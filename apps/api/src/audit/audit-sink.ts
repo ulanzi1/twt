@@ -376,8 +376,15 @@ export type AuthAuditEventType =
   //   nominee_name_check.queue_read — someone opened the District Admin's CORRECTION QUEUE (AC11).
   //     ⛔ NON-PII: counts only. It is a LIST read, so it names no claim — the per-claim
   //     `….read` line above is what records who looked at a particular living nominee's name.
+  //   nominee_name_check.queue_note_read — ONE line per return note the queue ATTEMPTED to decrypt
+  //     (a failure shown as `unreadable` still logs — the conservative side, 2026-09-23c), locating
+  //     the claim (BigDev 2026-09-23b, option 1). ⭐ The queue shows each Pariwar Admin's Tier-1
+  //     note; the `queue_read` line alone recorded that the queue was opened and ⛔ not whose notes
+  //     were shown, while the per-claim read of the same note leaves a claim-locatable line.
+  //     Context is NON-PII: claim_case_id + district — ⛔ never the note.
   | 'admin_nominee_name_check.read'
   | 'admin_nominee_name_check.queue_read'
+  | 'admin_nominee_name_check.queue_note_read'
   | 'admin_claim.nominee_name_checked'
   | 'admin_claim.nominee_name_check_rejected'
   // ── Shepherd assignment surface (Story 6.12, FR-41 / Epic 6) ──────────────────

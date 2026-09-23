@@ -11,7 +11,7 @@
 // No PII is persisted to the local draft (only the document-stage marker + claimCaseId live there —
 // the 6.2 discipline); the typed bank fields live in component state until submitted to the server.
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 import type { NomineeStatusResponse, RecordNomineeBankRequest } from '@twt/contracts'
 // Story 6.18 (AC12) — the SHARED English-script predicate from `@twt/contracts`.
@@ -25,8 +25,8 @@ import type { NomineeStatusResponse, RecordNomineeBankRequest } from '@twt/contr
 // places, so a change at the boundary would silently truncate a family's note at the OLD length —
 // client-side, before the server ever saw it.
 import { NAME_DIFFERENCE_NOTE_MAX_CHARS, isEnglishScriptName } from '@twt/contracts'
-import { useRouter } from 'expo-router'
-import { AccessibilityInfo } from 'react-native'
+import { useFocusEffect, useRouter } from 'expo-router'
+import { AccessibilityInfo, Platform } from 'react-native'
 import { Button, Input, Paragraph, Separator, Spinner, Text, XStack, YStack } from 'tamagui'
 
 import { ClaimProxyFlowShell } from '../../components/claim/ClaimProxyFlowShell'
@@ -83,6 +83,9 @@ export default function NomineeReviewScreen(): React.ReactElement {
   // correcting". Default `true` so a failed status fetch never silently locks a filer out of the
   // ordinary collection flow (the server is the boundary and refuses a write it should not take).
   const [memberEditable, setMemberEditable] = useState(true)
+  // ⚠ The status read FAILED (code review 2026-09-23b) — ⛔ never read as "nothing to correct". The
+  // form still works (the server is the boundary), but the family is told we could not check.
+  const [statusUnavailable, setStatusUnavailable] = useState(false)
 
   // Shared unmount guard for async handlers outside the load effect (e.g. resolveIfsc below).
   const mountedRef = useRef(true)
@@ -114,8 +117,12 @@ export default function NomineeReviewScreen(): React.ReactElement {
 
   // Whatever's already on file (bank names only — never account number / holder name; review
   // finding, 2026-07-11), so a re-edit or a D3 tier-2 admin correction doesn't start blind.
-  useEffect(() => {
-    if (!claimCaseId) return
+  // ⭐ READ ON EVERY FOCUS, ⛔ not once (code review 2026-09-23c). It was a mount-only effect, so a
+  // family who came BACK to this screen saw `correctionNeeded`/`memberEditable` as they were when it
+  // first mounted, and a failed first read left `statusUnavailable` up for the life of the screen —
+  // beside "Bank details saved". `useFocusEffect` below calls this on mount AND on every return.
+  const readStatus = useCallback((): (() => void) => {
+    if (!claimCaseId) return () => {}
     let active = true
     claimApi
       .nomineeBankStatus(claimCaseId)
@@ -125,9 +132,14 @@ export default function NomineeReviewScreen(): React.ReactElement {
         // Story 6.18 (AC5) — the filer is told their bank details need correcting.
         setCorrectionNeeded(res.correctionNeeded === true)
         setMemberEditable(res.memberEditable !== false)
+        setStatusUnavailable(false)
       })
       .catch(() => {
-        // Best-effort — the form still works blank if the status fetch fails.
+        // ⚠⚠ NO LONGER SWALLOWED (code review 2026-09-23b — the ticked 2026-09-20 bullet said *"a
+        // swallowed status-fetch `catch` means a returned filer sees no notice"* and the catch stayed
+        // empty). The form still works — `memberEditable` keeps its permissive default and the
+        // server refuses a write it should not take — but the family is TOLD the check failed.
+        if (active) setStatusUnavailable(true)
       })
     return () => {
       active = false
@@ -187,7 +199,12 @@ export default function NomineeReviewScreen(): React.ReactElement {
     // window fired a SECOND bank write (latest-wins ⇒ another event, a fresh `updated_at` that can
     // stale the District Admin's check) and a second `router.push`.
     submit !== 'saving' &&
-    submit !== 'saved'
+    submit !== 'saved' &&
+    // ⛔ NOT when the member may not edit (code review 2026-09-23b). The ticked 2026-09-20 bullet
+    // prescribed *"… and suppress the in-app edit"*; only the banner copy landed, so a family at
+    // `verifier_approved`/`reversed`/`state_trustee_freeze` typed into a live form and got the
+    // generic *"could not save"* 409 beside a banner saying the District Admin would handle it.
+    memberEditable
 
   async function onSubmit(): Promise<void> {
     if (!claimCaseId) return
@@ -238,7 +255,9 @@ export default function NomineeReviewScreen(): React.ReactElement {
     // in React Native and `accessibilityRole="text"` announces nothing, so on iOS VoiceOver the `saved`
     // Text below was silent. The live region stays for TalkBack; this call is the iOS path (the
     // `PanchayatNoticeboard.tsx` precedent).
-    AccessibilityInfo.announceForAccessibility(t('nominee.bank.saved'))
+    // ⚠ iOS ONLY (code review 2026-09-23b): unguarded, TalkBack spoke "saved" TWICE — once from this
+    // call and once from the live region.
+    if (Platform.OS === 'ios') AccessibilityInfo.announceForAccessibility(t('nominee.bank.saved'))
     // ⭐ Hold on this screen long enough for the `saved` live region to be announced (code review
     // 2026-09-22) — navigating on the same tick as `setSubmit('saved')` unmounted the message
     // before a screen reader had any chance to read it.
@@ -252,6 +271,21 @@ export default function NomineeReviewScreen(): React.ReactElement {
   // ⭐ `saved` is busy too (code review 2026-09-23): an edit typed during the announcement delay
   // would be silently discarded when the screen navigates away.
   const busy = submit === 'saving' || submit === 'saved'
+  // ⭐ Inputs are locked while busy OR when the member may not edit this claim (see `canSubmit`).
+  const locked = busy || !memberEditable
+
+  // ⭐ `saved` ENDS WHEN THE FAMILY COMES BACK (code review 2026-09-23b — a REGRESSION from the
+  // 2026-09-23 patch). `router.push` keeps this screen mounted beneath the acknowledgement, and
+  // nothing moved `submit` out of `saved`, so a swipe/hardware back landed on a permanently locked
+  // form: a family who spotted a typo could not fix it, although latest-wins re-edits are legitimate
+  // in the collection window. Re-focus resets it; the announcement delay itself runs while this
+  // screen stays focused, so the 2026-09-23 re-submit guard is untouched.
+  useFocusEffect(
+    useCallback(() => {
+      setSubmit((prev) => (prev === 'saved' ? 'idle' : prev))
+      return readStatus()
+    }, [readStatus]),
+  )
 
   const accountBlock = (idx: 0 | 1, labelKey: string): React.ReactElement => {
     const a = accounts[idx]
@@ -263,7 +297,7 @@ export default function NomineeReviewScreen(): React.ReactElement {
           onChangeText={(v) => patchAccount(idx, { holder: v })}
           placeholder={t('nominee.bank.holder')}
           accessibilityLabel={t('nominee.bank.holder')}
-          disabled={busy}
+          disabled={locked}
         />
         {/* Story 6.18 (AC12), `-227` cl.9 — the English-script gate, shown INLINE as the filer types.
             ⛔ Never a silent server-only 400: a grieving family typing a name in their own script must
@@ -292,7 +326,7 @@ export default function NomineeReviewScreen(): React.ReactElement {
           accessibilityLabel={t('nominee.bank.note')}
           accessibilityHint={t('nominee.bank.note_help')}
           maxLength={NAME_DIFFERENCE_NOTE_MAX_CHARS}
-          disabled={busy}
+          disabled={locked}
         />
         <Input
           value={a.number}
@@ -300,7 +334,7 @@ export default function NomineeReviewScreen(): React.ReactElement {
           keyboardType="number-pad"
           placeholder={t('nominee.bank.number')}
           accessibilityLabel={t('nominee.bank.number')}
-          disabled={busy}
+          disabled={locked}
         />
         <Input
           value={a.ifsc}
@@ -310,7 +344,7 @@ export default function NomineeReviewScreen(): React.ReactElement {
           maxLength={11}
           placeholder={t('nominee.bank.ifsc')}
           accessibilityLabel={t('nominee.bank.ifsc')}
-          disabled={busy}
+          disabled={locked}
         />
         {a.ifscState === 'checking' ? <Text color="$colorPress">{t('nominee.bank.ifsc_checking')}</Text> : null}
         {a.ifscState === 'ok' && a.bankName ? <Text color="#1E8E3E">{a.bankName}</Text> : null}
@@ -329,7 +363,7 @@ export default function NomineeReviewScreen(): React.ReactElement {
           keyboardType="email-address"
           placeholder={t('nominee.bank.vpa')}
           accessibilityLabel={t('nominee.bank.vpa')}
-          disabled={busy}
+          disabled={locked}
         />
         <Text color="$colorPress" fontSize="$2">{t('nominee.bank.vpa_help')}</Text>
         {a.vpa.trim() !== '' && !VPA_RE.test(a.vpa.trim()) ? (
@@ -383,7 +417,9 @@ export default function NomineeReviewScreen(): React.ReactElement {
           {t('nominee.bank.title')}
         </Text>
         <Paragraph color="$colorPress">{t('nominee.bank.help')}</Paragraph>
-        {existingBankNames.length > 0 ? (
+        {/* ⚠ Only while the family CAN save — "Saving below will replace both accounts" is false on
+            a locked form (code review 2026-09-23c). */}
+        {existingBankNames.length > 0 && memberEditable ? (
           <Paragraph color="$colorPress">
             {t('nominee.bank.existing_on_file', { banks: existingBankNames.join(', ') })}
           </Paragraph>
@@ -399,6 +435,25 @@ export default function NomineeReviewScreen(): React.ReactElement {
             staff-route copy says.
             ⛔ `accessibilityLiveRegion` — a bare `accessibilityRole="alert"` does not reliably
             announce on mount (the sibling `NomineeForm` in this same story already pairs them). */}
+        {statusUnavailable ? (
+          <Text
+            color="#B00020"
+            accessibilityRole="alert"
+            accessibilityLiveRegion="assertive"
+            testID="bank_status_unavailable"
+          >
+            {t('nominee.bank.status_unavailable')}
+          </Text>
+        ) : null}
+        {/* ⭐ THE LOCKED FORM SAYS WHY (BigDev 2026-09-23c, option 1). The 2026-09-23b patch locked
+            every field when the member may not edit — correct — but said nothing unless a correction
+            was needed, so a family on an approved, frozen, refused or appealed claim met a dead form
+            with no reason. `polite`: it is information, ⛔ not an error. */}
+        {!memberEditable && !correctionNeeded ? (
+          <Text accessibilityRole="text" accessibilityLiveRegion="polite" testID="bank_locked">
+            {t('nominee.bank.locked')}
+          </Text>
+        ) : null}
         {correctionNeeded ? (
           <Text
             color="#B00020"

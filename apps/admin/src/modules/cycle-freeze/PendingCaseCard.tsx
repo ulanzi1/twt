@@ -13,7 +13,7 @@
 // alone — a code picked for one action but left selected when a different button is clicked is caught here
 // instead of round-tripping to a confusing 400.
 
-import { TRUSTEE_REASON_CODE_OUTCOME_COMPAT } from '@twt/contracts';
+import { CYCLE_FREEZE_RETURNABLE_STATES, TRUSTEE_REASON_CODE_OUTCOME_COMPAT } from '@twt/contracts';
 import type {
   CycleFreezeDecisionRequest,
   CycleFreezePendingResponse,
@@ -146,15 +146,17 @@ export function PendingCaseCard({
         {case_.routed_to_r9 && (
           <span className="rounded bg-status-warn-bg px-1.5 py-0.5 text-xs text-status-warn-fg">routed to R9</span>
         )}
-        {/* Story 6.18 (AC11) — the claim is UNDER CORRECTION: this Pariwar Admin (or another) sent
-            it back to the District Admin and it has not been resubmitted. ⛔ NOT a denial — the
-            wording must never read as one. */}
+        {/* Story 6.18 (AC5/AC11) — the claim is UNDER CORRECTION, from EITHER half: a Pariwar Admin
+            returned it and it has not been resubmitted, OR the District Admin's current check says
+            `does_not_match` with no return at all. ⛔ NOT a denial — the wording must never read as
+            one. ⚠ "sent back", ⛔ not "returned" (code review 2026-09-23b): the second half involves
+            no return, and "returned" told the Pariwar Admin someone had returned a claim nobody had. */}
         {case_.under_correction && (
           <span
             data-testid="under-correction-badge"
             className="rounded bg-status-warn-bg px-1.5 py-0.5 text-xs text-status-warn-fg"
           >
-            returned for correction
+            sent back for correction
           </span>
         )}
         {/* Story 6.18 (AC8) — `-226` cl.5's highlight. It comes from the District Admin's RECORDED
@@ -302,8 +304,14 @@ export function PendingCaseCard({
             never be CLEARED: the only code that supersedes a return row is inside
             `voteOnFrozenClaim`, which refuses that state, and the District Admin cannot record the
             fresh check there either. The claim would be stuck forever. `TRUSTEE_RETURNABLE_STATES`
-            now excludes it, so offering the button here would be offering a guaranteed 409. */}
-        {bucket !== 'voted_pending_commit' && !case_.under_correction && (
+            now excludes it, so offering the button here would be offering a guaranteed 409.
+            ⚠ AND THE SAME 409 WAS STILL OFFERED ELSEWHERE (code review 2026-09-23b): on every
+            `escalated` card (`verifier_review`/`verification_in_progress` — outside the window) and
+            on a `routed_to_r9` card (the routing exclusion). The gate is now the server's own window,
+            mirrored in `CYCLE_FREEZE_RETURNABLE_STATES`, rather than a list of buckets to exclude. */}
+        {(CYCLE_FREEZE_RETURNABLE_STATES as readonly string[]).includes(case_.current_state) &&
+          !case_.routed_to_r9 &&
+          !case_.under_correction && (
           <button
             type="button"
             data-testid="return-to-district-admin"

@@ -395,13 +395,20 @@ export function createNomineeNameCheckHandlers(deps: AppDeps) {
      * about why it looks different from every sibling route. A per-claim route resolves ONE
      * district and the RBAC hook refuses the whole request; a LIST has no single district to gate
      * on. So the route gate proves the caller holds `claim.view_nominee_name_check` somewhere in
-     * this Pariwar, and every ROW is then tested against the caller's own grants with
-     * `rbac.scopeContains` — the SAME predicate the per-claim gate uses, so the two cannot drift
-     * apart. A District Admin for Patna sees Patna's returned claims and ⛔ not Vaishali's; a
+     * this Pariwar, and every ROW is then tested with `rbac.hasPermission` for THAT KEY at the row's
+     * district — the SAME predicate the per-claim gate evaluates, so the two cannot drift apart.
+     * A District Admin for Patna sees Patna's returned claims and ⛔ not Vaishali's; a
      * `pariwar`-ceiling holder (pariwar_admin, super_admin) sees all of them, exactly as that
      * ceiling already implies ([[project_rbac_geo_scope_containment]]).
+     * ⚠⚠ IT WAS RAW `rbac.scopeContains` OVER EVERY GRANT UNTIL 2026-09-23b, and this comment called
+     * that "the SAME predicate". It was not: `hasPermission` also requires the grant's ROLE to carry
+     * the key and the grant to sit within its role's ceiling. A District Admin who ALSO held any
+     * key-less wider grant (`auditor`/`finance_officer` at `pariwar`, `state_trustee` at `state`)
+     * saw every district's returned claims — and their decrypted return notes.
+     * ⭐ The test runs INSIDE the domain read, BEFORE its page limit (`isVisible`), so a District
+     * Admin's own rows are never crowded out by rows they cannot see.
      * ⛔ A row whose district cannot be resolved (`null`) is DROPPED, ⛔ never shown: an unresolved
-     * locator fails closed, which is what `scopeContains` itself does with a null target.
+     * locator fails closed, which is what `hasPermission` itself does with a null target.
      */
     async getClaimsUnderCorrection(request: FastifyRequest): Promise<ClaimsUnderCorrectionResponse> {
       const scopeTx = request.scopeTx;
@@ -414,22 +421,17 @@ export function createNomineeNameCheckHandlers(deps: AppDeps) {
       const geoTree = geoTreeResolverForRequest(request);
 
       const limit = (request.query as { limit?: number } | undefined)?.limit;
-      const rows = await claimDomain.listClaimsUnderCorrection(
-        scopeTx.tx,
-        pariwarId,
-        limit !== undefined ? { limit } : {},
-      );
-      const visible = rows.filter((row) =>
-        grants.some(
-          (g) =>
-            g.pariwarId === scopeTx.pariwarId &&
-            rbac.scopeContains(
-              { dimension: g.scopeDimension, value: g.scopeValue },
-              { dimension: 'district', value: row.district },
-              geoTree,
-            ),
-        ),
-      );
+      const isVisible = (row: { readonly district: string | null }): boolean =>
+        rbac.hasPermission(
+          grants,
+          NOMINEE_NAME_CHECK_VIEW_KEY,
+          { dimension: 'district', value: row.district, pariwarId: scopeTx.pariwarId },
+          { resolver: geoTree },
+        );
+      const visible = await claimDomain.listClaimsUnderCorrection(scopeTx.tx, pariwarId, {
+        ...(limit !== undefined ? { limit } : {}),
+        isVisible,
+      });
 
       const items = await Promise.all(
         visible.map(async (row) => ({
@@ -463,8 +465,21 @@ export function createNomineeNameCheckHandlers(deps: AppDeps) {
       emitAuthAudit(deps, request, 'admin_nominee_name_check.queue_read', {
         actorId,
         pariwarId: scopeTx.pariwarId,
-        context: { visible_count: items.length, candidate_count: rows.length },
+        context: { visible_count: items.length },
       });
+      // ⭐ ONE LINE PER DECRYPTED RETURN NOTE, locating its claim (BigDev 2026-09-23b, option 1).
+      // The `queue_read` line above says the queue was opened; ⛔ it cannot say whose notes were
+      // shown (its context is only hashed). The per-claim read of the same note leaves a
+      // claim-locatable line, so this surface now does too. ⛔ NON-PII: ids + district, never the note.
+      for (const row of visible) {
+        if (row.returnNoteCiphertext === null) continue;
+        emitAuthAudit(deps, request, 'admin_nominee_name_check.queue_note_read', {
+          actorId,
+          pariwarId: scopeTx.pariwarId,
+          resourceLocator: `claim:${row.claimCaseId.toLowerCase()}`,
+          context: { claim_case_id: row.claimCaseId, district: row.district },
+        });
+      }
 
       return { pariwar_id: scopeTx.pariwarId, items };
     },

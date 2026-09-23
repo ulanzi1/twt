@@ -50,20 +50,12 @@ import { type ClaimEventActor } from './events.js';
 import { resolveClaimCorrectionState } from './state-trustee-decision-persist.js';
 import { projectClaimState } from './project.js';
 
-/**
- * The states in which the "under correction" branch is BARRED however live the record — the claim is
- * over (code review 2026-09-20).
- *
- * ⛔⛔ A TERMINAL CLAIM'S BANK DETAILS ARE NOT CORRECTABLE, and without this the row-alone branch
- * had no state test at all: an R9 DENY on a claim carrying a live return row left a `denied` claim
- * whose accounts anyone holding the correction key could keep rewriting. `approved` is barred for
- * AC11's own reason (*"⛔ never after `claim.approved`"* — once the campaign is live a name
- * correction is a different governed act, and this story rules nothing about it) and `settled`
- * because the money has moved.
- * ⚠ This is a FLOOR, not the window: it does not permit anything. The branch still needs a live
- * correction record and `allowCorrection`; this only says which states no record can unlock.
- */
-const NOMINEE_BANK_CORRECTION_BARRED_STATES = ['denied', 'approved', 'settled'] as const;
+// ⭐ THE UNDER-CORRECTION BRANCH'S STATE WINDOW is an ALLOWLIST held by `resolveClaimCorrectionState`
+// (`NOMINEE_NAME_CHECK_RECORDABLE_STATES`) — code review 2026-09-23b. It REPLACES the 2026-09-20
+// denylist (`denied`/`approved`/`settled`), which left every state NOT on it open: a denied claim
+// under APPEAL with a still-current `does_not_match` had rewritable accounts, and the rewrite staled
+// the check in a state where no fresh check can be recorded. The allowlist also keeps the terminal
+// states that denylist barred closed, and a future lifecycle state is closed until someone opens it.
 
 /** The two account ranks v1 collects — always exactly these (Task 5 RESOLVED). */
 const REQUIRED_ACCOUNT_RANKS: readonly [1, 2] = [1, 2];
@@ -216,18 +208,19 @@ export async function recordClaimNomineeBankAccounts(
     // Ordinary collection/edit — no reason required.
   } else if (
     input.allowCorrection === true &&
-    !(NOMINEE_BANK_CORRECTION_BARRED_STATES as readonly string[]).includes(state) &&
     (
       await resolveClaimCorrectionState(
         db,
         input.pariwarId,
         input.claimCaseId,
         claimRow.deceasedMemberId as MemberId,
+        state,
       )
     ).underCorrection
   ) {
-    // Under correction — permitted WHATEVER the claim's state, on the strength of the governance
-    // record ALONE. The reason stays mandatory + audited, exactly as in the tier-2 window.
+    // Under correction — permitted in ANY state where a fresh check can then be recorded, on the
+    // strength of the governance record ALONE (the state window lives in the resolver). The reason
+    // stays mandatory + audited, exactly as in the tier-2 window.
     //
     // ⚠ BOTH HALVES, AND BOTH HAD TO BE FIXED HERE (code review 2026-09-20). This branch tested
     // `hasLiveReturnRow` alone, so AC5's OWN test case — the District Admin records `does_not_match`

@@ -135,7 +135,6 @@ export const verifierConsoleEn = {
     loadError: 'The names could not be loaded.',
     // ⭐ The on-demand disclosure, shared by the Pariwar Admin's card and the R9 panel. These were
     // three hard-coded English literals inside `R9CasePanel`, bypassing this table entirely.
-    disclosureLabel: 'Nominee name check',
     disclosureToggle: 'Check nominee names',
     accountsHeading: 'Name on the bank account',
     nomineesHeading: 'Nominee the member declared',
@@ -215,6 +214,8 @@ export const verifierConsoleEn = {
       'Claims the Pariwar Admin sent back to you, and claims where you recorded that a name does not match. Contact the claimant, have the bank details corrected, then open the claim and record the name check again. None of these claims has been refused.',
     loading: 'Loading…',
     loadError: 'The list could not be loaded.',
+    // Code review 2026-09-23c — a 403 is ⛔ not an outage, and must not read like one.
+    forbidden: 'You do not have access to this Pariwar’s correction queue.',
     empty: 'Nothing is waiting for a correction.',
     badgeReturned: 'returned by the Pariwar Admin',
     badgeSentBackByCheck: 'you recorded: does not match',

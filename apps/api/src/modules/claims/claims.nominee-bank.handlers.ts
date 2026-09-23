@@ -227,7 +227,8 @@ async function recordNomineeBank(
   // operator to correct it. The comment below even claimed *"the writer re-guards inside the tx"*;
   // the writer never got the chance.
   // ⛔ It is ⛔ NOT a widening of the state window: the same `resolveClaimCorrectionState` the writer
-  // consults decides it, so the handler and the writer cannot disagree about who may write.
+  // consults decides it — STATE WINDOW INCLUDED since 2026-09-23b; before that the writer carried a
+  // private denylist and a denied claim passed here only to 409 in the writer after encryption.
   const underCorrection =
     input.allowCorrection === true &&
     (await claim.resolveClaimCorrectionState(
@@ -235,6 +236,7 @@ async function recordNomineeBank(
       input.pariwarId,
       input.claimCaseId,
       claimRow.deceasedMemberId,
+      claimRow.currentState,
     )).underCorrection;
 
   // D3 tiers: the nominee window is open to any caller; the correction window only to an authorized
@@ -348,11 +350,15 @@ async function nomineeBankStatus(
   // after the helpline corrected the accounts and the District Admin re-checked, the filer was
   // still being told their bank details needed correcting — on a resubmitted claim, and on a
   // later-denied one. `resolveClaimCorrectionState` is the one definition every surface now shares.
+  // ⚠ The "later-denied" half was only closed on 2026-09-23b, when the resolver gained its state
+  // window: until then a DENIED claim with a current `does_not_match` still reported `true`, and
+  // the member app told the family their claim *"has not been refused"*.
   const correction = await claim.resolveClaimCorrectionState(
     tx,
     pariwarId,
     claimCaseId,
     deceasedMemberId,
+    claimState,
   );
   return {
     correctionNeeded: correction.underCorrection,

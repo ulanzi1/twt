@@ -98,7 +98,20 @@ function resolveQueueScopeStash(): preHandlerHookHandler {
     if (!scopeTx || !actorId) throw new UnauthorizedError('Authentication required', 'auth.session_required');
     const grants = request.scopeGrants ?? (await loadActorGrants(scopeTx, actorId));
     request.scopeGrants = grants;
-    const here = grants.filter((g) => g.pariwarId === scopeTx.pariwarId);
+    // ⚠ ONLY GRANTS WHOSE ROLE CARRIES THE KEY may choose the gate target (code review 2026-09-23b).
+    // `loadActorGrants` has no ORDER BY, so "the first district grant" was whichever row Postgres
+    // returned first — a keyed District Admin who also held a key-less district grant got a 403 or
+    // a pass depending on row order. Each grant is asked, alone, whether it holds the key at its OWN
+    // scope: a role without the key, or a grant above its role's ceiling, is not a candidate.
+    const here = grants.filter(
+      (g) =>
+        g.pariwarId === scopeTx.pariwarId &&
+        rbac.hasPermission([g], NOMINEE_NAME_CHECK_VIEW_KEY, {
+          dimension: g.scopeDimension,
+          value: g.scopeValue,
+          pariwarId: g.pariwarId,
+        }),
+    );
     const districtGrant = here.find((g) => g.scopeDimension === 'district' && g.scopeValue != null);
     if (districtGrant) {
       request.nomineeNameCheckQueueScope = { dimension: 'district', value: districtGrant.scopeValue };

@@ -17,7 +17,7 @@
 
 import { useNavigate, useParams } from '@tanstack/react-router';
 import type { ReactElement, ReactNode } from 'react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import {
   ScopeChrome,
@@ -32,6 +32,7 @@ import {
 } from '../modules/claim-verification/index.js';
 import { ApiError } from '../api/client.js';
 import {
+  useForgetNomineeNameCheck,
   useNomineeNameCheck,
   usePostConcealmentAssessment,
   usePostNomineeNameCheck,
@@ -191,9 +192,42 @@ export function VerifierConsoleRoute(): ReactElement {
   // Story 6.18 (AC2) — the NAMES are fetched ON DEMAND, ⛔ never as a side effect of loading the
   // console: the read decrypts a LIVING nominee's Tier-1 name and writes an audit line, so it must
   // happen when a District Admin chooses to look, and the audit line must mean they looked.
-  const [nameCheckOpen, setNameCheckOpen] = useState(false);
+  // ⚠⚠ THE OPEN STATE IS KEYED TO THE CLAIM IT WAS OPENED FOR (code review 2026-09-23c). It was a
+  // boolean reset by an EFFECT on `claimCaseId` — but effects run after the render that already
+  // handed the query observer `enabled: true` with the NEW claim's key, so a same-route claim change
+  // with the disclosure open fired ONE audited decrypt of the next claim before the reset landed.
+  // Deriving `nameCheckOpen` from `openFor === claimCaseId` makes it false on that very render.
+  const [nameCheckOpenFor, setNameCheckOpenFor] = useState<string | null>(null);
+  const nameCheckOpen = nameCheckOpenFor === claimCaseId;
   const nameCheck = useNomineeNameCheck(pariwarId, claimCaseId, nameCheckOpen);
   const postNameCheck = usePostNomineeNameCheck(pariwarId, claimCaseId);
+  const forgetNames = useForgetNomineeNameCheck(pariwarId, claimCaseId);
+  // ⭐ THE REST OF THE TICKED 2026-09-20 BULLET (*"`key` the route/panel state (`nameCheckOpen`,
+  // `postNameCheck`, verdicts) on `claimCaseId`"*). The open state is keyed above; on a claim change
+  // this effect drops the previous claim's write error and FORGETS its decrypted names (they are no
+  // longer on screen, and nothing else would remove them). `reset` is TanStack's stable observer method.
+  const resetPostNameCheck = postNameCheck.reset;
+  const previousClaimRef = useRef(claimCaseId);
+  useEffect(() => {
+    if (previousClaimRef.current !== claimCaseId) {
+      forgetNames(previousClaimRef.current);
+      previousClaimRef.current = claimCaseId;
+    }
+    resetPostNameCheck();
+    // `forgetNames` is a fresh closure each render and must ⛔ not re-run this effect.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [claimCaseId, resetPostNameCheck]);
+  const toggleNameCheck = (): void => {
+    if (nameCheckOpen) {
+      // ⭐ Closing FORGETS the names (`useForgetNomineeNameCheck`) and clears a lingering write
+      // error — it used to survive close + reopen and sit over freshly re-read names.
+      forgetNames();
+      resetPostNameCheck();
+      setNameCheckOpenFor(null);
+    } else {
+      setNameCheckOpenFor(claimCaseId);
+    }
+  };
   const submitNameCheck = async (input: NomineeNameCheckSubmit): Promise<void> => {
     await postNameCheck.mutateAsync(input);
   };
@@ -279,7 +313,7 @@ export function VerifierConsoleRoute(): ReactElement {
                 data-testid="name-check-disclosure"
                 className="text-sm underline"
                 aria-expanded={nameCheckOpen}
-                onClick={() => setNameCheckOpen((v) => !v)}
+                onClick={toggleNameCheck}
               >
                 {t.nameCheck.heading}
                 {/* AC8 — the highlight rides the console's OWN read, so it shows WITHOUT opening the
@@ -313,7 +347,10 @@ export function VerifierConsoleRoute(): ReactElement {
               </button>
               {nameCheckOpen ? (
                 <NomineeNameCheckPanel
-                  data={nameCheck.data}
+                  // ⛔ NO stale names beside a read error (code review 2026-09-23c — the other half of
+                  // a ticked 09-23b bullet): a failed refetch keeps `data`, and the panel rendered the
+                  // OLD names next to "could not be loaded".
+                  data={nameCheck.isError ? undefined : nameCheck.data}
                   loading={nameCheck.isLoading}
                   // ⚠ THE WRITE ERROR WINS. This was the other way round, so a lingering read error
                   // masked the message about the judgement the District Admin had just tried to

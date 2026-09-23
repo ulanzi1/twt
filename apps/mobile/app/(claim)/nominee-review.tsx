@@ -26,6 +26,7 @@ import type { NomineeStatusResponse, RecordNomineeBankRequest } from '@twt/contr
 // client-side, before the server ever saw it.
 import { NAME_DIFFERENCE_NOTE_MAX_CHARS, isEnglishScriptName } from '@twt/contracts'
 import { useRouter } from 'expo-router'
+import { AccessibilityInfo } from 'react-native'
 import { Button, Input, Paragraph, Separator, Spinner, Text, XStack, YStack } from 'tamagui'
 
 import { ClaimProxyFlowShell } from '../../components/claim/ClaimProxyFlowShell'
@@ -181,10 +182,16 @@ export default function NomineeReviewScreen(): React.ReactElement {
     accountComplete(accounts[1]) &&
     vpaValid(accounts[0]) &&
     vpaValid(accounts[1]) &&
-    submit !== 'saving'
+    // ⭐ `saved` is ⛔ not submittable either (code review 2026-09-23) — the announcement delay below
+    // holds the screen for SAVED_ANNOUNCEMENT_DELAY_MS after the write lands, and a second tap in that
+    // window fired a SECOND bank write (latest-wins ⇒ another event, a fresh `updated_at` that can
+    // stale the District Admin's check) and a second `router.push`.
+    submit !== 'saving' &&
+    submit !== 'saved'
 
   async function onSubmit(): Promise<void> {
     if (!claimCaseId) return
+    if (submit === 'saving' || submit === 'saved') return
     if (!accountComplete(accounts[0]) || !accountComplete(accounts[1])) {
       setNotice(t('nominee.bank.incomplete'))
       return
@@ -227,14 +234,24 @@ export default function NomineeReviewScreen(): React.ReactElement {
     // on the very details they had just corrected (code review 2026-09-20).
     setCorrectionNeeded(false)
     if (memberId) saveClaimDraft(memberId, { lastStep: 'nominee-review' })
+    // ⭐ SPOKEN on both platforms (code review 2026-09-23) — `accessibilityLiveRegion` is Android-only
+    // in React Native and `accessibilityRole="text"` announces nothing, so on iOS VoiceOver the `saved`
+    // Text below was silent. The live region stays for TalkBack; this call is the iOS path (the
+    // `PanchayatNoticeboard.tsx` precedent).
+    AccessibilityInfo.announceForAccessibility(t('nominee.bank.saved'))
     // ⭐ Hold on this screen long enough for the `saved` live region to be announced (code review
     // 2026-09-22) — navigating on the same tick as `setSubmit('saved')` unmounted the message
     // before a screen reader had any chance to read it.
     await new Promise((r) => setTimeout(r, SAVED_ANNOUNCEMENT_DELAY_MS))
+    // ⛔ Not if the family has already left this screen during the delay (code review 2026-09-23) —
+    // the push would otherwise pull them onto the acknowledgement from wherever they went.
+    if (!mountedRef.current) return
     router.push('/(claim)/acknowledgement')
   }
 
-  const busy = submit === 'saving'
+  // ⭐ `saved` is busy too (code review 2026-09-23): an edit typed during the announcement delay
+  // would be silently discarded when the screen navigates away.
+  const busy = submit === 'saving' || submit === 'saved'
 
   const accountBlock = (idx: 0 | 1, labelKey: string): React.ReactElement => {
     const a = accounts[idx]
@@ -420,7 +437,7 @@ export default function NomineeReviewScreen(): React.ReactElement {
         ) : null}
 
         <Button theme="accent" disabled={!canSubmit} onPress={() => void onSubmit()}>
-          {busy ? <Spinner /> : t('nominee.bank.submit')}
+          {submit === 'saving' ? <Spinner /> : t('nominee.bank.submit')}
         </Button>
 
         <CallHelplineCTA label={t('nominee.wrong')} />

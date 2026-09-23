@@ -11,7 +11,7 @@ import { useState } from 'react';
 
 import { errorMessage } from '../../api/client.js';
 import { useR9Queue, useR9VotesByTrustee } from '../../api/hooks.js';
-import { verifierConsoleEn as t } from '../claim-verification/i18n-en.js';
+import { nameDifferenceReasonLabel, verifierConsoleEn as t } from '../claim-verification/i18n-en.js';
 import { R9CasePanel } from './R9CasePanel.js';
 
 export interface R9VotingPageProps {
@@ -81,7 +81,7 @@ export function R9VotingPage({ pariwarId }: R9VotingPageProps): ReactElement {
                       >
                         {t.nameCheck.approvedWithDifference}:{' '}
                         {i.name_difference_reasons
-                          .map((r) => (t.nameCheck.reasons as Record<string, string | undefined>)[r] ?? r)
+                          .map((r) => nameDifferenceReasonLabel(r))
                           .join(', ')}
                       </div>
                     ) : null}

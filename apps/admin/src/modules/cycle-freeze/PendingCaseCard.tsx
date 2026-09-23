@@ -23,6 +23,7 @@ import type { ReactElement } from 'react';
 import { useState } from 'react';
 
 import { NomineeNameCheckDisclosure } from '../claim-verification/NomineeNameCheckDisclosure.js';
+import { nameDifferenceReasonLabel, verifierConsoleEn } from '../claim-verification/i18n-en.js';
 
 type PendingCase = CycleFreezePendingResponse['ready_to_freeze'][number];
 type Bucket = 'ready_to_freeze' | 'escalated' | 'voted_pending_commit';
@@ -49,13 +50,6 @@ function reasonCodesFor(outcome: 'denied' | 'routed_to_r9' | 'returned_for_corre
  * ⚠ A `Partial` on purpose: an unlisted outcome falls back to its own code rather than being
  * mislabelled as a different action.
  */
-/** The AC8 reason CODES as words. ⛔ Never a name — these are the District Admin's own codes. */
-const NAME_DIFFERENCE_LABEL: Record<string, string> = {
-  initial: 'an initial',
-  married_name: 'a married name',
-  bank_shortened_name: "the bank's shortened name",
-};
-
 const ACTION_LABEL: Partial<Record<StateTrusteeDecisionOutcome, string>> = {
   denied: 'Deny',
   routed_to_r9: 'Route to R9',
@@ -173,8 +167,10 @@ export function PendingCaseCard({
             {/* ⚠ LABELS, ⛔ NOT RAW CODES. This printed `bank_shortened_name` at a Pariwar Admin,
                 while the District Admin's own panel printed "The bank's shortened name" for the
                 same fact — two surfaces disagreeing about one ruling's vocabulary. */}
-            approved with a name difference:{' '}
-            {case_.name_difference_reasons.map((r) => NAME_DIFFERENCE_LABEL[r] ?? r).join(', ')}
+            {/* ⭐ The SHARED table (code review 2026-09-23) — a hand-copied one here had already
+                drifted from the District Admin's and R9's in case. */}
+            {verifierConsoleEn.nameCheck.approvedWithDifference}:{' '}
+            {case_.name_difference_reasons.map(nameDifferenceReasonLabel).join(', ')}
           </span>
         )}
         {case_.concealment_flags.map((f) => (

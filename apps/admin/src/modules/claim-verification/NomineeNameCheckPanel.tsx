@@ -22,7 +22,7 @@ import type {
   NomineeNameCheckVerdict,
 } from '@twt/contracts';
 
-import { verifierConsoleEn as t } from './i18n-en.js';
+import { nameDifferenceReasonLabel, verifierConsoleEn as t } from './i18n-en.js';
 
 export interface NomineeNameCheckSubmit {
   nominee_declaration_token: string;
@@ -65,7 +65,7 @@ const RECORDABLE_STATES = new Set([
 function reasonLabel(code: string): string {
   // ⚠ ⛔ NEVER `t.nameCheck.reasons[code as …]` bare: an unrecognised code printed the literal
   // string `undefined` into the console, which reads as a rendering bug rather than as new data.
-  return (t.nameCheck.reasons as Record<string, string | undefined>)[code] ?? code;
+  return nameDifferenceReasonLabel(code);
 }
 
 /** Render one Tier-1 name union. ⭐ The three states are NEVER collapsed into a blank. */

@@ -12,7 +12,7 @@ import { useState } from 'react';
 
 import { ApiError, errorMessage } from '../../api/client.js';
 import { NomineeNameCheckDisclosure } from '../claim-verification/NomineeNameCheckDisclosure.js';
-import { verifierConsoleEn as t } from '../claim-verification/i18n-en.js';
+import { nameDifferenceReasonLabel, verifierConsoleEn as t } from '../claim-verification/i18n-en.js';
 import {
   useCancelR9Session,
   useCastR9Vote,
@@ -104,7 +104,7 @@ export function R9CasePanel({ pariwarId, claimCaseId }: R9CasePanelProps): React
         >
           {t.nameCheck.approvedWithDifference}:{' '}
           {model.name_difference_reasons
-            .map((r) => (t.nameCheck.reasons as Record<string, string | undefined>)[r] ?? r)
+            .map((r) => nameDifferenceReasonLabel(r))
             .join(', ')}
         </p>
       ) : null}

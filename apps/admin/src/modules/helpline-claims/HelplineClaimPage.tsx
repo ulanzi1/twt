@@ -343,11 +343,14 @@ export function HelplineClaimPage({ pariwarId }: HelplineClaimPageProps): ReactE
           claimCaseId={filedClaimCaseId}
           recorded={bankRecorded}
           onSubmit={submitBank}
-          // ⭐ Also disabled while `stepUpRequired` (code review 2026-09-22) — `pending` alone goes
-          // back to `false` the instant the mutation settles, so an operator who is shown the
+          pending={recordBank.isPending}
+          // ⭐ Save is also blocked while `stepUpRequired` (code review 2026-09-22) — `pending` alone
+          // goes back to `false` the instant the mutation settles, so an operator who is shown the
           // step-up panel could immediately click Save again before elevating, firing a second
           // concurrent write that can race the elevation itself (see the stale-claim guard above).
-          pending={recordBank.isPending || stepUpRequired}
+          // ⚠ Save ONLY (code review 2026-09-23) — folding it into `pending` locked every input and
+          // Cancel-correction too, for as long as the OTP took.
+          submitBlocked={stepUpRequired}
           // ⭐ A step-up-required error is handled via the PANEL, ⛔ not surfaced as a hard error —
           // the same treatment `submitError` gives the intake, and for the same reason: a raw
           // *"step up required"* string is a dead end, the panel is the way out.

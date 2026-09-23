@@ -64,6 +64,13 @@ export interface BankDetailsCardProps {
   recorded: boolean;
   onSubmit: (body: RecordNomineeBankHelplineRequest) => Promise<void>;
   pending?: boolean;
+  /**
+   * Blocks ONLY the Save button (code review 2026-09-23) — the page sets it while a step-up is
+   * owed, so a second write cannot race the elevation. ⛔ It is NOT `pending`: that locks every
+   * input and Cancel too, which left the operator unable to fix a typo or back out of a correction
+   * while waiting for the OTP.
+   */
+  submitBlocked?: boolean;
   error?: string | null;
   /** The AC2 read, fetched after recording so the operator can discharge cl.1. */
   names?: NomineeNameCheckResponse | undefined;
@@ -89,6 +96,7 @@ export function BankDetailsCard(props: BankDetailsCardProps): React.ReactElement
     recorded,
     onSubmit,
     pending,
+    submitBlocked = false,
     error,
     names,
     namesLoading,
@@ -366,7 +374,7 @@ export function BankDetailsCard(props: BankDetailsCardProps): React.ReactElement
               type="button"
               data-testid="helpline-bank-submit"
               className="self-start rounded bg-slate-800 px-3 py-1 text-sm text-white disabled:opacity-50"
-              disabled={pending}
+              disabled={pending || submitBlocked}
               onClick={() => void submit()}
             >
               {resolveEn(isCorrection ? 'helpline.bank.submitCorrection' : 'helpline.bank.submit')}

@@ -461,13 +461,14 @@ describe('currency + passing (AC3, AC4)', () => {
     // the claim row lock, which serialises them. ⛔ No reachability is claimed either way
     // ([[feedback_trace_reachability_before_escalating]]).
     //
-    // ⚠⚠ `sameMs` MUST be a genuinely DIFFERENT timestamp that collides after truncation (code
-    // review 2026-09-22) — reusing `liveAccounts` verbatim (the previous version of this test) only
-    // re-proves "identical stamps ⇒ current", which the very first test in this block already
-    // covers, and cannot distinguish that from the sharper claim this test's title makes. A real
-    // Postgres `timestamptz` rewrite 500 MICROSECONDS later is simulated here — `new Date(...)`
-    // truncates sub-millisecond precision on parse, so the two ISO strings below are NOT the same
-    // moment, yet compare equal once both pass through `.toISOString()`.
+    // ⚠⚠ WHERE THE INVISIBILITY ACTUALLY LIVES (corrected by code review 2026-09-23). A rewrite
+    // 500 MICROSECONDS later is simulated with an ISO string carrying a microsecond fraction — but
+    // the truncation happens in `new Date(...)` right here, the same place the pg driver does it
+    // when it hands `updated_at` to JS. ⇒ `isNomineeNameCheckCurrent` below receives EXACTLY
+    // `new Date(UPDATED_1)`; the function has ⛔ no sub-millisecond input it could compare.
+    // ⭐ The claim this test carries is the TRUNCATION (the two `expect`s on the strings): the
+    // `isNomineeNameCheckCurrent` call only restates it at the function's boundary. The 2026-09-22
+    // version's comment said the call itself distinguished the sharper claim — ⛔ it cannot.
     const sameMs = [
       { accountRank: 1, updatedAt: new Date(`${UPDATED_1.slice(0, -1)}500Z`) },
       { accountRank: 2, updatedAt: new Date(UPDATED_2) },

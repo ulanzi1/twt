@@ -16,7 +16,7 @@
 // an audit line meaning "a human chose to look". The "no fetch until opened" assertions pin that.
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { NomineeNameCheckResponse, R9PanelResponse, R9QueueResponse } from '@twt/contracts';
@@ -176,7 +176,11 @@ describe('<R9CasePanel> — AC8, the highlight rides the R9 panel’s OWN read',
     );
   });
 
-  it('⛔ NO flag when the read carries no reason (no difference, a STALE check, or a non-passing one)', async () => {
+  it('⛔ NO flag when the read carries an EMPTY reason list', async () => {
+    // ⚠ Retitled (code review 2026-09-23): this used to claim "a STALE check, or a non-passing
+    // one" — but it mocks `[]`, and that filtering happens on the SERVER. The stale and mixed
+    // cases are pinned where they live, against `readNomineeNameCheckFlagsBulk` (the R9 reads'
+    // producer) in `nominee-name-check-return-loop.spec.ts`.
     getR9Panel.mockResolvedValue(PANEL_OPEN);
     renderIt(<R9CasePanel pariwarId={PARIWAR} claimCaseId={CLAIM} />);
     await screen.findByTestId('r9-name-check-disclosure');
@@ -270,6 +274,9 @@ describe('<R9VotingPage> — AC8 on the R9 QUEUE, from the queue’s own read', 
       t.nameCheck.reasons.married_name,
     );
     expect(screen.queryByTestId(`r9-queue-name-difference-${OTHER}`)).toBeNull();
-    await waitFor(() => expect(getNomineeNameCheck).not.toHaveBeenCalled());
+    // ⚠ ⛔ NOT `waitFor(() => expect(…).not.toHaveBeenCalled())` (code review 2026-09-23) — that
+    // resolves on its FIRST poll and can never catch a late fetch. Let the page settle, then assert.
+    await new Promise((r) => setTimeout(r, 50));
+    expect(getNomineeNameCheck).not.toHaveBeenCalled();
   });
 });

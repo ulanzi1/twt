@@ -71,7 +71,7 @@ describe('nominee-review — every ALERT is paired with a live region (family 13
     expect(bare, `these alerts announce nothing on mount:\n${bare.join('\n')}`).toEqual([])
   })
 
-  it('⭐ the four message states each carry a live region, with the RIGHT urgency', () => {
+  it('⭐ the three validation messages each carry a live region, with the RIGHT urgency', () => {
     // Named individually, so a future edit that drops ONE is reported by name rather than as a
     // count that quietly still passes.
     //
@@ -107,6 +107,10 @@ describe('nominee-review — every ALERT is paired with a live region (family 13
     const saved = elementsRendering(src, "t('nominee.bank.saved')")
     expect(saved).toHaveLength(1)
     expect(saved[0]!).toContain('accessibilityLiveRegion="polite"')
+    // ⚠ 2026-09-23 (code review): the role is PINNED too — `alert` is the interrupting role the
+    // 2026-09-22 patch removed from good news, and reverting it passed every test in this file.
+    expect(saved[0]!).toContain('accessibilityRole="text"')
+    expect(saved[0]!).not.toContain('accessibilityRole="alert"')
 
     const notice = elementsRendering(src, '{notice}')
     expect(notice.length, 'the failure notice is missing from the screen').toBe(1)
@@ -124,5 +128,28 @@ describe('the two Story 6.18 member surfaces agree with each other', () => {
     const alerts = textTags(form).filter((t) => t.includes('accessibilityRole="alert"'))
     expect(alerts.length, 'NomineeForm has no alert — the cited precedent is gone').toBeGreaterThan(0)
     for (const tag of alerts) expect(tag).toContain('accessibilityLiveRegion')
+  })
+})
+
+describe('nominee-review — the `saved` hold (code review 2026-09-23)', () => {
+  const src = stripComments(read(REVIEW))
+
+  it('⭐ `saved` is announced on iOS too — `accessibilityLiveRegion` is Android-only', () => {
+    expect(src).toContain("AccessibilityInfo.announceForAccessibility(t('nominee.bank.saved'))")
+  })
+
+  it('⛔ the announcement delay is NOT a re-submit window — `saved` blocks Save and every field', () => {
+    // A second tap during the delay fired a second bank write and a second navigation.
+    expect(src).toMatch(/const canSubmit =[\s\S]*?submit !== 'saved'/)
+    expect(src).toMatch(/const busy = [^\n]*submit === 'saved'/)
+    expect(src).toMatch(/if \(submit === 'saving' \|\| submit === 'saved'\) return/)
+  })
+
+  it('⛔ the delayed navigation does NOT fire once the screen has unmounted', () => {
+    const tail = src.slice(src.indexOf('SAVED_ANNOUNCEMENT_DELAY_MS))'))
+    expect(tail.indexOf('if (!mountedRef.current) return'), 'no unmount guard after the delay').toBeGreaterThan(-1)
+    expect(tail.indexOf('if (!mountedRef.current) return')).toBeLessThan(
+      tail.indexOf("router.push('/(claim)/acknowledgement')"),
+    )
   })
 })

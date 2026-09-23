@@ -26,6 +26,7 @@ import { buildTestDeps, hasDatabase, makeClient, type TestDeps } from '../_setup
 import { seedNomineeNameCheck } from '../_nominee-name-check-fixture.js';
 import { encryptNomineeBankField } from '../../../src/modules/claims/nominee-bank-crypto.js';
 import { encryptNomineeField } from '../../../src/modules/nominee/nominee-crypto.js';
+import { encryptTrusteeRationale } from '../../../src/modules/claims/state-trustee-decision-crypto.js';
 import { FakeWebAuthnProvider } from '../_webauthn-fake.js';
 
 type Client = ReturnType<typeof makeClient>;
@@ -1159,6 +1160,101 @@ describe.skipIf(!hasDatabase)('Nominee name-check surface — E2E (:5433)', () =
       const resY = await daY.client.inject({ method: 'GET', url: queueUrl(pariwarId) });
       const idsY = (resY.json() as { items: { claim_case_id: string }[] }).items.map((i) => i.claim_case_id);
       expect(idsY, "district Y's OWN District Admin must see it").toContain(claimY);
+    });
+
+    it('⛔⛔ a District Admin who ALSO holds a KEY-LESS Pariwar-wide role sees ⛔ NO other district (2026-09-23b)', async () => {
+      // ⚠ THE LEAK: the row filter was raw `scopeContains` over EVERY grant, so an `auditor` grant
+      // at `pariwar` (a role WITHOUT `claim.view_nominee_name_check`) admitted every district's rows
+      // — and their decrypted return notes. The single-role test above cannot see this.
+      const pariwarId = randomUUID();
+      const districtX = `DX-${randomUUID().slice(0, 8)}`;
+      const districtY = `DY-${randomUUID().slice(0, 8)}`;
+      const memberY = await seedDeceasedMember(pariwarId, districtY);
+      const claimY = await seedClaim(pariwarId, memberY);
+      await seedNomineeNameCheck(deps, pariwarId, claimY, {
+        verdicts: ['matches', 'does_not_match'] as const,
+      });
+
+      const daX = await authenticate();
+      await grant(daX.userId, pariwarId, 'district_admin', 'district', districtX);
+      await grant(daX.userId, pariwarId, 'auditor', 'pariwar', pariwarId);
+      await daX.client.inject({ method: 'POST', url: '/api/v1/auth/scope', payload: { pariwarId } });
+      const res = await daX.client.inject({ method: 'GET', url: queueUrl(pariwarId) });
+      expect(res.statusCode).toBe(200);
+      const got = (res.json() as { items: { claim_case_id: string }[] }).items.map((i) => i.claim_case_id);
+      expect(got, "a key-less wider grant must not widen the queue").not.toContain(claimY);
+
+      // ⭐ POSITIVE CONTROL — a Pariwar-wide role that DOES carry the key sees it.
+      const pa = await authenticate();
+      await grant(pa.userId, pariwarId, 'pariwar_admin', 'pariwar', pariwarId);
+      await pa.client.inject({ method: 'POST', url: '/api/v1/auth/scope', payload: { pariwarId } });
+      const resPa = await pa.client.inject({ method: 'GET', url: queueUrl(pariwarId) });
+      const gotPa = (resPa.json() as { items: { claim_case_id: string }[] }).items.map((i) => i.claim_case_id);
+      expect(gotPa).toContain(claimY);
+    });
+
+    it('⭐ each DECRYPTED return note leaves its OWN claim-locating audit line — ⛔ never the note (BigDev 2026-09-23b, option 1)', async () => {
+      const pariwarId = randomUUID();
+      const district = `D-${randomUUID().slice(0, 8)}`;
+      const memberId = await seedDeceasedMember(pariwarId, district);
+      const claimCaseId = await seedClaim(pariwarId, memberId);
+      // Drive to `verifier_approved`, check it, and have a Pariwar Admin RETURN it with a real note.
+      const pa = await authenticate('Kalpana (Pariwar Admin)');
+      const NOTE = `the holder name ${randomUUID().slice(0, 8)} is not the declared nominee`;
+      {
+        const scopeTx = await openScopeTx(deps, pariwarId);
+        try {
+          await claim.projectClaimState(scopeTx.client, {
+            claimCaseId: ids.claimId(claimCaseId),
+            pariwarId: ids.pariwarId(pariwarId),
+            deceasedMemberId: memberId,
+            intakeChannels: ['helpline'],
+            claimantActorId: null,
+            eventType: 'claim.verifier_approved' as never,
+            payload: { from_state: 'verifier_review', to_state: 'verifier_approved', trigger: 'seed', actor: 'system' },
+            actorId: null,
+          });
+          await closeScopeTx(scopeTx, true);
+        } catch (err) {
+          await closeScopeTx(scopeTx, false);
+          throw err;
+        }
+      }
+      await seedNomineeNameCheck(deps, pariwarId, claimCaseId);
+      {
+        const scopeTx = await openScopeTx(deps, pariwarId);
+        try {
+          await claim.returnToDistrictAdmin(scopeTx.client, {
+            claimCaseId: ids.claimId(claimCaseId),
+            pariwarId: ids.pariwarId(pariwarId),
+            reasonCode: 'other',
+            rationaleCiphertext: await encryptTrusteeRationale(NOTE, pariwarId, deps.encryption),
+            actorId: pa.userId,
+            actorDisplay: 'Kalpana (Pariwar Admin)',
+            actor: 'trustee',
+          });
+          await closeScopeTx(scopeTx, true);
+        } catch (err) {
+          await closeScopeTx(scopeTx, false);
+          throw err;
+        }
+      }
+
+      const da = await authenticate();
+      await grant(da.userId, pariwarId, 'district_admin', 'district', district);
+      await da.client.inject({ method: 'POST', url: '/api/v1/auth/scope', payload: { pariwarId } });
+      td.auditSink.events.length = 0;
+      const res = await da.client.inject({ method: 'GET', url: queueUrl(pariwarId) });
+      expect(res.statusCode).toBe(200);
+      // ⭐ NON-VACUITY: the note really was decrypted and shown.
+      expect(res.body).toContain(NOTE);
+
+      const lines = td.auditSink.ofType('admin_nominee_name_check.queue_note_read');
+      expect(lines).toHaveLength(1);
+      expect(lines[0]?.resourceLocator).toBe(`claim:${claimCaseId.toLowerCase()}`);
+      expect(td.auditSink.ofType('admin_nominee_name_check.queue_read')).toHaveLength(1);
+      // ⛔ The note itself rides NO audit line.
+      expect(JSON.stringify(td.auditSink.events)).not.toContain(NOTE);
     });
 
     it('⛔ the queue carries ⛔ NO holder name and ⛔ NO nominee name (Trap 4)', async () => {

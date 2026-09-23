@@ -18,8 +18,11 @@ import type { NomineeNameCheckResponse, VerifierConsolePacket } from '@twt/contr
 const PARIWAR = '44444444-4444-4444-8444-444444444444';
 const CLAIM = '11111111-1111-4111-8111-111111111111';
 
+// ⭐ MUTABLE route params (2026-09-23c) — the claim-change test moves `claimCaseId` under a mounted
+// route, the one thing a fixed mock could never show.
+const routeParams = vi.hoisted(() => ({ claimCaseId: '11111111-1111-4111-8111-111111111111' }));
 vi.mock('@tanstack/react-router', () => ({
-  useParams: () => ({ pariwarId: PARIWAR, claimCaseId: CLAIM }),
+  useParams: () => ({ pariwarId: PARIWAR, claimCaseId: routeParams.claimCaseId }),
   useNavigate: () => vi.fn(),
 }));
 
@@ -132,6 +135,7 @@ beforeEach(() => {
   getNomineeNameCheck.mockResolvedValue(NAMES);
 });
 afterEach(() => {
+  routeParams.claimCaseId = CLAIM;
   focusManager.setFocused(undefined);
 });
 
@@ -300,6 +304,29 @@ describe('<VerifierConsoleRoute> — the name-check error table and which error 
     );
   });
 
+  it('⛔ the write error is NOT sticky — closing the disclosure clears it, and a reopen does ⛔ not show it over fresh names (2026-09-23b)', async () => {
+    getNomineeNameCheck.mockResolvedValue(NAMES);
+    postNomineeNameCheck.mockRejectedValue(new ApiError(409, 'nominee_name_check.stale', 'stale'));
+    await mount({
+      available: true,
+      accountsComplete: true,
+      currentAndPassing: false,
+      differenceReasons: [],
+    });
+    fireEvent.click(screen.getByTestId('name-check-disclosure'));
+    await screen.findByTestId('name-check-form');
+    fireEvent.change(screen.getByTestId('name-check-verdict-1'), { target: { value: 'matches' } });
+    fireEvent.change(screen.getByTestId('name-check-verdict-2'), { target: { value: 'matches' } });
+    fireEvent.click(screen.getByTestId('name-check-submit'));
+    // ⭐ NON-VACUITY: the error really was shown first.
+    await screen.findByTestId('name-check-submit-error');
+
+    fireEvent.click(screen.getByTestId('name-check-disclosure')); // close
+    fireEvent.click(screen.getByTestId('name-check-disclosure')); // reopen
+    await screen.findByTestId('name-check-form');
+    expect(screen.queryByTestId('name-check-submit-error')).toBeNull();
+  });
+
   it('a FAILED names read renders through the name-check table — a 403 says "no permission"', async () => {
     getNomineeNameCheck.mockRejectedValue(new ApiError(403, 'claim.forbidden', 'nope'));
     await mount(PASSING);
@@ -335,5 +362,82 @@ describe('nameCheckErrorMessage — the table, row by row', () => {
   it('a non-ApiError (network, a bug) → the generic line, ⛔ never a raw message', () => {
     expect(nameCheckErrorMessage(new Error('socket hang up'))).toBe(t.nameCheck.errorGeneric);
     expect(nameCheckErrorMessage(undefined)).toBe(t.nameCheck.errorGeneric);
+  });
+});
+
+describe('<VerifierConsoleRoute> — the names are ⛔ never read for a claim nobody chose to look at (code review 2026-09-23c)', () => {
+  const CLAIM_2 = '55555555-5555-4555-8555-555555555555';
+  const PASS: NameStatus = {
+    available: true,
+    accountsComplete: true,
+    currentAndPassing: true,
+    differenceReasons: [],
+  };
+
+  it('⛔ a same-route claim change with the disclosure OPEN does ⛔ not fetch the next claim’s names — ⛔ not even once', async () => {
+    getVerifierConsole.mockResolvedValue({ packet: packet(PASS) });
+    const qc = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+    // ⚠ A FRESH element each render — re-passing the same element object lets React bail out, and the
+    // route would never see the new params.
+    const ui = () => (
+      <QueryClientProvider client={qc}>
+        <VerifierConsoleRoute />
+      </QueryClientProvider>
+    );
+    const { rerender } = render(ui());
+    fireEvent.click(await screen.findByTestId('name-check-disclosure'));
+    expect(await screen.findByText('Rani Devi')).toBeInTheDocument();
+    expect(getNomineeNameCheck).toHaveBeenCalledWith(PARIWAR, CLAIM);
+
+    routeParams.claimCaseId = CLAIM_2;
+    rerender(ui());
+    // ⭐ The disclosure is CLOSED for the new claim, and its names were ⛔ never requested.
+    await waitFor(() =>
+      expect(screen.getByTestId('name-check-disclosure')).toHaveAttribute('aria-expanded', 'false'),
+    );
+    expect(getNomineeNameCheck).not.toHaveBeenCalledWith(PARIWAR, CLAIM_2);
+    // …and the previous claim's decrypted names are gone from the cache, ⛔ not merely hidden.
+    expect(qc.getQueryData(['nominee-name-check', PARIWAR, CLAIM])).toBeUndefined();
+  });
+
+  it('⛔ closing the console disclosure FORGETS the names — a reopen shows ⛔ no cached name while the new read is pending', async () => {
+    getNomineeNameCheck.mockReset();
+    getNomineeNameCheck
+      .mockResolvedValueOnce(NAMES)
+      .mockImplementationOnce(() => new Promise(() => {}));
+    await mount(PASS);
+    const toggle = screen.getByTestId('name-check-disclosure');
+    fireEvent.click(toggle);
+    expect(await screen.findByText('Rani Devi')).toBeInTheDocument();
+    fireEvent.click(toggle); // close
+    fireEvent.click(toggle); // reopen
+    expect(await screen.findByTestId('name-check-loading')).toBeInTheDocument();
+    expect(screen.queryByText('Rani Devi')).toBeNull();
+    expect(getNomineeNameCheck).toHaveBeenCalledTimes(2);
+  });
+
+  it('⛔ a FAILED refetch shows the error ALONE — ⛔ never the old names beside it', async () => {
+    await mount(PASS);
+    fireEvent.click(screen.getByTestId('name-check-disclosure'));
+    expect(await screen.findByText('Rani Devi')).toBeInTheDocument();
+    getNomineeNameCheck.mockRejectedValue(new ApiError(503, 'internal', 'down'));
+    // A focus refetch is disabled on this read by design, so force one the way a write's onError does.
+    await act(async () => {
+      fireEvent.change(await screen.findByTestId('name-check-verdict-1'), {
+        target: { value: 'matches' },
+      });
+      fireEvent.change(screen.getByTestId('name-check-verdict-2'), {
+        target: { value: 'matches' },
+      });
+      postNomineeNameCheck.mockRejectedValueOnce(
+        new ApiError(409, 'nominee_name_check.stale', 'stale'),
+      );
+      fireEvent.click(screen.getByTestId('name-check-submit'));
+    });
+    // The POST's onError invalidates the names read, and that refetch fails.
+    expect(await screen.findByTestId('name-check-error')).toBeInTheDocument();
+    expect(screen.queryByText('Rani Devi')).toBeNull();
   });
 });

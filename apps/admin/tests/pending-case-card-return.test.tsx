@@ -67,6 +67,24 @@ const setup = (overrides: Partial<PendingCase> = {}, bucket: 'ready_to_freeze' |
   return { onDecision };
 };
 
+/** Like `setup`, but hands back `unmount` so one test can render several states in turn. */
+const renderCard = (overrides: Partial<PendingCase> = {}) => {
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    <QueryClientProvider client={qc}>
+      <ul>
+        <PendingCaseCard
+          case_={{ ...CASE, ...overrides }}
+          bucket="ready_to_freeze"
+          pariwarId={PARIWAR}
+          onDecision={vi.fn()}
+          pending={false}
+        />
+      </ul>
+    </QueryClientProvider>,
+  );
+};
+
 describe('<PendingCaseCard> — AC11, the return to the District Admin', () => {
   it('offers a RETURN action, and its label says "return" — never "reject" or "deny"', () => {
     setup();
@@ -127,15 +145,36 @@ describe('<PendingCaseCard> — AC11, the return to the District Admin', () => {
     });
   });
 
+  it('⛔ hides the return action on an ESCALATED-state claim — the server always refuses it there', () => {
+    // ⭐ 2026-09-23b: the button was offered on every `escalated` card and on routed cards, each a
+    // guaranteed 409 (`ClaimNotReturnableError` / the routing exclusion).
+    setup({ current_state: 'verifier_review' });
+    expect(screen.queryByTestId('return-to-district-admin')).toBeNull();
+  });
+
+  it('⛔ hides the return action on a claim routed to R9', () => {
+    setup({ routed_to_r9: true });
+    expect(screen.queryByTestId('return-to-district-admin')).toBeNull();
+  });
+
+  it('⭐ offers the return in each state the server accepts it from', () => {
+    for (const state of ['verifier_approved', 'reversed', 'state_trustee_freeze'] as const) {
+      const { unmount } = renderCard({ current_state: state });
+      expect(screen.getByTestId('return-to-district-admin')).toBeTruthy();
+      unmount();
+    }
+  });
+
   it('⛔ hides the return action on a claim ALREADY under correction (one open return at a time)', () => {
     setup({ under_correction: true });
     expect(screen.queryByTestId('return-to-district-admin')).toBeNull();
   });
 
-  it('⭐ badges a returned claim as "returned for correction" — ⛔ never as denied or rejected', () => {
+  it('⭐ badges a sent-back claim as "sent back for correction" — ⛔ never as denied or rejected, ⛔ nor "returned" (either half of AC5 sets it)', () => {
     setup({ under_correction: true });
     const badge = screen.getByTestId('under-correction-badge').textContent?.toLowerCase() ?? '';
-    expect(badge).toContain('returned for correction');
+    expect(badge).toContain('sent back for correction');
+    expect(badge).not.toContain('returned');
     expect(badge).not.toContain('denied');
     expect(badge).not.toContain('rejected');
     expect(badge).not.toContain('failed');
@@ -213,5 +252,34 @@ describe('<PendingCaseCard> — D3, the names disclosure', () => {
     expect(getNomineeNameCheck).toHaveBeenCalledWith(PARIWAR, CASE.claim_case_id);
     // ⛔ `-226` cl.3 — recording the verdict is the District Admin's alone.
     expect(screen.queryByTestId('name-check-form')).toBeNull();
+  });
+
+  it('⛔ CLOSING forgets the names — a reopen shows ⛔ no cached name before the new audited read returns (2026-09-23b)', async () => {
+    getNomineeNameCheck.mockReset();
+    getNomineeNameCheck.mockResolvedValueOnce(NAMES);
+    // The second (reopen) read never resolves — so anything shown meanwhile came from the cache.
+    getNomineeNameCheck.mockImplementationOnce(() => new Promise(() => {}));
+    setup();
+    const toggle = screen.getByTestId(`pending-case-name-check-${CASE.claim_case_id}`);
+
+    fireEvent.click(toggle);
+    expect(await screen.findByTestId('name-check-account-1')).toHaveTextContent('Rani Devi');
+    fireEvent.click(toggle); // close
+    fireEvent.click(toggle); // reopen
+
+    expect(await screen.findByTestId('name-check-loading')).toBeInTheDocument();
+    expect(screen.queryByText('Rani Devi')).toBeNull();
+    expect(screen.queryByText('Rani Kumari')).toBeNull();
+    // ⭐ NON-VACUITY: the reopen really asked again — it is a fresh, audited look.
+    expect(getNomineeNameCheck).toHaveBeenCalledTimes(2);
+  });
+
+  it('⛔ opening the disclosure makes ONE "Nominee name check" landmark — ⛔ not a wrapper and a panel with the same label (2026-09-23b/c)', async () => {
+    getNomineeNameCheck.mockReset();
+    getNomineeNameCheck.mockResolvedValue(NAMES);
+    setup();
+    fireEvent.click(screen.getByTestId(`pending-case-name-check-${CASE.claim_case_id}`));
+    await screen.findByTestId('name-check-account-1');
+    expect(document.querySelectorAll('[aria-label="Nominee name check"]')).toHaveLength(1);
   });
 });

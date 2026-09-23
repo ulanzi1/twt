@@ -14,7 +14,7 @@
 // though the operator is the one accountable: cl.5 rules the SYSTEM never acts on a mismatch, and a
 // "these look different" hint at filing would be the system acting.
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 // Story 6.18 (AC12) — the SHARED English-script predicate from `@twt/contracts`.
 // ⚠⚠ `isEnglishScriptName(x)`, ⛔ NOT `ENGLISH_NAME_REGEX.test(x.trim())` (code review 2026-09-20).
@@ -121,6 +121,24 @@ export function BankDetailsCard(props: BankDetailsCardProps): React.ReactElement
    */
   const [correctionReason, setCorrectionReason] = useState('');
 
+  // ⭐ FOCUS FOLLOWS THE TOGGLE (family 13(d), code review 2026-09-23b). "Correct these bank details"
+  // and "Cancel" each UNMOUNT the button that was pressed, so focus fell to `<body>` and a
+  // screen-reader operator on a live call was ⛔ not told the form had opened (or closed). The
+  // pressed button records where focus should land; the effect moves it once the DOM has changed.
+  const formRef = useRef<HTMLDivElement>(null);
+  const editButtonRef = useRef<HTMLButtonElement>(null);
+  const recordedMessageRef = useRef<HTMLParagraphElement>(null);
+  const focusAfterToggle = useRef<'form' | 'edit' | 'recorded' | null>(null);
+  useEffect(() => {
+    const target = focusAfterToggle.current;
+    focusAfterToggle.current = null;
+    if (target === 'form') formRef.current?.querySelector<HTMLInputElement>('input')?.focus();
+    if (target === 'edit') editButtonRef.current?.focus();
+    // ⭐ A successful CORRECTION lands on its confirmation (code review 2026-09-23c) — the Save button
+    // it came from unmounts, and focus fell to `<body>` with nothing announced.
+    if (target === 'recorded') recordedMessageRef.current?.focus();
+  }, [editing]);
+
   // ⚠ A change of claim resets EVERYTHING typed. The card is reused across filings, and account
   // numbers left over from another family's claim are the worst possible default.
   useEffect(() => {
@@ -193,6 +211,7 @@ export function BankDetailsCard(props: BankDetailsCardProps): React.ReactElement
     try {
       await onSubmit(body);
       // A successful write closes the re-entry; the parent's refetch flips `recorded`/`names`.
+      if (editing) focusAfterToggle.current = 'recorded';
       setEditing(false);
       setCorrectionReason('');
     } catch {
@@ -276,8 +295,22 @@ export function BankDetailsCard(props: BankDetailsCardProps): React.ReactElement
       ) : null}
 
       {recorded ? (
-        <div data-testid="helpline-bank-recorded" role="status">
-          <p className="text-sm">{resolveEn('helpline.bank.recorded')}</p>
+        // ⚠ ⛔ NOT a live region itself (code review 2026-09-23b). As `role="status"` it wrapped a
+        // nested `status`, a nested `alert`, both decrypted name lists and the Edit button, so every
+        // inner change re-read the WHOLE block — living nominees' names included — and the nested
+        // regions announced twice. Only the confirmation sentence announces now; the names-loading
+        // and names-error lines keep their own regions.
+        <div data-testid="helpline-bank-recorded">
+          <p
+            ref={recordedMessageRef}
+            // Focusable by script only — a successful correction moves focus here.
+            tabIndex={-1}
+            className="text-sm"
+            role="status"
+            data-testid="helpline-bank-recorded-message"
+          >
+            {resolveEn('helpline.bank.recorded')}
+          </p>
 
           {/* ── cl.1's whole point: the two names, side by side, AFTER submission ── */}
           {namesLoading ? (
@@ -337,10 +370,14 @@ export function BankDetailsCard(props: BankDetailsCardProps): React.ReactElement
           {!editing ? (
             <button
               type="button"
+              ref={editButtonRef}
               data-testid="helpline-bank-edit"
               className="mt-3 self-start rounded border px-3 py-1 text-sm"
               disabled={pending}
-              onClick={() => setEditing(true)}
+              onClick={() => {
+                focusAfterToggle.current = 'form';
+                setEditing(true);
+              }}
             >
               {resolveEn('helpline.bank.correct')}
             </button>
@@ -350,7 +387,7 @@ export function BankDetailsCard(props: BankDetailsCardProps): React.ReactElement
 
       {showForm ? (
         <>
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div ref={formRef} className="grid gap-3 sm:grid-cols-2">
             {accountBlock(0, 'helpline.bank.primary')}
             {accountBlock(1, 'helpline.bank.secondary')}
           </div>
@@ -386,6 +423,7 @@ export function BankDetailsCard(props: BankDetailsCardProps): React.ReactElement
                 className="self-start rounded border px-3 py-1 text-sm"
                 disabled={pending}
                 onClick={() => {
+                  focusAfterToggle.current = 'edit';
                   setEditing(false);
                   setValidationError(null);
                 }}

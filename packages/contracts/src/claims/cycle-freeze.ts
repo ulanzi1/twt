@@ -132,13 +132,16 @@ export const CycleFreezePendingItem = z
     concealment_flags: z.array(z.string()),
     /** True when the claim carries a LIVE route-to-R9 exclusion row → excluded from the commit set (AC4). */
     routed_to_r9: z.boolean(),
-    /** Story 6.18 (AC11) — the claim carries a LIVE `correction_return` row: the Pariwar Admin
-     *  returned it to the District Admin and it has not been resubmitted. ⛔ NOT a denial — it is
-     *  excluded from the commit set until the corrected accounts + a fresh name check land. */
+    /** Story 6.18 (AC5/AC11) — the claim is SENT BACK FOR CORRECTION, from EITHER half: a LIVE
+     *  `correction_return` row the Pariwar Admin wrote that has not been resubmitted, OR a CURRENT
+     *  name check carrying a `does_not_match` (the District Admin's own verdict — no return needed).
+     *  ⛔ NOT a denial — it is excluded from the commit set until the corrected accounts + a fresh
+     *  passing name check land. */
     under_correction: z.boolean(),
-    /** Story 6.18 (AC8) — the clerical reason CODES on the claim's latest recorded name check, when
-     *  it accepted a difference (`-226` cl.5's highlight). ⭐ NON-PII: codes only, ⛔ never a name.
-     *  Empty when no difference was recorded, or when no check exists. */
+    /** Story 6.18 (AC8) — the clerical reason CODES on the claim's CURRENT AND PASSING name check,
+     *  when it accepted a difference (`-226` cl.5's highlight). ⭐ NON-PII: codes only, ⛔ never a
+     *  name. Empty when no difference was recorded, or when no check exists, or when the latest
+     *  check is stale or not passing. */
     name_difference_reasons: z.array(NomineeNameClericalReason),
   })
   .strict();
@@ -163,6 +166,19 @@ export const CycleFreezePendingResponse = z
 export type CycleFreezePendingResponse = z.output<typeof CycleFreezePendingResponse>;
 
 // ── AC2/AC3/AC4/AC4b — the per-claim decision request ────────────────────────────────────────
+
+/**
+ * Story 6.18 (AC11) — the claim states a Pariwar Admin's `return_to_district_admin` is accepted from.
+ * ⭐ A MIRROR of the domain's `TRUSTEE_RETURNABLE_STATES` (which the admin app cannot import — it
+ * would pull `pg` into the bundle), held equal by `apps/api/tests/unit/cycle-freeze-returnable-parity.test.ts`.
+ * The card uses it so it never offers a Return the server is guaranteed to refuse (code review
+ * 2026-09-23b — the button showed on every `escalated` card).
+ */
+export const CYCLE_FREEZE_RETURNABLE_STATES = [
+  'verifier_approved',
+  'reversed',
+  'state_trustee_freeze',
+] as const;
 
 /** The four per-claim actions. `approve`/`deny` are the frozen votes (AC2/AC3); `route_to_r9` is the
  *  metadata-only routing (AC4); `resolve_escalation` resolves a verifier escalation (AC4b, direction in

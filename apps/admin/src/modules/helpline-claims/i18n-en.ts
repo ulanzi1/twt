@@ -88,6 +88,16 @@ const EN: Record<string, string> = {
     'The two accounts must be different — a second account is what lets the amount through if the first one fails.',
   // ⭐ AC6 — the claim WAITS for the accounts; it is never refused for the want of them.
   'helpline.bank.required': 'This claim needs both bank accounts before the District Admin can check it.',
+  // Code review 2026-09-23b — the status read is what `recorded` is DERIVED from; while it is loading
+  // or has failed, the card must ⛔ not present "nothing on file" (first-entry form, no correction
+  // reason) for a claim that may already hold two accounts.
+  'helpline.bank.statusLoading': 'Checking which bank details are already on file…',
+  'helpline.bank.statusError':
+    'The bank details on file could not be read just now. Try again before entering any — this claim may already have accounts saved.',
+  // Code review 2026-09-23c — a failed REFRESH of a status already read: the card stays, with this beside it.
+  'helpline.bank.statusRefreshError':
+    'The bank details could not be refreshed just now. What is shown may be out of date — try again.',
+  'helpline.bank.retry': 'Try again',
   // ── The CORRECTION path (code review 2026-09-20, D4) ─────────────────────────────
   // `-226` cl.1 puts the duty of making sure the names match on THIS operator, and `-227` cl.11
   // makes them the one who types the corrected details after the District Admin has called the

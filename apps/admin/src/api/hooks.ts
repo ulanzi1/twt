@@ -705,9 +705,8 @@ export const nomineeNameCheckKey = (pariwarId: string, claimCaseId: string) =>
  * The two names, on demand. ⭐ `enabled` is caller-controlled so the console can fetch this ONLY
  * when a District Admin opens the disclosure — the read decrypts a LIVING nominee's Tier-1 name and
  * writes an audit line, so it must ⛔ never fire as a side effect of rendering a list.
- */
-/**
- * The AC2 names read — ⭐ EXPLICITLY OPTED OUT OF BACKGROUND REFETCHING, and that is a PII
+ *
+ * ⭐ And it is EXPLICITLY OPTED OUT OF BACKGROUND REFETCHING, and that is a PII
  * decision, ⛔ not a performance one (code review 2026-09-20).
  *
  * ⚠⚠ Every fetch of this endpoint DECRYPTS a living nominee's Tier-1 name and writes an
@@ -731,11 +730,25 @@ export function useNomineeNameCheck(pariwarId: string, claimCaseId: string | nul
 }
 
 /**
- * Story 6.18 (AC11) — the District Admin's CORRECTION QUEUE.
- *
- * ⭐ UNLIKE the per-claim names read, this one MAY refetch freely: it decrypts no member or nominee
- * name and its audit line records only counts. It is a work queue — stale is the wrong default.
+ * ⭐ FORGET the decrypted names when a disclosure CLOSES (code review 2026-09-23b). A closed
+ * disclosure keeps its observer mounted with `enabled: false`, so `gcTime: 0` never starts and a
+ * living nominee's Tier-1 name stayed in the QueryClient for the host's lifetime — one per card on
+ * the cycle-freeze list. On reopen the cached names also rendered BEFORE the new audited read
+ * returned (and beside "could not be loaded" if it failed). Removing the entry on close means a
+ * reopen is a fresh, audited look, shown only once it succeeds.
  */
+export function useForgetNomineeNameCheck(pariwarId: string, claimCaseId: string | null) {
+  const qc = useQueryClient();
+  /** Forget THIS claim's names — or, given an id, that claim's (the console forgets the PREVIOUS
+   *  claim's on a claim change). */
+  return (otherClaimCaseId?: string) => {
+    qc.removeQueries({
+      queryKey: nomineeNameCheckKey(pariwarId, otherClaimCaseId ?? claimCaseId ?? ''),
+      exact: true,
+    });
+  };
+}
+
 /**
  * Story 6.18 (AC6/AC7) — what is ACTUALLY on file for this claim.
  * ⭐ The helpline card's `recorded` and its correction banner both come from here, ⛔ not from page
@@ -756,6 +769,14 @@ export function useNomineeBankStatusHelpline(pariwarId: string, claimCaseId: str
 export const claimsUnderCorrectionKey = (pariwarId: string) =>
   ['claims-under-correction', pariwarId] as const;
 
+/**
+ * Story 6.18 (AC11) — the District Admin's CORRECTION QUEUE.
+ *
+ * ⭐ UNLIKE the per-claim names read, this one MAY refetch freely: it decrypts no member or nominee
+ * NAME. ⚠ It does decrypt each Pariwar Admin's return note, and each one leaves its own
+ * claim-locating audit line (2026-09-23b) — a staff-authored note, which is why a refetch is
+ * acceptable here and ⛔ not on the names read. It is a work queue — stale is the wrong default.
+ */
 export function useClaimsUnderCorrection(pariwarId: string) {
   return useQuery({
     queryKey: claimsUnderCorrectionKey(pariwarId),

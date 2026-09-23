@@ -264,6 +264,20 @@ export function HelplineClaimPage({ pariwarId }: HelplineClaimPageProps): ReactE
    */
   const bankStatus = useNomineeBankStatusHelpline(pariwarId, filedClaimCaseId);
   const bankRecorded = (bankStatus.data?.accounts.length ?? 0) === 2;
+  // ⚠⚠ `bankRecorded` IS ONLY AN ANSWER ONCE THE STATUS READ HAS SUCCEEDED (code review 2026-09-23b).
+  // While it loads, or after it fails, `data` is undefined and `bankRecorded` reads `false` — which the
+  // card and the shell took as "nothing on file": the first-entry form with ⛔ no correction-reason
+  // field, the "needs both bank accounts" hint, a hidden correction banner, and ⛔ no error. On a
+  // claim that already held accounts, Save then 409'd `correction_reason_required` with no field to
+  // supply it (or, in the ordinary window, silently replaced accounts the operator never saw).
+  // ⚠⚠ KNOWN ⇔ DATA HAS BEEN READ AT LEAST ONCE, ⛔ not `isSuccess` (code review 2026-09-23c). With
+  // `retry: false`, `staleTime: 0` and window-focus refetch ON, ONE failed background refetch (alt-tab
+  // to the softphone, or the post-save invalidation) sets `status: 'error'` while keeping `data` — and
+  // `isSuccess` unmounted the card mid-call, taking every typed account number with it.
+  const bankStatusKnown = bankStatus.data !== undefined;
+  const retryBankStatus = (): void => {
+    void bankStatus.refetch();
+  };
   // ⭐ The names read is fetched ONLY once the accounts exist — before that there is nothing to
   // check, and the read decrypts a living nominee's name + writes an audit line, so it must not
   // fire speculatively.
@@ -333,8 +347,35 @@ export function HelplineClaimPage({ pariwarId }: HelplineClaimPageProps): ReactE
       onEscalate={escalate}
       // Story 6.18 (AC6/AC7) — cl.1 makes the match the operator's duty and cl.7 makes both
       // accounts mandatory; the card is where both are discharged.
-      bankRecorded={bankRecorded}
+      // ⭐ Unknown ≠ missing: while the status read is unresolved the shell shows ⛔ no "needs both
+      // accounts" hint, because that would be a claim about data we have not read.
+      bankRecorded={bankStatusKnown ? bankRecorded : true}
       bankSlot={
+        filedClaimCaseId !== null && !bankStatusKnown ? (
+          bankStatus.isError ? (
+            <div role="alert" data-testid="helpline-bank-status-error" className="text-sm text-status-fail-fg">
+              <p>{resolveEn('helpline.bank.statusError')}</p>
+              {/* ⭐ Retry IN PLACE, ⛔ never "Reload" — a reload drops the page's filed-claim result. */}
+              <button type="button" data-testid="helpline-bank-status-retry" className="mt-1 rounded border px-2 py-0.5" onClick={retryBankStatus}>
+                {resolveEn('helpline.bank.retry')}
+              </button>
+            </div>
+          ) : (
+            <p role="status" data-testid="helpline-bank-status-loading" className="text-sm opacity-80">
+              {resolveEn('helpline.bank.statusLoading')}
+            </p>
+          )
+        ) : (
+        <>
+        {/* A failed REFRESH of a status already read: the card STAYS, with the failure beside it. */}
+        {bankStatus.isError ? (
+          <div role="alert" data-testid="helpline-bank-status-refresh-error" className="text-sm text-status-fail-fg">
+            <p>{resolveEn('helpline.bank.statusRefreshError')}</p>
+            <button type="button" data-testid="helpline-bank-status-retry" className="mt-1 rounded border px-2 py-0.5" onClick={retryBankStatus}>
+              {resolveEn('helpline.bank.retry')}
+            </button>
+          </div>
+        ) : null}
         <BankDetailsCard
           // ⭐ `key` on the claim — a belt-and-braces reset of every field the card holds, so a
           // change of claim can never carry another family's typed account numbers across even if a
@@ -366,6 +407,8 @@ export function HelplineClaimPage({ pariwarId }: HelplineClaimPageProps): ReactE
           // AC5 — `-227` cl.11 makes THIS operator the one who types the corrected details.
           correctionNeeded={bankStatus.data?.correctionNeeded === true}
         />
+        </>
+        )
       }
     />
   );

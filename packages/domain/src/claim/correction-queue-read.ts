@@ -77,61 +77,163 @@ export interface ClaimUnderCorrectionRow {
 
 export interface ListClaimsUnderCorrectionOptions {
   readonly limit?: number;
+  /**
+   * The CALLER's scope test, applied to each qualifying row BEFORE the page limit counts it.
+   * ⭐ Code review 2026-09-23b: the route used to drop out-of-scope rows AFTER the domain had cut the
+   * page, so a District Admin whose returned claims sat past row N of the whole Pariwar's list got
+   * `items: []`. The domain still takes ⛔ no grants — the route passes a predicate over `district`.
+   * Omitted ⇒ every row is visible (the whole Pariwar's queue).
+   */
+  readonly isVisible?: (row: { readonly district: string | null }) => boolean;
 }
 
 /**
- * Every claim in this Pariwar that is currently UNDER CORRECTION, newest return first.
+ * The candidate claims one batch at a time — newest filed first, keyset-paged on
+ * `(created_at, claim_case_id)`.
  *
- * ⛔ NO N+1: four bounded queries for the whole page — the candidate claims (with their districts
- * resolved by ONE set-based correlated subquery, the `listPublicDirectoryMembers` shape), the live
- * return rows, and `readNomineeNameCheckFlagsBulk`'s own three.
- *
- * ⚠ THE CALLER MUST STILL FILTER BY SCOPE. This returns the whole Pariwar's correction queue with a
- * `district` on every row; it is the ROUTE that drops the rows outside the caller's geo grant, using
- * the same `scopeContains` the per-claim gate uses. Doing the filtering here would mean passing
- * grants into the domain, which no other read in this layer does.
+ * ⭐ THE SQL SUPERSET (code review 2026-09-23b). The scan used to take EVERY claim in the five
+ * correctable states and cut it to the page limit before asking whether any of them was under
+ * correction — so ordinary claims crowded returned ones off the District Admin's only list. It now
+ * takes only claims that CAN be under correction: a live `correction_return` row, OR at least one
+ * recorded check carrying a `does_not_match` verdict. That is a SUPERSET of the real condition (the
+ * check may be stale, or not the latest, and the return may be resubmitted) — the exact answer is
+ * still computed per row below, from the same bulk read every other surface uses.
+ * ⚠ Raw SQL with explicit `"claims".` qualifiers, ⛔ not a Drizzle column inside the subqueries: an
+ * outer Column in a same-named subquery renders unqualified and becomes a tautology
+ * ([[project_epic6_drizzle_correlated_subquery_bug]]).
  */
-export async function listClaimsUnderCorrection(
+async function candidateBatch(
   db: Db,
   pariwarId: PariwarId,
-  opts: ListClaimsUnderCorrectionOptions = {},
-): Promise<ClaimUnderCorrectionRow[]> {
-  const candidates = await db
-    .select({
-      claimCaseId: claims.claimCaseId,
-      deceasedMemberId: claims.deceasedMemberId,
-      currentState: claims.currentState,
-      createdAt: claims.createdAt,
-      // ⭐ The set-based district read — ONE correlated subquery for the whole page, ⛔ never a
-      // `getMemberPostingLatest` call per row (the N+1 AR-65 exists to prevent).
-      district: sql<string | null>`(
+  limit: number | undefined,
+  after: { readonly createdAtExact: string; readonly claimCaseId: string } | null,
+) {
+  return (
+    db
+      .select({
+        claimCaseId: claims.claimCaseId,
+        deceasedMemberId: claims.deceasedMemberId,
+        currentState: claims.currentState,
+        createdAt: claims.createdAt,
+        // ⚠ THE KEYSET CURSOR IS THE EXACT DATABASE VALUE, ⛔ not the JS `Date`: `created_at` is a
+        // microsecond `timestamptz` and a `Date` keeps milliseconds, so a `Date` cursor would skip
+        // every row filed between the truncated instant and the real one.
+        createdAtExact: sql<string>`"claims"."created_at"::text`,
+        // ⭐ The set-based district read — ONE correlated subquery for the whole batch, ⛔ never a
+        // `getMemberPostingLatest` call per row (the N+1 AR-65 exists to prevent).
+        district: sql<string | null>`(
         SELECT p.district
           FROM ${memberPostings} p
          WHERE p.member_id = "claims"."deceased_member_id" AND p.pariwar_id = "claims"."pariwar_id"
          ORDER BY p.created_at DESC, p.posting_id DESC
          LIMIT 1
       )`,
-    })
-    .from(claims)
-    .where(
-      and(
-        eq(claims.pariwarId, pariwarId),
-        inArray(claims.currentState, [...CORRECTABLE_SCAN_STATES]),
-      ),
-    )
-    .orderBy(desc(claims.createdAt))
-    // ⚠ CLAMPED INLINE, and the `domain-accessor-invariants` gate requires exactly that shape: an
-    // unclamped caller-supplied limit drains a connection, and a NEGATIVE one is a Postgres
-    // `LIMIT -1` pagination bypass ([[project_domain_limit_clamp_and_savepoint_retry]]).
-    .limit(
-      clampLimit(opts.limit, {
-        default: CORRECTION_QUEUE_DEFAULT_LIMIT,
-        cap: CORRECTION_QUEUE_MAX_LIMIT,
-      }),
-    );
+      })
+      .from(claims)
+      .where(
+        and(
+          eq(claims.pariwarId, pariwarId),
+          inArray(claims.currentState, [...CORRECTABLE_SCAN_STATES]),
+          sql`(
+          EXISTS (
+            SELECT 1 FROM ${claimStateTrusteeDecisions} d
+             WHERE d.pariwar_id = "claims"."pariwar_id"
+               AND d.claim_case_id = "claims"."claim_case_id"
+               AND d.phase = 'correction_return'
+               AND d.outcome = 'returned_for_correction'
+               AND d.superseded_at IS NULL
+          )
+          OR EXISTS (
+            SELECT 1 FROM events_log e
+             WHERE e.pariwar_id = "claims"."pariwar_id"
+               AND e.stream_id = "claims"."claim_case_id"
+               AND e.event_type = 'claim.nominee_name_checked'
+               AND e.payload -> 'accounts' @> '[{"verdict":"does_not_match"}]'::jsonb
+          )
+        )`,
+          after === null
+            ? undefined
+            : sql`("claims"."created_at", "claims"."claim_case_id") < (${after.createdAtExact}::timestamptz, ${after.claimCaseId}::uuid)`,
+        ),
+      )
+      .orderBy(desc(claims.createdAt), desc(claims.claimCaseId))
+      // ⚠ CLAMPED INLINE, and the `domain-accessor-invariants` gate requires exactly that shape: an
+      // unclamped caller-supplied limit drains a connection, and a NEGATIVE one is a Postgres
+      // `LIMIT -1` pagination bypass ([[project_domain_limit_clamp_and_savepoint_retry]]).
+      .limit(
+        clampLimit(limit, {
+          default: CORRECTION_QUEUE_DEFAULT_LIMIT,
+          cap: CORRECTION_QUEUE_MAX_LIMIT,
+        }),
+      )
+  );
+}
 
-  if (candidates.length === 0) return [];
+/**
+ * Every claim in this Pariwar that is currently UNDER CORRECTION and VISIBLE to the caller, newest
+ * return first — at most `limit` of them.
+ *
+ * ⛔ NO N+1: per batch, the candidate claims (districts resolved by ONE set-based correlated
+ * subquery), the live return rows, and `readNomineeNameCheckFlagsBulk`'s own three queries.
+ *
+ * ⭐ THE LIMIT COUNTS QUALIFYING, VISIBLE ROWS (code review 2026-09-23b). The candidates are read in
+ * batches of `limit`, newest filed first; each batch is filtered to the claims really under
+ * correction AND inside the caller's scope (`opts.isVisible`), and reading stops once `limit` rows
+ * are collected or the superset is exhausted. So a qualifying claim is never lost to rows that do
+ * not qualify, or that the caller cannot see. The page is then ordered newest return first.
+ * ⚠ When more than `limit` rows qualify, WHICH ones are returned is decided by filing date (the
+ * scan order); the response carries no cursor, so the default page is sized for a District
+ * Admin's real queue, and the SQL superset keeps the scan off every ordinary claim.
+ */
+export async function listClaimsUnderCorrection(
+  db: Db,
+  pariwarId: PariwarId,
+  opts: ListClaimsUnderCorrectionOptions = {},
+): Promise<ClaimUnderCorrectionRow[]> {
+  const pageSize = clampLimit(opts.limit, {
+    default: CORRECTION_QUEUE_DEFAULT_LIMIT,
+    cap: CORRECTION_QUEUE_MAX_LIMIT,
+  });
+  // ⚠ THE SCAN BATCH IS AT LEAST THE DEFAULT PAGE, ⛔ not the caller's page (code review 2026-09-23c).
+  // It was the caller's clamped `limit`, so `?limit=1` with mostly-invisible rows walked the whole
+  // superset ONE row per batch — about five queries per row, inside the request transaction.
+  const scanBatch = Math.max(pageSize, CORRECTION_QUEUE_DEFAULT_LIMIT);
+  const out: ClaimUnderCorrectionRow[] = [];
+  let after: { createdAtExact: string; claimCaseId: string } | null = null;
 
+  for (;;) {
+    const candidates = await candidateBatch(db, pariwarId, scanBatch, after);
+    if (candidates.length === 0) break;
+    const last = candidates[candidates.length - 1]!;
+    after = { createdAtExact: last.createdAtExact, claimCaseId: last.claimCaseId };
+
+    const visibleCandidates = opts.isVisible
+      ? candidates.filter((c) => opts.isVisible!({ district: c.district }))
+      : candidates;
+    if (visibleCandidates.length > 0) {
+      out.push(...(await qualifyingRows(db, pariwarId, visibleCandidates)));
+    }
+    if (out.length >= pageSize || candidates.length < scanBatch) break;
+  }
+
+  // Newest return first, then newest claim — a District Admin works the freshest discrepancy first.
+  const page = out.slice(0, pageSize);
+  page.sort((a, b) => {
+    const at = a.returnedAt?.getTime() ?? a.claimFiledAt.getTime();
+    const bt = b.returnedAt?.getTime() ?? b.claimFiledAt.getTime();
+    return bt - at;
+  });
+  return page;
+}
+
+type Candidate = Awaited<ReturnType<typeof candidateBatch>>[number];
+
+/** The candidates of one batch that are REALLY under correction (AC5's two halves), as rows. */
+async function qualifyingRows(
+  db: Db,
+  pariwarId: PariwarId,
+  candidates: readonly Candidate[],
+): Promise<ClaimUnderCorrectionRow[]> {
   const claimCaseIds = candidates.map((c) => c.claimCaseId);
   const returnRows = await db
     .select({
@@ -169,7 +271,7 @@ export async function listClaimsUnderCorrection(
     // ⭐ THE SAME TWO HALVES `isClaimUnderCorrection` collapses (AC5), applied per row. A returned
     // claim that has since been corrected AND re-checked is RESUBMITTED and drops off this list —
     // the District Admin's work on it is done, even though the return row itself survives until the
-    // Pariwar Admin's next vote supersedes it.
+    // Pariwar Admin's next vote (or next return) supersedes it.
     const resubmitted =
       ret !== undefined &&
       f !== undefined &&
@@ -193,12 +295,5 @@ export async function listClaimsUnderCorrection(
       accountsComplete: f?.accountsComplete ?? false,
     });
   }
-
-  // Newest return first, then newest claim — a District Admin works the freshest discrepancy first.
-  out.sort((a, b) => {
-    const at = a.returnedAt?.getTime() ?? a.claimFiledAt.getTime();
-    const bt = b.returnedAt?.getTime() ?? b.claimFiledAt.getTime();
-    return bt - at;
-  });
   return out;
 }

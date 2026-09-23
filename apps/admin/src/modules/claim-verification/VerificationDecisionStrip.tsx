@@ -139,6 +139,11 @@ export function VerificationDecisionStrip({
       // would leave pressing "1" as an unguarded path to the approve form, which is exactly the kind
       // of second entrance a keyboard-first console makes easy to forget.
       if (e.key === t.decision.approveShortcut && canApprove) chooseOutcome('approved');
+      // ⭐ BLOCKED ⇒ SAY WHY, ⛔ never a silent no-op (family 13(d), code review 2026-09-23b). On a
+      // keyboard-first console a dropped "1" reads as a broken shortcut; moving focus to the
+      // reason makes a screen reader speak it and shows a sighted user where to look.
+      else if (e.key === t.decision.approveShortcut)
+        document.getElementById('approve-blocked-reason')?.focus();
       else if (e.key === t.decision.denyShortcut) chooseOutcome('denied');
       else if (e.key === t.decision.escalateShortcut) chooseOutcome('escalated');
     };
@@ -211,8 +216,10 @@ export function VerificationDecisionStrip({
             onClick={() => chooseOutcome('approved')}
             aria-pressed={outcome === 'approved'}
             // ⭐ A DISABLED BUTTON IS NOT FOCUSABLE, so a screen-reader user tabbing through the
-            // controls never reaches it and is never told WHY approval is unavailable — the reason
-            // paragraph below is, to them, unattached text. `aria-describedby` binds the two.
+            // controls never reaches it. `aria-describedby` binds the reason for browse-mode users;
+            // ⚠ it does ⛔ NOT help a Tab user (corrected 2026-09-23b — this comment said it did).
+            // What reaches them: the reason is a `role="status"` live region (announced when it
+            // appears), and pressing "1" while blocked FOCUSES it (the shortcut handler above).
             {...(!canApprove && approveBlockedReason != null && approveBlockedReason !== ''
               ? { 'aria-describedby': 'approve-blocked-reason' }
               : {})}
@@ -225,6 +232,8 @@ export function VerificationDecisionStrip({
           {!canApprove && approveBlockedReason != null && approveBlockedReason !== '' ? (
             <p
               id="approve-blocked-reason"
+              // Focusable by script only — the blocked "1" shortcut moves focus here.
+              tabIndex={-1}
               role="status"
               className="w-full text-xs text-status-warn-fg"
               data-testid="approve-blocked-reason"

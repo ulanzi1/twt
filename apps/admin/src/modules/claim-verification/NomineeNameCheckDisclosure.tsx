@@ -20,7 +20,7 @@
 
 import { useState } from 'react';
 
-import { useNomineeNameCheck } from '../../api/hooks.js';
+import { useForgetNomineeNameCheck, useNomineeNameCheck } from '../../api/hooks.js';
 import { NomineeNameCheckPanel } from './NomineeNameCheckPanel.js';
 import { verifierConsoleEn as t } from './i18n-en.js';
 
@@ -38,21 +38,30 @@ export function NomineeNameCheckDisclosure({
 }: NomineeNameCheckDisclosureProps): React.ReactElement {
   const [open, setOpen] = useState(false);
   const nameCheck = useNomineeNameCheck(pariwarId, claimCaseId, open);
+  const forgetNames = useForgetNomineeNameCheck(pariwarId, claimCaseId);
 
+  // ⚠ A plain `<div>`, ⛔ NOT a labelled `<section>` (code review 2026-09-23b). The panel inside is
+  // itself a `<section aria-label={t.nameCheck.heading}>` — the SAME string — so the wrapper
+  // re-created the duplicate landmark the ticked 2026-09-20 R9 bullet removed, now on two surfaces.
   return (
-    <section className="mt-3 border-t pt-3" aria-label={t.nameCheck.disclosureLabel}>
+    <div className="mt-3 border-t pt-3">
       <button
         type="button"
         data-testid={testId}
         className="text-sm underline"
         aria-expanded={open}
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => {
+          // ⭐ Closing FORGETS the names (see `useForgetNomineeNameCheck`).
+          if (open) forgetNames();
+          setOpen((v) => !v);
+        }}
       >
         {t.nameCheck.disclosureToggle}
       </button>
       {open ? (
         <NomineeNameCheckPanel
-          data={nameCheck.data}
+          // ⛔ No stale names beside a read error (code review 2026-09-23c).
+          data={nameCheck.isError ? undefined : nameCheck.data}
           loading={nameCheck.isLoading}
           // ⚠ The read's own failure is surfaced, ⛔ never swallowed into an empty panel: a 403
           // (including the null-district hole) or a 5xx must not look like "this claim has no names".
@@ -63,6 +72,6 @@ export function NomineeNameCheckDisclosure({
           }}
         />
       ) : null}
-    </section>
+    </div>
   );
 }

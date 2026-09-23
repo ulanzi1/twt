@@ -59,12 +59,14 @@ export interface CycleFreezePendingCase {
   readonly signalsSummary: string;
   readonly concealmentFlags: string[];
   readonly routedToR9: boolean;
-  /** Story 6.18 (AC11) — the claim carries a LIVE `correction_return` row: the Pariwar Admin sent it
-   *  back to the District Admin and it has not been resubmitted. ⛔ NOT a denial; the claim is
-   *  UNDER CORRECTION and is excluded from the commit set until the correction + a fresh check land. */
+  /** Story 6.18 (AC5/AC11) — the claim is UNDER CORRECTION, from EITHER half: a LIVE
+   *  `correction_return` row the Pariwar Admin wrote that has not been resubmitted, OR a CURRENT
+   *  name check carrying a `does_not_match` (no return row needed — see the `checkSendsBack` loop
+   *  below). ⛔ NOT a denial; the claim is excluded from the commit set until the correction + a
+   *  fresh passing check land. */
   readonly underCorrection: boolean;
-  /** Story 6.18 (AC8) — the clerical reason CODES on the claim's LATEST recorded name check, when
-   *  that check accepted a difference. ⭐ NON-PII: reason codes only, ⛔ never a name. Empty when the
+  /** Story 6.18 (AC8) — the clerical reason CODES on the claim's CURRENT AND PASSING name check,
+   *  when that check accepted a difference (a stale or non-passing check yields `[]`). ⭐ NON-PII: reason codes only, ⛔ never a name. Empty when the
    *  check recorded no difference, or when no check exists. The flag comes from the District Admin's
    *  RECORDED judgement — ⛔ never from a computer comparison (`-226` cl.5). */
   readonly nameDifferenceReasons: readonly string[];

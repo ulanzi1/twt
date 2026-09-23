@@ -377,8 +377,10 @@ export type ClaimUnderCorrectionItem = z.output<typeof ClaimUnderCorrectionItem>
  * `GET …/admin/claims/under-correction` — the District Admin's queue.
  *
  * ⭐ SCOPE-FILTERED SERVER-SIDE: the rows are exactly the claims whose deceased member's posting
- * district falls inside the caller's own geo grant, decided by the same `scopeContains` the
- * per-claim district gate uses. A District Admin for one district ⛔ never sees another's.
+ * district the caller holds `claim.view_nominee_name_check` over — `rbac.hasPermission` per row, the
+ * same predicate the per-claim district gate evaluates (it was raw `scopeContains` over every grant
+ * until 2026-09-23b, which let a key-less wider grant widen the queue). A District Admin for one
+ * district ⛔ never sees another's.
  */
 export const ClaimsUnderCorrectionResponse = z
   .object({

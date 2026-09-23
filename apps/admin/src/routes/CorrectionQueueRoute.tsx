@@ -22,14 +22,42 @@
 
 import { useNavigate, useParams } from '@tanstack/react-router';
 import type { ReactElement } from 'react';
+import { useEffect } from 'react';
 
-import { useClaimsUnderCorrection } from '../api/hooks.js';
+import { ApiError } from '../api/client.js';
+import { useClaimsUnderCorrection, useSession } from '../api/hooks.js';
 import { verifierConsoleEn as t } from '../modules/claim-verification/i18n-en.js';
 
+/**
+ * ⭐ THE SESSION GATE every sibling route has (code review 2026-09-23b) — this was the only file in
+ * `routes/` without `useSession`, so an expired session read *"The list could not be loaded"* with
+ * ⛔ no way back to sign in, and a 403 looked like an outage. The queue itself is fetched only once
+ * the session is known (`CorrectionQueueView`).
+ */
 export function CorrectionQueueRoute(): ReactElement {
+  const session = useSession();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (session.isError) void navigate({ to: '/login' });
+  }, [session.isError, navigate]);
+
+  if (session.isLoading) return <p role="status">Checking your session…</p>;
+  if (session.isError) return <p role="status">Redirecting to sign in…</p>;
+  return <CorrectionQueueView />;
+}
+
+function CorrectionQueueView(): ReactElement {
   const { pariwarId } = useParams({ from: '/p/$pariwarId/claims/under-correction' });
   const navigate = useNavigate();
   const queue = useClaimsUnderCorrection(pariwarId);
+  // ⭐ THE QUEUE'S OWN 401/403 (code review 2026-09-23c — the other half of the 09-23b bullet). The
+  // session gate above only sees the SESSION read: a queue 401 while that read is still cached never
+  // redirected, and a 403 rendered as "could not be loaded" — an outage, which it is ⛔ not.
+  const queueStatus = queue.error instanceof ApiError ? queue.error.status : null;
+  useEffect(() => {
+    if (queueStatus === 401) void navigate({ to: '/login' });
+  }, [queueStatus, navigate]);
 
   return (
     <main className="mx-auto max-w-4xl p-4">
@@ -39,6 +67,10 @@ export function CorrectionQueueRoute(): ReactElement {
       {queue.isLoading ? (
         <p role="status" data-testid="correction-queue-loading" className="mt-4 text-sm">
           {t.correctionQueue.loading}
+        </p>
+      ) : queueStatus === 403 ? (
+        <p role="alert" data-testid="correction-queue-forbidden" className="mt-4 text-sm">
+          {t.correctionQueue.forbidden}
         </p>
       ) : queue.isError ? (
         <p role="alert" data-testid="correction-queue-error" className="mt-4 text-sm">

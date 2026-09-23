@@ -59,6 +59,7 @@ import {
   NomineeNameCheckRequiredError,
 } from './errors.js';
 import {
+  NOMINEE_NAME_CHECK_RECORDABLE_STATES,
   type NomineeNameCheckSnapshot,
   assertNomineeNameCheckForApproval,
   isClaimUnderCorrection,
@@ -558,7 +559,10 @@ export async function voteOnFrozenClaim(
   //   · a D5 POST-APPROVAL CORRECTION (`-227` cl.12) — a helpline operator corrected an account after
   //     the District Admin approved, which moves `updated_at`, makes the recorded check STALE, and
   //     must send the claim back to the District Admin to look again.
-  // ⛔ A DENY IS NEVER GATED (cl.6/cl.7 — a claim is never refused over a name or a missing account).
+  // ⛔ P3 NEVER GATES A DENY (cl.6/cl.7 — a claim is never refused over a name or a missing account).
+  // ⚠ The live-RETURN block above DOES refuse a deny as well as an approval — deliberately, per
+  // `-229`/`-230` consequence 1, until Story 6-19 builds the 90-day period after which a refusal
+  // becomes possible. The two rules are different rules; this one is only about the name check.
   if (input.outcome === 'approved') {
     await assertNomineeNameCheckForApproval(
       db,
@@ -699,7 +703,8 @@ export interface ReturnToDistrictAdminInput extends TrusteeWriteBase {
  * @throws TrusteeClaimNotFoundError   tenant-scoped miss (→ 404)
  * @throws ClaimNotReturnableError     outside `TRUSTEE_RETURNABLE_STATES` (→ 409)
  * @throws TrusteeReasonCodeError      missing/incompatible reason code (→ 400)
- * @throws TrusteeDecisionConflictError  a live return row already exists (→ 409, the partial-unique)
+ * @throws TrusteeDecisionConflictError  a live, UNRESUBMITTED return row already exists (→ 409); a
+ *   RESUBMITTED one is superseded and the new return recorded (the loop repeats, `-230` cl.2)
  */
 export async function returnToDistrictAdmin(
   client: pg.PoolClient,
@@ -721,6 +726,39 @@ export async function returnToDistrictAdmin(
   // that can no longer happen could clear.
   if (await hasLiveRoutedRow(db, input.pariwarId, input.claimCaseId)) {
     throw new TrusteeExclusionConflictError(input.claimCaseId, 'routing');
+  }
+
+  // ⭐ A SECOND RETURN, after the claim was corrected and re-checked (code review 2026-09-23b).
+  // The first return row survives the resubmission — only the next VOTE supersedes it — so without
+  // this the one-live-row partial-unique turned every second return into a 409 the Pariwar Admin
+  // could never clear, while the card (which reports a resubmitted claim as ⛔ not under
+  // correction) kept offering the button. `2026-09-20-230` cl.2 (*"second return restart the
+  // clock"*) presumes the loop repeats. ⇒ a RESUBMITTED live return is superseded here with the
+  // vote's conditional shape (0 rows ⇒ 409, so two racing returns cannot both proceed); an
+  // UNRESUBMITTED one is still a 409 — the claim is already with the District Admin.
+  const liveReturn = await getLiveReturnRow(db, input.pariwarId, input.claimCaseId);
+  if (liveReturn) {
+    const resubmitted = await isReturnedClaimResubmitted(
+      db,
+      input.pariwarId,
+      input.claimCaseId,
+      claimRow.deceasedMemberId,
+      liveReturn.decidedAt,
+    );
+    if (!resubmitted) throw new TrusteeDecisionConflictError(input.claimCaseId, 'correction_return');
+    const superseded = await db
+      .update(claimStateTrusteeDecisions)
+      .set({ supersededAt: sql`now()` })
+      .where(
+        and(
+          eq(claimStateTrusteeDecisions.decisionId, liveReturn.decisionId),
+          isNull(claimStateTrusteeDecisions.supersededAt),
+        ),
+      )
+      .returning({ decisionId: claimStateTrusteeDecisions.decisionId });
+    if (superseded.length === 0) {
+      throw new TrusteeDecisionConflictError(input.claimCaseId, 'correction_return');
+    }
   }
 
   let decision: ClaimStateTrusteeDecisionRow;
@@ -865,7 +903,8 @@ export async function isReturnedClaimResubmitted(
 
 /** The one answer to *"is this claim under correction?"*, with the parts that produced it. */
 export interface ClaimCorrectionState {
-  /** AC5 — the bank details need correcting, from EITHER half. */
+  /** AC5 — the bank details need correcting, from EITHER half, AND the claim is in a state where a
+   *  correction can still be re-checked (`NOMINEE_NAME_CHECK_RECORDABLE_STATES`). */
   readonly underCorrection: boolean;
   /** A live `correction_return` row exists (the Pariwar Admin sent it back). */
   readonly hasLiveReturn: boolean;
@@ -888,12 +927,22 @@ export interface ClaimCorrectionState {
  * those computed its own answer and three of the four were wrong in a different way.
  *
  * ⚠ Call inside the caller's transaction whenever the answer gates a write.
+ *
+ * ⚠⚠ THE STATE WINDOW IS PART OF THE DEFINITION (code review 2026-09-23b). Without it a claim whose
+ * check still carried `does_not_match` stayed "under correction" after a verifier DENIED it and
+ * through its appeal: the filer was told *"your claim … has not been refused"* on a refused claim,
+ * the helpline was invited to rewrite its accounts, and a rewrite there staled the check in a state
+ * where no fresh check can be recorded. ⭐ A correction is meaningful only where the District Admin
+ * can then look again — exactly `NOMINEE_NAME_CHECK_RECORDABLE_STATES`, a superset of
+ * `TRUSTEE_RETURNABLE_STATES` — so outside it the answer is `false`, for every consumer at once.
+ * The component flags (`hasLiveReturn`, `resubmitted`, `checkSendsBack`) stay unfiltered.
  */
 export async function resolveClaimCorrectionState(
   db: Db,
   pariwarId: PariwarId,
   claimCaseId: ClaimId,
   deceasedMemberId: MemberId,
+  currentState: string,
 ): Promise<ClaimCorrectionState> {
   const snapshot = await readNomineeNameCheckSnapshot(db, pariwarId, claimCaseId, deceasedMemberId);
   const returnRow = await getLiveReturnRow(db, pariwarId, claimCaseId);
@@ -911,8 +960,12 @@ export async function resolveClaimCorrectionState(
 
   const hasLiveReturn = returnRow !== undefined;
   const checkSendsBack = snapshot.sendsBack;
+  const inCorrectableState = (NOMINEE_NAME_CHECK_RECORDABLE_STATES as readonly string[]).includes(
+    currentState,
+  );
   return {
-    underCorrection: isClaimUnderCorrection(hasLiveReturn && !resubmitted, checkSendsBack),
+    underCorrection:
+      inCorrectableState && isClaimUnderCorrection(hasLiveReturn && !resubmitted, checkSendsBack),
     hasLiveReturn,
     resubmitted,
     checkSendsBack,

@@ -1,9 +1,13 @@
-// member_nominees write accessor — Story 3.4 (Task 2).
+// member_nominees write accessor — Story 3.4 (Task 2); re-scoped by Story 6.20 (D1, D16).
 //
-// The declare write: a member declares 1–2 nominees → LATEST-WINS replace. In ONE tx it
-// DELETEs all existing rows for the member then INSERTs the new 1–2 rows (AC5 — a re-
-// declaration via Life Events / Story 3.9 replaces the projection; the immutable event
-// stream is the timeline, this projection is the current effective row-set, R1). TENANT-
+// The declare write: a member declares 1–2 nominees → LATEST-WINS replace of the CURRENT PROJECTION.
+// In ONE tx it DELETEs all existing rows for the member then INSERTs the new 1–2 rows.
+// ⭐ Story 6.20: this is ⛔ NO LONGER the whole write. The projection's delete-then-insert used to
+// DESTROY the earlier declaration; the history now lives in `member_nominee_versions`
+// (`declaration-history.ts`), appended in the SAME transaction by the handler. `member_nominees` is
+// always the LATEST version by `version_no` per rank (D16) — ⛔ never the effective (as-at-death) set,
+// which is `claim/nominee-effective.ts`'s. ⚠ `epics.md` Story 3.4's *"the latest event is the effective
+// declaration"* is CONTRADICTED BY `2026-09-20-235` consequence 1 (annotated there, ⛔ not rewritten). TENANT-
 // scoped (RLS `withCheck` enforces the caller's `app.pariwar_id` matches `pariwarId`); runs
 // its statements DIRECTLY on the passed (scoped) `db`, so a scoped caller is already inside
 // the `SET LOCAL app.pariwar_id` transaction (the member_kyc_profiles write precedent).
@@ -78,4 +82,57 @@ export async function replaceMemberNominees(
     throw new Error('[replaceMemberNominees] insert returned fewer rows than declared — check session scope');
   }
   return inserted;
+}
+
+export interface ApplyCorrectionToProjectionInput {
+  memberId: MemberId;
+  pariwarId: PariwarId;
+  rank: 1 | 2;
+  nameCiphertext: string;
+  relationship: string;
+  mobileCiphertext: string;
+  addressCiphertext: string | null;
+}
+
+/**
+ * Story 6.20 (D7, D16) — apply an APPROVED correction to ONE rank of the current projection, so
+ * `member_nominees` stays "the latest version by `version_no`" once the correction's version is the
+ * latest. ⛔ The split is ⛔ not touched: a correction inherits the corrected version's `split_pct`
+ * (D17(b)), which is the value already on this row.
+ *
+ * ⚠ The row MUST exist: a correction targets the rank's STANDING version, and the projection holds the
+ * rank's LATEST — if the latest was a tombstone (rank vacated after the death) the projection has no
+ * row, and the correction is RE-INSERTED with the target's split. The caller passes that split.
+ */
+export async function applyCorrectionToProjection(
+  db: Db,
+  input: ApplyCorrectionToProjectionInput & { splitPct: number },
+): Promise<void> {
+  const updated = await db
+    .update(memberNominees)
+    .set({
+      nameCiphertext: input.nameCiphertext,
+      relationship: input.relationship,
+      mobileCiphertext: input.mobileCiphertext,
+      addressCiphertext: input.addressCiphertext,
+    })
+    .where(
+      and(
+        eq(memberNominees.pariwarId, input.pariwarId),
+        eq(memberNominees.memberId, input.memberId),
+        eq(memberNominees.rank, input.rank),
+      ),
+    )
+    .returning({ rank: memberNominees.rank });
+  if (updated.length > 0) return;
+  await db.insert(memberNominees).values({
+    memberId: input.memberId,
+    pariwarId: input.pariwarId,
+    rank: input.rank,
+    nameCiphertext: input.nameCiphertext,
+    relationship: input.relationship,
+    mobileCiphertext: input.mobileCiphertext,
+    addressCiphertext: input.addressCiphertext,
+    splitPct: input.splitPct,
+  });
 }

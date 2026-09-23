@@ -48,7 +48,7 @@ const NameCheckParam = z.object({ pariwarId: z.string().uuid(), claimCaseId: z.s
  * Runs AFTER scope-resolution (needs `request.scopeTx`). A claim missing in this Pariwar stashes
  * `null` ⇒ the district gate fails closed to 403, so the boundary never leaks existence.
  */
-function resolveNomineeNameCheckDistrict(): preHandlerHookHandler {
+export function resolveNomineeNameCheckDistrict(): preHandlerHookHandler {
   return async function preHandler(request: FastifyRequest): Promise<void> {
     const scopeTx = request.scopeTx;
     if (!scopeTx) throw new UnauthorizedError('Authentication required', 'auth.session_required');

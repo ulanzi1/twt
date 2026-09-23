@@ -29,8 +29,39 @@ import { EnglishScriptName, MobileNumber } from '../_common/primitives.js';
  * Nominee relationship-to-member. Constrained HERE (data quality) rather than at the DB,
  * where `relationship` is plain Tier-3 text (the kyc_transactions.status "text for the swap
  * seam" posture). The server stores the validated label verbatim.
+ *
+ * ⭐ STORY 6.20 (AC12) — FIFTEEN values replace the shipped five (`2026-09-21-237` cl.1, Trustee-
+ * ratified): spouse, mother, father, son, daughter, brother, sister, uncle, aunt, cousin,
+ * niece/nephew, grandchild, sister-in-law, daughter-in-law, other.
+ * ⚠ THESE ARE WIRE CODES, ⛔ NOT THE RATIFIED LABELS: `NomineeForm.tsx` builds its copy key as
+ * `nominees.relationship_${code}`, so a code of `niece/nephew` would produce an i18n key with a slash.
+ * The codes are snake_case identifiers; the ratified wording lives in the en/hi label values.
+ * ⚠ `other` FORECLOSES a later correction (`-237` cl.2 — *"we cannot really establish relationship and
+ * therefore no correction will be allowed"*) — the member is told so at the picker.
+ * ⛔ No migration and ⛔ no backfill: the DB column is plain text and nothing is in production (`-232`).
+ * ⛔ `ClaimantRelationship` (claims/filing.ts) is a DIFFERENT list — the claimant's relationship to the
+ * deceased — and stays five values.
+ * ⚠ Still OPEN, recorded in `-237`: ⛔ no brother-in-law / son-in-law / mother-in-law / father-in-law /
+ * grandparent — a member naming one falls to `other`. Kept as ratified (BigDev, 2026-09-21).
  */
-export const NomineeRelationship = z.enum(['spouse', 'child', 'parent', 'sibling', 'other']);
+export const NOMINEE_RELATIONSHIP_CODES = [
+  'spouse',
+  'mother',
+  'father',
+  'son',
+  'daughter',
+  'brother',
+  'sister',
+  'uncle',
+  'aunt',
+  'cousin',
+  'niece_nephew',
+  'grandchild',
+  'sister_in_law',
+  'daughter_in_law',
+  'other',
+] as const;
+export const NomineeRelationship = z.enum(NOMINEE_RELATIONSHIP_CODES);
 export type NomineeRelationship = z.output<typeof NomineeRelationship>;
 
 // ── declare ───────────────────────────────────────────────────────────────────────────
@@ -90,6 +121,12 @@ export type NomineeSummaryEntry = z.output<typeof NomineeSummaryEntry>;
 export const NomineeStatusResponse = z
   .object({
     nominees: z.array(NomineeSummaryEntry),
+    /**
+     * Story 6.20 (AC2) — the declaration is LOCKED: a claim was filed for this member as the deceased
+     * (`2026-09-20-234` V), and ⛔ no innocence finding has released it. A declare is then refused with
+     * 409 `nominee.locked_claim_filed`; a genuine mistake goes through the correction route instead.
+     */
+    locked: z.boolean(),
   })
   .strict();
 export type NomineeStatusResponse = z.output<typeof NomineeStatusResponse>;

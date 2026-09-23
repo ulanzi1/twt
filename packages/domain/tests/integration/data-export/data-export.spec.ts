@@ -31,7 +31,7 @@ import {
 import { dataExportId as toDataExportId, memberId as toMemberId } from '../../../src/ids/index.js';
 import * as schema from '../../../src/schema/index.js';
 import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
-import { PARIWAR_A, PARIWAR_B, enterAppScope, seedMember } from '../_helpers.js';
+import { PARIWAR_A, PARIWAR_B, enterAppScope, seedMember, seedNomineeDeclaration } from '../_helpers.js';
 
 const NOW = new Date('2026-07-02T10:00:00Z');
 
@@ -148,6 +148,39 @@ describe.skipIf(!hasDatabase)('data_exports store + assemble — RLS + cascade +
     const manifest = sections['manifest.json'] as { files: string[]; schemaVersion: number };
     expect(manifest.files).toHaveLength(7);
     expect(manifest.schemaVersion).toBe(1);
+  });
+
+  it('⭐ Story 6.20 (D11) — the export carries the nominee HISTORY: every version, decrypted, tombstone included', async () => {
+    const { tx, client } = getTx();
+    const { kms, kekRef } = fakeKms();
+    const mid = randomUUID();
+    await seedMember(tx, PARIWAR_A, { memberId: mid, state: 'active', stateEventVersion: 4 });
+    await enterAppScope(client, PARIWAR_A);
+    const enc = async (v: string) =>
+      serializeEnvelope(await encryptTier1(Buffer.from(v, 'utf-8'), { pariwarId: PARIWAR_A, fieldClass: 'member_nominee' }, kms, kekRef));
+    await seedNomineeDeclaration(tx, PARIWAR_A, mid, {
+      nominees: [
+        { nameCiphertext: await enc('Asha Devi'), mobileCiphertext: await enc('9876543210') },
+        { nameCiphertext: await enc('Ravi Kumar'), mobileCiphertext: await enc('9988776655') },
+      ],
+      ensureMember: false,
+    });
+    await seedNomineeDeclaration(tx, PARIWAR_A, mid, {
+      nominees: [{ nameCiphertext: await enc('Asha Devi'), mobileCiphertext: await enc('9876543210') }],
+      ensureMember: false,
+    });
+    const sections = await assembleMemberExport(
+      tx,
+      { kms, kekRef },
+      { exportId: randomUUID(), memberId: toMemberId(mid), pariwarId: PARIWAR_A, now: NOW },
+    );
+    const profile = sections['profile.json'] as { nomineeHistory: { rank: number; versionNo: number; kind: string; name: string | null }[] };
+    expect(profile.nomineeHistory.map((v) => [v.rank, v.versionNo, v.kind, v.name])).toEqual([
+      [1, 1, 'declared', 'Asha Devi'],
+      [1, 2, 'declared', 'Asha Devi'],
+      [2, 1, 'declared', 'Ravi Kumar'],
+      [2, 2, 'vacated', null],
+    ]);
   });
 
   it('assemble: a WITHDRAWN member still produces a valid payload (export up to withdrawal point)', async () => {

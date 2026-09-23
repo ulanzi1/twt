@@ -63,6 +63,8 @@ describe('<ConvergenceDecisionStrip>', () => {
     expect(screen.queryByTestId('convergence-override-modal')).not.toBeInTheDocument();
     fireEvent.click(screen.getByTestId(`convergence-override-${ATTEMPT_ID}-${CLAIM_ID}`));
     expect(screen.getByTestId('convergence-override-modal')).toBeInTheDocument();
+    // Story 6.20 (AC13, T17) — the refile-during-appeal trap is named where the override is exercised.
+    expect(screen.getByTestId('convergence-override-refile-note').textContent).toMatch(/under appeal/);
 
     // Confirm is disabled with an empty / too-short reason (mandatory-reason gate).
     const confirm = screen.getByTestId('convergence-override-confirm');

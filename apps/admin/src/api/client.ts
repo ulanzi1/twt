@@ -257,6 +257,16 @@ import {
   NomineeNameCheckResponse,
   NomineeNameCheckWriteResponse,
   type NomineeNameCheckRequest,
+  NomineeCorrectionListResponse,
+  NomineeCorrectionWriteResponse,
+  NomineeDeclarationSnapshotsResponse,
+  NomineeDeclarationTimelineResponse,
+  NomineeDeterminationWriteResponse,
+  NomineeRefusalListResponse,
+  NomineeCorrectionPendingListResponse,
+  type NomineeCorrectionDecisionRequest,
+  type NomineeCorrectionRaiseRequest,
+  type NomineeDeterminationRequest,
   RecordNomineeBankResponse,
   type RecordNomineeBankHelplineRequest,
 } from '@twt/contracts';
@@ -1361,6 +1371,64 @@ export function postNomineeNameCheck(
     NomineeNameCheckWriteResponse,
     { method: 'POST', body: JSON.stringify(body) },
   );
+}
+
+// ── Story 6.20 — the nominee declaration HISTORY ──────────────────────────────
+// The timeline is METADATA; the snapshots DECRYPT (audited, on demand only). The server is the boundary
+// for every write (the four `-241` keys); the client carries ⛔ no actor identity.
+
+const claimBase = (pariwarId: string, claimCaseId: string): string =>
+  `/api/v1/p/${encodeURIComponent(pariwarId)}/admin/claims/${encodeURIComponent(claimCaseId)}`;
+
+export function getNomineeDeclarationTimeline(pariwarId: string, claimCaseId: string) {
+  return apiFetch(`${claimBase(pariwarId, claimCaseId)}/nominee-declaration`, NomineeDeclarationTimelineResponse);
+}
+
+export function getNomineeDeclarationSnapshots(pariwarId: string, claimCaseId: string) {
+  return apiFetch(`${claimBase(pariwarId, claimCaseId)}/nominee-declaration/snapshots`, NomineeDeclarationSnapshotsResponse);
+}
+
+export function postNomineeDetermination(pariwarId: string, claimCaseId: string, body: NomineeDeterminationRequest) {
+  return apiFetch(`${claimBase(pariwarId, claimCaseId)}/nominee-determination`, NomineeDeterminationWriteResponse, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
+export function getNomineeCorrections(pariwarId: string, claimCaseId: string) {
+  return apiFetch(`${claimBase(pariwarId, claimCaseId)}/nominee-corrections`, NomineeCorrectionListResponse);
+}
+
+export function postNomineeCorrectionRaise(pariwarId: string, claimCaseId: string, body: NomineeCorrectionRaiseRequest) {
+  return apiFetch(`${claimBase(pariwarId, claimCaseId)}/nominee-corrections`, NomineeCorrectionWriteResponse, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
+/** STEP 1 (`district`) or STEP 2 (`pariwar`) of a nominee correction. */
+export function postNomineeCorrectionDecision(
+  pariwarId: string,
+  claimCaseId: string,
+  correctionId: string,
+  step: 'district' | 'pariwar',
+  body: NomineeCorrectionDecisionRequest,
+) {
+  return apiFetch(
+    `${claimBase(pariwarId, claimCaseId)}/nominee-corrections/${encodeURIComponent(correctionId)}/${step}-decision`,
+    NomineeCorrectionWriteResponse,
+    { method: 'POST', body: JSON.stringify(body) },
+  );
+}
+
+/** The Pariwar Admin's queue of nominee corrections awaiting STEP 2. */
+export function getPendingNomineeCorrections(pariwarId: string) {
+  return apiFetch(`/api/v1/p/${encodeURIComponent(pariwarId)}/admin/nominee-corrections/pending`, NomineeCorrectionPendingListResponse);
+}
+
+/** The Pariwar Admin's `-239` refusal read surface (a notification, ⛔ never an approval step). */
+export function getNomineeRefusals(pariwarId: string) {
+  return apiFetch(`/api/v1/p/${encodeURIComponent(pariwarId)}/admin/nominee-refusals`, NomineeRefusalListResponse);
 }
 
 // ── Verifier adjudication WRITE surface (Story 6.11) ──────────────────────────

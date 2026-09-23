@@ -16,8 +16,6 @@
 // ⛔ And there is no linkage: Story 6.8's D1 made the accounts a claim-scoped payment channel with
 // no `nominee_rank` ([[project_nominee_bank_disbursement_channel]]). Nothing here adds one.
 
-import { createHash } from 'node:crypto';
-
 import { and, desc, eq } from 'drizzle-orm';
 
 import type { Db } from '../db.js';
@@ -25,10 +23,11 @@ import type { ClaimId, MemberId, PariwarId } from '../ids/index.js';
 import { clampLimit } from '../pagination.js';
 import { claimNomineeBankAccounts } from '../schema/claim_nominee_bank_accounts.js';
 import {
-  type NomineeDeclarationRowRef,
-  getMemberNomineeDeclarationRefs,
-} from '../nominee/declaration-ref.js';
-import { NomineeBankAccountsRequiredError, NomineeNameCheckRequiredError } from './errors.js';
+  NomineeBankAccountsRequiredError,
+  NomineeDeterminationRequiredError,
+  NomineeNameCheckRequiredError,
+} from './errors.js';
+import { getEffectiveNomineeDeclaration } from './nominee-effective.js';
 import { eventsLog } from '../schema/events_log.js';
 
 /** The District Admin's verdict on ONE account's holder name (`-226` cl.3–cl.6). */
@@ -85,31 +84,34 @@ export interface RecordedNomineeNameCheck {
 }
 
 /**
- * The declaration token: a deterministic digest of the deceased member's `member_nominees` rows,
- * built from their `(rank, created_at)` pairs ONLY.
- *
- * ⭐ WHY A RE-DECLARATION MUST INVALIDATE A CHECK. `declaration-write.ts` replaces the nominee set
- * delete-then-insert, so a re-declaration mints new `created_at` values and the token changes. A
- * District Admin who approved a name against the OLD nominee set must look again, because the
- * person the member nominated may now be someone else entirely — and this is ⛔ not hypothetical:
- * the member-app nominee route checks only `withdrawn`/`anonymized`, and a Ravi-mode session IS the
- * deceased's, so the filer can rewrite the declaration AFTER the death (AC10, recorded open).
- *
- * ⚠⛔ THIS HASH IS NOT THE HASH TRAP 4 FORBIDS, and the distinction is the whole point: Trap 4
- * bans hashing a NAME, because a name hash is a stable identifier for a living person and a
- * confirmation oracle for any guessed name. This digest is built from ROW RANKS AND TIMESTAMPS and
- * ⛔ never touches a `name_ciphertext` — it identifies a DECLARATION, not a person. ⛔ Never widen
- * it to include a name, a name hash, or a decrypted anything.
+ * ⭐ THE DECLARATION TOKEN MOVED (Story 6.20, AC5; `2026-09-20-234` consequence 3). It used to be a
+ * digest of the CURRENT `member_nominees` rows' `(rank, created_at)` pairs. Under the ratified as-at-death
+ * rule the current rows are the WRONG nominee whenever a change was made after the death, so the token
+ * is now `EffectiveNomineeDeclaration.token` (`nominee-effective.ts`): a digest of the effective status,
+ * the live DETERMINATION's id and each effective rank's VERSION ID. ⭐ A new determination, a correction
+ * (which supersedes the determination) or a disqualification finding each move it — so a check recorded
+ * before any of them goes STALE (AC4: *"a new determination stales any earlier name check"*).
+ * ⚠⛔ Still ⛔ NOT the hash Trap 4 forbids: it is built from ids and never touches a `name_ciphertext`.
  */
-export function deriveNomineeDeclarationToken(rows: readonly NomineeDeclarationRowRef[]): string {
-  const canonical = [...rows]
-    .map((r) => `${r.rank}:${r.createdAt.toISOString()}`)
-    .sort()
-    .join('|');
-  // An EMPTY declaration hashes to a stable, distinct value rather than to `''` — "this member
-  // declared nobody" is a real state the District Admin must be able to have looked at (AC2), and
-  // it must be distinguishable from every populated set.
-  return createHash('sha256').update(`nominee-declaration:v1:${canonical}`).digest('hex').slice(0, 32);
+
+/**
+ * The effective declaration, CROSS-CHECKED against the caller's deceased member. The callers already
+ * hold the locked claim row, so a mismatch is a caller defect — it fails LOUD rather than gating one
+ * claim on another deceased's declaration.
+ */
+async function readEffectiveFor(
+  db: Db,
+  pariwarId: PariwarId,
+  claimCaseId: ClaimId,
+  deceasedMemberId: MemberId,
+) {
+  const effective = await getEffectiveNomineeDeclaration(db, pariwarId, claimCaseId);
+  if (effective.deceasedMemberId !== deceasedMemberId) {
+    throw new Error(
+      `[nominee-name-check] claim ${claimCaseId} is for deceased ${effective.deceasedMemberId}, not ${deceasedMemberId}`,
+    );
+  }
+  return effective;
 }
 
 /** Scan cap for the per-claim event lookback (the `DECIDER_SCAN_CAP` posture). */
@@ -313,8 +315,13 @@ export async function readNomineeNameCheckSnapshot(
       ),
     );
 
-  const declarationRefs = await getMemberNomineeDeclarationRefs(db, pariwarId, deceasedMemberId);
-  const liveDeclarationToken = deriveNomineeDeclarationToken(declarationRefs);
+  // ⭐ Story 6.20 (AC5, site E) — the EFFECTIVE declaration, ⛔ not the current rows. This snapshot is
+  // the "under correction" definition every surface consumes (`resolveClaimCorrectionState`), so it must
+  // read the SAME declaration the approval gate reads, or the two disagree — the divergence 6.18's review
+  // closed. `resolveClaimCorrectionState`'s `currentState` window (`-242`) is untouched: it gates on state
+  // BEFORE this read is consulted.
+  const effective = await readEffectiveFor(db, pariwarId, claimCaseId, deceasedMemberId);
+  const liveDeclarationToken = effective.token;
   const latestCheck = await getLatestNomineeNameCheck(db, pariwarId, claimCaseId);
 
   const current =
@@ -357,8 +364,9 @@ export async function readNomineeNameCheckSnapshot(
  * ⚠ MUST be called INSIDE the caller's transaction, AFTER the claim row lock — a check read before
  * the lock could be invalidated by a concurrent bank correction between the read and the approval.
  *
- * @throws NomineeBankAccountsRequiredError  fewer than two live accounts (→ 409). ⛔ NOT a denial.
- * @throws NomineeNameCheckRequiredError     no check / stale / `does_not_match` (→ 409). ⛔ NOT a denial.
+ * @throws NomineeBankAccountsRequiredError   fewer than two live accounts (→ 409). ⛔ NOT a denial.
+ * @throws NomineeDeterminationRequiredError  no effective as-at-death declaration (→ 409, Story 6.20 AC5).
+ * @throws NomineeNameCheckRequiredError      no check / stale / `does_not_match` (→ 409). ⛔ NOT a denial.
  */
 export async function assertNomineeNameCheckForApproval(
   db: Db,
@@ -382,11 +390,26 @@ export async function assertNomineeNameCheckForApproval(
     throw new NomineeBankAccountsRequiredError(claimCaseId, liveAccounts.length);
   }
 
+  // ⭐ Story 6.20 (AC5, D15) — the DECLARATION IN FORCE AT THE DEATH must be DETERMINED first. A claim
+  // with no live determination, an unversioned declaration, nobody standing or an incoherent rank set
+  // WAITS (409) — ⛔ never a denial: the system never decides that nothing changed (invariant 1), so even
+  // an explicit "no discards" determination is a human act this gate requires.
+  const effective = await readEffectiveFor(db, pariwarId, claimCaseId, deceasedMemberId);
+  if (effective.status !== 'effective') {
+    throw new NomineeDeterminationRequiredError(
+      claimCaseId,
+      effective.status === 'undetermined'
+        ? 'never_determined'
+        : effective.status === 'empty'
+          ? 'empty_declaration'
+          : effective.status,
+    );
+  }
+
   const check = await getLatestNomineeNameCheck(db, pariwarId, claimCaseId);
   if (!check) throw new NomineeNameCheckRequiredError(claimCaseId, 'never_checked');
 
-  const declarationRefs = await getMemberNomineeDeclarationRefs(db, pariwarId, deceasedMemberId);
-  const liveToken = deriveNomineeDeclarationToken(declarationRefs);
+  const liveToken = effective.token;
   if (!isNomineeNameCheckCurrent(check, liveAccounts, liveToken)) {
     throw new NomineeNameCheckRequiredError(claimCaseId, 'stale');
   }

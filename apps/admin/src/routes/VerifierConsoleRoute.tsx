@@ -24,16 +24,24 @@ import {
   SignalsPanel,
   VerificationConsoleShell,
   NomineeNameCheckPanel,
+  NomineeDeclarationPanel,
   VerificationDecisionStrip,
   type DecisionSubmit,
   type NomineeNameCheckSubmit,
+  type NomineeDeterminationSubmit,
   nameDifferenceReasonLabel,
   verifierConsoleEn as t,
 } from '../modules/claim-verification/index.js';
 import { ApiError } from '../api/client.js';
 import {
   useForgetNomineeNameCheck,
+  useNomineeCorrections,
+  useNomineeDeclarationSnapshots,
+  useNomineeDeclarationTimeline,
   useNomineeNameCheck,
+  usePostNomineeCorrectionDecision,
+  usePostNomineeCorrectionRaise,
+  usePostNomineeDetermination,
   usePostConcealmentAssessment,
   usePostNomineeNameCheck,
   usePostVerifierDecision,
@@ -89,8 +97,33 @@ export function decisionErrorMessage(err: unknown): string {
     if (err.code === 'auth.step_up_required') return t.decision.stepUpRequired;
     if (err.code === 'admin.display_name_missing') return t.decision.displayNameMissing;
     if (DECISION_CONFLICT_CODES.has(err.code)) return t.decision.decisionConflict;
+    // Story 6.20 (AC5) — the approval gate asks for the as-at-death DETERMINATION first. Name it, so
+    // the District Admin knows to open the nominee declaration history, ⛔ not to retry.
+    if (err.code.endsWith('.nominee_determination_required')) return t.nomineeDeclaration.status.undetermined;
   }
   return t.decision.submitError;
+}
+
+/** Story 6.20 — the determination's typed refusals, each with the instruction that fixes it. */
+export function nomineeDeterminationErrorMessage(err: unknown): string {
+  if (err instanceof ApiError) {
+    if (err.code === 'admin.display_name_missing') return t.decision.displayNameMissing;
+    const reason = err.code.startsWith('nominee_determination.') ? err.code.slice('nominee_determination.'.length) : '';
+    const text = t.nomineeDeclaration.determine.refused[reason];
+    if (text) return text;
+  }
+  return t.nomineeDeclaration.determine.refusedGeneric;
+}
+
+/** Story 6.20 — a nominee correction's typed refusals. */
+export function nomineeCorrectionErrorMessage(err: unknown): string {
+  if (err instanceof ApiError) {
+    if (err.code === 'admin.display_name_missing') return t.decision.displayNameMissing;
+    const reason = err.code.startsWith('nominee_correction.') ? err.code.slice('nominee_correction.'.length) : '';
+    const text = t.nomineeDeclaration.corrections.refused[reason];
+    if (text) return text;
+  }
+  return t.nomineeDeclaration.corrections.refusedGeneric;
 }
 
 /**
@@ -232,6 +265,19 @@ export function VerifierConsoleRoute(): ReactElement {
     await postNameCheck.mutateAsync(input);
   };
 
+  // Story 6.20 — the nominee declaration HISTORY, behind its own disclosure, keyed to the claim it was
+  // opened for (the 6.18 pattern: a claim change can ⛔ never fire a read of the next claim). The
+  // timeline is metadata; the snapshots DECRYPT and are fetched only when asked for (D10).
+  const [declOpenFor, setDeclOpenFor] = useState<string | null>(null);
+  const declOpen = declOpenFor === claimCaseId;
+  const [detailsFor, setDetailsFor] = useState<string | null>(null);
+  const timelineQ = useNomineeDeclarationTimeline(pariwarId, claimCaseId, declOpen);
+  const snapshotsQ = useNomineeDeclarationSnapshots(pariwarId, claimCaseId, declOpen && detailsFor === claimCaseId);
+  const correctionsQ = useNomineeCorrections(pariwarId, claimCaseId, declOpen);
+  const determine = usePostNomineeDetermination(pariwarId, claimCaseId);
+  const decideCorrection = usePostNomineeCorrectionDecision(pariwarId, claimCaseId);
+  const raiseCorrection = usePostNomineeCorrectionRaise(pariwarId, claimCaseId);
+
   return (
     <VerifierConsoleGateView status={status}>
       <VerificationConsoleShell
@@ -370,6 +416,49 @@ export function VerifierConsoleRoute(): ReactElement {
                   canCheck
                   onSubmit={submitNameCheck}
                   processing={postNameCheck.isPending}
+                />
+              ) : null}
+            </section>
+            {/* Story 6.20 (AC3, AC4, AC7) — the nominee declaration history, behind a disclosure. */}
+            <section className="mt-4 border-t pt-4">
+              <button
+                type="button"
+                data-testid="nominee-declaration-disclosure"
+                className="text-sm underline"
+                aria-expanded={declOpen}
+                onClick={() => {
+                  setDetailsFor(null);
+                  setDeclOpenFor(declOpen ? null : claimCaseId);
+                }}
+              >
+                {t.nomineeDeclaration.heading}
+              </button>
+              {declOpen ? (
+                <NomineeDeclarationPanel
+                  // ⭐ A fresh mount per claim — ⛔ no carried-over marks, date or note.
+                  key={claimCaseId}
+                  timeline={timelineQ.isError ? undefined : timelineQ.data}
+                  loading={timelineQ.isLoading}
+                  error={timelineQ.isError ? t.nomineeDeclaration.loadError : null}
+                  snapshots={snapshotsQ.data}
+                  snapshotsLoading={snapshotsQ.isFetching}
+                  onShowDetails={() => setDetailsFor(claimCaseId)}
+                  onDetermine={async (input: NomineeDeterminationSubmit) => {
+                    await determine.mutateAsync(input).catch(() => undefined);
+                  }}
+                  determining={determine.isPending}
+                  determineError={determine.error ? nomineeDeterminationErrorMessage(determine.error) : null}
+                  corrections={correctionsQ.data}
+                  onDecide={async (correctionId, step, outcome, note) => {
+                    await decideCorrection.mutateAsync({ correctionId, step, body: { outcome, note } }).catch(() => undefined);
+                  }}
+                  deciding={decideCorrection.isPending}
+                  decideError={decideCorrection.error ? nomineeCorrectionErrorMessage(decideCorrection.error) : null}
+                  onRaise={async (body) => {
+                    await raiseCorrection.mutateAsync(body).catch(() => undefined);
+                  }}
+                  raising={raiseCorrection.isPending}
+                  raiseError={raiseCorrection.error ? nomineeCorrectionErrorMessage(raiseCorrection.error) : null}
                 />
               ) : null}
             </section>

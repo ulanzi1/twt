@@ -18,14 +18,22 @@ import { useState } from 'react'
 // of the current implementation: the moment the schema gains a rule the bare regex does not carry,
 // a name the SERVER accepts starts being refused in the app (or worse, the reverse). One predicate,
 // used by the schema and by every form, is the only way the two cannot drift.
-import { isEnglishScriptName } from '@twt/contracts'
+import { NOMINEE_RELATIONSHIP_CODES, isEnglishScriptName } from '@twt/contracts'
 
 import { useT } from '@twt/i18n/react'
 import { Button, H2, Input, Paragraph, Spinner, Text, XStack, YStack } from 'tamagui'
 
-/** The nominee-relationship value set — value-aligned with the contracts NomineeRelationship. */
-export const RELATIONSHIPS = ['spouse', 'child', 'parent', 'sibling', 'other'] as const
+/**
+ * The nominee-relationship value set — Story 6.20 (AC12): the Trustee-ratified FIFTEEN
+ * (`2026-09-21-237` cl.1), IMPORTED from the contracts enum rather than re-spelled here, so the picker
+ * can ⛔ never offer a code the server refuses. Codes are snake_case; the ratified wording is the
+ * en/hi label at `nominees.relationship_${code}`.
+ */
+export const RELATIONSHIPS = NOMINEE_RELATIONSHIP_CODES
 export type Relationship = (typeof RELATIONSHIPS)[number]
+
+/** Every relationship except `other` — the ones a later correction can be made for (`-237` cl.2). */
+export const KNOWN_RELATIONSHIPS = RELATIONSHIPS.filter((r) => r !== 'other')
 
 export interface NomineeFormEntry {
   name: string
@@ -132,6 +140,10 @@ export function NomineeForm(props: NomineeFormProps) {
       <Paragraph color="$colorPress" accessibilityRole="text">
         {props.intro}
       </Paragraph>
+      {/* Story 6.20 (AC8) — changes stop at a claim: what happens, what to do, and the helpline. */}
+      <Paragraph accessibilityRole="text" testID="nominees-changes-stop-notice">
+        {t('nominees.changes_stop_notice')}
+      </Paragraph>
 
       {forms.map((f, index) => (
         <YStack key={index} gap="$3">
@@ -168,6 +180,17 @@ export function NomineeForm(props: NomineeFormProps) {
               )
             })}
           </XStack>
+          {f.relationship === 'other' ? (
+            // Story 6.20 (AC12, `-237` cl.2) — the ONE place the ruling's cost reaches a member: choosing
+            // "Other" forecloses a later correction. Said at the moment of choice, and ANNOUNCED.
+            <Text
+              accessibilityRole="text"
+              accessibilityLiveRegion="polite"
+              testID={`nominees-other-warning-${index}`}
+            >
+              {t('nominees.relationship_other_warning')}
+            </Text>
+          ) : null}
 
           <Input
             value={f.mobile}

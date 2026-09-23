@@ -171,6 +171,18 @@ function reduce(state: ClaimLifecycleState, event: ClaimEventInput): ClaimLifecy
     case 'claim.nominee_name_checked':
       return state;
 
+    // ANNOTATION: the District Admin recorded the NOMINEE DETERMINATION (Story 6.20 — the 33rd event).
+    // A RECORD of which declaration versions stand, ⛔ not a verdict: invariant 1 — the system never
+    // denies on it. Identity from any state; the write-path guard owns the window and the AC5 approval
+    // gates READ the row. ⛔ No edge to `denied` — the `-239` refusal is a separate verifier denial.
+    case 'claim.nominee_determination_recorded':
+      return state;
+
+    // ANNOTATION: the nominee-declaration LOCK this claim created was RELEASED on an innocence finding
+    // (Story 6.20 — the 34th event; `2026-09-21-238` cl.1). An OUTCOME, ⛔ never a lifecycle state (AC10).
+    case 'claim.nominee_lock_released':
+      return state;
+
     // ANNOTATION: claim-time DPDPA consent recorded (Story 6.9 — the 24th event). Claim-time capture
     // of the granular DPDPA consents via the Story 2.7 registry; it does NOT advance the primary state
     // (an annotation captured across the pre-adjudication window, like nominee_bank_recorded). Identity.

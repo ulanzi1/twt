@@ -155,6 +155,7 @@ describe('⛔⛔ AC12 — the gate is INPUT-ONLY: an already-stored non-Latin na
           nominee_name: { state: 'readable' as const, value: DEVANAGARI },
         },
       ],
+      declaration_status: 'effective', // Story 6.20 (AC5) — a required response field; the INPUT-only gate is untouched
       nominee_declaration_token: 'abc123',
       nominee_declared_at: '2026-01-01T00:00:00.000Z',
       claim_filed_at: '2026-09-01T00:00:00.000Z',
@@ -191,6 +192,7 @@ describe('⛔⛔ AC12 — the gate is INPUT-ONLY: an already-stored non-Latin na
         // The RTBF state — `anonymized` renders as ITSELF, never as a name.
         { rank: 1, split_pct: 100, relationship: 'spouse', nominee_name: { state: 'anonymized' as const } },
       ],
+      declaration_status: 'effective', // Story 6.20 (AC5) — a required response field; the INPUT-only gate is untouched
       nominee_declaration_token: 'abc123',
       nominee_declared_at: null,
       claim_filed_at: '2026-09-01T00:00:00.000Z',

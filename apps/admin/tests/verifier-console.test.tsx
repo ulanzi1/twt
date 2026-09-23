@@ -150,6 +150,41 @@ describe('<SignalsPanel> — six sections, four-state vocabulary, tri-state conc
     expect(present).not.toHaveTextContent('+91');
   });
 
+  it('⭐ Story 6.20 (AC13) — an INHERITED inspection is labelled and NAMES its source claim', () => {
+    const source = '99999999-9999-4999-8999-999999999999';
+    render(
+      <SignalsPanel
+        packet={{
+          ...PRESENT_PACKET,
+          groundInspection: {
+            status: 'present',
+            assignments: [
+              {
+                groundInspectionId: '88888888-8888-4888-8888-888888888888',
+                district: 'Patna',
+                inspectionStage: 'initial',
+                inspectionSiteType: 'family_residence',
+                inspectorActorId: 'inspector-1',
+                scheduledAt: '2026-05-01T06:00:00.000Z',
+                status: 'completed',
+                refusalReason: null,
+                completedAt: '2026-05-02T06:00:00.000Z',
+                notes: null,
+                structuredFindings: null,
+                photos: [],
+              },
+            ],
+            inheritedFrom: { claimCaseId: source },
+          },
+        }}
+      />,
+    );
+    const label = screen.getByTestId('ground-inspection-inherited');
+    expect(label.textContent).toContain('Carried over from the refused claim');
+    expect(label.textContent).toContain(source);
+    expect(label.getAttribute('role')).toBe('status');
+  });
+
   it('renders the shepherd section as empty when no shepherd is assigned yet (pre-verification)', () => {
     render(<SignalsPanel packet={{ ...PRESENT_PACKET, shepherd: { status: 'empty' } }} />);
     const section = screen.getByTestId('section-shepherd');

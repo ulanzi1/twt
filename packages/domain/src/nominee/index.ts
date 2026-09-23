@@ -6,8 +6,13 @@
 
 export * from './declaration-write.js';
 export * from './declaration-read.js';
-// Story 6.18 — the (rank, created_at) DECLARATION-REF projection the name-check staleness token is
-// derived from. A misuse-resistance accessor: it carries no name field, so the check write path
-// structurally cannot reach a nominee's name (Trap 1 / Trap 4).
-export * from './declaration-ref.js';
+// ⚠ Story 6.18's `declaration-ref.ts` (the `(rank, created_at)` refs of the CURRENT rows) is GONE —
+// Story 6.20 (AC5) moved the name-check token to the EFFECTIVE as-at-death declaration
+// (`claim/nominee-effective.ts`), which is equally ref-only (ranks, version ids, a determination id) and
+// ⛔ never reaches a name. Its misuse-resistance property survives there, ⛔ not here.
 export * from './split.js';
+// Story 6.20 — the append-only version HISTORY (D1, D2, T9): head-of-chain, plan + append, the
+// timeline listing and the database clock. ⛔ This module never imports from `claim/` (T5).
+export * from './declaration-history.js';
+// Story 6.20 (AC12) — the fifteen-value relationship vocabulary + the `other`-forecloses predicate.
+export * from './relationship.js';

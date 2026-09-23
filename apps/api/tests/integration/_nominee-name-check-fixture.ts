@@ -23,7 +23,7 @@
 
 import { randomUUID } from 'node:crypto';
 
-import { claim, ids, nominee } from '@twt/domain';
+import { claim, cycleCalendar, ids, nominee } from '@twt/domain';
 
 import type { AppDeps } from '../../src/context.js';
 import { closeScopeTx, openScopeTx } from '../../src/modules/multi-tenant/scope-tx.js';
@@ -57,6 +57,10 @@ export async function seedNomineeNameCheck(
     readonly accountsOnly?: boolean;
     /** Seed only ONE account — `-226` cl.7's "the claim WAITS" case (AC6). */
     readonly singleAccount?: boolean;
+    /** Story 6.20 (T16) — `'skip'` leaves the claim UNDETERMINED (the AC5 gate's 409). Default: a
+     *  "no discards" determination through the REAL writer, plus a one-nominee declaration when the
+     *  deceased has none. */
+    readonly determination?: 'no_discards' | 'skip';
   } = {},
 ): Promise<void> {
   if (opts.skip === true) return;
@@ -91,6 +95,14 @@ export async function seedNomineeNameCheck(
       [claimCaseId, pariwarId],
     );
 
+    // ⭐ Story 6.20 (AC5, T16) — the as-at-death DETERMINATION the gate asks for BEFORE the check.
+    // Seeded here, ahead of the `accountsOnly` return, so "nobody CHECKED" still reaches the name-check
+    // 409 rather than `nominee_determination_required` — a different fact. `determination: 'skip'`
+    // builds the UNDETERMINED claim instead.
+    if (opts.determination !== 'skip') {
+      await seedDeclarationAndDetermination(scopeTx, pariwarId, claimCaseId);
+    }
+
     // ⛔ The "two accounts but NOBODY CHECKED" fixture stops here — exactly the claim AC4's gate
     // must refuse with `nominee_name_check_required`, and the one no test could build before.
     if (opts.accountsOnly === true || opts.singleAccount === true) {
@@ -111,12 +123,11 @@ export async function seedNomineeNameCheck(
     );
     if (!claimRow) throw new Error(`[fixture] claim ${claimCaseId} not found in ${pariwarId}`);
 
-    const refs = await nominee.getMemberNomineeDeclarationRefs(
-      scopeTx.tx,
-      ids.pariwarId(pariwarId),
-      claimRow.deceasedMemberId,
-    );
-    const token = claim.deriveNomineeDeclarationToken(refs);
+    // Story 6.20 (AC5) — the token of the EFFECTIVE as-at-death declaration, read through the same
+    // accessor the writer re-validates against.
+    const token = (
+      await claim.getEffectiveNomineeDeclaration(scopeTx.tx, ids.pariwarId(pariwarId), ids.claimId(claimCaseId))
+    ).token;
 
     await claim.recordNomineeNameCheck(scopeTx.client, {
       claimCaseId: ids.claimId(claimCaseId),
@@ -138,4 +149,73 @@ export async function seedNomineeNameCheck(
   } finally {
     await closeScopeTx(scopeTx, ok);
   }
+}
+
+/** Tomorrow in IST — a certificate date against which every version dated up to now STANDS. */
+function certificateDateAfterEverything(): string {
+  return cycleCalendar.addCalendarDays(cycleCalendar.istDateOf(new Date()), 1);
+}
+
+/**
+ * Story 6.20 (T16) — give the claim's deceased a VERSIONED declaration (when they have none) and a live
+ * "no discards" determination (when there is none), both through the real domain writers. ⛔ Never a
+ * raw `member_nominees` INSERT: that row would be unversioned and fail closed (D1).
+ */
+async function seedDeclarationAndDetermination(
+  scopeTx: Awaited<ReturnType<typeof openScopeTx>>,
+  pariwarId: string,
+  claimCaseId: string,
+): Promise<void> {
+  const pid = ids.pariwarId(pariwarId);
+  const cid = ids.claimId(claimCaseId);
+  const claimRow = await claim.getClaimCase(scopeTx.tx, pid, cid);
+  if (!claimRow) throw new Error(`[fixture] claim ${claimCaseId} not found in ${pariwarId}`);
+  const mid = claimRow.deceasedMemberId;
+
+  const before = await claim.getEffectiveNomineeDeclaration(scopeTx.tx, pid, cid);
+  if (before.status === 'unversioned') {
+    throw new Error('[fixture] the deceased has member_nominees rows with NO version — seed them through the declare path');
+  }
+  let versions = await nominee.listNomineeDeclarationVersions(scopeTx.tx, pid, mid);
+  if (versions.length === 0) {
+    await scopeTx.client.query(
+      `INSERT INTO members (member_id, pariwar_id, state, state_event_version)
+       VALUES ($1, $2, 'active', 1) ON CONFLICT (member_id) DO NOTHING`,
+      [mid, pariwarId],
+    );
+    const row = {
+      rank: 1 as const,
+      splitPct: 100 as const,
+      relationship: 'spouse',
+      nameCiphertext: 'enc:v1:nominee-name-1',
+      mobileCiphertext: 'enc:v1:nominee-mobile-1',
+      addressCiphertext: null,
+    };
+    await nominee.replaceMemberNominees(scopeTx.tx, { memberId: mid, pariwarId: pid, nominees: [row] });
+    await nominee.appendMemberDeclarationVersions(scopeTx.tx, {
+      memberId: mid,
+      pariwarId: pid,
+      plan: nominee.planDeclarationVersions(await nominee.getNomineeVersionHeads(scopeTx.tx, pid, mid), [1]),
+      nominees: [row],
+      recordedAt: new Date('2026-01-05T06:00:00.000Z'),
+      eventVersion: null,
+    });
+    versions = await nominee.listNomineeDeclarationVersions(scopeTx.tx, pid, mid);
+  }
+  if (before.determinationId !== null) return;
+  const head = (rank: number) =>
+    versions.filter((v) => v.rank === rank).reduce<number | null>((m, v) => Math.max(m ?? 0, v.versionNo), null);
+  await claim.recordNomineeDetermination(scopeTx.client, {
+    claimCaseId: cid,
+    pariwarId: pid,
+    certificateDate: certificateDateAfterEverything(),
+    certificateDateCiphertext: 'enc:v1:certificate-date',
+    noteCiphertext: 'enc:v1:determination-note',
+    marks: versions.map((v) => ({ versionId: v.versionId, mark: 'stands' as const })),
+    watermark: { rank1: head(1), rank2: head(2) },
+    expectedLiveDeterminationId: null,
+    actorId: randomUUID(),
+    actorDisplay: 'Anita (District Admin)',
+    actor: 'operator',
+  });
 }

@@ -42,6 +42,9 @@ export * from './verification-decision.js';
 // are DISCRIMINATED UNIONS, not nullable strings — responses are serializer-parsed, and `unreadable` vs
 // `anonymized` are different facts a District Admin must not be shown as one another.
 export * from './nominee-name-check.js';
+// Story 6.20 — the nominee declaration history on the console: timeline, snapshots, determination,
+// correction (raise + two approvals) and the Pariwar Admin's `-239` refusal read surface.
+export * from './nominee-declaration.js';
 // Story 6.12 — the member-facing shepherd read DTO (GET /member/claims/:id/shepherd) backing the mobile
 // <ShepherdContactCard>: a discriminated union (assigned → display_name + role_label + contact snapshot |
 // not_assigned). The E.164 wire regex is re-declared (no @twt/domain import).

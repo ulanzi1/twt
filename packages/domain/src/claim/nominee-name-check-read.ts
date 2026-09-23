@@ -20,14 +20,13 @@ import { and, eq, inArray, sql } from 'drizzle-orm';
 
 import type { Db } from '../db.js';
 import type { ClaimId, MemberId, PariwarId } from '../ids/index.js';
-import { getMemberNomineeDeclarationRefsBulk } from '../nominee/declaration-ref.js';
 import { claimNomineeBankAccounts } from '../schema/claim_nominee_bank_accounts.js';
 import { ClaimNomineeNameCheckedPayloadSchema } from './events.js';
+import { getEffectiveNomineeDeclarationBulk } from './nominee-effective.js';
 import {
   type LiveAccountRef,
   type NomineeNameClericalReason,
   type RecordedNomineeNameCheck,
-  deriveNomineeDeclarationToken,
   isNomineeNameCheckCurrent,
   latestCheckSendsBack,
   nomineeNameCheckClericalReasons,
@@ -46,6 +45,12 @@ export interface NomineeNameCheckFlags {
   readonly checkSendsBack: boolean;
   /** The live accounts, for a caller that must also order a correction against a return's timestamp. */
   readonly liveAccounts: readonly LiveAccountRef[];
+  /**
+   * Story 6.20 (AC5, D15) — does the claim have an EFFECTIVE as-at-death declaration (a live District
+   * Admin determination with somebody standing)? `false` means approval WAITS for a determination, so a
+   * list card can say so instead of implying the name check is the only thing outstanding.
+   */
+  readonly declarationEffective: boolean;
 }
 
 /**
@@ -57,8 +62,9 @@ export interface NomineeNameCheckFlags {
  * first. Two surfaces, two answers, one ruling. A third surface (R9) was about to need the same
  * thing. So the derivation lives here once, and a list page calls it.
  *
- * ⛔ NO N+1: one query for the accounts, one for the declarations, one `DISTINCT ON` for the latest
- * check per claim — each independent of the number of claims' ROWS.
+ * ⛔ NO N+1: one query for the accounts, one for the EFFECTIVE declarations (Story 6.20 — the bulk
+ * accessor), one `DISTINCT ON` for the latest check per claim — each independent of the number of
+ * claims' ROWS.
  * ⛔ IT DECRYPTS NOTHING and returns no token: ranks, timestamps, verdicts and reason codes only.
  */
 export async function readNomineeNameCheckFlagsBulk(
@@ -91,11 +97,12 @@ export async function readNomineeNameCheckFlagsBulk(
     accountsByClaim.set(r.claimCaseId, list);
   }
 
-  const declarationRefs = await getMemberNomineeDeclarationRefsBulk(
-    db,
-    pariwarId,
-    [...new Set(claimRefs.map((r) => r.deceasedMemberId))],
-  );
+  // ⭐ Story 6.20 (AC5, site F) — the EFFECTIVE declarations, in the BULK form: ONE query for the whole
+  // list, ⛔ never the per-claim accessor in a loop. This serves the District Admin's correction queue AND
+  // the State Trustee's cycle-freeze pending list — the highest-stakes screen — so its currency flag must
+  // be derived from the declaration in force at the death, ⛔ not from the current rows (`-236`
+  // consequence 4).
+  const effectiveByClaim = await getEffectiveNomineeDeclarationBulk(db, pariwarId, claimCaseIds);
 
   // ⚠ `DISTINCT ON` requires the leading ORDER BY term to match the DISTINCT ON expression or PG
   // raises 42P10 ([[project_contribution_fact_projection_substrate]]).
@@ -135,7 +142,9 @@ export async function readNomineeNameCheckFlagsBulk(
   for (const ref of claimRefs) {
     const liveAccounts = accountsByClaim.get(ref.claimCaseId) ?? [];
     const check = latestByClaim.get(ref.claimCaseId) ?? null;
-    const liveToken = deriveNomineeDeclarationToken(declarationRefs.get(ref.deceasedMemberId) ?? []);
+    const effective = effectiveByClaim.get(ref.claimCaseId);
+    // A claim the bulk read could not see (another Pariwar, or gone) can ⛔ never be current.
+    const liveToken = effective?.token ?? '';
     const current = check !== null && isNomineeNameCheckCurrent(check, liveAccounts, liveToken);
     const passing = check !== null && nomineeNameCheckPasses(check);
     const currentAndPassing = current && passing;
@@ -146,6 +155,7 @@ export async function readNomineeNameCheckFlagsBulk(
       differenceReasons: currentAndPassing && check !== null ? nomineeNameCheckClericalReasons(check) : [],
       checkSendsBack: latestCheckSendsBack(check, current),
       liveAccounts,
+      declarationEffective: effective?.status === 'effective',
     });
   }
   return byClaim;

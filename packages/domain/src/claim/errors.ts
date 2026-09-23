@@ -360,3 +360,93 @@ export class NomineeNameCheckRequiredError extends Error {
     );
   }
 }
+
+// ── Story 6.20 — the nominee declaration history, the lock, the determination, the correction ─────
+
+/** AC2 / D3 — the member's nominee declaration is LOCKED: a claim was filed for them as the deceased
+ *  (and ⛔ no innocence finding has released it). Keyed to the DURABLE fact of a claim row — ⛔ never the
+ *  `account-frozen` overlay, ⛔ never `getClaimByDeceasedMember` (invariant 3). → 409
+ *  `nominee.locked_claim_filed`. */
+export class NomineeDeclarationLockedError extends Error {
+  public readonly name = 'NomineeDeclarationLockedError';
+  public constructor(public readonly memberId: string) {
+    super(`[nominee-lock] member ${memberId}'s nominee declaration is locked — a claim was filed`);
+  }
+}
+
+/** AC5 / D5 / D15 — a claim cannot be APPROVED until the District Admin has recorded a live nominee
+ *  determination whose effective declaration is non-empty and coherent. ⛔ Never a denial: the claim
+ *  WAITS for a human (invariant 1). → 409 `nominee_determination_required`.
+ *   · `never_determined`  — no live determination (a correction may have superseded it — D7);
+ *   · `empty_declaration` — every rank is discarded or vacated; nobody stands;
+ *   · `unversioned`       — a `member_nominees` row has ⛔ no version (D1 fails closed; ⛔ no backfill);
+ *   · `incoherent`        — the standing ranks are not `{1}` or `{1,2}` (D17). */
+export class NomineeDeterminationRequiredError extends Error {
+  public readonly name = 'NomineeDeterminationRequiredError';
+  public constructor(
+    public readonly claimCaseId: string,
+    public readonly reason: 'never_determined' | 'empty_declaration' | 'unversioned' | 'incoherent',
+  ) {
+    super(`[nominee-determination] claim ${claimCaseId} cannot be approved — the nominee determination is '${reason}'`);
+  }
+}
+
+/** D4 / D6 / D17 — the District Admin's determination is refused. A GUARD, ⛔ never a default: the
+ *  writer never fixes a mark, it refuses the whole submission (invariant 1). → 409. */
+export class NomineeDeterminationRefusedError extends Error {
+  public readonly name = 'NomineeDeterminationRefusedError';
+  public constructor(
+    public readonly claimCaseId: string,
+    public readonly reason:
+      | 'not_found'
+      | 'not_recordable'
+      | 'invalid_certificate_date'
+      | 'missing_note'
+      | 'missing_display'
+      | 'unknown_version'
+      | 'missing_item'
+      | 'inconsistent_mark'
+      | 'stale_watermark'
+      | 'stale_supersession'
+      | 'incoherent_rank_set'
+      | 'unversioned',
+    detail: string,
+  ) {
+    super(`[nominee-determination] claim ${claimCaseId}: ${reason} — ${detail}`);
+  }
+}
+
+/** D7 — a nominee correction is refused at raise or at a step. → 409 (404 for `not_found`). */
+export class NomineeCorrectionRefusedError extends Error {
+  public readonly name = 'NomineeCorrectionRefusedError';
+  public constructor(
+    public readonly subjectId: string,
+    public readonly reason:
+      | 'not_found'
+      | 'claim_not_found'
+      | 'outside_state_window'
+      | 'relationship_other'
+      | 'target_not_standing'
+      | 'no_standing_version'
+      | 'open_correction_exists'
+      | 'same_approver'
+      | 'step_conflict'
+      | 'missing_note'
+      | 'missing_display',
+    detail: string,
+  ) {
+    super(`[nominee-correction] ${subjectId}: ${reason} — ${detail}`);
+  }
+}
+
+/** AC2 / D17(c) — a Story-6-22 finding cannot be recorded against this claim. → 409. */
+export class ClaimNomineeFindingRefusedError extends Error {
+  public readonly name = 'ClaimNomineeFindingRefusedError';
+  public constructor(
+    public readonly claimCaseId: string,
+    public readonly reason: 'claim_not_found' | 'duplicate' | 'missing_display',
+    detail: string,
+  ) {
+    super(`[nominee-finding] claim ${claimCaseId}: ${reason} — ${detail}`);
+  }
+}

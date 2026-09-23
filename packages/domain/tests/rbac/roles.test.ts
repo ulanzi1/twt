@@ -235,6 +235,43 @@ describe('defaultRoleBundles — the seeded roles (FR-46)', () => {
     }
   });
 
+  it('Story 6.20 — the four nominee-history keys each have exactly ONE granted role (+ super_admin by construction)', () => {
+    // Decision `2026-09-21-241` §2 — count, dimension, holder and reuse-check are committed there.
+    const holdersOf = (key: string): string[] =>
+      defaultRoleBundles
+        .filter((b) => (b.permissions as readonly string[]).includes(key))
+        .map((b) => b.role)
+        .sort();
+    // (1) `-235` Y — the DISTRICT ADMIN decides which declaration versions stand.
+    expect(holdersOf('claim.determine_nominee_declaration')).toEqual(['district_admin', 'super_admin']);
+    // (2)/(3) `-236` Z — first District Admin, then Pariwar Admin.
+    expect(holdersOf('claim.approve_nominee_correction_district')).toEqual(['district_admin', 'super_admin']);
+    expect(holdersOf('claim.approve_nominee_correction_pariwar')).toEqual(['pariwar_admin', 'super_admin']);
+    // (4) CC2 (`-237` cl.3) — the helpline operator raises on the family's behalf.
+    expect(holdersOf('claim.raise_nominee_correction')).toEqual(['helpline_operator', 'super_admin']);
+  });
+
+  it('Story 6.20 — ⛔ no role but super_admin can both RAISE and APPROVE, or give BOTH approval steps', () => {
+    // ⭐ The structural half of D7's "two DIFFERENT people": no ordinary bundle carries both steps, so a
+    // single grant can never walk a correction from raise to applied. (The domain writer additionally
+    // refuses the same ACTOR on both steps — that is a different property: one human can hold two
+    // roles.) ⛔ And the District Admin never raises alone (CC2).
+    const RAISE = 'claim.raise_nominee_correction';
+    const DA = 'claim.approve_nominee_correction_district';
+    const PA = 'claim.approve_nominee_correction_pariwar';
+    for (const b of defaultRoleBundles) {
+      if (b.role === 'super_admin') continue;
+      const p = b.permissions as readonly string[];
+      expect(p.includes(DA) && p.includes(PA), `${b.role} holds both approval steps`).toBe(false);
+      expect(p.includes(RAISE) && (p.includes(DA) || p.includes(PA)), `${b.role} raises and approves`).toBe(false);
+    }
+    // ⛔ NOT state_trustee on any of the four (RANK-ORDER BLOCKED on the pariwar keys; the 6.10
+    // `claim.verify` disposition on the district keys).
+    for (const key of [RAISE, DA, PA, 'claim.determine_nominee_declaration']) {
+      expect(holds('state_trustee', key), `state_trustee must not hold ${key}`).toBe(false);
+    }
+  });
+
   it('Story 6.18 — claim.view_nominee_name_check is granted to the FOUR seeing roles (+ super_admin)', () => {
     const VIEW_KEY = 'claim.view_nominee_name_check';
     const holders = defaultRoleBundles

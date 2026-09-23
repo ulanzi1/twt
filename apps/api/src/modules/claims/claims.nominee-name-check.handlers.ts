@@ -235,10 +235,15 @@ export function createNomineeNameCheckHandlers(deps: AppDeps) {
         pariwarId,
         cid,
       );
-      const nomineeRows = await nomineeDomain.getMemberNominees(
+      // ⭐ Story 6.20 (AC5, site C) — ONE read feeding TWO outputs: the effective as-at-death declaration
+      // gives BOTH the token and the names below (they can never go stale relative to each other). The
+      // names are resolved by VERSION ID from the history — ⛔ never from the current `member_nominees`
+      // rows, which after a post-death change are the WRONG nominee (`-234` consequence 3).
+      const effective = await claimDomain.getEffectiveNomineeDeclaration(scopeTx.tx, pariwarId, cid);
+      const effectiveVersions = await nomineeDomain.getNomineeVersionsByIds(
         scopeTx.tx,
         pariwarId,
-        claimRow.deceasedMemberId,
+        effective.entries.map((e) => e.versionId),
       );
 
       // ── The bank side. ⛔ Account number, raw IFSC and VPA are NEVER read here. ──
@@ -272,12 +277,18 @@ export function createNomineeNameCheckHandlers(deps: AppDeps) {
         });
       }
 
-      // ── The declared-nominee side. ⛔ No mobile, ⛔ no address. ──
+      // ── The declared-nominee side — the EFFECTIVE set. ⛔ No mobile, ⛔ no address. ──
       const declaredNominees: NomineeNameCheckDeclaredNominee[] = [];
-      for (const row of nomineeRows) {
+      for (const entry of effective.entries) {
+        const row = effectiveVersions.find((v) => v.versionId === entry.versionId);
+        // A standing version is always `declared` (a tombstone empties its rank), so a name is present.
+        if (!row || row.nameCiphertext === null || row.relationship === null) {
+          throw new Error('nominee-name-check: an effective version could not be read back');
+        }
+        const nameCiphertext = row.nameCiphertext;
         let nomineeName: ReadableNomineeName;
         const read = await readName(
-          () => decryptNomineeField(row.nameCiphertext, scopeTx.pariwarId, deps.encryption),
+          () => decryptNomineeField(nameCiphertext, scopeTx.pariwarId, deps.encryption),
           request.log,
           'nominee_name',
           claimCaseId,
@@ -289,20 +300,20 @@ export function createNomineeNameCheckHandlers(deps: AppDeps) {
           nomineeName = read;
         }
         declaredNominees.push({
-          rank: row.rank,
-          split_pct: row.splitPct,
+          // The EFFECTIVE rank and the DERIVED split (D17(a)/(c)) — ⛔ never the version's stored split.
+          rank: entry.rank,
+          split_pct: entry.splitPct,
           relationship: row.relationship,
           nominee_name: nomineeName,
         });
       }
 
       // ── The tokens and the two plain dates (⛔ no highlight, ⛔ no derived warning) ──
-      const declarationRefs = nomineeRows.map((r) => ({ rank: r.rank, createdAt: r.createdAt }));
-      const declarationToken = claimDomain.deriveNomineeDeclarationToken(declarationRefs);
+      const declarationToken = effective.token;
       const nomineeDeclaredAt =
-        declarationRefs.length === 0
+        effective.entries.length === 0
           ? null
-          : new Date(Math.max(...declarationRefs.map((r) => r.createdAt.getTime()))).toISOString();
+          : new Date(Math.max(...effective.entries.map((e) => e.effectiveAt.getTime()))).toISOString();
 
       // ── The current check, if it is still current (AC3). `null` also covers "went stale". ──
       const recorded = await claimDomain.getLatestNomineeNameCheck(scopeTx.tx, pariwarId, cid);
@@ -367,7 +378,9 @@ export function createNomineeNameCheckHandlers(deps: AppDeps) {
           district,
           deceased_member_id: claimRow.deceasedMemberId,
           account_ranks: accountRows.map((r) => r.accountRank),
-          declared_nominee_count: nomineeRows.length,
+          declared_nominee_count: effective.entries.length,
+          // Story 6.20 (AC5) — which declaration was shown: the effective one, or a fail-closed state.
+          declaration_status: effective.status,
         },
       });
 
@@ -379,6 +392,7 @@ export function createNomineeNameCheckHandlers(deps: AppDeps) {
         // ⭐ Said explicitly, never inferred from an empty array (AC2/AC6).
         accounts_complete: accountRows.length === 2,
         declared_nominees: declaredNominees,
+        declaration_status: effective.status,
         nominee_declaration_token: declarationToken,
         nominee_declared_at: nomineeDeclaredAt,
         claim_filed_at: claimRow.createdAt.toISOString(),

@@ -7,10 +7,11 @@
 import { useEffect, useState } from 'react'
 import { ScrollView } from 'react-native'
 
+import { ApiError } from '@twt/api-client'
 import { useT } from '@twt/i18n/react'
-import { useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Stack, useRouter } from 'expo-router'
-import { Button, Input, Spinner, Text, YStack } from 'tamagui'
+import { Button, H2, Input, Paragraph, Spinner, Text, YStack } from 'tamagui'
 
 import { memberAuth } from '../../lib/member-api'
 import {
@@ -38,6 +39,11 @@ export default function LifeEventsNomineesScreen() {
   const [pending, setPending] = useState<NomineeSubmitEntry[] | null>(null)
   const [initialForms, setInitialForms] = useState<NomineeFormEntry[] | undefined>(undefined)
   const [resumeAvailable, setResumeAvailable] = useState(false)
+  // Story 6.20 (AC2, AC8) — the declaration LOCKS at the first claim. The status read says so up front;
+  // a 409 `nominee.locked_claim_filed` on submit (a claim filed while the screen was open) says so too.
+  const status = useQuery({ queryKey: ['member', 'nominees'], queryFn: () => memberAuth.nomineesStatus() })
+  const [lockedBySubmit, setLockedBySubmit] = useState(false)
+  const locked = lockedBySubmit || status.data?.locked === true
 
   useEffect(() => {
     const draft = loadDraft<NomineeFormEntry[]>(memberId, DRAFT_KEY)
@@ -61,8 +67,9 @@ export default function LifeEventsNomineesScreen() {
       const result = await stepUp.guard(() => memberAuth.lifeEventsUpdateNominees({ nominees }))
       // undefined ⇒ step-up was requested; the OTP input is now shown (do NOT leave yet).
       if (result !== undefined) await invalidateAndLeave()
-    } catch {
-      setError(t('lifeEvents.error_generic'))
+    } catch (err) {
+      if (err instanceof ApiError && err.code === 'nominee.locked_claim_filed') setLockedBySubmit(true)
+      else setError(t('lifeEvents.error_generic'))
     } finally {
       setBusy(false)
     }
@@ -75,8 +82,9 @@ export default function LifeEventsNomineesScreen() {
     try {
       await stepUp.verifyAndRetry(() => memberAuth.lifeEventsUpdateNominees({ nominees: pending }))
       await invalidateAndLeave()
-    } catch {
-      setError(t('lifeEvents.error_generic'))
+    } catch (err) {
+      if (err instanceof ApiError && err.code === 'nominee.locked_claim_filed') setLockedBySubmit(true)
+      else setError(t('lifeEvents.error_generic'))
     } finally {
       setBusy(false)
     }
@@ -128,6 +136,31 @@ export default function LifeEventsNomineesScreen() {
       </Button>
     </YStack>
   ) : null
+
+  if (locked) {
+    // ⭐ The LOCKED state — what happened, what the member can do, and the helpline (the three-part
+    // grammar). ⛔ Never a form that 409s on submit. Announced when it appears.
+    return (
+      <>
+        <Stack.Screen options={{ title: t('lifeEvents.nominees_label') }} />
+        <YStack gap="$4" px="$6" py="$6" bg="$background" testID="nominees-locked" accessible={true}>
+          <H2 accessibilityRole="header">{t('nominees.locked_title')}</H2>
+          <Paragraph accessibilityRole="text" accessibilityLiveRegion="polite">
+            {t('nominees.locked_body')}
+          </Paragraph>
+          <Button
+            theme="accent"
+            height={56}
+            accessibilityRole="button"
+            accessibilityLabel={t('nominees.locked_correction_cta')}
+            onPress={() => router.push('/(life-events)/nominee-correction')}
+          >
+            {t('nominees.locked_correction_cta')}
+          </Button>
+        </YStack>
+      </>
+    )
+  }
 
   return (
     <>

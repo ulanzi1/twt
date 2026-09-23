@@ -34,10 +34,9 @@ import {
   NOMINEE_NAME_CHECK_RECORDABLE_STATES,
   type NomineeNameCheckAccountVerdict,
   type RecordedNomineeNameCheck,
-  deriveNomineeDeclarationToken,
   getLatestNomineeNameCheck,
 } from './nominee-name-check.js';
-import { getMemberNomineeDeclarationRefs } from '../nominee/declaration-ref.js';
+import { getEffectiveNomineeDeclaration } from './nominee-effective.js';
 import { projectClaimState } from './project.js';
 
 
@@ -191,12 +190,12 @@ export async function recordNomineeNameCheck(
 
   // (d) The declaration must be the one the District Admin looked at. A re-declaration between the
   //     read and the submit can change WHO the member nominated, so the judgement no longer applies.
-  const declarationRefs = await getMemberNomineeDeclarationRefs(
-    db,
-    input.pariwarId,
-    claimRow.deceasedMemberId,
-  );
-  const liveToken = deriveNomineeDeclarationToken(declarationRefs);
+  // ⭐ Story 6.20 (AC5, site B) — the token of the declaration IN FORCE AT THE DEATH (the District
+  // Admin's determination), ⛔ not of the current `member_nominees` rows. Re-read HERE, under the claim
+  // lock, so a determination or correction that landed after the names were read is a 409. ⛔ Ref-only:
+  // ranks, version ids and a determination id — this file never reaches a name (Trap 1 / Trap 4).
+  const effective = await getEffectiveNomineeDeclaration(db, input.pariwarId, input.claimCaseId);
+  const liveToken = effective.token;
   if (liveToken !== input.nomineeDeclarationToken) {
     throw new NomineeNameCheckStaleError(
       input.claimCaseId,

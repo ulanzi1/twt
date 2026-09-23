@@ -13,13 +13,22 @@
 
 import { randomUUID } from 'node:crypto';
 
-import { and, asc, eq, sql } from 'drizzle-orm';
+import { and, asc, eq, isNull, sql } from 'drizzle-orm';
 import type pg from 'pg';
 
 import { bindScopedDb, setPariwarScope, type Db } from '../../src/db.js';
-import { deriveNomineeDeclarationToken } from '../../src/claim/nominee-name-check.js';
+import { getEffectiveNomineeDeclaration } from '../../src/claim/nominee-effective.js';
+import { recordNomineeDetermination } from '../../src/claim/nominee-determination-persist.js';
+import { addCalendarDays, istDateOf } from '../../src/cycle-calendar/holiday-resolver.js';
 import { recordNomineeNameCheck } from '../../src/claim/nominee-name-check-persist.js';
-import { getMemberNomineeDeclarationRefs } from '../../src/nominee/declaration-ref.js';
+import {
+  appendMemberDeclarationVersions,
+  getNomineeVersionHeads,
+  listNomineeDeclarationVersions,
+  planDeclarationVersions,
+} from '../../src/nominee/declaration-history.js';
+import { replaceMemberNominees } from '../../src/nominee/declaration-write.js';
+import { deriveNomineeSplit } from '../../src/nominee/split.js';
 import {
   alertId as toAlertId,
   claimId as toClaimId,
@@ -644,6 +653,176 @@ export async function enterAppRoleNoScope(client: pg.PoolClient): Promise<void> 
 // the real writer itself, across two COMMITTED transactions.
 
 /**
+ * Story 6.20 — drive a claim through the PROJECTOR (claim state is projector-only) to `target`, the way
+ * the name-check specs do. Runs in the caller's scope-tx. Returns nothing; the claim row exists after.
+ */
+export async function driveClaimTo(
+  client: pg.PoolClient,
+  pariwarId: string,
+  claimCaseId: string,
+  deceasedMemberId: string,
+  target: 'intake_pending' | 'verification_in_progress' | 'verifier_review' | 'verifier_approved',
+): Promise<void> {
+  const { projectClaimState } = await import('../../src/claim/project.js');
+  const emit = (from: string | null, to: string, eventType: string, extra: Record<string, unknown> = {}) =>
+    projectClaimState(client, {
+      claimCaseId: toClaimId(claimCaseId),
+      pariwarId: toPariwarId(pariwarId),
+      deceasedMemberId: toMemberId(deceasedMemberId),
+      intakeChannels: ['member_app'],
+      claimantActorId: null,
+      eventType: eventType as never,
+      payload: { from_state: from, to_state: to, trigger: 'test', actor: 'system', ...extra } as never,
+      actorId: null,
+    });
+  await emit(null, 'intake_pending', 'claim.intake_initiated', {
+    deceased_member_id: deceasedMemberId,
+    intake_channel: 'member_app',
+    claimant_actor_id: null,
+  });
+  if (target === 'intake_pending') return;
+  await emit('intake_pending', 'intake_converged', 'claim.intake_converged');
+  await emit('intake_converged', 'documents_pending', 'claim.documents_received');
+  await emit('documents_pending', 'verification_in_progress', 'claim.peer_mesh_pinged', {
+    selected_member_ids: [randomUUID()],
+    metric_id: 'district_cohort_v1',
+    metric_version: 1,
+  });
+  if (target === 'verification_in_progress') return;
+  await emit('verification_in_progress', 'verifier_review', 'claim.verifier_reviewing');
+  if (target === 'verifier_approved') {
+    await emit('verifier_review', 'verifier_approved', 'claim.verifier_approved');
+  }
+}
+
+// ── Story 6.20 — the nominee declaration HISTORY fixtures (T16) ─────────────────────────────────
+// AC5 makes every approval refuse until a live District Admin DETERMINATION exists, and D1's accessor
+// FAILS CLOSED on a `member_nominees` row with ⛔ no version. ⇒ seeding a nominee writes its VERSION too,
+// and `seedNomineeNameCheck` seeds a "no discards" determination by default (opt-out below) — the same
+// shape 6.18 used when it added its own gate. ⛔ The determination goes through the REAL
+// `recordNomineeDetermination`, so every approve-path spec keeps exercising its guards.
+
+/** The instant a fixture declaration is dated at by default — a fixed past day, so it stands against
+ *  any certificate date a fixture computes from "today" (⛔ never the DB clock — the date-bomb class). */
+export const SEEDED_NOMINEES_DECLARED_AT = new Date('2026-01-05T06:00:00.000Z');
+
+export interface SeedNomineeDeclarationOptions {
+  /** 1 or 2 nominees (default one). Placeholder ciphertext unless given. */
+  readonly nominees?: readonly {
+    readonly relationship?: string;
+    readonly nameCiphertext?: string;
+    readonly mobileCiphertext?: string;
+    readonly addressCiphertext?: string | null;
+  }[];
+  /** `recorded_at` = `effective_at` of the versions (default `SEEDED_NOMINEES_DECLARED_AT`). */
+  readonly declaredAt?: Date;
+  /** Create the `members` row when absent (default true — `seedClaim` mints a bare deceased id). */
+  readonly ensureMember?: boolean;
+}
+
+/**
+ * Seed a member's nominee declaration THE WAY A DECLARE WRITES IT: the `member_nominees` projection AND
+ * its `member_nominee_versions` (a tombstone included, on a 2→1). Works in or out of app scope.
+ * ⛔ Never insert `member_nominees` rows directly in a spec that reaches an approval — they are
+ * UNVERSIONED and the effective accessor fails them closed (D1).
+ */
+export async function seedNomineeDeclaration(
+  tx: Db,
+  pariwarId: string,
+  memberId: string,
+  opts: SeedNomineeDeclarationOptions = {},
+) {
+  const pid = toPariwarId(pariwarId);
+  const mid = toMemberId(memberId);
+  if (opts.ensureMember !== false) {
+    await tx
+      .insert(schema.members)
+      .values({ memberId: mid, pariwarId: pid, state: 'active', stateEventVersion: 1 })
+      .onConflictDoNothing();
+  }
+  const entries = opts.nominees ?? [{}];
+  const { ranks } = deriveNomineeSplit(entries.length);
+  const rows = entries.map((n, i) => ({
+    rank: ranks[i]!.rank,
+    splitPct: ranks[i]!.splitPct,
+    relationship: n.relationship ?? (i === 0 ? 'spouse' : 'son'),
+    nameCiphertext: n.nameCiphertext ?? `enc:v1:nominee-name-${i + 1}`,
+    mobileCiphertext: n.mobileCiphertext ?? `enc:v1:nominee-mobile-${i + 1}`,
+    addressCiphertext: n.addressCiphertext ?? null,
+  }));
+  await replaceMemberNominees(tx, { memberId: mid, pariwarId: pid, nominees: rows });
+  const plan = planDeclarationVersions(
+    await getNomineeVersionHeads(tx, pid, mid),
+    rows.map((r) => r.rank),
+  );
+  return appendMemberDeclarationVersions(tx, {
+    memberId: mid,
+    pariwarId: pid,
+    plan,
+    nominees: rows,
+    recordedAt: opts.declaredAt ?? SEEDED_NOMINEES_DECLARED_AT,
+    eventVersion: null,
+  });
+}
+
+/** Tomorrow in IST — a certificate date against which every version dated up to now STANDS. */
+export function certificateDateAfterEverything(): string {
+  return addCalendarDays(istDateOf(new Date()), 1);
+}
+
+/**
+ * Record a District Admin determination through the REAL writer. Default: "no discards" — every
+ * version `stands` against a certificate date after all of them. Pass `certificateDate` + `marks` to
+ * build a determination that discards (the marks must agree with D6 or the writer refuses them).
+ */
+export async function seedNomineeDetermination(
+  client: pg.PoolClient,
+  pariwarId: string,
+  claimCaseId: string,
+  opts: {
+    readonly certificateDate?: string;
+    readonly marks?: readonly { readonly versionId: string; readonly mark: 'stands' | 'discarded' }[];
+    readonly actorId?: string;
+    readonly actorDisplay?: string;
+  } = {},
+) {
+  const tx = bindScopedDb(client);
+  const pid = toPariwarId(pariwarId);
+  const cid = toClaimId(claimCaseId);
+  const claimRows = await tx
+    .select({ deceasedMemberId: schema.claims.deceasedMemberId })
+    .from(schema.claims)
+    .where(and(eq(schema.claims.pariwarId, pid), eq(schema.claims.claimCaseId, cid)));
+  const deceasedMemberId = claimRows[0]!.deceasedMemberId;
+  const versions = await listNomineeDeclarationVersions(tx, pid, deceasedMemberId);
+  const head = (rank: number) =>
+    versions.filter((v) => v.rank === rank).reduce<number | null>((m, v) => Math.max(m ?? 0, v.versionNo), null);
+  const live = await tx
+    .select({ id: schema.nomineeDeterminations.determinationId })
+    .from(schema.nomineeDeterminations)
+    .where(
+      and(
+        eq(schema.nomineeDeterminations.pariwarId, pid),
+        eq(schema.nomineeDeterminations.claimCaseId, cid),
+        isNull(schema.nomineeDeterminations.supersededAt),
+      ),
+    );
+  return recordNomineeDetermination(client, {
+    claimCaseId: cid,
+    pariwarId: pid,
+    certificateDate: opts.certificateDate ?? certificateDateAfterEverything(),
+    certificateDateCiphertext: 'enc:v1:certificate-date',
+    noteCiphertext: 'enc:v1:determination-note',
+    marks: opts.marks ?? versions.map((v) => ({ versionId: v.versionId, mark: 'stands' as const })),
+    watermark: { rank1: head(1), rank2: head(2) },
+    expectedLiveDeterminationId: (live[0]?.id as string | undefined) ?? null,
+    actorId: opts.actorId ?? randomUUID(),
+    actorDisplay: opts.actorDisplay ?? 'Test District Admin',
+    actor: 'operator',
+  });
+}
+
+/**
  * Give a claim its two bank accounts and a recorded, PASSING nominee name check, so it can pass the
  * AC4 approval gate. Runs inside the caller's scope-tx; the claim must already exist and be in one
  * of `NOMINEE_NAME_CHECK_RECORDABLE_STATES`.
@@ -676,6 +855,13 @@ export async function seedNomineeNameCheck(
      *  the accounts' `updated_at` is load-bearing — e.g. the return loop's re-check, where rewriting
      *  the rows would undo the very correction the check is supposed to be about. */
     readonly reuseAccounts?: boolean;
+    /**
+     * ⭐ Story 6.20 (T16) — the as-at-death DETERMINATION the AC5 gate requires. Default
+     * `'no_discards'`: when the deceased has ⛔ no declaration at all, one nominee is seeded (with its
+     * version); then, when ⛔ no determination is live, an all-`stands` one is recorded through the real
+     * writer. `'skip'` reaches an UNDETERMINED claim — the gate's 409 `nominee_determination_required`.
+     */
+    readonly determination?: 'no_discards' | 'skip';
   } = {},
 ): Promise<void> {
   if (opts.skip === true) return;
@@ -741,8 +927,23 @@ export async function seedNomineeNameCheck(
     .from(schema.claims)
     .where(and(eq(schema.claims.pariwarId, pid), eq(schema.claims.claimCaseId, cid)));
   const deceasedMemberId = claimRows[0]!.deceasedMemberId;
-  const refs = await getMemberNomineeDeclarationRefs(tx, pid, deceasedMemberId);
-  const token = deriveNomineeDeclarationToken(refs);
+  if (opts.determination !== 'skip') {
+    const before = await getEffectiveNomineeDeclaration(tx, pid, cid);
+    if (before.status === 'unversioned') {
+      throw new Error(
+        '[seedNomineeNameCheck] the deceased has member_nominees rows with NO version — seed them with seedNomineeDeclaration, not a raw INSERT (Story 6.20 D1 fails them closed)',
+      );
+    }
+    if ((await listNomineeDeclarationVersions(tx, pid, deceasedMemberId)).length === 0) {
+      await seedNomineeDeclaration(tx, pariwarId, deceasedMemberId);
+    }
+    if (before.determinationId === null) {
+      await seedNomineeDetermination(client, pariwarId, claimCaseId);
+    }
+  }
+  // The token of the declaration IN FORCE AT THE DEATH (Story 6.20, AC5) — read through the same
+  // accessor the writer re-validates against, so the two can never disagree.
+  const token = (await getEffectiveNomineeDeclaration(tx, pid, cid)).token;
 
   await recordNomineeNameCheck(client, {
     claimCaseId: cid,

@@ -387,6 +387,28 @@ export type AuthAuditEventType =
   | 'admin_nominee_name_check.queue_note_read'
   | 'admin_claim.nominee_name_checked'
   | 'admin_claim.nominee_name_check_rejected'
+  // ── Story 6.20 — the nominee declaration history (AC9) ─────────────────────────
+  // Every line carries ids and codes ONLY (⛔ never a name, mobile, address, date or note) and a
+  // `claim:<uuid>` resourceLocator so the row names the claim.
+  //   nominee_declaration.timeline_read  — the metadata timeline was read (claim.view_nominee_name_check).
+  //   nominee_declaration.snapshots_read — the DECRYPTED snapshots were opened on demand (D10).
+  //   nominee_determination.recorded / _rejected — the District Admin's determination (D4).
+  //   nominee_correction.raised / _rejected — a correction raised (helpline or member app) or refused.
+  //   nominee_correction.district_decided / pariwar_decided — the two approval steps (D7).
+  //   nominee_correction.list_read — the corrections (with decrypted details) were read.
+  //   nominee_refusal.list_read — the Pariwar Admin opened the `-239` refusal read surface (D14).
+  | 'admin_nominee_declaration.timeline_read'
+  | 'admin_nominee_declaration.snapshots_read'
+  | 'admin_claim.nominee_determination_recorded'
+  | 'admin_claim.nominee_determination_rejected'
+  | 'admin_claim.nominee_correction_raised'
+  | 'admin_claim.nominee_correction_rejected'
+  | 'admin_claim.nominee_correction_district_decided'
+  | 'admin_claim.nominee_correction_pariwar_decided'
+  | 'admin_nominee_correction.list_read'
+  | 'admin_nominee_refusal.list_read'
+  | 'member_claim.nominee_correction_raised'
+  | 'member_claim.nominee_correction_rejected'
   // ── Shepherd assignment surface (Story 6.12, FR-41 / Epic 6) ──────────────────
   // The human-shepherd routing/attribution surface (a District Admin as the family's named contact).
   // Post-commit SINK lines (the durable records are the claim.shepherd_assigned event + the

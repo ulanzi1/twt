@@ -71,6 +71,15 @@ export * from './member_kyc_profiles.js';
 // envelope, relationship Tier-3 plaintext). Composite PK (member_id, rank); 1–2 rows per
 // member, latest-wins (delete-then-insert); FK cascade for RTBF (Story 3.12).
 export * from './member_nominees.js';
+// Story 6.20 — the nominee declaration HISTORY (D1): `member_nominee_versions` is the append-only per-rank
+// version chain (Tier-1 name/mobile/address, a `vacated` tombstone form); `member_nominees` above stays
+// the CURRENT projection (D16). `nominee_determinations` (+ items) is the District Admin's record of
+// which versions stand for a claim (D4); `nominee_corrections` is the DA → PA genuine-mistake route (D7);
+// `claim_nominee_findings` holds the Story 6-22 investigation findings this story consumes (AC2, D17(c)).
+export * from './member_nominee_versions.js';
+export * from './nominee_determinations.js';
+export * from './nominee_corrections.js';
+export * from './claim_nominee_findings.js';
 // Story 3.5 — member medical disclosure (tenant-isolated; condition codes + free-text Tier-1
 // envelope). Per-disclosure PK (disclosure_id) — APPEND-ONLY history (NOT latest-wins; Epic 4
 // walks the full history); FK cascade to members for RTBF (Story 3.12) + FK to consent_records.

@@ -18,19 +18,41 @@
 //
 // ── Re-runnable for Story 3.9 (R3) ───────────────────────────────────────────────────────
 // `declare` is the re-runnable declare SERVICE: Story 3.9 attaches `requireMemberStepUp(deps,
-// 'nominee_change')` on its Life Events route and reuses this handler with zero changes. NO
-// step-up here (signup — the member holds a fresh signup-continuation session).
+// 'nominee_change')` on its Life Events route and reuses this handler.
+//
+// ── Story 6.20 — the history, the lock at the first claim, and the step-up on a re-declaration ──
+//   · D3 / AC2 — the FIRST thing the transaction does is take the intake advisory lock for this member
+//     and refuse (409 `nominee.locked_claim_filed`) if ANY claim was ever filed for them as the
+//     deceased (`-233`, `-234` V). ⛔ Never the `account-frozen` overlay, ⛔ never
+//     `getClaimByDeceasedMember` (invariant 3). The lock and its predicate live in `claim/` and are
+//     COMPOSED here, because a `nominee/` → `claim/` import is a runtime init cycle (T5).
+//   · AC1 / D1 / D2 — every declare appends ONE version per submitted rank (plus a `vacated`
+//     tombstone for a dropped rank) to `member_nominee_versions`, in the SAME transaction as the
+//     `member_nominees` projection write, stamped with `clock_timestamp()` taken AFTER the lock.
+//   · D9 — a RE-declaration (the member already has a version or a current nominee) requires a fresh
+//     `nominee_change` step-up on BOTH routes once the member has left the signup wizard. AR-24 names
+//     "nominee change" among the step-up operations, so `POST /member/nominees` accepting a
+//     re-declaration on `memberSession` alone was a live conformance breach. ⚠ The wizard's own
+//     pre-lock-in re-declares (`pending-kyc` / `pending-fee` / `pending-valid`) stay exempt — a
+//     NARROWING of what the handler used to allow (every non-terminal state), ⛔ not a preservation.
+//     The INITIAL declaration is ⛔ not a "change" and needs no step-up.
 
 import type {
   NomineeDeclareRequest,
   NomineeStatusResponse,
   NomineeSummaryEntry,
 } from '@twt/contracts';
-import { ids, nominee as nomineeDomain, member as memberDomain } from '@twt/domain';
+import { claim as claimDomain, ids, nominee as nomineeDomain, member as memberDomain } from '@twt/domain';
 import type { FastifyRequest } from 'fastify';
 
 import type { AppDeps } from '../../context.js';
-import { BadRequestError, ConflictError, UnauthorizedError } from '../../http-errors.js';
+import {
+  BadRequestError,
+  ConflictError,
+  StepUpRequiredError,
+  UnauthorizedError,
+} from '../../http-errors.js';
+import { hasFreshElevation } from '../auth/member/member-auth.repo.js';
 import { emitAuthAudit } from '../auth/shared/audit.js';
 import { closeScopeTx, openScopeTx } from '../multi-tenant/scope-tx.js';
 import type { ScopeTx } from '../../types.js';
@@ -38,6 +60,15 @@ import { encryptNomineeField } from './nominee-crypto.js';
 
 /** Lifecycle states in which a nominee declaration is rejected (terminal — R2). */
 const TERMINAL_STATES = new Set(['withdrawn', 'anonymized']);
+
+/**
+ * Story 6.20 (D9) — the signup wizard's pre-lock-in states, in which a back-navigation RE-declare stays
+ * exempt from the step-up. Every OTHER non-terminal state requires it for a re-declaration.
+ */
+const PRE_LOCK_IN_STATES = new Set(['pending-kyc', 'pending-fee', 'pending-valid']);
+
+/** The step-up action context a re-declaration requires (the Life Events route's own gate). */
+const NOMINEE_CHANGE_STEP_UP = 'nominee_change';
 
 export function createNomineeHandlers(deps: AppDeps) {
   const enc = deps.encryption;
@@ -62,7 +93,12 @@ export function createNomineeHandlers(deps: AppDeps) {
       rank: row.rank as 1 | 2,
       relationship: row.relationship as NomineeSummaryEntry['relationship'],
       splitPct: row.splitPct as 100 | 75 | 25,
-      mobilePresent: true, // mobile is required (NOT NULL on member_nominees)
+      // ⭐ Story 6.20 (AC10, T4) — RECONCILED with D1's tombstone form, ⛔ not left to assert a mobile a
+      // tombstone does not have: the projection NEVER holds a tombstone. A vacated rank is written to
+      // `member_nominee_versions` only and is ABSENT here (the projection is delete-then-insert of the
+      // submitted ranks — D16), and `member_nominees.mobile_ciphertext` is NOT NULL. So every row this
+      // summary maps names a nominee with a mobile.
+      mobilePresent: true,
       addressPresent: row.addressCiphertext !== null,
     };
   }
@@ -74,7 +110,10 @@ export function createNomineeHandlers(deps: AppDeps) {
     memberId: ids.MemberId,
   ): Promise<NomineeStatusResponse> {
     const rows = await nomineeDomain.getMemberNominees(scopeTx.tx, pariwarId, memberId);
-    return { nominees: rows.map(toSummary) };
+    // Story 6.20 (AC2) — the same durable predicate the declare path enforces, so the app can show the
+    // locked state before the member tries to change anything.
+    const locked = await claimDomain.isNomineeDeclarationLocked(scopeTx.tx, pariwarId, memberId);
+    return { nominees: rows.map(toSummary), locked };
   }
 
   return {
@@ -100,6 +139,21 @@ export function createNomineeHandlers(deps: AppDeps) {
         const memberId = ids.memberId(memberIdStr);
         const pariwarId = ids.pariwarId(pariwarIdStr);
 
+        // ⭐ Story 6.20 (D3, AC2) — the intake advisory lock FIRST (no other lock before it), then the
+        // claim-filed check. An intake that won the lock has already minted its claim row, and this
+        // edit refuses; an edit that won commits before the claim — legitimately "before the claim".
+        try {
+          await claimDomain.lockNomineeDeclarationForEdit(scopeTx.client, pariwarId, memberId);
+        } catch (err) {
+          if (err instanceof claimDomain.NomineeDeclarationLockedError) {
+            throw new ConflictError(
+              'A claim has been filed — the nominee declaration can no longer be changed. A genuine mistake can be corrected through the helpline.',
+              'nominee.locked_claim_filed',
+            );
+          }
+          throw err;
+        }
+
         // Guard: a member in a terminal state cannot re-declare nominees (R2). Pre-lock-in
         // states (pending-kyc/pending-fee/pending-valid) and active states are all allowed —
         // nominees may legitimately be declared before or after KYC within the wizard.
@@ -109,6 +163,23 @@ export function createNomineeHandlers(deps: AppDeps) {
             'Member is in a terminal state — nominees cannot be declared',
             'nominee.member_terminal',
           );
+        }
+
+        // ⭐ Story 6.20 (D9) — a RE-declaration outside the wizard needs a fresh `nominee_change`
+        // step-up on BOTH routes (AR-24). Checked here, ⛔ not as a static preHandler, because whether
+        // this submit is a CHANGE is only known inside the transaction.
+        const isRedeclaration =
+          (await nomineeDomain.hasNomineeDeclarationVersion(scopeTx.tx, pariwarId, memberId)) ||
+          (await nomineeDomain.getMemberNominees(scopeTx.tx, pariwarId, memberId)).length > 0;
+        if (isRedeclaration && !PRE_LOCK_IN_STATES.has(state)) {
+          let fresh = false;
+          try {
+            fresh = await hasFreshElevation(deps.pool, memberIdStr, NOMINEE_CHANGE_STEP_UP, deps.clock());
+          } catch {
+            // The member step-up gate's P24 posture: a lookup failure surfaces as step-up-required.
+            fresh = false;
+          }
+          if (!fresh) throw new StepUpRequiredError(NOMINEE_CHANGE_STEP_UP);
         }
 
         // Encrypt each nominee field under the member's real pariwar context, stamping the
@@ -129,6 +200,15 @@ export function createNomineeHandlers(deps: AppDeps) {
           }),
         );
 
+        // ⭐ Story 6.20 (D2) — the database wall clock, taken AFTER the lock, is BOTH `recorded_at` and
+        // `effective_at` of every version this declare writes. Then the plan: one version per submitted
+        // rank (⛔ no dedup — T3) and a tombstone for a rank this submit dropped (T9).
+        const recordedAt = await nomineeDomain.readDatabaseClock(scopeTx.tx);
+        const plan = nomineeDomain.planDeclarationVersions(
+          await nomineeDomain.getNomineeVersionHeads(scopeTx.tx, pariwarId, memberId),
+          rows.map((r) => r.rank),
+        );
+
         await nomineeDomain.replaceMemberNominees(scopeTx.tx, {
           memberId,
           pariwarId,
@@ -138,7 +218,8 @@ export function createNomineeHandlers(deps: AppDeps) {
         // Non-transition marker: from_state === to_state (R5). The reducer treats
         // member.nominees_declared as identity; this records the MOMENT on the stream with the
         // NON-PII audit (count + split only — R1). A re-declaration emits a NEW event (AC5).
-        await memberDomain.projectMemberState(scopeTx.client, {
+        // Story 6.20 (AC1) — plus the OPTIONAL non-PII `source` + per-rank `versions` written.
+        const projected = await memberDomain.projectMemberState(scopeTx.client, {
           memberId,
           pariwarId,
           eventType: 'member.nominees_declared',
@@ -149,8 +230,21 @@ export function createNomineeHandlers(deps: AppDeps) {
             actor: 'member',
             nominee_count: count as 1 | 2,
             split,
+            source: 'member',
+            versions: plan.map((p) => ({ rank: p.rank, version_no: p.versionNo, kind: p.kind })),
           },
           actorId: memberIdStr,
+        });
+
+        // ⭐ Story 6.20 (AC1) — the history, in the SAME transaction as the projection. ⛔ Nothing is
+        // updated or deleted there: the grant and the migration-0119 trigger both refuse it.
+        await nomineeDomain.appendMemberDeclarationVersions(scopeTx.tx, {
+          memberId,
+          pariwarId,
+          plan,
+          nominees: rows,
+          recordedAt,
+          eventVersion: projected.eventVersion,
         });
 
         const result = await buildStatus(scopeTx, pariwarId, memberId);
@@ -160,7 +254,12 @@ export function createNomineeHandlers(deps: AppDeps) {
         emitAuthAudit(deps, request, 'member_nominees.declared', {
           actorId: memberIdStr,
           pariwarId: pariwarIdStr,
-          context: { nominee_count: count, split },
+          // Story 6.20 — the version numbers written (non-PII), so the audit line joins the history.
+          context: {
+            nominee_count: count,
+            split,
+            versions: plan.map((p) => `${p.rank}:${p.versionNo}:${p.kind}`).join(','),
+          },
         });
         return result;
       } finally {

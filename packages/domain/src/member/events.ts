@@ -138,6 +138,28 @@ export const NomineesDeclaredPayloadSchema = z
     ...auditShape,
     nominee_count: z.union([z.literal(1), z.literal(2)]),
     split: z.enum(['sole', '75-25']),
+    // ── Story 6.20 (AC1) — OPTIONAL, NON-PII widening. The payload stays STRICT; these two fields
+    // name the `member_nominee_versions` rows the same transaction appended, so the member stream and
+    // the history can be joined without ever carrying a name, mobile or address. OPTIONAL because the
+    // stream is append-only: a Story-3.4-era event has neither field and still parses.
+    //   · `source` — `member` (the member's own declare) | `correction` (a DA → PA-approved genuine
+    //     mistake, D7).
+    //   · `versions` — per rank, the `version_no` written and its kind (`declared` | the `vacated`
+    //     tombstone a 2→1 change writes, T9).
+    source: z.enum(['member', 'correction']).optional(),
+    versions: z
+      .array(
+        z
+          .object({
+            rank: z.union([z.literal(1), z.literal(2)]),
+            version_no: z.number().int().min(1),
+            kind: z.enum(['declared', 'vacated']),
+          })
+          .strict(),
+      )
+      .min(1)
+      .max(2)
+      .optional(),
   })
   .strict();
 /**

@@ -46,3 +46,5 @@ export {
 export { nameDifferenceReasonLabel, verifierConsoleEn } from './i18n-en.js';
 // Story 6.18 — the nominee NAME CHECK panel (AC2/AC3/AC8).
 export * from './NomineeNameCheckPanel.js';
+// Story 6.20 — the nominee declaration history: timeline, determination, nominee corrections.
+export * from './NomineeDeclarationPanel.js';

@@ -15,7 +15,7 @@
 
 import { randomUUID } from 'node:crypto';
 
-import { claim, ids } from '@twt/domain';
+import { claim, cycleCalendar, ids, nominee } from '@twt/domain';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import type { AppDeps } from '../../../src/context.js';
@@ -157,6 +157,27 @@ describe.skipIf(!hasDatabase)('Nominee name-check surface — E2E (:5433)', () =
         metric_version: 1,
       });
       await emit('verification_in_progress', 'verifier_review', 'claim.verifier_reviewing');
+      // ⭐ Story 6.20 (AC5, T16) — the names read shows the declaration IN FORCE AT THE DEATH, which
+      // exists only once a District Admin has DETERMINED it. Seeded here through the REAL writer as a
+      // "no discards" determination over whatever versions `seedNominee` wrote (none ⇒ an EMPTY
+      // determination, which reads back as `declared_nominees: []`).
+      const pid = ids.pariwarId(pariwarId);
+      const versions = await nominee.listNomineeDeclarationVersions(scopeTx.tx, pid, deceasedMemberId);
+      const head = (rank: number) =>
+        versions.filter((v) => v.rank === rank).reduce<number | null>((m, v) => Math.max(m ?? 0, v.versionNo), null);
+      await claim.recordNomineeDetermination(scopeTx.client, {
+        claimCaseId,
+        pariwarId: pid,
+        certificateDate: cycleCalendar.addCalendarDays(cycleCalendar.istDateOf(new Date()), 1),
+        certificateDateCiphertext: 'enc:v1:certificate-date',
+        noteCiphertext: 'enc:v1:determination-note',
+        marks: versions.map((v) => ({ versionId: v.versionId, mark: 'stands' as const })),
+        watermark: { rank1: head(1), rank2: head(2) },
+        expectedLiveDeterminationId: null,
+        actorId: randomUUID(),
+        actorDisplay: 'Anita (District Admin)',
+        actor: 'operator',
+      });
       await closeScopeTx(scopeTx, true);
     } catch (err) {
       await closeScopeTx(scopeTx, false);
@@ -192,6 +213,17 @@ describe.skipIf(!hasDatabase)('Nominee name-check surface — E2E (:5433)', () =
       await c.query(
         `INSERT INTO member_nominees (member_id, pariwar_id, rank, name_ciphertext, mobile_ciphertext, address_ciphertext, relationship, split_pct, created_at)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, now())`,
+        [memberId, pariwarId, rank, ciphertext, mobile, address, relationship, splitPct],
+      );
+      // ⭐ Story 6.20 (D1, T16) — and its VERSION, as a declare writes it. A projection row with no
+      // version fails CLOSED; the names read resolves the effective set by version id.
+      await c.query(
+        `INSERT INTO member_nominee_versions
+           (member_id, pariwar_id, rank, version_no, declaration_id, kind, source, name_ciphertext,
+            relationship, mobile_ciphertext, address_ciphertext, split_pct, recorded_at, effective_at)
+         SELECT $1, $2, $3, COALESCE(MAX(version_no), 0) + 1, gen_random_uuid(), 'declared', 'member', $4,
+                $7, $5, $6, $8, '2026-01-05T06:00:00Z', '2026-01-05T06:00:00Z'
+           FROM member_nominee_versions WHERE member_id = $1 AND rank = $3`,
         [memberId, pariwarId, rank, ciphertext, mobile, address, relationship, splitPct],
       );
     } finally {
@@ -390,7 +422,7 @@ describe.skipIf(!hasDatabase)('Nominee name-check surface — E2E (:5433)', () =
       await grant(userId, pariwarId, 'district_admin', 'district', district);
       const memberId = await seedDeceasedMember(pariwarId, district);
       await seedNominee(pariwarId, memberId, 1, 'Asha Devi', 'spouse', 75);
-      await seedNominee(pariwarId, memberId, 2, 'Ravi Kumar', 'child', 25);
+      await seedNominee(pariwarId, memberId, 2, 'Ravi Kumar', 'son', 25);
       const claimCaseId = await seedClaim(pariwarId, memberId);
       await client.inject({ method: 'POST', url: '/api/v1/auth/scope', payload: { pariwarId } });
 

@@ -1837,7 +1837,7 @@ So that signup remains lightweight and bank-detail collection happens at claim t
 **Then** a new `nominees.declared` event is emitted (event-log is immutable; the latest event is the effective declaration); step-up OTP is required for the update
 
 > ⚠ **ANNOTATION 2026-09-21 (Story `6-20` Task 0) — *"the latest event is the effective declaration"* is CONTRADICTED for
-> the AS-AT-DEATH read. ⭐ Annotated, ⛔ not rewritten.** `2026-09-21-235` consequence 1 fixes the declaration in force as
+> the AS-AT-DEATH read. ⭐ Annotated, ⛔ not rewritten.** `2026-09-20-235` consequence 1 fixes the declaration in force as
 > **the last one made on an earlier calendar day than the day of death** — so after a death the *latest* declaration is
 > precisely the one that may ⛔ **not** govern. ⭐ The rule still holds **while the member is alive** (`-234` X). ⚠ And the
 > **relationship** field's value set moves from five to **fifteen** (`2026-09-21-237` cl.1). ⭐ Build from Story `6-20`.

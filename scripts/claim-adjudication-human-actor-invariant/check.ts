@@ -256,8 +256,10 @@ function main(): void {
   // union in `unclassifiedRouteFiles()` silently absorb it (code review 2026-09-22).
   for (const f of duplicateClassifiedFiles()) {
     missingCoverage.push(
-      `${f} — CLASSIFIED IN MORE THAN ONE LIST (COVERAGE_SET / NON_ADJUDICATION_ROUTES / ` +
-        'ENROLMENT_OWED). A route file must be classified exactly once — remove it from all but one.',
+      // ⚠ "more than once", ⛔ not "in more than one list" (code review 2026-09-23) — a file listed
+      // twice in the SAME list trips this too, and the old wording sent the reader to the wrong fix.
+      `${f} — CLASSIFIED MORE THAN ONCE across COVERAGE_SET / NON_ADJUDICATION_ROUTES / ` +
+        'ENROLMENT_OWED (in two lists, or twice in one). A route file must be classified exactly once.',
     );
   }
 

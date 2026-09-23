@@ -249,3 +249,17 @@ export const verifierConsoleEn = {
 } as const;
 
 export type VerifierConsoleCopy = typeof verifierConsoleEn;
+
+/**
+ * An AC8 clerical reason CODE as words — the ONE lookup every surface uses (the District Admin's
+ * panel and console, both R9 surfaces, the Pariwar Admin's card). ⛔ Never a name.
+ *
+ * ⚠ Falls back to the code itself for an unknown value — ⛔ never the string `undefined` — and
+ * reads OWN keys only, so a code like `constructor` cannot resolve to an inherited function
+ * (code review 2026-09-23; `PendingCaseCard` kept a hand-copied table that had already drifted
+ * in case).
+ */
+export function nameDifferenceReasonLabel(code: string): string {
+  const reasons: Record<string, string> = verifierConsoleEn.nameCheck.reasons;
+  return Object.hasOwn(reasons, code) ? reasons[code]! : code;
+}

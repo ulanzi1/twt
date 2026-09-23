@@ -27,6 +27,7 @@ import {
   VerificationDecisionStrip,
   type DecisionSubmit,
   type NomineeNameCheckSubmit,
+  nameDifferenceReasonLabel,
   verifierConsoleEn as t,
 } from '../modules/claim-verification/index.js';
 import { ApiError } from '../api/client.js';
@@ -294,7 +295,7 @@ export function VerifierConsoleRoute(): ReactElement {
                   >
                     {t.nameCheck.approvedWithDifference}:{' '}
                     {packet.nomineeNameCheck.differenceReasons
-                      .map((r) => (t.nameCheck.reasons as Record<string, string | undefined>)[r] ?? r)
+                      .map((r) => nameDifferenceReasonLabel(r))
                       .join(', ')}
                   </span>
                 ) : null}

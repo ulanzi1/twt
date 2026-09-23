@@ -66,7 +66,7 @@
 // (the `2026-08-06-080` precedent). *Re-trigger:* the first counsel engagement, at which it should be
 // re-presented ([[feedback_record_unattested_no_backfill]]).
 
-import { and, asc, desc, eq } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNull } from 'drizzle-orm';
 
 import { consentRecords } from '../schema/consent_records.js';
 import type { Db } from '../db.js';
@@ -81,6 +81,8 @@ import { memberIdentities } from '../schema/member_identities.js';
 import { memberKycProfiles } from '../schema/member_kyc_profiles.js';
 import { memberMedicalDisclosures } from '../schema/member_medical_disclosures.js';
 import { memberNominees } from '../schema/member_nominees.js';
+import { memberNomineeVersions } from '../schema/member_nominee_versions.js';
+import { nomineeDeterminationItems, nomineeDeterminations } from '../schema/nominee_determinations.js';
 import { memberPostings } from '../schema/member_postings.js';
 import { members } from '../schema/members.js';
 import { vyawasthaShulkReceipts } from '../schema/vyawastha_shulk_receipts.js';
@@ -196,6 +198,32 @@ export async function assembleMemberExport(
     .where(eq(memberNominees.memberId, memberId))
     .orderBy(asc(memberNominees.rank));
 
+  // Story 6.20 (D11) — the declaration HISTORY, with the marks of every LIVE determination on it.
+  const versionRows = await client
+    .select()
+    .from(memberNomineeVersions)
+    .where(eq(memberNomineeVersions.memberId, memberId))
+    .orderBy(asc(memberNomineeVersions.rank), asc(memberNomineeVersions.versionNo));
+  const liveMarks =
+    versionRows.length === 0
+      ? []
+      : await client
+          .select({ versionId: nomineeDeterminationItems.versionId, mark: nomineeDeterminationItems.mark })
+          .from(nomineeDeterminationItems)
+          .innerJoin(
+            nomineeDeterminations,
+            eq(nomineeDeterminations.determinationId, nomineeDeterminationItems.determinationId),
+          )
+          .where(
+            and(
+              inArray(
+                nomineeDeterminationItems.versionId,
+                versionRows.map((v) => v.versionId),
+              ),
+              isNull(nomineeDeterminations.supersededAt),
+            ),
+          );
+
   const medicalRows = await client
     .select()
     .from(memberMedicalDisclosures)
@@ -264,6 +292,23 @@ export async function assembleMemberExport(
     })),
   );
 
+  const nomineeHistory = await Promise.all(
+    versionRows.map(async (v) => ({
+      rank: v.rank,
+      versionNo: v.versionNo,
+      kind: v.kind,
+      source: v.source,
+      name: v.nameCiphertext !== null ? await decryptField(v.nameCiphertext, pariwarId, FIELD_CLASS_NOMINEE, enc) : null,
+      relationship: v.relationship,
+      mobile: v.mobileCiphertext !== null ? await decryptField(v.mobileCiphertext, pariwarId, FIELD_CLASS_NOMINEE, enc) : null,
+      address: v.addressCiphertext !== null ? await decryptField(v.addressCiphertext, pariwarId, FIELD_CLASS_NOMINEE, enc) : null,
+      splitPct: v.splitPct,
+      recordedAt: v.recordedAt.toISOString(),
+      effectiveAt: v.effectiveAt.toISOString(),
+      determinationMarks: liveMarks.filter((m) => m.versionId === v.versionId).map((m) => m.mark),
+    })),
+  );
+
   const medicalDisclosures = await Promise.all(
     medicalRows.map(async (m) => ({
       imaListVersion: m.imaListVersion,
@@ -292,6 +337,7 @@ export async function assembleMemberExport(
     kyc,
     address,
     nominees,
+    nomineeHistory,
     medicalDisclosures,
     postings: postingRows.map((p) => ({
       district: p.district,

@@ -196,8 +196,14 @@ export function addCalendarDays(date: CalendarDateString, days: number): Calenda
   });
 }
 
-/** The instant that IS IST midnight opening `date` — i.e. the exclusive end of the previous IST day. */
-function istMidnightAt(date: CalendarDateString): Date {
+/**
+ * The instant that IS IST midnight opening `date` — i.e. the exclusive end of the previous IST day.
+ *
+ * ⭐ EXPORTED by Story 6.20 (D6): the as-at-death cutoff is *"`effective_at` before the IST start-of-day
+ * of the certificate date"*, and this is that instant. Exported HERE rather than re-derived, because six
+ * copies of the IST offset already exist and ⛔ a seventh is the one thing D6 forbids.
+ */
+export function istMidnightAt(date: CalendarDateString): Date {
   return new Date(calendarDateToUtcMs(date) - IST_UTC_OFFSET_MS);
 }
 

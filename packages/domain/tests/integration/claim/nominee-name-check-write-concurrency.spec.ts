@@ -139,17 +139,17 @@ describe.skipIf(!hasDatabase)('Story 6.18 — the check write vs a concurrent ba
     return r.rows as { accountRank: number; updatedAt: Date }[];
   }
 
-  async function tokenFor(mid: MemberId): Promise<string> {
+  /** Story 6.20 (AC5) — the token of the EFFECTIVE as-at-death declaration, keyed by the CLAIM. */
+  async function tokenFor(cid: ClaimId): Promise<string> {
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
       await client.query('SET LOCAL ROLE twt_app');
       await setPariwarScope(client, PARIWAR_A);
-      const { getMemberNomineeDeclarationRefs } = await import('../../../src/nominee/declaration-ref.js');
-      const { deriveNomineeDeclarationToken } = await import('../../../src/claim/nominee-name-check.js');
-      const refs = await getMemberNomineeDeclarationRefs(bindScopedDb(client), PARIWAR_A, mid);
+      const { getEffectiveNomineeDeclaration } = await import('../../../src/claim/nominee-effective.js');
+      const effective = await getEffectiveNomineeDeclaration(bindScopedDb(client), PARIWAR_A, cid);
       await client.query('COMMIT');
-      return deriveNomineeDeclarationToken(refs);
+      return effective.token;
     } finally {
       client.release();
     }
@@ -246,8 +246,8 @@ describe.skipIf(!hasDatabase)('Story 6.18 — the check write vs a concurrent ba
       // ⭐ THE CHAIN D5 ACTUALLY CLAIMS, with every link driven by production code:
       //   record a passing check → it is CURRENT → the real bank writer commits a correction →
       //   the SAME check is now STALE. ⛔ No `tx.update`, ⛔ no fabricated timestamp.
-      const { cid, mid } = await seedClaimWithAccounts();
-      const token = await tokenFor(mid);
+      const { cid } = await seedClaimWithAccounts();
+      const token = await tokenFor(cid);
       const stamps = await liveStamps(cid);
 
       await onOwnTx((client) =>
@@ -305,7 +305,7 @@ describe.skipIf(!hasDatabase)('Story 6.18 — the check write vs a concurrent ba
 
       // ⭐ AND THE DECLARATION TOKEN IS ⛔ NOT WHAT CHANGED. A reader could otherwise suspect the
       // staleness came from the nominee side; it did not — the token is byte-identical.
-      expect(await tokenFor(mid)).toBe(token);
+      expect(await tokenFor(cid)).toBe(token);
     },
     TIMEOUT,
   );
@@ -324,9 +324,9 @@ describe.skipIf(!hasDatabase)('Story 6.18 — the check write vs a concurrent ba
       // against stamps that have moved. It is still a genuine TWO-CONNECTION test: the edit COMMITS
       // on a separate connection before the check runs, which is precisely what ⛔ cannot be
       // expressed on one connection, where the check would read its own uncommitted edit.
-      const { cid, mid } = await seedClaimWithAccounts();
+      const { cid } = await seedClaimWithAccounts();
       const stampsAsRead = await liveStamps(cid);
-      const token = await tokenFor(mid);
+      const token = await tokenFor(cid);
       expect(stampsAsRead).toHaveLength(2);
 
       // Someone else edits the accounts — on their OWN connection, and it COMMITS.
@@ -378,9 +378,9 @@ describe.skipIf(!hasDatabase)('Story 6.18 — the check write vs a concurrent ba
   it(
     '⭐⭐ a check racing a bank edit is EITHER recorded against live stamps OR refused as stale — ⛔ never recorded stale',
     async () => {
-      const { cid, mid } = await seedClaimWithAccounts();
+      const { cid } = await seedClaimWithAccounts();
       const stamps = await liveStamps(cid);
-      const token = await tokenFor(mid);
+      const token = await tokenFor(cid);
       expect(stamps, 'the fixture produced no accounts — the race below would be vacuous').toHaveLength(2);
 
       // ⭐ THE REAL SEQUENCE: the District Admin has already READ these stamps (above), and a
@@ -453,9 +453,9 @@ describe.skipIf(!hasDatabase)('Story 6.18 — the check write vs a concurrent ba
       // ⚠ This is the POSITIVE CONTROL for the test above: it proves the staleness refusal is caused
       // by the BANK EDIT and ⛔ not by concurrency as such. Two checks race on the same claim lock,
       // neither touches `claim_nominee_bank_accounts`, so both submit stamps that are still live.
-      const { cid, mid } = await seedClaimWithAccounts();
+      const { cid } = await seedClaimWithAccounts();
       const stamps = await liveStamps(cid);
-      const token = await tokenFor(mid);
+      const token = await tokenFor(cid);
 
       const mkCheck = (who: string) => (client: pg.PoolClient) =>
         recordNomineeNameCheck(client, {

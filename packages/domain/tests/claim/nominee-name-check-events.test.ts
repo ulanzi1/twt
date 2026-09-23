@@ -19,7 +19,6 @@ import {
   NOMINEE_NAME_CHECK_RECORDABLE_STATES,
   NOMINEE_NAME_CLERICAL_REASONS,
   NOMINEE_NAME_CHECK_VERDICTS,
-  deriveNomineeDeclarationToken,
   isNomineeNameCheckCurrent,
   nomineeNameCheckClericalReasons,
   nomineeNameCheckPasses,
@@ -110,12 +109,25 @@ describe('ClaimNomineeNameCheckedPayloadSchema (the 32nd claim event)', () => {
       'claim.settled',
       'claim.denied_no_appeal',
     ];
+    // ⭐⭐ AMENDED BY STORY 6.20 (T11) — ⛔ NOT LOOSENED. 6.20 mints its own two identity annotations
+    // (the District Admin's determination, D4; the lock release, AC2). They are named HERE, in a SECOND
+    // frozen literal, so this assertion keeps saying exactly what it said about 6.18 — and ANY OTHER
+    // addition still fails it, whatever it is called. 6.20's own count is asserted in the block below.
+    const STORY_6_20_CLAIM_EVENTS: readonly string[] = [
+      'claim.nominee_determination_recorded',
+      'claim.nominee_lock_released',
+    ];
     const live = [...CLAIM_EVENT_TYPES] as string[];
 
     // ⭐ ADDED — exactly one, and it is the one AC3 names.
-    expect(live.filter((t) => !PRE_6_18_CLAIM_EVENTS.includes(t))).toEqual([
-      'claim.nominee_name_checked',
-    ]);
+    expect(
+      live.filter((t) => !PRE_6_18_CLAIM_EVENTS.includes(t) && !STORY_6_20_CLAIM_EVENTS.includes(t)),
+    ).toEqual(['claim.nominee_name_checked']);
+    // Story 6.20 — its additions are EXACTLY its two, and both are live (a dropped one fails here too).
+    expect(STORY_6_20_CLAIM_EVENTS.filter((t) => !live.includes(t))).toEqual([]);
+    expect(live.filter((t) => STORY_6_20_CLAIM_EVENTS.includes(t)).sort()).toEqual(
+      [...STORY_6_20_CLAIM_EVENTS].sort(),
+    );
     // REMOVED — ⛔ none. A rename is an add AND a delete, and only checking additions would read a
     // rename as a clean addition.
     expect(PRE_6_18_CLAIM_EVENTS.filter((t) => !live.includes(t))).toEqual([]);
@@ -342,35 +354,10 @@ describe('the recordable window (AC3) vs the bank-write windows (AC4)', () => {
   });
 });
 
-describe('deriveNomineeDeclarationToken', () => {
-  const t = (rows: { rank: number; createdAt: Date }[]) => deriveNomineeDeclarationToken(rows);
-
-  it('is deterministic and order-independent', () => {
-    const a = { rank: 1, createdAt: new Date('2026-01-01T00:00:00.000Z') };
-    const b = { rank: 2, createdAt: new Date('2026-01-01T00:00:00.000Z') };
-    expect(t([a, b])).toBe(t([b, a]));
-  });
-
-  it('⭐ CHANGES when the declaration is replaced — the mechanism that invalidates a check', () => {
-    const before = t([{ rank: 1, createdAt: new Date('2026-01-01T00:00:00.000Z') }]);
-    const after = t([{ rank: 1, createdAt: new Date('2026-06-01T00:00:00.000Z') }]);
-    expect(after).not.toBe(before);
-  });
-
-  it('changes when a nominee is ADDED or REMOVED', () => {
-    const one = t([{ rank: 1, createdAt: new Date('2026-01-01T00:00:00.000Z') }]);
-    const two = t([
-      { rank: 1, createdAt: new Date('2026-01-01T00:00:00.000Z') },
-      { rank: 2, createdAt: new Date('2026-01-01T00:00:00.000Z') },
-    ]);
-    expect(two).not.toBe(one);
-  });
-
-  it('gives an EMPTY declaration a stable token distinct from every populated one', () => {
-    expect(t([])).toBe(t([]));
-    expect(t([])).not.toBe(t([{ rank: 1, createdAt: new Date('2026-01-01T00:00:00.000Z') }]));
-  });
-});
+// ⚠ `deriveNomineeDeclarationToken` (the digest of the CURRENT rows' `(rank, created_at)`) was REMOVED by
+// Story 6.20 (AC5): the token is now the EFFECTIVE as-at-death declaration's, and its unit tests live in
+// `nominee-effective.test.ts` — deterministic, moves on a new determination / version / disqualification,
+// and distinct for every fail-closed state.
 
 describe('currency + passing (AC3, AC4)', () => {
   const check: RecordedNomineeNameCheck = {

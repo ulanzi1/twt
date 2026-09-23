@@ -25,9 +25,15 @@ import { z } from 'zod';
 // ── Wire enums (re-declared; value-aligned with schema/claims.ts) ──────────────────────
 
 /**
- * The claimant's relationship to the deceased member (AC3 relationship-confirm). Value-
- * aligned with the nominee relationship set (data-quality constraint at the wire, not the
- * DB). Recorded on the `claim.intake_initiated` audit trail — never the claimant's PII.
+ * The claimant's relationship to the deceased member (AC3 relationship-confirm). A data-quality
+ * constraint at the wire, not the DB. Recorded on the `claim.intake_initiated` audit trail — never
+ * the claimant's PII.
+ *
+ * ⚠ STORY 6.20 (AC12) — this list is ⛔ NO LONGER value-aligned with the NOMINEE relationship set,
+ * and it must ⛔ not be widened to match. `2026-09-21-237` cl.1 moved `NomineeRelationship` from five
+ * values to FIFTEEN; it ruled only the NOMINEE list — the claimant's relationship to the deceased is a
+ * different fact and stays five. (The earlier "value-aligned" sentence here was also wrong about
+ * `schema/claims.ts`, which carries ⛔ no relationship column at all.)
  */
 export const ClaimantRelationship = z.enum(['spouse', 'child', 'parent', 'sibling', 'other']);
 export type ClaimantRelationship = z.output<typeof ClaimantRelationship>;

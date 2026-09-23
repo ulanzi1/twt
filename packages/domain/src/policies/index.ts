@@ -198,3 +198,7 @@ export * from './pariwar-custom-field-definitions-rls.js';
 // no cross-tenant default tree, and a DELETE would break the `superseded_by_version` chain.
 // ⛔ A leaked org tree is a leaked AUTHORIZATION INPUT — hence the adversarial-leak membership.
 export * from './geo-tree-versions-rls.js';
+// Story 6.20 — the nominee-declaration history tables (versions, determinations + items, corrections,
+// findings). SELECT + INSERT everywhere, a tenant-scoped UPDATE leg only on the three PII-bearing tables
+// (column-level grants in migration 0119 narrow it), ⛔ no DELETE leg and ⛔ no `FOR ALL` policy.
+export * from './nominee-declaration-history-rls.js';

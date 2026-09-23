@@ -40,6 +40,7 @@ const NAMES: NomineeNameCheckResponse = {
   declared_nominees: [
     { rank: 1, split_pct: 75, relationship: 'spouse', nominee_name: { state: 'readable', value: 'Asha Devi' } },
   ],
+  declaration_status: 'effective',
   nominee_declaration_token: 'tok-1',
   nominee_declared_at: '2026-01-01T00:00:00.000Z',
   claim_filed_at: '2026-09-01T00:00:00.000Z',

@@ -37,6 +37,18 @@ export * from './nominee-name-check.js';
 export * from './nominee-name-check-read.js';
 export * from './correction-queue-read.js';
 export * from './nominee-name-check-persist.js';
+// Story 6.20 — the nominee declaration in force AT THE DEATH: the claim-filed LOCK + the Story-6-22
+// findings it consumes (D3, AC2, D17(c)), the EFFECTIVE declaration accessor + its bulk form + the pure
+// D6 cutoff (D5), and the District Admin's DETERMINATION writer (D4). ⛔ `nominee-effective.ts` never
+// imports `events.ts` (T5(b)).
+export * from './nominee-lock.js';
+export * from './nominee-effective.js';
+export * from './nominee-determination-persist.js';
+// Story 6.20 (D7) — the genuine-mistake CORRECTION: raise, District Admin step, Pariwar Admin step (applies).
+export * from './nominee-correction-persist.js';
+// Story 6.20 (D14, AC13) — the `-239` refusal's two reads: the Pariwar Admin's read surface and the
+// derived ground-inspection inheritance source. The refusal itself is the shipped verifier denial.
+export * from './nominee-refusal-read.js';
 // Story 11b.3a (AC3, AC4, AC5) — the per-Pariwar NOMINEE-BANK MASKING schedule: the PURE projection
 // + predicate, and the governed schedule accessor. ⛔ Neither ever touches a bank row: cl.10(g)
 // keeps the complete details in the protected internal record and masking is a PROJECTION.

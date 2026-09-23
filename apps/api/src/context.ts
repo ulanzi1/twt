@@ -232,6 +232,18 @@ export const CLAIM_R9_VOTE_FIELD_CLASS = 'r9_vote';
 export const CLAIM_CONCEALMENT_ASSESSMENT_FIELD_CLASS = 'concealment_assessment';
 
 /**
+ * Story 6.20 (D4, D7) — the nominee-DETERMINATION and nominee-CORRECTION Tier-1 field classes. The
+ * District Admin's certificate date + note (`nominee_determinations`) and the correction's raise / step
+ * notes (`nominee_corrections`) are encrypted under these before the domain writer, and decrypted only on
+ * the authorized on-demand routes. Match the `piiColumn(1, 'nominee_determination' | 'nominee_correction')`
+ * annotations. ⚠ The correction's PROPOSED name / mobile / address are ⛔ NOT under `nominee_correction`:
+ * they are copied verbatim into `member_nominee_versions` and `member_nominees` when applied, so they are
+ * encrypted under `MEMBER_NOMINEE_FIELD_CLASS` from the start. NEVER in an event / audit line / log.
+ */
+export const NOMINEE_DETERMINATION_FIELD_CLASS = 'nominee_determination';
+export const NOMINEE_CORRECTION_FIELD_CLASS = 'nominee_correction';
+
+/**
  * The appeal Tier-1 field classes (Story 6.16, D-A/AC2/AC3). The appeal routes encrypt the mandatory reviewer
  * rationale (Stage 1/3 decisions + the Stage-2 finalize audit row) under `CLAIM_APPEAL_DECISION_FIELD_CLASS`
  * and each panel vote's rationale under `CLAIM_APPEAL_VOTE_FIELD_CLASS`, before the domain writer; authorized

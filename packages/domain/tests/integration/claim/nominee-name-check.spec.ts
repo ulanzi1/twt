@@ -23,17 +23,23 @@ import {
   NomineeNameCheckRequiredError,
   NomineeNameCheckStaleError,
   adjudicateClaim,
-  deriveNomineeDeclarationToken,
   getLatestNomineeNameCheck,
   projectClaimState,
   recordNomineeNameCheck,
   returnToDistrictAdmin,
   voteOnFrozenClaim,
 } from '../../../src/claim/index.js';
-import { getMemberNomineeDeclarationRefs } from '../../../src/nominee/declaration-ref.js';
+import { getEffectiveNomineeDeclaration } from '../../../src/claim/nominee-effective.js';
 import * as schema from '../../../src/schema/index.js';
 import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
-import { PARIWAR_A, enterAppScope, seedMember, seedNomineeNameCheck } from '../_helpers.js';
+import {
+  PARIWAR_A,
+  enterAppScope,
+  seedMember,
+  seedNomineeDeclaration,
+  seedNomineeDetermination,
+  seedNomineeNameCheck,
+} from '../_helpers.js';
 
 const DISTRICT_ADMIN = 'c3c3c3c3-c3c3-c3c3-c3c3-c3c3c3c3c3c3';
 const TRUSTEE = 'a1a1a1a1-a1a1-a1a1-a1a1-a1a1a1a1a1a1';
@@ -99,6 +105,21 @@ async function seedAccountsOnly(tx: Tx, claimCaseId: ClaimId, ranks: readonly nu
   );
 }
 
+/**
+ * Story 6.20 (AC5, T16) — the accounts AND an as-at-death DETERMINATION, but ⛔ no name check. Since
+ * 6.20 the gate asks for the determination BEFORE the check, so "nobody checked" is only reachable on a
+ * DETERMINED claim — otherwise the 409 is `nominee_determination_required`, a different fact.
+ */
+async function seedAccountsAndDetermination(client: Client, tx: Tx, claimCaseId: ClaimId): Promise<void> {
+  await seedAccountsOnly(tx, claimCaseId);
+  const [row] = await tx
+    .select({ deceasedMemberId: schema.claims.deceasedMemberId })
+    .from(schema.claims)
+    .where(and(eq(schema.claims.pariwarId, PARIWAR_A), eq(schema.claims.claimCaseId, claimCaseId)));
+  await seedNomineeDeclaration(tx, PARIWAR_A, row!.deceasedMemberId);
+  await seedNomineeDetermination(client, PARIWAR_A, claimCaseId);
+}
+
 async function liveAccountStamps(tx: Tx, claimCaseId: ClaimId) {
   return tx
     .select({
@@ -114,8 +135,9 @@ async function liveAccountStamps(tx: Tx, claimCaseId: ClaimId) {
     );
 }
 
-async function tokenFor(tx: Tx, memberId: MemberId): Promise<string> {
-  return deriveNomineeDeclarationToken(await getMemberNomineeDeclarationRefs(tx, PARIWAR_A, memberId));
+/** Story 6.20 (AC5) — the token of the EFFECTIVE as-at-death declaration, keyed by the CLAIM. */
+async function tokenFor(tx: Tx, claimCaseId: ClaimId): Promise<string> {
+  return (await getEffectiveNomineeDeclaration(tx, PARIWAR_A, claimCaseId)).token;
 }
 
 async function claimState(tx: Tx, claimCaseId: ClaimId): Promise<string | undefined> {
@@ -157,7 +179,7 @@ describe.skipIf(!hasDatabase)('Story 6.18 — the nominee name check (:5433)', (
       const result = await recordNomineeNameCheck(client, {
         claimCaseId: cid,
         pariwarId: PARIWAR_A,
-        nomineeDeclarationToken: await tokenFor(tx, mid),
+        nomineeDeclarationToken: await tokenFor(tx, cid),
         accounts: stamps.map((s) => ({
           accountRank: s.accountRank as 1 | 2,
           accountUpdatedAt: s.updatedAt.toISOString(),
@@ -191,7 +213,7 @@ describe.skipIf(!hasDatabase)('Story 6.18 — the nominee name check (:5433)', (
         recordNomineeNameCheck(client, {
           claimCaseId: cid,
           pariwarId: PARIWAR_A,
-          nomineeDeclarationToken: await tokenFor(tx, mid),
+          nomineeDeclarationToken: await tokenFor(tx, cid),
           accounts: [],
           actorId: DISTRICT_ADMIN,
           actorDisplay: 'Anita (District Admin)',
@@ -216,7 +238,7 @@ describe.skipIf(!hasDatabase)('Story 6.18 — the nominee name check (:5433)', (
         recordNomineeNameCheck(client, {
           claimCaseId: cid,
           pariwarId: PARIWAR_A,
-          nomineeDeclarationToken: await tokenFor(tx, mid),
+          nomineeDeclarationToken: await tokenFor(tx, cid),
           accounts: (await liveAccountStamps(tx, cid)).map((s) => ({
             accountRank: s.accountRank as 1 | 2,
             accountUpdatedAt: s.updatedAt.toISOString(),
@@ -243,7 +265,7 @@ describe.skipIf(!hasDatabase)('Story 6.18 — the nominee name check (:5433)', (
         recordNomineeNameCheck(client, {
           claimCaseId: cid,
           pariwarId: PARIWAR_A,
-          nomineeDeclarationToken: await tokenFor(tx, mid),
+          nomineeDeclarationToken: await tokenFor(tx, cid),
           accounts: stamps.map((s) => ({
             accountRank: s.accountRank as 1 | 2,
             // An instant that is not the live one — exactly what a concurrent correction produces.
@@ -330,16 +352,15 @@ describe.skipIf(!hasDatabase)('Story 6.18 — the nominee name check (:5433)', (
       // ⚠ The nominee row FKs to `members`, so the deceased member must exist as a row — `driveTo`
       // only mints claim EVENTS. Seeded here rather than in `driveTo` so the other tests in this
       // file keep exercising the "declared nobody" path, which is its own first-class state (AC2).
+      // ⭐ Story 6.20 (T16): seeded THE WAY A DECLARE WRITES IT — projection AND version — then
+      // DETERMINED, so the nominee sentinel sits in the EFFECTIVE declaration the check now reads. A raw
+      // `member_nominees` INSERT would be UNVERSIONED (D1 fails it closed) and never reached at all,
+      // which would make this leak test pass vacuously.
       await seedMember(tx, PARIWAR_A, { memberId: mid });
-      await tx.insert(schema.memberNominees).values({
-        memberId: mid,
-        pariwarId: PARIWAR_A,
-        rank: 1,
-        nameCiphertext: NOMINEE,
-        relationship: 'spouse',
-        splitPct: 100,
-        mobileCiphertext: 'ZZNOMINEEMOBILEZZ',
+      await seedNomineeDeclaration(tx, PARIWAR_A, mid, {
+        nominees: [{ nameCiphertext: NOMINEE, mobileCiphertext: 'ZZNOMINEEMOBILEZZ' }],
       });
+      await seedNomineeDetermination(client, PARIWAR_A, cid);
       await tx.insert(schema.claimNomineeBankAccounts).values(
         ([1, 2] as const).map((rank) => ({
           claimCaseId: cid,
@@ -358,7 +379,7 @@ describe.skipIf(!hasDatabase)('Story 6.18 — the nominee name check (:5433)', (
       await recordNomineeNameCheck(client, {
         claimCaseId: cid,
         pariwarId: PARIWAR_A,
-        nomineeDeclarationToken: await tokenFor(tx, mid),
+        nomineeDeclarationToken: await tokenFor(tx, cid),
         accounts: stamps.map((s2) => ({
           accountRank: s2.accountRank as 1 | 2,
           accountUpdatedAt: s2.updatedAt.toISOString(),
@@ -425,7 +446,7 @@ describe.skipIf(!hasDatabase)('Story 6.18 — the nominee name check (:5433)', (
       const cid = toClaimId(randomUUID());
       const mid = toMemberId(randomUUID());
       await driveTo(client, cid, mid, 'verifier_review');
-      await seedAccountsOnly(tx, cid);
+      await seedAccountsAndDetermination(client, tx, cid);
 
       await expect(
         adjudicateClaim(client, {
@@ -585,6 +606,15 @@ describe.skipIf(!hasDatabase)('Story 6.18 — the nominee name check (:5433)', (
         key: 'no check at all',
         error: 'NomineeNameCheckRequiredError',
         seed: async (client: Client, tx: Tx, cid: ClaimId) => {
+          await seedAccountsAndDetermination(client, tx, cid);
+        },
+      },
+      {
+        // ⭐ Story 6.20 (AC5, D15) — two accounts but ⛔ NO DETERMINATION: the claim WAITS for the
+        // District Admin to say which declaration stands. ⛔ Never a denial.
+        key: 'no as-at-death determination (Story 6.20)',
+        error: 'NomineeDeterminationRequiredError',
+        seed: async (client: Client, tx: Tx, cid: ClaimId) => {
           await seedAccountsOnly(tx, cid);
         },
       },
@@ -707,7 +737,7 @@ describe.skipIf(!hasDatabase)('Story 6.18 — the nominee name check (:5433)', (
         recordNomineeNameCheck(client, {
           claimCaseId: cid,
           pariwarId: PARIWAR_A,
-          nomineeDeclarationToken: await tokenFor(tx, mid),
+          nomineeDeclarationToken: await tokenFor(tx, cid),
           accounts: stamps.map((s) => ({
             accountRank: s.accountRank as 1 | 2,
             accountUpdatedAt: s.updatedAt.toISOString(),

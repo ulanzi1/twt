@@ -37,6 +37,9 @@ export const VerifierReasonCode = z.enum([
   'r8_90pct_met',
   'concealment_flag_override',
   'concealment_flag_uphold',
+  // Story 6.20 (D14, `2026-09-21-239`) — the District Admin's refusal on SUSPICION of a nominee
+  // version dated on or after the certificate date. `denied` ONLY. Mirrors the domain tuple + 0120.
+  'post_death_nominee_change',
   'r9_routed_to_voting',
   'other',
 ]);
@@ -57,6 +60,7 @@ export const REASON_CODE_OUTCOME_COMPAT: Readonly<
   r8_90pct_met: ['approved'],
   concealment_flag_override: ['approved'],
   concealment_flag_uphold: ['denied'],
+  post_death_nominee_change: ['denied'],
   r9_routed_to_voting: ['escalated'],
   other: ['approved', 'denied', 'escalated'],
 };

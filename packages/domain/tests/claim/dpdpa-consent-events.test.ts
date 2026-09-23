@@ -56,7 +56,7 @@ describe('ClaimDpdpaConsentRecordedPayloadSchema (the 24th claim event)', () => 
     // passes for a NEW event that was correctly registered. This pin does ⛔ not — so the
     // vocabulary cannot grow without somebody deliberately acknowledging it here. ⭐ It is a
     // TRIPWIRE, ⛔ not a coverage check, and the two are ⛔ not redundant.
-    expect(CLAIM_EVENT_TYPES).toHaveLength(32); // Story 6.18 added the 32nd (claim.nominee_name_checked)
+    expect(CLAIM_EVENT_TYPES).toHaveLength(34); // Story 6.20 added the 33rd + 34th (claim.nominee_determination_recorded, claim.nominee_lock_released — both identity annotations, D4 / AC2); Story 6.18 added the 32nd (claim.nominee_name_checked)
     expect(CLAIM_EVENT_PAYLOAD_SCHEMAS['claim.dpdpa_consent_recorded']).toBe(
       ClaimDpdpaConsentRecordedPayloadSchema,
     );

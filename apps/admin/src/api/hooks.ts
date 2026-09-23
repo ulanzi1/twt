@@ -1675,3 +1675,106 @@ export function useDecideModerationAppeal(pariwarId: string) {
 export function useRequestModerationAppealStepUp() {
   return useMutation({ mutationFn: () => api.requestModerationAppealStepUp() });
 }
+
+// ── Story 6.20 — the nominee declaration HISTORY ─────────────────────────────
+export const nomineeDeclarationKey = (pariwarId: string, claimCaseId: string) =>
+  ['nominee-declaration', pariwarId, claimCaseId] as const;
+export const nomineeSnapshotsKey = (pariwarId: string, claimCaseId: string) =>
+  ['nominee-declaration-snapshots', pariwarId, claimCaseId] as const;
+export const nomineeCorrectionsKey = (pariwarId: string, claimCaseId: string) =>
+  ['nominee-corrections', pariwarId, claimCaseId] as const;
+export const nomineeRefusalsKey = (pariwarId: string) => ['nominee-refusals', pariwarId] as const;
+
+/** The timeline — METADATA only, so it may refetch; still fetched only when the disclosure is open. */
+export function useNomineeDeclarationTimeline(pariwarId: string, claimCaseId: string | null, enabled = true) {
+  return useQuery({
+    queryKey: nomineeDeclarationKey(pariwarId, claimCaseId ?? ''),
+    queryFn: () => api.getNomineeDeclarationTimeline(pariwarId, claimCaseId as string),
+    enabled: Boolean(claimCaseId) && enabled,
+  });
+}
+
+/**
+ * The DECRYPTED snapshots — ⭐ on demand ONLY (the District Admin presses "Show names and numbers"),
+ * ⛔ never a background refetch: every fetch decrypts living people's Tier-1 details and writes an audit
+ * line (the 6.18 names-read posture).
+ */
+export function useNomineeDeclarationSnapshots(pariwarId: string, claimCaseId: string | null, enabled: boolean) {
+  return useQuery({
+    queryKey: nomineeSnapshotsKey(pariwarId, claimCaseId ?? ''),
+    queryFn: () => api.getNomineeDeclarationSnapshots(pariwarId, claimCaseId as string),
+    enabled: Boolean(claimCaseId) && enabled,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
+}
+
+/** The corrections on a claim (decrypts target + proposal; fetched only when the disclosure is open). */
+export function useNomineeCorrections(pariwarId: string, claimCaseId: string | null, enabled = true) {
+  return useQuery({
+    queryKey: nomineeCorrectionsKey(pariwarId, claimCaseId ?? ''),
+    queryFn: () => api.getNomineeCorrections(pariwarId, claimCaseId as string),
+    enabled: Boolean(claimCaseId) && enabled,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
+}
+
+/** Every write here moves the effective declaration — so the timeline, the corrections, the name check
+ *  (its token) and the correction queue all refetch. */
+function useInvalidateNomineeDeclaration(pariwarId: string, claimCaseId: string | null) {
+  const qc = useQueryClient();
+  return () => {
+    const cid = claimCaseId ?? '';
+    void qc.invalidateQueries({ queryKey: nomineeDeclarationKey(pariwarId, cid) });
+    void qc.invalidateQueries({ queryKey: nomineeCorrectionsKey(pariwarId, cid) });
+    void qc.invalidateQueries({ queryKey: nomineeNameCheckKey(pariwarId, cid) });
+    void qc.invalidateQueries({ queryKey: claimsUnderCorrectionKey(pariwarId) });
+    void qc.invalidateQueries({ queryKey: ['nominee-corrections-pending', pariwarId] });
+  };
+}
+
+export function usePostNomineeDetermination(pariwarId: string, claimCaseId: string | null) {
+  const invalidate = useInvalidateNomineeDeclaration(pariwarId, claimCaseId);
+  return useMutation({
+    mutationFn: (body: Parameters<typeof api.postNomineeDetermination>[2]) =>
+      api.postNomineeDetermination(pariwarId, claimCaseId as string, body),
+    onSuccess: invalidate,
+  });
+}
+
+export function usePostNomineeCorrectionRaise(pariwarId: string, claimCaseId: string | null) {
+  const invalidate = useInvalidateNomineeDeclaration(pariwarId, claimCaseId);
+  return useMutation({
+    mutationFn: (body: Parameters<typeof api.postNomineeCorrectionRaise>[2]) =>
+      api.postNomineeCorrectionRaise(pariwarId, claimCaseId as string, body),
+    onSuccess: invalidate,
+  });
+}
+
+export function usePostNomineeCorrectionDecision(pariwarId: string, claimCaseId: string | null) {
+  const invalidate = useInvalidateNomineeDeclaration(pariwarId, claimCaseId);
+  return useMutation({
+    mutationFn: (input: {
+      correctionId: string;
+      step: 'district' | 'pariwar';
+      body: Parameters<typeof api.postNomineeCorrectionDecision>[4];
+    }) => api.postNomineeCorrectionDecision(pariwarId, claimCaseId as string, input.correctionId, input.step, input.body),
+    onSuccess: invalidate,
+  });
+}
+
+/** The Pariwar Admin's `-239` refusal list. Decrypts staff-authored rationales only; may refetch. */
+export function useNomineeRefusals(pariwarId: string) {
+  return useQuery({ queryKey: nomineeRefusalsKey(pariwarId), queryFn: () => api.getNomineeRefusals(pariwarId) });
+}
+
+export const pendingNomineeCorrectionsKey = (pariwarId: string) => ['nominee-corrections-pending', pariwarId] as const;
+
+/** The Pariwar Admin's queue — ids only (⛔ no PII), so it may refetch freely. */
+export function usePendingNomineeCorrections(pariwarId: string) {
+  return useQuery({
+    queryKey: pendingNomineeCorrectionsKey(pariwarId),
+    queryFn: () => api.getPendingNomineeCorrections(pariwarId),
+  });
+}

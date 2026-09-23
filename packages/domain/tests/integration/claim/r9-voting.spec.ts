@@ -38,7 +38,16 @@ import {
 } from '../../../src/claim/index.js';
 import * as schema from '../../../src/schema/index.js';
 import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
-import { PARIWAR_A, enterAppScope, seedClauseVersion, seedNomineeNameCheck, seedRoleGrant } from '../_helpers.js';
+import {
+  PARIWAR_A,
+  enterAppScope,
+  seedClauseVersion,
+  seedNomineeDeclaration,
+  seedNomineeDetermination,
+  seedNomineeNameCheck,
+  seedRoleGrant,
+} from '../_helpers.js';
+import { bindScopedDb } from '../../../src/db.js';
 
 const TRUSTEE = 'a1a1a1a1-a1a1-a1a1-a1a1-a1a1a1a1a1a1';
 const PANEL = [
@@ -119,7 +128,15 @@ async function driveToApproved(
   // Story 6.18 (AC4) — a claim is only approvable once it carries its two bank accounts and a
   // current, PASSING District Admin name check. Seeded through the REAL writer, so these specs keep
   // exercising the production path rather than bypassing the new gate.
-  if (!skipCheck) await seedNomineeNameCheck(client, PARIWAR_A, claimCaseId);
+  if (!skipCheck) {
+    await seedNomineeNameCheck(client, PARIWAR_A, claimCaseId);
+  } else {
+    // ⭐ Story 6.20 (AC5, T16) — "never CHECKED" is only reachable on a DETERMINED claim: the gate asks
+    // for the as-at-death determination BEFORE the check, so skipping the check must not also skip the
+    // determination, or the 409 is `nominee_determination_required` — a different fact.
+    await seedNomineeDeclaration(bindScopedDb(client), PARIWAR_A, deceased);
+    await seedNomineeDetermination(client, PARIWAR_A, claimCaseId);
+  }
 }
 
 /** Insert the live routed_to_r9 routing row directly (6.13's routeToR9 output). */

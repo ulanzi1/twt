@@ -1444,17 +1444,23 @@ registry.registerPath({
   description:
     'Declares 1 or 2 nominees (name/relationship/mobile + optional address; Tier-1 encrypted) ' +
     'with a SERVER-derived 75/25 split when two are declared (100% for one) — the client cannot ' +
-    'override the split. Replaces any prior declaration (latest-wins) and emits ' +
-    'member.nominees_declared (a non-PII audit marker; count + split only) on the member stream. ' +
-    'NO nominee Aadhaar/KYC and NO nominee bank/IFSC are collected at signup (claim-time only, ' +
-    'Epic 6). Requires a member session (no step-up at signup — Life Events adds it in 3.9).',
+    'override the split. Replaces the CURRENT projection, and — Story 6.20 — APPENDS one version per ' +
+    'submitted rank (plus a tombstone for a dropped rank) to the append-only declaration history; the ' +
+    'earlier declaration is ⛔ never destroyed. Emits member.nominees_declared (a non-PII audit marker; ' +
+    'count + split + the version numbers written) on the member stream. NO nominee Aadhaar/KYC and NO ' +
+    'nominee bank/IFSC are collected at signup (claim-time only, Epic 6). Requires a member session; a ' +
+    'RE-declaration outside the signup wizard also requires a fresh nominee_change step-up (AR-24). ' +
+    'Refused once any claim has been filed for the member (the lock at the first claim).',
   tags: nomineeTags,
   request: { body: { content: jsonOf(nomineeComponents.NomineeDeclareRequest), required: true } },
   responses: {
     200: { description: 'Nominees declared', content: jsonOf(nomineeComponents.NomineeStatusResponse) },
     400: errorResponse('Request validation failed (0 or >2 nominees, or bad fields)'),
     401: nomineeAuth,
-    409: errorResponse('Member is in a terminal state (withdrawn / anonymized)'),
+    403: errorResponse('A re-declaration requires a fresh nominee_change step-up (auth.step_up_required)'),
+    409: errorResponse(
+      'Member is in a terminal state (withdrawn / anonymized), or a claim has been filed (nominee.locked_claim_filed)',
+    ),
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });
 

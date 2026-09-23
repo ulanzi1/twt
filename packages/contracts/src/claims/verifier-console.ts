@@ -188,7 +188,20 @@ export const GroundInspectionItem = z
 export type GroundInspectionItem = z.output<typeof GroundInspectionItem>;
 
 export const GroundInspectionSection = z.discriminatedUnion('status', [
-  z.object({ status: z.literal('present'), assignments: z.array(GroundInspectionItem) }).strict(),
+  z
+    .object({
+      status: z.literal('present'),
+      assignments: z.array(GroundInspectionItem),
+      /**
+       * Story 6.20 (AC13, `2026-09-21-239` (b)) — present ONLY when these are ANOTHER claim's completed
+       * inspections, INHERITED because that claim was refused on suspicion of a post-death nominee change
+       * (the `post_death_nominee_change` reason code) and this claim is the true nominee's refile.
+       * ⭐ Labelled and NAMING its source, so the District Admin never mistakes it for this claim's own.
+       * ⛔ Nothing else carries over.
+       */
+      inheritedFrom: z.object({ claimCaseId: z.string().uuid() }).strict().optional(),
+    })
+    .strict(),
   z.object({ status: z.literal('empty') }).strict(),
   z.object({ status: z.literal('unavailable') }).strict(),
 ]);

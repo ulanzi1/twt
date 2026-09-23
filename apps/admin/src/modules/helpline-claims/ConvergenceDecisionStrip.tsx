@@ -219,6 +219,16 @@ export function ConvergenceDecisionStrip(props: ConvergenceDecisionStripProps): 
             <code>{overrideTarget.againstClaimCaseId}</code>. The account stays frozen while either
             claim is open. This cannot be undone from here.
           </p>
+          {/* Story 6.20 (AC13, T17) — why a TRUE nominee's refile can land here: while a claim refused on
+              suspicion of a post-death nominee change is under APPEAL it is not closed, so a refile
+              within 30 days converges onto it. Overriding keeps the refile apart, and it still carries
+              over the refused claim's ground inspection. */}
+          <p className="text-sm" data-testid="convergence-override-refile-note">
+            If the claim above was refused because the nominee was changed on or after the date of death
+            and is now under appeal, a refile by the member&apos;s true nominee joins it automatically.
+            Overriding keeps the refile as its own claim; its ground inspection is carried over from the
+            refused claim.
+          </p>
           <label htmlFor="convergence-override-reason" className="text-sm font-medium">
             Reason (required, ≥ {CONVERGENCE_OVERRIDE_REASON_MIN} chars)
           </label>

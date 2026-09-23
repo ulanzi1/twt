@@ -742,3 +742,36 @@ export const restorationImpositionId = uuidBrand('RestorationImpositionId');
 export type GeoTreeVersionId = Brand<'GeoTreeVersionId'>;
 /** Smart constructor: validates UUID shape, returns a branded `GeoTreeVersionId`. */
 export const geoTreeVersionId = uuidBrand('GeoTreeVersionId');
+
+// ── Nominee declaration history ids (Story 6.20, Task 1; D1, D4, D7) ──────────────
+// Four NEW branded ids (the §Naming "branding mandatory on a new ID's first PR" discipline). Each
+// addresses one ROW — none is an event stream id, so none has a derive function:
+//   · `NomineeVersionId`        — one append-only version of ONE rank of a member's nominee
+//     declaration (`member_nominee_versions.version_id`). `member_nominees` stays the CURRENT
+//     projection; this is the history the as-at-death rule reads (D1, D16).
+//   · `NomineeDeterminationId`  — the District Admin's record of which versions STAND for one claim
+//     (`nominee_determinations.determination_id`). At most one live per claim (D4, D17).
+//   · `NomineeCorrectionId`     — one genuine-mistake correction, DA → PA (`nominee_corrections`, D7).
+//   · `ClaimNomineeFindingId`   — a Story `6-22` investigation FINDING this story consumes as input
+//     (`claim_nominee_findings.finding_id`): the innocence finding that releases the lock (AC2) and the
+//     disqualification finding that re-ranks the survivor (D17(c)). Supplied by the finding's producer.
+
+/** Per-row address of a nominee declaration version (`member_nominee_versions.version_id`). */
+export type NomineeVersionId = Brand<'NomineeVersionId'>;
+/** Smart constructor: validates UUID shape, returns a branded `NomineeVersionId`. */
+export const nomineeVersionId = uuidBrand('NomineeVersionId');
+
+/** Per-row address of a nominee determination (`nominee_determinations.determination_id`). */
+export type NomineeDeterminationId = Brand<'NomineeDeterminationId'>;
+/** Smart constructor: validates UUID shape, returns a branded `NomineeDeterminationId`. */
+export const nomineeDeterminationId = uuidBrand('NomineeDeterminationId');
+
+/** Per-row address of a nominee correction (`nominee_corrections.correction_id`). */
+export type NomineeCorrectionId = Brand<'NomineeCorrectionId'>;
+/** Smart constructor: validates UUID shape, returns a branded `NomineeCorrectionId`. */
+export const nomineeCorrectionId = uuidBrand('NomineeCorrectionId');
+
+/** Per-row address of a claim nominee finding (`claim_nominee_findings.finding_id`). */
+export type ClaimNomineeFindingId = Brand<'ClaimNomineeFindingId'>;
+/** Smart constructor: validates UUID shape, returns a branded `ClaimNomineeFindingId`. */
+export const claimNomineeFindingId = uuidBrand('ClaimNomineeFindingId');

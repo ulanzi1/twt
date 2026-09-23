@@ -225,6 +225,13 @@ export function SignalsPanel({
       <Section title={t.sections.groundInspection} testId="section-ground-inspection">
         {packet.groundInspection.status === 'present' ? (
           <div className="flex flex-col gap-3">
+            {/* Story 6.20 (AC13) — INHERITED from the claim refused on suspicion (`-239` (b)), labelled
+                and NAMING its source, so it is ⛔ never mistaken for this claim's own inspection. */}
+            {packet.groundInspection.inheritedFrom ? (
+              <p role="status" className="text-sm font-medium" data-testid="ground-inspection-inherited">
+                {t.nomineeDeclaration.inheritedInspection}: {packet.groundInspection.inheritedFrom.claimCaseId}
+              </p>
+            ) : null}
             {packet.groundInspection.assignments.map((a) => (
               <div key={a.groundInspectionId} className="rounded border p-2 text-sm">
                 <p className="flex items-center justify-between gap-2">

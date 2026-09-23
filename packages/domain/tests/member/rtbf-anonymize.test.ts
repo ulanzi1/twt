@@ -30,7 +30,10 @@ import {
   memberModerationGrounds,
   memberModerationAppeals,
   memberNominees,
+  memberNomineeVersions,
   memberWithdrawals,
+  nomineeCorrections,
+  nomineeDeterminations,
 } from '../../src/schema/index.js';
 
 // The fixed namespace the member mobile Tier-1 envelope keys on (login runs pre-scope). Duplicated by
@@ -91,7 +94,7 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
     return found.set;
   }
 
-  it('updates exactly the THIRTEEN member-PII tables (sixteen statements), once each except the three documented doubles', async () => {
+  it('updates exactly the SIXTEEN member-PII tables (nineteen statements), once each except the three documented doubles', async () => {
     // Seven since Story 10.10's review pass added `member_moderation_actions`; EIGHT since Story
     // 10.20 added `member_moderation_grounds`. This count is the completeness check for the RTBF
     // surface — a new Tier-1 column landing in a table absent from this list is exactly how the
@@ -135,8 +138,17 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
     // ⛔ The two are therefore NOT collapsible into one statement.
     // ⚠ This assertion did its job again: the appeal columns were added, this count failed, and the
     // scrub followed. That is what it is for.
+    //
+    // ⭐ MOVED AGAIN by Story 6.20 (D11, AC9, invariant 7): SIXTEEN tables, NINETEEN statements. The
+    // nominee declaration HISTORY adds THREE PII-bearing tables and each takes ONE statement:
+    // `member_nominee_versions` (every DECLARED version — a tombstone holds nothing and its coherence
+    // CHECK forbids a name), `nominee_determinations` (the certificate date + note, keyed on the
+    // DECEASED member) and `nominee_corrections` (the proposed nominee + every note; a step note is
+    // replaced only where present, in the same statement, because the step-coherence CHECK requires an
+    // undecided step's note to stay NULL). ⛔ Raised, never weakened — the versions alone would have
+    // left the determination's date of death and the correction's proposed person behind.
     const { captured } = await run();
-    expect(captured).toHaveLength(16);
+    expect(captured).toHaveLength(19);
     const tables = captured.map((c) => c.table);
     for (const t of [
       memberIdentities,
@@ -152,6 +164,9 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
       memberDataRightsCorrections,
       memberModerationAppeals,
       memberAuthOtps,
+      memberNomineeVersions,
+      nomineeDeterminations,
+      nomineeCorrections,
     ]) {
       expect(tables).toContain(t);
     }
@@ -164,7 +179,7 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
     expect(tables.filter((t) => t === dataExports)).toHaveLength(2);
     expect(tables.filter((t) => t === dataExportDeliveryGrants)).toHaveLength(2);
     expect(tables.filter((t) => t === memberModerationAppeals)).toHaveLength(2);
-    expect(new Set(tables).size).toBe(13);
+    expect(new Set(tables).size).toBe(16);
   });
 
   it('⭐ Story 10.21 (AC-R1/AC-R2): the staff attestation and the correction record are SCRUBBED but RETAINED', async () => {

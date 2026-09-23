@@ -22,7 +22,8 @@ import { mmkvStorage } from '../../lib/mmkv'
 const DRAFT_PREFIX = 'life-events-draft:'
 
 // The exhaustive set of screen keys that store drafts — used by clearAllMemberDrafts.
-const MEMBER_DRAFT_SCREEN_KEYS = ['nominees', 'medical'] as const
+// Story 6.20 — 'nominee-correction' (the family's correction request) is cleared on sign-out too.
+const MEMBER_DRAFT_SCREEN_KEYS = ['nominees', 'medical', 'nominee-correction'] as const
 
 function draftKey(memberId: string, screenKey: string): string {
   return DRAFT_PREFIX + memberId + ':' + screenKey

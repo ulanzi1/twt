@@ -239,6 +239,18 @@ export const EVENT_TYPE_REGISTRY = {
       "The District Admin recorded the nominee NAME CHECK — annotation event (the 32nd claim event); identity transition (state unchanged, AC3); carries checked_by_actor_display (the acting District Admin's name, SNAPSHOT at the check — staff identity, never resolved at read time) + nominee_declaration_token + per-account {account_rank, account_updated_at, verdict, clerical_reason}, NO MEMBER OR NOMINEE PII (no holder name, no nominee name, no HASH of either, no filer note); write-guarded to verification_in_progress|verifier_review|verifier_approved|reversed|state_trustee_freeze and refused without two live accounts. Ruled by 2026-09-19-226 cl.3/cl.5 — the system NEVER acts on a mismatch, it only records what a named human decided; the AC4 approval gates read this event, nothing else acts on it (Story 6.18).",
     schema: claim.ClaimNomineeNameCheckedPayloadSchema,
   },
+  'claim.nominee_determination_recorded': {
+    type: 'claim.nominee_determination_recorded',
+    description:
+      "The District Admin recorded the NOMINEE DETERMINATION — which nominee-declaration versions STAND for this claim against the death-certificate date (2026-09-20-235 Y) — annotation event (the 33rd claim event); identity transition (state unchanged); carries determination_id + supersedes_determination_id + stands_count + discarded_count, NO PII (no certificate date, no nominee name, no hash of either — the Tier-1 date and note live in nominee_determinations). A RECORD, never a verdict: the system never denies on it; the AC5 approval gates read the row (Story 6.20).",
+    schema: claim.ClaimNomineeDeterminationRecordedPayloadSchema,
+  },
+  'claim.nominee_lock_released': {
+    type: 'claim.nominee_lock_released',
+    description:
+      'The nominee-declaration LOCK this claim created was RELEASED on an investigation finding the member INNOCENT (2026-09-21-238 cl.1, the release route) — annotation event (the 34th claim event); identity transition (state unchanged, never a lifecycle state); carries finding_id only, NO PII. No production caller until row 6-22 (the fraud register) supplies the finding (Story 6.20).',
+    schema: claim.ClaimNomineeLockReleasedPayloadSchema,
+  },
   'claim.dpdpa_consent_recorded': {
     type: 'claim.dpdpa_consent_recorded',
     description:

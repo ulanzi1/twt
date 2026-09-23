@@ -834,6 +834,20 @@
       "when": 1790912400000,
       "tag": "0118_trustee-returned-for-correction-outcome",
       "breakpoints": true
+    },
+    {
+      "idx": 119,
+      "version": "7",
+      "when": 1790998800000,
+      "tag": "0119_nominee-declaration-history",
+      "breakpoints": true
+    },
+    {
+      "idx": 120,
+      "version": "7",
+      "when": 1791085200000,
+      "tag": "0120_verifier-reason-code-post-death-nominee-change",
+      "breakpoints": true
     }
   ]
 }

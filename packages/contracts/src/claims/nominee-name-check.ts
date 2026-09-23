@@ -219,6 +219,14 @@ export type NomineeNameCheckReturn = z.output<typeof NomineeNameCheckReturn>;
  * nominee route checks only `withdrawn`/`anonymized`, and a Ravi-mode session IS the deceased's), so
  * both names can come from the same hand. Showing the two dates lets a District Admin SEE that;
  * this story deliberately does ⛔ not fix it, and the hazard stays recorded and open (AC10).
+ *
+ * ⭐⭐ STORY 6.20 (AC5) CLOSES THAT HAZARD AT THE READ: `declared_nominees` is now the declaration IN
+ * FORCE AT THE DEATH — the versions the District Admin's determination marks as standing — ⛔ not the
+ * current `member_nominees` rows, and `nominee_declared_at` is that set's latest `effective_at`.
+ * `declaration_status` says which: `effective` (a live determination with somebody standing), or one of
+ * the fail-closed states — `undetermined` (no determination yet: the District Admin determines FIRST),
+ * `unversioned`, `empty` (nobody the member chose before the death stands) or `incoherent`. In every
+ * fail-closed state `declared_nominees` is `[]` and approval WAITS (409), ⛔ never a denial.
  */
 export const NomineeNameCheckResponse = z
   .object({
@@ -228,6 +236,8 @@ export const NomineeNameCheckResponse = z
     accounts: z.array(NomineeNameCheckAccount),
     accounts_complete: z.boolean(),
     declared_nominees: z.array(NomineeNameCheckDeclaredNominee),
+    /** Story 6.20 (AC5) — the effective as-at-death declaration's status; see the doc-block. */
+    declaration_status: z.enum(['effective', 'undetermined', 'unversioned', 'empty', 'incoherent']),
     nominee_declaration_token: z.string(),
     nominee_declared_at: z.string().nullable(),
     claim_filed_at: z.string(),

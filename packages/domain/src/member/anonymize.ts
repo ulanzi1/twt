@@ -48,6 +48,9 @@ import { memberMedicalDisclosures } from '../schema/member_medical_disclosures.j
 import { memberModerationActions } from '../schema/member_moderation_actions.js';
 import { memberModerationGrounds } from '../schema/member_moderation_grounds.js';
 import { memberNominees } from '../schema/member_nominees.js';
+import { memberNomineeVersions } from '../schema/member_nominee_versions.js';
+import { nomineeCorrections } from '../schema/nominee_corrections.js';
+import { nomineeDeterminations } from '../schema/nominee_determinations.js';
 import { memberWithdrawals } from '../schema/member_withdrawals.js';
 
 /** The KMS material the sentinel-encrypt uses. The caller (the RTBF handler) threads its `{ kms, kekRef }`
@@ -75,6 +78,9 @@ export const ANONYMIZED_SENTINEL = '[anonymized]';
 const FIELD_CLASS_KYC = 'member_kyc';
 const FIELD_CLASS_NOMINEE = 'member_nominee';
 const FIELD_CLASS_MEDICAL = 'member_medical';
+// Story 6.20 — the determination + correction Tier-1 classes (mirrors apps/api context.ts by value).
+const FIELD_CLASS_NOMINEE_DETERMINATION = 'nominee_determination';
+const FIELD_CLASS_NOMINEE_CORRECTION = 'nominee_correction';
 const FIELD_CLASS_ADDRESS = 'member_address';
 const FIELD_CLASS_MOBILE = 'member_mobile';
 // Story 10.10 — mirrors `piiColumn(1, 'member_moderation')` on member_moderation_actions.
@@ -163,6 +169,51 @@ export async function anonymizeMember(
       addressCiphertext: null,
     })
     .where(eq(memberNominees.memberId, memberId));
+
+  // ── ⭐ Story 6.20 (D11, AC9, invariant 7) — the nominee declaration HISTORY. A history that keeps PII
+  // must be erasable: EVERY new PII-bearing table is scrubbed HERE, in the SAME transaction — ⛔ not the
+  // versions alone. Each carries a column-level UPDATE grant at birth (migration 0119) for exactly this.
+  // ⚠ These tables FK `members` ON DELETE cascade, and an RTBF is a SOFT delete, so the cascade never
+  // fires — the inert-cascade class `deferred-work.md` records (Escalation 6). 6.20 does ⛔ not adopt
+  // that repo-wide audit; it discharges its OWN share by these three statements.
+  //
+  // member_nominee_versions — every DECLARED version: name/mobile → sentinel, address → NULL. ⚠ A
+  // `vacated` tombstone holds ⛔ nothing, and the kind-coherence CHECK forbids a name on one, so it is
+  // excluded by the predicate rather than written.
+  await client
+    .update(memberNomineeVersions)
+    .set({
+      nameCiphertext: await encSentinel(pariwarId, FIELD_CLASS_NOMINEE, enc),
+      mobileCiphertext: await encSentinel(pariwarId, FIELD_CLASS_NOMINEE, enc),
+      addressCiphertext: null,
+    })
+    .where(and(eq(memberNomineeVersions.memberId, memberId), eq(memberNomineeVersions.kind, 'declared')));
+
+  // nominee_determinations — keyed on the DECEASED member: the Tier-1 certificate date + note → sentinel
+  // (both NOT NULL). The marks, the attribution and the supersession chain are governance history, kept.
+  await client
+    .update(nomineeDeterminations)
+    .set({
+      certificateDateCiphertext: await encSentinel(pariwarId, FIELD_CLASS_NOMINEE_DETERMINATION, enc),
+      noteCiphertext: await encSentinel(pariwarId, FIELD_CLASS_NOMINEE_DETERMINATION, enc),
+    })
+    .where(eq(nomineeDeterminations.deceasedMemberId, memberId));
+
+  // nominee_corrections — the proposed nominee (name/mobile → sentinel, address → NULL) and every note.
+  // ⚠ A step note is NULL until its step is decided, and the step-coherence CHECK requires it to STAY
+  // null on an undecided step — so each is replaced only where present.
+  const correctionSentinel = await encSentinel(pariwarId, FIELD_CLASS_NOMINEE_CORRECTION, enc);
+  await client
+    .update(nomineeCorrections)
+    .set({
+      proposedNameCiphertext: await encSentinel(pariwarId, FIELD_CLASS_NOMINEE, enc),
+      proposedMobileCiphertext: await encSentinel(pariwarId, FIELD_CLASS_NOMINEE, enc),
+      proposedAddressCiphertext: null,
+      raiseNoteCiphertext: correctionSentinel,
+      daNoteCiphertext: sql`CASE WHEN ${nomineeCorrections.daNoteCiphertext} IS NULL THEN NULL ELSE ${correctionSentinel} END`,
+      paNoteCiphertext: sql`CASE WHEN ${nomineeCorrections.paNoteCiphertext} IS NULL THEN NULL ELSE ${correctionSentinel} END`,
+    })
+    .where(eq(nomineeCorrections.memberId, memberId));
 
   // ── member_medical_disclosures ── ALL rows: conditions → sentinel (NOT NULL); context → NULL. ──────
   await client

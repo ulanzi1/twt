@@ -39,8 +39,9 @@ import {
 // ⚠ VALUE imports for the SAME REASON — `claim/nominee-name-check.ts` is the AUTHORITY on the
 // nominee name-check vocabulary (Story 6.18), and this payload schema had re-spelled both tuples.
 // ⛔ No cycle: that module imports `db.js` and `ids/` as TYPES ONLY, plus leaf schema modules,
-// `pagination.js`, `claim/errors.js` and `nominee/declaration-ref.js` — none of which reaches back
-// here ([[project_type_only_import_cycle_trap]] — checked, not assumed).
+// `pagination.js`, `claim/errors.js` and (Story 6.20) `claim/nominee-effective.js` — which itself imports
+// only `node:crypto`, `drizzle-orm` and the import-free `cycle-calendar/holiday-resolver.js` — none of
+// which reaches back here ([[project_type_only_import_cycle_trap]] — checked, not assumed).
 import {
   NOMINEE_NAME_CHECK_VERDICTS,
   NOMINEE_NAME_CLERICAL_REASONS,
@@ -629,7 +630,41 @@ export const ClaimDeniedNoAppealPayloadSchema = requireIdentityTransition({
   deceased_member_id: z.string().uuid(),
 });
 
-// ── The 32-event vocabulary + the type→schema map (single source) ─────────────
+// ── Story 6.20 — the nominee declaration history (two IDENTITY annotations) ───────────────────
+
+/**
+ * The District Admin recorded (or re-recorded) the NOMINEE DETERMINATION — which declaration versions
+ * STAND for this claim against the death-certificate date (`2026-09-20-235` Y; D4). The 33rd claim
+ * event. An IDENTITY annotation (the 6.15 / 6.18 shape): the row in `nominee_determinations` and this
+ * event are written in ONE transaction, and the reducer is a no-op.
+ *
+ * ⛔ PII discipline: ids and COUNTS only — ⛔ no certificate date, ⛔ no name, ⛔ no hash of either. The
+ * Tier-1 date and note live encrypted in the row.
+ * ⛔ It is ⛔ not a verdict: "discarded" versions do not deny anything (invariant 1). The refusal on
+ * suspicion (`-239`) is a SEPARATE human act through the shipped verifier denial.
+ */
+export const ClaimNomineeDeterminationRecordedPayloadSchema = requireIdentityTransition({
+  ...auditShape,
+  determination_id: z.string().uuid(),
+  supersedes_determination_id: z.string().uuid().nullable(),
+  stands_count: z.number().int().nonnegative(),
+  discarded_count: z.number().int().nonnegative(),
+});
+
+/**
+ * The nominee-declaration LOCK this claim created is RELEASED, on an investigation finding the member
+ * INNOCENT (`2026-09-21-238` cl.1 — the release route, option B; AC2). The 34th claim event. An IDENTITY
+ * annotation: the finding row and this event are written in ONE transaction; ⛔ no lifecycle state
+ * (AC10), the claim stays wherever it is.
+ * ⚠ ⛔ NO PRODUCTION CALLER until row `6-22` (the fraud register) supplies the finding
+ * (`2026-09-21-241` §6). ⛔ No PII: the finding's id only.
+ */
+export const ClaimNomineeLockReleasedPayloadSchema = requireIdentityTransition({
+  ...auditShape,
+  finding_id: z.string().uuid(),
+});
+
+// ── The 34-event vocabulary + the type→schema map (single source) ─────────────
 // (Story 6.1 committed the 20 state-advancing events; Story 6.6 added the 21st —
 // `claim.peer_mesh_responded`; Story 6.7 added the 22nd — `claim.ground_inspection_completed`;
 // Story 6.8 added the 23rd — `claim.nominee_bank_recorded`; Story 6.9 added the 24th —
@@ -648,7 +683,11 @@ export const ClaimDeniedNoAppealPayloadSchema = requireIdentityTransition({
 // `claim.nominee_name_checked` (AC3), an IDENTITY annotation recording the District Admin's per-account
 // verdict on the nominee name (`2026-09-19-226` cl.3/cl.5). The AC4 approval gates READ it; the reducer
 // is a no-op and nothing acts on a mismatch. ⭐ It is the ONLY event this story mints — the Pariwar
-// Admin's return loop is a metadata-only decision row on the `routeToR9` shape and adds NONE.)
+// Admin's return loop is a metadata-only decision row on the `routeToR9` shape and adds NONE.
+// Story 6.20 adds the 33rd and 34th — `claim.nominee_determination_recorded` (D4) and
+// `claim.nominee_lock_released` (AC2's release route), both IDENTITY annotations with a no-op reducer:
+// the determination is a RECORD the approval gates read (AC5), and the release is an OUTCOME the
+// nominee lock reads (AC2). ⛔ Neither is a lifecycle state (AC10); ⛔ neither carries PII.)
 
 export const CLAIM_EVENT_TYPES = [
   'claim.intake_initiated',
@@ -660,6 +699,8 @@ export const CLAIM_EVENT_TYPES = [
   'claim.ground_inspection_completed',
   'claim.nominee_bank_recorded',
   'claim.nominee_name_checked',
+  'claim.nominee_determination_recorded',
+  'claim.nominee_lock_released',
   'claim.dpdpa_consent_recorded',
   'claim.dpdpa_consent_revoked',
   'claim.verifier_reviewing',
@@ -685,11 +726,11 @@ export const CLAIM_EVENT_TYPES = [
   'claim.denied_no_appeal',
 ] as const;
 
-/** The dotted `claim.*` event-type literal union (the 32 claim events). */
+/** The dotted `claim.*` event-type literal union (the 34 claim events). */
 export type ClaimEventType = (typeof CLAIM_EVENT_TYPES)[number];
 
 /**
- * type → payload-schema map. The ONE place the 32 events bind to their schemas;
+ * type → payload-schema map. The ONE place the 34 events bind to their schemas;
  * `EVENT_TYPE_REGISTRY` (packages/events) and the projector both consume it. The
  * `satisfies` keeps it exhaustive — adding a `ClaimEventType` without a schema is a
  * compile error.
@@ -704,6 +745,8 @@ export const CLAIM_EVENT_PAYLOAD_SCHEMAS = {
   'claim.ground_inspection_completed': ClaimGroundInspectionCompletedPayloadSchema,
   'claim.nominee_bank_recorded': ClaimNomineeBankRecordedPayloadSchema,
   'claim.nominee_name_checked': ClaimNomineeNameCheckedPayloadSchema,
+  'claim.nominee_determination_recorded': ClaimNomineeDeterminationRecordedPayloadSchema,
+  'claim.nominee_lock_released': ClaimNomineeLockReleasedPayloadSchema,
   'claim.dpdpa_consent_recorded': ClaimDpdpaConsentRecordedPayloadSchema,
   'claim.dpdpa_consent_revoked': ClaimDpdpaConsentRevokedPayloadSchema,
   'claim.verifier_reviewing': ClaimVerifierReviewingPayloadSchema,

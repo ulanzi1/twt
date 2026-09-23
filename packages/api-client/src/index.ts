@@ -145,6 +145,9 @@ import {
   type RecordNomineeBankRequest,
   type RecordNomineeBankResponse as RecordNomineeBankResult,
   type NomineeBankStatusResponse as NomineeBankStatusResult,
+  NomineeCorrectionWriteResponse,
+  type NomineeCorrectionRaiseRequest,
+  type NomineeCorrectionWriteResponse as NomineeCorrectionWriteResult,
   RecordDpdpaConsentResponse,
   DpdpaConsentStatusResponse,
   RevokeDpdpaConsentResponse,
@@ -1036,6 +1039,24 @@ export function createMemberClaimClient(opts: MemberAuthClientOptions) {
       return call(
         `${CLAIMS_BASE}/${encodeURIComponent(claimCaseId)}/nominee-bank`,
         RecordNomineeBankResponse,
+        input,
+        true,
+      );
+    },
+
+    /**
+     * Story 6.20 (AC7, CC2) — the FAMILY raises a genuine-mistake NOMINEE correction on a claim (session;
+     * auth; the `nominee_change` step-up — an `auth.step_up_required` code drives stepUpRequest → verify → retry).
+     * The District Admin approves first, then the Pariwar Admin. A 409 `nominee_correction.relationship_other`
+     * means the nominee was declared as "Other", which forecloses a correction (`-237` cl.2).
+     */
+    raiseNomineeCorrection(
+      claimCaseId: string,
+      input: NomineeCorrectionRaiseRequest,
+    ): Promise<NomineeCorrectionWriteResult> {
+      return call(
+        `${CLAIMS_BASE}/${encodeURIComponent(claimCaseId)}/nominee-corrections`,
+        NomineeCorrectionWriteResponse,
         input,
         true,
       );

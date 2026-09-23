@@ -164,7 +164,7 @@ describe.skipIf(!hasDatabase)('Nominee declaration — E2E (:5433)', () => {
         payload: {
           nominees: [
             { name: 'Asha Devi', relationship: 'spouse', mobile: '9876543210', address: '12 MG Road' },
-            { name: 'Ravi Kumar', relationship: 'child', mobile: '9988776655' },
+            { name: 'Ravi Kumar', relationship: 'son', mobile: '9988776655' },
           ],
         },
         token: token(t, memberId, pariwarId),
@@ -227,14 +227,14 @@ describe.skipIf(!hasDatabase)('Nominee declaration — E2E (:5433)', () => {
     try {
       const { memberId, pariwarId } = await seedMemberPendingFee(t);
       await inject(t, 'POST', '/api/v1/member/nominees', {
-        payload: { nominees: [{ name: 'Asha Devi', relationship: 'parent', mobile: '9876543210' }] },
+        payload: { nominees: [{ name: 'Asha Devi', relationship: 'mother', mobile: '9876543210' }] },
         token: token(t, memberId, pariwarId),
       });
 
       const get = await inject(t, 'GET', '/api/v1/member/nominees', { token: token(t, memberId, pariwarId) });
       expect(get.status).toBe(200);
       expect(get.body.nominees).toHaveLength(1);
-      expect((get.body.nominees as Json[])[0]).toMatchObject({ rank: 1, relationship: 'parent', splitPct: 100 });
+      expect((get.body.nominees as Json[])[0]).toMatchObject({ rank: 1, relationship: 'mother', splitPct: 100 });
       // No raw PII echoed back.
       expect(JSON.stringify(get.body)).not.toContain('Asha');
       expect(JSON.stringify(get.body)).not.toContain('9876543210');
@@ -282,7 +282,7 @@ describe.skipIf(!hasDatabase)('Nominee declaration — E2E (:5433)', () => {
         payload: {
           nominees: [
             { name: 'A', relationship: 'spouse', mobile: '9876543210' },
-            { name: 'B', relationship: 'child', mobile: '9876543211' },
+            { name: 'B', relationship: 'son', mobile: '9876543211' },
             { name: 'C', relationship: 'other', mobile: '9876543212' },
           ],
         },

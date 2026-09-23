@@ -2276,9 +2276,19 @@ components:
                 type: string
                 enum: &a7
                   - spouse
-                  - child
-                  - parent
-                  - sibling
+                  - mother
+                  - father
+                  - son
+                  - daughter
+                  - brother
+                  - sister
+                  - uncle
+                  - aunt
+                  - cousin
+                  - niece_nephew
+                  - grandchild
+                  - sister_in_law
+                  - daughter_in_law
                   - other
               mobile:
                 type: string
@@ -2340,8 +2350,11 @@ components:
               - mobilePresent
               - addressPresent
             additionalProperties: false
+        locked:
+          type: boolean
       required:
         - nominees
+        - locked
       additionalProperties: false
     DeviceTokenRegisterRequest:
       type: object
@@ -10576,7 +10589,7 @@ paths:
   /api/v1/member/nominees:
     post:
       summary: Signup nominees — declare 1–2 nominees (emits member.nominees_declared)
-      description: Declares 1 or 2 nominees (name/relationship/mobile + optional address; Tier-1 encrypted) with a SERVER-derived 75/25 split when two are declared (100% for one) — the client cannot override the split. Replaces any prior declaration (latest-wins) and emits member.nominees_declared (a non-PII audit marker; count + split only) on the member stream. NO nominee Aadhaar/KYC and NO nominee bank/IFSC are collected at signup (claim-time only, Epic 6). Requires a member session (no step-up at signup — Life Events adds it in 3.9).
+      description: Declares 1 or 2 nominees (name/relationship/mobile + optional address; Tier-1 encrypted) with a SERVER-derived 75/25 split when two are declared (100% for one) — the client cannot override the split. Replaces the CURRENT projection, and — Story 6.20 — APPENDS one version per submitted rank (plus a tombstone for a dropped rank) to the append-only declaration history; the earlier declaration is ⛔ never destroyed. Emits member.nominees_declared (a non-PII audit marker; count + split + the version numbers written) on the member stream. NO nominee Aadhaar/KYC and NO nominee bank/IFSC are collected at signup (claim-time only, Epic 6). Requires a member session; a RE-declaration outside the signup wizard also requires a fresh nominee_change step-up (AR-24). Refused once any claim has been filed for the member (the lock at the first claim).
       tags: &a62
         - member-nominee
       requestBody:
@@ -10604,8 +10617,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: A re-declaration requires a fresh nominee_change step-up (auth.step_up_required)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         "409":
-          description: Member is in a terminal state (withdrawn / anonymized)
+          description: Member is in a terminal state (withdrawn / anonymized), or a claim has been filed (nominee.locked_claim_filed)
           content:
             application/json:
               schema:

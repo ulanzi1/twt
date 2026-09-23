@@ -146,6 +146,19 @@ const COVERAGE_SET: readonly CoverageEntry[] = [
     owner: 'Story 6.18',
     expectedMethods: ['get', 'get', 'post'],
   },
+  {
+    // ⭐ Story 6.20 — the nominee declaration HISTORY. NINE routes, all admin (incl. the Pariwar Admin's
+    // queue of corrections awaiting step 2): the timeline + the
+    // on-demand DECRYPTED snapshots (a second living subject's Tier-1 details), the District Admin's
+    // DETERMINATION (which declaration governs who is paid), the corrections list (decrypted target +
+    // proposal), the helpline RAISE, the two APPROVAL steps (the Pariwar Admin's APPLIES the change),
+    // and the Pariwar Admin's `-239` refusal read surface. Every one needs the authenticated-HUMAN chain.
+    // ⛔ The family's raise through the app is in `claims.routes.ts` (NON_ADJUDICATION — a member route).
+    file: 'apps/api/src/modules/claims/claims.nominee-declaration.routes.ts',
+    pathSubstrings: ['nominee-declaration', 'nominee-determination', 'nominee-corrections', 'nominee-refusals'],
+    owner: 'Story 6.20',
+    expectedMethods: ['get', 'get', 'get', 'get', 'get', 'post', 'post', 'post', 'post'],
+  },
 ];
 
 /**
@@ -234,7 +247,7 @@ function main(): void {
 
   // ⭐ ANTI-VACUITY FLOOR. Without it, deleting an entry shrinks the gate's scope in silence and it
   // still reports success. Raise this DELIBERATELY when enrolling, ⛔ never to make the gate quiet.
-  const COVERAGE_FLOOR = 8; // ⚠ the TRUE count at 2026-09-21 — a first draft guessed 9 and the floor caught it.
+  const COVERAGE_FLOOR = 9; // Story 6.20 raised it 8 → 9 (claims.nominee-declaration.routes.ts). ⚠ The count was 8 at 2026-09-21 — a first draft guessed 9 and the floor caught it.
   if (COVERAGE_SET.length < COVERAGE_FLOOR) {
     missingCoverage.push(
       `COVERAGE_SET has ${COVERAGE_SET.length} entries but the floor is ${COVERAGE_FLOOR} — an entry was ` +

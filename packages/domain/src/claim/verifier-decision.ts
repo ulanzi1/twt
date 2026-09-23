@@ -42,6 +42,10 @@ export const VERIFIER_REASON_CODES = [
   'concealment_flag_override', // a concealment flag was reviewed + overridden → approve
   // Deny family.
   'concealment_flag_uphold', // a concealment flag was reviewed + upheld → deny
+  // Story 6.20 (D14, `2026-09-21-239`) — the District Admin REFUSES on SUSPICION: a nominee version dated
+  // on or after the certificate date. A DEDICATED code, ⛔ not `other`: AC13's ground-inspection
+  // inheritance must RECOGNISE a `-239` refusal. `denied` ONLY. Migration 0120 adds the pgEnum value.
+  'post_death_nominee_change',
   // Escalate family.
   'r9_routed_to_voting', // routed to State-Trustee voting/discretion → escalate
   // Any-outcome escape hatch (mandatory free-text rationale).
@@ -64,6 +68,7 @@ export const REASON_CODE_OUTCOME_COMPAT: Readonly<
   r8_90pct_met: ['approved'],
   concealment_flag_override: ['approved'],
   concealment_flag_uphold: ['denied'],
+  post_death_nominee_change: ['denied'],
   r9_routed_to_voting: ['escalated'],
   other: ['approved', 'denied', 'escalated'],
 };

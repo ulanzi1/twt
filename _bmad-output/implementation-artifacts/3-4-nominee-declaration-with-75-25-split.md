@@ -47,7 +47,10 @@ This is the **third signup-wizard SURFACE** of Epic 3, sitting between KYC (3.3b
 > declaration in force as **the last one made on an earlier calendar day than the day of death**; `2026-09-21-233`–`-236`
 > stop ordinary changes at the **first claim**. ⭐ The AC holds **while the member is alive**. ⚠ Annotating `epics.md` alone
 > would have left this `done` story file stating the contradicted rule — which is why Story `6-20`'s T12 names FOUR sites.
-> ⭐ The neighbouring AC (*non-PII payload only — count + split*) is **CORRECT and ⛔ must not be touched**. declare service re-runnable so a re-declaration replaces the projection (delete-then-insert within one scope tx) and emits the new event.
+> ⭐ The neighbouring AC (*non-PII payload only — count + split*) is **CORRECT and ⛔ must not be touched**. ⚠ **AND (AC12,
+> `2026-09-21-237` cl.1): the `relationship` field's value set moves from FIVE to FIFTEEN** — mirrors the annotation already
+> carried on `epics.md`'s Story 3.4 AC and PRD FR-4; this file's own AC named `relationship` among the fields above without
+> naming the value set, so it is annotated here too, ⛔ not rewritten. declare service re-runnable so a re-declaration replaces the projection (delete-then-insert within one scope tx) and emits the new event.
 
 **AC6 — Accessibility (inherited Story 0.10 P0-2c gate)**
 **And** the signup nominee screen is screen-reader-accessible: every field has a proper label + per-field guidance; the 75/25 split and the "no bank / no KYC at signup" reassurance copy are announced (UX-DR55 dignified-validation grammar, UX-DR57 Pattern 6 bilingual input).

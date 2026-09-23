@@ -45,7 +45,10 @@ describe('outcome↔reason-code compatibility (AC8)', () => {
     expect(reasonCodesForOutcome('approved').sort()).toEqual(
       ['concealment_flag_override', 'other', 'r5_d_natural_death', 'r8_90pct_met'].sort(),
     );
-    expect(reasonCodesForOutcome('denied').sort()).toEqual(['concealment_flag_uphold', 'other'].sort());
+    // Story 6.20 (D14) — the `-239` refusal on suspicion is a DENY-only code.
+    expect(reasonCodesForOutcome('denied').sort()).toEqual(
+      ['concealment_flag_uphold', 'other', 'post_death_nominee_change'].sort(),
+    );
     expect(reasonCodesForOutcome('escalated').sort()).toEqual(['other', 'r9_routed_to_voting'].sort());
   });
 
@@ -55,6 +58,7 @@ describe('outcome↔reason-code compatibility (AC8)', () => {
         'concealment_flag_override',
         'concealment_flag_uphold',
         'other',
+        'post_death_nominee_change',
         'r5_d_natural_death',
         'r8_90pct_met',
         'r9_routed_to_voting',

@@ -29,6 +29,8 @@ import {
   RevokeDpdpaConsentRequest,
   RevokeDpdpaConsentResponse,
   MemberShepherdResponse,
+  NomineeCorrectionRaiseRequest,
+  NomineeCorrectionWriteResponse,
 } from '@twt/contracts';
 import type { FastifyInstance } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
@@ -47,6 +49,7 @@ import { createClaimDocumentHandlers } from './claims.documents.handlers.js';
 import { createNomineeBankHandlers } from './claims.nominee-bank.handlers.js';
 import { createDpdpaConsentHandlers } from './claims.dpdpa-consent.handlers.js';
 import { createShepherdHandlers } from './claims.shepherd.handlers.js';
+import { createMemberNomineeCorrectionHandler } from './claims.nominee-declaration.handlers.js';
 
 const CLAIM_TAG = 'member-claim';
 
@@ -164,6 +167,26 @@ export function registerClaimsRoutes(app: FastifyInstance, deps: AppDeps): void 
       preHandler: [memberSession, requireMemberStepUp(deps, CLAIM_HANDOVER_ACTION_CONTEXT)],
     },
     bank.recordMember,
+  );
+
+  // Story 6.20 (AC7, D7, CC2) — the FAMILY raises a genuine-mistake NOMINEE correction through the app.
+  // ⚠ Not 6.18's bank "correction". A member route (no admin chain — this file is NON_ADJUDICATION in the
+  // human-actor gate); behind the `nominee_change` step-up — AR-24 names "nominee change" among the step-up
+  // operations, and a correction proposes exactly that (who is paid). The same context the Life Events
+  // nominee route uses, so the app's one step-up flow serves both. The two APPROVALS are admin routes
+  // (claims.nominee-declaration.routes).
+  r.post(
+    '/api/v1/member/claims/:claimCaseId/nominee-corrections',
+    {
+      schema: {
+        params: NomineeBankParam,
+        body: NomineeCorrectionRaiseRequest,
+        response: { 201: NomineeCorrectionWriteResponse },
+        tags: [CLAIM_TAG],
+      },
+      preHandler: [memberSession, requireMemberStepUp(deps, 'nominee_change')],
+    },
+    createMemberNomineeCorrectionHandler(deps),
   );
 
   // Review finding (2026-07-11) — the presence view of whatever is currently on file, so

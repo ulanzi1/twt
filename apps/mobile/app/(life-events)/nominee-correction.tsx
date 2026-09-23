@@ -1,0 +1,289 @@
+// The FAMILY's nominee CORRECTION request — Story 6.20 (Task 8; AC7, AC8; D7, CC2).
+//
+// Once a claim is filed the nominee declaration is LOCKED (`2026-09-20-233` / `-234` V). A detail entered
+// incorrectly can still be corrected — `-234` W — through ONE request the District Admin approves first
+// and the Pariwar Admin second (`-236` Z). This screen RAISES that request from the app (CC2, `-237`
+// cl.3); the helpline can raise the same request on the family's behalf.
+//
+//   · Ravi-mode: the session IS the deceased member's, so the claim id comes from the member's own
+//     claim draft (stamped at intake). No claim ⇒ a dignified "call the helpline" state.
+//   · The relationship picker offers only KNOWN relationships — `other` FORECLOSES a correction
+//     (`-237` cl.2); the server refuses it at the raise with a typed 409, which this screen explains.
+//   · Behind the `nominee_change` step-up (AR-24), exactly like the Life Events nominee update.
+//   · The draft persists in MMKV (the life-events draft store — cleared on sign-out).
+//   · ⚠ Not 6.18's BANK "correction" — this changes WHO the nominee is on record, not an account.
+
+import { useState } from 'react'
+import { ScrollView } from 'react-native'
+
+import { isEnglishScriptName } from '@twt/contracts'
+import { useT } from '@twt/i18n/react'
+import { Stack, useRouter } from 'expo-router'
+import { Button, H2, Input, Paragraph, Spinner, Text, TextArea, XStack, YStack } from 'tamagui'
+
+import { KNOWN_RELATIONSHIPS, type Relationship } from '../../components/life-events/NomineeForm'
+import { clearDraft, loadDraft, saveDraft } from '../../components/life-events/draft-store'
+import { useStepUpGate } from '../../components/life-events/useStepUpGate'
+import { claimApi } from '../../lib/claim-api'
+import { loadClaimDraft } from '../../lib/claim-draft'
+import { correctionErrorKey } from '../../lib/nominee-correction'
+import { useSession } from '../../lib/session-context'
+
+const DRAFT_KEY = 'nominee-correction'
+
+export interface CorrectionDraft {
+  rank: 1 | 2
+  name: string
+  relationship: Relationship | ''
+  mobile: string
+  address: string
+  note: string
+}
+
+const EMPTY: CorrectionDraft = { rank: 1, name: '', relationship: '', mobile: '', address: '', note: '' }
+
+export default function NomineeCorrectionScreen() {
+  const t = useT()
+  const router = useRouter()
+  const { session } = useSession()
+  const memberId = session?.memberId ?? ''
+  const claimCaseId = memberId ? loadClaimDraft(memberId).claimCaseId : undefined
+  const stepUp = useStepUpGate('nominee_change')
+
+  const [form, setForm] = useState<CorrectionDraft>(() => loadDraft<CorrectionDraft>(memberId, DRAFT_KEY) ?? EMPTY)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [done, setDone] = useState(false)
+
+  function patch<K extends keyof CorrectionDraft>(key: K, value: CorrectionDraft[K]): void {
+    const next = { ...form, [key]: value }
+    setForm(next)
+    saveDraft(memberId, DRAFT_KEY, next)
+    setError(null)
+  }
+
+  function validationError(): string | null {
+    if (!form.name.trim()) return t('nominees.name_required')
+    if (!isEnglishScriptName(form.name)) return t('nominees.name_english')
+    if (!form.relationship) return t('nominees.relationship_required')
+    if (!form.mobile.trim()) return t('nominees.mobile_required')
+    if (!form.note.trim()) return t('nominee_correction.note_required')
+    return null
+  }
+
+  function request() {
+    return claimApi.raiseNomineeCorrection(claimCaseId!, {
+      rank: form.rank,
+      proposed: {
+        name: form.name.trim(),
+        relationship: form.relationship as Relationship,
+        mobile: form.mobile.trim(),
+        ...(form.address.trim() ? { address: form.address.trim() } : {}),
+      },
+      note: form.note.trim(),
+    })
+  }
+
+  async function run(fn: () => Promise<unknown>): Promise<void> {
+    setBusy(true)
+    setError(null)
+    try {
+      const result = await fn()
+      if (result !== undefined) {
+        clearDraft(memberId, DRAFT_KEY)
+        setDone(true)
+      }
+    } catch (err) {
+      setError(t(correctionErrorKey(err)))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function onSubmit(): Promise<void> {
+    const v = validationError()
+    if (v) {
+      setError(v)
+      return
+    }
+    await run(() => stepUp.guard(request))
+  }
+
+  if (!claimCaseId) {
+    return (
+      <YStack gap="$4" px="$6" py="$6" bg="$background" accessible={true}>
+        <Stack.Screen options={{ title: t('nominee_correction.title') }} />
+        <H2 accessibilityRole="header">{t('nominee_correction.title')}</H2>
+        <Paragraph accessibilityRole="text" accessibilityLiveRegion="polite">
+          {t('nominee_correction.no_claim')}
+        </Paragraph>
+      </YStack>
+    )
+  }
+
+  if (done) {
+    return (
+      <YStack gap="$4" px="$6" py="$6" bg="$background" accessible={true} testID="nominee-correction-done">
+        <Stack.Screen options={{ title: t('nominee_correction.title') }} />
+        <H2 accessibilityRole="header">{t('nominee_correction.submitted_title')}</H2>
+        <Paragraph accessibilityRole="text" accessibilityLiveRegion="polite">
+          {t('nominee_correction.submitted_body')}
+        </Paragraph>
+        <Button
+          height={48}
+          accessibilityRole="button"
+          accessibilityLabel={t('lifeEvents.nominees_label')}
+          onPress={() => router.back()}
+        >
+          {t('lifeEvents.nominees_label')}
+        </Button>
+      </YStack>
+    )
+  }
+
+  return (
+    <>
+      <Stack.Screen options={{ title: t('nominee_correction.title') }} />
+      <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
+        <YStack gap="$4" px="$6" py="$6" bg="$background">
+          <H2 accessibilityRole="header">{t('nominee_correction.title')}</H2>
+          <Paragraph color="$colorPress" accessibilityRole="text">
+            {t('nominee_correction.intro')}
+          </Paragraph>
+
+          <Text accessibilityRole="text">{t('nominee_correction.rank_label')}</Text>
+          <XStack gap="$2">
+            {([1, 2] as const).map((rank) => {
+              const selected = form.rank === rank
+              const label = rank === 1 ? t('nominee_correction.rank_primary') : t('nominee_correction.rank_secondary')
+              return (
+                <Button
+                  key={rank}
+                  size="$3"
+                  theme={selected ? 'accent' : undefined}
+                  chromeless={!selected}
+                  accessibilityRole="button"
+                  accessibilityLabel={label}
+                  accessibilityState={{ selected }}
+                  onPress={() => patch('rank', rank)}
+                >
+                  {label}
+                </Button>
+              )
+            })}
+          </XStack>
+
+          <Input
+            value={form.name}
+            onChangeText={(v) => patch('name', v)}
+            placeholder={t('nominees.name')}
+            height={48}
+            accessibilityLabel={t('nominees.name')}
+            accessibilityHint={t('nominees.name_help')}
+          />
+
+          <Text accessibilityRole="text">{t('nominees.relationship')}</Text>
+          <XStack gap="$2" flexWrap="wrap" accessibilityHint={t('nominees.relationship_help')}>
+            {KNOWN_RELATIONSHIPS.map((rel) => {
+              const selected = form.relationship === rel
+              return (
+                <Button
+                  key={rel}
+                  size="$3"
+                  theme={selected ? 'accent' : undefined}
+                  chromeless={!selected}
+                  accessibilityRole="button"
+                  accessibilityLabel={t(`nominees.relationship_${rel}`)}
+                  accessibilityState={{ selected }}
+                  onPress={() => patch('relationship', rel)}
+                >
+                  {t(`nominees.relationship_${rel}`)}
+                </Button>
+              )
+            })}
+          </XStack>
+
+          <Input
+            value={form.mobile}
+            onChangeText={(v) => patch('mobile', v)}
+            placeholder={t('nominees.mobile')}
+            keyboardType="phone-pad"
+            height={48}
+            accessibilityLabel={t('nominees.mobile')}
+            accessibilityHint={t('nominees.mobile_help')}
+          />
+          <Input
+            value={form.address}
+            onChangeText={(v) => patch('address', v)}
+            placeholder={t('nominees.address')}
+            height={48}
+            accessibilityLabel={t('nominees.address')}
+            accessibilityHint={t('nominees.address_help')}
+          />
+          <TextArea
+            value={form.note}
+            onChangeText={(v) => patch('note', v)}
+            placeholder={t('nominee_correction.note_label')}
+            accessibilityLabel={t('nominee_correction.note_label')}
+            accessibilityHint={t('nominee_correction.note_help')}
+          />
+          <Paragraph color="$colorPress" accessibilityRole="text">
+            {t('nominee_correction.note_help')}
+          </Paragraph>
+
+          {stepUp.needsOtp ? (
+            <YStack gap="$3">
+              <Text accessibilityRole="text" accessibilityLiveRegion="polite">
+                {t('lifeEvents.step_up_required')}
+              </Text>
+              <Input
+                value={stepUp.otp}
+                onChangeText={stepUp.setOtp}
+                keyboardType="number-pad"
+                maxLength={6}
+                height={48}
+                accessibilityLabel={t('lifeEvents.step_up_required')}
+                accessibilityHint={t('lifeEvents.step_up_hint')}
+              />
+              <Button
+                theme="accent"
+                height={56}
+                disabled={busy || !stepUp.otp.trim()}
+                accessibilityRole="button"
+                accessibilityLabel={t('auth.verify')}
+                onPress={() => {
+                  const v = validationError()
+                  if (v) {
+                    setError(v)
+                    return
+                  }
+                  run(() => stepUp.verifyAndRetry(request))
+                }}
+              >
+                {busy ? <Spinner /> : t('auth.verify')}
+              </Button>
+            </YStack>
+          ) : null}
+
+          {error ? (
+            <Text color="#C0392B" accessibilityRole="alert" accessibilityLiveRegion="assertive">
+              {error}
+            </Text>
+          ) : null}
+
+          <Button
+            theme="accent"
+            height={56}
+            disabled={busy}
+            accessibilityRole="button"
+            accessibilityLabel={t('nominee_correction.submit')}
+            accessibilityState={{ disabled: busy }}
+            onPress={onSubmit}
+          >
+            {busy ? <Spinner /> : t('nominee_correction.submit')}
+          </Button>
+        </YStack>
+      </ScrollView>
+    </>
+  )
+}

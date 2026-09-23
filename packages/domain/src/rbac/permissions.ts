@@ -698,7 +698,25 @@ export function permissionKey(value: string): PermissionKey {
 // compound read; the names are a Tier-1 decrypt of a SECOND living subject (the nominee) on its own
 // route, and folding them under `claim.verify` would hand every console reader a nominee's plaintext
 // name as a side effect of reading claim signals. A new key is the only way that stays visible here.
-export const PERMISSION_CATALOG_VERSION = 43 as const;
+// ── Bumped 43 → 47 at Story 6.20 / Decision 2026-09-21-241 §2 — added FOUR keys: 51 → 55 ──────────
+// The nominee-declaration history keys. `2026-09-20-235` Y makes the DISTRICT ADMIN decide which
+// declaration versions stand against the certificate date; `-236` Z makes a genuine-mistake correction
+// need TWO approvals in order (District Admin, then Pariwar Admin); `-237` cl.3 (CC2) lets the HELPLINE
+// OPERATOR raise one on the family's behalf. +1 PER KEY (the 6.18 two-key precedent) ⇒ 43 + 4 = 47 and
+// 51 + 4 = 55, both READ LIVE on 2026-09-23 at `36129696` (⛔ not transcribed from `-241`, which read
+// them at `1359b9e3`). `defaultRoleBundles` stays 13 — ⛔ no new role.
+//   (1) `claim.determine_nominee_declaration` — district-dimension, `district_admin` (+ super_admin).
+//   (2) `claim.approve_nominee_correction_district` — district-dimension, `district_admin`.
+//   (3) `claim.approve_nominee_correction_pariwar` — pariwar-dimension, `pariwar_admin`.
+//   (4) `claim.raise_nominee_correction` — pariwar-dimension, `helpline_operator`.
+// ⚠ THE AUTHORITY IS SPLIT: `-236` consequence 2 authorises only (2) and (3) (*"Two new permission keys
+// are likely owed for the correction's two steps"*); (1) and (4) rest on `-195` cl.2 alone, each with
+// its reuse-check below and in `-241` §2.
+// ⭐ The timeline READ reuses `claim.view_nominee_name_check` — same four holders, same class of
+// living-subject PII (a nominee's decrypted details) ⇒ ⛔ no fifth key.
+// ⛔ NOT `state_trustee` on any of the four: the pariwar keys are RANK-ORDER BLOCKED for it (scope.ts),
+// and the district keys follow the 6.10 `claim.verify` disposition.
+export const PERMISSION_CATALOG_VERSION = 47 as const;
 
 /**
  * The grounded v1 seed keys (architecture + epic + PRD references only — see file
@@ -921,6 +939,30 @@ export const SEED_PERMISSION_KEYS = [
   // ACCEPTANCE CONDITION for any further holder: a Panel ruling superseding `-226` cl.3. ⛔ Never a
   // consistency argument from the read key's four holders.
   'claim.check_nominee_name',
+  // Story 6.20 (D4, D8(1), Decision `2026-09-21-241` §2) — the District Admin's nominee DETERMINATION:
+  // enter the death-certificate date and mark each declaration version `stands` | `discarded`
+  // (`2026-09-20-235` Y). Gates POST …/admin/claims/:claimCaseId/nominee-determination. Checked at
+  // `dimension: 'district'` against the deceased's SERVER-DERIVED posting district.
+  // ⛔ Cannot reuse `claim.check_nominee_name`: that records a NAME verdict; this records WHICH
+  // DECLARATION GOVERNS — a different judgement, record and table. Rests on `-195` cl.2 alone.
+  // Granted to `district_admin` ONLY (+ derived super_admin) — `-235` Y names the District Admin.
+  'claim.determine_nominee_declaration',
+  // Story 6.20 (D7, D8(2)) — STEP 1 of a nominee correction: the District Admin approves or declines a
+  // raised genuine-mistake correction (`2026-09-20-236` Z — *"first District Admin then Pariwar
+  // Admin"*). District-dimension, `district_admin`. ⛔ Cannot reuse (1): a determination and an approval
+  // of somebody else's proposed change are distinct acts, and D7 requires the two approvers be
+  // DIFFERENT people. Authorised by `-236` consequence 2.
+  'claim.approve_nominee_correction_district',
+  // Story 6.20 (D7, D8(3)) — STEP 2: the Pariwar Admin approves (and thereby APPLIES) or declines.
+  // Pariwar-dimension, `pariwar_admin`. ⛔ Cannot reuse (2): a different dimension and holder.
+  // ⚠ Direct `state_trustee` gating is RANK-ORDER BLOCKED, so the Pariwar dimension is the available
+  // shape. Authorised by `-236` consequence 2.
+  'claim.approve_nominee_correction_pariwar',
+  // Story 6.20 (D7, D8(4), CC2 — `2026-09-21-237` cl.3) — RAISE a nominee correction on the family's
+  // behalf. Pariwar-dimension, `helpline_operator`. ⛔ Cannot reuse (2) or (3): raising is ⛔ not
+  // approving, and ⛔ the District Admin never raises alone (CC2). The FAMILY's own raise through the
+  // member app is a `memberSession` route and needs ⛔ no key. Rests on `-195` cl.2 alone.
+  'claim.raise_nominee_correction',
   // Story 6.12 (R6) — the MANUAL shepherd reassignment WRITE key. Gates
   // `POST …/admin/claims/:claimCaseId/shepherd/reassign` (checked at `dimension: 'district'` against the
   // deceased member's SERVER-DERIVED posting district — the client never submits the authz district).

@@ -110,6 +110,13 @@ const CLAIM_VERIFY = permissionKey('claim.verify');
 // SEE), while cl.3 reserves the REVIEW to the District Admin (so one role RECORDS). See permissions.ts.
 const CLAIM_VIEW_NOMINEE_NAME_CHECK = permissionKey('claim.view_nominee_name_check');
 const CLAIM_CHECK_NOMINEE_NAME = permissionKey('claim.check_nominee_name');
+// Story 6.20 (D8, Decision `2026-09-21-241` §2) — the nominee-declaration history keys: the District
+// Admin's DETERMINATION (district) + the two CORRECTION approvals (district → pariwar, two DIFFERENT
+// people, `-236` Z) + the helpline operator's RAISE (pariwar). See permissions.ts for each reuse-check.
+const CLAIM_DETERMINE_NOMINEE_DECLARATION = permissionKey('claim.determine_nominee_declaration');
+const CLAIM_APPROVE_NOMINEE_CORRECTION_DISTRICT = permissionKey('claim.approve_nominee_correction_district');
+const CLAIM_APPROVE_NOMINEE_CORRECTION_PARIWAR = permissionKey('claim.approve_nominee_correction_pariwar');
+const CLAIM_RAISE_NOMINEE_CORRECTION = permissionKey('claim.raise_nominee_correction');
 // Story 6.12 (R6) — the MANUAL shepherd reassignment WRITE key (district-dimension; distinct from
 // claim.approve/claim.verify — routing the family's contact grants no adjudication power, AC6).
 const CLAIM_ASSIGN_SHEPHERD = permissionKey('claim.assign_shepherd');
@@ -343,6 +350,10 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
       // capability, ⛔ not an inert grant. ⛔ NOT CLAIM_CHECK_NOMINEE_NAME: their cl.4 authority is the
       // final approval, exercised through CYCLE_FREEZE below, ⛔ never a second check (cl.3).
       CLAIM_VIEW_NOMINEE_NAME_CHECK,
+      // Story 6.20 (D7) — STEP 2 of a nominee correction: the Pariwar Admin's approval APPLIES a
+      // genuine-mistake correction the District Admin approved first (`2026-09-20-236` Z). Checked at
+      // `dimension: 'pariwar'`; ⛔ the same person can never give both steps (D7, enforced in the domain).
+      CLAIM_APPROVE_NOMINEE_CORRECTION_PARIWAR,
       // Story 6.9 (D5a) — the DPDPA consent revocation key (a later consent-management action). A
       // supervisor-escalation grant alongside helpline_operator — the claim.correct_nominee_bank /
       // claim.override_ground_inspection shape (both roles hold it), NOT the helpline_operator-only
@@ -474,6 +485,11 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
       // for why verifier / pariwar_admin / helpline_operator hold the READ key and not this one.
       CLAIM_VIEW_NOMINEE_NAME_CHECK,
       CLAIM_CHECK_NOMINEE_NAME,
+      // Story 6.20 (D4, D7) — the District Admin DETERMINES which nominee versions stand
+      // (`2026-09-20-235` Y) and gives STEP 1 of a correction's two approvals (`-236` Z). Both
+      // district-dimension against the deceased's server-derived posting district.
+      CLAIM_DETERMINE_NOMINEE_DECLARATION,
+      CLAIM_APPROVE_NOMINEE_CORRECTION_DISTRICT,
       // Story 6.12 (R6) — the manual shepherd reassignment key. The District Admin IS the shepherd (D-C),
       // so they administer the assignment; checked at `dimension: 'district'` against the deceased's
       // server-derived posting district. Grants no adjudication power (AC6) — orthogonal to CLAIM_APPROVE.
@@ -675,6 +691,10 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
       // the filer also record the Trust's verdict would collapse cl.1 into cl.3 and let them clear
       // their own work.
       CLAIM_VIEW_NOMINEE_NAME_CHECK,
+      // Story 6.20 (D7, CC2 — `2026-09-21-237` cl.3) — RAISE a nominee correction on the family's behalf.
+      // Checked at `dimension: 'pariwar'`. ⛔ Raising is not approving: the two approvals are the District
+      // Admin's and the Pariwar Admin's keys, which this role does not hold.
+      CLAIM_RAISE_NOMINEE_CORRECTION,
       // Story 10.3 (SM-1 C3) — the helpdesk ticket-create key (the operator files on a caller's behalf).
       HELPDESK_CREATE,
       // Story 10.4 — the helpdesk responder-console key. helpline_operator is the default routing target for

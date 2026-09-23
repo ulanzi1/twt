@@ -60,6 +60,24 @@ const FENCED_FILES = [
   'apps/admin/src/modules/r9-voting/R9VotingPage.tsx',
   'apps/admin/src/modules/cycle-freeze/PendingCaseCard.tsx',
   'apps/admin/src/modules/claim-verification/NomineeNameCheckPanel.tsx',
+  // ⭐ STORY 6.20 (T14) — every module that reads a nominee-declaration VERSION or renders one beside
+  // another. The effective accessor now DEFINES which nominee the name check is about (AC5), the
+  // determination writer judges versions against a date, and the history module stores them. Each
+  // is compliant by construction (ranks, version ids, instants — ⛔ no name reaches the first two),
+  // and the fence is what keeps it so. ⚠ The timeline read + its handler + the admin panel DECRYPT
+  // by design (D10): they sit under FORBIDDEN_PATTERNS only — they may show two names side by side,
+  // and ⛔ never compare them.
+  'packages/domain/src/claim/nominee-effective.ts',
+  'packages/domain/src/claim/nominee-determination-persist.ts',
+  'packages/domain/src/nominee/declaration-history.ts',
+  // The timeline READ + its handler/route (they DECRYPT by design — D10 — so they sit under
+  // FORBIDDEN_PATTERNS only), the correction writer (it judges a TARGET version), and the admin panel
+  // that renders the versions and a correction's target BESIDE its proposal — the likeliest place a
+  // "helpful" diff would land.
+  'packages/domain/src/claim/nominee-correction-persist.ts',
+  'apps/api/src/modules/claims/claims.nominee-declaration.handlers.ts',
+  'apps/api/src/modules/claims/claims.nominee-declaration.routes.ts',
+  'apps/admin/src/modules/claim-verification/NomineeDeclarationPanel.tsx',
 ] as const;
 
 /**
@@ -106,7 +124,7 @@ describe('⛔ the no-comparison fence (Trap 1, `-226` cl.5)', () => {
     for (const f of FENCED_FILES) {
       expect(() => read(f), `fenced file missing: ${f}`).not.toThrow();
     }
-    expect(FENCED_FILES.length).toBeGreaterThanOrEqual(16);
+    expect(FENCED_FILES.length).toBeGreaterThanOrEqual(23); // Story 6.20 raised it FROM 16 (+7 modules)
   });
 
   it('⭐⭐ POSITIVE CONTROL — the scanner actually FIRES on a planted violation of every pattern', () => {
@@ -210,9 +228,12 @@ describe('⛔ the no-comparison fence (Trap 1, `-226` cl.5)', () => {
 
   it('⛔⛔ the WRITE PATH never reads a name at all — it cannot compare what it cannot reach', () => {
     // ⭐ This is the structural half of Trap 1/Trap 4: `recordNomineeNameCheck` records a human's
-    // judgement, and it is built so that reaching a name would require a NEW import. The
-    // `nominee/declaration-ref.ts` accessor projects only `(rank, created_at)` precisely so this
-    // property is a fact about the TYPES, not about the author's discipline.
+    // judgement, and it is built so that reaching a name would require a NEW import. The accessor it
+    // uses projects no name field, so this property is a fact about the TYPES, not about the author's
+    // discipline.
+    // ⭐ STORY 6.20 (T14) RE-POINTED IT: 6.18's `nominee/declaration-ref.ts` projected the CURRENT
+    // rows' `(rank, created_at)`; the token is now the EFFECTIVE as-at-death declaration's
+    // (`claim/nominee-effective.ts`), equally ref-only — ranks, version ids, a determination id.
     const code = stripComments(read('packages/domain/src/claim/nominee-name-check-persist.ts'));
     for (const forbidden of [
       'nameCiphertext',
@@ -223,7 +244,22 @@ describe('⛔ the no-comparison fence (Trap 1, `-226` cl.5)', () => {
       expect(code.includes(forbidden), `the check writer reached for '${forbidden}'`).toBe(false);
     }
     // And it uses the ref-only accessor, which has no name field to reach for.
-    expect(code).toContain('getMemberNomineeDeclarationRefs');
+    expect(code).toContain('getEffectiveNomineeDeclaration');
+  });
+
+  it('⛔⛔ Story 6.20 — the EFFECTIVE accessor and the DETERMINATION writer are ref-only too', () => {
+    // ⭐ The accessor now DEFINES which nominee the check is about, so it inherits the write path's
+    // structural guarantee: it cannot reach a name. The determination writer judges VERSIONS against a
+    // DATE; a name has no part in that judgement either (invariant 6).
+    for (const f of [
+      'packages/domain/src/claim/nominee-effective.ts',
+      'packages/domain/src/claim/nominee-determination-persist.ts',
+    ]) {
+      const code = stripComments(read(f));
+      for (const forbidden of ['nameCiphertext', 'mobileCiphertext', 'decrypt', 'getMemberNominees(']) {
+        expect(code.includes(forbidden), `${f} reached for '${forbidden}'`).toBe(false);
+      }
+    }
   });
 
   it('⛔ the APPROVAL GATES decide on recorded verdicts and timestamps — never on names', () => {

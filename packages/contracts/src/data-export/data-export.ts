@@ -124,6 +124,29 @@ export const ProfileSection = z
         })
         .strict(),
     ),
+    /**
+     * Story 6.20 (D11, D16) — EVERY version of the member's nominee declaration (the history is the
+     * member's own data), oldest first per rank, each with the marks any LIVE District Admin
+     * determination gave it. `name` / `mobile` are `null` only on a `vacated` tombstone.
+     */
+    nomineeHistory: z.array(
+      z
+        .object({
+          rank: z.number().int().positive(),
+          versionNo: z.number().int().positive(),
+          kind: z.enum(['declared', 'vacated']),
+          source: z.enum(['member', 'correction']),
+          name: z.string().nullable(),
+          relationship: z.string().nullable(),
+          mobile: z.string().nullable(),
+          address: z.string().nullable(),
+          splitPct: z.number().int().nullable(),
+          recordedAt: Iso8601Datetime,
+          effectiveAt: Iso8601Datetime,
+          determinationMarks: z.array(z.enum(['stands', 'discarded'])),
+        })
+        .strict(),
+    ),
     medicalDisclosures: z.array(
       z
         .object({

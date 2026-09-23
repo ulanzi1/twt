@@ -29,6 +29,9 @@ describe('REASON_CODE_OUTCOME_COMPAT — the single domain source of truth (AC8)
       r8_90pct_met: ['approved'],
       concealment_flag_override: ['approved'],
       concealment_flag_uphold: ['denied'],
+      // Story 6.20 (D14, `-239`) — the District Admin's refusal on SUSPICION of a post-death nominee
+      // change. `denied` ONLY: it is ⛔ never an approval or escalation reason.
+      post_death_nominee_change: ['denied'],
       r9_routed_to_voting: ['escalated'],
       other: ['approved', 'denied', 'escalated'],
     };

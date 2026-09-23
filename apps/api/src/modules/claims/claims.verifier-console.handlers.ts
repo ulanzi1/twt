@@ -25,7 +25,7 @@
 // fail-soft (a corrupt envelope ⇒ null for that field, never a failed read). The packet is
 // authorized-display-sensitive — never logged, never persisted client-side.
 
-import { claim, idempotency, ids, nominee as nomineeDomain, rbac, type Db } from '@twt/domain';
+import { claim, idempotency, ids, rbac, type Db } from '@twt/domain';
 import {
   getValidityCached,
   type ValidityCaller,
@@ -85,6 +85,8 @@ const SIGNED_URL_TTL_SECONDS = 300;
  *   + Story 6.15: the live concealment assessment + a conditional R14 clause
  *     resolution (budgeted as two so the counter reflects the worst case)        +2  → 11
  *   + Story 6.18: the nominee name-check status                                  +3  → 14
+  + Story 6.20: the ground-inspection INHERITANCE (AC13) — only when the claim has
+    ⛔ no inspection of its own: the derived source claim + its inspections        +2  → 16
  *
  * Story 6.18's THREE reads (AC4/AC8) are the claim's live bank accounts, the latest
  * `claim.nominee_name_checked` event, and — when a check exists — the deceased member's
@@ -106,7 +108,19 @@ const SIGNED_URL_TTL_SECONDS = 300;
  * Any FURTHER increase requires an explanation at review, not a casual bump; the counter is asserted
  * in the live-DB integration test so it cannot be silently "fixed" by excluding a newly-added read.
  */
-export const VERIFIER_CONSOLE_MAX_READS = 14;
+/*
+ * ⭐ STORY 6.20's TWO READS (AC13) — the explanation the paragraph above demands. `2026-09-21-239` (b)
+ * rules that the true nominee's REFILE inherits the refused claim's ground inspection, and the
+ * inspection is a CONSOLE SIGNAL ("absence is a signal"), ⛔ not a state gate — so inheriting it means
+ * THIS section shows the other claim's completed inspection, labelled. ⛔ They are the MINIMUM: one
+ * query derives the source (the most recent earlier claim for the same deceased whose live verifier
+ * decision is the `-239` denial and which HAS a completed inspection — ⛔ never stored, ⛔ never client-
+ * supplied), and one reads its inspections. Both run ONLY on the path where this claim has none of its
+ * own, so a claim with its own inspection pays nothing. ⚠ Story 6.20's AC5 swap of the name-check token
+ * onto the effective declaration is read-for-read (one statement replacing one), so it does ⛔ not move
+ * this number.
+ */
+export const VERIFIER_CONSOLE_MAX_READS = 16;
 
 /** Counts the assembler's top-level bounded source reads (the no-N+1 fan-out width). */
 class ReadCounter {
@@ -301,21 +315,27 @@ async function assembleNomineeNameCheckStatus(
         differenceReasons: [],
       };
     }
-    // The declaration token is derived from the (rank, created_at) refs — ⛔ never from a name.
-    // ⚠ COUNTED. This read used to run un-bumped whenever a check existed, so the console's own
-    // ceiling under-reported by exactly one on the path that matters — and the read-budget
+    // ⭐ Story 6.20 (AC5, site D) — the token of the declaration IN FORCE AT THE DEATH (the District
+    // Admin's determination), ⛔ not of the current `member_nominees` rows — ⛔ never from a name.
+    // ⚠ COUNTED, and READ-FOR-READ: `getEffectiveNomineeDeclaration` is ONE statement, replacing the
+    // one `getMemberNomineeDeclarationRefs` read this line made before, so the ceiling does ⛔ not move
+    // for this site (T7). This read used to run un-bumped whenever a check existed, so the console's
+    // own ceiling under-reported by exactly one on the path that matters — and the read-budget
     // doc-block says in as many words that the counter *"cannot be silently fixed by excluding a
     // newly-added read"*.
     reads.bump();
-    const refs = await nomineeDomain.getMemberNomineeDeclarationRefs(
+    const effective = await claim.getEffectiveNomineeDeclaration(
       ctx.db,
       ids.pariwarId(ctx.pariwarId),
-      deceasedMemberId,
+      claimCaseId,
     );
+    if (effective.deceasedMemberId !== deceasedMemberId) {
+      throw new Error('verifier-console: effective declaration belongs to a different deceased member');
+    }
     const current = claim.isNomineeNameCheckCurrent(
       check,
       accounts.map((a) => ({ accountRank: a.accountRank, updatedAt: a.updatedAt })),
-      claim.deriveNomineeDeclarationToken(refs),
+      effective.token,
     );
     const passing = claim.nomineeNameCheckPasses(check);
     return {
@@ -489,8 +509,22 @@ async function assembleGroundInspection(
 ): Promise<GroundInspectionSection> {
   try {
     reads.bump();
-    const all = await claim.getClaimGroundInspection(ctx.db, ids.pariwarId(ctx.pariwarId), claimCaseId);
-    if (all.length === 0) return { status: 'empty' }; // AC5 absence-is-a-signal — but a genuine [], not a failure
+    const own = await claim.getClaimGroundInspection(ctx.db, ids.pariwarId(ctx.pariwarId), claimCaseId);
+    let all = own;
+    let inheritedFrom: { claimCaseId: string } | undefined;
+    if (own.length === 0) {
+      // ⭐ Story 6.20 (AC13) — the true nominee's refile INHERITS the `-239`-refused claim's COMPLETED
+      // inspection. Derived here, ⛔ never stored. ⚠ COUNTED (two reads, only on this path).
+      reads.bump();
+      const source = await claim.getInheritedGroundInspectionSource(ctx.db, ids.pariwarId(ctx.pariwarId), claimCaseId);
+      if (source === null) return { status: 'empty' }; // AC5 absence-is-a-signal — but a genuine [], not a failure
+      reads.bump();
+      all = (await claim.getClaimGroundInspection(ctx.db, ids.pariwarId(ctx.pariwarId), source)).filter(
+        (r) => r.inspection.status === 'completed',
+      );
+      if (all.length === 0) return { status: 'empty' };
+      inheritedFrom = { claimCaseId: source };
+    }
 
     const assignments = await Promise.all(
       all.map(async (r) => {
@@ -525,7 +559,7 @@ async function assembleGroundInspection(
         };
       }),
     );
-    return { status: 'present', assignments };
+    return inheritedFrom ? { status: 'present', assignments, inheritedFrom } : { status: 'present', assignments };
   } catch (err) {
     ctx.log?.warn({ err, claimCaseId: ctx.claimCaseId }, 'verifier-console: ground-inspection section unavailable');
     return { status: 'unavailable' };

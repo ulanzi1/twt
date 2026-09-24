@@ -23,14 +23,44 @@ const read = (rel: string): string => readFileSync(path.join(repoRoot, rel), 'ut
 const LOCALES = ['en', 'hi'] as const
 
 /** The source with its comments removed — a pin must match CODE, ⛔ never a comment that mentions it. */
-// JSX `{/* … */}` and `/* … */` blocks, whole-line `//` comments, and TRAILING `  // …` comments (a space
-// before `//`, so a `://` URL inside a string is left alone — adversarial review 2026-09-24b).
-const code = (src: string): string =>
-  src
-    .replace(/\{\/\*[\s\S]*?\*\/\}/g, '')
-    .replace(/(^|[^'"`*])\/\*[\s\S]*?\*\//g, '$1')
-    .replace(/^\s*\/\/.*$/gm, '')
-    .replace(/\s\/\/(?!\/).*$/gm, '')
+/**
+ * The source with its COMMENTS removed, scanned character by character so a `//` or `/*` INSIDE a string,
+ * template or regex-free literal is left alone (review 2026-09-24c: the regex version cut into string literals,
+ * which could let a negative pin pass vacuously). JSX `{/* … *\/}` blocks collapse to `{}`.
+ */
+const code = (src: string): string => {
+  let out = ''
+  let quote: string | null = null
+  for (let i = 0; i < src.length; i++) {
+    const ch = src[i]!
+    const next = src[i + 1]
+    if (quote) {
+      out += ch
+      if (ch === '\\') {
+        out += next ?? ''
+        i++
+      } else if (ch === quote) quote = null
+      continue
+    }
+    if (ch === "'" || ch === '"' || ch === '`') {
+      quote = ch
+      out += ch
+      continue
+    }
+    if (ch === '/' && next === '/') {
+      while (i < src.length && src[i] !== '\n') i++
+      out += '\n'
+      continue
+    }
+    if (ch === '/' && next === '*') {
+      const close = src.indexOf('*/', i + 2)
+      i = close === -1 ? src.length : close + 1
+      continue
+    }
+    out += ch
+  }
+  return out
+}
 
 /**
  * The OPENING TAG of the JSX element carrying `testID="<id>"`, parsed brace-aware — `[^>]*` stopped at the
@@ -118,20 +148,22 @@ describe('Story 6.20 member copy resolves through the REAL t() — both locales'
   // each language (adversarial review 2026-09-24b: the Hindi list lacked "for now" / "again" / "no longer").
   const PROMISES = {
     en: [/for now/i, /open(s)? again/i, /no longer/i, /\bnever\b/i, /permanent/i],
-    hi: [/अभी|फ़िलहाल|फिलहाल/, /फिर से|दोबारा/, /अब .*नहीं/, /कभी नहीं/, /हमेशा|स्थायी/],
+    // ⚠ Matched against NFD text (see `normalized` below), so either encoding of the nukta letter फ़ is caught;
+    // "no longer" is bounded to one clause (review 2026-09-24c: `अब .*नहीं` spanned the whole string).
+    hi: [/अभी|फ\u093Cिलहाल|फिलहाल/, /फिर से|दोबारा/, /अब[^।,]{0,20}नहीं/, /कभी नहीं/, /हमेशा|स्थायी/],
   } as const
   const HELPLINE = { en: /helpline/i, hi: /हेल्पलाइन/ } as const
   for (const locale of LOCALES) {
     it(`[${locale}] ⭐ the locked copy promises ⛔ no outcome — neither a release nor a permanent lock — and names the helpline`, () => {
       for (const key of ['nominees.locked_title', 'nominees.locked_body'] as const) {
-        const text = t(key, undefined, { locale })
+        const text = t(key, undefined, { locale }).normalize('NFD')
         for (const promise of PROMISES[locale]) expect(text, `${locale} :: ${key}`).not.toMatch(promise)
       }
       expect(t('nominees.locked_body', undefined, { locale })).toMatch(HELPLINE[locale])
     })
 
     it(`[${locale}] the pre-claim notice agrees with the locked screen (⛔ no "no longer" / "never")`, () => {
-      const notice = t('nominees.changes_stop_notice', undefined, { locale })
+      const notice = t('nominees.changes_stop_notice', undefined, { locale }).normalize('NFD')
       for (const promise of PROMISES[locale].slice(2)) expect(notice).not.toMatch(promise)
     })
   }
@@ -202,7 +234,10 @@ describe('Story 6.20 — the correction screen finds the claim and guards the st
     const src = code(read('apps/mobile/app/(life-events)/nominee-correction.tsx'))
     // "Verified" is set INSIDE the callback `verifyAndRetry` runs only after the code verified — ⛔ never
     // inferred from an error code (a network error or a rate limit on the verify also used to close it).
-    expect(src).toMatch(/stepUp\.verifyAndRetry\(\(\) => \{\s*verified = true\s*return request\(\)\s*\}\)/)
+    // Tolerant of semicolons and formatting (review 2026-09-24c); the flag is declared FRESH per attempt, right
+    // before the `run(` that uses it — hoisted to component scope, one attempt's `true` would leak into the next.
+    expect(src).toMatch(/let verified = false;?\s*run\(/)
+    expect(src).toMatch(/stepUp\.verifyAndRetry\(\s*\(\) => \{\s*verified = true;?\s*return request\(\);?\s*\}\s*,?\s*\)/)
     expect(src).toMatch(/if \(verified\) stepUp\.reset\(\)/)
     expect(src).not.toMatch(/auth\.step_up_failed/)
   })

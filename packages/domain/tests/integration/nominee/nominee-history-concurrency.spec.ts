@@ -395,6 +395,8 @@ describe.skipIf(!hasDatabase)('Story 6.20 — nominee history two-connection con
       holder = await begin();
       holderOpen = true;
       await hold(holder);
+      // The holder's pid BEFORE the waiter exists (review 2026-09-24c: a throw here used to strand an open waiter).
+      const holderPid = await pidOf(holder);
       const waiter = await begin();
       let waiterPid: number;
       try {
@@ -403,8 +405,17 @@ describe.skipIf(!hasDatabase)('Story 6.20 — nominee history two-connection con
         await end(waiter, false).catch(() => undefined);
         throw err;
       }
-      const holderPid = await pidOf(holder);
-      pending = wait(waiter).finally(() => end(waiter, false));
+      // ⭐ The waiter's OWN result survives its cleanup: a rollback error never replaces the refusal under test.
+      pending = wait(waiter).then(
+        async (v) => {
+          await end(waiter, false).catch(() => undefined);
+          return v;
+        },
+        async (e: unknown) => {
+          await end(waiter, false).catch(() => undefined);
+          throw e;
+        },
+      );
       const waited = await blockedBy(waiterPid, holderPid);
       await end(holder, true);
       holderOpen = false;

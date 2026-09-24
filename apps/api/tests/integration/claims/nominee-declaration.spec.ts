@@ -747,9 +747,24 @@ describe.skipIf(!hasDatabase)('Story 6.20 — the nominee declaration surface �
     // error, including one thrown before any write). That it fails AFTER the row + items is proven in the domain
     // spec; ⚠ `inScope` is the same `openScopeTx` / `closeScopeTx(…, false)` pair the handler composes — this
     // proves that pair's rollback, ⛔ not the handler's `ok` bookkeeping (covered by construction there).
-    await expect(inScope(w.pariwarId, (s) => claim.recordNomineeDetermination(s.client, { ...input, actor: 'not-an-actor' as never }))).rejects.toSatisfy(
-      (err: unknown) => (err as Error).name === 'ZodError',
-    );
+    // ⭐ Review 2026-09-24c: the ZodError alone could also come from an entry-point check that writes nothing,
+    // leaving "zero afterwards" vacuous. So INSIDE the transaction the row is shown to EXIST after the failure
+    // (it failed MID-WAY), and only then is the transaction abandoned — through the real `closeScopeTx(…, false)`.
+    let insideAfterFailure = -1;
+    await expect(
+      inScope(w.pariwarId, async (s) => {
+        const err = await claim.recordNomineeDetermination(s.client, { ...input, actor: 'not-an-actor' as never }).then(
+          () => undefined,
+          (e: unknown) => e,
+        );
+        expect((err as Error | undefined)?.name).toBe('ZodError');
+        insideAfterFailure = Number(
+          (await s.client.query('SELECT count(*)::int AS n FROM nominee_determinations WHERE claim_case_id = $1', [w.claimCaseId])).rows[0].n,
+        );
+        throw err;
+      }),
+    ).rejects.toSatisfy((e: unknown) => (e as Error).name === 'ZodError');
+    expect(insideAfterFailure, 'the failure came AFTER the row was written').toBe(1);
     const events = async () =>
       (
         await td.pool.query<{ n: number }>(

@@ -20,6 +20,7 @@ import type {
 const PARIWAR = '44444444-4444-4444-8444-444444444444';
 const CLAIM_A = '11111111-1111-4111-8111-111111111111';
 const CLAIM_B = '11111111-1111-4111-8111-222222222222';
+const CLAIM_C = '11111111-1111-4111-8111-333333333333';
 const MEMBER = '22222222-2222-4222-8222-222222222222';
 const V1 = '00000000-0000-4000-8000-000000000001';
 
@@ -40,6 +41,7 @@ const getPendingNomineeCorrections = vi.fn();
 const getNomineeCorrectionRaisableClaims = vi.fn();
 const postNomineeCorrectionRaise = vi.fn();
 const postNomineeCorrectionDecision = vi.fn();
+const initiateHelplineClaim = vi.fn();
 vi.mock('../src/api/client.js', async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>();
   return {
@@ -55,6 +57,7 @@ vi.mock('../src/api/client.js', async (importOriginal) => {
     postNomineeCorrectionRaise: (p: string, c: string, b: unknown) => postNomineeCorrectionRaise(p, c, b),
     postNomineeCorrectionDecision: (p: string, c: string, id: string, step: string, b: unknown) =>
       postNomineeCorrectionDecision(p, c, id, step, b),
+    initiateHelplineClaim: (p: string, b: unknown) => initiateHelplineClaim(p, b),
   };
 });
 
@@ -62,6 +65,7 @@ const { VerifierConsoleRoute } = await import('../src/routes/VerifierConsoleRout
 const { NomineeCorrectionsRoute } = await import('../src/routes/NomineeCorrectionsRoute.js');
 const { HelplineNomineeCorrection } = await import('../src/modules/helpline-claims/HelplineNomineeCorrection.js');
 const { ApiError } = await import('../src/api/client.js');
+const { useHelplineClaimIntake } = await import('../src/api/hooks.js');
 
 const packet = (claimCaseId: string): VerifierConsolePacket =>
   ({
@@ -119,8 +123,8 @@ const ui = (child: ReactElement) => <QueryClientProvider client={qc}>{child}</Qu
 /** Let effects and `onError` handlers run BEFORE a negative call count is read (a refetch a tick late would
  *  otherwise be missed — adversarial review 2026-09-24b). */
 const settle = () => new Promise((r) => setTimeout(r, 50));
-const SNAPSHOTS_A = ['nominee-declaration-snapshots', PARIWAR, '11111111-1111-4111-8111-111111111111'] as const;
-const CORRECTIONS_A = ['nominee-corrections', PARIWAR, '11111111-1111-4111-8111-111111111111'] as const;
+const SNAPSHOTS_A = ['nominee-declaration-snapshots', PARIWAR, CLAIM_A] as const;
+const CORRECTIONS_A = ['nominee-corrections', PARIWAR, CLAIM_A] as const;
 
 beforeEach(() => {
   for (const f of [
@@ -134,6 +138,7 @@ beforeEach(() => {
     getNomineeCorrectionRaisableClaims,
     postNomineeCorrectionRaise,
     postNomineeCorrectionDecision,
+    initiateHelplineClaim,
     navigate,
   ])
     f.mockReset();
@@ -185,7 +190,9 @@ describe('<VerifierConsoleRoute> — the D10 reveal', () => {
   it('⭐ closing the disclosure FORGETS the decrypted details (cache removed), and a reopen shows ⛔ no name until revealed again', async () => {
     render(ui(<VerifierConsoleRoute />));
     await openAndReveal();
+    // POSITIVE CONTROLS — both decrypting reads held data before the close.
     expect(qc.getQueryData(SNAPSHOTS_A)).toBeDefined();
+    await waitFor(() => expect(qc.getQueryData(CORRECTIONS_A)).toBeDefined());
     fireEvent.click(screen.getByTestId('nominee-declaration-disclosure'));
     // ⭐ The CACHE is emptied on close — ⛔ not merely the reveal flag reset.
     expect(qc.getQueryData(SNAPSHOTS_A)).toBeUndefined();
@@ -277,6 +284,8 @@ describe('<HelplineNomineeCorrection> — the claim comes from the SELECTED memb
       claims: [
         { claim_case_id: CLAIM_B, claim_state: 'documents_pending', created_at: '2026-09-02T06:00:00.000Z' },
         { claim_case_id: CLAIM_A, claim_state: 'verifier_review', created_at: '2026-09-01T06:00:00.000Z' },
+        // An UNKNOWN state reads as "—", ⛔ never guessed as "Being filed" (review 2026-09-24c).
+        { claim_case_id: CLAIM_C, claim_state: 'some_future_state', created_at: '2026-09-03T06:00:00.000Z' },
       ],
     });
     render(ui(<HelplineNomineeCorrection pariwarId={PARIWAR} memberId={MEMBER} identityConfirmed />));
@@ -285,9 +294,78 @@ describe('<HelplineNomineeCorrection> — the claim comes from the SELECTED memb
     expect(screen.queryByTestId('nominee-correction-raise')).toBeNull();
     // A state LABEL, ⛔ never the raw code.
     expect(screen.getByTestId('helpline-nominee-correction-pick').textContent).toContain('With the verifier');
+    expect(screen.getByTestId(`helpline-nominee-correction-claim-${CLAIM_C}`).closest('label')!.textContent).toMatch(/— —$/);
+    expect(screen.getByTestId('helpline-nominee-correction-pick').textContent).not.toMatch(/Being filed/);
     fireEvent.click(screen.getByTestId(`helpline-nominee-correction-claim-${CLAIM_A}`));
     await screen.findByTestId('nominee-correction-raise');
     expect(screen.getByTestId('raise-submit')).not.toBeDisabled();
+  });
+
+  it('⭐ a FAILED send keeps every typed field and names the NAME/MOBILE (the raise wording, ⛔ the note wording) — review 2026-09-24c', async () => {
+    getNomineeCorrectionRaisableClaims.mockResolvedValue({
+      member_id: MEMBER,
+      claims: [{ claim_case_id: CLAIM_A, claim_state: 'verifier_review', created_at: '2026-09-01T06:00:00.000Z' }],
+    });
+    postNomineeCorrectionRaise.mockRejectedValueOnce(new ApiError(400, 'request.validation', 'schema'));
+    render(ui(<HelplineNomineeCorrection pariwarId={PARIWAR} memberId={MEMBER} identityConfirmed />));
+    await screen.findByTestId('nominee-correction-raise');
+    fireEvent.change(screen.getByTestId('raise-name'), { target: { value: 'Rani Devi' } });
+    fireEvent.change(screen.getByTestId('raise-relationship'), { target: { value: 'spouse' } });
+    fireEvent.change(screen.getByTestId('raise-mobile'), { target: { value: '9876543210' } });
+    fireEvent.change(screen.getByTestId('raise-note'), { target: { value: 'Married name' } });
+    fireEvent.click(screen.getByTestId('raise-submit'));
+    expect((await screen.findByTestId('raise-error')).textContent).toMatch(/English letters.*10-digit mobile/);
+    await settle();
+    expect((screen.getByTestId('raise-name') as HTMLInputElement).value).toBe('Rani Devi');
+    expect(screen.getByTestId('raise-sent').textContent).toBe('');
+  });
+
+  it('⭐ a LONE claim stays chosen when a refetch finds a second one — the form and what was typed survive (review 2026-09-24c)', async () => {
+    getNomineeCorrectionRaisableClaims.mockResolvedValueOnce({
+      member_id: MEMBER,
+      claims: [{ claim_case_id: CLAIM_A, claim_state: 'verifier_review', created_at: '2026-09-01T06:00:00.000Z' }],
+    });
+    render(ui(<HelplineNomineeCorrection pariwarId={PARIWAR} memberId={MEMBER} identityConfirmed />));
+    await screen.findByTestId('nominee-correction-raise');
+    fireEvent.change(screen.getByTestId('raise-name'), { target: { value: 'Rani Devi' } });
+    getNomineeCorrectionRaisableClaims.mockResolvedValue({
+      member_id: MEMBER,
+      claims: [
+        { claim_case_id: CLAIM_B, claim_state: 'intake_pending', created_at: '2026-09-02T06:00:00.000Z' },
+        { claim_case_id: CLAIM_A, claim_state: 'verifier_review', created_at: '2026-09-01T06:00:00.000Z' },
+      ],
+    });
+    await qc.invalidateQueries({ queryKey: ['nominee-correction-raisable-claims', PARIWAR] });
+    await screen.findByTestId('helpline-nominee-correction-pick');
+    expect((screen.getByTestId('raise-name') as HTMLInputElement).value).toBe('Rani Devi');
+    expect((screen.getByTestId(`helpline-nominee-correction-claim-${CLAIM_A}`) as HTMLInputElement).checked).toBe(true);
+  });
+
+  it('⭐ filing a claim (the helpline intake) REFRESHES the selected member\'s claim list — the real hook, the real key (review 2026-09-24c)', async () => {
+    getNomineeCorrectionRaisableClaims.mockResolvedValueOnce({ member_id: MEMBER, claims: [] });
+    initiateHelplineClaim.mockResolvedValue({ claimCaseId: CLAIM_A });
+    let intake: ReturnType<typeof useHelplineClaimIntake> | undefined;
+    function IntakeHarness(): null {
+      intake = useHelplineClaimIntake(PARIWAR);
+      return null;
+    }
+    render(
+      ui(
+        <>
+          <IntakeHarness />
+          <HelplineNomineeCorrection pariwarId={PARIWAR} memberId={MEMBER} identityConfirmed />
+        </>,
+      ),
+    );
+    await screen.findByTestId('helpline-nominee-correction-no-claim');
+    getNomineeCorrectionRaisableClaims.mockResolvedValue({
+      member_id: MEMBER,
+      claims: [{ claim_case_id: CLAIM_A, claim_state: 'intake_pending', created_at: '2026-09-01T06:00:00.000Z' }],
+    });
+    await intake!.mutateAsync({} as never);
+    // The list the raise reads was refetched by the intake's own `onSuccess` — the form appears.
+    await screen.findByTestId('nominee-correction-raise');
+    expect(getNomineeCorrectionRaisableClaims).toHaveBeenCalledTimes(2);
   });
 
   it('no live claim ⇒ says so, and offers ⛔ no form', async () => {
@@ -299,6 +377,46 @@ describe('<HelplineNomineeCorrection> — the claim comes from the SELECTED memb
 });
 
 describe('<NomineeCorrectionsRoute> — a refusal is ⛔ never silent (adversarial review 2026-09-24b)', () => {
+  it('⭐ a refusal that leaves the item MOUNTED (a 403) is announced ONCE — the page alert, ⛔ no second in-item alert (review 2026-09-24c)', async () => {
+    const CORR = '66666666-6666-4666-8666-666666666666';
+    getPendingNomineeCorrections.mockResolvedValue({
+      items: [{ correction_id: CORR, claim_case_id: CLAIM_A, rank: 1, raised_via: 'helpline', raised_at: '2026-09-01T06:00:00.000Z' }],
+    });
+    getNomineeCorrections.mockResolvedValue({
+      claim_case_id: CLAIM_A,
+      corrections: [
+        {
+          correction_id: CORR,
+          claim_case_id: CLAIM_A,
+          rank: 1,
+          target_version_id: V1,
+          target: { relationship: 'spouse', name: { state: 'readable', value: 'Asha Devi' }, mobile: null, address: null },
+          proposed: { relationship: 'spouse', name: { state: 'readable', value: 'Asha Kumari' }, mobile: { state: 'readable', value: '9876543210' }, address: null },
+          raised_via: 'helpline',
+          raised_at: '2026-09-01T06:00:00.000Z',
+          raise_note: { state: 'readable', value: 'Maiden name' },
+          step: 'pa_pending',
+          district_admin: { actor_display: 'Anita', decided_at: '2026-09-02T06:00:00.000Z', note: { state: 'readable', value: 'Seen' } },
+          pariwar_admin: null,
+          declined_at_step: null,
+          applied_version_id: null,
+        },
+      ],
+    });
+    postNomineeCorrectionDecision.mockRejectedValue(new ApiError(403, 'auth.forbidden', 'no'));
+    render(ui(<NomineeCorrectionsRoute />));
+    fireEvent.click(await screen.findByRole('button', { expanded: false }));
+    fireEvent.change(await screen.findByTestId(`nominee-correction-note-${CORR}`), { target: { value: 'Seen.' } });
+    fireEvent.click(screen.getByTestId(`nominee-correction-approve-${CORR}`));
+    expect((await screen.findByTestId('nominee-corrections-failed')).textContent).toMatch(/permission/);
+    await settle();
+    // POSITIVE: the item is still mounted …
+    expect(screen.getByTestId(`nominee-correction-${CORR}`)).toBeTruthy();
+    // … and carries ⛔ no second alert.
+    expect(screen.queryByTestId('nominee-correction-error')).toBeNull();
+    expect(screen.getAllByRole('alert')).toHaveLength(1);
+  });
+
   it('a decision refused because another admin already decided is ALERTED at page level, though the item has left the queue', async () => {
     const CORR = '55555555-5555-4555-8555-555555555555';
     getPendingNomineeCorrections
@@ -336,6 +454,7 @@ describe('<NomineeCorrectionsRoute> — a refusal is ⛔ never silent (adversari
     const alert = await screen.findByTestId('nominee-corrections-failed');
     expect(alert.getAttribute('role')).toBe('alert');
     expect(alert.textContent).toMatch(/already moved on/);
+
     // The item is gone (it left the queue) — and the refusal is STILL said.
     await waitFor(() => expect(screen.queryByTestId(`nominee-correction-${CORR}`)).toBeNull());
     expect(screen.getByTestId('nominee-corrections-failed')).toBeTruthy();

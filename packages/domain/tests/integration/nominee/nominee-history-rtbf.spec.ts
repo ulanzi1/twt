@@ -185,6 +185,17 @@ describe.skipIf(!hasDatabase)('Story 6.20 — RTBF over the nominee history (:54
       appliedVersionId: applied!.versionId,
     });
 
+    const dumpNow = async () =>
+      JSON.stringify(
+        await client
+          .query('SELECT v.*, c.* FROM member_nominee_versions v LEFT JOIN nominee_corrections c ON c.member_id = v.member_id WHERE v.member_id = $1', [mid])
+          .then((r) => r.rows),
+      );
+    // ⭐ POSITIVE CONTROL for the raw sweep below (review 2026-09-24c): BEFORE the scrub every ciphertext IS in
+    // the dump — so its absence afterwards is the scrub, ⛔ not a column the dump never carried.
+    const before = await dumpNow();
+    for (const ct of [cName, cMobile, cAddress, paNote, daNote, raiseNote2]) expect(before.includes(ct)).toBe(true);
+
     await anonymizeMember(tx, { kms, kekRef }, { memberId: toMemberId(mid), pariwarId: PARIWAR_A });
 
     const [v] = await tx.select().from(schema.memberNomineeVersions).where(eq(schema.memberNomineeVersions.versionId, applied!.versionId));
@@ -199,11 +210,7 @@ describe.skipIf(!hasDatabase)('Story 6.20 — RTBF over the nominee history (:54
     expect(await dec(c!.daNoteCiphertext!, 'nominee_correction')).toBe(ANONYMIZED_SENTINEL);
     // ⭐ …and the APPLIED row's raise note (code review 2026-09-24b: `ZZ-RAISE-2` was seeded, never checked).
     expect(await dec(c!.raiseNoteCiphertext, 'nominee_correction')).toBe(ANONYMIZED_SENTINEL);
-    const dump = JSON.stringify(
-      await client
-        .query('SELECT v.*, c.* FROM member_nominee_versions v LEFT JOIN nominee_corrections c ON c.member_id = v.member_id WHERE v.member_id = $1', [mid])
-        .then((r) => r.rows),
-    );
+    const dump = await dumpNow();
     // ⭐ The raise note too — decrypt-checked above AND swept raw here (adversarial review 2026-09-24b).
     for (const ct of [cName, cMobile, cAddress, paNote, daNote, raiseNote2]) expect(dump.includes(ct)).toBe(false);
   });

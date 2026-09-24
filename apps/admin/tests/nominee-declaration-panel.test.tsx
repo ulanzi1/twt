@@ -21,6 +21,8 @@ import {
   NomineeCorrections,
   NomineeDeclarationPanel,
 } from '../src/modules/claim-verification/index.js';
+import { ApiError } from '../src/api/client.js';
+import { nomineeCorrectionErrorMessage } from '../src/modules/claim-verification/nominee-errors.js';
 
 const V1 = '00000000-0000-4000-8000-000000000001';
 const V2 = '00000000-0000-4000-8000-000000000002';
@@ -424,6 +426,31 @@ describe('<NomineeDeclarationPanel> — nominee corrections', () => {
     await waitFor(() => expect(note().value).toBe(''));
   });
 
+  it('⭐ …and the kept note SURVIVES the refetch that follows a refusal (a new version moves the fingerprint) — review 2026-09-24c', async () => {
+    const onDecide = vi.fn().mockResolvedValue(false);
+    const { rerender, props } = setup({ detailsRequested: true, onDecide });
+    const note = () => screen.getByTestId(`nominee-correction-note-${CORRECTION_ID}`) as HTMLTextAreaElement;
+    fireEvent.change(note(), { target: { value: 'Married name, same person.' } });
+    fireEvent.click(screen.getByTestId(`nominee-correction-approve-${CORRECTION_ID}`));
+    await waitFor(() => expect(onDecide).toHaveBeenCalledTimes(1));
+    // The refusal (`version_conflict`) refetches: a NEW version lands — the fingerprint changes.
+    const V3 = '00000000-0000-4000-8000-000000000003';
+    rerender(
+      <NomineeDeclarationPanel
+        {...props}
+        detailsRequested
+        onDecide={onDecide}
+        timeline={{
+          ...TIMELINE,
+          watermark: { rank1: 3, rank2: null },
+          versions: [...TIMELINE.versions, { ...TIMELINE.versions[1]!, version_id: V3, version_no: 3, source: 'correction' }],
+        }}
+      />,
+    );
+    // With the old `resetKey={fingerprint}` this cleared the note.
+    expect(note().value).toBe('Married name, same person.');
+  });
+
   it('a failed corrections read offers a retry that calls back', () => {
     const onRetryCorrections = vi.fn();
     setup({ detailsRequested: true, corrections: undefined, correctionsError: 'The correction requests could not be loaded.', onRetryCorrections });
@@ -558,5 +585,13 @@ describe('<NomineeCorrectionRaiseForm> — the helpline raise', () => {
     render(<NomineeCorrectionRaiseForm onRaise={vi.fn(async () => undefined)} sentCount={0} resetKey="k" disabled disabledReason="Choose the claim first." />);
     expect(screen.getByTestId('raise-submit').getAttribute('aria-describedby')).toBe('raise-submit-reason');
     expect(screen.getByTestId('raise-submit-reason').textContent).toBe('Choose the claim first.');
+  });
+});
+
+describe('nomineeCorrectionErrorMessage — the schema refusal is worded for WHAT was sent (review 2026-09-24c)', () => {
+  const bad = new ApiError(400, 'request.validation', 'schema');
+  it('a RAISE names the name and the mobile; a DECISION names the note', () => {
+    expect(nomineeCorrectionErrorMessage(bad, 'raise')).toMatch(/English letters.*10-digit mobile/);
+    expect(nomineeCorrectionErrorMessage(bad, 'decide')).toBe('Check your note, then try again.');
   });
 });

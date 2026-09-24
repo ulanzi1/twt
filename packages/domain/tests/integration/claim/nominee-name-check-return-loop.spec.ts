@@ -16,7 +16,7 @@
 
 import { randomUUID } from 'node:crypto';
 
-import { and, eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
 import { claimId as toClaimId, memberId as toMemberId } from '../../../src/ids/index.js';
@@ -408,6 +408,41 @@ describe.skipIf(!hasDatabase)('Story 6.18 — the return loop (:5433)', () => {
     const types = await eventTypes(tx, cid);
     expect(types).not.toContain('claim.state_trustee_denied');
     expect(types.filter((t) => t.includes('appeal'))).toEqual([]);
+  });
+
+  // ── Story 6.20 (code review 2026-09-24b) — the 09-24 HIGH patch had ⛔ no regression test ─────────
+  it('⭐⭐ a RETURNED, resubmitted claim whose determination a nominee correction then SUPERSEDED reads "not yet resubmitted" — typed, ⛔ never a throw', async () => {
+    const { client, tx } = getTx();
+    await enterAppScope(client, PARIWAR_A);
+    const cid = toClaimId(randomUUID());
+    const mid = toMemberId(randomUUID());
+    await driveTo(client, cid, mid, 'verifier_approved');
+    await seedNomineeNameCheck(client, PARIWAR_A, cid);
+    await returnToDistrictAdmin(client, returnInput(cid));
+    await correctionAt(client, cid, 'the District Admin asked for the holder name to be corrected');
+    // The production clock fact (separate requests ⇒ separate transactions) — see the whole-loop test above.
+    await tx
+      .update(schema.claimNomineeBankAccounts)
+      .set({ updatedAt: new Date(Date.now() + 60_000) })
+      .where(and(eq(schema.claimNomineeBankAccounts.pariwarId, PARIWAR_A), eq(schema.claimNomineeBankAccounts.claimCaseId, cid)));
+    await seedNomineeNameCheck(client, PARIWAR_A, cid, { reuseAccounts: true });
+    // POSITIVE CONTROL — resubmitted: ⛔ not under correction.
+    expect((await resolveClaimCorrectionState(tx, PARIWAR_A, cid, mid, 'verifier_approved')).underCorrection).toBe(false);
+
+    // A nominee correction is applied ⇒ the live determination is SUPERSEDED (D7) — what the apply does.
+    await tx.execute(
+      sql`UPDATE nominee_determinations SET superseded_at = now(), superseded_reason = 'correction_applied'
+           WHERE claim_case_id = ${cid} AND superseded_at IS NULL`,
+    );
+
+    // ⭐ The shared "under correction?" answer RESOLVES (it used to throw `NomineeDeterminationRequiredError`
+    // out of `isReturnedClaimResubmitted` — a 500 on the nominee-bank and name-check reads) …
+    const state = await resolveClaimCorrectionState(tx, PARIWAR_A, cid, mid, 'verifier_approved');
+    expect(state).toMatchObject({ hasLiveReturn: true, underCorrection: true });
+    // … and the Trustee's vote is refused as AWAITING CORRECTION — pinned to the one error the path raises
+    // (adversarial review 2026-09-24b: accepting `NomineeDeterminationRequiredError` too accepted the very
+    // escape this test exists to catch).
+    await expect(voteOnFrozenClaim(client, voteInput(cid, 'approved'))).rejects.toBeInstanceOf(ClaimAwaitingCorrectionError);
   });
 
   // ── AC5 — THE BANK WRITER'S THIRD BRANCH, exercised on every axis that reaches it ─────────

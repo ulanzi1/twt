@@ -46,7 +46,7 @@ async function inScope<T>(t: TestApp, pariwarId: string, fn: (s: Awaited<ReturnT
 /** Seed a member and walk them to a WIZARD state (`pending-kyc` / `pending-fee` / `pending-valid`) or on to `active`. Committed. */
 async function seedMember(
   t: TestApp,
-  to: 'pending-kyc' | 'pending-fee' | 'pending-valid' | 'active',
+  to: 'pending-kyc' | 'pending-fee' | 'lock-in' | 'pending-valid' | 'active',
 ): Promise<{ memberId: string; pariwarId: string }> {
   const memberId = randomUUID();
   const pariwarId = randomUUID();
@@ -58,8 +58,9 @@ async function seedMember(
     await step('member.signup_initiated', { from_state: null, to_state: 'pending-kyc', trigger: 'signup', actor: 'member' });
     if (to === 'pending-kyc') return;
     await step('member.kyc_manual_fallback', { from_state: 'pending-kyc', to_state: 'pending-fee', trigger: 'kyc_manual', actor: 'member', reason: 'manual_fallback' });
-    if (to === 'active' || to === 'pending-valid') {
+    if (to === 'active' || to === 'pending-valid' || to === 'lock-in') {
       await step('member.vyawastha_shulk_paid', { from_state: 'pending-fee', to_state: 'lock-in', trigger: 'payment', actor: 'member', utr: 'TEST-UTR-6200', amount_inr: 1000 });
+      if (to === 'lock-in') return;
       // `kyc_verified: false` lands in `pending-valid` (still a wizard state); `true` goes on to `active`.
       await step(
         'member.lock_in_expired',
@@ -438,13 +439,17 @@ describe.skipIf(!hasDatabase)('Story 6.20 — nominee history, the lock at the f
         // A RE-declare with ⛔ no elevation at all — the wizard exemption is the only reason it passes.
         expect((await inject(t, 'POST', SIGNUP_ROUTE, { payload: TWO, token: tok })).status, state).toBe(200);
       }
-      // ⭐ Non-vacuity: the same re-declare by an ACTIVE member without a step-up is refused.
-      const { memberId, pariwarId } = await seedMember(t, 'active');
-      const tok = token(t, memberId, pariwarId);
-      expect((await inject(t, 'POST', SIGNUP_ROUTE, { payload: ONE, token: tok })).status).toBe(200);
-      const refused = await inject(t, 'POST', SIGNUP_ROUTE, { payload: TWO, token: tok });
-      expect(refused.status).toBe(403);
-      expect(errCode(refused.body)).toBe('auth.step_up_required');
+      // ⭐ Non-vacuity: the same re-declare WITHOUT a step-up is refused once the wizard is over — at `lock-in`
+      // (the first state past it — code review 2026-09-24b: only `active` was tried, so adding `lock-in` to the
+      // exempt set stayed green) and at `active`.
+      for (const state of ['lock-in', 'active'] as const) {
+        const { memberId, pariwarId } = await seedMember(t, state);
+        const tok = token(t, memberId, pariwarId);
+        expect((await inject(t, 'POST', SIGNUP_ROUTE, { payload: ONE, token: tok })).status, state).toBe(200);
+        const refused = await inject(t, 'POST', SIGNUP_ROUTE, { payload: TWO, token: tok });
+        expect(refused.status, state).toBe(403);
+        expect(errCode(refused.body), state).toBe('auth.step_up_required');
+      }
     } finally {
       await teardown(t);
     }
@@ -460,8 +465,10 @@ describe.skipIf(!hasDatabase)('Story 6.20 — nominee history, the lock at the f
         token: tok,
       });
       expect(bad.status).toBe(400);
-      // ⭐ Refused FOR the relationship — ⛔ not any 400 (a missing field would pass a bare status check).
-      expect(JSON.stringify(bad.body)).toContain('relationship');
+      // ⭐ Refused FOR the relationship — the schema issue's PATH is the relationship field (code review
+      // 2026-09-24b: a substring match on the whole body passed any 400 that mentioned the word).
+      expect(errCode(bad.body)).toBe('request.validation');
+      expect(JSON.stringify(bad.body)).toMatch(/"instancePath":"\/nominees\/0\/relationship"/);
       const good = await inject(t, 'POST', SIGNUP_ROUTE, {
         payload: { nominees: [{ name: 'Asha Devi', relationship: 'niece_nephew', mobile: '9876543210' }] },
         token: tok,

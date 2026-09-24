@@ -48,6 +48,11 @@ function pgCode(err: unknown): string | undefined {
   return (err as { code?: string }).code ?? (err as { cause?: { code?: string } }).cause?.code;
 }
 
+/** The violated constraint's NAME — a CHECK leg must be refused by ITS check, ⛔ not a neighbour's. */
+function pgConstraint(err: unknown): string | undefined {
+  return (err as { constraint?: string }).constraint ?? (err as { cause?: { constraint?: string } }).cause?.constraint;
+}
+
 const at = new Date('2026-03-10T06:00:00.000Z');
 
 /** A raw DECLARED version row, bypassing the writer — this file tests the DB, not the write path. */
@@ -180,14 +185,16 @@ describe.skipIf(!hasDatabase)('migration 0119 — nominee declaration history: R
     return { ...ctx, versionId: v.versionId, determinationId: d!.determinationId };
   }
 
-  async function countAll(client: ReturnType<typeof getTx>['client'], claimCaseId: string, memberId: string) {
+  async function countAll(client: ReturnType<typeof getTx>['client'], claimCaseId: string, memberId: string, determinationId: string) {
     const q = (sqlText: string, arg: string) => client.query<{ n: number }>(sqlText, [arg]).then((r) => Number(r.rows[0]!.n));
     return {
       versions: await q('SELECT count(*) AS n FROM member_nominee_versions WHERE member_id = $1', memberId),
       determinations: await q('SELECT count(*) AS n FROM nominee_determinations WHERE claim_case_id = $1', claimCaseId),
+      // ⭐ The items table's OWN policy, by its own column — ⛔ never through a JOIN on determinations, whose
+      // policy hides the row first and made this count 0 whatever the items policy said (code review 2026-09-24b).
       items: await q(
-        'SELECT count(*) AS n FROM nominee_determination_items i JOIN nominee_determinations d USING (determination_id) WHERE d.claim_case_id = $1',
-        claimCaseId,
+        'SELECT count(*) AS n FROM nominee_determination_items WHERE determination_id = $1',
+        determinationId,
       ),
       corrections: await q('SELECT count(*) AS n FROM nominee_corrections WHERE claim_case_id = $1', claimCaseId),
       findings: await q('SELECT count(*) AS n FROM claim_nominee_findings WHERE claim_case_id = $1', claimCaseId),
@@ -195,17 +202,21 @@ describe.skipIf(!hasDatabase)('migration 0119 — nominee declaration history: R
   }
 
   it('⭐ family 5 — ALL FIVE tables: visible in-scope, ZERO rows cross-tenant, ZERO rows with an unset scope', async () => {
-    const { client, claimCaseId, memberId } = await seedAllFive();
+    const { client, claimCaseId, memberId, determinationId } = await seedAllFive();
     // Non-vacuity: every table holds this claim's row in its own Pariwar.
-    expect(await countAll(client, claimCaseId, memberId)).toEqual({ versions: 1, determinations: 1, items: 1, corrections: 1, findings: 1 });
+    expect(await countAll(client, claimCaseId, memberId, determinationId)).toEqual({ versions: 1, determinations: 1, items: 1, corrections: 1, findings: 1 });
     await enterAppScope(client, PARIWAR_B);
-    expect(await countAll(client, claimCaseId, memberId)).toEqual({ versions: 0, determinations: 0, items: 0, corrections: 0, findings: 0 });
+    expect(await countAll(client, claimCaseId, memberId, determinationId)).toEqual({ versions: 0, determinations: 0, items: 0, corrections: 0, findings: 0 });
     await enterAppRoleNoScope(client);
     await client.query("SET LOCAL app.pariwar_id = ''");
-    expect(await countAll(client, claimCaseId, memberId)).toEqual({ versions: 0, determinations: 0, items: 0, corrections: 0, findings: 0 });
+    expect(await countAll(client, claimCaseId, memberId, determinationId)).toEqual({ versions: 0, determinations: 0, items: 0, corrections: 0, findings: 0 });
   });
 
-  it("⛔ a Pariwar cannot write another Pariwar's determination ITEM (42501)", async () => {
+  // ⚠ WHAT THIS PROVES, stated honestly (code review 2026-09-24b): the insert runs in A's scope with
+  // `pariwar_id = B`, so it is A's INSERT WITH CHECK that refuses it. The OTHER cross-tenant shape — B's scope
+  // writing an item with `pariwar_id = B` that points at A's determination — passes the single-column FK (FK
+  // checks ignore RLS); it is the recorded defer "DB-level cross-table coherence is writer-enforced only".
+  it("⛔ an item row stamped with ANOTHER Pariwar's id is refused by the WITH CHECK (42501)", async () => {
     const { tx, determinationId, versionId } = await seedAllFive();
     await expect(
       tx.insert(schema.nomineeDeterminationItems).values({ determinationId, versionId, pariwarId: PARIWAR_B, mark: 'discarded' }),
@@ -247,6 +258,27 @@ describe.skipIf(!hasDatabase)('migration 0119 — nominee declaration history: R
       ['correction → member', () => tx.insert(schema.nomineeCorrections).values(correction(claimCaseId, ghost, versionId, { rank: 2 }))],
       ['correction → target version', () => tx.insert(schema.nomineeCorrections).values(correction(claimCaseId, memberId, ghost, { rank: 2 }))],
       [
+        // (code review 2026-09-24b) — the fourth correction FK, which the list lacked. A coherent APPLIED row
+        // (two different approvers, every decision column) whose applied version does not exist.
+        'correction → applied version',
+        () =>
+          tx.insert(schema.nomineeCorrections).values(
+            correction(claimCaseId, memberId, versionId, {
+              rank: 2,
+              step: 'applied',
+              daActorId: randomUUID(),
+              daDisplay: 'A',
+              daNoteCiphertext: 'enc:v1:n',
+              daDecidedAt: new Date(),
+              paActorId: randomUUID(),
+              paDisplay: 'B',
+              paNoteCiphertext: 'enc:v1:n',
+              paDecidedAt: new Date(),
+              appliedVersionId: ghost as never,
+            }),
+          ),
+      ],
+      [
         'finding → claim',
         () =>
           tx.insert(schema.claimNomineeFindings).values({
@@ -278,22 +310,51 @@ describe.skipIf(!hasDatabase)('migration 0119 — nominee declaration history: R
       recordedByDisplay: 'Investigator',
       ...over,
     });
-    const attempts: [string, () => Promise<unknown>][] = [
-      ['version rank', () => insertVersion(memberId, { rank: 3, versionNo: 7 })],
-      ['version_no', () => insertVersion(memberId, { versionNo: 0 })],
-      ['version kind', () => insertVersion(memberId, { versionNo: 7, kind: 'erased' as never })],
-      ['version source', () => insertVersion(memberId, { versionNo: 7, source: 'import' as never })],
-      ['version split', () => insertVersion(memberId, { versionNo: 7, splitPct: 50 })],
-      ['correction rank', () => tx.insert(schema.nomineeCorrections).values(correction(claimCaseId, memberId, versionId, { rank: 3 }))],
-      ['correction step', () => tx.insert(schema.nomineeCorrections).values(correction(claimCaseId, memberId, versionId, { rank: 2, step: 'lost' as never }))],
-      ['correction channel', () => tx.insert(schema.nomineeCorrections).values(correction(claimCaseId, memberId, versionId, { rank: 2, raisedVia: 'email' as never }))],
-      ['finding kind', () => tx.insert(schema.claimNomineeFindings).values(finding({ kind: 'suspected' }))],
+    // ⭐ Each leg names the CHECK that must refuse it (code review 2026-09-24b): four of these values also
+    // violate a COHERENCE check, so a bare 23514 stayed green with the named CHECK dropped. Postgres reports
+    // the FIRST violated constraint in name order — so where two fire, the leg's value is chosen so that the
+    // named one is the one reported, and an unexpected name fails the leg.
+    const attempts: [string, string, () => Promise<unknown>][] = [
+      ['version rank', 'member_nominee_versions_rank_check', () => insertVersion(memberId, { rank: 3, versionNo: 7 })],
+      ['version_no', 'member_nominee_versions_version_no_check', () => insertVersion(memberId, { versionNo: 0 })],
+      ['version kind', 'member_nominee_versions_kind_check', () => insertVersion(memberId, { versionNo: 7, kind: 'erased' as never })],
+      ['version split', 'member_nominee_versions_split_check', () => insertVersion(memberId, { versionNo: 7, splitPct: 50 })],
+      ['correction rank', 'nominee_corrections_rank_check', () => tx.insert(schema.nomineeCorrections).values(correction(claimCaseId, memberId, versionId, { rank: 3 }))],
+      ['correction step', 'nominee_corrections_step_check', () => tx.insert(schema.nomineeCorrections).values(correction(claimCaseId, memberId, versionId, { rank: 2, step: 'lost' as never }))],
+      ['correction channel', 'nominee_corrections_raised_via_check', () => tx.insert(schema.nomineeCorrections).values(correction(claimCaseId, memberId, versionId, { rank: 2, raisedVia: 'email' as never }))],
+      ['finding kind', 'claim_nominee_findings_kind_check', () => tx.insert(schema.claimNomineeFindings).values(finding({ kind: 'suspected' }))],
     ];
-    for (const [label, attempt] of attempts) {
+    for (const [label, name, attempt] of attempts) {
       await client.query('SAVEPOINT ck');
-      await expect(attempt(), label).rejects.toSatisfy((err: unknown) => pgCode(err) === '23514');
+      const err = await attempt().then(
+        () => undefined,
+        (e: unknown) => e,
+      );
+      expect(pgCode(err), label).toBe('23514');
+      expect(pgConstraint(err), label).toBe(name);
       await client.query('ROLLBACK TO SAVEPOINT ck');
     }
+    // ⚠ `source` — NOT CONSTRUCTIBLE by an insert, and said so rather than faked (family 10): the correction
+    // coherence CHECK enumerates both legal sources, so ANY value `source_check` refuses is refused by it too,
+    // and Postgres reports `…_correction_coherence_check` (it sorts first). Two checks guard the column; the
+    // leg proves the refusal, and the catalog proves `source_check` itself is present with its value set.
+    await client.query('SAVEPOINT src');
+    const srcErr = await insertVersion(memberId, { versionNo: 7, source: 'import' as never }).then(
+      () => undefined,
+      (e: unknown) => e,
+    );
+    expect(pgCode(srcErr)).toBe('23514');
+    expect(['member_nominee_versions_source_check', 'member_nominee_versions_correction_coherence_check']).toContain(pgConstraint(srcErr));
+    await client.query('ROLLBACK TO SAVEPOINT src');
+    // ⭐ EXACTLY the two legal sources, on THIS table (adversarial review 2026-09-24b: a loose regex would also
+    // match a check WIDENED to a third source, which the coherence CHECK would then hide).
+    const def = await client.query<{ d: string }>(
+      `SELECT pg_get_constraintdef(oid) AS d FROM pg_constraint
+        WHERE conname = 'member_nominee_versions_source_check' AND conrelid = 'public.member_nominee_versions'::regclass`,
+    );
+    expect(def.rows).toHaveLength(1);
+    const values = [...def.rows[0]!.d.matchAll(/'([a-z_]+)'::text/g)].map((m) => m[1]).sort();
+    expect(values).toEqual(['correction', 'member']);
   });
 
   it('⭐ family 5 — ONE mark per version per determination (the items PK) and ONE disqualification per rank (23505)', async () => {
@@ -335,6 +396,12 @@ describe.skipIf(!hasDatabase)('migration 0119 — nominee declaration history: R
       tx.update(schema.nomineeDeterminations).set({ supersededReason: 'correction_applied' }).where(byId),
     ).rejects.toSatisfy((err: unknown) => pgCode(err) === '23000');
     await client.query('ROLLBACK TO SAVEPOINT rs');
+    // ⛔ … or re-stamped with another INSTANT (code review 2026-09-24b: only the reason was tried).
+    await client.query('SAVEPOINT rt');
+    await expect(
+      tx.update(schema.nomineeDeterminations).set({ supersededAt: new Date(Date.now() + 86_400_000) }).where(byId),
+    ).rejects.toSatisfy((err: unknown) => pgCode(err) === '23000');
+    await client.query('ROLLBACK TO SAVEPOINT rt');
     // ✓ The DPDPA-RTBF ciphertext scrub on a superseded row is untouched by the rule.
     await tx.update(schema.nomineeDeterminations).set({ noteCiphertext: '[anonymized]' }).where(byId);
     const [row] = await tx.select().from(schema.nomineeDeterminations).where(byId);

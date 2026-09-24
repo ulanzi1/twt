@@ -13,7 +13,7 @@
 
 import { randomUUID } from 'node:crypto';
 
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, eq, isNull, sql } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -83,7 +83,8 @@ describe.skipIf(!hasDatabase)('Story 6.20 — the nominee declaration read model
     await honestDetermination(client, tx, a, mid);
     await honestDetermination(client, tx, b, mid, { allStand: true });
 
-    // Another Pariwar: a member + claim + declaration that a missing tenant predicate would surface.
+    // Another Pariwar: a member + a declaration that a missing tenant predicate would surface. (⛔ No claim —
+    // the old comment said one was created; none is.)
     await enterAppScope(client, PARIWAR_B);
     const otherMid = toMemberId(randomUUID());
     await tx.insert(schema.members).values({ memberId: otherMid, pariwarId: PARIWAR_B, state: 'active', stateEventVersion: 1 });
@@ -122,20 +123,44 @@ describe.skipIf(!hasDatabase)('Story 6.20 — the nominee declaration read model
     const { tx, mid, otherMid } = await world();
     const versions = await listNomineeDeclarationVersions(tx, PARIWAR_A, mid);
     expect(new Set(versions.map((v) => v.memberId))).toEqual(new Set([mid]));
-    // The other Pariwar's member is invisible even when asked for by id.
+    // The other Pariwar's member is invisible even when asked for by id …
     expect(await listNomineeDeclarationVersions(tx, PARIWAR_A, otherMid)).toEqual([]);
+  });
+
+  it('⭐ POSITIVE CONTROL for the tenant decoy — the other Pariwar\'s version EXISTS, read in ITS scope (so the empty read above is the boundary, ⛔ not a missing row)', async () => {
+    const { client, tx, otherMid } = await world();
+    await enterAppScope(client, PARIWAR_B);
+    expect((await listNomineeDeclarationVersions(tx, PARIWAR_B, otherMid)).map((v) => v.memberId)).toEqual([otherMid]);
+    await enterAppScope(client, PARIWAR_A);
   });
 
   it('⭐ D17 — the EARLIER determinations shown on A are OTHER claims\' LIVE ones: ⛔ never A\'s own, ⛔ never a superseded one', async () => {
     const { tx, a, b } = await world();
     const earlierOnA = await listEarlierClaimNomineeDeterminations(tx, PARIWAR_A, a);
     const earlierOnB = await listEarlierClaimNomineeDeterminations(tx, PARIWAR_A, b);
-    // A and B share a `created_at` (one test transaction), so each sees the other — and ONLY the other.
+    // A and B share a `created_at` (one test transaction) — the premise, ASSERTED (code review 2026-09-24b) —
+    // so each sees the other, and ONLY the other.
+    const tie = await tx.execute<{ n: number }>(sql`SELECT count(DISTINCT created_at)::int AS n FROM claims WHERE claim_case_id IN (${a}, ${b})`);
+    expect(tie.rows[0]!.n).toBe(1);
     expect(earlierOnA.map((e) => e.claimCaseId)).toEqual([b]);
     expect(earlierOnB.map((e) => e.claimCaseId)).toEqual([a]);
     const liveA = await getLiveNomineeDetermination(tx, PARIWAR_A, a);
     expect(earlierOnB[0]!.determinationId).toBe(liveA!.row.determinationId); // the LIVE one, not the superseded
     expect(earlierOnB[0]!.items.map((i) => i.mark).sort()).toEqual(['discarded', 'stands']);
+  });
+
+  it('⭐⭐ D17 — a STRICTLY LATER claim is ⛔ never "earlier": A does not list C, while C lists A and B (the `<=` predicate, pinned)', async () => {
+    const { client, tx, mid, a, b } = await world();
+    const c = toClaimId(randomUUID());
+    await driveClaimTo(client, PARIWAR_A, c, mid, 'verification_in_progress');
+    await honestDetermination(client, tx, c, mid);
+    // C was filed LATER. ⚠ `now()` is the transaction's start, so the harness stamps every claim alike; move
+    // C forward as the table owner (the production fact: a refile is a later request).
+    await client.query('RESET ROLE');
+    await client.query(`UPDATE claims SET created_at = created_at + interval '1 day' WHERE claim_case_id = $1`, [c]);
+    await enterAppScope(client, PARIWAR_A);
+    expect((await listEarlierClaimNomineeDeterminations(tx, PARIWAR_A, a)).map((e) => e.claimCaseId)).toEqual([b]);
+    expect((await listEarlierClaimNomineeDeterminations(tx, PARIWAR_A, c)).map((e) => e.claimCaseId).sort()).toEqual([a, b].sort());
   });
 
   it('⭐⭐ AC5 site E — the name-check snapshot reads the EFFECTIVE declaration: a change to the CURRENT rows alone does ⛔ not move it', async () => {

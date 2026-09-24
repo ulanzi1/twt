@@ -35,7 +35,6 @@ import {
   recordNomineeDetermination,
   tryConverge,
 } from '../../../src/claim/index.js';
-import { MemberStreamConcurrencyError } from '../../../src/member/errors.js';
 import { projectMemberState } from '../../../src/member/project.js';
 import { bindScopedDb, setPariwarScope } from '../../../src/db.js';
 import { claimId as toClaimId, memberId as toMemberId, pariwarId as toPariwarId } from '../../../src/ids/index.js';
@@ -238,21 +237,24 @@ describe.skipIf(!hasDatabase)('Story 6.20 — nominee history two-connection con
 
   it('⭐⭐ D3 — an INTAKE holding the lock makes the edit WAIT, then REFUSE (it sees the committed claim)', { timeout: TIMEOUT }, async () => {
     const mid = await seedMember();
-    const intake = await begin();
-    const res = await tryConverge(intake, {
-      pariwarId: PARIWAR,
-      deceasedMemberId: mid,
-      intakeChannel: 'member_app',
-      actor: 'member',
-      claimantActorId: null,
-      trigger: 'race_intake',
-      actorId: null,
-      auditId: 'race-1',
-    });
-    claims.push(res.claimCaseId);
-
-    let intakeOpen = true;
+    // ⭐ The held transaction is opened INSIDE the try (code review 2026-09-24b): a throw between `begin()` and
+    // the try used to leak a checked-out client holding the advisory lock, hanging `afterAll`.
+    let intake: pg.PoolClient | undefined;
+    let intakeOpen = false;
     try {
+      intake = await begin();
+      intakeOpen = true;
+      const res = await tryConverge(intake, {
+        pariwarId: PARIWAR,
+        deceasedMemberId: mid,
+        intakeChannel: 'member_app',
+        actor: 'member',
+        claimantActorId: null,
+        trigger: 'race_intake',
+        actorId: null,
+        auditId: 'race-1',
+      });
+      claims.push(res.claimCaseId);
       const editClient = await begin();
       // ⚠ Both pids BEFORE the blocking call: a client's queries queue, so a pid lookup issued after it
       // would wait behind the very lock it is meant to observe.
@@ -265,19 +267,24 @@ describe.skipIf(!hasDatabase)('Story 6.20 — nominee history two-connection con
       intakeOpen = false;
       await expect(edit).rejects.toBeInstanceOf(NomineeDeclarationLockedError);
     } finally {
-      if (intakeOpen) await end(intake, false).catch(() => undefined);
+      if (intakeOpen && intake) await end(intake, false).catch(() => undefined);
     }
   });
 
   it('⭐⭐ D3 — an EDIT holding the lock makes the intake WAIT; the edit lands legitimately BEFORE the claim', { timeout: TIMEOUT }, async () => {
     const mid = await seedMember();
-    const edit = await begin();
-    await lockNomineeDeclarationForEdit(edit, PARIWAR, mid);
-    await seedNomineeDeclaration(bindScopedDb(edit), PARIWAR, mid, { declaredAt: new Date(), ensureMember: false });
-
-    let editOpen = true;
+    // ⭐ Opened INSIDE the try (code review 2026-09-24b) — see the test above.
+    // The edit leg is the declare handler's own composition: `lockNomineeDeclarationForEdit`, then the two
+    // writes it makes (`replaceMemberNominees` + `appendMemberDeclarationVersions`, which is exactly what
+    // `seedNomineeDeclaration` calls). ⛔ Not an HTTP call — the lock, not the transport, is under test.
+    let edit: pg.PoolClient | undefined;
+    let editOpen = false;
     let res: Awaited<ReturnType<typeof tryConverge>>;
     try {
+      edit = await begin();
+      editOpen = true;
+      await lockNomineeDeclarationForEdit(edit, PARIWAR, mid);
+      await seedNomineeDeclaration(bindScopedDb(edit), PARIWAR, mid, { declaredAt: new Date(), ensureMember: false });
       const intakeClient = await begin();
       const intakePid = await pidOf(intakeClient);
       const editPid = await pidOf(edit);
@@ -305,9 +312,9 @@ describe.skipIf(!hasDatabase)('Story 6.20 — nominee history two-connection con
       editOpen = false;
       res = await intake;
     } finally {
-      if (editOpen) await end(edit, false).catch(() => undefined);
+      if (editOpen && edit) await end(edit, false).catch(() => undefined);
     }
-    claims.push(res.claimCaseId);
+    claims.push(res!.claimCaseId);
 
     // Both committed; the edit's version exists, and a FURTHER edit is now refused.
     const versions = await onOwnTx((c) => listNomineeDeclarationVersions(bindScopedDb(c), PARIWAR, mid));
@@ -371,40 +378,80 @@ describe.skipIf(!hasDatabase)('Story 6.20 — nominee history two-connection con
     expect(live.rows[0].n).toBe(1);
   });
 
-  it('⭐ D7 — step 2 RACED (approve vs decline): exactly ONE wins, the other a typed `step_conflict`', { timeout: TIMEOUT }, async () => {
+  /**
+   * HOLDER / WAITER, leak-proof (adversarial review 2026-09-24b): the waiter is opened INSIDE the try, and its
+   * pending promise is ALWAYS awaited in `finally` — a failed proof used to leave it running into `afterAll`.
+   * ⚠ `blockedBy` proves the waiter waits on the HOLDER's backend — ⛔ not WHICH of the holder's locks; the
+   * comments name the lock the code path takes, the assertion proves only the wait.
+   */
+  async function holderWaiter<T>(
+    hold: (holder: pg.PoolClient) => Promise<unknown>,
+    wait: (waiter: pg.PoolClient) => Promise<T>,
+  ): Promise<{ waited: boolean; outcome: PromiseSettledResult<T> }> {
+    let holder: pg.PoolClient | undefined;
+    let holderOpen = false;
+    let pending: Promise<T> | undefined;
+    try {
+      holder = await begin();
+      holderOpen = true;
+      await hold(holder);
+      const waiter = await begin();
+      let waiterPid: number;
+      try {
+        waiterPid = await pidOf(waiter);
+      } catch (err) {
+        await end(waiter, false).catch(() => undefined);
+        throw err;
+      }
+      const holderPid = await pidOf(holder);
+      pending = wait(waiter).finally(() => end(waiter, false));
+      const waited = await blockedBy(waiterPid, holderPid);
+      await end(holder, true);
+      holderOpen = false;
+      const [outcome] = await Promise.allSettled([pending]);
+      return { waited, outcome: outcome! };
+    } finally {
+      if (holderOpen && holder) await end(holder, false).catch(() => undefined);
+      if (pending) await pending.catch(() => undefined);
+    }
+  }
+
+  it('⭐ D7 — step 2 RACED (approve vs decline): the second WAITS for the first, then is a typed `step_conflict`', { timeout: TIMEOUT }, async () => {
     const mid = await seedMember({ viaProjector: true });
     const cid = await driveClaim(mid);
     const correctionId = await correctionAwaitingPariwarAdmin(mid, cid);
-    const results = await Promise.allSettled([
-      onOwnTx((c) => decideNomineeCorrectionAsPariwarAdmin(c, stepInput(cid, correctionId, randomUUID(), 'approve'))),
-      onOwnTx((c) => decideNomineeCorrectionAsPariwarAdmin(c, stepInput(cid, correctionId, randomUUID(), 'decline'))),
-    ]);
-    expect(results.filter((r) => r.status === 'fulfilled')).toHaveLength(1);
-    const loser = (results.find((r) => r.status === 'rejected') as PromiseRejectedResult).reason;
-    expect(loser).toBeInstanceOf(NomineeCorrectionRefusedError);
-    expect((loser as NomineeCorrectionRefusedError).reason).toBe('step_conflict');
+    const { waited, outcome } = await holderWaiter(
+      (holder) => decideNomineeCorrectionAsPariwarAdmin(holder, stepInput(cid, correctionId, randomUUID(), 'approve')),
+      (waiter) => decideNomineeCorrectionAsPariwarAdmin(waiter, stepInput(cid, correctionId, randomUUID(), 'decline')),
+    );
+    expect(waited, 'the decline did not wait for the approval').toBe(true);
+    // The code path takes the CLAIM ROW lock first, so the loser re-reads the step under it and is refused at the
+    // pre-check. (The conditional `UPDATE … WHERE step = 'pa_pending'` behind it is a backstop, covered by
+    // construction: under the row lock the pre-check always sees the winner first.)
+    expect(outcome.status).toBe('rejected');
+    const reason = (outcome as PromiseRejectedResult).reason;
+    expect(reason instanceof NomineeCorrectionRefusedError && reason.reason === 'step_conflict', String(reason)).toBe(true);
     const row = await pool.query<{ step: string }>('SELECT step FROM nominee_corrections WHERE correction_id = $1', [correctionId]);
-    expect(['applied', 'declined']).toContain(row.rows[0]!.step);
+    expect(row.rows[0]!.step).toBe('applied');
   });
 
-  it('⭐ two CLAIMS\' corrections for ONE member applied at once: one version lands, the other is a TYPED refusal (⛔ never a raw 23505)', { timeout: TIMEOUT }, async () => {
+  it('⭐ two CLAIMS\' corrections for ONE member applied at once: the second WAITS for the first, then is a TYPED `version_conflict` (⛔ never a raw 23505)', { timeout: TIMEOUT }, async () => {
     const mid = await seedMember({ viaProjector: true });
     const cidA = await driveClaim(mid);
     const cidB = await driveClaim(mid);
     const corrA = await correctionAwaitingPariwarAdmin(mid, cidA);
     const corrB = await correctionAwaitingPariwarAdmin(mid, cidB);
-    // Different claim rows ⇒ different claim-row locks: only the version UNIQUE (or the member stream)
-    // stands between the two writers of rank 1's next version.
-    const results = await Promise.allSettled([
-      onOwnTx((c) => decideNomineeCorrectionAsPariwarAdmin(c, stepInput(cidA, corrA, randomUUID(), 'approve'))),
-      onOwnTx((c) => decideNomineeCorrectionAsPariwarAdmin(c, stepInput(cidB, corrB, randomUUID(), 'approve'))),
-    ]);
-    expect(results.filter((r) => r.status === 'fulfilled')).toHaveLength(1);
-    const loser = (results.find((r) => r.status === 'rejected') as PromiseRejectedResult).reason;
-    const typed =
-      loser instanceof MemberStreamConcurrencyError ||
-      (loser instanceof NomineeCorrectionRefusedError && loser.reason === 'version_conflict');
-    expect(typed, `the loser was ${String((loser as Error)?.name)} — ${String((loser as Error)?.message)}`).toBe(true);
+    // Different claim rows ⇒ different claim-row locks. On the code path B reads rank 1's next version_no, then
+    // waits on the projection row A has updated; once A commits, B's version insert collides on
+    // (member, rank, version_no) — the 23505 the chunk-1 patch maps to a typed refusal.
+    const { waited, outcome } = await holderWaiter(
+      (holder) => decideNomineeCorrectionAsPariwarAdmin(holder, stepInput(cidA, corrA, randomUUID(), 'approve')),
+      (waiter) => decideNomineeCorrectionAsPariwarAdmin(waiter, stepInput(cidB, corrB, randomUUID(), 'approve')),
+    );
+    expect(waited, 'B did not wait for A').toBe(true);
+    expect(outcome.status).toBe('rejected');
+    const reason = (outcome as PromiseRejectedResult).reason;
+    expect(reason instanceof NomineeCorrectionRefusedError && reason.reason === 'version_conflict', String(reason)).toBe(true);
     const v = await pool.query<{ n: number }>(
       "SELECT count(*)::int AS n FROM member_nominee_versions WHERE member_id = $1 AND source = 'correction'",
       [mid],

@@ -214,6 +214,9 @@ describe.skipIf(!hasDatabase)('data_exports store + assemble — RLS + cascade +
     const cid = randomUUID();
     await driveClaimTo(client, PARIWAR_A, cid, mid, 'verification_in_progress');
     const versions = await listNomineeDeclarationVersions(tx, PARIWAR_A, toMemberId(mid));
+    // ⭐ A FIRST determination where everything stands, then SUPERSEDED by the honest one (code review
+    // 2026-09-24b): only the LIVE marks are exported — a dropped `superseded_at IS NULL` would add `stands` to v2.
+    await seedNomineeDetermination(client, PARIWAR_A, cid);
     await seedNomineeDetermination(client, PARIWAR_A, cid, {
       certificateDate: '2026-05-01',
       marks: versions.map((v) => ({ versionId: v.versionId, mark: v.versionNo === 1 ? 'stands' : 'discarded' })),

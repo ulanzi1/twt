@@ -159,6 +159,7 @@ describe.skipIf(!hasDatabase)('Story 6.20 — RTBF over the nominee history (:54
       .returning();
     const paNote = await encr('ZZ-PA-NOTE', 'nominee_correction');
     const daNote = await encr('ZZ-DA-NOTE-2', 'nominee_correction');
+    const raiseNote2 = await encr('ZZ-RAISE-2', 'nominee_correction');
     await tx.insert(schema.nomineeCorrections).values({
       claimCaseId: toClaimId(cid),
       pariwarId: PARIWAR_A,
@@ -171,7 +172,7 @@ describe.skipIf(!hasDatabase)('Story 6.20 — RTBF over the nominee history (:54
       proposedAddressCiphertext: cAddress,
       raisedVia: 'member_app',
       raisedByActorId: randomUUID(),
-      raiseNoteCiphertext: await encr('ZZ-RAISE-2', 'nominee_correction'),
+      raiseNoteCiphertext: raiseNote2,
       step: 'applied',
       daActorId: randomUUID(),
       daDisplay: 'Anita',
@@ -196,11 +197,14 @@ describe.skipIf(!hasDatabase)('Story 6.20 — RTBF over the nominee history (:54
     // ⭐ The CASE branch for a DECIDED Pariwar Admin note — ⛔ never reached by an undecided fixture.
     expect(await dec(c!.paNoteCiphertext!, 'nominee_correction')).toBe(ANONYMIZED_SENTINEL);
     expect(await dec(c!.daNoteCiphertext!, 'nominee_correction')).toBe(ANONYMIZED_SENTINEL);
+    // ⭐ …and the APPLIED row's raise note (code review 2026-09-24b: `ZZ-RAISE-2` was seeded, never checked).
+    expect(await dec(c!.raiseNoteCiphertext, 'nominee_correction')).toBe(ANONYMIZED_SENTINEL);
     const dump = JSON.stringify(
       await client
         .query('SELECT v.*, c.* FROM member_nominee_versions v LEFT JOIN nominee_corrections c ON c.member_id = v.member_id WHERE v.member_id = $1', [mid])
         .then((r) => r.rows),
     );
-    for (const ct of [cName, cMobile, cAddress, paNote, daNote]) expect(dump.includes(ct)).toBe(false);
+    // ⭐ The raise note too — decrypt-checked above AND swept raw here (adversarial review 2026-09-24b).
+    for (const ct of [cName, cMobile, cAddress, paNote, daNote, raiseNote2]) expect(dump.includes(ct)).toBe(false);
   });
 });

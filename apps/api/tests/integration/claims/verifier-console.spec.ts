@@ -994,9 +994,9 @@ describe.skipIf(!hasDatabase)('Verifier-console read surface — E2E (:5433)', (
   async function assembleMeasured(pariwarId: string, claimCaseId: string) {
     const scopeTx = await openScopeTx(deps, pariwarId);
     let actual = 0;
+    const client = scopeTx.client as unknown as { query: (...a: unknown[]) => unknown };
+    const realQuery = client.query.bind(client);
     try {
-      const client = scopeTx.client as unknown as { query: (...a: unknown[]) => unknown };
-      const realQuery = client.query.bind(client);
       client.query = (...args: unknown[]) => {
         actual += 1;
         return realQuery(...args);
@@ -1016,10 +1016,13 @@ describe.skipIf(!hasDatabase)('Verifier-console read surface — E2E (:5433)', (
     } catch (err) {
       await closeScopeTx(scopeTx, false);
       throw err;
+    } finally {
+      // ⭐ Restored on EVERY path (code review 2026-09-24b) — a throw used to return the counting client to the pool.
+      client.query = realQuery as never;
     }
   }
 
-  it('⭐⭐ AC13 — the WORST read path (an INHERITED inspection: source found, three extra reads) stays within the ceiling, and the packet names its source', async () => {
+  it('⭐⭐ AC13 — the WORST read path (an INHERITED inspection: the source found, its extra reads COUNTED) stays within the ceiling, and the packet names its source', async () => {
     const pariwarId = randomUUID();
     const deceased = await seedDeceasedMember(pariwarId, DISTRICT);
     // The SOURCE: an earlier claim refused on `-239`, with a COMPLETED inspection.
@@ -1047,9 +1050,37 @@ describe.skipIf(!hasDatabase)('Verifier-console read surface — E2E (:5433)', (
     // ⭐ The API wiring (not only the domain derivation): the section is PRESENT, from the source, labelled.
     expect(packet.groundInspection.status).toBe('present');
     expect((packet.groundInspection as { inheritedFrom?: { claimCaseId: string } }).inheritedFrom).toEqual({ claimCaseId: source });
-    // ⭐ The ceiling (16), MEASURED on the path that pays for AC13's reads — and the self-report is honest.
+    // ⭐ The ceiling, MEASURED on the path that pays for AC13's reads.
     expect(readCount).toBeLessThanOrEqual(VERIFIER_CONSOLE_MAX_READS);
     expect(readCount, `reported ${readCount} reads but Postgres received ${actual}`).toBeLessThanOrEqual(actual);
+
+    // ⭐⭐ …and the inheritance reads are COUNTED, ⛔ not merely present (code review 2026-09-24b). `readCount
+    // <= actual` only catches OVER-reporting; an un-`bump()`ed read stayed green. The ceiling books ONE read per
+    // domain call (`getClaimGroundInspection` is one read whether it issues 1 statement or 2 — inspections, then
+    // photos when there are any — on the own path exactly as on the inherited one). So the BASELINE is the same
+    // section with the inspection the claim's OWN: identical from the inspection read on, it differs ONLY by the
+    // two inheritance-only calls (the empty own read, the source lookup) — each one statement, each booked.
+    // ⭐ The SAME death (adversarial review 2026-09-24b: a different deceased made every prior-claims read differ
+    // too). ⚠ Residual, named: this baseline has one MORE earlier claim than the refile (the refile itself) —
+    // equal read counts rely on every section booking per CALL, ⛔ not per row; the `actual` delta would expose
+    // a per-row section.
+    const own = await seedClaim(pariwarId, deceased);
+    const c2 = await td.pool.connect();
+    try {
+      await c2.query(
+        `INSERT INTO claim_ground_inspections (claim_case_id, pariwar_id, district, inspection_stage, inspection_site_type,
+           inspector_actor_id, scheduled_at, status, completed_at)
+         VALUES ($1, $2, $3, 'initial', 'family_residence', $4, now() - interval '3 days', 'completed', now() - interval '2 days')`,
+        [own, pariwarId, DISTRICT, randomUUID()],
+      );
+    } finally {
+      c2.release();
+    }
+    const baseline = await assembleMeasured(pariwarId, own);
+    expect(baseline.packet.groundInspection.status).toBe('present');
+    expect((baseline.packet.groundInspection as { inheritedFrom?: unknown }).inheritedFrom).toBeUndefined();
+    expect(readCount - baseline.readCount, 'the two inheritance-only reads, booked').toBe(2);
+    expect(actual - baseline.actual, 'statements Postgres received for the inheritance vs reads booked').toBe(readCount - baseline.readCount);
   });
 
   it('⭐ AC5 site D — the console\'s name-check status reads the EFFECTIVE declaration: a change to the CURRENT rows alone does ⛔ not stale it', async () => {

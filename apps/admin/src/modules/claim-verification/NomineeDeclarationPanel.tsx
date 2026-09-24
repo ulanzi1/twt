@@ -19,12 +19,12 @@
 // queries and mutations, so the tests drive it without a network.
 // ⭐ FRESH STATE per claim and per token change (6.18's stale-carry-over finding): the marks, the date
 // and the note RESET whenever the version set or the live determination changes.
-// ⭐ CONTROLS FOLLOW THE SURFACE, ⛔ not the correction's step (code review 2026-09-24). The admin session
-// carries only national grants, so the client cannot see a District Admin's scoped keys; instead each
-// surface offers the one step its audience holds — the console the District Admin's (`decideStep:
-// 'district'`), the Pariwar Admin's queue step 2 (`'pariwar'`) — and ⛔ no surface but the helpline's
-// renders the raise form (`NomineeCorrectionRaiseForm`, mounted on the helpline page). The server's key
-// check stays the boundary; a 403 is mapped to words, never shown as a generic failure.
+// ⭐ CONTROLS FOLLOW THE SURFACE AND THE VIEWER, ⛔ not the correction's step. Each surface offers the one
+// step its audience holds — the console the District Admin's (`decideStep: 'district'`), the Pariwar Admin's
+// queue step 2 (`'pariwar'`) — and ⛔ no surface but the helpline's renders the raise form. The admin session
+// carries only national grants, so WITHIN the console the server says what this viewer may do
+// (`timeline.viewer`, code review 2026-09-24b): a verifier reads the history but is ⛔ not offered the
+// determination form or step 1. The server's key check stays the boundary; a 403 is mapped to words.
 // ⭐ a11y (family 13): status is ⛔ never colour alone; ONE live region per part announces its outcome
 // (⛔ not one per correction card, which re-announced every card on each refetch); every repeated control
 // carries an accessible name naming WHICH request it acts on.
@@ -37,7 +37,7 @@ import type {
   NomineeDeclarationSnapshotsResponse,
   NomineeDeclarationTimelineResponse,
 } from '@twt/contracts';
-import { NOMINEE_RELATIONSHIP_CODES } from '@twt/contracts';
+import { MobileNumber, NOMINEE_RELATIONSHIP_CODES, isEnglishScriptName } from '@twt/contracts';
 
 import { verifierConsoleEn } from './i18n-en.js';
 
@@ -77,10 +77,14 @@ export interface NomineeDeclarationPanelProps {
   corrections?: NomineeCorrectionListResponse | undefined;
   correctionsLoading?: boolean;
   correctionsError?: string | null;
-  onDecide: (correctionId: string, step: 'district' | 'pariwar', outcome: 'approve' | 'decline', note: string) => Promise<void>;
+  /** Resolves `true` when the decision was recorded — the typed note is cleared ONLY then. */
+  onDecide: (correctionId: string, step: 'district' | 'pariwar', outcome: 'approve' | 'decline', note: string) => Promise<boolean>;
   deciding?: boolean;
   decideError?: string | null;
-  decided?: boolean;
+  /** The last decision that SUCCEEDED, announced by its outcome (family 13(d)); `null` when none. */
+  decidedOutcome?: 'approve' | 'decline' | null;
+  /** Re-fetch a failed corrections read (the reveal button is gone by then). */
+  onRetryCorrections?: () => void;
   /** The ONE approval step this surface offers (the console: the District Admin's). */
   decideStep: 'district' | 'pariwar';
 }
@@ -142,14 +146,22 @@ export function NomineeDeclarationPanel(props: NomineeDeclarationPanelProps): Re
     );
   }
 
-  const snapshotById = new Map((props.snapshots?.snapshots ?? []).map((s) => [s.version_id, s]));
+  // ⭐ D10 — decrypted details render only when THIS claim's reveal was pressed AND they arrived (code review
+  // 2026-09-24b: gating on the data alone would show names a parent pre-fetched without a click).
+  const revealed = props.detailsRequested === true && props.snapshots !== undefined;
+  const snapshotById = new Map((revealed ? props.snapshots!.snapshots : []).map((s) => [s.version_id, s]));
   // ⭐ The reveal button stays until EVERY version has its details: a version added after the details were
   // opened (an applied correction, possibly by another user) is otherwise unreachable.
   const missingSnapshot = timeline.versions.some((v) => !snapshotById.has(v.version_id));
-  const revealed = props.snapshots !== undefined;
+  const canDetermine = timeline.determination_recordable && timeline.viewer.can_determine;
   const allMarked = timeline.versions.length > 0 && timeline.versions.every((v) => marks[v.version_id] !== undefined);
   const ready = /^\d{4}-\d{2}-\d{2}$/.test(certificateDate) && allMarked && note.trim().length > 0;
-  const lastDecrypted = props.snapshots?.live_determination ?? null;
+  // ⭐ Only when it is the SAME determination the header names (a refetch can leave the two out of step).
+  const decryptedLast = revealed ? props.snapshots!.live_determination : null;
+  const lastDecrypted =
+    decryptedLast && timeline.live_determination && decryptedLast.determination_id === timeline.live_determination.determination_id
+      ? decryptedLast
+      : null;
 
   async function submit(): Promise<void> {
     if (!ready || !timeline) {
@@ -227,7 +239,7 @@ export function NomineeDeclarationPanel(props: NomineeDeclarationPanelProps): Re
                 </td>
                 <td>
                   {liveMark ? <span className="mr-2 text-xs">({t.determine[liveMark]})</span> : null}
-                  {timeline.determination_recordable ? (
+                  {canDetermine ? (
                     <fieldset className="inline-flex gap-2" aria-label={`${t.determine.markLegend} v${v.version_no}`}>
                       {(['stands', 'discarded'] as const).map((m) => (
                         <label key={m} className="inline-flex items-center gap-1">
@@ -304,7 +316,7 @@ export function NomineeDeclarationPanel(props: NomineeDeclarationPanelProps): Re
       ) : null}
 
       {/* ── 2. The determination — a sticky decision strip; the note is mandatory BEFORE submit ── */}
-      {timeline.determination_recordable ? (
+      {canDetermine ? (
         <div className="sticky bottom-0 flex flex-col gap-2 border-t bg-white p-3" data-testid="nominee-determination-strip">
           <h4 className="font-semibold">{t.determine.heading}</h4>
           <label className="flex flex-col text-sm">
@@ -357,6 +369,10 @@ export function NomineeDeclarationPanel(props: NomineeDeclarationPanelProps): Re
             {t.determine.submit}
           </button>
         </div>
+      ) : timeline.determination_recordable ? (
+        <p className="text-sm" data-testid="nominee-determination-not-permitted">
+          {t.determine.notPermitted}
+        </p>
       ) : (
         <p role="status" className="text-sm" data-testid="nominee-determination-closed">
           {t.determine.notRecordable}
@@ -371,11 +387,16 @@ export function NomineeDeclarationPanel(props: NomineeDeclarationPanelProps): Re
         gated={!props.detailsRequested}
         onReveal={props.onShowDetails}
         decideStep={props.decideStep}
+        canDecide={props.decideStep === 'district' ? timeline.viewer.can_decide_district : true}
+        pendingCount={timeline.pending_corrections}
+        onRetry={props.onRetryCorrections}
         onDecide={props.onDecide}
         deciding={props.deciding}
         decideError={props.decideError}
-        decided={props.decided}
-        resetKey={fingerprint}
+        decidedOutcome={props.decidedOutcome ?? null}
+        // ⭐ The CLAIM, ⛔ not the fingerprint (adversarial review 2026-09-24b): notes are keyed per request, and a
+        // refetch after a refusal (a new version, a redetermination) wiped the note the refusal had just kept.
+        resetKey={timeline.claim_case_id}
       />
     </section>
   );
@@ -390,10 +411,17 @@ export function NomineeCorrections(props: {
   gated?: boolean | undefined;
   onReveal?: (() => void) | undefined;
   decideStep: 'district' | 'pariwar';
+  /** May THIS viewer decide the step (server-judged; default true — the Pariwar Admin's own page). */
+  canDecide?: boolean | undefined;
+  /** Metadata-only counts, shown before the reveal (D10). */
+  pendingCount?: { da_pending: number; pa_pending: number } | undefined;
+  onRetry?: (() => void) | undefined;
   onDecide: NomineeDeclarationPanelProps['onDecide'];
   deciding?: boolean | undefined;
   decideError?: string | null | undefined;
-  decided?: boolean | undefined;
+  decidedOutcome?: 'approve' | 'decline' | null | undefined;
+  /** `false` where the page announces the outcome itself (the Pariwar Admin's queue) — ⛔ never twice. */
+  announceDecided?: boolean | undefined;
   resetKey: string;
 }): React.ReactElement {
   const c = t.corrections;
@@ -411,9 +439,10 @@ export function NomineeCorrections(props: {
       return;
     }
     setNoteMissing(null);
-    await props.onDecide(id, props.decideStep, outcome, n);
-    // ⭐ The note is the decider's own — ⛔ never carried into the next step's textarea.
-    setNotes((prev) => ({ ...prev, [id]: '' }));
+    const ok = await props.onDecide(id, props.decideStep, outcome, n);
+    // ⭐ The note is the decider's own — ⛔ never carried into the next step's textarea. Cleared ONLY on
+    // success (code review 2026-09-24b): a refused decision kept the error and lost the required note.
+    if (ok) setNotes((prev) => ({ ...prev, [id]: '' }));
   }
 
   const pendingStep = props.decideStep === 'district' ? 'da_pending' : 'pa_pending';
@@ -422,6 +451,11 @@ export function NomineeCorrections(props: {
   if (props.gated) {
     body = (
       <p className="text-sm" data-testid="nominee-corrections-gated">
+        {props.pendingCount ? (
+          <span className="block font-medium" data-testid="nominee-corrections-pending-count">
+            {c.pendingCount(props.pendingCount.da_pending, props.pendingCount.pa_pending)}
+          </span>
+        ) : null}
         {c.gated}{' '}
         {props.onReveal ? (
           <button type="button" className="underline" data-testid="nominee-corrections-reveal" onClick={props.onReveal}>
@@ -439,15 +473,21 @@ export function NomineeCorrections(props: {
   } else if (props.error) {
     // ⭐ A failed read is ⛔ never shown as "none requested" — that would hide a request waiting for you.
     body = (
-      <p role="alert" data-testid="nominee-corrections-error">
-        {props.error}
-      </p>
+      <div role="alert" data-testid="nominee-corrections-error">
+        <p>{props.error}</p>
+        {props.onRetry ? (
+          <button type="button" className="underline" data-testid="nominee-corrections-retry" onClick={props.onRetry}>
+            {c.retry}
+          </button>
+        ) : null}
+      </div>
     );
   } else if (list.length === 0) {
     body = <p data-testid="nominee-corrections-none">{c.none}</p>;
   } else {
     body = list.map((x) => {
-      const actionable = x.step === pendingStep;
+      const atStep = x.step === pendingStep;
+      const actionable = atStep && props.canDecide !== false;
       const who = c.forRequest(t.rankLabel[x.rank]!.toLowerCase(), fmt(x.raised_at));
       const noteId = `nominee-correction-note-help-${x.correction_id}`;
       return (
@@ -472,6 +512,11 @@ export function NomineeCorrections(props: {
               {x.target.mobile ? (
                 <p>
                   {c.mobile}: <ReadableValue value={x.target.mobile} />
+                </p>
+              ) : null}
+              {x.target.address ? (
+                <p>
+                  {c.address}: <ReadableValue value={x.target.address} />
                 </p>
               ) : null}
             </div>
@@ -544,6 +589,10 @@ export function NomineeCorrections(props: {
                 </button>
               </div>
             </div>
+          ) : atStep ? (
+            <p className="mt-2 text-xs" data-testid={`nominee-correction-not-permitted-${x.correction_id}`}>
+              {c.decideNotPermitted}
+            </p>
           ) : null}
         </article>
       );
@@ -561,9 +610,15 @@ export function NomineeCorrections(props: {
         </p>
       ) : null}
       {/* ⭐ ONE live region for the section's outcome (family 13(d)). */}
-      <p role="status" data-testid="nominee-correction-decided" className="text-sm">
-        {props.decided && !props.decideError ? c.decided : ''}
-      </p>
+      {props.announceDecided === false ? null : (
+        <p role="status" data-testid="nominee-correction-decided" className="text-sm">
+          {props.decidedOutcome && !props.decideError
+            ? props.decidedOutcome === 'approve'
+              ? c.decidedApproved
+              : c.decidedDeclined
+            : ''}
+        </p>
+      )}
     </section>
   );
 }
@@ -582,6 +637,8 @@ export function NomineeCorrectionRaiseForm(props: {
   sentCount: number;
   resetKey: string;
   disabled?: boolean | undefined;
+  /** Why Send is unavailable while `disabled` — stated, ⛔ never a silent disabled button (13(c)). */
+  disabledReason?: string | undefined;
 }): React.ReactElement {
   const r = t.corrections.raise;
   const [rank, setRank] = useState<1 | 2>(1);
@@ -591,7 +648,9 @@ export function NomineeCorrectionRaiseForm(props: {
   const [address, setAddress] = useState('');
   const [note, setNote] = useState('');
   const [incomplete, setIncomplete] = useState(false);
+  const [invalid, setInvalid] = useState<string | null>(null);
   useEffect(() => {
+    setInvalid(null);
     setRank(1);
     setName('');
     setRelationship('');
@@ -603,10 +662,22 @@ export function NomineeCorrectionRaiseForm(props: {
 
   async function submit(): Promise<void> {
     if (!name.trim() || !relationship || !mobile.trim() || !note.trim()) {
+      setInvalid(null);
       setIncomplete(true);
       return;
     }
     setIncomplete(false);
+    // The contract's own rules, checked here too so a slip is named, ⛔ not a generic 400 (code review 2026-09-24b)
+    // — on the TRIMMED values, the ones actually sent.
+    if (!isEnglishScriptName(name.trim())) {
+      setInvalid(r.nameEnglish);
+      return;
+    }
+    if (!MobileNumber.safeParse(mobile.trim()).success) {
+      setInvalid(r.mobileInvalid);
+      return;
+    }
+    setInvalid(null);
     await props.onRaise({
       rank,
       proposed: {
@@ -657,6 +728,11 @@ export function NomineeCorrectionRaiseForm(props: {
         <textarea value={note} onChange={(e) => setNote(e.target.value)} data-testid="raise-note" />
       </label>
       {incomplete ? <p role="alert">{r.incomplete}</p> : null}
+      {invalid ? (
+        <p role="alert" data-testid="raise-invalid">
+          {invalid}
+        </p>
+      ) : null}
       {props.raiseError ? (
         <p role="alert" data-testid="raise-error">
           {props.raiseError}
@@ -665,9 +741,15 @@ export function NomineeCorrectionRaiseForm(props: {
       <p role="status" data-testid="raise-sent" className="text-sm">
         {props.sentCount > 0 && !props.raiseError ? r.sent : ''}
       </p>
+      {props.disabled && props.disabledReason ? (
+        <p id="raise-submit-reason" className="text-xs" data-testid="raise-submit-reason">
+          {props.disabledReason}
+        </p>
+      ) : null}
       <button
         type="button"
         disabled={props.raising || props.disabled}
+        aria-describedby={props.disabled && props.disabledReason ? 'raise-submit-reason' : undefined}
         data-testid="raise-submit"
         onClick={() => void submit()}
       >

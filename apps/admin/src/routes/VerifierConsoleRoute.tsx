@@ -276,6 +276,10 @@ export function VerifierConsoleRoute(): ReactElement {
     if (previousDeclClaimRef.current !== claimCaseId) {
       forgetDeclarationDetails(previousDeclClaimRef.current);
       previousDeclClaimRef.current = claimCaseId;
+      // ⭐ D10 (code review 2026-09-24b): CLOSE the disclosure and drop the reveal too. Keyed to the claim,
+      // they survived A→B→A — returning to A re-enabled both decrypting reads with ⛔ no click.
+      setDeclOpenFor(null);
+      setDetailsFor(null);
     }
     resetDetermine();
     resetDecide();
@@ -471,12 +475,16 @@ export function VerifierConsoleRoute(): ReactElement {
                   // The console is the District Admin's surface — step 1 only (the Pariwar Admin decides on
                   // their own queue page; the helpline raises on the helpline page).
                   decideStep="district"
-                  onDecide={async (correctionId, step, outcome, note) => {
-                    await decideCorrection.mutateAsync({ correctionId, step, body: { outcome, note } }).catch(() => undefined);
-                  }}
+                  onDecide={(correctionId, step, outcome, note) =>
+                    decideCorrection
+                      .mutateAsync({ correctionId, step, body: { outcome, note } })
+                      .then(() => true)
+                      .catch(() => false)
+                  }
                   deciding={decideCorrection.isPending}
                   decideError={decideCorrection.error ? nomineeCorrectionErrorMessage(decideCorrection.error) : null}
-                  decided={decideCorrection.isSuccess}
+                  decidedOutcome={decideCorrection.isSuccess ? (decideCorrection.variables?.body.outcome ?? null) : null}
+                  onRetryCorrections={() => void correctionsQ.refetch()}
                 />
               ) : null}
             </section>

@@ -5,7 +5,7 @@
 // → verify → retry) is driven by useStepUpGate. On success the panel + nominee queries are invalidated.
 
 import { useEffect, useState } from 'react'
-import { ScrollView } from 'react-native'
+import { AccessibilityInfo, Platform, ScrollView } from 'react-native'
 
 import { ApiError } from '@twt/api-client'
 import { useT } from '@twt/i18n/react'
@@ -50,6 +50,16 @@ export default function LifeEventsNomineesScreen() {
     clearDraft(memberId, DRAFT_KEY)
     setLockedBySubmit(true)
   }
+
+  // ⭐ Family 13(d) (code review 2026-09-24b): the LOCKED state is ANNOUNCED on iOS too — the paragraph's
+  // `accessibilityLiveRegion` is Android-only (the `nominee-review.tsx` precedent; iOS only, or TalkBack
+  // would speak it twice).
+  useEffect(() => {
+    if (locked && Platform.OS === 'ios') {
+      AccessibilityInfo.announceForAccessibility(`${t('nominees.locked_title')}. ${t('nominees.locked_body')}`)
+    }
+    // `t` is a fresh closure each render (`useT()`) — keyed on `locked` only, or it re-announced every render.
+  }, [locked])
 
   useEffect(() => {
     const draft = loadDraft<NomineeFormEntry[]>(memberId, DRAFT_KEY)

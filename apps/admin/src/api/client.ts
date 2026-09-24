@@ -264,6 +264,7 @@ import {
   NomineeDeterminationWriteResponse,
   NomineeRefusalListResponse,
   NomineeCorrectionPendingListResponse,
+  NomineeCorrectionRaisableClaimsResponse,
   type NomineeCorrectionDecisionRequest,
   type NomineeCorrectionRaiseRequest,
   type NomineeDeterminationRequest,
@@ -1408,6 +1409,14 @@ export function postNomineeCorrectionRaise(pariwarId: string, claimCaseId: strin
     method: 'POST',
     body: JSON.stringify(body),
   });
+}
+
+/** The SELECTED deceased member's live claims — the helpline raise's claim source (⛔ no typed reference). */
+export function getNomineeCorrectionRaisableClaims(pariwarId: string, memberId: string) {
+  return apiFetch(
+    `/api/v1/p/${encodeURIComponent(pariwarId)}/admin/members/${encodeURIComponent(memberId)}/nominee-corrections/claims`,
+    NomineeCorrectionRaisableClaimsResponse,
+  );
 }
 
 /** STEP 1 (`district`) or STEP 2 (`pariwar`) of a nominee correction. */

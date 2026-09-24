@@ -18,7 +18,7 @@
 // ⭐ Mutations emit their audit lines AFTER the transaction closes (6.18's corrected shape), so each line
 // means what it says.
 
-import { claim as claimDomain, ids, member as memberDomain, nominee as nomineeDomain } from '@twt/domain';
+import { claim as claimDomain, ids, member as memberDomain, nominee as nomineeDomain, rbac } from '@twt/domain';
 import type {
   NomineeCorrectionDecisionRequest,
   NomineeCorrectionListResponse,
@@ -30,6 +30,7 @@ import type {
   NomineeDeterminationRequest,
   NomineeDeterminationWriteResponse,
   NomineeCorrectionPendingListResponse,
+  NomineeCorrectionRaisableClaimsResponse,
   NomineeRefusalListResponse,
   ReadableName,
   ReadableNomineeName,
@@ -46,6 +47,7 @@ import {
 import { getDisplayName } from '../auth/admin/admin-auth.repo.js';
 import { emitAuthAudit } from '../auth/shared/audit.js';
 import { closeScopeTx, openScopeTx } from '../multi-tenant/scope-tx.js';
+import { geoTreeResolverForRequest, loadActorGrants } from '../rbac/index.js';
 import { decryptNomineeField, encryptNomineeField } from '../nominee/nominee-crypto.js';
 import {
   decryptCorrectionNote,
@@ -209,6 +211,13 @@ export function createNomineeDeclarationHandlers(deps: AppDeps) {
       const earlier = await claimDomain.listEarlierClaimNomineeDeterminations(scopeTx.tx, pariwarId, cid);
       const head = (rank: number) =>
         versions.filter((v) => v.rank === rank).reduce<number | null>((m, v) => Math.max(m ?? 0, v.versionNo), null);
+      const pending = await claimDomain.countPendingNomineeCorrections(scopeTx.tx, pariwarId, cid);
+      // ⭐ What THIS viewer may do (code review 2026-09-24b) — the same keys, at the same district, as the
+      // write routes' preHandlers (`requireDetermine` / `requireDistrictApproval`). UI only; ⛔ never the gate.
+      const grants = request.scopeGrants ?? (await loadActorGrants(scopeTx, actorId));
+      const atDistrict = { dimension: 'district' as const, value: request.nomineeNameCheckDistrict ?? null, pariwarId: scopeTx.pariwarId };
+      const may = (key: string): boolean =>
+        rbac.hasPermission(grants, key, atDistrict, { resolver: geoTreeResolverForRequest(request) });
 
       emitAuthAudit(deps, request, 'admin_nominee_declaration.timeline_read', {
         actorId,
@@ -254,6 +263,8 @@ export function createNomineeDeclarationHandlers(deps: AppDeps) {
         determination_recordable: (claimDomain.NOMINEE_DETERMINATION_RECORDABLE_STATES as readonly string[]).includes(
           claimRow.currentState,
         ),
+        viewer: { can_determine: may(NOMINEE_DETERMINATION_KEY), can_decide_district: may(NOMINEE_CORRECTION_DISTRICT_KEY) },
+        pending_corrections: { da_pending: pending.daPending, pa_pending: pending.paPending },
       };
     },
 
@@ -362,17 +373,6 @@ export function createNomineeDeclarationHandlers(deps: AppDeps) {
           discarded_count: result.discardedCount,
         },
       });
-      // ⭐ The resulting status is read AFTER the commit, in its own read scope (code review 2026-09-24). Read
-      // inside the write's `try`, a failure here audited a committed determination as `_rejected` and
-      // answered 500 — or, on a Postgres error, silently turned the COMMIT into a rollback.
-      const readTx = await openScopeTx(deps, p);
-      let status: string;
-      try {
-        status = (await claimDomain.getEffectiveNomineeDeclaration(readTx.tx, ids.pariwarId(p), ids.claimId(claimCaseId))).status;
-      } finally {
-        await closeScopeTx(readTx, true);
-      }
-
       void reply.status(201);
       return {
         claim_case_id: claimCaseId,
@@ -380,7 +380,9 @@ export function createNomineeDeclarationHandlers(deps: AppDeps) {
         superseded_determination_id: result.supersededDeterminationId,
         stands_count: result.standsCount,
         discarded_count: result.discardedCount,
-        declaration_status: status as NomineeDeterminationWriteResponse['declaration_status'],
+        // ⭐ Read INSIDE the write's transaction (code review 2026-09-24b) — a failure there rolls the whole
+        // write back and is audited `_rejected`; ⛔ never a 500 for a committed determination.
+        declaration_status: result.declarationStatus as NomineeDeterminationWriteResponse['declaration_status'],
         event_version: result.eventVersion,
       };
     },
@@ -412,6 +414,9 @@ export function createNomineeDeclarationHandlers(deps: AppDeps) {
             relationship: t?.relationship ?? null,
             name: t?.nameCiphertext ? await readableNomineeName(() => decryptNomineeField(t.nameCiphertext!, p, enc), log, claimCaseId) : null,
             mobile: t?.mobileCiphertext ? await readable(() => decryptNomineeField(t.mobileCiphertext!, p, enc), log, 'nominee_mobile', claimCaseId) : null,
+            address: t?.addressCiphertext
+              ? await readable(() => decryptNomineeField(t.addressCiphertext!, p, enc), log, 'nominee_address', claimCaseId)
+              : null,
           },
           proposed: {
             relationship: r.proposedRelationship,
@@ -552,6 +557,25 @@ export function createNomineeDeclarationHandlers(deps: AppDeps) {
           rank: r.rank as 1 | 2,
           raised_via: r.raisedVia,
           raised_at: r.raisedAt.toISOString(),
+        })),
+      };
+    },
+
+    /**
+     * GET — the SELECTED deceased member's live claims, for the helpline raise (AC7 / CC2; code review
+     * 2026-09-24b, BigDev option (a)). Metadata only (⛔ no PII, ⛔ no audit line — the pending-queue
+     * precedent). Tenant-scoped: another Pariwar's member resolves to an empty list.
+     */
+    async listRaisableClaims(request: FastifyRequest): Promise<NomineeCorrectionRaisableClaimsResponse> {
+      const { scopeTx, pariwarId } = scopeOf(request);
+      const { memberId } = request.params as { memberId: string };
+      const rows = await claimDomain.listLiveClaimsForDeceasedMember(scopeTx.tx, pariwarId, ids.memberId(memberId));
+      return {
+        member_id: memberId,
+        claims: rows.map((r) => ({
+          claim_case_id: r.claimCaseId,
+          claim_state: r.currentState,
+          created_at: r.createdAt.toISOString(),
         })),
       };
     },

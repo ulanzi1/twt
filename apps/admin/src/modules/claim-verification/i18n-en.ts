@@ -325,6 +325,10 @@ export const verifierConsoleEn = {
         concurrent: 'The claim changed at the same moment. Reload and try again.',
       } as Record<string, string>,
       forbidden: 'Only the District Admin can record a determination.',
+      // Shown in place of the form to a viewer who may read the history but not determine (a verifier).
+      notPermitted: 'Only the District Admin records the determination. You can read the history here.',
+      invalid: 'Something in the form is not in the expected shape. Check the date and the note, then try again.',
+      sessionExpired: 'Your session has ended. Sign in again, then retry.',
       refusedGeneric: 'The determination could not be recorded.',
     },
     corrections: {
@@ -342,6 +346,17 @@ export const verifierConsoleEn = {
       paNote: 'Pariwar Admin’s note',
       declinedAt: { district_admin: 'Declined by the District Admin', pariwar_admin: 'Declined by the Pariwar Admin' } as Record<string, string>,
       decided: 'Your decision was recorded.',
+      // Family 13(d) — the outcome is ANNOUNCED, ⛔ not just "recorded" (code review 2026-09-24b).
+      decidedApproved: 'Your approval was recorded.',
+      decidedDeclined: 'Your decline was recorded.',
+      // Metadata only — shown BEFORE the reveal, so "is one waiting?" costs no decrypt (D10).
+      pendingCount: (da: number, pa: number) =>
+        da + pa === 0
+          ? 'No correction request is waiting.'
+          : `${da} waiting for the District Admin, ${pa} waiting for the Pariwar Admin.`,
+      retry: 'Try again',
+      // Shown instead of Approve/Decline to a viewer who may read but not decide this step.
+      decideNotPermitted: 'Only the District Admin decides these requests.',
       forRequest: (rank: string, raisedAt: string) => `the ${rank} nominee request raised ${raisedAt}`,
       target: 'On record',
       proposed: 'Requested',
@@ -376,6 +391,10 @@ export const verifierConsoleEn = {
         concurrent: 'The declaration changed at the same moment. Reload and try again.',
       } as Record<string, string>,
       forbidden: 'You do not hold the permission for this step.',
+      invalid: 'Check the details: the name in English letters and a 10-digit mobile number.',
+      // A DECISION's schema refusal is about the note — ⛔ never the raise form's name/mobile wording.
+      invalidDecision: 'Check your note, then try again.',
+      sessionExpired: 'Your session has ended. Sign in again, then retry.',
       refusedGeneric: 'The request could not be completed.',
       raise: {
         heading: 'Request a nominee correction for the family',
@@ -387,10 +406,16 @@ export const verifierConsoleEn = {
         note: 'What was entered incorrectly',
         submit: 'Send the request',
         incomplete: 'Enter the name, relationship, mobile number and a note.',
+        nameEnglish: 'Enter the name in English letters.',
+        mobileInvalid: 'Enter a 10-digit mobile number.',
         sent: 'The request was sent to the District Admin.',
-        claimReference: 'Claim reference',
-        claimReferenceHelp: 'The claim this correction belongs to. A correction is always tied to one claim.',
-        claimReferenceInvalid: 'Enter the claim reference exactly as it is shown (a 36-character reference).',
+        // The claim comes from the SELECTED, read-back member (BigDev 2026-09-24b) — ⛔ no typed reference.
+        needMember: 'Select the member above and confirm the caller’s identity to request a nominee correction.',
+        claimsLoading: 'Looking up this member’s claims…',
+        claimsError: 'This member’s claims could not be loaded. Try again.',
+        noClaim: 'This member has no open claim, so there is nothing to correct against.',
+        pickClaim: 'This member has more than one open claim. Choose the one the caller is asking about:',
+        claimOption: (state: string, filedAt: string) => `Claim filed ${filedAt} — ${state}`,
       },
     },
     refusals: {
@@ -405,11 +430,36 @@ export const verifierConsoleEn = {
       note: 'Their note',
       claim: 'Claim reference',
       state: 'Claim now',
+      // ⛔ Never the raw state code (AC12's posture).
+      claimStateLabels: {
+        intake_pending: 'Being filed',
+        intake_converged: 'Being filed',
+        documents_pending: 'Waiting for documents',
+        verification_in_progress: 'Being verified',
+        verifier_review: 'With the verifier',
+        verifier_approved: 'Approved by the verifier',
+        state_trustee_freeze: 'With the State Trustee',
+        state_trustee_approved: 'Approved by the State Trustee',
+        approved: 'Approved',
+        denied: 'Refused',
+        appeal_stage_1: 'Under appeal (stage 1)',
+        appeal_stage_2: 'Under appeal (stage 2)',
+        appeal_stage_3: 'Under appeal (stage 3)',
+        reversed: 'Refusal reversed on appeal',
+        settled: 'Settled',
+      } as Record<string, string>,
     },
     // The same 409 met on a TRUSTEE surface (the cycle freeze, R9 voting) — the State Trustee cannot
     // determine; they need to know the District Admin must (e.g. after a correction superseded it).
     trusteeApprovalGate:
       'This claim is waiting for the District Admin to determine which nominee declaration was in force at the death (for example, after an approved nominee correction). It cannot go forward until they do.',
+    // The trustee surfaces' wording BY REASON (code review 2026-09-24b) — `never_determined` keeps the text above.
+    trusteeApprovalGateByReason: {
+      empty_declaration:
+        'The District Admin’s determination leaves no nominee standing, so this claim cannot go forward as it is. The District Admin must look at it again.',
+      unversioned: 'This claim’s nominee declaration has no recorded history and cannot be determined. Please contact support.',
+      incoherent: 'The District Admin must redetermine this claim’s nominees before it can go forward.',
+    } as Record<string, string>,
     approvalGate: {
       never_determined: 'Not yet determined. Open the nominee declaration history below and record a determination before approving.',
       empty_declaration: 'The determination leaves nobody standing, so this claim cannot be approved. Check the marks in the nominee declaration history below.',

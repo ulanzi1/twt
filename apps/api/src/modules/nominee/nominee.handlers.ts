@@ -141,6 +141,11 @@ export function createNomineeHandlers(deps: AppDeps) {
       // held the D3 advisory lock — N concurrent re-declares could starve the pool with every lock held.
       // Whether it is NEEDED is still decided inside the transaction, below. A lookup failure is P24's
       // posture: step-up-required.
+      // ⚠ DELIBERATE (code review 2026-09-24b, family 9): the freshness is judged at REQUEST time, ⛔ not
+      // after the D3 lock wait — an elevation that expires while this request waits on the lock still
+      // authorises the write. Accepted: the window is bounded by the lock wait (seconds), the lookup does
+      // ⛔ not consume the elevation (no double use), and the alternative is the pool starvation above.
+      // Re-examine if the lock wait can ever approach the elevation's lifetime.
       let elevationFresh = false;
       try {
         elevationFresh = await hasFreshElevation(deps.pool, memberIdStr, NOMINEE_CHANGE_STEP_UP, deps.clock());

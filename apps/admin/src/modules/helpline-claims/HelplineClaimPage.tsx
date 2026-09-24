@@ -414,7 +414,11 @@ export function HelplineClaimPage({ pariwarId }: HelplineClaimPageProps): ReactE
         }
       />
       {/* Story 6.20 (AC7, CC2) — the operator's NOMINEE-correction raise (⛔ not bank details). */}
-      <HelplineNomineeCorrection pariwarId={pariwarId} filedClaimCaseId={filedClaimCaseId} />
+      <HelplineNomineeCorrection
+        pariwarId={pariwarId}
+        memberId={selected?.memberId ?? null}
+        identityConfirmed={identityConfirmed}
+      />
     </>
   );
 }

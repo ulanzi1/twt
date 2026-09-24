@@ -48,7 +48,7 @@ import {
 import { NomineeDeterminationRefusedError } from './errors.js';
 import type { ClaimEventActor } from './events.js';
 import { NOMINEE_NAME_CHECK_RECORDABLE_STATES } from './nominee-name-check.js';
-import { versionStandsAt } from './nominee-effective.js';
+import { getEffectiveNomineeDeclaration, versionStandsAt, type EffectiveNomineeDeclarationStatus } from './nominee-effective.js';
 import { projectClaimState } from './project.js';
 
 const CALENDAR_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -96,6 +96,10 @@ export interface RecordNomineeDeterminationResult {
   readonly standsCount: number;
   readonly discardedCount: number;
   readonly eventVersion: number;
+  /** The claim's effective-declaration status AFTER this write, read in the SAME transaction (code review
+   *  2026-09-24b): read after the commit, a failed read answered 500 for a committed determination, and a
+   *  write landing in between could report a status that was not this determination's. */
+  readonly declarationStatus: EffectiveNomineeDeclarationStatus;
 }
 
 /**
@@ -284,12 +288,14 @@ export async function recordNomineeDetermination(
     ...(input.auditId !== undefined ? { auditId: input.auditId } : {}),
   });
 
+  const { status: declarationStatus } = await getEffectiveNomineeDeclaration(db, input.pariwarId, input.claimCaseId);
   return {
     determinationId,
     supersededDeterminationId: liveId as NomineeDeterminationId | null,
     standsCount,
     discardedCount,
     eventVersion: projected.eventVersion,
+    declarationStatus,
   };
 }
 

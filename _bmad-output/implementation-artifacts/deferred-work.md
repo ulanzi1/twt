@@ -4,6 +4,24 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: adversarial review of the applied 6-20 patches (2026-09-24b)
+
+- A correction whose projection is NOT touched (its target is not the rank's head) appends the member event BEFORE its version, while a declare writes its versions BEFORE its event ⇒ a correction racing a declare for the same member could deadlock (40P01 → 500; only 23505 is mapped) [`packages/domain/src/claim/nominee-correction-persist.ts`] — ⛔ unreachable today: a declare after a claim needs the lock RELEASED, and the release (an innocence finding) has no production producer until `6-22`; the pre-patch order had the same event→version shape. Revisit with `6-22` (map 40P01 to `concurrent`, or align the orders).
+- The helpline's read of a selected member's live claims (`GET …/admin/members/:memberId/nominee-corrections/claims`) writes ⛔ no audit line, and its read-back gate is client-side only [`apps/api/src/modules/claims/claims.nominee-declaration.routes.ts`] — metadata only (ids, states, instants), on the raise key, the pending-queue precedent (also unaudited); an audit line needs a new type in the counted audit catalog. Revisit if the read ever carries PII or the operator surface gets a server-side read-back record.
+
+## Deferred from: code review of 6-20-nominee-declaration-history-and-as-at-death-rule — the 09-24 patches, CHUNK 3 (2026-09-24)
+
+- Story 6.18's name-check disclosure re-reads names on A→B→A with no click (`nameCheckOpenFor` is never reset on a claim change) [`apps/admin/src/routes/VerifierConsoleRoute.tsx:220-222`] — the same pattern 6.20's patch fixes for its own disclosure; pre-existing, 6.18's surface.
+- UX-DR54 remainder on the correction decision strip [`apps/admin/src/modules/claim-verification/NomineeDeclarationPanel.tsx:511`] — sticky only within its `<article>` (never pins to the viewport); no keyboard shortcuts 1-N (precedent `VerificationDecisionStrip.tsx:127`); no audit-trail-aware undo window. The undo window is a feature.
+- A native `disabled` on a just-pressed pending button drops keyboard focus to `<body>` [`NomineeDeclarationPanel.tsx:262`, `:351`, `:529`] — app-wide pending-button pattern.
+
+## Deferred from: code review of 6-20-nominee-declaration-history-and-as-at-death-rule — the 09-24 patches, CHUNKS 1+2 (2026-09-24)
+
+- `closeScopeTx` swallows a COMMIT failure [`apps/api/src/modules/multi-tenant/scope-tx.ts:57`] — with the 09-24 "committed ⇒ audit `_recorded` first" ordering, a COMMIT that fails is audited recorded and answered 201. Pre-existing and systemic (every scope-tx caller); fix = propagate COMMIT errors, keep swallowing ROLLBACK errors.
+- `isReturnedClaimResubmitted` swallows `unversioned` / `incoherent` as "not yet resubmitted" [`packages/domain/src/claim/state-trustee-decision-persist.ts:896`] — data faults reported as the family's; narrowing to `never_determined` needs the nominee-bank + name-check handlers to map `NomineeDeterminationRequiredError` first, or their reads 500.
+- `too_many_versions` is unreachable from the admin form [`packages/contracts/src/claims/nominee-declaration.ts:148`] — wire cap = writer cap and the form sends one mark per version ⇒ >1000 versions is a zod 400, not the typed 409; the lockstep test comment overstates it. Not practically reachable.
+- The earlier-claims determinations read truncates at 20 with no flag and breaks `created_at` ties ascending (the inheritance read: descending) [`packages/domain/src/claim/nominee-determination-persist.ts:360-368`] — ties only in one-tx fixtures; 20 earlier claims for one death not reachable.
+
 ## Deferred from: applying the 6-20 re-review patches (2026-09-24)
 
 - Story 6.18's friction-budget declaration row (the English-script name capture) sits in the `/members` byte-cost table at `friction-budget.md:1541`, ⛔ not in `## The ledger` — so the gate never counted it. Pre-existing on `main`; 6.20's own two rows were found in the same place and MOVED. Move 6.18's row into the ledger in a 6.18 follow-up (a ledger-only edit; the gate will then count 22).

@@ -45,6 +45,12 @@ export default function LifeEventsNomineesScreen() {
   const [lockedBySubmit, setLockedBySubmit] = useState(false)
   const locked = lockedBySubmit || status.data?.locked === true
 
+  /** A claim was filed while the screen was open — lock, and drop the now-unsendable draft. */
+  function lockOnSubmit(): void {
+    clearDraft(memberId, DRAFT_KEY)
+    setLockedBySubmit(true)
+  }
+
   useEffect(() => {
     const draft = loadDraft<NomineeFormEntry[]>(memberId, DRAFT_KEY)
     if (draft && draft.length > 0 && draft.some((f) => f.name.trim())) setResumeAvailable(true)
@@ -68,7 +74,7 @@ export default function LifeEventsNomineesScreen() {
       // undefined ⇒ step-up was requested; the OTP input is now shown (do NOT leave yet).
       if (result !== undefined) await invalidateAndLeave()
     } catch (err) {
-      if (err instanceof ApiError && err.code === 'nominee.locked_claim_filed') setLockedBySubmit(true)
+      if (err instanceof ApiError && err.code === 'nominee.locked_claim_filed') lockOnSubmit()
       else setError(t('lifeEvents.error_generic'))
     } finally {
       setBusy(false)
@@ -83,7 +89,7 @@ export default function LifeEventsNomineesScreen() {
       await stepUp.verifyAndRetry(() => memberAuth.lifeEventsUpdateNominees({ nominees: pending }))
       await invalidateAndLeave()
     } catch (err) {
-      if (err instanceof ApiError && err.code === 'nominee.locked_claim_filed') setLockedBySubmit(true)
+      if (err instanceof ApiError && err.code === 'nominee.locked_claim_filed') lockOnSubmit()
       else setError(t('lifeEvents.error_generic'))
     } finally {
       setBusy(false)
@@ -137,13 +143,28 @@ export default function LifeEventsNomineesScreen() {
     </YStack>
   ) : null
 
+  // ⭐ Until the status read answers, ⛔ no editable form (code review 2026-09-24): it used to flash the
+  // form — the very "form that 409s on submit" the locked state exists to avoid.
+  if (status.isLoading) {
+    return (
+      <>
+        <Stack.Screen options={{ title: t('lifeEvents.nominees_label') }} />
+        <YStack flex={1} items="center" justify="center" bg="$background" testID="nominees-status-loading">
+          <Spinner accessibilityLabel={t('lifeEvents.nominees_label')} />
+        </YStack>
+      </>
+    )
+  }
+
   if (locked) {
     // ⭐ The LOCKED state — what happened, what the member can do, and the helpline (the three-part
     // grammar). ⛔ Never a form that 409s on submit. Announced when it appears.
     return (
       <>
         <Stack.Screen options={{ title: t('lifeEvents.nominees_label') }} />
-        <YStack gap="$4" px="$6" py="$6" bg="$background" testID="nominees-locked" accessible={true}>
+        {/* ⛔ NOT `accessible={true}` (family 13(a), code review 2026-09-24): a grouped container is ONE
+            element to a screen reader, which swallowed the correction Button — the screen's only action. */}
+        <YStack gap="$4" px="$6" py="$6" bg="$background" testID="nominees-locked">
           <H2 accessibilityRole="header">{t('nominees.locked_title')}</H2>
           <Paragraph accessibilityRole="text" accessibilityLiveRegion="polite">
             {t('nominees.locked_body')}
@@ -166,6 +187,24 @@ export default function LifeEventsNomineesScreen() {
     <>
       <Stack.Screen options={{ title: t('lifeEvents.nominees_label') }} />
       <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
+        {/* ⭐ A failed status read is SAID, ⛔ not swallowed. The form stays usable — a submit after a claim
+            was filed is still refused and turns into the locked state. */}
+        {status.isError ? (
+          <YStack px="$6" pt="$6" gap="$2" testID="nominees-status-error">
+            <Text accessibilityRole="alert" accessibilityLiveRegion="polite">
+              {t('lifeEvents.error_generic')}
+            </Text>
+            <Button
+              chromeless
+              height={40}
+              accessibilityRole="button"
+              accessibilityLabel={t('medical.retry')}
+              onPress={() => void status.refetch()}
+            >
+              {t('medical.retry')}
+            </Button>
+          </YStack>
+        ) : null}
         {resumeAvailable ? (
           <YStack px="$6" pt="$6">
             <SaveAndResumeAffordance onContinue={onContinueDraft} onStartFresh={onStartFresh} />

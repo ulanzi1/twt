@@ -24,7 +24,10 @@
 //   · `empty`        — nobody stands;
 //   · `incoherent`   — a standing set that is neither `{1}` nor `{1,2}` without a disqualification.
 // Each carries a TOKEN too, so a name check recorded against one of these states goes STALE the moment
-// a determination makes the declaration effective.
+// a determination makes the declaration effective. ⭐ The fail-closed token also folds in each rank's
+// HIGHEST `version_no` (the version heads): a correction supersedes the determination AND appends a
+// version, so the post-correction `undetermined` token differs from the pre-determination one — ⛔ an old
+// name check never becomes "current" again (code review 2026-09-24).
 //
 // ⭐ ONE SQL ROUND-TRIP, per-claim AND bulk. Site F (`readNomineeNameCheckFlagsBulk`) serves the
 // correction queue AND the State Trustee's cycle-freeze pending list — a per-claim call there would be an
@@ -140,6 +143,7 @@ type RawRow = {
   versioned_ranks: number[] | null;
   disqualified_ranks: number[] | null;
   disqualification_ids: string[] | null;
+  version_heads: string[] | null;
 };
 
 /** Build the effective declaration from one raw row. Pure — exported for the unit tests. */
@@ -152,6 +156,8 @@ export function resolveEffectiveNomineeDeclaration(input: {
   versionedRanks: readonly number[];
   disqualifiedRanks: readonly number[];
   disqualificationIds: readonly string[];
+  /** `rank:highest version_no` per versioned rank — folded into the FAIL-CLOSED token only. */
+  versionHeads?: readonly string[];
 }): EffectiveNomineeDeclaration {
   const base = {
     claimCaseId: input.claimCaseId as ClaimId,
@@ -159,11 +165,12 @@ export function resolveEffectiveNomineeDeclaration(input: {
     determinationId: (input.determinationId ?? null) as NomineeDeterminationId | null,
   };
   const disq = [...input.disqualificationIds].sort().join(',');
+  const heads = [...(input.versionHeads ?? [])].sort().join(',');
   const failClosed = (status: Exclude<EffectiveNomineeDeclarationStatus, 'effective'>) => ({
     ...base,
     status,
     entries: [],
-    token: tokenOf([status, `d=${input.determinationId ?? '-'}`, `x=${disq}`]),
+    token: tokenOf([status, `d=${input.determinationId ?? '-'}`, `x=${disq}`, `h=${heads}`]),
   });
 
   // D1 — a projection rank with ⛔ no version FAILS CLOSED (⛔ no backfill, ⛔ nothing fabricated).
@@ -267,7 +274,16 @@ async function readRaw(
               WHERE f2.pariwar_id = c.pariwar_id
                 AND f2.claim_case_id = c.claim_case_id
                 AND f2.kind = 'nominee_disqualified'
-           ) AS disqualification_ids
+           ) AS disqualification_ids,
+           (
+             SELECT array_agg(h.rank || ':' || h.head_no ORDER BY h.rank)
+               FROM (
+                 SELECT v3.rank, max(v3.version_no) AS head_no
+                   FROM member_nominee_versions v3
+                  WHERE v3.pariwar_id = c.pariwar_id AND v3.member_id = c.deceased_member_id
+                  GROUP BY v3.rank
+               ) h
+           ) AS version_heads
       FROM claims c
       LEFT JOIN nominee_determinations d
         ON d.pariwar_id = c.pariwar_id
@@ -295,6 +311,7 @@ function fromRaw(row: RawRow): EffectiveNomineeDeclaration {
     versionedRanks: (row.versioned_ranks ?? []).map(Number),
     disqualifiedRanks: (row.disqualified_ranks ?? []).map(Number),
     disqualificationIds: row.disqualification_ids ?? [],
+    versionHeads: row.version_heads ?? [],
   });
 }
 

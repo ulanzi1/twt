@@ -205,6 +205,8 @@ export function createNomineeDeclarationHandlers(deps: AppDeps) {
       const versions = await nomineeDomain.listNomineeDeclarationVersions(scopeTx.tx, pariwarId, claimRow.deceasedMemberId);
       const live = await claimDomain.getLiveNomineeDetermination(scopeTx.tx, pariwarId, cid);
       const effective = await claimDomain.getEffectiveNomineeDeclaration(scopeTx.tx, pariwarId, cid);
+      // D17 — the earlier claims' determinations for the same death, shown READ-ONLY (⛔ never pre-filled).
+      const earlier = await claimDomain.listEarlierClaimNomineeDeterminations(scopeTx.tx, pariwarId, cid);
       const head = (rank: number) =>
         versions.filter((v) => v.rank === rank).reduce<number | null>((m, v) => Math.max(m ?? 0, v.versionNo), null);
 
@@ -240,6 +242,14 @@ export function createNomineeDeclarationHandlers(deps: AppDeps) {
               marks: live.items.map((i) => ({ version_id: i.versionId, mark: i.mark })),
             }
           : null,
+        earlier_determinations: earlier.map((e) => ({
+          claim_case_id: e.claimCaseId,
+          claim_state: e.claimState,
+          determination_id: e.determinationId,
+          decided_at: e.decidedAt.toISOString(),
+          decided_by_display: e.decidedByDisplay,
+          marks: e.items.map((i) => ({ version_id: i.versionId, mark: i.mark })),
+        })),
         declaration_status: effective.status,
         determination_recordable: (claimDomain.NOMINEE_DETERMINATION_RECORDABLE_STATES as readonly string[]).includes(
           claimRow.currentState,
@@ -295,41 +305,43 @@ export function createNomineeDeclarationHandlers(deps: AppDeps) {
       const { scopeTx: outer, actorId } = scopeOf(request);
       const { claimCaseId } = request.params as { claimCaseId: string };
       const body = request.body as NomineeDeterminationRequest;
-      const actorDisplay = await resolveDisplay(deps, actorId);
       const p = outer.pariwarId;
-      const [dateCt, noteCt] = await Promise.all([
-        encryptDeterminationField(body.certificate_date, p, enc),
-        encryptDeterminationField(body.note, p, enc),
-      ]);
 
-      const scopeTx = await openScopeTx(deps, p);
-      let ok = false;
+      // ⭐ EVERY refusal is audited — the display-name lookup, the encryption and the scope open included
+      // (code review 2026-09-24: those used to throw before the `try` and leave no `_rejected` line).
       let result: Awaited<ReturnType<typeof claimDomain.recordNomineeDetermination>> | undefined;
-      let status: string | undefined;
       let failure: unknown;
       try {
-        result = await claimDomain.recordNomineeDetermination(scopeTx.client, {
-          claimCaseId: ids.claimId(claimCaseId),
-          pariwarId: ids.pariwarId(p),
-          certificateDate: body.certificate_date,
-          certificateDateCiphertext: dateCt,
-          noteCiphertext: noteCt,
-          marks: body.marks.map((m) => ({ versionId: m.version_id, mark: m.mark })),
-          watermark: body.watermark,
-          expectedLiveDeterminationId: body.expected_live_determination_id,
-          actorId,
-          actorDisplay,
-          actor: 'operator',
-        });
-        ok = true;
-        status = (await claimDomain.getEffectiveNomineeDeclaration(scopeTx.tx, ids.pariwarId(p), ids.claimId(claimCaseId))).status;
+        const actorDisplay = await resolveDisplay(deps, actorId);
+        const [dateCt, noteCt] = await Promise.all([
+          encryptDeterminationField(body.certificate_date, p, enc),
+          encryptDeterminationField(body.note, p, enc),
+        ]);
+        const scopeTx = await openScopeTx(deps, p);
+        let ok = false;
+        try {
+          result = await claimDomain.recordNomineeDetermination(scopeTx.client, {
+            claimCaseId: ids.claimId(claimCaseId),
+            pariwarId: ids.pariwarId(p),
+            certificateDate: body.certificate_date,
+            certificateDateCiphertext: dateCt,
+            noteCiphertext: noteCt,
+            marks: body.marks.map((m) => ({ versionId: m.version_id, mark: m.mark })),
+            watermark: body.watermark,
+            expectedLiveDeterminationId: body.expected_live_determination_id,
+            actorId,
+            actorDisplay,
+            actor: 'operator',
+          });
+          ok = true;
+        } finally {
+          await closeScopeTx(scopeTx, ok);
+        }
       } catch (err) {
         failure = err;
-      } finally {
-        await closeScopeTx(scopeTx, ok);
       }
 
-      if (failure !== undefined || result === undefined || status === undefined) {
+      if (failure !== undefined || result === undefined) {
         emitAuthAudit(deps, request, 'admin_claim.nominee_determination_rejected', {
           actorId,
           pariwarId: p,
@@ -338,6 +350,7 @@ export function createNomineeDeclarationHandlers(deps: AppDeps) {
         });
         return translateDetermination(failure);
       }
+      // The write COMMITTED — it is audited as recorded BEFORE anything else can fail.
       emitAuthAudit(deps, request, 'admin_claim.nominee_determination_recorded', {
         actorId,
         pariwarId: p,
@@ -349,6 +362,17 @@ export function createNomineeDeclarationHandlers(deps: AppDeps) {
           discarded_count: result.discardedCount,
         },
       });
+      // ⭐ The resulting status is read AFTER the commit, in its own read scope (code review 2026-09-24). Read
+      // inside the write's `try`, a failure here audited a committed determination as `_rejected` and
+      // answered 500 — or, on a Postgres error, silently turned the COMMIT into a rollback.
+      const readTx = await openScopeTx(deps, p);
+      let status: string;
+      try {
+        status = (await claimDomain.getEffectiveNomineeDeclaration(readTx.tx, ids.pariwarId(p), ids.claimId(claimCaseId))).status;
+      } finally {
+        await closeScopeTx(readTx, true);
+      }
+
       void reply.status(201);
       return {
         claim_case_id: claimCaseId,
@@ -460,34 +484,37 @@ export function createNomineeDeclarationHandlers(deps: AppDeps) {
         const { scopeTx: outer, actorId } = scopeOf(request);
         const { claimCaseId, correctionId } = request.params as { claimCaseId: string; correctionId: string };
         const body = request.body as NomineeCorrectionDecisionRequest;
-        const actorDisplay = await resolveDisplay(deps, actorId);
         const p = outer.pariwarId;
-        const noteCiphertext = await encryptCorrectionNote(body.note, p, enc);
 
-        const scopeTx = await openScopeTx(deps, p);
-        let ok = false;
+        // ⭐ EVERY refusal is audited — the display-name lookup, the encryption and the scope open included.
         let res: { step: NomineeCorrectionWriteResponse['step']; appliedVersionId: string | null } | undefined;
         let failure: unknown;
         try {
-          const input = {
-            correctionId: ids.nomineeCorrectionId(correctionId),
-            claimCaseId: ids.claimId(claimCaseId),
-            pariwarId: ids.pariwarId(p),
-            outcome: body.outcome,
-            noteCiphertext,
-            actorId,
-            actorDisplay,
-          };
-          if (which === 'district') {
-            res = { ...(await claimDomain.decideNomineeCorrectionAsDistrictAdmin(scopeTx.client, input)), appliedVersionId: null };
-          } else {
-            res = await claimDomain.decideNomineeCorrectionAsPariwarAdmin(scopeTx.client, input);
+          const actorDisplay = await resolveDisplay(deps, actorId);
+          const noteCiphertext = await encryptCorrectionNote(body.note, p, enc);
+          const scopeTx = await openScopeTx(deps, p);
+          let ok = false;
+          try {
+            const input = {
+              correctionId: ids.nomineeCorrectionId(correctionId),
+              claimCaseId: ids.claimId(claimCaseId),
+              pariwarId: ids.pariwarId(p),
+              outcome: body.outcome,
+              noteCiphertext,
+              actorId,
+              actorDisplay,
+            };
+            if (which === 'district') {
+              res = { ...(await claimDomain.decideNomineeCorrectionAsDistrictAdmin(scopeTx.client, input)), appliedVersionId: null };
+            } else {
+              res = await claimDomain.decideNomineeCorrectionAsPariwarAdmin(scopeTx.client, input);
+            }
+            ok = true;
+          } finally {
+            await closeScopeTx(scopeTx, ok);
           }
-          ok = true;
         } catch (err) {
           failure = err;
-        } finally {
-          await closeScopeTx(scopeTx, ok);
         }
         if (failure !== undefined || res === undefined) {
           emitAuthAudit(deps, request, 'admin_claim.nominee_correction_rejected', {
@@ -554,6 +581,18 @@ export function createNomineeDeclarationHandlers(deps: AppDeps) {
         pariwarId: p,
         context: { refusal_count: items.length },
       });
+      // ⭐ ONE line per rationale the list ATTEMPTED to decrypt, locating its claim — 6.18's ruled precedent
+      // (`queue_note_read`, BigDev 2026-09-23b option 1): the list line alone records that the page was
+      // opened, ⛔ not whose Tier-1 rationale was shown. ⛔ NON-PII: ids only, never the rationale.
+      for (const r of rows) {
+        if (r.rationaleCiphertext === null) continue;
+        emitAuthAudit(deps, request, 'admin_nominee_refusal.rationale_read', {
+          actorId,
+          pariwarId: p,
+          resourceLocator: locator(r.claimCaseId),
+          context: { claim_case_id: r.claimCaseId },
+        });
+      }
       return { items };
     },
   };
@@ -561,7 +600,8 @@ export function createNomineeDeclarationHandlers(deps: AppDeps) {
 
 /**
  * `POST /api/v1/member/claims/:claimCaseId/nominee-corrections` — the FAMILY raises a correction through
- * the app (CC2, `-237` cl.3). A MEMBER route (session + the handover step-up), ⛔ no admin chain, ⛔ no key.
+ * the app (CC2, `-237` cl.3). A MEMBER route (session + the `nominee_change` step-up, AR-24 / D9), ⛔ no
+ * admin chain, ⛔ no key.
  * Ravi-mode: the claim's deceased must BE the session's member (the nominee-bank precedent), else 404.
  * ⛔ The same core as the helpline raise, so the two surfaces cannot drift.
  */

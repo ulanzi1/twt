@@ -96,18 +96,20 @@ export interface ApplyCorrectionToProjectionInput {
 
 /**
  * Story 6.20 (D7, D16) — apply an APPROVED correction to ONE rank of the current projection, so
- * `member_nominees` stays "the latest version by `version_no`" once the correction's version is the
- * latest. ⛔ The split is ⛔ not touched: a correction inherits the corrected version's `split_pct`
- * (D17(b)), which is the value already on this row.
+ * `member_nominees` stays "the latest version by `version_no`" for every rank it HOLDS. ⛔ The split is ⛔
+ * not touched: a correction inherits the corrected version's `split_pct` (D17(b)), already on this row.
  *
- * ⚠ The row MUST exist: a correction targets the rank's STANDING version, and the projection holds the
- * rank's LATEST — if the latest was a tombstone (rank vacated after the death) the projection has no
- * row, and the correction is RE-INSERTED with the target's split. The caller passes that split.
+ * ⭐ A rank the member VACATED after the death (its latest version is a tombstone) has ⛔ no projection
+ * row, and is ⛔ NOT re-inserted (BigDev 2026-09-24, option (b)): re-inserting it beside the member's own
+ * post-death declaration produced splits summing to 125%. The correction lives in the version history and
+ * in the claim's effective set; the projection keeps reflecting the member's own last declaration.
+ *
+ * @returns whether a projection row was updated.
  */
 export async function applyCorrectionToProjection(
   db: Db,
-  input: ApplyCorrectionToProjectionInput & { splitPct: number },
-): Promise<void> {
+  input: ApplyCorrectionToProjectionInput,
+): Promise<boolean> {
   const updated = await db
     .update(memberNominees)
     .set({
@@ -124,15 +126,5 @@ export async function applyCorrectionToProjection(
       ),
     )
     .returning({ rank: memberNominees.rank });
-  if (updated.length > 0) return;
-  await db.insert(memberNominees).values({
-    memberId: input.memberId,
-    pariwarId: input.pariwarId,
-    rank: input.rank,
-    nameCiphertext: input.nameCiphertext,
-    relationship: input.relationship,
-    mobileCiphertext: input.mobileCiphertext,
-    addressCiphertext: input.addressCiphertext,
-    splitPct: input.splitPct,
-  });
+  return updated.length > 0;
 }

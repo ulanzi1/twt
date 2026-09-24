@@ -62,6 +62,22 @@ export const NomineeDeterminationView = z
   .strict();
 export type NomineeDeterminationView = z.output<typeof NomineeDeterminationView>;
 
+/**
+ * D17 — an EARLIER claim's live determination for the same death, shown READ-ONLY on a later claim (its
+ * form pre-fills nothing from it). ⛔ No Tier-1 data: ids, marks, an instant and the snapshotted name.
+ */
+export const EarlierClaimNomineeDeterminationView = z
+  .object({
+    claim_case_id: z.string().uuid(),
+    claim_state: z.string(),
+    determination_id: z.string().uuid(),
+    decided_at: IsoInstant,
+    decided_by_display: z.string(),
+    marks: z.array(z.object({ version_id: z.string().uuid(), mark: z.enum(['stands', 'discarded']) }).strict()),
+  })
+  .strict();
+export type EarlierClaimNomineeDeterminationView = z.output<typeof EarlierClaimNomineeDeterminationView>;
+
 /** `GET …/admin/claims/:claimCaseId/nominee-declaration` — the on-demand timeline (⛔ not in the console packet). */
 export const NomineeDeclarationTimelineResponse = z
   .object({
@@ -72,6 +88,8 @@ export const NomineeDeclarationTimelineResponse = z
     /** Each rank's highest version_no NOW — echoed back on the determination write (D17). */
     watermark: z.object({ rank1: z.number().int().nullable(), rank2: z.number().int().nullable() }).strict(),
     live_determination: NomineeDeterminationView.nullable(),
+    /** D17 — the EARLIER claims' live determinations for the same death, READ-ONLY (newest first). */
+    earlier_determinations: z.array(EarlierClaimNomineeDeterminationView),
     declaration_status: NomineeDeclarationStatus,
     /** Is the claim in a state a determination can be recorded in? */
     determination_recordable: z.boolean(),
@@ -109,6 +127,15 @@ export type NomineeDeclarationSnapshotsResponse = z.output<typeof NomineeDeclara
 // ── The determination (AC4; D4, D6, D17) ─────────────────────────────────────────────────────────
 
 /**
+ * The most marks one determination may carry. Every version must be marked and the history is unbounded,
+ * so the old cap of 64 made a long history PERMANENTLY undeterminable — and so never approvable (code
+ * review 2026-09-24, BigDev option (a)). ⚠ LOCKSTEP with the domain writer's
+ * `NOMINEE_DETERMINATION_MAX_VERSIONS` (contracts never import `@twt/domain`, so the value is repeated and
+ * a lockstep test holds the two equal); past it the writer refuses with `too_many_versions`.
+ */
+export const NOMINEE_DETERMINATION_MAX_MARKS = 1000;
+
+/**
  * `POST …/nominee-determination`. ⭐ The form PRE-SELECTS NOTHING: every version carries the District
  * Admin's own mark. The server VALIDATES the marks against the certificate date (D6) and refuses an
  * inconsistent set with a typed 409 — ⛔ it never fills one in.
@@ -118,7 +145,7 @@ export const NomineeDeterminationRequest = z
     certificate_date: CalendarDate,
     marks: z
       .array(z.object({ version_id: z.string().uuid(), mark: z.enum(['stands', 'discarded']) }).strict())
-      .max(64),
+      .max(NOMINEE_DETERMINATION_MAX_MARKS),
     note: z.string().trim().min(1).max(2000),
     watermark: z.object({ rank1: z.number().int().nullable(), rank2: z.number().int().nullable() }).strict(),
     expected_live_determination_id: z.string().uuid().nullable(),
@@ -144,7 +171,9 @@ export type NomineeDeterminationWriteResponse = z.output<typeof NomineeDetermina
 /**
  * Raise a genuine-mistake correction — by the helpline operator (admin route) or by the family through
  * the app (member route). The `proposed` details are an INPUT, so the name carries the English-script
- * gate (`-227` cl.9). ⚠ `other` is refused for BOTH the target and the proposal (`-237` cl.2).
+ * gate (`-227` cl.9). ⚠ `other` is refused by the DOMAIN (a typed 409, ⛔ not a wire 400) for the TARGET
+ * (`-237` cl.2) and for the PROPOSAL — the latter an ENGINEERING READING of cl.2, ⛔ not a ratified rule
+ * (BigDev 2026-09-24).
  * `target_version_id` is optional: when omitted the server uses the rank's currently STANDING version,
  * and when given it must BE that version.
  */

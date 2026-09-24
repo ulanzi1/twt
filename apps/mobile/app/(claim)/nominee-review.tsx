@@ -25,6 +25,7 @@ import type { NomineeStatusResponse, RecordNomineeBankRequest } from '@twt/contr
 // places, so a change at the boundary would silently truncate a family's note at the OLD length —
 // client-side, before the server ever saw it.
 import { NAME_DIFFERENCE_NOTE_MAX_CHARS, isEnglishScriptName } from '@twt/contracts'
+import { useT } from '@twt/i18n/react'
 import { useFocusEffect, useRouter } from 'expo-router'
 import { AccessibilityInfo, Platform } from 'react-native'
 import { Button, Input, Paragraph, Separator, Spinner, Text, XStack, YStack } from 'tamagui'
@@ -67,6 +68,7 @@ const SAVED_ANNOUNCEMENT_DELAY_MS = 1200
 
 export default function NomineeReviewScreen(): React.ReactElement {
   const t = useClaimT()
+  const tCommon = useT()
   const router = useRouter()
   const { session } = useSession()
   const name = t('member_fallback')
@@ -400,7 +402,11 @@ export default function NomineeReviewScreen(): React.ReactElement {
           nominees.map((n, i) => (
             <YStack key={i} gap="$2" py="$2">
               <XStack justify="space-between">
-                <Text color="$colorPress">{t(`relationship.${n.relationship}`)}</Text>
+                {/* ⭐ The DECLARED nominee's relationship is one of the fifteen NOMINEE codes (`-237` cl.1) —
+                    labelled from `common`'s `nominees.relationship_*`. ⛔ Never the `claim` namespace's
+                    `relationship.*`, which holds the five CLAIMANT codes: `t()` throws on a missing key, so
+                    13 of the 15 values crashed this screen (code review 2026-09-24). */}
+                <Text color="$colorPress">{tCommon(`nominees.relationship_${n.relationship}`)}</Text>
                 <Text>{`${n.splitPct}%`}</Text>
               </XStack>
               <XStack justify="space-between">

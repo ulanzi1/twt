@@ -7,8 +7,9 @@
 // a rank the submit dropped (a 2→1 change — T9). Without the tombstone, "revert rank 2 to its earlier
 // version" is undefined and per-nominee reversion (invariant 4) breaks.
 //
-// ⛔⛔ THIS MODULE MUST NEVER IMPORT FROM `../claim/` (T5(a)). `claim/nominee-name-check.ts` imports
-// `nominee/declaration-ref.js`; a `nominee/` → `claim/` edge would form a runtime init cycle that
+// ⛔⛔ THIS MODULE MUST NEVER IMPORT FROM `../claim/` (T5(a)). `claim/` imports `nominee/` (e.g.
+// `claim/nominee-correction-persist.ts` → this module, `declaration-write.js`, `relationship.js`); a
+// `nominee/` → `claim/` edge would form a runtime init cycle that
 // typecheck cannot see ([[project_type_only_import_cycle_trap]]). The claim-filed LOCK lives in
 // `claim/nominee-lock.ts` and is COMPOSED with this module in the API handler.
 //

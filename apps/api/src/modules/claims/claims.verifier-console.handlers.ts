@@ -85,12 +85,13 @@ const SIGNED_URL_TTL_SECONDS = 300;
  *   + Story 6.15: the live concealment assessment + a conditional R14 clause
  *     resolution (budgeted as two so the counter reflects the worst case)        +2  → 11
  *   + Story 6.18: the nominee name-check status                                  +3  → 14
-  + Story 6.20: the ground-inspection INHERITANCE (AC13) — only when the claim has
-    ⛔ no inspection of its own: the derived source claim + its inspections        +2  → 16
+ *   + Story 6.20: the ground-inspection INHERITANCE (AC13) — only when the claim has
+ *     ⛔ no inspection of its own: the derived source claim + its inspections      +2  → 16
  *
  * Story 6.18's THREE reads (AC4/AC8) are the claim's live bank accounts, the latest
  * `claim.nominee_name_checked` event, and — when a check exists — the deceased member's
- * declaration refs.
+ * declaration, now read as the EFFECTIVE declaration (`getEffectiveNomineeDeclaration`, Story 6.20
+ * AC5 site D — one query, read-for-read replacing the old declaration-refs read).
  * ⚠ IT WAS BOOKED AS TWO AND IS ACTUALLY THREE (code review 2026-09-20). The declaration read was
  * never bumped, so on the path that matters (a claim that HAS been checked) the counter
  * under-reported by one — precisely the silent exclusion the last paragraph forbids. Corrected

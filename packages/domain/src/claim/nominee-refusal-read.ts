@@ -89,6 +89,10 @@ export async function listNomineeRefusals(
  * AC13 — the claim whose COMPLETED ground inspection this claim INHERITS, or `null`. ONE query. Derived:
  * the most recent EARLIER claim for the same deceased, in this Pariwar, whose live verifier decision is a
  * `-239` refusal AND which has at least one COMPLETED inspection. ⛔ Never another reason's denial.
+ * ⭐ A TIE on `created_at` is broken by the claim id (code review 2026-09-24): `LIMIT 1` over a tie used to
+ * pick whichever row the database returned first. ⚠ Two claims share a `created_at` only when minted in ONE
+ * transaction — a test fixture; in production a refile is a later request, so a later claim can never be
+ * the source (`<=` excludes it) and mutual inheritance is not constructible.
  */
 export async function getInheritedGroundInspectionSource(
   db: Db,
@@ -117,7 +121,7 @@ export async function getInheritedGroundInspectionSource(
             AND gi.claim_case_id = src.claim_case_id
             AND gi.status = 'completed'
        )
-     ORDER BY src.created_at DESC
+     ORDER BY src.created_at DESC, src.claim_case_id DESC
      LIMIT 1
   `);
   const row = result.rows?.[0];

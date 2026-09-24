@@ -105,6 +105,37 @@ export class ReasonCodeOutcomeMismatchError extends Error {
   }
 }
 
+/**
+ * Story 6.20 (AC4, D14, `-239`) — the `post_death_nominee_change` refusal is permitted ONLY *"where a
+ * version marked `discarded` exists"*: the claim's LIVE nominee determination must carry at least one
+ * `discarded` item. ⛔ Outcome compatibility alone never grounds it — the refusal feeds AC13's
+ * ground-inspection inheritance, so an ungrounded one would carry an inspection to a refile on a suspicion
+ * nobody recorded (code review 2026-09-24). → 409.
+ */
+export class PostDeathRefusalUngroundedError extends Error {
+  public readonly name = 'PostDeathRefusalUngroundedError';
+  public constructor(public readonly claimCaseId: string) {
+    super(`[verifier-decision] claim ${claimCaseId}: a post-death nominee-change refusal needs a live determination with a discarded version`);
+  }
+}
+
+/** The `-239` ground check (AC4) — read under the caller's claim row lock. */
+async function assertPostDeathRefusalGrounded(db: Db, pariwarId: PariwarId, claimCaseId: ClaimId): Promise<void> {
+  const result = await db.execute<{ grounded: number }>(sql`
+    SELECT 1 AS grounded
+      FROM nominee_determinations d
+      JOIN nominee_determination_items i
+        ON i.determination_id = d.determination_id
+       AND i.pariwar_id = d.pariwar_id
+       AND i.mark = 'discarded'
+     WHERE d.pariwar_id = ${pariwarId}
+       AND d.claim_case_id = ${claimCaseId}
+       AND d.superseded_at IS NULL
+     LIMIT 1
+  `);
+  if ((result.rows ?? []).length === 0) throw new PostDeathRefusalUngroundedError(claimCaseId);
+}
+
 /** Thrown when a concurrent revision already superseded the target decision (0-row conditional UPDATE)
  *  — the loser aborts (409); the partial-unique index is the second backstop (AC5/AC9). */
 export class DecisionRevisionConflictError extends Error {
@@ -292,6 +323,9 @@ export async function adjudicateClaim(
 
   const claimRow = await lockClaim(db, input.pariwarId, input.claimCaseId);
   if (!claimRow) throw new VerifierDecisionClaimNotFoundError(input.claimCaseId);
+  if (input.reasonCode === 'post_death_nominee_change') {
+    await assertPostDeathRefusalGrounded(db, input.pariwarId, input.claimCaseId);
+  }
 
   // A live decision already exists (e.g. the claim was escalated) — state alone doesn't guard this
   // because escalate never changes claim state. Fail fast, before any write (only revise may supersede).
@@ -462,6 +496,9 @@ export async function reviseDecision(
 
   const claimRow = await lockClaim(db, input.pariwarId, input.claimCaseId);
   if (!claimRow) throw new VerifierDecisionClaimNotFoundError(input.claimCaseId);
+  if (input.reasonCode === 'post_death_nominee_change') {
+    await assertPostDeathRefusalGrounded(db, input.pariwarId, input.claimCaseId);
+  }
 
   if (!(VERIFIER_DECISION_REVISABLE_STATES as readonly string[]).includes(claimRow.currentState)) {
     throw new ClaimDecisionNotRevisableError(

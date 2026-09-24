@@ -98,6 +98,13 @@ function translateDecisionError(err: unknown): never {
       { reason: err.reason },
     );
   }
+  // Story 6.20 (AC4, `-239`) — the post-death refusal needs a determination with a discarded version.
+  if (err instanceof claim.PostDeathRefusalUngroundedError) {
+    throw new ConflictError(
+      'This refusal needs a nominee determination that marks a version as discarded — record the determination first',
+      'verifier_decision.post_death_refusal_ungrounded',
+    );
+  }
   if (err instanceof claim.ReasonCodeOutcomeMismatchError) {
     throw new BadRequestError(
       'The reason code is not valid for the chosen outcome',

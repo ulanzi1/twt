@@ -34,13 +34,20 @@ import {
 } from '../modules/claim-verification/index.js';
 import { ApiError } from '../api/client.js';
 import {
+  nomineeCorrectionErrorMessage,
+  nomineeDeterminationErrorMessage,
+  nomineeDeterminationRequiredMessage,
+} from '../modules/claim-verification/nominee-errors.js';
+
+export { nomineeCorrectionErrorMessage, nomineeDeterminationErrorMessage, nomineeDeterminationRequiredMessage };
+import {
+  useForgetNomineeDeclarationDetails,
   useForgetNomineeNameCheck,
   useNomineeCorrections,
   useNomineeDeclarationSnapshots,
   useNomineeDeclarationTimeline,
   useNomineeNameCheck,
   usePostNomineeCorrectionDecision,
-  usePostNomineeCorrectionRaise,
   usePostNomineeDetermination,
   usePostConcealmentAssessment,
   usePostNomineeNameCheck,
@@ -97,33 +104,13 @@ export function decisionErrorMessage(err: unknown): string {
     if (err.code === 'auth.step_up_required') return t.decision.stepUpRequired;
     if (err.code === 'admin.display_name_missing') return t.decision.displayNameMissing;
     if (DECISION_CONFLICT_CODES.has(err.code)) return t.decision.decisionConflict;
-    // Story 6.20 (AC5) — the approval gate asks for the as-at-death DETERMINATION first. Name it, so
-    // the District Admin knows to open the nominee declaration history, ⛔ not to retry.
-    if (err.code.endsWith('.nominee_determination_required')) return t.nomineeDeclaration.status.undetermined;
+    // Story 6.20 (AC5) — the approval gate asks for the as-at-death DETERMINATION first. Name WHY (the
+    // server's `details.reason`), so the District Admin knows what to do in the history — ⛔ not to retry,
+    // and ⛔ not "record a determination" when they already have and it left nobody standing.
+    if (err.code === 'verifier_decision.nominee_determination_required') return nomineeDeterminationRequiredMessage(err);
+    if (err.code === 'verifier_decision.post_death_refusal_ungrounded') return t.nomineeDeclaration.postDeathRefusalUngrounded;
   }
   return t.decision.submitError;
-}
-
-/** Story 6.20 — the determination's typed refusals, each with the instruction that fixes it. */
-export function nomineeDeterminationErrorMessage(err: unknown): string {
-  if (err instanceof ApiError) {
-    if (err.code === 'admin.display_name_missing') return t.decision.displayNameMissing;
-    const reason = err.code.startsWith('nominee_determination.') ? err.code.slice('nominee_determination.'.length) : '';
-    const text = t.nomineeDeclaration.determine.refused[reason];
-    if (text) return text;
-  }
-  return t.nomineeDeclaration.determine.refusedGeneric;
-}
-
-/** Story 6.20 — a nominee correction's typed refusals. */
-export function nomineeCorrectionErrorMessage(err: unknown): string {
-  if (err instanceof ApiError) {
-    if (err.code === 'admin.display_name_missing') return t.decision.displayNameMissing;
-    const reason = err.code.startsWith('nominee_correction.') ? err.code.slice('nominee_correction.'.length) : '';
-    const text = t.nomineeDeclaration.corrections.refused[reason];
-    if (text) return text;
-  }
-  return t.nomineeDeclaration.corrections.refusedGeneric;
 }
 
 /**
@@ -271,12 +258,30 @@ export function VerifierConsoleRoute(): ReactElement {
   const [declOpenFor, setDeclOpenFor] = useState<string | null>(null);
   const declOpen = declOpenFor === claimCaseId;
   const [detailsFor, setDetailsFor] = useState<string | null>(null);
+  const detailsRequested = declOpen && detailsFor === claimCaseId;
   const timelineQ = useNomineeDeclarationTimeline(pariwarId, claimCaseId, declOpen);
-  const snapshotsQ = useNomineeDeclarationSnapshots(pariwarId, claimCaseId, declOpen && detailsFor === claimCaseId);
-  const correctionsQ = useNomineeCorrections(pariwarId, claimCaseId, declOpen);
+  const snapshotsQ = useNomineeDeclarationSnapshots(pariwarId, claimCaseId, detailsRequested);
+  // ⭐ The corrections decrypt names and numbers too — fetched only with the SAME reveal (D10).
+  const correctionsQ = useNomineeCorrections(pariwarId, claimCaseId, detailsRequested);
   const determine = usePostNomineeDetermination(pariwarId, claimCaseId);
   const decideCorrection = usePostNomineeCorrectionDecision(pariwarId, claimCaseId);
-  const raiseCorrection = usePostNomineeCorrectionRaise(pariwarId, claimCaseId);
+  const forgetDeclarationDetails = useForgetNomineeDeclarationDetails(pariwarId, claimCaseId);
+  // ⭐ Keyed to the claim, the 6.18 way (code review 2026-09-24): on a claim change FORGET the previous
+  // claim's decrypted details and drop both mutations' leftover errors — they used to show claim A's
+  // refusal on claim B's panel. `reset` is TanStack's stable observer method.
+  const resetDetermine = determine.reset;
+  const resetDecide = decideCorrection.reset;
+  const previousDeclClaimRef = useRef(claimCaseId);
+  useEffect(() => {
+    if (previousDeclClaimRef.current !== claimCaseId) {
+      forgetDeclarationDetails(previousDeclClaimRef.current);
+      previousDeclClaimRef.current = claimCaseId;
+    }
+    resetDetermine();
+    resetDecide();
+    // `forgetDeclarationDetails` is a fresh closure each render and must ⛔ not re-run this effect.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [claimCaseId, resetDetermine, resetDecide]);
 
   return (
     <VerifierConsoleGateView status={status}>
@@ -427,6 +432,11 @@ export function VerifierConsoleRoute(): ReactElement {
                 className="text-sm underline"
                 aria-expanded={declOpen}
                 onClick={() => {
+                  // ⭐ Closing FORGETS the decrypted details and the lingering write outcomes; a reopen is a
+                  // fresh, audited look.
+                  forgetDeclarationDetails();
+                  resetDetermine();
+                  resetDecide();
                   setDetailsFor(null);
                   setDeclOpenFor(declOpen ? null : claimCaseId);
                 }}
@@ -442,23 +452,31 @@ export function VerifierConsoleRoute(): ReactElement {
                   error={timelineQ.isError ? t.nomineeDeclaration.loadError : null}
                   snapshots={snapshotsQ.data}
                   snapshotsLoading={snapshotsQ.isFetching}
-                  onShowDetails={() => setDetailsFor(claimCaseId)}
+                  snapshotsError={snapshotsQ.isError ? t.nomineeDeclaration.detailsError : null}
+                  detailsRequested={detailsRequested}
+                  onShowDetails={() => {
+                    // A second press (a version added since) is a fresh, audited look — a refetch.
+                    if (detailsRequested) void snapshotsQ.refetch();
+                    else setDetailsFor(claimCaseId);
+                  }}
                   onDetermine={async (input: NomineeDeterminationSubmit) => {
                     await determine.mutateAsync(input).catch(() => undefined);
                   }}
                   determining={determine.isPending}
                   determineError={determine.error ? nomineeDeterminationErrorMessage(determine.error) : null}
+                  determined={determine.isSuccess}
                   corrections={correctionsQ.data}
+                  correctionsLoading={correctionsQ.isLoading}
+                  correctionsError={correctionsQ.isError ? t.nomineeDeclaration.corrections.loadError : null}
+                  // The console is the District Admin's surface — step 1 only (the Pariwar Admin decides on
+                  // their own queue page; the helpline raises on the helpline page).
+                  decideStep="district"
                   onDecide={async (correctionId, step, outcome, note) => {
                     await decideCorrection.mutateAsync({ correctionId, step, body: { outcome, note } }).catch(() => undefined);
                   }}
                   deciding={decideCorrection.isPending}
                   decideError={decideCorrection.error ? nomineeCorrectionErrorMessage(decideCorrection.error) : null}
-                  onRaise={async (body) => {
-                    await raiseCorrection.mutateAsync(body).catch(() => undefined);
-                  }}
-                  raising={raiseCorrection.isPending}
-                  raiseError={raiseCorrection.error ? nomineeCorrectionErrorMessage(raiseCorrection.error) : null}
+                  decided={decideCorrection.isSuccess}
                 />
               ) : null}
             </section>

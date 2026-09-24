@@ -10,7 +10,19 @@ import { R9_PANEL_MAX_MEMBERS, R9_VOTING_CLAUSE_IDS } from '@twt/contracts';
 import type { ReactElement } from 'react';
 import { useState } from 'react';
 
-import { ApiError, errorMessage } from '../../api/client.js';
+import { ApiError, errorMessage as apiErrorMessage } from '../../api/client.js';
+import { verifierConsoleEn } from '../claim-verification/i18n-en.js';
+
+/**
+ * The panel's error text. Story 6.20 (AC5) — a nominee correction can supersede the determination after
+ * the verifier approved, so a vote / finalize meets the approval gate's 409 again: say WHO must act.
+ */
+function errorMessage(error: unknown): string | undefined {
+  if (error instanceof ApiError && error.code.endsWith('.nominee_determination_required')) {
+    return verifierConsoleEn.nomineeDeclaration.trusteeApprovalGate;
+  }
+  return apiErrorMessage(error);
+}
 import { NomineeNameCheckDisclosure } from '../claim-verification/NomineeNameCheckDisclosure.js';
 import { nameDifferenceReasonLabel, verifierConsoleEn as t } from '../claim-verification/i18n-en.js';
 import {

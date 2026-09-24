@@ -227,9 +227,12 @@ export function SignalsPanel({
           <div className="flex flex-col gap-3">
             {/* Story 6.20 (AC13) — INHERITED from the claim refused on suspicion (`-239` (b)), labelled
                 and NAMING its source, so it is ⛔ never mistaken for this claim's own inspection. */}
+            {/* ⚠ Static text, ⛔ not a live region (code review 2026-09-24): a `role="status"` announced a bare
+                claim UUID on every mount. The reference is labelled as one, so it reads as what it is. */}
             {packet.groundInspection.inheritedFrom ? (
-              <p role="status" className="text-sm font-medium" data-testid="ground-inspection-inherited">
-                {t.nomineeDeclaration.inheritedInspection}: {packet.groundInspection.inheritedFrom.claimCaseId}
+              <p className="text-sm font-medium" data-testid="ground-inspection-inherited">
+                {t.nomineeDeclaration.inheritedInspection} ({t.nomineeDeclaration.refusals.claim}:{' '}
+                <code className="font-mono text-xs">{packet.groundInspection.inheritedFrom.claimCaseId}</code>)
               </p>
             ) : null}
             {packet.groundInspection.assignments.map((a) => (

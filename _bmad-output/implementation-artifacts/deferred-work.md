@@ -4,6 +4,29 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: applying the 6-20 re-review patches (2026-09-24)
+
+- Story 6.18's friction-budget declaration row (the English-script name capture) sits in the `/members` byte-cost table at `friction-budget.md:1541`, ⛔ not in `## The ledger` — so the gate never counted it. Pre-existing on `main`; 6.20's own two rows were found in the same place and MOVED. Move 6.18's row into the ledger in a 6.18 follow-up (a ledger-only edit; the gate will then count 22).
+
+## Deferred from: code review of 6-20-nominee-declaration-history-and-as-at-death-rule — committed code, CHUNK 3 of 4 (2026-09-24)
+
+- The family never learns the outcome of its correction — no member-side status read after "sent"; `approved`/`declined` are announced to nobody on the member side [`apps/mobile/app/(life-events)/nominee-correction.tsx:126`] — deferred: AC8's member surface names the correction REQUEST only; an outcome surface is new scope
+
+## Deferred from: code review of 6-20-nominee-declaration-history-and-as-at-death-rule — committed code, CHUNK 2 of 4 (2026-09-24)
+
+- DSAR `nomineeHistory.determinationMarks` is a bare `['stands','discarded']` array — with two claims for one death (D17) a reader cannot tell which determination said what [`packages/contracts/src/data-export/data-export.ts`, `packages/domain/src/data-export/assemble.ts:308`] — deferred, a contract-shape change for the rare D17 case
+- The `nominee_change` elevation is checked, never consumed — one OTP authorises every nominee-affecting write in its window (re-declares, the family correction raise) [`apps/api/src/modules/nominee/nominee.handlers.ts:177`] — deferred, pre-existing step-up design (member-step-up gate), not introduced here
+
+## Deferred from: code review of 6-20-nominee-declaration-history-and-as-at-death-rule — committed code, CHUNK 1 of 4 (2026-09-24)
+
+- ⚠ OPEN — ENGINEERING READING, ⛔ NOT RATIFIED: a nominee correction whose PROPOSED relationship is `other` is refused (`nominee-correction-persist.ts:157` + CHECK `0119:236`). `-237` cl.2 ratified only the TARGET side; the proposed side rests on cl.2's rationale ("we cannot establish relationship"). Re-examine when the Panel takes up `-237`'s open in-law/grandparent item — a brother-in-law nominee is foreclosed from correction by this reading (BigDev 2026-09-24).
+- A correction applied under one claim is invisible to another concurrently-live claim for the same deceased (and a determination can commit against a version that landed mid-write, different claim-row locks) [`packages/domain/src/claim/nominee-correction-persist.ts:372-381`, `nominee-effective.ts:236-245`] — deferred: D7 ties a correction to ONE claim and D17 makes determinations per-claim by design; the residual (two non-terminal claims for one death via convergence override / >30-day window) is recorded, not patched
+- The 6-22 finding writers: `recordNomineeDisqualificationFinding` takes a `Db`, emits no claim event, has no state window and no rank-exists check; both writers use an untargeted `onConflictDoNothing()` (a PK collision reads as "duplicate") and a same-id retry is not idempotent [`packages/domain/src/claim/nominee-lock.ts:160`, `:194`, `:214`] — deferred to Story 6-22 (no production caller until then)
+- After an innocence release, a correction can still be raised/approved on the released claim and races a member declare (the correction path does not hold the D3 lock) [`packages/domain/src/claim/nominee-correction-persist.ts:300-306`] — deferred to Story 6-22 (the release has no production caller)
+- DB-level cross-table coherence is writer-enforced only: item `pariwar_id` vs its determination/version, version `pariwar_id` vs the member, correction target/applied vs member+rank, no FK on `nominee_determinations.deceased_member_id`; four FK columns unindexed; the append-only trigger's `pg_trigger_depth() > 1` exemption admits any trigger, not only the `members` cascade [`packages/domain/migrations/0119_nominee-declaration-history.sql:38`, `:118`, `:182-230`] — deferred, defence-in-depth hardening; RLS scopes every row and the writers validate
+- `-239` inheritance source: an appeal-overturned refusal is never superseded, so it stays in the refusal list and still passes its inspection on; the source filter falls back to an older refusal when the newest has no completed inspection [`packages/domain/src/claim/nominee-refusal-read.ts:65-76`, `:98-121`] — deferred, needs the appeal-outcome state mapping; a refile after an overturn is improbable
+- Untraced: an erasure while a correction is `pa_pending` would apply the anonymised sentinel as the nominee (whether RTBF can pass for a member with a live claim is unknown); `EffectiveNomineeDeclarationClaimNotFoundError` from `readEffectiveFor` is unmapped where an invisible claim reaches it [`packages/domain/src/member/anonymize.ts:205`, `packages/domain/src/claim/nominee-name-check.ts:117`] — deferred, reachability not traced
+
 ## Deferred from: code review of story-6-20-nominee-declaration-history-and-as-at-death-rule (2026-09-23)
 
 - **`certificate_date` accepts any real calendar date with no plausibility bound (e.g. far future).** `packages/domain/src/claim/nominee-determination-persist.ts:117-118` only checks the string is a real `YYYY-MM-DD` date, not that it's a plausible death-certificate date. Applying the obvious fix (reject dates after today) broke 15 passing tests in `nominee-correction.spec.ts`: `tests/integration/_helpers.ts`'s `certificateDateAfterEverything()` deliberately seeds *tomorrow* as a sentinel meaning "every version stands." ⭐ Trigger: a product decision on what the real plausibility bound should be (and how the fixture sentinel should then be built instead), or a support report of a mistyped certificate date.

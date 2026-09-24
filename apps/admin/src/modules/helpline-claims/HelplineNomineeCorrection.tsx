@@ -6,79 +6,138 @@
 // operator ONLY, yet the raise form was mounted in the verifier console and on the Pariwar Admin's queue —
 // pages whose viewers do ⛔ not hold the key (every raise 403'd) and which the operator cannot open. So
 // neither channel CC2 names worked from the admin UI. This is the operator's surface.
-// ⭐ A correction is ALWAYS tied to one claim: the operator enters the claim reference the family quotes
-// (pre-filled with a claim filed in this session). The server checks the claim, its state window and the
-// standing target; the form only collects the request. The operator sees ⛔ no nominee details here — the
-// raise route needs none, and the District Admin and Pariwar Admin review the target beside the proposal.
+// ⭐ THE CLAIM COMES FROM THE SELECTED MEMBER (BigDev 2026-09-24b, option (a)). It used to be a typed
+// 36-character claim reference "exactly as it is shown" — but nothing ever shows it to the family, so the
+// channel worked only inside the filing call. Now the operator selects the deceased member and reads the
+// caller's identity back (the page's own script), and the server lists that member's live claims: one ⇒
+// used, several ⇒ the operator picks, none ⇒ nothing to correct against. ⛔ No typed reference.
+// ⚠ DELIBERATE (family 9): the raise route requires ⛔ no step-up, unlike the helpline INTAKE
+// (`requireStepUp('claim_file')`) and the member app's raise (`nominee_change`). The operator's raise asks
+// for nothing: it is a REQUEST that two different staff approvers must each approve with a note (CC2/CC3),
+// and the read-back gates the form here. Re-examine if a raise ever takes effect without both approvals.
+// The operator sees ⛔ no nominee details here — the District Admin and Pariwar Admin review the target
+// beside the proposal.
 
 import type { ReactElement } from 'react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
-import { usePostNomineeCorrectionRaise } from '../../api/hooks.js';
-import { NomineeCorrectionRaiseForm } from '../claim-verification/NomineeDeclarationPanel.js';
+import { useNomineeCorrectionRaisableClaims, usePostNomineeCorrectionRaise } from '../../api/hooks.js';
+import { NomineeCorrectionRaiseForm, formatIst } from '../claim-verification/NomineeDeclarationPanel.js';
 import { verifierConsoleEn } from '../claim-verification/i18n-en.js';
 import { nomineeCorrectionErrorMessage } from '../claim-verification/nominee-errors.js';
 
-const r = verifierConsoleEn.nomineeDeclaration.corrections.raise;
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const nd = verifierConsoleEn.nomineeDeclaration;
+const r = nd.corrections.raise;
 
 export function HelplineNomineeCorrection({
   pariwarId,
-  filedClaimCaseId,
+  memberId,
+  identityConfirmed,
 }: {
   pariwarId: string;
-  /** A claim filed in this session, if any — pre-fills the reference. */
-  filedClaimCaseId: string | null;
+  /** The deceased member the operator SELECTED on this page, or `null`. */
+  memberId: string | null;
+  /** The caller's identity was read back and confirmed for THAT member (the page's script). */
+  identityConfirmed: boolean;
 }): ReactElement {
-  const [claimRef, setClaimRef] = useState(filedClaimCaseId ?? '');
+  const ready = memberId !== null && identityConfirmed;
+  const claimsQ = useNomineeCorrectionRaisableClaims(pariwarId, memberId, ready);
+  const claims = claimsQ.data?.member_id === memberId ? claimsQ.data.claims : [];
+  const [picked, setPicked] = useState<string | null>(null);
+  // One live claim ⇒ it is the claim; several ⇒ the operator's pick (reset when the member changes).
+  const chosen = claims.length === 1 ? claims[0]!.claim_case_id : claims.some((c) => c.claim_case_id === picked) ? picked : null;
+  const raise = usePostNomineeCorrectionRaise(pariwarId, chosen);
   const [sentCount, setSentCount] = useState(0);
-  useEffect(() => {
-    if (filedClaimCaseId) setClaimRef(filedClaimCaseId);
-  }, [filedClaimCaseId]);
-  const trimmed = claimRef.trim().toLowerCase();
-  const valid = UUID.test(trimmed);
-  const raise = usePostNomineeCorrectionRaise(pariwarId, valid ? trimmed : null);
   // A different claim is a different request — ⛔ never carry an outcome or an error across.
   const resetRaise = raise.reset;
   useEffect(() => {
     resetRaise();
     setSentCount(0);
-  }, [trimmed, resetRaise]);
+  }, [chosen, memberId, resetRaise]);
+  useEffect(() => {
+    setPicked(null);
+  }, [memberId]);
+  // ⭐ The claim a send was FOR (code review 2026-09-24b): a result that lands after the claim changed is
+  // ⛔ never reported against the new one.
+  const chosenRef = useRef(chosen);
+  chosenRef.current = chosen;
+
+  let source: ReactElement | null = null;
+  if (!ready) {
+    source = (
+      <p className="text-sm" data-testid="helpline-nominee-correction-need-member">
+        {r.needMember}
+      </p>
+    );
+  } else if (claimsQ.isLoading) {
+    source = (
+      <p role="status" className="text-sm" data-testid="helpline-nominee-correction-claims-loading">
+        {r.claimsLoading}
+      </p>
+    );
+  } else if (claimsQ.isError) {
+    source = (
+      <div role="alert" className="text-sm" data-testid="helpline-nominee-correction-claims-error">
+        <p>{r.claimsError}</p>
+        <button type="button" className="underline" onClick={() => void claimsQ.refetch()}>
+          {nd.corrections.retry}
+        </button>
+      </div>
+    );
+  } else if (claims.length === 0) {
+    source = (
+      <p className="text-sm" data-testid="helpline-nominee-correction-no-claim">
+        {r.noClaim}
+      </p>
+    );
+  } else if (claims.length > 1) {
+    source = (
+      <fieldset className="text-sm" data-testid="helpline-nominee-correction-pick">
+        <legend>{r.pickClaim}</legend>
+        {claims.map((c) => (
+          <label key={c.claim_case_id} className="flex items-center gap-2">
+            <input
+              type="radio"
+              name="helpline-nominee-correction-claim"
+              value={c.claim_case_id}
+              checked={picked === c.claim_case_id}
+              // Locked while a send is in flight — the result must belong to the claim it was sent for.
+              disabled={raise.isPending}
+              onChange={() => setPicked(c.claim_case_id)}
+              data-testid={`helpline-nominee-correction-claim-${c.claim_case_id}`}
+            />
+            {/* An unknown state reads as a dash (the refusal list's posture) — ⛔ never guessed as "Being filed". */}
+            {r.claimOption(nd.refusals.claimStateLabels[c.claim_state] ?? '—', formatIst(c.created_at))}
+          </label>
+        ))}
+      </fieldset>
+    );
+  }
 
   return (
     <section className="mt-6 border-t pt-4" aria-label={r.heading} data-testid="helpline-nominee-correction">
-      <label className="flex flex-col text-sm">
-        {r.claimReference}
-        <input
-          value={claimRef}
-          onChange={(e) => setClaimRef(e.target.value)}
-          aria-describedby="helpline-nominee-correction-claim-help"
-          data-testid="helpline-nominee-correction-claim"
+      {source}
+      {/* ⭐ The form appears only once THE claim is known (adversarial review 2026-09-24b): shown while the
+          operator still had to pick, its fields were wiped by the pick itself (the reset is keyed to the claim). */}
+      {ready && chosen !== null ? (
+        <NomineeCorrectionRaiseForm
+          onRaise={async (body) => {
+            const sentFor = chosen;
+            if (!sentFor) return;
+            const ok = await raise
+              .mutateAsync(body)
+              .then(() => true)
+              .catch(() => false);
+            if (ok && chosenRef.current === sentFor) setSentCount((n) => n + 1);
+          }}
+          raising={raise.isPending}
+          raiseError={raise.error ? nomineeCorrectionErrorMessage(raise.error, 'raise') : null}
+          sentCount={sentCount}
+          // ⭐ Keyed to the CHOSEN claim only — ⛔ never to keystrokes (the old typed reference wiped every
+          // field on each character). A DIFFERENT claim is a different request, so switching it clears.
+          resetKey={chosen}
         />
-      </label>
-      <p id="helpline-nominee-correction-claim-help" className="text-xs">
-        {r.claimReferenceHelp}
-      </p>
-      {claimRef.trim() !== '' && !valid ? (
-        <p role="alert" className="text-xs" data-testid="helpline-nominee-correction-claim-invalid">
-          {r.claimReferenceInvalid}
-        </p>
       ) : null}
-      <NomineeCorrectionRaiseForm
-        onRaise={async (body) => {
-          if (!valid) return;
-          const ok = await raise
-            .mutateAsync(body)
-            .then(() => true)
-            .catch(() => false);
-          if (ok) setSentCount((n) => n + 1);
-        }}
-        raising={raise.isPending}
-        raiseError={raise.error ? nomineeCorrectionErrorMessage(raise.error) : null}
-        sentCount={sentCount}
-        resetKey={trimmed}
-        disabled={!valid}
-      />
     </section>
   );
 }

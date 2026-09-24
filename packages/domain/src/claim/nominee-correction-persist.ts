@@ -32,7 +32,8 @@
 // PARIWAR ADMIN (`decideNomineeCorrectionAsPariwarAdmin`): `pa_pending` → `applied` | `declined`;
 //   ⭐ ⛔ never the same PERSON as the District Admin step (also a DB CHECK). An APPROVAL applies:
 //     a new version, `source = 'correction'`, `effective_at` AND `split_pct` INHERITED from the target
-//     (invariant 5, D17(b)); the `member_nominees` projection updated (D16); `member.nominees_declared`
+//     (invariant 5, D17(b)); the `member_nominees` projection updated ONLY when the target was the rank's
+//     HEAD (D16, amended — BigDev 2026-09-24b); `member.nominees_declared`
 //     emitted with `source: 'correction'`; and ⭐ the live determination SUPERSEDED (`correction_applied`)
 //     — so the AC5 409 fires again until the District Admin redetermines (a version with no item does ⛔
 //     not stand). All in ONE transaction.
@@ -312,7 +313,7 @@ export async function decideNomineeCorrectionAsPariwarAdmin(
   // to a typed `version_conflict` below, ⛔ never a 500. ⚠ The D3 advisory lock cannot be taken here: it
   // must be a transaction's FIRST lock, and the claim row is already locked).
   const [head] = await db
-    .select({ versionNo: memberNomineeVersions.versionNo })
+    .select({ versionId: memberNomineeVersions.versionId, versionNo: memberNomineeVersions.versionNo })
     .from(memberNomineeVersions)
     .where(and(eq(memberNomineeVersions.memberId, memberId), eq(memberNomineeVersions.rank, rank)))
     .orderBy(desc(memberNomineeVersions.versionNo))
@@ -320,11 +321,31 @@ export async function decideNomineeCorrectionAsPariwarAdmin(
   const versionNo = (head?.versionNo ?? 0) + 1;
   const recordedAt = await readDatabaseClock(db);
 
-  // (2) The member stream: `member.nominees_declared` with `source: 'correction'` (AC1). ⛔ No PII.
-  // ⭐ The count / split describe the PROJECTION after the apply — and the apply NEVER adds a rank (a rank
-  // the member vacated after the death stays vacated in `member_nominees`; the correction lives in the
-  // version history and the claim's effective set — BigDev 2026-09-24, option (b)). So they are the
-  // projection's own, unchanged.
+  // (2) The projection — BEFORE the member-stream append, whose projector refreshes the admin search
+  // projection's `nominee_summary` FROM `member_nominees` (code review 2026-09-24b: applied after it, the
+  // summary kept the old relationship until the member's next event).
+  // ⭐ The projection row is updated ONLY when it IS the corrected declaration — i.e. the target was this
+  // rank's HEAD before the correction (BigDev 2026-09-24b, option (a); extends 2026-09-24 option (b)). When
+  // the member declared again after the death, the rank's row holds THAT declaration (or, when vacated, no
+  // row at all): overwriting it with the corrected pre-death person produced a row mixing two declarations
+  // (one person, another declaration's split). The correction then lives in the version history and the
+  // claim's effective set only, and `member_nominees` keeps the member's own last declaration (D16, amended).
+  if (head?.versionId === standing.versionId) {
+    await applyCorrectionToProjection(db, {
+      memberId,
+      pariwarId: input.pariwarId,
+      rank,
+      nameCiphertext: row.proposedNameCiphertext,
+      relationship: row.proposedRelationship,
+      mobileCiphertext: row.proposedMobileCiphertext,
+      addressCiphertext: row.proposedAddressCiphertext,
+    });
+  }
+
+  // (3) The member stream: `member.nominees_declared` with `source: 'correction'` (AC1). ⛔ No PII.
+  // ⭐ The count / split describe the PROJECTION — and the apply NEVER adds a rank, so they are the
+  // projection's own, unchanged. (In the vacated-rank case the listed version is a rank the projection does
+  // not hold; the payload's count/split describe the projection, ⛔ not the versions listed.)
   const projectionRanks = await getMemberNomineeProjectionRanks(db, input.pariwarId, memberId);
   if (projectionRanks.length === 0) {
     // Unreachable: a declaration always carries at least one nominee. ⛔ Never fabricate a count.
@@ -354,7 +375,7 @@ export async function decideNomineeCorrectionAsPariwarAdmin(
   // `splitPct` is non-null here — the fallback exists only for the type.
   const splitPct = standing.splitPct ?? (rank === 1 ? 75 : 25);
 
-  // (3) The correction VERSION — `effective_at` and `split_pct` INHERITED from the target.
+  // (4) The correction VERSION — `effective_at` and `split_pct` INHERITED from the target.
   let applied: { versionId: NomineeVersionId } | undefined;
   try {
     [applied] = await db
@@ -384,18 +405,6 @@ export async function decideNomineeCorrectionAsPariwarAdmin(
     }
     throw err;
   }
-
-  // (4) The projection — the correction is now this rank's LATEST version (D16). A rank the member vacated
-  // after the death has no projection row, and is ⛔ not re-inserted (BigDev 2026-09-24, option (b)).
-  await applyCorrectionToProjection(db, {
-    memberId,
-    pariwarId: input.pariwarId,
-    rank,
-    nameCiphertext: row.proposedNameCiphertext,
-    relationship: row.proposedRelationship,
-    mobileCiphertext: row.proposedMobileCiphertext,
-    addressCiphertext: row.proposedAddressCiphertext,
-  });
 
   // (5) ⭐ The live determination is SUPERSEDED — the new version has no item, so it does ⛔ not stand
   // until the District Admin redetermines, and AC5's 409 fires again meanwhile.
@@ -440,6 +449,30 @@ export async function listNomineeCorrections(
     .where(and(eq(nomineeCorrections.pariwarId, pariwarId), eq(nomineeCorrections.claimCaseId, claimCaseId)))
     .orderBy(desc(nomineeCorrections.raisedAt))
     .limit(clampLimit(opts.limit, { default: 50, cap: 200 }));
+}
+
+/**
+ * How many corrections on ONE claim wait at each step — METADATA ONLY (code review 2026-09-24b). The
+ * timeline carries it so a District Admin learns a request is waiting ⛔ without the decrypting reveal (D10).
+ */
+export async function countPendingNomineeCorrections(
+  db: Db,
+  pariwarId: PariwarId,
+  claimCaseId: ClaimId,
+): Promise<{ daPending: number; paPending: number }> {
+  const rows = await db
+    .select({ step: nomineeCorrections.step, n: sql<number>`count(*)::int` })
+    .from(nomineeCorrections)
+    .where(
+      and(
+        eq(nomineeCorrections.pariwarId, pariwarId),
+        eq(nomineeCorrections.claimCaseId, claimCaseId),
+        sql`${nomineeCorrections.step} IN ('da_pending', 'pa_pending')`,
+      ),
+    )
+    .groupBy(nomineeCorrections.step);
+  const of = (step: string) => rows.find((r) => r.step === step)?.n ?? 0;
+  return { daPending: of('da_pending'), paPending: of('pa_pending') };
 }
 
 /**

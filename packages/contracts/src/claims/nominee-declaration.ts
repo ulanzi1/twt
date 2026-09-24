@@ -78,6 +78,18 @@ export const EarlierClaimNomineeDeterminationView = z
   .strict();
 export type EarlierClaimNomineeDeterminationView = z.output<typeof EarlierClaimNomineeDeterminationView>;
 
+/**
+ * `GET …/admin/members/:memberId/nominee-corrections/claims` — the SELECTED deceased member's live claims,
+ * for the helpline raise (code review 2026-09-24b). ⛔ No PII: ids, state, instants.
+ */
+export const NomineeCorrectionRaisableClaimsResponse = z
+  .object({
+    member_id: z.string().uuid(),
+    claims: z.array(z.object({ claim_case_id: z.string().uuid(), claim_state: z.string(), created_at: IsoInstant }).strict()),
+  })
+  .strict();
+export type NomineeCorrectionRaisableClaimsResponse = z.output<typeof NomineeCorrectionRaisableClaimsResponse>;
+
 /** `GET …/admin/claims/:claimCaseId/nominee-declaration` — the on-demand timeline (⛔ not in the console packet). */
 export const NomineeDeclarationTimelineResponse = z
   .object({
@@ -93,6 +105,19 @@ export const NomineeDeclarationTimelineResponse = z
     declaration_status: NomineeDeclarationStatus,
     /** Is the claim in a state a determination can be recorded in? */
     determination_recordable: z.boolean(),
+    /**
+     * What THIS viewer may do here, judged server-side against their grants at the deceased's district
+     * (code review 2026-09-24b): the admin session carries only national grants, so the client cannot tell
+     * a verifier from a District Admin. ⛔ UI only — the route's key check stays the boundary.
+     */
+    viewer: z.object({ can_determine: z.boolean(), can_decide_district: z.boolean() }).strict(),
+    /**
+     * How many correction requests wait at each step — METADATA ONLY (code review 2026-09-24b): the list
+     * itself decrypts names and numbers (D10), and "is one waiting?" must not cost that reveal.
+     */
+    pending_corrections: z
+      .object({ da_pending: z.number().int().nonnegative(), pa_pending: z.number().int().nonnegative() })
+      .strict(),
   })
   .strict();
 export type NomineeDeclarationTimelineResponse = z.output<typeof NomineeDeclarationTimelineResponse>;
@@ -219,7 +244,13 @@ export const NomineeCorrectionView = z
     rank: Rank,
     target_version_id: z.string().uuid(),
     target: z
-      .object({ relationship: z.string().nullable(), name: ReadableNomineeName.nullable(), mobile: ReadableName.nullable() })
+      .object({
+        relationship: z.string().nullable(),
+        name: ReadableNomineeName.nullable(),
+        mobile: ReadableName.nullable(),
+        // AC7 "beside the old and new details" — the target's address beside the proposed one.
+        address: ReadableName.nullable(),
+      })
       .strict(),
     proposed: z
       .object({

@@ -147,8 +147,9 @@ const COVERAGE_SET: readonly CoverageEntry[] = [
     expectedMethods: ['get', 'get', 'post'],
   },
   {
-    // ⭐ Story 6.20 — the nominee declaration HISTORY. NINE routes, all admin (incl. the Pariwar Admin's
-    // queue of corrections awaiting step 2): the timeline + the
+    // ⭐ Story 6.20 — the nominee declaration HISTORY. TEN routes, all admin (incl. the Pariwar Admin's
+    // queue of corrections awaiting step 2, and — code review 2026-09-24b — the helpline's read of the
+    // SELECTED member's live claims, which the raise now takes its claim from): the timeline + the
     // on-demand DECRYPTED snapshots (a second living subject's Tier-1 details), the District Admin's
     // DETERMINATION (which declaration governs who is paid), the corrections list (decrypted target +
     // proposal), the helpline RAISE, the two APPROVAL steps (the Pariwar Admin's APPLIES the change),
@@ -157,7 +158,7 @@ const COVERAGE_SET: readonly CoverageEntry[] = [
     file: 'apps/api/src/modules/claims/claims.nominee-declaration.routes.ts',
     pathSubstrings: ['nominee-declaration', 'nominee-determination', 'nominee-corrections', 'nominee-refusals'],
     owner: 'Story 6.20',
-    expectedMethods: ['get', 'get', 'get', 'get', 'get', 'post', 'post', 'post', 'post'],
+    expectedMethods: ['get', 'get', 'get', 'get', 'get', 'get', 'post', 'post', 'post', 'post'],
   },
 ];
 

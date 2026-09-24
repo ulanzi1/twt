@@ -17,6 +17,7 @@ import {
   NomineeCorrectionDecisionRequest,
   NomineeCorrectionListResponse,
   NomineeCorrectionPendingListResponse,
+  NomineeCorrectionRaisableClaimsResponse,
   NomineeCorrectionRaiseRequest,
   NomineeCorrectionWriteResponse,
   NomineeDeclarationSnapshotsResponse,
@@ -141,6 +142,21 @@ export function registerNomineeDeclarationRoutes(app: FastifyInstance, deps: App
       preHandler: [adminSession, scope, resolveDistrict, requireView],
     },
     h.listCorrections,
+  );
+
+  // AC7 / CC2 — the SELECTED deceased member's live claims, so the helpline raise needs ⛔ no claim reference
+  // the family would have to quote (code review 2026-09-24b, BigDev option (a)). The raise key, at the Pariwar.
+  r.get(
+    '/api/v1/p/:pariwarId/admin/members/:memberId/nominee-corrections/claims',
+    {
+      schema: {
+        params: z.object({ pariwarId: z.string().uuid(), memberId: z.string().uuid() }).strict(),
+        response: { 200: NomineeCorrectionRaisableClaimsResponse },
+        tags: [TAG],
+      },
+      preHandler: [adminSession, scope, requireRaise],
+    },
+    h.listRaisableClaims,
   );
 
   // AC7 / CC2 — the helpline operator raises on the family's behalf.

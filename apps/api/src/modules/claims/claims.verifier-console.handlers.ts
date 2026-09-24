@@ -101,8 +101,8 @@ const SIGNED_URL_TTL_SECONDS = 300;
  * approval on this very surface, so a console that could not say whether one exists would offer an
  * approve control that 409s — training a District Admin to treat a governance refusal as a glitch.
  * ⛔ The three reads are the MINIMUM: the accounts answer cl.7 ("are both there?"), the event
- * answers cl.3 ("did somebody check?"), and the declaration refs answer "is that check still about
- * today's data?" — currency needs BOTH tokens, and a check that is stale is not a check. None can
+ * answers cl.3 ("did somebody check?"), and the EFFECTIVE declaration (`getEffectiveNomineeDeclaration`)
+ * answers "is that check still about today's data?" — currency needs BOTH tokens, and a check that is stale is not a check. None can
  * be derived from the others, and ⛔ NONE decrypts anything — the NAMES stay behind their own key on
  * their own route, fetched on demand.
  *

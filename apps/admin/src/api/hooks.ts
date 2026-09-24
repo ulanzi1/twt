@@ -22,6 +22,7 @@ import type {
 } from '@twt/contracts';
 
 import * as api from './client.js';
+import { ApiError } from './client.js';
 
 export const sessionKey = ['session'] as const;
 export const integrityChecksKey = ['integrity-checks'] as const;
@@ -303,8 +304,12 @@ export function useModerateMember(pariwarId: string, memberId: string | null) {
 /** The helpline claim intake mutation. On `created:false` the page surfaces "claim already
  * exists" rather than an error (a cross-channel convergence hit, not a failure). */
 export function useHelplineClaimIntake(pariwarId: string) {
+  const qc = useQueryClient();
   return useMutation({
     mutationFn: (body: HelplineClaimIntakeRequest) => api.initiateHelplineClaim(pariwarId, body),
+    // ⭐ A claim filed in THIS call is one the nominee-correction raise must now offer (adversarial review
+    // 2026-09-24b) — the selected member's live-claims list would otherwise keep saying "no open claim".
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ['nominee-correction-raisable-claims', pariwarId] }),
   });
 }
 
@@ -1736,6 +1741,22 @@ export function useForgetNomineeDeclarationDetails(pariwarId: string, claimCaseI
   };
 }
 
+/** The refusals that mean "what you are looking at moved" — the only failures that refetch. */
+const DETERMINATION_STALE_CODES: ReadonlySet<string> = new Set([
+  'nominee_determination.stale_watermark',
+  'nominee_determination.stale_supersession',
+  'nominee_determination.unknown_version',
+  'nominee_determination.concurrent',
+  // The claim LEFT the recordable window — refetch so the form stops being offered.
+  'nominee_determination.not_recordable',
+]);
+const CORRECTION_STALE_CODES: ReadonlySet<string> = new Set([
+  'nominee_correction.step_conflict',
+  'nominee_correction.version_conflict',
+  'nominee_correction.target_not_standing',
+  'nominee_correction.concurrent',
+]);
+
 /** Every write here moves the effective declaration — so the timeline, the corrections, the snapshots (a
  *  correction adds a VERSION, whose details are otherwise unreachable), the name check (its token) and
  *  the correction queues all refetch. ⚠ The snapshots and corrections refetch only while their observer is
@@ -1755,14 +1776,21 @@ function useInvalidateNomineeDeclaration(pariwarId: string, claimCaseId: string 
 
 export function usePostNomineeDetermination(pariwarId: string, claimCaseId: string | null) {
   const invalidate = useInvalidateNomineeDeclaration(pariwarId, claimCaseId);
+  const qc = useQueryClient();
   return useMutation({
     mutationFn: (body: Parameters<typeof api.postNomineeDetermination>[2]) =>
       api.postNomineeDetermination(pariwarId, claimCaseId as string, body),
     onSuccess: invalidate,
-    // ⭐ AND ON ERROR (the 6.18 `usePostNomineeNameCheck` precedent): `stale_watermark` /
+    // ⭐ ON A STALENESS ERROR (the 6.18 `usePostNomineeNameCheck` precedent): `stale_watermark` /
     // `stale_supersession` mean the timeline moved — without a refetch the panel kept the OLD watermark
-    // and "Reload and look again" resent the identical stale body forever.
-    onError: invalidate,
+    // and "Reload and look again" resent the identical stale body forever. ⚠ ONLY the metadata timeline
+    // (code review 2026-09-24b): refetching the DECRYPTING reads on every failure — a verifier's 403, a
+    // validation refusal — wrote an audited decrypt nobody asked for.
+    onError: (err: unknown) => {
+      if (err instanceof ApiError && DETERMINATION_STALE_CODES.has(err.code)) {
+        void qc.invalidateQueries({ queryKey: nomineeDeclarationKey(pariwarId, claimCaseId ?? '') });
+      }
+    },
   });
 }
 
@@ -1775,8 +1803,18 @@ export function usePostNomineeCorrectionRaise(pariwarId: string, claimCaseId: st
   });
 }
 
+/** The SELECTED deceased member's live claims, for the helpline raise — ids only (⛔ no PII). */
+export function useNomineeCorrectionRaisableClaims(pariwarId: string, memberId: string | null, enabled: boolean) {
+  return useQuery({
+    queryKey: ['nominee-correction-raisable-claims', pariwarId, memberId ?? ''] as const,
+    queryFn: () => api.getNomineeCorrectionRaisableClaims(pariwarId, memberId as string),
+    enabled: Boolean(memberId) && enabled,
+  });
+}
+
 export function usePostNomineeCorrectionDecision(pariwarId: string, claimCaseId: string | null) {
   const invalidate = useInvalidateNomineeDeclaration(pariwarId, claimCaseId);
+  const qc = useQueryClient();
   return useMutation({
     mutationFn: (input: {
       correctionId: string;
@@ -1784,8 +1822,16 @@ export function usePostNomineeCorrectionDecision(pariwarId: string, claimCaseId:
       body: Parameters<typeof api.postNomineeCorrectionDecision>[4];
     }) => api.postNomineeCorrectionDecision(pariwarId, claimCaseId as string, input.correctionId, input.step, input.body),
     onSuccess: invalidate,
-    // `step_conflict` means the request moved on — refetch so the screen shows where it is.
-    onError: invalidate,
+    // `step_conflict` & co. mean the request moved on — refetch so the screen shows where it is. ⚠ ONLY on
+    // those (code review 2026-09-24b): a 403 or a validation refusal must ⛔ not trigger an audited decrypt.
+    onError: (err: unknown) => {
+      if (err instanceof ApiError && CORRECTION_STALE_CODES.has(err.code)) {
+        const cid = claimCaseId ?? '';
+        void qc.invalidateQueries({ queryKey: nomineeDeclarationKey(pariwarId, cid) });
+        void qc.invalidateQueries({ queryKey: nomineeCorrectionsKey(pariwarId, cid) });
+        void qc.invalidateQueries({ queryKey: ['nominee-corrections-pending', pariwarId] });
+      }
+    },
   });
 }
 

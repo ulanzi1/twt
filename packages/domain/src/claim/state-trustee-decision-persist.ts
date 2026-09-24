@@ -885,12 +885,17 @@ export async function isReturnedClaimResubmitted(
     await assertNomineeNameCheckForApproval(db, pariwarId, claimCaseId, deceasedMemberId);
     return true;
   } catch (err) {
-    // ⛔⛔ ONLY THE THREE TYPED "NOT YET" ANSWERS ARE SWALLOWED, and the narrowness is the point.
+    // ⛔⛔ ONLY THE THREE TYPED "NOT YET" ERROR CLASSES ARE SWALLOWED, and the narrowness is the point.
     // A bare `catch { return false }` here reported a DB error, a timeout or a bug as "not
     // resubmitted" — i.e. as a 409 `ClaimAwaitingCorrectionError` blaming the family for a fault
     // that was ours. Worse, this runs INSIDE the caller's transaction: swallowing a Postgres error
     // leaves the transaction ABORTED (25P02), so the next statement fails with an unrelated message
-    // and the real cause is gone. Anything that is not one of these two propagates.
+    // and the real cause is gone. Anything that is not one of these three classes propagates.
+    // ⚠ KNOWN WIDENING (code review 2026-09-24b, deferred): `NomineeDeterminationRequiredError` is
+    // swallowed for EVERY reason — `never_determined` (the case this exists for) but also `unversioned` /
+    // `incoherent`, which are data faults, ⛔ not the family's. Narrowing it needs the nominee-bank and
+    // name-check handlers to map the error first (they call this through `resolveClaimCorrectionState`
+    // and would otherwise answer 500). Recorded in `deferred-work.md`.
     if (
       err instanceof NomineeBankAccountsRequiredError ||
       err instanceof NomineeNameCheckRequiredError ||

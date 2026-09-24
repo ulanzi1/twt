@@ -11,7 +11,7 @@ import type { ReactElement } from 'react';
 import { useState } from 'react';
 
 import { ApiError, errorMessage as apiErrorMessage } from '../../api/client.js';
-import { verifierConsoleEn } from '../claim-verification/i18n-en.js';
+import { trusteeDeterminationRequiredMessage } from '../claim-verification/nominee-errors.js';
 
 /**
  * The panel's error text. Story 6.20 (AC5) — a nominee correction can supersede the determination after
@@ -19,7 +19,7 @@ import { verifierConsoleEn } from '../claim-verification/i18n-en.js';
  */
 function errorMessage(error: unknown): string | undefined {
   if (error instanceof ApiError && error.code.endsWith('.nominee_determination_required')) {
-    return verifierConsoleEn.nomineeDeclaration.trusteeApprovalGate;
+    return trusteeDeterminationRequiredMessage(error);
   }
   return apiErrorMessage(error);
 }

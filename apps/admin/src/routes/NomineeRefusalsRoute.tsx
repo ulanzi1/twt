@@ -68,7 +68,8 @@ function NomineeRefusalsView(): ReactElement {
                   <code className="font-mono">{item.claim_case_id}</code>
                 </dd>
                 <dt className="opacity-70">{t.state}</dt>
-                <dd>{item.claim_state.replace(/_/g, ' ')}</dd>
+                {/* ⛔ Never the raw state code (code review 2026-09-24b); an unknown state reads as a dash. */}
+                <dd>{t.claimStateLabels[item.claim_state] ?? '—'}</dd>
               </dl>
               <dl className="mt-2 grid grid-cols-[auto,1fr] gap-x-3 gap-y-0.5 text-xs">
                 <dt className="opacity-70">{t.refusedBy}</dt>

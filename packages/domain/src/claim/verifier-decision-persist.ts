@@ -323,15 +323,17 @@ export async function adjudicateClaim(
 
   const claimRow = await lockClaim(db, input.pariwarId, input.claimCaseId);
   if (!claimRow) throw new VerifierDecisionClaimNotFoundError(input.claimCaseId);
-  if (input.reasonCode === 'post_death_nominee_change') {
-    await assertPostDeathRefusalGrounded(db, input.pariwarId, input.claimCaseId);
-  }
 
   // A live decision already exists (e.g. the claim was escalated) — state alone doesn't guard this
   // because escalate never changes claim state. Fail fast, before any write (only revise may supersede).
   const existingLive = await getLiveDecision(db, input.pariwarId, input.claimCaseId);
   if (existingLive) {
     throw new ClaimDecisionConflictError(input.claimCaseId, existingLive.outcome);
+  }
+  // `-239` grounding — AFTER the live-decision guard (code review 2026-09-24b): a claim that cannot take a
+  // decision at all must hear THAT, ⛔ not "record the determination first", which would not unblock it.
+  if (input.reasonCode === 'post_death_nominee_change') {
+    await assertPostDeathRefusalGrounded(db, input.pariwarId, input.claimCaseId);
   }
 
   // (a) Enter review in the write path when still gathering signals (D-C) — approve/deny ONLY.
@@ -496,9 +498,6 @@ export async function reviseDecision(
 
   const claimRow = await lockClaim(db, input.pariwarId, input.claimCaseId);
   if (!claimRow) throw new VerifierDecisionClaimNotFoundError(input.claimCaseId);
-  if (input.reasonCode === 'post_death_nominee_change') {
-    await assertPostDeathRefusalGrounded(db, input.pariwarId, input.claimCaseId);
-  }
 
   if (!(VERIFIER_DECISION_REVISABLE_STATES as readonly string[]).includes(claimRow.currentState)) {
     throw new ClaimDecisionNotRevisableError(
@@ -528,6 +527,11 @@ export async function reviseDecision(
   // Optional client optimistic assertion: the decision it thinks it is revising must be the live one.
   if (input.supersedesDecisionId != null && input.supersedesDecisionId !== live.decisionId) {
     throw new DecisionRevisionConflictError(input.claimCaseId);
+  }
+  // `-239` grounding — AFTER the window / live-decision / same-outcome guards (code review 2026-09-24b), so a
+  // revision that cannot happen is refused for its real reason.
+  if (input.reasonCode === 'post_death_nominee_change') {
+    await assertPostDeathRefusalGrounded(db, input.pariwarId, input.claimCaseId);
   }
 
   // Atomic supersession — 0 rows ⇒ a concurrent revise already superseded the target ⇒ conflict (409).

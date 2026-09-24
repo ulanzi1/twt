@@ -139,3 +139,29 @@ export async function getClaimByDeceasedMember(
     .limit(1);
   return rows[0];
 }
+
+/**
+ * Story 6.20 (AC7 / CC2; code review 2026-09-24b, BigDev option (a)) — every NON-TERMINAL claim for a
+ * deceased member in this Pariwar, newest first: the helpline operator raises a nominee correction against
+ * the claim of the member they have SELECTED and read back, ⛔ never a claim reference the family would have
+ * to quote (nothing ever shows it to them). Usually one; two only through the convergence override. ⛔ No
+ * PII — ids, state and instants. Bounded.
+ */
+export async function listLiveClaimsForDeceasedMember(
+  db: Db,
+  pariwarId: PariwarId,
+  deceasedMemberId: MemberId,
+): Promise<Pick<ClaimRow, 'claimCaseId' | 'currentState' | 'createdAt'>[]> {
+  return db
+    .select({ claimCaseId: claims.claimCaseId, currentState: claims.currentState, createdAt: claims.createdAt })
+    .from(claims)
+    .where(
+      and(
+        eq(claims.pariwarId, pariwarId),
+        eq(claims.deceasedMemberId, deceasedMemberId),
+        notInArray(claims.currentState, [...CLAIM_TERMINAL_STATES]),
+      ),
+    )
+    .orderBy(desc(claims.createdAt), desc(claims.claimCaseId))
+    .limit(10);
+}

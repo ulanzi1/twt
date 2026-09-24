@@ -49,7 +49,7 @@ const EMPTY: CorrectionDraft = { rank: 1, name: '', relationship: '', mobile: ''
 export default function NomineeCorrectionScreen() {
   const t = useT()
   const router = useRouter()
-  const { session } = useSession()
+  const { session, isLoading: sessionLoading } = useSession()
   const memberId = session?.memberId ?? ''
   const claimCaseId = memberId ? (loadClaimDraft(memberId).claimCaseId ?? getFiledClaimCaseId(memberId) ?? undefined) : undefined
   const stepUp = useStepUpGate('nominee_change')
@@ -59,8 +59,8 @@ export default function NomineeCorrectionScreen() {
   // draft then, rather than never (the lazy initializer above ran once, with no member).
   useEffect(() => {
     if (!memberId) return
-    const saved = loadDraft<CorrectionDraft>(memberId, DRAFT_KEY)
-    if (saved) setForm(saved)
+    // ⛔ Never another member's typed draft (code review 2026-09-24b): no saved draft ⇒ a clean form.
+    setForm(loadDraft<CorrectionDraft>(memberId, DRAFT_KEY) ?? EMPTY)
   }, [memberId])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -95,7 +95,7 @@ export default function NomineeCorrectionScreen() {
     })
   }
 
-  async function run(fn: () => Promise<unknown>): Promise<void> {
+  async function run(fn: () => Promise<unknown>, onFailure?: (err: unknown) => void): Promise<void> {
     setBusy(true)
     setError(null)
     try {
@@ -106,6 +106,7 @@ export default function NomineeCorrectionScreen() {
       }
     } catch (err) {
       setError(t(correctionErrorKey(err)))
+      onFailure?.(err)
     } finally {
       setBusy(false)
     }
@@ -118,6 +119,17 @@ export default function NomineeCorrectionScreen() {
       return
     }
     await run(() => stepUp.guard(request))
+  }
+
+  // ⭐ While the session is still loading there is no member yet — ⛔ never render (and announce) the "no
+  // claim, call the helpline" dead end in the meantime (code review 2026-09-24b).
+  if (sessionLoading) {
+    return (
+      <YStack flex={1} items="center" justify="center" bg="$background" testID="nominee-correction-loading">
+        <Stack.Screen options={{ title: t('nominee_correction.title') }} />
+        <Spinner accessibilityLabel={t('nominee_correction.title')} />
+      </YStack>
+    )
   }
 
   if (!claimCaseId) {
@@ -276,7 +288,24 @@ export default function NomineeCorrectionScreen() {
                     setError(v)
                     return
                   }
-                  run(() => stepUp.verifyAndRetry(request))
+                  // ⭐ The code VERIFIED but the request then failed (`concurrent`, `version_conflict` — "try
+                  // again"): close the prompt, or the main submit stayed disabled with ⛔ no new code sent and
+                  // only an unmentioned Cancel as a way out (code review 2026-09-24b). The elevation is now
+                  // fresh, so a retry needs no second code. ⭐ "Verified" is KNOWN, ⛔ not guessed from an error
+                  // code (adversarial review 2026-09-24b): `verifyAndRetry` calls the request only AFTER the code
+                  // verified, so the flag is set exactly then — a wrong code, an expired one, a rate limit or a
+                  // dropped network on the VERIFY all keep the prompt open.
+                  let verified = false
+                  run(
+                    () =>
+                      stepUp.verifyAndRetry(() => {
+                        verified = true
+                        return request()
+                      }),
+                    () => {
+                      if (verified) stepUp.reset()
+                    },
+                  )
                 }}
               >
                 {busy ? <Spinner /> : t('auth.verify')}

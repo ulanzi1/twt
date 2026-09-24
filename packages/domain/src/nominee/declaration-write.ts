@@ -95,14 +95,16 @@ export interface ApplyCorrectionToProjectionInput {
 }
 
 /**
- * Story 6.20 (D7, D16) — apply an APPROVED correction to ONE rank of the current projection, so
- * `member_nominees` stays "the latest version by `version_no`" for every rank it HOLDS. ⛔ The split is ⛔
- * not touched: a correction inherits the corrected version's `split_pct` (D17(b)), already on this row.
+ * Story 6.20 (D7, D16) — apply an APPROVED correction to ONE rank of the current projection.
  *
- * ⭐ A rank the member VACATED after the death (its latest version is a tombstone) has ⛔ no projection
- * row, and is ⛔ NOT re-inserted (BigDev 2026-09-24, option (b)): re-inserting it beside the member's own
- * post-death declaration produced splits summing to 125%. The correction lives in the version history and
- * in the claim's effective set; the projection keeps reflecting the member's own last declaration.
+ * ⚠ The CALLER decides whether to call this: only when the corrected version was the rank's HEAD before the
+ * correction (BigDev 2026-09-24b, option (a)). Then this row IS the corrected declaration, so its
+ * `split_pct` is already the corrected version's (D17(b): a correction inherits it) and is ⛔ not touched.
+ * When the member declared again after the death, the rank's row holds THAT declaration — overwriting it
+ * would mix two declarations in one row — and a rank the member VACATED has ⛔ no row, which is ⛔ never
+ * re-inserted (2026-09-24, option (b): re-inserting it produced splits summing to 125%). In both cases the
+ * correction lives in the version history and the claim's effective set, and `member_nominees` keeps the
+ * member's own last declaration — so the projection can LAG a correction (D16, amended by that ruling).
  *
  * @returns whether a projection row was updated.
  */

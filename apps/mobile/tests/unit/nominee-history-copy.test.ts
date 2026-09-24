@@ -22,6 +22,35 @@ const read = (rel: string): string => readFileSync(path.join(repoRoot, rel), 'ut
 
 const LOCALES = ['en', 'hi'] as const
 
+/** The source with its comments removed — a pin must match CODE, ⛔ never a comment that mentions it. */
+// JSX `{/* … */}` and `/* … */` blocks, whole-line `//` comments, and TRAILING `  // …` comments (a space
+// before `//`, so a `://` URL inside a string is left alone — adversarial review 2026-09-24b).
+const code = (src: string): string =>
+  src
+    .replace(/\{\/\*[\s\S]*?\*\/\}/g, '')
+    .replace(/(^|[^'"`*])\/\*[\s\S]*?\*\//g, '$1')
+    .replace(/^\s*\/\/.*$/gm, '')
+    .replace(/\s\/\/(?!\/).*$/gm, '')
+
+/**
+ * The OPENING TAG of the JSX element carrying `testID="<id>"`, parsed brace-aware — `[^>]*` stopped at the
+ * first `>` inside an attribute (an arrow's `=>`, a comparison) and could miss what came after it.
+ */
+const openingTagOf = (src: string, tag: string, testId: string): string => {
+  const at = src.indexOf(`testID="${testId}"`)
+  expect(at, testId).toBeGreaterThan(-1)
+  const start = src.lastIndexOf(`<${tag}`, at)
+  expect(start, testId).toBeGreaterThan(-1)
+  let depth = 0
+  for (let i = start; i < src.length; i++) {
+    const ch = src[i]
+    if (ch === '{') depth++
+    else if (ch === '}') depth--
+    else if (ch === '>' && depth === 0) return src.slice(start, i + 1)
+  }
+  throw new Error(`unterminated <${tag}> for ${testId}`)
+}
+
 const NEW_KEYS = [
   'nominees.relationship_other_warning',
   'nominees.changes_stop_notice',
@@ -76,21 +105,44 @@ describe('Story 6.20 member copy resolves through the REAL t() — both locales'
     for (const word of ['चाची', 'ताई', 'मामी', 'बुआ', 'मौसी']) expect(aunt).toContain(word)
     const cousin = t('nominees.relationship_cousin', undefined, { locale: 'hi' })
     for (const word of ['चचेरे', 'ममेरे', 'फुफेरे', 'मौसेरे']) expect(cousin).toContain(word)
+    // (code review 2026-09-24b) — the same class on the in-laws: the English "Sister-in-law" covers them all.
+    const sisterInLaw = t('nominees.relationship_sister_in_law', undefined, { locale: 'hi' })
+    for (const word of ['भाभी', 'ननद', 'साली', 'देवरानी', 'जेठानी', 'सलहज']) expect(sisterInLaw).toContain(word)
   })
 
-  it('⭐ the locked copy does ⛔ not tell a LIVING member the lock is permanent (`-234` X / `-238`)', () => {
-    for (const locale of LOCALES) {
-      const body = t('nominees.locked_body', undefined, { locale })
-      expect(body).not.toMatch(/no longer be changed/i)
-    }
-    expect(t('nominees.locked_body', undefined, { locale: 'en' })).toMatch(/helpline/i)
-  })
+  // ⭐ BigDev 2026-09-24b, option (a): the SAME screen is read by a living member hit by a stray claim and by a
+  // bereaved family in Ravi mode, and nothing can release a lock yet (`6-22`). So the copy promises ⛔ NO
+  // outcome either way — ⛔ not "for now … opens again" (a promise nothing delivers), ⛔ not "never".
+  // Each locale is checked in ITS OWN words (code review 2026-09-24b: the Hindi leg ran an English regex).
+  // ⭐ Each list: [a temporary lock…, …that re-opens, …no longer, never, permanent] — the same five meanings in
+  // each language (adversarial review 2026-09-24b: the Hindi list lacked "for now" / "again" / "no longer").
+  const PROMISES = {
+    en: [/for now/i, /open(s)? again/i, /no longer/i, /\bnever\b/i, /permanent/i],
+    hi: [/अभी|फ़िलहाल|फिलहाल/, /फिर से|दोबारा/, /अब .*नहीं/, /कभी नहीं/, /हमेशा|स्थायी/],
+  } as const
+  const HELPLINE = { en: /helpline/i, hi: /हेल्पलाइन/ } as const
+  for (const locale of LOCALES) {
+    it(`[${locale}] ⭐ the locked copy promises ⛔ no outcome — neither a release nor a permanent lock — and names the helpline`, () => {
+      for (const key of ['nominees.locked_title', 'nominees.locked_body'] as const) {
+        const text = t(key, undefined, { locale })
+        for (const promise of PROMISES[locale]) expect(text, `${locale} :: ${key}`).not.toMatch(promise)
+      }
+      expect(t('nominees.locked_body', undefined, { locale })).toMatch(HELPLINE[locale])
+    })
+
+    it(`[${locale}] the pre-claim notice agrees with the locked screen (⛔ no "no longer" / "never")`, () => {
+      const notice = t('nominees.changes_stop_notice', undefined, { locale })
+      for (const promise of PROMISES[locale].slice(2)) expect(notice).not.toMatch(promise)
+    })
+  }
 
   it('⭐ the Hindi labels are the member\'s words, ⛔ never a transliteration of the snake_case codes', () => {
     for (const code of NOMINEE_RELATIONSHIP_CODES) {
       const hi = t(`nominees.relationship_${code}`, undefined, { locale: 'hi' })
       expect(hi).not.toMatch(/_/)
       expect(hi).not.toBe(code)
+      // ⭐ Actually Hindi — a label copied across from English would pass the two checks above.
+      expect(hi, code).toMatch(/[\u0900-\u097F]/)
     }
   })
 })
@@ -105,9 +157,13 @@ describe('Story 6.20 — the pickers take their codes from the contracts enum', 
   })
 
   it('⭐ the CORRECTION picker offers only KNOWN relationships (target: `-237` cl.2; proposal: an ENGINEERING READING of it, ⛔ not a ratified rule — BigDev 2026-09-24)', () => {
-    const src = read('apps/mobile/app/(life-events)/nominee-correction.tsx')
+    const src = code(read('apps/mobile/app/(life-events)/nominee-correction.tsx'))
     expect(src).toContain('KNOWN_RELATIONSHIPS.map')
     expect(src).not.toMatch(/\bRELATIONSHIPS\.map/)
+    // …and KNOWN_RELATIONSHIPS itself EXCLUDES `other` (a pin on the name alone passed whatever it held).
+    expect(code(read('apps/mobile/components/life-events/NomineeForm.tsx'))).toMatch(
+      /export const KNOWN_RELATIONSHIPS = RELATIONSHIPS\.filter\(\(r\) => r !== 'other'\)/,
+    )
   })
 })
 
@@ -137,20 +193,43 @@ describe('Story 6.20 — the correction screen finds the claim and guards the st
   })
 
   it('⭐ the submit is disabled while the code prompt is open, and the prompt can be cancelled', () => {
-    const src = read('apps/mobile/app/(life-events)/nominee-correction.tsx')
+    const src = code(read('apps/mobile/app/(life-events)/nominee-correction.tsx'))
     expect(src).toContain('disabled={busy || stepUp.needsOtp}')
     expect(src).toContain('onPress={stepUp.reset}')
   })
 
+  it('⭐ a request that fails AFTER the code verified closes the prompt (⛔ a disabled submit and no new code); any VERIFY failure keeps it', () => {
+    const src = code(read('apps/mobile/app/(life-events)/nominee-correction.tsx'))
+    // "Verified" is set INSIDE the callback `verifyAndRetry` runs only after the code verified — ⛔ never
+    // inferred from an error code (a network error or a rate limit on the verify also used to close it).
+    expect(src).toMatch(/stepUp\.verifyAndRetry\(\(\) => \{\s*verified = true\s*return request\(\)\s*\}\)/)
+    expect(src).toMatch(/if \(verified\) stepUp\.reset\(\)/)
+    expect(src).not.toMatch(/auth\.step_up_failed/)
+  })
+
+  it('⭐ while the session loads there is a spinner, ⛔ never the announced "no claim" dead end', () => {
+    const src = code(read('apps/mobile/app/(life-events)/nominee-correction.tsx'))
+    const loading = src.indexOf('if (sessionLoading)')
+    const noClaim = src.indexOf('if (!claimCaseId)')
+    expect(loading).toBeGreaterThan(-1)
+    expect(noClaim).toBeGreaterThan(loading)
+  })
+
+  it('⭐ a member switch never keeps the previous member\'s typed draft', () => {
+    const src = code(read('apps/mobile/app/(life-events)/nominee-correction.tsx'))
+    expect(src).toContain('setForm(loadDraft<CorrectionDraft>(memberId, DRAFT_KEY) ?? EMPTY)')
+  })
+
+  it('⭐ family 13(d) — the locked state is announced on iOS too (the live region is Android-only)', () => {
+    const src = code(read('apps/mobile/app/(life-events)/nominees.tsx'))
+    expect(src).toMatch(/if \(locked && Platform\.OS === 'ios'\) \{\s*AccessibilityInfo\.announceForAccessibility\(/)
+  })
+
   it('⭐ family 13(a) — neither the done screen nor the locked screen groups its Button away', () => {
     // The container's OWN opening tag — ⛔ never a match spanning into a comment.
-    const tagOf = (src: string, testId: string): string => {
-      const m = src.match(new RegExp(`<YStack[^>]*testID="${testId}"[^>]*>`))
-      expect(m, testId).not.toBeNull()
-      return m![0]
-    }
-    expect(tagOf(read('apps/mobile/app/(life-events)/nominee-correction.tsx'), 'nominee-correction-done')).not.toContain('accessible')
-    expect(tagOf(read('apps/mobile/app/(life-events)/nominees.tsx'), 'nominees-locked')).not.toContain('accessible')
+    const tagOf = (src: string, testId: string): string => openingTagOf(code(src), 'YStack', testId)
+    expect(tagOf(read('apps/mobile/app/(life-events)/nominee-correction.tsx'), 'nominee-correction-done')).not.toMatch(/\baccessible\b/)
+    expect(tagOf(read('apps/mobile/app/(life-events)/nominees.tsx'), 'nominees-locked')).not.toMatch(/\baccessible\b/)
   })
 })
 

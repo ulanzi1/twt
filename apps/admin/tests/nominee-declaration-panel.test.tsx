@@ -63,6 +63,8 @@ const TIMELINE: NomineeDeclarationTimelineResponse = {
   earlier_determinations: [],
   declaration_status: 'undetermined',
   determination_recordable: true,
+  viewer: { can_determine: true, can_decide_district: true },
+  pending_corrections: { da_pending: 1, pa_pending: 1 },
 };
 
 const CORRECTION_ID = '33333333-3333-4333-8333-333333333333';
@@ -79,6 +81,7 @@ const CORRECTIONS: NomineeCorrectionListResponse = {
         relationship: 'daughter_in_law',
         name: { state: 'readable', value: 'Rani Kumari' },
         mobile: { state: 'readable', value: '9811111111' },
+        address: { state: 'readable', value: '4 Old Lane' },
       },
       proposed: {
         relationship: 'spouse',
@@ -100,7 +103,7 @@ const CORRECTIONS: NomineeCorrectionListResponse = {
       claim_case_id: TIMELINE.claim_case_id,
       rank: 2,
       target_version_id: V2,
-      target: { relationship: 'son', name: { state: 'readable', value: 'Ravi' }, mobile: null },
+      target: { relationship: 'son', name: { state: 'readable', value: 'Ravi' }, mobile: null, address: null },
       proposed: {
         relationship: 'son',
         name: { state: 'readable', value: 'Ravi Kumar' },
@@ -129,7 +132,7 @@ function setup(over: Partial<Parameters<typeof NomineeDeclarationPanel>[0]> = {}
     onShowDetails: vi.fn(),
     onDetermine: vi.fn(async () => undefined),
     corrections: CORRECTIONS,
-    onDecide: vi.fn(async () => undefined),
+    onDecide: vi.fn(async () => true),
     decideStep: 'district' as const,
     ...over,
   };
@@ -260,14 +263,52 @@ describe('<NomineeDeclarationPanel> — the timeline and the determination', () 
 });
 
 describe('<NomineeDeclarationPanel> — D10, the audited reveal', () => {
-  it('⭐ BEFORE the reveal: ⛔ no snapshot name, ⛔ no correction request (their names ARE in the props), only the reveal', () => {
-    // The corrections prop carries names — so a panel that ignored the gate WOULD render them.
-    setup({ detailsRequested: false });
-    expect(screen.queryByText('Rani Kumari')).toBeNull();
-    expect(screen.queryByText('Rani Devi')).toBeNull();
+  it('⭐ BEFORE the reveal: ⛔ no snapshot or correction name, mobile or address — EVEN WITH the data in the props', () => {
+    // ⭐ BOTH decrypted props are supplied (code review 2026-09-24b: the old test passed no snapshots, so its
+    // "no snapshot name" leg could not fail) — a panel gating on the DATA rather than the reveal WOULD show them.
+    setup({
+      detailsRequested: false,
+      snapshots: {
+        claim_case_id: TIMELINE.claim_case_id,
+        snapshots: [{ version_id: V1, name: { state: 'readable', value: 'Asha Devi' }, mobile: { state: 'readable', value: '9700000000' }, address: { state: 'readable', value: '9 Mill Road' } }],
+        live_determination: null,
+      },
+    });
+    const text = document.body.textContent ?? '';
+    for (const pii of ['Asha Devi', '9700000000', '9 Mill Road', 'Rani Kumari', 'Rani Devi', '9811111111', '9876543210', '12 Station Road', '4 Old Lane']) {
+      expect(text).not.toContain(pii);
+    }
     expect(screen.queryByTestId(`nominee-correction-${CORRECTION_ID}`)).toBeNull();
     expect(screen.getByTestId('nominee-corrections-gated')).toBeTruthy();
     expect(screen.getByTestId('nominee-show-details')).toBeTruthy();
+  });
+
+  it('⭐ D10 — "is a request waiting?" is answered BEFORE the reveal, from the METADATA count alone', () => {
+    // ⛔ No corrections prop, and counts that differ from any list — a panel counting decrypted data would fail.
+    setup({ detailsRequested: false, corrections: undefined, timeline: { ...TIMELINE, pending_corrections: { da_pending: 3, pa_pending: 0 } } });
+    expect(screen.getByTestId('nominee-corrections-pending-count').textContent).toBe(
+      '3 waiting for the District Admin, 0 waiting for the Pariwar Admin.',
+    );
+  });
+
+  it('⛔ a decrypted date/note belonging to ANOTHER determination is not shown under this one', () => {
+    setup({
+      detailsRequested: true,
+      timeline: {
+        ...TIMELINE,
+        live_determination: { determination_id: D1, decided_at: '2026-06-20T06:00:00.000Z', decided_by_display: 'Anita', marks: [] },
+      },
+      snapshots: {
+        claim_case_id: TIMELINE.claim_case_id,
+        snapshots: [],
+        live_determination: {
+          determination_id: '00000000-0000-4000-8000-0000000000d2',
+          certificate_date: { state: 'readable', value: '2026-04-01' },
+          note: { state: 'readable', value: 'An older look' },
+        },
+      },
+    });
+    expect(screen.queryByTestId('nominee-declaration-last-details')).toBeNull();
   });
 
   it('the reveal asks the parent (the audited read); snapshots render once supplied', () => {
@@ -339,6 +380,8 @@ describe('<NomineeDeclarationPanel> — nominee corrections', () => {
     expect(card.textContent).toContain('Rani Devi');
     expect(card.textContent).toContain('9876543210');
     expect(card.textContent).toContain('12 Station Road');
+    // AC7 "beside the old and new details" — the address ON RECORD too.
+    expect(card.textContent).toContain('4 Old Lane');
     expect(card.textContent).toContain('Daughter-in-law');
     expect(card.textContent).toContain('Spouse');
     expect(card.textContent).toContain('Waiting for the District Admin');
@@ -352,6 +395,40 @@ describe('<NomineeDeclarationPanel> — nominee corrections', () => {
     expect(screen.queryByTestId(`nominee-correction-approve-${PA_CORRECTION_ID}`)).toBeNull();
     // ⛔ The console renders no raise form (the helpline's surface does).
     expect(screen.queryByTestId('nominee-correction-raise')).toBeNull();
+  });
+
+  it('⭐ a VERIFIER (no determine / step-1 key) reads the history but is ⛔ not offered the form or step 1', () => {
+    setup({ detailsRequested: true, timeline: { ...TIMELINE, viewer: { can_determine: false, can_decide_district: false } } });
+    // It READS the history — every version row renders …
+    for (const v of [V1, V2]) expect(screen.getByTestId(`nominee-version-${v}`)).toBeTruthy();
+    // … but is offered ⛔ no control.
+    expect(screen.queryByTestId('nominee-determination-strip')).toBeNull();
+    expect(screen.queryByTestId(`mark-${V1}-stands`)).toBeNull();
+    expect(screen.getByTestId('nominee-determination-not-permitted').textContent).toMatch(/Only the District Admin/);
+    expect(screen.queryByTestId(`nominee-correction-approve-${CORRECTION_ID}`)).toBeNull();
+    expect(screen.getByTestId(`nominee-correction-not-permitted-${CORRECTION_ID}`)).toBeTruthy();
+  });
+
+  it('⭐ a REFUSED decision keeps the typed note; a recorded one clears it', async () => {
+    const onDecide = vi.fn().mockResolvedValueOnce(false).mockResolvedValueOnce(true);
+    setup({ detailsRequested: true, onDecide });
+    const note = () => screen.getByTestId(`nominee-correction-note-${CORRECTION_ID}`) as HTMLTextAreaElement;
+    fireEvent.change(note(), { target: { value: 'Married name, same person.' } });
+    fireEvent.click(screen.getByTestId(`nominee-correction-approve-${CORRECTION_ID}`));
+    await waitFor(() => expect(onDecide).toHaveBeenCalledTimes(1));
+    // ⭐ Let the component's own continuation (after `await onDecide`) run BEFORE reading the note.
+    await new Promise((r) => setTimeout(r, 20));
+    expect(note().value).toBe('Married name, same person.');
+    fireEvent.click(screen.getByTestId(`nominee-correction-approve-${CORRECTION_ID}`));
+    await waitFor(() => expect(onDecide).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(note().value).toBe(''));
+  });
+
+  it('a failed corrections read offers a retry that calls back', () => {
+    const onRetryCorrections = vi.fn();
+    setup({ detailsRequested: true, corrections: undefined, correctionsError: 'The correction requests could not be loaded.', onRetryCorrections });
+    fireEvent.click(screen.getByTestId('nominee-corrections-retry'));
+    expect(onRetryCorrections).toHaveBeenCalledTimes(1);
   });
 
   it('⛔ a step without a note is refused in the form; with a note it goes to the DISTRICT step', async () => {
@@ -379,7 +456,7 @@ describe('<NomineeDeclarationPanel> — nominee corrections', () => {
       <NomineeCorrections
         corrections={{ ...CORRECTIONS, corrections: [CORRECTIONS.corrections[1]!, { ...CORRECTIONS.corrections[1]!, correction_id: CORRECTION_ID, rank: 1 }] }}
         decideStep="pariwar"
-        onDecide={vi.fn(async () => undefined)}
+        onDecide={vi.fn(async () => true)}
         resetKey="k"
       />,
     );
@@ -389,11 +466,43 @@ describe('<NomineeDeclarationPanel> — nominee corrections', () => {
     expect(screen.getByTestId(`nominee-correction-${CORRECTION_ID}`).querySelector('[role="status"]')).toBeNull();
   });
 
-  it('family 13(d) — an approval / decline outcome is ANNOUNCED', () => {
-    render(<NomineeCorrections corrections={CORRECTIONS} decideStep="pariwar" onDecide={vi.fn(async () => undefined)} decided resetKey="k" />);
+  it('⭐ family 13(d) — the OUTCOME is announced: approval and decline in different words', () => {
+    const { rerender } = render(
+      <NomineeCorrections corrections={CORRECTIONS} decideStep="pariwar" onDecide={vi.fn(async () => true)} decidedOutcome="approve" resetKey="k" />,
+    );
     const live = screen.getByTestId('nominee-correction-decided');
     expect(live.getAttribute('role')).toBe('status');
-    expect(live.textContent).toMatch(/recorded/i);
+    expect(live.textContent).toBe('Your approval was recorded.');
+    rerender(<NomineeCorrections corrections={CORRECTIONS} decideStep="pariwar" onDecide={vi.fn(async () => true)} decidedOutcome="decline" resetKey="k" />);
+    expect(screen.getByTestId('nominee-correction-decided').textContent).toBe('Your decline was recorded.');
+  });
+
+  it('⛔ where the PAGE announces the outcome, the section adds ⛔ no second live region', () => {
+    render(
+      <NomineeCorrections corrections={CORRECTIONS} decideStep="pariwar" onDecide={vi.fn(async () => true)} decidedOutcome="approve" announceDecided={false} resetKey="k" />,
+    );
+    expect(screen.queryByTestId('nominee-correction-decided')).toBeNull();
+  });
+
+  it('⭐ family 13(d) — a DISCARDED mark is stated in words on the timeline', () => {
+    setup({
+      timeline: {
+        ...TIMELINE,
+        // ⛔ No determination form — its radio LABELS say "Stands"/"Discarded" in every row whatever the mark.
+        determination_recordable: false,
+        live_determination: {
+          determination_id: D1,
+          decided_at: '2026-06-20T06:00:00.000Z',
+          decided_by_display: 'Anita',
+          marks: [
+            { version_id: V1, mark: 'stands' },
+            { version_id: V2, mark: 'discarded' },
+          ],
+        },
+      },
+    });
+    expect(screen.getByTestId(`nominee-version-${V2}`).textContent).toMatch(/Discarded/i);
+    expect(screen.getByTestId(`nominee-version-${V1}`).textContent).toMatch(/Stands/i);
   });
 });
 
@@ -407,11 +516,47 @@ describe('<NomineeCorrectionRaiseForm> — the helpline raise', () => {
     expect(options.find((o) => o.value === 'niece_nephew')?.textContent).toBe('Niece / Nephew');
   });
 
-  it('⭐ after a SUCCESSFUL send the form clears and the send is announced', () => {
-    const { rerender } = render(<NomineeCorrectionRaiseForm onRaise={vi.fn(async () => undefined)} sentCount={0} resetKey="k" />);
-    fireEvent.change(screen.getByTestId('raise-name'), { target: { value: 'Rani Devi' } });
-    rerender(<NomineeCorrectionRaiseForm onRaise={vi.fn(async () => undefined)} sentCount={1} resetKey="k" />);
+  const fill = (over: { name?: string; mobile?: string } = {}) => {
+    fireEvent.change(screen.getByTestId('raise-name'), { target: { value: over.name ?? 'Rani Devi' } });
+    fireEvent.change(screen.getByTestId('raise-relationship'), { target: { value: 'spouse' } });
+    fireEvent.change(screen.getByTestId('raise-mobile'), { target: { value: over.mobile ?? '9876543210' } });
+    fireEvent.change(screen.getByTestId('raise-note'), { target: { value: 'Married name' } });
+  };
+
+  it('⭐ a send leaves the form UNTOUCHED until the parent reports success (its `sentCount` bump) — then it clears and announces', async () => {
+    // ⭐ A REAL send (code review 2026-09-24b: the old test bumped `sentCount` without ever sending). The form
+    // cannot tell success from failure — the parent swallows both and bumps `sentCount` on success ONLY — so
+    // "a failed send keeps the fields" IS "no bump ⇒ no clear".
+    const onRaise = vi.fn(async () => undefined);
+    const { rerender } = render(<NomineeCorrectionRaiseForm onRaise={onRaise} sentCount={0} resetKey="k" />);
+    fill();
+    fireEvent.click(screen.getByTestId('raise-submit'));
+    await waitFor(() => expect(onRaise).toHaveBeenCalledTimes(1));
+    await new Promise((r) => setTimeout(r, 20));
+    expect(onRaise).toHaveBeenCalledWith({ rank: 1, proposed: { name: 'Rani Devi', relationship: 'spouse', mobile: '9876543210' }, note: 'Married name' });
+    // The parent did ⛔ not bump (the send failed) — nothing is lost.
+    expect((screen.getByTestId('raise-name') as HTMLInputElement).value).toBe('Rani Devi');
+    expect(screen.getByTestId('raise-sent').textContent).toBe('');
+    rerender(<NomineeCorrectionRaiseForm onRaise={onRaise} sentCount={1} resetKey="k" />);
     expect((screen.getByTestId('raise-name') as HTMLInputElement).value).toBe('');
     expect(screen.getByTestId('raise-sent').textContent).toMatch(/sent/i);
+  });
+
+  it('⭐ a non-English name or a malformed mobile is NAMED before sending (⛔ never a generic 400)', () => {
+    const onRaise = vi.fn(async () => undefined);
+    render(<NomineeCorrectionRaiseForm onRaise={onRaise} sentCount={0} resetKey="k" />);
+    fill({ name: 'रानी देवी' });
+    fireEvent.click(screen.getByTestId('raise-submit'));
+    expect(screen.getByTestId('raise-invalid').textContent).toMatch(/English letters/);
+    fill({ mobile: '98765' });
+    fireEvent.click(screen.getByTestId('raise-submit'));
+    expect(screen.getByTestId('raise-invalid').textContent).toMatch(/10-digit/);
+    expect(onRaise).not.toHaveBeenCalled();
+  });
+
+  it('family 13(c) — a disabled Send STATES why', () => {
+    render(<NomineeCorrectionRaiseForm onRaise={vi.fn(async () => undefined)} sentCount={0} resetKey="k" disabled disabledReason="Choose the claim first." />);
+    expect(screen.getByTestId('raise-submit').getAttribute('aria-describedby')).toBe('raise-submit-reason');
+    expect(screen.getByTestId('raise-submit-reason').textContent).toBe('Choose the claim first.');
   });
 });

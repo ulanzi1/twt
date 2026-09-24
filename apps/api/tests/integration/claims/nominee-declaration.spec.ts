@@ -294,6 +294,11 @@ describe.skipIf(!hasDatabase)('Story 6.20 — the nominee declaration surface �
       expect(res.body, `${method} ${url}`).not.toContain(y.claimCaseId);
     }
     expect(await writesOn(y.claimCaseId)).toEqual({ determinations: 0, corrections: 0 });
+    // ⭐ POSITIVE CONTROL (code review 2026-09-24b) — the SAME client, with the SAME grants, DOES reach X: the
+    // refusals above are the tenant boundary, ⛔ not a session or grants that never took.
+    expect((await client.inject({ method: 'GET', url: `/api/v1/p/${x.pariwarId}/admin/nominee-refusals` })).statusCode).toBe(200);
+    expect((await client.inject({ method: 'GET', url: `/api/v1/p/${x.pariwarId}/admin/nominee-corrections/pending` })).statusCode).toBe(200);
+    expect((await client.inject({ method: 'GET', url: `${base(x.pariwarId, x.claimCaseId)}/nominee-declaration` })).statusCode).toBe(200);
   });
 
   it('⭐ family 3 — a TAMPERED session naming a non-human actor id is DENIED on every route, ⛔ never treated as the human (the verifier-decision pattern)', async () => {
@@ -305,8 +310,10 @@ describe.skipIf(!hasDatabase)('Story 6.20 — the nominee declaration surface �
     ]);
     for (const [method, url, payload] of allRoutes(w.pariwarId, w.claimCaseId)) {
       const res = await client.inject({ method: method as 'GET' | 'POST', url, payload });
-      // The swapped id holds no membership in this Pariwar: `scopeResolutionHook` treats it as any non-member.
-      expect([401, 403, 404], `${method} ${url}`).toContain(res.statusCode);
+      // The swapped id holds no membership in this Pariwar: `scopeResolutionHook` treats it as any non-member —
+      // EXACTLY 404, the precedent this cites (`verifier-decision.spec.ts`). ⛔ A 401 would pass without ever
+      // reaching scope resolution (code review 2026-09-24b).
+      expect(res.statusCode, `${method} ${url}`).toBe(404);
     }
     expect(await writesOn(w.claimCaseId)).toEqual({ determinations: 0, corrections: 0 });
   });
@@ -689,10 +696,182 @@ describe.skipIf(!hasDatabase)('Story 6.20 — the nominee declaration surface �
         }),
       );
     await expect(appeal()).resolves.toMatchObject({ claimState: expect.any(String) });
-    // ⭐ ONCE: a second appeal on the same refusal is refused.
-    await expect(appeal()).rejects.toThrow();
+    // ⭐ ONCE — proven by the ONCE-RULE itself (code review 2026-09-24b). Straight after the first appeal the
+    // claim is no longer `denied`, so a second attempt would be refused by the STATE guard
+    // (`AppealNotDeniedError`) and never reach D-F. Bring it back to `denied` — stage 1 UPHOLDS the refusal —
+    // so the only thing left to refuse the second appeal is "a journey already exists".
+    await inScope(w.pariwarId, (s) =>
+      claim.projectClaimState(s.client, {
+        claimCaseId: ids.claimId(w.claimCaseId),
+        pariwarId: ids.pariwarId(w.pariwarId),
+        deceasedMemberId: ids.memberId(w.memberId),
+        intakeChannels: ['helpline'],
+        claimantActorId: null,
+        eventType: 'claim.appeal_stage1_reviewed' as never,
+        payload: { from_state: 'appeal_stage_1', to_state: 'denied', trigger: 'seed', actor: 'system', decision: 'upheld' } as never,
+        actorId: null,
+      }),
+    );
+    await expect(appeal()).rejects.toBeInstanceOf(claim.AppealAlreadyExhaustedError);
     await inScope(w.pariwarId, async (s) => {
-      await expect(claim.assertAppealInitiable(s.tx, ids.pariwarId(w.pariwarId), ids.claimId(w.claimCaseId))).rejects.toThrow();
+      await expect(claim.assertAppealInitiable(s.tx, ids.pariwarId(w.pariwarId), ids.claimId(w.claimCaseId))).rejects.toBeInstanceOf(
+        claim.AppealAlreadyExhaustedError,
+      );
     });
+  });
+
+  // ── Code review 2026-09-24b ─────────────────────────────────────────────────────────────────────
+  it('⭐⭐ AC4 — a failure mid-way through the determination leaves NEITHER the row, the items nor the event — proven at the REAL transaction boundary, from a second connection', async () => {
+    const w = await world();
+    const cid = ids.claimId(w.claimCaseId);
+    const pid = ids.pariwarId(w.pariwarId);
+    const input = await inScope(w.pariwarId, async (s) => {
+      const versions = await nominee.listNomineeDeclarationVersions(s.tx, pid, ids.memberId(w.memberId));
+      return {
+        claimCaseId: cid,
+        pariwarId: pid,
+        certificateDate: CERT,
+        certificateDateCiphertext: 'enc:v1:certificate-date',
+        noteCiphertext: 'enc:v1:note',
+        marks: versions.map((v) => ({ versionId: v.versionId, mark: 'stands' as const })),
+        watermark: { rank1: 1, rank2: null },
+        expectedLiveDeterminationId: null,
+        actorId: randomUUID(),
+        actorDisplay: 'Anita (District Admin)',
+        actor: 'operator' as const,
+      };
+    });
+    // The handler's own pattern (`openScopeTx` → write → `closeScopeTx(…, ok)`): the event schema refuses the
+    // actor AFTER the row and items are written — the whole transaction must go.
+    // ⭐ The EVENT's schema refuses it — pinned by type (adversarial review 2026-09-24b: `toThrow()` accepted any
+    // error, including one thrown before any write). That it fails AFTER the row + items is proven in the domain
+    // spec; ⚠ `inScope` is the same `openScopeTx` / `closeScopeTx(…, false)` pair the handler composes — this
+    // proves that pair's rollback, ⛔ not the handler's `ok` bookkeeping (covered by construction there).
+    await expect(inScope(w.pariwarId, (s) => claim.recordNomineeDetermination(s.client, { ...input, actor: 'not-an-actor' as never }))).rejects.toSatisfy(
+      (err: unknown) => (err as Error).name === 'ZodError',
+    );
+    const events = async () =>
+      (
+        await td.pool.query<{ n: number }>(
+          `SELECT count(*)::int AS n FROM events_log WHERE stream_id = $1 AND event_type = 'claim.nominee_determination_recorded'`,
+          [w.claimCaseId],
+        )
+      ).rows[0]!.n;
+    const items = async () =>
+      (
+        await td.pool.query<{ n: number }>(
+          `SELECT count(*)::int AS n FROM nominee_determination_items i JOIN nominee_determinations d USING (determination_id) WHERE d.claim_case_id = $1`,
+          [w.claimCaseId],
+        )
+      ).rows[0]!.n;
+    expect(await writesOn(w.claimCaseId)).toEqual({ determinations: 0, corrections: 0 });
+    expect(await items()).toBe(0);
+    expect(await events()).toBe(0);
+    // POSITIVE CONTROL — the same input, well-formed, COMMITS all three.
+    await inScope(w.pariwarId, (s) => claim.recordNomineeDetermination(s.client, input));
+    expect(await writesOn(w.claimCaseId)).toEqual({ determinations: 1, corrections: 0 });
+    expect(await items()).toBe(1);
+    expect(await events()).toBe(1);
+  });
+
+  it('⭐ family 8 — an actor with NO display name is BLOCKED on the determination and on BOTH correction steps, each audited `_rejected` (⛔ nothing written)', async () => {
+    const w = await world();
+    const da = await actor(w.pariwarId, 'district_admin', 'district', w.district, 'Anita (District Admin)');
+    const helpline = await actor(w.pariwarId, 'helpline_operator', 'pariwar', w.pariwarId, 'Harsh (Helpline)');
+    const pa = await actor(w.pariwarId, 'pariwar_admin', 'pariwar', w.pariwarId, 'Kalpana (Pariwar Admin)');
+    const unnamed = (userId: string) => td.pool.query(`UPDATE users SET display_name = NULL WHERE id = $1`, [userId]);
+    const named = (userId: string, n: string) => td.pool.query(`UPDATE users SET display_name = $2 WHERE id = $1`, [userId, n]);
+
+    // (1) The determination — refused BEFORE the domain is reached (`resolveDisplay`), and still audited.
+    await unnamed(da.userId);
+    const refused = await determineHonestly(da.client, w.pariwarId, w.claimCaseId);
+    expect(refused.statusCode).toBe(409);
+    expect(errCode(refused.json() as Json)).toBe('admin.display_name_missing');
+    expect(auditsFor('admin_claim.nominee_determination_rejected', w.claimCaseId)).toHaveLength(1);
+    expect(await writesOn(w.claimCaseId)).toEqual({ determinations: 0, corrections: 0 });
+
+    // A named District Admin determines; the helpline raises.
+    await named(da.userId, 'Anita (District Admin)');
+    expect((await determineHonestly(da.client, w.pariwarId, w.claimCaseId)).statusCode).toBe(201);
+    const raise = await helpline.client.inject({
+      method: 'POST',
+      url: `${base(w.pariwarId, w.claimCaseId)}/nominee-corrections`,
+      payload: { rank: 1, proposed: { name: 'Asha Kumari', relationship: 'spouse', mobile: '9876543210' }, note: 'Maiden name.' },
+    });
+    expect(raise.statusCode).toBe(201);
+    const { correction_id } = raise.json() as { correction_id: string };
+    const decide = (c: Client, which: 'district' | 'pariwar') =>
+      c.inject({
+        method: 'POST',
+        url: `${base(w.pariwarId, w.claimCaseId)}/nominee-corrections/${correction_id}/${which}-decision`,
+        payload: { outcome: 'approve', note: 'Seen.' },
+      });
+    const stepOf = async () =>
+      (await td.pool.query<{ step: string }>(`SELECT step FROM nominee_corrections WHERE correction_id = $1`, [correction_id])).rows[0]!.step;
+
+    // (2) Step 1 without a name.
+    await unnamed(da.userId);
+    const s1 = await decide(da.client, 'district');
+    expect([s1.statusCode, errCode(s1.json() as Json)]).toEqual([409, 'admin.display_name_missing']);
+    expect(await stepOf()).toBe('da_pending');
+    await named(da.userId, 'Anita (District Admin)');
+    expect((await decide(da.client, 'district')).statusCode).toBe(200);
+
+    // (3) Step 2 without a name.
+    await unnamed(pa.userId);
+    const s2 = await decide(pa.client, 'pariwar');
+    expect([s2.statusCode, errCode(s2.json() as Json)]).toEqual([409, 'admin.display_name_missing']);
+    expect(await stepOf()).toBe('pa_pending');
+    const rejected = auditsFor('admin_claim.nominee_correction_rejected', w.claimCaseId);
+    expect(rejected.map((e) => (e.context as Json).step)).toEqual(['district', 'pariwar']);
+  });
+
+  it('⭐ the timeline says what THIS viewer may do (a verifier: nothing; a District Admin: determine + step 1) and how many requests wait — metadata only', async () => {
+    const w = await world();
+    const da = await actor(w.pariwarId, 'district_admin', 'district', w.district, 'Anita (District Admin)');
+    const verifier = await actor(w.pariwarId, 'verifier', 'district', w.district, 'Vikram (Verifier)');
+    const helpline = await actor(w.pariwarId, 'helpline_operator', 'pariwar', w.pariwarId, 'Harsh (Helpline)');
+    expect((await determineHonestly(da.client, w.pariwarId, w.claimCaseId)).statusCode).toBe(201);
+    const read = async (c: Client) => {
+      const res = await c.inject({ method: 'GET', url: `${base(w.pariwarId, w.claimCaseId)}/nominee-declaration` });
+      expect(res.statusCode).toBe(200);
+      return res.json() as { viewer: Json; pending_corrections: Json };
+    };
+    expect((await read(da.client)).viewer).toEqual({ can_determine: true, can_decide_district: true });
+    expect((await read(verifier.client)).viewer).toEqual({ can_determine: false, can_decide_district: false });
+    expect((await read(da.client)).pending_corrections).toEqual({ da_pending: 0, pa_pending: 0 });
+    await helpline.client.inject({
+      method: 'POST',
+      url: `${base(w.pariwarId, w.claimCaseId)}/nominee-corrections`,
+      payload: { rank: 1, proposed: { name: 'Asha Kumari', relationship: 'spouse', mobile: '9876543210' }, note: 'Maiden name.' },
+    });
+    const after = await da.client.inject({ method: 'GET', url: `${base(w.pariwarId, w.claimCaseId)}/nominee-declaration` });
+    expect((after.json() as Json).pending_corrections).toEqual({ da_pending: 1, pa_pending: 0 });
+    // ⛔ Still metadata only — the count carries no name.
+    expect(after.body).not.toContain('Asha');
+  });
+
+  it('⭐ the helpline raise finds the claim from the SELECTED member (BigDev 2026-09-24b) — the raise key only, ⛔ another Pariwar\'s member is empty', async () => {
+    const w = await world();
+    const other = await world();
+    const helpline = await actor(w.pariwarId, 'helpline_operator', 'pariwar', w.pariwarId, 'Harsh (Helpline)');
+    const da = await actor(w.pariwarId, 'district_admin', 'district', w.district, 'Anita (District Admin)');
+    const url = (p: string, m: string) => `/api/v1/p/${p}/admin/members/${m}/nominee-corrections/claims`;
+
+    const res = await helpline.client.inject({ method: 'GET', url: url(w.pariwarId, w.memberId) });
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toEqual({
+      member_id: w.memberId,
+      claims: [{ claim_case_id: w.claimCaseId, claim_state: 'verifier_review', created_at: expect.any(String) }],
+    });
+    // ⛔ No PII in the list.
+    expect(res.body).not.toContain('Asha');
+    // Another Pariwar's member, asked from THIS Pariwar ⇒ nothing (RLS + the explicit predicate).
+    const cross = await helpline.client.inject({ method: 'GET', url: url(w.pariwarId, other.memberId) });
+    expect(cross.statusCode).toBe(200);
+    expect((cross.json() as { claims: unknown[] }).claims).toEqual([]);
+    // ⛔ Not the District Admin's to read (the raise key), and ⛔ not without a session.
+    expect((await da.client.inject({ method: 'GET', url: url(w.pariwarId, w.memberId) })).statusCode).toBe(403);
+    expect((await makeClient(app).inject({ method: 'GET', url: url(w.pariwarId, w.memberId) })).statusCode).toBe(401);
   });
 });

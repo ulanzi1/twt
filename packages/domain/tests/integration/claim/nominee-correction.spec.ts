@@ -151,6 +151,13 @@ describe.skipIf(!hasDatabase)('Story 6.20 — the nominee correction (:5433)', {
     await expect(raiseNomineeCorrection(outside.client, raise(outside.cid))).rejects.toSatisfy(
       refusedWith('outside_state_window'),
     );
+    // ⭐ …and AFTER the lock's window too — a SETTLED claim (code review 2026-09-24b: only the before-window
+    // leg was tested, while AC11(vii) names a post-lock state).
+    const settled = await setup();
+    await settled.tx.execute(sql.raw("SET LOCAL app.claim_state_writer = 'on'"));
+    await settled.tx.execute(sql`UPDATE claims SET current_state = 'settled' WHERE claim_case_id = ${settled.cid}`);
+    await settled.tx.execute(sql.raw("SET LOCAL app.claim_state_writer = 'off'"));
+    await expect(raiseNomineeCorrection(settled.client, raise(settled.cid))).rejects.toSatisfy(refusedWith('outside_state_window'));
     const inside = await setup();
     const res = await raiseNomineeCorrection(inside.client, raise(inside.cid));
     expect(res.correctionId).toMatch(/^[0-9a-f-]{36}$/);
@@ -256,16 +263,19 @@ describe.skipIf(!hasDatabase)('Story 6.20 — the nominee correction (:5433)', {
     // ⭐ invariant 5 — positioned where the corrected version was, though recorded now.
     expect(applied.effectiveAt.toISOString()).toBe(target!.effectiveAt.toISOString());
     expect(applied.recordedAt.getTime()).toBeGreaterThan(target!.recordedAt.getTime());
-    // D16 — the projection is the LATEST version, i.e. the corrected nominee.
+    // D16 — the corrected version was the rank's HEAD, so the projection takes it (D16 as amended 2026-09-24b).
     const [proj] = await tx.select().from(schema.memberNominees).where(eq(schema.memberNominees.memberId, mid));
     expect(proj!.nameCiphertext).toBe('enc:v1:rani-devi');
-    // AC1 — the member stream records it, `source: 'correction'`, ⛔ no PII.
+    // AC1 — the member stream records it, `source: 'correction'`, ⛔ no PII. Exactly ONE such event (the seeds
+    // write none), ORDERED (code review 2026-09-24b).
     const ev = await tx
       .select()
       .from(schema.eventsLog)
-      .where(and(eq(schema.eventsLog.streamId, mid), eq(schema.eventsLog.eventType, 'member.nominees_declared')));
-    expect(ev.at(-1)!.payload).toMatchObject({ source: 'correction', versions: [{ rank: 1, version_no: 2, kind: 'declared' }] });
-    expect(JSON.stringify(ev.at(-1)!.payload)).not.toContain('rani');
+      .where(and(eq(schema.eventsLog.streamId, mid), eq(schema.eventsLog.eventType, 'member.nominees_declared')))
+      .orderBy(schema.eventsLog.eventVersion);
+    expect(ev).toHaveLength(1);
+    expect(ev[0]!.payload).toMatchObject({ source: 'correction', versions: [{ rank: 1, version_no: 2, kind: 'declared' }] });
+    expect(JSON.stringify(ev[0]!.payload)).not.toContain('rani');
   });
 
   it('⭐⭐ correction-then-determination ordering: the applied correction SUPERSEDES the determination, and AC5\'s 409 fires again', async () => {
@@ -335,12 +345,64 @@ describe.skipIf(!hasDatabase)('Story 6.20 — the nominee correction (:5433)', {
     // The correction lives in the version history …
     const applied = (await listNomineeDeclarationVersions(tx, PARIWAR_A, mid)).find((v) => v.versionId === res.appliedVersionId)!;
     expect(applied).toMatchObject({ rank: 2, source: 'correction', splitPct: 25 });
-    // … and the member event describes the UNCHANGED projection.
+    // … and the member event describes the UNCHANGED projection. ⭐ Exactly ONE such event (the seeds write
+    // none) and ORDERED — an unordered `.at(-1)` could pick any row (code review 2026-09-24b).
     const ev = await tx
       .select()
       .from(schema.eventsLog)
-      .where(and(eq(schema.eventsLog.streamId, mid), eq(schema.eventsLog.eventType, 'member.nominees_declared')));
-    expect(ev.at(-1)!.payload).toMatchObject({ source: 'correction', nominee_count: 1, split: 'sole' });
+      .where(and(eq(schema.eventsLog.streamId, mid), eq(schema.eventsLog.eventType, 'member.nominees_declared')))
+      .orderBy(schema.eventsLog.eventVersion);
+    expect(ev).toHaveLength(1);
+    expect(ev[0]!.payload).toMatchObject({ source: 'correction', nominee_count: 1, split: 'sole' });
+  });
+
+  it('⭐⭐ a correction on a HELD rank whose row is the member\'s POST-death declaration leaves that row UNTOUCHED — ⛔ never a row mixing two declarations (BigDev 2026-09-24b, option a)', async () => {
+    // Before the death {1: spouse 100}; after it {1: son 75, 2: daughter 25}; the determination keeps v1.
+    const { client, tx, cid, mid } = await setup();
+    await seedNomineeDeclaration(tx, PARIWAR_A, mid, {
+      nominees: [
+        { relationship: 'son', nameCiphertext: 'enc:v1:post-death-rank-1' },
+        { relationship: 'daughter', nameCiphertext: 'enc:v1:post-death-rank-2' },
+      ],
+      declaredAt: new Date('2026-06-01T06:00:00.000Z'),
+      ensureMember: false,
+    });
+    const versions = await listNomineeDeclarationVersions(tx, PARIWAR_A, mid);
+    await seedNomineeDetermination(client, PARIWAR_A, cid, {
+      certificateDate: '2026-05-01',
+      marks: versions.map((v) => ({ versionId: v.versionId, mark: v.versionNo === 1 && v.rank === 1 ? 'stands' : 'discarded' })),
+    });
+    const { correctionId } = await raiseNomineeCorrection(client, raise(cid, { rank: 1, proposedRelationship: 'spouse' }));
+    await decideNomineeCorrectionAsDistrictAdmin(client, step(cid, correctionId, DA));
+    const res = await decideNomineeCorrectionAsPariwarAdmin(client, step(cid, correctionId, PA));
+    expect(res.step).toBe('applied');
+
+    // The projection is the member's own post-death declaration, byte-for-byte — name, relationship AND split.
+    const proj = await tx.select().from(schema.memberNominees).where(eq(schema.memberNominees.memberId, mid)).orderBy(schema.memberNominees.rank);
+    expect(proj.map((r) => [r.rank, r.nameCiphertext, r.relationship, r.splitPct])).toEqual([
+      [1, 'enc:v1:post-death-rank-1', 'son', 75],
+      [2, 'enc:v1:post-death-rank-2', 'daughter', 25],
+    ]);
+    // The correction lives in the version history, at the CORRECTED version's split (100) …
+    const applied = (await listNomineeDeclarationVersions(tx, PARIWAR_A, mid)).find((v) => v.versionId === res.appliedVersionId)!;
+    expect(applied).toMatchObject({ rank: 1, source: 'correction', splitPct: 100, nameCiphertext: 'enc:v1:rani-devi' });
+  });
+
+  it('⭐ …and when the corrected version IS the rank\'s head, the projection takes the correction — and the admin search summary shows the corrected relationship at once', async () => {
+    const { client, tx, cid, mid } = await setup();
+    const { correctionId } = await raiseNomineeCorrection(client, raise(cid, { rank: 1, proposedRelationship: 'mother' }));
+    await decideNomineeCorrectionAsDistrictAdmin(client, step(cid, correctionId, DA));
+    await decideNomineeCorrectionAsPariwarAdmin(client, step(cid, correctionId, PA));
+
+    const proj = await tx.select().from(schema.memberNominees).where(eq(schema.memberNominees.memberId, mid));
+    expect(proj.map((r) => [r.rank, r.nameCiphertext, r.relationship, r.splitPct])).toEqual([[1, 'enc:v1:rani-devi', 'mother', 100]]);
+    // ⭐ The search projection is refreshed by the member-stream append — which now runs AFTER the projection
+    // write (code review 2026-09-24b: before it, the summary kept 'spouse' until the member's next event).
+    const [search] = await tx
+      .select({ nomineeSummary: schema.memberSearchProjection.nomineeSummary })
+      .from(schema.memberSearchProjection)
+      .where(eq(schema.memberSearchProjection.memberId, mid));
+    expect(search!.nomineeSummary.map((n) => n.relationship)).toEqual(['mother']);
   });
 
   it('⛔ the Pariwar Admin cannot apply a correction whose target STOPPED standing after step 1 (a redetermination moved it)', async () => {

@@ -436,6 +436,68 @@ describe.skipIf(!hasDatabase)('Nominee name-check surface — E2E (:5433)', () =
       expect(body.nominee_declared_at).not.toBeNull();
     });
 
+    it('⭐ AC5 — the names and `nominee_declared_at` come from the EFFECTIVE (as-at-death) declaration, ⛔ never the current projection (code review 2026-09-24b)', async () => {
+      const pariwarId = randomUUID();
+      const district = `D-${randomUUID().slice(0, 8)}`;
+      const { client, userId } = await authenticate();
+      await grant(userId, pariwarId, 'district_admin', 'district', district);
+      const memberId = await seedDeceasedMember(pariwarId, district);
+      await seedNominee(pariwarId, memberId, 1, 'Asha Devi', 'spouse', 100); // v1 — effective 2026-01-05
+      const claimCaseId = await seedClaim(pariwarId, memberId);
+      // A POST-death v2 lands in the projection AND the history — the current rows now name someone else.
+      const lateName = await encryptNomineeField('Mohan Lal', pariwarId, deps.encryption);
+      const c = await td.pool.connect();
+      try {
+        await c.query(`UPDATE member_nominees SET name_ciphertext = $2, relationship = 'son' WHERE member_id = $1 AND rank = 1`, [memberId, lateName]);
+        await c.query(
+          `INSERT INTO member_nominee_versions
+             (member_id, pariwar_id, rank, version_no, declaration_id, kind, source, name_ciphertext, relationship,
+              mobile_ciphertext, address_ciphertext, split_pct, recorded_at, effective_at)
+           SELECT member_id, pariwar_id, 1, 2, gen_random_uuid(), 'declared', 'member', $2, 'son',
+                  mobile_ciphertext, address_ciphertext, 100, '2026-06-10T06:00:00Z', '2026-06-10T06:00:00Z'
+             FROM member_nominee_versions WHERE member_id = $1 AND rank = 1 AND version_no = 1`,
+          [memberId, lateName],
+        );
+      } finally {
+        c.release();
+      }
+      // The District Admin redetermines against a May certificate: v1 stands, the June v2 is discarded.
+      const scopeTx = await openScopeTx(deps, pariwarId);
+      try {
+        const pid = ids.pariwarId(pariwarId);
+        const cid = ids.claimId(claimCaseId);
+        const versions = await nominee.listNomineeDeclarationVersions(scopeTx.tx, pid, memberId);
+        const live = await claim.getLiveNomineeDetermination(scopeTx.tx, pid, cid);
+        await claim.recordNomineeDetermination(scopeTx.client, {
+          claimCaseId: cid,
+          pariwarId: pid,
+          certificateDate: '2026-05-01',
+          certificateDateCiphertext: 'enc:v1:certificate-date',
+          noteCiphertext: 'enc:v1:determination-note',
+          marks: versions.map((v) => ({ versionId: v.versionId, mark: v.versionNo === 1 ? ('stands' as const) : ('discarded' as const) })),
+          watermark: { rank1: 2, rank2: null },
+          expectedLiveDeterminationId: live!.row.determinationId,
+          actorId: randomUUID(),
+          actorDisplay: 'Anita (District Admin)',
+          actor: 'operator',
+        });
+        await closeScopeTx(scopeTx, true);
+      } catch (err) {
+        await closeScopeTx(scopeTx, false);
+        throw err;
+      }
+      await client.inject({ method: 'POST', url: '/api/v1/auth/scope', payload: { pariwarId } });
+      const body = (await client.inject({ method: 'GET', url: url(pariwarId, claimCaseId) })).json() as {
+        declared_nominees: { rank: number; relationship: string; nominee_name: { state: string; value?: string } }[];
+        nominee_declared_at: string | null;
+      };
+      expect(body.declared_nominees.map((n) => [n.rank, n.relationship, n.nominee_name])).toEqual([
+        [1, 'spouse', { state: 'readable', value: 'Asha Devi' }],
+      ]);
+      // ⭐ The EFFECTIVE version's instant — ⛔ not merely non-null, and ⛔ not the June change's.
+      expect(body.nominee_declared_at).toBe('2026-01-05T06:00:00.000Z');
+    });
+
     it('says ZERO nominees explicitly — an empty list, and a NULL declared-at (AC2)', async () => {
       const { client, pariwarId, claimCaseId } = await setup('district_admin');
       const body = (await client.inject({ method: 'GET', url: url(pariwarId, claimCaseId) })).json() as {

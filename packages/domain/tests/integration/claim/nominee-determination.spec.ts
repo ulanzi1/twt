@@ -239,23 +239,52 @@ describe.skipIf(!hasDatabase)('Story 6.20 — the determination + the effective 
   });
 
   // ── The writer's other guards (D5, D17, D4) ───────────────────────────────────────────────────
-  it('⭐ AC4 — a failure MID-WAY (after the row + items, at the event) leaves NEITHER behind', async () => {
+  // ⚠ WHAT THIS PROVES, and what it does not (code review 2026-09-24b). The writer owns ⛔ no transaction: its
+  // atomicity IS the caller's one transaction. The old version of this test asserted "leaves neither" right
+  // after its OWN `ROLLBACK TO SAVEPOINT` — which removes the writes whatever the writer does, so it could not
+  // fail. It now proves the two things a savepoint CAN show: the failure really is MID-WAY (the row and items
+  // exist when the event throws) and it is the event's schema that throws. The ROLLBACK-ON-FAILURE boundary is
+  // proven where it lives — the handler's scope transaction, from a second connection
+  // (`apps/api/tests/integration/claims/nominee-declaration.spec.ts`, "AC4 — a failure mid-way …").
+  it('⭐ AC4 — the writer fails MID-WAY (its row + items already written) when the claim event is refused', async () => {
     const { client, tx, cid, mid } = await setup();
     await declare(tx, mid, 1, LONG_BEFORE);
     const input = await base(tx, cid, mid);
     await client.query('SAVEPOINT mid_way');
-    // An actor the claim event's payload schema rejects — the writer has already inserted its row and
-    // items when the event emission throws.
-    await expect(recordNomineeDetermination(client, { ...input, actor: 'not-an-actor' as never })).rejects.toThrow();
-    await client.query('ROLLBACK TO SAVEPOINT mid_way');
-    expect(await tx.select().from(schema.nomineeDeterminations).where(eq(schema.nomineeDeterminations.claimCaseId, cid))).toEqual([]);
-    const ev = await tx
+    // An actor the claim event's payload schema rejects.
+    const err = await recordNomineeDetermination(client, { ...input, actor: 'not-an-actor' as never }).then(
+      () => undefined,
+      (e: unknown) => e,
+    );
+    expect((err as Error | undefined)?.name).toBe('ZodError');
+    // ⭐ MID-WAY, asserted: the zod error is a JS throw (the transaction is ⛔ not aborted), so the writes made
+    // before the event are still visible here — the failure came AFTER them.
+    const rows = await tx.select().from(schema.nomineeDeterminations).where(eq(schema.nomineeDeterminations.claimCaseId, cid));
+    expect(rows).toHaveLength(1);
+    const items = await tx
       .select()
-      .from(schema.eventsLog)
-      .where(and(eq(schema.eventsLog.streamId, cid), eq(schema.eventsLog.eventType, 'claim.nominee_determination_recorded')));
-    expect(ev).toEqual([]);
+      .from(schema.nomineeDeterminationItems)
+      .where(eq(schema.nomineeDeterminationItems.determinationId, rows[0]!.determinationId));
+    expect(items).toHaveLength(1);
+    await client.query('ROLLBACK TO SAVEPOINT mid_way');
     // …and the same input, well-formed, then records (the rollback was of THIS attempt only).
     await expect(recordNomineeDetermination(client, input)).resolves.toMatchObject({ standsCount: 1 });
+  });
+
+  it(`⭐ the cap BOUNDARY — exactly ${NOMINEE_DETERMINATION_MAX_VERSIONS} versions is ACCEPTED (⛔ an off-by-one \`>=\` would refuse it)`, async () => {
+    const { client, tx, cid, mid } = await setup();
+    await declare(tx, mid, 1, LONG_BEFORE);
+    await tx.execute(sql`
+      INSERT INTO member_nominee_versions
+        (member_id, pariwar_id, rank, version_no, declaration_id, kind, source, name_ciphertext, relationship,
+         mobile_ciphertext, split_pct, recorded_at, effective_at)
+      SELECT ${mid}, ${PARIWAR_A}, 1, g, gen_random_uuid(), 'declared', 'member', 'enc:v1:n', 'spouse', 'enc:v1:m', 100,
+             ${LONG_BEFORE.toISOString()}::timestamptz, ${LONG_BEFORE.toISOString()}::timestamptz
+        FROM generate_series(2, ${NOMINEE_DETERMINATION_MAX_VERSIONS}) AS g
+    `);
+    await expect(recordNomineeDetermination(client, await base(tx, cid, mid))).resolves.toMatchObject({
+      standsCount: NOMINEE_DETERMINATION_MAX_VERSIONS,
+    });
   });
 
   it('⛔ a version marked TWICE is refused as `duplicate_mark` (⛔ not reported as an unknown version)', async () => {

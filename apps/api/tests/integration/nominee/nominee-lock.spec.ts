@@ -43,8 +43,11 @@ async function inScope<T>(t: TestApp, pariwarId: string, fn: (s: Awaited<ReturnT
   }
 }
 
-/** Seed a member and walk them to `pending-fee` (a WIZARD state) or on to `active`. Committed. */
-async function seedMember(t: TestApp, to: 'pending-fee' | 'active'): Promise<{ memberId: string; pariwarId: string }> {
+/** Seed a member and walk them to a WIZARD state (`pending-kyc` / `pending-fee` / `pending-valid`) or on to `active`. Committed. */
+async function seedMember(
+  t: TestApp,
+  to: 'pending-kyc' | 'pending-fee' | 'pending-valid' | 'active',
+): Promise<{ memberId: string; pariwarId: string }> {
   const memberId = randomUUID();
   const pariwarId = randomUUID();
   await inScope(t, pariwarId, async (s) => {
@@ -53,10 +56,16 @@ async function seedMember(t: TestApp, to: 'pending-fee' | 'active'): Promise<{ m
     const step = (eventType: string, payload: Json, actorId: string | null = memberId) =>
       memberDomain.projectMemberState(s.client, { memberId: mid, pariwarId: pid, eventType: eventType as never, payload: payload as never, actorId });
     await step('member.signup_initiated', { from_state: null, to_state: 'pending-kyc', trigger: 'signup', actor: 'member' });
+    if (to === 'pending-kyc') return;
     await step('member.kyc_manual_fallback', { from_state: 'pending-kyc', to_state: 'pending-fee', trigger: 'kyc_manual', actor: 'member', reason: 'manual_fallback' });
-    if (to === 'active') {
+    if (to === 'active' || to === 'pending-valid') {
       await step('member.vyawastha_shulk_paid', { from_state: 'pending-fee', to_state: 'lock-in', trigger: 'payment', actor: 'member', utr: 'TEST-UTR-6200', amount_inr: 1000 });
-      await step('member.lock_in_expired', { from_state: 'lock-in', to_state: 'active', trigger: 'lock_in_expiry', actor: 'system', kyc_verified: true }, null);
+      // `kyc_verified: false` lands in `pending-valid` (still a wizard state); `true` goes on to `active`.
+      await step(
+        'member.lock_in_expired',
+        { from_state: 'lock-in', to_state: to, trigger: 'lock_in_expiry', actor: 'system', kyc_verified: to === 'active' },
+        null,
+      );
     }
   });
   return { memberId, pariwarId };
@@ -88,6 +97,18 @@ async function fileClaim(t: TestApp, pariwarId: string, deceasedMemberId: string
   return claimCaseId;
 }
 
+/**
+ * Append a claim-stream event directly (superuser) — the overlay-releasing terminal event, for a claim whose
+ * row was FORCED to the matching state. Its payload names the deceased (the overlay's join key).
+ */
+async function appendClaimEvent(t: TestApp, pariwarId: string, claimCaseId: string, deceasedMemberId: string, eventType: string) {
+  await t.pool.query(
+    `INSERT INTO events_log (stream_id, event_type, payload, event_version, pariwar_id)
+     SELECT $1, $2, $3::jsonb, COALESCE(max(event_version), 0) + 1, $4 FROM events_log WHERE stream_id = $1`,
+    [claimCaseId, eventType, JSON.stringify({ deceased_member_id: deceasedMemberId, actor: 'system', trigger: 'test' }), pariwarId],
+  );
+}
+
 /** Force the claim row's state (superuser + the projector's own session guard) — the lock must hold in ANY. */
 async function forceClaimState(t: TestApp, claimCaseId: string, state: string): Promise<void> {
   const c = await t.pool.connect();
@@ -96,6 +117,10 @@ async function forceClaimState(t: TestApp, claimCaseId: string, state: string): 
     await c.query("SET LOCAL app.claim_state_writer = 'on'");
     await c.query('UPDATE claims SET current_state = $1 WHERE claim_case_id = $2', [state, claimCaseId]);
     await c.query('COMMIT');
+  } catch (err) {
+    // ⛔ Never hand an ABORTED transaction back to the pool.
+    await c.query('ROLLBACK').catch(() => undefined);
+    throw err;
   } finally {
     c.release();
   }
@@ -241,18 +266,35 @@ describe.skipIf(!hasDatabase)('Story 6.20 — nominee history, the lock at the f
   });
 
   it('⭐ AC2 — the lock holds AFTER A DENIAL and AFTER SETTLEMENT (the overlay is gone; the claim row is not)', async () => {
+    // ⚠ Code review 2026-09-24: forcing only `claims.current_state` left the `account-frozen` OVERLAY
+    // frozen (it is derived from `events_log`), so a lock keyed to the overlay passed this test. The
+    // releasing terminal event is now APPENDED, and the overlay's release is ASSERTED — so the only thing
+    // that can still hold the lock is the claim row itself (invariant 3).
     const t = await createTestApp();
     try {
-      for (const terminal of ['denied', 'settled'] as const) {
+      for (const [terminal, releasingEvent] of [
+        ['denied', 'claim.denied_no_appeal'],
+        ['settled', 'claim.settled'],
+      ] as const) {
         const { memberId, pariwarId } = await seedMember(t, 'active');
         const tok = token(t, memberId, pariwarId);
         await inject(t, 'POST', SIGNUP_ROUTE, { payload: ONE, token: tok });
         const cid = await fileClaim(t, pariwarId, memberId);
         await forceClaimState(t, cid, terminal);
+        await appendClaimEvent(t, pariwarId, cid, memberId, releasingEvent);
+        // Non-vacuity: the overlay IS released …
+        const overlay = await inScope(t, pariwarId, (s) =>
+          memberDomain.getMemberAccountOverlay(s.tx, ids.memberId(memberId), new Date(Date.now() + 60_000)),
+        );
+        expect(overlay.accountFrozen, terminal).toBe(false);
+        // … and the lock still holds, because a claim EXISTS — on BOTH routes, and nothing is written.
         await elevate(t, memberId);
-        const res = await inject(t, 'POST', LIFE_EVENTS_ROUTE, { payload: TWO, token: tok });
-        expect(res.status, terminal).toBe(409);
-        expect(errCode(res.body), terminal).toBe('nominee.locked_claim_filed');
+        for (const url of [SIGNUP_ROUTE, LIFE_EVENTS_ROUTE]) {
+          const res = await inject(t, 'POST', url, { payload: TWO, token: tok });
+          expect(res.status, `${terminal} ${url}`).toBe(409);
+          expect(errCode(res.body), `${terminal} ${url}`).toBe('nominee.locked_claim_filed');
+        }
+        expect(await versions(t, memberId), terminal).toHaveLength(1);
       }
     } finally {
       await teardown(t);
@@ -386,13 +428,23 @@ describe.skipIf(!hasDatabase)('Story 6.20 — nominee history, the lock at the f
     }
   });
 
-  it('D9 — the signup WIZARD\'s own back-navigation re-declare (pending-fee) stays exempt', async () => {
+  it('D9 — the signup WIZARD\'s own back-navigation re-declare stays exempt in EVERY pre-lock-in state (pending-kyc / pending-fee / pending-valid)', async () => {
     const t = await createTestApp();
     try {
-      const { memberId, pariwarId } = await seedMember(t, 'pending-fee');
+      for (const state of ['pending-kyc', 'pending-fee', 'pending-valid'] as const) {
+        const { memberId, pariwarId } = await seedMember(t, state);
+        const tok = token(t, memberId, pariwarId);
+        expect((await inject(t, 'POST', SIGNUP_ROUTE, { payload: ONE, token: tok })).status, state).toBe(200);
+        // A RE-declare with ⛔ no elevation at all — the wizard exemption is the only reason it passes.
+        expect((await inject(t, 'POST', SIGNUP_ROUTE, { payload: TWO, token: tok })).status, state).toBe(200);
+      }
+      // ⭐ Non-vacuity: the same re-declare by an ACTIVE member without a step-up is refused.
+      const { memberId, pariwarId } = await seedMember(t, 'active');
       const tok = token(t, memberId, pariwarId);
       expect((await inject(t, 'POST', SIGNUP_ROUTE, { payload: ONE, token: tok })).status).toBe(200);
-      expect((await inject(t, 'POST', SIGNUP_ROUTE, { payload: TWO, token: tok })).status).toBe(200);
+      const refused = await inject(t, 'POST', SIGNUP_ROUTE, { payload: TWO, token: tok });
+      expect(refused.status).toBe(403);
+      expect(errCode(refused.body)).toBe('auth.step_up_required');
     } finally {
       await teardown(t);
     }
@@ -408,6 +460,8 @@ describe.skipIf(!hasDatabase)('Story 6.20 — nominee history, the lock at the f
         token: tok,
       });
       expect(bad.status).toBe(400);
+      // ⭐ Refused FOR the relationship — ⛔ not any 400 (a missing field would pass a bare status check).
+      expect(JSON.stringify(bad.body)).toContain('relationship');
       const good = await inject(t, 'POST', SIGNUP_ROUTE, {
         payload: { nominees: [{ name: 'Asha Devi', relationship: 'niece_nephew', mobile: '9876543210' }] },
         token: tok,

@@ -65,6 +65,8 @@ describe.skipIf(!hasDatabase)('Story 6.20 — RTBF over the nominee history (:54
     const raiseNote = await encr('ZZ-RAISE-NOTE', 'nominee_correction');
     const daNote = await encr('ZZ-DA-NOTE', 'nominee_correction');
     const pName = await encr('ZZ-PROPOSED-NAME', 'member_nominee');
+    const pMobile = await encr('ZZ-PROPOSED-MOBILE', 'member_nominee');
+    const pAddress = await encr('ZZ-PROPOSED-ADDRESS', 'member_nominee');
     await tx.insert(schema.nomineeCorrections).values({
       claimCaseId: toClaimId(cid),
       pariwarId: PARIWAR_A,
@@ -73,8 +75,8 @@ describe.skipIf(!hasDatabase)('Story 6.20 — RTBF over the nominee history (:54
       targetVersionId: target.versionId,
       proposedNameCiphertext: pName,
       proposedRelationship: 'spouse',
-      proposedMobileCiphertext: await encr('ZZ-PROPOSED-MOBILE', 'member_nominee'),
-      proposedAddressCiphertext: await encr('ZZ-PROPOSED-ADDRESS', 'member_nominee'),
+      proposedMobileCiphertext: pMobile,
+      proposedAddressCiphertext: pAddress,
       raisedVia: 'helpline',
       raisedByActorId: randomUUID(),
       raiseNoteCiphertext: raiseNote,
@@ -96,7 +98,7 @@ describe.skipIf(!hasDatabase)('Story 6.20 — RTBF over the nominee history (:54
         [mid],
       ).then((r) => r.rows),
     );
-    for (const ct of [name, mobile, address, date, note, raiseNote, daNote, pName]) {
+    for (const ct of [name, mobile, address, date, note, raiseNote, daNote, pName, pMobile, pAddress]) {
       expect(dump.includes(ct), 'an original ciphertext survived the erasure').toBe(false);
     }
 
@@ -107,14 +109,98 @@ describe.skipIf(!hasDatabase)('Story 6.20 — RTBF over the nominee history (:54
     expect(tombstone.nameCiphertext).toBeNull(); // untouched — it held nothing
     for (const v of after.filter((x) => x.kind === 'declared')) {
       expect(await dec(v.nameCiphertext!, 'member_nominee')).toBe(ANONYMIZED_SENTINEL);
+      expect(await dec(v.mobileCiphertext!, 'member_nominee')).toBe(ANONYMIZED_SENTINEL);
       expect(v.addressCiphertext).toBeNull();
     }
     const [d] = await tx.select().from(schema.nomineeDeterminations).where(eq(schema.nomineeDeterminations.claimCaseId, toClaimId(cid)));
     expect(await dec(d!.certificateDateCiphertext, 'nominee_determination')).toBe(ANONYMIZED_SENTINEL);
+    expect(await dec(d!.noteCiphertext, 'nominee_determination')).toBe(ANONYMIZED_SENTINEL);
     const [c] = await tx.select().from(schema.nomineeCorrections).where(eq(schema.nomineeCorrections.claimCaseId, toClaimId(cid)));
     expect(c!.step).toBe('pa_pending'); // governance history kept
     expect(c!.paNoteCiphertext).toBeNull(); // an undecided step's note stays null (the coherence CHECK)
     expect(await dec(c!.daNoteCiphertext!, 'nominee_correction')).toBe(ANONYMIZED_SENTINEL);
     expect(await dec(c!.proposedNameCiphertext, 'member_nominee')).toBe(ANONYMIZED_SENTINEL);
+    expect(await dec(c!.proposedMobileCiphertext, 'member_nominee')).toBe(ANONYMIZED_SENTINEL);
+    expect(c!.proposedAddressCiphertext).toBeNull();
+    expect(await dec(c!.raiseNoteCiphertext, 'nominee_correction')).toBe(ANONYMIZED_SENTINEL);
+  });
+
+  it('⭐ an APPLIED correction is erased too: its decided Pariwar Admin note and the `correction`-sourced version it wrote', async () => {
+    const { client, tx } = getTx();
+    const mid = await seedMember(tx, PARIWAR_A, { state: 'active' });
+    const cid = await seedClaim(tx, PARIWAR_A, { deceasedMemberId: mid, currentState: 'verification_in_progress' });
+    await enterAppScope(client, PARIWAR_A);
+    await seedNomineeDeclaration(tx, PARIWAR_A, mid, { ensureMember: false });
+    const [target] = await tx.select().from(schema.memberNomineeVersions).where(eq(schema.memberNomineeVersions.memberId, toMemberId(mid)));
+
+    // The version a Pariwar Admin's approval wrote (source = correction, inheriting the target's position).
+    const cName = await encr('ZZ-CORRECTED-NAME', 'member_nominee');
+    const cMobile = await encr('ZZ-CORRECTED-MOBILE', 'member_nominee');
+    const cAddress = await encr('ZZ-CORRECTED-ADDRESS', 'member_nominee');
+    const [applied] = await tx
+      .insert(schema.memberNomineeVersions)
+      .values({
+        memberId: toMemberId(mid),
+        pariwarId: PARIWAR_A,
+        rank: 1,
+        versionNo: 2,
+        declarationId: randomUUID(),
+        kind: 'declared',
+        source: 'correction',
+        nameCiphertext: cName,
+        relationship: 'spouse',
+        mobileCiphertext: cMobile,
+        addressCiphertext: cAddress,
+        splitPct: target!.splitPct,
+        recordedAt: new Date(target!.recordedAt.getTime() + 86_400_000),
+        effectiveAt: target!.effectiveAt,
+        correctsVersionId: target!.versionId,
+      })
+      .returning();
+    const paNote = await encr('ZZ-PA-NOTE', 'nominee_correction');
+    const daNote = await encr('ZZ-DA-NOTE-2', 'nominee_correction');
+    await tx.insert(schema.nomineeCorrections).values({
+      claimCaseId: toClaimId(cid),
+      pariwarId: PARIWAR_A,
+      memberId: toMemberId(mid),
+      rank: 1,
+      targetVersionId: target!.versionId,
+      proposedNameCiphertext: cName,
+      proposedRelationship: 'spouse',
+      proposedMobileCiphertext: cMobile,
+      proposedAddressCiphertext: cAddress,
+      raisedVia: 'member_app',
+      raisedByActorId: randomUUID(),
+      raiseNoteCiphertext: await encr('ZZ-RAISE-2', 'nominee_correction'),
+      step: 'applied',
+      daActorId: randomUUID(),
+      daDisplay: 'Anita',
+      daNoteCiphertext: daNote,
+      daDecidedAt: new Date(),
+      paActorId: randomUUID(),
+      paDisplay: 'Kalpana',
+      paNoteCiphertext: paNote,
+      paDecidedAt: new Date(),
+      appliedVersionId: applied!.versionId,
+    });
+
+    await anonymizeMember(tx, { kms, kekRef }, { memberId: toMemberId(mid), pariwarId: PARIWAR_A });
+
+    const [v] = await tx.select().from(schema.memberNomineeVersions).where(eq(schema.memberNomineeVersions.versionId, applied!.versionId));
+    expect(v!.source).toBe('correction'); // the row is RETAINED …
+    expect(await dec(v!.nameCiphertext!, 'member_nominee')).toBe(ANONYMIZED_SENTINEL); // … its PII is not
+    expect(await dec(v!.mobileCiphertext!, 'member_nominee')).toBe(ANONYMIZED_SENTINEL);
+    expect(v!.addressCiphertext).toBeNull();
+    const [c] = await tx.select().from(schema.nomineeCorrections).where(eq(schema.nomineeCorrections.claimCaseId, toClaimId(cid)));
+    expect(c!.step).toBe('applied');
+    // ⭐ The CASE branch for a DECIDED Pariwar Admin note — ⛔ never reached by an undecided fixture.
+    expect(await dec(c!.paNoteCiphertext!, 'nominee_correction')).toBe(ANONYMIZED_SENTINEL);
+    expect(await dec(c!.daNoteCiphertext!, 'nominee_correction')).toBe(ANONYMIZED_SENTINEL);
+    const dump = JSON.stringify(
+      await client
+        .query('SELECT v.*, c.* FROM member_nominee_versions v LEFT JOIN nominee_corrections c ON c.member_id = v.member_id WHERE v.member_id = $1', [mid])
+        .then((r) => r.rows),
+    );
+    for (const ct of [cName, cMobile, cAddress, paNote, daNote]) expect(dump.includes(ct)).toBe(false);
   });
 });

@@ -20,7 +20,7 @@
 
 import { randomUUID } from 'node:crypto';
 
-import { claim, ids } from '@twt/domain';
+import { claim, ids, nominee } from '@twt/domain';
 import type { VerifierConsolePacket } from '@twt/contracts';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
@@ -987,5 +987,105 @@ describe.skipIf(!hasDatabase)('Verifier-console read surface — E2E (:5433)', (
     expect(s.accountsComplete).toBe(true);
     expect(s.currentAndPassing, 'a does_not_match check reported as passing').toBe(false);
     expect(s.differenceReasons, 'a sending-back check exposed a difference reason').toEqual([]);
+  });
+
+  // ── Story 6.20 (code review 2026-09-24) ─────────────────────────────────────────────────────────
+  /** Assemble the console for a claim; also count the statements Postgres really receives. */
+  async function assembleMeasured(pariwarId: string, claimCaseId: string) {
+    const scopeTx = await openScopeTx(deps, pariwarId);
+    let actual = 0;
+    try {
+      const client = scopeTx.client as unknown as { query: (...a: unknown[]) => unknown };
+      const realQuery = client.query.bind(client);
+      client.query = (...args: unknown[]) => {
+        actual += 1;
+        return realQuery(...args);
+      };
+      const out = await assembleVerifierConsole(deps, {
+        db: scopeTx.tx,
+        pariwarId,
+        claimCaseId,
+        district: DISTRICT,
+        actorId: randomUUID(),
+        grants: [{ pariwarId, role: 'super_admin', scopeDimension: 'global', scopeValue: null }],
+        traceId: null,
+      });
+      client.query = realQuery as never;
+      await closeScopeTx(scopeTx, true);
+      return { ...out, actual };
+    } catch (err) {
+      await closeScopeTx(scopeTx, false);
+      throw err;
+    }
+  }
+
+  it('⭐⭐ AC13 — the WORST read path (an INHERITED inspection: source found, three extra reads) stays within the ceiling, and the packet names its source', async () => {
+    const pariwarId = randomUUID();
+    const deceased = await seedDeceasedMember(pariwarId, DISTRICT);
+    // The SOURCE: an earlier claim refused on `-239`, with a COMPLETED inspection.
+    const source = await seedClaim(pariwarId, deceased, { skip: true });
+    const c = await td.pool.connect();
+    try {
+      await c.query(
+        `INSERT INTO claim_ground_inspections (claim_case_id, pariwar_id, district, inspection_stage, inspection_site_type,
+           inspector_actor_id, scheduled_at, status, completed_at)
+         VALUES ($1, $2, $3, 'initial', 'family_residence', $4, now() - interval '3 days', 'completed', now() - interval '2 days')`,
+        [source, pariwarId, DISTRICT, randomUUID()],
+      );
+      await c.query(
+        `INSERT INTO claim_verifier_decisions (claim_case_id, pariwar_id, outcome, reason_code, actor_id, actor_display)
+         VALUES ($1, $2, 'denied', 'post_death_nominee_change', $3, 'Anita (District Admin)')`,
+        [source, pariwarId, randomUUID()],
+      );
+    } finally {
+      c.release();
+    }
+    // The REFILE — later, with ⛔ no inspection of its own: the path that pays the inheritance reads.
+    const refile = await seedClaim(pariwarId, deceased);
+    const { packet, readCount, actual } = await assembleMeasured(pariwarId, refile);
+
+    // ⭐ The API wiring (not only the domain derivation): the section is PRESENT, from the source, labelled.
+    expect(packet.groundInspection.status).toBe('present');
+    expect((packet.groundInspection as { inheritedFrom?: { claimCaseId: string } }).inheritedFrom).toEqual({ claimCaseId: source });
+    // ⭐ The ceiling (16), MEASURED on the path that pays for AC13's reads — and the self-report is honest.
+    expect(readCount).toBeLessThanOrEqual(VERIFIER_CONSOLE_MAX_READS);
+    expect(readCount, `reported ${readCount} reads but Postgres received ${actual}`).toBeLessThanOrEqual(actual);
+  });
+
+  it('⭐ AC5 site D — the console\'s name-check status reads the EFFECTIVE declaration: a change to the CURRENT rows alone does ⛔ not stale it', async () => {
+    const pariwarId = randomUUID();
+    const deceased = await seedDeceasedMember(pariwarId, DISTRICT);
+    const claimCaseId = await seedClaim(pariwarId, deceased); // determined + a current, passing check
+    const before = (await assembleMeasured(pariwarId, claimCaseId)).packet.nomineeNameCheck;
+    expect(before.currentAndPassing).toBe(true);
+
+    // A later version lands in the CURRENT rows only (the projection now names someone else); the
+    // as-at-death declaration — and so the check recorded against it — is unchanged.
+    const scopeTx = await openScopeTx(deps, pariwarId);
+    try {
+      const row = {
+        rank: 1 as const,
+        splitPct: 100 as const,
+        relationship: 'son',
+        nameCiphertext: 'enc:v1:someone-else',
+        mobileCiphertext: 'enc:v1:someone-else-mobile',
+        addressCiphertext: null,
+      };
+      await nominee.replaceMemberNominees(scopeTx.tx, { memberId: deceased, pariwarId: ids.pariwarId(pariwarId), nominees: [row] });
+      await nominee.appendMemberDeclarationVersions(scopeTx.tx, {
+        memberId: deceased,
+        pariwarId: ids.pariwarId(pariwarId),
+        plan: nominee.planDeclarationVersions(await nominee.getNomineeVersionHeads(scopeTx.tx, ids.pariwarId(pariwarId), deceased), [1]),
+        nominees: [row],
+        recordedAt: new Date(),
+        eventVersion: null,
+      });
+      await closeScopeTx(scopeTx, true);
+    } catch (err) {
+      await closeScopeTx(scopeTx, false);
+      throw err;
+    }
+    const after = (await assembleMeasured(pariwarId, claimCaseId)).packet.nomineeNameCheck;
+    expect(after.currentAndPassing).toBe(true);
   });
 });

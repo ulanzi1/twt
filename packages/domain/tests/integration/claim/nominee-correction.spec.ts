@@ -17,12 +17,13 @@
 
 import { randomUUID } from 'node:crypto';
 
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, eq, isNull, sql } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
 import {
   NomineeCorrectionRefusedError,
   NomineeDeterminationRequiredError,
+  recordNomineeDisqualificationFinding,
   assertNomineeNameCheckForApproval,
   decideNomineeCorrectionAsDistrictAdmin,
   decideNomineeCorrectionAsPariwarAdmin,
@@ -30,6 +31,7 @@ import {
   raiseNomineeCorrection,
   type RaiseNomineeCorrectionInput,
 } from '../../../src/claim/index.js';
+import { bindScopedDb } from '../../../src/db.js';
 import { claimId as toClaimId, memberId as toMemberId, type ClaimId, type MemberId } from '../../../src/ids/index.js';
 import { projectMemberState } from '../../../src/member/project.js';
 import { listNomineeDeclarationVersions } from '../../../src/nominee/declaration-history.js';
@@ -50,7 +52,9 @@ const PA = randomUUID();
 
 type Tx = ReturnType<typeof getTx>['tx'];
 
-async function setup(opts: { relationship?: string; state?: 'verification_in_progress' | 'intake_pending' } = {}) {
+async function setup(
+  opts: { relationship?: string; state?: 'verification_in_progress' | 'intake_pending'; nominees?: { relationship: string }[] } = {},
+) {
   const { client, tx } = getTx();
   await enterAppScope(client, PARIWAR_A);
   const cid = toClaimId(randomUUID());
@@ -63,7 +67,7 @@ async function setup(opts: { relationship?: string; state?: 'verification_in_pro
     actorId: mid,
   });
   await seedNomineeDeclaration(tx, PARIWAR_A, mid, {
-    nominees: [{ relationship: opts.relationship ?? 'spouse' }],
+    nominees: opts.nominees ?? [{ relationship: opts.relationship ?? 'spouse' }],
     declaredAt: DECLARED_AT,
     ensureMember: false,
   });
@@ -128,7 +132,7 @@ describe.skipIf(!hasDatabase)('Story 6.20 — the nominee correction (:5433)', {
     expect(res.correctionId).toMatch(/^[0-9a-f-]{36}$/);
   });
 
-  it('⛔ a PROPOSED relationship of `other` is refused too', async () => {
+  it('⛔ a PROPOSED relationship of `other` is refused too — an ENGINEERING READING of `-237` cl.2, ⛔ not a ratified rule (BigDev 2026-09-24)', async () => {
     const { client, cid } = await setup();
     await expect(raiseNomineeCorrection(client, raise(cid, { proposedRelationship: 'other' }))).rejects.toSatisfy(
       refusedWith('relationship_other'),
@@ -177,7 +181,7 @@ describe.skipIf(!hasDatabase)('Story 6.20 — the nominee correction (:5433)', {
     await expect(raiseNomineeCorrection(client, raise(cid))).rejects.toSatisfy(refusedWith('no_standing_version'));
   });
 
-  it('⛔ a correction on a claim that does not exist is refused (before any claim the change is free)', async () => {
+  it('⛔ a correction on a claim that does not exist is NOT FOUND (`claim_not_found` → 404; before any claim the change is free)', async () => {
     const { client } = await setup();
     await expect(raiseNomineeCorrection(client, raise(toClaimId(randomUUID())))).rejects.toSatisfy(
       refusedWith('claim_not_found'),
@@ -287,6 +291,118 @@ describe.skipIf(!hasDatabase)('Story 6.20 — the nominee correction (:5433)', {
     const e = await getEffectiveNomineeDeclaration(tx, PARIWAR_A, cid);
     expect(e.status).toBe('effective');
     expect(e.entries.map((x) => x.versionNo)).toEqual([2]);
+  });
+
+  // ── Code review 2026-09-24 ──────────────────────────────────────────────────────────────────────
+  it('⭐⭐ CC2 — the person who RAISED a correction can decide it at ⛔ neither step', async () => {
+    const { client, cid } = await setup();
+    const { correctionId } = await raiseNomineeCorrection(client, raise(cid, { raisedByActorId: DA }));
+    await expect(decideNomineeCorrectionAsDistrictAdmin(client, step(cid, correctionId, DA))).rejects.toSatisfy(
+      refusedWith('raiser_cannot_approve'),
+    );
+    // A DIFFERENT District Admin approves; the raiser still cannot take step 2.
+    const otherDa = randomUUID();
+    await decideNomineeCorrectionAsDistrictAdmin(client, { ...step(cid, correctionId, otherDa), actorDisplay: 'Meena (District Admin)' });
+    const raiser2 = await setup();
+    const r2 = await raiseNomineeCorrection(raiser2.client, raise(raiser2.cid, { raisedByActorId: PA }));
+    await decideNomineeCorrectionAsDistrictAdmin(raiser2.client, step(raiser2.cid, r2.correctionId, DA));
+    await expect(decideNomineeCorrectionAsPariwarAdmin(raiser2.client, step(raiser2.cid, r2.correctionId, PA))).rejects.toSatisfy(
+      refusedWith('raiser_cannot_approve'),
+    );
+  });
+
+  it('⭐⭐ a correction of a rank VACATED after the death is ⛔ NOT re-inserted into the projection (BigDev 2026-09-24, option b) — the splits stay coherent', async () => {
+    // Before the death: {1: spouse 75, 2: son 25}. After it: a 2→1 change (rank 1 v2 at 100, rank 2 tombstone).
+    const { client, tx, cid, mid } = await setup({ nominees: [{ relationship: 'spouse' }, { relationship: 'son' }] });
+    await seedNomineeDeclaration(tx, PARIWAR_A, mid, {
+      nominees: [{ relationship: 'spouse' }],
+      declaredAt: new Date('2026-06-01T06:00:00.000Z'),
+      ensureMember: false,
+    });
+    const versions = await listNomineeDeclarationVersions(tx, PARIWAR_A, mid);
+    await seedNomineeDetermination(client, PARIWAR_A, cid, {
+      certificateDate: '2026-05-01',
+      marks: versions.map((v) => ({ versionId: v.versionId, mark: v.versionNo === 1 ? 'stands' : 'discarded' })),
+    });
+    const { correctionId } = await raiseNomineeCorrection(client, raise(cid, { rank: 2, proposedRelationship: 'son' }));
+    await decideNomineeCorrectionAsDistrictAdmin(client, step(cid, correctionId, DA));
+    const res = await decideNomineeCorrectionAsPariwarAdmin(client, step(cid, correctionId, PA));
+    expect(res.step).toBe('applied');
+
+    // The projection is still the member's OWN last declaration: rank 1 alone, at 100 — ⛔ no 125%.
+    const proj = await tx.select().from(schema.memberNominees).where(eq(schema.memberNominees.memberId, mid));
+    expect(proj.map((r) => [r.rank, r.splitPct])).toEqual([[1, 100]]);
+    // The correction lives in the version history …
+    const applied = (await listNomineeDeclarationVersions(tx, PARIWAR_A, mid)).find((v) => v.versionId === res.appliedVersionId)!;
+    expect(applied).toMatchObject({ rank: 2, source: 'correction', splitPct: 25 });
+    // … and the member event describes the UNCHANGED projection.
+    const ev = await tx
+      .select()
+      .from(schema.eventsLog)
+      .where(and(eq(schema.eventsLog.streamId, mid), eq(schema.eventsLog.eventType, 'member.nominees_declared')));
+    expect(ev.at(-1)!.payload).toMatchObject({ source: 'correction', nominee_count: 1, split: 'sole' });
+  });
+
+  it('⛔ the Pariwar Admin cannot apply a correction whose target STOPPED standing after step 1 (a redetermination moved it)', async () => {
+    const { client, tx, cid, mid } = await setup();
+    const { correctionId } = await raiseNomineeCorrection(client, raise(cid));
+    await decideNomineeCorrectionAsDistrictAdmin(client, step(cid, correctionId, DA));
+    // A newer PRE-death version (Feb) — it, not v1, is now the rank's standing version once redetermined.
+    await seedNomineeDeclaration(tx, PARIWAR_A, mid, { declaredAt: new Date('2026-02-01T06:00:00.000Z'), ensureMember: false });
+    await seedNomineeDetermination(client, PARIWAR_A, cid, {
+      certificateDate: '2026-05-01',
+      marks: (await listNomineeDeclarationVersions(tx, PARIWAR_A, mid)).map((v) => ({ versionId: v.versionId, mark: 'stands' as const })),
+    });
+    await expect(decideNomineeCorrectionAsPariwarAdmin(client, step(cid, correctionId, PA))).rejects.toSatisfy(
+      refusedWith('target_not_standing'),
+    );
+  });
+
+  it('⭐ outside the window an APPROVAL is refused, while a DECLINE is still allowed', async () => {
+    const { client, tx, cid } = await setup();
+    const { correctionId } = await raiseNomineeCorrection(client, raise(cid));
+    await tx.execute(sql.raw("SET LOCAL app.claim_state_writer = 'on'"));
+    await tx.execute(sql`UPDATE claims SET current_state = 'denied' WHERE claim_case_id = ${cid}`);
+    await tx.execute(sql.raw("SET LOCAL app.claim_state_writer = 'off'"));
+    await expect(decideNomineeCorrectionAsDistrictAdmin(client, step(cid, correctionId, DA))).rejects.toSatisfy(
+      refusedWith('outside_state_window'),
+    );
+    expect((await decideNomineeCorrectionAsDistrictAdmin(client, step(cid, correctionId, DA, 'decline'))).step).toBe('declined');
+  });
+
+  it('⛔ a step on a correction that is not on this claim is NOT FOUND (→ 404)', async () => {
+    const { client, cid } = await setup();
+    await expect(decideNomineeCorrectionAsDistrictAdmin(client, step(cid, randomUUID(), DA))).rejects.toSatisfy(refusedWith('not_found'));
+    // …including a real correction addressed through a DIFFERENT claim (family 12(a)).
+    const other = await setup();
+    const { correctionId } = await raiseNomineeCorrection(other.client, raise(other.cid));
+    await expect(decideNomineeCorrectionAsDistrictAdmin(client, step(cid, correctionId, DA))).rejects.toSatisfy(refusedWith('not_found'));
+  });
+
+  it('⭐ after a DECLINE the rank is free for a NEW request (the one-open rule counts open requests only)', async () => {
+    const { client, cid } = await setup();
+    const first = await raiseNomineeCorrection(client, raise(cid));
+    await decideNomineeCorrectionAsDistrictAdmin(client, step(cid, first.correctionId, DA, 'decline'));
+    const second = await raiseNomineeCorrection(client, raise(cid));
+    expect(second.correctionId).not.toBe(first.correctionId);
+  });
+
+  it('⭐ D17(c) — after rank 1 is DISQUALIFIED the survivor is corrected by the rank it was DECLARED at', async () => {
+    const { client, tx, cid } = await setup({ nominees: [{ relationship: 'spouse' }, { relationship: 'son' }] });
+    await recordNomineeDisqualificationFinding(bindScopedDb(client), {
+      claimCaseId: cid,
+      pariwarId: PARIWAR_A,
+      findingId: randomUUID() as never,
+      actorId: randomUUID(),
+      actorDisplay: 'Investigator',
+      rank: 1,
+    });
+    const e = await getEffectiveNomineeDeclaration(tx, PARIWAR_A, cid);
+    expect(e.entries.map((x) => [x.rank, x.declaredRank])).toEqual([[1, 2]]);
+    // The survivor sits at effective rank 1, but it is corrected as the rank it was declared at — 2.
+    await expect(raiseNomineeCorrection(client, raise(cid, { rank: 1 }))).rejects.toSatisfy(refusedWith('no_standing_version'));
+    const res = await raiseNomineeCorrection(client, raise(cid, { rank: 2, proposedRelationship: 'son' }));
+    expect(res.correctionId).toMatch(/^[0-9a-f-]{36}$/);
   });
 });
 

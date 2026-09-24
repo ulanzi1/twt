@@ -13,7 +13,9 @@
 //   · the `(member_id, rank, version_no)` UNIQUE (the D3 race backstop);
 //   · the tombstone coherence CHECK (T4 — a vacated rank can ⛔ never claim a mobile);
 //   · ONE live determination per claim (D4) and ONE open correction per claim + rank (D7);
-//   · the two-DIFFERENT-approvers CHECK (D7) and the `other`-forecloses CHECK (`-237` cl.2).
+//   · the two-DIFFERENT-approvers CHECK (D7) and the proposed-`other` CHECK — the DB backstop of an
+//     ENGINEERING READING of `-237` cl.2 (⛔ not a ratified rule; BigDev 2026-09-24);
+//   · (migration 0121) a determination's SUPERSESSION is ONE-WAY — a superseded row is never revived.
 //
 // Live DB only (`twt-test-pg :5433`); each test runs in its own rolled-back transaction.
 
@@ -144,8 +146,200 @@ describe.skipIf(!hasDatabase)('migration 0119 — nominee declaration history: R
       `SELECT tablename, cmd FROM pg_policies WHERE tablename = ANY($1)`,
       [TABLES],
     );
-    expect(pols.rows.length).toBeGreaterThanOrEqual(TABLES.length * 2);
     expect(pols.rows.filter((p) => p.cmd === 'ALL' || p.cmd === 'DELETE')).toEqual([]);
+    // ⭐ PER TABLE, exactly (code review 2026-09-24): an aggregate floor let one table with ⛔ no policy
+    // hide behind another's extras.
+    const byTable = new Map<string, string[]>();
+    for (const p of pols.rows) byTable.set(p.tablename, [...(byTable.get(p.tablename) ?? []), p.cmd].sort());
+    expect(Object.fromEntries(byTable)).toEqual({
+      member_nominee_versions: ['INSERT', 'SELECT', 'UPDATE'],
+      nominee_determinations: ['INSERT', 'SELECT', 'UPDATE'],
+      nominee_determination_items: ['INSERT', 'SELECT'],
+      nominee_corrections: ['INSERT', 'SELECT', 'UPDATE'],
+      claim_nominee_findings: ['INSERT', 'SELECT'],
+    });
+  });
+
+  /** One row in EVERY table for a claim in PARIWAR_A. */
+  async function seedAllFive() {
+    const ctx = await seedMemberAndClaim();
+    const v = await insertVersion(ctx.memberId);
+    const [d] = await ctx.tx.insert(schema.nomineeDeterminations).values(determination(ctx.claimCaseId, ctx.memberId)).returning();
+    await ctx.tx
+      .insert(schema.nomineeDeterminationItems)
+      .values({ determinationId: d!.determinationId, versionId: v.versionId, pariwarId: PARIWAR_A, mark: 'stands' });
+    await ctx.tx.insert(schema.nomineeCorrections).values(correction(ctx.claimCaseId, ctx.memberId, v.versionId));
+    await ctx.tx.insert(schema.claimNomineeFindings).values({
+      findingId: randomUUID() as never,
+      claimCaseId: ctx.claimCaseId as never,
+      pariwarId: PARIWAR_A,
+      kind: 'member_found_innocent',
+      recordedByActorId: randomUUID(),
+      recordedByDisplay: 'Investigator',
+    });
+    return { ...ctx, versionId: v.versionId, determinationId: d!.determinationId };
+  }
+
+  async function countAll(client: ReturnType<typeof getTx>['client'], claimCaseId: string, memberId: string) {
+    const q = (sqlText: string, arg: string) => client.query<{ n: number }>(sqlText, [arg]).then((r) => Number(r.rows[0]!.n));
+    return {
+      versions: await q('SELECT count(*) AS n FROM member_nominee_versions WHERE member_id = $1', memberId),
+      determinations: await q('SELECT count(*) AS n FROM nominee_determinations WHERE claim_case_id = $1', claimCaseId),
+      items: await q(
+        'SELECT count(*) AS n FROM nominee_determination_items i JOIN nominee_determinations d USING (determination_id) WHERE d.claim_case_id = $1',
+        claimCaseId,
+      ),
+      corrections: await q('SELECT count(*) AS n FROM nominee_corrections WHERE claim_case_id = $1', claimCaseId),
+      findings: await q('SELECT count(*) AS n FROM claim_nominee_findings WHERE claim_case_id = $1', claimCaseId),
+    };
+  }
+
+  it('⭐ family 5 — ALL FIVE tables: visible in-scope, ZERO rows cross-tenant, ZERO rows with an unset scope', async () => {
+    const { client, claimCaseId, memberId } = await seedAllFive();
+    // Non-vacuity: every table holds this claim's row in its own Pariwar.
+    expect(await countAll(client, claimCaseId, memberId)).toEqual({ versions: 1, determinations: 1, items: 1, corrections: 1, findings: 1 });
+    await enterAppScope(client, PARIWAR_B);
+    expect(await countAll(client, claimCaseId, memberId)).toEqual({ versions: 0, determinations: 0, items: 0, corrections: 0, findings: 0 });
+    await enterAppRoleNoScope(client);
+    await client.query("SET LOCAL app.pariwar_id = ''");
+    expect(await countAll(client, claimCaseId, memberId)).toEqual({ versions: 0, determinations: 0, items: 0, corrections: 0, findings: 0 });
+  });
+
+  it("⛔ a Pariwar cannot write another Pariwar's determination ITEM (42501)", async () => {
+    const { tx, determinationId, versionId } = await seedAllFive();
+    await expect(
+      tx.insert(schema.nomineeDeterminationItems).values({ determinationId, versionId, pariwarId: PARIWAR_B, mark: 'discarded' }),
+    ).rejects.toSatisfy((err: unknown) => pgCode(err) === '42501');
+  });
+
+  it('⭐ family 5 — every FOREIGN KEY refuses an orphan (23503)', async () => {
+    const { tx, client, memberId, claimCaseId, versionId, determinationId } = await seedAllFive();
+    const ghost = randomUUID();
+    const attempts: [string, () => Promise<unknown>][] = [
+      ['version → member', () => tx.insert(schema.memberNomineeVersions).values(declared(ghost, PARIWAR_A))],
+      [
+        'version → corrected version',
+        () =>
+          tx.insert(schema.memberNomineeVersions).values(
+            declared(memberId, PARIWAR_A, {
+              versionNo: 2,
+              source: 'correction',
+              correctsVersionId: ghost as never,
+              recordedAt: new Date(at.getTime() + 1000),
+            }),
+          ),
+      ],
+      ['determination → claim', () => tx.insert(schema.nomineeDeterminations).values(determination(ghost, memberId))],
+      [
+        'determination → superseded determination',
+        () =>
+          tx.insert(schema.nomineeDeterminations).values(
+            determination(claimCaseId, memberId, {
+              supersedesDeterminationId: ghost as never,
+              supersededAt: new Date(),
+              supersededReason: 'redetermined',
+            }),
+          ),
+      ],
+      ['item → determination', () => tx.insert(schema.nomineeDeterminationItems).values({ determinationId: ghost as never, versionId, pariwarId: PARIWAR_A, mark: 'stands' })],
+      ['item → version', () => tx.insert(schema.nomineeDeterminationItems).values({ determinationId, versionId: ghost as never, pariwarId: PARIWAR_A, mark: 'stands' })],
+      ['correction → claim', () => tx.insert(schema.nomineeCorrections).values(correction(ghost, memberId, versionId, { rank: 2 }))],
+      ['correction → member', () => tx.insert(schema.nomineeCorrections).values(correction(claimCaseId, ghost, versionId, { rank: 2 }))],
+      ['correction → target version', () => tx.insert(schema.nomineeCorrections).values(correction(claimCaseId, memberId, ghost, { rank: 2 }))],
+      [
+        'finding → claim',
+        () =>
+          tx.insert(schema.claimNomineeFindings).values({
+            findingId: randomUUID() as never,
+            claimCaseId: ghost as never,
+            pariwarId: PARIWAR_A,
+            kind: 'member_found_innocent',
+            recordedByActorId: randomUUID(),
+            recordedByDisplay: 'Investigator',
+          }),
+      ],
+    ];
+    for (const [label, attempt] of attempts) {
+      await client.query('SAVEPOINT fk');
+      await expect(attempt(), label).rejects.toSatisfy((err: unknown) => pgCode(err) === '23503');
+      await client.query('ROLLBACK TO SAVEPOINT fk');
+    }
+  });
+
+  it('⭐ family 5 — the value CHECKs on every table (23514)', async () => {
+    const { tx, client, memberId, claimCaseId, versionId } = await seedAllFive();
+    const finding = (over: Record<string, unknown>) => ({
+      findingId: randomUUID() as never,
+      claimCaseId: claimCaseId as never,
+      pariwarId: PARIWAR_A,
+      kind: 'nominee_disqualified' as const,
+      rank: 1,
+      recordedByActorId: randomUUID(),
+      recordedByDisplay: 'Investigator',
+      ...over,
+    });
+    const attempts: [string, () => Promise<unknown>][] = [
+      ['version rank', () => insertVersion(memberId, { rank: 3, versionNo: 7 })],
+      ['version_no', () => insertVersion(memberId, { versionNo: 0 })],
+      ['version kind', () => insertVersion(memberId, { versionNo: 7, kind: 'erased' as never })],
+      ['version source', () => insertVersion(memberId, { versionNo: 7, source: 'import' as never })],
+      ['version split', () => insertVersion(memberId, { versionNo: 7, splitPct: 50 })],
+      ['correction rank', () => tx.insert(schema.nomineeCorrections).values(correction(claimCaseId, memberId, versionId, { rank: 3 }))],
+      ['correction step', () => tx.insert(schema.nomineeCorrections).values(correction(claimCaseId, memberId, versionId, { rank: 2, step: 'lost' as never }))],
+      ['correction channel', () => tx.insert(schema.nomineeCorrections).values(correction(claimCaseId, memberId, versionId, { rank: 2, raisedVia: 'email' as never }))],
+      ['finding kind', () => tx.insert(schema.claimNomineeFindings).values(finding({ kind: 'suspected' }))],
+    ];
+    for (const [label, attempt] of attempts) {
+      await client.query('SAVEPOINT ck');
+      await expect(attempt(), label).rejects.toSatisfy((err: unknown) => pgCode(err) === '23514');
+      await client.query('ROLLBACK TO SAVEPOINT ck');
+    }
+  });
+
+  it('⭐ family 5 — ONE mark per version per determination (the items PK) and ONE disqualification per rank (23505)', async () => {
+    const { tx, client, claimCaseId, versionId, determinationId } = await seedAllFive();
+    await client.query('SAVEPOINT pk');
+    await expect(
+      tx.insert(schema.nomineeDeterminationItems).values({ determinationId, versionId, pariwarId: PARIWAR_A, mark: 'discarded' }),
+    ).rejects.toSatisfy((err: unknown) => pgCode(err) === '23505');
+    await client.query('ROLLBACK TO SAVEPOINT pk');
+    const dq = () =>
+      tx.insert(schema.claimNomineeFindings).values({
+        findingId: randomUUID() as never,
+        claimCaseId: claimCaseId as never,
+        pariwarId: PARIWAR_A,
+        kind: 'nominee_disqualified',
+        rank: 2,
+        recordedByActorId: randomUUID(),
+        recordedByDisplay: 'Investigator',
+      });
+    await dq();
+    await expect(dq()).rejects.toSatisfy((err: unknown) => pgCode(err) === '23505');
+  });
+
+  it('⭐⭐ migration 0121 — a determination\'s SUPERSESSION is ONE-WAY: never revived, never re-stamped (23000); the RTBF scrub still works', async () => {
+    const { tx, client, memberId, claimCaseId } = await seedMemberAndClaim();
+    const [d] = await tx.insert(schema.nomineeDeterminations).values(determination(claimCaseId, memberId)).returning();
+    const byId = eq(schema.nomineeDeterminations.determinationId, d!.determinationId);
+    // Live → superseded: allowed (the writers' only transition).
+    await tx.update(schema.nomineeDeterminations).set({ supersededAt: new Date(), supersededReason: 'redetermined' }).where(byId);
+    // ⛔ Revived (the coherence CHECK alone would ALLOW this pair) …
+    await client.query('SAVEPOINT rv');
+    await expect(
+      tx.update(schema.nomineeDeterminations).set({ supersededAt: null, supersededReason: null }).where(byId),
+    ).rejects.toSatisfy((err: unknown) => pgCode(err) === '23000');
+    await client.query('ROLLBACK TO SAVEPOINT rv');
+    // ⛔ … or re-stamped with another reason.
+    await client.query('SAVEPOINT rs');
+    await expect(
+      tx.update(schema.nomineeDeterminations).set({ supersededReason: 'correction_applied' }).where(byId),
+    ).rejects.toSatisfy((err: unknown) => pgCode(err) === '23000');
+    await client.query('ROLLBACK TO SAVEPOINT rs');
+    // ✓ The DPDPA-RTBF ciphertext scrub on a superseded row is untouched by the rule.
+    await tx.update(schema.nomineeDeterminations).set({ noteCiphertext: '[anonymized]' }).where(byId);
+    const [row] = await tx.select().from(schema.nomineeDeterminations).where(byId);
+    expect(row!.noteCiphertext).toBe('[anonymized]');
+    expect(row!.supersededReason).toBe('redetermined');
   });
 
   it('an UNSET scope reads zero version rows (the Story 1.6 closed-failure construct)', async () => {
@@ -388,7 +582,7 @@ describe.skipIf(!hasDatabase)('migration 0119 — nominee declaration history: R
     ).rejects.toSatisfy((err: unknown) => pgCode(err) === '23505');
   });
 
-  it('⭐ ⛔ a proposed relationship of `other` is refused at the DB (`-237` cl.2 backstop, 23514)', async () => {
+  it('⭐ ⛔ a proposed relationship of `other` is refused at the DB (backstop of an ENGINEERING READING of `-237` cl.2, ⛔ not a ratified rule — 23514)', async () => {
     const { tx, memberId, claimCaseId } = await seedMemberAndClaim();
     const v = await insertVersion(memberId);
     await expect(

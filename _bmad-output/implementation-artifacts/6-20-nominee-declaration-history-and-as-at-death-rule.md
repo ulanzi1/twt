@@ -3,6 +3,28 @@ baseline_commit: 36129696
 ---
 
 <!--
+⭐⭐ MERGED 2026-09-24 as PR #239 (REBASE-merge) — THE SHA MAP. Every SHA this file cites for Story 6.20's own commits
+is a BRANCH SHA (`story/6-20-nominee-declaration-history`), ⛔ NOT reachable from `main` after the rebase-merge. The
+baseline pin `36129696` IS on `main` and is unaffected. The citations below are kept AS WRITTEN (the record); this is
+the map to their `main` twins, PROVED ⛔ not assumed: each pair has an IDENTICAL `git patch-id --stable` AND an identical
+`git ls-tree -r <sha> -- packages apps scripts _bmad-output | git hash-object --stdin` (`main` had not moved, so the
+rebase rewrote SHAs only).
+  · `665a44e2` → `25f9c762`  governance: validate pass v0.6
+  · `5c944975` → `51e217ee`  feat: the story's code (the range the 2026-09-24 review read, `36129696..5c944975`)
+  · `5b8443f8` → `48ea28a1`  governance: code review 2026-09-24
+  · `cd298716` → `5c0bf887`  fix: 2026-09-24 production patches
+  · `6b83a26a` → `0c6b4ac8`  test: 2026-09-24 test half (the 2026-09-24b range `5b8443f8..6b83a26a` = `48ea28a1..0c6b4ac8`)
+  · `bd4b2b8c` → `556eb073`  governance: code review 2026-09-24b + the adversarial review
+  · `3a155cf3` → `23777561`  fix: 2026-09-24b production patches
+  · `1e64e4db` → `d3c8b60d`  test: 2026-09-24b test half
+  · `c31c7102` → `45810fb2`  governance: review of the adversarial-review fixes
+  · `4c976a13` → `4fbaa69e`  fix: those fixes, production
+  · `be2901db` → `d132ad1c`  test: those fixes, tests (the merge head)
+Re-verify: `for p in "5c944975 51e217ee" …; do set -- $p; diff <(git show $1 | git patch-id --stable | cut -d' ' -f1) <(git show $2 | git patch-id --stable | cut -d' ' -f1); done`
+— ⚠ needs the branch SHAs, which survive only while the branch (local or `origin/story/6-20-nominee-declaration-history`) does.
+-->
+
+<!--
 ⭐⭐ v0.6 CURRENT STATUS (2026-09-23) — READ THIS FIRST; the older paragraphs below are the RECORD and several of their conditions are now spent.
 · The PIN moved `e7712c24` → `36129696` (HEAD of `main`, an ancestor of `origin/main`). ⭐ Every code claim this file makes was RE-DERIVED at
   `36129696` by the second validate pass: 68 files under `packages`/`apps`/`scripts` had moved since `e7712c24` (6.18's 2026-09-22 → 09-23c
@@ -1085,3 +1107,4 @@ Claude Opus 5.5 (`claude-opus-5-5`), via `/bmad-dev-story`, 2026-09-23. Baseline
 | v0.8 | 2026-09-23 | **Code review, three parallel layers, `review → done`.** 20 raw findings: 1 decision → converted to a patch (the refusal-view key now reuses `claim.approve_nominee_correction_pariwar` instead of the unrelated `cycle.freeze`), 9 patches, 5 defer, 5 dismissed. 8 patches applied (`splitPct` fallback unified; two tautological test assertions strengthened; `postDetermination`'s `ok = true` moved ahead of its post-write read so a status-read failure can no longer roll back an already-committed determination; the CC3 note-required comments corrected to name the contract's `.min(1)` as the real enforcement; the mobile OTP-verify button gained the same `validationError()` guard `onSubmit` already has; `listNomineeCorrections` gained the sibling's `clampLimit`; the Story 3.4 done-file's annotation extended with the relationship five→fifteen note already carried by `epics.md`/PRD FR-4). 1 patch (a lockstep test for the routes' implicit view-key invariant) needed **no change** — already covered by 6.18's `roles.test.ts:275-291`. 1 patch (`certificate_date` plausibility) was applied then **reverted**: rejecting future dates broke 15 tests on `certificateDateAfterEverything()`'s deliberate tomorrow-sentinel fixture — moved to defer, needs a product decision on the real bound. ⚠⚠ **The Acceptance Auditor's AC12 finding was diff-scope-confused**: `epics.md` and PRD FR-4 already carry the five→fifteen annotation (landed in `72ae4259`, outside the reviewed diff) — verified directly, not from the auditor's prose ([[feedback_trace_internal_state_never_cite_decision_text]]); only the Story 3.4 file's own annotation was genuinely missing. ⚠ All three review layers reported `location` against the diff file's own line numbers, not the source files — every location re-derived by hand before acting. ✅ Touched suites green post-patch: `roles`+`permissions` (85), `nominee-effective` (20), `nominee-correction.spec` (15), `nominee-determination.spec`+bulk-path (22), api `nominee-declaration.spec` (13), mobile `nominee-history-copy` (10), admin `nominee-name-check-panel` (34); typecheck clean on domain/api/mobile. ⛔ Full suites ⛔ not run. |
 | v0.9 | 2026-09-24 | **Re-review of the committed code** (`36129696..5c944975`, 4 chunks) and its patches (`cd298716` + `6b83a26a`; ⛔ no Change Log row until now) — recorded in `### Review Findings` → "Re-review 2026-09-24". |
 | v1.0 | 2026-09-24 | **Code review of the 09-24 PATCHES themselves** (`5b8443f8..HEAD`, 4 chunks, layers one at a time) — ~141 raw findings → 3 BigDev decisions (the projection is touched only when the correction is of the rank's HEAD; the lock copy promises no outcome; the helpline raise takes its claim from the selected, read-back member) — the P2 half (the handover OTP's mobile) split off and ⛔ NOT decided, 51 patches ALL APPLIED, 7 defers, ~28 dismissed. Serious: a verifier still saw the determination form; A→B→A re-decrypted names with no click; a failed decision wiped the required note; the search summary kept the old relationship; the member lock copy promised a release nothing delivers; the helpline raise was usable only inside the filing call; four tests could not fail as titled (mid-way atomicity, appealable-once, the tie-break, the AC13 read count). New route: the helpline's read of the selected member's live claims (human-actor gate TEN routes). ⛔ NOT committed. |
+| v1.1 | 2026-09-24 | **Merged as PR #239 (rebase).** Every branch SHA this file cites is mapped to its `main` twin in the header note (each pair proved by identical `patch-id` and code tree); ⛔ no citation rewritten. |

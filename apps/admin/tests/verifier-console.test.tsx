@@ -182,7 +182,9 @@ describe('<SignalsPanel> — six sections, four-state vocabulary, tri-state conc
     const label = screen.getByTestId('ground-inspection-inherited');
     expect(label.textContent).toContain('Carried over from the refused claim');
     expect(label.textContent).toContain(source);
-    expect(label.getAttribute('role')).toBe('status');
+    // ⛔ NOT a live region (code review 2026-09-24): announcing a bare claim reference on every mount was
+    // noise; it is static, labelled text.
+    expect(label.getAttribute('role')).toBeNull();
   });
 
   it('renders the shepherd section as empty when no shepherd is assigned yet (pre-verification)', () => {

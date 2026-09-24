@@ -81,9 +81,28 @@ describe('resolveEffectiveNomineeDeclaration — the fail-closed states (D1, D5,
       resolve({ determinationId: null }).token,
       resolve({ projectionRanks: [1, 2], versionedRanks: [1] }).token,
       resolve({ standing: [] }).token,
+      resolve({
+        standing: [{ rank: 2, versionId: V(2), versionNo: 1, kind: 'declared', effectiveAt: T }],
+        projectionRanks: [2],
+        versionedRanks: [2],
+      }).token, // incoherent
       resolve().token,
     ]);
-    expect(tokens.size).toBe(4);
+    expect(tokens.size).toBe(5);
+  });
+
+  it('⭐⭐ the `undetermined` token MOVES when a version is added — an old name check never revives (code review 2026-09-24)', () => {
+    // Before any determination: rank 1 head is v1. A correction later supersedes a determination AND
+    // appends v2 — the claim is `undetermined` again, but it must ⛔ not match the pre-determination token.
+    const before = resolve({ determinationId: null, versionHeads: ['1:1'] });
+    const afterCorrection = resolve({ determinationId: null, versionHeads: ['1:2'] });
+    expect(before.status).toBe('undetermined');
+    expect(afterCorrection.status).toBe('undetermined');
+    expect(afterCorrection.token).not.toBe(before.token);
+    // …and the heads are order-independent.
+    expect(resolve({ determinationId: null, versionHeads: ['1:1', '2:3'] }).token).toBe(
+      resolve({ determinationId: null, versionHeads: ['2:3', '1:1'] }).token,
+    );
   });
 });
 
@@ -188,6 +207,29 @@ describe('the token (AC5) — ⛔ never a name', () => {
   it('is 32 hex characters and carries no id verbatim', () => {
     const t = resolve().token;
     expect(t).toMatch(/^[0-9a-f]{32}$/);
-    expect(t).not.toContain(V(1).slice(-12));
+    for (const id of [V(1), DET, CLAIM, MEMBER]) expect(t).not.toContain(id.slice(-12));
+  });
+
+  it('⭐ is ORDER-INDEPENDENT — the SQL pins no row order for `standing` or the findings', () => {
+    const r1 = { rank: 1, versionId: V(1), versionNo: 1, kind: 'declared', effectiveAt: T };
+    const r2 = { rank: 2, versionId: V(2), versionNo: 1, kind: 'declared', effectiveAt: T };
+    const base = { projectionRanks: [1, 2], versionedRanks: [1, 2] };
+    expect(resolve({ ...base, standing: [r2, r1] }).token).toBe(resolve({ ...base, standing: [r1, r2] }).token);
+    expect(resolve({ ...base, standing: [r2, r1] }).entries.map((e) => e.rank)).toEqual([1, 2]);
+    const x = { ...base, standing: [r1, r2], disqualifiedRanks: [2] };
+    expect(resolve({ ...x, disqualificationIds: ['b', 'a'] }).token).toBe(resolve({ ...x, disqualificationIds: ['a', 'b'] }).token);
+  });
+
+  it('⭐ a nominee ADDED or REMOVED moves it ({1} vs {1,2})', () => {
+    const one = resolve();
+    const two = resolve({
+      standing: [
+        { rank: 1, versionId: V(1), versionNo: 1, kind: 'declared', effectiveAt: T },
+        { rank: 2, versionId: V(2), versionNo: 1, kind: 'declared', effectiveAt: T },
+      ],
+      projectionRanks: [1, 2],
+      versionedRanks: [1, 2],
+    });
+    expect(two.token).not.toBe(one.token);
   });
 });

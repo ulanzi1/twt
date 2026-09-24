@@ -28,6 +28,7 @@ import { encryptVerifierRationale } from '../../../src/modules/claims/verifier-d
 import { closeScopeTx, openScopeTx } from '../../../src/modules/multi-tenant/scope-tx.js';
 import { encryptNomineeField } from '../../../src/modules/nominee/nominee-crypto.js';
 import { buildServer } from '../../../src/server.js';
+import { seedNomineeNameCheck } from '../_nominee-name-check-fixture.js';
 import { buildTestDeps, hasDatabase, makeClient, type TestDeps } from '../_setup.js';
 import { FakeWebAuthnProvider } from '../_webauthn-fake.js';
 
@@ -180,6 +181,39 @@ describe.skipIf(!hasDatabase)('Story 6.20 — the nominee declaration surface �
   const base = (p: string, c: string) => `/api/v1/p/${p}/admin/claims/${c}`;
   const errCode = (b: Json) => String((b.error as Json | undefined)?.code);
 
+  /** This claim's audit lines of one type — filtered by the claim, ⛔ never the shared sink's total. */
+  const auditsFor = (type: string, claimCaseId: string) =>
+    td.auditSink.ofType(type).filter((e) => (e.context as Json | undefined)?.claim_case_id === claimCaseId);
+
+  /** Every 6.20 admin route for (p, c), each with a STRUCTURALLY VALID body (Fastify validates before the chain). */
+  function allRoutes(p: string, c: string): readonly [string, string, Json | undefined][] {
+    const corr = randomUUID();
+    const decision = { outcome: 'approve', note: 'n' };
+    const raiseBody = { rank: 1, proposed: { name: 'Asha Devi', relationship: 'spouse', mobile: '9876543210' }, note: 'n' };
+    const determination = { certificate_date: CERT, marks: [], note: 'n', watermark: { rank1: 1, rank2: null }, expected_live_determination_id: null };
+    return [
+      ['GET', `/api/v1/p/${p}/admin/nominee-refusals`, undefined],
+      ['GET', `/api/v1/p/${p}/admin/nominee-corrections/pending`, undefined],
+      ['GET', `${base(p, c)}/nominee-declaration`, undefined],
+      ['GET', `${base(p, c)}/nominee-declaration/snapshots`, undefined],
+      ['POST', `${base(p, c)}/nominee-determination`, determination],
+      ['GET', `${base(p, c)}/nominee-corrections`, undefined],
+      ['POST', `${base(p, c)}/nominee-corrections`, raiseBody],
+      ['POST', `${base(p, c)}/nominee-corrections/${corr}/district-decision`, decision],
+      ['POST', `${base(p, c)}/nominee-corrections/${corr}/pariwar-decision`, decision],
+    ];
+  }
+
+  /** How many determinations / corrections Pariwar `p` holds for claim `c` (read as the superuser). */
+  async function writesOn(c: string): Promise<{ determinations: number; corrections: number }> {
+    const r = await td.pool.query<{ d: number; c: number }>(
+      `SELECT (SELECT count(*)::int FROM nominee_determinations WHERE claim_case_id = $1) AS d,
+              (SELECT count(*)::int FROM nominee_corrections WHERE claim_case_id = $1) AS c`,
+      [c],
+    );
+    return { determinations: r.rows[0]!.d, corrections: r.rows[0]!.c };
+  }
+
   async function timeline(client: Client, p: string, c: string) {
     const res = await client.inject({ method: 'GET', url: `${base(p, c)}/nominee-declaration` });
     expect(res.statusCode).toBe(200);
@@ -241,21 +275,40 @@ describe.skipIf(!hasDatabase)('Story 6.20 — the nominee declaration surface �
     expect((await client.inject({ method: 'GET', url: `${base(w.pariwarId, w.claimCaseId)}/nominee-declaration/snapshots` })).statusCode).toBe(403);
   });
 
-  it('⛔ CROSS-PARIWAR — a District Admin of Pariwar X cannot reach Pariwar Y\'s claim on any route (403 / 404)', async () => {
+  it('⭐ family 3 — CROSS-PARIWAR: an actor of Pariwar X holding EVERY key reaches NONE of the nine routes for Pariwar Y (⛔ no body, ⛔ no write)', async () => {
     const x = await world();
     const y = await world();
-    const { client } = await actor(x.pariwarId, 'district_admin', 'district', x.district, 'Anita (District Admin)');
-    for (const url of [
-      `${base(y.pariwarId, y.claimCaseId)}/nominee-declaration`,
-      `${base(y.pariwarId, y.claimCaseId)}/nominee-declaration/snapshots`,
-      `${base(y.pariwarId, y.claimCaseId)}/nominee-corrections`,
-    ]) {
-      // The scope middleware refuses a Pariwar the caller holds no grant in — as a 404 (⛔ existence is
-      // never confirmed) or a 403. Either way ⛔ no body of Pariwar Y is returned.
-      const res = await client.inject({ method: 'GET', url });
-      expect([403, 404], url).toContain(res.statusCode);
-      expect(res.body).not.toContain(y.claimCaseId.slice(0, 8) + '-');
+    // A caller who holds every relevant key — in X. ⛔ None of it may reach Y.
+    const { client, userId } = await actor(x.pariwarId, 'district_admin', 'district', x.district, 'Anita (District Admin)');
+    for (const role of ['helpline_operator', 'pariwar_admin']) {
+      await td.pool.query(
+        `INSERT INTO role_grants (user_id, pariwar_id, role, scope_dimension, scope_value) VALUES ($1, $2, $3, 'pariwar', $4)`,
+        [userId, x.pariwarId, role, x.pariwarId],
+      );
     }
+    for (const [method, url, payload] of allRoutes(y.pariwarId, y.claimCaseId)) {
+      const res = await client.inject({ method: method as 'GET' | 'POST', url, payload });
+      // The scope middleware refuses a Pariwar the caller holds no grant in — 404 (⛔ existence never
+      // confirmed) or 403. ⛔ Never a 2xx, and ⛔ never a body naming Y's claim.
+      expect([403, 404], `${method} ${url}`).toContain(res.statusCode);
+      expect(res.body, `${method} ${url}`).not.toContain(y.claimCaseId);
+    }
+    expect(await writesOn(y.claimCaseId)).toEqual({ determinations: 0, corrections: 0 });
+  });
+
+  it('⭐ family 3 — a TAMPERED session naming a non-human actor id is DENIED on every route, ⛔ never treated as the human (the verifier-decision pattern)', async () => {
+    const w = await world();
+    const { client, userId } = await actor(w.pariwarId, 'district_admin', 'district', w.district, 'Real Human');
+    await td.pool.query(`UPDATE admin_sessions SET sess = jsonb_set(sess, '{userId}', to_jsonb($1::text)) WHERE user_id = $2`, [
+      randomUUID(),
+      userId,
+    ]);
+    for (const [method, url, payload] of allRoutes(w.pariwarId, w.claimCaseId)) {
+      const res = await client.inject({ method: method as 'GET' | 'POST', url, payload });
+      // The swapped id holds no membership in this Pariwar: `scopeResolutionHook` treats it as any non-member.
+      expect([401, 403, 404], `${method} ${url}`).toContain(res.statusCode);
+    }
+    expect(await writesOn(w.claimCaseId)).toEqual({ determinations: 0, corrections: 0 });
   });
 
   // ── AC3 — the timeline + the snapshots ────────────────────────────────────────────────────────
@@ -273,6 +326,9 @@ describe.skipIf(!hasDatabase)('Story 6.20 — the nominee declaration surface �
     for (const forbidden of ['Asha', 'Mohan', '9876543210', 'after_death', 'post_death', 'highlight', 'suggested']) {
       expect(text).not.toContain(forbidden);
     }
+    // Family 8 — the read is audited, naming the claim (a `claim:<uuid>` locator), with ids only.
+    const [line] = auditsFor('admin_nominee_declaration.timeline_read', w.claimCaseId);
+    expect(line).toMatchObject({ resourceLocator: `claim:${w.claimCaseId}`, context: { version_count: 2 } });
   });
 
   it('⭐ D10 — the snapshots DECRYPT on demand, and the audit line carries ids only', async () => {
@@ -281,9 +337,12 @@ describe.skipIf(!hasDatabase)('Story 6.20 — the nominee declaration surface �
     const res = await client.inject({ method: 'GET', url: `${base(w.pariwarId, w.claimCaseId)}/nominee-declaration/snapshots` });
     expect(res.statusCode).toBe(200);
     expect((res.json() as { snapshots: Json[] }).snapshots[0]).toMatchObject({ name: { state: 'readable', value: 'Asha Devi' } });
-    const audits = td.auditSink.ofType('admin_nominee_declaration.snapshots_read');
-    expect(audits.length).toBeGreaterThan(0);
+    // ⭐ THIS claim's line — ⛔ not "any snapshots line anywhere in the shared sink".
+    const audits = auditsFor('admin_nominee_declaration.snapshots_read', w.claimCaseId);
+    expect(audits).toHaveLength(1);
+    expect(audits[0]).toMatchObject({ resourceLocator: `claim:${w.claimCaseId}` });
     expect(JSON.stringify(audits)).not.toContain('Asha');
+    expect(JSON.stringify(audits)).not.toContain('9876543210');
   });
 
   // ── AC4 — the determination ───────────────────────────────────────────────────────────────────
@@ -293,6 +352,13 @@ describe.skipIf(!hasDatabase)('Story 6.20 — the nominee declaration surface �
     const res = await determineHonestly(client, w.pariwarId, w.claimCaseId);
     expect(res.statusCode).toBe(201);
     expect(res.json()).toMatchObject({ stands_count: 1, discarded_count: 1, declaration_status: 'effective' });
+    // Family 8 — `_recorded`, naming the claim and the determination; ⛔ no date.
+    const [line] = auditsFor('admin_claim.nominee_determination_recorded', w.claimCaseId);
+    expect(line).toMatchObject({
+      resourceLocator: `claim:${w.claimCaseId}`,
+      context: { determination_id: (res.json() as Json).determination_id, stands_count: 1, discarded_count: 1 },
+    });
+    expect(JSON.stringify(line)).not.toContain(CERT);
     // AC5 site C — the names read now shows the EFFECTIVE nominee (Asha), ⛔ not the post-death one.
     const names = await client.inject({ method: 'GET', url: `${base(w.pariwarId, w.claimCaseId)}/nominee-name-check` });
     expect(names.statusCode).toBe(200);
@@ -317,6 +383,11 @@ describe.skipIf(!hasDatabase)('Story 6.20 — the nominee declaration surface �
     });
     expect(res.statusCode).toBe(409);
     expect(errCode(res.json() as Json)).toBe('nominee_determination.inconsistent_mark');
+    // Family 8 — a refused write is audited too, with its bounded reason code.
+    expect(auditsFor('admin_claim.nominee_determination_rejected', w.claimCaseId)).toEqual([
+      expect.objectContaining({ context: expect.objectContaining({ reason: 'inconsistent_mark' }) }),
+    ]);
+    expect(auditsFor('admin_claim.nominee_determination_recorded', w.claimCaseId)).toEqual([]);
   });
 
   it('⛔ a VERIFIER may read the timeline but may ⛔ NOT determine (403)', async () => {
@@ -389,15 +460,39 @@ describe.skipIf(!hasDatabase)('Story 6.20 — the nominee declaration surface �
     expect(step2.json()).toMatchObject({ step: 'applied' });
     // D7 — the determination is superseded; the timeline says so.
     expect((await timeline(da.client, w.pariwarId, w.claimCaseId)).declaration_status).toBe('undetermined');
-    // ⛔ No name reached any audit line.
-    expect(JSON.stringify(td.auditSink.ofType('admin_claim.nominee_correction_raised'))).not.toContain('Asha');
+
+    // ⭐ Family 8 — EVERY step left its line, naming the claim and the correction (non-empty, so the
+    // "no name" check below cannot pass vacuously on an empty list).
+    const lines = [
+      ...auditsFor('admin_claim.nominee_correction_raised', w.claimCaseId),
+      ...auditsFor('admin_claim.nominee_correction_district_decided', w.claimCaseId),
+      ...auditsFor('admin_claim.nominee_correction_pariwar_decided', w.claimCaseId),
+      ...auditsFor('admin_nominee_correction.list_read', w.claimCaseId),
+    ];
+    expect(lines.map((l) => l.type).sort()).toEqual([
+      'admin_claim.nominee_correction_district_decided',
+      'admin_claim.nominee_correction_pariwar_decided',
+      'admin_claim.nominee_correction_raised',
+      'admin_nominee_correction.list_read',
+    ]);
+    expect(auditsFor('admin_claim.nominee_correction_raised', w.claimCaseId)[0]).toMatchObject({
+      actorId: helpline.userId,
+      resourceLocator: `claim:${w.claimCaseId}`,
+      context: { correction_id, rank: 1, raised_via: 'helpline' },
+    });
+    expect(auditsFor('admin_claim.nominee_correction_pariwar_decided', w.claimCaseId)[0]).toMatchObject({
+      actorId: pa.userId,
+      context: { correction_id, outcome: 'approve', step: 'applied' },
+    });
+    // ⛔ No name, ⛔ no mobile, ⛔ no note on any of them.
+    for (const pii of ['Asha', '9876543210', 'Maiden', 'Passbook', 'Agreed']) expect(JSON.stringify(lines)).not.toContain(pii);
   });
 
   it('⭐⭐ AC11(i) — a raise against an `other` nominee is a typed 409 AT THE RAISE', async () => {
     const w = await world({ relationship: 'other' });
     const da = await actor(w.pariwarId, 'district_admin', 'district', w.district, 'Anita (District Admin)');
     const helpline = await actor(w.pariwarId, 'helpline_operator', 'pariwar', w.pariwarId, 'Harsh (Helpline)');
-    await determineHonestly(da.client, w.pariwarId, w.claimCaseId);
+    expect((await determineHonestly(da.client, w.pariwarId, w.claimCaseId)).statusCode).toBe(201);
     const res = await helpline.client.inject({
       method: 'POST',
       url: `${base(w.pariwarId, w.claimCaseId)}/nominee-corrections`,
@@ -405,6 +500,9 @@ describe.skipIf(!hasDatabase)('Story 6.20 — the nominee declaration surface �
     });
     expect(res.statusCode).toBe(409);
     expect(errCode(res.json() as Json)).toBe('nominee_correction.relationship_other');
+    expect(auditsFor('admin_claim.nominee_correction_rejected', w.claimCaseId)).toEqual([
+      expect.objectContaining({ context: expect.objectContaining({ step: 'raise', reason: 'relationship_other' }) }),
+    ]);
   });
 
   it('⚠ a correction on a claim that does NOT exist is a 404 (asserted as a 404, ⛔ not called a refusal)', async () => {
@@ -423,7 +521,7 @@ describe.skipIf(!hasDatabase)('Story 6.20 — the nominee declaration surface �
   it('⭐ the FAMILY raises through the app (Ravi-mode + the nominee_change step-up); another member\'s claim is a 404', async () => {
     const w = await world();
     const da = await actor(w.pariwarId, 'district_admin', 'district', w.district, 'Anita (District Admin)');
-    await determineHonestly(da.client, w.pariwarId, w.claimCaseId);
+    expect((await determineHonestly(da.client, w.pariwarId, w.claimCaseId)).statusCode).toBe(201);
     await memberAuthRepo.insertElevation(deps.pool, {
       memberId: w.memberId,
       actionContext: 'nominee_change',
@@ -439,6 +537,9 @@ describe.skipIf(!hasDatabase)('Story 6.20 — the nominee declaration surface �
     });
     expect(ok.statusCode).toBe(201);
     expect(ok.json()).toMatchObject({ step: 'da_pending' });
+    expect(auditsFor('member_claim.nominee_correction_raised', w.claimCaseId)).toEqual([
+      expect.objectContaining({ actorId: w.memberId, context: expect.objectContaining({ raised_via: 'member_app' }) }),
+    ]);
 
     const other = randomUUID();
     await memberAuthRepo.insertElevation(deps.pool, { memberId: other, actionContext: 'nominee_change', elevatedUntil: new Date(Date.now() + 300_000) });
@@ -450,6 +551,80 @@ describe.skipIf(!hasDatabase)('Story 6.20 — the nominee declaration surface �
       headers: { authorization: `Bearer ${tok2}`, origin: 'http://localhost:3001' },
     });
     expect(miss.statusCode).toBe(404);
+    expect(auditsFor('member_claim.nominee_correction_rejected', w.claimCaseId)).toEqual([
+      expect.objectContaining({ actorId: other, context: expect.objectContaining({ reason: 'claim_not_found' }) }),
+    ]);
+  });
+
+  it('⭐ family 3 / D9 — the member-app raise: ⛔ no session is a 401; a session WITHOUT a fresh `nominee_change` step-up is a 403 step-up (and writes nothing)', async () => {
+    const w = await world();
+    const da = await actor(w.pariwarId, 'district_admin', 'district', w.district, 'Anita (District Admin)');
+    expect((await determineHonestly(da.client, w.pariwarId, w.claimCaseId)).statusCode).toBe(201);
+    const url = `/api/v1/member/claims/${w.claimCaseId}/nominee-corrections`;
+    const payload = { rank: 1, proposed: { name: 'Asha Kumari', relationship: 'spouse', mobile: '9876543210' }, note: 'Maiden name.' };
+    const anon = await app.inject({ method: 'POST', url, payload, headers: { origin: 'http://localhost:3001' } });
+    expect(anon.statusCode).toBe(401);
+    // A valid member session — but ⛔ no elevation for `nominee_change` (AR-24).
+    const tok = signAccessToken(app, { memberId: w.memberId, pariwarId: w.pariwarId, deviceId: 'd' }, 15 * 60 * 1000);
+    const noStepUp = await app.inject({ method: 'POST', url, payload, headers: { authorization: `Bearer ${tok}`, origin: 'http://localhost:3001' } });
+    expect(noStepUp.statusCode).toBe(403);
+    expect(errCode(noStepUp.json() as Json)).toBe('auth.step_up_required');
+    // ⭐ An elevation for a DIFFERENT action does not satisfy it.
+    await memberAuthRepo.insertElevation(deps.pool, { memberId: w.memberId, actionContext: 'medical_change', elevatedUntil: new Date(Date.now() + 300_000) });
+    const wrongContext = await app.inject({ method: 'POST', url, payload, headers: { authorization: `Bearer ${tok}`, origin: 'http://localhost:3001' } });
+    expect(wrongContext.statusCode).toBe(403);
+    expect(await writesOn(w.claimCaseId)).toEqual({ determinations: 1, corrections: 0 });
+  });
+
+  it('⭐ family 3 — a member session of ANOTHER Pariwar reaches ⛔ nothing on this claim (404, no write)', async () => {
+    const w = await world();
+    const da = await actor(w.pariwarId, 'district_admin', 'district', w.district, 'Anita (District Admin)');
+    expect((await determineHonestly(da.client, w.pariwarId, w.claimCaseId)).statusCode).toBe(201);
+    const outsider = await world(); // a real member, in a DIFFERENT Pariwar
+    await memberAuthRepo.insertElevation(deps.pool, { memberId: outsider.memberId, actionContext: 'nominee_change', elevatedUntil: new Date(Date.now() + 300_000) });
+    const tok = signAccessToken(app, { memberId: outsider.memberId, pariwarId: outsider.pariwarId, deviceId: 'd' }, 15 * 60 * 1000);
+    const res = await app.inject({
+      method: 'POST',
+      url: `/api/v1/member/claims/${w.claimCaseId}/nominee-corrections`,
+      payload: { rank: 1, proposed: { name: 'Asha Kumari', relationship: 'spouse', mobile: '9876543210' }, note: 'n' },
+      headers: { authorization: `Bearer ${tok}`, origin: 'http://localhost:3001' },
+    });
+    expect(res.statusCode).toBe(404);
+    expect(await writesOn(w.claimCaseId)).toEqual({ determinations: 1, corrections: 0 });
+  });
+
+  // ── AC5 — the approval gate's 409, through HTTP ──────────────────────────────────────────────
+  it('⭐ AC5 — an UNDETERMINED claim\'s approval is a typed 409 `nominee_determination_required`, naming WHY (`never_determined`)', async () => {
+    const w = await world();
+    // Two accounts, ⛔ no determination — the fixture's `determination: 'skip'` (T16) reaches exactly this.
+    await seedNomineeNameCheck(deps, w.pariwarId, w.claimCaseId, { determination: 'skip', accountsOnly: true });
+    const da = await actor(w.pariwarId, 'district_admin', 'district', w.district, 'Anita (District Admin)');
+    const res = await da.client.inject({
+      method: 'POST',
+      url: `${base(w.pariwarId, w.claimCaseId)}/verifier-decision`,
+      payload: { outcome: 'approved', reason_code: 'r8_90pct_met' },
+    });
+    expect(res.statusCode).toBe(409);
+    const body = res.json() as Json;
+    expect(errCode(body)).toBe('verifier_decision.nominee_determination_required');
+    expect((body.error as Json).details).toEqual({ reason: 'never_determined' });
+    // …and the names read says so too, ⛔ not merely an empty list (all four non-effective states list nobody).
+    const names = await da.client.inject({ method: 'GET', url: `${base(w.pariwarId, w.claimCaseId)}/nominee-name-check` });
+    expect(names.statusCode).toBe(200);
+    expect(names.json()).toMatchObject({ declaration_status: 'undetermined' });
+  });
+
+  it('⭐ AC4 / `-239` — a post-death refusal WITHOUT a discarded version is a typed 409 `post_death_refusal_ungrounded`', async () => {
+    const w = await world(); // ONE pre-death version — nothing to discard
+    const da = await actor(w.pariwarId, 'district_admin', 'district', w.district, 'Anita (District Admin)');
+    expect((await determineHonestly(da.client, w.pariwarId, w.claimCaseId)).statusCode).toBe(201);
+    const res = await da.client.inject({
+      method: 'POST',
+      url: `${base(w.pariwarId, w.claimCaseId)}/verifier-decision`,
+      payload: { outcome: 'denied', reason_code: 'post_death_nominee_change', rationale: 'Suspicious.' },
+    });
+    expect(res.statusCode).toBe(409);
+    expect(errCode(res.json() as Json)).toBe('verifier_decision.post_death_refusal_ungrounded');
   });
 
   // ── AC11(iii) — the refusal on suspicion (`-239`) ─────────────────────────────────────────────
@@ -457,7 +632,10 @@ describe.skipIf(!hasDatabase)('Story 6.20 — the nominee declaration surface �
     const w = await world({ declarations: [PRE, POST_DEATH] });
     const da = await actor(w.pariwarId, 'district_admin', 'district', w.district, 'Anita (District Admin)');
     const pa = await actor(w.pariwarId, 'pariwar_admin', 'pariwar', w.pariwarId, 'Kalpana (Pariwar Admin)');
-    await determineHonestly(da.client, w.pariwarId, w.claimCaseId); // a `discarded` version exists
+    // A `discarded` version exists — asserted, ⛔ assumed: the refusal below is only grounded because of it.
+    const determined = await determineHonestly(da.client, w.pariwarId, w.claimCaseId);
+    expect(determined.statusCode).toBe(201);
+    expect(determined.json()).toMatchObject({ discarded_count: 1 });
 
     // The refusal IS the shipped verifier denial with the dedicated code — ⛔ no parallel path.
     const rationale = 'Nominee changed on 2026-06-10, after the certificate date.';
@@ -485,14 +663,36 @@ describe.skipIf(!hasDatabase)('Story 6.20 — the nominee declaration surface �
         rationale: { state: 'readable', value: rationale },
       }),
     ]);
-    // ⛔ It is a notification surface for the Pariwar Admin — a District Admin without `cycle.freeze` is refused.
+    // ⛔ It is a notification surface for the Pariwar Admin — a District Admin without the Pariwar Admin's
+    // correction key (`NOMINEE_CORRECTION_PARIWAR_KEY`, reused as the refusal-view key) is refused.
     expect((await da.client.inject({ method: 'GET', url: `/api/v1/p/${w.pariwarId}/admin/nominee-refusals` })).statusCode).toBe(403);
+    // ⭐ Family 8 — ONE line per decrypted rationale, naming ITS claim (the 6.18 `queue_note_read` precedent);
+    // ⛔ never the rationale itself.
+    const rationaleLines = auditsFor('admin_nominee_refusal.rationale_read', w.claimCaseId);
+    expect(rationaleLines).toEqual([expect.objectContaining({ actorId: pa.userId, resourceLocator: `claim:${w.claimCaseId}` })]);
+    expect(JSON.stringify(rationaleLines)).not.toContain('2026-06-10');
 
     // ⭐ Appealable ONCE (6.16), and the refuser is disqualified from reviewing their own refusal.
     await inScope(w.pariwarId, async (s) => {
       await expect(claim.assertAppealInitiable(s.tx, ids.pariwarId(w.pariwarId), ids.claimId(w.claimCaseId))).resolves.toBeUndefined();
       const deciders = await claim.getOriginalDeciderActorIds(s.tx, ids.pariwarId(w.pariwarId), ids.claimId(w.claimCaseId));
       expect(claim.isOriginalDecider(deciders, da.userId)).toBe(true);
+    });
+    const appeal = () =>
+      inScope(w.pariwarId, (s) =>
+        claim.initiateAppeal(s.client, {
+          claimCaseId: ids.claimId(w.claimCaseId),
+          pariwarId: ids.pariwarId(w.pariwarId),
+          initiatedByActor: w.memberId,
+          initiatedOnBehalf: false,
+          actor: 'member',
+        }),
+      );
+    await expect(appeal()).resolves.toMatchObject({ claimState: expect.any(String) });
+    // ⭐ ONCE: a second appeal on the same refusal is refused.
+    await expect(appeal()).rejects.toThrow();
+    await inScope(w.pariwarId, async (s) => {
+      await expect(claim.assertAppealInitiable(s.tx, ids.pariwarId(w.pariwarId), ids.claimId(w.claimCaseId))).rejects.toThrow();
     });
   });
 });

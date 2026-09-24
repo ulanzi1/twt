@@ -14,17 +14,22 @@ import { randomUUID } from 'node:crypto';
 
 import { describe, expect, it } from 'vitest';
 
+import { eq, sql } from 'drizzle-orm';
+
 import {
+  PostDeathRefusalUngroundedError,
+  adjudicateClaim,
   getConvergenceCandidate,
   getInheritedGroundInspectionSource,
   listNomineeRefusals,
   overrideIntakeAttempt,
   tryConverge,
 } from '../../../src/claim/index.js';
+import { listNomineeDeclarationVersions } from '../../../src/nominee/declaration-history.js';
 import { claimId as toClaimId, memberId as toMemberId, type ClaimId, type MemberId } from '../../../src/ids/index.js';
 import * as schema from '../../../src/schema/index.js';
 import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
-import { PARIWAR_A, enterAppScope } from '../_helpers.js';
+import { PARIWAR_A, driveClaimTo, enterAppScope, seedNomineeDeclaration, seedNomineeDetermination } from '../_helpers.js';
 
 type Client = ReturnType<typeof getTx>['client'];
 type Tx = ReturnType<typeof getTx>['tx'];
@@ -155,5 +160,88 @@ describe.skipIf(!hasDatabase)('Story 6.20 — the `-239` refusal: inheritance + 
     });
     expect(ov.newClaimCaseId).not.toBe(refused.claimCaseId);
     expect(await getInheritedGroundInspectionSource(tx, PARIWAR_A, toClaimId(ov.newClaimCaseId))).toBe(refused.claimCaseId);
+  });
+
+  // ── Code review 2026-09-24 ──────────────────────────────────────────────────────────────────────
+  it('⭐⭐ AC4 — the `-239` refusal through the REAL `adjudicateClaim` needs a determination with a DISCARDED version', async () => {
+    const { client, tx } = getTx();
+    await enterAppScope(client, PARIWAR_A);
+    const mid = toMemberId(randomUUID());
+    await tx.insert(schema.members).values({ memberId: mid, pariwarId: PARIWAR_A, state: 'active', stateEventVersion: 1 });
+    await seedNomineeDeclaration(tx, PARIWAR_A, mid, { declaredAt: new Date('2026-01-10T06:00:00.000Z'), ensureMember: false });
+    const cid = toClaimId(randomUUID());
+    await driveClaimTo(client, PARIWAR_A, cid, mid, 'verifier_review');
+    const deny = () =>
+      adjudicateClaim(client, {
+        claimCaseId: cid,
+        pariwarId: PARIWAR_A,
+        outcome: 'denied',
+        reasonCode: 'post_death_nominee_change',
+        rationaleCiphertext: 'enc:v1:rationale',
+        actorId: randomUUID(),
+        actorDisplay: 'Anita (District Admin)',
+        actor: 'operator',
+      });
+    const ungrounded = (err: unknown) => err instanceof PostDeathRefusalUngroundedError;
+
+    // (1) No determination at all ⇒ refused.
+    await client.query('SAVEPOINT a');
+    await expect(deny()).rejects.toSatisfy(ungrounded);
+    await client.query('ROLLBACK TO SAVEPOINT a');
+    // (2) A determination where EVERYTHING stands ⇒ still refused (no suspicion was ever recorded).
+    await seedNomineeDetermination(client, PARIWAR_A, cid);
+    await client.query('SAVEPOINT b');
+    await expect(deny()).rejects.toSatisfy(ungrounded);
+    await client.query('ROLLBACK TO SAVEPOINT b');
+    // (3) A post-death version the District Admin DISCARDED ⇒ the refusal is recorded (non-vacuity).
+    await seedNomineeDeclaration(tx, PARIWAR_A, mid, { declaredAt: new Date('2026-06-01T06:00:00.000Z'), ensureMember: false });
+    const versions = await listNomineeDeclarationVersions(tx, PARIWAR_A, mid);
+    await seedNomineeDetermination(client, PARIWAR_A, cid, {
+      certificateDate: '2026-05-01',
+      marks: versions.map((v) => ({ versionId: v.versionId, mark: v.versionNo === 1 ? 'stands' : 'discarded' })),
+    });
+    await expect(deny()).resolves.toMatchObject({ decision: { outcome: 'denied', reasonCode: 'post_death_nominee_change' } });
+    expect((await listNomineeRefusals(tx, PARIWAR_A)).map((r) => r.claimCaseId)).toContain(cid);
+  });
+
+  it('⛔ a SUPERSEDED `-239` refusal is ⛔ not listed and passes ⛔ nothing on', async () => {
+    const { client, tx } = getTx();
+    await enterAppScope(client, PARIWAR_A);
+    const mid = toMemberId(randomUUID());
+    const refused = await tryConverge(client, intake(mid, 'member_app', 'e1'));
+    const refusedId = toClaimId(refused.claimCaseId);
+    await completedInspection(tx, refusedId);
+    await refuse(tx, refusedId, 'post_death_nominee_change');
+    await forceState(client, refused.claimCaseId, 'denied');
+    await tx
+      .update(schema.claimVerifierDecisions)
+      .set({ supersededAt: new Date() })
+      .where(eq(schema.claimVerifierDecisions.claimCaseId, refusedId));
+    const refile = await tryConverge(client, intake(mid, 'member_app', 'e2'));
+    expect(await getInheritedGroundInspectionSource(tx, PARIWAR_A, toClaimId(refile.claimCaseId))).toBeNull();
+    expect((await listNomineeRefusals(tx, PARIWAR_A)).map((r) => r.claimCaseId)).not.toContain(refused.claimCaseId);
+  });
+
+  it('⭐ a TIE on `created_at` resolves to ONE deterministic source (the higher claim id) — on every call', async () => {
+    const { client, tx } = getTx();
+    await enterAppScope(client, PARIWAR_A);
+    const mid = toMemberId(randomUUID());
+    // Two `-239`-refused claims for one death, each with a completed inspection, minted in ONE transaction
+    // (so `created_at` is EQUAL — `now()` is the transaction's start), and a refile after them.
+    const ids = [toClaimId(randomUUID()), toClaimId(randomUUID())].sort() as [ClaimId, ClaimId];
+    for (const id of ids) {
+      await driveClaimTo(client, PARIWAR_A, id, mid, 'intake_pending');
+      await completedInspection(tx, id);
+      await refuse(tx, id, 'post_death_nominee_change');
+    }
+    const refile = toClaimId(randomUUID());
+    await driveClaimTo(client, PARIWAR_A, refile, mid, 'intake_pending');
+    const created = await tx.execute<{ n: number }>(
+      sql`SELECT count(DISTINCT created_at)::int AS n FROM claims WHERE claim_case_id IN (${ids[0]}, ${ids[1]}, ${refile})`,
+    );
+    expect(created.rows[0]!.n).toBe(1); // the premise: a genuine tie
+    const first = await getInheritedGroundInspectionSource(tx, PARIWAR_A, refile);
+    expect([ids[0], ids[1]]).toContain(first);
+    for (let i = 0; i < 3; i++) expect(await getInheritedGroundInspectionSource(tx, PARIWAR_A, refile)).toBe(first);
   });
 });

@@ -31,7 +31,16 @@ import {
 import { dataExportId as toDataExportId, memberId as toMemberId } from '../../../src/ids/index.js';
 import * as schema from '../../../src/schema/index.js';
 import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
-import { PARIWAR_A, PARIWAR_B, enterAppScope, seedMember, seedNomineeDeclaration } from '../_helpers.js';
+import {
+  PARIWAR_A,
+  PARIWAR_B,
+  driveClaimTo,
+  enterAppScope,
+  seedMember,
+  seedNomineeDeclaration,
+  seedNomineeDetermination,
+} from '../_helpers.js';
+import { listNomineeDeclarationVersions } from '../../../src/nominee/declaration-history.js';
 
 const NOW = new Date('2026-07-02T10:00:00Z');
 
@@ -180,6 +189,44 @@ describe.skipIf(!hasDatabase)('data_exports store + assemble — RLS + cascade +
       [1, 2, 'declared', 'Asha Devi'],
       [2, 1, 'declared', 'Ravi Kumar'],
       [2, 2, 'vacated', null],
+    ]);
+  });
+
+  it('⭐ Story 6.20 (D16 / D11) — each version is exported WITH its determination status (the live marks)', async () => {
+    const { tx, client } = getTx();
+    const { kms, kekRef } = fakeKms();
+    const mid = randomUUID();
+    await seedMember(tx, PARIWAR_A, { memberId: mid, state: 'active', stateEventVersion: 4 });
+    await enterAppScope(client, PARIWAR_A);
+    const enc = async (v: string) =>
+      serializeEnvelope(await encryptTier1(Buffer.from(v, 'utf-8'), { pariwarId: PARIWAR_A, fieldClass: 'member_nominee' }, kms, kekRef));
+    const nominee = async (name: string) => [{ nameCiphertext: await enc(name), mobileCiphertext: await enc('9876543210') }];
+    await seedNomineeDeclaration(tx, PARIWAR_A, mid, {
+      nominees: await nominee('Asha Devi'),
+      declaredAt: new Date('2026-01-10T06:00:00.000Z'),
+      ensureMember: false,
+    });
+    await seedNomineeDeclaration(tx, PARIWAR_A, mid, {
+      nominees: await nominee('Someone Else'),
+      declaredAt: new Date('2026-06-01T06:00:00.000Z'),
+      ensureMember: false,
+    });
+    const cid = randomUUID();
+    await driveClaimTo(client, PARIWAR_A, cid, mid, 'verification_in_progress');
+    const versions = await listNomineeDeclarationVersions(tx, PARIWAR_A, toMemberId(mid));
+    await seedNomineeDetermination(client, PARIWAR_A, cid, {
+      certificateDate: '2026-05-01',
+      marks: versions.map((v) => ({ versionId: v.versionId, mark: v.versionNo === 1 ? 'stands' : 'discarded' })),
+    });
+    const sections = await assembleMemberExport(
+      tx,
+      { kms, kekRef },
+      { exportId: randomUUID(), memberId: toMemberId(mid), pariwarId: PARIWAR_A, now: NOW },
+    );
+    const profile = sections['profile.json'] as { nomineeHistory: { versionNo: number; determinationMarks: string[] }[] };
+    expect(profile.nomineeHistory.map((v) => [v.versionNo, v.determinationMarks])).toEqual([
+      [1, ['stands']],
+      [2, ['discarded']],
     ]);
   });
 

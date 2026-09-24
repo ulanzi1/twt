@@ -11,7 +11,7 @@
 
 import { randomUUID } from 'node:crypto';
 
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, eq, isNull, sql } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -22,6 +22,7 @@ import {
   getEffectiveNomineeDeclaration,
   recordNomineeDetermination,
   recordNomineeDisqualificationFinding,
+  NOMINEE_DETERMINATION_MAX_VERSIONS,
   type RecordNomineeDeterminationInput,
 } from '../../../src/claim/index.js';
 import { bindScopedDb } from '../../../src/db.js';
@@ -213,7 +214,99 @@ describe.skipIf(!hasDatabase)('Story 6.20 — the determination + the effective 
     expect(e.entries.map((x) => [x.rank, x.versionNo, x.splitPct])).toEqual([[1, 2, 100]]);
   });
 
+  it('⭐ AC6 a change to ONE of two after the death: the changed rank reverts, the untouched rank keeps its own version', async () => {
+    const { client, tx, cid, mid } = await setup();
+    await seedNomineeDeclaration(tx, PARIWAR_A, mid, {
+      nominees: [{ nameCiphertext: 'enc:v1:asha' }, { nameCiphertext: 'enc:v1:ravi' }],
+      declaredAt: LONG_BEFORE,
+      ensureMember: false,
+    });
+    // After the death ONLY rank 1's nominee changes (rank 2 is re-submitted unchanged — T3: no dedup).
+    await seedNomineeDeclaration(tx, PARIWAR_A, mid, {
+      nominees: [{ nameCiphertext: 'enc:v1:someone-else' }, { nameCiphertext: 'enc:v1:ravi' }],
+      declaredAt: AFTER,
+      ensureMember: false,
+    });
+    await recordNomineeDetermination(client, await base(tx, cid, mid));
+    const e = await getEffectiveNomineeDeclaration(tx, PARIWAR_A, cid);
+    expect(e.entries.map((x) => [x.rank, x.versionNo, x.splitPct])).toEqual([
+      [1, 1, 75],
+      [2, 1, 25],
+    ]);
+    const versions = await listNomineeDeclarationVersions(tx, PARIWAR_A, mid);
+    const standing = e.entries.map((x) => versions.find((v) => v.versionId === x.versionId)!.nameCiphertext);
+    expect(standing).toEqual(['enc:v1:asha', 'enc:v1:ravi']);
+  });
+
   // ── The writer's other guards (D5, D17, D4) ───────────────────────────────────────────────────
+  it('⭐ AC4 — a failure MID-WAY (after the row + items, at the event) leaves NEITHER behind', async () => {
+    const { client, tx, cid, mid } = await setup();
+    await declare(tx, mid, 1, LONG_BEFORE);
+    const input = await base(tx, cid, mid);
+    await client.query('SAVEPOINT mid_way');
+    // An actor the claim event's payload schema rejects — the writer has already inserted its row and
+    // items when the event emission throws.
+    await expect(recordNomineeDetermination(client, { ...input, actor: 'not-an-actor' as never })).rejects.toThrow();
+    await client.query('ROLLBACK TO SAVEPOINT mid_way');
+    expect(await tx.select().from(schema.nomineeDeterminations).where(eq(schema.nomineeDeterminations.claimCaseId, cid))).toEqual([]);
+    const ev = await tx
+      .select()
+      .from(schema.eventsLog)
+      .where(and(eq(schema.eventsLog.streamId, cid), eq(schema.eventsLog.eventType, 'claim.nominee_determination_recorded')));
+    expect(ev).toEqual([]);
+    // …and the same input, well-formed, then records (the rollback was of THIS attempt only).
+    await expect(recordNomineeDetermination(client, input)).resolves.toMatchObject({ standsCount: 1 });
+  });
+
+  it('⛔ a version marked TWICE is refused as `duplicate_mark` (⛔ not reported as an unknown version)', async () => {
+    const { client, tx, cid, mid } = await setup();
+    await declare(tx, mid, 1, LONG_BEFORE);
+    const input = await base(tx, cid, mid);
+    await expect(recordNomineeDetermination(client, { ...input, marks: [...input.marks, input.marks[0]!] })).rejects.toSatisfy(
+      refusedWith('duplicate_mark'),
+    );
+  });
+
+  it('⭐ UPPER-case ids from a client are accepted (the contract is an unbranded uuid; stored ids are lower-case)', async () => {
+    const { client, tx, cid, mid } = await setup();
+    await declare(tx, mid, 1, LONG_BEFORE);
+    const first = await recordNomineeDetermination(client, await base(tx, cid, mid));
+    const input = await base(tx, cid, mid);
+    const res = await recordNomineeDetermination(client, {
+      ...input,
+      marks: input.marks.map((m) => ({ ...m, versionId: m.versionId.toUpperCase() })),
+      expectedLiveDeterminationId: first.determinationId.toUpperCase(),
+    });
+    expect(res.supersededDeterminationId).toBe(first.determinationId);
+  });
+
+  it('⛔ family 8 — a determination with NO display name, or NO note, is refused; an unknown claim is `not_found`', async () => {
+    const { client, tx, cid, mid } = await setup();
+    await declare(tx, mid, 1, LONG_BEFORE);
+    const input = await base(tx, cid, mid);
+    await expect(recordNomineeDetermination(client, { ...input, actorDisplay: '  ' })).rejects.toSatisfy(refusedWith('missing_display'));
+    await expect(recordNomineeDetermination(client, { ...input, noteCiphertext: '' })).rejects.toSatisfy(refusedWith('missing_note'));
+    await expect(recordNomineeDetermination(client, { ...input, claimCaseId: toClaimId(randomUUID()) })).rejects.toSatisfy(
+      refusedWith('not_found'),
+    );
+  });
+
+  it(`⛔ past ${NOMINEE_DETERMINATION_MAX_VERSIONS} versions the writer refuses with a TYPED \`too_many_versions\` (⛔ never an unreachable \`missing_item\`)`, async () => {
+    const { client, tx, cid, mid } = await setup();
+    await declare(tx, mid, 1, LONG_BEFORE);
+    // Versions 2 … MAX+1 of rank 1 — one statement, the fixture's own shape.
+    await tx.execute(sql`
+      INSERT INTO member_nominee_versions
+        (member_id, pariwar_id, rank, version_no, declaration_id, kind, source, name_ciphertext, relationship,
+         mobile_ciphertext, split_pct, recorded_at, effective_at)
+      SELECT ${mid}, ${PARIWAR_A}, 1, g, gen_random_uuid(), 'declared', 'member', 'enc:v1:n', 'spouse', 'enc:v1:m', 100,
+             ${LONG_BEFORE.toISOString()}::timestamptz, ${LONG_BEFORE.toISOString()}::timestamptz
+        FROM generate_series(2, ${NOMINEE_DETERMINATION_MAX_VERSIONS + 1}) AS g
+    `);
+    await expect(recordNomineeDetermination(client, await base(tx, cid, mid))).rejects.toSatisfy(refusedWith('too_many_versions'));
+  });
+
+
   it('⛔ a version with NO mark is refused (every version must be judged)', async () => {
     const { client, tx, cid, mid } = await setup();
     await declare(tx, mid, 1, LONG_BEFORE);
@@ -395,6 +488,41 @@ describe.skipIf(!hasDatabase)('Story 6.20 — the determination + the effective 
   });
 
   // ── D17 — two claims for one death ────────────────────────────────────────────────────────────
+  it('⛔ the 6-22 finding writers refuse a blank display name, an unknown claim, and a DUPLICATE (both kinds)', async () => {
+    const { client, tx, cid, mid } = await setup();
+    await declare(tx, mid, 2, LONG_BEFORE);
+    const { recordMemberInnocenceFinding, ClaimNomineeFindingRefusedError } = await import('../../../src/claim/index.js');
+    const refused = (reason: string) => (err: unknown) => err instanceof ClaimNomineeFindingRefusedError && err.reason === reason;
+    const innocence = (over: Record<string, unknown> = {}) =>
+      recordMemberInnocenceFinding(client, {
+        claimCaseId: cid,
+        pariwarId: PARIWAR_A,
+        findingId: claimNomineeFindingId(randomUUID()),
+        actorId: randomUUID(),
+        actorDisplay: 'Investigator',
+        actor: 'trustee',
+        ...over,
+      });
+    const disqualify = (over: Record<string, unknown> = {}) =>
+      recordNomineeDisqualificationFinding(bindScopedDb(client), {
+        claimCaseId: cid,
+        pariwarId: PARIWAR_A,
+        findingId: claimNomineeFindingId(randomUUID()),
+        actorId: randomUUID(),
+        actorDisplay: 'Investigator',
+        rank: 2,
+        ...over,
+      });
+    await expect(innocence({ actorDisplay: ' ' })).rejects.toSatisfy(refused('missing_display'));
+    await expect(disqualify({ actorDisplay: '' })).rejects.toSatisfy(refused('missing_display'));
+    await expect(innocence({ claimCaseId: toClaimId(randomUUID()) })).rejects.toSatisfy(refused('claim_not_found'));
+    await expect(disqualify({ claimCaseId: toClaimId(randomUUID()) })).rejects.toSatisfy(refused('claim_not_found'));
+    await innocence();
+    await expect(innocence()).rejects.toSatisfy(refused('duplicate'));
+    await disqualify();
+    await expect(disqualify()).rejects.toSatisfy(refused('duplicate'));
+  });
+
   it('⭐ D17 — TWO claims for one death each keep their OWN determination; determining B leaves A live', async () => {
     const { client, tx, cid, mid } = await setup();
     await declare(tx, mid, 1, LONG_BEFORE);

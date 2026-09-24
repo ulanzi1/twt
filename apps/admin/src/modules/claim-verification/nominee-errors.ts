@@ -44,7 +44,8 @@ export function nomineeDeterminationErrorMessage(err: unknown): string {
  * Story 6.20 — a nominee correction's typed refusals. `kind` picks the schema-refusal wording: a RAISE is
  * about the name and mobile, a DECISION about the note (adversarial review 2026-09-24b).
  */
-export function nomineeCorrectionErrorMessage(err: unknown, kind: 'raise' | 'decide' = 'decide'): string {
+// ⚠ `kind` is REQUIRED (review 2026-09-24c): a default let a raise caller that forgot it show the note wording.
+export function nomineeCorrectionErrorMessage(err: unknown, kind: 'raise' | 'decide'): string {
   if (err instanceof ApiError) {
     if (err.code === 'admin.display_name_missing') return t.decision.displayNameMissing;
     if (err.status === 401) return t.nomineeDeclaration.corrections.sessionExpired;

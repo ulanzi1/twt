@@ -45,7 +45,13 @@ export function HelplineNomineeCorrection({
   const claims = claimsQ.data?.member_id === memberId ? claimsQ.data.claims : [];
   const [picked, setPicked] = useState<string | null>(null);
   // One live claim ⇒ it is the claim; several ⇒ the operator's pick (reset when the member changes).
-  const chosen = claims.length === 1 ? claims[0]!.claim_case_id : claims.some((c) => c.claim_case_id === picked) ? picked : null;
+  // ⭐ A lone claim is REMEMBERED as the pick (review 2026-09-24c): otherwise a refetch that finds a second claim
+  // (one filed on this page meanwhile) un-chose it, unmounting the form and everything typed into it.
+  const lone = claims.length === 1 ? claims[0]!.claim_case_id : null;
+  useEffect(() => {
+    if (lone !== null) setPicked(lone);
+  }, [lone]);
+  const chosen = claims.some((c) => c.claim_case_id === picked) ? picked : lone;
   const raise = usePostNomineeCorrectionRaise(pariwarId, chosen);
   const [sentCount, setSentCount] = useState(0);
   // A different claim is a different request — ⛔ never carry an outcome or an error across.

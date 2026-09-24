@@ -100,7 +100,11 @@ function NomineeCorrectionsView(): ReactElement {
                 type="button"
                 className="underline"
                 aria-expanded={open === claimCaseId}
-                onClick={() => setOpen(open === claimCaseId ? null : claimCaseId)}
+                onClick={() => {
+                  // A different item is a different context — an old refusal must not read as this one's.
+                  setLastFailure(null);
+                  setOpen(open === claimCaseId ? null : claimCaseId);
+                }}
               >
                 <code className="font-mono text-xs">{claimCaseId}</code> — {c.step.pa_pending}
               </button>
@@ -154,7 +158,7 @@ function ClaimCorrections({
           .mutateAsync({ correctionId, step, body: { outcome, note } })
           .then(() => true)
           .catch((err: unknown) => {
-            onFailed(nomineeCorrectionErrorMessage(err));
+            onFailed(nomineeCorrectionErrorMessage(err, 'decide'));
             return false;
           });
         if (ok) onDecided(outcome);
@@ -162,7 +166,9 @@ function ClaimCorrections({
       }}
       onRetry={() => void corrections.refetch()}
       deciding={decide.isPending}
-      decideError={decide.error ? nomineeCorrectionErrorMessage(decide.error) : null}
+      // ⛔ The PAGE announces failures (it outlives this item) — ⛔ never a second alert here (review 2026-09-24c:
+      // a refusal that left the item mounted was announced twice).
+      decideError={null}
       // The PAGE announces the outcome (it outlives this item) — ⛔ never a second live region here.
       announceDecided={false}
       resetKey={claimCaseId}

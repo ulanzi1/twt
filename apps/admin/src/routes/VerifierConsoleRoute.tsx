@@ -482,7 +482,7 @@ export function VerifierConsoleRoute(): ReactElement {
                       .catch(() => false)
                   }
                   deciding={decideCorrection.isPending}
-                  decideError={decideCorrection.error ? nomineeCorrectionErrorMessage(decideCorrection.error) : null}
+                  decideError={decideCorrection.error ? nomineeCorrectionErrorMessage(decideCorrection.error, 'decide') : null}
                   decidedOutcome={decideCorrection.isSuccess ? (decideCorrection.variables?.body.outcome ?? null) : null}
                   onRetryCorrections={() => void correctionsQ.refetch()}
                 />

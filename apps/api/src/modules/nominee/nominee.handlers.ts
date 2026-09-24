@@ -118,9 +118,12 @@ export function createNomineeHandlers(deps: AppDeps) {
 
   return {
     /**
-     * POST /api/v1/member/nominees — declare 1–2 nominees (latest-wins replace) → emit
-     * `member.nominees_declared`. The split is SERVER-derived from the count (R4); the lifecycle
-     * state is unchanged (non-transition marker, R5). Rejected only in terminal states (R2).
+     * POST /api/v1/member/nominees — declare 1–2 nominees → emit `member.nominees_declared`, append one
+     * VERSION per submitted rank (+ a tombstone for a dropped rank) and replace the current projection
+     * (Story 6.20 D1/D16 — the history is kept; the projection is the latest). The split is SERVER-derived
+     * from the count (R4); the lifecycle state is unchanged (non-transition marker, R5). Refused: in a
+     * terminal state (R2); once a claim is filed (Story 6.20 D3, AC2 — `nominee.locked_claim_filed`); and a
+     * RE-declaration outside the wizard without a fresh `nominee_change` step-up (D9, AR-24).
      */
     async declare(request: FastifyRequest): Promise<NomineeStatusResponse> {
       const body = request.body as NomineeDeclareRequest;
@@ -132,6 +135,18 @@ export function createNomineeHandlers(deps: AppDeps) {
         throw new BadRequestError('Declare 1 or 2 nominees', 'nominee.invalid_count');
       }
       const { split, ranks } = nomineeDomain.deriveNomineeSplit(count);
+
+      // ⭐ Story 6.20 (D9) — the `nominee_change` elevation is looked up BEFORE the transaction opens (code
+      // review 2026-09-24): looked up inside it, the lookup took a SECOND pooled connection while this one
+      // held the D3 advisory lock — N concurrent re-declares could starve the pool with every lock held.
+      // Whether it is NEEDED is still decided inside the transaction, below. A lookup failure is P24's
+      // posture: step-up-required.
+      let elevationFresh = false;
+      try {
+        elevationFresh = await hasFreshElevation(deps.pool, memberIdStr, NOMINEE_CHANGE_STEP_UP, deps.clock());
+      } catch {
+        elevationFresh = false;
+      }
 
       const scopeTx = await openScopeTx(deps, pariwarIdStr);
       let ok = false;
@@ -171,15 +186,8 @@ export function createNomineeHandlers(deps: AppDeps) {
         const isRedeclaration =
           (await nomineeDomain.hasNomineeDeclarationVersion(scopeTx.tx, pariwarId, memberId)) ||
           (await nomineeDomain.getMemberNominees(scopeTx.tx, pariwarId, memberId)).length > 0;
-        if (isRedeclaration && !PRE_LOCK_IN_STATES.has(state)) {
-          let fresh = false;
-          try {
-            fresh = await hasFreshElevation(deps.pool, memberIdStr, NOMINEE_CHANGE_STEP_UP, deps.clock());
-          } catch {
-            // The member step-up gate's P24 posture: a lookup failure surfaces as step-up-required.
-            fresh = false;
-          }
-          if (!fresh) throw new StepUpRequiredError(NOMINEE_CHANGE_STEP_UP);
+        if (isRedeclaration && !PRE_LOCK_IN_STATES.has(state) && !elevationFresh) {
+          throw new StepUpRequiredError(NOMINEE_CHANGE_STEP_UP);
         }
 
         // Encrypt each nominee field under the member's real pariwar context, stamping the

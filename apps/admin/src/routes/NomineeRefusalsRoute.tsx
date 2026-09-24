@@ -13,6 +13,7 @@ import { useEffect } from 'react';
 
 import { ApiError } from '../api/client.js';
 import { useNomineeRefusals, useSession } from '../api/hooks.js';
+import { formatIst } from '../modules/claim-verification/NomineeDeclarationPanel.js';
 import { verifierConsoleEn } from '../modules/claim-verification/i18n-en.js';
 
 const t = verifierConsoleEn.nomineeDeclaration.refusals;
@@ -61,14 +62,20 @@ function NomineeRefusalsView(): ReactElement {
         <ul className="mt-4 space-y-3" data-testid="nominee-refusals">
           {list.data?.items.map((item) => (
             <li key={item.claim_case_id} className="rounded border p-3 text-sm" data-testid={`nominee-refusal-${item.claim_case_id}`}>
-              <div className="flex flex-wrap items-baseline gap-x-3">
-                <code className="font-mono text-xs opacity-80">{item.claim_case_id}</code>
-                <span className="rounded bg-black/5 px-1.5 py-0.5 text-xs">{item.claim_state}</span>
-              </div>
+              <dl className="grid grid-cols-[auto,1fr] gap-x-3 gap-y-0.5 text-xs">
+                <dt className="opacity-70">{t.claim}</dt>
+                <dd>
+                  <code className="font-mono">{item.claim_case_id}</code>
+                </dd>
+                <dt className="opacity-70">{t.state}</dt>
+                <dd>{item.claim_state.replace(/_/g, ' ')}</dd>
+              </dl>
               <dl className="mt-2 grid grid-cols-[auto,1fr] gap-x-3 gap-y-0.5 text-xs">
                 <dt className="opacity-70">{t.refusedBy}</dt>
                 <dd>
-                  {item.refused_by_display ?? '—'} · {item.refused_at}
+                  {/* ⭐ IST, like every other instant on these pages — a raw UTC string put a 00:30 IST
+                      refusal on the previous day. */}
+                  {item.refused_by_display ?? '—'} · {formatIst(item.refused_at)}
                 </dd>
                 <dt className="opacity-70">{t.note}</dt>
                 <dd data-testid="nominee-refusal-note">
@@ -79,9 +86,9 @@ function NomineeRefusalsView(): ReactElement {
                       : verifierConsoleEn.nomineeDeclaration.unreadable}
                 </dd>
               </dl>
-              <a className="mt-2 inline-block underline" href={`/p/${pariwarId}/claims/${item.claim_case_id}/verify`}>
-                {t.open}
-              </a>
+              {/* ⛔ No "open the claim" link (code review 2026-09-24): it pointed at the verifier console,
+                  which the Pariwar Admin cannot open (`claim.verify`). This page IS the notification
+                  (`-239`); the claim reference is what the Pariwar Admin quotes to the District Admin. */}
             </li>
           ))}
         </ul>

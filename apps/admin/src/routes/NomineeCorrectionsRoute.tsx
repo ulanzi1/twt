@@ -15,11 +15,10 @@ import {
   useNomineeCorrections,
   usePendingNomineeCorrections,
   usePostNomineeCorrectionDecision,
-  usePostNomineeCorrectionRaise,
   useSession,
 } from '../api/hooks.js';
 import { NomineeCorrections, verifierConsoleEn } from '../modules/claim-verification/index.js';
-import { nomineeCorrectionErrorMessage } from './VerifierConsoleRoute.js';
+import { nomineeCorrectionErrorMessage } from '../modules/claim-verification/nominee-errors.js';
 
 const c = verifierConsoleEn.nomineeDeclaration.corrections;
 
@@ -36,18 +35,34 @@ export function NomineeCorrectionsRoute(): ReactElement {
 
 function NomineeCorrectionsView(): ReactElement {
   const { pariwarId } = useParams({ from: '/p/$pariwarId/nominee-corrections' });
+  const navigate = useNavigate();
   const pending = usePendingNomineeCorrections(pariwarId);
   const [open, setOpen] = useState<string | null>(null);
+  // ⭐ The confirmation lives HERE, ⛔ not in the opened item: a decided request leaves the queue, so the
+  // item unmounts on the refetch and an in-item message would vanish unread.
+  const [decidedCount, setDecidedCount] = useState(0);
   const status = pending.error instanceof ApiError ? pending.error.status : null;
+  // ⭐ A session that expires mid-page goes back to sign-in (the refusal list's handling) — ⛔ never a
+  // generic "could not be loaded" with no way out.
+  useEffect(() => {
+    if (status === 401) void navigate({ to: '/login' });
+  }, [status, navigate]);
   const claimIds = [...new Set((pending.data?.items ?? []).map((i) => i.claim_case_id))];
 
   return (
     <main className="mx-auto max-w-4xl p-4">
       <h1 className="text-lg font-semibold">{c.heading}</h1>
       <p className="mt-1 text-sm text-slate-600">{c.intro}</p>
+      <p role="status" data-testid="nominee-corrections-decided" className="mt-2 text-sm">
+        {decidedCount > 0 ? c.decided : ''}
+      </p>
       {pending.isLoading ? (
         <p role="status" className="mt-4 text-sm">
           {verifierConsoleEn.nomineeDeclaration.loading}
+        </p>
+      ) : status === 401 ? (
+        <p role="status" className="mt-4 text-sm">
+          Redirecting to sign in…
         </p>
       ) : status === 403 ? (
         <p role="alert" data-testid="nominee-corrections-forbidden" className="mt-4 text-sm">
@@ -55,7 +70,7 @@ function NomineeCorrectionsView(): ReactElement {
         </p>
       ) : pending.isError ? (
         <p role="alert" className="mt-4 text-sm">
-          {verifierConsoleEn.nomineeDeclaration.loadError}
+          {c.loadError}
         </p>
       ) : claimIds.length === 0 ? (
         <p role="status" data-testid="nominee-corrections-pending-empty" className="mt-4 text-sm">
@@ -73,7 +88,11 @@ function NomineeCorrectionsView(): ReactElement {
               >
                 <code className="font-mono text-xs">{claimCaseId}</code> — {c.step.pa_pending}
               </button>
-              {open === claimCaseId ? <ClaimCorrections pariwarId={pariwarId} claimCaseId={claimCaseId} /> : null}
+              {/* Opening an item is the Pariwar Admin's deliberate look (the audited read); closing it
+                  unmounts the query, and the client's `gcTime: 0` drops the decrypted details. */}
+              {open === claimCaseId ? (
+                <ClaimCorrections pariwarId={pariwarId} claimCaseId={claimCaseId} onDecided={() => setDecidedCount((n) => n + 1)} />
+              ) : null}
             </li>
           ))}
         </ul>
@@ -82,23 +101,34 @@ function NomineeCorrectionsView(): ReactElement {
   );
 }
 
-function ClaimCorrections({ pariwarId, claimCaseId }: { pariwarId: string; claimCaseId: string }): ReactElement {
+function ClaimCorrections({
+  pariwarId,
+  claimCaseId,
+  onDecided,
+}: {
+  pariwarId: string;
+  claimCaseId: string;
+  onDecided: () => void;
+}): ReactElement {
   const corrections = useNomineeCorrections(pariwarId, claimCaseId, true);
   const decide = usePostNomineeCorrectionDecision(pariwarId, claimCaseId);
-  const raise = usePostNomineeCorrectionRaise(pariwarId, claimCaseId);
   return (
     <NomineeCorrections
       corrections={corrections.data}
+      loading={corrections.isLoading}
+      error={corrections.isError ? c.loadError : null}
+      // ⭐ This page offers the Pariwar Admin's step ONLY — ⛔ no District Admin controls, ⛔ no raise form.
+      decideStep="pariwar"
       onDecide={async (correctionId, step, outcome, note) => {
-        await decide.mutateAsync({ correctionId, step, body: { outcome, note } }).catch(() => undefined);
+        const ok = await decide
+          .mutateAsync({ correctionId, step, body: { outcome, note } })
+          .then(() => true)
+          .catch(() => false);
+        if (ok) onDecided();
       }}
       deciding={decide.isPending}
       decideError={decide.error ? nomineeCorrectionErrorMessage(decide.error) : null}
-      onRaise={async (body) => {
-        await raise.mutateAsync(body).catch(() => undefined);
-      }}
-      raising={raise.isPending}
-      raiseError={raise.error ? nomineeCorrectionErrorMessage(raise.error) : null}
+      decided={decide.isSuccess}
       resetKey={claimCaseId}
     />
   );

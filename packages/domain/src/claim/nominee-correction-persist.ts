@@ -20,10 +20,15 @@
 //   · the target is the rank's CURRENTLY STANDING version under the live determination — a discarded or
 //     superseded version is refused (and so is a raise with ⛔ no live determination at all);
 //   · ⭐⭐ the target's relationship is KNOWN — `other` FORECLOSES the correction, refused HERE, before
-//     either approval (`-237` cl.2; a REVERSAL of v0.1–v0.4's default). The proposed relationship may not
-//     be `other` either. A DIFFERENCE between the two known relationships is SHOWN, ⛔ never blocked;
+//     either approval (`-237` cl.2; a REVERSAL of v0.1–v0.4's default). ⚠ The PROPOSED relationship may
+//     not be `other` either — an ENGINEERING READING of cl.2's rationale ("we cannot establish
+//     relationship"), ⛔ NOT a ratified extension of the Panel's ruling (which covers the TARGET only;
+//     BigDev 2026-09-24). Re-examine it when the Panel takes up `-237`'s open in-law/grandparent item.
+//     A DIFFERENCE between the two known relationships is SHOWN, ⛔ never blocked;
 //   · ONE open correction per claim + rank (the partial unique index is the backstop).
 // DISTRICT ADMIN (`decideNomineeCorrectionAsDistrictAdmin`): `da_pending` → `pa_pending` | `declined`.
+//   ⭐ ⛔ never the person who RAISED it (CC2: "never the District Admin alone" — an actor holding both
+//     the raise key and an approval key cannot raise and approve their own request).
 // PARIWAR ADMIN (`decideNomineeCorrectionAsPariwarAdmin`): `pa_pending` → `applied` | `declined`;
 //   ⭐ ⛔ never the same PERSON as the District Admin step (also a DB CHECK). An APPROVAL applies:
 //     a new version, `source = 'correction'`, `effective_at` AND `split_pct` INHERITED from the target
@@ -42,7 +47,7 @@
 // ⛔ PII: every name / mobile / address / note arrives ALREADY ENCRYPTED (the handler encrypts under the
 // Pariwar context). Nothing here decrypts, compares or logs them.
 
-import { and, asc, desc, eq, isNull } from 'drizzle-orm';
+import { and, asc, desc, eq, isNull, sql } from 'drizzle-orm';
 import type pg from 'pg';
 
 import { bindScopedDb, type Db } from '../db.js';
@@ -147,15 +152,17 @@ export async function raiseNomineeCorrection(
       `rank ${input.rank} has no standing version — the District Admin determines the declaration first`,
     );
   }
-  if (input.targetVersionId !== undefined && input.targetVersionId !== target.versionId) {
+  // Lower-cased: the contract's `z.string().uuid()` is unbranded, and the stored id is lower-case.
+  if (input.targetVersionId !== undefined && input.targetVersionId.toLowerCase() !== target.versionId) {
     throw refuse('target_not_standing', 'only the rank\'s currently STANDING version can be corrected');
   }
   // ⭐⭐ `-237` cl.2 — refused HERE, before either approval.
   if (!isKnownNomineeRelationship(target.relationship)) {
     throw refuse('relationship_other', 'the nominee\'s relationship is `other` — no correction can be made (`-237` cl.2)');
   }
+  // ⚠ ENGINEERING READING of `-237` cl.2, ⛔ NOT a ratified rule — see the header (BigDev 2026-09-24).
   if (!isKnownNomineeRelationship(input.proposedRelationship)) {
-    throw refuse('relationship_other', 'a correction must name a known relationship (`-237` cl.2)');
+    throw refuse('relationship_other', 'a correction must name a known relationship (engineering reading of `-237` cl.2)');
   }
   if (input.raiseNoteCiphertext.trim() === '') throw refuse('missing_note', 'a note explaining the mistake is required');
 
@@ -224,6 +231,11 @@ async function loadForStep(db: Db, input: DecideNomineeCorrectionInput) {
       ),
     );
   if (!row) throw refuse('not_found', 'no such correction on this claim');
+  // CC2 — the raiser never decides their own request, at either step (a decline included: it would let
+  // the raiser withdraw-and-refile around a colleague's pending review).
+  if (row.raisedByActorId === input.actorId) {
+    throw refuse('raiser_cannot_approve', 'the person who raised a correction cannot also decide it (CC2)');
+  }
   if (input.outcome === 'approve' && !inWindow(claimRow.currentState as string)) {
     throw refuse('outside_state_window', `a correction cannot be approved while the claim is '${claimRow.currentState}'`);
   }
@@ -245,7 +257,7 @@ export async function decideNomineeCorrectionAsDistrictAdmin(
       daActorId: input.actorId,
       daDisplay: input.actorDisplay,
       daNoteCiphertext: input.noteCiphertext,
-      daDecidedAt: new Date(),
+      daDecidedAt: sql`now()`,
       declinedAtStep: input.outcome === 'decline' ? 'district_admin' : null,
     })
     .where(and(eq(nomineeCorrections.correctionId, input.correctionId), eq(nomineeCorrections.step, 'da_pending')))
@@ -277,7 +289,7 @@ export async function decideNomineeCorrectionAsPariwarAdmin(
         paActorId: input.actorId,
         paDisplay: input.actorDisplay,
         paNoteCiphertext: input.noteCiphertext,
-        paDecidedAt: new Date(),
+        paDecidedAt: sql`now()`,
         declinedAtStep: 'pariwar_admin',
       })
       .where(and(eq(nomineeCorrections.correctionId, input.correctionId), eq(nomineeCorrections.step, 'pa_pending')))
@@ -294,9 +306,11 @@ export async function decideNomineeCorrectionAsPariwarAdmin(
   }
 
   const memberId = claimRow.deceasedMemberId as MemberId;
-  // (1) The next version number for this rank (the claim row lock serialises corrections on this claim;
-  // the UNIQUE (member_id, rank, version_no) index is the backstop against a concurrent declare — which
-  // the D3 lock already refuses once a claim exists).
+  // (1) The next version number for this rank (the claim row lock serialises corrections on THIS claim;
+  // the UNIQUE (member_id, rank, version_no) index is the backstop against another writer for the same
+  // member — a second claim's correction, or a declare after an innocence release. Its 23505 is mapped
+  // to a typed `version_conflict` below, ⛔ never a 500. ⚠ The D3 advisory lock cannot be taken here: it
+  // must be a transaction's FIRST lock, and the claim row is already locked).
   const [head] = await db
     .select({ versionNo: memberNomineeVersions.versionNo })
     .from(memberNomineeVersions)
@@ -307,8 +321,16 @@ export async function decideNomineeCorrectionAsPariwarAdmin(
   const recordedAt = await readDatabaseClock(db);
 
   // (2) The member stream: `member.nominees_declared` with `source: 'correction'` (AC1). ⛔ No PII.
+  // ⭐ The count / split describe the PROJECTION after the apply — and the apply NEVER adds a rank (a rank
+  // the member vacated after the death stays vacated in `member_nominees`; the correction lives in the
+  // version history and the claim's effective set — BigDev 2026-09-24, option (b)). So they are the
+  // projection's own, unchanged.
   const projectionRanks = await getMemberNomineeProjectionRanks(db, input.pariwarId, memberId);
-  const countAfter = new Set([...projectionRanks, rank]).size as 1 | 2;
+  if (projectionRanks.length === 0) {
+    // Unreachable: a declaration always carries at least one nominee. ⛔ Never fabricate a count.
+    throw new Error(`[nominee-correction] member ${memberId} has no current nominee rows`);
+  }
+  const countAfter = projectionRanks.length as 1 | 2;
   const memberState = await getCurrentMemberState(db, memberId);
   const projected = await projectMemberState(client, {
     memberId,
@@ -329,11 +351,13 @@ export async function decideNomineeCorrectionAsPariwarAdmin(
   });
 
   // The target is always a `declared`-kind standing version, so the DB CHECK already guarantees
-  // `splitPct` is non-null here — the fallback exists only so the two writes below can never diverge.
-  const splitPct = standing.splitPct ?? (countAfter === 1 ? 100 : rank === 1 ? 75 : 25);
+  // `splitPct` is non-null here — the fallback exists only for the type.
+  const splitPct = standing.splitPct ?? (rank === 1 ? 75 : 25);
 
   // (3) The correction VERSION — `effective_at` and `split_pct` INHERITED from the target.
-  const [applied] = await db
+  let applied: { versionId: NomineeVersionId } | undefined;
+  try {
+    [applied] = await db
     .insert(memberNomineeVersions)
     .values({
       memberId,
@@ -354,8 +378,15 @@ export async function decideNomineeCorrectionAsPariwarAdmin(
       correctsVersionId: standing.versionId,
     })
     .returning({ versionId: memberNomineeVersions.versionId });
+  } catch (err) {
+    if (isUniqueViolation(err)) {
+      throw refuse('version_conflict', 'another change to this nominee landed at the same moment — please try again');
+    }
+    throw err;
+  }
 
-  // (4) The projection — the correction is now this rank's LATEST version (D16).
+  // (4) The projection — the correction is now this rank's LATEST version (D16). A rank the member vacated
+  // after the death has no projection row, and is ⛔ not re-inserted (BigDev 2026-09-24, option (b)).
   await applyCorrectionToProjection(db, {
     memberId,
     pariwarId: input.pariwarId,
@@ -364,14 +395,13 @@ export async function decideNomineeCorrectionAsPariwarAdmin(
     relationship: row.proposedRelationship,
     mobileCiphertext: row.proposedMobileCiphertext,
     addressCiphertext: row.proposedAddressCiphertext,
-    splitPct,
   });
 
   // (5) ⭐ The live determination is SUPERSEDED — the new version has no item, so it does ⛔ not stand
   // until the District Admin redetermines, and AC5's 409 fires again meanwhile.
   await db
     .update(nomineeDeterminations)
-    .set({ supersededAt: new Date(), supersededReason: 'correction_applied' })
+    .set({ supersededAt: sql`now()`, supersededReason: 'correction_applied' })
     .where(
       and(
         eq(nomineeDeterminations.pariwarId, input.pariwarId),
@@ -388,7 +418,7 @@ export async function decideNomineeCorrectionAsPariwarAdmin(
       paActorId: input.actorId,
       paDisplay: input.actorDisplay,
       paNoteCiphertext: input.noteCiphertext,
-      paDecidedAt: new Date(),
+      paDecidedAt: sql`now()`,
       appliedVersionId: applied!.versionId,
     })
     .where(and(eq(nomineeCorrections.correctionId, input.correctionId), eq(nomineeCorrections.step, 'pa_pending')))

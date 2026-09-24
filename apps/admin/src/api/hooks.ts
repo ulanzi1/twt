@@ -1720,13 +1720,32 @@ export function useNomineeCorrections(pariwarId: string, claimCaseId: string | n
   });
 }
 
-/** Every write here moves the effective declaration — so the timeline, the corrections, the name check
- *  (its token) and the correction queue all refetch. */
+/**
+ * ⭐ FORGET the decrypted details when the history disclosure CLOSES or the claim changes — the 6.18
+ * `useForgetNomineeNameCheck` posture (code review 2026-09-24). A closed disclosure keeps the observers
+ * mounted with `enabled: false`, so the cached snapshots and corrections (living people's names, mobiles,
+ * addresses) re-rendered on reopen with ⛔ no click and ⛔ no audit line — defeating D10's audited reveal.
+ * Removing them makes every reopen a fresh, audited look.
+ */
+export function useForgetNomineeDeclarationDetails(pariwarId: string, claimCaseId: string | null) {
+  const qc = useQueryClient();
+  return (otherClaimCaseId?: string) => {
+    const cid = otherClaimCaseId ?? claimCaseId ?? '';
+    qc.removeQueries({ queryKey: nomineeSnapshotsKey(pariwarId, cid), exact: true });
+    qc.removeQueries({ queryKey: nomineeCorrectionsKey(pariwarId, cid), exact: true });
+  };
+}
+
+/** Every write here moves the effective declaration — so the timeline, the corrections, the snapshots (a
+ *  correction adds a VERSION, whose details are otherwise unreachable), the name check (its token) and
+ *  the correction queues all refetch. ⚠ The snapshots and corrections refetch only while their observer is
+ *  ENABLED — i.e. while the same District Admin still has the details open: the write is their own act. */
 function useInvalidateNomineeDeclaration(pariwarId: string, claimCaseId: string | null) {
   const qc = useQueryClient();
   return () => {
     const cid = claimCaseId ?? '';
     void qc.invalidateQueries({ queryKey: nomineeDeclarationKey(pariwarId, cid) });
+    void qc.invalidateQueries({ queryKey: nomineeSnapshotsKey(pariwarId, cid) });
     void qc.invalidateQueries({ queryKey: nomineeCorrectionsKey(pariwarId, cid) });
     void qc.invalidateQueries({ queryKey: nomineeNameCheckKey(pariwarId, cid) });
     void qc.invalidateQueries({ queryKey: claimsUnderCorrectionKey(pariwarId) });
@@ -1740,6 +1759,10 @@ export function usePostNomineeDetermination(pariwarId: string, claimCaseId: stri
     mutationFn: (body: Parameters<typeof api.postNomineeDetermination>[2]) =>
       api.postNomineeDetermination(pariwarId, claimCaseId as string, body),
     onSuccess: invalidate,
+    // ⭐ AND ON ERROR (the 6.18 `usePostNomineeNameCheck` precedent): `stale_watermark` /
+    // `stale_supersession` mean the timeline moved — without a refetch the panel kept the OLD watermark
+    // and "Reload and look again" resent the identical stale body forever.
+    onError: invalidate,
   });
 }
 
@@ -1761,6 +1784,8 @@ export function usePostNomineeCorrectionDecision(pariwarId: string, claimCaseId:
       body: Parameters<typeof api.postNomineeCorrectionDecision>[4];
     }) => api.postNomineeCorrectionDecision(pariwarId, claimCaseId as string, input.correctionId, input.step, input.body),
     onSuccess: invalidate,
+    // `step_conflict` means the request moved on — refetch so the screen shows where it is.
+    onError: invalidate,
   });
 }
 

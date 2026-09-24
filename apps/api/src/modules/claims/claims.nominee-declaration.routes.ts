@@ -7,9 +7,10 @@
 // posting district (6.18's `resolveNomineeNameCheckDistrict` stash — the client never submits it). The
 // Pariwar-dimension routes (the raise, the Pariwar Admin's step, the refusal list) gate at the Pariwar.
 // ⭐ A write requires the VIEW key too where the actor must have SEEN what they judge: the District Admin
-// determines a timeline they may read, and approves a proposal they may read. The helpline raise and the
-// Pariwar Admin's step carry their own pariwar-dimension key; the helpline operator and the Pariwar Admin
-// both hold the view key already.
+// determines a timeline they may read, and approves a proposal they may read — and so does the Pariwar
+// Admin, whose step APPLIES the change (code review 2026-09-24: that route used to rely on a comment
+// saying the Pariwar Admin "holds the view key already"; it now ENFORCES it, at the deceased's district,
+// which a pariwar-scope grant satisfies). The helpline raise carries its own pariwar-dimension key.
 // ⛔ The family's raise through the app is a MEMBER route in `claims.routes.ts` (no admin chain).
 
 import {
@@ -182,7 +183,7 @@ export function registerNomineeDeclarationRoutes(app: FastifyInstance, deps: App
         response: { 200: NomineeCorrectionWriteResponse },
         tags: [TAG],
       },
-      preHandler: [adminSession, scope, requirePariwarApproval],
+      preHandler: [adminSession, scope, resolveDistrict, requireView, requirePariwarApproval],
     },
     h.decide('pariwar'),
   );

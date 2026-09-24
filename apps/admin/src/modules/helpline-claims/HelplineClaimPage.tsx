@@ -36,6 +36,7 @@ import { MemberLookupForm } from '../member-status/MemberLookupForm.js';
 import { MemberSearchResults } from '../member-status/MemberSearchResults.js';
 import { BankDetailsCard } from './BankDetailsCard.js';
 import { HelplineConsoleShell, type HelplineIntakeResult } from './HelplineConsoleShell.js';
+import { HelplineNomineeCorrection } from './HelplineNomineeCorrection.js';
 import { readBackScript, resolveEn } from './i18n-en.js';
 
 function messageOf(err: unknown): string | undefined {
@@ -317,99 +318,103 @@ export function HelplineClaimPage({ pariwarId }: HelplineClaimPageProps): ReactE
   };
 
   return (
-    <HelplineConsoleShell
-      lookupSlot={lookupSlot}
-      selected={selected}
-      identityScript={identityScript}
-      nomineeScript={nomineeScript}
-      identityConfirmed={identityConfirmed}
-      onIdentityConfirmedChange={confirmIdentity}
-      nomineeConfirmed={nomineeConfirmed}
-      onNomineeConfirmedChange={setNomineeConfirmed}
-      identityCorrections={identityCorrections}
-      onAddIdentityCorrection={(n) => setIdentityCorrections((prev) => [...prev, n])}
-      nomineeCorrections={nomineeCorrections}
-      onAddNomineeCorrection={(n) => setNomineeCorrections((prev) => [...prev, n])}
-      relationship={relationship}
-      onRelationshipChange={setRelationship}
-      onSubmit={submitIntake}
-      submitPending={intake.isPending}
-      submitError={
-        // A step-up-required error is handled via the panel, not surfaced as a hard error.
-        intake.isError && !(intake.error instanceof ApiError && intake.error.code === 'auth.step_up_required')
-          ? messageOf(intake.error)
-          : undefined
-      }
-      result={result}
-      stepUpRequired={stepUpRequired}
-      stepUpSlot={stepUpSlot}
-      escalated={escalated}
-      onEscalate={escalate}
-      // Story 6.18 (AC6/AC7) — cl.1 makes the match the operator's duty and cl.7 makes both
-      // accounts mandatory; the card is where both are discharged.
-      // ⭐ Unknown ≠ missing: while the status read is unresolved the shell shows ⛔ no "needs both
-      // accounts" hint, because that would be a claim about data we have not read.
-      bankRecorded={bankStatusKnown ? bankRecorded : true}
-      bankSlot={
-        filedClaimCaseId !== null && !bankStatusKnown ? (
-          bankStatus.isError ? (
-            <div role="alert" data-testid="helpline-bank-status-error" className="text-sm text-status-fail-fg">
-              <p>{resolveEn('helpline.bank.statusError')}</p>
-              {/* ⭐ Retry IN PLACE, ⛔ never "Reload" — a reload drops the page's filed-claim result. */}
+    <>
+      <HelplineConsoleShell
+        lookupSlot={lookupSlot}
+        selected={selected}
+        identityScript={identityScript}
+        nomineeScript={nomineeScript}
+        identityConfirmed={identityConfirmed}
+        onIdentityConfirmedChange={confirmIdentity}
+        nomineeConfirmed={nomineeConfirmed}
+        onNomineeConfirmedChange={setNomineeConfirmed}
+        identityCorrections={identityCorrections}
+        onAddIdentityCorrection={(n) => setIdentityCorrections((prev) => [...prev, n])}
+        nomineeCorrections={nomineeCorrections}
+        onAddNomineeCorrection={(n) => setNomineeCorrections((prev) => [...prev, n])}
+        relationship={relationship}
+        onRelationshipChange={setRelationship}
+        onSubmit={submitIntake}
+        submitPending={intake.isPending}
+        submitError={
+          // A step-up-required error is handled via the panel, not surfaced as a hard error.
+          intake.isError && !(intake.error instanceof ApiError && intake.error.code === 'auth.step_up_required')
+            ? messageOf(intake.error)
+            : undefined
+        }
+        result={result}
+        stepUpRequired={stepUpRequired}
+        stepUpSlot={stepUpSlot}
+        escalated={escalated}
+        onEscalate={escalate}
+        // Story 6.18 (AC6/AC7) — cl.1 makes the match the operator's duty and cl.7 makes both
+        // accounts mandatory; the card is where both are discharged.
+        // ⭐ Unknown ≠ missing: while the status read is unresolved the shell shows ⛔ no "needs both
+        // accounts" hint, because that would be a claim about data we have not read.
+        bankRecorded={bankStatusKnown ? bankRecorded : true}
+        bankSlot={
+          filedClaimCaseId !== null && !bankStatusKnown ? (
+            bankStatus.isError ? (
+              <div role="alert" data-testid="helpline-bank-status-error" className="text-sm text-status-fail-fg">
+                <p>{resolveEn('helpline.bank.statusError')}</p>
+                {/* ⭐ Retry IN PLACE, ⛔ never "Reload" — a reload drops the page's filed-claim result. */}
+                <button type="button" data-testid="helpline-bank-status-retry" className="mt-1 rounded border px-2 py-0.5" onClick={retryBankStatus}>
+                  {resolveEn('helpline.bank.retry')}
+                </button>
+              </div>
+            ) : (
+              <p role="status" data-testid="helpline-bank-status-loading" className="text-sm opacity-80">
+                {resolveEn('helpline.bank.statusLoading')}
+              </p>
+            )
+          ) : (
+          <>
+          {/* A failed REFRESH of a status already read: the card STAYS, with the failure beside it. */}
+          {bankStatus.isError ? (
+            <div role="alert" data-testid="helpline-bank-status-refresh-error" className="text-sm text-status-fail-fg">
+              <p>{resolveEn('helpline.bank.statusRefreshError')}</p>
               <button type="button" data-testid="helpline-bank-status-retry" className="mt-1 rounded border px-2 py-0.5" onClick={retryBankStatus}>
                 {resolveEn('helpline.bank.retry')}
               </button>
             </div>
-          ) : (
-            <p role="status" data-testid="helpline-bank-status-loading" className="text-sm opacity-80">
-              {resolveEn('helpline.bank.statusLoading')}
-            </p>
+          ) : null}
+          <BankDetailsCard
+            // ⭐ `key` on the claim — a belt-and-braces reset of every field the card holds, so a
+            // change of claim can never carry another family's typed account numbers across even if a
+            // future edit forgets an effect.
+            key={filedClaimCaseId ?? 'none'}
+            claimCaseId={filedClaimCaseId}
+            recorded={bankRecorded}
+            onSubmit={submitBank}
+            pending={recordBank.isPending}
+            // ⭐ Save is also blocked while `stepUpRequired` (code review 2026-09-22) — `pending` alone
+            // goes back to `false` the instant the mutation settles, so an operator who is shown the
+            // step-up panel could immediately click Save again before elevating, firing a second
+            // concurrent write that can race the elevation itself (see the stale-claim guard above).
+            // ⚠ Save ONLY (code review 2026-09-23) — folding it into `pending` locked every input and
+            // Cancel-correction too, for as long as the OTP took.
+            submitBlocked={stepUpRequired}
+            // ⭐ A step-up-required error is handled via the PANEL, ⛔ not surfaced as a hard error —
+            // the same treatment `submitError` gives the intake, and for the same reason: a raw
+            // *"step up required"* string is a dead end, the panel is the way out.
+            error={
+              recordBank.isError &&
+              !(recordBank.error instanceof ApiError && recordBank.error.code === 'auth.step_up_required')
+                ? messageOf(recordBank.error)
+                : null
+            }
+            names={bankNames.data}
+            namesLoading={bankNames.isLoading}
+            namesError={bankNames.isError ? resolveEn('helpline.bank.namesError') : null}
+            // AC5 — `-227` cl.11 makes THIS operator the one who types the corrected details.
+            correctionNeeded={bankStatus.data?.correctionNeeded === true}
+          />
+          </>
           )
-        ) : (
-        <>
-        {/* A failed REFRESH of a status already read: the card STAYS, with the failure beside it. */}
-        {bankStatus.isError ? (
-          <div role="alert" data-testid="helpline-bank-status-refresh-error" className="text-sm text-status-fail-fg">
-            <p>{resolveEn('helpline.bank.statusRefreshError')}</p>
-            <button type="button" data-testid="helpline-bank-status-retry" className="mt-1 rounded border px-2 py-0.5" onClick={retryBankStatus}>
-              {resolveEn('helpline.bank.retry')}
-            </button>
-          </div>
-        ) : null}
-        <BankDetailsCard
-          // ⭐ `key` on the claim — a belt-and-braces reset of every field the card holds, so a
-          // change of claim can never carry another family's typed account numbers across even if a
-          // future edit forgets an effect.
-          key={filedClaimCaseId ?? 'none'}
-          claimCaseId={filedClaimCaseId}
-          recorded={bankRecorded}
-          onSubmit={submitBank}
-          pending={recordBank.isPending}
-          // ⭐ Save is also blocked while `stepUpRequired` (code review 2026-09-22) — `pending` alone
-          // goes back to `false` the instant the mutation settles, so an operator who is shown the
-          // step-up panel could immediately click Save again before elevating, firing a second
-          // concurrent write that can race the elevation itself (see the stale-claim guard above).
-          // ⚠ Save ONLY (code review 2026-09-23) — folding it into `pending` locked every input and
-          // Cancel-correction too, for as long as the OTP took.
-          submitBlocked={stepUpRequired}
-          // ⭐ A step-up-required error is handled via the PANEL, ⛔ not surfaced as a hard error —
-          // the same treatment `submitError` gives the intake, and for the same reason: a raw
-          // *"step up required"* string is a dead end, the panel is the way out.
-          error={
-            recordBank.isError &&
-            !(recordBank.error instanceof ApiError && recordBank.error.code === 'auth.step_up_required')
-              ? messageOf(recordBank.error)
-              : null
-          }
-          names={bankNames.data}
-          namesLoading={bankNames.isLoading}
-          namesError={bankNames.isError ? resolveEn('helpline.bank.namesError') : null}
-          // AC5 — `-227` cl.11 makes THIS operator the one who types the corrected details.
-          correctionNeeded={bankStatus.data?.correctionNeeded === true}
-        />
-        </>
-        )
-      }
-    />
+        }
+      />
+      {/* Story 6.20 (AC7, CC2) — the operator's NOMINEE-correction raise (⛔ not bank details). */}
+      <HelplineNomineeCorrection pariwarId={pariwarId} filedClaimCaseId={filedClaimCaseId} />
+    </>
   );
 }

@@ -404,6 +404,8 @@ export class NomineeDeterminationRefusedError extends Error {
       | 'missing_note'
       | 'missing_display'
       | 'unknown_version'
+      | 'duplicate_mark'
+      | 'too_many_versions'
       | 'missing_item'
       | 'inconsistent_mark'
       | 'stale_watermark'
@@ -430,6 +432,8 @@ export class NomineeCorrectionRefusedError extends Error {
       | 'no_standing_version'
       | 'open_correction_exists'
       | 'same_approver'
+      | 'raiser_cannot_approve'
+      | 'version_conflict'
       | 'step_conflict'
       | 'missing_note'
       | 'missing_display',

@@ -5,15 +5,18 @@
 // and the Pariwar Admin second (`-236` Z). This screen RAISES that request from the app (CC2, `-237`
 // cl.3); the helpline can raise the same request on the family's behalf.
 //
-//   · Ravi-mode: the session IS the deceased member's, so the claim id comes from the member's own
-//     claim draft (stamped at intake). No claim ⇒ a dignified "call the helpline" state.
+//   · Ravi-mode: the session IS the deceased member's, so the claim id comes from the member's own claim
+//     draft (stamped at intake) — ⭐ or, once intake is acknowledged and the draft CLEARED, the filed-claim
+//     pointer `acknowledgement.tsx` stamps first (code review 2026-09-24: reading the draft alone sent every
+//     finished claim to "no claim"). No claim on this device (e.g. the helpline filed it) ⇒ a dignified
+//     "call the helpline" state.
 //   · The relationship picker offers only KNOWN relationships — `other` FORECLOSES a correction
 //     (`-237` cl.2); the server refuses it at the raise with a typed 409, which this screen explains.
 //   · Behind the `nominee_change` step-up (AR-24), exactly like the Life Events nominee update.
 //   · The draft persists in MMKV (the life-events draft store — cleared on sign-out).
 //   · ⚠ Not 6.18's BANK "correction" — this changes WHO the nominee is on record, not an account.
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ScrollView } from 'react-native'
 
 import { isEnglishScriptName } from '@twt/contracts'
@@ -26,6 +29,7 @@ import { clearDraft, loadDraft, saveDraft } from '../../components/life-events/d
 import { useStepUpGate } from '../../components/life-events/useStepUpGate'
 import { claimApi } from '../../lib/claim-api'
 import { loadClaimDraft } from '../../lib/claim-draft'
+import { getFiledClaimCaseId } from '../../lib/filed-claim'
 import { correctionErrorKey } from '../../lib/nominee-correction'
 import { useSession } from '../../lib/session-context'
 
@@ -47,10 +51,17 @@ export default function NomineeCorrectionScreen() {
   const router = useRouter()
   const { session } = useSession()
   const memberId = session?.memberId ?? ''
-  const claimCaseId = memberId ? loadClaimDraft(memberId).claimCaseId : undefined
+  const claimCaseId = memberId ? (loadClaimDraft(memberId).claimCaseId ?? getFiledClaimCaseId(memberId) ?? undefined) : undefined
   const stepUp = useStepUpGate('nominee_change')
 
-  const [form, setForm] = useState<CorrectionDraft>(() => loadDraft<CorrectionDraft>(memberId, DRAFT_KEY) ?? EMPTY)
+  const [form, setForm] = useState<CorrectionDraft>(() => (memberId ? loadDraft<CorrectionDraft>(memberId, DRAFT_KEY) : null) ?? EMPTY)
+  // ⭐ The session can resolve AFTER the first render (it starts loading) — restore the member's saved
+  // draft then, rather than never (the lazy initializer above ran once, with no member).
+  useEffect(() => {
+    if (!memberId) return
+    const saved = loadDraft<CorrectionDraft>(memberId, DRAFT_KEY)
+    if (saved) setForm(saved)
+  }, [memberId])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [done, setDone] = useState(false)
@@ -111,6 +122,7 @@ export default function NomineeCorrectionScreen() {
 
   if (!claimCaseId) {
     return (
+      // Text only — grouping it as ONE accessible element reads it as a single announcement.
       <YStack gap="$4" px="$6" py="$6" bg="$background" accessible={true}>
         <Stack.Screen options={{ title: t('nominee_correction.title') }} />
         <H2 accessibilityRole="header">{t('nominee_correction.title')}</H2>
@@ -123,7 +135,9 @@ export default function NomineeCorrectionScreen() {
 
   if (done) {
     return (
-      <YStack gap="$4" px="$6" py="$6" bg="$background" accessible={true} testID="nominee-correction-done">
+      // ⛔ NOT `accessible={true}` (family 13(a), code review 2026-09-24): a grouped container is ONE
+      // element to a screen reader, which swallowed the Button — the screen's only way back.
+      <YStack gap="$4" px="$6" py="$6" bg="$background" testID="nominee-correction-done">
         <Stack.Screen options={{ title: t('nominee_correction.title') }} />
         <H2 accessibilityRole="header">{t('nominee_correction.submitted_title')}</H2>
         <Paragraph accessibilityRole="text" accessibilityLiveRegion="polite">
@@ -182,8 +196,12 @@ export default function NomineeCorrectionScreen() {
             accessibilityHint={t('nominees.name_help')}
           />
 
-          <Text accessibilityRole="text">{t('nominees.relationship')}</Text>
-          <XStack gap="$2" flexWrap="wrap" accessibilityHint={t('nominees.relationship_help')}>
+          {/* The hint sits on an ACCESSIBLE element (the label) — on the XStack, which is not one, it was
+              never announced (family 13(a)). */}
+          <Text accessibilityRole="text" accessibilityHint={t('nominees.relationship_help')}>
+            {t('nominees.relationship')}
+          </Text>
+          <XStack gap="$2" flexWrap="wrap">
             {KNOWN_RELATIONSHIPS.map((rel) => {
               const selected = form.relationship === rel
               return (
@@ -251,6 +269,7 @@ export default function NomineeCorrectionScreen() {
                 disabled={busy || !stepUp.otp.trim()}
                 accessibilityRole="button"
                 accessibilityLabel={t('auth.verify')}
+                accessibilityState={{ disabled: busy || !stepUp.otp.trim() }}
                 onPress={() => {
                   const v = validationError()
                   if (v) {
@@ -262,6 +281,16 @@ export default function NomineeCorrectionScreen() {
               >
                 {busy ? <Spinner /> : t('auth.verify')}
               </Button>
+              {/* ⭐ A way out of the prompt, like the Life Events nominee footer. */}
+              <Button
+                chromeless
+                height={40}
+                accessibilityRole="button"
+                accessibilityLabel={t('lifeEvents.step_up_cancel')}
+                onPress={stepUp.reset}
+              >
+                {t('lifeEvents.step_up_cancel')}
+              </Button>
             </YStack>
           ) : null}
 
@@ -271,13 +300,15 @@ export default function NomineeCorrectionScreen() {
             </Text>
           ) : null}
 
+          {/* ⛔ Disabled while the code prompt is open: pressing it re-ran the step-up, sending a NEW code
+              that invalidated the one being typed. */}
           <Button
             theme="accent"
             height={56}
-            disabled={busy}
+            disabled={busy || stepUp.needsOtp}
             accessibilityRole="button"
             accessibilityLabel={t('nominee_correction.submit')}
-            accessibilityState={{ disabled: busy }}
+            accessibilityState={{ disabled: busy || stepUp.needsOtp }}
             onPress={onSubmit}
           >
             {busy ? <Spinner /> : t('nominee_correction.submit')}

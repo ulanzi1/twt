@@ -278,6 +278,8 @@ export class ApiError extends Error {
     public readonly status: number,
     public readonly code: string,
     message: string,
+    /** The envelope's safe structured context (`error.details`) — e.g. a 409's `reason`. */
+    public readonly details?: unknown,
   ) {
     super(message);
     this.name = 'ApiError';
@@ -298,7 +300,7 @@ export function errorMessage(error: unknown): string | undefined {
 }
 
 interface ErrorEnvelope {
-  error?: { code?: string; message?: string };
+  error?: { code?: string; message?: string; details?: unknown };
 }
 
 /**
@@ -321,14 +323,16 @@ async function apiFetch<T>(
   if (!res.ok) {
     let code = `http.${res.status}`;
     let message = res.statusText || 'Request failed';
+    let details: unknown;
     try {
       const body = (await res.json()) as ErrorEnvelope;
       if (body.error?.code) code = body.error.code;
       if (body.error?.message) message = body.error.message;
+      details = body.error?.details;
     } catch {
       // Non-JSON error body — keep the status-derived defaults.
     }
-    throw new ApiError(res.status, code, message);
+    throw new ApiError(res.status, code, message, details);
   }
 
   // 204 (logout) has no body to parse.

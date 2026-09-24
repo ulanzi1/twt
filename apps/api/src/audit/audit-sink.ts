@@ -397,6 +397,8 @@ export type AuthAuditEventType =
   //   nominee_correction.district_decided / pariwar_decided — the two approval steps (D7).
   //   nominee_correction.list_read — the corrections (with decrypted details) were read.
   //   nominee_refusal.list_read — the Pariwar Admin opened the `-239` refusal read surface (D14).
+  //   nominee_refusal.rationale_read — ONE line per refusal rationale the list ATTEMPTED to decrypt,
+  //     locating its claim (the 6.18 `queue_note_read` precedent; code review 2026-09-24). ⛔ ids only.
   | 'admin_nominee_declaration.timeline_read'
   | 'admin_nominee_declaration.snapshots_read'
   | 'admin_claim.nominee_determination_recorded'
@@ -407,6 +409,7 @@ export type AuthAuditEventType =
   | 'admin_claim.nominee_correction_pariwar_decided'
   | 'admin_nominee_correction.list_read'
   | 'admin_nominee_refusal.list_read'
+  | 'admin_nominee_refusal.rationale_read'
   | 'member_claim.nominee_correction_raised'
   | 'member_claim.nominee_correction_rejected'
   // ── Shepherd assignment surface (Story 6.12, FR-41 / Epic 6) ──────────────────

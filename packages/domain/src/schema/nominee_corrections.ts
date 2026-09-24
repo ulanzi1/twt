@@ -76,12 +76,19 @@ export const nomineeCorrections = pgTable(
     targetVersionId: uuid('target_version_id')
       .notNull()
       .$type<NomineeVersionId>()
-      .references(() => memberNomineeVersions.versionId),
+      // Matches migration 0119 (`ON DELETE cascade`); the versions' append-only trigger refuses every
+      // delete except the `members` cascade, so this only ever fires inside a member hard-delete.
+      .references(() => memberNomineeVersions.versionId, { onDelete: 'cascade' }),
 
-    proposedNameCiphertext: piiColumn(1, 'nominee_correction')('proposed_name_ciphertext').notNull(),
+    // ⚠ The PROPOSED name / mobile / address are encrypted under `member_nominee`, ⛔ NOT
+    // `nominee_correction`: an approval copies them VERBATIM into `member_nominee_versions` and
+    // `member_nominees` (both `member_nominee`), and the RTBF scrub re-encrypts them under the same class
+    // (`member/anonymize.ts`; `apps/api/src/context.ts` NOMINEE_CORRECTION_FIELD_CLASS). The notes below are
+    // the correction's own and stay `nominee_correction`.
+    proposedNameCiphertext: piiColumn(1, 'member_nominee')('proposed_name_ciphertext').notNull(),
     proposedRelationship: text('proposed_relationship').notNull(),
-    proposedMobileCiphertext: piiColumn(1, 'nominee_correction')('proposed_mobile_ciphertext').notNull(),
-    proposedAddressCiphertext: piiColumn(1, 'nominee_correction')('proposed_address_ciphertext'),
+    proposedMobileCiphertext: piiColumn(1, 'member_nominee')('proposed_mobile_ciphertext').notNull(),
+    proposedAddressCiphertext: piiColumn(1, 'member_nominee')('proposed_address_ciphertext'),
 
     raisedVia: text('raised_via').notNull().$type<NomineeCorrectionChannel>(),
     raisedByActorId: text('raised_by_actor_id').notNull(),
@@ -105,7 +112,7 @@ export const nomineeCorrections = pgTable(
     // The `source = 'correction'` version the PA's approval wrote.
     appliedVersionId: uuid('applied_version_id')
       .$type<NomineeVersionId>()
-      .references(() => memberNomineeVersions.versionId),
+      .references(() => memberNomineeVersions.versionId, { onDelete: 'cascade' }),
   },
   (t) => [
     index('nominee_corrections_pariwar_id_idx').on(t.pariwarId),

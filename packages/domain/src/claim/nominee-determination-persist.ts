@@ -30,7 +30,7 @@
 // Pariwar context); the plaintext date is used for validation only and ⛔ never persisted, logged or
 // put in the event.
 
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
 import type pg from 'pg';
 
 import { bindScopedDb, type Db } from '../db.js';
@@ -99,6 +99,15 @@ export interface RecordNomineeDeterminationResult {
 }
 
 /**
+ * The most versions one determination can judge (BigDev 2026-09-24, option (a)). Every version must carry
+ * a mark, and the history is unbounded, so the old 64-mark wire cap made a long history PERMANENTLY
+ * undeterminable (⇒ never approvable). 1000 is far beyond any realistic history; past it the writer refuses
+ * with a typed 409 instead of an unreachable `missing_item`. ⚠ LOCKSTEP with the contract's `marks.max`
+ * (`packages/contracts/src/claims/nominee-declaration.ts`, `NOMINEE_DETERMINATION_MAX_MARKS`).
+ */
+export const NOMINEE_DETERMINATION_MAX_VERSIONS = 1000;
+
+/**
  * Record the District Admin's determination. See the header for every guard.
  *
  * @throws NomineeDeterminationRefusedError  (→ 409; `not_found` → 404)
@@ -121,6 +130,9 @@ export async function recordNomineeDetermination(
   }
 
   const db = bindScopedDb(client);
+  // Ids are lower-cased: the contract's `z.string().uuid()` is unbranded, and stored ids are lower-case.
+  const marks = input.marks.map((m) => ({ versionId: m.versionId.toLowerCase(), mark: m.mark }));
+  const expectedLiveId = input.expectedLiveDeterminationId?.toLowerCase() ?? null;
 
   // (1) The claim row lock — serializes this with every other claim write, the correction included.
   const [claimRow] = await db
@@ -140,6 +152,12 @@ export async function recordNomineeDetermination(
   if (projectionRanks.some((rank) => !versions.some((v) => v.rank === rank))) {
     throw refuse('unversioned', 'a current nominee row has no version — the declaration is fail-closed (⛔ no backfill)');
   }
+  if (versions.length > NOMINEE_DETERMINATION_MAX_VERSIONS) {
+    throw refuse(
+      'too_many_versions',
+      `the declaration has ${versions.length} versions — more than the ${NOMINEE_DETERMINATION_MAX_VERSIONS} one determination can judge`,
+    );
+  }
 
   // (3) The watermark (D17): each rank's head must be what the District Admin read.
   const headOf = (rank: 1 | 2) =>
@@ -151,9 +169,9 @@ export async function recordNomineeDetermination(
   // (4) Exactly one mark per version.
   const byId = new Map(versions.map((v) => [v.versionId as string, v]));
   const seen = new Set<string>();
-  for (const m of input.marks) {
+  for (const m of marks) {
     if (!byId.has(m.versionId)) throw refuse('unknown_version', `version ${m.versionId} is not part of this declaration`);
-    if (seen.has(m.versionId)) throw refuse('unknown_version', `version ${m.versionId} is marked twice`);
+    if (seen.has(m.versionId)) throw refuse('duplicate_mark', `version ${m.versionId} is marked twice`);
     seen.add(m.versionId);
   }
   const unmarked = versions.filter((v) => !seen.has(v.versionId));
@@ -162,7 +180,7 @@ export async function recordNomineeDetermination(
   }
 
   // (5) D6 — the marks must agree with the certificate date. A guard, ⛔ never a default.
-  for (const m of input.marks) {
+  for (const m of marks) {
     const v = byId.get(m.versionId)!;
     const stands = versionStandsAt(v.effectiveAt, input.certificateDate);
     if ((m.mark === 'stands') !== stands) {
@@ -175,7 +193,7 @@ export async function recordNomineeDetermination(
 
   // (6) D17 — the standing rank set is {1}, {1,2} or empty. ⛔ Never a lone {2}.
   const standingRanks = ([1, 2] as const).filter((rank) => {
-    const standing = input.marks
+    const standing = marks
       .filter((m) => m.mark === 'stands')
       .map((m) => byId.get(m.versionId)!)
       .filter((v) => v.rank === rank)
@@ -198,13 +216,13 @@ export async function recordNomineeDetermination(
       ),
     );
   const liveId = (live?.determinationId as string | undefined) ?? null;
-  if (liveId !== input.expectedLiveDeterminationId) {
+  if (liveId !== expectedLiveId) {
     throw refuse('stale_supersession', 'the live determination changed after the timeline was read');
   }
   if (liveId !== null) {
     const superseded = await db
       .update(nomineeDeterminations)
-      .set({ supersededAt: new Date(), supersededReason: 'redetermined' })
+      .set({ supersededAt: sql`now()`, supersededReason: 'redetermined' })
       .where(
         and(
           eq(nomineeDeterminations.determinationId, liveId as NomineeDeterminationId),
@@ -232,9 +250,9 @@ export async function recordNomineeDetermination(
     })
     .returning({ determinationId: nomineeDeterminations.determinationId });
   const determinationId = row!.determinationId;
-  if (input.marks.length > 0) {
+  if (marks.length > 0) {
     await db.insert(nomineeDeterminationItems).values(
-      input.marks.map((m) => ({
+      marks.map((m) => ({
         determinationId,
         versionId: m.versionId as NomineeVersionId,
         pariwarId: input.pariwarId,
@@ -243,8 +261,8 @@ export async function recordNomineeDetermination(
     );
   }
 
-  const standsCount = input.marks.filter((m) => m.mark === 'stands').length;
-  const discardedCount = input.marks.length - standsCount;
+  const standsCount = marks.filter((m) => m.mark === 'stands').length;
+  const discardedCount = marks.length - standsCount;
   const projected = await projectClaimState(client, {
     claimCaseId: input.claimCaseId,
     pariwarId: input.pariwarId,
@@ -302,4 +320,79 @@ export async function getLiveNomineeDetermination(
       ),
     );
   return { row, items };
+}
+
+/** One EARLIER claim's live determination, for D17's read-only display on a later claim. */
+export interface EarlierClaimNomineeDetermination {
+  readonly claimCaseId: ClaimId;
+  readonly claimState: string;
+  readonly determinationId: NomineeDeterminationId;
+  readonly decidedAt: Date;
+  readonly decidedByDisplay: string;
+  readonly items: readonly { versionId: NomineeVersionId; mark: 'stands' | 'discarded' }[];
+}
+
+/**
+ * D17 — with two claims for one death, each claim's determination is its OWN, and a later claim's form
+ * pre-fills nothing but SHOWS the earlier claims' determinations READ-ONLY. This reads them: every OTHER
+ * claim for the same deceased member created no later than this one, with its live determination (a claim
+ * with none is omitted). Two statements, bounded (at most 20 earlier claims), RLS-scoped with the explicit
+ * `pariwar_id` predicate. ⛔ No ciphertext: ids, marks, instants and the snapshotted display name only.
+ */
+export async function listEarlierClaimNomineeDeterminations(
+  db: Db,
+  pariwarId: PariwarId,
+  claimCaseId: ClaimId,
+): Promise<EarlierClaimNomineeDetermination[]> {
+  const heads = await db.execute<{
+    claim_case_id: string;
+    current_state: string;
+    determination_id: string;
+    decided_at: string;
+    decided_by_display: string;
+  }>(sql`
+    SELECT o.claim_case_id, o.current_state, d.determination_id, d.decided_at, d.decided_by_display
+      FROM claims c
+      JOIN claims o
+        ON o.pariwar_id = c.pariwar_id
+       AND o.deceased_member_id = c.deceased_member_id
+       AND o.claim_case_id <> c.claim_case_id
+       AND o.created_at <= c.created_at
+      JOIN nominee_determinations d
+        ON d.pariwar_id = o.pariwar_id
+       AND d.claim_case_id = o.claim_case_id
+       AND d.superseded_at IS NULL
+     WHERE c.pariwar_id = ${pariwarId}
+       AND c.claim_case_id = ${claimCaseId}
+     ORDER BY o.created_at DESC, o.claim_case_id
+     LIMIT 20
+  `);
+  const rows = heads.rows ?? [];
+  if (rows.length === 0) return [];
+  const items = await db
+    .select({
+      determinationId: nomineeDeterminationItems.determinationId,
+      versionId: nomineeDeterminationItems.versionId,
+      mark: nomineeDeterminationItems.mark,
+    })
+    .from(nomineeDeterminationItems)
+    .where(
+      and(
+        eq(nomineeDeterminationItems.pariwarId, pariwarId),
+        inArray(
+          nomineeDeterminationItems.determinationId,
+          rows.map((r) => r.determination_id as NomineeDeterminationId),
+        ),
+      ),
+    );
+  return rows.map((r) => ({
+    claimCaseId: r.claim_case_id as ClaimId,
+    claimState: r.current_state,
+    determinationId: r.determination_id as NomineeDeterminationId,
+    decidedAt: new Date(r.decided_at),
+    decidedByDisplay: r.decided_by_display,
+    items: items
+      .filter((i) => i.determinationId === r.determination_id)
+      .map((i) => ({ versionId: i.versionId, mark: i.mark as 'stands' | 'discarded' })),
+  }));
 }

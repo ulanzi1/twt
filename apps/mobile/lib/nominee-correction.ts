@@ -8,6 +8,12 @@ import { ApiError } from '@twt/api-client'
 export function correctionErrorKey(err: unknown): string {
   if (err instanceof ApiError) {
     if (err.code === 'nominee_correction.relationship_other') return 'nominee_correction.error_other'
+    // A wrong or expired code on the step-up — ⛔ never "could not send", which hides what to fix.
+    if (err.code === 'auth.step_up_failed') return 'auth.otp_error_invalid'
+    // Something changed at the same moment — a retry can succeed, so ⛔ not "call the helpline".
+    if (err.code === 'nominee_correction.concurrent' || err.code === 'nominee_correction.version_conflict') {
+      return 'nominee_correction.error_try_again'
+    }
     if (err.status === 404) return 'nominee_correction.no_claim'
     if (err.status === 409) return 'nominee_correction.error_not_open'
   }

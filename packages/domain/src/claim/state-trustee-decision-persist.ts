@@ -56,6 +56,7 @@ import { assessClaimConcealment } from './concealment-review.js';
 import { type ClaimEventActor } from './events.js';
 import {
   NomineeBankAccountsRequiredError,
+  NomineeDeterminationRequiredError,
   NomineeNameCheckRequiredError,
 } from './errors.js';
 import {
@@ -884,7 +885,7 @@ export async function isReturnedClaimResubmitted(
     await assertNomineeNameCheckForApproval(db, pariwarId, claimCaseId, deceasedMemberId);
     return true;
   } catch (err) {
-    // ⛔⛔ ONLY THE TWO TYPED "NOT YET" ANSWERS ARE SWALLOWED, and the narrowness is the point.
+    // ⛔⛔ ONLY THE THREE TYPED "NOT YET" ANSWERS ARE SWALLOWED, and the narrowness is the point.
     // A bare `catch { return false }` here reported a DB error, a timeout or a bug as "not
     // resubmitted" — i.e. as a 409 `ClaimAwaitingCorrectionError` blaming the family for a fault
     // that was ours. Worse, this runs INSIDE the caller's transaction: swallowing a Postgres error
@@ -892,9 +893,13 @@ export async function isReturnedClaimResubmitted(
     // and the real cause is gone. Anything that is not one of these two propagates.
     if (
       err instanceof NomineeBankAccountsRequiredError ||
-      err instanceof NomineeNameCheckRequiredError
+      err instanceof NomineeNameCheckRequiredError ||
+      // ⭐ Story 6.20 (AC5) — an applied nominee correction SUPERSEDES the determination, so a returned
+      // claim waits for the District Admin to redetermine. That is "not yet", ⛔ never a 500
+      // (code review 2026-09-24).
+      err instanceof NomineeDeterminationRequiredError
     ) {
-      // No accounts / never checked / stale / does_not_match — all mean "not yet resubmitted".
+      // No accounts / never checked / stale / does_not_match / not determined — all mean "not yet resubmitted".
       return false;
     }
     throw err;

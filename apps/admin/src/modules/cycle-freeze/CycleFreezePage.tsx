@@ -10,6 +10,7 @@ import type { ReactElement } from 'react';
 import { useState } from 'react';
 
 import { ApiError } from '../../api/client.js';
+import { verifierConsoleEn } from '../claim-verification/i18n-en.js';
 import {
   useCommitCycleFreeze,
   useCycleFreezePending,
@@ -28,6 +29,11 @@ const COMMIT_STEP_UP_CONTEXT = 'cycle_freeze_commit';
 
 function errorMessage(error: unknown): string | undefined {
   if (!error) return undefined;
+  // Story 6.20 (AC5) — a correction can supersede the determination after the verifier approved, so the
+  // freeze meets the approval gate's 409 again. Say WHO must act, ⛔ not a raw code.
+  if (error instanceof ApiError && error.code.endsWith('.nominee_determination_required')) {
+    return verifierConsoleEn.nomineeDeclaration.trusteeApprovalGate;
+  }
   if (error instanceof ApiError) return `${error.code}: ${error.message}`;
   return error instanceof Error ? error.message : 'Something went wrong.';
 }

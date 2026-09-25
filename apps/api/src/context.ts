@@ -244,6 +244,15 @@ export const NOMINEE_DETERMINATION_FIELD_CLASS = 'nominee_determination';
 export const NOMINEE_CORRECTION_FIELD_CLASS = 'nominee_correction';
 
 /**
+ * Story 6.21a (D1, D11) — the death-certificate REVIEW Tier-1 field class. The District Admin's accepted date
+ * of death and the required note (`claim_death_certificate_reviews`) are encrypted under this before the
+ * review writer, and decrypted only on the authorized, audited on-demand reads (the history; 6.20's
+ * timeline and determination handlers). Matches `piiColumn(1, 'death_certificate_review')`. ⛔ NEVER in an
+ * event / audit line / log / the console packet (T10). By-value twin in `packages/domain/src/member/anonymize.ts`.
+ */
+export const DEATH_CERTIFICATE_REVIEW_FIELD_CLASS = 'death_certificate_review';
+
+/**
  * The appeal Tier-1 field classes (Story 6.16, D-A/AC2/AC3). The appeal routes encrypt the mandatory reviewer
  * rationale (Stage 1/3 decisions + the Stage-2 finalize audit row) under `CLAIM_APPEAL_DECISION_FIELD_CLASS`
  * and each panel vote's rationale under `CLAIM_APPEAL_VOTE_FIELD_CLASS`, before the domain writer; authorized
@@ -321,6 +330,13 @@ export interface ClaimOcrParityJobPayload {
   storageObjectKey: string;
   contentType: string;
   byteSize: number;
+  /** Story 6.21a (D2) — `death_certificate` only: the upload the handler minted; it names the upload's OWN
+   *  object. ⚠ Lockstep with `ClaimOcrParityPayload` in `apps/jobs/src/claim-ocr-parity.ts` (declared twice). */
+  uploadId?: string;
+  /** Story 6.21a (D2) — the HANDLER's clock (ISO-8601); it orders "current" forward-only in the job. */
+  uploadedAt?: string;
+  /** Story 6.21a (D2) — the upload route: `member_app` | `helpline`. */
+  channel?: 'member_app' | 'helpline';
 }
 
 export interface ClaimOcrParityEnqueuer {

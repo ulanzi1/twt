@@ -48,3 +48,5 @@ export { nameDifferenceReasonLabel, verifierConsoleEn } from './i18n-en.js';
 export * from './NomineeNameCheckPanel.js';
 // Story 6.20 — the nominee declaration history: timeline, determination, nominee corrections.
 export * from './NomineeDeclarationPanel.js';
+// Story 6.21a — the District Admin's death-certificate review: status, accept / reject control, history.
+export * from './DeathCertificateReviewControl.js';

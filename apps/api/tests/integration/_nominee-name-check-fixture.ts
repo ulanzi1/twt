@@ -26,7 +26,108 @@ import { randomUUID } from 'node:crypto';
 import { claim, cycleCalendar, ids, nominee } from '@twt/domain';
 
 import type { AppDeps } from '../../src/context.js';
+import {
+  decryptDeathCertificateReviewField,
+  encryptDeathCertificateReviewField,
+} from '../../src/modules/claims/death-certificate-crypto.js';
 import { closeScopeTx, openScopeTx } from '../../src/modules/multi-tenant/scope-tx.js';
+
+type ScopeTx = Awaited<ReturnType<typeof openScopeTx>>;
+
+// ── Story 6.21a (D12) — the death certificate ────────────────────────────────────────────────────────
+// ⭐ TEST-ONLY RAW INSERTS of the certificate itself (the OCR job is its sole production writer and there is ⛔ no
+// domain writer), a private copy of the domain `_helpers.ts` pair. The REVIEW goes through the REAL writer,
+// with the accepted date encrypted under the REAL field class — 6.20's timeline and determination handler
+// decrypt it and compare it with the date the District Admin sends.
+
+/** Raw-insert a death certificate (the row + ONE upload, made CURRENT) in the caller's scope tx. */
+export async function insertDeathCertificate(
+  scopeTx: ScopeTx,
+  pariwarId: string,
+  claimCaseId: string,
+  opts: { readonly uploadedAt?: Date; /** a caller-PINNED key (a spec's per-claim marker) */ readonly storageObjectKey?: string } = {},
+): Promise<{ claimDocumentId: string; uploadId: string; storageObjectKey: string }> {
+  const claimRow = await claim.getClaimCase(scopeTx.tx, ids.pariwarId(pariwarId), ids.claimId(claimCaseId));
+  if (!claimRow) throw new Error(`[fixture] claim ${claimCaseId} not found in ${pariwarId}`);
+  const existing = await scopeTx.client.query<{ claim_document_id: string }>(
+    `SELECT claim_document_id FROM claim_documents WHERE pariwar_id = $1 AND claim_case_id = $2 AND document_type = 'death_certificate'`,
+    [pariwarId, claimCaseId],
+  );
+  const claimDocumentId = existing.rows[0]?.claim_document_id ?? randomUUID();
+  const uploadId = randomUUID();
+  const storageObjectKey =
+    opts.storageObjectKey ?? `pariwar/${pariwarId}/claim/${claimCaseId}/death_certificate/${claimDocumentId}/${uploadId}`;
+  if (existing.rows[0]) {
+    await scopeTx.client.query(`UPDATE claim_documents SET storage_object_key = $2, updated_at = now() WHERE claim_document_id = $1`, [
+      claimDocumentId,
+      storageObjectKey,
+    ]);
+  } else {
+    await scopeTx.client.query(
+      `INSERT INTO claim_documents (claim_document_id, pariwar_id, claim_case_id, document_type, storage_object_key,
+         content_type, byte_size, parity_outcome, parity_flags, ocr_confidence, verifier_review_required)
+       VALUES ($1, $2, $3, 'death_certificate', $4, 'application/pdf', 1024, 'match', '{}'::jsonb, 0.9, false)`,
+      [claimDocumentId, pariwarId, claimCaseId, storageObjectKey],
+    );
+  }
+  await scopeTx.client.query(
+    `INSERT INTO claim_death_certificate_uploads (upload_id, claim_case_id, pariwar_id, deceased_member_id, claim_document_id,
+       storage_object_key, content_type, byte_size, channel, uploaded_by_actor_id, uploaded_at)
+     VALUES ($1, $2, $3, $4, $5, $6, 'application/pdf', 1024, 'member_app', NULL, $7)`,
+    [uploadId, claimCaseId, pariwarId, claimRow.deceasedMemberId, claimDocumentId, storageObjectKey, opts.uploadedAt ?? new Date()],
+  );
+  return { claimDocumentId, uploadId, storageObjectKey };
+}
+
+/**
+ * Ensure the claim's CURRENT certificate is ACCEPTED with `date` (default tomorrow, IST) — through the REAL
+ * review writer, reusing an accepted review with the same date. Returns its review id. The claim must be in
+ * the review window.
+ */
+export async function ensureAcceptedDeathCertificate(
+  deps: AppDeps,
+  scopeTx: ScopeTx,
+  pariwarId: string,
+  claimCaseId: string,
+  opts: { readonly date?: string } = {},
+): Promise<string> {
+  const pid = ids.pariwarId(pariwarId);
+  const cid = ids.claimId(claimCaseId);
+  const date = opts.date ?? certificateDateAfterEverything();
+  const snap = await claim.readDeathCertificateSnapshot(scopeTx.tx, pid, cid);
+  const status = claim.deathCertificateStatus(snap);
+  if (status === 'accepted') {
+    const accepted = await claim.getCurrentAcceptedDeathCertificate(scopeTx.tx, pid, cid);
+    if (accepted && (await decryptDeathCertificateReviewField(accepted.acceptedDateCiphertext, pariwarId, deps.encryption)) === date) {
+      return accepted.reviewId;
+    }
+  }
+  let token = snap.currentUploadId as string | null;
+  if (status === 'missing' || status === 'rejected' || token === null) {
+    token = (await insertDeathCertificate(scopeTx, pariwarId, claimCaseId)).uploadId;
+  }
+  const [dateCt, noteCt] = await Promise.all([
+    encryptDeathCertificateReviewField(date, pariwarId, deps.encryption),
+    encryptDeathCertificateReviewField('fixture: the date is clear', pariwarId, deps.encryption),
+  ]);
+  const r = await claim.recordDeathCertificateReview(scopeTx.client, {
+    claimCaseId: cid,
+    pariwarId: pid,
+    verdict: 'accepted',
+    certificateToken: token,
+    acceptedDate: date,
+    acceptedDateCiphertext: dateCt,
+    rejectionReason: null,
+    noteCiphertext: noteCt,
+    expectedLiveReviewId: (snap.liveReview?.reviewId as string | undefined) ?? null,
+    actorId: randomUUID(),
+    actorDisplay: 'Anita (District Admin)',
+    actor: 'operator',
+    // D4's clock — the date may be TOMORROW (IST), so the fixture accepts on that day.
+    now: new Date(Math.max(Date.now(), Date.parse(`${date}T12:00:00+05:30`))),
+  });
+  return r.reviewId;
+}
 
 /**
  * Give a claim its two bank accounts and a recorded, PASSING name check so it can pass the AC4 gate.
@@ -61,9 +162,28 @@ export async function seedNomineeNameCheck(
      *  "no discards" determination through the REAL writer, plus a one-nominee declaration when the
      *  deceased has none. */
     readonly determination?: 'no_discards' | 'skip';
+    /** Story 6.21a (D12) — `'accepted'` (default): the current death certificate is accepted through the REAL
+     *  review writer, BEFORE any determination (D8 needs it). `'skip'` reaches a claim with ⛔ no accepted
+     *  certificate — the gate's `…death_certificate_acceptance_required` — and seeds ⛔ no determination. */
+    readonly certificate?: 'accepted' | 'skip';
   } = {},
 ): Promise<void> {
-  if (opts.skip === true) return;
+  if (opts.skip === true) {
+    // Story 6.21a — an EXPLICIT `certificate: 'accepted'` with `skip` seeds the accepted certificate ONLY (no
+    // accounts, no determination, no check): the claim then reaches the gate's NEXT blocker (6.18's bank
+    // accounts) rather than the certificate conjunct, which runs first. A bare `skip` stays a pure no-op.
+    if (opts.certificate === 'accepted') {
+      const scopeTx = await openScopeTx(deps, pariwarId);
+      let ok = false;
+      try {
+        await ensureAcceptedDeathCertificate(deps, scopeTx, pariwarId, claimCaseId);
+        ok = true;
+      } finally {
+        await closeScopeTx(scopeTx, ok);
+      }
+    }
+    return;
+  }
   const verdicts = opts.verdicts ?? (['matches', 'matches'] as const);
   const clericalReasons = opts.clericalReasons ?? [null, null];
   // ⚠ A SHORT ARRAY THROWS. `verdicts[i] ?? 'matches'` silently produced a PASSING verdict on the
@@ -99,8 +219,11 @@ export async function seedNomineeNameCheck(
     // Seeded here, ahead of the `accountsOnly` return, so "nobody CHECKED" still reaches the name-check
     // 409 rather than `nominee_determination_required` — a different fact. `determination: 'skip'`
     // builds the UNDETERMINED claim instead.
-    if (opts.determination !== 'skip') {
-      await seedDeclarationAndDetermination(scopeTx, pariwarId, claimCaseId);
+    // ⭐ Story 6.21a (D7, D8) — the ACCEPTED certificate the gate asks for FIRST, and the determination's date.
+    const reviewId =
+      opts.certificate === 'skip' ? null : await ensureAcceptedDeathCertificate(deps, scopeTx, pariwarId, claimCaseId);
+    if (opts.determination !== 'skip' && reviewId !== null) {
+      await seedDeclarationAndDetermination(scopeTx, pariwarId, claimCaseId, reviewId);
     }
 
     // ⛔ The "two accounts but NOBODY CHECKED" fixture stops here — exactly the claim AC4's gate
@@ -165,6 +288,8 @@ async function seedDeclarationAndDetermination(
   scopeTx: Awaited<ReturnType<typeof openScopeTx>>,
   pariwarId: string,
   claimCaseId: string,
+  /** Story 6.21a (D8) — the accepted review whose date (tomorrow, IST) the determination uses. */
+  deathCertificateReviewId: string,
 ): Promise<void> {
   const pid = ids.pariwarId(pariwarId);
   const cid = ids.claimId(claimCaseId);
@@ -214,6 +339,7 @@ async function seedDeclarationAndDetermination(
     marks: versions.map((v) => ({ versionId: v.versionId, mark: 'stands' as const })),
     watermark: { rank1: head(1), rank2: head(2) },
     expectedLiveDeterminationId: null,
+    deathCertificateReviewId,
     actorId: randomUUID(),
     actorDisplay: 'Anita (District Admin)',
     actor: 'operator',

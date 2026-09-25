@@ -2899,6 +2899,8 @@ a route to fix it.
 > `6-22`, and its identifier set is **counsel-gated** (`-238`, `-240`). It adds ⛔ no new claim lifecycle
 > state, ⛔ no join between bank accounts and nominees (6.8 D1), and it does ⛔ not close the
 > certificate-admissibility rule, which is Story `6-21` and a **go-live coupling** on `-235` Y.
+>
+> ⭐ **2026-09-25 — the coupling is CLOSED BY THE BUILD (Story 6.21a) — it discharges on the build, ⛔ not on the record.** A determination must now be made against the claim's CURRENT, ACCEPTED death certificate (its review id is stored and re-asserted), and a re-review or replacement stales it at every approval gate. *Appended; ⛔ nothing above edited.*
 
 ### Story 6.21a: The Death Certificate's Clear-Date Rule — the District Admin Accepts or Rejects It, and Only an Accepted Certificate Counts `[SURFACE]`
 

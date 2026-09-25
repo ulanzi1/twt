@@ -25,6 +25,29 @@
 // outcome + `verifier_review_required`, still advances to `documents_pending`, and writes a
 // best-effort audit line. A low-confidence parse is likewise forced to `ambiguous`.
 //
+// ── Story 6.21a (D2, T1, T2) — EVERY death certificate is kept, and "current" only moves FORWARD ──
+// `2026-09-25-243` (option C): every certificate is kept for as long as claim records are kept. The
+// upload handler now mints an `uploadId` per death-certificate upload and writes the object at
+// `…/death_certificate/{claimDocumentId}/{uploadId}` — its OWN object, so a replacement ⛔ never
+// overwrites the certificate it replaces (T1). For such a payload this job, in ONE transaction:
+//   1. `SELECT … FOR UPDATE` the claim row — serialising it with the District Admin's review writer
+//      (which locks the same row first), so a review and a job commit never interleave;
+//   2. moves `claim_documents` FORWARD ONLY: it upserts (key + OCR reading) only if there is no current
+//      upload, or this upload's `uploaded_at` (the HANDLER's clock) is ≥ the current one's. A retried or
+//      delayed job for an OLDER upload therefore ⛔ never makes it current again, and ⛔ never revives its
+//      rejected review (T2). Otherwise the upload is KEPT (its row is written) but ⛔ not made current;
+//   3. inserts the upload row (`ON CONFLICT (upload_id) DO NOTHING` — a retry writes exactly one), with its
+//      `claim_document_id` from the upsert's `RETURNING`, ⛔ never from the payload (two handlers racing a
+//      FIRST upload mint different ids; the upsert keeps the first).
+// ⭐ The SOLE writer of `claim_death_certificate_uploads` (invariant 5). A REPLACEMENT in the review window
+// appends ⛔ no `documents_received` (it only fires from `intake_converged`) and enqueues ⛔ no peer-mesh
+// select (AC3: ⛔ no new selection, ⛔ no new event).
+// ⚠ TOLERANCE: a payload with ⛔ no `uploadId` (enqueued before this deploy) writes ⛔ no upload row and keeps
+// the pre-6.21a behaviour — overwrite included (T12 then applies to its row). Other document types are
+// ⛔ unchanged.
+// ⚠ A job that fails PERMANENTLY (DLQ) leaves an object with ⛔ no row — the pre-existing 6.5 class
+// ("OCR job DB failure retries indefinitely"), which now also strands a REPLACEMENT. Annotated, ⛔ not fixed.
+//
 // ── PII discipline ────────────────────────────────────────────────────────────────────
 // Extracted identity fields are Tier-1 (`claim_document` field-class) — encrypted app-side
 // before insert, NEVER logged. The audit line + logs carry only NON-PII metadata (outcome,
@@ -49,6 +72,7 @@ import {
   withPariwarScope,
 } from '@twt/domain';
 import { QUEUE_NAMES, type Job, type JobEnvelope, type QueueClient } from '@twt/queue';
+import { and, eq } from 'drizzle-orm';
 
 /**
  * Field-class for the deceased member's KYC Tier-1 envelope. Duplicated BY VALUE from
@@ -110,7 +134,9 @@ export interface ClaimOcrParityDeps {
   }) => Promise<void>;
 }
 
-/** The job payload (wrapped in a JobEnvelope by the API producer). All fields NON-PII. */
+/** The job payload (wrapped in a JobEnvelope by the API producer). All fields NON-PII.
+ *  ⚠ DECLARED TWICE — `ClaimOcrParityJobPayload` in `apps/api/src/context.ts` is its producer-side twin
+ *  (apps cannot import apps). Keep the two in lockstep. */
 export interface ClaimOcrParityPayload {
   readonly claimDocumentId: string;
   readonly claimCaseId: string;
@@ -119,6 +145,13 @@ export interface ClaimOcrParityPayload {
   readonly storageObjectKey: string;
   readonly contentType: string;
   readonly byteSize: number;
+  /** Story 6.21a (D2) — `death_certificate` only: the upload the handler minted (its own object). ABSENT on
+   *  a payload enqueued before 6.21a — the tolerance path. */
+  readonly uploadId?: string;
+  /** Story 6.21a (D2) — the HANDLER's clock (ISO-8601), ⛔ not the job's: it orders "current" forward-only. */
+  readonly uploadedAt?: string;
+  /** Story 6.21a (D2) — which upload route the certificate came through. */
+  readonly channel?: schema.DeathCertificateUploadChannel;
 }
 
 /** SHA-256 hex of a NON-PII context object — the audit `requestPayloadHash` (never the payload). */
@@ -186,6 +219,7 @@ export async function runClaimOcrParity(
   // ── (2) One scope-tx: decrypt member record → evaluate parity → encrypt + upsert row →
   //        advance the claim state idempotently.
   let finalOutcome: claim.ParityOutcome = 'ambiguous';
+  let replacementInReviewWindow = false;
   await withPariwarScope(deps.pool, pariwarId, async (db, client) => {
     // Read + decrypt the deceased member's KYC record (plaintext handed to the pure parity fn).
     const profile = await kyc.getMemberKycProfile(db, brandedPariwarId, deceasedMemberId);
@@ -225,8 +259,51 @@ export async function runClaimOcrParity(
     const issuingAuthorityCiphertext = await enc(ocrFields.issuingAuthority);
     const certificateNumberCiphertext = await enc(ocrFields.certificateNumber);
 
-    // Upsert ONE row per (claim, document_type) — idempotent (AC4).
-    await db
+    // ── Story 6.21a (D2) — a death certificate WITH an upload id: lock, forward-only, keep every upload.
+    const tracked =
+      p.documentType === 'death_certificate' && p.uploadId !== undefined && p.uploadedAt !== undefined
+        ? {
+            uploadId: ids.deathCertificateUploadId(p.uploadId),
+            uploadedAt: new Date(p.uploadedAt),
+            channel: p.channel ?? ('member_app' as const),
+          }
+        : null;
+    let makeCurrent = true;
+    if (tracked) {
+      // (1) The claim-row lock — the review writer takes it first too.
+      const [locked] = await db
+        .select({ claimCaseId: schema.claims.claimCaseId })
+        .from(schema.claims)
+        .where(and(eq(schema.claims.pariwarId, brandedPariwarId), eq(schema.claims.claimCaseId, claimCaseId)))
+        .for('update');
+      if (!locked) throw new Error(`[jobs] claim-ocr-parity: claim ${claimCaseId} not found in scope`);
+      // (2) Forward-only: the CURRENT upload is the one whose key is the row's key.
+      const current = await client.query<{ upload_id: string | null; uploaded_at: Date | null }>(
+        `SELECT u.upload_id, u.uploaded_at
+           FROM claim_documents cd
+           LEFT JOIN claim_death_certificate_uploads u
+             ON u.pariwar_id = cd.pariwar_id AND u.storage_object_key = cd.storage_object_key
+          WHERE cd.pariwar_id = $1 AND cd.claim_case_id = $2 AND cd.document_type = 'death_certificate'`,
+        [brandedPariwarId, claimCaseId],
+      );
+      const currentUploadedAt = current.rows[0]?.uploaded_at ?? null;
+      // A retry of the SAME upload re-applies the same key regardless of clock: idempotent by IDENTITY, not
+      // by timestamp comparison — `uploadedAt` is the HANDLER's wall clock, so two genuinely DIFFERENT
+      // uploads can tie on it. Only a strictly LATER timestamp promotes a different upload to current; a
+      // tie between two different uploads keeps the one already current (commit order must ⛔ never decide).
+      const isRetryOfCurrent = current.rows[0]?.upload_id?.toLowerCase() === (tracked.uploadId as string).toLowerCase();
+      makeCurrent =
+        currentUploadedAt === null ||
+        isRetryOfCurrent ||
+        tracked.uploadedAt.getTime() > new Date(currentUploadedAt).getTime();
+    }
+
+    // Upsert ONE row per (claim, document_type) — idempotent (AC4). ⭐ Story 6.21a: SKIPPED for an OLDER
+    // death-certificate upload (it is kept below, but ⛔ not made current, and its OCR reading ⛔ never
+    // overwrites the current certificate's).
+    let upsertedDocumentId: string | null = null;
+    if (makeCurrent) {
+    const [upserted] = await db
       .insert(schema.claimDocuments)
       .values({
         claimDocumentId,
@@ -263,13 +340,57 @@ export async function runClaimOcrParity(
           verifierReviewRequired: parity.verifierReviewRequired,
           updatedAt: now,
         },
-      });
+      })
+      .returning({ claimDocumentId: schema.claimDocuments.claimDocumentId });
+    upsertedDocumentId = upserted?.claimDocumentId ?? null;
+    }
+
+    if (tracked) {
+      // (3) The upload row — the row's id from the upsert's RETURNING, or (not made current) the existing row.
+      let documentId = upsertedDocumentId;
+      if (documentId === null) {
+        const [existing] = await db
+          .select({ claimDocumentId: schema.claimDocuments.claimDocumentId })
+          .from(schema.claimDocuments)
+          .where(
+            and(
+              eq(schema.claimDocuments.pariwarId, brandedPariwarId),
+              eq(schema.claimDocuments.claimCaseId, claimCaseId),
+              eq(schema.claimDocuments.documentType, 'death_certificate'),
+            ),
+          );
+        documentId = existing?.claimDocumentId ?? null;
+      }
+      if (documentId === null) {
+        throw new Error(`[jobs] claim-ocr-parity: no death_certificate row for claim ${claimCaseId}`);
+      }
+      await db
+        .insert(schema.claimDeathCertificateUploads)
+        .values({
+          uploadId: tracked.uploadId,
+          claimCaseId,
+          pariwarId: brandedPariwarId,
+          deceasedMemberId,
+          claimDocumentId: ids.claimDocumentId(documentId),
+          storageObjectKey: p.storageObjectKey,
+          contentType: p.contentType,
+          byteSize: p.byteSize,
+          channel: tracked.channel,
+          uploadedByActorId: actorId ?? null,
+          uploadedAt: tracked.uploadedAt,
+        })
+        .onConflictDoNothing({ target: schema.claimDeathCertificateUploads.uploadId });
+    }
 
     // Advance the claim state — idempotently. The claim row must exist (FK guarantees it).
     const claimRow = await claim.getClaimCase(db, brandedPariwarId, claimCaseId);
     if (!claimRow) {
       throw new Error(`[jobs] claim-ocr-parity: claim ${claimCaseId} not found in scope`);
     }
+    // Story 6.21a (AC3) — a death-certificate REPLACEMENT in the review window triggers ⛔ no peer-mesh
+    // select: the selection was made long ago, and the select job's no-op branch still re-queues its
+    // window and shepherd jobs.
+    replacementInReviewWindow = tracked !== null && claim.isInDeathCertificateReviewWindow(claimRow.currentState as string);
     // Only append from `intake_converged` (AC4). Already `documents_pending` (or beyond) → the
     // event was already emitted (a retry / a sibling document) → skip (no second event row).
     if (claimRow.currentState === 'intake_converged') {
@@ -310,7 +431,7 @@ export async function runClaimOcrParity(
   //        re-run of the OCR job does not double-select; the select job is itself idempotent.
   //        Best-effort: an enqueue failure NEVER fails the OCR job (the doc row + the
   //        documents_received event already committed) — alarm only.
-  if (deps.enqueuePeerMeshSelect) {
+  if (deps.enqueuePeerMeshSelect && !replacementInReviewWindow) {
     try {
       await deps.enqueuePeerMeshSelect({
         claimCaseId: p.claimCaseId,

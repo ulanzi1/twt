@@ -28,7 +28,7 @@ import { encryptVerifierRationale } from '../../../src/modules/claims/verifier-d
 import { closeScopeTx, openScopeTx } from '../../../src/modules/multi-tenant/scope-tx.js';
 import { encryptNomineeField } from '../../../src/modules/nominee/nominee-crypto.js';
 import { buildServer } from '../../../src/server.js';
-import { seedNomineeNameCheck } from '../_nominee-name-check-fixture.js';
+import { ensureAcceptedDeathCertificate, seedNomineeNameCheck } from '../_nominee-name-check-fixture.js';
 import { buildTestDeps, hasDatabase, makeClient, type TestDeps } from '../_setup.js';
 import { FakeWebAuthnProvider } from '../_webauthn-fake.js';
 
@@ -116,7 +116,7 @@ describe.skipIf(!hasDatabase)('Story 6.20 â€” the nominee declaration surface â€
    * declaration of ONE nominee (real Tier-1 ciphertext) dated `at` for each entry of `declarations`,
    * and a claim driven to `verifier_review`.
    */
-  async function world(opts: { relationship?: string; declarations?: Date[] } = {}) {
+  async function world(opts: { relationship?: string; declarations?: Date[]; certificate?: 'accepted' | 'skip' } = {}) {
     const pariwarId = randomUUID();
     const district = `D-${randomUUID().slice(0, 8)}`;
     const memberId = randomUUID();
@@ -174,6 +174,12 @@ describe.skipIf(!hasDatabase)('Story 6.20 â€” the nominee declaration surface â€
         metric_version: 1,
       });
       await emit('verification_in_progress', 'verifier_review', 'claim.verifier_reviewing');
+      // â­ Story 6.21a (D8, D12(c)) â€” a determination's date must be the claim's CURRENT, ACCEPTED certificate's:
+      // accepted here with CERT through the REAL review writer (its date encrypted under the real field class,
+      // so the determination handler's decrypt-and-compare runs for real). `'skip'` leaves none.
+      if (opts.certificate !== 'skip') {
+        await ensureAcceptedDeathCertificate(deps, s, pariwarId, claimCaseId, { date: CERT });
+      }
     });
     return { pariwarId, district, memberId, claimCaseId };
   }
@@ -727,9 +733,11 @@ describe.skipIf(!hasDatabase)('Story 6.20 â€” the nominee declaration surface â€
     const pid = ids.pariwarId(w.pariwarId);
     const input = await inScope(w.pariwarId, async (s) => {
       const versions = await nominee.listNomineeDeclarationVersions(s.tx, pid, ids.memberId(w.memberId));
+      const accepted = await claim.getCurrentAcceptedDeathCertificate(s.tx, pid, cid);
       return {
         claimCaseId: cid,
         pariwarId: pid,
+        deathCertificateReviewId: accepted!.reviewId as string,
         certificateDate: CERT,
         certificateDateCiphertext: 'enc:v1:certificate-date',
         noteCiphertext: 'enc:v1:note',

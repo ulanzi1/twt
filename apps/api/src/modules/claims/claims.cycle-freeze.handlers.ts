@@ -121,6 +121,14 @@ function translateCycleFreezeError(err: unknown): never {
   }
   // Story 6.20 (AC5, D15) — the SAME approval gate now asks for the District Admin's as-at-death
   // DETERMINATION first. ⛔ Never a denial: the claim WAITS for a human to say which declaration stands.
+  // Story 6.21a (D7) — ⛔ NOT a denial: the claim WAITS for an accepted death certificate (`-236` BB).
+  if (err instanceof claim.DeathCertificateAcceptanceRequiredError) {
+    throw new ConflictError(
+      'This claim needs an accepted death certificate with a clear date before it can be approved',
+      'cycle_freeze.death_certificate_acceptance_required',
+      { reason: err.reason },
+    );
+  }
   if (err instanceof claim.NomineeDeterminationRequiredError) {
     throw new ConflictError(
       'This claim needs the District Admin to determine which nominee declaration was in force at the death before it can be approved',

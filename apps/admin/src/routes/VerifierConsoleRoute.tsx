@@ -25,7 +25,10 @@ import {
   VerificationConsoleShell,
   NomineeNameCheckPanel,
   NomineeDeclarationPanel,
+  DeathCertificateHistory,
+  DeathCertificateReviewControl,
   VerificationDecisionStrip,
+  type DeathCertificateReviewSubmit,
   type DecisionSubmit,
   type NomineeNameCheckSubmit,
   type NomineeDeterminationSubmit,
@@ -34,6 +37,8 @@ import {
 } from '../modules/claim-verification/index.js';
 import { ApiError } from '../api/client.js';
 import {
+  deathCertificateAcceptanceRequiredMessage,
+  deathCertificateReviewErrorMessage,
   nomineeCorrectionErrorMessage,
   nomineeDeterminationErrorMessage,
   nomineeDeterminationRequiredMessage,
@@ -41,6 +46,9 @@ import {
 
 export { nomineeCorrectionErrorMessage, nomineeDeterminationErrorMessage, nomineeDeterminationRequiredMessage };
 import {
+  useDeathCertificateHistory,
+  useForgetDeathCertificateHistory,
+  usePostDeathCertificateReview,
   useForgetNomineeDeclarationDetails,
   useForgetNomineeNameCheck,
   useNomineeCorrections,
@@ -108,6 +116,8 @@ export function decisionErrorMessage(err: unknown): string {
     // server's `details.reason`), so the District Admin knows what to do in the history — ⛔ not to retry,
     // and ⛔ not "record a determination" when they already have and it left nobody standing.
     if (err.code === 'verifier_decision.nominee_determination_required') return nomineeDeterminationRequiredMessage(err);
+    // Story 6.21a (D7) — the certificate conjunct runs FIRST; name WHY (⛔ never "try again": the claim waits).
+    if (err.code === 'verifier_decision.death_certificate_acceptance_required') return deathCertificateAcceptanceRequiredMessage(err);
     if (err.code === 'verifier_decision.post_death_refusal_ungrounded') return t.nomineeDeclaration.postDeathRefusalUngrounded;
   }
   return t.decision.submitError;
@@ -287,6 +297,65 @@ export function VerifierConsoleRoute(): ReactElement {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [claimCaseId, resetDetermine, resetDecide]);
 
+  // ── Story 6.21a (D10) — the death certificate's review + its history ─────────────────────────────
+  // The item carries the review only for `death_certificate`; `viewer.canReview` is judged SERVER-side.
+  const certificateItem =
+    packet?.documentReview.status === 'present'
+      ? packet.documentReview.reviews.find((r) => r.documentType === 'death_certificate')
+      : undefined;
+  const certificateReview = certificateItem?.review;
+  // D7 review fix — `accepted` alone is ⛔ not enough: a re-review or replacement since the live
+  // determination was recorded makes it `determination_stale`, the gate's 4th ground.
+  const certificateAccepted = certificateReview?.status === 'accepted' && certificateReview.determinationStale === false;
+  // The open form and the history are KEYED TO THE CLAIM they were opened for (the 6.18 lesson: a claim
+  // change can ⛔ never carry a half-filled form, nor fire a decrypting read of the next claim).
+  const [certModeFor, setCertModeFor] = useState<{ claim: string; mode: 'accept' | 'reject' } | null>(null);
+  const certMode = certModeFor?.claim === claimCaseId ? certModeFor.mode : null;
+  const setCertMode = (mode: 'accept' | 'reject' | null): void => setCertModeFor(mode ? { claim: claimCaseId, mode } : null);
+  const [certHistoryFor, setCertHistoryFor] = useState<string | null>(null);
+  const certHistoryOpen = certHistoryFor === claimCaseId;
+  const certHistoryQ = useDeathCertificateHistory(pariwarId, claimCaseId, certHistoryOpen);
+  const forgetCertHistory = useForgetDeathCertificateHistory(pariwarId, claimCaseId);
+  const reviewCertificate = usePostDeathCertificateReview(pariwarId, claimCaseId);
+  const resetReview = reviewCertificate.reset;
+  const previousCertClaimRef = useRef(claimCaseId);
+  useEffect(() => {
+    if (previousCertClaimRef.current !== claimCaseId) {
+      // ⭐ FORGET the previous claim's decrypted history (the A→B→A posture) and close it.
+      forgetCertHistory(previousCertClaimRef.current);
+      previousCertClaimRef.current = claimCaseId;
+      setCertHistoryFor(null);
+      setCertModeFor(null);
+    }
+    resetReview();
+    // `forgetCertHistory` is a fresh closure each render and must ⛔ not re-run this effect.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [claimCaseId, resetReview]);
+  const submitCertificateReview = async (input: DeathCertificateReviewSubmit): Promise<boolean> => {
+    if (!certificateReview?.certificateToken) return false;
+    return reviewCertificate
+      .mutateAsync({
+        verdict: input.verdict,
+        certificate_token: certificateReview.certificateToken,
+        ...(input.accepted_date !== undefined ? { accepted_date: input.accepted_date } : {}),
+        ...(input.rejection_reason !== undefined ? { rejection_reason: input.rejection_reason } : {}),
+        note: input.note,
+        expected_live_review_id: certificateReview.liveReviewId,
+      })
+      .then(() => true)
+      .catch(() => false);
+  };
+  // D7 — approve waits for an ACCEPTED certificate (named FIRST, the gate's own order), then the name check.
+  const certificateBlockedReason = certificateAccepted
+    ? null
+    : !certificateItem
+      ? t.deathCertificate.approveBlocked.no_certificate!
+      : certificateReview?.status === 'rejected'
+        ? t.deathCertificate.approveBlocked.rejected!
+        : certificateReview?.status === 'accepted' && certificateReview.determinationStale === true
+          ? t.deathCertificate.approveBlocked.determination_stale!
+          : t.deathCertificate.approveBlocked.not_reviewed!;
+
   return (
     <VerifierConsoleGateView status={status}>
       <VerificationConsoleShell
@@ -320,14 +389,16 @@ export function VerifierConsoleRoute(): ReactElement {
               // accounts AND a current, passing District Admin name check. The domain refuses it
               // anyway under the claim lock; disabling here stops the console offering a control
               // that would 409, which would read to an operator as a glitch rather than a rule.
-              canApprove={packet.nomineeNameCheck.currentAndPassing}
+              canApprove={certificateAccepted && packet.nomineeNameCheck.currentAndPassing}
               // ⚠⚠ NAME THE ACTUAL BLOCKER (code review 2026-09-20). This fell through to
               // *"Record the nominee name check before approving"* for EVERY non-passing case —
               // including the one where the District Admin had just recorded `does_not_match`
               // themselves. Telling somebody to do a thing they have visibly already done reads as
               // the console not having noticed, and hides the real instruction: get it corrected.
               approveBlockedReason={
-                packet.nomineeNameCheck.currentAndPassing
+                certificateBlockedReason !== null
+                  ? certificateBlockedReason
+                  : packet.nomineeNameCheck.currentAndPassing
                   ? null
                   : // ⛔ "we could not read this" is ⛔ NOT "the bank details are missing".
                     !packet.nomineeNameCheck.available
@@ -360,7 +431,50 @@ export function VerifierConsoleRoute(): ReactElement {
               onAssessConcealment={submitConcealmentAssessment}
               concealmentAssessing={concealmentAssessment.isPending}
               concealmentAssessError={concealmentAssessErrorText}
+              // Story 6.21a (D10) — "Request a better document" opens the reject form; only for a reviewer.
+              {...(certificateReview?.viewer.canReview === true ? { onRequestBetterCertificate: () => setCertMode('reject') } : {})}
             />
+            {/* Story 6.21a (D10, AC5) — the death certificate: the review control (District Admin only) and
+                the on-demand history (any console reader — `claim.verify`). */}
+            {certificateItem ? (
+              <section className="mt-4 border-t pt-4" data-testid="death-certificate-section">
+                <h3 className="font-semibold">{t.deathCertificate.heading}</h3>
+                {certificateReview?.viewer.canReview === true ? (
+                  <DeathCertificateReviewControl
+                    key={claimCaseId}
+                    review={certificateReview}
+                    ocrDateOfDeath={certificateItem.extracted.dateOfDeath}
+                    mode={certMode}
+                    onModeChange={setCertMode}
+                    onSubmit={submitCertificateReview}
+                    processing={reviewCertificate.isPending}
+                    error={reviewCertificate.error ? deathCertificateReviewErrorMessage(reviewCertificate.error) : null}
+                    recorded={reviewCertificate.isSuccess}
+                  />
+                ) : null}
+                <button
+                  type="button"
+                  className="mt-2 text-sm underline"
+                  data-testid="death-certificate-history-disclosure"
+                  aria-expanded={certHistoryOpen}
+                  onClick={() => {
+                    // ⭐ Closing FORGETS the decrypted dates and notes; a reopen is a fresh, audited look.
+                    if (certHistoryOpen) forgetCertHistory();
+                    setCertHistoryFor(certHistoryOpen ? null : claimCaseId);
+                  }}
+                >
+                  {certHistoryOpen ? t.deathCertificate.history.hide : t.deathCertificate.history.show}
+                </button>
+                <p className="text-xs">{t.deathCertificate.history.audited}</p>
+                {certHistoryOpen ? (
+                  <DeathCertificateHistory
+                    history={certHistoryQ.isError ? undefined : certHistoryQ.data}
+                    loading={certHistoryQ.isLoading}
+                    error={certHistoryQ.isError ? t.deathCertificate.history.error : null}
+                  />
+                ) : null}
+              </section>
+            ) : null}
             {/* Story 6.18 (AC2/AC3) — the nominee name check, behind a disclosure. */}
             <section className="mt-4 border-t pt-4">
               <button

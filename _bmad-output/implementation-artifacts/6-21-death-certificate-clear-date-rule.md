@@ -32,7 +32,7 @@ instruction.
 
 # Story 6.21a: The Death Certificate's Clear-Date Rule: the District Admin Accepts or Rejects It, and Only an Accepted Certificate Counts `[SURFACE]`
 
-Status: ready-for-dev
+Status: done
 
 > **Not in `epics.md`'s story list.** Commissioned by the Trustee Panel (Dhiraj Rahul + Kalpana Bharti) through
 > `2026-09-20-235` Y and `2026-09-20-236` BB. BigDev placed it as a row on 2026-09-20 (`-236` consequence 3, row
@@ -776,7 +776,7 @@ re-deferred"**.
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0: Governance first** (AC0)
+- [x] **Task 0: Governance first** (AC0)
   - [x] Draft `2026-09-25-244` (author-commit) — ✅ CONFIRMED by BigDev 2026-09-25 (incl. `certificate.missing_body`):
     - a one-line table of 6.21a D1–D16 **and** 6.21b D1–D8 (the full text stays in the two story files; ⛔ no second copy);
     - `certificate.missing_body` for BigDev's yes;
@@ -787,66 +787,133 @@ re-deferred"**.
   - [x] Add `### Story 6.21a` and `### Story 6.21b` to `epics.md`, after 6.20. ✅ 2026-09-25
   - [x] Append the D16 item to 6.19's file (appended; ⛔ never a rewrite). ✅ 2026-09-25 — a section, AC12 and Task 11 (6.19 v0.3)
   - [x] **HALT for BigDev's confirmation.** ✅ Confirmed 2026-09-25. Then commit the governance edits alone: `-243` (already recorded), `-244`, the ruled routing note, `epics.md` and the 6.19 item.
-- [ ] **Task 1: Migration `0122`** (AC3, AC4, AC6). Hand-authored; journal `when` > `1791171600000`; ⛔ never regenerate
+- [x] **Task 1: Migration `0122`** (AC3, AC4, AC6). Hand-authored; journal `when` > `1791171600000`; ⛔ never regenerate
   `0119`–`0121`.
-  - [ ] Both tables: FKs with the stated ON DELETE, CHECKs, the partial unique index, grants, the append-only triggers
+  - [x] Both tables: FKs with the stated ON DELETE, CHECKs, the partial unique index, grants, the append-only triggers
     with the cascade exemption, and the one-way supersession trigger (a copy of `0121`).
-  - [ ] `nominee_determinations.death_certificate_review_id` (nullable, ON DELETE SET NULL).
-  - [ ] One policy file for both tables, `packages/domain/src/policies/claim-death-certificate-rls.ts`, plus its
+  - [x] `nominee_determinations.death_certificate_review_id` (nullable, ON DELETE SET NULL).
+  - [x] One policy file for both tables, `packages/domain/src/policies/claim-death-certificate-rls.ts`, plus its
     `policies/index.ts` export.
-  - [ ] The Drizzle schemas plus `schema/index.ts`; the two branded ids in `ids/index.ts`.
-- [ ] **Task 2: Domain** (AC1–AC4)
-  - [ ] `claim/death-certificate-approval.ts`, the LEAF: the conjunct, `isDeathCertificateReplacementRequested`, and the
+  - [x] The Drizzle schemas plus `schema/index.ts`; the two branded ids in `ids/index.ts`.
+- [x] **Task 2: Domain** (AC1–AC4)
+  - [x] `claim/death-certificate-approval.ts`, the LEAF: the conjunct, `isDeathCertificateReplacementRequested`, and the
     current-certificate read.
-  - [ ] `claim/death-certificate-review-persist.ts`, `recordDeathCertificateReview`, in this order: claim-row
+  - [x] `claim/death-certificate-review-persist.ts`, `recordDeathCertificateReview`, in this order: claim-row
     `FOR UPDATE`, the window, the token, supersession (`re_reviewed` / `replaced`), D4 with injected `now`, and the
     event via `projectClaimState`.
-  - [ ] `claim/death-certificate-review-read.ts`: the console read and the history (clamped).
-  - [ ] `assertClaimApprovable` in `nominee-name-check.ts`. Switch P1/P3/P4 to it; leave `isReturnedClaimResubmitted`
+  - [x] `claim/death-certificate-review-read.ts`: the console read and the history (clamped).
+  - [x] `assertClaimApprovable` in `nominee-name-check.ts`. Switch P1/P3/P4 to it; leave `isReturnedClaimResubmitted`
     alone; move the doc-block.
-  - [ ] D8 in `recordNomineeDetermination`. Add the two new reasons, `DeathCertificateAcceptanceRequiredError` and
+  - [x] D8 in `recordNomineeDetermination`. Add the two new reasons, `DeathCertificateAcceptanceRequiredError` and
     `DeathCertificateReviewRefusedError` in `errors.ts`.
-  - [ ] The event schema, `CLAIM_EVENT_TYPES`, the identity reducer case, and the `packages/events/src/registry.ts`
+  - [x] The event schema, `CLAIM_EVENT_TYPES`, the identity reducer case, and the `packages/events/src/registry.ts`
     entry.
-  - [ ] Exports in `claim/index.ts`.
-- [ ] **Task 3: Upload + job** (AC3)
+  - [x] Exports in `claim/index.ts`.
+- [x] **Task 3: Upload + job** (AC3)
   - D2 and D6 in `claims.documents.handlers.ts`.
   - `uploadId`, `uploadedAt` and `channel` in **both** payload types (`apps/api/src/context.ts` and
     `apps/jobs/src/claim-ocr-parity.ts`).
   - In the job: the lock, the upload insert, `.returning`, the forward-only upsert and the tolerance.
   - Update both file headers.
-- [ ] **Task 4: API** (AC1, AC2, AC4, AC5)
-  - [ ] `claims.death-certificate.{routes,handlers}.ts` (D9); register them in `claims/index.ts`.
-  - [ ] `death-certificate-crypto.ts`, plus the field class in `context.ts`.
-  - [ ] The three wire-code mappings (D7); D8 in `postDetermination`; `accepted_certificate` in `getTimeline`; the
+- [x] **Task 4: API** (AC1, AC2, AC4, AC5)
+  - [x] `claims.death-certificate.{routes,handlers}.ts` (D9); register them in `claims/index.ts`.
+  - [x] `death-certificate-crypto.ts`, plus the field class in `context.ts`.
+  - [x] The three wire-code mappings (D7); D8 in `postDetermination`; `accepted_certificate` in `getTimeline`; the
     console item and the ceiling (D10); the audit-sink union.
-- [ ] **Task 5: Contracts** (AC5)
+- [x] **Task 5: Contracts** (AC5)
   - `packages/contracts/src/claims/death-certificate.ts`: the review request/response and the history.
   - The `VerifierReviewItem.review` extension.
   - The timeline's `accepted_certificate`, with a `ReadableName` output.
   - Run `contracts:emit-openapi` and expect ⛔ no drift.
-- [ ] **Task 6: Admin** (AC4, AC5)
-  - [ ] `api/client.ts` fetchers and `api/hooks.ts` hooks, including the forget-on-close hook and
+- [x] **Task 6: Admin** (AC4, AC5)
+  - [x] `api/client.ts` fetchers and `api/hooks.ts` hooks, including the forget-on-close hook and
     `DETERMINATION_STALE_CODES`.
-  - [ ] `<DeathCertificateReviewControl>` and the history in `VerifierConsoleRoute.tsx`. Thread `onRequestBetter`
+  - [x] `<DeathCertificateReviewControl>` and the history in `VerifierConsoleRoute.tsx`. Thread `onRequestBetter`
     through `SignalsPanel` and `VerifierReviewPanel`. Update `canApprove`, `approveBlockedReason` and
     `decisionErrorMessage`.
-  - [ ] `CycleFreezePage.tsx`, `R9CasePanel.tsx`, `nominee-errors.ts`, the read-only date in `NomineeDeclarationPanel`,
+  - [x] `CycleFreezePage.tsx`, `R9CasePanel.tsx`, `nominee-errors.ts`, the read-only date in `NomineeDeclarationPanel`,
     and `claim-verification/i18n-en.ts`.
-- [ ] **Task 7: Keys, gates, RTBF and the fence** (AC6)
+- [x] **Task 7: Keys, gates, RTBF and the fence** (AC6)
   - The catalog, `roles.ts` and both RBAC tests.
   - The human-actor gate entry and floor.
   - The anonymizer, its test and a live-DB spec.
   - The event pins.
   - `FENCED_FILES`, its floor, and the ⛔-decrypt assertions.
-- [ ] **Task 8: Tests** (AC8). D12's fixture changes **first**, then the full suites, then (i)–(ix). Prove each guard red.
-- [ ] **Task 9: Records**
-  - [ ] Annotate the four coupling sites (AC4).
-  - [ ] The 6.20 deferral: the upper bound DISCHARGED, the lower bound re-deferred.
-  - [ ] 6.5's *"OCR job DB failure retries indefinitely"*: it now also strands a replacement.
-  - [ ] 6.5's *"no audit trail for rejected uploads"*: the two new 409s join it.
-  - [ ] 6.20's untraced-RTBF item: answered by D11's trace.
-  - [ ] Prepend the `sprint-status.yaml` ledger safely ([[project_sprint_status_safe_prepend]]).
+- [x] **Task 8: Tests** (AC8). D12's fixture changes **first**, then the full suites, then (i)–(ix). Prove each guard red.
+- [x] **Task 9: Records**
+  - [x] Annotate the four coupling sites (AC4).
+  - [x] The 6.20 deferral: the upper bound DISCHARGED, the lower bound re-deferred.
+  - [x] 6.5's *"OCR job DB failure retries indefinitely"*: it now also strands a replacement.
+  - [x] 6.5's *"no audit trail for rejected uploads"*: the two new 409s join it.
+  - [x] 6.20's untraced-RTBF item: answered by D11's trace.
+  - [x] Prepend the `sprint-status.yaml` ledger safely ([[project_sprint_status_safe_prepend]]).
+
+### Review Findings
+
+Code review, Chunk 1 of 2 (the 20 new files: domain persistence/read/RLS/schema, migration 0122, API handlers/routes/crypto, contracts, the admin control component, and their tests) — 2026-09-25. Chunk 2 (this story's touches to shared claim-verification infra) is a deferred follow-up run, not yet reviewed.
+
+- [x] [Review][Patch] `missing_note` domain refusal is unreachable over HTTP — `note: z.string().trim().min(1)...` at `packages/contracts/src/claims/death-certificate.ts:41` pre-empts the domain writer's `missing_note` guard with a generic 400, violating AC1/AC8(i)'s "every refusal reaches the wire as its own `death_certificate_review.<reason>` 409 and is audited" and contradicting this same file's own documented design principle (loose validation so the writer owns refusal semantics). — FIXED.
+- [x] [Review][Patch] Legacy (no-upload-row) certificate gets inconsistent status/refusal classification across code paths — `deathCertificateStatus` (`packages/domain/src/claim/death-certificate-approval.ts:144-145`) returns `awaiting_review` when `currentUploadId` is null, while `recordDeathCertificateReview` (`packages/domain/src/claim/death-certificate-review-persist.ts:148-149`) treats the identical condition as `no_certificate`. Same state, two different wire reasons depending on which path evaluates it. — FIXED.
+- [x] [Review][Patch] A post-commit audit-emit failure is reported to the client as a review failure even though the write already committed — `emitAuthAudit(..., 'admin_claim.death_certificate_reviewed', ...)` at `apps/api/src/modules/claims/claims.death-certificate.handlers.ts:146` runs after `closeScopeTx` with no try/catch; a throw here skips `reply.status(201)` (line 159), so the client sees a 500 for a review that succeeded, and a retry then hits `stale_supersession`. — FIXED.
+- [x] [Review][Patch] One failing signed-URL lookup fails the entire history read — `signedReadUrl(...)` at `apps/api/src/modules/claims/claims.death-certificate.handlers.ts:212` is awaited per-upload inside the history loop with no try/catch; a storage error on any one historical upload 500s the whole response. — FIXED.
+- [x] [Review][Patch] Success audit's `upload_id` is sourced from client-echoed input, not a domain-confirmed value — `upload_id: body.certificate_token.toLowerCase()` at `apps/api/src/modules/claims/claims.death-certificate.handlers.ts:153`; `RecordDeathCertificateReviewResult` doesn't return the reviewed `uploadId`, so the audit line has no independent guarantee it matches what was actually persisted. — FIXED.
+- [x] [Review][Patch] `DeathCertificateReviewControl.submit()` has no handling for a rejecting `onSubmit` — `apps/admin/src/modules/claim-verification/DeathCertificateReviewControl.tsx:100-118`; an unhandled promise rejection leaves the UI showing no feedback to the District Admin. — FIXED.
+- [x] [Review][Patch] Mode-toggle and cancel buttons stay enabled during an in-flight submit — only the submit button is gated on `props.processing` (`DeathCertificateReviewControl.tsx:196-198`); switching mode or cancelling mid-request races the pending submit's `onModeChange(null)`. — FIXED.
+- [x] [Review][Patch] `readDeathCertificateSnapshot` silently takes `rows[0]` with no assertion against the "at most one live review" invariant — `packages/domain/src/claim/death-certificate-approval.ts:119`; a future write that bypasses the partial unique index would silently drop extra rows instead of surfacing the violation. — FIXED.
+- [x] [Review][Patch] Failure-path audit line omits the certificate token/upload id that the success path records — `apps/api/src/modules/claims/claims.death-certificate.handlers.ts` failure audit context (~line 122-129, `context: { claim_case_id, verdict, reason }`) vs. the success audit's `upload_id` (line 153); refusals like `stale_certificate`/`stale_supersession` can't be correlated to which upload was involved from the audit trail alone. — FIXED.
+- [x] [Review][Patch] Audit reason code for a concurrency refusal doesn't match the wire error code — `auditReason()` at `apps/api/src/modules/claims/claims.death-certificate.handlers.ts:87-90` returns `err.name` (e.g. `"ClaimStreamConcurrencyError"`) instead of `"concurrent"` for `ClaimStreamConcurrencyError`, breaking log-to-response traceability for that one refusal class. — FIXED.
+- [x] [Review][Patch] History pagination cap (100) truncates silently with no signal in the response — `DEATH_CERTIFICATE_HISTORY_MAX_LIMIT = 100` at `packages/domain/src/claim/death-certificate-review-read.ts:72`; since uploads are never deleted (`-243`), a claim exceeding the cap has its oldest history dropped from `DeathCertificateHistoryResponse` with no `truncated`/`hasMore` flag telling the caller more exist. — FIXED.
+- [x] [Review][Patch] `byte_size` CHECK permits a zero-byte "certificate" — `CHECK ("byte_size" >= 0)` at `packages/domain/migrations/0122_death-certificate-clear-date-rule.sql:44`; should be `> 0`. — FIXED.
+- [x] [Review][Patch] "Incomplete" alert doesn't clear when the form becomes valid without a resubmit — `setIncomplete` in `DeathCertificateReviewControl.tsx:79-105` only resets at the start of the next submit or on a fingerprint change; fixing the date/note after a failed attempt leaves the stale `role="alert"` rendered until resubmit. — FIXED.
+- [x] [Review][Patch] `getCurrentAcceptedDeathCertificate` treats an empty-string ciphertext the same as "no certificate," silently — `packages/domain/src/claim/death-certificate-review-read.ts:54`; the DB CHECK only guarantees `IS NOT NULL`, not non-empty, so this could silently disagree with an `'accepted'` status with no log line marking the anomaly. — FIXED.
+- [x] [Review][Patch] `getHistory` does its decrypt and signed-URL work serially in a loop instead of batched — `apps/api/src/modules/claims/claims.death-certificate.handlers.ts` history loop (~lines 190-215); O(uploads × reviews) sequential KMS/storage round trips on a claim with many review cycles instead of `Promise.all`-batched ones. — FIXED.
+- [x] [Review][Patch] Response-contract timestamp fields are untyped bare strings — `decided_at`/`superseded_at`/`uploaded_at` at `packages/contracts/src/claims/death-certificate.ts:70-82` are `z.string()` rather than `z.string().datetime()`, so a malformed timestamp passes contract validation silently. — FIXED.
+- [x] [Review][Patch] Upload-channel enum duplicated across three independent sources with no shared import — the literal `('member_app', 'helpline')` set is hand-written separately in the Postgres CHECK (`migrations/0122_death-certificate-clear-date-rule.sql:43`), the Drizzle schema (`schema/claim_death_certificate_uploads.ts:42`), and the zod contract (`contracts/src/claims/death-certificate.ts:81`); a third channel later needs three synchronized edits with nothing to catch a missed one. — FIXED.
+- [x] [Review][Patch] `event_version` has no positivity constraint — `packages/contracts/src/claims/death-certificate.ts:55` (`z.number().int()`); a negative or zero value would pass contract validation silently for a field meant to be a monotonic stream position. — FIXED.
+- [x] [Review][Patch] Migration header comment overstates how narrow the delete-cascade graph is — `packages/domain/migrations/0122_death-certificate-clear-date-rule.sql:15-16` says "The ONLY rows that ever go are the `ON DELETE cascade` from `claims`," omitting the equally-real `claim_documents` cascade path that the same file's line 60 correctly documents (and that D2 specifies); not a functional violation, just an imprecise top-of-file comment. — FIXED.
+
+- [x] [Review][Defer] Tier-1 encryption runs before domain validation, on every request including ones certain to be refused — [`apps/api/src/modules/claims/claims.death-certificate.handlers.ts:113-118`] — deferred, this is the documented "encrypt BEFORE the writer" boundary (T10), not a new bug; the minor KMS-call waste on refused requests is an accepted trade-off of that design.
+- [x] [Review][Defer] `recordDeathCertificateReview` never re-derives or compares `acceptedDateCiphertext` against the validated `acceptedDate` plaintext — [`packages/domain/src/claim/death-certificate-review-persist.ts`] — deferred, an explicitly documented trust boundary (only the API handler calls this writer); real if that boundary discipline ever erodes, not actionable now.
+- [x] [Review][Defer] Append-only triggers use `pg_trigger_depth() > 1` as a stand-in for "this is an FK cascade," which doesn't actually distinguish a cascade from any other nested-trigger context — [`packages/domain/migrations/0122_death-certificate-clear-date-rule.sql:64-74,158-180`] — deferred, pre-existing idiom reused from migration 0119, not novel to this diff.
+
+Code review, Chunk 2 of 2 (this story's touches to existing shared infrastructure: claim state machine, RBAC, anonymizer, audit sink, OCR-parity job, events registry, human-actor-invariant gate, admin console wiring) — 2026-09-25.
+
+- [x] [Review][Decision] The console's OWN approve-gate (`certificateBlockedReason`/`canApprove` in `VerifierConsoleRoute.tsx:347-388`) had no way to detect D7's 4th refusal ground, `determination_stale` (an accepted-but-superseded review vs. the live nominee determination) — the packet's `review.status` only carried `not_reviewed | accepted | rejected`. A District Admin could see Approve enabled and get a 409 the console gave no warning for. **Decision: wire it in, bump the ceiling.** Implemented: a server-computed `determinationStale: boolean` on `VerifierReviewItem.review` (`packages/contracts/src/claims/verifier-console.ts`), computed in `assembleDocumentReview` via the reused `isDeathCertificateDeterminationStale` predicate (conditional on `status === 'accepted'`, one new counted read), `VERIFIER_CONSOLE_MAX_READS` 17→18 with its running-total comment updated, and `VerifierConsoleRoute.tsx`'s `certificateAccepted`/`certificateBlockedReason` now treat `determinationStale` as its own ground with the existing `approveBlocked.determination_stale` copy. A dedicated test covers the new gate (`death-certificate-review.test.tsx`, "approve stays DISABLED on an ACCEPTED certificate whose review is stale"). — FIXED.
+
+- [x] [Review][Patch] `VerifierReviewItem.review.decidedAt` was an untyped bare string — same class of gap Chunk 1 already fixed on the sibling `death-certificate.ts` contract — `packages/contracts/src/claims/verifier-console.ts`; now `z.string().datetime()`. — FIXED.
+- [x] [Review][Patch] OCR-parity job's forward-only tie-break used `>=` on the handler's wall-clock `uploadedAt`, so two genuinely DIFFERENT uploads landing with an equal timestamp would non-deterministically decide "current" by commit order — `apps/jobs/src/claim-ocr-parity.ts` (the `makeCurrent` comparison); now compares upload IDENTITY first (a retry of the current upload is idempotent regardless of clock) and requires a strictly LATER timestamp to promote a genuinely different upload. — FIXED.
+- [x] [Review][Patch] The read-only determination-date help text showed "Accept the death certificate first" even when a certificate WAS accepted but its date was unreadable (RTBF-scrubbed or a decrypt failure) — `apps/admin/src/modules/claim-verification/NomineeDeclarationPanel.tsx`; now a distinct `certificateDateUnreadable` copy/branch. — FIXED.
+
+- [x] [Review][Defer] The "ONE HELPER, THREE CALL SITES" approval gate (`assertClaimApprovable` at P1/P3/P4) has asymmetric test coverage — only P4/R9 (`packages/domain/tests/integration/claim/r9-voting.spec.ts`) gets a table-driven suite of all 4 deficiency reasons + a positive control; P1 (`verifier-decision.spec.ts`) and P3 (`state-trustee-decision.spec.ts`) only keep their existing specs green via a defaulted `certificate: 'accepted'` fixture, with no dedicated negative-case assertions of their own — deferred, a real but moderate-effort coverage gap (the pattern to replicate is P4's, cited above), not a functional defect (all three sites correctly call the same shared gate).
+- [x] [Review][Defer] Two new document-upload conflict codes (`claim_document.certificate_accepted`, `claim_document.certificate_awaiting_review` in `apps/api/src/modules/claims/claims.documents.handlers.ts`) have no i18n/error mapping in `nominee-errors.ts`/`i18n-en.ts` — VERIFIED there is no admin-console caller of the upload endpoint in this diff (only a preview component exists), so this is currently unreachable from this story's own surface — deferred to whichever surface actually uploads (named go-live coupling (1), 6.21b, or an existing non-admin helpline flow outside this diff).
+- [x] [Review][Defer] `viewer.canReview`'s server-side RBAC computation (`rbac.hasPermission` against the geo resolver, `claims.verifier-console.handlers.ts`) has no negative-case (a verifier session getting `canReview: false`) test at the API/integration level — only a UI-level test with a mocked packet value exists (Chunk 1's `death-certificate-review.test.tsx`) — deferred, a real but moderate-effort end-to-end coverage gap, not a functional defect (the underlying RBAC key/grant machinery is covered generically by AC6's `roles.test.ts`/`permissions.test.ts`).
+
+Dismissed as noise / false positives / by-design (not written to `deferred-work.md`):
+- ~150 new lines of OCR-parity job logic (claim-row lock, forward-only ordering, `ON CONFLICT DO NOTHING`, legacy no-`uploadId` tolerance, peer-mesh suppression) initially looked untested from this chunk's 64 tracked files alone (`apps/jobs/src/claim-ocr-parity.ts`) — VERIFIED as a chunking artifact, not a real gap: `apps/jobs/tests/claim-ocr-parity-death-certificate.test.ts` (Chunk 1, already reviewed) exercises every one of these paths (7 passing tests).
+- `submitCertificateReview` (`VerifierConsoleRoute.tsx`) collapsing "no certificate token" and "server refused" into one `false` return — by design: the actual error detail is surfaced independently via the separate `reviewCertificate.error` prop, which `DeathCertificateReviewControl` already renders.
+- `NOMINEE_NAME_CHECK_RECORDABLE_STATES = CLAIM_REVIEW_WINDOW_STATES` "silent drift" risk — VERIFIED false: it is the SAME array reference (not a re-declared literal), by `review-window.ts`'s own explicit design ("same identity, ⛔ never a copy"), so no drift is possible.
+- The newly-authored `t.deathCertificate.refused.missing_display` copy being unreachable (the practical `admin.display_name_missing` path reuses the generic `t.decision.displayNameMissing` instead) — VERIFIED this matches an existing, pre-6.21a codebase-wide convention (`nomineeDeterminationErrorMessage` does the identical reuse for 6.20); not a regression this story introduced.
+- `death_certificate_review.concurrent` "not modeled in the reason union" — false positive: it is thrown directly by the HTTP handler's `translateReview` for `ClaimStreamConcurrencyError` (a separate error class, mapped independently of `DeathCertificateReviewRefusedError`'s reason union) — the code path exists and is correctly wired (`apps/api/src/modules/claims/claims.death-certificate.handlers.ts`, verified in Chunk 1).
+
+### Review Findings — adversarial pass on the reviewer's OWN fix patches (2026-09-25)
+
+A third review pass, requested explicitly: adversarially reviewing only the second-pass fix patches applied above (not the original story implementation, already covered by Chunks 1/2). Found 10 findings; 2 were real, severe bugs the patches themselves introduced.
+
+- [x] [Review][Patch] **CRITICAL — Rules-of-Hooks violation would crash the review control.** The `useEffect` clearing `incomplete` (added in the Chunk 1 `[Review][Patch]` for "incomplete alert doesn't clear") was placed AFTER the `review.certificateToken === null` early return in `DeathCertificateReviewControl.tsx`. `certificateToken` legitimately flips `null → uuid` on the SAME mounted instance (the async OCR job creating the upload row after the console has already mounted with no certificate), which would change the hook count mid-life and crash the whole component with React's "fewer/more hooks than expected" error. Moved the effect above the early return. — FIXED.
+- [x] [Review][Patch] **HIGH — `truncated` was an off-by-one false positive.** `uploads.length >= effectiveLimit` (the Chunk 1 truncation-signal patch) reports `truncated: true` whenever a claim's upload count happens to equal the page limit EXACTLY, contradicting its own contract doc ("`true` when the claim has more uploads than the cap returned"). Replaced with a precise existence probe (`.offset(uploads.length).limit(1)`, exempt from the domain limit-clamp gate as a fixed single-row bound) that answers "is there at least one more row beyond this page," correct for any page size. New boundary test added (`death-certificate.spec.ts`, `limit: 2` on exactly 2 existing uploads → `false`; `limit: 1` → `true`). — FIXED.
+- [x] [Review][Patch] Unbounded concurrency fan-out in `getHistory` — the Promise.all batching fix (Chunk 1) had no cap, so a claim near the 100-upload history limit could fire up to ~100-wide concurrent bursts of KMS/storage calls. Rebounded to batches of `HISTORY_READ_CONCURRENCY = 10`, processed sequentially, concurrent within each batch. — FIXED.
+- [x] [Review][Patch] The failure-path audit's `upload_id` field name implied the same server-confirmed provenance as the success path's `result.uploadId`, when it's actually the unconfirmed, client-echoed `body.certificate_token` — undermining the success-path fix's own stated rationale. Renamed the failure-path field to `certificate_token`. — FIXED.
+- [x] [Review][Patch] A thrown (not resolved-`false`) `onSubmit` exception left the form with zero feedback (the `incomplete` alert already cleared, no `error` prop set). Added a local `submitError` fallback state, rendered with the existing generic `t.refusedGeneric` copy. — FIXED.
+
+- [x] [Review][Defer] **The legacy-row status fix (Chunk 2, `missing` instead of `awaiting_review` for `currentUploadId === null`) can show "No death certificate has been sent yet" for a certificate that WAS genuinely sent** — specifically, an OCR job enqueued just before the 6.21a deploy and processed just after it via the job's own documented `uploadId`-less TOLERANCE path lands in exactly this state. Neither the old classification (`awaiting_review`/"review it" — also wrong, since a legacy row has no token and can never actually be reviewed) nor the new one (`missing`/"none sent") is fully accurate for "sent but untracked." The new classification is a net improvement (it un-blocks the re-upload the old one silently prevented) but the copy is momentarily misleading in a narrow, time-boxed deploy-race window. A fully correct fix needs a distinct 3rd wire reason/status and its own copy — a real product/design decision, not made here.
+- [x] [Review][Defer] `byte_size > 0`'s tightened CHECK (Chunk 1) has no app-level pre-validation in the OCR job, so a 0-byte payload now hard-fails the transaction via a raw CHECK violation instead of a graceful refusal — VERIFIED this feeds into the job's OWN already-documented, already-accepted DLQ/orphaned-object failure category (the file's own header already names "a job that fails PERMANENTLY... Annotated, not fixed" as a known gap), not a new class of unhandled failure. Real, but pre-existing acceptance of this failure category makes it low-priority.
+- [x] [Review][Defer] No HTTP-level integration test drives `assembleVerifierConsole` and asserts the `determinationStale` wire field end-to-end (only a domain-level test of the underlying predicate, and an admin front-end test with a hand-built fixture exist) — a real, moderate-effort coverage gap for the Chunk 2 decision item specifically.
+
+Dismissed as false positives (not written to `deferred-work.md`):
+- `console.warn` in `getCurrentAcceptedDeathCertificate`'s new empty-ciphertext anomaly log "bypasses structured logging" — VERIFIED false: `console.warn`/`console.error` for anomaly logging IS the established convention across the domain layer generally (confirmed via `member/renewal-scheduler.ts`, `pool/*.ts`, `notifications/*.ts` and others); the API-layer's injected `log.warn` is a DIFFERENT layer's convention, not a deviation from this one.
+- The submit button's `aria-disabled` (rather than real `disabled`) for the `!ready` case, "inconsistent" with the newly-hardened `disabled={processing}` on its sibling buttons — VERIFIED false: this is a DELIBERATE, established accessibility pattern in this exact codebase (`NomineeDeclarationPanel.tsx` uses the identical reasoning, "Reachable (code review 2026-09-24): the button is ⛔ not disabled while the form is incomplete — a disabled button leaves the tab order and never says why"). Making Submit natively `disabled` for `!ready` would regress that pattern, not fix an inconsistency.
+
+**Own regression, caught by running the FULL affected test suites (not just the files touched) after this pass's fixes, not by the adversarial reviewer:** wiring `determinationStale` into the `VerifierReviewItem['review']` contract as a required field (Chunk 2's decision item) silently broke `apps/admin/tests/verifier-console-route-name-check.test.tsx` — a pre-existing fixture (`as VerifierConsolePacket` cast) built its `review` object without the new field, so `certificateAccepted` (now requiring `determinationStale === false`) read `undefined === false` as `false`, wrongly blocking approval and failing 5 tests. Fixed by adding `determinationStale: false` to that fixture. Full suites re-run clean after the fix: admin 622/622, domain 3697/3698 (1 pre-existing skip), api 1424/1425 (1 pre-existing skip), jobs 364/364.
 
 ## Dev Notes
 
@@ -951,15 +1018,128 @@ re-deferred"**.
 
 ### Agent Model Used
 
+Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story`, 2026-09-25.
+
 ### Debug Log References
+
+- Baseline: both diffs at `a35af210..e4b565d9` — CODE empty; GOVERNANCE exactly the expected Task 0 paths (+ `sprint-status.yaml`, the Task 0 ledger line). ⛔ Nothing re-derived was contradicted.
+- Migration `0122` applied to `twt-test-pg :5433` (journal `when` 1791258000000 > 1791171600000).
+- ⚠ `packages/domain/tests/integration/reconciliation/review-queue-read.spec.ts` fails 7/10 in the full domain run AND in isolation — the known `PARIWAR_A` accumulation class ([[project_known_livedb_test_failures]] #15; both sides of its dates pinned, so not a date bomb). ⛔ Not touched by this story; ⛔ not fixed here.
+- **Verification (2026-09-25):** `DATABASE_URL=… pnpm ci:local` → 32 of 34 jobs ✓ (lint, typecheck, build, test (unit) incl. admin, every invariant gate incl. claim-adjudication-human-actor, access-wrapper, claim-state, claim-canonical-id, schema-diff, pii-scrape, microcopy, friction-budget, contracts-determinism). ✗ `domain-invariants` — a REAL finding in this story: the history read clamped its limit into a variable, which the syntactic gate reads as unclamped; FIXED (clamp inlined), gate re-run ✓, the two history specs re-run ✓ (22 + 13). ✗ `integration-tests` — `@twt/domain` 7 failures, ALL in `reconciliation/review-queue-read.spec.ts` (Story 9.8), ⭐ reproduced IDENTICALLY with this story's entire change STASHED (`git stash -u`, run, pop — 89 files restored) ⇒ pre-existing DB state (memory #15, the fixed-`PARIWAR_A` accumulation class; both date sides pinned, so ⛔ not a date bomb). ⛔ Not fixed here; the remedy (recreate the container) is BigDev's call. Because turbo stopped at that task, the other seven integration packages were run separately with the same flags → 22/22 tasks ✓ (api 139 files / 1424 tests; jobs 38 / 364; events, queue, channels, niyamavali-engine, validity-service). `contracts:emit-openapi` ⛔ no drift.
 
 ### Completion Notes List
 
 - 2026-09-25: the story was created, validated inline, then validated in a fresh context by three read-only agents.
   After BigDev's decisions it was split into 6.21a (this file) and 6.21b. §0 routed one point (retention after
   closure), and the Panel **ruled it the same day** (`-243`, option C).
+- 2026-09-25 (`bmad-dev-story`) — **Tasks 1–9 implemented** (the sprint-status ledger line is written at close-out).
+  - **Task 1 — `0122`**: `claim_death_certificate_uploads` (append-only for every role, ⛔ no PII, ⛔ no UPDATE/DELETE; unique key per upload) and `claim_death_certificate_reviews` (verdict ⇔ date ⇔ reason CHECK with the NULL-trap guard, supersession CHECK, one live per claim, column-aware append-only trigger, a copy of 0121's one-way trigger), both with the cascade exemption; `nominee_determinations.death_certificate_review_id` (nullable, ON DELETE SET NULL, ⛔ no UPDATE grant). One policy file for both tables; two branded ids.
+  - **Task 2 — domain**: the LEAF `death-certificate-approval.ts` (snapshot in ONE statement, `deathCertificateStatus`, D6's shared upload predicate, D16's `isDeathCertificateReplacementRequested`, D7's conjunct); the review writer (shape → lock → window → token → supersession → D4 with injected `now` → `re_reviewed`/`replaced` → event, one tx); the reads (the accepted review for D8; the history ordered by the supersession CHAIN — `decided_at` is the tx clock and ties); `assertClaimApprovable` at P1/P3/P4 with `isReturnedClaimResubmitted` left on the inner helper; D8's re-assert AFTER every 6.20 validation; the 35th event (identity reducer, registry, both pins, a third frozen literal).
+  - ⚠ **DEVIATION (T8), recorded:** the leaf needs the review window (6.21b's row 1 and 6.19's trigger both test "in the window"), but T8 forbids it importing `nominee-name-check.ts`. The window's literal tuple moved to a new import-free `claim/review-window.ts`; `NOMINEE_NAME_CHECK_RECORDABLE_STATES` is bound to the SAME object (a test asserts identity across all four names), so D3's "reused, ⛔ never copied" holds by identity.
+  - ⚠ **D8 refinement, recorded:** the writer's `deathCertificateReviewId` is `string | null`. With ⛔ no accepted review the handler passes `null` and the WRITER refuses `certificate_not_accepted` after 6.20's validations — so the refusal ORDER is the same over HTTP as in the domain (a spec proves it). Only `certificate_date_mismatch` is decided in the handler (it needs the decrypt). An unreadable / RTBF-scrubbed accepted date is a mismatch (⛔ never taken on trust again).
+  - **Task 3 — upload + job**: D6 in `uploadClaimDocument` before MIME/storage/queue; D2's per-upload key and `uploadId`/`uploadedAt`/`channel` on both payload twins; the job's claim-row lock, forward-only upsert (skipped for an older upload), `.returning()` FK, `ON CONFLICT DO NOTHING`, tolerance, ⛔ no peer-mesh enqueue for a replacement in the window. Both headers updated.
+  - **Task 4/5 — API + contracts**: `claims.death-certificate.{routes,handlers}.ts` (review: D13 key; history: `claim.verify`; ids-only audit lines incl. every `_review_rejected`); `death-certificate-crypto.ts` + the field class; the three `…death_certificate_acceptance_required` mappings; D8 in `postDetermination` and `accepted_certificate` (`ReadableName`) on the timeline; the console item (`review` + server-side `viewer.canReview`, ⛔ no date) and the ceiling 16 → 17 with its ledger line. The request contract is deliberately LOOSE on verdict coherence so each writer refusal reaches the wire as its own audited 409. `contracts:emit-openapi` — ⛔ no drift; the claims contracts stay unregistered.
+  - **Task 6 — admin**: `DeathCertificateReviewControl` (empty date + labelled OCR reading; three-reason radio; required note; distinct accessible names), `DeathCertificateReviewStatus` (words, ⛔ never colour alone), `DeathCertificateHistory`; the route keys the form and the history to the claim, FORGETS the history on close and on a claim change; `onRequestBetter` threaded only for a reviewer; approve gated certificate-FIRST with the reason named; trustee wording on both trustee surfaces; the determination form's date is READ-ONLY from `accepted_certificate` (with a re-determine + re-check hint).
+  - **Task 7 — keys, gates, RTBF, fence**: catalog 47 → 48 / 55 → 56 (`claim.review_death_certificate`, `district_admin` only); human-actor gate 9 → 10; anonymizer 19 → 20 statements / 16 → 17 tables (+title) with the `-243` comment at the call site; live RTBF spec (both columns scrubbed, rejected date stays NULL, the certificate retained); the fence gains the three modules (23 → 26) and a ⛔-decrypt assertion.
+  - **Task 8 — tests (all executed on `:5433`)**: domain RLS/constraint spec (19), domain review/gate spec (22 — AC1 accept + every writer refusal, AC2 no-denial + no appeal conflict, P1/P3 × the four reasons incl. a NULL link, the fresh determination + check PASS, D8 refusals + ORDER, D6/D16 predicates), P4 × the four reasons + PASS in `r9-voting.spec.ts` (6), T4 in the return-loop spec (1), the holder/waiter two-review race (1), RTBF (1); jobs AC3 through the REAL job (7 — replacement, out-of-order, retry, first-upload race, tolerance, review-holds/job-waits via `pg_blocking_pids`, `stale_certificate`); API spec (13 — accept + audit, every HTTP-reachable refusal + audit, display-name refusal audited, reject → 409 approval, console `canReview` split, history + audit, cross-Pariwar + positive control, tampered session EXACTLY 404 + positive control, 403 without the key, D6 upload window ×3, D8 timeline/mismatch/not-accepted); admin (12). D12 fixtures: `seedDeathCertificate` / `seedAcceptedDeathCertificate` / `seedRejectedDeathCertificate` and `certificate: 'accepted' | 'skip'` on both helper sets; the named direct callers patched by SEEDING; the api `skip`+`certificate:'accepted'` opt-in; the shape spec puts its PINNED key in as the current upload.
+  - ⭐ **Every new guard proven RED by a planted regression, then restored byte-for-byte (14):** leaf `rejected` passes; NULL link passes; D8 re-assert skipped; D4 future accepted; T4 conjunct moved INSIDE the inner helper (the return-loop T4 test goes red); job makes an older upload current; D6 lets an unreviewed upload through; `canReview` always true; the review scrub removed; `decrypt` planted in the leaf (fence); the event dropped from the registry; the review route losing its permission hook; the one-way trigger dropped; the uploads append-only UPDATE trigger dropped (both DB triggers recreated from 0122's DDL; 7 triggers present after).
+  - **Task 9 — records**: the four coupling sites annotated *"closed by the build — discharges on the build, ⛔ not on the record"* (appended; ⛔ nothing rewritten); `deferred-work.md` — the 6.20 plausibility deferral DISCHARGED for the upper bound, the lower bound RE-DEFERRED; 6.5's DLQ item and unaudited-refusal item annotated; 6.20's untraced RTBF item answered (verified in `rtbf-legality.ts`: ⛔ no claim read).
+  - ⚠ **Go-live couplings UNCHANGED (merging ≠ go-live):** (1) 6.21b's family/helpline screens; (2) 6.19's CC1 reminder; (3′) counsel's basis under `-243`.
 
 ### File List
+
+**NEW:**
+- `apps/admin/src/modules/claim-verification/DeathCertificateReviewControl.tsx`
+- `apps/admin/tests/death-certificate-review.test.tsx`
+- `apps/api/src/modules/claims/claims.death-certificate.handlers.ts`
+- `apps/api/src/modules/claims/claims.death-certificate.routes.ts`
+- `apps/api/src/modules/claims/death-certificate-crypto.ts`
+- `apps/api/tests/integration/claims/death-certificate.spec.ts`
+- `apps/jobs/tests/claim-ocr-parity-death-certificate.test.ts`
+- `packages/contracts/src/claims/death-certificate.ts`
+- `packages/domain/migrations/0122_death-certificate-clear-date-rule.sql`
+- `packages/domain/src/claim/death-certificate-approval.ts`
+- `packages/domain/src/claim/death-certificate-review-persist.ts`
+- `packages/domain/src/claim/death-certificate-review-read.ts`
+- `packages/domain/src/claim/review-window.ts`
+- `packages/domain/src/policies/claim-death-certificate-rls.ts`
+- `packages/domain/src/schema/claim_death_certificate_reviews.ts`
+- `packages/domain/src/schema/claim_death_certificate_uploads.ts`
+- `packages/domain/tests/integration/claim/death-certificate-concurrency.spec.ts`
+- `packages/domain/tests/integration/claim/death-certificate-rtbf.spec.ts`
+- `packages/domain/tests/integration/claim/death-certificate.spec.ts`
+- `packages/domain/tests/integration/rls/claim-death-certificate-policy-regression.spec.ts`
+
+**MODIFIED:**
+- `_bmad-output/implementation-artifacts/6-20-nominee-declaration-history-and-as-at-death-rule.md`
+- `_bmad-output/implementation-artifacts/6-21-death-certificate-clear-date-rule.md`
+- `_bmad-output/implementation-artifacts/deferred-work.md`
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`
+- `_bmad-output/planning-artifacts/epics.md`
+- `apps/admin/src/api/client.ts`
+- `apps/admin/src/api/hooks.ts`
+- `apps/admin/src/modules/claim-verification/NomineeDeclarationPanel.tsx`
+- `apps/admin/src/modules/claim-verification/SignalsPanel.tsx`
+- `apps/admin/src/modules/claim-verification/VerifierReviewPanel.tsx`
+- `apps/admin/src/modules/claim-verification/i18n-en.ts`
+- `apps/admin/src/modules/claim-verification/index.ts`
+- `apps/admin/src/modules/claim-verification/nominee-errors.ts`
+- `apps/admin/src/modules/cycle-freeze/CycleFreezePage.tsx`
+- `apps/admin/src/modules/r9-voting/R9CasePanel.tsx`
+- `apps/admin/src/routes/VerifierConsoleRoute.tsx`
+- `apps/admin/tests/nominee-declaration-panel.test.tsx`
+- `apps/admin/tests/nominee-declaration-route.test.tsx`
+- `apps/admin/tests/verifier-console-route-name-check.test.tsx`
+- `apps/api/src/audit/audit-sink.ts`
+- `apps/api/src/context.ts`
+- `apps/api/src/modules/claims/claims.cycle-freeze.handlers.ts`
+- `apps/api/src/modules/claims/claims.documents.handlers.ts`
+- `apps/api/src/modules/claims/claims.nominee-declaration.handlers.ts`
+- `apps/api/src/modules/claims/claims.r9-voting.handlers.ts`
+- `apps/api/src/modules/claims/claims.verification-decision.handlers.ts`
+- `apps/api/src/modules/claims/claims.verifier-console.handlers.ts`
+- `apps/api/src/modules/claims/index.ts`
+- `apps/api/tests/integration/_nominee-name-check-fixture.ts`
+- `apps/api/tests/integration/claims/nominee-declaration.spec.ts`
+- `apps/api/tests/integration/claims/nominee-name-check.spec.ts`
+- `apps/api/tests/integration/claims/verifier-console-shape.spec.ts`
+- `apps/api/tests/integration/claims/verifier-console.spec.ts`
+- `apps/api/tests/integration/claims/verifier-decision.spec.ts`
+- `apps/jobs/src/claim-ocr-parity.ts`
+- `packages/contracts/src/claims/index.ts`
+- `packages/contracts/src/claims/nominee-declaration.ts`
+- `packages/contracts/src/claims/verifier-console.ts`
+- `packages/domain/migrations/meta/_journal.json`
+- `packages/domain/src/claim/errors.ts`
+- `packages/domain/src/claim/events.ts`
+- `packages/domain/src/claim/index.ts`
+- `packages/domain/src/claim/nominee-determination-persist.ts`
+- `packages/domain/src/claim/nominee-name-check.ts`
+- `packages/domain/src/claim/r9-voting-persist.ts`
+- `packages/domain/src/claim/state-trustee-decision-persist.ts`
+- `packages/domain/src/claim/state.ts`
+- `packages/domain/src/claim/verifier-decision-persist.ts`
+- `packages/domain/src/ids/index.ts`
+- `packages/domain/src/member/anonymize.ts`
+- `packages/domain/src/policies/index.ts`
+- `packages/domain/src/rbac/permissions.ts`
+- `packages/domain/src/rbac/roles.ts`
+- `packages/domain/src/schema/index.ts`
+- `packages/domain/src/schema/nominee_determinations.ts`
+- `packages/domain/tests/claim/dpdpa-consent-events.test.ts`
+- `packages/domain/tests/claim/nominee-name-check-events.test.ts`
+- `packages/domain/tests/claim/nominee-name-no-comparison-fence.test.ts`
+- `packages/domain/tests/integration/_helpers.ts`
+- `packages/domain/tests/integration/claim/nominee-determination.spec.ts`
+- `packages/domain/tests/integration/claim/nominee-name-check-return-loop.spec.ts`
+- `packages/domain/tests/integration/claim/nominee-name-check.spec.ts`
+- `packages/domain/tests/integration/claim/r9-voting.spec.ts`
+- `packages/domain/tests/integration/nominee/nominee-history-concurrency.spec.ts`
+- `packages/domain/tests/member/rtbf-anonymize.test.ts`
+- `packages/domain/tests/rbac/permissions.test.ts`
+- `packages/domain/tests/rbac/roles.test.ts`
+- `packages/events/src/registry.ts`
+- `scripts/claim-adjudication-human-actor-invariant/check.ts`
 
 ## Change Log
 
@@ -971,3 +1151,4 @@ re-deferred"**.
 | v0.5 | 2026-09-25 | **Fresh-context validate (three read-only agents; every finding re-verified), and SPLIT (BigDev).** This file becomes **6.21a**. The member and helpline surfaces, the copy, the OCR missing-date flag and the helpline upload client move to **6.21b**. The corrections: **(1)** ⛔ no decrypt in the domain: the handler compares, the writer re-asserts the id (T5, D8). **(2)** No constant-time compare (T6, D14). **(3)** "Current" moves forward only, under the claim-row lock (T2, D2); `.returning` for the FK race; the handler's `uploadedAt`; both payload types; a nullable actor; tolerance of old payloads. **(4)** A missing certificate can be uploaded late (T3(b), D6), and uploads awaiting review are refused. **(5)** The old `stale` reason is split into `not_reviewed` / `determination_stale` (D7), with a leaf module against the import cycle (T8). **(6)** `viewer.canReview`; approve gating in `VerifierConsoleRoute`; the `CycleFreezePage` / `R9CasePanel` mappings. **(7)** The fixture blast radius, named file by file (D12). **(8)** 0121's one-way trigger, the cascade exemption, ON DELETE rules, the RLS regression spec, and one policy file for both tables. **(9)** The ⛔-decrypt fence amendment (T9). **(10)** `-240` cl.1 cited: retention after closure is **routed to the Panel** (a new routing note), and keeping every certificate is scoped to **while the claim is open**. **(11)** CC1 re-labelled "default stands", ⛔ not "ruled", and quoted in full; "who judges clear" labelled as our reading; the key given its own letter (D13); `super_admin` needs ⛔ no grant; all four coupling-closure sites listed; "DISCHARGED for the upper bound". **(12)** The 6.19 item now carries the three protections. |
 | v0.6 | 2026-09-25 | **The Panel ruled the routing note: `2026-09-25-243`, option C** (*"death certificates are not valid identity documents"*). Every certificate is kept for as long as claim records are kept, and ⛔ nothing is deleted at closure. Invariant 3, D2, D11, the rulings table, §0, AC0(e), AC7 and "owed elsewhere" are updated. Go-live coupling (3) is DISCHARGED and replaced by (3′), counsel's legal basis. ⚠ The pending author-commit is **renumbered `-243` → `-244`** so the log stays in order (the ruling took `-243`). |
 | v0.7 | 2026-09-25 | BigDev's pre-Task-0 review. **(1)** The baseline check is now TWO diffs, code and governance, with the expected governance paths listed. **(2)** A *Who writes what* table: one production writer per table/column, plus the test-only seeding exception. **(3)** A build-vs-go-live retention table (`-243`). **(4)** Record ownership verified, and a gap FOUND: 6.21b said its D1–D8 were "recorded in `-244`", but Task 0 / AC0(a) ordered only 6.21a's D1–D16 and two readings. ⇒ AC0(a) and Task 0 now name 6.21b's decisions, `certificate.missing_body` and all eight BigDev calls, and a table maps each call to its owning story and record (the routing-note call is `-243`'s). Status stays `ready-for-dev`. |
+| v0.8 | 2026-09-25 | `bmad-dev-story`: Tasks 1–9 implemented and tested (see Completion Notes — two recorded deviations: the import-free review window (T8) and the nullable review id preserving the refusal order at HTTP (D8)). Status → `review`. |

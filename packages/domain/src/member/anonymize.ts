@@ -51,6 +51,7 @@ import { memberNominees } from '../schema/member_nominees.js';
 import { memberNomineeVersions } from '../schema/member_nominee_versions.js';
 import { nomineeCorrections } from '../schema/nominee_corrections.js';
 import { nomineeDeterminations } from '../schema/nominee_determinations.js';
+import { claimDeathCertificateReviews } from '../schema/claim_death_certificate_reviews.js';
 import { memberWithdrawals } from '../schema/member_withdrawals.js';
 
 /** The KMS material the sentinel-encrypt uses. The caller (the RTBF handler) threads its `{ kms, kekRef }`
@@ -81,6 +82,9 @@ const FIELD_CLASS_MEDICAL = 'member_medical';
 // Story 6.20 — the determination + correction Tier-1 classes (mirrors apps/api context.ts by value).
 const FIELD_CLASS_NOMINEE_DETERMINATION = 'nominee_determination';
 const FIELD_CLASS_NOMINEE_CORRECTION = 'nominee_correction';
+// Story 6.21a (D11) — the death-certificate REVIEW Tier-1 class (by-value twin of apps/api context.ts's
+// `DEATH_CERTIFICATE_REVIEW_FIELD_CLASS`; matches `piiColumn(1, 'death_certificate_review')`).
+const FIELD_CLASS_DEATH_CERTIFICATE_REVIEW = 'death_certificate_review';
 const FIELD_CLASS_ADDRESS = 'member_address';
 const FIELD_CLASS_MOBILE = 'member_mobile';
 // Story 10.10 — mirrors `piiColumn(1, 'member_moderation')` on member_moderation_actions.
@@ -214,6 +218,26 @@ export async function anonymizeMember(
       paNoteCiphertext: sql`CASE WHEN ${nomineeCorrections.paNoteCiphertext} IS NULL THEN NULL ELSE ${correctionSentinel} END`,
     })
     .where(eq(nomineeCorrections.memberId, memberId));
+
+  // ── ⭐ Story 6.21a (D11) — the District Admin's death-certificate REVIEWS, keyed on the DECEASED member:
+  // the accepted date of death and the note → sentinel. ⚠ A REJECTED review's date is NULL, and the
+  // verdict-coherence CHECK requires it to STAY null — so it is replaced only where present. The verdict,
+  // the reason code, the attribution and the supersession chain are governance history, kept. The
+  // column-level UPDATE grant exists for exactly this (migration 0122).
+  // ⛔⛔ THE CERTIFICATES THEMSELVES ARE ⛔ NOT ERASED HERE — BY RULING, ⛔ not by omission. `2026-09-25-243`
+  // (option C, Trustee-ratified): *"death certificates are not valid identity documents"*, so every
+  // certificate (its object in storage, its `claim_death_certificate_uploads` row and its OCR reading on
+  // `claim_documents`) is kept for as long as claim records are kept. Applying that to an ERASURE request is
+  // our reading (⛔ unratified), and COUNSEL's confirmation of the legal basis is owed BEFORE GO-LIVE
+  // (`-243` consequence 2; go-live coupling (3′)). ⛔ Do not "fix" the absence without superseding `-243`.
+  const reviewSentinel = await encSentinel(pariwarId, FIELD_CLASS_DEATH_CERTIFICATE_REVIEW, enc);
+  await client
+    .update(claimDeathCertificateReviews)
+    .set({
+      acceptedDateCiphertext: sql`CASE WHEN ${claimDeathCertificateReviews.acceptedDateCiphertext} IS NULL THEN NULL ELSE ${reviewSentinel} END`,
+      noteCiphertext: reviewSentinel,
+    })
+    .where(eq(claimDeathCertificateReviews.deceasedMemberId, memberId));
 
   // ── member_medical_disclosures ── ALL rows: conditions → sentinel (NOT NULL); context → NULL. ──────
   await client

@@ -160,6 +160,16 @@ const COVERAGE_SET: readonly CoverageEntry[] = [
     owner: 'Story 6.20',
     expectedMethods: ['get', 'get', 'get', 'get', 'get', 'get', 'post', 'post', 'post', 'post'],
   },
+  {
+    // ⭐ Story 6.21a (D9) — the death certificate's clear-date rule. TWO routes, both admin: the District
+    // Admin's ACCEPT / REJECT review (which decides whether the claim can be approved at all — `-235` Y)
+    // and the on-demand HISTORY (every upload, with the DECRYPTED accepted dates and notes). Both need the
+    // authenticated-HUMAN chain.
+    file: 'apps/api/src/modules/claims/claims.death-certificate.routes.ts',
+    pathSubstrings: ['death-certificate'],
+    owner: 'Story 6.21a',
+    expectedMethods: ['post', 'get'],
+  },
 ];
 
 /**
@@ -248,7 +258,7 @@ function main(): void {
 
   // ⭐ ANTI-VACUITY FLOOR. Without it, deleting an entry shrinks the gate's scope in silence and it
   // still reports success. Raise this DELIBERATELY when enrolling, ⛔ never to make the gate quiet.
-  const COVERAGE_FLOOR = 9; // Story 6.20 raised it 8 → 9 (claims.nominee-declaration.routes.ts). ⚠ The count was 8 at 2026-09-21 — a first draft guessed 9 and the floor caught it.
+  const COVERAGE_FLOOR = 10; // Story 6.21a raised it 9 → 10 (claims.death-certificate.routes.ts). Story 6.20 raised it 8 → 9 (claims.nominee-declaration.routes.ts). ⚠ The count was 8 at 2026-09-21 — a first draft guessed 9 and the floor caught it.
   if (COVERAGE_SET.length < COVERAGE_FLOOR) {
     missingCoverage.push(
       `COVERAGE_SET has ${COVERAGE_SET.length} entries but the floor is ${COVERAGE_FLOOR} — an entry was ` +

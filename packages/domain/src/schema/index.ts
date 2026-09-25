@@ -177,6 +177,12 @@ export * from './convergence_overrides.js';
 // ciphertext + NON-PII parity outcome/flags, NEVER the document bytes). One row per
 // (claim, document_type); the OCR parity job is the sole writer.
 export * from './claim_documents.js';
+// Story 6.21a — the death certificate's clear-date rule: `claim_death_certificate_uploads` keeps EVERY
+// uploaded certificate (its own object each; ⛔ never overwritten or deleted — `2026-09-25-243`), and
+// `claim_death_certificate_reviews` holds the District Admin's accept / reject verdict on one upload (at
+// most one live per claim; one-way supersession). Both append-only, tenant-isolated.
+export * from './claim_death_certificate_uploads.js';
+export * from './claim_death_certificate_reviews.js';
 // Story 6.6 — peer-mesh deterministic 5-nearest selection: `claim_peer_mesh_selections`
 // (ONE row per claim — the audit-replay source: candidate snapshot + ordered output +
 // metric identity; immutable selection, mutable outcome/window) + `claim_peer_mesh_pings`

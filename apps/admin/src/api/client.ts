@@ -268,6 +268,9 @@ import {
   type NomineeCorrectionDecisionRequest,
   type NomineeCorrectionRaiseRequest,
   type NomineeDeterminationRequest,
+  DeathCertificateHistoryResponse,
+  DeathCertificateReviewWriteResponse,
+  type DeathCertificateReviewRequest,
   RecordNomineeBankResponse,
   type RecordNomineeBankHelplineRequest,
 } from '@twt/contracts';
@@ -1398,6 +1401,20 @@ export function postNomineeDetermination(pariwarId: string, claimCaseId: string,
     method: 'POST',
     body: JSON.stringify(body),
   });
+}
+
+// ── Story 6.21a — the District Admin's death-certificate review + its history ──
+/** The District Admin ACCEPTS (typing the date) or REJECTS the claim's current certificate (D1, D4). */
+export function postDeathCertificateReview(pariwarId: string, claimCaseId: string, body: DeathCertificateReviewRequest) {
+  return apiFetch(`${claimBase(pariwarId, claimCaseId)}/death-certificate/review`, DeathCertificateReviewWriteResponse, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
+/** Every upload with its reviews — the dates and notes DECRYPTED, so fetched on demand and audited (D9). */
+export function getDeathCertificateHistory(pariwarId: string, claimCaseId: string) {
+  return apiFetch(`${claimBase(pariwarId, claimCaseId)}/death-certificate/history`, DeathCertificateHistoryResponse);
 }
 
 export function getNomineeCorrections(pariwarId: string, claimCaseId: string) {

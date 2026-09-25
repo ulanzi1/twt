@@ -101,6 +101,8 @@ Status: done
 > rejects one. This story builds the **day-boundary** half and takes the District Admin's entered date on trust (D4); until 6-21 lands, **an
 > unadmissible certificate can still supply a cutoff**. ⇒ a **GO-LIVE COUPLING, recorded as a named residual** — the shape `-236` consequence 4
 > uses for 6.18 — ⛔ not a build blocker on Tasks 1–9.
+>
+> ⭐ **Story 6.21a (2026-09-25) — CLOSED BY THE BUILD — discharges on the build, ⛔ not on the record** (the form of `-241` §4(4)). The determination must now carry the id of the claim's CURRENT, ACCEPTED death-certificate review (`nominee_determinations.death_certificate_review_id`, migration 0122), re-asserted under the claim-row lock; the handler refuses a different date (`certificate_date_mismatch`), and a re-review or replacement makes the determination `determination_stale` at every approval gate. ⚠ Merging is ⛔ not go-live: 6.21a's OWN go-live couplings (6.21b's family screen, 6.19's CC1 reminder, counsel's basis under `-243`) remain named on the 6.21a file. *Appended; the text above is unedited.*
 
 ## The rulings this story builds — verbatim keys, and OUR reading of them
 
@@ -1004,6 +1006,7 @@ Claude Opus 5.5 (`claude-opus-5-5`), via `/bmad-dev-story`, 2026-09-23. Baseline
 **⚠ Named residuals (recorded, ⛔ not defects of this story):**
 - The release route and the D17(c) re-rank have ⛔ NO production caller until row `6-22` lands (`-241` §6) — both driven only by test-seeded findings.
 - Story 6-21 (certificate admissibility) is a GO-LIVE coupling: until it lands the District Admin's entered date is taken on trust.
+  - ⭐ **2026-09-25 — CLOSED BY THE BUILD (Story 6.21a) — discharges on the build, ⛔ not on the record.** The date is no longer taken on trust: a determination requires the current ACCEPTED certificate's review (the writer re-asserts its id; the handler compares the decrypted date). *Appended.*
 - P2 (the handover OTP to the CURRENT rank-1 mobile) stands as a recorded limitation; D9 narrows, ⛔ does not close, the Ravi-mode window.
 - Task 0's two OUT-OF-REPO items (the retention-matrix row; the AR-61 entries in Story 0.7's ledger) remain OWED — ⛔ not discharged here, deliberately unchecked.
 - ⚠ The friction-budget gate's attribution facet diffs COMMITTED history ⇒ it reported "dormant" on the uncommitted tree; re-run after the commit.

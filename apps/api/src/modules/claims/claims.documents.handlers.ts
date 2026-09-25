@@ -12,9 +12,25 @@
 // job enqueue, so a rejected upload NEVER reaches storage or the queue. The reducer's
 // identity-on-invalid-transition is defense-in-depth underneath, not a substitute.
 //
+// ── Story 6.21a (D6) — a death certificate may ALSO be sent inside the review window ──
+// Once a claim is being verified (6.21a D3's window), a `death_certificate` upload is accepted when
+// the District Admin REJECTED the current one (the family is asked for another, `2026-09-20-236` BB)
+// or when there is NO certificate at all (T3(b) — another document type moved the claim forward). It
+// is refused `409 claim_document.certificate_accepted` once one is accepted (BigDev 2026-09-25: an
+// accepted certificate blocks further uploads), and `409 claim_document.certificate_awaiting_review`
+// while one waits to be judged (⛔ no silent pile-up of unreviewed replacements). Same scope tx, still
+// BEFORE the MIME/size check, storage and the queue. Every other state or type keeps today's 409.
+// ⭐ The predicate is the domain's ONE definition (`isDeathCertificateUploadAllowedInReviewWindow`), which
+// 6.21b's family status shares.
+//
 // The document bytes are stored in object storage (Decision D1 — never Postgres) and an OCR +
 // parity job is enqueued; extraction + the verdict complete asynchronously (HTTP 202). The
 // `claim_documents` metadata row is written by the JOB (one writer), not here.
+// ⭐ Story 6.21a (D2, T1) — a DEATH CERTIFICATE gets its OWN object per upload
+// (`…/death_certificate/{claimDocumentId}/{uploadId}`), so a replacement ⛔ never overwrites the one it
+// replaces (`2026-09-25-243`: every certificate is kept). The handler mints `uploadId` and `uploadedAt`
+// (its clock orders "current" forward-only in the job) and sends both with the `channel`. ⛔ It writes no
+// upload row: the JOB is the sole writer (T2). Other document types are ⛔ unchanged, overwrite included.
 
 import { randomUUID } from 'node:crypto';
 
@@ -48,6 +64,8 @@ interface UploadInput {
   pariwarId: ids.PariwarId;
   documentType: OcrDocumentType;
   actorId: string | null;
+  /** Story 6.21a (D2) — which surface the upload came through (recorded on the upload row). */
+  channel: 'member_app' | 'helpline';
   /** Member-app authz: the claim's deceased member must equal the acting session member. */
   requireDeceasedMemberId?: ids.MemberId;
 }
@@ -75,11 +93,32 @@ async function uploadClaimDocument(
     throw new NotFoundError('Claim not found', 'claim.not_found');
   }
   if (!UPLOADABLE_STATES.has(claimRow.currentState)) {
-    throw new ConflictError(
-      'Document upload is not allowed for the claim in its current state',
-      'claim_document.upload_not_allowed',
-      { state: claimRow.currentState },
-    );
+    // Story 6.21a (D6) — a death certificate inside the review window follows the certificate's own state.
+    if (
+      input.documentType === 'death_certificate' &&
+      claim.isInDeathCertificateReviewWindow(claimRow.currentState as string)
+    ) {
+      const status = claim.deathCertificateStatus(
+        await claim.readDeathCertificateSnapshot(tx.tx, input.pariwarId, input.claimCaseId),
+      );
+      if (!claim.isDeathCertificateUploadAllowedInReviewWindow(status)) {
+        throw status === 'accepted'
+          ? new ConflictError(
+              'The death certificate has already been accepted — another cannot be sent',
+              'claim_document.certificate_accepted',
+            )
+          : new ConflictError(
+              'A death certificate is already waiting to be reviewed — another cannot be sent yet',
+              'claim_document.certificate_awaiting_review',
+            );
+      }
+    } else {
+      throw new ConflictError(
+        'Document upload is not allowed for the claim in its current state',
+        'claim_document.upload_not_allowed',
+        { state: claimRow.currentState },
+      );
+    }
   }
 
   // (2) Read the multipart file (only AFTER the guard passes).
@@ -135,8 +174,15 @@ async function uploadClaimDocument(
     input.documentType,
   );
   const claimDocumentId = existing?.claimDocumentId ?? randomUUID();
+  // Story 6.21a (D2) — a death certificate's upload is its OWN object (⛔ never an overwrite).
+  const certificateUpload =
+    input.documentType === 'death_certificate'
+      ? { uploadId: randomUUID(), uploadedAt: new Date().toISOString(), channel: input.channel }
+      : null;
   // The object key is an opaque, non-PII path scoped by pariwar/claim (never exposed to the client).
-  const storageObjectKey = `pariwar/${input.pariwarId}/claim/${input.claimCaseId}/${input.documentType}/${claimDocumentId}`;
+  const storageObjectKey =
+    `pariwar/${input.pariwarId}/claim/${input.claimCaseId}/${input.documentType}/${claimDocumentId}` +
+    (certificateUpload ? `/${certificateUpload.uploadId}` : '');
   await deps.claimDocumentStorage.put(storageObjectKey, new Uint8Array(buffer), {
     contentType: data.mimetype,
   });
@@ -156,6 +202,7 @@ async function uploadClaimDocument(
         storageObjectKey,
         contentType: data.mimetype,
         byteSize: buffer.byteLength,
+        ...(certificateUpload ?? {}),
       },
     });
   } catch (err) {
@@ -195,6 +242,7 @@ export function createClaimDocumentHandlers(deps: AppDeps) {
           pariwarId: ids.pariwarId(pariwarIdStr),
           documentType,
           actorId: memberIdStr,
+          channel: 'member_app',
           requireDeceasedMemberId: ids.memberId(memberIdStr),
         });
         ok = true;
@@ -232,6 +280,7 @@ export function createClaimDocumentHandlers(deps: AppDeps) {
         pariwarId: ids.pariwarId(scopeTx.pariwarId),
         documentType,
         actorId: operatorId,
+        channel: 'helpline',
       });
       emitAuthAudit(deps, request, 'helpline_claim.document_uploaded', {
         actorId: operatorId,

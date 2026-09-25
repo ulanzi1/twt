@@ -181,6 +181,9 @@ describe.skipIf(!hasDatabase)('Verifier adjudication WRITE surface — E2E (:543
     // production gate rather than bypassing it.
     await seedNomineeNameCheck(deps, pariwarId, String(claimCaseId), {
       skip: nameCheck === 'none',
+      // Story 6.21a (D7) — the certificate conjunct runs FIRST, so even the 'none' claim carries an accepted
+      // certificate: it then waits on ITS OWN blocker (the bank accounts), ⛔ not on the certificate.
+      certificate: 'accepted',
       accountsOnly: nameCheck === 'accounts_only',
     });
     return String(claimCaseId);

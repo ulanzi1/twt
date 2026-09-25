@@ -251,6 +251,16 @@ describe('defaultRoleBundles — the seeded roles (FR-46)', () => {
     expect(holdersOf('claim.raise_nominee_correction')).toEqual(['helpline_operator', 'super_admin']);
   });
 
+  it('Story 6.21a (D13) — claim.review_death_certificate has ONE holder, district_admin (+ derived super_admin); ⛔ never a verifier or state_trustee', () => {
+    const holders = defaultRoleBundles
+      .filter((b) => (b.permissions as readonly string[]).includes('claim.review_death_certificate'))
+      .map((b) => b.role)
+      .sort();
+    expect(holders).toEqual(['district_admin', 'super_admin']);
+    expect(holds('verifier', 'claim.review_death_certificate')).toBe(false);
+    expect(holds('state_trustee', 'claim.review_death_certificate')).toBe(false);
+  });
+
   it('Story 6.20 — ⛔ no role but super_admin can both RAISE and APPROVE, or give BOTH approval steps', () => {
     // ⭐ The structural half of D7's "two DIFFERENT people": no ordinary bundle carries both steps, so a
     // single grant can never walk a correction from raise to applied. (The domain writer additionally

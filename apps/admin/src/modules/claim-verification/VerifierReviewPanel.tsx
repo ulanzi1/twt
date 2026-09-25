@@ -11,6 +11,7 @@
 
 import type { ReactElement } from 'react';
 
+import { DeathCertificateReviewStatus, type DeathCertificateReview } from './DeathCertificateReviewControl.js';
 import { DocumentPreview } from './DocumentPreview.js';
 
 export type ParityOutcome = 'match' | 'mismatch' | 'ambiguous';
@@ -35,6 +36,8 @@ export interface VerifierReviewData {
   memberRecord: { name: string | null; dateOfBirth: string | null } | null;
   /** The short-lived signed READ URL + content type for the original document preview. */
   preview: { signedUrl: string; contentType: string; filename?: string };
+  /** Story 6.21a (D10) — the death certificate's review (the `death_certificate` item only). */
+  review?: DeathCertificateReview | undefined;
 }
 
 export interface VerifierReviewPanelProps {
@@ -106,6 +109,9 @@ export function VerifierReviewPanel({
             {data.parityOutcome}
           </span>
         </header>
+
+        {/* Story 6.21a (AC5) — the certificate's review status, reason, who and when, in words. */}
+        {data.review ? <DeathCertificateReviewStatus review={data.review} /> : null}
 
         {data.verifierReviewRequired ? (
           <p className="rounded bg-status-warn-bg px-2 py-1 text-xs text-status-warn-fg">

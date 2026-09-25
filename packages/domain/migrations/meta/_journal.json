@@ -855,6 +855,13 @@
       "when": 1791171600000,
       "tag": "0121_nominee-determination-supersession-one-way",
       "breakpoints": true
+    },
+    {
+      "idx": 122,
+      "version": "7",
+      "when": 1791258000000,
+      "tag": "0122_death-certificate-clear-date-rule",
+      "breakpoints": true
     }
   ]
 }

@@ -40,7 +40,7 @@ import { bindScopedDb, setPariwarScope } from '../../../src/db.js';
 import { claimId as toClaimId, memberId as toMemberId, pariwarId as toPariwarId } from '../../../src/ids/index.js';
 import type { ClaimId, MemberId } from '../../../src/ids/index.js';
 import { listNomineeDeclarationVersions } from '../../../src/nominee/declaration-history.js';
-import { seedNomineeDeclaration } from '../_helpers.js';
+import { seedAcceptedDeathCertificate, seedNomineeDeclaration } from '../_helpers.js';
 
 const DATABASE_URL = process.env['DATABASE_URL'];
 const hasDatabase = Boolean(DATABASE_URL);
@@ -145,10 +145,15 @@ describe.skipIf(!hasDatabase)('Story 6.20 — nominee history two-connection con
   /** A committed determination (everything stands) + a raised correction the District Admin approved. */
   async function correctionAwaitingPariwarAdmin(mid: MemberId, cid: ClaimId): Promise<string> {
     const versions = await onOwnTx((c) => listNomineeDeclarationVersions(bindScopedDb(c), PARIWAR, mid));
+    // Story 6.21a (D12(c)) — the determination's date must be the current ACCEPTED certificate's (D8).
+    const deathCertificateReviewId = await onOwnTx((c) =>
+      seedAcceptedDeathCertificate(c, { pariwarId: PARIWAR, claimCaseId: cid, date: '2099-01-01' }),
+    );
     await onOwnTx((c) =>
       recordNomineeDetermination(c, {
         claimCaseId: cid,
         pariwarId: PARIWAR,
+        deathCertificateReviewId,
         certificateDate: '2099-01-01',
         certificateDateCiphertext: 'enc:v1:d',
         noteCiphertext: 'enc:v1:n',
@@ -202,6 +207,10 @@ describe.skipIf(!hasDatabase)('Story 6.20 — nominee history two-connection con
       await c.query('DELETE FROM nominee_corrections WHERE pariwar_id = $1', [PARIWAR]);
       await c.query('DELETE FROM nominee_determination_items WHERE pariwar_id = $1', [PARIWAR]);
       await c.query('DELETE FROM nominee_determinations WHERE pariwar_id = $1', [PARIWAR]);
+      // Story 6.21a — replica mode disables the RI cascades too, so the certificate tables go explicitly.
+      await c.query('DELETE FROM claim_death_certificate_reviews WHERE pariwar_id = $1', [PARIWAR]);
+      await c.query('DELETE FROM claim_death_certificate_uploads WHERE pariwar_id = $1', [PARIWAR]);
+      await c.query('DELETE FROM claim_documents WHERE pariwar_id = $1', [PARIWAR]);
       await c.query('DELETE FROM member_nominee_versions WHERE pariwar_id = $1', [PARIWAR]);
       await c.query('DELETE FROM member_nominees WHERE pariwar_id = $1', [PARIWAR]);
       await c.query('DELETE FROM intake_attempts WHERE pariwar_id = $1', [PARIWAR]);
@@ -350,11 +359,16 @@ describe.skipIf(!hasDatabase)('Story 6.20 — nominee history two-connection con
       });
     });
     const versions = await onOwnTx((c) => listNomineeDeclarationVersions(bindScopedDb(c), PARIWAR, mid));
+    // Story 6.21a (D12(c)) — accepted ONCE, before the race; both racers carry the same review id.
+    const deathCertificateReviewId = await onOwnTx((c) =>
+      seedAcceptedDeathCertificate(c, { pariwarId: PARIWAR, claimCaseId: cid, date: '2099-01-01' }),
+    );
     const determine = () =>
       onOwnTx((c) =>
         recordNomineeDetermination(c, {
           claimCaseId: cid,
           pariwarId: PARIWAR,
+          deathCertificateReviewId,
           certificateDate: '2099-01-01',
           certificateDateCiphertext: 'enc:v1:d',
           noteCiphertext: 'enc:v1:n',

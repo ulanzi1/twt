@@ -33,7 +33,7 @@ import {
   claimVerifierDecisions,
 } from '../schema/claim_verifier_decisions.js';
 import { type ClaimEventActor } from './events.js';
-import { assertNomineeNameCheckForApproval } from './nominee-name-check.js';
+import { assertClaimApprovable } from './nominee-name-check.js';
 import { projectClaimState } from './project.js';
 import {
   isReasonCodeValidForOutcome,
@@ -368,8 +368,10 @@ export async function adjudicateClaim(
   //      account into an obstacle to the one outcome that should always remain available.
   //      Inside the tx, after the claim lock — a check read before the lock could be invalidated by
   //      a concurrent helpline correction.
+  //      ⭐ Story 6.21a (D7) — through the OUTER helper, which first requires a CURRENT, ACCEPTED death
+  //      certificate (a rejected one makes the claim WAIT, ⛔ never a denial — `-236` BB).
   if (input.outcome === 'approved') {
-    await assertNomineeNameCheckForApproval(
+    await assertClaimApprovable(
       db,
       input.pariwarId,
       input.claimCaseId,

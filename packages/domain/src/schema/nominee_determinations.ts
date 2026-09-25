@@ -45,11 +45,13 @@ import {
 import { piiColumn } from '../encryption/column.js';
 import type {
   ClaimId,
+  DeathCertificateReviewId,
   MemberId,
   NomineeDeterminationId,
   NomineeVersionId,
   PariwarId,
 } from '../ids/index.js';
+import { claimDeathCertificateReviews } from './claim_death_certificate_reviews.js';
 import { claims } from './claims.js';
 import { memberNomineeVersions } from './member_nominee_versions.js';
 
@@ -104,11 +106,20 @@ export const nomineeDeterminations = pgTable(
     supersedesDeterminationId: uuid('supersedes_determination_id')
       .$type<NomineeDeterminationId>()
       .references((): AnyPgColumn => nomineeDeterminations.determinationId),
+
+    // Story 6.21a D8 (0122) — the ACCEPTED death-certificate review whose date is this determination's
+    // cutoff. Set at INSERT only (⛔ no UPDATE grant). NULLABLE: 0119-era rows exist in dev/test databases
+    // (⛔ no backfill); a NULL is `determination_stale` at the approval gate (D7), ⛔ never a pass.
+    // ON DELETE SET NULL.
+    deathCertificateReviewId: uuid('death_certificate_review_id')
+      .$type<DeathCertificateReviewId>()
+      .references(() => claimDeathCertificateReviews.reviewId, { onDelete: 'set null' }),
   },
   (t) => [
     index('nominee_determinations_pariwar_id_idx').on(t.pariwarId),
     index('nominee_determinations_claim_case_id_idx').on(t.claimCaseId),
     index('nominee_determinations_deceased_member_idx').on(t.pariwarId, t.deceasedMemberId),
+    index('nominee_determinations_death_certificate_review_id_idx').on(t.deathCertificateReviewId),
     // D4 — at most ONE live determination per claim (the supersession backstop).
     uniqueIndex('nominee_determinations_one_live_per_claim_uq')
       .on(t.claimCaseId)

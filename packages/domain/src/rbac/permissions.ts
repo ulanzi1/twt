@@ -716,7 +716,14 @@ export function permissionKey(value: string): PermissionKey {
 // living-subject PII (a nominee's decrypted details) ⇒ ⛔ no fifth key.
 // ⛔ NOT `state_trustee` on any of the four: the pariwar keys are RANK-ORDER BLOCKED for it (scope.ts),
 // and the district keys follow the 6.10 `claim.verify` disposition.
-export const PERMISSION_CATALOG_VERSION = 47 as const;
+// ── Bumped 47 → 48 at Story 6.21a / Decision 2026-09-25-244 (D13) — added ONE key: 55 → 56 ─────────
+// `claim.review_death_certificate` — the District Admin's ACCEPT / REJECT verdict on a claim's death
+// certificate (`2026-09-20-235` Y: *"only certificate with clear date is acceptable"*). District-dimension,
+// `district_admin` (+ super_admin, derived — ⛔ no explicit grant). Minted IN `-244` (the `-195` cl.2
+// discipline), ⛔ never inside the build. 47 / 55 were READ LIVE on 2026-09-25 at `e4b565d9`. The history
+// read reuses `claim.verify` (its holders already see the certificate and its OCR date) ⇒ ⛔ no second key.
+// `defaultRoleBundles` stays 13 — ⛔ no new role. ⛔ NOT `state_trustee` (the 6.10 disposition).
+export const PERMISSION_CATALOG_VERSION = 48 as const;
 
 /**
  * The grounded v1 seed keys (architecture + epic + PRD references only — see file
@@ -963,6 +970,17 @@ export const SEED_PERMISSION_KEYS = [
   // approving, and ⛔ the District Admin never raises alone (CC2). The FAMILY's own raise through the
   // member app is a `memberSession` route and needs ⛔ no key. Rests on `-195` cl.2 alone.
   'claim.raise_nominee_correction',
+  // Story 6.21a (D13, Decision `2026-09-25-244`) — the District Admin's death-certificate REVIEW: ACCEPT
+  // (entering the date of death themselves) or REJECT (one of three reasons) the claim's current
+  // certificate (`2026-09-20-235` Y; a rejection ⛔ never denies — `-236` BB). Gates POST
+  // …/admin/claims/:claimCaseId/death-certificate/review, checked at `dimension: 'district'` against the
+  // deceased's SERVER-DERIVED posting district. Reuse-check:
+  //   · ⛔ not `claim.determine_nominee_declaration` — that judges WHICH DECLARATION governs, ⛔ not whether a
+  //     document is admissible;
+  //   · ⛔ not `claim.approve` — approving a CLAIM ≠ admitting a DOCUMENT (and a verifier holds it);
+  //   · ⛔ not `claim.check_nominee_name` — a NAME verdict.
+  // Granted to `district_admin` ONLY (+ derived super_admin).
+  'claim.review_death_certificate',
   // Story 6.12 (R6) — the MANUAL shepherd reassignment WRITE key. Gates
   // `POST …/admin/claims/:claimCaseId/shepherd/reassign` (checked at `dimension: 'district'` against the
   // deceased member's SERVER-DERIVED posting district — the client never submits the authz district).

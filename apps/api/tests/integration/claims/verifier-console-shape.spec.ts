@@ -46,7 +46,7 @@ import type { AppDeps } from '../../../src/context.js';
 import { assembleVerifierConsole } from '../../../src/modules/claims/claims.verifier-console.handlers.js';
 import { closeScopeTx, openScopeTx } from '../../../src/modules/multi-tenant/scope-tx.js';
 import { buildTestDeps, hasDatabase, type TestDeps } from '../_setup.js';
-import { seedNomineeNameCheck } from '../_nominee-name-check-fixture.js';
+import { insertDeathCertificate, seedNomineeNameCheck } from '../_nominee-name-check-fixture.js';
 
 const DISTRICT = 'Patna';
 
@@ -124,12 +124,27 @@ describe.skipIf(!hasDatabase)('Verifier-console compound shape (AI-6-3 class) �
     // Story 6.18 (AC4) — approvable only with two bank accounts + a current, PASSING District
     // Admin name check. Seeded through the REAL writer, so these E2E specs keep exercising the
     // production gate rather than bypassing it.
-    await seedNomineeNameCheck(deps, pariwarId, String(claimCaseId));
+    // Story 6.21a (D12(c)) — ⛔ no certificate YET: this spec pins its own `death_certificate` key (the unique
+    // index allows one row per claim), so `seedDocument` puts it in as the CURRENT upload and the default
+    // fixture is re-run afterwards to ACCEPT that very upload (`acceptPinnedCertificates` below).
+    await seedNomineeNameCheck(deps, pariwarId, String(claimCaseId), { certificate: 'skip' });
     return String(claimCaseId);
   }
 
   /** One claim_documents row with a caller-pinned storage key (the per-claim membership marker). */
   async function seedDocument(pariwarId: string, claimCaseId: string, documentType: string, storageKey: string): Promise<void> {
+    if (documentType === 'death_certificate') {
+      // Story 6.21a (D2) — a death certificate is the row PLUS its upload (the pinned key IS the current upload).
+      const scopeTx = await openScopeTx(deps, pariwarId);
+      let ok = false;
+      try {
+        await insertDeathCertificate(scopeTx, pariwarId, claimCaseId, { storageObjectKey: storageKey });
+        ok = true;
+      } finally {
+        await closeScopeTx(scopeTx, ok);
+      }
+      return;
+    }
     const c = await td.pool.connect();
     try {
       await c.query(
@@ -327,6 +342,12 @@ describe.skipIf(!hasDatabase)('Verifier-console compound shape (AI-6-3 class) �
     await seedDocument(pariwarP, claimA, 'hospital_record', docKeyA2);
     await seedDocument(pariwarP, claimB, 'death_certificate', docKeyB);
     await seedDocument(pariwarQ, claimC, 'death_certificate', docKeyC);
+    // Story 6.21a (D7, D12(c)) — ACCEPT each claim's current certificate (the pinned one where there is one),
+    // then determine and re-check — so every approval below meets the certificate conjunct through the REAL
+    // writers, and the pinned keys stay current.
+    for (const [p, c] of [[pariwarP, claimA], [pariwarP, claimB], [pariwarQ, claimC], [pariwarP, claimD]] as const) {
+      await seedNomineeNameCheck(deps, p, c);
+    }
 
     await seedPeerMesh(pariwarP, claimA, deceasedP, [candA3, candA1, candA2], [candA1, candA2]);
     await seedPeerMesh(pariwarP, claimB, deceasedP, [candB1, candB2], [candB1]);

@@ -412,6 +412,16 @@ export type AuthAuditEventType =
   | 'admin_nominee_refusal.rationale_read'
   | 'member_claim.nominee_correction_raised'
   | 'member_claim.nominee_correction_rejected'
+  // ── Story 6.21a — the death certificate's clear-date rule (D9) ─────────────────
+  // ids and codes ONLY (⛔ never the accepted date, never the note — T10), with a `claim:<uuid>`
+  // resourceLocator.
+  //   death_certificate_reviewed / _review_rejected — the District Admin's accept / reject review
+  //     (`claim.review_death_certificate`), or its refusal with the reason code.
+  //   death_certificate.history_read — the history (every upload, the DECRYPTED dates and notes) was
+  //     opened on demand (`claim.verify`).
+  | 'admin_claim.death_certificate_reviewed'
+  | 'admin_claim.death_certificate_review_rejected'
+  | 'admin_death_certificate.history_read'
   // ── Shepherd assignment surface (Story 6.12, FR-41 / Epic 6) ──────────────────
   // The human-shepherd routing/attribution surface (a District Admin as the family's named contact).
   // Post-commit SINK lines (the durable records are the claim.shepherd_assigned event + the

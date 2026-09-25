@@ -62,6 +62,7 @@ import {
 import {
   NOMINEE_NAME_CHECK_RECORDABLE_STATES,
   type NomineeNameCheckSnapshot,
+  assertClaimApprovable,
   assertNomineeNameCheckForApproval,
   isClaimUnderCorrection,
   readNomineeNameCheckSnapshot,
@@ -564,8 +565,10 @@ export async function voteOnFrozenClaim(
   // ⚠ The live-RETURN block above DOES refuse a deny as well as an approval — deliberately, per
   // `-229`/`-230` consequence 1, until Story 6-19 builds the 90-day period after which a refusal
   // becomes possible. The two rules are different rules; this one is only about the name check.
+  // ⭐ Story 6.21a (D7) — through the OUTER helper: a current, ACCEPTED death certificate first.
+  // ⛔ `isReturnedClaimResubmitted` below stays on the INNER helper (T4).
   if (input.outcome === 'approved') {
-    await assertNomineeNameCheckForApproval(
+    await assertClaimApprovable(
       db,
       input.pariwarId,
       input.claimCaseId,

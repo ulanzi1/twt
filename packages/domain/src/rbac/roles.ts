@@ -117,6 +117,8 @@ const CLAIM_DETERMINE_NOMINEE_DECLARATION = permissionKey('claim.determine_nomin
 const CLAIM_APPROVE_NOMINEE_CORRECTION_DISTRICT = permissionKey('claim.approve_nominee_correction_district');
 const CLAIM_APPROVE_NOMINEE_CORRECTION_PARIWAR = permissionKey('claim.approve_nominee_correction_pariwar');
 const CLAIM_RAISE_NOMINEE_CORRECTION = permissionKey('claim.raise_nominee_correction');
+// Story 6.21a (D13, Decision `2026-09-25-244`) — the District Admin's death-certificate REVIEW (district).
+const CLAIM_REVIEW_DEATH_CERTIFICATE = permissionKey('claim.review_death_certificate');
 // Story 6.12 (R6) — the MANUAL shepherd reassignment WRITE key (district-dimension; distinct from
 // claim.approve/claim.verify — routing the family's contact grants no adjudication power, AC6).
 const CLAIM_ASSIGN_SHEPHERD = permissionKey('claim.assign_shepherd');
@@ -490,6 +492,9 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
       // district-dimension against the deceased's server-derived posting district.
       CLAIM_DETERMINE_NOMINEE_DECLARATION,
       CLAIM_APPROVE_NOMINEE_CORRECTION_DISTRICT,
+      // Story 6.21a (D13) — the District Admin ACCEPTS or REJECTS the death certificate (`-235` Y);
+      // district-dimension against the deceased's server-derived posting district.
+      CLAIM_REVIEW_DEATH_CERTIFICATE,
       // Story 6.12 (R6) — the manual shepherd reassignment key. The District Admin IS the shepherd (D-C),
       // so they administer the assignment; checked at `dimension: 'district'` against the deceased's
       // server-derived posting district. Grants no adjudication power (AC6) — orthogonal to CLAIM_APPROVE.

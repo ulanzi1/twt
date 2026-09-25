@@ -411,7 +411,12 @@ export class NomineeDeterminationRefusedError extends Error {
       | 'stale_watermark'
       | 'stale_supersession'
       | 'incoherent_rank_set'
-      | 'unversioned',
+      | 'unversioned'
+      // Story 6.21a D8 — the cutoff must come from the CURRENT, ACCEPTED death certificate. The writer
+      // re-asserts the review id under the lock (`certificate_not_accepted`); the HANDLER compares the
+      // decrypted dates (`certificate_date_mismatch` — ⛔ no decrypt in the domain, T5).
+      | 'certificate_not_accepted'
+      | 'certificate_date_mismatch',
     detail: string,
   ) {
     super(`[nominee-determination] claim ${claimCaseId}: ${reason} — ${detail}`);
@@ -452,5 +457,53 @@ export class ClaimNomineeFindingRefusedError extends Error {
     detail: string,
   ) {
     super(`[nominee-finding] claim ${claimCaseId}: ${reason} — ${detail}`);
+  }
+}
+
+// ── Story 6.21a — the death certificate's clear-date rule ───────────────────────────────────────────
+
+/** D7 — a claim cannot be APPROVED without a CURRENT, ACCEPTED death certificate whose review the live
+ *  nominee determination was made against (`2026-09-20-235` Y). ⛔ NEVER a denial (`2026-09-20-236` BB):
+ *  the claim WAITS for another certificate or a (re-)determination. → 409
+ *  `…death_certificate_acceptance_required`, `details.reason`:
+ *   · `no_certificate`      — no `death_certificate` row at all;
+ *   · `not_reviewed`        — the current certificate has no live current review (uploaded, not yet judged —
+ *                             or a replacement arrived after the last review);
+ *   · `rejected`            — the current review is a rejection: the family is asked for another;
+ *   · `determination_stale` — the live determination was made against a DIFFERENT review (a re-review or a
+ *                             replacement since), or against none at all (a 0119-era NULL link). */
+export class DeathCertificateAcceptanceRequiredError extends Error {
+  public readonly name = 'DeathCertificateAcceptanceRequiredError';
+  public constructor(
+    public readonly claimCaseId: string,
+    public readonly reason: 'no_certificate' | 'not_reviewed' | 'rejected' | 'determination_stale',
+  ) {
+    super(`[death-certificate] claim ${claimCaseId} cannot be approved — the death certificate is '${reason}'`);
+  }
+}
+
+/** D1 / D3 / D4 — the District Admin's accept / reject review is refused. A GUARD, ⛔ never a default: the
+ *  writer never turns an accept into a reject (D4). → 409 `death_certificate_review.<reason>` (404 for
+ *  `not_found`). */
+export class DeathCertificateReviewRefusedError extends Error {
+  public readonly name = 'DeathCertificateReviewRefusedError';
+  public constructor(
+    public readonly claimCaseId: string,
+    public readonly reason:
+      | 'not_found'
+      | 'not_reviewable'
+      | 'no_certificate'
+      | 'stale_certificate'
+      | 'stale_supersession'
+      | 'missing_display'
+      | 'missing_note'
+      | 'invalid_date'
+      | 'accept_future_date'
+      | 'reason_on_accept'
+      | 'missing_reason'
+      | 'date_on_reject',
+    detail: string,
+  ) {
+    super(`[death-certificate-review] claim ${claimCaseId}: ${reason} — ${detail}`);
   }
 }

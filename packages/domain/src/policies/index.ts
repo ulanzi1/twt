@@ -202,3 +202,7 @@ export * from './geo-tree-versions-rls.js';
 // findings). SELECT + INSERT everywhere, a tenant-scoped UPDATE leg only on the three PII-bearing tables
 // (column-level grants in migration 0119 narrow it), ⛔ no DELETE leg and ⛔ no `FOR ALL` policy.
 export * from './nominee-declaration-history-rls.js';
+// Story 6.21a — the death-certificate uploads + reviews (ONE file for both). SELECT + INSERT on both; a
+// tenant-scoped UPDATE leg on the reviews only (0122's column grants narrow it to the supersession pair and
+// the RTBF scrub). ⛔ No DELETE leg, ⛔ no `FOR ALL`: ⛔ no certificate is ever deleted (`2026-09-25-243`).
+export * from './claim-death-certificate-rls.js';

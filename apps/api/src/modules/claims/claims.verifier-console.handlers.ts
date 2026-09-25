@@ -53,6 +53,8 @@ import type { AppDeps } from '../../context.js';
 import { ForbiddenError, NotFoundError, UnauthorizedError } from '../../http-errors.js';
 import { emitAuthAudit } from '../auth/shared/audit.js';
 import { decryptKycField } from '../kyc/kyc-crypto.js';
+import { geoTreeResolverForRequest } from '../rbac/index.js';
+import { DEATH_CERTIFICATE_REVIEW_KEY } from './claims.death-certificate.handlers.js';
 import { decryptClaimDocumentField } from './claim-document-crypto.js';
 import { decryptGroundInspectionField } from './ground-inspection-crypto.js';
 import { decryptVerifierRationale } from './verifier-decision-crypto.js';
@@ -87,6 +89,11 @@ const SIGNED_URL_TTL_SECONDS = 300;
  *   + Story 6.18: the nominee name-check status                                  +3  → 14
  *   + Story 6.20: the ground-inspection INHERITANCE (AC13) — only when the claim has
  *     ⛔ no inspection of its own: the derived source claim + its inspections      +2  → 16
+ *   + Story 6.21a (D10): the death certificate's REVIEW (reviews ⋈ uploads for the
+ *     current key, ONE statement) — only when a `death_certificate` row exists       +1  → 17
+ *   + Story 6.21a review fix (D7): the live nominee determination's linked review id,
+ *     so the console's OWN approve gate can pre-empt `determination_stale` instead of
+ *     surfacing it only after a 409 — only when the certificate is `accepted`        +1  → 18
  *
  * Story 6.18's THREE reads (AC4/AC8) are the claim's live bank accounts, the latest
  * `claim.nominee_name_checked` event, and — when a check exists — the deceased member's
@@ -121,7 +128,26 @@ const SIGNED_URL_TTL_SECONDS = 300;
  * onto the effective declaration is read-for-read (one statement replacing one), so it does ⛔ not move
  * this number.
  */
-export const VERIFIER_CONSOLE_MAX_READS = 16;
+/*
+ * ⭐ STORY 6.21a's ONE READ (D10) — the explanation this counter demands. `2026-09-20-235` Y makes an
+ * ACCEPTED certificate a PRECONDITION of approval (6.21a D7), exactly as 6.18 made the name check one — so a
+ * console that could not say whether the certificate was accepted would offer an Approve that 409s. ⛔ It is
+ * the MINIMUM: `readDeathCertificateSnapshot` answers "which upload is current, and is its live review about
+ * it?" in ONE statement (the documents row ⋈ the uploads by key ⋈ the live review). It decrypts ⛔ nothing: the
+ * accepted DATE stays on the audited history read (T10).
+ */
+/*
+ * ⭐ STORY 6.21a's SECOND READ (a code-review fix, D7) — the same explanation the paragraph above demands.
+ * `assertDeathCertificateAcceptedForApproval`'s 4th ground, `determination_stale`, was invisible to the
+ * console: an accepted certificate whose review is no longer the one the LIVE nominee determination was
+ * made against still showed Approve as available, offering a control that would 409 — the exact failure
+ * mode the counter's own discipline exists to catch. ⛔ It is the MINIMUM: ONE query for the live
+ * determination's `death_certificate_review_id`, reusing `isDeathCertificateDeterminationStale`'s own
+ * comparison (the SAME predicate `assertDeathCertificateAcceptedForApproval` enforces, not a re-derived
+ * copy). Conditional — it runs ONLY when the certificate snapshot is already `accepted` (nothing to compare
+ * otherwise), so a claim with no accepted certificate pays nothing for it.
+ */
+export const VERIFIER_CONSOLE_MAX_READS = 18;
 
 /** Counts the assembler's top-level bounded source reads (the no-N+1 fan-out width). */
 class ReadCounter {
@@ -142,6 +168,9 @@ export interface VerifierConsoleContext {
   /** The acting verifier + their effective grants (for the scope-redacted validity read). */
   actorId: string;
   grants: readonly import('@twt/domain').rbac.EffectiveGrant[];
+  /** Story 6.21a (D10) — the request's geo-tree resolver, so `viewer.canReview` is judged exactly as the
+   *  review route's district gate judges it. Absent ⇒ the default resolver (no published tree). */
+  geoResolver?: import('@twt/domain').rbac.GeoTreeResolver;
   traceId: string | null;
   /** Optional structured logger for fail-soft decrypt/section warnings (the route passes request.log). */
   log?: { warn: (obj: unknown, msg: string) => void };
@@ -236,7 +265,7 @@ export async function assembleVerifierConsole(
   };
 
   // ── (b) OCR document-review parity (embeds the 6.5 <VerifierReviewPanel> shape) ──────────────────
-  const documentReview = await assembleDocumentReview(deps, ctx, core, memberRecord);
+  const documentReview = await assembleDocumentReview(deps, ctx, core, memberRecord, reads);
 
   // ── (c) peer-mesh transcripts (Story 6.6) — transcripts NOT counts; absence ≠ denied ─────────────
   const peerMesh = await assemblePeerMesh(ctx, claimCaseId, reads);
@@ -432,9 +461,44 @@ async function assembleDocumentReview(
   ctx: VerifierConsoleContext,
   core: NonNullable<Awaited<ReturnType<typeof claim.getClaimDocumentReview>>>,
   memberRecord: { name: string | null; dateOfBirth: string | null } | null,
+  reads: ReadCounter,
 ): Promise<DocumentReviewSection> {
   try {
     if (core.documents.length === 0) return { status: 'empty' };
+    // ⭐ Story 6.21a (D10) — the death certificate's review, ONE counted read, ⛔ no decrypt. `viewer.canReview`
+    // is judged SERVER-SIDE at the deceased's district against the actor's grants (the admin session carries
+    // only national grants, so the client cannot tell a verifier from a District Admin — 6.20's lesson).
+    let certificateReview: VerifierReviewItem['review'];
+    if (core.documents.some((d) => d.documentType === 'death_certificate')) {
+      reads.bump();
+      const pariwarId = ids.pariwarId(ctx.pariwarId);
+      const claimCaseId = ids.claimId(ctx.claimCaseId);
+      const snap = await claim.readDeathCertificateSnapshot(ctx.db, pariwarId, claimCaseId);
+      const status = claim.deathCertificateStatus(snap);
+      const current = snap.currentReview;
+      // D7 review fix — the console's OWN approve gate needs `determination_stale` too, ⛔ not only after a
+      // 409: conditional on `accepted` (the ONE status this predicate ever answers `true` for).
+      if (status === 'accepted') reads.bump();
+      const determinationStale =
+        status === 'accepted' ? await claim.isDeathCertificateDeterminationStale(ctx.db, pariwarId, claimCaseId, snap) : false;
+      certificateReview = {
+        status: status === 'accepted' ? 'accepted' : status === 'rejected' ? 'rejected' : 'not_reviewed',
+        rejectionReason: current?.rejectionReason ?? null,
+        decidedByDisplay: current?.decidedByDisplay ?? null,
+        decidedAt: current?.decidedAt.toISOString() ?? null,
+        liveReviewId: snap.liveReview?.reviewId ?? null,
+        certificateToken: snap.currentUploadId ?? null,
+        determinationStale,
+        viewer: {
+          canReview: rbac.hasPermission(
+            ctx.grants,
+            DEATH_CERTIFICATE_REVIEW_KEY,
+            { dimension: 'district', value: ctx.district, pariwarId: ctx.pariwarId },
+            ctx.geoResolver ? { resolver: ctx.geoResolver } : undefined,
+          ),
+        },
+      };
+    }
     const reviews: VerifierReviewItem[] = await Promise.all(
       core.documents.map(async (d): Promise<VerifierReviewItem> => {
         const dec = (ct: string | null, what: string) =>
@@ -458,6 +522,7 @@ async function assembleDocumentReview(
             contentType: d.contentType,
             filename: d.documentType,
           },
+          ...(d.documentType === 'death_certificate' && certificateReview ? { review: certificateReview } : {}),
         };
       }),
     );
@@ -662,6 +727,7 @@ export function createVerifierConsoleHandlers(deps: AppDeps) {
         district,
         actorId,
         grants: request.scopeGrants ?? [],
+        geoResolver: geoTreeResolverForRequest(request),
         traceId: request.requestContext.traceId ?? null,
         log: request.log,
       });

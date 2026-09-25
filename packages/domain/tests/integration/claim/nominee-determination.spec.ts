@@ -20,6 +20,7 @@ import {
   NomineeNameCheckRequiredError,
   assertNomineeNameCheckForApproval,
   getEffectiveNomineeDeclaration,
+  isInDeathCertificateReviewWindow,
   recordNomineeDetermination,
   recordNomineeDisqualificationFinding,
   NOMINEE_DETERMINATION_MAX_VERSIONS,
@@ -40,6 +41,7 @@ import {
   PARIWAR_A,
   driveClaimTo,
   enterAppScope,
+  seedAcceptedDeathCertificate,
   seedNomineeDeclaration,
   seedNomineeDetermination,
   seedNomineeNameCheck,
@@ -92,9 +94,20 @@ async function base(tx: Tx, cid: ClaimId, mid: MemberId): Promise<RecordNomineeD
     .select({ id: schema.nomineeDeterminations.determinationId })
     .from(schema.nomineeDeterminations)
     .where(and(eq(schema.nomineeDeterminations.claimCaseId, cid), isNull(schema.nomineeDeterminations.supersededAt)));
+  // Story 6.21a (D12(c)) — the determination's date must come from the claim's CURRENT, ACCEPTED death
+  // certificate (D8). Accepted ONCE per claim with CERT (a repeat call reuses the review). Outside the review
+  // window no review can exist, so a dummy id is passed — the writer refuses `not_recordable` first anyway.
+  const [claimRow] = await tx
+    .select({ state: schema.claims.currentState })
+    .from(schema.claims)
+    .where(eq(schema.claims.claimCaseId, cid));
+  const deathCertificateReviewId = isInDeathCertificateReviewWindow(claimRow!.state as string)
+    ? await seedAcceptedDeathCertificate(getTx().client, { pariwarId: PARIWAR_A, claimCaseId: cid, date: CERT })
+    : randomUUID();
   return {
     claimCaseId: cid,
     pariwarId: PARIWAR_A,
+    deathCertificateReviewId,
     certificateDate: CERT,
     certificateDateCiphertext: 'enc:v1:date',
     noteCiphertext: 'enc:v1:note',

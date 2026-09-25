@@ -44,6 +44,13 @@ export * from './nominee-name-check-persist.js';
 export * from './nominee-lock.js';
 export * from './nominee-effective.js';
 export * from './nominee-determination-persist.js';
+// Story 6.21a — the death certificate's clear-date rule: the LEAF (the current-certificate snapshot, the D6
+// upload predicate, D16's replacement trigger and the D7 approval conjunct), the District Admin's review
+// writer, and the reads (the accepted review for 6.20's determination; the on-demand history).
+export * from './review-window.js';
+export * from './death-certificate-approval.js';
+export * from './death-certificate-review-persist.js';
+export * from './death-certificate-review-read.js';
 // Story 6.20 (D7) — the genuine-mistake CORRECTION: raise, District Admin step, Pariwar Admin step (applies).
 export * from './nominee-correction-persist.js';
 // Story 6.20 (D14, AC13) — the `-239` refusal's two reads: the Pariwar Admin's read surface and the

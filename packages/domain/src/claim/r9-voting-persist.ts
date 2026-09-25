@@ -48,7 +48,7 @@ import { type ClaimR9VoteRow, claimR9Votes } from '../schema/claim_r9_votes.js';
 import { type ClaimR9VotingSessionRow, claimR9VotingSessions } from '../schema/claim_r9_voting_sessions.js';
 import { claimStateTrusteeDecisions } from '../schema/claim_state_trustee_decisions.js';
 import { type ClaimEventActor } from './events.js';
-import { assertNomineeNameCheckForApproval } from './nominee-name-check.js';
+import { assertClaimApprovable } from './nominee-name-check.js';
 import { projectClaimState } from './project.js';
 import { R9_OUTCOME_FROM_STATES } from './state.js';
 import {
@@ -617,8 +617,9 @@ export async function finalizeR9Outcome(client: pg.PoolClient, input: R9WriteBas
   // having never had its nominee name looked at by anybody.
   // ⛔ A DENIED outcome is NEVER gated, and the placement matters: this runs BEFORE any write, so a
   // refusal aborts cleanly with no orphaned session outcome, no event and no metadata row.
+  // ⭐ Story 6.21a (D7) — through the OUTER helper: a current, ACCEPTED death certificate first.
   if (outcome === 'approved') {
-    await assertNomineeNameCheckForApproval(
+    await assertClaimApprovable(
       db,
       input.pariwarId,
       input.claimCaseId,

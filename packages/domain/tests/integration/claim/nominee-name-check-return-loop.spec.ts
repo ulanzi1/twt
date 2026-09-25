@@ -48,6 +48,7 @@ import {
   seedMember,
   seedMemberPosting,
   seedNomineeNameCheck,
+  seedRejectedDeathCertificate,
 } from '../_helpers.js';
 
 const TRUSTEE = 'a1a1a1a1-a1a1-a1a1-a1a1-a1a1a1a1a1a1';
@@ -408,6 +409,31 @@ describe.skipIf(!hasDatabase)('Story 6.18 — the return loop (:5433)', () => {
     const types = await eventTypes(tx, cid);
     expect(types).not.toContain('claim.state_trustee_denied');
     expect(types.filter((t) => t.includes('appeal'))).toEqual([]);
+  });
+
+  // ── Story 6.21a (T4; AC2) — a REJECTED certificate leaves the correction state EXACTLY as it was ─────
+  it('⭐⭐ Story 6.21a T4 — a returned, corrected, re-checked claim: a REJECTED death certificate leaves `resolveClaimCorrectionState` exactly as it was (⛔ no 500, ⛔ no false "bank needs correcting")', async () => {
+    const { client, tx } = getTx();
+    await enterAppScope(client, PARIWAR_A);
+    const cid = toClaimId(randomUUID());
+    const mid = toMemberId(randomUUID());
+    await driveTo(client, cid, mid, 'verifier_approved');
+    await seedNomineeNameCheck(client, PARIWAR_A, cid);
+    await returnToDistrictAdmin(client, returnInput(cid));
+    await correctionAt(client, cid, 'the District Admin asked for the holder name to be corrected');
+    await tx
+      .update(schema.claimNomineeBankAccounts)
+      .set({ updatedAt: new Date(Date.now() + 60_000) })
+      .where(and(eq(schema.claimNomineeBankAccounts.pariwarId, PARIWAR_A), eq(schema.claimNomineeBankAccounts.claimCaseId, cid)));
+    await seedNomineeNameCheck(client, PARIWAR_A, cid, { reuseAccounts: true });
+    const without = await resolveClaimCorrectionState(tx, PARIWAR_A, cid, mid, 'verifier_approved');
+    // NON-VACUITY: the bank half really IS resolved — a leak of the certificate error would flip this.
+    expect(without.underCorrection).toBe(false);
+
+    await seedRejectedDeathCertificate(client, { pariwarId: PARIWAR_A, claimCaseId: cid });
+
+    // ⭐ The inner helper (`isReturnedClaimResubmitted`) never sees the certificate conjunct (T4): identical.
+    expect(await resolveClaimCorrectionState(tx, PARIWAR_A, cid, mid, 'verifier_approved')).toEqual(without);
   });
 
   // ── Story 6.20 (code review 2026-09-24b) — the 09-24 HIGH patch had ⛔ no regression test ─────────

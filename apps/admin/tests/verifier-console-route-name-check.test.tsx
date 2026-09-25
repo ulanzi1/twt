@@ -59,7 +59,33 @@ const packet = (nomineeNameCheck: NameStatus): VerifierConsolePacket =>
     identity: { deceasedName: 'Suresh Patel', deceasedDateOfBirth: '1955-03-01' },
     validity: { status: 'unavailable' },
     concealment: { status: 'not_evaluated', detailVisibility: 'indicator_only' },
-    documentReview: { status: 'unavailable' },
+    // Story 6.21a (D7) — an ACCEPTED death certificate, so the approve gate reaches the NAME CHECK this suite
+    // is about (the certificate is named first when it is not accepted — `death-certificate-review.test.tsx`).
+    documentReview: {
+      status: 'present',
+      reviews: [
+        {
+          documentType: 'death_certificate',
+          parityOutcome: 'match',
+          verifierReviewRequired: false,
+          ocrConfidence: 0.9,
+          parityFlags: {},
+          extracted: { deceasedName: null, dateOfBirth: null, dateOfDeath: null, issuingAuthority: null, certificateNumber: null },
+          memberRecord: null,
+          preview: { signedUrl: '', contentType: 'application/pdf' },
+          review: {
+            status: 'accepted',
+            rejectionReason: null,
+            decidedByDisplay: 'Anita (District Admin)',
+            decidedAt: '2026-09-25T06:00:00.000Z',
+            liveReviewId: '00000000-0000-4000-8000-0000000000ac',
+            certificateToken: '00000000-0000-4000-8000-0000000000ab',
+            determinationStale: false,
+            viewer: { canReview: false },
+          },
+        },
+      ],
+    },
     peerMesh: { status: 'unavailable' },
     groundInspection: { status: 'empty' },
     priorVerifierComments: { status: 'not_available_yet' },

@@ -23,6 +23,35 @@ export function trusteeDeterminationRequiredMessage(err: ApiError): string {
   return t.nomineeDeclaration.trusteeApprovalGateByReason[reason] ?? t.nomineeDeclaration.trusteeApprovalGate;
 }
 
+/**
+ * Story 6.21a (D7) — the approval gate's `…death_certificate_acceptance_required` 409, worded by its REASON
+ * (`no_certificate` | `not_reviewed` | `rejected` | `determination_stale`). ⛔ Never a denial: the claim waits.
+ */
+export function deathCertificateAcceptanceRequiredMessage(err: ApiError): string {
+  const reason = (err.details as { reason?: string } | undefined)?.reason ?? 'not_reviewed';
+  return t.deathCertificate.approveBlocked[reason] ?? t.deathCertificate.approveBlocked.not_reviewed!;
+}
+
+/** The same 409 on a TRUSTEE surface (the cycle freeze, R9 voting) — the District Admin or the family acts. */
+export function trusteeDeathCertificateAcceptanceRequiredMessage(err: ApiError): string {
+  const reason = (err.details as { reason?: string } | undefined)?.reason ?? 'not_reviewed';
+  return t.deathCertificate.trusteeApprovalGate[reason] ?? t.deathCertificate.trusteeApprovalGate.not_reviewed!;
+}
+
+/** Story 6.21a — the review's typed refusals (`death_certificate_review.<reason>`), each with its instruction. */
+export function deathCertificateReviewErrorMessage(err: unknown): string {
+  if (err instanceof ApiError) {
+    if (err.code === 'admin.display_name_missing') return t.decision.displayNameMissing;
+    if (err.status === 401) return t.deathCertificate.sessionExpired;
+    if (err.status === 403) return t.deathCertificate.forbidden;
+    const reason = err.code.startsWith('death_certificate_review.') ? err.code.slice('death_certificate_review.'.length) : '';
+    const text = t.deathCertificate.refused[reason];
+    if (text) return text;
+    if (err.status === 400) return t.deathCertificate.invalid;
+  }
+  return t.deathCertificate.refusedGeneric;
+}
+
 /** Story 6.20 — the determination's typed refusals, each with the instruction that fixes it. */
 export function nomineeDeterminationErrorMessage(err: unknown): string {
   if (err instanceof ApiError) {

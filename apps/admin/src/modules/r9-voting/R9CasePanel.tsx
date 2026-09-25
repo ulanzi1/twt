@@ -11,13 +11,20 @@ import type { ReactElement } from 'react';
 import { useState } from 'react';
 
 import { ApiError, errorMessage as apiErrorMessage } from '../../api/client.js';
-import { trusteeDeterminationRequiredMessage } from '../claim-verification/nominee-errors.js';
+import {
+  trusteeDeathCertificateAcceptanceRequiredMessage,
+  trusteeDeterminationRequiredMessage,
+} from '../claim-verification/nominee-errors.js';
 
 /**
  * The panel's error text. Story 6.20 (AC5) — a nominee correction can supersede the determination after
  * the verifier approved, so a vote / finalize meets the approval gate's 409 again: say WHO must act.
  */
 function errorMessage(error: unknown): string | undefined {
+  // Story 6.21a (D7) — the approval waits for an ACCEPTED death certificate; worded for the trustee (⛔ never a refusal).
+  if (error instanceof ApiError && error.code.endsWith('.death_certificate_acceptance_required')) {
+    return trusteeDeathCertificateAcceptanceRequiredMessage(error);
+  }
   if (error instanceof ApiError && error.code.endsWith('.nominee_determination_required')) {
     return trusteeDeterminationRequiredMessage(error);
   }

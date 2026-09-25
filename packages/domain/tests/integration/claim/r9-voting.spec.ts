@@ -35,13 +35,17 @@ import {
   R9SessionAlreadySupersededError,
   R9SessionExistsError,
   R9SessionFinalizedError,
+  DeathCertificateAcceptanceRequiredError,
 } from '../../../src/claim/index.js';
 import * as schema from '../../../src/schema/index.js';
 import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
 import {
   PARIWAR_A,
   enterAppScope,
+  seedAcceptedDeathCertificate,
   seedClauseVersion,
+  seedDeathCertificate,
+  seedRejectedDeathCertificate,
   seedNomineeDeclaration,
   seedNomineeDetermination,
   seedNomineeNameCheck,
@@ -99,6 +103,8 @@ async function driveToApproved(
    *  already recorded ⛔ cannot be removed afterwards; it has to be never written.
    *  [[project_live_db_test_gotchas]] */
   skipCheck = false,
+  /** Story 6.21a — `'skip'` reaches a claim with ⛔ no accepted death certificate (and so no determination). */
+  certificate: 'accepted' | 'skip' = 'accepted',
 ): Promise<void> {
   const emit = (from: string | null, to: string, eventType: string, extra: Record<string, unknown> = {}) =>
     projectClaimState(client, {
@@ -129,7 +135,7 @@ async function driveToApproved(
   // current, PASSING District Admin name check. Seeded through the REAL writer, so these specs keep
   // exercising the production path rather than bypassing the new gate.
   if (!skipCheck) {
-    await seedNomineeNameCheck(client, PARIWAR_A, claimCaseId);
+    await seedNomineeNameCheck(client, PARIWAR_A, claimCaseId, { certificate });
   } else {
     // ⭐ Story 6.20 (AC5, T16) — "never CHECKED" is only reachable on a DETERMINED claim: the gate asks
     // for the as-at-death determination BEFORE the check, so skipping the check must not also skip the
@@ -157,7 +163,7 @@ async function insertRoutedRow(tx: Tx, claimCaseId: ClaimId): Promise<void> {
 async function setupRoutedClaim(
   client: Client,
   tx: Tx,
-  opts: { clauseVersion?: number; skipCheck?: boolean } = {},
+  opts: { clauseVersion?: number; skipCheck?: boolean; certificate?: 'accepted' | 'skip' } = {},
 ): Promise<{ claimCaseId: ClaimId; deceased: MemberId }> {
   await seedClauseVersion(tx, PARIWAR_A, {
     clauseId: R9_CLAUSE,
@@ -170,7 +176,7 @@ async function setupRoutedClaim(
   await enterAppScope(client, PARIWAR_A);
   const claimCaseId = toClaimId(randomUUID());
   const deceased = toMemberId(randomUUID());
-  await driveToApproved(client, claimCaseId, deceased, opts.skipCheck === true);
+  await driveToApproved(client, claimCaseId, deceased, opts.skipCheck === true, opts.certificate ?? 'accepted');
   await insertRoutedRow(tx, claimCaseId);
   return { claimCaseId, deceased };
 }
@@ -439,6 +445,78 @@ describe.skipIf(!hasDatabase)('R9 voting (PARIWAR_A scope)', () => {
       expect(await claimState(tx, claimCaseId)).toBe(stateBefore);
     });
   }
+
+  // ── Story 6.21a (D7; AC2, AC8(iii)) — P4 × the death-certificate reasons, then a PASS ─────────────
+  // R9 bypasses P1 entirely, so an R9 approval must meet the certificate conjunct on its own path. Each row
+  // starts from a fully approvable routed claim and spoils exactly the certificate (⛔ never denied: it WAITS).
+  const P4_CERTIFICATE_DEFICIENCIES = [
+    { label: 'no certificate at all', reason: 'no_certificate', certificate: 'skip' as const, spoil: async () => {} },
+    {
+      label: 'a replacement nobody has reviewed',
+      reason: 'not_reviewed',
+      certificate: 'accepted' as const,
+      spoil: async (client: Client, claimCaseId: ClaimId) => {
+        await seedDeathCertificate(client, { pariwarId: PARIWAR_A, claimCaseId });
+      },
+    },
+    {
+      label: 'a REJECTED certificate',
+      reason: 'rejected',
+      certificate: 'accepted' as const,
+      spoil: async (client: Client, claimCaseId: ClaimId) => {
+        await seedRejectedDeathCertificate(client, { pariwarId: PARIWAR_A, claimCaseId });
+      },
+    },
+    {
+      label: 'a determination made against an EARLIER review',
+      reason: 'determination_stale',
+      certificate: 'accepted' as const,
+      spoil: async (client: Client, claimCaseId: ClaimId) => {
+        await seedAcceptedDeathCertificate(client, { pariwarId: PARIWAR_A, claimCaseId, date: '2026-03-10' });
+      },
+    },
+    {
+      label: 'a NULL determination link (0119-era)',
+      reason: 'determination_stale',
+      certificate: 'accepted' as const,
+      spoil: async (client: Client, claimCaseId: ClaimId) => {
+        await client.query('RESET ROLE');
+        await client.query(
+          'UPDATE nominee_determinations SET death_certificate_review_id = NULL WHERE claim_case_id = $1 AND superseded_at IS NULL',
+          [claimCaseId],
+        );
+        await enterAppScope(client, PARIWAR_A);
+      },
+    },
+  ] as const;
+
+  for (const d of P4_CERTIFICATE_DEFICIENCIES) {
+    it(`⭐ Story 6.21a P4 — an R9 APPROVE is refused on ${d.label} (\`${d.reason}\`), and the claim WAITS`, async () => {
+      const { client, tx } = getTx();
+      const { claimCaseId } = await setupRoutedClaim(client, tx, { certificate: d.certificate });
+      const stateBefore = await claimState(tx, claimCaseId);
+      await d.spoil(client, claimCaseId);
+
+      await openR9VotingSession(client, openBase(claimCaseId));
+      await castR9Vote(client, voteBase(claimCaseId, PANEL[0]!, 'approve'));
+      await castR9Vote(client, voteBase(claimCaseId, PANEL[1]!, 'approve'));
+
+      await expect(finalizeR9Outcome(client, finalizeBase(claimCaseId, PANEL[0]!))).rejects.toSatisfy(
+        (err: unknown) => err instanceof DeathCertificateAcceptanceRequiredError && err.reason === d.reason,
+      );
+      expect(await claimState(tx, claimCaseId)).toBe(stateBefore);
+    });
+  }
+
+  it('⭐ Story 6.21a P4 — with the certificate ACCEPTED and the determination made against it, the R9 approval PASSES (the positive control)', async () => {
+    const { client, tx } = getTx();
+    const { claimCaseId } = await setupRoutedClaim(client, tx);
+    await openR9VotingSession(client, openBase(claimCaseId));
+    await castR9Vote(client, voteBase(claimCaseId, PANEL[0]!, 'approve'));
+    await castR9Vote(client, voteBase(claimCaseId, PANEL[1]!, 'approve'));
+    await finalizeR9Outcome(client, finalizeBase(claimCaseId, PANEL[0]!));
+    expect(await claimState(tx, claimCaseId)).toBe('state_trustee_approved');
+  });
 
   it('⭐⭐ Story 6.18 P4 — an R9 APPROVE is refused on a `does_not_match` (cl.5 — it WAITS)', async () => {
     // ⚠ Re-recording the verdict through the REAL writer, ⛔ not by spoiling a column: the point is

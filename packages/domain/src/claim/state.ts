@@ -183,6 +183,14 @@ function reduce(state: ClaimLifecycleState, event: ClaimEventInput): ClaimLifecy
     case 'claim.nominee_lock_released':
       return state;
 
+    // ANNOTATION: the District Admin ACCEPTED or REJECTED the current death certificate (Story 6.21a —
+    // the 35th event; `2026-09-20-235` Y, `2026-09-20-236` BB). ⛔ A rejection is ⛔ NOT a denial: the
+    // family is asked for another certificate and the claim WAITS (invariant 2). So there is ⛔ no edge to
+    // `denied`, ⛔ no edge to anything — identity from any state. The write-path guard owns the review
+    // window; the approval gates READ the review ROW (`assertClaimApprovable`). Never here.
+    case 'claim.death_certificate_reviewed':
+      return state;
+
     // ANNOTATION: claim-time DPDPA consent recorded (Story 6.9 — the 24th event). Claim-time capture
     // of the granular DPDPA consents via the Story 2.7 registry; it does NOT advance the primary state
     // (an annotation captured across the pre-adjudication window, like nominee_bank_recorded). Identity.

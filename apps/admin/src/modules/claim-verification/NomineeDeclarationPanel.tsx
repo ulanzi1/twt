@@ -109,7 +109,6 @@ function ReadableValue({ value }: { value: Readable }): React.ReactElement | nul
 
 export function NomineeDeclarationPanel(props: NomineeDeclarationPanelProps): React.ReactElement {
   const { timeline, loading, error } = props;
-  const [certificateDate, setCertificateDate] = useState('');
   const [marks, setMarks] = useState<Record<string, Mark>>({});
   const [note, setNote] = useState('');
   const [incomplete, setIncomplete] = useState(false);
@@ -122,10 +121,11 @@ export function NomineeDeclarationPanel(props: NomineeDeclarationPanelProps): Re
         timeline.watermark.rank2,
         timeline.live_determination?.determination_id ?? '-',
         timeline.versions.map((v) => v.version_id).join(','),
+        // Story 6.21a (D8) — a re-reviewed or replaced certificate is a different cutoff: start again.
+        timeline.accepted_certificate?.review_id ?? '-',
       ].join('|')
     : '';
   useEffect(() => {
-    setCertificateDate('');
     setMarks({});
     setNote('');
     setIncomplete(false);
@@ -155,6 +155,13 @@ export function NomineeDeclarationPanel(props: NomineeDeclarationPanelProps): Re
   const missingSnapshot = timeline.versions.some((v) => !snapshotById.has(v.version_id));
   const canDetermine = timeline.determination_recordable && timeline.viewer.can_determine;
   const allMarked = timeline.versions.length > 0 && timeline.versions.every((v) => marks[v.version_id] !== undefined);
+  // ⭐ Story 6.21a (D8) — the date is the ACCEPTED certificate's, READ-ONLY: ⛔ never typed here. With no
+  // accepted certificate (or one whose date cannot be read) there is ⛔ no date, and the form says why.
+  const acceptedDate = timeline.accepted_certificate?.accepted_date;
+  const certificateDate = acceptedDate?.state === 'readable' ? acceptedDate.value : '';
+  // Two distinct reasons the field can be empty: no certificate has been accepted at all, vs. one WAS
+  // accepted but its date could not be read (an RTBF sentinel or a decrypt failure) — never the same message.
+  const certificateDateUnreadable = timeline.accepted_certificate != null && acceptedDate?.state !== 'readable';
   const ready = /^\d{4}-\d{2}-\d{2}$/.test(certificateDate) && allMarked && note.trim().length > 0;
   // ⭐ Only when it is the SAME determination the header names (a refetch can leave the two out of step).
   const decryptedLast = revealed ? props.snapshots!.live_determination : null;
@@ -319,18 +326,24 @@ export function NomineeDeclarationPanel(props: NomineeDeclarationPanelProps): Re
       {canDetermine ? (
         <div className="sticky bottom-0 flex flex-col gap-2 border-t bg-white p-3" data-testid="nominee-determination-strip">
           <h4 className="font-semibold">{t.determine.heading}</h4>
+          {/* Story 6.21a (D8) — READ-ONLY: the date the District Admin accepted on the certificate. */}
           <label className="flex flex-col text-sm">
             {t.determine.certificateDate}
             <input
-              type="date"
+              type="text"
+              readOnly
               value={certificateDate}
-              onChange={(e) => setCertificateDate(e.target.value)}
+              placeholder={certificateDateUnreadable ? t.determine.certificateDateUnreadable : t.determine.certificateNotAccepted}
               data-testid="nominee-certificate-date"
               aria-describedby="nominee-certificate-date-help"
             />
           </label>
           <p id="nominee-certificate-date-help" className="text-xs">
-            {t.determine.certificateDateHelp}
+            {certificateDate
+              ? t.determine.certificateDateHelp
+              : certificateDateUnreadable
+                ? t.determine.certificateDateUnreadable
+                : t.determine.certificateNotAccepted}
           </p>
           <label className="flex flex-col text-sm">
             {t.determine.note}

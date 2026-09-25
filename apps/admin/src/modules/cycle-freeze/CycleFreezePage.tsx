@@ -10,7 +10,10 @@ import type { ReactElement } from 'react';
 import { useState } from 'react';
 
 import { ApiError } from '../../api/client.js';
-import { trusteeDeterminationRequiredMessage } from '../claim-verification/nominee-errors.js';
+import {
+  trusteeDeathCertificateAcceptanceRequiredMessage,
+  trusteeDeterminationRequiredMessage,
+} from '../claim-verification/nominee-errors.js';
 import {
   useCommitCycleFreeze,
   useCycleFreezePending,
@@ -31,6 +34,10 @@ function errorMessage(error: unknown): string | undefined {
   if (!error) return undefined;
   // Story 6.20 (AC5) — a correction can supersede the determination after the verifier approved, so the
   // freeze meets the approval gate's 409 again. Say WHO must act, ⛔ not a raw code.
+  // Story 6.21a (D7) — the approval waits for an ACCEPTED death certificate; worded for the trustee (⛔ never a refusal).
+  if (error instanceof ApiError && error.code.endsWith('.death_certificate_acceptance_required')) {
+    return trusteeDeathCertificateAcceptanceRequiredMessage(error);
+  }
   if (error instanceof ApiError && error.code.endsWith('.nominee_determination_required')) {
     return trusteeDeterminationRequiredMessage(error);
   }

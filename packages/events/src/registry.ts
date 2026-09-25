@@ -251,6 +251,12 @@ export const EVENT_TYPE_REGISTRY = {
       'The nominee-declaration LOCK this claim created was RELEASED on an investigation finding the member INNOCENT (2026-09-21-238 cl.1, the release route) — annotation event (the 34th claim event); identity transition (state unchanged, never a lifecycle state); carries finding_id only, NO PII. No production caller until row 6-22 (the fraud register) supplies the finding (Story 6.20).',
     schema: claim.ClaimNomineeLockReleasedPayloadSchema,
   },
+  'claim.death_certificate_reviewed': {
+    type: 'claim.death_certificate_reviewed',
+    description:
+      "The District Admin ACCEPTED or REJECTED the claim's current death certificate (2026-09-20-235 Y: only a certificate with a clear date is acceptable; 2026-09-20-236 BB: a rejection asks the family for another without the claim being denied) — annotation event (the 35th claim event); identity transition (state unchanged — a rejection is NEVER a denial); carries review_id + upload_id + verdict + rejection_reason (a code, or null) + supersedes_review_id, NO PII (no date of death, no note — the Tier-1 accepted date and note live in claim_death_certificate_reviews). The approval gates read the review row, not this event (Story 6.21a).",
+    schema: claim.ClaimDeathCertificateReviewedPayloadSchema,
+  },
   'claim.dpdpa_consent_recorded': {
     type: 'claim.dpdpa_consent_recorded',
     description:

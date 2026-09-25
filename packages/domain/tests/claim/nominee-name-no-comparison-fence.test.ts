@@ -78,6 +78,13 @@ const FENCED_FILES = [
   'apps/api/src/modules/claims/claims.nominee-declaration.handlers.ts',
   'apps/api/src/modules/claims/claims.nominee-declaration.routes.ts',
   'apps/admin/src/modules/claim-verification/NomineeDeclarationPanel.tsx',
+  // ⭐ STORY 6.21a (T9) — AMENDED, ⛔ never weakened: every NEW domain module on the approval or determination
+  // path. The LEAF runs FIRST in the approval gate (`assertClaimApprovable`), the review writer supplies the
+  // determination's cutoff, and the review read feeds the determination handler. All three are ref-only
+  // (ids, verdicts, reason codes, instants) and ⛔ decrypt nothing — asserted below.
+  'packages/domain/src/claim/death-certificate-approval.ts',
+  'packages/domain/src/claim/death-certificate-review-persist.ts',
+  'packages/domain/src/claim/death-certificate-review-read.ts',
 ] as const;
 
 /**
@@ -124,7 +131,7 @@ describe('⛔ the no-comparison fence (Trap 1, `-226` cl.5)', () => {
     for (const f of FENCED_FILES) {
       expect(() => read(f), `fenced file missing: ${f}`).not.toThrow();
     }
-    expect(FENCED_FILES.length).toBeGreaterThanOrEqual(23); // Story 6.20 raised it FROM 16 (+7 modules)
+    expect(FENCED_FILES.length).toBeGreaterThanOrEqual(26); // Story 6.21a raised it FROM 23 (+3 modules); Story 6.20 FROM 16 (+7)
   });
 
   it('⭐⭐ POSITIVE CONTROL — the scanner actually FIRES on a planted violation of every pattern', () => {
@@ -260,6 +267,25 @@ describe('⛔ the no-comparison fence (Trap 1, `-226` cl.5)', () => {
         expect(code.includes(forbidden), `${f} reached for '${forbidden}'`).toBe(false);
       }
     }
+  });
+
+  it('⛔⛔ Story 6.21a (T5, T9) — the certificate LEAF, the review WRITER and the review READ ⛔ never decrypt', () => {
+    // ⭐ The HANDLER decrypts and compares the dates (envelope ciphertext never compares equal); the domain
+    // re-asserts a review ID. A `decrypt` here would move a Tier-1 comparison into the approval path.
+    for (const f of [
+      'packages/domain/src/claim/death-certificate-approval.ts',
+      'packages/domain/src/claim/death-certificate-review-persist.ts',
+      'packages/domain/src/claim/death-certificate-review-read.ts',
+    ]) {
+      const code = stripComments(read(f));
+      for (const forbidden of ['decrypt', 'nameCiphertext', 'getMemberNominees(']) {
+        expect(code.includes(forbidden), `${f} reached for '${forbidden}'`).toBe(false);
+      }
+    }
+    // ⭐ And the gate module runs the certificate conjunct from the LEAF (⛔ an inline copy would escape the fence).
+    expect(stripComments(read('packages/domain/src/claim/nominee-name-check.ts'))).toContain(
+      'assertDeathCertificateAcceptedForApproval',
+    );
   });
 
   it('⛔ the APPROVAL GATES decide on recorded verdicts and timestamps — never on names', () => {

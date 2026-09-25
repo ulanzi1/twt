@@ -371,7 +371,8 @@ describe.skipIf(!hasDatabase)('Verifier-console read surface — E2E (:5433)', (
   it('four-state vocabulary on a minimal claim (AC7) + audited read', async () => {
     const pariwarId = randomUUID();
     const deceased = await seedDeceasedMember(pariwarId, DISTRICT);
-    const claimCaseId = await seedClaim(pariwarId, deceased);
+    // Story 6.21a (D12(c)) — ⛔ no seeded certificate: this test needs the document section as it builds it.
+    const claimCaseId = await seedClaim(pariwarId, deceased, { certificate: 'skip' });
     const { client, userId } = await authenticate();
     await grant(userId, pariwarId, 'district_admin', 'district', DISTRICT);
 
@@ -557,7 +558,8 @@ describe.skipIf(!hasDatabase)('Verifier-console read surface — E2E (:5433)', (
   it('signed media: document preview URLs are minted with the intended 300s TTL', async () => {
     const pariwarId = randomUUID();
     const deceased = await seedDeceasedMember(pariwarId, DISTRICT);
-    const claimCaseId = await seedClaim(pariwarId, deceased);
+    // Story 6.21a (D12(c)) — ⛔ no seeded certificate: this test needs the document section as it builds it.
+    const claimCaseId = await seedClaim(pariwarId, deceased, { certificate: 'skip' });
     const c = await td.pool.connect();
     try {
       await c.query(
@@ -600,7 +602,8 @@ describe.skipIf(!hasDatabase)('Verifier-console read surface — E2E (:5433)', (
   it('AC7 unavailable: a transient optional-source failure degrades ONE section, request still succeeds', async () => {
     const pariwarId = randomUUID();
     const deceased = await seedDeceasedMember(pariwarId, DISTRICT);
-    const claimCaseId = await seedClaim(pariwarId, deceased);
+    // Story 6.21a (D12(c)) — ⛔ no seeded certificate: this test needs the document section as it builds it.
+    const claimCaseId = await seedClaim(pariwarId, deceased, { certificate: 'skip' });
     // Seed one document so section (b) has a row that requires a signed URL.
     const c = await td.pool.connect();
     try {

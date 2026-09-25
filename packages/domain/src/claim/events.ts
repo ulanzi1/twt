@@ -26,6 +26,13 @@
 
 import { z } from 'zod';
 
+// ⚠ VALUE imports (Story 6.21a) — the review table's schema module is the AUTHORITY on the verdict and
+// reason vocabulary. ⛔ No cycle: it imports only `ids/` (types), `encryption/column.js` and two leaf schema
+// modules.
+import {
+  DEATH_CERTIFICATE_REJECTION_REASONS,
+  DEATH_CERTIFICATE_REVIEW_VERDICTS,
+} from '../schema/claim_death_certificate_reviews.js';
 import { SHEPHERD_ASSIGNMENT_REASONS } from '../schema/claim_shepherd_assignments.js';
 import { CLAIM_INTAKE_CHANNELS, CLAIM_LIFECYCLE_STATES } from '../schema/claims.js';
 // ⚠ VALUE imports (the claim-time consent-type tuples), ⛔ not types — `schema/consent_records.ts`
@@ -664,7 +671,29 @@ export const ClaimNomineeLockReleasedPayloadSchema = requireIdentityTransition({
   finding_id: z.string().uuid(),
 });
 
-// ── The 34-event vocabulary + the type→schema map (single source) ─────────────
+// ── Story 6.21a — the death certificate's clear-date rule (ONE identity annotation) ───────────────
+
+/**
+ * The District Admin ACCEPTED or REJECTED the claim's current death certificate (`2026-09-20-235` Y,
+ * `2026-09-20-236` BB; D1, D5). The 35th claim event. An IDENTITY annotation (the 6.15 / 6.18 / 6.20
+ * shape): the row in `claim_death_certificate_reviews` and this event are written in ONE transaction, and
+ * the reducer is a no-op.
+ *
+ * ⛔ A rejection is ⛔ NOT a denial and moves ⛔ no state (invariant 2): the family is asked for another
+ * certificate and the claim WAITS at the approval gate.
+ * ⛔ PII discipline: ids, the verdict and the reason CODE only — ⛔ no date, ⛔ no note (T10). The Tier-1
+ * accepted date and the note live encrypted in the row.
+ */
+export const ClaimDeathCertificateReviewedPayloadSchema = requireIdentityTransition({
+  ...auditShape,
+  review_id: z.string().uuid(),
+  upload_id: z.string().uuid(),
+  verdict: z.enum(DEATH_CERTIFICATE_REVIEW_VERDICTS),
+  rejection_reason: z.enum(DEATH_CERTIFICATE_REJECTION_REASONS).nullable(),
+  supersedes_review_id: z.string().uuid().nullable(),
+});
+
+// ── The 35-event vocabulary + the type→schema map (single source) ─────────────
 // (Story 6.1 committed the 20 state-advancing events; Story 6.6 added the 21st —
 // `claim.peer_mesh_responded`; Story 6.7 added the 22nd — `claim.ground_inspection_completed`;
 // Story 6.8 added the 23rd — `claim.nominee_bank_recorded`; Story 6.9 added the 24th —
@@ -687,7 +716,10 @@ export const ClaimNomineeLockReleasedPayloadSchema = requireIdentityTransition({
 // Story 6.20 adds the 33rd and 34th — `claim.nominee_determination_recorded` (D4) and
 // `claim.nominee_lock_released` (AC2's release route), both IDENTITY annotations with a no-op reducer:
 // the determination is a RECORD the approval gates read (AC5), and the release is an OUTCOME the
-// nominee lock reads (AC2). ⛔ Neither is a lifecycle state (AC10); ⛔ neither carries PII.)
+// nominee lock reads (AC2). ⛔ Neither is a lifecycle state (AC10); ⛔ neither carries PII.
+// Story 6.21a adds the 35th — `claim.death_certificate_reviewed` (D5), an IDENTITY annotation with a no-op
+// reducer recording the District Admin's accept / reject verdict on the current death certificate. The
+// approval gates read the review ROW, ⛔ not the event; a rejection is ⛔ not a denial (invariant 2).)
 
 export const CLAIM_EVENT_TYPES = [
   'claim.intake_initiated',
@@ -701,6 +733,7 @@ export const CLAIM_EVENT_TYPES = [
   'claim.nominee_name_checked',
   'claim.nominee_determination_recorded',
   'claim.nominee_lock_released',
+  'claim.death_certificate_reviewed',
   'claim.dpdpa_consent_recorded',
   'claim.dpdpa_consent_revoked',
   'claim.verifier_reviewing',
@@ -726,11 +759,11 @@ export const CLAIM_EVENT_TYPES = [
   'claim.denied_no_appeal',
 ] as const;
 
-/** The dotted `claim.*` event-type literal union (the 34 claim events). */
+/** The dotted `claim.*` event-type literal union (the 35 claim events). */
 export type ClaimEventType = (typeof CLAIM_EVENT_TYPES)[number];
 
 /**
- * type → payload-schema map. The ONE place the 34 events bind to their schemas;
+ * type → payload-schema map. The ONE place the 35 events bind to their schemas;
  * `EVENT_TYPE_REGISTRY` (packages/events) and the projector both consume it. The
  * `satisfies` keeps it exhaustive — adding a `ClaimEventType` without a schema is a
  * compile error.
@@ -747,6 +780,7 @@ export const CLAIM_EVENT_PAYLOAD_SCHEMAS = {
   'claim.nominee_name_checked': ClaimNomineeNameCheckedPayloadSchema,
   'claim.nominee_determination_recorded': ClaimNomineeDeterminationRecordedPayloadSchema,
   'claim.nominee_lock_released': ClaimNomineeLockReleasedPayloadSchema,
+  'claim.death_certificate_reviewed': ClaimDeathCertificateReviewedPayloadSchema,
   'claim.dpdpa_consent_recorded': ClaimDpdpaConsentRecordedPayloadSchema,
   'claim.dpdpa_consent_revoked': ClaimDpdpaConsentRevokedPayloadSchema,
   'claim.verifier_reviewing': ClaimVerifierReviewingPayloadSchema,

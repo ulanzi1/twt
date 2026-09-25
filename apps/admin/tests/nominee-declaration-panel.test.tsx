@@ -67,6 +67,8 @@ const TIMELINE: NomineeDeclarationTimelineResponse = {
   determination_recordable: true,
   viewer: { can_determine: true, can_decide_district: true },
   pending_corrections: { da_pending: 1, pa_pending: 1 },
+  // Story 6.21a (D8) — the determination's date is the ACCEPTED certificate's (read-only in the form).
+  accepted_certificate: { review_id: '00000000-0000-4000-8000-0000000000ac', accepted_date: { state: 'readable', value: '2026-05-01' } },
 };
 
 const CORRECTION_ID = '33333333-3333-4333-8333-333333333333';
@@ -180,9 +182,27 @@ describe('<NomineeDeclarationPanel> — the timeline and the determination', () 
     expect(props.onDetermine).not.toHaveBeenCalled();
   });
 
-  it('Record acts only with a date, EVERY version marked and a note — and submits exactly those marks', async () => {
+  it('⭐ Story 6.21a (D8) — the date is the ACCEPTED certificate’s, READ-ONLY: ⛔ never typed here', () => {
+    setup();
+    const date = screen.getByTestId('nominee-certificate-date') as HTMLInputElement;
+    expect(date.readOnly).toBe(true);
+    expect(date.value).toBe('2026-05-01');
+  });
+
+  it('⭐ Story 6.21a (D8) — with ⛔ NO accepted certificate the form has no date, SAYS WHY, and submits nothing', () => {
+    const { props } = setup({ timeline: { ...TIMELINE, accepted_certificate: null } });
+    expect((screen.getByTestId('nominee-certificate-date') as HTMLInputElement).value).toBe('');
+    expect(screen.getByTestId('nominee-determination-strip').textContent).toMatch(/Accept the death certificate first/);
+    fireEvent.click(screen.getByTestId(`mark-${V1}-stands`));
+    fireEvent.click(screen.getByTestId(`mark-${V2}-discarded`));
+    fireEvent.change(screen.getByTestId('nominee-determination-note'), { target: { value: 'n' } });
+    fireEvent.click(screen.getByTestId('nominee-determination-submit'));
+    expect(props.onDetermine).not.toHaveBeenCalled();
+    expect(screen.getByTestId('nominee-determination-incomplete')).toBeTruthy();
+  });
+
+  it('Record acts only with the accepted date, EVERY version marked and a note — and submits exactly those marks', async () => {
     const { props } = setup();
-    fireEvent.change(screen.getByTestId('nominee-certificate-date'), { target: { value: '2026-05-01' } });
     fireEvent.click(screen.getByTestId(`mark-${V1}-stands`));
     fireEvent.click(screen.getByTestId('nominee-determination-submit'));
     expect(props.onDetermine).not.toHaveBeenCalled(); // V2 unmarked

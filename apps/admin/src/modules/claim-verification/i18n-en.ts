@@ -232,7 +232,7 @@ export const verifierConsoleEn = {
   nomineeDeclaration: {
     heading: 'Nominee declaration history',
     intro:
-      'Every version of the nominees this member declared, oldest first. Enter the date on the death certificate and mark each version: a change made before that day stands; a change on that day or later is discarded.',
+      'Every version of the nominees this member declared, oldest first. Using the date on the accepted death certificate, mark each version: a change made before that day stands; a change on that day or later is discarded.',
     loading: 'Loading the declaration history…',
     loadError: 'The declaration history could not be loaded.',
     status: {
@@ -294,16 +294,24 @@ export const verifierConsoleEn = {
     determine: {
       heading: 'Record the determination',
       certificateDate: 'Date of death on the certificate',
+      // Story 6.21a (D8) — the date is READ-ONLY: it is the date of death the District Admin ACCEPTED on the
+      // certificate. Changing it means reviewing the certificate again — which also needs a fresh name check.
       certificateDateHelp:
-        'Enter the date exactly as it is written on the death certificate. A certificate without a clear date cannot be used.',
+        'This is the date of death accepted on the death certificate. To change it, review the certificate again — after that, record the determination and the nominee name check again.',
+      certificateNotAccepted:
+        'Accept the death certificate first. The determination uses the date of death on the accepted certificate.',
+      // Story 6.21a review fix — distinct from `certificateNotAccepted`: a certificate WAS accepted, but its
+      // stored date could not be read (an RTBF sentinel or a decrypt failure) — never taken on trust.
+      certificateDateUnreadable:
+        'The accepted certificate’s date could not be read right now. Try again, or review the certificate again if this continues.',
       stands: 'Stands',
       discarded: 'Discarded',
       markLegend: 'Mark this version',
       note: 'Your note',
       noteHelp: 'Say what you checked. The note is required and is kept with the determination.',
       submit: 'Record the determination',
-      incomplete: 'Enter the certificate date, mark every version and write a note before recording.',
-      incompleteHint: 'To record, enter the certificate date, mark every version and write a note.',
+      incomplete: 'Accept the death certificate, mark every version and write a note before recording.',
+      incompleteHint: 'To record, the death certificate must be accepted; then mark every version and write a note.',
       notRecordable: 'A determination cannot be recorded while the claim is in this state.',
       recorded: 'The determination was recorded.',
       refused: {
@@ -323,6 +331,11 @@ export const verifierConsoleEn = {
         missing_display: 'Your account has no display name, so a determination cannot be attributed to you. Ask a Super Admin to set it.',
         not_found: 'This claim could not be found. Reload the page.',
         concurrent: 'The claim changed at the same moment. Reload and try again.',
+        // Story 6.21a (D8)
+        certificate_not_accepted:
+          'The death certificate is not accepted (or it was reviewed again). Review the certificate, then record the determination.',
+        certificate_date_mismatch:
+          'The date differs from the one accepted on the death certificate. Reload — the form uses the accepted date.',
       } as Record<string, string>,
       forbidden: 'Only the District Admin can record a determination.',
       // Shown in place of the form to a viewer who may read the history but not determine (a verifier).
@@ -494,6 +507,103 @@ export const verifierConsoleEn = {
     revisionOfNote: 'Revision of an earlier decision',
     empty: 'No decisions recorded yet.',
     unattributed: 'Unattributed',
+  },
+  // ── Story 6.21a — the death certificate's clear-date rule (D10) ────────────────────────────────
+  // `2026-09-20-235` Y: only a certificate with a clear date is acceptable. `-236` BB: a rejection asks the
+  // family for another, and the claim is ⛔ never refused for it. ⛔ No string here says the system judged
+  // the date — the District Admin types it and decides (invariant 1). The OCR reading is labelled as a
+  // MACHINE reading every time it appears.
+  deathCertificate: {
+    heading: 'Death certificate review',
+    intro:
+      'Accept the death certificate only if it shows a clear, possible date of death — you type that date yourself. Otherwise reject it: the family is asked for another certificate, and the claim is never refused for this.',
+    statusLabel: 'Death certificate',
+    status: {
+      not_reviewed: 'Not reviewed yet',
+      accepted: 'Accepted',
+      rejected: 'Rejected — the family is asked for another certificate',
+    } as Record<string, string>,
+    decidedBy: 'by',
+    decidedAt: 'on',
+    noToken: 'This certificate has no upload record and cannot be reviewed. Ask the family to send it again.',
+    reasons: {
+      no_date_of_death: 'No date of death on the certificate',
+      date_of_death_unclear: 'The date of death is unclear',
+      date_of_death_in_future: 'The date of death is in the future',
+    } as Record<string, string>,
+    accept: 'Accept the certificate',
+    reject: 'Reject the certificate',
+    acceptHeading: 'Accept the death certificate',
+    rejectHeading: 'Reject the death certificate',
+    dateLabel: 'Date of death, as written on the certificate',
+    dateHelp: 'Type the date yourself. The OCR reading beside it is only a machine reading of the scan.',
+    ocrLabel: 'Read by OCR (a machine reading, not your entry)',
+    ocrNone: 'OCR could not read a date',
+    reasonLegend: 'Why can the certificate not be accepted?',
+    note: 'Your note',
+    noteHelp: 'Say what you checked. The note is required and is kept with the review.',
+    submitAccept: 'Record the acceptance',
+    submitReject: 'Record the rejection',
+    cancel: 'Cancel',
+    incompleteAccept: 'Enter the date of death and write a note before recording.',
+    incompleteReject: 'Choose a reason and write a note before recording.',
+    recorded: 'The review was recorded.',
+    redetermineHint:
+      'After a new review, record the nominee determination again and then the nominee name check — approval waits for both.',
+    refused: {
+      invalid_date: 'That is not a real calendar date.',
+      accept_future_date: 'That date is after today, so it cannot be a date of death. Reject the certificate instead.',
+      reason_on_accept: 'An accepted certificate carries no rejection reason.',
+      missing_reason: 'Choose why the certificate cannot be accepted.',
+      date_on_reject: 'A rejected certificate carries no date.',
+      missing_note: 'Write a note before recording.',
+      missing_display:
+        'Your account has no display name, so a review cannot be attributed to you. Ask a Super Admin to set it.',
+      stale_certificate: 'A newer certificate was sent while you were looking. Reload and review the new one.',
+      stale_supersession: 'Someone else reviewed this certificate meanwhile. Reload and look again.',
+      not_reviewable: 'A certificate cannot be reviewed while the claim is in this state.',
+      no_certificate: 'There is no certificate to review. Reload the page.',
+      not_found: 'This claim could not be found. Reload the page.',
+      concurrent: 'The claim changed at the same moment. Reload and try again.',
+    } as Record<string, string>,
+    refusedGeneric: 'The review could not be recorded. Please try again.',
+    forbidden: 'Only the District Admin can review the death certificate.',
+    sessionExpired: 'Your session has ended. Sign in again.',
+    invalid: 'Something in the form is not in the expected shape. Check the date and the note, then try again.',
+    // The approval gate (D7) — on the District Admin's console, worded by the server's reason.
+    approveBlocked: {
+      no_certificate: 'No death certificate has been sent yet. Approval waits for one with a clear date.',
+      not_reviewed: 'Review the death certificate before approving.',
+      rejected: 'The death certificate was rejected; the family has been asked for another. Approval waits for it.',
+      determination_stale:
+        'The death certificate was reviewed again after the nominee determination. Record the determination and the name check again.',
+    } as Record<string, string>,
+    // The same gate on a TRUSTEE surface (the cycle freeze, R9 voting) — the District Admin acts, not them.
+    trusteeApprovalGate: {
+      no_certificate: 'This claim is waiting for a death certificate with a clear date. It is not refused.',
+      not_reviewed: 'This claim is waiting for the District Admin to review the death certificate.',
+      rejected: 'This claim is waiting for the family to send another death certificate. It is not refused.',
+      determination_stale:
+        'This claim is waiting for the District Admin to record the nominee determination again against the accepted certificate.',
+    } as Record<string, string>,
+    history: {
+      show: 'Show every certificate sent',
+      hide: 'Hide the certificates',
+      audited: 'Opening them shows the recorded dates and notes, and is recorded in the audit trail.',
+      loading: 'Loading the certificates…',
+      error: 'The certificates could not be loaded. Try again.',
+      empty: 'No certificate has been sent.',
+      current: 'Current certificate',
+      earlier: 'Earlier certificate',
+      channel: { member_app: 'Sent by the family (app)', helpline: 'Sent by the helpline' } as Record<string, string>,
+      uploadedAt: 'Sent',
+      open: 'Open the certificate',
+      previewUnavailable: 'The certificate image could not be loaded right now',
+      notReviewed: 'Not reviewed',
+      acceptedDate: 'Accepted date of death',
+      superseded: { re_reviewed: 'Reviewed again later', replaced: 'A newer certificate was sent' } as Record<string, string>,
+      unreadable: 'Could not be read',
+    },
   },
 } as const;
 

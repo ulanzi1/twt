@@ -35,6 +35,7 @@ import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integra
 import {
   PARIWAR_A,
   enterAppScope,
+  seedAcceptedDeathCertificate,
   seedMember,
   seedNomineeDeclaration,
   seedNomineeDetermination,
@@ -663,6 +664,9 @@ describe.skipIf(!hasDatabase)('Story 6.18 — the nominee name check (:5433)', (
         await enterAppScope(client, PARIWAR_A);
         const cid = toClaimId(randomUUID());
         await driveTo(client, cid, toMemberId(randomUUID()), 'verifier_review');
+        // Story 6.21a (D7, D12(d)) — the certificate conjunct runs FIRST, so each row is given an ACCEPTED
+        // certificate: the row then fails on ITS OWN deficiency, ⛔ not on a missing certificate.
+        await seedAcceptedDeathCertificate(client, { pariwarId: PARIWAR_A, claimCaseId: cid });
         await d.seed(client, tx, cid);
 
         await expect(
@@ -679,6 +683,9 @@ describe.skipIf(!hasDatabase)('Story 6.18 — the nominee name check (:5433)', (
         await enterAppScope(client, PARIWAR_A);
         const cid = toClaimId(randomUUID());
         await driveTo(client, cid, toMemberId(randomUUID()), 'verifier_approved');
+        // Story 6.21a (D7, D12(d)) — the certificate conjunct runs FIRST, so each row is given an ACCEPTED
+        // certificate: the row then fails on ITS OWN deficiency, ⛔ not on a missing certificate.
+        await seedAcceptedDeathCertificate(client, { pariwarId: PARIWAR_A, claimCaseId: cid });
         await d.seed(client, tx, cid);
 
         await expect(

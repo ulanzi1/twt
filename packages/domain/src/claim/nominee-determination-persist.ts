@@ -23,6 +23,12 @@
 // is mechanically determined by D6 — the writer refuses any other. What the District Admin genuinely
 // decides is the CERTIFICATE'S DATE (and, through Story 6-21, whether the certificate is admissible).
 // ⚠ Until 6-21 lands the entered date is TAKEN ON TRUST (D4) — a named go-live coupling.
+// ⭐ Story 6.21a (2026-09-25): CLOSED BY THE BUILD — discharges on the build, ⛔ not on the record. The date
+// is no longer taken on trust: the determination must carry the id of the claim's CURRENT, ACCEPTED
+// death-certificate review (`deathCertificateReviewId`), re-asserted below under the claim-row lock AFTER
+// every 6.20 validation, and stored in `death_certificate_review_id`. The HANDLER decrypts the accepted
+// date and refuses a different one (`certificate_date_mismatch`) — ⛔ no decrypt here (T5). A later
+// re-review or replacement makes the determination `determination_stale` at the approval gate (6.21a D7).
 //
 // ⛔ A NEW TABLE, ⛔ not `claim_verifier_decisions` (T6): a row there would disqualify the District Admin
 // from reviewing an appeal of this claim.
@@ -34,7 +40,13 @@ import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
 import type pg from 'pg';
 
 import { bindScopedDb, type Db } from '../db.js';
-import type { ClaimId, NomineeDeterminationId, NomineeVersionId, PariwarId } from '../ids/index.js';
+import type {
+  ClaimId,
+  DeathCertificateReviewId,
+  NomineeDeterminationId,
+  NomineeVersionId,
+  PariwarId,
+} from '../ids/index.js';
 import {
   getMemberNomineeProjectionRanks,
   listNomineeDeclarationVersions,
@@ -45,6 +57,7 @@ import {
   nomineeDeterminationItems,
   nomineeDeterminations,
 } from '../schema/nominee_determinations.js';
+import { deathCertificateStatus, readDeathCertificateSnapshot } from './death-certificate-approval.js';
 import { NomineeDeterminationRefusedError } from './errors.js';
 import type { ClaimEventActor } from './events.js';
 import { NOMINEE_NAME_CHECK_RECORDABLE_STATES } from './nominee-name-check.js';
@@ -83,6 +96,13 @@ export interface RecordNomineeDeterminationInput {
   readonly watermark: { readonly rank1: number | null; readonly rank2: number | null };
   /** The live determination the District Admin saw (`null` when there was none) — the supersession guard. */
   readonly expectedLiveDeterminationId: string | null;
+  /**
+   * Story 6.21a D8 — the CURRENT, ACCEPTED death-certificate review whose date `certificateDate` is. The
+   * handler read it (and compared the decrypted date); this writer re-asserts it under the lock. `null` when
+   * the handler found none — the writer then refuses `certificate_not_accepted` AFTER 6.20's own validations,
+   * so the refusal ORDER is the same at the HTTP layer as here.
+   */
+  readonly deathCertificateReviewId: string | null;
   readonly actorId: string;
   /** Snapshotted server-side by the caller — ⛔ never email-derived, ⛔ never from the request. */
   readonly actorDisplay: string;
@@ -223,6 +243,22 @@ export async function recordNomineeDetermination(
   if (liveId !== expectedLiveId) {
     throw refuse('stale_supersession', 'the live determination changed after the timeline was read');
   }
+
+  // (7b) Story 6.21a D8 — the cutoff comes from the CURRENT, ACCEPTED certificate. AFTER every 6.20
+  // validation (so its refusals keep their reasons), under the claim-row lock (the review writer and the
+  // OCR job lock the same row first, so the certificate cannot move between this read and the insert).
+  // D14 — ids are currency tokens: plain `===` on lower-cased ids.
+  const certificate = await readDeathCertificateSnapshot(db, input.pariwarId, input.claimCaseId);
+  const acceptedReviewId =
+    deathCertificateStatus(certificate) === 'accepted'
+      ? (certificate.currentReview!.reviewId as string).toLowerCase()
+      : null;
+  if (acceptedReviewId === null || acceptedReviewId !== input.deathCertificateReviewId?.toLowerCase()) {
+    throw refuse(
+      'certificate_not_accepted',
+      'the determination must be made against the claim\'s current, accepted death certificate',
+    );
+  }
   if (liveId !== null) {
     const superseded = await db
       .update(nomineeDeterminations)
@@ -251,6 +287,7 @@ export async function recordNomineeDetermination(
       decidedByActorId: input.actorId,
       decidedByDisplay: input.actorDisplay,
       supersedesDeterminationId: liveId as NomineeDeterminationId | null,
+      deathCertificateReviewId: acceptedReviewId as DeathCertificateReviewId,
     })
     .returning({ determinationId: nomineeDeterminations.determinationId });
   const determinationId = row!.determinationId;

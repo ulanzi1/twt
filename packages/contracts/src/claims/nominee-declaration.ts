@@ -118,6 +118,17 @@ export const NomineeDeclarationTimelineResponse = z
     pending_corrections: z
       .object({ da_pending: z.number().int().nonnegative(), pa_pending: z.number().int().nonnegative() })
       .strict(),
+    /**
+     * Story 6.21a (D8) — the claim's CURRENT, ACCEPTED death certificate, whose date the determination MUST
+     * use (the form shows it READ-ONLY and sends it back). `null` while there is none (missing, awaiting
+     * review or rejected) — the District Admin reviews the certificate first. The date is decrypted here, on
+     * this audited on-demand read. ⚠ `ReadableName`, ⛔ NOT `CalendarDate`: an RTBF sentinel or a failed
+     * decrypt must degrade to `unreadable`/a plain string, ⛔ never 500 the parse.
+     */
+    accepted_certificate: z
+      .object({ review_id: z.string().uuid(), accepted_date: ReadableName })
+      .strict()
+      .nullable(),
   })
   .strict();
 export type NomineeDeclarationTimelineResponse = z.output<typeof NomineeDeclarationTimelineResponse>;

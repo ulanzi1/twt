@@ -18,6 +18,8 @@ import type pg from 'pg';
 
 import { bindScopedDb, setPariwarScope, type Db } from '../../src/db.js';
 import { getEffectiveNomineeDeclaration } from '../../src/claim/nominee-effective.js';
+import { deathCertificateStatus, readDeathCertificateSnapshot } from '../../src/claim/death-certificate-approval.js';
+import { recordDeathCertificateReview } from '../../src/claim/death-certificate-review-persist.js';
 import { recordNomineeDetermination } from '../../src/claim/nominee-determination-persist.js';
 import { addCalendarDays, istDateOf } from '../../src/cycle-calendar/holiday-resolver.js';
 import { recordNomineeNameCheck } from '../../src/claim/nominee-name-check-persist.js';
@@ -765,6 +767,189 @@ export async function seedNomineeDeclaration(
   });
 }
 
+// ── Story 6.21a — the death certificate (D12) ─────────────────────────────────────────────────────
+// ⭐ TEST-ONLY RAW INSERTS. The OCR job (`runClaimOcrParity`) is the sole production writer of
+// `claim_documents` and `claim_death_certificate_uploads`; there is ⛔ no domain writer for either, so a
+// domain spec that needs a certificate seeds it here. ⛔ No production path may import this file.
+
+export interface SeededDeathCertificate {
+  readonly claimDocumentId: string;
+  readonly uploadId: string;
+  readonly storageObjectKey: string;
+}
+
+/**
+ * Seed a death certificate the way the OCR job would leave it: the `claim_documents` row (created, or its
+ * key moved to this upload) and ONE upload row whose key IS the row's key — i.e. the CURRENT certificate.
+ * Call it again on the same claim for a REPLACEMENT (a new upload, the old one kept). Runs in the caller's
+ * scope-tx.
+ */
+export async function seedDeathCertificate(
+  client: pg.PoolClient,
+  opts: { readonly pariwarId: string; readonly claimCaseId: string; readonly uploadedAt?: Date },
+): Promise<SeededDeathCertificate> {
+  const tx = bindScopedDb(client);
+  const pid = toPariwarId(opts.pariwarId);
+  const cid = toClaimId(opts.claimCaseId);
+  const [claimRow] = await tx
+    .select({ deceasedMemberId: schema.claims.deceasedMemberId })
+    .from(schema.claims)
+    .where(and(eq(schema.claims.pariwarId, pid), eq(schema.claims.claimCaseId, cid)));
+  if (!claimRow) throw new Error(`[seedDeathCertificate] no claim ${opts.claimCaseId} in ${opts.pariwarId}`);
+  const [existing] = await tx
+    .select({ claimDocumentId: schema.claimDocuments.claimDocumentId })
+    .from(schema.claimDocuments)
+    .where(
+      and(
+        eq(schema.claimDocuments.pariwarId, pid),
+        eq(schema.claimDocuments.claimCaseId, cid),
+        eq(schema.claimDocuments.documentType, 'death_certificate'),
+      ),
+    );
+  const claimDocumentId = (existing?.claimDocumentId as string | undefined) ?? randomUUID();
+  const uploadId = randomUUID();
+  const storageObjectKey = `pariwar/${pid}/claim/${cid}/death_certificate/${claimDocumentId}/${uploadId}`;
+  if (existing) {
+    await tx
+      .update(schema.claimDocuments)
+      .set({ storageObjectKey, updatedAt: new Date() })
+      .where(eq(schema.claimDocuments.claimDocumentId, existing.claimDocumentId));
+  } else {
+    await tx.insert(schema.claimDocuments).values({
+      claimDocumentId: claimDocumentId as never,
+      claimCaseId: cid,
+      pariwarId: pid,
+      documentType: 'death_certificate',
+      storageObjectKey,
+      contentType: 'application/pdf',
+      byteSize: 1024,
+      parityOutcome: 'match',
+      parityFlags: {},
+      ocrConfidence: 0.9,
+      verifierReviewRequired: false,
+    });
+  }
+  await tx.insert(schema.claimDeathCertificateUploads).values({
+    uploadId: uploadId as never,
+    claimCaseId: cid,
+    pariwarId: pid,
+    deceasedMemberId: claimRow.deceasedMemberId,
+    claimDocumentId: claimDocumentId as never,
+    storageObjectKey,
+    contentType: 'application/pdf',
+    byteSize: 1024,
+    channel: 'member_app',
+    uploadedByActorId: null,
+    uploadedAt: opts.uploadedAt ?? new Date(),
+  });
+  return { claimDocumentId, uploadId, storageObjectKey };
+}
+
+/** The fixture ciphertext for an accepted date — it carries the date so a later call can tell it apart. */
+export function fixtureAcceptedDateCiphertext(date: string): string {
+  return `enc:v1:accepted-date:${date}`;
+}
+
+/**
+ * D4's injected clock for a fixture accept: a date may be TOMORROW (`certificateDateAfterEverything`), which
+ * the real writer refuses against the wall clock — so the fixture passes a `now` on that IST day.
+ */
+function fixtureReviewNow(date: string): Date {
+  return new Date(Math.max(Date.now(), Date.parse(`${date}T12:00:00+05:30`)));
+}
+
+/**
+ * Ensure the claim's CURRENT death certificate is ACCEPTED — through the REAL review writer, ⛔ never a raw
+ * insert of a review (the writer's window, token and supersession guards run). Returns the accepted review id.
+ *   · already accepted, and (when `date` is given) with that fixture date ⇒ reused as is;
+ *   · accepted with ANOTHER date ⇒ re-reviewed (`re_reviewed`) with this one;
+ *   · awaiting review with an upload ⇒ accepted;
+ *   · missing, rejected, or a legacy row with no upload ⇒ a NEW certificate is seeded, then accepted.
+ * The claim must be in the review window (the writer refuses otherwise).
+ */
+export async function seedAcceptedDeathCertificate(
+  client: pg.PoolClient,
+  opts: {
+    readonly pariwarId: string;
+    readonly claimCaseId: string;
+    /** The date of death to accept. Omitted ⇒ keep any accepted certificate, else accept tomorrow (IST). */
+    readonly date?: string;
+    readonly now?: Date;
+    readonly actorId?: string;
+    readonly actorDisplay?: string;
+  },
+): Promise<string> {
+  const tx = bindScopedDb(client);
+  const pid = toPariwarId(opts.pariwarId);
+  const cid = toClaimId(opts.claimCaseId);
+  const snapshot = await readDeathCertificateSnapshot(tx, pid, cid);
+  const status = deathCertificateStatus(snapshot);
+  if (status === 'accepted') {
+    if (opts.date === undefined) return snapshot.currentReview!.reviewId as string;
+    const [row] = await tx
+      .select({ c: schema.claimDeathCertificateReviews.acceptedDateCiphertext })
+      .from(schema.claimDeathCertificateReviews)
+      .where(eq(schema.claimDeathCertificateReviews.reviewId, snapshot.currentReview!.reviewId));
+    if (row?.c === fixtureAcceptedDateCiphertext(opts.date)) return snapshot.currentReview!.reviewId as string;
+  }
+  let token = snapshot.currentUploadId as string | null;
+  if (status === 'missing' || status === 'rejected' || token === null) {
+    token = (await seedDeathCertificate(client, { pariwarId: opts.pariwarId, claimCaseId: opts.claimCaseId })).uploadId;
+  }
+  const date = opts.date ?? certificateDateAfterEverything();
+  const result = await recordDeathCertificateReview(client, {
+    claimCaseId: cid,
+    pariwarId: pid,
+    verdict: 'accepted',
+    certificateToken: token,
+    acceptedDate: date,
+    acceptedDateCiphertext: fixtureAcceptedDateCiphertext(date),
+    rejectionReason: null,
+    noteCiphertext: 'enc:v1:review-note',
+    expectedLiveReviewId: (snapshot.liveReview?.reviewId as string | undefined) ?? null,
+    actorId: opts.actorId ?? randomUUID(),
+    actorDisplay: opts.actorDisplay ?? 'Test District Admin',
+    actor: 'operator',
+    now: opts.now ?? fixtureReviewNow(date),
+  });
+  return result.reviewId as string;
+}
+
+/** Reject the claim's current death certificate through the REAL writer. Returns the review id. */
+export async function seedRejectedDeathCertificate(
+  client: pg.PoolClient,
+  opts: {
+    readonly pariwarId: string;
+    readonly claimCaseId: string;
+    readonly reason?: 'no_date_of_death' | 'date_of_death_unclear' | 'date_of_death_in_future';
+    readonly actorId?: string;
+  },
+): Promise<string> {
+  const tx = bindScopedDb(client);
+  const pid = toPariwarId(opts.pariwarId);
+  const cid = toClaimId(opts.claimCaseId);
+  let snapshot = await readDeathCertificateSnapshot(tx, pid, cid);
+  if (snapshot.currentUploadId === null) {
+    await seedDeathCertificate(client, { pariwarId: opts.pariwarId, claimCaseId: opts.claimCaseId });
+    snapshot = await readDeathCertificateSnapshot(tx, pid, cid);
+  }
+  const result = await recordDeathCertificateReview(client, {
+    claimCaseId: cid,
+    pariwarId: pid,
+    verdict: 'rejected',
+    certificateToken: snapshot.currentUploadId as string,
+    acceptedDate: null,
+    acceptedDateCiphertext: null,
+    rejectionReason: opts.reason ?? 'no_date_of_death',
+    noteCiphertext: 'enc:v1:review-note',
+    expectedLiveReviewId: (snapshot.liveReview?.reviewId as string | undefined) ?? null,
+    actorId: opts.actorId ?? randomUUID(),
+    actorDisplay: 'Test District Admin',
+    actor: 'operator',
+  });
+  return result.reviewId as string;
+}
+
 /** Tomorrow in IST — a certificate date against which every version dated up to now STANDS. */
 export function certificateDateAfterEverything(): string {
   return addCalendarDays(istDateOf(new Date()), 1);
@@ -784,11 +969,23 @@ export async function seedNomineeDetermination(
     readonly marks?: readonly { readonly versionId: string; readonly mark: 'stands' | 'discarded' }[];
     readonly actorId?: string;
     readonly actorDisplay?: string;
+    /**
+     * ⭐ Story 6.21a (D12) — the ACCEPTED death certificate the determination's date must come from (D8).
+     * Default `'accepted'`: the claim's current certificate is accepted with the determination's OWN date
+     * (through the real review writer), and its review id is passed. `'skip'` seeds nothing and passes a
+     * review id that is NOT the current accepted one — the writer's `certificate_not_accepted` refusal.
+     */
+    readonly certificate?: 'accepted' | 'skip';
   } = {},
 ) {
   const tx = bindScopedDb(client);
   const pid = toPariwarId(pariwarId);
   const cid = toClaimId(claimCaseId);
+  const certificateDate = opts.certificateDate ?? certificateDateAfterEverything();
+  const deathCertificateReviewId =
+    opts.certificate === 'skip'
+      ? randomUUID()
+      : await seedAcceptedDeathCertificate(client, { pariwarId, claimCaseId, date: certificateDate });
   const claimRows = await tx
     .select({ deceasedMemberId: schema.claims.deceasedMemberId })
     .from(schema.claims)
@@ -810,12 +1007,13 @@ export async function seedNomineeDetermination(
   return recordNomineeDetermination(client, {
     claimCaseId: cid,
     pariwarId: pid,
-    certificateDate: opts.certificateDate ?? certificateDateAfterEverything(),
+    certificateDate,
     certificateDateCiphertext: 'enc:v1:certificate-date',
     noteCiphertext: 'enc:v1:determination-note',
     marks: opts.marks ?? versions.map((v) => ({ versionId: v.versionId, mark: 'stands' as const })),
     watermark: { rank1: head(1), rank2: head(2) },
     expectedLiveDeterminationId: (live[0]?.id as string | undefined) ?? null,
+    deathCertificateReviewId,
     actorId: opts.actorId ?? randomUUID(),
     actorDisplay: opts.actorDisplay ?? 'Test District Admin',
     actor: 'operator',
@@ -862,6 +1060,14 @@ export async function seedNomineeNameCheck(
      * writer. `'skip'` reaches an UNDETERMINED claim — the gate's 409 `nominee_determination_required`.
      */
     readonly determination?: 'no_discards' | 'skip';
+    /**
+     * ⭐ Story 6.21a (D12, D7) — the ACCEPTED death certificate the approval gate now requires FIRST.
+     * Default `'accepted'`: the claim's current certificate is accepted through the real review writer
+     * (kept if one already is), before any determination. `'skip'` reaches a claim with no accepted
+     * certificate — the gate's 409 `death_certificate_acceptance_required` — and ⛔ seeds no determination
+     * either (a determination needs an accepted certificate, D8), unless one is already live.
+     */
+    readonly certificate?: 'accepted' | 'skip';
   } = {},
 ): Promise<void> {
   if (opts.skip === true) return;
@@ -927,6 +1133,9 @@ export async function seedNomineeNameCheck(
     .from(schema.claims)
     .where(and(eq(schema.claims.pariwarId, pid), eq(schema.claims.claimCaseId, cid)));
   const deceasedMemberId = claimRows[0]!.deceasedMemberId;
+  if (opts.certificate !== 'skip') {
+    await seedAcceptedDeathCertificate(client, { pariwarId, claimCaseId });
+  }
   if (opts.determination !== 'skip') {
     const before = await getEffectiveNomineeDeclaration(tx, pid, cid);
     if (before.status === 'unversioned') {
@@ -937,7 +1146,9 @@ export async function seedNomineeNameCheck(
     if ((await listNomineeDeclarationVersions(tx, pid, deceasedMemberId)).length === 0) {
       await seedNomineeDeclaration(tx, pariwarId, deceasedMemberId);
     }
-    if (before.determinationId === null) {
+    if (before.determinationId === null && opts.certificate !== 'skip') {
+      // The determination's date = the accepted certificate's (no `certificateDate` ⇒ tomorrow IST, the
+      // date `seedAcceptedDeathCertificate` accepted above — so the review is reused, ⛔ not re-reviewed).
       await seedNomineeDetermination(client, pariwarId, claimCaseId);
     }
   }

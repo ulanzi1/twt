@@ -775,3 +775,23 @@ export const nomineeCorrectionId = uuidBrand('NomineeCorrectionId');
 export type ClaimNomineeFindingId = Brand<'ClaimNomineeFindingId'>;
 /** Smart constructor: validates UUID shape, returns a branded `ClaimNomineeFindingId`. */
 export const claimNomineeFindingId = uuidBrand('ClaimNomineeFindingId');
+
+// ── Death certificate ids (Story 6.21a, Task 1; D1, D2) ──────────────────────────────
+// Two NEW branded ids. Each addresses one ROW; neither is an event stream id:
+//   · `DeathCertificateUploadId` — one uploaded death certificate
+//     (`claim_death_certificate_uploads.upload_id`). Minted by the upload handler; it names the upload's
+//     OWN storage object, so a replacement ⛔ never overwrites the certificate it replaces (D2). It is the
+//     console's `certificateToken`, a CURRENCY token, ⛔ not a credential: compare lower-cased with `===`
+//     (D14 / T6).
+//   · `DeathCertificateReviewId` — the District Admin's accept / reject verdict on ONE upload
+//     (`claim_death_certificate_reviews.review_id`). At most one live per claim (D1).
+
+/** Per-row address of an uploaded death certificate (`claim_death_certificate_uploads.upload_id`). */
+export type DeathCertificateUploadId = Brand<'DeathCertificateUploadId'>;
+/** Smart constructor: validates UUID shape, returns a branded `DeathCertificateUploadId`. */
+export const deathCertificateUploadId = uuidBrand('DeathCertificateUploadId');
+
+/** Per-row address of a death-certificate review (`claim_death_certificate_reviews.review_id`). */
+export type DeathCertificateReviewId = Brand<'DeathCertificateReviewId'>;
+/** Smart constructor: validates UUID shape, returns a branded `DeathCertificateReviewId`. */
+export const deathCertificateReviewId = uuidBrand('DeathCertificateReviewId');

@@ -23,7 +23,7 @@ import * as service from '../../../src/modules/auth/admin/admin-auth.service.js'
 import { closeScopeTx, openScopeTx } from '../../../src/modules/multi-tenant/scope-tx.js';
 import { buildServer } from '../../../src/server.js';
 import { buildTestDeps, hasDatabase, makeClient, type TestDeps } from '../_setup.js';
-import { seedNomineeNameCheck } from '../_nominee-name-check-fixture.js';
+import { ensureAcceptedDeathCertificate, seedNomineeNameCheck } from '../_nominee-name-check-fixture.js';
 import { encryptNomineeBankField } from '../../../src/modules/claims/nominee-bank-crypto.js';
 import { encryptNomineeField } from '../../../src/modules/nominee/nominee-crypto.js';
 import { encryptTrusteeRationale } from '../../../src/modules/claims/state-trustee-decision-crypto.js';
@@ -165,10 +165,14 @@ describe.skipIf(!hasDatabase)('Nominee name-check surface — E2E (:5433)', () =
       const versions = await nominee.listNomineeDeclarationVersions(scopeTx.tx, pid, deceasedMemberId);
       const head = (rank: number) =>
         versions.filter((v) => v.rank === rank).reduce<number | null>((m, v) => Math.max(m ?? 0, v.versionNo), null);
+      // Story 6.21a (D12(c)) — the determination's date must be the current ACCEPTED certificate's (D8).
+      const tomorrow = cycleCalendar.addCalendarDays(cycleCalendar.istDateOf(new Date()), 1);
+      const deathCertificateReviewId = await ensureAcceptedDeathCertificate(deps, scopeTx, pariwarId, claimCaseId, { date: tomorrow });
       await claim.recordNomineeDetermination(scopeTx.client, {
         claimCaseId,
         pariwarId: pid,
-        certificateDate: cycleCalendar.addCalendarDays(cycleCalendar.istDateOf(new Date()), 1),
+        deathCertificateReviewId,
+        certificateDate: tomorrow,
         certificateDateCiphertext: 'enc:v1:certificate-date',
         noteCiphertext: 'enc:v1:determination-note',
         marks: versions.map((v) => ({ versionId: v.versionId, mark: 'stands' as const })),
@@ -468,9 +472,12 @@ describe.skipIf(!hasDatabase)('Nominee name-check surface — E2E (:5433)', () =
         const cid = ids.claimId(claimCaseId);
         const versions = await nominee.listNomineeDeclarationVersions(scopeTx.tx, pid, memberId);
         const live = await claim.getLiveNomineeDetermination(scopeTx.tx, pid, cid);
+        // Story 6.21a (D12(c)) — the May certificate is RE-REVIEWED accepted with its own date first (D8).
+        const deathCertificateReviewId = await ensureAcceptedDeathCertificate(deps, scopeTx, pariwarId, claimCaseId, { date: '2026-05-01' });
         await claim.recordNomineeDetermination(scopeTx.client, {
           claimCaseId: cid,
           pariwarId: pid,
+          deathCertificateReviewId,
           certificateDate: '2026-05-01',
           certificateDateCiphertext: 'enc:v1:certificate-date',
           noteCiphertext: 'enc:v1:determination-note',

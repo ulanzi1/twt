@@ -55,6 +55,7 @@ import {
   encryptCorrectionNote,
   encryptDeterminationField,
 } from './nominee-declaration-crypto.js';
+import { decryptDeathCertificateReviewField } from './death-certificate-crypto.js';
 import { decryptVerifierRationale } from './verifier-decision-crypto.js';
 
 /** The timeline READ key — reused, ⛔ no fifth key (`-241` §2). */
@@ -212,6 +213,20 @@ export function createNomineeDeclarationHandlers(deps: AppDeps) {
       const head = (rank: number) =>
         versions.filter((v) => v.rank === rank).reduce<number | null>((m, v) => Math.max(m ?? 0, v.versionNo), null);
       const pending = await claimDomain.countPendingNomineeCorrections(scopeTx.tx, pariwarId, cid);
+      // ⭐ Story 6.21a (D8) — the current ACCEPTED certificate's date, decrypted on this audited read: the
+      // determination form shows it READ-ONLY (⛔ never typed). `null` while there is none.
+      const accepted = await claimDomain.getCurrentAcceptedDeathCertificate(scopeTx.tx, pariwarId, cid);
+      const acceptedCertificate = accepted
+        ? {
+            review_id: accepted.reviewId,
+            accepted_date: await readable(
+              () => decryptDeathCertificateReviewField(accepted.acceptedDateCiphertext, scopeTx.pariwarId, enc),
+              request.log,
+              'accepted_certificate_date',
+              claimCaseId,
+            ),
+          }
+        : null;
       // ⭐ What THIS viewer may do (code review 2026-09-24b) — the same keys, at the same district, as the
       // write routes' preHandlers (`requireDetermine` / `requireDistrictApproval`). UI only; ⛔ never the gate.
       const grants = request.scopeGrants ?? (await loadActorGrants(scopeTx, actorId));
@@ -223,7 +238,13 @@ export function createNomineeDeclarationHandlers(deps: AppDeps) {
         actorId,
         pariwarId: scopeTx.pariwarId,
         resourceLocator: locator(claimCaseId),
-        context: { claim_case_id: claimCaseId, version_count: versions.length, declaration_status: effective.status },
+        context: {
+          claim_case_id: claimCaseId,
+          version_count: versions.length,
+          declaration_status: effective.status,
+          // Story 6.21a — WHETHER the accepted date was decrypted here (⛔ never the date itself).
+          accepted_certificate_read: acceptedCertificate !== null,
+        },
       });
 
       return {
@@ -265,6 +286,7 @@ export function createNomineeDeclarationHandlers(deps: AppDeps) {
         ),
         viewer: { can_determine: may(NOMINEE_DETERMINATION_KEY), can_decide_district: may(NOMINEE_CORRECTION_DISTRICT_KEY) },
         pending_corrections: { da_pending: pending.daPending, pa_pending: pending.paPending },
+        accepted_certificate: acceptedCertificate,
       };
     },
 
@@ -331,9 +353,39 @@ export function createNomineeDeclarationHandlers(deps: AppDeps) {
         const scopeTx = await openScopeTx(deps, p);
         let ok = false;
         try {
+          // ⭐ Story 6.21a (D8, T5) — the cutoff must be the CURRENT, ACCEPTED certificate's date. The HANDLER
+          // decrypts and compares (⛔ no decrypt in the domain, and envelope ciphertext never compares equal);
+          // the writer then re-asserts the review id under the claim-row lock. With ⛔ no accepted review the
+          // writer is passed `null` and refuses `certificate_not_accepted` AFTER 6.20's own validations, so the
+          // refusal ORDER is unchanged. ⛔ The dates are never logged or audited.
+          const accepted = await claimDomain.getCurrentAcceptedDeathCertificate(
+            scopeTx.tx,
+            ids.pariwarId(p),
+            ids.claimId(claimCaseId),
+          );
+          if (accepted) {
+            let acceptedDate: string | null = null;
+            try {
+              acceptedDate = await decryptDeathCertificateReviewField(accepted.acceptedDateCiphertext, p, enc);
+            } catch (err) {
+              request.log.warn(
+                { err: err instanceof Error ? err.name : 'unknown', claimCaseId },
+                'nominee-determination: accepted certificate date unreadable',
+              );
+            }
+            // An unreadable or RTBF-scrubbed date can never be matched: ⛔ never taken on trust again.
+            if (acceptedDate !== body.certificate_date) {
+              throw new claimDomain.NomineeDeterminationRefusedError(
+                claimCaseId,
+                'certificate_date_mismatch',
+                "the date differs from the accepted death certificate's",
+              );
+            }
+          }
           result = await claimDomain.recordNomineeDetermination(scopeTx.client, {
             claimCaseId: ids.claimId(claimCaseId),
             pariwarId: ids.pariwarId(p),
+            deathCertificateReviewId: accepted?.reviewId ?? null,
             certificateDate: body.certificate_date,
             certificateDateCiphertext: dateCt,
             noteCiphertext: noteCt,

@@ -164,6 +164,12 @@ export interface SignalsPanelProps {
   onAssessConcealment?: (input: ConcealmentAssessmentSubmit) => Promise<void>;
   concealmentAssessing?: boolean;
   concealmentAssessError?: string | null;
+  /**
+   * Story 6.21a (D10) — "Request a better document" on the DEATH CERTIFICATE's preview opens the District
+   * Admin's REJECT form. Passed ONLY when the viewer may review (`viewer.canReview`); ⛔ never wired to any other
+   * document, and `onMarkIllegible` stays unwired (one verdict gets ⛔ no second button).
+   */
+  onRequestBetterCertificate?: () => void;
 }
 
 export function SignalsPanel({
@@ -171,6 +177,7 @@ export function SignalsPanel({
   onAssessConcealment,
   concealmentAssessing,
   concealmentAssessError,
+  onRequestBetterCertificate,
 }: SignalsPanelProps): ReactElement {
   return (
     <div className="flex flex-col gap-4" data-testid="signals-panel">
@@ -204,7 +211,13 @@ export function SignalsPanel({
         {packet.documentReview.status === 'present' ? (
           <div className="flex flex-col gap-4">
             {packet.documentReview.reviews.map((rev, i) => (
-              <VerifierReviewPanel key={`${rev.documentType}-${i}`} data={toReviewData(rev)} />
+              <VerifierReviewPanel
+                key={`${rev.documentType}-${i}`}
+                data={toReviewData(rev)}
+                {...(rev.documentType === 'death_certificate' && rev.review?.viewer.canReview === true && onRequestBetterCertificate
+                  ? { onRequestBetter: onRequestBetterCertificate }
+                  : {})}
+              />
             ))}
           </div>
         ) : (

@@ -110,6 +110,8 @@ const timeline = (claimCaseId: string): NomineeDeclarationTimelineResponse => ({
   determination_recordable: true,
   viewer: { can_determine: true, can_decide_district: true },
   pending_corrections: { da_pending: 0, pa_pending: 0 },
+  // Story 6.21a (D8) — the determination's date is the ACCEPTED certificate's (read-only in the form).
+  accepted_certificate: { review_id: '00000000-0000-4000-8000-0000000000ac', accepted_date: { state: 'readable', value: '2026-05-01' } },
 });
 
 const snapshots = (claimCaseId: string): NomineeDeclarationSnapshotsResponse => ({
@@ -209,7 +211,6 @@ describe('<VerifierConsoleRoute> — the D10 reveal', () => {
     render(ui(<VerifierConsoleRoute />));
     await openAndReveal();
     const fillAndRecord = () => {
-      fireEvent.change(screen.getByTestId('nominee-certificate-date'), { target: { value: '2026-05-01' } });
       fireEvent.click(screen.getByTestId(`mark-${V1}-stands`));
       fireEvent.change(screen.getByTestId('nominee-determination-note'), { target: { value: 'Checked.' } });
       fireEvent.click(screen.getByTestId('nominee-determination-submit'));

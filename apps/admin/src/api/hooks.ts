@@ -1749,6 +1749,10 @@ const DETERMINATION_STALE_CODES: ReadonlySet<string> = new Set([
   'nominee_determination.concurrent',
   // The claim LEFT the recordable window — refetch so the form stops being offered.
   'nominee_determination.not_recordable',
+  // Story 6.21a (D8) — the ACCEPTED certificate moved (re-reviewed, replaced, or never accepted): refetch the
+  // timeline so the read-only date the form sends is the one now accepted.
+  'nominee_determination.certificate_not_accepted',
+  'nominee_determination.certificate_date_mismatch',
 ]);
 const CORRECTION_STALE_CODES: ReadonlySet<string> = new Set([
   'nominee_correction.step_conflict',
@@ -1847,5 +1851,65 @@ export function usePendingNomineeCorrections(pariwarId: string) {
   return useQuery({
     queryKey: pendingNomineeCorrectionsKey(pariwarId),
     queryFn: () => api.getPendingNomineeCorrections(pariwarId),
+  });
+}
+
+// ── Story 6.21a — the death certificate's clear-date rule ──
+export const deathCertificateHistoryKey = (pariwarId: string, claimCaseId: string) =>
+  ['death-certificate-history', pariwarId, claimCaseId] as const;
+
+/**
+ * The HISTORY — every upload with its reviews, the accepted dates and notes DECRYPTED. ⭐ On demand ONLY and
+ * ⛔ never a background refetch: every fetch decrypts Tier-1 data and writes an audit line (6.20's snapshots).
+ */
+export function useDeathCertificateHistory(pariwarId: string, claimCaseId: string | null, enabled: boolean) {
+  return useQuery({
+    queryKey: deathCertificateHistoryKey(pariwarId, claimCaseId ?? ''),
+    queryFn: () => api.getDeathCertificateHistory(pariwarId, claimCaseId as string),
+    enabled: Boolean(claimCaseId) && enabled,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
+}
+
+/**
+ * ⭐ FORGET the decrypted history when it CLOSES or the claim changes — the `useForgetNomineeDeclarationDetails`
+ * A→B→A posture: a closed observer keeps its cache, which would re-render the dates and notes on reopen with
+ * ⛔ no click and ⛔ no audit line.
+ */
+export function useForgetDeathCertificateHistory(pariwarId: string, claimCaseId: string | null) {
+  const qc = useQueryClient();
+  return (otherClaimCaseId?: string) => {
+    qc.removeQueries({ queryKey: deathCertificateHistoryKey(pariwarId, otherClaimCaseId ?? claimCaseId ?? ''), exact: true });
+  };
+}
+
+/** The review refusals that mean "the certificate moved under you" — refetch the console packet. */
+const DEATH_CERTIFICATE_REVIEW_STALE_CODES: ReadonlySet<string> = new Set([
+  'death_certificate_review.stale_certificate',
+  'death_certificate_review.stale_supersession',
+  'death_certificate_review.not_reviewable',
+  'death_certificate_review.no_certificate',
+  'death_certificate_review.concurrent',
+]);
+
+/**
+ * The District Admin's accept / reject review. A success moves the console packet (the item's status and the
+ * approve gate), 6.20's timeline (the accepted date) and — only while it is open — the history.
+ */
+export function usePostDeathCertificateReview(pariwarId: string, claimCaseId: string | null) {
+  const qc = useQueryClient();
+  const refreshPacket = () => qc.invalidateQueries({ queryKey: verifierConsoleKey(pariwarId, claimCaseId ?? '') });
+  return useMutation({
+    mutationFn: (body: Parameters<typeof api.postDeathCertificateReview>[2]) =>
+      api.postDeathCertificateReview(pariwarId, claimCaseId as string, body),
+    onSuccess: () => {
+      void refreshPacket();
+      void qc.invalidateQueries({ queryKey: nomineeDeclarationKey(pariwarId, claimCaseId ?? '') });
+      void qc.invalidateQueries({ queryKey: deathCertificateHistoryKey(pariwarId, claimCaseId ?? '') });
+    },
+    onError: (err: unknown) => {
+      if (err instanceof ApiError && DEATH_CERTIFICATE_REVIEW_STALE_CODES.has(err.code)) void refreshPacket();
+    },
   });
 }

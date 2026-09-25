@@ -45,6 +45,8 @@ export * from './nominee-name-check.js';
 // Story 6.20 — the nominee declaration history on the console: timeline, snapshots, determination,
 // correction (raise + two approvals) and the Pariwar Admin's `-239` refusal read surface.
 export * from './nominee-declaration.js';
+// Story 6.21a — the District Admin's death-certificate REVIEW (accept / reject) and its on-demand HISTORY.
+export * from './death-certificate.js';
 // Story 6.12 — the member-facing shepherd read DTO (GET /member/claims/:id/shepherd) backing the mobile
 // <ShepherdContactCard>: a discriminated union (assigned → display_name + role_label + contact snapshot |
 // not_assigned). The E.164 wire regex is re-declared (no @twt/domain import).

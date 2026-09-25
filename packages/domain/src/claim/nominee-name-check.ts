@@ -27,7 +27,11 @@ import {
   NomineeDeterminationRequiredError,
   NomineeNameCheckRequiredError,
 } from './errors.js';
+// ⭐ Story 6.21a (T8) — the death-certificate conjunct lives in a LEAF (schema tables, ids, errors and the
+// import-free window only), so this import cannot close a runtime init cycle.
+import { assertDeathCertificateAcceptedForApproval } from './death-certificate-approval.js';
 import { getEffectiveNomineeDeclaration } from './nominee-effective.js';
+import { CLAIM_REVIEW_WINDOW_STATES } from './review-window.js';
 import { eventsLog } from '../schema/events_log.js';
 
 /** The District Admin's verdict on ONE account's holder name (`-226` cl.3–cl.6). */
@@ -56,14 +60,10 @@ export type NomineeNameClericalReason = (typeof NOMINEE_NAME_CLERICAL_REASONS)[n
  * correction require a FRESH check, and those are states a corrected claim can be sitting in.
  * ⛔ NOT `state_trustee_approved` and ⛔ NOT `approved`: once the Pariwar Admin has voted, the next
  * act is the commit, and a check recorded after the vote would have nothing left to gate.
+ * ⚠ Story 6.21a (T8): the tuple is DEFINED in the import-free `review-window.ts` and bound here by
+ * identity, so the death-certificate leaf can read the same window without an import cycle.
  */
-export const NOMINEE_NAME_CHECK_RECORDABLE_STATES = [
-  'verification_in_progress',
-  'verifier_review',
-  'verifier_approved',
-  'reversed',
-  'state_trustee_freeze',
-] as const;
+export const NOMINEE_NAME_CHECK_RECORDABLE_STATES = CLAIM_REVIEW_WINDOW_STATES;
 
 /** One account's recorded verdict, as it lives in the event payload. */
 export interface NomineeNameCheckAccountVerdict {
@@ -342,8 +342,10 @@ export async function readNomineeNameCheckSnapshot(
 // ── The AC4 approval gate (P1 / P3 / P4) ──────────────────────────────────────────────────────
 
 /**
- * Assert a claim may be APPROVED: it carries its two live bank accounts (`-226` cl.7) AND a
- * CURRENT, PASSING nominee name check (cl.3–cl.5).
+ * ⭐ Story 6.21a (D7) — THE APPROVAL GATE. Assert a claim may be APPROVED: it carries a CURRENT, ACCEPTED
+ * death certificate whose review the live determination was made against (`2026-09-20-235` Y), AND its two
+ * live bank accounts (`-226` cl.7), AND an effective as-at-death declaration (6.20 AC5), AND a CURRENT,
+ * PASSING nominee name check (cl.3–cl.5).
  *
  * ⭐ ONE HELPER, THREE CALL SITES, AND THAT IS THE POINT (AC4). The approval paths are
  * `adjudicateClaim` (P1 — the District Admin's verification approval), `voteOnFrozenClaim` (P3 —
@@ -354,6 +356,51 @@ export async function readNomineeNameCheckSnapshot(
  * ⛔ `resolveEscalation` is NOT gated separately: it can only reach `verifier_approved`, which must
  * still pass P3 before anything is committed. Gating it too would refuse an escalation resolution
  * for a claim whose accounts are not yet collected — which cl.7 forbids, because such a claim WAITS.
+ *
+ * ⛔⛔ THIS GATE COMPARES NO NAMES. It asks three questions about PROCESS — are there two accounts,
+ * is there a check, was it made about today's data — and the third is answered by timestamps. A
+ * claim whose names genuinely differ passes the moment a District Admin records
+ * `clerical_difference` with a reason, and fails while they have recorded `does_not_match`. The
+ * system's opinion about the two strings is, and must remain, nonexistent (cl.5).
+ *
+ * ⚠ MUST be called INSIDE the caller's transaction, AFTER the claim row lock — a check read before
+ * the lock could be invalidated by a concurrent bank correction between the read and the approval.
+ *
+ * ⭐⭐ WHY AN OUTER HELPER, ⛔ NOT A FOURTH CONJUNCT INSIDE `assertNomineeNameCheckForApproval` (6.21a T4). The
+ * inner helper has a FOURTH, non-approval caller — `isReturnedClaimResubmitted` — which swallows exactly
+ * three typed errors and feeds `resolveClaimCorrectionState`. A certificate error raised inside it would
+ * either propagate there (the family's bank-status read, the bank writer and the helpline correction all
+ * answering 500) or, swallowed, keep a bank-corrected claim "under correction" — telling the family their
+ * BANK needs fixing when the CERTIFICATE does. So the certificate conjunct runs HERE, FIRST, at the three
+ * approval sites only.
+ *
+ * @throws DeathCertificateAcceptanceRequiredError  no current accepted certificate / a stale determination
+ *                                                  (→ 409, Story 6.21a D7). ⛔ NOT a denial.
+ * @throws NomineeBankAccountsRequiredError   fewer than two live accounts (→ 409). ⛔ NOT a denial.
+ * @throws NomineeDeterminationRequiredError  no effective as-at-death declaration (→ 409, Story 6.20 AC5).
+ * @throws NomineeNameCheckRequiredError      no check / stale / `does_not_match` (→ 409). ⛔ NOT a denial.
+ */
+export async function assertClaimApprovable(
+  db: Db,
+  pariwarId: PariwarId,
+  claimCaseId: ClaimId,
+  deceasedMemberId: MemberId,
+): Promise<void> {
+  await assertDeathCertificateAcceptedForApproval(db, pariwarId, claimCaseId);
+  await assertNomineeNameCheckForApproval(db, pariwarId, claimCaseId, deceasedMemberId);
+}
+
+/**
+ * The bank-account, determination and name-check conjuncts of the approval gate: the claim carries its two
+ * live bank accounts (`-226` cl.7) AND an effective as-at-death declaration AND a CURRENT, PASSING nominee
+ * name check (cl.3–cl.5).
+ *
+ * ⭐ TWO CALLERS (Story 6.21a moved the approval-site doc-block to `assertClaimApprovable`):
+ *   · `assertClaimApprovable` — the approval gate at P1 / P3 / P4, which runs the death-certificate
+ *     conjunct FIRST and then this;
+ *   · `isReturnedClaimResubmitted` (`state-trustee-decision-persist.ts`) — ⛔ NOT an approval: it asks
+ *     whether a returned claim has been corrected and re-checked, and swallows exactly three of this
+ *     helper's typed errors. ⛔ Never route it through the outer helper (T4).
  *
  * ⛔⛔ THIS GATE COMPARES NO NAMES. It asks three questions about PROCESS — are there two accounts,
  * is there a check, was it made about today's data — and the third is answered by timestamps. A

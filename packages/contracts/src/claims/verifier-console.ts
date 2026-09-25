@@ -104,6 +104,30 @@ export const VerifierReviewItem = z
     preview: z
       .object({ signedUrl: z.string(), contentType: z.string(), filename: z.string().optional() })
       .strict(),
+    /**
+     * Story 6.21a (D10) — the DEATH CERTIFICATE's review, on the `death_certificate` item ONLY (absent on
+     * every other document type). ⛔ It carries NO decrypted date (T10): the date lives on the audited history
+     * read and 6.20's timeline. `certificateToken` is the CURRENT upload's id (`null` for a legacy row with no
+     * upload — never reviewable, T12). `viewer.canReview` is judged SERVER-SIDE against the actor's grants at
+     * the deceased's district (6.20's `viewer.can_determine` pattern): ⛔ UI only, the route's key stays the gate.
+     */
+    review: z
+      .object({
+        status: z.enum(['not_reviewed', 'accepted', 'rejected']),
+        rejectionReason: z.enum(['no_date_of_death', 'date_of_death_unclear', 'date_of_death_in_future']).nullable(),
+        decidedByDisplay: z.string().nullable(),
+        decidedAt: z.string().datetime().nullable(),
+        /** The claim's LIVE review (current or not) — echoed back as `expected_live_review_id`. */
+        liveReviewId: z.string().uuid().nullable(),
+        certificateToken: z.string().uuid().nullable(),
+        /** `true` iff `status === 'accepted'` AND the live nominee determination (if any) was made against
+         * a DIFFERENT review — D7's `determination_stale` ground, computed server-side so the console's
+         * OWN approve gate can pre-empt a doomed click instead of surfacing it only after a 409. */
+        determinationStale: z.boolean(),
+        viewer: z.object({ canReview: z.boolean() }).strict(),
+      })
+      .strict()
+      .optional(),
   })
   .strict();
 export type VerifierReviewItem = z.output<typeof VerifierReviewItem>;

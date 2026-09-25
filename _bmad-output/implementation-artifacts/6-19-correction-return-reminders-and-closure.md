@@ -224,6 +224,33 @@ uncommittable; what happens next is the Super Admin's and is ⛔ ruled nowhere (
 - **N — confirm only:** the day-90 escalation goes to the Pariwar Admin (D12).
 - **S — a go-live GATE, ⛔ not a build blocker:** the **privacy policy** (`docs/legal/privacy-policy.md` §3 lists nominee "Name, relationship; bank/IFSC at claim time only" and says data is used "only for the purpose stated at collection") needs a stated purpose for a postal address and a claimant's contact, and PRD FR-43A / §4.14 (internal appeal as the primary grievance path) is ⛔ amended by no one. Counsel's (Story 0.13), tracked like 6.16 D-G. ⚠ Retention for the address, tracking number and screenshot is **not found** anywhere — architecture §2.12 leaves the values to counsel.
 
+## ➕ APPENDED 2026-09-25 — `-236` CC1: the reminder that chases a REPLACEMENT DEATH CERTIFICATE (from Story 6.21a D16; recorded at `2026-09-25-244`)
+
+> ⚠ **Appended, ⛔ not a rewrite** — nothing above this block is edited. [`-241`](../../.decision-log.md#decision-2026-09-21-241)
+> §3 placed CC1 on **this** story (*"CC1 stays with Story 6.19, as `-236` states … Story 6.19 owes a CC1 item"*), and until
+> today this file carried ⛔ no CC1 item: the obligation had a carrier on paper and ⛔ none in the Tasks list.
+
+**CC1, in full (our default, ⛔ not the Panel's words; `-236` — it stands unless objected, and `-237` confirmed only CC2/CC3):**
+*"A time limit for the replacement certificate. Our default: **none** — the claim simply waits, chased by the reminders
+of Story 6.19 (a claim is never refused for a missing certificate)."*
+
+**What 6.19 owes, and the three protections that go with it (verbatim, and they bind this story):**
+1. ⭐ ***"a claim is never refused for a missing certificate"*** — CC1's own words; and `-236` BB: *"family will be asked
+   to produce certificate with clear date without the claim being denied."*
+2. ⛔ ***"the `-229`…`-232` day-90 closure does NOT apply to a certificate wait."*** That loop ends in a closure the
+   Pariwar Admin approves and which is ⛔ **not appealable** (`-231` A — the *"second refusal"*). Reusing it for a
+   certificate wait would **refuse** the claim, which breaches BB and CC1 together.
+3. ⚠ ***"the certificate reminder's schedule and channels (incl. letters for a dead number) are UNRULED — 6.19 runs §0
+   on them."*** The ratified schedule (`-229`) and the channel rules (`-230`, including posted letters) govern the
+   **correction-return** loop only. Whether a certificate wait gets the same schedule, a different one, or letters, is
+   ⛔ not ruled — and it concerns what a family is owed ⇒ run the routing template's §0 before building it.
+
+**The trigger (built by Story 6.21a, consumed here):** `isDeathCertificateReplacementRequested` in
+`packages/domain/src/claim/death-certificate-approval.ts` (6.21a D16, Task 2) — true while a claim in the review window
+has a current, **rejected** certificate. ⚠ 6.21b's member status adds a `missing` state (no certificate at all, in the
+window); whether that state is also chased is part of protection 3's §0.
+**Dependency:** 6.21a must be `done` before this item is built. ⛔ It does ⛔ not block the rest of 6.19.
+
 ## Acceptance Criteria
 
 ### AC0 — Governance first (Task 0)
@@ -284,6 +311,12 @@ uncommittable; what happens next is the Super Admin's and is ⛔ ruled nowhere (
 ### AC11 — The proof
 **Then** live-DB specs on `twt-test-pg :5433`, **executed** ("written but not run" is ⛔ not a pass): the schedule table (every slot, the day-1 / day-90 boundaries, a second return restarting it, the IST date at midnight), the stop predicate (superseded **and** resubmitted, each alone), **two-connection** races (two sweeps for one slot → exactly one send and one record; two closure decisions; a return racing a closure; a declined closure racing an approval — checklist family 2), the reminder record's `delivered` is **never** set for an accepted send, the closure's whole chain in one tx (a forced failure mid-chain leaves nothing), the three appeal sites, **cross-Pariwar** and **non-human/system-actor** denial per new route, the human-actor CI gate entries for every new mutation route (`scripts/claim-adjudication-human-actor-invariant/check.ts` — ⚠ 6.18's review found that gate hand-maintained, matching on one route, and dropping non-literal paths; an unlisted file is invisible), a `*-shape.spec.ts` for any compound read model, the i18n **real-`t()` leg** in both locales, and a `{ timeout: 20000 }` on any new domain live spec (`packages/domain/vitest.config.ts` sets none). **Also:** a Pariwar Admin approval after the family corrected → **409** `closure.claim_corrected`; a closure request racing a family correction; an approval racing a pending request; a crash between the reminder insert and the send; a late-slot catch-up after an outage (one `late` send, no burst); a closure refused on a live routing row; the Telegram side-channel never runs for a family reminder; and a reminder whose every slot was `no_target` cannot support a closure under the strict default (Q-R).
 
+### AC12 — CC1: the replacement-certificate reminder (APPENDED 2026-09-25; `-236` CC1, `-241` §3, `-244`)
+**Given** Story 6.21a is `done` and `isDeathCertificateReplacementRequested` is true for a claim
+**Then** the family is reminded to send a certificate with a clear date on a schedule and channels **settled by §0 first**
+(protection 3); **and** the claim is ⛔ **never** refused, closed or denied for a missing certificate (protections 1–2)
+— ⛔ the day-90 closure never runs on a certificate wait, and a test proves it; **and** ⛔ no time limit is imposed.
+
 ## Tasks / Subtasks
 
 - [ ] **Task 0 — Governance first** (AC0)
@@ -303,6 +336,7 @@ uncommittable; what happens next is the Super Admin's and is ⛔ ruled nowhere (
 - [ ] **Task 8 — Admin and mobile surfaces** (AC8) — extend 6.18's returned-claims list; the letter form; the closure strips; the Super Admin surface; family-13 assertions.
 - [ ] **Task 9 — Tests** (AC9, AC11) — **execute** on `twt-test-pg :5433`.
 - [ ] **Task 10 — Friction-budget disposition** — one named-payer row if capture at filing adds a required field the family must type (`friction-budget.md`; best-ever ratchet — [[project_friction_budget_baseline_ratchet]]).
+- [ ] **Task 11 — CC1: the replacement-certificate reminder** (AC12; APPENDED 2026-09-25) — ⛔ **start only after 6.21a is `done`**. (a) Run §0 on protection 3 (schedule, channels, letters, and whether `missing` is chased) — route what is the Panel's. (b) Build the reminder on `isDeathCertificateReplacementRequested`. (c) Prove ⛔ no closure / refusal / denial path runs on a certificate wait. (d) ⛔ No time limit.
 
 ## Dev Notes
 
@@ -341,3 +375,4 @@ Live-DB traps recorded for this repo ([[project_live_db_test_gotchas]], [[projec
 |---|---|---|
 | v0.1 | 2026-09-20 | Created by the create-story workflow from `-229` → `-232`, three parallel read-only research passes (planning documents; reminder / scheduler substrate; claim filing / closure / appeal code) and seven live re-verifications. ⚠ `backlog`, ⛔ not `ready-for-dev` — Panel questions K L M O P Q R open. ⛔ Not yet run through `validate`. |
 | v0.2 | 2026-09-20 | Applied a fresh-context validator's findings, **each re-verified in the tree first**. **Critical:** the closure guard against an already-CORRECTED claim (AC6, invariant 2 — a corrected-but-unvoted claim still has a LIVE return row, so the conditional `UPDATE` alone would succeed); Q-R rewritten (**strict default**; `no_target` is ⛔ not a dead number); readings that were stated as fact are labelled (new **Q-T**); `-232` J recorded (it ratified our parse of `-231` F); N carried as a confirm; the story split recorded (**D13**); where AC1's 409 lives (**D14**) and multiple nominees (**Q-U**); the family-message design rewritten (**D7**: `alert_published`, `Alert.member_id`, no Telegram mirror). **Should-fix:** private vs exported helper names; lifecycle suppression is prose, not live; a super-admin-only key precedent exists; the `attempting` → final reminder state, day numbering and catch-up; the family closure notice + a `closed_no_response` field; the day-90 reminder job had no Task; the AC7 control must be production-shaped; mis-cited paths and requirement ids; an invariants box. ⚠ Not re-validated after these edits. |
+| v0.3 | 2026-09-25 | **APPENDED, ⛔ nothing above edited: the `-236` CC1 item** that `-241` §3 placed on this story and that this file never carried (Story 6.21a D16; recorded at `2026-09-25-244`). A new section, AC12 and Task 11 — the three protections verbatim (*never refused*; ⛔ not the day-90 closure; schedule/channels UNRULED ⇒ §0), the trigger `isDeathCertificateReplacementRequested` (built by 6.21a), and the dependency (6.21a `done`). ⛔ No status change. |

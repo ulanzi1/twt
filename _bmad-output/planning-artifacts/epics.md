@@ -2900,6 +2900,61 @@ a route to fix it.
 > state, ⛔ no join between bank accounts and nominees (6.8 D1), and it does ⛔ not close the
 > certificate-admissibility rule, which is Story `6-21` and a **go-live coupling** on `-235` Y.
 
+### Story 6.21a: The Death Certificate's Clear-Date Rule — the District Admin Accepts or Rejects It, and Only an Accepted Certificate Counts `[SURFACE]`
+
+> ⚠ **Minted by Trustee ruling, ⛔ not by the original epic plan** — [`-235`](../../.decision-log.md#decision-2026-09-20-235)
+> Y and [`-236`](../../.decision-log.md#decision-2026-09-20-236) BB (Dhiraj Rahul + Kalpana Bharti, 2026-09-20); the row
+> was placed by `-236` consequence 3 (row (b)) and discharged by [`-241`](../../.decision-log.md#decision-2026-09-21-241) §4.
+> **Split on 2026-09-25** (BigDev) into **6.21a** (this — it keeps the row key `6-21-death-certificate-clear-date-rule`,
+> which `-241` §4 cites) and **6.21b**. Retention ruled by [`-243`](../../.decision-log.md#decision-2026-09-25-243)
+> (option C); the engineering calls and the key `claim.review_death_certificate` are
+> [`-244`](../../.decision-log.md#decision-2026-09-25-244). `epic-6-retrospective` stays `done` — ⛔ do not "correct" the
+> placement.
+
+As the District Admin verifying a claim,
+I want to accept a death certificate only when it shows a clear, possible date of death, which I enter myself, and
+otherwise reject it so the family is asked for another,
+So that the date that decides whose nominee is paid always comes from an admissible certificate, and no claim is ever
+refused because the first certificate was unclear.
+
+**Acceptance Criteria** (the full set, with the code coordinates, is in
+`_bmad-output/implementation-artifacts/6-21-death-certificate-clear-date-rule.md`):
+
+1. The District Admin **accepts** a certificate with a date they enter (real, ⛔ not in the future) or **rejects** it
+   (no date · unclear · future), with a required note. ⛔ The system never accepts, rejects or supplies the date
+   (`-235` Y).
+2. A rejection ⛔ never denies and ⛔ never moves the claim's state; the claim **waits** at every approval path
+   (`-236` BB).
+3. **Every** certificate is kept — ⛔ nothing overwrites or deletes one, for as long as claim records are kept
+   (`-243`, option C).
+4. Only a **current, accepted** certificate may supply Story 6.20's as-at-death cutoff, with an **equal** date — this
+   **closes 6.20's go-live coupling on the build**.
+5. The verifier console shows the verdict and every certificate ever sent; only the key-holder sees the control.
+
+> ⚠ **Go-live couplings (named, ⛔ not build blockers):** 6.21b (the family's surfaces), 6.19's CC1 item (the reminder),
+> and counsel's legal basis for retention (`-243` consequence 2).
+
+### Story 6.21b: A Rejected or Missing Death Certificate — the Family Is Asked in Their Own Words, and Can Send Another in the App or Through the Helpline `[SURFACE]`
+
+> ⚠ **Split from Story 6.21 on 2026-09-25** (BigDev). Row `6-21b-death-certificate-replacement-surfaces`, `backlog`
+> until **6.21a is `done`**. Recorded in [`-244`](../../.decision-log.md#decision-2026-09-25-244) with 6.21a — ⛔ no second
+> author-commit.
+
+As a bereaved family (in the app, or through the helpline),
+I want to be told plainly when the death certificate we sent cannot be used, and why, and to send another without
+starting over,
+So that our claim keeps moving and we are never left thinking it was refused.
+
+**Acceptance Criteria** (the full set is in
+`_bmad-output/implementation-artifacts/6-21b-death-certificate-replacement-surfaces.md`):
+
+1. The family sees a **true** status; *"has not been refused"* only while the claim is under review (the `-242`
+   defect class).
+2. The family can send another certificate from the app (the handover OTP re-run when needed), or the helpline sends
+   it on their behalf.
+3. The words are the family's own — a **separate** message for a future-dated certificate; ⛔ no deadline copy.
+4. A missing or unreadable date of death is **flagged** to the District Admin — display only, ⛔ never acted on.
+
 ---
 
 ## Epic 7: Pool Engine & Cycle Spawn

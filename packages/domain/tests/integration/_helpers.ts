@@ -841,6 +841,10 @@ export async function seedDeathCertificate(
     channel: 'member_app',
     uploadedByActorId: null,
     uploadedAt: opts.uploadedAt ?? new Date(),
+    // `2026-09-26-246` §4 — every new upload row carries its parity verdict (a `NOT VALID` CHECK).
+    parityOutcome: 'match',
+    parityFlags: {},
+    ocrConfidence: 0.9,
   });
   return { claimDocumentId, uploadId, storageObjectKey };
 }
@@ -976,6 +980,12 @@ export async function seedNomineeDetermination(
      * review id that is NOT the current accepted one — the writer's `certificate_not_accepted` refusal.
      */
     readonly certificate?: 'accepted' | 'skip';
+    /** With `certificate: 'skip'` — pass THIS review id instead of a random one (e.g. a live REJECTED review's
+     *  real id, so the refusal is proven to be about the VERDICT, ⛔ not merely about an unknown id). */
+    readonly deathCertificateReviewId?: string;
+    /** `2026-09-26-245` §4 / `-246` §3 — the caller's date verdict, passed to the writer. Default: `'match'` when
+     *  the helper seeds the accepted certificate itself (its date IS `certificateDate`), else `null`. */
+    readonly certificateDateCheck?: 'match' | 'mismatch' | 'unreadable' | 'anonymized' | null;
   } = {},
 ) {
   const tx = bindScopedDb(client);
@@ -984,7 +994,7 @@ export async function seedNomineeDetermination(
   const certificateDate = opts.certificateDate ?? certificateDateAfterEverything();
   const deathCertificateReviewId =
     opts.certificate === 'skip'
-      ? randomUUID()
+      ? (opts.deathCertificateReviewId ?? randomUUID())
       : await seedAcceptedDeathCertificate(client, { pariwarId, claimCaseId, date: certificateDate });
   const claimRows = await tx
     .select({ deceasedMemberId: schema.claims.deceasedMemberId })
@@ -1014,6 +1024,7 @@ export async function seedNomineeDetermination(
     watermark: { rank1: head(1), rank2: head(2) },
     expectedLiveDeterminationId: (live[0]?.id as string | undefined) ?? null,
     deathCertificateReviewId,
+    certificateDateCheck: opts.certificateDateCheck !== undefined ? opts.certificateDateCheck : opts.certificate === 'skip' ? null : 'match',
     actorId: opts.actorId ?? randomUUID(),
     actorDisplay: opts.actorDisplay ?? 'Test District Admin',
     actor: 'operator',

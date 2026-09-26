@@ -204,6 +204,17 @@ describe('<DeathCertificateReviewControl> — invariant 1 and the refusals in wo
     expect(status).toContain('Anita');
   });
 
+  it('⭐ family 13(d) — the reasons are their OWN group named by the question, and the note is DESCRIBED by its help', () => {
+    setup('reject');
+    // The group NAMED by the question is exactly the NESTED fieldset — ⛔ not the outer "Reject" form.
+    const group = screen.getByRole('group', { name: t.reasonLegend });
+    expect(group).toBe(screen.getByTestId('death-certificate-reasons'));
+    expect(group).not.toBe(screen.getByTestId('death-certificate-reject-form'));
+    expect(group.querySelectorAll('input[type="radio"]')).toHaveLength(3);
+    const help = screen.getByTestId('death-certificate-note').getAttribute('aria-describedby');
+    expect(help && document.getElementById(help)?.textContent).toBe(t.noteHelp);
+  });
+
   it('a legacy certificate with ⛔ no upload record cannot be reviewed — and says so', () => {
     render(
       <DeathCertificateReviewControl review={review({ certificateToken: null })} ocrDateOfDeath={null} mode={null} onModeChange={vi.fn()} onSubmit={vi.fn()} />,
@@ -238,10 +249,11 @@ describe('<VerifierConsoleRoute> — the certificate section (D10, AC5)', () => 
     expect(screen.queryByTestId('document-request-better')).toBeNull();
   });
 
-  it('⭐ "Request a better document" opens the REJECT form (a reviewer only)', async () => {
+  it('⭐ "Request a better document" opens the REJECT form (a reviewer only) — and MOVES FOCUS into it (family 13(d): announced, ⛔ not silently opened below)', async () => {
     await mount([certificateItem(review())]);
     fireEvent.click(screen.getByTestId('document-request-better'));
-    expect(await screen.findByTestId('death-certificate-reject-form')).toBeTruthy();
+    const form = await screen.findByTestId('death-certificate-reject-form');
+    await waitFor(() => expect(document.activeElement).toBe(form));
     expect(screen.queryByTestId('document-mark-illegible')).toBeNull();
   });
 
@@ -255,6 +267,52 @@ describe('<VerifierConsoleRoute> — the certificate section (D10, AC5)', () => 
     cleanup();
     await mount([certificateItem(review({ status: 'accepted', liveReviewId: LIVE }))]);
     expect(screen.getByTestId('action-approve')).not.toBeDisabled();
+  });
+
+  it('⭐ code review 2026-09-26 — an UNAVAILABLE document section is ⛔ never "none was sent"; a LEGACY row (`missing`) is ⛔ never "review it"', async () => {
+    getVerifierConsole.mockResolvedValue({ packet: { ...packet(null), documentReview: { status: 'unavailable' } } });
+    render(ui());
+    await screen.findByTestId('name-check-disclosure');
+    expect(screen.getByTestId('action-approve')).toBeDisabled();
+    expect(screen.getByTestId('approve-blocked-reason')).toHaveTextContent(t.approveBlocked.unavailable!);
+    cleanup();
+    await mount([certificateItem(review({ status: 'missing', certificateToken: null }))]);
+    expect(screen.getByTestId('approve-blocked-reason')).toHaveTextContent(t.approveBlocked.no_certificate!);
+    expect(screen.getByTestId('death-certificate-review-status')).toHaveTextContent(t.status.missing!);
+  });
+
+  it('⭐ adversarial review 2026-09-26 — the District Admin\'s OWN Accept toggle opens the form but ⛔ does not steal focus', async () => {
+    await mount([certificateItem(review())]);
+    const toggle = screen.getByTestId('death-certificate-accept');
+    toggle.focus();
+    fireEvent.click(toggle);
+    await screen.findByTestId('death-certificate-accept-form');
+    expect(document.activeElement).toBe(toggle);
+  });
+
+  it('⭐ `2026-09-26-246` §2 — an ERASED date or note in the history says so, ⛔ never "could not be read"', async () => {
+    const erased: DeathCertificateHistoryResponse = {
+      ...HISTORY,
+      uploads: [
+        {
+          ...HISTORY.uploads[0]!,
+          reviews: [{ ...HISTORY.uploads[0]!.reviews[0]!, verdict: 'accepted', rejection_reason: null, accepted_date: { state: 'anonymized' }, note: { state: 'anonymized' } }],
+        },
+      ],
+    };
+    getDeathCertificateHistory.mockResolvedValue(erased);
+    await mount([certificateItem(review())]);
+    fireEvent.click(screen.getByTestId('death-certificate-history-disclosure'));
+    const item = await screen.findByTestId('death-certificate-history-review');
+    expect(item.textContent).toContain(t.history.anonymized);
+    expect(item.textContent).not.toContain(t.history.unreadable);
+  });
+
+  it('⭐ the HISTORY says when older certificates were left out (`truncated`) — ⛔ never reads as complete', async () => {
+    getDeathCertificateHistory.mockResolvedValue({ ...HISTORY, truncated: true });
+    await mount([certificateItem(review())]);
+    fireEvent.click(screen.getByTestId('death-certificate-history-disclosure'));
+    expect(await screen.findByTestId('death-certificate-history-truncated')).toHaveTextContent(t.history.truncated!);
   });
 
   it('⭐ D7 review fix — approve stays DISABLED on an ACCEPTED certificate whose review is stale relative to the live determination', async () => {

@@ -189,6 +189,20 @@ describe('<NomineeDeclarationPanel> — the timeline and the determination', () 
     expect(date.value).toBe('2026-05-01');
   });
 
+  it('⭐ `2026-09-26-246` §2 — an ERASED accepted date says so (⛔ not "try again"); a decrypt failure says "try again"', () => {
+    const accepted = (state: 'anonymized' | 'unreadable') => ({
+      timeline: { ...TIMELINE, accepted_certificate: { review_id: '00000000-0000-4000-8000-0000000000ac', accepted_date: { state } } },
+    });
+    setup(accepted('anonymized'));
+    const help = () => document.getElementById('nominee-certificate-date-help')?.textContent ?? '';
+    expect((screen.getByTestId('nominee-certificate-date') as HTMLInputElement).value).toBe('');
+    expect(help()).toMatch(/erased at the member's request/);
+    expect(help()).not.toMatch(/Try again/);
+    cleanup();
+    setup(accepted('unreadable'));
+    expect(help()).toMatch(/Try again/);
+  });
+
   it('⭐ Story 6.21a (D8) — with ⛔ NO accepted certificate the form has no date, SAYS WHY, and submits nothing', () => {
     const { props } = setup({ timeline: { ...TIMELINE, accepted_certificate: null } });
     expect((screen.getByTestId('nominee-certificate-date') as HTMLInputElement).value).toBe('');

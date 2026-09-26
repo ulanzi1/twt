@@ -96,6 +96,9 @@ function upload(
     channel: 'helpline',
     uploadedByActorId: null,
     uploadedAt: new Date(),
+    parityOutcome: 'match',
+    parityFlags: {},
+    ocrConfidence: 0.9,
     ...over,
   };
 }
@@ -208,6 +211,11 @@ describe.skipIf(!hasDatabase)('migration 0122 — death-certificate uploads + re
     const attempts: [string, string, () => Promise<unknown>][] = [
       ['upload channel', 'claim_death_certificate_uploads_channel_check', () => tx.insert(schema.claimDeathCertificateUploads).values(upload(claimCaseId, memberId, claimDocumentId, { channel: 'email' as never }))],
       ['upload byte size', 'claim_death_certificate_uploads_byte_size_check', () => tx.insert(schema.claimDeathCertificateUploads).values(upload(claimCaseId, memberId, claimDocumentId, { byteSize: -1 }))],
+      // `2026-09-26-245` §1 (0123) — an upload's parity verdict is all three columns or none.
+      ['verdict: no flags', 'claim_death_certificate_uploads_parity_verdict_check', () => tx.insert(schema.claimDeathCertificateUploads).values(upload(claimCaseId, memberId, claimDocumentId, { parityFlags: null }))],
+      ['verdict: no confidence', 'claim_death_certificate_uploads_parity_verdict_check', () => tx.insert(schema.claimDeathCertificateUploads).values(upload(claimCaseId, memberId, claimDocumentId, { ocrConfidence: null }))],
+      // `2026-09-26-246` §4 — a NEW row with ⛔ no verdict at all is refused (the `NOT VALID` CHECK).
+      ['verdict: none at all', 'claim_death_certificate_uploads_parity_verdict_required_check', () => tx.insert(schema.claimDeathCertificateUploads).values(upload(claimCaseId, memberId, claimDocumentId, { parityOutcome: null, parityFlags: null, ocrConfidence: null }))],
       ['blank display', 'claim_death_certificate_reviews_display_check', () => r({ decidedByDisplay: '   ' })],
       ['accepted without a date', 'claim_death_certificate_reviews_verdict_coherence_check', () => r({ acceptedDateCiphertext: null })],
       ['accepted with a reason', 'claim_death_certificate_reviews_verdict_coherence_check', () => r({ rejectionReason: 'no_date_of_death' })],
@@ -243,6 +251,13 @@ describe.skipIf(!hasDatabase)('migration 0122 — death-certificate uploads + re
     );
     expect(def.rows).toHaveLength(1);
     expect([...def.rows[0]!.d.matchAll(/'([a-z_]+)'::text/g)].map((m) => m[1]).sort()).toEqual(['accepted', 'rejected']);
+    // `-246` §4 — the "verdict required" CHECK is `NOT VALID` BY DESIGN: enforced for new rows, ⛔ never validated
+    // against rows written before 0123 (⛔ no backfill). A `VALIDATE` would fail on them — the catalog pins it.
+    const req = await client.query<{ v: boolean }>(
+      `SELECT convalidated AS v FROM pg_constraint
+        WHERE conname = 'claim_death_certificate_uploads_parity_verdict_required_check' AND conrelid = 'public.claim_death_certificate_uploads'::regclass`,
+    );
+    expect(req.rows).toEqual([{ v: false }]);
   });
 
   it('a well-formed REJECTED review (each of the three reasons) is accepted', async () => {
@@ -320,6 +335,8 @@ describe.skipIf(!hasDatabase)('migration 0122 — death-certificate uploads + re
       ['review decided_by', () => tx.update(schema.claimDeathCertificateReviews).set({ decidedByDisplay: 'Someone Else' }).where(eq(schema.claimDeathCertificateReviews.reviewId, r!.reviewId))],
       ['upload key', () => tx.update(schema.claimDeathCertificateUploads).set({ storageObjectKey: 'k/other' }).where(eq(schema.claimDeathCertificateUploads.uploadId, uploadId as never))],
       ['upload uploaded_at', () => tx.update(schema.claimDeathCertificateUploads).set({ uploadedAt: new Date(0) }).where(eq(schema.claimDeathCertificateUploads.uploadId, uploadId as never))],
+      // `-245` §1 — the kept verdict is written once, ⛔ never rewritten.
+      ['upload parity verdict', () => tx.update(schema.claimDeathCertificateUploads).set({ parityOutcome: 'mismatch' }).where(eq(schema.claimDeathCertificateUploads.uploadId, uploadId as never))],
     ];
     for (const [label, attempt] of legs) {
       await client.query('SAVEPOINT g');

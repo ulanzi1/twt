@@ -108,6 +108,8 @@ async function base(tx: Tx, cid: ClaimId, mid: MemberId): Promise<RecordNomineeD
     claimCaseId: cid,
     pariwarId: PARIWAR_A,
     deathCertificateReviewId,
+    // `-246` §3 — the caller's date verdict (the HTTP handler compares decrypted dates; here the date IS CERT).
+    certificateDateCheck: 'match' as const,
     certificateDate: CERT,
     certificateDateCiphertext: 'enc:v1:date',
     noteCiphertext: 'enc:v1:note',

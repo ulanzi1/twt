@@ -738,6 +738,7 @@ describe.skipIf(!hasDatabase)('Story 6.20 â€” the nominee declaration surface â€
         claimCaseId: cid,
         pariwarId: pid,
         deathCertificateReviewId: accepted!.reviewId as string,
+        certificateDateCheck: 'match' as const,
         certificateDate: CERT,
         certificateDateCiphertext: 'enc:v1:certificate-date',
         noteCiphertext: 'enc:v1:note',

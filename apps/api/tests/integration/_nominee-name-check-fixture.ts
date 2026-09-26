@@ -72,8 +72,9 @@ export async function insertDeathCertificate(
   }
   await scopeTx.client.query(
     `INSERT INTO claim_death_certificate_uploads (upload_id, claim_case_id, pariwar_id, deceased_member_id, claim_document_id,
-       storage_object_key, content_type, byte_size, channel, uploaded_by_actor_id, uploaded_at)
-     VALUES ($1, $2, $3, $4, $5, $6, 'application/pdf', 1024, 'member_app', NULL, $7)`,
+       storage_object_key, content_type, byte_size, channel, uploaded_by_actor_id, uploaded_at,
+       parity_outcome, parity_flags, ocr_confidence)
+     VALUES ($1, $2, $3, $4, $5, $6, 'application/pdf', 1024, 'member_app', NULL, $7, 'match', '{}'::jsonb, 0.9)`,
     [uploadId, claimCaseId, pariwarId, claimRow.deceasedMemberId, claimDocumentId, storageObjectKey, opts.uploadedAt ?? new Date()],
   );
   return { claimDocumentId, uploadId, storageObjectKey };
@@ -340,6 +341,7 @@ async function seedDeclarationAndDetermination(
     watermark: { rank1: head(1), rank2: head(2) },
     expectedLiveDeterminationId: null,
     deathCertificateReviewId,
+    certificateDateCheck: 'match',
     actorId: randomUUID(),
     actorDisplay: 'Anita (District Admin)',
     actor: 'operator',

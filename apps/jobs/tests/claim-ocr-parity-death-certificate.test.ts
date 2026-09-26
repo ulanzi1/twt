@@ -6,10 +6,17 @@
 //   · a REPLACEMENT after a rejection: a new upload row, the OLD object still readable, the rejected review no
 //     longer current, ⛔ no `documents_received`, ⛔ no peer-mesh select;
 //   · OUT OF ORDER: an older upload's job landing after a newer one's is KEPT but ⛔ not made current (T2);
-//   · a RETRY writes exactly ONE upload row; a FIRST-upload race between two handlers breaks ⛔ no FK;
+//   · a RETRY writes exactly ONE upload row; a FIRST-upload race between two handlers — run CONCURRENTLY —
+//     breaks ⛔ no FK;
+//   · ⭐ `2026-09-26-246` §1 (superseding `-245` §2) — under the lock, a late job never displaces an ACCEPTED
+//     certificate (in the window, or after it — approval / denial), while an UNREVIEWED current certificate IS
+//     replaced by the family's newer one; a TIE on the handler's clock keeps the current one; a kept-but-not-
+//     current upload is AUDITED by name (`-246` §5); a retry of the current upload rewrites nothing (`-246` §4);
+//   · ⭐ `-245` §1 — each upload row keeps ITS OWN parity verdict, so a replacement never erases it;
 //   · TOLERANCE: a payload with ⛔ no `uploadId` writes ⛔ no upload row;
 //   · ⭐ AC8(viii) — a review HOLDING the claim row makes the job WAIT (proved with `pg_blocking_pids`); the
-//     job's upload then arrives after it and is `not_reviewed`. And a review against an upload the job has
+//     job's upload then arrives after it (the review REJECTED the current one) and is `not_reviewed`. And a
+//     review against an upload the job has
 //     already replaced is refused `stale_certificate`.
 // Each test mints its own tenant and cleans up by deleting its claim (the cascade sweeps the documents, uploads
 // and reviews — the append-only triggers exempt a cascade).
@@ -83,10 +90,10 @@ describe.skipIf(!hasDatabase)('Story 6.21a — death-certificate uploads through
     await pool.end();
   });
 
-  const deps: () => ClaimOcrParityDeps = () => ({
+  const deps: (ocr?: OcrProvider) => ClaimOcrParityDeps = (ocr = OCR) => ({
     pool,
     storage,
-    ocr: OCR,
+    ocr,
     kms: KMS,
     kekRef: KEK_REF,
     onAlarm: () => undefined,
@@ -214,6 +221,27 @@ describe.skipIf(!hasDatabase)('Story 6.21a — death-certificate uploads through
     );
     return r.rows;
   }
+  async function verdicts(s: Seed) {
+    const r = await pool.query<{ upload_id: string; parity_outcome: string | null; parity_flags: Record<string, string> | null; ocr_confidence: number | null }>(
+      'SELECT upload_id, parity_outcome, parity_flags, ocr_confidence FROM claim_death_certificate_uploads WHERE claim_case_id = $1',
+      [s.claimCaseId],
+    );
+    return new Map(r.rows.map((row) => [row.upload_id, row]));
+  }
+  async function currentKey(s: Seed) {
+    const r = await pool.query<{ storage_object_key: string }>(
+      "SELECT storage_object_key FROM claim_documents WHERE claim_case_id = $1 AND document_type = 'death_certificate'",
+      [s.claimCaseId],
+    );
+    return r.rows[0]?.storage_object_key ?? null;
+  }
+  async function keptAudits(uploadId: string) {
+    const r = await pool.query<{ action: string }>(
+      'SELECT action FROM audit_log_entries WHERE resource_locator = $1',
+      [`death_certificate_upload:${uploadId.toLowerCase()}`],
+    );
+    return r.rows.map((row) => row.action);
+  }
   async function eventCount(s: Seed, type: string) {
     const r = await pool.query<{ n: number }>('SELECT count(*)::int AS n FROM events_log WHERE stream_id = $1 AND event_type = $2', [s.claimCaseId, type]);
     return r.rows[0]!.n;
@@ -259,6 +287,7 @@ describe.skipIf(!hasDatabase)('Story 6.21a — death-certificate uploads through
     const doc = await pool.query('SELECT storage_object_key FROM claim_documents WHERE claim_case_id = $1', [s.claimCaseId]);
     expect(doc.rows[0].storage_object_key).toBe(newer.key);
     expect((await snapshot(s)).currentUploadId).toBe(newer.uploadId);
+    expect(await keptAudits(older.uploadId)).toEqual(['claim_document.death_certificate_kept_not_current']); // `-246` §5
   });
 
   it('⭐ a RETRIED job writes exactly ONE upload row, and the current certificate is unchanged', async () => {
@@ -270,18 +299,21 @@ describe.skipIf(!hasDatabase)('Story 6.21a — death-certificate uploads through
     expect((await snapshot(s)).currentUploadId).toBe(a.uploadId);
   });
 
-  it('⭐ a FIRST-upload race: two handlers minted DIFFERENT row ids — both uploads reference the ONE surviving row (⛔ no FK break)', async () => {
+  it('⭐ a FIRST-upload race: two handlers minted DIFFERENT row ids and their jobs run CONCURRENTLY — both uploads reference the ONE surviving row (⛔ no FK break)', async () => {
     const s = await seedClaim();
     const first = await upload(s, { claimDocumentId: randomUUID(), uploadedAt: new Date(Date.now() - 60_000) });
     const second = await upload(s, { claimDocumentId: randomUUID() });
-    await runClaimOcrParity(deps(), first.env);
-    await runClaimOcrParity(deps(), second.env);
+    // Two live connections (each job opens its own scope tx on the pool) — the claim-row lock serialises them.
+    await Promise.all([runClaimOcrParity(deps(), first.env), runClaimOcrParity(deps(), second.env)]);
     const doc = await pool.query<{ claim_document_id: string }>('SELECT claim_document_id FROM claim_documents WHERE claim_case_id = $1', [s.claimCaseId]);
     expect(doc.rows).toHaveLength(1);
     const rows = await uploadRows(s);
     expect(rows).toHaveLength(2);
     expect(new Set(rows.map((r) => r.claim_document_id))).toEqual(new Set([doc.rows[0]!.claim_document_id]));
-    expect(doc.rows[0]!.claim_document_id).toBe(first.env.payload.claimDocumentId);
+    // Whichever job committed first minted the surviving row; either way it is ONE of the two handlers' ids,
+    // and the LATER upload is current (forward-only, whatever the commit order).
+    expect([first.env.payload.claimDocumentId, second.env.payload.claimDocumentId]).toContain(doc.rows[0]!.claim_document_id);
+    expect(await currentKey(s)).toBe(second.key);
   });
 
   it('TOLERANCE — a payload with ⛔ no `uploadId` (enqueued before 6.21a) writes ⛔ no upload row and keeps the old behaviour', async () => {
@@ -295,6 +327,8 @@ describe.skipIf(!hasDatabase)('Story 6.21a — death-certificate uploads through
   });
 
   it('⭐⭐ AC8(viii) — a review HOLDING the claim row makes the job WAIT; the job’s upload then lands after it and is `not_reviewed`', async () => {
+    // The holder REJECTS the current certificate, so the waiting upload is one D6 allows (`-245` §2): had it
+    // ACCEPTED, the job would keep the upload but ⛔ not make it current — the next test.
     const s = await seedClaim();
     const a = await upload(s, { uploadedAt: new Date(Date.now() - 60_000) });
     await runClaimOcrParity(deps(), a.env);
@@ -306,7 +340,7 @@ describe.skipIf(!hasDatabase)('Story 6.21a — death-certificate uploads through
     try {
       await holder.query('BEGIN');
       await setPariwarScope(holder, s.pariwarId);
-      await review(s, a.uploadId, 'accepted', holder);
+      await review(s, a.uploadId, 'rejected', holder);
       const holderPid = Number((await holder.query<{ pid: number }>('SELECT pg_backend_pid() AS pid')).rows[0]!.pid);
 
       const job = runClaimOcrParity(deps(), b.env);
@@ -342,5 +376,143 @@ describe.skipIf(!hasDatabase)('Story 6.21a — death-certificate uploads through
     await expect(review(s, a.uploadId, 'accepted')).rejects.toSatisfy(
       (err: unknown) => err instanceof claim.DeathCertificateReviewRefusedError && err.reason === 'stale_certificate',
     );
+  });
+  // ── `2026-09-26-245` §2 — D6 RE-APPLIED by the job, under the claim-row lock ───────────────────────────
+  it('⭐⭐ `-245` §2 — a job landing AFTER an ACCEPTANCE keeps its upload but ⛔ never displaces the accepted certificate', async () => {
+    const s = await seedClaim();
+    const a = await upload(s, { uploadedAt: new Date(Date.now() - 180_000) });
+    await runClaimOcrParity(deps(), a.env);
+    await intoReview(s);
+    await review(s, a.uploadId, 'rejected');
+    // While A stands rejected, the handler lets BOTH B and C through (its check is lock-free and the upload row
+    // only exists once a job has run).
+    const b = await upload(s, { uploadedAt: new Date(Date.now() - 120_000) });
+    const c = await upload(s, { uploadedAt: new Date(Date.now() - 60_000) });
+    await runClaimOcrParity(deps(), b.env);
+    await review(s, b.uploadId, 'accepted');
+    // C's job lands late (a queue delay, a retry) — strictly later on the clock, but B is ACCEPTED.
+    await runClaimOcrParity(deps(), c.env);
+    const snap = await snapshot(s);
+    expect(snap.currentUploadId).toBe(b.uploadId);
+    expect(claim.deathCertificateStatus(snap)).toBe('accepted');
+    expect(await currentKey(s)).toBe(b.key);
+    expect((await uploadRows(s)).map((r) => r.upload_id)).toEqual([a.uploadId, b.uploadId, c.uploadId]); // C is KEPT
+    expect(await keptAudits(c.uploadId)).toEqual(['claim_document.death_certificate_kept_not_current']); // `-246` §5
+  });
+
+  it('⭐⭐ `-246` §1 — AFTER APPROVAL (the claim has left the window): a late job ⛔ never displaces the accepted certificate', async () => {
+    const s = await seedClaim();
+    const a = await upload(s, { uploadedAt: new Date(Date.now() - 120_000) });
+    await runClaimOcrParity(deps(), a.env);
+    await intoReview(s);
+    const c = await upload(s, { uploadedAt: new Date(Date.now() - 60_000) }); // sent, its job delayed
+    await review(s, a.uploadId, 'accepted');
+    await withPariwarScope(pool, s.pariwarId, (_db, client) =>
+      emit(client, s, 'verifier_review', 'state_trustee_approved', 'claim.r9_outcome', {
+        outcome: 'approved',
+        clause_id: 'r9-seed',
+        clause_version_id: randomUUID(),
+        voting_requirement: 'majority',
+        approve_count: 3,
+        deny_count: 0,
+      }),
+    );
+    await runClaimOcrParity(deps(), c.env);
+    const snap = await snapshot(s);
+    expect(snap.currentUploadId).toBe(a.uploadId);
+    expect(claim.deathCertificateStatus(snap)).toBe('accepted');
+    expect(await keptAudits(c.uploadId)).toEqual(['claim_document.death_certificate_kept_not_current']);
+  });
+
+  it('⭐ `-246` §1 — outside the window even a REJECTED certificate is ⛔ not replaced by a late job (a denied claim)', async () => {
+    const s = await seedClaim();
+    const a = await upload(s, { uploadedAt: new Date(Date.now() - 120_000) });
+    await runClaimOcrParity(deps(), a.env);
+    await intoReview(s);
+    await review(s, a.uploadId, 'rejected');
+    const c = await upload(s, { uploadedAt: new Date(Date.now() - 60_000) });
+    await withPariwarScope(pool, s.pariwarId, (_db, client) => emit(client, s, 'verifier_review', 'denied', 'claim.verifier_denied'));
+    await runClaimOcrParity(deps(), c.env);
+    expect((await snapshot(s)).currentUploadId).toBe(a.uploadId);
+  });
+
+  it('⭐⭐ `-246` §1 — two uploads sent before the first job committed: the NEWER one replaces the UNREVIEWED current certificate (⛔ never stranded)', async () => {
+    const s = await seedClaim();
+    const a = await upload(s, { uploadedAt: new Date(Date.now() - 180_000) });
+    await runClaimOcrParity(deps(), a.env);
+    await intoReview(s);
+    await review(s, a.uploadId, 'rejected');
+    const b = await upload(s, { uploadedAt: new Date(Date.now() - 120_000) });
+    const c = await upload(s, { uploadedAt: new Date(Date.now() - 60_000) });
+    await runClaimOcrParity(deps(), b.env);
+    await runClaimOcrParity(deps(), c.env);
+    const snap = await snapshot(s);
+    expect(snap.currentUploadId).toBe(c.uploadId); // the family's NEWEST certificate is the one to review
+    expect(claim.deathCertificateStatus(snap)).toBe('awaiting_review');
+    expect((await uploadRows(s)).map((r) => r.upload_id)).toEqual([a.uploadId, b.uploadId, c.uploadId]); // B is KEPT
+    expect(await keptAudits(c.uploadId)).toEqual([]); // made current: ⛔ no kept-not-current line
+    // …and a District Admin who was reviewing B is refused, ⛔ never recorded against a replaced certificate.
+    await expect(review(s, b.uploadId, 'accepted')).rejects.toSatisfy(
+      (err: unknown) => err instanceof claim.DeathCertificateReviewRefusedError && err.reason === 'stale_certificate',
+    );
+  });
+
+  it('⭐ `-246` §4 — a RETRY of the current upload rewrites ⛔ nothing: its reading stays the one its upload row records', async () => {
+    const s = await seedClaim();
+    const LOW: OcrProvider = {
+      async extract() {
+        return { documentType: 'death_certificate', fields: FIELDS, confidence: 0.1 };
+      },
+    };
+    const a = await upload(s);
+    await runClaimOcrParity(deps(), a.env); // first run: confidence 1
+    await runClaimOcrParity(deps(LOW), a.env); // a redelivery whose OCR reads differently
+    const doc = await pool.query<{ ocr_confidence: number }>(
+      "SELECT ocr_confidence FROM claim_documents WHERE claim_case_id = $1 AND document_type = 'death_certificate'",
+      [s.claimCaseId],
+    );
+    expect(doc.rows[0]!.ocr_confidence).toBe(1);
+    expect((await verdicts(s)).get(a.uploadId)!.ocr_confidence).toBe(1);
+  });
+
+  it('⭐ `-245` §2 — a TIE on the handler\'s clock between two DIFFERENT uploads keeps the one already current', async () => {
+    const s = await seedClaim();
+    const at = new Date(Date.now() - 60_000);
+    const first = await upload(s, { uploadedAt: at });
+    const second = await upload(s, { uploadedAt: at });
+    await runClaimOcrParity(deps(), first.env);
+    await runClaimOcrParity(deps(), second.env);
+    expect(await currentKey(s)).toBe(first.key); // commit order must ⛔ never decide
+    expect((await uploadRows(s)).map((r) => r.upload_id).sort()).toEqual([first.uploadId, second.uploadId].sort());
+    // …while a retry of the CURRENT upload re-applies it (idempotent by identity).
+    await runClaimOcrParity(deps(), first.env);
+    expect(await currentKey(s)).toBe(first.key);
+  });
+
+  // ── `2026-09-26-245` §1 — each upload keeps its OWN parity verdict ────────────────────────────────────
+  it('⭐ `-245` §1 — a replacement ⛔ never erases the verdict the replaced certificate received', async () => {
+    const s = await seedClaim();
+    const LOW: OcrProvider = {
+      async extract() {
+        return { documentType: 'death_certificate', fields: FIELDS, confidence: 0.1 };
+      },
+    };
+    const a = await upload(s, { uploadedAt: new Date(Date.now() - 60_000) });
+    await runClaimOcrParity(deps(LOW), a.env); // a poor scan → ambiguous, flagged low confidence
+    await intoReview(s);
+    await review(s, a.uploadId, 'rejected');
+    const b = await upload(s);
+    await runClaimOcrParity(deps(), b.env);
+    const v = await verdicts(s);
+    // (No KYC record is seeded, so both outcomes are `ambiguous`; the CONFIDENCE tells the two verdicts apart.)
+    expect(v.get(a.uploadId)).toMatchObject({ parity_outcome: 'ambiguous', ocr_confidence: 0.1 });
+    expect(v.get(a.uploadId)!.parity_flags).not.toBeNull();
+    expect(v.get(b.uploadId)).toMatchObject({ parity_outcome: 'ambiguous', ocr_confidence: 1 });
+    // claim_documents now carries B's verdict — A's survives ONLY on its own upload row.
+    const doc = await pool.query<{ ocr_confidence: number }>(
+      "SELECT ocr_confidence FROM claim_documents WHERE claim_case_id = $1 AND document_type = 'death_certificate'",
+      [s.claimCaseId],
+    );
+    expect(doc.rows[0]!.ocr_confidence).toBe(1);
   });
 });

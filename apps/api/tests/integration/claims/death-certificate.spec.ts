@@ -514,4 +514,77 @@ describe.skipIf(!hasDatabase)('Story 6.21a — the death-certificate review surf
     ).rows;
     expect(row.id).toBe((t.accepted_certificate as Json).review_id);
   });
+  // ── Code review 2026-09-26 (`2026-09-26-245`) ───────────────────────────────────────────────────
+  it('⭐ `-246` §2 / RTBF — after the REAL anonymizer runs, the accepted date and the note read `anonymized` on the timeline and the history (⛔ never `[anonymized]` as a value), and a determination is refused `certificate_date_anonymized`', async () => {
+    const w = await world();
+    await certificate(w);
+    await inScope(w.pariwarId, (s) => ensureAcceptedDeathCertificate(deps, s, w.pariwarId, w.claimCaseId, { date: ACCEPTED }));
+    // The production erasure path — ⛔ never a hand-written sentinel ("stubs call, never transcribe").
+    await inScope(w.pariwarId, (s) =>
+      memberDomain.anonymizeMember(s.tx, deps.encryption, { memberId: ids.memberId(w.memberId), pariwarId: ids.pariwarId(w.pariwarId) }),
+    );
+    const { client } = await actor(w.pariwarId, 'district_admin', 'district', w.district);
+    const timeline = await client.inject({ method: 'GET', url: `${base(w.pariwarId, w.claimCaseId)}/nominee-declaration` });
+    expect((timeline.json() as Json).accepted_certificate).toMatchObject({ accepted_date: { state: 'anonymized' } });
+    expect(timeline.body).not.toContain(memberDomain.ANONYMIZED_SENTINEL);
+    const history = await client.inject({ method: 'GET', url: historyUrl(w) });
+    expect(history.statusCode, history.body).toBe(200);
+    expect(history.body).not.toContain(memberDomain.ANONYMIZED_SENTINEL);
+    const reviews = ((history.json() as Json).uploads as Json[]).flatMap((u) => u.reviews as Json[]);
+    expect(reviews[0]).toMatchObject({ accepted_date: { state: 'anonymized' }, note: { state: 'anonymized' } });
+    const res = await client.inject({
+      method: 'POST',
+      url: `${base(w.pariwarId, w.claimCaseId)}/nominee-determination`,
+      payload: { certificate_date: ACCEPTED, marks: [], note: 'n', watermark: { rank1: null, rank2: null }, expected_live_determination_id: null },
+    });
+    expect(errCode(res.json() as Json), res.body).toBe('nominee_determination.certificate_date_anonymized');
+  });
+
+  it('⭐ `-246` §2 — a date that FAILS to decrypt is `unreadable` (transient), ⛔ not `anonymized`, and refused `certificate_date_unreadable`', async () => {
+    const w = await world();
+    await certificate(w);
+    await inScope(w.pariwarId, (s) => ensureAcceptedDeathCertificate(deps, s, w.pariwarId, w.claimCaseId, { date: ACCEPTED }));
+    await td.pool.query("UPDATE claim_death_certificate_reviews SET accepted_date_ciphertext = 'enc:v1:not-a-real-envelope' WHERE claim_case_id = $1", [
+      w.claimCaseId,
+    ]);
+    const { client } = await actor(w.pariwarId, 'district_admin', 'district', w.district);
+    const timeline = await client.inject({ method: 'GET', url: `${base(w.pariwarId, w.claimCaseId)}/nominee-declaration` });
+    expect((timeline.json() as Json).accepted_certificate).toMatchObject({ accepted_date: { state: 'unreadable' } });
+    const res = await client.inject({
+      method: 'POST',
+      url: `${base(w.pariwarId, w.claimCaseId)}/nominee-determination`,
+      payload: { certificate_date: ACCEPTED, marks: [], note: 'n', watermark: { rank1: null, rank2: null }, expected_live_determination_id: null },
+    });
+    expect(errCode(res.json() as Json), res.body).toBe('nominee_determination.certificate_date_unreadable');
+  });
+
+  it('⭐ `-245` §3 — a LEGACY certificate row (⛔ no upload row) reaches the console as `missing` with ⛔ no token, ⛔ never `not_reviewed`', async () => {
+    const w = await world();
+    await td.pool.query(
+      `INSERT INTO claim_documents (claim_document_id, pariwar_id, claim_case_id, document_type, storage_object_key,
+         content_type, byte_size, parity_outcome, parity_flags, ocr_confidence, verifier_review_required)
+       VALUES ($1, $2, $3, 'death_certificate', $4, 'application/pdf', 1024, 'match', '{}'::jsonb, 0.9, false)`,
+      [randomUUID(), w.pariwarId, w.claimCaseId, `pariwar/${w.pariwarId}/claim/${w.claimCaseId}/death_certificate/legacy`],
+    );
+    const da = await actor(w.pariwarId, 'district_admin', 'district', w.district);
+    const res = await da.client.inject({ method: 'GET', url: `${base(w.pariwarId, w.claimCaseId)}/verifier-console` });
+    expect(res.statusCode, res.body).toBe(200);
+    const dr = ((res.json() as Json).packet as Json).documentReview as Json;
+    const item = (dr.reviews as Json[]).find((r) => r.documentType === 'death_certificate')!;
+    expect(item.review).toMatchObject({ status: 'missing', certificateToken: null });
+  });
+
+  it('⭐ D10 review fix — `viewer.canReview` is FALSE outside the review window even for the District Admin (every submit there is 409 `not_reviewable`)', async () => {
+    const w = await world('documents_pending');
+    await certificate(w);
+    const da = await actor(w.pariwarId, 'district_admin', 'district', w.district);
+    const res = await da.client.inject({ method: 'GET', url: `${base(w.pariwarId, w.claimCaseId)}/verifier-console` });
+    expect(res.statusCode, res.body).toBe(200);
+    const dr = ((res.json() as Json).packet as Json).documentReview as Json;
+    const item = (dr.reviews as Json[]).find((r) => r.documentType === 'death_certificate')!;
+    expect((item.review as Json).viewer).toEqual({ canReview: false });
+    // …and the route agrees: the submit the flag would have offered is refused.
+    const post = await da.client.inject({ method: 'POST', url: reviewUrl(w), payload: await acceptBody(w) });
+    expect(errCode(post.json() as Json), post.body).toBe('death_certificate_review.not_reviewable');
+  });
 });

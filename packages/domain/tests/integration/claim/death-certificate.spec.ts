@@ -24,6 +24,8 @@ import {
   deathCertificateStatus,
   getOriginalDeciderActorIds,
   isDeathCertificateReplacementRequested,
+  isDeathCertificateUploadAllowed,
+  mayDeathCertificateUploadBecomeCurrent,
   isDeathCertificateUploadAllowedInReviewWindow,
   isInDeathCertificateReviewWindow,
   listDeathCertificateHistory,
@@ -469,9 +471,12 @@ describe.skipIf(!hasDatabase)('Story 6.21a — the death certificate clear-date 
     const refused = (err: unknown) => err instanceof NomineeDeterminationRefusedError && err.reason === 'certificate_not_accepted';
     // No certificate at all.
     await expect(seedNomineeDetermination(client, PARIWAR_A, cid, { certificate: 'skip' })).rejects.toSatisfy(refused);
-    // A rejected one.
-    await seedRejectedDeathCertificate(client, { pariwarId: PARIWAR_A, claimCaseId: cid });
-    await expect(seedNomineeDetermination(client, PARIWAR_A, cid, { certificate: 'skip' })).rejects.toSatisfy(refused);
+    // A rejected one — passing the rejected review's REAL id (code review 2026-09-26): a writer that matched
+    // the live review's id without checking its verdict must fail HERE, ⛔ not pass on a random id.
+    const rejectedReviewId = await seedRejectedDeathCertificate(client, { pariwarId: PARIWAR_A, claimCaseId: cid });
+    await expect(
+      seedNomineeDetermination(client, PARIWAR_A, cid, { certificate: 'skip', deathCertificateReviewId: rejectedReviewId }),
+    ).rejects.toSatisfy(refused);
     // An accepted one, but a DIFFERENT (random) review id.
     const reviewId = await seedAcceptedDeathCertificate(client, { pariwarId: PARIWAR_A, claimCaseId: cid, date: PAST });
     await expect(seedNomineeDetermination(client, PARIWAR_A, cid, { certificate: 'skip' })).rejects.toSatisfy(refused);
@@ -482,6 +487,39 @@ describe.skipIf(!hasDatabase)('Story 6.21a — the death certificate clear-date 
       .from(schema.nomineeDeterminations)
       .where(eq(schema.nomineeDeterminations.determinationId, d.determinationId));
     expect(row!.link).toBe(reviewId);
+  });
+
+  it('⭐ `-245` §4 — the handler\'s DATE verdict is refused by the WRITER, after 6.20\'s validations: `mismatch` and `unreadable` are distinct', async () => {
+    // Outside the window, a mismatch verdict does ⛔ not pre-empt 6.20's `not_recordable`.
+    const early = await freshClaim('documents_pending');
+    await expect(
+      seedNomineeDetermination(early.client, PARIWAR_A, early.cid, { certificate: 'skip', certificateDateCheck: 'mismatch' }),
+    ).rejects.toSatisfy((err: unknown) => err instanceof NomineeDeterminationRefusedError && err.reason === 'not_recordable');
+    const { client, cid } = await freshClaim('verification_in_progress');
+    // ONE accepted certificate; every leg passes its real review id (so only the DATE verdict differs).
+    const reviewId = await seedAcceptedDeathCertificate(client, { pariwarId: PARIWAR_A, claimCaseId: cid, date: PAST });
+    const leg = (certificateDateCheck: 'match' | 'mismatch' | 'unreadable' | 'anonymized' | null) =>
+      seedNomineeDetermination(client, PARIWAR_A, cid, {
+        certificate: 'skip',
+        deathCertificateReviewId: reviewId,
+        certificateDate: PAST,
+        certificateDateCheck,
+      });
+    await expect(leg('mismatch')).rejects.toSatisfy(
+      (err: unknown) => err instanceof NomineeDeterminationRefusedError && err.reason === 'certificate_date_mismatch',
+    );
+    await expect(leg('unreadable')).rejects.toSatisfy(
+      (err: unknown) => err instanceof NomineeDeterminationRefusedError && err.reason === 'certificate_date_unreadable',
+    );
+    await expect(leg('anonymized')).rejects.toSatisfy(
+      (err: unknown) => err instanceof NomineeDeterminationRefusedError && err.reason === 'certificate_date_anonymized',
+    );
+    // `-246` §3 — FAIL-CLOSED: an accepted review re-asserted with ⛔ no verdict is a caller bug, ⛔ never a pass.
+    await expect(leg(null)).rejects.toSatisfy(
+      (err: unknown) => err instanceof Error && !(err instanceof NomineeDeterminationRefusedError) && /no date verdict/.test(err.message),
+    );
+    // …and `match` records (non-vacuity).
+    await expect(leg('match')).resolves.toBeDefined();
   });
 
   it('⭐ D8 — the REFUSAL ORDER: a 6.20 refusal keeps its own reason even when the certificate is also missing', async () => {
@@ -511,6 +549,23 @@ describe.skipIf(!hasDatabase)('Story 6.21a — the death certificate clear-date 
     expect(isInDeathCertificateReviewWindow('verification_in_progress')).toBe(true);
     expect(isInDeathCertificateReviewWindow('documents_pending')).toBe(false);
     expect(isInDeathCertificateReviewWindow('denied')).toBe(false);
+  });
+
+  it('⭐ `-246` §1 — TWO predicates: INTAKE (D6: in the window only `missing`/`rejected`) and CURRENT (in the window unless ACCEPTED); both always before verification, never after the window', () => {
+    for (const status of ['missing', 'awaiting_review', 'accepted', 'rejected'] as const) {
+      for (const pre of ['intake_converged', 'documents_pending']) {
+        expect(isDeathCertificateUploadAllowed(pre, status)).toBe(true);
+        expect(mayDeathCertificateUploadBecomeCurrent(pre, status)).toBe(true);
+      }
+      expect(isDeathCertificateUploadAllowed('verifier_review', status)).toBe(status === 'missing' || status === 'rejected');
+      // ⭐ the difference: an UNREVIEWED certificate refuses a new INTAKE, but a newer upload already taken in
+      // may REPLACE it; only an ACCEPTED one is protected.
+      expect(mayDeathCertificateUploadBecomeCurrent('verifier_review', status)).toBe(status !== 'accepted');
+      for (const after of ['approved', 'denied', 'state_trustee_approved']) {
+        expect(isDeathCertificateUploadAllowed(after, status)).toBe(false);
+        expect(mayDeathCertificateUploadBecomeCurrent(after, status)).toBe(false);
+      }
+    }
   });
 
   it('⭐ D16 — `isDeathCertificateReplacementRequested` is true ONLY for a rejected certificate IN the window', async () => {

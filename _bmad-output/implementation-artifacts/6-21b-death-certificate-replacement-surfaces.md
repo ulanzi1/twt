@@ -36,7 +36,9 @@ Status: ready-for-dev
 > message, `तिथि`, and `certificate.missing_body`) are recorded in **`2026-09-25-244`**, the ONE author-commit for both
 > stories (its §1 table, §3 calls 3/4/7, and the `missing_body` approval). **`2026-09-26-247`** supersedes D1's
 > response, its row 1 (for two states) and its marker rule 2, and fixes the wire spelling as snake_case;
-> **`2026-09-26-248`** is an erratum to `-247` §3 (the api-client maps ⛔ no casing). ⛔ No other entry exists for 6.21b ([[feedback_supersede_never_reinterpret]]).
+> **`2026-09-26-248`** is an erratum to `-247` §3 (the api-client maps ⛔ no casing). **`2026-09-26-245` §3** had
+> already corrected D1 rows 2 and 5 (a legacy row is `missing`). **`2026-09-26-249`** records the blind validate's
+> four calls (B1–B4), a correction to `-247` §2's rationale, and the helpline operator lines. ⛔ No other entry exists for 6.21b ([[feedback_supersede_never_reinterpret]]).
 >
 > **Rulings:** `-235` Y (a certificate with no clear date is rejected) and `-236` BB (*"family will be asked to produce
 > certificate with clear date without the claim being denied"*). **BigDev, 2026-09-25:** a future date is rejected, and
@@ -59,11 +61,14 @@ so that **our claim keeps moving and we are never left thinking it was refused.*
    is shown **only** while that is true: inside 6.21a's review window (6.21a D3). Outside it, show nothing new. 6.18
    shipped exactly this defect, fixed by `-242` cl.2 (*"a DENIED claim … told the family their claim 'has not been
    refused'"*).
-2. **⛔ No deadline, countdown or urgency** on any replacement surface (`-236` CC1's default: none). ⚠ The filing
+2. **⛔ No deadline, countdown or urgency** on any replacement surface (`-236` CC1's default: none — CC1 governs the
+   **replacement** certificate; for a FIRST certificate put off at filing (row 1a), ⛔ no deadline is the AUTHOR's own
+   call, the same posture, ⛔ not CC1's — BW10). ⚠ The filing
    wizard's `document.help`, `document.defer` and `document.saved` say *"within 7 days"*. They must ⛔ not appear on
    the replacement screen.
 3. **⛔ No note, date, reviewer or free text reaches the family.** They get a two-value **reason enum** and our copy.
-4. **The helpline sees the same status the family sees**, from the same server-side resolver.
+4. **The helpline sees the same SERVER status the family sees**, from the same server-side resolver. The app's
+   in-flight marker and the helpline's "sent, being processed" line are each client-only overlays (BW-J5).
 5. **The OCR flag shows; it never acts.** A missing date of death is **flagged** for the District Admin. It rejects
    ⛔ nothing, and gates ⛔ nothing. (Verified at `eab7ba45`: the only readers of `parity_outcome` /
    `verifier_review_required` are the console assembler and `VerifierReviewPanel` — display.)
@@ -153,7 +158,9 @@ decisions landed on top of the one this file was written under:
     current). This also supersedes BigDev's v0.6 call.
   - **(c)** Keep D1 as committed. Cost: the up-to-24-hour false message ships, recorded as a known limit in the
     Completion Notes.
-- **Q1 — a certificate deferred at filing can never be sent afterwards.** Only a received certificate advances a claim
+- **Q1 — a certificate deferred at filing can never be sent afterwards.** ⚠ BLIND VALIDATE (BW-G5): the reason below is
+  imprecise — the OCR job advances a claim out of `intake_converged` for **ANY** document type. The conclusion holds
+  because the app only ever uploads a death certificate (and the helpline had ⛔ no upload UI). Only a received certificate advances a claim
   out of `intake_converged` (the OCR job appends `claim.documents_received`). A family who taps *"I'll upload later
   (within 7 days)"* is left in `intake_converged`. The draft that held the upload screen is cleared at acknowledgement,
   so there is ⛔ no screen. D1's row 1 answers `not_needed` there, so 6.21b adds none. The helpline has ⛔ no upload UI
@@ -168,6 +175,18 @@ decisions landed on top of the one this file was written under:
     author-commit, one table row, and two more tests.
   - **(b)** Leave it, and record the gap in `deferred-work.md` against 6.5 with 6.21b as the finder. Cost: the gap
     stays open.
+
+## 🕶️ Blind validate record (2026-09-26, three fresh-context read-only verifiers, against v0.9 at `945f9969`)
+
+Lenses: code claims · governance and sibling staleness · premise and end-to-end journeys. Every finding with a factual
+claim was re-checked in the code before being accepted; ⛔ none was rejected. Tagged `BW-<lens><n>` in this file
+(C = code, G = governance, J = journeys). **Applied (the author's):** C1 (⛔ no render harness ⇒ pure view/marker/
+outcome/announcement functions tested in node — CRITICAL), C2 (the OCR-failure path DOES call `evaluateParity`), C3/G1
+(AC1 contradicted row 1a), C4 (shepherd refetch on focus; the marker written from the wizard too), C5/J3
+(`otp.no_nominee` says *"file"*), C6/J8 (operator lines for every status), C7/G3, C8, C9 (friction table placement;
+6.18's row still uncounted), C10, C11, C12, G2, G4, G5 (story side), G6, G7, G8, G9, G10, J5, J6, J9, J10.
+**Decided by BigDev (B1–B4) in `2026-09-26-249`:** J1 offline (CRITICAL), J2 wizard re-entry (narrowed for `-239` (b)),
+C2/J4 the OCR-failure flag, J7 `reversed`.
 
 ## ✅ Validate record (2026-09-26, bmad-create-story validate, against v0.8 at `692a16de`)
 
@@ -244,12 +263,15 @@ applied** (V1's governance half by erratum `2026-09-26-248`):
     date logic.
   - Its date checks run only when `ocr.dateOfDeath !== null`. ⚠ The *"missing evidence stays silent here"* comment is
     about the certificate **issue** date.
-  - The job (`apps/jobs/src/claim-ocr-parity.ts`) has both the raw `ocrFields` and `normalized`. The OCR-failure path
-    forces `ambiguous` **without** calling `evaluateParity`. Each tracked upload's verdict is written **once** onto its
+  - The job (`apps/jobs/src/claim-ocr-parity.ts`) has both the raw `ocrFields` and `normalized`. ⚠ BLIND VALIDATE (BW-C2): the
+    OCR/fetch-failure path does **CALL** `evaluateParity` — its `catch` leaves `EMPTY_OCR_FIELDS`, which then hits the
+    `ocr: 'unreadable'` early return. Each tracked upload's verdict is written **once** onto its
     `claim_death_certificate_uploads` row (`-245` §1, `-246` §4).
   - `VerifierReviewPanel.tsx`'s "Date of death" row passes `flag={parityFlags['date']}`.
-- **Friction:** `friction-budget.md` `## The ledger` (`payer | protects | forced/optional`). ⚠ 6.18's row was once found
-  in the wrong table and never counted.
+- **Friction:** `friction-budget.md` `## The ledger` (`payer | protects | forced/optional`). ⚠ The gate (`scripts/friction-budget/lib.ts`)
+  reads ONLY the first contiguous `payer|protects|event_type` table and stops at the first non-`|` line. Append the
+  new row INSIDE that table, with leading and trailing pipes. ⚠ 6.18's row still sits OUTSIDE it (appended to the
+  `/members` bytes table under *"Story 10.15"*) and is still uncounted (BW-C9) — record it, ⛔ do not move it here.
 - **Audit:** `apps/api/src/audit/audit-sink.ts` is a string union with a comment block per surface. 6.21a added
   `admin_death_certificate.history_read` there.
 
@@ -259,8 +281,9 @@ applied** (V1's governance half by erratum `2026-09-26-248`):
   - **Route:** `GET /api/v1/member/claims/:claimCaseId/death-certificate` in `claims.routes.ts` (`NON_ADJUDICATION_ROUTES`
     in the human-actor gate — ⛔ no gate edit for it). `memberSession` only (⛔ no step-up: read-only, non-PII). Own
     claim only: a miss and a not-owned claim are both 404 `claim.not_found` (the `getShepherdMember` guard).
-  - **Response** (⚠ SUPERSEDED by `-247` §1 and §3 — the token and the snake_case spelling; §2 — `upload_allowed`):
-    `{ status, replacement_reason, replacement_allowed, upload_allowed, certificate_token }`.
+  - **Response** (⚠ SUPERSEDED by `-247` §1 and §3 — the token and the snake_case spelling; §2 — `upload_allowed`;
+    and by `-249` §2 — `claim_live`, §4 — `reassurance`):
+    `{ status, replacement_reason, replacement_allowed, upload_allowed, certificate_token, claim_live, reassurance }`.
     - `status`: `'not_needed' | 'missing' | 'awaiting_review' | 'accepted' | 'replacement_requested'`.
     - `replacement_reason`: `'unclear_date' | 'future_date' | null`.
     - `replacement_allowed: boolean` — the in-window predicate, ⛔ nothing else (C1).
@@ -268,6 +291,11 @@ applied** (V1's governance half by erratum `2026-09-26-248`):
       keys on this field, ⛔ never on `replacement_allowed`.
     - `certificate_token: string (uuid) | null` — the CURRENT upload's id (`snapshot.currentUploadId`). Used ⛔ only by
       the marker; ⛔ never shown (`-247` §1).
+    - `claim_live: boolean` — `state ∉ CLAIM_TERMINAL_STATES` (`denied`, `settled`). Used ⛔ only by the filing-entry
+      redirect (`-249` §2); ⛔ never shown.
+    - `reassurance: 'not_refused' | 'still_open' | null` — for `replacement_requested`: `not_refused`, or `still_open`
+      when the claim is `reversed`; `null` for every other status (`-249` §4). The app renders
+      `certificate.not_refused` / `certificate.still_open` from it — ⛔ never decides it.
     - ⚠ VALIDATE 2026-09-26 (V1): the api-client does ⛔ **not** map casing — every member method returns its
       contract type as-is (`getShepherd` → `MemberShepherdResponse`, and `ShepherdContactCard` reads
       `data.display_name`). ⇒ the app reads these snake_case fields directly; ⛔ no mapping layer is written.
@@ -281,8 +309,8 @@ applied** (V1's governance half by erratum `2026-09-26-248`):
     | 1b | ⭐ `-247` §2: state ∈ `CLAIM_DOCUMENT_UPLOADABLE_STATES`, any other status (a current upload exists) | `awaiting_review` | `null` | `false` | `false` | `awaiting_review` line |
     | 1 | `!isInDeathCertificateReviewWindow(state)` — the eight remaining states: `intake_pending`, `state_trustee_approved`, `approved`, `denied`, `appeal_stage_1/2/3`, `settled` | `not_needed` | `null` | `false` | `false` | nothing new |
     | 2 | in window, `deathCertificateStatus(snapshot) === 'missing'` — ⛔ no row, **or** a row with ⛔ no current upload (T12 legacy — `-245` §3) | `missing` | `null` | `true` | `true` | `missing_body` + upload button + helpline line |
-    | 3 | in window, status `rejected`, `currentReview.rejectionReason === 'date_of_death_in_future'` | `replacement_requested` | `future_date` | `true` | `true` | title + `replacement_body_future` + button + helpline line |
-    | 4 | in window, status `rejected`, reason `no_date_of_death` or `date_of_death_unclear` | `replacement_requested` | `unclear_date` | `true` | `true` | title + `replacement_body` + button + helpline line |
+    | 3 | in window, status `rejected`, `currentReview.rejectionReason === 'date_of_death_in_future'` | `replacement_requested` | `future_date` | `true` | `true` | title + `replacement_body_future` + the `reassurance` line + button + helpline line |
+    | 4 | in window, status `rejected`, reason `no_date_of_death` or `date_of_death_unclear` | `replacement_requested` | `unclear_date` | `true` | `true` | title + `replacement_body` + the `reassurance` line + button + helpline line |
     | 5 | in window, status `awaiting_review` — a **current upload** exists, ⛔ no live current review | `awaiting_review` | `null` | `false` | `false` | `awaiting_review` line |
     | 6 | in window, status `accepted` | `accepted` | `null` | `false` | `false` | `accepted` line |
 
@@ -305,8 +333,8 @@ applied** (V1's governance half by erratum `2026-09-26-248`):
     ⛔ not call it (that would be a second claim read), but a test asserts they agree for every row, so 6.19's reminder
     and the family's screen can ⛔ never disagree about whether the family is being asked.
   - **Implementation, and who owns which function:** 6.21a **created** the leaf and every predicate above. **6.21b
-    adds** one pure function to that leaf — `resolveDeathCertificateFamilyStatus(claimState, snapshot)` → the three
-    fields — plus a thin async reader beside it if convenient. ⭐ The leaf rule still binds (T8): import ⛔ nothing
+    adds** one pure function to that leaf — `resolveDeathCertificateFamilyStatus(claimState, snapshot)` → the five
+    fields (`-247`) — plus a thin async reader beside it if convenient. ⭐ The leaf rule still binds (T8): import ⛔ nothing
     beyond schema tables, id types, `errors.ts` and `review-window.ts`. ⛔ No second definition of any condition.
   - **In-flight: the server is AUTHORITATIVE, and the MMKV marker is a client-only DISPLAY OVERLAY.**
     - **Why it exists:** the job writes the upload row (6.21a D2), so between the 202 and the job's commit the server
@@ -330,10 +358,13 @@ applied** (V1's governance half by erratum `2026-09-26-248`):
          was received and asking again is right.
       4. **Otherwise** ⇒ show `awaiting_review`, with the upload button **hidden**, so the family does ⛔ not upload
          twice while the first is processing.
-    - **With no fresh server read** (offline, or an error): show the last cached server status (a status cache
-      beside the shepherd cache in `lib/filed-claim.ts`, same clear-on-401/403/404 rule). Apply rule 3 only; ⛔ never
-      let the marker alone decide beyond `awaiting_review`.
-    - **Tests:** each precedence rule, plus the offline case, with an injected clock, **and** the `-247` §1 case (A
+    - **With no fresh server read** (offline, or an error) — ⚠ SUPERSEDED by `-249` §1 (was: *"show the last cached
+      server status"*, which would say *"… has not been refused"* offline on a claim denied since — the `-242` defect,
+      BW-J1): render ⛔ **no** certificate notice at all. The shepherd card's own offline line and helpline CTA
+      remain. ⛔ No certificate status is cached; ⛔ no new copy. The marker is consulted only against a fresh read.
+    - **Tests (BW-C1 — apps/mobile has ⛔ NO render harness: `vitest.config.ts` is `environment: 'node'`, `tests/unit/**/*.test.ts`;
+      ⛔ no new dependency):** the marker precedence is a PURE function `(serverRead | null, marker | null, now) → view`,
+      tested in node; each precedence rule, plus the offline case, with an injected clock, **and** the `-247` §1 case (A
       rejected → B uploaded, app closed → B's job lands → B rejected → reopened inside 24 h ⇒ the server's
       `replacement_requested` is shown, ⛔ never `awaiting_review`).
   - This **narrows** 6.5's deferral *"No status/polling endpoint for the async upload outcome"* for the death
@@ -347,9 +378,12 @@ applied** (V1's governance half by erratum `2026-09-26-248`):
     - `document.tsx` keeps its current single message (the 6.5 deferral *"Generic 'upload failed' message doesn't
       distinguish…"* is **narrowed** for the replacement screen only — annotate, ⛔ do not close).
   - **Outcome → what the screen shows:** `certificate_awaiting_review` ⇒ `certificate.awaiting_review`;
-    `certificate_accepted` ⇒ `certificate.accepted`; `upload_not_allowed` ⇒ **refetch D1** and render the server's row
-    (⛔ never *"failed"*, and ⛔ never a *"not refused"* line the server no longer supports); generic ⇒
-    `document.upload_failed` + `document.retry`. ⛔ Never *"upload failed"* for the two 409s (C6).
+    `certificate_accepted` ⇒ `certificate.accepted`; `upload_not_allowed` ⇒ **refetch D1**; if
+    `upload_allowed` is now false, `router.replace` back to the shepherd screen, which renders the server's row (for
+    `not_needed`: nothing) — ⛔ never a blank screen, ⛔ never *"failed"*, ⛔ never a *"not refused"* line the server no
+    longer supports (BW-J6); 413/415 ⇒
+    `document.upload_failed` + `document.retry`, where retry REOPENS THE PICKER (⛔ never re-sends the same file, which
+    would fail again — BW-J9); generic ⇒ `document.upload_failed` + `document.retry`. ⛔ Never *"upload failed"* for the two 409s (C6).
   - **Step-up:** the screen runs the **handover OTP** when the upload returns `auth.step_up_required`. Extract request →
     verify from `handover-otp.tsx` into `lib/use-handover-otp.ts`, used by both.
     - `handover-otp.tsx` keeps its wizard navigation.
@@ -362,15 +396,17 @@ applied** (V1's governance half by erratum `2026-09-26-248`):
     `certificate-replacement` to `CLAIM_STEPS` (`lib/claim-steps.ts`): the `(claim)` layout then correctly shows ⛔ no
     "Step N of M" header.
   - **No reachable nominee (V4):** `requestHandoverOtp` returns an EMPTY `nomineeMobileMasked` when the nominee has no
-    reachable mobile, and the wizard then shows `otp.no_nominee`. The replacement screen does the same, **with** the
-    helpline line: the step-up can ⛔ not be passed, so the helpline (D5, ⛔ no step-up) is the way out. A test covers it.
+    reachable mobile. ⛔ Do **not** reuse `otp.no_nominee` — it says *"we'll help you **file**"* (hi: *"दावा दर्ज करने में"*),
+    false on a filed claim (BW-J3). Render **only** `<CallHelplineCTA label={t('certificate.replacement_helpline')} />`:
+    the step-up can ⛔ not be passed, so the helpline (D5, ⛔ no step-up) is the way out. ⛔ No new copy.
   - **Copy:** ⛔ none of `document.help` / `document.defer` / `document.saved` (invariant 2). The helpline line is
     `<CallHelplineCTA label={t('certificate.replacement_helpline')} />` (C5).
   - **Accessibility (V2 — the 6.18 review's pattern, ⛔ not a literal "call it on both"):** the outcome is spoken on
     both platforms. Android: the outcome `Text` carries `accessibilityLiveRegion="polite"`. iOS:
     `if (Platform.OS === 'ios') AccessibilityInfo.announceForAccessibility(…)` — ⛔ unguarded, TalkBack speaks it
     **twice** (`nominee-review.tsx`, code review 2026-09-23b). Hold on the screen long enough for the live region to
-    be read before navigating (`SAVED_ANNOUNCEMENT_DELAY_MS`), and key the effect on the outcome, ⛔ never on `t`.
+    be read before navigating (mirror `SAVED_ANNOUNCEMENT_DELAY_MS` = 1200 — it is module-local in `nominee-review.tsx`,
+    ⛔ not exported), and key the effect on the outcome, ⛔ never on `t`.
     Status is ⛔ never conveyed by colour alone.
   - **Colour (C3):** ⛔ no colour literal and ⛔ no status colour in the new screen or the two hooks.
 - **D3 — the post-filing notice.** `shepherd.tsx` takes `claimCaseId` from its route params (C2), reads D1, and renders
@@ -381,6 +417,12 @@ applied** (V1's governance half by erratum `2026-09-26-248`):
   - for `awaiting_review` and `accepted`: one line each;
   - for `not_needed`: nothing.
   - The notice's loading, error and empty states render ⛔ outside any list ([[project_fabric_flatlist_empty_populated_crash]]).
+  - (BW-C4) It **refetches on focus** (`useFocusEffect`) — `shepherd.tsx` does ⛔ not remount after `router.back()`
+    from the replacement screen — and it renders through the SAME pure view function as the replacement screen,
+    marker included. The shared upload hook writes the marker on **every** death-certificate 202, the wizard's
+    `document.tsx` included, so a family who just uploaded in the wizard is ⛔ not told *"not received yet"* (row 1a)
+    before the job lands.
+  - After a successful upload the replacement screen announces, holds, and `router.replace`s to the shepherd screen.
 - **D4 — the copy** (an author-commit, the `-225` precedent; both locales; `claim` namespace).
   - ⭐ `certificate.replacement_helpline` is **BigDev's wording**, and ⛔ must not be reverted.
   - ⭐ `certificate.replacement_body_future` is the **separate** future-date message BigDev asked for.
@@ -389,8 +431,10 @@ applied** (V1's governance half by erratum `2026-09-26-248`):
 | key | en | hi |
 |---|---|---|
 | `certificate.replacement_title` | A new death certificate is needed | नया मृत्यु प्रमाणपत्र चाहिए |
-| `certificate.replacement_body` | The death certificate we received does not show a clear date of death. Please upload one that does. Your claim is still open and has not been refused. | हमें मिले मृत्यु प्रमाणपत्र पर मृत्यु की तिथि स्पष्ट नहीं है। कृपया ऐसा प्रमाणपत्र अपलोड करें जिस पर तिथि स्पष्ट हो। आपका दावा अब भी खुला है और अस्वीकार नहीं हुआ है। |
-| `certificate.replacement_body_future` | The date of death on the certificate we received is a future date. Please upload a certificate that shows the correct date of death. Your claim is still open and has not been refused. | हमें मिले मृत्यु प्रमाणपत्र पर मृत्यु की तिथि भविष्य की है। कृपया ऐसा प्रमाणपत्र अपलोड करें जिस पर मृत्यु की सही तिथि हो। आपका दावा अब भी खुला है और अस्वीकार नहीं हुआ है। |
+| `certificate.replacement_body` ⚠ `-249` §4 | The death certificate we received does not show a clear date of death. Please upload one that does. | हमें मिले मृत्यु प्रमाणपत्र पर मृत्यु की तिथि स्पष्ट नहीं है। कृपया ऐसा प्रमाणपत्र अपलोड करें जिस पर तिथि स्पष्ट हो। |
+| `certificate.replacement_body_future` ⚠ `-249` §4 | The date of death on the certificate we received is a future date. Please upload a certificate that shows the correct date of death. | हमें मिले मृत्यु प्रमाणपत्र पर मृत्यु की तिथि भविष्य की है। कृपया ऐसा प्रमाणपत्र अपलोड करें जिस पर मृत्यु की सही तिथि हो। |
+| `certificate.not_refused` (new, `-249` §4) | Your claim is still open and has not been refused. | आपका दावा अब भी खुला है और अस्वीकार नहीं हुआ है। |
+| `certificate.still_open` (new, `-249` §4) | Your claim is still open. | आपका दावा अब भी खुला है। |
 | `certificate.missing_body` | We have not received the death certificate yet. Please upload it. Your claim is still open. | हमें अभी तक मृत्यु प्रमाणपत्र नहीं मिला है। कृपया इसे अपलोड करें। आपका दावा अब भी खुला है। |
 | `certificate.replacement_upload` | Upload a new certificate | नया प्रमाणपत्र अपलोड करें |
 | `certificate.replacement_helpline` | If you can't upload it, call the helpline and we will help you. | अगर आप इसे अपलोड नहीं कर पा रहे हैं, तो हेल्पलाइन पर कॉल करें — हम आपकी सहायता करेंगे। |
@@ -398,11 +442,15 @@ applied** (V1's governance half by erratum `2026-09-26-248`):
 | `certificate.accepted` | The death certificate has been accepted. | मृत्यु प्रमाणपत्र स्वीकार कर लिया गया है। |
 
   - ✅ `certificate.missing_body` was **approved by BigDev on 2026-09-25** (`-244` §3).
+  - ⚠ SUPERSEDED by `-249` §4 (the split only): the two bodies lost their closing sentence, which is now its own key,
+    chosen by the server's `reassurance` — so a `reversed` claim is told *"still open"*, ⛔ never *"not refused"*. ⛔ No
+    word is new: every string is `-244` D4's.
   - **Helpline read-out lines** (`helpline-claims/i18n-en.ts`, English):
     - unclear date: *"The certificate we have doesn't show a clear date of death — the family needs to send another. The claim is still open."*
     - future date: *"The date of death on the certificate we have is a future date — the family needs to send a certificate with the correct date. The claim is still open."*
     - missing: *"We haven't received the death certificate yet — the family needs to send it. The claim is still open."*
-  - **Helpline refusal lines** (C6; the author's, English chrome): for `certificate_accepted` — *"This claim's death
+  - **Every other operator line** (status lines, the "sent, being processed" line, refusals, 413/415) is recorded
+    verbatim in **`-249` §6** — copy them from there. The refusal lines (C6), as recorded: for `certificate_accepted` — *"This claim's death
     certificate has already been accepted. Another one can't be sent."*; for `certificate_awaiting_review` — *"A death
     certificate is already waiting to be reviewed. Another one can't be sent until it has been."*; for
     `upload_not_allowed` — *"This claim can't take a new certificate in its current state."*
@@ -415,8 +463,9 @@ applied** (V1's governance half by erratum `2026-09-26-248`):
       each with the D1 status from the same pure resolver. ⚠ COST: ≤ 10 claims ⇒ ≤ 10 snapshot reads, each one
       statement. Bounded by the domain's own `.limit(10)`.
     - It writes one audit line, `admin_death_certificate.claims_read` (a new member of the `audit-sink.ts` union, in
-      6.21a's comment block), **ids and status codes only**. This closes the class of 6.20's deferral *"the helpline
-      live-claims read writes no audit line"* **for this route only**.
+      6.21a's comment block), **ids and status codes only**. It does ⛔ **not** close 6.20's deferral *"the helpline live-claims read
+      writes no audit line"* — that item is about 6.20's own route, which stays unaudited; annotate both of its sites
+      (BW-G8).
     - Update the file header: it currently says *"Both gate at `dimension: 'district'`"* and *"⛔ No member or helpline
       surface here — those are Story 6.21b's"*. Both become false.
     - Update the gate entry's `expectedMethods` to `['post', 'get', 'get']` (the path contains `death-certificate`, so
@@ -434,7 +483,14 @@ applied** (V1's governance half by erratum `2026-09-26-248`):
       ⛔ no `certificate_token` (⛔ no marker on the helpline).
     - It uploads `death_certificate` only. There is ⛔ no type chooser.
     - It maps every upload refusal to its own line (D4 refusal lines; 413/415 to plain operator text) — ⛔ never a raw code.
-    - After a 202 it refetches the list (the server status is authoritative; ⛔ no marker on the helpline, invariant 4).
+    - After a 202 (BW-J5): the job, ⛔ not the handler, writes the upload row, so a refetch still answers
+      `replacement_requested` / `missing` until the job lands. ⇒ keep a per-claim "sent, being processed" state tied
+      to `chosenRef`, show its own operator line (*"The certificate was sent and is being processed. Refresh in a
+      minute."*), and hide the upload control until the server status or the claim changes. Then refetch.
+    - Every status has an operator line (BW-J8/C6; English chrome, the author's): `awaiting_review` — *"We have the
+      certificate; it is waiting for the District Admin's review. Nothing more is needed from the family."*;
+      `accepted` — *"The death certificate has been accepted."*; `not_needed` — *"Nothing is needed about the death
+      certificate on this claim right now."* ⛔ Never a raw status code.
   - **The 6.5 `DocumentTypeChooser` deferral:** its premise (*"no Story 6.3 helpline upload surface exists"*) becomes
     **partly false**, because a death-certificate surface now exists. Re-state it: the chooser is still unwired, and
     the other types still have no helpline surface. It stays **open**.
@@ -448,10 +504,15 @@ applied** (V1's governance half by erratum `2026-09-26-248`):
   - `flags.date` stays the plausibility key, unchanged;
   - `VerifierReviewPanel`'s Date-of-death row shows `death_date ?? date`.
   - The flag rides the verdict onto the upload row as well (`parity_flags`, written once — `-246` §4). ⛔ No migration.
-  - The OCR-failure path is ⛔ unchanged (it never calls `evaluateParity`). ⛔ Nothing is rejected or gated.
+  - ⚠ SUPERSEDED by `-249` §3 (D6's letter): the OCR/fetch-failure path **does** reach `evaluateParity` (with empty
+    fields). The job passes a new optional **`ocrFailed: true`** on that path, and ⛔ no `death_date` flag is written;
+    the existing `ocr` flag already says why. `missing` / `unreadable` apply only to a certificate that was read.
+    ⛔ Nothing is rejected or gated.
+  - `rawDateOfDeathPresent` absent (`undefined`) means ⛔ not present ⇒ `missing` (BW-C12).
 - **D7 — gates and ledgers.**
   - `microcopy.yaml` `code_globs` gains every new or edited mobile file: `certificate-replacement.tsx`, `shepherd.tsx`,
-    `document.tsx`, `handover-otp.tsx`, `lib/filed-claim.ts` (V6) and the two hooks. ✅ Probed at validate with the
+    `document.tsx`, `handover-otp.tsx`, `lib/filed-claim.ts` (V6), `(claim)/index.tsx` and
+    `components/claim/ClaimProxyFlowEntry.tsx` (`-249` §2; both probed clean), and the two hooks. ✅ Probed at validate with the
     real checks: the three existing files raise **exactly** the three literals below, and nothing else.
     - Add scoped FM-14 exemptions, in the 6.18 form, for the literals that must stay: `document.tsx`
       `'#(B00020|1E8E3E)\b'`, `handover-otp.tsx` `'#C0392B\b'`. ⛔ None for the new files (C3).
@@ -474,9 +535,13 @@ applied** (V1's governance half by erratum `2026-09-26-248`):
 row 1 still covers (table-driven).
 **And** a **denied** claim with a rejected review returns `not_needed`, and the app shows ⛔ no *"has not been refused"*
 line (invariant 1). A test proves it.
-**And** a `reversed` claim with a rejected review returns `replacement_requested`.
-**And** a legacy row with ⛔ no upload row returns `missing` with `replacement_allowed: true`, in window and (as row 1a)
-before verification.
+**And** a `reversed` claim with a rejected review returns `replacement_requested` with `reassurance: 'still_open'`;
+every other `replacement_requested` has `not_refused`; every other status has `null` (`-249` §4).
+**And** `claim_live` is `false` exactly for `denied` and `settled` (`-249` §2).
+**And** a legacy row with ⛔ no upload row returns `missing` with `replacement_allowed: true, upload_allowed: true` in
+window, and (row 1a) `missing` with `replacement_allowed: false, upload_allowed: true` before verification.
+**And** (BW-G5) a claim advanced to `documents_pending` / the window by a NON-certificate document, with ⛔ no
+certificate, returns `missing` (row 1a / row 2).
 **And** a claim not owned by the member returns 404, with a positive control.
 **And** for **every in-window state × every status**, `replacement_allowed` equals the upload handler's decision (C1).
 **And** (`-247` §2) a claim in `intake_converged` or `documents_pending` with ⛔ no certificate returns `missing` with
@@ -494,21 +559,28 @@ rejected after A" case.
 ### AC2 — The family can send another (D2, D3)
 
 **Given** `replacement_requested` or `missing`
-**When** the member taps the button, runs the handover OTP (a **stale** elevation triggers it; a test proves it), and
-uploads
+**When** the member taps the button, runs the handover OTP (a **stale** elevation ⇒ `403 auth.step_up_required` —
+proved in an API integration spec), and uploads
 **Then** the upload is accepted **without re-picking the file**, the app shows `certificate.awaiting_review`, and the
 outcome is announced on both platforms.
 **And** `certificate_accepted` and `certificate_awaiting_review` are shown as their own messages, ⛔ never *"upload
 failed"*, and `upload_not_allowed` refetches and renders the server's row.
 **And** ⛔ no `document.help`, `.defer` or `.saved` key renders on the replacement screen.
-**And** with ⛔ no reachable nominee (an empty mask), the screen shows `otp.no_nominee` and the helpline line (V4).
-**And** the outcome is spoken once per platform: a live region on Android, an iOS-guarded announcement (V2).
+**And** with ⛔ no reachable nominee (an empty mask), the view shows **only** the helpline CTA — ⛔ never `otp.no_nominee` (V4, BW-J3).
+**And** the outcome is spoken once per platform: a PURE announcement plan `(platform) → liveRegion | iosAnnounce` is
+tested in node (V2, BW-C1).
+**And** the outcome mapper (error code → outcome) is a pure function, tested in node for every code incl. 413/415.
 
 ### AC3 — Their own words (D4)
 
-**Then** a test renders every status × every reason × both locales.
+**Then** a node test drives the pure view function over every status × every reason × both locales and resolves every
+returned key through the REAL `t()` (the `tests/unit/nominee-name-copy-resolves.test.ts` pattern — BW-C1: ⛔ no render
+harness exists).
 **And** the `future_date` case ⛔ never shows `replacement_body`, and the `unclear_date` case ⛔ never shows `_body_future`.
-**And** BigDev's `replacement_helpline` wording is unchanged, and it renders as a tappable `<CallHelplineCTA>`.
+**And** a `reversed` claim ⛔ never shows `certificate.not_refused`, and no status but `replacement_requested` shows either
+reassurance line (`-249` §4).
+**And** BigDev's `replacement_helpline` wording is unchanged, and the view function places it as the `<CallHelplineCTA>`
+label (asserted on the view, ⛔ not by rendering).
 
 ### AC4 — The helpline (D5)
 
@@ -530,7 +602,8 @@ failed"*, and `upload_not_allowed` refetches and renders the server's row.
 - **both early-return paths**, each with a missing date of death;
 - a present, valid date (⛔ no `death_date` flag; `date` unchanged).
 
-**And** the **real job** is run with dirty OCR input (a missing date, and an unparseable date), and the flag lands on
+**And** (BW-C2, per B3) an OCR/fetch failure is a truth-table row too.
+**And** the **real job** is run with dirty OCR input (a missing date, an unparseable date, and a fetch failure), and the flag lands on
 both `claim_documents.parity_flags` and the upload row.
 **And** the panel shows the flag.
 
@@ -542,7 +615,8 @@ both `claim_documents.parity_flags` and the upload row.
 ### AC7 — Nothing else moves
 
 ⛔ No new predicate, ⛔ no lifecycle state, ⛔ no migration, ⛔ no `dispatch()`, ⛔ no reminder, ⛔ no deadline copy on
-replacement surfaces, ⛔ no document-type chooser, and ⛔ no change to the upload handler's decision or the job.
+replacement surfaces, ⛔ no document-type chooser, and ⛔ no change to the upload handler's decision. The job changes ONLY by passing the
+raw-presence input and the `ocrFailed` signal (`-249` §3). The filing entry changes ONLY as `-249` §2 says.
 
 ### AC8 — The proof
 
@@ -556,6 +630,15 @@ replacement surfaces, ⛔ no document-type chooser, and ⛔ no change to the upl
   - [x] **Q1** → **(a)** extend (BigDev). Recorded in `2026-09-26-247` §2; D1's table gains rows 1a/1b and the field
     `upload_allowed`.
   - [x] The wire spelling is snake_case (`-247` §3).
+- [x] **Task 0b — BigDev's calls from the BLIND validate (2026-09-26)** — ⛔ the dev does ⛔ not choose; ONE superseding
+  author-commit (`2026-09-26-249`, or the next free number) is committed ALONE before the task it blocks:
+  - [x] **B1** → no notice without a fresh read (`-249` §1);
+  - [x] **B2** → a LIVE filed claim goes to the shepherd screen, **narrowed** so `-239` (b)'s refile stays reachable
+    (`-249` §2 — the recommendation as first written would have blocked it);
+  - [x] **B3** → `ocrFailed` suppresses `death_date` (`-249` §3);
+  - [x] **B4** → the closing sentence split out; `reversed` gets `still_open` (`-249` §4);
+  - [x] the `-247` §2 rationale correction (`-249` §5) and the operator lines (`-249` §6).
+  ✅ 2026-09-26 — BigDev: *"B1–B4 recommended, correct the Q1 rationale in -247, and record the new helpline operator copy."*
 - [ ] **Task 1: API + domain** (AC1, AC4)
   - [ ] `resolveDeathCertificateFamilyStatus` in the leaf (pure; calls the named predicates — C1);
   - [ ] `upload_allowed` and `certificate_token` in the resolver (`-247`);
@@ -563,16 +646,23 @@ replacement surfaces, ⛔ no document-type chooser, and ⛔ no change to the upl
     the existing member handler file) — own scope tx, the `getShepherdMember` ownership guard;
   - [ ] the helpline list route in `claims.death-certificate.routes.ts` (+ handler), its audit line and `audit-sink.ts`
     entry, the file header, the gate entry's `expectedMethods`;
-  - [ ] contracts in `packages/contracts/src/claims/death-certificate.ts` (`.strict()`, snake_case on the wire, ⛔ no
+  - [ ] contracts in `packages/contracts/src/claims/death-certificate.ts` — `MemberDeathCertificateStatusResponse`, a
+    FIVE-value `DeathCertificateFamilyStatus` enum (⛔ never the domain's four-value `DeathCertificateStatus` name —
+    BW-C11), and the helpline list response (`.strict()`, snake_case on the wire, ⛔ no
     `@twt/domain` import);
   - [ ] `getDeathCertificateStatus` on `createMemberClaimClient`.
 - [ ] **Task 2: Mobile** (AC1–AC3)
   - [ ] the two hooks (extracted, both screens use them);
   - [ ] `certificate-replacement.tsx`;
-  - [ ] the `shepherd.tsx` notice;
-  - [ ] the status cache + the MMKV in-flight marker in `lib/filed-claim.ts` (with `tokenAtWrite`, `-247` §1);
+  - [ ] the `shepherd.tsx` notice (refetch on focus; ⛔ nothing offline — `-249` §1);
+  - [ ] the MMKV in-flight marker in `lib/filed-claim.ts` (with `tokenAtWrite`, `-247` §1; ⛔ no status cache, `-249` §1);
+  - [ ] (`-249` §2) `ClaimProxyFlowEntry` and the `(claim)/index.tsx` gate: a filed claim on record whose fresh D1 read
+    says `claim_live: true` ⇒ `router.replace('/(claim)/shepherd?claimCaseId=…')`; terminal, offline, error or 404 ⇒
+    today's wizard entry, unchanged (the `-239` (b) refile). The decision is a pure function, tested in node for all
+    five inputs;
   - [ ] the announcements.
-- [ ] **Task 3: Copy** (AC3) — `claim.json` en + hi (D4); the `helpline-claims/i18n-en.ts` read-out and refusal lines.
+- [ ] **Task 3: Copy** (AC3) — `claim.json` en + hi (D4 as split by `-249` §4, with the two new keys); the
+  `helpline-claims/i18n-en.ts` read-out lines (D4) and every `-249` §6 line, verbatim.
 - [ ] **Task 4: Admin** (AC4) — the multipart client (parsed, C7) + the list GET + hooks, and
   `<HelplineCertificateReplacement>` on `HelplineClaimPage`.
 - [ ] **Task 5: OCR** (AC5) — `parity.ts`, `claim-ocr-parity.ts` (the raw-presence input), and `VerifierReviewPanel.tsx`.
@@ -584,15 +674,27 @@ replacement surfaces, ⛔ no document-type chooser, and ⛔ no change to the upl
   - [ ] 6.5 *"Generic 'upload failed' message"* — **narrowed** (the replacement screen distinguishes; `document.tsx`
     does not);
   - [ ] 6.21a chunk 2 *"two new document-upload conflict codes have no i18n/error mapping"* — **closed by 6.21b** (C6),
-    once both surfaces map them;
-  - [ ] 6.20 *"the helpline live-claims read writes no audit line"* — annotated: this route has one; 6.20's still does
-    ⛔ not;
-  - [ ] 6.21a's go-live coupling (1) — **discharged on the build**, at the 6.21a header and the ledger;
+    once both surfaces map them — at BOTH sites: `deferred-work.md` **and** 6.21a's `[Review][Defer]` line (BW-G7);
+  - [ ] 6.20 *"the helpline live-claims read writes no audit line"* — annotated at BOTH sites (`deferred-work.md`
+    6-20 2026-09-24b and 6.20's `[Review][Defer]`): 6.21b's route has one; 6.20's still does ⛔ not — ⛔ not closed;
+  - [ ] 6.21a's go-live coupling (1) — **discharged on the build**, at EVERY site (BW-G7): the 6.21a header, 6.21a's
+    Completion Notes (*"Go-live couplings UNCHANGED: (1) …"*), the conflict-codes bullet, and the ledger;
+  - [ ] (BW-G2) the 6.21a legacy-row deferral (*"can show 'No death certificate has been sent yet' for a certificate that
+    WAS genuinely sent … needs a distinct 3rd wire reason/status"* — `deferred-work.md` and 6.21a `[Review][Defer]`):
+    annotate both — 6.21b now shows `missing_body` in that state; unreachable in production (every handler-minted job
+    carries an `uploadId`; only a pre-6.21a-deploy job reaches it, and the app is ⛔ not in production); the third
+    status is still ⛔ not built;
+  - [ ] (BW-G6) append (⛔ never rewrite) to the two stale *"`backlog` until 6.21a is `done`"* notes: the
+    `sprint-status.yaml` row-block comment and the `epics.md` §6.21b header;
+  - [ ] (BW-C9) record in `deferred-work.md` that 6.18's friction row sits outside the counted ledger table;
   - [ ] (V5) 6.19's CC1 item — append an annotation: `-247` §2 extends `missing` to `intake_converged` /
     `documents_pending`; whether THAT state is chased is part of protection 3's §0 too (6.19 is `backlog`; ⛔ no code);
   - [ ] (V8) the stale doc-comments, comment-only: `claims.documents.handlers.ts`'s header says the in-window predicate
     is *"the ONE definition … 6.21b's family status shares"* while the handler calls `isDeathCertificateUploadAllowed`
-    (`-246` §1) — name both; `claims.death-certificate.routes.ts`'s header (D5 already orders it);
+    (`-246` §1) — name both; `claims.death-certificate.routes.ts`'s header (D5 already orders it); and (BW-G9) the leaf's two doc-blocks —
+    `isDeathCertificateReplacementRequested` (*"6.21b's family surfaces are built on"* — they are tied by a test, ⛔ not
+    a call) and `isDeathCertificateUploadAllowedInReviewWindow` (*"6.21b's `replacementAllowed`"* → `replacement_allowed`;
+    the surfaces key on `upload_allowed`);
   - [ ] (V9) `epics.md` §6.21b — one line under its header pointing to `-247` (AC2 now also covers a certificate put off
     at filing);
   - [ ] 6.5's deferred-upload gap (Q1) — recorded in `deferred-work.md` as **found and closed by 6.21b** (`-247` §2),
@@ -609,7 +711,8 @@ replacement surfaces, ⛔ no document-type chooser, and ⛔ no change to the upl
 - **Two predicates, ⛔ never one** (`-246` §1). 6.21b reads the in-window intake predicate only. ⛔ Never call
   `mayDeathCertificateUploadBecomeCurrent` from a surface: it answers the job's question.
 - **Files — UPDATE (read each fully first):**
-  - `apps/mobile/app/(claim)/{document,shepherd,handover-otp}.tsx`
+  - `apps/mobile/app/(claim)/{document,shepherd,handover-otp,index}.tsx`
+  - `apps/mobile/components/claim/ClaimProxyFlowEntry.tsx` (`-249` §2)
   - `apps/mobile/lib/filed-claim.ts`
   - `packages/api-client/src/index.ts`
   - `apps/api/src/modules/claims/{claims.routes,claims.death-certificate.routes,claims.death-certificate.handlers}.ts`
@@ -626,7 +729,7 @@ replacement surfaces, ⛔ no document-type chooser, and ⛔ no change to the upl
 - **Files — READ, reuse, ⛔ do not change:** `claims.shepherd.handlers.ts` (the ownership guard),
   `packages/domain/src/claim/read.ts` (`listLiveClaimsForDeceasedMember`), `components/common/CallHelplineCTA.tsx`,
   `components/claim/ShepherdContactCard.tsx` (the fetch/cache pattern), `HelplineNomineeCorrection.tsx` (the pick
-  pattern), `claims.documents.handlers.ts` (the refusal codes).
+  pattern). ⚠ `claims.documents.handlers.ts` is UPDATE, comment-only (V8) — its decision logic ⛔ never changes (BW-C8).
 - **Files — NEW:**
   - `apps/mobile/app/(claim)/certificate-replacement.tsx`
   - `apps/mobile/lib/use-death-certificate-upload.ts`
@@ -656,6 +759,11 @@ replacement surfaces, ⛔ no document-type chooser, and ⛔ no change to the upl
 - **Known limit (V10, pre-existing, ⛔ not changed here):** the app notice is reachable only through
   `ClaimPointOfContactEntry`, which needs the filed-claim pointer stamped at the APP's acknowledgement. A family whose
   claim was filed by the helpline, or on another phone, has ⛔ no entry in the app; their path is the helpline (D5).
+- **Known limit (BW-J10, accepted at v0.6):** after a PERMANENT job failure (DLQ) the marker shows *"We have the death
+  certificate … nothing more you need to do"* for up to 24 h, then the family is asked again. Record it in the
+  Completion Notes.
+- **Known limit (BW-G2):** the 6.21a legacy-row state shows `missing_body` for a certificate that was sent; unreachable
+  in production (Task 8).
 - ⛔ **No new dependency.**
 
 ## Dev Agent Record
@@ -678,3 +786,5 @@ replacement surfaces, ⛔ no document-type chooser, and ⛔ no change to the upl
 | v0.7 | 2026-09-26 | **Re-pinned to `eab7ba45` and FLIPPED `backlog → ready-for-dev`** (bmad-create-story, after 6.21a went `done`). Every cited 6.21a name re-verified. Corrections C1–C7: **C1** `replacementAllowed` is the IN-WINDOW predicate `isDeathCertificateUploadAllowedInReviewWindow`, ⛔ not the handler's `isDeathCertificateUploadAllowed` (`-246` §1: two predicates) — AC1's *"every row"* was false for the two pre-verification states; **C2** the shepherd screen's claim id is a route param; **C3** apps/mobile has no colour token ⇒ ⛔ no status colour on the new screen; **C4** `handover-otp.tsx`'s literal is `#C0392B`; **C5** the helpline line reuses `<CallHelplineCTA label>`; **C6** 6.21b owns the two 409 codes' mapping, which 6.21a deferred to it; **C7** the admin multipart function parses its 202. Added: `upload_not_allowed` handling, retry without re-picking, the `≡ isDeathCertificateReplacementRequested` test, `listLiveClaimsForDeceasedMember` reuse and its read bound, the routes-file header update, `expectedMethods: ['post','get','get']`, and a present-date case in the OCR truth table. **Two open author calls:** F1 (the marker can show "we have it" for up to 24 h after a replacement is rejected — recommended: a `certificateToken` discriminator) and Q1 (a certificate deferred at filing has ⛔ no post-filing upload path in the app or through the helpline — recommended: extend). ⛔ No D changed by this edit; F1/Q1 would change D1 only by a superseding author-commit. |
 | v0.8 | 2026-09-26 | **`2026-09-26-247` applied** (BigDev: *"F1 (a) and Q1 (a), supersede by author-commit"*). **F1:** the response carries `certificate_token` (the current upload's id — opaque, ⛔ not a credential, never shown); the marker stores `tokenAtWrite`; rule 2 is *"token OR status differs ⇒ the server wins"*, which catches "B rejected after A"; a test for it. **Q1:** D1 gains rows 1a/1b — in `intake_converged` / `documents_pending`, `missing` offers an upload and a current upload shows `awaiting_review`; a new field `upload_allowed` carries the offer (the app and helpline key on it), while `replacement_allowed` stays the in-window predicate; a soundness test (`upload_allowed ⇒ isDeathCertificateUploadAllowed`) plus the one asserted divergence. **Wire spelling** snake_case (`-247` §3). Superseded sites marked; Task 0 closed. ⛔ No new copy; ⛔ no other D changed. |
 | v0.9 | 2026-09-26 | **Validate pass** (V1–V10, the table in §*Validate record*). The significant ones: V2 (the a11y announcement would double-speak on TalkBack), V4 (no reachable nominee ⇒ the step-up is impassable ⇒ helpline), V3 (⛔ not `<ClaimProxyFlowShell>`), V1 (the api-client does ⛔ not map casing — the story is fixed, and `-247` §3 is corrected by erratum `2026-09-26-248`). ⛔ No D changed. |
+| v1.0 | 2026-09-26 | **Blind validate** (three fresh-context verifiers; §*Blind validate record*). Applied every author-level finding — the CRITICAL test-harness one (C1) among them. Four calls opened for BigDev as Task 0b (B1 offline — CRITICAL, B2 wizard re-entry, B3 OCR-failure flag, B4 `reversed` copy); they block Tasks 2, 3 and 5 only. ⛔ No D changed. |
+| v1.1 | 2026-09-26 | **`2026-09-26-249` applied** (BigDev: *"B1–B4 recommended, correct the Q1 rationale in -247, and record the new helpline operator copy"*). B1 ⛔ no certificate notice offline (⛔ status cache); B2 a live filed claim opens the shepherd screen, **narrowed** for `-239` (b)'s refile (`claim_live`); B3 `ocrFailed` suppresses `death_date`; B4 the closing sentence split into `certificate.not_refused` / `certificate.still_open`, chosen by the server's `reassurance`; `-247` §2's rationale corrected in `-249` §5 (⛔ `-247` unedited); the operator lines live in `-249` §6. Task 0b closed. |

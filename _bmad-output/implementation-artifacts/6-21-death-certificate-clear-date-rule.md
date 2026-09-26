@@ -374,6 +374,7 @@ tests**, ⛔ by grants alone.
   - **Who supersedes:** the **review writer**. It stamps `re_reviewed` when the live review's upload is the current one,
     and `replaced` when the live review judged an older upload.
 - **D2: the uploads table, `claim_death_certificate_uploads`, and every certificate kept (`-243`, option C).**
+  > ⚠ **`-245` §2 itself SUPERSEDED by `2026-09-26-246` §1:** in the review window a newer upload may replace an UNREVIEWED current certificate; only an ACCEPTED one is protected. The handler's intake rule (D6) is unchanged — two named predicates.
   > ⚠ **SUPERSEDED in part by `2026-09-26-245` §1–§2** (code review 2026-09-26): a DIFFERENT upload becomes current only with a STRICTLY later `uploaded_at` (a retry of the current upload is idempotent by identity), and only where D6 still allows an upload, re-checked under the claim-row lock; each upload row also KEEPS its own non-PII parity verdict (`parity_outcome`, `parity_flags`, `ocr_confidence`). The text below is kept unedited as it was decided.
   - **Columns:**
     - `upload_id` (PK, branded `DeathCertificateUploadId`);
@@ -432,6 +433,7 @@ tests**, ⛔ by grants alone.
   - Bump the count pin. Add a 6.21a block to the frozen-vocabulary diff (⛔ never loosen 6.18's or 6.20's).
   - **Register it** in `packages/events/src/registry.ts`: *"the 35th claim event; identity transition; NO PII …"*.
 - **D6: the upload window, for `death_certificate` only.** Enforced in `uploadClaimDocument`, before MIME, storage or
+  > ⚠ **`-245` §2 itself SUPERSEDED by `2026-09-26-246` §1:** in the review window a newer upload may replace an UNREVIEWED current certificate; only an ACCEPTED one is protected. The handler's intake rule (D6) is unchanged — two named predicates.
   > ⚠ **SUPERSEDED in part by `2026-09-26-245` §2–§3**: a row with NO upload row (T12 legacy) is `missing`, ⛔ not `awaiting_review`, and an upload is allowed for it; the job re-applies this window under the claim-row lock.
   the queue, in the same scope tx:
   - **Accepted in the D3 window** when the current live review is **`rejected`**, **or** no `death_certificate` row
@@ -462,6 +464,7 @@ tests**, ⛔ by grants alone.
     `verifier_decision.death_certificate_acceptance_required`,
     `cycle_freeze.death_certificate_acceptance_required`, `r9_voting.death_certificate_acceptance_required`.
 - **D8: the 6.20 coupling. The HANDLER compares; the writer re-asserts the id.**
+  > ⚠ **Amended by `2026-09-26-246` §2–§3:** an ERASED date is `anonymized` / `certificate_date_anonymized` (⛔ not `unreadable`); the verdict is a REQUIRED writer field (fail-closed).
   > ⚠ **SUPERSEDED in part by `2026-09-26-245` §4**: the handler passes its verdict (`match | mismatch | unreadable`) to the writer, which refuses at its own guard point; an unreadable date is `certificate_date_unreadable`, ⛔ never a mismatch.
   - **In `claims.nominee-declaration.handlers.ts` `postDetermination`:**
     - Read the current accepted review and **decrypt** its date (the handler's field-class helper).
@@ -766,6 +769,7 @@ re-deferred"**.
   - two reviews ⇒ one 409s;
   - a review against a job commit ⇒ they serialise on the claim row, and the second sees the first. Either the review
     409s `stale_certificate`, or the job's upload arrives after it and is `not_reviewed`.
+    > ⚠ **Third outcome, recorded by `2026-09-26-246` §1:** if the holding review ACCEPTS, the waiting job's upload is kept but ⛔ not made current (an accepted certificate is never displaced). The spec's test now proves the REJECT case as written, and a separate test proves this one.
 - **(ix)** an **RLS / constraint regression spec**,
   `packages/domain/tests/integration/rls/claim-death-certificate-policy-regression.spec.ts`, for **both** tables:
   - positive, negative, fail-closed and FORCE RLS;
@@ -948,6 +952,23 @@ Full code diff `a35af210..78394cb9` (89 files), one pass, three layers run SEQUE
 - [x] [Review][Defer] After a stale-code 409 the route keeps passing `reviewCertificate.error` to the refreshed form until the next submit or a claim change — the "reload" text outlives the reload. [`apps/admin/src/routes/VerifierConsoleRoute.tsx:451`] — deferred, cosmetic, unverified in a browser.
 
 Dismissed (12): the column-scoped ciphertext UPDATE grant (by design for the RTBF scrub; the writer trust boundary was already deferred); `getBytes` `toBeDefined` (the port returns `Promise<Uint8Array>`); `channel ?? 'member_app'` (no producer omits it); `emitAuthAuditBestEffort` async escape (`emitAuthAudit` is synchronous `void`); no LOWER date bound (already re-deferred in `deferred-work.md`); history cache after unmount (global `gcTime: 0`); mode switch clears the form (by design, keyed fingerprint); history statements not atomic (cosmetic, self-heals); `pg_trigger_depth()` breadth (already deferred); `throw new Error` on >1 live review + `console.warn` (settled by the earlier passes); `certificateDateAfterEverything` import (defined locally); `isDeathCertificateReplacementRequested` has no caller (forward-declared for 6.19/6.21b, D16).
+
+### Review Findings — adversarial pass on the 2026-09-26 patches (2026-09-26)
+
+Requested by BigDev after the second full-diff review's patches were applied (uncommitted). Reviewed against the diff, ⛔ not memory. 12 findings; BigDev: *"yes fix all, supersede §2 by author-commit"* ⇒ `2026-09-26-246`, committed alone first.
+
+- [ ] [Review][Patch] **The job's re-check froze an UNREVIEWED current certificate** — pile-up A(rejected) → B, C: C kept but never current, never reviewable; if B is rejected the family is asked again though C exists. `-246` §1: protect only ACCEPTED. [`packages/domain/src/claim/death-certificate-approval.ts`, `apps/jobs/src/claim-ocr-parity.ts`]
+- [ ] [Review][Patch] `certificateDateCheck` was OPTIONAL — absent meant "no date check": fail-open on a guard. `-246` §3: required, `null` with an accepted review throws. [`packages/domain/src/claim/nominee-determination-persist.ts`]
+- [ ] [Review][Patch] The record claimed "the ONE predicate, shared by handler + job" — false; the handler shared only the state constant and composed its own check inline. Two named predicates, each called by its owner. [`apps/api/src/modules/claims/claims.documents.handlers.ts`]
+- [ ] [Review][Patch] Transient decrypt failure and permanent erasure collapsed into one `unreadable` / `certificate_date_unreadable` whose copy says "try again". `-246` §2: `anonymized` state + `certificate_date_anonymized`. [contracts, handlers, admin]
+- [ ] [Review][Patch] The "even after approval" case of the HIGH fix had no job-level test — only the pure predicate. [`apps/jobs/tests/claim-ocr-parity-death-certificate.test.ts`]
+- [ ] [Review][Patch] AC8(viii)'s spec text names two outcomes; the accepted-holder case is now a third — the test was switched to the REJECT holder without recording it. Recorded above (AC8(viii) marker).
+- [ ] [Review][Patch] The RTBF API test wrote the sentinel by hand through the superuser pool instead of calling `anonymizeMember` ("stubs call, never transcribe"). [`apps/api/tests/integration/claims/death-certificate.spec.ts`]
+- [ ] [Review][Patch] 0123 enforced all-or-none but nothing required a verdict on NEW rows. `-246` §4: a `NOT VALID` CHECK. [`packages/domain/migrations/0123_death-certificate-upload-parity-verdict.sql`]
+- [ ] [Review][Patch] A redelivered job for the current upload re-wrote `claim_documents` with that run's OCR while the upload row kept the first run's verdict — the two could disagree. `-246` §4: a retry of the current upload rewrites nothing. [`apps/jobs/src/claim-ocr-parity.ts`]
+- [ ] [Review][Patch] Focus moved on EVERY mode change, incl. the District Admin's own Accept/Reject toggle; only a form opened from elsewhere needed it. [`apps/admin/src/modules/claim-verification/DeathCertificateReviewControl.tsx`]
+- [ ] [Review][Patch] A kept-but-not-current upload left only a `console.warn`. `-246` §5: an audit line naming the upload. [`apps/jobs/src/claim-ocr-parity.ts`]
+- [ ] [Review][Patch] The "reasons group" test would pass if the OUTER fieldset carried the name — it did not prove the nested group. [`apps/admin/tests/death-certificate-review.test.tsx`]
 
 ## Dev Notes
 

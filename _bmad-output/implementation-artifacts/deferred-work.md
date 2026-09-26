@@ -4,6 +4,15 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: code review of 6-21-death-certificate-clear-date-rule (2026-09-26)
+
+- "Current" death certificate is ordered by the upload HANDLER's wall clock (`uploadedAt`, `apps/api/src/modules/claims/claims.documents.handlers.ts`, compared in `apps/jobs/src/claim-ocr-parity.ts`). Across API instances, clock skew larger than the gap between two uploads keeps the later upload non-current with no signal. Negligible under NTP; revisit if uploads ever run multi-region (a DB- or queue-side ordering removes it).
+- A future `-240` cl.1 closure-time deletion of `claim_documents` rows would CASCADE (`ON DELETE cascade`, migration 0122) into every kept `claim_death_certificate_uploads` row and every review, contrary to `-243`. No production path deletes `claim_documents` today (traced 2026-09-26). A trap for whoever builds that deletion.
+- After an RTBF erasure, the nominee determination can proceed only if the District Admin RE-ACCEPTS the certificate, which writes a fresh Tier-1 date ciphertext for an erased member; `recordDeathCertificateReview` has no erased-member check. Rides on go-live coupling (3′) — counsel's basis for keeping certificate data against an erasure request (`-243`).
+- After a stale-code 409 the verifier console keeps showing `reviewCertificate.error` ("reload") on the refreshed form until the next submit or a claim change (`apps/admin/src/routes/VerifierConsoleRoute.tsx`). Cosmetic; unverified in a browser.
+
+---
+
 ## Deferred from: adversarial review of the applied story-6-21a review patches (2026-09-25)
 
 - The legacy-row status fix (`missing` instead of `awaiting_review` for `currentUploadId === null`) can show "No death certificate has been sent yet" for a certificate that WAS genuinely sent — an OCR job enqueued just before the 6.21a deploy and processed just after it via the job's own documented `uploadId`-less tolerance path lands in exactly this state. Net improvement over the prior classification (which silently blocked re-upload), but the copy is momentarily misleading in a narrow, time-boxed deploy-race window. A fully correct fix needs a distinct 3rd wire reason/status and its own copy — a product/design decision, not made unilaterally.

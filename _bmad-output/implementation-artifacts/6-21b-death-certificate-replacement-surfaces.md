@@ -122,10 +122,10 @@ meaning). The upload window it relies on is 6.21a D6's. The OCR flag (D6 here) i
     | # | Condition (server-side, at read time) | `status` | `replacementReason` | `replacementAllowed` | What the app shows (D3) |
     |---|---|---|---|---|---|
     | 1 | claim state **outside** 6.21a's D3 window (incl. `denied`, `approved`, `settled`, appeal states, pre-verification) | `not_needed` | `null` | `false` | nothing new |
-    | 2 | in window, **no** `death_certificate` row | `missing` | `null` | `true` | `missing_body` + upload button + helpline line |
+    | 2 | in window, **no** `death_certificate` row, **or** a row with **no current upload** (T12 legacy — `2026-09-26-245` §3) | `missing` | `null` | `true` | `missing_body` + upload button + helpline line |
     | 3 | in window, current review **`rejected`**, reason `date_of_death_in_future` | `replacement_requested` | `future_date` | `true` | title + `replacement_body_future` + button + helpline line |
     | 4 | in window, current review **`rejected`**, reason `no_date_of_death` or `date_of_death_unclear` | `replacement_requested` | `unclear_date` | `true` | title + `replacement_body` + button + helpline line |
-    | 5 | in window, a row exists, ⛔ **no** live current review | `awaiting_review` | `null` | `false` | `awaiting_review` line |
+    | 5 | in window, a **current upload** exists, ⛔ **no** live current review | `awaiting_review` | `null` | `false` | `awaiting_review` line |
     | 6 | in window, current review **`accepted`** | `accepted` | `null` | `false` | `accepted` line |
 
     ⭐ `replacementAllowed` is `true` **exactly** where 6.21a D6's upload guard would accept a `death_certificate`

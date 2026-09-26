@@ -14,12 +14,12 @@
 // ⭐ EVERY refusal is audited `_review_rejected` with its reason code — the display-name lookup, the encryption
 // and the scope open included (6.20's corrected shape). Mutations audit AFTER the transaction closes.
 
-import { claim as claimDomain, ids } from '@twt/domain';
+import { claim as claimDomain, ids, member as memberDomain } from '@twt/domain';
 import type {
   DeathCertificateHistoryResponse,
   DeathCertificateReviewRequest,
   DeathCertificateReviewWriteResponse,
-  ReadableName,
+  ReadableErasable,
 } from '@twt/contracts';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 
@@ -68,16 +68,22 @@ async function resolveDisplay(deps: AppDeps, actorId: string): Promise<string> {
 
 const locator = (claimCaseId: string) => `claim:${claimCaseId.toLowerCase()}`;
 
-/** Decrypt one Tier-1 field for an authorized surface; a failure (or an empty decrypt) is `unreadable`. */
+/**
+ * Decrypt one Tier-1 field for an authorized surface: a failure or an empty decrypt is `unreadable`; the RTBF
+ * sentinel is `anonymized` (`2026-09-26-246` §2 — erased is permanent, ⛔ not a fault). ⚠ The sentinel DECRYPTS
+ * cleanly (`anonymizeMember` writes it as an ordinary envelope), so it must be named here — shown as a value,
+ * `[anonymized]` would read as the accepted date of death.
+ */
 async function readable(
   decrypt: () => Promise<string>,
   log: Log,
   what: string,
   claimCaseId: string,
-): Promise<ReadableName> {
+): Promise<ReadableErasable> {
   try {
     const value = await decrypt();
     if (value === '') return { state: 'unreadable' };
+    if (value === memberDomain.ANONYMIZED_SENTINEL) return { state: 'anonymized' };
     return { state: 'readable', value };
   } catch (err) {
     // ⚠ The class name only — ⛔ never the ciphertext or a fragment of a decrypt.

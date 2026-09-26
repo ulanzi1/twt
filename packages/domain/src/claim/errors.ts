@@ -414,9 +414,14 @@ export class NomineeDeterminationRefusedError extends Error {
       | 'unversioned'
       // Story 6.21a D8 — the cutoff must come from the CURRENT, ACCEPTED death certificate. The writer
       // re-asserts the review id under the lock (`certificate_not_accepted`); the HANDLER compares the
-      // decrypted dates (`certificate_date_mismatch` — ⛔ no decrypt in the domain, T5).
+      // decrypted dates (⛔ no decrypt in the domain, T5) and the WRITER refuses on its verdict, at its own
+      // guard point (`2026-09-26-245` §4): `certificate_date_mismatch`, or `certificate_date_unreadable`
+      // when the accepted date could not be read (a decrypt failure), or `certificate_date_anonymized` when it
+      // was ERASED (the RTBF sentinel — permanent, `2026-09-26-246` §2).
       | 'certificate_not_accepted'
-      | 'certificate_date_mismatch',
+      | 'certificate_date_mismatch'
+      | 'certificate_date_unreadable'
+      | 'certificate_date_anonymized',
     detail: string,
   ) {
     super(`[nominee-determination] claim ${claimCaseId}: ${reason} — ${detail}`);

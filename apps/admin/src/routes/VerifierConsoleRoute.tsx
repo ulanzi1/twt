@@ -346,15 +346,19 @@ export function VerifierConsoleRoute(): ReactElement {
       .catch(() => false);
   };
   // D7 — approve waits for an ACCEPTED certificate (named FIRST, the gate's own order), then the name check.
+  // ⛔ `unavailable` is ⛔ not `none`: a section that failed to load never says no certificate was sent; and a
+  // legacy row (`missing`, no token) is ⛔ not "review it" — the gate answers `no_certificate` for it too.
   const certificateBlockedReason = certificateAccepted
     ? null
-    : !certificateItem
-      ? t.deathCertificate.approveBlocked.no_certificate!
-      : certificateReview?.status === 'rejected'
-        ? t.deathCertificate.approveBlocked.rejected!
-        : certificateReview?.status === 'accepted' && certificateReview.determinationStale === true
-          ? t.deathCertificate.approveBlocked.determination_stale!
-          : t.deathCertificate.approveBlocked.not_reviewed!;
+    : packet?.documentReview.status === 'unavailable'
+      ? t.deathCertificate.approveBlocked.unavailable!
+      : !certificateItem || certificateReview?.status === 'missing'
+        ? t.deathCertificate.approveBlocked.no_certificate!
+        : certificateReview?.status === 'rejected'
+          ? t.deathCertificate.approveBlocked.rejected!
+          : certificateReview?.status === 'accepted' && certificateReview.determinationStale === true
+            ? t.deathCertificate.approveBlocked.determination_stale!
+            : t.deathCertificate.approveBlocked.not_reviewed!;
 
   return (
     <VerifierConsoleGateView status={status}>

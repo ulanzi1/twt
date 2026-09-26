@@ -32,6 +32,7 @@ import type {
   NomineeCorrectionPendingListResponse,
   NomineeCorrectionRaisableClaimsResponse,
   NomineeRefusalListResponse,
+  ReadableErasable,
   ReadableName,
   ReadableNomineeName,
 } from '@twt/contracts';
@@ -87,6 +88,16 @@ async function readable(decrypt: () => Promise<string>, log: Log, what: string, 
 /** A nominee NAME adds the third state: the RTBF sentinel decrypts fine and is ⛔ not a person's name. */
 async function readableNomineeName(decrypt: () => Promise<string>, log: Log, claimCaseId: string): Promise<ReadableNomineeName> {
   const r = await readable(decrypt, log, 'nominee_name', claimCaseId);
+  return r.state === 'readable' && r.value === SENTINEL ? { state: 'anonymized' } : r;
+}
+
+/**
+ * An ACCEPTED certificate date: the RTBF sentinel decrypts cleanly but is ⛔ not a date — it is `anonymized`
+ * (erased, permanent — `2026-09-26-246` §2), so the determination form says so instead of showing
+ * `[anonymized]` as the cutoff; a decrypt failure stays `unreadable` (transient).
+ */
+async function readableCertificateDate(decrypt: () => Promise<string>, log: Log, claimCaseId: string): Promise<ReadableErasable> {
+  const r = await readable(decrypt, log, 'accepted_certificate_date', claimCaseId);
   return r.state === 'readable' && r.value === SENTINEL ? { state: 'anonymized' } : r;
 }
 
@@ -219,10 +230,9 @@ export function createNomineeDeclarationHandlers(deps: AppDeps) {
       const acceptedCertificate = accepted
         ? {
             review_id: accepted.reviewId,
-            accepted_date: await readable(
+            accepted_date: await readableCertificateDate(
               () => decryptDeathCertificateReviewField(accepted.acceptedDateCiphertext, scopeTx.pariwarId, enc),
               request.log,
-              'accepted_certificate_date',
               claimCaseId,
             ),
           }
@@ -355,14 +365,17 @@ export function createNomineeDeclarationHandlers(deps: AppDeps) {
         try {
           // ⭐ Story 6.21a (D8, T5) — the cutoff must be the CURRENT, ACCEPTED certificate's date. The HANDLER
           // decrypts and compares (⛔ no decrypt in the domain, and envelope ciphertext never compares equal);
-          // the writer then re-asserts the review id under the claim-row lock. With ⛔ no accepted review the
-          // writer is passed `null` and refuses `certificate_not_accepted` AFTER 6.20's own validations, so the
-          // refusal ORDER is unchanged. ⛔ The dates are never logged or audited.
+          // the WRITER refuses on this verdict at its own guard point, AFTER 6.20's validations and its
+          // re-assertion of the review id under the claim-row lock (`2026-09-26-245` §4) — so the refusal
+          // ORDER is 6.20's first, whatever the certificate. ⛔ The dates are never logged or audited.
           const accepted = await claimDomain.getCurrentAcceptedDeathCertificate(
             scopeTx.tx,
             ids.pariwarId(p),
             ids.claimId(claimCaseId),
           );
+          // `-246` §3 — REQUIRED by the writer: `null` = no accepted review found (the writer then refuses
+          // `certificate_not_accepted`); a verdict otherwise.
+          let certificateDateCheck: claimDomain.CertificateDateCheck | null = null;
           if (accepted) {
             let acceptedDate: string | null = null;
             try {
@@ -373,19 +386,23 @@ export function createNomineeDeclarationHandlers(deps: AppDeps) {
                 'nominee-determination: accepted certificate date unreadable',
               );
             }
-            // An unreadable or RTBF-scrubbed date can never be matched: ⛔ never taken on trust again.
-            if (acceptedDate !== body.certificate_date) {
-              throw new claimDomain.NomineeDeterminationRefusedError(
-                claimCaseId,
-                'certificate_date_mismatch',
-                "the date differs from the accepted death certificate's",
-              );
-            }
+            // An unreadable or ERASED date can never be matched: ⛔ never taken on trust again, and ⛔ never
+            // reported as a MISMATCH (a reload would not change it). Erased (the RTBF sentinel) is permanent and
+            // is told apart from a decrypt failure (`-246` §2).
+            certificateDateCheck =
+              acceptedDate === SENTINEL
+                ? 'anonymized'
+                : acceptedDate === null || acceptedDate === ''
+                  ? 'unreadable'
+                  : acceptedDate === body.certificate_date
+                    ? 'match'
+                    : 'mismatch';
           }
           result = await claimDomain.recordNomineeDetermination(scopeTx.client, {
             claimCaseId: ids.claimId(claimCaseId),
             pariwarId: ids.pariwarId(p),
             deathCertificateReviewId: accepted?.reviewId ?? null,
+            certificateDateCheck,
             certificateDate: body.certificate_date,
             certificateDateCiphertext: dateCt,
             noteCiphertext: noteCt,

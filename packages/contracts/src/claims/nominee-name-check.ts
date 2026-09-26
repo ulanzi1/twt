@@ -102,6 +102,19 @@ export const ReadableNomineeName = z.discriminatedUnion('state', [
 ]);
 export type ReadableNomineeName = z.output<typeof ReadableNomineeName>;
 
+/**
+ * Any decrypted Tier-1 value the RTBF anonymizer can ERASE (Story 6.21a — the accepted death-certificate date
+ * and the review note; `2026-09-26-246` §2). The same three states as `ReadableNomineeName`, because the
+ * sentinel decrypts cleanly: `anonymized` (erased — permanent) is ⛔ not `unreadable` (a decrypt failure —
+ * transient), and neither is ever shown as a value.
+ */
+export const ReadableErasable = z.discriminatedUnion('state', [
+  z.object({ state: z.literal('readable'), value: z.string() }).strict(),
+  z.object({ state: z.literal('unreadable') }).strict(),
+  z.object({ state: z.literal('anonymized') }).strict(),
+]);
+export type ReadableErasable = z.output<typeof ReadableErasable>;
+
 // ── (a) The bank side ───────────────────────────────────────────────────────────────────────
 
 /**

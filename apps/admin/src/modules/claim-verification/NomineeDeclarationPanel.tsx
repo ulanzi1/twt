@@ -162,6 +162,9 @@ export function NomineeDeclarationPanel(props: NomineeDeclarationPanelProps): Re
   // Two distinct reasons the field can be empty: no certificate has been accepted at all, vs. one WAS
   // accepted but its date could not be read (an RTBF sentinel or a decrypt failure) — never the same message.
   const certificateDateUnreadable = timeline.accepted_certificate != null && acceptedDate?.state !== 'readable';
+  // `2026-09-26-246` §2 — ERASED (RTBF) is permanent and says so; a decrypt failure says "try again".
+  const certificateDateErased = acceptedDate?.state === 'anonymized';
+  const unreadableCopy = certificateDateErased ? t.determine.certificateDateErased : t.determine.certificateDateUnreadable;
   const ready = /^\d{4}-\d{2}-\d{2}$/.test(certificateDate) && allMarked && note.trim().length > 0;
   // ⭐ Only when it is the SAME determination the header names (a refetch can leave the two out of step).
   const decryptedLast = revealed ? props.snapshots!.live_determination : null;
@@ -333,7 +336,7 @@ export function NomineeDeclarationPanel(props: NomineeDeclarationPanelProps): Re
               type="text"
               readOnly
               value={certificateDate}
-              placeholder={certificateDateUnreadable ? t.determine.certificateDateUnreadable : t.determine.certificateNotAccepted}
+              placeholder={certificateDateUnreadable ? unreadableCopy : t.determine.certificateNotAccepted}
               data-testid="nominee-certificate-date"
               aria-describedby="nominee-certificate-date-help"
             />
@@ -342,7 +345,7 @@ export function NomineeDeclarationPanel(props: NomineeDeclarationPanelProps): Re
             {certificateDate
               ? t.determine.certificateDateHelp
               : certificateDateUnreadable
-                ? t.determine.certificateDateUnreadable
+                ? unreadableCopy
                 : t.determine.certificateNotAccepted}
           </p>
           <label className="flex flex-col text-sm">

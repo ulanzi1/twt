@@ -18,7 +18,7 @@ import { z } from 'zod';
 
 import { EnglishScriptName, MobileNumber } from '../_common/primitives.js';
 import { NomineeRelationship } from '../nominee/declaration.js';
-import { ReadableName, ReadableNomineeName } from './nominee-name-check.js';
+import { ReadableErasable, ReadableName, ReadableNomineeName } from './nominee-name-check.js';
 
 const Rank = z.union([z.literal(1), z.literal(2)]);
 const IsoInstant = z.string();
@@ -122,11 +122,11 @@ export const NomineeDeclarationTimelineResponse = z
      * Story 6.21a (D8) — the claim's CURRENT, ACCEPTED death certificate, whose date the determination MUST
      * use (the form shows it READ-ONLY and sends it back). `null` while there is none (missing, awaiting
      * review or rejected) — the District Admin reviews the certificate first. The date is decrypted here, on
-     * this audited on-demand read. ⚠ `ReadableName`, ⛔ NOT `CalendarDate`: an RTBF sentinel or a failed
-     * decrypt must degrade to `unreadable`/a plain string, ⛔ never 500 the parse.
+     * this audited on-demand read. ⚠ `ReadableErasable`, ⛔ NOT `CalendarDate`: an RTBF-erased date is
+     * `anonymized` and a failed decrypt `unreadable` (`2026-09-26-246` §2) — ⛔ never 500 the parse.
      */
     accepted_certificate: z
-      .object({ review_id: z.string().uuid(), accepted_date: ReadableName })
+      .object({ review_id: z.string().uuid(), accepted_date: ReadableErasable })
       .strict()
       .nullable(),
   })

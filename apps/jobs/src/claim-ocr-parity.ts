@@ -32,13 +32,25 @@
 // overwrites the certificate it replaces (T1). For such a payload this job, in ONE transaction:
 //   1. `SELECT … FOR UPDATE` the claim row — serialising it with the District Admin's review writer
 //      (which locks the same row first), so a review and a job commit never interleave;
-//   2. moves `claim_documents` FORWARD ONLY: it upserts (key + OCR reading) only if there is no current
-//      upload, or this upload's `uploaded_at` (the HANDLER's clock) is ≥ the current one's. A retried or
-//      delayed job for an OLDER upload therefore ⛔ never makes it current again, and ⛔ never revives its
-//      rejected review (T2). Otherwise the upload is KEPT (its row is written) but ⛔ not made current;
+//   2. moves `claim_documents` FORWARD ONLY (`2026-09-26-245` §2): a RETRY of the current upload re-applies
+//      it (idempotent by IDENTITY); a DIFFERENT upload becomes current only if there is no current upload
+//      or its `uploaded_at` (the HANDLER's clock) is STRICTLY later — a tie keeps the current one (commit
+//      order must ⛔ never decide). A retried or delayed job for an OLDER upload therefore ⛔ never makes it
+//      current again, and ⛔ never revives its rejected review (T2);
+//      A retry of the current upload rewrites ⛔ NOTHING (`-246` §4): `claim_documents` keeps the first run's
+//      reading, the same one its upload row's verdict records;
+//   2b. and RE-CHECKS, under the same lock, whether a different upload may become current
+//      (`claim.mayDeathCertificateUploadBecomeCurrent`, `2026-09-26-246` §1 — superseding `-245` §2): past the
+//      pre-verification states, only inside the review window AND ⛔ never over an ACCEPTED certificate. An
+//      UNREVIEWED current certificate may be replaced (the family's newest is the one to review). The handler's
+//      intake check ran at request time with no lock — without this, a job landing late could displace an
+//      ACCEPTED certificate, even after approval.
+//      Whenever (2) or (2b) says no, the upload is KEPT (its row is written) but ⛔ not made current, and an
+//      audit line names it (`claim_document.death_certificate_kept_not_current`, `-246` §5);
 //   3. inserts the upload row (`ON CONFLICT (upload_id) DO NOTHING` — a retry writes exactly one), with its
 //      `claim_document_id` from the upsert's `RETURNING`, ⛔ never from the payload (two handlers racing a
-//      FIRST upload mint different ids; the upsert keeps the first).
+//      FIRST upload mint different ids; the upsert keeps the first), and with THIS upload's parity verdict
+//      (`-245` §1 — kept per upload, so a replacement ⛔ never erases the verdict of the one it replaced).
 // ⭐ The SOLE writer of `claim_death_certificate_uploads` (invariant 5). A REPLACEMENT in the review window
 // appends ⛔ no `documents_received` (it only fires from `intake_converged`) and enqueues ⛔ no peer-mesh
 // select (AC3: ⛔ no new selection, ⛔ no new event).
@@ -220,6 +232,9 @@ export async function runClaimOcrParity(
   //        advance the claim state idempotently.
   let finalOutcome: claim.ParityOutcome = 'ambiguous';
   let replacementInReviewWindow = false;
+  // `-246` §5 — why a DIFFERENT death-certificate upload was kept but ⛔ not made current (null: it was made
+  // current, or it is the current upload's own retry). Audited after the transaction.
+  let keptNotCurrent: 'not_later' | 'protected' | null = null;
   await withPariwarScope(deps.pool, pariwarId, async (db, client) => {
     // Read + decrypt the deceased member's KYC record (plaintext handed to the pure parity fn).
     const profile = await kyc.getMemberKycProfile(db, brandedPariwarId, deceasedMemberId);
@@ -272,7 +287,7 @@ export async function runClaimOcrParity(
     if (tracked) {
       // (1) The claim-row lock — the review writer takes it first too.
       const [locked] = await db
-        .select({ claimCaseId: schema.claims.claimCaseId })
+        .select({ claimCaseId: schema.claims.claimCaseId, currentState: schema.claims.currentState })
         .from(schema.claims)
         .where(and(eq(schema.claims.pariwarId, brandedPariwarId), eq(schema.claims.claimCaseId, claimCaseId)))
         .for('update');
@@ -292,10 +307,23 @@ export async function runClaimOcrParity(
       // uploads can tie on it. Only a strictly LATER timestamp promotes a different upload to current; a
       // tie between two different uploads keeps the one already current (commit order must ⛔ never decide).
       const isRetryOfCurrent = current.rows[0]?.upload_id?.toLowerCase() === (tracked.uploadId as string).toLowerCase();
-      makeCurrent =
-        currentUploadedAt === null ||
-        isRetryOfCurrent ||
-        tracked.uploadedAt.getTime() > new Date(currentUploadedAt).getTime();
+      if (isRetryOfCurrent) {
+        // `-246` §4 — the current upload's own retry rewrites ⛔ nothing: its row already points here, and its
+        // reading must stay the one its upload row's verdict records (a non-deterministic OCR must ⛔ never make
+        // the two disagree).
+        makeCurrent = false;
+      } else if (currentUploadedAt !== null && tracked.uploadedAt.getTime() <= new Date(currentUploadedAt).getTime()) {
+        makeCurrent = false;
+        keptNotCurrent = 'not_later';
+      } else {
+        // (2b) `-246` §1 — may it become current? Re-checked UNDER the lock: ⛔ never trust the handler's
+        // lock-free check to still hold when the job lands.
+        const status = claim.deathCertificateStatus(await claim.readDeathCertificateSnapshot(db, brandedPariwarId, claimCaseId));
+        if (!claim.mayDeathCertificateUploadBecomeCurrent(locked.currentState as string, status)) {
+          makeCurrent = false;
+          keptNotCurrent = 'protected';
+        }
+      }
     }
 
     // Upsert ONE row per (claim, document_type) — idempotent (AC4). ⭐ Story 6.21a: SKIPPED for an OLDER
@@ -378,6 +406,10 @@ export async function runClaimOcrParity(
           channel: tracked.channel,
           uploadedByActorId: actorId ?? null,
           uploadedAt: tracked.uploadedAt,
+          // `-245` §1 — THIS upload's verdict (⛔ no PII), kept even when it is ⛔ not made current.
+          parityOutcome: parity.outcome,
+          parityFlags: parity.flags,
+          ocrConfidence: confidence,
         })
         .onConflictDoNothing({ target: schema.claimDeathCertificateUploads.uploadId });
     }
@@ -450,6 +482,25 @@ export async function runClaimOcrParity(
   }
 
   // ── (3) Best-effort audit (AC6 — logged, NON-PII, non-blocking).
+  // `-246` §5 — a death-certificate upload KEPT but ⛔ not made current is named in its own audit line (the
+  // resource locator is the ONLY channel that names what an entry is about; `context` is hashed).
+  if (keptNotCurrent !== null && p.uploadId !== undefined) {
+    try {
+      await audit.writeAuditEntry(deps.pool, {
+        pariwarId,
+        actorId: actorId ?? null,
+        actorRole: 'system',
+        action: 'claim_document.death_certificate_kept_not_current',
+        resourceLocator: `death_certificate_upload:${p.uploadId.toLowerCase()}`,
+        requestPayloadHash: contextHash({ claim_case_id: p.claimCaseId, reason: keptNotCurrent }),
+        responseStatus: 200,
+        traceId: traceId ?? null,
+      });
+    } catch (auditErr) {
+      const e = auditErr as Error;
+      alarm(`[jobs] claim-ocr-parity: kept-not-current audit failed for ${p.uploadId} — ${e?.message ?? String(auditErr)}`);
+    }
+  }
   try {
     await audit.writeAuditEntry(deps.pool, {
       pariwarId,

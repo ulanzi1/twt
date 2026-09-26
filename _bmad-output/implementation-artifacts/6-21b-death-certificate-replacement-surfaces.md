@@ -35,8 +35,8 @@ Status: ready-for-dev
 > **Record ownership:** 6.21b's D1–D8 and BigDev's 6.21b calls (the helpline wording, the separate future-date
 > message, `तिथि`, and `certificate.missing_body`) are recorded in **`2026-09-25-244`**, the ONE author-commit for both
 > stories (its §1 table, §3 calls 3/4/7, and the `missing_body` approval). **`2026-09-26-247`** supersedes D1's
-> response, its row 1 (for two states) and its marker rule 2, and fixes the wire spelling as snake_case. ⛔ No other
-> entry exists for 6.21b ([[feedback_supersede_never_reinterpret]]).
+> response, its row 1 (for two states) and its marker rule 2, and fixes the wire spelling as snake_case;
+> **`2026-09-26-248`** is an erratum to `-247` §3 (the api-client maps ⛔ no casing). ⛔ No other entry exists for 6.21b ([[feedback_supersede_never_reinterpret]]).
 >
 > **Rulings:** `-235` Y (a certificate with no clear date is rejected) and `-236` BB (*"family will be asked to produce
 > certificate with clear date without the claim being denied"*). **BigDev, 2026-09-25:** a future date is rejected, and
@@ -169,6 +169,27 @@ decisions landed on top of the one this file was written under:
   - **(b)** Leave it, and record the gap in `deferred-work.md` against 6.5 with 6.21b as the finder. Cost: the gap
     stays open.
 
+## ✅ Validate record (2026-09-26, bmad-create-story validate, against v0.8 at `692a16de`)
+
+Checked: the pin is an ancestor of HEAD, and nothing but governance moved since it; ⛔ no stray branch carries a
+6.21b pass; every code routing note naming 6.21b was read; the `scripts/` gates that scan these files were probed
+(microcopy with the real checks, human-actor, access-wrapper, friction-budget); `parityFlags` is
+`z.record(z.string(), z.string())`, so `death_date` can ⛔ not 500 the console read. **Ten findings, V1–V10, all
+applied** (V1's governance half by erratum `2026-09-26-248`):
+
+| # | Finding | Where fixed |
+|---|---|---|
+| V1 | ⚠ `-247` §3 says *"The client maps them"*, and v0.8 said the api-client maps to camelCase *"as the other member methods do"*. **False**: every member method returns its contract type as-is. The *"member-response convention is snake_case"* premise is also overstated — `filing.ts` is camelCase, `shepherd`/`appeal` are snake_case. Snake_case remains the right choice for a post-filing read (the shepherd/appeal precedent). | D1 (story); `-247` §3 corrected by erratum **`2026-09-26-248`** (BigDev, *"(a) erratum"*) |
+| V2 | *"Announce on iOS and Android"* taken literally makes TalkBack speak twice (6.18's review, 2026-09-23b) | D2, AC2 |
+| V3 | The screen's chrome was unstated; `<ClaimProxyFlowShell>` would show the wizard's save-and-resume | D2 |
+| V4 | A nominee with no reachable mobile makes the step-up impassable; unhandled | D2, AC2 |
+| V5 | 6.19's CC1 item says `missing` is *"in the window"*; `-247` §2 widened it | Task 8 |
+| V6 | `lib/filed-claim.ts` is edited but was missing from D7's glob list | D7 |
+| V7 | friction AC-4 only sees committed work; access-wrapper (3) bans a direct `audit.writeAuditEntry` | D7 |
+| V8 | Two code headers still describe the pre-`-246` single predicate / "no helpline surface here" | Task 8, D5 |
+| V9 | `epics.md` §6.21b does ⛔ not point to `-247` | Task 8 |
+| V10 | A helpline-filed (or other-phone) claim has ⛔ no app entry point — pre-existing 6.12 behaviour | Dev Notes |
+
 ## 🎯 What already EXISTS (verified at `eab7ba45`)
 
 - **Member app, post-filing:**
@@ -247,7 +268,10 @@ decisions landed on top of the one this file was written under:
       keys on this field, ⛔ never on `replacement_allowed`.
     - `certificate_token: string (uuid) | null` — the CURRENT upload's id (`snapshot.currentUploadId`). Used ⛔ only by
       the marker; ⛔ never shown (`-247` §1).
-    - The api-client maps it to camelCase for the app (`replacementReason`, …), as the other member methods do.
+    - ⚠ VALIDATE 2026-09-26 (V1): the api-client does ⛔ **not** map casing — every member method returns its
+      contract type as-is (`getShepherd` → `MemberShepherdResponse`, and `ShepherdContactCard` reads
+      `data.display_name`). ⇒ the app reads these snake_case fields directly; ⛔ no mapping layer is written.
+      (`-247` §3's *"The client maps them"* is false — corrected by erratum `2026-09-26-248`.)
   - **The state table.** The **server** computes this, from ONE scope tx: the claim row, then one
     `readDeathCertificateSnapshot`. Rows are evaluated **top to bottom, first match wins**:
 
@@ -333,9 +357,20 @@ decisions landed on top of the one this file was written under:
     - ⛔ Never `useStepUpGate` (wrong phone). ⛔ Never weaken the upload route's step-up.
   - **Entry:** the screen reads `claimCaseId` from its route params, and does a **fresh** D1 read before it shows the
     button. If `upload_allowed` is false, it shows the server's row and ⛔ no button.
+  - **Chrome (V3):** a plain `YStack`, like `shepherd.tsx`. ⛔ **Not** `<ClaimProxyFlowShell>`: it renders
+    `<SaveAndResumeAffordance>` (the filing draft, cleared at acknowledgement) and a `#1A1A1A` literal. ⛔ Do not add
+    `certificate-replacement` to `CLAIM_STEPS` (`lib/claim-steps.ts`): the `(claim)` layout then correctly shows ⛔ no
+    "Step N of M" header.
+  - **No reachable nominee (V4):** `requestHandoverOtp` returns an EMPTY `nomineeMobileMasked` when the nominee has no
+    reachable mobile, and the wizard then shows `otp.no_nominee`. The replacement screen does the same, **with** the
+    helpline line: the step-up can ⛔ not be passed, so the helpline (D5, ⛔ no step-up) is the way out. A test covers it.
   - **Copy:** ⛔ none of `document.help` / `document.defer` / `document.saved` (invariant 2). The helpline line is
     `<CallHelplineCTA label={t('certificate.replacement_helpline')} />` (C5).
-  - **Accessibility:** announce the outcome on iOS **and** Android (`AccessibilityInfo.announceForAccessibility`).
+  - **Accessibility (V2 — the 6.18 review's pattern, ⛔ not a literal "call it on both"):** the outcome is spoken on
+    both platforms. Android: the outcome `Text` carries `accessibilityLiveRegion="polite"`. iOS:
+    `if (Platform.OS === 'ios') AccessibilityInfo.announceForAccessibility(…)` — ⛔ unguarded, TalkBack speaks it
+    **twice** (`nominee-review.tsx`, code review 2026-09-23b). Hold on the screen long enough for the live region to
+    be read before navigating (`SAVED_ANNOUNCEMENT_DELAY_MS`), and key the effect on the outcome, ⛔ never on `t`.
     Status is ⛔ never conveyed by colour alone.
   - **Colour (C3):** ⛔ no colour literal and ⛔ no status colour in the new screen or the two hooks.
 - **D3 — the post-filing notice.** `shepherd.tsx` takes `claimCaseId` from its route params (C2), reads D1, and renders
@@ -416,7 +451,8 @@ decisions landed on top of the one this file was written under:
   - The OCR-failure path is ⛔ unchanged (it never calls `evaluateParity`). ⛔ Nothing is rejected or gated.
 - **D7 — gates and ledgers.**
   - `microcopy.yaml` `code_globs` gains every new or edited mobile file: `certificate-replacement.tsx`, `shepherd.tsx`,
-    `document.tsx`, `handover-otp.tsx` and the two hooks.
+    `document.tsx`, `handover-otp.tsx`, `lib/filed-claim.ts` (V6) and the two hooks. ✅ Probed at validate with the
+    real checks: the three existing files raise **exactly** the three literals below, and nothing else.
     - Add scoped FM-14 exemptions, in the 6.18 form, for the literals that must stay: `document.tsx`
       `'#(B00020|1E8E3E)\b'`, `handover-otp.tsx` `'#C0392B\b'`. ⛔ None for the new files (C3).
     - `scripts/microcopy/claim.test.ts` gets a teeth case planting a violation in the new screen, and its §(0) scope
@@ -424,6 +460,10 @@ decisions landed on top of the one this file was written under:
   - The en/hi parity test passes for every new key.
   - A **row** in `friction-budget.md` `## The ledger`:
     `family (uploading a second death certificate when the first shows no clear or valid date of death) | the as-at-death rule's integrity (-235 Y) | forced`.
+    ⚠ (V7) AC-4 diffs **committed** history (`git diff <base>...HEAD`), so it passes vacuously on uncommitted work:
+    **commit, then** run `pnpm friction:check` ([[project_friction_budget_baseline_ratchet]]).
+  - (V7) `access-wrapper-invariants` scans `apps/api/src/modules/claims` and `packages/domain/src/claim`: the D5 audit
+    goes through `emitAuthAudit`, ⛔ never a direct `audit.writeAuditEntry`.
 - **D8 — ⛔ no notification dispatch, ⛔ no reminder.** The same as 6.21a D15: the reminder is 6.19's (CC1).
 
 ## Acceptance Criteria
@@ -461,6 +501,8 @@ outcome is announced on both platforms.
 **And** `certificate_accepted` and `certificate_awaiting_review` are shown as their own messages, ⛔ never *"upload
 failed"*, and `upload_not_allowed` refetches and renders the server's row.
 **And** ⛔ no `document.help`, `.defer` or `.saved` key renders on the replacement screen.
+**And** with ⛔ no reachable nominee (an empty mask), the screen shows `otp.no_nominee` and the helpline line (V4).
+**And** the outcome is spoken once per platform: a live region on Android, an iOS-guarded announcement (V2).
 
 ### AC3 — Their own words (D4)
 
@@ -546,6 +588,13 @@ replacement surfaces, ⛔ no document-type chooser, and ⛔ no change to the upl
   - [ ] 6.20 *"the helpline live-claims read writes no audit line"* — annotated: this route has one; 6.20's still does
     ⛔ not;
   - [ ] 6.21a's go-live coupling (1) — **discharged on the build**, at the 6.21a header and the ledger;
+  - [ ] (V5) 6.19's CC1 item — append an annotation: `-247` §2 extends `missing` to `intake_converged` /
+    `documents_pending`; whether THAT state is chased is part of protection 3's §0 too (6.19 is `backlog`; ⛔ no code);
+  - [ ] (V8) the stale doc-comments, comment-only: `claims.documents.handlers.ts`'s header says the in-window predicate
+    is *"the ONE definition … 6.21b's family status shares"* while the handler calls `isDeathCertificateUploadAllowed`
+    (`-246` §1) — name both; `claims.death-certificate.routes.ts`'s header (D5 already orders it);
+  - [ ] (V9) `epics.md` §6.21b — one line under its header pointing to `-247` (AC2 now also covers a certificate put off
+    at filing);
   - [ ] 6.5's deferred-upload gap (Q1) — recorded in `deferred-work.md` as **found and closed by 6.21b** (`-247` §2),
     on the build;
   - [ ] prepend the ledger safely ([[project_sprint_status_safe_prepend]]).
@@ -604,6 +653,9 @@ replacement surfaces, ⛔ no document-type chooser, and ⛔ no change to the upl
     the family's side too (AC1);
   - 6.21a's review found a note saying "one shared predicate" that was false. Name the function, and assert it by test;
   - the known pre-existing failures: domain has 7, which are ⛔ not this story's ([[project_known_livedb_test_failures]]).
+- **Known limit (V10, pre-existing, ⛔ not changed here):** the app notice is reachable only through
+  `ClaimPointOfContactEntry`, which needs the filed-claim pointer stamped at the APP's acknowledgement. A family whose
+  claim was filed by the helpline, or on another phone, has ⛔ no entry in the app; their path is the helpline (D5).
 - ⛔ **No new dependency.**
 
 ## Dev Agent Record
@@ -625,3 +677,4 @@ replacement surfaces, ⛔ no document-type chooser, and ⛔ no change to the upl
 | v0.6.1 | 2026-09-26 | (6.21a code review, `c189cb27`) D1 rows 2 and 5 corrected to `-245` §3 (a legacy row is `missing`). |
 | v0.7 | 2026-09-26 | **Re-pinned to `eab7ba45` and FLIPPED `backlog → ready-for-dev`** (bmad-create-story, after 6.21a went `done`). Every cited 6.21a name re-verified. Corrections C1–C7: **C1** `replacementAllowed` is the IN-WINDOW predicate `isDeathCertificateUploadAllowedInReviewWindow`, ⛔ not the handler's `isDeathCertificateUploadAllowed` (`-246` §1: two predicates) — AC1's *"every row"* was false for the two pre-verification states; **C2** the shepherd screen's claim id is a route param; **C3** apps/mobile has no colour token ⇒ ⛔ no status colour on the new screen; **C4** `handover-otp.tsx`'s literal is `#C0392B`; **C5** the helpline line reuses `<CallHelplineCTA label>`; **C6** 6.21b owns the two 409 codes' mapping, which 6.21a deferred to it; **C7** the admin multipart function parses its 202. Added: `upload_not_allowed` handling, retry without re-picking, the `≡ isDeathCertificateReplacementRequested` test, `listLiveClaimsForDeceasedMember` reuse and its read bound, the routes-file header update, `expectedMethods: ['post','get','get']`, and a present-date case in the OCR truth table. **Two open author calls:** F1 (the marker can show "we have it" for up to 24 h after a replacement is rejected — recommended: a `certificateToken` discriminator) and Q1 (a certificate deferred at filing has ⛔ no post-filing upload path in the app or through the helpline — recommended: extend). ⛔ No D changed by this edit; F1/Q1 would change D1 only by a superseding author-commit. |
 | v0.8 | 2026-09-26 | **`2026-09-26-247` applied** (BigDev: *"F1 (a) and Q1 (a), supersede by author-commit"*). **F1:** the response carries `certificate_token` (the current upload's id — opaque, ⛔ not a credential, never shown); the marker stores `tokenAtWrite`; rule 2 is *"token OR status differs ⇒ the server wins"*, which catches "B rejected after A"; a test for it. **Q1:** D1 gains rows 1a/1b — in `intake_converged` / `documents_pending`, `missing` offers an upload and a current upload shows `awaiting_review`; a new field `upload_allowed` carries the offer (the app and helpline key on it), while `replacement_allowed` stays the in-window predicate; a soundness test (`upload_allowed ⇒ isDeathCertificateUploadAllowed`) plus the one asserted divergence. **Wire spelling** snake_case (`-247` §3). Superseded sites marked; Task 0 closed. ⛔ No new copy; ⛔ no other D changed. |
+| v0.9 | 2026-09-26 | **Validate pass** (V1–V10, the table in §*Validate record*). The significant ones: V2 (the a11y announcement would double-speak on TalkBack), V4 (no reachable nominee ⇒ the step-up is impassable ⇒ helpline), V3 (⛔ not `<ClaimProxyFlowShell>`), V1 (the api-client does ⛔ not map casing — the story is fixed, and `-247` §3 is corrected by erratum `2026-09-26-248`). ⛔ No D changed. |

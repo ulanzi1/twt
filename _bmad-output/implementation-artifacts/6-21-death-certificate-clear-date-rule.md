@@ -3,6 +3,24 @@ baseline_commit: a35af210
 ---
 
 <!--
+⭐⭐ MERGED 2026-09-26 as PR #241 (REBASE-merge) — THE SHA MAP. Every SHA this file (and `sprint-status.yaml`) cites
+for Story 6.21a's own commits is a BRANCH SHA (`story/6-21a-death-certificate-clear-date-rule`), ⛔ NOT reachable from
+`main` after the rebase-merge. The baseline pin `a35af210` IS on `main` and is unaffected. The citations are kept AS
+WRITTEN (the record); this is the map to their `main` twins, PROVED ⛔ not assumed: each pair has an IDENTICAL
+`git patch-id --stable` AND an identical `git ls-tree -r <sha> -- packages apps scripts _bmad-output .decision-log.md |
+git hash-object --stdin` (`main` had not moved, so the rebase rewrote SHAs only).
+  · `e4b565d9` → `ec4650e1`  governance: Task 0 (`-244`)
+  · `78394cb9` → `67121138`  feat: the story's code
+  · `5856fb07` → `c189cb27`  governance: code review 2026-09-26 (`-245`)
+  · `af4c6264` → `5d6524da`  governance: adversarial pass on those patches (`-246`)
+  · `ea618c3d` → `6f44f8f5`  fix: both rounds' production patches
+  · `57fb1d8f` → `cb1298b3`  test: both rounds' test half
+  · `682b6ca3` → `8e1432db`  governance: the records (the merge head; ⛔ not cited, mapped for completeness)
+Re-verify (bash — zsh does not word-split `$p`): `for p in "78394cb9 67121138" …; do set -- $p; diff <(git show $1 | git patch-id --stable | cut -d' ' -f1) <(git show $2 | git patch-id --stable | cut -d' ' -f1); done`
+— ⚠ needs the branch SHAs, which survive only while the branch (local or `origin/story/6-21a-death-certificate-clear-date-rule`) does.
+-->
+
+<!--
 BASELINE — `a35af210` on `main`. Two facts, stated separately (footgun 24):
   · the pin is an ancestor of HEAD (durable);
   · every code claim below was re-derived at `a35af210` on 2026-09-25, when `a35af210` WAS HEAD (perishable).
@@ -1218,3 +1236,4 @@ Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story`, 2026-09-25.
 | v0.9 | 2026-09-25 | `bmad-code-review` (Chunk 1, Chunk 2, and an adversarial pass on its own patches) — findings and fixes in *Review Findings*. Status → `done`. *(Entry added 2026-09-26: the review did ⛔ not write one.)* |
 | v1.0 | 2026-09-26 | **Second full-diff `bmad-code-review`** (three layers, sequential). BigDev's two calls → author-commit `2026-09-26-245` (committed alone first, `5856fb07`). 14 patches: the OCR job re-applies D6 under the lock (an accepted certificate can no longer be displaced); per-upload parity verdict (migration `0123`); RTBF sentinel → `unreadable`; the date verdict refused by the writer in order, with `certificate_date_unreadable`; console `missing`/`unavailable`; `canReview` bounded by the window; family 13(d); `truncated` shown; three test gaps; the record corrected. Status stays `done`. |
 | v1.1 | 2026-09-26 | **Adversarial pass on the v1.0 patches** (12 findings, all fixed). BigDev → author-commit `2026-09-26-246` (committed alone first, `af4c6264`): only an ACCEPTED certificate is protected from a late job (an unreviewed one is replaced by the family's newer upload); two named predicates; an erased date is `anonymized` with its own refusal; the date verdict is required (fail-closed); a retry rewrites nothing; new upload rows must carry a verdict; kept-not-current uploads are audited. Status stays `done`. |
+| v1.2 | 2026-09-26 | **Merged as PR #241 (rebase), every CI check green.** Every branch SHA this file cites is mapped to its `main` twin in the header note (each of the 7 pairs proved by identical `patch-id` and code tree); ⛔ no citation rewritten. |

@@ -56,8 +56,9 @@ import { emitAuthAudit } from '../auth/shared/audit.js';
 import { closeScopeTx, openScopeTx } from '../multi-tenant/scope-tx.js';
 import type { ScopeTx } from '../../types.js';
 
-/** The claim states from which a document upload is accepted (AC1/AC5). */
-const UPLOADABLE_STATES = new Set(['intake_converged', 'documents_pending']);
+/** The claim states from which a document upload is accepted (AC1/AC5) — the domain's ONE definition of the
+ *  pre-verification states (the OCR job's "may become current" predicate uses the same constant). */
+const UPLOADABLE_STATES: ReadonlySet<string> = new Set(claim.CLAIM_DOCUMENT_UPLOADABLE_STATES);
 
 interface UploadInput {
   claimCaseId: ids.ClaimId;
@@ -93,7 +94,9 @@ async function uploadClaimDocument(
     throw new NotFoundError('Claim not found', 'claim.not_found');
   }
   if (!UPLOADABLE_STATES.has(claimRow.currentState)) {
-    // Story 6.21a (D6) — a death certificate inside the review window follows the certificate's own state.
+    // Story 6.21a (D6) — a death certificate inside the review window follows the certificate's own state. The
+    // decision is the domain's named INTAKE predicate (`isDeathCertificateUploadAllowed`, `2026-09-26-246` §1),
+    // ⛔ never an inline composition; this branch only picks the refusal code.
     if (
       input.documentType === 'death_certificate' &&
       claim.isInDeathCertificateReviewWindow(claimRow.currentState as string)
@@ -101,7 +104,7 @@ async function uploadClaimDocument(
       const status = claim.deathCertificateStatus(
         await claim.readDeathCertificateSnapshot(tx.tx, input.pariwarId, input.claimCaseId),
       );
-      if (!claim.isDeathCertificateUploadAllowedInReviewWindow(status)) {
+      if (!claim.isDeathCertificateUploadAllowed(claimRow.currentState as string, status)) {
         throw status === 'accepted'
           ? new ConflictError(
               'The death certificate has already been accepted — another cannot be sent',

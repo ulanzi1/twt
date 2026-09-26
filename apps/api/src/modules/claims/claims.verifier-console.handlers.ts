@@ -482,7 +482,11 @@ async function assembleDocumentReview(
       const determinationStale =
         status === 'accepted' ? await claim.isDeathCertificateDeterminationStale(ctx.db, pariwarId, claimCaseId, snap) : false;
       certificateReview = {
-        status: status === 'accepted' ? 'accepted' : status === 'rejected' ? 'rejected' : 'not_reviewed',
+        // `missing` is carried THROUGH (`2026-09-26-245` §3): a legacy row has no token and can never be
+        // reviewed, so the console must ⛔ not tell the District Admin to "review" it — the gate says
+        // `no_certificate` for it, and so does the console.
+        status:
+          status === 'accepted' ? 'accepted' : status === 'rejected' ? 'rejected' : status === 'missing' ? 'missing' : 'not_reviewed',
         rejectionReason: current?.rejectionReason ?? null,
         decidedByDisplay: current?.decidedByDisplay ?? null,
         decidedAt: current?.decidedAt.toISOString() ?? null,
@@ -490,12 +494,16 @@ async function assembleDocumentReview(
         certificateToken: snap.currentUploadId ?? null,
         determinationStale,
         viewer: {
-          canReview: rbac.hasPermission(
-            ctx.grants,
-            DEATH_CERTIFICATE_REVIEW_KEY,
-            { dimension: 'district', value: ctx.district, pariwarId: ctx.pariwarId },
-            ctx.geoResolver ? { resolver: ctx.geoResolver } : undefined,
-          ),
+          // The key AND the review window: outside it every submit is 409 `not_reviewable`, so the control is
+          // ⛔ not offered (the same "never offer a control that would 409" rule as the verifier split).
+          canReview:
+            claim.isInDeathCertificateReviewWindow(core.claim.currentState as string) &&
+            rbac.hasPermission(
+              ctx.grants,
+              DEATH_CERTIFICATE_REVIEW_KEY,
+              { dimension: 'district', value: ctx.district, pariwarId: ctx.pariwarId },
+              ctx.geoResolver ? { resolver: ctx.geoResolver } : undefined,
+            ),
         },
       };
     }

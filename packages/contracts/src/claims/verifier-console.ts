@@ -109,11 +109,13 @@ export const VerifierReviewItem = z
      * every other document type). ⛔ It carries NO decrypted date (T10): the date lives on the audited history
      * read and 6.20's timeline. `certificateToken` is the CURRENT upload's id (`null` for a legacy row with no
      * upload — never reviewable, T12). `viewer.canReview` is judged SERVER-SIDE against the actor's grants at
-     * the deceased's district (6.20's `viewer.can_determine` pattern): ⛔ UI only, the route's key stays the gate.
+     * the deceased's district (6.20's `viewer.can_determine` pattern), AND only inside the review window (outside
+     * it every submit is 409 `not_reviewable`): ⛔ UI only, the route's key stays the gate.
      */
     review: z
       .object({
-        status: z.enum(['not_reviewed', 'accepted', 'rejected']),
+        /** `missing` = a row with no current upload (T12 legacy): no token, never reviewable (`2026-09-26-245` §3). */
+        status: z.enum(['missing', 'not_reviewed', 'accepted', 'rejected']),
         rejectionReason: z.enum(['no_date_of_death', 'date_of_death_unclear', 'date_of_death_in_future']).nullable(),
         decidedByDisplay: z.string().nullable(),
         decidedAt: z.string().datetime().nullable(),

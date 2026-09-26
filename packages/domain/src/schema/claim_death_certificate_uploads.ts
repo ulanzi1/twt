@@ -23,10 +23,26 @@
 // mint different ids, the upsert keeps the first, so the FK must come from the upsert's `RETURNING`).
 // The ONE exception is test-only: `seedDeathCertificate` (tests/integration/_helpers.ts).
 //
-// ⛔ No PII column (the OCR reading stays on `claim_documents`). ⛔ No UPDATE, ⛔ no DELETE: the 0122 grants
+// ── The parity VERDICT, per upload (`2026-09-26-245` §1, migration 0123) ─────────────────────────
+// The outcome, flags and confidence the OCR job gave THIS certificate — written once at insert, so a
+// replacement ⛔ never erases the verdict a verifier saw on the certificate it replaced. NULL (all three) on
+// a row written before 0123.
+//
+// ⛔ No PII column (the OCR TEXT stays on `claim_documents` — the current certificate's; it is re-derivable
+// from the kept object). ⛔ No UPDATE, ⛔ no DELETE: the 0122 grants
 // and an append-only trigger for every role (only an `ON DELETE cascade` passes).
 
-import { index, integer, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import {
+  doublePrecision,
+  index,
+  integer,
+  jsonb,
+  pgTable,
+  text,
+  timestamp,
+  uniqueIndex,
+  uuid,
+} from 'drizzle-orm/pg-core';
 
 import type {
   ClaimDocumentId,
@@ -35,7 +51,7 @@ import type {
   MemberId,
   PariwarId,
 } from '../ids/index.js';
-import { claimDocuments } from './claim_documents.js';
+import { claimDocumentParityOutcomeEnum, claimDocuments } from './claim_documents.js';
 import { claims } from './claims.js';
 
 /** Which surface the certificate came through (the two upload routes).
@@ -80,6 +96,11 @@ export const claimDeathCertificateUploads = pgTable(
 
     // The HANDLER's clock (⛔ not the job's): it orders "current" forward-only (D2).
     uploadedAt: timestamp('uploaded_at', { withTimezone: true, mode: 'date' }).notNull(),
+
+    // `2026-09-26-245` §1 (0123) — this upload's parity verdict, ⛔ no PII. All three or none (a CHECK).
+    parityOutcome: claimDocumentParityOutcomeEnum('parity_outcome'),
+    parityFlags: jsonb('parity_flags'),
+    ocrConfidence: doublePrecision('ocr_confidence'),
 
     createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
   },

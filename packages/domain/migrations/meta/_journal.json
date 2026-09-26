@@ -862,6 +862,13 @@
       "when": 1791258000000,
       "tag": "0122_death-certificate-clear-date-rule",
       "breakpoints": true
+    },
+    {
+      "idx": 123,
+      "version": "7",
+      "when": 1791344400000,
+      "tag": "0123_death-certificate-upload-parity-verdict",
+      "breakpoints": true
     }
   ]
 }

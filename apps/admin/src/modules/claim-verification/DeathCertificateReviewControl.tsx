@@ -14,7 +14,7 @@
 
 import type { DeathCertificateHistoryResponse, VerifierReviewItem } from '@twt/contracts';
 import type { ReactElement } from 'react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { verifierConsoleEn } from './i18n-en.js';
 
@@ -101,6 +101,19 @@ export function DeathCertificateReviewControl(props: DeathCertificateReviewContr
     if (ready) setIncomplete(false);
   }, [ready]);
 
+  // Family 13(d) — a form opened from ELSEWHERE (the preview's "Request a better document" opens the reject
+  // form further down the page) must be announced: focus moves into the opened fieldset, whose legend is read.
+  // ⛔ Only then: when the District Admin used this control's OWN Accept / Reject toggle, focus is already here
+  // and is ⛔ not moved (adversarial review 2026-09-26). ⚠ Also above the early return (Rules of Hooks, as above).
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const formRef = useRef<HTMLFieldSetElement | null>(null);
+  useEffect(() => {
+    if (mode === null) return;
+    const active = typeof document === 'undefined' ? null : document.activeElement;
+    if (active && rootRef.current?.contains(active)) return;
+    formRef.current?.focus();
+  }, [mode]);
+
   if (review.certificateToken === null) {
     return (
       <p className="text-sm" data-testid="death-certificate-no-token">
@@ -133,7 +146,7 @@ export function DeathCertificateReviewControl(props: DeathCertificateReviewContr
   }
 
   return (
-    <div className="flex flex-col gap-2" data-testid="death-certificate-review-control">
+    <div ref={rootRef} className="flex flex-col gap-2" data-testid="death-certificate-review-control">
       <p className="text-xs">{t.intro}</p>
       <div className="flex flex-wrap gap-2">
         <button
@@ -159,7 +172,7 @@ export function DeathCertificateReviewControl(props: DeathCertificateReviewContr
       </div>
 
       {mode === 'accept' ? (
-        <fieldset className="flex flex-col gap-2 rounded border p-3" data-testid="death-certificate-accept-form">
+        <fieldset ref={formRef} tabIndex={-1} className="flex flex-col gap-2 rounded border p-3" data-testid="death-certificate-accept-form">
           <legend className="text-sm font-semibold">{t.acceptHeading}</legend>
           <label className="flex flex-col text-sm">
             {t.dateLabel}
@@ -182,22 +195,25 @@ export function DeathCertificateReviewControl(props: DeathCertificateReviewContr
       ) : null}
 
       {mode === 'reject' ? (
-        <fieldset className="flex flex-col gap-2 rounded border p-3" data-testid="death-certificate-reject-form">
+        <fieldset ref={formRef} tabIndex={-1} className="flex flex-col gap-2 rounded border p-3" data-testid="death-certificate-reject-form">
           <legend className="text-sm font-semibold">{t.rejectHeading}</legend>
-          <p className="text-sm">{t.reasonLegend}</p>
-          {REASONS.map((r) => (
-            <label key={r} className="flex items-center gap-2 text-sm">
-              <input
-                type="radio"
-                name="death-certificate-reason"
-                value={r}
-                checked={reason === r}
-                onChange={() => setReason(r)}
-                data-testid={`death-certificate-reason-${r}`}
-              />
-              {t.reasons[r]}
-            </label>
-          ))}
+          {/* The reasons are their OWN group, named by the question — ⛔ not a bare paragraph beside them. */}
+          <fieldset className="flex flex-col gap-2" data-testid="death-certificate-reasons">
+            <legend className="text-sm">{t.reasonLegend}</legend>
+            {REASONS.map((r) => (
+              <label key={r} className="flex items-center gap-2 text-sm">
+                <input
+                  type="radio"
+                  name="death-certificate-reason"
+                  value={r}
+                  checked={reason === r}
+                  onChange={() => setReason(r)}
+                  data-testid={`death-certificate-reason-${r}`}
+                />
+                {t.reasons[r]}
+              </label>
+            ))}
+          </fieldset>
         </fieldset>
       ) : null}
 
@@ -205,9 +221,16 @@ export function DeathCertificateReviewControl(props: DeathCertificateReviewContr
         <>
           <label className="flex flex-col text-sm">
             {t.note}
-            <textarea value={note} onChange={(e) => setNote(e.target.value)} data-testid="death-certificate-note" />
+            <textarea
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              aria-describedby="death-certificate-note-help"
+              data-testid="death-certificate-note"
+            />
           </label>
-          <p className="text-xs">{t.noteHelp}</p>
+          <p id="death-certificate-note-help" className="text-xs">
+            {t.noteHelp}
+          </p>
           {incomplete ? (
             <p role="alert" data-testid="death-certificate-incomplete">
               {mode === 'accept' ? t.incompleteAccept : t.incompleteReject}
@@ -248,11 +271,13 @@ export function DeathCertificateReviewControl(props: DeathCertificateReviewContr
   );
 }
 
-type ReadableValue = { state: 'readable'; value: string } | { state: 'unreadable' } | null;
+type ReadableValue = { state: 'readable'; value: string } | { state: 'unreadable' } | { state: 'anonymized' } | null;
 
+/** A decrypted value in WORDS: erased (RTBF — permanent) is ⛔ not "could not be read" (`2026-09-26-246` §2). */
 function Value({ v }: { v: ReadableValue }): ReactElement | null {
   if (!v) return null;
-  return v.state === 'readable' ? <span>{v.value}</span> : <span className="italic">{t.history.unreadable}</span>;
+  if (v.state === 'readable') return <span>{v.value}</span>;
+  return <span className="italic">{v.state === 'anonymized' ? t.history.anonymized : t.history.unreadable}</span>;
 }
 
 export interface DeathCertificateHistoryProps {
@@ -279,47 +304,55 @@ export function DeathCertificateHistory({ history, loading, error }: DeathCertif
   }
   if (history.uploads.length === 0) return <p data-testid="death-certificate-history-empty">{t.history.empty}</p>;
   return (
-    <ol className="flex flex-col gap-3" data-testid="death-certificate-history">
-      {history.uploads.map((u) => (
-        <li key={u.upload_id} className="rounded border p-2 text-sm" data-testid="death-certificate-history-upload">
-          <p className="font-medium">
-            {u.current ? t.history.current : t.history.earlier} · {t.history.channel[u.channel]} · {t.history.uploadedAt}{' '}
-            {fmt(u.uploaded_at)} ·{' '}
-            {u.preview.signed_url ? (
-              <a href={u.preview.signed_url} target="_blank" rel="noreferrer" className="underline">
-                {t.history.open}
-              </a>
+    <>
+      <ol className="flex flex-col gap-3" data-testid="death-certificate-history">
+        {history.uploads.map((u) => (
+          <li key={u.upload_id} className="rounded border p-2 text-sm" data-testid="death-certificate-history-upload">
+            <p className="font-medium">
+              {u.current ? t.history.current : t.history.earlier} · {t.history.channel[u.channel]} · {t.history.uploadedAt}{' '}
+              {fmt(u.uploaded_at)} ·{' '}
+              {u.preview.signed_url ? (
+                <a href={u.preview.signed_url} target="_blank" rel="noreferrer" className="underline">
+                  {t.history.open}
+                </a>
+              ) : (
+                <span className="italic" data-testid="death-certificate-preview-unavailable">
+                  {t.history.previewUnavailable}
+                </span>
+              )}
+            </p>
+            {u.reviews.length === 0 ? (
+              <p className="text-xs">{t.history.notReviewed}</p>
             ) : (
-              <span className="italic" data-testid="death-certificate-preview-unavailable">
-                {t.history.previewUnavailable}
-              </span>
+              <ul className="ml-4 flex flex-col gap-1">
+                {u.reviews.map((r) => (
+                  <li key={r.review_id} data-testid="death-certificate-history-review">
+                    {t.status[r.verdict]}
+                    {r.rejection_reason ? <> — {t.reasons[r.rejection_reason]}</> : null}
+                    {r.accepted_date ? (
+                      <>
+                        {' '}
+                        · {t.history.acceptedDate}: <Value v={r.accepted_date} />
+                      </>
+                    ) : null}{' '}
+                    · {t.decidedBy} {r.decided_by_display} {t.decidedAt} {fmt(r.decided_at)}
+                    {r.superseded_reason ? <> · {t.history.superseded[r.superseded_reason]}</> : null}
+                    <p className="text-xs">
+                      {t.note}: <Value v={r.note} />
+                    </p>
+                  </li>
+                ))}
+              </ul>
             )}
-          </p>
-          {u.reviews.length === 0 ? (
-            <p className="text-xs">{t.history.notReviewed}</p>
-          ) : (
-            <ul className="ml-4 flex flex-col gap-1">
-              {u.reviews.map((r) => (
-                <li key={r.review_id} data-testid="death-certificate-history-review">
-                  {t.status[r.verdict]}
-                  {r.rejection_reason ? <> — {t.reasons[r.rejection_reason]}</> : null}
-                  {r.accepted_date ? (
-                    <>
-                      {' '}
-                      · {t.history.acceptedDate}: <Value v={r.accepted_date} />
-                    </>
-                  ) : null}{' '}
-                  · {t.decidedBy} {r.decided_by_display} {t.decidedAt} {fmt(r.decided_at)}
-                  {r.superseded_reason ? <> · {t.history.superseded[r.superseded_reason]}</> : null}
-                  <p className="text-xs">
-                    {t.note}: <Value v={r.note} />
-                  </p>
-                </li>
-              ))}
-            </ul>
-          )}
-        </li>
-      ))}
-    </ol>
+          </li>
+        ))}
+      </ol>
+      {/* The caller's ONLY signal that older certificates were left out — ⛔ never let the list read as complete. */}
+      {history.truncated ? (
+        <p className="text-xs" data-testid="death-certificate-history-truncated">
+          {t.history.truncated}
+        </p>
+      ) : null}
+    </>
   );
 }

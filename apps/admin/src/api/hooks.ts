@@ -1753,6 +1753,9 @@ const DETERMINATION_STALE_CODES: ReadonlySet<string> = new Set([
   // timeline so the read-only date the form sends is the one now accepted.
   'nominee_determination.certificate_not_accepted',
   'nominee_determination.certificate_date_mismatch',
+  // `2026-09-26-245` §4 — refetch so the read-only date shows its UNREADABLE state, ⛔ not a stale value.
+  'nominee_determination.certificate_date_unreadable',
+  'nominee_determination.certificate_date_anonymized',
 ]);
 const CORRECTION_STALE_CODES: ReadonlySet<string> = new Set([
   'nominee_correction.step_conflict',

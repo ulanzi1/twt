@@ -304,6 +304,9 @@ export const verifierConsoleEn = {
       // stored date could not be read (an RTBF sentinel or a decrypt failure) — never taken on trust.
       certificateDateUnreadable:
         'The accepted certificate’s date could not be read right now. Try again, or review the certificate again if this continues.',
+      // `2026-09-26-246` §2 — the date was ERASED (RTBF), permanently: ⛔ not "try again".
+      certificateDateErased:
+        "The accepted certificate’s date was erased at the member's request, so no determination can be checked against it. Contact support.",
       stands: 'Stands',
       discarded: 'Discarded',
       markLegend: 'Mark this version',
@@ -336,6 +339,11 @@ export const verifierConsoleEn = {
           'The death certificate is not accepted (or it was reviewed again). Review the certificate, then record the determination.',
         certificate_date_mismatch:
           'The date differs from the one accepted on the death certificate. Reload — the form uses the accepted date.',
+        certificate_date_unreadable:
+          'The date accepted on the death certificate cannot be read, so the determination cannot be checked against it. Try again; if it keeps happening, contact support.',
+        // `2026-09-26-246` §2 — ERASED, not unreadable: retrying will never help, so the copy must ⛔ not say "try again".
+        certificate_date_anonymized:
+          "The date accepted on the death certificate was erased at the member's request, so the determination cannot be checked against it. Trying again will not help — contact support.",
       } as Record<string, string>,
       forbidden: 'Only the District Admin can record a determination.',
       // Shown in place of the form to a viewer who may read the history but not determine (a verifier).
@@ -519,6 +527,7 @@ export const verifierConsoleEn = {
       'Accept the death certificate only if it shows a clear, possible date of death — you type that date yourself. Otherwise reject it: the family is asked for another certificate, and the claim is never refused for this.',
     statusLabel: 'Death certificate',
     status: {
+      missing: 'No certificate to review — the family needs to send it again',
       not_reviewed: 'Not reviewed yet',
       accepted: 'Accepted',
       rejected: 'Rejected — the family is asked for another certificate',
@@ -573,6 +582,9 @@ export const verifierConsoleEn = {
     // The approval gate (D7) — on the District Admin's console, worded by the server's reason.
     approveBlocked: {
       no_certificate: 'No death certificate has been sent yet. Approval waits for one with a clear date.',
+      // The document section failed to load — ⛔ never "none was sent" (unavailable is not none).
+      unavailable:
+        "The death certificate's status could not be loaded. Reload the page — approval stays unavailable until it can be checked.",
       not_reviewed: 'Review the death certificate before approving.',
       rejected: 'The death certificate was rejected; the family has been asked for another. Approval waits for it.',
       determination_stale:
@@ -593,6 +605,7 @@ export const verifierConsoleEn = {
       loading: 'Loading the certificates…',
       error: 'The certificates could not be loaded. Try again.',
       empty: 'No certificate has been sent.',
+      truncated: 'Only the most recent certificates are listed. Older ones are kept, but are not shown here.',
       current: 'Current certificate',
       earlier: 'Earlier certificate',
       channel: { member_app: 'Sent by the family (app)', helpline: 'Sent by the helpline' } as Record<string, string>,
@@ -603,6 +616,8 @@ export const verifierConsoleEn = {
       acceptedDate: 'Accepted date of death',
       superseded: { re_reviewed: 'Reviewed again later', replaced: 'A newer certificate was sent' } as Record<string, string>,
       unreadable: 'Could not be read',
+      // `2026-09-26-246` §2 — erased at the member's request (RTBF): permanent, ⛔ not a fault.
+      anonymized: "Erased at the member's request",
     },
   },
 } as const;

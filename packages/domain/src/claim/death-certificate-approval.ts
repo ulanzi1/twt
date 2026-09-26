@@ -67,8 +67,9 @@ export interface DeathCertificateSnapshot {
 
 /**
  * The certificate's status — ⭐ ONE definition every gate and surface derives from:
- *   · `missing`         — no `death_certificate` row at all;
- *   · `awaiting_review` — a row exists but has ⛔ no live CURRENT review;
+ *   · `missing`         — no `death_certificate` row, or a legacy row with ⛔ no current upload (T12 —
+ *                         `2026-09-26-245` §3: it has no token and can never be reviewed);
+ *   · `awaiting_review` — a CURRENT upload exists but has ⛔ no live CURRENT review;
  *   · `accepted`        — the current review accepted it;
  *   · `rejected`        — the current review rejected it: the family is asked for another.
  */
@@ -172,6 +173,40 @@ export function isInDeathCertificateReviewWindow(claimState: string): boolean {
  */
 export function isDeathCertificateUploadAllowedInReviewWindow(status: DeathCertificateStatus): boolean {
   return status === 'missing' || status === 'rejected';
+}
+
+/**
+ * The lifecycle states in which ANY claim document may be sent (Story 6.5): before verification begins, a
+ * new upload simply replaces the old one. ⭐ The ONE definition the upload handler and the OCR job share.
+ */
+export const CLAIM_DOCUMENT_UPLOADABLE_STATES = ['intake_converged', 'documents_pending'] as const;
+
+// ⭐ TWO predicates, ⛔ never one (`2026-09-26-246` §1). They answer DIFFERENT questions, at different moments,
+// and each owner calls its own — ⛔ never an inline composition that can drift from them.
+
+/**
+ * INTAKE (6.21a D6) — may the upload HANDLER take in a `death_certificate`? Before verification: always. In
+ * the review window: only while D6 allows it (`missing` / `rejected`) — ⛔ refused after an acceptance, and
+ * ⛔ refused while one awaits review (no pile-up at intake). Anywhere else: never. The handler then picks its
+ * own refusal code.
+ */
+export function isDeathCertificateUploadAllowed(claimState: string, status: DeathCertificateStatus): boolean {
+  if ((CLAIM_DOCUMENT_UPLOADABLE_STATES as readonly string[]).includes(claimState)) return true;
+  return isInDeathCertificateReviewWindow(claimState) && isDeathCertificateUploadAllowedInReviewWindow(status);
+}
+
+/**
+ * CURRENT (`2026-09-26-246` §1, superseding `-245` §2) — may the OCR job make a DIFFERENT, strictly later
+ * upload the CURRENT certificate? Re-checked UNDER the claim-row lock, because the handler's intake check ran
+ * earlier with no lock. Before verification: always. In the review window: ⭐ unless the current certificate
+ * is ACCEPTED — an unreviewed one MAY be replaced (the family's newest certificate is the one to review; a
+ * District Admin mid-review of the replaced one is refused `stale_certificate`). Outside the window: never.
+ * Told `false`, the job KEEPS the upload row but ⛔ never makes it current — so an accepted certificate can
+ * never be displaced by a late job, even after approval.
+ */
+export function mayDeathCertificateUploadBecomeCurrent(claimState: string, status: DeathCertificateStatus): boolean {
+  if ((CLAIM_DOCUMENT_UPLOADABLE_STATES as readonly string[]).includes(claimState)) return true;
+  return isInDeathCertificateReviewWindow(claimState) && status !== 'accepted';
 }
 
 /**

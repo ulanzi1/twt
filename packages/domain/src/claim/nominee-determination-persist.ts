@@ -27,7 +27,8 @@
 // is no longer taken on trust: the determination must carry the id of the claim's CURRENT, ACCEPTED
 // death-certificate review (`deathCertificateReviewId`), re-asserted below under the claim-row lock AFTER
 // every 6.20 validation, and stored in `death_certificate_review_id`. The HANDLER decrypts the accepted
-// date and refuses a different one (`certificate_date_mismatch`) — ⛔ no decrypt here (T5). A later
+// date and compares (⛔ no decrypt here, T5); THIS writer refuses on the handler's verdict at the same guard
+// point (`certificate_date_mismatch` / `certificate_date_unreadable` — `2026-09-26-245` §4). A later
 // re-review or replacement makes the determination `determination_stale` at the approval gate (6.21a D7).
 //
 // ⛔ A NEW TABLE, ⛔ not `claim_verifier_decisions` (T6): a row there would disqualify the District Admin
@@ -81,6 +82,9 @@ export function isRealCalendarDate(value: string): boolean {
  */
 export const NOMINEE_DETERMINATION_RECORDABLE_STATES = NOMINEE_NAME_CHECK_RECORDABLE_STATES;
 
+/** The caller's verdict on the determination's date against the accepted certificate's (`-246` §2–§3). */
+export type CertificateDateCheck = 'match' | 'mismatch' | 'unreadable' | 'anonymized';
+
 export interface RecordNomineeDeterminationInput {
   readonly claimCaseId: ClaimId;
   readonly pariwarId: PariwarId;
@@ -103,6 +107,14 @@ export interface RecordNomineeDeterminationInput {
    * so the refusal ORDER is the same at the HTTP layer as here.
    */
   readonly deathCertificateReviewId: string | null;
+  /**
+   * `2026-09-26-245` §4 / `-246` §3 — the CALLER's comparison of `certificateDate` with the accepted
+   * certificate's DECRYPTED date (⛔ no decrypt here, T5). Refused at (7b), AFTER 6.20's validations and the
+   * review-id re-assertion, so every earlier refusal keeps its own reason. ⭐ REQUIRED, and fail-closed: `null`
+   * says "I found no accepted review" — if the writer then re-asserts one, the caller compared nothing, and
+   * that is a bug the writer THROWS on, ⛔ never a pass.
+   */
+  readonly certificateDateCheck: CertificateDateCheck | null;
   readonly actorId: string;
   /** Snapshotted server-side by the caller — ⛔ never email-derived, ⛔ never from the request. */
   readonly actorDisplay: string;
@@ -258,6 +270,23 @@ export async function recordNomineeDetermination(
       'certificate_not_accepted',
       'the determination must be made against the claim\'s current, accepted death certificate',
     );
+  }
+  // `-246` §2–§3 — the caller's DATE verdict, refused here so every earlier refusal keeps its reason. An
+  // unreadable or erased date can never be matched — ⛔ never taken on trust, ⛔ never reported as a mismatch.
+  switch (input.certificateDateCheck) {
+    case 'match':
+      break;
+    case 'mismatch':
+      throw refuse('certificate_date_mismatch', "the date differs from the accepted death certificate's");
+    case 'unreadable':
+      throw refuse('certificate_date_unreadable', "the accepted death certificate's date cannot be read");
+    case 'anonymized':
+      throw refuse('certificate_date_anonymized', "the accepted death certificate's date was erased (RTBF)");
+    case null:
+      // Fail-CLOSED: an accepted review was re-asserted, but the caller compared no date. A caller bug — loud.
+      throw new Error(
+        `[nominee-determination] claim ${input.claimCaseId}: an accepted certificate review was re-asserted but the caller supplied no date verdict (certificateDateCheck: null)`,
+      );
   }
   if (liveId !== null) {
     const superseded = await db

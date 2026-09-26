@@ -11,7 +11,7 @@
 
 import { z } from 'zod';
 
-import { ReadableName } from './nominee-name-check.js';
+import { ReadableErasable } from './nominee-name-check.js';
 
 /** A `YYYY-MM-DD` shape — the REAL-date check (⛔ `2026-02-30`) is the writer's `invalid_date`. */
 const DateShape = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'a YYYY-MM-DD calendar date');
@@ -64,9 +64,10 @@ export const DeathCertificateHistoryReview = z
     review_id: z.string().uuid(),
     verdict: DeathCertificateReviewVerdict,
     rejection_reason: DeathCertificateRejectionReason.nullable(),
-    /** ACCEPTED only. ⚠ `ReadableName`, ⛔ not a date type: an RTBF sentinel or a failed decrypt ⛔ never 500s. */
-    accepted_date: ReadableName.nullable(),
-    note: ReadableName,
+    /** ACCEPTED only. ⚠ `ReadableErasable`, ⛔ not a date type: an RTBF-erased value is `anonymized`, a failed
+     *  decrypt `unreadable` — ⛔ never a 500, ⛔ never the sentinel as a value (`2026-09-26-246` §2). */
+    accepted_date: ReadableErasable.nullable(),
+    note: ReadableErasable,
     decided_by_display: z.string(),
     decided_at: z.string().datetime(),
     superseded_at: z.string().datetime().nullable(),

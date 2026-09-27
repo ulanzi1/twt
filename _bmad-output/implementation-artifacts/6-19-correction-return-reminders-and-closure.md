@@ -308,6 +308,35 @@ has a current, **rejected** certificate. ⚠ 6.21b's member status adds a `missi
 window); whether that state is also chased is part of protection 3's §0.
 **Dependency:** 6.21a must be `done` before this item is built. ⛔ It does ⛔ not block the rest of 6.19.
 
+## ➕ APPENDED 2026-09-27 — `-257` (N1): the NOMINEE relationship list grows from fifteen to twenty, built here beside `-255` F8's claimant list
+
+> ⚠ **Appended, ⛔ not a rewrite** — nothing above this block is edited. [`-257`](../../.decision-log.md#decision-2026-09-27-257)
+> **supersedes `-237` cl.1**: the nominee relationship list gains **`brother_in_law`, `son_in_law`, `mother_in_law`, `father_in_law`,
+> `grandparent`** (20 values). Its code change needed a ROW (template step 5) and Story 6.20 is `done`; **BigDev placed it on this story
+> (2026-09-27)** because this story already builds `-255` F8's **claimant-to-nominee** list (nineteen) — which is now **exactly the
+> nominee list without `other`**. ⭐ Building both here keeps them in step.
+
+**What `-257` changes, and what it does ⛔ not:**
+- ⭐ `NOMINEE_RELATIONSHIP_CODES` (`packages/contracts/src/nominee/declaration.ts`): 15 → **20**. ⛔ **No migration** (`member_nominees.relationship`
+  is plain `text`; the value set lives in the contracts enum, ⛔ not the DB) and ⛔ **no backfill** (⛔ no declaration exists — not in production).
+- ⛔ `-237` **cl.2 stands:** `other` still forecloses a correction.
+- ⛔ `ClaimantRelationship` (`claims/filing.ts` — the claimant's relation to the **deceased**, five values) is ⛔ **untouched**. The F8 list is
+  a **third**, new enum (claimant → nominee).
+- ⭐ **One source for both lists:** derive F8's nineteen from the twenty (the twenty minus `other`), ⛔ never a second hand-typed copy — a
+  lockstep test pins it ([[feedback_stub_must_call_not_transcribe]] — a copy is a second source).
+
+**The sites (every file that names the set today — `git grep -l "daughter_in_law\|NOMINEE_RELATIONSHIP_CODES" -- packages apps scripts`, 2026-09-27):**
+`packages/contracts/src/nominee/declaration.ts` (the enum, and its *"⚠ Still OPEN, recorded in `-237`"* note → mark DISCHARGED by `-257`,
+⛔ not deleted) · `packages/domain/src/nominee/relationship.ts` (the domain mirror) · `packages/contracts/tests/nominee-relationship-lockstep.test.ts`
+· `packages/i18n/locales/{en,hi}/common.json` (`nominees.relationship_*`) · `apps/mobile/components/life-events/NomineeForm.tsx` (the picker)
+· `apps/mobile/tests/unit/nominee-history-copy.test.ts` · `apps/admin/src/modules/claim-verification/{NomineeDeclarationPanel.tsx,i18n-en.ts}`
+· `apps/admin/tests/nominee-declaration-panel.test.tsx` · `packages/domain/tests/integration/claim/nominee-correction.spec.ts`.
+⚠ **Hindi copy needs care:** `nominees.relationship_sister_in_law` is *"भाभी / ननद / साली / देवरानी / जेठानी / सलहज"* — one English value, six
+Hindi kin terms. The four new in-law values (and `grandparent` — दादा / दादी / नाना / नानी) need the same treatment, reviewed, ⛔ not machine-translated.
+
+**Annotations owed (`-257` consequence 2), ⛔ never rewrites:** `epics.md` (its *"five to fifteen"* note), Story 3.4 / FR-4, Story 6.20's
+in-law/grandparent pointer (done at 6.20 v1.2).
+
 ## Acceptance Criteria
 
 ### AC0 — Governance first (Task 0)
@@ -374,6 +403,16 @@ window); whether that state is also chased is part of protection 3's §0.
 (protection 3); **and** the claim is ⛔ **never** refused, closed or denied for a missing certificate (protections 1–2)
 — ⛔ the day-90 closure never runs on a certificate wait, and a test proves it; **and** ⛔ no time limit is imposed.
 
+### AC13 — `-257` (N1): the nominee list is twenty, and the claimant list is derived from it (APPENDED 2026-09-27)
+**Given** `-257` and `-255` F8
+**Then** `NOMINEE_RELATIONSHIP_CODES` carries the **twenty** values of `-257` cl.1, the domain mirror matches it (the lockstep test passes),
+and the member app's nominee picker offers all twenty with **en and hi** copy (i18n parity green, microcopy gate green);
+**and** the claimant-to-nominee enum (`-253` cl.2 / `-255` F8) is **derived** from it minus `other` — a test proves the nineteen equal the
+twenty minus `other`, so the two can ⛔ never drift;
+**and** `other` still forecloses a correction (`-237` cl.2 — the existing 6.20 correction test stays green), `ClaimantRelationship` is
+⛔ unchanged, and there is ⛔ no migration and ⛔ no backfill;
+**and** `declaration.ts`'s *"Still OPEN"* note is marked DISCHARGED by `-257`, ⛔ not deleted.
+
 ## Tasks / Subtasks
 
 - [ ] **Task 0 — Governance first** (AC0)
@@ -394,6 +433,7 @@ window); whether that state is also chased is part of protection 3's §0.
 - [ ] **Task 9 — Tests** (AC9, AC11) — **execute** on `twt-test-pg :5433`.
 - [ ] **Task 10 — Friction-budget disposition** — one named-payer row if capture at filing adds a required field the family must type (`friction-budget.md`; best-ever ratchet — [[project_friction_budget_baseline_ratchet]]).
 - [ ] **Task 11 — CC1: the replacement-certificate reminder** (AC12; APPENDED 2026-09-25) — ⛔ **start only after 6.21a is `done`**. (a) Run §0 on protection 3 (schedule, channels, letters, and whether `missing` is chased) — route what is the Panel's. (b) Build the reminder on `isDeathCertificateReplacementRequested`. (c) Prove ⛔ no closure / refusal / denial path runs on a certificate wait. (d) ⛔ No time limit.
+- [ ] **Task 12 — `-257` (N1): the nominee list to twenty, and one source for the claimant list** (AC13; APPENDED 2026-09-27) — (a) extend `NOMINEE_RELATIONSHIP_CODES` and the domain mirror; mark the *"Still OPEN"* note DISCHARGED. (b) Derive the F8 claimant-to-nominee enum from it (minus `other`) in contracts — ⛔ a second hand-typed list is refused; add the equality test. (c) The picker and its **en + hi** copy for the five new values (reviewed Hindi kin terms, as `sister_in_law`'s). (d) Update every site in the appended section's list and its tests. (e) Annotate `epics.md` and Story 3.4 / FR-4 — ⛔ never rewrite. ⭐ Independent of counsel (M, S) and of the reminder machinery — it may be built first.
 
 ## Dev Notes
 
@@ -437,3 +477,4 @@ Live-DB traps recorded for this repo ([[project_live_db_test_gotchas]], [[projec
 | v0.5 | 2026-09-27 | **APPENDED, ⛔ nothing above edited: the follow-ups F2–F8 answered** (`2026-09-27-255`) — K except F1, L (letter address), P (SMS widened), U (each nominee reminded), and the 19-value claimant-to-nominee list. ⏳ F1 (keep open) awaits the clarification note `6-19-f1-keep-open`. Status stays `backlog`. |
 | v0.6 | 2026-09-27 | **APPENDED:** the unsent F1 note revised — option **E** (a Super Admin review period, with recorded directions to the admins) added and recommended, ⛔ no longer D. Status stays `backlog`. |
 | v0.7 | 2026-09-27 | **APPENDED:** F1 ruled (`2026-09-27-256`, option E — a Super Admin review period with directions to the admins). Every Panel question on this story is answered; counsel (M, S) remains as go-live gates. Next: a validate pass to re-derive the ACs. Status stays `backlog`. |
+| v0.8 | 2026-09-27 | **APPENDED, ⛔ nothing above edited: `-257` (N1) placed on this story by BigDev** — the nominee relationship list 15 → 20, built beside `-255` F8's claimant-to-nominee list (derived from it minus `other`, one source). A new section, **AC13** and **Task 12** (independent of counsel; may be built first). Status stays `backlog`. |

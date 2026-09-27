@@ -115,6 +115,13 @@ const EMPTY_OCR_FIELDS: DeathCertificateFields = {
   certificateIssueDate: null,
 };
 
+/** Every OCR field is null or blank — nothing at all was read off the document. Exported for its test. */
+export function isEmptyOcrRead(fields: DeathCertificateFields): boolean {
+  return (Object.keys(EMPTY_OCR_FIELDS) as Array<keyof DeathCertificateFields>).every(
+    (k) => (fields[k] ?? '').trim().length === 0,
+  );
+}
+
 export interface ClaimOcrParityDeps {
   /** The domain-table pool. In prod the service login (BYPASSRLS); withPariwarScope sets scope. */
   readonly pool: import('pg').Pool;
@@ -204,6 +211,11 @@ export async function runClaimOcrParity(
   //        (→ ambiguous at the parity step). Never let a provider/fetch error fail the claim.
   let ocrFields: DeathCertificateFields = EMPTY_OCR_FIELDS;
   let confidence = 0;
+  // Story 6.21b (D6, `-249` §3) — an OCR/fetch FAILURE is distinct from a genuine READ that came
+  // back empty: `evaluateParity` must skip the `death_date` flag entirely on this path (the
+  // existing `ocr: 'unreadable'` flag already says why), ⛔ never write `missing`/`unreadable` for a
+  // certificate that was never actually read.
+  let ocrFailed = false;
   try {
     const bytes = await deps.storage.getBytes(p.storageObjectKey);
     const result = await deps.ocr.extract({
@@ -213,7 +225,16 @@ export async function runClaimOcrParity(
     });
     ocrFields = result.fields;
     confidence = result.confidence;
+    // An EMPTY read — every field came back empty — is a certificate that was ⛔ never actually read, the
+    // same as a thrown failure. `-249` §3's own closing sentence governs: *"`missing` / `unreadable`
+    // apply only to a certificate that was actually read"* (BigDev 2026-09-27, round-2 decision (a); ⛔ no
+    // new decision id). Keyed on the FIELDS, ⛔ not on confidence: a vendor read with fields at zero
+    // confidence still reports its missing death date, and an empty parse at any confidence does not.
+    // ⚠ Under the v1 deterministic provider (no transport, no manual entry — an empty parse for EVERY
+    // upload) the D6 death-date flag therefore ⛔ never fires in production.
+    if (isEmptyOcrRead(result.fields)) ocrFailed = true;
   } catch (err) {
+    ocrFailed = true;
     if (OcrProviderError.is(err)) {
       alarm(`[jobs] claim-ocr-parity: OCR provider '${err.code}' for document ${claimDocumentId} → ambiguous`);
     } else {
@@ -227,6 +248,10 @@ export async function runClaimOcrParity(
   }
 
   const normalized = claim.normalizeOcrFields(ocrFields);
+  // Story 6.21b (D6) — derived from the RAW (pre-normalize) field: a raw string present but
+  // unparseable normalizes to `null` too, and the two cases must read differently (`unreadable` vs
+  // `missing`, BW-C12).
+  const rawDateOfDeathPresent = (ocrFields.dateOfDeath ?? '').trim().length > 0;
 
   // ── (2) One scope-tx: decrypt member record → evaluate parity → encrypt + upsert row →
   //        advance the claim state idempotently.
@@ -251,7 +276,11 @@ export async function runClaimOcrParity(
     // trustworthy membership-start/eligibility timestamp exists yet. Wire it once the member
     // lifecycle exposes one (see the domain member-lifecycle substrate) — do not approximate
     // with `createdAt` just to make this branch execute (review finding, 2026-07-09).
-    let parity = claim.evaluateParity(normalized, { name: memberName, dateOfBirth: memberDob }, { now });
+    let parity = claim.evaluateParity(
+      normalized,
+      { name: memberName, dateOfBirth: memberDob },
+      { now, rawDateOfDeathPresent, ocrFailed },
+    );
     // Low OCR confidence → force ambiguous (AC6), preserving the field flags for the verifier.
     if (confidence < OCR_CONFIDENCE_THRESHOLD && parity.outcome !== 'ambiguous') {
       parity = {

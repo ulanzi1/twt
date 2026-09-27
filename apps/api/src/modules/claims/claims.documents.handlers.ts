@@ -20,8 +20,10 @@
 // accepted certificate blocks further uploads), and `409 claim_document.certificate_awaiting_review`
 // while one waits to be judged (⛔ no silent pile-up of unreviewed replacements). Same scope tx, still
 // BEFORE the MIME/size check, storage and the queue. Every other state or type keeps today's 409.
-// ⭐ The predicate is the domain's ONE definition (`isDeathCertificateUploadAllowedInReviewWindow`), which
-// 6.21b's family status shares.
+// ⭐ (V8, 6.21b validate) TWO named predicates, ⛔ never one (`2026-09-26-246` §1): this handler calls
+// the INTAKE predicate, `isDeathCertificateUploadAllowed` (below) — which, in-window, defers to
+// `isDeathCertificateUploadAllowedInReviewWindow`, the SAME function 6.21b's `replacement_allowed`
+// calls directly. Name both; ⛔ never re-derive either inline.
 //
 // The document bytes are stored in object storage (Decision D1 — never Postgres) and an OCR +
 // parity job is enqueued; extraction + the verdict complete asynchronously (HTTP 202). The

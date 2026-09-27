@@ -106,3 +106,71 @@ export const DeathCertificateHistoryResponse = z
   })
   .strict();
 export type DeathCertificateHistoryResponse = z.output<typeof DeathCertificateHistoryResponse>;
+
+// ── Story 6.21b — the FAMILY's (and the helpline's) death-certificate status ────────────────────
+// `2026-09-25-244`/`2026-09-26-247`/`2026-09-26-249` (D1). A FIVE-value status — ⛔ NEVER the
+// domain's own four-value `DeathCertificateStatus` name (BW-C11) — table-driven, server-computed
+// from ONE scope tx. Wire keys are snake_case (the shepherd/appeal post-filing-read precedent —
+// `2026-09-26-248` corrects `-247` §3's "the client maps them"; every member method returns its
+// contract type AS-IS, ⛔ no camelCase mapping layer). `.strict()`, per the contracts discipline.
+
+/** The FIVE-value status a family (or the helpline, on their behalf) is shown. */
+export const DeathCertificateFamilyStatus = z.enum([
+  'not_needed',
+  'missing',
+  'awaiting_review',
+  'accepted',
+  'replacement_requested',
+]);
+export type DeathCertificateFamilyStatus = z.output<typeof DeathCertificateFamilyStatus>;
+
+/** Why a replacement is being asked for — present only for `replacement_requested`. */
+export const DeathCertificateReplacementReasonWire = z.enum(['unclear_date', 'future_date']);
+export type DeathCertificateReplacementReasonWire = z.output<typeof DeathCertificateReplacementReasonWire>;
+
+/** `-249` §4 — which reassurance line the family is shown; `null` for every status but `replacement_requested`. */
+export const DeathCertificateReassurance = z.enum(['not_refused', 'still_open']);
+export type DeathCertificateReassurance = z.output<typeof DeathCertificateReassurance>;
+
+/**
+ * `GET /api/v1/member/claims/:claimCaseId/death-certificate` — the member's own status read (D1).
+ * ⛔ No note, date, reviewer or free text (invariant 3) — only the reason ENUM and our own copy.
+ */
+export const MemberDeathCertificateStatusResponse = z
+  .object({
+    status: DeathCertificateFamilyStatus,
+    replacement_reason: DeathCertificateReplacementReasonWire.nullable(),
+    replacement_allowed: z.boolean(),
+    upload_allowed: z.boolean(),
+    /** The CURRENT upload's id — opaque, non-PII, the marker's discriminator (`-247` §1). ⛔ Never shown. */
+    certificate_token: z.string().uuid().nullable(),
+    /** `state ∉ {denied, settled}` — the filing-entry redirect's own gate (`-249` §2). ⛔ Never shown. */
+    claim_live: z.boolean(),
+    reassurance: DeathCertificateReassurance.nullable(),
+  })
+  .strict();
+export type MemberDeathCertificateStatusResponse = z.output<typeof MemberDeathCertificateStatusResponse>;
+
+/** One of the selected deceased member's live claims, with its D1 status (the helpline list, D5). */
+export const DeathCertificateHelplineClaimStatus = z
+  .object({
+    claim_case_id: z.string().uuid(),
+    claim_state: z.string(),
+    created_at: z.string().datetime(),
+    status: DeathCertificateFamilyStatus,
+    replacement_reason: DeathCertificateReplacementReasonWire.nullable(),
+    upload_allowed: z.boolean(),
+    reassurance: DeathCertificateReassurance.nullable(),
+    /** ⛔ No `certificate_token` here — the in-flight marker is a member-app-only concept (D5). */
+  })
+  .strict();
+export type DeathCertificateHelplineClaimStatus = z.output<typeof DeathCertificateHelplineClaimStatus>;
+
+/** `GET …/admin/members/:memberId/death-certificate/claims` — the selected member's live claims (D5). */
+export const DeathCertificateHelplineClaimsResponse = z
+  .object({
+    member_id: z.string().uuid(),
+    claims: z.array(DeathCertificateHelplineClaimStatus),
+  })
+  .strict();
+export type DeathCertificateHelplineClaimsResponse = z.output<typeof DeathCertificateHelplineClaimsResponse>;

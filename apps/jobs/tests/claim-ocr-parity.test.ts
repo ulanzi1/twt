@@ -329,4 +329,66 @@ describe.skipIf(!hasDatabase)('claim OCR + parity job — live DB (:5433)', () =
       await cleanup(seed);
     }
   });
+
+  // ── Story 6.21b (D6, AC5) — the death-date OCR flag, driven through the REAL job with dirty input ──
+
+  it('D6: a missing date of death (no raw value) lands `death_date: missing` on BOTH the doc row and the upload row', async () => {
+    const seed = await seedClaim({ withKyc: true });
+    const d = deps(providerReturning({ ...MATCHING_FIELDS, dateOfDeath: null }, 1));
+    await d.storage.put(seed.objectKey, new Uint8Array([1, 2, 3, 4]), { contentType: 'application/pdf' });
+    try {
+      const result = await runClaimOcrParity(d, envelope(seed, randomUUID()));
+      expect(result.outcome).toBe('ambiguous');
+      const rows = await docRow(seed.claimCaseId);
+      expect(rows[0].parity_flags).toMatchObject({ death_date: 'missing' });
+      expect(rows[0].verifier_review_required).toBe(true);
+      // Non-tracked (no uploadId in this envelope) — the flag rides ONLY the doc row here; the
+      // tracked-upload case is covered by `claim-ocr-parity-death-certificate.test.ts`'s harness.
+    } finally {
+      await cleanup(seed);
+    }
+  });
+
+  it('D6: an UNPARSEABLE raw date of death lands `death_date: unreadable`, ⛔ not `missing` (BW-C12)', async () => {
+    const seed = await seedClaim({ withKyc: true });
+    const d = deps(providerReturning({ ...MATCHING_FIELDS, dateOfDeath: 'not-a-real-date' }, 1));
+    await d.storage.put(seed.objectKey, new Uint8Array([1, 2, 3, 4]), { contentType: 'application/pdf' });
+    try {
+      const result = await runClaimOcrParity(d, envelope(seed, randomUUID()));
+      expect(result.outcome).toBe('ambiguous');
+      const rows = await docRow(seed.claimCaseId);
+      expect(rows[0].parity_flags).toMatchObject({ death_date: 'unreadable' });
+    } finally {
+      await cleanup(seed);
+    }
+  });
+
+  it('D6 (`-249` §3): an OCR/fetch FAILURE carries ⛔ NO death_date flag — the existing `ocr` flag already says why', async () => {
+    const seed = await seedClaim({ withKyc: true });
+    const d = deps(providerThrowing());
+    await d.storage.put(seed.objectKey, new Uint8Array([1, 2, 3, 4]), { contentType: 'application/pdf' });
+    try {
+      const result = await runClaimOcrParity(d, envelope(seed, randomUUID()));
+      expect(result.outcome).toBe('ambiguous');
+      const rows = await docRow(seed.claimCaseId);
+      expect(rows[0].parity_flags).toMatchObject({ ocr: 'unreadable' });
+      expect(rows[0].parity_flags.death_date).toBeUndefined();
+    } finally {
+      await cleanup(seed);
+    }
+  });
+
+  it('D6: a present, valid date of death carries NO death_date flag', async () => {
+    const seed = await seedClaim({ withKyc: true });
+    const d = deps(providerReturning(MATCHING_FIELDS, 1));
+    await d.storage.put(seed.objectKey, new Uint8Array([1, 2, 3, 4]), { contentType: 'application/pdf' });
+    try {
+      const result = await runClaimOcrParity(d, envelope(seed, randomUUID()));
+      expect(result.outcome).toBe('match');
+      const rows = await docRow(seed.claimCaseId);
+      expect(rows[0].parity_flags.death_date).toBeUndefined();
+    } finally {
+      await cleanup(seed);
+    }
+  });
 });

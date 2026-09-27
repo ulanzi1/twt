@@ -268,9 +268,11 @@ import {
   type NomineeCorrectionDecisionRequest,
   type NomineeCorrectionRaiseRequest,
   type NomineeDeterminationRequest,
+  DeathCertificateHelplineClaimsResponse,
   DeathCertificateHistoryResponse,
   DeathCertificateReviewWriteResponse,
   type DeathCertificateReviewRequest,
+  ClaimDocumentUploadResponse,
   RecordNomineeBankResponse,
   type RecordNomineeBankHelplineRequest,
 } from '@twt/contracts';
@@ -1415,6 +1417,49 @@ export function postDeathCertificateReview(pariwarId: string, claimCaseId: strin
 /** Every upload with its reviews — the dates and notes DECRYPTED, so fetched on demand and audited (D9). */
 export function getDeathCertificateHistory(pariwarId: string, claimCaseId: string) {
   return apiFetch(`${claimBase(pariwarId, claimCaseId)}/death-certificate/history`, DeathCertificateHistoryResponse);
+}
+
+// ── Story 6.21b (D5) — the helpline's death-certificate replacement (upload + status list) ──────
+
+/** The SELECTED member's live claims, each with the SAME D1 status the family sees. */
+export function getDeathCertificateClaimsForMember(pariwarId: string, memberId: string) {
+  return apiFetch(
+    `/api/v1/p/${encodeURIComponent(pariwarId)}/admin/members/${encodeURIComponent(memberId)}/death-certificate/claims`,
+    DeathCertificateHelplineClaimsResponse,
+  );
+}
+
+/**
+ * Send a replacement death certificate on the family's behalf (the EXISTING helpline documents
+ * route, `documentType=death_certificate`). Shaped like `uploadGroundInspectionPhoto` but PARSING
+ * the 202 with `ClaimDocumentUploadResponse` (C7 — that precedent does not; 6.21b must not copy the gap).
+ */
+export async function uploadHelplineDeathCertificate(
+  pariwarId: string,
+  claimCaseId: string,
+  file: File,
+): Promise<ClaimDocumentUploadResponse> {
+  const form = new FormData();
+  form.append('file', file);
+  const res = await fetch(
+    `${claimBase(pariwarId, claimCaseId)}/documents?documentType=death_certificate`,
+    { method: 'POST', credentials: 'include', body: form },
+  );
+  if (!res.ok) {
+    let code = `http.${res.status}`;
+    let message = res.statusText || 'Upload failed';
+    let details: unknown;
+    try {
+      const b = (await res.json()) as ErrorEnvelope;
+      if (b.error?.code) code = b.error.code;
+      if (b.error?.message) message = b.error.message;
+      details = b.error?.details;
+    } catch {
+      // keep defaults
+    }
+    throw new ApiError(res.status, code, message, details);
+  }
+  return ClaimDocumentUploadResponse.parse(await res.json());
 }
 
 export function getNomineeCorrections(pariwarId: string, claimCaseId: string) {

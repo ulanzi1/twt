@@ -422,6 +422,11 @@ export type AuthAuditEventType =
   | 'admin_claim.death_certificate_reviewed'
   | 'admin_claim.death_certificate_review_rejected'
   | 'admin_death_certificate.history_read'
+  // ── Story 6.21b (D5) — the helpline's read of the SELECTED member's live claims + their status ──
+  // ids and status codes ONLY (⛔ never a note/date/reviewer). `admin_death_certificate.claims_read`
+  // does ⛔ NOT close 6.20's "the helpline live-claims read writes no audit line" deferral — that
+  // item is about 6.20's OWN route, which stays unaudited.
+  | 'admin_death_certificate.claims_read'
   // ── Shepherd assignment surface (Story 6.12, FR-41 / Epic 6) ──────────────────
   // The human-shepherd routing/attribution surface (a District Admin as the family's named contact).
   // Post-commit SINK lines (the durable records are the claim.shepherd_assigned event + the

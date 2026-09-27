@@ -12,19 +12,52 @@
 // the copy uses a dignified generic ("your family member"); a later story can thread the real name
 // via a param. Recorded in the Dev Agent Record.
 
-import { useRouter } from 'expo-router'
-import { Button, H2, Paragraph, YStack } from 'tamagui'
+import { useEffect, useState } from 'react'
 
+import { useRouter } from 'expo-router'
+import { Button, H2, Paragraph, Spinner, YStack } from 'tamagui'
+
+import { resolveClaimEntryDecision } from '../../lib/claim-entry-gate'
 import { loadClaimDraft } from '../../lib/claim-draft'
 import { useClaimT } from '../../lib/claim-i18n'
 import { nextClaimStep } from '../../lib/claim-steps'
+import { fetchClaimEntryReadOutcome } from '../../lib/fetch-claim-entry-outcome'
+import { getFiledClaimCaseId } from '../../lib/filed-claim'
 import { useSession } from '../../lib/session-context'
 
 export default function ClaimEntryScreen(): React.ReactElement {
   const t = useClaimT()
   const router = useRouter()
-  const { session } = useSession()
+  const { session, isLoading: sessionLoading } = useSession()
   const name = t('member_fallback')
+
+  // `-249` §2 (B2, narrowed) — a filed claim on record whose fresh D1 read says `claim_live: true`
+  // skips straight to the shepherd screen. A terminal claim (`-239` (b)'s Trustee-ratified refile),
+  // an offline read, an error, or a 404 all fall through to today's wizard entry, UNCHANGED.
+  const [gateChecked, setGateChecked] = useState(false)
+  useEffect(() => {
+    // ⛔ Never open the gate while the session is still loading (a cold-start deep link would flash the
+    // wizard, then yank the family to the shepherd once the session lands).
+    if (sessionLoading) return
+    const claimCaseId = session?.memberId ? getFiledClaimCaseId(session.memberId) : null
+    if (!claimCaseId) {
+      setGateChecked(true)
+      return
+    }
+    let cancelled = false
+    void fetchClaimEntryReadOutcome(claimCaseId).then((outcome) => {
+      if (cancelled) return
+      const decision = resolveClaimEntryDecision(true, outcome)
+      if (decision.kind === 'shepherd') {
+        router.replace(`/(claim)/shepherd?claimCaseId=${encodeURIComponent(claimCaseId)}`)
+        return
+      }
+      setGateChecked(true)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [session?.memberId, sessionLoading])
 
   // Resume just past the last COMPLETED step in the saved draft (AC6 save-and-resume), instead
   // of always restarting at handover-OTP. expo-router typedRoutes rejects a COMPUTED Href, so
@@ -42,6 +75,16 @@ export default function ClaimEntryScreen(): React.ReactElement {
     } else {
       router.push('/(claim)/handover-otp')
     }
+  }
+
+  if (!gateChecked) {
+    // Briefly held while the entry gate checks a filed claim's live-ness — never flash the "are you
+    // family" question at someone who already filed and is simply being routed to their shepherd.
+    return (
+      <YStack flex={1} justify="center" px="$6" bg="$background" testID="claim-entry-gate-checking">
+        <Spinner size="small" />
+      </YStack>
+    )
   }
 
   return (

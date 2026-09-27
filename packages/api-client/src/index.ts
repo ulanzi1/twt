@@ -158,6 +158,8 @@ import {
   type RevokeDpdpaConsentResponse as RevokeDpdpaConsentResult,
   MemberShepherdResponse,
   type MemberShepherdResponse as MemberShepherdResult,
+  MemberDeathCertificateStatusResponse,
+  type MemberDeathCertificateStatusResponse as MemberDeathCertificateStatusResult,
   type OcrDocumentType,
 } from '@twt/contracts';
 import type { z } from 'zod';
@@ -1136,6 +1138,22 @@ export function createMemberClaimClient(opts: MemberAuthClientOptions) {
       return call(
         `${CLAIMS_BASE}/${encodeURIComponent(claimCaseId)}/shepherd`,
         MemberShepherdResponse,
+        undefined,
+        true,
+        'GET',
+      );
+    },
+
+    /**
+     * The family's own death-certificate status (Story 6.21b, D1; session; auth) — backs the shepherd
+     * notice + the replacement screen's entry gate. Own claim only (a non-owner surfaces as `ApiError`
+     * 404 `claim.not_found`). Snake_case fields returned AS-IS (the post-filing-read convention — no
+     * camelCase mapping layer, `2026-09-26` V1/`-248`).
+     */
+    getDeathCertificateStatus(claimCaseId: string): Promise<MemberDeathCertificateStatusResult> {
+      return call(
+        `${CLAIMS_BASE}/${encodeURIComponent(claimCaseId)}/death-certificate`,
+        MemberDeathCertificateStatusResponse,
         undefined,
         true,
         'GET',

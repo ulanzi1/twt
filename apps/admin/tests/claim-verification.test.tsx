@@ -68,4 +68,36 @@ describe('<VerifierReviewPanel>', () => {
     );
     expect(screen.getByTestId('parity-outcome-badge')).toHaveTextContent('ambiguous');
   });
+
+  function dateOfDeathRow(): HTMLElement {
+    return screen.getByRole('rowheader', { name: 'Date of death' }).closest('tr') as HTMLElement;
+  }
+
+  it.each(['missing', 'unreadable'])(
+    'Story 6.21b (D6, AC5) — the OCR `death_date: %s` flag shows on the Date-of-death row',
+    (flag) => {
+      render(
+        <VerifierReviewPanel
+          data={{
+            ...MISMATCH_REVIEW,
+            parityOutcome: 'ambiguous',
+            parityFlags: { death_date: flag },
+            extracted: { ...MISMATCH_REVIEW.extracted, dateOfDeath: null },
+          }}
+        />,
+      );
+      expect(dateOfDeathRow()).toHaveTextContent(flag);
+    },
+  );
+
+  it('Story 6.21b (D6) — the OCR death_date flag takes precedence over the plausibility `date` flag; `date` alone still shows', () => {
+    const { unmount } = render(
+      <VerifierReviewPanel data={{ ...MISMATCH_REVIEW, parityFlags: { death_date: 'unreadable', date: 'in_future' } }} />,
+    );
+    expect(dateOfDeathRow()).toHaveTextContent('unreadable');
+    expect(dateOfDeathRow()).not.toHaveTextContent('in_future');
+    unmount();
+    render(<VerifierReviewPanel data={{ ...MISMATCH_REVIEW, parityFlags: { date: 'in_future' } }} />);
+    expect(dateOfDeathRow()).toHaveTextContent('in_future');
+  });
 });

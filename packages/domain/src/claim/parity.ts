@@ -182,28 +182,41 @@ export function namesWithinTolerance(a: string, b: string): boolean {
  *   · Implausible dates (death before birth / after certificate issue / before member joined /
  *     in the future) → flag.
  *
- * Outcome: `ambiguous` if a critical field (name or DoB) is unreadable on either side; else
- * `mismatch` if any flag fired; else `match`.
+ * Outcome: `ambiguous` if a critical field (name or DoB, OR — Story 6.21b D6 — the death-date OCR
+ * flag) is unreadable on either side; else `mismatch` if any flag fired; else `match`.
+ *
+ * ── Story 6.21b (D6) — the death-date OCR flag (rejects ⛔ nothing, blocks ⛔ no transition; it DOES
+ *    make the outcome `ambiguous` + verifier review, below — that is how the verifier sees it) ──
+ * Computed BEFORE the two early returns so it survives them, and SKIPPED entirely when
+ * `opts.ocrFailed` (`-249` §3 — the existing `ocr: 'unreadable'` flag already explains an empty
+ * read; `missing`/`unreadable` describe only a certificate that WAS actually read):
+ *   · `flags.death_date = 'missing'`    — the OCR date of death is null AND no raw value was ever
+ *     present (`opts.rawDateOfDeathPresent` absent/false — BW-C12);
+ *   · `flags.death_date = 'unreadable'` — a raw value WAS present but did not normalize.
+ * Either forces `ambiguous` (AR-61: absent data → ambiguous, never mismatch).
  */
 export function evaluateParity(
   ocr: NormalizedOcrFields,
   member: DeceasedRecord,
-  opts: { now?: Date } = {},
+  opts: { now?: Date; rawDateOfDeathPresent?: boolean; ocrFailed?: boolean } = {},
 ): ParityResult {
   const flags: Record<string, string> = {};
+  if (!opts.ocrFailed && ocr.dateOfDeath === null) {
+    flags['death_date'] = opts.rawDateOfDeathPresent === true ? 'unreadable' : 'missing';
+  }
   const memberName = normalizeName(member.name);
   const memberDob = normalizeDate(member.dateOfBirth);
 
   // AR-61: no comparison source on file → ambiguous, never mismatch.
   if (memberName === null || memberDob === null) {
-    return ambiguous({ source: 'missing_member_record' });
+    return ambiguous({ source: 'missing_member_record', ...flags });
   }
   // Nothing readable to compare on the document → ambiguous.
   if (ocr.deceasedName === null && ocr.dateOfBirth === null) {
-    return ambiguous({ ocr: 'unreadable' });
+    return ambiguous({ ocr: 'unreadable', ...flags });
   }
 
-  let critical = false;
+  let critical = 'death_date' in flags;
 
   // Name.
   if (ocr.deceasedName === null) {

@@ -106,5 +106,15 @@
   "appeal.status_stage3": "A trustee is making the final decision on your claim.",
   "appeal.reversed": "Good news — the earlier decision was overturned and your claim is being taken forward again.",
   "appeal.upheld_final": "After a full review, the earlier decision stands. We're sorry this isn't the outcome you hoped for.",
-  "appeal.external_remedy": "Completing this review does not affect your right to seek help outside — you may still approach a consumer commission or civil court if you wish."
+  "appeal.external_remedy": "Completing this review does not affect your right to seek help outside — you may still approach a consumer commission or civil court if you wish.",
+  "certificate.replacement_title": "A new death certificate is needed",
+  "certificate.replacement_body": "The death certificate we received does not show a clear date of death. Please upload one that does.",
+  "certificate.replacement_body_future": "The date of death on the certificate we received is a future date. Please upload a certificate that shows the correct date of death.",
+  "certificate.not_refused": "Your claim is still open and has not been refused.",
+  "certificate.still_open": "Your claim is still open.",
+  "certificate.missing_body": "We have not received the death certificate yet. Please upload it. Your claim is still open.",
+  "certificate.replacement_upload": "Upload a new certificate",
+  "certificate.replacement_helpline": "If you can't upload it, call the helpline and we will help you.",
+  "certificate.awaiting_review": "We have the death certificate and will review it. There's nothing more you need to do.",
+  "certificate.accepted": "The death certificate has been accepted."
 }

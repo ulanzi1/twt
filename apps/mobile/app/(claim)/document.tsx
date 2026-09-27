@@ -12,28 +12,29 @@
 // The claim already exists here (relationship.tsx ran intake → claimCaseId is in the draft), so the
 // server-side lifecycle guard accepts the upload (intake_converged). If a resume somehow lands here
 // without a claimCaseId, the buttons fall back to the local `selected` marker (the 6.2 seam).
+//
+// ── Story 6.21b (D2) — the picker/upload logic is EXTRACTED into `use-death-certificate-upload.ts` ──
+// `(claim)/certificate-replacement.tsx` uses the SAME hook. ⭐ This screen DOES write the in-flight
+// marker (D3, BW-C4 — "on EVERY death-certificate 202, the wizard's `document.tsx` included"), so a
+// family who just uploaded here is ⛔ not told "not received yet — please upload it" (row 1a) on the
+// shepherd screen before the OCR job lands. Its write context is row 1a's (`missing`, no token): the
+// wizard makes no fresh read, and if the server had in fact moved on, marker rules 1–2 clear it. The 6.5
+// deferral ("generic 'upload failed' message doesn't distinguish…") is NARROWED for the replacement
+// screen only (D2) — this screen keeps its one message, unchanged.
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
-import * as DocumentPicker from 'expo-document-picker'
-import * as ImagePicker from 'expo-image-picker'
 import { useRouter } from 'expo-router'
 import { Button, Paragraph, Spinner, Text, YStack } from 'tamagui'
 
 import { ClaimProxyFlowShell } from '../../components/claim/ClaimProxyFlowShell'
-import { claimApi } from '../../lib/claim-api'
 import { useClaimT } from '../../lib/claim-i18n'
 import { loadClaimDraft, saveClaimDraft, type ClaimDocumentStage } from '../../lib/claim-draft'
 import { useSession } from '../../lib/session-context'
+import { useDeathCertificateUpload, type CertificateMarkerWriteContext } from '../../lib/use-death-certificate-upload'
 
-type UploadState = 'idle' | 'uploading' | 'uploaded' | 'error'
-
-/** The RN file descriptor FormData accepts for a multipart upload. */
-interface PickedFile {
-  uri: string
-  name: string
-  type: string
-}
+/** Row 1a (`-247` §2) — the state a wizard upload is sent against (see the header). */
+const WIZARD_MARKER_CONTEXT: CertificateMarkerWriteContext = { statusAtWrite: 'missing', tokenAtWrite: null }
 
 export default function DocumentScreen(): React.ReactElement {
   const t = useClaimT()
@@ -45,74 +46,40 @@ export default function DocumentScreen(): React.ReactElement {
   const claimCaseId = draft.claimCaseId
 
   const [stage, setStage] = useState<ClaimDocumentStage>(() => draft.documentStage || 'none')
-  const [upload, setUpload] = useState<UploadState>(() => (draft.documentStage === 'selected' ? 'uploaded' : 'idle'))
-  const [notice, setNotice] = useState<string | null>(null)
-  // Which picker the member last used — so "Try again" reopens the SAME one (a camera failure
-  // must not silently redirect to the file picker).
-  const [lastPicker, setLastPicker] = useState<'photo' | 'file' | null>(null)
+  const { state: upload, picking, pickPhoto, pickFile, lastPicker } = useDeathCertificateUpload(
+    claimCaseId,
+    WIZARD_MARKER_CONTEXT,
+  )
 
   function mark(next: ClaimDocumentStage): void {
     setStage(next)
     if (memberId) saveClaimDraft(memberId, { documentStage: next, lastStep: 'document' })
   }
 
-  /** Upload a picked file to the claim's death-certificate endpoint, preserving the grief-paced posture. */
-  async function uploadFile(file: PickedFile): Promise<void> {
-    // No claim yet (defensive — the flow stamps claimCaseId at relationship): keep the 6.2 local seam.
-    if (!claimCaseId) {
-      mark('selected')
-      setUpload('uploaded')
-      return
-    }
-    setNotice(null)
-    setUpload('uploading')
-    try {
-      const form = new FormData()
-      // RN multipart: append the { uri, name, type } descriptor (cast — RN's FormData accepts it).
-      form.append('file', file as unknown as Blob)
-      await claimApi.uploadClaimDocument(claimCaseId, form, 'death_certificate')
-      mark('selected')
-      setUpload('uploaded')
-    } catch {
-      // Dignified failure — the member can retry or defer. Never a hard crash / countdown.
-      setUpload('error')
-      setNotice(t('document.upload_failed'))
-    }
+  // No claim yet (defensive — the flow stamps claimCaseId at relationship): keep the 6.2 local seam.
+  const noClaimFallback = !claimCaseId
+  const uploadSucceeded = upload.phase === 'done' && upload.outcome?.kind === 'success'
+  const uploadFailed = upload.phase === 'done' && upload.outcome !== null && upload.outcome.kind !== 'success'
+  const busy = upload.phase === 'uploading' || picking
+
+  // Mirrors the pre-6.21b behavior: a completed upload marks the stage as `selected` so "Continue"
+  // unlocks and the draft persists — ONCE, on the upload's own outcome. Keyed on the outcome, ⛔ never on
+  // `stage`, so a later tap on "defer" is ⛔ not overwritten back to `selected` (code review 2026-09-27).
+  useEffect(() => {
+    if (uploadSucceeded) mark('selected')
+  }, [upload.outcome])
+
+  // The 6.2 no-claim seam: the picker still OPENS, and only an actual pick marks `selected` (as before
+  // 6.21b) — ⛔ never "uploaded" on a bare tap or a cancelled pick.
+  async function onPickPhoto(): Promise<void> {
+    const picked = await pickPhoto()
+    if (noClaimFallback && picked) mark('selected')
   }
 
-  async function pickPhoto(): Promise<void> {
-    setLastPicker('photo')
-    const perm = await ImagePicker.requestCameraPermissionsAsync()
-    if (!perm.granted) {
-      setNotice(t('document.permission_needed'))
-      return
-    }
-    const res = await ImagePicker.launchCameraAsync({ quality: 0.8 })
-    if (res.canceled || !res.assets[0]) return
-    const a = res.assets[0]
-    await uploadFile({
-      uri: a.uri,
-      name: a.fileName ?? `death-certificate-${Date.now()}.jpg`,
-      type: a.mimeType ?? 'image/jpeg',
-    })
+  async function onPickFile(): Promise<void> {
+    const picked = await pickFile()
+    if (noClaimFallback && picked) mark('selected')
   }
-
-  async function pickFile(): Promise<void> {
-    setLastPicker('file')
-    const res = await DocumentPicker.getDocumentAsync({
-      type: ['application/pdf', 'image/jpeg', 'image/png'],
-      copyToCacheDirectory: true,
-    })
-    if (res.canceled || !res.assets[0]) return
-    const a = res.assets[0]
-    await uploadFile({
-      uri: a.uri,
-      name: a.name ?? `death-certificate-${Date.now()}.pdf`,
-      type: a.mimeType ?? 'application/pdf',
-    })
-  }
-
-  const busy = upload === 'uploading'
 
   return (
     <ClaimProxyFlowShell deceasedName={name}>
@@ -122,10 +89,10 @@ export default function DocumentScreen(): React.ReactElement {
         </Text>
         <Paragraph color="$colorPress">{t('document.help')}</Paragraph>
 
-        <Button disabled={busy} onPress={() => void pickPhoto()} accessibilityLabel={t('document.pick_photo')}>
+        <Button disabled={busy} onPress={() => void onPickPhoto()} accessibilityLabel={t('document.pick_photo')}>
           {t('document.pick_photo')}
         </Button>
-        <Button disabled={busy} onPress={() => void pickFile()} accessibilityLabel={t('document.pick_file')}>
+        <Button disabled={busy} onPress={() => void onPickFile()} accessibilityLabel={t('document.pick_file')}>
           {t('document.pick_file')}
         </Button>
         <Button
@@ -137,28 +104,28 @@ export default function DocumentScreen(): React.ReactElement {
           {t('document.defer')}
         </Button>
 
-        {upload === 'uploading' ? (
+        {upload.phase === 'uploading' ? (
           <YStack gap="$2">
             <Spinner size="small" />
             <Text color="$colorPress">{t('document.uploading')}</Text>
           </YStack>
         ) : null}
-        {upload === 'uploaded' || stage === 'selected' ? (
-          <Text color="#1E8E3E">{t('document.uploaded')}</Text>
-        ) : null}
-        {upload === 'error' && notice ? (
+        {uploadSucceeded || stage === 'selected' ? <Text color="#1E8E3E">{t('document.uploaded')}</Text> : null}
+        {/* A refused camera permission is a NOTICE, ⛔ not a failure — neutral, as before 6.21b. */}
+        {upload.permissionNeeded ? <Text color="$colorPress">{t('document.permission_needed')}</Text> : null}
+        {uploadFailed ? (
           <YStack gap="$2">
-            <Text color="#B00020">{notice}</Text>
+            <Text color="#B00020">{t('document.upload_failed')}</Text>
             <Button
               chromeless
-              onPress={() => void (lastPicker === 'photo' ? pickPhoto() : pickFile())}
+              disabled={busy}
+              onPress={() => void (lastPicker === 'photo' ? onPickPhoto() : onPickFile())}
               accessibilityLabel={t('document.retry')}
             >
               {t('document.retry')}
             </Button>
           </YStack>
         ) : null}
-        {notice && upload !== 'error' ? <Text color="$colorPress">{notice}</Text> : null}
         {stage === 'deferred' ? <Text color="$colorPress">{t('document.saved')}</Text> : null}
 
         <Button

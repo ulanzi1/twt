@@ -181,3 +181,59 @@ describe('evaluateParity truth table', () => {
     expect(r.flags['name']).toBe('missing');
   });
 });
+
+// ── Story 6.21b (D6) — the death-date OCR flag (display only; AC5) ─────────────────────────────
+
+describe('evaluateParity — the death-date OCR flag (D6)', () => {
+  it('null date of death, no raw value present ⇒ death_date: missing, ambiguous', () => {
+    const r = evaluateParity(ocr({ dateOfDeath: null }), MEMBER, { now: NOW, rawDateOfDeathPresent: false });
+    expect(r.outcome).toBe('ambiguous');
+    expect(r.flags['death_date']).toBe('missing');
+    expect(r.verifierReviewRequired).toBe(true);
+  });
+
+  it('rawDateOfDeathPresent ABSENT (undefined) reads the same as false ⇒ missing (BW-C12)', () => {
+    const r = evaluateParity(ocr({ dateOfDeath: null }), MEMBER, { now: NOW });
+    expect(r.flags['death_date']).toBe('missing');
+  });
+
+  it('null date of death, a raw value WAS present but did not normalize ⇒ death_date: unreadable, ambiguous', () => {
+    const r = evaluateParity(ocr({ dateOfDeath: null }), MEMBER, { now: NOW, rawDateOfDeathPresent: true });
+    expect(r.outcome).toBe('ambiguous');
+    expect(r.flags['death_date']).toBe('unreadable');
+    expect(r.verifierReviewRequired).toBe(true);
+  });
+
+  it('BOTH early-return paths (missing member record; OCR name+DoB unreadable) carry the death_date flag too', () => {
+    const r1 = evaluateParity(ocr({ dateOfDeath: null }), { name: null, dateOfBirth: null }, { now: NOW });
+    expect(r1.outcome).toBe('ambiguous');
+    expect(r1.flags['source']).toBe('missing_member_record');
+    expect(r1.flags['death_date']).toBe('missing');
+
+    const r2 = evaluateParity(
+      ocr({ deceasedName: null, dateOfBirth: null, dateOfDeath: null }),
+      MEMBER,
+      { now: NOW },
+    );
+    expect(r2.outcome).toBe('ambiguous');
+    expect(r2.flags['ocr']).toBe('unreadable');
+    expect(r2.flags['death_date']).toBe('missing');
+  });
+
+  it('a present, valid date of death carries NO death_date flag; `date` stays the plausibility key', () => {
+    const r = evaluateParity(ocr({ dateOfDeath: '2026-06-30' }), MEMBER, { now: NOW });
+    expect(r.flags['death_date']).toBeUndefined();
+    expect(r.outcome).toBe('match');
+  });
+
+  it('an OCR/fetch FAILURE (ocrFailed: true) skips the death_date flag entirely — the existing `ocr` flag already says why (`-249` §3)', () => {
+    const r = evaluateParity(
+      ocr({ deceasedName: null, dateOfBirth: null, dateOfDeath: null }),
+      MEMBER,
+      { now: NOW, ocrFailed: true, rawDateOfDeathPresent: false },
+    );
+    expect(r.outcome).toBe('ambiguous');
+    expect(r.flags['ocr']).toBe('unreadable');
+    expect(r.flags['death_date']).toBeUndefined();
+  });
+});

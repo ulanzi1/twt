@@ -4,6 +4,27 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Found and closed during Story 6.21b's build (2026-09-26)
+
+- **(BW-C9) Story 6.18's friction-budget row sits OUTSIDE the counted `## The ledger` table.** `friction-budget.md`'s
+  gate (`scripts/friction-budget/lib.ts`) reads ONLY the first contiguous `payer | protects | event_type` table and
+  stops at the first non-`|` line; 6.18's row was appended to the `/members` bytes table under a "Story 10.15"
+  heading further down the file, so it is invisible to the friction-count gate. Found by the 6.21b blind validate
+  (BW-C9); recorded here rather than moved, per the row's own instruction ("⛔ do not move it here"). **Re-trigger:**
+  whoever next touches `friction-budget.md`'s ledger structure — move 6.18's row into the counted table, or extend
+  the gate to read multiple tables.
+- **(Q1, Story 6.5's deferred-upload gap) A family who deferred the death certificate at filing (`intake_converged`)
+  had ⛔ no way to upload it afterwards, in the app or through the helpline.** The OCR job only advances a claim out
+  of `intake_converged` on a RECEIVED document, and the filing wizard's upload screen is gone after acknowledgement
+  (the draft that held it is cleared) — so a family told *"upload within 7 days"* at filing had no path back to it.
+  6.5's own deferral never named this (its scope was the upload MECHANISM, not this post-filing gap); it was
+  discovered, and closed, by the 6.21b blind validate + `2026-09-26-247` §2. **CLOSED:** the family status (D1) now
+  answers `missing` with an upload offer in `intake_converged` / `documents_pending`, both the app
+  (`certificate-replacement.tsx`) and the helpline (`<HelplineCertificateReplacement>`) offer the upload when
+  `upload_allowed`, and the copy stays deadline-free (`missing_body`, invariant 2).
+
+---
+
 ## Deferred from: code review of 6-21-death-certificate-clear-date-rule (2026-09-26)
 
 - "Current" death certificate is ordered by the upload HANDLER's wall clock (`uploadedAt`, `apps/api/src/modules/claims/claims.documents.handlers.ts`, compared in `apps/jobs/src/claim-ocr-parity.ts`). Across API instances, clock skew larger than the gap between two uploads keeps the later upload non-current with no signal. Negligible under NTP; revisit if uploads ever run multi-region (a DB- or queue-side ordering removes it).
@@ -16,6 +37,10 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 ## Deferred from: adversarial review of the applied story-6-21a review patches (2026-09-25)
 
 - The legacy-row status fix (`missing` instead of `awaiting_review` for `currentUploadId === null`) can show "No death certificate has been sent yet" for a certificate that WAS genuinely sent — an OCR job enqueued just before the 6.21a deploy and processed just after it via the job's own documented `uploadId`-less tolerance path lands in exactly this state. Net improvement over the prior classification (which silently blocked re-upload), but the copy is momentarily misleading in a narrow, time-boxed deploy-race window. A fully correct fix needs a distinct 3rd wire reason/status and its own copy — a product/design decision, not made unilaterally.
+  - ⚠ **ANNOTATED (⛔ not closed), 2026-09-26 (BW-G2, Story 6.21b Task 8):** 6.21b's family status shows `missing_body`
+    ("still open") in exactly this state — a better message, the same narrow window. VERIFIED unreachable in
+    production: every handler-minted job carries an `uploadId`, and the app is ⛔ not in production yet
+    ([[project_not_in_production_merge_is_not_golive]]). The distinct 3rd status remains unbuilt. *Appended.*
 - `byte_size > 0`'s tightened CHECK has no app-level pre-validation in the OCR job, so a 0-byte payload now hard-fails the transaction via a raw CHECK violation instead of a graceful refusal. Feeds into the job's own already-documented, already-accepted DLQ/orphaned-object failure category, not a new class of unhandled failure — low-priority.
 - No HTTP-level integration test drives `assembleVerifierConsole` and asserts the `determinationStale` wire field end-to-end (only a domain-level predicate test and an admin front-end test with a hand-built fixture exist). Real, moderate-effort coverage gap.
 
@@ -24,6 +49,9 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 - The "ONE HELPER, THREE CALL SITES" approval gate (`assertClaimApprovable` at P1/P3/P4) has asymmetric test coverage — only P4/R9 (`packages/domain/tests/integration/claim/r9-voting.spec.ts`) gets a table-driven suite of all 4 deficiency reasons + a positive control; P1 (`verifier-decision.spec.ts`) and P3 (`state-trustee-decision.spec.ts`) only keep their existing specs green via a defaulted `certificate: 'accepted'` fixture, with no dedicated negative-case assertions of their own. Real but moderate-effort; the pattern to replicate is P4's.
   - ⚠ **WITHDRAWN 2026-09-26 (6.21a second full-diff review) — the gap does ⛔ not exist:** P1 and P3 each have a dedicated four-reason negative loop plus a PASS in `packages/domain/tests/integration/claim/death-certificate.spec.ts` ("⭐ P1 (adjudicateClaim) refuses APPROVE — ${label}…" / "⭐ P3 (voteOnFrozenClaim)…"). A false open item — withdrawn, ⛔ not "closed". *Appended.*
 - Two new document-upload conflict codes (`claim_document.certificate_accepted`, `claim_document.certificate_awaiting_review` in `apps/api/src/modules/claims/claims.documents.handlers.ts`) have no i18n/error mapping in `nominee-errors.ts`/`i18n-en.ts`. Verified unreachable from this story's own admin surface (no upload-initiating UI exists there); belongs to whichever surface actually uploads — named go-live coupling (1), 6.21b, or an existing non-admin helpline flow outside this diff.
+  - ⭐ **CLOSED BY 6.21b (D2, D5; C6), 2026-09-26:** both codes now map to their own copy on BOTH surfaces — the app's
+    `certificate-replacement.tsx` (via `use-death-certificate-upload.ts`'s outcome mapper) and the helpline's
+    `<HelplineCertificateReplacement>` (`-249` §6's verbatim lines). ⛔ Never a raw code. *Appended.*
 - `viewer.canReview`'s server-side RBAC computation (`rbac.hasPermission` against the geo resolver, `apps/api/src/modules/claims/claims.verifier-console.handlers.ts`) has no negative-case (a verifier session getting `canReview: false`) test at the API/integration level — only a UI-level test with a mocked packet value exists. The underlying RBAC key/grant machinery is covered generically by AC6's `roles.test.ts`/`permissions.test.ts`; this gap is specifically the end-to-end wiring.
   - ⚠ **WITHDRAWN 2026-09-26 (6.21a second full-diff review) — the gap does ⛔ not exist:** `apps/api/tests/integration/claims/death-certificate.spec.ts` "⭐ AC5 — … `viewer.canReview` is TRUE for the District Admin and FALSE for a verifier" asserts `{ canReview: false }` end to end. A false open item — withdrawn, ⛔ not "closed". *Appended.*
 
@@ -37,6 +65,10 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 - A correction whose projection is NOT touched (its target is not the rank's head) appends the member event BEFORE its version, while a declare writes its versions BEFORE its event ⇒ a correction racing a declare for the same member could deadlock (40P01 → 500; only 23505 is mapped) [`packages/domain/src/claim/nominee-correction-persist.ts`] — ⛔ unreachable today: a declare after a claim needs the lock RELEASED, and the release (an innocence finding) has no production producer until `6-22`; the pre-patch order had the same event→version shape. Revisit with `6-22` (map 40P01 to `concurrent`, or align the orders).
 - The helpline's read of a selected member's live claims (`GET …/admin/members/:memberId/nominee-corrections/claims`) writes ⛔ no audit line, and its read-back gate is client-side only [`apps/api/src/modules/claims/claims.nominee-declaration.routes.ts`] — metadata only (ids, states, instants), on the raise key, the pending-queue precedent (also unaudited); an audit line needs a new type in the counted audit catalog. Revisit if the read ever carries PII or the operator surface gets a server-side read-back record.
+  - ⚠ **ANNOTATED (⛔ not closed), 2026-09-26 (Story 6.21b Task 8):** the SIBLING helpline read this story adds —
+    `GET …/admin/members/:memberId/death-certificate/claims` — DOES write an audit line
+    (`admin_death_certificate.claims_read`, ids and status codes only). This route (6.20's) still does ⛔ not; ⛔ not
+    closed by this note. *Appended.*
 
 ## Deferred from: code review of 6-20-nominee-declaration-history-and-as-at-death-rule — the 09-24 patches, CHUNK 3 (2026-09-24)
 
@@ -6003,15 +6035,28 @@ Blind Hunter + Edge Case Hunter + Acceptance Auditor, diff `1d62ed4`..HEAD. Thre
 - `normalizeDate` collapses "unparseable format" and "OCR failure" into the same `ambiguous` bucket — behaviorally correct per AR-61, just an observability nicety for the verifier queue. [packages/domain/src/claim/parity.ts:83]
 - Manual-entry OCR path returns confidence 1.0 from unverified operator-typed values — already called out in the story's own Completion Notes as unreachable in v1 (no `manualEntry` threaded through the queue yet); revisit when manual entry is wired. [apps/jobs/src/ocr/index.ts:95]
 - No status/polling endpoint for the async upload outcome — matches the same 6.10/6.11 console deferral as `<DocumentPreview>`/`<VerifierReviewPanel>`, explicitly stated in AC5/Dev Notes. [packages/contracts/src/claims/documents.ts:3042]
+  - ⭐ **NARROWED by Story 6.21b (D1), 2026-09-26:** the death certificate now HAS one —
+    `GET /api/v1/member/claims/:claimCaseId/death-certificate` (D1) plus the in-flight marker
+    (`death-certificate-view.ts`) tell the family the async upload's outcome once the job lands. Every OTHER
+    document type still has none. *Appended.*
 - Decrypt/DB failure inside the OCR-parity job's scope-tx is uncaught and retries indefinitely rather than degrading to `ambiguous` — intentional per the code's own comment (infra errors retry; only OCR/fetch failures degrade), but a real tail risk if a KYC ciphertext is permanently corrupted. [apps/jobs/src/claim-ocr-parity.ts:171]
   - ⚠ **2026-09-25 — Story 6.21a widens the blast radius (annotated, ⛔ not fixed):** a job that fails PERMANENTLY now also STRANDS a death-certificate REPLACEMENT — its object is stored under its own key but ⛔ no upload row is written, so the family's new certificate never becomes current and the claim keeps waiting on the rejected one. *Appended.*
 - One failing job aborts an entire pg-boss batch in the claim-OCR-parity worker — identical to the pre-existing `registerDataExportWorkers` pattern in `apps/jobs/src/data-export.ts`; not a regression introduced by this diff. [apps/jobs/src/claim-ocr-parity.ts:345-352]
 - No audit trail for rejected claim-document uploads (409/415/413/400) — minor observability gap. [apps/api/src/modules/claims/claims.documents.handlers.ts:77-117]
   - ⚠ **2026-09-25 — Story 6.21a adds two more unaudited refusals to this gap:** `409 claim_document.certificate_accepted` and `409 claim_document.certificate_awaiting_review` (the D6 upload window). Same class, same deferral. *Appended.*
 - Generic "upload failed" message doesn't distinguish retriable vs. terminal errors on the mobile document-upload screen. [apps/mobile/app/(claim)/document.tsx:73-77]
+  - ⭐ **NARROWED by Story 6.21b (D2), 2026-09-26:** the REPLACEMENT screen (`certificate-replacement.tsx`) now
+    distinguishes `certificate_accepted` / `certificate_awaiting_review` / `upload_not_allowed` / `too_large` /
+    `unsupported_media_type` / `generic_failure` as distinct outcomes, via the pure `mapDeathCertificateUploadError`
+    (tested in node). `document.tsx` (the FIRST-filing wizard step) keeps its one generic message, unchanged, by
+    deliberate scope choice (D2). *Appended.*
 - `uploadFile`'s no-`claimCaseId` fallback marks local success without a real upload — per the file's own header comment this is explicitly defensive dead code preserving the pre-existing 6.2 seam; the flow guarantees `claimCaseId` is set before this screen is reached. [apps/mobile/app/(claim)/document.tsx:57-63]
 - AC2 "death before member joined" plausibility rule stays inactive in production — `evaluateParity` fully implements + unit-tests it, but no canonical membership-start timestamp exists to pass as `member.joinedAt` (`members.createdAt` is row-creation, not membership start, and would false-flag imported/backdated members). Reason: no trustworthy membership-start/eligibility timestamp available yet — activate when the member lifecycle exposes a historically correct one (incl. imported/backdated-member semantics). [packages/domain/src/claim/parity.ts:53-60, apps/jobs/src/claim-ocr-parity.ts:182]
 - `<DocumentTypeChooser>` (AC3) is built + unit-tested but not wired into any live admin/operator page — 6.5 owns the component + the end-to-end parser-selection contract (upload API already accepts `documentType`, routes to the correct OCR parser), but no existing Story 6.3 helpline upload surface exists to mount it into. Live operator-page composition belongs to Story 6.10/6.11's claim console assembly (same surface-assembly boundary as `<DocumentPreview>`/`<VerifierReviewPanel>`). Acceptance condition: the console story must wire the chooser's selected value into the existing upload request, not recreate document-type selection. [apps/admin/src/modules/claim-verification/DocumentTypeChooser.tsx]
+  - ⚠ **RE-STATED (⛔ not closed), 2026-09-26 (Story 6.21b D5):** the premise is now PARTLY false — a death-certificate
+    helpline upload surface exists (`<HelplineCertificateReplacement>`), but it uploads `death_certificate` ONLY, with
+    ⛔ no type chooser (a deliberate scope choice, D5). The chooser stays unwired, and every OTHER document type still
+    has no helpline surface. *Appended.*
 
 ## Deferred from: code review of 6-6-peer-mesh-deterministic-5-nearest-selection-ping (2026-07-10)
 
@@ -10034,3 +10079,7 @@ explicitly disclosed by the commit's own comments — ⛔ none blocks `11b-17`, 
 - **`appeal_stage1_reviewed` with `decision: 'upheld'` is never seeded in the AC5 correction-unlock tests, only its sibling `'reversed'`** [`apps/api/tests/integration/claims/nominee-bank-helpline.spec.ts:137-153`] — whether an upheld appeal (denial stands) wrongly unlocks a bank correction is unproven either way. **Trigger:** the next AC5/appeal-related test pass.
 - **`nominee-review-announcements.test.ts`'s anchor-matching regex is non-greedy to the first `</Text>`** [`apps/mobile/tests/unit/nominee-review-announcements.test.ts:36-42`] — could mis-attribute a live-region check if a message were ever nested inside another `<Text>`. Speculative; no current nesting exists. **Trigger:** the next edit to `nominee-review.tsx` or `NomineeForm.tsx` that changes the `<Text>` structure around an announced message.
 - **`checkMagicNumberColors` (`scripts/microcopy/lib.ts`) is whole-LINE scoped, ⛔ not position-aware, unlike `checkVocabulary`/`checkTone`** — an allow-list entry scoped to one hex literal (e.g. the FM-14 `#B00020`/`#1E8E3E` pair) also silently suppresses a different, unrelated hex sharing the same line. Found and confirmed while applying a 2026-09-22 code-review patch; NOT fixed, because the obvious fix (pass a `matchRange` to `isAllowed`, mirroring `checkVocabulary`) breaks a DIFFERENT, pre-existing, intentionally line-level entry — `primary_color|secondary_color|accent_color` on `apps/admin/src/modules/pariwar-provisioning/AddPariwarForm.tsx` — whose `pattern` deliberately matches a nearby FIELD NAME, not the hex itself, and so has zero position overlap with the hex it means to allow. Fixing this properly needs a gate-DESIGN decision: either a per-entry opt-in (`scope: 'line' | 'position'`) or rewriting that older entry's pattern to match the hex directly (now that `file` alone scopes it). Current (line-level) behaviour is PINNED in `scripts/microcopy/claim.test.ts` so it cannot regress further un-noticed while this is open. **Trigger:** the next time a magic-number-color allow-list entry is added or edited — decide the scoping model then, don't add a second ad-hoc workaround.
+
+## Deferred from: code review of 6-21b-death-certificate-replacement-surfaces (2026-09-27)
+
+- **`(claim)/document.tsx` can show "uploaded" and "upload failed" at the same time** [`apps/mobile/app/(claim)/document.tsx:109`] — after one successful upload (`stage === 'selected'`), a second pick that fails renders both lines; `stage` stays `selected`. Pre-existing: the pre-6.21b render carried the same `upload === 'uploaded' || stage === 'selected'` condition, and 6.21b's extraction preserved it. **Trigger:** the next edit to the wizard's document step.

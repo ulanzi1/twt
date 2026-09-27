@@ -10,35 +10,19 @@
 
 import { useEffect, useState } from 'react'
 
-import { ApiError } from '@twt/api-client'
 import { useRouter } from 'expo-router'
 import { Button, Input, Paragraph, Spinner, Text, YStack } from 'tamagui'
 
 import { ClaimProxyFlowShell } from '../../components/claim/ClaimProxyFlowShell'
-import { claimApi } from '../../lib/claim-api'
 import { useClaimT } from '../../lib/claim-i18n'
+import { useHandoverOtp } from '../../lib/use-handover-otp'
 
 export default function HandoverOtpScreen(): React.ReactElement {
   const t = useClaimT()
   const router = useRouter()
   const name = t('member_fallback')
   const [code, setCode] = useState('')
-  const [masked, setMasked] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [busy, setBusy] = useState(false)
-
-  async function send(): Promise<void> {
-    setError(null)
-    try {
-      const res = await claimApi.requestHandoverOtp()
-      // An empty mask means no reachable nominee → route Ravi to help (existence-defended).
-      setMasked(res.nomineeMobileMasked || '')
-    } catch (e) {
-      setError(
-        e instanceof ApiError && e.status === 429 ? t('otp.error_rate_limit') : t('otp.error_invalid'),
-      )
-    }
-  }
+  const { masked, noNominee, error, busy, send, verify } = useHandoverOtp()
 
   // Send on first mount (grief-paced: no manual "send" step to fumble through).
   useEffect(() => {
@@ -46,25 +30,10 @@ export default function HandoverOtpScreen(): React.ReactElement {
   }, [])
 
   async function onVerify(): Promise<void> {
-    setBusy(true)
-    setError(null)
-    try {
-      const res = await claimApi.verifyHandoverOtp(code)
-      if (res.verified) {
-        router.push('/(claim)/relationship')
-      } else {
-        setError(t('otp.error_invalid'))
-      }
-    } catch (e) {
-      setError(
-        e instanceof ApiError && e.status === 429 ? t('otp.error_rate_limit') : t('otp.error_invalid'),
-      )
-    } finally {
-      setBusy(false)
-    }
+    const verified = await verify(code)
+    if (verified) router.push('/(claim)/relationship')
   }
 
-  const noNominee = masked === ''
   return (
     <ClaimProxyFlowShell deceasedName={name}>
       <YStack gap="$4" pt="$4">

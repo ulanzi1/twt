@@ -56,6 +56,28 @@ const EN_FILE = 'packages/i18n/locales/en/claim.json';
 const HI_FILE = 'packages/i18n/locales/hi/claim.json';
 const REVIEW_TSX = 'apps/mobile/app/(claim)/nominee-review.tsx';
 const FORM_TSX = 'apps/mobile/components/life-events/NomineeForm.tsx';
+/** Story 6.21b (D7) — every new/edited mobile file the death-certificate surfaces touch. */
+const CERTIFICATE_REPLACEMENT_TSX = 'apps/mobile/app/(claim)/certificate-replacement.tsx';
+const DOCUMENT_TSX = 'apps/mobile/app/(claim)/document.tsx';
+const HANDOVER_OTP_TSX = 'apps/mobile/app/(claim)/handover-otp.tsx';
+const SIXB_CODE_GLOBS = [
+  CERTIFICATE_REPLACEMENT_TSX,
+  'apps/mobile/app/(claim)/shepherd.tsx',
+  DOCUMENT_TSX,
+  HANDOVER_OTP_TSX,
+  'apps/mobile/app/(claim)/index.tsx',
+  'apps/mobile/components/claim/ClaimProxyFlowEntry.tsx',
+  'apps/mobile/components/claim/DeathCertificateNotice.tsx',
+  'apps/mobile/lib/filed-claim.ts',
+  'apps/mobile/lib/use-death-certificate-upload.ts',
+  'apps/mobile/lib/use-handover-otp.ts',
+  'apps/mobile/lib/claim-entry-gate.ts',
+  'apps/mobile/lib/fetch-claim-entry-outcome.ts',
+  'apps/mobile/lib/use-death-certificate-status.ts',
+  'apps/mobile/lib/death-certificate-view.ts',
+  'apps/mobile/lib/death-certificate-announce.ts',
+  'apps/mobile/lib/death-certificate-upload-outcome.ts',
+] as const;
 
 /** The real locale strings the surface renders — VALUES only, ⛔ excluding `$comment*` keys. */
 function resolvedStrings(rel: string): string[] {
@@ -84,6 +106,12 @@ describe('the surface is actually IN SCOPE — ⛔ the premise of every test bel
   it("both member mobile screens are listed in scope.code_globs", () => {
     expect(config.scope.codeGlobs).toContain(REVIEW_TSX);
     expect(config.scope.codeGlobs).toContain(FORM_TSX);
+  });
+
+  it('Story 6.21b (D7) — every new/edited death-certificate mobile file is listed in scope.code_globs', () => {
+    for (const file of SIXB_CODE_GLOBS) {
+      expect(config.scope.codeGlobs, file).toContain(file);
+    }
   });
 });
 
@@ -286,6 +314,33 @@ describe('⭐⭐ the FM-14 colour allow-list is scoped to three literals and ⛔
       findings,
       'if this now finds #DEADBE, checkMagicNumberColors became position-aware — update this pin and the deferred-work.md entry',
     ).toEqual([]);
+  });
+});
+
+// ─── (g) Story 6.21b (D7) — the NEW screen has NO allow-list suppression ────────────────
+
+describe('Story 6.21b — the new death-certificate screen has no allow-list entry, so a planted violation goes red', () => {
+  it('a planted hex on the NEW screen is flagged (⛔ no suppression exists for it)', () => {
+    const findings = checkMagicNumberColors(CERTIFICATE_REPLACEMENT_TSX, '<Text color="#DEADBE">x</Text>', config);
+    expect(findings.length).toBeGreaterThan(0);
+    expect(findings[0].kind).toBe('magic-number');
+  });
+
+  it('a planted prohibited noun on the new screen is flagged (code register)', () => {
+    const findings = checkVocabulary(CERTIFICATE_REPLACEMENT_TSX, '<Text>Open the passbook</Text>', config, {
+      includeMemberOnly: false,
+    });
+    expect(findings.length).toBeGreaterThan(0);
+    expect(findings[0].kind).toBe('vocabulary');
+  });
+
+  it('the two PRE-EXISTING literal allow-list entries are scoped to document.tsx/handover-otp.tsx only', () => {
+    expect(checkMagicNumberColors(DOCUMENT_TSX, '<Text color="#1E8E3E">x</Text>', config)).toEqual([]);
+    expect(checkMagicNumberColors(DOCUMENT_TSX, '<Text color="#B00020">x</Text>', config)).toEqual([]);
+    expect(checkMagicNumberColors(HANDOVER_OTP_TSX, '<Text color="#C0392B">x</Text>', config)).toEqual([]);
+    // ⭐ Still flagged on the NEW screen — the entries are FILE-scoped, ⛔ not a blanket for the surface.
+    expect(checkMagicNumberColors(CERTIFICATE_REPLACEMENT_TSX, '<Text color="#1E8E3E">x</Text>', config).length).toBeGreaterThan(0);
+    expect(checkMagicNumberColors(CERTIFICATE_REPLACEMENT_TSX, '<Text color="#C0392B">x</Text>', config).length).toBeGreaterThan(0);
   });
 });
 

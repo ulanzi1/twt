@@ -29,6 +29,7 @@ import {
   isDeathCertificateUploadAllowedInReviewWindow,
   isInDeathCertificateReviewWindow,
   listDeathCertificateHistory,
+  resolveDeathCertificateFamilyStatus,
   NOMINEE_DETERMINATION_RECORDABLE_STATES,
   NOMINEE_NAME_CHECK_RECORDABLE_STATES,
   CLAIM_REVIEW_WINDOW_STATES,
@@ -592,5 +593,50 @@ describe.skipIf(!hasDatabase)('Story 6.21a — the death certificate clear-date 
       actor: 'operator',
     });
     expect(await isDeathCertificateReplacementRequested(tx, PARIWAR_A, gone.cid)).toBe(false);
+  });
+
+  it('⭐ Story 6.21b (D1, AC1) — `status === \'replacement_requested\'` iff `isDeathCertificateReplacementRequested`, for every row driven above', async () => {
+    async function agrees(client: Client, tx: Tx, cid: ClaimId, claimState: string): Promise<void> {
+      const snapshot = await readDeathCertificateSnapshot(tx, PARIWAR_A, cid);
+      const family = resolveDeathCertificateFamilyStatus(claimState, snapshot);
+      const trigger = await isDeathCertificateReplacementRequested(tx, PARIWAR_A, cid);
+      expect(family.status === 'replacement_requested', `state=${claimState}`).toBe(trigger);
+    }
+
+    const { client, tx, cid } = await freshClaim('verifier_review');
+    await agrees(client, tx, cid, 'verifier_review'); // missing
+    const { uploadId } = await seedDeathCertificate(client, { pariwarId: PARIWAR_A, claimCaseId: cid });
+    await agrees(client, tx, cid, 'verifier_review'); // awaiting_review
+    await recordDeathCertificateReview(client, reject(cid, uploadId));
+    await agrees(client, tx, cid, 'verifier_review'); // ⭐ replacement_requested
+    await seedDeathCertificate(client, { pariwarId: PARIWAR_A, claimCaseId: cid });
+    await agrees(client, tx, cid, 'verifier_review'); // a replacement arrived — back to awaiting_review
+
+    const gone = await freshClaim('verifier_review');
+    await seedRejectedDeathCertificate(client, { pariwarId: PARIWAR_A, claimCaseId: gone.cid });
+    await agrees(client, tx, gone.cid, 'verifier_review');
+    await adjudicateClaim(client, {
+      claimCaseId: gone.cid,
+      pariwarId: PARIWAR_A,
+      outcome: 'denied',
+      reasonCode: 'other',
+      rationaleCiphertext: 'enc:v1:unrelated-ground',
+      actorId: TRUSTEE,
+      actorDisplay: 'Another Verifier',
+      actor: 'operator',
+    });
+    await agrees(client, tx, gone.cid, 'denied'); // left the window — both false
+
+    // Rows 1a / 1b — pre-verification (`documents_pending`): no certificate, then a current upload.
+    const early = await freshClaim('documents_pending');
+    await agrees(client, tx, early.cid, 'documents_pending'); // 1a missing
+    await seedDeathCertificate(client, { pariwarId: PARIWAR_A, claimCaseId: early.cid });
+    await agrees(client, tx, early.cid, 'documents_pending'); // 1b awaiting_review
+
+    // Row 6 — in the window, ACCEPTED.
+    const ok = await freshClaim('verifier_review');
+    await seedAcceptedDeathCertificate(client, { pariwarId: PARIWAR_A, claimCaseId: ok.cid, date: PAST });
+    await agrees(client, tx, ok.cid, 'verifier_review'); // accepted — both false
+    // (`reversed` is covered by construction — both functions test the SAME window constant, which contains it.)
   });
 });

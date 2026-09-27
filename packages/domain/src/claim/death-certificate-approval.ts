@@ -167,7 +167,10 @@ export function isInDeathCertificateReviewWindow(claimState: string): boolean {
 
 /**
  * ⭐ D6's upload predicate, INSIDE the review window — the ONE definition the upload guard and 6.21b's
- * `replacementAllowed` share. A `death_certificate` may be sent when there is none (`missing`, T3(b)) or the
+ * `resolveDeathCertificateFamilyStatus` share (its `replacement_allowed` field, computed by CALLING
+ * this — ⚠ the surfaces (the app, the helpline) key their upload CONTROL on `upload_allowed`, which
+ * also covers the two pre-verification states; `replacement_allowed` stays the in-window predicate,
+ * ⛔ nothing else). A `death_certificate` may be sent when there is none (`missing`, T3(b)) or the
  * current one was turned back (`rejected`). Refused when it is `accepted` (BigDev 2026-09-25: an accepted
  * certificate blocks further uploads) or `awaiting_review` (⛔ no silent pile-up of unreviewed replacements).
  */
@@ -210,10 +213,12 @@ export function mayDeathCertificateUploadBecomeCurrent(claimState: string, statu
 }
 
 /**
- * ⭐ D16 — the trigger 6.19's CC1 reminder (and 6.21b's family surfaces) are built on: is the family being
- * ASKED FOR ANOTHER certificate right now? True iff the claim is in the review window AND its current
- * certificate was REJECTED. ⛔ A claim that has left the window (denied for another reason, approved,
- * settled) is ⛔ not chased. ⛔ It is never a deadline: the claim simply waits (`-236` CC1, default stands).
+ * ⭐ D16 — the trigger 6.19's CC1 reminder is built on: is the family being ASKED FOR ANOTHER
+ * certificate right now? True iff the claim is in the review window AND its current certificate was
+ * REJECTED. ⛔ A claim that has left the window (denied for another reason, approved, settled) is
+ * ⛔ not chased. ⛔ It is never a deadline: the claim simply waits (`-236` CC1, default stands).
+ * ⚠ (BW-G9) 6.21b's `status === 'replacement_requested'` is TIED to this by a TEST, ⛔ not a call —
+ * the resolver never invokes it (that would be a second claim read); see D1's own doc-block below.
  */
 export async function isDeathCertificateReplacementRequested(
   db: Db,
@@ -227,6 +232,146 @@ export async function isDeathCertificateReplacementRequested(
   if (!claimRow || !isInDeathCertificateReviewWindow(claimRow.currentState as string)) return false;
   const snapshot = await readDeathCertificateSnapshot(db, pariwarId, claimCaseId);
   return deathCertificateStatus(snapshot) === 'rejected';
+}
+
+// ── Story 6.21b — the FAMILY's (and the helpline's) read of a claim's death-certificate status ──
+// `-247`/`-249` (both author-commits, superseding 6.21b D1): the wire shape is SEVEN fields, this
+// leaf's ONE resolver. ⛔ No second definition of any condition — `replacementAllowed` is computed
+// by CALLING the two named predicates above (C1, `-246` §1), never re-derived from the table.
+
+/**
+ * The FIVE-value status a FAMILY (or the helpline, on their behalf) is shown — distinct from the
+ * domain's own four-value `DeathCertificateStatus` (BW-C11: never reuse that name for the wire
+ * shape). `not_needed` covers the eight out-of-window states; `missing` also covers the two
+ * pre-verification states (`-247` §2, rows 1a/1b).
+ */
+export type DeathCertificateFamilyStatus =
+  | 'not_needed'
+  | 'missing'
+  | 'awaiting_review'
+  | 'accepted'
+  | 'replacement_requested';
+
+/** Why a replacement is being asked for — `null` unless `status === 'replacement_requested'`. */
+export type DeathCertificateReplacementReason = 'unclear_date' | 'future_date' | null;
+
+/**
+ * `-249` §4 — which reassurance line the family is shown for a `replacement_requested` status:
+ * `not_refused` ordinarily, `still_open` when the claim itself is `reversed` (still true, but "has
+ * not been refused" would misstate a claim that WAS denied and is now under appeal). `null` for
+ * every other status.
+ */
+export type DeathCertificateReassurance = 'not_refused' | 'still_open' | null;
+
+/** The resolver's full result — the exact seven fields the member wire response carries (`-247`, `-249`). */
+export interface DeathCertificateFamilyStatusResult {
+  readonly status: DeathCertificateFamilyStatus;
+  readonly replacementReason: DeathCertificateReplacementReason;
+  /** The in-window predicate, ⛔ nothing else (C1) — ⛔ never what a surface is allowed to OFFER. */
+  readonly replacementAllowed: boolean;
+  /** What the surfaces (the app, the helpline) offer an upload control for (`-247` §2). */
+  readonly uploadAllowed: boolean;
+  /** The CURRENT upload's id — the marker's discriminator (`-247` §1). ⛔ Never shown. */
+  readonly certificateToken: DeathCertificateUploadId | null;
+  /** `state ∉ {settled, denied}` — the filing-entry redirect's own gate (`-249` §2). ⛔ Never shown. */
+  readonly claimLive: boolean;
+  readonly reassurance: DeathCertificateReassurance;
+}
+
+/**
+ * Which family-facing reason a REJECTION maps to. EXHAUSTIVE over the rejection-reason enum — a reason
+ * added later is a COMPILE error here, ⛔ never silently told to the family as "the date is unclear"
+ * (code review 2026-09-27). `null` cannot occur on a rejected review (the writer refuses it —
+ * `missing_reason`); it maps to the general line rather than throwing on a read path.
+ */
+function replacementReasonFor(reason: DeathCertificateRejectionReason | null): 'unclear_date' | 'future_date' {
+  switch (reason) {
+    case 'date_of_death_in_future':
+      return 'future_date';
+    case 'no_date_of_death':
+    case 'date_of_death_unclear':
+    case null:
+      return 'unclear_date';
+    default: {
+      const unhandled: never = reason;
+      return unhandled;
+    }
+  }
+}
+
+/**
+ * Duplicated BY VALUE from `claim/read.ts`'s `CLAIM_TERMINAL_STATES` — the leaf import fence (T8)
+ * permits only schema tables, id types, `errors.ts` and `review-window.ts`, so `read.ts` itself is
+ * ⛔ off limits here. Two literal states, unlikely to drift independently; if they ever do, update
+ * both together.
+ */
+const FAMILY_STATUS_TERMINAL_STATES: readonly string[] = ['settled', 'denied'];
+
+/**
+ * ⭐ D1 (`-247`, `-249`) — the member/helpline status read, table-driven, first match wins. A PURE
+ * function over the claim's state + its death-certificate snapshot; the route/handler's ONLY job is
+ * to fetch both from ONE scope tx and hand them here.
+ */
+export function resolveDeathCertificateFamilyStatus(
+  claimState: string,
+  snapshot: DeathCertificateSnapshot,
+): DeathCertificateFamilyStatusResult {
+  const certificateToken = snapshot.currentUploadId;
+  const claimLive = !FAMILY_STATUS_TERMINAL_STATES.includes(claimState);
+  const status = deathCertificateStatus(snapshot);
+  const inWindow = isInDeathCertificateReviewWindow(claimState);
+  const preVerification = (CLAIM_DOCUMENT_UPLOADABLE_STATES as readonly string[]).includes(claimState);
+  // ⭐ THE shared predicate (C1) — CALLED, ⛔ never re-derived from the table below. Every row
+  // returns this value; ⛔ no row writes a `replacementAllowed` literal.
+  const replacementAllowed = inWindow && isDeathCertificateUploadAllowedInReviewWindow(status);
+  // `-247` §2 — what a surface may OFFER: in the window, exactly the shared predicate; before
+  // verification, only while there is ⛔ no certificate yet (a current upload is `awaiting_review`,
+  // ⛔ never a second offer). Built from the named predicates + the constant, ⛔ never a state list.
+  const uploadAllowed = preVerification ? status === 'missing' : replacementAllowed;
+  const base = { replacementAllowed, uploadAllowed, certificateToken, claimLive } as const;
+
+  // Rows 1a/1b (`-247` §2) — the two pre-verification states, BEFORE row 1's out-of-window check
+  // (they are NOT part of the eight states row 1 still covers).
+  if (preVerification) {
+    if (status === 'missing') {
+      return { ...base, status: 'missing', replacementReason: null, reassurance: null };
+    }
+    // A current upload exists (T12 legacy rows are `missing`, never reach here).
+    return { ...base, status: 'awaiting_review', replacementReason: null, reassurance: null };
+  }
+
+  // Row 1 — the eight remaining out-of-window states.
+  if (!inWindow) {
+    return { ...base, status: 'not_needed', replacementReason: null, reassurance: null };
+  }
+
+  // In the review window — rows 2–6.
+  if (status === 'missing') {
+    return { ...base, status: 'missing', replacementReason: null, reassurance: null };
+  }
+  if (status === 'rejected') {
+    const replacementReason = replacementReasonFor(snapshot.currentReview?.rejectionReason ?? null);
+    // `-249` §4 — `reversed` is IN the window (`CLAIM_REVIEW_WINDOW_STATES`); every other
+    // `replacement_requested` claim gets `not_refused`.
+    const reassurance: DeathCertificateReassurance = claimState === 'reversed' ? 'still_open' : 'not_refused';
+    return { ...base, status: 'replacement_requested', replacementReason, reassurance };
+  }
+  if (status === 'awaiting_review') {
+    return { ...base, status: 'awaiting_review', replacementReason: null, reassurance: null };
+  }
+  // status === 'accepted'
+  return { ...base, status: 'accepted', replacementReason: null, reassurance: null };
+}
+
+/** The thin async reader beside the pure resolver — ONE scope-tx-friendly read + resolve. */
+export async function readDeathCertificateFamilyStatus(
+  db: Db,
+  pariwarId: PariwarId,
+  claimCaseId: ClaimId,
+  claimState: string,
+): Promise<DeathCertificateFamilyStatusResult> {
+  const snapshot = await readDeathCertificateSnapshot(db, pariwarId, claimCaseId);
+  return resolveDeathCertificateFamilyStatus(claimState, snapshot);
 }
 
 /**

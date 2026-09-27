@@ -29,6 +29,7 @@ import {
   RevokeDpdpaConsentRequest,
   RevokeDpdpaConsentResponse,
   MemberShepherdResponse,
+  MemberDeathCertificateStatusResponse,
   NomineeCorrectionRaiseRequest,
   NomineeCorrectionWriteResponse,
 } from '@twt/contracts';
@@ -50,6 +51,7 @@ import { createNomineeBankHandlers } from './claims.nominee-bank.handlers.js';
 import { createDpdpaConsentHandlers } from './claims.dpdpa-consent.handlers.js';
 import { createShepherdHandlers } from './claims.shepherd.handlers.js';
 import { createMemberNomineeCorrectionHandler } from './claims.nominee-declaration.handlers.js';
+import { createDeathCertificateMemberHandlers } from './claims.death-certificate-member.handlers.js';
 
 const CLAIM_TAG = 'member-claim';
 
@@ -70,6 +72,7 @@ export function registerClaimsRoutes(app: FastifyInstance, deps: AppDeps): void 
   const bank = createNomineeBankHandlers(deps);
   const consent = createDpdpaConsentHandlers(deps);
   const shepherd = createShepherdHandlers(deps);
+  const deathCertificate = createDeathCertificateMemberHandlers(deps);
   const r = app.withTypeProvider<ZodTypeProvider>();
   const memberSession = requireMemberSession(deps);
   const sendThrottle = memberClaimHandoverSendThrottle(deps);
@@ -268,5 +271,20 @@ export function registerClaimsRoutes(app: FastifyInstance, deps: AppDeps): void 
       preHandler: [memberSession],
     },
     shepherd.getShepherdMember,
+  );
+
+  // Story 6.21b (D1) — the family's own death-certificate status read (the shepherd notice + the
+  // replacement screen's entry gate). Read-only + own claim only; NO step-up.
+  r.get(
+    '/api/v1/member/claims/:claimCaseId/death-certificate',
+    {
+      schema: {
+        params: z.object({ claimCaseId: z.string().uuid() }).strict(),
+        response: { 200: MemberDeathCertificateStatusResponse },
+        tags: [CLAIM_TAG],
+      },
+      preHandler: [memberSession],
+    },
+    deathCertificate.getDeathCertificateStatusMember,
   );
 }

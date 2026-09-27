@@ -112,11 +112,53 @@ const EN: Record<string, string> = {
     'These bank details need correcting. Take the corrected account details from the family and save them here — the claim stays open and has not been refused.',
   'helpline.bank.namesError':
     'The two names could not be loaded, so they have not been checked. Do not treat this as "the names match".',
+
+  // ── Story 6.21b (D5) — the helpline's death-certificate replacement surface ──────
+  // English-only console chrome (the module convention). The STATUS read-out lines, the "sent" line and
+  // the refusal lines are `2026-09-26-249` §6 VERBATIM (plus `-244` D4's three family lines). The rest —
+  // the heading, loading/error/empty/pick/upload/refresh chrome and the generic refusal — is ordinary
+  // author-written console chrome, ⛔ not a §6 line.
+  'helpline.certificate.heading': 'Death certificate',
+  'helpline.certificate.needMember': 'Select the member and confirm the read-back to see their death-certificate status.',
+  'helpline.certificate.claimsLoading': 'Loading claims…',
+  'helpline.certificate.claimsError': 'The claims could not be loaded just now.',
+  'helpline.certificate.retry': 'Try again',
+  'helpline.certificate.noClaim': 'There is no open claim for this member right now.',
+  'helpline.certificate.pickClaim': 'Pick the claim',
+  'helpline.certificate.upload': 'Send a new certificate',
+  'helpline.certificate.uploading': 'Sending…',
+  'helpline.certificate.sentProcessing': 'The certificate was sent and is being processed. Refresh in a minute.',
+  'helpline.certificate.refresh': 'Refresh',
+  // The D4 read-out lines (`-249` §6) — spoken by the operator, verbatim.
+  'helpline.certificate.line.unclear_date':
+    "The certificate we have doesn't show a clear date of death — the family needs to send another. The claim is still open.",
+  'helpline.certificate.line.future_date':
+    'The date of death on the certificate we have is a future date — the family needs to send a certificate with the correct date. The claim is still open.',
+  'helpline.certificate.line.missing':
+    "We haven't received the death certificate yet — the family needs to send it. The claim is still open.",
+  'helpline.certificate.line.awaiting_review':
+    "We have the certificate; it is waiting for the District Admin's review. Nothing more is needed from the family.",
+  'helpline.certificate.line.accepted': 'The death certificate has been accepted.',
+  'helpline.certificate.line.not_needed': 'Nothing is needed about the death certificate on this claim right now.',
+  // The refusal lines (C6) — never a raw error code.
+  'helpline.certificate.refusal.certificate_accepted':
+    "This claim's death certificate has already been accepted. Another one can't be sent.",
+  'helpline.certificate.refusal.certificate_awaiting_review':
+    "A death certificate is already waiting to be reviewed. Another one can't be sent until it has been.",
+  'helpline.certificate.refusal.upload_not_allowed': "This claim can't take a new certificate in its current state.",
+  // `-249` §6 records ONE line for both 413 and 415 — verbatim, ⛔ never two author-written variants.
+  'helpline.certificate.refusal.fileRejected': 'That file is too large or not a supported type. Send a JPEG, PNG or PDF.',
+  'helpline.certificate.refusal.generic': "The certificate couldn't be sent. Please try again.",
 };
 
 /** Resolve a console-chrome key to English (loud-ish fallback: return the key if unmapped). */
 export function resolveEn(key: string): string {
   return EN[key] ?? key;
+}
+
+/** Story 6.21b (D5) — the pick-a-claim radio label, mirroring the nominee-correction `claimOption` precedent. */
+export function certificateClaimOption(stateLabel: string, createdAt: string): string {
+  return `${stateLabel} — filed ${createdAt}`;
 }
 
 /**

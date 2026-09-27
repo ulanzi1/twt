@@ -161,14 +161,15 @@ const COVERAGE_SET: readonly CoverageEntry[] = [
     expectedMethods: ['get', 'get', 'get', 'get', 'get', 'get', 'post', 'post', 'post', 'post'],
   },
   {
-    // ⭐ Story 6.21a (D9) — the death certificate's clear-date rule. TWO routes, both admin: the District
-    // Admin's ACCEPT / REJECT review (which decides whether the claim can be approved at all — `-235` Y)
-    // and the on-demand HISTORY (every upload, with the DECRYPTED accepted dates and notes). Both need the
-    // authenticated-HUMAN chain.
+    // ⭐ Story 6.21a (D9) — the death certificate's clear-date rule. THREE routes, all admin: the District
+    // Admin's ACCEPT / REJECT review (which decides whether the claim can be approved at all — `-235` Y),
+    // the on-demand HISTORY (every upload, with the DECRYPTED accepted dates and notes), and — Story 6.21b
+    // (D5) — the helpline operator's read of a selected member's live claims + their status. All three need
+    // the authenticated-HUMAN chain. `death-certificate` matches all three paths.
     file: 'apps/api/src/modules/claims/claims.death-certificate.routes.ts',
     pathSubstrings: ['death-certificate'],
     owner: 'Story 6.21a',
-    expectedMethods: ['post', 'get'],
+    expectedMethods: ['post', 'get', 'get'],
   },
 ];
 

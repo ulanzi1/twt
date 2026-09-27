@@ -1896,6 +1896,39 @@ const DEATH_CERTIFICATE_REVIEW_STALE_CODES: ReadonlySet<string> = new Set([
   'death_certificate_review.concurrent',
 ]);
 
+// ── Story 6.21b (D5) — the helpline's death-certificate replacement ──────────────────────────────
+
+export const deathCertificateClaimsForMemberKey = (pariwarId: string, memberId: string) =>
+  ['death-certificate-claims-for-member', pariwarId, memberId] as const;
+
+/** The SELECTED member's live claims + their D1 status — ids and status codes only (⛔ no PII; the
+ *  nominee-correction-raisable-claims precedent). */
+export function useDeathCertificateClaimsForMember(pariwarId: string, memberId: string | null, enabled: boolean) {
+  return useQuery({
+    queryKey: deathCertificateClaimsForMemberKey(pariwarId, memberId ?? ''),
+    queryFn: () => api.getDeathCertificateClaimsForMember(pariwarId, memberId as string),
+    enabled: Boolean(memberId) && enabled,
+    // Every read is AUDITED (`admin_death_certificate.claims_read`) — so a read is the operator's own act
+    // (select, send, Refresh), ⛔ never a background window-focus refetch.
+    refetchOnWindowFocus: false,
+  });
+}
+
+/** Send a replacement death certificate on the family's behalf. Invalidates the claims-for-member
+ *  list on EVERY settle — a success (the fresh status) AND a refusal: a 409 means the server's status
+ *  moved on since the list was read (the family's own upload landed, or the claim left the window), and
+ *  the D4 line the operator reads out must ⛔ never contradict the refusal beside it. */
+export function useUploadHelplineDeathCertificate(pariwarId: string, memberId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { claimCaseId: string; file: File }) =>
+      api.uploadHelplineDeathCertificate(pariwarId, input.claimCaseId, input.file),
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: deathCertificateClaimsForMemberKey(pariwarId, memberId ?? '') });
+    },
+  });
+}
+
 /**
  * The District Admin's accept / reject review. A success moves the console packet (the item's status and the
  * approve gate), 6.20's timeline (the accepted date) and — only while it is open — the history.

@@ -40,6 +40,7 @@ import type pg from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { runClaimOcrParity, type ClaimOcrParityDeps, type ClaimOcrParityPayload } from '../src/claim-ocr-parity.js';
+import { createDeterministicOcrProvider } from '../src/ocr/index.js';
 
 const DATABASE_URL = process.env['DATABASE_URL'];
 const hasDatabase = Boolean(DATABASE_URL);
@@ -514,5 +515,80 @@ describe.skipIf(!hasDatabase)('Story 6.21a — death-certificate uploads through
       [s.claimCaseId],
     );
     expect(doc.rows[0]!.ocr_confidence).toBe(1);
+  });
+
+  it('⭐ Story 6.21b (D6) — the death-date flag rides onto a TRACKED upload row too, ⛔ not only claim_documents', async () => {
+    const s = await seedClaim();
+    const DIRTY: OcrProvider = {
+      async extract() {
+        return { documentType: 'death_certificate', fields: { ...FIELDS, dateOfDeath: null }, confidence: 1 };
+      },
+    };
+    const a = await upload(s);
+    await runClaimOcrParity(deps(DIRTY), a.env);
+    const v = await verdicts(s);
+    expect(v.get(a.uploadId)!.parity_flags).toMatchObject({ death_date: 'missing' });
+    const doc = await pool.query<{ parity_flags: Record<string, string> }>(
+      "SELECT parity_flags FROM claim_documents WHERE claim_case_id = $1 AND document_type = 'death_certificate'",
+      [s.claimCaseId],
+    );
+    expect(doc.rows[0]!.parity_flags).toMatchObject({ death_date: 'missing' });
+  });
+
+  async function docFlags(s: Seed): Promise<Record<string, string>> {
+    const doc = await pool.query<{ parity_flags: Record<string, string> }>(
+      "SELECT parity_flags FROM claim_documents WHERE claim_case_id = $1 AND document_type = 'death_certificate'",
+      [s.claimCaseId],
+    );
+    return doc.rows[0]!.parity_flags;
+  }
+
+  it('⭐ Story 6.21b (D6, AC5) — an UNPARSEABLE raw date lands `unreadable` on the tracked upload row AND claim_documents', async () => {
+    const s = await seedClaim();
+    const DIRTY: OcrProvider = {
+      async extract() {
+        return { documentType: 'death_certificate', fields: { ...FIELDS, dateOfDeath: 'not-a-real-date' }, confidence: 1 };
+      },
+    };
+    const a = await upload(s);
+    await runClaimOcrParity(deps(DIRTY), a.env);
+    expect((await verdicts(s)).get(a.uploadId)!.parity_flags).toMatchObject({ death_date: 'unreadable' });
+    expect(await docFlags(s)).toMatchObject({ death_date: 'unreadable' });
+  });
+
+  it('⭐ Story 6.21b (D6, `-249` §3) — a STORAGE fetch failure carries ⛔ no death_date flag, on either row', async () => {
+    const s = await seedClaim();
+    const a = await upload(s);
+    storage.store.delete(a.key); // `getBytes` now throws — the object is gone, the OCR never runs
+    await runClaimOcrParity(deps(), a.env);
+    // (No KYC record is seeded, so the verdict is `missing_member_record` — the death-date flag is computed
+    // BEFORE that early return and would ride it, so its ABSENCE here is the assertion with teeth.)
+    const upRow = (await verdicts(s)).get(a.uploadId)!.parity_flags!;
+    expect(upRow).toMatchObject({ source: 'missing_member_record' });
+    expect(upRow.death_date).toBeUndefined();
+    expect((await docFlags(s)).death_date).toBeUndefined();
+  });
+
+  it('⭐ Story 6.21b (D6; round-2 decision (a)) — a vendor read WITH fields at ZERO confidence still reports its missing date of death (keyed on the fields, ⛔ not confidence)', async () => {
+    const s = await seedClaim();
+    const ZERO: OcrProvider = {
+      async extract() {
+        return { documentType: 'death_certificate', fields: { ...FIELDS, dateOfDeath: null }, confidence: 0 };
+      },
+    };
+    const a = await upload(s);
+    await runClaimOcrParity(deps(ZERO), a.env);
+    expect((await verdicts(s)).get(a.uploadId)!.parity_flags).toMatchObject({ death_date: 'missing' });
+    expect(await docFlags(s)).toMatchObject({ death_date: 'missing' });
+  });
+
+  it('⭐ Story 6.21b (D6, `-249` §3; code review 2026-09-27) — the v1 PRODUCTION provider (zero-confidence empty parse) is ⛔ never flagged "date of death missing"', async () => {
+    const s = await seedClaim();
+    const a = await upload(s);
+    await runClaimOcrParity(deps(createDeterministicOcrProvider()), a.env);
+    const upRow = (await verdicts(s)).get(a.uploadId)!.parity_flags!;
+    expect(upRow).toMatchObject({ source: 'missing_member_record' });
+    expect(upRow.death_date).toBeUndefined();
+    expect((await docFlags(s)).death_date).toBeUndefined();
   });
 });

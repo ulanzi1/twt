@@ -131,7 +131,10 @@ export function VerifierReviewPanel({
           <tbody>
             <Row label="Name" extracted={extracted.deceasedName} onFile={memberRecord?.name ?? null} flag={parityFlags['name']} />
             <Row label="Date of birth" extracted={extracted.dateOfBirth} onFile={memberRecord?.dateOfBirth ?? null} flag={parityFlags['dob']} />
-            <Row label="Date of death" extracted={extracted.dateOfDeath} flag={parityFlags['date']} />
+            {/* Story 6.21b (D6) — the OCR missing/unreadable death-date flag takes precedence over the
+                plausibility flag. Neither rejects anything or blocks a transition; the OCR flag does make
+                the parity outcome `ambiguous` + verifier review (AR-61, D6), which is how it reaches here. */}
+            <Row label="Date of death" extracted={extracted.dateOfDeath} flag={parityFlags['death_date'] ?? parityFlags['date']} />
             <Row label="Issuing authority" extracted={extracted.issuingAuthority} />
             <Row label="Certificate number" extracted={extracted.certificateNumber} />
           </tbody>

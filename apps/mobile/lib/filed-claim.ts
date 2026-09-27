@@ -13,16 +13,21 @@
 
 import type { MemberShepherdResponse } from '@twt/contracts'
 
+import type { DeathCertificatePendingMarker } from './death-certificate-view'
 import { mmkvStorage } from './mmkv'
 
 const FILED_PREFIX = 'filed-claim:'
 const SHEPHERD_CACHE_PREFIX = 'shepherd-cache:'
+const CERTIFICATE_PENDING_PREFIX = 'certificate-pending:'
 
 function filedKey(memberId: string): string {
   return FILED_PREFIX + memberId
 }
 function shepherdCacheKey(claimCaseId: string): string {
   return SHEPHERD_CACHE_PREFIX + claimCaseId
+}
+function certificatePendingKey(claimCaseId: string): string {
+  return CERTIFICATE_PENDING_PREFIX + claimCaseId
 }
 
 /** Stamp the filed claim id for a member (called at acknowledgement, before the draft is cleared) so the
@@ -66,6 +71,43 @@ export function loadCachedShepherd(claimCaseId: string): MemberShepherdResponse 
 export function clearCachedShepherd(claimCaseId: string): void {
   try {
     mmkvStorage.removeItem(shepherdCacheKey(claimCaseId))
+  } catch {
+    // Non-fatal.
+  }
+}
+
+// ── Story 6.21b (D1) — the death-certificate IN-FLIGHT marker ──────────────────────────────────
+// A CLIENT-ONLY display overlay (`death-certificate-view.ts` holds the pure precedence logic that
+// reads this). Written on the upload's 202 ONLY, never on an error. ⛔ Never sent to the server,
+// ⛔ never read by the helpline, ⛔ no status is cached here (`-249` §1 — the offline case renders
+// no notice at all, so there is nothing to cache).
+
+/** Write the in-flight marker after a successful (202) upload. Best-effort. */
+export function writeCertificatePendingMarker(claimCaseId: string, marker: DeathCertificatePendingMarker): void {
+  try {
+    mmkvStorage.setItem(certificatePendingKey(claimCaseId), JSON.stringify(marker))
+  } catch {
+    // Non-fatal — worst case the family is shown the server's own (still true) status.
+  }
+}
+
+/** The stored in-flight marker for a claim, or `null` when none is on record. */
+export function loadCertificatePendingMarker(claimCaseId: string): DeathCertificatePendingMarker | null {
+  // Best-effort, like its siblings: an unreadable store is "no marker" (the server's own status
+  // shows), ⛔ never a throw that would hide a good server read as if offline.
+  try {
+    const raw = mmkvStorage.getItem(certificatePendingKey(claimCaseId))
+    if (raw === null) return null
+    return JSON.parse(raw) as DeathCertificatePendingMarker
+  } catch {
+    return null
+  }
+}
+
+/** Clear the in-flight marker — called whenever the precedence resolver says the server has moved on. */
+export function clearCertificatePendingMarker(claimCaseId: string): void {
+  try {
+    mmkvStorage.removeItem(certificatePendingKey(claimCaseId))
   } catch {
     // Non-fatal.
   }

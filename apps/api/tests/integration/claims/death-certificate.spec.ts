@@ -20,6 +20,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import type { AppDeps } from '../../../src/context.js';
 import * as service from '../../../src/modules/auth/admin/admin-auth.service.js';
+import { signAccessToken } from '../../../src/modules/auth/member/tokens.js';
 import { encryptDeathCertificateReviewField } from '../../../src/modules/claims/death-certificate-crypto.js';
 import { closeScopeTx, openScopeTx } from '../../../src/modules/multi-tenant/scope-tx.js';
 import { buildServer } from '../../../src/server.js';
@@ -586,5 +587,231 @@ describe.skipIf(!hasDatabase)('Story 6.21a — the death-certificate review surf
     // …and the route agrees: the submit the flag would have offered is refused.
     const post = await da.client.inject({ method: 'POST', url: reviewUrl(w), payload: await acceptBody(w) });
     expect(errCode(post.json() as Json), post.body).toBe('death_certificate_review.not_reviewable');
+  });
+
+  // ── Story 6.21b (D1, D5) — the FAMILY's (and the helpline's) status read ───────────────────────
+  const ACCESS_TTL_MS = 15 * 60 * 1000;
+  const memberUrl = (w: World) => `/api/v1/member/claims/${w.claimCaseId}/death-certificate`;
+  const helplineClaimsUrl = (w: World) => `/api/v1/p/${w.pariwarId}/admin/members/${w.memberId}/death-certificate/claims`;
+  function memberClient(w: World) {
+    const c = makeClient(app);
+    const tok = signAccessToken(app, { memberId: w.memberId, pariwarId: w.pariwarId, deviceId: 'test-device' }, ACCESS_TTL_MS);
+    return { inject: (opts: { method: 'GET'; url: string }) => c.inject({ ...opts, headers: { authorization: `Bearer ${tok}` } }) };
+  }
+
+  it('⭐ D1 — pre-verification (intake_converged), no certificate ⇒ missing, upload_allowed true, replacement_allowed false, claim_live true', async () => {
+    const w = await world('intake_converged');
+    const res = await memberClient(w).inject({ method: 'GET', url: memberUrl(w) });
+    expect(res.statusCode, res.body).toBe(200);
+    expect(res.json()).toMatchObject({
+      status: 'missing',
+      replacement_reason: null,
+      replacement_allowed: false,
+      upload_allowed: true,
+      certificate_token: null,
+      claim_live: true,
+      reassurance: null,
+    });
+  });
+
+  it('⭐ D1 (`-247` §2) — pre-verification with a current upload ⇒ awaiting_review, both false — the deferred-upload gap CLOSED (Q1)', async () => {
+    const w = await world('intake_converged');
+    await certificate(w);
+    const res = await memberClient(w).inject({ method: 'GET', url: memberUrl(w) });
+    expect(res.statusCode, res.body).toBe(200);
+    expect(res.json()).toMatchObject({ status: 'awaiting_review', replacement_allowed: false, upload_allowed: false });
+  });
+
+  it('⭐ D1 — in the review window, rejected (unclear date) ⇒ replacement_requested, unclear_date, not_refused, a real certificate_token', async () => {
+    const w = await world('verifier_review');
+    const { uploadId } = await certificate(w);
+    await reject(w);
+    const res = await memberClient(w).inject({ method: 'GET', url: memberUrl(w) });
+    expect(res.statusCode, res.body).toBe(200);
+    expect(res.json()).toMatchObject({
+      status: 'replacement_requested',
+      replacement_reason: 'unclear_date',
+      replacement_allowed: true,
+      upload_allowed: true,
+      certificate_token: uploadId,
+      claim_live: true,
+      reassurance: 'not_refused',
+    });
+  });
+
+  it('⭐ D1 — invariant 1: a member of ANOTHER Pariwar (forged into this Pariwar\'s token) is 404 claim.not_found (no cross-claim oracle)', async () => {
+    const w = await world('intake_converged');
+    const other = await world('intake_converged');
+    const tok = signAccessToken(app, { memberId: other.memberId, pariwarId: w.pariwarId, deviceId: 'd' }, ACCESS_TTL_MS);
+    const c = makeClient(app);
+    const res = await c.inject({ method: 'GET', url: memberUrl(w), headers: { authorization: `Bearer ${tok}` } });
+    expect(res.statusCode).toBe(404);
+    expect(errCode(res.json() as Json)).toBe('claim.not_found');
+  });
+
+  it('⭐ D1 — invariant 1 / checklist 3: a SAME-Pariwar sibling member cannot read another member\'s claim (404, the ownership check itself)', async () => {
+    const w = await world('verifier_review');
+    const siblingId = randomUUID();
+    await inScope(w.pariwarId, (s) =>
+      memberDomain.projectMemberState(s.client, {
+        memberId: ids.memberId(siblingId),
+        pariwarId: ids.pariwarId(w.pariwarId),
+        eventType: 'member.signup_initiated',
+        payload: { from_state: null, to_state: 'pending-kyc', trigger: 'signup', actor: 'member' },
+        actorId: siblingId,
+      }),
+    );
+    const tok = signAccessToken(app, { memberId: siblingId, pariwarId: w.pariwarId, deviceId: 'd' }, ACCESS_TTL_MS);
+    const res = await makeClient(app).inject({ method: 'GET', url: memberUrl(w), headers: { authorization: `Bearer ${tok}` } });
+    expect(res.statusCode).toBe(404);
+    expect(errCode(res.json() as Json)).toBe('claim.not_found');
+    // POSITIVE CONTROL — the owner, same Pariwar, same claim, reads it.
+    expect((await memberClient(w).inject({ method: 'GET', url: memberUrl(w) })).statusCode).toBe(200);
+  });
+
+  it('⭐ AC2 — the family\'s UPLOAD with a STALE `claim_handover` elevation is 403 auth.step_up_required; nothing stored, nothing queued (positive control: a fresh one is 202)', async () => {
+    const w = await world('verifier_review');
+    const tok = signAccessToken(app, { memberId: w.memberId, pariwarId: w.pariwarId, deviceId: 'test-device' }, ACCESS_TTL_MS);
+    const now = deps.clock();
+    const elevate = (until: Date) =>
+      td.pool.query(
+        `INSERT INTO member_step_up_elevations (member_id, action_context, elevated_until) VALUES ($1, 'claim_handover', $2)
+           ON CONFLICT (member_id, action_context) DO UPDATE SET elevated_until = EXCLUDED.elevated_until`,
+        [w.memberId, until.toISOString()],
+      );
+    const send = async () => {
+      const { body, ct } = multipart(Buffer.from('%PDF-1.4 fake'), 'cert.pdf', 'application/pdf');
+      const storeBefore = td.claimDocumentStorage.store.size;
+      const queueBefore = td.claimOcrParityQueue.enqueued.length;
+      const res = await makeClient(app).inject({
+        method: 'POST',
+        url: `/api/v1/member/claims/${w.claimCaseId}/documents?documentType=death_certificate`,
+        payload: body as unknown as object,
+        headers: { 'content-type': ct, authorization: `Bearer ${tok}` },
+      });
+      return {
+        res,
+        stored: td.claimDocumentStorage.store.size - storeBefore,
+        queued: td.claimOcrParityQueue.enqueued.length - queueBefore,
+      };
+    };
+    try {
+      await elevate(new Date(now.getTime() - 60_000)); // expired a minute ago
+      const stale = await send();
+      expect(stale.res.statusCode, stale.res.body).toBe(403);
+      expect(errCode(stale.res.json() as Json)).toBe('auth.step_up_required');
+      expect({ stored: stale.stored, queued: stale.queued }).toEqual({ stored: 0, queued: 0 });
+
+      await elevate(new Date(now.getTime() + 10 * 60_000));
+      const fresh = await send();
+      expect(fresh.res.statusCode, fresh.res.body).toBe(202);
+      expect({ stored: fresh.stored, queued: fresh.queued }).toEqual({ stored: 1, queued: 1 });
+    } finally {
+      await td.pool.query(`DELETE FROM member_step_up_elevations WHERE member_id = $1`, [w.memberId]);
+    }
+  });
+
+  it('⭐ AC4 — the helpline UPLOAD denies a cross-Pariwar request: another Pariwar\'s URL (no grant) and a foreign claim under the operator\'s OWN Pariwar are both 404, nothing stored', async () => {
+    const w = await world('verifier_review');
+    const { body, ct } = multipart(Buffer.from('%PDF-1.4 fake'), 'cert.pdf', 'application/pdf');
+    const post = (client: Client, pariwarId: string) =>
+      client.inject({
+        method: 'POST',
+        url: `${base(pariwarId, w.claimCaseId)}/documents?documentType=death_certificate`,
+        payload: body as unknown as object,
+        headers: { 'content-type': ct },
+      });
+    const storeBefore = td.claimDocumentStorage.store.size;
+    const queueBefore = td.claimOcrParityQueue.enqueued.length;
+
+    // (a) W's operator, a DIFFERENT Pariwar in the URL — holds no grant there.
+    const own = await actor(w.pariwarId, 'helpline_operator', 'pariwar', w.pariwarId, 'Harsh (Helpline)');
+    expect((await post(own.client, randomUUID())).statusCode).toBe(404);
+
+    // (b) ANOTHER Pariwar's operator, their OWN Pariwar in the URL, W's claim id — the claim is not theirs.
+    const elsewhere = randomUUID();
+    const foreign = await actor(elsewhere, 'helpline_operator', 'pariwar', elsewhere, 'Meera (Helpline)');
+    const res = await post(foreign.client, elsewhere);
+    expect(res.statusCode, res.body).toBe(404);
+
+    expect(td.claimDocumentStorage.store.size - storeBefore).toBe(0);
+    expect(td.claimOcrParityQueue.enqueued.length - queueBefore).toBe(0);
+    // POSITIVE CONTROL — W's own operator, W's own Pariwar, is accepted.
+    expect((await post(own.client, w.pariwarId)).statusCode).toBe(202);
+  });
+
+  it('⭐ BW-G5 (AC1, `-249` §5) — a claim moved on by a NON-certificate document, with ⛔ no certificate, reads `missing` and OFFERS the upload', async () => {
+    // `documents_pending` reached on a hospital record — the certificate itself was never sent.
+    const w = await world('documents_pending');
+    await inScope(w.pariwarId, (s) =>
+      s.client.query(
+        `INSERT INTO claim_documents (claim_document_id, pariwar_id, claim_case_id, document_type, storage_object_key,
+           content_type, byte_size, parity_outcome, parity_flags, ocr_confidence, verifier_review_required)
+         VALUES ($1, $2, $3, 'hospital_record', $4, 'application/pdf', 1024, 'match', '{}'::jsonb, 0.9, false)`,
+        [randomUUID(), w.pariwarId, w.claimCaseId, `pariwar/${w.pariwarId}/claim/${w.claimCaseId}/hospital_record/${randomUUID()}`],
+      ),
+    );
+    const res = await memberClient(w).inject({ method: 'GET', url: memberUrl(w) });
+    expect(res.statusCode, res.body).toBe(200);
+    expect(res.json()).toMatchObject({ status: 'missing', upload_allowed: true, certificate_token: null, claim_live: true });
+    // …and the helpline sees the SAME row.
+    const { client } = await actor(w.pariwarId, 'helpline_operator', 'pariwar', w.pariwarId, 'Harsh (Helpline)');
+    const list = await client.inject({ method: 'GET', url: helplineClaimsUrl(w) });
+    expect((list.json() as { claims: Json[] }).claims).toMatchObject([{ status: 'missing', upload_allowed: true }]);
+  });
+
+  it('⭐ D1 — no step-up required: a plain member session (no elevation) reads it', async () => {
+    const w = await world('intake_converged');
+    const res = await memberClient(w).inject({ method: 'GET', url: memberUrl(w) });
+    expect(res.statusCode, res.body).toBe(200);
+  });
+
+  it('⭐ D5 — the helpline operator sees the SAME status the family sees, and can send a replacement when upload_allowed (`-247` §2, Q1 closed)', async () => {
+    const w = await world('intake_converged');
+    const { client } = await actor(w.pariwarId, 'helpline_operator', 'pariwar', w.pariwarId, 'Harsh (Helpline)');
+
+    const list = await client.inject({ method: 'GET', url: helplineClaimsUrl(w) });
+    expect(list.statusCode, list.body).toBe(200);
+    const listBody = list.json() as { member_id: string; claims: Json[] };
+    expect(listBody.member_id).toBe(w.memberId);
+    expect(listBody.claims).toMatchObject([{ claim_case_id: w.claimCaseId, status: 'missing', upload_allowed: true, reassurance: null }]);
+
+    // ⭐ The SAME resolver, the SAME row — the family's own read agrees (BW-J5).
+    const family = await memberClient(w).inject({ method: 'GET', url: memberUrl(w) });
+    expect((family.json() as Json).status).toBe(listBody.claims[0]!.status);
+
+    // A certificate put off at filing (`intake_converged`) is now sendable through the HELPLINE too
+    // (`-247` §2 — the pre-6.21b upload handler already accepted it here; this proves the offer agrees).
+    const { res: uploadRes, stored, queued } = await upload(w);
+    expect(uploadRes.statusCode, uploadRes.body).toBe(202);
+    expect({ stored, queued }).toEqual({ stored: 1, queued: 1 });
+
+    // The list-read audit line is MEMBER-scoped, ⛔ not claim-scoped (`auditsFor` filters on
+    // `claim_case_id`, which this event does not carry — it lists ALL of a member's live claims).
+    const lines = td.auditSink
+      .ofType('admin_death_certificate.claims_read')
+      .filter((e) => (e.context as Json | undefined)?.member_id === w.memberId);
+    expect(lines.length).toBeGreaterThan(0);
+    expect(lines[0]!.context).toMatchObject({ member_id: w.memberId, claim_count: 1 });
+    for (const l of lines) {
+      expect(JSON.stringify(l)).not.toContain(NOTE);
+    }
+  });
+
+  it('⭐ D5 — a cross-Pariwar request is denied, and a tampered session is EXACTLY 404 with a positive control', async () => {
+    const w = await world('intake_converged');
+    const other = randomUUID();
+    const { client, userId } = await actor(w.pariwarId, 'helpline_operator', 'pariwar', w.pariwarId, 'Harsh (Helpline)');
+
+    // Cross-Pariwar: the SAME operator session, a DIFFERENT pariwarId in the URL — the r9-voting/
+    // cycle-freeze family's 404 posture for a `pariwar`-dimension key (the operator holds no grant
+    // there at all, so the permission hook's own lookup comes back empty — not a leak).
+    const cross = await client.inject({ method: 'GET', url: `/api/v1/p/${other}/admin/members/${w.memberId}/death-certificate/claims` });
+    expect(cross.statusCode).toBe(404);
+
+    // POSITIVE CONTROL — the untampered session reaches it.
+    expect((await client.inject({ method: 'GET', url: helplineClaimsUrl(w) })).statusCode).toBe(200);
+    await td.pool.query(`UPDATE admin_sessions SET sess = jsonb_set(sess, '{userId}', to_jsonb($1::text)) WHERE user_id = $2`, [randomUUID(), userId]);
+    expect((await client.inject({ method: 'GET', url: helplineClaimsUrl(w) })).statusCode).toBe(404);
   });
 });

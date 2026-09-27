@@ -16,6 +16,7 @@
 
 import { claim as claimDomain, ids, member as memberDomain } from '@twt/domain';
 import type {
+  DeathCertificateHelplineClaimsResponse,
   DeathCertificateHistoryResponse,
   DeathCertificateReviewRequest,
   DeathCertificateReviewWriteResponse,
@@ -336,6 +337,60 @@ export function createDeathCertificateHandlers(deps: AppDeps) {
       });
 
       return { claim_case_id: claimCaseId, uploads, truncated: history.truncated };
+    },
+
+    /**
+     * GET …/admin/members/:memberId/death-certificate/claims — Story 6.21b (D5). The SELECTED
+     * deceased member's live claims, each with the SAME D1 status the family sees, from the SAME
+     * resolver (BW-J5 — one server-side source of truth). ⛔ No `certificate_token` on the wire here:
+     * the in-flight marker is a member-app-only concept. Bounded by `listLiveClaimsForDeceasedMember`'s
+     * own `.limit(10)` — ⛔ a second query is never written.
+     *
+     * ⚠ DELIBERATE — ⛔ no server-side read-back gate. Any `claim.file` holder at the Pariwar may list any
+     * member's live claims here; the caller's identity read-back is the helpline page's SCRIPT, enforced
+     * client-side only (D5: "⚠ client-side only"), as `<HelplineNomineeCorrection>`'s raisable-claims read
+     * already is. Acceptable because the response is ids + status codes, ⛔ no PII and ⛔ no token.
+     * Re-examine if this response ever carries more than ids and status codes, or if a server-side
+     * "caller verified" session fact is introduced.
+     */
+    async getClaimsForMember(
+      request: FastifyRequest,
+    ): Promise<DeathCertificateHelplineClaimsResponse> {
+      const { scopeTx, actorId, pariwarId } = scopeOf(request);
+      const { memberId } = request.params as { memberId: string };
+      const memberIdBrand = ids.memberId(memberId);
+      const liveClaims = await claimDomain.listLiveClaimsForDeceasedMember(scopeTx.tx, pariwarId, memberIdBrand);
+      const claims = await Promise.all(
+        liveClaims.map(async (c) => {
+          const result = await claimDomain.readDeathCertificateFamilyStatus(
+            scopeTx.tx,
+            pariwarId,
+            c.claimCaseId,
+            c.currentState,
+          );
+          return {
+            claim_case_id: c.claimCaseId,
+            claim_state: c.currentState,
+            created_at: c.createdAt.toISOString(),
+            status: result.status,
+            replacement_reason: result.replacementReason,
+            upload_allowed: result.uploadAllowed,
+            reassurance: result.reassurance,
+          };
+        }),
+      );
+      emitAuthAuditBestEffort(deps, request, 'admin_death_certificate.claims_read', {
+        actorId,
+        pariwarId: scopeTx.pariwarId,
+        resourceLocator: `member:${memberIdBrand}`,
+        context: {
+          // The BRANDED (lower-cased) id — the same spelling as the locator, so a join on either finds it.
+          member_id: memberIdBrand,
+          claim_count: claims.length,
+          statuses: claims.map((c) => c.status),
+        },
+      });
+      return { member_id: memberId, claims };
     },
   };
 }

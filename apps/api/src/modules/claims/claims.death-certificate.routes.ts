@@ -1,16 +1,19 @@
 // The death certificate's clear-date rule on the District Admin's console — Story 6.21a (Task 4; D9, D13).
+// Story 6.21b (D5) ADDS the helpline operator's read of a SELECTED member's live claims + their status.
 //
-// ⭐ BOTH routes are ADMIN routes composing the human-actor chain [requireAdminSession, scopeResolutionHook,
+// ⭐ ALL THREE routes are ADMIN routes composing the human-actor chain [requireAdminSession, scopeResolutionHook,
 // requirePermissionHook] — enrolled in the claim-adjudication human-actor gate's COVERAGE_SET — and every
 // path is a PLAIN STRING LITERAL (the gate fails a non-literal path).
-// ⭐ Both gate at `dimension: 'district'` against the deceased member's SERVER-DERIVED posting district
-// (6.18's exported `resolveNomineeNameCheckDistrict` stash — the client never submits it), read through a
-// LOCAL closure (`districtFromStash` is a per-file closure, ⛔ not a shared helper).
+// ⭐ The 6.21a pair gates at `dimension: 'district'` against the deceased member's SERVER-DERIVED posting
+// district (6.18's exported `resolveNomineeNameCheckDistrict` stash — the client never submits it), read
+// through a LOCAL closure (`districtFromStash` is a per-file closure, ⛔ not a shared helper).
 //   · the REVIEW write — `claim.review_death_certificate` (D13, `district_admin`);
 //   · the HISTORY read — `claim.verify`, reused (its holders already see the certificate and its OCR date).
-// ⛔ No member or helpline surface here — those are Story 6.21b's.
+// ⭐ The 6.21b list read gates at `dimension: 'pariwar'` — `claim.file`, the helpline upload's OWN key
+// (⛔ no district resolver: the operator is ⛔ not district-scoped).
 
 import {
+  DeathCertificateHelplineClaimsResponse,
   DeathCertificateHistoryResponse,
   DeathCertificateReviewRequest,
   DeathCertificateReviewWriteResponse,
@@ -33,6 +36,12 @@ import { resolveNomineeNameCheckDistrict } from './claims.nominee-name-check.rou
 const TAG = 'death-certificate';
 
 const ClaimParam = z.object({ pariwarId: z.string().uuid(), claimCaseId: z.string().uuid() }).strict();
+/** Story 6.21b (D5) — the SELECTED deceased member's live claims. */
+const MemberParam = z.object({ pariwarId: z.string().uuid(), memberId: z.string().uuid() }).strict();
+
+/** Story 6.21b (D5) — reused from the helpline upload route (`claims.helpline.routes.ts`): the operator
+ *  is ⛔ not district-scoped, so the list read gates on the SAME `claim.file` key at `pariwar`. */
+const DEATH_CERTIFICATE_LIST_KEY = 'claim.file';
 
 export function registerDeathCertificateRoutes(app: FastifyInstance, deps: AppDeps): void {
   const h = createDeathCertificateHandlers(deps);
@@ -44,6 +53,7 @@ export function registerDeathCertificateRoutes(app: FastifyInstance, deps: AppDe
 
   const requireReview = requirePermissionHook(deps, DEATH_CERTIFICATE_REVIEW_KEY, { dimension: 'district', resolveValue: districtFromStash });
   const requireHistory = requirePermissionHook(deps, DEATH_CERTIFICATE_HISTORY_KEY, { dimension: 'district', resolveValue: districtFromStash });
+  const requireList = requirePermissionHook(deps, DEATH_CERTIFICATE_LIST_KEY);
 
   // D1 / D4 — the District Admin ACCEPTS (typing the date) or REJECTS the current certificate.
   r.post(
@@ -68,5 +78,15 @@ export function registerDeathCertificateRoutes(app: FastifyInstance, deps: AppDe
       preHandler: [adminSession, scope, resolveDistrict, requireHistory],
     },
     h.getHistory,
+  );
+
+  // Story 6.21b (D5) — the helpline operator's read of the selected member's live claims + status.
+  r.get(
+    '/api/v1/p/:pariwarId/admin/members/:memberId/death-certificate/claims',
+    {
+      schema: { params: MemberParam, response: { 200: DeathCertificateHelplineClaimsResponse }, tags: [TAG] },
+      preHandler: [adminSession, scope, requireList],
+    },
+    h.getClaimsForMember,
   );
 }

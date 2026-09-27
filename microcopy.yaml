@@ -304,6 +304,25 @@ scope:
     # above. ⚠ The broad `apps/mobile/**` glob remains OWED and is recorded as such.
     - apps/mobile/app/(claim)/nominee-review.tsx
     - apps/mobile/components/life-events/NomineeForm.tsx
+    # ⭐ Story 6.21b (D7) — every new or edited mobile file the death-certificate replacement surfaces
+    # touch. Probed clean at validate: `document.tsx` and `handover-otp.tsx` raise EXACTLY the two
+    # literals allow-listed below and nothing else; the new files carry ⛔ no colour literal at all (C3).
+    - apps/mobile/app/(claim)/certificate-replacement.tsx
+    - apps/mobile/app/(claim)/shepherd.tsx
+    - apps/mobile/app/(claim)/document.tsx
+    - apps/mobile/app/(claim)/handover-otp.tsx
+    - apps/mobile/app/(claim)/index.tsx
+    - apps/mobile/components/claim/ClaimProxyFlowEntry.tsx
+    - apps/mobile/components/claim/DeathCertificateNotice.tsx
+    - apps/mobile/lib/filed-claim.ts
+    - apps/mobile/lib/use-death-certificate-upload.ts
+    - apps/mobile/lib/use-handover-otp.ts
+    - apps/mobile/lib/claim-entry-gate.ts
+    - apps/mobile/lib/fetch-claim-entry-outcome.ts
+    - apps/mobile/lib/use-death-certificate-status.ts
+    - apps/mobile/lib/death-certificate-view.ts
+    - apps/mobile/lib/death-certificate-announce.ts
+    - apps/mobile/lib/death-certificate-upload-outcome.ts
   # Member-visible copy (locale strings) — POPULATED at Story 2.5 (AC6c) for the first
   # member surface: the public Niyamavali (apps/public). These globs scan the PURE
   # member copy (the `niyamavali` i18n namespace strings), so the member-register
@@ -583,3 +602,21 @@ allow:
       apps/mobile surfaces that use it, same missing remedy. Scoped to this one literal;
       vocabulary, tone and numeral teeth on this file are untouched. Owed: a token layer
       for apps/mobile (deferred-work).
+  # ⭐ Story 6.21b (D7) — the SAME gap, on the two files it edits that already carried the app-wide
+  # hex convention (`document.tsx`, `handover-otp.tsx`, both pre-existing literals, unchanged by this
+  # story). ⛔ No entry for the new screen/component/hook files 6.21b adds — C3: they carry NO colour
+  # literal and NO status colour at all (status is text-only there).
+  - file: apps/mobile/app/(claim)/document.tsx
+    pattern: '#(B00020|1E8E3E)\b'
+    reason: >-
+      Story 6.5's pre-existing success/error hexes — the same app-wide apps/mobile convention
+      as the 6.18 entries above, unchanged by 6.21b. Scoped to these two literals only;
+      vocabulary, tone and numeral teeth on this file are untouched. Owed: a token layer
+      for apps/mobile (deferred-work).
+  - file: apps/mobile/app/(claim)/handover-otp.tsx
+    pattern: '#C0392B\b'
+    reason: >-
+      Story 6.2's pre-existing error hex — the same app-wide apps/mobile convention as the
+      6.18 entries above, unchanged by 6.21b. Scoped to this one literal; vocabulary, tone
+      and numeral teeth on this file are untouched. Owed: a token layer for apps/mobile
+      (deferred-work).

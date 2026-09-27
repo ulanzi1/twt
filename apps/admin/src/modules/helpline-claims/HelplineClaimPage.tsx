@@ -35,6 +35,7 @@ import {
 import { MemberLookupForm } from '../member-status/MemberLookupForm.js';
 import { MemberSearchResults } from '../member-status/MemberSearchResults.js';
 import { BankDetailsCard } from './BankDetailsCard.js';
+import { HelplineCertificateReplacement } from './HelplineCertificateReplacement.js';
 import { HelplineConsoleShell, type HelplineIntakeResult } from './HelplineConsoleShell.js';
 import { HelplineNomineeCorrection } from './HelplineNomineeCorrection.js';
 import { readBackScript, resolveEn } from './i18n-en.js';
@@ -415,6 +416,12 @@ export function HelplineClaimPage({ pariwarId }: HelplineClaimPageProps): ReactE
       />
       {/* Story 6.20 (AC7, CC2) — the operator's NOMINEE-correction raise (⛔ not bank details). */}
       <HelplineNomineeCorrection
+        pariwarId={pariwarId}
+        memberId={selected?.memberId ?? null}
+        identityConfirmed={identityConfirmed}
+      />
+      {/* Story 6.21b (D5) — the operator's death-certificate REPLACEMENT send. */}
+      <HelplineCertificateReplacement
         pariwarId={pariwarId}
         memberId={selected?.memberId ?? null}
         identityConfirmed={identityConfirmed}

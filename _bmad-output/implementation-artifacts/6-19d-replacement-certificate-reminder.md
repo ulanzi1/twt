@@ -14,6 +14,14 @@ The shared spec `6-19-correction-return-reminders-and-closure.md` is part of thi
 
 Status: backlog
 
+> ⭐⭐ **UNFENCED 2026-09-27 — the Panel ruled protection 3: `2026-09-27-259`** (option B, amended): the correction schedule to day 90,
+> then **monthly, stopping after 180 days**; **one** posted letter to a person whose phone is dead; **SMS** to the people the family agreed
+> may be contacted (`-255` F7 **extended**); a **never-sent** certificate chased the same way **once the claim is being checked** (⛔ not while
+> filing). ⛔ The claim still never closes and has no time limit. ⚠ **Next: a `bmad-create-story` pass on this row** derives the ACs from
+> `-259` and flips it to `ready-for-dev` — ⛔ not done by this annotation. ⭐ **`-260` settles the rest:** a **second** rejected certificate
+> starts a **new 180 days** (G5); after day 90 the reminders fall on **days 120, 150 and 180**, ⛔ none after (G6). District Admin reminders
+> for a certificate wait are ours to design (⛔ not the Panel's).
+
 > ⭐ **A go-live coupling of Story 6.21a** (`epics.md` §6.21a: *"Go-live couplings … (2) 6.19's CC1 reminder"*) — 6.21a must not go live
 > without this. ⛔ Nothing is live today.
 > ⛔ **Fenced on its routing note** (protection 3). Depends on 6.19a (the contact record) and 6.19b (the SMS path and the reminder record), both
@@ -69,4 +77,6 @@ certificate wait; **and** ⛔ no time limit is imposed.
 
 | Version | Date | Change |
 |---|---|---|
+| v1.2 | 2026-09-27 | **`-260` G5–G6 recorded** — the restart and the days. |
+| v1.1 | 2026-09-27 | **`-259` recorded — the fence is lifted**; ACs to derive. Status stays `backlog` until that pass. |
 | v1.0 | 2026-09-27 | Split from Story 6.19 v0.9 (D13). AC12 carried verbatim; the CC1 section re-homed. `backlog` — fenced on its routing note (drafted 2026-09-27, unsent). |

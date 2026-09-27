@@ -72,6 +72,9 @@ Status: split — ⛔ this file has no sprint row; it is the shared spec of four
 | `-255` | **F2** a Super Admin **refusal** is **appealable once** (a closure never); **F3** every Super Admin decision carries a **note and a reason**; **F4** an approval despite the name problem needs **nothing more** (money may go to the mismatched account — chosen knowingly); **F5** the letter goes to **the person whose phone is dead**, at their own address; **F6** **each declared nominee** is reminded; ⭐ **F7** the plan is **WIDENED — SMS reminders** to people the agreement covers (a new **DLT template**, a **per-message cost**; PRD §4.10 + architecture §3.4 owe an **annotation**); **F8** the claimant-to-nominee list = **nineteen** family relations, ⛔ no `other`. | Recipients, channel, Super Admin rules. |
 | `-256` | **F1 = option E**: the Super Admin may hold an escalated claim **under review** (with a note; ⛔ nothing paid, closed or refused meanwhile), **⛔ no hard deadline, a reminder every 30 days**, and ⭐ **may DIRECT the Pariwar Admin and the District Admin** — a **new power**, recorded against the named admin, who is reminded and **records what they did**. The review ends only with a decision + note. Restarting the family's reminders happens **only as a direction** (ours). | The review hold and the direction record. |
 | `-257` | **Supersedes `-237` cl.1**: the **nominee** relationship list gains brother-in-law, son-in-law, mother-in-law, father-in-law, grandparent — **twenty**. `other` still forecloses correction (`-237` cl.2). | ⭐ F8's nineteen = these twenty **minus `other`** (one source). |
+| `-258` | **V = option B**: every return **says who must act** — the Pariwar Admin marks *family* or *staff*, the District Admin may change it with a note; ⭐ **only while the family must act** is the family reminded, and ⭐ **only then can the claim ever be closed "for no response"**; staff cases chase **staff** (day 12 → Pariwar Admin, day 90 → **Super Admin**, who may review and direct); the District Admin may record **"no correction needed"** (note + fresh name check) and the Pariwar Admin approves or keeps it sent back; a switch to *family* starts the family's 90 days **that day**; the staff-case app line *"Your claim is still open — we are checking the bank details"*. ⚠ **Narrows** `-227` cl.2, `-230` cl.1–2, `-231` A/B; **widens** `-256` cl.3. | The mark, and every family reminder and closure conditioned on it (6.19b, 6.19c). |
+| `-259` | **CC1 = option B, amended**: the certificate reminder runs the correction schedule to day 90, then monthly — ⭐ **stopping after 180 days**; **one** posted letter for a dead phone; SMS to the agreed people (**F7 extended**); a never-sent certificate is chased once the claim is being checked. ⛔ The claim still never closes. | 6.19d's schedule — unfenced. |
+| `-260` | **G1–G6**: the Super Admin may **decide** a staff case at day 90 — approve **only with a fresh passing name check**, or refuse (appealable once), ⛔ never close (**widens** `-258`/`-256`); the Pariwar Admin says who must act when keeping a "no correction needed" claim (**widens** `-258` cl.1); ⛔ **no text** after a Super Admin refusal or approval; the first reminder stays the next morning; a second rejected certificate restarts the 180 days; monthly = days 120, 150, 180. | ⭐ Every Panel question on the set is answered. |
 
 ## Story
 
@@ -103,6 +106,8 @@ person the family agreed may be contacted; a posted letter to anyone whose phone
 9. **⛔ New claimant PII is Tier-1, gated, audited, never logged — and has no erasure path yet.** Record the gap; do ⛔ not fix it (T8).
 10. **⛔ The certificate wait is never closed** (CC1 protection 2): the day-90 closure keys on a **correction return**, ⛔ never on a
     certificate wait (AC12).
+11. **⛔ A family is never chased or closed for a silence that was never theirs** (`-258`): only a return whose **latest mark is "the family
+    must act"** reminds the family or can be closed "for no response"; a staff case chases **staff**. (AC16, AC17)
 
 ## 📜 Policy meaning (AI-10-1)
 
@@ -113,7 +118,9 @@ person the family agreed may be contacted; a posted letter to anyone whose phone
 3. a **Super Admin refusal can be appealed once** (unless the appeal was already used);
 4. on a claim escalated after a declined closure, **a Super Admin may approve payment even though the bank account is ⛔ not in the
    nominee's name**;
-5. a death whose claim was closed for no response can be **filed again only with a District Admin's or the helpline's confirmation**.
+5. a death whose claim was closed for no response can be **filed again only with a District Admin's or the helpline's confirmation**;
+6. ⭐ (`-258`) a claim can be closed for no response **only if the return says the family must act** — and a return found to need **no
+   correction** can be approved **without** one, once the District Admin records it (with a fresh name check) and the Pariwar Admin agrees.
 
 **The sentence, in the family's terms (ours, for the Panel to correct):** *"If your bank details need correcting we will remind you
 regularly by text message, and if we cannot reach a person by phone we will write to them by post. If after 90 days we have still not
@@ -145,18 +152,19 @@ neither ⇒ **S** (a go-live gate, ⛔ not a build blocker).
 | **D3** | The days and 10:00 — **the Panel's**. | `-250` #5 | ✅ AC2 |
 | **N1** | Nominee list → twenty. | `-257` | ✅ AC13 |
 | **S** | The privacy policy's purpose; FR-43A. | — (counsel, Story 0.13) | ⛔ **go-live gate**, never a Panel note |
-| **CC1 protection 3** | ⏳ **UNRULED** — routing note `…-2026-09-27-6-19d-replacement-certificate-reminder.md` **drafted, ⛔ not sent**. | — | ⛔ **6.19d is fenced** (`backlog`) |
-| **V** (NEW, widened) | ⏳ A return that is **⛔ not the family's to fix** — a staff mistake (helpline typing, a wrong name check) or no mistake at all: is the family reminded, and can it be closed "for no response"? Routing note `…-2026-09-27-6-19-return-not-the-familys-to-fix.md` **drafted, ⛔ not sent** (ours: B — the return records who must act; only a family-must-act return reminds the family or can be closed). | — | ⚠ ⛔ not a build blocker, but if ruled B/C it changes the return (6.18's action), 6.19b's family reminders and 6.19c's closure — ⭐ **best answered before 6.19b is built** |
-| **W** (NEW) | ⏳ What a family is told when a **Super Admin refuses or approves** — see below. | — | ⚠ non-blocking (author default stands) |
+| **CC1 protection 3** | ✅ **RULED** — option B amended: correction schedule to day 90, then monthly, **stop after 180 days**; one letter; SMS extended; a never-sent certificate chased once checking starts. | `-259` | ✅ **6.19d unfenced** — its ACs owe a `bmad-create-story` pass (stays `backlog` until then) |
+| **V** (NEW, widened) | ✅ **RULED — option B**: the return says who must act; only a family-must-act return reminds the family or can be closed; staff cases chase staff (→ Super Admin at day 90); "no correction needed" + the Pariwar Admin's approval; a switch to family restarts the family's 90 days. | `-258` | ✅ Buildable — **AC16** (6.19b), **AC17** (6.19c) |
+| **W** | ✅ **RULED by `-260` G3 = A** — ⛔ no new message after a Super Admin refusal or approval; the app and the helpline carry it (D23 stands as first written). | `-260` | ✅ |
+| **G1–G6** | ✅ **RULED** — G1 B (the Super Admin may approve a staff case only with a fresh passing check, or refuse — appealable once; ⛔ never close) · G2 A (the Pariwar Admin says who must act when keeping) · ⚠ **G3 A — ⛔ no text after a Super Admin refusal or approval (our B ⛔ not taken)** · G4 A (first reminder the next morning) · G5 A (a second rejection restarts 180 days) · G6 confirmed (days 120, 150, 180). | `-260` | ✅ 6.19c (AC17 revised) · 6.19d |
 
 ### §0 run in this pass — the three items still open
 
-- **CC1 protection 3 — the certificate reminder's schedule and channels (incl. letters, and whether `missing` is chased).** §0 result:
+- ✅ **RULED `-259`.** **CC1 protection 3 — the certificate reminder's schedule and channels (incl. letters, and whether `missing` is chased).** §0 result:
   ⭐ **the Panel's.** It fixes **what messages a family receives and whether the Trust writes to them by post** — exactly the ground on
   which `-250` treated this story's own schedule as the Panel's (*"each default fixes a date, a message or an alert a real person
   receives"*). ⇒ a routing note from the template is owed **before 6.19d builds anything**; ⛔ reusing the correction-return schedule by
   default would be deciding it for them. **6.19d is fenced (`backlog`); nothing in 6.19a–c waits on it.**
-- **V — a return that needs NO correction** ⭐ *(WIDENED 2026-09-27 at BigDev's direction to every return that is ⛔ not the family's to fix — staff mistakes too; see the note `…-2026-09-27-6-19-return-not-the-familys-to-fix.md`. The paragraph below is the narrower first framing, kept.)* (`deferred-work.md`, 6.18 chunk-1 item *"A return clears ONLY through a bank rewrite"* — its
+- ✅ **RULED `-258` (option B).** **V — a return that needs NO correction** ⭐ *(WIDENED 2026-09-27 at BigDev's direction to every return that is ⛔ not the family's to fix — staff mistakes too; see the note `…-2026-09-27-6-19-return-not-the-familys-to-fix.md`. The paragraph below is the narrower first framing, kept.)* (`deferred-work.md`, 6.18 chunk-1 item *"A return clears ONLY through a bank rewrite"* — its
   trigger is *"authoring Story 6-19 — its ACs must say what the District Admin does when the return needs no correction"*). Today a return
   clears only when **every account is rewritten after it** and a fresh passing check exists; a District Admin who finds the accounts
   already right can clear it only by a **no-op helpline rewrite with an invented reason** — and under this story the family would be
@@ -479,7 +487,7 @@ Where a decision only records a Panel ruling it says so.
   ⚠ The template registry is a **new file** beside the OTP one — ⛔ do not add a category to `SMS_DLT_TEMPLATE_REGISTRY` or to `AlertCategory`.
   *Cost:* a 10th send path to maintain; it is the only one that fits F7 without widening bulk SMS.
 - **D8 — REVISED. Six permission keys**, each with its own doc-block reuse-check, decided in ONE author-commit (6.19a Task 0) and minted by the slice
-  that uses them — 6.19b key (1), catalog 48 → 49; 6.19c keys (2)–(6), 49 → 50; keys 56 → **62** in all: (1) **record a posted letter** — district, `district_admin`; (2) **request a closure** — district, `district_admin`; (3) **decide a
+  that uses them — 6.19b key (1), catalog 48 → 49; 6.19c keys (2)–(6), 49 → 50; keys 56 → **62** in all (⭐ **64** once `-258`'s keys (7) and (8) are added — see D25–D29): (1) **record a posted letter** — district, `district_admin`; (2) **request a closure** — district, `district_admin`; (3) **decide a
   closure** — Pariwar, `pariwar_admin`; (4) **decide an escalated claim** (close / refuse / approve-despite-the-name) — `super_admin` only (no
   `roles.ts` const, the drive-target precedent); (5) **hold under review and direct** — `super_admin` only; (6) **confirm a re-file after a
   closure** — `district_admin` (district) and `helpline_operator` (Pariwar), per-request dimension like `resolveQueueScopeStash`. **Reads** reuse
@@ -553,7 +561,7 @@ Where a decision only records a Panel ruling it says so.
   (each effective nominee, and the claimant when none of them), ≥ 1 reminder `accepted` (or `delivered`) **or** a letter with a recorded
   delivery date. A closure **request** refuses otherwise (**409 `closure.not_reached`**, naming ⛔ no person in the body — a count and the
   roles only).
-- **D23 — NEW. Family notices:** the closure sends a name-free **closure notice** SMS to each reached person (en/hi per `contact_locale`); a
+- ✅ **D23 — CONFIRMED by `-260` G3 (A) — ⛔ no text after a Super Admin refusal or approval.** **D23 — NEW. Family notices:** the closure sends a name-free **closure notice** SMS to each reached person (en/hi per `contact_locale`); a
   Super Admin refusal or approval sends ⛔ no new SMS (W — a confirm for the Panel's next note). The member app derives
   **`closed_no_response`** through a **new contract field** on the claim status, ⛔ never `appeal_exhausted` (`deriveAppealView` would show the
   external-remedy disclosure — the wrong text).
@@ -561,6 +569,36 @@ Where a decision only records a Panel ruling it says so.
   (`appeal_flow_legal_review_status`, a tracked config flag). Recommended: record M and S in the architectural launch-gate inventory (Story
   0.15) and this story's header; ⛔ no dormant code path that could be "switched on" untested. ⚠ Nothing is in production, so every deploy
   before counsel clears is a dev/staging deploy — the DLT template IDs stay unset there (T13 fails closed).
+
+**⭐ APPENDED 2026-09-27 — the author decisions `-258` (V) needs (⏳ PROPOSED, in the same 6.19a Task 0 author-commit):**
+
+- **D25 — the "who must act" mark is its own append-only record**, keyed on the return's `decision_id`: `(mark_id, return_decision_id,
+  claim_case_id, must_act ∈ {family, staff}, set_by_actor, set_by_role ∈ {pariwar_admin, district_admin}, note, set_at)`; the **latest row
+  wins**; RLS + FORCE, own migration. ⛔ Not a column on `claim_state_trustee_decisions` (every phase shares it). The Pariwar Admin's
+  `return_to_district_admin` action gains a **required** `must_act` field, written in the **same tx** as the return row (6.18's cycle-freeze
+  contract + handler). A District Admin change needs a **required note** and key (7).
+- **D26 — the runs follow the mark.** A **family run** exists only while the latest mark is `family`: day 0 = the return's date if marked
+  `family` at the return, else the date of the latest change **to** `family` (`-258` detail 1); a change to `staff` ends the family run at once
+  (the running slot's record is written `skipped_superseded`); a change back to `family` opens a **new** run (a full 90 days). A **staff run**
+  exists while the mark is `staff`: the District Admin is reminded on D3's days from the return / the latest change to `staff`, **day 12** →
+  escalated to the Pariwar Admin (a record + a reminder), **day 90** → escalated to the Super Admin (6.19c). ⛔ The letter track (D20) runs
+  only in a family run. The District Admin's own reminders (AC4) continue in both.
+- **D27 — "no correction needed"** is a District Admin record (key (8)) with a **required note**, valid only with a **current, passing name
+  check recorded after it** (6.18's write); recording it sets the mark to `staff` (so the family is ⛔ not chased meanwhile) and puts the claim
+  on the Pariwar Admin's queue. The Pariwar Admin (`cycle.freeze`, the return's own key) **approves** — through a **NEW writer** (T2: ⛔ never
+  `voteOnFrozenClaim`), under the trustee lock: a live "no correction needed" record newer than the return, the **full**
+  `assertClaimApprovable` (⛔ nothing waived — unlike the `-251` path), the conditional supersede of the return, then the ordinary approval
+  events — **or keeps it sent back**, re-stating the mark (`family` or `staff`) with a note — ⭐ **ratified by `-260` G2**.
+- **D28 — the staff-case family copy** (`-258` detail 3): *"Your claim is still open — we are checking the bank details"* (en, ratified) +
+  a **reviewed** Hindi line (⛔ not machine-translated); the member claim status exposes the case as a status value (e.g.
+  `bank_details_being_checked` vs `bank_details_correction_needed`), ⛔ never the mark's note or who set it. `nominee.bank.correction_needed`
+  shows **only** in a family case.
+- ⚠ **D29 — ⛔ SUPERSEDED by `-260` G1 (B): the Super Admin MAY decide a staff case — approve with the FULL approval gate (a fresh passing name check; ⛔ nothing waived), or refuse for another reason (appealable once; `denied_no_appeal` only after a used appeal), each with a note and a reason; ⛔ never close. The text below is the proposal as first written, kept.** **D29 — the Super Admin on a staff case at day 90** (`-258` detail 2, `-256` widened): the case appears on the Super Admin's queue; the Super
+  Admin may **hold it under review and direct** (D18's machinery), incl. directing the District Admin to switch the mark to `family`. ⛔ **No
+  Super Admin decision** (close / refuse / approve) on a staff case is built — `-258` does ⛔ not rule one, and "close for no response" is
+  barred by construction. ⚠ A confirm for the next note.
+- **Keys:** **(7)** change who must act — district, `district_admin` (minted by 6.19b); **(8)** record "no correction needed" — district,
+  `district_admin` (minted by 6.19c). ⇒ **eight** keys in all: 6.19b mints (1) + (7); 6.19c mints (2)–(6) + (8).
 
 ## Where the Acceptance Criteria and Tasks now live (split 2026-09-27)
 
@@ -578,6 +616,9 @@ from a slice's Tasks list ([[feedback_spec_edits_must_propagate_to_tasks]]).
 | AC12 CC1 | 6.19d (`backlog`) | Tasks 8–9 | per slice |
 | AC13 N1 | 6.19a | Task 10 friction · Task 11 CC1 · Task 12 N1 | a Task 5 · d · a Task 3 |
 | AC14 Super Admin review · AC15 re-file | 6.19c | | |
+| ⭐ **AC16** (`-258`) the mark, family runs vs staff runs, the staff-case copy | 6.19b (appended 2026-09-27) | | |
+| ⭐ **AC17** (`-258`) the closure condition, "no correction needed", the staff case at day 90 | 6.19c (appended 2026-09-27) | | |
+| AC12 → 6.19d's ACs (`-259`) | to derive — `bmad-create-story` on 6.19d | | |
 
 ## Dev Notes
 
@@ -644,3 +685,5 @@ template registry's content against the rendered `t()` output).
 | **v0.9** | **2026-09-27** | ⭐ **RE-DERIVED, ⛔ not appended** (create-story validate pass). Every claim re-verified on `c136b03c` by three read-only passes. **Panel answers folded in:** every BLOCKED tag removed; T's (1)/(2) reversals applied (stop on delivery; chase from found-dead); the schedule numbers and the day-14 flag relabelled the Panel's. **Corrected against the code:** a second return supersedes only a resubmitted one (the live `decidedAt` is the latest return's); return ⟂ R9 is now enforced; migrations start at **0124**, ⛔ not 0119; the human-actor gate now reconciles against disk; `resourceLocator` is silently replaced unless lower-case; the member appeal route 404s in production (the operator path is the real one); `nominee-review.tsx` is already two concerns (⇒ a NEW `contact` step) and the claim-flow resume gap. ⭐ **D7 REVISED:** `alert_published` is excluded from the SMS DLT registry, so F7's SMS is a **direct DLT send to an explicit number** (the OTP precedent), ⛔ not an `Alert`. **New author decisions D15–D24:** the agreement as a consent type; the relationship per nominee; the Super Admin's three decisions (the `-251` narrowing waives ONLY the name check — the certificate, accounts and determination still gate); the review hold + directions; the re-file guard keyed on the closure record at both mint paths; the letter-track anchors per person; "reached" per person; family notices; the go-live gate as a record. **New ACs:** AC14 (Super Admin review), AC15 (re-file). **§0 run:** CC1 protection 3 is the Panel's ⇒ Task 11 fenced on a routing note; **V** (a return needing no correction — the 6.18 deferred item's trigger) and **W** (notices after a Super Admin decision) found, both non-blocking. Keys 4 → **6**. **Status → `ready-for-dev`**: every Panel question on the build is answered; counsel (M, S) gates go-live only; Task 11 is fenced. |
 | **v1.0** | **2026-09-27** | ⭐ **SPLIT (BigDev: *"split it three ways"*, D13)** into 6.19a (`ready-for-dev`), 6.19b and 6.19c (`ready-for-dev`, each fenced on its predecessor being `done`) and 6.19d (CC1, `backlog`). This file becomes the **shared spec**: ACs and Tasks moved to the slices (map above), the Dev Agent Record removed, the row retired. The CC1 and V routing notes **drafted** (⛔ not sent, ⛔ not committed). |
 | v1.1 | 2026-09-27 | **V WIDENED** (BigDev: a family is reminded even when staff made the mistake): the note is renamed `…-2026-09-27-6-19-return-not-the-familys-to-fix.md` and now asks whether a return that is ⛔ not the family's to fix (a helpline typing error, a wrong name check, or no error) reminds the family and can ever be closed "for no response". ⭐ Best answered before 6.19b is built. |
+| v1.2 | 2026-09-27 | ⭐ **The Panel ruled V (`-258`, option B) and CC1 (`-259`, option B amended — stop after 180 days).** Rulings table +2 rows; invariant 11; policy predicate 6; question table + §0 bullets marked RULED; **D25–D29** and keys (7), (8) appended (PROPOSED); the AC map gains AC16 (6.19b) and AC17 (6.19c). 6.19d unfenced, its ACs owed. |
+| v1.3 | 2026-09-27 | ⭐ **`-260` (G1–G6) recorded** — every Panel question on the set is answered. D29 SUPERSEDED (G1 B: the Super Admin decides a staff case, full gate, ⛔ never close); D23 CONFIRMED (G3 A — ⚠ our B ⛔ not taken); D27's keep ratified (G2). Only counsel's M and S remain (go-live). |

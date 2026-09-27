@@ -7,10 +7,20 @@
 
 ---
 
-> ## ⏳ AWAITING PANEL RULING
+> ## ✅ PANEL RULED — 2026-09-27 — recorded as `2026-09-27-258`
 >
-> ⛔ **Nothing is recorded here yet.** When the Panel rules, transcribe it into this block **and** into `.decision-log.md` as a new
-> decision id. ⭐ Everything below is then kept **unedited** as the question **as it was put** ([[feedback_supersede_never_reinterpret]]).
+> **Ruled by Dhiraj Rahul + Kalpana Bharti, relayed by BigDev — verbatim:**
+> *"Option (B) - The return says who must act"* · *"3 details given are fine."*
+>
+> ⭐ Our reading (B) **taken**, with all three details as drafted: a switch to "the family must act" starts the family's 90 days that day;
+> if staff never put it right — staff reminded on the family's days, the Pariwar Admin at day 12, the **Super Admin at day 90** (⚠ a
+> **widening** of `-256`, now ratified); in the staff cases the family gets ⛔ no reminders and the app says *"Your claim is still open — we
+> are checking the bank details"*. ⚠ Recorded as **narrowing** `-227` cl.2, `-230` cl.1–2 and `-231` A/B — ⛔ never as a reading.
+>
+> **What this ruling does NOT cover** (full list in `2026-09-27-258`): how often the mark may change; what the Super Admin decides on a
+> staff case at day 90; which staff person beyond the District Admin is reminded.
+>
+> ⭐ Everything **below this block is kept UNEDITED** — it is the question as it was put.
 
 ---
 

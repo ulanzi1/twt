@@ -2945,6 +2945,11 @@ refused because the first certificate was unclear.
 > the two pre-verification states (`intake_converged`, `documents_pending`), ⛔ not only the review window. Whether
 > `-236` CC1's reminder chases a certificate LEFT PENDING in those two states too is part of 6.19's own protection-3
 > §0 scoping — 6.19 stays `backlog`, ⛔ no code exists yet.
+>
+> ⭐ **2026-09-27 — protection 3 RULED: `2026-09-27-259`** (option B, amended): the correction schedule to day 90, then monthly,
+> **stopping after 180 days**; one posted letter for a dead phone; SMS to the agreed people; ⭐ a **never-sent** (`missing`) certificate IS
+> chased — **once the claim is being checked**, ⛔ not during filing. Built by **Story 6.19d** (`6-19d-replacement-certificate-reminder`,
+> split from 6.19 on 2026-09-27); coupling (2) discharges on **that build**, ⛔ not on this record. *Appended; ⛔ nothing above edited.*
 
 ### Story 6.21b: A Rejected or Missing Death Certificate — the Family Is Asked in Their Own Words, and Can Send Another in the App or Through the Helpline `[SURFACE]`
 

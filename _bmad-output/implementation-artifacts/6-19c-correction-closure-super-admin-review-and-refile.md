@@ -19,17 +19,16 @@ Status: ready-for-dev
 > and the closure notice uses 6.19b's SMS path.
 > ⭐ **With this slice done, 6.18's go-live fence ("not without 6.19") is discharged BY THE BUILD** — record that in 6.18's file and
 > `epics.md` §6.18, ⛔ never on the record alone. ⭐ Counsel's M and S still gate the family SMS's go-live (6.19b).
-> ⚠ **Routing note V** (`…-2026-09-27-6-19-return-not-the-familys-to-fix.md` — a return that is ⛔ not the family's to fix: a staff mistake or none) is drafted and unsent.
-> If the Panel rules B or C, **this slice** gains a closure condition (only a family-must-act return can be closed "for no response") and the
-> "no correction needed" path; 6.19b gains a family-reminder condition. ⛔ Not a blocker — but answered before 6.19b is built is cheapest.
+> ⭐ **V is RULED — `-258`, option B** (a return says who must act): this slice gains **AC17** — only a family-must-act return can be closed
+> "for no response", the "no correction needed" path, and the staff case's day-90 escalation to the Super Admin — who may decide it (`-260` G1). 6.19b carries the mark (AC16).
 
 ## Read first — the parts of the shared spec this slice depends on
 
-- **Rulings:** `-229`, `-230` 5, `-231` A/B, `-232` H/I, `-250` #6, `-251`, `-252` cl.1, `-254`, `-255` F2–F4, `-256`; and `-226` cl.1/cl.5/cl.6, `-227` cl.2 (what `-251` narrows).
+- **Rulings:** ⭐ **`-258`, `-260` G1–G3 (AC17)**, `-229`, `-230` 5, `-231` A/B, `-232` H/I, `-250` #6, `-251`, `-252` cl.1, `-254`, `-255` F2–F4, `-256`; and `-226` cl.1/cl.5/cl.6, `-227` cl.2 (what `-251` narrows).
 - **Invariants:** 1, 2, 5, 6, 7, 8, 10 — every one of them binds this slice.
 - **What already EXISTS:** *The return*, *Helpers*, *What supersedes a return*, *States*, *The approval gate*, *Reason codes*, *The closure vocabulary*, *Appeals (6.16)*, *Re-filing*, *Permissions*, *The human-actor gate*, *Audit*.
 - **Traps:** T2, T3, T4, T9, T10, T11.
-- **Decisions:** D1, D8 (keys 2–6 are minted here), D17, D18, D19, D22, D23, D24.
+- **Decisions:** D1, D8 (keys **2–6 and 8** are minted here), D17, D18, D19, D22, D23, D24, ⭐ **D26, D27, D29**.
 
 ## Story
 
@@ -41,7 +40,7 @@ claim was closed can **file again through a person**.
 
 ## 📜 Policy meaning (AI-10-1)
 
-⭐ This slice introduces **five predicates that gate a member's claim** — the five of the shared spec's *Policy meaning*: the closure's 90-day +
+⭐ This slice introduces **six predicates that gate a member's claim** — the six of the shared spec's *Policy meaning* (⭐ the sixth, `-258`: a closure for no response only when the family must act, and an approval without a correction once "no correction needed" is recorded and agreed): the closure's 90-day +
 reached + two-humans gate; the closure's non-appealability; the Super Admin refusal's one appeal; the Super Admin's approval despite the name;
 and the re-file that needs a person's confirmation.
 
@@ -97,6 +96,28 @@ note and reason** (D17), each re-checking "corrected" under the lock; approve ga
 helpline operator (key (6)) records a **confirmation with a note** — at **both** mint paths (T9); the mint consumes it in the same tx; ⛔ an
 ordinary `denied` or a stage-3-upheld claim re-files exactly as today; the member app routes the family to the helpline (en + hi).
 
+### AC17 — Only the family's silence can close a claim; "no correction needed"; the staff case at day 90 (`-258`; APPENDED 2026-09-27)
+**Then** a closure request (AC6) is refused unless the return's **latest mark is `family`** — **409 `closure.not_family_action`** — and its 90
+days count from the **family run's** day 0 (the return, or the latest switch to `family`); the Pariwar Admin's approval and a Super Admin close
+re-check both under the trustee lock
+**And** the District Admin may record **"no correction needed"** (key (8), district dimension) with a **required note**; it takes effect only
+with a **current, passing name check recorded after it**; it sets the mark to `staff`; the Pariwar Admin then **approves** through a **NEW writer**
+(D27 — the full `assertClaimApprovable`, ⛔ nothing waived; the conditional supersede of the return; the ordinary approval events; ⛔ never
+`voteOnFrozenClaim`) **or keeps it sent back**, re-stating the mark with a note
+**And** a **staff case still unresolved at day 90** is escalated to the **Super Admin** (`-256` widened by `-258`), who may **hold it under review
+and direct** (AC14's machinery), incl. directing a switch to `family`, ⭐ **and DECIDE** (`-260` G1): **approve** through the **full**
+approval gate (an accepted certificate, two accounts, the as-at-death nominee, a **current passing name check** — ⛔ nothing waived, unlike
+the `-251` path) or **refuse for another reason** (appealable once; `denied_no_appeal` only after a used appeal), each with a **required note and
+reason**; ⛔ **never close** — a close for no response on a staff case is barred by construction (**409 `closure.not_family_action`**)
+**And** when the Pariwar Admin keeps a "no correction needed" claim sent back, **the Pariwar Admin states who must act** with a note
+(`-260` G2) — a switch to `family` opens a new family run (day 0 = that day)
+**And** ⛔ no text goes to the family after a Super Admin refusal or approval (`-260` G3 — the app status and the helpline carry it)
+**And** the proof: a staff-marked return → `closure.not_family_action` at request, approval and Super Admin close; a switch to `family` on day 60
+→ a request refused until day 90 **of the new run**; "no correction needed" refused without a fresh passing check; the approve writer racing a
+family correction and a mark change (two connections); key (8) cross-Pariwar and non-human denial; ⭐ a Super Admin approve on a staff case
+**refused** with a stale or failing name check and permitted with a current passing one; a Super Admin close on a staff case →
+`closure.not_family_action`.
+
 ### AC8c — The surfaces (this slice)
 **Then** the correction queue gains the closure state and the **closure request** action (with every refusal shown in plain words — "too
 early", "not everyone reached yet", "the family has corrected it"); the **Pariwar Admin's** closure decision strip (UX-DR54: primary action
@@ -133,7 +154,7 @@ compound read model; the real-`t()` leg for the member copy; `{ timeout: 20000 }
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0 — Preflight** — confirm 6.19b is `done`; re-verify the shared spec's cited code against HEAD; check whether routing note V has been answered (if B or C: an author-commit first, then its closure condition and the "no correction needed" path in Task 3).
+- [ ] **Task 0 — Preflight** — confirm 6.19b is `done`; re-verify the shared spec's cited code against HEAD; V is ruled (`-258`) — confirm D25–D29 and key (8) are in 6.19a's author-commit before Task 8.
 - [ ] **Task 1 — Migrations (next free number after 6.19b's)** (AC6, AC14, AC15) — the closures table (request / decision / escalation / review), the directions table, the re-file confirmations table; RLS files, journal entries, migration-level policy specs (family 5).
 - [ ] **Task 2 — Keys** (D8) — mint **keys 2–6** in one catalog bump from HEAD's value (counts, `roles.ts` for 2, 3, 6; ⛔ no const for the super-admin-only 4 and 5; `permissions.test.ts`, `roles.test.ts`).
 - [ ] **Task 3 — The closure** (AC6, AC7) — the day-90 reminder job (daily 7 days, then escalate; ⛔ it calls no writer); the request route (every 409, the re-check under the trustee lock, D22's reached predicate); the Pariwar Admin's decision (approve → the D1 writer in one scope-tx; decline + note → escalate); the three appeal sites + their own 409 code; the closure notice through 6.19b's SMS path; the NEW `closed_no_response` contract field + the mobile status (⛔ not `appeal_exhausted`).
@@ -141,6 +162,7 @@ compound read model; the real-`t()` leg for the member copy; `{ timeout: 20000 }
 - [ ] **Task 5 — The re-file guard** (AC15) — the confirmation routes (district + helpline, key 6); the guard at `tryConverge` **and** `overrideIntakeAttempt`, keyed on the closure record (⛔ not on `denied_no_appeal`); consumption in the mint's tx; the member-app helpline state.
 - [ ] **Task 6 — Surfaces** (AC8c) — the queue's closure column + request action; the Pariwar Admin strip; the Super Admin queue + decision surface; the direction inbox; the helpline re-file card; the member states; family-13 assertions.
 - [ ] **Task 7 — Gates, tests, discharge** (AC9c, AC11c) — audit types; human-actor gate entries; **execute** on `twt-test-pg :5433`; record the member-appeal-route gap in `deferred-work.md`; annotate 6.18's go-live fence as discharged by this build (6.18's file + `epics.md` §6.18 — ⛔ never a rewrite).
+- [ ] **Task 8 — `-258` in the closure** (AC17) — the `closure.not_family_action` refusal and the family-run day 0 in AC6's request / approval / Super Admin close; the "no correction needed" record (**key (8)**) + its NEW approve writer (D27) and the Pariwar Admin's keep (re-stating the mark); the day-90 staff-case escalation onto the Super Admin queue — review, directions **and the two decisions** (`-260` G1: approve with the full gate, refuse; ⛔ never close) — and the Pariwar Admin's keep stating the mark (G2); the tests in AC17. ⭐ Also mark `deferred-work.md`'s 6.18 chunk-1 item *"A return clears ONLY through a bank rewrite"* **built** (its path was DISCHARGED by `-258`).
 
 ## Dev Notes
 
@@ -176,4 +198,6 @@ As the shared spec's. Two-connection exemplars: `apps/api/tests/integration/clai
 
 | Version | Date | Change |
 |---|---|---|
+| v1.2 | 2026-09-27 | ⭐ **`-260` recorded:** AC17's staff case — the Super Admin may approve (full gate) or refuse, ⛔ never close (G1); the Pariwar Admin's keep states the mark (G2); ⛔ no text after a Super Admin decision (G3). |
+| v1.1 | 2026-09-27 | ⭐ **`-258` (V, option B) appended:** AC17 and Task 8; key (8) minted here; six predicates in the policy note. |
 | v1.0 | 2026-09-27 | Split from Story 6.19 v0.9 (D13, BigDev: *"split it three ways"*). ACs AC6, AC7, AC10, AC14, AC15 carried verbatim; AC8c/AC9c/AC11c restated for this slice; Tasks re-cut. Status `ready-for-dev`, fenced on 6.19b `done`. |

@@ -8,10 +8,20 @@
 
 ---
 
-> ## ⏳ AWAITING PANEL RULING
+> ## ✅ PANEL RULED — 2026-09-27 — recorded as `2026-09-27-259`
 >
-> ⛔ **Nothing is recorded here yet.** When the Panel rules, transcribe it into this block **and** into `.decision-log.md` as a new
-> decision id. ⭐ Everything below is then kept **unedited** as the question **as it was put** ([[feedback_supersede_never_reinterpret]]).
+> **Ruled by Dhiraj Rahul + Kalpana Bharti, relayed by BigDev — verbatim:**
+> *"option (B), reminder stops after 180 days."* · *"Three details are fine."*
+>
+> ⭐ Our reading (B) **taken, and AMENDED by the Panel**: the correction schedule to day 90, then monthly — ⭐ **stopping after 180 days**
+> (⛔ not "until the certificate arrives"). All three details as drafted: **one** posted letter for a dead phone; text messages to the
+> people the family agreed may be contacted (⚠ `-255` F7's widening **extended**); a never-sent certificate chased once the claim is being
+> checked. ⛔ The claim still never closes, and has no time limit.
+>
+> **What this ruling does NOT cover** (full list in `2026-09-27-259`): whether a second rejection restarts the 180 days (our default: yes);
+> reminders to the District Admin; anything after day 180 beyond silence.
+>
+> ⭐ Everything **below this block is kept UNEDITED** — it is the question as it was put.
 
 ---
 

@@ -23,11 +23,11 @@ Status: ready-for-dev
 
 ## Read first — the parts of the shared spec this slice depends on
 
-- **Rulings:** `-229`, `-230` 1–4, `-231` C/D/E/F, `-232` I/J, `-250` #1–#5, `-252` cl.1–2, `-253` cl.3, `-255` F5/F6/F7.
+- **Rulings:** ⭐ **`-258` (who must act — AC16)**, `-229`, `-230` 1–4, `-231` C/D/E/F, `-232` I/J, `-250` #1–#5, `-252` cl.1–2, `-253` cl.3, `-255` F5/F6/F7.
 - **Invariants:** 1 (the system never decides), 3 (never `delivered` for an accepted send), 4 (no name in a family message).
 - **What already EXISTS:** *The return*, *Helpers* (`resolveClaimCorrectionState`), *The dispatch substrate* (⭐ the DLT registry excludes `alert_published`), *The scheduler analogues*, *Staff recipients*, *The District Admin's correction queue*, *District keys*, *Documents*, *Audit*.
 - **Traps:** T1, T5, T6, T7, T12, T13, T14.
-- **Decisions:** D2, D3, D4, D6, D7, D8 (key 1 is minted here), D10, D11, D20, D21.
+- **Decisions:** D2, D3, D4, D6, D7, D8 (keys **1 and 7** are minted here), D10, D11, D20, D21, ⭐ **D25, D26, D28**.
 
 ## Story
 
@@ -38,7 +38,7 @@ family is **on the record** before anyone can ask for the claim to be closed.
 
 ## 📜 Policy meaning (AI-10-1)
 
-⭐ **This slice introduces ⛔ no predicate that gates a member's access to a benefit.** It sends, records and flags; ⛔ nothing it computes
+⭐ **This slice introduces ⛔ no predicate that gates a member's access to a benefit.** ⚠ (`-258`) It **records** the mark that 6.19c's closure predicate reads (a claim can be closed for no response only when the family must act) and sets the family's day 0 — the predicate itself, and its note, are 6.19c's. It sends, records and flags; ⛔ nothing it computes
 blocks, approves, refuses or closes a claim. The one predicate built on its records — *"each person was reached"* (D22) — gates the closure
 **request** and is built and noted in **6.19c**. ⚠ One thing here does change what a person **receives**: an SMS to someone outside the app
 (`-255` F7) — the Panel's own widening, recorded with its costs, go-live gated on counsel.
@@ -89,6 +89,19 @@ with the actor's snapshotted display name ([[project_admin_display_name_attribut
 `voteOnFrozenClaim` and `assertClaimApprovable` behave exactly as today for their existing callers; 6.16's one-journey rule is unchanged;
 `-226` cl.1/cl.6 and `-227` cl.2 are unchanged **everywhere except the one Super Admin approve path** (invariant 7); ⛔ nothing is automatic.
 
+### AC16 — Who must act (`-258`; APPENDED 2026-09-27 — ⭐ it CONDITIONS AC2, AC3 and AC4)
+**Given** the Pariwar Admin sends a claim back **Then** the return carries a **required** mark — **the family must act** or **staff must put
+it right** — written in the same tx as the return (D25; 6.18's cycle-freeze contract + handler gain the field); the **District Admin** may
+change it with a **required note** (key (7), district dimension), and every change is recorded (who, when, the note)
+**And** the family's reminders (AC3) and the letter track (AC5) run **only while the latest mark is `family`**: day 0 = the return's date, or the
+date of the latest change **to** `family` (`-258` detail 1 — a full 90 days from then); a change to `staff` stops the family's reminders at once
+**And** while the mark is `staff`, **staff** are chased (D26): the District Admin on D3's days, **escalated to the Pariwar Admin at day 12**
+(a record + a reminder, ⛔ no automatic act); the day-90 Super Admin escalation is 6.19c's (AC17)
+**And** in a staff case the family gets ⛔ no reminder and the app says *"Your claim is still open — we are checking the bank details"* (en,
+ratified; hi reviewed — D28) — ⛔ never "please correct"; `nominee.bank.correction_needed` shows **only** in a family case; the member status
+carries ⛔ no note and ⛔ no actor
+**And** the queue (AC8b) shows the mark, who set it and when (staff only); the Pariwar Admin's return form requires the choice before submit.
+
 ### AC8b — The surfaces (this slice)
 **Then** the District Admin's **correction queue** (6.18's — ⛔ no second list) gains per claim: the day count, the next reminder, a
 reminder-record summary **per person** (roles only — "nominee 1", "claimant" — ⛔ no names), the dead / unreachable flags, each letter's state
@@ -118,7 +131,7 @@ the new route file and lists its methods; a `*-shape.spec.ts` for the extended q
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0 — Preflight** — confirm 6.19a is `done` and its Task 0 author-commit landed; re-verify the shared spec's cited code against HEAD; read the four DLT config keys' status (T13). ⚠ Check routing note V (`…-2026-09-27-6-19-return-not-the-familys-to-fix.md`): if ruled B or C, the family's reminders run **only** while the return says the family must act — an author-commit first, then that condition in Task 2's stop predicate.
+- [ ] **Task 0 — Preflight** — confirm 6.19a is `done` and its Task 0 author-commit landed; re-verify the shared spec's cited code against HEAD; read the four DLT config keys' status (T13). ⭐ V is RULED (`-258`, option B) — confirm D25–D28 are in 6.19a's author-commit; AC16 conditions every family reminder.
 - [ ] **Task 1 — Migrations (next free number after 6.19a's)** (AC2, AC5) — the reminder record (D2) and the letters table (D6), each with its RLS policy file, journal entry and migration-level policy spec (family 5).
 - [ ] **Task 2 — The schedule and the record** (AC2, AC3) — the pure `correctionReminderSchedule` + its data table (D3, the Panel's numbers); the record writer (`attempting` → final); the 10:00 IST sweep + child queue (`QUEUE_NAMES`, `boot.ts` registration); the stop predicate through `resolveClaimCorrectionState` (D4); injectable clock everywhere.
 - [ ] **Task 3 — The family SMS** (AC3) — the claim-correction SMS template registry (message × locale; config keys per D7) and the direct `createSmsDltProvider` send to the **explicit** number (claimant from the contact record; each nominee from the **effective** declaration version, T12); `providerMessageId` + the classified error on the row; fail-closed on a missing id; the name-free en/hi copy in `claim.json` (microcopy-clean) + the DLT-content lockstep test. ⛔ No `AlertCategory`, ⛔ no `SMS_DLT_TEMPLATE_REGISTRY` entry, ⛔ no `dispatch()` for the family.
@@ -126,6 +139,7 @@ the new route file and lists its methods; a `*-shape.spec.ts` for the extended q
 - [ ] **Task 5 — Letters** (AC5) — mint **key (1)** (catalog bump from HEAD's value, counts, `roles.ts`, `permissions.test.ts`, `roles.test.ts`); the letter writer + screenshot handler (port, key prefix, MIME/size before `put`, signed read); the district preHandler (copy `resolveNomineeNameCheckDistrict`); letter eligibility per person (D20); ≤ 2 letters per person per run; recordable after day 90 with ⛔ no reminders; audit lines with the snapshotted display name.
 - [ ] **Task 6 — Surfaces** (AC8b) — the queue columns, the letter form, the nav link, the Pariwar Admin's escalated view; family-13 assertions.
 - [ ] **Task 7 — Gates and tests** (AC9b, AC11b) — the human-actor gate entry; **execute** on `twt-test-pg :5433`; record the virus-scan gap in `deferred-work.md`.
+- [ ] **Task 8 — Who must act** (AC16; `-258`) — the mark table + migration (D25); the required `must_act` field on the Pariwar Admin's return (6.18's `cycle-freeze` decision contract, handler and `CycleFreezeRoute` form — the same tx as the return row); the District Admin's change route (**key (7)**, district preHandler, required note, audit line); family runs vs staff runs (D26) in the sweep and the stop predicate; the staff chase (day 12 → Pariwar Admin); the staff-case member status + copy (D28, en + reviewed hi); tests: a staff-marked return sends the family ⛔ nothing, a switch to `family` opens a run with day 0 = the switch date, a switch to `staff` stops it mid-run, the copy branches, cross-Pariwar / non-human denial on key (7).
 
 ## Dev Notes
 
@@ -161,4 +175,5 @@ As the shared spec's. Exemplars: `apps/jobs/tests/contribution-notify-triggers.t
 
 | Version | Date | Change |
 |---|---|---|
+| v1.1 | 2026-09-27 | ⭐ **`-258` (V, option B) appended:** AC16 (the mark, family vs staff runs, the staff-case copy) and Task 8; key (7) minted here. |
 | v1.0 | 2026-09-27 | Split from Story 6.19 v0.9 (D13, BigDev: *"split it three ways"*). ACs AC2–AC5 and AC10 carried verbatim; AC8b/AC9b/AC11b restated for this slice; Tasks re-cut. Status `ready-for-dev`, fenced on 6.19a `done`. |

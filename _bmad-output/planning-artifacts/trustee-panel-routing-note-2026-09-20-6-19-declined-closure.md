@@ -5,10 +5,19 @@
 > Super Admin then decide — and what happens to the claim in the meantime?"* — a question we should not answer alone. ⚠ Not mixed:
 > the screens and code are ours; **only the decision and the waiting** are asked.
 
-> ## ⏳ AWAITING PANEL RULING
+> ## ✅ PANEL RULED — 2026-09-27 — recorded as `2026-09-27-251`
 >
-> **Nothing is recorded here yet.** When the Panel rules, transcribe it into this block **and** into `.decision-log.md` as a new
-> decision id. Everything below is then kept **unedited**, as the question **as it was put**.
+> **Ruled by Dhiraj Rahul + Kalpana Bharti, relayed by BigDev — verbatim:**
+> *"Option C"*
+>
+> ⚠⚠ The Panel chose the option whose stated cost was *"It can bypass the name check you ruled on"*. `-251` records it as a
+> **narrowing** of `-226` cl.1, cl.6 and `-227` cl.2, confined to a claim whose closure the Pariwar Admin declined.
+>
+> **What this ruling does NOT cover** (full list in `2026-09-27-251` — follow-ups): whether the Super Admin may also **keep the claim
+> open**, and what then happens to it and its reminders; whether a Super Admin refusal is **appealable**; whether a Super Admin decision
+> needs a **written note**; and whether an approval over an uncorrected mismatch pays with ⛔ no fresh District Admin check.
+>
+> ⭐ Everything **below this block is kept UNEDITED** — it is the question as it was put.
 
 ---
 

@@ -6,10 +6,20 @@
 > Panel is asked **only** the contact-and-agreement question (and two small points that turn on the same fact). *How* a message is
 > physically delivered is ours and is being decided in the story.
 
-> ## ⏳ AWAITING PANEL RULING
+> ## ✅ PANEL RULED — 2026-09-27 — recorded as `2026-09-27-253`
 >
-> **Nothing is recorded here yet.** When the Panel rules, transcribe it into this block **and** into `.decision-log.md` as a new
-> decision id. Everything below is then kept **unedited**, as the question **as it was put**.
+> **Ruled by Dhiraj Rahul + Kalpana Bharti, relayed by BigDev — verbatim:**
+> *"option C, Also ask claimant relation to nominee with only options available are family relations."* · *"1. reminder to both
+> people"* · *"2. Yes, one address for each declared nominee; the claimant's details once"*
+>
+> ⚠ The Panel chose **C directly** (our reading was B for now, with C's wording taken to counsel), and added a **new** filing question:
+> the claimant's relationship **to the nominee**, from family relations only.
+>
+> **What this ruling does NOT cover** (full list in `2026-09-27-253` — follow-ups): the **legal basis** for one person agreeing for
+> another stays with **counsel** (go-live gated); **by what channel** a family member outside the app is reached; **whose address the
+> letter goes to** (the answer to point 1 covers the reminders only); and the exact relationship list.
+>
+> ⭐ Everything **below this block is kept UNEDITED** — it is the question as it was put.
 
 ---
 

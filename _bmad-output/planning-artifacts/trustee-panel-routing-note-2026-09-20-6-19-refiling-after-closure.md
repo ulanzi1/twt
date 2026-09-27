@@ -4,10 +4,18 @@
 > Stripped of citations: *"if we close a family's claim because they never answered, can they simply start again?"* — a question we
 > would not settle alone in front of a trustee. Not mixed.
 
-> ## ⏳ AWAITING PANEL RULING
+> ## ✅ PANEL RULED — 2026-09-27 — recorded as `2026-09-27-254`
 >
-> **Nothing is recorded here yet.** When the Panel rules, transcribe it into this block **and** into `.decision-log.md` as a new
-> decision id. Everything below is then kept **unedited**, as the question **as it was put**.
+> **Ruled by Dhiraj Rahul + Kalpana Bharti, relayed by BigDev — verbatim:**
+> *"option C - Allow it only through a person"*
+>
+> ⚠ Our reading (A — leave re-filing open) was ⛔ **not** taken: a new claim after a closure for silence needs the District Admin's or
+> the helpline's confirmation, with a note.
+>
+> **What this ruling does NOT cover** (full list in `2026-09-27-254`): what the confirming person must weigh; what carries over to the
+> new claim.
+>
+> ⭐ Everything **below this block is kept UNEDITED** — it is the question as it was put.
 
 ---
 

@@ -5,10 +5,18 @@
 > our messages?"* — a question we would not want to settle alone. ⚠ It was **mixed**, so it is split: the Panel is asked **only** the
 > "what must be shown" question. Whether the software *can* show delivery, and what it costs to build, is ours and is stated as a fact.
 
-> ## ⏳ AWAITING PANEL RULING
+> ## ✅ PANEL RULED — 2026-09-27 — recorded as `2026-09-27-252`
 >
-> **Nothing is recorded here yet.** When the Panel rules, transcribe it into this block **and** into `.decision-log.md` as a new
-> decision id. Everything below is then kept **unedited**, as the question **as it was put**.
+> **Ruled by Dhiraj Rahul + Kalpana Bharti, relayed by BigDev — verbatim:**
+> *"Option A, in future version we may want to build option B, but for now option A is fine."* · *"Yes for no working route, offer
+> District Admin the letter route"*
+>
+> ⭐ Our reading (A) **confirmed**, and the letter route for a family no channel can reach **confirmed**. Proven delivery (B) is recorded
+> as a possible future version — ⛔ no row is opened for it.
+>
+> **What this ruling does NOT cover** (full list in `2026-09-27-252`): how long a letter may take; when B would be built.
+>
+> ⭐ Everything **below this block is kept UNEDITED** — it is the question as it was put.
 
 ---
 

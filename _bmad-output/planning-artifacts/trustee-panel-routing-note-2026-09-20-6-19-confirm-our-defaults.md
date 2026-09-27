@@ -5,10 +5,21 @@
 > actually receives**, and we would not want to have chosen those quietly. ⚠ **This is a confirmation, not a request for a decision:**
 > if you say nothing, our defaults stand, and the story says they were ours. It is deliberately short.
 
-> ## ⏳ AWAITING PANEL RULING
+> ## ✅ PANEL RULED — 2026-09-27 — recorded as `2026-09-27-250`
 >
-> **Nothing is recorded here yet.** When the Panel rules, transcribe it into this block **and** into `.decision-log.md` as a new
-> decision id (or record "confirmed as drafted"). Everything below is then kept **unedited**, as the question **as it was put**.
+> **Ruled by Dhiraj Rahul + Kalpana Bharti, relayed by BigDev — verbatim:**
+> *"1. Reminder stops when letter delivery is recorded"* · *"2. From the day the phone was found dead."* · *"3. Yes - a flag is shown,
+> nothing else happen."* · *"4. A letter can still be recorded after day 90, with no more reminders."* · *"5. Daily days 1–7 (day 1 =
+> the day after the claim was sent back); then days 10, 14, 17, 21, 24, 28, 31, 35 (twice a week through day 37); then weekly on days
+> 42, 49, 56, 63, 70, 77, 84; stop at day 90. One message a day, at 10:00 in the morning."* · *"6. To the Pariwar Admin"*
+>
+> ⚠ **Two defaults CHANGED, four CONFIRMED.** #1: reminders to a dead number stop when a letter's **delivery** is recorded (⛔ not on
+> posting). #2: the District Admin's chase counts from the day the phone was **found dead** (⛔ not from posting). #3–#6 as drafted —
+> the day-14 flag and the 10:00 hour are now the Panel's, ⛔ no longer ours.
+>
+> **What this ruling does NOT cover** (full list in `2026-09-27-250`): the second letter's anchors (unchanged).
+>
+> ⭐ Everything **below this block is kept UNEDITED** — it is the question as it was put.
 
 ---
 

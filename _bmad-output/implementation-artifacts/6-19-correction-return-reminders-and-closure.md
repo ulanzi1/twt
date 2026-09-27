@@ -237,6 +237,22 @@ uncommittable; what happens next is the Super Admin's and is ⛔ ruled nowhere (
 >
 > ⚠ **The story stays `backlog`:** K's four follow-ups, L's letter address and P's channel are open, and the ACs above still carry
 > their old BLOCKED tags — re-deriving them is the next `bmad-create-story` validate pass, ⛔ not this annotation.
+>
+> ⭐⭐ **APPENDED 2026-09-27 (later the same day) — the follow-ups, `2026-09-27-255`** (note `6-19-follow-ups`). The table above is kept
+> as written; read these rows **over** it:
+> - **K** — ✅ F2: a Super Admin **refusal** is appealable once (a **closure** stays not appealable); ✅ F3: every Super Admin decision
+>   carries a **note and reason**; ✅ F4: an approval despite the name problem needs **nothing more** (money may go to the mismatched
+>   account — chosen knowingly). ⏳ **F1 (keep open) is still OPEN** — clarification note `6-19-f1-keep-open` (options A–D; ours: D,
+>   keep open **once**).
+> - **L** — ✅ F5: the letter goes to **the person whose phone is dead**, at their own address.
+> - **U** — ✅ F6: **each declared nominee** is reminded.
+> - **P** — ✅ F7: the plan is **widened** — **SMS** reminders to people the filing agreement covers (a new DLT template, a per-message
+>   cost; PRD §4.10 and architecture §3.4 owe an **annotation**, ⛔ never a rewrite). ⚠ Go-live gated on counsel (M), with S.
+> - **`-253` cl.2** — ✅ F8: the claimant-to-nominee relation is one of **nineteen** family relations (⛔ no `other`) — a NEW enum; the
+>   existing `ClaimantRelationship` (to the deceased) is untouched. ⚠ The **nominee declaration** list (`-237`, fifteen) is ⛔ unchanged
+>   until N1 of `6-20-confirm-what-we-recorded` is answered.
+>
+> ⚠ **Still `backlog`:** F1 and counsel (M, S) remain.
 
 - **K — the Super Admin's part.** When the Pariwar Admin declines a closure and it goes to the Super Admin: **what does the Super Admin decide** (close anyway, keep open, something else), and **what happens to the claim and its reminders after a decline** (keep waiting, resume, a new period)? *Blocks AC6 (the decline branch), the Super Admin surface, key (4).*
 - **L — who is contacted when the claimant is not the nominee.** The reminders and the **letters**: the nominee, the claimant, or both — and to **whose address**? *Blocks AC1 (which fields are mandatory for which recipient), AC3, AC5.*
@@ -403,3 +419,4 @@ Live-DB traps recorded for this repo ([[project_live_db_test_gotchas]], [[projec
 | v0.2 | 2026-09-20 | Applied a fresh-context validator's findings, **each re-verified in the tree first**. **Critical:** the closure guard against an already-CORRECTED claim (AC6, invariant 2 — a corrected-but-unvoted claim still has a LIVE return row, so the conditional `UPDATE` alone would succeed); Q-R rewritten (**strict default**; `no_target` is ⛔ not a dead number); readings that were stated as fact are labelled (new **Q-T**); `-232` J recorded (it ratified our parse of `-231` F); N carried as a confirm; the story split recorded (**D13**); where AC1's 409 lives (**D14**) and multiple nominees (**Q-U**); the family-message design rewritten (**D7**: `alert_published`, `Alert.member_id`, no Telegram mirror). **Should-fix:** private vs exported helper names; lifecycle suppression is prose, not live; a super-admin-only key precedent exists; the `attempting` → final reminder state, day numbering and catch-up; the family closure notice + a `closed_no_response` field; the day-90 reminder job had no Task; the AC7 control must be production-shaped; mis-cited paths and requirement ids; an invariants box. ⚠ Not re-validated after these edits. |
 | v0.3 | 2026-09-25 | **APPENDED, ⛔ nothing above edited: the `-236` CC1 item** that `-241` §3 placed on this story and that this file never carried (Story 6.21a D16; recorded at `2026-09-25-244`). A new section, AC12 and Task 11 — the three protections verbatim (*never refused*; ⛔ not the day-90 closure; schedule/channels UNRULED ⇒ §0), the trigger `isDeathCertificateReplacementRequested` (built by 6.21a), and the dependency (6.21a `done`). ⛔ No status change. |
 | v0.4 | 2026-09-27 | **APPENDED, ⛔ nothing above edited: the Panel answered K–U** (`2026-09-27-250` … `-254`). A status table under *Open Panel questions* (the question list kept as put). ⚠ K (option C — a narrowing of `-226`/`-227` for a declined closure), M (option C), Q (option C) and T (1)/(2) did ⛔ **not** take our defaults; K, L and P are answered only in part; `-253` cl.2 adds a filing question (claimant→nominee relationship). Status stays `backlog` — the AC BLOCKED tags are re-derived at the next validate. |
+| v0.5 | 2026-09-27 | **APPENDED, ⛔ nothing above edited: the follow-ups F2–F8 answered** (`2026-09-27-255`) — K except F1, L (letter address), P (SMS widened), U (each nominee reminded), and the 19-value claimant-to-nominee list. ⏳ F1 (keep open) awaits the clarification note `6-19-f1-keep-open`. Status stays `backlog`. |

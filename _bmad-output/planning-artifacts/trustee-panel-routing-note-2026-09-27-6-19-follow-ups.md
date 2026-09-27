@@ -5,10 +5,25 @@
 > a point those answers left open — ⛔ not a re-opening of them. ⚠ **One point is deliberately ⛔ not asked:** whether the person filing
 > may agree **on behalf of** the claimant and the nominee is a **legal** question, and it is with counsel.
 
-> ## ⏳ AWAITING PANEL RULING
+> ## ✅ PANEL RULED F2–F8 — 2026-09-27 — recorded as `2026-09-27-255` · ⏳ F1 AWAITS A CLARIFICATION
 >
-> ⛔ **Nothing is recorded here yet.** When the Panel rules, transcribe it into this block **and** into `.decision-log.md` as a new
-> decision id (or "confirmed as drafted" per item). Everything below is then kept **unedited**, as the question **as it was put**.
+> **Ruled by Dhiraj Rahul + Kalpana Bharti, relayed by BigDev — verbatim:**
+> *"F2 - A"* · *"F3 - Yes"* · *"F4 - A"* · *"F5 - A"* · *"F6 - A"* · *"F7 - A"* · *"F8 - spouse, mother, father, son, daughter, brother,
+> sister, uncle, aunt, cousin, niece/nephew, grandchild, sister-in-law, daughter-in-law, brother-in-law, son-in-law, mother-in-law,
+> father-in-law or grandparent."*
+>
+> ⭐ Every suggestion taken (F2 A, F3 yes, F4 A, F5 A, F6 A, F7 A). ⚠ **F8 was answered with a list, ⛔ not a confirmation:** nineteen
+> values — our fourteen **plus** brother-in-law, son-in-law, mother-in-law, father-in-law and grandparent. ⚠ It answers the
+> **claimant-to-nominee** list only; the **nominee declaration** list (`-237`) is ⛔ unchanged until N1 of `6-20-confirm-what-we-recorded`
+> is answered.
+>
+> ⏳ **F1 — ⛔ not answered.** BigDev asked for a clarification first (*"explain each option, also which type of claims are being
+> escalated"*): the note `trustee-panel-routing-note-2026-09-27-6-19-f1-keep-open.md`, which adds an option **D** (keep open once).
+>
+> **What this ruling does NOT cover** (full list in `2026-09-27-255`): F1; the legal basis for the filer's agreement (counsel's — F7's SMS
+> is go-live gated on it); the nominee declaration list.
+>
+> ⭐ Everything **below this block is kept UNEDITED** — it is the question as it was put.
 
 ---
 

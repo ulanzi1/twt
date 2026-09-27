@@ -253,6 +253,12 @@ uncommittable; what happens next is the Super Admin's and is ⛔ ruled nowhere (
 >   until N1 of `6-20-confirm-what-we-recorded` is answered.
 >
 > ⚠ **Still `backlog`:** F1 and counsel (M, S) remain.
+>
+> ⚠ **APPENDED (later again): the F1 note was REVISED before it was sent** (BigDev: the Super Admin needs time to meet the Pariwar
+> Admin and the District Admin and may ask them to act before deciding — so none of A–D fits). It now adds **E, a review period**
+> (an "under review" hold with a note; recorded directions to a named admin and their recorded response; a 30-day reminder to the Super
+> Admin; ⛔ no hard deadline) and recommends **E**, ⛔ no longer D. ⚠ E would give the Super Admin a new power to DIRECT the two admins —
+> asked in the note. The decider is the **Super Admin**, ⛔ not the Panel (confirmed by BigDev).
 
 - **K — the Super Admin's part.** When the Pariwar Admin declines a closure and it goes to the Super Admin: **what does the Super Admin decide** (close anyway, keep open, something else), and **what happens to the claim and its reminders after a decline** (keep waiting, resume, a new period)? *Blocks AC6 (the decline branch), the Super Admin surface, key (4).*
 - **L — who is contacted when the claimant is not the nominee.** The reminders and the **letters**: the nominee, the claimant, or both — and to **whose address**? *Blocks AC1 (which fields are mandatory for which recipient), AC3, AC5.*
@@ -420,3 +426,4 @@ Live-DB traps recorded for this repo ([[project_live_db_test_gotchas]], [[projec
 | v0.3 | 2026-09-25 | **APPENDED, ⛔ nothing above edited: the `-236` CC1 item** that `-241` §3 placed on this story and that this file never carried (Story 6.21a D16; recorded at `2026-09-25-244`). A new section, AC12 and Task 11 — the three protections verbatim (*never refused*; ⛔ not the day-90 closure; schedule/channels UNRULED ⇒ §0), the trigger `isDeathCertificateReplacementRequested` (built by 6.21a), and the dependency (6.21a `done`). ⛔ No status change. |
 | v0.4 | 2026-09-27 | **APPENDED, ⛔ nothing above edited: the Panel answered K–U** (`2026-09-27-250` … `-254`). A status table under *Open Panel questions* (the question list kept as put). ⚠ K (option C — a narrowing of `-226`/`-227` for a declined closure), M (option C), Q (option C) and T (1)/(2) did ⛔ **not** take our defaults; K, L and P are answered only in part; `-253` cl.2 adds a filing question (claimant→nominee relationship). Status stays `backlog` — the AC BLOCKED tags are re-derived at the next validate. |
 | v0.5 | 2026-09-27 | **APPENDED, ⛔ nothing above edited: the follow-ups F2–F8 answered** (`2026-09-27-255`) — K except F1, L (letter address), P (SMS widened), U (each nominee reminded), and the 19-value claimant-to-nominee list. ⏳ F1 (keep open) awaits the clarification note `6-19-f1-keep-open`. Status stays `backlog`. |
+| v0.6 | 2026-09-27 | **APPENDED:** the unsent F1 note revised — option **E** (a Super Admin review period, with recorded directions to the admins) added and recommended, ⛔ no longer D. Status stays `backlog`. |

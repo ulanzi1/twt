@@ -72,6 +72,11 @@ Status: done
 >   retention"*, is **DISCHARGED** by `-243` (option C).
 >
 > Merging is not go-live ([[project_not_in_production_merge_is_not_golive]]).
+>
+> ⭐ **2026-09-26 — coupling (1) DISCHARGED BY THE BUILD (Story 6.21b), ⛔ not on this record.** The family now has the
+> screen: `certificate-replacement.tsx` sends a replacement in the app, and the helpline's
+> `<HelplineCertificateReplacement>` sends one on the family's behalf. Couplings (2) and (3′) are ⛔ untouched.
+> *Appended; nothing above edited.*
 
 ## The rulings this story builds: the Panel's words, and OUR reading of them
 
@@ -915,6 +920,10 @@ Code review, Chunk 2 of 2 (this story's touches to existing shared infrastructur
 - [x] [Review][Defer] The "ONE HELPER, THREE CALL SITES" approval gate (`assertClaimApprovable` at P1/P3/P4) has asymmetric test coverage — only P4/R9 (`packages/domain/tests/integration/claim/r9-voting.spec.ts`) gets a table-driven suite of all 4 deficiency reasons + a positive control; P1 (`verifier-decision.spec.ts`) and P3 (`state-trustee-decision.spec.ts`) only keep their existing specs green via a defaulted `certificate: 'accepted'` fixture, with no dedicated negative-case assertions of their own — deferred, a real but moderate-effort coverage gap (the pattern to replicate is P4's, cited above), not a functional defect (all three sites correctly call the same shared gate).
   > ⚠ **WITHDRAWN 2026-09-26 (second full-diff review) — the gap does ⛔ not exist.** P1 and P3 each have a dedicated four-reason negative loop plus a PASS in `packages/domain/tests/integration/claim/death-certificate.spec.ts` ("⭐ P1 (adjudicateClaim) refuses APPROVE — ${label} — and the claim WAITS" / "⭐ P3 (voteOnFrozenClaim) …"). A false open item, withdrawn — ⛔ not "closed".
 - [x] [Review][Defer] Two new document-upload conflict codes (`claim_document.certificate_accepted`, `claim_document.certificate_awaiting_review` in `apps/api/src/modules/claims/claims.documents.handlers.ts`) have no i18n/error mapping in `nominee-errors.ts`/`i18n-en.ts` — VERIFIED there is no admin-console caller of the upload endpoint in this diff (only a preview component exists), so this is currently unreachable from this story's own surface — deferred to whichever surface actually uploads (named go-live coupling (1), 6.21b, or an existing non-admin helpline flow outside this diff).
+  > ⭐ **CLOSED BY 6.21b (D2, D5; C6), 2026-09-26.** Both surfaces now map the two codes to their own copy — the app's
+  > `certificate-replacement.tsx` (via `use-death-certificate-upload.ts`'s outcome mapper) and the helpline's
+  > `<HelplineCertificateReplacement>` (`certificateRefusalKey`, `-249` §6's verbatim lines). ⛔ Never a raw code on
+  > either surface.
 - [x] [Review][Defer] `viewer.canReview`'s server-side RBAC computation (`rbac.hasPermission` against the geo resolver, `claims.verifier-console.handlers.ts`) has no negative-case (a verifier session getting `canReview: false`) test at the API/integration level — only a UI-level test with a mocked packet value exists (Chunk 1's `death-certificate-review.test.tsx`) — deferred, a real but moderate-effort end-to-end coverage gap, not a functional defect (the underlying RBAC key/grant machinery is covered generically by AC6's `roles.test.ts`/`permissions.test.ts`).
   > ⚠ **WITHDRAWN 2026-09-26 (second full-diff review) — the gap does ⛔ not exist.** `apps/api/tests/integration/claims/death-certificate.spec.ts` "⭐ AC5 — … `viewer.canReview` is TRUE for the District Admin and FALSE for a verifier" asserts `{ canReview: false }` end to end, plus the verifier's 403. A false open item, withdrawn — ⛔ not "closed".
 
@@ -936,6 +945,11 @@ A third review pass, requested explicitly: adversarially reviewing only the seco
 - [x] [Review][Patch] A thrown (not resolved-`false`) `onSubmit` exception left the form with zero feedback (the `incomplete` alert already cleared, no `error` prop set). Added a local `submitError` fallback state, rendered with the existing generic `t.refusedGeneric` copy. — FIXED.
 
 - [x] [Review][Defer] **The legacy-row status fix (Chunk 2, `missing` instead of `awaiting_review` for `currentUploadId === null`) can show "No death certificate has been sent yet" for a certificate that WAS genuinely sent** — specifically, an OCR job enqueued just before the 6.21a deploy and processed just after it via the job's own documented `uploadId`-less TOLERANCE path lands in exactly this state. Neither the old classification (`awaiting_review`/"review it" — also wrong, since a legacy row has no token and can never actually be reviewed) nor the new one (`missing`/"none sent") is fully accurate for "sent but untracked." The new classification is a net improvement (it un-blocks the re-upload the old one silently prevented) but the copy is momentarily misleading in a narrow, time-boxed deploy-race window. A fully correct fix needs a distinct 3rd wire reason/status and its own copy — a real product/design decision, not made here.
+  > ⚠ **ANNOTATED (⛔ not closed), 2026-09-26 (BW-G2, Story 6.21b Task 8).** 6.21b's family status now shows
+  > `missing_body` ("still open") in exactly this state — the same narrow window, a better message, but ⛔ still not
+  > the distinct 3rd status the fully correct fix needs. VERIFIED unreachable in production: every handler-minted job
+  > carries an `uploadId` (only a pre-6.21a-deploy job reaches the tolerance path), and the app is ⛔ not in production
+  > yet ([[project_not_in_production_merge_is_not_golive]]). The 3rd status remains unbuilt.
 - [x] [Review][Defer] `byte_size > 0`'s tightened CHECK (Chunk 1) has no app-level pre-validation in the OCR job, so a 0-byte payload now hard-fails the transaction via a raw CHECK violation instead of a graceful refusal — VERIFIED this feeds into the job's OWN already-documented, already-accepted DLQ/orphaned-object failure category (the file's own header already names "a job that fails PERMANENTLY... Annotated, not fixed" as a known gap), not a new class of unhandled failure. Real, but pre-existing acceptance of this failure category makes it low-priority.
 - [x] [Review][Defer] No HTTP-level integration test drives `assembleVerifierConsole` and asserts the `determinationStale` wire field end-to-end (only a domain-level test of the underlying predicate, and an admin front-end test with a hand-built fixture exist) — a real, moderate-effort coverage gap for the Chunk 2 decision item specifically.
 
@@ -1125,6 +1139,8 @@ Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story`, 2026-09-25.
     > ⚠ **UN-ATTESTED (recorded 2026-09-26, second full-diff review).** No artifact in the repo records these 14 runs (no log, no commit, no CI record); they are the dev session's word. Carried openly as un-attested — ⛔ not reconstructed ([[feedback_record_unattested_no_backfill]]).
   - **Task 9 — records**: the four coupling sites annotated *"closed by the build — discharges on the build, ⛔ not on the record"* (appended; ⛔ nothing rewritten); `deferred-work.md` — the 6.20 plausibility deferral DISCHARGED for the upper bound, the lower bound RE-DEFERRED; 6.5's DLQ item and unaudited-refusal item annotated; 6.20's untraced RTBF item answered (verified in `rtbf-legality.ts`: ⛔ no claim read).
   - ⚠ **Go-live couplings UNCHANGED (merging ≠ go-live):** (1) 6.21b's family/helpline screens; (2) 6.19's CC1 reminder; (3′) counsel's basis under `-243`.
+  - ⭐ **2026-09-26 — coupling (1) DISCHARGED BY THE BUILD (Story 6.21b).** The family/helpline screens named above are
+    now built. Couplings (2) and (3′) are ⛔ untouched. *Appended; nothing above edited.*
 
 ### File List
 

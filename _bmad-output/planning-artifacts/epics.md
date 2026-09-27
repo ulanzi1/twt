@@ -2935,12 +2935,29 @@ refused because the first certificate was unclear.
 
 > ⚠ **Go-live couplings (named, ⛔ not build blockers):** 6.21b (the family's surfaces), 6.19's CC1 item (the reminder),
 > and counsel's legal basis for retention (`-243` consequence 2).
+>
+> ⭐ **2026-09-26 — coupling (1), 6.21b's family surfaces, is DISCHARGED BY THE BUILD (Story 6.21b) — ⛔ not on this
+> record.** The family's own status read, the app's replacement screen, and the helpline's send are all built
+> (`-247`/`-249`). Couplings (2) 6.19's CC1 reminder and (3′) counsel's basis under `-243` are ⛔ untouched. *Appended;
+> ⛔ nothing above edited.*
+>
+> ⭐ **2026-09-26 (V5) — annotating 6.19's CC1 item:** `-247` §2 (Story 6.21b) widens the family's `missing` status to
+> the two pre-verification states (`intake_converged`, `documents_pending`), ⛔ not only the review window. Whether
+> `-236` CC1's reminder chases a certificate LEFT PENDING in those two states too is part of 6.19's own protection-3
+> §0 scoping — 6.19 stays `backlog`, ⛔ no code exists yet.
 
 ### Story 6.21b: A Rejected or Missing Death Certificate — the Family Is Asked in Their Own Words, and Can Send Another in the App or Through the Helpline `[SURFACE]`
 
 > ⚠ **Split from Story 6.21 on 2026-09-25** (BigDev). Row `6-21b-death-certificate-replacement-surfaces`, `backlog`
 > until **6.21a is `done`**. Recorded in [`-244`](../../.decision-log.md#decision-2026-09-25-244) with 6.21a — ⛔ no second
 > author-commit.
+>
+> ⭐ **2026-09-26 (BW-G6) — the row FLIPPED.** 6.21a reached `done` (PR #241 rebase-merged); this row re-pinned to
+> `eab7ba45`, flipped `backlog → ready-for-dev`, and is now in development. *Appended; the note above is kept as the
+> condition that was met, ⛔ not rewritten.*
+>
+> ⭐ **`2026-09-26-247`** §2 widens AC2: the family can also send a certificate they put off at filing (`intake_converged`
+> / `documents_pending`), ⛔ not only a rejected/missing one inside the review window.
 
 As a bereaved family (in the app, or through the helpline),
 I want to be told plainly when the death certificate we sent cannot be used, and why, and to send another without

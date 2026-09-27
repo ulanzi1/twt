@@ -3,6 +3,22 @@ baseline_commit: eab7ba45
 ---
 
 <!--
+⭐⭐ MERGED 2026-09-27 as PR #243 (REBASE-merge) — THE SHA MAP. Every SHA this file (and `sprint-status.yaml`) cites
+for Story 6.21b's own commits is a BRANCH SHA (`story/6-21b-death-certificate-replacement-surfaces`), ⛔ NOT reachable
+from `main` after the rebase-merge. The baseline pin `eab7ba45` IS on `main` and is unaffected. The citations are kept AS
+WRITTEN (the record); this is the map to their `main` twins, PROVED ⛔ not assumed: each pair has an IDENTICAL
+`git patch-id --stable` AND an identical `git ls-tree -r <sha> -- packages apps scripts _bmad-output .decision-log.md |
+git hash-object --stdin` (`main` had not moved — the merge-base was `eab7ba45` — so the rebase rewrote SHAs only).
+  · `692a16de` → `fe73c639`  governance: re-pin, `ready-for-dev`, `-247`
+  · `945f9969` → `a2ea5b71`  governance: validate pass (v0.9), `-248`
+  · `110cdfb4` → `6bd7821d`  governance: blind validate (v1.1), `-249`
+  · `e6c7b384` → `a5f5d4d5`  feat: the story's code (the build and both review rounds)
+  · `e7ef9c20` → `9e0df6ae`  governance: the build record and code review (the merge head; ⛔ not cited, mapped for completeness)
+Re-verify (bash — zsh does not word-split `$p`): `for p in "e6c7b384 a5f5d4d5" …; do set -- $p; diff <(git show $1 | git patch-id --stable | cut -d' ' -f1) <(git show $2 | git patch-id --stable | cut -d' ' -f1); done`
+— ⚠ needs the branch SHAs, which survive only while the branch (local or `origin/story/6-21b-death-certificate-replacement-surfaces`) does.
+-->
+
+<!--
 BASELINE — `eab7ba45` (`main`, 2026-09-26): 6.21a's PR #241 rebase-merged; its last CODE commit is `8e1432db`/`cb1298b3`/
 `6f44f8f5`, and `eab7ba45` itself is governance-only. Every code claim below was RE-DERIVED at `eab7ba45` on 2026-09-26
 (see §*Re-pin record*). The previous pin was `a35af210` (2026-09-25, before 6.21a landed) — ⛔ do not diff against it.
@@ -1078,3 +1094,4 @@ Claude Sonnet 5 (claude-sonnet-5), via the bmad-dev-story workflow.
 | v1.2 | 2026-09-26 | **Dev-story build complete** (bmad-dev-story). All eight tasks implemented and tested; every AC1–AC8 satisfied. See Dev Agent Record → Completion Notes for the full account: the leaf resolver + both routes (Task 1); every mobile pure-logic module split out and tested in node, the render-harness import trap hit and fixed (Task 2); copy (Task 3); the admin multipart client + `<HelplineCertificateReplacement>` (Task 4); the `death_date` OCR flag (Task 5); the microcopy/friction/parity gates, incl. two NEW FM-14 allow-list entries the 6.18 ones did not cover (Task 6); 111 new domain unit tests + 6 new parity tests + 1 new live-DB consistency test + 24 API integration tests (8 new) + 5 new job tests + 7 new admin tests + 6 new mobile pure-logic test files, all green on `:5433` (Task 7); every deferred-work item this story's Dev Notes named closed/narrowed/annotated at every site named, plus two new findings (BW-C9, Q1) recorded (Task 8). ⛔ No D changed; ⛔ no new predicate, lifecycle state, migration, `dispatch()` or reminder (AC7). Status → `review`. |
 | v1.3 | 2026-09-27 | **Code review** (bmad-code-review; Blind Hunter → Edge Case Hunter → Acceptance Auditor, SEQUENTIAL, + the load-bearing-invariant lens). 1 decision (BigDev: (a), `relationship.error` + Try again), 25 patches, 1 defer, 10 dismissed; ALL 26 patches applied. The serious three: lint was red and `replacementAllowed` was never used (the "one shared predicate" claim false); the wizard wrote ⛔ no marker (family told "not received yet" right after uploading); the v1 production OCR provider would have flagged EVERY certificate "date of death missing" (`-249` §3). The Completion Notes' overstatements are corrected by an appended block (⛔ not edited in place). Status `review → done`. |
 | v1.4 | 2026-09-27 | **Code review, round 2** (the same three layers, SEQUENTIAL, with round 1's fixed list). All 26 round-1 fixes verified. 2 decisions (BigDev *"1,1"*: Refresh also clears the helpline pending line; the OCR not-read signal = "every field empty", `-249` §3's closing sentence governs, ⛔ no new id) + 21 patches → 23 applied; 4 dismissed. The main ones: a 409 "already waiting/accepted" now settles like a success; a double tap can no longer push two replacement screens (a second upload); the helpline's sent line replaces the stale D4 read-out; BW-G5 got its test. Record corrected again (incomplete NOT-executed list, vacuous friction ✓, the original 665). Status stays `done`. |
+| v1.5 | 2026-09-27 | **Merged as PR #243 (rebase), every CI check green.** Every branch SHA this file cites is mapped to its `main` twin in the header note (each of the 5 pairs proved by identical `patch-id` and code tree); ⛔ no citation rewritten. |

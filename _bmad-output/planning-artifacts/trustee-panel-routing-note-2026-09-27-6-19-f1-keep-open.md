@@ -6,10 +6,17 @@
 > `6-19-follow-ups` (F2–F8 were answered, `-255`). It explains **which claims reach the Super Admin at all**, **what each option means**,
 > and adds **two options the first note did not offer: D (keep open once) and E (a review period).**
 
-> ## ⏳ AWAITING PANEL RULING
+> ## ✅ PANEL RULED — 2026-09-27 — recorded as `2026-09-27-256`
 >
-> ⛔ **Nothing is recorded here yet.** When the Panel rules, transcribe it into this block, into the `6-19-follow-ups` note's F1 line
-> **and** into `.decision-log.md` as a new decision id. Everything below is then kept **unedited**, as the question **as it was put**.
+> **Ruled by Dhiraj Rahul + Kalpana Bharti, relayed by BigDev — verbatim:**
+> *"F1 - option E"* · *"1. No hard deadline, 30-day reminder is fine"* · *"2. Yes, super admin can direct other admins"*
+>
+> ⭐ Our reading (E) **taken**, with both details as drafted: ⛔ no hard deadline, a 30-day reminder to the Super Admin; and the Super
+> Admin **may direct** the Pariwar Admin and the District Admin — a **new power**, confined to claims escalated after a declined closure.
+>
+> **What this ruling does NOT cover** (full list in `2026-09-27-256`): what a direction may ask; what happens if an admin does not act.
+>
+> ⭐ Everything **below this block is kept UNEDITED** — it is the question as it was put.
 
 ---
 

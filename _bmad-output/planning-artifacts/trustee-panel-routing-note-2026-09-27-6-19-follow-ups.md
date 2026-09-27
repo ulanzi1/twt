@@ -5,7 +5,7 @@
 > a point those answers left open — ⛔ not a re-opening of them. ⚠ **One point is deliberately ⛔ not asked:** whether the person filing
 > may agree **on behalf of** the claimant and the nominee is a **legal** question, and it is with counsel.
 
-> ## ✅ PANEL RULED F2–F8 — 2026-09-27 — recorded as `2026-09-27-255` · ⏳ F1 AWAITS A CLARIFICATION
+> ## ✅ PANEL RULED F2–F8 — 2026-09-27 — recorded as `2026-09-27-255` · ✅ F1 RULED LATER THE SAME DAY — `2026-09-27-256`
 >
 > **Ruled by Dhiraj Rahul + Kalpana Bharti, relayed by BigDev — verbatim:**
 > *"F2 - A"* · *"F3 - Yes"* · *"F4 - A"* · *"F5 - A"* · *"F6 - A"* · *"F7 - A"* · *"F8 - spouse, mother, father, son, daughter, brother,
@@ -19,6 +19,9 @@
 >
 > ⏳ **F1 — ⛔ not answered.** BigDev asked for a clarification first (*"explain each option, also which type of claims are being
 > escalated"*): the note `trustee-panel-routing-note-2026-09-27-6-19-f1-keep-open.md`, which adds an option **D** (keep open once).
+>
+> ✅ **F1 — ruled later, `2026-09-27-256`:** *"F1 - option E"* — a Super Admin **review period** (option E of the clarification note,
+> ⛔ none of A–C above): ⛔ no hard deadline, a 30-day reminder, and the Super Admin **may direct** the Pariwar Admin and the District Admin.
 >
 > **What this ruling does NOT cover** (full list in `2026-09-27-255`): F1; the legal basis for the filer's agreement (counsel's — F7's SMS
 > is go-live gated on it); the nominee declaration list.

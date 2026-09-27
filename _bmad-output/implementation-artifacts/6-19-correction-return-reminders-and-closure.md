@@ -259,6 +259,15 @@ uncommittable; what happens next is the Super Admin's and is ⛔ ruled nowhere (
 > (an "under review" hold with a note; recorded directions to a named admin and their recorded response; a 30-day reminder to the Super
 > Admin; ⛔ no hard deadline) and recommends **E**, ⛔ no longer D. ⚠ E would give the Super Admin a new power to DIRECT the two admins —
 > asked in the note. The decider is the **Super Admin**, ⛔ not the Panel (confirmed by BigDev).
+>
+> ⭐⭐ **APPENDED (later still): F1 RULED — `2026-09-27-256`, option E.** A Super Admin **review period**: an "under review" hold with a
+> note, ⛔ no hard deadline, a 30-day reminder to the Super Admin, and the Super Admin **may direct** the Pariwar Admin and the District
+> Admin (a new power, confined to escalated claims). ⇒ ⭐ **K is fully answered, and EVERY Panel question on this story is now answered.**
+> What remains is **counsel's** — M (the filer's agreement for others) and S (the privacy policy's purpose) — both **go-live** gates,
+> ⛔ not build blockers. ⭐ And `2026-09-27-257` (N1 of the 6.20 note) makes the **nominee** list twenty values, so `-255` F8's
+> claimant-to-nominee list (nineteen) is now exactly that list without `other`.
+> ⚠ **Next: a `bmad-create-story` validate pass** to re-derive the AC BLOCKED tags from `-250`–`-256` — it may flip this story to
+> `ready-for-dev`. ⛔ Not done by this annotation.
 
 - **K — the Super Admin's part.** When the Pariwar Admin declines a closure and it goes to the Super Admin: **what does the Super Admin decide** (close anyway, keep open, something else), and **what happens to the claim and its reminders after a decline** (keep waiting, resume, a new period)? *Blocks AC6 (the decline branch), the Super Admin surface, key (4).*
 - **L — who is contacted when the claimant is not the nominee.** The reminders and the **letters**: the nominee, the claimant, or both — and to **whose address**? *Blocks AC1 (which fields are mandatory for which recipient), AC3, AC5.*
@@ -427,3 +436,4 @@ Live-DB traps recorded for this repo ([[project_live_db_test_gotchas]], [[projec
 | v0.4 | 2026-09-27 | **APPENDED, ⛔ nothing above edited: the Panel answered K–U** (`2026-09-27-250` … `-254`). A status table under *Open Panel questions* (the question list kept as put). ⚠ K (option C — a narrowing of `-226`/`-227` for a declined closure), M (option C), Q (option C) and T (1)/(2) did ⛔ **not** take our defaults; K, L and P are answered only in part; `-253` cl.2 adds a filing question (claimant→nominee relationship). Status stays `backlog` — the AC BLOCKED tags are re-derived at the next validate. |
 | v0.5 | 2026-09-27 | **APPENDED, ⛔ nothing above edited: the follow-ups F2–F8 answered** (`2026-09-27-255`) — K except F1, L (letter address), P (SMS widened), U (each nominee reminded), and the 19-value claimant-to-nominee list. ⏳ F1 (keep open) awaits the clarification note `6-19-f1-keep-open`. Status stays `backlog`. |
 | v0.6 | 2026-09-27 | **APPENDED:** the unsent F1 note revised — option **E** (a Super Admin review period, with recorded directions to the admins) added and recommended, ⛔ no longer D. Status stays `backlog`. |
+| v0.7 | 2026-09-27 | **APPENDED:** F1 ruled (`2026-09-27-256`, option E — a Super Admin review period with directions to the admins). Every Panel question on this story is answered; counsel (M, S) remains as go-live gates. Next: a validate pass to re-derive the ACs. Status stays `backlog`. |

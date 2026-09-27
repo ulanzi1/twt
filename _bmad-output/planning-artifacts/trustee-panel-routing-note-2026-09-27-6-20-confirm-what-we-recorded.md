@@ -6,7 +6,16 @@
 > built from those answers. We ask you to read what we recorded, and **confirm it — or tell us where we got it wrong.** Two items at the
 > end (N1, N2) were ⛔ never put to you and are new.
 
-> ## ⏳ AWAITING PANEL RULING
+> ## ✅ N1 RULED — 2026-09-27 — recorded as `2026-09-27-257` · ⏳ C1–C3, D1–D4, N2 STILL AWAITING
+>
+> **N1 — ruled by Dhiraj Rahul + Kalpana Bharti, relayed by BigDev — verbatim:** *"add these to N1 brother-in-law, son-in-law,
+> mother-in-law, father-in-law or grandparent"* — our suggestion taken: the nominee list becomes **twenty** values, **superseding `-237`
+> cl.1** (⛔ `-237` unedited; cl.2, `other` forecloses correction, stands). ⭐ It now matches the claimant-to-nominee list (`-255` F8) plus
+> `other`.
+>
+> ⏳ **Everything else below is still awaiting the Panel** — the block that follows is the original, and applies to C1–C3, D1–D4 and N2.
+>
+> ### ⏳ AWAITING PANEL RULING (C1–C3, D1–D4, N2)
 >
 > ⛔ **Nothing is recorded here yet.** When the Panel answers, transcribe it into this block **and** into `.decision-log.md` — as
 > **"confirmed as recorded"** where you confirm, and as a **new decision that supersedes** `-237` / `-238` / `-239` wherever you change

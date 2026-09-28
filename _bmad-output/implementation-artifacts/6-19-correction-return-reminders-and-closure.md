@@ -494,7 +494,11 @@ Where a decision only records a Panel ruling it says so.
   **completes** the filing — its writes there are **add-only**: insert a row or fill a column that is still null, ⛔ never overwrite a set
   value; the one permitted overwrite is the claimant-block write nulling `claimant_nominee_version_id` in the same statement (audited) —
   only when the stored claimant version is ⛔ not effective (over an effective one it is a correction: 409 `claim_contact.add_only`). In
-  every write the parent CHECK's two sides clear each other in the same statement (the claimant's version ⇄ the claimant block).
+  every write the parent CHECK's two sides clear each other in the same statement (the claimant's version ⇄ the claimant block). In the
+  extra states, a claimant-block write while the effective declaration is ⛔ not `effective` (a 6.20 correction can supersede the
+  determination there) is refused **409 `claim_contact.awaiting_determination`**. A **revoked** agreement counts as missing: `agreed`
+  records a fresh consent and repoints in any window. **Audit unit:** one contact line per write, plus one agreement line when a consent
+  is recorded, in one `withCompensatingAudit`.
   Any other overwrite, or a `claimantNomineeVersionId` (the parent CHECK means it could only collide), is refused whole — 409
   `claim_contact.add_only`, nothing written, ⛔ never silently dropped. Helpline nominee rows take an optional `address` and an optional
   `relationship` (the address required only to create the row — else 400 `claim_contact.address_required`), so a relationship is filled ⛔ without re-sending the address.
@@ -542,7 +546,7 @@ Where a decision only records a Panel ruling it says so.
   complete (conveniences); (3) the **server boundary** is a NEW exported domain check (e.g. `assertClaimContactRecorded`) called **after**
   `assertClaimApprovable` at P1/P3/P4, approve-only — ⛔ never inside `assertClaimApprovable` (which stays unchanged) and ⛔ never inside
   `isReturnedClaimResubmitted`'s inner helper; it reads `getEffectiveNomineeDeclaration` itself. It passes only when the contact row exists, its agreement consent exists and is ⛔ not
-  revoked, **every EFFECTIVE nominee's `versionId`** has an address row, and **either** (the claimant's version is one of the effective
+  revoked, **every EFFECTIVE nominee's `versionId`** has an address row (rows selected by the effective ids — ⛔ never a count), and **either** (the claimant's version is one of the effective
   nominees' versions) **or** (the claimant fields are present **and** every effective nominee's row carries the claimant-to-nominee
   relationship). It throws
   `ClaimContactRequiredError` (`reason`: `no_record | agreement_withdrawn |
@@ -741,3 +745,4 @@ template registry's content against the rendered `t()` output).
 | v1.7 | 2026-09-28 | 6.19a's fourth validate pass: **D5** gains the two request shapes (member full, helpline partial), `agreement_required` on the creating write, and the agreement repointing rules; **D14**'s predicate parenthesised. |
 | v1.8 | 2026-09-28 | 6.19a's fifth validate pass: **D5**'s add-only refusals get an outcome (409 `claim_contact.add_only`, nothing written; `claimantNomineeVersionId` refused in the extra states) and helpline nominee rows take an optional address and relationship. |
 | v1.9 | 2026-09-28 | 6.19a's sixth validate pass: **D5**'s claimant-block exception narrowed to a non-effective stored claimant version; the parent CHECK's two sides cleared symmetrically in every write; `claim_contact.address_required` named. |
+| v1.10 | 2026-09-28 | 6.19a v1.7 (external review): **D5** gains `claim_contact.awaiting_determination` (a claimant-block write in the extra states while the effective declaration is ⛔ not `effective`), a revoked agreement counting as missing (fillable in any window), and the audit unit; **D14** selects rows by effective `versionId`, ⛔ never a count. |

@@ -487,7 +487,8 @@ Where a decision only records a Panel ruling it says so.
   ⭐ **The write rules are 6.19a AC1's W1–W10 — the ONE copy** (⛔ not restated here, so the two can ⛔ never drift): W1 the member binds to
   the **projected** version (what `member_nominees` was last written from — ⛔ never the highest `version_no`); W2 the helpline binds by
   explicit allowed `nomineeVersionId` (effective once determined, else projected); W3 the windows (member = `NOMINEE_BANK_COLLECTABLE_STATES`;
-  helpline = that ∪ `TRUSTEE_ROUTABLE_STATES`); W4 upsert-only rows; W5 add-only in the helpline's extra states under `claim.file` (the
+  helpline = that ∪ `TRUSTEE_ROUTABLE_STATES`); W4 upsert-only rows; W4a the correction chain (after filing the declaration is locked, so
+  a 6.20 correction is the only re-versioning — a row or claimant link on V counts for any version correcting V, nearest wins); W5 add-only in the helpline's extra states under `claim.file` (the
   reason is recorded: there the helpline only COMPLETES the filing; an identical value is ⛔ not an overwrite); W6 the claimant side and its
   fills in the extra states (creating; a non-effective claimant version → an effective one or the block) and
   `claim_contact.awaiting_determination`; W7 the creating write (`agreement_required`, `nominee_set_mismatch`, `claimant_required`,
@@ -535,7 +536,8 @@ Where a decision only records a Panel ruling it says so.
   complete (conveniences); (3) the **server boundary** is a NEW exported domain check (e.g. `assertClaimContactRecorded`) called **after**
   `assertClaimApprovable` at P1/P3/P4, approve-only — ⛔ never inside `assertClaimApprovable` (which stays unchanged) and ⛔ never inside
   `isReturnedClaimResubmitted`'s inner helper; it reads `getEffectiveNomineeDeclaration` itself. It passes only when the contact row exists, its agreement consent exists and is ⛔ not
-  revoked, **every EFFECTIVE nominee's `versionId`** has an address row (rows selected by the effective ids — ⛔ never a count), and **either** (the claimant's version is one of the effective
+  revoked, **every EFFECTIVE nominee's `versionId`** has an address row (resolved per effective id through the correction chain, 6.19a
+  W4a — ⛔ never a count), and **either** (the claimant's version is one of the effective
   nominees' versions) **or** (the claimant fields are present **and** every effective nominee's row carries the claimant-to-nominee
   relationship). It throws
   `ClaimContactRequiredError` (`reason`: `no_record | agreement_withdrawn |
@@ -736,3 +738,4 @@ template registry's content against the rendered `t()` output).
 | v1.9 | 2026-09-28 | 6.19a's sixth validate pass: **D5**'s claimant-block exception narrowed to a non-effective stored claimant version; the parent CHECK's two sides cleared symmetrically in every write; `claim_contact.address_required` named. |
 | v1.10 | 2026-09-28 | 6.19a v1.7 (external review): **D5** gains `claim_contact.awaiting_determination` (a claimant-block write in the extra states while the effective declaration is ⛔ not `effective`), a revoked agreement counting as missing (fillable in any window), and the audit unit; **D14** selects rows by effective `versionId`, ⛔ never a count. |
 | v1.11 | 2026-09-28 | 6.19a v1.8 (fresh-context validate): **D5** rewritten as the table shape + a pointer to 6.19a AC1's **W1–W10** as the ONE copy of the write rules (projected versions, the claimant-side fills, `claimant_required`, `agreed` alone, `locale`, the audit unit) — ⛔ no second restatement to drift; **D8** records the `claim.view_nominee_name_check` reuse-check (presence-only; plaintext under `claim.file`); **D14** pins the reason precedence. Glyph register: six positive clauses that carried `⛔` corrected. |
+| v1.12 | 2026-09-28 | 6.19a v1.9: **D5**'s pointer list gains **W4a** (the correction chain — a 6.20 correction ⛔ never orphans an address or the claimant link); **D14** resolves rows through it. |

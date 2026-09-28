@@ -25,7 +25,9 @@ Status: ready-for-dev
 
 ## Read first — the parts of the shared spec this slice depends on
 
-- **Rulings:** `-232` G, `-233`, `-253` cl.1/cl.2/cl.4, `-255` F8, `-257`; for Task 0 also `-258`, `-259`, `-260`; `-261` C1/C3 (context for AC13 and for the per-claim agreement).
+- **Rulings:** `-232` G, `-233`, `-253` cl.1/cl.2/cl.4, `-255` F8, `-257`; for Task 0 also `-258`, `-259`, `-260`; `-261` C1/C3 (context for AC13 and for the per-claim agreement); `-263` FQ9 (row `6-26`'s
+  approval check — sequencing, Dev Notes). `-262` and `-264` do ⛔ not touch this slice (6.20's follow-ups). *"Every Panel question on the
+  set is answered"* counts the 6.19 set (`-250` … `-260`); `-261` … `-264` rule on 6.20.
 - **Invariants:** 9 (new PII is Tier-1, no erasure path yet — record the gap).
 - **What already EXISTS:** *Filing (member app)*, *Filing (helpline)*, *Side-route pattern*, *Consent*, *Nominees*, *Relationship lists*, *PII*, *The approval gate*.
 - **Traps:** T8 (new PII surface), T12 (the as-at-death declaration — ⚠ read its note on WHEN it exists), T14 (migrations from 0124).
@@ -62,7 +64,7 @@ cl.1 instead — the "waits, never refused" shape is `-226` cl.7's for the bank 
 ## Acceptance Criteria
 
 ### AC0 — Governance first (Task 0)
-**Then** ONE author-commit decision (after `-264`) lands **D1–D29** with their current status — D13 **decided** (BigDev, 2026-09-27, *"split it
+**Then** ONE author-commit decision (the next free id, read live at commit time — `-265` as of 2026-09-28) lands **D1–D29** with their current status — D13 **decided** (BigDev, 2026-09-27, *"split it
 three ways"*); D5, D14, D15, D16 as **revised 2026-09-28** (below); D23 **confirmed** by `-260` G3; D27's keep **ratified** by `-260` G2; ⭐ D29
 committed in its **`-260` G1 form** (the Super Admin decides a staff case — approve through the full gate incl. D14's check, or refuse;
 ⛔ never close), its first-written text kept as superseded — and the **eight** keys (D8 + keys 7, 8) with the slice that mints each
@@ -110,6 +112,12 @@ CHECK means that column or the claimant block is always set, so it can ⛔ never
 `claimant_nominee_version_id` to null in the same statement — ⭐ **only when the stored claimant version is ⛔ not one of the effective
 nominees' versions** (the `claimant_details_missing` case: the claimant is, as at the death, none of the nominees) — recorded in its audit
 line; when the stored version IS effective, replacing it is a correction and the write is **409 `claim_contact.add_only`**, nothing written.
+⚠ **When there is ⛔ no effective set:** a 6.20 nominee correction is open in `verifier_approved`, `reversed` and `state_trustee_freeze`
+and supersedes the determination, so the effective declaration can be `undetermined` (⛔ no entries) inside the extra states — and then
+EVERY stored version would read as "⛔ not effective". ⇒ in the extra states, a claimant-block write while the effective declaration is
+⛔ not `effective` is refused **409 `claim_contact.awaiting_determination`**, nothing written; the claim waits for the District Admin's new
+determination, which the approval gate needs anyway. (Nominee rows in the extra states are bound to the allowed set as always — the heads
+while undetermined.)
 ⭐ **The parent CHECK in every write:** setting the claimant's version clears the claimant block, and setting the claimant block clears the
 version, in the same statement — so a member (or the helpline inside the member's window) switching between "the claimant is nominee N" and
 "the claimant is someone else" never trips the CHECK. Inside `NOMINEE_BANK_COLLECTABLE_STATES` (where the family's own step and a phone filing usually run — the peer-mesh job moves
@@ -120,10 +128,12 @@ spreading the two tuples, ⛔ never hand-typed) — so every state from which P1
 (R9 reaches P4 from six states and bypasses P1); outside it a clean **409 `claim_contact.not_writable`** before any encryption. ⭐ Child
 rows are **UNIQUE `(contact_id, nominee_version_id)`** and every write **upserts the rows it carries and ⛔ never deletes a row it does ⛔
 not carry** — so a member re-POST can ⛔ never erase a row the helpline added for an effective version; a member re-POST (anywhere in its
-window) may overwrite its own head-bound rows and the claimant block; a helpline write in the extra states is add-only (above). One
-audit line per write
+window) may overwrite its own head-bound rows and the claimant block; a helpline write in the extra states is add-only (above). **Audit
+unit:** each write emits ONE contact-record line, plus ONE agreement line when it records a consent — both inside the same
+`withCompensatingAudit`; the admin read emits its own line (AC9a)
 **And** the body reuses the declaration's validators — `MobileNumber` for the claimant's mobile, `z.string().trim().min(1).max(500)` for every
-address (as `NomineeDeclareEntry`) — and the claimant's name is a trimmed bounded string, ⛔ not `EnglishScriptName` (D9). ⭐ **Two request shapes.** **Member** (the full record): an address for 1–2 distinct ranks; exactly one of `claimantNomineeRank` or the
+address (as `NomineeDeclareEntry`) — and the claimant's name is a trimmed bounded string, ⛔ not `EnglishScriptName` (D9). ⭐ **Two request shapes.** **Member** (the full record): an address for 1–2 distinct ranks (the contract can ⛔ not know how many nominees there are — the writer
+enforces exactly the head ranks, below); exactly one of `claimantNomineeRank` or the
 claimant block (name, mobile, address, and a relationship per rank); `agreed: z.literal(true)`. **Helpline** (possibly partial): at least one
 of — nominee rows (each `nomineeVersionId` + an optional `address` + an optional `relationship`, at least one of the two — so a missing
 relationship is filled ⛔ without re-sending the address; the writer requires the address only on the write that **creates** the row — else **400 `claim_contact.address_required`**), the
@@ -133,11 +143,16 @@ carry exactly the non-vacated head ranks, a helpline write only allowed versions
 **creates** the contact row needs the agreement and a complete nominee set → **400 `claim_contact.agreement_required`** /
 `nominee_set_mismatch`. **The agreement after creation:** every member re-POST records a fresh `claim_contact_agreement` and repoints
 `agreement_consent_id`; a helpline write that carries `agreed` does so only inside `NOMINEE_BANK_COLLECTABLE_STATES` — in the extra states it
-is ignored for an existing row (a confirmation, ⛔ not data: ⛔ never repointed), and the response says it was ignored
+is ignored for an existing row whose agreement is live (a confirmation, ⛔ not data: ⛔ never repointed), and the response says it was
+ignored. ⭐ **A REVOKED agreement counts as MISSING:** `agreed` then records a fresh consent and repoints `agreement_consent_id` in **any**
+window (it fills a gap — the add-only rule's own "fill what is empty"), so `agreement_withdrawn` always has a way out. (Nothing revokes
+this type in v1 — the only claim-consent revoke route is limited to `DpdpaRevocableConsentType` — so today only a direct DB change reaches
+it; the path exists so the reason is ⛔ never a permanent block.)
 **And** the boundary is D14's: a NEW exported domain check (e.g. `assertClaimContactRecorded(db, pariwarId, claimCaseId)` — it reads
 `getEffectiveNomineeDeclaration` itself, since `assertClaimApprovable` returns nothing to the call sites; one extra query per approval)
 runs **after** `assertClaimApprovable` at P1 (`adjudicateClaim`), P3 (`voteOnFrozenClaim`) and P4 (`finalizeR9Outcome`), approve-only, and
-passes only when: a contact row exists; its agreement consent exists and is ⛔ not revoked; **every EFFECTIVE nominee's `versionId`** has an
+passes only when (rows are selected WHERE `nominee_version_id` is one of the effective `versionId`s — ⛔ never a row count, since stale
+head-bound rows stay in the table): a contact row exists; its agreement consent exists and is ⛔ not revoked; **every EFFECTIVE nominee's `versionId`** has an
 address row; and **either** (the claimant's version is one of the effective nominees' versions) **or** (the claimant fields are present
 **and** every effective nominee's row carries the claimant-to-nominee relationship). Otherwise it throws
 `ClaimContactRequiredError` (a `reason` of `no_record | agreement_withdrawn | nominee_address_missing | claimant_details_missing` —
@@ -206,14 +221,17 @@ event, audit line or error body; the **RTBF gap** for the contact tables is reco
 ### AC11a — The proof (this slice)
 **Then** live-DB specs on `twt-test-pg :5433`, **executed**: the contact tables' migration-level policy spec (RLS positive / negative /
 fail-closed / FORCE, FKs incl. `agreement_consent_id` and the version FK, UNIQUE, CHECKs — incl. "claimant fields present ⇔ the claimant
-version is null"); both routes (member + helpline), **400** on every incomplete shape, **400 `claim_contact.nominee_set_mismatch`** on a
+version is null"); both routes (member + helpline) — ⭐ the partition: **400** = contract shape (every incomplete body) and the writer's checks against the
+declaration (`nominee_set_mismatch`, `agreement_required`, `address_required`); **409** = the claim's state or the stored row
+(`not_writable`, `add_only`, `awaiting_determination`) — **400** on every incomplete shape, **400 `claim_contact.nominee_set_mismatch`** on a
 wrong nominee set (member: ≠ the head ranks; helpline: a version outside the allowed set), **409 `claim_contact.not_writable`** outside each
 window; a member re-POST ⛔ never deletes a helpline-added row; a helpline write in the extra states that would overwrite a set value, or that carries `claimantNomineeVersionId`, is **409
 `claim_contact.add_only`** with the row proven unchanged (one test each) — and the same write in `verifier_review` may overwrite (full
 upsert); a helpline nominee row carrying only a `relationship` fills it on an existing row, and on a missing row is **400
 `claim_contact.address_required`**; in the extra states a claimant-block write over a stored claimant version that IS effective is **409
 `claim_contact.add_only`** (nothing written); a member re-POST switching from `claimantNomineeRank` to the claimant block and back leaves the
-parent CHECK satisfied each time; **409 `<route>.claim_contact_required`** at P1, P3 and P4 with the claim left **waiting** (⛔ no state move, ⛔ no
+parent CHECK satisfied each time; in `verifier_approved`, after a 6.20 correction supersedes the determination, a claimant-block write is
+**409 `claim_contact.awaiting_determination`** (nothing written) and succeeds once a new determination is recorded; **409 `<route>.claim_contact_required`** at P1, P3 and P4 with the claim left **waiting** (⛔ no state move, ⛔ no
 denial), one test per `reason`; ⭐ the version binding: a declaration changed after the death and before filing (so the effective nominee is
 an **earlier** version) ⇒ P1 409s `nominee_address_missing`, the admin read shows that version without an address, the helpline adds it
 **by `nomineeVersionId`** in `verifier_review`, and the approval then passes; the same path for a claimant bound to a version that is ⛔ not
@@ -221,7 +239,8 @@ effective (`claimant_details_missing`) — the helpline's claimant-block write n
 parent CHECK holds) and fills the relationship on the existing effective rows, in `verifier_approved` too (add-only); a claimant block with
 a missing relationship still 409s; the two request shapes — a helpline write carrying only the claimant block, or only one nominee row, is
 accepted; a first write (no row yet) without the agreement is **400 `claim_contact.agreement_required`**, in the extra states too (the R9
-case); a member re-POST repoints `agreement_consent_id` to a fresh consent; a helpline `agreed` in the extra states leaves it unchanged and the response says it was ignored; `agreement_withdrawn` by setting `revoked_at` directly; a refiled claim for the same death is ⛔ not satisfied by the first claim's agreement; the agreement's copy lockstep
+case); a member re-POST repoints `agreement_consent_id` to a fresh consent; a helpline `agreed` in the extra states leaves a live agreement unchanged and the response says it was ignored — and over a REVOKED one
+records a fresh consent and repoints (the `agreement_withdrawn` 409 then clears); `agreement_withdrawn` by setting `revoked_at` directly; a refiled claim for the same death is ⛔ not satisfied by the first claim's agreement; the agreement's copy lockstep
 (byte-identical en/hi ↔ the server constant); the preserved-consent-types test and the contracts consent-enum lockstep still green; the
 claimant-to-nominee list = the twenty minus `other` (equality test); **cross-Pariwar** and **non-human/system-actor** denial per new route;
 every new route file classified in the human-actor gate (`unclassifiedRouteFiles()` fails otherwise; a route added to an existing file needs
@@ -236,7 +255,7 @@ precedent 6.21a set for the certificate (`certificate: 'skip'`).
 
 - [ ] **Task 0 — Governance first, for the WHOLE 6.19 set** (AC0) — ⛔ no code in 6.19a, b or c before it
   - [ ] Re-run `git diff --name-only c136b03c..HEAD -- packages apps scripts` (empty at `6752e0d6`); re-read anything it lists that the shared spec cites.
-  - [ ] Write ONE author-commit decision (after `-264`): D1–D29 with the statuses in AC0 (D5/D14/D15/D16 as revised 2026-09-28; D29 in its `-260` G1 form); the **eight** keys and which slice mints each (6.19b: keys 1, 7; 6.19c: keys 2–6, 8).
+  - [ ] Write ONE author-commit decision (the next free id, read live — `-265` as of 2026-09-28): D1–D29 with the statuses in AC0 (D5/D14/D15/D16 as revised 2026-09-28; D29 in its `-260` G1 form); the **eight** keys and which slice mints each (6.19b: keys 1, 7; 6.19c: keys 2–6, 8).
   - [ ] `epics.md`: entries for 6.19a–d with the `> ⚠ Minted by…` header; `-257`'s three annotations (Story 3.4's *"five to fifteen"*, FR-4, Story 6.20 item 7); PRD §4.10 and architecture §3.4 annotations naming `-255` F7 **and** `-259` (⛔ never a rewrite).
   - [ ] AR-61 ledger rows for every loop node AC0 lists; M (incl. "a condition of approval") and S in `docs/launch-gate-inventory/inventory-roster.md` (D24).
   - [x] ✅ The two routing notes were sent and **ruled 2026-09-27**: V → `-258`, CC1 → `-259`; G1–G6 → `-260`.
@@ -245,21 +264,22 @@ precedent 6.21a set for the certificate (`certificate: 'skip'`).
 - [ ] **Task 2 — Capture at filing** (AC1, AC8a, AC9a, AC10)
   - [ ] Consent type (D15): `consentTypeEnum` + contracts `ConsentTypeSchema` (the lockstep in `packages/contracts/tests/consent.test.ts` pins them equal); ⛔ not `DpdpaConsentType` (its `Record`-total `DPDPA_CONSENT_COPY` and the DPDPA GET view's `ALL_TYPES` would change a shipped surface); ⛔ not `CLAIM_TIME_CONSENT_TYPES` (pinned by exact `toEqual`; it derives the `claim.dpdpa_consent_recorded` payload). Its own versioned copy constant + `claim.json` en + hi keys + a byte-identical lockstep test (the `dpdpa-consent-copy` precedent), marked *"pending Story 0.13"*.
   - [ ] Contracts (⛔ no `@twt/domain` import): the **two** request shapes — member (full, `claimantNomineeRank`, `agreed: true`) and helpline (partial, by `nomineeVersionId`, `agreed` optional) — reusing `MobileNumber` and the address validator, the claimant-to-nominee enum (Task 3b), the admin read DTO. Re-emit `openapi/v1.yaml`.
-  - [ ] Domain: the writer (under the claim lock; **member**: binds each rank to its non-vacated head version — `listNomineeDeclarationVersions`, or extend `getNomineeVersionHeads` to return `versionId`; **helpline**: takes explicit `nomineeVersionId`s, checked against the allowed set — effective once determined, else heads; upsert-only, ⛔ never deleting an uncarried row; helpline writes in the extra states add-only (insert or fill a null column; the claimant block also nulls `claimant_nominee_version_id`; any overwrite or a `claimantNomineeVersionId` → 409 `claim_contact.add_only`, nothing written); helpline nominee rows take an optional address and an optional relationship (the address required only to create — else 400 `claim_contact.address_required`); the parent CHECK's two sides cleared symmetrically in every write; the claimant-block exception only over a non-effective claimant version; the writer-level `nominee_set_mismatch` and `agreement_required` (on the write that creates the row); the agreement repointing rules; records the consent and the contact row in one tx); the window tuples; `assertClaimContactRecorded` (reads the effective declaration itself; requires the relationship on every effective row when the claimant block is present) + `ClaimContactRequiredError`, called **after** `assertClaimApprovable` at P1/P3/P4 (⛔ not inside it, ⛔ not inside `isReturnedClaimResubmitted`'s inner helper).
+  - [ ] Domain: the writer (under the claim lock; **member**: binds each rank to its non-vacated head version — `listNomineeDeclarationVersions`, or extend `getNomineeVersionHeads` to return `versionId`; **helpline**: takes explicit `nomineeVersionId`s, checked against the allowed set — effective once determined, else heads; upsert-only, ⛔ never deleting an uncarried row; helpline writes in the extra states add-only (insert or fill a null column; the claimant block also nulls `claimant_nominee_version_id`; any overwrite or a `claimantNomineeVersionId` → 409 `claim_contact.add_only`, nothing written); helpline nominee rows take an optional address and an optional relationship (the address required only to create — else 400 `claim_contact.address_required`); the parent CHECK's two sides cleared symmetrically in every write; the claimant-block exception only over a non-effective claimant version; the writer-level `nominee_set_mismatch` and `agreement_required` (on the write that creates the row); the agreement repointing rules (a revoked agreement counts as missing, fillable in any window); `awaiting_determination` for a claimant-block write in the extra states while the effective declaration is ⛔ not `effective`; the audit unit (one contact line + one agreement line when a consent is recorded); records the consent and the contact row in one tx); the window tuples; `assertClaimContactRecorded` (reads the effective declaration itself; requires the relationship on every effective row when the claimant block is present) + `ClaimContactRequiredError`, called **after** `assertClaimApprovable` at P1/P3/P4 (⛔ not inside it, ⛔ not inside `isReturnedClaimResubmitted`'s inner helper).
   - [ ] API: `claim-contact-crypto.ts` + `CLAIM_CONTACT_FIELD_CLASS`; member + helpline routes + the admin read (new route file(s) classified in `scripts/claim-adjudication-human-actor-invariant/check.ts`); the three error mappers; audit types; `withCompensatingAudit`.
   - [ ] Admin: the helpline card; the three console screens' `…claim_contact_required` message (`nominee-errors.ts`).
   - [ ] Mobile: `(claim)/contact.tsx` (direction-fixed relationship question; `saveClaimDraft({ lastStep: 'contact' })`), `CLAIM_STEPS`, `nominee-review.tsx`'s next route, `claim-steps.test.ts`, the `(claim)/index.tsx` resume fix.
   - [ ] Test helper: `seedNomineeNameCheck` seeds the contact record by default, `contact: 'skip'` opt-out (AC11a).
-- [ ] **Task 3 — `-257` (N1)** (AC13) — (a) `NOMINEE_RELATIONSHIP_CODES` + the domain mirror to twenty; the *"Still OPEN"* note DISCHARGED; the stale "fifteen"/five-value comments fixed (`declaration.ts` doc list, `relationship.ts` header, `NomineeForm.tsx`, `member_nominees.ts:62`). (b) The derived claimant-to-nominee enum (`NomineeRelationship.exclude(['other'])`) + the equality test; `KNOWN_RELATIONSHIPS` re-pointed at it. (c) The picker + **en + hi** copy for the five new values — reviewed kin terms that cover the English: e.g. `brother_in_law` — जीजा / देवर / जेठ / साला / नंदोई / साढ़ू; `son_in_law` — दामाद; `mother_in_law` — सास; `father_in_law` — ससुर; `grandparent` — दादा / दादी / नाना / नानी. (d) Every site: `NomineeForm.tsx`, `nominee-history-copy.test.ts` (the "FIFTEEN" test → twenty; extend the Hindi-coverage test to `brother_in_law` and `grandparent`), `NomineeDeclarationPanel.tsx` + its `i18n-en.ts` + test, `nominee-relationship-lockstep.test.ts`, `nominee-correction.spec.ts`, `nominee-lock.spec.ts` (its "fifteen-value" title), `common.json` ×2, `openapi/v1.yaml`. ⭐ Independent — may land first (Task 2's relationship picker consumes it).
+- [ ] **Task 3 — `-257` (N1)** (AC13) — (a) `NOMINEE_RELATIONSHIP_CODES` + the domain mirror to twenty; the *"Still OPEN"* note DISCHARGED; the stale "fifteen"/five-value comments fixed (`declaration.ts` doc list, `relationship.ts` header, `NomineeForm.tsx`, `member_nominees.ts:62`). (b) The derived claimant-to-nominee enum (`NomineeRelationship.exclude(['other'])`) + the equality test; `KNOWN_RELATIONSHIPS` re-pointed at it. (c) The picker + **en + hi** copy for the five new values — reviewed kin terms that cover the English: e.g. `brother_in_law` — जीजा / देवर / जेठ / साला / नंदोई / साढ़ू; `son_in_law` — दामाद; `mother_in_law` — सास; `father_in_law` — ससुर; `grandparent` — दादा / दादी / नाना / नानी. (d) Every site: `NomineeForm.tsx`, `nominee-history-copy.test.ts` (the "FIFTEEN" test → twenty; extend the Hindi-coverage test to `brother_in_law` and `grandparent`), `NomineeDeclarationPanel.tsx` + its `i18n-en.ts` + test, `nominee-relationship-lockstep.test.ts`, `nominee-correction.spec.ts`, `nominee-lock.spec.ts` (its "fifteen-value" title), `common.json` ×2, `openapi/v1.yaml`. ⭐ After Task 0 like every code task, and before Tasks 1–2 (Task 2's relationship picker consumes it); it needs ⛔ no author decision.
 - [ ] **Task 4 — Tests** (AC9a, AC11a) — **execute** on `twt-test-pg :5433`; record the RTBF gap in `deferred-work.md`.
-- [ ] **Task 5 — Friction budget** — one named-payer row for the `contact` step (addresses, maybe a claimant's details, the agreement) — `friction-budget.md` / `friction-budget.yaml`, best-ever ratchet ([[project_friction_budget_baseline_ratchet]]).
+- [ ] **Task 5 — Friction budget** — one named-payer row for the `contact` step (addresses, maybe a claimant's details, the agreement) — `friction-budget.md` / `friction-budget.yaml`, best-ever ratchet ([[project_friction_budget_baseline_ratchet]]) — the gate computes its own baseline from committed history, so ⛔ no
+number is carried here; done = `pnpm friction:test && pnpm friction:check` green (the `friction-budget` step of `scripts/ci-local.sh`).
 
 **AC ↔ Task map:** AC0 → T0 · AC1 → T1, T2 · AC8a → T2 · AC9a → T2, T4 · AC10 → T2 · AC11a → T4 · AC13 → T3 · T5 → the friction gate (no AC; the budget gate is its own check).
 
 ## Dev Notes
 
 ### Dependency and sequencing
-Nothing upstream (6.18, 6.20, 6.21a/b are merged). Task 0 → Task 3 (any time) → Task 1 → Task 2 → Tasks 4–5. ⭐ 6.19b starts only when this
+Nothing upstream (6.18, 6.20, 6.21a/b are merged). Task 0 first (⛔ no code in 6.19a, b or c before it) → Task 3 → Task 1 → Task 2 → Tasks 4–5. ⭐ 6.19b starts only when this
 slice is `done` — its recipients and letter addresses come from this table.
 ⚠ **Row `6-26`** (`-263` FQ9: ⛔ no approval before the ground inspection is complete) will add a check **inside** `assertClaimApprovable` at the
 same three call sites and will extend the same `seedNomineeNameCheck` — whichever lands second rebases onto the other; ⛔ neither drops the
@@ -322,3 +342,4 @@ precedent is `seedNomineeNameCheck`'s `certificate` / `determination` defaults. 
 | v1.4 | 2026-09-28 | **Fourth validate pass (all 3 applied at BigDev's direction) — every finding was v1.2/v1.3's own.** ⭐ (1) v1.2/v1.3 defined partial helpline writes (the claimant block alone, one nominee row) under a contract written for one full submission, so three AC11a helpline tests would 400; and the agreement was undefined after the first write ⇒ two request shapes (member full with `agreed: true`; helpline partial by `nomineeVersionId`, `agreed` optional), `agreement_required` on the write that creates the row (incl. the R9 case in the extra states), repointing rules (member re-POST repoints to a fresh consent; helpline only inside the member's window). (2) The member sends `claimantNomineeRank`, the helpline `claimantNomineeVersionId`. (3) D14's predicate parenthesised. |
 | v1.5 | 2026-09-28 | **Fifth validate pass (both applied at BigDev's direction) — both findings were v1.2–v1.4's own.** ⭐ (1) A helpline nominee row required its address, so filling a missing relationship in the extra states meant re-sending the address, which add-only refuses ⇒ helpline rows take an optional `address` and an optional `relationship` (the address required only to create the row). (2) An add-only overwrite had ⛔ no specified outcome, and `claimantNomineeVersionId` in the extra states could only ever violate the parent CHECK ⇒ both are refused whole, **409 `claim_contact.add_only`**, nothing written; `agreed` on an existing row stays ignored and the response says so; tests for each. |
 | v1.6 | 2026-09-28 | **Sixth validate pass (all 3 applied at BigDev's direction) — every finding was v1.3–v1.5's own.** (1) The claimant-block exception in the extra states is narrowed to a stored claimant version that is ⛔ not effective — over an effective one it is a correction, refused 409 `claim_contact.add_only` (it was the premise of keeping `claim.file` there). (2) The parent CHECK's two sides are cleared symmetrically in every write, so a switch never 500s. (3) The relationship-only row on a missing row is named: 400 `claim_contact.address_required`. Tests for each. |
+| v1.7 | 2026-09-28 | **External review findings (10), checked against the file — 4 real, 4 partly right, 2 ⛔ not holding; all applied at BigDev's direction.** ⭐ Real: (#4) a 6.20 correction can supersede the determination inside the extra states, leaving the effective set empty, so v1.6's narrowed claimant exception would fire for EVERY stored version ⇒ **409 `claim_contact.awaiting_determination`** there; (#3) a revoked agreement had ⛔ no way out in the extra states ⇒ a revoked agreement counts as missing and `agreed` fills it in any window; (#7) the audit unit defined (one contact line, plus one agreement line when a consent is recorded); (#10) Task 3 follows Task 0 like every code task. Partly right: (#1/#8, ⛔ not critical) the author-commit's id is "the next free id, read live" and Read-first lists `-263` and says `-262`/`-264` do ⛔ not touch the slice; (#5) the approval check selects rows by effective `versionId`, ⛔ never a count; (#9) done = `pnpm friction:test && pnpm friction:check`. ⛔ Not holding, clarified in one line each: (#2) the writer, ⛔ not the contract, enforces the nominee count; (#6) the 400/409 partition stated. |

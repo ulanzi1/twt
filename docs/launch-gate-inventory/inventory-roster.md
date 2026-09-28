@@ -279,3 +279,39 @@
 > ⛔⛔ **AND THE LIMIT IS PART OF THE RULING:** what falls is the **mechanism**, ⛔ **not** the per-data-class **basis**. Member's own name/PII → the **member's T&C acceptance**; nominee information + bank details → the **nominee's own Claim Terms**; family-owned information → the **family's own consent**. ⛔ Nobody may cite this amendment as authority that a member's T&C reaches another person's data.
 > ⭐ **THE DEATH/OVERLAY-EXCLUSION LIMB IS UNTOUCHED and remains owed by each surface** — ⛔ it was ⛔ never a consent question ([[project_death_is_an_overlay_not_a_state]]).
 > ⚠ **Still ⛔ no new roster rows minted**, and ⛔ this row does ⛔ not become the 11b clearance's home: that lives at `-160` cl.7.
+
+## Rows 18-19 — Story 6.19 counsel gates (decision-authored, D24)
+
+> ⭐ **Appended 2026-09-28 by Story 6.19a Task 0 under [Decision 2026-09-28-265](../../.decision-log.md#decision-2026-09-28-265) §3 / D24** —
+> the 6.19 set's go-live gates are **records**, ⛔ not runtime flags. Like Row 17, neither row has an architecture source line; each cites
+> the ruling that created it ([[feedback_record_unattested_no_backfill]]). ⛔ Neither blocks a **build** or a merge — nothing is in
+> production ([[project_not_in_production_merge_is_not_golive]]); every deploy before counsel clears is a dev/staging deploy, where the
+> 6.19 DLT template ids stay unset and the family SMS fails **closed** (T13).
+
+### Row 18 — `claim-contact-agreement-counsel-basis`
+
+- **gate_name:** Counsel's basis for the filer agreeing, on others' behalf, to their being contacted (the 6.19 **M** question)
+- **architecture_source_line:** N/A — **Trustee-ratified decision-authored**: [`-253`](../../.decision-log.md#decision-2026-09-27-253) consequence 3 and [`-255`](../../.decision-log.md#decision-2026-09-27-255) F7 leave the legal basis with counsel.
+- **owner:** Trustee Panel (gate); counsel (Story 0.13) — the answer
+- **support:** BigDev (the question as put; the build)
+- **closure_criteria:** A counsel return, recorded as a Decision, that answers (a) whether the filer may agree for the nominees and the claimant to be contacted by SMS and post; (b) ⭐ **whether the agreement may be a condition of approval** — 6.19a makes a claim **wait** until it is given (D14 + D15), so a filer who declines leaves the claim unapprovable; (c) whether the agreement must be withdrawable (it is ⛔ not revocable in v1). Testable signal: `closure_evidence_link` resolves to that Decision, and the `claim_contact_agreement` copy's *"pending Story 0.13"* marker is replaced by counsel's approved text.
+- **target_date:** before the 6.19 family SMS or the agreement copy goes live (relative-to-fact: the gate IS that go-live).
+- **current_status:** `open`
+- **closure_evidence_link:** (empty)
+- **missed_target_escalation_log:** (empty)
+- **cross_story_discharge_path:** Story 0.13 (counsel engagement) → a Decision; the code already ships the mechanism (Story 6.19a) and the sends (6.19b/6.19c/6.19d), each go-live gated here.
+- **notes:** ⚠ Counsel IS engaged (since 2026-06-21, [[project_dpdpa_counsel_engaged_but_unrecorded]]) — this row records a question ⛔ not yet put to them, ⛔ not an absence of counsel.
+
+### Row 19 — `claim-contact-privacy-policy-purpose`
+
+- **gate_name:** The privacy policy states the purpose of the claim contact record and its SMS / postal use (the 6.19 **S** question), and FR-43A's procedural-fairness review covers a closure that is ⛔ not appealable
+- **architecture_source_line:** N/A — decision-authored: [`-255`](../../.decision-log.md#decision-2026-09-27-255) F7 (a new purpose for a new PII surface) and the 6.19 shared spec's *Policy meaning* (the tension with PRD FR-43A and Story 6.16 D-G).
+- **owner:** Trustee Panel (gate); counsel (Story 0.13)
+- **support:** BigDev
+- **closure_criteria:** A published privacy-policy revision naming the purpose (contacting the family about a claim sent back for correction, and about a replacement certificate) **and** a counsel return on FR-43A / 6.16 D-G for the non-appealable closure, each recorded as a Decision. Testable signal: `closure_evidence_link` resolves to both.
+- **target_date:** before the 6.19 family SMS or the closure goes live.
+- **current_status:** `open`
+- **closure_evidence_link:** (empty)
+- **missed_target_escalation_log:** (empty)
+- **cross_story_discharge_path:** Story 0.13 → a Decision; ⛔ never a Panel routing note (the shared spec's question table: *"S — counsel, Story 0.13, ⚠ go-live gate, ⛔ never a Panel note"*).
+- **notes:** ⚠ **RTBF gap** on the contact tables (6.19a, shared spec invariant 9) is recorded in `deferred-work.md` — ⛔ no erasure path reaches the new claimant PII yet.

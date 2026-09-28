@@ -1841,6 +1841,10 @@ So that signup remains lightweight and bank-detail collection happens at claim t
 > **the last one made on an earlier calendar day than the day of death** — so after a death the *latest* declaration is
 > precisely the one that may ⛔ **not** govern. ⭐ The rule still holds **while the member is alive** (`-234` X). ⚠ And the
 > **relationship** field's value set moves from five to **fifteen** (`2026-09-21-237` cl.1). ⭐ Build from Story `6-20`.
+>
+> ⚠ **ANNOTATION 2026-09-28 (Story `6-19a` Task 0, `2026-09-28-265` §3) — *"five to fifteen"* is now five to **TWENTY**. ⭐ Annotated,
+> ⛔ not rewritten.** `2026-09-27-257` **supersedes `-237` cl.1**: the list gains brother-in-law, son-in-law, mother-in-law,
+> father-in-law and grandparent. `other` still forecloses a correction (`-237` cl.2). ⭐ Build from Story `6-19a` (AC13).
 
 ### Story 3.5: Medical Disclosure with IMA List + Concealment-Denial Ack `[SURFACE]`
 
@@ -2904,6 +2908,9 @@ a route to fix it.
    nominee whose relationship is `other` can ⛔ **never** be corrected (`-237` cl.2).
 7. The relationship value set is the ratified **fifteen**, replacing the shipped five (`-237` cl.1).
    ⛔ No migration (the column is plain text) and ⛔ no backfill (`-232`).
+   > ⚠ **ANNOTATION 2026-09-28 (`2026-09-28-265` §3) — *"the ratified fifteen"* is now **twenty**.** `2026-09-27-257` supersedes
+   > `-237` cl.1 (+ brother-in-law, son-in-law, mother-in-law, father-in-law, grandparent). ⭐ Annotated, ⛔ not rewritten — built by
+   > Story 6.19a (AC13); ⛔ still no migration and ⛔ no backfill.
 8. A history that keeps PII is **erasable** — the RTBF anonymizer covers every new PII-bearing table in
    the same commit.
 
@@ -2990,6 +2997,68 @@ So that our claim keeps moving and we are never left thinking it was refused.
    it on their behalf.
 3. The words are the family's own — a **separate** message for a future-dated certificate; ⛔ no deadline copy.
 4. A missing or unreadable date of death is **flagged** to the District Admin — display only, ⛔ never acted on.
+
+### Story 6.19a: The Family's Contact Details, Their Agreement and the Claimant's Relationship Are Captured at Filing — and the Nominee List Grows to Twenty `[SURFACE]`
+
+> ⚠ **Minted by Trustee ruling, ⛔ not by the original epic plan** — the Panel (Dhiraj Rahul + Kalpana Bharti) through the
+> follow-ups to Story 6.18's code-review decision D2: [`-229`](../../.decision-log.md#decision-2026-09-20-229) →
+> [`-232`](../../.decision-log.md#decision-2026-09-20-232) (2026-09-20), answered in full by
+> [`-250`](../../.decision-log.md#decision-2026-09-27-250) → [`-260`](../../.decision-log.md#decision-2026-09-27-260) (2026-09-27), and
+> by BigDev's calls that the build is its own story (`-230`) and is **split** four ways (D13, 2026-09-27). The engineering calls
+> D1–D29 and the eight keys are [`-265`](../../.decision-log.md#decision-2026-09-28-265). `epic-6-retrospective` is `done`; adding
+> stories here is the same deliberate act as 6.17, 6.18, 6.20 and 6.21 — ⛔ do not "correct" the placement.
+> ⚠ **Recorded, ⛔ not fixed:** Epic 6's *"16 stories"* (overview and closing checklist), its **FRs** line and its cross-cutting
+> AR-61 story list have been stale since 6.17 — they count none of 6.17–6.21 or 6.19a–d.
+> ⭐ The shared spec of 6.19a–d is `_bmad-output/implementation-artifacts/6-19-correction-return-reminders-and-closure.md`.
+
+As a family member filing a claim (in the app, or through the helpline operator),
+I want to give each nominee's postal address, say whether the claimant is one of the nominees — and if not, the claimant's name,
+mobile, address and relationship to each nominee — and agree that these people may be contacted,
+So that if the claim is ever sent back for a bank-name correction the Trust can reach us by text message or by post, and a claim is
+never closed without us having been reached.
+
+**Acceptance Criteria** (the full set is in `_bmad-output/implementation-artifacts/6-19a-claim-contact-capture-at-filing.md`):
+
+1. **Governance first** — one author-commit for the whole 6.19 set (`-265`), these entries, the planning annotations, the AR-61
+   ledger rows and counsel's M and S as launch-gate rows.
+2. A **contact record** per claim, bound to the declaration's **versions** (the as-at-death determination may ⛔ not exist yet at
+   filing), with the filer's **agreement to be contacted** recorded per claim (`-232` G, `-253`, `-255` F8).
+3. A claim **waits** — ⛔ never refused — at every approving path until the record is complete for the nominees in force at the
+   death, and the helpline can complete it in every state from which that wait can happen.
+4. The nominee relationship list is **twenty** (`-257`), and the claimant-to-nominee list is **derived** from it minus `other`.
+
+### Story 6.19b: The Correction-Return Reminders — the Panel's Schedule, the Text Message to Each Person, the Staff Chase and the Posted Letter `[SURFACE]`
+
+> ⚠ **Minted by Trustee ruling** — as Story 6.19a (the same rulings; split by D13). ⛔ Starts only when 6.19a is `done`. Its keys
+> (1) and (7) are decided in [`-265`](../../.decision-log.md#decision-2026-09-28-265). ⭐ The family SMS is go-live gated on
+> counsel (M, S) and on the DLT templates (T13) — ⛔ neither blocks the build. Full ACs:
+> `_bmad-output/implementation-artifacts/6-19b-correction-reminders-and-posted-letters.md`.
+
+As the District Admin, I want a claim sent back for a bank-name correction chased on the Panel's fixed, recorded schedule — by text
+message to each person the family agreed may be contacted, by a posted letter to anyone whose phone is dead — and only when **the
+family** must act (`-258`), so that no family is left unreached and no family is chased for a mistake that was ⛔ not theirs.
+
+### Story 6.19c: The Correction Closure, the Super Admin's Review and the Guarded Re-File `[SURFACE]`
+
+> ⚠ **Minted by Trustee ruling** — as Story 6.19a. ⛔ Starts only when 6.19b is `done`. Its keys (2)–(6) and (8) are decided in
+> [`-265`](../../.decision-log.md#decision-2026-09-28-265). ⭐ With it built, 6.18's go-live fence (*"not without 6.19"*) discharges
+> **by the build**. Full ACs: `_bmad-output/implementation-artifacts/6-19c-correction-closure-super-admin-review-and-refile.md`.
+
+As the District Admin, with the Pariwar Admin and the Super Admin above me, I want a claim still uncorrected after 90 days to be
+closed only on my **request** and a **human decision** (`-231`), only if each person was reached (`-252`) and only when the family
+had to act (`-258`), with the Super Admin reviewing a declined closure (`-251`, `-256`) and a re-file after a closure going
+through a person (`-254`), so that a family is never refused for a silence that was never theirs.
+
+### Story 6.19d: The Replacement-Certificate Reminder `[SURFACE]`
+
+> ⚠ **Minted by Trustee ruling** — [`-236`](../../.decision-log.md#decision-2026-09-20-236) CC1 (carried to 6.19 by
+> [`-241`](../../.decision-log.md#decision-2026-09-21-241) §3), ruled by [`-259`](../../.decision-log.md#decision-2026-09-27-259) and
+> [`-260`](../../.decision-log.md#decision-2026-09-27-260) G4–G6. Row `6-19d-replacement-certificate-reminder`, `backlog` until a
+> `bmad-create-story` pass derives its ACs from `-259`. ⛔ The claim still never closes.
+
+As a family whose death certificate was ⛔ not accepted (or never sent), I want to be reminded on the correction schedule to day 90,
+then monthly to day 180 (`-259`), by text message and — for a dead phone — by one posted letter, so that the claim does not wait
+unnoticed.
 
 ---
 

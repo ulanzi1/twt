@@ -2258,6 +2258,13 @@ fires per message, not per cohort. Members without active WA opt-in receive
 only in-app push for non-OTP notifications — they do not receive transactional-
 fallback SMS.
 
+> ⚠ **ANNOTATION 2026-09-28 (Story `6-19a` Task 0, `2026-09-28-265` §3) — a SECOND transactional SMS path. ⭐ Annotated, ⛔ not
+> rewritten.** `2026-09-27-255` **F7** and `2026-09-27-259` (consequence 3), both Trustee-ratified, add a **direct DLT SMS to an
+> explicit number** for one claim's family — the correction-return reminder and closure notice (6.19b/6.19c) and the
+> replacement-certificate reminder (6.19d) — to people who may ⛔ not be members and hold ⛔ no WA opt-in. It is ⛔ not the fallback
+> above and ⛔ not `dispatch()`: it follows the OTP path's precedent (its own template registry, keyed by message × locale), and a
+> missing template id fails **closed**. The sentence above still holds for every `dispatch()` notification.
+
 #### 3.5 Telephony integration — Helpline Operator console (Persona #7)
 
 **Scope demarcation.** This section covers telephony / CTI only — inbound call

@@ -283,6 +283,11 @@ Members can declare one or two nominees at signup or in Life Events. When two ar
 > on a disqualification only, and the effective split is **derived from the post-determination rank set**, ⛔ never read off
 > the stored rows. ⚠ The **relationship** value set also moves from five to **fifteen** (`-237` cl.1).es bank norms).
 
+> ⚠ **ANNOTATION 2026-09-28 (Story `6-19a` Task 0, `2026-09-28-265` §3) — the relationship value set is now **TWENTY**, ⛔ not
+> fifteen. ⭐ Annotated, ⛔ not rewritten.** `2026-09-27-257` supersedes `-237` cl.1 (+ brother-in-law, son-in-law, mother-in-law,
+> father-in-law, grandparent); `other` still forecloses a correction. ⚠ The line above ends in a stray *"es bank norms)."* — a
+> pre-existing splice from the 2026-09-21 annotation, recorded here, ⛔ not repaired.
+
 **Consequences (testable):**
 - Nominee bank/IFSC fields are **not** collected at member signup — they are collected at claim-time only (explicit policy correction from brainstorm).
 - Multi-nominee disputes route to State Trustee discretion (R5(E)).
@@ -1060,6 +1065,12 @@ TSCT-cohort honor channel; fire-and-forget mirror of alerts.
   - **Step-up OTP** for high-trust operations (nominee change, bank change, claim filing, trust-payout authorization, role grants, Niyamavali amendment, disaster-window declaration, etc.) — see architecture §2.2 for full list.
   - **Per-member transactional fallback** when both WhatsApp gates (Pariwar admin toggle + member opt-in) are ON and WA delivery fails (architecture §3.4).
   - **Pariwar-degraded-mode cycle-open bridge** when push delivery is degraded and WA admin-toggle is OFF (architecture §3.4).
+  > ⚠ **ANNOTATION 2026-09-28 (Story `6-19a` Task 0, `2026-09-28-265` §3) — SMS is WIDENED for one purpose. ⭐ Annotated, ⛔ not
+  > rewritten.** `2026-09-27-255` **F7** (Trustee-ratified) adds **per-claim transactional SMS** — the correction-return reminder and
+  > the closure notice (Stories 6.19b/6.19c) — to the people the filer's **agreement to be contacted** covers, outside the app; and
+  > `2026-09-27-259` (consequence 3) extends it to the **replacement-certificate reminder** (Story 6.19d). ⭐ Bulk-alert SMS stays
+  > **dropped**: each message is one claim's, to named recipients, through its own DLT template (⛔ not `dispatch()`, ⛔ not an
+  > `Alert`). ⚠ Go-live gated on counsel (M, S — launch-gate rows 18, 19) and on DLT registration.
 - Vernacular video alerts (WI-16) — v2.
 - TTS regional language read-aloud (WI-15) — v3.
 

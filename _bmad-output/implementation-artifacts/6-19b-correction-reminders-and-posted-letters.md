@@ -6,7 +6,7 @@ baseline_commit: c136b03c
 SPLIT FROM Story 6.19 v0.9 on 2026-09-27 (BigDev: "split it three ways") — D13. The set: 6.19a → 6.19b (this file) → 6.19c; 6.19d (CC1)
 `backlog`. AC numbers KEPT from 6.19 v0.9; AC8/AC9/AC11 restated per slice.
 ⭐ THE SHARED SPEC IS PART OF THIS STORY: `6-19-correction-return-reminders-and-closure.md` — rulings, invariants, *What already EXISTS*
-(re-verified on `c136b03c`), traps T1–T14, author decisions D1–D24. ⛔ Do not start without reading it end to end.
+(re-verified on `c136b03c`), traps T1–T14, author decisions D1–D29 (⚠ SWEPT by `-265`: was *"D1–D24"*). ⛔ Do not start without reading it end to end.
 GLYPH REGISTER: `⛔` only on a negation word; `⭐` key fact; `⚠` hazard. ⛔ No `file:NNN` into `.decision-log.md`, `deferred-work.md` or
 `sprint-status.yaml`.
 -->
@@ -16,7 +16,10 @@ GLYPH REGISTER: `⛔` only on a negation word; `⭐` key fact; `⚠` hazard. ⛔
 Status: ready-for-dev
 
 > ⛔ **Start only when 6.19a is `done`** (its contact table is this slice's recipient list and letter address book) **and** 6.19a's Task 0
-> author-commit (D1–D24, the six keys) has landed.
+> author-commit (D1–D29, the **eight** keys — `2026-09-28-265`; ⚠ SWEPT by `-265`: was *"D1–D24, the six keys"*) has landed.
+> ⚠ **SWEPT by `-265` (2026-09-28):** the letter writer (Task 5) runs **D14's check** (`assertClaimContactRecorded`, 6.19a) — a letter
+> is addressed from the contact record, which must exist; and the letter form reads the plaintext address under **its own key (1)**,
+> ⛔ never `claim.view_nominee_name_check` (under that key the contact record is presence-only — 6.19a AC8a).
 > ⭐ **The family SMS is go-live gated on counsel** (M, S) and cannot send for real until the DLT templates are registered (T13) — a missing
 > template id fails **closed**. ⛔ Neither blocks the build.
 > ⭐ **6.18 must still not go live without 6.19c** — this slice chases; only 6.19c lets a chased claim end.
@@ -80,7 +83,7 @@ best-effort, English, ⛔ no Telegram mirror; each reminder deep-links to the cl
 **Given** a letter-eligible person **Then** the District Admin (key (1)) records a letter **to that person, at their own address** (read from the
 contact record): posting date, **tracking number**, and — within 14 days of posting — the **delivery date** and a **screenshot** (D6); at most two
 per person per run; the second due 30 days after the first's recorded delivery (D20)
-**And** the address is shown only in the letter form (a gated, audited read)
+**And** the address is shown only in the letter form (a gated, audited read — under key (1), ⛔ never `claim.view_nominee_name_check`; ⚠ SWEPT by `-265`)
 **And** the record is staff-entered evidence: an un-recorded field is shown as un-recorded, ⛔ never inferred; every write carries its audit line
 with the actor's snapshotted display name ([[project_admin_display_name_attribution]]); letters stay recordable after day 90, ⛔ no reminders.
 
@@ -175,5 +178,6 @@ As the shared spec's. Exemplars: `apps/jobs/tests/contribution-notify-triggers.t
 
 | Version | Date | Change |
 |---|---|---|
+| v1.2 | 2026-09-28 | ⚠ **SWEPT by `-265`** (6.19a Task 0, which owns the set's governance): *"D1–D24, the six keys"* → D1–D29 and eight keys; the letter writer runs D14's check; the letter form reads the address under key (1). ⛔ No AC or Task re-derived. |
 | v1.1 | 2026-09-27 | ⭐ **`-258` (V, option B) appended:** AC16 (the mark, family vs staff runs, the staff-case copy) and Task 8; key (7) minted here. |
 | v1.0 | 2026-09-27 | Split from Story 6.19 v0.9 (D13, BigDev: *"split it three ways"*). ACs AC2–AC5 and AC10 carried verbatim; AC8b/AC9b/AC11b restated for this slice; Tasks re-cut. Status `ready-for-dev`, fenced on 6.19a `done`. |

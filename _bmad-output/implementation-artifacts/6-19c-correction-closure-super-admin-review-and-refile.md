@@ -6,7 +6,7 @@ baseline_commit: c136b03c
 SPLIT FROM Story 6.19 v0.9 on 2026-09-27 (BigDev: "split it three ways") — D13. The set: 6.19a → 6.19b → 6.19c (this file); 6.19d (CC1)
 `backlog`. AC numbers KEPT from 6.19 v0.9; AC8/AC9/AC11 restated per slice.
 ⭐ THE SHARED SPEC IS PART OF THIS STORY: `6-19-correction-return-reminders-and-closure.md` — rulings, invariants, *What already EXISTS*
-(re-verified on `c136b03c`), traps T1–T14, author decisions D1–D24. ⛔ Do not start without reading it end to end.
+(re-verified on `c136b03c`), traps T1–T14, author decisions D1–D29 (⚠ SWEPT by `-265`: was *"D1–D24"*). ⛔ Do not start without reading it end to end.
 GLYPH REGISTER: `⛔` only on a negation word; `⭐` key fact; `⚠` hazard. ⛔ No `file:NNN` into `.decision-log.md`, `deferred-work.md` or
 `sprint-status.yaml`.
 -->
@@ -28,7 +28,8 @@ Status: ready-for-dev
 - **Invariants:** 1, 2, 5, 6, 7, 8, 10 — every one of them binds this slice.
 - **What already EXISTS:** *The return*, *Helpers*, *What supersedes a return*, *States*, *The approval gate*, *Reason codes*, *The closure vocabulary*, *Appeals (6.16)*, *Re-filing*, *Permissions*, *The human-actor gate*, *Audit*.
 - **Traps:** T2, T3, T4, T9, T10, T11.
-- **Decisions:** D1, D8 (keys **2–6 and 8** are minted here), D17, D18, D19, D22, D23, D24, ⭐ **D26, D27, D29**.
+- **Decisions:** D1, D8 (keys **2–6 and 8** are minted here), D17, D18, D19, D22, D23, D24, ⭐ **D26, D27, D29** (⚠ SWEPT by `-265`: D29 is committed in its **`-260` G1 form** — the Super Admin approves a staff case through the full gate or refuses; ⛔ never closes).
+- ⚠ **SWEPT by `-265` (2026-09-28) — D14's check.** "The full gate" means `assertClaimApprovable` **and** 6.19a's `assertClaimContactRecorded`, run after it: ⭐ this slice's **three NEW approval writers** — the `-251` approve (the name conjunct waived, ⛔ never D14's check), D27's "no correction needed" approve, and D29's staff-case approve — each call it; the closure writers too.
 
 ## Story
 
@@ -61,7 +62,7 @@ PRD** (FR-43A: internal appeal is the primary grievance path, only Stage 3 non-a
 (`-232` I) — ⛔ **no job ever calls a decision writer**
 **And** the District Admin **requests** the closure (key (2)): ⛔ before day 90 → **409 `closure.too_early`**; not every person reached (D22) →
 **409 `closure.not_reached`**; **corrected** (re-checked under the trustee lock) → **409 `closure.claim_corrected`**; no contact record →
-**409 `claim_contact.required`**; a live routing row → **409 `closure.claim_routed_to_r9`** (defensive — the exclusion already holds); a
+**409 `closure.claim_contact_required`** (⚠ SWEPT by `-265`: was `claim_contact.required` — the per-route form of D14's code); a live routing row → **409 `closure.claim_routed_to_r9`** (defensive — the exclusion already holds); a
 certificate wait alone ⛔ never qualifies (invariant 10)
 **And** the Pariwar Admin (key (3)) **approves** (re-checking "corrected" under the lock → **409 `closure.claim_corrected`**) — running D1 in one
 scope-tx — **or declines with a REQUIRED note**, which escalates the claim to the Super Admin (AC14)
@@ -140,7 +141,7 @@ echoed to a member; a live-DB test finds a planted note sentinel in ⛔ no log o
 **two-connection** races — two closure decisions, a return racing a closure, a declined closure racing an approval, a closure request racing a
 family correction, a Super Admin decision racing a family correction (each → exactly one outcome, the loser a typed 409); the D1 and each D17
 chain in **one** tx (a forced failure mid-chain leaves nothing); every AC6 409 (`too_early`, `not_reached`, `claim_corrected` at request **and**
-approval **and** Super Admin close, `claim_contact.required`, `claim_routed_to_r9`); a reminder set whose every slot was `no_target` cannot
+approval **and** Super Admin close, `closure.claim_contact_required`, `claim_routed_to_r9`); a reminder set whose every slot was `no_target` cannot
 support a request without a delivered letter; the day-90 reminder job **never** calls a writer (a spy); `denied_no_appeal` emitted on a closure
 and on a final Super Admin refusal, ⛔ not on an appealable one; the three appeal sites + the operator's on-behalf initiate refuse a closed claim
 with their own code, and an ordinary `denied` claim is still appealable through the on-behalf path; the Super Admin approve **refused** without an
@@ -198,6 +199,7 @@ As the shared spec's. Two-connection exemplars: `apps/api/tests/integration/clai
 
 | Version | Date | Change |
 |---|---|---|
+| v1.3 | 2026-09-28 | ⚠ **SWEPT by `-265`** (6.19a Task 0): D1–D24 → D1–D29; D29 in its `-260` G1 form; `claim_contact.required` → `closure.claim_contact_required`; the three new approval writers and the closure writers call D14's check. ⛔ No AC re-derived. |
 | v1.2 | 2026-09-27 | ⭐ **`-260` recorded:** AC17's staff case — the Super Admin may approve (full gate) or refuse, ⛔ never close (G1); the Pariwar Admin's keep states the mark (G2); ⛔ no text after a Super Admin decision (G3). |
 | v1.1 | 2026-09-27 | ⭐ **`-258` (V, option B) appended:** AC17 and Task 8; key (8) minted here; six predicates in the policy note. |
 | v1.0 | 2026-09-27 | Split from Story 6.19 v0.9 (D13, BigDev: *"split it three ways"*). ACs AC6, AC7, AC10, AC14, AC15 carried verbatim; AC8c/AC9c/AC11c restated for this slice; Tasks re-cut. Status `ready-for-dev`, fenced on 6.19b `done`. |

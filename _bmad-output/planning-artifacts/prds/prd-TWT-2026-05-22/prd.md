@@ -697,6 +697,13 @@ A block-/district-level admin schedules a physical visit. Confirms facts on the 
 **Consequences (testable):**
 - Ground inspection workflow is a separate state in the claim lifecycle — both peer mesh confirm AND ground confirm must be `pass` for the claim to advance to State Trustee approval.
 
+> ⚠ **ANNOTATION 2026-09-28 (`2026-09-28-263`) — FR-40 is AMENDED for the peer mesh. ⭐ Annotated, ⛔ not rewritten.**
+> The **ground inspection must be complete before any claim is approved** (FQ9 A — a refusal never waits for it; a claim whose visit
+> cannot happen waits, ⛔ never refused for it), and the inspector **sees and photographs the original certificate** and records the
+> **date and time of death** (FQ11 A; `-262` FQ8 C). ⚠ The **peer mesh is a SIGNAL, ⛔ not a `pass` gate** (FQ10 A): fewer than 3 replies
+> makes the inspection the main check; a *"has not died"* or a differing date is a warning. ⚠ Found 2026-09-28: the peer mesh ⛔ never
+> sends or receives anything yet (row `6-27`).
+
 #### FR-41: Human shepherd assigned per claim (WI-26) `[v1-M]`
 
 On every claim entering `under_verification`, the trust assigns a named human shepherd (typically a District Admin in the deceased's scope). Shepherd contact (name + phone + WhatsApp) surfaces on the claim status page and in the claim-filing confirmation.

@@ -6,7 +6,31 @@
 > built from those answers. We ask you to read what we recorded, and **confirm it — or tell us where we got it wrong.** Two items at the
 > end (N1, N2) were ⛔ never put to you and are new.
 
-> ## ✅ N1 RULED — 2026-09-27 — recorded as `2026-09-27-257` · ⏳ C1–C3, D1–D4, N2 STILL AWAITING
+> ## ✅ EVERY ITEM RULED — C1–C3, D1–D4, N2 on 2026-09-28 (`2026-09-28-261`); N1 on 2026-09-27 (`2026-09-27-257`)
+>
+> **C1–C3, D1–D4, N2 — ruled by Dhiraj Rahul + Kalpana Bharti, relayed by BigDev — verbatim:**
+> *"C1 - confirm · C2 - confirm · C3 - confirm · D1 - B · D2 - B · D3 - A · D4 - B · N2 - only the correction."*
+>
+> - ⭐ **C1–C3 confirmed as recorded** — ⭐ **including** the two readings that were never put before (E2): a correction cannot change a
+>   relationship **to** `other` (C1), and **nothing but the ground inspection** carries over to the true nominee's claim (C3). Both are now
+>   ratified.
+> - ⭐ **D1 B** — the system **shows a warning** on a version dated on or after the death; it still refuses nothing.
+> - ⭐ **D2 B** — the Pariwar Admin is **sent a message** (its form is FQ3 of the follow-ups: an email with ⛔ no names).
+> - ⚠ **D3 A** — **wait for the fraud register.** ⚠ **Our reading (B) was ⛔ NOT taken.**
+> - ⭐ **D4 B** — a new claim is **always kept separate** from a claim refused on suspicion.
+> - ⭐ **N2** — `other` blocks **only the correction** (our reading, taken).
+>
+> ⚠ D1, D2 and D4 are recorded as **superseding 6.20's unratified readings** (the console that marks nothing, the list-only notice, T17's
+> convergence) — ⛔ **not** the Panel's words in `-239`, which stand. ⭐ The answers opened **eleven follow-ups (FQ1–FQ11)**, put to the
+> Panel in session the same day and ruled: see the note `2026-09-28-6-20-follow-ups` and decisions `2026-09-28-262` / `-263`.
+>
+> **What this ruling does NOT cover:** see `2026-09-28-261`–`-263`. ⭐ The three 2026-09-20 notes are completed from this answer (step 4).
+>
+> ⭐ Everything **below the next block is kept UNEDITED** — it is the question as it was put.
+>
+> ---
+>
+> ## ✅ N1 RULED — 2026-09-27 — recorded as `2026-09-27-257` · ~~⏳ C1–C3, D1–D4, N2 STILL AWAITING~~ (ruled 2026-09-28, above)
 >
 > **N1 — ruled by Dhiraj Rahul + Kalpana Bharti, relayed by BigDev — verbatim:** *"add these to N1 brother-in-law, son-in-law,
 > mother-in-law, father-in-law or grandparent"* — our suggestion taken: the nominee list becomes **twenty** values, **superseding `-237`
@@ -15,7 +39,7 @@
 >
 > ⏳ **Everything else below is still awaiting the Panel** — the block that follows is the original, and applies to C1–C3, D1–D4 and N2.
 >
-> ### ⏳ AWAITING PANEL RULING (C1–C3, D1–D4, N2)
+> ### ~~⏳ AWAITING PANEL RULING (C1–C3, D1–D4, N2)~~ — ✅ ruled 2026-09-28 (`-261`); the block is kept as it was
 >
 > ⛔ **Nothing is recorded here yet.** When the Panel answers, transcribe it into this block **and** into `.decision-log.md` — as
 > **"confirmed as recorded"** where you confirm, and as a **new decision that supersedes** `-237` / `-238` / `-239` wherever you change

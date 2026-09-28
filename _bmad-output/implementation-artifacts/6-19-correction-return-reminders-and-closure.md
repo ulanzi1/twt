@@ -34,8 +34,8 @@ Status: split — ⛔ this file has no sprint row; it is the shared spec of four
 > | Story | Row / file | Scope | Status |
 > |---|---|---|---|
 > | **6.19a** | `6-19a-claim-contact-capture-at-filing` | AC0 (governance for the WHOLE set), AC1, AC13 | `ready-for-dev` |
-> | **6.19b** | `6-19b-correction-reminders-and-posted-letters` | AC2–AC5 | `ready-for-dev` — ⛔ start after 6.19a `done` |
-> | **6.19c** | `6-19c-correction-closure-super-admin-review-and-refile` | AC6, AC7, AC14, AC15 | `ready-for-dev` — ⛔ start after 6.19b `done` |
+> | **6.19b** | `6-19b-correction-reminders-and-posted-letters` | AC2–AC5 | `ready-for-dev` — start only after 6.19a is `done` |
+> | **6.19c** | `6-19c-correction-closure-super-admin-review-and-refile` | AC6, AC7, AC14, AC15 | `ready-for-dev` — start only after 6.19b is `done` |
 > | **6.19d** | `6-19d-replacement-certificate-reminder` | AC12 (CC1) | `backlog` — fenced on its routing note |
 >
 > The AC numbers are **kept** in the slices, so every decision and note that cites "6.19 AC n" still resolves; AC8, AC9 and AC11 are restated per
@@ -143,16 +143,16 @@ neither ⇒ **S** (a go-live gate, ⛔ not a build blocker).
 |---|---|---|---|
 | **K** (+ F1–F4) | The Super Admin decides the whole claim (close / refuse / approve despite the name); a refusal is appealable once; every decision has a note + reason; an approval needs nothing more; **a review hold with directions**, ⛔ no deadline, a 30-day reminder. | `-251`, `-255` F2–F4, `-256` | ✅ **Buildable** — AC6, AC14 |
 | **L** (+ F5) | Reminders to **both**; the letter to **the person whose phone is dead**. | `-253` cl.3, `-255` F5 | ✅ AC3, AC5 |
-| **M** | Agreement asked **at filing** (mechanism). ⚠ The legal basis is **counsel's**. | `-253` cl.1 | ✅ build · ⛔ **go-live gated** |
+| **M** | Agreement asked **at filing** (mechanism). ⚠ The legal basis is **counsel's**. | `-253` cl.1 | ✅ build · ⚠ **go-live gated** |
 | **N** | Day-90 escalation → the Pariwar Admin. | `-250` #6 | ✅ AC6 |
 | **O**, **R** | `accepted` counts; STRICT reached-per-person; no working route → the letter route. | `-252` | ✅ AC3, AC6 |
-| **P** (+ F7) | **SMS** to those the agreement covers, outside the app. | `-253`, `-255` F7 | ✅ build · ⛔ **go-live gated** (M, S); ⚠ a DLT template has an external lead time |
+| **P** (+ F7) | **SMS** to those the agreement covers, outside the app. | `-253`, `-255` F7 | ✅ build · ⚠ **go-live gated** (M, S); ⚠ a DLT template has an external lead time |
 | **Q** | Re-file only through a person, with a note. | `-254` | ✅ AC15 |
 | **T** | #1/#2 **reversed** (stop on delivery; chase from found-dead); #3/#4 confirmed. | `-250` #1–#4 | ✅ AC3–AC5 |
 | **U** (+ F6) | One address per declared nominee; each nominee reminded; the claimant once. | `-253` cl.4, `-255` F6 | ✅ AC1, AC3 |
 | **D3** | The days and 10:00 — **the Panel's**. | `-250` #5 | ✅ AC2 |
 | **N1** | Nominee list → twenty. | `-257` | ✅ AC13 |
-| **S** | The privacy policy's purpose; FR-43A. | — (counsel, Story 0.13) | ⛔ **go-live gate**, never a Panel note |
+| **S** | The privacy policy's purpose; FR-43A. | — (counsel, Story 0.13) | ⚠ **go-live gate**, ⛔ never a Panel note |
 | **CC1 protection 3** | ✅ **RULED** — option B amended: correction schedule to day 90, then monthly, **stop after 180 days**; one letter; SMS extended; a never-sent certificate chased once checking starts. | `-259` | ✅ **6.19d unfenced** — its ACs owe a `bmad-create-story` pass (stays `backlog` until then) |
 | **V** (NEW, widened) | ✅ **RULED — option B**: the return says who must act; only a family-must-act return reminds the family or can be closed; staff cases chase staff (→ Super Admin at day 90); "no correction needed" + the Pariwar Admin's approval; a switch to family restarts the family's 90 days. | `-258` | ✅ Buildable — **AC16** (6.19b), **AC17** (6.19c) |
 | **W** | ✅ **RULED by `-260` G3 = A** — ⛔ no new message after a Super Admin refusal or approval; the app and the helpline carry it (D23 stands as first written). | `-260` | ✅ |
@@ -163,7 +163,7 @@ neither ⇒ **S** (a go-live gate, ⛔ not a build blocker).
 - ✅ **RULED `-259`.** **CC1 protection 3 — the certificate reminder's schedule and channels (incl. letters, and whether `missing` is chased).** §0 result:
   ⭐ **the Panel's.** It fixes **what messages a family receives and whether the Trust writes to them by post** — exactly the ground on
   which `-250` treated this story's own schedule as the Panel's (*"each default fixes a date, a message or an alert a real person
-  receives"*). ⇒ a routing note from the template is owed **before 6.19d builds anything**; ⛔ reusing the correction-return schedule by
+  receives"*). ⇒ a routing note from the template is owed **before 6.19d builds anything**; ⚠ reusing the correction-return schedule by
   default would be deciding it for them. **6.19d is fenced (`backlog`); nothing in 6.19a–c waits on it.**
 - ✅ **RULED `-258` (option B).** **V — a return that needs NO correction** ⭐ *(WIDENED 2026-09-27 at BigDev's direction to every return that is ⛔ not the family's to fix — staff mistakes too; see the note `…-2026-09-27-6-19-return-not-the-familys-to-fix.md`. The paragraph below is the narrower first framing, kept.)* (`deferred-work.md`, 6.18 chunk-1 item *"A return clears ONLY through a bank rewrite"* — its
   trigger is *"authoring Story 6-19 — its ACs must say what the District Admin does when the return needs no correction"*). Today a return
@@ -353,7 +353,7 @@ OPEN, recorded in `-237`"* note at `:44-45`); domain mirror `NOMINEE_RELATIONSHI
 **PII.** `claim_nominee_bank_accounts` is the model (Tier-1 `piiColumn(1,'claim_nominee_bank')`, `policies/claim-nominee-bank-rls.ts`,
 encrypt-before-insert `encryptNomineeBankField` in `apps/api/src/modules/claims/nominee-bank-crypto.ts:25`). `piiColumn`
 (`packages/domain/src/encryption/column.ts:70`) only **tags**; the handler encrypts. RTBF `member/anonymize.ts` scrubs nominee tables and
-`claim_death_certificate_reviews`, and ⛔ deliberately leaves `claim_documents`, uploads, bank accounts and `claims` (`-243`).
+`claim_death_certificate_reviews`, and deliberately does ⛔ not touch `claim_documents`, uploads, bank accounts or `claims` (`-243`).
 
 **Documents.** `ClaimDocumentStorage` (`packages/contracts/src/claims/documents.ts:86`), `CLAIM_DOCUMENT_ALLOWED_MIME_TYPES` (jpeg, png, pdf),
 `CLAIM_DOCUMENT_MAX_BYTES` (10 MiB); instance `deps.claimDocumentStorage`; keys `pariwar/{pariwarId}/claim/{claimCaseId}/{documentType}/{id}`.
@@ -476,39 +476,25 @@ Where a decision only records a Panel ruling it says so.
   delivery date**, then their reminders stop (`-250` #1, F5). The dead-number/unreachable marker is **per run** (a second return re-evaluates).
 - **D5 — REVISED 2026-09-28. A NEW claim-scoped contact table, bound to the declaration's VERSIONS**, ⛔ not on `claims` and ⛔ not on
   `intake_attempts`: one row per claim, plus child rows **UNIQUE `(contact_id, nominee_version_id)`** (`nominee_version_id` FK →
-  `member_nominee_versions`) holding each nominee's **postal address** (Tier-1). **Two binding rules:** a **member** write binds each rank to
-  its non-vacated **head version** (what `nomineesStatus()` shows the family — ⛔ never the effective set, which would attach an address to
-  another person's version after a post-death change); a **helpline** write names each `nomineeVersionId` explicitly, from the **allowed**
-  set — the effective versions once the determination is `effective`, else the heads. Every write **upserts** the rows it carries and ⛔ never
-  deletes one it does ⛔ not carry; a head-bound row whose version proves ⛔ not effective stays, unused. ⚠ **Why versions, ⛔ not the effective declaration:** the
-  effective declaration (T12) is `undetermined` until the District Admin's determination in the review window, so at filing it has ⛔ no
-  entries; the declaration is locked once the claim exists, so its current heads are stable. On the parent: `claimant_nominee_version_id`
-  (null = the claimant is none of the nominees) and, **only when null**, the claimant's **name, mobile, address** (Tier-1, all mandatory
-  then) and, on each child, the claimant-to-nominee **relationship** (D16); `agreement_consent_id` NOT NULL FK → `consent_records` (D15);
-  `contact_locale` (`hi` default, `en`) for the SMS language; `recorded_by_actor`, `recorded_via` (`member_app | helpline`).
-  `piiColumn(1,'claim_contact')`; own RLS file modelled on `claim-nominee-bank-rls.ts`. ⛔ No mobile blind index. ⛔ No backfill (`-232`:
-  not in production). The declaration stays locked — the address lives here, ⛔ never by editing `member_nominees` (`-233`). **Write
-  windows:** member = `NOMINEE_BANK_COLLECTABLE_STATES`; helpline = that ∪ `TRUSTEE_ROUTABLE_STATES` (every state from which P1/P3/P4 can
-  409 on D14 — R9 reaches P4 from six states). ⚠ `claim.file` gates the **intake** route by precedent (6.8/6.9); it also gates the
-  helpline's **extra states** (`TRUSTEE_ROUTABLE_STATES` minus `NOMINEE_BANK_COLLECTABLE_STATES`) because there the helpline only
-  **completes** the filing — its writes there are **add-only**: insert a row or fill a column that is still null, ⛔ never overwrite a set
-  value; the one permitted overwrite is the claimant-block write nulling `claimant_nominee_version_id` in the same statement (audited) —
-  only when the stored claimant version is ⛔ not effective (over an effective one it is a correction: 409 `claim_contact.add_only`). In
-  every write the parent CHECK's two sides clear each other in the same statement (the claimant's version ⇄ the claimant block). In the
-  extra states, a claimant-block write while the effective declaration is ⛔ not `effective` (a 6.20 correction can supersede the
-  determination there) is refused **409 `claim_contact.awaiting_determination`**. A **revoked** agreement counts as missing: `agreed`
-  records a fresh consent and repoints in any window. **Audit unit:** one contact line per write, plus one agreement line when a consent
-  is recorded, in one `withCompensatingAudit`.
-  Any other overwrite, or a `claimantNomineeVersionId` (the parent CHECK means it could only collide), is refused whole — 409
-  `claim_contact.add_only`, nothing written, ⛔ never silently dropped. Helpline nominee rows take an optional `address` and an optional
-  `relationship` (the address required only to create the row — else 400 `claim_contact.address_required`), so a relationship is filled ⛔ without re-sending the address.
-  Inside `NOMINEE_BANK_COLLECTABLE_STATES` the helpline has full upsert, as the member does. **Two request shapes:** the member sends the
-  full record (`claimantNomineeRank`, `agreed: true`); the helpline may send part of it (rows by `nomineeVersionId`, the claimant block,
-  `claimantNomineeVersionId`; `agreed` optional). The write that **creates** the row needs the agreement and a complete set (400
-  `claim_contact.agreement_required` / `nominee_set_mismatch`); a member re-POST records a fresh agreement and repoints
-  `agreement_consent_id`; a helpline `agreed` repoints it only inside the member's window. The writer, ⛔ not the contract, checks
-  the nominee set (`400 claim_contact.nominee_set_mismatch`); an admin read lists each allowed version with `address_present`. *(First text: the child rows were "per declared nominee
-  (from the effective declaration, T12)" — unsatisfiable at filing; kept in git at `6752e0d6`.)*
+  `member_nominee_versions`) holding each nominee's **postal address** (Tier-1) and, when the claimant is none of the nominees, the
+  claimant-to-nominee **relationship** (D16). On the parent: **exactly one claimant side** — `claimant_nominee_version_id` **or** the claimant
+  block (name, mobile, address; Tier-1) — enforced by a CHECK; `agreement_consent_id` NOT NULL FK → `consent_records` (D15);
+  `contact_locale` (`hi` default, `en`); `recorded_by_actor`, `recorded_via` (`member_app | helpline`, set by the creating write).
+  `piiColumn(1,'claim_contact')`; own RLS file modelled on `claim-nominee-bank-rls.ts`. ⛔ No mobile blind index. ⛔ No backfill (`-232`: not
+  in production). The declaration stays locked — the address lives here, ⛔ never by editing `member_nominees` (`-233`).
+  ⚠ **Why versions, ⛔ not the effective declaration:** it is `undetermined` until the District Admin's determination in the review window
+  (T12), and the determination can land mid-filing.
+  ⭐ **The write rules are 6.19a AC1's W1–W10 — the ONE copy** (⛔ not restated here, so the two can ⛔ never drift): W1 the member binds to
+  the **projected** version (what `member_nominees` was last written from — ⛔ never the highest `version_no`); W2 the helpline binds by
+  explicit allowed `nomineeVersionId` (effective once determined, else projected); W3 the windows (member = `NOMINEE_BANK_COLLECTABLE_STATES`;
+  helpline = that ∪ `TRUSTEE_ROUTABLE_STATES`); W4 upsert-only rows; W5 add-only in the helpline's extra states under `claim.file` (the
+  reason is recorded: there the helpline only COMPLETES the filing; an identical value is ⛔ not an overwrite); W6 the claimant side and its
+  fills in the extra states (creating; a non-effective claimant version → an effective one or the block) and
+  `claim_contact.awaiting_determination`; W7 the creating write (`agreement_required`, `nominee_set_mismatch`, `claimant_required`,
+  `address_required`); W8 the agreement after creation (a revoked one counts as missing; `agreed` alone is a valid helpline body); W9
+  `locale` and provenance; W10 the audit unit (one `withCompensatingAudit` intent line + `emitAuthAudit` events). *(First text, before
+  2026-09-28: the child rows were "per declared nominee (from the effective declaration, T12)" — unsatisfiable at filing; in git at
+  `6752e0d6`.)*
 - **D6 — the letter screenshot reuses the `claimDocumentStorage` PORT with its own key prefix** (`…/correction-letter/{letterId}`), a NEW
   letters table and handler; ⛔ not `claim_documents` / `uploadClaimDocument` (OCR-shaped, unique per type, state-gated, enqueues OCR). MIME and
   size limits enforced **before** `put`; reads only through a TTL-limited signed URL. ⚠ ⛔ No virus scan exists — record the gap.
@@ -524,7 +510,10 @@ Where a decision only records a Panel ruling it says so.
   closure** — Pariwar, `pariwar_admin`; (4) **decide an escalated claim** (close / refuse / approve-despite-the-name) — `super_admin` only (no
   `roles.ts` const, the drive-target precedent); (5) **hold under review and direct** — `super_admin` only; (6) **confirm a re-file after a
   closure** — `district_admin` (district) and `helpline_operator` (Pariwar), per-request dimension like `resolveQueueScopeStash`. **Reads** reuse
-  `claim.view_nominee_name_check` (its four holders already read the correction queue). A **direction response** needs ⛔ no key: the actor must be
+  `claim.view_nominee_name_check` (its four holders already read the correction queue) — ⚠ **reuse-check (2026-09-28):** that key's own
+  rationale forbids acquiring a second living subject's plaintext *"as a side effect"*, so under it the contact record is **presence-only**;
+  the **plaintext** read is under `claim.file` (the helpline operator, who re-types these fields), and 6.19b's letter form reads the address
+  under its own key (1). The key's doc-block in `permissions.ts` is amended to say so — ⛔ no catalog bump. A **direction response** needs ⛔ no key: the actor must be
   the **named directee** (identity check) and hold that read key. Names are the developer's.
 - **D9 — the claimant's NAME is ⛔ not English-gated.** `-227` cl.9 scoped the gate to the two names the check compares; UX-DR57 requires bilingual
   input. Say so in the doc-block.
@@ -550,7 +539,7 @@ Where a decision only records a Panel ruling it says so.
   nominees' versions) **or** (the claimant fields are present **and** every effective nominee's row carries the claimant-to-nominee
   relationship). It throws
   `ClaimContactRequiredError` (`reason`: `no_record | agreement_withdrawn |
-  nominee_address_missing | claimant_details_missing`), mapped per route as the gate's other errors are: **409 `verifier_decision.` / `cycle_freeze.` /
+  nominee_address_missing | claimant_details_missing` — the first that applies, in that order; rows selected by the effective ids), mapped per route as the gate's other errors are: **409 `verifier_decision.` / `cycle_freeze.` /
   `r9_voting.claim_contact_required`**, and the three admin screens explain it. Running it **after** the existing gate keeps every existing
   refusal's code unchanged when several are missing. The letter writer (6.19b), the closure writers and the three NEW approval writers
   (6.19c: the `-251` approve, D27's approve, `-260` G1's approve) call it too — "the full gate" means `assertClaimApprovable` **and** this
@@ -633,7 +622,7 @@ Where a decision only records a Panel ruling it says so.
   `family` at the return, else the date of the latest change **to** `family` (`-258` detail 1); a change to `staff` ends the family run at once
   (the running slot's record is written `skipped_superseded`); a change back to `family` opens a **new** run (a full 90 days). A **staff run**
   exists while the mark is `staff`: the District Admin is reminded on D3's days from the return / the latest change to `staff`, **day 12** →
-  escalated to the Pariwar Admin (a record + a reminder), **day 90** → escalated to the Super Admin (6.19c). ⛔ The letter track (D20) runs
+  escalated to the Pariwar Admin (a record + a reminder), **day 90** → escalated to the Super Admin (6.19c). The letter track (D20) runs
   only in a family run. The District Admin's own reminders (AC4) continue in both.
 - **D27 — "no correction needed"** is a District Admin record (key (8)) with a **required note**, valid only with a **current, passing name
   check recorded after it** (6.18's write); recording it sets the mark to `staff` (so the family is ⛔ not chased meanwhile) and puts the claim
@@ -746,3 +735,4 @@ template registry's content against the rendered `t()` output).
 | v1.8 | 2026-09-28 | 6.19a's fifth validate pass: **D5**'s add-only refusals get an outcome (409 `claim_contact.add_only`, nothing written; `claimantNomineeVersionId` refused in the extra states) and helpline nominee rows take an optional address and relationship. |
 | v1.9 | 2026-09-28 | 6.19a's sixth validate pass: **D5**'s claimant-block exception narrowed to a non-effective stored claimant version; the parent CHECK's two sides cleared symmetrically in every write; `claim_contact.address_required` named. |
 | v1.10 | 2026-09-28 | 6.19a v1.7 (external review): **D5** gains `claim_contact.awaiting_determination` (a claimant-block write in the extra states while the effective declaration is ⛔ not `effective`), a revoked agreement counting as missing (fillable in any window), and the audit unit; **D14** selects rows by effective `versionId`, ⛔ never a count. |
+| v1.11 | 2026-09-28 | 6.19a v1.8 (fresh-context validate): **D5** rewritten as the table shape + a pointer to 6.19a AC1's **W1–W10** as the ONE copy of the write rules (projected versions, the claimant-side fills, `claimant_required`, `agreed` alone, `locale`, the audit unit) — ⛔ no second restatement to drift; **D8** records the `claim.view_nominee_name_check` reuse-check (presence-only; plaintext under `claim.file`); **D14** pins the reason precedence. Glyph register: six positive clauses that carried `⛔` corrected. |

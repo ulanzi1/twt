@@ -4,10 +4,20 @@
 > every citation the sentence is *"if a claim is wrongly started for someone who is still alive, and it is refused — should their nominee stay
 > locked for the rest of their life?"* — not a question we would answer alone in front of a trustee. Not mixed.
 
-> ## ⏳ AWAITING PANEL RULING
+> ## ✅ PANEL RULED — 2026-09-21 — recorded as `2026-09-21-238` · ⚠ block completed LATE, on 2026-09-28
 >
-> **Nothing is recorded here yet.** When the Panel rules, transcribe it into this block **and** into `.decision-log.md` as a new decision
-> id. Everything below is then kept **unedited**, as the question **as it was put**.
+> ⚠ **This block was left reading "awaiting" after the Panel had ruled** — found on 2026-09-27 and completed here from the decision log.
+>
+> **Ruled by Dhiraj Rahul + Kalpana Bharti, relayed by BigDev** — verbatim in `2026-09-21-238`, in part: *"Option B is acceptable. However
+> there could be cases of fraud by producing fake certificate and all. Therefore, if proven guilty membership will be terminated and the
+> person will be blacklisted/banned."* · *"… If member is innocent then member's declaration unlock immediately. …"* ⇒ the lock is released
+> on the investigation's finding of innocence; a new sanction, blacklisting, is created.
+>
+> **Since then:** 6.20 built the release, but ⛔ nothing can call it until the fraud register (row `6-22`) exists. `2026-09-28-261` **D3 A**:
+> the Panel chose to **wait for the fraud register** (our reading, a staff "member is alive" record, was ⛔ not taken), and
+> `2026-09-28-262` **FQ4 B**: go-live may go ahead meanwhile — a living member wrongly locked stays locked until then.
+>
+> ⭐ Everything **below this block is kept UNEDITED** — it is the question as it was put.
 
 ---
 

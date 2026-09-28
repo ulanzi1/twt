@@ -2534,6 +2534,12 @@ So that mismatches are flagged for human review before verification proceeds and
 
 ### Story 6.6: Peer Mesh Deterministic 5-Nearest Selection + Ping `[CONSUMER]`
 
+> ⚠ **ANNOTATION 2026-09-28 (`2026-09-28-262` FQ8 E, `-263` FQ10 and its finding) — ⛔ not rewritten.** The question below gains
+> *"If you know, on what date did they die?"*; a reply that differs from the certificate by more than a day, or a *"has not died"*, is a
+> **warning** to the District Admin — the peer mesh is a **signal, ⛔ not a gate**. ⚠ **Found 2026-09-28:** this story shipped the
+> selection and the recorded requests only — ⛔ nothing sends them, ⛔ nothing can reply, ⛔ staff cannot see replies. Owned by row
+> `6-27-peer-mesh-sending-replies-and-date-of-death`.
+
 As the verification engine processing a claim,
 I want a peer mesh that deterministically selects the 5 nearest members and pings them for verification,
 So that peer-mesh selection is reproducible, audit-replayable, and non-manipulable.
@@ -2556,6 +2562,12 @@ So that peer-mesh selection is reproducible, audit-replayable, and non-manipulab
 **Then** the case falls back to ground-inspection-primary verification; operator is alerted to extend the window or skip peer-mesh with documented reason
 
 ### Story 6.7: Ground Inspection Scheduling + Notes + Photos `[SURFACE]`
+
+> ⚠ **ANNOTATION 2026-09-28 (`2026-09-28-263` FQ9 A, FQ11 A; `-262` FQ8 B, C) — ⛔ not rewritten. SUPERSEDES this story's**
+> *"the verifier may still approve with only one signal"*: ⛔ **no claim is approved before its ground inspection is complete** (a refusal
+> never waits; a visit that cannot happen makes the claim wait). The inspector **sees and photographs the original certificate** and
+> records whether it matches the upload, and records the **date and time of death**; the District Admin records the **government-register
+> (CRS) check**. Owned by row `6-26-ground-inspection-before-approval-and-death-facts`.
 
 As a District Admin or designated field worker conducting ground inspection,
 I want a ground inspection workflow to schedule, record notes, and upload photos,
@@ -2945,6 +2957,11 @@ refused because the first certificate was unclear.
 > the two pre-verification states (`intake_converged`, `documents_pending`), ⛔ not only the review window. Whether
 > `-236` CC1's reminder chases a certificate LEFT PENDING in those two states too is part of 6.19's own protection-3
 > §0 scoping — 6.19 stays `backlog`, ⛔ no code exists yet.
+>
+> ⭐ **2026-09-27 — protection 3 RULED: `2026-09-27-259`** (option B, amended): the correction schedule to day 90, then monthly,
+> **stopping after 180 days**; one posted letter for a dead phone; SMS to the agreed people; ⭐ a **never-sent** (`missing`) certificate IS
+> chased — **once the claim is being checked**, ⛔ not during filing. Built by **Story 6.19d** (`6-19d-replacement-certificate-reminder`,
+> split from 6.19 on 2026-09-27); coupling (2) discharges on **that build**, ⛔ not on this record. *Appended; ⛔ nothing above edited.*
 
 ### Story 6.21b: A Rejected or Missing Death Certificate — the Family Is Asked in Their Own Words, and Can Send Another in the App or Through the Helpline `[SURFACE]`
 

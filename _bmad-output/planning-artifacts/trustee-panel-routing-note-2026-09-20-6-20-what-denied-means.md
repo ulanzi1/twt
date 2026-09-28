@@ -6,10 +6,22 @@
 > **mixed**, so it is split: the Panel is asked **only** what happens to the claim. *How* the software records which version stands is
 > ours and is not asked.
 
-> ## ⏳ AWAITING PANEL RULING
+> ## ✅ PANEL RULED — 2026-09-21 — recorded as `2026-09-21-239` · ⚠ block completed LATE, on 2026-09-28
 >
-> **Nothing is recorded here yet.** When the Panel rules, transcribe it into this block **and** into `.decision-log.md` as a new decision
-> id. Everything below is then kept **unedited**, as the question **as it was put**.
+> ⚠ **This block was left reading "awaiting" after the Panel had ruled** — found on 2026-09-27 and completed here from the decision log.
+>
+> **Ruled by Dhiraj Rahul + Kalpana Bharti, relayed by BigDev — verbatim (`2026-09-21-239`):**
+> *"(a) Yes 'dated on or after the day of death' by itself enough to treat it as deliberate. That should raise the suspicion. System
+> shouldn't refuse the claim, district admin will act upon suspicion and refuse, also notify Pariwar admin that claim has been refused,
+> presenting District admin note and reason"* · *"(b) Member's true nominee has to start over and produce original death certificate.
+> However ground inspection can be inherited. Innocent nominee pays nothing."* · *"(c) Yes refusal appealable once."*
+>
+> **Since then:** `2026-09-28-261` confirms what 6.20 built (C3, incl. **nothing but the inspection** carries over) and decides three
+> behaviours — the system **warns** on a post-death version (D1 B), the Pariwar Admin is **sent a message** (D2 B), and the true nominee's
+> new claim is **kept apart** from the refused one (D4 B). `2026-09-28-262` and `-263` rule eleven follow-ups (the warning's details, the
+> refile, a false certificate date, the inspection before approval).
+>
+> ⭐ Everything **below this block is kept UNEDITED** — it is the question as it was put.
 
 ---
 

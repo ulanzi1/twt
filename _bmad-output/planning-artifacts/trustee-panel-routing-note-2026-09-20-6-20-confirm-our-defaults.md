@@ -5,10 +5,21 @@
 > known relationship, and what the approvers must write.** ⚠ **This is a confirmation, not a request for a decision:** if you say nothing, our
 > defaults stand, and the story says they were ours. It is deliberately short.
 
-> ## ⏳ AWAITING PANEL RULING
+> ## ✅ PANEL RULED — 2026-09-21 — recorded as `2026-09-21-237` · ⚠ block completed LATE, on 2026-09-28
 >
-> **Nothing is recorded here yet.** When the Panel rules, transcribe it into this block **and** into `.decision-log.md` as a new decision id
-> (or record "confirmed as drafted"). Everything below is then kept **unedited**, as the question **as it was put**.
+> ⚠ **This block was left reading "awaiting" after the Panel had ruled** — found on 2026-09-27 (the note `6-20-confirm-what-we-recorded`,
+> *"How much to trust this note"*) and completed here from the decision log, ⛔ not from memory.
+>
+> **Ruled by Dhiraj Rahul + Kalpana Bharti, relayed by BigDev** — the verbatim text is in `2026-09-21-237`: the relationship list (fifteen
+> values, with the *"Include - sister, aunt, sister-in-law, daughter-in-law, grandchild, niece/nephew"* addition); **`other` forecloses any
+> correction**; CC2 (the helpline operator or the family in the app, ⛔ never the District Admin alone) and CC3 (a written note at **each**
+> approval) **confirmed at our defaults**.
+>
+> **Since then:** `2026-09-27-257` **supersedes cl.1** — the list is **twenty** values (brother-in-law, son-in-law, mother-in-law,
+> father-in-law, grandparent added). `2026-09-28-261` **confirms** what 6.20 built from this answer (C1, C2), **including** that a
+> correction cannot change a relationship **to** `other`, and rules that `other` forecloses **only** the correction (N2).
+>
+> ⭐ Everything **below this block is kept UNEDITED** — it is the question as it was put.
 
 ---
 

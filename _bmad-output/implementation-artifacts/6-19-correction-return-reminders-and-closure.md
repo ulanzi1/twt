@@ -1,480 +1,689 @@
 ---
-baseline_commit: da823aeb
+baseline_commit: c136b03c
 ---
 
 <!--
-BASELINE — `governance(6.18): Task 0 …`. The Panel's rulings this story builds are in `.decision-log.md` as
-`2026-09-20-229` … `-232` (all UNCOMMITTED when this file was written).
+BASELINE — `c136b03c` on `main` (`governance(6.19): place -257 (N1) on Story 6.19 …`). ⭐ Every claim under *What already EXISTS*
+was RE-VERIFIED against this SHA on 2026-09-27 by three read-only passes (the return/closure/appeal code; the dispatch/scheduler/SMS
+substrate; filing, PII, keys and 6.21a/b). 6.18, 6.20, 6.21a and 6.21b are all `done` and merged — ⛔ nothing here is against an
+uncommitted tree any more. Before Task 1, run `git diff --name-only c136b03c..HEAD -- packages apps scripts` and re-read anything
+it lists that this file cites.
 
-⚠⚠ EVERY CLAIM BELOW ABOUT STORY 6.18 IS AGAINST ITS UNCOMMITTED WORKING TREE on `story/6-18-nominee-name-check`
-(`returnToDistrictAdmin`, `getLiveReturnRow`, migrations 0116–0118, the keys `claim.check_nominee_name` /
-`claim.view_nominee_name_check`). 6.18 is `in-progress` with 73 open review patches and its Tasks 5, 6, 7 RE-OPENED.
-Re-run `git diff --name-only da823aeb..HEAD -- packages apps scripts` and re-read 6.18's `### Review Findings` before Task 1.
-
-STATUS IS `backlog`, NOT `ready-for-dev` — a DELIBERATE deviation from the create-story default, recorded in
-`-232` consequence 2: nine Panel questions (K L M O P Q R T U, plus N as a confirm) are open and a developer cannot safely start.
-"A story a developer cannot safely start is not ready."
+⭐ v0.9 IS A RE-DERIVATION, ⛔ NOT AN APPEND. The Panel answered every question this story put (`-250` … `-257`); the ACs, the
+author decisions and the Tasks are re-derived from those answers and the old BLOCKED tags are gone. v0.8 (the question list as put, the
+five appended status blocks) is preserved in git at `c136b03c` — the questions themselves live in the seven routing notes, which are
+the record ([[feedback_supersede_never_reinterpret]] governs RULINGS; this file is a spec and is rewritten when its inputs change).
 
 GLYPH REGISTER: `⛔` sits ONLY on a negation word (NOT / no / never / don't); `⭐` = key fact or action; `⚠` = hazard.
 ADDRESSING RULE: no `file:NNN` pointers into `.decision-log.md`, `deferred-work.md` or `sprint-status.yaml` (newest-first — every
-prepend rots every number). Cite decision ids, clauses, item headings and row keys. `file:NNN` is used ONLY for code, and the
-6.18 line numbers rot when its patches land — the function names are the stable handle.
-LETTERS: `D1`…`D14` are 6.19's own author decisions; the Panel's open questions keep the letters `-232` gave them (K L M, and N as a
-confirm) and continue (O P Q R T U); other stories' letters are qualified (`6.18 D1`, `6.16 D-F`).
-VALIDATION: v0.2 applied a fresh-context validator's findings (Change Log). Its claims were re-verified in the tree before applying.
+prepend rots every number). Cite decision ids + clauses, item headings and row keys. `file:NNN` is used ONLY for code, as of
+`c136b03c` — the function names are the stable handle.
+LETTERS: `D1`…`D24` are 6.19's own author decisions (⏳ PROPOSED — one author-commit in 6.19a's Task 0). The Panel's questions keep the
+letters they were asked under (K L M N O P Q R T U; F1–F8 of `6-19-follow-ups`; N1 of `6-20-confirm-what-we-recorded`). Two NEW
+questions found by this pass are `V` and `W`. Other stories' letters are qualified (`6.18 D1`, `6.16 D-F`).
 -->
 
-# Story 6.19: The Correction-Return Reminders, the Posted Letter and the Closure `[SURFACE]`
+# Story 6.19 — SHARED SPEC for 6.19a · 6.19b · 6.19c · 6.19d: The Correction-Return Reminders, the Posted Letter, the Closure and the Super Admin's Review `[SURFACE]`
 
-Status: backlog
+Status: split — ⛔ this file has no sprint row; it is the shared spec of four stories (below)
 
-> **Not in `epics.md`'s story list.** Commissioned by the Trustee Panel (Dhiraj Rahul + Kalpana Bharti) on 2026-09-20 through the
-> follow-ups to Story 6.18's code-review decision D2 — decisions `-229` → `-232` — and by BigDev's own call, the same day, that the
-> build is **its own story** (*"Create another story"*, `-230`). Like 6.17 and 6.18 it needs a `> ⚠ Minted by…` header in
-> `epics.md` and the Epic 6 retrospective stays `done` (Task 0).
+> ⭐⭐ **SPLIT 2026-09-27 (BigDev: *"split it three ways"* — D13).** The build now lives in four story files, each of which declares this file
+> **part of itself** — read it end to end before any of them:
 >
-> ⭐ **6.18 must not go live without 6.19.** Until this ships, a claim the Pariwar Admin has sent back waits forever if the family
-> never answers — the outcome the Panel ruled against. Nothing is live today (`-232` consequence 5).
+> | Story | Row / file | Scope | Status |
+> |---|---|---|---|
+> | **6.19a** | `6-19a-claim-contact-capture-at-filing` | AC0 (governance for the WHOLE set), AC1, AC13 | `ready-for-dev` |
+> | **6.19b** | `6-19b-correction-reminders-and-posted-letters` | AC2–AC5 | `ready-for-dev` — ⛔ start after 6.19a `done` |
+> | **6.19c** | `6-19c-correction-closure-super-admin-review-and-refile` | AC6, AC7, AC14, AC15 | `ready-for-dev` — ⛔ start after 6.19b `done` |
+> | **6.19d** | `6-19d-replacement-certificate-reminder` | AC12 (CC1) | `backlog` — fenced on its routing note |
+>
+> The AC numbers are **kept** in the slices, so every decision and note that cites "6.19 AC n" still resolves; AC8, AC9 and AC11 are restated per
+> slice (AC8a/b/c …). The row `6-19-correction-return-reminders-and-closure` is **retired** (ledger `2026-09-27j`); this file keeps its path
+> because `-250` … `-257` and seven routing notes cite it.
 
-## The rulings this story builds — verbatim keys, and OUR reading of them
+> **Not in `epics.md`'s story list yet** (6.19a's Task 0 adds 6.19a–d). Commissioned by the Trustee Panel (Dhiraj Rahul + Kalpana Bharti) through the
+> follow-ups to Story 6.18's code-review decision D2 — `-229` → `-232` (2026-09-20), answered in full by `-250` → `-257` (2026-09-27) —
+> and by BigDev's call that the build is **its own story** (*"Create another story"*, `-230`). Like 6.17, 6.18, 6.20 and 6.21a/b it needs
+> a `> ⚠ Minted by…` header in `epics.md`; the Epic 6 retrospective stays `done`.
+>
+> ⭐ **6.18 must not go live without 6.19** — until this ships, a claim the Pariwar Admin sent back waits forever if the family never
+> answers. ⭐ **And 6.19's family-facing reminders must not go live before counsel** confirms the basis for the filer's agreement on
+> others' behalf (**M**) and the privacy policy states the purpose (**S**) — `-253` consequence 3, `-255` F7. ⛔ Neither is a build
+> blocker ([[project_not_in_production_merge_is_not_golive]]).
+>
+> ⚠ **Size.** This is three stories' worth of work in one file (filing capture · the reminder machine and letters · the closure, the
+> Super Admin's review and the re-file guard). ✅ **Split** 2026-09-27 (D13) — see the table at the top.
 
-⚠ Each ruling is one compact sentence. The **reading** column is ours and is ⛔ **not ratified**; every place it could be read another
-way is a numbered Panel question in *⚖️ Open Panel questions*. Verbatim text lives in `.decision-log.md`.
+## The rulings this story builds — verbatim keys, and what is still OUR reading
 
-| Decision | The Panel said (verbatim, typos as relayed) | Our reading |
+⚠ The verbatim text is in `.decision-log.md`; each row here is compact. A reading marked **ours** is ⛔ not ratified.
+
+| Decision | The Panel said (compact) | What it fixes for this story |
 |---|---|---|
-| `-229` | *"option C, Allow refusal only after a waiting period of 90 days with system sending and recording that enough reminder has been sent. For intial 7 days daily, therafter twice a week for a month, thereafter once a week."* | 90 calendar days; reminders recorded; daily days 1–7, twice a week for the next month, then weekly. |
-| `-230` 1–5 | *"both … Use standard channel"* · *"Day claim was sent back, yes second return restart the clock."* · *"All reminders sent and delivered. If number is dead a letter will be sent by District Admin on physical address, tracking number needs to be entered … Delivery date should be updated in system with screenshot within 14 days of sending letter … If no action taken within 30 days one more letter …"* · *"Until claim is corrected or 90 days lapsed."* | Reminders go to the District Admin **and** the family; a dead number is answered by posted letters. |
-| `-231` | *"system should not auto close instead it remind the District Admin for closure, following with Pariwar admin approves the closure."* · *"Yes it's the second refusal"* · *"Channel reports invalid. Address is mandatory in claim filing form. We will have reminder after 7 days for district admin for updation daily until 12th day, thereafter escalated to Pariwar admin."* · *"30 days since delivery, 90 days enough."* · *"Claendar days"* · *"Reaplced by one reminder after 30 days since delivery"* | ⭐ **The system never closes a claim.** The closure is the **second refusal** and is ⛔ not appealable. |
-| `-232` | *"either the family in the app, or the helpline operator"* · *"Address of both nominee and claimant if they are different person. Also capture name of claimant and mobile"* · *"Yes pariwar Admin can decline to approve a closure with note, escalate it to Superadmin."* · *"Once daily until for next 7 days then escalate"* · *"Yes, that's right."* (**J** — ⭐ **ratifies our parse of `-231` F**: the District Admin's regular reminders are replaced by ONE reminder 30 days after the first letter's delivery) | Address (+ claimant name/mobile) captured **at claim filing**; the Pariwar Admin may **decline**; the day-90 reminder runs 7 days, then escalates. |
-
-**⭐ `-231` supersedes `-230` clause 3's last sentence ("auto closure").** `-230`'s title and consequence 1 are kept as written and
-point to `-231`; this story is built against `-231`.
+| `-229` | Refusal only after a **90-day** wait, with the system **sending and recording** reminders (daily, then twice a week for a month, then weekly). | The period and the record. |
+| `-230` | Reminders to **both** the District Admin and the family, a **non-name reference**, the **standard channel**; the clock starts the **day the claim was sent back**, a **second return restarts it**; a **dead number** → the District Admin **posts a letter** (tracking number; delivery date + screenshot within 14 days of sending); **one more letter** if no action in 30 days; reminders run **until corrected or 90 days**; a **first refusal is appealable, the second is not**. ⚠ Cl.3's last sentence ("auto closure") is **superseded by `-231`**. | Recipients, anchor, letters, the second refusal. |
+| `-231` | ⭐ **⛔ No automatic closure** — the system **reminds** the District Admin, the **District Admin requests**, the **Pariwar Admin approves**; the closure is the **second refusal** (⛔ not appealable); dead = **"channel reports invalid"**; address **mandatory at filing**; the letter chase runs **7 → 12 days, then escalates to the Pariwar Admin**; the second letter is due **30 days after delivery**; **calendar days**; the District Admin's regular reminders are **replaced by ONE reminder 30 days after delivery**. | The closure is two human acts. |
+| `-232` | Address (+ claimant **name and mobile** when the claimant is not the nominee) captured **at filing**, in the app or by the helpline; the Pariwar Admin **may decline** a closure **with a note**, which **escalates to the Super Admin**; the day-90 closure reminder runs **daily for 7 days, then escalates**; J confirms `-231` F. *"code is not in production"* ⇒ ⛔ no backfill. | Filing capture; the decline branch. |
+| `-250` | #1 **CHANGED**: dead-number reminders stop when a **letter's delivery is recorded**. #2 **CHANGED**: the District Admin's letter chase counts from the **day the phone was found dead**. #3 the **day-14 overdue flag** (shown, nothing else). #4 letters recordable **after day 90**, no more reminders. #5 the **exact days** — 1–7; 10, 14, 17, 21, 24, 28, 31, 35; 42, 49, 56, 63, 70, 77, 84; stop at 90; **10:00**. #6 day-90 escalation → **the Pariwar Admin**. | ⭐ Every schedule number is now **the Panel's**, ⛔ no longer ours. |
+| `-251` | **K = option C**: on a declined closure the **Super Admin decides the whole claim** — close, refuse for another reason, or **approve despite the name problem**. ⚠ Recorded as a **NARROWING** of `-226` cl.1/cl.6 and `-227` cl.2, **confined to that one case**; `-226` cl.5's highlight still reaches all three roles. | The Super Admin's three decisions. |
+| `-252` | **O/R = option A**: "reached" = ≥ 1 reminder **accepted** by the network (or shown delivered, where a report exists) **or** a letter with a **recorded delivery date**, **for each person**; a family **no channel can reach** is offered the **letter route**; proven delivery (B) = a possible future version, ⛔ no row. | The closure precondition (STRICT, now the Panel's). |
+| `-253` | **M = option C**: the filer's **agreement to be contacted** is asked **at filing**; a **new question**: the **claimant's relationship to the nominee**, **family relations only**; reminders go to **both people**; **one address per declared nominee**, the **claimant's details once**. ⚠ The legal basis (M) stays with **counsel**. | Two new filing fields. |
+| `-254` | **Q = option C**: a claim closed for silence may be **filed again only through a person** — the District Admin or the helpline **confirms, with a note**. | A guarded re-file. |
+| `-255` | **F2** a Super Admin **refusal** is **appealable once** (a closure never); **F3** every Super Admin decision carries a **note and a reason**; **F4** an approval despite the name problem needs **nothing more** (money may go to the mismatched account — chosen knowingly); **F5** the letter goes to **the person whose phone is dead**, at their own address; **F6** **each declared nominee** is reminded; ⭐ **F7** the plan is **WIDENED — SMS reminders** to people the agreement covers (a new **DLT template**, a **per-message cost**; PRD §4.10 + architecture §3.4 owe an **annotation**); **F8** the claimant-to-nominee list = **nineteen** family relations, ⛔ no `other`. | Recipients, channel, Super Admin rules. |
+| `-256` | **F1 = option E**: the Super Admin may hold an escalated claim **under review** (with a note; ⛔ nothing paid, closed or refused meanwhile), **⛔ no hard deadline, a reminder every 30 days**, and ⭐ **may DIRECT the Pariwar Admin and the District Admin** — a **new power**, recorded against the named admin, who is reminded and **records what they did**. The review ends only with a decision + note. Restarting the family's reminders happens **only as a direction** (ours). | The review hold and the direction record. |
+| `-257` | **Supersedes `-237` cl.1**: the **nominee** relationship list gains brother-in-law, son-in-law, mother-in-law, father-in-law, grandparent — **twenty**. `other` still forecloses correction (`-237` cl.2). | ⭐ F8's nineteen = these twenty **minus `other`** (one source). |
+| `-258` | **V = option B**: every return **says who must act** — the Pariwar Admin marks *family* or *staff*, the District Admin may change it with a note; ⭐ **only while the family must act** is the family reminded, and ⭐ **only then can the claim ever be closed "for no response"**; staff cases chase **staff** (day 12 → Pariwar Admin, day 90 → **Super Admin**, who may review and direct); the District Admin may record **"no correction needed"** (note + fresh name check) and the Pariwar Admin approves or keeps it sent back; a switch to *family* starts the family's 90 days **that day**; the staff-case app line *"Your claim is still open — we are checking the bank details"*. ⚠ **Narrows** `-227` cl.2, `-230` cl.1–2, `-231` A/B; **widens** `-256` cl.3. | The mark, and every family reminder and closure conditioned on it (6.19b, 6.19c). |
+| `-259` | **CC1 = option B, amended**: the certificate reminder runs the correction schedule to day 90, then monthly — ⭐ **stopping after 180 days**; **one** posted letter for a dead phone; SMS to the agreed people (**F7 extended**); a never-sent certificate is chased once the claim is being checked. ⛔ The claim still never closes. | 6.19d's schedule — unfenced. |
+| `-260` | **G1–G6**: the Super Admin may **decide** a staff case at day 90 — approve **only with a fresh passing name check**, or refuse (appealable once), ⛔ never close (**widens** `-258`/`-256`); the Pariwar Admin says who must act when keeping a "no correction needed" claim (**widens** `-258` cl.1); ⛔ **no text** after a Super Admin refusal or approval; the first reminder stays the next morning; a second rejected certificate restarts the 180 days; monthly = days 120, 150, 180. | ⭐ Every Panel question on the set is answered. |
 
 ## Story
 
-As the **District Admin** (with the **Pariwar Admin** above me), I want a claim that has been sent back for a bank-name correction to
-be **chased on a fixed, recorded schedule** — reminders to me and to the family, a posted-letter track when the family's number is
-dead, and a closure I can request and the Pariwar Admin decides once 90 days have passed — so that a family is **never refused for
-silence without having been reached**, and a claim **never waits forever**.
+As the **District Admin** (with the **Pariwar Admin** and, for a disputed case, the **Super Admin** above me), I want a claim sent back
+for a bank-name correction to be **chased on the Panel's fixed, recorded schedule** — reminders to me and, by text message, to each
+person the family agreed may be contacted; a posted letter to anyone whose phone is dead or unreachable; and, after 90 days, a closure
+**I request and the Pariwar Admin decides** (or, if the Pariwar Admin declines, the Super Admin reviews and decides) — so that a family is
+**never refused for silence without having been reached**, a claim **never waits forever**, and every step is **on the record**.
 
 ## ⭐ THE INVARIANTS — read these first; every AC below serves one of them
 
-1. **⛔ The system NEVER closes a claim.** It reminds and escalates; a **human requests** the closure (District Admin) and a **human decides** it (Pariwar Admin approves, or declines with a note → Super Admin). No job, sweep or timer may call the closure writer. (`-231` B)
-2. **⛔ A corrected claim is never closed as "no response".** The closure request **and** its approval each re-check `isReturnedClaimResubmitted` under the trustee lock (AC6).
-3. **⛔ Never write `delivered` for an accepted send.** A reminder record says what is KNOWN; `delivered` only when a real signal arrived (T1).
-4. **⛔ No name, ever, in a family reminder** — a non-name reference only (T6).
-5. **⛔ `voteOnFrozenClaim` is untouched** — the closure goes through a NEW writer (T2).
-6. **⛔ Ordinary refusals keep 6.16's one appeal.** Only the closure is unappealable (AC7).
-7. **⛔ A new claimant PII surface is Tier-1, gated, audited, and has no erasure path yet** — record the gap, do not fix it (T8).
+1. **⛔ The system NEVER closes, refuses or approves a claim.** It reminds and escalates; a **human requests** a closure (District
+   Admin) and a **human decides** it (Pariwar Admin; on a decline, the Super Admin). ⛔ No job, sweep or timer may call any decision
+   writer. (`-231` B; AR-63: time-as-actor is non-punitive only.)
+2. **⛔ A corrected claim is never closed as "no response".** The closure request, the Pariwar Admin's approval **and** the Super
+   Admin's close each re-check `isReturnedClaimResubmitted` **under the trustee lock** (AC6).
+3. **⛔ Never write `delivered` for an accepted send.** A reminder record says what is KNOWN; `delivered` only when a real signal
+   arrived (T1). `accepted` **counts as reached** — the Panel's own answer (`-252` cl.1), ⛔ not our shortcut.
+4. **⛔ No name, ever, in a family message** — a non-name reference only (T6).
+5. **⛔ `voteOnFrozenClaim` and `assertClaimApprovable` are untouched.** Every new decision (closure, Super Admin close / refuse /
+   approve) goes through a **NEW writer** (T2).
+6. **Appealability is exact:** an ordinary refusal keeps 6.16's one appeal; **a closure is ⛔ never appealable**; **a Super Admin
+   refusal is appealable once** unless the claim already had its one appeal (`-255` F2, 6.16 D-F).
+7. **⭐ The `-251` narrowing is CONFINED and PARTIAL.** Only a Super Admin, only on a claim **escalated after a declined closure**, and it
+   waives **only the name-check conjunct** — ⛔ never the accepted death certificate (6.21a), the two accounts or the effective nominee
+   determination (6.20). Everywhere else `-226` cl.1/cl.6 and `-227` cl.2 stand.
+8. **⭐ A re-file after a closure for silence needs a person's recorded confirmation** (`-254`) — keyed on the **closure record**, ⛔ never
+   on `claim.denied_no_appeal` (a stage-3 uphold emits that too, and its re-file stays free).
+9. **⛔ New claimant PII is Tier-1, gated, audited, never logged — and has no erasure path yet.** Record the gap; do ⛔ not fix it (T8).
+10. **⛔ The certificate wait is never closed** (CC1 protection 2): the day-90 closure keys on a **correction return**, ⛔ never on a
+    certificate wait (AC12).
+11. **⛔ A family is never chased or closed for a silence that was never theirs** (`-258`): only a return whose **latest mark is "the family
+    must act"** reminds the family or can be closed "for no response"; a staff case chases **staff**. (AC16, AC17)
 
 ## 📜 Policy meaning (AI-10-1)
 
-⭐ This story introduces **two predicates that gate a member's claim**: *(1) a sent-back claim may be closed only 90 calendar days after
-it was sent back, and only through a human request and a human approval; (2) a claim closed for no response cannot be appealed.*
+⭐ This story introduces **five predicates that gate a member's claim** (the benefit the member's family is owed):
+1. a sent-back claim may be closed only after **90 calendar days**, only if **each person was reached**, and only through a **human
+   request and a human approval**;
+2. a claim **closed for no response cannot be appealed**;
+3. a **Super Admin refusal can be appealed once** (unless the appeal was already used);
+4. on a claim escalated after a declined closure, **a Super Admin may approve payment even though the bank account is ⛔ not in the
+   nominee's name**;
+5. a death whose claim was closed for no response can be **filed again only with a District Admin's or the helpline's confirmation**;
+6. ⭐ (`-258`) a claim can be closed for no response **only if the return says the family must act** — and a return found to need **no
+   correction** can be approved **without** one, once the District Admin records it (with a fresh name check) and the Pariwar Admin agrees.
 
 **The sentence, in the family's terms (ours, for the Panel to correct):** *"If your bank details need correcting we will remind you
-regularly, and if we cannot reach you by phone we will write to you by post. If we have still not heard from you after 90 days, the
-District Admin may ask for your claim to be closed, and the Pariwar Admin decides. A claim closed for no response cannot be appealed."*
+regularly by text message, and if we cannot reach a person by phone we will write to them by post. If after 90 days we have still not
+heard from you, the District Admin may ask for your claim to be closed and the Pariwar Admin decides; if the Pariwar Admin disagrees,
+the Super Admin looks into it and decides — and may pay to the account you gave even though the name does not match. A claim closed
+for no response cannot be appealed, but you can file again through the helpline or the District Admin."*
 
-**Checked against the Niyamavali? ⛔ NO — and here is why.** `docs/legal/` is **absent from the public repo by design**
-([[project_legal_corpus_private_repo_split]]); the planning-docs pass that could read `docs/legal/niyamavali.md` found **nothing** on
-non-response, closure or timelines in it; and the Niyamavali is an agent-drafted design reference, **⛔ not ratified and never a
-blocker** ([[feedback_niyamavali_rulebook_not_spec]]). The sentence was checked against decisions `-226` → `-232` instead. ⚠ It **does
-tension with the PRD**: FR-43A makes internal appeal the *primary* grievance path and only Stage 3 non-appealable, and 6.16's own
-Given requires counsel's procedural-fairness review (Story 0.13) before go-live — the ruling amends neither. ⇒ **Q-S** (a go-live
-gate, ⛔ not a build blocker).
+**Checked against the Niyamavali? ⛔ NO — and why.** `docs/legal/` is **absent from the public repo by design**
+([[project_legal_corpus_private_repo_split]]); the earlier planning pass found **nothing** on non-response, closure or timelines in the
+design reference; and the Niyamavali is an agent-drafted design reference, **⛔ not ratified and never a blocker**
+([[feedback_niyamavali_rulebook_not_spec]]). The sentence was checked against `-226` → `-232` and `-250` → `-257` instead — each clause
+of it traces to a ruling in the table above. ⚠ It **does tension with the PRD**: FR-43A makes internal appeal the *primary* grievance
+path and only Stage 3 non-appealable, and 6.16 D-G requires counsel's procedural-fairness review before go-live — the rulings amend
+neither ⇒ **S** (a go-live gate, ⛔ not a build blocker).
 
-## 🎯 What already EXISTS — re-derived 2026-09-20 (⛔ do not rebuild any of it)
+## ⚖️ Where every question stands (re-derived 2026-09-27)
 
-**The return the reminders key off (6.18, UNCOMMITTED).** `returnToDistrictAdmin` (`packages/domain/src/claim/state-trustee-decision-persist.ts`)
-writes ONE `claim_state_trustee_decisions` row, phase `correction_return`, outcome `returned_for_correction`, **no event, no state
-move**; `getLiveReturnRow` (module-private; the exported accessor is `getLiveCorrectionReturn`) returns the live row (`superseded_at IS NULL`) and its **`decidedAt` is the day the claim was sent back** —
-the 90-day clock's anchor; a second return is a new row, ⭐ so a new clock **for free**. The partial-unique index is one live per
-(claim, phase).
+| Q | Answer | Decision | Build status |
+|---|---|---|---|
+| **K** (+ F1–F4) | The Super Admin decides the whole claim (close / refuse / approve despite the name); a refusal is appealable once; every decision has a note + reason; an approval needs nothing more; **a review hold with directions**, ⛔ no deadline, a 30-day reminder. | `-251`, `-255` F2–F4, `-256` | ✅ **Buildable** — AC6, AC14 |
+| **L** (+ F5) | Reminders to **both**; the letter to **the person whose phone is dead**. | `-253` cl.3, `-255` F5 | ✅ AC3, AC5 |
+| **M** | Agreement asked **at filing** (mechanism). ⚠ The legal basis is **counsel's**. | `-253` cl.1 | ✅ build · ⛔ **go-live gated** |
+| **N** | Day-90 escalation → the Pariwar Admin. | `-250` #6 | ✅ AC6 |
+| **O**, **R** | `accepted` counts; STRICT reached-per-person; no working route → the letter route. | `-252` | ✅ AC3, AC6 |
+| **P** (+ F7) | **SMS** to those the agreement covers, outside the app. | `-253`, `-255` F7 | ✅ build · ⛔ **go-live gated** (M, S); ⚠ a DLT template has an external lead time |
+| **Q** | Re-file only through a person, with a note. | `-254` | ✅ AC15 |
+| **T** | #1/#2 **reversed** (stop on delivery; chase from found-dead); #3/#4 confirmed. | `-250` #1–#4 | ✅ AC3–AC5 |
+| **U** (+ F6) | One address per declared nominee; each nominee reminded; the claimant once. | `-253` cl.4, `-255` F6 | ✅ AC1, AC3 |
+| **D3** | The days and 10:00 — **the Panel's**. | `-250` #5 | ✅ AC2 |
+| **N1** | Nominee list → twenty. | `-257` | ✅ AC13 |
+| **S** | The privacy policy's purpose; FR-43A. | — (counsel, Story 0.13) | ⛔ **go-live gate**, never a Panel note |
+| **CC1 protection 3** | ✅ **RULED** — option B amended: correction schedule to day 90, then monthly, **stop after 180 days**; one letter; SMS extended; a never-sent certificate chased once checking starts. | `-259` | ✅ **6.19d unfenced** — its ACs owe a `bmad-create-story` pass (stays `backlog` until then) |
+| **V** (NEW, widened) | ✅ **RULED — option B**: the return says who must act; only a family-must-act return reminds the family or can be closed; staff cases chase staff (→ Super Admin at day 90); "no correction needed" + the Pariwar Admin's approval; a switch to family restarts the family's 90 days. | `-258` | ✅ Buildable — **AC16** (6.19b), **AC17** (6.19c) |
+| **W** | ✅ **RULED by `-260` G3 = A** — ⛔ no new message after a Super Admin refusal or approval; the app and the helpline carry it (D23 stands as first written). | `-260` | ✅ |
+| **G1–G6** | ✅ **RULED** — G1 B (the Super Admin may approve a staff case only with a fresh passing check, or refuse — appealable once; ⛔ never close) · G2 A (the Pariwar Admin says who must act when keeping) · ⚠ **G3 A — ⛔ no text after a Super Admin refusal or approval (our B ⛔ not taken)** · G4 A (first reminder the next morning) · G5 A (a second rejection restarts 180 days) · G6 confirmed (days 120, 150, 180). | `-260` | ✅ 6.19c (AC17 revised) · 6.19d |
 
-**"Corrected" is a DIFFERENT predicate from "the row is superseded".** The return row is superseded **only** by the Pariwar Admin's
-next vote (`voteOnFrozenClaim`, the conditional `UPDATE … WHERE superseded_at IS NULL`). "Corrected" is `isReturnedClaimResubmitted`
-(two live accounts, all `updated_at` later than the return's `decidedAt`, and a current passing name check). ⛔ Keying the stop on
-"row superseded" alone keeps reminding a family that has already corrected.
+### §0 run in this pass — the three items still open
 
-**The dispatch primitive — compose, never edit.** `dispatch(alert, deps)` (`packages/channels/src/dispatch.ts`) walks the ladder
-`push → whatsapp → sms` (+ a Telegram side-channel, announcements only). `apps/jobs/src/scheduler/contribution-notify.ts` is the ONE live
-caller (`fanOutAlert`, `fanOutAlertToMembers`; `backoffMs: []` so pg-boss owns retry). `packages/channels/src` is a **frozen surface** (the
-`channels-determinism` gate is the tripwire). The `Alert` category set is a strict discriminated union — a 10th category redefines
-FR-71's "7 push categories". Resolvers (`packages/domain/src/notifications/delivery.ts`) are **member-centric**: `resolvePushTargets`
-takes `principalType 'member'|'admin'`; `resolveWaTarget` / `resolveSmsTarget` / `resolveTelegramTarget` are member-only.
+- ✅ **RULED `-259`.** **CC1 protection 3 — the certificate reminder's schedule and channels (incl. letters, and whether `missing` is chased).** §0 result:
+  ⭐ **the Panel's.** It fixes **what messages a family receives and whether the Trust writes to them by post** — exactly the ground on
+  which `-250` treated this story's own schedule as the Panel's (*"each default fixes a date, a message or an alert a real person
+  receives"*). ⇒ a routing note from the template is owed **before 6.19d builds anything**; ⛔ reusing the correction-return schedule by
+  default would be deciding it for them. **6.19d is fenced (`backlog`); nothing in 6.19a–c waits on it.**
+- ✅ **RULED `-258` (option B).** **V — a return that needs NO correction** ⭐ *(WIDENED 2026-09-27 at BigDev's direction to every return that is ⛔ not the family's to fix — staff mistakes too; see the note `…-2026-09-27-6-19-return-not-the-familys-to-fix.md`. The paragraph below is the narrower first framing, kept.)* (`deferred-work.md`, 6.18 chunk-1 item *"A return clears ONLY through a bank rewrite"* — its
+  trigger is *"authoring Story 6-19 — its ACs must say what the District Admin does when the return needs no correction"*). Today a return
+  clears only when **every account is rewritten after it** and a fresh passing check exists; a District Admin who finds the accounts
+  already right can clear it only by a **no-op helpline rewrite with an invented reason** — and under this story the family would be
+  **chased for 90 days and could be closed "for no response"** when nothing was owed. §0 result: ⭐ **the Panel's** — any path that
+  clears a return **without** a correction narrows `-227` cl.2 (*"corrected, then re-submitted"*), a ratified clause. **What this story
+  does meanwhile (within ratified rules, AC6):** the District Admin **does not request** a closure; the only way forward is the Pariwar
+  Admin's own judgement. ⚠ There is ⛔ no in-system path for the Pariwar Admin to withdraw a return (a return is superseded only by a vote
+  on a **resubmitted** claim, or by a new return on one). ⇒ **Recommended: route V as a note** (options: the Pariwar Admin may withdraw
+  their own return with a note; or the District Admin may certify "no correction needed" and the Pariwar Admin re-votes). ⛔ Not a build
+  blocker — the machinery is the same either way; V adds one path.
+- **W — what the family is told after a Super Admin refusal or approval.** `-256`/`-255` rule the decisions, ⛔ not the notice. §0 result:
+  ⚠ mixed. **Author default (D23):** the closure sends the name-free **closure notice** (AC6, the Panel asked for reminders to both people
+  and a closure is their end); a Super Admin **refusal** and **approval** send ⛔ no new SMS — the member-app status and the helpline
+  carry them, exactly as an ordinary refusal or approval does today. ⚠ If the Panel wants a letter or SMS on those too, that is a new
+  message and theirs — carry it as a low-priority confirm in the next note.
 
-**The scheduler analogue.** Pending-match retry (Story 9.10, `runPendingMatchRetrySweep`) and the deadline-reminder sweep
-(`runDeadlineReminderSweep`) in `apps/jobs/src/scheduler/contribution-notify-triggers.ts`: a cross-tenant BYPASSRLS scan with `ORDER BY`
-and a bounded batch that alarms at the cap, per-entity try/catch, a child queue, a keyed-store claim, a trimmed result, and a throw on
-undelivered so pg-boss retries. Registration is `boss.createQueue` → `boss.work` → `boss.schedule(queue, cron, {}, {tz:'Asia/Kolkata'})`,
-with queue names in `packages/queue/src/index.ts` `QUEUE_NAMES` and `boot.ts`. The clock convention is `deps.now?.() ?? new Date()`.
-**Calendar-day math:** `packages/domain/src/cycle-calendar/holiday-resolver.ts` — `istDateOf`, `addCalendarDays`, fixed +05:30, ⛔ no
-`setDate`.
+## 🎯 What already EXISTS — re-verified on `c136b03c` (⛔ do not rebuild any of it)
 
-**Documents.** `ClaimDocumentStorage` (`put | getBytes | signedReadUrl | delete?`, `packages/contracts/src/claims/documents.ts`), the GCS /
-local-fs / in-memory adapters in `packages/platform-adapters`, the instance `deps.claimDocumentStorage`; keys
-`pariwar/{pariwarId}/claim/{claimCaseId}/{documentType}/{documentId}`; limits `CLAIM_DOCUMENT_ALLOWED_MIME_TYPES` (jpeg, png, pdf) and
-`CLAIM_DOCUMENT_MAX_BYTES` (10 MiB), enforced in the handler before `put`; the staff-upload precedent is the helpline
-`POST …/claims/:claimCaseId/documents` (multipart, `request.file()`); signed reads are TTL-limited (`claims.verifier-console.handlers.ts`).
+**The return (6.18, merged).** `returnToDistrictAdmin` (`packages/domain/src/claim/state-trustee-decision-persist.ts:713`) writes ONE
+`claim_state_trustee_decisions` row, phase `correction_return`, outcome `returned_for_correction`, reason `other` only, **no event, no
+state move** (returns `eventVersion: null`). `decidedAt` is `timestamptz defaultNow()` = the transaction time. Partial-unique index
+`claim_state_trustee_decisions_one_live_per_phase_uq` on `(claim_case_id, phase) WHERE superseded_at IS NULL`. ⚠ **A second return is
+allowed only after resubmission** — it conditionally supersedes the resubmitted row and inserts a new one (`:735-766`); an unresubmitted
+second return is `TrusteeDecisionConflictError(…,'correction_return')`. ⇒ **the live row's `decidedAt` is the LATEST return's date** —
+the 90-day anchor, and a new return is a new clock for free (`-230` 2).
 
-**Closure vocabulary.** `claim.state_trustee_denied` (an edge from `state_trustee_freeze` only) and `claim.denied_no_appeal` — an
-**identity annotation** (`requireIdentityTransition`, payload MUST carry `deceased_member_id`), emitted **only** by the stage-3 uphold
-(`appeal-persist.ts`), consumed **only** by the account-frozen overlay unfreeze (`ACCOUNT_UNFREEZE_EVENT_TYPES` in
-`packages/domain/src/member/overlay.ts`). 6.16 D-F: **exactly one appeal journey per claim, ever** (a unique constraint on
-`claim_appeals.claim_case_id`); an appeal starts only from `denied`.
+**Helpers.** Module-private: `getLiveReturnRow` (`:792`), `hasLiveRoutedRow` (`:330`). Exported: `getLiveCorrectionReturn` (`:818`),
+`hasLiveReturnRow` (`:827`), `isReturnedClaimResubmitted(db, pariwarId, claimCaseId, deceasedMemberId, returnedAt)` (`:855`),
+`resolveClaimCorrectionState(db, pariwarId, claimCaseId, deceasedMemberId, currentState)` (`:953`) — ⭐ **the one "under correction"
+answer; use it, ⛔ do not re-derive** (two readers already re-derive "resubmitted" — `cycle-freeze-read.ts:281-288`,
+`correction-queue-read.ts:280` — a drift risk ⛔ not to extend). `isReturnedClaimResubmitted` = ≥ 1 account **and** every account's
+`updated_at` > `returnedAt` **and** `assertNomineeNameCheckForApproval` passes (exactly 2 live accounts; the 6.20 effective determination
+is `'effective'`; a latest check that is current and ⛔ not `does_not_match`); it swallows only the three "required" errors, and
+deliberately uses the **inner** helper (⛔ no death-certificate conjunct).
 
-**Recipients.** The District Admin = the live `claim_shepherd_assignments` row (`shepherdActorId`, one live per claim). `users.contact_phone`
-exists (`schema/users.ts`) and has **no dispatch resolver**. The Pariwar Admin recipient: **no accessor exists** that lists actors by role
-and scope for notification. ⭐ Only **admin push** (device tokens, `principalType 'admin'`) is reachable today.
+**What supersedes a return.** Exactly two writers: `voteOnFrozenClaim` (`:503`; the conditional `UPDATE … WHERE superseded_at IS NULL
+RETURNING`, 0 rows ⇒ `ClaimAwaitingCorrectionError`, `:544-554`) and a second `returnToDistrictAdmin` on a resubmitted claim. ⭐
+`voteOnFrozenClaim` checks the live return **before** branching on outcome, so it blocks **approve and deny** alike (`:534-543`); its
+comment at `:565-567` names this story. ⭐ **Return ⟂ route-to-R9 is now enforced** (6.18): `TrusteeExclusionConflictError(claimCaseId,
+'routing'|'correction_return')` (`:286`) — `routeToR9` refuses a live return (`:671-673`), a return refuses a live routing row (`:731-733`).
+
+**States.** `TRUSTEE_RETURNABLE_STATES = TRUSTEE_VOTABLE_STATES = ['verifier_approved','reversed','state_trustee_freeze']` (`:125`, `:87`).
+State machine `packages/domain/src/claim/state.ts`: `verifier_approved`/`reversed` —`state_trustee_frozen`→ `state_trustee_freeze`
+(`:258-259`); `state_trustee_freeze` —`state_trustee_approved`→ `state_trustee_approved` (`:263`) / —`state_trustee_denied`→ `denied`
+(`:268`, the ONLY edge for that event); `state_trustee_approved` —`approved`→ `approved` (`:274`); `claim.reversed` and
+`claim.denied_no_appeal` are identity annotations (`:327-333`). `commitCycleFreeze` (`:1138`) excludes a claim with a live
+`routing`/`correction_return` row (`:1173-1196`) and re-checks under the lock (`:1214`).
+
+**The approval gate.** `assertClaimApprovable(db, pariwarId, claimCaseId, deceasedMemberId)` (`nominee-name-check.ts:383`, 6.21a) =
+`assertDeathCertificateAcceptedForApproval` (`death-certificate-approval.ts:393`) **then** `assertNomineeNameCheckForApproval`
+(`nominee-name-check.ts:418`). Called at P1 `adjudicateClaim`, P3 `voteOnFrozenClaim` (`:570-577`), P4 `finalizeR9Outcome`
+(`r9-voting-persist.ts:613-627`). Throws `DeathCertificateAcceptanceRequiredError`, `NomineeBankAccountsRequiredError`,
+`NomineeDeterminationRequiredError`, `NomineeNameCheckRequiredError`.
+
+**Reason codes.** `STATE_TRUSTEE_REASON_CODES` (pgEnum `state_trustee_reason_code`, `state-trustee-decision.ts:97-120`):
+`standing_not_met`, `documents_insufficient`, `concealment_upheld`, `r9_special_case`, `r9_panel_denied`, `concealment_override`, `other`;
+`TRUSTEE_REASON_CODE_OUTCOME_COMPAT` lets `other` pair with `denied` (`:135-151`). Contract mirror `packages/contracts/src/claims/cycle-freeze.ts:40-104`.
+
+**The closure vocabulary.** `claim.denied_no_appeal` = `requireIdentityTransition({…auditShape, deceased_member_id})`
+(`events.ts:635-638`; registry `packages/events/src/registry.ts:384`). ONE emitter today: `decideAppealStage3`'s uphold
+(`appeal-persist.ts:472-491`, trigger `appeal_exhausted_stage3_uphold`). ONE consumer: `ACCOUNT_UNFREEZE_EVENT_TYPES =
+['claim.settled','claim.denied_no_appeal']` (`member/overlay.ts:50`). ⚠ **An ordinary `denied` that is never appealed leaves the
+deceased's account frozen for ever** — nothing else unfreezes it (6.16 D-E: no appeal deadline).
+
+**Appeals (6.16).** `assertAppealInitiable` (`appeal-eligibility.ts:134-153`: `denied` else `AppealNotDeniedError`; no `claim_appeals`
+row else `AppealAlreadyExhaustedError`), called from `initiateAppeal`. `claim_appeals_one_per_claim_uq` is **unconditional**
+(`schema/claim_appeals.ts:71`). Handler `claims.appeal.handlers.ts`: `can_initiate: currentState === 'denied' && journey === undefined`
+(`:291`), `appeal_exhausted: journey?.status === 'upheld_final'` (`:294`). Contract `MemberAppealStatusResponse`
+(`packages/contracts/src/claims/appeal.ts:294`, `:301`). Mobile `deriveAppealView` (`apps/mobile/lib/appeal-status.ts:39-49`:
+`showExhausted = showExternalRemedy = appeal_exhausted`) → `AppealStatusCard.tsx`. ⚠ **The member appeal routes 404 for every real
+claim**: they guard on `claimRow.claimantActorId !== memberId` (`:206`, `:282`) and **every production filing path sets
+`claimantActorId` null** (member `claims.service.ts:260`, helpline `claims.helpline.handlers.ts:100`, convergence
+`claims.convergence.handlers.ts:204`). ⭐ The **production** appeal path is the operator's on-behalf initiate (AR-61, `POST
+…/admin/claims/:claimCaseId/appeal`, `claims.appeal.routes.ts`). ⛔ Not this story's to fix — record it.
+
+**Re-filing.** `CLAIM_TERMINAL_STATES = ['settled','denied']` (`read.ts:33`). The intake dedup is `getConvergenceCandidate`
+(`icp.ts:110-137`: filters terminal claims, ±30-day window). The mint is `tryConverge` (`icp.ts:275`; `if (!candidate)` at `:295` mints
+`intake_initiated` + `intake_converged`), called only from `initiateIntake` (`claims.service.ts:240`, `:265`) — the member path
+(`claims.handlers.ts:138`) and the helpline path (`claims.helpline.handlers.ts:90`). ⚠ **A SECOND mint path:** `overrideIntakeAttempt`
+(`icp.ts:553`). `getClaimByDeceasedMember` is only a race backstop at intake (`claims.service.ts:287`).
+
+**The District Admin's correction queue (6.18 D4).** `listClaimsUnderCorrection` (`packages/domain/src/claim/correction-queue-read.ts:188`,
+row `ClaimUnderCorrectionRow` `:60`); `GET /api/v1/p/:pariwarId/admin/claims/under-correction` (`claims.nominee-name-check.routes.ts:181-199`,
+preHandler `[adminSession, scope, resolveQueueScope, requireQueueView]`, key `claim.view_nominee_name_check`, per-request dimension via
+`resolveQueueScopeStash` `:94-127`, `limit` ≤ 200); handler `getClaimsUnderCorrection` (`…handlers.ts:427`); contract
+`ClaimsUnderCorrectionResponse` (`packages/contracts/src/claims/nominee-name-check.ts:408`); admin route `/p/$pariwarId/claims/under-correction`
+→ `CorrectionQueueRoute` / `CorrectionQueueView` (`apps/admin/src/routes/CorrectionQueueRoute.tsx`), hook `useClaimsUnderCorrection`,
+copy `correctionQueue` (`claim-verification/i18n-en.ts:211`). ⚠ **Nothing in the admin nav links to it** (`deferred-work.md`, 6.18 chunk 3 —
+trigger: *"Story 6-19 (its reminders should deep-link here)"*). The return itself is `POST …/admin/cycle-freeze/decision` with `action:
+'return_to_district_admin'` (`claims.cycle-freeze.handlers.ts:369-371`), audit `admin_cycle_freeze.returned`; the Pariwar Admin's screen is
+`CycleFreezeRoute.tsx`.
+
+**District keys.** `resolveNomineeNameCheckDistrict()` (`claims.nominee-name-check.routes.ts:51-72`) loads the claim, then
+`getMemberPostingLatest(deceasedMemberId)`, and stashes the district (null ⇒ fail closed); `requirePermissionHook(deps, KEY,
+{dimension:'district', resolveValue})` (`:137-146`). ⭐ Copy this for every district-dimension key.
+
+**Permissions.** `PERMISSION_CATALOG_VERSION = 48` (`packages/domain/src/rbac/permissions.ts:726`); pinned in
+`packages/domain/tests/rbac/permissions.test.ts` (`toBe(48)`, `keys toHaveLength(56)`) and `roles.test.ts` (13 bundles). `super_admin`
+derives **every** key from `PERMISSION_CATALOG.keys` (`roles.ts:300-305`); a super-admin-only key has **no const in `roles.ts`**
+(`pariwar.manage_drive_target_visibility`, `:280-287`, routes in `apps/api/src/modules/drive-target/routes.ts`). Holders:
+`claim.view_nominee_name_check` = district_admin, verifier, pariwar_admin, helpline_operator; `claim.check_nominee_name` = district_admin
+only; `cycle.freeze`, `claim.r9_vote` = pariwar_admin.
+
+**The human-actor gate.** `scripts/claim-adjudication-human-actor-invariant/check.ts`: a hand-maintained `COVERAGE_SET` (`:46-177`,
+`{file, pathSubstrings, owner, expectedMethods}`) + `NON_ADJUDICATION_ROUTES` (`:188`) + `ENROLMENT_OWED` (`:200`), ⭐ **now reconciled
+against disk**: `unclassifiedRouteFiles()` (`:215`) fails on any `apps/api/src/modules/claims/*.routes.ts` not in exactly one list;
+duplicate check (`:233`); `COVERAGE_FLOOR = 10` (`:262`). ⇒ a new route **file** cannot be forgotten, but a new **route in an existing
+file** is caught only by `expectedMethods`.
+
+**Audit.** `AuthAuditEventType` is a string union (`apps/api/src/audit/audit-sink.ts:15`); `resourceLocator?: string` sits on `interface
+AuthAuditEvent` (`:536`, `:562`). `emitAuthAudit` (`apps/api/src/modules/auth/shared/audit.ts:14`) accepts it but it must match
+`/^[a-z0-9][a-z0-9:_.-]{0,127}$/` — ⚠ **anything else is SILENTLY replaced by `user:<actorId>`** ⇒ lower-case the claim id
+(`claims.cycle-freeze.handlers.ts:241` does). `withCompensatingAudit`'s `auditIntent` takes it too.
+
+**The dispatch substrate.** `dispatch(alert, deps)` (`packages/channels/src/dispatch.ts:212`), ladder `['push','whatsapp','sms']`
+(`:34`), Telegram started concurrently (`:244`); `TELEGRAM_ELIGIBLE_CATEGORIES` = `alert_published`, `module_new`, `niyamavali_amended`
+(`:48-52`). One direct call site: `fanOutAlert` (`apps/jobs/src/scheduler/contribution-notify.ts:227`, call `:246`, `backoffMs: []`
+`:316`), which narrows `resolveDelivery` per rung and drives the **real Telegram mirror** itself (`:338-350`); reused by news, surveys,
+moderation (`fanOutAlertToMembers`, `:436`), helpdesk and the contribution triggers. `Alert` (`packages/contracts/src/alerts/alert.ts`): nine
+categories, `member_id` a **required UUID**, `time_critical` required, every variant `.strict()`; `alert_published` = `{title, body}`.
+`render.ts` headings are static English except `alert_published` (payload title); SMS renders `${heading}: ${line}`. Resolvers
+(`packages/domain/src/notifications/delivery.ts`): `resolvePushTargets(db, enc, pariwarIdStr, principalType 'member'|'admin',
+principalId)`, `resolveWaTarget` / `resolveSmsTarget` / `resolveTelegramTarget` — **all keyed on a member id; ⛔ none takes a phone
+number**. `resolveMemberDeliveryContext` lives in `contribution-notify.ts:161-184` (hard-codes `'member'`).
+⭐ **The SMS DLT registry** `packages/channels/src/sms-dlt-registry.ts`: `SMS_DLT_TEMPLATE_REGISTRY: Partial<Record<AlertCategory,
+DltTemplate>>` (`:57-83`), five categories, config keys `sms.dlt.template_id.<category>`; ⚠ **`alert_published` is DELIBERATELY
+EXCLUDED** (`:18-20`) — `resolveDltTemplate` returns null and the provider falls back to the **fixture**. `createSmsDltProvider({messaging,
+dltTemplateId})` (`sms-dlt.ts:53`). ⭐ **The explicit-number precedent** is the OTP path: its own template registry
+(`packages/channels/src/otp-sms-template.ts`, keyed by intent) and a direct send in `apps/api/src/modules/auth/shared/sms-step-up-delivery.ts`,
+⛔ not through `dispatch()`.
+
+**The scheduler analogues** (`apps/jobs/src/scheduler/contribution-notify-triggers.ts`): `runDeadlineReminderSweep` (`:1032`),
+`runPendingMatchRetrySweep` (`:1159`) — a raw cross-tenant `deps.pool.query` on the BYPASSRLS pool, `ORDER BY … LIMIT $1`, limit
+`Math.max(1, … ?? 500)`, alarm at `rows.length >= limit`, per-entity try/catch with alarm; a child queue (`enqueuePoolBatch`
+`:545-569`, singletonKey, `retryLimit` 4); the keyed-store claim, release on undelivered, `recordResult` and the throw live in the
+**child** (`runContributionNotifyChild`, `:821-868`). Registration `registerContributionNotifyWorkers` (`:1399-1529`, from `boot.ts:579`):
+`createQueue` → `work` → `schedule(queue, cron, {}, {tz:'Asia/Kolkata'})`. `QUEUE_NAMES` in `packages/queue/src/index.ts:41`. Clock
+`deps.now?.() ?? new Date()`. **Calendar math** `istDateOf(instant): CalendarDateString` / `addCalendarDays(date, days)` (throws on a
+non-integer) in `packages/domain/src/cycle-calendar/holiday-resolver.ts:178`, `:187` (via `@twt/domain` as `cycleCalendar.*`).
+
+**Staff recipients.** Admin push tokens live in `member_device_tokens` with `principal_type 'admin'`, `member_id` NULL, registered under
+`ADMIN_GLOBAL_NAMESPACE` (nil UUID) (`apps/api/src/modules/device-token/device-token.handlers.ts:115-131`); `resolvePushTargets(…,'admin',…)`
+works but **nothing calls it that way today**. ⛔ No "admins by role and scope" accessor; the duty-specific precedents join `role_grants ⋈
+users`: `resolveShepherdCandidates` (`claim/shepherd-assign-persist.ts:190`), `resolveEligibleFixedAmountAttestors`
+(`pool/fixed-amount-panel.ts:201`). ⛔ No admin inbox table. `users.contact_phone` (plaintext, E.164, nullable) has ⛔ no resolver. The
+District Admin for a claim = the live `claim_shepherd_assignments` row.
+
+**Filing (member app).** `CLAIM_STEPS` (`apps/mobile/lib/claim-steps.ts:22-29`) = `handover-otp`, `relationship`, `consent`, `document`,
+`nominee-review`, `acknowledgement`; each screen hard-codes its next typed route (`nominee-review.tsx:270` → `acknowledgement`);
+`_layout.tsx` renders `{step} / {total}`; `apps/mobile/tests/unit/claim-steps.test.ts` pins the list, `{1,6}`/`{6,6}` and the
+`nextClaimStep` chain. `lib/claim-draft.ts` is **PII-free** (MMKV `claim-draft:<deceasedMemberId>`). ⚠ `nominee-review.tsx` (508 lines) is
+already the nominee summary **plus** the dual-account form — ⛔ do not add a third concern to it. ⚠ **A pre-existing resume gap**
+(`(claim)/index.tsx:66-77`): only `relationship`, `document`, `nominee-review` are handled; `lastStep='relationship'` and
+`lastStep='nominee-review'` fall through to `handover-otp`. Session = the deceased member (Ravi-mode); ⛔ **no filer or claimant phone is
+stored anywhere on a claim** (the handover OTP goes to the **current** rank-1 nominee's mobile, not persisted).
+
+**Filing (helpline).** `apps/admin/src/modules/helpline-claims/`: `HelplineConsoleShell` slots `lookupSlot`, `stepUpSlot`, `bankSlot` (+
+`bankRecorded`, rendered when `result !== null`); 6.20's `HelplineNomineeCorrection` and 6.21b's `HelplineCertificateReplacement` are
+**siblings after the shell** (`HelplineClaimPage.tsx:411-422`), ⛔ not slots. ⚠ **There is ⛔ no consent UI in the helpline module.**
+
+**Side-route pattern.** Nominee bank (`claims.nominee-bank.handlers.ts`): member `GET/POST /api/v1/member/claims/:claimCaseId/nominee-bank`
+(guard `requireDeceasedMemberId`, mismatch ⇒ 404), helpline `GET/POST /api/v1/p/:pariwarId/admin/claims/:claimCaseId/nominee-bank`
+(`recordHelpline`, step-up). DPDPA consent (`claims.dpdpa-consent.handlers.ts`): member `POST/GET …/dpdpa-consent`, helpline `recordHelpline`
+(`grantedViaActor:'staff_assisted'`, preHandlers `canFileClaim, stepUp`). ⭐ **ICP:** neither does canonical resolution — the claim id a
+filer holds is already canonical (a merge only flips `intake_attempts` to `converged`; no second claim row exists).
+
+**Consent.** `DpdpaConsentType` (`packages/contracts/src/claims/dpdpa-consent.ts:81-86`) = `claim_time_dpdpa`, `sahyog_vivran_publication`,
+`in_memoriam_listing`, `sahyog_drive_publication` (preserved by ruling, must not shrink); `claim_time_dpdpa` is ⛔ **not** revocable
+(`DpdpaRevocableConsentType` `:113` = the three publication types). DB `pgEnum('consent_type', …)` (`schema/consent_records.ts:113`),
+revocation via `revoked_at` + `revocation_reason` + `revoked_audit_id`. Copy `dpdpa.*` in `packages/i18n/locales/{en,hi}/claim.json`,
+byte-identical lockstep `apps/api/tests/unit/dpdpa-consent-copy.test.ts` ↔ `DPDPA_CONSENT_COPY` (`claims/dpdpa-consent-copy.ts:38`); also
+`packages/domain/tests/consent/preserved-consent-types.test.ts`. The policy is *"un-attested-pending … Story 0.13"* (`:28-29`, `:123`, `:153`).
+
+**Nominees.** `member_nominees`: PK `(member_id, rank)`, rank 1 or 2; `name_ciphertext`, ⭐ **`mobile_ciphertext` NOT NULL** (every
+nominee has a mobile), `address_ciphertext` nullable, `relationship` plain `text`. ⚠ The declaration is **locked** once a claim exists
+(`claim/nominee-lock.ts`, 409 `nominee.locked_claim_filed`). ⭐ **The nominee who matters is the one in force at death**, ⛔ not the
+current rows: `getEffectiveNomineeDeclaration(db, pariwarId, claimCaseId)` (`claim/nominee-effective.ts:324`, bulk `:339`). ⚠ The handover
+OTP still reads the current projection (`claims.service.ts:100-101`) — ⛔ do not copy that.
+
+**Relationship lists.** `NOMINEE_RELATIONSHIP_CODES` (`packages/contracts/src/nominee/declaration.ts:47-63`, 15 values; its *"⚠ Still
+OPEN, recorded in `-237`"* note at `:44-45`); domain mirror `NOMINEE_RELATIONSHIPS` (`packages/domain/src/nominee/relationship.ts:12-28`);
+`ClaimantRelationship` (`packages/contracts/src/claims/filing.ts:38`, five values; its comment ends *"never the claimant's PII"* and
+`:32-36` forbid widening it).
+
+**PII.** `claim_nominee_bank_accounts` is the model (Tier-1 `piiColumn(1,'claim_nominee_bank')`, `policies/claim-nominee-bank-rls.ts`,
+encrypt-before-insert `encryptNomineeBankField` in `apps/api/src/modules/claims/nominee-bank-crypto.ts:25`). `piiColumn`
+(`packages/domain/src/encryption/column.ts:70`) only **tags**; the handler encrypts. RTBF `member/anonymize.ts` scrubs nominee tables and
+`claim_death_certificate_reviews`, and ⛔ deliberately leaves `claim_documents`, uploads, bank accounts and `claims` (`-243`).
+
+**Documents.** `ClaimDocumentStorage` (`packages/contracts/src/claims/documents.ts:86`), `CLAIM_DOCUMENT_ALLOWED_MIME_TYPES` (jpeg, png, pdf),
+`CLAIM_DOCUMENT_MAX_BYTES` (10 MiB); instance `deps.claimDocumentStorage`; keys `pariwar/{pariwarId}/claim/{claimCaseId}/{documentType}/{id}`.
+`claim_documents` is OCR-shaped (NOT NULL `parity_outcome`, `parity_flags`, `ocr_confidence`, `verifier_review_required`; unique per
+`(claim, document_type)`). ⚠ ⛔ No virus scan on any claim document (only the 9.3 `StatementScanner` seam for bank statements).
+
+**6.21a/b (CC1's trigger).** `isDeathCertificateReplacementRequested(db, pariwarId, claimCaseId)` (`claim/death-certificate-approval.ts:223`)
+— true only in the review window with a current `rejected` certificate; never a deadline. Family status `DeathCertificateFamilyStatus`
+(`:248`) = `not_needed | missing | awaiting_review | accepted | replacement_requested`.
+
+**Planning text owed an annotation (F7).** PRD `prds/prd-TWT-2026-05-22/prd.md` §4.10 *"**Bulk-alert SMS — dropped.**"* (`:1051`, also `:1218`);
+`architecture.md` §3.4 *"…do not receive transactional-fallback SMS."* (`:2258-2259`). ⛔ Neither carries an annotation yet.
+
+**The fallback-handler ledger (AR-61).** `docs/fallback-handler-ledger/ledger.md` + `loop-nodes/`; rows are two-column tables
+(`loop_node_id`, `node_description`, `owning_epic + stories`, `primary_actor`, `fallback_actor`, `escalation_trigger`, …, `status`).
+⚠ ⛔ No entry for 6.17, 6.18, 6.20 or 6.21 either — record that, ⛔ do not back-fill them here.
 
 ## ⚠ THE TRAPS
 
-**T1 — "delivered" is ⛔ NOT attainable today, and 6.19 must ⛔ never write it for an accepted send.** SMS: `sms-dlt.ts` — *"The gateway
-gives NO synchronous delivery receipt at accept time (no DLR seam in v1)"*; no SMS DLR webhook or table exists. WhatsApp: the Meta status
-callback (`apps/jobs/src/wa-webhook-processor.ts`) writes `whatsapp_send_status` keyed by `wamid`, with **no claim or reminder linkage**,
-**nothing seeds a row at send time**, and `MemberFanOutResult` **drops `providerMessageId`** (`grep providerMessageId
-contribution-notify.ts` is empty). Push: token invalidation only. ⇒ The Panel's *"sent **and delivered**"* cannot be attested for SMS
-without new integration; the best honest signals are `accepted` and a **send-time `invalid_number` rejection** (`sms-errors.ts` — its codes
-are marked INDICATIVE and unverified against the real gateway). ⇒ **Q-O.** Use closure language precisely
-([[feedback_closure_language_precision]]): a reminder record says what is KNOWN, and `delivered` only when a real signal arrived.
+**T1 — "delivered" is ⛔ NOT attainable, and ⛔ never written for an accepted send.** SMS: *"The gateway gives NO synchronous delivery receipt
+at accept time (no DLR seam in v1). Honest `unknown` here; never fabricate `delivered`."* (`sms-dlt.ts:82-83`); no DLR webhook or table.
+`sms-errors.ts` `INVALID_NUMBER_CODES = {'INVALID_NUMBER','INVALID_MOBILE','E001'}` → class `invalid_number` — ⚠ *"CODES ARE INDICATIVE,
+VERIFY AT IMPLEMENT TIME"* (`:9`, `:27`). ⭐ The Panel made `accepted` count (`-252` cl.1), so the record needs only **accepted / rejected
+(invalid_number) / no_target / error**; `delivered` stays a column only a real signal may fill. Capture `providerMessageId` from the provider's
+`SendResult` at send time (it is dropped today by `fanOutAlert`) — ⛔ no DLR integration is built (`-252` cl.3 opens no row).
 
-**T2 — ⛔ do not loosen `voteOnFrozenClaim`.** It blocks **both** approve and deny while a return is live and unresubmitted. The closure goes
-through a **NEW writer**; amending the deny path would let an ordinary deny skip the "awaiting correction" block.
+**T2 — ⛔ do not loosen `voteOnFrozenClaim` or `assertClaimApprovable`.** They block approve **and** deny on a live unresubmitted return; the
+closure and every Super Admin decision go through **new writers**. Amending the vote's deny path would let an ordinary deny skip the
+"awaiting correction" block; amending `assertClaimApprovable` would widen `-251`'s narrowing to P1/P3/P4 (invariant 7).
 
-**T3 — appeal eligibility is read in THREE places, all of which must learn the closure:** `assertAppealInitiable`
-(`packages/domain/src/claim/appeal-eligibility.ts` — `current_state === 'denied'` + no `claim_appeals` row), `can_initiate` in
-`apps/api/src/modules/claims/claims.appeal.handlers.ts` (`claimRow.currentState === 'denied' && journey === undefined`), and the mobile
-`AppealStatusCard` + the `can_initiate` contract (`packages/contracts/src/claims/appeal.ts`). Updating one leaves the UI offering an appeal
-that 409s (`appeal.not_denied`).
+**T3 — appeal eligibility is read in THREE places**, all of which must learn the closure: `assertAppealInitiable`, the handler's
+`can_initiate`, and the mobile card via the contract. Updating one leaves the UI offering an appeal that 409s. ⚠ And the **operator's
+on-behalf initiate** (AR-61) goes through `assertAppealInitiable` — the production path; test it there.
 
-**T4 — the overlay.** A `denied` claim with no `denied_no_appeal` leaves the deceased's account frozen forever; `denied_no_appeal` must carry
-`deceased_member_id` ([[project_claim_overlay_unfreeze_seam]]). ⚠ A NEW lifecycle state or unfreeze type would trigger the standing
-`NOT_DECEASED` re-examination fence ([[project_death_is_an_overlay_not_a_state]]) — **D1 adds neither.**
+**T4 — the overlay.** Every terminal refusal that can ⛔ no longer be appealed must emit `claim.denied_no_appeal` (carrying
+`deceased_member_id`), or the deceased's account stays frozen for ever: ⭐ the **closure** (always) and a **Super Admin refusal on a claim
+that already used its appeal** (F2's "unless"). A Super Admin refusal that **is** appealable emits ⛔ no `denied_no_appeal` — exactly an
+ordinary refusal. ⚠ A NEW lifecycle state or unfreeze type would trigger the `NOT_DECEASED` re-examination fence
+([[project_death_is_an_overlay_not_a_state]]) — D1 adds neither.
 
-**T5 — the reminder record is ⛔ NOT `idempotency_keys`.** The keyed store has a TTL and `purgeExpiredKeys` (`boot.ts`) deletes lapsed rows
-regardless of status; `recordResult` does not extend `expires_at`. It is an idempotency **guard**, not an audit record. A short TTL also
-re-opens the slot and **re-sends**.
+**T5 — the reminder record is ⛔ NOT `idempotency_keys`.** The keyed store has a mandatory TTL and `purgeExpiredKeys` (hourly, `boot.ts:352`)
+deletes lapsed rows regardless of status; `recordResult` does not extend `expires_at`. It is a guard, ⛔ not an audit record.
 
-**T6 — the family message ⛔ never names anyone.** The existing pool reminders NAME the family (`resolvePoolIdentity`); 6.19's rule is the
-**opposite** — ⛔ do not reuse it. `claim_status_change` carries `{claim_id, new_status}` and has a deep-link case, but renders English-only
-static copy; Hindi copy rides inside payload strings the producer resolves with `t()`, `DEFAULT_LOCALE` is `hi`. The `microcopy` gate scans
-`notify.*` and a literal panic word breaks it. Tone: warm-formal, never dunning — architecture's *witness, not bailiff* and UX Stance #5 (*no punitive auto-action*). ⚠ **`render.ts`'s headings are STATIC ENGLISH and neither candidate category can carry a Hindi, name-free reminder:** `deadline_reminder` renders "Deadline reminder / {subject} — due {deadline_display}" (and deep-links to `renewals` when there is no `pool_id`), `claim_status_change` renders "Your claim is now {new_status}" — so the message rides `alert_published`'s `{title, body}` (D7). ⚠ **`Alert.member_id` is a REQUIRED UUID** (`packages/contracts/src/alerts/alert.ts`), and a family recipient — in Ravi-mode the app session IS the deceased member, and `claimantActorId` is null — has no member identity: the existing member fan-out would address the **deceased's own** account. The developer must define the recipient path (D7).
+**T6 — the family message ⛔ never names anyone, and ⛔ is not an `Alert`.** The pool reminders NAME the family (`resolvePoolIdentity`) — ⛔ do
+not reuse them. ⭐ **Why ⛔ not `alert_published` (v0.8's D7, now withdrawn):** (a) F7 makes the family channel **SMS**, and
+`alert_published` is **deliberately excluded** from the DLT registry — an SMS would go to the **fixture**, ⛔ never the gateway; (b)
+registering `alert_published` for SMS would make **every** news/survey/moderation fallback a real, paid, bulk SMS — the exact thing PRD §4.10
+dropped; (c) `Alert.member_id` is required, but the recipients are a nominee and a claimant who may not be members, and every resolver keys on
+a member id; (d) `alert_published` is Telegram-mirrored by `fanOutAlert`. ⇒ **D7: a direct DLT SMS to an explicit number, on the OTP path's
+precedent.** Tone: warm-formal, never dunning — *witness, not bailiff*; UX Stance #5 (*no punitive auto-action*). ⚠ The `microcopy` gate
+scans whole files in `scope.copy_globs` (`microcopy.yaml`, `claim.json` included) — a panic word (`\bURGENT\b`) breaks it.
 
-**T7 — a family reminder can resolve to NO target.** WhatsApp is dual-gated (a per-Pariwar toggle plus an ACTIVE member opt-in within the 24h
-Meta window, user-initiated only); SMS is restricted (PRD §4.10: OTP, step-up OTP, per-member WhatsApp-failure fallback, degraded-mode bridge
-— ⛔ no bulk-alert SMS; architecture §3.4: members without a WA opt-in get push only, ⛔ no transactional-fallback SMS — while Story 5.6 AC(c)
-sends SMS when "no opted-in higher-tier channel" — **the two planning statements disagree**); a nominee is **not necessarily a member**, so
-no opt-in state may exist; lifecycle-driven dispatch suppression mutes member-class push for `claim-filed-frozen` accounts and **"claim-shepherd
-communications continue"** — ⚠ this is architecture PROSE, ⛔ not live behaviour — no caller passes `suppression` to `dispatch()` today (grep), so the no-op default applies, and classing matters only if it is wired; cost-suppression (AR-18; `costToggleEnabled` is fail-safe `false`, so off unless enabled) can drop a WA send if the
-member acted in-app within ~6h unless the category is `time_critical`. ⇒ **Q-P.**
+**T7 — who can be reached, by what.** Every declared nominee has a mobile (NOT NULL); the claimant's mobile is mandatory when they are not a
+nominee (`-232` G). ⇒ with F7's SMS a recipient is `no_target` only if a number cannot be sent to (malformed, not an Indian mobile) — rare,
+but the letter route still applies (`-252` cl.2). WhatsApp is dual-gated on a **member** opt-in and ⛔ cannot reach a non-member; push reaches
+only a member's device. ⇒ v1's family channel is **SMS only** (D7). ⚠ Lifecycle suppression is architecture PROSE (no caller passes
+`suppression`); `costToggleEnabled` is hard `false` — neither touches a direct SMS.
 
-**T8 — claimant data is a NEW PII surface.** The system holds **no claimant personal data**: only `claimantActorId` (`null` on the helpline path
-— `claims.helpline.handlers.ts` — and defaulting to `null` on the member path, INFERENCE: not traced end to end) and a relationship label; the
-filing contract says *"never the claimant's PII"* on `ClaimantRelationship` — ⛔ leave that comment untouched (`-232` consequence 3). Tier-1
-(`piiColumn(1, …)`), never logged, never echoed except through a gated, audited read. **⛔ No RTBF path exists for a claimant**
-(`member/anonymize.ts` mentions no `claim*` table; `claim_nominee_bank_accounts` and `claim_documents` are not anonymized either) — **record the
-gap, ⛔ do not fix it here.** Contracts ⛔ never import `@twt/domain` ([[project_contracts_domain_bundle_boundary]]).
+**T8 — claimant data is a NEW PII surface.** The system holds ⛔ no claimant personal data today (only a null `claimantActorId` and a relationship
+label). Tier-1 (`piiColumn(1, …)`), encrypt in the handler, never logged or echoed except through a gated, audited read. ⛔ **No RTBF path
+reaches it** — record the gap, ⛔ do not fix it (the precedent: `-243` deliberately leaves claim tables alone). Contracts ⛔ never import
+`@twt/domain` ([[project_contracts_domain_bundle_boundary]]). `ClaimantRelationship`'s comment stays ⛔ untouched (`-232` consequence 3).
 
-**T9 — a non-appealable closure is ⛔ NOT a non-refileable one.** `getClaimByDeceasedMember` deliberately filters out `CLAIM_TERMINAL_STATES`
-(`settled`/`denied`) — *"a death whose earlier claim already reached a terminal outcome must be able to re-file (e.g. a fresh claim after
-`denied`)"*. A family whose claim was closed for silence can **file a new claim for the same death**. ⇒ **Q-Q.**
+**T9 — the re-file guard must key on the CLOSURE, ⛔ not on `denied_no_appeal`.** A stage-3 uphold also emits `denied_no_appeal`, and its family
+re-files freely (`-254`'s scope is the closure for silence only; `-239` (b)'s refile by the true nominee is untouched). Guard **both** mint
+paths — `tryConverge` **and** `overrideIntakeAttempt`.
 
-**T10 — sequencing.** 6.18's `TRUSTEE_RETURNABLE_STATES` still lists `state_trustee_approved` (its D1 removes it) and `state_trustee_denied` has an edge
-only from `state_trustee_freeze`: the closure is reachable from `verifier_approved` / `reversed` / `state_trustee_freeze` **only after 6.18 D1
-lands**. Migrations are numbered **0119+ only after 6.18 lands** (0116–0118 are untracked). A live return and a route-to-R9 can coexist today
-(neither checks the other — 6.18's patch): the closure writer **refuses** a claim with a live routing row (a typed 409). ⚠ `hasLiveRoutedRow` and `getLiveReturnRow` are **module-private** in `state-trustee-decision-persist.ts`; the **exported** accessors are `getLiveCorrectionReturn`, `hasLiveReturnRow` and `isReturnedClaimResubmitted` — export the routing check, or place the writer in that module.
+**T10 — the Super Admin approve is a NEW approval path.** It must: supersede the live return (conditional `UPDATE`, 0 rows ⇒ 409), move the
+claim through the existing events (`state_trustee_frozen` if at `verifier_approved`/`reversed`, then `state_trustee_approved`), write whatever
+`commitCycleFreeze` needs to see an approved decision (⚠ **trace it** — the Pariwar Admin's vote writes a decision row; mirror that row's phase
+and outcome, ⛔ do not guess), and gate on **the accepted death certificate + two accounts + the effective determination** while waiving
+**only** the name-check currency/pass (invariant 7). ⚠ The inner helper bundles the determination with the name check — split it with a
+pure refactor that leaves `assertNomineeNameCheckForApproval`'s behaviour byte-identical for its existing callers. ⭐ The approved-name-differs
+highlight (`-226` cl.5, 6.18 AC8) must still show on such a claim — prove it.
 
-**T11 — `commitCycleFreeze` excludes a live return row.** A closure the Pariwar Admin **declines** keeps the claim under correction and
-uncommittable; what happens next is the Super Admin's and is ⛔ ruled nowhere (Q-K).
+**T11 — escalated claims are held.** While a declined closure is with the Super Admin (and while **under review**), ⛔ nothing is paid, closed
+or refused, and the family's reminders do ⛔ not run (they stopped at day 90) unless a **direction** restarts them (D18). `commitCycleFreeze`
+already excludes the claim (the return row is live) — keep it live until a Super Admin decision supersedes it.
 
-## ⚖️ Decisions — the AUTHOR's (BigDev's; ⏳ PROPOSED here, confirmed in Task 0 as an author-commit like `-228`)
+**T12 — the "reached" set is the as-at-death declaration.** "Each declared nominee" (`-255` F6) = the nominees of
+`getEffectiveNomineeDeclaration`, ⛔ never the current rows and ⛔ never the handover OTP's rank-1 read. Their mobiles come from that
+declaration version.
 
-⛔ None of these is the Panel's — each is "the code should do X" (the Panel-routing §0 gate) — **except D3**, whose exact reminder days fix what a family receives: it is carried in the routing batch as a **confirm**, ⛔ not left as our unchallenged reading.
+**T13 — DLT is external.** A new SMS content template needs **TRAI DLT registration** before any real send (F7's own cost) — per locale, per
+message (reminder, closure notice). Build against config keys; a missing key must fail **closed and loud** (record `error`, alarm), ⛔ never
+fall back to a fixture that reports `accepted`.
 
-- **D1 — closure modelling: `denied` + `denied_no_appeal` through a NEW writer, ⛔ no new state.** *Options:* (a) `denied` + an appeal-ineligibility marker; (b) `claim.denied_no_appeal` alone (an identity annotation, so it needs `denied` first — a complement, not an alternative); (c) a new terminal state (a 33rd event, `ALTER TYPE claim_lifecycle_state`, the `filing.ts` mirror, the events registry, `CLAIM_TERMINAL_STATES` consumers in ICP and the shepherd, member copy, and the `NOT_DECEASED` fence). ⭐ **(a)+(b) is recommended** — closest to precedent (stage-3 uphold already pairs `denied` with `denied_no_appeal`), lowest blast radius: the new writer, on a **new claim-scoped closure table**, supersedes the live return row (conditional `UPDATE`), then emits the existing `claim.state_trustee_denied` chain (`state_trustee_frozen` from `verifier_approved`/`reversed`, then `denied`), then `claim.denied_no_appeal` (`trigger: correction_closure_approved`, carrying `deceased_member_id`) — **one scope-tx under the trustee advisory lock**. The three appeal sites (T3) additionally refuse when a `denied_no_appeal` event exists in the claim's stream — the event **is** the marker. *Cost:* one migration, the writer, three appeal-site edits, a mobile status string, and a reason code (`other` + rationale, or `ADD VALUE` in its OWN migration).
-- **D2 — the reminder record is a dedicated append-only table**, keyed `(return decision_id, schedule slot, recipient kind)` with a UNIQUE key (at-least-once redelivery), carrying `attempt_state` and a `delivery_state` that only a real signal fills. ⛔ Not `idempotency_keys` (T5), ⛔ not a claim event (the 6.18 return deliberately mints none). Own RLS policy file, own hand-authored migration.
-- **D3 — the schedule is a pure function of `decidedAt`, computed in IST calendar days, from a DATA table** so the Panel can change it without code. ⚠ **OUR reading of *"twice a week for a month, thereafter once a week"*:** days **1–7 daily**; **10, 14, 17, 21, 24, 28, 31, 35** (twice a week through day 37); then **42, 49, 56, 63, 70, 77, 84** (weekly); **stop at day 90**. The exact weekdays are ⛔ not the Panel's to have chosen — flag them in the Dev Notes and keep the table trivially editable. **Day numbering:** day 0 = the IST date of `decided_at`; day N = day 0 + N calendar days (so day 1 is the NEXT calendar day); "at least 90 days" means today's IST date ≥ day 0 + 90 — every boundary test uses this. **Catch-up:** a slot whose date has passed with no record is sent ONCE and recorded `late`; older missed slots are recorded `skipped_superseded` — ⛔ no burst of reminders after an outage. Time of day: ⚠ **no quiet-hours or send-window rule exists** anywhere in the PRD, architecture, UX or epics (grepped) — default **one fixed IST slot per day (10:00)**, a constant.
-- **D4 — the stop predicate:** the return row is superseded **OR** `isReturnedClaimResubmitted` holds. A **dead number** stops **family** reminders to that number only — ⚠ **WHEN** it stops (on the finding, on the posting, on the recorded delivery) is ⛔ not ruled: `-230` 3 says *"After this reminder sending to dead number, should be stopped"*; our default is **once the first letter is recorded as posted**, and it is **Q-T**. The District Admin's regular reminders are replaced by ONE reminder 30 days after the first letter's recorded delivery (`-231` F, ⭐ **confirmed by `-232` J**).
-- **D5 — a NEW claim-scoped contact table**, ⛔ not on `claims` (a lifecycle anchor) and ⛔ not on `intake_attempts`: ICP merges channels onto one canonical `claim_case_id` (`claims.intake_channels` is an array), so a second-channel write goes against the canonical claim, as the bank routes do. Columns: `claimant_is_nominee`, Tier-1 ciphertext for the nominee address, claimant name, claimant mobile, claimant address; `piiColumn(1,'claim_contact')`; own RLS policy file (model: `claim_nominee_bank_accounts`, `policies/claim-nominee-bank-rls.ts`). ⛔ No mobile blind index (no search requirement in the ruling — INFERENCE). `member_nominees.address_ciphertext` stays optional and ⛔ untouched — ⭐ and the declaration is **LOCKED after the member's death** (`-233`, 6.18 Task 4e), so the address is captured in **this claim record**, ⛔ never by editing the declaration. **No backfill and no legacy path** — *"code is not in production"* (`-232`).
-- **D6 — the screenshot reuses the `claimDocumentStorage` PORT with a distinct key prefix (`…/correction-letter/…`), but a NEW table and handler.** ⛔ Do NOT reuse `claim_documents` / `uploadClaimDocument`: the table is OCR-shaped (`parity_outcome`, `parity_flags`, `ocr_confidence`, `verifier_review_required` are NOT NULL; the `document_type` enum is `death_certificate|ground_inspection_photo|hospital_record`; unique per (claim, type)), the upload core enqueues an OCR job and is gated to `UPLOADABLE_STATES`. ⚠ **No virus-scan hook exists** on the claim-document path (only a no-op `StatementScanner` for bank statements) — record it as a gap.
-- **D7 — the name-free family message rides an EXISTING alert category: `alert_published`'s `{title, body}`, with producer-resolved en/hi strings** (Story 10.10's precedent; ⛔ not a 10th category). ⚠ **Not `claim_status_change` / `deadline_reminder`:** their headings are static English and the latter deep-links to `renewals` (T6). ⚠ `alert_published` is in `TELEGRAM_ELIGIBLE_CATEGORIES` — a claim-specific message would be **mirrored to any opted-in Telegram chat**: the composition in `apps/jobs` ⛔ runs no Telegram side-channel for it (the mirror is independent in `fanOutAlert`), and a test proves it. **The recipient path:** `Alert.member_id` is required — set it to the **deceased member as the SUBJECT**, but deliver through an **explicit recipient contact** (the nominee's or claimant's mobile from the contact record and `member_nominees.mobile_ciphertext`), ⛔ **never** through `resolveMemberDeliveryContext`, which would address the deceased's own account. The developer names the concrete shape; ⚠ contingent on Q-P (if the standard channel reaches no non-member, this changes).
-- **D8 — four permission keys**, each with its own doc-block reuse-check, minted in ONE author-commit decision in Task 0 ([[project_enum_mint_authority_delegated]] covers *tracking* enums only; `PERMISSION_CATALOG_VERSION` is a governance act — `-195` cl.2's reasoning, `-228`'s precedent): (1) **record a posted letter** — district dimension, `district_admin`; (2) **request closure** — district dimension, `district_admin` (one key per governed act — the 6.18 lesson); (3) **decide a closure** — Pariwar dimension, `pariwar_admin` (like `claim.r9_vote` / `cycle.freeze`; direct `state_trustee` gating is RANK-ORDER BLOCKED); (4) **resolve a declined closure** — `super_admin` only (auto-derives the whole catalog; a super-admin-only key precedent EXISTS: `pariwar.manage_drive_target_visibility` (`permissions.ts`, held by `super_admin` ONLY, `-203`)). Names are the developer's, ⛔ not fixed here. Also decide who may READ the closure state: the four holders of `claim.view_nominee_name_check`, or a new read key. District-dimension keys copy `claims.nominee-name-check.routes.ts` (a preHandler stashes the server-derived posting district; the client never submits it).
-- **D9 — the claimant's NAME is ⛔ not English-gated.** `-227` cl.9 scoped the gate to the **two names the check compares**; the claimant's name is never compared, and UX-DR57 requires bilingual input. Say so in the doc-block, as 6.18 did for the ungated output schemas.
-- **D10 — reminders are classed as claim-shepherd communications** so that, IF lifecycle suppression is ever wired, it does not mute them (T7 — ⚠ it is architecture prose today, ⛔ not live); whether they are `time_critical` (AR-18, and only if the cost toggle is enabled) is decided in Task 4 with a test.
-- **D11 — staff channel: admin push + an in-app queue.** No `users.contact_phone` resolver and no Pariwar-Admin-by-role accessor exist (⛔ do not invent WA/SMS to staff); building the accessor is Task 4. ⚠ Staff push reaches only a device that has a token — the in-app queue is the fallback that cannot be missed.
-- **D12 — the day-90 escalation target is the Pariwar Admin** (`-232` N, defaulting to `-231` C's pattern — ⚠ `-232` listed N as "put back to the Panel": it is carried in the routing batch as a low-priority **confirm**, and this default stands unless the Panel objects). ⛔ Not the Panel's; recorded so it is visible.
-- **D13 — one story or a split (`-232` cl.4: "decided in the story"): WRITTEN AS ONE, SPLIT RECOMMENDED.** BigDev said *"another story"* (singular). It spans **claim filing** (Task 2: the member app, the helpline intake, contracts, a migration) AND the reminder scheduler, the letter record and the closure workflow. ⭐ **Recommended split, decided in Task 0:** **6.19a = capture at filing (AC1, Tasks 1–2)** — it is the letter track's INPUT and carries its own Panel blockers (L, M, U) — and **6.19b = everything else**. ⛔ Not decided here; BigDev's call.
-- **D14 — where AC1's 409 lives.** A claim exists from intake (the `relationship` step, `claim.intake_initiated`); there is ⛔ **no server "filing completed" transition** to gate. So: (1) the contact routes reject an incomplete body (**400**, at the contract); (2) the member-app step gate and the helpline card refuse to complete (conveniences only); (3) the **server boundary** is the approval gate — extend 6.18's `assertNomineeNameCheckForApproval` family (P1 / P3 / P4) to also require a contact record → **409 `claim_contact.required`**, and the letter and closure writers refuse without it; a claim that lacks it **waits, ⛔ never denied** (6.18 AC6's shape). ⚠ Extending 6.18's gate reopens code 6.18 is still patching — do it after 6.18 lands. The exact set of gated paths is the developer's.
+**T14 — sequencing inside the story.** 6.18, 6.20, 6.21a/b are merged; the last migration is **0123** ⇒ this story's migrations start at
+**0124**. 6.19a's Task 3 (N1) is independent and may land first; 6.19d (CC1) is fenced on its routing note.
 
-## ⚖️ Open Panel questions — the PANEL's (Task 0 batches them into routing notes from the TEMPLATE, §0 gate first)
+## ⚖️ Decisions — the AUTHOR's (BigDev's; ⏳ PROPOSED here, committed in ONE author-commit in 6.19a's Task 0, like `-228`/`-241`)
 
-📄 **DRAFTED 2026-09-20 as five notes** in `_bmad-output/planning-artifacts/`, all `trustee-panel-routing-note-2026-09-20-6-19-<slug>.md` — ⛔ **not sent, ⛔ not committed** — **`reaching-the-family`** (P, L, U, M), **`reached-before-closure`** (O, R), **`declined-closure`** (K), **`refiling-after-closure`** (Q) and **`confirm-our-defaults`** (T, N, D3). Each was grouped by the ONE thing it decides (the template is built for one question per note), had its §0 gate applied, and had its E4 commands run (two came back empty and were explained). Q-S (the go-live gate — counsel) is ⛔ deliberately **not** a Panel note. Each carries **what it blocks**.
+⛔ None of these is the Panel's (§0 gate: each is "the code should do X" with no change to what a person is owed beyond what the rulings fix).
+Where a decision only records a Panel ruling it says so.
 
-> ⭐⭐ **ANSWERED 2026-09-27 — `2026-09-27-250` … `-254` (Trustee-ratified, Dhiraj Rahul + Kalpana Bharti, relayed by BigDev).** The
-> list below is kept **as written** — it is the question as put; this table is its status. ⚠ Several answers are **partial** or
-> **reverse our default**; ⛔ do not read a row as "our default stands" unless it says CONFIRMED.
->
-> | Q | Status | Decision | What it means for this story |
-> |---|---|---|---|
-> | **K** | ⚠ **RULED IN PART — option C, ⛔ NOT our A** | `-251` | The Super Admin decides the WHOLE claim: close, refuse for another reason, or **approve despite the name problem** — a **narrowing** of `-226` cl.1/cl.6 and `-227` cl.2 for this one case. ⚠ **OPEN (follow-ups):** "keep open" and what then happens to the claim/reminders; is a Super Admin refusal appealable; must the Super Admin write a note; an approval over an uncorrected mismatch has ⛔ no fresh check. AC6's decline branch and AC8's Super Admin surface can be DESIGNED; their finish waits on these. |
-> | **L** | ⚠ **RULED IN PART** | `-253` cl.3 | Reminders go to **both** people. ⚠ **OPEN:** whose address the **letter** goes to — ⛔ not addressed. |
-> | **M** | ⚠ **MECHANISM RULED; basis with counsel** | `-253` cl.1 | Option C, ⛔ not our B: the filer's **agreement is asked at filing**. ⚠ Whether one person may agree for another is **counsel's** — AC1's family half is build-unblocked, **go-live gated** (with S). |
-> | **N** | ✅ **CONFIRMED** | `-250` #6 | Day-90 escalation → the Pariwar Admin. |
-> | **O** | ✅ **RULED — our A confirmed** | `-252` cl.1 | `accepted` (or `delivered` where a report exists) counts; proven delivery (B) = a possible future version, ⛔ no row. |
-> | **P** | ⚠ **RULED IN PART** | `-253` | **Who** is reached is ruled (those the filing agreement covers); **by what channel** a person outside the app is reached is ⛔ not — the approved plan has no SMS without a WhatsApp opt-in. |
-> | **Q** | ⚠ **RULED — option C, ⛔ NOT our A** | `-254` | Re-filing after a closure for silence **only through a person** (District Admin or helpline confirms, with a note). AC7 gains a guarded re-file at intake; the app routes the family to the helpline. |
-> | **R** | ✅ **RULED — STRICT confirmed** | `-252` cl.1–2 | Closure may be requested only when each person was reached (accepted reminder, or a delivered letter); a family no channel can reach is **offered the letter route**. |
-> | **T** | ⚠ **(1) and (2) REVERSED; (3), (4) CONFIRMED** | `-250` #1–#4 | (1) dead-number reminders stop when a letter's **delivery** is recorded; (2) the District Admin's 7-day chase counts from the day the phone was **found dead**; (3) the day-14 flag is now the Panel's; (4) letters recordable after day 90, no reminders. |
-> | **U** | ✅ **CONFIRMED** | `-253` cl.4 | One address per declared nominee; the claimant's details once. |
-> | **D3** | ✅ **CONFIRMED** | `-250` #5 | The reminder days and the 10:00 hour — now the Panel's. |
-> | **S** | ⏳ **unchanged** — counsel's go-live gate, ⛔ never a Panel note | — | — |
->
-> ⭐ **NEW from the Panel, ⛔ never asked:** `-253` cl.2 — at filing, ask the **claimant's relationship to the nominee**, from **family
-> relations only**. ⚠ A NEW field (the existing `ClaimantRelationship` is to the **deceased**); our reading is the `-237` list without
-> `other`, which inherits its in-law/grandparent gap (put to the Panel as N1 of the 2026-09-27 `6-20-confirm-what-we-recorded` note).
->
-> ⚠ **The story stays `backlog`:** K's four follow-ups, L's letter address and P's channel are open, and the ACs above still carry
-> their old BLOCKED tags — re-deriving them is the next `bmad-create-story` validate pass, ⛔ not this annotation.
->
-> ⭐⭐ **APPENDED 2026-09-27 (later the same day) — the follow-ups, `2026-09-27-255`** (note `6-19-follow-ups`). The table above is kept
-> as written; read these rows **over** it:
-> - **K** — ✅ F2: a Super Admin **refusal** is appealable once (a **closure** stays not appealable); ✅ F3: every Super Admin decision
->   carries a **note and reason**; ✅ F4: an approval despite the name problem needs **nothing more** (money may go to the mismatched
->   account — chosen knowingly). ⏳ **F1 (keep open) is still OPEN** — clarification note `6-19-f1-keep-open` (options A–D; ours: D,
->   keep open **once**).
-> - **L** — ✅ F5: the letter goes to **the person whose phone is dead**, at their own address.
-> - **U** — ✅ F6: **each declared nominee** is reminded.
-> - **P** — ✅ F7: the plan is **widened** — **SMS** reminders to people the filing agreement covers (a new DLT template, a per-message
->   cost; PRD §4.10 and architecture §3.4 owe an **annotation**, ⛔ never a rewrite). ⚠ Go-live gated on counsel (M), with S.
-> - **`-253` cl.2** — ✅ F8: the claimant-to-nominee relation is one of **nineteen** family relations (⛔ no `other`) — a NEW enum; the
->   existing `ClaimantRelationship` (to the deceased) is untouched. ⚠ The **nominee declaration** list (`-237`, fifteen) is ⛔ unchanged
->   until N1 of `6-20-confirm-what-we-recorded` is answered.
->
-> ⚠ **Still `backlog`:** F1 and counsel (M, S) remain.
->
-> ⚠ **APPENDED (later again): the F1 note was REVISED before it was sent** (BigDev: the Super Admin needs time to meet the Pariwar
-> Admin and the District Admin and may ask them to act before deciding — so none of A–D fits). It now adds **E, a review period**
-> (an "under review" hold with a note; recorded directions to a named admin and their recorded response; a 30-day reminder to the Super
-> Admin; ⛔ no hard deadline) and recommends **E**, ⛔ no longer D. ⚠ E would give the Super Admin a new power to DIRECT the two admins —
-> asked in the note. The decider is the **Super Admin**, ⛔ not the Panel (confirmed by BigDev).
->
-> ⭐⭐ **APPENDED (later still): F1 RULED — `2026-09-27-256`, option E.** A Super Admin **review period**: an "under review" hold with a
-> note, ⛔ no hard deadline, a 30-day reminder to the Super Admin, and the Super Admin **may direct** the Pariwar Admin and the District
-> Admin (a new power, confined to escalated claims). ⇒ ⭐ **K is fully answered, and EVERY Panel question on this story is now answered.**
-> What remains is **counsel's** — M (the filer's agreement for others) and S (the privacy policy's purpose) — both **go-live** gates,
-> ⛔ not build blockers. ⭐ And `2026-09-27-257` (N1 of the 6.20 note) makes the **nominee** list twenty values, so `-255` F8's
-> claimant-to-nominee list (nineteen) is now exactly that list without `other`.
-> ⚠ **Next: a `bmad-create-story` validate pass** to re-derive the AC BLOCKED tags from `-250`–`-256` — it may flip this story to
-> `ready-for-dev`. ⛔ Not done by this annotation.
+- **D1 — closure modelling: `denied` + `denied_no_appeal` through a NEW writer, ⛔ no new state.** A **new claim-scoped closure table** holds
+  the request, the Pariwar Admin's decision (+ note), the escalation and the Super Admin's review and decision. On an approved closure (Pariwar
+  Admin, or Super Admin "close"), one scope-tx under the trustee advisory lock: supersede the live return (conditional `UPDATE`, 0 rows ⇒ 409),
+  emit `claim.state_trustee_frozen` (from `verifier_approved`/`reversed` only), `claim.state_trustee_denied` (reason `other` + a fixed rationale
+  — ⛔ no new reason-code value; `other` + note is the return's own precedent), then `claim.denied_no_appeal` with trigger
+  `correction_closure_approved` / `correction_closure_super_admin` (carrying `deceased_member_id`). The three appeal sites refuse when the claim
+  has a closure row in state `closed` (the **table** is the marker for the 409 code; the event is what the overlay reads). *Cost:* migration,
+  writer, three appeal-site edits, a status string.
+- **D2 — the reminder record is a dedicated append-only table** keyed UNIQUE `(schedule_run_id, slot_day, recipient_key)`, carrying
+  `attempt_state` (`attempting` → `accepted | rejected_invalid_number | no_target | error | skipped_superseded`, plus `late`), a
+  `delivered_at` only a real signal fills, and `provider_message_id`. `schedule_run_id` is the return's `decision_id` — or a direction id when a
+  Super Admin restarts reminders (D18). ⛔ Not `idempotency_keys` (T5), ⛔ not a claim event. Own RLS file; own migration.
+- **D3 — the schedule is a pure function over a DATA table** (the Panel's numbers, `-250` #5): day 0 = `istDateOf(decidedAt)`; slots 1–7, 10,
+  14, 17, 21, 24, 28, 31, 35, 42, 49, 56, 63, 70, 77, 84; ⛔ nothing on or after day 90; one send per day at **10:00 IST** (a cron
+  `0 10 * * *`, `tz:'Asia/Kolkata'`). "At least 90 days" ⇔ `istDateOf(now) >= addCalendarDays(day0, 90)`. **Catch-up:** a due slot with no
+  record is sent ONCE and flagged `late`; older missed slots are written `skipped_superseded` — ⛔ no burst. ⚠ The numbers are now the Panel's:
+  a change is a new ruling, ⛔ never an edit.
+- **D4 — the stop predicate, per recipient.** All reminders on a run stop when the return row is superseded **or**
+  `resolveClaimCorrectionState(…).resubmitted` holds, and at day 90. A recipient's **dead number** (a send-time `invalid_number`) or **no working
+  route** (`no_target`) keeps them on the schedule (harmless — they fail, and `-250` #1 says so) **until a letter to that person has a recorded
+  delivery date**, then their reminders stop (`-250` #1, F5). The dead-number/unreachable marker is **per run** (a second return re-evaluates).
+- **D5 — a NEW claim-scoped contact table**, ⛔ not on `claims` and ⛔ not on `intake_attempts`: one row per claim, plus one child row per
+  **declared nominee** (from the effective declaration, T12) holding the nominee's **postal address** (Tier-1); on the parent,
+  `claimant_nominee_rank` (`1 | 2 | null` — null = the claimant is none of the nominees) and, **only when null**, the claimant's **name, mobile,
+  address** (Tier-1, all mandatory then) and the claimant-to-nominee **relationship per declared nominee** (D16); `contact_locale` (`hi` default,
+  `en`) for the SMS language; `recorded_by_actor`, `recorded_via` (`member_app | helpline`). `piiColumn(1,'claim_contact')`; own RLS file
+  modelled on `claim-nominee-bank-rls.ts`. ⛔ No mobile blind index. ⛔ No backfill (`-232`: not in production). The declaration stays locked —
+  the address lives here, ⛔ never by editing `member_nominees` (`-233`).
+- **D6 — the letter screenshot reuses the `claimDocumentStorage` PORT with its own key prefix** (`…/correction-letter/{letterId}`), a NEW
+  letters table and handler; ⛔ not `claim_documents` / `uploadClaimDocument` (OCR-shaped, unique per type, state-gated, enqueues OCR). MIME and
+  size limits enforced **before** `put`; reads only through a TTL-limited signed URL. ⚠ ⛔ No virus scan exists — record the gap.
+- **D7 — REVISED. The family message is a direct DLT SMS to an explicit number, ⛔ not an `Alert` and ⛔ not `dispatch()`.** Composed in
+  `apps/jobs`, on the OTP precedent: a small **claim-correction SMS template registry** (keyed by message × locale — `reminder`, `closure_notice`
+  × `hi`, `en` — config keys `sms.dlt.template_id.claim_correction.<message>.<locale>`), a send through `createSmsDltProvider`, the
+  **explicit** mobile decrypted from the contact record (claimant) or the effective declaration version (nominee), the
+  `providerMessageId` and the classified error kept on the reminder row. ⛔ No push, ⛔ no WhatsApp, ⛔ no Telegram for the family in v1 (T7).
+  ⚠ The template registry is a **new file** beside the OTP one — ⛔ do not add a category to `SMS_DLT_TEMPLATE_REGISTRY` or to `AlertCategory`.
+  *Cost:* a 10th send path to maintain; it is the only one that fits F7 without widening bulk SMS.
+- **D8 — REVISED. Six permission keys**, each with its own doc-block reuse-check, decided in ONE author-commit (6.19a Task 0) and minted by the slice
+  that uses them — 6.19b key (1), catalog 48 → 49; 6.19c keys (2)–(6), 49 → 50; keys 56 → **62** in all (⭐ **64** once `-258`'s keys (7) and (8) are added — see D25–D29): (1) **record a posted letter** — district, `district_admin`; (2) **request a closure** — district, `district_admin`; (3) **decide a
+  closure** — Pariwar, `pariwar_admin`; (4) **decide an escalated claim** (close / refuse / approve-despite-the-name) — `super_admin` only (no
+  `roles.ts` const, the drive-target precedent); (5) **hold under review and direct** — `super_admin` only; (6) **confirm a re-file after a
+  closure** — `district_admin` (district) and `helpline_operator` (Pariwar), per-request dimension like `resolveQueueScopeStash`. **Reads** reuse
+  `claim.view_nominee_name_check` (its four holders already read the correction queue). A **direction response** needs ⛔ no key: the actor must be
+  the **named directee** (identity check) and hold that read key. Names are the developer's.
+- **D9 — the claimant's NAME is ⛔ not English-gated.** `-227` cl.9 scoped the gate to the two names the check compares; UX-DR57 requires bilingual
+  input. Say so in the doc-block.
+- **D10 — reminders are claim-shepherd communications.** Moot for the family (a direct SMS bypasses suppression); for staff push, `time_critical:
+  false` (like every non-cycle-open producer).
+- **D11 — REVISED. Staff reach: the in-app queues first, admin push best-effort.** The District Admin's correction queue gains every due item
+  (below), and ⭐ the admin nav gains a link to it (closes the 6.18 deferred item). Pariwar Admin and Super Admin get two small queues (closures
+  awaiting decision; escalated claims + directions). Push: `resolvePushTargets(…,'admin', userId)` composed in `apps/jobs` through `dispatch()`
+  narrowed to push, an `alert_published` envelope with **English** staff copy (staff copy is English-only) and `member_id` = the deceased as
+  **subject** — ⚠ run ⛔ no Telegram mirror for it (call `dispatch` directly, ⛔ not `fanOutAlert`). Build a small **admin directory** accessor
+  (`role_grants ⋈ users`, by role and scope; precedent `resolveShepherdCandidates`); the District Admin = the live shepherd.
+- **D12 — recorded, ⛔ no longer ours:** the day-90 escalation goes to the Pariwar Admin (`-250` #6).
+- **D13 — split: ✅ DECIDED 2026-09-27 by BigDev (*"split it three ways"*) — a, b, c as below, and CC1 as 6.19d (`backlog`). Recorded in 6.19a's Task 0 author-commit.** *(As proposed:)* Proposed: **6.19a** filing capture + N1 (AC1, AC13;
+  Tasks 2, 12) — it is the letter track's input and independent of the reminder machine; **6.19b** the reminders, letters and staff chase
+  (AC2–AC5, Tasks 3–5); **6.19c** the closure, the Super Admin's review, the appeal sites and the re-file guard (AC6, AC7, AC14, AC15, Task 6);
+  **CC1** to its own row once its routing note is answered (AC12, Task 11). Shared: AC0 (governance), AC8–AC11 per slice.
+- **D14 — where the "contact record required" boundary lives.** ⛔ No server "filing completed" transition exists. So: (1) the contact routes
+  reject an incomplete body (**400**, at the contract); (2) the member step gate and the helpline card refuse to complete (conveniences); (3) the
+  **server boundary** is a new conjunct **beside** the approval gate at P1/P3/P4 → **409 `claim_contact.required`**, and the letter / closure
+  writers refuse without it; a claim that lacks it **waits, ⛔ never denied**. ⚠ Add it **beside** `assertClaimApprovable` at each call site
+  (or as a third helper it calls) — and ⛔ **not** into `isReturnedClaimResubmitted`'s inner helper.
+- **D15 — NEW. The filer's agreement (`-253` cl.1) is a NEW consent type `claim_contact_agreement`**, recorded in `consent_records` (subject =
+  the deceased member, [[project_consent_subject_key_convention]]): its own `ADD VALUE` migration (`IF NOT EXISTS`, own file), the
+  `DpdpaConsentType` contract widened (the preserved-types test only forbids shrinking), versioned copy in `claim.json` **en + hi** with a
+  byte-identical lockstep test (the `dpdpa-consent-copy` precedent), and a `staff_assisted` helpline variant. **Mandatory** to complete filing
+  (the option as put: *"The filer confirms — in the form"*; `-231` C: *"mandatory in claim filing form"*). ⛔ **Not revocable in v1** (as
+  `claim_time_dpdpa`); whether it must be withdrawable is **counsel's (M)** — record it. ⚠ The copy is ⭐ **go-live gated on counsel** — ship it
+  marked *"pending Story 0.13"* like `claim_time_dpdpa`.
+- **D16 — NEW. The claimant-to-nominee relationship (`-253` cl.2, F8)** is asked only when the claimant is **none** of the declared nominees, once
+  **per declared nominee**; values = `NOMINEE_RELATIONSHIP_CODES` **minus `other`** (derived, AC13); stored as plain `text` (as
+  `member_nominees.relationship`), ⛔ not Tier-1 (a label, like `ClaimantRelationship`) — `-253` left "whether the answer is PII" open; this is
+  our call and recorded.
+- **D17 — NEW. The Super Admin's three decisions**, each with a **required note and a reason** (`-255` F3), all under the trustee lock, all
+  re-checking `resolveClaimCorrectionState` first (a corrected claim is ⛔ never closed; if corrected, only **approve** via the ordinary vote
+  remains — the Super Admin's writer 409s `closure.claim_corrected` and the claim returns to the Pariwar Admin's ordinary vote):
+  - **close** → the D1 chain (`denied` + `denied_no_appeal`), ⛔ not appealable;
+  - **refuse for another reason** → `state_trustee_frozen` (if needed) + `state_trustee_denied` with a reason from `STATE_TRUSTEE_REASON_CODES`
+    (⛔ `other` without a note refused), **and** `denied_no_appeal` **only if** a `claim_appeals` row already exists (T4, F2);
+  - **approve despite the name** → T10's writer.
+  Each supersedes the live return with the conditional `UPDATE`; each writes its audit line (`resourceLocator: 'claim:<lower-case uuid>'`).
+- **D18 — NEW. The review hold and the direction record (`-256`).** The closure table carries `under_review_since` + note (set by key (5));
+  a NEW **directions** table: `(direction_id, claim_case_id, directed_to_actor, directed_to_role ∈ {district_admin, pariwar_admin}, kind,
+  text (Tier-2 note), created_by, created_at, response_text, responded_at, responded_by)`. `kind` = `restart_family_reminders | other` —
+  ⭐ **only** `restart_family_reminders` has a system effect: it opens a NEW schedule run anchored on the direction's date (the D3 table,
+  ending at day 90 of **that** run or at the Super Admin's decision, whichever first), ⛔ never re-opening a closure request (the claim is
+  already escalated). Reminders: the **Super Admin** every **30 days** under review (`-256` cl.2); the **directed admin** 7 days after the
+  direction if unanswered, then weekly until answered (ours — `-256` left the cadence to us). ⛔ No consequence for an unanswered direction
+  beyond its reminder (`-256` "does NOT cover"). ⚠ The power is **confined to escalated claims** — the direction route 409s on any other claim.
+- **D19 — NEW. The re-file guard (`-254`).** A NEW **re-file confirmations** table `(claim_case_id of the closed claim, deceased_member_id,
+  confirmed_by, via ∈ {district_admin, helpline}, note (required), created_at, consumed_by_claim_case_id)`. At **both** mint paths (T9), when
+  the deceased member's most recent terminal claim has a closure row `closed` and ⛔ no unconsumed confirmation exists → **409
+  `claim.refile_requires_confirmation`**; a mint consumes the confirmation in the same tx. The member app shows a calm "please call the
+  helpline" state (en + hi) — ⛔ never a bare error. ⛔ Nothing about what carries over from the closed claim (`-254` does not rule it): the new
+  claim starts empty, as any re-file does today.
+- **D20 — NEW. The letter track's anchors, per person.** A person is **letter-eligible** from the first slot whose outcome is
+  `rejected_invalid_number` (dead, `-231` C) or `no_target` (no working route, `-252` cl.2) — that date is their **found-dead day**. The District
+  Admin's chase for that person's letter record (tracking number, delivery date, screenshot) runs from the found-dead day: first reminder on
+  **day 7**, **daily through day 12**, then **escalated to the Pariwar Admin** (a record + a reminder; ⛔ no automatic act) (`-231` C, `-250`
+  #2). The **overdue flag** is shown at **14 days after posting** (*"within 14 days of sending letter"*, `-230` 3; `-250` #3) — shown, nothing
+  else. At most **two letters per person per run**; the second is due **30 days after the first's recorded delivery**, with **ONE** District
+  Admin reminder then (`-231` D/F); if the run reaches day 90 first, ⛔ nothing further is required. Letters stay recordable after day 90 with
+  ⛔ no reminders (`-250` #4). ⛔ The second letter gets no 7/12 chase (the Panel replaced the regular reminders with one — ours).
+- **D21 — NEW. The District Admin's regular reminders** follow D3's days; they are replaced by the single 30-day reminder (`-231` F, `-232` J)
+  only when **every** family recipient is letter-eligible **and** each has a recorded delivery (with one person still on a working phone, the
+  chase continues — ours; `-231` F was ruled for "the family's number").
+- **D22 — NEW. The "reached" precondition (`-252` cl.1)** is a pure function over the run's records: for **each** person who must be reached
+  (each effective nominee, and the claimant when none of them), ≥ 1 reminder `accepted` (or `delivered`) **or** a letter with a recorded
+  delivery date. A closure **request** refuses otherwise (**409 `closure.not_reached`**, naming ⛔ no person in the body — a count and the
+  roles only).
+- ✅ **D23 — CONFIRMED by `-260` G3 (A) — ⛔ no text after a Super Admin refusal or approval.** **D23 — NEW. Family notices:** the closure sends a name-free **closure notice** SMS to each reached person (en/hi per `contact_locale`); a
+  Super Admin refusal or approval sends ⛔ no new SMS (W — a confirm for the Panel's next note). The member app derives
+  **`closed_no_response`** through a **new contract field** on the claim status, ⛔ never `appeal_exhausted` (`deriveAppealView` would show the
+  external-remedy disclosure — the wrong text).
+- **D24 — NEW. The go-live gate is a record, ⛔ not a runtime flag** — unless BigDev prefers the 6.16 D-G precedent
+  (`appeal_flow_legal_review_status`, a tracked config flag). Recommended: record M and S in the architectural launch-gate inventory (Story
+  0.15) and this story's header; ⛔ no dormant code path that could be "switched on" untested. ⚠ Nothing is in production, so every deploy
+  before counsel clears is a dev/staging deploy — the DLT template IDs stay unset there (T13 fails closed).
 
-- **K — the Super Admin's part.** When the Pariwar Admin declines a closure and it goes to the Super Admin: **what does the Super Admin decide** (close anyway, keep open, something else), and **what happens to the claim and its reminders after a decline** (keep waiting, resume, a new period)? *Blocks AC6 (the decline branch), the Super Admin surface, key (4).*
-- **L — who is contacted when the claimant is not the nominee.** The reminders and the **letters**: the nominee, the claimant, or both — and to **whose address**? *Blocks AC1 (which fields are mandatory for which recipient), AC3, AC5.*
-- **M — the consent basis for the claimant's data.** ⭐ **Who consents** to the Trust collecting a claimant's name, mobile and address and messaging/writing to them — when the claimant is a **third person who is neither the filer nor the nominee**? Consent (a) `claim_time_dpdpa` is *worded* to cover "deceased + claimant + nominee PII" but its policy is *"un-attested-pending a Story 0.13 legal counsel determination … NOT a settled rule"*, its subject is the **deceased member**, it is given once per claim by the **filer**, and its window is pre-adjudication. *Blocks AC1's go-live, not its build.* ⚠ ⛔ Do **not** add a consent type (a `consent_type` extension needs its own `ADD VALUE` migration and a contracts lockstep) and ⛔ do **not** edit the consent copy without the lockstep with `packages/i18n/locales/{en,hi}/claim.json`.
-- **O — what counts as "delivered" when the channel gives no delivery report (T1).** The Panel's precondition is *"sent **and delivered**"*; for SMS that cannot be attested. Does **provider-accepted** satisfy it, or must a delivery-report integration be built first? *Blocks AC3's record semantics and AC6's precondition (Q-R).*
-- **P — how the family is reached at all (T7).** May the Trust send **SMS** to a family that has ⛔ not opted in — the planning documents disagree, and PRD §4.10 drops bulk-alert SMS? If not, what is the "standard channel" for a nominee who is not an app member? *Blocks AC3.*
-- **Q — may a closed claim be RE-FILED (T9)?** The ruling makes the closure ⛔ non-appealable; the intake code deliberately lets a death be re-filed after `denied`. Is a re-filed claim intended to be a way back, or must the closure block it? *Blocks AC7's scope.*
-- **R — what must be true before the closure may be REQUESTED?** `-231` D says *"90 days enough"* (about the second letter); `-229` says *"recording that enough reminder has been sent"*; `-230` 3 says *"All reminders sent and delivered"*. **Two readings, put to the Panel:** **(strict)** the family was **reached** — ≥ 1 reminder `accepted` (or `delivered`, when a signal exists) for each family recipient, **or** a letter recorded with a delivery date; **(permissive)** every scheduled slot merely has a recorded outcome, whatever it was. ⚠ **The permissive reading lets a claim close although NO channel ever reached the family** (every slot `no_target` or `error`) — which contradicts this story's own promise (*"never refused for silence without having been reached"*). ⭐ **Default until answered (author's): STRICT.** ⚠ **`no_target` is ⛔ not a "dead number"** (`-231` C: dead = *"channel reports invalid"*) — so a family that no channel can reach would never start the letter track. **Our reading:** a recipient with `no_target` on every slot is surfaced to the District Admin as **unreachable** and the letter track is offered (also **Q-P**). *Blocks AC6, AC3.*
-- **T — the exact anchors of the letter track.** `-231` C says *"reminder after 7 days for district admin for updation daily until 12th day, thereafter escalated"*; the Panel did not say **7 days after what**. ⚠ **Our readings, each a default:** (1) reminders to a dead number stop **once the first letter is recorded as posted** (`-230` 3: *"After this … should be stopped"*); (2) the 7-day chase is anchored on the **posting** date, not the dead-number finding; (3) a **day-14 "overdue" flag** (from *"within 14 days of sending letter"*) is **ours, not the Panel's** — shown, nothing more; (4) letters stay recordable **after day 90**, with no further reminders. ⭐ D3's exact reminder weekdays travel with this as a **confirm**. *Blocks AC3, AC4, AC5.*
-- **U — how many nominees, and which address?** `member_nominees` holds **1 or 2** declared nominees (a split); the ruling says *"the nominee"*. ⚠ **Default (author's): one address slot per declared nominee, and the claimant fields once**; the nominee's mobile for reminders is read from `member_nominees.mobile_ciphertext` (Tier-1). Is that the intent? *Blocks AC1, AC3.*
-- **N — confirm only:** the day-90 escalation goes to the Pariwar Admin (D12).
-- **S — a go-live GATE, ⛔ not a build blocker:** the **privacy policy** (`docs/legal/privacy-policy.md` §3 lists nominee "Name, relationship; bank/IFSC at claim time only" and says data is used "only for the purpose stated at collection") needs a stated purpose for a postal address and a claimant's contact, and PRD FR-43A / §4.14 (internal appeal as the primary grievance path) is ⛔ amended by no one. Counsel's (Story 0.13), tracked like 6.16 D-G. ⚠ Retention for the address, tracking number and screenshot is **not found** anywhere — architecture §2.12 leaves the values to counsel.
+**⭐ APPENDED 2026-09-27 — the author decisions `-258` (V) needs (⏳ PROPOSED, in the same 6.19a Task 0 author-commit):**
 
-## ➕ APPENDED 2026-09-25 — `-236` CC1: the reminder that chases a REPLACEMENT DEATH CERTIFICATE (from Story 6.21a D16; recorded at `2026-09-25-244`)
+- **D25 — the "who must act" mark is its own append-only record**, keyed on the return's `decision_id`: `(mark_id, return_decision_id,
+  claim_case_id, must_act ∈ {family, staff}, set_by_actor, set_by_role ∈ {pariwar_admin, district_admin}, note, set_at)`; the **latest row
+  wins**; RLS + FORCE, own migration. ⛔ Not a column on `claim_state_trustee_decisions` (every phase shares it). The Pariwar Admin's
+  `return_to_district_admin` action gains a **required** `must_act` field, written in the **same tx** as the return row (6.18's cycle-freeze
+  contract + handler). A District Admin change needs a **required note** and key (7).
+- **D26 — the runs follow the mark.** A **family run** exists only while the latest mark is `family`: day 0 = the return's date if marked
+  `family` at the return, else the date of the latest change **to** `family` (`-258` detail 1); a change to `staff` ends the family run at once
+  (the running slot's record is written `skipped_superseded`); a change back to `family` opens a **new** run (a full 90 days). A **staff run**
+  exists while the mark is `staff`: the District Admin is reminded on D3's days from the return / the latest change to `staff`, **day 12** →
+  escalated to the Pariwar Admin (a record + a reminder), **day 90** → escalated to the Super Admin (6.19c). ⛔ The letter track (D20) runs
+  only in a family run. The District Admin's own reminders (AC4) continue in both.
+- **D27 — "no correction needed"** is a District Admin record (key (8)) with a **required note**, valid only with a **current, passing name
+  check recorded after it** (6.18's write); recording it sets the mark to `staff` (so the family is ⛔ not chased meanwhile) and puts the claim
+  on the Pariwar Admin's queue. The Pariwar Admin (`cycle.freeze`, the return's own key) **approves** — through a **NEW writer** (T2: ⛔ never
+  `voteOnFrozenClaim`), under the trustee lock: a live "no correction needed" record newer than the return, the **full**
+  `assertClaimApprovable` (⛔ nothing waived — unlike the `-251` path), the conditional supersede of the return, then the ordinary approval
+  events — **or keeps it sent back**, re-stating the mark (`family` or `staff`) with a note — ⭐ **ratified by `-260` G2**.
+- **D28 — the staff-case family copy** (`-258` detail 3): *"Your claim is still open — we are checking the bank details"* (en, ratified) +
+  a **reviewed** Hindi line (⛔ not machine-translated); the member claim status exposes the case as a status value (e.g.
+  `bank_details_being_checked` vs `bank_details_correction_needed`), ⛔ never the mark's note or who set it. `nominee.bank.correction_needed`
+  shows **only** in a family case.
+- ⚠ **D29 — ⛔ SUPERSEDED by `-260` G1 (B): the Super Admin MAY decide a staff case — approve with the FULL approval gate (a fresh passing name check; ⛔ nothing waived), or refuse for another reason (appealable once; `denied_no_appeal` only after a used appeal), each with a note and a reason; ⛔ never close. The text below is the proposal as first written, kept.** **D29 — the Super Admin on a staff case at day 90** (`-258` detail 2, `-256` widened): the case appears on the Super Admin's queue; the Super
+  Admin may **hold it under review and direct** (D18's machinery), incl. directing the District Admin to switch the mark to `family`. ⛔ **No
+  Super Admin decision** (close / refuse / approve) on a staff case is built — `-258` does ⛔ not rule one, and "close for no response" is
+  barred by construction. ⚠ A confirm for the next note.
+- **Keys:** **(7)** change who must act — district, `district_admin` (minted by 6.19b); **(8)** record "no correction needed" — district,
+  `district_admin` (minted by 6.19c). ⇒ **eight** keys in all: 6.19b mints (1) + (7); 6.19c mints (2)–(6) + (8).
 
-> ⚠ **Appended, ⛔ not a rewrite** — nothing above this block is edited. [`-241`](../../.decision-log.md#decision-2026-09-21-241)
-> §3 placed CC1 on **this** story (*"CC1 stays with Story 6.19, as `-236` states … Story 6.19 owes a CC1 item"*), and until
-> today this file carried ⛔ no CC1 item: the obligation had a carrier on paper and ⛔ none in the Tasks list.
+## Where the Acceptance Criteria and Tasks now live (split 2026-09-27)
 
-**CC1, in full (our default, ⛔ not the Panel's words; `-236` — it stands unless objected, and `-237` confirmed only CC2/CC3):**
-*"A time limit for the replacement certificate. Our default: **none** — the claim simply waits, chased by the reminders
-of Story 6.19 (a claim is never refused for a missing certificate)."*
+⭐ The ACs are **in the slice files**, verbatim from v0.9 (AC8, AC9, AC11 restated per slice). ⛔ This file carries none — a dev agent works
+from a slice's Tasks list ([[feedback_spec_edits_must_propagate_to_tasks]]).
 
-**What 6.19 owes, and the three protections that go with it (verbatim, and they bind this story):**
-1. ⭐ ***"a claim is never refused for a missing certificate"*** — CC1's own words; and `-236` BB: *"family will be asked
-   to produce certificate with clear date without the claim being denied."*
-2. ⛔ ***"the `-229`…`-232` day-90 closure does NOT apply to a certificate wait."*** That loop ends in a closure the
-   Pariwar Admin approves and which is ⛔ **not appealable** (`-231` A — the *"second refusal"*). Reusing it for a
-   certificate wait would **refuse** the claim, which breaches BB and CC1 together.
-3. ⚠ ***"the certificate reminder's schedule and channels (incl. letters for a dead number) are UNRULED — 6.19 runs §0
-   on them."*** The ratified schedule (`-229`) and the channel rules (`-230`, including posted letters) govern the
-   **correction-return** loop only. Whether a certificate wait gets the same schedule, a different one, or letters, is
-   ⛔ not ruled — and it concerns what a family is owed ⇒ run the routing template's §0 before building it.
-
-**The trigger (built by Story 6.21a, consumed here):** `isDeathCertificateReplacementRequested` in
-`packages/domain/src/claim/death-certificate-approval.ts` (6.21a D16, Task 2) — true while a claim in the review window
-has a current, **rejected** certificate. ⚠ 6.21b's member status adds a `missing` state (no certificate at all, in the
-window); whether that state is also chased is part of protection 3's §0.
-**Dependency:** 6.21a must be `done` before this item is built. ⛔ It does ⛔ not block the rest of 6.19.
-
-## ➕ APPENDED 2026-09-27 — `-257` (N1): the NOMINEE relationship list grows from fifteen to twenty, built here beside `-255` F8's claimant list
-
-> ⚠ **Appended, ⛔ not a rewrite** — nothing above this block is edited. [`-257`](../../.decision-log.md#decision-2026-09-27-257)
-> **supersedes `-237` cl.1**: the nominee relationship list gains **`brother_in_law`, `son_in_law`, `mother_in_law`, `father_in_law`,
-> `grandparent`** (20 values). Its code change needed a ROW (template step 5) and Story 6.20 is `done`; **BigDev placed it on this story
-> (2026-09-27)** because this story already builds `-255` F8's **claimant-to-nominee** list (nineteen) — which is now **exactly the
-> nominee list without `other`**. ⭐ Building both here keeps them in step.
-
-**What `-257` changes, and what it does ⛔ not:**
-- ⭐ `NOMINEE_RELATIONSHIP_CODES` (`packages/contracts/src/nominee/declaration.ts`): 15 → **20**. ⛔ **No migration** (`member_nominees.relationship`
-  is plain `text`; the value set lives in the contracts enum, ⛔ not the DB) and ⛔ **no backfill** (⛔ no declaration exists — not in production).
-- ⛔ `-237` **cl.2 stands:** `other` still forecloses a correction.
-- ⛔ `ClaimantRelationship` (`claims/filing.ts` — the claimant's relation to the **deceased**, five values) is ⛔ **untouched**. The F8 list is
-  a **third**, new enum (claimant → nominee).
-- ⭐ **One source for both lists:** derive F8's nineteen from the twenty (the twenty minus `other`), ⛔ never a second hand-typed copy — a
-  lockstep test pins it ([[feedback_stub_must_call_not_transcribe]] — a copy is a second source).
-
-**The sites (every file that names the set today — `git grep -l "daughter_in_law\|NOMINEE_RELATIONSHIP_CODES" -- packages apps scripts`, 2026-09-27):**
-`packages/contracts/src/nominee/declaration.ts` (the enum, and its *"⚠ Still OPEN, recorded in `-237`"* note → mark DISCHARGED by `-257`,
-⛔ not deleted) · `packages/domain/src/nominee/relationship.ts` (the domain mirror) · `packages/contracts/tests/nominee-relationship-lockstep.test.ts`
-· `packages/i18n/locales/{en,hi}/common.json` (`nominees.relationship_*`) · `apps/mobile/components/life-events/NomineeForm.tsx` (the picker)
-· `apps/mobile/tests/unit/nominee-history-copy.test.ts` · `apps/admin/src/modules/claim-verification/{NomineeDeclarationPanel.tsx,i18n-en.ts}`
-· `apps/admin/tests/nominee-declaration-panel.test.tsx` · `packages/domain/tests/integration/claim/nominee-correction.spec.ts`.
-⚠ **Hindi copy needs care:** `nominees.relationship_sister_in_law` is *"भाभी / ननद / साली / देवरानी / जेठानी / सलहज"* — one English value, six
-Hindi kin terms. The four new in-law values (and `grandparent` — दादा / दादी / नाना / नानी) need the same treatment, reviewed, ⛔ not machine-translated.
-
-**Annotations owed (`-257` consequence 2), ⛔ never rewrites:** `epics.md` (its *"five to fifteen"* note), Story 3.4 / FR-4, Story 6.20's
-in-law/grandparent pointer (done at 6.20 v1.2).
-
-## Acceptance Criteria
-
-### AC0 — Governance first (Task 0)
-**Then** `-229` → `-232` are **committed** before any code ([[feedback_governance_commits_precede_implementation]]); **and** ONE author-commit decision lands the four keys (D8), the closure modelling (D1), the schedule reading (D3) and the D-decisions above; **and** the Panel questions K L M O P Q R are batched into routing notes written from the template, §0 gate first (over-routing is a cost); **and** `epics.md` gains the Story 6.19 entry under Epic 6 with the `> ⚠ Minted by…` header (and the stale "16 stories" / FR list / cross-cutting-AC lines are ⛔ not "fixed" silently — record them); **and** the new loop nodes (letter record, closure request, Pariwar Admin decision, Super Admin path) get `{primary_actor, fallback_actor, escalation_trigger}` entries in the Story 0.7 fallback-handler ledger (AR-61); **and** the sprint row stays `backlog` until K L M O P Q R are answered.
-
-### AC1 — The address and the claimant are captured at filing (`-232` G; **BLOCKED on L, U**; go-live gated on **M**, **S**)
-**Given** the family files in the app or the helpline operator files **Then** a new claim-scoped contact record holds the nominee's **postal address (mandatory — one slot per declared nominee, ⚠ Q-U)**, `claimant_is_nominee`, and — **only when false** — the claimant's **name, mobile and address (all mandatory in that case)**
-**And** both surfaces have a route each (a member route and a helpline route, `recordHelpline`, as `claims.nominee-bank.handlers.ts` and `claims.dpdpa-consent.handlers.ts` do) — ⛔ not fields bolted onto the intake body, ⛔ not `claims`, ⛔ not `intake_attempts`; a second-channel intake writes against the **canonical** claim
-**And** the boundary is enforced where a server transition exists (D14): an incomplete body is a **400**; approval and the letter / closure writers refuse a claim without a contact record (**409** `claim_contact.required`) — a claim that lacks it **waits, ⛔ never denied** ([[feedback_mechanization_split_commitment]]: the member-app step gate is a convenience, the server is the boundary)
-**And** the member app extends `CLAIM_STEPS` (`apps/mobile/lib/claim-steps.ts`) **or** `nominee-review.tsx`; ⚠ each screen hardcodes its next-route literal (typed routes) and `apps/mobile/tests/unit/claim-steps.test.ts` pins the exact list and the "N of 6" totals — edit all of them; ⛔ the draft (`lib/claim-draft.ts`) stays **PII-free**
-**And** the columns are Tier-1 ciphertext, RLS + FORCE, encrypt-before-insert in the handler; a read DTO exists only behind a gated, audited route and ⛔ echoes nothing to a member or a public surface; ⛔ no log, event, audit line or error body carries a value
-**And** `ClaimantRelationship`'s *"never the claimant's PII"* comment is **untouched**, the claimant name is ⛔ not English-gated (D9), and there is ⛔ no backfill.
-
-### AC2 — The clock and the schedule (`-229`, `-230` 2, 4)
-**Given** a live `correction_return` row **Then** the clock starts at its `decided_at`, counted in **IST calendar days** (`istDateOf`, `addCalendarDays` — ⛔ never `ceil` of elapsed milliseconds, ⛔ never `setDate`), and a **second return is a new row and a new clock**
-**And** a **pure** `correctionReminderSchedule(decidedAt)` returns the slots from a **data table** (D3); it takes an **injectable clock**; every period is testable without waiting
-**And** the schedule **stops** when the return row is superseded **or** `isReturnedClaimResubmitted` holds (D4), and at **day 90**
-**And** the sweep is idempotent under at-least-once redelivery: a claim per `(decision_id, slot, recipient kind)` released on failure, a per-entity try/catch, a bounded batch that alarms at its cap, `boss.schedule(… {tz:'Asia/Kolkata'})`
-**And** a reminder row is written `attempting` **before** the send and moved to its final state **after** it (UNIQUE `(decision_id, slot, recipient kind)`); a row stuck in `attempting` past a timeout is retried by the sweep — ⛔ a crash between the insert and the send must leave neither a phantom "sent" nor a permanently blocked slot; slots follow D3's day numbering and catch-up rule (a missed slot is sent once, `late`; older ones `skipped_superseded`).
-
-### AC3 — The reminder record and the family message (`-230` 1, 3; **BLOCKED on L, O, P, T, U**)
-**Given** a slot is due **Then** one row is written to the reminder record (D2) **before** the send, and updated with **what is known**: `accepted`, `rejected(invalid_number)`, `no_target` or `error` — and `delivered` ⭐ **only** when a real delivery signal arrives (T1). Any status not yet attested is stored as **un-attested**, ⛔ never reconstructed after the fact ([[feedback_record_unattested_no_backfill]])
-**And** the family message is **name-free**: a non-name **reference** (`claim_case_id` rides `provenance_refs`; INFERENCE — the exact reference form is the developer's), ⛔ no name, ⛔ no bank detail, ⛔ no reason for the mismatch (6.18 AC5: *"no name in that message"*); **en + hi** via the real `t()` (a member-facing namespace: both locales, both imports, the registry lines in `packages/i18n/src/catalog.ts`, and a test resolving a real key); tone per T6
-**And** the message is composed in `apps/jobs` over the existing `dispatch()`; ⛔ `packages/channels/src` is untouched; the recipients per **L**, through **new** resolvers for the nominee contact and the claimant's mobile (T7), on D7's recipient path (`Alert.member_id` = the deceased as SUBJECT, delivery to an explicit contact, ⛔ no Telegram side-channel, ⛔ never `resolveMemberDeliveryContext`)
-**And** a **dead number** is set from a send-time `invalid_number` rejection (SMS) or an asynchronous failed status (WhatsApp) — ⚠ the SMS codes are INDICATIVE — and family reminders to that number **stop** — ⚠ **when** is **Q-T** (our default: once the first letter is recorded as posted), recorded. ⚠ **`no_target` on every slot is ⛔ NOT a dead number** (`-231` C: dead = *"channel reports invalid"*): the recipient is surfaced to the District Admin as **unreachable** and the letter track is offered (our reading, **Q-R / Q-P**); the dead-number marker is **per return** — a second return re-evaluates it.
-
-### AC4 — Staff reminders and escalation (`-230` 1, `-231` C, `-232` I, D12)
-**Then** the District Admin (the live shepherd) is reminded on the same schedule **until** the family's number is dead **and** the first letter's delivery is recorded — then the regular reminders are **replaced by ONE reminder 30 days after that delivery** (`-231` F, ⭐ **confirmed by `-232` J**)
-**And** if a letter is posted and the tracking number / delivery date / screenshot are ⛔ not all recorded, the District Admin is reminded **7 days after posting** (⚠ *anchor = posting* is **our reading**, Q-T), **daily through day 12**, and **at day 12 it is escalated to the Pariwar Admin, who calls the District Admin** — the escalation is a **record and a reminder, ⛔ never an automatic action** (AR-63: time-as-actor is non-punitive only); at day 14 an **overdue** flag is shown, nothing more (⚠ the flag is **ours, ⛔ not the Panel's** — Q-T)
-**And** the recipients come from D11 (admin push + an in-app queue); the Pariwar-Admin-by-role accessor is built here.
-
-### AC5 — The posted-letter record (`-230` 3, `-231` D; **BLOCKED on L, T**)
-**Given** a family recipient has a dead number **Then** the District Admin (key (1)) records a **letter**: posting date, **tracking number**, and — within **14 days of posting** — the **delivery date** and a **screenshot** (D6); there are **at most two** letters per return; the **second** is due **30 days after the first's recorded delivery**, and if **90 days pass before the second is delivered, nothing further is required**
-**And** the address is read from the contact record (AC1), per **L**; the screenshot is stored through the `claimDocumentStorage` port with the new key prefix, type and size limits enforced **before** `put`, read back only through a TTL-limited signed URL
-**And** the record is **staff-entered evidence**: an un-recorded field is shown as un-recorded, ⛔ never inferred; every write carries its audit line with the actor's snapshotted display name (family 8); **letters stay recordable after day 90**, with no further reminders (Q-T).
-
-### AC6 — The closure: the system asks, humans decide (`-231` B, `-232` H; **BLOCKED on K, O, R**)
-**Given** ≥ 90 calendar days since the return (and, per **R**, a complete record) **Then** the system reminds the District Admin **once a day for 7 days**, then escalates (D12); ⛔ **no job ever calls the closure writer**
-**And** the District Admin **requests** the closure (key (2)); ⛔ before day 90 it is refused (**409** `closure.too_early`); ⭐ **and it is refused if the claim has been CORRECTED** — `isReturnedClaimResubmitted` is re-evaluated **under the trustee lock** (**409** `closure.claim_corrected`), so a corrected claim is ⛔ never closed as "no response" (a corrected-but-not-yet-voted claim still has a LIVE return row, so the writer's conditional `UPDATE` alone would succeed — the row is superseded only by the Pariwar Admin's next vote, T2)
-**And** the Pariwar Admin (key (3)) **approves** — or **declines with a REQUIRED note**, which goes to the Super Admin (key (4)); what the Super Admin decides is **K**; ⭐ **the approval re-checks `isReturnedClaimResubmitted` under the lock too** — the family may correct BETWEEN the request and the approval (**409** `closure.claim_corrected`)
-**And** an approval runs the D1 writer: it supersedes the live return row with the conditional `UPDATE` (0 rows ⇒ 409), **refuses** a live routing row (a typed **409** `closure.claim_routed_to_r9`, T10), and emits the state chain + `claim.denied_no_appeal` in **one** scope-tx under the trustee advisory lock — ⛔ ordinary `voteOnFrozenClaim` is untouched (T2)
-**And** the closure is the **second refusal**: terminal, ⛔ not appealable, with a member-facing status string in **en + hi** stating the reason
-**And** the family is **told the claim was closed** — a name-free message, en + hi, through the same path as the reminders (AC3) — and the member-app status derives `closed_no_response` from the claim's event stream through a **NEW contract field**, ⛔ never reusing `appeal_exhausted` (`deriveAppealView` in `apps/mobile/lib/appeal-status.ts` shows the **external-remedy disclosure** when it is true — the wrong text for a closure).
-
-### AC7 — The closure cannot be appealed, at every site (`-231` A; scope per **Q**)
-**Then** `assertAppealInitiable`, the handler's `can_initiate`, the mobile `AppealStatusCard` and the `can_initiate` contract **all** refuse when a `denied_no_appeal` event exists in the claim's stream (T3); the 409 has its own code (⛔ not the misleading `appeal.not_denied`); ⛔ **ordinary refusals keep 6.16's one appeal, unchanged** — a test proves an ordinary `denied` claim is still appealable. ⚠ **INFERENCE — verify:** the appeal handler's ownership guard is `claimRow.claimantActorId !== memberId` (`claims.appeal.handlers.ts`) and **every production filing path sets `claimantActorId` to null** (helpline, shepherd, and the member-app default), so only a seed that sets it makes an appeal reachable — build the "still appealable" control from a **production-shaped** claim, or the test proves nothing about production (and 6.16's member appeal may be unreachable in production — not this story's to fix; record it).
-
-### AC8 — The surfaces (the Super Admin surface is **BLOCKED on K**)
-**Then** the District Admin's **returned-claims list** (⭐ **built by 6.18 D4 = A / Task 6** — ⛔ do not build a second one) gains: the day count, the next reminder, a reminder-record summary, the dead-number flag, the letter state and the closure state; the **letter form** and the **closure request**; the **Pariwar Admin's** closure decision strip (UX-DR54: primary action leftmost, numbered shortcuts, the decline note mandatory **before** submit, UX-DR44 `<AuditTrailEntry>` shown immediately); the **Super Admin's** resolution surface (**K**); staff copy **English-only** in each module's `i18n-en.ts`; the letter-record form is **short** (the District Admin is a 90-second-judgment persona; NFR-8: usable at ≤ 720p)
-**And** semantic accessibility (checklist family 13): a container carrying a label is `accessible={true}` (mobile); every role implying interaction has a real handler; every reachable state (`recorded`, `overdue`, `too early`, `declined`, `closed`) is **announced** (`role="status"`/`aria-live`), ⛔ not merely reflected in a prop; WCAG AA (UX-DR67).
-
-### AC9 — PII and audit posture
-**Then** new `AuthAuditEventType` entries (`apps/api/src/audit/audit-sink.ts`) for the letter, the closure request, the decision and the Super Admin resolution — each passing a `resourceLocator: 'claim:<uuid>'` so the row can name the claim (6.18 review finding: without it only a hash of `context` survives); a live-DB test **plants** a claimant name, mobile, address, a tracking number and a screenshot as sentinels and finds them in ⛔ no log, event, audit line or error body ([[feedback_stub_must_call_not_transcribe]]-style: real plaintext, not `enc:v1:` strings that decrypt to `unreadable`); the **RTBF gap** is recorded in the story's Dev Notes and `deferred-work.md`, ⛔ not fixed.
-
-### AC10 — Nothing else moves
-**Then** ⛔ no new lifecycle state and ⛔ no new claim event beyond the D1 writer's use of the existing ones; `voteOnFrozenClaim` refuses exactly as today; 6.16's one-journey rule and the ordinary appeal are unchanged; `-226` cl.6 (⛔ a claim is not refused *for* a name — this refusal is for **no response**) and `-227` cl.2 (a return is not a denial) are unchanged; ⛔ the closure is **never automatic**.
-
-### AC11 — The proof
-**Then** live-DB specs on `twt-test-pg :5433`, **executed** ("written but not run" is ⛔ not a pass): the schedule table (every slot, the day-1 / day-90 boundaries, a second return restarting it, the IST date at midnight), the stop predicate (superseded **and** resubmitted, each alone), **two-connection** races (two sweeps for one slot → exactly one send and one record; two closure decisions; a return racing a closure; a declined closure racing an approval — checklist family 2), the reminder record's `delivered` is **never** set for an accepted send, the closure's whole chain in one tx (a forced failure mid-chain leaves nothing), the three appeal sites, **cross-Pariwar** and **non-human/system-actor** denial per new route, the human-actor CI gate entries for every new mutation route (`scripts/claim-adjudication-human-actor-invariant/check.ts` — ⚠ 6.18's review found that gate hand-maintained, matching on one route, and dropping non-literal paths; an unlisted file is invisible), a `*-shape.spec.ts` for any compound read model, the i18n **real-`t()` leg** in both locales, and a `{ timeout: 20000 }` on any new domain live spec (`packages/domain/vitest.config.ts` sets none). **Also:** a Pariwar Admin approval after the family corrected → **409** `closure.claim_corrected`; a closure request racing a family correction; an approval racing a pending request; a crash between the reminder insert and the send; a late-slot catch-up after an outage (one `late` send, no burst); a closure refused on a live routing row; the Telegram side-channel never runs for a family reminder; and a reminder whose every slot was `no_target` cannot support a closure under the strict default (Q-R).
-
-### AC12 — CC1: the replacement-certificate reminder (APPENDED 2026-09-25; `-236` CC1, `-241` §3, `-244`)
-**Given** Story 6.21a is `done` and `isDeathCertificateReplacementRequested` is true for a claim
-**Then** the family is reminded to send a certificate with a clear date on a schedule and channels **settled by §0 first**
-(protection 3); **and** the claim is ⛔ **never** refused, closed or denied for a missing certificate (protections 1–2)
-— ⛔ the day-90 closure never runs on a certificate wait, and a test proves it; **and** ⛔ no time limit is imposed.
-
-### AC13 — `-257` (N1): the nominee list is twenty, and the claimant list is derived from it (APPENDED 2026-09-27)
-**Given** `-257` and `-255` F8
-**Then** `NOMINEE_RELATIONSHIP_CODES` carries the **twenty** values of `-257` cl.1, the domain mirror matches it (the lockstep test passes),
-and the member app's nominee picker offers all twenty with **en and hi** copy (i18n parity green, microcopy gate green);
-**and** the claimant-to-nominee enum (`-253` cl.2 / `-255` F8) is **derived** from it minus `other` — a test proves the nineteen equal the
-twenty minus `other`, so the two can ⛔ never drift;
-**and** `other` still forecloses a correction (`-237` cl.2 — the existing 6.20 correction test stays green), `ClaimantRelationship` is
-⛔ unchanged, and there is ⛔ no migration and ⛔ no backfill;
-**and** `declaration.ts`'s *"Still OPEN"* note is marked DISCHARGED by `-257`, ⛔ not deleted.
-
-## Tasks / Subtasks
-
-- [ ] **Task 0 — Governance first** (AC0)
-  - [ ] Commit `-229` → `-232`, the routing note, and 6.18's edits **first**.
-  - [ ] Write the author-commit decision (D1–D14 — incl. D4, D7, D13 the split and D14 the gate); re-verify every claim under *What already EXISTS* — 6.18 moves under you.
-  - [x] ✅ **DRAFTED 2026-09-20** (five notes, ⛔ not sent, ⛔ not committed — see *Open Panel questions*); what remains is sending them and transcribing the rulings. Batch the Panel questions (K L M O P Q R T U — with N and D3 as confirms) into routing notes from `trustee-panel-routing-note-TEMPLATE.md` — §0 gate first, order per the template, E4 commands run (an **empty** result is a finding).
-  - [ ] `epics.md` entry + header; the AR-61 ledger entries; record Q-S with the go-live gate (counsel, Story 0.13).
-- [ ] **Task 1 — Migrations** (AC1, AC2, AC5, AC6) — ⛔ start only after 6.18 lands; numbers from **0119**
-  - [ ] Hand-authored, journal entry each (idx+1, a larger `when`); ⛔ never regenerate an applied migration; any `ADD VALUE` in its **own** file (`IF NOT EXISTS`); RLS hand-supplement (`ENABLE` → `GRANT`/`POLICY` → `FORCE`); new tables: contact, reminder record, letters, closures.
-  - [ ] Each table gets a **migration-level policy spec** asserting RLS positive / negative / fail-closed / FORCE, FKs, the UNIQUE keys and CHECKs directly (family 5).
-- [ ] **Task 2 — Capture at filing** (AC1) — contracts (⛔ no `@twt/domain` import), the writer, the member + helpline routes, the member-app step, the helpline card; tests incl. ICP two-channel merge.
-- [ ] **Task 3 — The schedule and the record** (AC2, AC3) — the pure function + data table, the record writer, the sweep and its child queue, the stop predicate; injectable clock everywhere.
-- [ ] **Task 4 — Dispatch composition and the delivery signal** (AC3, AC4) — recipient resolvers (nominee contact, claimant mobile, the Pariwar-Admin-by-role accessor), the name-free copy, the dead-number marker, and **capture `providerMessageId` at send time**; scope the delivery-signal integration to the answer to **O**.
-- [ ] **Task 5 — Staff reminders, escalation, the letter record, the day-90 reminder** (AC4, AC5, AC6) — the chase ladder, the letter writer + the screenshot handler, **the day-90 closure-reminder job (daily for 7 days, then escalate to the Pariwar Admin — AC6, D12; ⛔ it never calls the closure writer)**, the audit lines.
-- [ ] **Task 6 — The closure** (AC6, AC7) — the D1 writer, the request / decision / Super Admin routes, **the request's and the approval's re-check of `isReturnedClaimResubmitted` under the lock (invariant 2)**, the appeal-site edits (all three), the family closure notice and the NEW `closed_no_response` contract field (⛔ not `appeal_exhausted`), the mobile status string.
-- [ ] **Task 7 — Keys and gates** (D8) — mint the four keys (catalog version + counts + `roles.ts` + `permissions.test.ts` + `roles.test.ts`), the human-actor gate entries, the audit types.
-- [ ] **Task 8 — Admin and mobile surfaces** (AC8) — extend 6.18's returned-claims list; the letter form; the closure strips; the Super Admin surface; family-13 assertions.
-- [ ] **Task 9 — Tests** (AC9, AC11) — **execute** on `twt-test-pg :5433`.
-- [ ] **Task 10 — Friction-budget disposition** — one named-payer row if capture at filing adds a required field the family must type (`friction-budget.md`; best-ever ratchet — [[project_friction_budget_baseline_ratchet]]).
-- [ ] **Task 11 — CC1: the replacement-certificate reminder** (AC12; APPENDED 2026-09-25) — ⛔ **start only after 6.21a is `done`**. (a) Run §0 on protection 3 (schedule, channels, letters, and whether `missing` is chased) — route what is the Panel's. (b) Build the reminder on `isDeathCertificateReplacementRequested`. (c) Prove ⛔ no closure / refusal / denial path runs on a certificate wait. (d) ⛔ No time limit.
-- [ ] **Task 12 — `-257` (N1): the nominee list to twenty, and one source for the claimant list** (AC13; APPENDED 2026-09-27) — (a) extend `NOMINEE_RELATIONSHIP_CODES` and the domain mirror; mark the *"Still OPEN"* note DISCHARGED. (b) Derive the F8 claimant-to-nominee enum from it (minus `other`) in contracts — ⛔ a second hand-typed list is refused; add the equality test. (c) The picker and its **en + hi** copy for the five new values (reviewed Hindi kin terms, as `sister_in_law`'s). (d) Update every site in the appended section's list and its tests. (e) Annotate `epics.md` and Story 3.4 / FR-4 — ⛔ never rewrite. ⭐ Independent of counsel (M, S) and of the reminder machinery — it may be built first.
+| v0.9 AC | Now in | v0.9 Task | Now in |
+|---|---|---|---|
+| AC0 governance | 6.19a (for the whole set) | Task 0 | 6.19a Task 0 (b, c, d each have a preflight) |
+| AC1 capture at filing | 6.19a | Task 1 migrations | split by table: a (contact, consent type), b (reminder record, letters), c (closures, directions, re-file) |
+| AC2 clock · AC3 record + SMS · AC4 staff · AC5 letters | 6.19b | Task 2 | 6.19a Task 2 |
+| AC6 closure · AC7 appealability | 6.19c | Tasks 3–5 | 6.19b Tasks 2–5 |
+| AC8 surfaces · AC9 PII/audit · AC11 proof | restated per slice (AC8a/b/c, AC9a/b/c, AC11a/b/c) | Task 6 | 6.19c Tasks 3–5 |
+| AC10 nothing else moves | carried into a, b and c | Task 7 keys | b mints key 1; c mints keys 2–6 (one author-commit in a's Task 0) |
+| AC12 CC1 | 6.19d (`backlog`) | Tasks 8–9 | per slice |
+| AC13 N1 | 6.19a | Task 10 friction · Task 11 CC1 · Task 12 N1 | a Task 5 · d · a Task 3 |
+| AC14 Super Admin review · AC15 re-file | 6.19c | | |
+| ⭐ **AC16** (`-258`) the mark, family runs vs staff runs, the staff-case copy | 6.19b (appended 2026-09-27) | | |
+| ⭐ **AC17** (`-258`) the closure condition, "no correction needed", the staff case at day 90 | 6.19c (appended 2026-09-27) | | |
+| AC12 → 6.19d's ACs (`-259`) | to derive — `bmad-create-story` on 6.19d | | |
 
 ## Dev Notes
 
 ### Dependency and sequencing
-6.18 first: its D1 (the returnable-states change), its return/R9 mutual-exclusion patch, its D4 (the returned-claims list), and migrations 0116–0118. This story's own migrations start at **0119**. ⚠ 6.18's review found its **domain** live specs lack a suite-level timeout and its tests pin defects — do not copy its test helpers blindly (`seedNomineeNameCheck` seeds a passing check unconditionally).
+6.18, 6.20, 6.21a, 6.21b are `done` and merged. Migrations start at **0124** (6.19a); 6.19b and 6.19c take the next free numbers. Order: 6.19a (Task 0 first) → 6.19b → 6.19c; 6.19d after its
+ruling. ⚠ 6.18's domain live specs lacked a suite timeout and its helpers
+seed a passing check unconditionally (`seedNomineeNameCheck`) — ⛔ do not copy them blindly.
+
+### Previous-story intelligence (6.18 → 6.21b)
+- **6.18** built the return, the correction queue and the name-check gate; its reviews found tests that could not fail as titled, a hand-maintained
+  gate that dropped routes, and a missing `resourceLocator` — each is an AC here.
+- **6.20** moved "who is the nominee" to the **effective declaration at death** and locked the declaration on the first claim — T12 and D5 follow
+  from it. Its `-241` is the model for Task 0's single author-commit.
+- **6.21a/b** added the certificate gate to the approval chain (so the Super Admin approve must keep it), a new upload table (⛔ not
+  `claim_documents`), and the `claim_live` signal; their reviews found offline caches telling a refused family "still open" — hence
+  `closed_no_response` comes from a fresh server read, ⛔ never a cache.
+- **Recent commits** (`c136b03c` … `b068173a`) are all governance: the Panel's answers and routing notes for this story. ⛔ No code has been
+  written for 6.19.
 
 ### Files — UPDATE (read each completely before changing it) and NEW
-**UPDATE:** `apps/mobile/lib/claim-steps.ts` + `(claim)/index.tsx` + `nominee-review.tsx` + `apps/mobile/tests/unit/claim-steps.test.ts`; `apps/admin/src/modules/helpline-claims/{HelplineConsoleShell,HelplineClaimPage}.tsx` (a new slot beside `bankSlot`); `packages/domain/src/claim/{appeal-eligibility,state-trustee-decision-persist}.ts`; `apps/api/src/modules/claims/claims.appeal.handlers.ts`; `packages/contracts/src/claims/appeal.ts`; the mobile `AppealStatusCard`; `packages/domain/src/rbac/{permissions,roles}.ts`; `apps/api/src/audit/audit-sink.ts`; `packages/queue/src/index.ts` + `apps/jobs/src/boot.ts`; `packages/i18n/src/catalog.ts` + the locales; `scripts/claim-adjudication-human-actor-invariant/check.ts`.
-**NEW:** the contact, reminder-record, letters and closures tables + their RLS policy files (`policies/index.ts`, `schema/index.ts`); a reminder sweep module beside `contribution-notify-triggers.ts`; the letter / closure / contact handlers and routes under `apps/api/src/modules/claims/`; the admin modules.
-**⛔ NEVER edit:** `packages/channels/src/**` (frozen; compose in `apps/jobs`), `claim_documents` / `uploadClaimDocument`, `voteOnFrozenClaim`'s guard, `ClaimantRelationship`'s comment.
+**UPDATE:** `packages/domain/src/claim/{state-trustee-decision-persist,appeal-eligibility,icp,nominee-name-check}.ts` (the approval-gate split,
+T10), `apps/api/src/modules/claims/{claims.appeal.handlers,claims.service}.ts` + the override path, `packages/contracts/src/claims/{appeal,dpdpa-consent}.ts`,
+`packages/contracts/src/nominee/declaration.ts`, `packages/domain/src/nominee/relationship.ts`, `packages/domain/src/schema/consent_records.ts`,
+`apps/mobile/lib/{claim-steps,appeal-status}.ts`, `apps/mobile/app/(claim)/{index,nominee-review}.tsx`, `apps/mobile/components/claim/AppealStatusCard.tsx`,
+`apps/mobile/components/life-events/NomineeForm.tsx`, `apps/admin/src/modules/helpline-claims/HelplineClaimPage.tsx`, the correction-queue
+read/handler/contract/view, `CycleFreezeRoute.tsx` (or a sibling strip), the admin nav, `packages/domain/src/rbac/{permissions,roles}.ts`,
+`apps/api/src/audit/audit-sink.ts`, `packages/queue/src/index.ts`, `apps/jobs/src/boot.ts`, `packages/i18n/locales/{en,hi}/{claim,common}.json`,
+`scripts/claim-adjudication-human-actor-invariant/check.ts`, `friction-budget.md`.
+**NEW:** the tables + RLS policy files (`policies/index.ts`, `schema/index.ts`); `(claim)/contact.tsx`; the reminder sweep module beside
+`contribution-notify-triggers.ts`; the claim-correction SMS template registry; the admin directory accessor; the contact / letter / closure /
+Super Admin / direction / re-file handlers + routes under `apps/api/src/modules/claims/`; the admin modules (Pariwar Admin strip, Super Admin
+queue, direction inbox).
+**⛔ NEVER edit:** `packages/channels/src/{dispatch,render,sms-dlt-registry}.ts` and `AlertCategory`; `claim_documents` / `uploadClaimDocument`;
+`voteOnFrozenClaim`'s guard; `assertClaimApprovable`'s behaviour for P1/P3/P4; `ClaimantRelationship` and its comment.
 
 ### Testing standards
-Live-DB traps recorded for this repo ([[project_live_db_test_gotchas]], [[project_known_livedb_test_failures]], [[project_ci_local_double_run_pollution]]): never regenerate an applied migration (42P07); never `DROP SCHEMA` (42P01); **assert membership, not counts** (a shared `PARIWAR_A` pollutes under `ci:local`, which runs specs in both the unit and integration phases); expect 5 s timeouts under `--concurrency=4`; a fresh Pariwar has no niyamavali clauses; own-committing specs for the sweep and two-connection races; a green turbo run is ⛔ not proof when specs self-skip without `DATABASE_URL`. Exemplars: `apps/jobs/tests/contribution-notify-triggers.test.ts` (mocked deps, `now: () => NOW`), `apps/jobs/tests/pending-match-idempotency-live.test.ts` (live, own-committing, injected clock, revert-sanity), `apps/api/tests/integration/claims/cycle-freeze.spec.ts` and `packages/domain/tests/integration/alert/alert-stream-concurrency.spec.ts` (two-connection races), `apps/jobs/tests/wa-webhook-processor.test.ts` (status callbacks).
+[[project_live_db_test_gotchas]], [[project_known_livedb_test_failures]], [[project_ci_local_double_run_pollution]]: never regenerate an applied
+migration (42P07); never `DROP SCHEMA` (42P01); **assert membership, not counts** (shared `PARIWAR_A`); `{ timeout: 20000 }` on new domain live
+specs; own-committing specs for the sweep and the races; a green turbo run is ⛔ not proof when specs self-skip without `DATABASE_URL`.
+Exemplars: `apps/jobs/tests/contribution-notify-triggers.test.ts` (mocked deps, `now: () => NOW`), `apps/jobs/tests/pending-match-idempotency-live.test.ts`
+(live, injected clock), `apps/api/tests/integration/claims/cycle-freeze.spec.ts` and `packages/domain/tests/integration/alert/alert-stream-concurrency.spec.ts`
+(two-connection races), `apps/api/tests/unit/dpdpa-consent-copy.test.ts` (copy lockstep).
+
+### Latest technical notes
+No new library. ⚠ TRAI DLT: each content template (Hindi is Unicode — a shorter per-segment length) is registered with its `{#var#}` slots before
+use; the send must match the registered text exactly — keep the copy in `claim.json` and the registered text in lockstep (a test comparing the
+template registry's content against the rendered `t()` output).
 
 ### References
-- `.decision-log.md` — `2026-09-20-229`, `-230`, `-231`, `-232`; `-226`, `-227`, `-228`; `-195` cl.2.
-- `_bmad-output/implementation-artifacts/6-18-nominee-holder-name-on-the-verification-console.md` — `### Review Findings`, AC11, D4, Task 4d (deferred to this story).
-- `_bmad-output/implementation-artifacts/6-16-3-stage-claim-denial-appeal-flow-reversed-denial-sahyog-vivran-publish-hook.md` — D-F, D-G.
-- `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-09-20-6-18-deny-while-under-correction.md`; `…/trustee-panel-routing-note-TEMPLATE.md`.
-- PRD `_bmad-output/planning-artifacts/prds/prd-TWT-2026-05-22/prd.md` (FR-43A, FR-71/72/73, FR-23, FR-41, FR-47, FR-97, §4.10, §4.14); `architecture.md` (§3.4, §2.7, §2.12, AR-12, AR-15/16/18/19/20/40, AR-58 — and `epics.md` for AR-61 / AR-63, NFR-10/14/18/20/24/8); `ux-design-specification.md` (Stance #5, UX-DR39/44/54/55/57/66/67).
-- Code: `packages/domain/src/claim/{state-trustee-decision-persist,appeal-eligibility,appeal-persist,state,read}.ts`, `packages/domain/src/member/overlay.ts`, `packages/channels/src/{dispatch,provider}.ts`, `packages/channels/src/providers/{sms-dlt,sms-errors,whatsapp-status}.ts`, `apps/jobs/src/scheduler/{contribution-notify,contribution-notify-triggers}.ts`, `apps/jobs/src/wa-webhook-processor.ts`, `packages/domain/src/notifications/delivery.ts`, `packages/domain/src/idempotency/keyed-store.ts`, `packages/domain/src/cycle-calendar/holiday-resolver.ts`, `packages/contracts/src/claims/{filing,documents,dpdpa-consent,appeal}.ts`, `packages/domain/src/schema/{claims,claim_nominee_bank_accounts,member_nominees,whatsapp_send_status,claim_shepherd_assignments}.ts`.
-
-## Dev Agent Record
-
-### Agent Model Used
-
-### Debug Log References
-
-### Completion Notes List
-
-### File List
+- `.decision-log.md` — `-229`, `-230`, `-231`, `-232`, `-250` … `-257`; `-226`, `-227`, `-228`, `-233`, `-236`, `-237`, `-241`, `-243`, `-244`.
+- Routing notes `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-09-20-6-19-{reaching-the-family,reached-before-closure,declined-closure,refiling-after-closure,confirm-our-defaults}.md`, `…-2026-09-27-6-19-{follow-ups,f1-keep-open}.md`, `…-2026-09-27-6-20-confirm-what-we-recorded.md` (N1); the TEMPLATE.
+- Stories 6.16 (D-E, D-F, D-G), 6.18 (`### Review Findings`, AC11, D4), 6.20, 6.21a/b; `deferred-work.md` 6.18 chunks 1 and 3.
+- PRD (FR-43A, FR-71/72/73, §4.10, §4.14); `architecture.md` (§3.4, §2.12, AR-18, AR-61, AR-63); `ux-design-specification.md` (Stance #5, UX-DR44/54/57/67).
 
 ## Change Log
 
 | Version | Date | Change |
 |---|---|---|
-| v0.1 | 2026-09-20 | Created by the create-story workflow from `-229` → `-232`, three parallel read-only research passes (planning documents; reminder / scheduler substrate; claim filing / closure / appeal code) and seven live re-verifications. ⚠ `backlog`, ⛔ not `ready-for-dev` — Panel questions K L M O P Q R open. ⛔ Not yet run through `validate`. |
-| v0.2 | 2026-09-20 | Applied a fresh-context validator's findings, **each re-verified in the tree first**. **Critical:** the closure guard against an already-CORRECTED claim (AC6, invariant 2 — a corrected-but-unvoted claim still has a LIVE return row, so the conditional `UPDATE` alone would succeed); Q-R rewritten (**strict default**; `no_target` is ⛔ not a dead number); readings that were stated as fact are labelled (new **Q-T**); `-232` J recorded (it ratified our parse of `-231` F); N carried as a confirm; the story split recorded (**D13**); where AC1's 409 lives (**D14**) and multiple nominees (**Q-U**); the family-message design rewritten (**D7**: `alert_published`, `Alert.member_id`, no Telegram mirror). **Should-fix:** private vs exported helper names; lifecycle suppression is prose, not live; a super-admin-only key precedent exists; the `attempting` → final reminder state, day numbering and catch-up; the family closure notice + a `closed_no_response` field; the day-90 reminder job had no Task; the AC7 control must be production-shaped; mis-cited paths and requirement ids; an invariants box. ⚠ Not re-validated after these edits. |
-| v0.3 | 2026-09-25 | **APPENDED, ⛔ nothing above edited: the `-236` CC1 item** that `-241` §3 placed on this story and that this file never carried (Story 6.21a D16; recorded at `2026-09-25-244`). A new section, AC12 and Task 11 — the three protections verbatim (*never refused*; ⛔ not the day-90 closure; schedule/channels UNRULED ⇒ §0), the trigger `isDeathCertificateReplacementRequested` (built by 6.21a), and the dependency (6.21a `done`). ⛔ No status change. |
-| v0.4 | 2026-09-27 | **APPENDED, ⛔ nothing above edited: the Panel answered K–U** (`2026-09-27-250` … `-254`). A status table under *Open Panel questions* (the question list kept as put). ⚠ K (option C — a narrowing of `-226`/`-227` for a declined closure), M (option C), Q (option C) and T (1)/(2) did ⛔ **not** take our defaults; K, L and P are answered only in part; `-253` cl.2 adds a filing question (claimant→nominee relationship). Status stays `backlog` — the AC BLOCKED tags are re-derived at the next validate. |
-| v0.5 | 2026-09-27 | **APPENDED, ⛔ nothing above edited: the follow-ups F2–F8 answered** (`2026-09-27-255`) — K except F1, L (letter address), P (SMS widened), U (each nominee reminded), and the 19-value claimant-to-nominee list. ⏳ F1 (keep open) awaits the clarification note `6-19-f1-keep-open`. Status stays `backlog`. |
-| v0.6 | 2026-09-27 | **APPENDED:** the unsent F1 note revised — option **E** (a Super Admin review period, with recorded directions to the admins) added and recommended, ⛔ no longer D. Status stays `backlog`. |
-| v0.7 | 2026-09-27 | **APPENDED:** F1 ruled (`2026-09-27-256`, option E — a Super Admin review period with directions to the admins). Every Panel question on this story is answered; counsel (M, S) remains as go-live gates. Next: a validate pass to re-derive the ACs. Status stays `backlog`. |
-| v0.8 | 2026-09-27 | **APPENDED, ⛔ nothing above edited: `-257` (N1) placed on this story by BigDev** — the nominee relationship list 15 → 20, built beside `-255` F8's claimant-to-nominee list (derived from it minus `other`, one source). A new section, **AC13** and **Task 12** (independent of counsel; may be built first). Status stays `backlog`. |
+| v0.1 | 2026-09-20 | Created from `-229` → `-232`; ⚠ `backlog` — Panel questions K L M O P Q R open. |
+| v0.2 | 2026-09-20 | A fresh-context validator's findings applied (the corrected-claim guard, STRICT Q-R, Q-T, D13, D14, Q-U, D7). |
+| v0.3 | 2026-09-25 | Appended the `-236` CC1 item (AC12, Task 11). |
+| v0.4–v0.7 | 2026-09-27 | Appended the Panel's answers `-250` … `-256` as status blocks; status stayed `backlog`. |
+| v0.8 | 2026-09-27 | Appended `-257` (N1): AC13, Task 12. (v0.1–v0.8 text preserved in git at `c136b03c`.) |
+| **v0.9** | **2026-09-27** | ⭐ **RE-DERIVED, ⛔ not appended** (create-story validate pass). Every claim re-verified on `c136b03c` by three read-only passes. **Panel answers folded in:** every BLOCKED tag removed; T's (1)/(2) reversals applied (stop on delivery; chase from found-dead); the schedule numbers and the day-14 flag relabelled the Panel's. **Corrected against the code:** a second return supersedes only a resubmitted one (the live `decidedAt` is the latest return's); return ⟂ R9 is now enforced; migrations start at **0124**, ⛔ not 0119; the human-actor gate now reconciles against disk; `resourceLocator` is silently replaced unless lower-case; the member appeal route 404s in production (the operator path is the real one); `nominee-review.tsx` is already two concerns (⇒ a NEW `contact` step) and the claim-flow resume gap. ⭐ **D7 REVISED:** `alert_published` is excluded from the SMS DLT registry, so F7's SMS is a **direct DLT send to an explicit number** (the OTP precedent), ⛔ not an `Alert`. **New author decisions D15–D24:** the agreement as a consent type; the relationship per nominee; the Super Admin's three decisions (the `-251` narrowing waives ONLY the name check — the certificate, accounts and determination still gate); the review hold + directions; the re-file guard keyed on the closure record at both mint paths; the letter-track anchors per person; "reached" per person; family notices; the go-live gate as a record. **New ACs:** AC14 (Super Admin review), AC15 (re-file). **§0 run:** CC1 protection 3 is the Panel's ⇒ Task 11 fenced on a routing note; **V** (a return needing no correction — the 6.18 deferred item's trigger) and **W** (notices after a Super Admin decision) found, both non-blocking. Keys 4 → **6**. **Status → `ready-for-dev`**: every Panel question on the build is answered; counsel (M, S) gates go-live only; Task 11 is fenced. |
+| **v1.0** | **2026-09-27** | ⭐ **SPLIT (BigDev: *"split it three ways"*, D13)** into 6.19a (`ready-for-dev`), 6.19b and 6.19c (`ready-for-dev`, each fenced on its predecessor being `done`) and 6.19d (CC1, `backlog`). This file becomes the **shared spec**: ACs and Tasks moved to the slices (map above), the Dev Agent Record removed, the row retired. The CC1 and V routing notes **drafted** (⛔ not sent, ⛔ not committed). |
+| v1.1 | 2026-09-27 | **V WIDENED** (BigDev: a family is reminded even when staff made the mistake): the note is renamed `…-2026-09-27-6-19-return-not-the-familys-to-fix.md` and now asks whether a return that is ⛔ not the family's to fix (a helpline typing error, a wrong name check, or no error) reminds the family and can ever be closed "for no response". ⭐ Best answered before 6.19b is built. |
+| v1.2 | 2026-09-27 | ⭐ **The Panel ruled V (`-258`, option B) and CC1 (`-259`, option B amended — stop after 180 days).** Rulings table +2 rows; invariant 11; policy predicate 6; question table + §0 bullets marked RULED; **D25–D29** and keys (7), (8) appended (PROPOSED); the AC map gains AC16 (6.19b) and AC17 (6.19c). 6.19d unfenced, its ACs owed. |
+| v1.3 | 2026-09-27 | ⭐ **`-260` (G1–G6) recorded** — every Panel question on the set is answered. D29 SUPERSEDED (G1 B: the Super Admin decides a staff case, full gate, ⛔ never close); D23 CONFIRMED (G3 A — ⚠ our B ⛔ not taken); D27's keep ratified (G2). Only counsel's M and S remain (go-live). |

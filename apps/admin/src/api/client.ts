@@ -275,6 +275,10 @@ import {
   ClaimDocumentUploadResponse,
   RecordNomineeBankResponse,
   type RecordNomineeBankHelplineRequest,
+  ClaimContactDetailsResponse,
+  ClaimContactPresenceResponse,
+  RecordHelplineClaimContactResponse,
+  type RecordHelplineClaimContactRequest,
 } from '@twt/contracts';
 import { z } from 'zod';
 
@@ -1314,6 +1318,32 @@ export function recordHelplineNomineeBank(
     RecordNomineeBankResponse,
     { method: 'POST', body: JSON.stringify(body) },
   );
+}
+
+// ── The claim CONTACT RECORD (Story 6.19a, AC1 / AC8a) ───────────────────────────
+// The helpline's write (claim.file + step-up), the PRESENCE-only read (claim.view_nominee_name_check — ⛔ no
+// value) and the operator's PLAINTEXT read-back (claim.file; decrypted and audited per read).
+
+const contactPath = (pariwarId: string, claimCaseId: string) =>
+  `/api/v1/p/${encodeURIComponent(pariwarId)}/admin/claims/${encodeURIComponent(claimCaseId)}/contact`;
+
+export function getClaimContactPresence(pariwarId: string, claimCaseId: string): Promise<ClaimContactPresenceResponse> {
+  return apiFetch(contactPath(pariwarId, claimCaseId), ClaimContactPresenceResponse);
+}
+
+export function getClaimContactDetails(pariwarId: string, claimCaseId: string): Promise<ClaimContactDetailsResponse> {
+  return apiFetch(`${contactPath(pariwarId, claimCaseId)}/details`, ClaimContactDetailsResponse);
+}
+
+export function recordHelplineClaimContact(
+  pariwarId: string,
+  claimCaseId: string,
+  body: RecordHelplineClaimContactRequest,
+): Promise<RecordHelplineClaimContactResponse> {
+  return apiFetch(contactPath(pariwarId, claimCaseId), RecordHelplineClaimContactResponse, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
 }
 
 // ── Nominee NAME CHECK surface (Story 6.18, `2026-09-19-226` cl.3/cl.5) ──────

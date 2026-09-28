@@ -167,6 +167,12 @@ export async function seedNomineeNameCheck(
      *  review writer, BEFORE any determination (D8 needs it). `'skip'` reaches a claim with ⛔ no accepted
      *  certificate — the gate's `…death_certificate_acceptance_required` — and seeds ⛔ no determination. */
     readonly certificate?: 'accepted' | 'skip';
+    /** ⭐ Story 6.19a (D14, AC11a) — the claim's CONTACT RECORD, which the approval gate now requires AFTER the
+     *  rest. Default `'seed'` (in the `accountsOnly` / `singleAccount` modes too — D14 runs after the gates those
+     *  modes exercise, so it is inert there): a complete record, bound to the EFFECTIVE versions once the
+     *  determination is effective, else to the PROJECTED ones. `'skip'` reaches `…claim_contact_required`
+     *  (`no_record`). A bare `skip: true` stays a pure no-op. */
+    readonly contact?: 'seed' | 'skip';
   } = {},
 ): Promise<void> {
   if (opts.skip === true) {
@@ -230,6 +236,7 @@ export async function seedNomineeNameCheck(
     // ⛔ The "two accounts but NOBODY CHECKED" fixture stops here — exactly the claim AC4's gate
     // must refuse with `nominee_name_check_required`, and the one no test could build before.
     if (opts.accountsOnly === true || opts.singleAccount === true) {
+      if (opts.contact !== 'skip') await ensureClaimContact(scopeTx, pariwarId, claimCaseId);
       ok = true;
       return;
     }
@@ -269,10 +276,84 @@ export async function seedNomineeNameCheck(
       actorDisplay: opts.actorDisplay ?? 'Anita (District Admin)',
       actor: 'operator',
     });
+    if (opts.contact !== 'skip') await ensureClaimContact(scopeTx, pariwarId, claimCaseId);
     ok = true;
   } finally {
     await closeScopeTx(scopeTx, ok);
   }
+}
+
+/**
+ * ⭐ Story 6.19a — seed a COMPLETE contact record when the claim has none (TEST-ONLY raw inserts, placeholder
+ * ciphertext — ⛔ not decryptable, so ⛔ never the fixture for a PII-leak test: plant real plaintext through the
+ * real routes for that). Binding follows the writer's helpline rule (W2): the EFFECTIVE versions once the
+ * determination is effective, else the PROJECTED ones; the claimant is the first bound version, or — with no
+ * bound version at all — the claimant block. The agreement is a live `claim_contact_agreement` consent linked
+ * through `agreement_consent_id` (D15, per claim). Returns the bound version ids.
+ */
+export async function ensureClaimContact(
+  scopeTx: ScopeTx,
+  pariwarId: string,
+  claimCaseId: string,
+): Promise<readonly string[]> {
+  const pid = ids.pariwarId(pariwarId);
+  const cid = ids.claimId(claimCaseId);
+  const claimRow = await claim.getClaimCase(scopeTx.tx, pid, cid);
+  if (!claimRow) throw new Error(`[fixture] claim ${claimCaseId} not found in ${pariwarId}`);
+  const effective = await claim.getEffectiveNomineeDeclaration(scopeTx.tx, pid, cid);
+  const bound =
+    effective.status === 'effective'
+      ? effective.entries.map((e) => e.versionId as string)
+      : (await nominee.getProjectedNomineeVersions(scopeTx.tx, pid, claimRow.deceasedMemberId)).map((v) => v.versionId as string);
+  const existing = await claim.readClaimContact(scopeTx.tx, pid, cid);
+  if (existing.contact !== null) {
+    // ⭐ A record THIS FIXTURE wrote earlier (a spec that seeds before the declaration or the determination exists)
+    // is TOPPED UP: a row for each newly bound version with ⛔ no counted row (own or chain-carried, W4a). A
+    // record a spec wrote itself — through the real routes — is ⛔ never touched.
+    if (existing.contact.recordedByActor !== 'fixture') return [];
+    const index = await claim.readVersionChainIndex(scopeTx.tx, pid, claimRow.deceasedMemberId);
+    const blockSide = existing.contact.claimantNomineeVersionId === null;
+    for (const versionId of bound) {
+      if (claim.resolveContactRow(versionId, existing.nominees, index) !== null) continue;
+      await scopeTx.client.query(
+        `INSERT INTO claim_contact_nominees (contact_id, claim_case_id, pariwar_id, nominee_version_id, address_ciphertext, relationship)
+         VALUES ($1, $2, $3, $4, 'enc:v1:nominee-address', $5)`,
+        [existing.contact.contactId, claimCaseId, pariwarId, versionId, blockSide ? 'son' : null],
+      );
+    }
+    return bound;
+  }
+  const agreement = await scopeTx.client.query<{ consent_id: string }>(
+    `INSERT INTO consent_records (subject_id, pariwar_id, consent_type, consent_artifact_ref, granted_via_actor, consent_payload)
+     VALUES ($1, $2, 'claim_contact_agreement', $3, 'member_self', '{"checkboxTextShown":"fixture","locale":"en"}'::jsonb)
+     RETURNING consent_id`,
+    [claimRow.deceasedMemberId, pariwarId, claimCaseId],
+  );
+  const claimant = bound[0] ?? null;
+  const contact = await scopeTx.client.query<{ contact_id: string }>(
+    `INSERT INTO claim_contacts (claim_case_id, pariwar_id, deceased_member_id, claimant_nominee_version_id,
+       claimant_name_ciphertext, claimant_mobile_ciphertext, claimant_address_ciphertext, agreement_consent_id,
+       recorded_by_actor, recorded_via)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'fixture', 'member_app') RETURNING contact_id`,
+    [
+      claimCaseId,
+      pariwarId,
+      claimRow.deceasedMemberId,
+      claimant,
+      claimant === null ? 'enc:v1:claimant-name' : null,
+      claimant === null ? 'enc:v1:claimant-mobile' : null,
+      claimant === null ? 'enc:v1:claimant-address' : null,
+      agreement.rows[0]!.consent_id,
+    ],
+  );
+  for (const versionId of bound) {
+    await scopeTx.client.query(
+      `INSERT INTO claim_contact_nominees (contact_id, claim_case_id, pariwar_id, nominee_version_id, address_ciphertext, relationship)
+       VALUES ($1, $2, $3, $4, 'enc:v1:nominee-address', $5)`,
+      [contact.rows[0]!.contact_id, claimCaseId, pariwarId, versionId, claimant === null ? 'son' : null],
+    );
+  }
+  return bound;
 }
 
 /** Tomorrow in IST — a certificate date against which every version dated up to now STANDS. */

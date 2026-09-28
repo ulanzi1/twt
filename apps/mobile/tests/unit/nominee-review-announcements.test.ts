@@ -148,9 +148,11 @@ describe('nominee-review — the `saved` hold (code review 2026-09-23)', () => {
   it('⛔ the delayed navigation does NOT fire once the screen has unmounted', () => {
     const tail = src.slice(src.indexOf('SAVED_ANNOUNCEMENT_DELAY_MS))'))
     expect(tail.indexOf('if (!mountedRef.current) return'), 'no unmount guard after the delay').toBeGreaterThan(-1)
-    expect(tail.indexOf('if (!mountedRef.current) return')).toBeLessThan(
-      tail.indexOf("router.push('/(claim)/acknowledgement')"),
-    )
+    // Story 6.19a — the next step is now `contact` (it used to be `acknowledgement`). The push must EXIST
+    // (a -1 would make the ordering assertion vacuous) and come after the guard.
+    const push = tail.indexOf("router.push('/(claim)/contact')")
+    expect(push, 'the push to the contact step').toBeGreaterThan(-1)
+    expect(tail.indexOf('if (!mountedRef.current) return')).toBeLessThan(push)
   })
 })
 

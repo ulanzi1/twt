@@ -75,9 +75,11 @@ describe('Story 2.7 — consent enum lockstep (dual anti-drift guard)', () => {
     );
   });
 
-  it('consent_type declares the seven AC1 values + the 5.4/5.5 opt-in + 6.9/11b.1 publication additives', () => {
+  it('consent_type declares the seven AC1 values + the 5.4/5.5 opt-in + 6.9/11b.1 publication + 6.19a agreement additives', () => {
     expect([...ConsentTypeSchema.options].sort()).toEqual(
       [
+        // Story 6.19a (D15) — the filer's per-claim agreement to be contacted (additive via ALTER TYPE 0124 + lockstep).
+        'claim_contact_agreement',
         'claim_time_dpdpa',
         'dpdpa_data_processing',
         'dpdpa_data_sharing',

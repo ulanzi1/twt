@@ -575,6 +575,10 @@ describe('<NomineeCorrectionRaiseForm> — the helpline raise', () => {
     expect(options.map((o) => o.value)).not.toContain('other');
     expect(options.map((o) => o.value)).toContain('niece_nephew');
     expect(options.find((o) => o.value === 'niece_nephew')?.textContent).toBe('Niece / Nephew');
+    // Story 6.19a (AC13, `-257`) — the twenty minus `other`, each with its ratified label (⛔ never a raw code).
+    expect(options.filter((o) => o.value !== '')).toHaveLength(19);
+    expect(options.find((o) => o.value === 'brother_in_law')?.textContent).toBe('Brother-in-law');
+    expect(options.find((o) => o.value === 'grandparent')?.textContent).toBe('Grandparent');
   });
 
   const fill = (over: { name?: string; mobile?: string } = {}) => {

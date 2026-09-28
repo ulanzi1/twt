@@ -51,6 +51,11 @@ export * from './review-window.js';
 export * from './death-certificate-approval.js';
 export * from './death-certificate-review-persist.js';
 export * from './death-certificate-review-read.js';
+// Story 6.19a — the claim CONTACT RECORD: the reads, the correction chain (W4a) and the D14 approval check
+// (a leaf the three approval writers import), and the W1–W9 writer + its windows (which imports
+// `state-trustee-decision-persist.ts` for `TRUSTEE_ROUTABLE_STATES` — so the check ⛔ never imports the writer).
+export * from './claim-contact-check.js';
+export * from './claim-contact-persist.js';
 // Story 6.20 (D7) — the genuine-mistake CORRECTION: raise, District Admin step, Pariwar Admin step (applies).
 export * from './nominee-correction-persist.js';
 // Story 6.20 (D14, AC13) — the `-239` refusal's two reads: the Pariwar Admin's read surface and the

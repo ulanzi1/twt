@@ -18,22 +18,30 @@ import { useState } from 'react'
 // of the current implementation: the moment the schema gains a rule the bare regex does not carry,
 // a name the SERVER accepts starts being refused in the app (or worse, the reverse). One predicate,
 // used by the schema and by every form, is the only way the two cannot drift.
-import { NOMINEE_RELATIONSHIP_CODES, isEnglishScriptName } from '@twt/contracts'
+import {
+  CLAIMANT_NOMINEE_RELATIONSHIP_CODES,
+  NOMINEE_RELATIONSHIP_CODES,
+  isEnglishScriptName,
+} from '@twt/contracts'
 
 import { useT } from '@twt/i18n/react'
 import { Button, H2, Input, Paragraph, Spinner, Text, XStack, YStack } from 'tamagui'
 
 /**
- * The nominee-relationship value set — Story 6.20 (AC12): the Trustee-ratified FIFTEEN
- * (`2026-09-21-237` cl.1), IMPORTED from the contracts enum rather than re-spelled here, so the picker
- * can ⛔ never offer a code the server refuses. Codes are snake_case; the ratified wording is the
- * en/hi label at `nominees.relationship_${code}`.
+ * The nominee-relationship value set — the Trustee-ratified TWENTY (`2026-09-27-257`, Story 6.19a
+ * AC13; the fifteen of `2026-09-21-237` cl.1 at Story 6.20), IMPORTED from the contracts enum rather
+ * than re-spelled here, so the picker can ⛔ never offer a code the server refuses. Codes are
+ * snake_case; the ratified wording is the en/hi label at `nominees.relationship_${code}`.
  */
 export const RELATIONSHIPS = NOMINEE_RELATIONSHIP_CODES
 export type Relationship = (typeof RELATIONSHIPS)[number]
 
-/** Every relationship except `other` — the ones a later correction can be made for (`-237` cl.2). */
-export const KNOWN_RELATIONSHIPS = RELATIONSHIPS.filter((r) => r !== 'other')
+/**
+ * Every relationship except `other` — the ones a later correction can be made for (`-237` cl.2). ⭐ The
+ * contracts' DERIVED nineteen (Story 6.19a AC13 — the same list `-255` F8 gives the claimant-to-nominee
+ * question), ⛔ never a third copy.
+ */
+export const KNOWN_RELATIONSHIPS: readonly Relationship[] = CLAIMANT_NOMINEE_RELATIONSHIP_CODES
 
 export interface NomineeFormEntry {
   name: string

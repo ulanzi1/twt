@@ -37,7 +37,7 @@ import type {
   NomineeDeclarationSnapshotsResponse,
   NomineeDeclarationTimelineResponse,
 } from '@twt/contracts';
-import { MobileNumber, NOMINEE_RELATIONSHIP_CODES, isEnglishScriptName } from '@twt/contracts';
+import { CLAIMANT_NOMINEE_RELATIONSHIP_CODES, MobileNumber, isEnglishScriptName } from '@twt/contracts';
 
 import { verifierConsoleEn } from './i18n-en.js';
 
@@ -724,7 +724,8 @@ export function NomineeCorrectionRaiseForm(props: {
         {r.relationshipLabel}
         <select value={relationship} onChange={(e) => setRelationship(e.target.value)} data-testid="raise-relationship">
           <option value="">—</option>
-          {NOMINEE_RELATIONSHIP_CODES.filter((code) => code !== 'other').map((code) => (
+          {/* The twenty minus `other` — the contracts' DERIVED list (6.19a AC13), ⛔ never a local filter. */}
+          {CLAIMANT_NOMINEE_RELATIONSHIP_CODES.map((code) => (
             <option key={code} value={code}>
               {nomineeRelationshipLabel(code)}
             </option>

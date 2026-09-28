@@ -33,6 +33,7 @@ import {
   claimVerifierDecisions,
 } from '../schema/claim_verifier_decisions.js';
 import { type ClaimEventActor } from './events.js';
+import { assertClaimContactRecorded } from './claim-contact-check.js';
 import { assertClaimApprovable } from './nominee-name-check.js';
 import { projectClaimState } from './project.js';
 import {
@@ -377,6 +378,11 @@ export async function adjudicateClaim(
       input.claimCaseId,
       claimRow.deceasedMemberId,
     );
+    // ⭐ Story 6.19a (D14) — then the claim's CONTACT RECORD: an address for each nominee in force at the death,
+    // the claimant's details when the claimant is none of them, and a live agreement to be contacted. AFTER
+    // the gate above (every existing refusal keeps its code when several are missing), approve-only, and
+    // ⛔ never a denial — the claim WAITS, and the helpline can complete the record in this state (W3).
+    await assertClaimContactRecorded(db, input.pariwarId, input.claimCaseId);
   }
 
   // (b) Emit the verdict event (auditShape only — reason/rationale live in the decision row, D-G).

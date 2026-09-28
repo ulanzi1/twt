@@ -2289,6 +2289,11 @@ components:
                   - grandchild
                   - sister_in_law
                   - daughter_in_law
+                  - brother_in_law
+                  - son_in_law
+                  - mother_in_law
+                  - father_in_law
+                  - grandparent
                   - other
               mobile:
                 type: string

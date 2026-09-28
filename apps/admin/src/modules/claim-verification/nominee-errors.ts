@@ -38,6 +38,16 @@ export function trusteeDeathCertificateAcceptanceRequiredMessage(err: ApiError):
   return t.deathCertificate.trusteeApprovalGate[reason] ?? t.deathCertificate.trusteeApprovalGate.not_reviewed!;
 }
 
+/**
+ * Story 6.19a (D14) — the approval gate's `…claim_contact_required` 409 (`verifier_decision.` / `cycle_freeze.` /
+ * `r9_voting.`), worded by its REASON — the same words on every screen: the claim WAITS, and the helpline can add
+ * the details. ⛔ Never a denial, ⛔ never "try again".
+ */
+export function claimContactRequiredMessage(err: ApiError): string {
+  const reason = (err.details as { reason?: string } | undefined)?.reason ?? 'no_record';
+  return t.claimContact.approvalGate[reason] ?? t.claimContact.approvalGate.no_record!;
+}
+
 /** Story 6.21a — the review's typed refusals (`death_certificate_review.<reason>`), each with its instruction. */
 export function deathCertificateReviewErrorMessage(err: unknown): string {
   if (err instanceof ApiError) {

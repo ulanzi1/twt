@@ -32,6 +32,8 @@ import {
   MemberDeathCertificateStatusResponse,
   NomineeCorrectionRaiseRequest,
   NomineeCorrectionWriteResponse,
+  RecordMemberClaimContactRequest,
+  RecordMemberClaimContactResponse,
 } from '@twt/contracts';
 import type { FastifyInstance } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
@@ -52,6 +54,7 @@ import { createDpdpaConsentHandlers } from './claims.dpdpa-consent.handlers.js';
 import { createShepherdHandlers } from './claims.shepherd.handlers.js';
 import { createMemberNomineeCorrectionHandler } from './claims.nominee-declaration.handlers.js';
 import { createDeathCertificateMemberHandlers } from './claims.death-certificate-member.handlers.js';
+import { createClaimContactHandlers } from './claims.contact.handlers.js';
 
 const CLAIM_TAG = 'member-claim';
 
@@ -73,6 +76,7 @@ export function registerClaimsRoutes(app: FastifyInstance, deps: AppDeps): void 
   const consent = createDpdpaConsentHandlers(deps);
   const shepherd = createShepherdHandlers(deps);
   const deathCertificate = createDeathCertificateMemberHandlers(deps);
+  const contact = createClaimContactHandlers(deps);
   const r = app.withTypeProvider<ZodTypeProvider>();
   const memberSession = requireMemberSession(deps);
   const sendThrottle = memberClaimHandoverSendThrottle(deps);
@@ -223,6 +227,24 @@ export function registerClaimsRoutes(app: FastifyInstance, deps: AppDeps): void 
       preHandler: [memberSession],
     },
     consent.recordMember,
+  );
+
+  // Story 6.19a (AC1) — the family's CONTACT RECORD: each nominee's postal address, the claimant's side and the
+  // agreement to be contacted (the `contact` step). Like the DPDPA consent above it is ⛔ not a financial action,
+  // so the member session alone gates it; the claim must be the member's OWN (checked off the LOCKED row in the
+  // writer — mismatch ⇒ 404). ⛔ No member READ of the record exists: it is echoed to ⛔ no member surface.
+  r.post(
+    '/api/v1/member/claims/:claimCaseId/contact',
+    {
+      schema: {
+        params: DpdpaConsentParam,
+        body: RecordMemberClaimContactRequest,
+        response: { 201: RecordMemberClaimContactResponse },
+        tags: [CLAIM_TAG],
+      },
+      preHandler: [memberSession],
+    },
+    contact.recordMember,
   );
 
   // The presence view (which consents are currently granted) — so the consent step renders current

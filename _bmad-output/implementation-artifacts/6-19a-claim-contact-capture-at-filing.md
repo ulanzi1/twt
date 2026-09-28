@@ -16,7 +16,7 @@ GLYPH REGISTER: `⛔` only on a negation word; `⭐` key fact; `⚠` hazard. ⛔
 
 # Story 6.19a: The Family's Contact Details, Their Agreement and the Claimant's Relationship Are Captured at Filing — and the Nominee List Grows to Twenty `[SURFACE]`
 
-Status: ready-for-dev
+Status: review
 
 > ⭐ **First of the 6.19 set, and it carries the WHOLE SET's governance (Task 0)** — one author-commit for D1–D29 (D29 in its `-260` G1
 > form) and all **eight** keys, the `epics.md` entries for 6.19a–d, and the planning annotations. ⛔ No 6.19b/c code before that commit lands.
@@ -308,25 +308,26 @@ there) — the precedent 6.21a set for the certificate (`certificate: 'skip'`).
 ## Tasks / Subtasks
 
 - [ ] **Task 0 — Governance first, for the WHOLE 6.19 set** (AC0) — ⛔ no code in 6.19a, b or c before it
-  - [ ] Re-run `git diff --name-only c136b03c..HEAD -- packages apps scripts` (empty at `6752e0d6`); re-read anything it lists that the shared spec cites.
-  - [ ] Write ONE author-commit decision (the next free id, read live — `-265` as of 2026-09-28): D1–D29 with the statuses in AC0 (D5/D14/D15/D16 as revised 2026-09-28; D29 in its `-260` G1 form); the **eight** keys and which slice mints each (6.19b: keys 1, 7; 6.19c: keys 2–6, 8).
-  - [ ] `epics.md`: entries for 6.19a–d with the `> ⚠ Minted by…` header; `-257`'s three annotations (Story 3.4's *"five to fifteen"*, FR-4, Story 6.20 item 7); PRD §4.10 and architecture §3.4 annotations naming `-255` F7 **and** `-259` (⛔ never a rewrite).
-  - [ ] AR-61 ledger rows for every loop node AC0 lists; M (incl. "a condition of approval") and S in `docs/launch-gate-inventory/inventory-roster.md` (D24).
+  - [x] Re-run `git diff --name-only c136b03c..HEAD -- packages apps scripts` (empty at `6752e0d6`); re-read anything it lists that the shared spec cites.
+  - [x] Write ONE author-commit decision (the next free id, read live — `-265` as of 2026-09-28): D1–D29 with the statuses in AC0 (D5/D14/D15/D16 as revised 2026-09-28; D29 in its `-260` G1 form); the **eight** keys and which slice mints each (6.19b: keys 1, 7; 6.19c: keys 2–6, 8).
+  - [x] `epics.md`: entries for 6.19a–d with the `> ⚠ Minted by…` header; `-257`'s three annotations (Story 3.4's *"five to fifteen"*, FR-4, Story 6.20 item 7); PRD §4.10 and architecture §3.4 annotations naming `-255` F7 **and** `-259` (⛔ never a rewrite).
+  - [x] AR-61 ledger rows for every loop node AC0 lists; M (incl. "a condition of approval") and S in `docs/launch-gate-inventory/inventory-roster.md` (D24).
   - [x] ✅ The two routing notes were sent and **ruled 2026-09-27**: V → `-258`, CC1 → `-259`; G1–G6 → `-260`.
-  - [ ] Sweep the siblings in the same commit (this Task owns the whole set's governance): 6.19b's preflight still checks for *"author-commit (D1–D24, the six keys)"* → D1–D29 and eight keys, and its letter writer must name D14's check; 6.19b's letter form reads the plaintext address under its own key (1), ⛔ never `claim.view_nominee_name_check` (AC8a); 6.19c's closure code `claim_contact.required` → the per-route `…claim_contact_required` form, its D29 → the `-260` G1 form, and its three new approval writers call D14's check.
+  - [x] Sweep the siblings in the same commit (this Task owns the whole set's governance): 6.19b's preflight still checks for *"author-commit (D1–D24, the six keys)"* → D1–D29 and eight keys, and its letter writer must name D14's check; 6.19b's letter form reads the plaintext address under its own key (1), ⛔ never `claim.view_nominee_name_check` (AC8a); 6.19c's closure code `claim_contact.required` → the per-route `…claim_contact_required` form, its D29 → the `-260` G1 form, and its three new approval writers call D14's check.
   - [ ] Start the DLT template registration (T13) — record the date; it gates 6.19b's and 6.19d's real sends, ⛔ not any build.
-- [ ] **Task 1 — Migrations from 0124** (AC1) — the contact table (one row per claim; `claimant_nominee_version_id` nullable; the claimant's Tier-1 fields; `agreement_consent_id` NOT NULL FK → `consent_records`; `contact_locale`; `recorded_by_actor`, `recorded_via`) + its per-nominee child (`nominee_version_id` FK → `member_nominee_versions`, **UNIQUE `(contact_id, nominee_version_id)`**, the Tier-1 address, the claimant-to-nominee `relationship` text, nullable); RLS hand-supplement (`ENABLE` → `GRANT`/`POLICY` → `FORCE`), own policy file (model `claim-nominee-bank-rls.ts`); `ADD VALUE IF NOT EXISTS 'claim_contact_agreement'` to `consent_type` in its **own** file; journal entry each; ⛔ never regenerate an applied migration; the migration-level policy spec.
-- [ ] **Task 2 — Capture at filing** (AC1, AC8a, AC9a, AC10)
-  - [ ] Consent type (D15): `consentTypeEnum` + contracts `ConsentTypeSchema` (the lockstep in `packages/contracts/tests/consent.test.ts` pins them equal) — ⚠ the SAME file also pins `ConsentTypeSchema.options` by an **exact** list (*"consent_type declares the seven AC1 values + …"*): append `claim_contact_agreement` there with a one-line comment, as 6.9 and 11b.1 did; ⛔ not `DpdpaConsentType` (its `Record`-total `DPDPA_CONSENT_COPY` and the DPDPA GET view's `ALL_TYPES` would change a shipped surface); ⛔ not `CLAIM_TIME_CONSENT_TYPES` (pinned by exact `toEqual`; it derives the `claim.dpdpa_consent_recorded` payload). Its own versioned copy constant + `claim.json` en + hi keys + a byte-identical lockstep test (the `dpdpa-consent-copy` precedent), marked *"pending Story 0.13"*.
-  - [ ] Contracts (⛔ no `@twt/domain` import): the **two** request shapes (AC1) — member (full: `locale`, `claimantNomineeRank`, `agreed: true`) and helpline (partial: `locale`, rows by `nomineeVersionId`, `agreed: true` alone allowed) — `MobileNumber` and the address validator INPUT-only; the claimant-to-nominee enum (Task 3b); the two admin read DTOs (presence-only; plaintext) with plain bounded strings (responses are parsed — the decrypt-failed sentinel must parse). Re-emit `openapi/v1.yaml`.
-  - [ ] Domain: `getProjectedNomineeVersions` (W1 — the version each `member_nominees` row was last written from; ⛔ never max `version_no`); the correction-chain resolver (W4a: walk `corrects_version_id`, nearest row wins), shared by D14 and the admin read; the writer under the claim lock, implementing **W1–W9** exactly (member → projected versions; helpline → explicit allowed `nomineeVersionId`; upsert-only rows; add-only in the extra states with identical values ⛔ not overwrites; the claimant-side fills (a)/(b) and the parent CHECK's two sides cleared in one statement; `awaiting_determination`; the creating write's `agreement_required` / `nominee_set_mismatch` / `claimant_required` / `address_required`; the agreement repointing incl. a revoked agreement; `locale` and provenance); the window tuples; `assertClaimContactRecorded` (reads the effective declaration itself; rows by effective `versionId`; the pinned reason precedence) + `ClaimContactRequiredError`, called **after** `assertClaimApprovable` at P1/P3/P4 (⛔ not inside it, ⛔ not inside `isReturnedClaimResubmitted`'s inner helper).
-  - [ ] API: `claim-contact-crypto.ts` + `CLAIM_CONTACT_FIELD_CLASS`; member + helpline routes + the two admin reads (presence-only under `claim.view_nominee_name_check`; plaintext under `claim.file`) (new route file(s) classified in `scripts/claim-adjudication-human-actor-invariant/check.ts`); the three error mappers; the audit unit (W10: one `withCompensatingAudit` intent line + `emitAuthAudit` events; the consent's `audit_id` = the intent `auditId`).
-  - [ ] Admin: the helpline card; the three console screens' `…claim_contact_required` message (`nominee-errors.ts`).
-  - [ ] Mobile: `(claim)/contact.tsx` (direction-fixed relationship question; `saveClaimDraft({ lastStep: 'contact' })`), `CLAIM_STEPS`, `nominee-review.tsx`'s next route, `claim-steps.test.ts`, the `(claim)/index.tsx` resume fix.
-  - [ ] Test helpers: **both** `seedNomineeNameCheck`s — `packages/domain/tests/integration/_helpers.ts` and `apps/api/tests/integration/_nominee-name-check-fixture.ts` — seed the contact record by default (effective versions when effective, else projected; `contact: 'skip'` opt-out; the API twin's `skip: true` stays a no-op) (AC11a).
-- [ ] **Task 3 — `-257` (N1)** (AC13) — (a) `NOMINEE_RELATIONSHIP_CODES` + the domain mirror to twenty; the *"Still OPEN"* note DISCHARGED; the stale "fifteen"/five-value comments fixed (`declaration.ts` doc list, `relationship.ts` header, `NomineeForm.tsx`, `(claim)/nominee-review.tsx`, `packages/domain/src/nominee/index.ts`, `member_nominees.ts:62`). (b) The derived claimant-to-nominee enum (`ClaimantNomineeRelationship` / `CLAIMANT_NOMINEE_RELATIONSHIP_CODES`, AC13) + the equality test; `KNOWN_RELATIONSHIPS` re-pointed at it, and `nominee-history-copy.test.ts`'s source-text pin on that line rewritten to the new export (still asserting the value excludes `other`); the correction picker (`app/(life-events)/nominee-correction.tsx`) still offers twenty minus `other`. (c) The picker + **en + hi** copy for the five new values — reviewed kin terms that cover the English: e.g. `brother_in_law` — जीजा / देवर / जेठ / साला / नंदोई / साढ़ू; `son_in_law` — दामाद; `mother_in_law` — सास; `father_in_law` — ससुर; `grandparent` — दादा / दादी / नाना / नानी. (d) Every site: `NomineeForm.tsx`, `nominee-history-copy.test.ts` (the "FIFTEEN" test → twenty; extend the Hindi-coverage test to `brother_in_law` and `grandparent`), `NomineeDeclarationPanel.tsx` + its `i18n-en.ts` + test, `nominee-relationship-lockstep.test.ts`, `nominee-correction.spec.ts`, `nominee-lock.spec.ts` (its "fifteen-value" title), `common.json` ×2, `openapi/v1.yaml`. ⭐ After Task 0 like every code task, and before Tasks 1–2 (Task 2's relationship picker consumes it); it needs ⛔ no author decision.
-- [ ] **Task 4 — Tests** (AC9a, AC11a) — **execute** on `twt-test-pg :5433`; record the RTBF gap in `deferred-work.md`.
-- [ ] **Task 5 — Friction budget** — one named-payer row for the `contact` step (addresses, maybe a claimant's details, the agreement) — `friction-budget.md` / `friction-budget.yaml`, best-ever ratchet ([[project_friction_budget_baseline_ratchet]]) — the gate computes its own baseline from committed history, so ⛔ no
+    ⚠ **⛔ NOT STARTED — recorded, left unticked at BigDev's direction (2026-09-28: *"Record as not started"*).** Only BigDev can submit on the TRAI DLT portal, and the wording is 6.19b's/6.19d's. `-265` §4; request sheet `docs/launch-gate-inventory/dlt-template-requests-6-19.md`.
+- [x] **Task 1 — Migrations from 0124** (AC1) — the contact table (one row per claim; `claimant_nominee_version_id` nullable; the claimant's Tier-1 fields; `agreement_consent_id` NOT NULL FK → `consent_records`; `contact_locale`; `recorded_by_actor`, `recorded_via`) + its per-nominee child (`nominee_version_id` FK → `member_nominee_versions`, **UNIQUE `(contact_id, nominee_version_id)`**, the Tier-1 address, the claimant-to-nominee `relationship` text, nullable); RLS hand-supplement (`ENABLE` → `GRANT`/`POLICY` → `FORCE`), own policy file (model `claim-nominee-bank-rls.ts`); `ADD VALUE IF NOT EXISTS 'claim_contact_agreement'` to `consent_type` in its **own** file; journal entry each; ⛔ never regenerate an applied migration; the migration-level policy spec.
+- [x] **Task 2 — Capture at filing** (AC1, AC8a, AC9a, AC10)
+  - [x] Consent type (D15): `consentTypeEnum` + contracts `ConsentTypeSchema` (the lockstep in `packages/contracts/tests/consent.test.ts` pins them equal) — ⚠ the SAME file also pins `ConsentTypeSchema.options` by an **exact** list (*"consent_type declares the seven AC1 values + …"*): append `claim_contact_agreement` there with a one-line comment, as 6.9 and 11b.1 did; ⛔ not `DpdpaConsentType` (its `Record`-total `DPDPA_CONSENT_COPY` and the DPDPA GET view's `ALL_TYPES` would change a shipped surface); ⛔ not `CLAIM_TIME_CONSENT_TYPES` (pinned by exact `toEqual`; it derives the `claim.dpdpa_consent_recorded` payload). Its own versioned copy constant + `claim.json` en + hi keys + a byte-identical lockstep test (the `dpdpa-consent-copy` precedent), marked *"pending Story 0.13"*.
+  - [x] Contracts (⛔ no `@twt/domain` import): the **two** request shapes (AC1) — member (full: `locale`, `claimantNomineeRank`, `agreed: true`) and helpline (partial: `locale`, rows by `nomineeVersionId`, `agreed: true` alone allowed) — `MobileNumber` and the address validator INPUT-only; the claimant-to-nominee enum (Task 3b); the two admin read DTOs (presence-only; plaintext) with plain bounded strings (responses are parsed — the decrypt-failed sentinel must parse). Re-emit `openapi/v1.yaml`.
+  - [x] Domain: `getProjectedNomineeVersions` (W1 — the version each `member_nominees` row was last written from; ⛔ never max `version_no`); the correction-chain resolver (W4a: walk `corrects_version_id`, nearest row wins), shared by D14 and the admin read; the writer under the claim lock, implementing **W1–W9** exactly (member → projected versions; helpline → explicit allowed `nomineeVersionId`; upsert-only rows; add-only in the extra states with identical values ⛔ not overwrites; the claimant-side fills (a)/(b) and the parent CHECK's two sides cleared in one statement; `awaiting_determination`; the creating write's `agreement_required` / `nominee_set_mismatch` / `claimant_required` / `address_required`; the agreement repointing incl. a revoked agreement; `locale` and provenance); the window tuples; `assertClaimContactRecorded` (reads the effective declaration itself; rows by effective `versionId`; the pinned reason precedence) + `ClaimContactRequiredError`, called **after** `assertClaimApprovable` at P1/P3/P4 (⛔ not inside it, ⛔ not inside `isReturnedClaimResubmitted`'s inner helper).
+  - [x] API: `claim-contact-crypto.ts` + `CLAIM_CONTACT_FIELD_CLASS`; member + helpline routes + the two admin reads (presence-only under `claim.view_nominee_name_check`; plaintext under `claim.file`) (new route file(s) classified in `scripts/claim-adjudication-human-actor-invariant/check.ts`); the three error mappers; the audit unit (W10: one `withCompensatingAudit` intent line + `emitAuthAudit` events; the consent's `audit_id` = the intent `auditId`).
+  - [x] Admin: the helpline card; the three console screens' `…claim_contact_required` message (`nominee-errors.ts`).
+  - [x] Mobile: `(claim)/contact.tsx` (direction-fixed relationship question; `saveClaimDraft({ lastStep: 'contact' })`), `CLAIM_STEPS`, `nominee-review.tsx`'s next route, `claim-steps.test.ts`, the `(claim)/index.tsx` resume fix.
+  - [x] Test helpers: **both** `seedNomineeNameCheck`s — `packages/domain/tests/integration/_helpers.ts` and `apps/api/tests/integration/_nominee-name-check-fixture.ts` — seed the contact record by default (effective versions when effective, else projected; `contact: 'skip'` opt-out; the API twin's `skip: true` stays a no-op) (AC11a).
+- [x] **Task 3 — `-257` (N1)** (AC13) — (a) `NOMINEE_RELATIONSHIP_CODES` + the domain mirror to twenty; the *"Still OPEN"* note DISCHARGED; the stale "fifteen"/five-value comments fixed (`declaration.ts` doc list, `relationship.ts` header, `NomineeForm.tsx`, `(claim)/nominee-review.tsx`, `packages/domain/src/nominee/index.ts`, `member_nominees.ts:62`). (b) The derived claimant-to-nominee enum (`ClaimantNomineeRelationship` / `CLAIMANT_NOMINEE_RELATIONSHIP_CODES`, AC13) + the equality test; `KNOWN_RELATIONSHIPS` re-pointed at it, and `nominee-history-copy.test.ts`'s source-text pin on that line rewritten to the new export (still asserting the value excludes `other`); the correction picker (`app/(life-events)/nominee-correction.tsx`) still offers twenty minus `other`. (c) The picker + **en + hi** copy for the five new values — reviewed kin terms that cover the English: e.g. `brother_in_law` — जीजा / देवर / जेठ / साला / नंदोई / साढ़ू; `son_in_law` — दामाद; `mother_in_law` — सास; `father_in_law` — ससुर; `grandparent` — दादा / दादी / नाना / नानी. (d) Every site: `NomineeForm.tsx`, `nominee-history-copy.test.ts` (the "FIFTEEN" test → twenty; extend the Hindi-coverage test to `brother_in_law` and `grandparent`), `NomineeDeclarationPanel.tsx` + its `i18n-en.ts` + test, `nominee-relationship-lockstep.test.ts`, `nominee-correction.spec.ts`, `nominee-lock.spec.ts` (its "fifteen-value" title), `common.json` ×2, `openapi/v1.yaml`. ⭐ After Task 0 like every code task, and before Tasks 1–2 (Task 2's relationship picker consumes it); it needs ⛔ no author decision.
+- [x] **Task 4 — Tests** (AC9a, AC11a) — **execute** on `twt-test-pg :5433`; record the RTBF gap in `deferred-work.md`.
+- [x] **Task 5 — Friction budget** — one named-payer row for the `contact` step (addresses, maybe a claimant's details, the agreement) — `friction-budget.md` / `friction-budget.yaml`, best-ever ratchet ([[project_friction_budget_baseline_ratchet]]) — the gate computes its own baseline from committed history, so ⛔ no
 number is carried here; done = `pnpm friction:test && pnpm friction:check` green (the `friction-budget` step of `scripts/ci-local.sh`).
 
 **AC ↔ Task map:** AC0 → T0 · AC1 → T1, T2 · AC8a → T2 · AC9a → T2, T4 · AC10 → T2 · AC11a → T4 · AC13 → T3 · T5 → the friction gate (no AC; the budget gate is its own check).
@@ -390,11 +391,188 @@ precedent is `seedNomineeNameCheck`'s `certificate` / `determination` defaults. 
 
 ### Agent Model Used
 
+Claude Opus 5.5 (`claude-opus-5-5`) — `/bmad-dev-story 6.19a`, 2026-09-28. Branch `story/6-19a-claim-contact-capture`.
+
 ### Debug Log References
+
+- ⚠ **Shared test-DB pollution, ⛔ not this story.** The first full domain run failed `reconciliation/review-queue-read.spec.ts`
+  (4–7 tests: a 500-event window over the fixed `PARIWAR_A`); a `git stash -u` baseline failed identically ⇒ the
+  known accumulation class ([[project_known_livedb_test_failures]]). The `twt-test-pg` container was recreated
+  (`postgres:16`, the image it had) and migrated fresh before the final regression run.
+- `verifier-console-shape.spec.ts` failed once: the API fixture seeded a contact record BEFORE the deceased had a
+  declaration, then seeded the declaration + determination later, leaving the effective nominee with ⛔ no address.
+  Fixed in BOTH seed helpers: a record the fixture itself wrote is TOPPED UP for newly bound versions (a spec's own
+  record is ⛔ never touched).
+- **Red-capability proven by mutation** (then reverted): cutting the correction-chain walk to the own row failed 3
+  domain tests; disabling W5's decrypted comparison failed 1.
 
 ### Completion Notes List
 
+**Task 0 — governance (committed FIRST, `52da8651`, before any code).** Decision **`2026-09-28-265`** (author-commit):
+D1–D29 with their statuses (D13 decided; D5/D14/D15/D16 as revised 2026-09-28; D23 confirmed by `-260` G3; D27's keep
+ratified by `-260` G2; D29 in its `-260` G1 form) and the eight keys with their minting slice (catalog read LIVE: 48 / 56
+/ 13). `epics.md` 6.19a–d with Minted-by headers (Epic 6's stale "16 stories" / FRs / AR-61 list recorded, ⛔ not fixed);
+`-257`'s three annotations (Story 3.4, FR-4, Story 6.20 item 7); PRD §4.10 + architecture §3.4 annotated for `-255` F7 and
+`-259`. AR-61 ledger rows 9–19 (the `loop_node_id` extension's `[GOV]` record is `-265` §3). Launch-gate rows 18 (M, incl.
+"a condition of approval") and 19 (S). Siblings swept: 6.19b (D1–D29, eight keys, D14 in the letter writer, key (1) for
+the address), 6.19c (`closure.claim_contact_required`, D29's G1 form, D14 in the three new approval writers).
+⚠ **The DLT template registration is ⛔ NOT STARTED** — BigDev in session: *"Record as not started."* Only BigDev can
+submit it; the wording is 6.19b's/6.19d's. Recorded in `-265` §4, a request sheet
+(`docs/launch-gate-inventory/dlt-template-requests-6-19.md`) and `deferred-work.md`. ⇒ **Task 0 stays unticked on that
+one subtask** — it gates 6.19b's/6.19d's real sends, ⛔ never a build.
+
+**Task 3 — `-257` (N1).** The twenty codes in contracts + the domain mirror; `ClaimantNomineeRelationship =
+NomineeRelationship.exclude(['other'])` + `CLAIMANT_NOMINEE_RELATIONSHIP_CODES` (equality test); `KNOWN_RELATIONSHIPS`
+AND the admin raise picker re-pointed at it (⛔ no third copy); en + hi labels; every stale "fifteen"/five-value comment;
+the "Still OPEN" note marked DISCHARGED. ⛔ `ClaimantRelationship` and its comment untouched.
+
+**Task 1 — migrations 0124 (the consent value, its own file) + 0125 (`claim_contacts`, `claim_contact_nominees`).** RLS
++ FORCE, per-command policies (⛔ no DELETE, ⛔ no `FOR ALL`), the one-claimant-side CHECK, UNIQUE
+`(contact_id, nominee_version_id)`, one record per claim, FKs incl. `agreement_consent_id`. 28-test policy spec.
+
+**Task 2 — capture.** Domain: `getProjectedNomineeVersions` (W1), `claim-contact-check.ts` (the chain resolver W4a, the
+pure D14 evaluation, `assertClaimContactRecorded` — a leaf the approval writers import), `claim-contact-persist.ts`
+(the W1–W9 writer — validate EVERYTHING, then write, so a refusal leaves nothing; the windows spread from the two tuples;
+the admin presence read). D14 runs after an UNCHANGED `assertClaimApprovable` at P1/P3/P4, approve-only; the three
+mappers answer `<route>.claim_contact_required`. API: `CLAIM_CONTACT_FIELD_CLASS`, `claim-contact-crypto.ts`, the
+versioned agreement copy (*"pending Story 0.13"*), the member route (in `claims.routes.ts`), `claims.contact.routes.ts`
+(helpline write under `claim.file` + step-up; presence under `claim.view_nominee_name_check` at the deceased's district;
+plaintext under `claim.file`) enrolled in the human-actor gate (floor 10 → 11). Admin: `<HelplineClaimContact>` (presence,
+on-demand audited read-back, the form, the agreement read aloud in hi + en from `claim.json`) and the three consoles'
+message. Mobile: the `contact` step (7 steps), `nominee-review` → `contact`, the resume fix (a `switch` with a `never`
+default — every step now resumes at `nextClaimStep`). Both seed helpers seed the record by default (`contact: 'skip'`).
+
+**Decisions and deviations worth reading (each within the story's rules):**
+1. `packages/api-client/src/index.ts` gained `recordClaimContact` — ⛔ not in the story's Files list, but it is the member
+   app's only transport to the new route.
+2. The member route has ⛔ no step-up (the DPDPA consent precedent; AC1 names only the member session). ⛔ No member READ
+   of the record exists.
+3. The member's record is FULL: a rank's relationship absent means none — a member re-POST that names the claimant as a
+   nominee clears the relationships on the rows it carries.
+4. The presence view's `missing` evaluates D14 against the ALLOWED versions — the projected ones while undetermined (a
+   preview), the effective ones once determined. `assertClaimContactRecorded` itself, over a ⛔ not-effective declaration,
+   reports `nominee_address_missing` (⛔ never a vacuous pass; unreachable at P1/P3/P4, where `assertClaimApprovable` runs
+   first).
+5. The helpline card picks its claim from the member's live-claims list the 6.21b card already reads
+   (`useDeathCertificateClaimsForMember`) — the same pick pattern, ⛔ no new endpoint.
+6. ⚠ **The Hindi copy is agent-authored and ⛔ not reviewed by a Hindi reviewer**: the `contact.*` keys, the agreement
+   (whose final text is counsel's M anyway), and the five kin terms (taken from Task 3's own list). Parity and microcopy
+   gates are green; a human review is owed before go-live.
+7. ⚠ AC9a asks for the RTBF gap in "Dev Notes and `deferred-work.md`". This workflow may ⛔ not edit Dev Notes, so it is
+   recorded HERE and in `deferred-work.md` (2026-09-28 section).
+8. ⚠ AC9a's "no log" leg: the test server's logger is OFF (`nodeEnv === 'test'`), so a runtime log assertion would be
+   vacuous — the one log call on these routes is pinned by source instead (recorded in `deferred-work.md`).
+9. `openapi/v1.yaml` moved by 5 lines only — the emitter registers a fixed component set that never included the claims
+   routes; the relationship enum is the one emitted change. Determinism gate green.
+
+**Tests (executed on `twt-test-pg :5433`).** New: domain `claim-contact.spec.ts` (24), `rls/claim-contact-policy-regression.spec.ts`
+(28); API `claims/claim-contact.spec.ts` (11 — the member/helpline routes, every refusal code, W10's audit unit, the real
+envelope round-trip, the AC9a sentinels, cross-Pariwar, 401s), P1/P3/P4 `…claim_contact_required` in the three approval
+specs; contracts `claim-contact.test.ts` (15); API unit `claim-contact-copy.test.ts` (3); admin
+`helpline-claim-contact.test.tsx` (8); mobile `claim-contact.test.ts` (12). Updated pins: consent exact list, lockstep
+twenty, nominee-history-copy (twenty + the new `KNOWN_RELATIONSHIPS` pin on the value), claim-steps (seven + the resume
+switch), nominee-review announcements (→ `contact`), nominee-lock and nominee-correction specs (a `-257` code).
+
+**Full regression — `pnpm ci:local` on a freshly recreated `twt-test-pg`, exit 0, every step ✓** (lint, typecheck, build,
+unit, integration, and every gate: contracts-determinism, crypto, db, i18n-parity, pii-scrape, friction-budget, schema-diff,
+benefit-mechanism, microcopy, domain-accessor, member-state, claim-state, claim-canonical-id, claim-adjudication-human-actor,
+access-wrapper, kyc-provider, pool-*, alert-state, sahyog-vivran, governance-boundary, helpdesk-state, custom-field,
+survey-advisory, determinism). Counts with the DB: domain 3873 (+1 skipped), api 1456 (+1 skipped), contracts 1221,
+admin 656, mobile 656, jobs 383, public 688. The run's 20 `resourceLocator` guard warnings are all pre-existing event
+types (`login.success`, `member_drive_detail.coordinates_viewed`) — ⛔ none from this story's events.
+⚠ The friction gate's declaration facet diffs COMMITTED history, so its pre-commit "no member-facing surface touched" is
+re-run after the implementation commit.
+
 ### File List
+
+**Governance commit `52da8651` (Task 0):** `.decision-log.md`, `_bmad-output/implementation-artifacts/6-19b-correction-reminders-and-posted-letters.md`, `_bmad-output/implementation-artifacts/6-19c-correction-closure-super-admin-review-and-refile.md`, `_bmad-output/planning-artifacts/architecture.md`, `_bmad-output/planning-artifacts/epics.md`, `_bmad-output/planning-artifacts/prds/prd-TWT-2026-05-22/prd.md`, `docs/fallback-handler-ledger/ledger.md`, `docs/launch-gate-inventory/dlt-template-requests-6-19.md`, `docs/launch-gate-inventory/inventory-roster.md`
+
+**New:**
+- `apps/admin/src/modules/helpline-claims/HelplineClaimContact.tsx`
+- `apps/admin/tests/helpline-claim-contact.test.tsx`
+- `apps/api/src/modules/claims/claim-contact-copy.ts`
+- `apps/api/src/modules/claims/claim-contact-crypto.ts`
+- `apps/api/src/modules/claims/claims.contact.handlers.ts`
+- `apps/api/src/modules/claims/claims.contact.routes.ts`
+- `apps/api/tests/integration/claims/claim-contact.spec.ts`
+- `apps/api/tests/unit/claim-contact-copy.test.ts`
+- `apps/mobile/app/(claim)/contact.tsx`
+- `apps/mobile/lib/claim-contact.ts`
+- `apps/mobile/tests/unit/claim-contact.test.ts`
+- `packages/contracts/src/claims/contact.ts`
+- `packages/contracts/tests/claim-contact.test.ts`
+- `packages/domain/migrations/0124_consent-type-claim-contact-agreement.sql`
+- `packages/domain/migrations/0125_claim-contact.sql`
+- `packages/domain/src/claim/claim-contact-check.ts`
+- `packages/domain/src/claim/claim-contact-persist.ts`
+- `packages/domain/src/policies/claim-contact-rls.ts`
+- `packages/domain/src/schema/claim_contacts.ts`
+- `packages/domain/tests/integration/claim/claim-contact.spec.ts`
+- `packages/domain/tests/integration/rls/claim-contact-policy-regression.spec.ts`
+
+**Modified:**
+- `_bmad-output/implementation-artifacts/6-19a-claim-contact-capture-at-filing.md`
+- `_bmad-output/implementation-artifacts/deferred-work.md`
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`
+- `apps/admin/src/api/client.ts`
+- `apps/admin/src/api/hooks.ts`
+- `apps/admin/src/modules/claim-verification/NomineeDeclarationPanel.tsx`
+- `apps/admin/src/modules/claim-verification/i18n-en.ts`
+- `apps/admin/src/modules/claim-verification/nominee-errors.ts`
+- `apps/admin/src/modules/cycle-freeze/CycleFreezePage.tsx`
+- `apps/admin/src/modules/helpline-claims/HelplineClaimPage.tsx`
+- `apps/admin/src/modules/helpline-claims/i18n-en.ts`
+- `apps/admin/src/modules/r9-voting/R9CasePanel.tsx`
+- `apps/admin/src/routes/VerifierConsoleRoute.tsx`
+- `apps/admin/tests/nominee-declaration-panel.test.tsx`
+- `apps/api/src/audit/audit-sink.ts`
+- `apps/api/src/context.ts`
+- `apps/api/src/modules/claims/claims.cycle-freeze.handlers.ts`
+- `apps/api/src/modules/claims/claims.r9-voting.handlers.ts`
+- `apps/api/src/modules/claims/claims.routes.ts`
+- `apps/api/src/modules/claims/claims.verification-decision.handlers.ts`
+- `apps/api/src/modules/claims/index.ts`
+- `apps/api/tests/integration/_nominee-name-check-fixture.ts`
+- `apps/api/tests/integration/claims/cycle-freeze.spec.ts`
+- `apps/api/tests/integration/claims/r9-voting.spec.ts`
+- `apps/api/tests/integration/claims/verifier-decision.spec.ts`
+- `apps/api/tests/integration/nominee/nominee-lock.spec.ts`
+- `apps/mobile/app/(claim)/index.tsx`
+- `apps/mobile/app/(claim)/nominee-review.tsx`
+- `apps/mobile/components/life-events/NomineeForm.tsx`
+- `apps/mobile/lib/claim-steps.ts`
+- `apps/mobile/tests/unit/claim-steps.test.ts`
+- `apps/mobile/tests/unit/nominee-history-copy.test.ts`
+- `apps/mobile/tests/unit/nominee-review-announcements.test.ts`
+- `friction-budget.md`
+- `openapi/v1.yaml`
+- `packages/api-client/src/index.ts`
+- `packages/contracts/src/claims/index.ts`
+- `packages/contracts/src/consent/consent-record.ts`
+- `packages/contracts/src/nominee/declaration.ts`
+- `packages/contracts/tests/consent.test.ts`
+- `packages/contracts/tests/nominee-relationship-lockstep.test.ts`
+- `packages/domain/migrations/meta/_journal.json`
+- `packages/domain/src/claim/errors.ts`
+- `packages/domain/src/claim/index.ts`
+- `packages/domain/src/claim/r9-voting-persist.ts`
+- `packages/domain/src/claim/state-trustee-decision-persist.ts`
+- `packages/domain/src/claim/verifier-decision-persist.ts`
+- `packages/domain/src/nominee/declaration-history.ts`
+- `packages/domain/src/nominee/index.ts`
+- `packages/domain/src/nominee/relationship.ts`
+- `packages/domain/src/policies/index.ts`
+- `packages/domain/src/rbac/permissions.ts`
+- `packages/domain/src/schema/consent_records.ts`
+- `packages/domain/src/schema/index.ts`
+- `packages/domain/src/schema/member_nominees.ts`
+- `packages/domain/tests/integration/_helpers.ts`
+- `packages/domain/tests/integration/claim/nominee-correction.spec.ts`
+- `packages/i18n/locales/en/claim.json`
+- `packages/i18n/locales/en/common.json`
+- `packages/i18n/locales/hi/claim.json`
+- `packages/i18n/locales/hi/common.json`
+- `scripts/claim-adjudication-human-actor-invariant/check.ts`
 
 ## Change Log
 
@@ -410,3 +588,4 @@ precedent is `seedNomineeNameCheck`'s `certificate` / `determination` defaults. 
 | v1.7 | 2026-09-28 | **External review findings (10), checked against the file — 4 real, 4 partly right, 2 ⛔ not holding; all applied at BigDev's direction.** ⭐ Real: (#4) a 6.20 correction can supersede the determination inside the extra states, leaving the effective set empty, so v1.6's narrowed claimant exception would fire for EVERY stored version ⇒ **409 `claim_contact.awaiting_determination`** there; (#3) a revoked agreement had ⛔ no way out in the extra states ⇒ a revoked agreement counts as missing and `agreed` fills it in any window; (#7) the audit unit defined (one contact line, plus one agreement line when a consent is recorded); (#10) Task 3 follows Task 0 like every code task. Partly right: (#1/#8, ⛔ not critical) the author-commit's id is "the next free id, read live" and Read-first lists `-263` and says `-262`/`-264` do ⛔ not touch the slice; (#5) the approval check selects rows by effective `versionId`, ⛔ never a count; (#9) done = `pnpm friction:test && pnpm friction:check`. ⛔ Not holding, clarified in one line each: (#2) the writer, ⛔ not the contract, enforces the nominee count; (#6) the 400/409 partition stated. |
 | v1.8 | 2026-09-28 | **Fresh-context validate (15 findings — 1 critical, 4 high, 5 medium, 5 low; the top five re-verified in code; all applied at BigDev's direction).** ⭐ (1) "⛔ not effective" was read as "a different person", but a member declare or a 6.20 correction re-versions the SAME person — with `claimantNomineeVersionId` barred in the extra states, a re-versioned claimant (or a claim denied at P1, then reversed on appeal, with ⛔ no contact record) could ⛔ never satisfy D14 ⇒ W6's claimant-side fills. (2) A creating helpline write with ⛔ no claimant side hit the parent CHECK (500) ⇒ `claimant_required`. (3) `agreed` alone was a contract 400, so a revoked agreement had ⛔ no way out ⇒ allowed. (4) "Head version" was max `version_no`, which a correction of an older version takes while the member's list does ⛔ not move ⇒ the **projected** version (`getProjectedNomineeVersions`). (5) The API twin of `seedNomineeNameCheck` (ten specs) named; binding keyed on the effective status. Medium: the exact-list consent pin (6); the `KNOWN_RELATIONSHIPS` source-text pin + the named export + two more stale "fifteen" comments (7); `locale` on both shapes, INPUT-only validators, read DTOs that parse the sentinel (8); the audit unit restated as one intent line + `emitAuthAudit` events (9); the reused read key's reuse-check — presence-only under it, plaintext under `claim.file` (10). Low: Task 0 sweeps the stale siblings (11); rows 6-23/6-24 added to the sequencing note (12); the 400/409 partition and a pinned reason precedence (13); an identical retry is ⛔ not an overwrite (14); six shared-spec glyph inversions fixed (15). AC1's write rules restructured as **W1–W10** (the one copy; the shared spec's D5 points here) and AC11a as a structured test list. Also fixed on the way: the trap *"⛔ Do not call the effective read in the capture path"* contradicted W2/W6, which read it. |
 | v1.9 | 2026-09-28 | **Re-validation of v1.8 (all 4 applied at BigDev's direction).** ⭐ (1) After filing the declaration is locked, so a 6.20 correction is the only re-versioning — and it orphaned the address row and the claimant link, so P3 refused `nominee_address_missing` after every correction (and AC11a (b) expected the wrong reason under the pinned precedence) ⇒ **W4a, the correction chain**: a row or claimant link bound to V counts for any version correcting V, nearest wins; AC11a (b) now passes with ⛔ no helpline action; W6 (b) kept as an operator path with its reason corrected. (2) A family with ⛔ no declared nominee reaches the contact step (the bank form continues past `nominee-review`'s empty state) and the member body required ≥ 1 rank ⇒ 0–2 ranks, the claimant block then required. (3) W5's identical-value check decrypts the stored value — stated, limited to carried fields in the extra states. (4) `contact_locale` follows every write inside the member's window. |
+| v2.0 | 2026-09-28 | **Developed (`/bmad-dev-story`).** Task 0's author-commit `2026-09-28-265` committed FIRST (`52da8651`); Tasks 1–5 built and tested on `:5433`. ⚠ Task 0's DLT-registration subtask stays unticked — ⛔ not started, at BigDev's direction (`-265` §4). Status `in-progress` → `review`. |

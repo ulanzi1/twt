@@ -771,6 +771,48 @@ export function useNomineeBankStatusHelpline(pariwarId: string, claimCaseId: str
   });
 }
 
+// ── Story 6.19a — the claim CONTACT RECORD ──────────────────────────────────────────────────────────────
+export const claimContactPresenceKey = (pariwarId: string, claimCaseId: string) =>
+  ['claim-contact-presence', pariwarId, claimCaseId] as const;
+export const claimContactDetailsKey = (pariwarId: string, claimCaseId: string) =>
+  ['claim-contact-details', pariwarId, claimCaseId] as const;
+
+/** The PRESENCE-only read — ⛔ no value, so it may refetch; it is audited (one line per read). */
+export function useClaimContactPresence(pariwarId: string, claimCaseId: string | null) {
+  return useQuery({
+    queryKey: claimContactPresenceKey(pariwarId, claimCaseId ?? ''),
+    queryFn: () => api.getClaimContactPresence(pariwarId, claimCaseId as string),
+    enabled: Boolean(claimCaseId),
+    refetchOnWindowFocus: false,
+  });
+}
+
+/** The PLAINTEXT read-back — DECRYPTED and audited per read, so it runs ONLY when the operator asks
+ *  (`enabled`), ⛔ never on a background refetch. */
+export function useClaimContactDetails(pariwarId: string, claimCaseId: string | null, enabled: boolean) {
+  return useQuery({
+    queryKey: claimContactDetailsKey(pariwarId, claimCaseId ?? ''),
+    queryFn: () => api.getClaimContactDetails(pariwarId, claimCaseId as string),
+    enabled: Boolean(claimCaseId) && enabled,
+    refetchOnWindowFocus: false,
+    staleTime: Infinity,
+  });
+}
+
+/** The helpline's contact write. A success refreshes the presence read (the response carries it too) and
+ *  drops any cached plaintext read-back, which is now stale. */
+export function useRecordHelplineClaimContact(pariwarId: string, claimCaseId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: Parameters<typeof api.recordHelplineClaimContact>[2]) =>
+      api.recordHelplineClaimContact(pariwarId, claimCaseId as string, body),
+    onSuccess: (res) => {
+      qc.setQueryData(claimContactPresenceKey(pariwarId, claimCaseId ?? ''), res.presence);
+      qc.removeQueries({ queryKey: claimContactDetailsKey(pariwarId, claimCaseId ?? '') });
+    },
+  });
+}
+
 export const claimsUnderCorrectionKey = (pariwarId: string) =>
   ['claims-under-correction', pariwarId] as const;
 

@@ -455,7 +455,7 @@ describe.skipIf(!hasDatabase)('Story 6.20 — nominee history, the lock at the f
     }
   });
 
-  it('AC12 — a retired five-value code (`child`) is refused; a ratified fifteen-value code (`niece_nephew`) is accepted', async () => {
+  it('AC12 — a retired five-value code (`child`) is refused; a ratified code (`niece_nephew`) and a `-257` code (`grandparent`, Story 6.19a AC13) are accepted', async () => {
     const t = await createTestApp();
     try {
       const { memberId, pariwarId } = await seedMember(t, 'pending-fee');
@@ -475,6 +475,12 @@ describe.skipIf(!hasDatabase)('Story 6.20 — nominee history, the lock at the f
       });
       expect(good.status).toBe(200);
       expect((good.body.nominees as Json[])[0]).toMatchObject({ relationship: 'niece_nephew' });
+      const added = await inject(t, 'POST', SIGNUP_ROUTE, {
+        payload: { nominees: [{ name: 'Asha Devi', relationship: 'grandparent', mobile: '9876543210' }] },
+        token: tok,
+      });
+      expect(added.status).toBe(200);
+      expect((added.body.nominees as Json[])[0]).toMatchObject({ relationship: 'grandparent' });
     } finally {
       await teardown(t);
     }

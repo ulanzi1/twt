@@ -183,6 +183,10 @@ export * from './claim_documents.js';
 // most one live per claim; one-way supersession). Both append-only, tenant-isolated.
 export * from './claim_death_certificate_uploads.js';
 export * from './claim_death_certificate_reviews.js';
+// Story 6.19a — the claim's CONTACT RECORD: `claim_contacts` (one per claim — the claimant side and the filer's
+// per-claim agreement, D15) + `claim_contact_nominees` (one per nominee VERSION — the Tier-1 postal address and
+// the claimant-to-nominee relationship, D5 / D16). Tenant-isolated; SELECT / INSERT / UPDATE, ⛔ no DELETE.
+export * from './claim_contacts.js';
 // Story 6.6 — peer-mesh deterministic 5-nearest selection: `claim_peer_mesh_selections`
 // (ONE row per claim — the audit-replay source: candidate snapshot + ordered output +
 // metric identity; immutable selection, mutable outcome/window) + `claim_peer_mesh_pings`

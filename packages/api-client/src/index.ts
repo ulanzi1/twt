@@ -152,6 +152,9 @@ import {
   DpdpaConsentStatusResponse,
   RevokeDpdpaConsentResponse,
   type RecordDpdpaConsentRequest,
+  type RecordMemberClaimContactRequest,
+  RecordMemberClaimContactResponse,
+  type RecordMemberClaimContactResponse as RecordMemberClaimContactResult,
   type RevokeDpdpaConsentRequest,
   type RecordDpdpaConsentResponse as RecordDpdpaConsentResult,
   type DpdpaConsentStatusResponse as DpdpaConsentStatusResult,
@@ -1076,6 +1079,24 @@ export function createMemberClaimClient(opts: MemberAuthClientOptions) {
         undefined,
         true,
         'GET',
+      );
+    },
+
+    /**
+     * Record the claim's CONTACT RECORD (Story 6.19a, AC1; session; auth): an address for each nominee the
+     * family sees (by RANK — the family never sees a version id), who the claimant is, and the agreement to be
+     * contacted. ⛔ No step-up (⛔ not a financial action — the DPDPA consent posture). The response echoes
+     * ⛔ no value. ⛔ Nothing here is ever cached on the device (the draft stays PII-free).
+     */
+    recordClaimContact(
+      claimCaseId: string,
+      input: RecordMemberClaimContactRequest,
+    ): Promise<RecordMemberClaimContactResult> {
+      return call(
+        `${CLAIMS_BASE}/${encodeURIComponent(claimCaseId)}/contact`,
+        RecordMemberClaimContactResponse,
+        input,
+        true,
       );
     },
 

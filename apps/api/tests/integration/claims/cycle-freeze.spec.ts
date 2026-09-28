@@ -130,7 +130,7 @@ describe.skipIf(!hasDatabase)('State-Trustee cycle-freeze surface — E2E (:5433
    */
   async function seedApprovedClaim(
     pariwarId: string,
-    opts: { nameCheck?: 'passing' | 'accountsOnly' | 'singleAccount' | 'doesNotMatch' | 'none' } = {},
+    opts: { nameCheck?: 'passing' | 'accountsOnly' | 'singleAccount' | 'doesNotMatch' | 'none' | 'noContact' } = {},
   ): Promise<{ claimCaseId: string; deceasedMemberId: string }> {
     const claimCaseId = ids.claimId(randomUUID());
     const deceasedMemberId = ids.memberId(randomUUID());
@@ -163,6 +163,8 @@ describe.skipIf(!hasDatabase)('State-Trustee cycle-freeze surface — E2E (:5433
       ...(variant === 'accountsOnly' ? { accountsOnly: true } : {}),
       ...(variant === 'singleAccount' ? { singleAccount: true } : {}),
       ...(variant === 'doesNotMatch' ? { verdicts: ['matches', 'does_not_match'] as const } : {}),
+      // Story 6.19a — a passing check, and ⛔ no contact record: D14 is the ONE blocker left.
+      ...(variant === 'noContact' ? { contact: 'skip' as const } : {}),
     });
     return { claimCaseId: String(claimCaseId), deceasedMemberId: String(deceasedMemberId) };
   }
@@ -669,6 +671,22 @@ describe.skipIf(!hasDatabase)('State-Trustee cycle-freeze surface — E2E (:5433
         'cycle_freeze.nominee_name_check_required',
       );
       // ⛔ AND THE CLAIM DID NOT MOVE. A refused approval must leave no trace of a half-approval.
+      expect(await claimState(claimCaseId)).toBe('verifier_approved');
+    });
+
+    it('⭐ Story 6.19a (D14) — approving a claim with ⛔ no contact record is a 409 `cycle_freeze.claim_contact_required`, and the claim does ⛔ not move', async () => {
+      const pariwarId = randomUUID();
+      const { claimCaseId } = await seedApprovedClaim(pariwarId, { nameCheck: 'noContact' });
+      const pa = await pariwarAdmin(pariwarId);
+      const res = await pa.client.inject({
+        method: 'POST',
+        url: decisionUrl(pariwarId),
+        payload: { claim_case_id: claimCaseId, action: 'approve' },
+      });
+      expect(res.statusCode, res.body).toBe(409);
+      const body = res.json() as { error: { code: string; details: { reason: string } } };
+      expect(body.error.code).toBe('cycle_freeze.claim_contact_required');
+      expect(body.error.details.reason).toBe('no_record');
       expect(await claimState(claimCaseId)).toBe('verifier_approved');
     });
 

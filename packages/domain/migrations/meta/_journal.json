@@ -869,6 +869,20 @@
       "when": 1791344400000,
       "tag": "0123_death-certificate-upload-parity-verdict",
       "breakpoints": true
+    },
+    {
+      "idx": 124,
+      "version": "7",
+      "when": 1791430800000,
+      "tag": "0124_consent-type-claim-contact-agreement",
+      "breakpoints": true
+    },
+    {
+      "idx": 125,
+      "version": "7",
+      "when": 1791517200000,
+      "tag": "0125_claim-contact",
+      "breakpoints": true
     }
   ]
 }

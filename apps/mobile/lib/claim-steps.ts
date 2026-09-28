@@ -18,6 +18,11 @@
 // hardcodes its OWN next-route literal and the progress math derives M from this list's length,
 // uncommenting `'consent'` here reshuffled NO existing typed-route literals (relationship.tsx now
 // pushes /(claim)/consent and consent.tsx pushes /(claim)/document — the two adjacent screens).
+//
+// ── The claim CONTACT step (Story 6.19a, AC1) ────────────────────────────────────────────────────────────
+// Slots AFTER `nominee-review` (⛔ not inside it — that screen is already the nominee summary AND the dual-account
+// form) and BEFORE `acknowledgement`: nominee-review.tsx now pushes /(claim)/contact and contact.tsx pushes
+// /(claim)/acknowledgement. Seven steps.
 
 export const CLAIM_STEPS = [
   'handover-otp',
@@ -25,6 +30,7 @@ export const CLAIM_STEPS = [
   'consent', // Story 6.9 — claim-time DPDPA consent (three granular opt-ins).
   'document',
   'nominee-review',
+  'contact', // Story 6.19a — each nominee's postal address, the claimant, and the agreement to be contacted.
   'acknowledgement',
 ] as const
 

@@ -84,6 +84,15 @@ function translateR9Error(err: unknown): never {
   // Story 6.20 (AC5, D15) — the SAME approval gate now asks for the District Admin's as-at-death
   // DETERMINATION first. ⛔ Never a denial: the claim WAITS for a human to say which declaration stands.
   // Story 6.21a (D7) — ⛔ NOT a denial: the claim WAITS for an accepted death certificate (`-236` BB).
+  // Story 6.19a (D14) — the claim's CONTACT RECORD, checked AFTER the gate. ⛔ NOT a denial: the claim WAITS, and
+  // the helpline can add what is missing in this state. `details.reason` only — ⛔ never a name or a value.
+  if (err instanceof claim.ClaimContactRequiredError) {
+    throw new ConflictError(
+      'This claim needs the family’s contact details and their agreement to be contacted before it can be approved — it waits until they are added',
+      'r9_voting.claim_contact_required',
+      { reason: err.reason },
+    );
+  }
   if (err instanceof claim.DeathCertificateAcceptanceRequiredError) {
     throw new ConflictError(
       'This claim needs an accepted death certificate with a clear date before it can be approved',

@@ -128,7 +128,7 @@ describe.skipIf(!hasDatabase)('R9 voting surface — E2E (:5433)', () => {
   }
 
   /** Seed a claim driven to verifier_approved + a LIVE routed_to_r9 row (the R9 queue precondition). */
-  async function seedRoutedClaim(pariwarId: string): Promise<string> {
+  async function seedRoutedClaim(pariwarId: string, opts: { contact?: 'seed' | 'skip' } = {}): Promise<string> {
     const claimCaseId = ids.claimId(randomUUID());
     const deceasedMemberId = ids.memberId(randomUUID());
     const scopeTx = await openScopeTx(deps, pariwarId);
@@ -159,7 +159,7 @@ describe.skipIf(!hasDatabase)('R9 voting surface — E2E (:5433)', () => {
     // Story 6.18 (AC4) — approvable only with two bank accounts + a current, PASSING District
     // Admin name check. Seeded through the REAL writer, so these E2E specs keep exercising the
     // production gate rather than bypassing it.
-    await seedNomineeNameCheck(deps, pariwarId, String(claimCaseId));
+    await seedNomineeNameCheck(deps, pariwarId, String(claimCaseId), { contact: opts.contact ?? 'seed' });
     return String(claimCaseId);
   }
 
@@ -266,6 +266,24 @@ describe.skipIf(!hasDatabase)('R9 voting surface — E2E (:5433)', () => {
     const transcriptBody = transcript.json() as { votes: Array<{ clause_id: string }> };
     expect(transcriptBody.votes).toHaveLength(1);
     expect(transcriptBody.votes[0]!.clause_id).toBe(R9_CLAUSE);
+  });
+
+  it('⭐ Story 6.19a (D14) — finalizing an APPROVE with ⛔ no contact record is a 409 `r9_voting.claim_contact_required`; the claim WAITS at verifier_approved', async () => {
+    const pariwarId = randomUUID();
+    await seedR9Clause(pariwarId);
+    const claimCaseId = await seedRoutedClaim(pariwarId, { contact: 'skip' });
+    const a = await pariwarAdmin(pariwarId);
+    const open = await a.client.inject({ method: 'POST', url: openUrl(pariwarId, claimCaseId), payload: { clause_id: R9_CLAUSE, panel_actor_ids: [a.userId] } });
+    expect(open.statusCode).toBe(201);
+    const vote = await a.client.inject({ method: 'POST', url: voteUrl(pariwarId, claimCaseId), payload: { vote: 'approve', rationale: 'Meets R9 standing.' } });
+    expect(vote.statusCode).toBe(201);
+    await elevateFinalize(a.client);
+    const finalize = await a.client.inject({ method: 'POST', url: finalizeUrl(pariwarId, claimCaseId), payload: {} });
+    expect(finalize.statusCode, finalize.body).toBe(409);
+    const body = finalize.json() as { error: { code: string; details: { reason: string } } };
+    expect(body.error.code).toBe('r9_voting.claim_contact_required');
+    expect(body.error.details.reason).toBe('no_record');
+    expect(await claimState(claimCaseId)).toBe('verifier_approved');
   });
 
   it('AC5 — cancel/correct: a live session is superseded (cancelled) and a re-open then succeeds', async () => {

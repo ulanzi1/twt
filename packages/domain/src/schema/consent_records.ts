@@ -164,6 +164,15 @@ export const consentTypeEnum = pgEnum('consent_type', [
   // kept deliberately — it is WHY this value exists, and that is how a reader tells preserved-by-ruling
   // from dead code.
   'sahyog_drive_publication',
+  // Story 6.19a (D15, committed in `2026-09-28-265`) — the FILER's agreement that the people named on a claim's
+  // contact record may be contacted by SMS and by post (`2026-09-27-253` cl.1). Subject = the DECEASED member.
+  // ⭐ PER CLAIM: recorded in the same tx as the claim's `claim_contacts` row, which carries its
+  // `agreement_consent_id` — and read ONLY through that column, ⛔ never by subject (`-261` C3: a refiled claim
+  // for the same death gives it again). ⛔ NOT a `DpdpaConsentType` and ⛔ NOT in `CLAIM_TIME_CONSENT_TYPES`
+  // below (a shipped DPDPA surface; recording it emits ⛔ no `claim.dpdpa_consent_recorded`). ⛔ Not revocable in
+  // v1 — whether it must be, and whether it may be a condition of approval, is counsel's (M). APPENDED at the
+  // END — never reorder. Migration 0124, its OWN file.
+  'claim_contact_agreement',
 ]);
 
 /**

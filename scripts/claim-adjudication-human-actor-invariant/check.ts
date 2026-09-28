@@ -171,6 +171,16 @@ const COVERAGE_SET: readonly CoverageEntry[] = [
     owner: 'Story 6.21a',
     expectedMethods: ['post', 'get', 'get'],
   },
+  {
+    // ⭐ Story 6.19a — the claim CONTACT RECORD's admin routes. THREE: the helpline's WRITE (a second living
+    // subject's Tier-1 address and the claimant's details, and the agreement that gates approval — D14), the
+    // PRESENCE-only read (what the approval check will ask for), and the operator's PLAINTEXT read-back. Every one
+    // needs the authenticated-HUMAN chain. ⛔ The family's own write is in `claims.routes.ts` (a member route).
+    file: 'apps/api/src/modules/claims/claims.contact.routes.ts',
+    pathSubstrings: ['/contact'],
+    owner: 'Story 6.19a',
+    expectedMethods: ['post', 'get', 'get'],
+  },
 ];
 
 /**
@@ -259,7 +269,7 @@ function main(): void {
 
   // ⭐ ANTI-VACUITY FLOOR. Without it, deleting an entry shrinks the gate's scope in silence and it
   // still reports success. Raise this DELIBERATELY when enrolling, ⛔ never to make the gate quiet.
-  const COVERAGE_FLOOR = 10; // Story 6.21a raised it 9 → 10 (claims.death-certificate.routes.ts). Story 6.20 raised it 8 → 9 (claims.nominee-declaration.routes.ts). ⚠ The count was 8 at 2026-09-21 — a first draft guessed 9 and the floor caught it.
+  const COVERAGE_FLOOR = 11; // Story 6.19a raised it 10 → 11 (claims.contact.routes.ts). Story 6.21a raised it 9 → 10 (claims.death-certificate.routes.ts). Story 6.20 raised it 8 → 9 (claims.nominee-declaration.routes.ts). ⚠ The count was 8 at 2026-09-21 — a first draft guessed 9 and the floor caught it.
   if (COVERAGE_SET.length < COVERAGE_FLOOR) {
     missingCoverage.push(
       `COVERAGE_SET has ${COVERAGE_SET.length} entries but the floor is ${COVERAGE_FLOOR} — an entry was ` +

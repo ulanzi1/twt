@@ -155,7 +155,7 @@ describe.skipIf(!hasDatabase)('Verifier adjudication WRITE surface — E2E (:543
   async function seedClaim(
     pariwarId: string,
     deceasedMemberId: ids.MemberId,
-    nameCheck: 'passing' | 'accounts_only' | 'none' = 'passing',
+    nameCheck: 'passing' | 'accounts_only' | 'none' | 'no_contact' = 'passing',
   ): Promise<string> {
     const claimCaseId = ids.claimId(randomUUID());
     const scopeTx = await openScopeTx(deps, pariwarId);
@@ -185,6 +185,8 @@ describe.skipIf(!hasDatabase)('Verifier adjudication WRITE surface — E2E (:543
       // certificate: it then waits on ITS OWN blocker (the bank accounts), ⛔ not on the certificate.
       certificate: 'accepted',
       accountsOnly: nameCheck === 'accounts_only',
+      // Story 6.19a — everything else passes, and ⛔ no contact record: D14 is the ONE blocker left.
+      ...(nameCheck === 'no_contact' ? { contact: 'skip' as const } : {}),
     });
     return String(claimCaseId);
   }
@@ -827,6 +829,31 @@ describe.skipIf(!hasDatabase)('Verifier adjudication WRITE surface — E2E (:543
     expect(res.json<{ error: { code: string } }>().error.code).toBe(
       'verifier_decision.nominee_name_check_required',
     );
+  });
+
+  it('⭐ Story 6.19a (D14) — APPROVE with ⛔ no contact record → 409 `verifier_decision.claim_contact_required` (reason `no_record`); the claim WAITS, and a DENY still succeeds', async () => {
+    const pariwarId = randomUUID();
+    const { client, userId } = await authenticate({ displayName: 'Anita (District Admin)' });
+    await grant(userId, pariwarId, 'district_admin', 'district', DISTRICT);
+    const deceased = await seedDeceasedMember(pariwarId, DISTRICT);
+    const claimCaseId = await seedClaim(pariwarId, deceased, 'no_contact');
+    await client.inject({ method: 'POST', url: '/api/v1/auth/scope', payload: { pariwarId } });
+
+    const res = await client.inject({
+      method: 'POST', url: decisionUrl(pariwarId, claimCaseId),
+      payload: { outcome: 'approved', reason_code: 'r8_90pct_met' },
+    });
+    expect(res.statusCode, res.body).toBe(409);
+    const body = res.json<{ error: { code: string; message: string; details: { reason: string } } }>();
+    expect(body.error.code).toBe('verifier_decision.claim_contact_required');
+    expect(body.error.details.reason).toBe('no_record');
+    expect(body.error.message.toLowerCase()).toContain('waits');
+    // ⛔ Never gated on a DENY — the one outcome that must always stay available.
+    const deny = await client.inject({
+      method: 'POST', url: decisionUrl(pariwarId, claimCaseId),
+      payload: { outcome: 'denied', reason_code: 'concealment_flag_uphold', rationale: 'Concealment upheld.' },
+    });
+    expect(deny.statusCode, deny.body).toBe(201);
   });
 
   it('⚠⚠ AC4 — APPROVE with ⛔ NO accounts → 409 `verifier_decision.bank_details_required` (cl.7 — it WAITS)', async () => {

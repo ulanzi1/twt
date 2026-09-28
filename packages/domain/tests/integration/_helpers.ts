@@ -18,6 +18,7 @@ import type pg from 'pg';
 
 import { bindScopedDb, setPariwarScope, type Db } from '../../src/db.js';
 import { getEffectiveNomineeDeclaration } from '../../src/claim/nominee-effective.js';
+import { readClaimContact, readVersionChainIndex, resolveContactRow } from '../../src/claim/claim-contact-check.js';
 import { deathCertificateStatus, readDeathCertificateSnapshot } from '../../src/claim/death-certificate-approval.js';
 import { recordDeathCertificateReview } from '../../src/claim/death-certificate-review-persist.js';
 import { recordNomineeDetermination } from '../../src/claim/nominee-determination-persist.js';
@@ -26,6 +27,7 @@ import { recordNomineeNameCheck } from '../../src/claim/nominee-name-check-persi
 import {
   appendMemberDeclarationVersions,
   getNomineeVersionHeads,
+  getProjectedNomineeVersions,
   listNomineeDeclarationVersions,
   planDeclarationVersions,
 } from '../../src/nominee/declaration-history.js';
@@ -1079,6 +1081,15 @@ export async function seedNomineeNameCheck(
      * either (a determination needs an accepted certificate, D8), unless one is already live.
      */
     readonly certificate?: 'accepted' | 'skip';
+    /**
+     * ⭐ Story 6.19a (D14, AC11a) — the claim's CONTACT RECORD the approval gate now requires AFTER the rest.
+     * Default `'seed'`: a complete record (a live agreement, an address for every bound version, the claimant =
+     * the first of them) is seeded when none exists — bound to the EFFECTIVE versions once the determination is
+     * effective, else to the PROJECTED ones (so `certificate: 'skip'` / `determination: 'skip'` leave an
+     * undetermined claim bound the way a real filing would be). `'skip'` reaches a claim with ⛔ no record — the
+     * gate's 409 `…claim_contact_required` (`no_record`).
+     */
+    readonly contact?: 'seed' | 'skip';
   } = {},
 ): Promise<void> {
   if (opts.skip === true) return;
@@ -1183,4 +1194,96 @@ export async function seedNomineeNameCheck(
     actorDisplay: opts.actorDisplay ?? 'Test District Admin',
     actor: 'operator',
   });
+
+  if (opts.contact !== 'skip') await seedClaimContact(client, pariwarId, claimCaseId);
+}
+
+/**
+ * ⭐ Story 6.19a — seed a claim's CONTACT RECORD directly (TEST-ONLY raw inserts; placeholder ciphertext),
+ * unless one exists. Binding follows the writer's own rule for the helpline (W2): the EFFECTIVE versions once
+ * the determination is effective, else the PROJECTED ones. The claimant is the first bound version; with ⛔ no
+ * bound version at all, the claimant block. The agreement is a live `claim_contact_agreement` consent linked
+ * through `agreement_consent_id` (D15 — per claim). Runs inside the caller's scope (RLS applies).
+ */
+export async function seedClaimContact(
+  client: pg.PoolClient,
+  pariwarId: string,
+  claimCaseId: string,
+  opts: { readonly agreementRevoked?: boolean } = {},
+): Promise<{ readonly contactId: string; readonly boundVersionIds: readonly string[]; readonly agreementConsentId: string } | null> {
+  const tx = bindScopedDb(client);
+  const pid = toPariwarId(pariwarId);
+  const cid = toClaimId(claimCaseId);
+  const claimRows = await tx
+    .select({ deceasedMemberId: schema.claims.deceasedMemberId })
+    .from(schema.claims)
+    .where(and(eq(schema.claims.pariwarId, pid), eq(schema.claims.claimCaseId, cid)));
+  const deceasedMemberId = claimRows[0]!.deceasedMemberId;
+  const effective = await getEffectiveNomineeDeclaration(tx, pid, cid);
+  const bound =
+    effective.status === 'effective'
+      ? effective.entries.map((e) => e.versionId as string)
+      : (await getProjectedNomineeVersions(tx, pid, deceasedMemberId)).map((p) => p.versionId as string);
+  const existing = await readClaimContact(tx, pid, cid);
+  if (existing.contact !== null) {
+    // ⭐ A record THIS HELPER wrote earlier is TOPPED UP (a row for each newly bound version with ⛔ no counted
+    // row, W4a); one a spec wrote through the real writer is ⛔ never touched.
+    if (existing.contact.recordedByActor !== 'fixture') return null;
+    const index = await readVersionChainIndex(tx, pid, deceasedMemberId);
+    const blockSide = existing.contact.claimantNomineeVersionId === null;
+    for (const versionId of bound) {
+      if (resolveContactRow(versionId, existing.nominees, index) !== null) continue;
+      await tx.insert(schema.claimContactNominees).values({
+        contactId: existing.contact.contactId,
+        claimCaseId: cid,
+        pariwarId: pid,
+        nomineeVersionId: versionId as never,
+        addressCiphertext: `enc:v1:address-${versionId.slice(0, 8)}`,
+        relationship: blockSide ? 'son' : null,
+      });
+    }
+    return null;
+  }
+  const grantedAt = new Date(Date.now() - 60_000);
+  const [agreement] = await tx
+    .insert(schema.consentRecords)
+    .values({
+      subjectId: deceasedMemberId,
+      pariwarId: pid,
+      consentType: 'claim_contact_agreement',
+      consentArtifactRef: cid,
+      grantedViaActor: 'member_self',
+      consentPayload: { checkboxTextShown: 'fixture', locale: 'en' },
+      grantedAt,
+      revokedAt: opts.agreementRevoked === true ? new Date() : null,
+    })
+    .returning({ consentId: schema.consentRecords.consentId });
+  const claimant = bound[0];
+  const [contact] = await tx
+    .insert(schema.claimContacts)
+    .values({
+      claimCaseId: cid,
+      pariwarId: pid,
+      deceasedMemberId,
+      claimantNomineeVersionId: (claimant ?? null) as never,
+      claimantNameCiphertext: claimant === undefined ? 'enc:v1:claimant-name' : null,
+      claimantMobileCiphertext: claimant === undefined ? 'enc:v1:claimant-mobile' : null,
+      claimantAddressCiphertext: claimant === undefined ? 'enc:v1:claimant-address' : null,
+      agreementConsentId: agreement!.consentId,
+      contactLocale: 'hi',
+      recordedByActor: 'fixture',
+      recordedVia: 'member_app',
+    })
+    .returning({ contactId: schema.claimContacts.contactId });
+  for (const versionId of bound) {
+    await tx.insert(schema.claimContactNominees).values({
+      contactId: contact!.contactId,
+      claimCaseId: cid,
+      pariwarId: pid,
+      nomineeVersionId: versionId as never,
+      addressCiphertext: `enc:v1:address-${versionId.slice(0, 8)}`,
+      relationship: claimant === undefined ? 'son' : null,
+    });
+  }
+  return { contactId: contact!.contactId, boundVersionIds: bound, agreementConsentId: agreement!.consentId };
 }

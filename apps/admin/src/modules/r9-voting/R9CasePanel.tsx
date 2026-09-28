@@ -12,6 +12,7 @@ import { useState } from 'react';
 
 import { ApiError, errorMessage as apiErrorMessage } from '../../api/client.js';
 import {
+  claimContactRequiredMessage,
   trusteeDeathCertificateAcceptanceRequiredMessage,
   trusteeDeterminationRequiredMessage,
 } from '../claim-verification/nominee-errors.js';
@@ -27,6 +28,10 @@ function errorMessage(error: unknown): string | undefined {
   }
   if (error instanceof ApiError && error.code.endsWith('.nominee_determination_required')) {
     return trusteeDeterminationRequiredMessage(error);
+  }
+  // Story 6.19a (D14) — the claim waits for the family's contact details; the helpline can add them.
+  if (error instanceof ApiError && error.code.endsWith('.claim_contact_required')) {
+    return claimContactRequiredMessage(error);
   }
   return apiErrorMessage(error);
 }

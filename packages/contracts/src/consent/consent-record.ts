@@ -54,6 +54,10 @@ export const ConsentTypeSchema = z.enum([
   // and pools spawn one per APPROVED claim, so a claim filed before this value existed is permanently
   // unaskable and its pool can never carry a name.
   'sahyog_drive_publication',
+  // Story 6.19a (D15, `2026-09-28-265`) — the filer's agreement that the people on a claim's contact record
+  // may be contacted (`2026-09-27-253` cl.1). Lockstep with the domain `consent_type` pgEnum (migration 0124).
+  // ⭐ Per claim (linked by `claim_contacts.agreement_consent_id`); ⛔ NOT a `DpdpaConsentType`.
+  'claim_contact_agreement',
 ]);
 export type ConsentTypeSchema = z.output<typeof ConsentTypeSchema>;
 

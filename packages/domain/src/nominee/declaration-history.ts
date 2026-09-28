@@ -142,6 +142,58 @@ export async function getNomineeVersionsByIds(
     );
 }
 
+/** One rank's PROJECTED version — the version the family's `member_nominees` row was last written from. */
+export interface ProjectedNomineeVersion {
+  readonly rank: NomineeRank;
+  readonly versionId: NomineeVersionId;
+}
+
+/**
+ * Walk ONE rank's versions (in `version_no` order) to the version its `member_nominees` row was last written
+ * from (Story 6.19a W1). Pure — exported for the unit tests.
+ *   · a `member` version always becomes the projected one (a declare rewrites the row — or, when `vacated`,
+ *     removes it);
+ *   · a `correction` becomes it ONLY when its `corrects_version_id` is the version immediately before it —
+ *     i.e. it corrected the rank's HEAD. `nominee-correction-persist.ts` updates the projection in exactly
+ *     that case (*"The projection row is updated ONLY when it IS the corrected declaration"*); a correction
+ *     of an OLDER version takes `version_no` head + 1 but leaves the row — and so this answer — alone.
+ * Returns `null` when the projected version is a `vacated` tombstone (the rank is empty) or there is none.
+ * ⛔ NEVER "the highest `version_no`" — that is exactly the version the family may ⛔ not be seeing.
+ */
+export function projectedVersionOfRank(
+  versionsInOrder: readonly Pick<MemberNomineeVersionRow, 'versionId' | 'versionNo' | 'kind' | 'source' | 'correctsVersionId'>[],
+): NomineeVersionId | null {
+  let projected: (typeof versionsInOrder)[number] | null = null;
+  let previous: (typeof versionsInOrder)[number] | null = null;
+  for (const v of versionsInOrder) {
+    if (v.source === 'member') {
+      projected = v;
+    } else if (previous !== null && v.correctsVersionId === previous.versionId) {
+      projected = v;
+    }
+    previous = v;
+  }
+  return projected !== null && projected.kind === 'declared' ? projected.versionId : null;
+}
+
+/**
+ * The PROJECTED version of every occupied rank of a member's declaration (Story 6.19a W1) — what the family
+ * sees in `nomineesStatus()`. Rank-ordered; an empty rank is absent. ⛔ No ciphertext is returned.
+ */
+export async function getProjectedNomineeVersions(
+  db: Db,
+  pariwarId: PariwarId,
+  memberId: MemberId,
+): Promise<ProjectedNomineeVersion[]> {
+  const rows = await listNomineeDeclarationVersions(db, pariwarId, memberId);
+  const out: ProjectedNomineeVersion[] = [];
+  for (const rank of NOMINEE_RANKS) {
+    const versionId = projectedVersionOfRank(rows.filter((r) => r.rank === rank));
+    if (versionId !== null) out.push({ rank, versionId });
+  }
+  return out;
+}
+
 /**
  * The DATABASE wall-clock instant, taken NOW (D2).
  *

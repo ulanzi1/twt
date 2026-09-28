@@ -4,6 +4,26 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Recorded during Story 6.19a's build (2026-09-28)
+
+- **(AC9a, shared spec invariant 9 / T8) ⛔ NO RTBF path reaches the new claim CONTACT tables.** `claim_contacts`
+  (the claimant's Tier-1 name, mobile and address) and `claim_contact_nominees` (each nominee's Tier-1 postal address)
+  are NEW PII surfaces, and `member/anonymize.ts` does ⛔ not touch them — the `-243` posture that deliberately
+  leaves claim tables alone. ⚠ The claimant is a SECOND living subject who may not be a member at all, so a
+  member-keyed erasure could never have reached them anyway. **Recorded, ⛔ not fixed** (the story says so).
+  **Re-trigger:** the first DPDPA erasure request from a claimant or a nominee, or counsel's M/S return (launch-gate
+  rows 18, 19) — whichever comes first; the fix must decide WHOSE request erases which column.
+- **(AC9a) The runtime log check is VACUOUS in the API specs.** The server's logger is `false` under
+  `nodeEnv === 'test'` (`apps/api/src/server.ts`), so "a planted value reaches ⛔ no log" is proven by a SOURCE pin on
+  the one log call of the contact routes (`claims.contact.handlers.ts` — `{ err, claimCaseId }` only), ⛔ not by a
+  captured log stream. **Re-trigger:** the first spec that needs a real log assertion — add a capturing logger to
+  `buildTestDeps` rather than switching the logger on.
+- **(Task 0 / T13) The DLT template registration is ⛔ NOT STARTED** — recorded at BigDev's direction
+  (`2026-09-28-265` §4; `docs/launch-gate-inventory/dlt-template-requests-6-19.md`). It gates 6.19b's and 6.19d's
+  REAL sends only. **Re-trigger:** 6.19b's Task 3 (the reminder wording) — register the six templates then.
+
+---
+
 ## Found and closed during Story 6.21b's build (2026-09-26)
 
 - **(BW-C9) Story 6.18's friction-budget row sits OUTSIDE the counted `## The ledger` table.** `friction-budget.md`'s

@@ -47,6 +47,11 @@ export * from './nominee-name-check.js';
 export * from './nominee-declaration.js';
 // Story 6.21a — the District Admin's death-certificate REVIEW (accept / reject) and its on-demand HISTORY.
 export * from './death-certificate.js';
+// Story 6.19a — the claim CONTACT RECORD: the member's full request (by rank) and the helpline's partial one (by
+// nominee version), the admin presence read (⛔ no value) and the operator's plaintext read-back (plain bounded
+// strings — the decrypt-failed sentinel must parse). The claimant-to-nominee relationship is the DERIVED
+// `ClaimantNomineeRelationship` (nominee/declaration.ts).
+export * from './contact.js';
 // Story 6.12 — the member-facing shepherd read DTO (GET /member/claims/:id/shepherd) backing the mobile
 // <ShepherdContactCard>: a discriminated union (assigned → display_name + role_label + contact snapshot |
 // not_assigned). The E.164 wire regex is re-declared (no @twt/domain import).

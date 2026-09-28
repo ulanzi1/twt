@@ -30,9 +30,11 @@ import { EnglishScriptName, MobileNumber } from '../_common/primitives.js';
  * where `relationship` is plain Tier-3 text (the kyc_transactions.status "text for the swap
  * seam" posture). The server stores the validated label verbatim.
  *
- * ⭐ STORY 6.20 (AC12) — FIFTEEN values replace the shipped five (`2026-09-21-237` cl.1, Trustee-
- * ratified): spouse, mother, father, son, daughter, brother, sister, uncle, aunt, cousin,
- * niece/nephew, grandchild, sister-in-law, daughter-in-law, other.
+ * ⭐ STORY 6.19a (AC13) — TWENTY values (`2026-09-27-257`, Trustee-ratified, SUPERSEDES `-237` cl.1):
+ * spouse, mother, father, son, daughter, brother, sister, uncle, aunt, cousin, niece/nephew,
+ * grandchild, sister-in-law, daughter-in-law, brother-in-law, son-in-law, mother-in-law,
+ * father-in-law, grandparent, other. (Story 6.20 (AC12) had moved the shipped five to the fifteen
+ * of `-237` cl.1.)
  * ⚠ THESE ARE WIRE CODES, ⛔ NOT THE RATIFIED LABELS: `NomineeForm.tsx` builds its copy key as
  * `nominees.relationship_${code}`, so a code of `niece/nephew` would produce an i18n key with a slash.
  * The codes are snake_case identifiers; the ratified wording lives in the en/hi label values.
@@ -43,6 +45,7 @@ import { EnglishScriptName, MobileNumber } from '../_common/primitives.js';
  * deceased — and stays five values.
  * ⚠ Still OPEN, recorded in `-237`: ⛔ no brother-in-law / son-in-law / mother-in-law / father-in-law /
  * grandparent — a member naming one falls to `other`. Kept as ratified (BigDev, 2026-09-21).
+ *   ⭐ DISCHARGED by `2026-09-27-257` (Story 6.19a, AC13): all five are now in the list.
  */
 export const NOMINEE_RELATIONSHIP_CODES = [
   'spouse',
@@ -59,10 +62,29 @@ export const NOMINEE_RELATIONSHIP_CODES = [
   'grandchild',
   'sister_in_law',
   'daughter_in_law',
+  'brother_in_law',
+  'son_in_law',
+  'mother_in_law',
+  'father_in_law',
+  'grandparent',
   'other',
 ] as const;
 export const NomineeRelationship = z.enum(NOMINEE_RELATIONSHIP_CODES);
 export type NomineeRelationship = z.output<typeof NomineeRelationship>;
+
+/**
+ * The CLAIMANT's relationship to a NOMINEE (Story 6.19a, AC13; `2026-09-27-255` F8 — *"family relations
+ * only"*): the twenty nominee codes minus `other` — NINETEEN. ⭐ DERIVED, ⛔ never a hand-typed second
+ * list (`-257` made F8's nineteen exactly the nominee list without `other`), pinned by an equality test in
+ * `packages/contracts/tests/nominee-relationship-lockstep.test.ts`. Asked only when the claimant is none of
+ * the nominees, once per nominee (6.19 shared spec D16). ⚠ The question fixes its DIRECTION — *"The claimant
+ * is the nominee's …"* — because half the values are inverse pairs (son/father, son-in-law/father-in-law,
+ * grandchild/grandparent, niece_nephew/uncle·aunt). ⛔ Not `ClaimantRelationship` (claims/filing.ts), which is
+ * the claimant's relationship to the DECEASED and stays five values.
+ */
+export const ClaimantNomineeRelationship = NomineeRelationship.exclude(['other']);
+export type ClaimantNomineeRelationship = z.output<typeof ClaimantNomineeRelationship>;
+export const CLAIMANT_NOMINEE_RELATIONSHIP_CODES = ClaimantNomineeRelationship.options;
 
 // ── declare ───────────────────────────────────────────────────────────────────────────
 

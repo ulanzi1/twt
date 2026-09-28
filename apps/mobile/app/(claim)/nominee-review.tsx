@@ -267,7 +267,8 @@ export default function NomineeReviewScreen(): React.ReactElement {
     // ⛔ Not if the family has already left this screen during the delay (code review 2026-09-23) —
     // the push would otherwise pull them onto the acknowledgement from wherever they went.
     if (!mountedRef.current) return
-    router.push('/(claim)/acknowledgement')
+    // Story 6.19a — the CONTACT step comes next (each nominee's address, the claimant, the agreement).
+    router.push('/(claim)/contact')
   }
 
   // ⭐ `saved` is busy too (code review 2026-09-23): an edit typed during the announcement delay
@@ -402,7 +403,7 @@ export default function NomineeReviewScreen(): React.ReactElement {
           nominees.map((n, i) => (
             <YStack key={i} gap="$2" py="$2">
               <XStack justify="space-between">
-                {/* ⭐ The DECLARED nominee's relationship is one of the fifteen NOMINEE codes (`-237` cl.1) —
+                {/* ⭐ The DECLARED nominee's relationship is one of the twenty NOMINEE codes (`-257`) —
                     labelled from `common`'s `nominees.relationship_*`. ⛔ Never the `claim` namespace's
                     `relationship.*`, which holds the five CLAIMANT codes: `t()` throws on a missing key, so
                     13 of the 15 values crashed this screen (code review 2026-09-24). */}

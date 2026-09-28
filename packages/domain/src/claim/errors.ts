@@ -512,3 +512,73 @@ export class DeathCertificateReviewRefusedError extends Error {
     super(`[death-certificate-review] claim ${claimCaseId}: ${reason} — ${detail}`);
   }
 }
+
+// ── Story 6.19a — the claim CONTACT RECORD (D5, D14; W1–W10) ─────────────────────────────────────────
+
+/** D14 — the reasons a claim cannot be APPROVED for want of its contact record, in PRECEDENCE order: when
+ *  several apply, the FIRST is reported (6.19a AC1). */
+export const CLAIM_CONTACT_REQUIRED_REASONS = [
+  'no_record',
+  'agreement_withdrawn',
+  'nominee_address_missing',
+  'claimant_details_missing',
+] as const;
+export type ClaimContactRequiredReason = (typeof CLAIM_CONTACT_REQUIRED_REASONS)[number];
+
+/** D14 — a claim cannot be APPROVED until the family has given a postal address for each nominee in force
+ *  at the death (and the claimant's details when the claimant is none of them) and agreed to be contacted.
+ *  ⛔ NEVER a denial: the claim WAITS, and the helpline can supply what is missing in every state from which
+ *  an approval can still 409 on it (W3). → 409 `<route>.claim_contact_required`, `details.reason` — ⛔ never
+ *  a name or any value. */
+export class ClaimContactRequiredError extends Error {
+  public readonly name = 'ClaimContactRequiredError';
+  public constructor(
+    public readonly claimCaseId: string,
+    public readonly reason: ClaimContactRequiredReason,
+  ) {
+    super(`[claim-contact] claim ${claimCaseId} cannot be approved — the contact record is '${reason}'`);
+  }
+}
+
+/** W1–W8 — a contact-record WRITE is refused. The API maps `status` + `code` verbatim
+ *  (`claim_contact.<code>`); ⛔ nothing is written when this is thrown (the writer validates before writing).
+ *   · 400 — the request against the declaration, or what a creating write requires: `nominee_set_mismatch`,
+ *           `agreement_required`, `claimant_required`, `address_required`;
+ *   · 404 — `not_found` (no such claim here, or ⛔ not the member's own — ⛔ never a 403 oracle);
+ *   · 409 — the claim's state or a conflict with the stored row: `not_writable`, `add_only`,
+ *           `awaiting_determination`. */
+export type ClaimContactWriteRefusal =
+  | 'not_found'
+  | 'not_writable'
+  | 'nominee_set_mismatch'
+  | 'agreement_required'
+  | 'claimant_required'
+  | 'address_required'
+  | 'add_only'
+  | 'awaiting_determination';
+
+const CLAIM_CONTACT_REFUSAL_STATUS: Record<ClaimContactWriteRefusal, 400 | 404 | 409> = {
+  not_found: 404,
+  not_writable: 409,
+  nominee_set_mismatch: 400,
+  agreement_required: 400,
+  claimant_required: 400,
+  address_required: 400,
+  add_only: 409,
+  awaiting_determination: 409,
+};
+
+export class ClaimContactWriteRefusedError extends Error {
+  public readonly name = 'ClaimContactWriteRefusedError';
+  public readonly status: 400 | 404 | 409;
+  public constructor(
+    public readonly claimCaseId: string,
+    public readonly code: ClaimContactWriteRefusal,
+    detail: string,
+    /** Non-PII details for the error body (a state name, a count) — ⛔ never a value the filer typed. */
+    public readonly details: Readonly<Record<string, unknown>> = {},
+  ) {
+    super(`[claim-contact] claim ${claimCaseId}: ${code} — ${detail}`);
+    this.status = CLAIM_CONTACT_REFUSAL_STATUS[code];
+  }
+}

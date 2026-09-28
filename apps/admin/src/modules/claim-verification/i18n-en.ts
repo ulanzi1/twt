@@ -252,8 +252,8 @@ export const verifierConsoleEn = {
       details: 'Details',
     },
     rankLabel: { 1: 'Primary', 2: 'Second' } as Record<number, string>,
-    // The ratified English labels for the fifteen relationship codes (`-237` cl.1) — the same wording the
-    // member app shows (`packages/i18n/locales/en/common.json` `nominees.relationship_*`). ⛔ Never a raw code.
+    // The ratified English labels for the twenty relationship codes (`-257`; fifteen under `-237` cl.1) —
+    // the same wording the member app shows (`packages/i18n/locales/en/common.json` `nominees.relationship_*`). ⛔ Never a raw code.
     relationshipLabels: {
       spouse: 'Spouse',
       mother: 'Mother',
@@ -269,6 +269,11 @@ export const verifierConsoleEn = {
       grandchild: 'Grandchild',
       sister_in_law: 'Sister-in-law',
       daughter_in_law: 'Daughter-in-law',
+      brother_in_law: 'Brother-in-law',
+      son_in_law: 'Son-in-law',
+      mother_in_law: 'Mother-in-law',
+      father_in_law: 'Father-in-law',
+      grandparent: 'Grandparent',
       other: 'Other',
     } as Record<string, string>,
     kindVacated: 'Removed (no nominee at this rank)',
@@ -619,6 +624,20 @@ export const verifierConsoleEn = {
       // `2026-09-26-246` §2 — erased at the member's request (RTBF): permanent, ⛔ not a fault.
       anonymized: "Erased at the member's request",
     },
+  },
+  // Story 6.19a (D14) — the approval gate's `…claim_contact_required` 409, worded by its REASON. Staff copy,
+  // English-only. ⛔ Never a denial: the claim WAITS, and the helpline can add what is missing in this state.
+  claimContact: {
+    approvalGate: {
+      no_record:
+        'This claim is waiting: the family has not yet given the nominees’ postal addresses and their agreement to be contacted. The helpline can add them. The claim is not denied.',
+      agreement_withdrawn:
+        'This claim is waiting: the family’s agreement to be contacted is missing or withdrawn. The helpline can record it again. The claim is not denied.',
+      nominee_address_missing:
+        'This claim is waiting: a postal address is missing for a nominee in force at the death. The helpline can add it. The claim is not denied.',
+      claimant_details_missing:
+        'This claim is waiting: the claimant’s details are missing — which nominee they are, or their name, mobile, address and relationship to each nominee. The helpline can add them. The claim is not denied.',
+    } as Record<string, string>,
   },
 } as const;
 

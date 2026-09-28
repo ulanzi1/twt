@@ -59,6 +59,7 @@ import {
   NomineeDeterminationRequiredError,
   NomineeNameCheckRequiredError,
 } from './errors.js';
+import { assertClaimContactRecorded } from './claim-contact-check.js';
 import {
   NOMINEE_NAME_CHECK_RECORDABLE_STATES,
   type NomineeNameCheckSnapshot,
@@ -574,6 +575,11 @@ export async function voteOnFrozenClaim(
       input.claimCaseId,
       claimRow.deceasedMemberId,
     );
+    // ⭐ Story 6.19a (D14) — then the claim's CONTACT RECORD: an address for each nominee in force at the death,
+    // the claimant's details when the claimant is none of them, and a live agreement to be contacted. AFTER
+    // the gate above (every existing refusal keeps its code when several are missing), approve-only, and
+    // ⛔ never a denial — the claim WAITS, and the helpline can complete the record in this state (W3).
+    await assertClaimContactRecorded(db, input.pariwarId, input.claimCaseId);
   }
 
   // Story 6.15 (AC3) — resolve the R14 clause snapshot server-side INSIDE this tx for a concealment-coded

@@ -66,14 +66,36 @@ export default function ClaimEntryScreen(): React.ReactElement {
   function enterClaimFlow(): void {
     const lastStep = session?.memberId ? loadClaimDraft(session.memberId).lastStep : undefined
     const next = lastStep ? nextClaimStep(lastStep) : undefined
-    if (next === 'relationship') {
-      router.push('/(claim)/relationship')
-    } else if (next === 'document') {
-      router.push('/(claim)/document')
-    } else if (next === 'nominee-review') {
-      router.push('/(claim)/nominee-review')
-    } else {
-      router.push('/(claim)/handover-otp')
+    // ⭐ Story 6.19a — EVERY step resumes at `nextClaimStep` (the pre-existing gap: a `lastStep` of
+    // `relationship` (→ consent) or `nominee-review` (→ acknowledgement, now → contact) fell through to the
+    // handover OTP). A switch, so a step added to CLAIM_STEPS without a branch here is a typecheck error.
+    switch (next) {
+      case 'relationship':
+        router.push('/(claim)/relationship')
+        return
+      case 'consent':
+        router.push('/(claim)/consent')
+        return
+      case 'document':
+        router.push('/(claim)/document')
+        return
+      case 'nominee-review':
+        router.push('/(claim)/nominee-review')
+        return
+      case 'contact':
+        router.push('/(claim)/contact')
+        return
+      case 'acknowledgement':
+        router.push('/(claim)/acknowledgement')
+        return
+      case 'handover-otp':
+      case undefined:
+        router.push('/(claim)/handover-otp')
+        return
+      default: {
+        const unhandled: never = next
+        return unhandled
+      }
     }
   }
 

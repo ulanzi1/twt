@@ -22,6 +22,7 @@ import { registerVerifierConsoleRoutes } from './claims.verifier-console.routes.
 import { registerNomineeNameCheckRoutes } from './claims.nominee-name-check.routes.js';
 import { registerNomineeDeclarationRoutes } from './claims.nominee-declaration.routes.js';
 import { registerDeathCertificateRoutes } from './claims.death-certificate.routes.js';
+import { registerClaimContactRoutes } from './claims.contact.routes.js';
 import { registerShepherdRoutes } from './claims.shepherd.routes.js';
 import { registerCycleFreezeRoutes } from './claims.cycle-freeze.routes.js';
 import { registerR9VotingRoutes } from './claims.r9-voting.routes.js';
@@ -45,6 +46,9 @@ export function registerClaimsModule(app: FastifyInstance, deps: AppDeps): void 
   // Story 6.21a — the death certificate's clear-date rule: the District Admin's accept / reject review and
   // the on-demand history of every certificate (each kept — `2026-09-25-243`).
   registerDeathCertificateRoutes(app, deps);
+  // Story 6.19a — the claim CONTACT RECORD's admin routes: the helpline's write (claim.file + step-up), the
+  // presence-only read (claim.view_nominee_name_check, district) and the operator's plaintext read-back.
+  registerClaimContactRoutes(app, deps);
   // Story 6.11 — the verifier adjudication WRITE surface (approve/deny/escalate + step-up-gated revise).
   registerVerificationDecisionRoutes(app, deps);
   // Story 6.12 — the R6 manual shepherd reassignment WRITE surface (claim.assign_shepherd, district-gated).

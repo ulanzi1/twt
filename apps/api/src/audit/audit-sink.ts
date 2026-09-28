@@ -294,6 +294,20 @@ export type AuthAuditEventType =
   | 'helpline_claim.escalated'
   // Death-certificate operator upload-on-behalf accepted (Story 6.5) — TWIN of the member line.
   | 'helpline_claim.document_uploaded'
+  // ── The claim CONTACT RECORD (Story 6.19a, AC9a; W10) ──────────────────────────────────────────────────
+  // The SECONDARY lines of one contact write — the ONE intent line is `withCompensatingAudit`'s
+  // (`claim.contact_recorded`, `claim:<lower-case uuid>`). Context is NON-PII: which fields were written
+  // (counts, the claimant SIDE, the mode), ⛔ never an address, a name, a mobile or a relationship value.
+  //   member_claim / helpline_claim .contact_recorded — the record written, per surface;
+  //   claim_contact.agreement_recorded — a fresh `claim_contact_agreement` consent recorded + repointed (D15);
+  //   admin_claim.contact_presence_read — the presence-only read under `claim.view_nominee_name_check`;
+  //   admin_claim.contact_details_read  — the operator's PLAINTEXT read-back under `claim.file` — one line per
+  //                                       read, naming how many fields were decrypted (AC8a (ii)).
+  | 'member_claim.contact_recorded'
+  | 'helpline_claim.contact_recorded'
+  | 'claim_contact.agreement_recorded'
+  | 'admin_claim.contact_presence_read'
+  | 'admin_claim.contact_details_read'
   // ── ICP convergence-resolution surface (Story 6.4, AR-62) ─────────────────────
   // The operator-console pending/merge/override lines (the <ConvergenceDecisionStrip>). Context
   // is NON-PII throughout: claim ids + intake_attempt_id + intake_channel(s) + the resolving

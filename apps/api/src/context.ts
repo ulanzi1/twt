@@ -195,6 +195,15 @@ export const CLAIM_GROUND_INSPECTION_FIELD_CLASS = 'ground_inspection';
 export const CLAIM_NOMINEE_BANK_FIELD_CLASS = 'claim_nominee_bank';
 
 /**
+ * The claim CONTACT RECORD Tier-1 field class (Story 6.19a, D5). The member + helpline contact routes encrypt
+ * each nominee's postal address and the claimant's name / mobile / address before insert (the writer's
+ * `crypto` port), and the helpline operator's audited read-back decrypts under the SAME (pariwarId, fieldClass).
+ * Matches the `piiColumn(1, 'claim_contact')` column annotation. The claimant-to-nominee `relationship` is a
+ * plain-text label and is NOT encrypted (D16).
+ */
+export const CLAIM_CONTACT_FIELD_CLASS = 'claim_contact';
+
+/**
  * The verifier-decision Tier-1 field class (Story 6.11, D-G). The adjudication route encrypts the brief
  * verifier rationale free-text (`rationale_ciphertext`) before the domain writer, and the verifier
  * console (the authorized READ) decrypts it under the SAME (pariwarId, fieldClass). Arbitrary verifier

@@ -145,6 +145,12 @@ describe.skipIf(!hasDatabase)('Story 6.20 — the nominee correction (:5433)', {
     expect(res.correctionId).toMatch(/^[0-9a-f-]{36}$/);
   });
 
+  it('⭐ a `-257` value (Story 6.19a AC13) is KNOWN — a nominee recorded as `brother_in_law` may be corrected, and to `grandparent`', async () => {
+    const { client, cid } = await setup({ relationship: 'brother_in_law' });
+    const res = await raiseNomineeCorrection(client, raise(cid, { proposedRelationship: 'grandparent' }));
+    expect(res.correctionId).toMatch(/^[0-9a-f-]{36}$/);
+  });
+
   // ── AC11(vii) — the state window on the RAISE ────────────────────────────────────────────────
   it('⭐⭐ AC11(vii) — OUTSIDE the recordable window the raise is a typed 409; INSIDE it the same raise succeeds', async () => {
     const outside = await setup({ state: 'intake_pending' });

@@ -37,6 +37,7 @@ import {
 } from '../modules/claim-verification/index.js';
 import { ApiError } from '../api/client.js';
 import {
+  claimContactRequiredMessage,
   deathCertificateAcceptanceRequiredMessage,
   deathCertificateReviewErrorMessage,
   nomineeCorrectionErrorMessage,
@@ -118,6 +119,8 @@ export function decisionErrorMessage(err: unknown): string {
     if (err.code === 'verifier_decision.nominee_determination_required') return nomineeDeterminationRequiredMessage(err);
     // Story 6.21a (D7) — the certificate conjunct runs FIRST; name WHY (⛔ never "try again": the claim waits).
     if (err.code === 'verifier_decision.death_certificate_acceptance_required') return deathCertificateAcceptanceRequiredMessage(err);
+    // Story 6.19a (D14) — the contact record, checked AFTER the rest of the gate: say WHY the claim waits.
+    if (err.code.endsWith('.claim_contact_required')) return claimContactRequiredMessage(err);
     if (err.code === 'verifier_decision.post_death_refusal_ungrounded') return t.nomineeDeclaration.postDeathRefusalUngrounded;
   }
   return t.decision.submitError;

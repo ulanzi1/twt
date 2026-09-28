@@ -11,7 +11,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { ApiError } from '@twt/api-client'
-import { NOMINEE_RELATIONSHIP_CODES } from '@twt/contracts'
+import { CLAIMANT_NOMINEE_RELATIONSHIP_CODES, NOMINEE_RELATIONSHIP_CODES } from '@twt/contracts'
 import { t } from '@twt/i18n'
 import { describe, expect, it } from 'vitest'
 
@@ -107,8 +107,8 @@ const NEW_KEYS = [
 
 describe('Story 6.20 member copy resolves through the REAL t() — both locales', () => {
   for (const locale of LOCALES) {
-    it(`[${locale}] all FIFTEEN relationship labels resolve, built the way the picker builds them`, () => {
-      expect(NOMINEE_RELATIONSHIP_CODES).toHaveLength(15)
+    it(`[${locale}] all TWENTY relationship labels resolve, built the way the picker builds them (\`-257\`)`, () => {
+      expect(NOMINEE_RELATIONSHIP_CODES).toHaveLength(20)
       for (const code of NOMINEE_RELATIONSHIP_CODES) {
         const value = t(`nominees.relationship_${code}`, undefined, { locale })
         expect(value.trim().length, `${locale} :: ${code}`).toBeGreaterThan(0)
@@ -138,6 +138,12 @@ describe('Story 6.20 member copy resolves through the REAL t() — both locales'
     // (code review 2026-09-24b) — the same class on the in-laws: the English "Sister-in-law" covers them all.
     const sisterInLaw = t('nominees.relationship_sister_in_law', undefined, { locale: 'hi' })
     for (const word of ['भाभी', 'ननद', 'साली', 'देवरानी', 'जेठानी', 'सलहज']) expect(sisterInLaw).toContain(word)
+    // Story 6.19a (AC13, `-257`) — the same class on the new values: "Brother-in-law" and "Grandparent" each
+    // cover several Hindi kin terms.
+    const brotherInLaw = t('nominees.relationship_brother_in_law', undefined, { locale: 'hi' })
+    for (const word of ['जीजा', 'देवर', 'जेठ', 'साला', 'नंदोई', 'साढ़ू']) expect(brotherInLaw).toContain(word)
+    const grandparent = t('nominees.relationship_grandparent', undefined, { locale: 'hi' })
+    for (const word of ['दादा', 'दादी', 'नाना', 'नानी']) expect(grandparent).toContain(word)
   })
 
   // ⭐ BigDev 2026-09-24b, option (a): the SAME screen is read by a living member hit by a stray claim and by a
@@ -180,7 +186,7 @@ describe('Story 6.20 member copy resolves through the REAL t() — both locales'
 })
 
 describe('Story 6.20 — the pickers take their codes from the contracts enum', () => {
-  it('⭐ NomineeForm IMPORTS the fifteen codes (⛔ never a re-spelled local list)', () => {
+  it('⭐ NomineeForm IMPORTS the twenty codes (⛔ never a re-spelled local list)', () => {
     const src = read('apps/mobile/components/life-events/NomineeForm.tsx')
     // An actual import statement — ⛔ a comment or a string mentioning the name does not satisfy it.
     expect(src).toMatch(/import\s*\{[^}]*\bNOMINEE_RELATIONSHIP_CODES\b[^}]*\}\s*from\s*'@twt\/contracts'/)
@@ -193,9 +199,14 @@ describe('Story 6.20 — the pickers take their codes from the contracts enum', 
     expect(src).toContain('KNOWN_RELATIONSHIPS.map')
     expect(src).not.toMatch(/\bRELATIONSHIPS\.map/)
     // …and KNOWN_RELATIONSHIPS itself EXCLUDES `other` (a pin on the name alone passed whatever it held).
+    // Story 6.19a (AC13): it is now the contracts' DERIVED list — ⛔ never a third copy — so the pin is on the
+    // export it points at AND on that export's VALUE.
     expect(code(read('apps/mobile/components/life-events/NomineeForm.tsx'))).toMatch(
-      /export const KNOWN_RELATIONSHIPS = RELATIONSHIPS\.filter\(\(r\) => r !== 'other'\)/,
+      /export const KNOWN_RELATIONSHIPS: readonly Relationship\[\] = CLAIMANT_NOMINEE_RELATIONSHIP_CODES\b/,
     )
+    expect(CLAIMANT_NOMINEE_RELATIONSHIP_CODES).not.toContain('other')
+    expect([...CLAIMANT_NOMINEE_RELATIONSHIP_CODES]).toEqual(NOMINEE_RELATIONSHIP_CODES.filter((r) => r !== 'other'))
+    expect(CLAIMANT_NOMINEE_RELATIONSHIP_CODES).toHaveLength(19)
   })
 })
 

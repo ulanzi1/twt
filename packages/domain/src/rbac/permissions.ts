@@ -929,6 +929,13 @@ export const SEED_PERMISSION_KEYS = [
   // makes their approval FINAL, so they must see what they are approving) + `helpline_operator`
   // (⭐ cl.1 gives THEM the duty to make sure the names match at filing — the grant is the duty)
   // (+ derived super_admin). ⛔ NOT `state_trustee` — see the version-bump note above.
+  // ⭐ REUSED, ⛔ NOT WIDENED — Story 6.19a (D8's reuse-check, `2026-09-28-265` §2): it also gates
+  // GET …/admin/claims/:claimCaseId/contact, the claim CONTACT RECORD's PRESENCE-only read (which nominee
+  // versions still need an address, which claimant side is set, the agreement live/revoked). ⛔ PRESENCE ONLY,
+  // and deliberately: the rationale above forbids acquiring a second living subject's plaintext "as a side
+  // effect", and the contact record holds the nominees' and the claimant's addresses and the claimant's name
+  // and mobile. ⇒ the PLAINTEXT read-back is under `claim.file` (the helpline operator, who re-types these
+  // fields) and 6.19b's letter form reads an address under its OWN key. ⛔ No catalog bump.
   'claim.view_nominee_name_check',
   // Story 6.18 (AC1, Decision `2026-09-20-228`) — the NOMINEE-NAME CHECK WRITE key. Gates
   // POST …/admin/claims/:claimCaseId/nominee-name-check, the District Admin's RECORDED judgement per

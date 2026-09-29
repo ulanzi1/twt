@@ -34,7 +34,7 @@ Status: ready-for-dev
 - **Rulings:** ⭐ **`-258`** (who must act — AC16), ⭐ **`-260` G2** (the Pariwar Admin's keep also sets the mark — a writer 6.19c builds
   on this slice's table) and ⭐ **G4** (⛔ no same-day message — the first slot is the next morning), `-229`, `-230` 1–4, `-231` C/D/E/F,
   `-232` J, `-250` #1–#5, `-252` cl.1–2, `-253` cl.3, `-255` F5/F6/F7.
-- **Author decisions:** `-265` (D1–D29, the eight keys) **as amended by `-266`** — D2 (superseded: the runs table), D3 (keyed by run
+- **Author decisions:** `-265` (D1–D29, the eight keys) **as amended by `-266` and its erratum `-267`** — D2 (superseded: the runs table), D3 (keyed by run
   kind), D4, D6, D7, D8 (keys **(1) and (7)** are minted here), D10, D11, D20, D21, D25, D26, D28, ⭐ **D30–D34** (`-266`).
 - **Invariants (shared spec):** 1 (the system never decides), 3 (never `delivered` for an accepted send), 4 (no name in a family
   message), 11 (a family is never chased for a silence that was never theirs).
@@ -107,8 +107,8 @@ latest missed slot once, `late`; older ones `skipped_superseded` — ⛔ no burs
 stops reminders" stop) resets — a new number is reached afresh, ⛔ never silenced by the old number's history
 **And** ⭐ **D30 — nobody nameable:** when the effective declaration is ⛔ not `effective`, there is ⛔ no contact record, or the agreement is
 ⛔ not `live`, the sweep sends ⛔ nothing to the family, writes ⛔ no family row for the slot, and the queue shows *"cannot remind"* with the
-reason (`undetermined` / `no_contact_record` / `agreement_not_live` / `claimant_unresolved` — `-267` §5c: a claimant linked to a nominee
-version that resolves to ⛔ no effective nominee); once fixed, D3's catch-up applies; the staff reminders still run
+reason (`undetermined` / `no_contact_record` / `agreement_not_live`); ⭐ `claimant_unresolved` (`-267` §5c — a claimant linked to a nominee
+version that resolves to ⛔ no effective nominee) flags **the claimant alone**: the nominees are still sent; once fixed, D3's catch-up applies; the staff reminders still run
 **And** the row records what is known — `accepted`, `rejected_invalid_number`, `no_target` or `error`; `delivered_at` ⭐ **only** from a real
 signal (T1); `provider_message_id` and the classified error (`detail`, `'<class>:<code>'`) kept; ⛔ never reconstructed ([[feedback_record_unattested_no_backfill]])
 **And** the provider's result maps as follows (`createSmsDltProvider.send` ⛔ never throws — it resolves `rejected` with
@@ -229,7 +229,9 @@ and each mark change, with `resourceLocator: 'claim:<lower-case uuid>'` (anythin
   correction mid-run keeps the person's `recipient_key`;
 - **the message:** the SMS body is name-free, carries the short reference and the helpline number, and matches the registered DLT content in
   **both** locales for **both** messages through the real `t()`;
-- **letters:** eligibility from `rejected_invalid_number` and from `no_target`; D31's three refusals; the chase anchored on the found-dead
+- **letters:** eligibility from `rejected_invalid_number` and from `no_target`; D31's three refusals; a letter to the **claimant** reads
+  `claimant_address_ciphertext`; two people's letter chases on one day both recorded (`subject_key`); `claimant_unresolved` flags the
+  claimant while the nominees are still sent; the chase anchored on the found-dead
   day (7 → 12 → escalate); the overdue flag 14 days after posting and a late delivery accepted; the second letter due 30 days after the
   first's delivery; D21's single replacement reminder only when every person is letter-eligible and delivered; a person's reminders stop on
   their letter's recorded delivery (and ⛔ not before); a letter recorded after its run ended;
@@ -244,14 +246,18 @@ and each mark change, with `resourceLocator: 'claim:<lower-case uuid>'` (anythin
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0 — Preflight** (all ACs) — confirm `-266` is on `main`; run `git diff --name-only f06ee41f..HEAD -- packages apps scripts`
+- [ ] **Task 0 — Preflight** (all ACs) — confirm `-266` and `-267` are on `main`; run `git diff --name-only f06ee41f..HEAD -- packages apps scripts`
   and re-read any cited file it lists; read the DLT request sheet and the four + one config keys' status (T13, D33); read the catalog
   version **live** (forecast 48).
-- [ ] **Task 1 — Migrations, from `0126`** (AC2, AC5, AC16) — in one ordered set, each with its RLS policy file (tenant, FORCE; modelled on
+- [ ] **Task 1 — Migrations, from `0126`** (AC2, AC3, AC4, AC5, AC16) — in one ordered set, each with its RLS policy file (tenant, FORCE; modelled on
   `policies/claim-contact-rls.ts`), journal entry and migration-level policy spec: (a) the **mark** table (D25); (b) the **runs** table
-  (`-266` §1 as amended by `-267` §1: the partial-unique on `claim_case_id WHERE ended_at IS NULL`); (c) the **reminder record** keyed UNIQUE
-  `(run_id, slot_day, recipient_key, purpose, subject_key)` (`-267` §4; `slot_day` = the run's day; `purpose` a CHECK 6.19c extends by its own
-  migration); (d) the **letters** table keyed on `run_id` + the person's key (D6). Hand-authored (snapshots stop at 0020); ⛔ never regenerate an applied
+  (`-266` §1 as amended by `-267` §1: the partial-unique on `claim_case_id WHERE ended_at IS NULL`; `end_reason` CHECK ∈ {`superseded`,
+  `day_90`, `mark_changed`, `decided`} — ⛔ no `resubmitted`, `-267` §3); (c) the **reminder record** keyed UNIQUE
+  `(run_id, slot_day, recipient_key, purpose, subject_key)` (`-267` §4; `slot_day` = the run's day; `purpose` CHECK ∈ {`family_sms`,
+  `staff_reminder`, `letter_chase`, `letter_second_due`, `replacement_reminder`, `escalation`}, which 6.19c extends by its own migration;
+  ⚠ `subject_key text NOT NULL DEFAULT ''` — Postgres treats NULLs as distinct, so a nullable column would silently void the UNIQUE; it holds
+  the chased person's key ONLY for `letter_chase`, `letter_second_due` and the letter-chase `escalation`, and `''` for every other row incl.
+  `family_sms`, whose person is its `recipient_key`); (d) the **letters** table keyed on `run_id` + the person's key (D6). Hand-authored (snapshots stop at 0020); ⛔ never regenerate an applied
   migration. A dev/staging return with ⛔ no mark opens ⛔ no run — the queue shows "not set" and key (7) sets it (⛔ no backfill).
 - [ ] **Task 2 — The mark and the runs** (AC16, AC2) — the exported mark writer + run opener (ends any open run of the claim; refuses `direction` unless `family`) + the end-run function + the
   ONE resolver (latest mark; latest family/direction and staff runs, open or ended — `-267` §2);
@@ -284,7 +290,8 @@ and each mark change, with `resourceLocator: 'claim:<lower-case uuid>'` (anythin
 - [ ] **Task 7 — Letters and the mark route** (AC5, AC16) — one NEW route file under `apps/api/src/modules/claims/` for: record a letter,
   record delivery + screenshot (port, key prefix `…/correction-letter/{letterId}`, MIME/size before `put`), the letter form's address read
   (step-up, audit per reveal), the screenshot's signed read, and the District Admin's mark change (key (7), required note); district
-  preHandlers by **importing** `resolveNomineeNameCheckDistrict` (⛔ not copying it); D31's precondition; ≤ 2 letters per person per run;
+  preHandlers by **importing** `resolveNomineeNameCheckDistrict` (⛔ not copying it); the letter targets the resolver's latest `family`/`direction` run, open or ended (its delivery is recorded by `letterId`);
+  D31's precondition; ≤ 2 letters per person per run;
   recordable after the run ends; audit lines with the snapshotted display name; register the module in `claims/index.ts`.
 - [ ] **Task 8 — Surfaces** (AC8b, AC16) — the queue columns + the contract's `.strict()` item + `ClaimUnderCorrectionRow`
   (`returnDecisionId`, the run, the mark, the flags, the short reference); the letter form; the mark change form; the `?claim=` search
@@ -362,7 +369,9 @@ reminder and letter records (D22), calls the exported mark writer, run opener, r
 ### ⚠ Slice traps
 - **S1 — the run is the unit, ⛔ not the return** (`-266` §1). Everything per-run (the dead marker, "≤ 2 letters", "reached" in 6.19c) keys
   on `run_id`.
-- **S2 — ⛔ never write a record for a slot you did not attempt** (D30): the catch-up rule reads "a due slot with no record".
+- **S2 — ⛔ never write a record for a slot you did not attempt** (D30, a `resubmitted` pause): the catch-up rule reads "a due slot with no
+  record" — the ONE exception is the catch-up's own `skipped_superseded` markers for the older missed slots (after a pause they mean
+  *"not sent, superseded by the catch-up"*, ⛔ never *"attempted"*).
 - **S3 — the provider never throws.** A `rejected` is a resolved value; only a transient class makes the child throw.
 - **S4 — microcopy.** `microcopy.yaml`'s `code_globs` scan **all** of `apps/admin/src/**`, comments included, for `\breceipt\b` and
   `\breport\b` (among others) — "postal receipt", "delivery report" in the letter form, its copy or its comments fail CI. `claim.json` (en,
@@ -382,7 +391,8 @@ reminder and letter records (D22), calls the exported mark writer, run opener, r
 `apps/admin/src/modules/helpline-claims/BankDetailsCard.tsx` (the shared schema), `apps/api/src/modules/claims/index.ts`,
 `packages/domain/src/rbac/{permissions,roles}.ts`, `apps/api/src/audit/audit-sink.ts`, `packages/i18n/locales/{en,hi}/claim.json`,
 `scripts/claim-adjudication-human-actor-invariant/check.ts`, `openapi/v1.yaml`, `friction-budget.md`,
-`docs/launch-gate-inventory/dlt-template-requests-6-19.md`, `docs/degradation-policy/surface-inventory.md`,
+`docs/launch-gate-inventory/dlt-template-requests-6-19.md`, `docs/launch-gate-inventory/inventory-roster.md` (D28's Hindi review, `-267` §6),
+`docs/degradation-policy/surface-inventory.md`,
 `docs/fallback-handler-ledger/ledger.md` (rows 9, 15, 16's xref), `_bmad-output/implementation-artifacts/deferred-work.md`.
 **NEW:** the four tables + RLS files (`schema/index.ts`, `policies/index.ts`); the domain module for the mark writer, run opener, resolver,
 schedule and the letter precondition; the reminder sweep beside `contribution-notify-triggers.ts`; the claim-correction SMS template
@@ -427,6 +437,7 @@ and 6.19a's `apps/api/tests/unit/claim-contact-copy.test.ts` (copy lockstep).
 | Version | Date | Change |
 |---|---|---|
 | **v2.0** | **2026-09-29** | ⭐ **VALIDATED (create-story validate; one in-session pass + three fresh-context read-only verifiers) and REWRITTEN on author-commit `2026-09-29-266`** (BigDev: *"all"*). Re-pinned `c136b03c` → `f06ee41f` (78 code files moved under 6.19a). ⚠ **Critical:** AC16 named `nominee.bank.correction_needed`, but a returned claim always renders `…_staff` — a staff-case family would still have been told to correct; the run key (D2) collided on a family → staff → family switch (the family silently got nothing) — **superseded by `-266` §1** (a runs table); the recipient set can be EMPTY (a return needs ⛔ no determination) — **D30**. **High:** Task order (the mark before the sweep; Task 8 was outside "0 → 7"); the `must_act` contract/handler/form design and the tests it turns red; apps/jobs could reach neither the SMS client nor the decrypt field classes; the provider result mapping; the letter check was only in the header and was the wrong predicate — **superseded by `-266` §2 (D31)**; 6.19a's readers named; the closure notice was owned by nobody — **D32**; one exported mark writer and resolver for 6.19c. **Medium/low:** one catalog bump for keys (1) + (7); `-260` G2/G4 cited; escalation and staff rows get a home (`purpose`); AC2–AC4 carry `-258`'s narrowing; `-232` I (6.19c's) dropped from AC4; AC10 restated and given a Task; admin push declared inert on day one, the queue's `?claim=` link; microcopy traps; the policy note now names what the family receives; D28's Hindi marked pending review; ~15 files added; the SMS reference and helpline number (D33); one District Admin reminder a day (D34); migrations from `0126`; `resolveNomineeNameCheckDistrict` imported; two glyph inversions removed; a Task to mark the 6.18 nav item built at both its sites; surface-inventory + AR-61 xrefs. *(Re-validated the same day by a fresh-context pass against this rewrite: the story-level findings applied in place — the gateway/outage fail-closed rules, the row claim, the classified error, the per-person reset on a new mobile, the letter cap's 409, the "not set" flag, six citations, the policy note's inputs, AC10's `-226`/`-227` line, the DLT sheet's owner; ~20 files in all, ⛔ not ~15; three glyph inversions in v1.2, ⛔ not two.)* |
+| v2.2 | 2026-09-29 | Final fresh-context re-validate (⛔ no critical): 6.19c's Tasks 1/3/4/8 and the shared spec's D2/D4/D30/D31/D34 now carry `-267` inline (its Consequence 1 had claimed 6.19c's resolver use was swept — it now is); `subject_key` NOT NULL DEFAULT `''` and the full `purpose` / `end_reason` CHECKs; `claimant_unresolved` flags the claimant alone; which run a letter targets; S2's catch-up-marker exception; three AC11b tests; `-267` in Read first + Task 0; `inventory-roster.md` in Files. ⚠ One HIGH is ⛔ NOT applied — it needs BigDev: *"the family's part is done"* (see the validate hand-back, 2026-09-29). |
 | v2.1 | 2026-09-29 | ⭐ **Re-validated against v2.0 (fresh context) ⇒ erratum author-commit `2026-09-29-267`**, the validate pass's own output having carried six design defects: one open run per **claim** (a vote-path second return left two); the resolver returns runs **open or ended** (every run ends at day 90, where 6.19c's gates start); `resubmitted` **pauses** a run (a 6.20 correction can un-resubmit it on the same return); `subject_key` on per-person items (two letter chases on one day collided); the claimant's letter reads the block's address (`resolveContactRow` holds only nominees'); `direction` refused unless `family`; D30's `claimant_unresolved`; D28's Hindi review a go-live gate. The mark writer accepts a same-value restatement (G2's keep); `must_act.unchanged` is the District Admin route's only. |
 | v1.2 | 2026-09-28 | ⚠ **SWEPT by `-265`** (6.19a Task 0, which owns the set's governance): *"D1–D24, the six keys"* → D1–D29 and eight keys; the letter writer runs D14's check (⚠ superseded by `-266` §2); the letter form reads the address under key (1). ⛔ No AC or Task re-derived. |
 | v1.1 | 2026-09-27 | ⭐ **`-258` (V, option B) appended:** AC16 (the mark, family vs staff runs, the staff-case copy) and Task 8; key (7) minted here. |

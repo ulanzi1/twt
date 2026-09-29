@@ -95,7 +95,8 @@ person the family agreed may be contacted; a posted letter to anyone whose phone
    writer. (`-231` B; AR-63: time-as-actor is non-punitive only.)
 2. **⛔ A corrected claim is never closed as "no response".** The closure request, the Pariwar Admin's approval **and** the Super
    Admin's close each re-check `isReturnedClaimResubmitted` **under the trustee lock** (AC6). ⚠ *(`-268` §3: "corrected" = `isReturnedClaimResubmitted` **or** "the family's part is done" — the
-   accounts rewritten after the return with ⛔ no later `does_not_match` — so a family awaiting a staff check is ⛔ never closed.)*
+   accounts rewritten after the return with ⛔ no later `does_not_match` — so a family awaiting a staff check is ⛔ never closed. `-269` §1:
+   the LATEST check since the latest rewrite decides.)*
 3. **⛔ Never write `delivered` for an accepted send.** A reminder record says what is KNOWN; `delivered` only when a real signal
    arrived (T1). `accepted` **counts as reached** — the Panel's own answer (`-252` cl.1), ⛔ not our shortcut.
 4. **⛔ No name, ever, in a family message** — a non-name reference only (T6).
@@ -600,7 +601,8 @@ Where a decision only records a Panel ruling it says so.
   `claim.refile_requires_confirmation`**; a mint consumes the confirmation in the same tx. The member app shows a calm "please call the
   helpline" state (en + hi) — ⛔ never a bare error. ⛔ Nothing about what carries over from the closed claim (`-254` does not rule it): the new
   claim starts empty, as any re-file does today.
-- ⚠ *(`-269` §4: `carrier_reject` → `rejected_unreachable`, letter-eligible too.)* **D20 — NEW. The letter track's anchors, per person.** A person is **letter-eligible** from the first slot whose outcome is
+- ⚠ *(`-269` §4: `carrier_reject` → `rejected_unreachable`, letter-eligible too. 6.19b v2.5: *"then escalated"* = found-dead day + 13 —
+  `-231` C's *"thereafter"*.)* **D20 — NEW. The letter track's anchors, per person.** A person is **letter-eligible** from the first slot whose outcome is
   `rejected_invalid_number` (dead, `-231` C) or `no_target` (no working route, `-252` cl.2) — that date is their **found-dead day**. The District
   Admin's chase for that person's letter record (tracking number, delivery date, screenshot) runs from the found-dead day: first reminder on
   **day 7**, **daily through day 12**, then **escalated to the Pariwar Admin** (a record + a reminder; ⛔ no automatic act) (`-231` C, `-250`
@@ -608,7 +610,8 @@ Where a decision only records a Panel ruling it says so.
   else. At most **two letters per person per run**; the second is due **30 days after the first's recorded delivery**, with **ONE** District
   Admin reminder then (`-231` D/F); if the run reaches day 90 first, ⛔ nothing further is required. Letters stay recordable after day 90 with
   ⛔ no reminders (`-250` #4). ⛔ The second letter gets no 7/12 chase (the Panel replaced the regular reminders with one — ours).
-- **D21 — NEW. The District Admin's regular reminders** follow D3's days; they are replaced by the single 30-day reminder (`-231` F, `-232` J)
+- ⚠ *(6.19b v2.4: the "single 30-day reminder" and `-231` D's second letter are ONE reminder **per person** — `letter_second_due` at that
+  person's delivery + 30 days; ⛔ no separate `replacement_reminder` in v1.)* **D21 — NEW. The District Admin's regular reminders** follow D3's days; they are replaced by the single 30-day reminder (`-231` F, `-232` J)
   only when **every** family recipient is letter-eligible **and** each has a recorded delivery (with one person still on a working phone, the
   chase continues — ours; `-231` F was ruled for "the family's number").
 - **D22 — NEW. The "reached" precondition (`-252` cl.1)** is a pure function over the run's records: for **each** person who must be reached
@@ -626,7 +629,7 @@ Where a decision only records a Panel ruling it says so.
 
 **⭐ APPENDED 2026-09-27 — the author decisions `-258` (V) needs (⏳ PROPOSED, in the same 6.19a Task 0 author-commit):**
 
-- **D25 — the "who must act" mark is its own append-only record**, keyed on the return's `decision_id`: `(mark_id, return_decision_id,
+- ⚠ *(`-270`: `set_by_role` also admits `super_admin`.)* **D25 — the "who must act" mark is its own append-only record**, keyed on the return's `decision_id`: `(mark_id, return_decision_id,
   claim_case_id, must_act ∈ {family, staff}, set_by_actor, set_by_role ∈ {pariwar_admin, district_admin}, note, set_at)`; the **latest row
   wins**; RLS + FORCE, own migration. ⛔ Not a column on `claim_state_trustee_decisions` (every phase shares it). The Pariwar Admin's
   `return_to_district_admin` action gains a **required** `must_act` field, written in the **same tx** as the return row (6.18's cycle-freeze
@@ -766,3 +769,4 @@ template registry's content against the rendered `t()` output).
 | v1.14 | 2026-09-29 | ⚠ **`-267`** (erratum to `-266`, from re-validating 6.19b v2.0): one open run per **claim**; the resolver returns runs open **or ended**; `resubmitted` pauses a run; `subject_key` on per-person items; the claimant's letter address is the block's; `direction` only while `family`; D30's `claimant_unresolved`; **D28 amended** — the Hindi review is a go-live gate. The decision entry is the text; ⛔ not restated here. |
 | v1.15 | 2026-09-29 | ⚠ **`-268`**: invariant 2's "corrected" also means "the family's part is done"; D4's pause (via `-267` §3) is widened to it. |
 | v1.16 | 2026-09-29 | ⚠ **`-269`**: the latest check decides "the family's part is done"; two pause tiers (D4); ⛔ no family run during a Super Admin hold (6.19c fills 6.19b's opener hook — T11/D18); D20 gains `rejected_unreachable`; D33's helpline key is per Pariwar. |
+| v1.17 | 2026-09-29 | 6.19b v2.5's re-check: invariant 2 marked with `-269` §1; D20's escalation day (13); D21 read as one reminder per person; D25's role set gains `super_admin` (`-270`). |

@@ -22,7 +22,7 @@ import { CLAIMANT_NOMINEE_RELATIONSHIP_CODES } from '@twt/contracts'
 import { ApiError } from '@twt/api-client'
 import { useLocale, useT } from '@twt/i18n/react'
 import { useFocusEffect, useRouter } from 'expo-router'
-import { AccessibilityInfo, Platform } from 'react-native'
+import { AccessibilityInfo, Platform, ScrollView } from 'react-native'
 import { Button, Input, Paragraph, Spinner, Text, XStack, YStack } from 'tamagui'
 
 import { CallHelplineCTA } from '../../components/claim/CallHelplineCTA'
@@ -48,16 +48,18 @@ function ChoiceRow(props: {
   label: string
   role: 'radio' | 'checkbox'
   testID: string
+  disabled?: boolean
 }): React.ReactElement {
   return (
     <XStack
       gap="$3"
       items="flex-start"
-      onPress={props.onPress}
-      pressStyle={{ opacity: 0.7 }}
+      onPress={props.disabled ? undefined : props.onPress}
+      pressStyle={props.disabled ? undefined : { opacity: 0.7 }}
+      opacity={props.disabled ? 0.5 : 1}
       accessible={true}
       accessibilityRole={props.role}
-      accessibilityState={{ checked: props.checked }}
+      accessibilityState={{ checked: props.checked, disabled: !!props.disabled }}
       accessibilityLabel={props.label}
       testID={props.testID}
     >
@@ -108,6 +110,21 @@ export default function ContactScreen(): React.ReactElement {
     }
   }, [])
 
+  // A fast double-tap can fire a second `onSave` before the `busy`-derived disable commits on the next
+  // render — this is a SYNCHRONOUS guard, checked before that render happens.
+  const savingRef = useRef(false)
+
+  // Clear a stale `incomplete`/`agreement_required` message as soon as the field that caused it changes —
+  // otherwise the last error keeps announcing itself as still true after the family fixes it. ⭐ Review
+  // 2026-09-29: split by CAUSE, not one effect for both — editing an address must never clear
+  // `agreement_required` when the checkbox itself is still untouched, and vice versa.
+  useEffect(() => {
+    setPhase((prev) => (prev === 'incomplete' ? 'idle' : prev))
+  }, [addresses, claimant, block, relationships])
+  useEffect(() => {
+    setPhase((prev) => (prev === 'agreement_required' ? 'idle' : prev))
+  }, [agreed])
+
   useEffect(() => {
     let active = true
     memberAuth
@@ -149,55 +166,65 @@ export default function ContactScreen(): React.ReactElement {
   }
 
   async function onSave(): Promise<void> {
-    if (!claimCaseId || !Array.isArray(nominees)) {
-      setPhase('error')
-      announce(t('contact.error'))
-      return
-    }
-    const built = buildMemberContactBody({
-      nominees,
-      addresses,
-      claimant,
-      block,
-      relationships,
-      agreed,
-      locale: locale === 'en' ? 'en' : 'hi',
-    })
-    if (!built.ok) {
-      setPhase(built.reason)
-      announce(phaseText[built.reason]!)
-      return
-    }
-    setPhase('saving')
+    if (savingRef.current) return
+    savingRef.current = true
     try {
-      await claimApi.recordClaimContact(claimCaseId, built.body)
-    } catch (e) {
+      if (!claimCaseId || !Array.isArray(nominees)) {
+        setPhase('error')
+        announce(t('contact.error'))
+        return
+      }
+      const built = buildMemberContactBody({
+        nominees,
+        addresses,
+        claimant,
+        block,
+        relationships,
+        agreed,
+        locale: locale === 'en' ? 'en' : 'hi',
+      })
+      if (!built.ok) {
+        setPhase(built.reason)
+        announce(phaseText[built.reason]!)
+        return
+      }
+      setPhase('saving')
+      try {
+        await claimApi.recordClaimContact(claimCaseId, built.body)
+      } catch (e) {
+        if (!mountedRef.current) return
+        const next: Phase =
+          e instanceof ApiError && e.code === 'claim_contact.not_writable'
+            ? 'not_writable'
+            : e instanceof ApiError && e.status === 400
+              ? 'incomplete'
+              : 'error'
+        setPhase(next)
+        announce(phaseText[next]!)
+        return
+      }
       if (!mountedRef.current) return
-      const next: Phase =
-        e instanceof ApiError && e.code === 'claim_contact.not_writable'
-          ? 'not_writable'
-          : e instanceof ApiError && e.status === 400
-            ? 'incomplete'
-            : 'error'
-      setPhase(next)
-      announce(phaseText[next]!)
-      return
+      setPhase('saved')
+      // ⛔ PII-free: only the step marker is remembered on the device.
+      if (memberId) saveClaimDraft(memberId, { lastStep: 'contact' })
+      announce(t('contact.saved'))
+      await new Promise((r) => setTimeout(r, SAVED_ANNOUNCEMENT_DELAY_MS))
+      if (!mountedRef.current) return
+      router.push('/(claim)/acknowledgement')
+    } finally {
+      savingRef.current = false
     }
-    if (!mountedRef.current) return
-    setPhase('saved')
-    // ⛔ PII-free: only the step marker is remembered on the device.
-    if (memberId) saveClaimDraft(memberId, { lastStep: 'contact' })
-    announce(t('contact.saved'))
-    await new Promise((r) => setTimeout(r, SAVED_ANNOUNCEMENT_DELAY_MS))
-    if (!mountedRef.current) return
-    router.push('/(claim)/acknowledgement')
   }
 
   const busy = phase === 'saving' || phase === 'saved'
+  // `not_writable` is a server-confirmed refusal (from the write's own response — no extra read needed): the
+  // form must not stay editable/resubmittable against a claim state that will always refuse it.
+  const locked = busy || phase === 'not_writable'
   const relLabel = (code: string): string => tCommon(`nominees.relationship_${code}`)
 
   return (
     <ClaimProxyFlowShell deceasedName={name}>
+      <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
       <YStack gap="$4" pt="$4">
         <Text fontSize="$7" fontWeight="700" accessibilityRole="header">
           {t('contact.title')}
@@ -225,14 +252,14 @@ export default function ContactScreen(): React.ReactElement {
               accessibilityHint={t('contact.address_help')}
               multiline
               maxLength={500}
-              disabled={busy}
+              disabled={locked}
               testID={`contact-address-${n.rank}`}
             />
           </YStack>
         ))}
 
         {list.length > 0 ? (
-          <YStack gap="$2" accessibilityRole="radiogroup">
+          <YStack gap="$2" accessibilityRole="radiogroup" accessibilityLabel={t('contact.claimant_question')}>
             <Text fontWeight="600">{t('contact.claimant_question')}</Text>
             {list.map((n) => (
               <ChoiceRow
@@ -242,6 +269,7 @@ export default function ContactScreen(): React.ReactElement {
                 onPress={() => setClaimant({ kind: 'rank', rank: n.rank })}
                 label={t('contact.claimant_is_nominee', { rank: n.rank, relationship: relLabel(n.relationship) })}
                 testID={`contact-claimant-rank-${n.rank}`}
+                disabled={locked}
               />
             ))}
             <ChoiceRow
@@ -250,6 +278,7 @@ export default function ContactScreen(): React.ReactElement {
               onPress={() => setClaimant({ kind: 'someone_else' })}
               label={t('contact.claimant_is_someone_else')}
               testID="contact-claimant-someone-else"
+              disabled={locked}
             />
           </YStack>
         ) : null}
@@ -263,17 +292,17 @@ export default function ContactScreen(): React.ReactElement {
               placeholder={t('contact.claimant_name')}
               accessibilityLabel={t('contact.claimant_name')}
               maxLength={200}
-              disabled={busy}
+              disabled={locked}
               testID="contact-claimant-name"
             />
             <Input
               value={block.mobile}
-              onChangeText={(v) => setBlock((b) => ({ ...b, mobile: v }))}
+              onChangeText={(v) => setBlock((b) => ({ ...b, mobile: v.replace(/[^0-9]/g, '') }))}
               placeholder={t('contact.claimant_mobile')}
               accessibilityLabel={t('contact.claimant_mobile')}
               keyboardType="phone-pad"
               maxLength={20}
-              disabled={busy}
+              disabled={locked}
               testID="contact-claimant-mobile"
             />
             <Input
@@ -283,7 +312,7 @@ export default function ContactScreen(): React.ReactElement {
               accessibilityLabel={t('contact.claimant_address')}
               multiline
               maxLength={500}
-              disabled={busy}
+              disabled={locked}
               testID="contact-claimant-address"
             />
             {list.map((n) => (
@@ -299,9 +328,10 @@ export default function ContactScreen(): React.ReactElement {
                         size="$3"
                         theme={selected ? 'accent' : undefined}
                         chromeless={!selected}
+                        disabled={locked}
                         accessibilityRole="button"
                         accessibilityLabel={relLabel(rel)}
-                        accessibilityState={{ selected }}
+                        accessibilityState={{ selected, disabled: locked }}
                         onPress={() => setRelationships((r) => ({ ...r, [n.rank]: rel }))}
                         testID={`contact-relationship-${n.rank}-${rel}`}
                       >
@@ -321,6 +351,7 @@ export default function ContactScreen(): React.ReactElement {
           onPress={() => setAgreed((v) => !v)}
           label={t('contact.agreement')}
           testID="contact-agreement"
+          disabled={locked}
         />
 
         {phaseText[phase] ? (
@@ -334,12 +365,18 @@ export default function ContactScreen(): React.ReactElement {
           </Text>
         ) : null}
 
-        <Button theme="accent" disabled={busy || nominees === null} onPress={() => void onSave()} testID="contact-save">
+        <Button
+          theme="accent"
+          disabled={locked || nominees === null || nominees === 'error'}
+          onPress={() => void onSave()}
+          testID="contact-save"
+        >
           {phase === 'saving' ? <Spinner /> : t('contact.continue')}
         </Button>
 
         <CallHelplineCTA />
       </YStack>
+      </ScrollView>
     </ClaimProxyFlowShell>
   )
 }

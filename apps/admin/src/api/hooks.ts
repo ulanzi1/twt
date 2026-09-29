@@ -800,15 +800,19 @@ export function useClaimContactDetails(pariwarId: string, claimCaseId: string | 
 }
 
 /** The helpline's contact write. A success refreshes the presence read (the response carries it too) and
- *  drops any cached plaintext read-back, which is now stale. */
-export function useRecordHelplineClaimContact(pariwarId: string, claimCaseId: string | null) {
+ *  drops any cached plaintext read-back, which is now stale.
+ *  ⭐ Review 2026-09-29: `claimCaseId` travels in the mutate-time VARIABLES, not as a hook param — a
+ *  hook-level `useMutation({ onSuccess })` rebinds to the LATEST render's closure while a mutation is still
+ *  pending (TanStack Query v5), so a claim switch mid-save could otherwise write a settling response into
+ *  the WRONG claim's cache entry. `variables` are always the ones the settling call was made with. */
+export function useRecordHelplineClaimContact(pariwarId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (body: Parameters<typeof api.recordHelplineClaimContact>[2]) =>
-      api.recordHelplineClaimContact(pariwarId, claimCaseId as string, body),
-    onSuccess: (res) => {
-      qc.setQueryData(claimContactPresenceKey(pariwarId, claimCaseId ?? ''), res.presence);
-      qc.removeQueries({ queryKey: claimContactDetailsKey(pariwarId, claimCaseId ?? '') });
+    mutationFn: ({ claimCaseId, body }: { claimCaseId: string; body: Parameters<typeof api.recordHelplineClaimContact>[2] }) =>
+      api.recordHelplineClaimContact(pariwarId, claimCaseId, body),
+    onSuccess: (res, { claimCaseId }) => {
+      qc.setQueryData(claimContactPresenceKey(pariwarId, claimCaseId), res.presence);
+      qc.removeQueries({ queryKey: claimContactDetailsKey(pariwarId, claimCaseId) });
     },
   });
 }

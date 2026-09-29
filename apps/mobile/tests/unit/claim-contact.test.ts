@@ -91,7 +91,7 @@ describe('the contact screen (source pins)', () => {
 
   it('⭐ the choices are explicit accessibility elements with a role and a state (family 13(a))', () => {
     expect(src).toContain('accessible={true}')
-    expect(src).toContain('accessibilityState={{ checked: props.checked }}')
+    expect(src).toContain('accessibilityState={{ checked: props.checked, disabled: !!props.disabled }}')
   })
 
   it('the relationships offered are the DERIVED nineteen (⛔ never a local list)', () => {

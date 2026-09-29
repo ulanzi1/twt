@@ -84,7 +84,10 @@ export type NomineeRelationship = z.output<typeof NomineeRelationship>;
  */
 export const ClaimantNomineeRelationship = NomineeRelationship.exclude(['other']);
 export type ClaimantNomineeRelationship = z.output<typeof ClaimantNomineeRelationship>;
-export const CLAIMANT_NOMINEE_RELATIONSHIP_CODES = ClaimantNomineeRelationship.options;
+// ⭐ Review 2026-09-29: `.options` is the SCHEMA's own live internal array, ⛔ not a copy — mutating it in
+// place (e.g. `.push()`) would silently change what `ClaimantNomineeRelationship.safeParse()` accepts
+// process-wide. A frozen defensive copy so no consumer can alias-corrupt the schema.
+export const CLAIMANT_NOMINEE_RELATIONSHIP_CODES = Object.freeze([...ClaimantNomineeRelationship.options]);
 
 // ── declare ───────────────────────────────────────────────────────────────────────────
 

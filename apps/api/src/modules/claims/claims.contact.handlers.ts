@@ -37,6 +37,7 @@ import { BadRequestError, ConflictError, NotFoundError, UnauthorizedError } from
 import { emitAuthAudit } from '../auth/shared/audit.js';
 import { closeScopeTx, openScopeTx } from '../multi-tenant/scope-tx.js';
 import {
+  CLAIM_CONTACT_DECRYPT_FAILED_SENTINEL,
   decryptClaimContactField,
   decryptClaimContactFieldSoft,
   encryptClaimContactField,
@@ -296,11 +297,14 @@ export function createClaimContactHandlers(deps: AppDeps) {
       const presence = await claim.readClaimContactPresence(scopeTx.tx, pariwarId, claimCaseId);
       if (!presence) throw new NotFoundError('Claim not found', 'claim.not_found');
       let decrypted = 0;
+      let failed = 0;
       const soft = async (c: string): Promise<string> => {
-        decrypted += 1;
-        return decryptClaimContactFieldSoft(c, pariwarId, deps.encryption, (err) =>
+        const plaintext = await decryptClaimContactFieldSoft(c, pariwarId, deps.encryption, (err) =>
           request.log.warn({ err, claimCaseId }, '[claim-contact] a contact field could not be decrypted'),
         );
+        if (plaintext === CLAIM_CONTACT_DECRYPT_FAILED_SENTINEL) failed += 1;
+        else decrypted += 1;
+        return plaintext;
       };
       const nominees = [];
       for (const n of presence.nominees) {
@@ -320,7 +324,9 @@ export function createClaimContactHandlers(deps: AppDeps) {
       emitAuthAudit(deps, request, 'admin_claim.contact_details_read', {
         actorId,
         pariwarId,
-        context: { claim_case_id: claimCaseId, fields_decrypted: decrypted },
+        // ⭐ Review 2026-09-29: `decrypted` counts only CONFIRMED successes; `fields_failed` names the sentinel
+        // fallback separately so the audit line can't overstate actual plaintext exposure.
+        context: { claim_case_id: claimCaseId, fields_decrypted: decrypted, fields_failed: failed },
         resourceLocator: `claim:${claimCaseId}`,
       });
       void reply.status(200);

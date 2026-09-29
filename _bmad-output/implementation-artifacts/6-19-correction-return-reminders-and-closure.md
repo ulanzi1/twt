@@ -37,7 +37,7 @@ Status: split — ⛔ this file has no sprint row; it is the shared spec of four
 > | Story | Row / file | Scope | Status |
 > |---|---|---|---|
 > | **6.19a** | `6-19a-claim-contact-capture-at-filing` | AC0 (governance for the WHOLE set), AC1, AC13 | ✅ `done` (merged, `f06ee41f`) |
-> | **6.19b** | `6-19b-correction-reminders-and-posted-letters` | AC2–AC5, AC16 | `ready-for-dev` — v2.1 on `-266` + `-267`, re-pinned `f06ee41f` |
+> | **6.19b** | `6-19b-correction-reminders-and-posted-letters` | AC2–AC5, AC16 | `ready-for-dev` — v2.4 on `-266` … `-269`, re-pinned `f06ee41f` |
 > | **6.19c** | `6-19c-correction-closure-super-admin-review-and-refile` | AC6, AC7, AC14, AC15, AC17 | `ready-for-dev` — start only after 6.19b is `done` |
 > | **6.19d** | `6-19d-replacement-certificate-reminder` | AC12 (CC1) | `backlog` — fenced on its routing note |
 >
@@ -479,7 +479,8 @@ Where a decision only records a Panel ruling it says so.
   `0 10 * * *`, `tz:'Asia/Kolkata'`). "At least 90 days" ⇔ `istDateOf(now) >= addCalendarDays(day0, 90)`. **Catch-up:** a due slot with no
   record is sent ONCE and flagged `late`; older missed slots are written `skipped_superseded` — ⛔ no burst. ⚠ The numbers are now the Panel's:
   a change is a new ruling, ⛔ never an edit.
-- ⚠ *(`-267` §3: `resubmitted` now PAUSES a run — ⛔ no send, ⛔ no record — and ⛔ never ends it; a run ends on superseded, day 90, a mark
+- ⚠ *(`-269` §2: the pause has two tiers — `resubmitted` pauses the whole run; "the family's part is done" (`-268`, the LATEST check per
+  `-269` §1) pauses the family only.)* ⚠ *(`-267` §3: `resubmitted` now PAUSES a run — ⛔ no send, ⛔ no record — and ⛔ never ends it; a run ends on superseded, day 90, a mark
   change or `decided`.)* **D4 — the stop predicate, per recipient.** All reminders on a run stop when the return row is superseded **or**
   `resolveClaimCorrectionState(…).resubmitted` holds, and at day 90. A recipient's **dead number** (a send-time `invalid_number`) or **no working
   route** (`no_target`) keeps them on the schedule (harmless — they fail, and `-250` #1 says so) **until a letter to that person has a recorded
@@ -599,7 +600,7 @@ Where a decision only records a Panel ruling it says so.
   `claim.refile_requires_confirmation`**; a mint consumes the confirmation in the same tx. The member app shows a calm "please call the
   helpline" state (en + hi) — ⛔ never a bare error. ⛔ Nothing about what carries over from the closed claim (`-254` does not rule it): the new
   claim starts empty, as any re-file does today.
-- **D20 — NEW. The letter track's anchors, per person.** A person is **letter-eligible** from the first slot whose outcome is
+- ⚠ *(`-269` §4: `carrier_reject` → `rejected_unreachable`, letter-eligible too.)* **D20 — NEW. The letter track's anchors, per person.** A person is **letter-eligible** from the first slot whose outcome is
   `rejected_invalid_number` (dead, `-231` C) or `no_target` (no working route, `-252` cl.2) — that date is their **found-dead day**. The District
   Admin's chase for that person's letter record (tracking number, delivery date, screenshot) runs from the found-dead day: first reminder on
   **day 7**, **daily through day 12**, then **escalated to the Pariwar Admin** (a record + a reminder; ⛔ no automatic act) (`-231` C, `-250`
@@ -661,7 +662,7 @@ Where a decision only records a Panel ruling it says so.
   409 `correction_letter.not_letter_eligible | .address_missing | .agreement_not_live`. D14 stays approval-only.
 - **D32 — 6.19b builds BOTH family messages** (`reminder`, `closure_notice` × `hi`, `en`), their copy, the lockstep test and the DLT sheet's
   wording; 6.19c only sends the closure notice.
-- **D33 — the SMS's variables:** the short reference (first 8 hex of the claim id, upper-cased — shown on the queue row) and the helpline
+- ⚠ *(`-269` §5: the helpline key is per Pariwar — `sms.claim_correction.helpline_number.<pariwarId>`.)* **D33 — the SMS's variables:** the short reference (first 8 hex of the claim id, upper-cased — shown on the queue row) and the helpline
   number from config key `sms.claim_correction.helpline_number`, failing closed.
 - **D34 — one District Admin reminder per claim per day**, following the open run (⭐ one per claim, `-267` §1); at most one staff push per District Admin per claim per day.
 
@@ -764,3 +765,4 @@ template registry's content against the rendered `t()` output).
 | **v1.13** | **2026-09-29** | ⭐ **6.19b's validate pass + author-commit `-266`:** D2 SUPERSEDED (a runs table — the return's `decision_id` collided on a family → staff → family switch); D3 keyed by run kind + `-260` G4; D14's letter-writer clause SUPERSEDED (D31); **D30–D34 added**; D8's arithmetic marked (`-265` §2); T14's migration number marked (6.19b starts at 0126); the status table (6.19a `done`) and the LETTERS / Decisions headers (COMMITTED). ⚠ *What already EXISTS* stays pinned to `c136b03c` — for 6.19b's scope, 6.19b v2.0's *§ What 6.19a shipped, and what moved* (re-derived at `f06ee41f`) is the current record. |
 | v1.14 | 2026-09-29 | ⚠ **`-267`** (erratum to `-266`, from re-validating 6.19b v2.0): one open run per **claim**; the resolver returns runs open **or ended**; `resubmitted` pauses a run; `subject_key` on per-person items; the claimant's letter address is the block's; `direction` only while `family`; D30's `claimant_unresolved`; **D28 amended** — the Hindi review is a go-live gate. The decision entry is the text; ⛔ not restated here. |
 | v1.15 | 2026-09-29 | ⚠ **`-268`**: invariant 2's "corrected" also means "the family's part is done"; D4's pause (via `-267` §3) is widened to it. |
+| v1.16 | 2026-09-29 | ⚠ **`-269`**: the latest check decides "the family's part is done"; two pause tiers (D4); ⛔ no family run during a Super Admin hold (6.19c fills 6.19b's opener hook — T11/D18); D20 gains `rejected_unreachable`; D33's helpline key is per Pariwar. |

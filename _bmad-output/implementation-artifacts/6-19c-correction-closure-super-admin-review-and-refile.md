@@ -61,7 +61,7 @@ PRD** (FR-43A: internal appeal is the primary grievance path, only Stage 3 non-a
 **Given** day ≥ 90 of the live run (⚠ SWEPT by `-267` §2: *"of the latest family-or-direction run"* — every run has ENDED by day 90; read it, open or ended, through 6.19b's resolver) **Then** the system reminds the District Admin **daily for 7 days**, then escalates to the Pariwar Admin
 (`-232` I) — ⛔ **no job ever calls a decision writer**
 **And** the District Admin **requests** the closure (key (2)): ⛔ before day 90 → **409 `closure.too_early`**; not every person reached (D22) →
-**409 `closure.not_reached`**; **corrected** (re-checked under the trustee lock) → **409 `closure.claim_corrected`**; no contact record →
+**409 `closure.not_reached`**; **corrected** (re-checked under the trustee lock) → **409 `closure.claim_corrected`** — ⚠ SWEPT by `-268` §3: *"corrected"* = `isReturnedClaimResubmitted` **or** the family's part is done (6.19b's exported reader), re-checked at the request, the Pariwar Admin's approval and the Super Admin's close; no contact record →
 **409 `closure.claim_contact_required`** (⚠ SWEPT by `-265`: was `claim_contact.required` — the per-route form of D14's code); a live routing row → **409 `closure.claim_routed_to_r9`** (defensive — the exclusion already holds); a
 certificate wait alone ⛔ never qualifies (invariant 10)
 **And** the Pariwar Admin (key (3)) **approves** (re-checking "corrected" under the lock → **409 `closure.claim_corrected`**) — running D1 in one
@@ -199,6 +199,7 @@ As the shared spec's. Two-connection exemplars: `apps/api/tests/integration/clai
 
 | Version | Date | Change |
 |---|---|---|
+| v1.6 | 2026-09-29 | ⚠ **SWEPT by `-268`**: AC6's `closure.claim_corrected` also fires when the family's part is done (every account rewritten after the return, ⛔ no later `does_not_match`) — through 6.19b's reader, under the trustee lock, at all three closing acts. ⚠ Its AC11c owes the test (a family that rewrote on day 10 and was never re-checked is ⛔ not closable at day 90). |
 | v1.5 | 2026-09-29 | ⚠ **SWEPT by `-267`** (6.19b's re-validate): AC6's *"live run"* = the latest family run, open or ended, through 6.19b's resolver; 6.19b's opener ends any open run of the claim and refuses a `direction` run unless the mark is `family`; 6.19c's decisions end the run through 6.19b's end-run function (`decided`); 6.19c's own reminder purposes extend 6.19b's `purpose` CHECK by its own migration. |
 | v1.4 | 2026-09-29 | ⚠ **SWEPT by `-266`** (6.19b's validate pass): the closure notice's template/copy are 6.19b's (D32 — this slice sends it); a `restart_family_reminders` direction opens a `direction` run through 6.19b's run opener; the mark and the family run's day 0 are read through 6.19b's exported resolver and written through its mark writer; "reached" keys on `run_id`. ⛔ No AC re-derived — ⚠ this file's own code claims are still pinned to `c136b03c` and owe a re-derivation at its own validate. |
 | v1.3 | 2026-09-28 | ⚠ **SWEPT by `-265`** (6.19a Task 0): D1–D24 → D1–D29; D29 in its `-260` G1 form; `claim_contact.required` → `closure.claim_contact_required`; the three new approval writers and the closure writers call D14's check. ⛔ No AC re-derived. |

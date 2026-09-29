@@ -23,7 +23,8 @@ Status: ready-for-dev
 > ⭐ **6.19a is `done` and merged** (its governance `68be1778` = `-265`; its code `a779bfaf`, review `f06ee41f`). ⭐ **`2026-09-29-266`**
 > (author-commit, this story's validate pass) **supersedes** `-265`'s D2 and `-265` §5's letter check, and adds **D30–D34**; ⭐ **`2026-09-29-267`** is its erratum
 > (one open run per claim, the resolver reads ended runs, `resubmitted` pauses, a per-person key, the claimant's letter address, D28's Hindi
-> review a go-live gate) — read both before Task 1; every AC below is written to them.
+> review a go-live gate); ⭐ **`2026-09-29-268`** makes *"the family's part is done"* its own fact (the accounts rewritten after the return,
+> with ⛔ no later `does_not_match`) — read all three before Task 1; every AC below is written to them.
 > ⭐ **The family SMS is go-live gated on counsel** (M, S — launch-gate inventory rows 18, 19) and cannot send for real until the DLT
 > templates are registered (T13; the request sheet reads ⛔ *not started*). A missing template id or helpline number fails **closed**.
 > Neither blocks the build ([[project_not_in_production_merge_is_not_golive]]).
@@ -89,7 +90,10 @@ first slot is the next morning at 10:00, for a return **and** for a switch), ⛔
 `getLiveCorrectionReturn(…).decisionId` — `resolveClaimCorrectionState` returns ⛔ no id), or day ≥ 90 — computed through those helpers,
 ⛔ never re-derived; ⭐ **`resolveClaimCorrectionState(…).resubmitted` PAUSES the run, it never ends it** (`-267` §3 — ⚠ SUPERSEDES `-266`'s
 `end_reason 'resubmitted'`: a 6.20 correction after resubmission makes it false again on the SAME return) — ⛔ no send and ⛔ no record for
-those slots; D3's catch-up if it flips back
+those slots; D3's catch-up if it flips back — ⭐ **and since `-268` §2 the pause predicate is WIDER: the run pauses for the family while
+*"the family's part is done"*** (every account rewritten after the return, and ⛔ no name check after the latest rewrite says
+`does_not_match`) — `resubmitted` implies it; ⛔ no family SMS, ⛔ no letter chase; the District Admin's own reminders **continue** (the claim
+now waits on staff)
 **And** the sweep (daily 10:00 IST) enumerates **open runs** — a raw cross-tenant read on the BYPASSRLS pool, bounded, alarming at its
 cap — and enqueues a child job per `(run, slot, recipient, purpose)` (a `singletonKey`); a per-claim try/catch (⚠ `resolveClaimCorrectionState`
 re-throws any error that is not one of its three "not yet" errors); the child throws **only on a transient failure** (AC3) so pg-boss retries
@@ -186,7 +190,8 @@ ends the family run at once
 (a record + a reminder, ⛔ no automatic act); the day-90 Super Admin escalation is 6.19c's (AC17)
 **And** in a staff case the family gets ⛔ no reminder, and the member app shows *"Your claim is still open — we are checking the bank
 details"* (en, ratified; hi — D28, its human review a **go-live** gate per `-267` §6) ⭐ **in place of** `nominee.bank.correction_needed_staff` — ⚠ a returned claim is ⛔ never in the member's
-editable window, so it **always** renders `…_staff` today, ⛔ never `nominee.bank.correction_needed`; in a family case `…_staff` stays; a
+editable window, so it **always** renders `…_staff` today, ⛔ never `nominee.bank.correction_needed`; in a family case `…_staff` stays — ⭐ **except while the family's part is done** (`-268` §2), when the D28 line shows (*"we are checking"* is
+exactly that situation); a
 `does_not_match` claim with ⛔ no return (⛔ no mark) keeps today's behaviour; the member status carries ⛔ no note and ⛔ no actor
 **And** the queue (AC8b) shows the mark, who set it and when (staff only), and carries the District Admin's change form; the Pariwar Admin's
 return form requires the choice before submit
@@ -219,8 +224,9 @@ and each mark change, with `resourceLocator: 'claim:<lower-case uuid>'` (anythin
   return **or** of a switch (G4);
 - **runs:** a second return ends the old run and opens a new one; ⭐ **family → staff → family opens a second family run whose day-1 slot
   sends**; one open run per claim — a racing opener loses, and a second return after a **vote** supersession leaves one run; the stop
-  predicate (superseded, day 90, a mark change — each alone); `resubmitted` pauses and a 6.20 correction that un-resubmits resumes it (a
-  `late` catch-up, ⛔ no burst); a `direction` run refused while the mark is `staff`; the resolver returns an ENDED day-90 run;
+  predicate (superseded, day 90, a mark change — each alone); ⭐ **`-268`:** a family that rewrites on day 10 is ⛔ never texted again while
+  ⛔ no check is recorded, the District Admin still is, and the member line switches to D28's; a later 6.20 correction does ⛔ not resume the
+  family chase; a later `does_not_match` does (a `late` catch-up, ⛔ no burst), and the family's next rewrite pauses it again; a `direction` run refused while the mark is `staff`; the resolver returns an ENDED day-90 run;
 - **races and crashes:** **two sweeps racing one slot → exactly one send and one row** (two connections); a crash between the insert and the
   send (⛔ neither a phantom "sent" nor a blocked slot); a catch-up after an outage (one `late`, older `skipped_superseded`, ⛔ no burst);
 - **the record:** `delivered_at` ⛔ never set for an accepted send; each provider class maps as AC3 says (a transient one retries, a permanent
@@ -260,7 +266,8 @@ and each mark change, with `resourceLocator: 'claim:<lower-case uuid>'` (anythin
   `family_sms`, whose person is its `recipient_key`); (d) the **letters** table keyed on `run_id` + the person's key (D6). Hand-authored (snapshots stop at 0020); ⛔ never regenerate an applied
   migration. A dev/staging return with ⛔ no mark opens ⛔ no run — the queue shows "not set" and key (7) sets it (⛔ no backfill).
 - [ ] **Task 2 — The mark and the runs** (AC16, AC2) — the exported mark writer + run opener (ends any open run of the claim; refuses `direction` unless `family`) + the end-run function + the
-  ONE resolver (latest mark; latest family/direction and staff runs, open or ended — `-267` §2);
+  ONE resolver (latest mark; latest family/direction and staff runs, open or ended — `-267` §2; ⭐ `familyPartDoneAt` — `-268` §1, from ONE
+  exported reader over the accounts leg of `isReturnedClaimResubmitted` + the latest check, which 6.19c's closure guard also calls);
   the `must_act` field: **optional** in `CycleFreezeDecisionRequest`'s object and **required for `return_to_district_admin` only** inside
   its `superRefine` (the `escalation_outcome` pattern); written in `postDecision`'s scope tx right after `claim.returnToDistrictAdmin(...)`
   (⛔ not a new required field on `ReturnToDistrictAdminInput` — 37 test calls would break); the second-return path ends the old run;
@@ -437,6 +444,7 @@ and 6.19a's `apps/api/tests/unit/claim-contact-copy.test.ts` (copy lockstep).
 | Version | Date | Change |
 |---|---|---|
 | **v2.0** | **2026-09-29** | ⭐ **VALIDATED (create-story validate; one in-session pass + three fresh-context read-only verifiers) and REWRITTEN on author-commit `2026-09-29-266`** (BigDev: *"all"*). Re-pinned `c136b03c` → `f06ee41f` (78 code files moved under 6.19a). ⚠ **Critical:** AC16 named `nominee.bank.correction_needed`, but a returned claim always renders `…_staff` — a staff-case family would still have been told to correct; the run key (D2) collided on a family → staff → family switch (the family silently got nothing) — **superseded by `-266` §1** (a runs table); the recipient set can be EMPTY (a return needs ⛔ no determination) — **D30**. **High:** Task order (the mark before the sweep; Task 8 was outside "0 → 7"); the `must_act` contract/handler/form design and the tests it turns red; apps/jobs could reach neither the SMS client nor the decrypt field classes; the provider result mapping; the letter check was only in the header and was the wrong predicate — **superseded by `-266` §2 (D31)**; 6.19a's readers named; the closure notice was owned by nobody — **D32**; one exported mark writer and resolver for 6.19c. **Medium/low:** one catalog bump for keys (1) + (7); `-260` G2/G4 cited; escalation and staff rows get a home (`purpose`); AC2–AC4 carry `-258`'s narrowing; `-232` I (6.19c's) dropped from AC4; AC10 restated and given a Task; admin push declared inert on day one, the queue's `?claim=` link; microcopy traps; the policy note now names what the family receives; D28's Hindi marked pending review; ~15 files added; the SMS reference and helpline number (D33); one District Admin reminder a day (D34); migrations from `0126`; `resolveNomineeNameCheckDistrict` imported; two glyph inversions removed; a Task to mark the 6.18 nav item built at both its sites; surface-inventory + AR-61 xrefs. *(Re-validated the same day by a fresh-context pass against this rewrite: the story-level findings applied in place — the gateway/outage fail-closed rules, the row claim, the classified error, the per-person reset on a new mobile, the letter cap's 409, the "not set" flag, six citations, the policy note's inputs, AC10's `-226`/`-227` line, the DLT sheet's owner; ~20 files in all, ⛔ not ~15; three glyph inversions in v1.2, ⛔ not two.)* |
+| v2.3 | 2026-09-29 | ⭐ **Author-commit `2026-09-29-268`** (BigDev: *"A"*) — *"the family's part is done"* is its own fact (every account rewritten after the return, ⛔ no later `does_not_match`); the family chase pauses on it (⛔ not only on `resubmitted`, which also needs a staff check and which a 6.20 correction un-sets), the District Admin's reminders continue, the member line shows D28's *"we are checking"*, and 6.19c's closure guard reads it. `isReturnedClaimResubmitted` and the approval gate are ⛔ not changed. |
 | v2.2 | 2026-09-29 | Final fresh-context re-validate (⛔ no critical): 6.19c's Tasks 1/3/4/8 and the shared spec's D2/D4/D30/D31/D34 now carry `-267` inline (its Consequence 1 had claimed 6.19c's resolver use was swept — it now is); `subject_key` NOT NULL DEFAULT `''` and the full `purpose` / `end_reason` CHECKs; `claimant_unresolved` flags the claimant alone; which run a letter targets; S2's catch-up-marker exception; three AC11b tests; `-267` in Read first + Task 0; `inventory-roster.md` in Files. ⚠ One HIGH is ⛔ NOT applied — it needs BigDev: *"the family's part is done"* (see the validate hand-back, 2026-09-29). |
 | v2.1 | 2026-09-29 | ⭐ **Re-validated against v2.0 (fresh context) ⇒ erratum author-commit `2026-09-29-267`**, the validate pass's own output having carried six design defects: one open run per **claim** (a vote-path second return left two); the resolver returns runs **open or ended** (every run ends at day 90, where 6.19c's gates start); `resubmitted` **pauses** a run (a 6.20 correction can un-resubmit it on the same return); `subject_key` on per-person items (two letter chases on one day collided); the claimant's letter reads the block's address (`resolveContactRow` holds only nominees'); `direction` refused unless `family`; D30's `claimant_unresolved`; D28's Hindi review a go-live gate. The mark writer accepts a same-value restatement (G2's keep); `must_act.unchanged` is the District Admin route's only. |
 | v1.2 | 2026-09-28 | ⚠ **SWEPT by `-265`** (6.19a Task 0, which owns the set's governance): *"D1–D24, the six keys"* → D1–D29 and eight keys; the letter writer runs D14's check (⚠ superseded by `-266` §2); the letter form reads the address under key (1). ⛔ No AC or Task re-derived. |

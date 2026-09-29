@@ -94,7 +94,8 @@ person the family agreed may be contacted; a posted letter to anyone whose phone
    Admin) and a **human decides** it (Pariwar Admin; on a decline, the Super Admin). ⛔ No job, sweep or timer may call any decision
    writer. (`-231` B; AR-63: time-as-actor is non-punitive only.)
 2. **⛔ A corrected claim is never closed as "no response".** The closure request, the Pariwar Admin's approval **and** the Super
-   Admin's close each re-check `isReturnedClaimResubmitted` **under the trustee lock** (AC6).
+   Admin's close each re-check `isReturnedClaimResubmitted` **under the trustee lock** (AC6). ⚠ *(`-268` §3: "corrected" = `isReturnedClaimResubmitted` **or** "the family's part is done" — the
+   accounts rewritten after the return with ⛔ no later `does_not_match` — so a family awaiting a staff check is ⛔ never closed.)*
 3. **⛔ Never write `delivered` for an accepted send.** A reminder record says what is KNOWN; `delivered` only when a real signal
    arrived (T1). `accepted` **counts as reached** — the Panel's own answer (`-252` cl.1), ⛔ not our shortcut.
 4. **⛔ No name, ever, in a family message** — a non-name reference only (T6).
@@ -762,3 +763,4 @@ template registry's content against the rendered `t()` output).
 | v1.12 | 2026-09-28 | 6.19a v1.9: **D5**'s pointer list gains **W4a** (the correction chain — a 6.20 correction ⛔ never orphans an address or the claimant link); **D14** resolves rows through it. |
 | **v1.13** | **2026-09-29** | ⭐ **6.19b's validate pass + author-commit `-266`:** D2 SUPERSEDED (a runs table — the return's `decision_id` collided on a family → staff → family switch); D3 keyed by run kind + `-260` G4; D14's letter-writer clause SUPERSEDED (D31); **D30–D34 added**; D8's arithmetic marked (`-265` §2); T14's migration number marked (6.19b starts at 0126); the status table (6.19a `done`) and the LETTERS / Decisions headers (COMMITTED). ⚠ *What already EXISTS* stays pinned to `c136b03c` — for 6.19b's scope, 6.19b v2.0's *§ What 6.19a shipped, and what moved* (re-derived at `f06ee41f`) is the current record. |
 | v1.14 | 2026-09-29 | ⚠ **`-267`** (erratum to `-266`, from re-validating 6.19b v2.0): one open run per **claim**; the resolver returns runs open **or ended**; `resubmitted` pauses a run; `subject_key` on per-person items; the claimant's letter address is the block's; `direction` only while `family`; D30's `claimant_unresolved`; **D28 amended** — the Hindi review is a go-live gate. The decision entry is the text; ⛔ not restated here. |
+| v1.15 | 2026-09-29 | ⚠ **`-268`**: invariant 2's "corrected" also means "the family's part is done"; D4's pause (via `-267` §3) is widened to it. |

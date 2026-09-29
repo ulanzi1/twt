@@ -245,7 +245,7 @@ change cannot race a second return onto a superseded `decision_id`
 (`-260` G2's keep re-stating the mark; D27's "no correction needed", which sets `staff`) — with ⛔ no database constraint that shuts
 6.19c's writers out (`set_by_role ∈ {pariwar_admin, district_admin, super_admin}` — a Super Admin holds every key, so can return a claim or change the mark;
 ⚠ `super_admin` extends D25's committed role set and is recorded by author-commit `2026-09-29-270`; `set_by_role` is the role whose grant
-authorised the route — ⚠ the permission checks return only a boolean (`packages/domain/src/rbac/check.ts`), so a NEW pure helper
+authorised the route — ⚠ the permission checks return a boolean, `void` or `{ ok }` — ⛔ never the matching grant (`packages/domain/src/rbac/check.ts`), so a NEW pure helper
 `matchingGrantRole(grants, key, resource)` in `packages/domain/src/rbac/` returns it, preferring a scoped grant over a `global` one (a
 Pariwar Admin who also holds `super_admin` records `pariwar_admin` for a Pariwar-scoped act); unit-tested with a dual grant;
 a note on every row after the return's); ⚠ the **writer** accepts a same-value row (G2's keep RE-STATES the mark, possibly unchanged; D27 sets `staff` on a claim that may

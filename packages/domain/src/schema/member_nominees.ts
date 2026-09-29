@@ -59,7 +59,7 @@ export const memberNominees = pgTable(
     // Tier-1 envelope ciphertext (serialized `enc:v1:…`) of the nominee's name.
     nameCiphertext: piiColumn(1, 'member_nominee')('name_ciphertext').notNull(),
 
-    // Tier-3 plaintext relationship label — one of the TWENTY `NOMINEE_RELATIONSHIP_CODES` (`-257`; the
+    // Tier-3 plaintext relationship label — one of the TWENTY `NOMINEE_RELATIONSHIPS` (`-257`; the
     // shipped five — spouse | child | parent | sibling | other — were retired by Story 6.20).
     // Low-sensitivity, not a direct identifier; the value set is constrained in the contracts
     // enum, NOT at the DB (the kyc_transactions.status "text for the swap seam" posture).

@@ -14,11 +14,13 @@
 import type { ClaimContactPresenceResponse, RecordHelplineClaimContactRequest } from '@twt/contracts';
 import { CLAIMANT_NOMINEE_RELATIONSHIP_CODES } from '@twt/contracts';
 import { t } from '@twt/i18n';
+import { useQueryClient } from '@tanstack/react-query';
 import type { ReactElement } from 'react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { ApiError } from '../../api/client.js';
 import {
+  claimContactDetailsKey,
   useClaimContactDetails,
   useClaimContactPresence,
   useDeathCertificateClaimsForMember,
@@ -38,6 +40,9 @@ function refusalKey(err: unknown): string {
       if (resolveEn(key) !== key) return key;
     }
     if (err.code === 'claim.not_found') return 'helpline.contact.refusal.not_found';
+    // ⭐ Review 2026-09-29: a non-step-up 403 (e.g. an RBAC/geo-scope denial) is ⛔ never "try again" — that
+    // implies retrying could work.
+    if (err.status === 403) return 'helpline.contact.refusal.forbidden';
     if (err.status === 400) return 'helpline.contact.refusal.invalid';
   }
   return 'helpline.contact.refusal.generic';
@@ -70,11 +75,30 @@ export function HelplineClaimContact({
   }, [memberId]);
   const chosen = claims.some((c) => c.claim_case_id === picked) ? picked : lone;
 
+  // ⭐ Review 2026-09-29: the LATEST `chosen`, read by settlement-time callbacks — a plain closure variable
+  // captured at `onSave()`-call time can never detect a later claim switch (it and the value it's compared
+  // against are frozen together), so this needs a ref that's always current.
+  const chosenRef = useRef(chosen);
+  useEffect(() => {
+    chosenRef.current = chosen;
+  }, [chosen]);
+
   const presenceQ = useClaimContactPresence(pariwarId, ready ? chosen : null);
   const presence = presenceQ.data?.claimCaseId === chosen ? presenceQ.data : undefined;
-  const [showDetails, setShowDetails] = useState(false);
+  // ⭐ Review 2026-09-29: keyed by WHICH claim it's for, so switching `chosen` derives `showDetails = false`
+  // for the new claim in the SAME render — no effect has to "catch up" before the details query's `enabled`
+  // is computed, which used to let it fire one unrequested (audited) decrypt for the new claim.
+  const [showDetailsFor, setShowDetailsFor] = useState<string | null>(null);
+  const showDetails = showDetailsFor !== null && showDetailsFor === chosen;
   const detailsQ = useClaimContactDetails(pariwarId, ready ? chosen : null, showDetails);
-  const save = useRecordHelplineClaimContact(pariwarId, chosen);
+  const qc = useQueryClient();
+  function hideDetails(): void {
+    setShowDetailsFor(null);
+    // Evict the cache so the NEXT reveal is a fresh (audited) fetch, ⛔ never served stale from
+    // `staleTime: Infinity`.
+    if (chosen) qc.removeQueries({ queryKey: claimContactDetailsKey(pariwarId, chosen) });
+  }
+  const save = useRecordHelplineClaimContact(pariwarId);
 
   // The form — reset whenever the claim changes, so ⛔ no family's typed address can cross to another claim.
   const [locale, setLocale] = useState<'hi' | 'en'>('hi');
@@ -85,6 +109,11 @@ export function HelplineClaimContact({
   const [claimant, setClaimant] = useState({ name: '', mobile: '', address: '' });
   const [agreed, setAgreed] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
+  // ⭐ Review 2026-09-29: WHICH claim the mutation's rendered status (isSuccess/isError/data/error) is for —
+  // `useMutation`'s own state is shared across every claim; `.reset()` clears it on a claim switch, but a
+  // save already in flight for the OLD claim can still settle AFTER that and repopulate it, which this
+  // comparison catches (unlike the raw `save.isSuccess`/`save.isError` alone).
+  const [savedForClaim, setSavedForClaim] = useState<string | null>(null);
   const resetSave = save.reset;
   useEffect(() => {
     setAddresses({});
@@ -93,15 +122,42 @@ export function HelplineClaimContact({
     setClaimantVersion('');
     setClaimant({ name: '', mobile: '', address: '' });
     setAgreed(false);
-    setShowDetails(false);
+    // ⭐ Review 2026-09-29: `locale` is exactly the kind of value the comment above promises never crosses
+    // a claim switch — reset it here too, ⛔ not just left for the seed effect below (which stays silent
+    // when the NEW claim has no `contactLocale` on file yet, e.g. a brand-new claim).
+    setLocale('hi');
+    setShowDetailsFor(null);
     setLocalError(null);
+    setSavedForClaim(null);
     resetSave();
-  }, [chosen, memberId, resetSave]);
+    return () => {
+      // ⭐ Review 2026-09-29: evict the claim being LEFT's plaintext cache too, ⛔ not only on an explicit
+      // Hide — otherwise switching away and back re-serves the old, unaudited cached decrypt under
+      // `staleTime: Infinity`.
+      if (chosen) qc.removeQueries({ queryKey: claimContactDetailsKey(pariwarId, chosen) });
+    };
+  }, [chosen, memberId, resetSave, pariwarId, qc]);
+
+  // ⭐ Review 2026-09-29: seed the language radio from what's already on file, so an add-only completion
+  // (e.g. filling a missing address without touching this radio) never silently resends the DEFAULT and
+  // overwrites the family's already-recorded contact-language preference. Only fires when the presence
+  // read's OWN value changes (first load for this claim), so it never clobbers an operator's own choice.
+  useEffect(() => {
+    if (presence?.contactLocale) setLocale(presence.contactLocale);
+  }, [presence?.contactLocale]);
 
   const askRelationship =
     claimantChoice === 'someone_else' || (claimantChoice === 'unchanged' && presence?.claimantSide === 'claimant');
 
-  function buildBody(p: ClaimContactPresenceResponse): RecordHelplineClaimContactRequest | null {
+  type BuildResult =
+    | { ok: true; body: RecordHelplineClaimContactRequest }
+    | { ok: false; reason: 'claimantIncomplete' | 'claimantNomineeRequired' | 'nothingToSave' };
+
+  function buildBody(p: ClaimContactPresenceResponse): BuildResult {
+    // ⭐ Review 2026-09-29: "one of the nominees" with none picked used to be silently dropped (no
+    // `claimantNomineeVersionId`, no error) — now blocked with its own message, matching the `someone_else`
+    // path's own validation.
+    if (claimantChoice === 'nominee' && claimantVersion === '') return { ok: false, reason: 'claimantNomineeRequired' };
     const rows = p.nominees
       .map((n) => {
         const address = (addresses[n.nomineeVersionId] ?? '').trim();
@@ -116,37 +172,46 @@ export function HelplineClaimContact({
       .filter((r): r is NonNullable<typeof r> => r !== null);
     const body: RecordHelplineClaimContactRequest = { locale };
     if (rows.length > 0) body.nominees = rows;
-    if (claimantChoice === 'nominee' && claimantVersion !== '') body.claimantNomineeVersionId = claimantVersion;
+    if (claimantChoice === 'nominee') body.claimantNomineeVersionId = claimantVersion;
     if (claimantChoice === 'someone_else') {
       const block = { name: claimant.name.trim(), mobile: claimant.mobile.trim(), address: claimant.address.trim() };
-      if (block.name === '' || block.mobile === '' || block.address === '') return null;
+      if (block.name === '' || block.mobile === '' || block.address === '') return { ok: false, reason: 'claimantIncomplete' };
       body.claimant = block;
     }
     if (agreed) body.agreed = true;
     const empty = !body.nominees && !body.claimant && !body.claimantNomineeVersionId && !body.agreed;
-    return empty ? null : body;
+    return empty ? { ok: false, reason: 'nothingToSave' } : { ok: true, body };
   }
 
   function onSave(): void {
-    if (!presence || !chosen) return;
-    const body = buildBody(presence);
-    if (body === null) {
-      setLocalError(resolveEn(claimantChoice === 'someone_else' ? 'helpline.contact.claimantIncomplete' : 'helpline.contact.nothingToSave'));
+    if (!presence || !chosen || save.isPending) return;
+    const built = buildBody(presence);
+    if (!built.ok) {
+      setLocalError(resolveEn(`helpline.contact.${built.reason}`));
       return;
     }
     setLocalError(null);
-    const savedFor = chosen;
-    save.mutate(body, {
-      onError: (err) => {
-        if (savedFor === chosen && err instanceof ApiError && err.code === 'auth.step_up_required') onStepUpRequired();
+    const claimCaseId = chosen;
+    setSavedForClaim(claimCaseId);
+    save.mutate(
+      { claimCaseId, body: built.body },
+      {
+        onError: (err) => {
+          if (chosenRef.current === claimCaseId && err instanceof ApiError && err.code === 'auth.step_up_required') {
+            onStepUpRequired();
+          }
+        },
+        onSuccess: () => {
+          if (chosenRef.current !== claimCaseId) return;
+          setAddresses({});
+          setRelationships({});
+          setClaimantChoice('unchanged');
+          setClaimantVersion('');
+          setClaimant({ name: '', mobile: '', address: '' });
+          setAgreed(false);
+        },
       },
-      onSuccess: () => {
-        setAddresses({});
-        setRelationships({});
-        setClaimant({ name: '', mobile: '', address: '' });
-        setAgreed(false);
-      },
-    });
+    );
   }
 
   let source: ReactElement | null = null;
@@ -187,7 +252,10 @@ export function HelplineClaimContact({
   }
 
   const notWritable = presence?.writeMode === 'not_writable';
-  const stepUpError = save.error instanceof ApiError && save.error.code === 'auth.step_up_required';
+  // ⭐ Review 2026-09-29: only render the mutation's OWN status for the claim it was actually for — see
+  // `savedForClaim`'s comment above.
+  const saveStatusIsCurrent = savedForClaim === chosen;
+  const stepUpError = saveStatusIsCurrent && save.error instanceof ApiError && save.error.code === 'auth.step_up_required';
 
   return (
     <section className="mt-6 border-t pt-4" aria-label={resolveEn('helpline.contact.heading')} data-testid="helpline-contact">
@@ -209,7 +277,9 @@ export function HelplineClaimContact({
         <div className="mt-2 flex flex-col gap-3 text-sm" data-testid="helpline-contact-presence">
           <p data-testid="helpline-contact-mode">{resolveEn(`helpline.contact.mode.${presence.writeMode}`)}</p>
           {presence.missing !== null ? (
-            <p data-testid="helpline-contact-missing">{verifierConsoleEn.claimContact.approvalGate[presence.missing]}</p>
+            <p data-testid="helpline-contact-missing">
+              {verifierConsoleEn.claimContact.approvalGate[presence.missing] ?? resolveEn('helpline.contact.missingUnknown')}
+            </p>
           ) : (
             <p data-testid="helpline-contact-complete">{resolveEn('helpline.contact.complete')}</p>
           )}
@@ -231,32 +301,57 @@ export function HelplineClaimContact({
           {presence.recorded ? (
             <div>
               {!showDetails ? (
-                <button type="button" className="underline" onClick={() => setShowDetails(true)} data-testid="helpline-contact-show-details">
+                <button
+                  type="button"
+                  className="underline"
+                  onClick={() => setShowDetailsFor(chosen)}
+                  data-testid="helpline-contact-show-details"
+                >
                   {resolveEn('helpline.contact.showDetails')}
                 </button>
               ) : detailsQ.isLoading ? (
-                <p role="status">{resolveEn('helpline.contact.detailsLoading')}</p>
+                <div>
+                  <p role="status">{resolveEn('helpline.contact.detailsLoading')}</p>
+                  <button type="button" className="underline" onClick={hideDetails}>
+                    {resolveEn('helpline.contact.hideDetails')}
+                  </button>
+                </div>
               ) : detailsQ.isError ? (
-                <p role="alert">{resolveEn('helpline.contact.detailsError')}</p>
+                <div role="alert">
+                  <p>{resolveEn('helpline.contact.detailsError')}</p>
+                  <button type="button" className="underline" onClick={() => void detailsQ.refetch()}>
+                    {resolveEn('helpline.contact.retry')}
+                  </button>
+                  <button type="button" className="underline ml-2" onClick={hideDetails}>
+                    {resolveEn('helpline.contact.hideDetails')}
+                  </button>
+                </div>
               ) : detailsQ.data ? (
-                <dl data-testid="helpline-contact-details">
-                  {detailsQ.data.nominees.map((n) => (
-                    <div key={n.nomineeVersionId}>
-                      <dt>{resolveEn('helpline.contact.nomineeLabel').replace('{rank}', String(n.rank))}</dt>
-                      <dd>{n.address ?? '—'}</dd>
-                      {n.relationship ? <dd>{nomineeRelationshipLabel(n.relationship)}</dd> : null}
-                    </div>
-                  ))}
-                  {detailsQ.data.claimant ? (
-                    <div>
-                      <dt>{resolveEn('helpline.contact.claimantHeading')}</dt>
-                      <dd>{detailsQ.data.claimant.name}</dd>
-                      <dd>{detailsQ.data.claimant.mobile}</dd>
-                      <dd>{detailsQ.data.claimant.address}</dd>
-                    </div>
-                  ) : null}
+                <div>
+                  {/* ⭐ Review 2026-09-29: the notice + hide button moved OUTSIDE the `<dl>` — `dl` only
+                   *  permits `dt`/`dd`/`div`/script-supporting elements as direct children. */}
+                  <dl data-testid="helpline-contact-details">
+                    {detailsQ.data.nominees.map((n) => (
+                      <div key={n.nomineeVersionId}>
+                        <dt>{resolveEn('helpline.contact.nomineeLabel').replace('{rank}', String(n.rank))}</dt>
+                        <dd>{n.address ?? '—'}</dd>
+                        {n.relationship ? <dd>{nomineeRelationshipLabel(n.relationship)}</dd> : null}
+                      </div>
+                    ))}
+                    {detailsQ.data.claimant ? (
+                      <div>
+                        <dt>{resolveEn('helpline.contact.claimantHeading')}</dt>
+                        <dd>{detailsQ.data.claimant.name}</dd>
+                        <dd>{detailsQ.data.claimant.mobile}</dd>
+                        <dd>{detailsQ.data.claimant.address}</dd>
+                      </div>
+                    ) : null}
+                  </dl>
                   <p className="opacity-80">{resolveEn('helpline.contact.detailsAudited')}</p>
-                </dl>
+                  <button type="button" className="underline" onClick={hideDetails} data-testid="helpline-contact-hide-details">
+                    {resolveEn('helpline.contact.hideDetails')}
+                  </button>
+                </div>
               ) : null}
             </div>
           ) : null}
@@ -274,7 +369,13 @@ export function HelplineClaimContact({
                 <legend>{resolveEn('helpline.contact.language')}</legend>
                 {(['hi', 'en'] as const).map((l) => (
                   <label key={l} className="mr-4">
-                    <input type="radio" name="helpline-contact-locale" checked={locale === l} onChange={() => setLocale(l)} />{' '}
+                    <input
+                      type="radio"
+                      name="helpline-contact-locale"
+                      checked={locale === l}
+                      disabled={save.isPending}
+                      onChange={() => setLocale(l)}
+                    />{' '}
                     {resolveEn(`helpline.contact.language.${l}`)}
                   </label>
                 ))}
@@ -285,6 +386,7 @@ export function HelplineClaimContact({
                   <textarea
                     value={addresses[n.nomineeVersionId] ?? ''}
                     maxLength={500}
+                    disabled={save.isPending}
                     onChange={(e) => setAddresses((a) => ({ ...a, [n.nomineeVersionId]: e.target.value }))}
                     data-testid={`helpline-contact-address-${n.rank}`}
                   />
@@ -298,6 +400,7 @@ export function HelplineClaimContact({
                       type="radio"
                       name="helpline-contact-claimant"
                       checked={claimantChoice === c}
+                      disabled={save.isPending}
                       onChange={() => setClaimantChoice(c)}
                       data-testid={`helpline-contact-claimant-${c}`}
                     />{' '}
@@ -308,7 +411,12 @@ export function HelplineClaimContact({
               {claimantChoice === 'nominee' ? (
                 <label className="flex flex-col">
                   {resolveEn('helpline.contact.whichNominee')}
-                  <select value={claimantVersion} onChange={(e) => setClaimantVersion(e.target.value)} data-testid="helpline-contact-claimant-version">
+                  <select
+                    value={claimantVersion}
+                    disabled={save.isPending}
+                    onChange={(e) => setClaimantVersion(e.target.value)}
+                    data-testid="helpline-contact-claimant-version"
+                  >
                     <option value="">—</option>
                     {presence.nominees.map((n) => (
                       <option key={n.nomineeVersionId} value={n.nomineeVersionId}>
@@ -326,6 +434,7 @@ export function HelplineClaimContact({
                       <input
                         value={claimant[f]}
                         maxLength={f === 'address' ? 500 : 200}
+                        disabled={save.isPending}
                         onChange={(e) => setClaimant((c) => ({ ...c, [f]: e.target.value }))}
                         data-testid={`helpline-contact-claimant-${f}`}
                       />
@@ -340,6 +449,7 @@ export function HelplineClaimContact({
                       {resolveEn('helpline.contact.relationshipQuestion').replace('{rank}', String(n.rank))}
                       <select
                         value={relationships[n.nomineeVersionId] ?? ''}
+                        disabled={save.isPending}
                         onChange={(e) => setRelationships((r) => ({ ...r, [n.nomineeVersionId]: e.target.value }))}
                         data-testid={`helpline-contact-relationship-${n.rank}`}
                       >
@@ -360,7 +470,13 @@ export function HelplineClaimContact({
                 <p lang="hi">{t('contact.agreement', undefined, { locale: 'hi', namespace: 'claim' })}</p>
                 <p lang="en">{t('contact.agreement', undefined, { locale: 'en', namespace: 'claim' })}</p>
                 <label>
-                  <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} data-testid="helpline-contact-agreed" />{' '}
+                  <input
+                    type="checkbox"
+                    checked={agreed}
+                    disabled={save.isPending}
+                    onChange={(e) => setAgreed(e.target.checked)}
+                    data-testid="helpline-contact-agreed"
+                  />{' '}
                   {resolveEn('helpline.contact.agreedLabel')}
                 </label>
               </fieldset>
@@ -372,12 +488,12 @@ export function HelplineClaimContact({
           {localError ? (
             <p role="alert" data-testid="helpline-contact-local-error">{localError}</p>
           ) : null}
-          {save.isSuccess ? (
+          {save.isSuccess && saveStatusIsCurrent ? (
             <p role="status" data-testid="helpline-contact-saved">
               {resolveEn(save.data.agreementIgnored ? 'helpline.contact.savedAgreementIgnored' : 'helpline.contact.saved')}
             </p>
           ) : null}
-          {save.isError ? (
+          {save.isError && saveStatusIsCurrent ? (
             <p role="alert" className="text-status-fail-fg" data-testid="helpline-contact-error">
               {resolveEn(stepUpError ? 'helpline.contact.stepUpRequired' : refusalKey(save.error))}
             </p>

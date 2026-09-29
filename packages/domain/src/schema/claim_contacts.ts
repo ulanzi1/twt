@@ -94,6 +94,7 @@ export const claimContacts = pgTable(
     index('claim_contacts_pariwar_id_idx').on(t.pariwarId),
     index('claim_contacts_deceased_member_idx').on(t.pariwarId, t.deceasedMemberId),
     index('claim_contacts_agreement_consent_id_idx').on(t.agreementConsentId),
+    index('claim_contacts_claimant_nominee_version_id_idx').on(t.claimantNomineeVersionId),
     check('claim_contacts_contact_locale_check', sql`${t.contactLocale} IN ('hi', 'en')`),
     check('claim_contacts_recorded_via_check', sql`${t.recordedVia} IN ('member_app', 'helpline')`),
     check('claim_contacts_recorded_by_actor_check', sql`length(btrim(${t.recordedByActor})) > 0`),

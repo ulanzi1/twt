@@ -78,6 +78,7 @@ CREATE UNIQUE INDEX "claim_contacts_claim_case_id_uq" ON "claim_contacts" USING 
 CREATE INDEX "claim_contacts_pariwar_id_idx" ON "claim_contacts" USING btree ("pariwar_id");--> statement-breakpoint
 CREATE INDEX "claim_contacts_deceased_member_idx" ON "claim_contacts" USING btree ("pariwar_id", "deceased_member_id");--> statement-breakpoint
 CREATE INDEX "claim_contacts_agreement_consent_id_idx" ON "claim_contacts" USING btree ("agreement_consent_id");--> statement-breakpoint
+CREATE INDEX "claim_contacts_claimant_nominee_version_id_idx" ON "claim_contacts" USING btree ("claimant_nominee_version_id");--> statement-breakpoint
 
 -- ══ claim_contact_nominees — one row per (contact, nominee VERSION) ════════════════════════════════════════
 -- Each nominee's postal address (Tier-1, required when the row is created — W7), and — only when the claimant is

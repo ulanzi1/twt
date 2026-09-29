@@ -139,6 +139,9 @@ export interface WriteClaimContactResult {
   readonly rowsWritten: number;
   /** W5 — how many stored fields were DECRYPTED to compare (each an audited KMS decrypt). */
   readonly compareDecrypts: number;
+  /** The claim's write REGIME for its state (W3/W5), going forward — ⛔ not whether THIS call was restricted.
+   *  A creating write can report `'add_only'` while having inserted freely (there was nothing yet to restrict
+   *  against); the field tells the caller what regime governs the NEXT write to this record. */
   readonly mode: 'full' | 'add_only';
 }
 

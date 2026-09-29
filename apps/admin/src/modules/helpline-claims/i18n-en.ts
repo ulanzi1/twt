@@ -207,7 +207,11 @@ const EN: Record<string, string> = {
     'Saved. The agreement was already on file, so the tick was not recorded again.',
   'helpline.contact.nothingToSave': 'Nothing to save — fill in a detail or tick the agreement.',
   'helpline.contact.claimantIncomplete': 'Give the claimant’s name, mobile number and postal address.',
+  'helpline.contact.claimantNomineeRequired': 'Pick which nominee the claimant is.',
   'helpline.contact.stepUpRequired': 'A fresh step-up verification is needed to save — use the step-up panel above, then save again.',
+  'helpline.contact.hideDetails': 'Hide the details',
+  'helpline.contact.missingUnknown': 'The approval is still waiting on this claim’s contact details.',
+  'helpline.contact.refusal.forbidden': 'You do not have permission to save these details.',
   'helpline.contact.refusal.not_writable': 'Contact details cannot be recorded for this claim in its current state.',
   'helpline.contact.refusal.add_only':
     'That detail is already on file and this claim has been verified, so it cannot be changed here. Only missing details can be added.',

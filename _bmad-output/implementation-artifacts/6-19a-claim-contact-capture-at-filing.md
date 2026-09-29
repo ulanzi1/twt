@@ -16,7 +16,7 @@ GLYPH REGISTER: `⛔` only on a negation word; `⭐` key fact; `⚠` hazard. ⛔
 
 # Story 6.19a: The Family's Contact Details, Their Agreement and the Claimant's Relationship Are Captured at Filing — and the Nominee List Grows to Twenty `[SURFACE]`
 
-Status: review
+Status: done
 
 > ⭐ **First of the 6.19 set, and it carries the WHOLE SET's governance (Task 0)** — one author-commit for D1–D29 (D29 in its `-260` G1
 > form) and all **eight** keys, the `epics.md` entries for 6.19a–d, and the planning annotations. ⛔ No 6.19b/c code before that commit lands.
@@ -331,6 +331,473 @@ there) — the precedent 6.21a set for the certificate (`certificate: 'skip'`).
 number is carried here; done = `pnpm friction:test && pnpm friction:check` green (the `friction-budget` step of `scripts/ci-local.sh`).
 
 **AC ↔ Task map:** AC0 → T0 · AC1 → T1, T2 · AC8a → T2 · AC9a → T2, T4 · AC10 → T2 · AC11a → T4 · AC13 → T3 · T5 → the friction gate (no AC; the budget gate is its own check).
+
+### Review Findings (bmad-code-review, 2026-09-29 — `packages/domain` chunk only)
+
+⚠ **Partial review.** This pass covers only `packages/domain` (24 files, the largest of six chunks the 6482-line
+full diff was split into). `apps/api`, `apps/mobile`, `apps/admin`, `packages/contracts` and the small
+i18n/api-client/scripts group are still owed a review pass. Story status is left at `review`, not advanced,
+until the remaining chunks are covered.
+
+- [x] [Review][Decision] `WriteClaimContactResult.mode` is ambiguous on the creating write — resolved: `mode`
+  keeps its "state write regime" meaning (add_only = this claim is now in the add-only zone, not "this call was
+  restricted"), no behaviour change; converted to the doc-comment patch below.
+
+- [x] [Review][Patch] Add a doc comment on `WriteClaimContactResult.mode` stating it reports the claim's write
+  regime for its state (going forward), not whether this particular call was restricted — a creating write in an
+  extra state can report `'add_only'` while having inserted freely. [`packages/domain/src/claim/claim-contact-persist.ts:142`]
+  — fixed.
+- [x] [Review][Patch] Stale comment names a non-existent export `NOMINEE_RELATIONSHIP_CODES` — the actual export
+  in `relationship.ts` is `NOMINEE_RELATIONSHIPS`. Task 3(d) committed to fixing exactly this stale comment and
+  the replacement text is itself wrong. [`packages/domain/src/schema/member_nominees.ts:61`] — fixed.
+- [x] [Review][Patch] Missing index on `claim_contacts.claimant_nominee_version_id` — every other FK column on
+  this table gets its own index; this one, read on every presence/approval evaluation via
+  `claimantLinkCountsFor`, doesn't. [`packages/domain/migrations/0125_claim-contact.sql`,
+  `packages/domain/src/schema/claim_contacts.ts`] — fixed (schema + migration, both hand-edited since 0125 is
+  unreleased in this story; ⚠ the local `twt-test-pg` container already has 0125's journal entry recorded, so
+  the new index needs the container recreated/re-migrated before it actually exists there — the same step the
+  Dev Agent Record already does before its regression run).
+
+- [x] [Review][Defer] No DB-level cross-tenant guard on `claim_contacts`'/`claim_contact_nominees`' FK targets
+  (`claimant_nominee_version_id`, `agreement_consent_id`, `nominee_version_id`) — tenant isolation for these
+  cross-table links is entirely application-level; matches the existing schema-wide pattern (RLS scopes only the
+  local table), not introduced by this diff. — deferred, pre-existing
+- [x] [Review][Defer] The domain-layer `ClaimContactPresence` type carries raw ciphertext rather than presence
+  booleans — AC8a (i)'s "no plaintext under `claim.view_nominee_name_check`" guarantee depends entirely on the
+  apps/api route stripping it before responding; nothing in `packages/domain` enforces it. Re-check when the
+  `apps/api` chunk is reviewed. — deferred, pending apps/api chunk
+- [x] [Review][Defer] `recordedByActor` (session `actorId`) has no blank/whitespace guard in the domain writer —
+  relies on upstream auth/session always supplying a non-empty actor id; if that ever fails, the creating write
+  surfaces a raw Postgres `23514` instead of a typed refusal. Re-check apps/api's session handling when that
+  chunk is reviewed. — deferred, pending apps/api chunk
+
+**Dismissed as noise (12):** a W5 decrypt-and-compare "PII oracle" concern (the only surface that exercises it
+already requires `claim.file`, the same permission gating the plaintext read — no privilege escalation exists);
+no DB CHECK verifying a claimant version belongs to this claim's own nominee set (by design — exactly the
+correction-chain membership logic a CHECK cannot express, and explicitly the writer's job per W1/W2/W4a); a
+TOCTOU concern resting on `lockClaimCase`'s locking behaviour (pre-existing, reused primitive, not new here); an
+unmapped-23505 race that the same locking primitive prevents; a same-row double-write across two version ids in
+one request (correction chains are per-person by construction — two allowed nominee slots can't share one);
+no domain-level enum validation of `relationship` (explicitly documented as the contract layer's job, matching
+the `member_nominees.relationship` precedent); `as never` branded-id casts (ids are normalized upstream at the
+Zod `uuid()` boundary before reaching these casts); unbounded `consent_records` growth on member resubmission
+(exactly W8's specified behaviour, proven by its own test); cross-package enum wiring "only in a comment"
+(verified: `packages/contracts/src/consent/consent-record.ts` is in the branch, just a different chunk); blank
+`relationship` reaching the writer unvalidated (verified against `packages/contracts/src/claims/contact.ts` —
+it's a Zod enum, unreachable via the real request path); empty-string Tier-1 address/name/mobile bypassing an
+`=== undefined` check (same contract file enforces `.trim().min(1)`, unreachable via the real path); and
+`readClaimContactPresence`'s `missing` field evaluating against the projected set while undetermined (this is
+explicitly documented in "Decisions and deviations worth reading" #4 as a deliberate preview, not a bug).
+
+### Review Findings (bmad-code-review, 2026-09-29 — `apps/api` chunk)
+
+⚠ **Still partial.** `apps/mobile`, `apps/admin`, `packages/contracts` and the small i18n/api-client/scripts
+group remain. A seventh, root-level slice (`openapi/v1.yaml`, `friction-budget.md`/`.yaml`) also needs a pass —
+the Acceptance Auditor found these sit outside every `packages`/`apps`/`scripts`-scoped chunk this review split
+the diff into, so Dev Notes #9's "moved by 5 lines only" claim and Task 5's friction-budget commitment are still
+unverified. Both deferred items from the `packages/domain` chunk are now RESOLVED: the presence route's
+`toPresenceDto()` strips ciphertext to booleans before responding (confirmed by test assertion at
+`claim-contact.spec.ts:1157`), and the `actorId` blank-guard is closed (both `recordMember` and the admin
+context throw 401 on a falsy actor id before the domain writer is ever reached).
+
+- [x] [Review][Decision] The plaintext read-back route (`GET /api/v1/p/:pariwarId/admin/claims/:claimCaseId/contact/details`)
+  has no step-up requirement, while the sibling WRITE route on the same resource does
+  (`preHandler: [adminSession, scope, canFileClaim, stepUp]` vs. `[adminSession, scope, canFileClaim]`) — any
+  operator holding `claim.file` can decrypt and read the claimant's name/mobile/address and every nominee's
+  address indefinitely without ever completing step-up. This is NOT a spec deviation — AC8a's text specifies the
+  permission key for this read but never mentions step-up — so the question is whether that omission was
+  deliberate (matches how other Tier-1 admin reads in this codebase work) or an oversight worth closing.
+  [`apps/api/src/modules/claims/claims.contact.routes.ts`] — resolved: added `stepUp` to the GET details route's
+  preHandler, matching the write route; a "no step-up → 403" assertion added to the existing helpline test; the
+  presence route (no plaintext) is asserted to still need none.
+- [x] [Review][Patch] `fields_decrypted` in the plaintext-read audit context counts decrypt *attempts*, not
+  successes — `soft()` incremented the counter before the decrypt outcome was known, so a field that silently
+  fails to the sentinel was still counted as decrypted, overstating actual plaintext exposure in the audit
+  trail. [`apps/api/src/modules/claims/claims.contact.handlers.ts`, `getDetails`] — fixed: the counter now
+  increments only on a confirmed non-sentinel result, and a new `fields_failed` context field names the sentinel
+  fallback separately; test updated to assert both.
+
+- [x] [Review][Defer] The plaintext read-back (`getDetails`) does not check `presence.agreement` before
+  decrypting and returning PII, so a claim whose agreement is `revoked` would still serve plaintext on this
+  route. Low risk in v1: per D15/W8, this consent type has no revoke route in the product — "only a direct DB
+  change reaches it today" — so the gap isn't reachable through any real staff/family flow yet.
+  [`apps/api/src/modules/claims/claims.contact.handlers.ts:443-477`] — deferred, unreachable in v1 without a
+  revoke flow.
+
+**Dismissed as noise (12):** `ok = true` set before two `emitAuthAudit` calls in the write handler, flagged as a
+commit/audit desync risk if either throws (verified as a false positive: `AuthAuditSink.emit`'s interface doc
+explicitly guarantees "Never throws (an audit-sink failure must not break the auth path)", confirmed in the
+actual default implementation's own try/catch — every sink implementing this interface is bound by that
+documented contract, so there is nothing here for the write path to guard against); fail-soft decrypt conflating an empty plaintext with a decrypt failure (unreachable
+— the contract's `.trim().min(1)` validators guarantee no legitimately-empty plaintext is ever encrypted in the
+first place, so the sentinel branch only ever fires on a genuine failure); sequential, unbatched KMS decrypt
+calls in the read-back (a low-volume, human-triggered admin endpoint reading at most 2 nominees + a claimant
+block — not a real perf problem); inconsistent `.toLowerCase()` id normalization across write paths (verified:
+present exactly where client-submitted uuid strings exist — the helpline path — and correctly absent on the
+member path, which only ever handles server-derived version ids from DB-generated, already-lowercase UUIDs); an
+audit line on every presence-read GET with no dedup (this is AC9a's explicit "gated, audited admin reads"
+requirement working as specified — deduping would weaken the audit trail, not strengthen it); a domain refusal
+re-thrown as an HTTP error from inside `withCompensatingAudit`'s `mutate` callback (matches the pervasive
+existing pattern used by every sibling claim handler, not new to this diff); the presence-read route borrowing
+its authorization from the nominee-name-check module (explicitly spec-mandated by D8's documented reuse-check,
+not an accidental coupling); a non-null assertion on `readClaimContactPresence`'s result in the helpline write
+path (verified safe — both calls run inside the same `scopeTx.tx`, and the write already proved the claim
+exists in this Pariwar before the presence read runs); a writer-refusal status other than 400/404 "collapsing"
+to 409 (verified: the domain's `ClaimContactWriteRefusal` status type is exhaustively `400 | 404 | 409` — no
+other value is possible, so the fallthrough to 409 is exactly correct, not a silent collapse); a KMS/encryption
+failure during write having no dedicated error code (ordinary infra-failure handling — a generic 500 for an
+unmapped exception matches convention, and nothing in the spec asks for special KMS-outage UX); the domain
+error's `message`/`details` being forwarded into the HTTP body with no local redaction, including the regex
+prefix-strip's silent no-op on a format drift (the domain's own `ClaimContactWriteRefusedError` doc comment
+explicitly guarantees non-PII details, verified against its actual refusal call sites — all constant strings,
+never a submitted value — so the API layer is entitled to trust that documented contract, per this codebase's
+own boundary-trust convention); and a partial-claimant-block read assuming all three ciphertext fields are
+populated together (enforced at both the DB CHECK and the writer's `claimantColumns()` — verified in the
+`packages/domain` chunk — with no backfill and no pre-existing data, since nothing is in production yet).
+
+### Review Findings (bmad-code-review, 2026-09-29 — `apps/mobile` chunk)
+
+⚠ **Still partial.** `apps/admin`, `packages/contracts` and the small i18n/api-client/scripts group remain,
+plus the root-level slice (`openapi/v1.yaml`, `friction-budget.md`/`.yaml`) flagged from the `apps/api` chunk.
+
+- [x] [Review][Patch] No re-entrancy guard on `contact.tsx`'s `onSave` — a fast double-tap can fire two
+  concurrent `recordClaimContact` requests before the `busy`-derived disable takes effect on the next render.
+  The sibling screen guards this explicitly (`nominee-review.tsx:213`:
+  `if (submit === 'saving' || submit === 'saved') return`); `contact.tsx`'s `onSave` has no equivalent check at
+  entry. [`apps/mobile/app/(claim)/contact.tsx`] — fixed: a synchronous `savingRef` guard wraps the whole
+  function body in try/finally.
+- [x] [Review][Patch] The claimant `ChoiceRow`s, the relationship buttons and the agreement `ChoiceRow` are not
+  gated on `busy` during the save/saved window (only the `Input` fields are) — a tap during the 1200ms
+  post-save delay can silently diverge local state from what was actually submitted. `ChoiceRow` itself has no
+  `disabled` prop to gate with. [`apps/mobile/app/(claim)/contact.tsx:45-89,238-324`] — fixed: `ChoiceRow` gained
+  a `disabled` prop (no-ops `onPress`, dims opacity, reports `accessibilityState.disabled`); every `ChoiceRow`
+  and relationship `Button` now takes `disabled={locked}`.
+- [x] [Review][Patch] The Save button doesn't disable when the nominee-status fetch fails (`nominees ===
+  'error'`) — only `nominees === null` is checked, so a failed fetch leaves a functionally dead but pressable
+  button with no retry affordance. [`apps/mobile/app/(claim)/contact.tsx:208,337`] — fixed: Save now also
+  disables on `nominees === 'error'`.
+- [x] [Review][Patch] After a `claim_contact.not_writable` rejection, the form stays fully editable and
+  resubmittable — nothing locks inputs/Save on that phase, unlike the sibling `nominee-review.tsx`'s
+  `locked = busy || !memberEditable` pattern. A proactive presence check isn't in scope (the member surface has
+  no read endpoint by design, per Dev Notes deviation #2) — the fix is to lock on the phase already returned by
+  the POST response itself. [`apps/mobile/app/(claim)/contact.tsx`] — fixed: a new `locked = busy || phase ===
+  'not_writable'` derivation now gates every input, choice and the Save button.
+- [x] [Review][Patch] No client-side digit-filtering on the claimant's mobile input — `nominee-review.tsx:336`
+  already strips non-digits (`.replace(/[^0-9]/g, '')`) on its own mobile field; `contact.tsx`'s mobile `Input`
+  has no equivalent, so a malformed value only fails at the server and surfaces as the generic `'incomplete'`
+  phase. [`apps/mobile/app/(claim)/contact.tsx:276-284`] — fixed: the same `.replace(/[^0-9]/g, '')` filter
+  applied on `onChangeText`.
+- [x] [Review][Patch] The error banner (`'incomplete'`/`'agreement_required'`) isn't cleared as the user edits
+  the fields that caused it — ticking the agreement checkbox or filling an address doesn't reset `phase`, so the
+  screen-reader announcement and the visible message keep claiming the problem is still there after it's fixed.
+  [`apps/mobile/app/(claim)/contact.tsx`] — fixed: a new effect resets `phase` to `'idle'` whenever
+  `addresses`/`claimant`/`block`/`relationships`/`agreed` change while `phase` is one of those two.
+- [x] [Review][Patch] The `accessibilityRole="radiogroup"` claimant-question container has no accessible group
+  name — the heading text above it isn't linked via `accessibilityLabel`/`accessibilityLabelledBy`, which some
+  screen readers need to announce group context. [`apps/mobile/app/(claim)/contact.tsx:241`] — fixed: the
+  container now carries `accessibilityLabel={t('contact.claimant_question')}`.
+- [x] [Review][Patch] No `ScrollView`/`KeyboardAvoidingView` wraps this screen's content — with up to 2 nominee
+  addresses, a 3-field claimant block, and up to 2×19 relationship buttons on one screen, this is more
+  content-heavy than any sibling claim step and the open keyboard can occlude lower fields with no way to
+  scroll. [`apps/mobile/app/(claim)/contact.tsx:203-349`] — fixed: the whole screen body is now wrapped in a
+  `ScrollView` (the `nominee-correction.tsx` precedent).
+
+- [x] [Review][Defer] The generic `'incomplete'` phase gives no field-level signal across several possible
+  causes (a missing nominee address, a missing claimant field, a missing per-nominee relationship) — a
+  meaningful UX redesign, not a small fix, and AC1's contract only defines aggregate refusal codes, not
+  field-level ones. — deferred, needs product/UX input on the redesign, not a mechanical fix.
+- [x] [Review][Defer] The phase banner's `accessibilityLiveRegion="polite"` `<Text>` is conditionally MOUNTED
+  rather than updated, which on Android risks the first idle→error transition going unannounced (TalkBack
+  typically needs an already-present node to observe a change). This matches the existing, already-shipped
+  `nominee-review.tsx` precedent's same pattern — a cross-cutting app-wide a11y gap, not specific to this diff.
+  — deferred, needs a broader accessibility pass across every claim-flow screen using this pattern.
+- [x] [Review][Defer] Every `Input` in `contact.tsx` uses `placeholder` as its only label, which disappears once
+  text is entered — ambiguous for a multi-field form (e.g. distinguishing nominee 1's vs. nominee 2's address on
+  review). Likely a systemic, app-wide convention rather than specific to this diff. — deferred, needs a broader
+  UX pass on persistent field labels across the claim flow.
+- [x] [Review][Defer] Hardcoded, non-themed error color `#C0392B` in `contact.tsx:336` — verified this is NOT
+  specific to this diff: the identical hex literal is used the same way in 17+ other files across the entire
+  mobile app (`handover-otp.tsx`, `relationship.tsx`, `consent.tsx`, `login.tsx`, `otp.tsx`,
+  `NomineeForm.tsx`, and more). Fixing only this one file's occurrence would make it inconsistent with every
+  sibling screen; a real fix needs a design-system-wide token addition. — deferred, systemic app-wide pattern,
+  out of scope for this story.
+
+**Dismissed as noise (6):** the resume switch's `default: never` branch being a "silent dead end" for an
+out-of-union `lastStep` (verified false positive — `nextClaimStep`'s `indexOf`-based lookup already normalizes
+any value not in `CLAIM_STEPS` to `undefined` before the switch runs, and `case undefined` is handled
+explicitly); the claimant-relationship picker having no `'other'` escape valve (matches AC13/D16's Panel-ratified
+`NomineeRelationship.exclude(['other'])` design exactly — a known, deliberate product limitation, not a code
+defect); `KNOWN_RELATIONSHIPS` being shared between the correction picker and the claimant-relationship question
+(matches Task 3(b)'s explicit "⛔ never a third copy" mandate — deliberate reuse, not accidental coupling); typed
+form state being fully lost on back-navigation or a cold resume (the direct, intended consequence of AC1's
+PII-free-draft mandate — "the contact form is never cached in MMKV" — not an oversight); sub-minimum touch
+targets on the `ChoiceRow`'s 26×26 visual indicator (the actual tappable area is the whole row via the parent
+`onPress`, not just the small dot); and two independent "am I still mounted" idioms (`mountedRef` + a scoped
+`active` flag) in one file (cosmetic duplication, not a bug).
+
+### Review Findings (bmad-code-review, 2026-09-29 — `apps/admin` chunk)
+
+⚠ **Still partial.** `packages/contracts`, the small i18n/api-client/scripts group, and the root-level slice
+(`openapi/v1.yaml`, `friction-budget.md`/`.yaml`) remain. This chunk surfaced several genuine data-integrity bugs
+in `HelplineClaimContact.tsx`'s state management, not just UX nits — verified directly against the current code,
+not just the diff.
+
+- [x] [Review][Patch] The mutation's hook-level `onSuccess` cache write can target the WRONG claim's cache slot
+  if the operator switches claims while a save is in flight — TanStack Query v5 rebinds a hook-level
+  `useMutation({ onSuccess })` to the LATEST render's closure, so a settling promise for claim A's save can
+  write `res.presence` into claim B's `claimContactPresenceKey` cache entry. [`apps/admin/src/api/hooks.ts`,
+  `useRecordHelplineClaimContact`] — fixed: `claimCaseId` now travels in the mutate-time VARIABLES
+  (`mutate({ claimCaseId, body })`), which TanStack guarantees are the ones the settling call was made with,
+  regardless of hook-level rebinding.
+- [x] [Review][Patch] The per-call `onError`/`onSuccess` stale-claim guard is tautological and provides zero
+  protection — `const savedFor = chosen` and the later `savedFor === chosen` check both read `chosen` from the
+  SAME frozen closure (the render active when `onSave` was called), so the comparison can never be false. A
+  claim switch mid-flight still pops the step-up panel for the wrong claim, and `onSuccess`'s form-field wipe has
+  no guard at all. [`apps/admin/src/modules/helpline-claims/HelplineClaimContact.tsx:138-149`] — fixed: a
+  `chosenRef` (kept current via an effect) replaces the frozen closure comparison in both callbacks, matching the
+  `HelplineClaimPage.tsx` sibling's own ref-based precedent.
+- [x] [Review][Patch] Repeat-viewing an already-revealed claim's plaintext (toggle "Show details" off then on,
+  or switch away and back) is NOT re-audited — `useClaimContactDetails` sets `staleTime: Infinity`, and the
+  cache is evicted only on save success, never on hide. This contradicts the component's own stated invariant
+  ("audited per read... runs ONLY when the operator asks"). [`apps/admin/src/api/hooks.ts`,
+  `useClaimContactDetails`] — fixed: a new `hideDetails()` explicitly evicts the cache entry, so the next reveal
+  is always a fresh (audited) fetch; test added asserting the fetch count is 2 across hide→show.
+- [x] [Review][Patch] There is no "hide details" control at all — once revealed, the claimant's name/mobile/
+  address and every nominee's address stay rendered in the DOM for the rest of the session on that claim, a
+  screenshot/shoulder-surfing risk in a call-center console. [`apps/admin/src/modules/helpline-claims/HelplineClaimContact.tsx:231-262`]
+  — fixed: a "Hide the details" button now appears alongside the revealed details and on the details-error state.
+- [x] [Review][Patch] A failed plaintext read-back has no retry button (unlike the presence-error and
+  claims-error states, which both have one) and — combined with the missing hide control above — no way back to
+  the "Show details" button either; the operator is stuck until they switch claims and back.
+  [`apps/admin/src/modules/helpline-claims/HelplineClaimContact.tsx:239-240`] — fixed: the details-error state
+  now has both a "Try again" (refetch) and a "Hide the details" button.
+- [x] [Review][Patch] Switching claims while details are shown for the previous claim can fire an unrequested,
+  audited plaintext DECRYPT for the NEW claim — `detailsQ` is constructed with the new `chosen` but the still-`true`
+  `showDetails` from the prior claim in the same render (the reset effect that clears it hasn't fired yet), so
+  React Query's enabled-query effect can start fetching before the reset effect cancels it.
+  [`apps/admin/src/modules/helpline-claims/HelplineClaimContact.tsx:73-99`] — fixed structurally: `showDetails` is
+  now DERIVED (`showDetailsFor === chosen`) rather than independent state, so it's `false` for a new claim in the
+  SAME render `chosen` changes in — no effect has to "win a race" to catch up.
+- [x] [Review][Patch] The save-success handler never resets `claimantChoice`/`claimantVersion` — after a
+  successful `'someone_else'` save, the next unrelated save (e.g. adding a missing address) re-evaluates the
+  now-blank claimant fields against the still-`'someone_else'` choice and fails with `claimantIncomplete`, even
+  though the claimant was already recorded; for `'nominee'`, the stale `claimantVersion` keeps getting silently
+  resent on every later save. [`apps/admin/src/modules/helpline-claims/HelplineClaimContact.tsx:143-148`] — fixed:
+  `onSuccess` now also resets `claimantChoice` to `'unchanged'` and `claimantVersion` to `''`.
+- [x] [Review][Patch] Choosing "one of the nominees" as claimant without picking which one silently drops the
+  intent instead of blocking with a clear error — unlike the parallel `'someone_else'` path, which returns `null`
+  (triggering `claimantIncomplete`) when incomplete. [`apps/admin/src/modules/helpline-claims/HelplineClaimContact.tsx:119`]
+  — fixed: `buildBody` now returns a typed `{ ok: false; reason }` result, with a new `claimantNomineeRequired`
+  reason/message for this case; test added.
+- [x] [Review][Patch] The address `<textarea>`s, the relationship `<select>`s, and the claimant/locale/claimant-choice
+  inputs are never disabled during `save.isPending` (only the submit button is) — an operator who keeps typing
+  in a field that ISN'T part of the in-flight save can have that just-typed text silently wiped by the unconditional
+  reset in `onSuccess`. [`apps/admin/src/modules/helpline-claims/HelplineClaimContact.tsx:274-334`] — fixed:
+  `disabled={save.isPending}` added to every field; test added asserting fields are disabled mid-save and
+  re-enabled after.
+- [x] [Review][Patch] Double-submit is enforced only by the submit button's `disabled` attribute, not inside
+  `onSave` itself — a fast double-click before React commits the re-render can fire two concurrent
+  `save.mutate()` calls. [`apps/admin/src/modules/helpline-claims/HelplineClaimContact.tsx:130`] — fixed:
+  `onSave` now returns early when `save.isPending`.
+- [x] [Review][Patch] `locale` always defaults to `'hi'` and is never seeded from `presence.contactLocale`, and
+  is resent unconditionally on every save — an add-only completion (e.g. adding a missing address, without
+  touching the language radio) can silently overwrite the family's already-recorded contact-language preference.
+  [`apps/admin/src/modules/helpline-claims/HelplineClaimContact.tsx:80,117`] — fixed: an effect seeds `locale`
+  from `presence.contactLocale` when it first loads for a claim, without clobbering a later manual choice; test
+  added.
+- [x] [Review][Patch] An unmapped `presence.missing` reason renders BLANK — `verifierConsoleEn.claimContact.approvalGate[presence.missing]`
+  is indexed directly with no fallback, unlike the sibling `claimContactRequiredMessage()` in `nominee-errors.ts`
+  (added in the same story), which guards the identical map with `?? approvalGate.no_record`.
+  [`apps/admin/src/modules/helpline-claims/HelplineClaimContact.tsx:212`] — fixed: added the same `??` fallback
+  (a new `helpline.contact.missingUnknown` string); test added with an out-of-union reason.
+- [x] [Review][Patch] `refusalKey` has no distinct handling for a non-step-up 403 (e.g. an RBAC/geo-scope denial
+  specific to the helpline role) — it falls through to `'helpline.contact.refusal.generic'` ("Try again"), which
+  misleadingly suggests retrying will work when the operator simply lacks permission.
+  [`apps/admin/src/modules/helpline-claims/HelplineClaimContact.tsx:34-44`] — fixed: a new
+  `helpline.contact.refusal.forbidden` message for any `status === 403` that isn't `auth.step_up_required`,
+  matching the `deathCertificateReviewErrorMessage` sibling's own 403 handling; test added.
+
+- [x] [Review][Defer] The identical `instanceof ApiError && error.code.endsWith('.claim_contact_required')` guard
+  is pasted across `CycleFreezePage.tsx`, `R9CasePanel.tsx` and `VerifierConsoleRoute.tsx` instead of a
+  self-guarding helper (the sibling `deathCertificateReviewErrorMessage` in the same `nominee-errors.ts` accepts
+  `unknown` and does its own guard). A maintainability nit, not a behavior bug. — deferred, low priority.
+- [x] [Review][Defer] The twenty-value relationship label map (`verifierConsoleEn.relationshipLabels`) has no
+  compile-time coupling to the contracts code list it's typed `as Record<string, string>` against — a future
+  21st code added to contracts before this map is updated would render an unmapped label. — deferred, needs a
+  type-level fix (e.g. `satisfies Record<ClaimantNomineeRelationshipCode, string>`) the next time this map is
+  touched.
+- [x] [Review][Defer] No accessible focus management or field association for local validation errors on this
+  form (`localError` renders well below the fields it concerns, no `aria-describedby`, no focus move on
+  failure). — deferred, a broader accessibility pass on this card.
+- [x] [Review][Defer] Repeated identical validation failures may not re-announce to screen readers (a `role="alert"`
+  node whose text doesn't change between two identical failures). Same class of gap as the `apps/mobile` chunk's
+  already-deferred live-region finding. — deferred, cross-cutting a11y pass.
+- [x] [Review][Defer] The claimant mobile `<input>` has no `type="tel"`/`inputMode`/`pattern` hint, despite a
+  `MobileNumber` branded primitive existing in `@twt/contracts` and already imported elsewhere in this same
+  diff (`NomineeDeclarationPanel.tsx`). — deferred, minor UX polish.
+- [x] [Review][Defer] `claimantIsAnAllowedNominee`/`claimantBlockNeeded` are fetched from the presence response
+  but never surfaced in the UI as an explicit staleness warning (e.g. after a nominee correction invalidates a
+  previously-recorded claimant version). The server still enforces correctness regardless of what the UI shows —
+  not a functional defect, a missed opportunity to warn the operator proactively. — deferred, future UX polish.
+- [x] [Review][Defer] A sibling card's mutation (`HelplineCertificateReplacement`, presumably) invalidates the
+  same `deathCertificateClaimsForMemberKey` this card reads, which could in principle change `chosen` and reset
+  this card's in-progress typed data via the effect keyed on `[chosen, memberId]`. Narrower than it first
+  appears: `invalidateQueries` keeps serving the previous data while refetching, so the reset only fires if the
+  claim list's membership/order genuinely changes, not on every sibling-card submission. — deferred, needs a
+  broader design decision (e.g. keying the reset on claim IDENTITY changes only, not any list refetch) rather
+  than a quick patch.
+
+### Review Findings (bmad-code-review, 2026-09-29 — `packages/contracts` chunk)
+
+⚠ **Still partial.** The small i18n/api-client/scripts group and the root-level slice (`openapi/v1.yaml`,
+`friction-budget.md`/`.yaml`) remain. This chunk is the most rigorously-specified so far — most findings from
+the two isolated layers didn't hold up once checked against the domain-layer guarantees and the pervasive
+codebase conventions already verified in earlier chunks.
+
+- [x] [Review][Patch] `CLAIMANT_NOMINEE_RELATIONSHIP_CODES = ClaimantNomineeRelationship.options` exports a
+  LIVE, mutable reference into the Zod enum's own internal array, not a defensive copy — verified by direct
+  execution (`node -e`): mutating the exported constant (e.g. `.push()`) actually changes what
+  `ClaimantNomineeRelationship.safeParse()` accepts process-wide afterward. Contrast with
+  `NOMINEE_RELATIONSHIP_CODES`, which is `as const` on its own literal array (the source, not a derived schema
+  view). [`packages/contracts/src/nominee/declaration.ts:87`] — fixed: now `Object.freeze([...options])`, a
+  frozen defensive copy.
+
+- [x] [Review][Defer] The three response DTOs (`ClaimContactPresenceResponse`, `RecordHelplineClaimContactResponse`,
+  `ClaimContactDetailsResponse`) carry no cross-field consistency `superRefine`, unlike both request schemas —
+  e.g. nothing rejects a parsed response with two `nominees` entries both claiming `rank: 1`, or
+  `claimantSide: 'none'` alongside a non-null `claimantNomineeVersionId`. Defense-in-depth only: the domain
+  layer's DB CHECK and its deterministic `evaluateClaimContact`/`readClaimContactPresence` computations (verified
+  in the `packages/domain` chunk) already prevent these combinations from arising in practice. — deferred, low
+  priority, matches this project's "don't validate scenarios that can't happen" convention.
+- [x] [Review][Defer] The helpline request's `nomineeVersionId`/`claimantNomineeVersionId` fields aren't
+  normalized to lowercase at the contract boundary — only the superRefine's OWN duplicate-detection Set
+  lowercases for comparison; the values that ship downstream keep their original casing. A client sending a
+  differently-cased (but valid) UUID for a version the writer's `allowed.includes(...)` check expects lowercase
+  could be wrongly refused. Not reachable today: the only real client (the admin helpline card) passes through
+  server-supplied, already-lowercase ids unchanged. — deferred, worth a `.transform()` fix the next time this
+  file is touched, not urgent given no real caller triggers it.
+- [x] [Review][Defer] Free-text fields (`ClaimantContactBlock.name`, `ClaimContactAddress`) have no
+  control-character/bidi-override filtering beyond `.trim()` — matches the pervasive `z.string().trim().min().max()`
+  convention used for every other free-text field across the codebase (D9 deliberately keeps names
+  script-unrestricted). — deferred, a systemic hardening pass across every free-text field, not specific to this
+  diff.
+- [x] [Review][Defer] `HelplineClaimContactNominee`'s custom refine message ("a row carries an address, a
+  relationship, or both") doesn't cover a client sending explicit `null` for either field — `null` fails the base
+  `.optional()` type check first, surfacing a generic Zod type-mismatch instead of the friendlier custom message.
+  Not reachable via the real admin UI (which only ever omits the key, never sends `null`). — deferred, minor DX
+  polish.
+- [x] [Review][Defer] `agreed: null` on the helpline endpoint hits the generic `z.literal(true)` mismatch error
+  rather than a custom message, for a plausible "not yet answered" client convention. Not reachable via the real
+  admin UI. — deferred, same class as the above, minor DX polish.
+
+**Dismissed as noise (9):** the helpline request not checking `claimantNomineeVersionId` against its own
+submitted `nominees` rows at the contract layer (verified: the domain WRITER performs exactly this check via
+`allowed.includes(...)`, matching the file's own documented W1–W8 layering split — the contract "can not see the
+declaration," by design); `z.string().uuid()` accepting the nil UUID or any RFC4122 variant (matches the
+pervasive convention used for every id field throughout the entire codebase, not specific to this diff);
+`ReadBackText`'s empty-string ambiguity with the decrypt-failed sentinel (unreachable — the write-side
+`.trim().min(1)` validators, verified in the `apps/api` chunk, guarantee no legitimately-empty plaintext is ever
+encrypted in the first place); the decrypt-failed sentinel being imported from the "nominee bank" namespace with
+no derived size bound (deliberate, spec-documented reuse of the `nominee-bank-crypto.ts` precedent — the 600-char
+margin is comfortably safe by construction, sized for a 500-char address far exceeding any short diagnostic
+sentinel); the plaintext read-back's `relationship` being a bounded string rather than the strict 19-value enum
+(verified correct BY DESIGN — the DB column has no enum constraint, so a strict-enum read type would wrongly fail
+to parse a legitimately-stored legacy/out-of-vocabulary value); `RecordMemberClaimContactResponse.agreementRecorded`
+being a general boolean rather than `literal(true)` (not incorrect, just loose — the shared domain result type is
+reused by both the member and helpline surfaces, and over-narrowing the member response risks future breakage for
+no established benefit); the helpline "nothing to record" issue omitting a `path` (verified correct, idiomatic Zod
+usage for a root-level, no-single-field issue — an explicit path here would be misleading, not more correct);
+`missing` surfacing only one reason at a time (matches D14's explicit, spec-mandated precedence design, verified
+extensively in the `packages/domain` and `apps/api` chunks); and no enforced separation between the new consent
+value and `DpdpaConsentType`/`CLAIM_TIME_CONSENT_TYPES` via a lockstep mechanism (the analogy to the relationship
+enum's derivation doesn't hold — these are two independently-maintained, non-derived lists by design, unlike
+`ClaimantNomineeRelationship`, which truly derives from `NomineeRelationship`).
+
+### Review Findings (bmad-code-review, 2026-09-29 — final chunk: i18n/api-client/scripts + root-level files)
+
+⭐ **All seven chunks now reviewed.** This final chunk covered `packages/i18n/locales/{en,hi}/{claim,common}.json`,
+`packages/api-client/src/index.ts`, `scripts/claim-adjudication-human-actor-invariant/check.ts`, `openapi/v1.yaml`,
+and `friction-budget.md` — plus a deliberate exclusion: the governance/planning artifacts Task 0's author-commit
+touched (`.decision-log.md`, `_bmad-output/`, `docs/`, `sprint-status.yaml`, `architecture.md`, `epics.md`,
+`prd.md`, the routing notes) are Panel-ratified governance record, not code, and out of scope for this workflow.
+This was the cleanest chunk of the whole review — nearly every finding from the isolated layers resolved to a
+false positive once checked directly against the actual code (the gate script's own coverage floor, the
+api-client's `call()` signature, the two `/contact` routes' distinct URL prefixes, and the openapi emitter's
+enum ordering matching its source array exactly).
+
+- [x] [Review][Defer] Four new i18n keys (`contact.claimant_required`, `contact.claimant_details_required`,
+  `contact.address_required`, `contact.relationship_required`, in both `en`/`hi` `claim.json`) are unreferenced
+  by any application code — `apps/mobile`'s `contact.tsx` only renders the generic `contact.incomplete`. These
+  plausibly correspond to the already-deferred `apps/mobile` chunk finding ("the generic `'incomplete'` phase
+  gives no field-level signal") — kept rather than deleted, since removing translated copy now would just mean
+  re-adding and re-translating it for that same future work. — deferred, linked to the existing
+  field-level-signal deferral.
+
+**Dismissed as noise (13):** the human-actor gate enrolling only one of "two claimed" new route files (verified:
+only one file was actually new — `claims.contact.routes.ts`; the member's own `/contact` write lives in the
+pre-existing `claims.routes.ts`, correctly excluded from this staff-actor gate); the presence-only read possibly
+being a system caller rather than human (verified: it's `adminSession`-gated HTTP, a separate code path from the
+domain's own internal D14 evaluation — the comment's "what the approval check will ask for" is a semantic
+analogy, not a shared call path); the gate's method-tally being unable to distinguish the two GET routes from
+each other (a pre-existing design characteristic of the entire script, not introduced here); `recordClaimContact`'s
+trailing `true` argument contradicting its own "no step-up" doc comment (verified against `call()`'s actual
+signature — it's the ordinary `auth` bearer-token flag, unrelated to step-up, which is a separate mechanism
+entirely); a route-collision risk between the member and helpline `/contact` paths (verified: distinct URL
+prefixes, `/api/v1/member/claims/...` vs `/api/v1/p/:pariwarId/admin/claims/...`); the doc comment's PII-free/
+no-caching claims being unverifiable from this diff alone (already verified extensively in the `apps/mobile`
+chunk); the friction-budget row's "`F7`" citation locator looking inconsistent (verified: matches the exact
+citation format used throughout the story and shared spec text itself); `openapi/v1.yaml`'s diff looking
+"suspiciously minimal" for hand-patching (verified: the emitted enum order exactly mirrors the contracts source
+array's own declared order, confirming genuine regeneration); the new enum values' insertion order not matching
+the list's apparent grouping (same verification — it's the source array's own order, not a hand-edit artifact);
+a shared `{relationship}` placeholder reused ambiguously across two questions (self-contradicted by the finding's
+own quoted evidence — `relationship_question` doesn't use a `{relationship}` placeholder at all, only `{rank}`);
+locale key-set parity and JSON structural cleanliness (explicitly confirmed clean by the reviewing layer itself,
+not raised as issues); and `openapi/v1.yaml` never documenting the claims module's routes at all (confirmed
+pre-existing and repo-wide — explicitly disclosed in this story's own Dev Notes #9: "the emitter registers a
+fixed component set that never included the claims routes").
+
+### Adversarial follow-up on the review's OWN patches (2026-09-29)
+
+⭐ After all 7 chunks landed, a fresh, isolated adversarial pass was run against the combined diff of every
+patch this review applied (`git diff -- apps/admin apps/api apps/mobile packages/contracts packages/domain`) —
+checking the fixes themselves for bugs, not the original feature. 11 findings; 6 were real and fixed, 5
+verified as unreachable/unfounded (the same verification discipline used throughout this review, applied
+reflexively to its own output):
+
+- [x] **Fixed:** `locale` was never reset on a claim switch in `HelplineClaimContact.tsx` — only seeded when
+  `presence.contactLocale` was truthy, so switching to a brand-new claim (no `contactLocale` on file yet) could
+  silently carry the PREVIOUS claim's language into the new claim's first save. Now reset to `'hi'` in the same
+  effect that resets every other per-claim field.
+- [x] **Fixed:** the save-success/error banners in `HelplineClaimContact.tsx` read `save.isSuccess`/`save.data`/
+  `save.isError`/`save.error` directly with no claim guard — unlike the per-call `onSuccess`/`onError` callbacks
+  (which the earlier patch DID guard with `chosenRef`), a claim-A save settling after a switch to claim B could
+  render claim A's stale result under claim B's card. A new `savedForClaim` state (set at `mutate()`-call time)
+  now gates every rendered use of the mutation's status.
+- [x] **Fixed:** the claim-switch reset effect cleared `showDetailsFor` but never evicted the claim being LEFT's
+  plaintext cache — switching away and back re-served the old, unaudited decrypt under `staleTime: Infinity`.
+  The effect's cleanup function now evicts it.
+- [x] **Fixed:** the revealed-details `<dl>` had a `<p>` and a `<button>` as direct children (invalid per the
+  `dl` content model, which only permits `dt`/`dd`/`div`/script-supporting elements) — the new hide button
+  compounded a pre-existing violation. Moved both outside the `<dl>`.
+- [x] **Fixed:** no hide/cancel affordance existed while `detailsQ.isLoading` — an operator who clicked "Show
+  details" was committed to waiting out the decrypt with no way back. A hide button now appears in the loading
+  state too.
+- [x] **Fixed:** the mobile `contact.tsx`'s stale-error-clearing effect cleared EITHER `incomplete` or
+  `agreement_required` on a change to ANY of five unrelated field groups — editing an address could clear an
+  unresolved "you must agree" message. Split into two effects, each keyed only to the fields that actually
+  cause its own error.
+- **Verified unreachable, no change:** `fields_failed`'s empty-string/failure conflation (the underlying sentinel
+  function's behavior is pre-existing, and no legitimately-empty plaintext can ever be stored, per the
+  `apps/api` chunk's own `.trim().min(1)` verification); the migration-edited-in-place risk (a deliberate,
+  disclosed tradeoff, not an oversight); the digit-filter's country-code handling (out of scope — a pre-existing
+  `MobileNumber` leniency concern, not a regression); the `ScrollView`/`CallHelplineCTA` visibility concern (the
+  prior layout had no scroll mechanism at all, so this patch strictly improves reachability); and a
+  prototype-collision angle on the `approvalGate` bracket lookup (unreachable — `presence.missing` is Zod-enum
+  parsed to exactly 4 known values before ever reaching the component).
+
+Full regression re-run after these follow-up fixes: `@twt/admin` 662 passed, `mobile` 656 passed; typecheck and
+lint clean on both.
 
 ## Dev Notes
 

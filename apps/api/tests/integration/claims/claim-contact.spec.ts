@@ -281,7 +281,7 @@ describe.skipIf(!hasDatabase)('claim contact record — routes (Story 6.19a)', {
 
   // ── HELPLINE + the two ADMIN READS ──────────────────────────────────────────────────────────────────────
   describe('the helpline write and the admin reads', () => {
-    it('⛔ no session → 401 on all three admin routes; the write needs the operator’s OWN step-up (403 → then 201)', async () => {
+    it('⛔ no session → 401 on all three admin routes; the write AND the plaintext read-back need the operator’s OWN step-up (403 → then 201/200)', async () => {
       const { pariwarId, claimCaseId } = await fileClaim();
       const anon = makeClient(t.app);
       expect((await anon.inject({ method: 'GET', url: adminUrl(pariwarId, claimCaseId) })).statusCode).toBe(401);
@@ -291,6 +291,12 @@ describe.skipIf(!hasDatabase)('claim contact record — routes (Story 6.19a)', {
       const noStepUp = await op.inject({ method: 'POST', url: adminUrl(pariwarId, claimCaseId), payload: { locale: 'hi', agreed: true } });
       expect(noStepUp.statusCode).toBe(403);
       expect(noStepUp.json<{ error: { code: string } }>().error.code).toBe('auth.step_up_required');
+      // ⭐ Review 2026-09-29: decrypting is at least as sensitive as writing — the plaintext read-back needs the
+      // SAME fresh step-up, ⛔ not `claim.file` alone. The presence read (no plaintext) needs none.
+      const detailsNoStepUp = await op.inject({ method: 'GET', url: `${adminUrl(pariwarId, claimCaseId)}/details` });
+      expect(detailsNoStepUp.statusCode).toBe(403);
+      expect(detailsNoStepUp.json<{ error: { code: string } }>().error.code).toBe('auth.step_up_required');
+      expect((await op.inject({ method: 'GET', url: adminUrl(pariwarId, claimCaseId) })).statusCode).toBe(200);
     });
 
     it('⭐ the creating write’s 400s, each its own code — agreement_required, claimant_required, address_required, nominee_set_mismatch', async () => {
@@ -335,7 +341,7 @@ describe.skipIf(!hasDatabase)('claim contact record — routes (Story 6.19a)', {
       expect(details.json<{ nominees: Array<{ address: string }> }>().nominees[0]!.address).toBe(SENTINEL.nomineeAddress);
       const readLine = t.auditSink.ofType('admin_claim.contact_details_read').filter((e) => e.resourceLocator === `claim:${claimCaseId.toLowerCase()}`);
       expect(readLine).toHaveLength(1);
-      expect(readLine[0]!.context).toMatchObject({ fields_decrypted: 1 });
+      expect(readLine[0]!.context).toMatchObject({ fields_decrypted: 1, fields_failed: 0 });
 
       // A District Admin holds the presence key (at the deceased's district) — ⛔ never the plaintext.
       const da = await authenticate();

@@ -10,8 +10,10 @@
 //     deceased member's SERVER-DERIVED district (the 6.18 stash, `resolveNomineeNameCheckDistrict`); all four
 //     holders. ⛔ No plaintext: that key's rationale forbids acquiring a second living subject's plaintext
 //     *"as a side effect"* (`permissions.ts`).
-//   · GET  …/admin/claims/:claimCaseId/contact/details  — the PLAINTEXT read-back, `claim.file` (the helpline
-//     operator, the one role that re-types these fields); decrypted and audited per read.
+//   · GET  …/admin/claims/:claimCaseId/contact/details  — the PLAINTEXT read-back, `claim.file` + the SAME
+//     fresh admin step-up as the write route (the helpline operator, the one role that re-types these fields);
+//     decrypted and audited per read. Step-up added by review 2026-09-29 — decrypting is at least as sensitive
+//     as writing.
 // Every route composes the authenticated-HUMAN chain [adminSession, scope, requirePermissionHook(…)] — enrolled
 // in `scripts/claim-adjudication-human-actor-invariant/check.ts`'s COVERAGE_SET.
 
@@ -81,7 +83,9 @@ export function registerClaimContactRoutes(app: FastifyInstance, deps: AppDeps):
     '/api/v1/p/:pariwarId/admin/claims/:claimCaseId/contact/details',
     {
       schema: { params: ContactParam, response: { 200: ClaimContactDetailsResponse }, tags: [TAG] },
-      preHandler: [adminSession, scope, canFileClaim],
+      // ⭐ Review 2026-09-29: decrypting Tier-1 plaintext is at least as sensitive as writing it — step-up
+      // matches the write route, ⛔ not just `claim.file` alone.
+      preHandler: [adminSession, scope, canFileClaim, stepUp],
     },
     h.getDetails,
   );

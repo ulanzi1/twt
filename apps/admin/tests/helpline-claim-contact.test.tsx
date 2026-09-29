@@ -174,4 +174,76 @@ describe('<HelplineClaimContact>', () => {
     expect(await screen.findByTestId('helpline-contact-details')).toHaveTextContent('12 Station Road');
     expect(mocked.getClaimContactDetails).toHaveBeenCalledTimes(1);
   });
+
+  it('⭐ review 2026-09-29: hiding then re-showing details re-fetches (and so re-AUDITS) — ⛔ never served stale', async () => {
+    mocked.getClaimContactPresence.mockResolvedValue(presence({ recorded: true }));
+    mocked.getClaimContactDetails.mockResolvedValue({
+      claimCaseId: CLAIM_A,
+      nominees: [{ rank: 1, nomineeVersionId: V1, row: 'own', address: '12 Station Road', relationship: null }],
+      claimantNomineeVersionId: V1,
+      claimant: null,
+    });
+    renderCard();
+    const user = userEvent.setup();
+    await user.click(await screen.findByTestId('helpline-contact-show-details'));
+    await screen.findByTestId('helpline-contact-details');
+    await user.click(screen.getByTestId('helpline-contact-hide-details'));
+    expect(await screen.findByTestId('helpline-contact-show-details')).toBeInTheDocument();
+    await user.click(screen.getByTestId('helpline-contact-show-details'));
+    await screen.findByTestId('helpline-contact-details');
+    expect(mocked.getClaimContactDetails).toHaveBeenCalledTimes(2);
+  });
+
+  it('⭐ review 2026-09-29: "one of the nominees" with none picked is refused locally — ⛔ no silent drop', async () => {
+    renderCard();
+    const user = userEvent.setup();
+    await user.click(await screen.findByTestId('helpline-contact-claimant-nominee'));
+    await user.click(screen.getByTestId('helpline-contact-save'));
+    expect(await screen.findByTestId('helpline-contact-local-error')).toHaveTextContent('Pick which nominee');
+    expect(mocked.recordHelplineClaimContact).not.toHaveBeenCalled();
+  });
+
+  it('⭐ review 2026-09-29: the language radio is seeded from what is already on file, ⛔ never a bare Hindi default', async () => {
+    mocked.getClaimContactPresence.mockResolvedValue(presence({ contactLocale: 'en' }));
+    renderCard();
+    await screen.findByTestId('helpline-contact-form');
+    await waitFor(() => expect(screen.getByLabelText('English')).toBeChecked());
+    expect(screen.getByLabelText('Hindi')).not.toBeChecked();
+  });
+
+  it('⭐ review 2026-09-29: an unmapped `missing` reason renders a fallback, ⛔ never blank', async () => {
+    mocked.getClaimContactPresence.mockResolvedValue(
+      presence({ missing: 'a_future_reason_this_ui_does_not_know_yet' as unknown as ClaimContactPresenceResponse['missing'] }),
+    );
+    renderCard();
+    const node = await screen.findByTestId('helpline-contact-missing');
+    expect(node.textContent).not.toBe('');
+    expect(node).toHaveTextContent(/still waiting/);
+  });
+
+  it('⭐ review 2026-09-29: a non-step-up 403 gets its OWN message — ⛔ never the misleading generic "try again"', async () => {
+    mocked.recordHelplineClaimContact.mockRejectedValue(new ApiError(403, 'rbac.geo_scope_denied', 'x'));
+    renderCard();
+    const user = userEvent.setup();
+    await user.click(await screen.findByTestId('helpline-contact-agreed'));
+    await user.click(screen.getByTestId('helpline-contact-save'));
+    expect(await screen.findByTestId('helpline-contact-error')).toHaveTextContent(/do not have permission/);
+  });
+
+  it('⭐ review 2026-09-29: fields are disabled while a save is in flight — no unrelated edit races the reset', async () => {
+    let resolveSave!: (v: { presence: ClaimContactPresenceResponse; agreementRecorded: boolean; agreementIgnored: boolean }) => void;
+    mocked.recordHelplineClaimContact.mockReturnValue(
+      new Promise((resolve) => {
+        resolveSave = resolve;
+      }),
+    );
+    renderCard();
+    const user = userEvent.setup();
+    await user.click(await screen.findByTestId('helpline-contact-agreed'));
+    await user.click(screen.getByTestId('helpline-contact-save'));
+    await waitFor(() => expect(screen.getByTestId('helpline-contact-address-1')).toBeDisabled());
+    expect(screen.getByTestId('helpline-contact-agreed')).toBeDisabled();
+    resolveSave({ presence: presence({ recorded: true }), agreementRecorded: true, agreementIgnored: false });
+    await waitFor(() => expect(screen.getByTestId('helpline-contact-address-1')).not.toBeDisabled());
+  });
 });

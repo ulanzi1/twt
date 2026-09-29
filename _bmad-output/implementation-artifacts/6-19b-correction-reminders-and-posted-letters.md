@@ -26,7 +26,8 @@ Status: ready-for-dev
 > review a go-live gate); ⭐ **`2026-09-29-268`** makes *"the family's part is done"* its own fact (the accounts rewritten after the return,
 > with ⛔ no later `does_not_match`); ⭐ **`2026-09-29-269`** is its erratum and closes three seams (the LATEST check decides; the pause has
 > two tiers; ⛔ no family run during a Super Admin hold; a number the network refuses is letter-eligible; the helpline number is per Pariwar)
-> — read all four before Task 1; every AC below is written to them.
+> ⭐ **`-270`** (the mark also records a Super Admin) and ⭐ **`-271`** ("reached" counts only the person's CURRENT number; ⛔ no staff run on a
+> switch during a Super Admin hold) — read all six before Task 1; every AC below is written to them.
 > ⭐ **The family SMS is go-live gated on counsel** (M, S — launch-gate inventory rows 18, 19) and cannot send for real until the DLT
 > templates are registered (T13; the request sheet reads ⛔ *not started*). A missing template id or helpline number fails **closed**.
 > Neither blocks the build ([[project_not_in_production_merge_is_not_golive]]).
@@ -37,7 +38,7 @@ Status: ready-for-dev
 - **Rulings:** ⭐ **`-258`** (who must act — AC16), ⭐ **`-260` G2** (the Pariwar Admin's keep also sets the mark — a writer 6.19c builds
   on this slice's table) and ⭐ **G4** (⛔ no same-day message — the first slot is the next morning), `-229`, `-230` 1–4, `-231` C/D/E/F,
   `-232` J, `-250` #1–#5, `-252` cl.1–2, `-253` cl.3, `-255` F5/F6/F7.
-- **Author decisions:** `-265` (D1–D29, the eight keys) **as amended by `-266`, `-267`, `-268` and `-269`** — D2 (superseded: the runs table), D3 (keyed by run
+- **Author decisions:** `-265` (D1–D29, the eight keys) **as amended by `-266` … `-271`** — D2 (superseded: the runs table), D3 (keyed by run
   kind), D4, D6, D7, D8 (keys **(1) and (7)** are minted here), D10, D11, D20, D21, D25, D26, D28, ⭐ **D30–D34** (`-266`).
 - **Invariants (shared spec):** 1 (the system never decides), 3 (never `delivered` for an accepted send), 4 (no name in a family
   message), 11 (a family is never chased for a silence that was never theirs).
@@ -83,13 +84,13 @@ traces to one of them.
 land before the sweep ends the first run)
 **And** the return's handler opens the first run **in the return's transaction**: `family` with `day0 = istDateOf(decidedAt)` when the mark
 is `family`, else `staff`; a mark change (AC16) ends the open run, if any (`end_reason 'mark_changed'`; D26's *"the running slot is written `skipped_superseded`"*
-is done by the **next sweep**, ⛔ not the API: when the run ended on one of its slot days, the sweep writes `skipped_superseded` for each
-recipient with ⛔ no row for that slot — an existing row is left as it is; the child's re-check already stops the send), and opens the other kind with `day0` = the change's IST date — also when ⛔ no run is open (after day 90, or
+is done by the **next sweep**, ⛔ not the API — a separate bounded query for runs ended `mark_changed` in the last 36 hours on one of their
+slot days; the sweep writes `skipped_superseded` for each recipient with ⛔ no row for that slot — an existing row is left as it is; the child's re-check already stops the send), and opens the other kind with `day0` = the change's IST date — also when ⛔ no run is open (after day 90, or
 on an unmarked return: a switch to `family` gives the family a full 90 days from that day, `-258` detail 1); the opener first ends any open run of the claim (`superseded`) — so a **second return**, by either path, leaves one run; a `direction` run is
 opened ONLY through the exported opener (6.19c calls it), which refuses it unless the latest mark is `family` (`-267` §5a — ⛔ no family chase
 by direction in a staff case); an exported **end-run** function records `decided` (6.19c's decisions call it; on an already-ended run it is a no-op); ⭐ the opener carries
 a **hold hook** that 6.19c fills (`-269` §3): while a claim is escalated or under Super Admin review, a mark switch opens ⛔ no `family` run —
-only a `restart_family_reminders` direction does — and a switch to `staff` ends any open `direction` run and opens ⛔ no `staff` run (the
+only a `restart_family_reminders` direction does — and a switch to `staff` ends any open `direction` run and opens ⛔ no `staff` run (`-271` §2 — the
 claim is already with the Super Admin; the review's reminders are 6.19c's); the opener and the mark writer run under the trustee advisory lock
 (`stateTrusteeDecisionAdvisoryLockKey`, the lock every return and vote takes)
 **And** a **pure** `correctionReminderSchedule(kind, day0)` returns the slots from a DATA table keyed by run kind — `family`, `staff` and
@@ -109,16 +110,22 @@ counts; `-269` §1) — pauses the **family only**: ⛔ no family SMS, ⛔ no le
 cap — and enqueues a child job per `(run, slot, recipient, purpose, subject_key)` (its `singletonKey` is a **label only** — ⚠ every queue here uses pg-boss's
 `standard` policy, which enforces ⛔ no `singletonKey` uniqueness (`apps/jobs/src/claim-peer-mesh.ts`'s policy note); ⭐ the dedup is the
 table's UNIQUE + the insert under the lock); the retry policy is stated at the enqueue site — `retryLimit: CHILD_RETRY_LIMIT` (4),
-`retryDelay: CHILD_RETRY_DELAY_SECONDS` (60), `retryBackoff: true` (`contribution-notify-triggers.ts` — pg-boss's default is ⛔ no retry); a per-claim try/catch (⚠ `resolveClaimCorrectionState`
+`retryDelay: CHILD_RETRY_DELAY_SECONDS` (60), `retryBackoff: true` (`contribution-notify-triggers.ts`) — ⚠ ⛔ never inherit the default: pg-boss 12.19.1's is **2 immediate retries**
+(`QUEUE_DEFAULTS`, `retry_limit: 2, retry_delay: 0`; the repo comment calling it "no retry" is stale), so the **sweep** and the **staff-push**
+queues state theirs too (each `retryLimit: 2`, `retryDelay: 60`, `retryBackoff: true` — both are idempotent); a per-claim try/catch (⚠ `resolveClaimCorrectionState`
 re-throws any error that is not one of its three "not yet" errors); the child throws **only on a transient failure** (AC3) so pg-boss retries
 **And** ⭐ **the child re-checks before it sends**, in ONE transaction under the trustee advisory lock: the run is still open (a mark change
-ends it; a same-value restatement does ⛔ not), neither pause tier holds, D30 does ⛔ not apply — and only then inserts its row `attempting`
+ends it; a same-value restatement does ⛔ not) and — **by purpose** — tier (a) (`resubmitted`) does ⛔ not hold for ANY row, while tier (b)
+(the family's part done) and D30 stop only `family_sms` and `letter_chase` rows (⛔ never the District Admin's `staff_reminder`,
+`escalation` or `letter_second_due` — tier (b) is exactly when staff must act) — and only then inserts its row `attempting`
 (with `claimed_at` and `claimed_by_job` = the pg-boss job id, which a retry keeps) and commits — ⚠ all on the ONE client of that scope tx
 (the jobs domain pool is `max: 2`, `boot.ts`): decrypts and config reads happen **after** the commit, ⛔ never a second checkout inside
 the lock; the
 send happens **after** that commit, and the row moves to its final state **after** the send (compare-and-set: `attempting` → final only from
-`attempting`). ⇒ a switch to `staff` at 10:01 stops a job queued at 10:00. ⭐ A **retry of the same job** (same `claimed_by_job`) re-runs the
-re-check and re-claims its row **at once** (`attempt_count + 1`, the first transient `detail` kept in `first_detail`) — ⛔ never a second
+`attempting`). ⇒ a switch to `staff` at 10:01 stops a job queued at 10:00. ⭐ A child whose re-check **fails** (a switch, a pause, D30) writes — or
+compare-and-sets its own `attempting` row to — `skipped_superseded` with the reason in `detail`, and completes ⛔ without throwing. A
+**retry of the same job** (same `claimed_by_job`) re-claims **only from `attempting`** (a retry arriving after the finaliser's `error` is a
+no-op): it re-runs the re-check and re-claims its row **at once** (`attempt_count + 1`, the first transient `detail` kept in `first_detail`) — ⛔ never a second
 row; a row claimed by a **different** job is re-claimed only when its `claimed_at` is older than **`CORRECTION_SEND_LEASE` (10 minutes —
 longer than any single attempt: a 10-second send)**, else left alone. ⭐ The **exhausted-row finaliser** is a time bound, ⛔ not a retry
 count: the sweep compare-and-sets to `error` (+ alarm) every row still `attempting` whose `claimed_at` is before today's IST date (the
@@ -133,8 +140,12 @@ latest missed slot once, flagged `late`; older ones `skipped_superseded` — ⛔
 **block** — gets one reminder row (`purpose 'family_sms'`) and one SMS
 **And** the row's `recipient_key` is stable across a 6.20 correction: `nominee:<the correction-chain ROOT of the version>` or `claimant`;
 ⚠ when a correction changes the **number** behind a key mid-run (each `family_sms` row stores the `recipient_version_id` it used and a
-keyed hash of the decrypted E.164 number — `recipient_number_hash`, the encryption package's blind index, the member-mobile precedent —
-since ciphertext is ⛔ not comparable; a correction that keeps the same number changes ⛔ nothing), that person's per-run state (the found-dead marker, the "delivered letter
+keyed hash of the decrypted, normalised E.164 number — `recipient_number_hash`, via `blindIndex` under a NEW field class
+`claim_contact_mobile` in `field-classes.ts`, bound to the claim's **real** `pariwarId` — ⚠ ⛔ never `mobileBlindIndex` (its
+`MEMBER_IDENTITY_NAMESPACE` hash equals `member_identities.mobile_blind_index`, the login key, and would make every row joinable to a
+member) — computed after the decrypt and written at the final compare-and-set; since ciphertext is ⛔ not comparable; the sweep evaluates
+the reset by comparing `recipient_version_id` first and hashing only when it differs (a stopped person writes ⛔ no rows, so the sweep, ⛔ not
+the child, must detect their change); a correction that keeps the same number changes ⛔ nothing), that person's per-run state (the found-dead marker, the "delivered letter
 stops reminders" stop) resets — a new number is reached afresh, ⛔ never silenced by the old number's history
 **And** ⭐ **D30 — nobody nameable:** when the effective declaration is ⛔ not `effective`, there is ⛔ no contact record, or the agreement is
 ⛔ not `live`, the sweep sends ⛔ nothing to the family, writes ⛔ no family row for the slot, and the queue shows *"cannot remind"* with the
@@ -168,7 +179,8 @@ throws and retries); `messaging()` is called **inside** the send's try
 **And** a person becomes **letter-eligible** in a run on their first `rejected_invalid_number`, `rejected_unreachable` (`-269` §4) or `no_target` (D20) — the
 IST date that outcome was recorded is their **found-dead day** (for a `late` send, the send's date) — and is shown to the District Admin as **dead** (`rejected_invalid_number`) or **unreachable** (`rejected_unreachable`, `no_target`) with the
 letter route offered (`-252` cl.2); ⚠ the sweep alarms when one day's sends carry ≥ 3 `rejected_unreachable` (`carrier_reject` also covers
-spam filters — a content-level block would make everyone letter-eligible); their
+spam filters — a content-level block would make everyone letter-eligible; evaluated at the next sweep, and letter-eligibility is ⛔ not
+undone — a letter is only added reach); their
 reminders stop only when a letter to them has a recorded delivery (`-250` #1); the marker is **per run**.
 
 ### AC4 — Staff reminders and escalation (`-230` 1, `-231` C/F, `-232` J, `-250` #2/#3, `-258`; D11, D20, D21, D26, D34)
@@ -181,14 +193,18 @@ is `recorded`
 reminder to post the second letter) ⇒ per person, ONE `letter_second_due` row at that person's recorded delivery + 30 days; ⛔ no separate
 `replacement_reminder` is written in v1 (the CHECK keeps the value for later kinds)
 **And** for each letter-eligible person without a complete letter record, the District Admin is reminded from the **found-dead day**: day 7,
-daily through day 12 (found-dead day + 7 … + 12), then **escalated to the Pariwar Admin on day 13** (*"thereafter"*, `-231` C) (`purpose 'letter_chase'` / `'escalation'`, `subject_key` = the chased person — `-267` §4: per-person items for one District Admin on one day
+daily through day 12 (found-dead day + 7 … + 12), then **escalated to the Pariwar Admin on day 13** (*"thereafter"*, `-231` C — one `escalation` row per Pariwar Admin of the claim's
+Pariwar, from the admin directory, `recipient_key 'staff:<user_id>'`, each on their own daily push) (`purpose 'letter_chase'` / `'escalation'`, `subject_key` = the chased person — `-267` §4: per-person items for one District Admin on one day
 ⛔ never collide) — a record and a reminder, ⛔ never
 an automatic act (AR-63); the **overdue** flag at 14 days after posting is shown, nothing else
 **And** delivery is D11's: ⭐ **the queues are the channel** — the correction queue is **linked from the admin nav** and every due item is on
 it; admin push is best-effort, English, `time_critical:false`, ⛔ no Telegram mirror, at most one push per District Admin per claim per day
-(D34) — ⭐ combined by ONE daily staff-push job per `(claim, user, IST date)` — the sweep enqueues it with `startAfter` 30 minutes, it reads that
-day's staff rows when it runs, and its idempotency is its own reminder row (`purpose 'staff_push'`, `recipient_key 'staff:<user_id>'`,
-`subject_key ''`) inserted under the lock before the push (a child job ⛔ never pushes itself) — ⚠ **inert on day one**: ⛔ no admin client registers a device token today, so it reaches ⛔ no device; build and test it against a
+(D34) — ⭐ combined by ONE daily staff-push job per `(claim, user, IST date)` — ⭐ staff rows send nothing, so the **sweep writes them itself** (⛔ no child
+job), then enqueues the push, which reads that day's staff rows; its idempotency is its own row (`purpose 'staff_push'`) under a partial
+UNIQUE on `(claim_case_id, recipient_key, sent_on) WHERE purpose = 'staff_push'` — so a sweep retry after a same-day mark switch cannot
+key a second push on the new run; it follows the same claim / same-job-retry / finaliser rules as a family row; with ⛔ no admin device
+token its outcome is `no_target` with ⛔ no alarm (the day-one state; an alarm would fire daily for every claim); a child job ⛔ never
+pushes itself — ⚠ **inert on day one**: ⛔ no admin client registers a device token today, so it reaches ⛔ no device; build and test it against a
 fake provider and say so in Completion Notes
 **And** each queue item links to the claim **in the queue** (a new `?claim=<id>` search parameter that scrolls to and highlights the row);
 ⚠ the push itself cannot deep-link (the `alert_published` render builds a member-app link, and `render.ts` is on the never-edit list) — its
@@ -229,7 +245,9 @@ change cannot race a second return onto a superseded `decision_id`
 (`-260` G2's keep re-stating the mark; D27's "no correction needed", which sets `staff`) — with ⛔ no database constraint that shuts
 6.19c's writers out (`set_by_role ∈ {pariwar_admin, district_admin, super_admin}` — a Super Admin holds every key, so can return a claim or change the mark;
 ⚠ `super_admin` extends D25's committed role set and is recorded by author-commit `2026-09-29-270`; `set_by_role` is the role whose grant
-authorised the route — `super_admin` when the actor acts through the Super Admin bundle;
+authorised the route — ⚠ the permission checks return only a boolean (`packages/domain/src/rbac/check.ts`), so a NEW pure helper
+`matchingGrantRole(grants, key, resource)` in `packages/domain/src/rbac/` returns it, preferring a scoped grant over a `global` one (a
+Pariwar Admin who also holds `super_admin` records `pariwar_admin` for a Pariwar-scoped act); unit-tested with a dual grant;
 a note on every row after the return's); ⚠ the **writer** accepts a same-value row (G2's keep RE-STATES the mark, possibly unchanged; D27 sets `staff` on a claim that may
 already be `staff`) — a same-value row is recorded and leaves the open run untouched; only a changed value ends and opens a run
 **And** the family's reminders (AC3) and the letter track (AC5) run **only in a `family` or `direction` run**: day 0 = the return's date if
@@ -246,7 +264,9 @@ exactly that situation); a
 return form requires the choice before submit
 **And** ⭐ this slice **exports** ONE resolver: the latest mark and, for the live return, the latest `family`/`direction` run and the latest
 `staff` run — **open or ended** — each with `run_id`, `day0`, `ended_at`, `end_reason` (`-267` §2 — ⚠ SUPERSEDES *"the open run"*: every run
-ends at day 90, where 6.19c's gates begin); 6.19c's closure gate calls it.
+ends at day 90, where 6.19c's gates begin) — ⭐ **and each person's CURRENT number hash** (`-271` §1: 6.19c's D22 counts an accept as
+"reached" only when its `recipient_number_hash` equals it — an accept to a corrected-away number ⛔ never reaches the person); 6.19c's
+closure gate calls it.
 
 ### AC8b — The surfaces (this slice)
 **Then** the District Admin's **correction queue** (6.18's — ⛔ no second list) gains per claim: the **short reference** (D33), the day
@@ -283,8 +303,8 @@ and each mark change, with `resourceLocator: 'claim:<lower-case uuid>'` (anythin
   one does ⛔ not); a missing DLT template id and an unset helpline number → `error` + alarm, ⛔ never `accepted`;
 - **pause tiers (`-269`):** rewrite day 10 → mismatch day 11 → match day 12 with ⛔ no new rewrite ⇒ resubmitted, **everything** paused;
   rewrite with ⛔ no check yet ⇒ the family paused, the District Admin still reminded, the queue's "awaiting your check" flag;
-- **send safety:** a switch to `staff` between enqueue and send ⇒ ⛔ no SMS; a lease-expired `attempting` row re-claimed once, a younger one
-  left alone; a row stuck after retries are exhausted finalised `error` by the next sweep; a send timeout ⇒ `api_unavailable` + retry;
+- **send safety:** a switch to `staff` between enqueue and send ⇒ ⛔ no SMS; a row held by a **different** job re-claimed only once its lease
+  expires, a younger one left alone; a re-check that fails on a retry ⇒ `skipped_superseded`, ⛔ no throw, ⛔ no false `error`; a row stuck after retries are exhausted finalised `error` by the next sweep; a send timeout ⇒ `api_unavailable` + retry;
   `isConfigured() === false` ⇒ `error` + alarm; a Secret Manager outage ⇒ retry; `carrier_reject` ⇒ `rejected_unreachable` and
   letter-eligible; an unset helpline number for Pariwar A fails A's sends only;
 - **retries (the H1 of the v2.4 re-check):** a transient failure then a retry of the SAME job ⇒ re-claimed at once and sent (`attempt_count` 2,
@@ -311,22 +331,24 @@ and each mark change, with `resourceLocator: 'claim:<lower-case uuid>'` (anythin
 - **AC16:** a staff-marked return sends the family ⛔ nothing; a switch to `family` opens a run with day 0 = the switch date; a switch to
   `staff` stops it mid-run; the member copy branches (staff case → the D28 line and ⛔ neither correction key; family case → `…_staff`);
   `must_act` missing on a return → 400;
+- **`-271`:** a nominee reached on number A, then corrected to number B that is dead ⇒ ⛔ not "reached" (the resolver's current hash is B's);
+  a switch to `staff` during a hold opens ⛔ no staff run; `matchingGrantRole` with a dual Pariwar-Admin + Super-Admin grant ⇒ `pariwar_admin`;
 - **keys:** keys (1) and (7) — **cross-Pariwar** and **non-human/system-actor** denial each; the human-actor gate classifies the new route
   file and lists its methods;
 - a `*-shape.spec.ts` for the extended queue read model; `{ timeout: 20000 }` on each new domain live spec.
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0 — Preflight** (all ACs) — confirm `-266`, `-267`, `-268` and `-269` are on `main`; run `git diff --name-only f06ee41f..HEAD -- packages apps scripts`
+- [ ] **Task 0 — Preflight** (all ACs) — confirm `-266` … `-271` are on `main`; run `git diff --name-only f06ee41f..HEAD -- packages apps scripts`
   and re-read any cited file it lists; read the DLT request sheet and the four DLT keys' and each Pariwar's helpline-number key's status (T13, D33, `-269` §5); read the catalog
   version **live** (forecast 48).
 - [ ] **Task 1 — Migrations, from `0126`** (AC2, AC3, AC4, AC5, AC16) — in one ordered set, each with its RLS policy file (tenant, FORCE; modelled on
   `policies/claim-contact-rls.ts`), journal entry and migration-level policy spec: (a) the **mark** table (D25); (b) the **runs** table
   (`-266` §1 as amended by `-267` §1: the partial-unique on `claim_case_id WHERE ended_at IS NULL`; `end_reason` CHECK ∈ {`superseded`,
-  `day_90`, `mark_changed`, `decided`} — ⛔ no `resubmitted`, `-267` §3); (c) the **reminder record** (+ `late boolean NOT NULL DEFAULT false`, `claimed_at`, `recipient_version_id` on `family_sms` rows, the
+  `day_90`, `mark_changed`, `decided`} — ⛔ no `resubmitted`, `-267` §3); (c) the **reminder record** (+ `claim_case_id`, `pariwar_id` (RLS), `sent_on` (IST date), `late boolean NOT NULL DEFAULT false`, `claimed_at`, `recipient_version_id` on `family_sms` rows, the
   `claimed_by_job`, `attempt_count int NOT NULL DEFAULT 1`, `first_detail`, `recipient_number_hash`, the `detail` text; outcome CHECK ∈
   {`attempting`, `accepted`, `rejected_invalid_number`, `rejected_unreachable`, `no_target`, `error`, `skipped_superseded`, `recorded`} —
-  `delivered` is ⛔ not a state, only `delivered_at`) keyed UNIQUE
+  `delivered` is ⛔ not a state, only `delivered_at`; the `staff_push` partial UNIQUE on `(claim_case_id, recipient_key, sent_on)`) keyed UNIQUE
   `(run_id, slot_day, recipient_key, purpose, subject_key)` (`-267` §4; `slot_day` = the run's day; `purpose` CHECK ∈ {`family_sms`,
   `staff_reminder`, `staff_push`, `letter_chase`, `letter_second_due`, `replacement_reminder`, `escalation`}, which 6.19c extends by its own migration;
   ⚠ `subject_key text NOT NULL DEFAULT ''` — Postgres treats NULLs as distinct, so a nullable column would silently void the UNIQUE; it holds
@@ -347,6 +369,7 @@ and each mark change, with `resourceLocator: 'claim:<lower-case uuid>'` (anythin
   sweep + child queue (`QUEUE_NAMES`, registration in `boot.ts` beside `registerContributionNotifyWorkers`); the stop predicate; the record
   writer (`attempting` → final, the stuck-row retry); injectable clock everywhere.
 - [ ] **Task 4 — The family SMS** (AC3) — relocate `claim_contact` and `member_nominee` into `packages/domain/src/encryption/field-classes.ts`
+  and add the NEW `claim_contact_mobile` field class for `recipient_number_hash` (`-271` §1 reads it)
   (apps/api re-exports; the 8.8 precedent — ⛔ no by-value duplicate in apps/jobs); decrypt the claimant's mobile from the contact block
   and each nominee's from `member_nominee_versions.mobile_ciphertext` (via `getNomineeVersionsByIds`); expose the SMS gateway client from
   `buildContributionProviderResolver` (⛔ not a second client); the recipient set via 6.19a's `readClaimContact`, `readVersionChainIndex`,
@@ -476,7 +499,7 @@ reminder and letter records (D22), calls the exported mark writer, run opener, r
 `docs/launch-gate-inventory/dlt-template-requests-6-19.md`, `docs/launch-gate-inventory/inventory-roster.md` (D28's Hindi review, `-267` §6),
 `docs/degradation-policy/surface-inventory.md`,
 `docs/fallback-handler-ledger/ledger.md` (rows 9, 15, 16's xref), `_bmad-output/implementation-artifacts/deferred-work.md`.
-**NEW:** the four tables + RLS files (`schema/index.ts`, `policies/index.ts`); a contracts module for the letter and mark requests /
+**NEW:** `matchingGrantRole` (`packages/domain/src/rbac/`, + its unit test); the four tables + RLS files (`schema/index.ts`, `policies/index.ts`); a contracts module for the letter and mark requests /
 responses under `packages/contracts/src/claims/` (+ its `index.ts` export and tests); the admin letter-form and mark-change components; the domain module for the mark writer, run opener, resolver,
 schedule and the letter precondition; the reminder sweep beside `contribution-notify-triggers.ts`; the claim-correction SMS template
 registry (apps/jobs); the admin directory accessor; the letter + mark route file and handlers.
@@ -519,6 +542,7 @@ and 6.19a's `apps/api/tests/unit/claim-contact-copy.test.ts` (copy lockstep).
 
 | Version | Date | Change |
 |---|---|---|
+| v2.6 | 2026-09-29 | Re-check of v2.5 (⛔ no critical/high) ⇒ **`-271`** (BigDev): "reached" counts only the person's CURRENT number (the resolver exposes it); ⛔ no staff run on a switch during a hold. **Story fixes:** the child's re-check is scoped **by purpose** (tier (b) and D30 stop only `family_sms` / `letter_chase` — the District Admin is still reminded when staff must act); a failed re-check → `skipped_superseded`, ⛔ no throw; a same-job retry re-claims only from `attempting`; `matchingGrantRole` gives `set_by_role` a mechanism; the number hash's own field class `claim_contact_mobile` on the real `pariwarId` (⛔ never the login-key namespace), the reset evaluated in the sweep; pg-boss's real default is 2 immediate retries (the "no retry" sentence was false) — the sweep and push queues state theirs; the sweep writes staff rows itself, the push dedups on `(claim, user, IST date)`, ⛔ no daily alarm on day one; escalation recipients named; the D26-marker query bounded; the burst alarm's lag accepted; the send-safety test reworded. |
 | v2.5 | 2026-09-29 | Fresh-context re-check of v2.4 (one HIGH, story-level): ⚠ **the 10-minute lease had disabled the transient retry** — a 60-second pg-boss retry found its own younger row and left it alone ⇒ `claimed_by_job` (a retry of the same job re-claims at once; the lease is for a different job only) and the retry policy stated (`CHILD_RETRY_LIMIT` 4, 60 s, backoff — pg-boss's default is ⛔ no retry). **Also:** the `singletonKey` rationale was false (`standard` queues enforce ⛔ no singleton uniqueness — the table is the dedup); the daily staff push gets its own `staff_push` row and a `startAfter` trigger; the exhausted-row finaliser is a time bound (a previous IST day); `attempt_count` / `first_detail` record the at-least-once double; the reset keys on the NUMBER (`recipient_number_hash`), ⛔ not the version; the full outcome CHECK incl. staff rows' `recorded`; D26's markers written by the sweep, S2's two exceptions; the staff day-12 slot in AC2; T6 → S4 for tone; the reminder copy matches `…_staff`; dead / unreachable mapping; an alarm on a burst of `rejected_unreachable`; the hold hook's switch-to-`staff` rule; `set_by_role`'s rule, and `super_admin` recorded by `-270`; the one-client-per-scope-tx rule (pool `max: 2`); a duplicate Files entry removed. |
 | v2.4 | 2026-09-29 | ⭐ **One fresh-context validate of v2.3 (BigDev: *"do one"*, then *"all"*) ⇒ author-commit `2026-09-29-269`**: the LATEST check decides "the family's part is done"; the pause has two tiers (`resubmitted` pauses everything, the family's part alone pauses the family); ⛔ no family run during a Super Admin hold (a hook 6.19c fills); `carrier_reject` → `rejected_unreachable`, letter-eligible; the helpline number per Pariwar. **Story fixes:** the job `singletonKey` gains `subject_key` (pg-boss would have dropped a second person's chase); the child re-checks run/mark/pause/D30 under the trustee lock before its insert, a 10-minute lease, an exhausted-row finaliser, a 10-second send timeout, at-least-once stated; one daily staff-push job; `super_admin` in `set_by_role`; the mark writer's live-return check and lock; D21 and the second letter are ONE reminder per person; what each SMS says, and its Hindi on D28's go-live row; the queue's "awaiting your check" flag; `late`, `claimed_at`, `recipient_version_id` and the encrypted tracking number / note; the chase escalates on day 13 and the staff run's day-12 slot is in the table; no-shepherd, unmarked-return and end-run no-op rules; the cost line; Hindi microcopy rules; files; the Change Log reordered. |
 | v2.3 | 2026-09-29 | ⭐ **Author-commit `2026-09-29-268`** (BigDev: *"A"*) — *"the family's part is done"* is its own fact (every account rewritten after the return, ⛔ no later `does_not_match`); the family chase pauses on it (⛔ not only on `resubmitted`, which also needs a staff check and which a 6.20 correction un-sets), the District Admin's reminders continue, the member line shows D28's *"we are checking"*, and 6.19c's closure guard reads it. `isReturnedClaimResubmitted` and the approval gate are ⛔ not changed. |

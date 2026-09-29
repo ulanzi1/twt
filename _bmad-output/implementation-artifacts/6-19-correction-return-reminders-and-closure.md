@@ -614,7 +614,7 @@ Where a decision only records a Panel ruling it says so.
   person's delivery + 30 days; ⛔ no separate `replacement_reminder` in v1.)* **D21 — NEW. The District Admin's regular reminders** follow D3's days; they are replaced by the single 30-day reminder (`-231` F, `-232` J)
   only when **every** family recipient is letter-eligible **and** each has a recorded delivery (with one person still on a working phone, the
   chase continues — ours; `-231` F was ruled for "the family's number").
-- **D22 — NEW. The "reached" precondition (`-252` cl.1)** is a pure function over the run's records: for **each** person who must be reached
+- ⚠ *(`-271` §1: an accept counts only when it went to the person's CURRENT number — `recipient_number_hash`.)* **D22 — NEW. The "reached" precondition (`-252` cl.1)** is a pure function over the run's records: for **each** person who must be reached
   (each effective nominee, and the claimant when none of them), ≥ 1 reminder `accepted` (or `delivered`) **or** a letter with a recorded
   delivery date. A closure **request** refuses otherwise (**409 `closure.not_reached`**, naming ⛔ no person in the body — a count and the
   roles only).
@@ -770,3 +770,4 @@ template registry's content against the rendered `t()` output).
 | v1.15 | 2026-09-29 | ⚠ **`-268`**: invariant 2's "corrected" also means "the family's part is done"; D4's pause (via `-267` §3) is widened to it. |
 | v1.16 | 2026-09-29 | ⚠ **`-269`**: the latest check decides "the family's part is done"; two pause tiers (D4); ⛔ no family run during a Super Admin hold (6.19c fills 6.19b's opener hook — T11/D18); D20 gains `rejected_unreachable`; D33's helpline key is per Pariwar. |
 | v1.17 | 2026-09-29 | 6.19b v2.5's re-check: invariant 2 marked with `-269` §1; D20's escalation day (13); D21 read as one reminder per person; D25's role set gains `super_admin` (`-270`). |
+| v1.18 | 2026-09-29 | ⚠ **`-271`**: D22 counts only accepts to the person's current number; ⛔ no staff run on a switch during a Super Admin hold. |

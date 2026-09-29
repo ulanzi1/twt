@@ -8,6 +8,8 @@ was RE-VERIFIED against this SHA on 2026-09-27 by three read-only passes (the re
 substrate; filing, PII, keys and 6.21a/b). 6.18, 6.20, 6.21a and 6.21b are all `done` and merged — ⛔ nothing here is against an
 uncommitted tree any more. Before Task 1, run `git diff --name-only c136b03c..HEAD -- packages apps scripts` and re-read anything
 it lists that this file cites.
+⚠ 2026-09-29: 6.19a has since SHIPPED (78 code files moved by `f06ee41f`). For 6.19b's scope, 6.19b v2.0's *§ What 6.19a shipped, and
+what moved* (re-derived at `f06ee41f`) wins over *What already EXISTS* below; 6.19c must re-derive its own scope the same way.
 
 ⭐ v0.9 IS A RE-DERIVATION, ⛔ NOT AN APPEND. The Panel answered every question this story put (`-250` … `-257`); the ACs, the
 author decisions and the Tasks are re-derived from those answers and the old BLOCKED tags are gone. v0.8 (the question list as put, the
@@ -18,7 +20,8 @@ GLYPH REGISTER: `⛔` sits ONLY on a negation word (NOT / no / never / don't); `
 ADDRESSING RULE: no `file:NNN` pointers into `.decision-log.md`, `deferred-work.md` or `sprint-status.yaml` (newest-first — every
 prepend rots every number). Cite decision ids + clauses, item headings and row keys. `file:NNN` is used ONLY for code, as of
 `c136b03c` — the function names are the stable handle.
-LETTERS: `D1`…`D29` are 6.19's own author decisions (⏳ PROPOSED — one author-commit in 6.19a's Task 0; D5, D14, D15, D16 revised
+LETTERS: `D1`…`D29` are 6.19's own author decisions (✅ COMMITTED by `-265`, 2026-09-28; ⭐ `D30`…`D34` and the supersession of D2 and of
+D14's letter-writer clause by `-266`, 2026-09-29. First text: ⏳ PROPOSED — one author-commit in 6.19a's Task 0; D5, D14, D15, D16 revised
 2026-09-28 by 6.19a's validate pass; D29 superseded by `-260` G1 before it was ever committed). The Panel's questions keep the
 letters they were asked under (K L M N O P Q R T U; F1–F8 of `6-19-follow-ups`; N1 of `6-20-confirm-what-we-recorded`). Two NEW
 questions found by this pass are `V` and `W`. Other stories' letters are qualified (`6.18 D1`, `6.16 D-F`).
@@ -33,9 +36,9 @@ Status: split — ⛔ this file has no sprint row; it is the shared spec of four
 >
 > | Story | Row / file | Scope | Status |
 > |---|---|---|---|
-> | **6.19a** | `6-19a-claim-contact-capture-at-filing` | AC0 (governance for the WHOLE set), AC1, AC13 | `ready-for-dev` |
-> | **6.19b** | `6-19b-correction-reminders-and-posted-letters` | AC2–AC5 | `ready-for-dev` — start only after 6.19a is `done` |
-> | **6.19c** | `6-19c-correction-closure-super-admin-review-and-refile` | AC6, AC7, AC14, AC15 | `ready-for-dev` — start only after 6.19b is `done` |
+> | **6.19a** | `6-19a-claim-contact-capture-at-filing` | AC0 (governance for the WHOLE set), AC1, AC13 | ✅ `done` (merged, `f06ee41f`) |
+> | **6.19b** | `6-19b-correction-reminders-and-posted-letters` | AC2–AC5, AC16 | `ready-for-dev` — v2.0 on `-266`, re-pinned `f06ee41f` |
+> | **6.19c** | `6-19c-correction-closure-super-admin-review-and-refile` | AC6, AC7, AC14, AC15, AC17 | `ready-for-dev` — start only after 6.19b is `done` |
 > | **6.19d** | `6-19d-replacement-certificate-reminder` | AC12 (CC1) | `backlog` — fenced on its routing note |
 >
 > The AC numbers are **kept** in the slices, so every decision and note that cites "6.19 AC n" still resolves; AC8, AC9 and AC11 are restated per
@@ -446,9 +449,9 @@ message (reminder, closure notice). Build against config keys; a missing key mus
 fall back to a fixture that reports `accepted`.
 
 **T14 — sequencing inside the story.** 6.18, 6.20, 6.21a/b are merged; the last migration is **0123** ⇒ this story's migrations start at
-**0124**. 6.19a's Task 3 (N1) is independent and may land first; 6.19d (CC1) is fenced on its routing note.
+**0124**. ⚠ *(As of `f06ee41f`: 6.19a used 0124 + 0125 ⇒ 6.19b starts at **0126**.)* 6.19a's Task 3 (N1) is independent and may land first; 6.19d (CC1) is fenced on its routing note.
 
-## ⚖️ Decisions — the AUTHOR's (BigDev's; ⏳ PROPOSED here, committed in ONE author-commit in 6.19a's Task 0, like `-228`/`-241`)
+## ⚖️ Decisions — the AUTHOR's (BigDev's; ✅ committed by `-265` — D2 and D14's letter clause ⚠ SUPERSEDED and D30–D34 ADDED by `-266`)
 
 ⛔ None of these is the Panel's (§0 gate: each is "the code should do X" with no change to what a person is owed beyond what the rulings fix).
 Where a decision only records a Panel ruling it says so.
@@ -461,11 +464,15 @@ Where a decision only records a Panel ruling it says so.
   `correction_closure_approved` / `correction_closure_super_admin` (carrying `deceased_member_id`). The three appeal sites refuse when the claim
   has a closure row in state `closed` (the **table** is the marker for the 409 code; the event is what the overlay reads). *Cost:* migration,
   writer, three appeal-site edits, a status string.
-- **D2 — the reminder record is a dedicated append-only table** keyed UNIQUE `(schedule_run_id, slot_day, recipient_key)`, carrying
+- ⚠ **D2 — SUPERSEDED by `-266` §1 (2026-09-29): a run is its OWN record** — a runs table (`kind` ∈ {family, staff, direction}, `anchor_id`,
+  `day0`, ⭐ one open run per return), the record keyed UNIQUE `(run_id, slot_day, recipient_key, purpose)`, `recipient_key` stable across a
+  6.20 correction (the chain root). Why: D26's family → staff → family switch reused the return's `decision_id` and collided. *The text
+  below is D2 as `-265` committed it, kept.* **D2 — the reminder record is a dedicated append-only table** keyed UNIQUE `(schedule_run_id, slot_day, recipient_key)`, carrying
   `attempt_state` (`attempting` → `accepted | rejected_invalid_number | no_target | error | skipped_superseded`, plus `late`), a
   `delivered_at` only a real signal fills, and `provider_message_id`. `schedule_run_id` is the return's `decision_id` — or a direction id when a
   Super Admin restarts reminders (D18). ⛔ Not `idempotency_keys` (T5), ⛔ not a claim event. Own RLS file; own migration.
-- **D3 — the schedule is a pure function over a DATA table** (the Panel's numbers, `-250` #5): day 0 = `istDateOf(decidedAt)`; slots 1–7, 10,
+- **D3 — the schedule is a pure function over a DATA table** (⭐ keyed by run KIND since `-266` §1 — 6.19d adds its own kind's days; ⭐ `-260`
+  G4: ⛔ nothing on day 0 of a return **or** a switch) (the Panel's numbers, `-250` #5): day 0 = `istDateOf(decidedAt)`; slots 1–7, 10,
   14, 17, 21, 24, 28, 31, 35, 42, 49, 56, 63, 70, 77, 84; ⛔ nothing on or after day 90; one send per day at **10:00 IST** (a cron
   `0 10 * * *`, `tz:'Asia/Kolkata'`). "At least 90 days" ⇔ `istDateOf(now) >= addCalendarDays(day0, 90)`. **Catch-up:** a due slot with no
   record is sent ONCE and flagged `late`; older missed slots are written `skipped_superseded` — ⛔ no burst. ⚠ The numbers are now the Panel's:
@@ -507,7 +514,7 @@ Where a decision only records a Panel ruling it says so.
   ⚠ The template registry is a **new file** beside the OTP one — ⛔ do not add a category to `SMS_DLT_TEMPLATE_REGISTRY` or to `AlertCategory`.
   *Cost:* a 10th send path to maintain; it is the only one that fits F7 without widening bulk SMS.
 - **D8 — REVISED. Six permission keys**, each with its own doc-block reuse-check, decided in ONE author-commit (6.19a Task 0) and minted by the slice
-  that uses them — 6.19b key (1), catalog 48 → 49; 6.19c keys (2)–(6), 49 → 50; keys 56 → **62** in all (⭐ **64** once `-258`'s keys (7) and (8) are added — see D25–D29): (1) **record a posted letter** — district, `district_admin`; (2) **request a closure** — district, `district_admin`; (3) **decide a
+  that uses them — ⚠ **the arithmetic below is superseded by `-265` §2: 6.19b mints (1) + (7) in ONE bump, 48 → 49, 56 → 58; 6.19c (2)–(6) + (8), 49 → 50, 58 → 64** — first text: 6.19b key (1), catalog 48 → 49; 6.19c keys (2)–(6), 49 → 50; keys 56 → **62** in all (⭐ **64** once `-258`'s keys (7) and (8) are added — see D25–D29): (1) **record a posted letter** — district, `district_admin`; (2) **request a closure** — district, `district_admin`; (3) **decide a
   closure** — Pariwar, `pariwar_admin`; (4) **decide an escalated claim** (close / refuse / approve-despite-the-name) — `super_admin` only (no
   `roles.ts` const, the drive-target precedent); (5) **hold under review and direct** — `super_admin` only; (6) **confirm a re-file after a
   closure** — `district_admin` (district) and `helpline_operator` (Pariwar), per-request dimension like `resolveQueueScopeStash`. **Reads** reuse
@@ -543,7 +550,7 @@ Where a decision only records a Panel ruling it says so.
   `ClaimContactRequiredError` (`reason`: `no_record | agreement_withdrawn |
   nominee_address_missing | claimant_details_missing` — the first that applies, in that order; rows selected by the effective ids), mapped per route as the gate's other errors are: **409 `verifier_decision.` / `cycle_freeze.` /
   `r9_voting.claim_contact_required`**, and the three admin screens explain it. Running it **after** the existing gate keeps every existing
-  refusal's code unchanged when several are missing. The letter writer (6.19b), the closure writers and the three NEW approval writers
+  refusal's code unchanged when several are missing. ⚠ **The letter writer's clause is SUPERSEDED by `-266` §2 (D31)** — a letter needs only that person's address + a live agreement. The closure writers and the three NEW approval writers
   (6.19c: the `-251` approve, D27's approve, `-260` G1's approve) call it too — "the full gate" means `assertClaimApprovable` **and** this
   check. A claim that lacks it **waits, ⛔ never denied**; the write windows (D5) keep a path to supply it open.
   *(First text: "a new conjunct beside the approval gate … (or as a third helper it calls)", one flat code `claim_contact.required`.)*
@@ -632,16 +639,28 @@ Where a decision only records a Panel ruling it says so.
   `voteOnFrozenClaim`), under the trustee lock: a live "no correction needed" record newer than the return, the **full**
   `assertClaimApprovable` (⛔ nothing waived — unlike the `-251` path), the conditional supersede of the return, then the ordinary approval
   events — **or keeps it sent back**, re-stating the mark (`family` or `staff`) with a note — ⭐ **ratified by `-260` G2**.
-- **D28 — the staff-case family copy** (`-258` detail 3): *"Your claim is still open — we are checking the bank details"* (en, ratified) +
+- ⚠ *(D28's "reviewed" Hindi: its review is a **go-live** gate since `-267` §6.)* **D28 — the staff-case family copy** (`-258` detail 3): *"Your claim is still open — we are checking the bank details"* (en, ratified) +
   a **reviewed** Hindi line (⛔ not machine-translated); the member claim status exposes the case as a status value (e.g.
   `bank_details_being_checked` vs `bank_details_correction_needed`), ⛔ never the mark's note or who set it. `nominee.bank.correction_needed`
-  shows **only** in a family case.
+  shows **only** in a family case. ⚠ *(6.19b v2.0: a returned claim ⛔ never renders `correction_needed` — it renders `…_staff`; the staff case replaces `…_staff`.)*
 - ⚠ **D29 — ⛔ SUPERSEDED by `-260` G1 (B): the Super Admin MAY decide a staff case — approve with the FULL approval gate (a fresh passing name check; ⛔ nothing waived), or refuse for another reason (appealable once; `denied_no_appeal` only after a used appeal), each with a note and a reason; ⛔ never close. The text below is the proposal as first written, kept.** **D29 — the Super Admin on a staff case at day 90** (`-258` detail 2, `-256` widened): the case appears on the Super Admin's queue; the Super
   Admin may **hold it under review and direct** (D18's machinery), incl. directing the District Admin to switch the mark to `family`. ⛔ **No
   Super Admin decision** (close / refuse / approve) on a staff case is built — `-258` does ⛔ not rule one, and "close for no response" is
   barred by construction. ⚠ A confirm for the next note.
 - **Keys:** **(7)** change who must act — district, `district_admin` (minted by 6.19b); **(8)** record "no correction needed" — district,
   `district_admin` (minted by 6.19c). ⇒ **eight** keys in all: 6.19b mints (1) + (7); 6.19c mints (2)–(6) + (8).
+
+**⭐ ADDED 2026-09-29 by `-266` (author-commit; the full text is the decision entry — ⛔ not restated here):**
+
+- **D30 — nobody nameable ⇒ ⛔ no family send.** Undetermined declaration / ⛔ no contact record / agreement ⛔ not live ⇒ ⛔ no send, ⛔ no
+  record for the slot, a *"cannot remind"* queue flag; D3's catch-up once fixed; the 90-day clock is ⛔ not paused (D22 protects the family).
+- **D31 — the letter's own precondition:** letter-eligible in the run + THAT person's address via `resolveContactRow` + a live agreement;
+  409 `correction_letter.not_letter_eligible | .address_missing | .agreement_not_live`. D14 stays approval-only.
+- **D32 — 6.19b builds BOTH family messages** (`reminder`, `closure_notice` × `hi`, `en`), their copy, the lockstep test and the DLT sheet's
+  wording; 6.19c only sends the closure notice.
+- **D33 — the SMS's variables:** the short reference (first 8 hex of the claim id, upper-cased — shown on the queue row) and the helpline
+  number from config key `sms.claim_correction.helpline_number`, failing closed.
+- **D34 — one District Admin reminder per claim per day**, following the open run; at most one staff push per District Admin per claim per day.
 
 ## Where the Acceptance Criteria and Tasks now live (split 2026-09-27)
 
@@ -739,3 +758,5 @@ template registry's content against the rendered `t()` output).
 | v1.10 | 2026-09-28 | 6.19a v1.7 (external review): **D5** gains `claim_contact.awaiting_determination` (a claimant-block write in the extra states while the effective declaration is ⛔ not `effective`), a revoked agreement counting as missing (fillable in any window), and the audit unit; **D14** selects rows by effective `versionId`, ⛔ never a count. |
 | v1.11 | 2026-09-28 | 6.19a v1.8 (fresh-context validate): **D5** rewritten as the table shape + a pointer to 6.19a AC1's **W1–W10** as the ONE copy of the write rules (projected versions, the claimant-side fills, `claimant_required`, `agreed` alone, `locale`, the audit unit) — ⛔ no second restatement to drift; **D8** records the `claim.view_nominee_name_check` reuse-check (presence-only; plaintext under `claim.file`); **D14** pins the reason precedence. Glyph register: six positive clauses that carried `⛔` corrected. |
 | v1.12 | 2026-09-28 | 6.19a v1.9: **D5**'s pointer list gains **W4a** (the correction chain — a 6.20 correction ⛔ never orphans an address or the claimant link); **D14** resolves rows through it. |
+| **v1.13** | **2026-09-29** | ⭐ **6.19b's validate pass + author-commit `-266`:** D2 SUPERSEDED (a runs table — the return's `decision_id` collided on a family → staff → family switch); D3 keyed by run kind + `-260` G4; D14's letter-writer clause SUPERSEDED (D31); **D30–D34 added**; D8's arithmetic marked (`-265` §2); T14's migration number marked (6.19b starts at 0126); the status table (6.19a `done`) and the LETTERS / Decisions headers (COMMITTED). ⚠ *What already EXISTS* stays pinned to `c136b03c` — for 6.19b's scope, 6.19b v2.0's *§ What 6.19a shipped, and what moved* (re-derived at `f06ee41f`) is the current record. |
+| v1.14 | 2026-09-29 | ⚠ **`-267`** (erratum to `-266`, from re-validating 6.19b v2.0): one open run per **claim**; the resolver returns runs open **or ended**; `resubmitted` pauses a run; `subject_key` on per-person items; the claimant's letter address is the block's; `direction` only while `family`; D30's `claimant_unresolved`; **D28 amended** — the Hindi review is a go-live gate. The decision entry is the text; ⛔ not restated here. |

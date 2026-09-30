@@ -835,8 +835,12 @@ async function planRun(
       const fd = claimDomain.calendarDaysBetween(state.foundDeadOn, today);
       if (!state.letterDelivered && !familyPaused) {
         // The chase: found-dead + 7 … + 12, EVERY due day (D20/`-231` C: "daily through + 12", ⛔ not once total —
-        // tier (b) and D30 stop it). D3's catch-up applies here too: a sweep day this window missed gets a
-        // `skipped_superseded` marker rather than silently no row at all, matching family_sms/staff_reminder.
+        // tier (b) and D30 stop it). D3's catch-up decides the latest due day to send for real (so a missed sweep
+        // day is caught up rather than silently skipped forever) — ⚠ ⛔ no `skipped_superseded` markers for the
+        // gap days, matching the staff_reminder precedent just above: the new `letter_chase_day_uq` (D34,
+        // extended) is keyed on `sent_on` alone (⛔ no slot_day), so multiple backfilled rows stamped with
+        // TODAY's date would collide with each other and with the real send under `ON CONFLICT DO NOTHING` —
+        // a staff row is ⛔ an attempt at anyone, and the queue always shows the item regardless.
         if (fd >= claimDomain.LETTER_CHASE_FIRST_OFFSET) {
           const lastOffset = Math.min(fd, claimDomain.LETTER_CHASE_LAST_OFFSET);
           const foundDeadOn = state.foundDeadOn;
@@ -848,22 +852,6 @@ async function planRun(
             staffRowsNow.filter((r) => r.purpose === 'letter_chase' && r.subjectKey === person.personKey).map((r) => r.slotDay),
           );
           const cuChase = claimDomain.correctionCatchUp(dueSlots, recordedSlots, d);
-          for (const skipSlot of cuChase.skip) {
-            if (skipSlot < claimDomain.CORRECTION_RUN_HORIZON_DAYS) {
-              await claimDomain.insertFinalCorrectionReminder(db, {
-                pariwarId,
-                claimCaseId,
-                runId: run.runId,
-                slotDay: skipSlot,
-                sentOn: today,
-                recipientKey: daKey,
-                purpose: 'letter_chase',
-                subjectKey: person.personKey,
-                outcome: 'skipped_superseded',
-                detail: 'catch_up',
-              });
-            }
-          }
           if (cuChase.send && cuChase.send.day < claimDomain.CORRECTION_RUN_HORIZON_DAYS) {
             await writeStaff({
               slotDay: cuChase.send.day,

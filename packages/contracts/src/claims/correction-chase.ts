@@ -23,8 +23,10 @@ import { z } from 'zod';
 export const CorrectionMustAct = z.enum(['family', 'staff']);
 export type CorrectionMustAct = z.infer<typeof CorrectionMustAct>;
 
-/** True only for a real calendar date — rejects a digit-shaped but impossible one (`2026-13-99`, `2026-02-30`). */
-function isRealCalendarDate(value: string): boolean {
+/** True only for a real calendar date — rejects a digit-shaped but impossible one (`2026-13-99`, `2026-02-30`).
+ * Exported so the route layer can apply the SAME check to the multipart `delivered_on` field, which bypasses
+ * this module's Zod schema entirely (it rides a raw multipart part, not the JSON body). */
+export function isRealCalendarDate(value: string): boolean {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
   if (!m) return false;
   const [, y, mo, d] = m.map(Number) as [never, number, number, number];

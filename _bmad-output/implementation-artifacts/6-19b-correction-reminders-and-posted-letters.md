@@ -462,6 +462,21 @@ Code review (2026-09-30), chunked by area across the full uncommitted diff (doma
 - [x] [Review][Defer] `role="status"` regions may re-announce noisily on unrelated queue refetches — deferred, accessibility polish
 - [x] [Review][Defer] No client-side size/progress feedback on screenshot upload beyond the accept attribute — deferred, UX polish
 
+### Second-pass review: the patches themselves (2026-09-30)
+
+Adversarial review of the 25 patches applied above (reconstructed before/after dossier, Blind Hunter + Edge Case Hunter, findings verified against source). Found that the letter-chase patch had introduced a real regression by combining two of its own sibling patches incorrectly; fixed. Everything else verified either already-correct or genuinely lower-priority.
+
+- [x] [Review][Patch] **Regression, fixed:** the letter-chase catch-up rewrite wrote `skipped_superseded` markers for every gap day PLUS the real send, all stamped `sent_on: today` — colliding with the new `claim_correction_reminders_letter_chase_day_uq` index (added by a sibling patch in the same pass), which has no `slot_day` column. `ON CONFLICT DO NOTHING` would have silently dropped all but one row per sweep, up to and including the real send. Fixed by dropping the skip-marker writes entirely and keeping only the real "latest due day" send — matching the `staff_reminder` block's own pre-existing precedent and comment ("no `skipped_superseded` markers for staff slots: the D34 day key would collide"), which I should have followed the first time. [apps/jobs/src/scheduler/claim-correction-reminders.ts]
+- [x] [Review][Patch] `isRealCalendarDate` was hand-duplicated identically in two packages — FIXED: exported from `packages/contracts/src/claims/correction-chase.ts`, the API handler now imports it instead of re-declaring it [apps/api/src/modules/claims/claims.correction-chase.handlers.ts]
+- [x] [Review][Patch] The escalated-filter fix (200-row bounded scan) still has a residual gap for a Pariwar with >200 under-correction claims, with no signal — FIXED: `request.log.warn` when the scan is fully consumed while filtering [apps/api/src/modules/claims/claims.nominee-name-check.handlers.ts]
+- [x] [Review][Defer] i18n key `screenshotError` added to `i18n-en.ts` with no Hindi companion — VERIFIED false alarm: the admin app has zero Hindi locale files across all 15 of its modules (English-only by design for staff UI); not a deviation.
+- [x] [Review][Defer] `cycle-freeze.handlers.ts`'s new scope-guard throws after `returnToDistrictAdmin` has already run in the same transaction — VERIFIED false alarm: `closeScopeTx(scopeTx, ok=false)` in the `finally` block issues a real `ROLLBACK` (confirmed in `scope-tx.ts`), so the throw correctly reverts the whole transaction, matching how every other throw in that switch already relies on the same mechanism.
+- [x] [Review][Defer] `writeCorrectionMark`'s note-required guard checks `noteCiphertext === null` — VERIFIED false alarm: the field is a required (non-optional) `string | null` on `WriteCorrectionMarkInput`; TypeScript already rejects any caller passing `undefined`.
+- [ ] [Review][Patch] `CorrectionQueueRoute.tsx`'s escalated-checkbox handler explicitly preserves only the `claim` param rather than a generic merge of the current search — not fixed; low risk given the route's `validateSearch` is a closed 2-key shape, but would need revisiting if a third search param is ever added.
+- [ ] [Review][Patch] No dedicated test exercises the letter-chase catch-up path across a genuine multi-day sweep gap (only single-day and no-gap cases are covered) — not fixed this pass, part of the already-deferred test-coverage bundle.
+
+Re-verified after this pass: all 5 packages typecheck clean; full `apps/jobs` suite (42 files, 433 tests, live DB) and the domain DB-integration suite (previously 159 files/1685 tests) pass.
+
 ## Dev Notes
 
 ### Dependency and sequencing

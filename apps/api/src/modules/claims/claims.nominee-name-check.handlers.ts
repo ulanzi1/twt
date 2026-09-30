@@ -500,6 +500,14 @@ export function createNomineeNameCheckHandlers(deps: AppDeps) {
         })),
       );
       if (escalatedOnly) {
+        if (visible.length >= claimDomain.CORRECTION_QUEUE_MAX_LIMIT) {
+          // The bounded scan (200) was fully consumed — a Pariwar with MORE under-correction claims than
+          // that could have real escalations past the scan boundary that this view can never surface.
+          request.log.warn(
+            { pariwarId: scopeTx.pariwarId, scanned: visible.length },
+            'correction-queue escalated filter: the bounded scan may be omitting escalations',
+          );
+        }
         items = items
           .filter((i) => i.correction_chase.escalated)
           .slice(0, clampLimit(limit, { default: claimDomain.CORRECTION_QUEUE_DEFAULT_LIMIT, cap: claimDomain.CORRECTION_QUEUE_MAX_LIMIT }));

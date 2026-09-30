@@ -21,6 +21,7 @@ import { randomUUID } from 'node:crypto';
 import {
   CLAIM_DOCUMENT_MAX_BYTES,
   CORRECTION_LETTER_SCREENSHOT_MIME_TYPES,
+  isRealCalendarDate,
   type ChangeCorrectionMustActRequest,
   type ChangeCorrectionMustActResponse,
   type CorrectionLetterAddressResponse,
@@ -55,16 +56,6 @@ export const CORRECTION_LETTER_ADDRESS_STEP_UP_CONTEXT = 'correction_letter_addr
 /** The screenshot's signed read lives this long (a short, never-public link). */
 export const CORRECTION_SCREENSHOT_URL_TTL_SECONDS = 300;
 
-const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
-
-/** True only for a real calendar date — rejects a digit-shaped but impossible one (`2026-13-99`, `2026-02-30`). */
-function isRealCalendarDate(value: string): boolean {
-  const m = ISO_DATE.exec(value);
-  if (!m) return false;
-  const [y, mo, d] = value.split('-').map(Number) as [number, number, number];
-  const asUtc = new Date(Date.UTC(y, mo - 1, d));
-  return asUtc.getUTCFullYear() === y && asUtc.getUTCMonth() === mo - 1 && asUtc.getUTCDate() === d;
-}
 
 interface ChaseContext {
   readonly actorId: string;

@@ -353,6 +353,29 @@ export const QUEUE_NAMES = {
    * enqueue never fails the committed action. Job class B (request/event).
    */
   MEMBER_MODERATION_NOTIFY: 'member.moderation.notify',
+  /**
+   * The claim-correction REMINDER SWEEP (Story 6.19b, AC2) — daily 10:00 IST. Enumerates the OPEN correction runs
+   * (a bounded cross-tenant read on the BYPASSRLS pool, alarmed at its cap), ends a run whose return is no longer
+   * live or that reached day 90, finalises `attempting` rows from a previous IST day to `error`, writes the District
+   * Admin's staff rows ITSELF (a staff row sends nothing — the queue is the channel), and enqueues one
+   * CLAIM_CORRECTION_FAMILY_SMS child per due family slot and one CLAIM_CORRECTION_STAFF_PUSH per staff member.
+   * ⛔ It never approves, refuses or closes a claim (invariant 1). Retry policy stated at the schedule site
+   * (idempotent — the reminder table's UNIQUE is the dedup). Job class C (background).
+   */
+  CLAIM_CORRECTION_REMINDER_SWEEP: 'claim.correction.reminder.sweep',
+  /**
+   * ONE family SMS for one (run, slot, person) (Story 6.19b, AC2/AC3). The child re-checks under the trustee lock,
+   * claims its row `attempting`, commits, THEN decrypts and sends; it throws ONLY on a transient failure. Its
+   * `singletonKey` is a LABEL — the `standard` policy enforces ⛔ no singleton uniqueness; the table is the dedup.
+   * The payload carries ids only, ⛔ never a number. Job class B.
+   */
+  CLAIM_CORRECTION_FAMILY_SMS: 'claim.correction.family_sms',
+  /**
+   * ONE daily admin push per (claim, staff member, IST date) (Story 6.19b, AC4, D34) — best-effort, English,
+   * `time_critical: false`, ⛔ no Telegram mirror; deduped by its own `staff_push` row. ⚠ Inert on day one: ⛔ no admin
+   * client registers a device token yet. Job class B.
+   */
+  CLAIM_CORRECTION_STAFF_PUSH: 'claim.correction.staff_push',
 } as const;
 
 /** Union of the registered queue names. */

@@ -208,3 +208,17 @@ describe('nominee-review — code review 2026-09-23c', () => {
     expect(src).toMatch(/existingBankNames\.length > 0 && memberEditable \?/)
   })
 })
+
+describe('nominee-review — Story 6.19b (AC16, D28: the staff case)', () => {
+  const src = stripComments(read(REVIEW))
+
+  it('⭐ a staff case (or the family\'s part done) shows D28\'s line POLITELY, IN PLACE OF the correction line', () => {
+    const checking = elementsRendering(src, "t('nominee.bank.being_checked')")
+    expect(checking).toHaveLength(1)
+    expect(checking[0]!).toContain('accessibilityLiveRegion="polite"')
+    expect(src).toMatch(/\{correctionNeeded && beingChecked \? \(/)
+    // ⛔ …and the correction line (either key) renders only when NOT being checked.
+    expect(src).toMatch(/\{correctionNeeded && !beingChecked \? \(/)
+    expect(src).toContain('setBeingChecked(res.beingChecked === true)')
+  })
+})

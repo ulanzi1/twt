@@ -877,18 +877,10 @@ export async function isReturnedClaimResubmitted(
   // rewrite means a District Admin cannot clear a return by simply re-recording the same verdict
   // over the same data. And it composes: the AC4 gate below then requires a check that is CURRENT
   // with respect to those corrected rows, which by construction was recorded after the correction.
-  const accounts = await db
-    .select({ updatedAt: claimNomineeBankAccounts.updatedAt })
-    .from(claimNomineeBankAccounts)
-    .where(
-      and(
-        eq(claimNomineeBankAccounts.pariwarId, pariwarId),
-        eq(claimNomineeBankAccounts.claimCaseId, claimCaseId),
-      ),
-    );
-  if (accounts.length === 0) return false;
-  const correctedSinceReturn = accounts.every((a) => a.updatedAt.getTime() > returnedAt.getTime());
-  if (!correctedSinceReturn) return false;
+  // ⭐ Story 6.19b — the accounts leg is `readReturnAccountsRewrite` below (a pure extraction: the same query and
+  // the same `>` test), so "the family's part is done" (`2026-09-29-268` §1(a)) reads the SAME leg, ⛔ never a copy.
+  const rewrite = await readReturnAccountsRewrite(db, pariwarId, claimCaseId, returnedAt);
+  if (!rewrite.allRewritten) return false;
 
   try {
     await assertNomineeNameCheckForApproval(db, pariwarId, claimCaseId, deceasedMemberId);
@@ -918,6 +910,43 @@ export async function isReturnedClaimResubmitted(
     }
     throw err;
   }
+}
+
+/** The ACCOUNTS leg of a returned claim's resubmission: has every bank account been rewritten since the return? */
+export interface ReturnAccountsRewrite {
+  /** ≥ 1 account, and EVERY account's `updated_at` is later than the return's `decided_at`. */
+  readonly allRewritten: boolean;
+  /** The latest account `updated_at` when `allRewritten`, else `null`. */
+  readonly latestRewriteAt: Date | null;
+}
+
+/**
+ * The accounts leg of `isReturnedClaimResubmitted` — ⭐ ONE definition, read by the resubmission AND by Story 6.19b's
+ * *"the family's part is done"* (`2026-09-29-268` §1(a): *"the SAME accounts leg `isReturnedClaimResubmitted` already
+ * uses, ⛔ without its name-check and determination leg"*). A rewrite counts whoever keyed it (the member app, or the
+ * helpline / District Admin taking the family's corrected details by phone — `-227` cl.10).
+ * ⚠ The `>` is on transaction timestamps — see `isReturnedClaimResubmitted`'s note on separate transactions.
+ */
+export async function readReturnAccountsRewrite(
+  db: Db,
+  pariwarId: PariwarId,
+  claimCaseId: ClaimId,
+  returnedAt: Date,
+): Promise<ReturnAccountsRewrite> {
+  const accounts = await db
+    .select({ updatedAt: claimNomineeBankAccounts.updatedAt })
+    .from(claimNomineeBankAccounts)
+    .where(
+      and(
+        eq(claimNomineeBankAccounts.pariwarId, pariwarId),
+        eq(claimNomineeBankAccounts.claimCaseId, claimCaseId),
+      ),
+    );
+  if (accounts.length === 0) return { allRewritten: false, latestRewriteAt: null };
+  const allRewritten = accounts.every((a) => a.updatedAt.getTime() > returnedAt.getTime());
+  if (!allRewritten) return { allRewritten: false, latestRewriteAt: null };
+  const latest = accounts.reduce((m, a) => (a.updatedAt.getTime() > m.getTime() ? a.updatedAt : m), accounts[0]!.updatedAt);
+  return { allRewritten: true, latestRewriteAt: latest };
 }
 
 /** The one answer to *"is this claim under correction?"*, with the parts that produced it. */

@@ -209,3 +209,10 @@ export * from './claim-death-certificate-rls.js';
 // Story 6.19a — the claim contact record (ONE file for both tables). SELECT + INSERT + UPDATE, per command;
 // ⛔ no DELETE leg and ⛔ no `FOR ALL` (W4: a write never deletes a row it does not carry).
 export * from './claim-contact-rls.js';
+// Story 6.19b — the correction-return chase (ONE file per table, per its migration 0126–0129). Per command; ⛔ no
+// DELETE leg and ⛔ no `FOR ALL`. The marks are append-only (⛔ no UPDATE leg); the runs' UPDATE is narrowed by 0127's
+// column grant to ending a run.
+export * from './claim-correction-mark-rls.js';
+export * from './claim-correction-run-rls.js';
+export * from './claim-correction-reminder-rls.js';
+export * from './claim-correction-letter-rls.js';

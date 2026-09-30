@@ -34,7 +34,7 @@ import {
   type CycleFreezePendingResponse,
   type CycleFreezeDecisionAction,
 } from '@twt/contracts';
-import { claim, ids } from '@twt/domain';
+import { claim, ids, rbac } from '@twt/domain';
 import { consolePoolSpawnTrigger, type PoolSpawnTrigger } from '@twt/jobs';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 
@@ -49,6 +49,7 @@ import {
 import type { AuthAuditEventType } from '../../audit/audit-sink.js';
 import { emitAuthAudit } from '../auth/shared/audit.js';
 import { getDisplayName } from '../auth/admin/admin-auth.repo.js';
+import { geoTreeResolverForRequest, loadActorGrants } from '../rbac/index.js';
 import { closeScopeTx, openScopeTx } from '../multi-tenant/scope-tx.js';
 import { encryptOptionalTrusteeRationale } from './state-trustee-decision-crypto.js';
 import { decryptVerifierRationale } from './verifier-decision-crypto.js';
@@ -375,9 +376,44 @@ export function createCycleFreezeHandlers(
           // note. Metadata-only: the domain writer emits ⛔ no event and moves ⛔ no state, and it
           // deliberately does ⛔ not go near `voteOnFrozenClaim`, which would OPEN THE FREEZE on a
           // claim the Pariwar Admin just declined to advance.
-          case 'return_to_district_admin':
+          case 'return_to_district_admin': {
+            if (body.must_act === undefined) {
+              // Defense-in-depth (the `escalation_outcome` precedent): the contract superRefine already requires it.
+              throw new BadRequestError('must_act is required when returning a claim', 'cycle_freeze.must_act_required');
+            }
             result = await claim.returnToDistrictAdmin(scopeTx.client, base);
+            // ⭐ Story 6.19b (AC16, D25) — WHO MUST ACT, written in the SAME transaction as the return row, and the first
+            // reminder run it opens (a `family` run from the return's IST date, else a `staff` run — AC2). The mark's
+            // note IS the return's rationale (⛔ a second copy is ⛔ written). `set_by_role` is the role whose grant
+            // authorised THIS route (`-270`: `super_admin` when the Super Admin bundle is what matched).
+            if (!request.scopeTx) {
+              // Programming error — this route requires the scope-resolution pre-handler to have already run.
+              throw new Error('[cycle-freeze] return_to_district_admin ran without scope-resolution');
+            }
+            const grants = request.scopeGrants ?? (await loadActorGrants(request.scopeTx, ctx.actorId));
+            const matchedRole = rbac.matchingGrantRole(
+              grants,
+              'cycle.freeze',
+              { dimension: 'pariwar', value: ctx.pariwarIdStr, pariwarId: ctx.pariwarIdStr },
+              { resolver: geoTreeResolverForRequest(request) },
+            );
+            // The route's own gate already required this key — a `null`/unrecognised re-check result is a
+            // programming error (grant/context drift), never a real "nobody authorised this" case.
+            if (matchedRole !== 'pariwar_admin' && matchedRole !== 'super_admin') {
+              throw new Error(`[cycle-freeze] return_to_district_admin: no matching grant role resolved (got ${String(matchedRole)})`);
+            }
+            await claim.writeCorrectionMark(scopeTx.client, {
+              pariwarId: ctx.pariwarId,
+              claimCaseId,
+              mustAct: body.must_act,
+              actorId: ctx.actorId,
+              actorDisplay: ctx.actorDisplay,
+              setByRole: matchedRole,
+              noteCiphertext: null,
+              isReturnMark: true,
+            });
             break;
+          }
           case 'resolve_escalation':
             if (body.escalation_outcome === undefined) {
               // Defense-in-depth (the reason-code precedent): the contract superRefine already requires
@@ -419,6 +455,8 @@ export function createCycleFreezeHandlers(
         phase: result.decision.phase,
         outcome: result.decision.outcome,
         reason_code: result.decision.reasonCode ?? null,
+        // Story 6.19b (AC9b) — the return's "who must act" mark rides the return's own line (non-PII).
+        ...(body.action === 'return_to_district_admin' && body.must_act !== undefined ? { must_act: body.must_act } : {}),
         // Story 6.15 (AC3) — the R14 clause-version snapshot on a concealment decision (non-PII); absent
         // for every non-concealment decision.
         ...(result.concealmentClauseVersionId != null

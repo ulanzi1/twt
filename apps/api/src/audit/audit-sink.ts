@@ -308,6 +308,20 @@ export type AuthAuditEventType =
   | 'claim_contact.agreement_recorded'
   | 'admin_claim.contact_presence_read'
   | 'admin_claim.contact_details_read'
+  // ── The correction-return CHASE (Story 6.19b, AC9b) ────────────────────────────────────────────────────
+  // Every line carries `resourceLocator: 'claim:<lower-case uuid>'` (anything else is silently replaced). Context is
+  // NON-PII: ids, dates, the person's ROLE KEY (`nominee:<version root>` / `claimant`), sizes and content types —
+  // ⛔ never a tracking number, an address, a screenshot, a mobile or a note.
+  //   admin_claim_correction.letter_recorded           — a posted letter recorded (key (1));
+  //   admin_claim_correction.letter_delivery_recorded  — its delivery date + screenshot recorded (key (1));
+  //   admin_claim_correction.letter_address_revealed   — the letter form's address read, step-up — one line PER reveal;
+  //   admin_claim_correction.letter_screenshot_read    — a TTL-limited signed read of the screenshot;
+  //   admin_claim_correction.must_act_changed          — the District Admin's change of who must act (key (7)).
+  | 'admin_claim_correction.letter_recorded'
+  | 'admin_claim_correction.letter_delivery_recorded'
+  | 'admin_claim_correction.letter_address_revealed'
+  | 'admin_claim_correction.letter_screenshot_read'
+  | 'admin_claim_correction.must_act_changed'
   // ── ICP convergence-resolution surface (Story 6.4, AR-62) ─────────────────────
   // The operator-console pending/merge/override lines (the <ConvergenceDecisionStrip>). Context
   // is NON-PII throughout: claim ids + intake_attempt_id + intake_channel(s) + the resolving

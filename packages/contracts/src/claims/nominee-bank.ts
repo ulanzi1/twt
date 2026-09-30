@@ -192,6 +192,13 @@ export const NomineeBankStatusResponse = z
      */
     correctionNeeded: z.boolean(),
     /**
+     * ⭐ Story 6.19b (AC16; `2026-09-27-258` detail 3, D28, `-268` §2) — the claim is sent back, and it is ⛔ not the
+     * family's to fix right now: STAFF must put it right, or the family's part is already done (the bank details were
+     * rewritten after the return, with ⛔ no later mismatch). The app shows *"Your claim is still open — we are
+     * checking the bank details"* IN PLACE OF the correction line. ⛔ Carries no note and no actor.
+     */
+    beingChecked: z.boolean(),
+    /**
      * Can the MEMBER/filer edit the accounts from the app right now?
      *
      * ⚠⚠ IT IS ⛔ NOT THE SAME QUESTION AS `correctionNeeded`, AND CONFLATING THEM PRODUCED A

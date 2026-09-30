@@ -108,7 +108,8 @@ import {
   DEFAULT_MATCHER_PARSER_SLUG,
   registerReconciliationMatchWorkers,
 } from './matcher/matcher-worker.js';
-import { buildContributionProviderResolver } from './scheduler/contribution-providers.js';
+import { buildContributionProviderResolver, resolveSmsDltConfig } from './scheduler/contribution-providers.js';
+import { registerClaimCorrectionReminderWorkers } from './scheduler/claim-correction-reminders.js';
 import { createConfigShepherdFallbackResolver } from './shepherd-fallback-resolver.js';
 import { consoleShepherdAssignedNotificationHook } from './shepherd-notification-hook.js';
 import { createDeterministicOcrProvider } from './ocr/index.js';
@@ -577,6 +578,25 @@ async function main(): Promise<void> {
       resolveProviders: contributionProviders.resolveProviders,
     };
     await registerContributionNotifyWorkers(boss, contributionNotifyDeps);
+
+    // ── Claim-correction reminders (Story 6.19b) — Class C (the daily 10:00 IST sweep) + Class B (the children) ──
+    // Registered BESIDE the contribution-notify workers: it reuses the SAME BYPASSRLS pool, the SAME jobs KMS deps
+    // (the nominee / claimant mobile decrypt + the number hash), THE one global SMS gateway client (exposed by
+    // buildContributionProviderResolver — ⛔ never a second client) and the SAME `dispatch()` seams for the admin
+    // push. ⚠ The family SMS is a DIRECT DLT send that FAILS CLOSED on a missing template id, an unset per-Pariwar
+    // helpline number or an unconfigured gateway (T13) — ⛔ never the fixture that reports `accepted`. ⚠ The admin push
+    // is INERT on day one (⛔ no admin client registers a device token).
+    await registerClaimCorrectionReminderWorkers(boss, {
+      pool,
+      encryption: jobsEncryption,
+      smsAppClient: contributionProviders.smsAppClient,
+      resolveConfig: resolveSmsDltConfig,
+      push: {
+        audit: contributionNotifyDeps.audit,
+        hashRendered: contributionNotifyDeps.hashRendered,
+        resolveProviders: contributionProviders.resolveProviders,
+      },
+    });
 
     // Story 10.5 (Task 5) — the News/Blog scheduled + immediate publish worker. Reuses the SAME
     // contribution-notify deps (BYPASSRLS pool + member Tier-1 crypto) for the shipped

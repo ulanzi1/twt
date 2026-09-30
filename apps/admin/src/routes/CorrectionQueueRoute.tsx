@@ -20,13 +20,14 @@
 // and the nominee name live behind the per-claim read, decrypted ONE CLAIM AT A TIME when a District
 // Admin opens that claim — ⛔ never across a list (Trap 4).
 
-import { useNavigate, useParams } from '@tanstack/react-router';
+import { useNavigate, useParams, useSearch } from '@tanstack/react-router';
 import type { ReactElement } from 'react';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 import { ApiError } from '../api/client.js';
 import { useClaimsUnderCorrection, useSession } from '../api/hooks.js';
 import { verifierConsoleEn as t } from '../modules/claim-verification/i18n-en.js';
+import { CorrectionChasePanel, correctionChaseEn } from '../modules/correction-chase/index.js';
 
 /**
  * ⭐ THE SESSION GATE every sibling route has (code review 2026-09-23b) — this was the only file in
@@ -50,7 +51,23 @@ export function CorrectionQueueRoute(): ReactElement {
 function CorrectionQueueView(): ReactElement {
   const { pariwarId } = useParams({ from: '/p/$pariwarId/claims/under-correction' });
   const navigate = useNavigate();
-  const queue = useClaimsUnderCorrection(pariwarId);
+  // ⭐ Story 6.19b (AC4, AC8b) — `?claim=<id>` scrolls to and highlights that row (a staff reminder names the queue;
+  // the push itself cannot deep-link); `?escalated=true` is the Pariwar Admin's view of the chases escalated to them.
+  const search = useSearch({ strict: false }) as { claim?: string; escalated?: boolean };
+  const focusClaim = typeof search.claim === 'string' ? search.claim.toLowerCase() : null;
+  const escalatedOnly = search.escalated === true;
+  const queue = useClaimsUnderCorrection(pariwarId, { escalated: escalatedOnly });
+  const focusedRef = useRef<HTMLLIElement | null>(null);
+  // ⭐ Scroll/focus ONCE per distinct `?claim=` arrival, ⛔ not on every queue refetch — every mutation on this page
+  // (a mark change, a letter, a delivery) invalidates and refetches the WHOLE queue, and re-running this on every
+  // `queue.data` change would yank an admin working on a different row back to the highlighted one mid-task.
+  const focusedForRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (focusClaim === null || focusedForRef.current === focusClaim || focusedRef.current === null) return;
+    focusedRef.current.scrollIntoView?.({ block: 'center' });
+    focusedRef.current.focus?.();
+    focusedForRef.current = focusClaim;
+  }, [queue.data, focusClaim]);
   // ⭐ THE QUEUE'S OWN 401/403 (code review 2026-09-23c — the other half of the 09-23b bullet). The
   // session gate above only sees the SESSION read: a queue 401 while that read is still cached never
   // redirected, and a 403 rendered as "could not be loaded" — an outage, which it is ⛔ not.
@@ -63,6 +80,24 @@ function CorrectionQueueView(): ReactElement {
     <main className="mx-auto max-w-4xl p-4">
       <h1 className="text-lg font-semibold">{t.correctionQueue.heading}</h1>
       <p className="mt-1 text-sm text-slate-600">{t.correctionQueue.intro}</p>
+      <label className="mt-2 flex items-center gap-2 text-xs">
+        <input
+          type="checkbox"
+          data-testid="correction-queue-escalated-only"
+          checked={escalatedOnly}
+          onChange={(e) =>
+            void navigate({
+              to: '/p/$pariwarId/claims/under-correction',
+              params: { pariwarId },
+              search: {
+                ...(focusClaim !== null ? { claim: focusClaim } : {}),
+                ...(e.target.checked ? { escalated: true } : {}),
+              },
+            } as never)
+          }
+        />
+        {correctionChaseEn.queue.escalatedOnly}
+      </label>
 
       {queue.isLoading ? (
         <p role="status" data-testid="correction-queue-loading" className="mt-4 text-sm">
@@ -89,8 +124,16 @@ function CorrectionQueueView(): ReactElement {
             <li
               key={item.claim_case_id}
               data-testid={`correction-queue-item-${item.claim_case_id}`}
-              className="rounded border p-3 text-sm"
+              ref={focusClaim === item.claim_case_id.toLowerCase() ? focusedRef : undefined}
+              tabIndex={focusClaim === item.claim_case_id.toLowerCase() ? -1 : undefined}
+              aria-current={focusClaim === item.claim_case_id.toLowerCase() ? 'true' : undefined}
+              className={`rounded border p-3 text-sm ${focusClaim === item.claim_case_id.toLowerCase() ? 'ring-2 ring-status-warn-fg' : ''}`}
             >
+              {focusClaim === item.claim_case_id.toLowerCase() ? (
+                <p role="status" className="mb-1 text-xs" data-testid="queue-highlighted">
+                  {correctionChaseEn.queue.highlighted}
+                </p>
+              ) : null}
               <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                 <code className="font-mono text-xs opacity-80">{item.claim_case_id}</code>
                 <span className="rounded bg-black/5 px-1.5 py-0.5 text-xs">{item.claim_state}</span>
@@ -144,6 +187,10 @@ function CorrectionQueueView(): ReactElement {
                   </dd>
                 </dl>
               ) : null}
+
+              {/* ⭐ Story 6.19b (AC8b) — the correction chase: the reference, who must act, the run, the flags, each
+                  person by role and their letters, and the letter form. */}
+              <CorrectionChasePanel pariwarId={pariwarId} item={item} />
 
               {/* ⭐ The only action is OPEN THE CLAIM. ⛔ There is deliberately no "Re-submit"
                   button: the resubmission is DERIVED (AC11) — the District Admin records a fresh

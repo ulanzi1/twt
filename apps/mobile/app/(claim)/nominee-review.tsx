@@ -81,6 +81,8 @@ export default function NomineeReviewScreen(): React.ReactElement {
   const [notice, setNotice] = useState<string | null>(null)
   const [existingBankNames, setExistingBankNames] = useState<string[]>([])
   const [correctionNeeded, setCorrectionNeeded] = useState(false)
+  // Story 6.19b (AC16, D28) — sent back, but ⛔ the family's to fix now: staff must act, or the family's part is done.
+  const [beingChecked, setBeingChecked] = useState(false)
   // ⚠ Whether the MEMBER may edit right now — ⛔ a different question from "does something need
   // correcting". Default `true` so a failed status fetch never silently locks a filer out of the
   // ordinary collection flow (the server is the boundary and refuses a write it should not take).
@@ -133,6 +135,7 @@ export default function NomineeReviewScreen(): React.ReactElement {
         setExistingBankNames(res.accounts.map((a) => a.bankName))
         // Story 6.18 (AC5) — the filer is told their bank details need correcting.
         setCorrectionNeeded(res.correctionNeeded === true)
+        setBeingChecked(res.beingChecked === true)
         setMemberEditable(res.memberEditable !== false)
         setStatusUnavailable(false)
       })
@@ -461,7 +464,14 @@ export default function NomineeReviewScreen(): React.ReactElement {
             {t('nominee.bank.locked')}
           </Text>
         ) : null}
-        {correctionNeeded ? (
+        {/* ⭐ Story 6.19b (AC16; `-258` detail 3, D28) — in a STAFF case, or once the family's part is done, the family
+            is asked for NOTHING: the D28 line, calm and polite, IN PLACE OF the correction line. */}
+        {correctionNeeded && beingChecked ? (
+          <Text accessibilityRole="text" accessibilityLiveRegion="polite" testID="bank_being_checked">
+            {t('nominee.bank.being_checked')}
+          </Text>
+        ) : null}
+        {correctionNeeded && !beingChecked ? (
           <Text
             color="#B00020"
             accessibilityRole="alert"

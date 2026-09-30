@@ -723,7 +723,14 @@ export function permissionKey(value: string): PermissionKey {
 // discipline), ⛔ never inside the build. 47 / 55 were READ LIVE on 2026-09-25 at `e4b565d9`. The history
 // read reuses `claim.verify` (its holders already see the certificate and its OCR date) ⇒ ⛔ no second key.
 // `defaultRoleBundles` stays 13 — ⛔ no new role. ⛔ NOT `state_trustee` (the 6.10 disposition).
-export const PERMISSION_CATALOG_VERSION = 48 as const;
+// ── Bumped 48 → 49 at Story 6.19b / Decision 2026-09-28-265 §2 (keys (1) and (7)) — added TWO keys: 56 → 58 ────
+// Minted IN `-265` (the `-195` cl.2 discipline — decided in the author-commit, minted by the slice that uses them),
+// ONE bump for both (the 6.18 two-key precedent). 48 / 56 were READ LIVE on 2026-09-29 at `1dbc9248` (⛔ not
+// transcribed from `-265`'s forecast, read at `0751cdd0`). `defaultRoleBundles` stays 13 — ⛔ no new role.
+//   (1) `claim.record_correction_letter` — district-dimension, `district_admin` (+ derived super_admin).
+//   (7) `claim.change_correction_must_act` — district-dimension, `district_admin` (+ derived super_admin).
+// ⛔ NOT `state_trustee` on either (the 6.10 `claim.verify` disposition). 6.19c mints (2)–(6) + (8) at 49 → 50.
+export const PERMISSION_CATALOG_VERSION = 49 as const;
 
 /**
  * The grounded v1 seed keys (architecture + epic + PRD references only — see file
@@ -988,6 +995,24 @@ export const SEED_PERMISSION_KEYS = [
   //   · ⛔ not `claim.check_nominee_name` — a NAME verdict.
   // Granted to `district_admin` ONLY (+ derived super_admin).
   'claim.review_death_certificate',
+  // Story 6.19b (key (1) of `2026-09-28-265` §2) — RECORD A POSTED LETTER to a person the correction reminders could
+  // ⛔ not reach (`-230` 3, `-231` D, `-252` cl.2): the posting date and tracking number, then the delivery date and a
+  // screenshot; AND read THAT person's postal address inside the letter form (step-up, one audit line per reveal).
+  // Gates POST …/admin/claims/:claimCaseId/correction/letters(+/:letterId/delivery), GET …/letters/address and the
+  // screenshot's signed read, checked at `dimension: 'district'` against the deceased's SERVER-DERIVED posting district.
+  // Reuse-check (`-265` §2): ⛔ not `claim.check_nominee_name` — that records a NAME verdict, ⛔ not evidence of a
+  // posting; ⛔ not `claim.view_nominee_name_check` — a read held by FOUR roles whose rationale forbids acquiring a
+  // second living subject's plaintext "as a side effect" (the address is exactly that, so it gets its own key and
+  // its own step-up). Granted to `district_admin` ONLY (+ derived super_admin).
+  'claim.record_correction_letter',
+  // Story 6.19b (key (7) of `2026-09-28-265` §2) — CHANGE WHO MUST ACT on a returned claim (`2026-09-27-258`: the
+  // family, or staff), with a REQUIRED note. The mark decides whom the system CHASES — a switch to `family` starts the
+  // family's 90 days that day; a switch to `staff` stops the family's reminders at once. Gates POST
+  // …/admin/claims/:claimCaseId/correction/must-act, checked at `dimension: 'district'`. Reuse-check: ⛔ not (1) —
+  // recording evidence of a letter is ⛔ deciding whom to chase; ⛔ not `cycle.freeze` — the RETURN's own key is the
+  // Pariwar Admin's (pariwar-dimension), and `-258` gives the change to the District Admin; ⛔ not 6.19c's (2) — a
+  // chase change ⛔ asks for no refusal. Granted to `district_admin` ONLY (+ derived super_admin).
+  'claim.change_correction_must_act',
   // Story 6.12 (R6) — the MANUAL shepherd reassignment WRITE key. Gates
   // `POST …/admin/claims/:claimCaseId/shepherd/reassign` (checked at `dimension: 'district'` against the
   // deceased member's SERVER-DERIVED posting district — the client never submits the authz district).

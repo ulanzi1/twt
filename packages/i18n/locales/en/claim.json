@@ -58,6 +58,7 @@
   "nominee.bank.note_help": "If the name on the bank account is written a little differently — an initial, a married name, or the bank's short form — you can explain it here.",
   "nominee.bank.correction_needed": "Please check the bank details below — they need correcting before the claim can go ahead. Your claim is still open.",
   "nominee.bank.correction_needed_staff": "The bank details on this claim need correcting. The District Admin will contact your family, take the corrected details and send the claim back up. Your claim is still open and has not been refused.",
+  "nominee.bank.being_checked": "Your claim is still open — we are checking the bank details",
   "nominee.bank.number": "Account number",
   "nominee.bank.ifsc": "IFSC code",
   "nominee.bank.ifsc_checking": "Checking…",
@@ -142,5 +143,8 @@
   "contact.saved": "Saved.",
   "contact.incomplete": "Some details are missing. Please check the marked fields.",
   "contact.error": "We couldn't save these details right now. Please try again, or call us — we'll help.",
-  "contact.not_writable": "These details can't be changed in the app any more. Please call the helpline — we'll help."
+  "contact.not_writable": "These details can't be changed in the app any more. Please call the helpline — we'll help.",
+  "$comment.correction_chase": "Story 6.19b: the Hindi of correction_sms.reminder, correction_sms.closure_notice and nominee.bank.being_checked is agent-authored and NOT YET HUMAN-REVIEWED. Its review is a go-live gate (Decision 2026-09-29-267 section 6; launch-gate inventory). The SMS keys must match the registered DLT content byte for byte.",
+  "correction_sms.reminder": "Claim {reference}: the bank details on your family's claim need correcting. Please call the helpline on {helpline}, or the District Admin will contact you. Your claim is still open.",
+  "correction_sms.closure_notice": "Claim {reference}: this claim was closed because no correction of the bank details was received. This closure cannot be appealed. A new claim may be filed through the helpline on {helpline} or the District Admin."
 }

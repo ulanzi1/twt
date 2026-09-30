@@ -175,12 +175,13 @@ describe('nominee-bank DTOs (strict + shapes)', () => {
   it('NomineeBankStatusResponse (review finding, 2026-07-11): [] when nothing recorded, both accounts when it has', () => {
     expect(() => assertStrict(NomineeBankStatusResponse)).not.toThrow();
     expect(
-      NomineeBankStatusResponse.parse({ accounts: [], correctionNeeded: false, memberEditable: true }).accounts,
+      NomineeBankStatusResponse.parse({ accounts: [], correctionNeeded: false, beingChecked: false, memberEditable: true }).accounts,
     ).toEqual([]);
     const parsed = NomineeBankStatusResponse.parse({
       // Story 6.18 (AC5) — `correctionNeeded` is REQUIRED, not optional: a filer must never be left
       // unsure whether their details need fixing because a producer forgot the field.
       correctionNeeded: false,
+      beingChecked: false,
       memberEditable: true,
       accounts: [
         { rank: 1, bankName: 'State Bank of India', ifscValidated: true, holderNamePresent: true, vpaPresent: true },
@@ -192,6 +193,7 @@ describe('nominee-bank DTOs (strict + shapes)', () => {
     expect(() =>
       NomineeBankStatusResponse.parse({
         correctionNeeded: false,
+        beingChecked: false,
         memberEditable: true,
         accounts: [{ rank: 1, bankName: 'X', ifscValidated: true, holderNamePresent: true, vpaPresent: false, accountNumber: '123' }],
       }),
@@ -274,7 +276,7 @@ describe('Story 6.18 (AC7) — the filer NOTE and its limits', () => {
     // ⚠ `NomineeBankStatusResponse` — the PRESENCE view (`GET …/nominee-bank`), ⛔ not
     // `RecordNomineeBankResponse` (the write echo, which carries ⛔ no such field). My first draft
     // asserted against the wrong one and was refused for an unrelated reason; read off the schema.
-    const view = { accounts: [], correctionNeeded: false, memberEditable: true };
+    const view = { accounts: [], correctionNeeded: false, beingChecked: false, memberEditable: true };
     expect(NomineeBankStatusResponse.safeParse(view).success, 'the complete view was refused').toBe(true);
 
     const without: Record<string, unknown> = { ...view };
@@ -290,5 +292,11 @@ describe('Story 6.18 (AC7) — the filer NOTE and its limits', () => {
     const noEditable: Record<string, unknown> = { ...view };
     delete noEditable['memberEditable'];
     expect(NomineeBankStatusResponse.safeParse(noEditable).success).toBe(false);
+
+    // ⭐ Story 6.19b (AC16, D28) — and `beingChecked`: an optional one would let a staff-case family read
+    // "correct your details" by omission.
+    const noBeingChecked: Record<string, unknown> = { ...view };
+    delete noBeingChecked['beingChecked'];
+    expect(NomineeBankStatusResponse.safeParse(noBeingChecked).success).toBe(false);
   });
 });

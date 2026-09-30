@@ -30,6 +30,7 @@ import {
   createTelegramAppCache,
   createWhatsappAppCache,
   type FirebaseAppCache,
+  type SmsAppClient,
 } from '@twt/channels';
 import { resolveSecretValue, withPariwarScope, type Db } from '@twt/domain';
 import type pg from 'pg';
@@ -44,6 +45,12 @@ export interface ContributionProviderWiringDeps {
 /** The wired resolver + a teardown for the graceful-shutdown drain (only the Firebase App cache holds resources). */
 export interface ContributionProviderWiring {
   readonly resolveProviders: NonNullable<ContributionNotifyDeps['resolveProviders']>;
+  /**
+   * ⭐ Story 6.19b (Task 4) — THE one global SMS gateway client, exposed (⛔ never a second client) so the claim-
+   * correction family SMS (a DIRECT DLT send to an explicit number, the OTP precedent) uses the SAME credential.
+   * ⚠ Its `isConfigured()` false must fail the correction send CLOSED — ⛔ never the fixture that reports `accepted`.
+   */
+  readonly smsAppClient: SmsAppClient;
   /** Tear down the per-Pariwar Firebase Apps (SIGTERM drain). The fetch-based WA/TG/SMS clients hold nothing. */
   readonly teardown: () => Promise<void>;
 }
@@ -195,6 +202,7 @@ export async function buildContributionProviderResolver(
 
   return {
     resolveProviders,
+    smsAppClient,
     teardown: () => firebaseAppCache.close(),
   };
 }

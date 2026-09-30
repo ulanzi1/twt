@@ -181,6 +181,17 @@ const COVERAGE_SET: readonly CoverageEntry[] = [
     owner: 'Story 6.19a',
     expectedMethods: ['post', 'get', 'get'],
   },
+  {
+    // ⭐ Story 6.19b — the correction-return CHASE's District Admin routes. FIVE: the change of WHO MUST ACT (key (7) —
+    // it decides whom the system chases, `-258`), the posted-letter record and its delivery + screenshot (key (1) —
+    // the evidence 6.19c's "reached" and closure gates read), the letter form's ADDRESS read (a second living
+    // subject's Tier-1 plaintext, step-up) and the screenshot's signed read. Every one needs the authenticated-HUMAN
+    // chain. `/correction/` matches all five paths.
+    file: 'apps/api/src/modules/claims/claims.correction-chase.routes.ts',
+    pathSubstrings: ['/correction/'],
+    owner: 'Story 6.19b',
+    expectedMethods: ['post', 'post', 'post', 'get', 'get'],
+  },
 ];
 
 /**
@@ -269,7 +280,7 @@ function main(): void {
 
   // ⭐ ANTI-VACUITY FLOOR. Without it, deleting an entry shrinks the gate's scope in silence and it
   // still reports success. Raise this DELIBERATELY when enrolling, ⛔ never to make the gate quiet.
-  const COVERAGE_FLOOR = 11; // Story 6.19a raised it 10 → 11 (claims.contact.routes.ts). Story 6.21a raised it 9 → 10 (claims.death-certificate.routes.ts). Story 6.20 raised it 8 → 9 (claims.nominee-declaration.routes.ts). ⚠ The count was 8 at 2026-09-21 — a first draft guessed 9 and the floor caught it.
+  const COVERAGE_FLOOR = 12; // Story 6.19b raised it 11 → 12 (claims.correction-chase.routes.ts). Story 6.19a raised it 10 → 11 (claims.contact.routes.ts). Story 6.21a raised it 9 → 10 (claims.death-certificate.routes.ts). Story 6.20 raised it 8 → 9 (claims.nominee-declaration.routes.ts). ⚠ The count was 8 at 2026-09-21 — a first draft guessed 9 and the floor caught it.
   if (COVERAGE_SET.length < COVERAGE_FLOOR) {
     missingCoverage.push(
       `COVERAGE_SET has ${COVERAGE_SET.length} entries but the floor is ${COVERAGE_FLOOR} — an entry was ` +

@@ -53,8 +53,10 @@ const CORRECTABLE_SCAN_STATES = [
 ] as const;
 
 /** Page cap — the same bounded posture as every other admin list read. */
-const CORRECTION_QUEUE_DEFAULT_LIMIT = 50;
-const CORRECTION_QUEUE_MAX_LIMIT = 200;
+/** Exported (with the cap below) so a caller that must scan the WHOLE bounded space before applying an in-memory
+ * predicate the DB query doesn't express (e.g. the escalated-only filter) can re-derive the same page size. */
+export const CORRECTION_QUEUE_DEFAULT_LIMIT = 50;
+export const CORRECTION_QUEUE_MAX_LIMIT = 200;
 
 /** ONE claim awaiting correction, as the District Admin's list needs it. ⛔ Carries no name. */
 export interface ClaimUnderCorrectionRow {

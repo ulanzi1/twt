@@ -187,6 +187,10 @@ export * from './claim_death_certificate_reviews.js';
 // per-claim agreement, D15) + `claim_contact_nominees` (one per nominee VERSION — the Tier-1 postal address and
 // the claimant-to-nominee relationship, D5 / D16). Tenant-isolated; SELECT / INSERT / UPDATE, ⛔ no DELETE.
 export * from './claim_contacts.js';
+// Story 6.19b — the correction-return CHASE: the "who must act" marks (append-only, latest wins), the reminder RUNS
+// (one open per claim), the reminder RECORD (one row per attempt; the table's UNIQUE is the dedup) and the posted
+// LETTERS (≤ 2 per person per run). Tenant-isolated; ⛔ no DELETE.
+export * from './claim_correction_chase.js';
 // Story 6.6 — peer-mesh deterministic 5-nearest selection: `claim_peer_mesh_selections`
 // (ONE row per claim — the audit-replay source: candidate snapshot + ordered output +
 // metric identity; immutable selection, mutable outcome/window) + `claim_peer_mesh_pings`

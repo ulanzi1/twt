@@ -45,6 +45,7 @@
 // different facts and a District Admin must not be shown one as the other. A nullable string
 // collapses them into an indistinguishable blank.
 
+import { CorrectionChaseSummaryDto } from './correction-chase.js';
 import { z } from 'zod';
 
 /** Max length of the filer's per-account note to the District Admin (AC7, `-226` cl.2). */
@@ -392,6 +393,13 @@ export const ClaimUnderCorrectionItem = z
     sent_back_by_check: z.boolean(),
     /** `-226` cl.7 — `false` means the claim is ALSO still waiting for its two accounts. */
     accounts_complete: z.boolean(),
+    /**
+     * ⭐ Story 6.19b (D33) — the claim's SHORT REFERENCE: the first 8 hex characters of the id, upper-cased — the SAME
+     * string the family's SMS carries, so a caller quoting it can be matched to this row.
+     */
+    short_reference: z.string().regex(/^[0-9A-F]{8}$/),
+    /** ⭐ Story 6.19b (AC8b) — the correction chase: the mark, the run, each person by ROLE, the flags, the letters. */
+    correction_chase: CorrectionChaseSummaryDto,
   })
   .strict();
 export type ClaimUnderCorrectionItem = z.output<typeof ClaimUnderCorrectionItem>;

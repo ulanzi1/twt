@@ -251,6 +251,16 @@ describe('defaultRoleBundles — the seeded roles (FR-46)', () => {
     expect(holdersOf('claim.raise_nominee_correction')).toEqual(['helpline_operator', 'super_admin']);
   });
 
+  it('Story 6.19b (keys (1) and (7)) — claim.record_correction_letter and claim.change_correction_must_act have ONE holder each, district_admin (+ derived super_admin)', () => {
+    for (const key of ['claim.record_correction_letter', 'claim.change_correction_must_act']) {
+      const holders = defaultRoleBundles
+        .filter((b) => (b.permissions as readonly string[]).includes(key))
+        .map((b) => b.role)
+        .sort();
+      expect(holders).toEqual(['district_admin', 'super_admin']);
+    }
+  });
+
   it('Story 6.21a (D13) — claim.review_death_certificate has ONE holder, district_admin (+ derived super_admin); ⛔ never a verifier or state_trustee', () => {
     const holders = defaultRoleBundles
       .filter((b) => (b.permissions as readonly string[]).includes('claim.review_death_certificate'))

@@ -52,6 +52,10 @@ export {
   MEMBER_MOBILE_FIELD_CLASS,
   MEMBER_KYC_FIELD_CLASS,
   MEMBER_DEVICE_TOKEN_FIELD_CLASS,
+  // Story 6.19b (Task 4) — relocated for the correction-reminder job (apps/jobs), + the number-hash class.
+  MEMBER_NOMINEE_FIELD_CLASS,
+  CLAIM_CONTACT_FIELD_CLASS,
+  CLAIM_CONTACT_MOBILE_FIELD_CLASS,
   type FieldCryptoDeps,
 } from './field-classes.js';
 export {

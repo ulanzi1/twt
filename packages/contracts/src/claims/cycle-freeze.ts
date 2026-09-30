@@ -34,6 +34,9 @@ import { z } from 'zod';
 // `nominee-name-check.ts` and `verifier-console.ts`), and the responses are serializer-PARSED — so
 // a value present in one copy and missing from another is a 500 in production with no failing test.
 import { NomineeNameClericalReason } from './nominee-name-check.js';
+// Story 6.19b — `CorrectionMustAct` lives in `correction-chase.ts`, which imports ⛔ nothing from its siblings (a runtime
+// import cycle through `nominee-name-check.ts` left a schema `undefined` at init).
+import { CorrectionMustAct } from './correction-chase.js';
 
 // ── Trustee decision vocabulary wire mirror (value-aligned with @twt/domain) ────────────────
 
@@ -245,9 +248,31 @@ export const CycleFreezeDecisionRequest = z
     escalation_outcome: z.enum(['approved', 'denied']).optional(),
     reason_code: StateTrusteeReasonCode.optional(),
     rationale: z.string().max(TRUSTEE_RATIONALE_MAX_CHARS).optional(),
+    /**
+     * ⭐ Story 6.19b (AC16; `2026-09-27-258`, D25) — WHO MUST ACT on a return: `family` (the family is reminded and
+     * can later be closed "for no response") or `staff` (staff are chased, ⛔ never the family). REQUIRED iff
+     * `action === 'return_to_district_admin'` and FORBIDDEN otherwise (the `escalation_outcome` pattern — optional
+     * in the object so every other action's payload is unchanged).
+     */
+    must_act: CorrectionMustAct.optional(),
   })
   .strict()
   .superRefine((val, ctx) => {
+    // (−1) Story 6.19b — `must_act` presence rule: required for a return, forbidden otherwise.
+    if (val.action === 'return_to_district_admin' && val.must_act === undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['must_act'],
+        message: 'must_act is required when returning a claim to the District Admin — say who must put it right',
+      });
+    }
+    if (val.action !== 'return_to_district_admin' && val.must_act !== undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['must_act'],
+        message: 'must_act is only valid when action is "return_to_district_admin"',
+      });
+    }
     // (0) escalation_outcome presence rule — required for resolve_escalation, forbidden otherwise.
     if (val.action === 'resolve_escalation' && val.escalation_outcome === undefined) {
       ctx.addIssue({

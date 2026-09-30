@@ -76,6 +76,10 @@ export function PendingCaseCard({
 }: PendingCaseCardProps): ReactElement {
   const [reasonCode, setReasonCode] = useState<string>('');
   const [rationale, setRationale] = useState<string>('');
+  // ⭐ Story 6.19b (AC16; `2026-09-27-258`, D25) — WHO MUST ACT on a return. ⛔ No default: the Pariwar Admin
+  // chooses, because the choice decides whether the FAMILY is reminded (and can later be closed "for no
+  // response") or STAFF are chased — a pre-selected value would be the system deciding for them.
+  const [mustAct, setMustAct] = useState<'' | 'family' | 'staff'>('');
   const [validationError, setValidationError] = useState<string | undefined>(undefined);
 
   const denyOptions = reasonCodesFor('denied');
@@ -119,6 +123,12 @@ export function PendingCaseCard({
         );
         return;
       }
+      if (mustAct === '') {
+        setValidationError(
+          'Choose who must put it right — the family, or staff. Only a family case reminds the family; a staff mistake is chased with staff, never the family.',
+        );
+        return;
+      }
     }
 
     if (!reasonCodeValidFor(reasonCode, outcome)) {
@@ -134,8 +144,12 @@ export function PendingCaseCard({
       ...partial,
       ...(reasonCode !== '' ? { reason_code: reasonCode as CycleFreezeDecisionRequest['reason_code'] } : {}),
       ...(rationale.trim() !== '' ? { rationale: rationale.trim() } : {}),
+      ...(outcome === 'returned_for_correction' && mustAct !== '' ? { must_act: mustAct } : {}),
     };
     onDecision(body);
+    setReasonCode('');
+    setRationale('');
+    setMustAct('');
   };
 
   return (
@@ -312,15 +326,47 @@ export function PendingCaseCard({
         {(CYCLE_FREEZE_RETURNABLE_STATES as readonly string[]).includes(case_.current_state) &&
           !case_.routed_to_r9 &&
           !case_.under_correction && (
-          <button
-            type="button"
-            data-testid="return-to-district-admin"
-            className="rounded border px-3 py-1 text-sm disabled:opacity-50"
-            disabled={pending}
-            onClick={() => submit({ action: 'return_to_district_admin' }, 'returned_for_correction')}
-          >
-            Return to District Admin
-          </button>
+          <>
+            {/* ⭐ Story 6.19b (AC16) — the REQUIRED choice of who must put it right (`-258`). ⛔ No default. */}
+            <fieldset data-testid="return-must-act" className="flex flex-wrap items-center gap-3 text-xs">
+              <legend className="opacity-70">If you return it, who must put it right?</legend>
+              <label className="flex items-center gap-1">
+                <input
+                  type="radio"
+                  name={`must-act-${case_.claim_case_id}`}
+                  value="family"
+                  checked={mustAct === 'family'}
+                  onChange={() => {
+                    setMustAct('family');
+                    setValidationError(undefined);
+                  }}
+                />
+                The family must act
+              </label>
+              <label className="flex items-center gap-1">
+                <input
+                  type="radio"
+                  name={`must-act-${case_.claim_case_id}`}
+                  value="staff"
+                  checked={mustAct === 'staff'}
+                  onChange={() => {
+                    setMustAct('staff');
+                    setValidationError(undefined);
+                  }}
+                />
+                Staff must put it right
+              </label>
+            </fieldset>
+            <button
+              type="button"
+              data-testid="return-to-district-admin"
+              className="rounded border px-3 py-1 text-sm disabled:opacity-50"
+              disabled={pending}
+              onClick={() => submit({ action: 'return_to_district_admin' }, 'returned_for_correction')}
+            >
+              Return to District Admin
+            </button>
+          </>
         )}
       </div>
 

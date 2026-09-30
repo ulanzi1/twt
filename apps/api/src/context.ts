@@ -80,7 +80,9 @@ export const MEMBER_KYC_FIELD_CLASS = encryptionRuntime.MEMBER_KYC_FIELD_CLASS;
  * encryption context keys on the member's REAL `pariwarId`. Matches the
  * `piiColumn(1, 'member_nominee')` field-class annotation on the name/mobile/address columns.
  */
-export const MEMBER_NOMINEE_FIELD_CLASS = 'member_nominee';
+// ⭐ Story 6.19b (Task 4) — RELOCATED to `@twt/domain` `encryption` (the jobs reminder decrypts nominee mobiles);
+// re-exported here so ⛔ no apps/api call site changed. ⛔ Never re-declare the value.
+export const MEMBER_NOMINEE_FIELD_CLASS = encryptionRuntime.MEMBER_NOMINEE_FIELD_CLASS;
 
 /**
  * Field-class namespace for the member MEDICAL-disclosure Tier-1 envelope (Story 3.5). Like the
@@ -201,7 +203,8 @@ export const CLAIM_NOMINEE_BANK_FIELD_CLASS = 'claim_nominee_bank';
  * Matches the `piiColumn(1, 'claim_contact')` column annotation. The claimant-to-nominee `relationship` is a
  * plain-text label and is NOT encrypted (D16).
  */
-export const CLAIM_CONTACT_FIELD_CLASS = 'claim_contact';
+// ⭐ Story 6.19b (Task 4) — RELOCATED to `@twt/domain` `encryption`; re-exported here. ⛔ Never re-declare the value.
+export const CLAIM_CONTACT_FIELD_CLASS = encryptionRuntime.CLAIM_CONTACT_FIELD_CLASS;
 
 /**
  * The verifier-decision Tier-1 field class (Story 6.11, D-G). The adjudication route encrypts the brief

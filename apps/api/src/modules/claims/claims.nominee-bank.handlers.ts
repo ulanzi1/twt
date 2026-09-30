@@ -360,8 +360,19 @@ async function nomineeBankStatus(
     deceasedMemberId,
     claimState,
   );
+  // ⭐ Story 6.19b (AC16; `-258` detail 3, D28, `-268` §2) — WHO MUST ACT decides the line the family reads. In a STAFF
+  // case — or while the family's part is done — the family is ⛔ not asked for anything and ⛔ not chased: the app
+  // says *"Your claim is still open — we are checking the bank details"*. Only a MARKED live return counts: an
+  // unmarked one (a dev/staging row) and a `does_not_match` with ⛔ no return keep today's line. ⛔ No note, ⛔ no actor.
+  let beingChecked = false;
+  if (correction.underCorrection && correction.hasLiveReturn) {
+    const chase = await claim.resolveCorrectionChase(tx, pariwarId, claimCaseId);
+    beingChecked =
+      chase.mark?.mustAct === 'staff' || (chase.mark?.mustAct === 'family' && chase.familyPartDoneAt !== null);
+  }
   return {
     correctionNeeded: correction.underCorrection,
+    beingChecked,
     // ⭐ The MEMBER's own window — `-226`/`-227` never ask the family to act on a return, and the
     // app must not pretend otherwise. `allowCorrection` is helpline-only, so the member's window is
     // exactly `NOMINEE_BANK_COLLECTABLE_STATES` and nothing else.

@@ -228,6 +228,10 @@ Per-loop-node rows. At Task 9 ≥2-trustee ratification per `.decision-log.md` D
 > calls a decision writer (shared spec invariant 1) — every fallback below is a **person reminded**, ⛔ never an automatic act.
 > ⚠ 6.17, 6.18, 6.20 and 6.21 carry ⛔ no ledger rows either — recorded, ⛔ not back-filled here. `surface_inventory_xref` for every row:
 > *none in `surface-inventory.md` at author-commit; the surface-inventory amendment is the implementing Story's territory.*
+> ⭐ **Amended 2026-09-30 by Story 6.19b (Task 9)** — the `surface_inventory_xref` of rows **9, 15 and 16** is now
+> `surface-inventory.md` Tier 2: row 9 → **Posted-letter form**; row 15 → **Change who must act**; row 16 → **District Admin correction
+> queue — the correction chase** (the staff run's reminders and its day-12 escalation are on the queue). The other rows stay 6.19c's /
+> 6.19d's territory. ⛔ The rows carry ⛔ no xref column, so the xref lives in this note (§7 records the revision).
 > Recommended-default SLA for every row: `≤1 business day ack / ≤3 business days first action` (staff-to-staff; the family-facing clock is the
 > Panel's schedule, ⛔ not this SLA).
 
@@ -316,6 +320,7 @@ Per-loop-node entry revisions + ledger schema revisions per the Story 0.4 + 0.5 
 |---|---|---|---|---|---|
 | _(empty — first row appended on first post-author-commit revision)_ | _(file path + section, e.g., `loop-nodes/claim-filing.md#§6` or `ledger.md#§3-row-1`)_ | _(prior version commit hash OR `author-commit baseline 2026-05-30`)_ | _(summary of revision)_ | _(why the revision is needed — gap discovered in synthetic SLA test, per-loop-node-handler turnover, funding-posture change, etc.)_ | _(`.decision-log.md` `[OPS]` entry id)_ |
 | 2026-09-28 | `ledger.md#§3` rows 9–19 + §2 `loop_node_id` allowed values | `author-commit baseline 2026-05-30` (eight values) | Eleven loop nodes of the Story 6.19 set appended (`pending-trustee-ratification`); the allowed `loop_node_id` values extended by those eleven slugs | The Panel's 6.19 rulings (`-229` → `-232`, `-250` → `-260`) created new loop nodes; AR-61 requires every node to carry `{primary_actor, fallback_actor, escalation_trigger}` | [Decision 2026-09-28-265](../../.decision-log.md#decision-2026-09-28-265) §3 (`[GOV]`) |
+| 2026-09-30 | `ledger.md#§3` rows 9, 15, 16 (`surface_inventory_xref`) | `2026-09-28` (Story 6.19a Task 0 — *"the surface-inventory amendment is the implementing Story's territory"*) | The xref of rows 9, 15, 16 set to the three `surface-inventory.md` Tier-2 rows Story 6.19b added (the posted-letter form; change who must act; the correction queue's chase), recorded in the rows 9–19 note | Story 6.19b built the surfaces the three loop nodes run on | Story 6.19b (Task 9) — ⛔ no new decision (the 2026-09-28 row deferred the xref to the implementing Story) |
 
 **Schema notes:**
 

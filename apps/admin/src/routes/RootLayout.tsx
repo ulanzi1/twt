@@ -66,6 +66,19 @@ function TopBar(): ReactElement {
               Trustee worklist
             </Link>
           )}
+          {/* Story 6.19b (AC8b, D11) — the CORRECTION QUEUE, linked at last (closes the 6.18 deferred item "Nothing
+              in the admin app links to the correction queue"). ⭐ The queues are the staff channel: every due
+              reminder, letter chase and escalation is ON this page. The server's key check is the boundary. */}
+          {pariwarId && (
+            <Link
+              to="/p/$pariwarId/claims/under-correction"
+              params={{ pariwarId }}
+              className="text-sm underline"
+              data-testid="nav-correction-queue"
+            >
+              Correction queue
+            </Link>
+          )}
           {/* Story 6.20 (AC7, D14) — the Pariwar Admin's two nominee pages. ⭐ Linked here because the
               refusal list IS the `-239` notification and the queue is the only way to FIND a correction
               waiting at step 2 (code review 2026-09-24: both were reachable only by a typed URL). The

@@ -817,8 +817,8 @@ export function useRecordHelplineClaimContact(pariwarId: string) {
   });
 }
 
-export const claimsUnderCorrectionKey = (pariwarId: string) =>
-  ['claims-under-correction', pariwarId] as const;
+/** The queue's key PREFIX — every invalidation uses it, so both views (all / escalated) refresh. */
+export const claimsUnderCorrectionKey = (pariwarId: string) => ['claims-under-correction', pariwarId] as const;
 
 /**
  * Story 6.18 (AC11) — the District Admin's CORRECTION QUEUE.
@@ -828,10 +828,42 @@ export const claimsUnderCorrectionKey = (pariwarId: string) =>
  * claim-locating audit line (2026-09-23b) — a staff-authored note, which is why a refetch is
  * acceptable here and ⛔ not on the names read. It is a work queue — stale is the wrong default.
  */
-export function useClaimsUnderCorrection(pariwarId: string) {
+export function useClaimsUnderCorrection(pariwarId: string, opts: { readonly escalated?: boolean } = {}) {
+  const escalated = opts.escalated === true;
   return useQuery({
-    queryKey: claimsUnderCorrectionKey(pariwarId),
-    queryFn: () => api.getClaimsUnderCorrection(pariwarId),
+    queryKey: [...claimsUnderCorrectionKey(pariwarId), escalated ? 'escalated' : 'all'],
+    queryFn: () => api.getClaimsUnderCorrection(pariwarId, escalated ? { escalated: true } : {}),
+  });
+}
+
+// ── Story 6.19b — the correction chase (keys (1) and (7)). Every write refreshes the queue (both views). ──────
+
+const queuePrefix = claimsUnderCorrectionKey;
+
+export function useChangeCorrectionMustAct(pariwarId: string, claimCaseId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: Parameters<typeof api.changeCorrectionMustAct>[2]) =>
+      api.changeCorrectionMustAct(pariwarId, claimCaseId, body),
+    onSettled: () => void qc.invalidateQueries({ queryKey: queuePrefix(pariwarId) }),
+  });
+}
+
+export function useRecordCorrectionLetter(pariwarId: string, claimCaseId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: Parameters<typeof api.recordCorrectionLetter>[2]) =>
+      api.recordCorrectionLetter(pariwarId, claimCaseId, body),
+    onSettled: () => void qc.invalidateQueries({ queryKey: queuePrefix(pariwarId) }),
+  });
+}
+
+export function useRecordCorrectionLetterDelivery(pariwarId: string, claimCaseId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { letterId: string; deliveredOn: string; file: File }) =>
+      api.recordCorrectionLetterDelivery(pariwarId, claimCaseId, v.letterId, v.deliveredOn, v.file),
+    onSettled: () => void qc.invalidateQueries({ queryKey: queuePrefix(pariwarId) }),
   });
 }
 

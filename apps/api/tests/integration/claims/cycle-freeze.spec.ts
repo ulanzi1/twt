@@ -741,6 +741,58 @@ describe.skipIf(!hasDatabase)('State-Trustee cycle-freeze surface — E2E (:5433
       expect(JSON.stringify(res.json())).toContain('return-to-District-Admin');
     });
 
+    it('⛔ Story 6.19b (AC16) — a RETURN with ⛔ no `must_act` is a 400, and nothing is written', async () => {
+      const pariwarId = randomUUID();
+      const { claimCaseId } = await seedApprovedClaim(pariwarId);
+      const pa = await pariwarAdmin(pariwarId);
+      const res = await pa.client.inject({
+        method: 'POST',
+        url: decisionUrl(pariwarId),
+        payload: {
+          claim_case_id: claimCaseId,
+          action: 'return_to_district_admin',
+          reason_code: 'other',
+          rationale: 'the holder name on account 2 is not the declared nominee',
+        },
+      });
+      expect(res.statusCode).toBe(400);
+      expect(JSON.stringify(res.json())).toContain('must_act');
+      expect(await trusteeDecisionCount(claimCaseId)).toBe(0);
+    });
+
+    it('⭐ Story 6.19b (AC16, AC2) — the RETURN writes its mark and opens the first run IN THE SAME TRANSACTION', async () => {
+      const pariwarId = randomUUID();
+      for (const mustAct of ['family', 'staff'] as const) {
+        const { claimCaseId } = await seedApprovedClaim(pariwarId);
+        const pa = await pariwarAdmin(pariwarId);
+        td.auditSink.events.length = 0;
+        const res = await pa.client.inject({
+          method: 'POST',
+          url: decisionUrl(pariwarId),
+          payload: {
+            claim_case_id: claimCaseId,
+            action: 'return_to_district_admin',
+            reason_code: 'other',
+            rationale: 'please get the account 2 holder name corrected',
+            must_act: mustAct,
+          },
+        });
+        expect(res.statusCode).toBe(201);
+        const marks = await td.pool.query<{ must_act: string; set_by_role: string; is_return_mark: boolean; note_ciphertext: string | null }>(
+          'SELECT must_act, set_by_role, is_return_mark, note_ciphertext FROM claim_correction_marks WHERE claim_case_id = $1',
+          [claimCaseId],
+        );
+        expect(marks.rows).toEqual([{ must_act: mustAct, set_by_role: 'pariwar_admin', is_return_mark: true, note_ciphertext: null }]);
+        const runs = await td.pool.query<{ kind: string; ended_at: Date | null }>(
+          'SELECT kind, ended_at FROM claim_correction_runs WHERE claim_case_id = $1',
+          [claimCaseId],
+        );
+        expect(runs.rows).toEqual([{ kind: mustAct, ended_at: null }]);
+        const line = td.auditSink.events.find((e) => e.type === 'admin_cycle_freeze.returned');
+        expect(line?.context).toMatchObject({ must_act: mustAct });
+      }
+    });
+
     it('⛔ AC11 — a RETURN with a code but NO note is a 400 (`-227` cl.10 requires the note)', async () => {
       const pariwarId = randomUUID();
       const { claimCaseId } = await seedApprovedClaim(pariwarId);
@@ -768,6 +820,7 @@ describe.skipIf(!hasDatabase)('State-Trustee cycle-freeze surface — E2E (:5433
           action: 'return_to_district_admin',
           reason_code: 'other',
           rationale: 'the holder name on account 2 is not the declared nominee',
+          must_act: 'family',
         },
       });
       expect(res.statusCode).toBe(201);
@@ -799,6 +852,7 @@ describe.skipIf(!hasDatabase)('State-Trustee cycle-freeze surface — E2E (:5433
           action: 'return_to_district_admin',
           reason_code: 'other',
           rationale: 'please get the account 2 holder name corrected',
+          must_act: 'family',
         },
       });
 
@@ -825,6 +879,7 @@ describe.skipIf(!hasDatabase)('State-Trustee cycle-freeze surface — E2E (:5433
           action: 'return_to_district_admin',
           reason_code: 'other',
           rationale: 'corrections needed',
+          must_act: 'family',
         },
       });
 
@@ -859,6 +914,7 @@ describe.skipIf(!hasDatabase)('State-Trustee cycle-freeze surface — E2E (:5433
           action: 'return_to_district_admin',
           reason_code: 'other',
           rationale: 'too early to return',
+          must_act: 'family',
         },
       });
       expect(res.statusCode).toBe(409);
@@ -885,6 +941,7 @@ describe.skipIf(!hasDatabase)('State-Trustee cycle-freeze surface — E2E (:5433
           action: 'return_to_district_admin',
           reason_code: 'other',
           rationale: 'corrections needed',
+          must_act: 'family',
         },
       });
 
@@ -917,6 +974,7 @@ describe.skipIf(!hasDatabase)('State-Trustee cycle-freeze surface — E2E (:5433
           action: 'return_to_district_admin',
           reason_code: 'other',
           rationale: 'cross-tenant attempt',
+          must_act: 'family',
         },
       });
       // ⛔ 404, ⛔ never 200 — and the claim under A is untouched.

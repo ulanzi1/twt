@@ -315,3 +315,24 @@
 - **missed_target_escalation_log:** (empty)
 - **cross_story_discharge_path:** Story 0.13 → a Decision; ⛔ never a Panel routing note (the shared spec's question table: *"S — counsel, Story 0.13, ⚠ go-live gate, ⛔ never a Panel note"*).
 - **notes:** ⚠ **RTBF gap** on the contact tables (6.19a, shared spec invariant 9) is recorded in `deferred-work.md` — ⛔ no erasure path reaches the new claimant PII yet.
+
+## Row 20 — Story 6.19b: the reviewed Hindi of the correction chase (decision-authored, `-267` §6)
+
+> ⭐ **Appended 2026-09-30 by Story 6.19b (Task 8) under [Decision 2026-09-29-267](../../.decision-log.md#decision-2026-09-29-267) §6** — which
+> amended `-265`'s D28 so that the Hindi of the Trustee-ratified staff-case line is reviewed **before go-live**, ⛔ not before merge. Like
+> Rows 17–19 it has ⛔ no architecture source line; it cites the ruling that created it. ⛔ It blocks ⛔ no build or merge — nothing is in
+> production ([[project_not_in_production_merge_is_not_golive]]).
+
+### Row 20 — `correction-chase-hindi-human-review`
+
+- **gate_name:** A human review of the Hindi of the claim-correction family copy — D28's staff-case line and the four SMS messages
+- **architecture_source_line:** N/A — **decision-authored**: [`-267`](../../.decision-log.md#decision-2026-09-29-267) §6 (D28's reviewed Hindi as a go-live gate); the four SMS messages' Hindi rides the same review because it ships the same way (6.19b D32).
+- **owner:** BigDev (gate); a Hindi-first reviewer named by BigDev — the review
+- **support:** Story 6.19b (the copy as shipped)
+- **closure_criteria:** A recorded human review of the Hindi values of `nominee.bank.being_checked`, `correction_sms.reminder` and `correction_sms.closure_notice` in `packages/i18n/locales/hi/claim.json` — agreed or corrected — and the `$comment.correction_chase` marker (*"agent-authored and NOT YET HUMAN-REVIEWED"*) removed in the same commit. ⚠ A corrected SMS text must be re-registered on the DLT portal (`dlt-template-requests-6-19.md`) — the send must byte-match the registered text. Testable signal: the marker is gone and `closure_evidence_link` names the review.
+- **target_date:** before the 6.19 family SMS or the D28 member line goes live (relative-to-fact: the gate IS that go-live).
+- **current_status:** `open`
+- **closure_evidence_link:** (empty)
+- **missed_target_escalation_log:** (empty)
+- **cross_story_discharge_path:** a review recorded in the decision log (or on the 6.19b story) → the marker removed; any change to the SMS Hindi → re-registration (the DLT sheet's Record).
+- **notes:** The English of D28's line is the Trustee-ratified text (`-258` detail 3); the English SMS wording is 6.19b's (D32). ⛔ Neither is machine-translated; the Hindi was agent-authored (2026-09-30) and is ⛔ never shown to a real family unreviewed.

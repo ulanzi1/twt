@@ -58,6 +58,7 @@
   "nominee.bank.note_help": "अगर बैंक खाते पर नाम थोड़ा अलग लिखा है — कोई अक्षर, विवाह के बाद का नाम, या बैंक का छोटा रूप — तो आप यहाँ बता सकते हैं।",
   "nominee.bank.correction_needed": "कृपया नीचे बैंक विवरण देखें — आगे बढ़ने से पहले इन्हें ठीक करना ज़रूरी है। आपका दावा अब भी खुला है।",
   "nominee.bank.correction_needed_staff": "इस दावे के बैंक विवरण ठीक किए जाने हैं। ज़िला प्रशासक आपके परिवार से संपर्क करेंगे, सही विवरण लेंगे और दावा आगे भेजेंगे। आपका दावा अब भी खुला है और अस्वीकार नहीं हुआ है।",
+  "nominee.bank.being_checked": "आपका दावा अब भी खुला है — हम बैंक विवरण की जाँच कर रहे हैं",
   "nominee.bank.number": "खाता संख्या",
   "nominee.bank.ifsc": "IFSC कोड",
   "nominee.bank.ifsc_checking": "जाँच हो रही है…",
@@ -142,5 +143,8 @@
   "contact.saved": "सहेज लिया गया।",
   "contact.incomplete": "कुछ विवरण छूट गए हैं। कृपया चिह्नित जगहों को देखें।",
   "contact.error": "हम अभी ये विवरण सहेज नहीं सके। कृपया फिर से कोशिश करें, या हमें कॉल करें — हम मदद करेंगे।",
-  "contact.not_writable": "ये विवरण अब ऐप में बदले नहीं जा सकते। कृपया हेल्पलाइन पर कॉल करें — हम मदद करेंगे।"
+  "contact.not_writable": "ये विवरण अब ऐप में बदले नहीं जा सकते। कृपया हेल्पलाइन पर कॉल करें — हम मदद करेंगे।",
+  "$comment.correction_chase": "Story 6.19b: the Hindi of correction_sms.reminder, correction_sms.closure_notice and nominee.bank.being_checked is agent-authored and NOT YET HUMAN-REVIEWED. Its review is a go-live gate (Decision 2026-09-29-267 section 6; launch-gate inventory). The SMS keys must match the registered DLT content byte for byte.",
+  "correction_sms.reminder": "दावा {reference}: आपके परिवार के दावे के बैंक विवरण ठीक किए जाने हैं। कृपया हेल्पलाइन {helpline} पर कॉल करें, या ज़िला प्रशासक आपसे संपर्क करेंगे। आपका दावा अब भी खुला है।",
+  "correction_sms.closure_notice": "दावा {reference}: बैंक विवरण में सुधार प्राप्त न होने के कारण यह दावा बंद कर दिया गया है। इस बंद किए जाने के विरुद्ध अपील नहीं की जा सकती। नया दावा हेल्पलाइन {helpline} या ज़िला प्रशासक के माध्यम से दर्ज किया जा सकता है।"
 }

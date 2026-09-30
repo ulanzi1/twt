@@ -253,6 +253,12 @@ import {
   RecordCorrectionResponse,
   StaffMediatedDeliveryResponse,
   ClaimsUnderCorrectionResponse,
+  ChangeCorrectionMustActResponse,
+  CorrectionLetterDto,
+  CorrectionLetterAddressResponse,
+  CorrectionLetterScreenshotResponse,
+  type ChangeCorrectionMustActRequest,
+  type RecordCorrectionLetterRequest,
   NomineeBankStatusResponse,
   NomineeNameCheckResponse,
   NomineeNameCheckWriteResponse,
@@ -1384,10 +1390,82 @@ export function getNomineeBankStatusHelpline(
  * above, decrypted ONE CLAIM AT A TIME behind the same key. What rides here is the Pariwar Admin's
  * own return note — staff-authored text about a claim — plus ids, dates and flags.
  */
-export function getClaimsUnderCorrection(pariwarId: string): Promise<ClaimsUnderCorrection> {
+export function getClaimsUnderCorrection(
+  pariwarId: string,
+  opts: { readonly escalated?: boolean } = {},
+): Promise<ClaimsUnderCorrection> {
+  // Story 6.19b (AC8b) — the Pariwar Admin's filter: only the claims whose chase was escalated to them.
+  const query = opts.escalated === true ? '?escalated=true' : '';
   return apiFetch(
-    `/api/v1/p/${encodeURIComponent(pariwarId)}/admin/claims/under-correction`,
+    `/api/v1/p/${encodeURIComponent(pariwarId)}/admin/claims/under-correction${query}`,
     ClaimsUnderCorrectionResponse,
+  );
+}
+
+// ── Story 6.19b — the correction-return CHASE (keys (1) and (7)) ────────────────────────────────────────────
+// The server is the boundary for every write; the client carries ⛔ no actor identity. The letter form's ADDRESS
+// read needs a fresh step-up (`correction_letter_address`) — a 403 `auth.step_up_required` means "elevate, then retry".
+
+export const CORRECTION_LETTER_ADDRESS_STEP_UP_CONTEXT = 'correction_letter_address';
+
+const correctionBase = (pariwarId: string, claimCaseId: string): string =>
+  `/api/v1/p/${encodeURIComponent(pariwarId)}/admin/claims/${encodeURIComponent(claimCaseId)}/correction`;
+
+export function changeCorrectionMustAct(pariwarId: string, claimCaseId: string, body: ChangeCorrectionMustActRequest) {
+  return apiFetch(`${correctionBase(pariwarId, claimCaseId)}/must-act`, ChangeCorrectionMustActResponse, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
+export function recordCorrectionLetter(pariwarId: string, claimCaseId: string, body: RecordCorrectionLetterRequest) {
+  return apiFetch(`${correctionBase(pariwarId, claimCaseId)}/letters`, CorrectionLetterDto, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
+export async function recordCorrectionLetterDelivery(
+  pariwarId: string,
+  claimCaseId: string,
+  letterId: string,
+  deliveredOn: string,
+  file: File,
+): Promise<z.output<typeof CorrectionLetterDto>> {
+  const form = new FormData();
+  form.append('delivered_on', deliveredOn);
+  form.append('file', file);
+  const res = await fetch(`${correctionBase(pariwarId, claimCaseId)}/letters/${encodeURIComponent(letterId)}/delivery`, {
+    method: 'POST',
+    credentials: 'include',
+    body: form,
+  });
+  if (!res.ok) {
+    let code = `http.${res.status}`;
+    let message = res.statusText || 'Upload did not go through';
+    try {
+      const b = (await res.json()) as ErrorEnvelope;
+      if (b.error?.code) code = b.error.code;
+      if (b.error?.message) message = b.error.message;
+    } catch {
+      // keep defaults
+    }
+    throw new ApiError(res.status, code, message);
+  }
+  return CorrectionLetterDto.parse(await res.json());
+}
+
+export function getCorrectionLetterAddress(pariwarId: string, claimCaseId: string, personKey: string) {
+  return apiFetch(
+    `${correctionBase(pariwarId, claimCaseId)}/letters/address?person_key=${encodeURIComponent(personKey)}`,
+    CorrectionLetterAddressResponse,
+  );
+}
+
+export function getCorrectionLetterScreenshot(pariwarId: string, claimCaseId: string, letterId: string) {
+  return apiFetch(
+    `${correctionBase(pariwarId, claimCaseId)}/letters/${encodeURIComponent(letterId)}/screenshot`,
+    CorrectionLetterScreenshotResponse,
   );
 }
 

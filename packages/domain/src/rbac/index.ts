@@ -17,3 +17,4 @@ export * from './scope.js';
 export * from './permissions.js';
 export * from './roles.js';
 export * from './check.js';
+export * from './matching-grant.js';

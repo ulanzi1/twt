@@ -11,14 +11,22 @@
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { ClaimsUnderCorrectionResponse } from '@twt/contracts';
 
 const navigate = vi.fn();
+let search: Record<string, unknown> = {};
+// ⭐ A FLOOR, ⛔ not a substitute for the manual resets below: if an assertion in a test THROWS before its own
+// `search = {}` runs, this still stops the leftover value crossing into the next test.
+afterEach(() => {
+  search = {};
+});
 vi.mock('@tanstack/react-router', () => ({
   useParams: () => ({ pariwarId: PARIWAR }),
   useNavigate: () => navigate,
+  // Story 6.19b — `?claim=` (the highlight) and `?escalated=` (the Pariwar Admin's filter).
+  useSearch: () => search,
 }));
 
 const getClaimsUnderCorrection = vi.fn();
@@ -29,7 +37,7 @@ vi.mock('../src/api/client.js', async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>();
   return {
     ...actual,
-    getClaimsUnderCorrection: (p: string) => getClaimsUnderCorrection(p),
+    getClaimsUnderCorrection: (p: string, o?: unknown) => getClaimsUnderCorrection(p, o),
     getSession: () => getSession(),
   };
 });
@@ -51,6 +59,30 @@ const ITEM: Item = {
   return_note: { state: 'readable', value: 'The holder name on account 2 is not the declared nominee.' },
   sent_back_by_check: false,
   accounts_complete: true,
+  // Story 6.19b (AC8b) — the short reference and a quiet chase (a family run, day 3, nobody unreachable yet).
+  short_reference: '11111111',
+  correction_chase: {
+    return_decision_id: '55555555-5555-4555-8555-555555555555',
+    must_act: 'family',
+    must_act_set_by: 'Pariwar Admin Two',
+    must_act_set_at: '2026-09-19T10:00:00.000Z',
+    run: { kind: 'family', day0: '2026-09-19', day_count: 3, open: true, next_reminder_on: '2026-09-23' },
+    cannot_remind: null,
+    claimant_unresolved: false,
+    awaiting_check: false,
+    people: [
+      {
+        person_key: 'nominee:66666666-6666-4666-8666-666666666666',
+        role: 'nominee',
+        rank: 1,
+        status: 'reached',
+        found_dead_on: null,
+        reminders_accepted: 2,
+        letters: [],
+      },
+    ],
+    escalated: false,
+  },
 };
 
 const setup = (items: Item[]) => {
@@ -166,5 +198,92 @@ describe('<CorrectionQueueRoute> — the QUEUE read’s own 401/403 (code review
     getClaimsUnderCorrection.mockRejectedValue(new ApiError(401, 'auth.session_required', 'expired'));
     renderRoute();
     await waitFor(() => expect(navigate).toHaveBeenCalledWith({ to: '/login' }));
+  });
+});
+
+// ── Story 6.19b (AC8b, AC16) — the correction chase on each row ────────────────────────────────────────────────
+describe('<CorrectionQueueRoute> — the correction chase (Story 6.19b)', () => {
+  const chase = (over: Partial<Item['correction_chase']>): Item => ({ ...ITEM, correction_chase: { ...ITEM.correction_chase, ...over } });
+
+  it('⭐ shows the SHORT REFERENCE, who must act (who, when), and the run\'s day and next reminder — announced', async () => {
+    search = {};
+    setup([ITEM]);
+    await screen.findByTestId(`correction-queue-item-${CLAIM}`);
+    expect(screen.getByTestId('queue-short-reference').textContent).toBe('11111111');
+    expect(screen.getByTestId('queue-must-act').textContent).toContain('The family must act');
+    expect(screen.getByTestId('queue-must-act').textContent).toContain('Pariwar Admin Two');
+    expect(screen.getByTestId('queue-run').getAttribute('role')).toBe('status');
+    expect(screen.getByTestId('queue-run').textContent).toContain('day 3 of 90');
+    expect(screen.getByTestId('queue-run').textContent).toContain('2026-09-23');
+    expect(screen.getByTestId('person-status').textContent).toBe('reached');
+  });
+
+  it('⭐ every flag is ANNOUNCED (role="status"): cannot remind + why, awaiting your check, not set, escalated', async () => {
+    search = {};
+    setup([
+      chase({ must_act: null, must_act_set_by: null, must_act_set_at: null, cannot_remind: 'no_contact_record', awaiting_check: true, escalated: true, claimant_unresolved: true, people: [] }),
+    ]);
+    await screen.findByTestId(`correction-queue-item-${CLAIM}`);
+    for (const id of ['flag-must-act-not-set', 'flag-cannot-remind', 'flag-awaiting-check', 'flag-escalated', 'flag-claimant-unresolved']) {
+      expect(screen.getByTestId(id).getAttribute('role'), id).toBe('status');
+    }
+    expect(screen.getByTestId('flag-cannot-remind').textContent).toContain('there is no contact record');
+  });
+
+  it('⭐ a person found unreachable: their status, the letter form, and a posted letter\'s OVERDUE flag — ⛔ no name, ⛔ no address', async () => {
+    search = {};
+    setup([
+      chase({
+        people: [
+          {
+            person_key: 'nominee:66666666-6666-4666-8666-666666666666',
+            role: 'nominee',
+            rank: 1,
+            status: 'dead',
+            found_dead_on: '2026-09-20',
+            reminders_accepted: 0,
+            letters: [
+              { letter_id: '77777777-7777-4777-8777-777777777777', person_key: 'nominee:66666666-6666-4666-8666-666666666666', sequence: 1, posted_on: '2026-09-01', delivered_on: null, overdue: true, has_screenshot: false },
+            ],
+          },
+        ],
+      }),
+    ]);
+    await screen.findByTestId(`correction-queue-item-${CLAIM}`);
+    expect(screen.getByTestId('person-status').textContent).toContain('dead number');
+    expect(screen.getByTestId('letter-overdue').getAttribute('role')).toBe('status');
+    expect(screen.getByTestId('letter-form-nominee:66666666-6666-4666-8666-666666666666')).toBeInTheDocument();
+    // The address is ⛔ on the page until asked for (step-up).
+    expect(screen.queryByTestId('letter-address')).toBeNull();
+    const text = (document.body.textContent ?? '').toLowerCase();
+    for (const forbidden of ['rejected', 'denied', 'failed']) expect(text).not.toContain(forbidden);
+  });
+
+  it('⭐ `?claim=<id>` highlights that row (the staff push names the queue, it cannot deep-link)', async () => {
+    search = { claim: CLAIM };
+    setup([ITEM]);
+    expect(await screen.findByTestId('queue-highlighted')).toBeInTheDocument();
+    expect(screen.getByTestId(`correction-queue-item-${CLAIM}`).getAttribute('aria-current')).toBe('true');
+    search = {};
+  });
+
+  it('⭐ `?escalated=true` asks the server for the escalated chases only (the Pariwar Admin\'s filter)', async () => {
+    search = { escalated: true };
+    getClaimsUnderCorrection.mockClear();
+    setup([ITEM]);
+    await screen.findByTestId(`correction-queue-item-${CLAIM}`);
+    expect(getClaimsUnderCorrection).toHaveBeenCalledWith(PARIWAR, { escalated: true });
+    expect((screen.getByTestId('correction-queue-escalated-only') as HTMLInputElement).checked).toBe(true);
+    search = {};
+  });
+
+  it('the change-who-must-act form offers only the OTHER value and needs a note', async () => {
+    search = {};
+    setup([ITEM]);
+    await screen.findByTestId(`correction-queue-item-${CLAIM}`);
+    const form = screen.getByTestId(`must-act-form-${CLAIM}`);
+    const radios = form.querySelectorAll('input[type="radio"]');
+    expect(radios).toHaveLength(1);
+    expect(form.textContent).toContain('Staff must put it right');
   });
 });

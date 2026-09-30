@@ -252,14 +252,17 @@ describe('Story 6.18 (AC11) — return_to_district_admin, the effectiveOutcome()
     expect(r.success).toBe(false);
   });
 
-  it('⭐ ACCEPTS `other` + a note', () => {
-    const r = CycleFreezeDecisionRequest.safeParse({
-      claim_case_id: CLAIM,
-      action: 'return_to_district_admin',
-      reason_code: 'other',
-      rationale: NOTE,
-    });
-    expect(r.success).toBe(true);
+  it('⭐ ACCEPTS `other` + a note + who must act (Story 6.19b — `must_act` is required on a return)', () => {
+    for (const must_act of ['family', 'staff'] as const) {
+      const r = CycleFreezeDecisionRequest.safeParse({
+        claim_case_id: CLAIM,
+        action: 'return_to_district_admin',
+        reason_code: 'other',
+        rationale: NOTE,
+        must_act,
+      });
+      expect(r.success).toBe(true);
+    }
   });
 
   it('⛔ REJECTS an escalation_outcome on a return (the presence rule still applies)', () => {
@@ -268,6 +271,7 @@ describe('Story 6.18 (AC11) — return_to_district_admin, the effectiveOutcome()
       action: 'return_to_district_admin',
       reason_code: 'other',
       rationale: NOTE,
+      must_act: 'family',
       escalation_outcome: 'denied',
     });
     expect(r.success).toBe(false);
@@ -279,7 +283,43 @@ describe('Story 6.18 (AC11) — return_to_district_admin, the effectiveOutcome()
       action: 'return_to_district_admin',
       reason_code: 'concealment_upheld',
       rationale: NOTE,
+      must_act: 'family',
     });
     expect(r.success).toBe(false);
+  });
+});
+
+// ── Story 6.19b (AC16; `2026-09-27-258`, D25) — WHO MUST ACT on a return ─────────────────────────────────────
+describe('Story 6.19b (AC16) — must_act: required on a return, forbidden elsewhere', () => {
+  const CLAIM = '00000000-0000-0000-0000-000000000001';
+  const NOTE = 'The holder name on account 2 is not the nominee — please get it corrected.';
+
+  it('⛔ REJECTS a return with ⛔ no must_act, and says so', () => {
+    const r = CycleFreezeDecisionRequest.safeParse({
+      claim_case_id: CLAIM,
+      action: 'return_to_district_admin',
+      reason_code: 'other',
+      rationale: NOTE,
+    });
+    expect(r.success).toBe(false);
+    expect(JSON.stringify(r.error?.issues)).toContain('must_act is required when returning a claim');
+  });
+
+  it('⛔ REJECTS a value outside family | staff', () => {
+    const r = CycleFreezeDecisionRequest.safeParse({
+      claim_case_id: CLAIM,
+      action: 'return_to_district_admin',
+      reason_code: 'other',
+      rationale: NOTE,
+      must_act: 'nobody',
+    });
+    expect(r.success).toBe(false);
+  });
+
+  it('⛔ REJECTS must_act on any other action (an approve is unchanged)', () => {
+    const r = CycleFreezeDecisionRequest.safeParse({ claim_case_id: CLAIM, action: 'approve', must_act: 'family' });
+    expect(r.success).toBe(false);
+    expect(JSON.stringify(r.error?.issues)).toContain('must_act is only valid');
+    expect(CycleFreezeDecisionRequest.safeParse({ claim_case_id: CLAIM, action: 'approve' }).success).toBe(true);
   });
 });

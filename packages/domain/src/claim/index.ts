@@ -56,6 +56,15 @@ export * from './death-certificate-review-read.js';
 // `state-trustee-decision-persist.ts` for `TRUSTEE_ROUTABLE_STATES` — so the check ⛔ never imports the writer).
 export * from './claim-contact-check.js';
 export * from './claim-contact-persist.js';
+// Story 6.19b — the correction-return chase: the schedule (pure), the reminder decrypt + number hash, and the mark /
+// runs / ONE resolver (6.19c calls the mark writer, the run opener, end-run and the resolver — ⛔ never re-derives).
+export * from './correction-schedule.js';
+export * from './correction-crypto.js';
+export * from './correction-chase.js';
+export * from './correction-reminder-record.js';
+export * from './correction-letter.js';
+export * from './correction-chase-read.js';
+export * from './admin-directory.js';
 // Story 6.20 (D7) — the genuine-mistake CORRECTION: raise, District Admin step, Pariwar Admin step (applies).
 export * from './nominee-correction-persist.js';
 // Story 6.20 (D14, AC13) — the `-239` refusal's two reads: the Pariwar Admin's read surface and the

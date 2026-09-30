@@ -38,6 +38,7 @@ const CLAIM_KEYS = [
   'nominee.bank.correction_needed_staff', // AC5 — the same, when the member may ⛔ not edit
   'nominee.bank.status_unavailable', // 2026-09-23b — the status read failed; ⛔ never silently "nothing to correct"
   'nominee.bank.locked', // 2026-09-23c — the form is locked and nothing needs correcting: say WHY
+  'nominee.bank.being_checked', // Story 6.19b (D28) — a staff case, or the family's part done: "we are checking"
 ] as const
 
 /** The `common`-namespace key the life-events nominee form mints. */

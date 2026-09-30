@@ -55,6 +55,32 @@ export const MEMBER_KYC_FIELD_CLASS = 'member_kyc';
 export const MEMBER_DEVICE_TOKEN_FIELD_CLASS = 'member_device_token';
 
 /**
+ * Field-class namespace for the member NOMINEE Tier-1 envelope (Story 3.4) — RELOCATED here by Story 6.19b (Task 4).
+ * `member_nominees` / `member_nominee_versions` are TENANT tables — the context keys on the member's REAL
+ * `pariwarId`. Matches the `piiColumn(1, 'member_nominee')` annotation. ⭐ Relocated because 6.19b's correction
+ * reminders decrypt a nominee version's `mobile_ciphertext` in `apps/jobs`, which cannot import `apps/api` (the
+ * 8.8 precedent above); `apps/api/src/context.ts` re-exports it, so ⛔ no apps/api call site changed.
+ */
+export const MEMBER_NOMINEE_FIELD_CLASS = 'member_nominee';
+
+/**
+ * The claim CONTACT RECORD Tier-1 field class (Story 6.19a, D5) — RELOCATED here by Story 6.19b (Task 4), for the
+ * same reason: the reminder job decrypts the claimant block's mobile. Keys on the claim's REAL `pariwarId`; matches
+ * `piiColumn(1, 'claim_contact')`. `apps/api/src/context.ts` re-exports it.
+ */
+export const CLAIM_CONTACT_FIELD_CLASS = 'claim_contact';
+
+/**
+ * ⭐ NEW (Story 6.19b, AC3; `2026-09-29-271` §1) — the keyed-hash class of the E.164 number a correction SMS went to
+ * (`claim_correction_reminders.recipient_number_hash`), bound to the claim's REAL `pariwarId`. It lets 6.19c's
+ * "reached" (D22) compare an accept against the person's CURRENT number without ever storing a number.
+ * ⛔ DELIBERATELY ⛔ NOT `MEMBER_MOBILE_FIELD_CLASS` under `MEMBER_IDENTITY_NAMESPACE`: that hash IS
+ * `member_identities.mobile_blind_index`, the login key — using it here would make every reminder row joinable to a
+ * member's identity. A distinct class under a real tenant keeps the two hash spaces disjoint.
+ */
+export const CLAIM_CONTACT_MOBILE_FIELD_CLASS = 'claim_contact_mobile';
+
+/**
  * Envelope-encryption + blind-index key material for the member PII families. Structurally identical
  * to `apps/api`'s `EncryptionDeps` and `apps/jobs`'s `JobsEncryptionDeps` (both are
  * `{ kms, kekRef, hmacKeyRef }` over these same domain types), so BOTH apps pass their own bundle

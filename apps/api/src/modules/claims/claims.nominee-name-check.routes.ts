@@ -188,7 +188,12 @@ export function registerNomineeNameCheckRoutes(app: FastifyInstance, deps: AppDe
         // emitted OpenAPI surface — it caught this route the moment it was added. An unbounded
         // admin list is an availability problem waiting for the first Pariwar with a long queue.
         querystring: z
-          .object({ limit: z.coerce.number().int().min(1).max(CORRECTION_QUEUE_MAX_LIMIT).optional() })
+          .object({
+            limit: z.coerce.number().int().min(1).max(CORRECTION_QUEUE_MAX_LIMIT).optional(),
+            // ⭐ Story 6.19b (AC8b) — the Pariwar Admin's view: only the claims whose chase was ESCALATED to them
+            // (the same queue, filtered — they hold its read key).
+            escalated: z.enum(['true', 'false']).optional(),
+          })
           .strict(),
         response: { 200: ClaimsUnderCorrectionResponse },
         tags: [TAG],

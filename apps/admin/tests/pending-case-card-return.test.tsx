@@ -128,13 +128,14 @@ describe('<PendingCaseCard> — AC11, the return to the District Admin', () => {
     expect(screen.getByRole('alert').textContent?.toLowerCase()).toContain('note');
   });
 
-  it('posts `return_to_district_admin` with the reason code and the note', () => {
+  it('posts `return_to_district_admin` with the reason code, the note and WHO MUST ACT (Story 6.19b)', () => {
     const { onDecision } = setup();
     // `other` is the only code valid for a return; the rationale carries cl.10's NOTE.
     fireEvent.change(screen.getByRole('combobox'), { target: { value: 'other' } });
     fireEvent.change(screen.getByRole('textbox'), {
       target: { value: 'the holder name is not the declared nominee' },
     });
+    fireEvent.click(screen.getByRole('radio', { name: 'Staff must put it right' }));
     fireEvent.click(screen.getByTestId('return-to-district-admin'));
     expect(onDecision).toHaveBeenCalledTimes(1);
     expect(onDecision.mock.calls[0]![0]).toMatchObject({
@@ -142,7 +143,26 @@ describe('<PendingCaseCard> — AC11, the return to the District Admin', () => {
       action: 'return_to_district_admin',
       reason_code: 'other',
       rationale: 'the holder name is not the declared nominee',
+      must_act: 'staff',
     });
+  });
+
+  it('⛔ Story 6.19b (AC16) — a return with a code and a note but ⛔ no "who must act" posts nothing, and asks for it', () => {
+    const { onDecision } = setup();
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'other' } });
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'the holder name is not the declared nominee' } });
+    // ⛔ No default choice is pre-selected.
+    expect(screen.getAllByRole('radio').every((r) => !(r as HTMLInputElement).checked)).toBe(true);
+    fireEvent.click(screen.getByTestId('return-to-district-admin'));
+    expect(onDecision).not.toHaveBeenCalled();
+    expect(screen.getByRole('alert').textContent?.toLowerCase()).toContain('who must put it right');
+  });
+
+  it('⛔ an approve carries ⛔ no must_act even after a choice was made', () => {
+    const { onDecision } = setup();
+    fireEvent.click(screen.getByRole('radio', { name: 'The family must act' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Approve' }));
+    expect(onDecision.mock.calls[0]![0]).not.toHaveProperty('must_act');
   });
 
   it('⛔ hides the return action on an ESCALATED-state claim — the server always refuses it there', () => {

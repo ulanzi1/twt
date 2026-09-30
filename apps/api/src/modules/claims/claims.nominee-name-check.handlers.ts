@@ -23,9 +23,18 @@
 //   · The nominee is a SECOND, LIVING Tier-1 subject — not the deceased — so their name is not
 //     covered by the claim's own consent posture.
 
-import { claim as claimDomain, ids, member as memberDomain, nominee as nomineeDomain, rbac } from '@twt/domain';
+import {
+  claim as claimDomain,
+  clampLimit,
+  cycleCalendar,
+  ids,
+  member as memberDomain,
+  nominee as nomineeDomain,
+  rbac,
+} from '@twt/domain';
 import type {
   ClaimsUnderCorrectionResponse,
+  CorrectionChaseSummaryDto,
   NomineeNameCheckAccount,
   NomineeNameCheckDeclaredNominee,
   NomineeNameCheckCurrent,
@@ -435,6 +444,7 @@ export function createNomineeNameCheckHandlers(deps: AppDeps) {
       const geoTree = geoTreeResolverForRequest(request);
 
       const limit = (request.query as { limit?: number } | undefined)?.limit;
+      const escalatedOnly = (request.query as { escalated?: string } | undefined)?.escalated === 'true';
       const isVisible = (row: { readonly district: string | null }): boolean =>
         rbac.hasPermission(
           grants,
@@ -442,12 +452,17 @@ export function createNomineeNameCheckHandlers(deps: AppDeps) {
           { dimension: 'district', value: row.district, pariwarId: scopeTx.pariwarId },
           { resolver: geoTree },
         );
+      // ⭐ `escalated` has no DB-side predicate (it's derived per-claim from the chase resolver, not a queue
+      // column), so filtering it AFTER the caller's page would silently drop escalations that fall outside a
+      // small page — escalated rows are systematically NOT the newest returns (escalation fires at
+      // found-dead+13). Scan the queue's full bounded space when filtering, then slice to the requested page.
       const visible = await claimDomain.listClaimsUnderCorrection(scopeTx.tx, pariwarId, {
-        ...(limit !== undefined ? { limit } : {}),
+        limit: escalatedOnly ? claimDomain.CORRECTION_QUEUE_MAX_LIMIT : limit,
         isVisible,
       });
 
-      const items = await Promise.all(
+      const today = cycleCalendar.istDateOf(deps.clock());
+      let items = await Promise.all(
         visible.map(async (row) => ({
           claim_case_id: row.claimCaseId,
           deceased_member_id: row.deceasedMemberId,
@@ -471,8 +486,24 @@ export function createNomineeNameCheckHandlers(deps: AppDeps) {
                 ),
           sent_back_by_check: row.sentBackByCheck,
           accounts_complete: row.accountsComplete,
+          // ⭐ Story 6.19b (AC8b, D33) — the short reference the family's SMS carries, and the correction chase.
+          short_reference: claimDomain.claimShortReference(row.claimCaseId),
+          correction_chase: correctionChaseDto(
+            await claimDomain.readCorrectionChaseSummary(
+              scopeTx.tx,
+              pariwarId,
+              ids.claimId(row.claimCaseId),
+              today,
+              { crypto: deps.encryption },
+            ),
+          ),
         })),
       );
+      if (escalatedOnly) {
+        items = items
+          .filter((i) => i.correction_chase.escalated)
+          .slice(0, clampLimit(limit, { default: claimDomain.CORRECTION_QUEUE_DEFAULT_LIMIT, cap: claimDomain.CORRECTION_QUEUE_MAX_LIMIT }));
+      }
 
       // AUDITED — who looked at the correction queue, and how much of it they could see.
       // ⛔ NON-PII: counts and ids only, ⛔ no name and ⛔ no note.
@@ -615,5 +646,39 @@ export function createNomineeNameCheckHandlers(deps: AppDeps) {
         current_check: toCurrentCheck(result.check, result.check.checkedByActorDisplay),
       };
     },
+  };
+}
+
+/** Story 6.19b (AC8b) — the queue's chase summary DTO. ⛔ No name, ⛔ no number, ⛔ no note. */
+function correctionChaseDto(s: claimDomain.CorrectionChaseSummary): CorrectionChaseSummaryDto {
+  return {
+    return_decision_id: s.returnDecisionId,
+    must_act: s.mark?.mustAct ?? null,
+    must_act_set_by: s.mark?.setByActorDisplay ?? null,
+    must_act_set_at: s.mark?.setAt.toISOString() ?? null,
+    run: s.run
+      ? { kind: s.run.kind, day0: s.run.day0, day_count: s.run.dayCount, open: s.run.open, next_reminder_on: s.run.nextReminderOn }
+      : null,
+    cannot_remind: s.cannotRemind,
+    claimant_unresolved: s.claimantUnresolved,
+    awaiting_check: s.awaitingCheck,
+    people: s.people.map((p) => ({
+      person_key: p.personKey,
+      role: p.role,
+      rank: p.rank,
+      status: p.status,
+      found_dead_on: p.foundDeadOn,
+      reminders_accepted: p.remindersAccepted,
+      letters: p.letters.map((l) => ({
+        letter_id: l.letterId,
+        person_key: p.personKey,
+        sequence: l.sequence as 1 | 2,
+        posted_on: l.postedOn,
+        delivered_on: l.deliveredOn,
+        overdue: l.overdue,
+        has_screenshot: l.hasScreenshot,
+      })),
+    })),
+    escalated: s.escalated,
   };
 }

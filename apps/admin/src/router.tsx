@@ -237,6 +237,14 @@ const correctionQueueRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/p/$pariwarId/claims/under-correction',
   component: CorrectionQueueRoute,
+  // Story 6.19b (AC4, AC8b) — `?claim=<id>` highlights one row; `?escalated=true` is the Pariwar Admin's filter.
+  validateSearch: (search: Record<string, unknown>): { claim?: string; escalated?: boolean } => ({
+    ...(typeof search['claim'] === 'string' &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(search['claim'])
+      ? { claim: search['claim'] }
+      : {}),
+    ...(search['escalated'] === true || search['escalated'] === 'true' ? { escalated: true } : {}),
+  }),
 });
 
 // Story 6.20 (D14) — the Pariwar Admin's `-239` refusal READ surface (a notification, ⛔ never an

@@ -28,9 +28,9 @@ const h = vi.hoisted(() => ({
   getLiveShepherd: vi.fn(),
   readRunStaffRows: vi.fn(),
   readRunFamilyRows: vi.fn(),
-  readRunLetters: vi.fn(),
+  readReturnLetterTrackStaffRows: vi.fn(),
   readCorrectionRecipients: vi.fn(),
-  readRunPersonStates: vi.fn(),
+  readReturnPersonStates: vi.fn(),
   insertFinalCorrectionReminder: vi.fn(),
   listAdminsByRole: vi.fn(),
 }));
@@ -56,9 +56,9 @@ vi.mock('@twt/domain', async (importOriginal) => {
       getLiveShepherd: h.getLiveShepherd,
       readRunStaffRows: h.readRunStaffRows,
       readRunFamilyRows: h.readRunFamilyRows,
-      readRunLetters: h.readRunLetters,
+      readReturnLetterTrackStaffRows: h.readReturnLetterTrackStaffRows,
       readCorrectionRecipients: h.readCorrectionRecipients,
-      readRunPersonStates: h.readRunPersonStates,
+      readReturnPersonStates: h.readReturnPersonStates,
       insertFinalCorrectionReminder: h.insertFinalCorrectionReminder,
       listAdminsByRole: h.listAdminsByRole,
     },
@@ -428,13 +428,16 @@ describe('planRun — its scope-transaction timeouts, the I6 aggregate and K2\'s
     h.getLiveShepherd.mockResolvedValue({ shepherdActorId: DA });
     h.readRunStaffRows.mockResolvedValue([]);
     h.readRunFamilyRows.mockResolvedValue([]);
-    h.readRunLetters.mockResolvedValue([{ personKey: PERSON, sequence: 1, postedOn: o.deliveredOn, deliveredOn: o.deliveredOn }]);
+    h.readReturnLetterTrackStaffRows.mockResolvedValue([]);
     h.readCorrectionRecipients.mockResolvedValue({ cannotRemind: null, people: [{ personKey: PERSON }] });
-    h.readRunPersonStates.mockResolvedValue([
+    h.readReturnPersonStates.mockResolvedValue([
       {
         person: { personKey: PERSON },
-        // Found dead TODAY (⇒ ⛔ no chase / escalation yet) and delivered (⇒ ⛔ no SMS, D21 stops the DA reminder).
-        state: { foundDeadOn: TODAY, deadKind: 'dead', letterDelivered: true, firstDeliveredOn: o.deliveredOn, reset: false, epochRows: [] },
+        // Found dead TODAY (⇒ ⛔ no chase / escalation yet) and delivered (⇒ ⛔ no SMS, D21 stops the DA reminder) —
+        // ONE letter in the return (⛔ capped), the first delivered on `deliveredOn`.
+        track: { foundDeadOn: TODAY, deadKind: 'dead', letterDelivered: true, firstDeliveredOn: o.deliveredOn, reset: false, epochRows: [] },
+        lettersInReturn: 1,
+        firstDeliveredInReturnOn: o.deliveredOn,
         ...(o.hashFailed === true ? { hashFailed: true } : {}),
       },
     ]);

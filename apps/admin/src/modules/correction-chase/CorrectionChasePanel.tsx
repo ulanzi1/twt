@@ -271,7 +271,6 @@ export function CorrectionChasePanel({ pariwarId, item }: CorrectionChasePanelPr
                       claimCaseId={item.claim_case_id}
                       personKey={p.person_key}
                       letters={p.letters}
-                      familyRunDay0={c.run !== null && c.run.kind !== 'staff' ? c.run.day0 : null}
                       canRecord={canRecordNew}
                     />
                   ) : null}

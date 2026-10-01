@@ -108,11 +108,11 @@ export const CorrectionLetterDto = z
     overdue: z.boolean(),
     has_screenshot: z.boolean(),
     /**
-     * K1 — the letter belongs to the latest family / direction run, the run whose letters the per-run rules count (≤ 2,
-     * the second after the first's delivery). Present on the QUEUE's letters (which span every run of the return);
-     * absent on a single-letter write response.
+     * `-273` §2 (Story 6.19c — renamed from `in_current_run`): the letter counts toward the person's two-letter limit
+     * of the RETURN (≤ 2, the second after the first's delivery). Present on the QUEUE's letters (which span every run
+     * of the live return — each one counts, so it is `true` there); absent on a single-letter write response.
      */
-    in_current_run: z.boolean().optional(),
+    counts_toward_limit: z.boolean().optional(),
   })
   .strict();
 export type CorrectionLetterDto = z.output<typeof CorrectionLetterDto>;

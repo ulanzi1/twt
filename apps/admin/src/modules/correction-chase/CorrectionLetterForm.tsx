@@ -86,27 +86,15 @@ export function forgetStepUpVerified(): void {
 }
 
 /**
- * The letters the per-RUN rules read — ≤ 2 per person per run, and the second after the first one's delivery (`-231`
- * D). Under K1 a person's `letters` span EVERY family / direction run of the live return (two may BOTH be #1). ⭐ The
- * queue marks each letter `in_current_run` — when it does, that flag decides. ⚠ Only a letter list WITHOUT the flag
- * (⛔ never the queue's) falls back to the posting-order guess: the LATEST group — from the last #1 on, in posting order. ⭐ Unless EVERY letter of that
- * group was posted before the latest family run's day 0 (`familyRunDay0`, known when that run is the headline run):
- * then the group is an EARLIER run's (a family → staff → family claim whose new run has no letter yet), and there is ⛔
- * no client gate — the server is the boundary, and its refusal has its own line. ⛔ Never gate on all of a person's
- * letters: two delivered letters of run 1 blocked run 3's first letter for good.
+ * The letters the two-letter rules read — ≤ 2 per person per RETURN, and the second after the first one's delivery
+ * (`-231` D; `-272` §2(c), `-273` §2 — Story 6.19c). The queue lists a person's letters across EVERY family / direction
+ * run of the live return and marks each `counts_toward_limit` (always `true` there: under per-return every live-return
+ * letter counts — the server is the boundary, this only hides a form it would refuse). A list WITHOUT the flag (a single
+ * write response) counts every letter. *(Story 6.19b's `currentRunLetters` guessed the current RUN's group; per-return
+ * makes the guess — and its `familyRunDay0` input — unnecessary.)*
  */
-export function currentRunLetters(
-  letters: readonly CorrectionLetterDto[],
-  familyRunDay0: string | null,
-): readonly CorrectionLetterDto[] {
-  if (letters.some((l) => l.in_current_run !== undefined)) return letters.filter((l) => l.in_current_run === true);
-  const ordered = [...letters].sort((a, b) =>
-    a.posted_on === b.posted_on ? a.sequence - b.sequence : a.posted_on < b.posted_on ? -1 : 1,
-  );
-  const start = ordered.map((l) => l.sequence).lastIndexOf(1);
-  const group = start === -1 ? ordered : ordered.slice(start);
-  if (familyRunDay0 !== null && group.length > 0 && group.every((l) => l.posted_on < familyRunDay0)) return [];
-  return group;
+export function returnLetters(letters: readonly CorrectionLetterDto[]): readonly CorrectionLetterDto[] {
+  return letters.filter((l) => l.counts_toward_limit !== false);
 }
 
 export interface CorrectionLetterFormProps {
@@ -115,11 +103,6 @@ export interface CorrectionLetterFormProps {
   readonly personKey: string;
   /** EVERY letter of the person across the live return's family / direction runs (K1) — each delivery recordable. */
   readonly letters: readonly CorrectionLetterDto[];
-  /**
-   * The latest family / direction run's day 0 when the panel knows it (that run is the headline run), else `null` —
-   * it tells an earlier run's letters from the current run's (`currentRunLetters`).
-   */
-  readonly familyRunDay0: string | null;
   /**
    * A NEW letter can be recorded: the person is letter-eligible (found dead) AND the family can be contacted (the
    * chase's `cannot_remind` is unset — D30). Deliveries are recordable regardless. ⭐ REQUIRED — a default of `true`
@@ -229,7 +212,6 @@ export function CorrectionLetterForm({
   claimCaseId,
   personKey,
   letters,
-  familyRunDay0,
   canRecord,
 }: CorrectionLetterFormProps): ReactElement {
   const record = useRecordCorrectionLetter(pariwarId, claimCaseId);
@@ -261,11 +243,11 @@ export function CorrectionLetterForm({
 
   // ⭐ Deliveries: EVERY undelivered letter, whichever run it belongs to (keyed by `letter_id`, ⛔ by `sequence`).
   const undelivered = letters.filter((l) => l.delivered_on === null);
-  // ⭐ The per-RUN rules read the current run's letters only (K1 — see `currentRunLetters`).
-  const runLetters = currentRunLetters(letters, familyRunDay0);
-  const atLimit = runLetters.length >= 2;
+  // ⭐ The two-letter rules read the RETURN's letters (`-273` §2 — see `returnLetters`).
+  const counted = returnLetters(letters);
+  const atLimit = counted.length >= 2;
   // `-231` D — the second letter follows the first one's delivery.
-  const waitingForFirstDelivery = runLetters.length === 1 && runLetters[0]!.delivered_on === null;
+  const waitingForFirstDelivery = counted.length === 1 && counted[0]!.delivered_on === null;
   const recordFormShown = canRecord && !atLimit && !waitingForFirstDelivery;
 
   // ⭐ Focus FOLLOWS a swapped control — the code input once the code is sent, the address once it is shown, "Show the

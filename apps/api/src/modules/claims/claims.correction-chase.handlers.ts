@@ -5,8 +5,10 @@
 //                          refuses when there is ⛔ no live return (409 `must_act.no_live_return`) and writes under the
 //                          trustee lock, so the change cannot race a second return onto a superseded `decision_id`.
 //   · recordLetter       — key (1): a POSTED letter to a letter-eligible person (D31's own precondition; ≤ 2 per person
-//                          per run; the second only after the first's delivery AND posted on/after that delivery date,
-//                          `-231` D). The tracking number is encrypted HERE, before the writer. ⚠ When the person's
+//                          per RETURN — `-272` §2(c) / `-273` §2, Story 6.19c; the second only after the first's
+//                          delivery AND posted on/after that delivery date, `-231` D). The cheap refusals run FIRST
+//                          (a read-only `assertCorrectionLetterRecordable`), THEN the tracking number is encrypted, THEN
+//                          the writer re-checks under the lock (6.19b's third-pass follow-up: ⛔ KMS before a 409). ⚠ When the person's
 //                          CURRENT number could not be hashed (a KMS / envelope fault) the precondition fails CLOSED:
 //                          503 `correction_letter.number_unverified` (retryable), on this route AND the address reveal
 //                          — each logged first as a warn line (ids only), so a persistent fault is visible server-side.
@@ -123,7 +125,7 @@ export function translateLetterError(err: unknown): never {
       case 'agreement_not_live':
         throw new ConflictError("The family's agreement to be contacted is not in force", 'correction_letter.agreement_not_live');
       case 'limit_reached':
-        throw new ConflictError('Two letters have already been recorded for this person in this run', 'correction_letter.limit_reached');
+        throw new ConflictError('Two letters have already been recorded for this person on this return', 'correction_letter.limit_reached');
       case 'already_delivered':
         throw new ConflictError("This letter's delivery is already recorded", 'correction_letter.already_delivered');
       case 'first_not_delivered':
@@ -216,6 +218,15 @@ export function createCorrectionChaseHandlers(deps: AppDeps) {
         throw new Error(`[correction-chase] changeMustAct: no matching grant role resolved (got ${String(role)})`);
       }
       const setByRole = role as schema.CorrectionMarkRole;
+      // ⭐ The cheap refusals FIRST (read-only; the writer re-checks under the lock) — ⛔ KMS work for a 409 (6.19b's
+      // third-pass follow-up).
+      const pre = await claim.resolveCorrectionChase(request.scopeTx!.tx, ctx.pariwarId, ctx.claimCaseId);
+      if (pre.liveReturn === null) {
+        throw new ConflictError('This claim has no live return — there is nothing to mark', 'must_act.no_live_return');
+      }
+      if (pre.mark?.mustAct === body.must_act) {
+        throw new ConflictError(`Who must act is already "${body.must_act}"`, 'must_act.unchanged');
+      }
       const noteCiphertext = await encryptCorrectionMarkNote(body.note, ctx.pariwarIdStr, deps.encryption);
       const scopeTx = await openScopeTx(deps, ctx.pariwarIdStr);
       let ok = false;
@@ -269,6 +280,21 @@ export function createCorrectionChaseHandlers(deps: AppDeps) {
       const body = request.body as RecordCorrectionLetterRequest;
       refuseFutureDate(body.posted_on, today());
       const actorDisplay = await displayName(ctx.actorId);
+      // ⭐ The cheap refusals FIRST (read-only — D31, the return's cap, the chronology); the writer re-checks under the
+      // lock. ⛔ KMS work for a 409 (6.19b's third-pass follow-up).
+      try {
+        await claim.assertCorrectionLetterRecordable(
+          request.scopeTx!.tx,
+          ctx.pariwarId,
+          ctx.claimCaseId,
+          body.person_key,
+          body.posted_on,
+          { crypto: deps.encryption },
+        );
+      } catch (err) {
+        warnIfNumberUnverified(request, err, 'record_letter');
+        translateLetterError(err);
+      }
       const trackingNumberCiphertext = await encryptCorrectionTrackingNumber(body.tracking_number, ctx.pariwarIdStr, deps.encryption);
       const scopeTx = await openScopeTx(deps, ctx.pariwarIdStr);
       let ok = false;

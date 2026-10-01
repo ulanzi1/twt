@@ -14,7 +14,9 @@
 // ⭐ K1 — THE LETTERS ARE THE RETURN'S: every letter of every `family` / `direction` run of the live return (after
 // family → staff → family a run-1 letter and its delivery form stay listed — the delivery writer is keyed on the
 // letter, ⛔ not the run), and a person who LEFT the recipient set (a W6 (b) rewrite) keeps their letters (their
-// line is derived from the records). Each person's STATUS stays the latest family run's — the sweep's own state.
+// line is derived from the records). ⭐ Since Story 6.19c (Task 0a, `-272` §2 / `-273` §1–§2) each person's STATUS,
+// found-dead day and accepted count are the RETURN's too (every family / direction run's rows, for the CURRENT
+// number) — the sweep's own state — and every listed letter counts toward the return's two-letter limit.
 // ⭐ A person whose CURRENT number had to be hashed and whose hash THREW is surfaced as `numberUnverified` (the API
 // logs it by claim id) — ⛔ never silently judged on the old number's epoch.
 // ⚠ Per claim (a bounded page — the queue's `clampLimit` cap), ⛔ never unbounded.
@@ -47,8 +49,8 @@ import {
   type RunFamilyRow,
   type RunLetterRow,
   readReturnFamilyLetters,
-  readRunFamilyRows,
-  readRunPersonStates,
+  readReturnFamilyRows,
+  readReturnPersonStates,
 } from './correction-reminder-record.js';
 import {
   LETTER_OVERDUE_AFTER_DAYS,
@@ -68,8 +70,12 @@ export interface CorrectionChaseLetterSummary {
   readonly deliveredOn: string | null;
   readonly overdue: boolean;
   readonly hasScreenshot: boolean;
-  /** K1 — the letter belongs to the latest family / direction run (the run the per-run letter rules count). */
-  readonly inCurrentRun: boolean;
+  /**
+   * `-273` §2 — the letter counts toward the person's two-letter limit of the RETURN. Every letter the queue lists is
+   * the live return's, so it is always `true` there (Story 6.19c renamed it from `inCurrentRun` — `-272` §3's
+   * *"unchanged"* was a naming slip: under per-return every live-return letter counts).
+   */
+  readonly countsTowardLimit: boolean;
 }
 
 export interface CorrectionChasePersonSummary {
@@ -150,7 +156,8 @@ export function correctionNextReminderOn(input: {
   return next?.date ?? null;
 }
 
-/** A person derived from the chase's own records (D30 — the recipient read is empty then; or one who left it). */
+/** A person derived from the chase's own records (D30 — the recipient read is empty then; or one who left it).
+ * The rows and letters are the live RETURN's (every family / direction run's — Story 6.19c Task 0a). */
 export interface CorrectionRecordPerson {
   readonly personKey: string;
   readonly role: 'nominee' | 'claimant';
@@ -212,13 +219,12 @@ async function readEffectiveNomineeRanks(
   return new Map(effective.entries.map((e) => [nomineePersonKey(e.versionId as string, index), e.rank] as const));
 }
 
-/** One person's queue line from their evaluated state and their letters in the run. Pure. */
+/** One person's queue line from their evaluated state and their letters in the RETURN. Pure. */
 function personSummary(
   person: { readonly personKey: string; readonly role: 'nominee' | 'claimant'; readonly rank: 1 | 2 | null },
   state: PersonRunState,
-  letters: readonly (RunLetterRow & { readonly runId?: string })[],
+  letters: readonly RunLetterRow[],
   today: CalendarDateString,
-  currentRunId: string,
 ): CorrectionChasePersonSummary {
   const accepted = state.epochRows.filter((r) => r.outcome === 'accepted').length;
   return {
@@ -237,7 +243,7 @@ function personSummary(
         deliveredOn: l.deliveredOn,
         overdue: correctionLetterOverdue(l.postedOn, l.deliveredOn, today),
         hasScreenshot: l.hasScreenshot,
-        inCurrentRun: l.runId === undefined || l.runId === currentRunId,
+        countsTowardLimit: true,
       })),
   };
 }
@@ -331,35 +337,28 @@ export async function readCorrectionChaseSummary(
   let people: CorrectionChasePersonSummary[] = [];
   let numberUnverified = false;
   if (familyRun !== null) {
-    // ⭐ K1 — the letters LISTED are every family / direction run's of the live return; a person's STATE is the
-    // latest family run's (its own rows and letters — the sweep's evaluation), ⛔ never mixed across runs.
+    // ⭐ `-272` §2 / `-273` §1 — the letters AND each person's state are the RETURN's: every family / direction run's
+    // rows and letters, for the person's CURRENT number (the sweep's own evaluation).
     const letters = await readReturnFamilyLetters(db, pariwarId, claimCaseId, chase.liveReturn.decisionId);
-    const runLetters = letters.filter((l) => l.runId === familyRun.runId);
     /** A record-derived person's line: ⛔ no crypto — their number's epoch is the recorded one. */
     const recordLine = (p: CorrectionRecordPerson): CorrectionChasePersonSummary =>
-      personSummary(
-        p,
-        evaluatePersonRunState(p.rows, runLetters.filter((l) => l.personKey === p.personKey)),
-        p.letters,
-        today,
-        familyRun.runId,
-      );
+      personSummary(p, evaluatePersonRunState(p.rows, p.letters), p.letters, today);
     if (recipients.cannotRemind === null) {
-      const states = await readRunPersonStates(db, pariwarId, familyRun, recipients.people, { crypto: opts.crypto });
+      const states = await readReturnPersonStates(db, pariwarId, familyRun, recipients.people, { crypto: opts.crypto });
       numberUnverified = states.some((s) => s.hashFailed === true);
-      people = states.map(({ person, state }) => personSummary(person, state, letters, today, familyRun.runId));
+      people = states.map(({ person, track }) => personSummary(person, track, letters, today));
       const recipientKeys = recipients.people.map((p) => p.personKey);
       if (letters.some((l) => !recipientKeys.includes(l.personKey))) {
         // ⭐ A person who LEFT the recipient set keeps their letters (K1). ⛔ No rank: every effective nominee IS a
         // recipient, so a person outside the set holds ⛔ no effective rank.
-        const rows = await readRunFamilyRows(db, pariwarId, familyRun.runId);
+        const rows = await readReturnFamilyRows(db, pariwarId, claimCaseId, chase.liveReturn.decisionId);
         const left = correctionPeopleLeftWithLetters(recipientKeys, correctionPeopleFromRecords(rows, letters));
         people = [...people, ...left.map(recordLine)];
       }
     } else {
-      // ⭐ D30 — ⛔ no reminders, but the letters stay recordable at any time: derive the people from the records
-      // (the latest run's rows + the return's letters); the rank from the effective declaration when it is one.
-      const rows = await readRunFamilyRows(db, pariwarId, familyRun.runId);
+      // ⭐ D30 — ⛔ no reminders, but the letters stay recordable at any time: derive the people from the RETURN's
+      // records; the rank from the effective declaration when it is one.
+      const rows = await readReturnFamilyRows(db, pariwarId, claimCaseId, chase.liveReturn.decisionId);
       const ranks = await readEffectiveNomineeRanks(db, pariwarId, claimCaseId);
       people = correctionPeopleFromRecords(rows, letters, ranks).map(recordLine);
     }

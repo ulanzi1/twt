@@ -400,8 +400,8 @@ describe.skipIf(!hasDatabase)('Story 6.19b — the claim-correction reminders (l
     expect(outcomes).toEqual(['rejected_invalid_number', 'rejected_unreachable']);
     const recipients = await withPariwarScope(pool, PARIWAR, (db) => claim.readCorrectionRecipients(db, ids.pariwarId(PARIWAR), ids.claimId(s.claimCaseId)));
     const run = await withPariwarScope(pool, PARIWAR, (db) => claim.readCorrectionRun(db, ids.pariwarId(PARIWAR), s.runId!));
-    const states = await withPariwarScope(pool, PARIWAR, (db) => claim.readRunPersonStates(db, ids.pariwarId(PARIWAR), run!, recipients.people));
-    expect(states.map((x) => x.state.deadKind).sort()).toEqual(['dead', 'unreachable']);
+    const states = await withPariwarScope(pool, PARIWAR, (db) => claim.readReturnPersonStates(db, ids.pariwarId(PARIWAR), run!, recipients.people));
+    expect(states.map((x) => x.track.deadKind).sort()).toEqual(['dead', 'unreachable']);
   });
 
   it('⭐ a number that is ⛔ not a valid mobile ⇒ `no_target` WITHOUT a send; the letter chase runs 7 → 12 → escalated on 13', async () => {
@@ -592,10 +592,10 @@ describe.skipIf(!hasDatabase)('Story 6.19b — the claim-correction reminders (l
     // A 6.20 correction's new version: SAME person key, a different version id.
     const sameNumber = { ...person!, versionId: randomUUID(), mobileCiphertext: await encryptField('9812345678', PARIWAR, 'member_nominee', enc) };
     const newNumber = { ...person!, versionId: randomUUID(), mobileCiphertext: await encryptField('9898989898', PARIWAR, 'member_nominee', enc) };
-    const [kept] = await withPariwarScope(pool, PARIWAR, (db) => claim.readRunPersonStates(db, pid, run, [sameNumber], { crypto: enc }));
-    const [reset] = await withPariwarScope(pool, PARIWAR, (db) => claim.readRunPersonStates(db, pid, run, [newNumber], { crypto: enc }));
-    expect(kept!.state).toMatchObject({ reset: false, deadKind: 'dead' });
-    expect(reset!.state).toMatchObject({ reset: true, foundDeadOn: null });
+    const [kept] = await withPariwarScope(pool, PARIWAR, (db) => claim.readReturnPersonStates(db, pid, run, [sameNumber], { crypto: enc }));
+    const [reset] = await withPariwarScope(pool, PARIWAR, (db) => claim.readReturnPersonStates(db, pid, run, [newNumber], { crypto: enc }));
+    expect(kept!.track).toMatchObject({ reset: false, deadKind: 'dead' });
+    expect(reset!.track).toMatchObject({ reset: true, foundDeadOn: null });
     // The resolver exposes the CURRENT hash — the dead number's, here — for 6.19c's "reached".
     const chase = await withPariwarScope(pool, PARIWAR, (db) => claim.resolveCorrectionChase(db, pid, ids.claimId(s.claimCaseId), { crypto: enc }));
     const row = (await rowsOf(s.claimCaseId)).find((r) => r.purpose === 'family_sms');
@@ -1053,6 +1053,93 @@ describe.skipIf(!hasDatabase)('Story 6.19b — the claim-correction reminders (l
       expect.objectContaining({ slot_day: 0, late: true, outcome: 'recorded', recipient_key: `staff:${da}`, subject_key: personKey }),
     ]);
     expect(h.alarms.filter((a) => a.includes(s.claimCaseId))).toEqual([]);
+  });
+
+  // ── Story 6.19c Task 0a — AC18: the letter track per RETURN (`-272` §2, `-273` §1/§2) ─────────────────────────
+  /** A claim on its OWN Pariwar with a live shepherd and one Pariwar Admin — its one nominee ⛔ sendable (`no_target`). */
+  async function ownChase(label: string) {
+    const pariwarId = randomUUID();
+    const s = await seed({ pariwarId, nomineeMobiles: ['12345'] });
+    const { day0: returnedOn } = await runOf(s.runId!);
+    const da = await staffUser(`Shepherd District Admin (${label})`);
+    await assignShepherd(s.claimCaseId, pariwarId, da);
+    const pa = await staffUser(`Pariwar Admin (${label})`);
+    await grantPariwarAdmin(pa, pariwarId);
+    const h = harness({ allowlist: [pariwarId] });
+    return { s, h, da, pa, pariwarId, returnedOn };
+  }
+  const trackRows = async (cid: string) =>
+    (await rowsOf(cid)).filter((r) => ['letter_chase', 'escalation', 'letter_second_due'].includes(r.purpose) && r.subject_key !== '');
+
+  it('⭐ AC18 (a) — family → staff → family: a letter DELIVERED in run 1 stops run 3\'s texts to that number, and ⛔ no letter chase in run 3', async () => {
+    const { s, h, pariwarId, returnedOn } = await ownChase('AC18a');
+    h.setNow(tenAmIst(day(returnedOn, 1)));
+    await runCorrectionReminderSweep(h.deps, boss(h));
+    const [job] = smsFor(h, s.claimCaseId);
+    expect(await child(h, job!)).toEqual({ status: 'sent', outcome: 'no_target' }); // found dead in RUN 1, day 1
+    const personKey = payloadOf(job!).personKey;
+    const l1 = await recordDeliveredLetter(pariwarId, s.claimCaseId, personKey, day(returnedOn, 2), day(returnedOn, 3));
+    expect(l1.runId).toBe(s.runId);
+    await switchMark(pariwarId, s.claimCaseId, 'staff', day(returnedOn, 4));
+    const run3 = await switchMark(pariwarId, s.claimCaseId, 'family', day(returnedOn, 10));
+    const before = smsFor(h, s.claimCaseId).length;
+    for (const n of [11, 12, 17, 18, 22]) {
+      h.setNow(tenAmIst(day(returnedOn, n)));
+      await runCorrectionReminderSweep(h.deps, boss(h));
+    }
+    // ⛔ No SMS to the person in run 3 (`-250` #1 across runs) and ⛔ no letter chase / escalation about them.
+    expect(smsFor(h, s.claimCaseId).length).toBe(before);
+    expect((await rowsOf(s.claimCaseId)).filter((r) => r.purpose === 'family_sms' && r.slot_day >= 0 && r.outcome !== 'skipped_superseded').map((r) => r.slot_day)).toEqual([1]);
+    expect((await trackRows(s.claimCaseId)).filter((r) => r.purpose !== 'letter_second_due')).toEqual([]);
+    expect(h.alarms.filter((a) => a.includes(s.claimCaseId))).toEqual([]);
+    expect((await runOf(run3)).day0).toBe(day(returnedOn, 10));
+  });
+
+  it('⭐ AC18 — found dead in RUN 1, the run reopened at found-dead + 19: the chase and the +13 escalation are written ONCE at TODAY\'s slot (`late`) — ⛔ no negative slot_day, ⛔ no 23514, ⛔ no second one tomorrow', async () => {
+    const { s, h, da, pa, pariwarId, returnedOn } = await ownChase('AC18-esc');
+    h.setNow(tenAmIst(day(returnedOn, 1)));
+    await runCorrectionReminderSweep(h.deps, boss(h));
+    expect(await child(h, smsFor(h, s.claimCaseId)[0]!)).toEqual({ status: 'sent', outcome: 'no_target' }); // found dead on day 1
+    const personKey = payloadOf(smsFor(h, s.claimCaseId)[0]!).personKey;
+    await switchMark(pariwarId, s.claimCaseId, 'staff', day(returnedOn, 2)); // before the chase's + 7
+    const run3 = await switchMark(pariwarId, s.claimCaseId, 'family', day(returnedOn, 20));
+    h.setNow(tenAmIst(day(returnedOn, 21))); // run 3's day 1; found-dead + 20 — every chase date is BEFORE run 3
+    await runCorrectionReminderSweep(h.deps, boss(h));
+    const rows = await trackRows(s.claimCaseId);
+    expect(rows).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ purpose: 'letter_chase', slot_day: 1, late: true, recipient_key: `staff:${da}`, subject_key: personKey }),
+        expect.objectContaining({ purpose: 'escalation', slot_day: 1, late: true, recipient_key: `staff:${pa}`, subject_key: personKey }),
+      ]),
+    );
+    expect(rows).toHaveLength(2);
+    expect(rows.every((r) => r.slot_day >= 0)).toBe(true);
+    expect(h.alarms.filter((a) => a.includes('failed —'))).toEqual([]);
+    // The next day: ⛔ a second chase (its latest due date is covered) and ⛔ a second escalation.
+    h.setNow(tenAmIst(day(returnedOn, 22)));
+    await runCorrectionReminderSweep(h.deps, boss(h));
+    expect(await trackRows(s.claimCaseId)).toHaveLength(2);
+    expect((await runOf(run3)).day0).toBe(day(returnedOn, 20));
+  });
+
+  it('⭐ the letter chase across MISSED sweep days (6.19b third-pass follow-up): + 7 sent; + 8, + 9 missed ⇒ + 10 sends the LATEST due day once (⛔ a burst); + 11, + 12 missed ⇒ + 13 catches up + 12 once, `late`, and escalates once', async () => {
+    const { s, h, returnedOn } = await ownChase('chase-gap');
+    h.setNow(tenAmIst(day(returnedOn, 1)));
+    await runCorrectionReminderSweep(h.deps, boss(h));
+    expect(await child(h, smsFor(h, s.claimCaseId)[0]!)).toEqual({ status: 'sent', outcome: 'no_target' });
+    const fd = day(returnedOn, 1);
+    for (const off of [7, 10, 13, 14]) {
+      h.setNow(tenAmIst(day(fd, off)));
+      await runCorrectionReminderSweep(h.deps, boss(h));
+    }
+    const rows = await trackRows(s.claimCaseId);
+    // Slots are run days: found-dead (day 1) + offset.
+    expect(rows.filter((r) => r.purpose === 'letter_chase').map((r) => [r.slot_day, r.late])).toEqual([
+      [8, false],
+      [11, false],
+      [13, true],
+    ]);
+    expect(rows.filter((r) => r.purpose === 'escalation').map((r) => r.slot_day)).toEqual([14]);
   });
 });
 

@@ -650,9 +650,14 @@ export async function readCorrectionRecipients(
   return { cannotRemind: null, claimantUnresolved, people, contactLocale: locale };
 }
 
-// ── A person's per-run state (D4, D20, D21, `-271` §1) — PURE ──────────────────────────────────────────────────
+// ── A person's letter-track state, per RETURN (D4, D20, D21, `-271` §1, `-272` §2, `-273` §1/§2) — PURE ───────────
+// ⭐ Since Story 6.19c (Task 0a): the rows and letters are the person's across EVERY `family` / `direction` run of the
+// live return (⛔ never one run's) — a switch back to "the family must act" restarts the CLOCK, ⛔ not the letter track
+// (`-272`). The facts about a NUMBER (the found-dead day, "a delivered letter stops reminders") stay per CURRENT number
+// (`-271` §1); the two-letter cap is per PERSON and epoch-blind (`-273` §2 — the writer counts it). ⚠ Rows are ordered
+// by TIME (`sent_on`, then `created_at`) — ⛔ never `slot_day`, which means a different day in each run.
 
-/** A person's `family_sms` rows in one run, as the state evaluator needs them. */
+/** A person's `family_sms` rows across the live return's family / direction runs, as the state evaluator needs them. */
 export interface PersonReminderRow {
   readonly slotDay: number;
   readonly sentOn: string;
@@ -662,7 +667,7 @@ export interface PersonReminderRow {
   readonly createdAt: Date;
 }
 
-/** A person's letters in one run. */
+/** A person's letters across the live return's family / direction runs. */
 export interface PersonLetterRow {
   readonly sequence: number;
   readonly postedOn: string;
@@ -704,22 +709,32 @@ export function isEvidentialReminderRow(r: Pick<PersonReminderRow, 'outcome' | '
 }
 
 /**
- * ⭐ A person's per-run state, from their rows and letters. The state is PER NUMBER (AC3): whenever a 6.20
- * correction changes the number behind the person's key, their found-dead marker and their "a delivered letter stops
- * reminders" stop RESET — a new number is reached afresh, ⛔ never silenced by the old number's history.
- * `currentNumberHash`: `undefined` = unknown (the version did ⛔ not change, so the latest row's hash stands);
- * a value (or `null` for "⛔ no sendable number") = the person's current number, compared with the latest row's.
- * ⚠ A correction that keeps the SAME number changes ⛔ nothing. Only EVIDENTIAL rows count
- * (`isEvidentialReminderRow` — a hash-less `error` defines ⛔ no epoch). Rows may come in any order. Pure.
+ * Order two reminder rows by TIME — the IST date they were sent for, then their insert — ⛔ never by `slot_day` (a run's
+ * own day number: rows of two runs of one return are ⛔ comparable by it, S-T4). Pure.
+ */
+export function compareReminderRowsByTime(
+  a: Pick<PersonReminderRow, 'sentOn' | 'createdAt'>,
+  b: Pick<PersonReminderRow, 'sentOn' | 'createdAt'>,
+): number {
+  return a.sentOn < b.sentOn ? -1 : a.sentOn > b.sentOn ? 1 : a.createdAt.getTime() - b.createdAt.getTime();
+}
+
+/**
+ * ⭐ A person's letter-track state across the live return, from their rows and letters (`-272` §2). The state is PER
+ * NUMBER (AC3): whenever a 6.20 correction changes the number behind the person's key, their found-dead marker and
+ * their "a delivered letter stops reminders" stop RESET — a new number is reached afresh, ⛔ never silenced by the old
+ * number's history. `currentNumberHash`: `undefined` = unknown (the version did ⛔ not change, so the latest row's hash
+ * stands); a value (or `null` for "⛔ no sendable number") = the person's current number, compared with the latest
+ * row's. ⚠ A correction that keeps the SAME number changes ⛔ nothing. Only EVIDENTIAL rows count
+ * (`isEvidentialReminderRow` — a hash-less `error` defines ⛔ no epoch). Rows may come in any order, from any run of the
+ * return: they are ordered by TIME (`compareReminderRowsByTime`), ⛔ never by slot. Pure.
  */
 export function evaluatePersonRunState(
   rows: readonly PersonReminderRow[],
   letters: readonly PersonLetterRow[],
   currentNumberHash?: string | null,
 ): PersonRunState {
-  const attempted = [...rows]
-    .filter(isEvidentialReminderRow)
-    .sort((a, b) => a.slotDay - b.slotDay || a.createdAt.getTime() - b.createdAt.getTime());
+  const attempted = [...rows].filter(isEvidentialReminderRow).sort(compareReminderRowsByTime);
   // The current epoch: the rows since the last change of number hash.
   let start = 0;
   for (let i = 1; i < attempted.length; i += 1) {
@@ -736,9 +751,11 @@ export function evaluatePersonRunState(
     : letters.filter((l) => epochStart === null || l.createdAt.getTime() >= epochStart.getTime());
 
   const dead = epoch.find((r) => DEAD_OUTCOMES.has(r.outcome));
+  // By insert (⛔ by `sequence`: before `-273` §2 a sequence restarted per run, so two letters of one return could
+  // both be 1).
   const delivered = epochLetters
     .filter((l) => l.deliveredOn !== null)
-    .sort((a, b) => a.sequence - b.sequence);
+    .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
   return {
     foundDeadOn: dead?.sentOn ?? null,
     deadKind: dead === undefined ? null : dead.outcome === 'rejected_invalid_number' ? 'dead' : 'unreachable',

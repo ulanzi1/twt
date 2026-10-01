@@ -98,6 +98,10 @@ const FENCED_FILES = [
   'apps/api/src/modules/claims/claims.correction-escalation.handlers.ts',
   'apps/api/src/modules/claims/claims.correction-closure.handlers.ts',
   'apps/api/src/modules/claims/correction-closure-dto.ts',
+  // The admin render sites: the Super Admin's decision surface (the name check's RECORDED state beside the notes) and the
+  // highlight badge the cycle-freeze card and the District Admin's panel render.
+  'apps/admin/src/modules/correction-closure/EscalationPanel.tsx',
+  'apps/admin/src/modules/correction-closure/ApprovalNameHighlightBadge.tsx',
 ] as const;
 
 /**
@@ -144,7 +148,7 @@ describe('⛔ the no-comparison fence (Trap 1, `-226` cl.5)', () => {
     for (const f of FENCED_FILES) {
       expect(() => read(f), `fenced file missing: ${f}`).not.toThrow();
     }
-    expect(FENCED_FILES.length).toBeGreaterThanOrEqual(32); // Story 6.19c raised it FROM 26 (+1 domain module), then 27 → 32 (the highlight's read + its four wire / route surfaces); Story 6.21a FROM 23 (+3 modules); Story 6.20 FROM 16 (+7)
+    expect(FENCED_FILES.length).toBeGreaterThanOrEqual(34); // Story 6.19c raised it FROM 26 (+1 domain module), then 27 → 32 (the highlight's read + its four wire / route surfaces), then 32 → 34 (its two admin render sites); Story 6.21a FROM 23 (+3 modules); Story 6.20 FROM 16 (+7)
   });
 
   it('⭐⭐ POSITIVE CONTROL — the scanner actually FIRES on a planted violation of every pattern', () => {

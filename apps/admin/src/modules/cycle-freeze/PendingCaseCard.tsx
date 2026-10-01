@@ -24,6 +24,7 @@ import { useState } from 'react';
 
 import { NomineeNameCheckDisclosure } from '../claim-verification/NomineeNameCheckDisclosure.js';
 import { nameDifferenceReasonLabel, verifierConsoleEn } from '../claim-verification/i18n-en.js';
+import { ApprovalNameHighlightBadge } from '../correction-closure/ApprovalNameHighlightBadge.js';
 
 type PendingCase = CycleFreezePendingResponse['ready_to_freeze'][number];
 type Bucket = 'ready_to_freeze' | 'escalated' | 'voted_pending_commit';
@@ -196,6 +197,9 @@ export function PendingCaseCard({
             {case_.name_difference_reasons.map(nameDifferenceReasonLabel).join(', ')}
           </span>
         )}
+        {/* ⭐ Story 6.19c (`-273` §7) — a Super Admin approval made WITHOUT a current passing name check, from the
+            approval record and the check's RECORDED state (⛔ a comparison, ⛔ a name). */}
+        <ApprovalNameHighlightBadge highlight={case_.approval_name_highlight} />
         {case_.concealment_flags.map((f) => (
           <span key={f} className="rounded bg-status-warn-bg px-1.5 py-0.5 text-xs text-status-warn-fg">
             {f}

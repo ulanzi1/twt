@@ -343,9 +343,11 @@ export type ClosureLettersOwedResponse = z.output<typeof ClosureLettersOwedRespo
 
 export const ClosureLetterAddressQuery = z.object({ person_key: CorrectionPersonKey }).strict();
 export const ClosureLetterAddressResponse = z.object({ person_key: CorrectionPersonKey, address: z.string() }).strict();
+export type ClosureLetterAddressResponse = z.output<typeof ClosureLetterAddressResponse>;
 export const ClosureLetterScreenshotResponse = z
   .object({ url: z.string().url(), expires_in_seconds: z.number().int().positive() })
   .strict();
+export type ClosureLetterScreenshotResponse = z.output<typeof ClosureLetterScreenshotResponse>;
 
 export const NoCorrectionNeededResponse = z
   .object({ claim_case_id: z.string().uuid(), record_id: z.string().uuid(), must_act: CorrectionMustAct })
@@ -353,7 +355,14 @@ export const NoCorrectionNeededResponse = z
 export type NoCorrectionNeededResponse = z.output<typeof NoCorrectionNeededResponse>;
 
 export const ClosureDecisionClaimResponse = z
-  .object({ claim_case_id: z.string().uuid(), claim_state: z.string(), closure: CorrectionClosureDto.nullable() })
+  .object({
+    claim_case_id: z.string().uuid(),
+    claim_state: z.string(),
+    closure: CorrectionClosureDto.nullable(),
+    /** The deciding staff member's SNAPSHOTTED display name and the act's instant — the UX-DR44 entry shown at once. */
+    decided_by: z.string(),
+    decided_at: z.string(),
+  })
   .strict();
 export type ClosureDecisionClaimResponse = z.output<typeof ClosureDecisionClaimResponse>;
 

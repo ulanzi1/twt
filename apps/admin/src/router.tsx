@@ -23,6 +23,13 @@ import { NomineeBankMaskingRoute } from './routes/NomineeBankMaskingRoute.js';
 import { GroundInspectionRoute } from './routes/GroundInspectionRoute.js';
 import { HelpdeskOperatorRoute } from './routes/HelpdeskOperatorRoute.js';
 import { CorrectionQueueRoute } from './routes/CorrectionQueueRoute.js';
+import {
+  ClosureLettersRoute,
+  CorrectionClosuresRoute,
+  CorrectionDirectionsRoute,
+  CorrectionEscalationsRoute,
+  EscalationsPickerRoute,
+} from './routes/CorrectionClosureRoutes.js';
 import { NomineeRefusalsRoute } from './routes/NomineeRefusalsRoute.js';
 import { NomineeCorrectionsRoute } from './routes/NomineeCorrectionsRoute.js';
 import { HelpdeskQueueRoute } from './routes/HelpdeskQueueRoute.js';
@@ -247,6 +254,40 @@ const correctionQueueRoute = createRoute({
   }),
 });
 
+// Story 6.19c (AC8c) — the correction CLOSURE's pages: the Pariwar Admin's decisions, the Super Admin's held claims
+// (`?claim=` opens one), the named directee's inbox, the District Admin's closure letters, and the Super Admin's
+// top-level Pariwar picker (a global role — ⛔ never a cross-tenant read).
+const correctionClosuresRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/p/$pariwarId/correction/closures',
+  component: CorrectionClosuresRoute,
+});
+const correctionEscalationsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/p/$pariwarId/correction/escalations',
+  component: CorrectionEscalationsRoute,
+  validateSearch: (search: Record<string, unknown>): { claim?: string } =>
+    typeof search['claim'] === 'string' &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(search['claim'])
+      ? { claim: search['claim'] }
+      : {},
+});
+const correctionDirectionsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/p/$pariwarId/correction/directions',
+  component: CorrectionDirectionsRoute,
+});
+const closureLettersRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/p/$pariwarId/correction/closure-letters',
+  component: ClosureLettersRoute,
+});
+const escalationsPickerRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/correction/escalations',
+  component: EscalationsPickerRoute,
+});
+
 // Story 6.20 (D14) — the Pariwar Admin's `-239` refusal READ surface (a notification, ⛔ never an
 // approval step).
 const nomineeRefusalsRoute = createRoute({
@@ -332,6 +373,11 @@ const routeTree = rootRoute.addChildren([
   groundInspectionRoute,
   verifierConsoleRoute,
   correctionQueueRoute,
+  correctionClosuresRoute,
+  correctionEscalationsRoute,
+  correctionDirectionsRoute,
+  closureLettersRoute,
+  escalationsPickerRoute,
   nomineeRefusalsRoute,
   nomineeCorrectionsRoute,
   cycleFreezeRoute,

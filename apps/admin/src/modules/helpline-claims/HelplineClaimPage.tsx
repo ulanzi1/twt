@@ -40,6 +40,7 @@ import { HelplineClaimContact } from './HelplineClaimContact.js';
 import { HelplineConsoleShell, type HelplineIntakeResult } from './HelplineConsoleShell.js';
 import { HelplineNomineeCorrection } from './HelplineNomineeCorrection.js';
 import { readBackScript, resolveEn } from './i18n-en.js';
+import { RefileConfirmationCard } from '../correction-closure/RefileConfirmationCard.js';
 
 function messageOf(err: unknown): string | undefined {
   if (err instanceof ApiError) return err.message;
@@ -48,6 +49,8 @@ function messageOf(err: unknown): string | undefined {
 }
 
 const STEP_UP_CONTEXT = 'claim_file';
+/** Story 6.19c — the intake's 409 when the death's last claim was closed for no response (D19). */
+const REFILE_REQUIRES_CONFIRMATION_CODE = 'claim.refile_requires_confirmation';
 const NAME_FALLBACK = 'the member';
 
 export interface HelplineClaimPageProps {
@@ -72,6 +75,9 @@ export function HelplineClaimPage({ pariwarId }: HelplineClaimPageProps): ReactE
   const [stepUpRequired, setStepUpRequired] = useState(false);
   const [otp, setOtp] = useState('');
   const [escalated, setEscalated] = useState(false);
+  // ⭐ Story 6.19c (AC15, D19) — the death's last claim was closed for no response: the intake 409s with the CLOSED
+  // claim's id, and the re-file confirmation card records against it.
+  const [refileClaimId, setRefileClaimId] = useState<string | null>(null);
 
   const results: readonly MemberSearchResultItem[] = useMemo(
     () => search.data?.results ?? [],
@@ -92,6 +98,7 @@ export function HelplineClaimPage({ pariwarId }: HelplineClaimPageProps): ReactE
     setStepUpRequired(false);
     setOtp('');
     setEscalated(false);
+    setRefileClaimId(null);
     requestStepUp.reset();
     verifyStepUp.reset();
   };
@@ -156,6 +163,10 @@ export function HelplineClaimPage({ pariwarId }: HelplineClaimPageProps): ReactE
           // A step-up-required 403 is the SIGNAL to elevate — not a hard error (AC4).
           if (err instanceof ApiError && err.code === 'auth.step_up_required') {
             setStepUpRequired(true);
+          }
+          if (err instanceof ApiError && err.code === REFILE_REQUIRES_CONFIRMATION_CODE) {
+            const closed = (err.details as { closed_claim_case_id?: unknown } | undefined)?.closed_claim_case_id;
+            if (typeof closed === 'string') setRefileClaimId(closed);
           }
         },
       },
@@ -321,6 +332,9 @@ export function HelplineClaimPage({ pariwarId }: HelplineClaimPageProps): ReactE
 
   return (
     <>
+      {refileClaimId !== null ? (
+        <RefileConfirmationCard pariwarId={pariwarId} closedClaimCaseId={refileClaimId} />
+      ) : null}
       <HelplineConsoleShell
         lookupSlot={lookupSlot}
         selected={selected}

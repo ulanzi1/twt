@@ -870,6 +870,165 @@ export function useRecordCorrectionLetterDelivery(pariwarId: string, claimCaseId
   });
 }
 
+// ── Story 6.19c — the correction CLOSURE. Every write refreshes every queue it can move (the District Admin's
+// correction queue, the Pariwar Admin's closure queue, the Super Admin's held claims, the inbox, the letters owed) and
+// the cycle-freeze list (a decision moves the claim there). `onSettled` RETURNS the invalidation (6.19b's lesson: the
+// buttons stay disabled until the fresh rows are on screen).
+
+export const closureQueueKey = (pariwarId: string) => ['correction-closure-queue', pariwarId] as const;
+export const escalatedClosuresKey = (pariwarId: string) => ['correction-escalations', pariwarId] as const;
+export const escalatedClosureKey = (pariwarId: string, claimCaseId: string) =>
+  ['correction-escalation', pariwarId, claimCaseId] as const;
+export const directionInboxKey = (pariwarId: string) => ['correction-direction-inbox', pariwarId] as const;
+export const closureLettersOwedKey = (pariwarId: string) => ['correction-closure-letters', pariwarId] as const;
+
+function useInvalidateClosureViews(pariwarId: string) {
+  const qc = useQueryClient();
+  return () =>
+    Promise.all([
+      qc.invalidateQueries({ queryKey: claimsUnderCorrectionKey(pariwarId) }),
+      qc.invalidateQueries({ queryKey: closureQueueKey(pariwarId) }),
+      qc.invalidateQueries({ queryKey: escalatedClosuresKey(pariwarId) }),
+      qc.invalidateQueries({ queryKey: ['correction-escalation', pariwarId] }),
+      qc.invalidateQueries({ queryKey: directionInboxKey(pariwarId) }),
+      qc.invalidateQueries({ queryKey: closureLettersOwedKey(pariwarId) }),
+      qc.invalidateQueries({ queryKey: ['cycle-freeze-pending', pariwarId] }),
+    ]);
+}
+
+export function useRequestCorrectionClosure(pariwarId: string, claimCaseId: string) {
+  const invalidate = useInvalidateClosureViews(pariwarId);
+  return useMutation({
+    mutationFn: (note: string) => api.requestCorrectionClosure(pariwarId, claimCaseId, note),
+    onSettled: invalidate,
+  });
+}
+
+export function useRecordNoCorrectionNeeded(pariwarId: string, claimCaseId: string) {
+  const invalidate = useInvalidateClosureViews(pariwarId);
+  return useMutation({
+    mutationFn: (note: string) => api.recordNoCorrectionNeeded(pariwarId, claimCaseId, note),
+    onSettled: invalidate,
+  });
+}
+
+/** The Pariwar Admin's closure decisions (key (3)) — a work queue, refetched freely (staff notes only, ⛔ names). */
+export function useClosureQueue(pariwarId: string) {
+  return useQuery({ queryKey: closureQueueKey(pariwarId), queryFn: () => api.getClosureQueue(pariwarId) });
+}
+
+export function useDecideCorrectionClosure(pariwarId: string) {
+  const invalidate = useInvalidateClosureViews(pariwarId);
+  return useMutation({
+    mutationFn: (v: { claimCaseId: string; body: Parameters<typeof api.decideCorrectionClosure>[2] }) =>
+      api.decideCorrectionClosure(pariwarId, v.claimCaseId, v.body),
+    onSettled: invalidate,
+  });
+}
+
+export function useApproveNoCorrectionNeeded(pariwarId: string) {
+  const invalidate = useInvalidateClosureViews(pariwarId);
+  return useMutation({
+    mutationFn: (claimCaseId: string) => api.approveNoCorrectionNeeded(pariwarId, claimCaseId),
+    onSettled: invalidate,
+  });
+}
+
+export function useKeepNoCorrectionNeeded(pariwarId: string) {
+  const invalidate = useInvalidateClosureViews(pariwarId);
+  return useMutation({
+    mutationFn: (v: { claimCaseId: string; body: Parameters<typeof api.keepNoCorrectionNeeded>[2] }) =>
+      api.keepNoCorrectionNeeded(pariwarId, v.claimCaseId, v.body),
+    onSettled: invalidate,
+  });
+}
+
+/** The Super Admin's held claims (key (5)). */
+export function useEscalatedClosures(pariwarId: string) {
+  return useQuery({ queryKey: escalatedClosuresKey(pariwarId), queryFn: () => api.getEscalatedClosures(pariwarId) });
+}
+
+/**
+ * ONE held claim's decision surface (key (5)). It decrypts staff NOTES (⛔ names) and writes an audit line per read —
+ * ⛔ refetched on window focus (an audit line must mean a human looked), the name-check read's precedent.
+ */
+export function useEscalatedClosure(pariwarId: string, claimCaseId: string | null) {
+  return useQuery({
+    queryKey: escalatedClosureKey(pariwarId, claimCaseId ?? ''),
+    queryFn: () => api.getEscalatedClosure(pariwarId, claimCaseId!),
+    enabled: claimCaseId !== null,
+    refetchOnWindowFocus: false,
+  });
+}
+
+export function usePlaceClosureUnderReview(pariwarId: string, claimCaseId: string) {
+  const invalidate = useInvalidateClosureViews(pariwarId);
+  return useMutation({
+    mutationFn: (note: string) => api.placeClosureUnderReview(pariwarId, claimCaseId, note),
+    onSettled: invalidate,
+  });
+}
+
+export function useRecordClosureDirection(pariwarId: string, claimCaseId: string) {
+  const invalidate = useInvalidateClosureViews(pariwarId);
+  return useMutation({
+    mutationFn: (body: Parameters<typeof api.recordClosureDirection>[2]) => api.recordClosureDirection(pariwarId, claimCaseId, body),
+    onSettled: invalidate,
+  });
+}
+
+export function useDecideEscalatedClosure(pariwarId: string, claimCaseId: string) {
+  const invalidate = useInvalidateClosureViews(pariwarId);
+  return useMutation({
+    mutationFn: (body: Parameters<typeof api.decideEscalatedClosure>[2]) => api.decideEscalatedClosure(pariwarId, claimCaseId, body),
+    onSettled: invalidate,
+  });
+}
+
+/** The caller's own unanswered directions (D18). */
+export function useDirectionInbox(pariwarId: string) {
+  return useQuery({ queryKey: directionInboxKey(pariwarId), queryFn: () => api.getDirectionInbox(pariwarId) });
+}
+
+export function useRespondToClosureDirection(pariwarId: string) {
+  const invalidate = useInvalidateClosureViews(pariwarId);
+  return useMutation({
+    mutationFn: (v: { claimCaseId: string; directionId: string; response: string }) =>
+      api.respondToClosureDirection(pariwarId, v.claimCaseId, v.directionId, v.response),
+    onSettled: invalidate,
+  });
+}
+
+/** The closure letters owed (`-274` 2, key (1)). */
+export function useClosureLettersOwed(pariwarId: string) {
+  return useQuery({ queryKey: closureLettersOwedKey(pariwarId), queryFn: () => api.getClosureLettersOwed(pariwarId) });
+}
+
+export function useRecordClosureLetter(pariwarId: string, claimCaseId: string) {
+  const invalidate = useInvalidateClosureViews(pariwarId);
+  return useMutation({
+    mutationFn: (body: Parameters<typeof api.recordClosureLetter>[2]) => api.recordClosureLetter(pariwarId, claimCaseId, body),
+    onSettled: invalidate,
+  });
+}
+
+export function useRecordClosureLetterDelivery(pariwarId: string, claimCaseId: string) {
+  const invalidate = useInvalidateClosureViews(pariwarId);
+  return useMutation({
+    mutationFn: (v: { letterId: string; deliveredOn: string; file: File }) =>
+      api.recordClosureLetterDelivery(pariwarId, claimCaseId, v.letterId, v.deliveredOn, v.file),
+    onSettled: invalidate,
+  });
+}
+
+/** (6) The helpline's re-file confirmation. */
+export function useRecordRefileConfirmation(pariwarId: string) {
+  return useMutation({
+    mutationFn: (v: { closedClaimCaseId: string; note: string }) =>
+      api.recordRefileConfirmation(pariwarId, v.closedClaimCaseId, v.note),
+  });
+}
+
 export function usePostNomineeNameCheck(pariwarId: string, claimCaseId: string) {
   const qc = useQueryClient();
   return useMutation({

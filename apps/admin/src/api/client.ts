@@ -259,6 +259,24 @@ import {
   CorrectionLetterScreenshotResponse,
   type ChangeCorrectionMustActRequest,
   type RecordCorrectionLetterRequest,
+  ClosureDecisionClaimResponse,
+  ClosureDirectionResponse,
+  ClosureLetterAddressResponse,
+  ClosureLetterDto,
+  ClosureLetterScreenshotResponse,
+  ClosureLettersOwedResponse,
+  CorrectionClosureDto,
+  DirectionInboxResponse,
+  EscalatedClosureDetailResponse,
+  EscalatedClosuresResponse,
+  NoCorrectionNeededResponse,
+  PariwarClosureQueueResponse,
+  RefileConfirmationResponse,
+  type ClosureDirectionRequest,
+  type CorrectionClosureDecisionRequest,
+  type EscalatedClosureDecisionRequest,
+  type NoCorrectionNeededKeepRequest,
+  type RecordClosureLetterRequest,
   NomineeBankStatusResponse,
   NomineeNameCheckResponse,
   NomineeNameCheckWriteResponse,
@@ -1466,6 +1484,143 @@ export function getCorrectionLetterScreenshot(pariwarId: string, claimCaseId: st
   return apiFetch(
     `${correctionBase(pariwarId, claimCaseId)}/letters/${encodeURIComponent(letterId)}/screenshot`,
     CorrectionLetterScreenshotResponse,
+  );
+}
+
+// ── Story 6.19c — the correction CLOSURE (keys (1)–(6), (8); D27 under cycle.freeze) ───────────────────────────────
+// The server is the boundary for every write and decides who may act; the client carries ⛔ no actor identity. The
+// closure letter's ADDRESS read needs a fresh step-up (`closure_letter_address`).
+
+export const CLOSURE_LETTER_ADDRESS_STEP_UP_CONTEXT = 'closure_letter_address';
+
+const pariwarCorrectionBase = (pariwarId: string): string => `/api/v1/p/${encodeURIComponent(pariwarId)}/admin/correction`;
+const post = (body: unknown): RequestInit => ({ method: 'POST', body: JSON.stringify(body) });
+
+/** (2) The District Admin asks for a closure for no response, with a note. */
+export function requestCorrectionClosure(pariwarId: string, claimCaseId: string, note: string) {
+  return apiFetch(`${correctionBase(pariwarId, claimCaseId)}/closure/request`, CorrectionClosureDto, post({ note }));
+}
+
+/** (3) The Pariwar Admin approves (the claim is closed) or declines with a note (the claim goes to the Super Admin). */
+export function decideCorrectionClosure(pariwarId: string, claimCaseId: string, body: CorrectionClosureDecisionRequest) {
+  return apiFetch(`${correctionBase(pariwarId, claimCaseId)}/closure/decision`, ClosureDecisionClaimResponse, post(body));
+}
+
+/** (3) The Pariwar Admin's closure decisions: pending requests and "no correction needed" records. */
+export function getClosureQueue(pariwarId: string) {
+  return apiFetch(`${pariwarCorrectionBase(pariwarId)}/closure-queue?limit=200`, PariwarClosureQueueResponse);
+}
+
+/** (8) The District Admin records "no correction needed", with a note. */
+export function recordNoCorrectionNeeded(pariwarId: string, claimCaseId: string, note: string) {
+  return apiFetch(`${correctionBase(pariwarId, claimCaseId)}/no-correction-needed`, NoCorrectionNeededResponse, post({ note }));
+}
+
+/** D27 — the Pariwar Admin approves a "no correction needed" claim (the full approval gate). */
+export function approveNoCorrectionNeeded(pariwarId: string, claimCaseId: string) {
+  return apiFetch(`${correctionBase(pariwarId, claimCaseId)}/no-correction-needed/approve`, ClosureDecisionClaimResponse, post({}));
+}
+
+/** `-260` G2 — the Pariwar Admin keeps it sent back, stating who must act, with a note. */
+export function keepNoCorrectionNeeded(pariwarId: string, claimCaseId: string, body: NoCorrectionNeededKeepRequest) {
+  return apiFetch(`${correctionBase(pariwarId, claimCaseId)}/no-correction-needed/keep`, ChangeCorrectionMustActResponse, post(body));
+}
+
+/** (1) The closure letters owed (`-274` 2) — the caller's districts only. */
+export function getClosureLettersOwed(pariwarId: string) {
+  return apiFetch(`${pariwarCorrectionBase(pariwarId)}/closure-letters?limit=200`, ClosureLettersOwedResponse);
+}
+
+export function recordClosureLetter(pariwarId: string, claimCaseId: string, body: RecordClosureLetterRequest) {
+  return apiFetch(`${correctionBase(pariwarId, claimCaseId)}/closure-letters`, ClosureLetterDto, post(body));
+}
+
+export async function recordClosureLetterDelivery(
+  pariwarId: string,
+  claimCaseId: string,
+  letterId: string,
+  deliveredOn: string,
+  file: File,
+): Promise<z.output<typeof ClosureLetterDto>> {
+  const form = new FormData();
+  form.append('delivered_on', deliveredOn);
+  form.append('file', file);
+  const res = await fetch(`${correctionBase(pariwarId, claimCaseId)}/closure-letters/${encodeURIComponent(letterId)}/delivery`, {
+    method: 'POST',
+    credentials: 'include',
+    body: form,
+  });
+  if (!res.ok) {
+    let code = `http.${res.status}`;
+    let message = res.statusText || 'Upload did not go through';
+    try {
+      const b = (await res.json()) as ErrorEnvelope;
+      if (b.error?.code) code = b.error.code;
+      if (b.error?.message) message = b.error.message;
+    } catch {
+      // keep defaults
+    }
+    throw new ApiError(res.status, code, message);
+  }
+  return ClosureLetterDto.parse(await res.json());
+}
+
+export function getClosureLetterAddress(pariwarId: string, claimCaseId: string, personKey: string) {
+  return apiFetch(
+    `${correctionBase(pariwarId, claimCaseId)}/closure-letters/address?person_key=${encodeURIComponent(personKey)}`,
+    ClosureLetterAddressResponse,
+  );
+}
+
+export function getClosureLetterScreenshot(pariwarId: string, claimCaseId: string, letterId: string) {
+  return apiFetch(
+    `${correctionBase(pariwarId, claimCaseId)}/closure-letters/${encodeURIComponent(letterId)}/screenshot`,
+    ClosureLetterScreenshotResponse,
+  );
+}
+
+/** (5) The Super Admin's held claims in this Pariwar (both origins). */
+export function getEscalatedClosures(pariwarId: string) {
+  return apiFetch(`${pariwarCorrectionBase(pariwarId)}/escalations?limit=200`, EscalatedClosuresResponse);
+}
+
+/** (5) One held claim for the decision surface. */
+export function getEscalatedClosure(pariwarId: string, claimCaseId: string) {
+  return apiFetch(`${correctionBase(pariwarId, claimCaseId)}/escalation`, EscalatedClosureDetailResponse);
+}
+
+export function placeClosureUnderReview(pariwarId: string, claimCaseId: string, note: string) {
+  return apiFetch(`${correctionBase(pariwarId, claimCaseId)}/escalation/review`, CorrectionClosureDto, post({ note }));
+}
+
+export function recordClosureDirection(pariwarId: string, claimCaseId: string, body: ClosureDirectionRequest) {
+  return apiFetch(`${correctionBase(pariwarId, claimCaseId)}/escalation/directions`, ClosureDirectionResponse, post(body));
+}
+
+/** (4) The Super Admin closes, refuses or approves. */
+export function decideEscalatedClosure(pariwarId: string, claimCaseId: string, body: EscalatedClosureDecisionRequest) {
+  return apiFetch(`${correctionBase(pariwarId, claimCaseId)}/escalation/decision`, ClosureDecisionClaimResponse, post(body));
+}
+
+/** The caller's own unanswered directions (D18). */
+export function getDirectionInbox(pariwarId: string) {
+  return apiFetch(`${pariwarCorrectionBase(pariwarId)}/directions/mine?limit=200`, DirectionInboxResponse);
+}
+
+export function respondToClosureDirection(pariwarId: string, claimCaseId: string, directionId: string, response: string) {
+  return apiFetch(
+    `${correctionBase(pariwarId, claimCaseId)}/directions/${encodeURIComponent(directionId)}/response`,
+    ClosureDirectionResponse,
+    post({ response }),
+  );
+}
+
+/** (6) A re-file confirmation after a closure for no response (D19). */
+export function recordRefileConfirmation(pariwarId: string, closedClaimCaseId: string, note: string) {
+  return apiFetch(
+    `/api/v1/p/${encodeURIComponent(pariwarId)}/admin/claims/${encodeURIComponent(closedClaimCaseId)}/refile-confirmation`,
+    RefileConfirmationResponse,
+    post({ note }),
   );
 }
 

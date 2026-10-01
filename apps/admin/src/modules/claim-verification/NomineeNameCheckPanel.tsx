@@ -23,6 +23,7 @@ import type {
 } from '@twt/contracts';
 
 import { nameDifferenceReasonLabel, verifierConsoleEn as t } from './i18n-en.js';
+import { ApprovalNameHighlightBadge } from '../correction-closure/ApprovalNameHighlightBadge.js';
 
 export interface NomineeNameCheckSubmit {
   nominee_declaration_token: string;
@@ -178,6 +179,8 @@ export function NomineeNameCheckPanel(props: NomineeNameCheckPanelProps): React.
     <section aria-label={t.nameCheck.heading} data-testid="name-check-panel" className="space-y-4">
       <h3 className="font-semibold">{t.nameCheck.heading}</h3>
       <p className="text-sm text-slate-600">{t.nameCheck.intro}</p>
+      {/* ⭐ Story 6.19c (`-273` §7) — shown to the District Admin too (all three roles). */}
+      <ApprovalNameHighlightBadge highlight={data.approval_name_highlight} />
 
       {/* ⭐ AC11 — the Pariwar Admin RETURNED this claim. Shown FIRST, because it is the instruction
           the District Admin came here to act on (`-227` cl.10: contact the claimant, get it

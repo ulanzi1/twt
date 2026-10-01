@@ -27,8 +27,8 @@ import type {
   ClosureLettersOwedResponse,
   CorrectionClosureDecisionRequest,
   CorrectionClosureDto,
-  CorrectionLetterAddressResponse,
-  CorrectionLetterScreenshotResponse,
+  ClosureLetterAddressResponse,
+  ClosureLetterScreenshotResponse,
   NoCorrectionNeededKeepRequest,
   NoCorrectionNeededRequest,
   NoCorrectionNeededResponse,
@@ -431,7 +431,13 @@ export function createCorrectionClosureHandlers(deps: AppDeps) {
         },
       );
       void reply.status(201);
-      return { claim_case_id: ctx.claimCaseIdStr, claim_state: claimState, closure: toClosureDto(result!.closure, null) };
+      return {
+        claim_case_id: ctx.claimCaseIdStr,
+        claim_state: claimState,
+        closure: toClosureDto(result!.closure, null),
+        decided_by: actorDisplay,
+        decided_at: base.now.toISOString(),
+      };
     },
 
     /** GET …/admin/correction/closure-queue — key (3): the pending requests and the live D27 records, notes decrypted. */
@@ -544,7 +550,13 @@ export function createCorrectionClosureHandlers(deps: AppDeps) {
         ended_run: result!.endedRun,
       });
       void reply.status(201);
-      return { claim_case_id: ctx.claimCaseIdStr, claim_state: result!.chain.claimState, closure: null };
+      return {
+        claim_case_id: ctx.claimCaseIdStr,
+        claim_state: result!.chain.claimState,
+        closure: null,
+        decided_by: actorDisplay,
+        decided_at: deps.clock().toISOString(),
+      };
     },
 
     /** POST …/correction/no-correction-needed/keep — `cycle.freeze`: `-260` G2, stating who must act, with a note. */
@@ -744,7 +756,7 @@ export function createCorrectionClosureHandlers(deps: AppDeps) {
     },
 
     /** GET …/correction/closure-letters/address?person_key= — key (1) + step-up; one audit line per reveal. */
-    async readClosureLetterAddress(request: FastifyRequest, reply: FastifyReply): Promise<CorrectionLetterAddressResponse> {
+    async readClosureLetterAddress(request: FastifyRequest, reply: FastifyReply): Promise<ClosureLetterAddressResponse> {
       const ctx = contextOf(request);
       const { person_key: personKey } = request.query as { person_key: string };
       void reply.header('cache-control', 'no-store');
@@ -760,7 +772,7 @@ export function createCorrectionClosureHandlers(deps: AppDeps) {
     },
 
     /** GET …/correction/closure-letters/:letterId/screenshot — key (1); a TTL-limited signed URL. */
-    async readClosureLetterScreenshot(request: FastifyRequest, reply: FastifyReply): Promise<CorrectionLetterScreenshotResponse> {
+    async readClosureLetterScreenshot(request: FastifyRequest, reply: FastifyReply): Promise<ClosureLetterScreenshotResponse> {
       const ctx = contextOf(request);
       const letterId = (request.params as { letterId: string }).letterId.toLowerCase();
       void reply.header('cache-control', 'no-store');

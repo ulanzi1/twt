@@ -277,6 +277,8 @@ export function createCorrectionEscalationHandlers(deps: AppDeps) {
         claim_state: result!.chain?.claimState ?? detail.currentState,
         // `-273` §7 — from the written row, through the ONE rule the reads use.
         closure: toClosureDto(result!.closure, claim.approvalNameHighlightOf(result!.closure)),
+        decided_by: actorDisplay,
+        decided_at: base.now.toISOString(),
       };
     },
 

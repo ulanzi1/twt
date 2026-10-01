@@ -4,17 +4,23 @@
 // and ⭐ AC9b — a planted tracking number, screenshot marker and address appear in ⛔ no audit line, ⛔ no error body
 // and ⛔ no request-log line (the test app CAPTURES the Fastify logger's output for that leg).
 // ⚠ Dates are RELATIVE to today (IST): the routes refuse a letter date later than today, and the writer refuses a
-// posting before the run's day 0 — so each seeded run is back-dated (`RUN_AGE_DAYS`) to leave room for a past letter.
+// posting before the live RETURN's IST date (J5) — so each seeded claim's WHOLE correction timeline (the accounts, the
+// name check, the return, its mark, the run's day 0) is back-dated `RUN_AGE_DAYS`, in order, to leave room for a past
+// letter (⛔ never a run older than its own return — the impossible state the fourth review pass found).
+// ⚠ "Future" dates are TWO days ahead (⛔ one): `today` is computed before the request, so a one-day lead could be
+// "today" again across IST midnight.
 
 import { randomUUID } from 'node:crypto';
 import { Writable } from 'node:stream';
 
 import { CLAIM_DOCUMENT_MAX_BYTES } from '@twt/contracts';
 import { claim, cycleCalendar, ids } from '@twt/domain';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import * as service from '../../../src/modules/auth/admin/admin-auth.service.js';
+import { CLAIM_STATE_TRUSTEE_DECISION_FIELD_CLASS } from '../../../src/context.js';
 import { encryptClaimContactField } from '../../../src/modules/claims/claim-contact-crypto.js';
+import { encryptTrusteeRationale } from '../../../src/modules/claims/state-trustee-decision-crypto.js';
 import { closeScopeTx, openScopeTx } from '../../../src/modules/multi-tenant/scope-tx.js';
 import { seedNomineeNameCheck } from '../_nominee-name-check-fixture.js';
 import { createTestApp, hasDatabase, makeClient, teardown, type TestApp } from '../_setup.js';
@@ -114,9 +120,29 @@ describe.skipIf(!hasDatabase)('the correction chase — District Admin routes (S
     expect((await client.inject({ method: 'POST', url: '/api/v1/auth/step-up/verify', payload: { otp: code } })).statusCode).toBe(200);
   }
 
-  /** A returned, family-marked claim whose one nominee is letter-eligible (`no_target` on day 1), with a REAL address.
-   * The family run's day 0 is back-dated `RUN_AGE_DAYS` (returned as `day0`). */
-  async function returnedClaim(pariwarId: string, opts: { eligible?: boolean; mark?: boolean } = {}) {
+  /**
+   * ⭐ AC9b — the request-log lines written since `from`, read a TICK after the response: Fastify writes the
+   * "request completed" line from the response's own hooks, which may land after `inject` resolves.
+   */
+  async function logsSince(from: number): Promise<string> {
+    await new Promise(setImmediate);
+    return logLines.slice(from).join('\n');
+  }
+
+  /**
+   * A returned, family-marked claim whose one nominee is letter-eligible (`no_target` on day 1), with a REAL address.
+   * The WHOLE timeline is back-dated `RUN_AGE_DAYS` (see the header); `day0` (returned) is the run's day 0 = the
+   * return's IST date.
+   *   · `rationale` — the return's note as a REAL Tier-1 envelope (default: an undecryptable placeholder).
+   *   · `versionStamped` (default true) — the `no_target` row names the version it reached (`recipient_version_id`),
+   *     as the child's row does, so the letter precondition has ⛔ no reason to hash the number. `false` leaves it
+   *     null ⇒ the number "may have moved" ⇒ it is hashed — and the fixture's mobile is an undecryptable placeholder
+   *     envelope, so the hash FAILS (the J1 fail-closed leg).
+   */
+  async function returnedClaim(
+    pariwarId: string,
+    opts: { eligible?: boolean; mark?: boolean; rationale?: string; versionStamped?: boolean } = {},
+  ) {
     const cid = ids.claimId(randomUUID());
     const mid = ids.memberId(randomUUID());
     const pid = ids.pariwarId(pariwarId);
@@ -150,13 +176,15 @@ describe.skipIf(!hasDatabase)('the correction chase — District Admin routes (S
     const address = await encryptClaimContactField(SENTINEL.address, pariwarId, t.deps.encryption);
     await t.pool.query('UPDATE claim_contact_nominees SET address_ciphertext = $2 WHERE claim_case_id = $1', [cid, address]);
 
+    const rationaleCiphertext =
+      opts.rationale === undefined ? 'enc:v1:note' : await encryptTrusteeRationale(opts.rationale, pariwarId, t.deps.encryption);
     scopeTx = await openScopeTx(t.deps, pariwarId);
     let personKey = '';
+    let versionId: string | null = null;
     let runId: string | null = null;
-    const day0 = daysFromToday(-RUN_AGE_DAYS);
     try {
       await claim.returnToDistrictAdmin(scopeTx.client, {
-        claimCaseId: cid, pariwarId: pid, reasonCode: 'other', rationaleCiphertext: 'enc:v1:note',
+        claimCaseId: cid, pariwarId: pid, reasonCode: 'other', rationaleCiphertext,
         actorId: randomUUID(), actorDisplay: 'Pariwar Admin One', actor: 'trustee',
       });
       if (opts.mark !== false) {
@@ -165,10 +193,13 @@ describe.skipIf(!hasDatabase)('the correction chase — District Admin routes (S
           setByRole: 'pariwar_admin', noteCiphertext: null, isReturnMark: true,
         });
         runId = w.openedRun!.runId;
-        personKey = (await claim.readCorrectionRecipients(scopeTx.tx, pid, cid)).people[0]!.personKey;
+        const person = (await claim.readCorrectionRecipients(scopeTx.tx, pid, cid)).people[0]!;
+        personKey = person.personKey;
+        versionId = person.versionId;
         if (opts.eligible !== false) {
+          // The day-1 slot of the run as it WILL be once back-dated (day 0 = today − RUN_AGE_DAYS).
           await claim.insertFinalCorrectionReminder(scopeTx.tx, {
-            pariwarId: pid, claimCaseId: cid, runId, slotDay: 1, sentOn: cycleCalendar.addCalendarDays(day0, 1), recipientKey: personKey,
+            pariwarId: pid, claimCaseId: cid, runId, slotDay: 1, sentOn: daysFromToday(1 - RUN_AGE_DAYS), recipientKey: personKey,
             purpose: 'family_sms', subjectKey: '', outcome: 'no_target',
           });
         }
@@ -178,9 +209,55 @@ describe.skipIf(!hasDatabase)('the correction chase — District Admin routes (S
       await closeScopeTx(scopeTx, false);
       throw err;
     }
-    // TEST-ONLY back-date (`twt_app` holds ⛔ no UPDATE on `day0`; the suite's pool login does).
-    if (runId !== null) await t.pool.query('UPDATE claim_correction_runs SET day0 = $2::date WHERE run_id = $1', [runId, day0]);
+    await backdateTimeline(String(cid), opts.eligible !== false && opts.versionStamped !== false ? versionId : null);
+    const day0 =
+      runId === null
+        ? daysFromToday(-RUN_AGE_DAYS)
+        : (await t.pool.query<{ day0: string }>('SELECT day0::text AS day0 FROM claim_correction_runs WHERE run_id = $1', [runId])).rows[0]!.day0;
     return { claimCaseId: String(cid), personKey, runId, day0 };
+  }
+
+  /**
+   * TEST-ONLY: move the claim's correction timeline `RUN_AGE_DAYS` into the past — EVERY instant by the same amount,
+   * so the order the real writers produced (accounts → name check → return → mark → run → day-1 row) is kept and the
+   * return's IST date stays the run's day 0. One transaction under `session_replication_role = 'replica'` (the
+   * `events_log` append-only trigger; ⛔ `twt_app` holds no UPDATE on these columns — the suite's pool login does).
+   * `stampVersionId` — the `no_target` row's `recipient_version_id` (see `returnedClaim`).
+   */
+  async function backdateTimeline(claimCaseId: string, stampVersionId: string | null): Promise<void> {
+    const c = await t.pool.connect();
+    const age = `${RUN_AGE_DAYS} days`;
+    try {
+      await c.query('BEGIN');
+      await c.query("SET LOCAL session_replication_role = 'replica'");
+      const accounts = await c.query('UPDATE claim_nominee_bank_accounts SET updated_at = updated_at - $2::interval WHERE claim_case_id = $1', [claimCaseId, age]);
+      expect(accounts.rowCount, 'the seeded accounts moved').toBeGreaterThanOrEqual(1);
+      await c.query(
+        `UPDATE events_log SET occurred_at = occurred_at - $2::interval WHERE stream_id = $1 AND event_type = 'claim.nominee_name_checked'`,
+        [claimCaseId, age],
+      );
+      const ret = await c.query('UPDATE claim_state_trustee_decisions SET decided_at = decided_at - $2::interval WHERE claim_case_id = $1', [claimCaseId, age]);
+      expect(ret.rowCount, 'the return moved').toBe(1);
+      await c.query('UPDATE claim_correction_marks SET set_at = set_at - $2::interval WHERE claim_case_id = $1', [claimCaseId, age]);
+      await c.query(
+        'UPDATE claim_correction_runs SET day0 = day0 - $2::int, opened_at = opened_at - $3::interval WHERE claim_case_id = $1',
+        [claimCaseId, RUN_AGE_DAYS, age],
+      );
+      // The day-1 row was written NOW for a slot 59 days ago — its instants follow its `sent_on`.
+      await c.query(
+        `UPDATE claim_correction_reminders
+            SET created_at = created_at - $2::interval, updated_at = updated_at - $2::interval,
+                recipient_version_id = COALESCE($3::uuid, recipient_version_id)
+          WHERE claim_case_id = $1`,
+        [claimCaseId, `${RUN_AGE_DAYS - 1} days`, stampVersionId],
+      );
+      await c.query('COMMIT');
+    } catch (err) {
+      await c.query('ROLLBACK').catch(() => undefined);
+      throw err;
+    } finally {
+      c.release();
+    }
   }
 
   /** Record a District Admin name check through the REAL writer, over the claim's CURRENT account stamps. */
@@ -378,6 +455,26 @@ describe.skipIf(!hasDatabase)('the correction chase — District Admin routes (S
     expect(third.statusCode).toBe(409);
     expect(errCode(third)).toBe('correction_letter.limit_reached');
 
+    // ⭐ AC9b's failure legs, each CARRYING the sentinel: a payload the schema rejects (400 — the validation error must
+    // ⛔ not echo the field), and a forced 500 (the tracking number's encryption fails — the error line must ⛔ not
+    // carry the request body).
+    const invalid = await da.inject({
+      method: 'POST', url: `${base(pariwarId, claimCaseId)}/letters`,
+      payload: { person_key: personKey, posted_on: 'not-a-date', tracking_number: SENTINEL.tracking },
+    });
+    expect(invalid.statusCode).toBe(400);
+    const kmsFault = vi.spyOn(t.deps.encryption.kms, 'encryptDek').mockRejectedValueOnce(new Error('test: forced KMS failure'));
+    let forced: Awaited<ReturnType<Client['inject']>>;
+    try {
+      forced = await da.inject({
+        method: 'POST', url: `${base(pariwarId, claimCaseId)}/letters`,
+        payload: { person_key: personKey, posted_on: daysFromToday(-1), tracking_number: SENTINEL.tracking },
+      });
+    } finally {
+      kmsFault.mockRestore();
+    }
+    expect(forced.statusCode, forced.body).toBe(500);
+
     const lines = t.auditSink.events.filter((e) => e.resourceLocator === `claim:${claimCaseId.toLowerCase()}`);
     expect(lines.map((e) => e.type)).toEqual(expect.arrayContaining([
       'admin_claim_correction.letter_recorded',
@@ -387,9 +484,10 @@ describe.skipIf(!hasDatabase)('the correction chase — District Admin routes (S
     const deliveryLine = lines.find((e) => e.type === 'admin_claim_correction.letter_delivery_recorded');
     expect(deliveryLine?.context).toMatchObject({ letter_id: letter.letter_id.toLowerCase() });
     // ⭐ AC9b — ⛔ no tracking number and ⛔ no screenshot content in any audit line, error body or request-log line.
-    const logs = logLines.slice(logFrom).join('\n');
+    const logs = await logsSince(logFrom);
     expect(logs, 'non-vacuity: the request logger captured this test\'s requests').toContain('correction/letters');
-    const surfaces = JSON.stringify(t.auditSink.events) + refused.body + third.body + logs;
+    expect(logs, 'non-vacuity: the forced 500 was logged').toContain('test: forced KMS failure');
+    const surfaces = JSON.stringify(t.auditSink.events) + refused.body + third.body + invalid.body + forced.body + logs;
     expect(surfaces).not.toContain(SENTINEL.tracking);
     expect(surfaces).not.toContain(SENTINEL.screenshot);
   });
@@ -405,7 +503,56 @@ describe.skipIf(!hasDatabase)('the correction chase — District Admin routes (S
     expect((await t.pool.query('SELECT 1 FROM claim_correction_letters WHERE claim_case_id = $1', [claimCaseId])).rows).toHaveLength(1);
   });
 
-  it('⛔ key (1) — the letter dates: posted before the run\'s day 0 ⇒ 409 posted_before_run; posted or delivered LATER than today ⇒ 400 date_in_future', async () => {
+  it('⛔ key (1) — `-231` D\'s chronology: a second letter posted BEFORE the first\'s delivery date ⇒ 409 posted_before_first_delivery; ON that date it is accepted', async () => {
+    const pariwarId = randomUUID();
+    const { claimCaseId, personKey } = await returnedClaim(pariwarId);
+    const da = await staff(pariwarId);
+    const first = await postLetter(da, pariwarId, claimCaseId, personKey, daysFromToday(-20));
+    expect((await deliver(da, pariwarId, claimCaseId, first, png(), daysFromToday(-10))).statusCode).toBe(201);
+    const backDated = await da.inject({
+      method: 'POST', url: `${base(pariwarId, claimCaseId)}/letters`,
+      payload: { person_key: personKey, posted_on: daysFromToday(-11), tracking_number: 'T2' },
+    });
+    expect(backDated.statusCode).toBe(409);
+    expect(errCode(backDated)).toBe('correction_letter.posted_before_first_delivery');
+    expect((await t.pool.query('SELECT 1 FROM claim_correction_letters WHERE claim_case_id = $1', [claimCaseId])).rows).toHaveLength(1);
+    // The boundary: posted ON the first letter's delivery date is ⛔ not before it.
+    await postLetter(da, pariwarId, claimCaseId, personKey, daysFromToday(-10), 'T2');
+  });
+
+  it('⛔ keys (1) — J1: the person\'s current number cannot be hashed (an unreadable mobile envelope) ⇒ the letter AND the address are 503 correction_letter.number_unverified (⛔ no row, ⛔ no reveal); the queue still shows the row and logs it', async () => {
+    const pariwarId = randomUUID();
+    const { claimCaseId, personKey } = await returnedClaim(pariwarId, { versionStamped: false });
+    const da = await staff(pariwarId);
+    const logFrom = logLines.length;
+    const rec = await da.inject({
+      method: 'POST', url: `${base(pariwarId, claimCaseId)}/letters`,
+      payload: { person_key: personKey, posted_on: daysFromToday(-5), tracking_number: SENTINEL.tracking },
+    });
+    expect(rec.statusCode, rec.body).toBe(503);
+    expect(errCode(rec)).toBe('correction_letter.number_unverified');
+    expect((await t.pool.query('SELECT 1 FROM claim_correction_letters WHERE claim_case_id = $1', [claimCaseId])).rows).toHaveLength(0);
+
+    await elevate(da, 'correction_letter_address');
+    t.auditSink.events.length = 0;
+    const address = await da.inject({ method: 'GET', url: `${base(pariwarId, claimCaseId)}/letters/address?person_key=${encodeURIComponent(personKey)}` });
+    expect(address.statusCode).toBe(503);
+    expect(errCode(address)).toBe('correction_letter.number_unverified');
+    expect(address.body).not.toContain(SENTINEL.address);
+    expect(t.auditSink.events.filter((e) => e.type === 'admin_claim_correction.letter_address_revealed')).toHaveLength(0);
+
+    // J2 — the queue degrades the ROW, ⛔ never the page: 200, the row listed, one warn line naming the claim alone.
+    const queue = await da.inject({ method: 'GET', url: `/api/v1/p/${pariwarId}/admin/claims/under-correction` });
+    expect(queue.statusCode, queue.body).toBe(200);
+    expect((queue.json() as { items: { claim_case_id: string }[] }).items.map((i) => i.claim_case_id)).toContain(claimCaseId);
+    const logs = await logsSince(logFrom);
+    expect(logs).toContain('current number could not be hashed');
+    expect(logs).toContain(claimCaseId);
+    expect(logs).not.toContain(SENTINEL.tracking);
+    expect(logs).not.toContain(SENTINEL.address);
+  });
+
+  it('⛔ key (1) — the letter dates: posted before the RETURN\'s IST date ⇒ 409 posted_before_run (ON it is accepted); posted or delivered LATER than today ⇒ 400 date_in_future', async () => {
     const pariwarId = randomUUID();
     const { claimCaseId, personKey, day0 } = await returnedClaim(pariwarId);
     const da = await staff(pariwarId);
@@ -417,15 +564,23 @@ describe.skipIf(!hasDatabase)('the correction chase — District Admin routes (S
     expect(errCode(early)).toBe('correction_letter.posted_before_run');
     const future = await da.inject({
       method: 'POST', url: `${base(pariwarId, claimCaseId)}/letters`,
-      payload: { person_key: personKey, posted_on: daysFromToday(1), tracking_number: 'T' },
+      payload: { person_key: personKey, posted_on: daysFromToday(2), tracking_number: 'T' },
     });
     expect(future.statusCode).toBe(400);
     expect(errCode(future)).toBe('correction_letter.date_in_future');
     expect((await t.pool.query('SELECT 1 FROM claim_correction_letters WHERE claim_case_id = $1', [claimCaseId])).rows).toHaveLength(0);
 
-    const letterId = await postLetter(da, pariwarId, claimCaseId, personKey, todayIst());
+    // ⭐ J5 — the floor is the return's IST date (= this run's day 0 here): a letter posted ON it is accepted.
+    const returnedOn = (
+      await t.pool.query<{ d: string }>(
+        `SELECT (decided_at AT TIME ZONE 'Asia/Kolkata')::date::text AS d FROM claim_state_trustee_decisions WHERE claim_case_id = $1`,
+        [claimCaseId],
+      )
+    ).rows[0]!.d;
+    expect(returnedOn, 'the fixture keeps the return and the run on one day').toBe(day0);
+    const letterId = await postLetter(da, pariwarId, claimCaseId, personKey, returnedOn);
     const before = t.claimDocumentStorage.store.size;
-    const futureDelivery = await deliver(da, pariwarId, claimCaseId, letterId, png(), daysFromToday(1));
+    const futureDelivery = await deliver(da, pariwarId, claimCaseId, letterId, png(), daysFromToday(2));
     expect(futureDelivery.statusCode).toBe(400);
     expect(errCode(futureDelivery)).toBe('correction_letter.date_in_future');
     expect(t.claimDocumentStorage.store.size, 'the date is refused BEFORE the bytes are stored').toBe(before);
@@ -502,10 +657,11 @@ describe.skipIf(!hasDatabase)('the correction chase — District Admin routes (S
 
   it('⭐ the Pariwar Admin\'s ESCALATED filter — scans past the caller\'s page, slices to `limit`, and decrypts + audits ONLY the returned rows', async () => {
     const pariwarId = randomUUID();
-    // Oldest → newest: A (escalated), B (escalated), C (⛔ not). The queue is newest-first.
-    const a = await returnedClaim(pariwarId);
-    const b = await returnedClaim(pariwarId);
-    const c = await returnedClaim(pariwarId);
+    // Oldest → newest: A (escalated), B (escalated), C (⛔ not). The queue is newest-first. Each return note is a REAL
+    // envelope, so its decrypt is observable (the KMS unwrap under the trustee-decision field class).
+    const a = await returnedClaim(pariwarId, { rationale: 'return note a' });
+    const b = await returnedClaim(pariwarId, { rationale: 'return note b' });
+    const c = await returnedClaim(pariwarId, { rationale: 'return note c' });
     for (const x of [a, b]) {
       const scopeTx = await openScopeTx(t.deps, pariwarId);
       let ok = false;
@@ -520,15 +676,32 @@ describe.skipIf(!hasDatabase)('the correction chase — District Admin routes (S
       }
     }
     const da = await staff(pariwarId);
+    // ⭐ The note DECRYPTS, counted at the KMS seam: every `decryptTier1` fires `auditHook('decryptDek', …, ctx)` once.
+    const kms = t.deps.encryption.kms;
     const queue = async (qs: string) => {
       t.auditSink.events.length = 0;
-      const res = await da.inject({ method: 'GET', url: `/api/v1/p/${pariwarId}/admin/claims/under-correction${qs}` });
+      let noteDecrypts = 0;
+      const previousHook = kms.auditHook;
+      kms.auditHook = (op, kekRef, ctx) => {
+        if (op === 'decryptDek' && ctx.fieldClass === CLAIM_STATE_TRUSTEE_DECISION_FIELD_CLASS && ctx.pariwarId === pariwarId) noteDecrypts += 1;
+        previousHook?.(op, kekRef, ctx);
+      };
+      let res: Awaited<ReturnType<Client['inject']>>;
+      try {
+        res = await da.inject({ method: 'GET', url: `/api/v1/p/${pariwarId}/admin/claims/under-correction${qs}` });
+      } finally {
+        kms.auditHook = previousHook;
+      }
       expect(res.statusCode, res.body).toBe(200);
-      const items = (res.json() as { items: { claim_case_id: string; correction_chase: { escalated: boolean } }[] }).items;
+      const items = (res.json() as {
+        items: { claim_case_id: string; return_note: { state: string } | null; correction_chase: { escalated: boolean } }[];
+      }).items;
+      // Every returned row's note was READ (non-vacuity for the count below).
+      expect(items.map((i) => i.return_note?.state)).toEqual(items.map(() => 'readable'));
       const noteLines = t.auditSink.events
         .filter((e) => e.type === 'admin_nominee_name_check.queue_note_read')
         .map((e) => e.resourceLocator);
-      return { ids: items.map((i) => i.claim_case_id), items, noteLines };
+      return { ids: items.map((i) => i.claim_case_id), items, noteLines, noteDecrypts };
     };
 
     // The unfiltered page of one is C — the escalations are both OUTSIDE it.
@@ -539,11 +712,16 @@ describe.skipIf(!hasDatabase)('the correction chase — District Admin routes (S
     expect(one.items[0]!.correction_chase.escalated).toBe(true);
     // ⛔ ONE note line — for the row returned, ⛔ not for A (filtered out by the page) or C (by the filter).
     expect(one.noteLines).toEqual([`claim:${b.claimCaseId.toLowerCase()}`]);
+    // ⛔ ONE note decrypt — the scan's filtered-out rows are ⛔ never decrypted.
+    expect(one.noteDecrypts).toBe(1);
     const both = await queue('?escalated=true');
     expect(both.ids).toEqual([b.claimCaseId, a.claimCaseId]);
     expect([...both.noteLines].sort()).toEqual([`claim:${a.claimCaseId.toLowerCase()}`, `claim:${b.claimCaseId.toLowerCase()}`].sort());
-    // Unfiltered, every row is returned — and every row's note is audited.
-    expect((await queue('')).noteLines).toHaveLength(3);
+    expect(both.noteDecrypts).toBe(2);
+    // Unfiltered, every row is returned — and every row's note is decrypted once and audited.
+    const all = await queue('');
+    expect(all.noteLines).toHaveLength(3);
+    expect(all.noteDecrypts).toBe(3);
   });
 
   it('⭐ key (1) + STEP-UP — the letter form\'s address: 403 without the step-up; with it, the plaintext (no-store), and ONE audit line PER reveal', async () => {
@@ -569,19 +747,22 @@ describe.skipIf(!hasDatabase)('the correction chase — District Admin routes (S
     expect(reveals[0]!.resourceLocator).toBe(`claim:${claimCaseId.toLowerCase()}`);
     // ⭐ AC9b — the address is in ⛔ no audit line and ⛔ no request-log line.
     expect(JSON.stringify(t.auditSink.events)).not.toContain(SENTINEL.address);
-    const logs = logLines.slice(logFrom).join('\n');
+    const logs = await logsSince(logFrom);
     expect(logs, 'non-vacuity: the request logger captured the reveals').toContain('letters/address');
     expect(logs).not.toContain(SENTINEL.address);
   });
 
-  it('⭐ AC9b — the must-act note is in ⛔ no request-log line', async () => {
+  it('⭐ AC9b — the must-act note is in ⛔ no request-log line and ⛔ no error body (an accepted change AND a payload the schema rejects)', async () => {
     const pariwarId = randomUUID();
     const { claimCaseId } = await returnedClaim(pariwarId);
     const da = await staff(pariwarId);
     const logFrom = logLines.length;
     const res = await da.inject({ method: 'POST', url: `${base(pariwarId, claimCaseId)}/must-act`, payload: { must_act: 'staff', note: SENTINEL.note } });
     expect(res.statusCode).toBe(201);
-    const logs = logLines.slice(logFrom).join('\n');
+    const invalid = await da.inject({ method: 'POST', url: `${base(pariwarId, claimCaseId)}/must-act`, payload: { must_act: 'nobody', note: SENTINEL.note } });
+    expect(invalid.statusCode).toBe(400);
+    expect(invalid.body).not.toContain('zqxw');
+    const logs = await logsSince(logFrom);
     expect(logs).toContain('correction/must-act');
     expect(logs).not.toContain('zqxw');
   });

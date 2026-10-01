@@ -39,12 +39,45 @@ describe.skipIf(!hasDatabase)('State-Trustee cycle-freeze surface — E2E (:5433
   let app: Awaited<ReturnType<typeof buildServer>>;
   const createdUserIds: string[] = [];
 
+  /** The atomicity test's fault-injection objects share this prefix (see the `beforeAll` sweep). */
+  const FAIL_MARK_PREFIX = 'twt_test_fail_mark_';
+
+  /**
+   * TEST-ONLY DDL on the SHARED `claim_correction_marks` (`CREATE/DROP TRIGGER` takes a SHARE ROW EXCLUSIVE / ACCESS
+   * EXCLUSIVE lock): on its own connection with a `lock_timeout`, so a busy table fails this test FAST instead of
+   * queueing every other suite's writes behind it.
+   */
+  async function ddl(sql: string): Promise<void> {
+    const c = await td.pool.connect();
+    try {
+      await c.query("SET lock_timeout = '5s'");
+      await c.query(sql);
+    } finally {
+      await c.query('RESET lock_timeout').catch(() => undefined);
+      c.release();
+    }
+  }
+
   beforeAll(async () => {
     fakeWebauthn = new FakeWebAuthnProvider();
     td = buildTestDeps({ webauthn: fakeWebauthn });
     deps = td.deps;
     adminStepUp = td.adminStepUpDelivery;
     app = await buildServer(deps);
+    // ⭐ Sweep a fault-injection trigger / function a crashed earlier run LEAKED (its `finally` never ran): a leaked
+    // trigger only fails its own claim's mark, but it holds the shared table's DDL history hostage and accumulates.
+    const leakedTriggers = await td.pool.query<{ tgname: string }>(
+      `SELECT tgname FROM pg_trigger
+        WHERE tgrelid = 'claim_correction_marks'::regclass AND NOT tgisinternal AND starts_with(tgname, $1)`,
+      [FAIL_MARK_PREFIX],
+    );
+    for (const { tgname } of leakedTriggers.rows) await ddl(`DROP TRIGGER IF EXISTS ${tgname} ON claim_correction_marks`);
+    const leakedFunctions = await td.pool.query<{ proname: string }>(
+      `SELECT p.proname FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+        WHERE n.nspname = current_schema() AND starts_with(p.proname, $1)`,
+      [FAIL_MARK_PREFIX],
+    );
+    for (const { proname } of leakedFunctions.rows) await ddl(`DROP FUNCTION IF EXISTS ${proname}()`);
   });
 
   afterAll(async () => {
@@ -800,8 +833,9 @@ describe.skipIf(!hasDatabase)('State-Trustee cycle-freeze surface — E2E (:5433
       // TEST-ONLY fault injection: a trigger that fails the mark INSERT for THIS claim alone (every other suite's
       // claim passes through untouched), dropped in `finally`. The return row is written FIRST in the same handler,
       // so a return row surviving here would mean the two writes were ⛔ not one transaction.
-      const fn = `twt_test_fail_mark_${randomUUID().replace(/-/g, '')}`;
-      await td.pool.query(
+      // ⚠ The DDL runs with a `lock_timeout` (`ddl`), and a trigger a crashed run leaks is swept in `beforeAll`.
+      const fn = `${FAIL_MARK_PREFIX}${randomUUID().replace(/-/g, '')}`;
+      await ddl(
         `CREATE FUNCTION ${fn}() RETURNS trigger LANGUAGE plpgsql AS $fn$
          BEGIN
            IF NEW.claim_case_id = '${claimCaseId}'::uuid THEN RAISE EXCEPTION 'test: the mark write fails'; END IF;
@@ -810,7 +844,7 @@ describe.skipIf(!hasDatabase)('State-Trustee cycle-freeze surface — E2E (:5433
       );
       let status: number;
       try {
-        await td.pool.query(`CREATE TRIGGER ${fn} BEFORE INSERT ON claim_correction_marks FOR EACH ROW EXECUTE FUNCTION ${fn}()`);
+        await ddl(`CREATE TRIGGER ${fn} BEFORE INSERT ON claim_correction_marks FOR EACH ROW EXECUTE FUNCTION ${fn}()`);
         const res = await pa.client.inject({
           method: 'POST',
           url: decisionUrl(pariwarId),
@@ -824,8 +858,8 @@ describe.skipIf(!hasDatabase)('State-Trustee cycle-freeze surface — E2E (:5433
         });
         status = res.statusCode;
       } finally {
-        await td.pool.query(`DROP TRIGGER IF EXISTS ${fn} ON claim_correction_marks`);
-        await td.pool.query(`DROP FUNCTION IF EXISTS ${fn}()`);
+        await ddl(`DROP TRIGGER IF EXISTS ${fn} ON claim_correction_marks`);
+        await ddl(`DROP FUNCTION IF EXISTS ${fn}()`);
       }
       expect(status).toBe(500);
       expect(await trusteeDecisionCount(claimCaseId), 'the return rolled back with its mark').toBe(0);

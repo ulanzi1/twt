@@ -83,7 +83,9 @@ export const RecordCorrectionLetterRequest = z
   .object({
     person_key: CorrectionPersonKey,
     /** ⛔ Later than today (IST) is the route's 400 `correction_letter.date_in_future` (it needs a clock); before the
-     *  run's day 0 is the writer's 409 `correction_letter.posted_before_run`. The same upper bound holds for `delivered_on`. */
+     *  live return's IST date is the writer's 409 `correction_letter.posted_before_run`, and a second letter posted
+     *  before the first letter's delivery date is its 409 `correction_letter.posted_before_first_delivery`. The same
+     *  upper bound holds for `delivered_on`. */
     posted_on: IsoDate,
     tracking_number: z
       .string()

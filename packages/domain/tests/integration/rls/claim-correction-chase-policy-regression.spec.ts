@@ -173,7 +173,7 @@ describe.skipIf(!hasDatabase)('the correction chase — migrations 0126–0130 +
     it(`FORCE RLS: ${table} has rowsecurity AND forcerowsecurity`, async () => {
       const { client } = getTx();
       const { rows } = await client.query<{ relrowsecurity: boolean; relforcerowsecurity: boolean }>(
-        `SELECT relrowsecurity, relforcerowsecurity FROM pg_class WHERE relname = $1`,
+        `SELECT relrowsecurity, relforcerowsecurity FROM pg_class WHERE relname = $1 AND relnamespace = (SELECT oid FROM pg_namespace WHERE nspname = current_schema())`,
         [table],
       );
       expect(rows).toHaveLength(1);
@@ -184,12 +184,19 @@ describe.skipIf(!hasDatabase)('the correction chase — migrations 0126–0130 +
       const { client } = getTx();
       const seeded = await seedChase(client, PARIWAR_A);
       await enterAppScope(client, PARIWAR_A);
-      await expectPgError(client, () => client.query(`DELETE FROM ${table} WHERE claim_case_id = $1`, [seeded.claimCaseId]), '42501');
+      await expectPgError(client, () => client.query(`DELETE FROM ${table} WHERE claim_case_id = $1`, [seeded.claimCaseId]), {
+        code: '42501',
+        message: expect.stringMatching(/permission denied/),
+      });
     });
 
     it(`the policies are per-command — ⛔ no FOR ALL and ⛔ no DELETE policy on ${table}`, async () => {
       const { client } = getTx();
-      const { rows } = await client.query<{ cmd: string }>(`SELECT cmd FROM pg_policies WHERE tablename = $1`, [table]);
+      const { rows } = await client.query<{ cmd: string }>(
+        `SELECT cmd FROM pg_policies WHERE schemaname = current_schema() AND tablename = $1`,
+        [table],
+      );
+      expect(rows.length).toBeGreaterThan(0); // ⛔ an empty list would pass every `not.toContain` below
       const cmds = rows.map((r) => r.cmd).sort();
       expect(cmds).not.toContain('ALL');
       expect(cmds).not.toContain('DELETE');
@@ -230,7 +237,7 @@ describe.skipIf(!hasDatabase)('the correction chase — migrations 0126–0130 +
           message: expect.stringMatching(/permission denied/),
         });
         const { rows } = await client.query<{ qual: string | null; with_check: string | null }>(
-          `SELECT qual, with_check FROM pg_policies WHERE tablename = $1 AND cmd = 'UPDATE'`,
+          `SELECT qual, with_check FROM pg_policies WHERE schemaname = current_schema() AND tablename = $1 AND cmd = 'UPDATE'`,
           [table],
         );
         expect(rows).toHaveLength(1);
@@ -243,16 +250,21 @@ describe.skipIf(!hasDatabase)('the correction chase — migrations 0126–0130 +
   it('the only deletion is the ON DELETE cascade from claims — all four tables follow the claim', async () => {
     const { client } = getTx();
     const s = await seedChase(client, PARIWAR_A);
+    const counts = async () =>
+      (
+        await client.query(
+          `SELECT (SELECT count(*) FROM claim_correction_marks WHERE claim_case_id = $1)::int AS m,
+                  (SELECT count(*) FROM claim_correction_runs WHERE claim_case_id = $1)::int AS r,
+                  (SELECT count(*) FROM claim_correction_reminders WHERE claim_case_id = $1)::int AS rem,
+                  (SELECT count(*) FROM claim_correction_letters WHERE claim_case_id = $1)::int AS l`,
+          [s.claimCaseId],
+        )
+      ).rows[0];
+    // ⭐ The pre-count — every table HAS the claim's row (⛔ a cascade proven against tables that were already empty).
+    expect(await counts()).toEqual({ m: 1, r: 1, rem: 1, l: 1 });
     // As the superuser (the fixture owner) — a spec cleanup / a hard delete of the claim itself.
     await client.query(`DELETE FROM claims WHERE claim_case_id = $1`, [s.claimCaseId]);
-    const left = await client.query(
-      `SELECT (SELECT count(*) FROM claim_correction_marks WHERE claim_case_id = $1)::int AS m,
-              (SELECT count(*) FROM claim_correction_runs WHERE claim_case_id = $1)::int AS r,
-              (SELECT count(*) FROM claim_correction_reminders WHERE claim_case_id = $1)::int AS rem,
-              (SELECT count(*) FROM claim_correction_letters WHERE claim_case_id = $1)::int AS l`,
-      [s.claimCaseId],
-    );
-    expect(left.rows[0]).toEqual({ m: 0, r: 0, rem: 0, l: 0 });
+    expect(await counts()).toEqual({ m: 0, r: 0, rem: 0, l: 0 });
   });
 
   // ── FKs (23503) — one violation per test, each by its constraint name ─────────────────────────────────────────
@@ -291,15 +303,23 @@ describe.skipIf(!hasDatabase)('the correction chase — migrations 0126–0130 +
     const { client } = getTx();
     const s = await seedChase(client, PARIWAR_A);
     await enterAppScope(client, PARIWAR_A);
-    await expectPgError(client, () => client.query(`UPDATE claim_correction_marks SET must_act = 'staff' WHERE mark_id = $1`, [s.markId]), '42501');
+    for (const col of ['mark_id', 'must_act', 'note_ciphertext']) {
+      await expectPgError(client, () => client.query(`UPDATE claim_correction_marks SET ${col} = ${col} WHERE mark_id = $1`, [s.markId]), {
+        code: '42501',
+        message: expect.stringMatching(/permission denied/),
+      });
+    }
   });
 
   it('⭐ a run\'s UPDATE is narrowed to ENDING it — its identity, kind and day 0 are ⛔ never rewritten', async () => {
     const { client } = getTx();
     const s = await seedChase(client, PARIWAR_A);
     await enterAppScope(client, PARIWAR_A);
-    for (const col of ['kind', 'day0', 'claim_case_id', 'pariwar_id', 'return_decision_id', 'anchor_id', 'opened_at']) {
-      await expectPgError(client, () => client.query(`UPDATE claim_correction_runs SET ${col} = ${col} WHERE run_id = $1`, [s.runId]), '42501');
+    for (const col of ['run_id', 'kind', 'day0', 'claim_case_id', 'pariwar_id', 'return_decision_id', 'anchor_id', 'opened_at']) {
+      await expectPgError(client, () => client.query(`UPDATE claim_correction_runs SET ${col} = ${col} WHERE run_id = $1`, [s.runId]), {
+        code: '42501',
+        message: expect.stringMatching(/permission denied/),
+      });
     }
     const ended = await client.query(`UPDATE claim_correction_runs SET ended_at = now(), end_reason = 'decided' WHERE run_id = $1`, [s.runId]);
     expect(ended.rowCount).toBe(1);
@@ -310,7 +330,7 @@ describe.skipIf(!hasDatabase)('the correction chase — migrations 0126–0130 +
     const s = await seedChase(client, PARIWAR_A);
     await enterAppScope(client, PARIWAR_A);
     // ⭐ `delivered_at` is ⛔ not granted: no delivery signal exists in v1 (T1), so ⛔ no app path can claim one.
-    for (const col of ['run_id', 'claim_case_id', 'pariwar_id', 'slot_day', 'sent_on', 'recipient_key', 'purpose', 'subject_key', 'late', 'delivered_at', 'created_at']) {
+    for (const col of ['reminder_id', 'run_id', 'claim_case_id', 'pariwar_id', 'slot_day', 'sent_on', 'recipient_key', 'purpose', 'subject_key', 'late', 'delivered_at', 'created_at']) {
       await expectPgError(client, () => client.query(`UPDATE claim_correction_reminders SET ${col} = ${col} WHERE reminder_id = $1`, [s.reminderId]), {
         code: '42501',
         message: expect.stringMatching(/permission denied/),
@@ -331,7 +351,7 @@ describe.skipIf(!hasDatabase)('the correction chase — migrations 0126–0130 +
     const { client } = getTx();
     const s = await seedChase(client, PARIWAR_A);
     await enterAppScope(client, PARIWAR_A);
-    for (const col of ['run_id', 'claim_case_id', 'pariwar_id', 'person_key', 'sequence', 'posted_on', 'tracking_number_ciphertext', 'recorded_by_actor', 'recorded_by_display', 'created_at']) {
+    for (const col of ['letter_id', 'run_id', 'claim_case_id', 'pariwar_id', 'person_key', 'sequence', 'posted_on', 'tracking_number_ciphertext', 'recorded_by_actor', 'recorded_by_display', 'created_at']) {
       await expectPgError(client, () => client.query(`UPDATE claim_correction_letters SET ${col} = ${col} WHERE letter_id = $1`, [s.letterId]), {
         code: '42501',
         message: expect.stringMatching(/permission denied/),
@@ -466,6 +486,8 @@ describe.skipIf(!hasDatabase)('the correction chase — migrations 0126–0130 +
       readonly bad: Record<string, unknown>;
       /** The nearest override that is ACCEPTED. */
       readonly good: Record<string, unknown>;
+      /** Run before the positive leg (as the superuser), when the seed itself stands in its way. */
+      readonly prepare?: (client: Client, s: Seeded) => Promise<unknown>;
       readonly constraint: string;
     }
     const cases: readonly CheckCase[] = [
@@ -491,7 +513,16 @@ describe.skipIf(!hasDatabase)('the correction chase — migrations 0126–0130 +
         constraint: 'claim_correction_runs_end_reason_check',
       },
       { title: 'an ended run has a reason (ended_at without end_reason)', table: 'claim_correction_runs', bad: { end_reason: null }, good: { end_reason: 'decided' }, constraint: 'claim_correction_runs_ended_pair_check' },
-      { title: 'an open run has ⛔ no reason (end_reason without ended_at)', table: 'claim_correction_runs', bad: { ended_at: null }, good: { end_reason: 'mark_changed' }, constraint: 'claim_correction_runs_ended_pair_check' },
+      {
+        title: 'an open run has ⛔ no reason (end_reason without ended_at); a TRUE open run (both null) is accepted',
+        table: 'claim_correction_runs',
+        bad: { ended_at: null },
+        good: { ended_at: null, end_reason: null },
+        // ⭐ The seeded run is OPEN — end it first, so the positive leg's open run is ⛔ refused by the one-open-run
+        // UNIQUE instead of being accepted by the CHECK under test.
+        prepare: (client, s) => client.query(`UPDATE claim_correction_runs SET ended_at = now(), end_reason = 'superseded' WHERE run_id = $1`, [s.runId]),
+        constraint: 'claim_correction_runs_ended_pair_check',
+      },
       // reminders
       { title: 'purpose is checked', table: 'claim_correction_reminders', bad: { purpose: 'sms' }, good: { purpose: 'replacement_reminder' }, constraint: 'claim_correction_reminders_purpose_check' },
       { title: '`delivered` is ⛔ not an outcome (T1)', table: 'claim_correction_reminders', bad: { outcome: 'delivered' }, good: { outcome: 'rejected_unreachable' }, constraint: 'claim_correction_reminders_outcome_check' },
@@ -545,6 +576,7 @@ describe.skipIf(!hasDatabase)('the correction chase — migrations 0126–0130 +
         const { client } = getTx();
         const s = await seedChase(client, PARIWAR_A);
         await expectPgError(client, () => insertRow(client, c.table, { ...validRow[c.table](s), ...c.bad }), CHECK(c.constraint));
+        await c.prepare?.(client, s);
         expect((await insertRow(client, c.table, { ...validRow[c.table](s), ...c.good })).rowCount).toBe(1);
       });
     }

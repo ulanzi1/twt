@@ -5,19 +5,24 @@
 //                          refuses when there is ⛔ no live return (409 `must_act.no_live_return`) and writes under the
 //                          trustee lock, so the change cannot race a second return onto a superseded `decision_id`.
 //   · recordLetter       — key (1): a POSTED letter to a letter-eligible person (D31's own precondition; ≤ 2 per person
-//                          per run; the second only after the first's delivery, `-231` D). The tracking number is
-//                          encrypted HERE, before the writer.
+//                          per run; the second only after the first's delivery AND posted on/after that delivery date,
+//                          `-231` D). The tracking number is encrypted HERE, before the writer. ⚠ When the person's
+//                          CURRENT number could not be hashed (a KMS / envelope fault) the precondition fails CLOSED:
+//                          503 `correction_letter.number_unverified` (retryable), on this route AND the address reveal.
 //   · recordDelivery     — key (1): the delivery date + ONE screenshot (multipart). MIME and size are checked BEFORE
-//                          the port's `put`; put-then-persist, the orphan deleted best-effort on ANY failure before
-//                          the commit (opening the scope tx included). A delivery later than 14 days is ACCEPTED
-//                          (flagged overdue by the read) — ⛔ never refused.
+//                          the port's `put`; put-then-persist, the orphan deleted best-effort on any failure THROWN
+//                          before the commit (opening the scope tx included). ⚠ ⛔ NOT a failed COMMIT itself:
+//                          `closeScopeTx` swallows a COMMIT failure, so the route then returns 201, writes the audit
+//                          line and leaves the screenshot orphaned — a pre-existing project-wide pattern, DEFERRED
+//                          (`deferred-work.md`, 6.19b fourth pass), ⛔ not fixed here. A delivery later than 14 days
+//                          is ACCEPTED (flagged overdue by the read) — ⛔ never refused.
 //                          ⚠ ⛔ No virus scan exists (D6) — recorded in `deferred-work.md`, ⛔ not fixed.
 //   · readLetterAddress  — key (1) + STEP-UP: that person's address, ONLY inside the letter form; one audit line per
 //                          reveal; `Cache-Control: no-store`. ⛔ Never under `claim.view_nominee_name_check`.
 //   · readScreenshot     — key (1): a TTL-limited signed read URL; audited; `Cache-Control: no-store`.
 // ⛔ A `posted_on` / `delivered_on` LATER than today (IST) is refused here (400 `correction_letter.date_in_future`),
 // before the writer — a future delivery date would stop the person's reminders today. The lower bounds (⛔ before
-// the run's day 0; a delivery before the posting) are the writer's.
+// the live return's IST date; ⛔ before the first letter's delivery; a delivery before the posting) are the writer's.
 // Every audit line: `resourceLocator: 'claim:<lower-case uuid>'`, the actor's SNAPSHOTTED display name on the record
 // ([[project_admin_display_name_attribution]]), ⛔ never a tracking number, an address, a note or a screenshot.
 
@@ -45,6 +50,7 @@ import {
   ConflictError,
   NotFoundError,
   PayloadTooLargeError,
+  ServiceUnavailableError,
   UnauthorizedError,
   UnsupportedMediaTypeError,
 } from '../../http-errors.js';
@@ -84,8 +90,18 @@ function contextOf(request: FastifyRequest): ChaseContext {
   };
 }
 
-/** The D31 / D20 refusals as stable 409 codes. */
-function translateLetterError(err: unknown): never {
+/**
+ * The D31 / D20 refusals as stable 4xx codes — and the precondition's fail-CLOSED hash fault as a retryable 503
+ * (`correction_letter.number_unverified`): the person's current number could not be hashed just now, so whether they
+ * are letter-eligible on THAT number is unknown — ⛔ never decided on the old number's history.
+ */
+export function translateLetterError(err: unknown): never {
+  if (err instanceof claim.CorrectionNumberUnverifiedError) {
+    throw new ServiceUnavailableError(
+      "This person's current number could not be checked just now — try again in a minute",
+      'correction_letter.number_unverified',
+    );
+  }
   if (err instanceof claim.CorrectionLetterRefusedError) {
     // ⭐ Exhaustive over `CorrectionLetterRefusal` — a compile error, ⛔ not a silent `?? 'default'` forward, is
     // what should happen if the domain ever adds a refusal reason this route doesn't know about yet.
@@ -115,8 +131,14 @@ function translateLetterError(err: unknown): never {
           "The person's first letter has no recorded delivery — a second letter follows the first's delivery",
           'correction_letter.first_not_delivered',
         );
+      case 'posted_before_first_delivery':
+        // `-231` D's chronology — the second letter follows the first's DELIVERY, so it cannot be posted before it.
+        throw new ConflictError(
+          "The posting date is before the person's first letter was delivered",
+          'correction_letter.posted_before_first_delivery',
+        );
       case 'posted_before_run':
-        throw new ConflictError("The posting date is before this reminder run's day 0", 'correction_letter.posted_before_run');
+        throw new ConflictError('The posting date is before the claim was returned for correction', 'correction_letter.posted_before_run');
       default: {
         const unreachable: never = err.refusal;
         throw new ConflictError('The letter cannot be recorded', `correction_letter.${String(unreachable)}`);
@@ -313,8 +335,9 @@ export function createCorrectionChaseHandlers(deps: AppDeps) {
       }
       refuseFutureDate(deliveredOn, today());
 
-      // D6 — the port, its OWN key prefix. put-then-persist; the orphan is deleted best-effort on ANY failure before the
-      // commit — ⭐ `openScopeTx` runs INSIDE the `try`, so a pool / BEGIN failure cleans up too.
+      // D6 — the port, its OWN key prefix. put-then-persist; the orphan is deleted best-effort on any failure THROWN before
+      // the commit — ⭐ `openScopeTx` runs INSIDE the `try`, so a pool / BEGIN failure cleans up too. ⚠ A failed COMMIT is
+      // ⛔ not one of them: `closeScopeTx` swallows it (deferred, see the header).
       const storageKey = `pariwar/${ctx.pariwarIdStr}/claim/${ctx.claimCaseIdStr}/correction-letter/${letterId}/${randomUUID()}`;
       await deps.claimDocumentStorage.put(storageKey, new Uint8Array(buffer), { contentType: data.mimetype });
       let scopeTx: Awaited<ReturnType<typeof openScopeTx>> | undefined;

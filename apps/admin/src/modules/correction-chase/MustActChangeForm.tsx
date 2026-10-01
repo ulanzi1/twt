@@ -4,12 +4,14 @@
 // with 409 `must_act.unchanged` anyway). A switch to "the family must act" starts the family's 90 days THAT day
 // (`-258` detail 1); a switch to "staff" stops the family's reminders at once. The server is the boundary.
 // ⚠ Shown to every queue reader: the page cannot tell whether the session holds key (7) (district-dimension; the
-// session carries only the national grants), so a 403 is mapped to its own "your role cannot" line.
+// session carries only the national grants), so a 403 is mapped to its own "your role cannot" line — through the
+// chase's ONE classifier (`errors.ts`), the same one the letter forms use.
 
-import { useEffect, useState, type FormEvent, type ReactElement } from 'react';
+import { useEffect, useRef, useState, type FormEvent, type ReactElement } from 'react';
 
 import { ApiError } from '../../api/client.js';
 import { useChangeCorrectionMustAct } from '../../api/hooks.js';
+import { isRoleForbidden } from './errors.js';
 import { correctionChaseEn as t } from './i18n-en.js';
 
 export interface MustActChangeFormProps {
@@ -23,6 +25,8 @@ export function MustActChangeForm({ pariwarId, claimCaseId, current }: MustActCh
   const [choice, setChoice] = useState<'' | 'family' | 'staff'>('');
   const [note, setNote] = useState('');
   const [problem, setProblem] = useState<string | null>(null);
+  // ⭐ The in-flight GUARD is a ref — two submits in one tick both read the render-time `isPending === false`.
+  const submittingRef = useRef(false);
 
   const options = (['family', 'staff'] as const).filter((o) => o !== current);
 
@@ -33,42 +37,41 @@ export function MustActChangeForm({ pariwarId, claimCaseId, current }: MustActCh
     setChoice((c) => (c === current ? '' : c));
   }, [current]);
 
-  function submit(e: FormEvent): void {
+  async function submit(e: FormEvent): Promise<void> {
     e.preventDefault();
+    if (submittingRef.current) return;
     setProblem(null);
     if (choice === '') return;
     if (note.trim() === '') {
       setProblem(t.mustAct.noteRequired);
       return;
     }
-    change.mutate(
-      { must_act: choice, note: note.trim() },
-      {
-        onSuccess: () => {
-          setChoice('');
-          setNote('');
-        },
-        onError: (err) => {
-          const code = err instanceof ApiError ? err.code : '';
-          // ⭐ A 403 is the ROLE (the page cannot see key (7) — the session carries only national grants), ⛔ never
-          // "could not be saved. Try again." — a retry that can never succeed.
-          const forbidden = err instanceof ApiError && err.status === 403;
-          setProblem(
-            code === 'must_act.unchanged'
-              ? t.mustAct.unchanged
-              : code === 'must_act.no_live_return'
-                ? t.mustAct.noLiveReturn
-                : forbidden
-                  ? t.mustAct.forbidden
-                  : t.mustAct.error,
-          );
-        },
-      },
-    );
+    submittingRef.current = true;
+    try {
+      await change.mutateAsync({ must_act: choice, note: note.trim() });
+      setChoice('');
+      setNote('');
+    } catch (err) {
+      const code = err instanceof ApiError ? err.code : '';
+      // ⭐ A 403 is the ROLE (the page cannot see key (7) — the session carries only national grants), ⛔ never
+      // "could not be saved. Try again." — a retry that can never succeed.
+      const forbidden = isRoleForbidden(err);
+      setProblem(
+        code === 'must_act.unchanged'
+          ? t.mustAct.unchanged
+          : code === 'must_act.no_live_return'
+            ? t.mustAct.noLiveReturn
+            : forbidden
+              ? t.mustAct.forbidden
+              : t.mustAct.error,
+      );
+    } finally {
+      submittingRef.current = false;
+    }
   }
 
   return (
-    <form onSubmit={submit} className="mt-2 flex flex-col gap-2 text-xs" data-testid={`must-act-form-${claimCaseId}`}>
+    <form onSubmit={(e) => void submit(e)} className="mt-2 flex flex-col gap-2 text-xs" data-testid={`must-act-form-${claimCaseId}`}>
       <fieldset className="flex flex-wrap items-center gap-3">
         <legend className="opacity-70">{t.mustAct.change}</legend>
         {options.map((o) => (

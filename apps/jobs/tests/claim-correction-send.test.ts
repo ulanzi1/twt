@@ -2,8 +2,10 @@
 // record" / "send safety"; `2026-09-29-269` §4/§5; T13). Mocked deps (⛔ no DB).
 //   · a missing DLT template id, an unset helpline number, an unconfigured gateway ⇒ `error` + alarm — ⛔ never a
 //     fixture `accepted`, ⛔ never a placeholder number;
-//   · a Secret Manager OUTAGE (`UNAVAILABLE` / `DEADLINE_EXCEEDED`) ⇒ transient (retry); any OTHER Secret Manager fault
-//     ⇒ FINAL `error` + alarm (`config:secret_manager_<code>`); a send TIMEOUT ⇒ transient (`api_unavailable:timeout`);
+//   · a KNOWN Secret Manager config fault (`INVALID_ARGUMENT`, `PERMISSION_DENIED`, `FAILED_PRECONDITION`,
+//     `UNIMPLEMENTED`, `UNAUTHENTICATED`) ⇒ FINAL `error` + alarm (`config:secret_manager_<code>`); ANY other fault (an
+//     outage, a quota spike, a socket error, a wrapped `cause`, ⛔ no code) ⇒ transient (retry); a send TIMEOUT ⇒
+//     transient (`api_unavailable:timeout`);
 //   · `invalid_number` → `rejected_invalid_number`; `carrier_reject` → `rejected_unreachable` (letter-eligible, ⛔ no
 //     alarm); `dlt_template_not_approved` / `auth` / `unknown` → `error` + alarm, FINAL; `rate_limited` /
 //     `api_unavailable` → transient.
@@ -82,8 +84,14 @@ describe('sendClaimCorrectionSms — fail CLOSED (T13)', () => {
   it.each([
     ['UNAVAILABLE', 14],
     ['DEADLINE_EXCEEDED', 4],
+    ['RESOURCE_EXHAUSTED (a quota spike)', 8],
+    ['ABORTED', 10],
+    ['INTERNAL', 13],
+    ['CANCELLED', 1],
+    ['UNKNOWN', 2],
     ['a raw socket reset', 'ECONNRESET'],
-  ])('a Secret Manager OUTAGE (%s) ⇒ transient (retry)', async (_label, code) => {
+    ['a DNS failure', 'ENOTFOUND'],
+  ])('a Secret Manager fault that is ⛔ not a config fault (%s) ⇒ transient (retry)', async (_label, code) => {
     const c = client(() => Promise.resolve('gw'));
     const r = await sendClaimCorrectionSms({ smsAppClient: c, resolveConfig: () => Promise.reject(grpcError(code)) }, input);
     expect(r).toEqual({ kind: 'transient', detail: 'config_unavailable:secret_manager' });
@@ -94,6 +102,8 @@ describe('sendClaimCorrectionSms — fail CLOSED (T13)', () => {
     [7, 'config:secret_manager_permission_denied'],
     [3, 'config:secret_manager_invalid_argument'],
     [16, 'config:secret_manager_unauthenticated'],
+    [9, 'config:secret_manager_failed_precondition'],
+    [12, 'config:secret_manager_unimplemented'],
   ])('⛔ a Secret Manager CONFIG fault (gRPC %s) ⇒ FINAL error + alarm, ⛔ never a silent retry', async (code, detail) => {
     const c = client(() => Promise.resolve('gw'));
     const r = await sendClaimCorrectionSms({ smsAppClient: c, resolveConfig: () => Promise.reject(grpcError(code)) }, input);
@@ -101,13 +111,21 @@ describe('sendClaimCorrectionSms — fail CLOSED (T13)', () => {
     expect(c.sent).toEqual([]);
   });
 
-  it('⛔ a Secret Manager failure with ⛔ no code (a missing project, an empty payload) ⇒ FINAL error + alarm', async () => {
+  it('a Secret Manager failure with ⛔ no code (a missing project, an empty payload) ⇒ transient — ⛔ never a FINAL that cancels the slot (the next sweep\'s finaliser alarms one that never clears)', async () => {
     const c = client(() => Promise.resolve('gw'));
     const r = await sendClaimCorrectionSms(
       { smsAppClient: c, resolveConfig: () => Promise.reject(new Error('GOOGLE_CLOUD_PROJECT is not set')) },
       input,
     );
-    expect(r).toMatchObject({ kind: 'final', outcome: 'error', detail: 'config:secret_manager_unknown', alarm: true });
+    expect(r).toEqual({ kind: 'transient', detail: 'config_unavailable:secret_manager' });
+    expect(c.sent).toEqual([]);
+  });
+
+  it('⛔ a config fault WRAPPED in a `cause` is still a config fault — FINAL error + alarm', async () => {
+    const c = client(() => Promise.resolve('gw'));
+    const wrapped = new Error('resolve failed', { cause: grpcError(7) });
+    const r = await sendClaimCorrectionSms({ smsAppClient: c, resolveConfig: () => Promise.reject(wrapped) }, input);
+    expect(r).toEqual({ kind: 'final', outcome: 'error', providerMessageId: null, detail: 'config:secret_manager_permission_denied', alarm: true });
   });
 
   it('a send TIMEOUT ⇒ transient `api_unavailable:timeout`', async () => {
@@ -157,23 +175,44 @@ describe('sendClaimCorrectionSms — the provider result mapping (AC3)', () => {
   });
 });
 
-describe('classifySecretManagerFault — only an OUTAGE retries', () => {
+describe('classifySecretManagerFault — FINAL only for a known CONFIG fault', () => {
   it.each([
+    [3, false, 'invalid_argument'],
+    [7, false, 'permission_denied'],
+    [9, false, 'failed_precondition'],
+    [12, false, 'unimplemented'],
+    [16, false, 'unauthenticated'],
     [14, true, 'unavailable'],
     [4, true, 'deadline_exceeded'],
-    [7, false, 'permission_denied'],
-    [3, false, 'invalid_argument'],
-    [99, false, 'grpc_99'],
+    [8, true, 'resource_exhausted'],
+    [10, true, 'aborted'],
+    [13, true, 'internal'],
+    [1, true, 'cancelled'],
+    [2, true, 'unknown'],
+    [99, true, 'grpc_99'],
     ['ETIMEDOUT', true, 'etimedout'],
-    ['EWHATEVER', false, 'unknown'],
-    [undefined, false, 'unknown'],
+    ['ENETUNREACH', true, 'enetunreach'],
+    ['EWHATEVER', true, 'ewhatever'],
+    ['not a code: +91 98…', true, 'unknown'], // a non-label string is ⛔ never echoed into `detail`
+    [undefined, true, 'unknown'],
   ])('code %s ⇒ transient=%s (%s)', (code, transient, label) => {
     expect(classifySecretManagerFault(Object.assign(new Error('x'), { code }))).toEqual({ transient, code: label });
   });
 
-  it('a non-object rejection is a config fault, ⛔ never a crash', () => {
-    expect(classifySecretManagerFault(null)).toEqual({ transient: false, code: 'unknown' });
-    expect(classifySecretManagerFault('boom')).toEqual({ transient: false, code: 'unknown' });
+  it('reads a WRAPPED error\'s `cause.code` when the error itself carries none', () => {
+    expect(classifySecretManagerFault(new Error('x', { cause: Object.assign(new Error('y'), { code: 16 }) }))).toEqual({
+      transient: false,
+      code: 'unauthenticated',
+    });
+    expect(classifySecretManagerFault(new Error('x', { cause: Object.assign(new Error('y'), { code: 'ECONNRESET' }) }))).toEqual({
+      transient: true,
+      code: 'econnreset',
+    });
+  });
+
+  it('a non-object rejection is transient, ⛔ never a crash', () => {
+    expect(classifySecretManagerFault(null)).toEqual({ transient: true, code: 'unknown' });
+    expect(classifySecretManagerFault('boom')).toEqual({ transient: true, code: 'unknown' });
   });
 });
 

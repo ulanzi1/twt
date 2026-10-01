@@ -34,6 +34,8 @@ export const correctionChaseEn = {
     endedOn: 'ended on',
     started: 'started on',
     next: 'next reminder',
+    // An OPEN run past its 90 days (the close is a separate step) — ⛔ never "day 95 of 90".
+    pastDay90: 'past day 90',
     none: 'No reminder run yet.',
   },
   flags: {
@@ -85,6 +87,8 @@ export const correctionChaseEn = {
     stepUpIntro: 'Showing an address needs a fresh verification. We will send you a code.',
     sendCode: 'Send the code',
     codeSent: 'We sent you a code. Enter it below.',
+    resendCode: 'Send a new code',
+    codeResent: 'We sent you a new code. Enter it below.',
     code: 'Code',
     verify: 'Verify and show',
     codeWrong: 'That code is not right, or it has expired. Send a new code and try again.',
@@ -100,6 +104,7 @@ export const correctionChaseEn = {
     deliveredOn: 'Delivery date',
     file: 'Screenshot of the delivery (JPEG, PNG or WebP)',
     saveDelivery: 'Save the delivery',
+    deliveryRecorded: (sequence: number): string => `Delivery recorded for letter #${String(sequence)}.`,
     limit: 'Two letters are already recorded for this person.',
     refusals: {
       not_letter_eligible: 'This person has not been found unreachable — a letter is for someone the text reminders could not reach.',
@@ -110,7 +115,10 @@ export const correctionChaseEn = {
       already_delivered: 'The delivery is already recorded.',
       delivered_before_posted: 'The delivery date is before the posting date.',
       first_not_delivered: 'Record the first letter’s delivery before a second letter — a second letter follows the first one’s delivery.',
-      posted_before_run: 'The posting date is before this claim’s reminders started. Check the date.',
+      posted_before_run: 'The posting date is before this claim was sent back for correction. Check the date.',
+      posted_before_first_delivery:
+        'The second letter’s posting date is before the first letter was delivered. Check the date.',
+      number_unverified: 'We could not check this person’s current number just now. Try again in a minute.',
       date_in_future: 'The date is in the future. Use today’s date or an earlier one.',
       too_large: 'The screenshot is too large. Upload an image of 10 MB or less.',
       unsupported_media_type: 'Upload the screenshot as a JPEG, PNG or WebP image.',

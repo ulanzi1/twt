@@ -11,7 +11,7 @@
 // No PII is persisted to the local draft (only the document-stage marker + claimCaseId live there —
 // the 6.2 discipline); the typed bank fields live in component state until submitted to the server.
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 
 import type { NomineeStatusResponse, RecordNomineeBankRequest } from '@twt/contracts'
 // Story 6.18 (AC12) — the SHARED English-script predicate from `@twt/contracts`.
@@ -155,10 +155,14 @@ export default function NomineeReviewScreen(): React.ReactElement {
   // `accessibilityLiveRegion` is Android-only, so VoiceOver heard nothing when the line replaced the correction line.
   // iOS ONLY (TalkBack already speaks the live region — unguarded, it spoke twice). Once per appearance, ⛔ not per
   // re-read: the effect keys on the boolean. ⚠ `t` is a fresh closure every render (`useT`), so it is read through
-  // a ref — ⛔ never an effect dependency, which would re-announce on every render.
+  // a ref — ⛔ never an effect dependency, which would re-announce on every render. ⭐ The ref is written in a LAYOUT
+  // effect, ⛔ never during render (a render may be discarded; layout effects run before this commit's effects, so the
+  // announcement below still reads the current `t`).
   const showBeingChecked = correctionNeeded && beingChecked
   const tRef = useRef(t)
-  tRef.current = t
+  useLayoutEffect(() => {
+    tRef.current = t
+  })
   useEffect(() => {
     if (showBeingChecked && Platform.OS === 'ios') {
       AccessibilityInfo.announceForAccessibility(tRef.current('nominee.bank.being_checked'))

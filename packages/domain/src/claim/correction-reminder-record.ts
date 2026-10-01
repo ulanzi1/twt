@@ -248,6 +248,38 @@ export async function finaliseCorrectionReminder(
 }
 
 /**
+ * ⭐ EXPIRE THIS JOB'S OWN `attempting` ROW — the stale child's path (a retry that crossed an IST midnight: today's
+ * sweep owns today, so the slot is ⛔ never sent late). Compare-and-set on `outcome = 'attempting' AND claimed_by_job =
+ * jobId`: → `error` (FINAL — the same terminal the sweep's exhausted-row finaliser writes), the transient detail kept
+ * in `first_detail` (`COALESCE(first_detail, detail)` reads the row's OLD `detail` — an `api_unavailable` that may have
+ * been sent stays on record), `detail` = the caller's reason. ⛔ Never `skipped_superseded` (that would claim "⛔ not
+ * sent" and hide an ambiguous send). Returns whether the row moved; the caller ALARMS (ids only).
+ */
+export async function expireOwnCorrectionReminder(
+  db: Db,
+  input: { readonly pariwarId: PariwarId; readonly reminderId: string; readonly jobId: string; readonly detail: string },
+): Promise<boolean> {
+  const rows = await db
+    .update(claimCorrectionReminders)
+    .set({
+      outcome: 'error',
+      firstDetail: sql`COALESCE(${claimCorrectionReminders.firstDetail}, ${claimCorrectionReminders.detail})`,
+      detail: input.detail,
+      updatedAt: sql`clock_timestamp()`,
+    })
+    .where(
+      and(
+        eq(claimCorrectionReminders.pariwarId, input.pariwarId),
+        eq(claimCorrectionReminders.reminderId, input.reminderId),
+        eq(claimCorrectionReminders.outcome, 'attempting'),
+        eq(claimCorrectionReminders.claimedByJob, input.jobId),
+      ),
+    )
+    .returning({ reminderId: claimCorrectionReminders.reminderId });
+  return rows.length > 0;
+}
+
+/**
  * A TRANSIENT failure: keep the row `attempting` (the retry re-claims it at once) and record the classified detail —
  * the re-claim moves it to `first_detail`.
  */

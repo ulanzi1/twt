@@ -463,10 +463,14 @@ export function createNomineeNameCheckHandlers(deps: AppDeps) {
 
       const today = cycleCalendar.istDateOf(deps.clock());
       // ⭐ ONE row's chase summary, degraded per ROW (never a 500 for the whole queue). With `withCrypto` it hashes
-      // each chased person's CURRENT number so the per-person status resets on a 6.20 correction (AC3). A throw there
-      // (an unreadable mobile envelope, a KMS blip) is logged — ids only — and the row is retried WITHOUT crypto, so
-      // it still shows (its per-person status may then read the old number's history). ⚠ A DB error inside the
-      // shared scope tx aborts it, so the retry rethrows that one — a degraded row is a crypto fault, never a DB one.
+      // each chased person's CURRENT number so the per-person status resets on a 6.20 correction (AC3).
+      //   · A per-person HASH fault (an unreadable mobile envelope, a KMS blip) is caught INSIDE the read model and
+      //     surfaces as `numberUnverified` — logged here (claim id only); the row still shows, its affected people
+      //     read the old number's history. ⛔ Not on the wire (the DTO is unchanged); the letter routes fail CLOSED
+      //     on the same fault (503 `correction_letter.number_unverified`).
+      //   · A DATABASE error is rethrown AT ONCE: it has aborted the shared scope tx, so a retry could only fail with
+      //     25P02 and bury the real SQLSTATE.
+      //   · Any OTHER throw is logged (`err.name` + `err.code`, ids only) and the row is retried WITHOUT crypto.
       const chaseSummaryOf = async (
         claimCaseId: string,
         withCrypto: boolean,
@@ -474,15 +478,24 @@ export function createNomineeNameCheckHandlers(deps: AppDeps) {
         const read = (opts: { readonly crypto?: typeof deps.encryption }) =>
           claimDomain.readCorrectionChaseSummary(scopeTx.tx, pariwarId, ids.claimId(claimCaseId), today, opts);
         if (!withCrypto) return read({});
+        let summary: claimDomain.CorrectionChaseSummary;
         try {
-          return await read({ crypto: deps.encryption });
+          summary = await read({ crypto: deps.encryption });
         } catch (err) {
+          if (isDatabaseError(err)) throw err;
           request.log.warn(
-            { err: err instanceof Error ? err.name : 'unknown', claimCaseId },
+            { err: err instanceof Error ? err.name : 'unknown', code: errorCodeOf(err), claimCaseId },
             'correction-queue: chase summary failed with crypto; retrying without the current-number hash',
           );
           return read({});
         }
+        if (summary.numberUnverified) {
+          request.log.warn(
+            { claimCaseId },
+            "correction-queue: a chased person's current number could not be hashed; their status reads the old number's history",
+          );
+        }
+        return summary;
       };
 
       // ⭐ Escalated filter FIRST, decrypt SECOND. `escalated` is derived from the chase's reminder rows (⛔ no number
@@ -681,6 +694,36 @@ export function createNomineeNameCheckHandlers(deps: AppDeps) {
       };
     },
   };
+}
+
+/** An error's own `code` when it is a string (a SQLSTATE, a Node / gRPC code), else `null` — logged, ⛔ never a message. */
+function errorCodeOf(err: unknown): string | null {
+  const code = (err as { code?: unknown } | null)?.code;
+  return typeof code === 'string' || typeof code === 'number' ? String(code) : null;
+}
+
+/**
+ * A Postgres SQLSTATE: five characters of digits / upper-case letters (`23505`, `25P02`, `40P01`, `HV00B`) — ⭐ with at
+ * least one digit (every SQLSTATE has one), so a five-letter Node errno (`EPIPE`, `EPERM`) is ⛔ not mistaken for one.
+ */
+const SQLSTATE = /^(?=.*\d)[0-9A-Z]{5}$/;
+
+/**
+ * Story 6.19b (fourth pass) — is this a DATABASE error? Walks `err` and its `.cause` chain (drizzle wraps the pg error
+ * in a `DrizzleQueryError` whose own `code` is undefined): a 5-character SQLSTATE `code`, or a `DatabaseError` by
+ * name. ⚠ pg's own `DatabaseError` sets `name` to the protocol message name (`'error'`), so the SQLSTATE leg is the
+ * one that catches it — the server always sends one. A dropped connection carries ⛔ no SQLSTATE; the no-crypto retry
+ * then fails on the same dead connection and propagates.
+ */
+export function isDatabaseError(err: unknown): boolean {
+  let node: unknown = err;
+  for (let depth = 0; depth < 5 && node !== null && typeof node === 'object'; depth += 1) {
+    const candidate = node as { name?: unknown; code?: unknown; cause?: unknown };
+    if (candidate.name === 'DatabaseError') return true;
+    if (typeof candidate.code === 'string' && SQLSTATE.test(candidate.code)) return true;
+    node = candidate.cause;
+  }
+  return false;
 }
 
 /** Story 6.19b (AC8b) — the queue's chase summary DTO. ⛔ No name, ⛔ no number, ⛔ no note. */

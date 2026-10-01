@@ -3,9 +3,16 @@
 
 const IST = 'Asia/Kolkata';
 
-/** Today's IST calendar date as `YYYY-MM-DD` (`en-CA` formats as ISO). */
+const IST_DATE_PARTS = new Intl.DateTimeFormat('en-US', { timeZone: IST, year: 'numeric', month: '2-digit', day: '2-digit' });
+
+/**
+ * Today's IST calendar date as `YYYY-MM-DD`. ⭐ Assembled from `formatToParts`, ⛔ not from a locale's whole-string
+ * format (`en-CA` happening to print ISO is a CLDR detail, ⛔ a contract). The IST day turns at 18:30 UTC.
+ */
 export function istToday(now: Date = new Date()): string {
-  return now.toLocaleDateString('en-CA', { timeZone: IST, year: 'numeric', month: '2-digit', day: '2-digit' });
+  const parts = IST_DATE_PARTS.formatToParts(now);
+  const part = (type: 'year' | 'month' | 'day'): string => parts.find((p) => p.type === type)?.value ?? '';
+  return `${part('year')}-${part('month')}-${part('day')}`;
 }
 
 /** An instant as staff read it, in IST. ⚠ An unparseable value is shown as given — ⛔ never as "Invalid Date". */

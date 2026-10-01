@@ -7,10 +7,11 @@
 //     run ended `mark_changed`), escalated, a dead nominee;
 //   · the claim's OWN earlier, SUPERSEDED return — its run, its rows, its escalation (only the LIVE return counts);
 //   · another PARIWAR's claim (tenant boundary).
-// ⭐ The timeline is the PRODUCTION one (the transaction-clock simulation — see `correction-chase.spec.ts`): the first
-// return, then the family's rewrite, then the District Admin's passing check, then the SECOND return — each strictly
-// after the last, so the second return is genuinely un-rewritten and un-checked (⛔ a fixture that is already
-// "resubmitted" would read a paused chase and prove nothing about the live one).
+// ⭐ The timeline is the PRODUCTION one (the transaction-clock simulation — see `correction-chase.spec.ts`): the
+// accounts and the check the first return answered, then the first return, then the family's rewrite, then the
+// District Admin's passing check, then the SECOND return — each strictly after the last (and asserted: the first return
+// is RESUBMITTED before the second lands), so the second return is genuinely un-rewritten and un-checked (⛔ a fixture
+// that is already "resubmitted" would read a paused chase and prove nothing about the live one).
 // ⭐ Every assertion names the claim's OWN ids — ⛔ never a count over a shared table, ⛔ never `every` over a list
 // that may be empty. And the summary carries ⛔ no name, ⛔ no number, ⛔ no address.
 
@@ -23,13 +24,15 @@ import {
   claimShortReference,
   insertFinalCorrectionReminder,
   readCorrectionChaseSummary,
+  readCorrectionClaimRow,
   readCorrectionRecipients,
+  resolveClaimCorrectionState,
   returnToDistrictAdmin,
   writeCorrectionMark,
 } from '../../../src/claim/index.js';
 import { addCalendarDays } from '../../../src/cycle-calendar/holiday-resolver.js';
 import { claimId as toClaimId, memberId as toMemberId } from '../../../src/ids/index.js';
-import type { ClaimId } from '../../../src/ids/index.js';
+import type { ClaimId, MemberId } from '../../../src/ids/index.js';
 import * as schema from '../../../src/schema/index.js';
 import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
 import { PARIWAR_A, PARIWAR_B, driveClaimTo, enterAppScope, seedNomineeNameCheck } from '../_helpers.js';
@@ -39,22 +42,89 @@ type Tx = ReturnType<typeof getTx>['tx'];
 
 const HOUR = 3_600_000;
 
+/** Fail loudly when a fixture's clock shift reached ⛔ no row — a shift of nothing would leave the timeline unbuilt. */
+function shifted(what: string, rowCount: number | null, atLeast = 1): void {
+  if ((rowCount ?? 0) < atLeast) throw new Error(`[correction-chase-shape.spec] ${what} moved ${rowCount ?? 0} row(s), expected ≥ ${atLeast}`);
+}
+
+/**
+ * Run `fn` as the superuser, then back into `pariwarId`'s app scope on EVERY path (when `fn` threw, ITS error wins —
+ * on an aborted transaction the restore itself fails and must ⛔ not mask the cause).
+ */
+async function asSuperuser<T>(client: Client, pariwarId: typeof PARIWAR_A, fn: () => Promise<T>): Promise<T> {
+  await client.query('RESET ROLE');
+  let out: T;
+  try {
+    out = await fn();
+  } catch (err) {
+    await enterAppScope(client, pariwarId).catch(() => undefined);
+    throw err;
+  }
+  await enterAppScope(client, pariwarId);
+  return out;
+}
+
 /** Move a return's `decided_at` by `ms` as the superuser, then back into `pariwarId`'s app scope. */
 async function shiftReturn(client: Client, pariwarId: typeof PARIWAR_A, returnId: string, ms: number) {
-  await client.query('RESET ROLE');
-  await client.query(`UPDATE claim_state_trustee_decisions SET decided_at = decided_at + ($2 || ' milliseconds')::interval WHERE decision_id = $1`, [
-    returnId,
-    String(ms),
-  ]);
-  await enterAppScope(client, pariwarId);
+  const r = await asSuperuser(client, pariwarId, () =>
+    client.query(`UPDATE claim_state_trustee_decisions SET decided_at = decided_at + ($2 || ' milliseconds')::interval WHERE decision_id = $1`, [
+      returnId,
+      String(ms),
+    ]),
+  );
+  shifted('shiftReturn', r.rowCount);
+}
+
+/**
+ * Move EVERY recorded name check of the claim by `ms`. `events_log` is append-only by trigger, so this runs as the
+ * superuser with `session_replication_role = 'replica'` for the ONE statement — restored on every path — inside the
+ * per-test transaction that rolls back; ⛔ never a production shape.
+ */
+async function shiftNameChecks(client: Client, pariwarId: typeof PARIWAR_A, cid: ClaimId, ms: number) {
+  const r = await asSuperuser(client, pariwarId, async () => {
+    await client.query("SET LOCAL session_replication_role = 'replica'");
+    try {
+      return await client.query(
+        `UPDATE events_log SET occurred_at = occurred_at + ($2 || ' milliseconds')::interval
+          WHERE stream_id = $1 AND event_type = 'claim.nominee_name_checked'`,
+        [cid, String(ms)],
+      );
+    } finally {
+      // ⚠ On an aborted transaction this restore fails too — swallowed so the UPDATE's own error surfaces.
+      await client.query("SET LOCAL session_replication_role = 'origin'").catch(() => undefined);
+    }
+  });
+  shifted('shiftNameChecks', r.rowCount);
+}
+
+/** Move the claim's two accounts' `updated_at` to `at` (the family's rewrite, or the pre-return accounts). */
+async function setAccountsUpdatedAt(tx: Tx, pariwarId: typeof PARIWAR_A, cid: ClaimId, at: Date) {
+  const rows = await tx
+    .update(schema.claimNomineeBankAccounts)
+    .set({ updatedAt: at })
+    .where(and(eq(schema.claimNomineeBankAccounts.pariwarId, pariwarId), eq(schema.claimNomineeBankAccounts.claimCaseId, cid)))
+    .returning({ rank: schema.claimNomineeBankAccounts.accountRank });
+  shifted('setAccountsUpdatedAt', rows.length, 2);
+}
+
+/** Is the claim RESUBMITTED (tier (a)) right now — through the production resolver, from the claim's own row. */
+async function resubmittedOf(tx: Tx, pariwarId: typeof PARIWAR_A, cid: ClaimId): Promise<boolean> {
+  const row = await readCorrectionClaimRow(tx, pariwarId, cid);
+  if (row === null) throw new Error(`[correction-chase-shape.spec] no claim row for ${cid}`);
+  return (await resolveClaimCorrectionState(tx, pariwarId, cid, row.deceasedMemberId as MemberId, row.currentState)).resubmitted;
 }
 
 const returnMarkInput = (pariwarId: typeof PARIWAR_A, cid: ClaimId, mustAct: 'family' | 'staff', actorDisplay: string) => ({
   pariwarId, claimCaseId: cid, mustAct, actorId: randomUUID(), actorDisplay, setByRole: 'pariwar_admin' as const, noteCiphertext: null, isReturnMark: true,
 });
 
-/** A returned claim; `shiftMs` moves the return's `decided_at` BEFORE its mark is written (day 0 = the return's date). */
+/**
+ * A returned claim. `shiftMs` moves the return's `decided_at` BEFORE its mark is written (day 0 = the moved return's
+ * date) — and with it the claim's accounts and every check recorded so far, to an hour BEFORE the moved return (⭐ the
+ * production order: the check the return answered predates it; ⛔ a check left at T would sit AFTER the return).
+ */
 async function returned(client: Client, pariwarId: typeof PARIWAR_A, mustAct: 'family' | 'staff', opts: { readonly shiftMs?: number } = {}) {
+  const { tx } = getTx();
   const cid = toClaimId(randomUUID());
   await enterAppScope(client, pariwarId);
   await driveClaimTo(client, pariwarId, cid, toMemberId(randomUUID()), 'verifier_approved');
@@ -62,9 +132,14 @@ async function returned(client: Client, pariwarId: typeof PARIWAR_A, mustAct: 'f
   const ret = await returnToDistrictAdmin(client, {
     claimCaseId: cid, pariwarId, reasonCode: 'other', rationaleCiphertext: 'enc:v1:n', actorId: randomUUID(), actorDisplay: 'Pariwar Admin One', actor: 'trustee',
   });
-  if (opts.shiftMs !== undefined) await shiftReturn(client, pariwarId, ret.decision.decisionId as string, opts.shiftMs);
+  const returnId = ret.decision.decisionId as string;
+  if (opts.shiftMs !== undefined) {
+    await shiftReturn(client, pariwarId, returnId, opts.shiftMs);
+    await setAccountsUpdatedAt(tx, pariwarId, cid, new Date(ret.decision.decidedAt.getTime() + opts.shiftMs - HOUR));
+    await shiftNameChecks(client, pariwarId, cid, opts.shiftMs - HOUR);
+  }
   const w = await writeCorrectionMark(client, returnMarkInput(pariwarId, cid, mustAct, 'Pariwar Admin One'));
-  return { cid, returnId: ret.decision.decisionId as string, runId: w.openedRun!.runId, day0: w.openedRun!.day0 };
+  return { cid, returnId, runId: w.openedRun!.runId, day0: w.openedRun!.day0 };
 }
 
 async function deadRow(tx: Tx, pariwarId: typeof PARIWAR_A, cid: ClaimId, runId: string, day0: string) {
@@ -109,11 +184,13 @@ describe.skipIf(!hasDatabase)('the correction chase summary — shape against de
       .from(schema.claimStateTrusteeDecisions)
       .where(eq(schema.claimStateTrusteeDecisions.decisionId, first.returnId as never)))[0]!.decidedAt;
     const rewriteAt = new Date(anchor.getTime() + HOUR); // = T − 2 h
-    await tx
-      .update(schema.claimNomineeBankAccounts)
-      .set({ updatedAt: rewriteAt })
-      .where(and(eq(schema.claimNomineeBankAccounts.pariwarId, PARIWAR_A), eq(schema.claimNomineeBankAccounts.claimCaseId, first.cid)));
+    // ⛔ Not yet resubmitted — the accounts and the only check predate the return (the fixture's timeline holds).
+    expect(await resubmittedOf(tx, PARIWAR_A, first.cid)).toBe(false);
+    await setAccountsUpdatedAt(tx, PARIWAR_A, first.cid, rewriteAt);
+    expect(await resubmittedOf(tx, PARIWAR_A, first.cid)).toBe(false); // the rewrite alone is only tier (b)
     await seedNomineeNameCheck(client, PARIWAR_A, first.cid, { reuseAccounts: true });
+    // ⭐ The first return IS resubmitted before the second lands — the fixture builds its title's state.
+    expect(await resubmittedOf(tx, PARIWAR_A, first.cid)).toBe(true);
     const second = await returnToDistrictAdmin(client, {
       claimCaseId: first.cid, pariwarId: PARIWAR_A, reasonCode: 'other', rationaleCiphertext: 'enc:v1:n2', actorId: randomUUID(), actorDisplay: 'Pariwar Admin Two', actor: 'trustee',
     });
@@ -160,6 +237,6 @@ describe.skipIf(!hasDatabase)('the correction chase summary — shape against de
     await driveClaimTo(client, PARIWAR_A, cid, toMemberId(randomUUID()), 'verifier_approved');
     await seedNomineeNameCheck(client, PARIWAR_A, cid, { verdicts: ['matches', 'does_not_match'] });
     const s = await readCorrectionChaseSummary(tx, PARIWAR_A, cid, '2026-09-23');
-    expect(s).toMatchObject({ returnDecisionId: null, mark: null, run: null, people: [], escalated: false, awaitingCheck: false });
+    expect(s).toMatchObject({ returnDecisionId: null, mark: null, run: null, people: [], escalated: false, awaitingCheck: false, numberUnverified: false });
   });
 });

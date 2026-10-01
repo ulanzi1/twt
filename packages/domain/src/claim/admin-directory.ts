@@ -26,7 +26,13 @@ export interface AdminDirectoryResult {
   readonly truncated: boolean;
 }
 
-const ADMIN_DIRECTORY_LIMIT = 50; // fixed bounded window (integer literal — the forced-pagination-clamp gate)
+/**
+ * The fixed bounded window, TYPE-PINNED to the literal `50`. The `.limit(50)` below must stay an integer literal (the
+ * domain-invariants `.limit()` gate accepts only a literal or `clampLimit`), so it cannot name this constant: the
+ * comparison literal is typed `typeof ADMIN_DIRECTORY_LIMIT` (a drift there fails typecheck), and the `.limit(...)`
+ * literal is pinned to this constant by `tests/claim/admin-directory-limit.test.ts` (a drift there fails the test).
+ */
+export const ADMIN_DIRECTORY_LIMIT = 50 as const;
 
 /**
  * The active staff holding `role` in this Pariwar, at `scope` when given (e.g. `{ dimension: 'district', value }`;
@@ -56,11 +62,12 @@ export async function listAdminsByRole(
       ),
     )
     .orderBy(asc(users.id))
-    // ⚠ The literal IS `ADMIN_DIRECTORY_LIMIT` — the forced-pagination-clamp gate accepts only an integer literal
-    // (or `clampLimit`) as a fixed bound; keep the two equal.
+    // ⚠ An integer literal for the domain-invariants gate — pinned to `ADMIN_DIRECTORY_LIMIT` by a unit test.
     .limit(50);
+  // ⭐ The bound `truncated` compares against: the SAME literal, typed so it cannot drift from the constant.
+  const BOUND: typeof ADMIN_DIRECTORY_LIMIT = 50;
   return {
     entries: rows.map((r) => ({ userId: r.userId as string, displayName: r.displayName! })),
-    truncated: rows.length >= ADMIN_DIRECTORY_LIMIT,
+    truncated: rows.length >= BOUND,
   };
 }

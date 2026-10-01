@@ -315,8 +315,9 @@ export async function seedReturnedClaim(
 }
 
 /**
- * Delete everything a test created — and FAIL LOUDLY if a claim or a run survives (a surviving OPEN run would be read
- * by every later sweep in the shared database).
+ * Delete everything a test created — and FAIL LOUDLY if any of it survives: a claim, a run, a reminder, a letter, a
+ * staff user, a role grant or a device token (a surviving OPEN run would be read by every later sweep in the shared
+ * database).
  * ⚠ The claims go FIRST and ⛔ NOT under the replica role: `session_replication_role = 'replica'` disables the RI
  * triggers too, so a `DELETE FROM claims` there would ⛔ not cascade and would orphan the runs, reminders and letters.
  * The cascade itself is allowed by the append-only tables' triggers (`pg_trigger_depth() > 1`). Only the rows ⛔ no
@@ -366,18 +367,33 @@ export async function cleanupClaims(
     c.release();
   }
   if (failures.length > 0) console.warn('[claim-correction seed] cleanup — optional deletes failed:', failures.join('; '));
-  if (claimCaseIds.length > 0) {
-    const { rows } = await pool.query<{ claims: number; runs: number }>(
-      `SELECT (SELECT count(*) FROM claims WHERE claim_case_id = ANY($1))::int AS claims,
-              (SELECT count(*) FROM claim_correction_runs WHERE claim_case_id = ANY($1))::int AS runs`,
-      [claimCaseIds],
+  // ⭐ FAIL LOUDLY on ANY leftover this suite created — ⛔ not just the claims and runs: a surviving reminder or letter (an
+  // orphan the cascade missed), a staff user, a role grant (a later suite's escalation recipients) or a device token
+  // (a later suite's push target) all leak into the shared database.
+  const { rows } = await pool.query<{
+    claims: number;
+    runs: number;
+    reminders: number;
+    letters: number;
+    users: number;
+    grants: number;
+    tokens: number;
+  }>(
+    `SELECT (SELECT count(*) FROM claims WHERE claim_case_id = ANY($1::uuid[]))::int AS claims,
+            (SELECT count(*) FROM claim_correction_runs WHERE claim_case_id = ANY($1::uuid[]))::int AS runs,
+            (SELECT count(*) FROM claim_correction_reminders WHERE claim_case_id = ANY($1::uuid[]))::int AS reminders,
+            (SELECT count(*) FROM claim_correction_letters WHERE claim_case_id = ANY($1::uuid[]))::int AS letters,
+            (SELECT count(*) FROM users WHERE id = ANY($2::uuid[]))::int AS users,
+            (SELECT count(*) FROM role_grants WHERE user_id = ANY($2::uuid[]))::int AS grants,
+            (SELECT count(*) FROM member_device_tokens WHERE principal_id = ANY($2::uuid[]))::int AS tokens`,
+    [claimCaseIds, userIds],
+  );
+  const left = rows[0]!;
+  const leftovers = Object.entries(left).filter(([, n]) => n > 0);
+  if (leftovers.length > 0) {
+    throw new Error(
+      `[claim-correction seed] cleanup LEFT rows behind — ${leftovers.map(([k, n]) => `${String(n)} ${k}`).join(', ')} ` +
+        '(a surviving open run is swept by every later suite; a surviving grant or token changes their recipients)',
     );
-    const left = rows[0]!;
-    if (left.claims > 0 || left.runs > 0) {
-      throw new Error(
-        `[claim-correction seed] cleanup LEFT ${String(left.claims)} claim(s) and ${String(left.runs)} run(s) behind — ` +
-          'a surviving open run is swept by every later suite',
-      );
-    }
   }
 }

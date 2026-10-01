@@ -146,5 +146,10 @@
   "contact.not_writable": "These details can't be changed in the app any more. Please call the helpline — we'll help.",
   "$comment.correction_chase": "Story 6.19b: the Hindi of correction_sms.reminder, correction_sms.closure_notice and nominee.bank.being_checked is agent-authored and NOT YET HUMAN-REVIEWED. Its review is a go-live gate (Decision 2026-09-29-267 section 6; launch-gate inventory). The SMS keys must match the registered DLT content byte for byte.",
   "correction_sms.reminder": "Claim {reference}: the bank details on your family's claim need correcting. Please call the helpline on {helpline}, or the District Admin will contact you. Your claim is still open.",
-  "correction_sms.closure_notice": "Claim {reference}: this claim was closed because no correction of the bank details was received. This closure cannot be appealed. A new claim may be filed through the helpline on {helpline} or the District Admin."
+  "correction_sms.closure_notice": "Claim {reference}: this claim was closed because no correction of the bank details was received. This closure cannot be appealed. A new claim may be filed through the helpline on {helpline} or the District Admin.",
+  "$comment.refile": "Story 6.19c: the Hindi of refile.* is agent-authored and NOT YET HUMAN-REVIEWED (Decision 2026-09-29-267 section 6; launch-gate inventory).",
+  "refile.title": "This claim was closed",
+  "refile.body": "This claim was closed because the corrected bank details did not reach us. A new claim can be filed with the helpline's help. Please call us and we will guide you through it.",
+  "refile.call": "Call the helpline",
+  "refile.back": "Go back"
 }

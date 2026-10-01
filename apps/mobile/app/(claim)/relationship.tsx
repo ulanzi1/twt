@@ -18,6 +18,7 @@ import { ClaimProxyFlowShell } from '../../components/claim/ClaimProxyFlowShell'
 import { claimApi } from '../../lib/claim-api'
 import { useClaimT } from '../../lib/claim-i18n'
 import { loadClaimDraft, saveClaimDraft } from '../../lib/claim-draft'
+import { REFILE_REQUIRES_CONFIRMATION_CODE } from '../../lib/refile-helpline-copy'
 import { useSession } from '../../lib/session-context'
 
 const RELATIONSHIPS = ['spouse', 'child', 'parent', 'sibling', 'other'] as const
@@ -49,6 +50,12 @@ export default function RelationshipScreen(): React.ReactElement {
       // A lapsed handover-trust elevation → return to the OTP step (keyed on the CODE).
       if (e instanceof ApiError && e.code === 'auth.step_up_required') {
         router.replace('/(claim)/handover-otp')
+        return
+      }
+      // Story 6.19c (`-273` §9) — the death's last claim was closed for no response and ⛔ no re-file confirmation is
+      // recorded (a phone without the filed-claim pointer reaches the wizard): the SAME calm helpline state.
+      if (e instanceof ApiError && e.code === REFILE_REQUIRES_CONFIRMATION_CODE) {
+        router.replace('/(claim)/refile-helpline')
         return
       }
       setError(t('relationship.error'))

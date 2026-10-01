@@ -1,5 +1,6 @@
-// PURE claim-entry redirect decision — Story 6.21b (`-249` §2; Task 2; BW-B2). All FIVE
-// `ClaimEntryReadOutcome` inputs, plus the "no pointer" / "never fetched" cases.
+// PURE claim-entry redirect decision — Story 6.21b (`-249` §2; Task 2; BW-B2). All SIX
+// `ClaimEntryReadOutcome` inputs (Story 6.19c added `refile_needs_confirmation`), plus the "no pointer" / "never
+// fetched" cases.
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
@@ -30,6 +31,22 @@ describe('resolveClaimEntryDecision', () => {
       expect(resolveClaimEntryDecision(true, outcome)).toEqual({ kind: 'wizard' })
     })
   }
+
+  // ⭐ Story 6.19c (`-273` §9) — the ONE terminal claim that does ⛔ not fall through: closed for no response with ⛔ no
+  // re-file confirmation. The server computes the bit (D19's guard); it is false once a confirmation is recorded (the
+  // read is then `terminal` ⇒ the wizard) and once a new claim is live (the old pointer ⛔ never traps the family).
+  it('a pointer + refile_needs_confirmation ⇒ the calm helpline state (⛔ the wizard, which would only 409)', () => {
+    expect(resolveClaimEntryDecision(true, { kind: 'refile_needs_confirmation' })).toEqual({ kind: 'refile_helpline' })
+  })
+
+  it('after the confirmation is recorded (or consumed by a live new claim) the bit is false ⇒ the wizard again', () => {
+    // The server's two answers once the guard no longer holds: the closed claim is plain `terminal`.
+    expect(resolveClaimEntryDecision(true, { kind: 'terminal' })).toEqual({ kind: 'wizard' })
+  })
+
+  it('no pointer ⇒ the wizard even for a guarded death (its submit maps the 409 to the same state)', () => {
+    expect(resolveClaimEntryDecision(false, { kind: 'refile_needs_confirmation' })).toEqual({ kind: 'wizard' })
+  })
 })
 
 describe('boundClaimEntryRead — a stalled read never holds the claim entry (code review 2026-09-27)', () => {

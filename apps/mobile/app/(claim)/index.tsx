@@ -32,7 +32,8 @@ export default function ClaimEntryScreen(): React.ReactElement {
   const name = t('member_fallback')
 
   // `-249` §2 (B2, narrowed) — a filed claim on record whose fresh D1 read says `claim_live: true`
-  // skips straight to the shepherd screen. A terminal claim (`-239` (b)'s Trustee-ratified refile),
+  // skips straight to the shepherd screen; one CLOSED for no response that still needs a re-file confirmation goes to
+  // the helpline state (Story 6.19c). A terminal claim (`-239` (b)'s Trustee-ratified refile),
   // an offline read, an error, or a 404 all fall through to today's wizard entry, UNCHANGED.
   const [gateChecked, setGateChecked] = useState(false)
   useEffect(() => {
@@ -50,6 +51,11 @@ export default function ClaimEntryScreen(): React.ReactElement {
       const decision = resolveClaimEntryDecision(true, outcome)
       if (decision.kind === 'shepherd') {
         router.replace(`/(claim)/shepherd?claimCaseId=${encodeURIComponent(claimCaseId)}`)
+        return
+      }
+      // Story 6.19c (`-273` §9) — a claim closed for no response with ⛔ no re-file confirmation: the calm helpline state.
+      if (decision.kind === 'refile_helpline') {
+        router.replace('/(claim)/refile-helpline')
         return
       }
       setGateChecked(true)

@@ -323,6 +323,12 @@ scope:
     - apps/mobile/lib/death-certificate-view.ts
     - apps/mobile/lib/death-certificate-announce.ts
     - apps/mobile/lib/death-certificate-upload-outcome.ts
+    # ⭐ Story 6.19c (AC15, `-273` §9) — every new or edited mobile file of the re-file "please call the helpline" state
+    # and the closed claim's appeal view (`index.tsx`, `claim-entry-gate.ts`, `fetch-claim-entry-outcome.ts` are above).
+    - apps/mobile/app/(claim)/refile-helpline.tsx
+    - apps/mobile/app/(claim)/relationship.tsx
+    - apps/mobile/lib/refile-helpline-copy.ts
+    - apps/mobile/lib/appeal-status.ts
   # Member-visible copy (locale strings) — POPULATED at Story 2.5 (AC6c) for the first
   # member surface: the public Niyamavali (apps/public). These globs scan the PURE
   # member copy (the `niyamavali` i18n namespace strings), so the member-register
@@ -619,4 +625,13 @@ allow:
       Story 6.2's pre-existing error hex — the same app-wide apps/mobile convention as the
       6.18 entries above, unchanged by 6.21b. Scoped to this one literal; vocabulary, tone
       and numeral teeth on this file are untouched. Owed: a token layer for apps/mobile
+      (deferred-work).
+  # ⭐ Story 6.19c — the SAME gap, on the wizard step it edits (the 409 → the re-file state). The literal is Story 6.2's,
+  # unchanged; the new re-file screen carries ⛔ no colour literal at all.
+  - file: apps/mobile/app/(claim)/relationship.tsx
+    pattern: '#C0392B\b'
+    reason: >-
+      Story 6.2's pre-existing error hex — the same app-wide apps/mobile convention as the
+      entries above, unchanged by 6.19c. Scoped to this one literal; vocabulary, tone and
+      numeral teeth on this file are untouched. Owed: a token layer for apps/mobile
       (deferred-work).

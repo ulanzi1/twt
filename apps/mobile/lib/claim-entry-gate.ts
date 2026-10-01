@@ -15,11 +15,19 @@
 export type ClaimEntryReadOutcome =
   | { readonly kind: 'live' }
   | { readonly kind: 'terminal' }
+  /** ⭐ Story 6.19c (`-273` §9) — the server's `refile_requires_confirmation` routing bit (D19's guard): the death's
+   *  latest claim was CLOSED for no response and ⛔ no re-file confirmation waits. ⛔ Never shown as such. */
+  | { readonly kind: 'refile_needs_confirmation' }
   | { readonly kind: 'offline' }
   | { readonly kind: 'error' }
   | { readonly kind: 'not_found' }
 
-export type ClaimEntryDecision = { readonly kind: 'shepherd' } | { readonly kind: 'wizard' }
+/** `refile_helpline` — the calm "please call the helpline" state: ⛔ never the wizard (it would only 409), ⛔ never a
+ *  bare error. */
+export type ClaimEntryDecision =
+  | { readonly kind: 'shepherd' }
+  | { readonly kind: 'wizard' }
+  | { readonly kind: 'refile_helpline' }
 
 /**
  * `hasFiledClaimPointer` — the MMKV filed-claim pointer (`getFiledClaimCaseId`) is on record.
@@ -31,6 +39,11 @@ export function resolveClaimEntryDecision(
 ): ClaimEntryDecision {
   if (!hasFiledClaimPointer || outcome === null) return { kind: 'wizard' }
   if (outcome.kind === 'live') return { kind: 'shepherd' }
+  // ⭐ Story 6.19c (`-273` §9) narrows `-249` §2's "a terminal claim falls through to the wizard, UNCHANGED" for ONE
+  // terminal claim only: one CLOSED for no response while no confirmation is recorded. Once a District Admin or the
+  // helpline records one the bit is false and the wizard is open again; once a new claim is live it is false too
+  // (the old pointer ⛔ never traps the family).
+  if (outcome.kind === 'refile_needs_confirmation') return { kind: 'refile_helpline' }
   // terminal | offline | error | not_found — all fall through, unchanged.
   return { kind: 'wizard' }
 }

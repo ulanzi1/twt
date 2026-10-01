@@ -19,7 +19,7 @@ LETTERS: bare `D1`…`D34` are 6.19's own (the shared spec). Other letters are q
 
 # Story 6.19c: The Closure for No Response, the Super Admin's Review and Decision, and Filing Again Through a Person `[SURFACE]`
 
-Status: in-progress
+Status: review
 
 > ⭐ **6.19b is `done`** (its build `40304d9f`, five review passes to `f301f09e`) — the fence this slice waited on is discharged.
 > ⭐ **Two author-commits bind this slice before any code:** **`-272`** (a switch back to "the family must act" restarts the CLOCK, ⛔ not the
@@ -414,7 +414,7 @@ tables' Tier-1 columns (invariant 9); ⛔ no virus scan on the closure letter's 
   `correction-chase-forms.test.tsx:705-708`); the Pariwar Admin strip (in `apps/admin/src/modules/cycle-freeze/{CycleFreezePage,
   PendingCaseCard}.tsx` or a sibling — `CycleFreezeRoute.tsx` is a wrapper); the Super Admin queue + decision surface; the direction inbox;
   the helpline re-file card; the closure-letter queue item and form; the nav links; the member screens for Task 5's state; family-13 assertions.
-- [ ] **Task 7 — Gates, tests, discharge** (AC9c, AC10, AC11c) — audit types; the human-actor gate (new route files in `COVERAGE_SET` with
+- [x] **Task 7 — Gates, tests, discharge** (AC9c, AC10, AC11c) — audit types; the human-actor gate (new route files in `COVERAGE_SET` with
   exact `expectedMethods`, ⭐ raise `COVERAGE_FLOOR` from 12 deliberately — a minimum stays green if forgotten); the no-comparison fence's
   `FENCED_FILES` + floor; **execute** on `twt-test-pg :5433`; `deferred-work.md` records (AC7, AC9c, and each item in *Deferred items this
   slice touches*); the fallback-handler ledger rows **10–14, 17, 18** (`docs/fallback-handler-ledger/ledger.md` — the xref and
@@ -422,7 +422,7 @@ tables' Tier-1 columns (invariant 9); ⛔ no virus scan on the closure letter's 
   — record it, ⛔ never fill it); annotate 6.18's go-live fence as discharged by this build at **6.18's AC11 blockquote**, the shared spec's
   header, 6.19b's header and `epics.md` §6.19c (⛔ never a rewrite; `-265` Consequence 4 is cited, ⛔ not edited); a `sprint-status.yaml`
   ledger line.
-- [ ] **Task 8 — `-258` in the closure** (AC17) — `closure.not_family_action` and the family run's `day0` at AC6's three acts (read the mark
+- [x] **Task 8 — `-258` in the closure** (AC17) — `closure.not_family_action` and the family run's `day0` at AC6's three acts (read the mark
   and the latest family/direction run — open or ended — through `resolveCorrectionChase`); the "no correction needed" record (key (8)) + its
   NEW approve writer (D27; refused while held — `cycle_freeze.escalated`) and the Pariwar Admin's keep stating the mark (`-260` G2), both through `writeCorrectionMark` with `hold`; the
   staff case's day-90 escalation and its two decisions (`-260` G1: approve with the full gate, refuse; ⛔ never close); AC17's tests. Mark
@@ -567,16 +567,211 @@ follow-ups-2,return-not-the-familys-to-fix}.md`. UX `ux-design-specification.md`
 
 ### Agent Model Used
 
+Claude Opus 5.5 (1M context) — `/bmad-dev-story 6.19c`, 2026-10-01.
+
 ### Debug Log References
+
+- The 0131 CHECKs first passed on NULL — rewritten null-safe (`IS NOT DISTINCT FROM` + explicit `NOT NULL` legs) BEFORE the migration was
+  committed (an applied migration is ⛔ never regenerated — [[project_live_db_test_gotchas]]).
+- The lapse never fired while `requested_at` took the test's future `now` ⇒ the request stamps `clock_timestamp()`; a direction's
+  `created_at` takes the act's `now` (its reminders key on it).
+- The access-wrapper gate (invariant (f)) flagged `a === b` on two HMACs in `sameNumberHash` ⇒ a local timing-safe comparator.
+- The queue 500'd on a claim whose person's mobile envelope cannot be hashed (6.19b's `resolveCorrectionChase(…, { crypto })` threw an
+  untyped error) ⇒ the resolver now throws a TYPED `CorrectionNumberUnverifiedError` (moved to the leaf `correction-crypto.ts`, re-exported
+  from `correction-letter.ts`); the readiness reads `number_unverified` (the row still shows) and the request is a retryable 503.
+- 6.19b's API spec: the forced-500 leg 409'd once Task 0a's read-only pre-check ran before KMS on a capped person ⇒ the leg now runs while
+  a second letter is still allowed (the assertion is ⛔ not weakened).
+- The domain-accessor clamp gate failed on the closure reads' `pageOf()` helper (committed in `56a3897f` without the gate run) ⇒ inline
+  `clampLimit(opts.limit, …)` at every `.limit()`.
 
 ### Completion Notes List
 
+- ⭐ **Every Task built; the slice is the closure end to end.** Domain (`correction-closure.ts`, `correction-closure-read.ts`,
+  `closure-letter.ts`, `correction-closure-jobs.ts`, `refile-guard.ts`), migrations 0131–0136, keys (2)–(6) + (8) (catalog 50 / 64), the
+  jobs (the closure sweep + the closure-notice child — ⛔ no job calls a decision writer, a source fence proves it), the API (three new
+  route files, all in the human-actor gate — `COVERAGE_FLOOR` 12 → 15), the admin surfaces and the member re-file state.
+- ⚠ **FLAGGED for BigDev — AC11c's example vs `-273` §3d.** *"A request on day 95, the mark switched to `staff` and back, then the Pariwar
+  Admin's approval → `closure.too_early`"*: §3d makes that request LAPSE (a non-`family` mark after it; a new family run that is ⛔ not its
+  `request_family_run_id`), and the approve refuses a lapsed request FIRST ⇒ the built answer is **409 `closure.request_lapsed`**.
+  `too_early` stays as the defensive re-check under the lock. Recorded in `deferred-work.md` (6.19c section).
+- **Additions beyond Task 1's list (each the developer's call the story leaves open):** migration **0136** (D27's "no correction needed"
+  record — its own append-only table, so the approve can require a check recorded AFTER it); the closure letter as its own table (0134);
+  `icp-lock.ts` (the intake advisory-lock key shared by the mint paths and the re-file confirmation, to avoid an import cycle).
+- **Readings recorded:** the re-file confirmation is ⛔ not refused while a LIVE claim exists (else the override mint path, which mints exactly
+  while one is live, deadlocks — the guard keys on the death's most recent TERMINAL claim); `via` is the role key (6) is held under — a
+  `super_admin`'s auto-derived key records ⛔ no confirmation (403 `refile_confirmation.role_not_recordable`, `-254` names the District Admin
+  or the helpline); the re-file route gates at the Pariwar for a pariwar-ceiling holder, else at the closed claim's district; the Super
+  Admin's queue is per-Pariwar, reached from the top level through a Pariwar picker (⛔ never a cross-tenant read); a D30 failure on the closure
+  notice is a final `skipped_superseded` row (detail `cannot_remind:*`); the D1 and D27 decision rows carry FIXED rationales (⛔ no new reason
+  code); the Super Admin's note is encrypted twice (the closures row's class, and the decision row's trustee class — the vote's shape).
+- **AC9c:** four new field classes (`claim_correction_closure`, `claim_correction_direction`, `claim_refile_confirmation`,
+  `claim_closure_letter`); every audit line names the claim (`claim:<lower-case uuid>`); a planted note sentinel is in ⛔ no log line, error
+  body, audit line or plaintext column (`apps/api/tests/integration/claims/correction-closure.spec.ts`, the 6.19b `logStream`).
+- **The highlight (`-273` §7)** has ONE rule (`approvalNameHighlightOf`) used by the bulk read (name-check panel, cycle-freeze list) and the
+  Super Admin's decision response; shown to all three roles. The no-comparison fence: `FENCED_FILES` 26 → 34.
+- **Not done / owed (recorded in `deferred-work.md`, ⛔ not fixed):** the member appeal route's production 404 and the unmounted card (AC7); ⛔ no
+  RTBF over the new Tier-1 columns; ⛔ no virus scan on the closure letter's screenshot; the direction form takes a user id (there is ⛔ no admin
+  directory read); the new staff reminders inherit the member-app push deep link.
+- **Discharges:** `deferred-work.md` 6.18 chunk 1 *"A return clears ONLY through a bank rewrite"* — BUILT (Task 8); 6.18 chunk 3 — the new
+  queues are in the nav; D26's staff-row marker — ⛔ not needed (disposed); the `-272` item — BUILT (Task 0a). 6.18's go-live fence annotated
+  DISCHARGED BY THE BUILD at its four sites (`-265` Consequence 4). Fallback ledger: rows 10–14, 17, 18 xref'd; row 20
+  `closure-letter-record` appended; rows 12 and 18 keep `<TO-BE-NAMED-BY-TRUSTEE-PANEL>`.
+
 ### File List
+
+_Against the baseline `f079dc56`; ⛔ governance commits (`.decision-log.md`, the Panel routing note) excluded._
+
+- MOD `_bmad-output/implementation-artifacts/6-18-nominee-holder-name-on-the-verification-console.md`
+- MOD `_bmad-output/implementation-artifacts/6-19-correction-return-reminders-and-closure.md`
+- MOD `_bmad-output/implementation-artifacts/6-19b-correction-reminders-and-posted-letters.md`
+- MOD `_bmad-output/implementation-artifacts/deferred-work.md`
+- MOD `_bmad-output/implementation-artifacts/sprint-status.yaml`
+- MOD `_bmad-output/planning-artifacts/epics.md`
+- MOD `apps/admin/src/api/client.ts`
+- MOD `apps/admin/src/api/hooks.ts`
+- MOD `apps/admin/src/modules/claim-verification/NomineeNameCheckPanel.tsx`
+- MOD `apps/admin/src/modules/correction-chase/CorrectionChasePanel.tsx`
+- MOD `apps/admin/src/modules/correction-chase/CorrectionLetterForm.tsx`
+- NEW `apps/admin/src/modules/correction-closure/ApprovalNameHighlightBadge.tsx`
+- NEW `apps/admin/src/modules/correction-closure/ClosureColumn.tsx`
+- NEW `apps/admin/src/modules/correction-closure/ClosureLettersOwed.tsx`
+- NEW `apps/admin/src/modules/correction-closure/DirectionInbox.tsx`
+- NEW `apps/admin/src/modules/correction-closure/EscalationPanel.tsx`
+- NEW `apps/admin/src/modules/correction-closure/PariwarClosureStrip.tsx`
+- NEW `apps/admin/src/modules/correction-closure/RefileConfirmationCard.tsx`
+- NEW `apps/admin/src/modules/correction-closure/errors.ts`
+- NEW `apps/admin/src/modules/correction-closure/i18n-en.ts`
+- NEW `apps/admin/src/modules/correction-closure/index.ts`
+- MOD `apps/admin/src/modules/cycle-freeze/PendingCaseCard.tsx`
+- MOD `apps/admin/src/modules/helpline-claims/HelplineClaimPage.tsx`
+- MOD `apps/admin/src/router.tsx`
+- NEW `apps/admin/src/routes/CorrectionClosureRoutes.tsx`
+- MOD `apps/admin/src/routes/CorrectionQueueRoute.tsx`
+- MOD `apps/admin/src/routes/RootLayout.tsx`
+- NEW `apps/admin/tests/closure-nav.test.tsx`
+- MOD `apps/admin/tests/correction-chase-forms.test.tsx`
+- NEW `apps/admin/tests/correction-closure.test.tsx`
+- MOD `apps/admin/tests/correction-queue.test.tsx`
+- MOD `apps/admin/tests/cycle-freeze-page.test.tsx`
+- MOD `apps/admin/tests/helpline-bank-details.test.tsx`
+- MOD `apps/admin/tests/nominee-name-check-panel.test.tsx`
+- MOD `apps/admin/tests/pending-case-card-return.test.tsx`
+- MOD `apps/admin/tests/r9-case-panel.test.tsx`
+- MOD `apps/admin/tests/verifier-console-route-name-check.test.tsx`
+- MOD `apps/api/src/audit/audit-sink.ts`
+- MOD `apps/api/src/modules/claims/claims.appeal.handlers.ts`
+- MOD `apps/api/src/modules/claims/claims.convergence.handlers.ts`
+- MOD `apps/api/src/modules/claims/claims.correction-chase.handlers.ts`
+- NEW `apps/api/src/modules/claims/claims.correction-closure.handlers.ts`
+- NEW `apps/api/src/modules/claims/claims.correction-closure.routes.ts`
+- NEW `apps/api/src/modules/claims/claims.correction-escalation.handlers.ts`
+- NEW `apps/api/src/modules/claims/claims.correction-escalation.routes.ts`
+- MOD `apps/api/src/modules/claims/claims.cycle-freeze.handlers.ts`
+- MOD `apps/api/src/modules/claims/claims.death-certificate-member.handlers.ts`
+- MOD `apps/api/src/modules/claims/claims.nominee-name-check.handlers.ts`
+- MOD `apps/api/src/modules/claims/claims.nominee-name-check.routes.ts`
+- NEW `apps/api/src/modules/claims/claims.refile-confirmation.handlers.ts`
+- NEW `apps/api/src/modules/claims/claims.refile-confirmation.routes.ts`
+- MOD `apps/api/src/modules/claims/claims.service.ts`
+- NEW `apps/api/src/modules/claims/correction-closure-crypto.ts`
+- NEW `apps/api/src/modules/claims/correction-closure-dto.ts`
+- MOD `apps/api/src/modules/claims/index.ts`
+- MOD `apps/api/src/types.ts`
+- MOD `apps/api/tests/integration/claims/correction-chase.spec.ts`
+- NEW `apps/api/tests/integration/claims/correction-closure.spec.ts`
+- MOD `apps/jobs/src/boot.ts`
+- NEW `apps/jobs/src/scheduler/claim-correction-closure.ts`
+- MOD `apps/jobs/src/scheduler/claim-correction-reminders.ts`
+- MOD `apps/jobs/tests/_claim-correction-seed.ts`
+- NEW `apps/jobs/tests/claim-correction-closure-live.test.ts`
+- NEW `apps/jobs/tests/claim-correction-closure-no-decision.test.ts`
+- MOD `apps/jobs/tests/claim-correction-control-paths.test.ts`
+- MOD `apps/jobs/tests/claim-correction-reminders-live.test.ts`
+- MOD `apps/mobile/app/(claim)/index.tsx`
+- NEW `apps/mobile/app/(claim)/refile-helpline.tsx`
+- MOD `apps/mobile/app/(claim)/relationship.tsx`
+- MOD `apps/mobile/lib/appeal-status.ts`
+- MOD `apps/mobile/lib/claim-entry-gate.ts`
+- MOD `apps/mobile/lib/fetch-claim-entry-outcome.ts`
+- NEW `apps/mobile/lib/refile-helpline-copy.ts`
+- MOD `apps/mobile/tests/unit/appeal-status.test.ts`
+- MOD `apps/mobile/tests/unit/claim-entry-gate.test.ts`
+- MOD `apps/mobile/tests/unit/helpline-cta-presence.test.ts`
+- NEW `apps/mobile/tests/unit/refile-copy-resolves.test.ts`
+- MOD `docs/degradation-policy/surface-inventory.md`
+- MOD `docs/fallback-handler-ledger/ledger.md`
+- MOD `friction-budget.md`
+- MOD `microcopy.yaml`
+- MOD `packages/contracts/src/claims/appeal.ts`
+- MOD `packages/contracts/src/claims/correction-chase.ts`
+- NEW `packages/contracts/src/claims/correction-closure.ts`
+- MOD `packages/contracts/src/claims/cycle-freeze.ts`
+- MOD `packages/contracts/src/claims/death-certificate.ts`
+- MOD `packages/contracts/src/claims/index.ts`
+- MOD `packages/contracts/src/claims/nominee-name-check.ts`
+- NEW `packages/contracts/tests/correction-closure-lockstep.test.ts`
+- MOD `packages/contracts/tests/english-script-name.test.ts`
+- MOD `packages/contracts/tests/nominee-name-check-vocabulary-lockstep.test.ts`
+- NEW `packages/domain/migrations/0131_claim-correction-closure.sql`
+- NEW `packages/domain/migrations/0132_claim-correction-direction.sql`
+- NEW `packages/domain/migrations/0133_claim-refile-confirmation.sql`
+- NEW `packages/domain/migrations/0134_claim-closure-letter.sql`
+- NEW `packages/domain/migrations/0135_claim-correction-closure-reminder-purposes.sql`
+- NEW `packages/domain/migrations/0136_claim-correction-no-correction-record.sql`
+- MOD `packages/domain/migrations/meta/_journal.json`
+- MOD `packages/domain/src/claim/admin-directory.ts`
+- MOD `packages/domain/src/claim/appeal-eligibility.ts`
+- NEW `packages/domain/src/claim/closure-letter.ts`
+- MOD `packages/domain/src/claim/correction-chase-read.ts`
+- MOD `packages/domain/src/claim/correction-chase.ts`
+- NEW `packages/domain/src/claim/correction-closure-jobs.ts`
+- NEW `packages/domain/src/claim/correction-closure-read.ts`
+- NEW `packages/domain/src/claim/correction-closure.ts`
+- MOD `packages/domain/src/claim/correction-crypto.ts`
+- MOD `packages/domain/src/claim/correction-letter.ts`
+- MOD `packages/domain/src/claim/correction-reminder-record.ts`
+- NEW `packages/domain/src/claim/icp-lock.ts`
+- MOD `packages/domain/src/claim/icp.ts`
+- MOD `packages/domain/src/claim/index.ts`
+- MOD `packages/domain/src/claim/nominee-name-check.ts`
+- NEW `packages/domain/src/claim/refile-guard.ts`
+- NEW `packages/domain/src/policies/claim-closure-letter-rls.ts`
+- NEW `packages/domain/src/policies/claim-correction-closure-rls.ts`
+- NEW `packages/domain/src/policies/claim-correction-direction-rls.ts`
+- NEW `packages/domain/src/policies/claim-correction-no-correction-record-rls.ts`
+- NEW `packages/domain/src/policies/claim-refile-confirmation-rls.ts`
+- MOD `packages/domain/src/policies/index.ts`
+- MOD `packages/domain/src/rbac/permissions.ts`
+- MOD `packages/domain/src/rbac/roles.ts`
+- MOD `packages/domain/src/schema/claim_correction_chase.ts`
+- NEW `packages/domain/src/schema/claim_correction_closure.ts`
+- MOD `packages/domain/src/schema/index.ts`
+- MOD `packages/domain/tests/claim/correction-person-state.test.ts`
+- MOD `packages/domain/tests/claim/nominee-name-no-comparison-fence.test.ts`
+- NEW `packages/domain/tests/integration/claim/_correction-closure-fixture.ts`
+- MOD `packages/domain/tests/integration/claim/correction-chase-concurrency.spec.ts`
+- MOD `packages/domain/tests/integration/claim/correction-chase-shape.spec.ts`
+- MOD `packages/domain/tests/integration/claim/correction-chase.spec.ts`
+- NEW `packages/domain/tests/integration/claim/correction-closure-concurrency.spec.ts`
+- NEW `packages/domain/tests/integration/claim/correction-closure-shape.spec.ts`
+- NEW `packages/domain/tests/integration/claim/correction-closure.spec.ts`
+- MOD `packages/domain/tests/integration/claim/nominee-name-check.spec.ts`
+- MOD `packages/domain/tests/integration/multi-tenant/cross-pariwar-leak.spec.ts`
+- MOD `packages/domain/tests/integration/rls/claim-correction-chase-policy-regression.spec.ts`
+- NEW `packages/domain/tests/integration/rls/claim-correction-closure-policy-regression.spec.ts`
+- MOD `packages/domain/tests/rbac/permissions.test.ts`
+- MOD `packages/domain/tests/rbac/roles.test.ts`
+- MOD `packages/i18n/locales/en/claim.json`
+- MOD `packages/i18n/locales/hi/claim.json`
+- MOD `packages/queue/src/index.ts`
+- MOD `scripts/claim-adjudication-human-actor-invariant/check.ts`
+- MOD `scripts/microcopy/claim.test.ts`
 
 ## Change Log
 
 | Version | Date | Change |
 |---|---|---|
+| **v2.3** | **2026-10-01** | ⭐ **`/bmad-dev-story 6.19c` — BUILT, every Task ticked; Status `in-progress → review`.** Domain, migrations 0131–0136, keys (2)–(6) + (8), the jobs (the closure sweep, the closure-notice child), the API (three route files, the human-actor gate's floor 12 → 15), the admin surfaces, the member re-file state; the records (deferred work, the fallback ledger rows 10–14/17/18 + row 20, six surface-inventory rows, 6.18's go-live fence annotated discharged at its four sites). ⚠ **Flagged:** AC11c's *"→ `closure.too_early`"* example answers **`closure.request_lapsed`** under `-273` §3d (recorded in `deferred-work.md`). Details in the Dev Agent Record. |
 | **v2.2** | **2026-10-01** | ⭐ **The Panel answered `-273`'s confirms — `-274` (DR + KB):** 1a–1d **A** (our readings taken — the staff-origin close refused, the 90 days start only with a restart while held, the `-251` approve follows the origin, only the Super Admin decides a held claim), relabelled **ratified** at AC14, AC17 and the Policy meaning; **2 B** — a family reached only by post is sent a **closure letter**: AC6's closure-letter paragraph, AC8c's queue item and form, AC9c, AC11c, Tasks 1, 3, 6, 7. ⛔ No status flip. |
 | v2.1 | 2026-10-01 | ⭐ **The fresh-context re-validate of v2.0 and of `-273`'s first draft** (footgun 22), applied before `-273` is inserted: `-273` gains **§4** (while escalated only the Super Admin decides — `-256` cl.1 outranks D17's *"returns to the ordinary vote"*; the vote and a new return refused at the route) and **§3c** (a staff-origin escalation is ⛔ never closable — `closure.staff_case_origin`, keyed on origin — **Confirm 1** for the Panel); §5 becomes an **outbox** (once per closure per recipient) and records **Confirm 2** (a family reached only by post is ⛔ not told); §6's cadence ⛔ never rides `slot_day`; §7's highlight covers `never_checked` / `stale`; §9 names `-249` §2 and the post-confirmation wizard; `-273` renumbered (§4–§9 → §5–§10). **Story:** the Pariwar Admin's approval and the Super Admin's close re-check the **whole** request (`too_early` on the current run, `not_reached`); the hold keyed on the live return's row; the day-90 job's stop condition; AC7's `deriveAppealView` is display-only; the wizard's submit maps the re-file 409; the six test callers of `writeCorrectionMark`; predicate 8 in the Policy meaning; S-T8, S-T9. ⭐ **Second re-validate, same version:** every Pariwar Admin decision (incl. D27's approve) refused while held, records allowed; a pending request **lapses** when its family run or its return ends (`-273` §3d); one live closures row per **return**; the `-251` waiver follows the origin (ours, Confirm 1); `refile_requires_confirmation` routes the gate (a consumed confirmation ⛔ never traps a family); the outbox's columns and once-only key; every 6.19c reminder stops at the decision; a directee's per-direction key; `-273`'s Status line no longer credits BigDev with sections added after BigDev's answers. ⭐ **Third re-validate:** the lapse is **derived** from `request_family_run_id` (the first trigger never fired — at day ≥ 90 the family run has already ended) and the decline refuses a lapsed request (`closure.request_lapsed`); the closures UNIQUE excludes `lapsed`; the cycle-freeze guard runs after the lock for every actor (incl. `super_admin`); the outbox's `closure_notice_done_at`. BigDev approved `-273`'s added sections (*"Approve all"*). ✅ **`-273` inserted by BigDev** (verified additive-only, byte-identical to the staged text) — Task 0's STOP is lifted. |
 | v2.0 | 2026-10-01 | ⭐ **RE-DERIVED at `f079dc56`, ⛔ not patched** (`/bmad-create-story validate 6.19c`, four read-only verifiers; BigDev: *"Rewrite v2.0"*). Re-pinned from `c136b03c` (157 code files moved — 6.19a and 6.19b shipped). ⭐ **Author-commit `-273` staged** (BigDev inserts): D22 reads the whole return (the per-run reading deadlocked closure under `-272`); the letter cap ⛔ never resets on a new number (*"No reset"*); an escalated staff case is held (*"Held"*); the closure notice is sent by the jobs app; reminders after day 90 key on the return's latest run; the member status rides the claim-entry gate (*"Claim-entry gate"*); the *"approved despite a name mismatch"* highlight; the `-251` gate composed by construction (carrying `-263` C4); the Super Admin's reason on the closure record. **New:** AC18 (`-272`/`-273`); § What 6.19b shipped; § Slice traps; § CI gates and red tests; § Deferred items; the AC6 409 order incl. `no_live_return` / `escalated` / `request_pending`; AC14's both origins and the required `hold`. **Corrected:** Task 2 mints key (8) in the one bump (49 → 50, 58 → 64); the hold hook is on `writeCorrectionMark`, ⛔ not the run opener; the closure notice cannot be called from the API; the member appeal card is unmounted; the Files list (the import cycle; `CycleFreezePage`); AC10 names D27's narrowing; AC11c gains the `-267`/`-268`/`-269`/`-271`/`-272` proofs; keys (4)/(5) denial; race timeouts; Task 7's discharge sites (`epics.md` §6.18 carries no such fence); the ledger rows 10–14, 17, 18; the Policy meaning (seven predicates; `-258`, `-260` G1, `-268`); four `⛔` on non-negation words. |

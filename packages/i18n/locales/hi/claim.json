@@ -147,7 +147,7 @@
   "$comment.correction_chase": "Story 6.19b: the Hindi of correction_sms.reminder, correction_sms.closure_notice and nominee.bank.being_checked is agent-authored and NOT YET HUMAN-REVIEWED. Its review is a go-live gate (Decision 2026-09-29-267 section 6; launch-gate inventory). The SMS keys must match the registered DLT content byte for byte.",
   "correction_sms.reminder": "दावा {reference}: आपके परिवार के दावे के बैंक विवरण ठीक किए जाने हैं। कृपया हेल्पलाइन {helpline} पर कॉल करें, या ज़िला प्रशासक आपसे संपर्क करेंगे। आपका दावा अब भी खुला है।",
   "correction_sms.closure_notice": "दावा {reference}: बैंक विवरण में सुधार प्राप्त न होने के कारण यह दावा बंद कर दिया गया है। इस बंद किए जाने के विरुद्ध अपील नहीं की जा सकती। नया दावा हेल्पलाइन {helpline} या ज़िला प्रशासक के माध्यम से दर्ज किया जा सकता है।",
-  "$comment.refile": "Story 6.19c: the Hindi of refile.* is agent-authored and NOT YET HUMAN-REVIEWED (Decision 2026-09-29-267 section 6; launch-gate inventory).",
+  "$comment.refile": "Story 6.19c: the Hindi of refile.* was agent-authored and HUMAN-REVIEWED by BigDev on 2026-10-01 (accepted as written).",
   "refile.title": "यह दावा बंद कर दिया गया है",
   "refile.body": "यह दावा बंद कर दिया गया, क्योंकि बैंक विवरण में सुधार हमें नहीं मिला। हेल्पलाइन की सहायता से नया दावा दर्ज किया जा सकता है। कृपया हमें कॉल करें, हम आपका मार्गदर्शन करेंगे।",
   "refile.call": "हेल्पलाइन पर कॉल करें",

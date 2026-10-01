@@ -13,7 +13,6 @@ import { describe, expect, it } from 'vitest';
 import {
   ClaimContactRequiredError,
   ClosureLetterRefusedError,
-  CorrectionClosureRefusedError,
   RefileConfirmationRefusedError,
   RefileRequiresConfirmationError,
   listClosureLettersOwed,
@@ -32,21 +31,14 @@ import {
   voteOnFrozenClaim,
   approveNoCorrectionNeeded,
   assertCorrectionClaimNotHeld,
-  claimCorrectionReminder,
-  currentCorrectionNumberHash,
-  decideCorrectionClosure,
-  decideEscalatedClosure,
   decideNomineeCorrectionAsDistrictAdmin,
   decideNomineeCorrectionAsPariwarAdmin,
   endCorrectionRun,
   escalateStaffCase,
-  finaliseCorrectionReminder,
   isCorrectionClaimHeld,
   keepNoCorrectionNeeded,
-  noCorrectionHold,
   placeClosureUnderReview,
   raiseNomineeCorrection,
-  readCorrectionRecipients,
   recordClosureDirection,
   recordCorrectionLetter,
   recordCorrectionLetterDelivery,
@@ -56,274 +48,47 @@ import {
   respondToClosureDirection,
   returnToDistrictAdmin,
   writeCorrectionMark,
-  type CorrectionClosureRefusal,
 } from '../../../src/claim/index.js';
 import { istDateOf } from '../../../src/claim/correction-schedule.js';
 import { addCalendarDays } from '../../../src/cycle-calendar/holiday-resolver.js';
 import {
-  MEMBER_NOMINEE_FIELD_CLASS,
-  createFakeKmsProvider,
-  encryptTier1,
-  serializeEnvelope,
-  type FieldCryptoDeps,
 } from '../../../src/encryption/index.js';
 import { claimId as toClaimId, memberId as toMemberId } from '../../../src/ids/index.js';
-import type { ClaimId } from '../../../src/ids/index.js';
 import * as schema from '../../../src/schema/index.js';
 import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
 import {
   PARIWAR_A,
   driveClaimTo,
   enterAppScope,
-  seedNomineeDeclaration,
   seedNomineeDetermination,
   seedNomineeNameCheck,
 } from '../_helpers.js';
 
-type Client = ReturnType<typeof getTx>['client'];
-type Tx = ReturnType<typeof getTx>['tx'];
-
-const TRUSTEE = 'a1a1a1a1-a1a1-a1a1-a1a1-a1a1a1a1a1a1';
-const DA = 'b2b2b2b2-b2b2-b2b2-b2b2-b2b2b2b2b2b2';
-const SA = 'c3c3c3c3-c3c3-c3c3-c3c3-c3c3c3c3c3c3';
-const HOUR = 3_600_000;
-
-const KMS = createFakeKmsProvider({ kekBytes: new Uint8Array(32).fill(7), hmacKeyBytes: new Uint8Array(32).fill(9) });
-const ENC: FieldCryptoDeps = {
-  kms: KMS,
-  kekRef: { resourceName: 'fake:correction-closure-kek' },
-  hmacKeyRef: { resourceName: 'fake:correction-closure-hmac' },
-};
-
-async function encryptNomineeMobile(plaintext: string): Promise<string> {
-  return serializeEnvelope(
-    await encryptTier1(Buffer.from(plaintext, 'utf-8'), { pariwarId: PARIWAR_A, fieldClass: MEMBER_NOMINEE_FIELD_CLASS }, KMS, ENC.kekRef),
-  );
-}
-
-const tenAmIst = (date: string) => new Date(`${date}T04:30:00.000Z`);
-
-/** `claimCaseId`'s claim state, read from its row. */
-async function stateOf(tx: Tx, cid: ClaimId): Promise<string> {
-  const [row] = await tx.select({ s: schema.claims.currentState }).from(schema.claims).where(eq(schema.claims.claimCaseId, cid));
-  return row!.s;
-}
-
-async function eventTypesOf(tx: Tx, cid: ClaimId): Promise<string[]> {
-  const rows = await tx
-    .select({ t: schema.eventsLog.eventType })
-    .from(schema.eventsLog)
-    .where(and(eq(schema.eventsLog.pariwarId, PARIWAR_A), eq(schema.eventsLog.streamId, cid)))
-    .orderBy(schema.eventsLog.eventVersion);
-  return rows.map((r) => r.t);
-}
-
-const markInput = (cid: ClaimId, mustAct: 'family' | 'staff', now: Date) => ({
-  pariwarId: PARIWAR_A,
-  claimCaseId: cid,
-  mustAct,
-  actorId: DA,
-  actorDisplay: 'District Admin One',
-  setByRole: 'district_admin' as const,
-  noteCiphertext: 'enc:v1:note',
-  now,
-  hold: isCorrectionClaimHeld,
-});
-
-/**
- * A returned claim (verifier_approved, two accounts, a passing check, a determination, a contact record whose
- * claimant IS nominee 1) whose ONE nominee has a REAL mobile; marked `mustAct` at the return. With `timeline`, the
- * return moves to T − 3 h and the accounts + checks to T − 4 h (a later rewrite then lands AFTER the return).
- */
-async function returnedClaim(client: Client, opts: { readonly mustAct?: 'family' | 'staff'; readonly timeline?: boolean } = {}) {
-  const { tx } = getTx();
-  const cid = toClaimId(randomUUID());
-  const mid = toMemberId(randomUUID());
-  await driveClaimTo(client, PARIWAR_A, cid, mid, 'verifier_approved');
-  await seedNomineeDeclaration(tx, PARIWAR_A, mid, { nominees: [{ mobileCiphertext: await encryptNomineeMobile('9812345678') }] });
-  await seedNomineeNameCheck(client, PARIWAR_A, cid);
-  const ret = await returnToDistrictAdmin(client, {
-    claimCaseId: cid,
-    pariwarId: PARIWAR_A,
-    reasonCode: 'other',
-    rationaleCiphertext: 'enc:v1:return-note',
-    actorId: TRUSTEE,
-    actorDisplay: 'Pariwar Admin One',
-    actor: 'trustee',
-  });
-  const returnId = ret.decision.decisionId as string;
-  let returnedAt = ret.decision.decidedAt;
-  if (opts.timeline === true) {
-    await asSuperuser(client, async () => {
-      await client.query(`UPDATE claim_state_trustee_decisions SET decided_at = decided_at - interval '3 hours' WHERE decision_id = $1`, [returnId]);
-      await client.query("SET LOCAL session_replication_role = 'replica'");
-      await client.query(
-        `UPDATE events_log SET occurred_at = occurred_at - interval '4 hours' WHERE stream_id = $1 AND event_type = 'claim.nominee_name_checked'`,
-        [cid],
-      );
-      await client.query("SET LOCAL session_replication_role = 'origin'");
-    });
-    await tx
-      .update(schema.claimNomineeBankAccounts)
-      .set({ updatedAt: new Date(returnedAt.getTime() - 4 * HOUR) })
-      .where(eq(schema.claimNomineeBankAccounts.claimCaseId, cid));
-    returnedAt = new Date(returnedAt.getTime() - 3 * HOUR);
-  }
-  const w = await writeCorrectionMark(client, {
-    pariwarId: PARIWAR_A,
-    claimCaseId: cid,
-    mustAct: opts.mustAct ?? 'family',
-    actorId: TRUSTEE,
-    actorDisplay: 'Pariwar Admin One',
-    setByRole: 'pariwar_admin',
-    noteCiphertext: null,
-    isReturnMark: true,
-    hold: noCorrectionHold,
-  });
-  const day0 = w.openedRun!.day0;
-  const person = (await readCorrectionRecipients(tx, PARIWAR_A, cid)).people[0]!;
-  return { cid, mid, returnId, returnedAt, runId: w.openedRun!.runId, day0, person, day: (n: number) => tenAmIst(addCalendarDays(day0, n)) };
-}
-
-type Returned = Awaited<ReturnType<typeof returnedClaim>>;
-
-async function asSuperuser<T>(client: Client, fn: () => Promise<T>): Promise<T> {
-  await client.query('RESET ROLE');
-  try {
-    return await fn();
-  } finally {
-    await enterAppScope(client, PARIWAR_A);
-  }
-}
-
-/** A family-SMS outcome for the person on `runId` slot `slotDay` — `hash` defaults to their CURRENT number's. */
-async function familyRow(
-  tx: Tx,
-  c: Returned,
-  outcome: 'accepted' | 'rejected_invalid_number' | 'no_target',
-  opts: { readonly runId?: string; readonly slotDay?: number; readonly hash?: string | null; readonly sentOn?: string } = {},
-) {
-  const slotDay = opts.slotDay ?? 1;
-  const hash =
-    opts.hash !== undefined
-      ? opts.hash
-      : outcome === 'no_target'
-        ? null
-        : await currentCorrectionNumberHash(c.person.mobileCiphertext, c.person.mobileSource, PARIWAR_A, ENC);
-  const claimed = await claimCorrectionReminder(tx, {
-    pariwarId: PARIWAR_A,
-    claimCaseId: c.cid,
-    runId: opts.runId ?? c.runId,
-    slotDay,
-    recipientKey: c.person.personKey,
-    purpose: 'family_sms',
-    subjectKey: '',
-    sentOn: opts.sentOn ?? addCalendarDays(c.day0, slotDay),
-    late: false,
-    jobId: `j-${slotDay}-${randomUUID()}`,
-    now: new Date(),
-  });
-  if (claimed.status !== 'claimed') throw new Error('claim');
-  const jobId = (await tx.select().from(schema.claimCorrectionReminders).where(eq(schema.claimCorrectionReminders.reminderId, claimed.reminderId)))[0]!
-    .claimedByJob!;
-  await finaliseCorrectionReminder(tx, {
-    pariwarId: PARIWAR_A,
-    reminderId: claimed.reminderId,
-    jobId,
-    outcome,
-    recipientVersionId: c.person.versionId,
-    recipientNumberHash: hash,
-  });
-}
-
-/** A returned FAMILY claim whose one person was reached (an accepted SMS to their current number). */
-async function reachedClaim(client: Client, tx: Tx, opts: { readonly timeline?: boolean } = {}) {
-  const c = await returnedClaim(client, { mustAct: 'family', ...opts });
-  await familyRow(tx, c, 'accepted');
-  return c;
-}
-
-const request = (client: Client, c: Returned, now = c.day(95)) =>
-  requestCorrectionClosure(client, {
-    pariwarId: PARIWAR_A,
-    claimCaseId: c.cid,
-    actorId: DA,
-    actorDisplay: 'District Admin One',
-    now,
-    noteCiphertext: 'enc:v1:request-note',
-    crypto: ENC,
-  });
-
-const approve = (client: Client, c: Returned, now = c.day(96)) =>
-  decideCorrectionClosure(client, {
-    pariwarId: PARIWAR_A,
-    claimCaseId: c.cid,
-    actorId: TRUSTEE,
-    actorDisplay: 'Pariwar Admin One',
-    now,
-    decision: 'approve',
-    noteCiphertext: null,
-    decisionRationaleCiphertext: 'enc:v1:closed-for-no-response',
-    crypto: ENC,
-  });
-
-const decline = (client: Client, c: Returned, now = c.day(96)) =>
-  decideCorrectionClosure(client, {
-    pariwarId: PARIWAR_A,
-    claimCaseId: c.cid,
-    actorId: TRUSTEE,
-    actorDisplay: 'Pariwar Admin One',
-    now,
-    decision: 'decline',
-    noteCiphertext: 'enc:v1:decline-note',
-  });
-
-const superAdmin = (client: Client, c: Returned, decision: 'close' | 'refuse' | 'approve', reason: string, now = c.day(100)) =>
-  decideEscalatedClosure(client, {
-    pariwarId: PARIWAR_A,
-    claimCaseId: c.cid,
-    actorId: SA,
-    actorDisplay: 'Super Admin One',
-    now,
-    reason,
-    noteCiphertext: 'enc:v1:super-admin-note',
-    decisionRationaleCiphertext: 'enc:v1:super-admin-rationale',
-    ...(decision === 'close'
-      ? { decision, crypto: ENC }
-      : decision === 'refuse'
-        ? { decision, refusalReasonCode: 'documents_insufficient' }
-        : { decision }),
-  } as Parameters<typeof decideEscalatedClosure>[1]);
-
-async function expectRefused(p: Promise<unknown>, refusal: CorrectionClosureRefusal): Promise<CorrectionClosureRefusedError> {
-  const err = await p.then(
-    () => {
-      throw new Error(`expected refusal '${refusal}', but it succeeded`);
-    },
-    (e: unknown) => e,
-  );
-  expect(err).toBeInstanceOf(CorrectionClosureRefusedError);
-  expect((err as CorrectionClosureRefusedError).refusal).toBe(refusal);
-  return err as CorrectionClosureRefusedError;
-}
-
-/** The claim's closures rows, oldest first. */
-async function closuresOf(tx: Tx, cid: ClaimId) {
-  return tx
-    .select()
-    .from(schema.claimCorrectionClosures)
-    .where(eq(schema.claimCorrectionClosures.claimCaseId, cid))
-    .orderBy(schema.claimCorrectionClosures.createdAt);
-}
-
-/** Make the claim RESUBMITTED (tier (a)): every account rewritten after the return, then a fresh passing check. */
-async function resubmit(client: Client, tx: Tx, c: Returned) {
-  await tx
-    .update(schema.claimNomineeBankAccounts)
-    .set({ updatedAt: new Date(c.returnedAt.getTime() + HOUR) })
-    .where(eq(schema.claimNomineeBankAccounts.claimCaseId, c.cid));
-  await seedNomineeNameCheck(client, PARIWAR_A, c.cid, { reuseAccounts: true });
-}
+import {
+  TRUSTEE,
+  DA,
+  SA,
+  HOUR,
+  ENC,
+  encryptNomineeMobile,
+  tenAmIst,
+  stateOf,
+  eventTypesOf,
+  markInput,
+  returnedClaim,
+  asSuperuser,
+  familyRow,
+  reachedClaim,
+  request,
+  approve,
+  decline,
+  superAdmin,
+  expectRefused,
+  closuresOf,
+  resubmit,
+  type Client,
+  type Tx,
+} from './_correction-closure-fixture.js';
 
 describe.skipIf(!hasDatabase)('the correction closure — request, decision, hold, Super Admin, D27 (6.19c)', { timeout: 20000 }, () => {
   setupLiveDb();

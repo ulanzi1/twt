@@ -62,9 +62,12 @@ describe('isDatabaseError (Story 6.19b — J3)', () => {
     expect(isDatabaseError(Object.assign(new Error('x'), { name: 'DatabaseError' }))).toBe(true);
   });
 
-  it('a crypto / network fault is ⛔ not — incl. a five-letter Node errno, a gRPC number, no code at all', () => {
+  it('a crypto / network fault is ⛔ not — incl. a five-character Node errno (with or without a digit), a gRPC number, no code at all', () => {
     expect(isDatabaseError(new Error('Unsupported envelope'))).toBe(false);
     expect(isDatabaseError(Object.assign(new Error('pipe'), { code: 'EPIPE' }))).toBe(false);
+    // ⭐ A Node errno WITH a digit — the digit lookahead alone would have read it as a SQLSTATE.
+    expect(isDatabaseError(Object.assign(new Error('arg list too long'), { code: 'E2BIG' }))).toBe(false);
+    expect(isDatabaseError(Object.assign(new Error('x'), { name: 'DrizzleQueryError', cause: Object.assign(new Error('y'), { code: 'E2BIG' }) }))).toBe(false);
     expect(isDatabaseError(Object.assign(new Error('reset'), { code: 'ECONNRESET' }))).toBe(false);
     expect(isDatabaseError(Object.assign(new Error('kms'), { code: 14 }))).toBe(false);
     expect(isDatabaseError(undefined)).toBe(false);

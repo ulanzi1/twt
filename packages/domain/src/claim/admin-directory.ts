@@ -21,16 +21,16 @@ export interface AdminDirectoryEntry {
 
 export interface AdminDirectoryResult {
   readonly entries: readonly AdminDirectoryEntry[];
-  /** The 50-row window was hit — there may be MORE active holders than were returned. The caller should alarm; a
+  /** MORE than 50 active holders exist — only the first 50 (by user id) were returned. The caller should alarm; a
    * silent drop from "every Pariwar Admin" is a real miss, not a cosmetic one. */
   readonly truncated: boolean;
 }
 
 /**
- * The fixed bounded window, TYPE-PINNED to the literal `50`. The `.limit(50)` below must stay an integer literal (the
- * domain-invariants `.limit()` gate accepts only a literal or `clampLimit`), so it cannot name this constant: the
- * comparison literal is typed `typeof ADMIN_DIRECTORY_LIMIT` (a drift there fails typecheck), and the `.limit(...)`
- * literal is pinned to this constant by `tests/claim/admin-directory-limit.test.ts` (a drift there fails the test).
+ * The most holders RETURNED. ⭐ The query fetches ONE MORE (`.limit(51)` — an integer literal, as the domain-invariants
+ * `.limit()` gate requires, so it cannot name this constant) and `truncated` is set only when that extra row came back:
+ * exactly 50 holders is ⛔ not truncated. `tests/claim/admin-directory-limit.test.ts` pins the behaviour at 50 / 51
+ * holders through a fake `Db` (the fetched bound included).
  */
 export const ADMIN_DIRECTORY_LIMIT = 50 as const;
 
@@ -62,12 +62,13 @@ export async function listAdminsByRole(
       ),
     )
     .orderBy(asc(users.id))
-    // ⚠ An integer literal for the domain-invariants gate — pinned to `ADMIN_DIRECTORY_LIMIT` by a unit test.
-    .limit(50);
-  // ⭐ The bound `truncated` compares against: the SAME literal, typed so it cannot drift from the constant.
-  const BOUND: typeof ADMIN_DIRECTORY_LIMIT = 50;
+    // ⚠ `ADMIN_DIRECTORY_LIMIT + 1` as an integer literal (the domain-invariants gate) — the extra row only PROVES
+    // there are more holders than are returned; it is ⛔ never returned itself.
+    .limit(51);
   return {
-    entries: rows.map((r) => ({ userId: r.userId as string, displayName: r.displayName! })),
-    truncated: rows.length >= BOUND,
+    entries: rows
+      .slice(0, ADMIN_DIRECTORY_LIMIT)
+      .map((r) => ({ userId: r.userId as string, displayName: r.displayName! })),
+    truncated: rows.length > ADMIN_DIRECTORY_LIMIT,
   };
 }

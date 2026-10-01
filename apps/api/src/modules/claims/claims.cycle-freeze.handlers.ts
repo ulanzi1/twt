@@ -411,11 +411,10 @@ export function createCycleFreezeHandlers(
               setByRole: matchedRole,
               noteCiphertext: null,
               isReturnMark: true,
-              // Passed for symmetry with the change route ONLY — on a return mark (`isReturnMark`) the writer
-              // reads it for ⛔ nothing: day 0 is the return's OWN IST date (its `decided_at`, AC2, taken from the
-              // live return), and the mark's `set_at` is the DB's `clock_timestamp()` column default — ⛔ neither
-              // comes from this clock. (On the change route `now` drives the NEW run's day 0, never `set_at`.)
-              now: deps.clock(),
+              // ⛔ No `now` on a return mark (K5): day 0 is the return's OWN IST date (its `decided_at`, AC2, taken
+              // from the live return) and the mark's `set_at` is the DB's `clock_timestamp()` column default — a
+              // clock passed here could only ever split day 0 from `decided_at`, so the writer's input refuses it.
+              // (On the change route `now` drives the NEW run's day 0, never `set_at`.)
             });
             break;
           }

@@ -22,7 +22,9 @@ export const correctionChaseEn = {
     unchanged: 'That is already who must act.',
     noLiveReturn: 'This claim is no longer sent back — there is nothing to change.',
     error: 'The change could not be saved. Try again.',
-    forbidden: 'Your role cannot change who must act — a District Admin can.',
+    // ⭐ NEUTRAL (fifth-pass review 2026-10-01): a 403 also reaches a District Admin of ANOTHER district — "a District
+    // Admin can" read wrong to them. The page cannot tell which (the session carries only the national grants).
+    forbidden: 'Your access does not cover this claim.',
   },
   run: {
     family: 'Family reminders',
@@ -75,6 +77,8 @@ export const correctionChaseEn = {
     screenshotLoad: 'Get the screenshot link',
     screenshotOpen: 'Open the screenshot (new tab)',
     screenshotBadLink: 'The screenshot link is not a secure link — it was not opened.',
+    screenshotNotFound: 'No screenshot is on record for this letter. Reload the page.',
+    screenshotExpired: 'The screenshot link expired. Get a new link to open it.',
     record: 'Record a posted letter',
     postedOn: 'Posting date',
     tracking: 'Tracking number',
@@ -84,6 +88,8 @@ export const correctionChaseEn = {
     address: 'Address',
     addressShown: 'The address is shown below. It hides itself after a few minutes.',
     addressHidden: 'The address is hidden again.',
+    // A READ failed — ⛔ "could not be saved" (nothing was being saved).
+    addressError: 'The address could not be shown. Try again.',
     stepUpIntro: 'Showing an address needs a fresh verification. We will send you a code.',
     sendCode: 'Send the code',
     codeSent: 'We sent you a code. Enter it below.',
@@ -95,7 +101,11 @@ export const correctionChaseEn = {
     codeNotSent: 'The code could not be sent. Try again.',
     codeNotChecked: 'The code could not be checked. Try again.',
     codeRequired: 'Enter the code we sent you.',
-    forbidden: 'Your role cannot do this — a District Admin can.',
+    // ⭐ NEUTRAL — see `mustAct.forbidden`.
+    forbidden: 'Your access does not cover this claim.',
+    sessionExpired: 'Your session has ended. Sign in again to continue.',
+    rateLimited: 'Too many attempts in a short time. Wait a few minutes, then try again.',
+    deliveryBusy: 'A delivery is still being saved. Wait for it to finish, then try again.',
     fieldsRequired: 'Enter the posting date and the tracking number.',
     secondWaitsForDelivery: 'Record the first letter’s delivery before a second letter — a second letter follows the first one’s delivery.',
     deliveryHeading: 'Record the delivery',
@@ -104,10 +114,14 @@ export const correctionChaseEn = {
     deliveredOn: 'Delivery date',
     file: 'Screenshot of the delivery (JPEG, PNG or WebP)',
     saveDelivery: 'Save the delivery',
-    deliveryRecorded: (sequence: number): string => `Delivery recorded for letter #${String(sequence)}.`,
+    // ⭐ With the posting date — under K1 two letters (of two runs) can both be #1.
+    deliveryRecorded: (sequence: number, postedOn: string): string =>
+      `Delivery recorded for letter #${String(sequence)} posted ${postedOn}.`,
     limit: 'Two letters are already recorded for this person.',
     refusals: {
-      not_letter_eligible: 'This person has not been found unreachable — a letter is for someone the text reminders could not reach.',
+      // ⭐ NEUTRAL — the server also refuses while the nominees in force are not yet determined (D30 `undetermined`).
+      not_letter_eligible:
+        'A letter cannot be recorded for this person right now — either the text reminders have not been found unable to reach them, or the nominees in force at the death are not yet determined.',
       address_missing: 'This person’s postal address is not on the contact record.',
       agreement_not_live: 'The family’s agreement to be contacted is not in force.',
       limit_reached: 'Two letters are already recorded for this person.',
@@ -136,6 +150,9 @@ export const correctionChaseEn = {
     // national grants), and "escalated to me" read wrong to the District Admin who was chased.
     escalatedOnly: 'Show only the chases escalated to the Pariwar Admin',
     highlighted: 'This is the claim you opened from a reminder.',
+    // A REFETCH failed while a list is on screen — the list stays (a typed field, a revealed address, a confirmation
+    // survive); this line says it may be out of date.
+    refetchError: 'The list could not be refreshed, so it may be out of date. Reload the page to try again.',
     claimNotShown:
       'The claim you opened from a reminder is not in this list — it may be filtered out, further down than this page shows, or already resubmitted.',
   },

@@ -462,8 +462,11 @@ export function createNomineeNameCheckHandlers(deps: AppDeps) {
       });
 
       const today = cycleCalendar.istDateOf(deps.clock());
-      // ⭐ ONE row's chase summary, degraded per ROW (never a 500 for the whole queue). With `withCrypto` it hashes
-      // each chased person's CURRENT number so the per-person status resets on a 6.20 correction (AC3).
+      // ⭐ ONE row's chase summary, degraded per ROW where that is safe. With `withCrypto` it hashes each chased
+      // person's CURRENT number so the per-person status resets on a 6.20 correction (AC3). ⚠ What holds is NARROWER
+      // than "never a 500": a non-database fault in the crypto read degrades only its row (below), as does any
+      // non-database fault in the escalated scan (its own catch); a DATABASE error (it has aborted the shared scope
+      // tx) and any throw from the no-crypto read itself still fail the whole request (a 500).
       //   · A per-person HASH fault (an unreadable mobile envelope, a KMS blip) is caught INSIDE the read model and
       //     surfaces as `numberUnverified` — logged here (claim id only); the row still shows, its affected people
       //     read the old number's history. ⛔ Not on the wire (the DTO is unchanged); the letter routes fail CLOSED
@@ -512,8 +515,22 @@ export function createNomineeNameCheckHandlers(deps: AppDeps) {
             'correction-queue escalated filter: the bounded scan may be omitting escalations',
           );
         }
+        // ⭐ A per-row catch: a NON-database fault in one row's summary is logged (claim id + error name / code, ids
+        // only) and that row reads as ⛔ not escalated — the filter shows the rest. A database error is rethrown (it
+        // has aborted the shared scope tx; every later row would fail with 25P02 and bury its SQLSTATE).
         const flags = await Promise.all(
-          visible.map(async (row) => (await chaseSummaryOf(row.claimCaseId, false)).escalated),
+          visible.map(async (row) => {
+            try {
+              return (await chaseSummaryOf(row.claimCaseId, false)).escalated;
+            } catch (err) {
+              if (isDatabaseError(err)) throw err;
+              request.log.warn(
+                { err: err instanceof Error ? err.name : 'unknown', code: errorCodeOf(err), claimCaseId: row.claimCaseId },
+                "correction-queue escalated filter: a row's chase summary failed; the row is treated as not escalated",
+              );
+              return false;
+            }
+          }),
         );
         rows = visible
           .filter((_, i) => flags[i] === true)
@@ -704,9 +721,11 @@ function errorCodeOf(err: unknown): string | null {
 
 /**
  * A Postgres SQLSTATE: five characters of digits / upper-case letters (`23505`, `25P02`, `40P01`, `HV00B`) — ⭐ with at
- * least one digit (every SQLSTATE has one), so a five-letter Node errno (`EPIPE`, `EPERM`) is ⛔ not mistaken for one.
+ * least one digit (every SQLSTATE has one), so an all-letter Node errno (`EPIPE`, `EPERM`) is ⛔ not mistaken for one;
+ * and ⛔ never starting with `E`: a Node errno can carry a digit (`E2BIG`), and ⛔ no SQLSTATE class starts with `E`
+ * (Postgres' classes are `00`–`72`, `F0`, `HV`, `P0`, `XX`) — so any `E` + four characters is read as an errno.
  */
-const SQLSTATE = /^(?=.*\d)[0-9A-Z]{5}$/;
+const SQLSTATE = /^(?!E)(?=.*\d)[0-9A-Z]{5}$/;
 
 /**
  * Story 6.19b (fourth pass) — is this a DATABASE error? Walks `err` and its `.cause` chain (drizzle wraps the pg error
@@ -754,6 +773,7 @@ function correctionChaseDto(s: claimDomain.CorrectionChaseSummary): CorrectionCh
         delivered_on: l.deliveredOn,
         overdue: l.overdue,
         has_screenshot: l.hasScreenshot,
+        in_current_run: l.inCurrentRun,
       })),
     })),
     escalated: s.escalated,

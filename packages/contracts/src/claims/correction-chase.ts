@@ -107,6 +107,12 @@ export const CorrectionLetterDto = z
     /** `-250` #3 — 14 days after posting with ⛔ no recorded delivery, OR a delivery recorded later than that. Shown only. */
     overdue: z.boolean(),
     has_screenshot: z.boolean(),
+    /**
+     * K1 — the letter belongs to the latest family / direction run, the run whose letters the per-run rules count (≤ 2,
+     * the second after the first's delivery). Present on the QUEUE's letters (which span every run of the return);
+     * absent on a single-letter write response.
+     */
+    in_current_run: z.boolean().optional(),
   })
   .strict();
 export type CorrectionLetterDto = z.output<typeof CorrectionLetterDto>;

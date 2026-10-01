@@ -640,6 +640,56 @@ export async function enterAppRoleNoScope(client: pg.PoolClient): Promise<void> 
   await client.query('SET LOCAL ROLE twt_app');
 }
 
+/**
+ * ⭐ Take EVERY lock a `TRUNCATE <parent> CASCADE` needs, ALL OR NOTHING, before the spec issues it (Story 6.19b,
+ * fifth-pass review, 2026-10-01). The set is the parent plus every table its CASCADE reaches — the FK referencers,
+ * RECURSIVELY. In a bounded retry loop: `SAVEPOINT`, ONE `LOCK TABLE <the whole set> IN ACCESS EXCLUSIVE MODE NOWAIT`;
+ * on `55P03` (a lock is busy) `ROLLBACK TO SAVEPOINT` — which drops whatever part of the set was granted — sleep a
+ * moment and try again. The caller's TRUNCATE then needs ⛔ no lock it does not already hold.
+ * ⚠ WHY: TRUNCATE locks the parent first and then each child, while a parallel spec's INSERT into a child holds the
+ * child and waits on the parent for its FK check — a deadlock between two files. Pre-locking the children one
+ * statement at a time (the fourth pass) only MOVED it: a parallel test that touched the parent and then a child
+ * (`seedNomineeNameCheck`; `claim_contacts` → `claim_contact_nominees`) deadlocks with the held children. Here the
+ * TRUNCATE side ⛔ never waits while it holds part of the set, so it can never be one end of a deadlock cycle.
+ * Must run inside a transaction (each live-DB test's own). Returns the locked set.
+ */
+export async function lockTruncateSetNowait(
+  client: pg.PoolClient,
+  parent: string,
+  opts: { readonly attempts?: number } = {},
+): Promise<readonly string[]> {
+  const { rows } = await client.query<{ t: string }>(
+    `WITH RECURSIVE reach(oid) AS (
+       SELECT $1::regclass::oid
+       UNION
+       SELECT c.conrelid FROM pg_constraint c JOIN reach r ON c.confrelid = r.oid WHERE c.contype = 'f'
+     )
+     SELECT oid::regclass::text AS t FROM reach ORDER BY 1`,
+    [parent],
+  );
+  const tables = rows.map((r) => r.t);
+  const attempts = opts.attempts ?? 60;
+  for (let attempt = 1; ; attempt++) {
+    await client.query('SAVEPOINT truncate_lock_set');
+    try {
+      await client.query(`LOCK TABLE ${tables.join(', ')} IN ACCESS EXCLUSIVE MODE NOWAIT`);
+      await client.query('RELEASE SAVEPOINT truncate_lock_set');
+      return tables;
+    } catch (err) {
+      await client.query('ROLLBACK TO SAVEPOINT truncate_lock_set');
+      await client.query('RELEASE SAVEPOINT truncate_lock_set');
+      const code = (err as { code?: string }).code ?? (err as { cause?: { code?: string } }).cause?.code;
+      if (code !== '55P03') throw err;
+      if (attempt >= attempts) {
+        throw new Error(
+          `[lockTruncateSetNowait] ${parent}: the CASCADE set (${tables.length} tables) stayed busy for ${attempts} attempts`,
+        );
+      }
+      await new Promise((resolve) => setTimeout(resolve, 25 + Math.floor(Math.random() * 75)));
+    }
+  }
+}
+
 // ── Story 6.18 — the nominee NAME CHECK approval gate (AC4) ────────────────────────────────────
 // Every approving path (P1 `adjudicateClaim`, P3 `voteOnFrozenClaim`, P4 `finalizeR9Outcome`) now
 // requires the claim's two live bank accounts AND a current, passing District Admin name check

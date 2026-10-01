@@ -18,13 +18,16 @@ import {
   type SmsGatewayMessage,
 } from '@twt/channels';
 import { bindScopedDb, claim, cycleCalendar, deviceToken, encryption, ids, withPariwarScope } from '@twt/domain';
-import type { JobEnvelope } from '@twt/queue';
+import { createQueueClient, QUEUE_NAMES, stopQueueClient, type JobEnvelope, type QueueClient } from '@twt/queue';
 import pg from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { buildJobsEncryptionDeps } from '../src/deps.js';
 import {
   ClaimCorrectionTransientError,
+  CORRECTION_SWEEP_EXPIRE_SECONDS,
+  CORRECTION_SWEEP_RETRY,
+  registerClaimCorrectionReminderWorkers,
   runCorrectionFamilySmsChild,
   runCorrectionReminderSweep,
   runCorrectionStaffPush,
@@ -95,6 +98,8 @@ describe.skipIf(!hasDatabase)('Story 6.19b — the claim-correction reminders (l
       encryption?: encryption.FieldCryptoDeps;
       runLimit?: number;
       maxRuns?: number;
+      /** The sweep's Pariwars (default: this suite's three) — a test with far-future clocks takes its OWN Pariwar. */
+      allowlist?: readonly string[];
     } = {},
   ): Harness {
     const enqueued: Harness['enqueued'] = [];
@@ -134,7 +139,7 @@ describe.skipIf(!hasDatabase)('Story 6.19b — the claim-correction reminders (l
       },
       now: () => now,
       onAlarm: (m) => alarms.push(m),
-      pariwarAllowlist: [PARIWAR, OTHER_PARIWAR, STAFF_PARIWAR],
+      pariwarAllowlist: opts.allowlist ?? [PARIWAR, OTHER_PARIWAR, STAFF_PARIWAR],
     };
     return { deps, enqueued, sent, alarms, audits, setNow: (d) => (now = d) };
   }
@@ -227,7 +232,7 @@ describe.skipIf(!hasDatabase)('Story 6.19b — the claim-correction reminders (l
     const letter = await onOwnTx(pool, pariwarId, (client) =>
       claim.recordCorrectionLetter(client, {
         pariwarId: pid, claimCaseId: cid, personKey, postedOn,
-        trackingNumberCiphertext: 'enc:v1:t', actorId: randomUUID(), actorDisplay: 'District Admin',
+        trackingNumberCiphertext: 'enc:v1:t', actorId: randomUUID(), actorDisplay: 'District Admin', crypto: enc,
       }),
     );
     await onOwnTx(pool, pariwarId, (client) =>
@@ -434,7 +439,7 @@ describe.skipIf(!hasDatabase)('Story 6.19b — the claim-correction reminders (l
     const letter = await onOwnTx(pool, PARIWAR, (client) =>
       claim.recordCorrectionLetter(client, {
         pariwarId: pid, claimCaseId: cid, personKey: person!.personKey, postedOn: posted,
-        trackingNumberCiphertext: 'enc:v1:t', actorId: randomUUID(), actorDisplay: 'District Admin',
+        trackingNumberCiphertext: 'enc:v1:t', actorId: randomUUID(), actorDisplay: 'District Admin', crypto: enc,
       }),
     );
     // A POSTED letter does ⛔ not stop the reminders.
@@ -665,6 +670,10 @@ describe.skipIf(!hasDatabase)('Story 6.19b — the claim-correction reminders (l
     const claimantJobs = () => smsFor(h, s.claimCaseId).filter((j) => payloadOf(j).personKey === 'claimant');
     expect(claimantJobs().map((j) => payloadOf(j).slotDay)).toEqual([1]); // the delivery stops A's reminders
     // The 6.20 correction: the claimant block's mobile becomes B (the claimant has ⛔ no version — the hash decides).
+    // ⚠ PLANTED RAW, on purpose (fifth-pass review): ⛔ no domain writer changes the claimant block's mobile once a claim
+    // is returned (`writeClaimContact`'s window ⛔ reaches `verifier_approved` for the member, and the helpline is
+    // add-only there; the 6.20 correction writer versions NOMINEES), so this plants the state such a change would
+    // leave. The nominee path — a real 6.20 version — is the domain suite's (`correction-chase.spec.ts`).
     await asOwner('UPDATE claim_contacts SET claimant_mobile_ciphertext = $2 WHERE claim_case_id = $1', [
       s.claimCaseId,
       await encryptField(B, PARIWAR, 'claim_contact', enc),
@@ -680,7 +689,7 @@ describe.skipIf(!hasDatabase)('Story 6.19b — the claim-correction reminders (l
     expect(claimantRows.find((r) => r.slot_day === 4)).toMatchObject({ outcome: 'accepted' });
   });
 
-  it('⭐ a delivery dated far BEFORE the run (a wrong-year typo) ⇒ the second-letter slot is negative: skipped + alarmed, and the REST of the plan still lands', async () => {
+  it('⭐ a delivery dated BEFORE the return (a wrong-year typo) ⇒ the second-letter slot is negative: the `delivery_before_run` marker + ONE alarm, and the REST of the plan still lands', async () => {
     const s = await seed({ nomineeMobiles: ['12345', '9812345678'] });
     const { day0 } = await runOf(s.runId!);
     const h = harness();
@@ -873,9 +882,13 @@ describe.skipIf(!hasDatabase)('Story 6.19b — the claim-correction reminders (l
     h.setNow(tenAmIst(day(day0, 1)));
     const result = await runCorrectionReminderSweep(h.deps, boss(h));
     expect(result.scannedRuns).toBeGreaterThanOrEqual(4);
+    const today = day(day0, 1);
     for (const s of seeded) {
-      // ONE nominee each ⇒ exactly one SMS per run: planned once, ⛔ never re-read at a page edge.
-      expect(smsFor(h, s.claimCaseId).map((j) => payloadOf(j).slotDay)).toEqual([1]);
+      // Each seed against ITS OWN run's day 0 (four seeds can straddle an IST midnight): ONE nominee each ⇒ exactly one
+      // SMS on its day 1 (planned once, ⛔ never re-read at a page edge), ⛔ none on its day 0.
+      const own = claim.correctionRunDay((await runOf(s.runId!)).day0, today);
+      expect([0, 1]).toContain(own);
+      expect(smsFor(h, s.claimCaseId).map((j) => payloadOf(j).slotDay)).toEqual(own === 1 ? [1] : []);
     }
     expect(h.alarms.some((a) => a.includes('hard bound'))).toBe(false);
 
@@ -885,20 +898,25 @@ describe.skipIf(!hasDatabase)('Story 6.19b — the claim-correction reminders (l
     expect(bounded.alarms.filter((a) => a.includes('hard bound of 3'))).toHaveLength(1);
   });
 
-  it('⭐ I6 in the sweep — a person\'s current number cannot be HASHED ⇒ ALARMED by ids (⛔ never the number), and the plan still lands', async () => {
+  it('⭐ I6 in the sweep — a person\'s current number cannot be HASHED ⇒ ONE aggregated alarm by ids (⛔ never the number), and the plan still lands', async () => {
     const A = '9811111131';
-    const s = await seed({ nomineeMobiles: ['9812345678'], claimantMobile: A });
+    // Its OWN Pariwar: every hash fails under `hmacDown`, so the tick's ONE aggregated alarm (count + up to five claim
+    // ids) must count THIS claim alone to name it.
+    const own = randomUUID();
+    const s = await seed({ pariwarId: own, nomineeMobiles: ['9812345678'], claimantMobile: A });
     const { day0 } = await runOf(s.runId!);
-    const h = harness();
+    const config = { [`sms.claim_correction.helpline_number.${own}`]: HELPLINE };
+    const h = harness({ allowlist: [own], config });
     h.setNow(tenAmIst(day(day0, 1)));
     await runCorrectionReminderSweep(h.deps, boss(h));
     for (const j of smsFor(h, s.claimCaseId)) await child(h, j); // the claimant now has an evidential row ⇒ hashed daily
-    const down = harness({ encryption: hmacDown });
+    const down = harness({ encryption: hmacDown, allowlist: [own], config });
     down.setNow(tenAmIst(day(day0, 2)));
     await runCorrectionReminderSweep(down.deps, boss(down));
-    const hashAlarms = down.alarms.filter((a) => a.includes(s.claimCaseId) && a.includes('could not be hashed'));
-    expect(hashAlarms).toHaveLength(1);
-    expect(hashAlarms[0]).toContain('claimant');
+    const hashAlarms = down.alarms.filter((a) => a.includes('could not be hashed'));
+    expect(hashAlarms).toHaveLength(1); // ⛔ one per person per run — one per TICK
+    expect(hashAlarms[0]).toContain(s.claimCaseId);
+    expect(hashAlarms[0]).toContain('on 1 claim(s)');
     expect(JSON.stringify(down.alarms)).not.toContain(A);
     // The fallback is the last row's number — the claimant's day-2 reminder is still planned.
     expect(smsFor(down, s.claimCaseId).some((j) => payloadOf(j).personKey === 'claimant' && payloadOf(j).slotDay === 2)).toBe(true);
@@ -962,5 +980,138 @@ describe.skipIf(!hasDatabase)('Story 6.19b — the claim-correction reminders (l
     // Today's sweep: slot 1 is FINAL (⛔ re-sent), slot 2 goes out on its own.
     await runCorrectionReminderSweep(h.deps, boss(h));
     expect(smsFor(h, s.claimCaseId).map((j) => payloadOf(j).slotDay)).toEqual([1, 2]);
+  });
+  // ── Fifth-pass review (2026-10-01) ────────────────────────────────────────────────────────────────────────────
+
+  /** A District Admin's mark change dated `onDate` (10:00 IST) — the newly opened run's id (its day 0 is `onDate`). */
+  async function switchMark(pariwarId: string, claimCaseId: string, mustAct: 'family' | 'staff', onDate: string): Promise<string> {
+    const w = await onOwnTx(pool, pariwarId, (client) =>
+      claim.writeCorrectionMark(client, {
+        pariwarId: ids.pariwarId(pariwarId),
+        claimCaseId: ids.claimId(claimCaseId),
+        mustAct,
+        actorId: randomUUID(),
+        actorDisplay: 'District Admin',
+        setByRole: 'district_admin',
+        noteCiphertext: 'enc:v1:note',
+        now: tenAmIst(onDate),
+      }),
+    );
+    return w.openedRun!.runId;
+  }
+
+  /**
+   * family → staff → family on its OWN Pariwar (far-future clocks), with a live shepherd; the family run reopens on the
+   * return day + `reopenAfter`; its one nominee is found dead on that run's day 1, and a letter POSTED during run 1
+   * (the return day + 1 — accepted: `posted_before_run` keys on the RETURN's date, J5) is recorded and delivered
+   * (the return day + 5) — against run 3.
+   */
+  async function familyStaffFamily(reopenAfter: number) {
+    const pariwarId = randomUUID();
+    const s = await seed({ pariwarId, nomineeMobiles: ['12345'] });
+    const { day0: returnedOn } = await runOf(s.runId!); // run 1's day 0 IS the return's IST date (I8)
+    const da = await staffUser('Shepherd District Admin (K2)');
+    await assignShepherd(s.claimCaseId, pariwarId, da);
+    await switchMark(pariwarId, s.claimCaseId, 'staff', day(returnedOn, 2));
+    const run3 = await switchMark(pariwarId, s.claimCaseId, 'family', day(returnedOn, reopenAfter));
+    expect((await runOf(run3)).day0).toBe(day(returnedOn, reopenAfter));
+    const h = harness({ allowlist: [pariwarId] });
+    h.setNow(tenAmIst(day(returnedOn, reopenAfter + 1)));
+    await runCorrectionReminderSweep(h.deps, boss(h));
+    const [job] = smsFor(h, s.claimCaseId);
+    expect(payloadOf(job!)).toMatchObject({ runId: run3, slotDay: 1 });
+    expect(await child(h, job!)).toEqual({ status: 'sent', outcome: 'no_target' }); // found dead in run 3
+    const personKey = payloadOf(job!).personKey;
+    const letter = await recordDeliveredLetter(pariwarId, s.claimCaseId, personKey, day(returnedOn, 1), day(returnedOn, 5));
+    expect(letter.runId).toBe(run3);
+    return { s, h, da, run3, returnedOn, personKey };
+  }
+
+  it('⭐ K2 — family → staff → family, a run-1 letter delivered on the return day + 5 (its + 30 is BEFORE run 3) ⇒ ONE `late`, `recorded` letter_second_due at TODAY\'s slot, pushed — ⛔ no marker, ⛔ no alarm', async () => {
+    const { s, h, da, returnedOn, personKey } = await familyStaffFamily(40);
+    h.setNow(tenAmIst(day(returnedOn, 42))); // run 3's day 2; the delivery + 30 = the return day + 35 = run 3's day −5
+    await runCorrectionReminderSweep(h.deps, boss(h));
+    expect((await rowsOf(s.claimCaseId)).filter((r) => r.purpose === 'letter_second_due')).toEqual([
+      expect.objectContaining({ slot_day: 2, late: true, outcome: 'recorded', detail: null, recipient_key: `staff:${da}`, subject_key: personKey }),
+    ]);
+    expect(h.alarms.filter((a) => a.includes(s.claimCaseId))).toEqual([]);
+    const pushedToday = pushesFor(h, s.claimCaseId)
+      .map((e) => e.data.payload as CorrectionStaffPushPayload)
+      .filter((p) => p.sentOn === day(returnedOn, 42));
+    expect(pushedToday.map((p) => p.userId)).toEqual([da]);
+    // The next day: ⛔ a second one.
+    h.setNow(tenAmIst(day(returnedOn, 43)));
+    await runCorrectionReminderSweep(h.deps, boss(h));
+    expect((await rowsOf(s.claimCaseId)).filter((r) => r.purpose === 'letter_second_due')).toHaveLength(1);
+  });
+
+  it('⭐ K2 — the delivery + 30 lands ON run 3\'s day 0 ⇒ written at slot 0 (a valid slot, ⛔ never rejected), `late`, ⛔ no marker, ⛔ no alarm', async () => {
+    const { s, h, da, returnedOn, personKey } = await familyStaffFamily(35); // run 3's day 0 = the delivery + 30
+    h.setNow(tenAmIst(day(returnedOn, 37))); // run 3's day 2
+    await runCorrectionReminderSweep(h.deps, boss(h));
+    expect((await rowsOf(s.claimCaseId)).filter((r) => r.purpose === 'letter_second_due')).toEqual([
+      expect.objectContaining({ slot_day: 0, late: true, outcome: 'recorded', recipient_key: `staff:${da}`, subject_key: personKey }),
+    ]);
+    expect(h.alarms.filter((a) => a.includes(s.claimCaseId))).toEqual([]);
+  });
+});
+
+// ── The sweep job's pg-boss expiry, READ BACK (fifth-pass review) ───────────────────────────────────────────────
+// The unit test only sees the call ARGUMENTS; this reads what pg-boss STORED. ⚠ A DEDICATED pg-boss schema (a random
+// name, created by `start()` and dropped after): registering into the shared `pgboss` schema would leave a real 10:00
+// cron behind for every booted worker of the shared database. ⛔ No worker is started (`work` is stubbed), so ⛔ no job
+// runs; the sweep job is FIRED the way pg-boss's timekeeper fires a schedule — `send(name, data, options)` with the
+// stored schedule row — and the job row is read back.
+describe.skipIf(!hasDatabase)('Story 6.19b — the sweep job\'s pg-boss expiry, read back (live pg-boss, a dedicated schema)', () => {
+  const SCHEMA = `pgboss_cc_${randomUUID().replace(/-/g, '').slice(0, 12)}`;
+  let pool: pg.Pool;
+  let boss: QueueClient;
+
+  beforeAll(async () => {
+    pool = new pg.Pool({ connectionString: DATABASE_URL, max: 2, ssl: false, connectionTimeoutMillis: 5000 });
+    boss = createQueueClient(DATABASE_URL!, { schema: SCHEMA, applicationName: 'twt-jobs-test' });
+    await boss.start();
+  }, 60_000);
+  afterAll(async () => {
+    try {
+      await stopQueueClient(boss, { timeoutMs: 5000 }).catch(() => undefined);
+      // Only THIS suite's own, randomly named schema — ⛔ never `pgboss` or the app schema.
+      await pool.query(`SET lock_timeout = '10s'; DROP SCHEMA IF EXISTS ${SCHEMA} CASCADE`);
+    } finally {
+      await pool.end();
+    }
+  });
+
+  it('⭐ even on an ALREADY-DEPLOYED queue (created with pg-boss\'s 15-minute default), a fired sweep job carries the stated expiry', async () => {
+    // The deployed state: the queue exists with pg-boss's defaults (`createQueue` is ON CONFLICT DO NOTHING later).
+    await boss.createQueue(QUEUE_NAMES.CLAIM_CORRECTION_REMINDER_SWEEP);
+    const registering = {
+      createQueue: boss.createQueue.bind(boss),
+      schedule: boss.schedule.bind(boss),
+      work: () => Promise.resolve('not-started'),
+    } as unknown as QueueClient;
+    await registerClaimCorrectionReminderWorkers(registering, {} as never, { sweepCron: '0 3 1 1 *' });
+    // The deployed queue KEEPS its 15-minute default (pg-boss's `create_queue` is ON CONFLICT DO NOTHING) — which is
+    // exactly why the schedule carries the expiry too.
+    const { rows: queues } = await pool.query<{ expire_seconds: number }>(
+      `SELECT expire_seconds FROM ${SCHEMA}.queue WHERE name = $1`,
+      [QUEUE_NAMES.CLAIM_CORRECTION_REMINDER_SWEEP],
+    );
+    expect(queues).toEqual([{ expire_seconds: 15 * 60 }]);
+
+    const { rows: schedules } = await pool.query<{ data: object | null; options: Record<string, unknown> }>(
+      `SELECT data, options FROM ${SCHEMA}.schedule WHERE name = $1`,
+      [QUEUE_NAMES.CLAIM_CORRECTION_REMINDER_SWEEP],
+    );
+    expect(schedules).toHaveLength(1);
+    expect(schedules[0]!.options).toMatchObject({ expireInSeconds: CORRECTION_SWEEP_EXPIRE_SECONDS, ...CORRECTION_SWEEP_RETRY });
+
+    const jobId = await boss.send(QUEUE_NAMES.CLAIM_CORRECTION_REMINDER_SWEEP, schedules[0]!.data ?? {}, schedules[0]!.options);
+    expect(jobId).not.toBeNull();
+    const { rows: jobs } = await pool.query<{ expire_seconds: number; retry_limit: number }>(
+      `SELECT expire_seconds, retry_limit FROM ${SCHEMA}.job WHERE id = $1`,
+      [jobId],
+    );
+    expect(jobs).toEqual([{ expire_seconds: CORRECTION_SWEEP_EXPIRE_SECONDS, retry_limit: CORRECTION_SWEEP_RETRY.retryLimit }]);
   });
 });

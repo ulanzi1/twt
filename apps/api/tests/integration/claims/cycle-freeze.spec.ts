@@ -15,6 +15,7 @@
 // ([[project_live_db_test_gotchas]]).
 
 import { randomUUID } from 'node:crypto';
+import { Writable } from 'node:stream';
 
 import { claim, ids, schema } from '@twt/domain';
 import { createCapturingPoolSpawnTrigger, createThrowingPoolSpawnTrigger } from '@twt/jobs';
@@ -41,6 +42,17 @@ describe.skipIf(!hasDatabase)('State-Trustee cycle-freeze surface — E2E (:5433
 
   /** The atomicity test's fault-injection objects share this prefix (see the `beforeAll` sweep). */
   const FAIL_MARK_PREFIX = 'twt_test_fail_mark_';
+  /**
+   * Every request-logger line this suite's app writes (the test-only `logStream`) — the atomicity test proves its
+   * trigger FIRED by finding the trigger's own RAISE text in the 500's error line.
+   */
+  const logLines: string[] = [];
+  const logStream = new Writable({
+    write(chunk: Buffer | string, _enc, cb) {
+      logLines.push(chunk.toString());
+      cb();
+    },
+  });
 
   /**
    * TEST-ONLY DDL on the SHARED `claim_correction_marks` (`CREATE/DROP TRIGGER` takes a SHARE ROW EXCLUSIVE / ACCESS
@@ -63,7 +75,7 @@ describe.skipIf(!hasDatabase)('State-Trustee cycle-freeze surface — E2E (:5433
     td = buildTestDeps({ webauthn: fakeWebauthn });
     deps = td.deps;
     adminStepUp = td.adminStepUpDelivery;
-    app = await buildServer(deps);
+    app = await buildServer(deps, { logStream });
     // ⭐ Sweep a fault-injection trigger / function a crashed earlier run LEAKED (its `finally` never ran): a leaked
     // trigger only fails its own claim's mark, but it holds the shared table's DDL history hostage and accumulates.
     const leakedTriggers = await td.pool.query<{ tgname: string }>(
@@ -842,31 +854,39 @@ describe.skipIf(!hasDatabase)('State-Trustee cycle-freeze surface — E2E (:5433
            RETURN NEW;
          END $fn$`,
       );
+      const returnPayload = {
+        claim_case_id: claimCaseId,
+        action: 'return_to_district_admin',
+        reason_code: 'other',
+        rationale: 'please get the account 2 holder name corrected',
+        must_act: 'family',
+      } as const;
       let status: number;
+      const logFrom = logLines.length;
       try {
         await ddl(`CREATE TRIGGER ${fn} BEFORE INSERT ON claim_correction_marks FOR EACH ROW EXECUTE FUNCTION ${fn}()`);
-        const res = await pa.client.inject({
-          method: 'POST',
-          url: decisionUrl(pariwarId),
-          payload: {
-            claim_case_id: claimCaseId,
-            action: 'return_to_district_admin',
-            reason_code: 'other',
-            rationale: 'please get the account 2 holder name corrected',
-            must_act: 'family',
-          },
-        });
+        const res = await pa.client.inject({ method: 'POST', url: decisionUrl(pariwarId), payload: returnPayload });
         status = res.statusCode;
       } finally {
         await ddl(`DROP TRIGGER IF EXISTS ${fn} ON claim_correction_marks`);
         await ddl(`DROP FUNCTION IF EXISTS ${fn}()`);
       }
       expect(status).toBe(500);
+      // ⭐ Non-vacuity: the 500 IS the trigger's — its RAISE text reached the error line (pino's `err` serializer
+      // carries a wrapped error's `cause` message). Read a tick later: the line may land after `inject` resolves.
+      await new Promise(setImmediate);
+      expect(logLines.slice(logFrom).join('\n'), "the 500's error line carries the trigger's RAISE text").toContain(
+        'test: the mark write fails',
+      );
       expect(await trusteeDecisionCount(claimCaseId), 'the return rolled back with its mark').toBe(0);
       const marks = await td.pool.query('SELECT 1 FROM claim_correction_marks WHERE claim_case_id = $1', [claimCaseId]);
       expect(marks.rows).toHaveLength(0);
       const runs = await td.pool.query('SELECT 1 FROM claim_correction_runs WHERE claim_case_id = $1', [claimCaseId]);
       expect(runs.rows).toHaveLength(0);
+      // ⭐ And with the trigger gone, the SAME request succeeds — nothing else about it was failing.
+      const retry = await pa.client.inject({ method: 'POST', url: decisionUrl(pariwarId), payload: returnPayload });
+      expect(retry.statusCode, retry.body).toBe(201);
+      expect(await trusteeDecisionCount(claimCaseId)).toBe(1);
     });
 
     it('⛔ AC11 — a RETURN with a code but NO note is a 400 (`-227` cl.10 requires the note)', async () => {

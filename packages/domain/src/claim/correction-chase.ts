@@ -387,7 +387,28 @@ export async function endCorrectionRun(
 
 // ── The mark writer (exported — the return, the District Admin's change, 6.19c's two) ─────────────────────────
 
-export interface WriteCorrectionMarkInput {
+/**
+ * The mark writer's input. ⭐ K5 — `now` is TYPED OUT of a return mark: the return's own mark takes its run's day 0
+ * from the return's `decided_at` (AC2), so a clock passed there could only ever split day 0 from the return's date.
+ * A discriminated union on `isReturnMark` (compile-time — ⛔ no runtime throw): `isReturnMark: true` forbids `now`;
+ * any other mark may pass it.
+ */
+export type WriteCorrectionMarkInput = WriteCorrectionMarkBaseInput &
+  (
+    | {
+        /** The return's own mark, written in the return's transaction (its note is the return's rationale). */
+        readonly isReturnMark: true;
+        /** ⛔ Never on a return mark — its day 0 is the return's own `decided_at` (AC2). */
+        readonly now?: never;
+      }
+    | {
+        readonly isReturnMark?: false;
+        /** The instant the day 0 of a newly opened run is taken from (the mark's own time by default). */
+        readonly now?: Date;
+      }
+  );
+
+export interface WriteCorrectionMarkBaseInput {
   readonly pariwarId: PariwarId;
   readonly claimCaseId: ClaimId;
   readonly mustAct: CorrectionMustAct;
@@ -398,15 +419,8 @@ export interface WriteCorrectionMarkInput {
   readonly setByRole: CorrectionMarkRole;
   /** ⛔ Ciphertext — required on every row except the return's own. */
   readonly noteCiphertext: string | null;
-  /** The return's own mark, written in the return's transaction (its note is the return's rationale). */
-  readonly isReturnMark?: boolean;
   /** The District Admin's ROUTE only: refuse a change to the value the mark already has (409 `must_act.unchanged`). */
   readonly refuseUnchanged?: boolean;
-  /**
-   * The instant the day 0 of a newly opened run is taken from on a NON-return mark (the mark's own time by default).
-   * ⭐ A return mark (`isReturnMark`) ignores it: its day 0 is the return's own `decided_at` (AC2).
-   */
-  readonly now?: Date;
   /**
    * 6.19c's hold (`-269` §3, `-271` §2). Default: ⛔ not held.
    * ⚠ Optional and fail-open ONLY while ⛔ no claim can be held — once 6.19c lands, EVERY caller must thread it.

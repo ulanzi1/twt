@@ -4,14 +4,14 @@
 // with 409 `must_act.unchanged` anyway). A switch to "the family must act" starts the family's 90 days THAT day
 // (`-258` detail 1); a switch to "staff" stops the family's reminders at once. The server is the boundary.
 // ⚠ Shown to every queue reader: the page cannot tell whether the session holds key (7) (district-dimension; the
-// session carries only the national grants), so a 403 is mapped to its own "your role cannot" line — through the
+// session carries only the national grants), so a 403 is mapped to its own NEUTRAL line — through the
 // chase's ONE classifier (`errors.ts`), the same one the letter forms use.
 
 import { useEffect, useRef, useState, type FormEvent, type ReactElement } from 'react';
 
 import { ApiError } from '../../api/client.js';
 import { useChangeCorrectionMustAct } from '../../api/hooks.js';
-import { isRoleForbidden } from './errors.js';
+import { correctionLetterRefusalText, isRoleForbidden } from './errors.js';
 import { correctionChaseEn as t } from './i18n-en.js';
 
 export interface MustActChangeFormProps {
@@ -53,8 +53,9 @@ export function MustActChangeForm({ pariwarId, claimCaseId, current }: MustActCh
       setNote('');
     } catch (err) {
       const code = err instanceof ApiError ? err.code : '';
-      // ⭐ A 403 is the ROLE (the page cannot see key (7) — the session carries only national grants), ⛔ never
-      // "could not be saved. Try again." — a retry that can never succeed.
+      // ⭐ A 403 is the ROLE or the scope (the page cannot see key (7) — the session carries only national grants),
+      // ⛔ never "could not be saved. Try again." — a retry that can never succeed. A 401 / 429 read through the
+      // chase's ONE classifier.
       const forbidden = isRoleForbidden(err);
       setProblem(
         code === 'must_act.unchanged'
@@ -63,7 +64,7 @@ export function MustActChangeForm({ pariwarId, claimCaseId, current }: MustActCh
             ? t.mustAct.noLiveReturn
             : forbidden
               ? t.mustAct.forbidden
-              : t.mustAct.error,
+              : correctionLetterRefusalText(err, t.mustAct.error),
       );
     } finally {
       submittingRef.current = false;

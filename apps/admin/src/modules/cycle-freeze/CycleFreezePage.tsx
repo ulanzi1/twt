@@ -31,6 +31,22 @@ export interface CycleFreezePageProps {
 /** The step-up action context the commit route is gated on (must match the server's requireStepUp arg). */
 const COMMIT_STEP_UP_CONTEXT = 'cycle_freeze_commit';
 
+/**
+ * The decision route's refusals that say "the claim moved under you" — as staff read them, ⛔ a raw
+ * `cycle_freeze.*` code on screen (Story 6.19b, fifth-pass review 2026-10-01). Any code not here keeps the
+ * `code: message` line below.
+ */
+const DECISION_REFUSAL_COPY: Readonly<Record<string, string>> = {
+  'cycle_freeze.stream_conflict': 'Someone else updated this claim at the same moment. Reload the page and decide again.',
+  'cycle_freeze.decision_conflict': 'A decision on this claim is already recorded. Reload the page to see it.',
+  'cycle_freeze.escalation_conflict': 'Someone else resolved this escalation. Reload the page to see it.',
+  'cycle_freeze.not_votable': 'This claim cannot be voted on in its current state. Reload the page to see where it stands.',
+  'cycle_freeze.not_routable': 'This claim cannot be routed to R9 in its current state. Reload the page to see where it stands.',
+  'cycle_freeze.not_returnable':
+    'This claim cannot be sent back to the District Admin in its current state. Reload the page to see where it stands.',
+  'cycle_freeze.already_routed': 'This claim is routed to R9, so it cannot be voted on here.',
+};
+
 function errorMessage(error: unknown): string | undefined {
   if (!error) return undefined;
   // Story 6.20 (AC5) — a correction can supersede the determination after the verifier approved, so the
@@ -46,7 +62,7 @@ function errorMessage(error: unknown): string | undefined {
   if (error instanceof ApiError && error.code.endsWith('.claim_contact_required')) {
     return claimContactRequiredMessage(error);
   }
-  if (error instanceof ApiError) return `${error.code}: ${error.message}`;
+  if (error instanceof ApiError) return DECISION_REFUSAL_COPY[error.code] ?? `${error.code}: ${error.message}`;
   return error instanceof Error ? error.message : 'Something went wrong.';
 }
 

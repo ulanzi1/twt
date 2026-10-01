@@ -4,6 +4,12 @@
 // fixtures commit (the claim and its cascade, its event stream, the deceased's `members` row with its nominees and
 // versions, the contact agreement's consent) is deleted and then COUNTED — and it FAILS LOUDLY (a swallowed cleanup
 // error leaves committed rows in the shared DB for every later suite); assertions key on our OWN ids.
+// ⭐ A DEDICATED PARIWAR (`PARIWAR_RACE`): the claims committed here are RETURNED, and a committed returned claim in the
+// shared `PARIWAR_A` could take a Pariwar-wide queue's `limit: 1` slot in another spec's per-test transaction. ⛔ No
+// per-test spec queries this Pariwar. Nothing to seed for it: `pariwar_id` carries ⛔ no FK, and every row the claim
+// needs is seeded per claim by the helpers (`seedNomineeNameCheck` — accounts, certificate, determination, contact).
+// ⭐ BOUNDED: every transaction here (racers, holder, setup) runs under `SET LOCAL lock_timeout` + `statement_timeout`,
+// and the racers' settlement has a DEADLINE that TERMINATES their backends — ⛔ a wedged racer never outlives its test.
 //
 // ⭐ THE OVERLAP IS FORCED, ⛔ never hoped for. Two `Promise.all`ed transactions on separate clients may simply run one
 // after the other — a "race" that never raced. So each race here: a THIRD client takes the claim's trustee advisory
@@ -42,7 +48,17 @@ import { seedNomineeNameCheck } from '../_helpers.js';
 
 const DATABASE_URL = process.env['DATABASE_URL'];
 const hasDatabase = Boolean(DATABASE_URL);
-const PARIWAR_A = toPariwarId('11111111-1111-1111-1111-111111111111');
+/** ⭐ This file's OWN Pariwar — ⛔ the shared `PARIWAR_A` (see the header). */
+const PARIWAR_RACE = toPariwarId('6190b0c0-6190-4b19-8b19-000000006190');
+/** A racer waits on the holder's lock while the NEXT racer is launched and confirmed (≤ 10 s each) — so its bound sits
+ * above that, and below the settlement deadline. */
+const RACER_LOCK_TIMEOUT = '20s';
+const RACER_STATEMENT_TIMEOUT = '25s';
+/** The holder only TAKES the lock (free — the claim is ours) and commits. */
+const HOLDER_LOCK_TIMEOUT = '5s';
+const HOLDER_STATEMENT_TIMEOUT = '10s';
+/** After the holder lets go, every racer must SETTLE within this — else their backends are terminated. */
+const SETTLE_DEADLINE_MS = 30_000;
 const TRUSTEE = '88888888-8888-8888-8888-888888888888';
 const DA = '99999999-9999-9999-9999-999999999999';
 const ENC: FieldCryptoDeps = {
@@ -51,25 +67,41 @@ const ENC: FieldCryptoDeps = {
   hmacKeyRef: { resourceName: 'fake:correction-chase-concurrency-hmac' },
 };
 
-describe.skipIf(!hasDatabase)('Story 6.19b — the correction chase under two-connection races (own-committing)', { timeout: 30000 }, () => {
+// ⚠ The test timeout sits ABOVE every internal bound (two racers queued ≤ 10 s each + the 30 s settlement deadline): a
+// vitest timeout abandons the test's promises — exactly what the bounds exist to prevent.
+describe.skipIf(!hasDatabase)('Story 6.19b — the correction chase under two-connection races (own-committing)', { timeout: 60000 }, () => {
   let pool: pg.Pool;
   const createdClaims: string[] = [];
   const createdMembers: string[] = [];
 
+  /** The backend pids of the transactions in flight — what the settlement deadline terminates. */
+  const livePids = new Set<number>();
+
   async function onOwnTx<T>(fn: (client: pg.PoolClient) => Promise<T>): Promise<T> {
     const client = await pool.connect();
+    let pid: number | undefined;
+    let broken: Error | undefined;
     try {
       await client.query('BEGIN');
+      // ⭐ BOUNDED: ⛔ a lock wait or a statement that never returns (the racers wait on the holder's lock on purpose).
+      await client.query(`SET LOCAL lock_timeout = '${RACER_LOCK_TIMEOUT}'`);
+      await client.query(`SET LOCAL statement_timeout = '${RACER_STATEMENT_TIMEOUT}'`);
+      pid = (await client.query<{ pid: number }>('SELECT pg_backend_pid() AS pid')).rows[0]!.pid;
+      livePids.add(pid);
       await client.query('SET LOCAL ROLE twt_app');
-      await setPariwarScope(client, PARIWAR_A);
+      await setPariwarScope(client, PARIWAR_RACE);
       const out = await fn(client);
       await client.query('COMMIT');
       return out;
     } catch (err) {
-      await client.query('ROLLBACK').catch(() => undefined);
+      // A terminated backend cannot even roll back — ⛔ back to the pool then (`release(err)` destroys the client).
+      await client.query('ROLLBACK').catch((e: unknown) => {
+        broken = e as Error;
+      });
       throw err;
     } finally {
-      client.release();
+      if (pid !== undefined) livePids.delete(pid);
+      client.release(broken);
     }
   }
 
@@ -83,7 +115,7 @@ describe.skipIf(!hasDatabase)('Story 6.19b — the correction chase under two-co
       const emit = (from: string | null, to: string, eventType: string, extra: Record<string, unknown> = {}) =>
         projectClaimState(client, {
           claimCaseId: cid,
-          pariwarId: PARIWAR_A,
+          pariwarId: PARIWAR_RACE,
           deceasedMemberId: mid,
           intakeChannels: ['member_app'],
           claimantActorId: null,
@@ -101,14 +133,14 @@ describe.skipIf(!hasDatabase)('Story 6.19b — the correction chase under two-co
       });
       await emit('verification_in_progress', 'verifier_review', 'claim.verifier_reviewing');
       await emit('verifier_review', 'verifier_approved', 'claim.verifier_approved');
-      await seedNomineeNameCheck(client, PARIWAR_A, cid);
+      await seedNomineeNameCheck(client, PARIWAR_RACE, cid);
     });
     return { cid, mid };
   }
 
   const returnInput = (claimCaseId: ClaimId) => ({
     claimCaseId,
-    pariwarId: PARIWAR_A,
+    pariwarId: PARIWAR_RACE,
     reasonCode: 'other' as const,
     rationaleCiphertext: 'enc:v1:note',
     actorId: TRUSTEE,
@@ -117,7 +149,7 @@ describe.skipIf(!hasDatabase)('Story 6.19b — the correction chase under two-co
   });
 
   const returnMark = (claimCaseId: ClaimId, mustAct: 'family' | 'staff') => ({
-    pariwarId: PARIWAR_A,
+    pariwarId: PARIWAR_RACE,
     claimCaseId,
     mustAct,
     actorId: TRUSTEE,
@@ -132,7 +164,7 @@ describe.skipIf(!hasDatabase)('Story 6.19b — the correction chase under two-co
     const out = await onOwnTx(async (client) => {
       const r = await returnToDistrictAdmin(client, returnInput(cid));
       const m = await writeCorrectionMark(client, returnMark(cid, mustAct));
-      return { returnId: r.decision.decisionId as string, runId: m.openedRun!.runId };
+      return { returnId: r.decision.decisionId as string, runId: m.openedRun!.runId, day0: m.openedRun!.day0 };
     });
     return { cid, mid, ...out };
   }
@@ -149,7 +181,7 @@ describe.skipIf(!hasDatabase)('Story 6.19b — the correction chase under two-co
 
   /** The claim's trustee advisory lock as `pg_locks` shows it (a bigint key: classid = high 32 bits, objid = low). */
   function lockKeyParts(cid: string): { readonly hi: string; readonly lo: string } {
-    const key = BigInt.asUintN(64, stateTrusteeDecisionAdvisoryLockKey(PARIWAR_A, cid));
+    const key = BigInt.asUintN(64, stateTrusteeDecisionAdvisoryLockKey(PARIWAR_RACE, cid));
     return { hi: String(key >> 32n), lo: String(key & 0xffffffffn) };
   }
 
@@ -196,6 +228,34 @@ describe.skipIf(!hasDatabase)('Story 6.19b — the correction chase under two-co
   }
 
   /**
+   * ⭐ Every racer SETTLES within `SETTLE_DEADLINE_MS`. Past it, the racers' backends still in flight are TERMINATED
+   * (`pg_terminate_backend` — the pending query rejects, the transaction never commits) and their settlement is
+   * awaited once more (bounded too), then it THROWS — ⛔ an unbounded `allSettled` that hangs the suite, ⛔ a racer
+   * left to commit after its test moved on.
+   */
+  async function settleWithin<T>(running: readonly Promise<T>[]): Promise<PromiseSettledResult<T>[]> {
+    const bounded = async (ms: number): Promise<PromiseSettledResult<T>[] | 'deadline'> => {
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const deadline = new Promise<'deadline'>((resolve) => {
+        timer = setTimeout(() => resolve('deadline'), ms);
+      });
+      try {
+        return await Promise.race([Promise.allSettled(running), deadline]);
+      } finally {
+        clearTimeout(timer);
+      }
+    };
+    const first = await bounded(SETTLE_DEADLINE_MS);
+    if (first !== 'deadline') return first;
+    const pids = [...livePids];
+    await pool.query('SELECT pg_terminate_backend(pid) FROM unnest($1::int[]) AS pid', [pids]);
+    const second = await bounded(5_000);
+    throw new Error(
+      `[correction-chase-concurrency.spec] racers did not settle within ${SETTLE_DEADLINE_MS} ms — backends ${JSON.stringify(pids)} terminated${second === 'deadline' ? ', and still unsettled 5 s later' : ''}`,
+    );
+  }
+
+  /**
    * ⭐ Run `racers` GENUINELY concurrently: a third client holds the claim's trustee lock; each racer is launched and
    * confirmed WAITING on it before the next starts (so the queue order is the launch order); then the lock is released.
    * ⭐ On EVERY exit path the holder lets go and every launched racer SETTLES before this returns or rethrows — ⛔ a
@@ -206,9 +266,13 @@ describe.skipIf(!hasDatabase)('Story 6.19b — the correction chase under two-co
     const running: Promise<T>[] = [];
     const outcomes: Outcome<T>[] = [];
     let holderBroken: Error | undefined;
+    let settled: PromiseSettledResult<T>[] | undefined;
+    let settleError: unknown;
     try {
       await holder.query('BEGIN');
-      await acquireCorrectionChaseLock(holder, PARIWAR_A, cid);
+      await holder.query(`SET LOCAL lock_timeout = '${HOLDER_LOCK_TIMEOUT}'`);
+      await holder.query(`SET LOCAL statement_timeout = '${HOLDER_STATEMENT_TIMEOUT}'`);
+      await acquireCorrectionChaseLock(holder, PARIWAR_RACE, cid);
       // ⭐ The key we poll IS the lock the holder took (⛔ two derivations that could drift apart).
       const { rows } = await holder.query<{ pid: number }>('SELECT pg_backend_pid() AS pid');
       expect(await holderOf(cid)).toBe(rows[0]!.pid);
@@ -234,10 +298,18 @@ describe.skipIf(!hasDatabase)('Story 6.19b — the correction chase under two-co
         holderBroken = err as Error; // ⛔ never back to the pool — a destroyed client's session (and lock) ends
       }
       holder.release(holderBroken);
-      // ⭐ EVERY path: the racers settle before we return or rethrow.
-      await Promise.allSettled(running);
+      // ⭐ EVERY path: the racers settle (or are terminated past the deadline) before we return or rethrow. When the
+      // body threw, ITS error wins.
+      try {
+        settled = await settleWithin(running);
+      } catch (err) {
+        settleError = err;
+      }
     }
-    return Promise.allSettled(running);
+    if (settleError !== undefined) throw settleError;
+    // ⛔ A holder that could not COMMIT let go of the lock by losing its session — the queue order is then unproven.
+    if (holderBroken !== undefined) throw holderBroken;
+    return settled!;
   }
 
   const fulfilled = <T>(s: PromiseSettledResult<T>): T => {
@@ -252,8 +324,9 @@ describe.skipIf(!hasDatabase)('Story 6.19b — the correction chase under two-co
 
   // ⭐ FAILS LOUDLY: every cleanup step's error is collected (⛔ never `.catch(() => undefined)`), the remaining rows are
   // COUNTED, and the hook throws if anything is left — committed rows must ⛔ never silently outlive this suite.
-  // ORDER: the claims first (their ON DELETE cascade takes the runs / marks / reminders / letters, the accounts, the
-  // certificate, the determination and the CONTACT RECORD — which releases the agreement consent's FK), then the
+  // ORDER: the claims first (their ON DELETE cascade takes the trustee decisions, the runs / marks / reminders /
+  // letters, the accounts, the certificate, the determination and the CONTACT RECORD with its nominee rows — which
+  // releases the agreement consent's FK), then the
   // agreement consents, then the deceased members (their cascade takes `member_nominees` and the append-only
   // `member_nominee_versions` — its delete trigger lets a cascade through), then the event streams (append-only by
   // trigger ⇒ `replica` for that one statement).
@@ -268,6 +341,17 @@ describe.skipIf(!hasDatabase)('Story 6.19b — the correction chase under two-co
     };
     try {
       if (createdClaims.length > 0) {
+        // The determinations' ids BEFORE the cascade — their items carry ⛔ no claim id to count them by afterwards.
+        let determinationIds: string[] = [];
+        try {
+          determinationIds = (
+            await pool.query<{ id: string }>('SELECT determination_id AS id FROM nominee_determinations WHERE claim_case_id = ANY($1)', [
+              createdClaims,
+            ])
+          ).rows.map((r) => r.id);
+        } catch (e) {
+          errors.push(`determination ids: ${(e as Error).message}`);
+        }
         await step('claims', 'DELETE FROM claims WHERE claim_case_id = ANY($1)', [createdClaims]);
         await step(
           'consent_records',
@@ -288,17 +372,30 @@ describe.skipIf(!hasDatabase)('Story 6.19b — the correction chase under two-co
         } finally {
           c.release();
         }
+        // ⭐ EVERY table the fixtures and the races write — ⛔ a subset that would pass while (say) the reminders or the
+        // decisions stayed behind.
         const left = await pool.query<Record<string, number>>(
           `SELECT (SELECT count(*) FROM claims WHERE claim_case_id = ANY($1))::int AS claims,
+                  (SELECT count(*) FROM claim_state_trustee_decisions WHERE claim_case_id = ANY($1))::int AS decisions,
                   (SELECT count(*) FROM claim_correction_runs WHERE claim_case_id = ANY($1))::int AS runs,
+                  (SELECT count(*) FROM claim_correction_marks WHERE claim_case_id = ANY($1))::int AS marks,
+                  (SELECT count(*) FROM claim_correction_reminders WHERE claim_case_id = ANY($1))::int AS reminders,
+                  (SELECT count(*) FROM claim_correction_letters WHERE claim_case_id = ANY($1))::int AS letters,
+                  (SELECT count(*) FROM claim_nominee_bank_accounts WHERE claim_case_id = ANY($1))::int AS bank_accounts,
+                  (SELECT count(*) FROM claim_documents WHERE claim_case_id = ANY($1))::int AS claim_documents,
+                  (SELECT count(*) FROM claim_death_certificate_uploads WHERE claim_case_id = ANY($1))::int AS certificate_uploads,
+                  (SELECT count(*) FROM claim_death_certificate_reviews WHERE claim_case_id = ANY($1))::int AS certificate_reviews,
+                  (SELECT count(*) FROM nominee_determinations WHERE claim_case_id = ANY($1))::int AS determinations,
+                  (SELECT count(*) FROM nominee_determination_items WHERE determination_id = ANY($5::uuid[]))::int AS determination_items,
                   (SELECT count(*) FROM claim_contacts WHERE claim_case_id = ANY($1))::int AS claim_contacts,
+                  (SELECT count(*) FROM claim_contact_nominees WHERE claim_case_id = ANY($1))::int AS contact_nominees,
                   (SELECT count(*) FROM consent_records
                     WHERE consent_artifact_ref = ANY($4::text[]) OR subject_id = ANY($2))::int AS consent_records,
                   (SELECT count(*) FROM members WHERE member_id = ANY($2))::int AS members,
                   (SELECT count(*) FROM member_nominees WHERE member_id = ANY($2))::int AS member_nominees,
                   (SELECT count(*) FROM member_nominee_versions WHERE member_id = ANY($2))::int AS member_nominee_versions,
                   (SELECT count(*) FROM events_log WHERE stream_id = ANY($3))::int AS events`,
-          [createdClaims, createdMembers, streams, createdClaims],
+          [createdClaims, createdMembers, streams, createdClaims, determinationIds],
         );
         const l = left.rows[0]!;
         if (Object.values(l).some((n) => n > 0)) errors.push(`rows remain: ${JSON.stringify(l)}`);
@@ -311,12 +408,12 @@ describe.skipIf(!hasDatabase)('Story 6.19b — the correction chase under two-co
 
   it('⭐ two sends racing ONE slot (forced overlap) ⇒ exactly one `send` and exactly one row', async () => {
     const { cid, runId } = await returned('family');
-    const personKey = await onOwnTx(async (client) => (await readCorrectionRecipients(bindScopedDb(client), PARIWAR_A, cid)).people[0]!.personKey);
+    const personKey = await onOwnTx(async (client) => (await readCorrectionRecipients(bindScopedDb(client), PARIWAR_RACE, cid)).people[0]!.personKey);
     const now = new Date();
     const attempt = (jobId: string) => () =>
       onOwnTx((client) =>
         beginCorrectionFamilySend(client, {
-          pariwarId: PARIWAR_A,
+          pariwarId: PARIWAR_RACE,
           claimCaseId: cid,
           runId,
           slotDay: 1,
@@ -337,16 +434,16 @@ describe.skipIf(!hasDatabase)('Story 6.19b — the correction chase under two-co
   });
 
   it('⭐ two openers racing one claim (forced overlap) ⇒ exactly ONE open run, and the full history: each opener superseded the run before it', async () => {
-    const { cid, returnId, runId } = await returned('family');
+    const { cid, returnId, runId, day0 } = await returned('family');
     const open = () => () =>
       onOwnTx((client) =>
         openCorrectionRun(client, {
-          pariwarId: PARIWAR_A,
+          pariwarId: PARIWAR_RACE,
           claimCaseId: cid,
           returnDecisionId: returnId,
           kind: 'direction',
           anchorId: randomUUID(),
-          day0: '2026-11-01',
+          day0, // the return's own day 0 (⛔ a fixed calendar date — a date bomb)
         }),
       );
     const [a, b] = (await overlapped(cid, [open(), open()])).map(fulfilled);
@@ -364,7 +461,7 @@ describe.skipIf(!hasDatabase)('Story 6.19b — the correction chase under two-co
       await onOwnTx((client) =>
         recordClaimNomineeBankAccounts(client, {
           claimCaseId: cid,
-          pariwarId: PARIWAR_A,
+          pariwarId: PARIWAR_RACE,
           accounts: ([1, 2] as const).map((rank) => ({
             accountRank: rank,
             accountHolderNameCiphertext: `enc:v1:h2-${rank}`,
@@ -382,7 +479,7 @@ describe.skipIf(!hasDatabase)('Story 6.19b — the correction chase under two-co
           correctionReason: 'the family gave the corrected details by phone',
         } as never),
       );
-      await onOwnTx((client) => seedNomineeNameCheck(client, PARIWAR_A, cid, { reuseAccounts: true }));
+      await onOwnTx((client) => seedNomineeNameCheck(client, PARIWAR_RACE, cid, { reuseAccounts: true }));
 
       const secondReturn = () =>
         onOwnTx(async (client) => {
@@ -394,7 +491,7 @@ describe.skipIf(!hasDatabase)('Story 6.19b — the correction chase under two-co
         onOwnTx(async (client) => ({
           kind: 'change' as const,
           result: await writeCorrectionMark(client, {
-            pariwarId: PARIWAR_A,
+            pariwarId: PARIWAR_RACE,
             claimCaseId: cid,
             mustAct: 'staff',
             actorId: DA,

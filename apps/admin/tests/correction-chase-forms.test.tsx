@@ -10,9 +10,13 @@
 // ⭐ Fourth pass (2026-10-01): the delivery's confirmation is driven THROUGH the panel with a queue that refetches
 // (the per-letter form unmounts when its letter is delivered — a static-props harness hid that); ONE persistent
 // status line is announced by its text CHANGING; the address window is measured on the browser's clock.
+// ⭐ Fifth pass (2026-10-01): the address / step-up state clears whenever the record form is not shown (and a late reveal
+// is discarded); ONE page-wide verify clock; an absolute deadline re-checked on `visibilitychange` / `focus`; every error
+// through ONE classifier (read failure, 401, 403, 429); focus to the status line after a save; the dates checked
+// before the upload; the `max` IS the IST today under a mocked clock.
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactElement } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -45,7 +49,7 @@ const { ApiError } = await import('../src/api/client.js');
 const { CorrectionChasePanel, CorrectionLetterForm, MustActChangeForm, correctionChaseEn: t } = await import(
   '../src/modules/correction-chase/index.js'
 );
-const { ADDRESS_VISIBLE_MAX_MS, ADDRESS_VISIBLE_MIN_MS, addressVisibleMs } = await import(
+const { ADDRESS_VISIBLE_MAX_MS, ADDRESS_VISIBLE_MIN_MS, addressVisibleMs, currentRunLetters, forgetStepUpVerified } = await import(
   '../src/modules/correction-chase/CorrectionLetterForm.js'
 );
 const { istToday } = await import('../src/modules/correction-chase/ist.js');
@@ -75,8 +79,20 @@ function renderWithClient(ui: ReactElement) {
 
 const renderLetterForm = (letters: CorrectionLetterDto[], canRecord = true) =>
   renderWithClient(
-    <CorrectionLetterForm pariwarId={PARIWAR} claimCaseId={CLAIM} personKey={PERSON} letters={letters} canRecord={canRecord} />,
+    <CorrectionLetterForm pariwarId={PARIWAR} claimCaseId={CLAIM} personKey={PERSON} letters={letters} familyRunDay0={null} canRecord={canRecord} />,
   );
+
+/** The letter form with a `rerender` that keeps ONE query client — a refetch's new props, without a remount. */
+function renderRerenderable(letters: CorrectionLetterDto[], canRecord = true) {
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+  const ui = (l: CorrectionLetterDto[], c: boolean) => (
+    <QueryClientProvider client={qc}>
+      <CorrectionLetterForm pariwarId={PARIWAR} claimCaseId={CLAIM} personKey={PERSON} letters={l} familyRunDay0={null} canRecord={c} />
+    </QueryClientProvider>
+  );
+  const r = render(ui(letters, canRecord));
+  return { rerender: (l: CorrectionLetterDto[], c: boolean) => r.rerender(ui(l, c)) };
+}
 
 beforeEach(() => {
   for (const f of [
@@ -90,6 +106,8 @@ beforeEach(() => {
   ]) {
     f.mockReset();
   }
+  // ⭐ The verify clock is PAGE-wide (module state) — ⛔ leaked from one test into the next.
+  forgetStepUpVerified();
 });
 afterEach(() => {
   vi.useRealTimers();
@@ -111,6 +129,8 @@ describe('<CorrectionLetterForm> — recording a posted letter', () => {
     await waitFor(() => expect(screen.getByTestId('letter-form-status').textContent).toBe(t.letters.saved));
     expect(screen.getByTestId('letter-form-status').getAttribute('role')).toBe('status');
     expect((screen.getByLabelText(t.letters.tracking) as HTMLInputElement).value).toBe('');
+    // ⭐ Focus moves to the status line (`tabIndex` -1) — ⛔ dropped to <body> (fifth-pass review).
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByTestId('letter-form-status')));
   });
 
   it('⭐ `noValidate` on the letter and delivery forms — the native `required` bubble pre-empted the specific message', () => {
@@ -141,9 +161,29 @@ describe('<CorrectionLetterForm> — recording a posted letter', () => {
     expect(recordCorrectionLetter).not.toHaveBeenCalled();
   });
 
-  it('⭐ the posting date cannot be later than today (IST)', () => {
+  it.each([
+    ['2026-09-30T18:29:59.000Z', '2026-09-30'],
+    ['2026-09-30T18:30:00.000Z', '2026-10-01'],
+  ])('⭐ under a clock at %s the posting and delivery dates’ `max` IS the IST today (%s) — ⛔ only its format', (iso, day) => {
+    vi.useFakeTimers({ now: new Date(iso), toFake: ['Date'] });
+    const first = renderLetterForm([]);
+    const posted = (screen.getByLabelText(t.letters.postedOn) as HTMLInputElement).max;
+    expect(posted).toBe(day);
+    expect(posted).toBe(istToday());
+    first.unmount();
+    renderLetterForm([letter({})]);
+    const delivered = (screen.getByTestId(`delivery-form-${L1}`).querySelector('input[type="date"]') as HTMLInputElement).max;
+    expect(delivered).toBe(day);
+    expect(delivered).toBe(istToday());
+  });
+
+  it('⛔ a FUTURE posting date is refused HERE (`noValidate` cancelled the `max`) — ⛔ a round trip', () => {
     renderLetterForm([]);
-    expect((screen.getByLabelText(t.letters.postedOn) as HTMLInputElement).max).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    fireEvent.change(screen.getByLabelText(t.letters.postedOn), { target: { value: '2999-01-01' } });
+    fireEvent.change(screen.getByLabelText(t.letters.tracking), { target: { value: 'EE1' } });
+    fireEvent.submit(screen.getByRole('form', { name: t.letters.record }));
+    expect(screen.getByRole('alert').textContent).toBe(t.letters.refusals.date_in_future);
+    expect(recordCorrectionLetter).not.toHaveBeenCalled();
   });
 
   it.each([
@@ -155,6 +195,10 @@ describe('<CorrectionLetterForm> — recording a posted letter', () => {
     ['correction_letter.posted_before_first_delivery', 409, t.letters.refusals.posted_before_first_delivery],
     ['correction_letter.number_unverified', 503, t.letters.refusals.number_unverified],
     ['auth.forbidden', 403, t.letters.forbidden],
+    // Fifth pass — the session, the rate limit, and the neutral `not_letter_eligible` (D30 `undetermined` too).
+    ['auth.session_required', 401, t.letters.sessionExpired],
+    ['rate_limit.exceeded', 429, t.letters.rateLimited],
+    ['correction_letter.not_letter_eligible', 409, t.letters.refusals.not_letter_eligible],
   ])('⭐ the refusal %s reads as its OWN line', async (code, status, copy) => {
     recordCorrectionLetter.mockRejectedValue(new ApiError(status, code, 'no'));
     renderLetterForm([]);
@@ -205,7 +249,7 @@ describe('<CorrectionLetterForm> — the delivery, ONE form per undelivered lett
     // drives the real case, where the refetch removes the form).
     await waitFor(() => expect(fileInput.value).toBe(''));
     expect(fileInput.files?.length ?? 0).toBe(0);
-    expect(screen.getByTestId('letter-form-status').textContent).toBe(t.letters.deliveryRecorded(2));
+    expect(screen.getByTestId('letter-form-status').textContent).toBe(t.letters.deliveryRecorded(2, '2026-09-20'));
   });
 
   it('⭐ two undelivered letters (older data) ⇒ two forms, each recording ITS letter', async () => {
@@ -219,6 +263,40 @@ describe('<CorrectionLetterForm> — the delivery, ONE form per undelivered lett
     fireEvent.submit(form2);
     await waitFor(() => expect(recordCorrectionLetterDelivery).toHaveBeenCalledTimes(1));
     expect(recordCorrectionLetterDelivery.mock.calls[0]![2]).toBe(L2);
+  });
+
+  it.each([
+    ['a FUTURE delivery date', '2999-01-01', t.letters.refusals.date_in_future],
+    ['a delivery BEFORE the posting', '2026-08-31', t.letters.refusals.delivered_before_posted],
+  ])('⛔ %s is refused HERE, BEFORE the upload (`noValidate` cancelled the `min`/`max`)', async (_label, date, copy) => {
+    const user = userEvent.setup();
+    renderLetterForm([letter({})]);
+    const form = screen.getByTestId(`delivery-form-${L1}`);
+    fireEvent.change(form.querySelector('input[type="date"]')!, { target: { value: date } });
+    await user.upload(form.querySelector('input[type="file"]') as HTMLInputElement, new File(['x'], 'a.png', { type: 'image/png' }));
+    fireEvent.submit(form);
+    expect(screen.getByRole('alert').textContent).toBe(copy);
+    expect(recordCorrectionLetterDelivery).not.toHaveBeenCalled();
+  });
+
+  it('⭐ a second delivery submitted while one is in flight SAYS so — ⛔ a silent return', async () => {
+    const user = userEvent.setup();
+    let resolve: (v: unknown) => void = () => undefined;
+    recordCorrectionLetterDelivery.mockReturnValue(new Promise((r) => (resolve = r)));
+    renderLetterForm([letter({}), letter({ letter_id: L2, sequence: 2, posted_on: '2026-09-20' })]);
+    const forms = [screen.getByTestId(`delivery-form-${L1}`), screen.getByTestId(`delivery-form-${L2}`)];
+    for (const form of forms) {
+      fireEvent.change(form.querySelector('input[type="date"]')!, { target: { value: '2026-09-28' } });
+      await user.upload(form.querySelector('input[type="file"]') as HTMLInputElement, new File(['x'], 'a.png', { type: 'image/png' }));
+    }
+    act(() => {
+      fireEvent.submit(forms[0]!);
+      fireEvent.submit(forms[1]!);
+    });
+    expect(screen.getByTestId('letter-form-status').textContent).toBe(t.letters.deliveryBusy);
+    await waitFor(() => expect(recordCorrectionLetterDelivery).toHaveBeenCalledTimes(1));
+    expect(recordCorrectionLetterDelivery.mock.calls[0]![2]).toBe(L1);
+    await act(async () => resolve(letter({ delivered_on: '2026-09-28' })));
   });
 
   it('⛔ no file ⇒ a VISIBLE message, nothing posted', () => {
@@ -411,6 +489,208 @@ describe('<CorrectionLetterForm> — the address, behind a fresh step-up', () =>
   });
 });
 
+describe('<CorrectionLetterForm> — the address lifecycle (fifth-pass review 2026-10-01)', () => {
+  const ADDRESS = '12 Gandhi Marg, Patna';
+
+  it('⭐ the address CLEARS when the record form is no longer shown (a refetch flipped `canRecord`) — ⛔ back when it returns', async () => {
+    getCorrectionLetterAddress.mockResolvedValue({ person_key: PERSON, address: ADDRESS });
+    const view = renderRerenderable([], true);
+    fireEvent.click(screen.getByRole('button', { name: t.letters.showAddress }));
+    await screen.findByTestId('letter-address');
+    view.rerender([], false);
+    expect(screen.queryByTestId('letter-address')).toBeNull();
+    await waitFor(() => expect(screen.getByTestId('letter-form-status').textContent).toBe(t.letters.addressHidden));
+    view.rerender([], true);
+    expect(screen.queryByTestId('letter-address')).toBeNull();
+    expect(screen.getByRole('button', { name: t.letters.showAddress })).toBeInTheDocument();
+    expect(document.body.textContent).not.toContain('Gandhi Marg');
+  });
+
+  it('⭐ the STEP-UP state clears too (the form waits for the first delivery, then returns) — ⛔ a stale code step', async () => {
+    getCorrectionLetterAddress.mockRejectedValue(new ApiError(403, 'auth.step_up_required', 'elevate'));
+    const view = renderRerenderable([], true);
+    fireEvent.click(screen.getByRole('button', { name: t.letters.showAddress }));
+    await screen.findByTestId('letter-step-up');
+    view.rerender([letter({})], true);
+    expect(screen.queryByTestId('letter-step-up')).toBeNull();
+    view.rerender([letter({ delivered_on: '2026-09-10' })], true);
+    expect(screen.getByRole('form', { name: t.letters.record })).toBeInTheDocument();
+    expect(screen.queryByTestId('letter-step-up')).toBeNull();
+  });
+
+  it('⛔ a reveal that resolves AFTER the form hid is DISCARDED — ⛔ shown when the form returns', async () => {
+    let resolve: (v: unknown) => void = () => undefined;
+    getCorrectionLetterAddress.mockReturnValue(new Promise((r) => (resolve = r)));
+    const view = renderRerenderable([], true);
+    fireEvent.click(screen.getByRole('button', { name: t.letters.showAddress }));
+    view.rerender([], false);
+    await act(async () => resolve({ person_key: PERSON, address: ADDRESS }));
+    view.rerender([], true);
+    expect(screen.queryByTestId('letter-address')).toBeNull();
+    expect(screen.getByTestId('letter-form-status').textContent).not.toBe(t.letters.addressShown);
+    expect(document.body.textContent).not.toContain('Gandhi Marg');
+  });
+
+  it('⭐ ONE page-wide verify clock: a reveal in ANOTHER person’s form gets the REST of that elevation — ⛔ a fresh five minutes', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const OTHER = 'claimant';
+    getCorrectionLetterAddress
+      .mockRejectedValueOnce(new ApiError(403, 'auth.step_up_required', 'elevate'))
+      .mockResolvedValue({ person_key: PERSON, address: ADDRESS });
+    requestStepUp.mockResolvedValue({ sent: true, expiresInSeconds: 300 });
+    verifyStepUp.mockResolvedValue({ elevated: true, elevatedUntil: new Date(Date.now() + 300_000).toISOString() });
+    renderWithClient(
+      <>
+        <CorrectionLetterForm pariwarId={PARIWAR} claimCaseId={CLAIM} personKey={PERSON} letters={[]} familyRunDay0={null} canRecord />
+        <CorrectionLetterForm pariwarId={PARIWAR} claimCaseId={CLAIM} personKey={OTHER} letters={[]} familyRunDay0={null} canRecord />
+      </>,
+    );
+    const a = within(screen.getByTestId(`letter-form-${PERSON}`));
+    const b = within(screen.getByTestId(`letter-form-${OTHER}`));
+    // Form A verifies a code.
+    fireEvent.click(a.getByRole('button', { name: t.letters.showAddress }));
+    fireEvent.click(await a.findByRole('button', { name: t.letters.sendCode }));
+    fireEvent.change(await a.findByLabelText(t.letters.code), { target: { value: '123456' } });
+    fireEvent.click(a.getByRole('button', { name: t.letters.verify }));
+    await a.findByTestId('letter-address');
+    await act(async () => {
+      vi.advanceTimersByTime(4 * 60_000);
+    });
+    // Form B reveals on the SAME elevation — one minute of it is left.
+    fireEvent.click(b.getByRole('button', { name: t.letters.showAddress }));
+    await b.findByTestId('letter-address');
+    await act(async () => {
+      vi.advanceTimersByTime(55_000);
+    });
+    expect(b.getByTestId('letter-address')).toBeInTheDocument();
+    await act(async () => {
+      vi.advanceTimersByTime(10_000);
+    });
+    expect(b.queryByTestId('letter-address')).toBeNull();
+  });
+
+  it.each([
+    ['visibilitychange', () => document.dispatchEvent(new Event('visibilitychange'))],
+    ['focus', () => window.dispatchEvent(new Event('focus'))],
+  ])('⭐ the ABSOLUTE deadline is re-checked on `%s` — a slept laptop (⛔ the timer fired) still hides it', async (_label, fire) => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    getCorrectionLetterAddress.mockResolvedValue({ person_key: PERSON, address: ADDRESS });
+    renderLetterForm([]);
+    fireEvent.click(screen.getByRole('button', { name: t.letters.showAddress }));
+    await screen.findByTestId('letter-address');
+    // ⚠ The address arrived from a mocked promise OUTSIDE act — flush the passive effect that attaches the
+    // `visibilitychange` / `focus` listeners, or under load the event fires before they exist (a ci:local flake).
+    await act(async () => {});
+    // The wall clock jumps past the deadline WITHOUT the timer firing (the machine slept).
+    vi.setSystemTime(Date.now() + ADDRESS_VISIBLE_MAX_MS + 1_000);
+    expect(screen.getByTestId('letter-address')).toBeInTheDocument();
+    act(() => fire());
+    expect(screen.queryByTestId('letter-address')).toBeNull();
+    expect(screen.getByTestId('letter-form-status').textContent).toBe(t.letters.addressHidden);
+  });
+
+  it.each([
+    [500, 'internal', t.letters.addressError],
+    [401, 'auth.session_required', t.letters.sessionExpired],
+    [403, 'auth.forbidden', t.letters.forbidden],
+    [429, 'rate_limit.exceeded', t.letters.rateLimited],
+    [409, 'correction_letter.not_letter_eligible', t.letters.refusals.not_letter_eligible],
+  ])('⭐ a failed REVEAL (%s %s) reads as its own line — ⛔ "could not be saved"', async (status, code, copy) => {
+    getCorrectionLetterAddress.mockRejectedValue(new ApiError(status, code, 'no'));
+    renderLetterForm([]);
+    fireEvent.click(screen.getByRole('button', { name: t.letters.showAddress }));
+    expect(await screen.findByRole('alert')).toHaveTextContent(copy!);
+    expect(screen.getByRole('alert').textContent).not.toBe(t.letters.error);
+  });
+
+  it.each([
+    [403, 'auth.forbidden', t.letters.forbidden],
+    [429, 'rate_limit.exceeded', t.letters.rateLimited],
+    [401, 'auth.session_required', t.letters.sessionExpired],
+  ])('⭐ "Send the code" refused (%s %s) goes through the ONE classifier — ⛔ "Try again"', async (status, code, copy) => {
+    getCorrectionLetterAddress.mockRejectedValue(new ApiError(403, 'auth.step_up_required', 'elevate'));
+    requestStepUp.mockRejectedValue(new ApiError(status, code, 'no'));
+    renderLetterForm([]);
+    fireEvent.click(screen.getByRole('button', { name: t.letters.showAddress }));
+    fireEvent.click(await screen.findByRole('button', { name: t.letters.sendCode }));
+    expect(await screen.findByRole('alert')).toHaveTextContent(copy);
+  });
+
+  it('⭐ the limit / second-letter line lives in a PERSISTENT status region — its content CHANGES, so it is announced', () => {
+    const view = renderRerenderable([], true);
+    const note = screen.getByTestId('letter-form-note');
+    expect(note.getAttribute('role')).toBe('status');
+    expect(note.textContent).toBe('');
+    view.rerender([letter({})], true);
+    expect(screen.getByTestId('letter-form-note')).toBe(note);
+    expect(note.textContent).toBe(t.letters.secondWaitsForDelivery);
+    view.rerender([letter({ delivered_on: '2026-09-10' }), letter({ letter_id: L2, sequence: 2, posted_on: '2026-09-20' })], true);
+    expect(screen.getByTestId('letter-form-note')).toBe(note);
+    expect(note.textContent).toBe(t.letters.limit);
+  });
+});
+
+// ── K1 (fifth pass): a person's letters span EVERY family / direction run of the live return ─────────────────────
+describe('currentRunLetters — the per-RUN rules read the current run’s letters, ⛔ all of the person’s', () => {
+  const L3 = '99999999-9999-4999-8999-999999999999';
+  const run1 = [letter({ posted_on: '2026-09-02', delivered_on: '2026-09-05' }), letter({ letter_id: L2, sequence: 2, posted_on: '2026-09-08', delivered_on: '2026-09-11' })];
+
+  it('⭐ the queue’s `in_current_run` flag DECIDES when present — even where the posting-order guess would be wrong', () => {
+    // A current-run letter posted BEFORE that run's day 0 (J5 allows it) — the guess called it an earlier run's.
+    const flagged = [
+      letter({ posted_on: '2026-09-02', delivered_on: '2026-09-05', in_current_run: false }),
+      letter({ letter_id: L3, sequence: 1, posted_on: '2026-09-20', in_current_run: true }),
+    ];
+    expect(currentRunLetters(flagged, '2026-09-25').map((l) => l.letter_id)).toEqual([L3]);
+    // Headline run `staff` (day 0 unknown) and the newest family run has ⛔ no letter: nothing gates.
+    expect(currentRunLetters([letter({ in_current_run: false }), letter({ letter_id: L2, sequence: 2, in_current_run: false })], null)).toEqual([]);
+  });
+
+  it('⭐ one run: every letter (the old behaviour)', () => {
+    expect(currentRunLetters(run1, '2026-09-01').map((l) => l.letter_id)).toEqual([L1, L2]);
+    expect(currentRunLetters(run1, null).map((l) => l.letter_id)).toEqual([L1, L2]);
+  });
+
+  it('⭐ family → staff → family, the new run has a letter: only the LATEST group (from the last #1) — two #1s are fine', () => {
+    const all = [...run1, letter({ letter_id: L3, sequence: 1, posted_on: '2026-09-26' })];
+    expect(currentRunLetters(all, '2026-09-25').map((l) => l.letter_id)).toEqual([L3]);
+    // Order-independent — sorted by posting date here, ⛔ trusted from the wire.
+    expect(currentRunLetters([...all].reverse(), '2026-09-25').map((l) => l.letter_id)).toEqual([L3]);
+  });
+
+  it('⛔ the new run has NO letter yet: run 1’s two letters do ⛔ not block its first one (no client gate)', () => {
+    expect(currentRunLetters(run1, '2026-09-25')).toEqual([]);
+  });
+
+  it('⭐ the form: run 1’s two delivered letters + a new family run ⇒ the record form IS offered; ⛔ the limit line', () => {
+    renderWithClient(
+      <CorrectionLetterForm pariwarId={PARIWAR} claimCaseId={CLAIM} personKey={PERSON} letters={run1} familyRunDay0="2026-09-25" canRecord />,
+    );
+    expect(screen.getByRole('form', { name: t.letters.record })).toBeInTheDocument();
+    expect(screen.queryByTestId('letter-limit')).toBeNull();
+  });
+
+  it('⭐ the form: an undelivered #1 of run 1 AND an undelivered #1 of run 3 ⇒ two delivery forms, keyed and labelled apart', () => {
+    renderWithClient(
+      <CorrectionLetterForm
+        pariwarId={PARIWAR}
+        claimCaseId={CLAIM}
+        personKey={PERSON}
+        letters={[letter({ posted_on: '2026-09-02' }), letter({ letter_id: L3, sequence: 1, posted_on: '2026-09-26' })]}
+        familyRunDay0="2026-09-25"
+        canRecord
+      />,
+    );
+    const a = screen.getByTestId(`delivery-form-${L1}`).getAttribute('aria-label');
+    const b = screen.getByTestId(`delivery-form-${L3}`).getAttribute('aria-label');
+    expect(a).toContain('#1 posted 2026-09-02');
+    expect(b).toContain('#1 posted 2026-09-26');
+    expect(a).not.toBe(b);
+    // The CURRENT run's #1 is undelivered ⇒ the second letter waits for it.
+    expect(screen.getByTestId('letter-second-waits')).toBeInTheDocument();
+  });
+});
+
 describe('istToday — the IST calendar day (it turns at 18:30 UTC)', () => {
   it('⭐ 18:29:59Z is still the same IST day; 18:30:00Z is the next', () => {
     expect(istToday(new Date('2026-09-30T18:29:59.000Z'))).toBe('2026-09-30');
@@ -494,8 +774,10 @@ describe('<CorrectionChasePanel> — a recorded delivery survives the refetch th
       await new Promise((r) => setTimeout(r, 20));
     });
     // …THEN the confirmation must STILL be on screen — ⛔ a line that flashed before the unmount does not count.
-    expect(screen.getByTestId('letter-form-status').textContent).toBe(t.letters.deliveryRecorded(1));
+    expect(screen.getByTestId('letter-form-status').textContent).toBe(t.letters.deliveryRecorded(1, '2026-09-01'));
     expect(screen.queryByRole('alert')).toBeNull();
+    // ⭐ The form that held focus is gone — focus is on the status line, ⛔ <body> (fifth-pass review).
+    expect(document.activeElement).toBe(screen.getByTestId('letter-form-status'));
   });
 
   it('⭐ a refusal of the delivery is shown even when the refetch removes the form (already delivered elsewhere)', async () => {

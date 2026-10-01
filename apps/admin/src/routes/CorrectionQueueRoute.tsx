@@ -72,6 +72,12 @@ function CorrectionQueueView(): ReactElement {
   // session gate above only sees the SESSION read: a queue 401 while that read is still cached never
   // redirected, and a 403 rendered as "could not be loaded" — an outage, which it is ⛔ not.
   const queueStatus = queue.error instanceof ApiError ? queue.error.status : null;
+  // ⭐ A FAILED REFETCH keeps the list (fifth-pass review 2026-10-01). TanStack keeps `data` and sets `isError` when a
+  // refetch fails; branching on `isError` first replaced the whole list with "could not be loaded" — a save's
+  // confirmation never showed (staff retried into `already_delivered` / `limit_reached`), and a window-focus refetch
+  // wiped a revealed address and the typed fields with the forms that held them. The full error branch is for a page
+  // with ⛔ no data; with data, a non-blocking banner says the list may be out of date.
+  const hasData = queue.data !== undefined;
   // ⭐ A `?claim=` that is ⛔ not in the rendered list (filtered out, beyond the first page, already resubmitted)
   // SAYS so — it failed silently, and the reminder's reader was left looking for a row that is not there.
   const focusMissing =
@@ -104,9 +110,19 @@ function CorrectionQueueView(): ReactElement {
         />
         {correctionChaseEn.queue.escalatedOnly}
       </label>
-      {focusMissing ? (
-        <p role="status" data-testid="queue-claim-not-shown" className="mt-2 text-xs">
-          {correctionChaseEn.queue.claimNotShown}
+      {/* ⭐ PERSISTENT — mounted before the list arrives, so the line is ANNOUNCED when it appears (a live region that
+          mounts already holding its text is ⛔ not). */}
+      <p role="status" data-testid="queue-claim-status" className="text-xs">
+        {focusMissing ? (
+          <span className="mt-2 block" data-testid="queue-claim-not-shown">
+            {correctionChaseEn.queue.claimNotShown}
+          </span>
+        ) : null}
+      </p>
+
+      {hasData && queue.isError ? (
+        <p role="alert" data-testid="correction-queue-refetch-error" className="mt-2 text-xs">
+          {queueStatus === 403 ? t.correctionQueue.forbidden : correctionChaseEn.queue.refetchError}
         </p>
       ) : null}
 
@@ -114,11 +130,11 @@ function CorrectionQueueView(): ReactElement {
         <p role="status" data-testid="correction-queue-loading" className="mt-4 text-sm">
           {t.correctionQueue.loading}
         </p>
-      ) : queueStatus === 403 ? (
+      ) : !hasData && queueStatus === 403 ? (
         <p role="alert" data-testid="correction-queue-forbidden" className="mt-4 text-sm">
           {t.correctionQueue.forbidden}
         </p>
-      ) : queue.isError ? (
+      ) : !hasData && queue.isError ? (
         <p role="alert" data-testid="correction-queue-error" className="mt-4 text-sm">
           {t.correctionQueue.loadError}
         </p>

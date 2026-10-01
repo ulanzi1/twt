@@ -4,7 +4,9 @@
 // it, when) and the change form, the run's day count and next reminder, the flags — "cannot remind" and why (D30),
 // "the claimant cannot be reminded", "the family has corrected — awaiting your check" (`-269` §2(b)), "who must act:
 // not set", "escalated" — a reminder summary PER PERSON by ROLE ("Nominee 1", "Claimant" — ⛔ never a name), and each
-// letter's state with its overdue flag, plus the letter form for a person found unreachable.
+// letter's state with its overdue flag, plus the letter form for a person found unreachable. ⭐ A nominee WITHOUT a rank
+// (D30, when the declaration is not effective) is "Nominee A", "Nominee B" — an ordinal by person-key order, ⛔ two
+// indistinguishable "Nominee" rows (fifth-pass review 2026-10-01).
 // ⭐ Semantic accessibility (family 13): every reachable state is ANNOUNCED (`role="status"`), ⛔ not merely styled.
 // ⛔ No name, ⛔ no number, ⛔ no address here — the address shows only inside the letter form, on demand.
 // ⭐ The letter form follows the PERSON, ⛔ not the headline run's kind: a letter (and its delivery) stays recordable
@@ -14,16 +16,16 @@
 // ⭐ Under D30 (`cannot_remind`) the people and their letters STAY listed — a posted letter's delivery is still
 // recordable — but a NEW letter is ⛔ offered only while the family can be contacted (`cannot_remind === null`).
 // ⚠ Every control is shown to every queue reader: the page cannot see keys (1)/(7) (district-dimension; the
-// session carries only the national grants), so every control maps a 403 through ONE classifier (`errors.ts`).
+// session carries only the national grants), so every control maps an error through ONE classifier (`errors.ts`).
 
 import { useEffect, useRef, useState, type ReactElement } from 'react';
 
 import type { ClaimsUnderCorrectionResponse, CorrectionLetterDto } from '@twt/contracts';
 
-import { getCorrectionLetterScreenshot } from '../../api/client.js';
+import { ApiError, getCorrectionLetterScreenshot } from '../../api/client.js';
 import { CorrectionLetterForm } from './CorrectionLetterForm.js';
 import { MustActChangeForm } from './MustActChangeForm.js';
-import { isRoleForbidden } from './errors.js';
+import { correctionLetterRefusalText } from './errors.js';
 import { correctionChaseEn as t } from './i18n-en.js';
 import { formatIst } from './ist.js';
 
@@ -40,6 +42,31 @@ export function screenshotLinkTtlMs(expiresInSeconds: unknown): number | null {
 }
 
 type Item = ClaimsUnderCorrectionResponse['items'][number];
+type Person = Item['correction_chase']['people'][number];
+
+/**
+ * Each person's label by ROLE, ⛔ never a name: "Claimant"; "Nominee <rank>" when the rank is known; else an ordinal
+ * among the RANKLESS nominees by person-key order ("Nominee A", "Nominee B") — stable across refetches, and two rows
+ * ⛔ never read the same.
+ */
+export function personLabels(people: readonly Person[]): ReadonlyMap<string, string> {
+  const rankless = people
+    .filter((p) => p.role === 'nominee' && p.rank === null)
+    .map((p) => p.person_key)
+    .sort();
+  const labels = new Map<string, string>();
+  for (const p of people) {
+    if (p.role === 'claimant') {
+      labels.set(p.person_key, t.people.claimant);
+    } else if (p.rank !== null) {
+      labels.set(p.person_key, `${t.people.nominee} ${String(p.rank)}`);
+    } else {
+      const i = rankless.indexOf(p.person_key);
+      labels.set(p.person_key, `${t.people.nominee} ${i < 26 ? String.fromCharCode(65 + i) : String(i + 1)}`);
+    }
+  }
+  return labels;
+}
 
 function StatusFlag({ testId, children }: { readonly testId: string; readonly children: string }): ReactElement {
   return (
@@ -73,12 +100,14 @@ function LetterLine({
     focusNext.current = null;
     (target === 'link' ? linkRef.current : buttonRef.current)?.focus();
   });
-  // ⭐ The signed URL is TTL-limited — drop the link when it expires rather than offer a dead one.
+  // ⭐ The signed URL is TTL-limited — drop the link when it expires rather than offer a dead one, and SAY so (the
+  // link silently turning back into the button read as a click that did nothing).
   useEffect(() => {
     if (link === null) return;
     const id = setTimeout(() => {
       if (document.activeElement === linkRef.current) focusNext.current = 'button';
       setLink(null);
+      setProblem(t.letters.screenshotExpired);
     }, link.ttlMs);
     return () => clearTimeout(id);
   }, [link]);
@@ -105,8 +134,13 @@ function LetterLine({
       setLink({ url, ttlMs });
       focusNext.current = 'link';
     } catch (err) {
-      // ⭐ A 403 is the ROLE — ⛔ "Try again" invited a retry that can never succeed.
-      setProblem(isRoleForbidden(err) ? t.letters.forbidden : t.letters.screenshotError);
+      // ⭐ Through the ONE classifier — a 403 / 401 / 429 each read as what they are (⛔ "Try again", a retry that can
+      // never succeed); a 404 is "no screenshot on record".
+      setProblem(
+        err instanceof ApiError && err.status === 404
+          ? t.letters.screenshotNotFound
+          : correctionLetterRefusalText(err, t.letters.screenshotError),
+      );
     } finally {
       loadingRef.current = false;
       setLoading(false);
@@ -155,6 +189,7 @@ export interface CorrectionChasePanelProps {
 
 export function CorrectionChasePanel({ pariwarId, item }: CorrectionChasePanelProps): ReactElement {
   const c = item.correction_chase;
+  const labels = personLabels(c.people);
   return (
     <section className="mt-2 flex flex-col gap-2 border-t pt-2 text-xs" aria-label={`${t.heading} — ${item.short_reference}`}>
       <p>
@@ -203,7 +238,7 @@ export function CorrectionChasePanel({ pariwarId, item }: CorrectionChasePanelPr
           <p className="font-medium">{t.people.heading}</p>
           <ul className="mt-1 flex flex-col gap-2">
             {c.people.map((p) => {
-              const label = p.role === 'claimant' ? t.people.claimant : `${t.people.nominee} ${String(p.rank ?? '')}`.trim();
+              const label = labels.get(p.person_key) ?? t.people.nominee;
               // ⭐ `found_dead_on`, ⛔ not `status` — the server's own predicate; a number found dead AFTER an earlier
               // "reached" is still letter-eligible (and the sweep chases the District Admin for that letter).
               const eligible = p.found_dead_on !== null;
@@ -236,6 +271,7 @@ export function CorrectionChasePanel({ pariwarId, item }: CorrectionChasePanelPr
                       claimCaseId={item.claim_case_id}
                       personKey={p.person_key}
                       letters={p.letters}
+                      familyRunDay0={c.run !== null && c.run.kind !== 'staff' ? c.run.day0 : null}
                       canRecord={canRecordNew}
                     />
                   ) : null}

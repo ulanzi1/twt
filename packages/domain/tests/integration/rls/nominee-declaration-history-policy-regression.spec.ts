@@ -31,6 +31,7 @@ import {
   PARIWAR_B,
   enterAppRoleNoScope,
   enterAppScope,
+  lockTruncateSetNowait,
   seedClaim,
   seedMember,
 } from '../_helpers.js';
@@ -507,16 +508,13 @@ describe.skipIf(!hasDatabase)('migration 0119 — nominee declaration history: R
 
   it('⛔ TRUNCATE is refused (23000)', async () => {
     const { client } = getTx();
-    // ⚠ Lock order (found in the 6.19b review, 2026-10-01): `TRUNCATE … CASCADE` takes the parent's ACCESS EXCLUSIVE lock
-    // FIRST, then each FK child's — while a parallel spec file's INSERT into a child (6.19b's
-    // `claim_correction_reminders.recipient_version_id`) holds the child and waits on the parent for its FK check ⇒ a
-    // deadlock between the two files. Taking the children first — the INSERT's own order — turns it into a wait.
-    const children = await client.query<{ t: string }>(
-      `SELECT DISTINCT conrelid::regclass::text AS t FROM pg_constraint
-        WHERE confrelid = 'member_nominee_versions'::regclass AND contype = 'f' AND conrelid <> confrelid
-        ORDER BY 1`,
-    );
-    for (const { t } of children.rows) await client.query(`LOCK TABLE ${t} IN ACCESS EXCLUSIVE MODE`);
+    // ⚠ Lock order (6.19b review, 2026-10-01): `TRUNCATE … CASCADE` takes the parent's ACCESS EXCLUSIVE lock FIRST, then
+    // each FK child's — while a parallel spec file's INSERT into a child (e.g. `claim_correction_reminders.
+    // recipient_version_id`) holds the child and waits on the parent for its FK check ⇒ a deadlock between two files.
+    // ⛔ Pre-locking the children one at a time only MOVED it (a test that touched the parent, then a child, deadlocks
+    // with the held children) — the whole CASCADE set is taken ALL OR NOTHING with NOWAIT and retried
+    // (`lockTruncateSetNowait`), so this side ⛔ never waits while holding part of the set.
+    expect(await lockTruncateSetNowait(client, 'member_nominee_versions')).toContain('member_nominee_versions');
     await expect(client.query('TRUNCATE member_nominee_versions CASCADE')).rejects.toSatisfy(
       (err: unknown) => pgCode(err) === '23000',
     );

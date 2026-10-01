@@ -331,8 +331,8 @@
 - **support:** Story 6.19b (the copy as shipped)
 - **closure_criteria:** A recorded human review of the Hindi values of `nominee.bank.being_checked`, `correction_sms.reminder` and `correction_sms.closure_notice` in `packages/i18n/locales/hi/claim.json` — agreed or corrected — and the `$comment.correction_chase` marker (*"agent-authored and NOT YET HUMAN-REVIEWED"*) removed in the same commit. ⚠ A corrected SMS text must be re-registered on the DLT portal (`dlt-template-requests-6-19.md`) — the send must byte-match the registered text. Testable signal: the marker is gone and `closure_evidence_link` names the review.
 - **target_date:** before the 6.19 family SMS or the D28 member line goes live (relative-to-fact: the gate IS that go-live).
-- **current_status:** `open`
-- **closure_evidence_link:** (empty)
+- **current_status:** `closed` <2026-10-01 — BigDev reviewed the Hindi of all three keys and accepted it as written (⛔ no correction ⇒ ⛔ no DLT re-registration); the `$comment.correction_chase` marker replaced in the same commit; prior history: open (2026-09-30, Story 6.19b Task 8) → closed (2026-10-01)>
+- **closure_evidence_link:** `6-19b-correction-reminders-and-posted-letters.md` Change Log (2026-10-01, the Hindi review) + the `$comment.correction_chase` key in `packages/i18n/locales/{en,hi}/claim.json` (now reads HUMAN-REVIEWED).
 - **missed_target_escalation_log:** (empty)
 - **cross_story_discharge_path:** a review recorded in the decision log (or on the 6.19b story) → the marker removed; any change to the SMS Hindi → re-registration (the DLT sheet's Record).
 - **notes:** The English of D28's line is the Trustee-ratified text (`-258` detail 3); the English SMS wording is 6.19b's (D32). ⛔ Neither is machine-translated; the Hindi was agent-authored (2026-09-30) and is ⛔ never shown to a real family unreviewed.

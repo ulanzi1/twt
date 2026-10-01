@@ -613,6 +613,7 @@ Claude Opus 5.5 (1M context) — `/bmad-dev-story 6.19c`, 2026-10-01.
   RTBF over the new Tier-1 columns; ⛔ no virus scan on the closure letter's screenshot; the direction form takes a user id (there is ⛔ no admin
   directory read); the new staff reminders inherit the member-app push deep link.
 - **The re-file state's Hindi (`refile.*`) — HUMAN-REVIEWED by BigDev 2026-10-01, accepted as written;** the `$comment.refile` in both locale files says so.
+- **6.19b's correction-chase Hindi (the reminder and closure-notice SMS, the D28 line) — HUMAN-REVIEWED by BigDev 2026-10-01, accepted as written;** launch-gate Row 20 closed (recorded on 6.19b's Change Log).
 - **Discharges:** `deferred-work.md` 6.18 chunk 1 *"A return clears ONLY through a bank rewrite"* — BUILT (Task 8); 6.18 chunk 3 — the new
   queues are in the nav; D26's staff-row marker — ⛔ not needed (disposed); the `-272` item — BUILT (Task 0a). 6.18's go-live fence annotated
   DISCHARGED BY THE BUILD at its four sites (`-265` Consequence 4). Fallback ledger: rows 10–14, 17, 18 xref'd; row 20

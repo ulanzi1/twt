@@ -29,6 +29,8 @@ questions found by this pass are `V` and `W`. Other stories' letters are qualifi
 
 # Story 6.19 — SHARED SPEC for 6.19a · 6.19b · 6.19c · 6.19d: The Correction-Return Reminders, the Posted Letter, the Closure and the Super Admin's Review `[SURFACE]`
 
+> ⭐ **DISCHARGED BY THE BUILD 2026-10-01 — Story 6.19c (`-265` Consequence 4, cited ⛔ not edited).** 6.18's go-live fence (*"not without 6.19"*) discharges here: a sent-back claim no longer waits forever — the closure for no response is built (the District Admin's request, the Pariwar Admin's decision, the Super Admin's review and decision, the staff case's day-90 escalation, "no correction needed" and the guarded re-file). ⚠ What still gates GO-LIVE is the 6.19 set's own: counsel's M and S (launch-gate rows 18, 19), the DLT registration, the Hindi review (`-267` §6) and Story 6.19d — ⛔ not this fence. Annotation only, ⛔ not a rewrite.
+
 Status: split — ⛔ this file has no sprint row; it is the shared spec of four stories (below)
 
 > ⭐⭐ **SPLIT 2026-09-27 (BigDev: *"split it three ways"* — D13).** The build now lives in four story files, each of which declares this file

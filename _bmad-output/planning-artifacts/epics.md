@@ -3043,6 +3043,7 @@ family** must act (`-258`), so that no family is left unreached and no family is
 > ⚠ **Minted by Trustee ruling** — as Story 6.19a. ⛔ Starts only when 6.19b is `done`. Its keys (2)–(6) and (8) are decided in
 > [`-265`](../../.decision-log.md#decision-2026-09-28-265). ⭐ With it built, 6.18's go-live fence (*"not without 6.19"*) discharges
 > **by the build**. Full ACs: `_bmad-output/implementation-artifacts/6-19c-correction-closure-super-admin-review-and-refile.md`.
+> ⭐ **DISCHARGED BY THE BUILD 2026-10-01 — Story 6.19c (`-265` Consequence 4, cited ⛔ not edited).** 6.18's go-live fence (*"not without 6.19"*) discharges here: a sent-back claim no longer waits forever — the closure for no response is built (the District Admin's request, the Pariwar Admin's decision, the Super Admin's review and decision, the staff case's day-90 escalation, "no correction needed" and the guarded re-file). ⚠ What still gates GO-LIVE is the 6.19 set's own: counsel's M and S (launch-gate rows 18, 19), the DLT registration, the Hindi review (`-267` §6) and Story 6.19d — ⛔ not this fence. Annotation only, ⛔ not a rewrite.
 
 As the District Admin, with the Pariwar Admin and the Super Admin above me, I want a claim still uncorrected after 90 days to be
 closed only on my **request** and a **human decision** (`-231`), only if each person was reached (`-252`) and only when the family

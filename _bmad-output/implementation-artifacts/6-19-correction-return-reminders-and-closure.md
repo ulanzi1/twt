@@ -38,7 +38,7 @@ Status: split — ⛔ this file has no sprint row; it is the shared spec of four
 > |---|---|---|---|
 > | **6.19a** | `6-19a-claim-contact-capture-at-filing` | AC0 (governance for the WHOLE set), AC1, AC13 | ✅ `done` (merged, `f06ee41f`) |
 > | **6.19b** | `6-19b-correction-reminders-and-posted-letters` | AC2–AC5, AC16 | ✅ `done` (build `40304d9f`, reviews to `f301f09e`) |
-> | **6.19c** | `6-19c-correction-closure-super-admin-review-and-refile` | AC6, AC7, AC14, AC15, AC17, ⭐ AC18 (`-272`, `-273`) | `ready-for-dev` — v2.1 re-pinned `f079dc56` |
+> | **6.19c** | `6-19c-correction-closure-super-admin-review-and-refile` | AC6, AC7, AC14, AC15, AC17, ⭐ AC18 (`-272`, `-273`) | `ready-for-dev` — v2.2 re-pinned `f079dc56` |
 > | **6.19d** | `6-19d-replacement-certificate-reminder` | AC12 (CC1) | `backlog` — fenced on its routing note |
 >
 > The AC numbers are **kept** in the slices, so every decision and note that cites "6.19 AC n" still resolves; AC8, AC9 and AC11 are restated per
@@ -618,7 +618,7 @@ Where a decision only records a Panel ruling it says so.
   (each effective nominee, and the claimant when none of them), ≥ 1 reminder `accepted` (or `delivered`) **or** a letter with a recorded
   delivery date. A closure **request** refuses otherwise (**409 `closure.not_reached`**, naming ⛔ no person in the body — a count and the
   roles only).
-- ✅ **D23 — CONFIRMED by `-260` G3 (A) — ⛔ no text after a Super Admin refusal or approval.** ⚠ *(`-273` §5: the closure notice is an outbox on the closure row, sent by a jobs sweep once per closure per recipient, ⛔ never to a known-dead number — a family reached only by post is ⛔ not told (Confirm 2); §9: `closed_no_response` rides the member death-certificate status GET the claim-entry gate reads.)* **D23 — NEW. Family notices:** the closure sends a name-free **closure notice** SMS to each reached person (en/hi per `contact_locale`); a
+- ✅ **D23 — CONFIRMED by `-260` G3 (A) — ⛔ no text after a Super Admin refusal or approval.** ⚠ *(`-273` §5: the closure notice is an outbox on the closure row, sent by a jobs sweep once per closure per recipient, ⛔ never to a known-dead number — a family reached only by post is sent a **closure letter** instead (`-274` 2, Trustee-ratified); §9: `closed_no_response` rides the member death-certificate status GET the claim-entry gate reads.)* **D23 — NEW. Family notices:** the closure sends a name-free **closure notice** SMS to each reached person (en/hi per `contact_locale`); a
   Super Admin refusal or approval sends ⛔ no new SMS (W — a confirm for the Panel's next note). The member app derives
   **`closed_no_response`** through a **new contract field** on the claim status, ⛔ never `appeal_exhausted` (`deriveAppealView` would show the
   external-remedy disclosure — the wrong text).
@@ -634,7 +634,7 @@ Where a decision only records a Panel ruling it says so.
   wins**; RLS + FORCE, own migration. ⛔ Not a column on `claim_state_trustee_decisions` (every phase shares it). The Pariwar Admin's
   `return_to_district_admin` action gains a **required** `must_act` field, written in the **same tx** as the return row (6.18's cycle-freeze
   contract + handler). A District Admin change needs a **required note** and key (7).
-- ⚠ *(`-272`: a change back to `family` restarts the CLOCK only — the letter track's per-person facts carry across the return; `-273` §3: an escalated staff case is held, and a staff-origin escalation is ⛔ never closable (Confirm 1).)* **D26 — the runs follow the mark.** A **family run** exists only while the latest mark is `family`: day 0 = the return's date if marked
+- ⚠ *(`-272`: a change back to `family` restarts the CLOCK only — the letter track's per-person facts carry across the return; `-273` §3: an escalated staff case is held, and a staff-origin escalation is ⛔ never closable (`-274` 1a, Trustee-ratified).)* **D26 — the runs follow the mark.** A **family run** exists only while the latest mark is `family`: day 0 = the return's date if marked
   `family` at the return, else the date of the latest change **to** `family` (`-258` detail 1); a change to `staff` ends the family run at once
   (the running slot's record is written `skipped_superseded`); a change back to `family` opens a **new** run (a full 90 days). A **staff run**
   exists while the mark is `staff`: the District Admin is reminded on D3's days from the return / the latest change to `staff`, **day 12** →
@@ -772,3 +772,4 @@ template registry's content against the rendered `t()` output).
 | v1.17 | 2026-09-29 | 6.19b v2.5's re-check: invariant 2 marked with `-269` §1; D20's escalation day (13); D21 read as one reminder per person; D25's role set gains `super_admin` (`-270`). |
 | v1.18 | 2026-09-29 | ⚠ **`-271`**: D22 counts only accepts to the person's current number; ⛔ no staff run on a switch during a Super Admin hold. |
 | v1.19 | 2026-10-01 | ⚠ **`-272`** and **`-273`** (6.19c's validate pass; `-273` inserted by BigDev 2026-10-01): D4, D20, D26 marked — the letter track is per return (the cap ⛔ never resets on a new number); D22 reads the whole return; D17/D18/T11 — an escalated claim (either origin) is held and only the Super Admin decides it, a staff-origin escalation is ⛔ never closable; D23 — the closure notice is an outbox, the member status rides the claim-entry gate. Two confirms owed to the Panel. The status table: 6.19b `done`, 6.19c v2.1. |
+| v1.20 | 2026-10-01 | ⭐ **`-274` (Trustee-ratified, DR + KB) answers `-273`'s two confirms:** 1a–1d A (a staff-origin escalation ⛔ never closable; the 90 days start only with a restart while held; the `-251` approve follows the origin; only the Super Admin decides a held claim); **2 B** — a family reached only by post is sent a closure letter (D23 widened). D23 and D26 markers updated. |

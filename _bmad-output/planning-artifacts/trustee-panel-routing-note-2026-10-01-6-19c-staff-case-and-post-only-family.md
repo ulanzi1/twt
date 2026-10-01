@@ -9,10 +9,19 @@
 
 ---
 
-> ## ⏳ AWAITING PANEL RULING
+> ## ✅ PANEL RULED — 2026-10-01 — recorded as `2026-10-01-274`
 >
-> ⛔ **Nothing is recorded here yet.** When the Panel rules, transcribe the answer into this block **and** into `.decision-log.md` as a new
-> decision id. ⭐ Everything below is then kept **unedited**, as the question was put ([[feedback_supersede_never_reinterpret]]).
+> **Ruled by Dhiraj Rahul + Kalpana Bharti, relayed by BigDev — verbatim:**
+> *"by DR and KB — 1a. A · 1b. A · 1c. A · 1d. A · 2. B"*
+>
+> ⭐ Our readings **taken** for 1a, 1b, 1c and 1d. ⚠ **2: our holding position (A, ⛔ no message) was ⛔ NOT taken** — the Panel chose **B**:
+> a family reached only by post is sent a **posted letter** saying the claim was closed and how to file again. ⚠ 1c was taken although the
+> note offered B as the safer reading.
+>
+> **What this ruling does NOT cover** (full list in `2026-10-01-274`): the closure letter's wording beyond its two points, its language,
+> and what happens if it is returned undelivered.
+>
+> ⭐ Everything **below this block is kept UNEDITED** — it is the question as it was put.
 
 ---
 

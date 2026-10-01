@@ -19,7 +19,7 @@ LETTERS: bare `D1`…`D34` are 6.19's own (the shared spec). Other letters are q
 
 # Story 6.19c: The Closure for No Response, the Super Admin's Review and Decision, and Filing Again Through a Person `[SURFACE]`
 
-Status: ready-for-dev
+Status: in-progress
 
 > ⭐ **6.19b is `done`** (its build `40304d9f`, five review passes to `f301f09e`) — the fence this slice waited on is discharged.
 > ⭐ **Two author-commits bind this slice before any code:** **`-272`** (a switch back to "the family must act" restarts the CLOCK, ⛔ not the
@@ -310,32 +310,32 @@ tables' Tier-1 columns (invariant 9); ⛔ no virus scan on the closure letter's 
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0 — Preflight** (all ACs) — ✅ `-273` is in `.decision-log.md` (BigDev inserted it 2026-10-01). Then `git diff --name-only f079dc56..HEAD -- packages apps scripts` and re-read
+- [x] **Task 0 — Preflight** (all ACs) — ✅ `-273` is in `.decision-log.md` (BigDev inserted it 2026-10-01). Then `git diff --name-only f079dc56..HEAD -- packages apps scripts` and re-read
   every hit this file cites; confirm live: `PERMISSION_CATALOG_VERSION` 49 / 58 keys, migration tail 0130, `COVERAGE_FLOOR` 12.
-- [ ] **Task 0a — `-272` + `-273` §1/§2: the letter track per RETURN** (AC18) — 6.19b code, reworked to per-return, current-number
+- [x] **Task 0a — `-272` + `-273` §1/§2: the letter track per RETURN** (AC18) — 6.19b code, reworked to per-return, current-number
   evaluation (`readReturnFamilyLetters`, `correction-reminder-record.ts:556`, is the model):
-  - [ ] `readRunPersonStates` (`correction-reminder-record.ts:671`) / `evaluatePersonRunState` (`correction-chase.ts:715`) /
+  - [x] `readRunPersonStates` (`correction-reminder-record.ts:671`) / `evaluatePersonRunState` (`correction-chase.ts:715`) /
     `lastEvidentialAttempt` (`correction-reminder-record.ts:643`): join the `family_sms` rows and letters of every family/direction run of the
     live return, ⭐ **ordered by `sent_on`, `created_at`** — ⛔ never `slot_day`.
-  - [ ] `beginCorrectionFamilySend`'s delivered-letter re-check (`correction-reminder-record.ts:389`); `assertCorrectionLetterAllowed`
+  - [x] `beginCorrectionFamilySend`'s delivered-letter re-check (`correction-reminder-record.ts:389`); `assertCorrectionLetterAllowed`
     (`correction-letter.ts:158`, also the address reveal).
-  - [ ] `recordCorrectionLetter` (`correction-letter.ts:239`): the count, `limit_reached`, `first_not_delivered`,
+  - [x] `recordCorrectionLetter` (`correction-letter.ts:239`): the count, `limit_reached`, `first_not_delivered`,
     `posted_before_first_delivery`, `sequence` — per person per return, epoch-blind (the cap ⛔ never resets, `-273` §2).
-  - [ ] `readCorrectionChaseSummary` (`correction-chase-read.ts:253`): person `status` / `foundDeadOn` / `remindersAccepted`; the DTO's
+  - [x] `readCorrectionChaseSummary` (`correction-chase-read.ts:253`): person `status` / `foundDeadOn` / `remindersAccepted`; the DTO's
     `in_current_run` (`packages/contracts/src/claims/correction-chase.ts:115`, `.strict()`) → *"counts toward this return's limit"*
     (rename or redefine — `-272` §3's *"unchanged"* is a naming slip: under per-return every live-return letter is in it); the admin's
     `currentRunLetters` (`CorrectionLetterForm.tsx:98`); the API copy *"…in this run"* (`claims.correction-chase.handlers.ts:126`).
-  - [ ] The sweep (`apps/jobs/src/scheduler/claim-correction-reminders.ts`, `planRun`): `hasSecond`; the letter-chase, the +13 escalation and
+  - [x] The sweep (`apps/jobs/src/scheduler/claim-correction-reminders.ts`, `planRun`): `hasSecond`; the letter-chase, the +13 escalation and
     `letter_second_due` dedup read the return's staff rows and compare **dates**, ⛔ never slot days; ⭐ the `6.19b K2` clamp-to-today's-slot
     also covers the chase and the escalation; a capped person gets ⛔ no chase; the D30 `removed` / `tracked` reads; D21's replacement
     (`everyoneDelivered`) now reads the return — state it in the code comment.
-  - [ ] ⛔ No migration (`-273` §2). ⚠ `claim_correction_letters_person_sequence_uq (run_id, person_key, sequence)` stays a per-run backstop —
+  - [x] ⛔ No migration (`-273` §2). ⚠ `claim_correction_letters_person_sequence_uq (run_id, person_key, sequence)` stays a per-run backstop —
     its spec `claim-correction-chase-policy-regression.spec.ts:405` keeps passing and now describes the backstop, ⛔ not the rule: re-word its title.
-  - [ ] Update the tests that pin per-run semantics: `packages/domain/tests/integration/claim/correction-chase.spec.ts:1510` (K1 —
+  - [x] Update the tests that pin per-run semantics: `packages/domain/tests/integration/claim/correction-chase.spec.ts:1510` (K1 —
     *"sequence restarts per run"*); `apps/admin/tests/correction-chase-forms.test.tsx:633-680` (the `currentRunLetters` describe);
     `apps/jobs/tests/claim-correction-reminders-live.test.ts:1003-1058` and `apps/jobs/tests/claim-correction-control-paths.test.ts:413-530`
     (they mock the readers **by name**, `:22-61`); `packages/domain/tests/claim/correction-person-state.test.ts:158`, `:196` (the slot sort).
-  - [ ] AC18's live tests. Mark `deferred-work.md` § *fifth-pass re-review* item *"⏳ `-272`"* **built**; dispose each of § *third pass*
+  - [x] AC18's live tests. Mark `deferred-work.md` § *fifth-pass re-review* item *"⏳ `-272`"* **built**; dispose each of § *third pass*
     item *"Nine earlier-pass 6.19b review items"* that this rework touches (KMS before the conflict checks in `recordLetter`, the
     `RunPersonState.state` collision, the multi-day letter-chase gap test) — fixed or re-deferred by name.
 - [ ] **Task 1 — Migrations from `0131`** (AC6, AC14, AC15, AC17) — never edit 0126–0130:

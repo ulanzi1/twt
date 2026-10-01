@@ -58,7 +58,10 @@ export type CorrectionRunKind = (typeof CORRECTION_RUN_KINDS)[number];
 export const CORRECTION_RUN_END_REASONS = ['superseded', 'day_90', 'mark_changed', 'decided'] as const;
 export type CorrectionRunEndReason = (typeof CORRECTION_RUN_END_REASONS)[number];
 
-/** What a reminder row is FOR. 6.19c extends it by its own migration. ⚠ LOCKSTEP with 0128. */
+/**
+ * What a reminder row is FOR. ⚠ LOCKSTEP with 0128, as extended by 0135 (Story 6.19c — one value per reminder kind,
+ * `-273` §6: ⛔ never `staff_reminder` / `escalation`, whose indexes and 6.19b's sweep reads would collide).
+ */
 export const CORRECTION_REMINDER_PURPOSES = [
   'family_sms',
   'staff_reminder',
@@ -67,6 +70,23 @@ export const CORRECTION_REMINDER_PURPOSES = [
   'letter_second_due',
   'replacement_reminder',
   'escalation',
+  // ── Story 6.19c (0135) ──
+  /** The District Admin, on the family run's days 90–96, while a closure request could pass (`-232` I). */
+  'closure_due',
+  /** The day-97 escalation to every Pariwar Admin (a record + a reminder). */
+  'closure_escalation',
+  /** A staff case at day 90 of its staff run, escalated to the Super Admin (`-273` §3a). */
+  'staff_case_escalation',
+  /** The Super Admin, every 30 days from the escalation date while held (`-273` §6). */
+  'review_reminder',
+  /** A directee, 7 days after the direction, then weekly, until they respond (D18). */
+  'direction_reminder',
+  /** The family's closure SMS — ONCE per closure per recipient (`-273` §5). */
+  'closure_notice',
+  /** The District Admin, for a closure letter owed (`-274` 2: closure date + 7 … + 12). */
+  'closure_letter_chase',
+  /** … then escalated to every Pariwar Admin (closure date + 13). */
+  'closure_letter_escalation',
 ] as const;
 export type CorrectionReminderPurpose = (typeof CORRECTION_REMINDER_PURPOSES)[number];
 
@@ -192,7 +212,10 @@ export const claimCorrectionReminders = pgTable(
     /** `nominee:<chain root>` | `claimant` | `staff:<user_id>` | `staff:unassigned`. */
     recipientKey: text('recipient_key').notNull(),
     purpose: text('purpose').notNull().$type<CorrectionReminderPurpose>(),
-    /** The chased PERSON for `letter_chase` / `letter_second_due` / the letter-chase `escalation`; else `''`. */
+    /**
+     * The chased PERSON for `letter_chase` / `letter_second_due` / the letter-chase `escalation` and the 6.19c
+     * closure-letter rows; `direction:<direction_id>` on a directee's rows (0135); else `''` (⛔ never null).
+     */
     subjectKey: text('subject_key').notNull().default(''),
     outcome: text('outcome').notNull().$type<CorrectionReminderOutcome>(),
     late: boolean('late').notNull().default(false),
@@ -234,9 +257,19 @@ export const claimCorrectionReminders = pgTable(
     index('claim_correction_reminders_attempting_idx').on(t.claimedAt).where(sql`"outcome" = 'attempting'`),
     index('claim_correction_reminders_pariwar_claim_idx').on(t.pariwarId, t.claimCaseId),
     index('claim_correction_reminders_run_idx').on(t.runId, t.recipientKey),
+    // ⭐ 0135 (Story 6.19c) — the 6.19c staff reminders: ONE per (claim, recipient, subject, purpose, IST day).
+    uniqueIndex('claim_correction_reminders_closure_day_uq')
+      .on(t.claimCaseId, t.recipientKey, t.subjectKey, t.purpose, t.sentOn)
+      .where(
+        sql`"purpose" IN ('closure_due', 'closure_escalation', 'staff_case_escalation', 'review_reminder', 'direction_reminder', 'closure_letter_chase', 'closure_letter_escalation')`,
+      ),
+    // ⭐ 0135 — the closure notice ONCE per closure per recipient (`-273` §5), ⛔ per day.
+    uniqueIndex('claim_correction_reminders_closure_notice_uq')
+      .on(t.claimCaseId, t.recipientKey)
+      .where(sql`"purpose" = 'closure_notice'`),
     check(
       'claim_correction_reminders_purpose_check',
-      sql`${t.purpose} IN ('family_sms', 'staff_reminder', 'staff_push', 'letter_chase', 'letter_second_due', 'replacement_reminder', 'escalation')`,
+      sql`${t.purpose} IN ('family_sms', 'staff_reminder', 'staff_push', 'letter_chase', 'letter_second_due', 'replacement_reminder', 'escalation', 'closure_due', 'closure_escalation', 'staff_case_escalation', 'review_reminder', 'direction_reminder', 'closure_notice', 'closure_letter_chase', 'closure_letter_escalation')`,
     ),
     check(
       'claim_correction_reminders_outcome_check',

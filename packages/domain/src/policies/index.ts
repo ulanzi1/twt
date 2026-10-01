@@ -216,3 +216,10 @@ export * from './claim-correction-mark-rls.js';
 export * from './claim-correction-run-rls.js';
 export * from './claim-correction-reminder-rls.js';
 export * from './claim-correction-letter-rls.js';
+// Story 6.19c — the correction closure, the directions, the re-file confirmations and the closure letters (ONE file per
+// table, per its migration 0131–0134). Per command; ⛔ no DELETE leg and ⛔ no `FOR ALL`; each UPDATE leg is narrowed
+// by its migration's column grant.
+export * from './claim-correction-closure-rls.js';
+export * from './claim-correction-direction-rls.js';
+export * from './claim-refile-confirmation-rls.js';
+export * from './claim-closure-letter-rls.js';

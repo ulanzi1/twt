@@ -918,6 +918,41 @@
       "when": 1791949200000,
       "tag": "0130_claim-correction-letter-chase-day-purpose",
       "breakpoints": true
+    },
+    {
+      "idx": 131,
+      "version": "7",
+      "when": 1792035600000,
+      "tag": "0131_claim-correction-closure",
+      "breakpoints": true
+    },
+    {
+      "idx": 132,
+      "version": "7",
+      "when": 1792122000000,
+      "tag": "0132_claim-correction-direction",
+      "breakpoints": true
+    },
+    {
+      "idx": 133,
+      "version": "7",
+      "when": 1792208400000,
+      "tag": "0133_claim-refile-confirmation",
+      "breakpoints": true
+    },
+    {
+      "idx": 134,
+      "version": "7",
+      "when": 1792294800000,
+      "tag": "0134_claim-closure-letter",
+      "breakpoints": true
+    },
+    {
+      "idx": 135,
+      "version": "7",
+      "when": 1792381200000,
+      "tag": "0135_claim-correction-closure-reminder-purposes",
+      "breakpoints": true
     }
   ]
 }

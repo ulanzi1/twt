@@ -191,6 +191,9 @@ export * from './claim_contacts.js';
 // (one open per claim), the reminder RECORD (one row per attempt; the table's UNIQUE is the dedup) and the posted
 // LETTERS (≤ 2 per person per run). Tenant-isolated; ⛔ no DELETE.
 export * from './claim_correction_chase.js';
+// Story 6.19c — the correction closure, the Super Admin's review, the directions, the re-file confirmations and the
+// closure letters (migrations 0131–0134).
+export * from './claim_correction_closure.js';
 // Story 6.6 — peer-mesh deterministic 5-nearest selection: `claim_peer_mesh_selections`
 // (ONE row per claim — the audit-replay source: candidate snapshot + ordered output +
 // metric identity; immutable selection, mutable outcome/window) + `claim_peer_mesh_pings`

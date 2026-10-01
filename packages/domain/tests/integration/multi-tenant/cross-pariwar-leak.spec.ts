@@ -42,6 +42,7 @@ import {
   PARIWAR_X,
   PARIWAR_Y,
   enterAppScope,
+  seedClaim,
   seedClauseVersion,
   seedEvent,
   seedPassport,
@@ -280,6 +281,63 @@ describe.skipIf(!hasDatabase)('cross-Pariwar adversarial leak (RLS-enforced)', (
       `SELECT tree_document FROM geo_tree_versions WHERE tree_document IS NOT NULL`,
     );
     expect(rawDoc.rows).toHaveLength(1);
+  });
+
+  // Story 6.19c (Task 1; AC11c) — the correction closure's four tables: a closures row (with a Tier-1 note), a direction,
+  // a re-file confirmation and a closure letter in each tenant. ⭐ Probed by the NOTE / TRACKING columns too (⛔ only the
+  // tenant key) — the Super Admin's and the Pariwar Admin's notes and a closure letter's tracking number are the payload.
+  it('claim_correction_closures / _directions / claim_refile_confirmations / claim_closure_letters (scoped) — A scope sees only A rows, never B', async () => {
+    const { tx, client } = getTx();
+    for (const pariwar of [PARIWAR_A, PARIWAR_B]) {
+      const claimCaseId = await seedClaim(tx, pariwar);
+      const decisionId = randomUUID();
+      await client.query(
+        `INSERT INTO claim_state_trustee_decisions (decision_id, claim_case_id, pariwar_id, phase, outcome, reason_code, actor_id, actor_display)
+         VALUES ($1, $2, $3, 'correction_return', 'returned_for_correction', 'other', 'trustee', 'Pariwar Admin')`,
+        [decisionId, claimCaseId, pariwar],
+      );
+      const runId = randomUUID();
+      await client.query(
+        `INSERT INTO claim_correction_runs (run_id, claim_case_id, pariwar_id, return_decision_id, kind, anchor_id, day0, ended_at, end_reason)
+         VALUES ($1, $2, $3, $4, 'family', $5, '2026-08-01', now(), 'day_90')`,
+        [runId, claimCaseId, pariwar, decisionId, randomUUID()],
+      );
+      const closureId = randomUUID();
+      await client.query(
+        `INSERT INTO claim_correction_closures (closure_id, claim_case_id, pariwar_id, return_decision_id, origin, state, request_family_run_id,
+           requested_by_actor, requested_by_display, request_note_ciphertext, requested_at, pariwar_decision, pariwar_decided_by_actor,
+           pariwar_decided_by_display, pariwar_decided_at, closed_at, closure_notice_run_id, closure_notice_due_at)
+         VALUES ($1, $2, $3, $4, 'declined_closure', 'closed', $5, 'da', 'District Admin', $6, now(), 'approved', 'pa', 'Pariwar Admin',
+           now(), now(), $5, now())`,
+        [closureId, claimCaseId, pariwar, decisionId, runId, `enc:v1:note-${pariwar}`],
+      );
+      await client.query(
+        `INSERT INTO claim_correction_directions (closure_id, claim_case_id, pariwar_id, directed_to_actor, directed_to_role, kind, text_ciphertext,
+           created_by_actor, created_by_display) VALUES ($1, $2, $3, 'da', 'district_admin', 'other', 'enc:v1:t', 'sa', 'Super Admin')`,
+        [closureId, claimCaseId, pariwar],
+      );
+      await client.query(
+        `INSERT INTO claim_refile_confirmations (pariwar_id, deceased_member_id, closed_claim_case_id, closure_id, via, confirmed_by_actor,
+           confirmed_by_display, note_ciphertext) VALUES ($1, $2, $3, $4, 'helpline', 'op', 'Operator', 'enc:v1:n')`,
+        [pariwar, randomUUID(), claimCaseId, closureId],
+      );
+      await client.query(
+        `INSERT INTO claim_closure_letters (closure_id, claim_case_id, pariwar_id, person_key, posted_on, tracking_number_ciphertext,
+           recorded_by_actor, recorded_by_display) VALUES ($1, $2, $3, 'claimant', '2026-11-03', $4, 'da', 'District Admin')`,
+        [closureId, claimCaseId, pariwar, `enc:v1:track-${pariwar}`],
+      );
+    }
+    await enterAppScope(client, PARIWAR_A);
+    for (const table of ['claim_correction_closures', 'claim_correction_directions', 'claim_refile_confirmations', 'claim_closure_letters']) {
+      const all = await client.query<{ pariwar_id: string }>(`SELECT pariwar_id FROM ${table}`);
+      expect(all.rows.length).toBeGreaterThan(0);
+      expect(all.rows.every((r) => r.pariwar_id === PARIWAR_A)).toBe(true);
+      expect((await client.query(`SELECT 1 FROM ${table} WHERE pariwar_id = $1`, [PARIWAR_B])).rows).toHaveLength(0);
+    }
+    // ⭐ The payload columns — B's note and tracking number are ⛔ reachable by any filter.
+    expect((await client.query(`SELECT 1 FROM claim_correction_closures WHERE request_note_ciphertext = $1`, [`enc:v1:note-${PARIWAR_B}`])).rows).toHaveLength(0);
+    expect((await client.query(`SELECT 1 FROM claim_closure_letters WHERE tracking_number_ciphertext = $1`, [`enc:v1:track-${PARIWAR_B}`])).rows).toHaveLength(0);
+    expect((await client.query(`SELECT 1 FROM claim_correction_closures WHERE request_note_ciphertext = $1`, [`enc:v1:note-${PARIWAR_A}`])).rows).toHaveLength(1);
   });
 });
 

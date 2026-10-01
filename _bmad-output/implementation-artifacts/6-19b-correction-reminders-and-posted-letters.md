@@ -20,6 +20,8 @@ item headings and row keys. `file:NNN` is used ONLY for code, as of `f06ee41f`; 
 
 Status: done
 
+> ⭐ **DISCHARGED BY THE BUILD 2026-10-01 — Story 6.19c (`-265` Consequence 4, cited ⛔ not edited).** 6.18's go-live fence (*"not without 6.19"*) discharges here: a sent-back claim no longer waits forever — the closure for no response is built (the District Admin's request, the Pariwar Admin's decision, the Super Admin's review and decision, the staff case's day-90 escalation, "no correction needed" and the guarded re-file). ⚠ What still gates GO-LIVE is the 6.19 set's own: counsel's M and S (launch-gate rows 18, 19), the DLT registration, the Hindi review (`-267` §6) and Story 6.19d — ⛔ not this fence. Annotation only, ⛔ not a rewrite.
+>
 > ⭐ **6.19a is `done` and merged** (its governance `68be1778` = `-265`; its code `a779bfaf`, review `f06ee41f`). ⭐ **`2026-09-29-266`**
 > (author-commit, this story's validate pass) **supersedes** `-265`'s D2 and `-265` §5's letter check, and adds **D30–D34**; ⭐ **`2026-09-29-267`** is its erratum
 > (one open run per claim, the resolver reads ended runs, `resubmitted` pauses, a per-person key, the claimant's letter address, D28's Hindi

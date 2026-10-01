@@ -67,6 +67,8 @@ export * from './correction-chase-read.js';
 // Story 6.19c — the closure, the Super Admin's review / directions / decision, "no correction needed" (NEW module —
 // ⛔ imported by correction-chase.ts or state-trustee-decision-persist.ts, S-T1).
 export * from './correction-closure.js';
+export * from './correction-closure-read.js';
+export * from './closure-letter.js';
 // Story 6.19c (AC15) — the re-file guard after a closure for no response.
 export * from './refile-guard.js';
 export * from './admin-directory.js';

@@ -12,7 +12,24 @@ import { describe, expect, it } from 'vitest';
 
 import {
   ClaimContactRequiredError,
+  ClosureLetterRefusedError,
   CorrectionClosureRefusedError,
+  RefileConfirmationRefusedError,
+  RefileRequiresConfirmationError,
+  listClosureLettersOwed,
+  listEscalatedClosures,
+  listOpenDirectionsFor,
+  listPariwarClosureQueue,
+  overrideIntakeAttempt,
+  readApprovalNameHighlight,
+  readClosureReadiness,
+  readEscalatedClosureDetail,
+  readRefileRequiresConfirmation,
+  recordClosureLetter,
+  recordClosureLetterDelivery,
+  recordRefileConfirmation,
+  tryConverge,
+  voteOnFrozenClaim,
   approveNoCorrectionNeeded,
   assertCorrectionClaimNotHeld,
   claimCorrectionReminder,
@@ -823,5 +840,171 @@ describe.skipIf(!hasDatabase)('the correction closure — request, decision, hol
     expect(await eventTypesOf(tx, c.cid)).toEqual(before);
     expect(await stateOf(tx, c.cid)).toBe('verifier_approved');
     expect(istDateOf(c.day(95))).toBe(addCalendarDays(c.day0, 95));
+  });
+
+  // ── AC15 — the re-file guard (both mint paths), and the member's routing bit ───────────────────────────────
+  describe('AC15 — re-filing after a closure for silence (D19, T9)', () => {
+    const intake = (mid: string, channel: 'member_app' | 'helpline', auditId: string) =>
+      ({ pariwarId: PARIWAR_A, deceasedMemberId: toMemberId(mid), intakeChannel: channel, actor: 'member' as const, claimantActorId: null, trigger: 'test', actorId: null, auditId });
+
+    async function closedClaim(client: Client, tx: Tx) {
+      const c = await reachedClaim(client, tx);
+      await request(client, c);
+      await approve(client, c);
+      return c;
+    }
+
+    it('⭐ BOTH mint paths are guarded: ⛔ without a confirmation ⇒ 409; a confirmation is CONSUMED by the mint; the routing bit follows', async () => {
+      const { client, tx } = getTx();
+      await enterAppScope(client, PARIWAR_A);
+      const c = await closedClaim(client, tx);
+      expect(await readRefileRequiresConfirmation(tx, PARIWAR_A, c.mid)).toBe(true);
+      await client.query('SAVEPOINT refile');
+      await expect(tryConverge(client, intake(c.mid, 'member_app', 'r1'))).rejects.toBeInstanceOf(RefileRequiresConfirmationError);
+      await client.query('ROLLBACK TO SAVEPOINT refile');
+      const conf = await recordRefileConfirmation(client, {
+        pariwarId: PARIWAR_A, closedClaimCaseId: c.cid, via: 'helpline', actorId: 'op', actorDisplay: 'Helpline Operator', noteCiphertext: 'enc:v1:n',
+      });
+      await expect(
+        recordRefileConfirmation(client, { pariwarId: PARIWAR_A, closedClaimCaseId: c.cid, via: 'district_admin', actorId: DA, actorDisplay: 'DA', noteCiphertext: 'x' }),
+      ).rejects.toMatchObject({ refusal: 'already_confirmed' });
+      // ⭐ Once confirmed the routing bit is false (the wizard is open again).
+      expect(await readRefileRequiresConfirmation(tx, PARIWAR_A, c.mid)).toBe(false);
+      const r1 = await tryConverge(client, intake(c.mid, 'member_app', 'r2'));
+      expect(r1.minted).toBe(true);
+      const [consumed] = await tx.select().from(schema.claimRefileConfirmations).where(eq(schema.claimRefileConfirmations.confirmationId, conf.confirmationId));
+      expect(consumed!.consumedByClaimCaseId).toBe(r1.claimCaseId);
+      // ⭐ The confirmation is consumed and the new claim is LIVE ⇒ the old pointer ⛔ never traps the family.
+      expect(await readRefileRequiresConfirmation(tx, PARIWAR_A, c.mid)).toBe(false);
+      // The SECOND mint path — an override separating a cross-channel attempt — needs its own confirmation.
+      const r2 = await tryConverge(client, intake(c.mid, 'helpline', 'r3'));
+      expect(r2.convergencePending).toBe(true);
+      const override = () =>
+        overrideIntakeAttempt(client, {
+          intakeAttemptId: r2.intakeAttemptId!, pariwarId: PARIWAR_A, deceasedMemberId: toMemberId(c.mid), intakeChannel: 'helpline',
+          againstClaimCaseId: toClaimId(r1.claimCaseId), reason: 'distinct claimant', actor: 'operator', claimantActorId: null,
+          decidedByActor: randomUUID(), auditId: 'o1',
+        });
+      await client.query('SAVEPOINT ov');
+      await expect(override()).rejects.toBeInstanceOf(RefileRequiresConfirmationError);
+      await client.query('ROLLBACK TO SAVEPOINT ov');
+      await recordRefileConfirmation(client, { pariwarId: PARIWAR_A, closedClaimCaseId: c.cid, via: 'district_admin', actorId: DA, actorDisplay: 'DA', noteCiphertext: 'x' });
+      expect((await override()).newClaimCaseId).not.toBe(r1.claimCaseId);
+    });
+
+    it('⭐ T9 — keyed on the CLOSURE row: an ordinary denied claim re-files freely; a confirmation on a claim ⛔ closed is refused', async () => {
+      const { client, tx } = getTx();
+      await enterAppScope(client, PARIWAR_A);
+      const mid = toMemberId(randomUUID());
+      const cid = toClaimId(randomUUID());
+      await driveClaimTo(client, PARIWAR_A, cid, mid, 'verifier_approved');
+      // An ORDINARY refusal (the vote's deny — the projector moves the state; ⛔ a closures row).
+      await voteOnFrozenClaim(client, {
+        claimCaseId: cid, pariwarId: PARIWAR_A, outcome: 'denied', reasonCode: 'documents_insufficient',
+        rationaleCiphertext: 'enc:v1:r', actorId: TRUSTEE, actorDisplay: 'PA', actor: 'trustee',
+      });
+      expect(await stateOf(tx, cid)).toBe('denied');
+      expect(await readRefileRequiresConfirmation(tx, PARIWAR_A, mid)).toBe(false);
+      expect((await tryConverge(client, intake(mid, 'member_app', 'f1'))).minted).toBe(true);
+      await expect(
+        recordRefileConfirmation(client, { pariwarId: PARIWAR_A, closedClaimCaseId: cid, via: 'helpline', actorId: 'op', actorDisplay: 'Op', noteCiphertext: 'x' }),
+      ).rejects.toBeInstanceOf(RefileConfirmationRefusedError);
+    });
+  });
+
+  // ── `-274` 2 — the closure letter ──────────────────────────────────────────────────────────────────────────
+  describe('`-274` 2 — the closure letter', () => {
+    it('⭐ ONE per person per closure (a second ⇒ already_recorded); ⛔ owed ⇒ not_owed; ⛔ before the closure date; the delivery; listed as owed until delivered', async () => {
+      const { client, tx } = getTx();
+      await enterAppScope(client, PARIWAR_A);
+      const c = await returnedClaim(client);
+      await familyRow(tx, c, 'rejected_invalid_number');
+      const l = await recordCorrectionLetter(client, {
+        pariwarId: PARIWAR_A, claimCaseId: c.cid, personKey: c.person.personKey, postedOn: addCalendarDays(c.day0, 2),
+        trackingNumberCiphertext: 'enc:v1:t', actorId: DA, actorDisplay: 'DA', crypto: ENC,
+      });
+      await recordCorrectionLetterDelivery(client, {
+        pariwarId: PARIWAR_A, claimCaseId: c.cid, letterId: l.letterId, deliveredOn: addCalendarDays(c.day0, 4),
+        screenshotStorageKey: 'k', screenshotContentType: 'image/png', screenshotSizeBytes: 1, actorId: DA, actorDisplay: 'DA',
+      });
+      await request(client, c);
+      const closed = await approve(client, c);
+      const closedOn = istDateOf(closed.closure.closedAt!);
+      const record = (personKey: string, postedOn = closedOn) =>
+        recordClosureLetter(client, { pariwarId: PARIWAR_A, claimCaseId: c.cid, personKey, postedOn, trackingNumberCiphertext: 'enc:v1:ct', actorId: DA, actorDisplay: 'DA' });
+      await expect(record('claimant')).rejects.toMatchObject({ refusal: 'not_owed' });
+      await expect(record(c.person.personKey, addCalendarDays(closedOn, -1))).rejects.toMatchObject({ refusal: 'posted_before_closure' });
+      expect((await listClosureLettersOwed(tx, PARIWAR_A, closedOn)).find((i) => i.claimCaseId === c.cid)?.people).toEqual([
+        { personKey: c.person.personKey, letter: null },
+      ]);
+      const letter = await record(c.person.personKey);
+      await expect(record(c.person.personKey)).rejects.toBeInstanceOf(ClosureLetterRefusedError);
+      await recordClosureLetterDelivery(client, {
+        pariwarId: PARIWAR_A, claimCaseId: c.cid, letterId: letter.letterId, deliveredOn: addCalendarDays(closedOn, 3),
+        screenshotStorageKey: 'k2', screenshotContentType: 'image/png', screenshotSizeBytes: 1, actorId: DA, actorDisplay: 'DA',
+      });
+      expect((await listClosureLettersOwed(tx, PARIWAR_A, closedOn)).some((i) => i.claimCaseId === c.cid)).toBe(false);
+    });
+  });
+
+  // ── The read models (AC8c) ─────────────────────────────────────────────────────────────────────────────────
+  describe('the read models — readiness, the Pariwar Admin\'s queue, the Super Admin\'s queue, the inbox, the highlight', () => {
+    it('⭐ readiness reports the FIRST refusal (the writer\'s own checks) and `null` when a request would pass', async () => {
+      const { client, tx } = getTx();
+      await enterAppScope(client, PARIWAR_A);
+      const c = await reachedClaim(client, tx);
+      expect(await readClosureReadiness(tx, PARIWAR_A, c.cid, c.day(10), { crypto: ENC })).toMatchObject({ blocker: 'too_early', familyRunDay: 10, state: null });
+      expect(await readClosureReadiness(tx, PARIWAR_A, c.cid, c.day(95), { crypto: ENC })).toMatchObject({ blocker: null });
+      await request(client, c);
+      expect(await readClosureReadiness(tx, PARIWAR_A, c.cid, c.day(95), { crypto: ENC })).toMatchObject({ blocker: 'request_pending', state: 'requested' });
+      const unreached = await returnedClaim(client);
+      expect(await readClosureReadiness(tx, PARIWAR_A, unreached.cid, unreached.day(95), { crypto: ENC })).toMatchObject({
+        blocker: 'not_reached',
+        notReached: { count: 1, roles: ['nominee'] },
+      });
+    });
+
+    it('⭐ the Pariwar Admin\'s queue lists a pending request (⛔ a lapsed one) and a live D27 record; the Super Admin\'s lists the held claim with its detail; the directee\'s inbox; the highlight', async () => {
+      const { client, tx } = getTx();
+      await enterAppScope(client, PARIWAR_A);
+      const pending = await reachedClaim(client, tx);
+      await request(client, pending);
+      const lapsed = await reachedClaim(client, tx);
+      await request(client, lapsed);
+      await writeCorrectionMark(client, markInput(lapsed.cid, 'staff', lapsed.day(96)));
+      const d27 = await returnedClaim(client);
+      await recordNoCorrectionNeeded(client, {
+        pariwarId: PARIWAR_A, claimCaseId: d27.cid, actorId: DA, actorDisplay: 'DA', now: d27.day(3),
+        markNoteCiphertext: 'enc:v1:m', noteCiphertext: 'enc:v1:n', setByRole: 'district_admin', hold: isCorrectionClaimHeld,
+      });
+      const queue = await listPariwarClosureQueue(tx, PARIWAR_A, { limit: 200 });
+      expect(queue.some((i) => i.claimCaseId === pending.cid && i.kind === 'closure_request')).toBe(true);
+      expect(queue.some((i) => i.claimCaseId === lapsed.cid)).toBe(false);
+      expect(queue.find((i) => i.claimCaseId === d27.cid)).toMatchObject({ kind: 'no_correction_needed', held: false });
+
+      const esc = await reachedClaim(client, tx);
+      await request(client, esc);
+      await decline(client, esc);
+      await recordClosureDirection(client, {
+        pariwarId: PARIWAR_A, claimCaseId: esc.cid, actorId: SA, actorDisplay: 'SA', now: esc.day(98),
+        directedToActor: DA, directedToRole: 'district_admin', kind: 'other', textCiphertext: 'enc:v1:d',
+      });
+      expect((await listEscalatedClosures(tx, PARIWAR_A, { limit: 200 })).find((i) => i.claimCaseId === esc.cid)).toMatchObject({
+        origin: 'declined_closure',
+        state: 'escalated',
+        openDirections: 1,
+      });
+      const detail = await readEscalatedClosureDetail(tx, PARIWAR_A, esc.cid);
+      expect(detail).toMatchObject({ resubmitted: false, familyPartDone: false, nameCheckState: 'passing' });
+      expect(detail!.marks.map((m) => m.mustAct)).toEqual(['family']);
+      expect(await readEscalatedClosureDetail(tx, PARIWAR_A, pending.cid)).toBeNull();
+      expect((await listOpenDirectionsFor(tx, PARIWAR_A, DA)).some((d) => d.direction.claimCaseId === esc.cid && d.stillHeld)).toBe(true);
+
+      // `-273` §7 — the highlight: approved despite a mismatch.
+      await seedNomineeNameCheck(client, PARIWAR_A, esc.cid, { reuseAccounts: true, verdicts: ['matches', 'does_not_match'] });
+      expect(await readApprovalNameHighlight(tx, PARIWAR_A, esc.cid)).toBeNull();
+      await superAdmin(client, esc, 'approve', 'name_difference_accepted');
+      expect(await readApprovalNameHighlight(tx, PARIWAR_A, esc.cid)).toBe('approved_despite_name_mismatch');
+    });
   });
 });

@@ -39,7 +39,7 @@ export class RefileRequiresConfirmationError extends Error {
 }
 
 /** A confirmation write is refused — the route maps `409 refile_confirmation.<code>` (`not_found` → 404). */
-export type RefileConfirmationRefusal = 'not_found' | 'not_closed' | 'not_most_recent' | 'live_claim_exists' | 'already_confirmed';
+export type RefileConfirmationRefusal = 'not_found' | 'not_closed' | 'not_most_recent' | 'already_confirmed';
 
 export class RefileConfirmationRefusedError extends Error {
   public readonly name = 'RefileConfirmationRefusedError';
@@ -207,8 +207,10 @@ export async function consumeRefileConfirmation(
  * ⭐ RECORD A RE-FILE CONFIRMATION (key (6), `-254`) — a person's confirmation, with a REQUIRED note, that the death of
  * a claim closed for no response may be filed again. Under the death's intake advisory lock (the mints'): the claim
  * must exist here (`not_found`), carry a `closed` closures row (`not_closed`), be the death's MOST RECENT terminal claim
- * (`not_most_recent`), the death must have ⛔ no live claim (`live_claim_exists`), and ⛔ no unconsumed confirmation may
- * already wait (`already_confirmed` — the partial UNIQUE is the backstop).
+ * (`not_most_recent`), and ⛔ no unconsumed confirmation may already wait (`already_confirmed` — the partial UNIQUE is the
+ * backstop). ⭐ A LIVE claim of the death does ⛔ not refuse it: the override path mints a separate claim exactly while
+ * one is live (a pending cross-channel attempt needs one), and it is guarded too (T9) — refusing a confirmation then
+ * would block that path for good. A confirmation is a person's recorded decision whenever it is made (`-254`).
  */
 export async function recordRefileConfirmation(
   client: pg.PoolClient,
@@ -236,9 +238,6 @@ export async function recordRefileConfirmation(
   const terminal = await mostRecentTerminalClaim(db, input.pariwarId, deceasedMemberId);
   if (terminal?.claimCaseId !== input.closedClaimCaseId) {
     throw new RefileConfirmationRefusedError(input.closedClaimCaseId, 'not_most_recent');
-  }
-  if (await hasLiveClaim(db, input.pariwarId, deceasedMemberId)) {
-    throw new RefileConfirmationRefusedError(input.closedClaimCaseId, 'live_claim_exists');
   }
   if ((await openConfirmationOf(db, input.pariwarId, input.closedClaimCaseId)) !== null) {
     throw new RefileConfirmationRefusedError(input.closedClaimCaseId, 'already_confirmed');

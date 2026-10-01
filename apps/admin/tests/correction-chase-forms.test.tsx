@@ -49,7 +49,7 @@ const { ApiError } = await import('../src/api/client.js');
 const { CorrectionChasePanel, CorrectionLetterForm, MustActChangeForm, correctionChaseEn: t } = await import(
   '../src/modules/correction-chase/index.js'
 );
-const { ADDRESS_VISIBLE_MAX_MS, ADDRESS_VISIBLE_MIN_MS, addressVisibleMs, currentRunLetters, forgetStepUpVerified } = await import(
+const { ADDRESS_VISIBLE_MAX_MS, ADDRESS_VISIBLE_MIN_MS, addressVisibleMs, forgetStepUpVerified, returnLetters } = await import(
   '../src/modules/correction-chase/CorrectionLetterForm.js'
 );
 const { istToday } = await import('../src/modules/correction-chase/ist.js');
@@ -79,7 +79,7 @@ function renderWithClient(ui: ReactElement) {
 
 const renderLetterForm = (letters: CorrectionLetterDto[], canRecord = true) =>
   renderWithClient(
-    <CorrectionLetterForm pariwarId={PARIWAR} claimCaseId={CLAIM} personKey={PERSON} letters={letters} familyRunDay0={null} canRecord={canRecord} />,
+    <CorrectionLetterForm pariwarId={PARIWAR} claimCaseId={CLAIM} personKey={PERSON} letters={letters} canRecord={canRecord} />,
   );
 
 /** The letter form with a `rerender` that keeps ONE query client — a refetch's new props, without a remount. */
@@ -87,7 +87,7 @@ function renderRerenderable(letters: CorrectionLetterDto[], canRecord = true) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
   const ui = (l: CorrectionLetterDto[], c: boolean) => (
     <QueryClientProvider client={qc}>
-      <CorrectionLetterForm pariwarId={PARIWAR} claimCaseId={CLAIM} personKey={PERSON} letters={l} familyRunDay0={null} canRecord={c} />
+      <CorrectionLetterForm pariwarId={PARIWAR} claimCaseId={CLAIM} personKey={PERSON} letters={l} canRecord={c} />
     </QueryClientProvider>
   );
   const r = render(ui(letters, canRecord));
@@ -541,8 +541,8 @@ describe('<CorrectionLetterForm> — the address lifecycle (fifth-pass review 20
     verifyStepUp.mockResolvedValue({ elevated: true, elevatedUntil: new Date(Date.now() + 300_000).toISOString() });
     renderWithClient(
       <>
-        <CorrectionLetterForm pariwarId={PARIWAR} claimCaseId={CLAIM} personKey={PERSON} letters={[]} familyRunDay0={null} canRecord />
-        <CorrectionLetterForm pariwarId={PARIWAR} claimCaseId={CLAIM} personKey={OTHER} letters={[]} familyRunDay0={null} canRecord />
+        <CorrectionLetterForm pariwarId={PARIWAR} claimCaseId={CLAIM} personKey={PERSON} letters={[]} canRecord />
+        <CorrectionLetterForm pariwarId={PARIWAR} claimCaseId={CLAIM} personKey={OTHER} letters={[]} canRecord />
       </>,
     );
     const a = within(screen.getByTestId(`letter-form-${PERSON}`));
@@ -630,63 +630,42 @@ describe('<CorrectionLetterForm> — the address lifecycle (fifth-pass review 20
   });
 });
 
-// ── K1 (fifth pass): a person's letters span EVERY family / direction run of the live return ─────────────────────
-describe('currentRunLetters — the per-RUN rules read the current run’s letters, ⛔ all of the person’s', () => {
-  const L3 = '99999999-9999-4999-8999-999999999999';
+// ── K1 + `-273` §2 (Story 6.19c Task 0a): a person's letters span EVERY run of the live return — and ALL count ──────
+describe('returnLetters — the two-letter rules read the RETURN’s letters (`-273` §2), ⛔ one run’s', () => {
   const run1 = [letter({ posted_on: '2026-09-02', delivered_on: '2026-09-05' }), letter({ letter_id: L2, sequence: 2, posted_on: '2026-09-08', delivered_on: '2026-09-11' })];
 
-  it('⭐ the queue’s `in_current_run` flag DECIDES when present — even where the posting-order guess would be wrong', () => {
-    // A current-run letter posted BEFORE that run's day 0 (J5 allows it) — the guess called it an earlier run's.
-    const flagged = [
-      letter({ posted_on: '2026-09-02', delivered_on: '2026-09-05', in_current_run: false }),
-      letter({ letter_id: L3, sequence: 1, posted_on: '2026-09-20', in_current_run: true }),
-    ];
-    expect(currentRunLetters(flagged, '2026-09-25').map((l) => l.letter_id)).toEqual([L3]);
-    // Headline run `staff` (day 0 unknown) and the newest family run has ⛔ no letter: nothing gates.
-    expect(currentRunLetters([letter({ in_current_run: false }), letter({ letter_id: L2, sequence: 2, in_current_run: false })], null)).toEqual([]);
+  it('⭐ every letter the queue lists counts (`counts_toward_limit: true`); a list without the flag counts them all', () => {
+    const flagged = run1.map((l) => ({ ...l, counts_toward_limit: true }));
+    expect(returnLetters(flagged).map((l) => l.letter_id)).toEqual([L1, L2]);
+    expect(returnLetters(run1).map((l) => l.letter_id)).toEqual([L1, L2]);
+    // A letter explicitly marked ⛔ counting is left out (⛔ a shape the queue sends today — the contract allows it).
+    expect(returnLetters([letter({ counts_toward_limit: false })])).toEqual([]);
   });
 
-  it('⭐ one run: every letter (the old behaviour)', () => {
-    expect(currentRunLetters(run1, '2026-09-01').map((l) => l.letter_id)).toEqual([L1, L2]);
-    expect(currentRunLetters(run1, null).map((l) => l.letter_id)).toEqual([L1, L2]);
+  it('⭐ family → staff → family: run 1’s two delivered letters CAP the person — the record form is ⛔ offered; the limit line shows', () => {
+    renderWithClient(<CorrectionLetterForm pariwarId={PARIWAR} claimCaseId={CLAIM} personKey={PERSON} letters={run1} canRecord />);
+    expect(screen.queryByRole('form', { name: t.letters.record })).toBeNull();
+    expect(screen.getByTestId('letter-form-note').textContent).toBe(t.letters.limit);
   });
 
-  it('⭐ family → staff → family, the new run has a letter: only the LATEST group (from the last #1) — two #1s are fine', () => {
-    const all = [...run1, letter({ letter_id: L3, sequence: 1, posted_on: '2026-09-26' })];
-    expect(currentRunLetters(all, '2026-09-25').map((l) => l.letter_id)).toEqual([L3]);
-    // Order-independent — sorted by posting date here, ⛔ trusted from the wire.
-    expect(currentRunLetters([...all].reverse(), '2026-09-25').map((l) => l.letter_id)).toEqual([L3]);
-  });
-
-  it('⛔ the new run has NO letter yet: run 1’s two letters do ⛔ not block its first one (no client gate)', () => {
-    expect(currentRunLetters(run1, '2026-09-25')).toEqual([]);
-  });
-
-  it('⭐ the form: run 1’s two delivered letters + a new family run ⇒ the record form IS offered; ⛔ the limit line', () => {
+  it('⭐ run 1’s ONE delivered letter ⇒ the second letter (in run 3) IS offered — it is the return’s second', () => {
     renderWithClient(
-      <CorrectionLetterForm pariwarId={PARIWAR} claimCaseId={CLAIM} personKey={PERSON} letters={run1} familyRunDay0="2026-09-25" canRecord />,
+      <CorrectionLetterForm pariwarId={PARIWAR} claimCaseId={CLAIM} personKey={PERSON} letters={[run1[0]!]} canRecord />,
     );
     expect(screen.getByRole('form', { name: t.letters.record })).toBeInTheDocument();
-    expect(screen.queryByTestId('letter-limit')).toBeNull();
   });
 
-  it('⭐ the form: an undelivered #1 of run 1 AND an undelivered #1 of run 3 ⇒ two delivery forms, keyed and labelled apart', () => {
+  it('⭐ an undelivered #1 of run 1 ⇒ its delivery form, and the second letter waits for it (whichever run is current)', () => {
     renderWithClient(
       <CorrectionLetterForm
         pariwarId={PARIWAR}
         claimCaseId={CLAIM}
         personKey={PERSON}
-        letters={[letter({ posted_on: '2026-09-02' }), letter({ letter_id: L3, sequence: 1, posted_on: '2026-09-26' })]}
-        familyRunDay0="2026-09-25"
+        letters={[letter({ posted_on: '2026-09-02', counts_toward_limit: true })]}
         canRecord
       />,
     );
-    const a = screen.getByTestId(`delivery-form-${L1}`).getAttribute('aria-label');
-    const b = screen.getByTestId(`delivery-form-${L3}`).getAttribute('aria-label');
-    expect(a).toContain('#1 posted 2026-09-02');
-    expect(b).toContain('#1 posted 2026-09-26');
-    expect(a).not.toBe(b);
-    // The CURRENT run's #1 is undelivered ⇒ the second letter waits for it.
+    expect(screen.getByTestId(`delivery-form-${L1}`).getAttribute('aria-label')).toContain('#1 posted 2026-09-02');
     expect(screen.getByTestId('letter-second-waits')).toBeInTheDocument();
   });
 });

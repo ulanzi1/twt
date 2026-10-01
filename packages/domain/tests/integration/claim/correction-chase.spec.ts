@@ -40,6 +40,7 @@ import {
   finaliseCorrectionReminder,
   hasLiveReturnRow,
   insertFinalCorrectionReminder,
+  isPersonAtLetterCap,
   noteCorrectionReminderTransient,
   openCorrectionRun,
   projectClaimState,
@@ -52,7 +53,7 @@ import {
   readCorrectionRun,
   readFamilyPartDoneAt,
   readReturnFamilyLetters,
-  readRunPersonStates,
+  readReturnPersonStates,
   recordCorrectionLetter,
   recordCorrectionLetterDelivery,
   resolveClaimCorrectionState,
@@ -1420,8 +1421,8 @@ describe.skipIf(!hasDatabase)('the correction chase — letters (AC5, D31) and t
       sequence: 2,
       runId: c.runId,
     });
-    const [st] = await readRunPersonStates(tx, PARIWAR_A, (await readCorrectionRun(tx, PARIWAR_A, c.runId!))!, [after], { crypto: ENC });
-    expect(st!.state).toMatchObject({ foundDeadOn: c.deadOn, letterDelivered: true, reset: false });
+    const [st] = await readReturnPersonStates(tx, PARIWAR_A, (await readCorrectionRun(tx, PARIWAR_A, c.runId!))!, [after], { crypto: ENC });
+    expect(st!.track).toMatchObject({ foundDeadOn: c.deadOn, letterDelivered: true, reset: false });
   });
 
   it('⭐ I5 — a hash-less `error` row (the exhausted-row finaliser, a decrypt that never cleared) carries ⛔ no number: found-dead and the delivered letter STAND', async () => {
@@ -1442,8 +1443,8 @@ describe.skipIf(!hasDatabase)('the correction chase — letters (AC5, D31) and t
     expect(await finaliseCorrectionReminder(tx, { pariwarId: PARIWAR_A, reminderId: claimed.reminderId, jobId: 'j2', outcome: 'error', detail: 'decrypt_failed' })).toBe(true);
 
     const run = (await readCorrectionRun(tx, PARIWAR_A, c.runId!))!;
-    const [st] = await readRunPersonStates(tx, PARIWAR_A, run, [c.person], { crypto: ENC });
-    expect(st!.state).toMatchObject({ foundDeadOn: c.deadOn, deadKind: 'dead', letterDelivered: true, reset: false });
+    const [st] = await readReturnPersonStates(tx, PARIWAR_A, run, [c.person], { crypto: ENC });
+    expect(st!.track).toMatchObject({ foundDeadOn: c.deadOn, deadKind: 'dead', letterDelivered: true, reset: false });
     expect(await beginFamily(client, c, c.person.personKey, { slotDay: 3, jobId: 'j3' })).toEqual({ kind: 'skipped', reason: 'letter_delivered' });
   });
 
@@ -1507,7 +1508,7 @@ describe.skipIf(!hasDatabase)('the correction chase — letters (AC5, D31) and t
     expect(await recordCorrectionLetter(client, letterInput(c, person.personKey, postedOn))).toMatchObject({ runId: run2.runId, postedOn });
   });
 
-  it('⭐ K1 — after family → staff → family the queue STILL lists the run-1 letter (with the person\'s later letters, by posting date — the sequence restarts per run) and its delivery is recordable; under D30 too', async () => {
+  it('⭐ AC18 (`-272` §2, `-273` §1/§2) — after family → staff → family the run-1 found-dead fact and letter CARRY into run 3: the queue shows the person dead from run 1, the letter counts toward the RETURN\'s limit, its delivery is recordable, the second letter is the return\'s #2, a third is refused; under D30 too', async () => {
     const { client, tx } = getTx();
     await enterAppScope(client, PARIWAR_A);
     const c = await deadNominee(client, tx);
@@ -1520,52 +1521,68 @@ describe.skipIf(!hasDatabase)('the correction chase — letters (AC5, D31) and t
     const run3 = (await writeCorrectionMark(client, mark(c.cid, 'family', { now: tenAmIst(addCalendarDays(c.day0!, 10)) }))).openedRun!;
     expect(run3.runId).not.toBe(c.runId);
     const today = addCalendarDays(run3.day0, 3);
-    // `inCurrentRun: false` — run 1's letter, ⛔ the latest family run's (the per-run letter rules count run 3's only).
-    const letter1 = { letterId: l1.letterId, sequence: 1, postedOn: posted1, deliveredOn: null, overdue: false, hasScreenshot: false, inCurrentRun: false };
+    const letter1 = { letterId: l1.letterId, sequence: 1, postedOn: posted1, deliveredOn: null, overdue: false, hasScreenshot: false, countsTowardLimit: true };
 
-    // ⭐ THE PROOF: the undelivered run-1 letter (and so its delivery form) is still on the queue. The person's STATUS is
-    // run 3's own — ⛔ not yet chased there.
+    // ⭐ (b) — the found-dead fact of run 1 CARRIES into run 3 for the same number: the queue shows the person DEAD from
+    // run 1's day (⛔ "not_yet"), and the run-1 letter (and its delivery form) is listed and counts toward the limit.
     const s1 = await readCorrectionChaseSummary(tx, PARIWAR_A, c.cid, today, { crypto: ENC });
     expect(s1.run).toMatchObject({ runId: run3.runId, kind: 'family', open: true });
     expect(s1.people).toEqual([
-      { personKey: key, role: 'nominee', rank: c.person.rank, status: 'not_yet', foundDeadOn: null, remindersAccepted: 0, letters: [letter1] },
+      { personKey: key, role: 'nominee', rank: c.person.rank, status: 'dead', foundDeadOn: c.deadOn, remindersAccepted: 0, letters: [letter1] },
     ]);
     // The reader itself: every family run's letters of the return, each carrying its own run.
     expect((await readReturnFamilyLetters(tx, PARIWAR_A, c.cid, c.returnId)).map((l) => [l.letterId, l.runId])).toEqual([[l1.letterId, c.runId]]);
+    // `-231` D across runs: the run-1 letter is undelivered ⇒ a run-3 letter is the SECOND and waits for it.
+    await expect(recordCorrectionLetter(client, letterInput(c, key, addCalendarDays(run3.day0, 1)))).rejects.toMatchObject({
+      refusal: 'first_not_delivered',
+    });
 
-    // …and its delivery is recordable (the server always accepted it — now the queue shows it).
+    // …its delivery is recordable, and (a) a run-1 delivery stops run 3's texts to that number.
     const delivered1 = addCalendarDays(c.day0!, 11);
     expect((await deliver(client, c.cid, l1.letterId, delivered1)).deliveredOn).toBe(delivered1);
     const letter1Delivered = { ...letter1, deliveredOn: delivered1, hasScreenshot: true };
+    const [st] = await readReturnPersonStates(tx, PARIWAR_A, run3, [c.person], { crypto: ENC });
+    expect(st).toMatchObject({ track: { foundDeadOn: c.deadOn, letterDelivered: true }, lettersInReturn: 1, firstDeliveredInReturnOn: delivered1 });
 
-    // The person is found dead in RUN 3 and gets run 3's first letter — sequence 1 AGAIN (per run), listed AFTER the
-    // run-1 letter (posting order).
-    const deadOn3 = addCalendarDays(run3.day0, 1);
-    const claimed = await claimCorrectionReminder(tx, {
-      pariwarId: PARIWAR_A, claimCaseId: c.cid, runId: run3.runId, slotDay: 1, recipientKey: key, purpose: 'family_sms', subjectKey: '',
-      sentOn: deadOn3, late: false, jobId: 'j3', now: tenAmIst(deadOn3),
-    });
-    if (claimed.status !== 'claimed') throw new Error('claim');
-    await finaliseCorrectionReminder(tx, {
-      pariwarId: PARIWAR_A, reminderId: claimed.reminderId, jobId: 'j3', outcome: 'rejected_invalid_number', recipientVersionId: c.person.versionId, recipientNumberHash: 'h',
-    });
+    // ⭐ (c) — the second letter, recorded in run 3, is the RETURN's #2 (⛔ "sequence 1 again"); a third is refused.
     const posted3 = addCalendarDays(run3.day0, 2);
     const l3 = await recordCorrectionLetter(client, letterInput(c, key, posted3));
-    expect(l3).toMatchObject({ runId: run3.runId, sequence: 1 });
-    const letter3 = { letterId: l3.letterId, sequence: 1, postedOn: posted3, deliveredOn: null, overdue: false, hasScreenshot: false, inCurrentRun: true };
+    expect(l3).toMatchObject({ runId: run3.runId, sequence: 2 });
+    await expect(recordCorrectionLetter(client, letterInput(c, key, posted3))).rejects.toMatchObject({ refusal: 'limit_reached' });
+    const letter3 = { letterId: l3.letterId, sequence: 2, postedOn: posted3, deliveredOn: null, overdue: false, hasScreenshot: false, countsTowardLimit: true };
     const s3 = await readCorrectionChaseSummary(tx, PARIWAR_A, c.cid, today, { crypto: ENC });
     expect(s3.people).toEqual([
-      { personKey: key, role: 'nominee', rank: c.person.rank, status: 'dead', foundDeadOn: deadOn3, remindersAccepted: 0, letters: [letter1Delivered, letter3] },
+      { personKey: key, role: 'nominee', rank: c.person.rank, status: 'dead', foundDeadOn: c.deadOn, remindersAccepted: 0, letters: [letter1Delivered, letter3] },
     ]);
 
-    // ⭐ D30 (the agreement withdrawn): the record-derived line keeps BOTH runs' letters, and the rank.
+    // ⭐ D30 (the agreement withdrawn): the record-derived line keeps BOTH runs' letters, the rank and run 1's fact.
     const contact = await tx.select().from(schema.claimContacts).where(eq(schema.claimContacts.claimCaseId, c.cid));
     await tx.update(schema.consentRecords).set({ revokedAt: new Date() }).where(eq(schema.consentRecords.consentId, contact[0]!.agreementConsentId));
     const d30 = await readCorrectionChaseSummary(tx, PARIWAR_A, c.cid, today, { crypto: ENC });
     expect(d30.cannotRemind).toBe('agreement_not_live');
     expect(d30.people).toEqual([
-      { personKey: key, role: 'nominee', rank: c.person.rank, status: 'dead', foundDeadOn: deadOn3, remindersAccepted: 0, letters: [letter1Delivered, letter3] },
+      { personKey: key, role: 'nominee', rank: c.person.rank, status: 'dead', foundDeadOn: c.deadOn, remindersAccepted: 0, letters: [letter1Delivered, letter3] },
     ]);
+  });
+
+  it('⭐ AC18 — a 6.20 number change between runs resets (a)/(b) for the new number, ⛔ the cap: two letters on the old number keep the person capped', async () => {
+    const { client, tx } = getTx();
+    await enterAppScope(client, PARIWAR_A);
+    const c = await deadNominee(client, tx, 'rejected_invalid_number', { nomineeMobile: '9812345678', projectedMember: true });
+    const key = c.person.personKey;
+    const l1 = await recordCorrectionLetter(client, letterInput(c, key));
+    await deliver(client, c.cid, l1.letterId, addCalendarDays(c.day0!, 3));
+    await recordCorrectionLetter(client, letterInput(c, key, addCalendarDays(c.day0!, 3)));
+    await writeCorrectionMark(client, mark(c.cid, 'staff', { now: tenAmIst(addCalendarDays(c.day0!, 5)) }));
+    await applyNomineeCorrection(client, c.cid, await encryptNomineeMobile('9898989898'));
+    const run3 = (await writeCorrectionMark(client, mark(c.cid, 'family', { now: tenAmIst(addCalendarDays(c.day0!, 10)) }))).openedRun!;
+    const person = (await readCorrectionRecipients(tx, PARIWAR_A, c.cid)).people[0]!;
+    const [st] = await readReturnPersonStates(tx, PARIWAR_A, run3, [person], { crypto: ENC });
+    // (a)/(b) afresh for the new number …
+    expect(st!.track).toMatchObject({ reset: true, foundDeadOn: null, letterDelivered: false });
+    // … ⛔ the cap: two letters in the return, whatever the number.
+    expect(st).toMatchObject({ lettersInReturn: 2 });
+    expect(isPersonAtLetterCap(st!)).toBe(true);
   });
 
   it('⭐ K1 — a person who LEFT the recipient set (a W6 (b) rewrite of the contact record) keeps their letter on the queue, and its delivery stays recordable', async () => {
@@ -1607,7 +1624,7 @@ describe.skipIf(!hasDatabase)('the correction chase — letters (AC5, D31) and t
     expect((await readCorrectionRecipients(tx, PARIWAR_A, c.cid)).people.map((p) => p.personKey)).toEqual([nominee.personKey]);
 
     // ⭐ THE PROOF: the person who left keeps their line — from the records (⛔ no rank: they hold no effective one).
-    const letter = { letterId: l.letterId, sequence: 1, postedOn, deliveredOn: null, overdue: false, hasScreenshot: false, inCurrentRun: true };
+    const letter = { letterId: l.letterId, sequence: 1, postedOn, deliveredOn: null, overdue: false, hasScreenshot: false, countsTowardLimit: true };
     const s = await readCorrectionChaseSummary(tx, PARIWAR_A, c.cid, addCalendarDays(c.day0!, 3), { crypto: ENC });
     expect(s.people.map((p) => p.personKey)).toEqual([nominee.personKey, 'claimant']);
     expect(s.people[1]).toEqual({
@@ -1686,7 +1703,7 @@ describe.skipIf(!hasDatabase)('the correction chase — letters (AC5, D31) and t
       await deliver(client, c.cid, l1.letterId, deliveredOn);
       const today = addCalendarDays(c.day0!, 12);
       const letter = {
-        letterId: l1.letterId, sequence: 1, postedOn: addCalendarDays(c.day0!, 2), deliveredOn, overdue: false, hasScreenshot: true, inCurrentRun: true,
+        letterId: l1.letterId, sequence: 1, postedOn: addCalendarDays(c.day0!, 2), deliveredOn, overdue: false, hasScreenshot: true, countsTowardLimit: true,
       };
       // ⭐ Positive control — before D30 the same person and letter come from the recipient read.
       const before = await readCorrectionChaseSummary(tx, PARIWAR_A, c.cid, today);

@@ -8,8 +8,13 @@
 // `claimant_address_ciphertext`), and the claim's agreement is `live`. `assertClaimContactRecorded` is ⛔ NOT called
 // (it stays approval-only — an all-or-nothing check would refuse a letter to nominee 1 over nominee 2's row).
 // ⭐ The letter targets the resolver's latest `family` / `direction` run, OPEN OR ENDED: a letter stays recordable after
-// its run ends (day 90, a mark change) — ⛔ no reminders then (`-250` #4). At most TWO per person per run, and ⭐ the
-// second only after the first's recorded delivery AND posted ON OR AFTER that delivery date (`-231` D).
+// its run ends (day 90, a mark change) — ⛔ no reminders then (`-250` #4). ⭐ At most TWO per person per RETURN
+// (`-272` §2(c), `-273` §2 — Story 6.19c Task 0a: counted across every family / direction run of the live return,
+// EPOCH-BLIND — ⛔ never reset by a 6.20 number change), and ⭐ the second only after the first's recorded delivery
+// AND posted ON OR AFTER that delivery date (`-231` D). Letter-eligibility (D20) and the delivered-letter stop are
+// read across the return too, for the person's CURRENT number (`-272` §2(a)/(b), `-271` §1).
+// ⚠ `claim_correction_letters_person_sequence_uq (run_id, person_key, sequence)` stays a PER-RUN backstop, weaker than
+// this rule (`-273` §2 — recorded, ⛔ not widened); `sequence` is the person's letter number in the RETURN.
 // ⭐ FAILS CLOSED on a hash fault: when the person's CURRENT number had to be hashed (a 6.20 correction may have moved
 // it) and the hash threw, eligibility cannot be judged — `CorrectionNumberUnverifiedError` (the route's retryable
 // 503), ⛔ never a decision on the OLD number's epoch.
@@ -36,7 +41,11 @@ import {
   readCorrectionRecipients,
   resolveCorrectionChase,
 } from './correction-chase.js';
-import { readRunPersonStates } from './correction-reminder-record.js';
+import {
+  CORRECTION_LETTERS_PER_PERSON,
+  readReturnFamilyLetters,
+  readReturnPersonStates,
+} from './correction-reminder-record.js';
 import { istDateOf } from './correction-schedule.js';
 import { getEffectiveNomineeDeclaration } from './nominee-effective.js';
 
@@ -180,11 +189,11 @@ export async function assertCorrectionLetterAllowed(
   // ⭐ From here the contact record exists and its agreement is `live` (the recipient read checked both).
   const person = recipients.people.find((p) => p.personKey === personKey);
   if (person === undefined) throw new CorrectionLetterRefusedError(claimCaseId, 'not_letter_eligible');
-  const [state] = await readRunPersonStates(db, pariwarId, run, [person], { crypto: opts.crypto });
+  const [state] = await readReturnPersonStates(db, pariwarId, run, [person], { crypto: opts.crypto });
   // ⭐ FAIL CLOSED (before the eligibility verdict, either way): a state evaluated with the number UNKNOWN is the OLD
   // number's epoch — it can neither grant nor refuse a letter for the person's current number.
   if (state?.hashFailed === true) throw new CorrectionNumberUnverifiedError(claimCaseId, personKey);
-  if (state === undefined || state.state.foundDeadOn === null) {
+  if (state === undefined || state.track.foundDeadOn === null) {
     throw new CorrectionLetterRefusedError(claimCaseId, 'not_letter_eligible');
   }
   const address = await readCorrectionLetterAddress(db, pariwarId, claimCaseId, personKey);
@@ -226,11 +235,44 @@ export async function readCorrectionLetter(
 }
 
 /**
- * ⭐ RECORD A POSTED LETTER (key (1)). Under the trustee lock, in this order: D31's precondition; ≤ 2 per person per
- * run (a third is `limit_reached`; the UNIQUE `(run_id, person_key, sequence)` is the backstop); ⭐ `-231` D — the
- * second only AFTER the first's recorded delivery (`first_not_delivered`; a first letter lost in the post is a Panel
- * supersession, ⛔ never a re-reading) and posted ON OR AFTER that delivery date (`posted_before_first_delivery`); a
- * posting date ⛔ before the live RETURN's IST date is `posted_before_run`.
+ * ⭐ THE RECORDABILITY CHECK — D31's precondition, then the RETURN's per-person rules, in this order (`-273` §2):
+ * ≤ 2 per person per return, epoch-blind (a third is `limit_reached`); `-231` D — the second only AFTER the first's
+ * recorded delivery (`first_not_delivered`; a first letter lost in the post is a Panel supersession, ⛔ never a
+ * re-reading) and posted ON OR AFTER that delivery date (`posted_before_first_delivery`); a posting date ⛔ before the
+ * live RETURN's IST date is `posted_before_run`. Reads only — the writer runs it again under the trustee lock; the
+ * route runs it FIRST (before any KMS work on the tracking number — 6.19b's third-pass follow-up). Returns the run the
+ * letter targets and its `sequence` in the return.
+ * @throws CorrectionLetterRefusedError
+ * @throws CorrectionNumberUnverifiedError  the person's current number could not be hashed (→ retryable 503)
+ */
+export async function assertCorrectionLetterRecordable(
+  db: Db,
+  pariwarId: PariwarId,
+  claimCaseId: ClaimId,
+  personKey: string,
+  postedOn: string,
+  opts: { readonly crypto: FieldCryptoDeps },
+): Promise<{ readonly run: CorrectionRunView; readonly sequence: number }> {
+  const { run, returnedOn } = await assertCorrectionLetterAllowed(db, pariwarId, claimCaseId, personKey, opts);
+  const existing = (await readReturnFamilyLetters(db, pariwarId, claimCaseId, run.returnDecisionId)).filter(
+    (l) => l.personKey === personKey,
+  );
+  if (existing.length >= CORRECTION_LETTERS_PER_PERSON) throw new CorrectionLetterRefusedError(claimCaseId, 'limit_reached');
+  if (existing.some((l) => l.deliveredOn === null)) {
+    throw new CorrectionLetterRefusedError(claimCaseId, 'first_not_delivered');
+  }
+  // `YYYY-MM-DD` strings compare as dates.
+  if (existing.some((l) => l.deliveredOn !== null && postedOn < l.deliveredOn)) {
+    throw new CorrectionLetterRefusedError(claimCaseId, 'posted_before_first_delivery');
+  }
+  if (postedOn < returnedOn) throw new CorrectionLetterRefusedError(claimCaseId, 'posted_before_run');
+  return { run, sequence: existing.length + 1 };
+}
+
+/**
+ * ⭐ RECORD A POSTED LETTER (key (1)). Under the trustee lock: `assertCorrectionLetterRecordable` (D31, then the
+ * return's per-person rules), then the insert — `sequence` = the person's letter number in the RETURN; the per-run
+ * UNIQUE `(run_id, person_key, sequence)` is a backstop only.
  * ⚠ A posting date LATER than today is the route's refusal (`400 correction_letter.date_in_future`) — this module has
  * ⛔ no clock.
  * @throws CorrectionLetterRefusedError
@@ -252,32 +294,14 @@ export async function recordCorrectionLetter(
 ): Promise<ClaimCorrectionLetterRow> {
   await acquireCorrectionChaseLock(client, input.pariwarId, input.claimCaseId);
   const db = bindScopedDb(client);
-  const { run, returnedOn } = await assertCorrectionLetterAllowed(
+  const { run, sequence } = await assertCorrectionLetterRecordable(
     db,
     input.pariwarId,
     input.claimCaseId,
     input.personKey,
+    input.postedOn,
     { crypto: input.crypto },
   );
-  const existing = await db
-    .select({ sequence: claimCorrectionLetters.sequence, deliveredOn: claimCorrectionLetters.deliveredOn })
-    .from(claimCorrectionLetters)
-    .where(
-      and(
-        eq(claimCorrectionLetters.pariwarId, input.pariwarId),
-        eq(claimCorrectionLetters.runId, run.runId),
-        eq(claimCorrectionLetters.personKey, input.personKey),
-      ),
-    );
-  if (existing.length >= 2) throw new CorrectionLetterRefusedError(input.claimCaseId, 'limit_reached');
-  if (existing.some((l) => l.deliveredOn === null)) {
-    throw new CorrectionLetterRefusedError(input.claimCaseId, 'first_not_delivered');
-  }
-  // `YYYY-MM-DD` strings compare as dates.
-  if (existing.some((l) => l.deliveredOn !== null && input.postedOn < l.deliveredOn)) {
-    throw new CorrectionLetterRefusedError(input.claimCaseId, 'posted_before_first_delivery');
-  }
-  if (input.postedOn < returnedOn) throw new CorrectionLetterRefusedError(input.claimCaseId, 'posted_before_run');
   try {
     const [row] = await db
       .insert(claimCorrectionLetters)
@@ -286,7 +310,7 @@ export async function recordCorrectionLetter(
         claimCaseId: input.claimCaseId,
         pariwarId: input.pariwarId,
         personKey: input.personKey,
-        sequence: existing.length + 1,
+        sequence,
         postedOn: input.postedOn,
         trackingNumberCiphertext: input.trackingNumberCiphertext,
         recordedByActor: input.actorId,

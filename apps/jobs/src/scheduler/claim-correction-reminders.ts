@@ -17,8 +17,17 @@
 //     older missed slots are written `skipped_superseded` — ⛔ no burst;
 //   · the STAFF rows are written by the sweep itself (a staff row sends nothing — the queue is the channel, AC4):
 //     the District Admin's scheduled reminder (D34 — ONE per claim per day, the open run's days; D21 stops it once
-//     every family recipient is letter-eligible AND delivered), the staff run's day-12 escalation to every Pariwar
-//     Admin, the letter chase (found-dead + 7 … + 12, escalated on + 13), and each person's ONE `letter_second_due`;
+//     every family recipient is letter-eligible AND delivered — or at the two-letter cap, `-273` §2), the staff run's
+//     day-12 escalation to every Pariwar Admin, the letter chase (found-dead + 7 … + 12, escalated on + 13), and each
+//     person's ONE `letter_second_due`;
+//   · ⭐ THE LETTER TRACK IS PER RETURN (`-272` §2, `-273` §1/§2 — Story 6.19c Task 0a): each person's state (the
+//     found-dead day, the delivered-letter stop — per CURRENT number) and the letter cap / second-letter reminder (per
+//     PERSON, epoch-blind) read EVERY family / direction run of the live return; the chase / escalation /
+//     `letter_second_due` dedup reads the return's staff rows and compares DATES (each row's own run `day0 + slot_day`),
+//     ⛔ never slot days; a date carried from an earlier run whose slot falls BEFORE this run is written at TODAY's
+//     slot (`late`) — ⛔ never a negative `slot_day` (23514 would roll the claim's whole plan back). ⚠ A carried
+//     found-dead date may therefore escalate on DAY 1 of a reopened run — stated, ⛔ not a defect (AC18). A person at
+//     the cap is ⛔ not chased for another letter;
 //   · then one staff PUSH per staff member with a row today (deduped by its own `staff_push` row).
 // ⚠ What the expiry claim really is: the job's pg-boss expiry (90 min) sits 45 minutes ABOVE the budget, and the
 // budget is checked BETWEEN runs, so a tick overruns its budget by at most ONE run's tail. Each DATABASE wait in that
@@ -1134,63 +1143,84 @@ async function planRun(
 
   // ── The family (AC3): recipients, per-person state, D30 ──────────────────────────────────────────────────────
   // ⭐ BY PURPOSE (AC2): D30 ("cannot remind") stops ONLY `family_sms` and `letter_chase` — the letter track's +13
-  // escalation and `letter_second_due` still run, from each person's state evaluated over the run's PAST rows
+  // escalation and `letter_second_due` still run, from each person's state evaluated over the RETURN's PAST rows
   // (⛔ no recipients to decrypt, ⛔ no crypto: the latest row's number stands).
+  // ⭐ The per-person state is the RETURN's (`-272` §2 — every family / direction run's rows and letters); the D3
+  // catch-up below stays this RUN's own schedule (`familyRows` — this run's slot days only).
   const sms: CorrectionFamilySmsPayload[] = [];
   /** The people who can be reminded NOW (the family SMS, D21) — empty under D30. */
-  let reachable: claimDomain.RunPersonState[] = [];
+  let reachable: claimDomain.ReturnPersonState[] = [];
   /** Every person the letter track considers: the reachable people, or under D30 everyone with a past row/letter. */
-  let tracked: { readonly personKey: string; readonly state: claimDomain.PersonRunState }[] = [];
+  let tracked: {
+    readonly personKey: string;
+    readonly track: claimDomain.PersonRunState;
+    readonly lettersInReturn: number;
+    readonly firstDeliveredInReturnOn: string | null;
+  }[] = [];
   let familyCanBeReminded = false;
   let hashFailedPeople = 0;
   const familyRows = isFamilyRun ? await claimDomain.readRunFamilyRows(db, pariwarId, run.runId) : [];
-  const letters = isFamilyRun ? await claimDomain.readRunLetters(db, pariwarId, run.runId) : [];
   if (isFamilyRun) {
     const recipients = await claimDomain.readCorrectionRecipients(db, pariwarId, claimCaseId);
     familyCanBeReminded = recipients.cannotRemind === null;
     if (familyCanBeReminded) {
-      reachable = await claimDomain.readRunPersonStates(db, pariwarId, run, recipients.people, { crypto: deps.encryption });
+      reachable = await claimDomain.readReturnPersonStates(db, pariwarId, run, recipients.people, { crypto: deps.encryption });
       // I6 — a person's CURRENT number could not be hashed (an unreadable envelope, a KMS blip): their reset check fell
       // back to the latest row's number for today. COUNTED — the sweep alarms ONCE per tick (ids only).
       hashFailedPeople = reachable.filter((s) => s.hashFailed === true).length;
-      tracked = reachable.map((s) => ({ personKey: s.person.personKey, state: s.state }));
+      tracked = reachable.map((s) => ({
+        personKey: s.person.personKey,
+        track: s.track,
+        lettersInReturn: s.lettersInReturn,
+        firstDeliveredInReturnOn: s.firstDeliveredInReturnOn,
+      }));
     } else {
-      // ⭐ Under D30 there is ⛔ no recipient set, so "who is tracked" comes from the run's PAST rows and letters —
-      // minus every person whose LATEST family row is the child's `not_a_recipient` skip (removed from the recipient
-      // set before D30 arrived: ⛔ no escalation or second-letter reminder about someone no longer a recipient).
+      // ⭐ Under D30 there is ⛔ no recipient set, so "who is tracked" comes from the RETURN's PAST rows and letters —
+      // minus every person whose LATEST family row (by TIME, across the return's runs) is the child's
+      // `not_a_recipient` skip (removed from the recipient set before D30 arrived: ⛔ no escalation or second-letter
+      // reminder about someone no longer a recipient).
       // ⚠ RECORDED LIMITATIONS (⛔ not derivable without a recipient set or a number to hash):
       //   · a person removed WITHOUT a `not_a_recipient` row (removed between two sweeps, ⛔ no child ran for them
       //     after) is still tracked;
       //   · ⛔ no current number is hashed (D30 has ⛔ no recipient to decrypt), so each person's epoch is their
       //     latest evidential row's — a 6.20 number change DURING D30 is ⛔ not seen (the old number's found-dead
       //     day and delivered letter stand) until the family is remindable again and the sweep re-hashes.
+      const returnRows = await claimDomain.readReturnFamilyRows(db, pariwarId, claimCaseId, run.returnDecisionId);
+      const returnLetters = await claimDomain.readReturnFamilyLetters(db, pariwarId, claimCaseId, run.returnDecisionId);
       const { rows: latest } = await client.query<{ recipient_key: string; outcome: string; detail: string | null }>(
-        `SELECT DISTINCT ON (recipient_key) recipient_key, outcome, detail FROM claim_correction_reminders
-          WHERE pariwar_id = $1 AND run_id = $2 AND purpose = 'family_sms'
-          ORDER BY recipient_key, slot_day DESC, created_at DESC`,
-        [row.pariwar_id, run.runId],
+        `SELECT DISTINCT ON (rem.recipient_key) rem.recipient_key, rem.outcome, rem.detail
+           FROM claim_correction_reminders rem
+           JOIN claim_correction_runs r ON r.run_id = rem.run_id AND r.pariwar_id = rem.pariwar_id
+          WHERE rem.pariwar_id = $1 AND rem.claim_case_id = $2 AND rem.purpose = 'family_sms'
+            AND r.return_decision_id = $3 AND r.kind IN ('family', 'direction')
+          ORDER BY rem.recipient_key, rem.sent_on DESC, rem.created_at DESC`,
+        [row.pariwar_id, row.claim_case_id, run.returnDecisionId],
       );
       const removed = new Set(
         latest
           .filter((r) => r.outcome === 'skipped_superseded' && r.detail === 'not_a_recipient')
           .map((r) => r.recipient_key),
       );
-      const keys = [...new Set([...familyRows.map((r) => r.recipientKey), ...letters.map((l) => l.personKey)])]
+      const keys = [...new Set([...returnRows.map((r) => r.recipientKey), ...returnLetters.map((l) => l.personKey)])]
         .filter((k) => !removed.has(k))
         .sort();
-      tracked = keys.map((personKey) => ({
-        personKey,
-        state: claimDomain.evaluatePersonRunState(
-          familyRows.filter((r) => r.recipientKey === personKey),
-          letters.filter((l) => l.personKey === personKey),
-        ),
-      }));
+      tracked = keys.map((personKey) => {
+        const myLetters = returnLetters.filter((l) => l.personKey === personKey);
+        return {
+          personKey,
+          track: claimDomain.evaluatePersonRunState(
+            returnRows.filter((r) => r.recipientKey === personKey),
+            myLetters,
+          ),
+          ...claimDomain.personReturnLetterFacts(myLetters),
+        };
+      });
     }
   }
 
   if (isFamilyRun && familyCanBeReminded && !familyPaused) {
-    for (const { person, state } of reachable) {
-      if (state.letterDelivered) continue; // `-250` #1 — a recorded delivery stops that person's reminders
+    for (const { person, track } of reachable) {
+      if (track.letterDelivered) continue; // `-250` #1 — a recorded delivery stops that person's reminders (per return)
       const recorded = new Set(familyRows.filter((r) => r.recipientKey === person.personKey).map((r) => r.slotDay));
       const cu = claimDomain.correctionCatchUp(reminderDays, recorded, d);
       for (const day of cu.skip) {
@@ -1215,9 +1245,13 @@ async function planRun(
 
   // ── The District Admin's scheduled reminder (D34), stopped by D21 ───────────────────────────────────────────
   // D21 reads the REACHABLE people only: under D30 there is ⛔ no recipient set to be "every recipient", so the
-  // District Admin keeps being reminded (the D30 fix is theirs).
+  // District Admin keeps being reminded (the D30 fix is theirs). ⭐ D21's replacement now reads the RETURN (`-272` §2):
+  // a person is "delivered" when a letter delivered in ANY family run of the return reached their current number — or
+  // when they are at the two-letter cap (`-273` §2: a second letter exists only after the first's delivery).
   const everyoneDelivered =
-    isFamilyRun && reachable.length > 0 && reachable.every((s) => s.state.foundDeadOn !== null && s.state.letterDelivered);
+    isFamilyRun &&
+    reachable.length > 0 &&
+    reachable.every((s) => claimDomain.isPersonAtLetterCap(s) || (s.track.foundDeadOn !== null && s.track.letterDelivered));
   if (!everyoneDelivered) {
     const recordedStaff = new Set(staffRowsNow.filter((r) => r.purpose === 'staff_reminder').map((r) => r.slotDay));
     const cu = claimDomain.correctionCatchUp(reminderDays, recordedStaff, d);
@@ -1240,98 +1274,93 @@ async function planRun(
   // ── The letter track (D20, D21): the chase, its escalation, and the ONE second-letter reminder per person ──
   // By purpose: the chase needs a remindable family and ⛔ tier (b); the + 13 escalation needs ⛔ tier (b) (D2 —
   // `-268` §2: "the family's part is done" ⇒ ⛔ no letter chase, its escalation included) but ⛔ not a remindable
-  // family (D30); `letter_second_due` needs neither. ⭐ POST-RESET (`-271` §1): the escalation and
-  // `letter_second_due` dedupe within the person's CURRENT number epoch only — a row at a slot BEFORE the current
-  // found-dead / first-delivery day belongs to an OLD number, so a second found-dead period is escalated afresh.
+  // family (D30); `letter_second_due` needs neither. ⭐ PER RETURN (`-272` §2): the dedup reads the return's staff rows
+  // and compares DATES (`slotDate` — each row's own run `day0 + slot_day`), ⛔ never slot days. ⭐ POST-RESET (`-271`
+  // §1): the chase and the escalation dedupe within the person's CURRENT number epoch only — a row dated ON or BEFORE
+  // the current found-dead day belongs to an OLD number, so a second found-dead period is chased and escalated afresh.
+  // ⭐ `-273` §2: a person at the two-letter cap is ⛔ not chased (⛔ no `letter_chase`, ⛔ no + 13 escalation), and the
+  // second-letter reminder is owed ONCE per person per return (epoch-blind).
   if (isFamilyRun) {
     const runSlotOf = (date: string): number => claimDomain.correctionRunDay(run.day0, date);
-    for (const { personKey, state } of tracked) {
-      if (state.foundDeadOn === null) continue;
-      const fd = claimDomain.calendarDaysBetween(state.foundDeadOn, today);
-      const foundDeadSlot = runSlotOf(state.foundDeadOn);
-      if (familyCanBeReminded && !state.letterDelivered && !familyPaused) {
-        // The chase: found-dead + 7 … + 12, EVERY due day (D20/`-231` C: "daily through + 12", ⛔ not once total —
-        // tier (b) and D30 stop it). D3's catch-up decides the latest due day to send for real (so a missed sweep
-        // day is caught up rather than silently skipped forever) — ⚠ ⛔ no `skipped_superseded` markers for the
-        // gap days, matching the staff_reminder precedent just above: `letter_chase_day_uq` (D34, extended; 0130
-        // added `purpose`) is keyed on `(claim, recipient, subject, purpose, sent_on)` — ⛔ no slot_day — so
-        // multiple backfilled `letter_chase` rows stamped with TODAY's date would collide with each other and with
-        // the real send under `ON CONFLICT DO NOTHING` — a staff row is ⛔ an attempt at anyone, and the queue
-        // always shows the item regardless.
-        if (fd >= claimDomain.LETTER_CHASE_FIRST_OFFSET) {
-          const lastOffset = Math.min(fd, claimDomain.LETTER_CHASE_LAST_OFFSET);
-          const foundDeadOn = state.foundDeadOn;
-          const slotOfOffset = (off: number): number => runSlotOf(cycleCalendar.addCalendarDays(foundDeadOn, off));
-          const dueSlots: number[] = [];
-          for (let off = claimDomain.LETTER_CHASE_FIRST_OFFSET; off <= lastOffset; off += 1) dueSlots.push(slotOfOffset(off));
-          const recordedSlots = new Set(
-            staffRowsNow.filter((r) => r.purpose === 'letter_chase' && r.subjectKey === personKey).map((r) => r.slotDay),
+    /**
+     * The slot a dated staff row is written at: the date's own slot in THIS run, or — a date carried from an EARLIER
+     * run of the return, whose slot is negative here — TODAY's slot (the `6.19b K2` form). ⛔ Never negative.
+     */
+    const slotForDate = (date: string): number => {
+      const s = runSlotOf(date);
+      return s >= 0 ? s : Math.max(0, d);
+    };
+    const returnStaff = await claimDomain.readReturnLetterTrackStaffRows(db, pariwarId, claimCaseId, run.returnDecisionId);
+    for (const { personKey, track, lettersInReturn, firstDeliveredInReturnOn } of tracked) {
+      const mine = returnStaff.filter((r) => r.subjectKey === personKey);
+      const capped = claimDomain.isPersonAtLetterCap({ lettersInReturn });
+      if (track.foundDeadOn !== null && !capped) {
+        const foundDeadOn = track.foundDeadOn;
+        const fd = claimDomain.calendarDaysBetween(foundDeadOn, today);
+        if (familyCanBeReminded && !track.letterDelivered && !familyPaused && fd >= claimDomain.LETTER_CHASE_FIRST_OFFSET) {
+          // The chase: found-dead + 7 … + 12, EVERY due day (D20/`-231` C: "daily through + 12", ⛔ not once total —
+          // tier (b) and D30 stop it). D3's catch-up over DATES: the latest due date is sent unless a chase row of
+          // this epoch already stands for it (or later — a carried row clamped to its sweep's day). ⚠ ⛔ No
+          // `skipped_superseded` markers for the gap days (the staff_reminder precedent): `letter_chase_day_uq` is
+          // keyed on `(claim, recipient, subject, purpose, sent_on)` — ⛔ no slot — so backfilled rows stamped with
+          // TODAY's date would collide; a staff row is ⛔ an attempt at anyone, and the queue always shows the item.
+          const latestDue = cycleCalendar.addCalendarDays(
+            foundDeadOn,
+            Math.min(fd, claimDomain.LETTER_CHASE_LAST_OFFSET),
           );
-          const cuChase = claimDomain.correctionCatchUp(dueSlots, recordedSlots, d);
-          if (cuChase.send && cuChase.send.day < claimDomain.CORRECTION_RUN_HORIZON_DAYS) {
+          const covered = mine.some(
+            (r) => r.purpose === 'letter_chase' && r.slotDate > foundDeadOn && r.slotDate >= latestDue,
+          );
+          const slot = slotForDate(latestDue);
+          if (!covered && slot < claimDomain.CORRECTION_RUN_HORIZON_DAYS) {
             await writeStaff({
-              slotDay: cuChase.send.day,
+              slotDay: slot,
               recipientKey: daKey,
               purpose: 'letter_chase',
               subjectKey: personKey,
-              late: cuChase.send.late,
+              late: latestDue < today,
             });
           }
         }
-      }
-      if (!state.letterDelivered && !familyPaused && fd >= claimDomain.LETTER_CHASE_ESCALATION_OFFSET) {
-        // "Thereafter" (`-231` C) — ONE escalation to every Pariwar Admin on found-dead + 13, per number epoch.
-        const escDate = cycleCalendar.addCalendarDays(state.foundDeadOn, claimDomain.LETTER_CHASE_ESCALATION_OFFSET);
-        const slot = runSlotOf(escDate);
-        // ⚠ STRICTLY after the found-dead slot (`>`): an OLD epoch's + 13 escalation can sit ON the new epoch's
-        // found-dead slot (the old number died 13 days before the new one) — it must ⛔ not suppress the new one.
-        // This epoch's own escalation is always at found-dead + 13, so `>` never misses it.
-        const has = staffRowsNow.some(
-          (r) => r.purpose === 'escalation' && r.subjectKey === personKey && r.slotDay > foundDeadSlot,
-        );
-        if (slot < claimDomain.CORRECTION_RUN_HORIZON_DAYS && !has) {
-          for (const key of await pariwarAdmins()) {
-            await writeStaff({ slotDay: slot, recipientKey: key, purpose: 'escalation', subjectKey: personKey, late: escDate < today });
+        if (!track.letterDelivered && !familyPaused && fd >= claimDomain.LETTER_CHASE_ESCALATION_OFFSET) {
+          // "Thereafter" (`-231` C) — ONE escalation to every Pariwar Admin on found-dead + 13, per number epoch.
+          const escDate = cycleCalendar.addCalendarDays(foundDeadOn, claimDomain.LETTER_CHASE_ESCALATION_OFFSET);
+          // ⚠ STRICTLY after the found-dead DATE (`>`): an OLD epoch's + 13 escalation can sit ON the new epoch's
+          // found-dead day (the old number died 13 days before the new one) — it must ⛔ not suppress the new one.
+          const has = mine.some((r) => r.purpose === 'escalation' && r.slotDate > foundDeadOn);
+          const slot = slotForDate(escDate);
+          if (!has && slot < claimDomain.CORRECTION_RUN_HORIZON_DAYS) {
+            for (const key of await pariwarAdmins()) {
+              await writeStaff({ slotDay: slot, recipientKey: key, purpose: 'escalation', subjectKey: personKey, late: escDate < today });
+            }
           }
         }
       }
-      if (state.firstDeliveredOn !== null) {
-        // D21 / `-231` D — ONE reminder at the first delivery + 30 days, unless a second letter is already posted.
-        // ⚠ "A second letter" is counted over the RUN, ⛔ not the epoch: the cap is two letters per person per run
-        // (`recordCorrectionLetter`), so once the person has two, a reminder to post another asks for the impossible.
-        const personLetters = letters.filter((l) => l.personKey === personKey);
-        const hasSecond = personLetters.length >= 2;
-        const due = cycleCalendar.addCalendarDays(state.firstDeliveredOn, claimDomain.SECOND_LETTER_DUE_AFTER_DAYS);
+      if (firstDeliveredInReturnOn !== null) {
+        // D21 / `-231` D — ONE reminder at the first letter's delivery + 30, unless a second letter is already posted
+        // (`-273` §2(d): once per person per RETURN, epoch-blind — whichever run the delivery was recorded in).
+        const firstDelivered = firstDeliveredInReturnOn;
+        const due = cycleCalendar.addCalendarDays(firstDelivered, claimDomain.SECOND_LETTER_DUE_AFTER_DAYS);
+        const has = mine.some((r) => r.purpose === 'letter_second_due');
         const slot = runSlotOf(due);
-        const firstDeliveredSlot = runSlotOf(state.firstDeliveredOn);
-        // `>` for the same reason as the escalation's: this epoch's own row sits at the delivery + 30, or — when that
-        // slot is before the run (below) — at TODAY's slot, either way ABOVE the delivery's own slot.
-        const has = staffRowsNow.some(
-          (r) => r.purpose === 'letter_second_due' && r.subjectKey === personKey && r.slotDay > firstDeliveredSlot,
-        );
-        if (!hasSecond && due <= today && slot < claimDomain.CORRECTION_RUN_HORIZON_DAYS && !has) {
+        if (!capped && due <= today && slot < claimDomain.CORRECTION_RUN_HORIZON_DAYS && !has) {
           if (slot >= 0) {
             // The run's own slot (slot 0 — the run's day 0 — is a valid slot, ⛔ never rejected).
             await writeStaff({ slotDay: slot, recipientKey: daKey, purpose: 'letter_second_due', subjectKey: personKey, late: due < today });
-          } else if (state.firstDeliveredOn >= returnedOn) {
-            // ⭐ K2 (fifth-pass review) — a CORRECT date whose + 30 falls before THIS run: a letter posted during an
-            // EARLIER family run of the same return (family → staff → family) is recorded against the latest run
-            // (`posted_before_run` keys on the RETURN's date, J5), so its delivery + 30 can precede this run's day 0.
-            // The reminder is still OWED — written `late` at TODAY's slot (a real, `recorded` reminder, pushed like any
-            // other), ⛔ never a marker and ⛔ never an alarm about a date that is right. ⚠ ⛔ Never at the negative
-            // slot itself: `slot_day_check` (23514) is ⛔ absorbed by `ON CONFLICT` and would roll the whole plan back.
-            // (`Math.max(0, d)` only guards a clock BEFORE the run's day 0 — ⛔ reachable in production, where a run
-            // opens on the day its mark is written.)
+          } else if (firstDelivered >= returnedOn) {
+            // ⭐ K2 (fifth-pass review) — a CORRECT date whose + 30 falls before THIS run: a letter delivered during an
+            // EARLIER family run of the same return (family → staff → family). The reminder is still OWED — written
+            // `late` at TODAY's slot (a real, `recorded` reminder, pushed like any other), ⛔ never a marker and ⛔ never
+            // an alarm about a date that is right. ⚠ ⛔ Never at the negative slot itself: `slot_day_check` (23514) is
+            // ⛔ absorbed by `ON CONFLICT` and would roll the whole plan back.
             await writeStaff({ slotDay: Math.max(0, d), recipientKey: daKey, purpose: 'letter_second_due', subjectKey: personKey, late: true });
           } else {
             // ⛔ A delivery dated BEFORE the live return — impossible through the writers (a letter is ⛔ posted before
             // the return's date, ⛔ delivered before it was posted), so a wrong-year typo or a legacy row. Skip the
-            // reminder and say so ONCE: ⭐ a `skipped_superseded` MARKER at TODAY's slot (valid: d ≥ 0) records the
-            // decision, and the `has` check above sees it tomorrow (its slot is above the negative delivery slot) ⇒
-            // ⛔ no daily re-alarm. Chosen over an alarm-dedup because it is DURABLE and HONEST: it sits on
-            // `letter_second_due` only (a one-shot purpose with ⛔ no catch-up — it can ⛔ never hide a `family_sms` slot
-            // from D3's catch-up, S2), and it is ⛔ not `recorded`, so ⛔ no push and ⛔ no queue item pretends a
-            // reminder was made.
+            // reminder and say so ONCE: ⭐ a `skipped_superseded` MARKER at TODAY's slot records the decision, and the
+            // `has` check above sees it tomorrow ⇒ ⛔ no daily re-alarm. It sits on `letter_second_due` only (a one-shot
+            // purpose with ⛔ no catch-up — it can ⛔ never hide a `family_sms` slot from D3's catch-up, S2), and it is
+            // ⛔ not `recorded`, so ⛔ no push and ⛔ no queue item pretends a reminder was made.
             const marked = await claimDomain.insertFinalCorrectionReminder(db, {
               pariwarId,
               claimCaseId,
@@ -1347,7 +1376,7 @@ async function planRun(
             if (marked) {
               alarm(
                 `[jobs] claim-correction-sweep: ⛔ skipped the second-letter reminder for ${personKey} on claim ` +
-                  `${row.claim_case_id} — its delivery date ${state.firstDeliveredOn} is BEFORE the return ` +
+                  `${row.claim_case_id} — its delivery date ${firstDelivered} is BEFORE the return ` +
                   `(${returnedOn}); run ${run.runId} (check the recorded delivery date)`,
               );
             }

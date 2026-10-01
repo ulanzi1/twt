@@ -42,6 +42,7 @@ import {
   type CorrectionRunView,
   type PersonRunState,
   acquireCorrectionChaseLock,
+  compareReminderRowsByTime,
   evaluatePersonRunState,
   isEvidentialReminderRow,
   readCorrectionClaimRow,
@@ -377,11 +378,12 @@ export class CorrectionNumberHashUnavailableError extends Error {
  * return still the live one, day < 90; a `family` run's return is still MARKED `family` (a `direction` run is exempt —
  * 6.19c's direction chases the family whatever the mark); ⭐ BY PURPOSE — tier (a) `resubmitted` stops any row; tier
  * (b) (the family's part is done) and D30 stop the family's rows; the person is still a recipient and their letter has
- * ⛔ no recorded delivery IN THE CURRENT NUMBER'S EPOCH. Only then the row is claimed `attempting`. ⇒ a switch to
+ * ⛔ no recorded delivery IN THE CURRENT NUMBER'S EPOCH — across EVERY family / direction run of the live return
+ * (`-272` §2(a): a run-1 delivery still stops the texts in run 3). Only then the row is claimed `attempting`. ⇒ a switch to
  * `staff` at 10:01 stops a job queued at 10:00. A failed re-check writes `skipped_superseded` (the reason in `detail`)
  * and returns ⛔ without throwing — or, when this job's own row already carries an attempt's detail, expires it and
  * returns `expiredAttempt: true` (K4; the caller alarms).
- * ⭐ The person's state is computed with the SWEEP's own logic (`readRunPersonStates` with `crypto`): it hashes the
+ * ⭐ The person's state is computed with the SWEEP's own logic (`readReturnPersonStates` with `crypto`): it hashes the
  * CURRENT number when the version moved (`-271` §1), so a letter delivered to an OLD number ⛔ never silences a
  * 6.20-corrected one. ⚠ The caller commits, THEN decrypts for the send — the only crypto here is that hash.
  * @throws CorrectionNumberHashUnavailableError  the hash failed AND a delivered letter would otherwise skip the send
@@ -453,9 +455,9 @@ export async function beginCorrectionFamilySend(
   if (recipients.cannotRemind !== null) return skip(recipients.cannotRemind);
   const person = recipients.people.find((p) => p.personKey === input.personKey);
   if (person === undefined) return skip('not_a_recipient');
-  const [personState] = await readRunPersonStates(db, input.pariwarId, run, [person], { crypto: input.crypto });
+  const [personState] = await readReturnPersonStates(db, input.pariwarId, run, [person], { crypto: input.crypto });
   if (personState === undefined) return skip('not_a_recipient');
-  if (personState.state.letterDelivered) {
+  if (personState.track.letterDelivered) {
     if (personState.hashFailed === true) throw new CorrectionNumberHashUnavailableError(input.claimCaseId, input.runId);
     return skip('letter_delivered');
   }
@@ -590,6 +592,113 @@ export async function readReturnFamilyLetters(
   return rows.map(({ screenshotStorageKey, ...r }) => ({ ...r, hasScreenshot: screenshotStorageKey !== null }));
 }
 
+/** A `family_sms` row of a RETURN — a run row carrying the run it was sent in. */
+export interface ReturnFamilyRow extends RunFamilyRow {
+  readonly runId: string;
+}
+
+/**
+ * ⭐ Every `family_sms` row of the live return's FAMILY / DIRECTION runs (`-272` §2, `-273` §1 — Story 6.19c Task 0a),
+ * ordered by TIME (`sent_on`, then insert) — ⛔ never `slot_day` (a run's own day number).
+ */
+export async function readReturnFamilyRows(
+  db: Db,
+  pariwarId: PariwarId,
+  claimCaseId: ClaimId,
+  returnDecisionId: string,
+): Promise<ReturnFamilyRow[]> {
+  const rows = await db
+    .select({
+      runId: claimCorrectionReminders.runId,
+      recipientKey: claimCorrectionReminders.recipientKey,
+      slotDay: claimCorrectionReminders.slotDay,
+      sentOn: claimCorrectionReminders.sentOn,
+      outcome: claimCorrectionReminders.outcome,
+      recipientVersionId: claimCorrectionReminders.recipientVersionId,
+      recipientNumberHash: claimCorrectionReminders.recipientNumberHash,
+      createdAt: claimCorrectionReminders.createdAt,
+      late: claimCorrectionReminders.late,
+    })
+    .from(claimCorrectionReminders)
+    .innerJoin(
+      claimCorrectionRuns,
+      and(
+        eq(claimCorrectionRuns.runId, claimCorrectionReminders.runId),
+        eq(claimCorrectionRuns.pariwarId, claimCorrectionReminders.pariwarId),
+      ),
+    )
+    .where(
+      and(
+        eq(claimCorrectionReminders.pariwarId, pariwarId),
+        eq(claimCorrectionReminders.claimCaseId, claimCaseId),
+        eq(claimCorrectionReminders.purpose, 'family_sms'),
+        eq(claimCorrectionRuns.returnDecisionId, returnDecisionId as TrusteeDecisionId),
+        inArray(claimCorrectionRuns.kind, ['family', 'direction']),
+      ),
+    )
+    .orderBy(asc(claimCorrectionReminders.sentOn), asc(claimCorrectionReminders.createdAt));
+  return rows.map((r) => ({ ...r, recipientVersionId: (r.recipientVersionId as string | null) ?? null }));
+}
+
+/** A staff-side row of a RETURN, with the calendar date its slot stands for (its OWN run's `day0 + slot_day`). */
+export interface ReturnStaffRow {
+  readonly runId: string;
+  readonly slotDay: number;
+  /** ⭐ The IST date of the row's slot in ITS run — the cross-run comparable (⛔ never `slot_day`, S-T4). */
+  readonly slotDate: string;
+  readonly recipientKey: string;
+  readonly purpose: CorrectionReminderPurpose;
+  readonly subjectKey: string;
+  readonly outcome: CorrectionReminderOutcome;
+  readonly sentOn: string;
+}
+
+/**
+ * ⭐ Every per-person staff row (`letter_chase`, `letter_second_due`, `escalation`) of the live return's runs of ANY
+ * kind (Story 6.19c Task 0a — the letter track's dedup is per return, `-272` §2), each with its `slotDate` — the date
+ * its slot stands for in its own run. Ordered by `slotDate`, then insert.
+ */
+export async function readReturnLetterTrackStaffRows(
+  db: Db,
+  pariwarId: PariwarId,
+  claimCaseId: ClaimId,
+  returnDecisionId: string,
+): Promise<ReturnStaffRow[]> {
+  const rows = await db
+    .select({
+      runId: claimCorrectionReminders.runId,
+      slotDay: claimCorrectionReminders.slotDay,
+      slotDate: sql<string>`to_char(${claimCorrectionRuns.day0} + ${claimCorrectionReminders.slotDay}, 'YYYY-MM-DD')`,
+      recipientKey: claimCorrectionReminders.recipientKey,
+      purpose: claimCorrectionReminders.purpose,
+      subjectKey: claimCorrectionReminders.subjectKey,
+      outcome: claimCorrectionReminders.outcome,
+      sentOn: claimCorrectionReminders.sentOn,
+    })
+    .from(claimCorrectionReminders)
+    .innerJoin(
+      claimCorrectionRuns,
+      and(
+        eq(claimCorrectionRuns.runId, claimCorrectionReminders.runId),
+        eq(claimCorrectionRuns.pariwarId, claimCorrectionReminders.pariwarId),
+      ),
+    )
+    .where(
+      and(
+        eq(claimCorrectionReminders.pariwarId, pariwarId),
+        eq(claimCorrectionReminders.claimCaseId, claimCaseId),
+        eq(claimCorrectionRuns.returnDecisionId, returnDecisionId as TrusteeDecisionId),
+        inArray(claimCorrectionReminders.purpose, ['letter_chase', 'letter_second_due', 'escalation']),
+        sql`${claimCorrectionReminders.subjectKey} <> ''`,
+      ),
+    )
+    .orderBy(
+      asc(sql`${claimCorrectionRuns.day0} + ${claimCorrectionReminders.slotDay}`),
+      asc(claimCorrectionReminders.createdAt),
+    );
+  return rows;
+}
+
 /** Every staff-side row of a run (for the catch-up's "is this slot recorded" and the queue). */
 export async function readRunStaffRows(
   db: Db,
@@ -622,10 +731,24 @@ export async function readRunStaffRows(
     .orderBy(asc(claimCorrectionReminders.slotDay));
 }
 
-/** One person's evaluated state in one run. */
-export interface RunPersonState {
+/**
+ * One person's evaluated letter-track state across the live RETURN of a run (`-272` §2, `-273` §1/§2). ⭐ `track` is
+ * the per-number evaluation (`evaluatePersonRunState`); `lettersInReturn` is the person's letter COUNT across the
+ * return — epoch-blind (`-273` §2: the two-letter cap is per person and ⛔ never reset by a new number).
+ * *(Story 6.19c renamed it from `RunPersonState` and its `state` field to `track` — the `RunPersonState.state` naming
+ * collision recorded at 6.19b's third pass.)*
+ */
+export interface ReturnPersonState {
   readonly person: CorrectionPerson;
-  readonly state: PersonRunState;
+  readonly track: PersonRunState;
+  /** The person's letters across the live return's family / direction runs (⛔ per epoch — the cap's count). */
+  readonly lettersInReturn: number;
+  /**
+   * `-273` §2(d) — the delivery date of the person's FIRST letter of the return (epoch-blind: a letter goes to an
+   * address, which a 6.20 number change does ⛔ not move) — the anchor of the ONE second-letter reminder. `null` while
+   * no letter of theirs has a recorded delivery.
+   */
+  readonly firstDeliveredInReturnOn: string | null;
   /** The person's current number hash, when it was computed (only when their version changed, or on request). */
   readonly currentNumberHash?: string | null;
   /**
@@ -636,15 +759,35 @@ export interface RunPersonState {
   readonly hashFailed?: boolean;
 }
 
+/** `-231` D / `-273` §2 — at most this many letters per person per RETURN. */
+export const CORRECTION_LETTERS_PER_PERSON = 2;
+
+/**
+ * The person's letter facts across the RETURN, epoch-blind (`-273` §2): how many letters, and the delivery date of the
+ * FIRST letter (by insert) when it is recorded. Pure.
+ */
+export function personReturnLetterFacts(
+  letters: readonly Pick<RunLetterRow, 'deliveredOn' | 'createdAt'>[],
+): { readonly lettersInReturn: number; readonly firstDeliveredInReturnOn: string | null } {
+  const first = [...letters].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())[0];
+  return { lettersInReturn: letters.length, firstDeliveredInReturnOn: first?.deliveredOn ?? null };
+}
+
+/**
+ * Has the person reached the two-letter cap of the return (`-273` §2)? A capped person is ⛔ not chased for another
+ * letter, and counts as DELIVERED for D21 (a second letter exists only after the first's recorded delivery). Pure.
+ */
+export function isPersonAtLetterCap(s: Pick<ReturnPersonState, 'lettersInReturn'>): boolean {
+  return s.lettersInReturn >= CORRECTION_LETTERS_PER_PERSON;
+}
+
 /**
  * The person's LAST evidential attempt (`isEvidentialReminderRow` — a hash-less `error` is ⛔ not one), from rows in
- * any order (latest slot, then latest insert), or `undefined`. Pure.
+ * any order and of any run of the return (latest by TIME — `sent_on`, then insert; ⛔ never `slot_day`), or
+ * `undefined`. Pure.
  */
 export function lastEvidentialAttempt<R extends RunFamilyRow>(rows: readonly R[]): R | undefined {
-  return [...rows]
-    .filter(isEvidentialReminderRow)
-    .sort((a, b) => a.slotDay - b.slotDay || a.createdAt.getTime() - b.createdAt.getTime())
-    .at(-1);
+  return [...rows].filter(isEvidentialReminderRow).sort(compareReminderRowsByTime).at(-1);
 }
 
 /**
@@ -661,25 +804,29 @@ export function personNumberMayHaveMoved(
 }
 
 /**
- * Each person's per-run state. ⭐ The reset (a 6.20 correction changed the NUMBER): the latest evidential row's
- * `recipient_version_id` is compared FIRST, and the number is hashed only when it differs (⛔ a stopped person writes
- * no rows — so the sweep must detect their change, and the child re-checks it the same way); a correction that keeps
- * the same number changes ⛔ nothing. Without `crypto` the latest row's hash stands.
+ * ⭐ Each person's letter-track state across the live RETURN of `run` (`-272` §2, `-273` §1/§2 — Story 6.19c Task 0a;
+ * formerly `readRunPersonStates`, which read the one run). The rows and letters are the person's across EVERY
+ * `family` / `direction` run of `run`'s return. ⭐ The reset (a 6.20 correction changed the NUMBER): the latest
+ * evidential row's `recipient_version_id` is compared FIRST, and the number is hashed only when it differs (⛔ a
+ * stopped person writes no rows — so the sweep must detect their change, and the child re-checks it the same way); a
+ * correction that keeps the same number changes ⛔ nothing. Without `crypto` the latest row's hash stands.
  * ⭐ A hash that THROWS is caught PER PERSON: that person is evaluated with the number unknown and `hashFailed: true`
  * (the caller alarms); ⛔ it never throws out of the whole run.
  */
-export async function readRunPersonStates(
+export async function readReturnPersonStates(
   db: Db,
   pariwarId: PariwarId,
-  run: CorrectionRunView,
+  run: Pick<CorrectionRunView, 'claimCaseId' | 'returnDecisionId'>,
   people: readonly CorrectionPerson[],
   opts: { readonly crypto?: FieldCryptoDeps; readonly alwaysHash?: boolean } = {},
-): Promise<RunPersonState[]> {
-  const rows = await readRunFamilyRows(db, pariwarId, run.runId);
-  const letters = await readRunLetters(db, pariwarId, run.runId);
-  const out: RunPersonState[] = [];
+): Promise<ReturnPersonState[]> {
+  const claimCaseId = run.claimCaseId as ClaimId;
+  const rows = await readReturnFamilyRows(db, pariwarId, claimCaseId, run.returnDecisionId);
+  const letters = await readReturnFamilyLetters(db, pariwarId, claimCaseId, run.returnDecisionId);
+  const out: ReturnPersonState[] = [];
   for (const person of people) {
     const mine = rows.filter((r) => r.recipientKey === person.personKey);
+    const myLetters = letters.filter((l) => l.personKey === person.personKey);
     let currentNumberHash: string | null | undefined;
     let hashFailed = false;
     if (
@@ -699,14 +846,10 @@ export async function readRunPersonStates(
         hashFailed = true;
       }
     }
-    const state = evaluatePersonRunState(
-      mine,
-      letters.filter((l) => l.personKey === person.personKey),
-      currentNumberHash,
-    );
     out.push({
       person,
-      state,
+      track: evaluatePersonRunState(mine, myLetters, currentNumberHash),
+      ...personReturnLetterFacts(myLetters),
       ...(currentNumberHash === undefined ? {} : { currentNumberHash }),
       ...(hashFailed ? { hashFailed: true } : {}),
     });

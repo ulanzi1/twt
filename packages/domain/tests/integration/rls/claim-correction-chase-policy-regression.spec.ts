@@ -402,7 +402,9 @@ describe.skipIf(!hasDatabase)('the correction chase — migrations 0126–0130 +
     expect((await insertRow(client, 'claim_correction_reminders', { ...dup, subject_key: 'claimant' })).rowCount).toBe(1);
   });
 
-  it('⭐ a letter: ≤ 2 per person per run (`person_sequence_uq`); another person\'s first letter is accepted', async () => {
+  // ⚠ `person_sequence_uq` is a PER-RUN BACKSTOP only — ⛔ the rule. The rule (≤ 2 per person per RETURN, epoch-blind)
+  // is the writer's, under the trustee lock (`-273` §2, Story 6.19c Task 0a — recorded, ⛔ widened).
+  it('⭐ a letter: the per-RUN backstop `person_sequence_uq` (one row per run, person, sequence — ⛔ the per-RETURN rule, which is the writer\'s); another person\'s first letter is accepted', async () => {
     const { client } = getTx();
     const s = await seedChase(client, PARIWAR_A);
     await expectPgError(

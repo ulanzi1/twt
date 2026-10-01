@@ -773,7 +773,7 @@ function correctionChaseDto(s: claimDomain.CorrectionChaseSummary): CorrectionCh
         delivered_on: l.deliveredOn,
         overdue: l.overdue,
         has_screenshot: l.hasScreenshot,
-        in_current_run: l.inCurrentRun,
+        counts_toward_limit: l.countsTowardLimit,
       })),
     })),
     escalated: s.escalated,

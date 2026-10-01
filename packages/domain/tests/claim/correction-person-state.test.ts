@@ -1,4 +1,5 @@
-// A person's per-run state — Story 6.19b (AC3, AC5, AC11b "letters" / "retries"; D4, D20, `-269` §4, `-271` §1).
+// A person's letter-track state — Story 6.19b (AC3, AC5, AC11b "letters" / "retries"; D4, D20, `-269` §4, `-271` §1),
+// per RETURN since Story 6.19c (Task 0a, AC18; `-272` §2, `-273` §2): rows of several runs are ordered by TIME.
 // Pure: the found-dead day and its kind; a delivered letter stops reminders (and ⛔ not before); the state is PER
 // NUMBER — a 6.20 correction that CHANGES the number resets it, one that keeps it changes ⛔ nothing.
 
@@ -21,8 +22,10 @@ import {
 import {
   type RunFamilyRow,
   type RunLetterRow,
+  isPersonAtLetterCap,
   lastEvidentialAttempt,
   personNumberMayHaveMoved,
+  personReturnLetterFacts,
 } from '../../src/claim/correction-reminder-record.js';
 
 const t = (n: number) => new Date(Date.UTC(2026, 9, 1, 5, 0, n));
@@ -155,12 +158,12 @@ describe('evaluatePersonRunState — non-evidential rows (I5), the post-reset ep
     expect(lettered.firstDeliveredOn).toBe('2026-10-20');
   });
 
-  it('rows in ANY order: sorted by slot, then by insert time — the epoch is the same', () => {
+  it('rows in ANY order: sorted by `sent_on`, then by insert time — the epoch is the same', () => {
     const inOrder = [row(1, 'rejected_invalid_number', 'A', 1), row(5, 'accepted', 'B', 20), row(6, 'accepted', 'B', 21)];
     const shuffled = [inOrder[2]!, inOrder[0]!, inOrder[1]!];
     expect(evaluatePersonRunState(shuffled, [])).toEqual(evaluatePersonRunState(inOrder, []));
     expect(evaluatePersonRunState(shuffled, []).epochRows.map((r) => r.slotDay)).toEqual([5, 6]);
-    // Two rows on ONE slot (a retry after a reset): the LATER insert is the last.
+    // Two rows on ONE day (a retry after a reset): the LATER insert is the last.
     const sameSlot = [row(3, 'accepted', 'B', 9), row(3, 'rejected_invalid_number', 'A', 2)];
     expect(evaluatePersonRunState(sameSlot, [], 'B')).toMatchObject({ reset: false, foundDeadOn: null });
   });
@@ -193,7 +196,7 @@ describe('the child\'s re-check — the pure parts of `readRunPersonStates` (I4)
     expect(lastEvidentialAttempt([])).toBeUndefined();
   });
 
-  it('⭐ ≥ 2 evidential rows OUT OF ORDER: the latest slot wins, and on ONE slot the LATER insert wins', () => {
+  it('⭐ ≥ 2 evidential rows OUT OF ORDER: the latest `sent_on` wins, and on ONE day the LATER insert wins', () => {
     // Slot 2 twice (a retry after a reset): A inserted at t(5), B at t(9) — B is the last attempt. Slot 1 is older.
     const slot1 = familyRow(row(1, 'accepted', 'A', 1), 'v1');
     const slot2Early = familyRow(row(2, 'rejected_invalid_number', 'A', 5), 'v1');
@@ -379,5 +382,59 @@ describe('correctionPeopleLeftWithLetters (K1 — a person who LEFT the recipien
     expect(correctionPeopleLeftWithLetters(['nominee:v1'], correctionPeopleFromRecords(rows, []))).toEqual([]);
     const letters = [letterRow('nominee:v1', 10)];
     expect(correctionPeopleLeftWithLetters(['nominee:v1'], correctionPeopleFromRecords([], letters))).toEqual([]);
+  });
+});
+
+describe('⭐ AC18 — the letter track per RETURN (`-272` §2, `-273` §2; Story 6.19c Task 0a)', () => {
+  /** A row of ANOTHER run: its `slot_day` is that run's own day number — it says ⛔ nothing about time across runs. */
+  const runRow = (slotDay: number, sentOn: string, outcome: PersonReminderRow['outcome'], hash: string | null, at: number): PersonReminderRow => ({
+    slotDay,
+    sentOn,
+    outcome,
+    recipientVersionId: 'v1',
+    recipientNumberHash: hash,
+    createdAt: t(at),
+  });
+
+  it('⭐ S-T4 — rows of two runs are ordered by `sent_on`, ⛔ `slot_day`: run 1 day 40 (A, dead) BEFORE run 3 day 2 (B, accepted)', () => {
+    // By slot the run-1 row (40) would sort AFTER the run-3 row (2) and make A the "current" number.
+    const run1Dead = runRow(40, '2026-10-10', 'rejected_invalid_number', 'A', 1);
+    const run3Accepted = runRow(2, '2026-11-20', 'accepted', 'B', 2);
+    const s = evaluatePersonRunState([run1Dead, run3Accepted], []);
+    expect(s.foundDeadOn).toBeNull();
+    expect(s.epochRows.map((r) => r.recipientNumberHash)).toEqual(['B']);
+    expect(lastEvidentialAttempt([familyRow(run3Accepted), familyRow(run1Dead)])?.recipientNumberHash).toBe('B');
+  });
+
+  it('⭐ (a)/(b) — the found-dead fact and a delivered letter CARRY into a later run for the SAME number', () => {
+    const run1Dead = runRow(5, '2026-10-06', 'rejected_invalid_number', 'A', 1);
+    const s = evaluatePersonRunState([run1Dead], [letter(1, '2026-10-09', 10)], 'A');
+    expect(s).toMatchObject({ foundDeadOn: '2026-10-06', letterDelivered: true, reset: false });
+  });
+
+  it('⭐ a NEW number (6.20) resets (a)/(b) only — the letter facts of the RETURN stay (`-273` §2: the cap ⛔ never resets)', () => {
+    const letters: RunLetterRow[] = [
+      { letterId: 'l1', personKey: 'nominee:v1', sequence: 1, postedOn: '2026-10-07', deliveredOn: '2026-10-09', createdAt: t(10), hasScreenshot: true },
+      { letterId: 'l2', personKey: 'nominee:v1', sequence: 2, postedOn: '2026-11-10', deliveredOn: null, createdAt: t(20), hasScreenshot: false },
+    ];
+    const s = evaluatePersonRunState([runRow(5, '2026-10-06', 'rejected_invalid_number', 'A', 1)], letters, 'B');
+    expect(s).toMatchObject({ reset: true, foundDeadOn: null, letterDelivered: false });
+    const facts = personReturnLetterFacts(letters);
+    expect(facts).toEqual({ lettersInReturn: 2, firstDeliveredInReturnOn: '2026-10-09' });
+    expect(isPersonAtLetterCap(facts)).toBe(true);
+  });
+
+  it('personReturnLetterFacts — the FIRST letter by insert anchors the second-letter reminder; ⛔ none delivered ⇒ null', () => {
+    expect(personReturnLetterFacts([])).toEqual({ lettersInReturn: 0, firstDeliveredInReturnOn: null });
+    const undelivered = [{ deliveredOn: null, createdAt: t(1) }];
+    expect(personReturnLetterFacts(undelivered)).toEqual({ lettersInReturn: 1, firstDeliveredInReturnOn: null });
+    // Out of order: the earlier insert is the first letter.
+    expect(
+      personReturnLetterFacts([
+        { deliveredOn: '2026-11-30', createdAt: t(9) },
+        { deliveredOn: '2026-10-09', createdAt: t(2) },
+      ]).firstDeliveredInReturnOn,
+    ).toBe('2026-10-09');
+    expect(isPersonAtLetterCap({ lettersInReturn: 1 })).toBe(false);
   });
 });

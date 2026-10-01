@@ -305,6 +305,7 @@ export async function seedReturnedClaim(
         setByRole: 'pariwar_admin',
         noteCiphertext: null,
         isReturnMark: true, // I8 — the run's day 0 is the RETURN's `decided_at` (IST), ⛔ never a passed `now`
+        hold: claim.noCorrectionHold, // Story 6.19c (S-T3) — REQUIRED; "never held", explicitly
       });
       runId = w.openedRun?.runId ?? null;
     }

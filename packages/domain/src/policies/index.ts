@@ -223,3 +223,5 @@ export * from './claim-correction-closure-rls.js';
 export * from './claim-correction-direction-rls.js';
 export * from './claim-refile-confirmation-rls.js';
 export * from './claim-closure-letter-rls.js';
+// Story 6.19c (0136) — the "no correction needed" record: SELECT + INSERT only (append-only).
+export * from './claim-correction-no-correction-record-rls.js';

@@ -21,6 +21,7 @@ import { claimVerifierDecisions } from '../schema/claim_verifier_decisions.js';
 import { claimStateTrusteeDecisions } from '../schema/claim_state_trustee_decisions.js';
 import { claimR9Votes } from '../schema/claim_r9_votes.js';
 import { claimAppeals } from '../schema/claim_appeals.js';
+import { claimCorrectionClosures } from '../schema/claim_correction_closure.js';
 import { pariwarAppealConfig } from '../schema/pariwar_appeal_config.js';
 import { eventsLog } from '../schema/events_log.js';
 import {
@@ -44,6 +45,19 @@ export class AppealNotDeniedError extends Error {
     public readonly currentState: string,
   ) {
     super(`[appeal] claim ${claimCaseId} is '${currentState}' — an appeal can only be initiated from 'denied'`);
+  }
+}
+
+/**
+ * Story 6.19c (AC7, `2026-09-20-231` A, invariant 6, T3) — the claim was CLOSED FOR NO RESPONSE (a `closed` row in
+ * `claim_correction_closures`): the second refusal, ⛔ never appealable. Its OWN 409 code
+ * (`appeal.closed_no_response`, ⛔ `appeal.not_denied` — the claim IS denied). Thrown by `assertAppealInitiable`, so
+ * every initiation path — the operator's on-behalf initiate (the production one) and the member route — refuses it.
+ */
+export class AppealClosedNoResponseError extends Error {
+  public readonly name = 'AppealClosedNoResponseError';
+  public constructor(public readonly claimCaseId: string) {
+    super(`[appeal] claim ${claimCaseId} was closed for no response — a closure is not appealable`);
   }
 }
 
@@ -142,6 +156,21 @@ export async function assertAppealInitiable(db: Db, pariwarId: PariwarId, claimC
   if (!claimRow || claimRow.currentState !== 'denied') {
     throw new AppealNotDeniedError(claimCaseId, claimRow?.currentState ?? 'not_found');
   }
+
+  // Story 6.19c (AC7) — a closure for no response is ⛔ never appealable (`-231` A). Keyed on the CLOSURE ROW (D1:
+  // "the table is the marker for the 409 code"), ⛔ on `denied_no_appeal` (a stage-3 uphold emits that too).
+  const closed = await db
+    .select({ id: claimCorrectionClosures.closureId })
+    .from(claimCorrectionClosures)
+    .where(
+      and(
+        eq(claimCorrectionClosures.pariwarId, pariwarId),
+        eq(claimCorrectionClosures.claimCaseId, claimCaseId),
+        eq(claimCorrectionClosures.state, 'closed'),
+      ),
+    )
+    .limit(1);
+  if (closed[0]) throw new AppealClosedNoResponseError(claimCaseId);
 
   // D-F — any existing journey (open OR terminal) blocks a new one (the unconditional unique is the backstop).
   const existing = await db

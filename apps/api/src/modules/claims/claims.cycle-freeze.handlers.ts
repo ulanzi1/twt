@@ -56,6 +56,13 @@ import { decryptVerifierRationale } from './verifier-decision-crypto.js';
 
 /** Map a cycle-freeze domain error to its stable HTTP shape. Rethrows ApiErrors + anything unknown as-is. */
 function translateCycleFreezeError(err: unknown): never {
+  // Story 6.19c (`-273` §4) — the claim is HELD: only the Super Admin decides it.
+  if (err instanceof claim.CorrectionClosureRefusedError && err.refusal === 'cycle_freeze_escalated') {
+    throw new ConflictError(
+      'This claim is with the Super Admin — only the Super Admin can decide it now',
+      'cycle_freeze.escalated',
+    );
+  }
   if (err instanceof claim.TrusteeClaimNotFoundError) {
     throw new NotFoundError('Claim not found', 'claim.not_found');
   }
@@ -362,6 +369,13 @@ export function createCycleFreezeHandlers(
       let ok = false;
       let result: claim.TrusteeDecisionResult;
       try {
+        // ⭐ Story 6.19c (`-273` §4, `-274` 1d) — while the claim is HELD (a closures row of its live return escalated or
+        // under review), ONLY the Super Admin decides it: the vote (approve AND deny) and a new return are refused 409
+        // `cycle_freeze.escalated` — inside this scope-tx, AFTER the trustee advisory lock, for EVERY actor (this route
+        // also accepts `super_admin`). `voteOnFrozenClaim` is ⛔ changed (AC10).
+        if (body.action === 'approve' || body.action === 'deny' || body.action === 'return_to_district_admin') {
+          await claim.assertCorrectionClaimNotHeld(scopeTx.client, ctx.pariwarId, claimCaseId);
+        }
         switch (body.action) {
           case 'approve':
             result = await claim.voteOnFrozenClaim(scopeTx.client, { ...base, outcome: 'approved' });
@@ -411,6 +425,9 @@ export function createCycleFreezeHandlers(
               setByRole: matchedRole,
               noteCiphertext: null,
               isReturnMark: true,
+              // Story 6.19c (S-T3) — the HOLD, REQUIRED (a new return on a held claim is refused above; a stale row of
+              // an EARLIER return holds ⛔ nothing — S-T9).
+              hold: claim.isCorrectionClaimHeld,
               // ⛔ No `now` on a return mark (K5): day 0 is the return's OWN IST date (its `decided_at`, AC2, taken
               // from the live return) and the mark's `set_at` is the DB's `clock_timestamp()` column default — a
               // clock passed here could only ever split day 0 from `decided_at`, so the writer's input refuses it.

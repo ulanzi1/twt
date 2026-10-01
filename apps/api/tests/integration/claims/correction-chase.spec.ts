@@ -206,7 +206,7 @@ describe.skipIf(!hasDatabase)('the correction chase — District Admin routes (S
       if (opts.mark !== false) {
         const w = await claim.writeCorrectionMark(scopeTx.client, {
           pariwarId: pid, claimCaseId: cid, mustAct: 'family', actorId: randomUUID(), actorDisplay: 'Pariwar Admin One',
-          setByRole: 'pariwar_admin', noteCiphertext: null, isReturnMark: true,
+          setByRole: 'pariwar_admin', noteCiphertext: null, isReturnMark: true, hold: claim.noCorrectionHold,
         });
         runId = w.openedRun!.runId;
         const person = (await claim.readCorrectionRecipients(scopeTx.tx, pid, cid)).people[0]!;

@@ -38,6 +38,7 @@ import {
   recordClaimNomineeBankAccounts,
   returnToDistrictAdmin,
   stateTrusteeDecisionAdvisoryLockKey,
+  noCorrectionHold,
   writeCorrectionMark,
 } from '../../../src/claim/index.js';
 import { bindScopedDb, setPariwarScope } from '../../../src/db.js';
@@ -157,6 +158,7 @@ describe.skipIf(!hasDatabase)('Story 6.19b — the correction chase under two-co
     setByRole: 'pariwar_admin' as const,
     noteCiphertext: null,
     isReturnMark: true,
+    hold: noCorrectionHold,
   });
 
   async function returned(mustAct: 'family' | 'staff') {
@@ -498,6 +500,7 @@ describe.skipIf(!hasDatabase)('Story 6.19b — the correction chase under two-co
             actorDisplay: 'District Admin One',
             setByRole: 'district_admin',
             noteCiphertext: 'enc:v1:change',
+            hold: noCorrectionHold,
           }),
         }));
       const settled = (await overlapped<{ kind: 'return'; decisionId: string } | { kind: 'change'; result: Awaited<ReturnType<typeof writeCorrectionMark>> }>(

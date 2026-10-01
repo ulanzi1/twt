@@ -28,6 +28,7 @@ import {
   readCorrectionRecipients,
   resolveClaimCorrectionState,
   returnToDistrictAdmin,
+  noCorrectionHold,
   writeCorrectionMark,
 } from '../../../src/claim/index.js';
 import { addCalendarDays } from '../../../src/cycle-calendar/holiday-resolver.js';
@@ -121,7 +122,7 @@ async function resubmittedOf(tx: Tx, pariwarId: typeof PARIWAR_A, cid: ClaimId):
 }
 
 const returnMarkInput = (pariwarId: typeof PARIWAR_A, cid: ClaimId, mustAct: 'family' | 'staff', actorDisplay: string) => ({
-  pariwarId, claimCaseId: cid, mustAct, actorId: randomUUID(), actorDisplay, setByRole: 'pariwar_admin' as const, noteCiphertext: null, isReturnMark: true,
+  pariwarId, claimCaseId: cid, mustAct, actorId: randomUUID(), actorDisplay, setByRole: 'pariwar_admin' as const, noteCiphertext: null, isReturnMark: true, hold: noCorrectionHold,
 });
 
 /**
@@ -170,7 +171,7 @@ describe.skipIf(!hasDatabase)('the correction chase summary — shape against de
     const sibling = await returned(client, PARIWAR_A, 'family');
     const siblingDeadKey = await deadRow(tx, PARIWAR_A, sibling.cid, sibling.runId, sibling.day0);
     const toStaff = await writeCorrectionMark(client, {
-      pariwarId: PARIWAR_A, claimCaseId: sibling.cid, mustAct: 'staff', actorId: randomUUID(), actorDisplay: 'District Admin One', setByRole: 'district_admin', noteCiphertext: 'enc:v1:change',
+      pariwarId: PARIWAR_A, claimCaseId: sibling.cid, mustAct: 'staff', actorId: randomUUID(), actorDisplay: 'District Admin One', setByRole: 'district_admin', noteCiphertext: 'enc:v1:change', hold: noCorrectionHold,
     });
     expect(toStaff).toMatchObject({ endedRun: { runId: sibling.runId, endReason: 'mark_changed' }, openedRun: { kind: 'staff' } });
     await insertFinalCorrectionReminder(tx, {

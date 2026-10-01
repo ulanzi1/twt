@@ -60,6 +60,7 @@ import {
   resolveCorrectionChase,
   returnToDistrictAdmin,
   voteOnFrozenClaim,
+  noCorrectionHold,
   writeCorrectionMark,
   type CorrectionReminderKey,
 } from '../../../src/claim/index.js';
@@ -146,6 +147,8 @@ const mark = (claimCaseId: ClaimId, mustAct: 'family' | 'staff', extra: Record<s
   actorDisplay: 'District Admin One',
   setByRole: 'district_admin' as const,
   noteCiphertext: 'enc:v1:note',
+  // Story 6.19c (S-T3) — `hold` is REQUIRED: "never held", explicitly (a test passes its own `held` to override).
+  hold: noCorrectionHold,
   ...extra,
 });
 

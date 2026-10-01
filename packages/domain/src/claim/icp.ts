@@ -34,7 +34,7 @@
 // Reads/writes `events_log`/`claims` via the client-bound Drizzle Db (domain owns the
 // tables; it cannot import @twt/events — the turbo cycle).
 
-import { createHash, randomUUID } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 
 import { and, asc, desc, eq, gte, notInArray, sql } from 'drizzle-orm';
 import type pg from 'pg';
@@ -53,7 +53,9 @@ import { intakeAttempts, type IntakeAttemptRow } from '../schema/intake_attempts
 import { convergenceOverrides } from '../schema/convergence_overrides.js';
 import type { ClaimEventActor } from './events.js';
 import { projectClaimState } from './project.js';
+import { intakeAdvisoryLockKey } from './icp-lock.js';
 import { CLAIM_TERMINAL_STATES } from './read.js';
+import { assertRefileAllowed, consumeRefileConfirmation } from './refile-guard.js';
 
 /**
  * The dedup-window HALF-WIDTH in days (AC1). A policy knob (architecture-vs-PRD boundary):
@@ -71,20 +73,10 @@ const AUTO_CONVERGE_TRIGGER = 'icp_lone_intake_auto_converge';
  * in the audit trail (AC9 unambiguous lineage). */
 const OVERRIDE_AUTO_CONVERGE_TRIGGER = 'icp_override_separate_case_converge';
 
-/**
- * The transaction-scoped advisory-lock key for one death's intake — the SHARED key both the
- * ICP and any convergence-resolution writer take, so concurrent dual-channel filings serialize
- * against the identical lock (the candidate read is then race-safe). Postgres advisory locks
- * take a bigint — derive a stable one from the (pariwarId, deceasedMemberId) pair via a
- * truncated SHA-256. Extracted here (was inline in claims.service.ts) so the API caller +
- * the merge/override endpoints all reuse it.
- */
-export function intakeAdvisoryLockKey(pariwarId: string, deceasedMemberId: string): bigint {
-  const hex = createHash('sha256').update(`${pariwarId}:${deceasedMemberId}`).digest('hex');
-  // 15 hex chars (60 bits) → always positive, safely inside Postgres' signed bigint
-  // advisory-lock arg (63 usable magnitude bits).
-  return BigInt(`0x${hex.slice(0, 15)}`);
-}
+// The transaction-scoped advisory-lock key for one death's intake lives in `icp-lock.ts` (Story 6.19c moved it there,
+// unchanged, so the re-file guard can take the SAME lock without a runtime import cycle — `refile-guard.ts` ⛔ imports
+// this module, and this module imports the guard). Re-exported here: every existing caller keeps its import.
+export { intakeAdvisoryLockKey };
 
 /** Acquire the tx-scoped advisory lock for a death (released on COMMIT/ROLLBACK). */
 async function acquireIntakeLock(
@@ -293,6 +285,12 @@ export async function tryConverge(
   // (3a) NO CANDIDATE → this attempt IS the canonical claim. Mint + intake_initiated (freeze)
   //      + immediately intake_converged. The attempt row is `converged` from birth.
   if (!candidate) {
+    // ⭐ Story 6.19c (AC15, D19, T9) — the RE-FILE GUARD, under this intake lock: a death whose most recent terminal
+    // claim was CLOSED for no response is minted again only with a person's recorded confirmation (`-254`), which
+    // this mint CONSUMES below in the same transaction; else 409 `claim.refile_requires_confirmation`. ⛔ Keyed on the
+    // closure row, ⛔ `denied_no_appeal` (a stage-3 uphold re-files freely). ⚠ Row `6-24` edits this same branch —
+    // see `refile-guard.ts`.
+    const refileConfirmationId = await assertRefileAllowed(db, input.pariwarId, input.deceasedMemberId);
     const claimCaseId = toClaimId(randomUUID());
     const deceasedMemberIdStr = String(input.deceasedMemberId);
 
@@ -334,6 +332,10 @@ export async function tryConverge(
       actorId: input.actorId,
       auditId: input.auditId,
     });
+
+    if (refileConfirmationId !== null) {
+      await consumeRefileConfirmation(db, input.pariwarId, refileConfirmationId, claimCaseId);
+    }
 
     const attemptId = toIntakeAttemptId(randomUUID());
     await db.insert(intakeAttempts).values({
@@ -572,6 +574,11 @@ export async function overrideIntakeAttempt(
     );
   }
 
+  // ⭐ Story 6.19c (AC15, T9) — the SECOND mint path takes the SAME re-file guard, under the same intake lock: a death
+  // whose most recent terminal claim was closed for no response mints a separate claim only with a recorded
+  // confirmation, consumed below. ⛔ Never a 500 — the override handler maps the 409.
+  const refileConfirmationId = await assertRefileAllowed(db, input.pariwarId, input.deceasedMemberId);
+
   // (a) Append the AC4 override ledger row (reason + actor + against-claim).
   await db.insert(convergenceOverrides).values({
     pariwarId: input.pariwarId,
@@ -620,6 +627,10 @@ export async function overrideIntakeAttempt(
     actorId: input.decidedByActor,
     auditId: input.auditId,
   });
+
+  if (refileConfirmationId !== null) {
+    await consumeRefileConfirmation(db, input.pariwarId, refileConfirmationId, newClaimCaseId);
+  }
 
   // (c) Flip the attempt overridden_separate → superseded by the NEW distinct claim.
   await db

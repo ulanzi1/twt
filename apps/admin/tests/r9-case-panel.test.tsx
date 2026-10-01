@@ -136,6 +136,7 @@ const NAMES: NomineeNameCheckResponse = {
   },
   latest_check_is_stale: false,
   correction_return: null,
+  approval_name_highlight: null,
 };
 
 const renderIt = (ui: React.ReactElement): void => {

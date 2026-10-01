@@ -41,8 +41,6 @@ import { resolveClaimCorrectionState } from './state-trustee-decision-persist.js
 export const CLOSURE_QUEUE_DEFAULT_LIMIT = 50;
 export const CLOSURE_QUEUE_MAX_LIMIT = 200;
 
-const pageOf = (limit: number | undefined) =>
-  clampLimit(limit, { default: CLOSURE_QUEUE_DEFAULT_LIMIT, cap: CLOSURE_QUEUE_MAX_LIMIT });
 
 // ── The Pariwar Admin's queue (AC6, D27) ──────────────────────────────────────────────────────────────────────
 
@@ -74,7 +72,7 @@ export async function listPariwarClosureQueue(
   pariwarId: PariwarId,
   opts: { readonly limit?: number } = {},
 ): Promise<PariwarClosureQueueItem[]> {
-  const limit = pageOf(opts.limit);
+  const limit = clampLimit(opts.limit, { default: CLOSURE_QUEUE_DEFAULT_LIMIT, cap: CLOSURE_QUEUE_MAX_LIMIT });
   const requests = await db
     .select({ row: claimCorrectionClosures, deceasedMemberId: claims.deceasedMemberId })
     .from(claimCorrectionClosures)
@@ -88,7 +86,7 @@ export async function listPariwarClosureQueue(
     .innerJoin(claims, eq(claims.claimCaseId, claimCorrectionClosures.claimCaseId))
     .where(and(eq(claimCorrectionClosures.pariwarId, pariwarId), eq(claimCorrectionClosures.state, 'requested')))
     .orderBy(asc(claimCorrectionClosures.requestedAt))
-    .limit(limit);
+    .limit(clampLimit(opts.limit, { default: CLOSURE_QUEUE_DEFAULT_LIMIT, cap: CLOSURE_QUEUE_MAX_LIMIT }));
   const out: PariwarClosureQueueItem[] = [];
   for (const { row, deceasedMemberId } of requests) {
     const chase = await resolveCorrectionChase(db, pariwarId, row.claimCaseId);
@@ -128,7 +126,7 @@ export async function listPariwarClosureQueue(
       ),
     )
     .orderBy(asc(claimCorrectionNoCorrectionRecords.recordedAt))
-    .limit(limit);
+    .limit(clampLimit(opts.limit, { default: CLOSURE_QUEUE_DEFAULT_LIMIT, cap: CLOSURE_QUEUE_MAX_LIMIT }));
   for (const { record, deceasedMemberId } of records) {
     const check = await getLatestNomineeNameCheck(db, pariwarId, record.claimCaseId);
     const held = await isCorrectionClaimHeld(db, pariwarId, record.claimCaseId);
@@ -188,7 +186,7 @@ export async function listEscalatedClosures(
     .innerJoin(claims, eq(claims.claimCaseId, claimCorrectionClosures.claimCaseId))
     .where(and(eq(claimCorrectionClosures.pariwarId, pariwarId), inArray(claimCorrectionClosures.state, [...CLOSURE_HELD_STATES])))
     .orderBy(asc(claimCorrectionClosures.escalatedAt))
-    .limit(pageOf(opts.limit));
+    .limit(clampLimit(opts.limit, { default: CLOSURE_QUEUE_DEFAULT_LIMIT, cap: CLOSURE_QUEUE_MAX_LIMIT }));
   return rows.map(({ row, deceasedMemberId, openDirections }) => ({
     closureId: row.closureId,
     claimCaseId: row.claimCaseId,
@@ -335,7 +333,7 @@ export async function listOpenDirectionsFor(
       ),
     )
     .orderBy(asc(claimCorrectionDirections.createdAt))
-    .limit(pageOf(opts.limit));
+    .limit(clampLimit(opts.limit, { default: CLOSURE_QUEUE_DEFAULT_LIMIT, cap: CLOSURE_QUEUE_MAX_LIMIT }));
   return rows.map(({ direction, state }) => ({
     direction,
     shortReference: claimShortReference(direction.claimCaseId),
@@ -393,7 +391,7 @@ export async function listClosureLettersOwed(
       ),
     )
     .orderBy(asc(claimCorrectionClosures.closedAt))
-    .limit(pageOf(opts.limit));
+    .limit(clampLimit(opts.limit, { default: CLOSURE_QUEUE_DEFAULT_LIMIT, cap: CLOSURE_QUEUE_MAX_LIMIT }));
   const out: ClosureLettersOwedItem[] = [];
   for (const { row, deceasedMemberId } of rows) {
     const letters = await db
@@ -440,6 +438,21 @@ export function closureLetterOverdue(postedOn: string, deliveredOn: string | nul
 export type ApprovalNameHighlight = 'approved_without_passing_check' | 'approved_despite_name_mismatch';
 
 /**
+ * ⭐ `-273` §7 — THE RULE, pure: a closures row's highlight from its APPROVAL RECORD — `null` unless it was approved
+ * with the name check WAIVED and the check's recorded state was ⛔ `passing`. ONE place: the bulk read below and the
+ * Super Admin decision's own response both call it.
+ */
+export function approvalNameHighlightOf(row: {
+  readonly state: string;
+  readonly nameCheckWaived: boolean | null;
+  readonly approvalNameCheckState: string | null;
+}): ApprovalNameHighlight | null {
+  if (row.state !== 'approved' || row.nameCheckWaived !== true) return null;
+  if (row.approvalNameCheckState === null || row.approvalNameCheckState === 'passing') return null;
+  return row.approvalNameCheckState === 'does_not_match' ? 'approved_despite_name_mismatch' : 'approved_without_passing_check';
+}
+
+/**
  * ⭐ `-273` §7 — the Super Admin APPROVED the claim with the name check WAIVED (the `-251` path) and the check's
  * RECORDED state at approval was ⛔ `passing`: `approved_despite_name_mismatch` when it was `does_not_match`, else
  * `approved_without_passing_check` (`never_checked` / `stale`). DERIVED from the approval record — ⛔ never a name
@@ -453,7 +466,12 @@ export async function readApprovalNameHighlightBulk(
   const out = new Map<string, ApprovalNameHighlight>();
   if (claimCaseIds.length === 0) return out;
   const rows = await db
-    .select({ claimCaseId: claimCorrectionClosures.claimCaseId, state: claimCorrectionClosures.approvalNameCheckState })
+    .select({
+      claimCaseId: claimCorrectionClosures.claimCaseId,
+      state: claimCorrectionClosures.state,
+      nameCheckWaived: claimCorrectionClosures.nameCheckWaived,
+      approvalNameCheckState: claimCorrectionClosures.approvalNameCheckState,
+    })
     .from(claimCorrectionClosures)
     .where(
       and(
@@ -466,8 +484,9 @@ export async function readApprovalNameHighlightBulk(
     .orderBy(desc(claimCorrectionClosures.superAdminDecidedAt))
     .limit(clampLimit(claimCaseIds.length, { default: 1, cap: 1000 }));
   for (const r of rows) {
-    if (r.state === null || r.state === 'passing' || out.has(r.claimCaseId)) continue;
-    out.set(r.claimCaseId, r.state === 'does_not_match' ? 'approved_despite_name_mismatch' : 'approved_without_passing_check');
+    if (out.has(r.claimCaseId)) continue;
+    const highlight = approvalNameHighlightOf(r);
+    if (highlight !== null) out.set(r.claimCaseId, highlight);
   }
   return out;
 }

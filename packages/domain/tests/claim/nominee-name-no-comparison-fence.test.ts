@@ -90,6 +90,14 @@ const FENCED_FILES = [
   // "approved without a current passing name check" highlight derives from. ⛔ It compares no names and decrypts nothing
   // (asserted below) — the highlight is the gate's OWN refusal reason, recorded at approval.
   'packages/domain/src/claim/correction-closure.ts',
+  // The highlight's READ (`approvalNameHighlightOf` — the ONE rule) and its wire / route surfaces: the contract that
+  // carries it, the decision surface's handler (the name check's RECORDED state beside the notes), the D27 approve's
+  // handler and the mapper. Each carries a STATE or a code — ⛔ never a name.
+  'packages/domain/src/claim/correction-closure-read.ts',
+  'packages/contracts/src/claims/correction-closure.ts',
+  'apps/api/src/modules/claims/claims.correction-escalation.handlers.ts',
+  'apps/api/src/modules/claims/claims.correction-closure.handlers.ts',
+  'apps/api/src/modules/claims/correction-closure-dto.ts',
 ] as const;
 
 /**
@@ -136,7 +144,7 @@ describe('⛔ the no-comparison fence (Trap 1, `-226` cl.5)', () => {
     for (const f of FENCED_FILES) {
       expect(() => read(f), `fenced file missing: ${f}`).not.toThrow();
     }
-    expect(FENCED_FILES.length).toBeGreaterThanOrEqual(27); // Story 6.19c raised it FROM 26 (+1 domain module); Story 6.21a FROM 23 (+3 modules); Story 6.20 FROM 16 (+7)
+    expect(FENCED_FILES.length).toBeGreaterThanOrEqual(32); // Story 6.19c raised it FROM 26 (+1 domain module), then 27 → 32 (the highlight's read + its four wire / route surfaces); Story 6.21a FROM 23 (+3 modules); Story 6.20 FROM 16 (+7)
   });
 
   it('⭐⭐ POSITIVE CONTROL — the scanner actually FIRES on a planted violation of every pattern', () => {

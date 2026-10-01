@@ -64,7 +64,7 @@ import {
   readVersionChainIndex,
   type VersionChainIndex,
 } from './claim-contact-check.js';
-import { currentCorrectionNumberHash, type CorrectionMobileSource } from './correction-crypto.js';
+import { CorrectionNumberUnverifiedError, currentCorrectionNumberHash, type CorrectionMobileSource } from './correction-crypto.js';
 import { istDateOf } from './correction-schedule.js';
 import { getEffectiveNomineeDeclaration } from './nominee-effective.js';
 import { getLatestNomineeNameCheck } from './nominee-name-check.js';
@@ -824,10 +824,14 @@ export async function resolveCorrectionChase(
     currentNumberHashes = new Map();
     const recipients = await readCorrectionRecipients(db, pariwarId, claimCaseId);
     for (const p of recipients.people) {
-      currentNumberHashes.set(
-        p.personKey,
-        await currentCorrectionNumberHash(p.mobileCiphertext, p.mobileSource, pariwarId, opts.crypto),
-      );
+      let hash: string | null;
+      try {
+        hash = await currentCorrectionNumberHash(p.mobileCiphertext, p.mobileSource, pariwarId, opts.crypto);
+      } catch {
+        // Story 6.19c — a TYPED fail-closed (an unreadable envelope, a KMS blip): reach cannot be judged on this number.
+        throw new CorrectionNumberUnverifiedError(claimCaseId, p.personKey);
+      }
+      currentNumberHashes.set(p.personKey, hash);
     }
   }
   return {

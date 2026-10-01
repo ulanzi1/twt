@@ -508,14 +508,8 @@ describe.skipIf(!hasDatabase)('the correction chase — District Admin routes (S
     // ⛔ A signed read URL is never cached.
     expect(shot.headers['cache-control']).toBe('no-store');
 
-    // A second letter is allowed (the first is delivered), a third is refused.
-    const second = await da.inject({ method: 'POST', url: `${base(pariwarId, claimCaseId)}/letters`, payload: { person_key: personKey, posted_on: daysFromToday(-3), tracking_number: 'T2' } });
-    expect(second.statusCode, second.body).toBe(201);
-    const third = await da.inject({ method: 'POST', url: `${base(pariwarId, claimCaseId)}/letters`, payload: { person_key: personKey, posted_on: daysFromToday(-2), tracking_number: 'T3' } });
-    expect(third.statusCode).toBe(409);
-    expect(errCode(third)).toBe('correction_letter.limit_reached');
-
-    // ⭐ AC9b's failure legs, each CARRYING the sentinel: a payload the schema rejects BECAUSE OF the sentinel's own
+    // ⭐ AC9b's failure legs, each CARRYING the sentinel — run while a second letter is still ALLOWED (Story 6.19c, Task 0a:
+    // the read-only refusals run BEFORE the encryption, so once the person is at the cap a request 409s before KMS): a payload the schema rejects BECAUSE OF the sentinel's own
     // field (an over-long tracking number made of it — 400; the validation error must ⛔ not echo the field), and a
     // forced 500 (the tracking number's encryption fails — the error line must ⛔ not carry the request body).
     const overLong = SENTINEL.tracking.repeat(5);
@@ -540,6 +534,14 @@ describe.skipIf(!hasDatabase)('the correction chase — District Admin routes (S
       kmsFault.mockRestore();
     }
     expect(forced.statusCode, forced.body).toBe(500);
+
+    // A second letter is allowed (the first is delivered), a third is refused.
+    const second = await da.inject({ method: 'POST', url: `${base(pariwarId, claimCaseId)}/letters`, payload: { person_key: personKey, posted_on: daysFromToday(-3), tracking_number: 'T2' } });
+    expect(second.statusCode, second.body).toBe(201);
+    const third = await da.inject({ method: 'POST', url: `${base(pariwarId, claimCaseId)}/letters`, payload: { person_key: personKey, posted_on: daysFromToday(-2), tracking_number: 'T3' } });
+    expect(third.statusCode).toBe(409);
+    expect(errCode(third)).toBe('correction_letter.limit_reached');
+
 
     const lines = t.auditSink.events.filter((e) => e.resourceLocator === `claim:${claimCaseId.toLowerCase()}`);
     expect(lines.map((e) => e.type)).toEqual(expect.arrayContaining([

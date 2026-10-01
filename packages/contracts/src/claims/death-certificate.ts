@@ -147,6 +147,17 @@ export const MemberDeathCertificateStatusResponse = z
     /** `state ∉ {denied, settled}` — the filing-entry redirect's own gate (`-249` §2). ⛔ Never shown. */
     claim_live: z.boolean(),
     reassurance: DeathCertificateReassurance.nullable(),
+    /**
+     * ⭐ Story 6.19c (`-273` §9) — this claim was CLOSED for no response (a `closed` closure row): the member sees
+     * `closed_no_response`, ⛔ never `appeal_exhausted`. ⛔ Never a reason, a note or a date.
+     */
+    closed_no_response: z.boolean(),
+    /**
+     * ⭐ Story 6.19c (`-273` §9) — a ROUTING BIT, exactly D19's guard: the death has ⛔ no live claim, its most recent
+     * terminal claim was closed for no response, and ⛔ no re-file confirmation waits. The claim-entry gate routes to the
+     * calm "please call the helpline" state while it is true. ⛔ Never shown.
+     */
+    refile_requires_confirmation: z.boolean(),
   })
   .strict();
 export type MemberDeathCertificateStatusResponse = z.output<typeof MemberDeathCertificateStatusResponse>;

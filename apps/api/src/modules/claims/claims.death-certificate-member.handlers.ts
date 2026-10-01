@@ -7,7 +7,8 @@
 // (`@twt/domain`'s `death-certificate-approval.ts`, 6.21a's — T8 keeps it one module) — this
 // handler's ONLY job is to open ONE scope tx, assert ownership off the locked claim (the
 // `getShepherdMember` sibling-oracle guard: a miss and a not-owned claim are both `claim.not_found`),
-// and hand the claim's state + its death-certificate snapshot to that resolver.
+// and hand the claim's state + its death-certificate snapshot to that resolver. Story 6.19c adds the closure's member
+// state (`closed_no_response`) and the re-file routing bit (`refile_requires_confirmation`, `-273` §9).
 
 import type { MemberDeathCertificateStatusResponse } from '@twt/contracts';
 import { claim, ids } from '@twt/domain';
@@ -54,6 +55,13 @@ export function createDeathCertificateMemberHandlers(deps: AppDeps) {
           claimCaseIdBrand,
           claimRow.currentState,
         );
+        // ⭐ Story 6.19c (`-273` §9) — the closure's member state and the re-file ROUTING BIT (D19's guard, read-only).
+        const closedNoResponse = (await claim.readClosedClosureRow(tx.tx, pariwarId, claimCaseIdBrand)) !== null;
+        const refileRequiresConfirmation = await claim.readRefileRequiresConfirmation(
+          tx.tx,
+          pariwarId,
+          claimRow.deceasedMemberId,
+        );
         ok = true;
         void reply.status(200);
         return {
@@ -64,6 +72,8 @@ export function createDeathCertificateMemberHandlers(deps: AppDeps) {
           certificate_token: result.certificateToken,
           claim_live: result.claimLive,
           reassurance: result.reassurance,
+          closed_no_response: closedNoResponse,
+          refile_requires_confirmation: refileRequiresConfirmation,
         };
       } finally {
         await closeScopeTx(tx, ok);

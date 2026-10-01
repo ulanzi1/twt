@@ -47,6 +47,7 @@ const NAMES: NomineeNameCheckResponse = {
   current_check: null,
   latest_check_is_stale: false,
   correction_return: null,
+  approval_name_highlight: null,
 };
 
 const setup = (props: Partial<React.ComponentProps<typeof BankDetailsCard>> = {}) => {

@@ -46,6 +46,7 @@
 // collapses them into an indistinguishable blank.
 
 import { CorrectionChaseSummaryDto } from './correction-chase.js';
+import { ApprovalNameHighlight, CorrectionClosureStateDto } from './correction-closure.js';
 import { z } from 'zod';
 
 /** Max length of the filer's per-account note to the District Admin (AC7, `-226` cl.2). */
@@ -271,6 +272,13 @@ export const NomineeNameCheckResponse = z
     latest_check_is_stale: z.boolean(),
     /** Story 6.18 (AC11) — the live return, or `null` when the claim is not under correction. */
     correction_return: NomineeNameCheckReturn.nullable(),
+    /**
+     * ⭐ Story 6.19c (`-273` §7) — the claim was approved by the Super Admin WITHOUT a current passing name check:
+     * `approved_despite_name_mismatch` when the recorded verdict was `does_not_match`, else
+     * `approved_without_passing_check`; `null` otherwise. From the approval record and the check's RECORDED state —
+     * ⛔ never a name comparison.
+     */
+    approval_name_highlight: ApprovalNameHighlight.nullable(),
   })
   .strict();
 export type NomineeNameCheckResponse = z.output<typeof NomineeNameCheckResponse>;
@@ -400,6 +408,8 @@ export const ClaimUnderCorrectionItem = z
     short_reference: z.string().regex(/^[0-9A-F]{8}$/),
     /** ⭐ Story 6.19b (AC8b) — the correction chase: the mark, the run, each person by ROLE, the flags, the letters. */
     correction_chase: CorrectionChaseSummaryDto,
+    /** ⭐ Story 6.19c (AC8c) — the closure state, and why a closure request would refuse now (⛔ `null` ⇒ it would pass). */
+    correction_closure: CorrectionClosureStateDto,
   })
   .strict();
 export type ClaimUnderCorrectionItem = z.output<typeof ClaimUnderCorrectionItem>;

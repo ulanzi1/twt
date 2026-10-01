@@ -286,6 +286,13 @@ export function createCycleFreezeHandlers(
       let ok = false;
       try {
         const pending = await claim.getCycleFreezePending(tx.tx, ctx.pariwarId);
+        // ⭐ Story 6.19c (`-273` §7) — the highlight on a Super Admin approval made WITHOUT a current passing name
+        // check, from the approval record and the check's RECORDED state (⛔ never a name comparison). One bulk read.
+        const highlights = await claim.readApprovalNameHighlightBulk(
+          tx.tx,
+          ctx.pariwarId,
+          [...pending.readyToFreeze, ...pending.escalated, ...pending.votedPendingCommit].map((c) => c.claimCaseId),
+        );
         const mapCase = async (c: claim.CycleFreezePendingCase) => {
           let verifierRationale: string | null = null;
           if (c.verifierRationaleCiphertext) {
@@ -313,6 +320,7 @@ export function createCycleFreezeHandlers(
             routed_to_r9: c.routedToR9,
     under_correction: c.underCorrection,
     name_difference_reasons: c.nameDifferenceReasons as ('initial' | 'married_name' | 'bank_shortened_name')[],
+            approval_name_highlight: highlights.get(c.claimCaseId) ?? null,
           };
         };
         const ready_to_freeze = await Promise.all(pending.readyToFreeze.map(mapCase));

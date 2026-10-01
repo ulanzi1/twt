@@ -46,6 +46,7 @@ import {
   readReturnFamilyLetters,
   readReturnPersonStates,
 } from './correction-reminder-record.js';
+import { CorrectionNumberUnverifiedError } from './correction-crypto.js';
 import { istDateOf } from './correction-schedule.js';
 import { getEffectiveNomineeDeclaration } from './nominee-effective.js';
 
@@ -73,21 +74,9 @@ export type CorrectionLetterRefusal =
   | 'already_delivered'
   | 'delivered_before_posted';
 
-/**
- * The letter precondition NEEDED the person's CURRENT number hash (their version moved, or they are the claimant) and
- * the decrypt / hash THREW (an unreadable envelope, a KMS blip): letter-eligibility cannot be judged on the OLD
- * number's epoch, so the precondition FAILS CLOSED. The route maps it to a RETRYABLE `503
- * correction_letter.number_unverified` (⛔ never a 409 — nothing about the claim is wrong). ⛔ Carries no number.
- */
-export class CorrectionNumberUnverifiedError extends Error {
-  public readonly name = 'CorrectionNumberUnverifiedError';
-  public constructor(
-    public readonly claimCaseId: string,
-    public readonly personKey: string,
-  ) {
-    super(`[correction-letter] claim ${claimCaseId} person ${personKey}: the current number could not be verified`);
-  }
-}
+// `CorrectionNumberUnverifiedError` lives in the leaf `correction-crypto.ts` (Story 6.19c — `resolveCorrectionChase` throws
+// it too, and `correction-chase.ts` must ⛔ never import this module). Re-exported here for the letter's callers.
+export { CorrectionNumberUnverifiedError };
 
 export class CorrectionLetterRefusedError extends Error {
   public readonly name = 'CorrectionLetterRefusedError';

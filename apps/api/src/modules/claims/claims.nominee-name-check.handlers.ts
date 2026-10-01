@@ -59,6 +59,7 @@ import { emitAuthAudit } from '../auth/shared/audit.js';
 import { geoTreeResolverForRequest, loadActorGrants } from '../rbac/index.js';
 import { getDisplayName } from '../auth/admin/admin-auth.repo.js';
 import { closeScopeTx, openScopeTx } from '../multi-tenant/scope-tx.js';
+import { closureStateDto } from './correction-closure-dto.js';
 import { decryptNomineeBankField } from './nominee-bank-crypto.js';
 import { decryptTrusteeRationale } from './state-trustee-decision-crypto.js';
 import { decryptNomineeField } from '../nominee/nominee-crypto.js';
@@ -408,6 +409,8 @@ export function createNomineeNameCheckHandlers(deps: AppDeps) {
         current_check: currentCheck,
         latest_check_is_stale: latestCheckIsStale,
         correction_return: correctionReturn,
+        // ⭐ Story 6.19c (`-273` §7) — shown to the District Admin too (all three roles).
+        approval_name_highlight: await claimDomain.readApprovalNameHighlight(scopeTx.tx, pariwarId, cid),
       };
     },
 
@@ -564,6 +567,13 @@ export function createNomineeNameCheckHandlers(deps: AppDeps) {
           // ⭐ Story 6.19b (AC8b, D33) — the short reference the family's SMS carries, and the correction chase.
           short_reference: claimDomain.claimShortReference(row.claimCaseId),
           correction_chase: correctionChaseDto(await chaseSummaryOf(row.claimCaseId, true)),
+          // ⭐ Story 6.19c (AC8c) — the closure state and why a request would refuse now, through the SAME checks the
+          // request writer runs (`readClosureReadiness` — ⛔ a second copy that could drift).
+          correction_closure: closureStateDto(
+            await claimDomain.readClosureReadiness(scopeTx.tx, pariwarId, ids.claimId(row.claimCaseId), deps.clock(), {
+              crypto: deps.encryption,
+            }),
+          ),
         })),
       );
 

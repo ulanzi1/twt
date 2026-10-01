@@ -322,6 +322,44 @@ export type AuthAuditEventType =
   | 'admin_claim_correction.letter_address_revealed'
   | 'admin_claim_correction.letter_screenshot_read'
   | 'admin_claim_correction.must_act_changed'
+  // Story 6.19c (AC9c) — the CLOSURE, the Super Admin's review, "no correction needed", the closure letter, the re-file.
+  // Every line carries `resourceLocator: 'claim:<lower-case uuid>'` (else `RESOURCE_LOCATOR_PATTERN` silently replaces
+  // it) and ⛔ never a note, a direction's text, a response, a tracking number, an address or a screenshot:
+  //   admin_claim_correction.closure_requested          — the District Admin asked for a closure (key (2));
+  //   admin_claim_correction.closure_approved           — the Pariwar Admin approved it — the D1 chain ran (key (3));
+  //   admin_claim_correction.closure_declined           — … declined it with a note — ESCALATED to the Super Admin;
+  //   admin_claim_correction.closure_under_review       — the Super Admin's hold under review (key (5));
+  //   admin_claim_correction.direction_recorded         — a Super Admin direction to a named admin (key (5));
+  //   admin_claim_correction.direction_responded        — the named directee's recorded response (identity check);
+  //   admin_claim_correction.super_admin_decided        — close / refuse / approve, with the closure-scoped reason (key (4));
+  //   admin_claim_correction.no_correction_needed       — the District Admin's "no correction needed" record (key (8));
+  //   admin_claim_correction.no_correction_approved     — the Pariwar Admin's approve of it (D27, `cycle.freeze`);
+  //   admin_claim_correction.no_correction_kept         — … or the keep, stating who must act (`-260` G2);
+  //   admin_claim_correction.closure_letter_recorded / closure_letter_delivery_recorded / closure_letter_address_revealed /
+  //     closure_letter_screenshot_read — the closure letter (`-274` 2, key (1));
+  //   admin_claim_correction.closure_queue_read / escalations_read / escalation_read / direction_inbox_read /
+  //     closure_letters_read — who read which 6.19c queue (counts and ids only);
+  //   admin_claim_refile.confirmed                      — a re-file confirmation after a closure for no response (key (6)).
+  | 'admin_claim_correction.closure_requested'
+  | 'admin_claim_correction.closure_approved'
+  | 'admin_claim_correction.closure_declined'
+  | 'admin_claim_correction.closure_under_review'
+  | 'admin_claim_correction.direction_recorded'
+  | 'admin_claim_correction.direction_responded'
+  | 'admin_claim_correction.super_admin_decided'
+  | 'admin_claim_correction.no_correction_needed'
+  | 'admin_claim_correction.no_correction_approved'
+  | 'admin_claim_correction.no_correction_kept'
+  | 'admin_claim_correction.closure_letter_recorded'
+  | 'admin_claim_correction.closure_letter_delivery_recorded'
+  | 'admin_claim_correction.closure_letter_address_revealed'
+  | 'admin_claim_correction.closure_letter_screenshot_read'
+  | 'admin_claim_correction.closure_queue_read'
+  | 'admin_claim_correction.escalations_read'
+  | 'admin_claim_correction.escalation_read'
+  | 'admin_claim_correction.direction_inbox_read'
+  | 'admin_claim_correction.closure_letters_read'
+  | 'admin_claim_refile.confirmed'
   // ── ICP convergence-resolution surface (Story 6.4, AR-62) ─────────────────────
   // The operator-console pending/merge/override lines (the <ConvergenceDecisionStrip>). Context
   // is NON-PII throughout: claim ids + intake_attempt_id + intake_channel(s) + the resolving

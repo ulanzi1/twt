@@ -72,3 +72,21 @@ export async function currentCorrectionNumberHash(
   const e164 = await resolveCorrectionMobile(serialized, source, pariwarId, enc);
   return e164 === null ? null : correctionNumberHash(e164, pariwarId, enc);
 }
+
+/**
+ * The letter precondition NEEDED the person's CURRENT number hash (their version moved, or they are the claimant) and
+ * the decrypt / hash THREW (an unreadable envelope, a KMS blip): letter-eligibility cannot be judged on the OLD
+ * number's epoch, so the precondition FAILS CLOSED. The route maps it to a RETRYABLE `503
+ * correction_letter.number_unverified` (⛔ never a 409 — nothing about the claim is wrong). ⛔ Carries no number.
+ * ⭐ Story 6.19c — also thrown by `resolveCorrectionChase(…, { crypto })` when a person's current number cannot be hashed
+ * (D22's reach cannot be judged): the closure routes map it to `503 closure.number_unverified`.
+ */
+export class CorrectionNumberUnverifiedError extends Error {
+  public readonly name = 'CorrectionNumberUnverifiedError';
+  public constructor(
+    public readonly claimCaseId: string,
+    public readonly personKey: string,
+  ) {
+    super(`[correction-letter] claim ${claimCaseId} person ${personKey}: the current number could not be verified`);
+  }
+}

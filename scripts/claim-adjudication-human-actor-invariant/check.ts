@@ -192,6 +192,34 @@ const COVERAGE_SET: readonly CoverageEntry[] = [
     owner: 'Story 6.19b',
     expectedMethods: ['post', 'post', 'post', 'get', 'get'],
   },
+  {
+    // ⭐ Story 6.19c — the correction CLOSURE's District Admin and Pariwar Admin routes. ELEVEN: the closure REQUEST
+    // (key (2)) and the Pariwar Admin's DECISION (key (3) — the second refusal, ⛔ appealable, or the escalation), their
+    // queue; "no correction needed" (key (8)) and D27's approve / `-260` G2's keep (`cycle.freeze` — a final approval);
+    // the closure letter's list, record, delivery + screenshot, address (step-up) and screenshot read (key (1)). Every one
+    // needs the authenticated-HUMAN chain — ⛔ no job ever decides (invariant 1). `/correction/` matches all eleven.
+    file: 'apps/api/src/modules/claims/claims.correction-closure.routes.ts',
+    pathSubstrings: ['/correction/'],
+    owner: 'Story 6.19c',
+    expectedMethods: ['post', 'post', 'get', 'post', 'post', 'get', 'get', 'get', 'post', 'post', 'post'],
+  },
+  {
+    // ⭐ Story 6.19c — the Super Admin's review and decision (keys (5), (4) — `super_admin` only: close / refuse /
+    // approve, the hold under review, the directions) and the named directee's inbox and response (the identity check).
+    // SEVEN; `/correction/` matches all seven.
+    file: 'apps/api/src/modules/claims/claims.correction-escalation.routes.ts',
+    pathSubstrings: ['/correction/'],
+    owner: 'Story 6.19c',
+    expectedMethods: ['get', 'get', 'post', 'post', 'post', 'get', 'post'],
+  },
+  {
+    // ⭐ Story 6.19c — the RE-FILE CONFIRMATION (key (6), D19): the person's recorded decision that lets ONE new claim
+    // be minted for a death closed for no response. Its own file (⛔ the unscanned helpline / convergence files).
+    file: 'apps/api/src/modules/claims/claims.refile-confirmation.routes.ts',
+    pathSubstrings: ['refile-confirmation'],
+    owner: 'Story 6.19c',
+    expectedMethods: ['post'],
+  },
 ];
 
 /**
@@ -280,7 +308,7 @@ function main(): void {
 
   // ⭐ ANTI-VACUITY FLOOR. Without it, deleting an entry shrinks the gate's scope in silence and it
   // still reports success. Raise this DELIBERATELY when enrolling, ⛔ never to make the gate quiet.
-  const COVERAGE_FLOOR = 12; // Story 6.19b raised it 11 → 12 (claims.correction-chase.routes.ts). Story 6.19a raised it 10 → 11 (claims.contact.routes.ts). Story 6.21a raised it 9 → 10 (claims.death-certificate.routes.ts). Story 6.20 raised it 8 → 9 (claims.nominee-declaration.routes.ts). ⚠ The count was 8 at 2026-09-21 — a first draft guessed 9 and the floor caught it.
+  const COVERAGE_FLOOR = 15; // Story 6.19c raised it 12 → 15 (claims.correction-closure / claims.correction-escalation / claims.refile-confirmation .routes.ts). Story 6.19b raised it 11 → 12 (claims.correction-chase.routes.ts). Story 6.19a raised it 10 → 11 (claims.contact.routes.ts). Story 6.21a raised it 9 → 10 (claims.death-certificate.routes.ts). Story 6.20 raised it 8 → 9 (claims.nominee-declaration.routes.ts). ⚠ The count was 8 at 2026-09-21 — a first draft guessed 9 and the floor caught it.
   if (COVERAGE_SET.length < COVERAGE_FLOOR) {
     missingCoverage.push(
       `COVERAGE_SET has ${COVERAGE_SET.length} entries but the floor is ${COVERAGE_FLOOR} — an entry was ` +

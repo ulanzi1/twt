@@ -72,6 +72,7 @@ import {
   resolveCorrectionChase,
   writeCorrectionMark,
 } from './correction-chase.js';
+import { CorrectionNumberUnverifiedError } from './correction-crypto.js';
 import {
   type ReturnFamilyRow,
   type ReturnLetterRow,
@@ -657,8 +658,12 @@ interface ActorInput {
 
 // ── The closure READINESS (AC8c — the District Admin's queue: the closure state, and why a request would refuse) ──
 
-/** Why a request would refuse right now — `closure_contact_required` is D14's (`ClaimContactRequiredError`). */
-export type ClosureRequestBlocker = CorrectionClosureRefusal | 'claim_contact_required';
+/**
+ * Why a request would refuse right now — `claim_contact_required` is D14's (`ClaimContactRequiredError`);
+ * `number_unverified` — a person's CURRENT number could not be hashed just now (`CorrectionNumberUnverifiedError`), so
+ * D22's reach cannot be judged (the request route's retryable 503, ⛔ a 409).
+ */
+export type ClosureRequestBlocker = CorrectionClosureRefusal | 'claim_contact_required' | 'number_unverified';
 
 export interface ClosureReadiness {
   /** The live return's closures row state (a lapsed request reads `lapsed`), or `null` (⛔ none). */
@@ -690,7 +695,16 @@ export async function readClosureReadiness(
     .from(claims)
     .where(and(eq(claims.pariwarId, pariwarId), eq(claims.claimCaseId, claimCaseId)))
     .limit(1);
-  const chase = await resolveCorrectionChase(db, pariwarId, claimCaseId, { crypto: opts.crypto });
+  // ⭐ A hash fault degrades THIS claim's readiness to `number_unverified` (⛔ a thrown read — the queue shows the row).
+  let numberUnverified = false;
+  let chase: CorrectionChaseResolution;
+  try {
+    chase = await resolveCorrectionChase(db, pariwarId, claimCaseId, { crypto: opts.crypto });
+  } catch (err) {
+    if (!(err instanceof CorrectionNumberUnverifiedError)) throw err;
+    numberUnverified = true;
+    chase = await resolveCorrectionChase(db, pariwarId, claimCaseId);
+  }
   const today = istDateOf(now);
   const familyRunDay = chase.familyRun === null ? null : correctionRunDay(chase.familyRun.day0, today);
   const none: ClosureReadiness = {
@@ -724,9 +738,11 @@ export async function readClosureReadiness(
       chase,
       today,
     });
-    return { ...base, blocker: null, notReached: null };
+    return { ...base, blocker: numberUnverified ? 'number_unverified' : null, notReached: null };
   } catch (err) {
     if (err instanceof CorrectionClosureRefusedError) {
+      // Without a number's hash D22 is unjudgeable — ⛔ "not reached" when it may well be reached.
+      if (numberUnverified && err.refusal === 'not_reached') return { ...base, blocker: 'number_unverified', notReached: null };
       return { ...base, blocker: err.refusal, notReached: err.notReached ?? null };
     }
     if (err instanceof ClaimContactRequiredError) return { ...base, blocker: 'claim_contact_required', notReached: null };

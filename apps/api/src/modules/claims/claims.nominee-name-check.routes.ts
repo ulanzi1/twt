@@ -90,8 +90,10 @@ export function resolveNomineeNameCheckDistrict(): preHandlerHookHandler {
  * ⇒ a caller holding a district-scoped grant is gated at `district` against THAT district; a caller
  * whose narrowest reach is the Pariwar is gated at `pariwar` against the Pariwar id, which their
  * pariwar-dimension grant satisfies. A caller with neither has nothing to gate on and fails closed.
+ * ⭐ Story 6.19c — `key` (default `claim.view_nominee_name_check`) lets a sibling LIST route gated on another key (the
+ * closure letters owed, key (1); the direction inbox) choose its gate target the same way.
  */
-function resolveQueueScopeStash(): preHandlerHookHandler {
+export function resolveQueueScopeStash(key: string = NOMINEE_NAME_CHECK_VIEW_KEY): preHandlerHookHandler {
   return async function preHandler(request: FastifyRequest): Promise<void> {
     const scopeTx = request.scopeTx;
     const actorId = request.requestContext.actorId;
@@ -106,7 +108,7 @@ function resolveQueueScopeStash(): preHandlerHookHandler {
     const here = grants.filter(
       (g) =>
         g.pariwarId === scopeTx.pariwarId &&
-        rbac.hasPermission([g], NOMINEE_NAME_CHECK_VIEW_KEY, {
+        rbac.hasPermission([g], key, {
           dimension: g.scopeDimension,
           value: g.scopeValue,
           pariwarId: g.pariwarId,

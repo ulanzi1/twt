@@ -69,6 +69,14 @@ function translateAppealError(err: unknown): never {
   if (err instanceof claim.AppealNotDeniedError) {
     throw new ConflictError('An appeal can only be initiated on a denied claim', 'appeal.not_denied');
   }
+  // Story 6.19c (AC7) — a claim CLOSED for no response: the second refusal, ⛔ appealable — its own code (⛔ `not_denied`:
+  // the claim IS denied).
+  if (err instanceof claim.AppealClosedNoResponseError) {
+    throw new ConflictError(
+      'This claim was closed because the family did not respond — it cannot be appealed; the family may file again through the helpline',
+      'appeal.closed_no_response',
+    );
+  }
   if (err instanceof claim.AppealAlreadyExhaustedError) {
     throw new ConflictError('This claim already has an appeal journey', 'appeal.already_exhausted');
   }
@@ -283,15 +291,18 @@ export function createAppealHandlers(deps: AppDeps) {
           throw new NotFoundError('Claim not found', 'claim.not_found');
         }
         const journey = await claim.getAppealJourney(tx.tx, pariwarId, claimCaseId);
+        // Story 6.19c (AC7, `-273` §9) — a claim closed for no response is ⛔ appealable: ⛔ no affordance.
+        const closedNoResponse = (await claim.readClosedClosureRow(tx.tx, pariwarId, claimCaseId)) !== null;
         ok = true;
         void reply.status(200);
         return {
           claim_case_id: claimCaseId,
           claim_state: claimRow.currentState,
-          can_initiate: claimRow.currentState === 'denied' && journey === undefined,
+          can_initiate: claimRow.currentState === 'denied' && journey === undefined && !closedNoResponse,
           appeal_status: journey?.status ?? null,
           current_stage: journey?.currentStage ?? null,
           appeal_exhausted: journey?.status === 'upheld_final',
+          closed_no_response: closedNoResponse,
         };
       } finally {
         await closeScopeTx(tx, ok);

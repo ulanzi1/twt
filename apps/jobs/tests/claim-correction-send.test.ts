@@ -2,7 +2,8 @@
 // record" / "send safety"; `2026-09-29-269` §4/§5; T13). Mocked deps (⛔ no DB).
 //   · a missing DLT template id, an unset helpline number, an unconfigured gateway ⇒ `error` + alarm — ⛔ never a
 //     fixture `accepted`, ⛔ never a placeholder number;
-//   · a Secret Manager OUTAGE ⇒ transient (retry); a send TIMEOUT ⇒ transient (`api_unavailable:timeout`);
+//   · a Secret Manager OUTAGE (`UNAVAILABLE` / `DEADLINE_EXCEEDED`) ⇒ transient (retry); any OTHER Secret Manager fault
+//     ⇒ FINAL `error` + alarm (`config:secret_manager_<code>`); a send TIMEOUT ⇒ transient (`api_unavailable:timeout`);
 //   · `invalid_number` → `rejected_invalid_number`; `carrier_reject` → `rejected_unreachable` (letter-eligible, ⛔ no
 //     alarm); `dlt_template_not_approved` / `auth` / `unknown` → `error` + alarm, FINAL; `rate_limited` /
 //     `api_unavailable` → transient.
@@ -10,7 +11,8 @@
 import { SmsSendError, type SmsAppClient, type SmsMessagingHandle } from '@twt/channels';
 import { describe, expect, it } from 'vitest';
 
-import { sendClaimCorrectionSms } from '../src/scheduler/claim-correction-reminders.js';
+import { correctionStaffPushAlert, sendClaimCorrectionSms } from '../src/scheduler/claim-correction-reminders.js';
+import { classifySecretManagerFault } from '../src/scheduler/contribution-providers.js';
 
 const PARIWAR = '11111111-1111-1111-1111-111111111111';
 const CLAIM = '3f2a9c1e-0b4d-4e6f-8a1b-2c3d4e5f6a7b';
@@ -75,13 +77,37 @@ describe('sendClaimCorrectionSms — fail CLOSED (T13)', () => {
     });
   });
 
-  it('a Secret Manager OUTAGE ⇒ transient (retry)', async () => {
+  const grpcError = (code: number | string) => Object.assign(new Error('secret manager'), { code });
+
+  it.each([
+    ['UNAVAILABLE', 14],
+    ['DEADLINE_EXCEEDED', 4],
+    ['a raw socket reset', 'ECONNRESET'],
+  ])('a Secret Manager OUTAGE (%s) ⇒ transient (retry)', async (_label, code) => {
+    const c = client(() => Promise.resolve('gw'));
+    const r = await sendClaimCorrectionSms({ smsAppClient: c, resolveConfig: () => Promise.reject(grpcError(code)) }, input);
+    expect(r).toEqual({ kind: 'transient', detail: 'config_unavailable:secret_manager' });
+    expect(c.sent).toEqual([]);
+  });
+
+  it.each([
+    [7, 'config:secret_manager_permission_denied'],
+    [3, 'config:secret_manager_invalid_argument'],
+    [16, 'config:secret_manager_unauthenticated'],
+  ])('⛔ a Secret Manager CONFIG fault (gRPC %s) ⇒ FINAL error + alarm, ⛔ never a silent retry', async (code, detail) => {
+    const c = client(() => Promise.resolve('gw'));
+    const r = await sendClaimCorrectionSms({ smsAppClient: c, resolveConfig: () => Promise.reject(grpcError(code)) }, input);
+    expect(r).toEqual({ kind: 'final', outcome: 'error', providerMessageId: null, detail, alarm: true });
+    expect(c.sent).toEqual([]);
+  });
+
+  it('⛔ a Secret Manager failure with ⛔ no code (a missing project, an empty payload) ⇒ FINAL error + alarm', async () => {
     const c = client(() => Promise.resolve('gw'));
     const r = await sendClaimCorrectionSms(
-      { smsAppClient: c, resolveConfig: () => Promise.reject(new Error('UNAVAILABLE')) },
+      { smsAppClient: c, resolveConfig: () => Promise.reject(new Error('GOOGLE_CLOUD_PROJECT is not set')) },
       input,
     );
-    expect(r).toEqual({ kind: 'transient', detail: 'config_unavailable:secret_manager' });
+    expect(r).toMatchObject({ kind: 'final', outcome: 'error', detail: 'config:secret_manager_unknown', alarm: true });
   });
 
   it('a send TIMEOUT ⇒ transient `api_unavailable:timeout`', async () => {
@@ -128,5 +154,60 @@ describe('sendClaimCorrectionSms — the provider result mapping (AC3)', () => {
     expect(await sendClaimCorrectionSms({ smsAppClient: rejecting(code, status), resolveConfig: config() }, input)).toMatchObject({
       kind: 'transient',
     });
+  });
+});
+
+describe('classifySecretManagerFault — only an OUTAGE retries', () => {
+  it.each([
+    [14, true, 'unavailable'],
+    [4, true, 'deadline_exceeded'],
+    [7, false, 'permission_denied'],
+    [3, false, 'invalid_argument'],
+    [99, false, 'grpc_99'],
+    ['ETIMEDOUT', true, 'etimedout'],
+    ['EWHATEVER', false, 'unknown'],
+    [undefined, false, 'unknown'],
+  ])('code %s ⇒ transient=%s (%s)', (code, transient, label) => {
+    expect(classifySecretManagerFault(Object.assign(new Error('x'), { code }))).toEqual({ transient, code: label });
+  });
+
+  it('a non-object rejection is a config fault, ⛔ never a crash', () => {
+    expect(classifySecretManagerFault(null)).toEqual({ transient: false, code: 'unknown' });
+    expect(classifySecretManagerFault('boom')).toEqual({ transient: false, code: 'unknown' });
+  });
+});
+
+describe('the staff push Alert (AC4, D11) — pure', () => {
+  const base = {
+    pariwarId: PARIWAR,
+    claimCaseId: CLAIM,
+    userId: '44444444-4444-4444-8444-444444444444',
+    sentOn: '2026-10-01',
+    deceasedMemberId: '55555555-5555-4555-8555-555555555555',
+    items: [{ purpose: 'staff_reminder' }, { purpose: 'escalation' }],
+    now: new Date('2026-10-01T04:30:00.000Z'),
+  };
+
+  it('⭐ ⛔ never time-critical; the deceased member is the SUBJECT; `alert_published`; name-free copy naming the queue', () => {
+    const a = correctionStaffPushAlert(base);
+    expect(a).toMatchObject({
+      pariwar_id: PARIWAR,
+      member_id: base.deceasedMemberId,
+      time_critical: false,
+      alert_category: 'alert_published',
+      created_by_actor: 'system',
+    });
+    expect(a.payload_data).toEqual({
+      title: 'Claim 3F2A9C1E: a correction chase needs you',
+      body: '2 items due today on claim 3F2A9C1E. Open the correction queue in the admin app.',
+    });
+  });
+
+  it('⭐ the alert id is deterministic per (claim, staff member, IST date) — and differs on any of the three', () => {
+    const id = correctionStaffPushAlert(base).alert_id;
+    expect(correctionStaffPushAlert({ ...base, now: new Date('2026-10-01T09:00:00.000Z') }).alert_id).toBe(id);
+    expect(correctionStaffPushAlert({ ...base, sentOn: '2026-10-02' }).alert_id).not.toBe(id);
+    expect(correctionStaffPushAlert({ ...base, userId: '66666666-6666-4666-8666-666666666666' }).alert_id).not.toBe(id);
+    expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
   });
 });

@@ -83,11 +83,25 @@ import { registerSwagger } from './plugins/swagger/index.js';
 import { registerZodOpenapi } from './plugins/zod-openapi/index.js';
 import { collectRoutes } from './route-registry.js';
 
-export async function buildServer(deps: AppDeps): Promise<FastifyInstance> {
+/** Build options that are ⛔ never set in production. */
+export interface BuildServerOptions {
+  /**
+   * TEST-ONLY — capture the request logger's output into this stream (every level). A PII spec uses it to prove a
+   * planted value reaches ⛔ no log line (Story 6.19b, AC9b); without it a test server logs nothing at all.
+   */
+  readonly logStream?: NodeJS.WritableStream;
+}
+
+export async function buildServer(deps: AppDeps, opts: BuildServerOptions = {}): Promise<FastifyInstance> {
   const app = Fastify({
-    // Quiet in tests; structured logs otherwise. The raw-logger ban + audit-log
-    // wrapper land at Story 1.10 (deferred lint TODO in eslint-config-twt).
-    logger: deps.config.nodeEnv === 'test' ? false : { level: process.env['LOG_LEVEL'] ?? 'info' },
+    // Quiet in tests (unless a spec captures the output); structured logs otherwise. The raw-logger ban +
+    // audit-log wrapper land at Story 1.10 (deferred lint TODO in eslint-config-twt).
+    logger:
+      opts.logStream !== undefined
+        ? { level: 'trace', stream: opts.logStream }
+        : deps.config.nodeEnv === 'test'
+          ? false
+          : { level: process.env['LOG_LEVEL'] ?? 'info' },
     // Trust the proxy hop (Cloud Run / Dokploy) so request.ip + origin are accurate.
     trustProxy: true,
     // The session cookie + CSRF flows need the body; cap it defensively.

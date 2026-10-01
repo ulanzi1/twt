@@ -11,6 +11,7 @@ import { useState } from 'react';
 
 import * as api from '../api/client.js';
 import { hasAuditVerify, hasPariwarProvision, sessionKey, useSession } from '../api/hooks.js';
+import { correctionChaseEn } from '../modules/correction-chase/i18n-en.js';
 
 function TopBar(): ReactElement {
   const session = useSession();
@@ -66,9 +67,11 @@ function TopBar(): ReactElement {
               Trustee worklist
             </Link>
           )}
-          {/* Story 6.19b (AC8b, D11) — the CORRECTION QUEUE, linked at last (closes the 6.18 deferred item "Nothing
-              in the admin app links to the correction queue"). ⭐ The queues are the staff channel: every due
-              reminder, letter chase and escalation is ON this page. The server's key check is the boundary. */}
+          {/* Story 6.19b (AC8b, D11) — the CORRECTION QUEUE, linked inside a Pariwar context (the 6.18 deferred item
+              "Nothing in the admin app links to the correction queue"). ⚠ ONLY on a `/p/<pariwarId>/…` page, like
+              its siblings here — ⛔ no entry point from `/` (it lands on `/audit/integrity`). ⭐ The queues are the
+              staff channel: every due reminder, letter chase and escalation is ON this page. The server's key check
+              is the boundary. */}
           {pariwarId && (
             <Link
               to="/p/$pariwarId/claims/under-correction"
@@ -76,7 +79,7 @@ function TopBar(): ReactElement {
               className="text-sm underline"
               data-testid="nav-correction-queue"
             >
-              Correction queue
+              {correctionChaseEn.queue.nav}
             </Link>
           )}
           {/* Story 6.20 (AC7, D14) — the Pariwar Admin's two nominee pages. ⭐ Linked here because the

@@ -3,12 +3,13 @@
 //   · POST …/admin/claims/:claimCaseId/correction/must-act                      — change WHO MUST ACT (key (7))
 //   · POST …/admin/claims/:claimCaseId/correction/letters                       — record a POSTED letter (key (1))
 //   · POST …/admin/claims/:claimCaseId/correction/letters/:letterId/delivery    — its delivery date + screenshot
-//     (multipart: a `delivered_on` field and ONE image file — ⛔ no JSON schema here)
+//     (multipart: a `delivered_on` field, sent BEFORE the file, and ONE image file — ⛔ no JSON schema here)
 //   · GET  …/admin/claims/:claimCaseId/correction/letters/address?person_key=   — the letter form's address (step-up)
 //   · GET  …/admin/claims/:claimCaseId/correction/letters/:letterId/screenshot  — a TTL-limited signed read URL
 //
 // ⛔ Contracts never import `@twt/domain` ([[project_contracts_domain_bundle_boundary]]) — every vocabulary here is
-// RE-DECLARED and pinned in lockstep by its test. PII: the tracking number (in) and the address (out) are Tier-1 —
+// RE-DECLARED by hand. ⚠ ⛔ No lockstep test pins them to the domain yet (an open 6.19b review follow-up) — a change
+// to a domain vocabulary must be mirrored here by hand. PII: the tracking number (in) and the address (out) are Tier-1 —
 // the route encrypts / decrypts; ⛔ neither is ever echoed anywhere else.
 
 import { z } from 'zod';
@@ -81,6 +82,8 @@ export type ChangeCorrectionMustActResponse = z.output<typeof ChangeCorrectionMu
 export const RecordCorrectionLetterRequest = z
   .object({
     person_key: CorrectionPersonKey,
+    /** ⛔ Later than today (IST) is the route's 400 `correction_letter.date_in_future` (it needs a clock); before the
+     *  run's day 0 is the writer's 409 `correction_letter.posted_before_run`. The same upper bound holds for `delivered_on`. */
     posted_on: IsoDate,
     tracking_number: z
       .string()
@@ -135,8 +138,9 @@ export const CorrectionCannotRemindReason = z.enum(['undetermined', 'no_contact_
 
 /**
  * ONE person's reminder summary — by ROLE (`nominee` + rank, or `claimant`), ⛔ never a name.
- * `status`: `reached` (≥ 1 accepted to their current number), `dead` (a dead number), `unreachable` (the network
- * refused it, or ⛔ no sendable number), `not_yet`.
+ * `status`: `dead` (a dead number), `unreachable` (the network refused it, or ⛔ no sendable number), `reached`
+ * (≥ 1 accepted to their current number), `not_yet` — in THAT precedence: a dead / unreachable finding in the current
+ * number's epoch WINS over an earlier acceptance (it is what the letter track acts on; `found_dead_on` is set).
  */
 export const CorrectionChasePersonDto = z
   .object({
@@ -165,6 +169,8 @@ export const CorrectionChaseSummaryDto = z
         day0: IsoDate,
         day_count: z.number().int(),
         open: z.boolean(),
+        /** The IST date the run ended, `null` while it is open. */
+        ended_on: IsoDate.nullable(),
         next_reminder_on: IsoDate.nullable(),
       })
       .strict()

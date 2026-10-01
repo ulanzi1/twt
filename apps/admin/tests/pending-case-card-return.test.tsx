@@ -158,6 +158,40 @@ describe('<PendingCaseCard> — AC11, the return to the District Admin', () => {
     expect(screen.getByRole('alert').textContent?.toLowerCase()).toContain('who must put it right');
   });
 
+  it('⭐ a FAILED return keeps the code, the note and who-must-act — they reset only on the server\'s success', () => {
+    // ⚠ Regression of the earlier fix (third-pass review 2026-09-30): the inputs were wiped BEFORE the server
+    // answered, so a failed Return/Deny lost the typed note. `setup`'s `onDecision` never calls `onSuccess`.
+    const { onDecision } = setup();
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'other' } });
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'the holder name is not the declared nominee' } });
+    fireEvent.click(screen.getByRole('radio', { name: 'The family must act' }));
+    fireEvent.click(screen.getByTestId('return-to-district-admin'));
+    expect(onDecision).toHaveBeenCalledTimes(1);
+    expect((screen.getByRole('combobox') as HTMLSelectElement).value).toBe('other');
+    expect((screen.getByRole('textbox') as HTMLInputElement).value).toBe('the holder name is not the declared nominee');
+    expect((screen.getByRole('radio', { name: 'The family must act' }) as HTMLInputElement).checked).toBe(true);
+  });
+
+  it('⭐ …and a SUCCESSFUL return clears them', () => {
+    const onDecision = vi.fn((_body: unknown, opts?: { onSuccess?: () => void }) => opts?.onSuccess?.());
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={qc}>
+        <ul>
+          <PendingCaseCard case_={CASE} bucket="ready_to_freeze" pariwarId={PARIWAR} onDecision={onDecision} pending={false} />
+        </ul>
+      </QueryClientProvider>,
+    );
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'other' } });
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'the holder name is not the declared nominee' } });
+    fireEvent.click(screen.getByRole('radio', { name: 'Staff must put it right' }));
+    fireEvent.click(screen.getByTestId('return-to-district-admin'));
+    expect(onDecision).toHaveBeenCalledTimes(1);
+    expect((screen.getByRole('combobox') as HTMLSelectElement).value).toBe('');
+    expect((screen.getByRole('textbox') as HTMLInputElement).value).toBe('');
+    expect(screen.getAllByRole('radio').every((r) => !(r as HTMLInputElement).checked)).toBe(true);
+  });
+
   it('⛔ an approve carries ⛔ no must_act even after a choice was made', () => {
     const { onDecision } = setup();
     fireEvent.click(screen.getByRole('radio', { name: 'The family must act' }));

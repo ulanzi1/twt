@@ -72,6 +72,12 @@ function CorrectionQueueView(): ReactElement {
   // session gate above only sees the SESSION read: a queue 401 while that read is still cached never
   // redirected, and a 403 rendered as "could not be loaded" — an outage, which it is ⛔ not.
   const queueStatus = queue.error instanceof ApiError ? queue.error.status : null;
+  // ⭐ A `?claim=` that is ⛔ not in the rendered list (filtered out, beyond the first page, already resubmitted)
+  // SAYS so — it failed silently, and the reminder's reader was left looking for a row that is not there.
+  const focusMissing =
+    focusClaim !== null &&
+    queue.data !== undefined &&
+    !queue.data.items.some((item) => item.claim_case_id.toLowerCase() === focusClaim);
   useEffect(() => {
     if (queueStatus === 401) void navigate({ to: '/login' });
   }, [queueStatus, navigate]);
@@ -98,6 +104,11 @@ function CorrectionQueueView(): ReactElement {
         />
         {correctionChaseEn.queue.escalatedOnly}
       </label>
+      {focusMissing ? (
+        <p role="status" data-testid="queue-claim-not-shown" className="mt-2 text-xs">
+          {correctionChaseEn.queue.claimNotShown}
+        </p>
+      ) : null}
 
       {queue.isLoading ? (
         <p role="status" data-testid="correction-queue-loading" className="mt-4 text-sm">

@@ -15,7 +15,9 @@
 // ⚠ AT-LEAST-ONCE: `api_unavailable` includes "no response" and 5xx, which can follow a gateway accept, so a retried
 // slot can text a person twice — accepted, and recorded in `attempt_count` / `first_detail`, ⛔ never hidden.
 // ⚠ ALL ON ONE CLIENT: the jobs domain pool is `max: 2`; the re-check + claim run on the ONE client of the caller's
-// scope tx, and every decrypt / config read happens AFTER its commit — ⛔ never a second checkout inside the lock.
+// scope tx, and the SEND's decrypt and every config read happen AFTER its commit — ⛔ never a second checkout inside
+// the lock. The one crypto call inside it is the re-check's hash of the person's CURRENT number (`-271` §1: a 6.20
+// correction resets their state) — KMS / HMAC only, ⛔ no DB checkout, and the plaintext never leaves the helper.
 // ⛔ S2 — a record is ⛔ never written for a slot that was ⛔ not attempted, except the two `skipped_superseded`
 // markers (the catch-up's older missed slots, and the sweep's marker for a run ended by a mark change on a slot day).
 
@@ -38,10 +40,12 @@ import {
   type PersonRunState,
   acquireCorrectionChaseLock,
   evaluatePersonRunState,
+  isEvidentialReminderRow,
   readCorrectionClaimRow,
   readCorrectionRecipients,
   readCorrectionRun,
   readFamilyPartDoneAt,
+  readLatestCorrectionMark,
 } from './correction-chase.js';
 import { currentCorrectionNumberHash } from './correction-crypto.js';
 import { istDateOf, isCorrectionRunExpired } from './correction-schedule.js';
@@ -272,6 +276,8 @@ export type CorrectionSkipReason =
   | 'return_superseded'
   | 'day_90'
   | 'not_a_family_run'
+  /** A `family` run whose live return's LATEST mark is ⛔ not `family` (a held switch, 6.19c). ⛔ Not for `direction`. */
+  | 'not_a_family_mark'
   | 'resubmitted'
   | 'family_part_done'
   | 'undetermined'
@@ -292,12 +298,33 @@ export type BeginCorrectionFamilySendResult =
   | { readonly kind: 'noop'; readonly reason: 'already_final' | 'held_by_other' };
 
 /**
+ * The child's re-check could ⛔ not hash the person's CURRENT number while the only thing stopping the send is a
+ * delivered letter of an EARLIER epoch — so it cannot tell "a letter reached this number" from "the number changed
+ * since". ⛔ Never a silent `skipped_superseded` (that would lose the slot over a KMS blip): it throws, the
+ * transaction rolls back, and the job retries. ⛔ Carries no number.
+ */
+export class CorrectionNumberHashUnavailableError extends Error {
+  public readonly name = 'CorrectionNumberHashUnavailableError';
+  public constructor(
+    public readonly claimCaseId: string,
+    public readonly runId: string,
+  ) {
+    super(`[correction-reminder] claim ${claimCaseId} run ${runId}: the current number could not be hashed`);
+  }
+}
+
+/**
  * ⭐ THE CHILD'S PRE-SEND RE-CHECK, in ONE transaction under the trustee lock (AC2): the run is still open and its
- * return still the live one, day < 90; ⭐ BY PURPOSE — tier (a) `resubmitted` stops any row; tier (b) (the family's part
- * is done) and D30 stop the family's rows; the person is still a recipient and their letter has ⛔ no recorded
- * delivery. Only then the row is claimed `attempting`. ⇒ a switch to `staff` at 10:01 stops a job queued at 10:00.
- * A failed re-check writes `skipped_superseded` (the reason in `detail`) and returns ⛔ without throwing.
- * ⚠ The caller commits, THEN decrypts and sends — ⛔ nothing here decrypts.
+ * return still the live one, day < 90; a `family` run's return is still MARKED `family` (a `direction` run is exempt —
+ * 6.19c's direction chases the family whatever the mark); ⭐ BY PURPOSE — tier (a) `resubmitted` stops any row; tier
+ * (b) (the family's part is done) and D30 stop the family's rows; the person is still a recipient and their letter has
+ * ⛔ no recorded delivery IN THE CURRENT NUMBER'S EPOCH. Only then the row is claimed `attempting`. ⇒ a switch to
+ * `staff` at 10:01 stops a job queued at 10:00. A failed re-check writes `skipped_superseded` (the reason in `detail`)
+ * and returns ⛔ without throwing.
+ * ⭐ The person's state is computed with the SWEEP's own logic (`readRunPersonStates` with `crypto`): it hashes the
+ * CURRENT number when the version moved (`-271` §1), so a letter delivered to an OLD number ⛔ never silences a
+ * 6.20-corrected one. ⚠ The caller commits, THEN decrypts for the send — the only crypto here is that hash.
+ * @throws CorrectionNumberHashUnavailableError  the hash failed AND a delivered letter would otherwise skip the send
  */
 export async function beginCorrectionFamilySend(
   client: pg.PoolClient,
@@ -311,6 +338,8 @@ export async function beginCorrectionFamilySend(
     readonly late: boolean;
     readonly jobId: string;
     readonly now: Date;
+    /** REQUIRED — the reset check hashes the person's current number (jobs passes `deps.encryption`). */
+    readonly crypto: FieldCryptoDeps;
   },
 ): Promise<BeginCorrectionFamilySendResult> {
   await acquireCorrectionChaseLock(client, input.pariwarId, input.claimCaseId);
@@ -334,6 +363,11 @@ export async function beginCorrectionFamilySend(
   if (run.kind !== 'family' && run.kind !== 'direction') return skip('not_a_family_run');
   const ret = await getLiveCorrectionReturn(db, input.pariwarId, input.claimCaseId);
   if (!ret || ret.decisionId !== run.returnDecisionId) return skip('return_superseded');
+  if (run.kind === 'family') {
+    // A held switch to `staff` (6.19c) can leave ⛔ no run to end before this job runs — the MARK is the truth.
+    const mark = await readLatestCorrectionMark(db, input.pariwarId, ret.decisionId);
+    if (mark?.mustAct !== 'family') return skip('not_a_family_mark');
+  }
   if (isCorrectionRunExpired(run.day0, istDateOf(input.now))) return skip('day_90');
 
   const claimRow = await readCorrectionClaimRow(db, input.pariwarId, input.claimCaseId);
@@ -353,13 +387,12 @@ export async function beginCorrectionFamilySend(
   if (recipients.cannotRemind !== null) return skip(recipients.cannotRemind);
   const person = recipients.people.find((p) => p.personKey === input.personKey);
   if (person === undefined) return skip('not_a_recipient');
-  const personRows = await readRunFamilyRows(db, input.pariwarId, input.runId);
-  const letters = await readRunLetters(db, input.pariwarId, input.runId);
-  const state = evaluatePersonRunState(
-    personRows.filter((r) => r.recipientKey === input.personKey),
-    letters.filter((l) => l.personKey === input.personKey),
-  );
-  if (state.letterDelivered) return skip('letter_delivered');
+  const [personState] = await readRunPersonStates(db, input.pariwarId, run, [person], { crypto: input.crypto });
+  if (personState === undefined) return skip('not_a_recipient');
+  if (personState.state.letterDelivered) {
+    if (personState.hashFailed === true) throw new CorrectionNumberHashUnavailableError(input.claimCaseId, input.runId);
+    return skip('letter_delivered');
+  }
 
   const claimed = await claimCorrectionReminder(db, {
     ...key,
@@ -482,13 +515,45 @@ export interface RunPersonState {
   readonly state: PersonRunState;
   /** The person's current number hash, when it was computed (only when their version changed, or on request). */
   readonly currentNumberHash?: string | null;
+  /**
+   * The current number's hash was NEEDED but its decrypt / hash THREW (an unreadable envelope, a KMS blip): the
+   * state was evaluated as if the number were unknown (the latest row's hash stands). ⚠ The caller ALARMS — it is
+   * ⛔ never silent, and it never stops the other people's states (one person's fault is theirs alone).
+   */
+  readonly hashFailed?: boolean;
 }
 
 /**
- * Each person's per-run state. ⭐ The reset (a 6.20 correction changed the NUMBER): the latest row's
+ * The person's LAST evidential attempt (`isEvidentialReminderRow` — a hash-less `error` is ⛔ not one), from rows in
+ * any order (latest slot, then latest insert), or `undefined`. Pure.
+ */
+export function lastEvidentialAttempt<R extends RunFamilyRow>(rows: readonly R[]): R | undefined {
+  return [...rows]
+    .filter(isEvidentialReminderRow)
+    .sort((a, b) => a.slotDay - b.slotDay || a.createdAt.getTime() - b.createdAt.getTime())
+    .at(-1);
+}
+
+/**
+ * Must the person's CURRENT number be hashed to see a 6.20 reset? Only when they have an evidential attempt AND its
+ * version is ⛔ not the person's current one — or always for the CLAIMANT: the block carries ⛔ no version
+ * (`person.versionId` and `recipientVersionId` are always null for them), so the version-compare short-circuit could
+ * never see a correction to their own `claim_contacts` mobile. Pure.
+ */
+export function personNumberMayHaveMoved(
+  person: Pick<CorrectionPerson, 'role' | 'versionId'>,
+  lastAttempt: Pick<RunFamilyRow, 'recipientVersionId'> | undefined,
+): boolean {
+  return lastAttempt !== undefined && (person.role === 'claimant' || lastAttempt.recipientVersionId !== person.versionId);
+}
+
+/**
+ * Each person's per-run state. ⭐ The reset (a 6.20 correction changed the NUMBER): the latest evidential row's
  * `recipient_version_id` is compared FIRST, and the number is hashed only when it differs (⛔ a stopped person writes
- * no rows — so the sweep, ⛔ not the child, must detect their change); a correction that keeps the same number
- * changes ⛔ nothing. Without `crypto` the latest row's hash stands.
+ * no rows — so the sweep must detect their change, and the child re-checks it the same way); a correction that keeps
+ * the same number changes ⛔ nothing. Without `crypto` the latest row's hash stands.
+ * ⭐ A hash that THROWS is caught PER PERSON: that person is evaluated with the number unknown and `hashFailed: true`
+ * (the caller alarms); ⛔ it never throws out of the whole run.
  */
 export async function readRunPersonStates(
   db: Db,
@@ -502,31 +567,36 @@ export async function readRunPersonStates(
   const out: RunPersonState[] = [];
   for (const person of people) {
     const mine = rows.filter((r) => r.recipientKey === person.personKey);
-    const lastAttempt = [...mine]
-      .reverse()
-      .find((r) => r.outcome !== 'skipped_superseded' && r.outcome !== 'attempting');
     let currentNumberHash: string | null | undefined;
-    // The claimant carries ⛔ no version (`person.versionId` and `recipientVersionId` are always null for them —
-    // "the claimant block" has no version concept), so the version-compare-first short-circuit can never see a
-    // claimant's number change. Treat any prior attempt as "moved" for the claimant, so a correction to the
-    // claimant's own `claim_contacts` mobile is still caught when `crypto` is supplied.
-    const versionMoved =
-      lastAttempt !== undefined &&
-      (person.role === 'claimant' || lastAttempt.recipientVersionId !== person.versionId);
-    if (opts.crypto !== undefined && (opts.alwaysHash === true || versionMoved)) {
-      currentNumberHash = await currentCorrectionNumberHash(
-        person.mobileCiphertext,
-        person.mobileSource,
-        pariwarId,
-        opts.crypto,
-      );
+    let hashFailed = false;
+    if (
+      opts.crypto !== undefined &&
+      (opts.alwaysHash === true || personNumberMayHaveMoved(person, lastEvidentialAttempt(mine)))
+    ) {
+      try {
+        currentNumberHash = await currentCorrectionNumberHash(
+          person.mobileCiphertext,
+          person.mobileSource,
+          pariwarId,
+          opts.crypto,
+        );
+      } catch {
+        // ⛔ The error is NOT logged here (it may carry envelope detail) — the caller alarms on `hashFailed` by ids.
+        currentNumberHash = undefined;
+        hashFailed = true;
+      }
     }
     const state = evaluatePersonRunState(
       mine,
       letters.filter((l) => l.personKey === person.personKey),
       currentNumberHash,
     );
-    out.push(currentNumberHash === undefined ? { person, state } : { person, state, currentNumberHash });
+    out.push({
+      person,
+      state,
+      ...(currentNumberHash === undefined ? {} : { currentNumberHash }),
+      ...(hashFailed ? { hashFailed: true } : {}),
+    });
   }
   return out;
 }

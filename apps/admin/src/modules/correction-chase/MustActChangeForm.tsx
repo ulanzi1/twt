@@ -3,6 +3,8 @@
 // ⭐ A REQUIRED note (D25), ⛔ no default choice, and the current value is ⛔ offered as a change (the route refuses it
 // with 409 `must_act.unchanged` anyway). A switch to "the family must act" starts the family's 90 days THAT day
 // (`-258` detail 1); a switch to "staff" stops the family's reminders at once. The server is the boundary.
+// ⚠ Shown to every queue reader: the page cannot tell whether the session holds key (7) (district-dimension; the
+// session carries only the national grants), so a 403 is mapped to its own "your role cannot" line.
 
 import { useEffect, useState, type FormEvent, type ReactElement } from 'react';
 
@@ -48,12 +50,17 @@ export function MustActChangeForm({ pariwarId, claimCaseId, current }: MustActCh
         },
         onError: (err) => {
           const code = err instanceof ApiError ? err.code : '';
+          // ⭐ A 403 is the ROLE (the page cannot see key (7) — the session carries only national grants), ⛔ never
+          // "could not be saved. Try again." — a retry that can never succeed.
+          const forbidden = err instanceof ApiError && err.status === 403;
           setProblem(
             code === 'must_act.unchanged'
               ? t.mustAct.unchanged
               : code === 'must_act.no_live_return'
                 ? t.mustAct.noLiveReturn
-                : t.mustAct.error,
+                : forbidden
+                  ? t.mustAct.forbidden
+                  : t.mustAct.error,
           );
         },
       },

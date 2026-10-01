@@ -151,6 +151,20 @@ export default function NomineeReviewScreen(): React.ReactElement {
     }
   }, [claimCaseId])
 
+  // ⭐ Story 6.19b (D28) — the "we are checking" line is SPOKEN on iOS too, the `saved` precedent below:
+  // `accessibilityLiveRegion` is Android-only, so VoiceOver heard nothing when the line replaced the correction line.
+  // iOS ONLY (TalkBack already speaks the live region — unguarded, it spoke twice). Once per appearance, ⛔ not per
+  // re-read: the effect keys on the boolean. ⚠ `t` is a fresh closure every render (`useT`), so it is read through
+  // a ref — ⛔ never an effect dependency, which would re-announce on every render.
+  const showBeingChecked = correctionNeeded && beingChecked
+  const tRef = useRef(t)
+  tRef.current = t
+  useEffect(() => {
+    if (showBeingChecked && Platform.OS === 'ios') {
+      AccessibilityInfo.announceForAccessibility(tRef.current('nominee.bank.being_checked'))
+    }
+  }, [showBeingChecked])
+
   function patchAccount(idx: 0 | 1, patch: Partial<AccountFields>): void {
     setAccounts((prev) => {
       const next: [AccountFields, AccountFields] = [{ ...prev[0] }, { ...prev[1] }]

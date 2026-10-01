@@ -3,13 +3,14 @@
 // `-271`).
 //
 // ── What runs when ────────────────────────────────────────────────────────────────────────────────────────────
-// ⭐ The SWEEP (daily 10:00 IST) enumerates OPEN runs — a raw, bounded, cross-tenant read on the BYPASSRLS pool,
-// alarmed at its cap — and, per run, in ONE scope transaction under the trustee lock:
+// ⭐ The SWEEP (daily 10:00 IST) enumerates OPEN runs — a raw cross-tenant read on the BYPASSRLS pool, paged until
+// exhausted under a hard bound (alarmed) — and, per run, in ONE scope transaction under the trustee lock:
 //   · ends the run when its return is no longer the live one (`superseded`) or it reached day 90 (`day_90`) — through
 //     the domain's end-run, ⛔ never re-derived;
 //   · ⭐ tier (a) `resubmitted` PAUSES the whole run (⛔ no send, ⛔ no record); tier (b) "the family's part is done"
-//     pauses the FAMILY only (`-269` §2); D30 (nobody nameable) sends the family ⛔ nothing — the District Admin is
-//     still reminded;
+//     pauses the FAMILY only (`-269` §2) — its SMS, the letter chase and the chase's + 13 escalation (`-268` §2, D2);
+//     D30 (nobody nameable) stops ⛔ only `family_sms` and `letter_chase` (BY PURPOSE) — the District Admin is still
+//     reminded, and the + 13 escalation and `letter_second_due` still run from the run's past rows;
 //   · D3's CATCH-UP per person: the latest due slot with ⛔ no record is enqueued ONCE (`late` unless it is today's),
 //     older missed slots are written `skipped_superseded` — ⛔ no burst;
 //   · the STAFF rows are written by the sweep itself (a staff row sends nothing — the queue is the channel, AC4):
@@ -18,8 +19,9 @@
 //     Admin, the letter chase (found-dead + 7 … + 12, escalated on + 13), and each person's ONE `letter_second_due`;
 //   · then one staff PUSH per staff member with a row today (deduped by its own `staff_push` row).
 // Before the runs: the EXHAUSTED-ROW FINALISER (a time bound — every row still `attempting` from a previous IST day
-// becomes `error` + alarm; ⛔ no catch-up for it), D26's `skipped_superseded` markers for runs ended by a mark change
-// on one of their slot days, and the `rejected_unreachable` burst alarm (≥ 3 on one day — a content-level block).
+// becomes `error` + alarm; ⛔ no catch-up for it; ⚠ the module's ONE cross-tenant WRITE — see its DELIBERATE block),
+// D26's `skipped_superseded` markers for runs ended by a mark change on one of their slot days, and the
+// `rejected_unreachable` burst alarm (≥ 3 on one day — a content-level block).
 //
 // ⭐ The CHILD (one family SMS): re-check + claim in ONE transaction under the lock (the domain's
 // `beginCorrectionFamilySend`), COMMIT, then decrypt → resolve config → send (10-second timeout) → compare-and-set.
@@ -59,13 +61,16 @@ import {
   type ClaimCorrectionSmsLocale,
   type ClaimCorrectionSmsMessage,
 } from './claim-correction-sms-templates.js';
+import { classifySecretManagerFault } from './contribution-providers.js';
 
 // ── Operational knobs ────────────────────────────────────────────────────────────────────────────────────────
 
 /** IST — never a UTC cron (architecture §scheduling). */
 export const CLAIM_CORRECTION_TZ = 'Asia/Kolkata';
-/** Max open runs one sweep considers — a full batch is ALARMED, never silently capped. */
+/** The open-run scan's PAGE size (and the D26 marker scan's batch — a full batch is ALARMED). */
 export const DEFAULT_CORRECTION_SWEEP_RUN_LIMIT = 1000;
+/** The HARD bound on open runs one tick sweeps — the scan pages until exhausted or this; hitting it is ALARMED. */
+export const DEFAULT_CORRECTION_SWEEP_MAX_RUNS = 20_000;
 /** A send is abandoned after this and counted `api_unavailable` (the OTP path's `sms-step-up-delivery.ts` budget). */
 export const CORRECTION_SEND_TIMEOUT_MS = 10_000;
 /** D26's marker window — runs ended `mark_changed` within this are checked for a slot-day marker. */
@@ -122,8 +127,17 @@ export interface ClaimCorrectionReminderDeps {
   };
   readonly now?: () => Date;
   readonly onAlarm?: (message: string) => void;
+  /** The open-run scan's PAGE size (the D26 marker scan's batch, too). */
   readonly runLimit?: number;
+  /** The HARD bound on open runs one tick sweeps (pages until exhausted or this) — hitting it is ALARMED. */
+  readonly maxRuns?: number;
   readonly sendTimeoutMs?: number;
+  /**
+   * ⚠ TESTS ONLY — restrict every cross-tenant statement of the sweep (the exhausted-row finaliser, the burst count,
+   * the D26 marker scan, the open-run scan) to these Pariwars, so a live suite's far-future clock cannot end or
+   * finalise ANOTHER suite's runs in the shared database. Production leaves it unset (every tenant).
+   */
+  readonly pariwarAllowlist?: readonly string[];
 }
 
 type EnqueueBoss = Pick<QueueClient, 'send'>;
@@ -171,7 +185,8 @@ function withTimeout<T>(pending: Promise<T>, ms: number): Promise<T> {
  * unconfigured gateway — `error`, alarm, ⛔ never a fixture `accepted` (T13). The provider never throws (S3): its
  * `rejected` is classified — `invalid_number` → `rejected_invalid_number`; `carrier_reject` → `rejected_unreachable`
  * (`-269` §4); `dlt_template_not_approved` / `auth` / `unknown` → `error` + alarm, FINAL; `rate_limited` /
- * `api_unavailable` (and a timeout, and a Secret Manager outage) → TRANSIENT.
+ * `api_unavailable` (and a timeout, and a Secret Manager OUTAGE — `UNAVAILABLE` / `DEADLINE_EXCEEDED`) →
+ * TRANSIENT; any other Secret Manager fault → `error` + alarm, FINAL (`config:secret_manager_<code>`).
  */
 export async function sendClaimCorrectionSms(
   deps: Pick<ClaimCorrectionReminderDeps, 'smsAppClient' | 'resolveConfig' | 'sendTimeoutMs'>,
@@ -190,9 +205,14 @@ export async function sendClaimCorrectionSms(
   try {
     dltTemplateId = await deps.resolveConfig(template.dltTemplateIdConfigKey);
     helpline = await deps.resolveConfig(claimCorrectionHelplineConfigKey(input.pariwarId));
-  } catch {
-    // A Secret Manager / network OUTAGE (`resolveSmsDltConfig` re-throws everything but "not provisioned").
-    return { kind: 'transient', detail: 'config_unavailable:secret_manager' };
+  } catch (err) {
+    // `resolveSmsDltConfig` re-throws everything but "not provisioned" (`NOT_FOUND` ⇒ `null`, handled below). Only
+    // an OUTAGE (`UNAVAILABLE` / `DEADLINE_EXCEEDED`, a socket error) is transient; any other code
+    // (`PERMISSION_DENIED`, `INVALID_ARGUMENT`, ⛔ no code) is a config fault a retry cannot clear — FINAL + alarm,
+    // ⛔ never a silent retry loop that surfaces only at the next day's exhausted-row finaliser.
+    const fault = classifySecretManagerFault(err);
+    if (fault.transient) return { kind: 'transient', detail: 'config_unavailable:secret_manager' };
+    return { kind: 'final', outcome: 'error', providerMessageId: null, detail: `config:secret_manager_${fault.code}`, alarm: true };
   }
   if (dltTemplateId === null || dltTemplateId.trim() === '') {
     return { kind: 'final', outcome: 'error', providerMessageId: null, detail: 'config:dlt_template_id_missing', alarm: true };
@@ -245,7 +265,8 @@ export class ClaimCorrectionTransientError extends Error {
 
 export type CorrectionFamilySmsChildResult =
   | { readonly status: 'sent'; readonly outcome: string }
-  | { readonly status: 'skipped'; readonly reason: string }
+  /** `stale_slot` is the jobs-side skip: a child enqueued for an EARLIER IST day (see the child). */
+  | { readonly status: 'skipped'; readonly reason: claimDomain.CorrectionSkipReason | 'stale_slot' }
   | { readonly status: 'noop'; readonly reason: string };
 
 /**
@@ -271,7 +292,31 @@ export async function runCorrectionFamilySmsChild(
   const pariwarId = ids.pariwarId(pid);
   const claimCaseId = ids.claimId(p.claimCaseId);
 
-  const begun = await withPariwarScope(deps.pool, pid, (_db, client) =>
+  // ⭐ A STALE child — enqueued for an EARLIER IST day (a redelivery, a backlog) — ⛔ never sends that day's slot
+  // today: today's sweep owns today (its catch-up re-plans the slot), so a late send here would be a SECOND text
+  // the same day. Only THIS job's own `attempting` row (a retry that crossed midnight) is closed `skipped_superseded`;
+  // ⛔ no marker is written for a slot it never claimed (S2 — a marker would hide the slot from the catch-up).
+  if (p.sentOn < cycleCalendar.istDateOf(now)) {
+    await withPariwarScope(deps.pool, pid, async (db: Db, client) => {
+      await claimDomain.acquireCorrectionChaseLock(client, pid, p.claimCaseId);
+      const key = {
+        pariwarId,
+        claimCaseId,
+        runId: p.runId,
+        slotDay: p.slotDay,
+        recipientKey: p.personKey,
+        purpose: 'family_sms' as const,
+        subjectKey: '',
+      };
+      const own = await claimDomain.readCorrectionReminder(db, key);
+      if (own !== null && own.outcome === 'attempting' && own.claimedByJob === jobId) {
+        await claimDomain.skipCorrectionReminder(db, { ...key, sentOn: p.sentOn, late: p.late, jobId, reason: 'stale_slot' });
+      }
+    });
+    return { status: 'skipped', reason: 'stale_slot' };
+  }
+
+  const begin = () => withPariwarScope(deps.pool, pid, (_db, client) =>
     claimDomain.beginCorrectionFamilySend(client, {
       pariwarId,
       claimCaseId,
@@ -282,8 +327,25 @@ export async function runCorrectionFamilySmsChild(
       late: p.late,
       jobId,
       now,
+      // I4 — the re-check hashes the person's CURRENT number (under the lock) so a 6.20-corrected number is ⛔ never
+      // silenced by the OLD number's delivered letter or found-dead marker (`-271` §1); the send's decrypt is still
+      // after the commit.
+      crypto: deps.encryption,
     }),
   );
+  let begun: Awaited<ReturnType<typeof begin>>;
+  try {
+    begun = await begin();
+  } catch (err) {
+    if (err instanceof claimDomain.CorrectionNumberHashUnavailableError) {
+      // The re-check could ⛔ not hash the CURRENT number while an earlier epoch's delivered letter is all that would
+      // stop the send — its transaction rolled back (⛔ no row), so retry. ⚠ ⛔ No row ⇒ ⛔ no finaliser would ever
+      // surface a hash that never clears — alarm (ids only).
+      alarm(`[jobs] claim-correction-sms: the current number could not be hashed in the re-check for run ${p.runId} slot ${String(p.slotDay)} — retrying`);
+      throw new ClaimCorrectionTransientError(`[jobs] claim-correction-sms: transient hash_failed:tier1 (re-check) for run ${p.runId}`);
+    }
+    throw err;
+  }
   if (begun.kind === 'skipped') return { status: 'skipped', reason: begun.reason };
   if (begun.kind === 'noop') return { status: 'noop', reason: begun.reason };
 
@@ -327,7 +389,13 @@ export async function runCorrectionFamilySmsChild(
     await finalise({ outcome: 'no_target', detail: 'no_target:no_sendable_number', recipientNumberHash: null });
     return { status: 'sent', outcome: 'no_target' };
   }
-  const recipientNumberHash = await claimDomain.correctionNumberHash(e164, pid, deps.encryption);
+  let recipientNumberHash: string;
+  try {
+    recipientNumberHash = await claimDomain.correctionNumberHash(e164, pid, deps.encryption);
+  } catch {
+    // A KMS / HMAC failure — classified and retried like the decrypt (⛔ never an unclassified throw with no cause).
+    return transient('hash_failed:tier1');
+  }
 
   const result = await sendClaimCorrectionSms(deps, {
     message: 'reminder',
@@ -375,6 +443,35 @@ export function correctionStaffPushText(items: readonly { readonly purpose: stri
     title: escalated ? `Claim ${reference}: a correction chase needs you` : `Claim ${reference}: correction reminder`,
     body: `${String(n)} item${n === 1 ? '' : 's'} due today on claim ${reference}. Open the correction queue in the admin app.`,
   };
+}
+
+/**
+ * The staff push's Alert — PURE (pinned by a unit test): a deterministic id per (claim, staff member, IST date), the
+ * deceased member as the SUBJECT (D11 — the push goes to the staff member's device, ⛔ never the member's),
+ * `time_critical: false` (⛔ never the AR-18 override), `alert_published` (push-eligible; Telegram is never reached —
+ * the delivery resolver names push alone).
+ */
+export function correctionStaffPushAlert(input: {
+  readonly pariwarId: string;
+  readonly claimCaseId: string;
+  readonly userId: string;
+  readonly sentOn: string;
+  readonly deceasedMemberId: string;
+  readonly items: readonly { readonly purpose: string }[];
+  readonly now: Date;
+}): Alert {
+  const text = correctionStaffPushText(input.items, claimDomain.claimShortReference(input.claimCaseId));
+  return Alert.parse({
+    alert_id: uuidV5(CORRECTION_PUSH_ALERT_NAMESPACE, `${input.claimCaseId}:${input.userId}:${input.sentOn}`),
+    pariwar_id: input.pariwarId,
+    member_id: input.deceasedMemberId,
+    time_critical: false,
+    provenance_refs: {},
+    created_at: input.now.toISOString(),
+    created_by_actor: 'system',
+    alert_category: 'alert_published',
+    payload_data: { title: text.title, body: text.body },
+  });
 }
 
 export type CorrectionStaffPushResult =
@@ -451,18 +548,14 @@ export async function runCorrectionStaffPush(
     return { status: 'pushed', outcome: 'no_target' };
   }
 
-  const text = correctionStaffPushText(claimed.items, claimDomain.claimShortReference(p.claimCaseId));
-  const alert = Alert.parse({
-    alert_id: uuidV5(CORRECTION_PUSH_ALERT_NAMESPACE, `${p.claimCaseId}:${p.userId}:${p.sentOn}`),
-    pariwar_id: pid,
-    // The deceased member as the SUBJECT (D11) — the push goes to the staff member's device, ⛔ never the member's.
-    member_id: claimed.deceased,
-    time_critical: false,
-    provenance_refs: {},
-    created_at: now.toISOString(),
-    created_by_actor: 'system',
-    alert_category: 'alert_published',
-    payload_data: { title: text.title, body: text.body },
+  const alert = correctionStaffPushAlert({
+    pariwarId: pid,
+    claimCaseId: p.claimCaseId,
+    userId: p.userId,
+    sentOn: p.sentOn,
+    deceasedMemberId: claimed.deceased,
+    items: claimed.items,
+    now,
   });
   const providers = deps.push.resolveProviders
     ? await deps.push.resolveProviders({ pariwarId: pid, category: 'alert_published' })
@@ -511,9 +604,23 @@ export async function runCorrectionReminderSweep(
   const now = deps.now?.() ?? new Date();
   const today = cycleCalendar.istDateOf(now);
   const limit = Math.max(1, deps.runLimit ?? DEFAULT_CORRECTION_SWEEP_RUN_LIMIT);
+  const maxRuns = Math.max(limit, deps.maxRuns ?? DEFAULT_CORRECTION_SWEEP_MAX_RUNS);
+  // `null` ⇒ every tenant (production); a list ⇒ only those Pariwars (tests — see `pariwarAllowlist`).
+  const allow: string[] | null = deps.pariwarAllowlist ? [...deps.pariwarAllowlist] : null;
 
   // (1) THE EXHAUSTED-ROW FINALISER — a time bound, ⛔ not a retry count: the retry horizon (60 s with backoff over 4
   //     tries) is minutes, ⛔ never a day. `error` is FINAL — ⛔ no catch-up for that slot.
+  // ── DELIBERATE: a CROSS-TENANT WRITE on the BYPASSRLS pool (family 9) ─────────────────────────────────────────
+  // Every other write in this module runs inside `withPariwarScope` (RLS + the trustee lock); this ONE statement
+  // does ⛔ not. WHY: it is a time bound over EVERY tenant's rows, and its predicate (`attempting` + claimed before
+  // today's IST midnight) and its effect (→ `error`, the detail moved to `first_detail`) read and write ⛔ nothing
+  // tenant-derived — ⛔ no PII, ⛔ no cross-row join, ⛔ no value from one tenant reaches another. A per-tenant loop
+  // would first need a cross-tenant READ to enumerate the Pariwars (the same bypass), then N scope transactions to
+  // apply one predicate. ⚠ It takes ⛔ no trustee lock: a row still `attempting` from a previous IST day is past every
+  // retry and lease (10 minutes), so ⛔ no live job can hold it; a job that somehow finalises it later loses its
+  // compare-and-set (`finaliseCorrectionReminder` keys on `attempting`). RE-EXAMINE when: the statement ever writes
+  // a value derived from another row or tenant, the pool loses BYPASSRLS, a per-tenant scheduler exists, or the
+  // retry / lease horizon approaches a day.
   const stuck = await deps.pool.query<{ reminder_id: string; claim_case_id: string }>(
     `UPDATE claim_correction_reminders
         SET outcome = 'error',
@@ -521,8 +628,9 @@ export async function runCorrectionReminderSweep(
             detail = 'exhausted:attempting_past_day',
             updated_at = clock_timestamp()
       WHERE outcome = 'attempting' AND claimed_at < $1
+        AND ($2::uuid[] IS NULL OR pariwar_id = ANY($2::uuid[]))
       RETURNING reminder_id, claim_case_id`,
-    [cycleCalendar.istMidnightAt(today)],
+    [cycleCalendar.istMidnightAt(today), allow],
   );
   if (stuck.rows.length > 0) {
     alarm(
@@ -537,8 +645,9 @@ export async function runCorrectionReminderSweep(
   const yesterday = cycleCalendar.addCalendarDays(today, -1);
   const burst = await deps.pool.query<{ n: number }>(
     `SELECT count(*)::int AS n FROM claim_correction_reminders
-      WHERE purpose = 'family_sms' AND outcome = 'rejected_unreachable' AND sent_on = $1`,
-    [yesterday],
+      WHERE purpose = 'family_sms' AND outcome = 'rejected_unreachable' AND sent_on = $1
+        AND ($2::uuid[] IS NULL OR pariwar_id = ANY($2::uuid[]))`,
+    [yesterday, allow],
   );
   const burstCount = burst.rows[0]?.n ?? 0;
   if (burstCount >= CORRECTION_UNREACHABLE_BURST_THRESHOLD) {
@@ -554,9 +663,10 @@ export async function runCorrectionReminderSweep(
   const changed = await deps.pool.query<{ run_id: string; claim_case_id: string; pariwar_id: string }>(
     `SELECT run_id, claim_case_id, pariwar_id FROM claim_correction_runs
       WHERE end_reason = 'mark_changed' AND ended_at > $1
+        AND ($3::uuid[] IS NULL OR pariwar_id = ANY($3::uuid[]))
       ORDER BY ended_at ASC
       LIMIT $2`,
-    [new Date(now.getTime() - CORRECTION_MARK_CHANGE_LOOKBACK_MS), limit],
+    [new Date(now.getTime() - CORRECTION_MARK_CHANGE_LOOKBACK_MS), limit, allow],
   );
   for (const row of changed.rows) {
     try {
@@ -565,69 +675,97 @@ export async function runCorrectionReminderSweep(
       alarm(`[jobs] claim-correction-sweep: D26 markers failed for run ${row.run_id} — ${String(err)}`);
     }
   }
+  if (changed.rows.length >= limit) {
+    // ⛔ Never a silent cap: the runs past the batch (the NEWEST mark changes) got ⛔ no marker this tick — they stay
+    // in the 36-hour window, so the next tick still sees them unless the backlog persists.
+    alarm(
+      `[jobs] claim-correction-sweep: the D26 marker scan hit its ${String(limit)}-run batch — runs ended by a mark ` +
+        `change after the batch got ⛔ no marker this tick (raise the run limit if this recurs)`,
+    );
+  }
 
-  // (4) THE OPEN RUNS — bounded, ordered, alarmed at the cap.
-  const open = await deps.pool.query<{ run_id: string; claim_case_id: string; pariwar_id: string }>(
-    `SELECT run_id, claim_case_id, pariwar_id FROM claim_correction_runs
-      WHERE ended_at IS NULL
-      ORDER BY opened_at ASC, run_id ASC
-      LIMIT $1`,
-    [limit],
-  );
+  // (4) THE OPEN RUNS — paged (keyset on `opened_at, run_id`) until EXHAUSTED within the tick, under a hard bound.
   let endedRuns = 0;
   let enqueuedSms = 0;
   let staffRows = 0;
   let enqueuedPushes = 0;
-  for (const row of open.rows) {
-    try {
-      const plan = await withPariwarScope(deps.pool, row.pariwar_id, (db: Db, client) =>
-        planRun(deps, db, client, row, now, today, alarm),
-      );
-      if (plan.ended) endedRuns += 1;
-      staffRows += plan.staffRows;
-      const ctx = { pariwarId: row.pariwar_id, requestId: `claim.correction:${row.run_id}:${today}`, actorId: null, traceId: `claim.correction:${row.run_id}:${today}` };
-      for (const sms of plan.sms) {
-        try {
-          await boss.send(
-            QUEUE_NAMES.CLAIM_CORRECTION_FAMILY_SMS,
-            { ...ctx, payload: sms } satisfies JobEnvelope<CorrectionFamilySmsPayload>,
-            {
-              // ⚠ A LABEL only — the `standard` policy enforces ⛔ no singleton uniqueness; the table is the dedup.
-              singletonKey: `${sms.runId}:${String(sms.slotDay)}:${sms.personKey}:family_sms:`,
-              retryLimit: CHILD_RETRY_LIMIT,
-              retryDelay: CHILD_RETRY_DELAY_SECONDS,
-              retryBackoff: true,
-            },
-          );
-          enqueuedSms += 1;
-        } catch (err) {
-          alarm(`[jobs] claim-correction-sweep: failed to enqueue a family SMS for run ${row.run_id} — ${String(err)}`);
+  let scannedRuns = 0;
+  // The cursor is `opened_at` as TEXT — a JS Date would truncate microseconds and re-read rows at the page edge.
+  let cursor: { readonly openedAt: string; readonly runId: string } | null = null;
+  let exhausted = false;
+  const openPage = (after: typeof cursor, size: number) =>
+    deps.pool.query<{ run_id: string; claim_case_id: string; pariwar_id: string; opened_at: string }>(
+      `SELECT run_id, claim_case_id, pariwar_id, opened_at::text AS opened_at FROM claim_correction_runs
+        WHERE ended_at IS NULL
+          AND ($1::timestamptz IS NULL OR (opened_at, run_id) > ($1::timestamptz, $2::uuid))
+          AND ($4::uuid[] IS NULL OR pariwar_id = ANY($4::uuid[]))
+        ORDER BY opened_at ASC, run_id ASC
+        LIMIT $3`,
+      [after?.openedAt ?? null, after?.runId ?? null, size, allow],
+    );
+  while (scannedRuns < maxRuns) {
+    const size = Math.min(limit, maxRuns - scannedRuns);
+    const page = await openPage(cursor, size);
+    for (const row of page.rows) {
+      scannedRuns += 1;
+      try {
+        const plan = await withPariwarScope(deps.pool, row.pariwar_id, (db: Db, client) =>
+          planRun(deps, db, client, row, now, today, alarm),
+        );
+        if (plan.ended) endedRuns += 1;
+        staffRows += plan.staffRows;
+        const ctx = { pariwarId: row.pariwar_id, requestId: `claim.correction:${row.run_id}:${today}`, actorId: null, traceId: `claim.correction:${row.run_id}:${today}` };
+        for (const sms of plan.sms) {
+          try {
+            await boss.send(
+              QUEUE_NAMES.CLAIM_CORRECTION_FAMILY_SMS,
+              { ...ctx, payload: sms } satisfies JobEnvelope<CorrectionFamilySmsPayload>,
+              {
+                // ⚠ A LABEL only — the `standard` policy enforces ⛔ no singleton uniqueness; the table is the dedup.
+                singletonKey: `${sms.runId}:${String(sms.slotDay)}:${sms.personKey}:family_sms:`,
+                retryLimit: CHILD_RETRY_LIMIT,
+                retryDelay: CHILD_RETRY_DELAY_SECONDS,
+                retryBackoff: true,
+              },
+            );
+            enqueuedSms += 1;
+          } catch (err) {
+            alarm(`[jobs] claim-correction-sweep: failed to enqueue a family SMS for run ${row.run_id} — ${String(err)}`);
+          }
         }
-      }
-      for (const push of plan.pushes) {
-        try {
-          await boss.send(
-            QUEUE_NAMES.CLAIM_CORRECTION_STAFF_PUSH,
-            { ...ctx, payload: push } satisfies JobEnvelope<CorrectionStaffPushPayload>,
-            { singletonKey: `${push.claimCaseId}:${push.userId}:${push.sentOn}`, ...CORRECTION_PUSH_RETRY },
-          );
-          enqueuedPushes += 1;
-        } catch (err) {
-          alarm(`[jobs] claim-correction-sweep: failed to enqueue a staff push for claim ${row.claim_case_id} — ${String(err)}`);
+        for (const push of plan.pushes) {
+          try {
+            await boss.send(
+              QUEUE_NAMES.CLAIM_CORRECTION_STAFF_PUSH,
+              { ...ctx, payload: push } satisfies JobEnvelope<CorrectionStaffPushPayload>,
+              { singletonKey: `${push.claimCaseId}:${push.userId}:${push.sentOn}`, ...CORRECTION_PUSH_RETRY },
+            );
+            enqueuedPushes += 1;
+          } catch (err) {
+            alarm(`[jobs] claim-correction-sweep: failed to enqueue a staff push for claim ${row.claim_case_id} — ${String(err)}`);
+          }
         }
+      } catch (err) {
+        alarm(`[jobs] claim-correction-sweep: run ${row.run_id} (claim ${row.claim_case_id}) failed — ${String(err)}`);
       }
-    } catch (err) {
-      alarm(`[jobs] claim-correction-sweep: run ${row.run_id} (claim ${row.claim_case_id}) failed — ${String(err)}`);
     }
+    const last = page.rows[page.rows.length - 1];
+    if (page.rows.length < size || last === undefined) {
+      exhausted = true;
+      break;
+    }
+    cursor = { openedAt: last.opened_at, runId: last.run_id };
   }
-  if (open.rows.length >= limit) {
+  if (!exhausted && (await openPage(cursor, 1)).rows.length > 0) {
+    // ⚠ Honest about the cost: the next tick starts again from the OLDEST open run, so the runs past the bound are
+    // ⛔ not "picked up next tick" — the NEWEST runs starve every day until the bound is raised.
     alarm(
-      `[jobs] claim-correction-sweep: hit the ${String(limit)}-run batch cap — more open runs remain; the next tick ` +
-        `picks them up (raise the run limit if this recurs)`,
+      `[jobs] claim-correction-sweep: hit the hard bound of ${String(maxRuns)} open runs — the runs opened after it were ` +
+        `⛔ NOT swept today, and every tick starts again from the oldest, so they starve until the bound is raised`,
     );
   }
   const result = {
-    scannedRuns: open.rows.length,
+    scannedRuns,
     endedRuns,
     enqueuedSms,
     staffRows,
@@ -769,20 +907,47 @@ async function planRun(
   };
 
   // ── The family (AC3): recipients, per-person state, D30 ──────────────────────────────────────────────────────
+  // ⭐ BY PURPOSE (AC2): D30 ("cannot remind") stops ONLY `family_sms` and `letter_chase` — the letter track's +13
+  // escalation and `letter_second_due` still run, from each person's state evaluated over the run's PAST rows
+  // (⛔ no recipients to decrypt, ⛔ no crypto: the latest row's number stands).
   const sms: CorrectionFamilySmsPayload[] = [];
-  let states: claimDomain.RunPersonState[] = [];
+  /** The people who can be reminded NOW (the family SMS, D21) — empty under D30. */
+  let reachable: claimDomain.RunPersonState[] = [];
+  /** Every person the letter track considers: the reachable people, or under D30 everyone with a past row/letter. */
+  let tracked: { readonly personKey: string; readonly state: claimDomain.PersonRunState }[] = [];
   let familyCanBeReminded = false;
+  const familyRows = isFamilyRun ? await claimDomain.readRunFamilyRows(db, pariwarId, run.runId) : [];
+  const letters = isFamilyRun ? await claimDomain.readRunLetters(db, pariwarId, run.runId) : [];
   if (isFamilyRun) {
     const recipients = await claimDomain.readCorrectionRecipients(db, pariwarId, claimCaseId);
     familyCanBeReminded = recipients.cannotRemind === null;
     if (familyCanBeReminded) {
-      states = await claimDomain.readRunPersonStates(db, pariwarId, run, recipients.people, { crypto: deps.encryption });
+      reachable = await claimDomain.readRunPersonStates(db, pariwarId, run, recipients.people, { crypto: deps.encryption });
+      for (const s of reachable) {
+        if (s.hashFailed === true) {
+          // I6 — the person's CURRENT number could not be hashed (an unreadable envelope, a KMS blip): their reset
+          // check fell back to the latest row's number for today. Ids only — ⛔ never a number.
+          alarm(
+            `[jobs] claim-correction-sweep: the current number of ${s.person.personKey} on claim ${row.claim_case_id} ` +
+              `could not be hashed — today's reset check used the last row's number`,
+          );
+        }
+      }
+      tracked = reachable.map((s) => ({ personKey: s.person.personKey, state: s.state }));
+    } else {
+      const keys = [...new Set([...familyRows.map((r) => r.recipientKey), ...letters.map((l) => l.personKey)])].sort();
+      tracked = keys.map((personKey) => ({
+        personKey,
+        state: claimDomain.evaluatePersonRunState(
+          familyRows.filter((r) => r.recipientKey === personKey),
+          letters.filter((l) => l.personKey === personKey),
+        ),
+      }));
     }
   }
-  const familyRows = isFamilyRun ? await claimDomain.readRunFamilyRows(db, pariwarId, run.runId) : [];
 
   if (isFamilyRun && familyCanBeReminded && !familyPaused) {
-    for (const { person, state } of states) {
+    for (const { person, state } of reachable) {
       if (state.letterDelivered) continue; // `-250` #1 — a recorded delivery stops that person's reminders
       const recorded = new Set(familyRows.filter((r) => r.recipientKey === person.personKey).map((r) => r.slotDay));
       const cu = claimDomain.correctionCatchUp(reminderDays, recorded, d);
@@ -807,8 +972,10 @@ async function planRun(
   }
 
   // ── The District Admin's scheduled reminder (D34), stopped by D21 ───────────────────────────────────────────
+  // D21 reads the REACHABLE people only: under D30 there is ⛔ no recipient set to be "every recipient", so the
+  // District Admin keeps being reminded (the D30 fix is theirs).
   const everyoneDelivered =
-    isFamilyRun && states.length > 0 && states.every((s) => s.state.foundDeadOn !== null && s.state.letterDelivered);
+    isFamilyRun && reachable.length > 0 && reachable.every((s) => s.state.foundDeadOn !== null && s.state.letterDelivered);
   if (!everyoneDelivered) {
     const recordedStaff = new Set(staffRowsNow.filter((r) => r.purpose === 'staff_reminder').map((r) => r.slotDay));
     const cu = claimDomain.correctionCatchUp(reminderDays, recordedStaff, d);
@@ -818,6 +985,7 @@ async function planRun(
   }
 
   // ── The staff run's day-12 escalation to every Pariwar Admin (`-258` detail 2) ──────────────────────────────
+  // ⚠ ⛔ NOT gated on tier (b): `-268` §2 governs the LETTER chase's + 13 step only (D2, 2026-10-01).
   if (run.kind === 'staff' && d >= claimDomain.STAFF_RUN_ESCALATION_DAY) {
     const done = staffRowsNow.some((r) => r.purpose === 'escalation' && r.slotDay === claimDomain.STAFF_RUN_ESCALATION_DAY && r.subjectKey === '');
     if (!done) {
@@ -828,28 +996,34 @@ async function planRun(
   }
 
   // ── The letter track (D20, D21): the chase, its escalation, and the ONE second-letter reminder per person ──
-  if (isFamilyRun && familyCanBeReminded) {
-    const letters = await claimDomain.readRunLetters(db, pariwarId, run.runId);
-    for (const { person, state } of states) {
+  // By purpose: the chase needs a remindable family and ⛔ tier (b); the + 13 escalation needs ⛔ tier (b) (D2 —
+  // `-268` §2: "the family's part is done" ⇒ ⛔ no letter chase, its escalation included) but ⛔ not a remindable
+  // family (D30); `letter_second_due` needs neither. ⭐ POST-RESET (`-271` §1): the escalation and
+  // `letter_second_due` dedupe within the person's CURRENT number epoch only — a row at a slot BEFORE the current
+  // found-dead / first-delivery day belongs to an OLD number, so a second found-dead period is escalated afresh.
+  if (isFamilyRun) {
+    const runSlotOf = (date: string): number => claimDomain.correctionRunDay(run.day0, date);
+    for (const { personKey, state } of tracked) {
       if (state.foundDeadOn === null) continue;
       const fd = claimDomain.calendarDaysBetween(state.foundDeadOn, today);
-      if (!state.letterDelivered && !familyPaused) {
+      const foundDeadSlot = runSlotOf(state.foundDeadOn);
+      if (familyCanBeReminded && !state.letterDelivered && !familyPaused) {
         // The chase: found-dead + 7 … + 12, EVERY due day (D20/`-231` C: "daily through + 12", ⛔ not once total —
         // tier (b) and D30 stop it). D3's catch-up decides the latest due day to send for real (so a missed sweep
         // day is caught up rather than silently skipped forever) — ⚠ ⛔ no `skipped_superseded` markers for the
-        // gap days, matching the staff_reminder precedent just above: the new `letter_chase_day_uq` (D34,
-        // extended) is keyed on `sent_on` alone (⛔ no slot_day), so multiple backfilled rows stamped with
-        // TODAY's date would collide with each other and with the real send under `ON CONFLICT DO NOTHING` —
-        // a staff row is ⛔ an attempt at anyone, and the queue always shows the item regardless.
+        // gap days, matching the staff_reminder precedent just above: `letter_chase_day_uq` (D34, extended; 0130
+        // added `purpose`) is keyed on `(claim, recipient, subject, purpose, sent_on)` — ⛔ no slot_day — so
+        // multiple backfilled `letter_chase` rows stamped with TODAY's date would collide with each other and with
+        // the real send under `ON CONFLICT DO NOTHING` — a staff row is ⛔ an attempt at anyone, and the queue
+        // always shows the item regardless.
         if (fd >= claimDomain.LETTER_CHASE_FIRST_OFFSET) {
           const lastOffset = Math.min(fd, claimDomain.LETTER_CHASE_LAST_OFFSET);
           const foundDeadOn = state.foundDeadOn;
-          const slotOfOffset = (off: number): number =>
-            claimDomain.correctionRunDay(run.day0, cycleCalendar.addCalendarDays(foundDeadOn, off));
+          const slotOfOffset = (off: number): number => runSlotOf(cycleCalendar.addCalendarDays(foundDeadOn, off));
           const dueSlots: number[] = [];
           for (let off = claimDomain.LETTER_CHASE_FIRST_OFFSET; off <= lastOffset; off += 1) dueSlots.push(slotOfOffset(off));
           const recordedSlots = new Set(
-            staffRowsNow.filter((r) => r.purpose === 'letter_chase' && r.subjectKey === person.personKey).map((r) => r.slotDay),
+            staffRowsNow.filter((r) => r.purpose === 'letter_chase' && r.subjectKey === personKey).map((r) => r.slotDay),
           );
           const cuChase = claimDomain.correctionCatchUp(dueSlots, recordedSlots, d);
           if (cuChase.send && cuChase.send.day < claimDomain.CORRECTION_RUN_HORIZON_DAYS) {
@@ -857,31 +1031,50 @@ async function planRun(
               slotDay: cuChase.send.day,
               recipientKey: daKey,
               purpose: 'letter_chase',
-              subjectKey: person.personKey,
+              subjectKey: personKey,
               late: cuChase.send.late,
             });
           }
         }
       }
-      if (!state.letterDelivered && fd >= claimDomain.LETTER_CHASE_ESCALATION_OFFSET) {
-        // "Thereafter" (`-231` C) — ONE escalation to every Pariwar Admin on found-dead + 13.
+      if (!state.letterDelivered && !familyPaused && fd >= claimDomain.LETTER_CHASE_ESCALATION_OFFSET) {
+        // "Thereafter" (`-231` C) — ONE escalation to every Pariwar Admin on found-dead + 13, per number epoch.
         const escDate = cycleCalendar.addCalendarDays(state.foundDeadOn, claimDomain.LETTER_CHASE_ESCALATION_OFFSET);
-        const slot = claimDomain.correctionRunDay(run.day0, escDate);
-        const has = staffRowsNow.some((r) => r.purpose === 'escalation' && r.subjectKey === person.personKey);
+        const slot = runSlotOf(escDate);
+        const has = staffRowsNow.some(
+          (r) => r.purpose === 'escalation' && r.subjectKey === personKey && r.slotDay >= foundDeadSlot,
+        );
         if (slot < claimDomain.CORRECTION_RUN_HORIZON_DAYS && !has) {
           for (const key of await pariwarAdmins()) {
-            await writeStaff({ slotDay: slot, recipientKey: key, purpose: 'escalation', subjectKey: person.personKey, late: escDate < today });
+            await writeStaff({ slotDay: slot, recipientKey: key, purpose: 'escalation', subjectKey: personKey, late: escDate < today });
           }
         }
       }
       if (state.firstDeliveredOn !== null) {
         // D21 / `-231` D — ONE reminder at the first delivery + 30 days, unless a second letter is already posted.
-        const hasSecond = letters.some((l) => l.personKey === person.personKey && l.sequence === 2);
+        // ⚠ "A second letter" is counted over the RUN, ⛔ not the epoch: the cap is two letters per person per run
+        // (`recordCorrectionLetter`), so once the person has two, a reminder to post another asks for the impossible.
+        const personLetters = letters.filter((l) => l.personKey === personKey);
+        const hasSecond = personLetters.length >= 2;
         const due = cycleCalendar.addCalendarDays(state.firstDeliveredOn, claimDomain.SECOND_LETTER_DUE_AFTER_DAYS);
-        const slot = claimDomain.correctionRunDay(run.day0, due);
-        const has = staffRowsNow.some((r) => r.purpose === 'letter_second_due' && r.subjectKey === person.personKey);
+        const slot = runSlotOf(due);
+        const firstDeliveredSlot = runSlotOf(state.firstDeliveredOn);
+        const has = staffRowsNow.some(
+          (r) => r.purpose === 'letter_second_due' && r.subjectKey === personKey && r.slotDay >= firstDeliveredSlot,
+        );
         if (!hasSecond && due <= today && slot < claimDomain.CORRECTION_RUN_HORIZON_DAYS && !has) {
-          await writeStaff({ slotDay: slot, recipientKey: daKey, purpose: 'letter_second_due', subjectKey: person.personKey, late: due < today });
+          if (slot < 1) {
+            // ⛔ Never a slot before day 1: a delivery dated far before the run (a wrong-year typo) would make the
+            // slot negative ⇒ the `slot_day_check` 23514 ⛔ not absorbed by `ON CONFLICT` ⇒ this whole plan rolls back
+            // and the claim gets ⛔ nothing (SMS, District Admin, chase) every day to day 90. Skip it, and say so.
+            alarm(
+              `[jobs] claim-correction-sweep: ⛔ skipped the second-letter reminder for ${personKey} on claim ` +
+                `${row.claim_case_id} — its delivery date ${state.firstDeliveredOn} puts the due slot at day ` +
+                `${String(slot)} of run ${run.runId} (check the recorded delivery date)`,
+            );
+          } else {
+            await writeStaff({ slotDay: slot, recipientKey: daKey, purpose: 'letter_second_due', subjectKey: personKey, late: due < today });
+          }
         }
       }
     }

@@ -462,8 +462,53 @@ export function createNomineeNameCheckHandlers(deps: AppDeps) {
       });
 
       const today = cycleCalendar.istDateOf(deps.clock());
-      let items = await Promise.all(
-        visible.map(async (row) => ({
+      // ⭐ ONE row's chase summary, degraded per ROW (never a 500 for the whole queue). With `withCrypto` it hashes
+      // each chased person's CURRENT number so the per-person status resets on a 6.20 correction (AC3). A throw there
+      // (an unreadable mobile envelope, a KMS blip) is logged — ids only — and the row is retried WITHOUT crypto, so
+      // it still shows (its per-person status may then read the old number's history). ⚠ A DB error inside the
+      // shared scope tx aborts it, so the retry rethrows that one — a degraded row is a crypto fault, never a DB one.
+      const chaseSummaryOf = async (
+        claimCaseId: string,
+        withCrypto: boolean,
+      ): Promise<claimDomain.CorrectionChaseSummary> => {
+        const read = (opts: { readonly crypto?: typeof deps.encryption }) =>
+          claimDomain.readCorrectionChaseSummary(scopeTx.tx, pariwarId, ids.claimId(claimCaseId), today, opts);
+        if (!withCrypto) return read({});
+        try {
+          return await read({ crypto: deps.encryption });
+        } catch (err) {
+          request.log.warn(
+            { err: err instanceof Error ? err.name : 'unknown', claimCaseId },
+            'correction-queue: chase summary failed with crypto; retrying without the current-number hash',
+          );
+          return read({});
+        }
+      };
+
+      // ⭐ Escalated filter FIRST, decrypt SECOND. `escalated` is derived from the chase's reminder rows (⛔ no number
+      // needed), so the 200-row scan reads each summary WITHOUT crypto, filters and slices to the page, and ONLY the
+      // rows returned are then summarised with crypto, have their return note decrypted and get a `queue_note_read`
+      // line — ⛔ never a Tier-1 decrypt or an audit line for a row the caller is not shown.
+      let rows: ReadonlyArray<(typeof visible)[number]> = visible;
+      if (escalatedOnly) {
+        if (visible.length >= claimDomain.CORRECTION_QUEUE_MAX_LIMIT) {
+          // The bounded scan (200) was fully consumed — a Pariwar with MORE under-correction claims than
+          // that could have real escalations past the scan boundary that this view can never surface.
+          request.log.warn(
+            { pariwarId: scopeTx.pariwarId, scanned: visible.length },
+            'correction-queue escalated filter: the bounded scan may be omitting escalations',
+          );
+        }
+        const flags = await Promise.all(
+          visible.map(async (row) => (await chaseSummaryOf(row.claimCaseId, false)).escalated),
+        );
+        rows = visible
+          .filter((_, i) => flags[i] === true)
+          .slice(0, clampLimit(limit, { default: claimDomain.CORRECTION_QUEUE_DEFAULT_LIMIT, cap: claimDomain.CORRECTION_QUEUE_MAX_LIMIT }));
+      }
+
+      const items = await Promise.all(
+        rows.map(async (row) => ({
           claim_case_id: row.claimCaseId,
           deceased_member_id: row.deceasedMemberId,
           claim_state: row.currentState,
@@ -488,30 +533,9 @@ export function createNomineeNameCheckHandlers(deps: AppDeps) {
           accounts_complete: row.accountsComplete,
           // ⭐ Story 6.19b (AC8b, D33) — the short reference the family's SMS carries, and the correction chase.
           short_reference: claimDomain.claimShortReference(row.claimCaseId),
-          correction_chase: correctionChaseDto(
-            await claimDomain.readCorrectionChaseSummary(
-              scopeTx.tx,
-              pariwarId,
-              ids.claimId(row.claimCaseId),
-              today,
-              { crypto: deps.encryption },
-            ),
-          ),
+          correction_chase: correctionChaseDto(await chaseSummaryOf(row.claimCaseId, true)),
         })),
       );
-      if (escalatedOnly) {
-        if (visible.length >= claimDomain.CORRECTION_QUEUE_MAX_LIMIT) {
-          // The bounded scan (200) was fully consumed — a Pariwar with MORE under-correction claims than
-          // that could have real escalations past the scan boundary that this view can never surface.
-          request.log.warn(
-            { pariwarId: scopeTx.pariwarId, scanned: visible.length },
-            'correction-queue escalated filter: the bounded scan may be omitting escalations',
-          );
-        }
-        items = items
-          .filter((i) => i.correction_chase.escalated)
-          .slice(0, clampLimit(limit, { default: claimDomain.CORRECTION_QUEUE_DEFAULT_LIMIT, cap: claimDomain.CORRECTION_QUEUE_MAX_LIMIT }));
-      }
 
       // AUDITED — who looked at the correction queue, and how much of it they could see.
       // ⛔ NON-PII: counts and ids only, ⛔ no name and ⛔ no note.
@@ -524,7 +548,9 @@ export function createNomineeNameCheckHandlers(deps: AppDeps) {
       // The `queue_read` line above says the queue was opened; ⛔ it cannot say whose notes were
       // shown (its context is only hashed). The per-claim read of the same note leaves a
       // claim-locatable line, so this surface now does too. ⛔ NON-PII: ids + district, never the note.
-      for (const row of visible) {
+      // ⭐ Over the RETURNED rows only (`rows`, ⛔ not the escalated scan's `visible`) — a line for a note the
+      // caller was never shown is a false audit trail.
+      for (const row of rows) {
         if (row.returnNoteCiphertext === null) continue;
         emitAuthAudit(deps, request, 'admin_nominee_name_check.queue_note_read', {
           actorId,
@@ -665,7 +691,7 @@ function correctionChaseDto(s: claimDomain.CorrectionChaseSummary): CorrectionCh
     must_act_set_by: s.mark?.setByActorDisplay ?? null,
     must_act_set_at: s.mark?.setAt.toISOString() ?? null,
     run: s.run
-      ? { kind: s.run.kind, day0: s.run.day0, day_count: s.run.dayCount, open: s.run.open, next_reminder_on: s.run.nextReminderOn }
+      ? { kind: s.run.kind, day0: s.run.day0, day_count: s.run.dayCount, open: s.run.open, ended_on: s.run.endedOn, next_reminder_on: s.run.nextReminderOn }
       : null,
     cannot_remind: s.cannotRemind,
     claimant_unresolved: s.claimantUnresolved,

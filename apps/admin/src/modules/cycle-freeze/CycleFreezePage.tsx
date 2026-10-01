@@ -136,7 +136,7 @@ export function CycleFreezePage({ pariwarId }: CycleFreezePageProps): ReactEleme
                     key={c.claim_case_id}
                     case_={c}
                     bucket="ready_to_freeze"
-                    onDecision={(body) => decision.mutate(body)}
+                    onDecision={(body, opts) => decision.mutate(body, opts)}
                     pending={decision.isPending}
                     error={errorMessage(decision.error)}
                   />
@@ -159,7 +159,7 @@ export function CycleFreezePage({ pariwarId }: CycleFreezePageProps): ReactEleme
                     key={c.claim_case_id}
                     case_={c}
                     bucket="escalated"
-                    onDecision={(body) => decision.mutate(body)}
+                    onDecision={(body, opts) => decision.mutate(body, opts)}
                     pending={decision.isPending}
                     error={errorMessage(decision.error)}
                   />
@@ -186,7 +186,7 @@ export function CycleFreezePage({ pariwarId }: CycleFreezePageProps): ReactEleme
                     key={c.claim_case_id}
                     case_={c}
                     bucket="voted_pending_commit"
-                    onDecision={(body) => decision.mutate(body)}
+                    onDecision={(body, opts) => decision.mutate(body, opts)}
                     pending={decision.isPending}
                     error={errorMessage(decision.error)}
                   />

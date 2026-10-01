@@ -33,7 +33,12 @@ export interface PendingCaseCardProps {
   bucket: Bucket;
   /** Needed for the on-demand names disclosure (D3) — the read is per-claim and tenant-scoped. */
   pariwarId: string;
-  onDecision: (body: CycleFreezeDecisionRequest) => void;
+  /**
+   * Submit a decision. ⭐ `opts.onSuccess` is called only once the SERVER accepted it — the card clears its inputs
+   * there and nowhere else, so a failed Return/Deny keeps the typed note (Story 6.19b review: the inputs were wiped
+   * before the server answered).
+   */
+  onDecision: (body: CycleFreezeDecisionRequest, opts?: { readonly onSuccess?: () => void }) => void;
   pending: boolean;
   error?: string | undefined;
 }
@@ -89,6 +94,12 @@ export function PendingCaseCard({
   // mandatory at the contract boundary, which is how the note is actually enforced.
   const returnOptions = reasonCodesFor('returned_for_correction');
 
+  const resetInputs = (): void => {
+    setReasonCode('');
+    setRationale('');
+    setMustAct('');
+  };
+
   const submit = (
     partial: Pick<CycleFreezeDecisionRequest, 'action' | 'escalation_outcome'>,
     outcome: StateTrusteeDecisionOutcome,
@@ -96,11 +107,9 @@ export function PendingCaseCard({
     setValidationError(undefined);
 
     if (outcome === 'approved') {
-      // Approve takes no reason code/rationale — clear any leftover selection from a different action
-      // before submitting, so it can never leak into an approve decision.
-      onDecision({ claim_case_id: case_.claim_case_id, ...partial });
-      setReasonCode('');
-      setRationale('');
+      // Approve takes no reason code/rationale — the body is built WITHOUT them, so a leftover selection from a
+      // different action can never leak into an approve decision; the inputs clear once the server accepts it.
+      onDecision({ claim_case_id: case_.claim_case_id, ...partial }, { onSuccess: resetInputs });
       return;
     }
 
@@ -146,10 +155,8 @@ export function PendingCaseCard({
       ...(rationale.trim() !== '' ? { rationale: rationale.trim() } : {}),
       ...(outcome === 'returned_for_correction' && mustAct !== '' ? { must_act: mustAct } : {}),
     };
-    onDecision(body);
-    setReasonCode('');
-    setRationale('');
-    setMustAct('');
+    // ⭐ Reset ONLY on the server's success — a failed Return/Deny keeps the code, the note and who-must-act.
+    onDecision(body, { onSuccess: resetInputs });
   };
 
   return (

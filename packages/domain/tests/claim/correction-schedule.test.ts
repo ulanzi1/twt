@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   CORRECTION_REMINDER_DAYS,
+  type CorrectionScheduleTable,
   calendarDaysBetween,
   correctionCatchUp,
   correctionReminderSchedule,
@@ -36,6 +37,21 @@ describe('correctionReminderSchedule', () => {
     expect(days).not.toContain(89);
     expect(days).not.toContain(90);
     expect(days.every((d) => d > 0 && d < 90)).toBe(true);
+  });
+
+  it('⭐ the 0 / 89 / 90 horizon FILTER itself — on an injected table that holds those days (the Panel\'s cannot)', () => {
+    const days = [0, 1, 89, 90, 91, 120];
+    const table: CorrectionScheduleTable = {
+      family: days.map((day) => ({ day, kind: 'reminder' as const })),
+      direction: [],
+      staff: [{ day: 0, kind: 'escalation' }, { day: 90, kind: 'escalation' }],
+    };
+    expect(correctionReminderSchedule('family', '2026-10-01', table)).toEqual([
+      { day: 1, date: '2026-10-02', kind: 'reminder' },
+      { day: 89, date: '2026-12-29', kind: 'reminder' },
+    ]);
+    expect(correctionReminderSchedule('staff', '2026-10-01', table)).toEqual([]);
+    expect(correctionReminderSchedule('direction', '2026-10-01', table)).toEqual([]);
   });
 
   it('⭐ the staff kind also carries its day-12 ESCALATION slot (⛔ not a reminder day)', () => {
@@ -74,6 +90,19 @@ describe('correctionCatchUp (D3)', () => {
 
   it('a slot already recorded ⇒ nothing (a second sweep the same day is a no-op)', () => {
     expect(correctionCatchUp(PANEL_DAYS, new Set([1, 2, 3]), 3)).toEqual({ send: null, skip: [] });
+  });
+
+  it('⭐ TODAY is a slot with OLDER misses: today\'s slot is sent (⛔ not late), the gap since the last record skipped', () => {
+    expect(correctionCatchUp(PANEL_DAYS, new Set([1, 2]), 10)).toEqual({ send: { day: 10, late: false }, skip: [3, 4, 5, 6, 7] });
+  });
+
+  it('the tail: day 89 sends the missed day-84 slot once, late; day 89 with 84 recorded ⇒ nothing; day 90 is EXPIRED', () => {
+    const allBut84 = new Set(PANEL_DAYS.filter((d) => d !== 84));
+    expect(correctionCatchUp(PANEL_DAYS, allBut84, 89)).toEqual({ send: { day: 84, late: true }, skip: [] });
+    expect(correctionCatchUp(PANEL_DAYS, new Set(PANEL_DAYS), 89)).toEqual({ send: null, skip: [] });
+    // The catch-up is calendar-free; the sweep never calls it on day 90 — the run is over (`-229`).
+    expect(isCorrectionRunExpired('2026-10-01', '2026-12-30')).toBe(true);
+    expect(correctionRunDay('2026-10-01', '2026-12-30')).toBe(90);
   });
 
   it('⛔ nothing before the first slot, and a non-slot day with the last slot recorded ⇒ nothing', () => {

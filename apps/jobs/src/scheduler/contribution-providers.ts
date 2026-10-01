@@ -80,7 +80,8 @@ interface PossibleGoogleError {
 
 /** gRPC `Status.NOT_FOUND` (google-gax `src/status.ts`) — the code Secret Manager's `accessSecretVersion`
  *  rejects with when the named secret has never been created (as opposed to e.g. `UNAVAILABLE`/`DEADLINE_EXCEEDED`
- *  for a genuine outage, or `PERMISSION_DENIED` for an access-control misconfiguration). */
+ *  for a genuine outage, or `PERMISSION_DENIED` for an access-control misconfiguration — see
+ *  `classifySecretManagerFault` for the claim-correction send's split of the two). */
 const GRPC_NOT_FOUND = 5;
 
 /** The exact local-dev "not configured" throw `resolveSecretValue` raises itself (packages/domain/src/secrets.ts)
@@ -115,6 +116,50 @@ export async function resolveSmsDltConfig(configKey: string): Promise<string | n
     if (isSecretManagerNotFound || isLocalDevUnconfigured) return null;
     throw err;
   }
+}
+
+/** The gRPC status names (google-gax `src/status.ts`) a Secret Manager fault can carry — for a classified detail. */
+const GRPC_STATUS_NAMES: Readonly<Record<number, string>> = {
+  1: 'cancelled',
+  2: 'unknown',
+  3: 'invalid_argument',
+  4: 'deadline_exceeded',
+  5: 'not_found',
+  6: 'already_exists',
+  7: 'permission_denied',
+  8: 'resource_exhausted',
+  9: 'failed_precondition',
+  10: 'aborted',
+  11: 'out_of_range',
+  12: 'unimplemented',
+  13: 'internal',
+  14: 'unavailable',
+  15: 'data_loss',
+  16: 'unauthenticated',
+};
+
+/** gRPC `UNAVAILABLE` / `DEADLINE_EXCEEDED` — the only Secret Manager codes that are an OUTAGE (a retry can clear). */
+const GRPC_TRANSIENT: ReadonlySet<number> = new Set([4, 14]);
+
+/** Node socket errors that reach a caller un-wrapped by gRPC — a network blip, ⛔ never a config fault. */
+const NETWORK_TRANSIENT: ReadonlySet<string> = new Set(['ECONNRESET', 'ECONNREFUSED', 'ETIMEDOUT', 'EAI_AGAIN', 'EPIPE']);
+
+/**
+ * ⭐ Story 6.19b (third-pass review) — classify a failure that `resolveSmsDltConfig` RE-THREW (i.e. ⛔ not the
+ * "not provisioned" `NOT_FOUND`, which already resolved to `null`). Only an OUTAGE is `transient` (gRPC
+ * `UNAVAILABLE` / `DEADLINE_EXCEEDED`, or a raw socket error); everything else — `PERMISSION_DENIED`,
+ * `INVALID_ARGUMENT`, `UNAUTHENTICATED`, a missing `GOOGLE_CLOUD_PROJECT`, an empty payload, an error with ⛔ no
+ * code — is a CONFIG fault a retry cannot clear: the caller records it FINAL and alarms. `code` is a lower-case,
+ * PII-free label (the gRPC status name, the socket code, or `unknown`) for the record's `detail`.
+ * ⚠ Used by the claim-correction send only — the contribution resolver keeps its own "re-throw ⇒ retry" posture.
+ */
+export function classifySecretManagerFault(err: unknown): { readonly transient: boolean; readonly code: string } {
+  const code = (err as PossibleGoogleError | null)?.code;
+  if (typeof code === 'number') {
+    return { transient: GRPC_TRANSIENT.has(code), code: GRPC_STATUS_NAMES[code] ?? `grpc_${String(code)}` };
+  }
+  if (typeof code === 'string' && NETWORK_TRANSIENT.has(code)) return { transient: true, code: code.toLowerCase() };
+  return { transient: false, code: 'unknown' };
 }
 
 /**

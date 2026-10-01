@@ -730,7 +730,22 @@ export function permissionKey(value: string): PermissionKey {
 //   (1) `claim.record_correction_letter` — district-dimension, `district_admin` (+ derived super_admin).
 //   (7) `claim.change_correction_must_act` — district-dimension, `district_admin` (+ derived super_admin).
 // ⛔ NOT `state_trustee` on either (the 6.10 `claim.verify` disposition). 6.19c mints (2)–(6) + (8) at 49 → 50.
-export const PERMISSION_CATALOG_VERSION = 49 as const;
+// ── Bumped 49 → 50 at Story 6.19c / Decision 2026-09-28-265 §2 (keys (2)–(6) and (8)) — added SIX keys: 58 → 64 ────
+// Minted IN `-265` (the `-195` cl.2 discipline), ONE bump for all six (the 6.18 two-key precedent). 49 / 58 were READ
+// LIVE on 2026-10-01 at `f079dc56` (6.19c Task 0 — ⛔ not transcribed from `-265`'s forecast). `defaultRoleBundles`
+// stays 13 — ⛔ no new role. The names are the developer's (D8: *"Names are the developer's"*).
+//   (2) `claim.request_correction_closure`    — district-dimension, `district_admin` (+ derived super_admin).
+//   (3) `claim.decide_correction_closure`     — pariwar-dimension, `pariwar_admin` (+ derived super_admin).
+//   (4) `claim.decide_escalated_closure`      — pariwar-dimension, `super_admin` ONLY (⛔ no `roles.ts` const — the
+//                                               drive-target precedent: super_admin derives every catalog key).
+//   (5) `claim.review_escalated_closure`      — pariwar-dimension, `super_admin` ONLY (likewise).
+//   (6) `claim.confirm_refile`                — PER-REQUEST dimension (`district` for `district_admin`, `pariwar` for
+//                                               `helpline_operator` — the `resolveQueueScopeStash` precedent).
+//   (8) `claim.record_no_correction_needed`   — district-dimension, `district_admin` (+ derived super_admin).
+// ⛔ NOT `state_trustee` on any (the 6.10 `claim.verify` disposition; the pariwar keys are RANK-ORDER BLOCKED for it).
+// ⭐ A direction RESPONSE needs ⛔ no key (D8): the actor must be the NAMED directee AND hold
+// `claim.view_nominee_name_check` — an identity check, ⛔ a capability.
+export const PERMISSION_CATALOG_VERSION = 50 as const;
 
 /**
  * The grounded v1 seed keys (architecture + epic + PRD references only — see file
@@ -1013,6 +1028,39 @@ export const SEED_PERMISSION_KEYS = [
   // Pariwar Admin's (pariwar-dimension), and `-258` gives the change to the District Admin; ⛔ not 6.19c's (2) — a
   // chase change ⛔ asks for no refusal. Granted to `district_admin` ONLY (+ derived super_admin).
   'claim.change_correction_must_act',
+  // Story 6.19c (key (2) of `2026-09-28-265` §2) — REQUEST A CLOSURE for no response (`-231` A/B: the system reminds,
+  // the District Admin REQUESTS, the Pariwar Admin decides). Gates POST …/admin/claims/:claimCaseId/correction/closure
+  // /request, checked at `dimension: 'district'`. Reuse-check: ⛔ not (1) — recording evidence of a letter is ⛔ asking
+  // for a refusal; ⛔ not (7) — a chase change asks for ⛔ no refusal. Granted to `district_admin` ONLY (+ super_admin).
+  'claim.request_correction_closure',
+  // Story 6.19c (key (3)) — DECIDE A CLOSURE REQUEST: approve (the D1 chain — the SECOND refusal, ⛔ appealable) or
+  // decline with a REQUIRED note (→ escalated to the Super Admin, `-232` H). Gates POST …/correction/closure/decision,
+  // checked at `dimension: 'pariwar'`. Reuse-check: ⛔ not `cycle.freeze` — the vote decides a resubmitted or ordinary
+  // claim; this decides a request for a refusal that is ⛔ never appealable. Granted to `pariwar_admin` ONLY
+  // (+ super_admin).
+  'claim.decide_correction_closure',
+  // Story 6.19c (key (4)) — DECIDE AN ESCALATED CLAIM (D17, `-260` G1, `-273` §4/§8/§10): close (a declined-closure
+  // origin only), refuse for another reason, or approve — on a declined closure despite the name problem (`-251`),
+  // on a staff case only with a current passing check. Gates POST …/correction/closure/super-admin-decision, checked at
+  // `dimension: 'pariwar'`. Reuse-check: ⛔ not (3) — the `-251` narrowing is confined to the Super Admin. ⭐ Granted to
+  // `super_admin` ONLY — ⛔ no `roles.ts` const (the drive-target precedent: `super_admin` derives every catalog key).
+  'claim.decide_escalated_closure',
+  // Story 6.19c (key (5)) — HOLD AN ESCALATED CLAIM UNDER REVIEW AND DIRECT the named Pariwar Admin / District Admin
+  // (`-256` cl.1/cl.3, D18). Gates POST …/correction/closure/review and …/directions, checked at `dimension:
+  // 'pariwar'`. Reuse-check: ⛔ not (4) — holding and directing decide nothing (`-256`). `super_admin` ONLY (⛔ no const).
+  'claim.review_escalated_closure',
+  // Story 6.19c (key (6)) — CONFIRM A RE-FILE after a closure for no response (`-254`: only through a PERSON, with a
+  // note). Gates POST …/admin/claims/:claimCaseId/refile-confirmation, checked PER REQUEST — `district` for a
+  // `district_admin`, `pariwar` for a `helpline_operator` (the `resolveQueueScopeStash` precedent). Reuse-check: ⛔ not
+  // `claim.file` — `-254` requires a person's recorded confirmation WITH A NOTE, a distinct act from filing. Granted
+  // to `district_admin` AND `helpline_operator` (+ super_admin).
+  'claim.confirm_refile',
+  // Story 6.19c (key (8)) — RECORD "NO CORRECTION NEEDED" on a returned claim (D27, `-258`): a District Admin record
+  // with a REQUIRED note, valid only with a current passing name check recorded after it; it sets the mark to `staff`
+  // and puts the claim before the Pariwar Admin. Gates POST …/correction/no-correction-needed, checked at `dimension:
+  // 'district'`. Reuse-check: ⛔ not (7) — it starts an APPROVAL path (D27), ⛔ only a chase change. Granted to
+  // `district_admin` ONLY (+ super_admin).
+  'claim.record_no_correction_needed',
   // Story 6.12 (R6) — the MANUAL shepherd reassignment WRITE key. Gates
   // `POST …/admin/claims/:claimCaseId/shepherd/reassign` (checked at `dimension: 'district'` against the
   // deceased member's SERVER-DERIVED posting district — the client never submits the authz district).

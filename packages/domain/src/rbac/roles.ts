@@ -123,6 +123,14 @@ const CLAIM_REVIEW_DEATH_CERTIFICATE = permissionKey('claim.review_death_certifi
 // read) and the "who must act" change, both district-dimension, `district_admin` ONLY. See permissions.ts.
 const CLAIM_RECORD_CORRECTION_LETTER = permissionKey('claim.record_correction_letter');
 const CLAIM_CHANGE_CORRECTION_MUST_ACT = permissionKey('claim.change_correction_must_act');
+// Story 6.19c (keys (2), (3), (6), (8), Decision `2026-09-28-265` §2) — the closure request (district), its decision
+// (pariwar), the re-file confirmation (per request: district / pariwar) and "no correction needed" (district). See
+// permissions.ts. ⛔ Keys (4) and (5) have NO const here — `super_admin` ONLY, derived from the catalog (the
+// drive-target precedent).
+const CLAIM_REQUEST_CORRECTION_CLOSURE = permissionKey('claim.request_correction_closure');
+const CLAIM_DECIDE_CORRECTION_CLOSURE = permissionKey('claim.decide_correction_closure');
+const CLAIM_CONFIRM_REFILE = permissionKey('claim.confirm_refile');
+const CLAIM_RECORD_NO_CORRECTION_NEEDED = permissionKey('claim.record_no_correction_needed');
 // Story 6.12 (R6) — the MANUAL shepherd reassignment WRITE key (district-dimension; distinct from
 // claim.approve/claim.verify — routing the family's contact grants no adjudication power, AC6).
 const CLAIM_ASSIGN_SHEPHERD = permissionKey('claim.assign_shepherd');
@@ -376,6 +384,10 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
       // — a `state`-ceiling grant can NEVER satisfy a pariwar check, see permissions.ts. No inert
       // state_trustee grant is seeded.
       CYCLE_FREEZE,
+      // Story 6.19c (key (3), `-231` A/B, `-232` H) — DECIDE a closure request: approve (the second refusal, ⛔
+      // appealable) or decline with a required note (→ the Super Admin). Checked at `dimension: 'pariwar'`, the
+      // cycle.freeze ceiling rationale. ⛔ Not cycle.freeze itself — see permissions.ts.
+      CLAIM_DECIDE_CORRECTION_CLOSURE,
       // Story 6.14 (D-B) — the R9 special-case panel-voting key. A PARIWAR-WIDE bulk-adjudication surface
       // (checked at `dimension: 'pariwar'`), the exact cycle.freeze ceiling rationale (a `pariwar`-ceiling-
       // or-broader role). v1 actor = pariwar_admin-as-Trustee-Lite; direct state_trustee gating is
@@ -501,6 +513,12 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
       CLAIM_REVIEW_DEATH_CERTIFICATE,
       CLAIM_RECORD_CORRECTION_LETTER,
       CLAIM_CHANGE_CORRECTION_MUST_ACT,
+      // Story 6.19c (keys (2), (6), (8)) — the District Admin REQUESTS a closure for no response (`-231` A/B), CONFIRMS a
+      // re-file after one (`-254`), and records "no correction needed" (D27). All district-dimension against the
+      // deceased's server-derived posting district (the re-file confirmation per request — `district` for this role).
+      CLAIM_REQUEST_CORRECTION_CLOSURE,
+      CLAIM_CONFIRM_REFILE,
+      CLAIM_RECORD_NO_CORRECTION_NEEDED,
       // Story 6.12 (R6) — the manual shepherd reassignment key. The District Admin IS the shepherd (D-C),
       // so they administer the assignment; checked at `dimension: 'district'` against the deceased's
       // server-derived posting district. Grants no adjudication power (AC6) — orthogonal to CLAIM_APPROVE.
@@ -706,6 +724,9 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
       // Checked at `dimension: 'pariwar'`. ⛔ Raising is not approving: the two approvals are the District
       // Admin's and the Pariwar Admin's keys, which this role does not hold.
       CLAIM_RAISE_NOMINEE_CORRECTION,
+      // Story 6.19c (key (6), `-254`) — CONFIRM A RE-FILE after a closure for no response, with a note. Checked PER
+      // REQUEST at `dimension: 'pariwar'` for this role (the `resolveQueueScopeStash` precedent). ⛔ Not `claim.file`.
+      CLAIM_CONFIRM_REFILE,
       // Story 10.3 (SM-1 C3) — the helpdesk ticket-create key (the operator files on a caller's behalf).
       HELPDESK_CREATE,
       // Story 10.4 — the helpdesk responder-console key. helpline_operator is the default routing target for

@@ -4,6 +4,11 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: adversarial review of the applied 6-19b third-pass patches (2026-10-01)
+
+- **The SMS child hashes the claimant's number inside the trustee lock, with no timeout.** I4 (`beginCorrectionFamilySend`) calls `currentCorrectionNumberHash` — a KMS decrypt + HMAC — under the claim's advisory lock and open transaction on every claimant send after day 1; ⛔ no timeout exists in `packages/domain/src/encryption` or `apps/jobs/src`. A KMS stall would hold the claim's lock (blocking the District Admin's mark change, letter recording and the sweep's plan) on a `max: 2` pool. ⚠ UNVERIFIED: the KMS client's own default timeout. ⭐ Trigger: confirm that timeout; if none, bound the hash or hash before taking the lock.
+- **`closeScopeTx` swallows a failed COMMIT** (`apps/api/src/modules/multi-tenant/scope-tx.ts`) — a write route returns 201 and writes its audit line for a change that was never stored (the delivery route also orphans its screenshot). Pre-existing, every route. ⭐ Trigger: a scope-tx plumbing pass (a `commitScopeTx` that throws).
+
 ## Deferred from: code review of 6-19b-correction-reminders-and-posted-letters — third pass, the committed branch (2026-09-30)
 
 - **Two pool connections per correction-chase write; the delivery route holds the first across the upload.** The pre-handler's scope tx stays open while each writer opens its own `openScopeTx`; `recordDelivery` also keeps it open while buffering a screenshot of up to 10 MiB. Pre-existing: the established own-`openScopeTx` route pattern. ⭐ Trigger: pool-exhaustion alarms, or a route-plumbing pass that lets a writer reuse `request.scopeTx`. (`apps/api/src/modules/claims/claims.correction-chase.handlers.ts`)

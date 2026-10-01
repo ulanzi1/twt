@@ -57,6 +57,7 @@ import {
 import { claimStateTrusteeDecisions } from '../schema/claim_state_trustee_decisions.js';
 import { claims } from '../schema/claims.js';
 import { assertClaimContactRecorded } from './claim-contact-check.js';
+import { ClaimContactRequiredError } from './errors.js';
 import {
   type CorrectionChaseResolution,
   type CorrectionHoldCheck,
@@ -78,7 +79,7 @@ import {
   readReturnFamilyLetters,
   readReturnFamilyRows,
 } from './correction-reminder-record.js';
-import { istDateOf, isCorrectionRunExpired } from './correction-schedule.js';
+import { correctionRunDay, istDateOf, isCorrectionRunExpired } from './correction-schedule.js';
 import type { ClaimEventActor } from './events.js';
 import {
   assertClaimApprovable,
@@ -652,6 +653,85 @@ interface ActorInput {
   /** The instant of the act (the API passes its clock) — "today" is its IST date. */
   readonly now: Date;
   readonly auditId?: string;
+}
+
+// ── The closure READINESS (AC8c — the District Admin's queue: the closure state, and why a request would refuse) ──
+
+/** Why a request would refuse right now — `closure_contact_required` is D14's (`ClaimContactRequiredError`). */
+export type ClosureRequestBlocker = CorrectionClosureRefusal | 'claim_contact_required';
+
+export interface ClosureReadiness {
+  /** The live return's closures row state (a lapsed request reads `lapsed`), or `null` (⛔ none). */
+  readonly state: ClaimCorrectionClosureRow['state'] | null;
+  readonly origin: ClaimCorrectionClosureRow['origin'] | null;
+  readonly requestedAt: Date | null;
+  readonly requestedByDisplay: string | null;
+  /** `null` ⇔ a request would be ACCEPTED now; else the FIRST refusal in AC6's order. */
+  readonly blocker: ClosureRequestBlocker | null;
+  readonly notReached: NotReachedDetail | null;
+  /** The latest family / direction run's day number on `now` (open or ended), or `null`. */
+  readonly familyRunDay: number | null;
+}
+
+/**
+ * ⭐ READ-ONLY — what a closure REQUEST would answer now, through the SAME checks the writer runs (⛔ a second copy that
+ * could drift): the live return's row and its derived lapse, then `assertClosureGround`. ⛔ Takes no lock and writes
+ * nothing (a lapsed request is REPORTED `lapsed`, ⛔ materialised). `crypto` hashes each person's current number (D22).
+ */
+export async function readClosureReadiness(
+  db: Db,
+  pariwarId: PariwarId,
+  claimCaseId: ClaimId,
+  now: Date,
+  opts: { readonly crypto: FieldCryptoDeps },
+): Promise<ClosureReadiness> {
+  const [claimRow] = await db
+    .select()
+    .from(claims)
+    .where(and(eq(claims.pariwarId, pariwarId), eq(claims.claimCaseId, claimCaseId)))
+    .limit(1);
+  const chase = await resolveCorrectionChase(db, pariwarId, claimCaseId, { crypto: opts.crypto });
+  const today = istDateOf(now);
+  const familyRunDay = chase.familyRun === null ? null : correctionRunDay(chase.familyRun.day0, today);
+  const none: ClosureReadiness = {
+    state: null,
+    origin: null,
+    requestedAt: null,
+    requestedByDisplay: null,
+    blocker: 'no_live_return',
+    notReached: null,
+    familyRunDay,
+  };
+  if (!claimRow || chase.liveReturn === null) return none;
+  const row = await readLiveClosureRowOfReturn(db, pariwarId, chase.liveReturn.decisionId);
+  const lapsed = row !== null && (await isClosureRequestLapsed(db, pariwarId, row, chase));
+  const base = {
+    state: row === null ? null : lapsed ? ('lapsed' as const) : row.state,
+    origin: row?.origin ?? null,
+    requestedAt: row?.requestedAt ?? null,
+    requestedByDisplay: row?.requestedByDisplay ?? null,
+    familyRunDay,
+  };
+  if (row !== null && isHeldClosureState(row.state)) return { ...base, blocker: 'escalated', notReached: null };
+  if (row !== null && row.state === 'requested' && !lapsed) return { ...base, blocker: 'request_pending', notReached: null };
+  try {
+    await assertClosureGround({
+      db,
+      pariwarId,
+      claimCaseId,
+      deceasedMemberId: claimRow.deceasedMemberId,
+      currentState: claimRow.currentState,
+      chase,
+      today,
+    });
+    return { ...base, blocker: null, notReached: null };
+  } catch (err) {
+    if (err instanceof CorrectionClosureRefusedError) {
+      return { ...base, blocker: err.refusal, notReached: err.notReached ?? null };
+    }
+    if (err instanceof ClaimContactRequiredError) return { ...base, blocker: 'claim_contact_required', notReached: null };
+    throw err;
+  }
 }
 
 // ── (2) THE REQUEST — the District Admin (AC6) ─────────────────────────────────────────────────────────────────

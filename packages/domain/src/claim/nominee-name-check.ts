@@ -385,9 +385,54 @@ export async function assertClaimApprovable(
   pariwarId: PariwarId,
   claimCaseId: ClaimId,
   deceasedMemberId: MemberId,
+  /**
+   * ⭐ Story 6.19c (`2026-09-27-251`, `2026-10-01-273` §8, T10) — the gate's ONE composition seam. OMITTED by every
+   * existing caller (P1 / P3 / P4, D27's and `-260` G1's approves): the behaviour is BYTE-IDENTICAL to before. ONLY
+   * the `-251` Super Admin approve passes `{ nameCheck: 'waived_251' }` — the FULL gate minus the name-check conjunct,
+   * BY CONSTRUCTION (⛔ a hand list of today's conjuncts): every OTHER conjunct here — the accepted certificate, the
+   * two accounts, the effective determination, and whatever conjunct is added later — still refuses it.
+   * ⭐ `-263` Consequence 4 (FQ9, row `6-26`, `backlog`): *"whichever lands second carries FQ9 into both halves; ⛔
+   * neither may drop it."* `6-26` adds the ground-inspection conjunct HERE, ONCE, and the `-251` path inherits it
+   * without an edit (D27's and G1's approves call the full gate and inherit it too).
+   */
+  opts: ClaimApprovalGateOptions = {},
 ): Promise<void> {
   await assertDeathCertificateAcceptedForApproval(db, pariwarId, claimCaseId);
-  await assertNomineeNameCheckForApproval(db, pariwarId, claimCaseId, deceasedMemberId);
+  await assertNomineeNameCheckForApproval(db, pariwarId, claimCaseId, deceasedMemberId, opts);
+}
+
+/**
+ * The approval gate's options (Story 6.19c). `nameCheck`: `'required'` (the default — today's gate, every caller but
+ * one) or `'waived_251'` — ⛔ ONLY the `-251` Super Admin approve on a claim escalated after a DECLINED closure
+ * (invariant 7: confined to that one case; `-255` F4: *"nothing more is required"*). It waives `never_checked`,
+ * `stale` AND `does_not_match` — ⛔ never the certificate, the accounts or the determination.
+ */
+export interface ClaimApprovalGateOptions {
+  readonly nameCheck?: 'required' | 'waived_251';
+}
+
+/**
+ * ⭐ Story 6.19c (`2026-10-01-273` §7) — the name check's RECORDED state for an approval, as the gate itself would
+ * judge it: `passing` (current and passing), else the gate's own refusal reason — `never_checked`, `stale` or
+ * `does_not_match`. The `-251` approve records it on the closure row; the *"approved without a current passing name
+ * check"* highlight is DERIVED from it. ⛔ COMPARES NO NAMES (cl.5) — it reads the recorded verdicts and timestamps,
+ * exactly as `assertNomineeNameCheckForApproval` does.
+ * ⚠ Call it AFTER the gate's accounts and determination legs have passed (the `-251` writer runs the waived gate
+ * first): with ⛔ two accounts or ⛔ an effective determination it throws those legs' typed errors.
+ */
+export async function readNomineeNameCheckApprovalState(
+  db: Db,
+  pariwarId: PariwarId,
+  claimCaseId: ClaimId,
+  deceasedMemberId: MemberId,
+): Promise<'passing' | NomineeNameCheckRequiredError['reason']> {
+  try {
+    await assertNomineeNameCheckForApproval(db, pariwarId, claimCaseId, deceasedMemberId);
+    return 'passing';
+  } catch (err) {
+    if (err instanceof NomineeNameCheckRequiredError) return err.reason;
+    throw err;
+  }
 }
 
 /**
@@ -420,6 +465,8 @@ export async function assertNomineeNameCheckForApproval(
   pariwarId: PariwarId,
   claimCaseId: ClaimId,
   deceasedMemberId: MemberId,
+  /** Story 6.19c — omitted by every caller but the `-251` approve (via `assertClaimApprovable`). */
+  opts: ClaimApprovalGateOptions = {},
 ): Promise<void> {
   const liveAccounts = await db
     .select({
@@ -452,6 +499,10 @@ export async function assertNomineeNameCheckForApproval(
           : effective.status,
     );
   }
+
+  // ⭐ Story 6.19c (`-251`, `-273` §8) — the ONE waiver: the name-check conjunct alone, and ONLY when the caller says so
+  // (the `-251` Super Admin approve). Everything ABOVE — the accounts and the determination — has already run.
+  if (opts.nameCheck === 'waived_251') return;
 
   const check = await getLatestNomineeNameCheck(db, pariwarId, claimCaseId);
   if (!check) throw new NomineeNameCheckRequiredError(claimCaseId, 'never_checked');

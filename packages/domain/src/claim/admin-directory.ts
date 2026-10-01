@@ -72,3 +72,34 @@ export async function listAdminsByRole(
     truncated: rows.length > ADMIN_DIRECTORY_LIMIT,
   };
 }
+
+/**
+ * ⭐ Story 6.19c (AC14, `-273` §6) — the active SUPER ADMINS who may decide this Pariwar's held claims: every `super_admin`
+ * grant at the GLOBAL ceiling (pariwar-agnostic — its `pariwar_id` is ⛔ this Pariwar's) or scoped to this Pariwar. The
+ * sibling of `listAdminsByRole` (which reads one Pariwar's grants). ⚠ A global grant lives under ANOTHER `pariwar_id`, so
+ * RLS hides it from a scoped transaction: the CALLER passes a db on the jobs' BYPASSRLS pool (the reminder sweep's own
+ * cross-tenant read). Bounded like its sibling (`truncated` on a 51st holder).
+ */
+export async function listSuperAdmins(db: Db, pariwarId: PariwarId): Promise<AdminDirectoryResult> {
+  const rows = await db
+    .selectDistinct({ userId: users.id, displayName: users.displayName })
+    .from(roleGrants)
+    .innerJoin(users, eq(users.id, roleGrants.userId))
+    .where(
+      and(
+        eq(roleGrants.role, 'super_admin'),
+        sql`(${roleGrants.scopeDimension} = 'global' OR ${roleGrants.pariwarId} = ${pariwarId})`,
+        eq(users.status, 'active'),
+        isNotNull(users.displayName),
+        sql`btrim(${users.displayName}) <> ''`,
+      ),
+    )
+    .orderBy(asc(users.id))
+    .limit(51);
+  return {
+    entries: rows
+      .slice(0, ADMIN_DIRECTORY_LIMIT)
+      .map((r) => ({ userId: r.userId as string, displayName: r.displayName! })),
+    truncated: rows.length > ADMIN_DIRECTORY_LIMIT,
+  };
+}

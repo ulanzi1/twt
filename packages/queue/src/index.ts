@@ -376,6 +376,23 @@ export const QUEUE_NAMES = {
    * client registers a device token yet. Job class B.
    */
   CLAIM_CORRECTION_STAFF_PUSH: 'claim.correction.staff_push',
+  /**
+   * The claim-correction CLOSURE SWEEP (Story 6.19c, AC6 / AC14 / AC17; `2026-10-01-273` §5/§6) — daily 10:00 IST. Two
+   * bounded cross-tenant scans on the BYPASSRLS pool: the LIVE returns whose run reached day 90 (the District Admin's
+   * closure reminders on the family run's days 90–96 and the Pariwar Admin's day-97 escalation, the staff case's
+   * day-90 escalation RECORD, the Super Admin's 30-day and the directee's reminders) and the CLOSED closures (the
+   * closure notice's outbox, the closure-letter chase). It enqueues one CLAIM_CORRECTION_CLOSURE_NOTICE child per
+   * recipient and one CLAIM_CORRECTION_STAFF_PUSH per staff member. ⛔ It never requests, approves, declines, refuses or
+   * closes a claim (invariant 1) — its ONE record beyond reminder rows is the staff case's escalation. Job class C.
+   */
+  CLAIM_CORRECTION_CLOSURE_SWEEP: 'claim.correction.closure.sweep',
+  /**
+   * ONE closure-notice SMS for one (closure, person) (Story 6.19c, `-273` §5) — the outbox's sender: it claims the
+   * person's ONE `closure_notice` row (an errored send is retried on the SAME row), commits, THEN decrypts and sends,
+   * and marks the closure's notice done once every recipient has a final row. It throws ONLY on a transient failure.
+   * The payload carries ids only, ⛔ never a number. Job class B.
+   */
+  CLAIM_CORRECTION_CLOSURE_NOTICE: 'claim.correction.closure_notice',
 } as const;
 
 /** Union of the registered queue names. */

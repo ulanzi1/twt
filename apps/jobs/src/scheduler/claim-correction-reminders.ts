@@ -529,13 +529,29 @@ function uuidV5(namespaceUuid: string, name: string): string {
   return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20, 32)}`;
 }
 
+/**
+ * The staff items ONE daily push lists — 6.19b's and (Story 6.19c) the closure's: the District Admin's closure reminders
+ * and the escalations, the Super Admin's review / staff-case reminders, a directee's, the closure-letter chase.
+ */
+export const STAFF_PUSH_ITEM_PURPOSES: readonly string[] = [
+  'staff_reminder',
+  'letter_chase',
+  'letter_second_due',
+  'escalation',
+  ...claimDomain.CLOSURE_STAFF_PURPOSES,
+];
+
 /** The staff push's copy — ENGLISH (staff copy is English-only), name-free, naming the correction queue. */
 export function correctionStaffPushText(items: readonly { readonly purpose: string }[], reference: string): {
   readonly title: string;
   readonly body: string;
 } {
   const n = items.length;
-  const escalated = items.some((i) => i.purpose === 'escalation');
+  // Story 6.19c — its escalations (the day-97 closure escalation, the staff case to the Super Admin, the closure-letter
+  // chase's day 13) read as escalations too.
+  const escalated = items.some((i) =>
+    ['escalation', 'closure_escalation', 'staff_case_escalation', 'closure_letter_escalation'].includes(i.purpose),
+  );
   return {
     title: escalated ? `Claim ${reference}: a correction chase needs you` : `Claim ${reference}: correction reminder`,
     body: `${String(n)} item${n === 1 ? '' : 's'} due today on claim ${reference}. Open the correction queue in the admin app.`,
@@ -618,8 +634,8 @@ export async function runCorrectionStaffPush(
     const { rows } = await client.query<{ purpose: string }>(
       `SELECT purpose FROM claim_correction_reminders
         WHERE pariwar_id = $1 AND claim_case_id = $2 AND recipient_key = $3 AND sent_on = $4
-          AND outcome = 'recorded' AND purpose IN ('staff_reminder', 'letter_chase', 'letter_second_due', 'escalation')`,
-      [pid, p.claimCaseId, recipientKey, p.sentOn],
+          AND outcome = 'recorded' AND purpose = ANY($5::text[])`,
+      [pid, p.claimCaseId, recipientKey, p.sentOn, STAFF_PUSH_ITEM_PURPOSES],
     );
     const claimRow = await claimDomain.readCorrectionClaimRow(db, pariwarId, claimCaseId);
     return { c, items: rows, deceased: claimRow?.deceasedMemberId ?? null };

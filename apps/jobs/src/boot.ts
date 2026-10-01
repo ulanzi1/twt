@@ -110,6 +110,7 @@ import {
 } from './matcher/matcher-worker.js';
 import { buildContributionProviderResolver, resolveSmsDltConfig } from './scheduler/contribution-providers.js';
 import { registerClaimCorrectionReminderWorkers } from './scheduler/claim-correction-reminders.js';
+import { registerClaimCorrectionClosureWorkers } from './scheduler/claim-correction-closure.js';
 import { createConfigShepherdFallbackResolver } from './shepherd-fallback-resolver.js';
 import { consoleShepherdAssignedNotificationHook } from './shepherd-notification-hook.js';
 import { createDeterministicOcrProvider } from './ocr/index.js';
@@ -586,7 +587,7 @@ async function main(): Promise<void> {
     // push. ⚠ The family SMS is a DIRECT DLT send that FAILS CLOSED on a missing template id, an unset per-Pariwar
     // helpline number or an unconfigured gateway (T13) — ⛔ never the fixture that reports `accepted`. ⚠ The admin push
     // is INERT on day one (⛔ no admin client registers a device token).
-    await registerClaimCorrectionReminderWorkers(boss, {
+    const claimCorrectionDeps = {
       pool,
       encryption: jobsEncryption,
       smsAppClient: contributionProviders.smsAppClient,
@@ -596,7 +597,13 @@ async function main(): Promise<void> {
         hashRendered: contributionNotifyDeps.hashRendered,
         resolveProviders: contributionProviders.resolveProviders,
       },
-    });
+    };
+    await registerClaimCorrectionReminderWorkers(boss, claimCorrectionDeps);
+    // Story 6.19c (AC6, AC14, AC17) — the CLOSURE sweep (daily 10:00 IST: the day-90 reminders, the staff case's
+    // escalation RECORD, the Super Admin's / directee's reminders, the closure-letter chase) and the closure-notice
+    // child (the outbox's sender, `-273` §5). The SAME deps as the reminder sweep (the closure notice is 6.19b's send,
+    // D32). ⛔ Neither ever requests, approves, declines, refuses or closes a claim (invariant 1).
+    await registerClaimCorrectionClosureWorkers(boss, claimCorrectionDeps);
 
     // Story 10.5 (Task 5) — the News/Blog scheduled + immediate publish worker. Reuses the SAME
     // contribution-notify deps (BYPASSRLS pool + member Tier-1 crypto) for the shipped

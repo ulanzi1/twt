@@ -162,6 +162,7 @@ describe('⛔⛔ AC12 — the gate is INPUT-ONLY: an already-stored non-Latin na
       current_check: null,
       latest_check_is_stale: false,
       correction_return: null,
+      approval_name_highlight: null,
     };
     const parsed = NomineeNameCheckResponse.safeParse(packet);
     expect(parsed.success, JSON.stringify((parsed as { error?: unknown }).error)).toBe(true);
@@ -199,6 +200,7 @@ describe('⛔⛔ AC12 — the gate is INPUT-ONLY: an already-stored non-Latin na
       current_check: null,
       latest_check_is_stale: false,
       correction_return: null,
+      approval_name_highlight: null,
     };
     expect(NomineeNameCheckResponse.safeParse(base).success).toBe(true);
   });

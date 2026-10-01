@@ -78,6 +78,7 @@ describe('EVERY clerical reason parses through EVERY schema that carries one', (
         routed_to_r9: false,
         under_correction: false,
         name_difference_reasons: [reason],
+        approval_name_highlight: null,
       });
       expect(r.success, JSON.stringify(r.error?.issues)).toBe(true);
     });

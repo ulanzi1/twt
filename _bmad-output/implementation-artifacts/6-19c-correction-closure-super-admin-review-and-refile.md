@@ -26,8 +26,9 @@ Status: ready-for-dev
 > letter track — Task 0a) and **`-273`** (this story's validate pass: "reached" reads the whole return; the letter cap never resets on a new
 > number; an escalated claim is held and only the Super Admin decides it; a staff case is ⛔ never closable; a stale request lapses; the closure notice's outbox;
 > reminders after day 90; the member status; the mismatch highlight; the `-251` gate; the Super Admin's reason). ✅ **`-273` is in `.decision-log.md`** (BigDev inserted it
-> 2026-10-01; verified additive-only). ⚠ `-273` owes **two confirms** to the Panel's next note (a staff case directed back to the family; a
-> family reached only by post is ⛔ not told of the closure) — ⛔ neither blocks the build.
+> 2026-10-01; verified additive-only). ⭐ `-273`'s **two confirms are ANSWERED** by Trustee-ratified **`-274`** (DR + KB,
+> 2026-10-01; ✅ in `.decision-log.md`, inserted by BigDev): 1a–1d **A** — our readings taken — and **2 B**: a family reached only by post
+> is sent a **closure letter** (AC6).
 > ⭐ **With this slice done, 6.18's go-live fence ("not without 6.19") is discharged BY THE BUILD** (`-265` Consequence 4) — annotated at the
 > sites Task 7 lists, ⛔ never on the record alone.
 > ⚠ **Go-live gates this slice inherits (⛔ none is a build blocker — [[project_not_in_production_merge_is_not_golive]]):** counsel's **M** and
@@ -36,7 +37,7 @@ Status: ready-for-dev
 
 ## Read first
 
-- **Rulings:** ⭐ `-258`, `-260` G1–G3, `-251`, `-254`, `-255` F2–F4, `-256`, `-252` cl.1, `-229`, `-230` cl.3/cl.5, `-231` A/B/D, `-232` H/I,
+- **Rulings:** ⭐ **`-274`** (1a–1d, 2), `-258`, `-260` G1–G3, `-251`, `-254`, `-255` F2–F4, `-256`, `-252` cl.1, `-229`, `-230` cl.3/cl.5, `-231` A/B/D, `-232` H/I,
   `-250` #1/#6; and `-226` cl.1/cl.5/cl.6, `-227` cl.2 (what `-251` and `-258` narrow). ⭐ **`-263` Consequence 4** (FQ9 and this slice's
   gate split — see *Sequencing*), `-262` FQ5 / `-261` D4 B (row `6-24`, the same convergence code).
 - **Author-commits:** `-265` (D1–D29, the keys), `-266` (D30–D34), `-267`, `-268`, `-269`, `-270`, `-271`, ⭐ **`-272`**, ⭐ **`-273`**.
@@ -69,7 +70,7 @@ through a person**.
    fresh name check) and the Pariwar Admin agrees (`-258` cl.3);
 7. a death whose claim was closed for no response can be **filed again only with a District Admin's or the helpline's confirmation**;
 8. ⭐ while a claim is with the Super Admin, the Pariwar Admin **cannot approve or refuse it** — even once the family has corrected the
-   details — and the Super Admin decides (`-251`; `-256` cl.1 while under review; ⚠ ours — `-273` §4 — for a staff case ⛔ not under review).
+   details — and the Super Admin decides (`-251`; `-256` cl.1 while under review; `-274` 1d for a staff case ⛔ not under review).
 
 **In the family's terms (ours, for the Panel to correct):** *"If the bank details you gave need correcting, and after 90 days we have still
 not heard from you — though we reached each of you by text or by post — the District Admin may ask for your claim to be closed and the
@@ -77,11 +78,11 @@ Pariwar Admin decides; if the Pariwar Admin disagrees, the Super Admin looks int
 though the name does not match. If you have already sent corrected details, or if the mistake was ours to put right, your claim is never
 closed for no response. A claim closed for no response cannot be appealed, but you can file again through the helpline or the District
 Admin. A refusal by the Super Admin for any other reason can be appealed once. While the Super Admin is looking into your claim, the Super
-Admin decides it."*
+Admin decides it. If we could reach you only by post, we write to tell you your claim was closed and how to file again."*
 
 **Checked against the Niyamavali? ⛔ NO** — absent from the public repo by design and ⛔ not ratified
 ([[feedback_niyamavali_rulebook_not_spec]]). Checked clause by clause against `-229` → `-232`, `-250` → `-256`, `-258`, `-260` and the
-author-commits `-268`, `-272`, `-273`. ⚠ It **tensions with the PRD** (FR-43A: internal appeal is the primary grievance path, only Stage 3
+author-commits `-268`, `-272`, `-273`, and the Panel's answers to `-273`'s confirms (`-274`). ⚠ It **tensions with the PRD** (FR-43A: internal appeal is the primary grievance path, only Stage 3
 non-appealable) and 6.16 D-G's counsel review — **S**, a go-live gate.
 
 ## Acceptance Criteria
@@ -110,8 +111,16 @@ with a REQUIRED note**, which writes the escalation (AC14)
 **And** the closure is the **second refusal**: terminal, ⛔ not appealable, `claim.denied_no_appeal` emitted (trigger
 `correction_closure_approved`, T4); the run is ended `decided` through `endCorrectionRun` **only if still open** (it is a no-op on a run
 already ended `day_90`); the **closure notice** is recorded as due on the closure row (an outbox — `-273` §5) and sent by a jobs sweep, once per closure per
-recipient; the member sees `closed_no_response` (AC8c,
+recipient; ⭐ each person D22 counted reached whose current number is known dead gets ⛔ no text and is owed a **closure letter**
+instead (`-274` 2 — the AC6 closure-letter paragraph below); the member sees `closed_no_response` (AC8c,
 `-273` §9), ⛔ never `appeal_exhausted`
+**And** ⭐ **the closure letter** (`-274` 2, Trustee-ratified; its mechanics our reading): for each person D22 counted reached whose
+current number is known dead (latest evidential outcome `rejected_invalid_number`, `rejected_unreachable` or `no_target`), at their own
+address (D31: a nominee's through the correction chain, the claimant's from the claimant block) and with a live agreement (D30), the
+District Admin owes **one** posted letter saying the claim was closed for no response and how to file again through the helpline or the
+District Admin; recorded as a correction letter is (key (1); posting date + Tier-1 tracking number; within 14 days the delivery date + a
+screenshot, the 14-day overdue flag shown, ⛔ nothing else); chased from the **closure date** in D20's shape (day 7, daily to day 12, then
+escalated to the Pariwar Admin — a record and a reminder); ⛔ no second letter; the claim stays closed whatever happens to the letter
 **And** `voteOnFrozenClaim` refuses exactly as today.
 
 ### AC7 — Appealability, at every site (`-231` A, `-255` F2, 6.16 D-F, T3)
@@ -158,7 +167,7 @@ value the actor chooses — `other` without a note is refused); each under the t
 conditional `UPDATE` (0 rows ⇒ 409) and ends any open run `decided`:
 - **close** — a **declined-closure** origin only (a staff origin → **409 `closure.staff_case_origin`**, checked **first**, keyed on the row's
   origin, ⛔ never on the mark — `-273` §3c); then every AC6 request refusal from `not_family_action` on, as the Pariwar Admin's approval;
-- **approve despite the name** — a declined-closure origin, by origin, whatever the mark now says (⚠ ours, `-273` §8 — in Confirm 1); still
+- **approve despite the name** — a declined-closure origin, by origin, whatever the mark now says (`-274` 1c, ratified); still
   available when the family's part is done but the claim is ⛔ not resubmitted (`never_checked` waived — `-255` F4); on a staff origin,
   AC17's approve;
 - ⭐ a claim the family has since **corrected** (resubmitted) is still decided **here** (`-273` §4 supersedes D17's *"returns to the ordinary
@@ -201,8 +210,8 @@ row on (`-273` §3); the Super Admin may hold it under review and direct (AC14's
 restart; ⭐ **and DECIDE** (`-260` G1): **approve** through the **full** gate (an accepted certificate, two accounts, the as-at-death nominee, a
 **current passing name check**, D14 — ⛔ nothing waived) or **refuse for another reason** (appealable once; `denied_no_appeal` only after a
 used appeal), each with a required note and reason; ⛔ **never close** — **409 `closure.staff_case_origin`**, keyed on the origin, so a
-mark later directed back to `family` does ⛔ not make it closable (⚠ our reading of `-260` G1 — **Confirm 1** for the Panel's next note,
-`-273`); a `direction` run on it reaches day 90 with ⛔ no closure reminder
+mark later directed back to `family` does ⛔ not make it closable (`-274` 1a, ratified — ⛔ no "no response" reason is offered on it); a
+`direction` run on it reaches day 90 with ⛔ no closure reminder; while held the family's 90 days start only with a restart (`-274` 1b)
 **And** ⛔ no text goes to the family after a Super Admin refusal or approval (`-260` G3 — the app status and the helpline carry it)
 **And** a staff case the Super Admin neither decides nor resolves waits — ⛔ no deadline; the 30-day reminder applies (`-260` *"does NOT cover"*).
 
@@ -225,7 +234,8 @@ Admin's** closure decision strip (UX-DR54: primary action leftmost, numbered sho
 UX-DR44 `<AuditTrailEntry>` shown immediately); the **Super Admin's** escalated-claim queue (both origins) and decision surface (both
 admins' notes, the reminder and letter record, ⭐ the name-differs highlight incl. *"approved without a current passing name check"* /
 *"approved despite a name mismatch"* — `-226` cl.5, `-273` §7), the hold and the directions; the **directed admin's** direction inbox with a response form; the helpline's **re-file
-confirmation** card; ⭐ every new queue is **reachable from the admin nav** (the Pariwar Admin's and the directee's inside the Pariwar
+confirmation** card; the District Admin's **closure letter** queue item and form (the letter's two required points stated on the form,
+`-274` 2); ⭐ every new queue is **reachable from the admin nav** (the Pariwar Admin's and the directee's inside the Pariwar
 context; the Super Admin's — a global role — from the top level; cf. `deferred-work.md` 6.18 chunk-3 *"LINKED INSIDE A PARIWAR CONTEXT"*)
 **And** the member app: `closed_no_response` (on `MemberDeathCertificateStatusResponse`, `GET /api/v1/member/claims/:claimCaseId/death-certificate`,
 read by the gate through `fetch-claim-entry-outcome.ts`) and the *"please call the helpline"* re-file state through the claim-entry gate and
@@ -244,7 +254,7 @@ direction / decision, a direction response, "no correction needed" and a re-file
 `writeAuditEntry`); the notes are Tier-1 ciphertext (the 6.19b mark-note precedent) and ⛔ never echoed to a member; a live-DB test finds a
 planted note sentinel in ⛔ no log or error body (6.19b's test-only `logStream` in `apps/api/src/server.ts` is the capture)
 **And** `deferred-work.md` records: the member appeal route's production 404 and the unmounted card (AC7); ⛔ no RTBF path reaches the new
-tables' Tier-1 columns (invariant 9).
+tables' Tier-1 columns (invariant 9); ⛔ no virus scan on the closure letter's screenshot (as the correction letter's, D6).
 
 ### AC11c — The proof (this slice)
 **Then** live-DB specs on `twt-test-pg :5433`, **executed** (`integration-tests`; `test (unit)` runs `env -u DATABASE_URL` and skips them):
@@ -285,6 +295,10 @@ tables' Tier-1 columns (invariant 9).
 - **AC18:** family → staff → family with a delivered run-1 letter (⛔ no SMS to that number, ⛔ no letter chase, a third letter refused, D22
   reached); a run-1 undelivered letter → `first_not_delivered` in run 3 and deliverable there; found dead in run 1 at day ≥ 13 → one
   escalation and ⛔ no 23514; a 6.20 number change between runs → (a)/(b) afresh, the cap ⛔ not reset.
+- **The closure letter (`-274` 2):** a closure with one person reached only by a delivered letter (number dead) → ⛔ no text to them and a
+  closure letter owed; a person whose number accepted texts → the text, ⛔ no letter; the chase from the closure date (day 7, daily to 12,
+  then the Pariwar Admin) and the 14-day overdue flag; a second closure letter for the same person refused; key (1)'s denial for the other
+  roles.
 - **Re-file:** **both** mint paths guarded; a mint consuming its confirmation; a stage-3-upheld claim's re-file still free; the entry gate
   routes on `refile_requires_confirmation` — the helpline state before a confirmation, the wizard after it, and ⭐ the wizard again once the
   confirmation is consumed and the new claim is live (the old pointer ⛔ never traps the family); the wizard's submit maps the 409 to the
@@ -332,6 +346,10 @@ tables' Tier-1 columns (invariant 9).
     (`-273` §10), the outbox `closure_notice_run_id` (FK, provenance) + `closure_notice_due_at` + `closure_notice_done_at` (`-273` §5); a `closed` state the
     appeal sites and the re-file guard read.
   - [ ] **directions** (D18) and **re-file confirmations** (D19).
+  - [ ] **closure letters** (`-274` 2) — one per person per closure (UNIQUE `(closure_id, person_key)`), the correction letter's columns
+    (posting date, Tier-1 tracking number, the all-or-nothing delivery + screenshot), the screenshot under the storage port's own prefix
+    (`…/closure-letter/{letterId}`); its own small table or a `kind` on `claim_correction_letters` by a NEW migration — the developer's call,
+    ⛔ never an edit to 0129; its chase purposes join the `purpose` CHECK below.
   - [ ] **`purpose`**: extend `claim_correction_reminders_purpose_check` (0128) **and** `CORRECTION_REMINDER_PURPOSES`
     (`schema/claim_correction_chase.ts`, *"⚠ LOCKSTEP with 0128"*) and the policy spec's purpose leg; one value per reminder kind
     (`-273` §6 — ⛔ never `staff_reminder` / `escalation`) with its own partial unique index: per day including `purpose` and `subject_key`
@@ -357,6 +375,8 @@ tables' Tier-1 columns (invariant 9).
     through `sendClaimCorrectionSms` (`claim-correction-reminders.ts:237`, `message: 'closure_notice'`, `{reference}` + `{helpline}` — `t()`
     throws on a missing param) and records each send under its own purpose with a **once-per-closure** partial UNIQUE (⛔ not per day); a
     reminder row's `attempting` needs `claimed_at` (0128) — write it at send, ⛔ not in the approving tx; recipients per `-273` §5.
+  - [ ] the closure letter (`-274` 2): the owed set computed at the closure (the known-dead complement of the notice's recipients); the
+    writer under key (1) with D31's address and agreement checks; the chase from the closure date and its escalation; the 14-day flag.
   - [ ] the day-90 job's stop condition (AC6) and its cadence from the family run's day 90 (`-273` §6); every 6.19c reminder stops at the
     row's decision or when the return stops being live.
   - [ ] the request's lapse (`-273` §3d): **derived** in the closure module under the trustee lock at every read and act (⛔ never written
@@ -393,12 +413,12 @@ tables' Tier-1 columns (invariant 9).
   parsed: fill it in the handler and update the typed fixtures `apps/admin/tests/correction-queue.test.tsx:58`,
   `correction-chase-forms.test.tsx:705-708`); the Pariwar Admin strip (in `apps/admin/src/modules/cycle-freeze/{CycleFreezePage,
   PendingCaseCard}.tsx` or a sibling — `CycleFreezeRoute.tsx` is a wrapper); the Super Admin queue + decision surface; the direction inbox;
-  the helpline re-file card; the nav links; the member screens for Task 5's state; family-13 assertions.
+  the helpline re-file card; the closure-letter queue item and form; the nav links; the member screens for Task 5's state; family-13 assertions.
 - [ ] **Task 7 — Gates, tests, discharge** (AC9c, AC10, AC11c) — audit types; the human-actor gate (new route files in `COVERAGE_SET` with
   exact `expectedMethods`, ⭐ raise `COVERAGE_FLOOR` from 12 deliberately — a minimum stays green if forgotten); the no-comparison fence's
   `FENCED_FILES` + floor; **execute** on `twt-test-pg :5433`; `deferred-work.md` records (AC7, AC9c, and each item in *Deferred items this
   slice touches*); the fallback-handler ledger rows **10–14, 17, 18** (`docs/fallback-handler-ledger/ledger.md` — the xref and
-  `surface-inventory.md` amendment as 6.19b did for 9, 15, 16; ⚠ rows 12 and 18 carry `<TO-BE-NAMED-BY-TRUSTEE-PANEL>` as `fallback_actor`
+  `surface-inventory.md` amendment as 6.19b did for 9, 15, 16, plus the closure letter's loop node, `-274` Consequence 3; ⚠ rows 12 and 18 carry `<TO-BE-NAMED-BY-TRUSTEE-PANEL>` as `fallback_actor`
   — record it, ⛔ never fill it); annotate 6.18's go-live fence as discharged by this build at **6.18's AC11 blockquote**, the shared spec's
   header, 6.19b's header and `epics.md` §6.19c (⛔ never a rewrite; `-265` Consequence 4 is cited, ⛔ not edited); a `sprint-status.yaml`
   ledger line.
@@ -557,7 +577,8 @@ follow-ups-2,return-not-the-familys-to-fix}.md`. UX `ux-design-specification.md`
 
 | Version | Date | Change |
 |---|---|---|
-| **v2.1** | **2026-10-01** | ⭐ **The fresh-context re-validate of v2.0 and of `-273`'s first draft** (footgun 22), applied before `-273` is inserted: `-273` gains **§4** (while escalated only the Super Admin decides — `-256` cl.1 outranks D17's *"returns to the ordinary vote"*; the vote and a new return refused at the route) and **§3c** (a staff-origin escalation is ⛔ never closable — `closure.staff_case_origin`, keyed on origin — **Confirm 1** for the Panel); §5 becomes an **outbox** (once per closure per recipient) and records **Confirm 2** (a family reached only by post is ⛔ not told); §6's cadence ⛔ never rides `slot_day`; §7's highlight covers `never_checked` / `stale`; §9 names `-249` §2 and the post-confirmation wizard; `-273` renumbered (§4–§9 → §5–§10). **Story:** the Pariwar Admin's approval and the Super Admin's close re-check the **whole** request (`too_early` on the current run, `not_reached`); the hold keyed on the live return's row; the day-90 job's stop condition; AC7's `deriveAppealView` is display-only; the wizard's submit maps the re-file 409; the six test callers of `writeCorrectionMark`; predicate 8 in the Policy meaning; S-T8, S-T9. ⭐ **Second re-validate, same version:** every Pariwar Admin decision (incl. D27's approve) refused while held, records allowed; a pending request **lapses** when its family run or its return ends (`-273` §3d); one live closures row per **return**; the `-251` waiver follows the origin (ours, Confirm 1); `refile_requires_confirmation` routes the gate (a consumed confirmation ⛔ never traps a family); the outbox's columns and once-only key; every 6.19c reminder stops at the decision; a directee's per-direction key; `-273`'s Status line no longer credits BigDev with sections added after BigDev's answers. ⭐ **Third re-validate:** the lapse is **derived** from `request_family_run_id` (the first trigger never fired — at day ≥ 90 the family run has already ended) and the decline refuses a lapsed request (`closure.request_lapsed`); the closures UNIQUE excludes `lapsed`; the cycle-freeze guard runs after the lock for every actor (incl. `super_admin`); the outbox's `closure_notice_done_at`. BigDev approved `-273`'s added sections (*"Approve all"*). ✅ **`-273` inserted by BigDev** (verified additive-only, byte-identical to the staged text) — Task 0's STOP is lifted. |
+| **v2.2** | **2026-10-01** | ⭐ **The Panel answered `-273`'s confirms — `-274` (DR + KB):** 1a–1d **A** (our readings taken — the staff-origin close refused, the 90 days start only with a restart while held, the `-251` approve follows the origin, only the Super Admin decides a held claim), relabelled **ratified** at AC14, AC17 and the Policy meaning; **2 B** — a family reached only by post is sent a **closure letter**: AC6's closure-letter paragraph, AC8c's queue item and form, AC9c, AC11c, Tasks 1, 3, 6, 7. ⛔ No status flip. |
+| v2.1 | 2026-10-01 | ⭐ **The fresh-context re-validate of v2.0 and of `-273`'s first draft** (footgun 22), applied before `-273` is inserted: `-273` gains **§4** (while escalated only the Super Admin decides — `-256` cl.1 outranks D17's *"returns to the ordinary vote"*; the vote and a new return refused at the route) and **§3c** (a staff-origin escalation is ⛔ never closable — `closure.staff_case_origin`, keyed on origin — **Confirm 1** for the Panel); §5 becomes an **outbox** (once per closure per recipient) and records **Confirm 2** (a family reached only by post is ⛔ not told); §6's cadence ⛔ never rides `slot_day`; §7's highlight covers `never_checked` / `stale`; §9 names `-249` §2 and the post-confirmation wizard; `-273` renumbered (§4–§9 → §5–§10). **Story:** the Pariwar Admin's approval and the Super Admin's close re-check the **whole** request (`too_early` on the current run, `not_reached`); the hold keyed on the live return's row; the day-90 job's stop condition; AC7's `deriveAppealView` is display-only; the wizard's submit maps the re-file 409; the six test callers of `writeCorrectionMark`; predicate 8 in the Policy meaning; S-T8, S-T9. ⭐ **Second re-validate, same version:** every Pariwar Admin decision (incl. D27's approve) refused while held, records allowed; a pending request **lapses** when its family run or its return ends (`-273` §3d); one live closures row per **return**; the `-251` waiver follows the origin (ours, Confirm 1); `refile_requires_confirmation` routes the gate (a consumed confirmation ⛔ never traps a family); the outbox's columns and once-only key; every 6.19c reminder stops at the decision; a directee's per-direction key; `-273`'s Status line no longer credits BigDev with sections added after BigDev's answers. ⭐ **Third re-validate:** the lapse is **derived** from `request_family_run_id` (the first trigger never fired — at day ≥ 90 the family run has already ended) and the decline refuses a lapsed request (`closure.request_lapsed`); the closures UNIQUE excludes `lapsed`; the cycle-freeze guard runs after the lock for every actor (incl. `super_admin`); the outbox's `closure_notice_done_at`. BigDev approved `-273`'s added sections (*"Approve all"*). ✅ **`-273` inserted by BigDev** (verified additive-only, byte-identical to the staged text) — Task 0's STOP is lifted. |
 | v2.0 | 2026-10-01 | ⭐ **RE-DERIVED at `f079dc56`, ⛔ not patched** (`/bmad-create-story validate 6.19c`, four read-only verifiers; BigDev: *"Rewrite v2.0"*). Re-pinned from `c136b03c` (157 code files moved — 6.19a and 6.19b shipped). ⭐ **Author-commit `-273` staged** (BigDev inserts): D22 reads the whole return (the per-run reading deadlocked closure under `-272`); the letter cap ⛔ never resets on a new number (*"No reset"*); an escalated staff case is held (*"Held"*); the closure notice is sent by the jobs app; reminders after day 90 key on the return's latest run; the member status rides the claim-entry gate (*"Claim-entry gate"*); the *"approved despite a name mismatch"* highlight; the `-251` gate composed by construction (carrying `-263` C4); the Super Admin's reason on the closure record. **New:** AC18 (`-272`/`-273`); § What 6.19b shipped; § Slice traps; § CI gates and red tests; § Deferred items; the AC6 409 order incl. `no_live_return` / `escalated` / `request_pending`; AC14's both origins and the required `hold`. **Corrected:** Task 2 mints key (8) in the one bump (49 → 50, 58 → 64); the hold hook is on `writeCorrectionMark`, ⛔ not the run opener; the closure notice cannot be called from the API; the member appeal card is unmounted; the Files list (the import cycle; `CycleFreezePage`); AC10 names D27's narrowing; AC11c gains the `-267`/`-268`/`-269`/`-271`/`-272` proofs; keys (4)/(5) denial; race timeouts; Task 7's discharge sites (`epics.md` §6.18 carries no such fence); the ledger rows 10–14, 17, 18; the Policy meaning (seven predicates; `-258`, `-260` G1, `-268`); four `⛔` on non-negation words. |
 | v1.8 | 2026-09-29 | ⚠ **SWEPT by `-271`**: D22's "reached" counts only accepts to the person's CURRENT number (6.19b's resolver exposes its hash); the hold hook also covers a switch to `staff` (⛔ no staff run during a hold). |
 | v1.7 | 2026-09-29 | ⚠ **SWEPT by `-269`**: Task 4 fills 6.19b's run-opener hold hook (⛔ no family run on a mark switch during an escalation or review — only a direction); "the family's part is done" now reads the LATEST check (AC6's `closure.claim_corrected` via 6.19b's reader, unchanged in shape). *(v2.0: the hook is on `writeCorrectionMark`, ⛔ not the run opener.)* |

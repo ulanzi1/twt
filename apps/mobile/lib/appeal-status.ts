@@ -10,6 +10,9 @@ export interface MemberAppealStatus {
   appeal_status: 'open' | 'reversed' | 'upheld_final' | null
   current_stage: '1' | '2' | '3' | null
   appeal_exhausted: boolean
+  /** Story 6.19c (AC7, `-273` §9) — the claim was CLOSED for no response: ⛔ appealable, ⛔ no affordance, ⛔ no
+   *  external-remedy disclosure (a display rule — the server's `can_initiate` already says false). */
+  closed_no_response: boolean
 }
 
 /** What the card should show, as bounded, testable flags + copy keys (resolved via useClaimT in the card). */
@@ -38,9 +41,10 @@ const STAGE_STATUS_KEY: Record<'1' | '2' | '3', string> = {
  */
 export function deriveAppealView(status: MemberAppealStatus): AppealView {
   const showReversed = status.appeal_status === 'reversed'
-  const showExhausted = status.appeal_exhausted
+  // A closure is ⛔ an exhausted appeal: the family files again through the helpline (the re-file state), ⛔ appeals.
+  const showExhausted = status.appeal_exhausted && !status.closed_no_response
   return {
-    showFileAffordance: status.can_initiate,
+    showFileAffordance: status.can_initiate && !status.closed_no_response,
     statusKey: status.appeal_status === 'open' && status.current_stage ? STAGE_STATUS_KEY[status.current_stage] : null,
     showReversed,
     showExhausted,

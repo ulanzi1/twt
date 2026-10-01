@@ -75,6 +75,18 @@ describe('AC7 — <CallHelplineCTA> is present on every contribution surface', (
   });
 });
 
+// ─── Story 6.19c (AC15, `-273` §9) — the re-file state IS the helpline ────────────────────────────────
+//
+// A family whose claim was closed for no response files again THROUGH the helpline: the state's whole point is the
+// one-tap call, so a regression that dropped it would leave the family with a message and nothing to do.
+describe('Story 6.19c — the re-file "please call the helpline" state renders <CallHelplineCTA>', () => {
+  const REFILE = 'apps/mobile/app/(claim)/refile-helpline.tsx';
+  it(`${REFILE} renders <${AFFORDANCE}>`, () => {
+    const src = stripComments(read(REFILE));
+    expect(src.includes(`<${AFFORDANCE}`), `${REFILE} no longer renders <${AFFORDANCE}>`).toBe(true);
+  });
+});
+
 // ─── the PDF artifact carries the printed helpline line too (AC4) ────────────────────────────────
 //
 // A PDF is not tappable, so it carries the NUMBER, not a <CallHelplineCTA>. Guard the artifact's

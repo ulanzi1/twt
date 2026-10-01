@@ -11,6 +11,7 @@ const base: MemberAppealStatus = {
   appeal_status: null,
   current_stage: null,
   appeal_exhausted: false,
+  closed_no_response: false,
 }
 
 describe('deriveAppealView (AC7)', () => {
@@ -40,6 +41,15 @@ describe('deriveAppealView (AC7)', () => {
     expect(v.showExhausted).toBe(true)
     expect(v.showExternalRemedy).toBe(true)
     expect(v.showFileAffordance).toBe(false)
+  })
+
+  it('⭐ Story 6.19c (AC7, `-273` §9) — a claim CLOSED for no response shows ⛔ no appeal affordance and ⛔ no external-remedy disclosure (a display rule — it refuses nothing)', () => {
+    // Even were the server's `can_initiate` true, the closure wins; a closure is ⛔ an exhausted appeal.
+    const v = deriveAppealView({ ...base, can_initiate: true, closed_no_response: true })
+    expect(v.showFileAffordance).toBe(false)
+    expect(v.showExhausted).toBe(false)
+    expect(v.showExternalRemedy).toBe(false)
+    expect(v.statusKey).toBeNull()
   })
 
   it('never derives a deadline gate — a denied claim with an existing journey cannot re-initiate (D-F)', () => {

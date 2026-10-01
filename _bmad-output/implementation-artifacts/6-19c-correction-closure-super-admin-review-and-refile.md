@@ -402,7 +402,7 @@ tables' Tier-1 columns (invariant 9); ⛔ no virus scan on the closure letter's 
   - [x] the three D17 decisions (note + closure reason + the lock + the conditional supersede + `decided`; `closure.staff_case_origin`; a
     resubmitted claim decided here, `-273` §4); the highlight leg (`-273` §7) — beside `nominee-name-check-read.ts:155` /
     `cycle-freeze-read.ts:272`, from the approval record and the check's recorded state (`never_checked` / `stale` / `does_not_match`).
-- [ ] **Task 5 — The re-file guard** (AC15) — the confirmation routes (district + helpline, key (6), per-request dimension as
+- [x] **Task 5 — The re-file guard** (AC15) — the confirmation routes (district + helpline, key (6), per-request dimension as
   `resolveQueueScopeStash`) in a **new** route file (⚠ ⛔ not `claims.helpline.routes.ts` / `claims.convergence.routes.ts` — both sit in the
   human-actor gate's `ENROLMENT_OWED`, unscanned); the guard at `tryConverge` (`icp.ts:275`) **and** `overrideIntakeAttempt` (`icp.ts:553`),
   keyed on the closure row (⛔ never `denied_no_appeal`); consumption in the mint's tx; the 409 mapped at three handlers; ⭐ the member

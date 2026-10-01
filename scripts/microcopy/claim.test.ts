@@ -113,6 +113,17 @@ describe('the surface is actually IN SCOPE — ⛔ the premise of every test bel
       expect(config.scope.codeGlobs, file).toContain(file);
     }
   });
+
+  it('Story 6.19c (AC15) — every new/edited re-file mobile file is listed in scope.code_globs', () => {
+    for (const file of [
+      'apps/mobile/app/(claim)/refile-helpline.tsx',
+      'apps/mobile/app/(claim)/relationship.tsx',
+      'apps/mobile/lib/refile-helpline-copy.ts',
+      'apps/mobile/lib/appeal-status.ts',
+    ]) {
+      expect(config.scope.codeGlobs, file).toContain(file);
+    }
+  });
 });
 
 // ─── (a) VOCABULARY bites the copy files ────────────────────────────────────────────────

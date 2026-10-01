@@ -28,6 +28,7 @@ import { ApiError } from '../api/client.js';
 import { useClaimsUnderCorrection, useSession } from '../api/hooks.js';
 import { verifierConsoleEn as t } from '../modules/claim-verification/i18n-en.js';
 import { CorrectionChasePanel, correctionChaseEn } from '../modules/correction-chase/index.js';
+import { ClosureColumn } from '../modules/correction-closure/index.js';
 
 /**
  * ⭐ THE SESSION GATE every sibling route has (code review 2026-09-23b) — this was the only file in
@@ -218,6 +219,10 @@ function CorrectionQueueView(): ReactElement {
               {/* ⭐ Story 6.19b (AC8b) — the correction chase: the reference, who must act, the run, the flags, each
                   person by role and their letters, and the letter form. */}
               <CorrectionChasePanel pariwarId={pariwarId} item={item} />
+
+              {/* ⭐ Story 6.19c (AC8c) — the closure state, why a request would refuse now (plain words), the request and
+                  "no correction needed". */}
+              <ClosureColumn pariwarId={pariwarId} item={item} />
 
               {/* ⭐ The only action is OPEN THE CLAIM. ⛔ There is deliberately no "Re-submit"
                   button: the resubmission is DERIVED (AC11) — the District Admin records a fresh

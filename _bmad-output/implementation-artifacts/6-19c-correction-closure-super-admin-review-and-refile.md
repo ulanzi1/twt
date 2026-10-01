@@ -409,7 +409,7 @@ tables' Tier-1 columns (invariant 9); ⛔ no virus scan on the closure letter's 
   re-file state is **this Task's**: `refile_requires_confirmation` on `MemberDeathCertificateStatusResponse` (exactly D19's guard, a routing
   bit ⛔ never shown); the claim-entry gate's new outcome keyed on it (`ClaimEntryReadOutcome` **and** `ClaimEntryDecision` each gain a kind);
   the wizard's submit mapping the 409 to the same state (`-273` §9).
-- [ ] **Task 6 — Surfaces** (AC8c) — the queue column + request action (`ClaimUnderCorrectionItem` is `.strict()` and the response is
+- [x] **Task 6 — Surfaces** (AC8c) — the queue column + request action (`ClaimUnderCorrectionItem` is `.strict()` and the response is
   parsed: fill it in the handler and update the typed fixtures `apps/admin/tests/correction-queue.test.tsx:58`,
   `correction-chase-forms.test.tsx:705-708`); the Pariwar Admin strip (in `apps/admin/src/modules/cycle-freeze/{CycleFreezePage,
   PendingCaseCard}.tsx` or a sibling — `CycleFreezeRoute.tsx` is a wrapper); the Super Admin queue + decision surface; the direction inbox;

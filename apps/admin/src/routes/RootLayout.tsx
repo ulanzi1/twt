@@ -12,6 +12,7 @@ import { useState } from 'react';
 import * as api from '../api/client.js';
 import { hasAuditVerify, hasPariwarProvision, sessionKey, useSession } from '../api/hooks.js';
 import { correctionChaseEn } from '../modules/correction-chase/i18n-en.js';
+import { correctionClosureEn } from '../modules/correction-closure/i18n-en.js';
 
 function TopBar(): ReactElement {
   const session = useSession();
@@ -20,6 +21,9 @@ function TopBar(): ReactElement {
   const authed = Boolean(session.data);
   const canVerify = hasAuditVerify(session.data?.nationalGrants);
   const canProvision = hasPariwarProvision(session.data?.nationalGrants);
+  // Story 6.19c (AC8c) — the Super Admin's held claims are a GLOBAL role's queue: reachable from the TOP LEVEL (a Pariwar
+  // picker) on the national grant — advisory, the server's key check is the boundary.
+  const canReviewEscalations = session.data?.nationalGrants.includes('claim.review_escalated_closure') ?? false;
   // Story 10.11 — the Trustee-Lite nav entry. The two entries above are gated on NATIONAL grants and
   // link to un-scoped routes; the worklist is per-Pariwar, so it can only be linked from inside a
   // Pariwar context. `strict: false` reads the CURRENT match's params without pinning this shared
@@ -80,6 +84,34 @@ function TopBar(): ReactElement {
               data-testid="nav-correction-queue"
             >
               {correctionChaseEn.queue.nav}
+            </Link>
+          )}
+          {/* Story 6.19c (AC8c) — the closure's queues, linked INSIDE a Pariwar context (`deferred-work.md` 6.18 chunk 3):
+              the Pariwar Admin's closure decisions, the named directee's inbox, the District Admin's closure letters,
+              and this Pariwar's held claims. The server's key check is the boundary; each page shows its own "no access". */}
+          {pariwarId && (
+            <Link to="/p/$pariwarId/correction/closures" params={{ pariwarId }} className="text-sm underline" data-testid="nav-closure-decisions">
+              {correctionClosureEn.strip.nav}
+            </Link>
+          )}
+          {pariwarId && (
+            <Link to="/p/$pariwarId/correction/directions" params={{ pariwarId }} className="text-sm underline" data-testid="nav-direction-inbox">
+              {correctionClosureEn.inbox.nav}
+            </Link>
+          )}
+          {pariwarId && (
+            <Link to="/p/$pariwarId/correction/closure-letters" params={{ pariwarId }} className="text-sm underline" data-testid="nav-closure-letters">
+              {correctionClosureEn.letters.nav}
+            </Link>
+          )}
+          {pariwarId && canReviewEscalations && (
+            <Link to="/p/$pariwarId/correction/escalations" params={{ pariwarId }} className="text-sm underline" data-testid="nav-escalations">
+              {correctionClosureEn.escalation.nav}
+            </Link>
+          )}
+          {!pariwarId && canReviewEscalations && (
+            <Link to="/correction/escalations" className="text-sm underline" data-testid="nav-escalations-top">
+              {correctionClosureEn.escalation.nav}
             </Link>
           )}
           {/* Story 6.20 (AC7, D14) — the Pariwar Admin's two nominee pages. ⭐ Linked here because the

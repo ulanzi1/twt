@@ -28,8 +28,8 @@ import {
   ClosureLettersOwedResponse,
   CorrectionClosureDecisionRequest,
   CorrectionClosureDto,
-  CorrectionLetterAddressResponse,
-  CorrectionLetterScreenshotResponse,
+  ClosureLetterAddressResponse,
+  ClosureLetterScreenshotResponse,
   NoCorrectionNeededApproveRequest,
   NoCorrectionNeededKeepRequest,
   NoCorrectionNeededRequest,
@@ -143,7 +143,7 @@ export function registerCorrectionClosureRoutes(app: FastifyInstance, deps: AppD
   r.get(
     '/api/v1/p/:pariwarId/admin/claims/:claimCaseId/correction/closure-letters/address',
     {
-      schema: { params: ClaimParam, querystring: ClosureLetterAddressQuery, response: { 200: CorrectionLetterAddressResponse }, tags: [TAG] },
+      schema: { params: ClaimParam, querystring: ClosureLetterAddressQuery, response: { 200: ClosureLetterAddressResponse }, tags: [TAG] },
       preHandler: [adminSession, scope, resolveDistrict, canRecordLetter, addressStepUp],
     },
     h.readClosureLetterAddress,
@@ -152,7 +152,7 @@ export function registerCorrectionClosureRoutes(app: FastifyInstance, deps: AppD
   r.get(
     '/api/v1/p/:pariwarId/admin/claims/:claimCaseId/correction/closure-letters/:letterId/screenshot',
     {
-      schema: { params: LetterParam, response: { 200: CorrectionLetterScreenshotResponse }, tags: [TAG] },
+      schema: { params: LetterParam, response: { 200: ClosureLetterScreenshotResponse }, tags: [TAG] },
       preHandler: [adminSession, scope, resolveDistrict, canRecordLetter],
     },
     h.readClosureLetterScreenshot,

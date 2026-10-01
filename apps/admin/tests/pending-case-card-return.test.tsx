@@ -262,6 +262,16 @@ describe('<PendingCaseCard> — AC8, the name-difference highlight', () => {
     expect(screen.queryByTestId('name-difference-badge')).toBeNull();
   });
 
+  it('⭐ Story 6.19c (`-273` §7) — a Super Admin approval made WITHOUT a current passing name check carries its highlight; ⛔ none otherwise', () => {
+    setup({ approval_name_highlight: 'approved_despite_name_mismatch' });
+    expect(screen.getByTestId('approval-name-highlight')).toHaveTextContent('Approved despite a name mismatch');
+  });
+
+  it('⛔ no approval highlight when the server sends none', () => {
+    setup({});
+    expect(screen.queryByTestId('approval-name-highlight')).toBeNull();
+  });
+
   it('⛔⛔ the card renders NO comparison of its own — the flag is the ONLY difference signal', () => {
     setup({ name_difference_reasons: ['initial'] });
     const text = document.body.textContent?.toLowerCase() ?? '';

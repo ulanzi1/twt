@@ -230,5 +230,8 @@ describe('nominee-review — Story 6.19b (AC16, D28: the staff case)', () => {
     )
     // ⛔ Keyed on the BOOLEAN, ⛔ never on `t` (a fresh closure every render ⇒ an announcement every render).
     expect(src).toMatch(/announceForAccessibility\(tRef\.current\('nominee\.bank\.being_checked'\)\)\s*\}\s*\}, \[showBeingChecked\]\)/)
+    // ⭐ The ref is written in a LAYOUT effect, ⛔ never during render (fourth-pass review 2026-10-01).
+    expect(src).toMatch(/useLayoutEffect\(\(\) => \{\s*tRef\.current = t\s*\}\)/)
+    expect(src.match(/tRef\.current = t\b/g)).toHaveLength(1)
   })
 })

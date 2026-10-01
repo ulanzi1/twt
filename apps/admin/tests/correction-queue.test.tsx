@@ -10,17 +10,21 @@
 // reversed in the UI regardless of what the domain does.
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { ClaimsUnderCorrectionResponse } from '@twt/contracts';
 
 const navigate = vi.fn();
 let search: Record<string, unknown> = {};
+// ⭐ The `window.open` spy lives HERE so `afterEach` restores it even when an assertion throws first.
+let openSpy: { mockRestore: () => void } | null = null;
 // ⭐ A FLOOR, ⛔ not a substitute for the manual resets below: if an assertion in a test THROWS before its own
-// `search = {}` runs, this still stops the leftover value crossing into the next test.
+// `search = {}` (or `mockRestore`) runs, this still stops the leftover crossing into the next test.
 afterEach(() => {
   search = {};
+  openSpy?.mockRestore();
+  openSpy = null;
 });
 vi.mock('@tanstack/react-router', () => ({
   useParams: () => ({ pariwarId: PARIWAR }),
@@ -366,11 +370,47 @@ describe('<CorrectionQueueRoute> — the correction chase (Story 6.19b)', () => 
     expect(line).toContain('3:30'); // 10:00 UTC = 15:30 IST
   });
 
-  it('⛔ ⛔ no trailing "·" when the setter and the time are unknown', async () => {
+  it('⛔ ⛔ no trailing "·" when the time is unknown (the setter known) — nor when both are', async () => {
+    search = {};
+    // ⭐ The setter PRESENT and the time null — the case an unconditional " · <time>" separator got wrong.
+    setup([chase({ must_act_set_by: 'Pariwar Admin Two', must_act_set_at: null })]);
+    await screen.findByTestId(`correction-queue-item-${CLAIM}`);
+    const line = screen.getByTestId('queue-must-act').textContent ?? '';
+    expect(line).toContain('Pariwar Admin Two');
+    expect(line.trim().endsWith('·')).toBe(false);
+    expect(line).not.toMatch(/·\s*·/);
+  });
+
+  it('⛔ ⛔ no dangling "·" when neither the setter nor the time is known', async () => {
     search = {};
     setup([chase({ must_act_set_by: null, must_act_set_at: null })]);
     await screen.findByTestId(`correction-queue-item-${CLAIM}`);
     expect((screen.getByTestId('queue-must-act').textContent ?? '').trim().endsWith('·')).toBe(false);
+  });
+
+  it('⭐ an OPEN run past day 90 reads "past day 90" — ⛔ never "day 95 of 90"', async () => {
+    search = {};
+    setup([chase({ run: { kind: 'family', day0: '2026-06-01', day_count: 95, open: true, ended_on: null, next_reminder_on: null } })]);
+    await screen.findByTestId(`correction-queue-item-${CLAIM}`);
+    const run = screen.getByTestId('queue-run').textContent ?? '';
+    expect(run).toContain('past day 90');
+    expect(run).not.toContain('95');
+    expect(run).not.toContain('of 90');
+  });
+
+  it('⭐ day 90 itself still reads "day 90 of 90"', async () => {
+    search = {};
+    setup([chase({ run: { kind: 'family', day0: '2026-06-01', day_count: 90, open: true, ended_on: null, next_reminder_on: null } })]);
+    await screen.findByTestId(`correction-queue-item-${CLAIM}`);
+    expect(screen.getByTestId('queue-run').textContent).toContain('day 90 of 90');
+  });
+
+  it('⭐ `?claim=` matches whatever its case — BOTH sides are lower-cased', async () => {
+    search = { claim: CLAIM.toUpperCase() };
+    setup([{ ...ITEM, claim_case_id: CLAIM.toUpperCase() }]);
+    expect(await screen.findByTestId('queue-highlighted')).toBeInTheDocument();
+    expect(screen.queryByTestId('queue-claim-not-shown')).toBeNull();
+    search = { claim: CLAIM };
   });
 
   it('⭐ a `?claim=` that is ⛔ not in the list SAYS so — ⛔ never a silent miss', async () => {
@@ -391,6 +431,7 @@ describe('<CorrectionQueueRoute> — the correction chase (Story 6.19b)', () => 
   it('⭐ the screenshot is FETCHED, then offered as a new-tab link (noopener noreferrer) — ⛔ no `window.open` after an await', async () => {
     search = {};
     const open = vi.spyOn(window, 'open').mockImplementation(() => null);
+    openSpy = open;
     getCorrectionLetterScreenshot.mockResolvedValue({ url: 'https://storage.example/proof.png?sig=1', expires_in_seconds: 300 });
     setup([
       chase({
@@ -410,7 +451,8 @@ describe('<CorrectionQueueRoute> — the correction chase (Story 6.19b)', () => 
     expect(link.getAttribute('target')).toBe('_blank');
     expect(link.getAttribute('rel')).toBe('noopener noreferrer');
     expect(open).not.toHaveBeenCalled();
-    open.mockRestore();
+    // ⭐ The button was swapped for the link — focus followed it, ⛔ dropped to <body>.
+    await waitFor(() => expect(document.activeElement).toBe(link));
   });
 
   it('⛔ a non-https screenshot URL is ⛔ not offered', async () => {
@@ -431,5 +473,56 @@ describe('<CorrectionQueueRoute> — the correction chase (Story 6.19b)', () => 
     fireEvent.click(screen.getByRole('button', { name: 'Get the screenshot link' }));
     expect(await screen.findByText('The screenshot link is not a secure link — it was not opened.')).toBeInTheDocument();
     expect(screen.queryByTestId('letter-screenshot-link')).toBeNull();
+  });
+  const screenshotItem = () =>
+    chase({
+      people: [
+        person({
+          status: 'dead',
+          found_dead_on: '2026-09-20',
+          letters: [{ letter_id: LETTER, person_key: PERSON, sequence: 1, posted_on: '2026-09-21', delivered_on: '2026-09-25', overdue: false, has_screenshot: true }],
+        }),
+      ],
+    });
+
+  it('⛔ a 403 on the screenshot is the ROLE — "your role cannot", ⛔ "Try again"', async () => {
+    search = {};
+    const { ApiError } = await import('../src/api/client.js');
+    getCorrectionLetterScreenshot.mockRejectedValue(new ApiError(403, 'auth.forbidden', 'no'));
+    setup([screenshotItem()]);
+    await screen.findByTestId(`correction-queue-item-${CLAIM}`);
+    const statusLine = screen.getByTestId('letter-screenshot-status');
+    expect(statusLine.textContent).toBe(''); // ⭐ persistent — its text changes, so it is announced
+    fireEvent.click(screen.getByRole('button', { name: 'Get the screenshot link' }));
+    await waitFor(() => expect(statusLine.textContent).toBe('Your role cannot do this — a District Admin can.'));
+  });
+
+  it('⭐ the link is dropped a few seconds BEFORE the signed URL expires, and focus returns to the button', async () => {
+    search = {};
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      getCorrectionLetterScreenshot.mockResolvedValue({ url: 'https://storage.example/proof.png?sig=1', expires_in_seconds: 60 });
+      setup([screenshotItem()]);
+      await screen.findByTestId(`correction-queue-item-${CLAIM}`);
+      fireEvent.click(screen.getByRole('button', { name: 'Get the screenshot link' }));
+      const link = await screen.findByTestId('letter-screenshot-link');
+      await waitFor(() => expect(document.activeElement).toBe(link));
+      await act(async () => {
+        vi.advanceTimersByTime(56_000);
+      });
+      expect(screen.queryByTestId('letter-screenshot-link')).toBeNull();
+      await waitFor(() => expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Get the screenshot link' })));
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('⭐ `screenshotLinkTtlMs` validates the server value — finite, > 0, clamped, minus a margin', async () => {
+    const { screenshotLinkTtlMs } = await import('../src/modules/correction-chase/CorrectionChasePanel.js');
+    expect(screenshotLinkTtlMs(300)).toBe(295_000);
+    expect(screenshotLinkTtlMs(10_000_000)).toBe((3600 - 5) * 1000); // a huge value would overflow `setTimeout`
+    for (const bad of [0, -1, 3, Number.NaN, Number.POSITIVE_INFINITY, '300', null, undefined]) {
+      expect(screenshotLinkTtlMs(bad), String(bad)).toBeNull();
+    }
   });
 });

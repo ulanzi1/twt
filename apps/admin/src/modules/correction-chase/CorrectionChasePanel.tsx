@@ -9,20 +9,35 @@
 // ⛔ No name, ⛔ no number, ⛔ no address here — the address shows only inside the letter form, on demand.
 // ⭐ The letter form follows the PERSON, ⛔ not the headline run's kind: a letter (and its delivery) stays recordable
 // after a switch to "staff" (AC5; the surface inventory's "letters stay recordable at any time") — `people` is
-// non-empty exactly when a family/direction run exists for the live return. A person is letter-eligible once found
+// non-empty exactly when a family/direction run exists for the live return (under D30 too). A person is letter-eligible once found
 // dead (`found_dead_on`, the server's own predicate) — even after an earlier "reached".
+// ⭐ Under D30 (`cannot_remind`) the people and their letters STAY listed — a posted letter's delivery is still
+// recordable — but a NEW letter is ⛔ offered only while the family can be contacted (`cannot_remind === null`).
 // ⚠ Every control is shown to every queue reader: the page cannot see keys (1)/(7) (district-dimension; the
-// session carries only the national grants), so each form maps a 403 to its own "your role cannot" line.
+// session carries only the national grants), so every control maps a 403 through ONE classifier (`errors.ts`).
 
-import { useEffect, useState, type ReactElement } from 'react';
+import { useEffect, useRef, useState, type ReactElement } from 'react';
 
 import type { ClaimsUnderCorrectionResponse, CorrectionLetterDto } from '@twt/contracts';
 
 import { getCorrectionLetterScreenshot } from '../../api/client.js';
 import { CorrectionLetterForm } from './CorrectionLetterForm.js';
 import { MustActChangeForm } from './MustActChangeForm.js';
+import { isRoleForbidden } from './errors.js';
 import { correctionChaseEn as t } from './i18n-en.js';
 import { formatIst } from './ist.js';
+
+/** The longest a screenshot link is offered, whatever the server says (a huge value overflows `setTimeout`). */
+const SCREENSHOT_LINK_MAX_SECONDS = 60 * 60;
+/** Dropped this much BEFORE the signed URL expires — a click in the last seconds would open a dead link. */
+const SCREENSHOT_LINK_MARGIN_SECONDS = 5;
+
+/** How long to offer a signed screenshot link, from the server's `expires_in_seconds`; `null` ⇒ ⛔ not usable. */
+export function screenshotLinkTtlMs(expiresInSeconds: unknown): number | null {
+  if (typeof expiresInSeconds !== 'number' || !Number.isFinite(expiresInSeconds) || expiresInSeconds <= 0) return null;
+  const seconds = Math.min(expiresInSeconds, SCREENSHOT_LINK_MAX_SECONDS) - SCREENSHOT_LINK_MARGIN_SECONDS;
+  return seconds > 0 ? seconds * 1000 : null;
+}
 
 type Item = ClaimsUnderCorrectionResponse['items'][number];
 
@@ -44,18 +59,34 @@ function LetterLine({
   readonly letter: CorrectionLetterDto;
 }): ReactElement {
   const [loading, setLoading] = useState(false);
+  // ⭐ The in-flight GUARD is a ref — two clicks in one tick both read the render-time `false`.
+  const loadingRef = useRef(false);
   const [link, setLink] = useState<{ readonly url: string; readonly ttlMs: number } | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
+  const linkRef = useRef<HTMLAnchorElement | null>(null);
+  // ⭐ The button and the link SWAP — focus follows to the replacement, ⛔ never dropped to <body>.
+  const focusNext = useRef<'button' | 'link' | null>(null);
+  useEffect(() => {
+    const target = focusNext.current;
+    if (target === null) return;
+    focusNext.current = null;
+    (target === 'link' ? linkRef.current : buttonRef.current)?.focus();
+  });
   // ⭐ The signed URL is TTL-limited — drop the link when it expires rather than offer a dead one.
   useEffect(() => {
     if (link === null) return;
-    const id = setTimeout(() => setLink(null), link.ttlMs);
+    const id = setTimeout(() => {
+      if (document.activeElement === linkRef.current) focusNext.current = 'button';
+      setLink(null);
+    }, link.ttlMs);
     return () => clearTimeout(id);
   }, [link]);
   // ⭐ FETCH, THEN RENDER A LINK (the `DeathCertificateReviewControl.tsx` precedent) — a `window.open` after an
   // `await` is popup-blocked, and with `noopener` the block cannot even be detected.
   async function loadLink(): Promise<void> {
-    if (loading) return;
+    if (loadingRef.current) return;
+    loadingRef.current = true;
     setLoading(true);
     setProblem(null);
     try {
@@ -66,14 +97,18 @@ function LetterLine({
       } catch {
         secure = false;
       }
-      if (!secure) {
-        setProblem(t.letters.screenshotBadLink);
+      const ttlMs = screenshotLinkTtlMs(expires_in_seconds);
+      if (!secure || ttlMs === null) {
+        setProblem(!secure ? t.letters.screenshotBadLink : t.letters.screenshotError);
         return;
       }
-      setLink({ url, ttlMs: expires_in_seconds * 1000 });
-    } catch {
-      setProblem(t.letters.screenshotError);
+      setLink({ url, ttlMs });
+      focusNext.current = 'link';
+    } catch (err) {
+      // ⭐ A 403 is the ROLE — ⛔ "Try again" invited a retry that can never succeed.
+      setProblem(isRoleForbidden(err) ? t.letters.forbidden : t.letters.screenshotError);
     } finally {
+      loadingRef.current = false;
       setLoading(false);
     }
   }
@@ -89,16 +124,26 @@ function LetterLine({
       ) : null}
       {letter.has_screenshot ? (
         link === null ? (
-          <button type="button" className="underline" disabled={loading} onClick={() => void loadLink()}>
+          <button ref={buttonRef} type="button" className="underline" disabled={loading} onClick={() => void loadLink()}>
             {t.letters.screenshotLoad}
           </button>
         ) : (
-          <a href={link.url} target="_blank" rel="noopener noreferrer" className="underline" data-testid="letter-screenshot-link">
+          <a
+            ref={linkRef}
+            href={link.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline"
+            data-testid="letter-screenshot-link"
+          >
             {t.letters.screenshotOpen}
           </a>
         )
       ) : null}
-      {problem !== null ? <span role="status">{problem}</span> : null}
+      {/* ⭐ PERSISTENT, its text changes — a live region that mounts already holding its text is ⛔ not announced. */}
+      <span role="status" data-testid="letter-screenshot-status">
+        {problem ?? ''}
+      </span>
     </li>
   );
 }
@@ -139,12 +184,13 @@ export function CorrectionChasePanel({ pariwarId, item }: CorrectionChasePanelPr
       <p data-testid="queue-run" role="status">
         {/* ⭐ An ENDED run shows when it started and the day it ended — ⛔ never its day count, which kept growing
             past 90 ("day 140 of 90"). */}
+        {/* ⭐ An OPEN run past its 90 days says so — ⛔ never "day 95 of 90". */}
         {c.run === null
           ? t.run.none
           : c.run.open
-            ? `${t.run[c.run.kind]} · ${t.run.day} ${String(c.run.day_count)} ${t.run.of90}${
-                c.run.next_reminder_on !== null ? ` · ${t.run.next} ${c.run.next_reminder_on}` : ''
-              }`
+            ? `${t.run[c.run.kind]} · ${
+                c.run.day_count > 90 ? t.run.pastDay90 : `${t.run.day} ${String(c.run.day_count)} ${t.run.of90}`
+              }${c.run.next_reminder_on !== null ? ` · ${t.run.next} ${c.run.next_reminder_on}` : ''}`
             : `${t.run[c.run.kind]} · ${t.run.started} ${c.run.day0} · ${
                 c.run.ended_on !== null ? `${t.run.endedOn} ${c.run.ended_on}` : t.run.ended
               }`}
@@ -161,6 +207,8 @@ export function CorrectionChasePanel({ pariwarId, item }: CorrectionChasePanelPr
               // ⭐ `found_dead_on`, ⛔ not `status` — the server's own predicate; a number found dead AFTER an earlier
               // "reached" is still letter-eligible (and the sweep chases the District Admin for that letter).
               const eligible = p.found_dead_on !== null;
+              // ⭐ D30 (J6) — a NEW letter needs the family to be contactable; a posted one's delivery never does.
+              const canRecordNew = eligible && c.cannot_remind === null;
               return (
                 <li key={p.person_key} className="rounded border p-2" data-testid={`person-${p.person_key}`}>
                   <span className="font-medium">{label}</span>{' '}
@@ -179,14 +227,16 @@ export function CorrectionChasePanel({ pariwarId, item }: CorrectionChasePanelPr
                     eligible && <p className="mt-1 opacity-70">{t.letters.none}</p>
                   )}
                   {/* ⭐ A delivery stays recordable for a letter already posted even when the person is no longer
-                      found dead (a new number resets that, `-271` §1) — only a NEW letter needs eligibility. */}
-                  {eligible || p.letters.some((l) => l.delivered_on === null) ? (
+                      found dead (a new number resets that, `-271` §1) — only a NEW letter needs eligibility. ⭐ The
+                      form stays mounted while the person has ANY letter — it holds the delivery's confirmation,
+                      which must outlive the refetch that marks the letter delivered. */}
+                  {canRecordNew || p.letters.length > 0 ? (
                     <CorrectionLetterForm
                       pariwarId={pariwarId}
                       claimCaseId={item.claim_case_id}
                       personKey={p.person_key}
                       letters={p.letters}
-                      canRecord={eligible}
+                      canRecord={canRecordNew}
                     />
                   ) : null}
                 </li>

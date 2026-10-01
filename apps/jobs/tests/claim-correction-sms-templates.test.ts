@@ -40,6 +40,18 @@ const HINDI_DEADLINE_TERMS = [
   'वरना',
 ] as const;
 
+/**
+ * THE deadline-threat assertion every body runs through (T6, S4) — ONE helper, so the liveness test below exercises
+ * the SAME code the per-template test does (⛔ a re-implementation that could drift). Throws on a threat.
+ */
+function assertNoDeadlineThreat(body: string, label: string): void {
+  expect(body.toLowerCase(), label).not.toMatch(/\bdays?\b|urgent|last chance|within|deadline/);
+  expect(body, label).not.toMatch(/[०-९]/); // UX-DR73 — ⛔ Devanagari digits
+  // ⚠ The HINDI deny-list is matched as SUBSTRINGS, ⛔ never with `\b`: JavaScript's `\b` is ASCII-only, so it can
+  // never fire between Devanagari letters — a `\b`-anchored Hindi pattern passes every body vacuously.
+  for (const term of HINDI_DEADLINE_TERMS) expect(body, `"${term}" in ${label}`).not.toContain(term);
+}
+
 const CASES = (['reminder', 'closure_notice'] as const).flatMap((message) =>
   (['hi', 'en'] as const).map((locale) => ({ message, locale })),
 );
@@ -76,16 +88,20 @@ describe('the claim-correction SMS templates (D32 — both messages × both loca
     expect(body).toContain('3F2A9C1E');
     expect(body).toContain('+911800123456');
     expect(body).not.toMatch(/\{\w+\}/); // every variable filled
-    expect(body.toLowerCase()).not.toMatch(/\bdays?\b|urgent|last chance|within|deadline/);
-    expect(body).not.toMatch(/[०-९]/); // UX-DR73 — ⛔ Devanagari digits
-    // ⚠ The HINDI deny-list is matched as SUBSTRINGS, ⛔ never with `\b`: JavaScript's `\b` is ASCII-only, so it can
-    // never fire between Devanagari letters — a `\b`-anchored Hindi pattern passes every body vacuously.
-    for (const term of HINDI_DEADLINE_TERMS) expect(body, `"${term}" in the ${locale} ${message}`).not.toContain(term);
+    assertNoDeadlineThreat(body, `the ${locale} ${message}`);
   });
 
-  it('the Hindi deny-list is LIVE — it catches a deadline threat written into a Hindi body', () => {
-    const threatened = `${renderClaimCorrectionSms('reminder', 'hi', { reference: 'X', helpline: 'Y' })} 7 दिनों के भीतर उत्तर दें।`;
-    expect(HINDI_DEADLINE_TERMS.some((term) => threatened.includes(term))).toBe(true);
+  it.each([
+    ['a Hindi "within N days"', ' 7 दिनों के भीतर उत्तर दें।'],
+    ['a Hindi "immediately"', ' तुरंत संपर्क करें।'],
+    ['a Hindi "otherwise"', ' अन्यथा दावा बंद होगा।'],
+    ['Devanagari digits', ' ७'],
+    ['an English "within 7 days"', ' Reply within 7 days.'],
+  ])('the deny-list is LIVE — the SAME assertion THROWS on %s written into a real Hindi body', (_label, threat) => {
+    const threatened = `${renderClaimCorrectionSms('reminder', 'hi', { reference: 'X', helpline: 'Y' })}${threat}`;
+    // The clean body passes the very helper that must reject the threatened one.
+    assertNoDeadlineThreat(renderClaimCorrectionSms('reminder', 'hi', { reference: 'X', helpline: 'Y' }), 'clean');
+    expect(() => assertNoDeadlineThreat(threatened, 'threatened')).toThrow();
   });
 
   it('⭐ the reminder asks the family to CALL — ⛔ never "update in the app" (a returned claim is never member-editable)', () => {

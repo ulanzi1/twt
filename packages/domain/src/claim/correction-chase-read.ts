@@ -7,6 +7,11 @@
 // has corrected — awaiting your check" flag (`-269` §2(b)), each letter's state and its overdue flag, and whether any
 // chase was escalated to the Pariwar Admin. Everything is derived from the chase's own records through the ONE
 // resolver — ⛔ nothing re-derived.
+// ⭐ D30 (`cannotRemind`) stops the family's REMINDERS, ⛔ not the letters: the people are then derived from the run's
+// own records (its family rows + letters, grouped by person key — ⛔ no crypto), so a recorded letter and its delivery
+// form stay visible while the server still accepts a delivery.
+// ⭐ A person whose CURRENT number had to be hashed and whose hash THREW is surfaced as `numberUnverified` (the API
+// logs it by claim id) — ⛔ never silently judged on the old number's epoch.
 // ⚠ Per claim (a bounded page — the queue's `clampLimit` cap), ⛔ never unbounded.
 // ⛔ Carries no name, ⛔ no number, ⛔ no address, ⛔ no tracking number, ⛔ no note.
 
@@ -24,12 +29,20 @@ import {
 } from '../schema/claim_correction_chase.js';
 import {
   type CorrectionCannotRemindReason,
+  type PersonRunState,
   claimShortReference,
+  evaluatePersonRunState,
   readCorrectionClaimRow,
   readCorrectionRecipients,
   resolveCorrectionChase,
 } from './correction-chase.js';
-import { readRunLetters, readRunPersonStates } from './correction-reminder-record.js';
+import {
+  type RunFamilyRow,
+  type RunLetterRow,
+  readRunFamilyRows,
+  readRunLetters,
+  readRunPersonStates,
+} from './correction-reminder-record.js';
 import {
   LETTER_OVERDUE_AFTER_DAYS,
   correctionReminderSchedule,
@@ -80,6 +93,11 @@ export interface CorrectionChaseSummary {
   readonly people: readonly CorrectionChasePersonSummary[];
   /** A chase of this claim's live return was escalated to the Pariwar Admin. */
   readonly escalated: boolean;
+  /**
+   * At least one person's CURRENT number had to be hashed and the hash THREW — their status is the OLD number's
+   * epoch. ⛔ Not on the contract DTO: the API logs it (claim id only); the letter route fails closed on it.
+   */
+  readonly numberUnverified: boolean;
 }
 
 /**
@@ -92,6 +110,89 @@ export function correctionPersonStatus(
   accepted: number,
 ): CorrectionPersonStatus {
   return deadKind === 'dead' ? 'dead' : deadKind === 'unreachable' ? 'unreachable' : accepted > 0 ? 'reached' : 'not_yet';
+}
+
+/**
+ * The run's NEXT reminder date, or `null`. ⛔ None once the run ended, nor while the claim is `resubmitted` (a pause,
+ * `-267` §3); and for a FAMILY / DIRECTION run ⛔ none while the family's part is done (tier (b), `-269` §2) or the
+ * family cannot be reminded (D30) — the sweep sends nothing to them then, so the queue must ⛔ not advertise a date.
+ * A STAFF run keeps its dates under tier (b) and D30 (the District Admin is still reminded). Pure.
+ */
+export function correctionNextReminderOn(input: {
+  readonly kind: CorrectionRunKind;
+  readonly day0: CalendarDateString;
+  readonly open: boolean;
+  readonly dayCount: number;
+  readonly resubmitted: boolean;
+  readonly familyPartDone: boolean;
+  readonly cannotRemind: boolean;
+}): string | null {
+  if (!input.open || input.resubmitted) return null;
+  if (input.kind !== 'staff' && (input.familyPartDone || input.cannotRemind)) return null;
+  const next = correctionReminderSchedule(input.kind, input.day0).find(
+    (s) => s.kind === 'reminder' && s.day > input.dayCount,
+  );
+  return next?.date ?? null;
+}
+
+/** A person derived from a run's own records (D30 — the recipient read is empty then). */
+export interface CorrectionRecordPerson {
+  readonly personKey: string;
+  readonly role: 'nominee' | 'claimant';
+  /** ⛔ Not derivable from the records (the declaration is unread under D30) — always `null`. */
+  readonly rank: null;
+  readonly rows: readonly RunFamilyRow[];
+  readonly letters: readonly RunLetterRow[];
+}
+
+/**
+ * D30 — the people of a run from its OWN records: every person key on a `family_sms` row or a letter, in order of
+ * first appearance (rows by slot, then letters), with the role read off the key's format (`claimant`, or
+ * `nominee:<root version>`; a key of any other format is ⛔ not a person key and is skipped). Pure.
+ */
+export function correctionPeopleFromRecords(
+  rows: readonly RunFamilyRow[],
+  letters: readonly RunLetterRow[],
+): CorrectionRecordPerson[] {
+  const keys: string[] = [];
+  for (const k of [...rows.map((r) => r.recipientKey), ...letters.map((l) => l.personKey)]) {
+    if ((k === 'claimant' || k.startsWith('nominee:')) && !keys.includes(k)) keys.push(k);
+  }
+  return keys.map((personKey) => ({
+    personKey,
+    role: personKey === 'claimant' ? ('claimant' as const) : ('nominee' as const),
+    rank: null,
+    rows: rows.filter((r) => r.recipientKey === personKey),
+    letters: letters.filter((l) => l.personKey === personKey),
+  }));
+}
+
+/** One person's queue line from their evaluated state and their letters in the run. Pure. */
+function personSummary(
+  person: { readonly personKey: string; readonly role: 'nominee' | 'claimant'; readonly rank: 1 | 2 | null },
+  state: PersonRunState,
+  letters: readonly RunLetterRow[],
+  today: CalendarDateString,
+): CorrectionChasePersonSummary {
+  const accepted = state.epochRows.filter((r) => r.outcome === 'accepted').length;
+  return {
+    personKey: person.personKey,
+    role: person.role,
+    rank: person.rank,
+    status: correctionPersonStatus(state.deadKind, accepted),
+    foundDeadOn: state.foundDeadOn,
+    remindersAccepted: accepted,
+    letters: letters
+      .filter((l) => l.personKey === person.personKey)
+      .map((l) => ({
+        letterId: l.letterId,
+        sequence: l.sequence,
+        postedOn: l.postedOn,
+        deliveredOn: l.deliveredOn,
+        overdue: correctionLetterOverdue(l.postedOn, l.deliveredOn, today),
+        hasScreenshot: l.hasScreenshot,
+      })),
+  };
 }
 
 /** The overdue flag (`-250` #3). Pure. */
@@ -121,6 +222,7 @@ export async function readCorrectionChaseSummary(
     awaitingCheck: false,
     people: [],
     escalated: false,
+    numberUnverified: false,
   };
   if (chase.liveReturn === null) return empty;
 
@@ -152,16 +254,12 @@ export async function readCorrectionChaseSummary(
         : chase.familyRun.openedAt.getTime() >= chase.staffRun.openedAt.getTime()
           ? chase.familyRun
           : chase.staffRun);
+  const recipients = await readCorrectionRecipients(db, pariwarId, claimCaseId);
   const runSummary =
     run === null
       ? null
       : (() => {
           const dayCount = correctionRunDay(run.day0, today);
-          // ⭐ `resubmitted` PAUSES the run (`-267` §3) — ⛔ no next reminder is due while it holds.
-          const next =
-            run.endedAt === null && !resubmitted
-              ? correctionReminderSchedule(run.kind, run.day0).find((s) => s.kind === 'reminder' && s.day > dayCount)
-              : undefined;
           return {
             runId: run.runId,
             kind: run.kind,
@@ -169,37 +267,34 @@ export async function readCorrectionChaseSummary(
             dayCount,
             open: run.endedAt === null,
             endedOn: run.endedAt === null ? null : istDateOf(run.endedAt),
-            nextReminderOn: next?.date ?? null,
+            nextReminderOn: correctionNextReminderOn({
+              kind: run.kind,
+              day0: run.day0,
+              open: run.endedAt === null,
+              dayCount,
+              resubmitted,
+              familyPartDone: chase.familyPartDoneAt !== null,
+              cannotRemind: recipients.cannotRemind !== null,
+            }),
           };
         })();
 
-  const recipients = await readCorrectionRecipients(db, pariwarId, claimCaseId);
   const familyRun = chase.familyRun;
   let people: CorrectionChasePersonSummary[] = [];
+  let numberUnverified = false;
   if (familyRun !== null && recipients.cannotRemind === null) {
     const states = await readRunPersonStates(db, pariwarId, familyRun, recipients.people, { crypto: opts.crypto });
     const letters = await readRunLetters(db, pariwarId, familyRun.runId);
-    people = states.map(({ person, state }) => {
-      const accepted = state.epochRows.filter((r) => r.outcome === 'accepted').length;
-      return {
-        personKey: person.personKey,
-        role: person.role,
-        rank: person.rank,
-        status: correctionPersonStatus(state.deadKind, accepted),
-        foundDeadOn: state.foundDeadOn,
-        remindersAccepted: accepted,
-        letters: letters
-          .filter((l) => l.personKey === person.personKey)
-          .map((l) => ({
-            letterId: l.letterId,
-            sequence: l.sequence,
-            postedOn: l.postedOn,
-            deliveredOn: l.deliveredOn,
-            overdue: correctionLetterOverdue(l.postedOn, l.deliveredOn, today),
-            hasScreenshot: l.hasScreenshot,
-          })),
-      };
-    });
+    numberUnverified = states.some((s) => s.hashFailed === true);
+    people = states.map(({ person, state }) => personSummary(person, state, letters, today));
+  } else if (familyRun !== null) {
+    // ⭐ D30 — ⛔ no reminders, but the letters stay recordable at any time: derive the people from the run's own
+    // records (⛔ no crypto — nobody is texted, so the number's epoch is the recorded one).
+    const rows = await readRunFamilyRows(db, pariwarId, familyRun.runId);
+    const letters = await readRunLetters(db, pariwarId, familyRun.runId);
+    people = correctionPeopleFromRecords(rows, letters).map((p) =>
+      personSummary(p, evaluatePersonRunState(p.rows, p.letters), p.letters, today),
+    );
   }
 
   const escalations = await db
@@ -227,5 +322,6 @@ export async function readCorrectionChaseSummary(
     awaitingCheck: chase.familyPartDoneAt !== null && !resubmitted,
     people,
     escalated: (escalations[0]?.n ?? 0) > 0,
+    numberUnverified,
   };
 }

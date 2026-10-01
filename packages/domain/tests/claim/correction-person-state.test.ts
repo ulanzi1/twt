@@ -4,7 +4,11 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { correctionPersonStatus } from '../../src/claim/correction-chase-read.js';
+import {
+  correctionNextReminderOn,
+  correctionPeopleFromRecords,
+  correctionPersonStatus,
+} from '../../src/claim/correction-chase-read.js';
 import {
   type PersonLetterRow,
   type PersonReminderRow,
@@ -15,6 +19,7 @@ import {
 } from '../../src/claim/correction-chase.js';
 import {
   type RunFamilyRow,
+  type RunLetterRow,
   lastEvidentialAttempt,
   personNumberMayHaveMoved,
 } from '../../src/claim/correction-reminder-record.js';
@@ -186,6 +191,26 @@ describe('the child\'s re-check — the pure parts of `readRunPersonStates` (I4)
     expect(lastEvidentialAttempt([...rows].reverse())?.slotDay).toBe(1);
     expect(lastEvidentialAttempt([])).toBeUndefined();
   });
+
+  it('⭐ ≥ 2 evidential rows OUT OF ORDER: the latest slot wins, and on ONE slot the LATER insert wins', () => {
+    // Slot 2 twice (a retry after a reset): A inserted at t(5), B at t(9) — B is the last attempt. Slot 1 is older.
+    const slot1 = familyRow(row(1, 'accepted', 'A', 1), 'v1');
+    const slot2Early = familyRow(row(2, 'rejected_invalid_number', 'A', 5), 'v1');
+    const slot2Late = familyRow(row(2, 'accepted', 'B', 9), 'v2');
+    const trailingError = familyRow(row(3, 'error', null, 12), 'v3');
+    const orders = [
+      [slot2Late, slot1, trailingError, slot2Early],
+      [slot2Early, trailingError, slot2Late, slot1],
+      [trailingError, slot2Late, slot2Early, slot1],
+    ];
+    for (const rows of orders) {
+      const last = lastEvidentialAttempt(rows);
+      expect(last).toBe(slot2Late);
+      expect(last?.recipientNumberHash).toBe('B');
+    }
+    // … and with the later insert REMOVED, the earlier one on the same slot is the last (⛔ slot 1).
+    expect(lastEvidentialAttempt([slot2Early, slot1])).toBe(slot2Early);
+  });
 });
 
 describe('correctionPersonStatus (I1)', () => {
@@ -219,5 +244,80 @@ describe('claimShortReference (D33)', () => {
   it('the first 8 hex characters of the lower-case id, upper-cased', () => {
     expect(claimShortReference('3f2a9c1e-0b4d-4e6f-8a1b-2c3d4e5f6a7b')).toBe('3F2A9C1E');
     expect(claimShortReference('ABCDEF01-0000-0000-0000-000000000000')).toBe('ABCDEF01');
+  });
+});
+
+describe('correctionNextReminderOn (J7 — ⛔ no date the sweep will not send)', () => {
+  const base = {
+    kind: 'family' as const,
+    day0: '2026-10-01',
+    open: true,
+    dayCount: 3,
+    resubmitted: false,
+    familyPartDone: false,
+    cannotRemind: false,
+  };
+
+  it('an open family run advertises its next Panel day', () => {
+    expect(correctionNextReminderOn(base)).toBe('2026-10-05');
+    expect(correctionNextReminderOn({ ...base, kind: 'direction' })).toBe('2026-10-05');
+  });
+
+  it('⛔ none once the run ended, or while resubmitted (any kind)', () => {
+    expect(correctionNextReminderOn({ ...base, open: false })).toBeNull();
+    expect(correctionNextReminderOn({ ...base, resubmitted: true })).toBeNull();
+    expect(correctionNextReminderOn({ ...base, kind: 'staff', resubmitted: true })).toBeNull();
+  });
+
+  it('⭐ a family / direction run under tier (b) or D30 ⇒ ⛔ none', () => {
+    for (const kind of ['family', 'direction'] as const) {
+      expect(correctionNextReminderOn({ ...base, kind, familyPartDone: true })).toBeNull();
+      expect(correctionNextReminderOn({ ...base, kind, cannotRemind: true })).toBeNull();
+    }
+  });
+
+  it('⭐ a STAFF run keeps its dates under tier (b) and D30 (the District Admin is still reminded)', () => {
+    const staff = { ...base, kind: 'staff' as const };
+    const expected = correctionNextReminderOn(staff);
+    expect(expected).not.toBeNull();
+    expect(correctionNextReminderOn({ ...staff, familyPartDone: true })).toBe(expected);
+    expect(correctionNextReminderOn({ ...staff, cannotRemind: true })).toBe(expected);
+  });
+});
+
+describe('correctionPeopleFromRecords (J6 — the people under D30, from the run\'s own records)', () => {
+  const letterRow = (personKey: string, sequence: number, deliveredOn: string | null, at: number): RunLetterRow => ({
+    letterId: `l-${personKey}-${String(sequence)}`,
+    personKey,
+    sequence,
+    postedOn: '2026-10-05',
+    deliveredOn,
+    createdAt: t(at),
+    hasScreenshot: deliveredOn !== null,
+  });
+  const keyed = (r: PersonReminderRow, recipientKey: string): RunFamilyRow => ({ ...familyRow(r), recipientKey });
+
+  it('every person key on a row OR a letter, in first-appearance order, role from the key, rank ⛔ derivable ⇒ null', () => {
+    const rows = [keyed(row(1, 'accepted', 'A', 1), 'nominee:v1'), keyed(row(1, 'rejected_invalid_number', 'C', 2), 'claimant')];
+    const letters = [letterRow('claimant', 1, '2026-10-09', 10), letterRow('nominee:v9', 1, null, 11)];
+    const people = correctionPeopleFromRecords(rows, letters);
+    expect(people.map((p) => [p.personKey, p.role, p.rank])).toEqual([
+      ['nominee:v1', 'nominee', null],
+      ['claimant', 'claimant', null],
+      // A person with a letter but ⛔ no row still shows — their letter (and its delivery form) must ⛔ vanish.
+      ['nominee:v9', 'nominee', null],
+    ]);
+    expect(people[1]!.rows).toHaveLength(1);
+    expect(people[1]!.letters.map((l) => l.letterId)).toEqual(['l-claimant-1']);
+    // The state comes from the pure evaluator (⛔ no crypto): the claimant is dead and lettered.
+    expect(evaluatePersonRunState(people[1]!.rows, people[1]!.letters)).toMatchObject({
+      deadKind: 'dead',
+      letterDelivered: true,
+    });
+  });
+
+  it('a key of any other format is ⛔ not a person (skipped); ⛔ no records ⇒ ⛔ nobody', () => {
+    expect(correctionPeopleFromRecords([keyed(row(1, 'accepted', 'A'), 'staff:u1')], [])).toEqual([]);
+    expect(correctionPeopleFromRecords([], [])).toEqual([]);
   });
 });

@@ -6,8 +6,12 @@
 // In production they are separate requests. Where ORDER matters this file moves the stamps explicitly — the return's
 // `decided_at` back, an account's `updated_at`, and (as the superuser, with the append-only trigger off for that one
 // statement) a recorded check's `occurred_at` — reproducing the production fact the test is about.
-// ⭐ `backdateTimeline` is the one shape every ordering test starts from: the accounts and every check recorded so far
-// sit BEFORE the return, so a rewrite placed after the return has ⛔ no check after it until the test records one.
+// ⭐ `returnedClaim(…, { timeline: true })` is the one shape every ordering test starts from: the return is moved back
+// BEFORE its mark (and so its run) is written — day 0 is then the return's IST date at ANY hour, ⛔ never a date the
+// shift left behind — and the accounts and every check recorded so far sit BEFORE the return, so a rewrite placed after
+// the return has ⛔ no check after it until the test records one.
+// ⭐ The child's clock is the RUN's: `beginFamily` derives `now` (and so `sentOn`) from day 0 + the slot, 10:00 IST —
+// ⛔ never the wall clock.
 // The races (two connections) live in `correction-chase-concurrency.spec.ts`, which commits.
 
 import { randomUUID } from 'node:crypto';
@@ -21,12 +25,18 @@ import {
   CorrectionMarkNoLiveReturnError,
   CorrectionMarkNoteRequiredError,
   CorrectionMarkUnchangedError,
+  CorrectionNumberHashUnavailableError,
+  CorrectionNumberUnverifiedError,
+  assertCorrectionLetterAllowed,
   beginCorrectionFamilySend,
   claimCorrectionReminder,
+  correctionCatchUp,
+  correctionReminderSchedule,
   currentCorrectionNumberHash,
   decideNomineeCorrectionAsDistrictAdmin,
   decideNomineeCorrectionAsPariwarAdmin,
   endCorrectionRun,
+  expireOwnCorrectionReminder,
   finaliseCorrectionReminder,
   hasLiveReturnRow,
   insertFinalCorrectionReminder,
@@ -35,6 +45,7 @@ import {
   projectClaimState,
   raiseNomineeCorrection,
   readCorrectionChaseSummary,
+  readCorrectionClaimRow,
   readCorrectionLetterAddress,
   readCorrectionRecipients,
   readCorrectionReminder,
@@ -88,6 +99,15 @@ const ENC: FieldCryptoDeps = {
   hmacKeyRef: { resourceName: 'fake:correction-chase-hmac' },
 };
 
+/**
+ * A KMS that cannot DECRYPT (an outage — gRPC UNAVAILABLE); the HMAC still works. Drives a person's `hashFailed`
+ * wherever their current number must be hashed (J1, the child's throw path) — ⛔ a real envelope, a real failure.
+ */
+const KMS_DOWN: FieldCryptoDeps = {
+  ...ENC,
+  kms: { ...KMS, decryptDek: () => Promise.reject(Object.assign(new Error('fake kms: unavailable'), { code: 14 })) },
+};
+
 async function encryptNomineeMobile(plaintext: string): Promise<string> {
   return serializeEnvelope(
     await encryptTier1(Buffer.from(plaintext, 'utf-8'), { pariwarId: PARIWAR_A, fieldClass: MEMBER_NOMINEE_FIELD_CLASS }, KMS, ENC.kekRef),
@@ -138,6 +158,11 @@ async function returnedClaim(
     readonly nomineeMobile?: string;
     /** The deceased is a member with a REAL event stream (signup) — a 6.20 correction's apply appends to it. */
     readonly projectedMember?: boolean;
+    /**
+     * ⭐ THE PRODUCTION TIMELINE (`backdateTimeline`), built BEFORE the mark is written: the return moves to T − 3 h
+     * and the accounts + every check so far to T − 4 h, so the run's day 0 is the MOVED return's IST date.
+     */
+    readonly timeline?: boolean;
   } = {},
 ) {
   const { tx } = getTx();
@@ -161,17 +186,21 @@ async function returnedClaim(
   }
   await seedNomineeNameCheck(client, PARIWAR_A, cid, { contact: opts.contact ?? 'seed' });
   const ret = await returnToDistrictAdmin(client, returnInput(cid));
+  const returnId = ret.decision.decisionId as string;
+  const returnedAt =
+    opts.timeline === true ? await backdateTimeline(client, tx, cid, returnId, ret.decision.decidedAt) : ret.decision.decidedAt;
   let runId: string | null = null;
   let day0: string | null = null;
   if (opts.mustAct !== null) {
     const w = await writeCorrectionMark(client, returnMark(cid, opts.mustAct ?? 'family'));
     runId = w.openedRun?.runId ?? null;
     day0 = w.openedRun?.day0 ?? null;
+    // ⭐ The fixture's own invariant (I8): the run starts on the return's IST date — the MOVED one when moved.
+    if (day0 !== istDateOf(returnedAt)) throw new Error(`[returnedClaim] day 0 ${day0} ≠ the return's IST date ${istDateOf(returnedAt)}`);
   }
-  return { cid, mid, returnId: ret.decision.decisionId as string, returnedAt: ret.decision.decidedAt, runId, day0 };
+  // `rewriteAt` — an hour after the return (T − 2 h on the timeline): a rewrite with ⛔ no check after it yet.
+  return { cid, mid, returnId, returnedAt, rewriteAt: new Date(returnedAt.getTime() + HOUR), runId, day0 };
 }
-
-type Returned = Awaited<ReturnType<typeof returnedClaim>>;
 
 async function runsOf(tx: Tx, cid: ClaimId) {
   return tx
@@ -181,57 +210,92 @@ async function runsOf(tx: Tx, cid: ClaimId) {
     .orderBy(schema.claimCorrectionRuns.openedAt);
 }
 
+/**
+ * Run `fn`, then `restore` on EVERY path — ⛔ a later statement must never run in the state `fn` needed. When `fn`
+ * threw, ITS error wins (on an aborted transaction the restore itself fails, and must ⛔ not mask the cause).
+ */
+async function withRestore<T>(fn: () => Promise<T>, restore: () => Promise<unknown>): Promise<T> {
+  let out: T;
+  try {
+    out = await fn();
+  } catch (err) {
+    await restore().catch(() => undefined);
+    throw err;
+  }
+  await restore();
+  return out;
+}
+
 /** As the superuser (RLS + grants bypassed), then back into the app scope — for the clock simulation only. */
-async function asSuperuser(client: Client, fn: () => Promise<unknown>) {
+async function asSuperuser<T>(client: Client, fn: () => Promise<T>): Promise<T> {
   await client.query('RESET ROLE');
-  await fn();
-  await enterAppScope(client, PARIWAR_A);
+  return withRestore(fn, () => enterAppScope(client, PARIWAR_A));
+}
+
+/** Fail loudly when a fixture's clock shift reached ⛔ no row — a shift of nothing would leave the timeline unbuilt. */
+function shifted(what: string, rowCount: number | null, atLeast = 1): void {
+  if ((rowCount ?? 0) < atLeast) throw new Error(`[correction-chase.spec] ${what} moved ${rowCount ?? 0} row(s), expected ≥ ${atLeast}`);
 }
 
 async function backdateReturn(client: Client, returnId: string, ms: number) {
-  await asSuperuser(client, () =>
+  const r = await asSuperuser(client, () =>
     client.query(`UPDATE claim_state_trustee_decisions SET decided_at = decided_at - ($2 || ' milliseconds')::interval WHERE decision_id = $1`, [
       returnId,
       String(ms),
     ]),
   );
+  shifted('backdateReturn', r.rowCount);
 }
 
 async function setAccountsUpdatedAt(tx: Tx, cid: ClaimId, at: Date) {
-  await tx
+  const rows = await tx
     .update(schema.claimNomineeBankAccounts)
     .set({ updatedAt: at })
-    .where(and(eq(schema.claimNomineeBankAccounts.pariwarId, PARIWAR_A), eq(schema.claimNomineeBankAccounts.claimCaseId, cid)));
+    .where(and(eq(schema.claimNomineeBankAccounts.pariwarId, PARIWAR_A), eq(schema.claimNomineeBankAccounts.claimCaseId, cid)))
+    .returning({ rank: schema.claimNomineeBankAccounts.accountRank });
+  shifted('setAccountsUpdatedAt', rows.length, 2); // ⭐ BOTH accounts — "every account rewritten" is the fact under test
 }
 
 /**
  * Move the claim's recorded name checks by `ms` (every one, or only the LATEST). `events_log` is append-only by
- * trigger, so this runs as the superuser with `session_replication_role = 'replica'` for the ONE statement — a
- * per-test transaction that rolls back; ⛔ never a production shape.
+ * trigger, so this runs as the superuser with `session_replication_role = 'replica'` for the ONE statement — restored
+ * on every path — inside a per-test transaction that rolls back; ⛔ never a production shape.
  */
 async function shiftNameChecks(client: Client, cid: ClaimId, ms: number, opts: { readonly latestOnly?: boolean } = {}) {
-  await asSuperuser(client, async () => {
+  const r = await asSuperuser(client, async () => {
     await client.query("SET LOCAL session_replication_role = 'replica'");
-    await client.query(
-      `UPDATE events_log SET occurred_at = occurred_at + ($2 || ' milliseconds')::interval
-        WHERE stream_id = $1 AND event_type = 'claim.nominee_name_checked'
-          ${opts.latestOnly === true ? `AND event_version = (SELECT max(event_version) FROM events_log WHERE stream_id = $1 AND event_type = 'claim.nominee_name_checked')` : ''}`,
-      [cid, String(ms)],
+    return withRestore(
+      () =>
+        client.query(
+          `UPDATE events_log SET occurred_at = occurred_at + ($2 || ' milliseconds')::interval
+            WHERE stream_id = $1 AND event_type = 'claim.nominee_name_checked'
+              ${opts.latestOnly === true ? `AND event_version = (SELECT max(event_version) FROM events_log WHERE stream_id = $1 AND event_type = 'claim.nominee_name_checked')` : ''}`,
+          [cid, String(ms)],
+        ),
+      () => client.query("SET LOCAL session_replication_role = 'origin'"),
     );
-    await client.query("SET LOCAL session_replication_role = 'origin'");
   });
+  shifted('shiftNameChecks', r.rowCount);
 }
 
 /**
- * ⭐ THE PRODUCTION TIMELINE, rebuilt: the accounts and every check recorded so far land BEFORE the return (T − 4 h),
- * the return at T − 3 h. A rewrite at `rewriteAt` (T − 2 h) then has ⛔ no check after it, and every check recorded
- * from here on (at the transaction instant T) lands AFTER it.
+ * ⭐ THE PRODUCTION TIMELINE, rebuilt — called by `returnedClaim` BEFORE the mark: the accounts and every check
+ * recorded so far land BEFORE the return (T − 4 h), the return at T − 3 h. A rewrite at `rewriteAt` (T − 2 h) then has
+ * ⛔ no check after it, and every check recorded from here on (at the transaction instant T) lands AFTER it. Returns
+ * the return's moved `decided_at`.
  */
-async function backdateTimeline(client: Client, tx: Tx, c: Returned) {
-  await backdateReturn(client, c.returnId, 3 * HOUR);
-  await setAccountsUpdatedAt(tx, c.cid, new Date(c.returnedAt.getTime() - 4 * HOUR));
-  await shiftNameChecks(client, c.cid, -4 * HOUR);
-  return { decidedAt: new Date(c.returnedAt.getTime() - 3 * HOUR), rewriteAt: new Date(c.returnedAt.getTime() - 2 * HOUR) };
+async function backdateTimeline(client: Client, tx: Tx, cid: ClaimId, returnId: string, returnedAt: Date): Promise<Date> {
+  await backdateReturn(client, returnId, 3 * HOUR);
+  await setAccountsUpdatedAt(tx, cid, new Date(returnedAt.getTime() - 4 * HOUR));
+  await shiftNameChecks(client, cid, -4 * HOUR);
+  return new Date(returnedAt.getTime() - 3 * HOUR);
+}
+
+/** Is the claim RESUBMITTED (tier (a)) right now — read through the production resolver, from the claim's own row. */
+async function resubmittedOf(tx: Tx, c: { readonly cid: ClaimId; readonly mid: string }): Promise<boolean> {
+  const row = await readCorrectionClaimRow(tx, PARIWAR_A, c.cid);
+  if (row === null) throw new Error(`[correction-chase.spec] no claim row for ${c.cid}`);
+  return (await resolveClaimCorrectionState(tx, PARIWAR_A, c.cid, c.mid as MemberId, row.currentState)).resubmitted;
 }
 
 /** ⭐ A REAL 6.20 nominee correction of rank 1 (raise → District Admin → Pariwar Admin, which APPLIES it and
@@ -264,25 +328,40 @@ async function applyNomineeCorrection(client: Client, cid: ClaimId, proposedMobi
   await seedNomineeDetermination(client, PARIWAR_A, cid);
 }
 
-/** The child's pre-send re-check for one family slot. */
+/**
+ * The child's pre-send re-check for one family slot. ⭐ Its clock is the RUN's: `now` defaults to 10:00 IST on day 0 +
+ * the slot (`day0` overrides the run's day 0 for another run of the claim) — ⛔ never the wall clock — and `sentOn` is
+ * that instant's IST date.
+ */
 function beginFamily(
   client: Client,
-  c: { readonly cid: ClaimId; readonly runId: string | null },
+  c: { readonly cid: ClaimId; readonly runId: string | null; readonly day0: string | null },
   personKey: string,
-  opts: { readonly slotDay?: number; readonly jobId?: string; readonly now?: Date; readonly late?: boolean; readonly runId?: string } = {},
+  opts: {
+    readonly slotDay?: number;
+    readonly jobId?: string;
+    readonly now?: Date;
+    readonly day0?: string;
+    readonly late?: boolean;
+    readonly runId?: string;
+    readonly crypto?: FieldCryptoDeps;
+  } = {},
 ) {
-  const now = opts.now ?? new Date();
+  const slotDay = opts.slotDay ?? 1;
+  const day0 = opts.day0 ?? c.day0;
+  if (opts.now === undefined && day0 === null) throw new Error('[beginFamily] no run day 0 to derive the clock from — pass `now`');
+  const now = opts.now ?? tenAmIst(addCalendarDays(day0!, slotDay));
   return beginCorrectionFamilySend(client, {
     pariwarId: PARIWAR_A,
     claimCaseId: c.cid,
     runId: opts.runId ?? c.runId!,
-    slotDay: opts.slotDay ?? 1,
+    slotDay,
     personKey,
     sentOn: istDateOf(now),
     late: opts.late ?? false,
     jobId: opts.jobId ?? 'job-1',
     now,
-    crypto: ENC,
+    crypto: opts.crypto ?? ENC,
   });
 }
 
@@ -515,7 +594,7 @@ describe.skipIf(!hasDatabase)('the correction chase — marks, runs, the resolve
       returnDecisionId: dir.returnId,
       kind: 'direction',
       anchorId: randomUUID(),
-      day0: istDateOf(new Date()),
+      day0: dir.day0!,
     });
     await staffMarkRaw(dir.cid, dir.returnId);
     expect(await beginFamily(client, dir, dirPerson.personKey, { runId: direction.runId })).toMatchObject({ kind: 'send' });
@@ -524,10 +603,13 @@ describe.skipIf(!hasDatabase)('the correction chase — marks, runs, the resolve
   it('⭐ a second return after resubmission supersedes the old run and leaves ONE open run (`-267` §1)', async () => {
     const { client, tx } = getTx();
     await enterAppScope(client, PARIWAR_A);
-    const first = await returnedClaim(client, { mustAct: 'family' });
-    // Resubmit: the family rewrites (a later stamp — the clock simulation) and the District Admin re-checks.
-    await setAccountsUpdatedAt(tx, first.cid, new Date(Date.now() + 60_000));
+    const first = await returnedClaim(client, { mustAct: 'family', timeline: true });
+    // Resubmit: the family rewrites after the return (T − 2 h) and the District Admin re-checks AFTER it (at T).
+    await setAccountsUpdatedAt(tx, first.cid, first.rewriteAt);
+    expect(await resubmittedOf(tx, first)).toBe(false); // ⛔ the rewrite alone is only tier (b)
     await seedNomineeNameCheck(client, PARIWAR_A, first.cid, { reuseAccounts: true });
+    // ⭐ The fixture builds its title's state: the first return IS resubmitted before the second lands.
+    expect(await resubmittedOf(tx, first)).toBe(true);
     const second = await returnToDistrictAdmin(client, returnInput(first.cid));
     await writeCorrectionMark(client, returnMark(first.cid, 'staff'));
     const runs = await runsOf(tx, first.cid);
@@ -540,9 +622,12 @@ describe.skipIf(!hasDatabase)('the correction chase — marks, runs, the resolve
   it('⭐ a second return after a VOTE supersession leaves ONE open run (`-267` §1 — the vote supersedes the return but ends ⛔ no run)', async () => {
     const { client, tx } = getTx();
     await enterAppScope(client, PARIWAR_A);
-    const first = await returnedClaim(client, { mustAct: 'family' });
-    await setAccountsUpdatedAt(tx, first.cid, new Date(Date.now() + 60_000));
+    const first = await returnedClaim(client, { mustAct: 'family', timeline: true });
+    await setAccountsUpdatedAt(tx, first.cid, first.rewriteAt);
+    expect(await resubmittedOf(tx, first)).toBe(false);
     await seedNomineeNameCheck(client, PARIWAR_A, first.cid, { reuseAccounts: true });
+    // ⭐ The fixture builds its title's state: the return IS resubmitted before the vote.
+    expect(await resubmittedOf(tx, first)).toBe(true);
 
     // The Pariwar Admin's VOTE (a denial) supersedes the resubmitted return — the OTHER path that does, besides a
     // second return — and moves the claim to `denied`. ⛔ Nothing ends the first return's run here.
@@ -623,8 +708,8 @@ describe.skipIf(!hasDatabase)('the correction chase — "the family\'s part is d
   it('⭐ `-268` / `-269` §1 — rewrite ⇒ done (⛔ no check yet); a later mismatch ⇒ ⛔ not done; the next rewrite ⇒ done again', async () => {
     const { client, tx } = getTx();
     await enterAppScope(client, PARIWAR_A);
-    const c = await returnedClaim(client, { mustAct: 'family' });
-    const { decidedAt, rewriteAt } = await backdateTimeline(client, tx, c);
+    const c = await returnedClaim(client, { mustAct: 'family', timeline: true });
+    const { returnedAt: decidedAt, rewriteAt } = c;
     expect(await readFamilyPartDoneAt(tx, PARIWAR_A, c.cid, decidedAt)).toBeNull(); // ⛔ not rewritten yet
 
     // The family rewrites an hour after the return — and ⛔ NO check exists after it (every check sits at T − 4 h).
@@ -635,8 +720,8 @@ describe.skipIf(!hasDatabase)('the correction chase — "the family\'s part is d
     await seedNomineeNameCheck(client, PARIWAR_A, c.cid, { reuseAccounts: true, verdicts: ['matches', 'does_not_match'] });
     expect(await readFamilyPartDoneAt(tx, PARIWAR_A, c.cid, decidedAt)).toBeNull();
 
-    // The family's NEXT rewrite (after that check) makes it true again.
-    const rewrite2 = new Date(Date.now() + 60_000);
+    // The family's NEXT rewrite (T + 1 h — after that check) makes it true again.
+    const rewrite2 = new Date(decidedAt.getTime() + 4 * HOUR);
     await setAccountsUpdatedAt(tx, c.cid, rewrite2);
     expect((await readFamilyPartDoneAt(tx, PARIWAR_A, c.cid, decidedAt))?.getTime()).toBe(rewrite2.getTime());
     expect((await resolveCorrectionChase(tx, PARIWAR_A, c.cid)).familyPartDoneAt?.getTime()).toBe(rewrite2.getTime());
@@ -645,8 +730,8 @@ describe.skipIf(!hasDatabase)('the correction chase — "the family\'s part is d
   it('⭐ the child\'s re-check: tier (b) (the family\'s part done, ⛔ not resubmitted) SKIPS the family send, ⛔ no throw', async () => {
     const { client, tx } = getTx();
     await enterAppScope(client, PARIWAR_A);
-    const c = await returnedClaim(client, { mustAct: 'family' });
-    await setAccountsUpdatedAt(tx, c.cid, new Date(Date.now() + 60_000)); // rewritten, ⛔ no check since
+    const c = await returnedClaim(client, { mustAct: 'family', timeline: true });
+    await setAccountsUpdatedAt(tx, c.cid, c.rewriteAt); // rewritten, ⛔ no check since
     const person = (await readCorrectionRecipients(tx, PARIWAR_A, c.cid)).people[0]!;
     expect(await beginFamily(client, c, person.personKey)).toEqual({ kind: 'skipped', reason: 'family_part_done' });
   });
@@ -654,9 +739,8 @@ describe.skipIf(!hasDatabase)('the correction chase — "the family\'s part is d
   it('⭐ tier (a): once RESUBMITTED (a rewrite, then a current passing check AFTER it) the family send is skipped `resubmitted`; the rewrite alone is only tier (b)', async () => {
     const { client, tx } = getTx();
     await enterAppScope(client, PARIWAR_A);
-    const c = await returnedClaim(client, { mustAct: 'family' });
-    const { rewriteAt } = await backdateTimeline(client, tx, c);
-    await setAccountsUpdatedAt(tx, c.cid, rewriteAt);
+    const c = await returnedClaim(client, { mustAct: 'family', timeline: true });
+    await setAccountsUpdatedAt(tx, c.cid, c.rewriteAt);
     const person = (await readCorrectionRecipients(tx, PARIWAR_A, c.cid)).people[0]!;
     // ⛔ The negative leg — rewritten, the only checks predate the rewrite ⇒ ⛔ not resubmitted, only paused.
     expect(await beginFamily(client, c, person.personKey, { slotDay: 1, jobId: 'job-1' })).toEqual({ kind: 'skipped', reason: 'family_part_done' });
@@ -665,12 +749,11 @@ describe.skipIf(!hasDatabase)('the correction chase — "the family\'s part is d
     expect(await beginFamily(client, c, person.personKey, { slotDay: 2, jobId: 'job-2' })).toEqual({ kind: 'skipped', reason: 'resubmitted' });
   });
 
-  it('⭐ `-268` — a family that has rewritten is ⛔ not texted; a later 6.20 correction does ⛔ not resume the chase; a later `does_not_match` does (once, `late`); the next rewrite pauses it again', async () => {
+  it('⭐ `-268` — a family that has rewritten is ⛔ not texted; a later 6.20 correction does ⛔ not resume the chase (its rewrite fact is untouched, and the same correction with ⛔ no rewrite SENDS); a later `does_not_match` does — the catch-up plans ONE `late` send, ⛔ no burst; the next rewrite pauses it again', async () => {
     const { client, tx } = getTx();
     await enterAppScope(client, PARIWAR_A);
-    const c = await returnedClaim(client, { mustAct: 'family', projectedMember: true });
-    const { rewriteAt } = await backdateTimeline(client, tx, c);
-    await setAccountsUpdatedAt(tx, c.cid, rewriteAt);
+    const c = await returnedClaim(client, { mustAct: 'family', projectedMember: true, timeline: true });
+    await setAccountsUpdatedAt(tx, c.cid, c.rewriteAt);
     const person = (await readCorrectionRecipients(tx, PARIWAR_A, c.cid)).people[0]!;
     expect(await beginFamily(client, c, person.personKey, { slotDay: 10, jobId: 'd10' })).toEqual({ kind: 'skipped', reason: 'family_part_done' });
 
@@ -679,37 +762,57 @@ describe.skipIf(!hasDatabase)('the correction chase — "the family\'s part is d
     const after = (await readCorrectionRecipients(tx, PARIWAR_A, c.cid)).people[0]!;
     expect(after.personKey).toBe(person.personKey); // D30 — the correction keeps the person's key
     expect(after.versionId).not.toBe(person.versionId);
+    // ⭐ The correction is ⛔ neither a rewrite nor a staff check: the family's-part-done fact is EXACTLY the rewrite's.
+    expect((await readFamilyPartDoneAt(tx, PARIWAR_A, c.cid, c.returnedAt))?.getTime()).toBe(c.rewriteAt.getTime());
     expect(await beginFamily(client, c, person.personKey, { slotDay: 14, jobId: 'd14' })).toEqual({ kind: 'skipped', reason: 'family_part_done' });
+    // ⭐ CONTROL — the SAME correction on a claim whose family has ⛔ not rewritten: the post-correction slot SENDS. So
+    // the pause above is tier (b) holding OVER the correction — ⛔ an artefact of the correction itself (a person no
+    // longer a recipient, a reset that stops them) that the leg would pass on whatever tier (b) did.
+    const ctl = await returnedClaim(client, { mustAct: 'family', projectedMember: true, timeline: true });
+    const ctlPerson = (await readCorrectionRecipients(tx, PARIWAR_A, ctl.cid)).people[0]!;
+    await applyNomineeCorrection(client, ctl.cid, 'enc:v1:corrected-mobile');
+    expect(await beginFamily(client, ctl, ctlPerson.personKey, { slotDay: 14, jobId: 'ctl-d14' })).toMatchObject({
+      kind: 'send',
+      person: { personKey: ctlPerson.personKey },
+    });
 
-    // The District Admin records a `does_not_match` AFTER the rewrite ⇒ the chase resumes — ONE send for the
-    // latest due slot, flagged `late` (the sweep's catch-up; the missed slots stay as they were, ⛔ no burst).
+    // The District Admin records a `does_not_match` AFTER the rewrite ⇒ the chase resumes. ⭐ The sweep's D3 catch-up
+    // on run day 18 plans the send — ⛔ the test does not hand the child a `late` flag of its own: the latest due slot
+    // with ⛔ no record is 17 (10 and 14 carry their markers), sent ONCE and `late` (17 < 18), the gap since 14 empty.
     await seedNomineeNameCheck(client, PARIWAR_A, c.cid, { reuseAccounts: true, verdicts: ['matches', 'does_not_match'] });
-    const resumed = await beginFamily(client, c, person.personKey, { slotDay: 17, jobId: 'd17', late: true });
+    const familyRows = () =>
+      tx
+        .select()
+        .from(schema.claimCorrectionReminders)
+        .where(and(eq(schema.claimCorrectionReminders.claimCaseId, c.cid), eq(schema.claimCorrectionReminders.purpose, 'family_sms')))
+        .orderBy(schema.claimCorrectionReminders.slotDay);
+    const dueDays = correctionReminderSchedule('family', c.day0!).filter((s) => s.kind === 'reminder').map((s) => s.day);
+    const cu = correctionCatchUp(dueDays, new Set((await familyRows()).map((r) => r.slotDay)), 18);
+    expect(cu).toEqual({ send: { day: 17, late: true }, skip: [] });
+    const resumed = await beginFamily(client, c, person.personKey, {
+      slotDay: cu.send!.day,
+      late: cu.send!.late,
+      jobId: 'd18',
+      now: tenAmIst(addCalendarDays(c.day0!, 18)),
+    });
     expect(resumed).toMatchObject({ kind: 'send', person: { personKey: person.personKey } });
-    const rows = await tx
-      .select()
-      .from(schema.claimCorrectionReminders)
-      .where(and(eq(schema.claimCorrectionReminders.claimCaseId, c.cid), eq(schema.claimCorrectionReminders.purpose, 'family_sms')))
-      .orderBy(schema.claimCorrectionReminders.slotDay);
-    expect(rows.map((r) => [r.slotDay, r.outcome, r.late])).toEqual([
+    expect((await familyRows()).map((r) => [r.slotDay, r.outcome, r.late])).toEqual([
       [10, 'skipped_superseded', false],
       [14, 'skipped_superseded', false],
       [17, 'attempting', true],
     ]);
 
-    // The family's NEXT rewrite pauses it again.
-    await setAccountsUpdatedAt(tx, c.cid, new Date(Date.now() + 60_000));
+    // The family's NEXT rewrite (T + 1 h — after that check) pauses it again.
+    await setAccountsUpdatedAt(tx, c.cid, new Date(c.returnedAt.getTime() + 4 * HOUR));
     expect(await beginFamily(client, c, person.personKey, { slotDay: 21, jobId: 'd21' })).toEqual({ kind: 'skipped', reason: 'family_part_done' });
   });
 
   it('⭐ `-269` — rewrite (d10) → mismatch (d11) → match (d12) with ⛔ no new rewrite ⇒ RESUBMITTED: everything paused', async () => {
     const { client, tx } = getTx();
     await enterAppScope(client, PARIWAR_A);
-    const c = await returnedClaim(client, { mustAct: 'family' });
-    const { decidedAt, rewriteAt } = await backdateTimeline(client, tx, c);
+    const c = await returnedClaim(client, { mustAct: 'family', timeline: true });
+    const { returnedAt: decidedAt, rewriteAt } = c;
     const person = (await readCorrectionRecipients(tx, PARIWAR_A, c.cid)).people[0]!;
-    const resubmitted = async () =>
-      (await resolveClaimCorrectionState(tx, PARIWAR_A, c.cid, c.mid as MemberId, 'verifier_approved')).resubmitted;
 
     // d10 — the family rewrites.
     await setAccountsUpdatedAt(tx, c.cid, rewriteAt);
@@ -717,17 +820,39 @@ describe.skipIf(!hasDatabase)('the correction chase — "the family\'s part is d
     await seedNomineeNameCheck(client, PARIWAR_A, c.cid, { reuseAccounts: true, verdicts: ['matches', 'does_not_match'] });
     await shiftNameChecks(client, c.cid, -HOUR, { latestOnly: true });
     expect(await readFamilyPartDoneAt(tx, PARIWAR_A, c.cid, decidedAt)).toBeNull();
-    expect(await resubmitted()).toBe(false);
+    expect(await resubmittedOf(tx, c)).toBe(false);
     expect(await beginFamily(client, c, person.personKey, { slotDay: 11, jobId: 'd11' })).toMatchObject({ kind: 'send' });
 
     // d12 — a MATCH over the SAME rewrite (⛔ no new rewrite) ⇒ resubmitted.
     await seedNomineeNameCheck(client, PARIWAR_A, c.cid, { reuseAccounts: true });
-    expect(await resubmitted()).toBe(true);
+    expect(await resubmittedOf(tx, c)).toBe(true);
     expect(await beginFamily(client, c, person.personKey, { slotDay: 12, jobId: 'd12' })).toEqual({ kind: 'skipped', reason: 'resubmitted' });
     // The queue: ⛔ "awaiting your check" (it was checked), and ⛔ no next reminder while resubmitted.
-    const summary = await readCorrectionChaseSummary(tx, PARIWAR_A, c.cid, istDateOf(new Date()));
+    const summary = await readCorrectionChaseSummary(tx, PARIWAR_A, c.cid, addCalendarDays(c.day0!, 12));
     expect(summary.awaitingCheck).toBe(false);
     expect(summary.run).toMatchObject({ runId: c.runId, open: true, nextReminderOn: null });
+  });
+
+  it('⭐ J7 — tier (b) on a FAMILY run advertises ⛔ no next reminder (a control: before the rewrite it does); a STAFF run keeps its own', async () => {
+    const { client, tx } = getTx();
+    await enterAppScope(client, PARIWAR_A);
+    const fam = await returnedClaim(client, { mustAct: 'family', timeline: true });
+    const today = addCalendarDays(fam.day0!, 3);
+    // ⭐ Positive control — the open family run, ⛔ not paused, names its next reminder (day 4).
+    expect((await readCorrectionChaseSummary(tx, PARIWAR_A, fam.cid, today)).run).toMatchObject({
+      kind: 'family', open: true, nextReminderOn: addCalendarDays(fam.day0!, 4),
+    });
+    await setAccountsUpdatedAt(tx, fam.cid, fam.rewriteAt); // the family's part is done, ⛔ not resubmitted
+    const paused = await readCorrectionChaseSummary(tx, PARIWAR_A, fam.cid, today);
+    expect(paused.awaitingCheck).toBe(true);
+    expect(paused.run).toMatchObject({ kind: 'family', open: true, nextReminderOn: null });
+
+    // A STAFF run is the District Admin's own chase — the family's rewrite does ⛔ not pause it.
+    const stf = await returnedClaim(client, { mustAct: 'staff', timeline: true });
+    await setAccountsUpdatedAt(tx, stf.cid, stf.rewriteAt);
+    const staff = await readCorrectionChaseSummary(tx, PARIWAR_A, stf.cid, addCalendarDays(stf.day0!, 3));
+    expect(staff.awaitingCheck).toBe(true);
+    expect(staff.run).toMatchObject({ kind: 'staff', open: true, nextReminderOn: addCalendarDays(stf.day0!, 4) });
   });
 });
 
@@ -740,8 +865,13 @@ describe.skipIf(!hasDatabase)('the correction chase — the send claim (AC2 send
     return { ...c, person };
   }
 
-  const begin = (client: Client, c: { cid: ClaimId; runId: string | null; person: { personKey: string } }, jobId: string, now = new Date()) =>
-    beginFamily(client, c, c.person.personKey, { jobId, now });
+  /** `now` omitted ⇒ the run's own clock (day 0 + 1, 10:00 IST — `beginFamily`'s default). */
+  const begin = (
+    client: Client,
+    c: { cid: ClaimId; runId: string | null; day0: string | null; person: { personKey: string } },
+    jobId: string,
+    now?: Date,
+  ) => beginFamily(client, c, c.person.personKey, { jobId, now });
 
   it('⭐ a claim, then a finalise (CAS), and ⛔ never `delivered_at` for an accepted send', async () => {
     const { client, tx } = getTx();
@@ -778,11 +908,55 @@ describe.skipIf(!hasDatabase)('the correction chase — the send claim (AC2 send
     const first = await begin(client, c, 'job-1');
     if (first.kind !== 'send') throw new Error('expected a send');
     await noteCorrectionReminderTransient(tx, { pariwarId: PARIWAR_A, reminderId: first.reminderId, jobId: 'job-1', detail: 'api_unavailable:HTTP_503' });
-    const retry = await begin(client, c, 'job-1', new Date(Date.now() + 60_000));
+    const retry = await begin(client, c, 'job-1', new Date(tenAmIst(addCalendarDays(c.day0!, 1)).getTime() + 60_000));
     expect(retry).toMatchObject({ kind: 'send', reminderId: first.reminderId, attemptCount: 2 });
     const rows = await tx.select().from(schema.claimCorrectionReminders).where(eq(schema.claimCorrectionReminders.claimCaseId, c.cid));
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({ firstDetail: 'api_unavailable:HTTP_503', attemptCount: 2 });
+  });
+
+  it('⭐ J8 — the stale child EXPIRES its OWN attempting row: `error`, the transient detail kept in first_detail, its reason in detail; ⛔ another job\'s row, ⛔ a final row', async () => {
+    const { client, tx } = getTx();
+    await enterAppScope(client, PARIWAR_A);
+    const c = await familyCase(client, tx);
+    const key: CorrectionReminderKey = {
+      pariwarId: PARIWAR_A, claimCaseId: c.cid, runId: c.runId!, slotDay: 1, recipientKey: c.person.personKey, purpose: 'family_sms', subjectKey: '',
+    };
+    const res = await begin(client, c, 'job-1');
+    if (res.kind !== 'send') throw new Error('expected a send');
+    await noteCorrectionReminderTransient(tx, { pariwarId: PARIWAR_A, reminderId: res.reminderId, jobId: 'job-1', detail: 'api_unavailable:HTTP_503' });
+    const expire = (jobId: string) =>
+      expireOwnCorrectionReminder(tx, { pariwarId: PARIWAR_A, reminderId: res.reminderId, jobId, detail: 'exhausted:crossed_midnight' });
+    // ⛔ Another job's row is ⛔ never expired (the compare-and-set holds the claimant).
+    expect(await expire('job-2')).toBe(false);
+    expect(await readCorrectionReminder(tx, key)).toMatchObject({ outcome: 'attempting', detail: 'api_unavailable:HTTP_503', firstDetail: null });
+    expect(await expire('job-1')).toBe(true);
+    expect(await readCorrectionReminder(tx, key)).toMatchObject({
+      outcome: 'error', firstDetail: 'api_unavailable:HTTP_503', detail: 'exhausted:crossed_midnight', claimedByJob: 'job-1', attemptCount: 1,
+    });
+    // A FINAL row is ⛔ moved again, and the slot is ⛔ re-claimed (⛔ `skipped_superseded` — an ambiguous send stays on record).
+    expect(await expire('job-1')).toBe(false);
+    expect(await begin(client, c, 'job-3')).toEqual({ kind: 'noop', reason: 'already_final' });
+  });
+
+  it('J8 — an EARLIER transient detail already in first_detail is KEPT (COALESCE), ⛔ overwritten by the latest', async () => {
+    const { client, tx } = getTx();
+    await enterAppScope(client, PARIWAR_A);
+    const c = await familyCase(client, tx);
+    const first = await begin(client, c, 'job-1');
+    if (first.kind !== 'send') throw new Error('expected a send');
+    await noteCorrectionReminderTransient(tx, { pariwarId: PARIWAR_A, reminderId: first.reminderId, jobId: 'job-1', detail: 'api_unavailable:HTTP_503' });
+    // The job's retry re-claims its row (the first detail moves to first_detail), then fails transiently again.
+    const retry = await begin(client, c, 'job-1');
+    expect(retry).toMatchObject({ kind: 'send', reminderId: first.reminderId, attemptCount: 2 });
+    await noteCorrectionReminderTransient(tx, { pariwarId: PARIWAR_A, reminderId: first.reminderId, jobId: 'job-1', detail: 'api_unavailable:ETIMEDOUT' });
+    expect(
+      await expireOwnCorrectionReminder(tx, { pariwarId: PARIWAR_A, reminderId: first.reminderId, jobId: 'job-1', detail: 'exhausted:crossed_midnight' }),
+    ).toBe(true);
+    const rows = await tx.select().from(schema.claimCorrectionReminders).where(eq(schema.claimCorrectionReminders.claimCaseId, c.cid));
+    expect(rows.map((r) => [r.outcome, r.firstDetail, r.detail, r.attemptCount])).toEqual([
+      ['error', 'api_unavailable:HTTP_503', 'exhausted:crossed_midnight', 2],
+    ]);
   });
 
   // ⭐ A FIXED `t0` (10:00 IST the day after day 0 — ⛔ `new Date()`): the lease boundary is then exact to the
@@ -852,7 +1026,7 @@ describe.skipIf(!hasDatabase)('the correction chase — the send claim (AC2 send
     expect(await beginFamily(client, c, 'claimant')).toEqual({ kind: 'skipped', reason: 'no_contact_record' });
   });
 
-  it('D30 — an agreement ⛔ not live ⇒ the queue reads agreement_not_live and the CHILD skips with it (⛔ no send)', async () => {
+  it('D30 — an agreement ⛔ not live ⇒ the queue reads agreement_not_live and the CHILD skips with it (⛔ no send); the STAFF rows are unaffected', async () => {
     const { client, tx } = getTx();
     await enterAppScope(client, PARIWAR_A);
     const c = await returnedClaim(client, { mustAct: 'family' });
@@ -870,6 +1044,14 @@ describe.skipIf(!hasDatabase)('the correction chase — the send claim (AC2 send
       pariwarId: PARIWAR_A, claimCaseId: c.cid, runId: c.runId!, slotDay: 2, recipientKey: person.personKey, purpose: 'family_sms', subjectKey: '',
     });
     expect(row).toMatchObject({ outcome: 'skipped_superseded', detail: 'agreement_not_live' });
+    // ⭐ D30 stops the FAMILY only — the District Admin is still chased: a staff row of the same claim still inserts
+    // (once — its slot key holds).
+    const staffKey: CorrectionReminderKey = {
+      pariwarId: PARIWAR_A, claimCaseId: c.cid, runId: c.runId!, slotDay: 2, recipientKey: `staff:${DA}`, purpose: 'staff_reminder', subjectKey: '',
+    };
+    const staffDay = addCalendarDays(c.day0!, 2);
+    expect(await insertFinalCorrectionReminder(tx, { ...staffKey, sentOn: staffDay, outcome: 'recorded' })).toBe(true);
+    expect(await insertFinalCorrectionReminder(tx, { ...staffKey, sentOn: staffDay, outcome: 'recorded' })).toBe(false);
   });
 
   it('⭐ D34 — ONE scheduled District Admin reminder per claim per IST day, whichever run it was keyed on', async () => {
@@ -986,10 +1168,11 @@ describe.skipIf(!hasDatabase)('the correction chase — letters (AC5, D31) and t
     }
   });
 
-  it('⭐ a letter posted BEFORE its run\'s day 0 ⇒ posted_before_run; ON day 0 is accepted', async () => {
+  it('⭐ J5 — a letter posted BEFORE the live return\'s IST date ⇒ posted_before_run; ON that date (the first run\'s day 0) is accepted', async () => {
     const { client, tx } = getTx();
     await enterAppScope(client, PARIWAR_A);
     const c = await deadNominee(client, tx);
+    expect(c.day0).toBe(istDateOf(c.returnedAt)); // the floor IS the return's date (I8 — the return mark's run)
     await expect(recordCorrectionLetter(client, letterInput(c, c.person.personKey, addCalendarDays(c.day0!, -1)))).rejects.toMatchObject({
       refusal: 'posted_before_run',
     });
@@ -1132,4 +1315,155 @@ describe.skipIf(!hasDatabase)('the correction chase — letters (AC5, D31) and t
     expect(st!.state).toMatchObject({ foundDeadOn: c.deadOn, deadKind: 'dead', letterDelivered: true, reset: false });
     expect(await beginFamily(client, c, c.person.personKey, { slotDay: 3, jobId: 'j3' })).toEqual({ kind: 'skipped', reason: 'letter_delivered' });
   });
+
+  it('⭐ J4 — `-231` D chronology: a SECOND letter posted before the first\'s delivery date ⇒ posted_before_first_delivery; ON that date is accepted', async () => {
+    const { client, tx } = getTx();
+    await enterAppScope(client, PARIWAR_A);
+    const c = await deadNominee(client, tx);
+    const l1 = await recordCorrectionLetter(client, letterInput(c, c.person.personKey));
+    const deliveredOn = addCalendarDays(c.day0!, 9);
+    await deliver(client, c.cid, l1.letterId, deliveredOn);
+    await expect(recordCorrectionLetter(client, letterInput(c, c.person.personKey, addCalendarDays(deliveredOn, -1)))).rejects.toMatchObject({
+      refusal: 'posted_before_first_delivery',
+    });
+    expect(await recordCorrectionLetter(client, letterInput(c, c.person.personKey, deliveredOn))).toMatchObject({ sequence: 2, postedOn: deliveredOn });
+  });
+
+  it('⭐ J5 — the refusal ORDER after D31: limit_reached → first_not_delivered → posted_before_first_delivery → posted_before_run (each proven with a date that ALSO fails every later check)', async () => {
+    const { client, tx } = getTx();
+    await enterAppScope(client, PARIWAR_A);
+    const c = await deadNominee(client, tx);
+    const beforeReturn = addCalendarDays(c.day0!, -1);
+    const second = () => recordCorrectionLetter(client, letterInput(c, c.person.personKey, beforeReturn));
+    const l1 = await recordCorrectionLetter(client, letterInput(c, c.person.personKey));
+    // The first is undelivered — and the date is before the return ⇒ the FIRST failing check names it.
+    await expect(second()).rejects.toMatchObject({ refusal: 'first_not_delivered' });
+    const deliveredOn = addCalendarDays(c.day0!, 9);
+    await deliver(client, c.cid, l1.letterId, deliveredOn);
+    // Before the first's delivery AND before the return ⇒ the chronology refusal, ⛔ posted_before_run.
+    await expect(second()).rejects.toMatchObject({ refusal: 'posted_before_first_delivery' });
+    await recordCorrectionLetter(client, letterInput(c, c.person.personKey, deliveredOn));
+    // Two letters ⇒ limit_reached, whatever the date.
+    await expect(second()).rejects.toMatchObject({ refusal: 'limit_reached' });
+  });
+
+  it('⭐ J5 — `posted_before_run` keys on the RETURN: a letter posted during an EARLIER family run of the same return (family → staff → family) is accepted; one before the return is refused', async () => {
+    const { client, tx } = getTx();
+    await enterAppScope(client, PARIWAR_A);
+    const c = await returnedClaim(client, { mustAct: 'family' });
+    const returnedOn = istDateOf(c.returnedAt);
+    const person = (await readCorrectionRecipients(tx, PARIWAR_A, c.cid)).people[0]!;
+    // family (day 0) → staff (day 0 + 5) → family (day 0 + 10): the letter's run is the SECOND family run.
+    await writeCorrectionMark(client, mark(c.cid, 'staff', { now: tenAmIst(addCalendarDays(c.day0!, 5)) }));
+    const back = await writeCorrectionMark(client, mark(c.cid, 'family', { now: tenAmIst(addCalendarDays(c.day0!, 10)) }));
+    const run2 = back.openedRun!;
+    expect(run2.day0).toBe(addCalendarDays(returnedOn, 10)); // the precondition: the run starts AFTER the posting below
+    // The person is found dead in the second run (its day 1).
+    const claimed = await claimCorrectionReminder(tx, {
+      pariwarId: PARIWAR_A, claimCaseId: c.cid, runId: run2.runId, slotDay: 1, recipientKey: person.personKey, purpose: 'family_sms', subjectKey: '',
+      sentOn: addCalendarDays(run2.day0, 1), late: false, jobId: 'j', now: tenAmIst(addCalendarDays(run2.day0, 1)),
+    });
+    if (claimed.status !== 'claimed') throw new Error('claim');
+    await finaliseCorrectionReminder(tx, {
+      pariwarId: PARIWAR_A, reminderId: claimed.reminderId, jobId: 'j', outcome: 'rejected_invalid_number', recipientVersionId: person.versionId, recipientNumberHash: 'h',
+    });
+    await expect(recordCorrectionLetter(client, letterInput(c, person.personKey, addCalendarDays(returnedOn, -1)))).rejects.toMatchObject({
+      refusal: 'posted_before_run',
+    });
+    // ⭐ Posted on day 3 — during the FIRST family run, before the second's day 0 — a real posting: accepted, recorded
+    // against the run the letter now targets.
+    const postedOn = addCalendarDays(returnedOn, 3);
+    expect(await recordCorrectionLetter(client, letterInput(c, person.personKey, postedOn))).toMatchObject({ runId: run2.runId, postedOn });
+  });
+
+  it('⭐ J1 / J2 — the person\'s CURRENT number must be hashed and CANNOT be (a KMS outage) ⇒ the precondition AND the record fail CLOSED (CorrectionNumberUnverifiedError, ⛔ no letter row); the queue flags numberUnverified', async () => {
+    const { client, tx } = getTx();
+    await enterAppScope(client, PARIWAR_A);
+    const c = await deadNominee(client, tx, 'rejected_invalid_number', { nomineeMobile: '9812345678', projectedMember: true });
+    const today = addCalendarDays(c.day0!, 3);
+    // ⭐ Positive control — the number has ⛔ not moved (the dead row's version IS the person's): ⛔ no hash is needed,
+    // so the outage changes nothing — the letter is allowed and the queue is ⛔ flagged.
+    await expect(assertCorrectionLetterAllowed(tx, PARIWAR_A, c.cid, c.person.personKey, { crypto: KMS_DOWN })).resolves.toMatchObject({
+      run: { runId: c.runId },
+    });
+    expect((await readCorrectionChaseSummary(tx, PARIWAR_A, c.cid, today, { crypto: KMS_DOWN })).numberUnverified).toBe(false);
+
+    // A 6.20 correction moves the person to a NEW version (number B) — eligibility now rests on the current number.
+    await applyNomineeCorrection(client, c.cid, await encryptNomineeMobile('9898989898'));
+    const unverified = { name: 'CorrectionNumberUnverifiedError', claimCaseId: c.cid, personKey: c.person.personKey };
+    const allowed = () => assertCorrectionLetterAllowed(tx, PARIWAR_A, c.cid, c.person.personKey, { crypto: KMS_DOWN });
+    await expect(allowed()).rejects.toBeInstanceOf(CorrectionNumberUnverifiedError);
+    await expect(allowed()).rejects.toMatchObject(unverified);
+    const record = recordCorrectionLetter(client, { ...letterInput(c, c.person.personKey), crypto: KMS_DOWN });
+    await expect(record).rejects.toBeInstanceOf(CorrectionNumberUnverifiedError);
+    expect(await tx.select().from(schema.claimCorrectionLetters).where(eq(schema.claimCorrectionLetters.claimCaseId, c.cid))).toEqual([]);
+    // ⭐ The verdict really rests on the hash: with the KMS UP the new number is a fresh epoch ⇒ ⛔ letter-eligible —
+    // the outage path would otherwise have granted the letter on the OLD number's found-dead.
+    await expect(recordCorrectionLetter(client, letterInput(c, c.person.personKey))).rejects.toMatchObject({ refusal: 'not_letter_eligible' });
+
+    // J2 — the queue surfaces the outage (⛔ silently judged on the old epoch), and ⛔ flags nothing once it clears.
+    expect((await readCorrectionChaseSummary(tx, PARIWAR_A, c.cid, today, { crypto: KMS_DOWN })).numberUnverified).toBe(true);
+    expect((await readCorrectionChaseSummary(tx, PARIWAR_A, c.cid, today, { crypto: ENC })).numberUnverified).toBe(false);
+  });
+
+  it('⭐ the CHILD throws CorrectionNumberHashUnavailableError when its number hash fails and only a delivered letter would stop the send — ⛔ no row for the slot; the KMS back ⇒ it sends', async () => {
+    const { client, tx } = getTx();
+    await enterAppScope(client, PARIWAR_A);
+    const c = await deadNominee(client, tx, 'rejected_invalid_number', { nomineeMobile: '9812345678', projectedMember: true });
+    const key = c.person.personKey;
+    const l = await recordCorrectionLetter(client, letterInput(c, key));
+    await deliver(client, c.cid, l.letterId, addCalendarDays(c.day0!, 5));
+    // ⭐ Control — the number has ⛔ not moved: ⛔ no hash needed, the outage changes nothing, the letter stops them.
+    expect(await beginFamily(client, c, key, { slotDay: 2, jobId: 'on-A', crypto: KMS_DOWN })).toEqual({ kind: 'skipped', reason: 'letter_delivered' });
+
+    await applyNomineeCorrection(client, c.cid, await encryptNomineeMobile('9898989898'));
+    await expect(beginFamily(client, c, key, { slotDay: 3, jobId: 'kms-down', crypto: KMS_DOWN })).rejects.toBeInstanceOf(
+      CorrectionNumberHashUnavailableError,
+    );
+    // ⛔ Never a silent `skipped_superseded` that would lose the slot over a KMS blip — ⛔ no row at all.
+    const slot3: CorrectionReminderKey = {
+      pariwarId: PARIWAR_A, claimCaseId: c.cid, runId: c.runId!, slotDay: 3, recipientKey: key, purpose: 'family_sms', subjectKey: '',
+    };
+    expect(await readCorrectionReminder(tx, slot3)).toBeNull();
+    // The job's retry once the KMS is back: the new number is reached afresh (I4).
+    expect(await beginFamily(client, c, key, { slotDay: 3, jobId: 'kms-down' })).toMatchObject({ kind: 'send' });
+  });
+
+  for (const reason of ['agreement_not_live', 'no_contact_record'] as const) {
+    it(`⭐ J6 / J7 — under D30 (${reason}) the queue STILL lists the person and their letters (from the run's own records, ⛔ no crypto) and advertises ⛔ no next reminder`, async () => {
+      const { client, tx } = getTx();
+      await enterAppScope(client, PARIWAR_A);
+      const c = await deadNominee(client, tx);
+      const key = c.person.personKey;
+      const l1 = await recordCorrectionLetter(client, letterInput(c, key));
+      const deliveredOn = addCalendarDays(c.day0!, 9);
+      await deliver(client, c.cid, l1.letterId, deliveredOn);
+      const today = addCalendarDays(c.day0!, 12);
+      const letter = {
+        letterId: l1.letterId, sequence: 1, postedOn: addCalendarDays(c.day0!, 2), deliveredOn, overdue: false, hasScreenshot: true,
+      };
+      // ⭐ Positive control — before D30 the same person and letter come from the recipient read.
+      const before = await readCorrectionChaseSummary(tx, PARIWAR_A, c.cid, today);
+      expect(before.cannotRemind).toBeNull();
+      expect(before.people).toEqual([
+        { personKey: key, role: 'nominee', rank: c.person.rank, status: 'dead', foundDeadOn: c.deadOn, remindersAccepted: 0, letters: [letter] },
+      ]);
+
+      if (reason === 'agreement_not_live') {
+        const contact = await tx.select().from(schema.claimContacts).where(eq(schema.claimContacts.claimCaseId, c.cid));
+        await tx.update(schema.consentRecords).set({ revokedAt: new Date() }).where(eq(schema.consentRecords.consentId, contact[0]!.agreementConsentId));
+      } else {
+        await asSuperuser(client, () => client.query('DELETE FROM claim_contacts WHERE claim_case_id = $1', [c.cid]));
+      }
+      const s = await readCorrectionChaseSummary(tx, PARIWAR_A, c.cid, today);
+      expect(s.cannotRemind).toBe(reason);
+      // ⭐ The person and their letter survive D30 — role off the key's format; the rank is ⛔ derivable (null).
+      expect(s.people).toEqual([
+        { personKey: key, role: 'nominee', rank: null, status: 'dead', foundDeadOn: c.deadOn, remindersAccepted: 0, letters: [letter] },
+      ]);
+      expect(s.numberUnverified).toBe(false);
+      // J7 — the family run is open, but nobody is texted under D30 ⇒ ⛔ no next reminder advertised.
+      expect(s.run).toMatchObject({ kind: 'family', open: true, nextReminderOn: null });
+    });
+  }
 });

@@ -138,28 +138,41 @@ const GRPC_STATUS_NAMES: Readonly<Record<number, string>> = {
   16: 'unauthenticated',
 };
 
-/** gRPC `UNAVAILABLE` / `DEADLINE_EXCEEDED` — the only Secret Manager codes that are an OUTAGE (a retry can clear). */
-const GRPC_TRANSIENT: ReadonlySet<number> = new Set([4, 14]);
+/**
+ * The ONLY Secret Manager codes that are FINAL — a CONFIG fault a retry cannot clear: `INVALID_ARGUMENT` (3),
+ * `PERMISSION_DENIED` (7), `FAILED_PRECONDITION` (9, e.g. a disabled / destroyed version), `UNIMPLEMENTED` (12),
+ * `UNAUTHENTICATED` (16). ⚠ An ALLOWLIST of finals, ⛔ never an allowlist of transients: a code nobody listed
+ * (`RESOURCE_EXHAUSTED` 8 — a quota spike, `ABORTED` 10, `INTERNAL` 13, `CANCELLED` 1, `UNKNOWN` 2, a socket code,
+ * ⛔ no code) RETRIES — a wrongly-final code would cancel the day's slot for every family at once, while a wrongly-
+ * transient one only retries until the next morning's exhausted-row finaliser records `error` and alarms.
+ */
+const GRPC_CONFIG_FINAL: ReadonlySet<number> = new Set([3, 7, 9, 12, 16]);
 
-/** Node socket errors that reach a caller un-wrapped by gRPC — a network blip, ⛔ never a config fault. */
-const NETWORK_TRANSIENT: ReadonlySet<string> = new Set(['ECONNRESET', 'ECONNREFUSED', 'ETIMEDOUT', 'EAI_AGAIN', 'EPIPE']);
+/** A code-ish label from an error, `undefined` when it carries none (a non-object, or no `code`). */
+function faultCodeOf(err: unknown): number | string | undefined {
+  if (typeof err !== 'object' || err === null) return undefined;
+  const code = (err as PossibleGoogleError).code;
+  return typeof code === 'number' || typeof code === 'string' ? code : undefined;
+}
 
 /**
- * ⭐ Story 6.19b (third-pass review) — classify a failure that `resolveSmsDltConfig` RE-THREW (i.e. ⛔ not the
- * "not provisioned" `NOT_FOUND`, which already resolved to `null`). Only an OUTAGE is `transient` (gRPC
- * `UNAVAILABLE` / `DEADLINE_EXCEEDED`, or a raw socket error); everything else — `PERMISSION_DENIED`,
- * `INVALID_ARGUMENT`, `UNAUTHENTICATED`, a missing `GOOGLE_CLOUD_PROJECT`, an empty payload, an error with ⛔ no
- * code — is a CONFIG fault a retry cannot clear: the caller records it FINAL and alarms. `code` is a lower-case,
- * PII-free label (the gRPC status name, the socket code, or `unknown`) for the record's `detail`.
+ * ⭐ Story 6.19b — classify a failure that `resolveSmsDltConfig` RE-THREW (i.e. ⛔ not the "not provisioned"
+ * `NOT_FOUND`, which already resolved to `null`). FINAL only for a known CONFIG fault (`GRPC_CONFIG_FINAL`) — the
+ * caller records `error` and alarms; EVERYTHING else is `transient` (pg-boss retries; a fault that never clears is
+ * finalised `error` + alarmed by the next sweep's exhausted-row finaliser). The code is read from the error, else
+ * from a wrapping error's `cause` (a client that wraps the gRPC error). `code` is a lower-case, PII-free label (the
+ * gRPC status name, `grpc_<n>`, a sanitised socket code, or `unknown`) for the record's `detail`.
  * ⚠ Used by the claim-correction send only — the contribution resolver keeps its own "re-throw ⇒ retry" posture.
  */
 export function classifySecretManagerFault(err: unknown): { readonly transient: boolean; readonly code: string } {
-  const code = (err as PossibleGoogleError | null)?.code;
+  const code =
+    faultCodeOf(err) ??
+    faultCodeOf(typeof err === 'object' && err !== null ? (err as { readonly cause?: unknown }).cause : undefined);
   if (typeof code === 'number') {
-    return { transient: GRPC_TRANSIENT.has(code), code: GRPC_STATUS_NAMES[code] ?? `grpc_${String(code)}` };
+    return { transient: !GRPC_CONFIG_FINAL.has(code), code: GRPC_STATUS_NAMES[code] ?? `grpc_${String(code)}` };
   }
-  if (typeof code === 'string' && NETWORK_TRANSIENT.has(code)) return { transient: true, code: code.toLowerCase() };
-  return { transient: false, code: 'unknown' };
+  if (typeof code === 'string' && /^[A-Za-z0-9_]{1,32}$/.test(code)) return { transient: true, code: code.toLowerCase() };
+  return { transient: true, code: 'unknown' };
 }
 
 /**

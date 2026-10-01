@@ -42,6 +42,16 @@ const OTHER_PARIWAR = randomUUID();
 const STAFF_PARIWAR = randomUUID();
 const HELPLINE = '+911800123456';
 const enc = buildJobsEncryptionDeps('claim-correction-live-pepper');
+/** The SAME deps with the HMAC failing (a KMS blip on the number hash) — the decrypt still works. */
+const hmacDown: encryption.FieldCryptoDeps = {
+  kekRef: enc.kekRef,
+  hmacKeyRef: enc.hmacKeyRef,
+  kms: {
+    encryptDek: (dek, kekRef, aad) => enc.kms.encryptDek(dek, kekRef, aad),
+    decryptDek: (dek, kekRef, aad) => enc.kms.decryptDek(dek, kekRef, aad),
+    computeHmac: () => Promise.reject(new Error('kms hmac unavailable')),
+  },
+};
 
 /** 10:00 IST on `date` (the sweep's hour). */
 const tenAmIst = (date: string) => new Date(Date.parse(`${date}T10:00:00+05:30`));
@@ -57,8 +67,12 @@ describe.skipIf(!hasDatabase)('Story 6.19b — the claim-correction reminders (l
     pool.on('error', (err) => console.error('[claim-correction-reminders-live] idle client error:', err.message));
   });
   afterAll(async () => {
-    await cleanupClaims(pool, claims, members, { userIds: staffUsers });
-    await pool.end();
+    // ⚠ The cleanup THROWS on a leftover — `pool.end()` must still run (an open pool hangs the worker).
+    try {
+      await cleanupClaims(pool, claims, members, { userIds: staffUsers });
+    } finally {
+      await pool.end();
+    }
   });
 
   // ── Harness ─────────────────────────────────────────────────────────────────────────────────────────────────
@@ -77,6 +91,10 @@ describe.skipIf(!hasDatabase)('Story 6.19b — the claim-correction reminders (l
       config?: Record<string, string | null>;
       /** The staff push's provider registry (absent ⇒ `dispatch()`'s stub registry). */
       providers?: ProviderRegistry;
+      /** The crypto deps (absent ⇒ the suite's real fake-KMS deps) — e.g. `hmacDown` to fail every number hash. */
+      encryption?: encryption.FieldCryptoDeps;
+      runLimit?: number;
+      maxRuns?: number;
     } = {},
   ): Harness {
     const enqueued: Harness['enqueued'] = [];
@@ -95,7 +113,9 @@ describe.skipIf(!hasDatabase)('Story 6.19b — the claim-correction reminders (l
     };
     const deps: ClaimCorrectionReminderDeps = {
       pool,
-      encryption: enc,
+      encryption: opts.encryption ?? enc,
+      ...(opts.runLimit !== undefined ? { runLimit: opts.runLimit } : {}),
+      ...(opts.maxRuns !== undefined ? { maxRuns: opts.maxRuns } : {}),
       smsAppClient,
       resolveConfig: async (key) => {
         if (opts.config && key in opts.config) return opts.config[key]!;
@@ -677,13 +697,23 @@ describe.skipIf(!hasDatabase)('Story 6.19b — the claim-correction reminders (l
     ]);
     h.setNow(tenAmIst(day(day0, 5)));
     await runCorrectionReminderSweep(h.deps, boss(h));
-    expect(h.alarms.some((a) => a.includes(s.claimCaseId) && a.includes('second-letter'))).toBe(true);
+    const secondLetterAlarms = () => h.alarms.filter((a) => a.includes(s.claimCaseId) && a.includes('second-letter'));
+    expect(secondLetterAlarms()).toHaveLength(1);
     expect(h.alarms.some((a) => a.includes(s.runId!) && a.includes('failed'))).toBe(false);
     const rows = await rowsOf(s.claimCaseId);
-    expect(rows.filter((r) => r.purpose === 'letter_second_due')).toEqual([]);
+    // ⭐ The decision is RECORDED once — a `skipped_superseded` marker at today's slot (⛔ `recorded`: ⛔ no push, ⛔ no
+    // queue item) — so tomorrow's sweep sees it and does ⛔ not re-alarm.
+    expect(rows.filter((r) => r.purpose === 'letter_second_due')).toEqual([
+      expect.objectContaining({ slot_day: 5, subject_key: deadKey, outcome: 'skipped_superseded', detail: 'delivery_before_run' }),
+    ]);
     // ⛔ No rollback: the District Admin's reminder and the other person's SMS for day 5 are still planned.
     expect(rows.filter((r) => r.purpose === 'staff_reminder').map((r) => r.slot_day)).toContain(5);
     expect(smsFor(h, s.claimCaseId).some((j) => payloadOf(j).slotDay === 5 && payloadOf(j).personKey !== deadKey)).toBe(true);
+    // The next day: ⛔ no second alarm, ⛔ no second marker.
+    h.setNow(tenAmIst(day(day0, 6)));
+    await runCorrectionReminderSweep(h.deps, boss(h));
+    expect(secondLetterAlarms()).toHaveLength(1);
+    expect((await rowsOf(s.claimCaseId)).filter((r) => r.purpose === 'letter_second_due')).toHaveLength(1);
   });
 
   it('⭐ D30 BY PURPOSE — "cannot remind" stops the family SMS and the letter chase ONLY: the + 13 escalation and `letter_second_due` still land', async () => {
@@ -831,5 +861,106 @@ describe.skipIf(!hasDatabase)('Story 6.19b — the claim-correction reminders (l
     // A re-run the same day is a no-op (the `staff_push` row is the dedup).
     expect(await runCorrectionStaffPush(h.deps, env, 'push-again')).toEqual({ status: 'noop', reason: 'already_final' });
     expect(fake.sends).toHaveLength(1);
+  });
+
+  // ── Fourth-pass review (2026-10-01) ───────────────────────────────────────────────────────────────────────────
+
+  it('⭐ keyset paging past page 1 — runLimit 2: EVERY one of four new runs planned exactly ONCE; runLimit 2 + maxRuns 3 ⇒ the bound ALARMED', async () => {
+    const seeded = [];
+    for (let i = 0; i < 4; i += 1) seeded.push(await seed());
+    const { day0 } = await runOf(seeded[0]!.runId!);
+    const h = harness({ runLimit: 2, maxRuns: 10_000 });
+    h.setNow(tenAmIst(day(day0, 1)));
+    const result = await runCorrectionReminderSweep(h.deps, boss(h));
+    expect(result.scannedRuns).toBeGreaterThanOrEqual(4);
+    for (const s of seeded) {
+      // ONE nominee each ⇒ exactly one SMS per run: planned once, ⛔ never re-read at a page edge.
+      expect(smsFor(h, s.claimCaseId).map((j) => payloadOf(j).slotDay)).toEqual([1]);
+    }
+    expect(h.alarms.some((a) => a.includes('hard bound'))).toBe(false);
+
+    const bounded = harness({ runLimit: 2, maxRuns: 3 });
+    bounded.setNow(tenAmIst(day(day0, 1)));
+    expect((await runCorrectionReminderSweep(bounded.deps, boss(bounded))).scannedRuns).toBe(3);
+    expect(bounded.alarms.filter((a) => a.includes('hard bound of 3'))).toHaveLength(1);
+  });
+
+  it('⭐ I6 in the sweep — a person\'s current number cannot be HASHED ⇒ ALARMED by ids (⛔ never the number), and the plan still lands', async () => {
+    const A = '9811111131';
+    const s = await seed({ nomineeMobiles: ['9812345678'], claimantMobile: A });
+    const { day0 } = await runOf(s.runId!);
+    const h = harness();
+    h.setNow(tenAmIst(day(day0, 1)));
+    await runCorrectionReminderSweep(h.deps, boss(h));
+    for (const j of smsFor(h, s.claimCaseId)) await child(h, j); // the claimant now has an evidential row ⇒ hashed daily
+    const down = harness({ encryption: hmacDown });
+    down.setNow(tenAmIst(day(day0, 2)));
+    await runCorrectionReminderSweep(down.deps, boss(down));
+    const hashAlarms = down.alarms.filter((a) => a.includes(s.claimCaseId) && a.includes('could not be hashed'));
+    expect(hashAlarms).toHaveLength(1);
+    expect(hashAlarms[0]).toContain('claimant');
+    expect(JSON.stringify(down.alarms)).not.toContain(A);
+    // The fallback is the last row's number — the claimant's day-2 reminder is still planned.
+    expect(smsFor(down, s.claimCaseId).some((j) => payloadOf(j).personKey === 'claimant' && payloadOf(j).slotDay === 2)).toBe(true);
+  });
+
+  it('⭐ the child — the re-check cannot hash the current number while only an OLD epoch\'s delivered letter would stop the send ⇒ TRANSIENT, ⛔ no row; with the hash back ⇒ `letter_delivered`', async () => {
+    const A = '9811111141';
+    const s = await seed({ nomineeMobiles: ['9812345678'], claimantMobile: A });
+    const { day0 } = await runOf(s.runId!);
+    const h = harness({
+      gateway: (m) => (m.to === `+91${A}` ? Promise.reject(new SmsSendError('x', 'INVALID_NUMBER', 400)) : Promise.resolve('gw-ok')),
+    });
+    h.setNow(tenAmIst(day(day0, 1)));
+    await runCorrectionReminderSweep(h.deps, boss(h));
+    for (const j of smsFor(h, s.claimCaseId)) await child(h, j);
+    await recordDeliveredLetter(PARIWAR, s.claimCaseId, 'claimant', day(day0, 2), day(day0, 2));
+    const job = {
+      queue: 'claim.correction.family_sms',
+      data: {
+        pariwarId: PARIWAR,
+        requestId: 'r',
+        actorId: null,
+        traceId: 't',
+        payload: { runId: s.runId!, claimCaseId: s.claimCaseId, slotDay: 3, personKey: 'claimant', sentOn: day(day0, 3), late: false },
+      } satisfies JobEnvelope<CorrectionFamilySmsPayload>,
+      opts: undefined,
+    };
+    const down = harness({ encryption: hmacDown });
+    down.setNow(tenAmIst(day(day0, 3)));
+    await expect(child(down, job, 'job-hash')).rejects.toBeInstanceOf(ClaimCorrectionTransientError);
+    expect(down.alarms.filter((a) => a.includes('could not be hashed'))).toHaveLength(1);
+    expect(down.sent).toHaveLength(0);
+    // The begin's transaction rolled back ⇒ ⛔ no row for the slot (a retry re-runs the re-check).
+    const slot3 = () => rowsOf(s.claimCaseId).then((rows) => rows.filter((r) => r.recipient_key === 'claimant' && r.slot_day === 3));
+    expect(await slot3()).toEqual([]);
+    // Control: with the hash back, the SAME job is stopped by the delivered letter (the number did ⛔ not move).
+    h.setNow(tenAmIst(day(day0, 3)));
+    expect(await child(h, job, 'job-hash')).toEqual({ status: 'skipped', reason: 'letter_delivered' });
+  });
+
+  it('⭐ J8 — a retry that crossed IST midnight still `attempting` ⇒ `error` (exhausted:crossed_midnight), `first_detail` KEPT, alarmed; ⛔ no catch-up for it', async () => {
+    const s = await seed();
+    const { day0 } = await runOf(s.runId!);
+    const h = harness({ gateway: () => Promise.reject(new SmsSendError('down', null, 503)) });
+    h.setNow(tenAmIst(day(day0, 1)));
+    await runCorrectionReminderSweep(h.deps, boss(h));
+    const [job] = smsFor(h, s.claimCaseId);
+    await expect(child(h, job!, 'job-midnight')).rejects.toBeInstanceOf(ClaimCorrectionTransientError);
+    h.setNow(tenAmIst(day(day0, 2)));
+    expect(await child(h, job!, 'job-midnight')).toEqual({ status: 'skipped', reason: 'stale_slot' });
+    expect((await rowsOf(s.claimCaseId)).filter((r) => r.purpose === 'family_sms')).toEqual([
+      expect.objectContaining({
+        slot_day: 1,
+        outcome: 'error',
+        detail: 'exhausted:crossed_midnight',
+        first_detail: 'api_unavailable:http_503',
+      }),
+    ]);
+    expect(h.alarms.filter((a) => a.includes('crossed_midnight') && a.includes(s.runId!))).toHaveLength(1);
+    expect(h.sent).toHaveLength(1); // the one transient attempt — ⛔ no second send
+    // Today's sweep: slot 1 is FINAL (⛔ re-sent), slot 2 goes out on its own.
+    await runCorrectionReminderSweep(h.deps, boss(h));
+    expect(smsFor(h, s.claimCaseId).map((j) => payloadOf(j).slotDay)).toEqual([1, 2]);
   });
 });

@@ -88,11 +88,16 @@ export interface BuildServerOptions {
   /**
    * TEST-ONLY — capture the request logger's output into this stream (every level). A PII spec uses it to prove a
    * planted value reaches ⛔ no log line (Story 6.19b, AC9b); without it a test server logs nothing at all.
+   * ⛔ Refused unless `deps.config.nodeEnv === 'test'` — it switches the logger to `trace`, which a deployed server
+   * must never run at.
    */
   readonly logStream?: NodeJS.WritableStream;
 }
 
 export async function buildServer(deps: AppDeps, opts: BuildServerOptions = {}): Promise<FastifyInstance> {
+  if (opts.logStream !== undefined && deps.config.nodeEnv !== 'test') {
+    throw new Error(`[buildServer] opts.logStream is test-only (nodeEnv is '${deps.config.nodeEnv}')`);
+  }
   const app = Fastify({
     // Quiet in tests (unless a spec captures the output); structured logs otherwise. The raw-logger ban +
     // audit-log wrapper land at Story 1.10 (deferred lint TODO in eslint-config-twt).

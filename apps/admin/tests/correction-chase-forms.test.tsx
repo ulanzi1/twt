@@ -7,6 +7,9 @@
 // the letter (#2's proof never lands on #1); the file input is reset after a success; a missing field is a VISIBLE
 // message, ⛔ never a silent return; the step-up is announced, focus moves, and a wrong code reads differently from a
 // code that was never sent; the address can be hidden; a double click is one request.
+// ⭐ Fourth pass (2026-10-01): the delivery's confirmation is driven THROUGH the panel with a queue that refetches
+// (the per-letter form unmounts when its letter is delivered — a static-props harness hid that); ONE persistent
+// status line is announced by its text CHANGING; the address window is measured on the browser's clock.
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
@@ -14,7 +17,7 @@ import userEvent from '@testing-library/user-event';
 import type { ReactElement } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { CorrectionLetterDto } from '@twt/contracts';
+import type { ClaimsUnderCorrectionResponse, CorrectionLetterDto } from '@twt/contracts';
 
 const recordCorrectionLetter = vi.fn();
 const recordCorrectionLetterDelivery = vi.fn();
@@ -22,6 +25,7 @@ const getCorrectionLetterAddress = vi.fn();
 const requestStepUp = vi.fn();
 const verifyStepUp = vi.fn();
 const changeCorrectionMustAct = vi.fn();
+const getClaimsUnderCorrection = vi.fn();
 vi.mock('../src/api/client.js', async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>();
   return {
@@ -33,13 +37,19 @@ vi.mock('../src/api/client.js', async (importOriginal) => {
     requestStepUp: (ctx: string) => requestStepUp(ctx),
     verifyStepUp: (otp: string) => verifyStepUp(otp),
     changeCorrectionMustAct: (p: string, c: string, b: unknown) => changeCorrectionMustAct(p, c, b),
+    getClaimsUnderCorrection: (p: string, o?: unknown) => getClaimsUnderCorrection(p, o),
   };
 });
 
 const { ApiError } = await import('../src/api/client.js');
-const { CorrectionLetterForm, MustActChangeForm, correctionChaseEn: t } = await import(
+const { CorrectionChasePanel, CorrectionLetterForm, MustActChangeForm, correctionChaseEn: t } = await import(
   '../src/modules/correction-chase/index.js'
 );
+const { ADDRESS_VISIBLE_MAX_MS, ADDRESS_VISIBLE_MIN_MS, addressVisibleMs } = await import(
+  '../src/modules/correction-chase/CorrectionLetterForm.js'
+);
+const { istToday } = await import('../src/modules/correction-chase/ist.js');
+const { useClaimsUnderCorrection } = await import('../src/api/hooks.js');
 
 const PARIWAR = '44444444-4444-4444-8444-444444444444';
 const CLAIM = '11111111-1111-4111-8111-111111111111';
@@ -76,6 +86,7 @@ beforeEach(() => {
     requestStepUp,
     verifyStepUp,
     changeCorrectionMustAct,
+    getClaimsUnderCorrection,
   ]) {
     f.mockReset();
   }
@@ -97,8 +108,30 @@ describe('<CorrectionLetterForm> — recording a posted letter', () => {
       posted_on: '2026-09-25',
       tracking_number: 'EE123456789IN',
     });
-    await waitFor(() => expect(screen.getByText(t.letters.saved)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByTestId('letter-form-status').textContent).toBe(t.letters.saved));
+    expect(screen.getByTestId('letter-form-status').getAttribute('role')).toBe('status');
     expect((screen.getByLabelText(t.letters.tracking) as HTMLInputElement).value).toBe('');
+  });
+
+  it('⭐ `noValidate` on the letter and delivery forms — the native `required` bubble pre-empted the specific message', () => {
+    renderLetterForm([letter({ letter_id: L2, sequence: 1, delivered_on: null })]);
+    expect((screen.getByTestId(`delivery-form-${L2}`) as HTMLFormElement).noValidate).toBe(true);
+    renderLetterForm([]);
+    expect((screen.getByRole('form', { name: t.letters.record }) as HTMLFormElement).noValidate).toBe(true);
+  });
+
+  it('⛔ a double submit is ONE request — the guard is a ref, ⛔ the render-time `isPending`', async () => {
+    let resolve: (v: unknown) => void = () => undefined;
+    recordCorrectionLetter.mockReturnValue(new Promise((r) => (resolve = r)));
+    renderLetterForm([]);
+    fireEvent.change(screen.getByLabelText(t.letters.postedOn), { target: { value: '2026-09-25' } });
+    fireEvent.change(screen.getByLabelText(t.letters.tracking), { target: { value: 'EE1' } });
+    const form = screen.getByRole('form', { name: t.letters.record });
+    fireEvent.submit(form);
+    fireEvent.submit(form);
+    await waitFor(() => expect(recordCorrectionLetter).toHaveBeenCalledTimes(1));
+    await act(async () => resolve(letter({})));
+    expect(recordCorrectionLetter).toHaveBeenCalledTimes(1);
   });
 
   it('⛔ a missing field is a VISIBLE message — ⛔ never a silent return', () => {
@@ -118,6 +151,9 @@ describe('<CorrectionLetterForm> — recording a posted letter', () => {
     ['correction_letter.posted_before_run', 409, t.letters.refusals.posted_before_run],
     ['correction_letter.date_in_future', 400, t.letters.refusals.date_in_future],
     ['correction_letter.limit_reached', 409, t.letters.refusals.limit_reached],
+    // Fourth pass — `-231` D chronology (J4) and the hash failure that now fails CLOSED (J1, a retryable 503).
+    ['correction_letter.posted_before_first_delivery', 409, t.letters.refusals.posted_before_first_delivery],
+    ['correction_letter.number_unverified', 503, t.letters.refusals.number_unverified],
     ['auth.forbidden', 403, t.letters.forbidden],
   ])('⭐ the refusal %s reads as its OWN line', async (code, status, copy) => {
     recordCorrectionLetter.mockRejectedValue(new ApiError(status, code, 'no'));
@@ -146,7 +182,7 @@ describe('<CorrectionLetterForm> — recording a posted letter', () => {
 });
 
 describe('<CorrectionLetterForm> — the delivery, ONE form per undelivered letter', () => {
-  it('⭐ #1 delivered, #2 not ⇒ ONE form, labelled "#2 posted <date>", and it records #2 — ⛔ never #1', async () => {
+  it('⭐ #1 delivered, #2 not ⇒ ONE form, labelled "#2 posted <date>", and it records #2 — ⛔ never #1 (and, when the form stays — no refetch — its file input is reset)', async () => {
     const user = userEvent.setup();
     recordCorrectionLetterDelivery.mockResolvedValue(letter({ letter_id: L2, sequence: 2, delivered_on: '2026-09-28' }));
     renderLetterForm([
@@ -165,9 +201,11 @@ describe('<CorrectionLetterForm> — the delivery, ONE form per undelivered lett
     await waitFor(() => expect(recordCorrectionLetterDelivery).toHaveBeenCalledTimes(1));
     expect(recordCorrectionLetterDelivery.mock.calls[0]![2]).toBe(L2);
     expect(recordCorrectionLetterDelivery.mock.calls[0]![3]).toBe('2026-09-28');
-    // ⭐ The uncontrolled file input is RESET after the success — it kept the old file, and the next submit no-oped.
+    // ⭐ Static props = no refetch, so the form STAYS: its uncontrolled file input is reset (the panel suite below
+    // drives the real case, where the refetch removes the form).
     await waitFor(() => expect(fileInput.value).toBe(''));
     expect(fileInput.files?.length ?? 0).toBe(0);
+    expect(screen.getByTestId('letter-form-status').textContent).toBe(t.letters.deliveryRecorded(2));
   });
 
   it('⭐ two undelivered letters (older data) ⇒ two forms, each recording ITS letter', async () => {
@@ -199,6 +237,9 @@ describe('<CorrectionLetterForm> — the delivery, ONE form per undelivered lett
     ['correction_letter.date_in_future', 400, t.letters.refusals.date_in_future],
     ['correction_letter.already_delivered', 409, t.letters.refusals.already_delivered],
     ['auth.forbidden', 403, t.letters.forbidden],
+    // ⭐ A transport refusal with ⛔ no JSON code (a proxy's 413/415) reads by its STATUS — ⛔ "Try again".
+    ['http.413', 413, t.letters.refusals.too_large],
+    ['http.415', 415, t.letters.refusals.unsupported_media_type],
   ])('⭐ the upload refusal %s reads as its OWN line', async (code, status, copy) => {
     const user = userEvent.setup();
     recordCorrectionLetterDelivery.mockRejectedValue(new ApiError(status, code, 'no'));
@@ -212,21 +253,30 @@ describe('<CorrectionLetterForm> — the delivery, ONE form per undelivered lett
 });
 
 describe('<CorrectionLetterForm> — the address, behind a fresh step-up', () => {
-  it('⭐ step-up: the prompt and "code sent" are ANNOUNCED, focus moves to the code, then to the address; Hide clears it', async () => {
+  const ADDRESS = '12 Gandhi Marg, Patna';
+  const status = () => screen.getByTestId('letter-form-status');
+
+  it('⭐ step-up: ONE persistent status line ANNOUNCES each step by its text changing; focus follows every swapped control', async () => {
     getCorrectionLetterAddress
       .mockRejectedValueOnce(new ApiError(403, 'auth.step_up_required', 'elevate'))
-      .mockResolvedValueOnce({ person_key: PERSON, address: '12 Gandhi Marg, Patna' });
+      .mockResolvedValueOnce({ person_key: PERSON, address: ADDRESS });
     requestStepUp.mockResolvedValue({ sent: true, expiresInSeconds: 300 });
     verifyStepUp.mockResolvedValue({ elevated: true, elevatedUntil: new Date(Date.now() + 300_000).toISOString() });
     renderLetterForm([]);
 
-    fireEvent.click(screen.getByRole('button', { name: t.letters.showAddress }));
-    const status = await screen.findByTestId('letter-step-up-status');
-    expect(status.getAttribute('role')).toBe('status');
-    expect(status.textContent).toBe(t.letters.stepUpIntro);
+    // ⭐ The region EXISTS (empty) before the first prompt — a live region that mounts holding its text is silent.
+    const region = status();
+    expect(region.getAttribute('role')).toBe('status');
+    expect(region.textContent).toBe('');
 
-    fireEvent.click(screen.getByRole('button', { name: t.letters.sendCode }));
-    await waitFor(() => expect(screen.getByTestId('letter-step-up-status').textContent).toBe(t.letters.codeSent));
+    fireEvent.click(screen.getByRole('button', { name: t.letters.showAddress }));
+    await waitFor(() => expect(status().textContent).toBe(t.letters.stepUpIntro));
+    expect(status()).toBe(region); // the SAME node — its text changed
+    const send = screen.getByRole('button', { name: t.letters.sendCode });
+    await waitFor(() => expect(document.activeElement).toBe(send));
+
+    fireEvent.click(send);
+    await waitFor(() => expect(status().textContent).toBe(t.letters.codeSent));
     expect(requestStepUp).toHaveBeenCalledWith('correction_letter_address');
     const code = screen.getByLabelText(t.letters.code);
     await waitFor(() => expect(document.activeElement).toBe(code));
@@ -234,32 +284,68 @@ describe('<CorrectionLetterForm> — the address, behind a fresh step-up', () =>
     fireEvent.change(code, { target: { value: '123456' } });
     fireEvent.click(screen.getByRole('button', { name: t.letters.verify }));
     const address = await screen.findByTestId('letter-address');
-    expect(address.getAttribute('role')).toBe('status');
-    expect(address.textContent).toContain('12 Gandhi Marg, Patna');
+    // ⛔ The address is in NO live region (it was read twice) — it is FOCUSED; the region says only that it is shown.
+    expect(address.getAttribute('role')).toBeNull();
+    expect(address.closest('[role="status"],[aria-live]')).toBeNull();
+    expect(address.textContent).toContain(ADDRESS);
     await waitFor(() => expect(document.activeElement).toBe(address));
+    expect(status().textContent).toBe(t.letters.addressShown);
+    expect(status().textContent).not.toContain('Gandhi');
+    // ⭐ The code is used — the code step is gone.
+    expect(screen.queryByLabelText(t.letters.code)).toBeNull();
 
+    // ⭐ Hide ⇒ focus moves to "Show the address" (the control that replaced Hide), ⛔ never <body>.
     fireEvent.click(screen.getByRole('button', { name: t.letters.hideAddress }));
     expect(screen.queryByTestId('letter-address')).toBeNull();
     expect(document.body.textContent).not.toContain('Gandhi Marg');
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole('button', { name: t.letters.showAddress })));
+    expect(status().textContent).toBe(t.letters.addressHidden);
   });
 
-  it('⛔ a WRONG code and a code that was never SENT read differently — ⛔ neither "could not be saved"', async () => {
+  it('⛔ a WRONG code and a code that was never SENT read differently — and "Send a new code" IS there to press', async () => {
     getCorrectionLetterAddress.mockRejectedValue(new ApiError(403, 'auth.step_up_required', 'elevate'));
-    requestStepUp.mockRejectedValueOnce(new Error('network')).mockResolvedValueOnce({ sent: true, expiresInSeconds: 300 });
+    requestStepUp
+      .mockRejectedValueOnce(new Error('network'))
+      .mockResolvedValueOnce({ sent: true, expiresInSeconds: 300 })
+      .mockResolvedValueOnce({ sent: true, expiresInSeconds: 300 });
     verifyStepUp.mockRejectedValue(new ApiError(401, 'auth.step_up_failed', 'bad'));
     renderLetterForm([]);
     fireEvent.click(screen.getByRole('button', { name: t.letters.showAddress }));
-    await screen.findByTestId('letter-step-up-status');
+    await waitFor(() => expect(status().textContent).toBe(t.letters.stepUpIntro));
 
     fireEvent.click(screen.getByRole('button', { name: t.letters.sendCode }));
     expect(await screen.findByRole('alert')).toHaveTextContent(t.letters.codeNotSent);
 
     fireEvent.click(screen.getByRole('button', { name: t.letters.sendCode }));
-    await waitFor(() => expect(screen.getByTestId('letter-step-up-status').textContent).toBe(t.letters.codeSent));
+    await waitFor(() => expect(status().textContent).toBe(t.letters.codeSent));
     fireEvent.change(screen.getByLabelText(t.letters.code), { target: { value: '000000' } });
     fireEvent.click(screen.getByRole('button', { name: t.letters.verify }));
     await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent(t.letters.codeWrong));
     expect(screen.getByRole('alert').textContent).not.toBe(t.letters.codeNotSent);
+
+    // ⭐ The wrong-code line says "Send a new code" — the control exists in the `sent` state, and it sends one.
+    fireEvent.click(screen.getByRole('button', { name: t.letters.resendCode }));
+    await waitFor(() => expect(status().textContent).toBe(t.letters.codeResent));
+    expect(requestStepUp).toHaveBeenCalledTimes(3);
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect((screen.getByLabelText(t.letters.code) as HTMLInputElement).value).toBe('');
+  });
+
+  it('⭐ a reveal REFUSED after a successful verify leaves the code step (the code is used) and focus on "Show the address"', async () => {
+    getCorrectionLetterAddress
+      .mockRejectedValueOnce(new ApiError(403, 'auth.step_up_required', 'elevate'))
+      .mockRejectedValueOnce(new ApiError(409, 'correction_letter.agreement_not_live', 'no'));
+    requestStepUp.mockResolvedValue({ sent: true, expiresInSeconds: 300 });
+    verifyStepUp.mockResolvedValue({ elevated: true, elevatedUntil: new Date(Date.now() + 300_000).toISOString() });
+    renderLetterForm([]);
+    fireEvent.click(screen.getByRole('button', { name: t.letters.showAddress }));
+    fireEvent.click(await screen.findByRole('button', { name: t.letters.sendCode }));
+    fireEvent.change(await screen.findByLabelText(t.letters.code), { target: { value: '123456' } });
+    fireEvent.click(screen.getByRole('button', { name: t.letters.verify }));
+    expect(await screen.findByRole('alert')).toHaveTextContent(t.letters.refusals.agreement_not_live!);
+    expect(screen.queryByTestId('letter-step-up')).toBeNull();
+    expect(screen.queryByLabelText(t.letters.code)).toBeNull();
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole('button', { name: t.letters.showAddress })));
   });
 
   it('⛔ "Show the address" is ONE request while in flight — a double click was two decrypts + two audit lines', async () => {
@@ -267,24 +353,224 @@ describe('<CorrectionLetterForm> — the address, behind a fresh step-up', () =>
     getCorrectionLetterAddress.mockReturnValue(new Promise((r) => (resolve = r)));
     renderLetterForm([]);
     const show = screen.getByRole('button', { name: t.letters.showAddress });
-    fireEvent.click(show);
-    fireEvent.click(show);
+    // ⭐ Two clicks in ONE tick — both saw the render-time state; the ref guard is what holds.
+    act(() => {
+      show.click();
+      show.click();
+    });
     expect(show).toBeDisabled();
     expect(getCorrectionLetterAddress).toHaveBeenCalledTimes(1);
     await act(async () => resolve({ person_key: PERSON, address: 'X' }));
   });
 
-  it('⭐ a revealed address CLEARS itself on a timer (the step-up window)', async () => {
+  it('⭐ a revealed address CLEARS itself on a timer, and focus moves to "Show the address"', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
-    getCorrectionLetterAddress.mockResolvedValue({ person_key: PERSON, address: '12 Gandhi Marg, Patna' });
+    getCorrectionLetterAddress.mockResolvedValue({ person_key: PERSON, address: ADDRESS });
     renderLetterForm([]);
     fireEvent.click(screen.getByRole('button', { name: t.letters.showAddress }));
-    await screen.findByTestId('letter-address');
+    const shown = await screen.findByTestId('letter-address');
+    await waitFor(() => expect(document.activeElement).toBe(shown));
     await act(async () => {
-      vi.advanceTimersByTime(5 * 60 * 1000 + 1);
+      vi.advanceTimersByTime(ADDRESS_VISIBLE_MAX_MS + 1);
     });
     expect(screen.queryByTestId('letter-address')).toBeNull();
-    expect(screen.getByTestId('letter-address-hidden').textContent).toBe(t.letters.addressHidden);
+    expect(status().textContent).toBe(t.letters.addressHidden);
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole('button', { name: t.letters.showAddress })));
+  });
+
+  it('⛔ a SKEWED server clock cannot flash the address away — the window is measured on the browser, ⛔ from `elevatedUntil`', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    getCorrectionLetterAddress
+      .mockRejectedValueOnce(new ApiError(403, 'auth.step_up_required', 'elevate'))
+      .mockResolvedValueOnce({ person_key: PERSON, address: ADDRESS });
+    requestStepUp.mockResolvedValue({ sent: true, expiresInSeconds: 300 });
+    // The browser runs an hour fast: the server's window already "ended" by this clock.
+    verifyStepUp.mockResolvedValue({ elevated: true, elevatedUntil: new Date(Date.now() - 3_600_000).toISOString() });
+    renderLetterForm([]);
+    fireEvent.click(screen.getByRole('button', { name: t.letters.showAddress }));
+    fireEvent.click(await screen.findByRole('button', { name: t.letters.sendCode }));
+    fireEvent.change(await screen.findByLabelText(t.letters.code), { target: { value: '123456' } });
+    fireEvent.click(screen.getByRole('button', { name: t.letters.verify }));
+    await screen.findByTestId('letter-address');
+    await act(async () => {
+      vi.advanceTimersByTime(ADDRESS_VISIBLE_MIN_MS);
+    });
+    expect(screen.getByTestId('letter-address').textContent).toContain(ADDRESS);
+  });
+
+  it('⭐ the window is recomputed PER reveal — the rest of the step-up window, ⛔ never under the 30-second floor', () => {
+    expect(addressVisibleMs(null)).toBe(ADDRESS_VISIBLE_MAX_MS);
+    expect(addressVisibleMs(0)).toBe(ADDRESS_VISIBLE_MAX_MS);
+    expect(addressVisibleMs(60_000)).toBe(ADDRESS_VISIBLE_MAX_MS - 60_000);
+    expect(addressVisibleMs(ADDRESS_VISIBLE_MAX_MS - 1_000)).toBe(ADDRESS_VISIBLE_MIN_MS);
+    expect(addressVisibleMs(10 * ADDRESS_VISIBLE_MAX_MS)).toBe(ADDRESS_VISIBLE_MIN_MS);
+    // A clock that went BACKWARDS, or garbage ⇒ the whole window (⛔ a 0 ms flash).
+    expect(addressVisibleMs(-5_000)).toBe(ADDRESS_VISIBLE_MAX_MS);
+    expect(addressVisibleMs(Number.NaN)).toBe(ADDRESS_VISIBLE_MAX_MS);
+    expect(ADDRESS_VISIBLE_MIN_MS).toBe(30_000);
+  });
+});
+
+describe('istToday — the IST calendar day (it turns at 18:30 UTC)', () => {
+  it('⭐ 18:29:59Z is still the same IST day; 18:30:00Z is the next', () => {
+    expect(istToday(new Date('2026-09-30T18:29:59.000Z'))).toBe('2026-09-30');
+    expect(istToday(new Date('2026-09-30T18:30:00.000Z'))).toBe('2026-10-01');
+    // Across a year end.
+    expect(istToday(new Date('2026-12-31T18:30:00.000Z'))).toBe('2027-01-01');
+  });
+});
+
+// ── Fourth pass (2026-10-01): the DELIVERY driven through the PANEL, with a queue that REFETCHES ───────────────────
+describe('<CorrectionChasePanel> — a recorded delivery survives the refetch that marks it delivered', () => {
+  type Item = ClaimsUnderCorrectionResponse['items'][number];
+  type Person = Item['correction_chase']['people'][number];
+
+  const item = (person: Person, over: Partial<Item['correction_chase']> = {}): Item => ({
+    claim_case_id: CLAIM,
+    deceased_member_id: '22222222-2222-4222-8222-222222222222',
+    claim_state: 'verifier_approved',
+    claim_filed_at: '2026-09-01T00:00:00.000Z',
+    returned_at: '2026-09-19T10:00:00.000Z',
+    returned_by_actor_display: 'Kalpana Bharti',
+    return_note: { state: 'readable', value: 'note' },
+    sent_back_by_check: false,
+    accounts_complete: true,
+    short_reference: '11111111',
+    correction_chase: {
+      return_decision_id: '55555555-5555-4555-8555-555555555555',
+      must_act: 'family',
+      must_act_set_by: 'Pariwar Admin Two',
+      must_act_set_at: '2026-09-19T10:00:00.000Z',
+      run: { kind: 'family', day0: '2026-09-19', day_count: 13, open: true, ended_on: null, next_reminder_on: null },
+      cannot_remind: null,
+      claimant_unresolved: false,
+      awaiting_check: false,
+      people: [person],
+      escalated: false,
+      ...over,
+    },
+  });
+
+  function QueueHarness(): ReactElement {
+    const q = useClaimsUnderCorrection(PARIWAR);
+    const first = q.data?.items[0];
+    return first === undefined ? <p>loading</p> : <CorrectionChasePanel pariwarId={PARIWAR} item={first} />;
+  }
+
+  it.each([
+    ['still found dead', '2026-09-20'],
+    // ⭐ The harder case: ⛔ no longer letter-eligible — the form was mounted ONLY for the undelivered letter, so the
+    // refetch used to unmount the whole form along with its confirmation.
+    ['no longer found dead (a new number)', null],
+  ])('⭐ "Delivery recorded for letter #1." renders after the queue refetches the letter as delivered (%s)', async (_label, foundDeadOn) => {
+    const user = userEvent.setup();
+    let delivered = false;
+    const person = (): Person => ({
+      person_key: PERSON,
+      role: 'nominee',
+      rank: 1,
+      status: foundDeadOn === null ? 'reached' : 'dead',
+      found_dead_on: foundDeadOn,
+      reminders_accepted: 1,
+      letters: [letter({ delivered_on: delivered ? '2026-09-28' : null, has_screenshot: delivered })],
+    });
+    getClaimsUnderCorrection.mockImplementation(async () => ({ pariwar_id: PARIWAR, items: [item(person())] }));
+    recordCorrectionLetterDelivery.mockImplementation(async () => {
+      delivered = true;
+      return letter({ delivered_on: '2026-09-28', has_screenshot: true });
+    });
+    renderWithClient(<QueueHarness />);
+
+    const form = await screen.findByTestId(`delivery-form-${L1}`);
+    fireEvent.change(form.querySelector('input[type="date"]')!, { target: { value: '2026-09-28' } });
+    await user.upload(form.querySelector('input[type="file"]') as HTMLInputElement, new File(['png'], 'p.png', { type: 'image/png' }));
+    fireEvent.submit(form);
+
+    // ⭐ FIRST let the refetch land and render (the letter reads delivered, its delivery form is gone) and settle…
+    await waitFor(() => expect(screen.getByTestId('letter-state').textContent).toContain('2026-09-28'));
+    expect(screen.queryByTestId(`delivery-form-${L1}`)).toBeNull();
+    expect(getClaimsUnderCorrection.mock.calls.length).toBeGreaterThanOrEqual(2);
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 20));
+    });
+    // …THEN the confirmation must STILL be on screen — ⛔ a line that flashed before the unmount does not count.
+    expect(screen.getByTestId('letter-form-status').textContent).toBe(t.letters.deliveryRecorded(1));
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('⭐ a refusal of the delivery is shown even when the refetch removes the form (already delivered elsewhere)', async () => {
+    const user = userEvent.setup();
+    let delivered = false;
+    getClaimsUnderCorrection.mockImplementation(async () => ({
+      pariwar_id: PARIWAR,
+      items: [
+        item({
+          person_key: PERSON,
+          role: 'nominee',
+          rank: 1,
+          status: 'dead',
+          found_dead_on: '2026-09-20',
+          reminders_accepted: 0,
+          letters: [letter({ delivered_on: delivered ? '2026-09-27' : null })],
+        }),
+      ],
+    }));
+    recordCorrectionLetterDelivery.mockImplementation(async () => {
+      delivered = true; // another admin recorded it first
+      throw new ApiError(409, 'correction_letter.already_delivered', 'no');
+    });
+    renderWithClient(<QueueHarness />);
+    const form = await screen.findByTestId(`delivery-form-${L1}`);
+    fireEvent.change(form.querySelector('input[type="date"]')!, { target: { value: '2026-09-28' } });
+    await user.upload(form.querySelector('input[type="file"]') as HTMLInputElement, new File(['png'], 'p.png', { type: 'image/png' }));
+    fireEvent.submit(form);
+    await waitFor(() => expect(screen.queryByTestId(`delivery-form-${L1}`)).toBeNull());
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 20));
+    });
+    expect(screen.getByRole('alert')).toHaveTextContent(t.letters.refusals.already_delivered!);
+  });
+
+  it('⭐ D30 (`cannot_remind`): the person and their letter STAY, the delivery form stays — ⛔ no NEW-letter form', async () => {
+    getClaimsUnderCorrection.mockResolvedValue({
+      pariwar_id: PARIWAR,
+      items: [
+        item(
+          {
+            person_key: PERSON,
+            role: 'nominee',
+            // J6 — under D30 a nominee arrives WITHOUT a rank.
+            rank: null,
+            status: 'dead',
+            found_dead_on: '2026-09-20',
+            reminders_accepted: 0,
+            letters: [letter({}), letter({ letter_id: L2, sequence: 2, posted_on: '2026-09-10', delivered_on: '2026-09-15' })],
+          },
+          { cannot_remind: 'agreement_not_live' },
+        ),
+      ],
+    });
+    renderWithClient(<QueueHarness />);
+    expect(await screen.findByTestId(`delivery-form-${L1}`)).toBeInTheDocument();
+    expect(screen.queryByRole('form', { name: t.letters.record })).toBeNull();
+    expect(screen.queryByTestId('letter-second-waits')).toBeNull();
+    expect(screen.getByTestId(`person-${PERSON}`).textContent).toContain(t.people.nominee);
+    expect(screen.getByTestId(`person-${PERSON}`).textContent).not.toContain('null');
+  });
+
+  it('⭐ D30 with ⛔ no letter yet: ⛔ no new-letter form (the family cannot be contacted)', async () => {
+    getClaimsUnderCorrection.mockResolvedValue({
+      pariwar_id: PARIWAR,
+      items: [
+        item(
+          { person_key: PERSON, role: 'nominee', rank: null, status: 'dead', found_dead_on: '2026-09-20', reminders_accepted: 0, letters: [] },
+          { cannot_remind: 'no_contact_record' },
+        ),
+      ],
+    });
+    renderWithClient(<QueueHarness />);
+    expect(await screen.findByTestId(`person-${PERSON}`)).toBeInTheDocument();
+    expect(screen.queryByTestId(`letter-form-${PERSON}`)).toBeNull();
   });
 });
 

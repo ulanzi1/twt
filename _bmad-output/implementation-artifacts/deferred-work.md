@@ -4,6 +4,12 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: fifth-pass re-review of the 6-19b review commits (2026-10-01)
+
+- **Newest open runs can starve at scale.** When the 45-minute budget or the 20k run bound stops a sweep tick, the next tick restarts from the OLDEST open run, so the newest runs get no SMS / District Admin row until older runs end (alarmed every tick). ⭐ Trigger: either alarm firing in production — then a resume cursor or a "least recently swept" order. (`apps/jobs/src/scheduler/claim-correction-reminders.ts`)
+- **The D26 marker scan has no cursor** — oldest-first, batch 1000 in a 36-hour window; a larger backlog can let the newest mark changes age out unmarked (alarmed). ⭐ Trigger: the alarm firing.
+- **`readRunPersonStates`' per-person catch absorbs every error, not just crypto faults** — a programming error reads as "number unverified". ⭐ Trigger: the crypto layer exposing distinguishable error types.
+
 ## Deferred from: adversarial review of the applied 6-19b third-pass patches (2026-10-01)
 
 - **The SMS child hashes the claimant's number inside the trustee lock, with no timeout.** I4 (`beginCorrectionFamilySend`) calls `currentCorrectionNumberHash` — a KMS decrypt + HMAC — under the claim's advisory lock and open transaction on every claimant send after day 1; ⛔ no timeout exists in `packages/domain/src/encryption` or `apps/jobs/src`. A KMS stall would hold the claim's lock (blocking the District Admin's mark change, letter recording and the sweep's plan) on a `max: 2` pool. ⚠ UNVERIFIED: the KMS client's own default timeout. ⭐ Trigger: confirm that timeout; if none, bound the hash or hash before taking the lock.

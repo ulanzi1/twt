@@ -338,68 +338,68 @@ tables' Tier-1 columns (invariant 9); ⛔ no virus scan on the closure letter's 
   - [x] AC18's live tests. Mark `deferred-work.md` § *fifth-pass re-review* item *"⏳ `-272`"* **built**; dispose each of § *third pass*
     item *"Nine earlier-pass 6.19b review items"* that this rework touches (KMS before the conflict checks in `recordLetter`, the
     `RunPersonState.state` collision, the multi-day letter-chase gap test) — fixed or re-deferred by name.
-- [ ] **Task 1 — Migrations from `0131`** (AC6, AC14, AC15, AC17) — never edit 0126–0130:
-  - [ ] **closures** — one live row per **return** (`return_decision_id`, ⛔ never per claim — `-273` §3b): origin (declined closure / staff
+- [x] **Task 1 — Migrations from `0131`** (AC6, AC14, AC15, AC17) — never edit 0126–0130:
+  - [x] **closures** — one live row per **return** (`return_decision_id`, ⛔ never per claim — `-273` §3b): origin (declined closure / staff
     case), the request (+ actor, note, `request_family_run_id` FK to runs) and its derivable `lapsed` state (`-273` §3d), a partial UNIQUE
     `(return_decision_id) WHERE state <> 'lapsed'`, the Pariwar Admin's decision (+ note), the escalation,
     `under_review_since` + note, the Super Admin's decision + closure-scoped reason (⛔ no "no response" reason on a staff origin) + note
     (`-273` §10), the outbox `closure_notice_run_id` (FK, provenance) + `closure_notice_due_at` + `closure_notice_done_at` (`-273` §5); a `closed` state the
     appeal sites and the re-file guard read.
-  - [ ] **directions** (D18) and **re-file confirmations** (D19).
-  - [ ] **closure letters** (`-274` 2) — one per person per closure (UNIQUE `(closure_id, person_key)`), the correction letter's columns
+  - [x] **directions** (D18) and **re-file confirmations** (D19).
+  - [x] **closure letters** (`-274` 2) — one per person per closure (UNIQUE `(closure_id, person_key)`), the correction letter's columns
     (posting date, Tier-1 tracking number, the all-or-nothing delivery + screenshot), the screenshot under the storage port's own prefix
     (`…/closure-letter/{letterId}`); its own small table or a `kind` on `claim_correction_letters` by a NEW migration — the developer's call,
     ⛔ never an edit to 0129; its chase purposes join the `purpose` CHECK below.
-  - [ ] **`purpose`**: extend `claim_correction_reminders_purpose_check` (0128) **and** `CORRECTION_REMINDER_PURPOSES`
+  - [x] **`purpose`**: extend `claim_correction_reminders_purpose_check` (0128) **and** `CORRECTION_REMINDER_PURPOSES`
     (`schema/claim_correction_chase.ts`, *"⚠ LOCKSTEP with 0128"*) and the policy spec's purpose leg; one value per reminder kind
     (`-273` §6 — ⛔ never `staff_reminder` / `escalation`) with its own partial unique index: per day including `purpose` and `subject_key`
     (a directee's rows carry `subject_key = 'direction:<direction_id>'`); the closure notice **once**, `UNIQUE (claim_case_id, recipient_key)
     WHERE purpose = 'closure_notice'`, an errored send retried on the same row, a D30 failure a final row (`-273` §5); update 0128's header
     comment on `subject_key` in the new migration's own comment (⛔ never edit 0128).
-  - [ ] RLS files (`policies/index.ts`, `schema/index.ts`), ENABLE + FORCE, journal entries, policy specs + leak probes (⚠ ⛔ no global gate
+  - [x] RLS files (`policies/index.ts`, `schema/index.ts`), ENABLE + FORCE, journal entries, policy specs + leak probes (⚠ ⛔ no global gate
     enforces any of it — the per-table specs are the only guard).
-- [ ] **Task 2 — Keys** (D8; AC11c) — mint **(2)–(6) + (8)** in **ONE** bump, **49 → 50, 58 → 64** (`-265` §2, `permissions.ts:732`);
+- [x] **Task 2 — Keys** (D8; AC11c) — mint **(2)–(6) + (8)** in **ONE** bump, **49 → 50, 58 → 64** (`-265` §2, `permissions.ts:732`);
   `roles.ts` grants for (2), (3), (6), (8); ⛔ no const for the super-admin-only (4), (5) (the drive-target precedent, `roles.ts:284`); names
   match `PERMISSION_KEY_REGEX` (one dot); `permissions.test.ts:54`/`:56`, `roles.test.ts` holder `it`s. `set_by_role` via `matchingGrantRole`.
-- [ ] **Task 3 — The closure** (AC6, AC7) — in a **NEW domain module** (⛔ never `state-trustee-decision-persist.ts`: `correction-chase.ts`
+- [x] **Task 3 — The closure** (AC6, AC7) — in a **NEW domain module** (⛔ never `state-trustee-decision-persist.ts`: `correction-chase.ts`
   imports it, so it must ⛔ never import back — `correction-chase.ts:37-38`):
-  - [ ] the request route (every AC6 409 in order); the Pariwar Admin's decision (approve → D1 in one scope-tx; decline + note → escalation);
+  - [x] the request route (every AC6 409 in order); the Pariwar Admin's decision (approve → D1 in one scope-tx; decline + note → escalation);
     the lock order **advisory lock, then the claim row lock** (as the vote, `state-trustee-decision-persist.ts:509-512`; export or re-query
     `lockClaim` / `hasLiveRoutedRow` — both private today).
-  - [ ] the D1 writer: conditional supersede of the return; `state_trustee_frozen` (from `verifier_approved`/`reversed` only),
+  - [x] the D1 writer: conditional supersede of the return; `state_trustee_frozen` (from `verifier_approved`/`reversed` only),
     `state_trustee_denied` (reason `other` + fixed rationale), `denied_no_appeal`; `endCorrectionRun(…,'decided')` if the run is still open.
-  - [ ] the day-90 job (a new queue in `QUEUE_NAMES`, a worker in `boot.ts`): District Admin days 90–96, escalation on 97; the staff case's
+  - [x] the day-90 job (a new queue in `QUEUE_NAMES`, a worker in `boot.ts`): District Admin days 90–96, escalation on 97; the staff case's
     day-90 escalation row (AC17); scans ended `day_90` runs; calls ⛔ no writer.
-  - [ ] the closure notice — an **outbox**: the approving tx records it as due on the closure row with the closed run's `run_id` (⛔ never an
+  - [x] the closure notice — an **outbox**: the approving tx records it as due on the closure row with the closed run's `run_id` (⛔ never an
     in-tx enqueue: every API enqueuer is post-commit, `apps/api/src/context.ts`; the 10.7 `pending`-row precedent); a jobs sweep sends it
     through `sendClaimCorrectionSms` (`claim-correction-reminders.ts:237`, `message: 'closure_notice'`, `{reference}` + `{helpline}` — `t()`
     throws on a missing param) and records each send under its own purpose with a **once-per-closure** partial UNIQUE (⛔ not per day); a
     reminder row's `attempting` needs `claimed_at` (0128) — write it at send, ⛔ not in the approving tx; recipients per `-273` §5.
-  - [ ] the closure letter (`-274` 2): the owed set computed at the closure (the known-dead complement of the notice's recipients); the
+  - [x] the closure letter (`-274` 2): the owed set computed at the closure (the known-dead complement of the notice's recipients); the
     writer under key (1) with D31's address and agreement checks; the chase from the closure date and its escalation; the 14-day flag.
-  - [ ] the day-90 job's stop condition (AC6) and its cadence from the family run's day 90 (`-273` §6); every 6.19c reminder stops at the
+  - [x] the day-90 job's stop condition (AC6) and its cadence from the family run's day 90 (`-273` §6); every 6.19c reminder stops at the
     row's decision or when the return stops being live.
-  - [ ] the request's lapse (`-273` §3d): **derived** in the closure module under the trustee lock at every read and act (⛔ never written
+  - [x] the request's lapse (`-273` §3d): **derived** in the closure module under the trustee lock at every read and act (⛔ never written
     by `writeCorrectionMark`, the hold hook or a return's superseder); materialise `lapsed` only on a `requested` row.
-  - [ ] the appeal sites (AC7); `closed_no_response` on `MemberDeathCertificateStatusResponse` and on `MemberAppealStatusResponse` (`-273` §9).
-- [ ] **Task 4 — The Super Admin** (AC14) — ⭐ **the `-251` gate composition FIRST, as its own commit with its neutrality proof** (T10,
+  - [x] the appeal sites (AC7); `closed_no_response` on `MemberDeathCertificateStatusResponse` and on `MemberAppealStatusResponse` (`-273` §9).
+- [x] **Task 4 — The Super Admin** (AC14) — ⭐ **the `-251` gate composition FIRST, as its own commit with its neutrality proof** (T10,
   `-273` §8): the full gate minus the name check by construction (e.g. an option on `assertClaimApprovable` defaulting to today's behaviour) —
   ⛔ never a hand list of today's conjuncts; keep the fence's required strings in `nominee-name-check.ts` (*CI gates*). Then:
-  - [ ] the hold hook filled from the closures table, keyed on the **live return's** row in an escalated / under-review state (`-273` §3b);
+  - [x] the hold hook filled from the closures table, keyed on the **live return's** row in an escalated / under-review state (`-273` §3b);
     `hold` made **required** on `writeCorrectionMark` (`correction-chase.ts:428`); threaded at `claims.cycle-freeze.handlers.ts:405`,
     `claims.correction-chase.handlers.ts:224` and this slice's two new callers; ⚠ the test callers pass `noCorrectionHold` explicitly —
     `apps/api/tests/integration/claims/correction-chase.spec.ts`, `apps/jobs/tests/_claim-correction-seed.ts`,
     `apps/jobs/tests/claim-correction-reminders-live.test.ts`, `packages/domain/tests/integration/claim/correction-chase{,-shape,-concurrency}.spec.ts`.
-  - [ ] the cycle-freeze route's guard: while held, the vote and the return action → **409 `cycle_freeze.escalated`** (`-273` §4) — inside
+  - [x] the cycle-freeze route's guard: while held, the vote and the return action → **409 `cycle_freeze.escalated`** (`-273` §4) — inside
     the route's scope-tx **after** `acquireCorrectionChaseLock`, for **every** actor (the route also accepts `super_admin`,
     `claims.cycle-freeze.handlers.ts:401`); the same guard on D27's approve route.
     `voteOnFrozenClaim` is ⛔ not changed.
-  - [ ] D22's function: per person (`readCorrectionRecipients`), across the return (`-273` §1), an accept counts only when its
+  - [x] D22's function: per person (`readCorrectionRecipients`), across the return (`-273` §1), an accept counts only when its
     `recipient_number_hash` equals `resolveCorrectionChase(…,{crypto}).currentNumberHashes` (⚠ filled only when `crypto` is passed) — compare
     with the access-wrapper gate's comparator, ⛔ never `===` on HMACs.
-  - [ ] the queue reads (both origins, bounded `limit`); hold / direction / response routes; the 30-day and directee reminders;
+  - [x] the queue reads (both origins, bounded `limit`); hold / direction / response routes; the 30-day and directee reminders;
     `listAdminsByRole` (`admin-directory.ts:43`) extended to `super_admin` (or a sibling reader).
-  - [ ] the three D17 decisions (note + closure reason + the lock + the conditional supersede + `decided`; `closure.staff_case_origin`; a
+  - [x] the three D17 decisions (note + closure reason + the lock + the conditional supersede + `decided`; `closure.staff_case_origin`; a
     resubmitted claim decided here, `-273` §4); the highlight leg (`-273` §7) — beside `nominee-name-check-read.ts:155` /
     `cycle-freeze-read.ts:272`, from the approval record and the check's recorded state (`never_checked` / `stale` / `does_not_match`).
 - [ ] **Task 5 — The re-file guard** (AC15) — the confirmation routes (district + helpline, key (6), per-request dimension as

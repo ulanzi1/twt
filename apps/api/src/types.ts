@@ -75,6 +75,12 @@ declare module 'fastify' {
      * `nomineeNameCheckDistrict` stash above, which is derived from the CLAIM's deceased member.
      */
     nomineeNameCheckQueueScope?: { dimension: 'district' | 'pariwar'; value: string | null };
+    /**
+     * Story 6.19c (AC15) — the scope the RE-FILE CONFIRMATION route gates this caller at: a caller holding
+     * `claim.confirm_refile` at a pariwar-or-broader grant is gated at `pariwar`; any other at the CLOSED claim's
+     * server-derived posting district (`null` fails closed).
+     */
+    refileConfirmationScope?: { dimension: 'district' | 'pariwar'; value: string | null };
     /** Story 6.11 — the deceased member's server-derived latest posting district, resolved by the
      *  `resolveDecisionDistrict` preHandler so `requirePermissionHook`'s (synchronous) district
      *  resolveValue reads it for the `claim.approve` gate (the client NEVER submits the authz

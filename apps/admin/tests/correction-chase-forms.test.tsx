@@ -708,6 +708,15 @@ describe('<CorrectionChasePanel> — a recorded delivery survives the refetch th
       escalated: false,
       ...over,
     },
+    correction_closure: {
+      state: null,
+      origin: null,
+      requested_at: null,
+      requested_by: null,
+      blocker: 'too_early',
+      not_reached: null,
+      family_run_day: 3,
+    },
   });
 
   function QueueHarness(): ReactElement {

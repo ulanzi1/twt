@@ -24,6 +24,9 @@ import { registerNomineeDeclarationRoutes } from './claims.nominee-declaration.r
 import { registerDeathCertificateRoutes } from './claims.death-certificate.routes.js';
 import { registerClaimContactRoutes } from './claims.contact.routes.js';
 import { registerCorrectionChaseRoutes } from './claims.correction-chase.routes.js';
+import { registerCorrectionClosureRoutes } from './claims.correction-closure.routes.js';
+import { registerCorrectionEscalationRoutes } from './claims.correction-escalation.routes.js';
+import { registerRefileConfirmationRoutes } from './claims.refile-confirmation.routes.js';
 import { registerShepherdRoutes } from './claims.shepherd.routes.js';
 import { registerCycleFreezeRoutes } from './claims.cycle-freeze.routes.js';
 import { registerR9VotingRoutes } from './claims.r9-voting.routes.js';
@@ -52,6 +55,12 @@ export function registerClaimsModule(app: FastifyInstance, deps: AppDeps): void 
   registerClaimContactRoutes(app, deps);
   // Story 6.19b — the correction-return chase: the District Admin's mark change and posted letters (keys (1), (7)).
   registerCorrectionChaseRoutes(app, deps);
+  // Story 6.19c — the correction CLOSURE: the District Admin's request and "no correction needed" (keys (2), (8)), the
+  // Pariwar Admin's decision (key (3), D27 under cycle.freeze), the closure letter (key (1)); the Super Admin's review and
+  // decision (keys (5), (4)) and the directee's inbox; the re-file confirmation after a closure (key (6)).
+  registerCorrectionClosureRoutes(app, deps);
+  registerCorrectionEscalationRoutes(app, deps);
+  registerRefileConfirmationRoutes(app, deps);
   // Story 6.11 — the verifier adjudication WRITE surface (approve/deny/escalate + step-up-gated revise).
   registerVerificationDecisionRoutes(app, deps);
   // Story 6.12 — the R6 manual shepherd reassignment WRITE surface (claim.assign_shepherd, district-gated).

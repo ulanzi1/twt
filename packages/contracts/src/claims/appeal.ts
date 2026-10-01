@@ -299,6 +299,12 @@ export const MemberAppealStatusResponse = z
     /** True once the internal appeal ladder is exhausted (Stage-3 uphold) — the external-remedy disclosure
      *  is surfaced prominently. */
     appeal_exhausted: z.boolean(),
+    /**
+     * ⭐ Story 6.19c (AC7, `-273` §9) — the claim was CLOSED for no response: the second refusal, ⛔ appealable.
+     * `can_initiate` is `false` and `appeal_exhausted` stays `false` — ⛔ no appeal affordance, ⛔ no external-remedy
+     * disclosure for it.
+     */
+    closed_no_response: z.boolean(),
   })
   .strict();
 export type MemberAppealStatusResponse = z.output<typeof MemberAppealStatusResponse>;

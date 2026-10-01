@@ -39,6 +39,7 @@ const CASE: PendingCase = {
   routed_to_r9: false,
   under_correction: false,
   name_difference_reasons: [],
+  approval_name_highlight: null,
 };
 
 const PARIWAR = '44444444-4444-4444-8444-444444444444';

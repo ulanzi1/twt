@@ -35,6 +35,7 @@ import type { AuthAuditEventType } from '../../audit/audit-sink.js';
 import type { AppDeps } from '../../context.js';
 import { ConflictError, NotFoundError } from '../../http-errors.js';
 import { emitAuthAudit } from '../auth/shared/audit.js';
+import { translateRefileRequiresConfirmation } from './claims.service.js';
 
 /**
  * The resolution endpoints (confirmMerge/overrideConvergence) are channel-agnostic — the SAME
@@ -193,18 +194,25 @@ export function createConvergenceHandlers(deps: AppDeps) {
         );
       }
 
-      const result = await claim.overrideIntakeAttempt(scopeTx.client, {
-        intakeAttemptId: attemptId,
-        pariwarId,
-        deceasedMemberId: ids.memberId(String(attempt.deceasedMemberId)),
-        intakeChannel: attempt.intakeChannel,
-        againstClaimCaseId,
-        reason: body.reason,
-        actor: 'operator',
-        claimantActorId: attempt.claimantActorId,
-        decidedByActor: operatorId,
-        auditId,
-      });
+      let result: Awaited<ReturnType<typeof claim.overrideIntakeAttempt>>;
+      try {
+        result = await claim.overrideIntakeAttempt(scopeTx.client, {
+          intakeAttemptId: attemptId,
+          pariwarId,
+          deceasedMemberId: ids.memberId(String(attempt.deceasedMemberId)),
+          intakeChannel: attempt.intakeChannel,
+          againstClaimCaseId,
+          reason: body.reason,
+          actor: 'operator',
+          claimantActorId: attempt.claimantActorId,
+          decidedByActor: operatorId,
+          auditId,
+        });
+      } catch (err) {
+        // ⭐ Story 6.19c (AC15, T9) — the override MINTS too, so it is guarded like `tryConverge`: a 409, ⛔ a 500.
+        translateRefileRequiresConfirmation(err);
+        throw err;
+      }
 
       emitAuthAudit(deps, request, convergenceAuditType(attempt.intakeChannel, 'convergence_overridden'), {
         actorId: operatorId,

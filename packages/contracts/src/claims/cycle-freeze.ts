@@ -37,6 +37,7 @@ import { NomineeNameClericalReason } from './nominee-name-check.js';
 // Story 6.19b — `CorrectionMustAct` lives in `correction-chase.ts`, which imports ⛔ nothing from its siblings (a runtime
 // import cycle through `nominee-name-check.ts` left a schema `undefined` at init).
 import { CorrectionMustAct } from './correction-chase.js';
+import { ApprovalNameHighlight } from './correction-closure.js';
 
 // ── Trustee decision vocabulary wire mirror (value-aligned with @twt/domain) ────────────────
 
@@ -146,6 +147,8 @@ export const CycleFreezePendingItem = z
      *  name. Empty when no difference was recorded, or when no check exists, or when the latest
      *  check is stale or not passing. */
     name_difference_reasons: z.array(NomineeNameClericalReason),
+    /** ⭐ Story 6.19c (`-273` §7) — a Super Admin approval made WITHOUT a current passing name check, or `null`. */
+    approval_name_highlight: ApprovalNameHighlight.nullable(),
   })
   .strict();
 export type CycleFreezePendingItem = z.output<typeof CycleFreezePendingItem>;

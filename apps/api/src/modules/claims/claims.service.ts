@@ -38,6 +38,7 @@ import { claim, ids, nominee as nomineeDomain, schema } from '@twt/domain';
 import type pg from 'pg';
 
 import type { AppDeps } from '../../context.js';
+import { ConflictError } from '../../http-errors.js';
 import type { ScopeTx } from '../../types.js';
 import { maskMobile, normalizeMobile } from '../auth/shared/mobile-index.js';
 import { requestOtp, verifyOtp } from '../auth/member/member-otp.service.js';
@@ -237,6 +238,22 @@ export interface IntakeAttribution {
  * chain). The account freeze still fires on `claim.intake_initiated` (unchanged; the overlay is
  * state-agnostic — it matches the event by `deceased_member_id`).
  */
+/**
+ * Story 6.19c (AC15) — `claim.RefileRequiresConfirmationError` → 409 `claim.refile_requires_confirmation`, carrying the
+ * CLOSED claim's id (the family's own claim — the helpline's confirmation card records against it). ⛔ Never a reason
+ * or a note. Mapped at the three mint handlers: the member app, the helpline (both through `initiateIntake`) and the
+ * convergence override. A no-op for any other error.
+ */
+export function translateRefileRequiresConfirmation(err: unknown): void {
+  if (err instanceof claim.RefileRequiresConfirmationError) {
+    throw new ConflictError(
+      'This claim was closed because the family did not respond — a new claim needs a re-file confirmation recorded by the District Admin or the helpline',
+      'claim.refile_requires_confirmation',
+      { closed_claim_case_id: err.closedClaimCaseId.toLowerCase() },
+    );
+  }
+}
+
 export async function initiateIntake(
   deps: AppDeps,
   scopeTx: ScopeTx,
@@ -280,6 +297,10 @@ export async function initiateIntake(
       intakeAttemptId: result.intakeAttemptId !== null ? String(result.intakeAttemptId) : null,
     };
   } catch (err) {
+    // ⭐ Story 6.19c (AC15, D19) — the death's most recent terminal claim was CLOSED for no response and ⛔ no re-file
+    // confirmation waits: a 409, ⛔ never a 500 — at BOTH callers (the member app and the helpline) through this one
+    // core. The member app routes it to the calm "please call the helpline" state; the helpline's card records one.
+    translateRefileRequiresConfirmation(err);
     // Backstop (should be unreachable under the ICP's advisory lock): a concurrent submit that
     // slipped past the lock collided at the (stream_id, event_version) unique index. Re-read and
     // return the existing canonical claim rather than surfacing a 500.

@@ -89,6 +89,16 @@ const ITEM: Item = {
     ],
     escalated: false,
   },
+  // Story 6.19c (AC8c) — the closure column: day 3 of the family run, a request would be too early.
+  correction_closure: {
+    state: null,
+    origin: null,
+    requested_at: null,
+    requested_by: null,
+    blocker: 'too_early',
+    not_reached: null,
+    family_run_day: 3,
+  },
 };
 
 const setup = (items: Item[]) => {

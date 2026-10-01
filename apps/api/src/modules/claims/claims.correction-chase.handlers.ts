@@ -71,7 +71,7 @@ export const CORRECTION_LETTER_ADDRESS_STEP_UP_CONTEXT = 'correction_letter_addr
 export const CORRECTION_SCREENSHOT_URL_TTL_SECONDS = 300;
 
 
-interface ChaseContext {
+export interface ChaseContext {
   readonly actorId: string;
   readonly pariwarIdStr: string;
   readonly pariwarId: ids.PariwarId;
@@ -79,7 +79,7 @@ interface ChaseContext {
   readonly claimCaseIdStr: string;
 }
 
-function contextOf(request: FastifyRequest): ChaseContext {
+export function contextOf(request: FastifyRequest): ChaseContext {
   const scopeTx = request.scopeTx;
   const actorId = request.requestContext.actorId;
   if (!scopeTx || !actorId) throw new UnauthorizedError('Authentication required', 'auth.session_required');
@@ -164,11 +164,61 @@ function warnIfNumberUnverified(request: FastifyRequest, err: unknown, route: 'r
   );
 }
 
-/** ⛔ A letter date LATER than today (IST) — 400 `correction_letter.date_in_future`. */
-function refuseFutureDate(date: string, today: string): void {
+/** The error-code prefix of a letter route — 6.19b's correction letter, or 6.19c's closure letter (`-274` 2). */
+export type LetterCodePrefix = 'correction_letter' | 'closure_letter';
+
+/** ⛔ A letter date LATER than today (IST) — 400 `<prefix>.date_in_future`. */
+export function refuseFutureDate(date: string, today: string, prefix: LetterCodePrefix = 'correction_letter'): void {
   if (date > today) {
-    throw new BadRequestError('A letter date cannot be later than today', 'correction_letter.date_in_future');
+    throw new BadRequestError('A letter date cannot be later than today', `${prefix}.date_in_future`);
   }
+}
+
+/**
+ * The delivery upload — ONE screenshot (multipart) and its `delivered_on` field — read and checked BEFORE any byte is
+ * stored: the MIME type, the size, ⛔ empty, a real date ⛔ later than today. Shared by the correction letter (6.19b) and
+ * the closure letter (6.19c), each with its own error-code prefix.
+ */
+export async function readLetterScreenshotUpload(
+  request: FastifyRequest,
+  today: string,
+  prefix: LetterCodePrefix,
+): Promise<{ readonly buffer: Buffer; readonly mimetype: string; readonly deliveredOn: string }> {
+  const data = await request.file();
+  if (!data) throw new BadRequestError('No screenshot in the upload', `${prefix}.no_file`);
+  if (!(CORRECTION_LETTER_SCREENSHOT_MIME_TYPES as readonly string[]).includes(data.mimetype)) {
+    throw new UnsupportedMediaTypeError('Upload the screenshot as a JPEG, PNG or WebP image', `${prefix}.unsupported_media_type`, {
+      allowed: CORRECTION_LETTER_SCREENSHOT_MIME_TYPES,
+    });
+  }
+  let buffer: Buffer;
+  try {
+    buffer = await data.toBuffer();
+  } catch (err) {
+    const code = (err as { code?: string }).code;
+    if (code === 'FST_REQ_FILE_TOO_LARGE' || code === 'FST_FILES_LIMIT') {
+      throw new PayloadTooLargeError('The screenshot exceeds the size limit', `${prefix}.too_large`, {
+        maxBytes: CLAIM_DOCUMENT_MAX_BYTES,
+      });
+    }
+    throw err;
+  }
+  if (data.file.truncated || buffer.byteLength > CLAIM_DOCUMENT_MAX_BYTES) {
+    throw new PayloadTooLargeError('The screenshot exceeds the size limit', `${prefix}.too_large`, {
+      maxBytes: CLAIM_DOCUMENT_MAX_BYTES,
+    });
+  }
+  if (buffer.byteLength === 0) throw new BadRequestError('The screenshot is empty', `${prefix}.empty`);
+  // The delivery date. ⚠ The client sends the `delivered_on` field BEFORE the file: `request.file()` returns at the
+  // file part, so only the fields ahead of it are guaranteed in `data.fields` — a field trailing the file is
+  // timing-dependent (busboy may or may not have parsed it by now) and is ⛔ not relied on.
+  const field = (data.fields as Record<string, { value?: unknown } | undefined> | undefined)?.['delivered_on'];
+  const deliveredOn = field && typeof field.value === 'string' ? field.value.trim() : '';
+  if (!isRealCalendarDate(deliveredOn)) {
+    throw new BadRequestError('A delivery date (YYYY-MM-DD) is required with the screenshot', `${prefix}.delivered_on_required`);
+  }
+  refuseFutureDate(deliveredOn, today, prefix);
+  return { buffer, mimetype: data.mimetype, deliveredOn };
 }
 
 export function toLetterDto(row: claim.ClaimCorrectionLetterView, today: string): CorrectionLetterDto {
@@ -343,46 +393,13 @@ export function createCorrectionChaseHandlers(deps: AppDeps) {
         throw new ConflictError("This letter's delivery is already recorded", 'correction_letter.already_delivered');
       }
 
-      const data = await request.file();
-      if (!data) throw new BadRequestError('No screenshot in the upload', 'correction_letter.no_file');
-      if (!(CORRECTION_LETTER_SCREENSHOT_MIME_TYPES as readonly string[]).includes(data.mimetype)) {
-        throw new UnsupportedMediaTypeError('Upload the screenshot as a JPEG, PNG or WebP image', 'correction_letter.unsupported_media_type', {
-          allowed: CORRECTION_LETTER_SCREENSHOT_MIME_TYPES,
-        });
-      }
-      let buffer: Buffer;
-      try {
-        buffer = await data.toBuffer();
-      } catch (err) {
-        const code = (err as { code?: string }).code;
-        if (code === 'FST_REQ_FILE_TOO_LARGE' || code === 'FST_FILES_LIMIT') {
-          throw new PayloadTooLargeError('The screenshot exceeds the size limit', 'correction_letter.too_large', {
-            maxBytes: CLAIM_DOCUMENT_MAX_BYTES,
-          });
-        }
-        throw err;
-      }
-      if (data.file.truncated || buffer.byteLength > CLAIM_DOCUMENT_MAX_BYTES) {
-        throw new PayloadTooLargeError('The screenshot exceeds the size limit', 'correction_letter.too_large', {
-          maxBytes: CLAIM_DOCUMENT_MAX_BYTES,
-        });
-      }
-      if (buffer.byteLength === 0) throw new BadRequestError('The screenshot is empty', 'correction_letter.empty');
-      // The delivery date. ⚠ The client sends the `delivered_on` field BEFORE the file: `request.file()` returns at the
-      // file part, so only the fields ahead of it are guaranteed in `data.fields` — a field trailing the file is
-      // timing-dependent (busboy may or may not have parsed it by now) and is ⛔ not relied on.
-      const field = (data.fields as Record<string, { value?: unknown } | undefined> | undefined)?.['delivered_on'];
-      const deliveredOn = field && typeof field.value === 'string' ? field.value.trim() : '';
-      if (!isRealCalendarDate(deliveredOn)) {
-        throw new BadRequestError('A delivery date (YYYY-MM-DD) is required with the screenshot', 'correction_letter.delivered_on_required');
-      }
-      refuseFutureDate(deliveredOn, today());
+      const { buffer, mimetype, deliveredOn } = await readLetterScreenshotUpload(request, today(), 'correction_letter');
 
       // D6 — the port, its OWN key prefix. put-then-persist; the orphan is deleted best-effort on any failure THROWN before
       // the commit — ⭐ `openScopeTx` runs INSIDE the `try`, so a pool / BEGIN failure cleans up too. ⚠ A failed COMMIT is
       // ⛔ not one of them: `closeScopeTx` swallows it (deferred, see the header).
       const storageKey = `pariwar/${ctx.pariwarIdStr}/claim/${ctx.claimCaseIdStr}/correction-letter/${letterId}/${randomUUID()}`;
-      await deps.claimDocumentStorage.put(storageKey, new Uint8Array(buffer), { contentType: data.mimetype });
+      await deps.claimDocumentStorage.put(storageKey, new Uint8Array(buffer), { contentType: mimetype });
       let scopeTx: Awaited<ReturnType<typeof openScopeTx>> | undefined;
       let ok = false;
       let row: claim.ClaimCorrectionLetterView;
@@ -394,7 +411,7 @@ export function createCorrectionChaseHandlers(deps: AppDeps) {
           letterId,
           deliveredOn,
           screenshotStorageKey: storageKey,
-          screenshotContentType: data.mimetype,
+          screenshotContentType: mimetype,
           screenshotSizeBytes: buffer.byteLength,
           actorId: ctx.actorId,
           actorDisplay,
@@ -418,7 +435,7 @@ export function createCorrectionChaseHandlers(deps: AppDeps) {
         delivered_on: deliveredOn,
         overdue: dto.overdue,
         byte_size: buffer.byteLength,
-        content_type: data.mimetype,
+        content_type: mimetype,
       });
       void reply.status(201);
       return dto;

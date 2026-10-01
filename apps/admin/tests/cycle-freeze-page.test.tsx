@@ -43,6 +43,7 @@ const CASE: PendingCase = {
   routed_to_r9: false,
   under_correction: false,
   name_difference_reasons: [],
+  approval_name_highlight: null,
 };
 
 const PENDING: CycleFreezePendingResponse = {

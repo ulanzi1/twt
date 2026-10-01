@@ -8,6 +8,7 @@
 //   · `claim_correction_directions` — the Super Admin's directions to a named admin, and their responses (D18).
 //   · `claim_refile_confirmations`  — a person's recorded confirmation that a closed claim may be filed again (D19).
 //   · `claim_closure_letters`       — the posted closure letters, ONE per person per closure (`-274` 2).
+//   · `claim_correction_no_correction_records` — the District Admin's "no correction needed" record (D27; 0136).
 //
 // ⛔ Nothing here decides a claim by itself (invariant 1): every state change is a human act's writer, in
 // `claim/correction-closure.ts` — except the staff case's escalation ROW, a record the day-90 job writes (`-273` §3a).
@@ -21,7 +22,7 @@ import { boolean, check, date, index, integer, pgTable, text, timestamp, uniqueI
 import { piiColumn } from '../encryption/column.js';
 import type { ClaimId, MemberId, PariwarId, TrusteeDecisionId } from '../ids/index.js';
 import { claims } from './claims.js';
-import { claimCorrectionRuns } from './claim_correction_chase.js';
+import { claimCorrectionMarks, claimCorrectionRuns } from './claim_correction_chase.js';
 import { claimStateTrusteeDecisions } from './claim_state_trustee_decisions.js';
 
 // ── The vocabularies (⚠ LOCKSTEP with the migrations' CHECKs) ──────────────────────────────────────────────────
@@ -268,3 +269,36 @@ export const claimClosureLetters = pgTable(
 );
 
 export type ClaimClosureLetterRow = typeof claimClosureLetters.$inferSelect;
+
+// ── claim_correction_no_correction_records (0136) ──────────────────────────────────────────────────────────────
+
+export const claimCorrectionNoCorrectionRecords = pgTable(
+  'claim_correction_no_correction_records',
+  {
+    recordId: uuid('record_id').defaultRandom().primaryKey(),
+    claimCaseId: uuid('claim_case_id')
+      .notNull()
+      .$type<ClaimId>()
+      .references(() => claims.claimCaseId, { onDelete: 'cascade' }),
+    pariwarId: uuid('pariwar_id').notNull().$type<PariwarId>(),
+    returnDecisionId: uuid('return_decision_id')
+      .notNull()
+      .$type<TrusteeDecisionId>()
+      .references(() => claimStateTrusteeDecisions.decisionId, { onDelete: 'cascade' }),
+    /** The `staff` mark written with it — the record is LIVE only while this is the return's latest mark. */
+    markId: uuid('mark_id')
+      .notNull()
+      .references(() => claimCorrectionMarks.markId, { onDelete: 'cascade' }),
+    noteCiphertext: piiColumn(1, 'claim_correction_closure')('note_ciphertext').notNull(),
+    recordedByActor: text('recorded_by_actor').notNull(),
+    recordedByDisplay: text('recorded_by_display').notNull(),
+    recordedAt: timestamp('recorded_at', { withTimezone: true, mode: 'date' }).notNull().default(sql`clock_timestamp()`),
+  },
+  (t) => [
+    uniqueIndex('claim_correction_no_correction_records_mark_uq').on(t.markId),
+    index('claim_correction_no_correction_records_return_idx').on(t.returnDecisionId, t.recordedAt),
+    index('claim_correction_no_correction_records_pariwar_claim_idx').on(t.pariwarId, t.claimCaseId),
+  ],
+);
+
+export type ClaimCorrectionNoCorrectionRecordRow = typeof claimCorrectionNoCorrectionRecords.$inferSelect;

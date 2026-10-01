@@ -21,9 +21,9 @@
 // while a claim is escalated or under Super Admin review, a switch opens ⛔ no run at all (only a direction opens a
 // family chase), and it ENDS any open run of the live return whose kind no longer matches the new mark (`staff` ⇒ an
 // open `family` / `direction` run; `family` ⇒ an open `staff` run), `mark_changed`. 6.19c owns the hold (its closures
-// table) and FILLS the hook; until it lands ⛔ no claim can be held, so the default answers "not held".
-// ⚠ The hook is an OPTIONAL per-call parameter defaulting fail-open — once 6.19c lands, EVERY caller of
-// `writeCorrectionMark` must thread it (a caller that forgets it treats a held claim as not held).
+// table) and FILLS the hook (`isCorrectionClaimHeld`).
+// ⭐ Since Story 6.19c the hook is a REQUIRED per-call input (S-T3) — every caller of `writeCorrectionMark` threads it
+// (production: 6.19c's `isCorrectionClaimHeld`; tests: `noCorrectionHold`, explicitly).
 // ⭐ `resubmitted` PAUSES a run — it never ends one (`-267` §3). A run ends only `superseded`, `day_90`,
 // `mark_changed`, or `decided` (the exported end-run, which 6.19c's decisions call).
 //
@@ -135,12 +135,13 @@ export async function acquireCorrectionChaseLock(
 // ── The hold hook (`-269` §3, `-271` §2) ───────────────────────────────────────────────────────────────────────
 
 /**
- * Is the claim escalated after a declined closure, or under Super Admin review? ⭐ 6.19c FILLS this (its closures
- * table holds the escalation); until it lands ⛔ no claim can be escalated or held, so the default is "not held".
- * Injectable so the rule is provable today.
+ * Is the claim HELD — a closures row for its LIVE return escalated or under Super Admin review, either origin
+ * (`-273` §3b)? ⭐ 6.19c FILLS it: `isCorrectionClaimHeld` (`claim/correction-closure.ts`). An injected function, ⛔ an
+ * import — this module must ⛔ never import that one (S-T1) — and a REQUIRED input of `writeCorrectionMark` (S-T3).
  */
 export type CorrectionHoldCheck = (db: Db, pariwarId: PariwarId, claimCaseId: ClaimId) => Promise<boolean>;
 
+/** "⛔ Never held" — for TESTS that construct a claim no closures row can hold. ⛔ Never a production caller's default. */
 export const noCorrectionHold: CorrectionHoldCheck = () => Promise.resolve(false);
 
 /**
@@ -422,10 +423,12 @@ export interface WriteCorrectionMarkBaseInput {
   /** The District Admin's ROUTE only: refuse a change to the value the mark already has (409 `must_act.unchanged`). */
   readonly refuseUnchanged?: boolean;
   /**
-   * 6.19c's hold (`-269` §3, `-271` §2). Default: ⛔ not held.
-   * ⚠ Optional and fail-open ONLY while ⛔ no claim can be held — once 6.19c lands, EVERY caller must thread it.
+   * 6.19c's hold (`-269` §3, `-271` §2, `-273` §3b) — ⭐ REQUIRED since Story 6.19c (S-T3: an optional, fail-open hook
+   * let a forgotten caller treat a held claim as not held, invisibly to typecheck). Production callers pass 6.19c's
+   * `isCorrectionClaimHeld` (`claim/correction-closure.ts` — threaded in by the CALLER, since this module must ⛔ never
+   * import that one); a test that means "never held" passes `noCorrectionHold` EXPLICITLY.
    */
-  readonly hold?: CorrectionHoldCheck;
+  readonly hold: CorrectionHoldCheck;
 }
 
 export interface WriteCorrectionMarkResult {
@@ -484,7 +487,7 @@ export async function writeCorrectionMark(
   const changed = previous === null || previous.mustAct !== input.mustAct;
   if (!changed) return { mark, changed, endedRun: null, openedRun: null };
 
-  const held = await (input.hold ?? noCorrectionHold)(db, input.pariwarId, input.claimCaseId);
+  const held = await input.hold(db, input.pariwarId, input.claimCaseId);
   const open = await readOpenCorrectionRun(db, input.pariwarId, input.claimCaseId);
   // AC2 — the return's own mark starts its run on the RETURN's IST date (`decided_at`), ⛔ never the mark row's
   // `clock_timestamp()`; a later change starts on the change's date.

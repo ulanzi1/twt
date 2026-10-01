@@ -242,6 +242,8 @@ export function createCorrectionChaseHandlers(deps: AppDeps) {
           noteCiphertext,
           refuseUnchanged: true,
           now: deps.clock(),
+          // Story 6.19c (S-T3) — the HOLD, REQUIRED: a switch on a held claim opens ⛔ no run (`-273` §3b, `-274` 1b).
+          hold: claim.isCorrectionClaimHeld,
         });
         ok = true;
       } catch (err) {

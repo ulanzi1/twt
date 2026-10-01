@@ -347,6 +347,7 @@ describe.skipIf(!hasDatabase)('Story 6.19b — the claim-correction reminders (l
         actorDisplay: 'District Admin',
         setByRole: 'district_admin',
         noteCiphertext: 'enc:v1:note',
+        hold: claim.noCorrectionHold,
       }),
     );
     expect(await child(h, job!)).toEqual({ status: 'skipped', reason: 'run_ended' });
@@ -995,6 +996,7 @@ describe.skipIf(!hasDatabase)('Story 6.19b — the claim-correction reminders (l
         setByRole: 'district_admin',
         noteCiphertext: 'enc:v1:note',
         now: tenAmIst(onDate),
+        hold: claim.noCorrectionHold,
       }),
     );
     return w.openedRun!.runId;

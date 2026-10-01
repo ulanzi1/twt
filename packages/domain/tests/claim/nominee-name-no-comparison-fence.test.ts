@@ -85,6 +85,11 @@ const FENCED_FILES = [
   'packages/domain/src/claim/death-certificate-approval.ts',
   'packages/domain/src/claim/death-certificate-review-persist.ts',
   'packages/domain/src/claim/death-certificate-review-read.ts',
+  // ⭐ STORY 6.19c (AC14, `-273` §7/§8) — the closure / Super Admin module: THREE NEW APPROVAL WRITERS (the `-251`
+  // approve — the gate MINUS the name check, by construction; D27's; `-260` G1's) and the RECORDED name-check state the
+  // "approved without a current passing name check" highlight derives from. ⛔ It compares no names and decrypts nothing
+  // (asserted below) — the highlight is the gate's OWN refusal reason, recorded at approval.
+  'packages/domain/src/claim/correction-closure.ts',
 ] as const;
 
 /**
@@ -131,7 +136,7 @@ describe('⛔ the no-comparison fence (Trap 1, `-226` cl.5)', () => {
     for (const f of FENCED_FILES) {
       expect(() => read(f), `fenced file missing: ${f}`).not.toThrow();
     }
-    expect(FENCED_FILES.length).toBeGreaterThanOrEqual(26); // Story 6.21a raised it FROM 23 (+3 modules); Story 6.20 FROM 16 (+7)
+    expect(FENCED_FILES.length).toBeGreaterThanOrEqual(27); // Story 6.19c raised it FROM 26 (+1 domain module); Story 6.21a FROM 23 (+3 modules); Story 6.20 FROM 16 (+7)
   });
 
   it('⭐⭐ POSITIVE CONTROL — the scanner actually FIRES on a planted violation of every pattern', () => {
@@ -267,6 +272,17 @@ describe('⛔ the no-comparison fence (Trap 1, `-226` cl.5)', () => {
         expect(code.includes(forbidden), `${f} reached for '${forbidden}'`).toBe(false);
       }
     }
+  });
+
+  it('⛔⛔ Story 6.19c (`-273` §7, §8) — the closure / Super Admin module ⛔ never decrypts a name, and composes the gate by its OPTION', () => {
+    const code = stripComments(read('packages/domain/src/claim/correction-closure.ts'));
+    for (const forbidden of ['decryptTier1', 'nameCiphertext', 'getMemberNominees(', 'resolveCorrectionMobile']) {
+      expect(code.includes(forbidden), `correction-closure.ts must not contain ${forbidden}`).toBe(false);
+    }
+    // ⭐ The `-251` waiver is the gate's OWN option — ⛔ a hand list of conjuncts (`-273` §8, `-263` C4).
+    expect(code).toContain("nameCheck: 'waived_251'");
+    expect(code.includes('assertNomineeNameCheckForApproval')).toBe(false);
+    expect(code.includes('assertDeathCertificateAcceptedForApproval')).toBe(false);
   });
 
   it('⛔⛔ Story 6.21a (T5, T9) — the certificate LEAF, the review WRITER and the review READ ⛔ never decrypt', () => {

@@ -37,8 +37,8 @@ Status: split — ⛔ this file has no sprint row; it is the shared spec of four
 > | Story | Row / file | Scope | Status |
 > |---|---|---|---|
 > | **6.19a** | `6-19a-claim-contact-capture-at-filing` | AC0 (governance for the WHOLE set), AC1, AC13 | ✅ `done` (merged, `f06ee41f`) |
-> | **6.19b** | `6-19b-correction-reminders-and-posted-letters` | AC2–AC5, AC16 | `ready-for-dev` — v2.4 on `-266` … `-269`, re-pinned `f06ee41f` |
-> | **6.19c** | `6-19c-correction-closure-super-admin-review-and-refile` | AC6, AC7, AC14, AC15, AC17 | `ready-for-dev` — start only after 6.19b is `done` |
+> | **6.19b** | `6-19b-correction-reminders-and-posted-letters` | AC2–AC5, AC16 | ✅ `done` (build `40304d9f`, reviews to `f301f09e`) |
+> | **6.19c** | `6-19c-correction-closure-super-admin-review-and-refile` | AC6, AC7, AC14, AC15, AC17, ⭐ AC18 (`-272`, `-273`) | `ready-for-dev` — v2.1 re-pinned `f079dc56` |
 > | **6.19d** | `6-19d-replacement-certificate-reminder` | AC12 (CC1) | `backlog` — fenced on its routing note |
 >
 > The AC numbers are **kept** in the slices, so every decision and note that cites "6.19 AC n" still resolves; AC8, AC9 and AC11 are restated per
@@ -436,7 +436,7 @@ and outcome, ⛔ do not guess), and gate on **the accepted death certificate + t
 pure refactor that leaves `assertNomineeNameCheckForApproval`'s behaviour byte-identical for its existing callers. ⭐ The approved-name-differs
 highlight (`-226` cl.5, 6.18 AC8) must still show on such a claim — prove it.
 
-**T11 — escalated claims are held.** While a declined closure is with the Super Admin (and while **under review**), ⛔ nothing is paid, closed
+**T11 — escalated claims are held.** ⚠ *(`-273` §3/§4: either origin; while held the Pariwar Admin's vote and a new return are refused at the route.)* While a declined closure is with the Super Admin (and while **under review**), ⛔ nothing is paid, closed
 or refused, and the family's reminders do ⛔ not run (they stopped at day 90) unless a **direction** restarts them (D18). `commitCycleFreeze`
 already excludes the claim (the return row is live) — keep it live until a Super Admin decision supersedes it.
 
@@ -482,7 +482,7 @@ Where a decision only records a Panel ruling it says so.
   a change is a new ruling, ⛔ never an edit.
 - ⚠ *(`-269` §2: the pause has two tiers — `resubmitted` pauses the whole run; "the family's part is done" (`-268`, the LATEST check per
   `-269` §1) pauses the family only.)* ⚠ *(`-267` §3: `resubmitted` now PAUSES a run — ⛔ no send, ⛔ no record — and ⛔ never ends it; a run ends on superseded, day 90, a mark
-  change or `decided`.)* **D4 — the stop predicate, per recipient.** All reminders on a run stop when the return row is superseded **or**
+  change or `decided`.)* ⚠ *(`-272` §2 / `-273` §2: the delivered-letter stop and the found-dead fact are per RETURN, per current number — ⛔ not per run.)* **D4 — the stop predicate, per recipient.** All reminders on a run stop when the return row is superseded **or**
   `resolveClaimCorrectionState(…).resubmitted` holds, and at day 90. A recipient's **dead number** (a send-time `invalid_number`) or **no working
   route** (`no_target`) keeps them on the schedule (harmless — they fail, and `-250` #1 says so) **until a letter to that person has a recorded
   delivery date**, then their reminders stop (`-250` #1, F5). The dead-number/unreachable marker is **per run** (a second return re-evaluates).
@@ -579,7 +579,7 @@ Where a decision only records a Panel ruling it says so.
   `text` (as `member_nominees.relationship`), ⛔ not Tier-1 (a label, like `ClaimantRelationship`) — `-253` left "whether the answer is PII"
   open; this is our call and recorded. ⭐ The question fixes its **direction** in both locales — *"The claimant is the nominee's …"* — since
   half the values are inverse pairs (son/father, son-in-law/father-in-law, grandchild/grandparent).
-- **D17 — NEW. The Super Admin's three decisions**, each with a **required note and a reason** (`-255` F3), all under the trustee lock, all
+- ⚠ *(`-273` §4: while escalated only the Super Admin decides — a corrected claim is ⛔ not returned to the ordinary vote; §10: the reason is a closure-scoped set on the closure record.)* **D17 — NEW. The Super Admin's three decisions**, each with a **required note and a reason** (`-255` F3), all under the trustee lock, all
   re-checking `resolveClaimCorrectionState` first (a corrected claim is ⛔ never closed; if corrected, only **approve** via the ordinary vote
   remains — the Super Admin's writer 409s `closure.claim_corrected` and the claim returns to the Pariwar Admin's ordinary vote):
   - **close** → the D1 chain (`denied` + `denied_no_appeal`), ⛔ not appealable;
@@ -587,7 +587,7 @@ Where a decision only records a Panel ruling it says so.
     (⛔ `other` without a note refused), **and** `denied_no_appeal` **only if** a `claim_appeals` row already exists (T4, F2);
   - **approve despite the name** → T10's writer.
   Each supersedes the live return with the conditional `UPDATE`; each writes its audit line (`resourceLocator: 'claim:<lower-case uuid>'`).
-- **D18 — NEW. The review hold and the direction record (`-256`).** The closure table carries `under_review_since` + note (set by key (5));
+- ⚠ *(`-273` §3: the hold also covers a staff case escalated at day 90, keyed on the live return's row; §6: the 30-day reminder runs while escalated, from the escalation date.)* **D18 — NEW. The review hold and the direction record (`-256`).** The closure table carries `under_review_since` + note (set by key (5));
   a NEW **directions** table: `(direction_id, claim_case_id, directed_to_actor, directed_to_role ∈ {district_admin, pariwar_admin}, kind,
   text (Tier-2 note), created_by, created_at, response_text, responded_at, responded_by)`. `kind` = `restart_family_reminders | other` —
   ⭐ **only** `restart_family_reminders` has a system effect: it opens a NEW schedule run anchored on the direction's date (the D3 table,
@@ -602,7 +602,7 @@ Where a decision only records a Panel ruling it says so.
   helpline" state (en + hi) — ⛔ never a bare error. ⛔ Nothing about what carries over from the closed claim (`-254` does not rule it): the new
   claim starts empty, as any re-file does today.
 - ⚠ *(`-269` §4: `carrier_reject` → `rejected_unreachable`, letter-eligible too. 6.19b v2.5: *"then escalated"* = found-dead day + 13 —
-  `-231` C's *"thereafter"*.)* **D20 — NEW. The letter track's anchors, per person.** A person is **letter-eligible** from the first slot whose outcome is
+  `-231` C's *"thereafter"*.)* ⚠ *(`-272` §2 / `-273` §2: "at most two letters per person" counts per RETURN and ⛔ never resets on a new number; the found-dead day carries across the return's runs **for the same number**.)* **D20 — NEW. The letter track's anchors, per person.** A person is **letter-eligible** from the first slot whose outcome is
   `rejected_invalid_number` (dead, `-231` C) or `no_target` (no working route, `-252` cl.2) — that date is their **found-dead day**. The District
   Admin's chase for that person's letter record (tracking number, delivery date, screenshot) runs from the found-dead day: first reminder on
   **day 7**, **daily through day 12**, then **escalated to the Pariwar Admin** (a record + a reminder; ⛔ no automatic act) (`-231` C, `-250`
@@ -614,11 +614,11 @@ Where a decision only records a Panel ruling it says so.
   person's delivery + 30 days; ⛔ no separate `replacement_reminder` in v1.)* **D21 — NEW. The District Admin's regular reminders** follow D3's days; they are replaced by the single 30-day reminder (`-231` F, `-232` J)
   only when **every** family recipient is letter-eligible **and** each has a recorded delivery (with one person still on a working phone, the
   chase continues — ours; `-231` F was ruled for "the family's number").
-- ⚠ *(`-271` §1: an accept counts only when it went to the person's CURRENT number — `recipient_number_hash`.)* **D22 — NEW. The "reached" precondition (`-252` cl.1)** is a pure function over the run's records: for **each** person who must be reached
+- ⚠ *(`-271` §1: an accept counts only when it went to the person's CURRENT number — `recipient_number_hash`. ⚠ `-273` §1: "the run's records" is superseded — D22 reads every family/direction run of the live return.)* **D22 — NEW. The "reached" precondition (`-252` cl.1)** is a pure function over the run's records: for **each** person who must be reached
   (each effective nominee, and the claimant when none of them), ≥ 1 reminder `accepted` (or `delivered`) **or** a letter with a recorded
   delivery date. A closure **request** refuses otherwise (**409 `closure.not_reached`**, naming ⛔ no person in the body — a count and the
   roles only).
-- ✅ **D23 — CONFIRMED by `-260` G3 (A) — ⛔ no text after a Super Admin refusal or approval.** **D23 — NEW. Family notices:** the closure sends a name-free **closure notice** SMS to each reached person (en/hi per `contact_locale`); a
+- ✅ **D23 — CONFIRMED by `-260` G3 (A) — ⛔ no text after a Super Admin refusal or approval.** ⚠ *(`-273` §5: the closure notice is an outbox on the closure row, sent by a jobs sweep once per closure per recipient, ⛔ never to a known-dead number — a family reached only by post is ⛔ not told (Confirm 2); §9: `closed_no_response` rides the member death-certificate status GET the claim-entry gate reads.)* **D23 — NEW. Family notices:** the closure sends a name-free **closure notice** SMS to each reached person (en/hi per `contact_locale`); a
   Super Admin refusal or approval sends ⛔ no new SMS (W — a confirm for the Panel's next note). The member app derives
   **`closed_no_response`** through a **new contract field** on the claim status, ⛔ never `appeal_exhausted` (`deriveAppealView` would show the
   external-remedy disclosure — the wrong text).
@@ -634,7 +634,7 @@ Where a decision only records a Panel ruling it says so.
   wins**; RLS + FORCE, own migration. ⛔ Not a column on `claim_state_trustee_decisions` (every phase shares it). The Pariwar Admin's
   `return_to_district_admin` action gains a **required** `must_act` field, written in the **same tx** as the return row (6.18's cycle-freeze
   contract + handler). A District Admin change needs a **required note** and key (7).
-- **D26 — the runs follow the mark.** A **family run** exists only while the latest mark is `family`: day 0 = the return's date if marked
+- ⚠ *(`-272`: a change back to `family` restarts the CLOCK only — the letter track's per-person facts carry across the return; `-273` §3: an escalated staff case is held, and a staff-origin escalation is ⛔ never closable (Confirm 1).)* **D26 — the runs follow the mark.** A **family run** exists only while the latest mark is `family`: day 0 = the return's date if marked
   `family` at the return, else the date of the latest change **to** `family` (`-258` detail 1); a change to `staff` ends the family run at once
   (the running slot's record is written `skipped_superseded`); a change back to `family` opens a **new** run (a full 90 days). A **staff run**
   exists while the mark is `staff`: the District Admin is reminded on D3's days from the return / the latest change to `staff`, **day 12** →
@@ -771,3 +771,4 @@ template registry's content against the rendered `t()` output).
 | v1.16 | 2026-09-29 | ⚠ **`-269`**: the latest check decides "the family's part is done"; two pause tiers (D4); ⛔ no family run during a Super Admin hold (6.19c fills 6.19b's opener hook — T11/D18); D20 gains `rejected_unreachable`; D33's helpline key is per Pariwar. |
 | v1.17 | 2026-09-29 | 6.19b v2.5's re-check: invariant 2 marked with `-269` §1; D20's escalation day (13); D21 read as one reminder per person; D25's role set gains `super_admin` (`-270`). |
 | v1.18 | 2026-09-29 | ⚠ **`-271`**: D22 counts only accepts to the person's current number; ⛔ no staff run on a switch during a Super Admin hold. |
+| v1.19 | 2026-10-01 | ⚠ **`-272`** and **`-273`** (6.19c's validate pass; `-273` inserted by BigDev 2026-10-01): D4, D20, D26 marked — the letter track is per return (the cap ⛔ never resets on a new number); D22 reads the whole return; D17/D18/T11 — an escalated claim (either origin) is held and only the Super Admin decides it, a staff-origin escalation is ⛔ never closable; D23 — the closure notice is an outbox, the member status rides the claim-entry gate. Two confirms owed to the Panel. The status table: 6.19b `done`, 6.19c v2.1. |

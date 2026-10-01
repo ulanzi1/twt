@@ -6,6 +6,9 @@ import { describe, expect, it } from 'vitest';
 
 import type { EffectiveGrant, ResourceLocator } from '../../src/rbac/check.js';
 import { matchingGrantRole } from '../../src/rbac/matching-grant.js';
+import { permissionKey } from '../../src/rbac/permissions.js';
+import type { RoleBundle } from '../../src/rbac/roles.js';
+import type { GeoTreeResolver } from '../../src/rbac/scope.js';
 
 const PARIWAR = '11111111-1111-1111-1111-111111111111';
 const OTHER = '22222222-2222-2222-2222-222222222222';
@@ -29,6 +32,39 @@ describe('matchingGrantRole', () => {
     expect(
       matchingGrantRole([da], 'claim.check_nominee_name', { dimension: 'district', value: 'Patna', pariwarId: PARIWAR }),
     ).toBe('district_admin');
+  });
+
+  it('⭐ COMPETING grants that ALL satisfy the check: district > state > pariwar > global — in EVERY caller order', () => {
+    // One key held by all four roles, each at its own ceiling, and a tree where Patna ∈ Bihar — so every grant below
+    // satisfies the SAME check on a Patna target, and only the specificity rule can pick between them.
+    const KEY = permissionKey('claim.approve');
+    const bundles: RoleBundle[] = [
+      { role: 'super_admin', permissions: [KEY], scopeCeiling: 'global' },
+      { role: 'pariwar_admin', permissions: [KEY], scopeCeiling: 'pariwar' },
+      { role: 'state_trustee', permissions: [KEY], scopeCeiling: 'state' },
+      { role: 'district_admin', permissions: [KEY], scopeCeiling: 'district' },
+    ];
+    const resolver: GeoTreeResolver = {
+      contains: (a, d) => a.dimension === 'state' && a.value === 'Bihar' && d.value === 'Patna',
+    };
+    const ctx = { bundles, resolver };
+    const patna: ResourceLocator = { dimension: 'district', value: 'Patna', pariwarId: PARIWAR };
+    const district: EffectiveGrant = { pariwarId: PARIWAR, role: 'district_admin', scopeDimension: 'district', scopeValue: 'Patna' };
+    const state: EffectiveGrant = { pariwarId: PARIWAR, role: 'state_trustee', scopeDimension: 'state', scopeValue: 'Bihar' };
+    const all = [superAdmin, pariwarAdmin, state, district];
+
+    const permutations = (xs: readonly EffectiveGrant[]): EffectiveGrant[][] =>
+      xs.length <= 1 ? [[...xs]] : xs.flatMap((x, i) => permutations([...xs.slice(0, i), ...xs.slice(i + 1)]).map((p) => [x, ...p]));
+    for (const order of permutations(all)) {
+      expect(matchingGrantRole(order, KEY, patna, ctx)).toBe('district_admin');
+    }
+    // Remove the winner each time — the next most specific wins.
+    expect(matchingGrantRole([superAdmin, pariwarAdmin, state], KEY, patna, ctx)).toBe('state_trustee');
+    expect(matchingGrantRole([state, pariwarAdmin, superAdmin], KEY, patna, ctx)).toBe('state_trustee');
+    expect(matchingGrantRole([superAdmin, pariwarAdmin], KEY, patna, ctx)).toBe('pariwar_admin');
+    expect(matchingGrantRole([superAdmin], KEY, patna, ctx)).toBe('super_admin');
+    // Sanity: each grant ALONE satisfies the check (so the picks above are the ordering, ⛔ not a failed match).
+    for (const g of all) expect(matchingGrantRole([g], KEY, patna, ctx)).toBe(g.role);
   });
 
   it('⛔ no grant that satisfies the check ⇒ null (another Pariwar, the wrong key, no grants)', () => {

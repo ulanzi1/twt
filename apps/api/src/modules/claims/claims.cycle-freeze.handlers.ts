@@ -411,6 +411,9 @@ export function createCycleFreezeHandlers(
               setByRole: matchedRole,
               noteCiphertext: null,
               isReturnMark: true,
+              // Consistency with the change route. ⚠ Day 0 of a return mark is the return's OWN IST date (its
+              // `decided_at`, AC2) — the writer takes it from the live return, ⛔ not from this clock.
+              now: deps.clock(),
             });
             break;
           }

@@ -760,7 +760,7 @@ describe.skipIf(!hasDatabase)('State-Trustee cycle-freeze surface — E2E (:5433
       expect(await trusteeDecisionCount(claimCaseId)).toBe(0);
     });
 
-    it('⭐ Story 6.19b (AC16, AC2) — the RETURN writes its mark and opens the first run IN THE SAME TRANSACTION', async () => {
+    it('⭐ Story 6.19b (AC16, AC2) — the RETURN writes its mark and opens the first run (one mark, one open run per return)', async () => {
       const pariwarId = randomUUID();
       for (const mustAct of ['family', 'staff'] as const) {
         const { claimCaseId } = await seedApprovedClaim(pariwarId);
@@ -791,6 +791,48 @@ describe.skipIf(!hasDatabase)('State-Trustee cycle-freeze surface — E2E (:5433
         const line = td.auditSink.events.find((e) => e.type === 'admin_cycle_freeze.returned');
         expect(line?.context).toMatchObject({ must_act: mustAct });
       }
+    });
+
+    it('⭐ Story 6.19b (AC16, AC2) — the mark is IN THE RETURN\'S TRANSACTION: a mark write that fails rolls the return back (⛔ no return row, ⛔ no mark, ⛔ no run)', async () => {
+      const pariwarId = randomUUID();
+      const { claimCaseId } = await seedApprovedClaim(pariwarId);
+      const pa = await pariwarAdmin(pariwarId);
+      // TEST-ONLY fault injection: a trigger that fails the mark INSERT for THIS claim alone (every other suite's
+      // claim passes through untouched), dropped in `finally`. The return row is written FIRST in the same handler,
+      // so a return row surviving here would mean the two writes were ⛔ not one transaction.
+      const fn = `twt_test_fail_mark_${randomUUID().replace(/-/g, '')}`;
+      await td.pool.query(
+        `CREATE FUNCTION ${fn}() RETURNS trigger LANGUAGE plpgsql AS $fn$
+         BEGIN
+           IF NEW.claim_case_id = '${claimCaseId}'::uuid THEN RAISE EXCEPTION 'test: the mark write fails'; END IF;
+           RETURN NEW;
+         END $fn$`,
+      );
+      let status: number;
+      try {
+        await td.pool.query(`CREATE TRIGGER ${fn} BEFORE INSERT ON claim_correction_marks FOR EACH ROW EXECUTE FUNCTION ${fn}()`);
+        const res = await pa.client.inject({
+          method: 'POST',
+          url: decisionUrl(pariwarId),
+          payload: {
+            claim_case_id: claimCaseId,
+            action: 'return_to_district_admin',
+            reason_code: 'other',
+            rationale: 'please get the account 2 holder name corrected',
+            must_act: 'family',
+          },
+        });
+        status = res.statusCode;
+      } finally {
+        await td.pool.query(`DROP TRIGGER IF EXISTS ${fn} ON claim_correction_marks`);
+        await td.pool.query(`DROP FUNCTION IF EXISTS ${fn}()`);
+      }
+      expect(status).toBe(500);
+      expect(await trusteeDecisionCount(claimCaseId), 'the return rolled back with its mark').toBe(0);
+      const marks = await td.pool.query('SELECT 1 FROM claim_correction_marks WHERE claim_case_id = $1', [claimCaseId]);
+      expect(marks.rows).toHaveLength(0);
+      const runs = await td.pool.query('SELECT 1 FROM claim_correction_runs WHERE claim_case_id = $1', [claimCaseId]);
+      expect(runs.rows).toHaveLength(0);
     });
 
     it('⛔ AC11 — a RETURN with a code but NO note is a 400 (`-227` cl.10 requires the note)', async () => {

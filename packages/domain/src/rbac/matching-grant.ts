@@ -6,8 +6,9 @@
 // predicate (`hasPermission`) one grant at a time and returns the role of a grant that satisfies it.
 // ⭐ A SCOPED grant is preferred over a `global` one: a Pariwar Admin who also holds `super_admin` records
 // `pariwar_admin` for a Pariwar-scoped act — the role they exercised in that Pariwar, ⛔ not their widest one.
-// ⭐ Among two SCOPED grants of different dimensions that both match, the MORE SPECIFIC one wins (`district` before
-// `pariwar` before `state`, per `SCOPE_DIMENSIONS`' canonical broad→narrow order) — ⛔ never caller-array order.
+// ⭐ Among two SCOPED grants of different dimensions that both match, the MORE SPECIFIC one wins — `district` before
+// `state` before `pariwar` (then `global` last), i.e. the REVERSE of `SCOPE_DIMENSIONS`' canonical broad→narrow order
+// — ⛔ never caller-array order. Pinned by `tests/rbac/matching-grant.test.ts`.
 // ⛔ It authorises NOTHING: call it only after the route's own gate passed; `null` means ⛔ no grant matched.
 // ⚠ Pass the SAME `ctx` (resolver included) the route's own gate used — a bare-context re-check is ⛔ not
 // guaranteed to be "the same predicate" the doc above claims, even if it happens to agree today.

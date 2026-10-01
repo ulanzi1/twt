@@ -290,6 +290,8 @@ export interface TestDepsOverrides {
   resolveChannelSecret?: (secretName: string) => Promise<string>;
   clock?: () => Date;
   env?: NodeJS.ProcessEnv;
+  /** Capture the Fastify request logger's output (`createTestApp` only) — e.g. a PII spec's "no log line" leg. */
+  logStream?: NodeJS.WritableStream;
 }
 
 export interface TestDeps {
@@ -491,7 +493,7 @@ export interface TestApp extends TestDeps {
 
 export async function createTestApp(overrides: TestDepsOverrides = {}): Promise<TestApp> {
   const td = buildTestDeps(overrides);
-  const app = await buildServer(td.deps);
+  const app = await buildServer(td.deps, { logStream: overrides.logStream });
   return { ...td, app };
 }
 
@@ -506,6 +508,8 @@ export interface InjectResult {
   statusCode: number;
   json<T = unknown>(): T;
   body: string;
+  /** The response headers (e.g. a `cache-control: no-store` assertion). */
+  headers: Record<string, string | string[] | number | undefined>;
 }
 
 /** A cookie-threading HTTP client over fastify.inject (no supertest). */
@@ -537,7 +541,7 @@ export function makeClient(app: TestApp['app']): {
         },
       });
       for (const c of res.cookies) jar[c.name] = c.value;
-      return { statusCode: res.statusCode, json: <T,>() => res.json<T>(), body: res.body };
+      return { statusCode: res.statusCode, json: <T,>() => res.json<T>(), body: res.body, headers: res.headers };
     },
   };
 }

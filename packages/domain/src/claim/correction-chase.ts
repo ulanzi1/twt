@@ -10,15 +10,20 @@
 // ⭐ A SAME-VALUE row is recorded and leaves the run alone (G2's keep RE-STATES the mark); only a CHANGED value ends
 // the open run (`mark_changed`) and opens the other kind with day 0 = the change's IST date — also when ⛔ no run is
 // open (after day 90, or on an unmarked return): a switch to `family` gives the family a full 90 days (`-258` 1).
+// ⭐ The RETURN's own mark takes day 0 from the return's `decided_at` (AC2), ⛔ never the mark row's insert time — the
+// two can straddle an IST midnight.
 // `must_act.unchanged` is the District Admin ROUTE's refusal only (`refuseUnchanged`), ⛔ never the writer's rule.
 //
 // ── The runs (`-266` §1, `-267` §1/§3/§5) ───────────────────────────────────────────────────────────────────────
 // ⭐ At most ONE open run per CLAIM. The opener first ends any open run of the claim (`superseded`), so a second
 // return — by either path — leaves one. A `direction` run (6.19c's `restart_family_reminders`) is refused unless the
 // latest mark is `family` (⛔ no family chase by direction in a staff case). ⭐ The HOLD HOOK (`-269` §3, `-271` §2):
-// while a claim is escalated or under Super Admin review, a switch opens ⛔ no `family` run (only a direction does) and
-// a switch to `staff` ends any open `direction` run and opens ⛔ no `staff` run. 6.19c owns the hold (its closures
+// while a claim is escalated or under Super Admin review, a switch opens ⛔ no run at all (only a direction opens a
+// family chase), and it ENDS any open run of the live return whose kind no longer matches the new mark (`staff` ⇒ an
+// open `family` / `direction` run; `family` ⇒ an open `staff` run), `mark_changed`. 6.19c owns the hold (its closures
 // table) and FILLS the hook; until it lands ⛔ no claim can be held, so the default answers "not held".
+// ⚠ The hook is an OPTIONAL per-call parameter defaulting fail-open — once 6.19c lands, EVERY caller of
+// `writeCorrectionMark` must thread it (a caller that forgets it treats a held claim as not held).
 // ⭐ `resubmitted` PAUSES a run — it never ends one (`-267` §3). A run ends only `superseded`, `day_90`,
 // `mark_changed`, or `decided` (the exported end-run, which 6.19c's decisions call).
 //
@@ -137,6 +142,14 @@ export async function acquireCorrectionChaseLock(
 export type CorrectionHoldCheck = (db: Db, pariwarId: PariwarId, claimCaseId: ClaimId) => Promise<boolean>;
 
 export const noCorrectionHold: CorrectionHoldCheck = () => Promise.resolve(false);
+
+/**
+ * Does an open run of `kind` still serve a mark of `mustAct`? A `family` mark is served by a `family` OR a
+ * `direction` run (both chase the family); a `staff` mark only by a `staff` run. Pure.
+ */
+export function runMatchesMark(kind: CorrectionRunKind, mustAct: CorrectionMustAct): boolean {
+  return mustAct === 'staff' ? kind === 'staff' : kind === 'family' || kind === 'direction';
+}
 
 // ── Views ──────────────────────────────────────────────────────────────────────────────────────────────────────
 
@@ -343,7 +356,8 @@ async function openRunLocked(db: Db, input: OpenCorrectionRunInput): Promise<Cor
 
 /**
  * ⭐ END-RUN (exported — 6.19c's decisions call it with `decided`; the sweep with `day_90` / `superseded`). On an
- * already-ended run it is a NO-OP (returns `false`). ⛔ Never re-opens a run.
+ * already-ended run it is a NO-OP (returns `false`). ⛔ Never re-opens a run. The update is keyed on the claim it
+ * LOCKED as well as the run id — a `runId` of another claim is a no-op, ⛔ never an end under the wrong lock.
  */
 export async function endCorrectionRun(
   client: pg.PoolClient,
@@ -362,6 +376,7 @@ export async function endCorrectionRun(
     .where(
       and(
         eq(claimCorrectionRuns.pariwarId, input.pariwarId),
+        eq(claimCorrectionRuns.claimCaseId, input.claimCaseId),
         eq(claimCorrectionRuns.runId, input.runId),
         isNull(claimCorrectionRuns.endedAt),
       ),
@@ -387,9 +402,15 @@ export interface WriteCorrectionMarkInput {
   readonly isReturnMark?: boolean;
   /** The District Admin's ROUTE only: refuse a change to the value the mark already has (409 `must_act.unchanged`). */
   readonly refuseUnchanged?: boolean;
-  /** The instant the day 0 of a newly opened run is taken from (the mark's own time by default). */
+  /**
+   * The instant the day 0 of a newly opened run is taken from on a NON-return mark (the mark's own time by default).
+   * ⭐ A return mark (`isReturnMark`) ignores it: its day 0 is the return's own `decided_at` (AC2).
+   */
   readonly now?: Date;
-  /** 6.19c's hold (`-269` §3, `-271` §2). Default: ⛔ not held. */
+  /**
+   * 6.19c's hold (`-269` §3, `-271` §2). Default: ⛔ not held.
+   * ⚠ Optional and fail-open ONLY while ⛔ no claim can be held — once 6.19c lands, EVERY caller must thread it.
+   */
   readonly hold?: CorrectionHoldCheck;
 }
 
@@ -404,9 +425,9 @@ export interface WriteCorrectionMarkResult {
 /**
  * ⭐ THE MARK WRITER. Under the trustee lock, against the LIVE return read under it: records the mark, and — only when
  * the value CHANGES (or this is the return's first mark) — ends the claim's open run (`mark_changed`; a first mark on
- * a new return supersedes the previous return's run) and opens the run the mark calls for, day 0 = the mark's IST
- * date, unless the hold hook says the claim is held (then a switch opens ⛔ no family and ⛔ no staff run, and a
- * switch to `staff` ends an open `direction` run).
+ * a new return supersedes the previous return's run) and opens the run the mark calls for — day 0 = the return's IST
+ * date for the return's own mark, else the change's — unless the hold hook says the claim is held (then a switch
+ * opens ⛔ no run, and ends any open run of the live return whose kind no longer matches the new mark).
  * @throws CorrectionMarkNoLiveReturnError  ⛔ no live return (→ 409 `must_act.no_live_return`)
  * @throws CorrectionMarkUnchangedError     `refuseUnchanged` and the value is the same (→ 409 `must_act.unchanged`)
  * @throws CorrectionMarkNoteRequiredError  a non-return mark with ⛔ no note (→ 409 `must_act.note_required`)
@@ -451,17 +472,20 @@ export async function writeCorrectionMark(
 
   const held = await (input.hold ?? noCorrectionHold)(db, input.pariwarId, input.claimCaseId);
   const open = await readOpenCorrectionRun(db, input.pariwarId, input.claimCaseId);
-  const day0 = istDateOf(input.now ?? mark.setAt);
+  // AC2 — the return's own mark starts its run on the RETURN's IST date (`decided_at`), ⛔ never the mark row's
+  // `clock_timestamp()`; a later change starts on the change's date.
+  const day0 = input.isReturnMark === true ? istDateOf(liveReturn.decidedAt) : istDateOf(input.now ?? mark.setAt);
 
   if (held) {
-    // `-269` §3 / `-271` §2 — the claim is with the Super Admin: ⛔ no family run on a switch (only a direction
-    // opens one), and a switch to `staff` ends an open direction run and opens ⛔ no staff run.
+    // `-269` §3 / `-271` §2 — the claim is with the Super Admin: a switch opens ⛔ no run (only a direction opens a
+    // family chase), and an open run of the live return whose kind ⛔ no longer matches the new mark ends
+    // `mark_changed` (`staff` ⇒ an open `family` / `direction` run; `family` ⇒ an open `staff` run).
     // ⭐ Whatever the switch, an open run from an EARLIER return is stale (a second return landed while held) and
     // must still close — "at most one open run per claim" holds regardless of hold state.
     let endedRun: CorrectionRunView | null = null;
     if (open !== null && open.returnDecisionId !== liveReturn.decisionId) {
       endedRun = await endOpenRunOfClaim(db, input.pariwarId, input.claimCaseId, 'superseded');
-    } else if (input.mustAct === 'staff' && open?.kind === 'direction') {
+    } else if (open !== null && !runMatchesMark(open.kind, input.mustAct)) {
       endedRun = await endOpenRunOfClaim(db, input.pariwarId, input.claimCaseId, 'mark_changed');
     }
     return { mark, changed, endedRun, openedRun: null };
@@ -654,12 +678,25 @@ const DEAD_OUTCOMES: ReadonlySet<CorrectionReminderOutcome> = new Set([
 ]);
 
 /**
+ * Is this row EVIDENCE about a number — does it define (or belong to) a number epoch? ⛔ Not a `skipped_superseded`
+ * marker or an in-flight `attempting` row (S2), and ⛔ not an `error` row with ⛔ no hash: the sweep's exhausted-row
+ * finaliser and a decrypt that never cleared carry NO known number, so letting one split the epoch would RESET a
+ * dead-and-lettered person (their found-dead day and delivered letter wiped) and re-text them.
+ * ⚠ A `no_target` row's null hash is different — it MEANS "⛔ no sendable number" — so it stays evidential. Pure.
+ */
+export function isEvidentialReminderRow(r: Pick<PersonReminderRow, 'outcome' | 'recipientNumberHash'>): boolean {
+  if (r.outcome === 'skipped_superseded' || r.outcome === 'attempting') return false;
+  return !(r.outcome === 'error' && r.recipientNumberHash === null);
+}
+
+/**
  * ⭐ A person's per-run state, from their rows and letters. The state is PER NUMBER (AC3): whenever a 6.20
  * correction changes the number behind the person's key, their found-dead marker and their "a delivered letter stops
  * reminders" stop RESET — a new number is reached afresh, ⛔ never silenced by the old number's history.
  * `currentNumberHash`: `undefined` = unknown (the version did ⛔ not change, so the latest row's hash stands);
  * a value (or `null` for "⛔ no sendable number") = the person's current number, compared with the latest row's.
- * ⚠ A correction that keeps the SAME number changes ⛔ nothing. Pure.
+ * ⚠ A correction that keeps the SAME number changes ⛔ nothing. Only EVIDENTIAL rows count
+ * (`isEvidentialReminderRow` — a hash-less `error` defines ⛔ no epoch). Rows may come in any order. Pure.
  */
 export function evaluatePersonRunState(
   rows: readonly PersonReminderRow[],
@@ -667,7 +704,7 @@ export function evaluatePersonRunState(
   currentNumberHash?: string | null,
 ): PersonRunState {
   const attempted = [...rows]
-    .filter((r) => r.outcome !== 'skipped_superseded' && r.outcome !== 'attempting')
+    .filter(isEvidentialReminderRow)
     .sort((a, b) => a.slotDay - b.slotDay || a.createdAt.getTime() - b.createdAt.getTime());
   // The current epoch: the rows since the last change of number hash.
   let start = 0;

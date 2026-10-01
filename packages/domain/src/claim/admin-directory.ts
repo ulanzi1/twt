@@ -29,8 +29,10 @@ export interface AdminDirectoryResult {
 const ADMIN_DIRECTORY_LIMIT = 50; // fixed bounded window (integer literal — the forced-pagination-clamp gate)
 
 /**
- * The active staff holding `role` in this Pariwar, at `scope` when given (e.g. `{ dimension: 'district', value }`),
- * else at the role's Pariwar-wide grant. Bounded, ordered; `truncated` signals when the bound was hit.
+ * The active staff holding `role` in this Pariwar, at `scope` when given (e.g. `{ dimension: 'district', value }`;
+ * a `null` value = any node of that dimension), else ⭐ at a PARIWAR-WIDE grant only (`scope_dimension = 'pariwar'`)
+ * — ⛔ never any-scope: a `pariwar_admin` granted at a single state is ⛔ not "every Pariwar Admin of the claim's
+ * Pariwar". Bounded, ordered; `truncated` signals when the bound was hit.
  */
 export async function listAdminsByRole(
   db: Db,
@@ -46,7 +48,7 @@ export async function listAdminsByRole(
       and(
         eq(roleGrants.pariwarId, pariwarId),
         eq(roleGrants.role, role),
-        scope === undefined ? undefined : eq(roleGrants.scopeDimension, scope.dimension),
+        eq(roleGrants.scopeDimension, scope?.dimension ?? 'pariwar'),
         scope === undefined || scope.value === null ? undefined : eq(roleGrants.scopeValue, scope.value),
         eq(users.status, 'active'),
         isNotNull(users.displayName),
@@ -54,7 +56,9 @@ export async function listAdminsByRole(
       ),
     )
     .orderBy(asc(users.id))
-    .limit(ADMIN_DIRECTORY_LIMIT);
+    // ⚠ The literal IS `ADMIN_DIRECTORY_LIMIT` — the forced-pagination-clamp gate accepts only an integer literal
+    // (or `clampLimit`) as a fixed bound; keep the two equal.
+    .limit(50);
   return {
     entries: rows.map((r) => ({ userId: r.userId as string, displayName: r.displayName! })),
     truncated: rows.length >= ADMIN_DIRECTORY_LIMIT,

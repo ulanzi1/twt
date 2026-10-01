@@ -10,7 +10,7 @@
 // reversed in the UI regardless of what the domain does.
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { ClaimsUnderCorrectionResponse } from '@twt/contracts';
@@ -30,6 +30,7 @@ vi.mock('@tanstack/react-router', () => ({
 }));
 
 const getClaimsUnderCorrection = vi.fn();
+const getCorrectionLetterScreenshot = vi.fn();
 // ⭐ The route is session-gated (2026-09-23b) — a signed-in session by default; the gate test below
 // makes it fail.
 const getSession = vi.fn(async () => ({ actorId: 'a', grants: [] }));
@@ -39,6 +40,7 @@ vi.mock('../src/api/client.js', async (importOriginal) => {
     ...actual,
     getClaimsUnderCorrection: (p: string, o?: unknown) => getClaimsUnderCorrection(p, o),
     getSession: () => getSession(),
+    getCorrectionLetterScreenshot: (p: string, c: string, l: string) => getCorrectionLetterScreenshot(p, c, l),
   };
 });
 
@@ -66,7 +68,7 @@ const ITEM: Item = {
     must_act: 'family',
     must_act_set_by: 'Pariwar Admin Two',
     must_act_set_at: '2026-09-19T10:00:00.000Z',
-    run: { kind: 'family', day0: '2026-09-19', day_count: 3, open: true, next_reminder_on: '2026-09-23' },
+    run: { kind: 'family', day0: '2026-09-19', day_count: 3, open: true, ended_on: null, next_reminder_on: '2026-09-23' },
     cannot_remind: null,
     claimant_unresolved: false,
     awaiting_check: false,
@@ -285,5 +287,149 @@ describe('<CorrectionQueueRoute> — the correction chase (Story 6.19b)', () => 
     const radios = form.querySelectorAll('input[type="radio"]');
     expect(radios).toHaveLength(1);
     expect(form.textContent).toContain('Staff must put it right');
+  });
+
+  // ── Third-pass review (2026-09-30) ──────────────────────────────────────────────────────────────────────────────
+  const PERSON = 'nominee:66666666-6666-4666-8666-666666666666';
+  const LETTER = '77777777-7777-4777-8777-777777777777';
+  const person = (over: Partial<Item['correction_chase']['people'][number]>): Item['correction_chase']['people'][number] => ({
+    person_key: PERSON,
+    role: 'nominee',
+    rank: 1,
+    status: 'not_yet',
+    found_dead_on: null,
+    reminders_accepted: 0,
+    letters: [],
+    ...over,
+  });
+
+  it('⭐ the region is named "Correction chase — <reference>" (⛔ "Who must act")', async () => {
+    search = {};
+    setup([ITEM]);
+    await screen.findByTestId(`correction-queue-item-${CLAIM}`);
+    expect(screen.getByRole('region', { name: 'Correction chase — 11111111' })).toBeInTheDocument();
+  });
+
+  it('⭐ a number found dead AFTER an earlier "reached" still gets the letter form — the gate is `found_dead_on`', async () => {
+    search = {};
+    setup([chase({ people: [person({ status: 'reached', reminders_accepted: 1, found_dead_on: '2026-09-22' })] })]);
+    await screen.findByTestId(`correction-queue-item-${CLAIM}`);
+    expect(screen.getByTestId(`letter-form-${PERSON}`)).toBeInTheDocument();
+  });
+
+  it('⛔ ⛔ no letter form for a person never found dead', async () => {
+    search = {};
+    setup([chase({ people: [person({ status: 'not_yet' })] })]);
+    await screen.findByTestId(`correction-queue-item-${CLAIM}`);
+    expect(screen.queryByTestId(`letter-form-${PERSON}`)).toBeNull();
+  });
+
+  it('⭐ after a switch to STAFF the letter AND delivery forms stay — they follow the person, ⛔ not the headline run', async () => {
+    search = {};
+    setup([
+      chase({
+        must_act: 'staff',
+        run: { kind: 'staff', day0: '2026-09-25', day_count: 2, open: true, ended_on: null, next_reminder_on: '2026-09-28' },
+        people: [
+          person({
+            status: 'dead',
+            found_dead_on: '2026-09-20',
+            letters: [{ letter_id: LETTER, person_key: PERSON, sequence: 1, posted_on: '2026-09-21', delivered_on: null, overdue: false, has_screenshot: false }],
+          }),
+        ],
+      }),
+    ]);
+    await screen.findByTestId(`correction-queue-item-${CLAIM}`);
+    expect(screen.getByTestId(`letter-form-${PERSON}`)).toBeInTheDocument();
+    expect(screen.getByTestId(`delivery-form-${LETTER}`).getAttribute('aria-label')).toContain('#1 posted 2026-09-21');
+    // ⭐ The letter's own state is announced.
+    expect(screen.getByTestId('letter-state').getAttribute('role')).toBe('status');
+  });
+
+  it('⭐ an ENDED run shows when it started and the day it ended — ⛔ never a day count past 90', async () => {
+    search = {};
+    setup([chase({ run: { kind: 'family', day0: '2026-05-01', day_count: 140, open: false, ended_on: '2026-07-30', next_reminder_on: null } })]);
+    await screen.findByTestId(`correction-queue-item-${CLAIM}`);
+    const run = screen.getByTestId('queue-run').textContent ?? '';
+    expect(run).not.toContain('140');
+    expect(run).not.toContain('of 90');
+    expect(run).toContain('started on 2026-05-01');
+    expect(run).toContain('ended on 2026-07-30');
+  });
+
+  it('⭐ who-must-act shows its time in IST, and ⛔ no dangling separator when nothing is known', async () => {
+    search = {};
+    setup([ITEM]);
+    await screen.findByTestId(`correction-queue-item-${CLAIM}`);
+    const line = screen.getByTestId('queue-must-act').textContent ?? '';
+    expect(line).not.toContain('T10:00');
+    expect(line).toContain('3:30'); // 10:00 UTC = 15:30 IST
+  });
+
+  it('⛔ ⛔ no trailing "·" when the setter and the time are unknown', async () => {
+    search = {};
+    setup([chase({ must_act_set_by: null, must_act_set_at: null })]);
+    await screen.findByTestId(`correction-queue-item-${CLAIM}`);
+    expect((screen.getByTestId('queue-must-act').textContent ?? '').trim().endsWith('·')).toBe(false);
+  });
+
+  it('⭐ a `?claim=` that is ⛔ not in the list SAYS so — ⛔ never a silent miss', async () => {
+    search = { claim: '99999999-9999-4999-8999-999999999999' };
+    setup([ITEM]);
+    expect(await screen.findByTestId('queue-claim-not-shown')).toHaveAttribute('role', 'status');
+    expect(screen.queryByTestId('queue-highlighted')).toBeNull();
+    search = {};
+  });
+
+  it('⭐ the escalated filter is NEUTRALLY worded — ⛔ "escalated to me" read wrong to the District Admin', async () => {
+    search = {};
+    setup([ITEM]);
+    await screen.findByTestId(`correction-queue-item-${CLAIM}`);
+    expect(document.body.textContent).not.toContain('escalated to me');
+  });
+
+  it('⭐ the screenshot is FETCHED, then offered as a new-tab link (noopener noreferrer) — ⛔ no `window.open` after an await', async () => {
+    search = {};
+    const open = vi.spyOn(window, 'open').mockImplementation(() => null);
+    getCorrectionLetterScreenshot.mockResolvedValue({ url: 'https://storage.example/proof.png?sig=1', expires_in_seconds: 300 });
+    setup([
+      chase({
+        people: [
+          person({
+            status: 'dead',
+            found_dead_on: '2026-09-20',
+            letters: [{ letter_id: LETTER, person_key: PERSON, sequence: 1, posted_on: '2026-09-21', delivered_on: '2026-09-25', overdue: false, has_screenshot: true }],
+          }),
+        ],
+      }),
+    ]);
+    await screen.findByTestId(`correction-queue-item-${CLAIM}`);
+    fireEvent.click(screen.getByRole('button', { name: 'Get the screenshot link' }));
+    const link = await screen.findByTestId('letter-screenshot-link');
+    expect(link.getAttribute('href')).toBe('https://storage.example/proof.png?sig=1');
+    expect(link.getAttribute('target')).toBe('_blank');
+    expect(link.getAttribute('rel')).toBe('noopener noreferrer');
+    expect(open).not.toHaveBeenCalled();
+    open.mockRestore();
+  });
+
+  it('⛔ a non-https screenshot URL is ⛔ not offered', async () => {
+    search = {};
+    getCorrectionLetterScreenshot.mockResolvedValue({ url: 'http://storage.example/proof.png', expires_in_seconds: 300 });
+    setup([
+      chase({
+        people: [
+          person({
+            status: 'dead',
+            found_dead_on: '2026-09-20',
+            letters: [{ letter_id: LETTER, person_key: PERSON, sequence: 1, posted_on: '2026-09-21', delivered_on: '2026-09-25', overdue: false, has_screenshot: true }],
+          }),
+        ],
+      }),
+    ]);
+    await screen.findByTestId(`correction-queue-item-${CLAIM}`);
+    fireEvent.click(screen.getByRole('button', { name: 'Get the screenshot link' }));
+    expect(await screen.findByText('The screenshot link is not a secure link — it was not opened.')).toBeInTheDocument();
+    expect(screen.queryByTestId('letter-screenshot-link')).toBeNull();
   });
 });

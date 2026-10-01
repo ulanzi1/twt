@@ -53,8 +53,13 @@ export interface CorrectionSlot {
   readonly kind: CorrectionSlotKind;
 }
 
+/** The schedule DATA's shape: per run kind, its days and their slot kinds. */
+export type CorrectionScheduleTable = Readonly<
+  Record<CorrectionRunKind, readonly { readonly day: number; readonly kind: CorrectionSlotKind }[]>
+>;
+
 /** The schedule DATA, keyed by run kind (`-266` §1). 6.19d adds its own kind's days here as data. */
-const SCHEDULE_TABLE: Readonly<Record<CorrectionRunKind, readonly { readonly day: number; readonly kind: CorrectionSlotKind }[]>> = {
+const SCHEDULE_TABLE: CorrectionScheduleTable = {
   family: CORRECTION_REMINDER_DAYS.map((day) => ({ day, kind: 'reminder' as const })),
   direction: CORRECTION_REMINDER_DAYS.map((day) => ({ day, kind: 'reminder' as const })),
   // ⚠ The tie-break (`a.kind === 'reminder' ? -1 : 1`) is UNEXERCISED today: `STAFF_RUN_ESCALATION_DAY` (12) does
@@ -81,9 +86,15 @@ export function calendarDaysBetween(from: CalendarDateString, to: CalendarDateSt
 /**
  * ⭐ THE SCHEDULE — the slots of a run of `kind` whose day 0 is `day0`: every Panel day in (0, 90), plus the staff
  * kind's day-12 escalation. Pure, total, ordered by day. ⛔ Nothing on day 0, ⛔ nothing on or after day 90.
+ * `table` is injectable for TESTS only (the Panel's table holds no day 0 and nothing ≥ 90, so the horizon filter is
+ * provable only on a table that does) — ⛔ production callers never pass it.
  */
-export function correctionReminderSchedule(kind: CorrectionRunKind, day0: CalendarDateString): CorrectionSlot[] {
-  const rows = SCHEDULE_TABLE[kind];
+export function correctionReminderSchedule(
+  kind: CorrectionRunKind,
+  day0: CalendarDateString,
+  table: CorrectionScheduleTable = SCHEDULE_TABLE,
+): CorrectionSlot[] {
+  const rows = table[kind];
   return rows
     .filter((r) => r.day > 0 && r.day < CORRECTION_RUN_HORIZON_DAYS)
     .map((r) => ({ day: r.day, date: addCalendarDays(day0, r.day), kind: r.kind }));

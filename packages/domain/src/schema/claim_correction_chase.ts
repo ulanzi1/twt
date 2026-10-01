@@ -1,4 +1,5 @@
-// The correction-return CHASE — Story 6.19b (Task 1; AC2, AC3, AC4, AC5, AC16). Four tables, migrations 0126–0129:
+// The correction-return CHASE — Story 6.19b (Task 1; AC2, AC3, AC4, AC5, AC16). Four tables, migrations 0126–0129
+// (+ 0130: the letter-chase day key gains `purpose`):
 //
 //   · `claim_correction_marks`     — WHO MUST ACT on a return (`2026-09-27-258`; D25, `set_by_role` per `-270`).
 //                                     Append-only; the LATEST row per return wins.
@@ -224,9 +225,11 @@ export const claimCorrectionReminders = pgTable(
       .on(t.claimCaseId, t.recipientKey, t.sentOn)
       .where(sql`"purpose" = 'staff_reminder'`),
     // D34, extended to the per-person staff-side purposes: a same-day mark-switch supersession must not double a
-    // letter chase, its second-letter reminder, or its escalation for the SAME chased person either.
+    // letter chase, its second-letter reminder, or its escalation for the SAME chased person either. ⭐ `purpose` is
+    // in the key (0130): two DIFFERENT purposes for one recipient + person + day (a DA who is also a Pariwar Admin, two
+    // `staff:unassigned`) must both land — 0128's key silently dropped the second.
     uniqueIndex('claim_correction_reminders_letter_chase_day_uq')
-      .on(t.claimCaseId, t.recipientKey, t.subjectKey, t.sentOn)
+      .on(t.claimCaseId, t.recipientKey, t.subjectKey, t.purpose, t.sentOn)
       .where(sql`"purpose" IN ('letter_chase', 'letter_second_due', 'escalation')`),
     index('claim_correction_reminders_attempting_idx').on(t.claimedAt).where(sql`"outcome" = 'attempting'`),
     index('claim_correction_reminders_pariwar_claim_idx').on(t.pariwarId, t.claimCaseId),
@@ -295,6 +298,27 @@ export const claimCorrectionLetters = pgTable(
     check(
       'claim_correction_letters_recorded_by_check',
       sql`length(btrim(${t.recordedByActor})) > 0 AND length(btrim(${t.recordedByDisplay})) > 0`,
+    ),
+    // A delivery is recorded WITH its screenshot and its attribution, or ⛔ not at all (D6) — 0129's CHECK.
+    check(
+      'claim_correction_letters_delivery_all_or_nothing_check',
+      sql`(
+        ${t.deliveredOn} IS NULL
+        AND ${t.screenshotStorageKey} IS NULL
+        AND ${t.screenshotContentType} IS NULL
+        AND ${t.screenshotSizeBytes} IS NULL
+        AND ${t.deliveryRecordedByActor} IS NULL
+        AND ${t.deliveryRecordedByDisplay} IS NULL
+        AND ${t.deliveryRecordedAt} IS NULL
+      ) OR (
+        ${t.deliveredOn} IS NOT NULL
+        AND ${t.screenshotStorageKey} IS NOT NULL
+        AND ${t.screenshotContentType} IS NOT NULL
+        AND ${t.screenshotSizeBytes} IS NOT NULL
+        AND ${t.deliveryRecordedByActor} IS NOT NULL
+        AND ${t.deliveryRecordedByDisplay} IS NOT NULL
+        AND ${t.deliveryRecordedAt} IS NOT NULL
+      )`,
     ),
     check(
       'claim_correction_letters_delivered_after_posted_check',

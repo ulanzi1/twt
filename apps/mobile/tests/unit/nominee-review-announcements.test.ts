@@ -221,4 +221,14 @@ describe('nominee-review — Story 6.19b (AC16, D28: the staff case)', () => {
     expect(src).toMatch(/\{correctionNeeded && !beingChecked \? \(/)
     expect(src).toContain('setBeingChecked(res.beingChecked === true)')
   })
+
+  it('⭐ D28\'s line is SPOKEN on iOS too, once per appearance — the `saved` precedent (code review 2026-09-30)', () => {
+    // `accessibilityLiveRegion` is Android-only: VoiceOver heard nothing when the line replaced the correction line.
+    expect(src).toContain('const showBeingChecked = correctionNeeded && beingChecked')
+    expect(src).toMatch(
+      /if \(showBeingChecked && Platform\.OS === 'ios'\) \{\s*AccessibilityInfo\.announceForAccessibility\(tRef\.current\('nominee\.bank\.being_checked'\)\)/,
+    )
+    // ⛔ Keyed on the BOOLEAN, ⛔ never on `t` (a fresh closure every render ⇒ an announcement every render).
+    expect(src).toMatch(/announceForAccessibility\(tRef\.current\('nominee\.bank\.being_checked'\)\)\s*\}\s*\}, \[showBeingChecked\]\)/)
+  })
 })

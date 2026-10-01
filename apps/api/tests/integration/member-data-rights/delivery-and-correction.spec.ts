@@ -856,8 +856,8 @@ describe.skipIf(!hasDatabase)('Story 10.21 AC-R1/AC-R2 — delivery + correction
     expect(code).toBeTruthy();
 
     // ⚠ Raw `app.inject` here, not the `makeClient` cookie-jar wrapper (used elsewhere in this file)
-    // — the wrapper's `InjectResult` deliberately exposes only `statusCode`/`json()`/`body`, and this
-    // assertion needs the raw headers + binary payload `data-export.spec.ts`'s own `injectRaw` helper
+    // — the wrapper's `InjectResult` exposes `statusCode`/`json()`/`body`/`headers` but ⛔ no raw bytes, and this
+    // assertion needs the binary payload `data-export.spec.ts`'s own `injectRaw` helper
     // reads the same way. The route is unauthenticated, so no cookie jar is needed anyway.
     const res = await app.inject({
       method: 'POST',

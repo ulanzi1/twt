@@ -5,14 +5,19 @@
 //                          refuses when there is ⛔ no live return (409 `must_act.no_live_return`) and writes under the
 //                          trustee lock, so the change cannot race a second return onto a superseded `decision_id`.
 //   · recordLetter       — key (1): a POSTED letter to a letter-eligible person (D31's own precondition; ≤ 2 per person
-//                          per run). The tracking number is encrypted HERE, before the writer.
+//                          per run; the second only after the first's delivery, `-231` D). The tracking number is
+//                          encrypted HERE, before the writer.
 //   · recordDelivery     — key (1): the delivery date + ONE screenshot (multipart). MIME and size are checked BEFORE
-//                          the port's `put`; put-then-persist, the orphan deleted best-effort on a failed write. A
-//                          delivery later than 14 days is ACCEPTED (flagged overdue by the read) — ⛔ never refused.
+//                          the port's `put`; put-then-persist, the orphan deleted best-effort on ANY failure before
+//                          the commit (opening the scope tx included). A delivery later than 14 days is ACCEPTED
+//                          (flagged overdue by the read) — ⛔ never refused.
 //                          ⚠ ⛔ No virus scan exists (D6) — recorded in `deferred-work.md`, ⛔ not fixed.
 //   · readLetterAddress  — key (1) + STEP-UP: that person's address, ONLY inside the letter form; one audit line per
-//                          reveal. ⛔ Never under `claim.view_nominee_name_check`.
-//   · readScreenshot     — key (1): a TTL-limited signed read URL; audited.
+//                          reveal; `Cache-Control: no-store`. ⛔ Never under `claim.view_nominee_name_check`.
+//   · readScreenshot     — key (1): a TTL-limited signed read URL; audited; `Cache-Control: no-store`.
+// ⛔ A `posted_on` / `delivered_on` LATER than today (IST) is refused here (400 `correction_letter.date_in_future`),
+// before the writer — a future delivery date would stop the person's reminders today. The lower bounds (⛔ before
+// the run's day 0; a delivery before the posting) are the writer's.
 // Every audit line: `resourceLocator: 'claim:<lower-case uuid>'`, the actor's SNAPSHOTTED display name on the record
 // ([[project_admin_display_name_attribution]]), ⛔ never a tracking number, an address, a note or a screenshot.
 
@@ -104,6 +109,14 @@ function translateLetterError(err: unknown): never {
         throw new ConflictError('Two letters have already been recorded for this person in this run', 'correction_letter.limit_reached');
       case 'already_delivered':
         throw new ConflictError("This letter's delivery is already recorded", 'correction_letter.already_delivered');
+      case 'first_not_delivered':
+        // `-231` D — "at most two letters; the second after the first's delivery".
+        throw new ConflictError(
+          "The person's first letter has no recorded delivery — a second letter follows the first's delivery",
+          'correction_letter.first_not_delivered',
+        );
+      case 'posted_before_run':
+        throw new ConflictError("The posting date is before this reminder run's day 0", 'correction_letter.posted_before_run');
       default: {
         const unreachable: never = err.refusal;
         throw new ConflictError('The letter cannot be recorded', `correction_letter.${String(unreachable)}`);
@@ -111,6 +124,13 @@ function translateLetterError(err: unknown): never {
     }
   }
   throw err;
+}
+
+/** ⛔ A letter date LATER than today (IST) — 400 `correction_letter.date_in_future`. */
+function refuseFutureDate(date: string, today: string): void {
+  if (date > today) {
+    throw new BadRequestError('A letter date cannot be later than today', 'correction_letter.date_in_future');
+  }
 }
 
 export function toLetterDto(row: claim.ClaimCorrectionLetterView, today: string): CorrectionLetterDto {
@@ -211,6 +231,7 @@ export function createCorrectionChaseHandlers(deps: AppDeps) {
     async recordLetter(request: FastifyRequest, reply: FastifyReply): Promise<CorrectionLetterDto> {
       const ctx = contextOf(request);
       const body = request.body as RecordCorrectionLetterRequest;
+      refuseFutureDate(body.posted_on, today());
       const actorDisplay = await displayName(ctx.actorId);
       const trackingNumberCiphertext = await encryptCorrectionTrackingNumber(body.tracking_number, ctx.pariwarIdStr, deps.encryption);
       const scopeTx = await openScopeTx(deps, ctx.pariwarIdStr);
@@ -247,7 +268,8 @@ export function createCorrectionChaseHandlers(deps: AppDeps) {
     /** POST …/correction/letters/:letterId/delivery — key (1), multipart. */
     async recordDelivery(request: FastifyRequest, reply: FastifyReply): Promise<CorrectionLetterDto> {
       const ctx = contextOf(request);
-      const { letterId } = request.params as { letterId: string };
+      // ⭐ Lower-cased ONCE — the storage key and the audit lines carry the canonical id ([[project_branded_ids_lowercase]]).
+      const letterId = (request.params as { letterId: string }).letterId.toLowerCase();
       const actorDisplay = await displayName(ctx.actorId);
       // A cheap existence pre-check BEFORE reading or storing any bytes (the writer re-checks under the lock).
       const existing = await claim.readCorrectionLetter(request.scopeTx!.tx, ctx.pariwarId, ctx.claimCaseId, letterId);
@@ -281,20 +303,25 @@ export function createCorrectionChaseHandlers(deps: AppDeps) {
         });
       }
       if (buffer.byteLength === 0) throw new BadRequestError('The screenshot is empty', 'correction_letter.empty');
-      // The delivery date — read AFTER draining the file, so the field is captured in either multipart position.
+      // The delivery date. ⚠ The client sends the `delivered_on` field BEFORE the file: `request.file()` returns at the
+      // file part, so only the fields ahead of it are guaranteed in `data.fields` — a field trailing the file is
+      // timing-dependent (busboy may or may not have parsed it by now) and is ⛔ not relied on.
       const field = (data.fields as Record<string, { value?: unknown } | undefined> | undefined)?.['delivered_on'];
       const deliveredOn = field && typeof field.value === 'string' ? field.value.trim() : '';
       if (!isRealCalendarDate(deliveredOn)) {
         throw new BadRequestError('A delivery date (YYYY-MM-DD) is required with the screenshot', 'correction_letter.delivered_on_required');
       }
+      refuseFutureDate(deliveredOn, today());
 
-      // D6 — the port, its OWN key prefix. put-then-persist; the orphan is deleted best-effort on a failed write.
+      // D6 — the port, its OWN key prefix. put-then-persist; the orphan is deleted best-effort on ANY failure before the
+      // commit — ⭐ `openScopeTx` runs INSIDE the `try`, so a pool / BEGIN failure cleans up too.
       const storageKey = `pariwar/${ctx.pariwarIdStr}/claim/${ctx.claimCaseIdStr}/correction-letter/${letterId}/${randomUUID()}`;
       await deps.claimDocumentStorage.put(storageKey, new Uint8Array(buffer), { contentType: data.mimetype });
-      const scopeTx = await openScopeTx(deps, ctx.pariwarIdStr);
+      let scopeTx: Awaited<ReturnType<typeof openScopeTx>> | undefined;
       let ok = false;
       let row: claim.ClaimCorrectionLetterView;
       try {
+        scopeTx = await openScopeTx(deps, ctx.pariwarIdStr);
         row = await claim.recordCorrectionLetterDelivery(scopeTx.client, {
           pariwarId: ctx.pariwarId,
           claimCaseId: ctx.claimCaseId,
@@ -317,7 +344,7 @@ export function createCorrectionChaseHandlers(deps: AppDeps) {
         }
         translateLetterError(err);
       } finally {
-        await closeScopeTx(scopeTx, ok);
+        if (scopeTx !== undefined) await closeScopeTx(scopeTx, ok);
       }
       const dto = toLetterDto(row!, today());
       audit(request, ctx, 'admin_claim_correction.letter_delivery_recorded', {
@@ -332,13 +359,18 @@ export function createCorrectionChaseHandlers(deps: AppDeps) {
     },
 
     /** GET …/correction/letters/address?person_key= — key (1) + step-up; one audit line per reveal. */
-    async readLetterAddress(request: FastifyRequest): Promise<CorrectionLetterAddressResponse> {
+    async readLetterAddress(request: FastifyRequest, reply: FastifyReply): Promise<CorrectionLetterAddressResponse> {
       const ctx = contextOf(request);
       const { person_key: personKey } = request.query as { person_key: string };
+      // ⛔ A step-up-gated Tier-1 read is never cached (no global hook sets this — checked 2026-10-01).
+      void reply.header('cache-control', 'no-store');
       let address: claim.CorrectionLetterAddress;
       try {
         // The address is for a letter the District Admin may SEND — D31's precondition, the same answer the writer runs.
-        ({ address } = await claim.assertCorrectionLetterAllowed(request.scopeTx!.tx, ctx.pariwarId, ctx.claimCaseId, personKey));
+        // ⭐ `{ crypto }` — the SAME number-reset-aware person state the writer reads (AC3, `-271` §1).
+        ({ address } = await claim.assertCorrectionLetterAllowed(request.scopeTx!.tx, ctx.pariwarId, ctx.claimCaseId, personKey, {
+          crypto: deps.encryption,
+        }));
       } catch (err) {
         translateLetterError(err);
       }
@@ -348,9 +380,11 @@ export function createCorrectionChaseHandlers(deps: AppDeps) {
     },
 
     /** GET …/correction/letters/:letterId/screenshot — key (1); a TTL-limited signed URL. */
-    async readScreenshot(request: FastifyRequest): Promise<CorrectionLetterScreenshotResponse> {
+    async readScreenshot(request: FastifyRequest, reply: FastifyReply): Promise<CorrectionLetterScreenshotResponse> {
       const ctx = contextOf(request);
-      const { letterId } = request.params as { letterId: string };
+      const letterId = (request.params as { letterId: string }).letterId.toLowerCase();
+      // ⛔ A signed read URL is a bearer credential for its TTL — never cached.
+      void reply.header('cache-control', 'no-store');
       const row = await claim.readCorrectionLetter(request.scopeTx!.tx, ctx.pariwarId, ctx.claimCaseId, letterId);
       if (row === null || row.screenshotStorageKey === null) {
         throw new NotFoundError('No screenshot is recorded for this letter', 'correction_letter.no_screenshot');

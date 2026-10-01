@@ -837,6 +837,9 @@ export function useClaimsUnderCorrection(pariwarId: string, opts: { readonly esc
 }
 
 // ── Story 6.19b — the correction chase (keys (1) and (7)). Every write refreshes the queue (both views). ──────
+// ⭐ `onSettled` RETURNS the invalidation's promise — the mutation stays `isPending` until the refetch lands, so the
+// submit buttons stay disabled until the fresh `letters` / mark are on screen (a `void` here ended `isPending` first,
+// and stale letters let staff double-submit into `limit_reached` / `already_delivered`).
 
 const queuePrefix = claimsUnderCorrectionKey;
 
@@ -845,7 +848,7 @@ export function useChangeCorrectionMustAct(pariwarId: string, claimCaseId: strin
   return useMutation({
     mutationFn: (body: Parameters<typeof api.changeCorrectionMustAct>[2]) =>
       api.changeCorrectionMustAct(pariwarId, claimCaseId, body),
-    onSettled: () => void qc.invalidateQueries({ queryKey: queuePrefix(pariwarId) }),
+    onSettled: () => qc.invalidateQueries({ queryKey: queuePrefix(pariwarId) }),
   });
 }
 
@@ -854,7 +857,7 @@ export function useRecordCorrectionLetter(pariwarId: string, claimCaseId: string
   return useMutation({
     mutationFn: (body: Parameters<typeof api.recordCorrectionLetter>[2]) =>
       api.recordCorrectionLetter(pariwarId, claimCaseId, body),
-    onSettled: () => void qc.invalidateQueries({ queryKey: queuePrefix(pariwarId) }),
+    onSettled: () => qc.invalidateQueries({ queryKey: queuePrefix(pariwarId) }),
   });
 }
 
@@ -863,7 +866,7 @@ export function useRecordCorrectionLetterDelivery(pariwarId: string, claimCaseId
   return useMutation({
     mutationFn: (v: { letterId: string; deliveredOn: string; file: File }) =>
       api.recordCorrectionLetterDelivery(pariwarId, claimCaseId, v.letterId, v.deliveredOn, v.file),
-    onSettled: () => void qc.invalidateQueries({ queryKey: queuePrefix(pariwarId) }),
+    onSettled: () => qc.invalidateQueries({ queryKey: queuePrefix(pariwarId) }),
   });
 }
 

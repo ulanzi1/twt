@@ -54,8 +54,6 @@ export interface SeedReturnedClaimOptions {
   readonly claimantMobile?: string | null;
   readonly contactLocale?: 'hi' | 'en';
   readonly mustAct?: 'family' | 'staff' | null;
-  /** The instant the return's run takes its day 0 from (the mark's `now`). */
-  readonly returnedAt?: Date;
   /** The plaintext address sentinel for every contact row (AC9b). */
   readonly address?: string;
   /** `false` ⇒ ⛔ no contact record (D30 `no_contact_record`). */
@@ -306,8 +304,7 @@ export async function seedReturnedClaim(
         actorDisplay: 'Pariwar Admin One',
         setByRole: 'pariwar_admin',
         noteCiphertext: null,
-        isReturnMark: true,
-        ...(opts.returnedAt ? { now: opts.returnedAt } : {}),
+        isReturnMark: true, // I8 — the run's day 0 is the RETURN's `decided_at` (IST), ⛔ never a passed `now`
       });
       runId = w.openedRun?.runId ?? null;
     }
@@ -317,25 +314,70 @@ export async function seedReturnedClaim(
 
 }
 
-/** Delete everything a test created (claims cascade; `events_log` is append-only ⇒ replica role). */
-export async function cleanupClaims(pool: pg.Pool, claimCaseIds: readonly string[], memberIds: readonly string[]): Promise<void> {
-  if (claimCaseIds.length === 0) return;
+/**
+ * Delete everything a test created — and FAIL LOUDLY if a claim or a run survives (a surviving OPEN run would be read
+ * by every later sweep in the shared database).
+ * ⚠ The claims go FIRST and ⛔ NOT under the replica role: `session_replication_role = 'replica'` disables the RI
+ * triggers too, so a `DELETE FROM claims` there would ⛔ not cascade and would orphan the runs, reminders and letters.
+ * The cascade itself is allowed by the append-only tables' triggers (`pg_trigger_depth() > 1`). Only the rows ⛔ no
+ * cascade reaches (`events_log`, the nominee history, the consents, the staff fixtures) are then deleted under the
+ * replica role — each OPTIONAL delete in its own SAVEPOINT, so one failure (25P02) can ⛔ never roll back the rest.
+ */
+export async function cleanupClaims(
+  pool: pg.Pool,
+  claimCaseIds: readonly string[],
+  memberIds: readonly string[],
+  extra: { readonly userIds?: readonly string[] } = {},
+): Promise<void> {
+  const userIds = extra.userIds ?? [];
+  if (claimCaseIds.length === 0 && userIds.length === 0) return;
+  if (claimCaseIds.length > 0) await pool.query('DELETE FROM claims WHERE claim_case_id = ANY($1)', [claimCaseIds]);
+  const failures: string[] = [];
   const c = await pool.connect();
   try {
     await c.query('BEGIN');
     await c.query("SET LOCAL session_replication_role = 'replica'");
-    await c.query('DELETE FROM claims WHERE claim_case_id = ANY($1)', [claimCaseIds]);
-    await c.query('DELETE FROM events_log WHERE stream_id = ANY($1)', [claimCaseIds]);
+    const optional = async (label: string, statement: string, params: unknown[]): Promise<void> => {
+      await c.query('SAVEPOINT cleanup_step');
+      try {
+        await c.query(statement, params);
+        await c.query('RELEASE SAVEPOINT cleanup_step');
+      } catch (e) {
+        await c.query('ROLLBACK TO SAVEPOINT cleanup_step');
+        failures.push(`${label}: ${(e as Error).message}`);
+      }
+    };
+    if (claimCaseIds.length > 0) await optional('events_log', 'DELETE FROM events_log WHERE stream_id = ANY($1)', [claimCaseIds]);
     if (memberIds.length > 0) {
-      await c.query('DELETE FROM member_nominee_versions WHERE member_id = ANY($1)', [memberIds]).catch(() => undefined);
-      await c.query('DELETE FROM member_nominees WHERE member_id = ANY($1)', [memberIds]).catch(() => undefined);
-      await c.query('DELETE FROM consent_records WHERE subject_id = ANY($1)', [memberIds]).catch(() => undefined);
+      await optional('member_nominee_versions', 'DELETE FROM member_nominee_versions WHERE member_id = ANY($1)', [memberIds]);
+      await optional('member_nominees', 'DELETE FROM member_nominees WHERE member_id = ANY($1)', [memberIds]);
+      await optional('consent_records', 'DELETE FROM consent_records WHERE subject_id = ANY($1)', [memberIds]);
+    }
+    if (userIds.length > 0) {
+      await optional('member_device_tokens', 'DELETE FROM member_device_tokens WHERE principal_id = ANY($1::uuid[])', [userIds]);
+      await optional('role_grants', 'DELETE FROM role_grants WHERE user_id = ANY($1::uuid[])', [userIds]);
+      await optional('users', 'DELETE FROM users WHERE id = ANY($1::uuid[])', [userIds]);
     }
     await c.query('COMMIT');
   } catch (e) {
     await c.query('ROLLBACK').catch(() => undefined);
-    console.error('[claim-correction seed] cleanup:', (e as Error).message);
+    throw e;
   } finally {
     c.release();
+  }
+  if (failures.length > 0) console.warn('[claim-correction seed] cleanup — optional deletes failed:', failures.join('; '));
+  if (claimCaseIds.length > 0) {
+    const { rows } = await pool.query<{ claims: number; runs: number }>(
+      `SELECT (SELECT count(*) FROM claims WHERE claim_case_id = ANY($1))::int AS claims,
+              (SELECT count(*) FROM claim_correction_runs WHERE claim_case_id = ANY($1))::int AS runs`,
+      [claimCaseIds],
+    );
+    const left = rows[0]!;
+    if (left.claims > 0 || left.runs > 0) {
+      throw new Error(
+        `[claim-correction seed] cleanup LEFT ${String(left.claims)} claim(s) and ${String(left.runs)} run(s) behind — ` +
+          'a surviving open run is swept by every later suite',
+      );
+    }
   }
 }

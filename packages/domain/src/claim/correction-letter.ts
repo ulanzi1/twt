@@ -8,7 +8,8 @@
 // `claimant_address_ciphertext`), and the claim's agreement is `live`. `assertClaimContactRecorded` is ⛔ NOT called
 // (it stays approval-only — an all-or-nothing check would refuse a letter to nominee 1 over nominee 2's row).
 // ⭐ The letter targets the resolver's latest `family` / `direction` run, OPEN OR ENDED: a letter stays recordable after
-// its run ends (day 90, a mark change) — ⛔ no reminders then (`-250` #4). At most TWO per person per run.
+// its run ends (day 90, a mark change) — ⛔ no reminders then (`-250` #4). At most TWO per person per run, and ⭐ the
+// second only after the first's recorded delivery (`-231` D).
 // ⭐ STAFF-ENTERED EVIDENCE: a delivery recorded LATER than 14 days is accepted and flagged overdue by the read — ⛔ never
 // refused (`-250` #3: *"nothing else"*). The tracking number is Tier-1 ciphertext (the handler encrypts); the
 // screenshot is ⛔ never here — only its storage key (the `claimDocumentStorage` port, D6).
@@ -23,7 +24,6 @@ import type { ClaimId, PariwarId } from '../ids/index.js';
 import { type ClaimCorrectionLetterRow, claimCorrectionLetters } from '../schema/claim_correction_chase.js';
 import {
   readClaimContact,
-  readClaimContactAgreementState,
   readVersionChainIndex,
   resolveContactRow,
 } from './claim-contact-check.js';
@@ -43,6 +43,10 @@ export type CorrectionLetterRefusal =
   | 'address_missing'
   | 'agreement_not_live'
   | 'limit_reached'
+  /** `-231` D — "the second after the first's delivery": a second letter while the first has ⛔ no recorded delivery. */
+  | 'first_not_delivered'
+  /** The posting date is BEFORE the letter's run began (its day 0) — a wrong-year typo, ⛔ never a real posting. */
+  | 'posted_before_run'
   | 'not_found'
   | 'already_delivered'
   | 'delivered_before_posted';
@@ -102,8 +106,12 @@ export async function readCorrectionLetterAddress(
 }
 
 /**
- * ⭐ D31 — the letter's precondition, in the precedence the 409 codes are listed: letter-eligible in the run, that
- * person's address, a live agreement. Returns the run and the address (the form's gated read uses the same answer).
+ * ⭐ D31 — the letter's precondition. Precedence: a family run exists; then the CLAIM-level facts the recipient read
+ * reports (D30's `cannotRemind`) — an agreement ⛔ not `live` ⇒ `agreement_not_live`, ⛔ no contact record ⇒
+ * `address_missing`, any other reason (an undetermined declaration) ⇒ `not_letter_eligible` — checked BEFORE the
+ * person lookup, because the recipient read empties `people` whenever it sets one (so a later check could never see
+ * them); then the person is letter-eligible in the run; then THAT person's address. Returns the run and the address
+ * (the form's gated read uses the same answer).
  * `crypto`: hashes the person's CURRENT number so a 6.20 correction resets their found-dead state (AC3) before
  * eligibility is judged — ⛔ the plaintext never leaves (same seam `resolveCorrectionChase` uses).
  */
@@ -116,6 +124,14 @@ export async function assertCorrectionLetterAllowed(
 ): Promise<{ readonly run: CorrectionRunView; readonly address: CorrectionLetterAddress }> {
   const run = await letterRun(db, pariwarId, claimCaseId);
   const recipients = await readCorrectionRecipients(db, pariwarId, claimCaseId);
+  if (recipients.cannotRemind === 'agreement_not_live') {
+    throw new CorrectionLetterRefusedError(claimCaseId, 'agreement_not_live');
+  }
+  if (recipients.cannotRemind === 'no_contact_record') {
+    throw new CorrectionLetterRefusedError(claimCaseId, 'address_missing');
+  }
+  if (recipients.cannotRemind !== null) throw new CorrectionLetterRefusedError(claimCaseId, 'not_letter_eligible');
+  // ⭐ From here the contact record exists and its agreement is `live` (the recipient read checked both).
   const person = recipients.people.find((p) => p.personKey === personKey);
   if (person === undefined) throw new CorrectionLetterRefusedError(claimCaseId, 'not_letter_eligible');
   const [state] = await readRunPersonStates(db, pariwarId, run, [person], { crypto: opts.crypto });
@@ -123,12 +139,6 @@ export async function assertCorrectionLetterAllowed(
     throw new CorrectionLetterRefusedError(claimCaseId, 'not_letter_eligible');
   }
   const address = await readCorrectionLetterAddress(db, pariwarId, claimCaseId, personKey);
-  const snapshot = await readClaimContact(db, pariwarId, claimCaseId);
-  const agreement =
-    snapshot.contact === null
-      ? 'missing'
-      : await readClaimContactAgreementState(db, pariwarId, snapshot.contact.agreementConsentId);
-  if (agreement !== 'live') throw new CorrectionLetterRefusedError(claimCaseId, 'agreement_not_live');
   return { run, address };
 }
 
@@ -167,8 +177,12 @@ export async function readCorrectionLetter(
 }
 
 /**
- * ⭐ RECORD A POSTED LETTER (key (1)). Under the trustee lock: D31's precondition, then ≤ 2 per person per run (a
- * third is `limit_reached`; the UNIQUE `(run_id, person_key, sequence)` is the backstop).
+ * ⭐ RECORD A POSTED LETTER (key (1)). Under the trustee lock: D31's precondition; a posting date ⛔ before the run's
+ * day 0 is `posted_before_run`; ≤ 2 per person per run (a third is `limit_reached`; the UNIQUE
+ * `(run_id, person_key, sequence)` is the backstop); and ⭐ `-231` D — the second only AFTER the first's recorded
+ * delivery (`first_not_delivered`; a first letter lost in the post is a Panel supersession, ⛔ never a re-reading).
+ * ⚠ A posting date LATER than today is the route's refusal (`400 correction_letter.date_in_future`) — this module has
+ * ⛔ no clock.
  * @throws CorrectionLetterRefusedError
  */
 export async function recordCorrectionLetter(
@@ -189,8 +203,9 @@ export async function recordCorrectionLetter(
   const { run } = await assertCorrectionLetterAllowed(db, input.pariwarId, input.claimCaseId, input.personKey, {
     crypto: input.crypto,
   });
+  if (input.postedOn < run.day0) throw new CorrectionLetterRefusedError(input.claimCaseId, 'posted_before_run');
   const existing = await db
-    .select({ sequence: claimCorrectionLetters.sequence })
+    .select({ sequence: claimCorrectionLetters.sequence, deliveredOn: claimCorrectionLetters.deliveredOn })
     .from(claimCorrectionLetters)
     .where(
       and(
@@ -200,6 +215,9 @@ export async function recordCorrectionLetter(
       ),
     );
   if (existing.length >= 2) throw new CorrectionLetterRefusedError(input.claimCaseId, 'limit_reached');
+  if (existing.some((l) => l.deliveredOn === null)) {
+    throw new CorrectionLetterRefusedError(input.claimCaseId, 'first_not_delivered');
+  }
   try {
     const [row] = await db
       .insert(claimCorrectionLetters)

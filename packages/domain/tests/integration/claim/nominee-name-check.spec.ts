@@ -23,8 +23,10 @@ import {
   NomineeNameCheckRequiredError,
   NomineeNameCheckStaleError,
   adjudicateClaim,
+  assertClaimApprovable,
   getLatestNomineeNameCheck,
   projectClaimState,
+  readNomineeNameCheckApprovalState,
   recordNomineeNameCheck,
   returnToDistrictAdmin,
   voteOnFrozenClaim,
@@ -703,6 +705,54 @@ describe.skipIf(!hasDatabase)('Story 6.18 — the nominee name check (:5433)', (
         expect(await claimState(tx, cid)).toBe('verifier_approved');
       });
     }
+
+    // ── Story 6.19c (T10, `-273` §8) — THE `-251` COMPOSITION'S NEUTRALITY PROOF ─────────────────────────────
+    // ⭐ The gate gained ONE options parameter. For EVERY deficiency: (a) the default, `{}` and `{ nameCheck:
+    // 'required' }` refuse with the SAME error — byte-identical behaviour for P1/P3/P4 and every caller that omits it;
+    // (b) `{ nameCheck: 'waived_251' }` lets ONLY the three name-check deficiencies through (`never_checked`, `stale`,
+    // `does_not_match` — invariant 7) and still refuses the accounts and the determination with their own errors.
+    const NAME_CHECK_DEFICIENCIES = new Set(['no check at all', 'a STALE check (D5 — the accounts moved under it)', 'a `does_not_match` verdict (cl.5 — it WAITS, it is ⛔ never a denial)']);
+    for (const d of DEFICIENCIES) {
+      it(`⭐ 6.19c T10 — the gate's options: default / {} / 'required' refuse alike, and 'waived_251' ${NAME_CHECK_DEFICIENCIES.has(d.key) ? 'PASSES' : 'still REFUSES'} — ${d.key}`, async () => {
+        const { client, tx } = getTx();
+        await enterAppScope(client, PARIWAR_A);
+        const cid = toClaimId(randomUUID());
+        const mid = toMemberId(randomUUID());
+        await driveTo(client, cid, mid, 'verifier_approved');
+        await seedAcceptedDeathCertificate(client, { pariwarId: PARIWAR_A, claimCaseId: cid });
+        await d.seed(client, tx, cid);
+        for (const opts of [undefined, {}, { nameCheck: 'required' as const }]) {
+          await expect(assertClaimApprovable(tx, PARIWAR_A, cid, mid, opts)).rejects.toMatchObject({ name: d.error });
+        }
+        const waived = assertClaimApprovable(tx, PARIWAR_A, cid, mid, { nameCheck: 'waived_251' });
+        if (NAME_CHECK_DEFICIENCIES.has(d.key)) {
+          await expect(waived).resolves.toBeUndefined();
+          // `-273` §7 — the recorded state the highlight derives from is the gate's OWN refusal reason.
+          const expected = d.key.startsWith('no check') ? 'never_checked' : d.key.includes('STALE') ? 'stale' : 'does_not_match';
+          expect(await readNomineeNameCheckApprovalState(tx, PARIWAR_A, cid, mid)).toBe(expected);
+        } else {
+          await expect(waived).rejects.toMatchObject({ name: d.error });
+        }
+      });
+    }
+
+    it('⭐ 6.19c T10 — the waiver ⛔ never waives the CERTIFICATE (it runs first, under every option); a passing claim reads `passing`', async () => {
+      const { client, tx } = getTx();
+      await enterAppScope(client, PARIWAR_A);
+      const cid = toClaimId(randomUUID());
+      const mid = toMemberId(randomUUID());
+      await driveTo(client, cid, mid, 'verifier_approved');
+      await seedNomineeNameCheck(client, PARIWAR_A, cid, { certificate: 'skip' });
+      for (const opts of [undefined, { nameCheck: 'waived_251' as const }]) {
+        await expect(assertClaimApprovable(tx, PARIWAR_A, cid, mid, opts)).rejects.toMatchObject({ name: 'DeathCertificateAcceptanceRequiredError' });
+      }
+      const ok = toClaimId(randomUUID());
+      const okMid = toMemberId(randomUUID());
+      await driveTo(client, ok, okMid, 'verifier_approved');
+      await seedNomineeNameCheck(client, PARIWAR_A, ok);
+      await expect(assertClaimApprovable(tx, PARIWAR_A, ok, okMid)).resolves.toBeUndefined();
+      expect(await readNomineeNameCheckApprovalState(tx, PARIWAR_A, ok, okMid)).toBe('passing');
+    });
 
     it('⭐⭐ cl.5 — a recorded `does_not_match` mints ⛔ NO escalation event, and ⛔ no denial', async () => {
       // ⚠ *"The system never acts"* has THREE limbs and ⛔ only the denial one was pinned. An

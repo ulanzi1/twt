@@ -261,6 +261,30 @@ describe('defaultRoleBundles — the seeded roles (FR-46)', () => {
     }
   });
 
+  it('Story 6.19c (keys (2)–(6), (8)) — each key\'s exact holders; (4) and (5) are super_admin ONLY; ⛔ never state_trustee', () => {
+    const holdersOf = (key: string) =>
+      defaultRoleBundles
+        .filter((b) => (b.permissions as readonly string[]).includes(key))
+        .map((b) => b.role)
+        .sort();
+    expect(holdersOf('claim.request_correction_closure')).toEqual(['district_admin', 'super_admin']);
+    expect(holdersOf('claim.decide_correction_closure')).toEqual(['pariwar_admin', 'super_admin']);
+    expect(holdersOf('claim.decide_escalated_closure')).toEqual(['super_admin']);
+    expect(holdersOf('claim.review_escalated_closure')).toEqual(['super_admin']);
+    expect(holdersOf('claim.confirm_refile')).toEqual(['district_admin', 'helpline_operator', 'super_admin']);
+    expect(holdersOf('claim.record_no_correction_needed')).toEqual(['district_admin', 'super_admin']);
+    for (const key of [
+      'claim.request_correction_closure',
+      'claim.decide_correction_closure',
+      'claim.decide_escalated_closure',
+      'claim.review_escalated_closure',
+      'claim.confirm_refile',
+      'claim.record_no_correction_needed',
+    ]) {
+      expect(holds('state_trustee', key)).toBe(false);
+    }
+  });
+
   it('Story 6.21a (D13) — claim.review_death_certificate has ONE holder, district_admin (+ derived super_admin); ⛔ never a verifier or state_trustee', () => {
     const holders = defaultRoleBundles
       .filter((b) => (b.permissions as readonly string[]).includes('claim.review_death_certificate'))

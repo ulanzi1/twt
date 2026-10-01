@@ -83,16 +83,22 @@ async function shiftReturn(client: Client, pariwarId: typeof PARIWAR_A, returnId
 async function shiftNameChecks(client: Client, pariwarId: typeof PARIWAR_A, cid: ClaimId, ms: number) {
   const r = await asSuperuser(client, pariwarId, async () => {
     await client.query("SET LOCAL session_replication_role = 'replica'");
-    try {
-      return await client.query(
+    const restore = () => client.query("SET LOCAL session_replication_role = 'origin'");
+    const moved = await client
+      .query(
         `UPDATE events_log SET occurred_at = occurred_at + ($2 || ' milliseconds')::interval
           WHERE stream_id = $1 AND event_type = 'claim.nominee_name_checked'`,
         [cid, String(ms)],
-      );
-    } finally {
-      // ⚠ On an aborted transaction this restore fails too — swallowed so the UPDATE's own error surfaces.
-      await client.query("SET LOCAL session_replication_role = 'origin'").catch(() => undefined);
-    }
+      )
+      .catch(async (err: unknown) => {
+        // ⚠ On an aborted transaction the restore fails too — swallowed ONLY here, so the UPDATE's own error surfaces.
+        await restore().catch(() => undefined);
+        throw err;
+      });
+    // ⭐ On the success path a failed restore THROWS — ⛔ never swallowed: the spec must ⛔ never go on in `replica`
+    // (every append-only trigger off).
+    await restore();
+    return moved;
   });
   shifted('shiftNameChecks', r.rowCount);
 }

@@ -90,10 +90,14 @@ describe('<CycleFreezePage> — the decision forwards the card’s `opts`', () =
     expect(select.value).toBe('');
   });
 
-  it('⛔ the server REFUSES ⇒ the inputs STAY (the typed note is ⛔ lost) and the refusal shows', async () => {
-    postCycleFreezeDecision.mockRejectedValue(new ApiError(409, 'cycle_freeze.conflict', 'no'));
+  it('⛔ the server REFUSES ⇒ the inputs STAY (the typed note is ⛔ lost) and the refusal shows as HUMAN copy', async () => {
+    // A REAL code the decision route raises (`translateCycleFreezeError`) — ⛔ an invented one pinned as copy.
+    postCycleFreezeDecision.mockRejectedValue(new ApiError(409, 'cycle_freeze.not_routable', 'no'));
     const { select, rationale } = await renderAndFillRoute();
-    expect(await screen.findByRole('alert')).toHaveTextContent('cycle_freeze.conflict');
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('This claim cannot be routed to R9 in its current state. Reload the page to see where it stands.');
+    // ⛔ The raw code is ⛔ the copy (fifth-pass review 2026-10-01).
+    expect(alert.textContent).not.toContain('cycle_freeze.');
     expect(rationale.value).toBe('needs the panel');
     expect(select.value).toBe('r9_special_case');
   });

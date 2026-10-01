@@ -140,13 +140,16 @@ const GRPC_STATUS_NAMES: Readonly<Record<number, string>> = {
 
 /**
  * The ONLY Secret Manager codes that are FINAL — a CONFIG fault a retry cannot clear: `INVALID_ARGUMENT` (3),
- * `PERMISSION_DENIED` (7), `FAILED_PRECONDITION` (9, e.g. a disabled / destroyed version), `UNIMPLEMENTED` (12),
- * `UNAUTHENTICATED` (16). ⚠ An ALLOWLIST of finals, ⛔ never an allowlist of transients: a code nobody listed
- * (`RESOURCE_EXHAUSTED` 8 — a quota spike, `ABORTED` 10, `INTERNAL` 13, `CANCELLED` 1, `UNKNOWN` 2, a socket code,
- * ⛔ no code) RETRIES — a wrongly-final code would cancel the day's slot for every family at once, while a wrongly-
- * transient one only retries until the next morning's exhausted-row finaliser records `error` and alarms.
+ * `PERMISSION_DENIED` (7), `FAILED_PRECONDITION` (9, e.g. a disabled / destroyed version), `UNIMPLEMENTED` (12).
+ * ⚠ An ALLOWLIST of finals, ⛔ never an allowlist of transients: a code nobody listed (`RESOURCE_EXHAUSTED` 8 — a
+ * quota spike, `ABORTED` 10, `INTERNAL` 13, `CANCELLED` 1, `UNKNOWN` 2, a socket code, ⛔ no code) RETRIES — a
+ * wrongly-final code would cancel the day's slot for every family at once, while a wrongly-transient one only
+ * retries until the next morning's exhausted-row finaliser records `error` and alarms.
+ * ⚠ `UNAUTHENTICATED` (16) is TRANSIENT on purpose (fifth-pass review): on Cloud Run it is most often a metadata-
+ * server / token-refresh blip, and a FINAL 16 at 10:00 would end every in-flight family SMS for the day. A real
+ * credential fault that never clears is still surfaced — by the next sweep's exhausted-row finaliser (`error` + alarm).
  */
-const GRPC_CONFIG_FINAL: ReadonlySet<number> = new Set([3, 7, 9, 12, 16]);
+const GRPC_CONFIG_FINAL: ReadonlySet<number> = new Set([3, 7, 9, 12]);
 
 /** A code-ish label from an error, `undefined` when it carries none (a non-object, or no `code`). */
 function faultCodeOf(err: unknown): number | string | undefined {

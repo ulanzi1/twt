@@ -8,7 +8,8 @@
 //                          per run; the second only after the first's delivery AND posted on/after that delivery date,
 //                          `-231` D). The tracking number is encrypted HERE, before the writer. ⚠ When the person's
 //                          CURRENT number could not be hashed (a KMS / envelope fault) the precondition fails CLOSED:
-//                          503 `correction_letter.number_unverified` (retryable), on this route AND the address reveal.
+//                          503 `correction_letter.number_unverified` (retryable), on this route AND the address reveal
+//                          — each logged first as a warn line (ids only), so a persistent fault is visible server-side.
 //   · recordDelivery     — key (1): the delivery date + ONE screenshot (multipart). MIME and size are checked BEFORE
 //                          the port's `put`; put-then-persist, the orphan deleted best-effort on any failure THROWN
 //                          before the commit (opening the scope tx included). ⚠ ⛔ NOT a failed COMMIT itself:
@@ -148,6 +149,19 @@ export function translateLetterError(err: unknown): never {
   throw err;
 }
 
+/**
+ * Story 6.19b (fifth pass) — the J1 503 leaves a SERVER trace. A persistent envelope / KMS fault would otherwise block
+ * one person's letter and address reveal indefinitely with only a 503 in the access log. ⛔ Ids only: the claim id,
+ * the person key (`claimant` / `nominee:<version id>`) and the route — never a number, an address or a hash.
+ */
+function warnIfNumberUnverified(request: FastifyRequest, err: unknown, route: 'record_letter' | 'letter_address'): void {
+  if (!(err instanceof claim.CorrectionNumberUnverifiedError)) return;
+  request.log.warn(
+    { claimCaseId: err.claimCaseId.toLowerCase(), personKey: err.personKey, route },
+    "correction-letter: the person's current number could not be hashed — refusing with 503 number_unverified",
+  );
+}
+
 /** ⛔ A letter date LATER than today (IST) — 400 `correction_letter.date_in_future`. */
 function refuseFutureDate(date: string, today: string): void {
   if (date > today) {
@@ -272,6 +286,7 @@ export function createCorrectionChaseHandlers(deps: AppDeps) {
         });
         ok = true;
       } catch (err) {
+        warnIfNumberUnverified(request, err, 'record_letter');
         translateLetterError(err);
       } finally {
         await closeScopeTx(scopeTx, ok);
@@ -395,6 +410,7 @@ export function createCorrectionChaseHandlers(deps: AppDeps) {
           crypto: deps.encryption,
         }));
       } catch (err) {
+        warnIfNumberUnverified(request, err, 'letter_address');
         translateLetterError(err);
       }
       const plaintext = await decryptClaimContactField(address!.addressCiphertext, ctx.pariwarIdStr, deps.encryption);

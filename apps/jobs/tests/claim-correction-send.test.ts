@@ -3,9 +3,9 @@
 //   · a missing DLT template id, an unset helpline number, an unconfigured gateway ⇒ `error` + alarm — ⛔ never a
 //     fixture `accepted`, ⛔ never a placeholder number;
 //   · a KNOWN Secret Manager config fault (`INVALID_ARGUMENT`, `PERMISSION_DENIED`, `FAILED_PRECONDITION`,
-//     `UNIMPLEMENTED`, `UNAUTHENTICATED`) ⇒ FINAL `error` + alarm (`config:secret_manager_<code>`); ANY other fault (an
-//     outage, a quota spike, a socket error, a wrapped `cause`, ⛔ no code) ⇒ transient (retry); a send TIMEOUT ⇒
-//     transient (`api_unavailable:timeout`);
+//     `UNIMPLEMENTED`) ⇒ FINAL `error` + alarm (`config:secret_manager_<code>`); ANY other fault (an outage, a quota
+//     spike, `UNAUTHENTICATED` — a token-refresh blip, fifth-pass review —, a socket error, a wrapped `cause`, ⛔ no
+//     code) ⇒ transient (retry); a send TIMEOUT ⇒ transient (`api_unavailable:timeout`);
 //   · `invalid_number` → `rejected_invalid_number`; `carrier_reject` → `rejected_unreachable` (letter-eligible, ⛔ no
 //     alarm); `dlt_template_not_approved` / `auth` / `unknown` → `error` + alarm, FINAL; `rate_limited` /
 //     `api_unavailable` → transient.
@@ -89,6 +89,7 @@ describe('sendClaimCorrectionSms — fail CLOSED (T13)', () => {
     ['INTERNAL', 13],
     ['CANCELLED', 1],
     ['UNKNOWN', 2],
+    ['UNAUTHENTICATED (a metadata-server / token-refresh blip)', 16],
     ['a raw socket reset', 'ECONNRESET'],
     ['a DNS failure', 'ENOTFOUND'],
   ])('a Secret Manager fault that is ⛔ not a config fault (%s) ⇒ transient (retry)', async (_label, code) => {
@@ -101,7 +102,6 @@ describe('sendClaimCorrectionSms — fail CLOSED (T13)', () => {
   it.each([
     [7, 'config:secret_manager_permission_denied'],
     [3, 'config:secret_manager_invalid_argument'],
-    [16, 'config:secret_manager_unauthenticated'],
     [9, 'config:secret_manager_failed_precondition'],
     [12, 'config:secret_manager_unimplemented'],
   ])('⛔ a Secret Manager CONFIG fault (gRPC %s) ⇒ FINAL error + alarm, ⛔ never a silent retry', async (code, detail) => {
@@ -181,7 +181,7 @@ describe('classifySecretManagerFault — FINAL only for a known CONFIG fault', (
     [7, false, 'permission_denied'],
     [9, false, 'failed_precondition'],
     [12, false, 'unimplemented'],
-    [16, false, 'unauthenticated'],
+    [16, true, 'unauthenticated'], // ⚠ TRANSIENT (fifth-pass review) — a token-refresh blip ⛔ must not end the day's sends
     [14, true, 'unavailable'],
     [4, true, 'deadline_exceeded'],
     [8, true, 'resource_exhausted'],
@@ -200,8 +200,12 @@ describe('classifySecretManagerFault — FINAL only for a known CONFIG fault', (
   });
 
   it('reads a WRAPPED error\'s `cause.code` when the error itself carries none', () => {
-    expect(classifySecretManagerFault(new Error('x', { cause: Object.assign(new Error('y'), { code: 16 }) }))).toEqual({
+    expect(classifySecretManagerFault(new Error('x', { cause: Object.assign(new Error('y'), { code: 7 }) }))).toEqual({
       transient: false,
+      code: 'permission_denied',
+    });
+    expect(classifySecretManagerFault(new Error('x', { cause: Object.assign(new Error('y'), { code: 16 }) }))).toEqual({
+      transient: true,
       code: 'unauthenticated',
     });
     expect(classifySecretManagerFault(new Error('x', { cause: Object.assign(new Error('y'), { code: 'ECONNRESET' }) }))).toEqual({

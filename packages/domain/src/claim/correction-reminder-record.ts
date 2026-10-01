@@ -11,7 +11,9 @@
 // the first transient detail kept in `first_detail`) — ⛔ never a second row. A row held by a DIFFERENT job is
 // re-claimed only once its `claimed_at` is older than `CORRECTION_SEND_LEASE_MS` (10 minutes — longer than any
 // single attempt), else left alone. ⭐ A child whose re-check FAILS writes — or compare-and-sets its own `attempting`
-// row to — `skipped_superseded` with the reason in `detail`, and completes ⛔ without throwing.
+// row to — `skipped_superseded` with the reason in `detail`, and completes ⛔ without throwing; ⭐ except an own row
+// that already carries an attempt's detail, which is EXPIRED `error` (`exhausted:recheck_<reason>`) — ⛔ never
+// `skipped_superseded` over an attempt that may have sent.
 // ⚠ AT-LEAST-ONCE: `api_unavailable` includes "no response" and 5xx, which can follow a gateway accept, so a retried
 // slot can text a person twice — accepted, and recorded in `attempt_count` / `first_detail`, ⛔ never hidden.
 // ⚠ ALL ON ONE CLIENT: the jobs domain pool is `max: 2`; the re-check + claim run on the ONE client of the caller's
@@ -26,13 +28,14 @@ import type pg from 'pg';
 
 import { bindScopedDb, type Db } from '../db.js';
 import type { FieldCryptoDeps } from '../encryption/field-classes.js';
-import type { ClaimId, MemberId, NomineeVersionId, PariwarId } from '../ids/index.js';
+import type { ClaimId, MemberId, NomineeVersionId, PariwarId, TrusteeDecisionId } from '../ids/index.js';
 import {
   type ClaimCorrectionReminderRow,
   type CorrectionReminderOutcome,
   type CorrectionReminderPurpose,
   claimCorrectionLetters,
   claimCorrectionReminders,
+  claimCorrectionRuns,
 } from '../schema/claim_correction_chase.js';
 import {
   type CorrectionPerson,
@@ -183,14 +186,28 @@ export async function claimCorrectionReminder(
 /**
  * A failed re-check: compare-and-set THIS job's own `attempting` row to `skipped_superseded`, else write the marker
  * (⛔ no conflict raised — a final row, or another live job's row, is left as it is).
+ * ⭐ K4 — when THIS job's own `attempting` row carries a `detail`, an attempt ALREADY RAN (a transient failure noted
+ * it — possibly after a gateway accept): it is ⛔ never `skipped_superseded` (that would claim "⛔ not sent" and erase
+ * the evidence). It is EXPIRED like the stale-child path (`expireOwnCorrectionReminder`: `error`, the transient detail
+ * kept in `first_detail`, `detail` = `exhausted:recheck_<reason>`) and `expiredAttempt: true` is returned — the
+ * caller ALARMS (ids only).
  */
 export async function skipCorrectionReminder(
   db: Db,
   k: CorrectionReminderKey & { readonly sentOn: string; readonly late: boolean; readonly jobId: string; readonly reason: string },
-): Promise<void> {
+): Promise<{ readonly expiredAttempt: boolean }> {
   const existing = await readCorrectionReminder(db, k);
   if (existing !== null) {
     if (existing.outcome === 'attempting' && existing.claimedByJob === k.jobId) {
+      if (existing.detail !== null) {
+        const expired = await expireOwnCorrectionReminder(db, {
+          pariwarId: k.pariwarId,
+          reminderId: existing.reminderId,
+          jobId: k.jobId,
+          detail: `exhausted:recheck_${k.reason}`,
+        });
+        return { expiredAttempt: expired };
+      }
       await db
         .update(claimCorrectionReminders)
         .set({ outcome: 'skipped_superseded', detail: k.reason, updatedAt: sql`clock_timestamp()` })
@@ -199,12 +216,14 @@ export async function skipCorrectionReminder(
             eq(claimCorrectionReminders.reminderId, existing.reminderId),
             eq(claimCorrectionReminders.outcome, 'attempting'),
             eq(claimCorrectionReminders.claimedByJob, k.jobId),
+            sql`${claimCorrectionReminders.detail} IS NULL`,
           ),
         );
     }
-    return;
+    return { expiredAttempt: false };
   }
   await insertFinalCorrectionReminder(db, { ...k, outcome: 'skipped_superseded', detail: k.reason });
+  return { expiredAttempt: false };
 }
 
 /**
@@ -326,7 +345,15 @@ export type BeginCorrectionFamilySendResult =
       readonly person: CorrectionPerson;
       readonly contactLocale: 'hi' | 'en';
     }
-  | { readonly kind: 'skipped'; readonly reason: CorrectionSkipReason }
+  | {
+      readonly kind: 'skipped';
+      readonly reason: CorrectionSkipReason;
+      /**
+       * K4 — THIS job's own `attempting` row already carried an attempt's detail, so it was EXPIRED (`error`,
+       * `exhausted:recheck_<reason>`, the detail kept in `first_detail`) instead of skipped: ALARM (ids only).
+       */
+      readonly expiredAttempt?: true;
+    }
   | { readonly kind: 'noop'; readonly reason: 'already_final' | 'held_by_other' };
 
 /**
@@ -352,7 +379,8 @@ export class CorrectionNumberHashUnavailableError extends Error {
  * (b) (the family's part is done) and D30 stop the family's rows; the person is still a recipient and their letter has
  * ⛔ no recorded delivery IN THE CURRENT NUMBER'S EPOCH. Only then the row is claimed `attempting`. ⇒ a switch to
  * `staff` at 10:01 stops a job queued at 10:00. A failed re-check writes `skipped_superseded` (the reason in `detail`)
- * and returns ⛔ without throwing.
+ * and returns ⛔ without throwing — or, when this job's own row already carries an attempt's detail, expires it and
+ * returns `expiredAttempt: true` (K4; the caller alarms).
  * ⭐ The person's state is computed with the SWEEP's own logic (`readRunPersonStates` with `crypto`): it hashes the
  * CURRENT number when the version moved (`-271` §1), so a letter delivered to an OLD number ⛔ never silences a
  * 6.20-corrected one. ⚠ The caller commits, THEN decrypts for the send — the only crypto here is that hash.
@@ -386,8 +414,14 @@ export async function beginCorrectionFamilySend(
     subjectKey: '',
   };
   const skip = async (reason: CorrectionSkipReason): Promise<BeginCorrectionFamilySendResult> => {
-    await skipCorrectionReminder(db, { ...key, sentOn: input.sentOn, late: input.late, jobId: input.jobId, reason });
-    return { kind: 'skipped', reason };
+    const { expiredAttempt } = await skipCorrectionReminder(db, {
+      ...key,
+      sentOn: input.sentOn,
+      late: input.late,
+      jobId: input.jobId,
+      reason,
+    });
+    return expiredAttempt ? { kind: 'skipped', reason, expiredAttempt: true } : { kind: 'skipped', reason };
   };
 
   const run = await readCorrectionRun(db, input.pariwarId, input.runId);
@@ -506,6 +540,53 @@ export async function readRunLetters(db: Db, pariwarId: PariwarId, runId: string
     .from(claimCorrectionLetters)
     .where(and(eq(claimCorrectionLetters.pariwarId, pariwarId), eq(claimCorrectionLetters.runId, runId)))
     .orderBy(asc(claimCorrectionLetters.personKey), asc(claimCorrectionLetters.sequence));
+  return rows.map(({ screenshotStorageKey, ...r }) => ({ ...r, hasScreenshot: screenshotStorageKey !== null }));
+}
+
+/** A letter of a RETURN — a run letter carrying the run it was recorded against. */
+export interface ReturnLetterRow extends RunLetterRow {
+  readonly runId: string;
+}
+
+/**
+ * ⭐ K1 — EVERY letter of the live return's FAMILY / DIRECTION runs (⛔ not only the latest run's): after family →
+ * staff → family a run-1 letter stays on the queue (its delivery is still recordable — the delivery writer is keyed
+ * on the letter, ⛔ not the run). Ordered by posting date, then insert. ⛔ No tracking number, ⛔ no screenshot key.
+ */
+export async function readReturnFamilyLetters(
+  db: Db,
+  pariwarId: PariwarId,
+  claimCaseId: ClaimId,
+  returnDecisionId: string,
+): Promise<ReturnLetterRow[]> {
+  const rows = await db
+    .select({
+      letterId: claimCorrectionLetters.letterId,
+      runId: claimCorrectionLetters.runId,
+      personKey: claimCorrectionLetters.personKey,
+      sequence: claimCorrectionLetters.sequence,
+      postedOn: claimCorrectionLetters.postedOn,
+      deliveredOn: claimCorrectionLetters.deliveredOn,
+      createdAt: claimCorrectionLetters.createdAt,
+      screenshotStorageKey: claimCorrectionLetters.screenshotStorageKey,
+    })
+    .from(claimCorrectionLetters)
+    .innerJoin(
+      claimCorrectionRuns,
+      and(
+        eq(claimCorrectionRuns.runId, claimCorrectionLetters.runId),
+        eq(claimCorrectionRuns.pariwarId, claimCorrectionLetters.pariwarId),
+      ),
+    )
+    .where(
+      and(
+        eq(claimCorrectionLetters.pariwarId, pariwarId),
+        eq(claimCorrectionLetters.claimCaseId, claimCaseId),
+        eq(claimCorrectionRuns.returnDecisionId, returnDecisionId as TrusteeDecisionId),
+        inArray(claimCorrectionRuns.kind, ['family', 'direction']),
+      ),
+    )
+    .orderBy(asc(claimCorrectionLetters.postedOn), asc(claimCorrectionLetters.createdAt));
   return rows.map(({ screenshotStorageKey, ...r }) => ({ ...r, hasScreenshot: screenshotStorageKey !== null }));
 }
 

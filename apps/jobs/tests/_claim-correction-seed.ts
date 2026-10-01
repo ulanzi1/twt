@@ -316,13 +316,15 @@ export async function seedReturnedClaim(
 
 /**
  * Delete everything a test created — and FAIL LOUDLY if any of it survives: a claim, a run, a reminder, a letter, a
- * staff user, a role grant or a device token (a surviving OPEN run would be read by every later sweep in the shared
- * database).
+ * member, a staff user, a role grant or a device token (a surviving OPEN run would be read by every later sweep in the
+ * shared database).
+ * ⭐ EVERY step runs, and every failure is COLLECTED, before anything throws (fifth-pass review): one failing delete
+ * must ⛔ never skip the others — or the leftover count that would have named them.
  * ⚠ The claims go FIRST and ⛔ NOT under the replica role: `session_replication_role = 'replica'` disables the RI
  * triggers too, so a `DELETE FROM claims` there would ⛔ not cascade and would orphan the runs, reminders and letters.
  * The cascade itself is allowed by the append-only tables' triggers (`pg_trigger_depth() > 1`). Only the rows ⛔ no
- * cascade reaches (`events_log`, the nominee history, the consents, the staff fixtures) are then deleted under the
- * replica role — each OPTIONAL delete in its own SAVEPOINT, so one failure (25P02) can ⛔ never roll back the rest.
+ * cascade reaches (`events_log`, the nominee history, the consents, the `members` rows, the staff fixtures) are then
+ * deleted under the replica role — each in its own SAVEPOINT, so one failure (25P02) can ⛔ never roll back the rest.
  */
 export async function cleanupClaims(
   pool: pg.Pool,
@@ -331,69 +333,88 @@ export async function cleanupClaims(
   extra: { readonly userIds?: readonly string[] } = {},
 ): Promise<void> {
   const userIds = extra.userIds ?? [];
-  if (claimCaseIds.length === 0 && userIds.length === 0) return;
-  if (claimCaseIds.length > 0) await pool.query('DELETE FROM claims WHERE claim_case_id = ANY($1)', [claimCaseIds]);
+  if (claimCaseIds.length === 0 && memberIds.length === 0 && userIds.length === 0) return;
   const failures: string[] = [];
-  const c = await pool.connect();
-  try {
-    await c.query('BEGIN');
-    await c.query("SET LOCAL session_replication_role = 'replica'");
-    const optional = async (label: string, statement: string, params: unknown[]): Promise<void> => {
-      await c.query('SAVEPOINT cleanup_step');
-      try {
-        await c.query(statement, params);
-        await c.query('RELEASE SAVEPOINT cleanup_step');
-      } catch (e) {
-        await c.query('ROLLBACK TO SAVEPOINT cleanup_step');
-        failures.push(`${label}: ${(e as Error).message}`);
-      }
-    };
-    if (claimCaseIds.length > 0) await optional('events_log', 'DELETE FROM events_log WHERE stream_id = ANY($1)', [claimCaseIds]);
-    if (memberIds.length > 0) {
-      await optional('member_nominee_versions', 'DELETE FROM member_nominee_versions WHERE member_id = ANY($1)', [memberIds]);
-      await optional('member_nominees', 'DELETE FROM member_nominees WHERE member_id = ANY($1)', [memberIds]);
-      await optional('consent_records', 'DELETE FROM consent_records WHERE subject_id = ANY($1)', [memberIds]);
+  const step = async (label: string, fn: () => Promise<unknown>): Promise<void> => {
+    try {
+      await fn();
+    } catch (e) {
+      failures.push(`${label}: ${(e as Error).message}`);
     }
-    if (userIds.length > 0) {
-      await optional('member_device_tokens', 'DELETE FROM member_device_tokens WHERE principal_id = ANY($1::uuid[])', [userIds]);
-      await optional('role_grants', 'DELETE FROM role_grants WHERE user_id = ANY($1::uuid[])', [userIds]);
-      await optional('users', 'DELETE FROM users WHERE id = ANY($1::uuid[])', [userIds]);
-    }
-    await c.query('COMMIT');
-  } catch (e) {
-    await c.query('ROLLBACK').catch(() => undefined);
-    throw e;
-  } finally {
-    c.release();
+  };
+  if (claimCaseIds.length > 0) {
+    await step('claims (the cascade)', () => pool.query('DELETE FROM claims WHERE claim_case_id = ANY($1)', [claimCaseIds]));
   }
-  if (failures.length > 0) console.warn('[claim-correction seed] cleanup — optional deletes failed:', failures.join('; '));
+  await step('the replica-role transaction', async () => {
+    const c = await pool.connect();
+    try {
+      await c.query('BEGIN');
+      await c.query("SET LOCAL session_replication_role = 'replica'");
+      const each = async (label: string, statement: string, params: unknown[]): Promise<void> => {
+        await c.query('SAVEPOINT cleanup_step');
+        try {
+          await c.query(statement, params);
+          await c.query('RELEASE SAVEPOINT cleanup_step');
+        } catch (e) {
+          await c.query('ROLLBACK TO SAVEPOINT cleanup_step');
+          failures.push(`${label}: ${(e as Error).message}`);
+        }
+      };
+      if (claimCaseIds.length > 0) await each('events_log', 'DELETE FROM events_log WHERE stream_id = ANY($1)', [claimCaseIds]);
+      if (memberIds.length > 0) {
+        await each('member_nominee_versions', 'DELETE FROM member_nominee_versions WHERE member_id = ANY($1)', [memberIds]);
+        await each('member_nominees', 'DELETE FROM member_nominees WHERE member_id = ANY($1)', [memberIds]);
+        await each('consent_records', 'DELETE FROM consent_records WHERE subject_id = ANY($1)', [memberIds]);
+        await each('members', 'DELETE FROM members WHERE member_id = ANY($1::uuid[])', [memberIds]);
+      }
+      if (userIds.length > 0) {
+        await each('member_device_tokens', 'DELETE FROM member_device_tokens WHERE principal_id = ANY($1::uuid[])', [userIds]);
+        await each('role_grants', 'DELETE FROM role_grants WHERE user_id = ANY($1::uuid[])', [userIds]);
+        await each('users', 'DELETE FROM users WHERE id = ANY($1::uuid[])', [userIds]);
+      }
+      await c.query('COMMIT');
+    } catch (e) {
+      await c.query('ROLLBACK').catch(() => undefined);
+      throw e;
+    } finally {
+      c.release();
+    }
+  });
   // ⭐ FAIL LOUDLY on ANY leftover this suite created — ⛔ not just the claims and runs: a surviving reminder or letter (an
-  // orphan the cascade missed), a staff user, a role grant (a later suite's escalation recipients) or a device token
-  // (a later suite's push target) all leak into the shared database.
-  const { rows } = await pool.query<{
-    claims: number;
-    runs: number;
-    reminders: number;
-    letters: number;
-    users: number;
-    grants: number;
-    tokens: number;
-  }>(
-    `SELECT (SELECT count(*) FROM claims WHERE claim_case_id = ANY($1::uuid[]))::int AS claims,
-            (SELECT count(*) FROM claim_correction_runs WHERE claim_case_id = ANY($1::uuid[]))::int AS runs,
-            (SELECT count(*) FROM claim_correction_reminders WHERE claim_case_id = ANY($1::uuid[]))::int AS reminders,
-            (SELECT count(*) FROM claim_correction_letters WHERE claim_case_id = ANY($1::uuid[]))::int AS letters,
-            (SELECT count(*) FROM users WHERE id = ANY($2::uuid[]))::int AS users,
-            (SELECT count(*) FROM role_grants WHERE user_id = ANY($2::uuid[]))::int AS grants,
-            (SELECT count(*) FROM member_device_tokens WHERE principal_id = ANY($2::uuid[]))::int AS tokens`,
-    [claimCaseIds, userIds],
-  );
-  const left = rows[0]!;
-  const leftovers = Object.entries(left).filter(([, n]) => n > 0);
-  if (leftovers.length > 0) {
+  // orphan the cascade missed), a member, a staff user, a role grant (a later suite's escalation recipients) or a
+  // device token (a later suite's push target) all leak into the shared database.
+  let leftovers: [string, number][] = [];
+  await step('the leftover count', async () => {
+    const { rows } = await pool.query<{
+      claims: number;
+      runs: number;
+      reminders: number;
+      letters: number;
+      members: number;
+      users: number;
+      grants: number;
+      tokens: number;
+    }>(
+      `SELECT (SELECT count(*) FROM claims WHERE claim_case_id = ANY($1::uuid[]))::int AS claims,
+              (SELECT count(*) FROM claim_correction_runs WHERE claim_case_id = ANY($1::uuid[]))::int AS runs,
+              (SELECT count(*) FROM claim_correction_reminders WHERE claim_case_id = ANY($1::uuid[]))::int AS reminders,
+              (SELECT count(*) FROM claim_correction_letters WHERE claim_case_id = ANY($1::uuid[]))::int AS letters,
+              (SELECT count(*) FROM members WHERE member_id = ANY($3::uuid[]))::int AS members,
+              (SELECT count(*) FROM users WHERE id = ANY($2::uuid[]))::int AS users,
+              (SELECT count(*) FROM role_grants WHERE user_id = ANY($2::uuid[]))::int AS grants,
+              (SELECT count(*) FROM member_device_tokens WHERE principal_id = ANY($2::uuid[]))::int AS tokens`,
+      [claimCaseIds, userIds, memberIds],
+    );
+    leftovers = Object.entries(rows[0]!).filter(([, n]) => n > 0);
+  });
+  if (failures.length > 0 || leftovers.length > 0) {
     throw new Error(
-      `[claim-correction seed] cleanup LEFT rows behind — ${leftovers.map(([k, n]) => `${String(n)} ${k}`).join(', ')} ` +
-        '(a surviving open run is swept by every later suite; a surviving grant or token changes their recipients)',
+      '[claim-correction seed] cleanup FAILED — ' +
+        [
+          ...(leftovers.length > 0 ? [`left rows behind: ${leftovers.map(([k, n]) => `${String(n)} ${k}`).join(', ')}`] : []),
+          ...(failures.length > 0 ? [`failed steps: ${failures.join('; ')}`] : []),
+        ].join(' | ') +
+        ' (a surviving open run is swept by every later suite; a surviving grant or token changes their recipients)',
     );
   }
 }

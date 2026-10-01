@@ -26,6 +26,7 @@ import {
   PARIWAR_B,
   enterAppRoleNoScope,
   enterAppScope,
+  lockTruncateSetNowait,
   seedClaim,
   seedDeathCertificate,
   seedMember,
@@ -398,6 +399,12 @@ describe.skipIf(!hasDatabase)('migration 0122 — death-certificate uploads + re
     const { client } = getTx();
     for (const t of TABLES) {
       await client.query('SAVEPOINT tr');
+      // ⚠ Lock order (6.19b review, 2026-10-01 — the likelier source of the round-1 D17 deadlock): `TRUNCATE …
+      // CASCADE` locks the parent and THEN each table the CASCADE reaches, while a parallel spec's INSERT into one of
+      // them holds it and waits on the parent for its FK check. The whole set is taken ALL OR NOTHING with NOWAIT and
+      // retried (`lockTruncateSetNowait`) — this side ⛔ never waits while holding part of it. The `ROLLBACK TO
+      // SAVEPOINT tr` below drops the set again before the next table.
+      expect(await lockTruncateSetNowait(client, t)).toContain(t);
       const err = await client.query(`TRUNCATE ${t} CASCADE`).then(
         () => undefined,
         (e: unknown) => e,

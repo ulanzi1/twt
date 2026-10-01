@@ -416,7 +416,9 @@ describe('<CorrectionQueueRoute> — the correction chase (Story 6.19b)', () => 
   it('⭐ a `?claim=` that is ⛔ not in the list SAYS so — ⛔ never a silent miss', async () => {
     search = { claim: '99999999-9999-4999-8999-999999999999' };
     setup([ITEM]);
-    expect(await screen.findByTestId('queue-claim-not-shown')).toHaveAttribute('role', 'status');
+    // ⭐ Inside a PERSISTENT status region (mounted before the list arrived) — so its appearance is announced.
+    const line = await screen.findByTestId('queue-claim-not-shown');
+    expect(line.closest('[role="status"]')).toBe(screen.getByTestId('queue-claim-status'));
     expect(screen.queryByTestId('queue-highlighted')).toBeNull();
     search = {};
   });
@@ -485,7 +487,7 @@ describe('<CorrectionQueueRoute> — the correction chase (Story 6.19b)', () => 
       ],
     });
 
-  it('⛔ a 403 on the screenshot is the ROLE — "your role cannot", ⛔ "Try again"', async () => {
+  it('⛔ a 403 on the screenshot is the ROLE or the scope — a NEUTRAL line, ⛔ "Try again"', async () => {
     search = {};
     const { ApiError } = await import('../src/api/client.js');
     getCorrectionLetterScreenshot.mockRejectedValue(new ApiError(403, 'auth.forbidden', 'no'));
@@ -494,7 +496,22 @@ describe('<CorrectionQueueRoute> — the correction chase (Story 6.19b)', () => 
     const statusLine = screen.getByTestId('letter-screenshot-status');
     expect(statusLine.textContent).toBe(''); // ⭐ persistent — its text changes, so it is announced
     fireEvent.click(screen.getByRole('button', { name: 'Get the screenshot link' }));
-    await waitFor(() => expect(statusLine.textContent).toBe('Your role cannot do this — a District Admin can.'));
+    await waitFor(() => expect(statusLine.textContent).toBe('Your access does not cover this claim.'));
+  });
+
+  it.each([
+    [404, 'correction_letter.no_screenshot', 'No screenshot is on record for this letter. Reload the page.'],
+    [401, 'auth.session_required', 'Your session has ended. Sign in again to continue.'],
+    [429, 'rate_limit.exceeded', 'Too many attempts in a short time. Wait a few minutes, then try again.'],
+    [500, 'internal', 'The screenshot could not be opened. Try again.'],
+  ])('⭐ a %s on the screenshot reads as its OWN line (fifth-pass review)', async (status, code, copy) => {
+    search = {};
+    const { ApiError } = await import('../src/api/client.js');
+    getCorrectionLetterScreenshot.mockRejectedValue(new ApiError(status, code, 'no'));
+    setup([screenshotItem()]);
+    await screen.findByTestId(`correction-queue-item-${CLAIM}`);
+    fireEvent.click(screen.getByRole('button', { name: 'Get the screenshot link' }));
+    await waitFor(() => expect(screen.getByTestId('letter-screenshot-status').textContent).toBe(copy));
   });
 
   it('⭐ the link is dropped a few seconds BEFORE the signed URL expires, and focus returns to the button', async () => {
@@ -511,6 +528,8 @@ describe('<CorrectionQueueRoute> — the correction chase (Story 6.19b)', () => 
         vi.advanceTimersByTime(56_000);
       });
       expect(screen.queryByTestId('letter-screenshot-link')).toBeNull();
+      // ⭐ The expiry SAYS so — ⛔ the link silently turning back into the button.
+      expect(screen.getByTestId('letter-screenshot-status').textContent).toBe('The screenshot link expired. Get a new link to open it.');
       await waitFor(() => expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Get the screenshot link' })));
     } finally {
       vi.useRealTimers();
@@ -524,5 +543,83 @@ describe('<CorrectionQueueRoute> — the correction chase (Story 6.19b)', () => 
     for (const bad of [0, -1, 3, Number.NaN, Number.POSITIVE_INFINITY, '300', null, undefined]) {
       expect(screenshotLinkTtlMs(bad), String(bad)).toBeNull();
     }
+  });
+});
+
+// ── Fifth-pass review (2026-10-01) — a failed REFETCH keeps the list; nominee labels without a rank ────────────────
+describe('<CorrectionQueueRoute> — a failed refetch is a banner, ⛔ a wiped list', () => {
+  it('⭐ the list STAYS when a refetch fails, with a non-blocking banner; the full error branch is only for ⛔ no data', async () => {
+    search = {};
+    const { ApiError } = await import('../src/api/client.js');
+    getClaimsUnderCorrection.mockReset();
+    getClaimsUnderCorrection
+      .mockResolvedValueOnce({ pariwar_id: PARIWAR, items: [ITEM] })
+      .mockRejectedValueOnce(new ApiError(503, 'internal', 'down'));
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={qc}>
+        <CorrectionQueueRoute />
+      </QueryClientProvider>,
+    );
+    const row = await screen.findByTestId(`correction-queue-item-${CLAIM}`);
+    await act(async () => {
+      await qc.refetchQueries({ queryKey: ['claims-under-correction', PARIWAR] });
+    });
+    expect(await screen.findByTestId('correction-queue-refetch-error')).toHaveTextContent(
+      'The list could not be refreshed, so it may be out of date.',
+    );
+    // The SAME row node — ⛔ unmounted and re-created (which would drop a revealed address and typed fields).
+    expect(screen.getByTestId(`correction-queue-item-${CLAIM}`)).toBe(row);
+    expect(screen.queryByTestId('correction-queue-error')).toBeNull();
+  });
+
+  it('⛔ a first load that fails (⛔ no data) still shows the full error branch, ⛔ a banner', async () => {
+    search = {};
+    const { ApiError } = await import('../src/api/client.js');
+    getClaimsUnderCorrection.mockReset();
+    getClaimsUnderCorrection.mockRejectedValue(new ApiError(503, 'internal', 'down'));
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={qc}>
+        <CorrectionQueueRoute />
+      </QueryClientProvider>,
+    );
+    expect(await screen.findByTestId('correction-queue-error')).toBeInTheDocument();
+    expect(screen.queryByTestId('correction-queue-refetch-error')).toBeNull();
+  });
+});
+
+describe('<CorrectionQueueRoute> — nominees WITHOUT a rank (D30) are told apart', () => {
+  it('⭐ "Nominee A" / "Nominee B" by person-key order — ⛔ two rows both reading "Nominee"', async () => {
+    search = {};
+    const nominee = (key: string) => ({
+      person_key: key,
+      role: 'nominee' as const,
+      rank: null,
+      status: 'not_yet' as const,
+      found_dead_on: null,
+      reminders_accepted: 0,
+      letters: [],
+    });
+    const K1 = 'nominee:aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+    const K2 = 'nominee:bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+    // Listed in REVERSE key order — the label follows the key, ⛔ the list position.
+    setup([{ ...ITEM, correction_chase: { ...ITEM.correction_chase, cannot_remind: 'undetermined', people: [nominee(K2), nominee(K1)] } }]);
+    await screen.findByTestId(`correction-queue-item-${CLAIM}`);
+    expect(screen.getByTestId(`person-${K1}`).textContent).toContain('Nominee A');
+    expect(screen.getByTestId(`person-${K2}`).textContent).toContain('Nominee B');
+  });
+
+  it('⭐ a known rank is used as is', async () => {
+    const { personLabels } = await import('../src/modules/correction-chase/CorrectionChasePanel.js');
+    const base = { status: 'reached' as const, found_dead_on: null, reminders_accepted: 0, letters: [] };
+    const labels = personLabels([
+      { ...base, person_key: 'nominee:2', role: 'nominee', rank: 2 },
+      { ...base, person_key: 'claimant', role: 'claimant', rank: null },
+      { ...base, person_key: 'nominee:1', role: 'nominee', rank: 1 },
+    ]);
+    expect(labels.get('nominee:1')).toBe('Nominee 1');
+    expect(labels.get('nominee:2')).toBe('Nominee 2');
+    expect(labels.get('claimant')).toBe('Claimant');
   });
 });

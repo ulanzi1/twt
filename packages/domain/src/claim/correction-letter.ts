@@ -160,7 +160,8 @@ export async function assertCorrectionLetterAllowed(
   pariwarId: PariwarId,
   claimCaseId: ClaimId,
   personKey: string,
-  opts: { readonly crypto?: FieldCryptoDeps } = {},
+  /** REQUIRED (K3) — an omitted `crypto` would silently skip the AC3 reset and the fail-closed hash check. */
+  opts: { readonly crypto: FieldCryptoDeps },
 ): Promise<{
   readonly run: CorrectionRunView;
   readonly address: CorrectionLetterAddress;
@@ -245,7 +246,8 @@ export async function recordCorrectionLetter(
     readonly trackingNumberCiphertext: string;
     readonly actorId: string;
     readonly actorDisplay: string;
-    readonly crypto?: FieldCryptoDeps;
+    /** REQUIRED (K3) — hashes the person's CURRENT number (AC3's reset; the fail-closed `number_unverified`). */
+    readonly crypto: FieldCryptoDeps;
   },
 ): Promise<ClaimCorrectionLetterRow> {
   await acquireCorrectionChaseLock(client, input.pariwarId, input.claimCaseId);

@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest';
 import {
   correctionNextReminderOn,
   correctionPeopleFromRecords,
+  correctionPeopleLeftWithLetters,
   correctionPersonStatus,
 } from '../../src/claim/correction-chase-read.js';
 import {
@@ -256,6 +257,7 @@ describe('correctionNextReminderOn (J7 — ⛔ no date the sweep will not send)'
     resubmitted: false,
     familyPartDone: false,
     cannotRemind: false,
+    latestMark: 'family' as 'family' | 'staff' | null,
   };
 
   it('an open family run advertises its next Panel day', () => {
@@ -282,6 +284,17 @@ describe('correctionNextReminderOn (J7 — ⛔ no date the sweep will not send)'
     expect(expected).not.toBeNull();
     expect(correctionNextReminderOn({ ...staff, familyPartDone: true })).toBe(expected);
     expect(correctionNextReminderOn({ ...staff, cannotRemind: true })).toBe(expected);
+  });
+
+  it('⭐ K3 — a FAMILY run whose latest mark is ⛔ not `family` (a held switch) ⇒ ⛔ none (the child skips `not_a_family_mark`)', () => {
+    expect(correctionNextReminderOn({ ...base, latestMark: 'staff' })).toBeNull();
+    expect(correctionNextReminderOn({ ...base, latestMark: null })).toBeNull();
+  });
+
+  it('⭐ K3 — a DIRECTION run is exempt from the mark rule (as in the child); a STAFF run ignores the mark', () => {
+    expect(correctionNextReminderOn({ ...base, kind: 'direction', latestMark: 'staff' })).toBe('2026-10-05');
+    const staff = { ...base, kind: 'staff' as const };
+    expect(correctionNextReminderOn({ ...staff, latestMark: 'family' })).toBe(correctionNextReminderOn(staff));
   });
 });
 
@@ -319,5 +332,52 @@ describe('correctionPeopleFromRecords (J6 — the people under D30, from the run
   it('a key of any other format is ⛔ not a person (skipped); ⛔ no records ⇒ ⛔ nobody', () => {
     expect(correctionPeopleFromRecords([keyed(row(1, 'accepted', 'A'), 'staff:u1')], [])).toEqual([]);
     expect(correctionPeopleFromRecords([], [])).toEqual([]);
+  });
+
+  it('⭐ K1 — a nominee\'s rank comes from the effective declaration\'s map; an unmapped key and the claimant stay null', () => {
+    const rows = [keyed(row(1, 'accepted', 'A', 1), 'nominee:v1'), keyed(row(1, 'accepted', 'C', 2), 'claimant')];
+    const letters = [letterRow('nominee:v2', 1, null, 10), letterRow('nominee:v9', 1, null, 11)];
+    const ranks = new Map<string, 1 | 2>([
+      ['nominee:v1', 1],
+      ['nominee:v2', 2],
+      ['claimant', 1],
+    ]);
+    expect(correctionPeopleFromRecords(rows, letters, ranks).map((p) => [p.personKey, p.rank])).toEqual([
+      ['nominee:v1', 1],
+      ['claimant', null],
+      ['nominee:v2', 2],
+      ['nominee:v9', null],
+    ]);
+  });
+});
+
+describe('correctionPeopleLeftWithLetters (K1 — a person who LEFT the recipient set keeps their letters)', () => {
+  const letterRow = (personKey: string, at: number): RunLetterRow => ({
+    letterId: `l-${personKey}`,
+    personKey,
+    sequence: 1,
+    postedOn: '2026-10-05',
+    deliveredOn: null,
+    createdAt: t(at),
+    hasScreenshot: false,
+  });
+  const keyed = (r: PersonReminderRow, recipientKey: string): RunFamilyRow => ({ ...familyRow(r), recipientKey });
+
+  it('adds every record person with a LETTER who is ⛔ a current recipient, in record order', () => {
+    const rows = [
+      keyed(row(1, 'rejected_invalid_number', 'A', 1), 'nominee:v1'),
+      keyed(row(1, 'rejected_invalid_number', 'C', 2), 'claimant'),
+    ];
+    const letters = [letterRow('claimant', 10), letterRow('nominee:old', 11), letterRow('nominee:v1', 12)];
+    const left = correctionPeopleLeftWithLetters(['nominee:v1'], correctionPeopleFromRecords(rows, letters));
+    expect(left.map((p) => p.personKey)).toEqual(['claimant', 'nominee:old']);
+    expect(left[1]!.letters.map((l) => l.letterId)).toEqual(['l-nominee:old']);
+  });
+
+  it('a non-recipient with only reminder rows is ⛔ not added (no letter to keep); every recipient ⇒ ⛔ nobody', () => {
+    const rows = [keyed(row(1, 'accepted', 'C', 1), 'claimant')];
+    expect(correctionPeopleLeftWithLetters(['nominee:v1'], correctionPeopleFromRecords(rows, []))).toEqual([]);
+    const letters = [letterRow('nominee:v1', 10)];
+    expect(correctionPeopleLeftWithLetters(['nominee:v1'], correctionPeopleFromRecords([], letters))).toEqual([]);
   });
 });

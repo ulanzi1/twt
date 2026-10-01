@@ -1086,6 +1086,8 @@ export async function recordClosureDirection(
       textCiphertext: input.textCiphertext,
       createdByActor: input.actorId,
       createdByDisplay: input.actorDisplay,
+      // The direction's DATE anchors its directee's reminders (day 7, then weekly) — the act's clock.
+      createdAt: input.now,
     })
     .returning();
   if (input.kind !== 'restart_family_reminders') return { direction: direction!, openedRunId: null };

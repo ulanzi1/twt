@@ -69,6 +69,7 @@ export * from './correction-chase-read.js';
 export * from './correction-closure.js';
 export * from './correction-closure-read.js';
 export * from './closure-letter.js';
+export * from './correction-closure-jobs.js';
 // Story 6.19c (AC15) — the re-file guard after a closure for no response.
 export * from './refile-guard.js';
 export * from './admin-directory.js';

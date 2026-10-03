@@ -20,7 +20,7 @@ import {
   type ClaimCertificateReminderDeps,
 } from '../src/scheduler/claim-certificate-reminders.js';
 import { ClaimCorrectionTransientError } from '../src/scheduler/claim-correction-reminders.js';
-import { cleanupClaims, encryptField, onOwnTx } from './_claim-correction-seed.js';
+import { cleanupClaims, encryptField, onOwnTx, seedReturnedClaim } from './_claim-correction-seed.js';
 
 const DATABASE_URL = process.env['DATABASE_URL'];
 const hasDatabase = Boolean(DATABASE_URL);
@@ -439,5 +439,126 @@ describe.skipIf(!hasDatabase)('Story 6.19d — the certificate reminder (live DB
     h.setNow(tenAmIst(day(d0, 2)));
     expect(await child(h, job!)).toEqual({ status: 'skipped', reason: 'stale_slot' });
     expect(h.sent).toEqual([]);
+  });
+
+  // ── AC6 — ⛔ never refused, closed or time-limited; ⛔ never the closure's ground (CR12) ──────────────────────────
+
+  it('⭐ AC6 — a claim whose ONLY open matter is a certificate wait answers `closure.no_live_return` (the closure ⛔ never applies)', async () => {
+    const s = await seedWait();
+    const h = harness();
+    h.setNow(tenAmIst(day(todayIst(), 1)));
+    await runCertificateReminderSweep(h.deps, boss(h));
+    expect((await runsOf(s.cid))[0]).toMatchObject({ cause: 'rejected', end_reason: null });
+    await expect(
+      onOwnTx(pool, PARIWAR, (client) =>
+        claim.requestCorrectionClosure(client, {
+          pariwarId: ids.pariwarId(PARIWAR),
+          claimCaseId: ids.claimId(s.cid),
+          actorId: randomUUID(),
+          actorDisplay: 'District Admin One',
+          now: new Date(),
+          noteCiphertext: 'enc:v1:n',
+          crypto: enc,
+        }),
+      ),
+    ).rejects.toSatisfy((err: unknown) => err instanceof claim.CorrectionClosureRefusedError && err.refusal === 'no_live_return');
+  });
+
+  it('⭐ AC6 / CR12 — BOTH waits: the closure\'s readiness and the ONE resolver read the SAME with and without the certificate rows', async () => {
+    const r = await seedReturnedClaim(pool, PARIWAR, enc, { nomineeMobiles: ['9812345678'] });
+    claims.push(r.claimCaseId);
+    members.push(r.deceasedMemberId);
+    const read = () =>
+      onOwnTx(pool, PARIWAR, async (client) => {
+        const db = bindScopedDb(client);
+        const at = new Date();
+        const readiness = await claim.readClosureReadiness(db, ids.pariwarId(PARIWAR), ids.claimId(r.claimCaseId), at, { crypto: enc });
+        const chase = await claim.resolveCorrectionChase(db, ids.pariwarId(PARIWAR), ids.claimId(r.claimCaseId), { crypto: enc });
+        return JSON.stringify({ readiness, chase });
+      });
+    const before = await read();
+    // A certificate wait beside the correction return — its run, a dead-number row, a staff chase row, a letter.
+    const { rows } = await pool.query<{ run_id: string }>(
+      `INSERT INTO claim_certificate_reminder_runs (claim_case_id, pariwar_id, cause, day0) VALUES ($1, $2, 'missing', $3) RETURNING run_id`,
+      [r.claimCaseId, PARIWAR, todayIst()],
+    );
+    const runId = rows[0]!.run_id;
+    await pool.query(
+      `INSERT INTO claim_certificate_reminders (run_id, claim_case_id, pariwar_id, slot_day, sent_on, recipient_key, purpose, subject_key, outcome, recipient_number_hash)
+       VALUES ($1, $2, $3, 1, $4, 'claimant', 'family_sms', '', 'accepted', 'h'),
+              ($1, $2, $3, 8, $4, 'staff:unassigned', 'letter_chase', 'claimant', 'no_target', NULL)`,
+      [runId, r.claimCaseId, PARIWAR, todayIst()],
+    );
+    await pool.query(
+      `INSERT INTO claim_certificate_reminder_letters (run_id, claim_case_id, pariwar_id, person_key, posted_on, tracking_number_ciphertext, recorded_by_actor, recorded_by_display)
+       VALUES ($1, $2, $3, 'claimant', $4, 'enc:v1:t', 'da', 'D')`,
+      [runId, r.claimCaseId, PARIWAR, todayIst()],
+    );
+    expect(await read()).toBe(before);
+  });
+
+  it('⭐ AC6 — after day 180 the claim is UNCHANGED (still being checked, ⛔ refused, ⛔ closed) and approvable once a certificate is accepted', async () => {
+    const s = await seedWait();
+    const h = harness();
+    h.setNow(tenAmIst(day(todayIst(), 181)));
+    await runCertificateReminderSweep(h.deps, boss(h));
+    expect((await runsOf(s.cid))[0]!.end_reason).toBe('completed');
+    const state = await pool.query<{ current_state: string }>('SELECT current_state FROM claims WHERE claim_case_id = $1', [s.cid]);
+    expect(state.rows[0]!.current_state).toBe('verifier_review');
+    // A new certificate is sent and ACCEPTED — the approval conjunct passes (the wait ⛔ never cost the claim anything).
+    await onOwnTx(pool, PARIWAR, async (client) => {
+      const db = bindScopedDb(client);
+      const pid = ids.pariwarId(PARIWAR);
+      const cid = ids.claimId(s.cid);
+      const { rows: docs } = await client.query<{ id: string }>(
+        "SELECT claim_document_id AS id FROM claim_documents WHERE claim_case_id = $1 AND document_type = 'death_certificate'",
+        [cid],
+      );
+      const doc = { id: docs[0]!.id as never };
+      const uploadId = randomUUID();
+      const key = `pariwar/${pid}/claim/${cid}/death_certificate/${String(doc.id)}/${uploadId}`;
+      await client.query('UPDATE claim_documents SET storage_object_key = $2 WHERE claim_document_id = $1', [doc.id, key]);
+      await db.insert(schema.claimDeathCertificateUploads).values({
+        uploadId: uploadId as never, claimCaseId: cid, pariwarId: pid, deceasedMemberId: ids.memberId(s.mid), claimDocumentId: doc.id,
+        storageObjectKey: key, contentType: 'application/pdf', byteSize: 1024, channel: 'member_app', uploadedByActorId: null,
+        uploadedAt: new Date(), parityOutcome: 'match', parityFlags: {}, ocrConfidence: 0.9,
+      });
+      const date = cycleCalendar.addCalendarDays(todayIst(), -30);
+      await claim.recordDeathCertificateReview(client, {
+        claimCaseId: cid, pariwarId: pid, verdict: 'accepted', certificateToken: uploadId, acceptedDate: date,
+        acceptedDateCiphertext: `enc:v1:accepted-date:${date}`, rejectionReason: null, noteCiphertext: 'enc:v1:n',
+        expectedLiveReviewId: (await claim.readDeathCertificateSnapshot(db, pid, cid)).liveReview?.reviewId ?? null,
+        actorId: randomUUID(), actorDisplay: 'Test District Admin', actor: 'operator',
+      } as never);
+      await expect(claim.assertDeathCertificateAcceptedForApproval(db, pid, cid)).resolves.toBeUndefined();
+    });
+  });
+
+  // ── Races (the claim-row lock serialises them; the UNIQUEs are the backstop) ─────────────────────────────────
+
+  it('⭐ RACE — two sweeps CONCURRENTLY on one claim open exactly ONE run (⛔ never a duplicate, ⛔ never a crash)', async () => {
+    const s = await seedWait();
+    const a = harness();
+    const b = harness();
+    a.setNow(tenAmIst(day(todayIst(), 1)));
+    b.setNow(tenAmIst(day(todayIst(), 1)));
+    await Promise.all([runCertificateReminderSweep(a.deps, boss(a)), runCertificateReminderSweep(b.deps, boss(b))]);
+    expect(await runsOf(s.cid)).toHaveLength(1);
+    expect([...a.alarms, ...b.alarms].filter((m) => m.includes(s.cid) && m.includes('failed'))).toEqual([]);
+  });
+
+  it('⭐ RACE — two children of ONE number in one slot run CONCURRENTLY ⇒ ONE text, the lower key\'s', async () => {
+    const s = await seedWait({ mobiles: ['9822222222', '9822222222'] });
+    const h = harness();
+    h.setNow(tenAmIst(day(todayIst(), 1)));
+    await runCertificateReminderSweep(h.deps, boss(h));
+    const jobs = smsFor(h, s.cid);
+    expect(jobs).toHaveLength(2);
+    const results = await Promise.all(jobs.map((j) => child(h, j)));
+    expect(results.filter((r) => r.status === 'sent')).toHaveLength(1);
+    expect(results.filter((r) => r.status === 'skipped' && r.reason === 'same_number_in_slot')).toHaveLength(1);
+    expect(h.sent).toHaveLength(1);
+    const lowest = [...jobs.map((j) => (j.data.payload as CertificateFamilySmsPayload).personKey)].sort()[0];
+    expect((await rowsOf(s.cid)).find((r) => r.outcome === 'accepted')?.recipient_key).toBe(lowest);
   });
 });

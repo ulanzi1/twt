@@ -317,8 +317,8 @@ story has followed); and the en ↔ hi key-parity check (every `en` key, incl. a
     or the erasure sentinel ⇒ `no_target`.
   - **The claimant**, when the claimant side is the BLOCK, at the block's mobile.
   - ⭐ **One human, one text per slot — decided by NUMBER, deterministically** (Trap 2(c)): the hash is computed BEFORE the lock (CR7) and
-    **written on the `attempting` row** (⚠ 6.19b writes it only at finalise — here it must be on the claim row, or a second child sees no
-    hash and sends). Under the claim-row lock a child skips (`skipped_superseded`, detail `same_number_in_slot`) when a row of the same run
+    **written on the `attempting` row** (⚠ 6.19b writes it only at finalise — here it must be on the `attempting` row itself, or a second
+    child sees no hash and sends). Under the claim-row lock a child skips (`skipped_superseded`, detail `same_number_in_slot`) when a row of the same run
     and slot carries the same hash with outcome `attempting` or `accepted`; among the person keys sharing a hash, the **lowest `personKey`**
     is the sender, so the winner is stable across slots. A delivered letter to ANY person stops SMS to that NUMBER on the claim, and
     letter-eligibility for a shared number is counted ONCE (one letter per number). A race test proves it: two children, same hash, same
@@ -331,11 +331,12 @@ story has followed); and the en ↔ hi key-parity check (every `en` key, incl. a
   `ClaimCorrectionSmsMessage` gains `'certificate_reminder'` (the registry is a `Record` over the union, so the compiler forces both entries);
   config keys `sms.dlt.template_id.claim_correction.certificate_reminder.{hi,en}` (the sheet's naming, D7); the same two `{#var#}` slots (the
   short reference, then the per-Pariwar helpline, `claimCorrectionHelplineConfigKey`); copy keys `certificate_sms.reminder` in `claim.json`
-  en + hi. ⭐ **One wording for both causes** — it names ⛔ no reason (AC7). Everything else is 6.19b's, **reused unchanged**
+  en + hi. ⭐ **One wording for both causes** — it names ⛔ no reason (AC7). The SEND FUNCTION is 6.19b's, **reused unchanged**
   (`sendClaimCorrectionSms`, `claim-correction-reminders.ts:246-313`): fail-closed on a missing template id / helpline / gateway (`error` +
   alarm, T13); the provider classification (`invalid_number` → `rejected_invalid_number`, `carrier_reject` → `rejected_unreachable`,
   `rate_limited` / `api_unavailable` / timeout → transient, a known Secret Manager config fault → `error` + alarm, else `error` + alarm). The
-  child's lifecycle mirrors 6.19b's AC2 (insert `attempting` with `claimed_at`/`claimed_by_job` under the lock → commit → send →
+  child's lifecycle mirrors 6.19b's AC2 — ⚠ with ONE deliberate departure: the number hash is written on the `attempting` row, ⛔ not only
+  at finalise (CR6's one-text-per-number rule needs it there) — (insert `attempting` with `claimed_at`/`claimed_by_job`/`recipient_number_hash` under the lock → commit → send →
   compare-and-set the final outcome, checking `moved` on every CAS (6.19c's lost-CAS finding); a same-job retry re-claims at once, another job
   only after `CORRECTION_SEND_LEASE_MS` (`correction-reminder-record.ts:59`); an exhausted row finalised `error` by the next sweep; a child
   redelivered after IST midnight finalises `error`, `exhausted:crossed_midnight`, ⛔ never sends yesterday's slot today). ⭐ **The lock is the

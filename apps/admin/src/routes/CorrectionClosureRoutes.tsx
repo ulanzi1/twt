@@ -56,11 +56,15 @@ function ListStates<T>(props: {
   }, [status, navigate]);
   const data = props.query.data;
   if (props.query.isLoading) return <p role="status" data-testid={`${props.testId}-loading`}>{props.copy.loading}</p>;
-  if (data === undefined && status === 403) return <p role="alert" data-testid={`${props.testId}-forbidden`}>{props.copy.forbidden}</p>;
+  // Code review patch (2026-10-02): a background-refetch 403 (e.g. a grant revoked mid-session) now re-gates
+  // EVEN when stale `data` is still cached — the old `data === undefined` guard left stale, possibly
+  // now-unauthorized data visible behind only a small inline alert further below.
+  if (status === 403) return <p role="alert" data-testid={`${props.testId}-forbidden`}>{props.copy.forbidden}</p>;
   if (data === undefined) return <p role="alert" data-testid={`${props.testId}-error`}>{props.copy.loadError}</p>;
   return (
     <>
-      {props.query.isError ? <p role="alert">{status === 403 ? props.copy.forbidden : props.copy.loadError}</p> : null}
+      {/* `status === 403` already returns early above, so a reached isError here is never a 403. */}
+      {props.query.isError ? <p role="alert">{props.copy.loadError}</p> : null}
       {props.isEmpty(data) ? <p role="status" data-testid={`${props.testId}-empty`}>{props.copy.empty}</p> : props.children(data)}
     </>
   );
@@ -137,6 +141,11 @@ function EscalationsPickerView(): ReactElement {
     <main className="mx-auto max-w-xl p-4">
       <h1 className="text-lg font-semibold">{t.escalation.heading}</h1>
       <p className="mt-1 text-sm">{t.escalation.pickPariwar}</p>
+      {/* Code review patch (2026-10-02): a loading/error branch for `useProvisionedPariwars()` — previously a
+          failed or still-loading fetch rendered identically to "no provisioned pariwars" (an empty list), unlike
+          every other list view in this file. */}
+      {pariwars.isLoading ? <p role="status" data-testid="escalations-pariwar-picker-loading">{t.escalation.loading}</p> : null}
+      {pariwars.isError ? <p role="alert" data-testid="escalations-pariwar-picker-error">{t.escalation.loadError}</p> : null}
       {items.length > 0 ? (
         <ul className="mt-2 space-y-1" data-testid="escalations-pariwar-picker">
           {items.map((p) => (
@@ -155,7 +164,9 @@ function EscalationsPickerView(): ReactElement {
       <button
         type="button"
         className="mt-1 rounded border px-3 py-1 text-sm"
-        disabled={!/^[0-9a-f-]{36}$/i.test(typed.trim())}
+        // Code review patch (2026-10-02): properly-anchored UUID pattern (matching `router.tsx`'s `?claim=`
+        // validator) — the old `[0-9a-f-]{36}` accepted any 36-char hex/hyphen arrangement in any grouping.
+        disabled={!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(typed.trim())}
         onClick={() => go(typed.trim())}
       >
         {t.escalation.open}

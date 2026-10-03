@@ -153,7 +153,10 @@ export function registerCorrectionClosureRoutes(app: FastifyInstance, deps: AppD
     '/api/v1/p/:pariwarId/admin/claims/:claimCaseId/correction/closure-letters/:letterId/screenshot',
     {
       schema: { params: LetterParam, response: { 200: ClosureLetterScreenshotResponse }, tags: [TAG] },
-      preHandler: [adminSession, scope, resolveDistrict, canRecordLetter],
+      // Code review patch (2026-10-02): `addressStepUp` added — a delivery-proof photo of a posted letter
+      // plausibly shows the same recipient name/address the sibling address route step-up-gates one route above;
+      // this route had no such gate.
+      preHandler: [adminSession, scope, resolveDistrict, canRecordLetter, addressStepUp],
     },
     h.readClosureLetterScreenshot,
   );

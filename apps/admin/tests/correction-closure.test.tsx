@@ -12,29 +12,40 @@ import { describe, expect, it, vi } from 'vitest';
 
 import type {
   ClaimsUnderCorrectionResponse,
+  ClosureLettersOwedResponse,
   DirectionInboxResponse,
   EscalatedClosureDetailResponse,
   PariwarClosureQueueResponse,
 } from '@twt/contracts';
 
+const { ApiError } = await import('../src/api/client.js');
+
 const requestCorrectionClosure = vi.fn();
+const recordNoCorrectionNeeded = vi.fn();
 const decideCorrectionClosure = vi.fn();
 const approveNoCorrectionNeeded = vi.fn();
 const decideEscalatedClosure = vi.fn();
 const getEscalatedClosure = vi.fn();
 const respondToClosureDirection = vi.fn();
 const recordRefileConfirmation = vi.fn();
+const getClosureLetterAddress = vi.fn();
+const requestStepUp = vi.fn();
+const verifyStepUp = vi.fn();
 vi.mock('../src/api/client.js', async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>();
   return {
     ...actual,
     requestCorrectionClosure: (...a: unknown[]) => requestCorrectionClosure(...a),
+    recordNoCorrectionNeeded: (...a: unknown[]) => recordNoCorrectionNeeded(...a),
     decideCorrectionClosure: (...a: unknown[]) => decideCorrectionClosure(...a),
     approveNoCorrectionNeeded: (...a: unknown[]) => approveNoCorrectionNeeded(...a),
     decideEscalatedClosure: (...a: unknown[]) => decideEscalatedClosure(...a),
     getEscalatedClosure: (...a: unknown[]) => getEscalatedClosure(...a),
     respondToClosureDirection: (...a: unknown[]) => respondToClosureDirection(...a),
     recordRefileConfirmation: (...a: unknown[]) => recordRefileConfirmation(...a),
+    getClosureLetterAddress: (...a: unknown[]) => getClosureLetterAddress(...a),
+    requestStepUp: (...a: unknown[]) => requestStepUp(...a),
+    verifyStepUp: (...a: unknown[]) => verifyStepUp(...a),
   };
 });
 
@@ -130,6 +141,48 @@ describe('<ClosureColumn> — the District Admin (AC6, AC8c)', () => {
     fireEvent.click(screen.getByTestId('closure-request-submit'));
     await waitFor(() => expect(requestCorrectionClosure).toHaveBeenCalledWith(PARIWAR, CLAIM, 'reached in June, silent since'));
   });
+
+  it('⭐ code review patch (2026-10-02) — the success banner clears once the SERVER-driven blocker moves on, ⛔ stays forever', async () => {
+    requestCorrectionClosure.mockResolvedValue({});
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const { rerender } = render(
+      <QueryClientProvider client={qc}>
+        <ClosureColumn pariwarId={PARIWAR} item={queueItem()} />
+      </QueryClientProvider>,
+    );
+    fireEvent.change(screen.getByTestId('closure-request-note'), { target: { value: 'reached in June, silent since' } });
+    fireEvent.click(screen.getByTestId('closure-request-submit'));
+    expect(await screen.findByText('Closure requested — the Pariwar Admin decides.')).toBeInTheDocument();
+    // The server's next read now reports `blocker: 'request_pending'` — the success banner must clear, ⛔ sit
+    // beside the new blocker line forever.
+    rerender(
+      <QueryClientProvider client={qc}>
+        <ClosureColumn pariwarId={PARIWAR} item={queueItem({ blocker: 'request_pending', state: 'requested' })} />
+      </QueryClientProvider>,
+    );
+    await waitFor(() => expect(screen.queryByText('Closure requested — the Pariwar Admin decides.')).toBeNull());
+  });
+
+  it('⭐ code review patch (2026-10-02, adversarial re-check) — the SAME reset covers the D27 "no correction needed" banner too, ⛔ only the request one', async () => {
+    recordNoCorrectionNeeded.mockResolvedValue({ must_act: 'staff' });
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const { rerender } = render(
+      <QueryClientProvider client={qc}>
+        <ClosureColumn pariwarId={PARIWAR} item={queueItem()} />
+      </QueryClientProvider>,
+    );
+    fireEvent.change(screen.getByTestId('no-correction-note'), { target: { value: 'the bank details were already correct' } });
+    fireEvent.click(screen.getByTestId('no-correction-submit'));
+    expect(await screen.findByText('Recorded — staff must act until the Pariwar Admin decides.')).toBeInTheDocument();
+    // Recording D27 sets the mark to `staff`, so the NEXT server read reports `blocker: 'not_family_action'` —
+    // the success banner must clear here too, ⛔ only on the `request` path.
+    rerender(
+      <QueryClientProvider client={qc}>
+        <ClosureColumn pariwarId={PARIWAR} item={queueItem({ blocker: 'not_family_action' })} />
+      </QueryClientProvider>,
+    );
+    await waitFor(() => expect(screen.queryByText('Recorded — staff must act until the Pariwar Admin decides.')).toBeNull());
+  });
 });
 
 type ClosureQueueItem = PariwarClosureQueueResponse['items'][number];
@@ -214,7 +267,7 @@ const detail = (over: Partial<EscalatedClosureDetailResponse> = {}): EscalatedCl
     super_admin_reason: null,
     closed_at: null,
     closure_letter_person_keys: [],
-    name_highlight: null,
+    approval_name_highlight: null,
   },
   deceased_member_id: '22222222-2222-4222-8222-222222222222',
   short_reference: '11111111',
@@ -244,6 +297,18 @@ describe('<EscalationDetail> — the Super Admin (AC14, AC17)', () => {
     expect(screen.getByTestId('decision-approve-path')).toHaveTextContent('waives the name check only');
   });
 
+  it('⭐ code review patch (2026-10-02) — the direction form\'s actor field gets its OWN missing-value alert, ⛔ sharing the text field\'s', async () => {
+    getEscalatedClosure.mockResolvedValue(detail());
+    wrap(<EscalationDetail pariwarId={PARIWAR} claimCaseId={CLAIM} />);
+    await screen.findByTestId('escalation-direction-form');
+    // Text filled, actor empty — only the actor alert should fire.
+    fireEvent.change(screen.getByTestId('direction-text'), { target: { value: 'call the family once more' } });
+    fireEvent.click(screen.getByTestId('direction-submit'));
+    expect(await screen.findByTestId('direction-actor-missing')).toBeInTheDocument();
+    // The TEXT field's own alert is distinct wording and must ⛔ fire — it is valid, only the actor is empty.
+    expect(screen.queryByText('Write a note saying why.')).toBeNull();
+  });
+
   it('⛔ a STAFF case offers no close (`-274` 1a); the reason list follows the decision; a refusal takes its code', async () => {
     getEscalatedClosure.mockResolvedValue(detail({ closure: { ...detail().closure, origin: 'staff_case' }, approve_path: 'full_gate' }));
     wrap(<EscalationDetail pariwarId={PARIWAR} claimCaseId={CLAIM} />);
@@ -261,7 +326,7 @@ describe('<EscalationDetail> — the Super Admin (AC14, AC17)', () => {
     decideEscalatedClosure.mockResolvedValue({
       claim_case_id: CLAIM,
       claim_state: 'state_trustee_approved',
-      closure: { ...detail().closure, state: 'approved', super_admin_decision: 'approved', super_admin_reason: 'name_difference_accepted', name_highlight: 'approved_despite_name_mismatch' },
+      closure: { ...detail().closure, state: 'approved', super_admin_decision: 'approved', super_admin_reason: 'name_difference_accepted', approval_name_highlight: 'approved_despite_name_mismatch' },
       decided_by: 'Super Admin One',
       decided_at: '2026-10-01T10:00:00.000Z',
     });
@@ -281,6 +346,48 @@ describe('<EscalationDetail> — the Super Admin (AC14, AC17)', () => {
     );
     expect(await screen.findByTestId('approval-name-highlight')).toHaveTextContent('Approved despite a name mismatch');
     expect(screen.getByTestId('audit-actor').textContent).toBe('Super Admin One');
+  });
+
+  it('⭐ code review Decision 5 (2026-10-02) — a `close` decision shows its OWN "Closed by" verb, ⛔ not collapsed into "Denied by"', async () => {
+    getEscalatedClosure.mockResolvedValue(detail());
+    decideEscalatedClosure.mockResolvedValue({
+      claim_case_id: CLAIM,
+      claim_state: 'denied',
+      closure: { ...detail().closure, state: 'closed', super_admin_decision: 'closed', super_admin_reason: 'family_silent_after_reached' },
+      decided_by: 'Super Admin One',
+      decided_at: '2026-10-01T10:00:00.000Z',
+    });
+    wrap(<EscalationDetail pariwarId={PARIWAR} claimCaseId={CLAIM} />);
+    // `decision-kind` defaults to 'close' (the first option for a non-staff-case row).
+    fireEvent.change(await screen.findByTestId('decision-note'), { target: { value: 'never answered after reach' } });
+    fireEvent.click(screen.getByTestId('decision-submit'));
+    await waitFor(() =>
+      expect(decideEscalatedClosure).toHaveBeenCalledWith(PARIWAR, CLAIM, {
+        decision: 'close',
+        reason: 'family_silent_after_reached',
+        note: 'never answered after reach',
+      }),
+    );
+    expect(screen.getByTestId('audit-trail-entry')).toHaveAttribute('data-outcome', 'closed');
+    expect(screen.getByTestId('audit-trail-entry')).toHaveTextContent('Closed by');
+  });
+
+  it('⭐ code review Decision 5 (2026-10-03, adversarial re-check) — a `refuse` decision still reads "Denied by" — DELIBERATELY ⛔ given its own verb', async () => {
+    getEscalatedClosure.mockResolvedValue(detail());
+    decideEscalatedClosure.mockResolvedValue({
+      claim_case_id: CLAIM,
+      claim_state: 'denied',
+      closure: { ...detail().closure, state: 'refused', super_admin_decision: 'refused', super_admin_reason: 'claim_not_payable' },
+      decided_by: 'Super Admin One',
+      decided_at: '2026-10-01T10:00:00.000Z',
+    });
+    wrap(<EscalationDetail pariwarId={PARIWAR} claimCaseId={CLAIM} />);
+    fireEvent.change(await screen.findByTestId('decision-kind'), { target: { value: 'refuse' } });
+    fireEvent.change(screen.getByTestId('decision-note'), { target: { value: 'the standing was never met' } });
+    fireEvent.click(screen.getByTestId('decision-submit'));
+    await waitFor(() => expect(decideEscalatedClosure).toHaveBeenCalled());
+    expect(screen.getByTestId('audit-trail-entry')).toHaveAttribute('data-outcome', 'denied');
+    expect(screen.getByTestId('audit-trail-entry')).toHaveTextContent('Denied by');
   });
 });
 
@@ -327,6 +434,38 @@ describe('the directee, the closure letter, the helpline, the highlight', () => 
     const mustSay = screen.getByTestId('closure-letter-must-say').textContent ?? '';
     expect(mustSay).toContain('closed because the family did not respond');
     expect(mustSay).toContain('a new claim can be filed through the helpline or the District Admin');
+  });
+
+  it('⭐ code review patch (2026-10-02) — the "Record the posted letter" button is clickable, ⛔ silently disabled: a missing field is SAID', () => {
+    wrap(
+      <ClosureLettersOwedList
+        pariwarId={PARIWAR}
+        items={[{ claim_case_id: CLAIM, deceased_member_id: CLAIM, short_reference: '11111111', closed_on: '2026-09-30', days_since_closure: 1, people: [{ person_key: 'claimant', letter: null }] }]}
+      />,
+    );
+    expect(screen.getByTestId('closure-letter-record')).not.toBeDisabled();
+    fireEvent.click(screen.getByTestId('closure-letter-record'));
+    expect(screen.getByRole('alert')).toHaveTextContent('Enter the posting date and the tracking number.');
+  });
+
+  it('⭐ code review patch (2026-10-03, adversarial re-check) — entering the step-up code actually REVEALS the address, ⛔ a silent no-op', async () => {
+    getClosureLetterAddress.mockRejectedValueOnce(new ApiError(403, 'auth.step_up_required', 'Step up required'));
+    requestStepUp.mockResolvedValue({});
+    verifyStepUp.mockResolvedValue({});
+    getClosureLetterAddress.mockResolvedValueOnce({ person_key: 'claimant', address: 'Sentinel House 7' });
+    const items: ClosureLettersOwedResponse['items'] = [
+      { claim_case_id: CLAIM, deceased_member_id: CLAIM, short_reference: '11111111', closed_on: '2026-09-30', days_since_closure: 1, people: [{ person_key: 'claimant', letter: null }] },
+    ];
+    wrap(<ClosureLettersOwedList pariwarId={PARIWAR} items={items} />);
+    fireEvent.click(screen.getByTestId('closure-letter-reveal'));
+    expect(await screen.findByTestId('closure-letter-code')).toBeInTheDocument();
+    fireEvent.change(screen.getByTestId('closure-letter-code'), { target: { value: '123456' } });
+    const verifyButton = screen.getByTestId('closure-letter-code').closest('label')!.querySelector('button')!;
+    await act(async () => {
+      fireEvent.click(verifyButton);
+    });
+    expect(await screen.findByTestId('closure-letter-address')).toHaveTextContent('Sentinel House 7');
+    expect(getClosureLetterAddress).toHaveBeenCalledTimes(2);
   });
 
   it('the helpline re-file card: a note is REQUIRED, then the confirmation is recorded against the CLOSED claim', async () => {

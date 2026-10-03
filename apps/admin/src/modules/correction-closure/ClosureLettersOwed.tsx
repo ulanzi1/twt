@@ -8,7 +8,7 @@
 
 import type { ClosureLettersOwedResponse } from '@twt/contracts';
 import type { ReactElement } from 'react';
-import { useState } from 'react';
+import { useId, useState } from 'react';
 
 import * as api from '../../api/client.js';
 import { ApiError } from '../../api/client.js';
@@ -32,8 +32,27 @@ function PersonLetter({ pariwarId, item, person }: { pariwarId: string; item: It
   const [addressError, setAddressError] = useState<string | null>(null);
   const [needsCode, setNeedsCode] = useState(false);
   const [code, setCode] = useState('');
+  // Code review patch (2026-10-02): an explicit in-flight guard — `reveal`/`verifyAndReveal` are plain async
+  // functions (not a `useMutation`), so there was no `isPending`-equivalent to disable the buttons with; a
+  // double-click fired duplicate step-up requests / audit lines, against the module's own "one audit line per
+  // reveal" comment.
+  const [revealPending, setRevealPending] = useState(false);
+  const [postMissing, setPostMissing] = useState(false);
+  const [deliverMissing, setDeliverMissing] = useState(false);
+  const postMissingId = useId();
+  const deliverMissingId = useId();
 
-  async function reveal(): Promise<void> {
+  // Code review patch (2026-10-03, adversarial re-check): the actual GET + step-up-request logic is factored
+  // OUT of the `revealPending` guard. An adversarial pass flagged the original shape — `verifyAndReveal` setting
+  // `revealPending` false then immediately calling the ALSO-guarded `reveal()` — as a plausible stale-closure
+  // no-op (a React state setter doesn't mutate the already-captured closure variable, only schedules the next
+  // render, so a naive reading suggests `reveal()`'s own guard could see itself as still-tripped). Verified by
+  // test (temporarily reintroducing that exact shape): it was NOT actually broken — within one render, BOTH the
+  // outer and the nested guard read the SAME frozen `revealPending` value, so if the outer guard let the call
+  // through, the inner one necessarily does too. Kept this factoring anyway: it removes the confusing
+  // false-then-true flip entirely, and a new regression test now exercises this flow end-to-end (verify → the
+  // address is actually shown), which nothing did before.
+  async function doReveal(): Promise<void> {
     setAddressError(null);
     try {
       const r = await api.getClosureLetterAddress(pariwarId, item.claim_case_id, person.person_key);
@@ -41,22 +60,41 @@ function PersonLetter({ pariwarId, item, person }: { pariwarId: string; item: It
       setNeedsCode(false);
     } catch (err) {
       if (err instanceof ApiError && err.code === STEP_UP_REQUIRED_CODE) {
-        await api.requestStepUp(api.CLOSURE_LETTER_ADDRESS_STEP_UP_CONTEXT).catch(() => undefined);
-        setNeedsCode(true);
+        // Code review patch (2026-10-02): `needsCode(true)` now fires ONLY if the step-up request itself
+        // succeeded — previously it fired unconditionally, showing a code-entry form for a code that may never
+        // have been sent.
+        try {
+          await api.requestStepUp(api.CLOSURE_LETTER_ADDRESS_STEP_UP_CONTEXT);
+          setNeedsCode(true);
+        } catch (stepUpErr) {
+          setAddressError(closureErrorText(stepUpErr));
+        }
         return;
       }
       setAddressError(closureErrorText(err));
     }
   }
 
+  async function reveal(): Promise<void> {
+    if (revealPending) return;
+    setRevealPending(true);
+    await doReveal();
+    setRevealPending(false);
+  }
+
   async function verifyAndReveal(): Promise<void> {
+    if (revealPending) return;
+    setRevealPending(true);
     try {
       await api.verifyStepUp(code);
       setCode('');
-      await reveal();
     } catch (err) {
       setAddressError(closureErrorText(err));
+      setRevealPending(false);
+      return;
     }
+    await doReveal();
+    setRevealPending(false);
   }
 
   return (
@@ -69,7 +107,13 @@ function PersonLetter({ pariwarId, item, person }: { pariwarId: string; item: It
             {l.mustSay}
           </p>
           {address === null ? (
-            <button type="button" className="self-start rounded border px-2 py-0.5 text-xs" onClick={() => void reveal()} data-testid="closure-letter-reveal">
+            <button
+              type="button"
+              className="self-start rounded border px-2 py-0.5 text-xs"
+              disabled={revealPending}
+              onClick={() => void reveal()}
+              data-testid="closure-letter-reveal"
+            >
               {l.showAddress}
             </button>
           ) : (
@@ -81,7 +125,7 @@ function PersonLetter({ pariwarId, item, person }: { pariwarId: string; item: It
             <label className="flex flex-col text-xs">
               {l.code}
               <input value={code} onChange={(e) => setCode(e.target.value)} inputMode="numeric" data-testid="closure-letter-code" />
-              <button type="button" className="self-start rounded border px-2 py-0.5" onClick={() => void verifyAndReveal()}>
+              <button type="button" className="self-start rounded border px-2 py-0.5" disabled={revealPending} onClick={() => void verifyAndReveal()}>
                 {l.showAddress}
               </button>
             </label>
@@ -89,19 +133,40 @@ function PersonLetter({ pariwarId, item, person }: { pariwarId: string; item: It
           {addressError !== null ? <p role="alert">{addressError}</p> : null}
           <label className="flex flex-col text-xs">
             {l.postedOn}
-            <input type="date" value={postedOn} onChange={(e) => setPostedOn(e.target.value)} data-testid="closure-letter-posted-on" />
+            <input
+              type="date"
+              value={postedOn}
+              onChange={(e) => setPostedOn(e.target.value)}
+              aria-describedby={postMissing ? postMissingId : undefined}
+              data-testid="closure-letter-posted-on"
+            />
           </label>
           <label className="flex flex-col text-xs">
             {l.tracking}
-            <input value={tracking} onChange={(e) => setTracking(e.target.value)} data-testid="closure-letter-tracking" />
+            <input
+              value={tracking}
+              onChange={(e) => setTracking(e.target.value)}
+              aria-describedby={postMissing ? postMissingId : undefined}
+              data-testid="closure-letter-tracking"
+            />
           </label>
+          {/* Code review patch (2026-10-02): the button is ⛔ no longer silently disabled on missing fields — it
+              is clickable, and a missing field is SAID (`role="alert"`), matching this story's own stated design
+              rule (`ClosureColumn.tsx`'s header comment: "a missing note is SAID, ⛔ a silently disabled button"). */}
+          {postMissing ? (
+            <p role="alert" id={postMissingId}>
+              {l.postRequired}
+            </p>
+          ) : null}
           <button
             type="button"
             className="self-start rounded border px-3 py-1"
-            disabled={record.isPending || postedOn === '' || tracking.trim() === ''}
-            onClick={() =>
-              void record.mutateAsync({ person_key: person.person_key, posted_on: postedOn, tracking_number: tracking }).catch(() => undefined)
-            }
+            disabled={record.isPending}
+            onClick={() => {
+              if (postedOn === '' || tracking.trim() === '') return setPostMissing(true);
+              setPostMissing(false);
+              void record.mutateAsync({ person_key: person.person_key, posted_on: postedOn, tracking_number: tracking }).catch(() => undefined);
+            }}
             data-testid="closure-letter-record"
           >
             {l.record}
@@ -124,19 +189,38 @@ function PersonLetter({ pariwarId, item, person }: { pariwarId: string; item: It
             <>
               <label className="flex flex-col">
                 {l.deliveredOn}
-                <input type="date" value={deliveredOn} onChange={(e) => setDeliveredOn(e.target.value)} data-testid="closure-letter-delivered-on" />
+                <input
+                  type="date"
+                  value={deliveredOn}
+                  onChange={(e) => setDeliveredOn(e.target.value)}
+                  aria-describedby={deliverMissing ? deliverMissingId : undefined}
+                  data-testid="closure-letter-delivered-on"
+                />
               </label>
               <label className="flex flex-col">
                 {l.screenshot}
-                <input type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => setFile(e.target.files?.[0] ?? null)} data-testid="closure-letter-file" />
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                  aria-describedby={deliverMissing ? deliverMissingId : undefined}
+                  data-testid="closure-letter-file"
+                />
               </label>
+              {deliverMissing ? (
+                <p role="alert" id={deliverMissingId}>
+                  {l.deliverRequired}
+                </p>
+              ) : null}
               <button
                 type="button"
                 className="self-start rounded border px-3 py-1"
-                disabled={deliver.isPending || deliveredOn === '' || file === null}
-                onClick={() =>
-                  void deliver.mutateAsync({ letterId: person.letter!.letter_id, deliveredOn, file: file! }).catch(() => undefined)
-                }
+                disabled={deliver.isPending}
+                onClick={() => {
+                  if (deliveredOn === '' || file === null) return setDeliverMissing(true);
+                  setDeliverMissing(false);
+                  void deliver.mutateAsync({ letterId: person.letter!.letter_id, deliveredOn, file }).catch(() => undefined);
+                }}
                 data-testid="closure-letter-deliver"
               >
                 {l.recordDelivery}

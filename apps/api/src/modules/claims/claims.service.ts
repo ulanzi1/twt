@@ -34,6 +34,7 @@
 // (ClaimStreamConcurrencyError → return the existing claim), though the advisory lock
 // means it should never be reached in practice.
 
+import { REFILE_REQUIRES_CONFIRMATION_CODE } from '@twt/contracts';
 import { claim, ids, nominee as nomineeDomain, schema } from '@twt/domain';
 import type pg from 'pg';
 
@@ -248,7 +249,10 @@ export function translateRefileRequiresConfirmation(err: unknown): void {
   if (err instanceof claim.RefileRequiresConfirmationError) {
     throw new ConflictError(
       'This claim was closed because the family did not respond — a new claim needs a re-file confirmation recorded by the District Admin or the helpline',
-      'claim.refile_requires_confirmation',
+      // Code review patch (2026-10-02): the contracts package's canonical constant, ⛔ a literal — the mobile
+      // wizard's catch (`apps/mobile/lib/refile-helpline-copy.ts`) now cross-checks against the SAME export, so
+      // a rename here is caught at the mobile test, not silently degrading the flow in production.
+      REFILE_REQUIRES_CONFIRMATION_CODE,
       { closed_claim_case_id: err.closedClaimCaseId.toLowerCase() },
     );
   }

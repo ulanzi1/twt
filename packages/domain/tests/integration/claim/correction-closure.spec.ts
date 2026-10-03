@@ -453,6 +453,20 @@ describe.skipIf(!hasDatabase)('the correction closure — request, decision, hol
       expect(await stateOf(tx, c.cid)).toBe('denied');
     });
 
+    it('⭐ code review Decision 3 (2026-10-02) — a D27 record during the hold makes `close` throw `not_family_action` (stale "family was silent" premise), but `refuse`/`approve` stay open', async () => {
+      const { client, tx } = getTx();
+      await enterAppScope(client, PARIWAR_A);
+      const c = await escalated(client, tx);
+      await recordNoCorrectionNeeded(client, {
+        pariwarId: PARIWAR_A, claimCaseId: c.cid, actorId: DA, actorDisplay: 'DA', now: c.day(99),
+        markNoteCiphertext: 'enc:v1:m', noteCiphertext: 'enc:v1:n', setByRole: 'district_admin', hold: isCorrectionClaimHeld,
+      });
+      await expectRefused(superAdmin(client, c, 'close', 'family_silent_after_reached'), 'not_family_action');
+      // `close` threw before writing anything — the escalated row is still decidable via `refuse`.
+      const r = await superAdmin(client, c, 'refuse', 'claim_not_payable');
+      expect(r.chain).toMatchObject({ claimState: 'denied' });
+    });
+
     it('⭐ refuse ⇒ `state_trustee_denied` with the chosen code, ⛔ `denied_no_appeal` (appealable once); after a used appeal ⇒ `denied_no_appeal`', async () => {
       const { client, tx } = getTx();
       await enterAppScope(client, PARIWAR_A);
@@ -770,6 +784,23 @@ describe.skipIf(!hasDatabase)('the correction closure — request, decision, hol
       expect(await readApprovalNameHighlight(tx, PARIWAR_A, esc.cid)).toBeNull();
       await superAdmin(client, esc, 'approve', 'name_difference_accepted');
       expect(await readApprovalNameHighlight(tx, PARIWAR_A, esc.cid)).toBe('approved_despite_name_mismatch');
+    });
+
+    it('⭐ code review Decision 9 (2026-10-02) — the highlight\'s OTHER wording: approved with ⛔ no current passing check at all (never_checked)', async () => {
+      const { client, tx } = getTx();
+      await enterAppScope(client, PARIWAR_A);
+      const esc = await reachedClaim(client, tx);
+      await request(client, esc);
+      await decline(client, esc);
+      await asSuperuser(client, async () => {
+        await client.query("SET LOCAL session_replication_role = 'replica'");
+        await client.query(`DELETE FROM events_log WHERE stream_id = $1 AND event_type = 'claim.nominee_name_checked'`, [esc.cid]);
+        await client.query("SET LOCAL session_replication_role = 'origin'");
+      });
+      expect(await readApprovalNameHighlight(tx, PARIWAR_A, esc.cid)).toBeNull();
+      const a = await superAdmin(client, esc, 'approve', 'name_difference_accepted');
+      expect(a).toMatchObject({ nameCheckWaived: true, approvalNameCheckState: 'never_checked' });
+      expect(await readApprovalNameHighlight(tx, PARIWAR_A, esc.cid)).toBe('approved_without_passing_check');
     });
   });
 });

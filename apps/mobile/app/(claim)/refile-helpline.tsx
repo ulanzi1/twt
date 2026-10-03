@@ -6,7 +6,10 @@
 // the claim-entry gate (`index.tsx`) and the wizard's submit (`relationship.tsx`, the 409) — ONE state, ⛔ two copies.
 //
 // ⛔ Chrome: a plain `YStack` (the `certificate-replacement.tsx` precedent) — ⛔ `<ClaimProxyFlowShell>` (its
-// save-and-resume affordance belongs to the wizard). ⛔ Not added to `CLAIM_STEPS`. ⛔ No reason, note or date.
+// save-and-resume affordance belongs to the wizard). ⛔ Not added to `CLAIM_STEPS`. The copy names the closure
+// CATEGORY (no response reached the correction) — ⛔ no case-specific note or date from the closed claim is shown.
+// Clarified 2026-10-02 (code review, Decision 2) — this comment previously said "no reason," which overstated what's
+// withheld; the copy was human-reviewed and accepted as written (commit `45449354`).
 // Accessibility (family 13): the message is ONE labelled container (`accessible={true}`) and is ANNOUNCED on arrival;
 // both buttons have real handlers.
 

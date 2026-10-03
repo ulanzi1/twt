@@ -148,7 +148,9 @@ describe('⛔ the no-comparison fence (Trap 1, `-226` cl.5)', () => {
     for (const f of FENCED_FILES) {
       expect(() => read(f), `fenced file missing: ${f}`).not.toThrow();
     }
-    expect(FENCED_FILES.length).toBeGreaterThanOrEqual(34); // Story 6.19c raised it FROM 26 (+1 domain module), then 27 → 32 (the highlight's read + its four wire / route surfaces), then 32 → 34 (its two admin render sites); Story 6.21a FROM 23 (+3 modules); Story 6.20 FROM 16 (+7)
+    // Code review patch (2026-10-02): exact count, ⛔ a floor — a floor can't catch an accidental
+    // duplicate entry masking a dropped file (padding the array with any extra element keeps a `>=` green).
+    expect(FENCED_FILES.length).toBe(34); // Story 6.19c raised it FROM 26 (+1 domain module), then 27 → 32 (the highlight's read + its four wire / route surfaces), then 32 → 34 (its two admin render sites); Story 6.21a FROM 23 (+3 modules); Story 6.20 FROM 16 (+7)
   });
 
   it('⭐⭐ POSITIVE CONTROL — the scanner actually FIRES on a planted violation of every pattern', () => {
@@ -263,7 +265,10 @@ describe('⛔ the no-comparison fence (Trap 1, `-226` cl.5)', () => {
       'nameCiphertext',
       'accountHolderNameCiphertext',
       'decrypt',
-      'getMemberNominees(',
+      // Code review patch (2026-10-02): the trailing `(` was call-site-anchored and evadable by a
+      // point-free/aliased reference (`const g = getMemberNominees; g(id)`) — the bare identifier
+      // catches any reference, not just a direct call.
+      'getMemberNominees',
     ]) {
       expect(code.includes(forbidden), `the check writer reached for '${forbidden}'`).toBe(false);
     }
@@ -280,7 +285,7 @@ describe('⛔ the no-comparison fence (Trap 1, `-226` cl.5)', () => {
       'packages/domain/src/claim/nominee-determination-persist.ts',
     ]) {
       const code = stripComments(read(f));
-      for (const forbidden of ['nameCiphertext', 'mobileCiphertext', 'decrypt', 'getMemberNominees(']) {
+      for (const forbidden of ['nameCiphertext', 'mobileCiphertext', 'decrypt', 'getMemberNominees']) {
         expect(code.includes(forbidden), `${f} reached for '${forbidden}'`).toBe(false);
       }
     }
@@ -288,7 +293,7 @@ describe('⛔ the no-comparison fence (Trap 1, `-226` cl.5)', () => {
 
   it('⛔⛔ Story 6.19c (`-273` §7, §8) — the closure / Super Admin module ⛔ never decrypts a name, and composes the gate by its OPTION', () => {
     const code = stripComments(read('packages/domain/src/claim/correction-closure.ts'));
-    for (const forbidden of ['decryptTier1', 'nameCiphertext', 'getMemberNominees(', 'resolveCorrectionMobile']) {
+    for (const forbidden of ['decryptTier1', 'nameCiphertext', 'getMemberNominees', 'resolveCorrectionMobile']) {
       expect(code.includes(forbidden), `correction-closure.ts must not contain ${forbidden}`).toBe(false);
     }
     // ⭐ The `-251` waiver is the gate's OWN option — ⛔ a hand list of conjuncts (`-273` §8, `-263` C4).
@@ -306,7 +311,7 @@ describe('⛔ the no-comparison fence (Trap 1, `-226` cl.5)', () => {
       'packages/domain/src/claim/death-certificate-review-read.ts',
     ]) {
       const code = stripComments(read(f));
-      for (const forbidden of ['decrypt', 'nameCiphertext', 'getMemberNominees(']) {
+      for (const forbidden of ['decrypt', 'nameCiphertext', 'getMemberNominees']) {
         expect(code.includes(forbidden), `${f} reached for '${forbidden}'`).toBe(false);
       }
     }

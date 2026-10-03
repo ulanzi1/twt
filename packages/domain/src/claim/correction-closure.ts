@@ -64,6 +64,7 @@ import {
   type CorrectionPerson,
   type WriteCorrectionMarkResult,
   CorrectionDirectionRunRefusedError,
+  DEAD_OUTCOMES,
   acquireCorrectionChaseLock,
   endCorrectionRun,
   isEvidentialReminderRow,
@@ -129,6 +130,24 @@ export type CorrectionClosureRefusal =
   | 'no_record'
   | 'check_required'
   | 'cycle_freeze_escalated';
+
+/**
+ * AC6's refusals, in their order — the subset of `CorrectionClosureRefusal` the READINESS check (`readClosureReadiness`)
+ * can actually produce (⛔ a hand-copy: this IS the order `assertClosureGround` re-checks). Code review patch
+ * (2026-10-02): exported as a RUNTIME value so `correction-closure-lockstep.test.ts`'s `ClosureRequestBlocker` test
+ * can compare against the domain directly, like every sibling vocabulary in that file — `CorrectionClosureRefusal`
+ * itself is a compile-time-only `type` and can't be used for that.
+ */
+export const AC6_REQUEST_REFUSALS = [
+  'no_live_return',
+  'escalated',
+  'request_pending',
+  'not_family_action',
+  'too_early',
+  'claim_routed_to_r9',
+  'claim_corrected',
+  'not_reached',
+] as const satisfies readonly CorrectionClosureRefusal[];
 
 /** The roles of the people ⛔ yet reached (D22 — the body names ⛔ no person: a count and the roles only). */
 export interface NotReachedDetail {
@@ -320,8 +339,6 @@ export function sameNumberHash(a: string | null, b: string | null): boolean {
   return timingSafeEqualString(a, b);
 }
 
-const DEAD_OUTCOMES = new Set(['rejected_invalid_number', 'rejected_unreachable', 'no_target']);
-
 /** One person's D22 verdict. ⛔ No name, ⛔ no number. */
 export interface ClosurePersonReach {
   readonly personKey: string;
@@ -347,6 +364,16 @@ export interface ClosureReach {
  * the number that is theirs NOW (`-271` §1 — the hash compared timing-safe), OR a letter to them with a recorded
  * delivery date (a letter goes to an ADDRESS — any number's). `numberKnownDead`: their latest evidential row is about
  * their CURRENT number and its outcome is dead / unreachable / ⛔ target (`-273` §5).
+ *
+ * Code review Decision 4 (2026-10-02) — closure-notice routing (`closureNoticeRecipients`) sends the SMS notice to
+ * anyone `!numberKnownDead`, ⛔ not anyone `reachedBySms`. DELIBERATE: SMS is attempted by default, and the SMS/DLT
+ * provider's own per-attempt outcome (`accepted` / `rejected_invalid_number` / `rejected_unreachable` / `no_target`,
+ * recorded per `claim_correction_reminders` row) is exactly what `numberKnownDead` already keys on — so a number
+ * with ⛔ no provider-confirmed-dead evidence is treated as workable, even without a prior `accepted` to this
+ * CURRENT number (e.g. a very recent 6.20 number change with no reminder attempt yet). The alternative — requiring
+ * `reachedBySms` before attempting SMS, else falling back to a letter — would route MORE people to the slow/costly
+ * letter channel for no actual benefit, since the provider will itself report back `rejected_unreachable` if the
+ * number truly can't take an SMS. ⛔ No code change; this is the intended default.
  */
 export function evaluateClosurePersonReach(
   person: Pick<CorrectionPerson, 'personKey' | 'role' | 'rank'>,
@@ -442,6 +469,13 @@ interface ClosureGateInput {
  */
 async function assertClosureGround(input: ClosureGateInput): Promise<ClosureReach> {
   const { db, pariwarId, claimCaseId, chase } = input;
+  // Only `decideEscalatedClosure`'s `close` branch calls this. `close` means "the family was silent" — this check
+  // re-validates that premise at decision time. A D27 `recordNoCorrectionNeeded` is explicitly allowed WHILE HELD
+  // (`-273` §4) and unconditionally sets the mark to `staff`, so a D27 record made during the hold makes `close`
+  // throw `not_family_action` here — DELIBERATE, not a deadlock: `close`'s premise (family must act) is now stale,
+  // and `approve`/`refuse` on the same escalated claim take no dependency on `chase.mark` at all, so the Super Admin
+  // always has a path forward. Code review Decision 3 (2026-10-02) — see
+  // `packages/domain/tests/integration/claim/correction-closure.spec.ts`'s D27-while-escalated test.
   if (chase.mark?.mustAct !== 'family') throw new CorrectionClosureRefusedError(claimCaseId, 'not_family_action');
   if (chase.familyRun === null || !isCorrectionRunExpired(chase.familyRun.day0, input.today)) {
     throw new CorrectionClosureRefusedError(claimCaseId, 'too_early');

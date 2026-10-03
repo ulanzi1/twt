@@ -38,7 +38,9 @@ export const correctionClosureEn = {
     heading: 'Closure for no response',
     day: 'Family reminders: day',
     ready: 'Every person was reached and 90 days have passed — you may ask the Pariwar Admin to close this claim.',
-    notReached: (count: number, roles: string) => `${count} still to be reached (${roles}).`,
+    // Code review patch (2026-10-02): an empty `roles` string (the server sent `not_reached.roles: []`) now drops
+    // the parenthetical instead of rendering "still to be reached ()".
+    notReached: (count: number, roles: string) => (roles === '' ? `${count} still to be reached.` : `${count} still to be reached (${roles}).`),
     requestedBy: 'requested by',
     requestNote: 'Why you are asking (required)',
     request: 'Ask the Pariwar Admin to close this claim',
@@ -67,8 +69,9 @@ export const correctionClosureEn = {
     familyRunDay0: 'Family reminders began',
     approve: 'Approve the closure',
     decline: 'Decline — send to the Super Admin',
-    declineNote: 'Why you are declining (required before you decline)',
-    approveNote: 'A note (optional)',
+    // Code review patch (2026-10-02): ONE label, accurate for either outcome of the SAME shared textarea — the
+    // dead `approveNote` key (never wired in; approve always rendered this same label regardless) is gone.
+    declineNote: 'Your note (required before you decline; optional before you approve)',
     noteRequired: 'Write a note saying why you are declining.',
     shortcuts: 'Shortcuts: 1 approves, 2 declines (when the note box is not focused).',
     approved: 'Approved — the claim is closed.',
@@ -136,6 +139,8 @@ export const correctionClosureEn = {
     direct: {
       heading: 'Direct an admin',
       actor: 'The admin’s user id',
+      // Code review patch (2026-10-02): a distinct message for the actor field's own missing-value alert.
+      actorRequired: 'Say which admin you are directing.',
       role: 'Their role',
       district_admin: 'District Admin',
       pariwar_admin: 'Pariwar Admin',
@@ -207,10 +212,14 @@ export const correctionClosureEn = {
     tracking: 'Tracking number',
     record: 'Record the posted letter',
     recorded: 'Letter recorded.',
+    // Code review patch (2026-10-02): the posting/delivery buttons are clickable, ⛔ silently disabled — a
+    // missing field is SAID on click.
+    postRequired: 'Enter the posting date and the tracking number.',
     deliveredOn: 'Delivery date',
     screenshot: 'Delivery screenshot',
     recordDelivery: 'Record the delivery',
     deliveryRecorded: 'Delivery recorded.',
+    deliverRequired: 'Enter the delivery date and add the screenshot.',
     viewScreenshot: 'View the screenshot',
   },
   /** The helpline's re-file confirmation (D19, key (6)). */

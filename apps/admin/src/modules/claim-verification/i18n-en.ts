@@ -514,6 +514,7 @@ export const verifierConsoleEn = {
     heading: 'Decision trail',
     approvedBy: 'Approved by',
     deniedBy: 'Denied by',
+    closedBy: 'Closed by',
     escalatedBy: 'Escalated by',
     revisedBy: 'Revised by',
     supersededNote: 'Superseded by a later revision',

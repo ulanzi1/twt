@@ -8,6 +8,7 @@ import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+import { REFILE_REQUIRES_CONFIRMATION_CODE as CANONICAL_REFILE_REQUIRES_CONFIRMATION_CODE } from '@twt/contracts'
 import { t } from '@twt/i18n'
 import { describe, expect, it } from 'vitest'
 
@@ -44,7 +45,11 @@ describe('Story 6.19c — the re-file state', () => {
   })
 
   it('BOTH routes into it are wired: the entry gate decision and the wizard submit\'s 409 code', () => {
-    expect(REFILE_REQUIRES_CONFIRMATION_CODE).toBe('claim.refile_requires_confirmation')
+    // Code review patch (2026-10-02): compared against the contracts package's canonical export (added this
+    // same review, `packages/contracts/src/claims/death-certificate.ts`), ⛔ a literal self-reassertion — the
+    // mobile copy's own file stays "PURE, zero imports" by design, so this cross-check lives in the test instead.
+    // A server-side rename now fails THIS assertion instead of silently degrading the flow.
+    expect(REFILE_REQUIRES_CONFIRMATION_CODE).toBe(CANONICAL_REFILE_REQUIRES_CONFIRMATION_CODE)
     const entry = stripComments(read('app/(claim)/index.tsx'))
     expect(entry).toContain("decision.kind === 'refile_helpline'")
     expect(entry).toContain("router.replace('/(claim)/refile-helpline')")

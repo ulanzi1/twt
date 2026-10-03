@@ -65,7 +65,9 @@ export function DirectionInboxList({ pariwarId, items }: { pariwarId: string; it
           <p className="mt-1">
             <Text note={item.direction.text} />
           </p>
-          <p className="text-xs opacity-80">{item.still_held ? n.stillHeld : n.decided}</p>
+          {/* Code review patch (2026-10-02) — `role="status"`: still_held → decided is a silent background-refetch
+              transition a non-actor viewer should be told about. */}
+          <p role="status" className="text-xs opacity-80">{item.still_held ? n.stillHeld : n.decided}</p>
           <ResponseForm pariwarId={pariwarId} item={item} />
         </li>
       ))}

@@ -374,6 +374,26 @@ async function apiFetch<T>(
   return schema.parse(await res.json());
 }
 
+/**
+ * Code review patch (2026-10-02): the shared error-parsing tail of a multipart upload — `apiFetch` itself can't
+ * be reused for these (it unconditionally sets `content-type: application/json`, which breaks a `FormData` body's
+ * browser-generated multipart boundary header). Extracted so `uploadGroundInspectionPhoto` and
+ * `recordClosureLetterDelivery` stop hand-duplicating the identical error-parsing block.
+ */
+async function throwIfNotOk(res: Response, fallbackMessage: string): Promise<void> {
+  if (res.ok) return;
+  let code = `http.${res.status}`;
+  let message = res.statusText || fallbackMessage;
+  try {
+    const b = (await res.json()) as ErrorEnvelope;
+    if (b.error?.code) code = b.error.code;
+    if (b.error?.message) message = b.error.message;
+  } catch {
+    // keep defaults
+  }
+  throw new ApiError(res.status, code, message);
+}
+
 // ── Audit-integrity surface (Story 1.11b) ─────────────────────────────────────
 
 /** GET the recent integrity-check history (default 30, most-recent first). */
@@ -1296,18 +1316,7 @@ export async function uploadGroundInspectionPhoto(
     `${giBase(pariwarId, claimCaseId)}/${encodeURIComponent(groundInspectionId)}/photos`,
     { method: 'POST', credentials: 'include', body: form },
   );
-  if (!res.ok) {
-    let code = `http.${res.status}`;
-    let message = res.statusText || 'Upload failed';
-    try {
-      const b = (await res.json()) as ErrorEnvelope;
-      if (b.error?.code) code = b.error.code;
-      if (b.error?.message) message = b.error.message;
-    } catch {
-      // keep defaults
-    }
-    throw new ApiError(res.status, code, message);
-  }
+  await throwIfNotOk(res, 'Upload failed');
   return (await res.json()) as { photoId: string };
 }
 
@@ -1550,18 +1559,7 @@ export async function recordClosureLetterDelivery(
     credentials: 'include',
     body: form,
   });
-  if (!res.ok) {
-    let code = `http.${res.status}`;
-    let message = res.statusText || 'Upload did not go through';
-    try {
-      const b = (await res.json()) as ErrorEnvelope;
-      if (b.error?.code) code = b.error.code;
-      if (b.error?.message) message = b.error.message;
-    } catch {
-      // keep defaults
-    }
-    throw new ApiError(res.status, code, message);
-  }
+  await throwIfNotOk(res, 'Upload did not go through');
   return ClosureLetterDto.parse(await res.json());
 }
 

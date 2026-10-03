@@ -213,8 +213,10 @@ export const CorrectionClosureDto = z
     closed_at: z.string().nullable(),
     /** `-274` 2 — the people owed a closure letter (role keys, ⛔ names). */
     closure_letter_person_keys: z.array(CorrectionPersonKey),
-    /** `-273` §7 — on an approval made without a current passing name check. */
-    name_highlight: ApprovalNameHighlight.nullable(),
+    /** `-273` §7 — on an approval made without a current passing name check. Code review patch (2026-10-02):
+     * renamed from `name_highlight` to `approval_name_highlight`, matching `nominee-name-check.ts` and
+     * `cycle-freeze.ts`'s identical field for the same `ApprovalNameHighlight` concept. */
+    approval_name_highlight: ApprovalNameHighlight.nullable(),
   })
   .strict();
 export type CorrectionClosureDto = z.output<typeof CorrectionClosureDto>;
@@ -262,7 +264,10 @@ export type EscalatedClosuresResponse = z.output<typeof EscalatedClosuresRespons
 export const ClosureDirectionDto = z
   .object({
     direction_id: z.string().uuid(),
-    directed_to_actor: z.string(),
+    // Code review patch (2026-10-02): `.uuid()`, matching the request side (`ClosureDirectionRequest`, below) —
+    // the response echoes back the same actor id the request validated, so a bare `z.string()` here let a
+    // non-UUID value round-trip silently.
+    directed_to_actor: z.string().uuid(),
     directed_to_role: DirectionRole,
     kind: DirectionKind,
     text: StaffNoteDto,

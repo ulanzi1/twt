@@ -191,15 +191,20 @@ export async function runCorrectionClosureSweep(
   }
 
   // (B) The CLOSED closures — the notice outbox still due, or within the letter chase's window.
+  // Code review patch (2026-10-02): the cutoff is now an explicit IST-midnight INSTANT (`istMidnightAt`), ⛔ a bare
+  // `$1::date - N` SQL expression. `closed_at` is `timestamptz`; the old expression implicitly cast the computed
+  // `date` to `timestamptz` using the SESSION's timezone (not necessarily IST), drifting the boundary by up to
+  // 5.5 hours from the IST-day semantics this module's own header documents (the daily 10:00 IST tick).
+  const letterScanCutoff = cycleCalendar.istMidnightAt(cycleCalendar.addCalendarDays(today, -CLOSURE_LETTER_SCAN_DAYS));
   const closures = await deps.pool.query<{ closure_id: string; claim_case_id: string; pariwar_id: string }>(
     `SELECT closure_id, claim_case_id, pariwar_id FROM claim_correction_closures
       WHERE state = 'closed'
         AND (closure_notice_done_at IS NULL
-             OR (cardinality(closure_letter_person_keys) > 0 AND closed_at >= ($1::date - $4::int)))
-        AND ($3::uuid[] IS NULL OR pariwar_id = ANY($3::uuid[]))
+             OR (cardinality(closure_letter_person_keys) > 0 AND closed_at >= $3::timestamptz))
+        AND ($2::uuid[] IS NULL OR pariwar_id = ANY($2::uuid[]))
       ORDER BY closed_at, closure_id
-      LIMIT $2`,
-    [today, limit + 1, allow, CLOSURE_LETTER_SCAN_DAYS],
+      LIMIT $1`,
+    [limit + 1, allow, letterScanCutoff],
   );
   if (closures.rows.length > limit) {
     alarm(`[jobs] claim-correction-closure-sweep: the closed-closure scan hit its ${String(limit)} bound — the closures past it were ⛔ swept today`);
@@ -342,7 +347,16 @@ export async function runClosureNoticeChild(
     return transient('decrypt_failed:tier1');
   }
   if (e164 === null) {
-    await finalise({ outcome: 'no_target', detail: 'no_target:no_sendable_number', recipientNumberHash: null });
+    const movedNoTarget = await finalise({ outcome: 'no_target', detail: 'no_target:no_sendable_number', recipientNumberHash: null });
+    // Code review patch (2026-10-02): check `moved` here too, like the success path below — a lost CAS means a
+    // DIFFERENT invocation already finalised (or re-claimed) this row, so reporting `sent` here would claim an
+    // outcome this attempt never actually wrote. `complete()` itself stays safe either way: it re-queries the
+    // real pending set from the DB, never the caller's belief (`completeClosureNoticeIfDone`).
+    if (!movedNoTarget) {
+      alarm(`[jobs] claim-correction-closure-notice: the row for closure ${p.closureId} moved on before its no_target finalise`);
+      await complete();
+      return { status: 'skipped', reason: 'moved_before_finalise' };
+    }
     await complete();
     return { status: 'sent', outcome: 'no_target' };
   }
@@ -369,8 +383,14 @@ export async function runClosureNoticeChild(
     detail: result.detail,
     recipientNumberHash,
   });
-  if (!moved) alarm(`[jobs] claim-correction-closure-notice: the row for closure ${p.closureId} moved on before its finalise`);
   await complete();
+  // Code review patch (2026-10-02): a lost CAS (`!moved`) means a different invocation already finalised (or
+  // re-claimed) this row — this attempt's own `result.outcome` was never actually written, so reporting `sent`
+  // would claim an outcome that isn't the row's real state. `complete()` above stays correct either way.
+  if (!moved) {
+    alarm(`[jobs] claim-correction-closure-notice: the row for closure ${p.closureId} moved on before its finalise`);
+    return { status: 'skipped', reason: 'moved_before_finalise' };
+  }
   return { status: 'sent', outcome: result.outcome };
 }
 
@@ -381,6 +401,16 @@ export async function registerClaimCorrectionClosureWorkers(
   opts: { readonly sweepCron?: string; readonly tz?: string } = {},
 ): Promise<void> {
   await boss.createQueue(QUEUE_NAMES.CLAIM_CORRECTION_CLOSURE_NOTICE);
+  // Code review patch (2026-10-02), investigated and NOT changed: pg-boss's `work()` has no per-job
+  // complete/fail signal inside one callback invocation — `#processJobs` (pg-boss 12.19.1, manager.js) calls
+  // `this.complete(name, jobIds, ...)` or `this.fail(name, jobIds, err)` for the WHOLE batch based on whether
+  // the single `callback(jobs)` promise resolved or rejected. A `try/catch` INSIDE this loop that swallows one
+  // job's error and continues would make the callback RESOLVE, which marks every job in the batch — including
+  // the one that actually failed — complete (worse than today: that job would never retry). `batchSize` defaults
+  // to 1 and is not overridden here, so `jobs` is a single-element array today and this is not reachable; true
+  // per-job isolation at `batchSize > 1` needs an explicit per-job `boss.complete()`/`boss.fail()` call inside
+  // the loop (bypassing the callback's own resolve/reject), which is an architecture change, not a patch —
+  // carried in `deferred-work.md`.
   await boss.work(QUEUE_NAMES.CLAIM_CORRECTION_CLOSURE_NOTICE, async (jobs: Job[]) => {
     const results = [];
     for (const job of jobs) {

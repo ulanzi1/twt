@@ -9,7 +9,7 @@
 
 import type { ClaimUnderCorrectionItem } from '@twt/contracts';
 import type { ReactElement } from 'react';
-import { useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 
 import { useRecordNoCorrectionNeeded, useRequestCorrectionClosure } from '../../api/hooks.js';
 import { closureErrorText } from './errors.js';
@@ -30,6 +30,19 @@ export function ClosureColumn({ pariwarId, item }: ClosureColumnProps): ReactEle
   const [ncNoteMissing, setNcNoteMissing] = useState(false);
   const noteId = useId();
   const ncNoteId = useId();
+
+  // Code review patch (2026-10-02): reset both mutations whenever the SERVER-driven blocker moves on, so a
+  // success banner from an earlier action doesn't keep rendering forever beside a now-current, possibly
+  // contradicting blocker line. `request`/`noCorrection` are freshly re-created on every render by `useMutation`,
+  // so this effect must read them through a ref to call `.reset()` without re-firing on their own identity churn.
+  const requestRef = useRef(request);
+  requestRef.current = request;
+  const noCorrectionRef = useRef(noCorrection);
+  noCorrectionRef.current = noCorrection;
+  useEffect(() => {
+    requestRef.current.reset();
+    noCorrectionRef.current.reset();
+  }, [c.blocker]);
 
   const roles = c.not_reached?.roles.map((r) => t.role[r] ?? r).join(', ') ?? '';
   const blockerText =
@@ -76,7 +89,10 @@ export function ClosureColumn({ pariwarId, item }: ClosureColumnProps): ReactEle
         </p>
       ) : null}
       {c.state !== null ? (
-        <p data-testid="closure-state">
+        // Code review patch (2026-10-02) — `role="status"` added: a background refetch silently updates this
+        // state line the same way `closure-blocker` (which already carries `role="status"`) does, and the
+        // inconsistency between two state lines in the same column left this one unannounced.
+        <p role="status" data-testid="closure-state">
           {t.state[c.state] ?? c.state}
           {c.requested_by !== null && c.state === 'requested' ? ` — ${t.column.requestedBy} ${c.requested_by}` : null}
         </p>

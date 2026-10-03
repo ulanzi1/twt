@@ -3,8 +3,10 @@
 //
 // Reached two ways, ONE state: the claim-entry gate (`refile_requires_confirmation` on the filed claim's fresh read) and
 // the wizard's submit (a `409 claim.refile_requires_confirmation` — a phone without the filed-claim pointer: a
-// helpline-filed claim, another device). ⛔ Never the wizard (it would only 409), ⛔ never a bare error, ⛔ no reason, no
-// note, no date — the claim was closed for no response, and a new claim goes through the helpline.
+// helpline-filed claim, another device). ⛔ Never the wizard (it would only 409), ⛔ never a bare error. The copy states
+// WHY the closure track exists (no response reached the bank-detail correction) — that category is the whole reason this
+// screen is shown — but ⛔ no case-specific note or date from the closed claim is disclosed. Clarified 2026-10-02 (code
+// review, Decision 2): the copy was human-reviewed and accepted as written (commit `45449354`); this comment was stale.
 
 export const REFILE_HELPLINE_COPY = {
   title: 'refile.title',

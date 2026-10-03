@@ -13,6 +13,7 @@ import * as api from '../api/client.js';
 import { hasAuditVerify, hasPariwarProvision, sessionKey, useSession } from '../api/hooks.js';
 import { correctionChaseEn } from '../modules/correction-chase/i18n-en.js';
 import { correctionClosureEn } from '../modules/correction-closure/i18n-en.js';
+import { certificateRemindersEn } from '../modules/certificate-reminders/i18n-en.js';
 
 function TopBar(): ReactElement {
   const session = useSession();
@@ -102,6 +103,12 @@ function TopBar(): ReactElement {
           {pariwarId && (
             <Link to="/p/$pariwarId/correction/closure-letters" params={{ pariwarId }} className="text-sm underline" data-testid="nav-closure-letters">
               {correctionClosureEn.letters.nav}
+            </Link>
+          )}
+          {/* Story 6.19d (AC5) — the District Admin's certificate reminders, inside a Pariwar context only. */}
+          {pariwarId && (
+            <Link to="/p/$pariwarId/certificate-reminders" params={{ pariwarId }} className="text-sm underline" data-testid="nav-certificate-reminders">
+              {certificateRemindersEn.nav}
             </Link>
           )}
           {pariwarId && canReviewEscalations && (

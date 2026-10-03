@@ -52,11 +52,11 @@ function assertNoDeadlineThreat(body: string, label: string): void {
   for (const term of HINDI_DEADLINE_TERMS) expect(body, `"${term}" in ${label}`).not.toContain(term);
 }
 
-const CASES = (['reminder', 'closure_notice'] as const).flatMap((message) =>
+const CASES = (['reminder', 'closure_notice', 'certificate_reminder'] as const).flatMap((message) =>
   (['hi', 'en'] as const).map((locale) => ({ message, locale })),
 );
 
-describe('the claim-correction SMS templates (D32 — both messages × both locales)', () => {
+describe('the claim-correction SMS templates (D32 — all three messages × both locales; Story 6.19d adds `certificate_reminder`)', () => {
   it.each(CASES)('⭐ $message / $locale — the real t() renders EXACTLY the registered DLT text', ({ message, locale }) => {
     const template = CLAIM_CORRECTION_SMS_TEMPLATES[message][locale];
     // ⭐ DISTINCT markers per variable — one shared token would let a swapped `{reference}` / `{helpline}` pass.
@@ -115,6 +115,31 @@ describe('the claim-correction SMS templates (D32 — both messages × both loca
     const en = renderClaimCorrectionSms('closure_notice', 'en', { reference: 'X', helpline: 'Y' });
     expect(en).toContain('cannot be appealed');
     expect(en).toContain('new claim may be filed through the helpline');
+  });
+
+  it('⭐ Story 6.19d — the certificate reminder states the REQUIREMENT every certificate must meet (`-236` BB), ⛔ never why one was refused', () => {
+    for (const locale of ['en', 'hi'] as const) {
+      const body = renderClaimCorrectionSms('certificate_reminder', locale, { reference: 'X', helpline: 'Y' });
+      // ⛔ No refusal reason — the reasons 6.21a records (no date / unclear / a future date).
+      expect(body.toLowerCase()).not.toMatch(/reject|refus|not accepted|unclear|future|missing/);
+      expect(body).not.toMatch(/अस्वीकार|अस्पष्ट|भविष्य/);
+    }
+    const en = renderClaimCorrectionSms('certificate_reminder', 'en', { reference: 'X', helpline: 'Y' });
+    expect(en).toContain('clearly shows the date of death');
+    expect(en).toContain('Your claim is still open.');
+    // ⭐ The house words (`-244` §3 call 7): तिथि and प्रमाणपत्र.
+    const hi = renderClaimCorrectionSms('certificate_reminder', 'hi', { reference: 'X', helpline: 'Y' });
+    expect(hi).toContain('तिथि');
+    expect(hi).toContain('प्रमाणपत्र');
+  });
+
+  it('⭐ Story 6.19d — the two 6.19b / 6.19c messages render BYTE-IDENTICALLY to their registered text (AC9)', () => {
+    expect(CLAIM_CORRECTION_SMS_TEMPLATES.reminder.en.registeredText).toBe(
+      "Claim {#var#}: the bank details on your family's claim need correcting. Please call the helpline on {#var#}, or the District Admin will contact you. Your claim is still open.",
+    );
+    expect(CLAIM_CORRECTION_SMS_TEMPLATES.closure_notice.en.registeredText).toBe(
+      'Claim {#var#}: this claim was closed because no correction of the bank details was received. This closure cannot be appealed. A new claim may be filed through the helpline on {#var#} or the District Admin.',
+    );
   });
 
   it('`-269` §5 — ONE helpline key PER PARIWAR, lower-case id', () => {

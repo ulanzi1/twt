@@ -393,6 +393,24 @@ export const QUEUE_NAMES = {
    * The payload carries ids only, ⛔ never a number. Job class B.
    */
   CLAIM_CORRECTION_CLOSURE_NOTICE: 'claim.correction.closure_notice',
+  /**
+   * The REPLACEMENT-CERTIFICATE REMINDER SWEEP (Story 6.19d, AC1–AC5; `2026-10-03-276` CR4) — daily 10:00 IST, its OWN
+   * queue (⛔ never a kind on 6.19b's runs, CR1). Two keyset-paged cross-tenant scans on the BYPASSRLS pool: every OPEN
+   * certificate run (to end, complete or pause it) and every claim in the review window with ⛔ no open run (to open
+   * one — `rejected` or `missing`). It finalises `attempting` rows from a previous IST day to `error`, writes the
+   * District Admin's letter-chase / escalation RECORDS itself, and enqueues one CLAIM_CERTIFICATE_FAMILY_SMS child per
+   * due (run, slot, person). ⛔ It never refuses, closes, approves or time-limits a claim (invariant 1); ⛔ no staff push
+   * (CR10). Job class C.
+   */
+  CLAIM_CERTIFICATE_REMINDER_SWEEP: 'claim.certificate.reminder.sweep',
+  /**
+   * ONE certificate-reminder SMS for one (run, slot, person) (Story 6.19d, AC3; CR6–CR8). It hashes EVERY person's
+   * number BEFORE the claim-row lock, re-checks under it (the plan, the recipients, the per-number delivered-letter
+   * stop, one text per number per slot), claims its row `attempting` WITH the hash, commits, THEN sends through 6.19b's
+   * `sendClaimCorrectionSms`. It throws ONLY on a transient failure. The payload carries ids only, ⛔ never a number.
+   * Job class B.
+   */
+  CLAIM_CERTIFICATE_FAMILY_SMS: 'claim.certificate.family_sms',
 } as const;
 
 /** Union of the registered queue names. */

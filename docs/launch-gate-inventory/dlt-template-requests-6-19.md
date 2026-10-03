@@ -18,11 +18,11 @@ shorter per-segment length.
 | 2 | Correction-return reminder | en | 6.19b | `sms.dlt.template_id.claim_correction.reminder.en` | as #1 |
 | 3 | Closure notice | hi | 6.19b builds (D32, `2026-09-29-266` §5); 6.19c sends | `sms.dlt.template_id.claim_correction.closure_notice.hi` | a non-name claim reference; the helpline number |
 | 4 | Closure notice | en | 6.19b builds (D32); 6.19c sends | `sms.dlt.template_id.claim_correction.closure_notice.en` | as #3 |
-| 5 | Replacement-certificate reminder | hi | 6.19d | *(6.19d's to name)* | a non-name claim reference; the helpline number |
-| 6 | Replacement-certificate reminder | en | 6.19d | *(6.19d's to name)* | as #5 |
+| 5 | Replacement-certificate reminder | hi | 6.19d | `sms.dlt.template_id.claim_correction.certificate_reminder.hi` | a non-name claim reference; the helpline number |
+| 6 | Replacement-certificate reminder | en | 6.19d | `sms.dlt.template_id.claim_correction.certificate_reminder.en` | as #5 |
 
 ⚠ A template registered before the wording is final must be re-registered if a word changes: the send must match the registered text
-exactly. ⭐ **Templates 1–4's wording is now written (Story 6.19b, 2026-09-30)** — below; 5–6 stay 6.19d's.
+exactly. ⭐ **Templates 1–4's wording is now written (Story 6.19b, 2026-09-30)** — below; ⭐ **5–6's too (Story 6.19d, 2026-10-03)** — below them.
 
 ## The wording of templates 1–4 (Story 6.19b — the text to register)
 
@@ -40,6 +40,20 @@ carries it. ⚠ The **Hindi** is agent-authored and ⛔ not yet human-reviewed �
 | 2 | Claim {#var#}: the bank details on your family's claim need correcting. Please call the helpline on {#var#}, or the District Admin will contact you. Your claim is still open. |
 | 3 | दावा {#var#}: बैंक विवरण में सुधार प्राप्त न होने के कारण यह दावा बंद कर दिया गया है। इस बंद किए जाने के विरुद्ध अपील नहीं की जा सकती। नया दावा हेल्पलाइन {#var#} या ज़िला प्रशासक के माध्यम से दर्ज किया जा सकता है। |
 | 4 | Claim {#var#}: this claim was closed because no correction of the bank details was received. This closure cannot be appealed. A new claim may be filed through the helpline on {#var#} or the District Admin. |
+
+## The wording of templates 5–6 (Story 6.19d — the text to register)
+
+The same two variables in the same order — the claim's short reference, then the Pariwar's helpline number (`claimCorrectionHelplineConfigKey`,
+per Pariwar). ⭐ **One wording for both causes** (a certificate the District Admin could not accept, or ⛔ none received once the claim is
+being checked — `-259` detail 3): it states the requirement every certificate must meet (a clear date of death, `-236` BB) and ⛔ never why
+one was refused. ⛔ No name, ⛔ no deadline. The copy is `certificate_sms.reminder` in `packages/i18n/locales/{en,hi}/claim.json`; the
+registry entry is `certificate_reminder` (`2026-10-03-276` CR7). ⚠ The **Hindi** is agent-authored and ⛔ not yet human-reviewed — go-live
+gate **row 21** (`inventory-roster.md`, `certificate-reminder-hindi-human-review`); a reviewed change means re-registering.
+
+| # | Registered text |
+|---|---|
+| 5 | दावा {#var#}: आपके परिवार के दावे के लिए ऐसा मृत्यु प्रमाणपत्र चाहिए जिसमें मृत्यु की तिथि स्पष्ट हो। कृपया ऐप से भेजें या हेल्पलाइन {#var#} पर कॉल करें। आपका दावा अब भी खुला है। |
+| 6 | Claim {#var#}: your family's claim still needs a death certificate that clearly shows the date of death. Please send it in the app, or call the helpline on {#var#}. Your claim is still open. |
 
 ## The per-Pariwar helpline number (D33(b), `-269` §5)
 
@@ -59,9 +73,16 @@ the Hindi reminder 171 characters of Unicode (**3 segments** at 67 per concatena
 220 (hi, 4 segments), sent at most once per person. ⇒ a Hindi reminder costs about **1.5×** an English one (3 segments against 2). ⚠ The per-segment price is the
 gateway's and is ⛔ not recorded here (⛔ no contract exists yet).
 
+⭐ **The certificate reminder (templates 5–6, Story 6.19d):** ONE transactional DLT SMS per **contact-record person** (CR6 — each nominee
+person on the contact record, plus the claimant block; one text per NUMBER per slot) per slot — at most **25** slots per rejected
+certificate (the 22 correction days to day 84, then days 120, 150 and 180 — `-259` cl.1, `-260` G6); a second rejected certificate
+(`-260` G5) starts a new 25. Rendered with an 8-character reference and a 13-character helpline number: the English reminder is 197
+characters (**2 GSM segments**), the Hindi 185 characters of Unicode (**3 segments**).
+
 ## Record
 
 | Date | Template(s) | Action | By | Reference |
 |---|---|---|---|---|
 | 2026-09-28 | 1–6 | ⛔ Not started — recorded as owed | BigDev | — |
 | 2026-09-30 | 1–4 | ⭐ Wording and `{#var#}` slots written (Story 6.19b, D32); 3–4 now BUILT by 6.19b (6.19c sends); the per-Pariwar helpline keys added (`-269` §5). ⛔ Still not submitted | Story 6.19b | `claim-correction-sms-templates.ts` |
+| 2026-10-03 | 5–6 | ⭐ Wording, `{#var#}` slots and config keys written (Story 6.19d, `2026-10-03-276` CR7, CR13); its cost line added. ⛔ Still not submitted | Story 6.19d | `claim-correction-sms-templates.ts` |

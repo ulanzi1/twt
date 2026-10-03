@@ -6,7 +6,9 @@
 // an `AlertCategory` (AC10): the family message is a DIRECT DLT SMS to an explicit number (the OTP precedent), so
 // registering it as an alert category would make every news / survey / moderation fallback a paid bulk SMS (T6).
 // ⭐ D32 — 6.19b builds BOTH family messages (`reminder` and `closure_notice`) × `hi` / `en`: four config keys. 6.19c
-// only CALLS the send for the closure notice.
+// only CALLS the send for the closure notice. ⭐ Story 6.19d adds a THIRD — `certificate_reminder` (`2026-10-03-276`
+// CR7): the replacement-certificate reminder, ONE wording for both causes (it names ⛔ no reason), its own two config
+// keys; the send function is 6.19b's, reused unchanged.
 // ⭐ THE REGISTERED TEXT. A DLT-transactional gateway rejects any content that does not byte-match a registered content
 // template, so each entry carries the text submitted to TRAI with `{#var#}` in its two slots — the lockstep test
 // (`tests/claim-correction-sms-templates.test.ts`) proves the real `t()` renders EXACTLY it, and that
@@ -19,7 +21,7 @@
 
 import { t, type Locale } from '@twt/i18n';
 
-export type ClaimCorrectionSmsMessage = 'reminder' | 'closure_notice';
+export type ClaimCorrectionSmsMessage = 'reminder' | 'closure_notice' | 'certificate_reminder';
 export type ClaimCorrectionSmsLocale = Extract<Locale, 'hi' | 'en'>;
 
 export interface ClaimCorrectionSmsTemplate {
@@ -63,6 +65,21 @@ export const CLAIM_CORRECTION_SMS_TEMPLATES: Readonly<
       dltTemplateIdConfigKey: 'sms.dlt.template_id.claim_correction.closure_notice.en',
       registeredText:
         'Claim {#var#}: this claim was closed because no correction of the bank details was received. This closure cannot be appealed. A new claim may be filed through the helpline on {#var#} or the District Admin.',
+    },
+  },
+  // Story 6.19d (CR7) — ⚠ the Hindi is agent-authored, ⛔ not yet human-reviewed (go-live gate Row 21).
+  certificate_reminder: {
+    hi: {
+      copyKey: 'certificate_sms.reminder',
+      dltTemplateIdConfigKey: 'sms.dlt.template_id.claim_correction.certificate_reminder.hi',
+      registeredText:
+        'दावा {#var#}: आपके परिवार के दावे के लिए ऐसा मृत्यु प्रमाणपत्र चाहिए जिसमें मृत्यु की तिथि स्पष्ट हो। कृपया ऐप से भेजें या हेल्पलाइन {#var#} पर कॉल करें। आपका दावा अब भी खुला है।',
+    },
+    en: {
+      copyKey: 'certificate_sms.reminder',
+      dltTemplateIdConfigKey: 'sms.dlt.template_id.claim_correction.certificate_reminder.en',
+      registeredText:
+        "Claim {#var#}: your family's claim still needs a death certificate that clearly shows the date of death. Please send it in the app, or call the helpline on {#var#}. Your claim is still open.",
     },
   },
 };

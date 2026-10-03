@@ -11,8 +11,14 @@ import { randomUUID } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 
 import {
+  CertificateLetterRefusedError,
+  assertCertificateLetterAllowed,
+  correctionNumberHash,
+  hashCertificateRecipients,
   istDateOf,
   projectClaimState,
+  recordCertificateLetter,
+  recordCertificateLetterDelivery,
   lockCertificateClaim,
   openCertificateRun,
   planCertificateRun,
@@ -22,6 +28,13 @@ import {
   type CertificateRunPlan,
 } from '../../../src/claim/index.js';
 import { bindScopedDb } from '../../../src/db.js';
+import {
+  MEMBER_NOMINEE_FIELD_CLASS,
+  createFakeKmsProvider,
+  encryptTier1,
+  serializeEnvelope,
+  type FieldCryptoDeps,
+} from '../../../src/encryption/index.js';
 import { claimId as toClaimId, memberId as toMemberId, pariwarId as toPariwarId } from '../../../src/ids/index.js';
 import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
 import {
@@ -36,6 +49,20 @@ import {
 } from '../_helpers.js';
 
 const PID = toPariwarId(PARIWAR_A);
+
+// ⭐ REAL envelopes where a number is hashed (6.19b slice trap S5): a fake KMS, the SAME deps the child hashes with.
+const KMS = createFakeKmsProvider({ kekBytes: new Uint8Array(32).fill(7), hmacKeyBytes: new Uint8Array(32).fill(9) });
+const ENC: FieldCryptoDeps = {
+  kms: KMS,
+  kekRef: { resourceName: 'fake:certificate-kek' },
+  hmacKeyRef: { resourceName: 'fake:certificate-hmac' },
+};
+
+async function encryptNomineeMobile(plaintext: string): Promise<string> {
+  return serializeEnvelope(
+    await encryptTier1(Buffer.from(plaintext, 'utf-8'), { pariwarId: PARIWAR_A, fieldClass: MEMBER_NOMINEE_FIELD_CLASS }, KMS, ENC.kekRef),
+  );
+}
 const TODAY = () => istDateOf(new Date());
 
 type Client = ReturnType<typeof getTx>['client'];
@@ -44,10 +71,16 @@ type Client = ReturnType<typeof getTx>['client'];
  * A claim being CHECKED, driven through the projector (the review writer re-projects the claim from its events, so a
  * raw-seeded claim would fall back to `intake_pending`) — its `claim.peer_mesh_pinged` is emitted on the way.
  */
-async function seedCheckedClaim(client: Client, opts: { readonly target?: 'documents_pending' | 'verifier_review' } = {}) {
+async function seedCheckedClaim(
+  client: Client,
+  opts: { readonly target?: 'documents_pending' | 'verifier_review'; readonly mobiles?: readonly [string, string] } = {},
+) {
   const { tx } = getTx();
   const member = randomUUID();
-  await seedNomineeDeclaration(tx, PARIWAR_A, member, { nominees: [{}, {}] });
+  const nominees = opts.mobiles
+    ? await Promise.all(opts.mobiles.map(async (m) => ({ mobileCiphertext: await encryptNomineeMobile(m) })))
+    : [{}, {}];
+  await seedNomineeDeclaration(tx, PARIWAR_A, member, { nominees });
   await enterAppScope(client, PARIWAR_A);
   const cid = toClaimId(randomUUID());
   const emit = (from: string | null, to: string, eventType: string, extra: Record<string, unknown> = {}) =>
@@ -200,6 +233,121 @@ describe.skipIf(!hasDatabase)('the certificate reminder — runs and recipients 
       expect(await readCertificateRecipients(bindScopedDb(client), PID, a.cid)).toMatchObject({ cannotRemind: 'no_contact_record', people: [] });
       await seedClaimContact(client, PARIWAR_A, a.cid, { agreementRevoked: true });
       expect(await readCertificateRecipients(bindScopedDb(client), PID, a.cid)).toMatchObject({ cannotRemind: 'agreement_not_live', people: [] });
+    });
+  });
+
+  describe('the ONE letter (CR9; `-275` Q1 A)', () => {
+    /** A rejected-certificate claim with an open run, two nominees on the record at `mobiles`, and its people. */
+    async function letterClaim(client: Client, mobiles: readonly [string, string]) {
+      const { cid } = await seedCheckedClaim(client, { mobiles });
+      await seedClaimContact(client, PARIWAR_A, cid);
+      await seedRejectedDeathCertificate(client, { pariwarId: PARIWAR_A, claimCaseId: cid });
+      const opened = await openUnderLock(client, cid, await planNow(client, cid));
+      if (opened.status !== 'opened') throw new Error('run not opened');
+      const people = (await readCertificateRecipients(bindScopedDb(client), PID, cid)).people;
+      const hashes = await hashCertificateRecipients(people, PARIWAR_A, ENC);
+      const hashOf = (k: string): string => {
+        const h = hashes.get(k);
+        if (h === undefined || 'failed' in h || h.hash === null) throw new Error(`no hash for ${k}`);
+        return h.hash;
+      };
+      return { cid, runId: opened.run.runId, a: people[0]!, b: people[1]!, hashOf };
+    }
+    /** A dead-number row for `personKey` at the number whose keyed hash is `hash`. */
+    async function deadRow(client: Client, cid: string, runId: string, personKey: string, hash: string, slotDay = 1) {
+      await client.query(
+        `INSERT INTO claim_certificate_reminders (run_id, claim_case_id, pariwar_id, slot_day, sent_on, recipient_key, purpose, outcome, recipient_number_hash)
+         VALUES ($1, $2, $3, $4, $5, $6, 'family_sms', 'rejected_invalid_number', $7)`,
+        [runId, cid, PARIWAR_A, slotDay, TODAY(), personKey, hash],
+      );
+    }
+    const refusal = (code: string) => (err: unknown) => err instanceof CertificateLetterRefusedError && err.refusal === code;
+    const record = (client: Client, cid: string, personKey: string, postedOn = TODAY()) =>
+      recordCertificateLetter(
+        client,
+        {
+          pariwarId: PID,
+          claimCaseId: toClaimId(cid),
+          personKey,
+          postedOn,
+          trackingNumberCiphertext: 'enc:v1:track',
+          actorId: randomUUID(),
+          actorDisplay: 'Test District Admin',
+        },
+        { crypto: ENC },
+      );
+
+    it('⛔ `no_run` before any certificate run exists', async () => {
+      const { client } = getTx();
+      const { cid } = await seedCheckedClaim(client, { mobiles: ['9876543210', '9123456789'] });
+      await seedClaimContact(client, PARIWAR_A, cid);
+      await expect(assertCertificateLetterAllowed(bindScopedDb(client), PID, cid, 'claimant', { crypto: ENC })).rejects.toSatisfy(refusal('no_run'));
+    });
+
+    it('⭐ letter-eligible from a dead outcome of the CURRENT number; ⛔ a person with ⛔ no dead row is ⛔ not; the address is THAT person\'s', async () => {
+      const { client } = getTx();
+      const c = await letterClaim(client, ['9876543210', '9123456789']);
+      await deadRow(client, c.cid, c.runId, c.a.personKey, c.hashOf(c.a.personKey));
+      const ok = await assertCertificateLetterAllowed(bindScopedDb(client), PID, c.cid, c.a.personKey, { crypto: ENC });
+      expect(ok.address.addressCiphertext).toBe(`enc:v1:address-${c.a.versionId!.slice(0, 8)}`);
+      expect(ok.runId).toBe(c.runId);
+      await expect(assertCertificateLetterAllowed(bindScopedDb(client), PID, c.cid, c.b.personKey, { crypto: ENC })).rejects.toSatisfy(
+        refusal('not_letter_eligible'),
+      );
+    });
+
+    it('⭐ a 6.20 number change RESETS eligibility — the dead row was about ANOTHER number', async () => {
+      const { client } = getTx();
+      const c = await letterClaim(client, ['9876543210', '9123456789']);
+      await deadRow(client, c.cid, c.runId, c.a.personKey, await correctionNumberHash('+919000000001', PARIWAR_A, ENC));
+      await expect(assertCertificateLetterAllowed(bindScopedDb(client), PID, c.cid, c.a.personKey, { crypto: ENC })).rejects.toSatisfy(
+        refusal('not_letter_eligible'),
+      );
+    });
+
+    it('⭐ `-275` Q1 A — ONE letter per person per CLAIM: a second is `already_recorded`; a delivery is recorded once, ⛔ before posting', async () => {
+      const { client } = getTx();
+      const c = await letterClaim(client, ['9876543210', '9123456789']);
+      await deadRow(client, c.cid, c.runId, c.a.personKey, c.hashOf(c.a.personKey));
+      const letter = await record(client, c.cid, c.a.personKey, '2026-10-01');
+      expect(letter.runId).toBe(c.runId);
+      await expect(record(client, c.cid, c.a.personKey)).rejects.toSatisfy(refusal('already_recorded'));
+      const deliver = (letterId: string, deliveredOn: string) =>
+        recordCertificateLetterDelivery(client, {
+          pariwarId: PID,
+          claimCaseId: toClaimId(c.cid),
+          letterId,
+          deliveredOn,
+          screenshotStorageKey: `k/${letterId}`,
+          screenshotContentType: 'image/png',
+          screenshotSizeBytes: 10,
+          actorId: randomUUID(),
+          actorDisplay: 'Test District Admin',
+        });
+      await expect(deliver(letter.letterId, '2026-09-30')).rejects.toSatisfy(refusal('delivered_before_posted'));
+      await expect(deliver(randomUUID(), '2026-10-05')).rejects.toSatisfy(refusal('not_found'));
+      expect((await deliver(letter.letterId, '2026-10-05')).deliveredOn).toBe('2026-10-05');
+      await expect(deliver(letter.letterId, '2026-10-06')).rejects.toSatisfy(refusal('already_delivered'));
+    });
+
+    it('⭐ CR6 — one letter per NUMBER: a second person at the SAME number is refused `already_recorded`', async () => {
+      const { client } = getTx();
+      const c = await letterClaim(client, ['9876543210', '9876543210']);
+      await deadRow(client, c.cid, c.runId, c.a.personKey, c.hashOf(c.a.personKey));
+      await deadRow(client, c.cid, c.runId, c.b.personKey, c.hashOf(c.b.personKey), 2);
+      await record(client, c.cid, c.a.personKey);
+      await expect(record(client, c.cid, c.b.personKey)).rejects.toSatisfy(refusal('already_recorded'));
+    });
+
+    it('⛔ a revoked agreement ⇒ `agreement_not_live`', async () => {
+      const { client } = getTx();
+      const c = await letterClaim(client, ['9876543210', '9123456789']);
+      await deadRow(client, c.cid, c.runId, c.a.personKey, c.hashOf(c.a.personKey));
+      await client.query(
+        `UPDATE consent_records SET revoked_at = now() WHERE consent_id = (SELECT agreement_consent_id FROM claim_contacts WHERE claim_case_id = $1)`,
+        [c.cid],
+      );
+      await expect(record(client, c.cid, c.a.personKey)).rejects.toSatisfy(refusal('agreement_not_live'));
     });
   });
 });

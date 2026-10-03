@@ -10,10 +10,19 @@
 
 ---
 
-> ## ⏳ AWAITING PANEL RULING
+> ## ✅ PANEL RULED — 2026-10-03 — recorded as `2026-10-03-275`
 >
-> ⛔ **Nothing is recorded here yet.** When the Panel rules, transcribe it into this block **and** into `.decision-log.md` as a new decision
-> id. ⭐ Everything below is then kept **unedited** as the question **as it was put** ([[feedback_supersede_never_reinterpret]]).
+> **Ruled by Dhiraj Rahul + Kalpana Bharti, relayed by BigDev — verbatim:**
+> *"by DR and KB — Q1 - A · Q2 - A · Q3 - A · Q4 - A"*
+>
+> ⭐ Our readings **taken** for Q2, Q3 and Q4. ⚠ **Q1: our reading (B, a letter with each rejected certificate) was ⛔ NOT taken** — the
+> Panel chose **A**: one posted letter per claim, ever, with the stated cost in front of them (a family with a dead phone may ⛔ never learn
+> in writing that a second certificate was also rejected). Every A is what Story 6.19d already builds — ⛔ no design change.
+>
+> **What this ruling does NOT cover** (full list in `2026-10-03-275`): whether staff should call a dead-phone family after a second
+> rejection; a letter returned undelivered and the letter's wording; Q2's premise that an appeal reaches the family; the SMS wording.
+>
+> ⭐ Everything **below this block is kept UNEDITED** — it is the question as it was put.
 
 ---
 

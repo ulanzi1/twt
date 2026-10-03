@@ -9,7 +9,7 @@
 
 import type { ClosureDecisionClaimResponse, PariwarClosureQueueResponse } from '@twt/contracts';
 import type { KeyboardEvent, ReactElement } from 'react';
-import { useId, useState } from 'react';
+import { useId, useRef, useState } from 'react';
 
 import {
   useApproveNoCorrectionNeeded,
@@ -41,24 +41,33 @@ export function ClosureRequestStrip({ pariwarId, item }: { pariwarId: string; it
   const [noteMissing, setNoteMissing] = useState(false);
   const [decided, setDecided] = useState<{ response: ClosureDecisionClaimResponse; decision: 'approve' | 'decline' } | null>(null);
   const noteId = useId();
+  // Code review patch (2026-10-02): a SYNCHRONOUS ref guard, ⛔ only `decide.isPending` — React state updates
+  // are batched/async, so OS key-repeat on "1"/"2" could fire several `keydown`s before a re-render ever makes
+  // `isPending` true, calling `act()` (and `decide.mutateAsync`) more than once for one key-press.
+  const actingRef = useRef(false);
 
   async function act(decision: 'approve' | 'decline'): Promise<void> {
-    if (decide.isPending || decided !== null) return;
+    if (actingRef.current || decide.isPending || decided !== null) return;
     if (decision === 'decline' && note.trim() === '') {
       setNoteMissing(true);
       return;
     }
     setNoteMissing(false);
+    actingRef.current = true;
     const body = note.trim() === '' ? { decision } : { decision, note };
     await decide.mutateAsync({ claimCaseId: item.claim_case_id, body }).then(
       (response) => setDecided({ response, decision }),
       () => undefined,
     );
+    actingRef.current = false;
   }
 
   // UX-DR54 — 1 / 2 act from anywhere in the strip, ⛔ while the note box has focus (the digits are text there).
+  // Code review patch (2026-10-02): a held modifier key (ctrl/alt/meta/shift) now SKIPS the shortcut, so a
+  // browser/OS combo (e.g. ctrl+1 for tab switching) is never hijacked into an approve/decline.
   function onKeyDown(e: KeyboardEvent<HTMLDivElement>): void {
     if ((e.target as HTMLElement).tagName === 'TEXTAREA') return;
+    if (e.ctrlKey || e.altKey || e.metaKey || e.shiftKey) return;
     if (e.key === '1') {
       e.preventDefault();
       void act('approve');

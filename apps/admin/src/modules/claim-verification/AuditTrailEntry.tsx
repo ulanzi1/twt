@@ -27,6 +27,11 @@ export interface AuditTrailEntryData {
 const VERB: Record<string, string> = {
   approved: t.audit.approvedBy,
   denied: t.audit.deniedBy,
+  // `closed` added for Story 6.19c's escalated-closure decision (code review Decision 5, 2026-10-02) — a
+  // closure-for-no-response and a refusal both leave the claim `denied` at the domain layer, but they are
+  // different stories to an admin reading the trail; this map stays additive, so the pre-existing
+  // `approved`/`denied`/`escalated` verifier-console call sites are unaffected.
+  closed: t.audit.closedBy,
   escalated: t.audit.escalatedBy,
 };
 

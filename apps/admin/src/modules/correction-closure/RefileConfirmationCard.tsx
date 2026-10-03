@@ -23,7 +23,10 @@ export function RefileConfirmationCard(props: {
   const id = useId();
   const r = t.refile;
   return (
-    <section role="region" aria-label={r.heading} className="mt-3 rounded border p-3 text-sm" data-testid="refile-confirmation-card">
+    // Code review patch (2026-10-02) — `aria-live="polite"` added: this card is CONDITIONALLY MOUNTED in
+    // response to the 409 (AC15), and a plain `role="region"` is not proactively announced on insertion — a
+    // screen-reader operator who just hit the refusal got no signal that a required new step appeared.
+    <section role="region" aria-live="polite" aria-label={r.heading} className="mt-3 rounded border p-3 text-sm" data-testid="refile-confirmation-card">
       <h3 className="font-semibold">{r.heading}</h3>
       <p>{r.body}</p>
       <label className="mt-1 flex flex-col">

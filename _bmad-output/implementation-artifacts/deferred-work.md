@@ -4,13 +4,62 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: code review of story-6.19c (2026-10-02)
+
+- **Duplicated "stale request" lookup in `pendingRequestOf`** (`packages/domain/src/claim/correction-closure.ts`) — two branches run an identical query/throw pair, copy-pasted rather than factored.
+- **Redundant duplicate `clampLimit` computation in `listPariwarClosureQueue`** — same formula computed twice inline.
+- **`isClosureReasonValidFor` type predicate narrows to the full union, not the decision-specific subset** — downstream still casts explicitly; type-hygiene only.
+- **No DB-level backstop that `directedToRole` matches the actor's real role in `recordClosureDirection`** — relies entirely on API-layer verification.
+- **`decideEscalatedClosure` refuse path records two independent, uncorrelated reason fields** (`input.reason` vs `input.refusalReasonCode`) — no cross-validation today.
+- **Pervasive non-null assertions (`result!`, `row!`) as the only guard against a crash if a `translate*Error` helper is ever edited to not always throw** — systemic pattern across API + domain layers, not specific to this story.
+- **`translateClosureLetterError` has no KMS/envelope-fault branch**, unlike the sibling correction-letter flow's explicit fail-closed 503.
+- **Duplicate hand-constructed `cycle_freeze.escalated` `ConflictError`** in `claims.cycle-freeze.handlers.ts` instead of calling the shared `closureRefusalError`.
+- **Refile-confirmation authz split between a permissive route gate and a handler-level allow-list** — works today, fragile to a future refactor.
+- **N+1 query in `getClosureLettersOwed`** (`getMemberPostingLatest` per row before the page limit applies) — bounded by `CLOSURE_QUEUE_MAX_LIMIT` today.
+- **Same plaintext staff note encrypted twice under two field classes** (`encryptCorrectionMarkNote` + `encryptClosureField`) — no comment justifying the duplication, no demonstrated leak.
+- **Audit lines log `notice_recipients`/`letters_owed` unconditionally on both approve and decline events** — cosmetic forensics noise.
+- **Array/pagination silent-truncation caps** (>200 unanswered directions, >1000 reminder rows per claim/purpose/subject, >100 closure-notice reminder rows) — unlikely to be hit at current volumes; revisit if claim volume grows.
+- **`escalateStaffCase` race gives no distinct signal between a genuine conflict and a lock timeout** (`onConflictDoNothing`).
+- **Tie-break on identical `createdAt` for "most recent terminal claim"** falls back to `claimCaseId desc`, not true recency — requires two claims created in the same instant.
+- **`latestCadenceDue` has no guard against `every<=0`** — not reachable with current fixed cadence constants.
+- **Non-null assertion `chase.familyRun!.runId` in `markClosed`** — part of the broader non-null-assertion pattern above.
+- **`readClosureReadiness` for a non-existent claim returns the same signal as an ordinary "no live return" case** — low impact.
+- **All decrypt/hash failures in the closure-notice child are blanket-caught as "transient"**, including permanently unrecoverable ones — burns retry budget but doesn't corrupt data.
+- **No documented recovery path once a closure-notice job exhausts `CHILD_RETRY_LIMIT`.**
+- **Super-admin lookup failure takes down the whole claim's day-90 plan**, not just the Super-Admin-specific piece.
+- **`timedOut` claim list can double-count the same claim across the returns/closures scans** — affects only a diagnostic count.
+- **Two independently hand-maintained "what counts as an escalation" purpose lists** — drift risk only on a future rename.
+- **Sweep tick's outer try/catch is cosmetic** (logs then unconditionally rethrows).
+- **No combined ceiling on a single tick's total work** across the two sweep queries.
+- **Raw string interpolation for `SET LOCAL lock_timeout`/`statement_timeout`** — currently safe (fixed constants only).
+- **Silent soft-fail if `pariwarAllowlist` is left set in production** — only a `console.warn`-level alarm, no escalation path.
+- **Dropped negative-path coverage in the rewritten AC18 family→staff→family test** vs. the old `K1` test it replaced.
+- **`personReturnLetterFacts` tests only all-delivered/all-undelivered sets**, not a mixed-delivery case.
+- **The `-251` escalated-approve path is untested for a `stale`-by-timing name check** (only no-check/does_not_match seeded).
+- **Day-90-exact threshold untested for the base (non-switched) family run.**
+- **No test combines `{ mustAct:'staff', timeline:true }` in the shared fixture.**
+- **Concurrency spec's `settleWithin` 30s-deadline/forced-termination fallback path is never actually triggered.**
+- **Concurrency race case (1) (approve×decline) only exercises one arrival order**, unlike siblings which loop both.
+- **`refusalOf` test helper collapses all failure shapes (typed refusal vs raw Postgres error vs TypeError) into one bucket.**
+- **Shared `superAdmin()` fixture hardcodes one `refusalReasonCode`**, so the invalid-code branch is never exercised by any test using it.
+- **Admin UI race/edge-case grab-bag**: approve+keep racing on the same no-correction item; decide-succeeds-before-refetch leaves stale Review/Direct/Decision forms mounted; `EscalationPanel`'s `decided.closure === null` → mislabeled outcome; "1"/"2" shortcuts fire with a modifier key held; a malformed `?claim=` deep link is silently dropped; mobile `appeal-status.ts`'s `reversed`/`closed_no_response` combination unguarded.
+- **`closed_no_response` added to `MemberDeathCertificateStatusResponse` has no mobile consumer in this diff**, undisclosed as wire-only — likely forward-looking per AC7's already-acknowledged "mounted on no screen" gap.
+- **`ClosureLettersOwedItemDto`/`days_since_closure` contract gaps** — an empty `people` array can validate; no non-negative constraint on day-count fields.
+- **Per-return vs. per-run letter-cap reading (`-273` §2) was handled as an author-commit with no Panel Confirm raised**, unlike `-273`'s other provisions — plausibly a deadlock bug-fix rather than new policy.
+
+- ✅ **DISCHARGED 2026-10-02 (code review, Decision 6) — `:5433` came up mid-review, fixed instead of deferred.** The cycle-freeze hold guard's API-level test coverage gap (`assertCorrectionClaimNotHeld` wired into `claims.cycle-freeze.handlers.ts`'s vote/deny/return route) is now covered: a new test in `apps/api/tests/integration/claims/correction-closure.spec.ts` escalates a claim, then hits `/admin/cycle-freeze/decision` and asserts `409 cycle_freeze.escalated`. Verified live, 11/11 passing. No longer open.
+
+- **`decideEscalation`'s `claim_corrected` refusal is untested at the API layer.** `/escalation/decision`'s `close` branch refuses `409 closure.claim_corrected` when the family resubmitted after escalation (`assertClosureGround`); this is proven at the domain layer (`packages/domain/tests/integration/claim/correction-closure.spec.ts`, the `-273 §4` resubmitted-escalated-claim test) but no API test resubmits a family correction on an escalated claim before calling the route. `approve`, `refuse` and `staff_case_origin` on this same route were covered 2026-10-02 (code review, Decision 7); this leg was left out — it needs a `resubmit`-after-escalation fixture (mirroring the domain spec's `resubmit(client, tx, c)` helper: bump `claim_nominee_bank_accounts.updated_at` past the return, then a fresh passing name check) that doesn't yet exist in `correction-closure.spec.ts`. ⭐ Trigger: next touch of `/escalation/decision`'s test coverage.
+
+⭐ Trigger for all of the above: next touch of the files named, or a dedicated hardening pass over the 6.19c closure surface. Full raw per-layer review output (Blind Hunter / Edge Case Hunter / Acceptance Auditor × 7 diff chunks) is in this session's scratchpad; this is the deduplicated, triaged set. See the story's own *Review Findings* section for the `decision_needed` and `patch` items from the same run.
+
 ## Deferred from: Story 6.19c dev — the correction closure, the Super Admin's review, the re-file (2026-10-01)
 
 - **The member appeal routes 404 for every production claim, and `AppealStatusCard` is mounted on ⛔ no screen (AC7, `-273` §9) — RECORDED, ⛔ not fixed.** `getMemberStatus` (and the member initiate) match the claim's `claimantActorId` against the member session; every production claim is filed with `claimant_actor_id = null` (the v1 null-claimant policy), so the member route answers 404 for all of them. The card's `closed_no_response` leg (`deriveAppealView` — ⛔ no affordance, ⛔ no external-remedy disclosure) is correct but unreachable; what a family actually sees for a closed claim is the claim-entry gate's re-file state (`apps/mobile/app/(claim)/refile-helpline.tsx`). ⭐ Trigger: the story that mounts the appeal card or settles the claimant identity.
 - **⛔ No RTBF path reaches the 6.19c tables' Tier-1 columns (AC9c, invariant 9).** `claim_correction_closures` (four note columns), `claim_correction_directions` (text, response), `claim_refile_confirmations` (note), `claim_closure_letters` (tracking number) and `claim_correction_no_correction_records` (note) are swept by ⛔ no erasure path — the 6.19b chase tables' gap, widened. ⭐ Trigger: the RTBF story that covers the claim-correction tables.
 - **⛔ No virus scan on the closure letter's delivery screenshot (D6).** The same gap as 6.19b's correction-letter screenshot: MIME + size are checked before the port's `put`, nothing scans the bytes. And the same failed-COMMIT orphan caveat (`closeScopeTx` swallows a COMMIT failure). ⭐ Trigger: the document-scanning story.
 - **The Super Admin's direction form takes the directee's USER ID.** The API verifies the id holds the named role in this Pariwar (`direction.directee_role_invalid` otherwise), but there is ⛔ no admin-directory READ route for the form to pick from (`listAdminsByRole` is a domain reader the jobs use). Usable, not friendly. ⭐ Trigger: an admin-directory read for staff pickers.
-- **⚠ AC11c's "a request on day 95, the mark switched to `staff` and back, then the Pariwar Admin's approval → `closure.too_early`" vs `-273` §3d.** §3d makes that request LAPSE (a mark that is ⛔ not `family` recorded after it; and the new family run is ⛔ not its `request_family_run_id`), and the approve refuses a lapsed request first — so the built answer is **409 `closure.request_lapsed`** (`packages/domain/tests/integration/claim/correction-closure.spec.ts`). `too_early` stays the defensive re-check under the lock (reachable only if a request outlived its run without lapsing). Flagged for BigDev: the AC's example predates §3d. ⭐ Trigger: the next spec pass over 6.19c.
+- ✅ **DISCHARGED 2026-10-02 (code review, Decision 1).** AC11c's "a request on day 95, the mark switched to `staff` and back, then the Pariwar Admin's approval → `closure.too_early`" vs `-273` §3d. §3d makes that request LAPSE (a mark that is ⛔ not `family` recorded after it; and the new family run is ⛔ not its `request_family_run_id`), and the approve refuses a lapsed request first — so the built answer is **409 `closure.request_lapsed`** (`packages/domain/tests/integration/claim/correction-closure.spec.ts`). `too_early` stays the defensive re-check under the lock (reachable only if a request outlived its run without lapsing). Was flagged for BigDev; the AC11c text itself is now corrected to `closure.request_lapsed` in the story file — no longer open.
 - **The staff reminders 6.19c adds inherit "The staff push deep-links into the MEMBER app"** (the closure-due / escalation reminders, the staff case's day-90 escalation, the Super Admin's 30-day reminder, the directee's, the closure-letter chase and its escalation) — recorded, ⛔ not fixed (see the third-pass section below).
 
 ## Deferred from: fifth-pass re-review of the 6-19b review commits (2026-10-01)

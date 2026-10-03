@@ -693,7 +693,9 @@ export interface PersonRunState {
   readonly epochRows: readonly PersonReminderRow[];
 }
 
-const DEAD_OUTCOMES: ReadonlySet<CorrectionReminderOutcome> = new Set([
+// Code review patch (2026-10-02): exported and shared with `correction-closure.ts` (was independently redefined
+// there) — ONE place "dead" means, so a future addition can't apply to one module and silently miss the other.
+export const DEAD_OUTCOMES: ReadonlySet<CorrectionReminderOutcome> = new Set([
   'rejected_invalid_number',
   'rejected_unreachable',
   'no_target',

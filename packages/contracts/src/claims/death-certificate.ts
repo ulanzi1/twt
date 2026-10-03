@@ -162,6 +162,15 @@ export const MemberDeathCertificateStatusResponse = z
   .strict();
 export type MemberDeathCertificateStatusResponse = z.output<typeof MemberDeathCertificateStatusResponse>;
 
+/**
+ * The wizard submit's 409 code that routes to the SAME re-file state as `refile_requires_confirmation` above
+ * (`apps/api/src/modules/claims/claims.service.ts`'s `translateRefileRequiresConfirmation` — a phone without the
+ * filed-claim pointer, e.g. a helpline-filed claim read from another device). Code review patch (2026-10-02):
+ * canonical here — previously hand-duplicated as a literal string in `apps/mobile/lib/refile-helpline-copy.ts`
+ * with no server-side link, so a server rename would have silently degraded the flow with nothing to catch it.
+ */
+export const REFILE_REQUIRES_CONFIRMATION_CODE = 'claim.refile_requires_confirmation';
+
 /** One of the selected deceased member's live claims, with its D1 status (the helpline list, D5). */
 export const DeathCertificateHelplineClaimStatus = z
   .object({

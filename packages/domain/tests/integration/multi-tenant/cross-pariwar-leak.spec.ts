@@ -283,10 +283,12 @@ describe.skipIf(!hasDatabase)('cross-Pariwar adversarial leak (RLS-enforced)', (
     expect(rawDoc.rows).toHaveLength(1);
   });
 
-  // Story 6.19c (Task 1; AC11c) — the correction closure's four tables: a closures row (with a Tier-1 note), a direction,
-  // a re-file confirmation and a closure letter in each tenant. ⭐ Probed by the NOTE / TRACKING columns too (⛔ only the
-  // tenant key) — the Super Admin's and the Pariwar Admin's notes and a closure letter's tracking number are the payload.
-  it('claim_correction_closures / _directions / claim_refile_confirmations / claim_closure_letters (scoped) — A scope sees only A rows, never B', async () => {
+  // Story 6.19c (Task 1; AC11c) — the correction closure's five tables: a closures row (with a Tier-1 note), a
+  // direction, a re-file confirmation, a closure letter, and a "no correction needed" record (D27, migration 0136 —
+  // added by code review Decision 8, 2026-10-02: the only one of the five NOT originally probed here) in each
+  // tenant. ⭐ Probed by the NOTE / TRACKING columns too (⛔ only the tenant key) — the Super Admin's and the Pariwar
+  // Admin's notes, a closure letter's tracking number, and the D27 record's note are the payload.
+  it('claim_correction_closures / _directions / claim_refile_confirmations / claim_closure_letters / claim_correction_no_correction_records (scoped) — A scope sees only A rows, never B', async () => {
     const { tx, client } = getTx();
     for (const pariwar of [PARIWAR_A, PARIWAR_B]) {
       const claimCaseId = await seedClaim(tx, pariwar);
@@ -326,9 +328,20 @@ describe.skipIf(!hasDatabase)('cross-Pariwar adversarial leak (RLS-enforced)', (
            recorded_by_actor, recorded_by_display) VALUES ($1, $2, $3, 'claimant', '2026-11-03', $4, 'da', 'District Admin')`,
         [closureId, claimCaseId, pariwar, `enc:v1:track-${pariwar}`],
       );
+      const markId = randomUUID();
+      await client.query(
+        `INSERT INTO claim_correction_marks (mark_id, claim_case_id, pariwar_id, return_decision_id, must_act, set_by_actor, set_by_actor_display, set_by_role, note_ciphertext)
+         VALUES ($1, $2, $3, $4, 'staff', 'da', 'District Admin', 'district_admin', 'enc:v1:mark')`,
+        [markId, claimCaseId, pariwar, decisionId],
+      );
+      await client.query(
+        `INSERT INTO claim_correction_no_correction_records (claim_case_id, pariwar_id, return_decision_id, mark_id, note_ciphertext, recorded_by_actor, recorded_by_display)
+         VALUES ($1, $2, $3, $4, $5, 'da', 'District Admin')`,
+        [claimCaseId, pariwar, decisionId, markId, `enc:v1:d27-${pariwar}`],
+      );
     }
     await enterAppScope(client, PARIWAR_A);
-    for (const table of ['claim_correction_closures', 'claim_correction_directions', 'claim_refile_confirmations', 'claim_closure_letters']) {
+    for (const table of ['claim_correction_closures', 'claim_correction_directions', 'claim_refile_confirmations', 'claim_closure_letters', 'claim_correction_no_correction_records']) {
       const all = await client.query<{ pariwar_id: string }>(`SELECT pariwar_id FROM ${table}`);
       expect(all.rows.length).toBeGreaterThan(0);
       expect(all.rows.every((r) => r.pariwar_id === PARIWAR_A)).toBe(true);
@@ -338,6 +351,8 @@ describe.skipIf(!hasDatabase)('cross-Pariwar adversarial leak (RLS-enforced)', (
     expect((await client.query(`SELECT 1 FROM claim_correction_closures WHERE request_note_ciphertext = $1`, [`enc:v1:note-${PARIWAR_B}`])).rows).toHaveLength(0);
     expect((await client.query(`SELECT 1 FROM claim_closure_letters WHERE tracking_number_ciphertext = $1`, [`enc:v1:track-${PARIWAR_B}`])).rows).toHaveLength(0);
     expect((await client.query(`SELECT 1 FROM claim_correction_closures WHERE request_note_ciphertext = $1`, [`enc:v1:note-${PARIWAR_A}`])).rows).toHaveLength(1);
+    expect((await client.query(`SELECT 1 FROM claim_correction_no_correction_records WHERE note_ciphertext = $1`, [`enc:v1:d27-${PARIWAR_B}`])).rows).toHaveLength(0);
+    expect((await client.query(`SELECT 1 FROM claim_correction_no_correction_records WHERE note_ciphertext = $1`, [`enc:v1:d27-${PARIWAR_A}`])).rows).toHaveLength(1);
   });
 });
 

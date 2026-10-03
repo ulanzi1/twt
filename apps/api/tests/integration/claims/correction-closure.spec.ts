@@ -458,7 +458,7 @@ describe.skipIf(!hasDatabase)('the correction closure — routes (Story 6.19c)',
       payload: { decision: 'close', reason: 'family_silent_after_reached', note: 'reached and silent for 96 days' },
     });
     expect(closed.statusCode, closed.body).toBe(201);
-    expect(closed.json()).toMatchObject({ claim_state: 'denied', closure: { state: 'closed', super_admin_decision: 'closed', name_highlight: null } });
+    expect(closed.json()).toMatchObject({ claim_state: 'denied', closure: { state: 'closed', super_admin_decision: 'closed', approval_name_highlight: null } });
     const events = await t.pool.query<{ event_type: string }>('SELECT event_type FROM events_log WHERE stream_id = $1 ORDER BY event_version', [claimCaseId]);
     expect(events.rows.map((r) => r.event_type)).toContain('claim.denied_no_appeal');
 
@@ -481,6 +481,82 @@ describe.skipIf(!hasDatabase)('the correction closure — routes (Story 6.19c)',
     );
     expect(stored.rows[0]!.request_note_ciphertext).not.toContain('zqxw');
     expect(await logsSince(logFrom)).not.toContain('zqxw');
+  });
+
+  it('⭐ code review Decision 7 (2026-10-02) — `/escalation/decision` approve + refuse response shapes, and a STAFF-CASE origin refuses `close` with `closure.staff_case_origin`', async () => {
+    const pariwarId = randomUUID();
+    const da = await staff(pariwarId, 'district_admin');
+    const pa = await staff(pariwarId, 'pariwar_admin');
+    const sa = await staff(pariwarId, 'super_admin');
+    const escalate = async () => {
+      const c = await returnedClaim(pariwarId);
+      const requested = await da.client.inject({ method: 'POST', url: `${claimBase(pariwarId, c.claimCaseId)}/closure/request`, payload: { note: 'n' } });
+      expect(requested.statusCode, requested.body).toBe(201);
+      const declined = await pa.client.inject({ method: 'POST', url: `${claimBase(pariwarId, c.claimCaseId)}/closure/decision`, payload: { decision: 'decline', note: 'escalate' } });
+      expect(declined.statusCode, declined.body).toBe(201);
+      return c;
+    };
+
+    // APPROVE — the `-251` waiver path (accounts, a passing check and a determination are already seeded by `returnedClaim`).
+    const approveClaim = await escalate();
+    const approved = await sa.client.inject({
+      method: 'POST', url: `${claimBase(pariwarId, approveClaim.claimCaseId)}/escalation/decision`,
+      payload: { decision: 'approve', reason: 'name_difference_accepted', note: 'the bank shortened the name' },
+    });
+    expect(approved.statusCode, approved.body).toBe(201);
+    expect(approved.json()).toMatchObject({ claim_state: 'state_trustee_approved', closure: { state: 'approved', super_admin_decision: 'approved', approval_name_highlight: null } });
+
+    // REFUSE — a chosen trustee reason code, appealable once (⛔ `denied_no_appeal`).
+    const refuseClaim = await escalate();
+    const refused = await sa.client.inject({
+      method: 'POST', url: `${claimBase(pariwarId, refuseClaim.claimCaseId)}/escalation/decision`,
+      payload: { decision: 'refuse', reason: 'claim_not_payable', refusal_reason_code: 'documents_insufficient', note: 'n' },
+    });
+    expect(refused.statusCode, refused.body).toBe(201);
+    expect(refused.json()).toMatchObject({ claim_state: 'denied', closure: { state: 'refused', super_admin_decision: 'refused' } });
+    const refuseEvents = await t.pool.query<{ event_type: string }>('SELECT event_type FROM events_log WHERE stream_id = $1 ORDER BY event_version', [refuseClaim.claimCaseId]);
+    expect(refuseEvents.rows.map((r) => r.event_type)).not.toContain('claim.denied_no_appeal');
+
+    // A STAFF-CASE origin (the day-90 job's own record, ⛔ no request, ⛔ no Pariwar Admin decision) — `close` is refused
+    // on origin FIRST (`-274` 1a); `approve_path` reads `full_gate` (⛔ the `-251` waiver — that path is for a
+    // declined-closure origin only).
+    const staffClaim = await returnedClaim(pariwarId, { mustAct: 'staff' });
+    const escalateTx = await openScopeTx(t.deps, pariwarId);
+    try {
+      const row = await claim.escalateStaffCase(escalateTx.client, { pariwarId: ids.pariwarId(pariwarId), claimCaseId: ids.claimId(staffClaim.claimCaseId), now: new Date() });
+      expect(row).not.toBeNull();
+      await closeScopeTx(escalateTx, true);
+    } catch (err) {
+      await closeScopeTx(escalateTx, false);
+      throw err;
+    }
+    const staffDetail = await sa.client.inject({ method: 'GET', url: `${claimBase(pariwarId, staffClaim.claimCaseId)}/escalation` });
+    expect(staffDetail.statusCode, staffDetail.body).toBe(200);
+    expect(staffDetail.json()).toMatchObject({ approve_path: 'full_gate' });
+    const closeStaff = await sa.client.inject({
+      method: 'POST', url: `${claimBase(pariwarId, staffClaim.claimCaseId)}/escalation/decision`,
+      payload: { decision: 'close', reason: 'family_silent_after_reached', note: 'n' },
+    });
+    expect(closeStaff.statusCode, closeStaff.body).toBe(409);
+    expect(errCode(closeStaff)).toBe('closure.staff_case_origin');
+  });
+
+  it('⭐ code review Decision 6 (2026-10-02) — the cycle-freeze vote route refuses `cycle_freeze.escalated` while a claim is held by a correction-closure escalation', async () => {
+    const pariwarId = randomUUID();
+    const da = await staff(pariwarId, 'district_admin');
+    const pa = await staff(pariwarId, 'pariwar_admin');
+    const c = await returnedClaim(pariwarId);
+    const requested = await da.client.inject({ method: 'POST', url: `${claimBase(pariwarId, c.claimCaseId)}/closure/request`, payload: { note: 'n' } });
+    expect(requested.statusCode, requested.body).toBe(201);
+    const declined = await pa.client.inject({ method: 'POST', url: `${claimBase(pariwarId, c.claimCaseId)}/closure/decision`, payload: { decision: 'decline', note: 'escalate' } });
+    expect(declined.statusCode, declined.body).toBe(201);
+    // The SAME `pariwar_admin` who can decide an ordinary vote is refused here, HELD by the correction escalation —
+    // `claims.cycle-freeze.handlers.ts`'s own guard, ⛔ not the correction-closure routes under test elsewhere in this file.
+    const vote = await pa.client.inject({
+      method: 'POST', url: `/api/v1/p/${pariwarId}/admin/cycle-freeze/decision`, payload: { claim_case_id: c.claimCaseId, action: 'approve' },
+    });
+    expect(vote.statusCode, vote.body).toBe(409);
+    expect(errCode(vote)).toBe('cycle_freeze.escalated');
   });
 
   it('⭐ the Pariwar Admin APPROVES (key 3) — the D1 chain (`denied_no_appeal`); the appeal status reads closed_no_response with ⛔ no affordance; the helpline re-file needs a confirmation (key 6): 409 → confirmed → minted', async () => {
@@ -656,6 +732,11 @@ describe.skipIf(!hasDatabase)('the correction closure — routes (Story 6.19c)',
     expect(delivered.json()).toMatchObject({ letter_id: letterId, delivered_on: todayIst(), overdue: false, has_screenshot: true });
     const keys = await t.pool.query<{ screenshot_storage_key: string }>('SELECT screenshot_storage_key FROM claim_closure_letters WHERE letter_id = $1', [letterId]);
     expect(keys.rows[0]!.screenshot_storage_key).toContain(`/closure-letter/${letterId}/`);
+    // Code review patch (2026-10-02) — the screenshot route is step-up-gated too, same as the address route: an
+    // UNELEVATED District Admin of this same Pariwar is refused.
+    const unelevatedDa = await staff(pariwarId, 'district_admin');
+    const unelevatedShot = await unelevatedDa.client.inject({ method: 'GET', url: `${claimBase(pariwarId, claimCaseId)}/closure-letters/${letterId}/screenshot` });
+    expect(unelevatedShot.statusCode, unelevatedShot.body).toBe(403);
     const shot = await da.client.inject({ method: 'GET', url: `${claimBase(pariwarId, claimCaseId)}/closure-letters/${letterId}/screenshot` });
     expect(shot.statusCode, shot.body).toBe(200);
     // Key (1)'s denial for a role without it.
@@ -674,10 +755,15 @@ describe.skipIf(!hasDatabase)('the correction closure — routes (Story 6.19c)',
     const opB = await staff(pariwarB, 'helpline_operator');
     expect((await daB.client.inject({ method: 'POST', url: `${claimBase(pariwarB, claimCaseId)}/closure/request`, payload: { note: 'n' } })).statusCode).toBe(403);
     expect((await daB.client.inject({ method: 'POST', url: `${claimBase(pariwarB, claimCaseId)}/no-correction-needed`, payload: { note: 'n' } })).statusCode).toBe(403);
+    // Code review patch (2026-10-02): pinned to the single deterministic code (verified live, 4 runs) instead of
+    // tolerating `[403, 404]` — both routes 404 (`closure.not_found` / `refile_confirmation.not_found`): the
+    // permission hook checks the ACTOR's grant in pariwarB (which `paB`/`opB` hold), so it never 403s here; the
+    // claim scoped to pariwarB's RLS then genuinely doesn't exist. A non-deterministic response for the identical
+    // condition would be an enumeration-oracle risk, not a deliberate choice — pinning it removes that risk.
     const decide = await paB.client.inject({ method: 'POST', url: `${claimBase(pariwarB, claimCaseId)}/closure/decision`, payload: { decision: 'approve' } });
-    expect([403, 404]).toContain(decide.statusCode);
+    expect(decide.statusCode, decide.body).toBe(404);
     const refile = await opB.client.inject({ method: 'POST', url: `/api/v1/p/${pariwarB}/admin/claims/${claimCaseId}/refile-confirmation`, payload: { note: 'n' } });
-    expect([403, 404]).toContain(refile.statusCode);
+    expect(refile.statusCode, refile.body).toBe(404);
     expect((await t.pool.query('SELECT 1 FROM claim_correction_closures WHERE claim_case_id = $1', [claimCaseId])).rows).toHaveLength(0);
     expect((await t.pool.query('SELECT 1 FROM claim_correction_no_correction_records WHERE claim_case_id = $1', [claimCaseId])).rows).toHaveLength(0);
     expect((await t.pool.query('SELECT 1 FROM claim_refile_confirmations WHERE closed_claim_case_id = $1', [claimCaseId])).rows).toHaveLength(0);

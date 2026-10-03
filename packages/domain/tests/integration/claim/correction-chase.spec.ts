@@ -1586,6 +1586,20 @@ describe.skipIf(!hasDatabase)('the correction chase — letters (AC5, D31) and t
     // … ⛔ the cap: two letters in the return, whatever the number.
     expect(st).toMatchObject({ lettersInReturn: 2 });
     expect(isPersonAtLetterCap(st!)).toBe(true);
+    // Code review patch (2026-10-02) — the WRITER itself, ⛔ only the read-model: a third letter on the NEW number,
+    // in the NEW run, is still refused `limit_reached` (the cap never resets on a number change). First make the
+    // NEW number eligible (found dead) — letter-eligibility runs before the cap check, and this run3 hasn't had any
+    // reminder attempt yet (that's exactly what `foundDeadOn: null` above asserts).
+    const newHash = await currentCorrectionNumberHash(person.mobileCiphertext, person.mobileSource, PARIWAR_A, ENC);
+    const deadOnNewNumber: CorrectionReminderKey = {
+      pariwarId: PARIWAR_A, claimCaseId: c.cid, runId: run3.runId, slotDay: 11, recipientKey: key, purpose: 'family_sms', subjectKey: '',
+    };
+    const claimedDead = await claimCorrectionReminder(tx, { ...deadOnNewNumber, sentOn: addCalendarDays(c.day0!, 11), late: false, jobId: 'j2', now: new Date() });
+    if (claimedDead.status !== 'claimed') throw new Error('claim');
+    await finaliseCorrectionReminder(tx, {
+      pariwarId: PARIWAR_A, reminderId: claimedDead.reminderId, jobId: 'j2', outcome: 'rejected_invalid_number', recipientVersionId: person.versionId, recipientNumberHash: newHash,
+    });
+    await expect(recordCorrectionLetter(client, letterInput(c, key, addCalendarDays(c.day0!, 15)))).rejects.toMatchObject({ refusal: 'limit_reached' });
   });
 
   it('⭐ K1 — a person who LEFT the recipient set (a W6 (b) rewrite of the contact record) keeps their letter on the queue, and its delivery stays recordable', async () => {

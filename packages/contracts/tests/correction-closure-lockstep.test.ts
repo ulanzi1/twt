@@ -45,21 +45,25 @@ describe('the correction closure vocabularies (Story 6.19c)', () => {
   });
 
   it('the request blocker carries AC6\'s codes in their order, then D14 and the retryable hash fault', () => {
-    expect(ClosureRequestBlocker.options).toEqual([
-      'no_live_return',
-      'escalated',
-      'request_pending',
-      'not_family_action',
-      'too_early',
-      'claim_routed_to_r9',
-      'claim_corrected',
-      'not_reached',
-      'claim_contact_required',
-      'number_unverified',
-    ]);
+    // Code review patch (2026-10-02): the AC6 prefix is compared against the domain's own runtime export
+    // (`claim.AC6_REQUEST_REFUSALS`), ⛔ an inline hand-copy — a domain-side rename/reorder of these codes would
+    // now be caught here, like every sibling vocabulary in this file. `claim_contact_required` (D14) and
+    // `number_unverified` (the retryable hash fault) are NOT `CorrectionClosureRefusal` members at all — they
+    // come from separate domain error types (`ClaimContactRequiredError` / `CorrectionNumberUnverifiedError`)
+    // the API layer adds on top, so they stay an explicit literal tail, not a domain lockstep claim.
+    expect(ClosureRequestBlocker.options.slice(0, claim.AC6_REQUEST_REFUSALS.length)).toEqual([...claim.AC6_REQUEST_REFUSALS]);
+    expect(ClosureRequestBlocker.options.slice(claim.AC6_REQUEST_REFUSALS.length)).toEqual(['claim_contact_required', 'number_unverified']);
   });
 
-  it('the highlight carries the two `-273` §7 wordings', () => {
+  it('the highlight carries the two `-273` §7 wordings — `approvalNameHighlightOf`\'s own two return values', () => {
+    // Code review patch (2026-10-02): compared against the domain function's actual two non-null return values
+    // (derived by calling it, not a hand-copied literal) — a rename/reorder there now fails this test too.
+    expect(claim.approvalNameHighlightOf({ state: 'approved', nameCheckWaived: true, approvalNameCheckState: 'never_checked' })).toBe(
+      'approved_without_passing_check',
+    );
+    expect(claim.approvalNameHighlightOf({ state: 'approved', nameCheckWaived: true, approvalNameCheckState: 'does_not_match' })).toBe(
+      'approved_despite_name_mismatch',
+    );
     expect(ApprovalNameHighlight.options).toEqual(['approved_without_passing_check', 'approved_despite_name_mismatch']);
   });
 });

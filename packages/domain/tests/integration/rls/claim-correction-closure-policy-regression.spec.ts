@@ -165,7 +165,7 @@ const TOUCH: Record<Table, string> = {
   claim_closure_letters: 'updated_at = now()',
 };
 
-function insertRow(client: Client, table: Table | 'claim_correction_reminders', v: Record<string, unknown>) {
+function insertRow(client: Client, table: Table | 'claim_correction_reminders' | 'claim_correction_no_correction_records', v: Record<string, unknown>) {
   const cols = Object.keys(v);
   return client.query(
     `INSERT INTO ${table} (${cols.join(', ')}) VALUES (${cols.map((_, i) => `$${i + 1}`).join(', ')})`,
@@ -390,7 +390,10 @@ describe.skipIf(!hasDatabase)('the correction closure — migrations 0131–0135
         title: 'an approval records its name-check facts',
         set: `state = 'approved', super_admin_decision = 'approved', super_admin_reason = 'other', super_admin_decided_by_actor = 'sa', super_admin_decided_by_display = 'Super Admin', super_admin_note_ciphertext = 'enc:v1:n', super_admin_decided_at = now()`,
         constraint: 'claim_correction_closures_approval_facts_check',
-        ok: `state = 'approved', super_admin_decision = 'approved', super_admin_reason = 'name_difference_accepted', super_admin_decided_by_actor = 'sa', super_admin_decided_by_display = 'Super Admin', super_admin_note_ciphertext = 'enc:v1:n', super_admin_decided_at = now(), name_check_waived = true, approval_name_check_state = 'does_not_match'`,
+        // Code review patch (2026-10-02): the reason stays `'other'` (a VALID `approved` reason, same as the
+        // `set` above) — isolating this to the actual fix (the missing `name_check_waived`/`approval_name_check_state`
+        // columns), matching every sibling entry's discipline of holding one variable constant between bad/ok.
+        ok: `state = 'approved', super_admin_decision = 'approved', super_admin_reason = 'other', super_admin_decided_by_actor = 'sa', super_admin_decided_by_display = 'Super Admin', super_admin_note_ciphertext = 'enc:v1:n', super_admin_decided_at = now(), name_check_waived = true, approval_name_check_state = 'does_not_match'`,
       },
       {
         title: 'a closed row carries its closure date and notice outbox',
@@ -409,6 +412,15 @@ describe.skipIf(!hasDatabase)('the correction closure — migrations 0131–0135
         }
       });
     }
+
+    it('⭐ code review Decision 9 (2026-10-02) — `claim_correction_closures_approval_facts_check` also accepts `never_checked` and `stale` (the highlight\'s OTHER wording), ⛔ only `does_not_match` was exercised before', async () => {
+      const { client } = getTx();
+      const s = await seedClosure(client, PARIWAR_A);
+      const approved = (approvalState: string) =>
+        `state = 'approved', super_admin_decision = 'approved', super_admin_reason = 'name_difference_accepted', super_admin_decided_by_actor = 'sa', super_admin_decided_by_display = 'Super Admin', super_admin_note_ciphertext = 'enc:v1:n', super_admin_decided_at = now(), name_check_waived = true, approval_name_check_state = '${approvalState}'`;
+      await expectAccepted(client, () => client.query(`UPDATE claim_correction_closures SET ${approved('never_checked')} WHERE closure_id = $1`, [s.closureId]));
+      await expectAccepted(client, () => client.query(`UPDATE claim_correction_closures SET ${approved('stale')} WHERE closure_id = $1`, [s.closureId]));
+    });
 
     it('⭐⛔ `-274` 1a — a STAFF-ORIGIN row is NEVER closed (`..._staff_case_never_closed_check`), whatever the reason; its refusal / approval are accepted', async () => {
       const { client } = getTx();
@@ -565,5 +577,167 @@ describe.skipIf(!hasDatabase)('the correction closure — migrations 0131–0135
         await expectAccepted(client, () => insertRow(client, 'claim_correction_reminders', reminder(s, { purpose, subject_key: purpose })));
       }
     });
+  });
+});
+
+// ── claim_correction_no_correction_records — migration 0136 + RLS policy regression (code review Decision 8,
+// 2026-10-02). ⚠ NOT folded into the generic `TABLES` loop above: this table's grant is SELECT + INSERT ONLY (⛔ no
+// UPDATE at all, unlike its four siblings, per 0136's own "append-only, as the marks" note), so the loop's
+// UPDATE-command assumptions (TOUCH, the UPDATE-policy's qual=with_check check) don't apply. A dedicated, smaller
+// block instead, asserting the SAME family-5 invariants by NAME: RLS + FORCE, per-command policies, cross-tenant
+// SELECT/INSERT, the one CHECK (`claim_correction_no_correction_records_recorded_by_check`), the `mark_id` UNIQUE
+// (`claim_correction_no_correction_records_mark_uq`), ⛔ no DELETE, ⛔ no UPDATE (not merely RLS-denied — ungranted).
+describe.skipIf(!hasDatabase)('claim_correction_no_correction_records — migration 0136 + RLS policy regression', { timeout: 20000 }, () => {
+  setupLiveDb();
+
+  /** As the superuser: a claim, its return, a `staff` mark consumed by one record, and a SPARE unused mark. */
+  async function seedRecord(client: Client, pariwarId: string) {
+    const { tx } = getTx();
+    const claimCaseId = await seedClaim(tx, pariwarId);
+    const decisionId = randomUUID();
+    await client.query(
+      `INSERT INTO claim_state_trustee_decisions (decision_id, claim_case_id, pariwar_id, phase, outcome, reason_code, actor_id, actor_display)
+       VALUES ($1, $2, $3, 'correction_return', 'returned_for_correction', 'other', 'trustee', 'Pariwar Admin')`,
+      [decisionId, claimCaseId, pariwarId],
+    );
+    const markId = randomUUID();
+    await client.query(
+      `INSERT INTO claim_correction_marks (mark_id, claim_case_id, pariwar_id, return_decision_id, must_act, set_by_actor, set_by_actor_display, set_by_role, note_ciphertext)
+       VALUES ($1, $2, $3, $4, 'staff', 'da', 'District Admin', 'district_admin', 'enc:v1:mark')`,
+      [markId, claimCaseId, pariwarId, decisionId],
+    );
+    const recordId = randomUUID();
+    await client.query(
+      `INSERT INTO claim_correction_no_correction_records (record_id, claim_case_id, pariwar_id, return_decision_id, mark_id, note_ciphertext, recorded_by_actor, recorded_by_display)
+       VALUES ($1, $2, $3, $4, $5, 'enc:v1:n', 'da', 'District Admin')`,
+      [recordId, claimCaseId, pariwarId, decisionId, markId],
+    );
+    // A SPARE, unused mark on the SAME claim/return — the free slot a test's own record lands on (mirrors
+    // `seedClosure`'s spare return above).
+    const spareMarkId = randomUUID();
+    await client.query(
+      `INSERT INTO claim_correction_marks (mark_id, claim_case_id, pariwar_id, return_decision_id, must_act, set_by_actor, set_by_actor_display, set_by_role, note_ciphertext)
+       VALUES ($1, $2, $3, $4, 'staff', 'da', 'District Admin', 'district_admin', 'enc:v1:mark')`,
+      [spareMarkId, claimCaseId, pariwarId, decisionId],
+    );
+    return { claimCaseId, decisionId, markId, recordId, spareMarkId };
+  }
+
+  type SeededRecord = Awaited<ReturnType<typeof seedRecord>>;
+  const TABLE = 'claim_correction_no_correction_records';
+  const validRow = (s: SeededRecord, pariwarId = PARIWAR_A) => ({
+    record_id: randomUUID(),
+    claim_case_id: s.claimCaseId,
+    pariwar_id: pariwarId,
+    return_decision_id: s.decisionId,
+    mark_id: s.spareMarkId,
+    note_ciphertext: 'enc:v1:n2',
+    recorded_by_actor: 'da2',
+    recorded_by_display: 'District Admin Two',
+  });
+
+  it('positive + negative: scope A shows only A rows, and scope B only B rows', async () => {
+    const { client } = getTx();
+    await seedRecord(client, PARIWAR_A);
+    await seedRecord(client, PARIWAR_B);
+    await enterAppScope(client, PARIWAR_A);
+    const a = await client.query<{ pariwar_id: string }>(`SELECT pariwar_id FROM ${TABLE}`);
+    expect(a.rows.length).toBeGreaterThan(0);
+    expect(a.rows.every((r) => r.pariwar_id === PARIWAR_A)).toBe(true);
+    await enterAppScope(client, PARIWAR_B);
+    const b = await client.query<{ pariwar_id: string }>(`SELECT pariwar_id FROM ${TABLE}`);
+    expect(b.rows.length).toBeGreaterThan(0);
+    expect(b.rows.some((r) => r.pariwar_id === PARIWAR_A)).toBe(false);
+  });
+
+  it('connection-level fail-closed: the app role with no scope sees ⛔ no row', async () => {
+    const { client } = getTx();
+    await seedRecord(client, PARIWAR_A);
+    await enterAppRoleNoScope(client);
+    expect((await client.query(`SELECT 1 FROM ${TABLE}`)).rows).toHaveLength(0);
+  });
+
+  it('FORCE RLS: rowsecurity AND forcerowsecurity are both on', async () => {
+    const { client } = getTx();
+    const { rows } = await client.query<{ relrowsecurity: boolean; relforcerowsecurity: boolean }>(
+      `SELECT relrowsecurity, relforcerowsecurity FROM pg_class WHERE relname = $1 AND relnamespace = (SELECT oid FROM pg_namespace WHERE nspname = current_schema())`,
+      [TABLE],
+    );
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.relrowsecurity && rows[0]!.relforcerowsecurity).toBe(true);
+  });
+
+  it('the policies are per-command, SELECT + INSERT ONLY — ⛔ no FOR ALL, ⛔ no UPDATE policy, ⛔ no DELETE policy', async () => {
+    const { client } = getTx();
+    const { rows } = await client.query<{ cmd: string }>(
+      `SELECT cmd FROM pg_policies WHERE schemaname = current_schema() AND tablename = $1`,
+      [TABLE],
+    );
+    expect(rows.map((r) => r.cmd).sort()).toEqual(['INSERT', 'SELECT']);
+  });
+
+  it('⛔ no DELETE for twt_app', async () => {
+    const { client } = getTx();
+    const s = await seedRecord(client, PARIWAR_A);
+    await enterAppScope(client, PARIWAR_A);
+    await expectPgError(client, () => client.query(`DELETE FROM ${TABLE} WHERE record_id = $1`, [s.recordId]), DENIED);
+  });
+
+  it('⛔ no UPDATE for twt_app — ungranted, ⛔ not merely RLS-denied (true append-only)', async () => {
+    const { client } = getTx();
+    const s = await seedRecord(client, PARIWAR_A);
+    await enterAppScope(client, PARIWAR_A);
+    await expectPgError(client, () => client.query(`UPDATE ${TABLE} SET note_ciphertext = note_ciphertext WHERE record_id = $1`, [s.recordId]), DENIED);
+  });
+
+  it('cross-tenant INSERT: under scope A, a row carrying Pariwar B is refused by WITH CHECK (42501)', async () => {
+    const { client } = getTx();
+    const s = await seedRecord(client, PARIWAR_A);
+    await enterAppScope(client, PARIWAR_A);
+    await expectPgError(client, () => insertRow(client, TABLE, validRow(s, PARIWAR_B)), {
+      code: '42501',
+      message: expect.stringMatching(/row-level security/),
+    });
+    expect((await insertRow(client, TABLE, validRow(s, PARIWAR_A))).rowCount).toBe(1);
+  });
+
+  it(`the one CHECK — ${'claim_correction_no_correction_records_recorded_by_check'}: a blank actor or display is refused; both non-blank is accepted`, async () => {
+    const { client } = getTx();
+    const s = await seedRecord(client, PARIWAR_A);
+    await enterAppScope(client, PARIWAR_A);
+    await expectPgError(
+      client,
+      () => insertRow(client, TABLE, { ...validRow(s), recorded_by_actor: '  ' }),
+      CHECK('claim_correction_no_correction_records_recorded_by_check'),
+    );
+    await expectPgError(
+      client,
+      () => insertRow(client, TABLE, { ...validRow(s), recorded_by_display: '' }),
+      CHECK('claim_correction_no_correction_records_recorded_by_check'),
+    );
+    await expectAccepted(client, () => insertRow(client, TABLE, validRow(s)));
+  });
+
+  it('ONE record per mark — `claim_correction_no_correction_records_mark_uq`: a second record on the SAME mark is refused', async () => {
+    const { client } = getTx();
+    const s = await seedRecord(client, PARIWAR_A);
+    await enterAppScope(client, PARIWAR_A);
+    // The seed's own `markId` already carries a record (`s.recordId`) — a second one on it is the UNIQUE violation.
+    await expectPgError(
+      client,
+      () => insertRow(client, TABLE, { ...validRow(s), mark_id: s.markId }),
+      UNIQUE('claim_correction_no_correction_records_mark_uq'),
+    );
+    // The SPARE mark (`s.spareMarkId`) carries ⛔ no record yet — a fresh one on it is accepted.
+    await expectAccepted(client, () => insertRow(client, TABLE, validRow(s)));
+  });
+
+  it('the only deletion is the ON DELETE cascade from claims', async () => {
+    const { client } = getTx();
+    const s = await seedRecord(client, PARIWAR_A);
+    const count = async () => (await client.query(`SELECT count(*)::int AS n FROM ${TABLE} WHERE claim_case_id = $1`, [s.claimCaseId])).rows[0]!.n as number;
+    expect(await count()).toBe(1);
+    await client.query(`DELETE FROM claims WHERE claim_case_id = $1`, [s.claimCaseId]);
+    expect(await count()).toBe(0);
   });
 });

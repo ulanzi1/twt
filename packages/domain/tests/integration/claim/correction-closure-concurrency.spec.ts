@@ -355,14 +355,6 @@ describe.skipIf(!hasDatabase)('Story 6.19c — the correction closure under two-
     };
     try {
       if (createdClaims.length > 0) {
-        let determinationIds: string[] = [];
-        try {
-          determinationIds = (
-            await pool.query<{ id: string }>('SELECT determination_id AS id FROM nominee_determinations WHERE claim_case_id = ANY($1)', [createdClaims])
-          ).rows.map((r) => r.id);
-        } catch (e) {
-          errors.push(`determination ids: ${(e as Error).message}`);
-        }
         await step('claims', 'DELETE FROM claims WHERE claim_case_id = ANY($1)', [createdClaims]);
         await step(
           'consent_records',
@@ -394,14 +386,15 @@ describe.skipIf(!hasDatabase)('Story 6.19c — the correction closure under two-
                   (SELECT count(*) FROM claim_nominee_bank_accounts WHERE claim_case_id = ANY($1))::int AS bank_accounts,
                   (SELECT count(*) FROM claim_death_certificate_uploads WHERE claim_case_id = ANY($1))::int AS certificate_uploads,
                   (SELECT count(*) FROM claim_death_certificate_reviews WHERE claim_case_id = ANY($1))::int AS certificate_reviews,
-                  (SELECT count(*) FROM nominee_determinations WHERE claim_case_id = ANY($1))::int AS determinations,
-                  (SELECT count(*) FROM nominee_determination_items WHERE determination_id = ANY($4::uuid[]))::int AS determination_items,
                   (SELECT count(*) FROM claim_contacts WHERE claim_case_id = ANY($1))::int AS claim_contacts,
                   (SELECT count(*) FROM consent_records WHERE consent_artifact_ref = ANY($1::text[]) OR subject_id = ANY($2))::int AS consent_records,
                   (SELECT count(*) FROM members WHERE member_id = ANY($2))::int AS members,
                   (SELECT count(*) FROM member_nominee_versions WHERE member_id = ANY($2))::int AS member_nominee_versions,
                   (SELECT count(*) FROM events_log WHERE stream_id = ANY($3))::int AS events`,
-          [createdClaims, createdMembers, streams, determinationIds],
+          // Code review patch (2026-10-02): the `nominee_determinations`/`nominee_determination_items` counts were
+          // removed — no test in this file seeds a determination, so those two columns were always 0, dressing up a
+          // dead check as leak-proof coverage this file never actually exercised.
+          [createdClaims, createdMembers, streams],
         );
         const l = left.rows[0]!;
         if (Object.values(l).some((n) => n > 0)) errors.push(`rows remain: ${JSON.stringify(l)}`);

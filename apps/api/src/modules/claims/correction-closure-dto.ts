@@ -49,6 +49,6 @@ export function toClosureDto(row: schema.ClaimCorrectionClosureRow, highlight: A
     super_admin_reason: row.superAdminReason ?? null,
     closed_at: row.closedAt?.toISOString() ?? null,
     closure_letter_person_keys: [...row.closureLetterPersonKeys],
-    name_highlight: highlight,
+    approval_name_highlight: highlight,
   };
 }

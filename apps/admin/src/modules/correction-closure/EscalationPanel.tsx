@@ -7,7 +7,7 @@
 // the trustee reason code. The `-273` §7 highlight is shown on the decision's result. Every note / text is REQUIRED
 // before Send, and its absence is SAID.
 
-import type { ClosureDecisionClaimResponse, EscalatedClosureDetailResponse, EscalatedClosuresResponse, StaffNoteDto } from '@twt/contracts';
+import type { ClosureDecisionClaimResponse, ClosureSuperAdminReason, EscalatedClosureDetailResponse, EscalatedClosuresResponse, StaffNoteDto } from '@twt/contracts';
 import { CLOSURE_SUPER_ADMIN_REASONS } from '@twt/contracts';
 import type { ReactElement } from 'react';
 import { useId, useState } from 'react';
@@ -66,7 +66,9 @@ export function EscalatedClosureList(props: {
           <div className="flex flex-wrap items-baseline gap-x-3">
             <code className="font-mono text-xs">{i.short_reference}</code>
             <span className="text-xs">{t.origin[i.origin] ?? i.origin}</span>
-            <span className="text-xs">{t.state[i.state] ?? i.state}</span>
+            {/* Code review patch (2026-10-02) — `role="status"`: a refetch silently updates this state span (e.g.
+                decline → escalated, review → under_review) for a viewer who isn't the one who just acted. */}
+            <span role="status" className="text-xs">{t.state[i.state] ?? i.state}</span>
           </div>
           <p className="text-xs opacity-80">
             {e.escalatedAt} {i.escalated_at}
@@ -116,14 +118,29 @@ function DirectionForm({ pariwarId, claimCaseId }: { pariwarId: string; claimCas
   const [kind, setKind] = useState<'restart_family_reminders' | 'other'>('other');
   const [text, setText] = useState('');
   const [missing, setMissing] = useState(false);
+  // Code review patch (2026-10-02): `actor` gets its OWN missing-value state, ⛔ sharing `missing` with `text` —
+  // an empty actor field with a filled text field used to render "Write a note saying why" under the (already
+  // valid) text box while the actually-empty actor input got no error state/`aria-describedby` at all.
+  const [actorMissing, setActorMissing] = useState(false);
+  const actorErrorId = useId();
   const d = e.direct;
   return (
     <fieldset className="mt-3 flex flex-col gap-1" data-testid="escalation-direction-form">
       <legend className="font-semibold">{d.heading}</legend>
       <label className="flex flex-col">
         {d.actor}
-        <input value={actor} onChange={(ev) => setActor(ev.target.value)} data-testid="direction-actor" />
+        <input
+          value={actor}
+          onChange={(ev) => setActor(ev.target.value)}
+          aria-describedby={actorMissing ? actorErrorId : undefined}
+          data-testid="direction-actor"
+        />
       </label>
+      {actorMissing ? (
+        <p role="alert" id={actorErrorId} data-testid="direction-actor-missing">
+          {d.actorRequired}
+        </p>
+      ) : null}
       <label>
         {d.role}{' '}
         <select value={role} onChange={(ev) => setRole(ev.target.value as typeof role)} data-testid="direction-role">
@@ -145,11 +162,20 @@ function DirectionForm({ pariwarId, claimCaseId }: { pariwarId: string; claimCas
         disabled={direct.isPending}
         data-testid="direction-submit"
         onClick={() => {
-          if (text.trim() === '' || actor.trim() === '') return setMissing(true);
-          setMissing(false);
+          const textEmpty = text.trim() === '';
+          const actorEmpty = actor.trim() === '';
+          setMissing(textEmpty);
+          setActorMissing(actorEmpty);
+          if (textEmpty || actorEmpty) return;
           void direct
             .mutateAsync({ directed_to_actor: actor.trim(), directed_to_role: role, kind, text })
-            .then(() => setText(''), () => undefined);
+            // Code review patch (2026-10-03, adversarial re-check): `actor` is cleared too, ⛔ only `text` — this
+            // handler was already being touched for the `actorMissing` fix, and leaving the previous recipient's
+            // id sitting in the box after a successful direction is a real, directly-adjacent paper-cut.
+            .then(() => {
+              setText('');
+              setActor('');
+            }, () => undefined);
         }}
       >
         {d.submit}
@@ -167,7 +193,11 @@ function DecisionForm({ pariwarId, detail }: { pariwarId: string; detail: Escala
   const staffCase = detail.closure.origin === 'staff_case';
   const decisions: Decision[] = staffCase ? ['approve', 'refuse'] : ['close', 'refuse', 'approve'];
   const [decision, setDecision] = useState<Decision>(decisions[0]!);
-  const [reason, setReason] = useState<string>(CLOSURE_SUPER_ADMIN_REASONS[decisions[0]!][0]);
+  // Code review patch (2026-10-02): typed as `ClosureSuperAdminReason` (the contracts enum), ⛔ a bare `string` —
+  // the `as never` cast at the mutation call site below is gone; a future drift between this dropdown's values
+  // and the contract's enum now fails at COMPILE time, at the one place the value is actually set (the `<select>`
+  // handler below), not silently at the distant call site.
+  const [reason, setReason] = useState<ClosureSuperAdminReason>(CLOSURE_SUPER_ADMIN_REASONS[decisions[0]!][0]);
   const [refusalCode, setRefusalCode] = useState<'standing_not_met' | 'documents_insufficient' | 'other'>('documents_insufficient');
   const [note, setNote] = useState('');
   const [missing, setMissing] = useState(false);
@@ -181,14 +211,24 @@ function DecisionForm({ pariwarId, detail }: { pariwarId: string; detail: Escala
         <ul>
           <AuditTrailEntry
             entry={{
-              outcome: decided.closure?.super_admin_decision === 'approved' ? 'approved' : 'denied',
+              // Code review Decision 5 (2026-10-02): `closed` and `approved` each get their OWN outcome value now;
+              // `refused` is DELIBERATELY left mapped to the shared `denied` verb (⛔ not given a distinct one) —
+              // a closure-for-no-response and a refusal both leave the claim `denied` at the domain layer, but
+              // "Closed by" was the one reading an admin could otherwise mistake for "Denied"; "refused" already
+              // reads correctly as the verifier console's existing "Denied by" concept, so it stays as-is.
+              outcome:
+                decided.closure?.super_admin_decision === 'approved'
+                  ? 'approved'
+                  : decided.closure?.super_admin_decision === 'closed'
+                    ? 'closed'
+                    : 'denied',
               reasonCode: x.reasons[decided.closure?.super_admin_reason ?? ''] ?? decided.closure?.super_admin_reason ?? '',
               actorDisplay: decided.decided_by,
               decidedAt: decided.decided_at,
             }}
           />
         </ul>
-        <ApprovalNameHighlightBadge highlight={decided.closure?.name_highlight ?? null} />
+        <ApprovalNameHighlightBadge highlight={decided.closure?.approval_name_highlight ?? null} />
       </section>
     );
   }
@@ -217,7 +257,7 @@ function DecisionForm({ pariwarId, detail }: { pariwarId: string; detail: Escala
       </label>
       <label>
         {x.reason}{' '}
-        <select value={reason} onChange={(ev) => setReason(ev.target.value)} data-testid="decision-reason">
+        <select value={reason} onChange={(ev) => setReason(ev.target.value as ClosureSuperAdminReason)} data-testid="decision-reason">
           {CLOSURE_SUPER_ADMIN_REASONS[decision].map((r) => (
             <option key={r} value={r}>
               {x.reasons[r] ?? r}
@@ -250,7 +290,7 @@ function DecisionForm({ pariwarId, detail }: { pariwarId: string; detail: Escala
           void decide
             .mutateAsync({
               decision,
-              reason: reason as never,
+              reason,
               note,
               ...(decision === 'refuse' ? { refusal_reason_code: refusalCode } : {}),
             })
@@ -277,7 +317,10 @@ export function EscalationDetail({ pariwarId, claimCaseId }: { pariwarId: string
   return (
     <article className="mt-4 rounded border p-3 text-sm" data-testid="escalation-detail" aria-label={d.short_reference}>
       <h2 className="font-semibold">
-        <code className="font-mono">{d.short_reference}</code> — {t.origin[d.closure.origin]} · {t.state[d.closure.state]}
+        <code className="font-mono">{d.short_reference}</code> — {t.origin[d.closure.origin]} ·{' '}
+        {/* Code review patch (2026-10-02) — `role="status"`: a refetch after a decide/direct/review action
+            silently updates this state word (e.g. escalated → under_review → closed/refused/approved). */}
+        <span role="status">{t.state[d.closure.state]}</span>
       </h2>
       {d.resubmitted ? <p role="status">{e.resubmitted}</p> : d.family_part_done ? <p>{e.familyPartDone}</p> : null}
       <p data-testid="escalation-name-check">

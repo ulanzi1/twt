@@ -143,6 +143,11 @@ export async function listPariwarClosureQueue(
       held,
     });
   }
+  // Code review patch (2026-10-02): the two kinds were concatenated requests-first, records-second, then sliced —
+  // so a full page of requests silently dropped every record regardless of its age. The doc comment promises "oldest
+  // first" across the WHOLE queue, not per-kind; sort by `at` before the bound so both kinds get a fair, age-ordered
+  // slice.
+  out.sort((a, b) => a.at.getTime() - b.at.getTime());
   return out.slice(0, limit);
 }
 
@@ -457,6 +462,12 @@ export function approvalNameHighlightOf(row: {
  * RECORDED state at approval was ⛔ `passing`: `approved_despite_name_mismatch` when it was `does_not_match`, else
  * `approved_without_passing_check` (`never_checked` / `stale`). DERIVED from the approval record — ⛔ never a name
  * comparison. Reaches the District Admin, the Pariwar Admin and the Super Admin.
+ * Code review patch (2026-10-02, corrected after an adversarial re-check): ⛔ no `.limit()` at all — a claim can
+ * carry MORE THAN ONE matching row (a second return, separately approved+waived), so even a `claimCaseIds.length`
+ * bound doesn't guarantee one row per id: if the ROWS for some ids outnumber 1, the budget can be consumed before
+ * the scan reaches a DIFFERENT id's only (older-sorting) row, silently dropping that id's highlight. The `inArray`
+ * clause already bounds this query to exactly these ids' own rows — a small, naturally-bounded set, not an
+ * unbounded scan — so no safety-valve limit is needed for this COMPLETE bulk read (the doc's own word).
  */
 export async function readApprovalNameHighlightBulk(
   db: Db,
@@ -481,8 +492,7 @@ export async function readApprovalNameHighlightBulk(
         eq(claimCorrectionClosures.nameCheckWaived, true),
       ),
     )
-    .orderBy(desc(claimCorrectionClosures.superAdminDecidedAt))
-    .limit(clampLimit(claimCaseIds.length, { default: 1, cap: 1000 }));
+    .orderBy(desc(claimCorrectionClosures.superAdminDecidedAt));
   for (const r of rows) {
     if (out.has(r.claimCaseId)) continue;
     const highlight = approvalNameHighlightOf(r);

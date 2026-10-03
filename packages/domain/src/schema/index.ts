@@ -194,6 +194,9 @@ export * from './claim_correction_chase.js';
 // Story 6.19c — the correction closure, the Super Admin's review, the directions, the re-file confirmations and the
 // closure letters (migrations 0131–0134).
 export * from './claim_correction_closure.js';
+// Story 6.19d — the replacement-certificate reminder (migrations 0137–0139): its OWN runs, reminder record and the
+// ONE letter per person per claim (`2026-10-03-276` CR1 — ⛔ never a kind on `claim_correction_runs`).
+export * from './claim_certificate_reminder.js';
 // Story 6.6 — peer-mesh deterministic 5-nearest selection: `claim_peer_mesh_selections`
 // (ONE row per claim — the audit-replay source: candidate snapshot + ordered output +
 // metric identity; immutable selection, mutable outcome/window) + `claim_peer_mesh_pings`

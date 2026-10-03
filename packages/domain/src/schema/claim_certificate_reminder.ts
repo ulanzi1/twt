@@ -74,11 +74,18 @@ export const claimCertificateReminderRuns = pgTable(
       .references(() => claims.claimCaseId, { onDelete: 'cascade' }),
     pariwarId: uuid('pariwar_id').notNull().$type<PariwarId>(),
     cause: text('cause').notNull().$type<CertificateRunCause>(),
-    /** `rejected` only — the rejected upload (Trap 4: a re-review of it ⛔ never restarts the 180 days). */
+    /**
+     * `rejected` only — the rejected upload (Trap 4: a re-review of it ⛔ never restarts the 180 days).
+     * ⚠ `cascade` is CORRECT here, ⛔ not a gap (code review, 2026-10-03 — checked live against `-243` invariant 3):
+     * the upload row's own append-only BEFORE triggers (6.21a) refuse ANY direct DELETE/UPDATE for every role,
+     * the table owner included — "only an `ON DELETE cascade` passes" is 6.21a's own ratified design, so a
+     * legitimate claims-cascade can still reach it. `restrict` would NOT add protection (the trigger already
+     * blocks every direct path) and WOULD break the legitimate claims-deletion cascade.
+     */
     anchorUploadId: uuid('anchor_upload_id')
       .$type<DeathCertificateUploadId>()
       .references(() => claimDeathCertificateUploads.uploadId, { onDelete: 'cascade' }),
-    /** `rejected` only — the review that rejected it and opened the run (its `decided_at` is day 0). */
+    /** `rejected` only — the review that rejected it and opened the run (its `decided_at` is day 0). `cascade` — see `anchorUploadId`. */
     anchorReviewId: uuid('anchor_review_id')
       .$type<DeathCertificateReviewId>()
       .references(() => claimDeathCertificateReviews.reviewId, { onDelete: 'cascade' }),
@@ -175,6 +182,12 @@ export const claimCertificateReminders = pgTable(
     check(
       'claim_certificate_reminders_outcome_check',
       sql`${t.outcome} IN ('attempting', 'accepted', 'rejected_invalid_number', 'rejected_unreachable', 'no_target', 'error', 'skipped_superseded', 'recorded')`,
+    ),
+    // 0141, code review — `recorded` is staff-purpose-only; the family outcomes are family_sms-only.
+    check(
+      'claim_certificate_reminders_purpose_outcome_check',
+      sql`(${t.purpose} = 'family_sms' AND ${t.outcome} IN ('attempting', 'accepted', 'rejected_invalid_number', 'rejected_unreachable', 'no_target', 'error', 'skipped_superseded'))
+        OR (${t.purpose} IN ('letter_chase', 'letter_escalation') AND ${t.outcome} IN ('recorded', 'no_target'))`,
     ),
     check('claim_certificate_reminders_slot_day_check', sql`${t.slotDay} >= 0`),
     check('claim_certificate_reminders_attempt_count_check', sql`${t.attemptCount} >= 1`),

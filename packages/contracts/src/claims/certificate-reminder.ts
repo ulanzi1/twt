@@ -25,11 +25,22 @@ const IsoDate = z
 
 /** Why the family is waiting (the domain's `CERTIFICATE_RUN_CAUSES`). */
 export const CERTIFICATE_REMINDER_CAUSES = ['rejected', 'missing'] as const;
-/** The run's state on the list. */
+/** The run's state on the list (the domain's `CertificateListRunState`). */
 export const CERTIFICATE_REMINDER_RUN_STATES = ['open', 'paused', 'ended'] as const;
-/** Why a run is paused (the domain's `CertificatePauseReason`). */
+/** A person's role on the list (the domain's `CertificateListPersonRole`). */
+export const CERTIFICATE_REMINDER_ROLES = ['nominee', 'claimant'] as const;
+/**
+ * Why a run is paused (the domain's `CertificatePauseReason`): `outside_window` — the claim left the review window;
+ * `certificate_accepted` — the anchor upload itself stands accepted on a re-review; `certificate_not_rejected` — a
+ * defensive third value for the SAME anchor upload going `missing`/`awaiting_review` on a re-review (unreachable by
+ * construction today, per the domain's own trace — kept here only to stay exhaustive with it).
+ */
 export const CERTIFICATE_REMINDER_PAUSE_REASONS = ['outside_window', 'certificate_accepted', 'certificate_not_rejected'] as const;
-/** Why the family cannot be reminded (the domain's `CertificateCannotRemindReason`). */
+/**
+ * Why the family cannot be reminded (the domain's `CertificateCannotRemindReason`): `no_contact_record` — the claim
+ * has no contact record at all; `agreement_not_live` — the contact record exists but its agreement to be contacted
+ * (the consent record) isn't `live` (e.g. revoked).
+ */
 export const CERTIFICATE_REMINDER_CANNOT_REMIND = ['no_contact_record', 'agreement_not_live'] as const;
 /** A person's SMS state (the domain's `CertificatePersonSmsState`). */
 export const CERTIFICATE_REMINDER_SMS_STATES = [
@@ -51,7 +62,8 @@ export const RecordCertificateLetterRequest = z
     tracking_number: z
       .string()
       .max(CORRECTION_LETTER_TRACKING_MAX_CHARS)
-      .refine((v) => v.trim().length > 0, 'a tracking number is required'),
+      .transform((v) => v.trim())
+      .refine((v) => v.length > 0, 'a tracking number is required'),
   })
   .strict();
 export type RecordCertificateLetterRequest = z.output<typeof RecordCertificateLetterRequest>;
@@ -74,10 +86,15 @@ export const CertificateLetterDto = z
   .strict();
 export type CertificateLetterDto = z.output<typeof CertificateLetterDto>;
 
+/** The letter-record route's response (the 6.19b `RecordCorrectionLetterResponse` convention) — reused as-is for the
+ * delivery route too: both write routes return the SAME updated letter row. */
+export const RecordCertificateLetterResponse = CertificateLetterDto;
+export type RecordCertificateLetterResponse = CertificateLetterDto;
+
 export const CertificateReminderPersonDto = z
   .object({
     person_key: z.string(),
-    role: z.enum(['nominee', 'claimant']),
+    role: z.enum(CERTIFICATE_REMINDER_ROLES),
     /** `A`, `B`, … — a display position, ⛔ never a rank; `null` for the claimant. */
     position: z.string().nullable(),
     sms_state: z.enum(CERTIFICATE_REMINDER_SMS_STATES),
@@ -96,7 +113,7 @@ export const CertificateReminderItemDto = z
     cause: z.enum(CERTIFICATE_REMINDER_CAUSES),
     run_state: z.enum(CERTIFICATE_REMINDER_RUN_STATES),
     pause_reason: z.enum(CERTIFICATE_REMINDER_PAUSE_REASONS).nullable(),
-    run_day: z.number().int().nullable(),
+    run_day: z.number().int().min(0).nullable(),
     next_reminder_on: z.string().nullable(),
     cannot_remind: z.enum(CERTIFICATE_REMINDER_CANNOT_REMIND).nullable(),
     people: z.array(CertificateReminderPersonDto),
@@ -104,7 +121,13 @@ export const CertificateReminderItemDto = z
   .strict();
 export type CertificateReminderItemDto = z.output<typeof CertificateReminderItemDto>;
 
-export const CertificateRemindersResponse = z.object({ items: z.array(CertificateReminderItemDto) }).strict();
+export const CertificateRemindersResponse = z
+  .object({
+    items: z.array(CertificateReminderItemDto),
+    /** The domain's bounded scan hit `CERTIFICATE_LIST_SCAN_CAP` — older, more-overdue claims are NOT in `items`. */
+    truncated: z.boolean(),
+  })
+  .strict();
 export type CertificateRemindersResponse = z.output<typeof CertificateRemindersResponse>;
 
 export const CertificateLetterAddressResponse = z.object({ person_key: z.string(), address: z.string() }).strict();

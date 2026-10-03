@@ -8,7 +8,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ReactElement, ReactNode } from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { CertificateRemindersResponse } from '@twt/contracts';
 
@@ -28,6 +28,7 @@ vi.mock('@tanstack/react-router', () => ({
 const getCertificateReminders = vi.fn();
 const recordCertificateLetter = vi.fn();
 const getCertificateLetterAddress = vi.fn();
+const getCertificateLetterScreenshot = vi.fn();
 const requestStepUp = vi.fn();
 const verifyStepUp = vi.fn();
 vi.mock('../src/api/client.js', async (importOriginal) => {
@@ -38,6 +39,7 @@ vi.mock('../src/api/client.js', async (importOriginal) => {
     getCertificateReminders: (...a: unknown[]) => getCertificateReminders(...a),
     recordCertificateLetter: (...a: unknown[]) => recordCertificateLetter(...a),
     getCertificateLetterAddress: (...a: unknown[]) => getCertificateLetterAddress(...a),
+    getCertificateLetterScreenshot: (...a: unknown[]) => getCertificateLetterScreenshot(...a),
     requestStepUp: (...a: unknown[]) => requestStepUp(...a),
     verifyStepUp: (...a: unknown[]) => verifyStepUp(...a),
   };
@@ -47,6 +49,7 @@ const { ApiError } = await import('../src/api/client.js');
 const { useCertificateReminders } = await import('../src/api/hooks.js');
 const { CertificateRemindersList } = await import('../src/modules/certificate-reminders/index.js');
 const { RootLayout } = await import('../src/routes/RootLayout.js');
+const { CertificateRemindersRoute } = await import('../src/routes/CertificateReminderRoutes.js');
 
 const PARIWAR = '44444444-4444-4444-8444-444444444444';
 const CLAIM = '11111111-1111-4111-8111-111111111111';
@@ -76,6 +79,11 @@ function wrap(ui: ReactElement): void {
 }
 
 describe('the "Certificate reminders" list (Story 6.19d)', () => {
+  beforeEach(() => {
+    params = {}; // code review, 2026-10-03 — isolate from whichever test last set it (no longer order-dependent)
+  });
+
+
   it('⭐ each claim by short reference with its cause, day and next reminder; each person BY POSITION and role, ⛔ no name', () => {
     wrap(<CertificateRemindersList pariwarId={PARIWAR} items={[item()]} />);
     const row = screen.getByTestId(`certificate-reminders-item-${CLAIM}`);
@@ -127,13 +135,13 @@ describe('the "Certificate reminders" list (Story 6.19d)', () => {
     expect(await screen.findByTestId('certificate-letter-code')).toBeInTheDocument();
     expect(requestStepUp).toHaveBeenCalledWith('certificate_letter_address');
     fireEvent.change(screen.getByTestId('certificate-letter-code'), { target: { value: '123456' } });
-    fireEvent.click(screen.getByTestId('certificate-letter-code').closest('label')!.querySelector('button')!);
+    fireEvent.click(screen.getByTestId('certificate-letter-verify'));
     expect(await screen.findByTestId('certificate-letter-address')).toHaveTextContent('Sentinel House 9');
   });
 
   it('⭐ with a REAL refetching useQuery: the submit stays disabled through the refetch, and "Letter recorded" is STILL on screen once the person shows their posted letter', async () => {
     let resolveRefetch: (v: CertificateRemindersResponse) => void = () => undefined;
-    getCertificateReminders.mockResolvedValueOnce({ items: [item()] });
+    getCertificateReminders.mockResolvedValueOnce({ items: [item()], truncated: false });
     getCertificateReminders.mockImplementationOnce(() => new Promise((res) => (resolveRefetch = res)));
     recordCertificateLetter.mockResolvedValueOnce({
       letter_id: '99999999-9999-4999-8999-999999999999',
@@ -172,11 +180,64 @@ describe('the "Certificate reminders" list (Story 6.19d)', () => {
             ],
           }),
         ],
+        truncated: false,
       });
     });
     expect(await screen.findByTestId('certificate-letter-recorded')).toHaveTextContent('Letter recorded.');
     expect(screen.getByTestId(`certificate-letter-${CLAIM}-${NOMINEE_A}`)).toHaveTextContent('posted 2026-10-03');
     expect(screen.queryByTestId('certificate-letter-record')).toBeNull();
+  });
+
+  it('⛔ code review 2026-10-03 — once a fresh code is needed, the ORIGINAL reveal button is gone (⛔ no duplicate control)', async () => {
+    getCertificateLetterAddress.mockRejectedValueOnce(new ApiError(403, 'auth.step_up_required', 'Step up required'));
+    requestStepUp.mockResolvedValueOnce({ sent: true, expiresInSeconds: 300 });
+    wrap(<CertificateRemindersList pariwarId={PARIWAR} items={[item()]} />);
+    fireEvent.click(screen.getByTestId('certificate-letter-reveal'));
+    expect(await screen.findByTestId('certificate-letter-code')).toBeInTheDocument();
+    expect(screen.queryByTestId('certificate-letter-reveal')).toBeNull();
+    expect(screen.queryByTestId('certificate-letter-address')).toBeNull();
+  });
+
+  it('⭐ a delivery recorded LATE reads "delivered more than 14 days after posting", ⛔ never "no delivery recorded" (the letter WAS delivered)', () => {
+    const lateLetter = { letter_id: '99999999-9999-4999-8999-999999999999', posted_on: '2026-09-01', delivered_on: '2026-09-20', overdue: true, has_screenshot: false };
+    wrap(
+      <CertificateRemindersList
+        pariwarId={PARIWAR}
+        items={[item({ people: [{ person_key: NOMINEE_A, role: 'nominee', position: 'A', sms_state: 'number_not_working', letter_eligible: true, letter: lateLetter, escalation_recorded_on: null }] })]}
+      />,
+    );
+    const banner = screen.getByTestId('certificate-letter-overdue');
+    expect(banner).toHaveTextContent('Delivered more than 14 days after posting.');
+    expect(banner).not.toHaveTextContent('No delivery recorded');
+  });
+
+  it('⭐ the delivery screenshot — a fresh step-up, then a TTL-signed link to open it', async () => {
+    const delivered = { letter_id: '99999999-9999-4999-8999-999999999999', posted_on: '2026-09-01', delivered_on: '2026-09-05', overdue: false, has_screenshot: true };
+    getCertificateLetterScreenshot.mockRejectedValueOnce(new ApiError(403, 'auth.step_up_required', 'Step up required'));
+    requestStepUp.mockResolvedValueOnce({ sent: true, expiresInSeconds: 300 });
+    verifyStepUp.mockResolvedValueOnce({ elevated: true });
+    getCertificateLetterScreenshot.mockResolvedValueOnce({ url: 'https://example.test/signed-screenshot', expires_in_seconds: 60 });
+    wrap(
+      <CertificateRemindersList
+        pariwarId={PARIWAR}
+        items={[item({ people: [{ person_key: NOMINEE_A, role: 'nominee', position: 'A', sms_state: 'reminded', letter_eligible: true, letter: delivered, escalation_recorded_on: null }] })]}
+      />,
+    );
+    fireEvent.click(screen.getByTestId('certificate-letter-screenshot-load'));
+    expect(await screen.findByTestId('certificate-letter-screenshot-code')).toBeInTheDocument();
+    expect(requestStepUp).toHaveBeenCalledWith('certificate_letter_address');
+    fireEvent.change(screen.getByTestId('certificate-letter-screenshot-code'), { target: { value: '654321' } });
+    fireEvent.click(screen.getByTestId('certificate-letter-screenshot-verify'));
+    const link = await screen.findByTestId('certificate-letter-screenshot-link');
+    expect(link).toHaveAttribute('href', 'https://example.test/signed-screenshot');
+    expect(link).toHaveTextContent('Open the delivery screenshot');
+  });
+
+  it('⭐ the list `truncated` flag is SHOWN — older, more-overdue claims are not silently dropped', async () => {
+    params = { pariwarId: PARIWAR };
+    getCertificateReminders.mockResolvedValueOnce({ items: [item()], truncated: true });
+    wrap(<CertificateRemindersRoute />);
+    expect(await screen.findByTestId('certificate-reminders-truncated')).toHaveTextContent('Older, more overdue ones are kept');
   });
 
   it('the nav link — inside a Pariwar context only', async () => {

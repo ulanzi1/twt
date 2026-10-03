@@ -170,7 +170,16 @@ export interface CertificatePlanFacts {
   readonly windowEnteredAt: Date | null;
 }
 
-/** Why a run is paused (CR5). ⚠ LOCKSTEP with the contract's `CERTIFICATE_REMINDER_PAUSE_REASONS`. */
+/**
+ * Why a run is paused (CR5). ⚠ LOCKSTEP with the contract's `CERTIFICATE_REMINDER_PAUSE_REASONS`.
+ * ⚠ `certificate_not_rejected` is a defensive third value CR5's prose doesn't name (it names only
+ * `outside_window`/`certificate_accepted`) — it covers `f.status` being `missing`/`awaiting_review` while the SAME
+ * anchor upload is still current. Traced 2026-10-03 (code review): `recordDeathCertificateReview` always
+ * supersede-and-inserts atomically with a concrete verdict (⛔ never a pending/verdict-less row), and its own token
+ * check forces every new review to target the CURRENT upload — so a live review can ⛔ never go missing, or point at
+ * a stale upload, while `currentUploadId` stays unchanged. Unreachable by construction today; kept as a defensive
+ * fallback rather than removed, since nothing in the type system proves it impossible.
+ */
 export const CERTIFICATE_PAUSE_REASONS = ['outside_window', 'certificate_accepted', 'certificate_not_rejected'] as const;
 export type CertificatePauseReason = (typeof CERTIFICATE_PAUSE_REASONS)[number];
 
@@ -335,7 +344,8 @@ function samePlan(a: CertificateRunPlan, b: CertificateRunPlan): boolean {
     a.anchorUploadId === b.anchorUploadId &&
     a.anchorReviewId === b.anchorReviewId &&
     a.day0 === b.day0 &&
-    a.supersedeRunId === b.supersedeRunId
+    a.supersedeRunId === b.supersedeRunId &&
+    a.completeAtOnce === b.completeAtOnce
   );
 }
 
@@ -397,7 +407,7 @@ export async function openCertificateRun(
         anchorUploadId: plan.anchorUploadId as DeathCertificateUploadId | null,
         anchorReviewId: plan.anchorReviewId as DeathCertificateReviewId | null,
         day0: plan.day0,
-        ...(plan.completeAtOnce ? { endedAt: sql`clock_timestamp()` as never, endReason: 'completed' as const } : {}),
+        ...(plan.completeAtOnce ? { endedAt: sql`clock_timestamp()`, endReason: 'completed' as const } : {}),
       })
       .returning();
     await client.query('RELEASE SAVEPOINT certificate_run_open');
@@ -492,8 +502,10 @@ export async function listCertificateCandidateClaimsPage(
 
 // ── The recipients (CR6) ──────────────────────────────────────────────────────────────────────────────────────
 
-/** Why the family cannot be reminded (CR6 — D30's shape, its OWN reason type; ⛔ never `undetermined`). */
-/** ⚠ LOCKSTEP with the contract's `CERTIFICATE_REMINDER_CANNOT_REMIND`. */
+/**
+ * Why the family cannot be reminded (CR6 — D30's shape, its OWN reason type; ⛔ never `undetermined`).
+ * ⚠ LOCKSTEP with the contract's `CERTIFICATE_REMINDER_CANNOT_REMIND`.
+ */
 export const CERTIFICATE_CANNOT_REMIND_REASONS = ['no_contact_record', 'agreement_not_live'] as const;
 export type CertificateCannotRemindReason = (typeof CERTIFICATE_CANNOT_REMIND_REASONS)[number];
 
@@ -550,7 +562,7 @@ export function chainHeadOf(versionId: string, versions: readonly ChainVersion[]
     if (seen.has(at)) continue;
     seen.add(at);
     const kids = (children.get(at) ?? []).filter((k) => !seen.has(k));
-    if ((children.get(at) ?? []).length === 0) leaves.push(at);
+    if (kids.length === 0) leaves.push(at);
     stack.push(...kids);
   }
   if (leaves.length === 0) return versionId;

@@ -397,6 +397,24 @@ describe.skipIf(!hasDatabase)('the certificate reminder — migrations 0137–01
       await expectPgError(client, () => insertRow(client, 'claim_certificate_reminders', { ...row, outcome: 'delivered' }), CHECK('claim_certificate_reminders_outcome_check'));
     });
 
+    it('0141, code review — `outcome` is pinned to `purpose`: `recorded` is staff-only, the family outcomes are `family_sms`-only', async () => {
+      const { client } = getTx();
+      const s = await seedCertificateWait(client, PARIWAR_A);
+      const row = validRow.claim_certificate_reminders(s);
+      const pairing = CHECK('claim_certificate_reminders_purpose_outcome_check');
+      // Each override is individually valid under the purpose/outcome CHECKs alone — only the pairing is wrong.
+      await expectPgError(client, () => insertRow(client, 'claim_certificate_reminders', { ...row, outcome: 'recorded' }), pairing);
+      await expectPgError(
+        client,
+        () => insertRow(client, 'claim_certificate_reminders', { ...row, purpose: 'letter_chase', subject_key: 'nominee:v1', outcome: 'accepted' }),
+        pairing,
+      );
+      await expectAccepted(client, () =>
+        insertRow(client, 'claim_certificate_reminders', { ...row, purpose: 'letter_chase', subject_key: 'nominee:v1', outcome: 'recorded' }),
+      );
+      await expectAccepted(client, () => insertRow(client, 'claim_certificate_reminders', { ...row, outcome: 'no_target' }));
+    });
+
     it('slot day ≥ 0, attempt count ≥ 1, a non-blank recipient, a claimed `attempting` row, and a delivery time only on an accept', async () => {
       const { client } = getTx();
       const s = await seedCertificateWait(client, PARIWAR_A);

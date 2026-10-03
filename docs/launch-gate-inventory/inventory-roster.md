@@ -356,4 +356,4 @@
 - **closure_evidence_link:** (empty)
 - **missed_target_escalation_log:** (empty)
 - **cross_story_discharge_path:** a review recorded in the decision log (or on the 6.19d story) → the marker replaced; any change to the Hindi → re-registration (the DLT sheet's Record).
-- **notes:** The house words are `तिथि` and `प्रमाणपत्र` (`-244` §3 call 7; the shipped `certificate.replacement_body`). The English wording is 6.19d's (CR7). ⛔ Neither is machine-translated; the Hindi was agent-authored (2026-10-03) and is ⛔ never shown to a real family unreviewed. Counsel's M and S (Rows 18, 19) already name 6.19d's sends — ⛔ no edit there.
+- **notes:** The house words are `तिथि` and `प्रमाणपत्र` (`-244` §3 call 7; the shipped `certificate.replacement_body` in `packages/i18n/locales/{en,hi}/claim.json` — a DIFFERENT, pre-existing key from this row's own `certificate_sms.reminder`, cited here only as the shared-terminology precedent). The English wording is 6.19d's (CR7). ⛔ Neither is machine-translated; the Hindi was agent-authored (2026-10-03) and is ⛔ never shown to a real family unreviewed. Counsel's M and S (Rows 18, 19) already name 6.19d's sends — ⛔ no edit there.

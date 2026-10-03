@@ -58,6 +58,8 @@ export const CLAIM_CERTIFICATE_LETTER_FIELD_CLASS = 'claim_certificate_letter';
 export function certificateLetterRefusalError(refusal: claim.CertificateLetterRefusal): Error {
   const c = (message: string) => new ConflictError(message, `certificate_letter.${refusal}`);
   switch (refusal) {
+    case 'claim_not_found':
+      return new NotFoundError('Claim not found', 'certificate_letter.claim_not_found');
     case 'no_run':
       return c('There is no certificate reminder on this claim — no letter is owed');
     case 'not_letter_eligible':
@@ -154,9 +156,9 @@ export function createCertificateReminderHandlers(deps: AppDeps) {
       const pariwarId = ids.pariwarId(scopeTx.pariwarId);
       const grants = request.scopeGrants ?? (await loadActorGrants(scopeTx, actorId));
       const geoTree = geoTreeResolverForRequest(request);
-      const scanned = await claim.listCertificateReminderClaims(scopeTx.tx, pariwarId, today() as cycleCalendar.CalendarDateString);
+      const scan = await claim.listCertificateReminderClaims(scopeTx.tx, pariwarId, today() as cycleCalendar.CalendarDateString);
       const visible: claim.CertificateListItem[] = [];
-      for (const row of scanned) {
+      for (const row of scan.items) {
         const posting = await memberDomain.getMemberPostingLatest(scopeTx.tx, pariwarId, ids.memberId(row.deceasedMemberId));
         const district = posting?.district ?? null;
         if (rbac.hasPermission(grants, CORRECTION_LETTER_KEY, { dimension: 'district', value: district, pariwarId: scopeTx.pariwarId }, { resolver: geoTree })) {
@@ -165,12 +167,17 @@ export function createCertificateReminderHandlers(deps: AppDeps) {
       }
       const limit = (request.query as { limit?: number } | undefined)?.limit ?? claim.CERTIFICATE_LIST_DEFAULT_LIMIT;
       const items = visible.slice(0, limit).map(itemDto);
+      if (scan.truncated) {
+        console.warn(
+          `[api] certificate-reminders list: scan hit CERTIFICATE_LIST_SCAN_CAP (${String(claim.CERTIFICATE_LIST_SCAN_CAP)}) for pariwar ${scopeTx.pariwarId} — older claims are not in this page`,
+        );
+      }
       emitAuthAudit(deps, request, 'admin_claim_certificate_reminder.list_read', {
         actorId,
         pariwarId: scopeTx.pariwarId,
-        context: { visible_count: items.length },
+        context: { visible_count: items.length, scan_truncated: scan.truncated },
       });
-      return { items };
+      return { items, truncated: scan.truncated };
     },
 
     /** POST …/certificate-reminders/letters — key (1): the ONE posted letter (CR9). */

@@ -13,7 +13,7 @@
 
 import type { CertificateRemindersResponse } from '@twt/contracts';
 import type { ReactElement } from 'react';
-import { useId, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 
 import * as api from '../../api/client.js';
 import { ApiError } from '../../api/client.js';
@@ -25,6 +25,18 @@ import { certificateRemindersEn as t } from './i18n-en.js';
 type Item = CertificateRemindersResponse['items'][number];
 type Person = Item['people'][number];
 const l = t.letter;
+
+/** The longest a screenshot link is offered, whatever the server says (a huge value overflows `setTimeout`). */
+const SCREENSHOT_LINK_MAX_SECONDS = 60 * 60;
+/** Dropped this much BEFORE the signed URL expires — a click in the last seconds would open a dead link. */
+const SCREENSHOT_LINK_MARGIN_SECONDS = 5;
+
+/** How long to offer a signed screenshot link, from the server's `expires_in_seconds`; `null` ⇒ ⛔ not usable. */
+function screenshotLinkTtlMs(expiresInSeconds: unknown): number | null {
+  if (typeof expiresInSeconds !== 'number' || !Number.isFinite(expiresInSeconds) || expiresInSeconds <= 0) return null;
+  const seconds = Math.min(expiresInSeconds, SCREENSHOT_LINK_MAX_SECONDS) - SCREENSHOT_LINK_MARGIN_SECONDS;
+  return seconds > 0 ? seconds * 1000 : null;
+}
 
 function personLabel(p: Person): string {
   return p.role === 'claimant' ? (t.role['claimant'] ?? 'claimant') : `${t.role['nominee'] ?? 'nominee'} ${p.position ?? ''}`.trim();
@@ -44,9 +56,25 @@ function LetterForm({ pariwarId, item, person }: { pariwarId: string; item: Item
   const [revealPending, setRevealPending] = useState(false);
   const [postMissing, setPostMissing] = useState(false);
   const [deliverMissing, setDeliverMissing] = useState(false);
+  const [screenshotLink, setScreenshotLink] = useState<{ url: string; ttlMs: number } | null>(null);
+  const [screenshotProblem, setScreenshotProblem] = useState<string | null>(null);
+  // Address-reveal and screenshot-load share the SAME fresh step-up context — one code entry serves whichever
+  // action asked for it.
+  const [pendingAction, setPendingAction] = useState<'address' | 'screenshot' | null>(null);
   const postMissingId = useId();
   const deliverMissingId = useId();
   const testKey = `${item.claim_case_id}-${person.person_key}`;
+  const letter = person.letter;
+
+  // ⭐ The signed URL is TTL-limited — drop the link when it expires rather than offer a dead one, and SAY so.
+  useEffect(() => {
+    if (screenshotLink === null) return;
+    const id = setTimeout(() => {
+      setScreenshotLink(null);
+      setScreenshotProblem(l.screenshotExpired);
+    }, screenshotLink.ttlMs);
+    return () => clearTimeout(id);
+  }, [screenshotLink]);
 
   async function doReveal(): Promise<void> {
     setAddressError(null);
@@ -58,6 +86,7 @@ function LetterForm({ pariwarId, item, person }: { pariwarId: string; item: Item
       if (err instanceof ApiError && err.code === STEP_UP_REQUIRED_CODE) {
         try {
           await api.requestStepUp(api.CERTIFICATE_LETTER_ADDRESS_STEP_UP_CONTEXT);
+          setPendingAction('address');
           setNeedsCode(true);
         } catch (stepUpErr) {
           setAddressError(certificateErrorText(stepUpErr));
@@ -68,6 +97,32 @@ function LetterForm({ pariwarId, item, person }: { pariwarId: string; item: Item
     }
   }
 
+  async function doLoadScreenshot(letterId: string): Promise<void> {
+    setScreenshotProblem(null);
+    try {
+      const { url, expires_in_seconds } = await api.getCertificateLetterScreenshot(pariwarId, item.claim_case_id, letterId);
+      const ttlMs = screenshotLinkTtlMs(expires_in_seconds);
+      if (ttlMs === null) {
+        setScreenshotProblem(l.screenshotError);
+        return;
+      }
+      setScreenshotLink({ url, ttlMs });
+      setNeedsCode(false);
+    } catch (err) {
+      if (err instanceof ApiError && err.code === STEP_UP_REQUIRED_CODE) {
+        try {
+          await api.requestStepUp(api.CERTIFICATE_LETTER_ADDRESS_STEP_UP_CONTEXT);
+          setPendingAction('screenshot');
+          setNeedsCode(true);
+        } catch (stepUpErr) {
+          setScreenshotProblem(certificateErrorText(stepUpErr, l.screenshotError));
+        }
+        return;
+      }
+      setScreenshotProblem(certificateErrorText(err, l.screenshotError));
+    }
+  }
+
   async function reveal(): Promise<void> {
     if (revealPending) return;
     setRevealPending(true);
@@ -75,22 +130,31 @@ function LetterForm({ pariwarId, item, person }: { pariwarId: string; item: Item
     setRevealPending(false);
   }
 
-  async function verifyAndReveal(): Promise<void> {
+  async function loadScreenshot(): Promise<void> {
+    if (revealPending || letter === null) return;
+    setRevealPending(true);
+    await doLoadScreenshot(letter.letter_id);
+    setRevealPending(false);
+  }
+
+  async function verifyAndRetry(): Promise<void> {
     if (revealPending) return;
     setRevealPending(true);
+    const action = pendingAction;
     try {
       await api.verifyStepUp(code);
       setCode('');
     } catch (err) {
-      setAddressError(certificateErrorText(err));
+      const text = certificateErrorText(err, action === 'screenshot' ? l.screenshotError : undefined);
+      if (action === 'screenshot') setScreenshotProblem(text);
+      else setAddressError(text);
       setRevealPending(false);
       return;
     }
-    await doReveal();
+    if (action === 'screenshot' && letter !== null) await doLoadScreenshot(letter.letter_id);
+    else await doReveal();
     setRevealPending(false);
   }
-
-  const letter = person.letter;
   return (
     <div className="mt-1 flex flex-col gap-1 text-xs" data-testid={`certificate-letter-${testKey}`}>
       {letter === null ? (
@@ -98,7 +162,7 @@ function LetterForm({ pariwarId, item, person }: { pariwarId: string; item: Item
           <p>{l.owed}</p>
           <p data-testid="certificate-letter-must-say">{l.mustSay}</p>
           <p>{l.onlyOne}</p>
-          {address === null ? (
+          {address === null && !needsCode ? (
             <button
               type="button"
               className="self-start rounded border px-2 py-0.5"
@@ -108,16 +172,22 @@ function LetterForm({ pariwarId, item, person }: { pariwarId: string; item: Item
             >
               {l.showAddress}
             </button>
-          ) : (
+          ) : address !== null ? (
             <p data-testid="certificate-letter-address" className="whitespace-pre-line">
               {address}
             </p>
-          )}
-          {needsCode ? (
+          ) : null}
+          {needsCode && pendingAction === 'address' ? (
             <label className="flex flex-col">
               {l.code}
               <input value={code} onChange={(e) => setCode(e.target.value)} inputMode="numeric" data-testid="certificate-letter-code" />
-              <button type="button" className="self-start rounded border px-2 py-0.5" disabled={revealPending} onClick={() => void verifyAndReveal()}>
+              <button
+                type="button"
+                className="self-start rounded border px-2 py-0.5"
+                disabled={revealPending}
+                onClick={() => void verifyAndRetry()}
+                data-testid="certificate-letter-verify"
+              >
                 {l.showAddress}
               </button>
             </label>
@@ -170,7 +240,7 @@ function LetterForm({ pariwarId, item, person }: { pariwarId: string; item: Item
           </p>
           {letter.overdue ? (
             <p role="status" data-testid="certificate-letter-overdue">
-              {l.overdue}
+              {letter.delivered_on === null ? l.overdue : l.deliveredLate}
             </p>
           ) : null}
           {letter.delivered_on === null ? (
@@ -216,6 +286,45 @@ function LetterForm({ pariwarId, item, person }: { pariwarId: string; item: Item
               {deliver.isError ? <p role="alert">{certificateErrorText(deliver.error)}</p> : null}
             </>
           ) : null}
+          {letter.has_screenshot ? (
+            screenshotLink === null ? (
+              <button
+                type="button"
+                className="self-start rounded border px-2 py-0.5"
+                disabled={revealPending}
+                onClick={() => void loadScreenshot()}
+                data-testid="certificate-letter-screenshot-load"
+              >
+                {l.screenshotLoad}
+              </button>
+            ) : (
+              <a
+                href={screenshotLink.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline"
+                data-testid="certificate-letter-screenshot-link"
+              >
+                {l.screenshotOpen}
+              </a>
+            )
+          ) : null}
+          {needsCode && pendingAction === 'screenshot' ? (
+            <label className="flex flex-col">
+              {l.code}
+              <input value={code} onChange={(e) => setCode(e.target.value)} inputMode="numeric" data-testid="certificate-letter-screenshot-code" />
+              <button
+                type="button"
+                className="self-start rounded border px-2 py-0.5"
+                disabled={revealPending}
+                onClick={() => void verifyAndRetry()}
+                data-testid="certificate-letter-screenshot-verify"
+              >
+                {l.screenshotLoad}
+              </button>
+            </label>
+          ) : null}
+          {screenshotProblem !== null ? <p role="alert">{screenshotProblem}</p> : null}
         </>
       )}
       {/* ⭐ OUTSIDE the branch — still on screen after the refetch moves the person to "posted" / "delivered". */}

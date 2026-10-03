@@ -31,6 +31,7 @@ import {
   type CertificateNumberHash,
   type CertificatePerson,
   type CertificatePersonState,
+  type CertificateRecipients,
   evaluateCertificatePersonStates,
   hashCertificateRecipients,
   lockCertificateClaim,
@@ -45,6 +46,7 @@ import { CorrectionNumberUnverifiedError } from './correction-crypto.js';
 
 /** The certificate letter's refusals — the route maps each to its own status and `certificate_letter.<code>`. */
 export type CertificateLetterRefusal =
+  | 'claim_not_found'
   | 'no_run'
   | 'not_letter_eligible'
   | 'address_missing'
@@ -69,7 +71,13 @@ export interface CertificateLetterAddress {
   readonly addressCiphertext: string;
 }
 
-/** The person's address — a nominee's through the correction chain from their chain HEAD (W4a); the claimant's block. */
+/**
+ * The person's address — a nominee's through the correction chain from their chain HEAD (W4a); the claimant's block.
+ * ⚠ All four "no usable address" exits below throw the SAME `address_missing` refusal, deliberately: no contact
+ * record, a null claimant ciphertext, a null `versionId`, and a failed chain-row resolution are all, from the
+ * District Admin's side, the identical actionable fact ("we have no address recorded for this person") — splitting
+ * them into separate wire codes would add surface area with no behavior difference for the one caller that reads it.
+ */
 async function readCertificateLetterAddress(
   db: Db,
   pariwarId: PariwarId,
@@ -107,12 +115,12 @@ async function evaluateLetterPrecondition(
   pariwarId: PariwarId,
   claimCaseId: ClaimId,
   personKey: string,
+  recipients: CertificateRecipients,
   hashes: ReadonlyMap<string, CertificateNumberHash>,
 ): Promise<{ readonly facts: CertificateLetterFacts; readonly person: CertificatePerson; readonly address: CertificateLetterAddress }> {
   const runs = await readClaimCertificateRuns(db, pariwarId, claimCaseId);
   if (runs.length === 0) throw new CertificateLetterRefusedError(claimCaseId, 'no_run');
   const run = runs.find((r) => r.endedAt === null) ?? runs[runs.length - 1]!;
-  const recipients = await readCertificateRecipients(db, pariwarId, claimCaseId);
   if (recipients.cannotRemind === 'no_contact_record') throw new CertificateLetterRefusedError(claimCaseId, 'address_missing');
   if (recipients.cannotRemind === 'agreement_not_live') throw new CertificateLetterRefusedError(claimCaseId, 'agreement_not_live');
   const person = recipients.people.find((p) => p.personKey === personKey);
@@ -145,7 +153,7 @@ export async function assertCertificateLetterAllowed(
 ): Promise<{ readonly runId: string; readonly person: CertificatePerson; readonly address: CertificateLetterAddress }> {
   const recipients = await readCertificateRecipients(db, pariwarId, claimCaseId);
   const hashes = await hashCertificateRecipients(recipients.people, pariwarId as string, opts.crypto);
-  const { facts, person, address } = await evaluateLetterPrecondition(db, pariwarId, claimCaseId, personKey, hashes);
+  const { facts, person, address } = await evaluateLetterPrecondition(db, pariwarId, claimCaseId, personKey, recipients, hashes);
   return { runId: facts.runId, person, address };
 }
 
@@ -214,9 +222,10 @@ export async function recordCertificateLetter(
 
   await client.query(`SET LOCAL lock_timeout = '${CERTIFICATE_LETTER_LOCK_TIMEOUT}'`);
   if ((await lockCertificateClaim(db, input.pariwarId, input.claimCaseId)) === null) {
-    throw new CertificateLetterRefusedError(input.claimCaseId, 'no_run');
+    throw new CertificateLetterRefusedError(input.claimCaseId, 'claim_not_found');
   }
-  const { facts, person } = await evaluateLetterPrecondition(db, input.pariwarId, input.claimCaseId, input.personKey, hashes);
+  const recipients = await readCertificateRecipients(db, input.pariwarId, input.claimCaseId);
+  const { facts, person } = await evaluateLetterPrecondition(db, input.pariwarId, input.claimCaseId, input.personKey, recipients, hashes);
   const pre = new Map(before.people.map((p) => [p.personKey, p]));
   if (facts.people.length !== pre.size || facts.people.some((p) => !samePersonSource(p, pre.get(p.personKey)))) {
     throw new CorrectionNumberUnverifiedError(input.claimCaseId, input.personKey);
@@ -278,7 +287,7 @@ export async function recordCertificateLetterDelivery(
   const db = bindScopedDb(client);
   await client.query(`SET LOCAL lock_timeout = '${CERTIFICATE_LETTER_LOCK_TIMEOUT}'`);
   if ((await lockCertificateClaim(db, input.pariwarId, input.claimCaseId)) === null) {
-    throw new CertificateLetterRefusedError(input.claimCaseId, 'not_found');
+    throw new CertificateLetterRefusedError(input.claimCaseId, 'claim_not_found');
   }
   const letter = await readCertificateLetter(db, input.pariwarId, input.claimCaseId, input.letterId);
   if (letter === null) throw new CertificateLetterRefusedError(input.claimCaseId, 'not_found');

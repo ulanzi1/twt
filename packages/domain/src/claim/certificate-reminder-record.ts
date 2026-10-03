@@ -195,7 +195,7 @@ export async function skipCertificateReminder(
         });
         return { expiredAttempt: expired };
       }
-      await db
+      const moved = await db
         .update(claimCertificateReminders)
         .set({ outcome: 'skipped_superseded', detail: k.reason, updatedAt: sql`clock_timestamp()` })
         .where(
@@ -205,7 +205,20 @@ export async function skipCertificateReminder(
             eq(claimCertificateReminders.claimedByJob, k.jobId),
             sql`${claimCertificateReminders.detail} IS NULL`,
           ),
-        );
+        )
+        .returning({ reminderId: claimCertificateReminders.reminderId });
+      // Lost the CAS: `detail` went non-null between the read above and this write (a concurrent
+      // `noteCertificateReminderTransient`). The row is still ours and still `attempting` — re-check
+      // once, the same as the branch above would have, instead of leaving it stuck un-expired.
+      if (moved.length === 0) {
+        const expired = await expireOwnCertificateReminder(db, {
+          pariwarId: k.pariwarId,
+          reminderId: existing.reminderId,
+          jobId: k.jobId,
+          detail: `exhausted:recheck_${k.reason}`,
+        });
+        return { expiredAttempt: expired };
+      }
     }
     return { expiredAttempt: false };
   }

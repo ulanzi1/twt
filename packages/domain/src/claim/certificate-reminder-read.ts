@@ -57,9 +57,13 @@ export const CERTIFICATE_PERSON_SMS_STATES = [
 ] as const;
 export type CertificatePersonSmsState = (typeof CERTIFICATE_PERSON_SMS_STATES)[number];
 
+/** A person's role on the list. ⚠ LOCKSTEP with the contract's `CERTIFICATE_REMINDER_ROLES` (code review, 2026-10-03). */
+export const CERTIFICATE_LIST_PERSON_ROLES = ['nominee', 'claimant'] as const;
+export type CertificateListPersonRole = (typeof CERTIFICATE_LIST_PERSON_ROLES)[number];
+
 export interface CertificateListPerson {
   readonly personKey: string;
-  readonly role: 'nominee' | 'claimant';
+  readonly role: CertificateListPersonRole;
   /** `A`, `B`, … for nominees; `null` for the claimant. */
   readonly position: string | null;
   readonly smsState: CertificatePersonSmsState;
@@ -75,17 +79,27 @@ export interface CertificateListPerson {
   readonly escalationRecordedOn: string | null;
 }
 
+/** The run's state on the list. ⚠ LOCKSTEP with the contract's `CERTIFICATE_REMINDER_RUN_STATES` (code review, 2026-10-03). */
+export const CERTIFICATE_LIST_RUN_STATES = ['open', 'paused', 'ended'] as const;
+export type CertificateListRunState = (typeof CERTIFICATE_LIST_RUN_STATES)[number];
+
 export interface CertificateListItem {
   readonly claimCaseId: string;
   readonly deceasedMemberId: string;
   readonly shortReference: string;
   readonly cause: 'rejected' | 'missing';
-  readonly runState: 'open' | 'paused' | 'ended';
+  readonly runState: CertificateListRunState;
   readonly pauseReason: CertificatePauseReason | null;
   readonly runDay: number | null;
   readonly nextReminderOn: string | null;
   readonly cannotRemind: CertificateCannotRemindReason | null;
   readonly people: readonly CertificateListPerson[];
+}
+
+export interface CertificateListScanResult {
+  readonly items: readonly CertificateListItem[];
+  /** The scan hit `CERTIFICATE_LIST_SCAN_CAP` — older, more-overdue claims past the cap are NOT in `items`. */
+  readonly truncated: boolean;
 }
 
 /**
@@ -97,20 +111,21 @@ export async function listCertificateReminderClaims(
   pariwarId: PariwarId,
   today: CalendarDateString,
   opts: { readonly limit?: number } = {},
-): Promise<CertificateListItem[]> {
+): Promise<CertificateListScanResult> {
+  const limit = clampLimit(opts.limit, { default: CERTIFICATE_LIST_SCAN_CAP, cap: CERTIFICATE_LIST_SCAN_CAP });
   const claimRows = await db
     .select({ claimCaseId: claimCertificateReminderRuns.claimCaseId, latest: sql<Date>`max(${claimCertificateReminderRuns.openedAt})` })
     .from(claimCertificateReminderRuns)
     .where(eq(claimCertificateReminderRuns.pariwarId, pariwarId))
     .groupBy(claimCertificateReminderRuns.claimCaseId)
     .orderBy(desc(sql`max(${claimCertificateReminderRuns.openedAt})`))
-    .limit(clampLimit(opts.limit, { default: CERTIFICATE_LIST_SCAN_CAP, cap: CERTIFICATE_LIST_SCAN_CAP }));
+    .limit(limit);
   const out: CertificateListItem[] = [];
   for (const { claimCaseId } of claimRows) {
     const item = await readCertificateListItem(db, pariwarId, claimCaseId as ClaimId, today);
     if (item !== null) out.push(item);
   }
-  return out;
+  return { items: out, truncated: claimRows.length >= limit };
 }
 
 /** One claim's row, or `null` when it is ⛔ not listed. */
@@ -144,8 +159,15 @@ export async function readCertificateListItem(
       runDay = plan.runDay;
     } else {
       runState = 'open';
-      runDay = plan?.kind === 'continue' ? plan.runDay : null;
-      nextReminderOn = certificateReminderSchedule(open.day0).find((s) => s.date > today)?.date ?? null;
+      if (plan?.kind === 'continue') {
+        runDay = plan.runDay;
+        // ⚠ `>=`, ⛔ not `>`: a slot due TODAY (the sweep may not have run yet) still reads as "next", never
+        // understating urgency by skipping to the day after.
+        nextReminderOn = certificateReminderSchedule(open.day0).find((s) => s.date >= today)?.date ?? null;
+      }
+      // `plan?.kind === 'end'` (completed / certificate received) or `'open'` (a restart about to supersede this
+      // run) — the row is still open in the DB right now, but the next sweep ends/supersedes it: no further slot
+      // of THIS run will fire, so `runDay`/`nextReminderOn` stay `null` rather than naming a date that never comes.
     }
   }
 

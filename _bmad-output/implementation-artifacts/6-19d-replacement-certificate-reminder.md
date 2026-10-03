@@ -26,7 +26,7 @@ four confirms this story put to the Panel — ✅ RULED by `-275` (2026-10-03), 
 
 # Story 6.19d: The Reminder for a Replacement Death Certificate — ⛔ Never a Deadline, ⛔ Never a Closure `[SURFACE]`
 
-Status: in-progress
+Status: review
 
 > ⭐⭐ **WHAT THIS STORY IS, IN ONE PARAGRAPH.** When the District Admin cannot accept a family's death certificate (the date of death is
 > missing, unclear or in the future) — **or** the claim reaches the District Admin's checking with ⛔ no certificate at all — the family is
@@ -597,8 +597,8 @@ carry the Task 8–9 records, and `epics.md` §6.21a / §6.19d carry Task 11's a
 - [x] **Task 8 — Records (AC10; CR13).** `docs/fallback-handler-ledger/ledger.md`: row 19's `surface_inventory_xref` via the rows-9–19 note (*"Amended … by Story 6.19d"*) **and** a §7 revision row superseding row 19's trigger (+ `rejected_unreachable`, `-269` §4) and fallback (District Admin; the found-dead + 13 escalation is RECORDED, ⛔ not delivered in v1 — ⛔ no push, ⛔ no Pariwar-Admin surface), citing Task 0's decision id (rows are append-only — supersede, ⛔ never edit); `docs/degradation-policy/surface-inventory.md`: a Tier-2 row **Certificate reminders list** (+ its letter form), `degraded-mode` — the sweep keeps running, ⛔ no claim is refused or closed; `permissions.ts` key (1) doc-block (CR11) — ⛔ no catalog bump.
 - [x] **Task 9 — `deferred-work.md` (AC10; a new "Recorded during Story 6.19d" section):** the OCR-stall case (Trap 3 — ⭐ cross-reference the existing OCR-parity retry/decrypt items, ⛔ no duplicate); the zero-candidate peer-mesh stall (Trap 6); the T12 legacy `missing` and the tolerance path (Trap 6); ⛔ no staff push, and so the day-13 escalation reaches ⛔ no Pariwar Admin (CR10; trigger: an admin client that registers a device token, or a Pariwar-Admin view); the at-least-once double SMS (inherited; trigger: a gateway idempotency key / DLR seam); ⛔ no virus scan on the letter screenshot (D6); ⛔ no RTBF path on the new tables (T8's class); ⛔ no staff prompt to call a dead-phone family after a second rejection (CR10; `-275` "does NOT cover"; trigger: a staff call-task seam);
 ⛔ not Q1–Q4 (✅ ruled by `-275` — discharged, ⛔ nothing to defer).
-- [ ] **Task 10 — Tests (AC6, AC9, AC10)** — see *Testing*. Then `pnpm -w typecheck`, lint, the domain / jobs / api / admin / contracts / i18n suites and `ci:local` (⚠ [[project_ci_local_double_run_pollution]], [[project_known_livedb_test_failures]] — a known flake is named, ⛔ never silently re-run).
-- [ ] **Task 11 — Close-out (AC0's records).** `epics.md` §6.21a: an appended annotation *"coupling (2) DISCHARGED BY THE BUILD — Story 6.19d"*, and §6.19d: *"ACs derived 2026-10-03; built …"* (annotations only; ⚠ §6.19d's header and ledger row 19 say *"`-260` G4–G6"* — recorded, ⛔ not rewritten: G4 is the correction twin); the shared spec's header line on 6.19d left as written. Status → `review`.
+- [x] **Task 10 — Tests (AC6, AC9, AC10)** — see *Testing*. Then `pnpm -w typecheck`, lint, the domain / jobs / api / admin / contracts / i18n suites and `ci:local` (⚠ [[project_ci_local_double_run_pollution]], [[project_known_livedb_test_failures]] — a known flake is named, ⛔ never silently re-run).
+- [x] **Task 11 — Close-out (AC0's records).** `epics.md` §6.21a: an appended annotation *"coupling (2) DISCHARGED BY THE BUILD — Story 6.19d"*, and §6.19d: *"ACs derived 2026-10-03; built …"* (annotations only; ⚠ §6.19d's header and ledger row 19 say *"`-260` G4–G6"* — recorded, ⛔ not rewritten: G4 is the correction twin); the shared spec's header line on 6.19d left as written. Status → `review`.
 
 ## Dev Notes
 
@@ -700,11 +700,84 @@ immediate — set the policy explicitly (6.19b AC2).
 
 ### Agent Model Used
 
+Claude Opus 5.5 (`claude-opus-5-5`), `/bmad-dev-story 6.19d`, 2026-10-03.
+
 ### Debug Log References
+
+- Task 0.1: `git diff --name-only 06b3ebdf..HEAD -- packages apps scripts docs` was EMPTY; the only decision-log commit since the pin was `-275`. `-276` drafted in the scratchpad, inserted by BigDev (with their two wording edits: CR6's *"T12 continues to govern 6.19b; it does ⛔ not define 6.19d's recipient population"*, CR5's *"For a sweep decision, precedence is: …"*), verified additive-only (50 / 0) and byte-identical to the draft, committed ALONE (`a9e90272`).
+- Four 0137–0139 constraint names exceeded Postgres's 63-byte identifier limit (silently truncated) — shortened before any commit (the local test DB was re-migrated; ⛔ nothing applied anywhere else).
+- The anchor CHECK first fired before the cause CHECK on an unknown cause — rewritten so it is silent on an unknown cause (the cause CHECK names that one).
+- The candidate scan compared the `claim_lifecycle_state` enum with `text[]` — cast to `claim_lifecycle_state[]`.
+- A seeded claim with no events falls back to `intake_pending` when the review writer re-projects it — the live specs drive the claim through the projector instead.
 
 ### Completion Notes List
 
+- ⭐ **Governance first (AC0):** author-commit **`2026-10-03-276`** (CR1–CR15) committed alone before any code; the shared spec v1.21 carries the D3 / D11 / T12 markers and its status table (6.19c `done`, 6.19d `ready-for-dev`); the UX spec carries CR15's two annotations; the two code comments `-276` supersedes are marked (`CORRECTION_RUN_KINDS`, `SCHEDULE_TABLE`) — ⛔ 0127's SQL comment untouched.
+- **Migrations 0137–0139 (CR1):** the runs (`rejected` / `missing`, the anchor pair, ONE open per claim, ONE per rejected upload, ONE `missing` per claim), the reminder record (0128's shape; `subject_key` pinned by a CHECK both ways; the staff day key WITH `purpose`), the letters (0134's shape; ONE per person per CLAIM). RLS + FORCE, per command, ⛔ no DELETE; column-narrowed UPDATE grants. 47-test policy-regression spec incl. the DB ↔ TS lockstep.
+- **Domain:** the schedule (`CORRECTION_REMINDER_DAYS` IMPORTED + 120/150/180; `> 180`), the PURE planner (open ≻ completed ≻ received ≻ pause ≻ continue — 30 unit tests incl. Q2/Q3/Q4 and the CR10 chase planner), the opener under the CLAIM-ROW lock (re-plans ⇒ `stale`; SAVEPOINT before ending the old run; 23505 ⇒ `exists`), the recipients from the CONTACT RECORD (`chainHeadOf` — fork-safe; positions A, B, …), the person-state adapter onto 6.19b's evaluator (per-NUMBER delivered-letter stop), the reminder record (hash written on `attempting` — CR7's one departure; finalisers keep it), the letter (one per person per claim AND per number; hashes before the lock), the list read.
+- **Jobs:** the sweep (open runs ∪ window candidates, keyset-paged; hashes BEFORE the claim-row lock; `lock_timeout` first; open / end / pause / catch-up; the CR10 chase RECORDS — ⛔ no staff push) and the child (one text per number; the per-number letter stop; a KMS failure recorded `exhausted:hash_failed` on the final attempt; crossed-midnight expiry). The third SMS message `certificate_reminder` (6.19b's send reused unchanged); queues; boot wiring.
+- **API + contract:** five key-(1) routes (the list gated by `resolveQueueScopeStash` + `requirePermissionHook` + a per-row district filter; the address AND the screenshot behind the fresh step-up `certificate_letter_address`); an exhaustive `certificate_letter.*` switch; the human-actor gate enrolled, `COVERAGE_FLOOR` 15 → 16. Catalog stays **50 / 64**.
+- **Admin:** `/p/$pariwarId/certificate-reminders` — each person by position and role (⛔ no name), the escalation line *"(the Pariwar Admin is not notified in this version)"*, the one-letter form; the "Letter recorded" line sits OUTSIDE the form's branch, so it survives the refetch (a mutation-check showed the test FAILS with it inside); the submit stays disabled through the refetch.
+- **Records:** DLT sheet rows 5–6 (keys, texts, slots, cost: ≤ 25 slots per rejected certificate), launch-gate **row 21** (`open`), ledger row 19's xref + a §7 revision row (trigger + `rejected_unreachable`; the + 13 escalation is a RECORD reaching ⛔ no Pariwar Admin in v1), a surface-inventory Tier-2 row, key (1)'s doc-block, `deferred-work.md`'s 6.19d section, `epics.md` §6.21a / §6.19d annotations.
+- ⚠ **Deviations, stated:** (1) two edits OUTSIDE the Dev Notes *UPDATE* list — `apps/api/src/audit/audit-sink.ts` (five new `admin_claim_certificate_reminder.*` audit event types; the union is closed) and `claims.correction-chase.handlers.ts` (`LetterCodePrefix` widened by `'certificate_letter'` — a type-only widening, ⛔ no behaviour change, so the shared date / screenshot helpers carry the right code prefix); (2) THREE new domain modules beyond the three the story named — `certificate-reminder-record.ts` (the record writers) and `certificate-reminder-read.ts` (the list read) split out for size; (3) the jobs unit test with mocked deps covers the guard paths only — the sweep / child behaviour is proven by the live suite (15 tests); (4) two of the listed races are ⛔ not built (the child vs the review writer / the OCR pointer move) — recorded in `deferred-work.md`; the concurrent-sweep and concurrent-same-number races ARE built.
+- ⭐ **Verification:** `ci:local` with the live DB — first run: every job green but `domain-invariants` (the list read's `.limit(scan)` held the `clampLimit` in a variable; the gate wants it inline) — fixed (behaviour-identical), then the full re-run **PASSED, 34 / 34 jobs green**. The 6.19d suites re-run against the live DB after the fix: domain 117 (incl. the 47-test policy spec and 15 runs/recipients/letter specs), jobs 59 (incl. 15 live), API 6, admin 7, contracts 3. ⛔ No 6.19b / 6.19c / 6.21a / 6.21b suite was modified except the two Trap 10 names (the SMS template test; the human-actor gate); `permissions.test.ts` still 50 / 64; `packages/channels/src` diff empty.
+- ⚠ **Red-first, honestly:** the schedule, template, admin-banner and fence tests were shown to fail before their code (or by a mutation check); the planner, recipients, policy-regression and API specs were written in the same step as their code and ran green on first full run after fixes — ⛔ not separately shown red.
+
 ### File List
+
+**New**
+- `packages/domain/migrations/0137_claim-certificate-reminder-run.sql`
+- `packages/domain/migrations/0138_claim-certificate-reminder.sql`
+- `packages/domain/migrations/0139_claim-certificate-reminder-letter.sql`
+- `packages/domain/src/schema/claim_certificate_reminder.ts`
+- `packages/domain/src/policies/claim-certificate-reminder-rls.ts`
+- `packages/domain/src/claim/certificate-reminder-schedule.ts`
+- `packages/domain/src/claim/certificate-reminder.ts`
+- `packages/domain/src/claim/certificate-reminder-record.ts`
+- `packages/domain/src/claim/certificate-letter.ts`
+- `packages/domain/src/claim/certificate-reminder-read.ts`
+- `packages/domain/tests/claim/certificate-reminder-schedule.test.ts`
+- `packages/domain/tests/claim/certificate-reminder-plan.test.ts`
+- `packages/domain/tests/claim/certificate-recipients.test.ts`
+- `packages/domain/tests/integration/claim/certificate-reminder.spec.ts`
+- `packages/domain/tests/integration/rls/claim-certificate-reminder-policy-regression.spec.ts`
+- `packages/contracts/src/claims/certificate-reminder.ts`
+- `packages/contracts/tests/certificate-reminder-lockstep.test.ts`
+- `apps/jobs/src/scheduler/claim-certificate-reminders.ts`
+- `apps/jobs/tests/claim-certificate-reminders-live.test.ts`
+- `apps/jobs/tests/claim-certificate-reminders.test.ts`
+- `apps/jobs/tests/claim-certificate-reminder-no-decision.test.ts`
+- `apps/api/src/modules/claims/claims.certificate-reminder.routes.ts`
+- `apps/api/src/modules/claims/claims.certificate-reminder.handlers.ts`
+- `apps/api/tests/integration/claims/certificate-reminder.spec.ts`
+- `apps/admin/src/modules/certificate-reminders/CertificateRemindersList.tsx`
+- `apps/admin/src/modules/certificate-reminders/errors.ts`
+- `apps/admin/src/modules/certificate-reminders/i18n-en.ts`
+- `apps/admin/src/modules/certificate-reminders/index.ts`
+- `apps/admin/src/routes/CertificateReminderRoutes.tsx`
+- `apps/admin/tests/certificate-reminders.test.tsx`
+
+**Modified**
+- `.decision-log.md` (`-276`, inserted by BigDev)
+- `packages/domain/migrations/meta/_journal.json`
+- `packages/domain/src/schema/index.ts`, `packages/domain/src/policies/index.ts`, `packages/domain/src/claim/index.ts`
+- `packages/domain/src/schema/claim_correction_chase.ts`, `packages/domain/src/claim/correction-schedule.ts` (doc-block markers only)
+- `packages/domain/src/rbac/permissions.ts` (key (1) doc-block only)
+- `packages/contracts/src/claims/index.ts`
+- `packages/queue/src/index.ts`
+- `packages/i18n/locales/en/claim.json`, `packages/i18n/locales/hi/claim.json`
+- `apps/jobs/src/scheduler/claim-correction-sms-templates.ts`, `apps/jobs/tests/claim-correction-sms-templates.test.ts`, `apps/jobs/src/boot.ts`
+- `apps/api/src/modules/claims/index.ts`, `apps/api/src/audit/audit-sink.ts`, `apps/api/src/modules/claims/claims.correction-chase.handlers.ts`
+- `apps/admin/src/api/client.ts`, `apps/admin/src/api/hooks.ts`, `apps/admin/src/router.tsx`, `apps/admin/src/routes/RootLayout.tsx`
+- `scripts/claim-adjudication-human-actor-invariant/check.ts`
+- `docs/launch-gate-inventory/dlt-template-requests-6-19.md`, `docs/launch-gate-inventory/inventory-roster.md`
+- `docs/fallback-handler-ledger/ledger.md`, `docs/degradation-policy/surface-inventory.md`
+- `_bmad-output/implementation-artifacts/6-19-correction-return-reminders-and-closure.md` (v1.21 markers)
+- `_bmad-output/planning-artifacts/ux-design-specification.md` (CR15 annotations)
+- `_bmad-output/planning-artifacts/epics.md` (Task 11 annotations)
+- `_bmad-output/implementation-artifacts/deferred-work.md`
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`
+- `_bmad-output/implementation-artifacts/6-19d-replacement-certificate-reminder.md`
 
 ## Change Log
 
@@ -720,3 +793,4 @@ immediate — set the policy explicitly (6.19b AC2).
 | v2.4 | 2026-10-03 | Q1–Q4 routed: `trustee-panel-routing-note-2026-10-03-6-19d-four-confirms.md` (⏳ awaiting). Our readings put: Q1 **B** (a letter with each rejected certificate — A built meanwhile), Q2 A, Q3 A, Q4 A. ⛔ Nothing blocked. |
 | v2.5 | 2026-10-03 | ✅ **The Panel ruled Q1–Q4 — `2026-10-03-275`, all A** (DR + KB). Q1: ONE letter per claim, ever — ⚠ our reading B ⛔ not taken. Q2–Q4: our readings taken. Each A is what was already built ⇒ ⛔ no design change. Q1–Q4 marked RULED at every site (the Panel table, §0, CR9, AC0, Task 0.2, Task 9); ⛔ no confirm still owed. |
 | v2.6 | 2026-10-03 | Two round-2 patch defects fixed (CR6 *"claim row"* → the `attempting` row; CR7 names its one departure). Then **round 3** (fresh-context, scoped to the v2.2+ text) — ⛔ no BLOCKER; 12 findings, all applied: CR6's per-number rule given a mechanism (hash EVERY person before the lock; lowest key sends; a dead-number row also blocks; per-number delivered-letter stop; one letter per NUMBER as a code check) + four tests; the opener re-reads under the lock, returns `stale`, and savepoints BEFORE ending the old run (⛔ never an orphaned end); the KMS-failure path records a final `error` row (⛔ never an unrecorded slot re-sent `late`); CR5's precedence (`completed` before pause) + three planner arms; `-275` cited at CR2/CR3/CR4/CR5/AC4; the staff call after a second rejection recorded as deferred (`-275` does NOT cover); the escalation's list copy ⛔ never says notified; AC5's escalation ONE per epoch; the list row set defined + tested; the sweep's hash-before-lock; cites (`readClosureReadiness` back to `:719` — round 2's `:721` was wrong; the per-row filter is `getClosureLettersOwed`). |
+| **v2.7** | **2026-10-03** | ⭐ **BUILT (`/bmad-dev-story`).** Task 0: author-commit **`-276`** (CR1–CR15) inserted by BigDev and committed alone; the shared spec v1.21 markers; the UX spec's CR15 annotations. Tasks 1–11: migrations 0137–0139 + RLS; the domain schedule / planner / opener / recipients / person state / record / letter / list read; the jobs sweep + child + the third SMS message; five key-(1) API routes (gate floor 15 → 16; catalog 50 / 64); the admin list + one-letter form; DLT rows 5–6, launch-gate row 21, ledger row 19 + §7, the surface inventory, key (1)'s doc-block; `deferred-work.md`; `epics.md` §6.21a (coupling (2) DISCHARGED BY THE BUILD) / §6.19d. Deviations stated in Completion Notes (two edits outside the UPDATE list; two extra domain modules; two races recorded ⛔ not built). |

@@ -2969,6 +2969,13 @@ refused because the first certificate was unclear.
 > **stopping after 180 days**; one posted letter for a dead phone; SMS to the agreed people; ⭐ a **never-sent** (`missing`) certificate IS
 > chased — **once the claim is being checked**, ⛔ not during filing. Built by **Story 6.19d** (`6-19d-replacement-certificate-reminder`,
 > split from 6.19 on 2026-09-27); coupling (2) discharges on **that build**, ⛔ not on this record. *Appended; ⛔ nothing above edited.*
+>
+> ⭐ **2026-10-03 — coupling (2), 6.19's CC1 reminder, is DISCHARGED BY THE BUILD (Story 6.19d) — ⛔ not on this record.** The
+> replacement-certificate reminder is built ([`-276`](../../.decision-log.md#decision-2026-10-03-276) CR1–CR15; `-275` Q1–Q4): its own runs,
+> a daily 10:00 IST sweep on the Panel's 25 days (the correction days to 84, then 120, 150, 180), the text to the contact record's people,
+> the ONE letter per person per claim, and the District Admin's list — ⛔ never a refusal, a closure or a time limit. ⚠ GO-LIVE still waits
+> on the 6.19 set's own gates (counsel's M and S, the DLT registration, launch-gate row 21's Hindi review), ⛔ this coupling. Coupling (3′)
+> (counsel's basis under `-243`) is ⛔ untouched. *Appended; ⛔ nothing above edited.*
 
 ### Story 6.21b: A Rejected or Missing Death Certificate — the Family Is Asked in Their Own Words, and Can Send Another in the App or Through the Helpline `[SURFACE]`
 
@@ -3060,6 +3067,12 @@ through a person (`-254`), so that a family is never refused for a silence that 
 As a family whose death certificate was ⛔ not accepted (or never sent), I want to be reminded on the correction schedule to day 90,
 then monthly to day 180 (`-259`), by text message and — for a dead phone — by one posted letter, so that the claim does not wait
 unnoticed.
+
+> ⭐ **2026-10-03 — ACs DERIVED** (`bmad-create-story`, v2.0 → v2.6; ⛔ no BLOCKER in three validate rounds) and **BUILT** the same day
+> (`/bmad-dev-story`) under [`-276`](../../.decision-log.md#decision-2026-10-03-276) (CR1–CR15) and [`-275`](../../.decision-log.md#decision-2026-10-03-275)
+> (Q1–Q4, all A): its own tables (migrations 0137–0139), the sweep and the SMS child, the ONE letter, the District Admin's "Certificate
+> reminders" list. ⚠ The header above says *"`-260` G4–G6"*: G4 is the correction-return twin, ⛔ this story's ruling (the next-morning rule
+> here is `-250` #5 through `-259` cl.1) — recorded, ⛔ not rewritten. *Appended; ⛔ nothing above edited.*
 
 ---
 

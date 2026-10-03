@@ -58,7 +58,10 @@ export type CorrectionScheduleTable = Readonly<
   Record<CorrectionRunKind, readonly { readonly day: number; readonly kind: CorrectionSlotKind }[]>
 >;
 
-/** The schedule DATA, keyed by run kind (`-266` §1). 6.19d adds its own kind's days here as data. */
+/**
+ * The schedule DATA, keyed by run kind (`-266` §1). ⚠ `-266` §1's *"6.19d adds its own kind's days here as data"* is
+ * SUPERSEDED by `2026-10-03-276` CR1 — 6.19d's days live in `certificate-reminder-schedule.ts`, ⛔ never a key here.
+ */
 const SCHEDULE_TABLE: CorrectionScheduleTable = {
   family: CORRECTION_REMINDER_DAYS.map((day) => ({ day, kind: 'reminder' as const })),
   direction: CORRECTION_REMINDER_DAYS.map((day) => ({ day, kind: 'reminder' as const })),

@@ -360,6 +360,17 @@ export type AuthAuditEventType =
   | 'admin_claim_correction.direction_inbox_read'
   | 'admin_claim_correction.closure_letters_read'
   | 'admin_claim_refile.confirmed'
+  // Story 6.19d (AC8) — the REPLACEMENT-CERTIFICATE reminder's staff surface, key (1) `claim.record_correction_letter`.
+  // `resourceLocator: 'claim:<lower-case uuid>'` on every per-claim line; ⛔ never a tracking number, an address or a
+  // screenshot:
+  //   admin_claim_certificate_reminder.letter_recorded / letter_delivery_recorded / letter_address_revealed /
+  //     letter_screenshot_read — the ONE certificate letter (`-259` detail 1; `-275` Q1);
+  //   admin_claim_certificate_reminder.list_read — who read the "Certificate reminders" list (a count only).
+  | 'admin_claim_certificate_reminder.letter_recorded'
+  | 'admin_claim_certificate_reminder.letter_delivery_recorded'
+  | 'admin_claim_certificate_reminder.letter_address_revealed'
+  | 'admin_claim_certificate_reminder.letter_screenshot_read'
+  | 'admin_claim_certificate_reminder.list_read'
   // ── ICP convergence-resolution surface (Story 6.4, AR-62) ─────────────────────
   // The operator-console pending/merge/override lines (the <ConvergenceDecisionStrip>). Context
   // is NON-PII throughout: claim ids + intake_attempt_id + intake_channel(s) + the resolving

@@ -165,7 +165,8 @@ function warnIfNumberUnverified(request: FastifyRequest, err: unknown, route: 'r
 }
 
 /** The error-code prefix of a letter route — 6.19b's correction letter, or 6.19c's closure letter (`-274` 2). */
-export type LetterCodePrefix = 'correction_letter' | 'closure_letter';
+/** The letter's error-code prefix — 6.19b's, 6.19c's closure letter and (Story 6.19d) the certificate letter. */
+export type LetterCodePrefix = 'correction_letter' | 'closure_letter' | 'certificate_letter';
 
 /** ⛔ A letter date LATER than today (IST) — 400 `<prefix>.date_in_future`. */
 export function refuseFutureDate(date: string, today: string, prefix: LetterCodePrefix = 'correction_letter'): void {

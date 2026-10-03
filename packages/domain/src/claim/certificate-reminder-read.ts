@@ -98,14 +98,13 @@ export async function listCertificateReminderClaims(
   today: CalendarDateString,
   opts: { readonly limit?: number } = {},
 ): Promise<CertificateListItem[]> {
-  const scan = clampLimit(opts.limit, { default: CERTIFICATE_LIST_SCAN_CAP, cap: CERTIFICATE_LIST_SCAN_CAP });
   const claimRows = await db
     .select({ claimCaseId: claimCertificateReminderRuns.claimCaseId, latest: sql<Date>`max(${claimCertificateReminderRuns.openedAt})` })
     .from(claimCertificateReminderRuns)
     .where(eq(claimCertificateReminderRuns.pariwarId, pariwarId))
     .groupBy(claimCertificateReminderRuns.claimCaseId)
     .orderBy(desc(sql`max(${claimCertificateReminderRuns.openedAt})`))
-    .limit(scan);
+    .limit(clampLimit(opts.limit, { default: CERTIFICATE_LIST_SCAN_CAP, cap: CERTIFICATE_LIST_SCAN_CAP }));
   const out: CertificateListItem[] = [];
   for (const { claimCaseId } of claimRows) {
     const item = await readCertificateListItem(db, pariwarId, claimCaseId as ClaimId, today);

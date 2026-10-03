@@ -26,7 +26,7 @@ four confirms this story put to the Panel — ✅ RULED by `-275` (2026-10-03), 
 
 # Story 6.19d: The Reminder for a Replacement Death Certificate — ⛔ Never a Deadline, ⛔ Never a Closure `[SURFACE]`
 
-Status: ready-for-dev
+Status: in-progress
 
 > ⭐⭐ **WHAT THIS STORY IS, IN ONE PARAGRAPH.** When the District Admin cannot accept a family's death certificate (the date of death is
 > missing, unclear or in the future) — **or** the claim reaches the District Admin's checking with ⛔ no certificate at all — the family is
@@ -571,11 +571,11 @@ carry the Task 8–9 records, and `epics.md` §6.21a / §6.19d carry Task 11's a
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0 — Governance first (AC0).** ⛔ No code before it lands.
-  - [ ] 0.1 `git diff --name-only 06b3ebdf..HEAD -- packages apps scripts docs`; re-read anything cited here that moved. `git log 06b3ebdf..HEAD -- .decision-log.md` — read any new entry for `6.19d`, `certificate`, `claim_correction_runs`, `sendClaimCorrectionSms`; grep any routing note dated after 2026-10-03 for `6.19d` / `certificate`.
-  - [ ] 0.2 Draft the author-commit (next free id; Decision type **author-commit (BigDev)**; §0: the author's, with Q1–Q4's person-facing halves cited to `-275` (Trustee-ratified); everything AC0 lists; Consequences: 6.19d may build; the shared spec and two code comments marked; ⛔ no confirm still owed; ⛔ no status flip) to the scratchpad; BigDev inserts it above the newest `### Decision`; verify additive-only; commit `governance(6.19d): …` **alone**, first.
-  - [ ] 0.3 Mark the shared spec (`6-19-correction-return-reminders-and-closure.md`): D3's *"6.19d adds its own kind's days"* → `⚠ SUPERSEDED by <id> CR1 — 6.19d has its own tables`; D11 → `⚠ 6.19d sends ⛔ no staff push (<id> CR10)`; T12 → `⚠ governs 6.19b; 6.19d's recipients are CR6`; the status table's 6.19d row → `ready-for-dev` (and its stale 6.19c row → `done`); a Change Log row. ⛔ No ratified text edited.
-  - [ ] 0.4 Annotate `ux-design-specification.md` Journey 2's deferred-upload SMS and `<ClaimDocumentUpload>`'s deferred state (CR15): *"⛔ Not built — `-259` detail 3 rules no reminder while filing; see Story 6.19d."* Annotation only.
+- [x] **Task 0 — Governance first (AC0).** ⛔ No code before it lands.
+  - [x] 0.1 `git diff --name-only 06b3ebdf..HEAD -- packages apps scripts docs`; re-read anything cited here that moved. `git log 06b3ebdf..HEAD -- .decision-log.md` — read any new entry for `6.19d`, `certificate`, `claim_correction_runs`, `sendClaimCorrectionSms`; grep any routing note dated after 2026-10-03 for `6.19d` / `certificate`.
+  - [x] 0.2 Draft the author-commit (next free id; Decision type **author-commit (BigDev)**; §0: the author's, with Q1–Q4's person-facing halves cited to `-275` (Trustee-ratified); everything AC0 lists; Consequences: 6.19d may build; the shared spec and two code comments marked; ⛔ no confirm still owed; ⛔ no status flip) to the scratchpad; BigDev inserts it above the newest `### Decision`; verify additive-only; commit `governance(6.19d): …` **alone**, first.
+  - [x] 0.3 Mark the shared spec (`6-19-correction-return-reminders-and-closure.md`): D3's *"6.19d adds its own kind's days"* → `⚠ SUPERSEDED by <id> CR1 — 6.19d has its own tables`; D11 → `⚠ 6.19d sends ⛔ no staff push (<id> CR10)`; T12 → `⚠ governs 6.19b; 6.19d's recipients are CR6`; the status table's 6.19d row → `ready-for-dev` (and its stale 6.19c row → `done`); a Change Log row. ⛔ No ratified text edited.
+  - [x] 0.4 Annotate `ux-design-specification.md` Journey 2's deferred-upload SMS and `<ClaimDocumentUpload>`'s deferred state (CR15): *"⛔ Not built — `-259` detail 3 rules no reminder while filing; see Story 6.19d."* Annotation only.
 - [ ] **Task 1 — Migrations + schema + RLS (AC1, AC4, AC8; CR1).** Next free numbers (**0137** at `06b3ebdf` — read `packages/domain/migrations/` and `meta/_journal.json` live; the journal steps `when` by +86 400 000 per entry). Hand-authored SQL, the 0127/0128/0134 headers as models (what, why, the CHECK/UNIQUE list, the grants). Drizzle schema in a NEW `packages/domain/src/schema/claim_certificate_reminder.ts`, TS mirrors of every CHECK list in LOCKSTEP (with a DB ↔ TS lockstep test, the 0135 precedent); RLS file(s) under `packages/domain/src/policies/`; register in both indexes. ⛔ Never edit 0126–0136.
 - [ ] **Task 2 — Domain: the schedule and the runs (AC1, AC2; CR2–CR6).**
   - [ ] 2.1 NEW `packages/domain/src/claim/certificate-reminder-schedule.ts` — `CERTIFICATE_REMINDER_MONTHLY_DAYS`, `CERTIFICATE_REMINDER_DAYS` (spread of the imported `CORRECTION_REMINDER_DAYS`), `CERTIFICATE_RUN_HORIZON_DAYS = 180`, `certificateReminderSchedule(day0)`, `isCertificateRunPastHorizon` (`runDay > 180`); reuse `istDateOf` (re-exported by `correction-schedule.ts:113`), `addCalendarDays` (from `cycle-calendar/holiday-resolver.ts`), `calendarDaysBetween`, `correctionCatchUp`.

@@ -1540,6 +1540,8 @@ flowchart TD
   Ack --> EnterAnitaQueue[Claim enters intake stage<br/>Awaits field visit<br/>then Anita's verification queue]
 ```
 
+> ⚠ **ANNOTATION 2026-10-03 (Story `6-19d` Task 0, `-276` CR15) — the `DeferUpload` node's *"SMS reminder"* is ⛔ NOT BUILT.** `-259` detail 3 rules ⛔ no reminder while the family is still filing; a never-sent certificate is chased only once the claim is with the District Admin for checking. See Story 6.19d.
+
 **Recovery anchors:** Cannot access deceased's phone → Helpline path at entry. OTP failures at either step → Helpline. Save-and-resume mandatory across all data-entry steps; no time pressure on grief-paced flow. Update-nominee path requires Trustee Panel review (fraud guard at high-risk node).
 
 > ⚠ **ANNOTATION 2026-09-21 (Story `6-20` Task 0) — *"Update-nominee path requires Trustee Panel review"* is CONTRADICTED.**
@@ -2078,7 +2080,7 @@ Grouped by surface tier. Internal names lead; UX labels in parens where they dif
 - **Anatomy:** Drop zone · "Take photo" CTA (mobile camera) · "Pick PDF" CTA · upload progress · uploaded preview · re-upload affordance.
 - **States:** Default · upload-in-progress · uploaded · upload-failed (network) · deferred (save-and-upload-within-7-days).
 - **Variants:** Member-initiated (claim-proxy mode) · helpline-triggered (SMS link to nominee from Priya path).
-- **Accessibility:** Camera and file-pick both supported; uploaded preview readable to screen-reader; deferred state has visible reminder schedule.
+- **Accessibility:** Camera and file-pick both supported; uploaded preview readable to screen-reader; deferred state has visible reminder schedule. ⚠ *ANNOTATION 2026-10-03 (`-276` CR15): ⛔ Not built — `-259` detail 3 rules no reminder while filing; see Story 6.19d.*
 - **Surfaces:** Journey 2; Journey 3 (when family uploads via SMS link).
 
 ##### `<NomineeDetailEditor>`

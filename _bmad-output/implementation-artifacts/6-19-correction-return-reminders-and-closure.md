@@ -40,8 +40,8 @@ Status: split — ⛔ this file has no sprint row; it is the shared spec of four
 > |---|---|---|---|
 > | **6.19a** | `6-19a-claim-contact-capture-at-filing` | AC0 (governance for the WHOLE set), AC1, AC13 | ✅ `done` (merged, `f06ee41f`) |
 > | **6.19b** | `6-19b-correction-reminders-and-posted-letters` | AC2–AC5, AC16 | ✅ `done` (build `40304d9f`, reviews to `f301f09e`) |
-> | **6.19c** | `6-19c-correction-closure-super-admin-review-and-refile` | AC6, AC7, AC14, AC15, AC17, ⭐ AC18 (`-272`, `-273`) | `ready-for-dev` — v2.2 re-pinned `f079dc56` |
-> | **6.19d** | `6-19d-replacement-certificate-reminder` | AC12 (CC1) | `backlog` — fenced on its routing note |
+> | **6.19c** | `6-19c-correction-closure-super-admin-review-and-refile` | AC6, AC7, AC14, AC15, AC17, ⭐ AC18 (`-272`, `-273`) | ✅ `done` (two code-review passes, `06b3ebdf`) |
+> | **6.19d** | `6-19d-replacement-certificate-reminder` | AC12 (CC1) | `ready-for-dev` — v2.6, `-276` (CR1–CR15) |
 >
 > The AC numbers are **kept** in the slices, so every decision and note that cites "6.19 AC n" still resolves; AC8, AC9 and AC11 are restated per
 > slice (AC8a/b/c …). The row `6-19-correction-return-reminders-and-closure` is **retired** (ledger `2026-09-27j`); this file keeps its path
@@ -442,7 +442,7 @@ highlight (`-226` cl.5, 6.18 AC8) must still show on such a claim — prove it.
 or refused, and the family's reminders do ⛔ not run (they stopped at day 90) unless a **direction** restarts them (D18). `commitCycleFreeze`
 already excludes the claim (the return row is live) — keep it live until a Super Admin decision supersedes it.
 
-**T12 — the "reached" set is the as-at-death declaration.** "Each declared nominee" (`-255` F6) = the nominees of
+**T12 — the "reached" set is the as-at-death declaration.** ⚠ *(governs 6.19b; 6.19d's recipients are CR6 — `-276`: T12 continues to govern 6.19b; it does ⛔ not define 6.19d's recipient population.)* "Each declared nominee" (`-255` F6) = the nominees of
 `getEffectiveNomineeDeclaration`, ⛔ never the current rows and ⛔ never the handover OTP's rank-1 read. Their mobiles come from that
 declaration version. ⚠ **WHEN it exists:** the effective declaration is `undetermined` (no entries) until the District Admin's
 determination, recordable only in `CLAIM_REVIEW_WINDOW_STATES` (from `verification_in_progress`). ⇒ it governs 6.19b's reminders and
@@ -476,7 +476,7 @@ Where a decision only records a Panel ruling it says so.
   `attempt_state` (`attempting` → `accepted | rejected_invalid_number | no_target | error | skipped_superseded`, plus `late`), a
   `delivered_at` only a real signal fills, and `provider_message_id`. `schedule_run_id` is the return's `decision_id` — or a direction id when a
   Super Admin restarts reminders (D18). ⛔ Not `idempotency_keys` (T5), ⛔ not a claim event. Own RLS file; own migration.
-- **D3 — the schedule is a pure function over a DATA table** (⭐ keyed by run KIND since `-266` §1 — 6.19d adds its own kind's days; ⭐ `-260`
+- **D3 — the schedule is a pure function over a DATA table** (⭐ keyed by run KIND since `-266` §1 — 6.19d adds its own kind's days ⚠ *SUPERSEDED by `-276` CR1 — 6.19d has its own tables*; ⭐ `-260`
   G4: ⛔ nothing on day 0 of a return **or** a switch) (the Panel's numbers, `-250` #5): day 0 = `istDateOf(decidedAt)`; slots 1–7, 10,
   14, 17, 21, 24, 28, 31, 35, 42, 49, 56, 63, 70, 77, 84; ⛔ nothing on or after day 90; one send per day at **10:00 IST** (a cron
   `0 10 * * *`, `tz:'Asia/Kolkata'`). "At least 90 days" ⇔ `istDateOf(now) >= addCalendarDays(day0, 90)`. **Catch-up:** a due slot with no
@@ -534,7 +534,7 @@ Where a decision only records a Panel ruling it says so.
   input. Say so in the doc-block.
 - **D10 — reminders are claim-shepherd communications.** Moot for the family (a direct SMS bypasses suppression); for staff push, `time_critical:
   false` (like every non-cycle-open producer).
-- **D11 — REVISED. Staff reach: the in-app queues first, admin push best-effort.** The District Admin's correction queue gains every due item
+- **D11 — REVISED. Staff reach: the in-app queues first, admin push best-effort.** ⚠ *6.19d sends ⛔ no staff push (`-276` CR10).* The District Admin's correction queue gains every due item
   (below), and ⭐ the admin nav gains a link to it (closes the 6.18 deferred item). Pariwar Admin and Super Admin get two small queues (closures
   awaiting decision; escalated claims + directions). Push: `resolvePushTargets(…,'admin', userId)` composed in `apps/jobs` through `dispatch()`
   narrowed to push, an `alert_published` envelope with **English** staff copy (staff copy is English-only) and `member_id` = the deceased as
@@ -775,3 +775,4 @@ template registry's content against the rendered `t()` output).
 | v1.18 | 2026-09-29 | ⚠ **`-271`**: D22 counts only accepts to the person's current number; ⛔ no staff run on a switch during a Super Admin hold. |
 | v1.19 | 2026-10-01 | ⚠ **`-272`** and **`-273`** (6.19c's validate pass; `-273` inserted by BigDev 2026-10-01): D4, D20, D26 marked — the letter track is per return (the cap ⛔ never resets on a new number); D22 reads the whole return; D17/D18/T11 — an escalated claim (either origin) is held and only the Super Admin decides it, a staff-origin escalation is ⛔ never closable; D23 — the closure notice is an outbox, the member status rides the claim-entry gate. Two confirms owed to the Panel. The status table: 6.19b `done`, 6.19c v2.1. |
 | v1.20 | 2026-10-01 | ⭐ **`-274` (Trustee-ratified, DR + KB) answers `-273`'s two confirms:** 1a–1d A (a staff-origin escalation ⛔ never closable; the 90 days start only with a restart while held; the `-251` approve follows the origin; only the Super Admin decides a held claim); **2 B** — a family reached only by post is sent a closure letter (D23 widened). D23 and D26 markers updated. |
+| v1.21 | 2026-10-03 | Story 6.19d Task 0 (`-276`, author-commit CR1–CR15): markers only, ⛔ no ratified text edited — D3 *SUPERSEDED by `-276` CR1* (6.19d has its own tables), D11 *6.19d sends no staff push (`-276` CR10)*, T12 *governs 6.19b; 6.19d's recipients are CR6*. Status table: 6.19c → `done`, 6.19d → `ready-for-dev`. |

@@ -1021,6 +1021,33 @@ export function useRecordClosureLetterDelivery(pariwarId: string, claimCaseId: s
   });
 }
 
+// ── Story 6.19d — the replacement-certificate reminder (key (1)) ──────────────────────────────────────────────
+// `onSettled` RETURNS the invalidation (6.19b's lesson): the mutation stays pending until the fresh list is on screen,
+// so the submit stays disabled through the refetch (the 6.19b double-submit finding).
+
+export const certificateRemindersKey = (pariwarId: string) => ['certificate-reminders', pariwarId] as const;
+
+export function useCertificateReminders(pariwarId: string) {
+  return useQuery({ queryKey: certificateRemindersKey(pariwarId), queryFn: () => api.getCertificateReminders(pariwarId) });
+}
+
+export function useRecordCertificateLetter(pariwarId: string, claimCaseId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: Parameters<typeof api.recordCertificateLetter>[2]) => api.recordCertificateLetter(pariwarId, claimCaseId, body),
+    onSettled: () => qc.invalidateQueries({ queryKey: certificateRemindersKey(pariwarId) }),
+  });
+}
+
+export function useRecordCertificateLetterDelivery(pariwarId: string, claimCaseId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { letterId: string; deliveredOn: string; file: File }) =>
+      api.recordCertificateLetterDelivery(pariwarId, claimCaseId, v.letterId, v.deliveredOn, v.file),
+    onSettled: () => qc.invalidateQueries({ queryKey: certificateRemindersKey(pariwarId) }),
+  });
+}
+
 /** (6) The helpline's re-file confirmation. */
 export function useRecordRefileConfirmation(pariwarId: string) {
   return useMutation({

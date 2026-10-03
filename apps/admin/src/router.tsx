@@ -30,6 +30,7 @@ import {
   CorrectionEscalationsRoute,
   EscalationsPickerRoute,
 } from './routes/CorrectionClosureRoutes.js';
+import { CertificateRemindersRoute } from './routes/CertificateReminderRoutes.js';
 import { NomineeRefusalsRoute } from './routes/NomineeRefusalsRoute.js';
 import { NomineeCorrectionsRoute } from './routes/NomineeCorrectionsRoute.js';
 import { HelpdeskQueueRoute } from './routes/HelpdeskQueueRoute.js';
@@ -282,6 +283,12 @@ const closureLettersRoute = createRoute({
   path: '/p/$pariwarId/correction/closure-letters',
   component: ClosureLettersRoute,
 });
+// Story 6.19d (AC5) — the District Admin's "Certificate reminders" list and its one-letter form (key (1)).
+const certificateRemindersRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/p/$pariwarId/certificate-reminders',
+  component: CertificateRemindersRoute,
+});
 const escalationsPickerRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/correction/escalations',
@@ -377,6 +384,7 @@ const routeTree = rootRoute.addChildren([
   correctionEscalationsRoute,
   correctionDirectionsRoute,
   closureLettersRoute,
+  certificateRemindersRoute,
   escalationsPickerRoute,
   nomineeRefusalsRoute,
   nomineeCorrectionsRoute,

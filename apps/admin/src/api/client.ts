@@ -277,6 +277,11 @@ import {
   type EscalatedClosureDecisionRequest,
   type NoCorrectionNeededKeepRequest,
   type RecordClosureLetterRequest,
+  CertificateLetterAddressResponse,
+  CertificateLetterDto,
+  CertificateLetterScreenshotResponse,
+  CertificateRemindersResponse,
+  type RecordCertificateLetterRequest,
   NomineeBankStatusResponse,
   NomineeNameCheckResponse,
   NomineeNameCheckWriteResponse,
@@ -1574,6 +1579,57 @@ export function getClosureLetterScreenshot(pariwarId: string, claimCaseId: strin
   return apiFetch(
     `${correctionBase(pariwarId, claimCaseId)}/closure-letters/${encodeURIComponent(letterId)}/screenshot`,
     ClosureLetterScreenshotResponse,
+  );
+}
+
+// ── Story 6.19d — the replacement-certificate reminder (key (1)) ──────────────────────────────────────────────
+// The District Admin's "Certificate reminders" list and the ONE letter per person per claim (`-275` Q1). The address
+// AND the screenshot reads need a fresh step-up (`certificate_letter_address`) — a 403 `auth.step_up_required` means
+// "elevate, then retry".
+
+export const CERTIFICATE_LETTER_ADDRESS_STEP_UP_CONTEXT = 'certificate_letter_address';
+const certificateLetterBase = (pariwarId: string, claimCaseId: string): string =>
+  `/api/v1/p/${encodeURIComponent(pariwarId)}/admin/claims/${encodeURIComponent(claimCaseId)}/certificate-reminders/letters`;
+
+/** The "Certificate reminders" list — the caller's districts only. */
+export function getCertificateReminders(pariwarId: string) {
+  return apiFetch(`/api/v1/p/${encodeURIComponent(pariwarId)}/admin/certificate-reminders?limit=200`, CertificateRemindersResponse);
+}
+
+export function recordCertificateLetter(pariwarId: string, claimCaseId: string, body: RecordCertificateLetterRequest) {
+  return apiFetch(certificateLetterBase(pariwarId, claimCaseId), CertificateLetterDto, post(body));
+}
+
+export async function recordCertificateLetterDelivery(
+  pariwarId: string,
+  claimCaseId: string,
+  letterId: string,
+  deliveredOn: string,
+  file: File,
+): Promise<z.output<typeof CertificateLetterDto>> {
+  const form = new FormData();
+  form.append('delivered_on', deliveredOn);
+  form.append('file', file);
+  const res = await fetch(`${certificateLetterBase(pariwarId, claimCaseId)}/${encodeURIComponent(letterId)}/delivery`, {
+    method: 'POST',
+    credentials: 'include',
+    body: form,
+  });
+  await throwIfNotOk(res, 'Upload did not go through');
+  return CertificateLetterDto.parse(await res.json());
+}
+
+export function getCertificateLetterAddress(pariwarId: string, claimCaseId: string, personKey: string) {
+  return apiFetch(
+    `${certificateLetterBase(pariwarId, claimCaseId)}/address?person_key=${encodeURIComponent(personKey)}`,
+    CertificateLetterAddressResponse,
+  );
+}
+
+export function getCertificateLetterScreenshot(pariwarId: string, claimCaseId: string, letterId: string) {
+  return apiFetch(
+    `${certificateLetterBase(pariwarId, claimCaseId)}/${encodeURIComponent(letterId)}/screenshot`,
+    CertificateLetterScreenshotResponse,
   );
 }
 

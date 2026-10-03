@@ -83,11 +83,7 @@ import {
 } from './correction-reminder-record.js';
 import { correctionRunDay, istDateOf, isCorrectionRunExpired } from './correction-schedule.js';
 import type { ClaimEventActor } from './events.js';
-import {
-  assertClaimApprovable,
-  getLatestNomineeNameCheck,
-  readNomineeNameCheckApprovalState,
-} from './nominee-name-check.js';
+import { assertClaimApprovable, readNomineeNameCheckApprovalState } from './nominee-name-check.js';
 import { projectClaimState } from './project.js';
 import { TRUSTEE_VOTABLE_STATES, resolveClaimCorrectionState } from './state-trustee-decision-persist.js';
 import { isTrusteeReasonCodeValidForOutcome, type StateTrusteeReasonCode } from './state-trustee-decision.js';
@@ -133,10 +129,12 @@ export type CorrectionClosureRefusal =
 
 /**
  * AC6's refusals, in their order — the subset of `CorrectionClosureRefusal` the READINESS check (`readClosureReadiness`)
- * can actually produce (⛔ a hand-copy: this IS the order `assertClosureGround` re-checks). Code review patch
- * (2026-10-02): exported as a RUNTIME value so `correction-closure-lockstep.test.ts`'s `ClosureRequestBlocker` test
- * can compare against the domain directly, like every sibling vocabulary in that file — `CorrectionClosureRefusal`
- * itself is a compile-time-only `type` and can't be used for that.
+ * can actually produce . ⚠ It IS a hand-maintained literal: neither
+ * `readClosureReadiness` nor `assertClosureGround` reads it, so `satisfies` proves each entry is a real refusal, ⛔ that
+ * the list is complete or in the control flow's order (corrected 2026-10-03 — this comment had claimed otherwise).
+ * Code review patch (2026-10-02): exported as a RUNTIME value so `correction-closure-lockstep.test.ts` compares the wire
+ * against ONE domain-side copy, ⛔ a second copy in the test — `CorrectionClosureRefusal` itself is a compile-time-only
+ * `type`. ⭐ A reorder of the checks must update this array by hand.
  */
 export const AC6_REQUEST_REFUSALS = [
   'no_live_return',
@@ -469,8 +467,9 @@ interface ClosureGateInput {
  */
 async function assertClosureGround(input: ClosureGateInput): Promise<ClosureReach> {
   const { db, pariwarId, claimCaseId, chase } = input;
-  // Only `decideEscalatedClosure`'s `close` branch calls this. `close` means "the family was silent" — this check
-  // re-validates that premise at decision time. A D27 `recordNoCorrectionNeeded` is explicitly allowed WHILE HELD
+  // FOUR callers: `readClosureReadiness`, `requestCorrectionClosure`, the Pariwar Admin's `decideCorrectionClosure`
+  // and `decideEscalatedClosure`'s `close` branch (corrected 2026-10-03 — an earlier comment said only the last).
+  // Each act means "the family was silent", and this check re-validates that premise at the moment of the act. A D27 `recordNoCorrectionNeeded` is explicitly allowed WHILE HELD
   // (`-273` §4) and unconditionally sets the mark to `staff`, so a D27 record made during the hold makes `close`
   // throw `not_family_action` here — DELIBERATE, not a deadlock: `close`'s premise (family must act) is now stale,
   // and `approve`/`refuse` on the same escalated claim take no dependency on `chase.mark` at all, so the Super Admin
@@ -1130,7 +1129,8 @@ export async function recordClosureDirection(
       closureId: row.closureId,
       claimCaseId: input.claimCaseId,
       pariwarId: input.pariwarId,
-      directedToActor: input.directedToActor,
+      // Lower-cased (code review 2026-10-03): the column is `text`, and every reader compares a lower-case session id.
+      directedToActor: input.directedToActor.toLowerCase(),
       directedToRole: input.directedToRole,
       kind: input.kind,
       textCiphertext: input.textCiphertext,
@@ -1401,6 +1401,31 @@ export async function readLiveNoCorrectionRecord(
   return record !== undefined && record.markId === chase.mark.markId ? record : null;
 }
 
+/**
+ * ⭐ D27's "a name check recorded AFTER the record" — compared IN THE DATABASE at full (microsecond) precision.
+ * ⚠ ⛔ as two JS `Date`s: both timestamps are µs in Postgres (`recorded_at` = `clock_timestamp()`, the check's
+ * `occurred_at` = its transaction's `now()`), and a `Date` truncates to the millisecond. A check recorded within
+ * the same millisecond AFTER the record therefore read as ⛔ after (`<=` on equal ms) and was refused
+ * `check_required` (found 2026-10-03: the root cause of race (5)'s ~50% flake in
+ * `correction-closure-concurrency.spec.ts`). The writer (`approveNoCorrectionNeeded`) and the Pariwar Admin's queue
+ * (`listPariwarClosureQueue`'s `checkedAfterRecord`) BOTH read this one predicate, so the strip ⛔ offers an approve
+ * the writer would refuse. "The latest check" = the highest `event_version`, as `getLatestNomineeNameCheck` reads it.
+ */
+export async function isNameCheckRecordedAfterRecord(db: Db, pariwarId: PariwarId, recordId: string): Promise<boolean> {
+  const [row] = await db
+    .select({
+      after: sql<boolean | null>`(
+        SELECT e.occurred_at FROM events_log e
+         WHERE e.pariwar_id = ${claimCorrectionNoCorrectionRecords.pariwarId}
+           AND e.stream_id = ${claimCorrectionNoCorrectionRecords.claimCaseId}
+           AND e.event_type = 'claim.nominee_name_checked'
+         ORDER BY e.event_version DESC LIMIT 1) > ${claimCorrectionNoCorrectionRecords.recordedAt}`,
+    })
+    .from(claimCorrectionNoCorrectionRecords)
+    .where(and(eq(claimCorrectionNoCorrectionRecords.pariwarId, pariwarId), eq(claimCorrectionNoCorrectionRecords.recordId, recordId)));
+  return row?.after === true;
+}
+
 export interface NoCorrectionRecordResult {
   readonly record: ClaimCorrectionNoCorrectionRecordRow;
   readonly mark: WriteCorrectionMarkResult;
@@ -1472,8 +1497,7 @@ export async function approveNoCorrectionNeeded(
   if (chase.liveReturn === null) throw new CorrectionClosureRefusedError(input.claimCaseId, 'no_live_return');
   const record = await readLiveNoCorrectionRecord(db, input.pariwarId, input.claimCaseId);
   if (record === null) throw new CorrectionClosureRefusedError(input.claimCaseId, 'no_record');
-  const check = await getLatestNomineeNameCheck(db, input.pariwarId, input.claimCaseId);
-  if (check === null || check.checkedAt.getTime() <= record.recordedAt.getTime()) {
+  if (!(await isNameCheckRecordedAfterRecord(db, input.pariwarId, record.recordId))) {
     throw new CorrectionClosureRefusedError(input.claimCaseId, 'check_required');
   }
   assertDecidable(input.claimCaseId, claimRow.currentState);

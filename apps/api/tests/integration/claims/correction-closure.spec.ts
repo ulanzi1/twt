@@ -422,7 +422,9 @@ describe.skipIf(!hasDatabase)('the correction closure — routes (Story 6.19c)',
     expect(errCode(wrongRole)).toBe('direction.directee_role_invalid');
     const directed = await sa.client.inject({
       method: 'POST', url: `${claimBase(pariwarId, claimCaseId)}/escalation/directions`,
-      payload: { directed_to_actor: da.userId, directed_to_role: 'district_admin', kind: 'other', text: 'call the family once more' },
+      // Code review (2026-10-03): sent UPPER-CASED — the inbox and the response below prove the id is normalised,
+      // ⛔ stored as typed (a `text` column compared to the lower-case session id would orphan the direction).
+      payload: { directed_to_actor: da.userId.toUpperCase(), directed_to_role: 'district_admin', kind: 'other', text: 'call the family once more' },
     });
     expect(directed.statusCode, directed.body).toBe(201);
     const directionId = (directed.json() as { direction: { direction_id: string } }).direction.direction_id;
@@ -557,6 +559,16 @@ describe.skipIf(!hasDatabase)('the correction closure — routes (Story 6.19c)',
     });
     expect(vote.statusCode, vote.body).toBe(409);
     expect(errCode(vote)).toBe('cycle_freeze.escalated');
+    // Code review (2026-10-03, second pass): the guard covers ALL THREE Pariwar Admin decisions — the deny and a
+    // new return are driven too, ⛔ only the approve (the Decision 6 discharge claimed all three).
+    for (const payload of [
+      { claim_case_id: c.claimCaseId, action: 'deny', reason_code: 'documents_insufficient', rationale: 'the papers never came' },
+      { claim_case_id: c.claimCaseId, action: 'return_to_district_admin', reason_code: 'other', rationale: 'one more try', must_act: 'family' },
+    ]) {
+      const res = await pa.client.inject({ method: 'POST', url: `/api/v1/p/${pariwarId}/admin/cycle-freeze/decision`, payload });
+      expect(res.statusCode, `${payload.action}: ${res.body}`).toBe(409);
+      expect(errCode(res), payload.action).toBe('cycle_freeze.escalated');
+    }
   });
 
   it('⭐ the Pariwar Admin APPROVES (key 3) — the D1 chain (`denied_no_appeal`); the appeal status reads closed_no_response with ⛔ no affordance; the helpline re-file needs a confirmation (key 6): 409 → confirmed → minted', async () => {
@@ -737,6 +749,8 @@ describe.skipIf(!hasDatabase)('the correction closure — routes (Story 6.19c)',
     const unelevatedDa = await staff(pariwarId, 'district_admin');
     const unelevatedShot = await unelevatedDa.client.inject({ method: 'GET', url: `${claimBase(pariwarId, claimCaseId)}/closure-letters/${letterId}/screenshot` });
     expect(unelevatedShot.statusCode, unelevatedShot.body).toBe(403);
+    // …and it is the STEP-UP gate that refused (⛔ a role/district/scope 403 that would also read 403).
+    expect(errCode(unelevatedShot)).toBe('auth.step_up_required');
     const shot = await da.client.inject({ method: 'GET', url: `${claimBase(pariwarId, claimCaseId)}/closure-letters/${letterId}/screenshot` });
     expect(shot.statusCode, shot.body).toBe(200);
     // Key (1)'s denial for a role without it.

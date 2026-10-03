@@ -33,9 +33,9 @@ import {
 import { claimStateTrusteeDecisions } from '../schema/claim_state_trustee_decisions.js';
 import { claims } from '../schema/claims.js';
 import { claimShortReference, resolveCorrectionChase } from './correction-chase.js';
-import { isClosureRequestLapsed, isCorrectionClaimHeld } from './correction-closure.js';
+import { isClosureRequestLapsed, isCorrectionClaimHeld, isNameCheckRecordedAfterRecord } from './correction-closure.js';
 import { LETTER_OVERDUE_AFTER_DAYS, calendarDaysBetween, istDateOf } from './correction-schedule.js';
-import { getLatestNomineeNameCheck, readNomineeNameCheckApprovalState } from './nominee-name-check.js';
+import { readNomineeNameCheckApprovalState } from './nominee-name-check.js';
 import { resolveClaimCorrectionState } from './state-trustee-decision-persist.js';
 
 export const CLOSURE_QUEUE_DEFAULT_LIMIT = 50;
@@ -128,7 +128,10 @@ export async function listPariwarClosureQueue(
     .orderBy(asc(claimCorrectionNoCorrectionRecords.recordedAt))
     .limit(clampLimit(opts.limit, { default: CLOSURE_QUEUE_DEFAULT_LIMIT, cap: CLOSURE_QUEUE_MAX_LIMIT }));
   for (const { record, deceasedMemberId } of records) {
-    const check = await getLatestNomineeNameCheck(db, pariwarId, record.claimCaseId);
+    // Second pass (2026-10-03): the SAME µs-precise predicate the D27 writer refuses on — ⛔ a ms-truncated `Date`
+    // comparison that read a same-millisecond check as "not after", so the strip and the writer could disagree.
+    // No check at all ⇒ `false` (as before).
+    const checkedAfterRecord = await isNameCheckRecordedAfterRecord(db, pariwarId, record.recordId);
     const held = await isCorrectionClaimHeld(db, pariwarId, record.claimCaseId);
     out.push({
       kind: 'no_correction_needed',
@@ -139,7 +142,7 @@ export async function listPariwarClosureQueue(
       byDisplay: record.recordedByDisplay,
       noteCiphertext: record.noteCiphertext,
       familyRunDay0: null,
-      checkedAfterRecord: check !== null && check.checkedAt.getTime() > record.recordedAt.getTime(),
+      checkedAfterRecord,
       held,
     });
   }
@@ -468,6 +471,9 @@ export function approvalNameHighlightOf(row: {
  * the scan reaches a DIFFERENT id's only (older-sorting) row, silently dropping that id's highlight. The `inArray`
  * clause already bounds this query to exactly these ids' own rows — a small, naturally-bounded set, not an
  * unbounded scan — so no safety-valve limit is needed for this COMPLETE bulk read (the doc's own word).
+ * ⚠ Second pass (2026-10-03): the NEWEST matching row per id decides — an id is marked SEEN before its highlight is
+ * checked, so a newest approval recorded `passing` (no highlight) is ⛔ shadowed by an older `does_not_match` one.
+ * Ties on `super_admin_decided_at` break on `closure_id` (deterministic).
  */
 export async function readApprovalNameHighlightBulk(
   db: Db,
@@ -492,9 +498,11 @@ export async function readApprovalNameHighlightBulk(
         eq(claimCorrectionClosures.nameCheckWaived, true),
       ),
     )
-    .orderBy(desc(claimCorrectionClosures.superAdminDecidedAt));
+    .orderBy(desc(claimCorrectionClosures.superAdminDecidedAt), desc(claimCorrectionClosures.closureId));
+  const seen = new Set<string>();
   for (const r of rows) {
-    if (out.has(r.claimCaseId)) continue;
+    if (seen.has(r.claimCaseId)) continue;
+    seen.add(r.claimCaseId);
     const highlight = approvalNameHighlightOf(r);
     if (highlight !== null) out.set(r.claimCaseId, highlight);
   }

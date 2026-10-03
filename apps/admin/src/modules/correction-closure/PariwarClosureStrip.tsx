@@ -63,11 +63,13 @@ export function ClosureRequestStrip({ pariwarId, item }: { pariwarId: string; it
   }
 
   // UX-DR54 — 1 / 2 act from anywhere in the strip, ⛔ while the note box has focus (the digits are text there).
-  // Code review patch (2026-10-02): a held modifier key (ctrl/alt/meta/shift) now SKIPS the shortcut, so a
-  // browser/OS combo (e.g. ctrl+1 for tab switching) is never hijacked into an approve/decline.
+  // Code review patch (2026-10-02, corrected 2026-10-03): a held ctrl/alt/meta SKIPS the shortcut, so a browser/OS
+  // combo (e.g. ctrl+1 for tab switching) is never hijacked into an approve/decline. ⛔ Shift is not skipped: on
+  // layouts where the digits need Shift (AZERTY) `e.key === '1'` arrives WITH Shift, and on QWERTY Shift+1 is `!`
+  // anyway. A held key's auto-repeat (`e.repeat`) never acts a second time.
   function onKeyDown(e: KeyboardEvent<HTMLDivElement>): void {
     if ((e.target as HTMLElement).tagName === 'TEXTAREA') return;
-    if (e.ctrlKey || e.altKey || e.metaKey || e.shiftKey) return;
+    if (e.ctrlKey || e.altKey || e.metaKey || e.repeat) return;
     if (e.key === '1') {
       e.preventDefault();
       void act('approve');
@@ -83,7 +85,9 @@ export function ClosureRequestStrip({ pariwarId, item }: { pariwarId: string; it
         <p role="status">{decided.decision === 'approve' ? t.strip.approved : t.strip.declined}</p>
         <DecidedEntry
           decided={decided.response}
-          outcome={decided.decision === 'approve' ? 'denied' : 'escalated'}
+          // Code review (2026-10-03) — the approve IS the D1 closure for no response (`denied_no_appeal`), the same
+          // closure the Super Admin's `close` records: "Closed by", as Decision 5 ruled for that site.
+          outcome={decided.decision === 'approve' ? 'closed' : 'escalated'}
           label={decided.decision === 'approve' ? t.state.closed! : t.state.escalated!}
         />
       </div>

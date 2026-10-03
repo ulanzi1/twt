@@ -23,12 +23,15 @@ export function RefileConfirmationCard(props: {
   const id = useId();
   const r = t.refile;
   return (
-    // Code review patch (2026-10-02) — `aria-live="polite"` added: this card is CONDITIONALLY MOUNTED in
-    // response to the 409 (AC15), and a plain `role="region"` is not proactively announced on insertion — a
-    // screen-reader operator who just hit the refusal got no signal that a required new step appeared.
-    <section role="region" aria-live="polite" aria-label={r.heading} className="mt-3 rounded border p-3 text-sm" data-testid="refile-confirmation-card">
+    // Code review patch (2026-10-02, corrected 2026-10-03) — this card is CONDITIONALLY MOUNTED in response to the 409
+    // (AC15). A live region (`aria-live`) mounted already filled is ⛔ reliably announced — screen readers announce
+    // CHANGES to a region that already exists — so the body that says a new step is required is `role="alert"`,
+    // which IS announced on insertion (family 13(d)).
+    <section role="region" aria-label={r.heading} className="mt-3 rounded border p-3 text-sm" data-testid="refile-confirmation-card">
       <h3 className="font-semibold">{r.heading}</h3>
-      <p>{r.body}</p>
+      <p role="alert" data-testid="refile-confirmation-announce">
+        {r.body}
+      </p>
       <label className="mt-1 flex flex-col">
         {r.note}
         <textarea value={note} onChange={(e) => setNote(e.target.value)} aria-describedby={missing ? id : undefined} data-testid="refile-confirmation-note" />

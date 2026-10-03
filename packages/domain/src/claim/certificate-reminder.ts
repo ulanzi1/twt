@@ -476,7 +476,7 @@ export async function listCertificateCandidateClaimsPage(
   const size = clampLimit(input.limit, { default: CERTIFICATE_SWEEP_PAGE_CAP, cap: CERTIFICATE_SWEEP_PAGE_CAP });
   const { rows } = await q.query<{ claim_case_id: string; pariwar_id: string }>(
     `SELECT c.claim_case_id, c.pariwar_id FROM claims c
-      WHERE c.current_state = ANY($4::text[])
+      WHERE c.current_state = ANY($4::claim_lifecycle_state[])
         AND NOT EXISTS (SELECT 1 FROM claim_certificate_reminder_runs r
                          WHERE r.claim_case_id = c.claim_case_id AND r.ended_at IS NULL)
         AND ($1::uuid IS NULL OR c.claim_case_id > $1::uuid)

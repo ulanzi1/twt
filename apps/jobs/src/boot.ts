@@ -111,6 +111,7 @@ import {
 import { buildContributionProviderResolver, resolveSmsDltConfig } from './scheduler/contribution-providers.js';
 import { registerClaimCorrectionReminderWorkers } from './scheduler/claim-correction-reminders.js';
 import { registerClaimCorrectionClosureWorkers } from './scheduler/claim-correction-closure.js';
+import { registerClaimCertificateReminderWorkers } from './scheduler/claim-certificate-reminders.js';
 import { createConfigShepherdFallbackResolver } from './shepherd-fallback-resolver.js';
 import { consoleShepherdAssignedNotificationHook } from './shepherd-notification-hook.js';
 import { createDeterministicOcrProvider } from './ocr/index.js';
@@ -604,6 +605,11 @@ async function main(): Promise<void> {
     // child (the outbox's sender, `-273` §5). The SAME deps as the reminder sweep (the closure notice is 6.19b's send,
     // D32). ⛔ Neither ever requests, approves, declines, refuses or closes a claim (invariant 1).
     await registerClaimCorrectionClosureWorkers(boss, claimCorrectionDeps);
+    // Story 6.19d (AC1–AC5) — the REPLACEMENT-CERTIFICATE reminder: its OWN daily 10:00 IST sweep and family-SMS child
+    // (`2026-10-03-276` CR1 — ⛔ never a kind on 6.19b's runs). The SAME deps (6.19b's send, the third message
+    // `certificate_reminder`); its staff push is ⛔ never used (CR10). ⛔ Neither ever refuses, closes, approves or
+    // time-limits a claim (invariant 1).
+    await registerClaimCertificateReminderWorkers(boss, claimCorrectionDeps);
 
     // Story 10.5 (Task 5) — the News/Blog scheduled + immediate publish worker. Reuses the SAME
     // contribution-notify deps (BYPASSRLS pool + member Tier-1 crypto) for the shipped

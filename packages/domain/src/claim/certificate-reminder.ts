@@ -170,7 +170,9 @@ export interface CertificatePlanFacts {
   readonly windowEnteredAt: Date | null;
 }
 
-export type CertificatePauseReason = 'outside_window' | 'certificate_accepted' | 'certificate_not_rejected';
+/** Why a run is paused (CR5). ⚠ LOCKSTEP with the contract's `CERTIFICATE_REMINDER_PAUSE_REASONS`. */
+export const CERTIFICATE_PAUSE_REASONS = ['outside_window', 'certificate_accepted', 'certificate_not_rejected'] as const;
+export type CertificatePauseReason = (typeof CERTIFICATE_PAUSE_REASONS)[number];
 
 export type CertificateRunPlan =
   | {
@@ -491,7 +493,9 @@ export async function listCertificateCandidateClaimsPage(
 // ── The recipients (CR6) ──────────────────────────────────────────────────────────────────────────────────────
 
 /** Why the family cannot be reminded (CR6 — D30's shape, its OWN reason type; ⛔ never `undetermined`). */
-export type CertificateCannotRemindReason = 'no_contact_record' | 'agreement_not_live';
+/** ⚠ LOCKSTEP with the contract's `CERTIFICATE_REMINDER_CANNOT_REMIND`. */
+export const CERTIFICATE_CANNOT_REMIND_REASONS = ['no_contact_record', 'agreement_not_live'] as const;
+export type CertificateCannotRemindReason = (typeof CERTIFICATE_CANNOT_REMIND_REASONS)[number];
 
 /** One person on the contact record. ⛔ No name. */
 export interface CertificatePerson {

@@ -25,6 +25,7 @@ import { registerDeathCertificateRoutes } from './claims.death-certificate.route
 import { registerClaimContactRoutes } from './claims.contact.routes.js';
 import { registerCorrectionChaseRoutes } from './claims.correction-chase.routes.js';
 import { registerCorrectionClosureRoutes } from './claims.correction-closure.routes.js';
+import { registerCertificateReminderRoutes } from './claims.certificate-reminder.routes.js';
 import { registerCorrectionEscalationRoutes } from './claims.correction-escalation.routes.js';
 import { registerRefileConfirmationRoutes } from './claims.refile-confirmation.routes.js';
 import { registerShepherdRoutes } from './claims.shepherd.routes.js';
@@ -59,6 +60,8 @@ export function registerClaimsModule(app: FastifyInstance, deps: AppDeps): void 
   // Pariwar Admin's decision (key (3), D27 under cycle.freeze), the closure letter (key (1)); the Super Admin's review and
   // decision (keys (5), (4)) and the directee's inbox; the re-file confirmation after a closure (key (6)).
   registerCorrectionClosureRoutes(app, deps);
+  // Story 6.19d — the replacement-certificate reminder's District Admin list and its ONE letter (key (1)).
+  registerCertificateReminderRoutes(app, deps);
   registerCorrectionEscalationRoutes(app, deps);
   registerRefileConfirmationRoutes(app, deps);
   // Story 6.11 — the verifier adjudication WRITE surface (approve/deny/escalate + step-up-gated revise).

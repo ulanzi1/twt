@@ -68,6 +68,9 @@ export * from './correction-chase.js';
 // Story 6.19c — the correction CLOSURE: the request, the Pariwar Admin's decision, the Super Admin's review and decision,
 // the directions, "no correction needed", the closure letters and the re-file confirmation.
 export * from './correction-closure.js';
+// Story 6.19d — the replacement-certificate reminder: the District Admin's list, the ONE letter, its delivery, the gated
+// address read and the screenshot's signed read (key (1)).
+export * from './certificate-reminder.js';
 // Story 6.14 — the R9 special-case voting DTOs (the R9 panel surface + the FIRST claim-flow read of the
 // niyamavali clause registry): the queue + per-claim panel model (clause snapshot + immutable panel roster +
 // live votes + tally), the open (clause-id superRefine + non-empty roster) / vote (rationale required ≤500) /

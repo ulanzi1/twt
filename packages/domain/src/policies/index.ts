@@ -225,3 +225,6 @@ export * from './claim-refile-confirmation-rls.js';
 export * from './claim-closure-letter-rls.js';
 // Story 6.19c (0136) — the "no correction needed" record: SELECT + INSERT only (append-only).
 export * from './claim-correction-no-correction-record-rls.js';
+// Story 6.19d (0137–0139) — the certificate reminder's runs, reminder record and letters (ONE file). Per command; ⛔ no
+// DELETE leg and ⛔ no `FOR ALL`; each UPDATE leg is narrowed by its migration's column grant.
+export * from './claim-certificate-reminder-rls.js';

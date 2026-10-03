@@ -262,7 +262,7 @@ story has followed); and the en ↔ hi key-parity check (every `en` key, incl. a
   uploads are append-only and the current pointer moves forward only; Trap 6's tolerance path is the one exception, handled as "exists").
   ⭐ **Precedence (one plan per claim per sweep):** when a new run is due, **`open` wins** — the opener ends any open run of the claim
   `superseded` in the same transaction, so a second rejection between two sweeps still gets its day 1 the next morning; `certificate_received`
-  applies only when ⛔ no new run is due. A never-sent wait that turns into a first rejection opens its own run (**Q3**).
+  applies only when ⛔ no new run is due. A never-sent wait that turns into a first rejection opens its own run (**Q3** — ✅ `-275` Q3 A).
   ⭐ **Discovery is the sweep's** (CR4): ⛔ no edit to the review writer, the upload handler or the OCR job (CR14). The first slot is day 1 at
   10:00, so a run discovered at any sweep on or after day 0 loses nothing (the catch-up covers a missed sweep).
 - **CR3 — Day 0** (`-259`'s reading, adopted): `rejected` ⇒ `istDateOf(anchor review.decided_at)`; `missing` ⇒ `istDateOf(occurred_at)` of
@@ -270,7 +270,8 @@ story has followed); and the en ↔ hi key-parity check (every `en` key, incl. a
   `documents_pending → verification_in_progress` (`state.ts:131-133`), emitted once, guarded on `documents_pending`, by
   `apps/jobs/src/claim-peer-mesh.ts:274-299`. `claims` has ⛔ no state-entry column; the read follows `computeStageSlaStatus`'s pattern
   (`appeal-eligibility.ts:244-270`). Every route into the window (incl. `denied → … → reversed`) passes `verification_in_progress` first, so
-  "⛔ no such event" is unreachable ⇒ ⛔ no run + an alarm, ⛔ never a guessed day 0.
+  "⛔ no such event" is unreachable ⇒ ⛔ no run + an alarm, ⛔ never a guessed day 0. ⭐ A `rejected` run's day 0 applies also to a first
+  rejection after a `missing` wait (✅ `-275` Q3 A).
 - **CR4 — The schedule, as DATA, and the sweep.** `CERTIFICATE_REMINDER_DAYS` = `CORRECTION_REMINDER_DAYS` (⭐ **imported** from
   `correction-schedule.ts:24-26`, ⛔ never copied — one source of the Panel's `-250` #5 days) followed by `CERTIFICATE_REMINDER_MONTHLY_DAYS =
   [120, 150, 180]` (`-260` G6). ⛔ Nothing on day 0 (`-250` #5: day 1 = the day after); ⛔ nothing after day 180. A pure
@@ -289,8 +290,9 @@ story has followed); and the en ↔ hi key-parity check (every `en` key, incl. a
   every fixture of `death-certificate.spec.ts`, the bulk class equals `deathCertificateStatus(readDeathCertificateSnapshot(…))`, and
   `rejected` in the window equals `isDeathCertificateReplacementRequested`). ⭐ **The horizon check runs BEFORE any slot is
   planned:** `runDay > 180` ⇒ end `completed`, ⛔ no catch-up (a missed day-180 sweep is ⛔ not caught up — stated, accepted). A run whose day 0
-  is already more than 180 days back when CR2 would open it is opened and ended `completed` in the same transaction, ⛔ no send (Q2's reading:
-  ⛔ never re-dated). Day 180's slot is planned on day 180, while the run is open.
+  is already more than 180 days back when CR2 would open it is opened and ended `completed` in the same transaction, ⛔ no send (✅ `-275` Q2 A:
+  ⛔ never re-dated). Day 180's slot is planned on day 180, while the run is open. ⭐ The sweep, too, hashes every person's current number BEFORE taking a
+  claim's row lock — ⛔ no KMS while holding it (CR7's discipline; the jobs pool is `max: 2`).
 - **CR5 — Stop, pause, resume.** Evaluated by the sweep, re-checked by the child under the lock:
   - **END `certificate_received`** — the claim's current upload is no longer the run's anchor (`rejected`), or the status is no longer
     `missing` (`missing`), and ⛔ no new run is due (CR2's precedence): a certificate arrived (`-259`'s *"stop the moment a new certificate is
@@ -300,7 +302,9 @@ story has followed); and the en ↔ hi key-parity check (every `en` key, incl. a
   - **PAUSE** (⛔ no send, ⛔ no record; the calendar runs on) — (i) the claim is outside `CLAIM_REVIEW_WINDOW_STATES` (`denied`, an appeal
     stage, `state_trustee_approved`, `approved`, …); (ii) the anchor upload itself stands **accepted** on a re-review (Trap 4(b)). On
     resumption (`reversed`; a re-rejection) the run sends ONE `late` catch-up, still counting from its own day 0 — ⛔ never re-opened, ⛔ never
-    re-dated (**Q2**, **Q4**).
+    re-dated (**Q2**, **Q4** — ✅ `-275` Q2 A, Q4 A).
+  - ⭐ **Precedence:** `open` (CR2) ≻ END `completed` (run day > 180 — checked BEFORE pause, so a run paused past day 180 ends) ≻ END
+    `certificate_received` ≻ PAUSE ≻ continue.
   - It is ⛔ **not** paused by a live correction return, the "who must act" mark, or a Super Admin hold — **ours**: `-274` 1b (Trustee-ratified)
     governs the **correction** run's 90 days while held, ⛔ not `-259`'s schedule; pausing would narrow a ruled schedule, so the build keeps
     sending.
@@ -316,13 +320,23 @@ story has followed); and the en ↔ hi key-parity check (every `en` key, incl. a
     descendants** (⚠ ⛔ never "the member's highest `version_no`" — [[feedback_story_validate_footguns]] #31(b)). A vacated head (null mobile)
     or the erasure sentinel ⇒ `no_target`.
   - **The claimant**, when the claimant side is the BLOCK, at the block's mobile.
-  - ⭐ **One human, one text per slot — decided by NUMBER, deterministically** (Trap 2(c)): the hash is computed BEFORE the lock (CR7) and
-    **written on the `attempting` row** (⚠ 6.19b writes it only at finalise — here it must be on the `attempting` row itself, or a second
-    child sees no hash and sends). Under the claim-row lock a child skips (`skipped_superseded`, detail `same_number_in_slot`) when a row of the same run
-    and slot carries the same hash with outcome `attempting` or `accepted`; among the person keys sharing a hash, the **lowest `personKey`**
-    is the sender, so the winner is stable across slots. A delivered letter to ANY person stops SMS to that NUMBER on the claim, and
-    letter-eligibility for a shared number is counted ONCE (one letter per number). A race test proves it: two children, same hash, same
-    slot, concurrent ⇒ exactly one `accepted`.
+  - ⭐ **One human, one text per slot — decided by NUMBER, deterministically** (Trap 2(c)):
+    - BEFORE the lock, the child hashes the CURRENT number of **EVERY** person on the record (CR7's KMS-outside-the-lock rule; it keeps the
+      plaintext of its OWN number only, for the send). Under the claim-row lock it re-verifies each person's version id (the claimant: the
+      block's ciphertext) — a change ⇒ ⛔ no write, retry.
+    - It writes `skipped_superseded`, detail `same_number_in_slot`, when (i) a person with a **LOWER `personKey`** has the same current hash
+      (the lowest key is the sender — stable across slots, ⛔ never whoever runs first), or (ii) a row of the same run and slot already
+      carries its hash with any outcome other than `skipped_superseded` (a dead-number row included — ⛔ never a second text to a number
+      known dead that morning).
+    - Its `attempting` row carries the hash (⚠ 6.19b writes it only at finalise — CR7's one departure).
+    - ⭐ **The delivered-letter stop is per NUMBER:** a letter delivered to ANY person whose letter-epoch number is N stops every person's SMS
+      to N on the claim — the CR8 adapter passes the letters of every person sharing the hash, ⛔ not only the person's own.
+    - ⭐ **One letter per NUMBER as well as per person:** `assertCertificateLetterAllowed` refuses `409 certificate_letter.already_recorded`
+      when any person whose current number hash equals this person's already has a letter on the claim (the code check is the backstop the
+      per-person UNIQUE cannot be); the list shows that number's letter as owed ONCE, under the lowest key.
+    - Tests: (race) two children, same hash, same slot, concurrent ⇒ the LOWER key `accepted`, the other `same_number_in_slot`; (dead) the
+      lower key's row is `rejected_invalid_number` ⇒ the higher key is ⛔ not sent; (letter) a second key of the same number ⇒ 409;
+      (stop) a letter delivered to A stops B's SMS to the same number.
   - **Cannot remind** (⛔ no family send, ⛔ no record for the slot, a flag on the staff list — D30's shape, its OWN reason type):
     `no_contact_record` · `agreement_not_live` (`readClaimContactAgreementState` ≠ `live`). ⛔ Never `undetermined` — the determination is ⛔
     not consulted (Trap 2). ⭐ The catch-up sends the latest missed slot once the record is fixed.
@@ -336,7 +350,8 @@ story has followed); and the en ↔ hi key-parity check (every `en` key, incl. a
   alarm, T13); the provider classification (`invalid_number` → `rejected_invalid_number`, `carrier_reject` → `rejected_unreachable`,
   `rate_limited` / `api_unavailable` / timeout → transient, a known Secret Manager config fault → `error` + alarm, else `error` + alarm). The
   child's lifecycle mirrors 6.19b's AC2 — ⚠ with ONE deliberate departure: the number hash is written on the `attempting` row, ⛔ not only
-  at finalise (CR6's one-text-per-number rule needs it there) — (insert `attempting` with `claimed_at`/`claimed_by_job`/`recipient_number_hash` under the lock → commit → send →
+  at finalise (CR6's one-text-per-number rule needs it there; ⚠ the finalisers then KEEP the row's hash, so an exhausted `error` row is evidential — its
+  hash is the number attempted, it splits ⛔ no epoch — and CR6's same-number skip does ⛔ not treat it as "sent") — (insert `attempting` with `claimed_at`/`claimed_by_job`/`recipient_number_hash` under the lock → commit → send →
   compare-and-set the final outcome, checking `moved` on every CAS (6.19c's lost-CAS finding); a same-job retry re-claims at once, another job
   only after `CORRECTION_SEND_LEASE_MS` (`correction-reminder-record.ts:59`); an exhausted row finalised `error` by the next sweep; a child
   redelivered after IST midnight finalises `error`, `exhausted:crossed_midnight`, ⛔ never sends yesterday's slot today). ⭐ **The lock is the
@@ -356,8 +371,11 @@ story has followed); and the en ↔ hi key-parity check (every `en` key, incl. a
   exported) through a thin adapter from this table's rows (the letter shape needs a placeholder `sequence`) — ⛔ never copy them (two copies of
   "what dead means" is the defect `DEAD_OUTCOMES`'s own comment records). ⭐ The catch-up's recorded-day set = THIS run's rows of the person,
   **any outcome** — ⛔ never `epochRows` (which drops `skipped_superseded` / `attempting` and spans runs, so skipped slots would be planned
-  again; 6.19b builds it the same way, `claim-correction-reminders.ts:1240`). A KMS failure while hashing fails **closed** (the child retries;
-  the letter route answers 503 `certificate_letter.number_unverified`).
+  again; 6.19b builds it the same way, `claim-correction-reminders.ts:1240`). ⭐ A KMS failure while hashing fails **closed**: the child retries; on
+  its FINAL attempt (the pg-boss retry count at its limit) it takes the lock and writes a final `error` row, `recipient_number_hash` NULL,
+  detail `exhausted:hash_failed`, plus an alarm (ids only) — non-evidential under `isEvidentialReminderRow`, and a RECORDED day, so it is ⛔
+  never caught up (⚠ with hash-before-lock there is otherwise ⛔ no row at all, and the next sweep would re-send it as `late`). The letter route
+  answers 503 `certificate_letter.number_unverified`.
 - **CR9 — The ONE letter** (`-259` detail 1). ⭐ **One letter per person per CLAIM** — UNIQUE `(claim_case_id, person_key)`; ✅ **the Panel's
   rule, `-275` Q1 (A)**: a G5 restart, or a never-sent wait turning into a rejection, allows ⛔ no second letter.
   Recorded like a correction/closure letter: posting date, Tier-1 tracking number; within 14 days of posting, the delivery date + a screenshot
@@ -374,7 +392,8 @@ story has followed); and the en ↔ hi key-parity check (every `en` key, incl. a
   **day 7, daily through day 12, then on day 13 an escalation RECORD naming every Pariwar Admin** (`listAdminsByRole(db, pid, 'pariwar_admin')`,
   `admin-directory.ts:43`). ⚠ **In v1 the escalation reaches ⛔ no Pariwar Admin**: there is ⛔ no push (below) and ⛔ no Pariwar-Admin surface
   (key (1) is `district_admin` only — `roles.ts:124, 514`; 6.19b/6.19c's escalations reach a Pariwar Admin only through
-  `runCorrectionStaffPush`). The District Admin's list shows *"escalated to the Pariwar Admin on <date>"*; recorded in Task 9 (trigger: the
+  `runCorrectionStaffPush`). The District Admin's list shows *"Escalation recorded on <date> (the Pariwar Admin is not notified in this version)"* — ⛔ never worded as
+  sent or notified; recorded in Task 9 (trigger: the
   staff-push seam, or a Pariwar-Admin view) — 6.19b's `LETTER_CHASE_*` offsets (`correction-schedule.ts:35-37`, D20; `-274` 2's
   closure-letter cadence is its **unratified** reading of the same). Records in `claim_certificate_reminders` (`letter_chase` /
   `letter_escalation`, `recipient_key` `staff:<user_id>` or `staff:unassigned` with an alarm, `subject_key` = the chased person's key,
@@ -388,12 +407,15 @@ story has followed); and the en ↔ hi key-parity check (every `en` key, incl. a
   reviewing a certificate once it arrives — is already on 6.21a's verifier console). ⛔ **No staff push** in v1 — ⚠ a departure from the
   shared spec's **D11** (*"admin push best-effort"*) for this story only, recorded in Task 0's author-commit: admin push is inert on day one
   (⛔ no admin device token) and 6.19b's `runCorrectionStaffPush` is hard-wired to correction rows and copy
-  (`claim-correction-reminders.ts:556-557, 602-693`). After day 180, ⛔ nothing to anyone — **ours** (`-259` ruled ⛔ no prompt either way).
+  (`claim-correction-reminders.ts:556-557, 602-693`). ⚠ ⛔ No staff prompt to CALL a dead-phone family whose second certificate is rejected after their one letter (`-275` *"does NOT cover"* —
+  the author's): in v1 such a person gets ⛔ no SMS (the delivered-letter stop), ⛔ no letter (`-275` Q1) and ⛔ no chase; the list shows the
+  new run with the person as *"letter delivered — ⛔ no SMS"*. Deferred (Task 9; trigger: a staff call-task seam). After day 180, ⛔ nothing
+  to anyone — **ours** (`-259` ruled ⛔ no prompt either way).
 - **CR11 — The staff surface: a NEW "Certificate reminders" list** for the District Admin, `/p/$pariwarId/certificate-reminders`, modelled on
   6.19c's closure-letters page (`apps/admin/src/routes/CorrectionClosureRoutes.tsx` `ClosureLettersView` `:212`;
   `modules/correction-closure/ClosureLettersOwed.tsx`). Per claim with an open run, or with a letter-eligible person whose letter is unrecorded or
   undelivered (any run, open or ended) — ⛔ not listed while paused in a state that never re-enters the window (`approved`, `settled`) unless
-  a letter is owed: the short reference (`claimShortReference`), the cause (*"certificate not accepted"* / *"no certificate received"*),
+  a person's letter is unrecorded or undelivered: the short reference (`claimShortReference`), the cause (*"certificate not accepted"* / *"no certificate received"*),
   the run day and the next reminder date — or *"paused — the claim is not being checked"* / *"paused — the certificate is accepted"* — each
   person **by position and role** (*"nominee A"*, *"nominee B"*, *"claimant"* — ⛔ no name): reminded / number not working / unreachable / no
   number / letter owed / posted / delivered / overdue; the "cannot remind" flag with its reason; and the letter form (the address under a
@@ -404,16 +426,17 @@ story has followed); and the en ↔ hi key-parity check (every `en` key, incl. a
   that person's address inside the letter form)"*, `-265` §2), the holder the same (`district_admin`, district dimension), and **6.19c
   already reused it for all five closure-letter routes** (precedent). ⭐ **The gating shape is 6.19c's:** the LIST (Pariwar-level, ⛔ no claim
   in the path) = preHandlers `[adminSession, scope, resolveQueueScopeStash(key (1)), requirePermissionHook(key (1), { dimension: 'district',
-  resolveDimension: <the queue scope> })]` (⚠ `resolveQueueScopeStash` only STASHES the scope — without the hook the route answers 200 with an
+  resolveDimension: <the queue scope's dimension>, resolveValue: <its value> })]` (⚠ `resolveQueueScopeStash` only STASHES the scope — without the hook the route answers 200 with an
   empty list, ⛔ not a 403) + a per-row `hasPermission(key (1), { dimension: 'district', value: <the deceased's posting district> })` filter in the
-  handler (6.19c's `canReadLetterQueue`, `claims.correction-closure.routes.ts:89-92, 120`) — a bare Pariwar
+  handler, BEFORE the page slice (6.19c: the hook `canReadLetterQueue`, `claims.correction-closure.routes.ts:89-92, 120`; the per-row filter
+  `getClosureLettersOwed`, `claims.correction-closure.handlers.ts:607-631`) — a bare Pariwar
   gate would leak other districts' claims, so ⛔ never use one; the per-claim routes = `resolveDistrict` + key (1). Amend key (1)'s doc-block in
   `permissions.ts`; ⛔ **no catalog bump** (stays **50 / 64**).
 - **CR12 — The separation from the closure, proved.** Structural by CR1: every 6.19b/6.19c reader (`resolveCorrectionChase`, the "reached"
   readers, the closure sweep that enumerates live trustee returns, `claim-correction-closure.ts:159-160`) reads `claim_correction_*` only.
   Proved by tests (AC6): a claim with only a certificate wait answers **409 `closure.no_live_return`** (`requestCorrectionClosure`,
   `correction-closure.ts:790-807` — *"a certificate wait alone ⛔ never qualifies — invariant 10; 6.19d relies on it"*); a claim with **both**
-  waits has the **same** `readClosureReadiness` (`correction-closure.ts:721`) + `resolveCorrectionChase` result with and without certificate
+  waits has the **same** `readClosureReadiness` (`correction-closure.ts:719`) + `resolveCorrectionChase` result with and without certificate
   rows (a cheap fence); ⛔ no 6.19d module calls a decision writer — a **source-scan fence** on the model of
   `apps/jobs/tests/claim-correction-closure-no-decision.test.ts` (comments stripped; its `DECISION_WRITERS` list incl. `adjudicateClaim`,
   `returnToDistrictAdmin`, `routeToR9`, `finalizeR9Outcome`, `projectClaimState`; a positive control) over this story's jobs and domain
@@ -465,7 +488,9 @@ once (`late`), older ones `skipped_superseded`, ⛔ no burst; **and** the sweep 
 `rejected`/`missing`), ending it `certificate_received` the first sweep after a new certificate becomes current (unless a new run is due),
 `completed` once its run day is past 180; **and** it **pauses** (⛔ no send, ⛔ no record) while the claim is outside the review window or the
 anchor upload stands accepted, and resumes with ONE `late` on re-entry or re-rejection, counting from its own day 0 (Q2, Q4); **and** a
-correction return, mark or Super Admin hold ⛔ neither pauses nor ends it.
+correction return, mark or Super Admin hold ⛔ neither pauses nor ends it; **and** a run past day 180 ends `completed` even while paused, a
+missed day-180 sweep is ⛔ not caught up, and a run whose day 0 is more than 180 days back is opened and ended `completed` in one transaction
+with ⛔ no send.
 
 ### AC3 — The text message (CR6–CR8)
 **Given** a due slot **Then** each person on the contact record (each nominee person, at their chain head's mobile; the claimant block when
@@ -475,20 +500,22 @@ the Pariwar's helpline number — ⛔ no name, reason or deadline — recorded `
 record, the "cannot remind" flag (⛔ never `undetermined`, ⛔ never the effective declaration); **and** a missing template id / helpline number
 / gateway fails CLOSED (`error` + alarm, ⛔ never a fixture `accepted`); **and** the at-least-once lifecycle (attempting → send → CAS with
 `moved` checked, lease, crossed-midnight expiry, exhausted-row finaliser) holds, under the claim-row lock with `lock_timeout` set first and
-⛔ no KMS call inside it; **and** a person whose letter is delivered gets ⛔ no further SMS to that number on the claim, until their number
-changes.
+⛔ no KMS call inside it; **and** once a letter to ANY person at a number is delivered, ⛔ no further SMS goes to that number on the claim, until a
+person's number changes.
 
 ### AC4 — The one letter (CR9)
 **Given** a person letter-eligible on the claim **When** the District Admin records a letter (posting date, tracking number) and later its
 delivery date + screenshot **Then** it is recorded under key (1), at that person's own address (shown only behind a fresh step-up, one audit
 line per reveal), with the overdue flag shown at posting + 14 days; **and** a second letter for that person on the claim — in the same run or
-a later one — is refused `409 certificate_letter.already_recorded` (Q1, built as "one per claim"); each other refusal in CR9 answers its own
+a later one — is refused `409 certificate_letter.already_recorded` (✅ `-275` Q1 A — one per claim, ever); each other refusal in CR9 answers its own
 code; **and** a letter can still be recorded after the run ended.
 
 ### AC5 — The District Admin (CR10, CR11)
 **Given** a letter-eligible person with ⛔ no letter on the claim, while the run is open and ⛔ not paused **Then** the District Admin's chase
-records fall on found-dead + 7 … + 12, and on +13 an escalation RECORD naming every Pariwar Admin (once per person per day — the day-key
-UNIQUE; ⚠ delivered to ⛔ no Pariwar Admin in v1, shown on the list); a chase carried across runs is written at today's slot, ⛔ never
+records fall on found-dead + 7 … + 12, and on +13 an escalation RECORD naming every Pariwar Admin (ONE per person per found-dead epoch — the day-key
+UNIQUE is its backstop; ⚠ delivered to ⛔ no Pariwar Admin in v1, shown on the list and ⛔ never worded as sent or notified); the chase
+dedupes across runs, a due date before the run's day 0 is written at today's slot, and a late chase and a late escalation may fall on one
+morning; a chase carried across runs is written at today's slot, ⛔ never
 negative;
 ⛔ none while paused or after the run ends; **and** the "Certificate reminders" list shows each claim with an open run or an owed / undelivered letter (any run) by short reference with its cause,
 day, next reminder (or which pause), each person **by position and role** with their state, the "cannot remind" flag and the letter form —
@@ -527,8 +554,8 @@ list and the letter routes — CR8) — the plaintext ⛔ never leaves the funct
 read** and letter write is audited with `resourceLocator: 'claim:<lower-case uuid>'`; ids are lower-cased at the boundary
 ([[project_branded_ids_lowercase]]); every table has RLS + FORCE with a policy-regression spec (cross-Pariwar read/insert/update refused, ⛔ no
 DELETE grant, the cause/purpose/outcome/end-reason CHECKs, the UNIQUEs); **and** the erasure sentinel (`[anonymized]`) or a null / invalid
-number ⇒ `no_target`, while a decrypt or KMS failure ⇒ a transient retry, then `error` + alarm (6.19b's path) — ⛔ never a crash, ⛔ never
-`no_target`.
+number ⇒ `no_target`, while a decrypt or KMS failure ⇒ a transient retry, then on the final attempt a recorded `error` row (`exhausted:hash_failed`, NULL hash)
++ alarm (CR8) — ⛔ never a crash, ⛔ never `no_target`, ⛔ never an unrecorded slot.
 
 ### AC9 — Nothing else moves (CR14)
 **Given** the diff **Then** every changed file outside this story's NEW files is on the Dev Notes *UPDATE* list; `packages/channels/src` diff
@@ -552,8 +579,11 @@ carry the Task 8–9 records, and `epics.md` §6.21a / §6.19d carry Task 11's a
 - [ ] **Task 1 — Migrations + schema + RLS (AC1, AC4, AC8; CR1).** Next free numbers (**0137** at `06b3ebdf` — read `packages/domain/migrations/` and `meta/_journal.json` live; the journal steps `when` by +86 400 000 per entry). Hand-authored SQL, the 0127/0128/0134 headers as models (what, why, the CHECK/UNIQUE list, the grants). Drizzle schema in a NEW `packages/domain/src/schema/claim_certificate_reminder.ts`, TS mirrors of every CHECK list in LOCKSTEP (with a DB ↔ TS lockstep test, the 0135 precedent); RLS file(s) under `packages/domain/src/policies/`; register in both indexes. ⛔ Never edit 0126–0136.
 - [ ] **Task 2 — Domain: the schedule and the runs (AC1, AC2; CR2–CR6).**
   - [ ] 2.1 NEW `packages/domain/src/claim/certificate-reminder-schedule.ts` — `CERTIFICATE_REMINDER_MONTHLY_DAYS`, `CERTIFICATE_REMINDER_DAYS` (spread of the imported `CORRECTION_REMINDER_DAYS`), `CERTIFICATE_RUN_HORIZON_DAYS = 180`, `certificateReminderSchedule(day0)`, `isCertificateRunPastHorizon` (`runDay > 180`); reuse `istDateOf` (re-exported by `correction-schedule.ts:113`), `addCalendarDays` (from `cycle-calendar/holiday-resolver.ts`), `calendarDaysBetween`, `correctionCatchUp`.
-  - [ ] 2.2 NEW `packages/domain/src/claim/certificate-reminder.ts` — the sweep's two keyset-paged, `clampLimit`-ed readers (open runs; window claims with ⛔ no open run), the per-claim status via `readDeathCertificateSnapshot` + `deathCertificateStatus` + `isInDeathCertificateReviewWindow` (`death-certificate-approval.ts:164`), the earliest `claim.peer_mesh_pinged` read; a pure `planCertificateRun(facts, openRun, latestRunForUpload)` → `open(cause, anchor, day0) | end(reason) | pause(reason) | continue` with CR2's precedence (open wins); `openCertificateRun` / `endCertificateRun` under the claim-row lock (opening ends any open run `superseded` in the same tx; the insert under a raw `SAVEPOINT` — a 23505 ⇒ `ROLLBACK TO SAVEPOINT` and
-    "exists", ⛔ never re-ending the old run — [[project_domain_limit_clamp_and_savepoint_retry]]).
+  - [ ] 2.2 NEW `packages/domain/src/claim/certificate-reminder.ts` — the sweep's two keyset-paged, `clampLimit`-ed readers (open runs; window claims with ⛔ no open run), the per-claim status via `readDeathCertificateSnapshot` + `deathCertificateStatus` + `isInDeathCertificateReviewWindow` (`death-certificate-approval.ts:164`), the earliest `claim.peer_mesh_pinged` read; a pure `planCertificateRun(facts, openRun, latestRunForUpload)` → `open(cause, anchor, day0, { completeAtOnce: runDayToday > 180 }) | end(reason) | pause(reason) | continue` with CR5's precedence; `openCertificateRun(plan)` / `endCertificateRun` under the claim-row lock: ⭐ the opener re-reads, under the lock, the claim's open run and
+    the latest run for the anchor upload — if either differs from what the plan saw it returns `stale` (⛔ no write; the next sweep re-plans);
+    it then takes a raw `SAVEPOINT` **BEFORE** ending the old run, ends exactly the planned `run_id` (CAS `WHERE run_id = $1 AND ended_at IS
+    NULL`, `moved` checked) and inserts the new run; a 23505 ⇒ `ROLLBACK TO SAVEPOINT` (the end AND the insert) and "exists" — ⛔ never an old
+    run ended without its successor ([[project_domain_limit_clamp_and_savepoint_retry]]).
   - [ ] 2.3 The recipients (CR6): `readCertificateRecipients(db, pariwarId, claimCaseId)` → `{ cannotRemind: 'no_contact_record' | 'agreement_not_live' | null, people, contactLocale }` and a pure `chainHeadOf` (unit-tested on a linear chain, a fork, a vacated head, two roots for one human).
   - [ ] 2.4 Person state (CR8) — an adapter onto `evaluatePersonRunState` / `isEvidentialReminderRow` / `DEAD_OUTCOMES` / `compareReminderRowsByTime` across the claim's runs.
 - [ ] **Task 3 — Domain: the letter (AC4; CR9).** NEW `packages/domain/src/claim/certificate-letter.ts` on `closure-letter.ts`'s shape: `CertificateLetterRefusal`, `assertCertificateLetterAllowed`, `recordCertificateLetter` (23505 → `already_recorded`), `recordCertificateLetterDelivery`, `listCertificateLetters`, `readCertificateLetter`; export from `packages/domain/src/claim/index.ts`.
@@ -565,7 +595,8 @@ carry the Task 8–9 records, and `epics.md` §6.21a / §6.19d carry Task 11's a
 - [ ] **Task 6 — Admin (AC5).** NEW route `/p/$pariwarId/certificate-reminders` + module `apps/admin/src/modules/certificate-reminders/` (list + letter form, copying `ClosureLettersOwed` and its form; its own `i18n-en.ts`); hooks + client in `apps/admin/src/api/{hooks,client}.ts`; the route in `router.tsx`; nav link in `routes/RootLayout.tsx` (Pariwar context only). ⚠ Test the success banner with a REAL refetching `useQuery` ([[project_tanstack_onsettled_before_success]]); disable the submit while the mutation **or** its refetch is pending (the 6.19b double-submit finding).
 - [ ] **Task 7 — Copy, the DLT sheet, the go-live row (AC7; CR13).** `claim.json` en + hi (+ `$comment.certificate_reminder` in both); extend the template test's `CASES`; the DLT sheet rows 5–6 (keys, texts, slots, cost, Record); `inventory-roster.md` row 21; run the microcopy gate and the i18n parity check.
 - [ ] **Task 8 — Records (AC10; CR13).** `docs/fallback-handler-ledger/ledger.md`: row 19's `surface_inventory_xref` via the rows-9–19 note (*"Amended … by Story 6.19d"*) **and** a §7 revision row superseding row 19's trigger (+ `rejected_unreachable`, `-269` §4) and fallback (District Admin; the found-dead + 13 escalation is RECORDED, ⛔ not delivered in v1 — ⛔ no push, ⛔ no Pariwar-Admin surface), citing Task 0's decision id (rows are append-only — supersede, ⛔ never edit); `docs/degradation-policy/surface-inventory.md`: a Tier-2 row **Certificate reminders list** (+ its letter form), `degraded-mode` — the sweep keeps running, ⛔ no claim is refused or closed; `permissions.ts` key (1) doc-block (CR11) — ⛔ no catalog bump.
-- [ ] **Task 9 — `deferred-work.md` (AC10; a new "Recorded during Story 6.19d" section):** the OCR-stall case (Trap 3 — ⭐ cross-reference the existing OCR-parity retry/decrypt items, ⛔ no duplicate); the zero-candidate peer-mesh stall (Trap 6); the T12 legacy `missing` and the tolerance path (Trap 6); ⛔ no staff push, and so the day-13 escalation reaches ⛔ no Pariwar Admin (CR10; trigger: an admin client that registers a device token, or a Pariwar-Admin view); the at-least-once double SMS (inherited; trigger: a gateway idempotency key / DLR seam); ⛔ no virus scan on the letter screenshot (D6); ⛔ no RTBF path on the new tables (T8's class); ⛔ not Q1–Q4 (✅ ruled by `-275` — discharged, ⛔ nothing to defer).
+- [ ] **Task 9 — `deferred-work.md` (AC10; a new "Recorded during Story 6.19d" section):** the OCR-stall case (Trap 3 — ⭐ cross-reference the existing OCR-parity retry/decrypt items, ⛔ no duplicate); the zero-candidate peer-mesh stall (Trap 6); the T12 legacy `missing` and the tolerance path (Trap 6); ⛔ no staff push, and so the day-13 escalation reaches ⛔ no Pariwar Admin (CR10; trigger: an admin client that registers a device token, or a Pariwar-Admin view); the at-least-once double SMS (inherited; trigger: a gateway idempotency key / DLR seam); ⛔ no virus scan on the letter screenshot (D6); ⛔ no RTBF path on the new tables (T8's class); ⛔ no staff prompt to call a dead-phone family after a second rejection (CR10; `-275` "does NOT cover"; trigger: a staff call-task seam);
+⛔ not Q1–Q4 (✅ ruled by `-275` — discharged, ⛔ nothing to defer).
 - [ ] **Task 10 — Tests (AC6, AC9, AC10)** — see *Testing*. Then `pnpm -w typecheck`, lint, the domain / jobs / api / admin / contracts / i18n suites and `ci:local` (⚠ [[project_ci_local_double_run_pollution]], [[project_known_livedb_test_failures]] — a known flake is named, ⛔ never silently re-run).
 - [ ] **Task 11 — Close-out (AC0's records).** `epics.md` §6.21a: an appended annotation *"coupling (2) DISCHARGED BY THE BUILD — Story 6.19d"*, and §6.19d: *"ACs derived 2026-10-03; built …"* (annotations only; ⚠ §6.19d's header and ledger row 19 say *"`-260` G4–G6"* — recorded, ⛔ not rewritten: G4 is the correction twin); the shared spec's header line on 6.19d left as written. Status → `review`.
 
@@ -586,7 +617,7 @@ carry the Task 8–9 records, and `epics.md` §6.21a / §6.19d carry Task 11's a
 | Person state | `nomineePersonKey` (`correction-chase.ts:590`), `DEAD_OUTCOMES`, `isEvidentialReminderRow`, `compareReminderRowsByTime`, `evaluatePersonRunState` (`:690-772`) | CR6, CR8 |
 | The letter precedent | `claim/closure-letter.ts` (`assertClosureLetterAllowed` `:58`, `recordClosureLetter` `:116`, `recordClosureLetterDelivery` `:168`); migration 0134; routes `claims.correction-closure.routes.ts:89-90, 117-153`; admin `CorrectionClosureRoutes.tsx` `ClosureLettersView` (`:212`), `ClosureLettersOwed.tsx` | CR9, CR11 |
 | Staff directory | `getLiveShepherd` (`shepherd-read.ts:36`), `listAdminsByRole` (`admin-directory.ts:43`) | CR10 |
-| The negative's anchor | `requestCorrectionClosure` (`correction-closure.ts:790-807`) → `CorrectionClosureRefusedError('no_live_return')` → 409 `closure.no_live_return` (`claims.correction-closure.handlers.ts:100, 218`); `readClosureReadiness` (`correction-closure.ts:721`); the fence model `apps/jobs/tests/claim-correction-closure-no-decision.test.ts` | AC6 |
+| The negative's anchor | `requestCorrectionClosure` (`correction-closure.ts:790-807`) → `CorrectionClosureRefusedError('no_live_return')` → 409 `closure.no_live_return` (`claims.correction-closure.handlers.ts:100, 218`); `readClosureReadiness` (`correction-closure.ts:719`); the fence model `apps/jobs/tests/claim-correction-closure-no-decision.test.ts` | AC6 |
 | The approval wait | `assertDeathCertificateAcceptedForApproval` (`death-certificate-approval.ts:393-407`) → 409 `…death_certificate_acceptance_required` at P1/P3/P4 and 6.19c — ⛔ never a denial (`verifier-decision-persist.ts:365-369`) | AC6 (unchanged) |
 | Key (1) | `claim.record_correction_letter` (`permissions.ts:730`, the 48 → 49 block; `roles.ts:124, 514` — `district_admin`) | CR11 |
 
@@ -611,17 +642,20 @@ carry the Task 8–9 records, and `epics.md` §6.21a / §6.19d carry Task 11's a
   day 0; ⛔ nothing after day 180; day 180 sent (`> 180`, ⛔ never `>=`); catch-up `late`/skip; IST midnight edges); `certificate-reminder-plan.test.ts`
   (every `planCertificateRun` arm — open rejected / missing; a re-rejection of the same upload ⛔ never restarts; a different upload restarts and
   `open` wins over `certificate_received`; missing → first rejection (Q3); received; completed; pause outside the window and resume on
-  `reversed` (Q2); pause on an accepted anchor and resume on re-rejection (Q4)); `certificate-recipients.test.ts` (`chainHeadOf` linear / fork /
+  `reversed` (Q2); pause on an accepted anchor and resume on re-rejection (Q4); `completed` while paused; a missed day-180 sweep ⛔ not caught up; a run
+  opened already past 180 ⇒ open + `completed` in one tx, ⛔ no send); `certificate-recipients.test.ts` (`chainHeadOf` linear / fork /
   vacated; claimant block vs version; dedupe by chain root; two roots for one human ⇒ one text per slot); `apps/jobs/tests/claim-certificate-reminders.test.ts`
   (mocked deps by name, the 6.19b `claim-correction-control-paths` shape — ⚠ it mocks readers BY NAME, so keep names stable).
 - **Live-DB (`twt-test-pg`, own-committing, `{timeout:20000}`):** `packages/domain/tests/integration/claim/certificate-reminder.spec.ts`;
   `…/rls/claim-certificate-reminder-policy-regression.spec.ts` (+ the DB ↔ TS CHECK lockstep); `apps/jobs/tests/claim-certificate-reminders-live.test.ts`
   (seed on `_claim-correction-seed.ts`'s pattern, `pariwarAllowlist` test-only); `apps/api/tests/integration/claims/certificate-reminder.spec.ts`
-  (the letter routes, both step-ups, every refusal, cross-Pariwar 404, the list's per-district filter). ⚠ Use REAL envelopes where AC8's
+  (the letter routes, both step-ups, every refusal, cross-Pariwar 404, the list's per-district filter; the list row set — an owed letter on an ENDED run is listed, a paused run on `approved` with ⛔ no
+  owed letter is hidden; the number-level letter refusal and delivered-letter stop of CR6). ⚠ Use REAL envelopes where AC8's
   sentinels are asserted (6.19b slice trap S5).
 - **Races (NOWAIT / `lock_timeout`, `{timeout:60000}`):** copy or extract the `overlapped()` helper (a local function in
   `packages/domain/tests/integration/claim/correction-chase-concurrency.spec.ts:266`); the child vs a review writer rejecting/accepting the
-  same claim; the child vs the OCR job moving the current pointer; two sweeps opening the same run (the UNIQUE wins, ⛔ never a duplicate). ⚠
+  same claim; the child vs the OCR job moving the current pointer; two sweeps opening the same run (the UNIQUE wins, ⛔ never a duplicate); a stale plan (sweep 2 planned before sweep 1 opened) returns
+  `stale` and ⛔ never ends sweep 1's new run; two children of one number in one slot (CR6's race and dead cases). ⚠
   Compare µs timestamps in SQL, ⛔ never as JS `Date` (6.19c's ms-truncation finding).
 - **AC6 negative:** the closure 409 on a certificate-only claim; the both-waits readiness equality; the source-scan fence with its positive
   control.
@@ -685,3 +719,4 @@ immediate — set the policy explicitly (6.19b AC2).
 | v2.3 | 2026-10-03 | BigDev agreed CR1 (own tables, superseding `-266` §1's two 6.19d sentences) and CR6 (the contact record's people) — *"yes, agreed"*. ⚠ Only those two were put; CR2–CR5 and CR7–CR15 stay ⏳ PROPOSED, and Task 0's author-commit must say which CRs BigDev agreed to and when ([[feedback_story_validate_footguns]] #33(c)). |
 | v2.4 | 2026-10-03 | Q1–Q4 routed: `trustee-panel-routing-note-2026-10-03-6-19d-four-confirms.md` (⏳ awaiting). Our readings put: Q1 **B** (a letter with each rejected certificate — A built meanwhile), Q2 A, Q3 A, Q4 A. ⛔ Nothing blocked. |
 | v2.5 | 2026-10-03 | ✅ **The Panel ruled Q1–Q4 — `2026-10-03-275`, all A** (DR + KB). Q1: ONE letter per claim, ever — ⚠ our reading B ⛔ not taken. Q2–Q4: our readings taken. Each A is what was already built ⇒ ⛔ no design change. Q1–Q4 marked RULED at every site (the Panel table, §0, CR9, AC0, Task 0.2, Task 9); ⛔ no confirm still owed. |
+| v2.6 | 2026-10-03 | Two round-2 patch defects fixed (CR6 *"claim row"* → the `attempting` row; CR7 names its one departure). Then **round 3** (fresh-context, scoped to the v2.2+ text) — ⛔ no BLOCKER; 12 findings, all applied: CR6's per-number rule given a mechanism (hash EVERY person before the lock; lowest key sends; a dead-number row also blocks; per-number delivered-letter stop; one letter per NUMBER as a code check) + four tests; the opener re-reads under the lock, returns `stale`, and savepoints BEFORE ending the old run (⛔ never an orphaned end); the KMS-failure path records a final `error` row (⛔ never an unrecorded slot re-sent `late`); CR5's precedence (`completed` before pause) + three planner arms; `-275` cited at CR2/CR3/CR4/CR5/AC4; the staff call after a second rejection recorded as deferred (`-275` does NOT cover); the escalation's list copy ⛔ never says notified; AC5's escalation ONE per epoch; the list row set defined + tested; the sweep's hash-before-lock; cites (`readClosureReadiness` back to `:719` — round 2's `:721` was wrong; the per-row filter is `getClosureLettersOwed`). |

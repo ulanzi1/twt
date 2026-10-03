@@ -72,6 +72,12 @@ export * from './closure-letter.js';
 export * from './correction-closure-jobs.js';
 // Story 6.19c (AC15) — the re-file guard after a closure for no response.
 export * from './refile-guard.js';
+// Story 6.19d — the replacement-certificate reminder: its schedule (the Panel's 25 days), its runs + planner +
+// recipients (the contact record's people — CR6), its reminder record, and the ONE letter per person per claim.
+// ⛔ Imported by nothing in 6.19b / 6.19c / 6.21a (`2026-10-03-276` CR14).
+export * from './certificate-reminder-schedule.js';
+export * from './certificate-reminder.js';
+export * from './certificate-reminder-record.js';
 export * from './admin-directory.js';
 // Story 6.20 (D7) — the genuine-mistake CORRECTION: raise, District Admin step, Pariwar Admin step (applies).
 export * from './nominee-correction-persist.js';

@@ -50,7 +50,10 @@ export type CorrectionMustAct = (typeof CORRECTION_MUST_ACT)[number];
 export const CORRECTION_MARK_ROLES = ['pariwar_admin', 'district_admin', 'super_admin'] as const;
 export type CorrectionMarkRole = (typeof CORRECTION_MARK_ROLES)[number];
 
-/** A run's kind (`-266` §1). 6.19d adds its own by its own migration. ⚠ LOCKSTEP with 0127. */
+/**
+ * A run's kind (`-266` §1). ⚠ LOCKSTEP with 0127. ⚠ `-266` §1's *"6.19d adds its own kind by its own migration"* is
+ * SUPERSEDED by `2026-10-03-276` CR1 — 6.19d has its OWN tables (`claim_certificate_reminder.ts`), ⛔ never a kind here.
+ */
 export const CORRECTION_RUN_KINDS = ['family', 'staff', 'direction'] as const;
 export type CorrectionRunKind = (typeof CORRECTION_RUN_KINDS)[number];
 

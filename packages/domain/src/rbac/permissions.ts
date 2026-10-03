@@ -1019,6 +1019,10 @@ export const SEED_PERMISSION_KEYS = [
   // posting; ⛔ not `claim.view_nominee_name_check` — a read held by FOUR roles whose rationale forbids acquiring a
   // second living subject's plaintext "as a side effect" (the address is exactly that, so it gets its own key and
   // its own step-up). Granted to `district_admin` ONLY (+ derived super_admin).
+  // ⭐ REUSED (⛔ no catalog bump): by Story 6.19c for the five closure-letter routes (`-274` 2), and by Story 6.19d for
+  // the "Certificate reminders" list and the ONE certificate letter per person per claim — record, delivery, the address
+  // and the screenshot (each behind a fresh step-up) — under `2026-10-03-276` CR11: the same act (a posted letter and
+  // THAT person's address inside the letter form, `-265` §2), the same holder.
   'claim.record_correction_letter',
   // Story 6.19b (key (7) of `2026-09-28-265` §2) — CHANGE WHO MUST ACT on a returned claim (`2026-09-27-258`: the
   // family, or staff), with a REQUIRED note. The mark decides whom the system CHASES — a switch to `family` starts the

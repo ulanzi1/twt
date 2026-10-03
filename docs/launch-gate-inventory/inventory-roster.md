@@ -336,3 +336,24 @@
 - **missed_target_escalation_log:** (empty)
 - **cross_story_discharge_path:** a review recorded in the decision log (or on the 6.19b story) → the marker removed; any change to the SMS Hindi → re-registration (the DLT sheet's Record).
 - **notes:** The English of D28's line is the Trustee-ratified text (`-258` detail 3); the English SMS wording is 6.19b's (D32). ⛔ Neither is machine-translated; the Hindi was agent-authored (2026-09-30) and is ⛔ never shown to a real family unreviewed.
+
+## Row 21 — Story 6.19d: the reviewed Hindi of the certificate reminder (decision-authored, `-276` CR13)
+
+> ⭐ **Appended 2026-10-03 by Story 6.19d (Task 7) under [Decision 2026-10-03-276](../../.decision-log.md#decision-2026-10-03-276) CR13** —
+> on Row 20's precedent: Row 20 covered three keys only, so the certificate reminder's Hindi needs its own review. Like Rows 17–20 it has
+> ⛔ no architecture source line; it cites the decision that created it. ⛔ It blocks ⛔ no build or merge — nothing is in production
+> ([[project_not_in_production_merge_is_not_golive]]).
+
+### Row 21 — `certificate-reminder-hindi-human-review`
+
+- **gate_name:** A human review of the Hindi of the replacement-certificate reminder SMS (`certificate_sms.reminder`)
+- **architecture_source_line:** N/A — **decision-authored**: [`-276`](../../.decision-log.md#decision-2026-10-03-276) CR13 (the Hindi review as a go-live gate, Row 20's precedent).
+- **owner:** BigDev (gate); a Hindi-first reviewer named by BigDev — the review
+- **support:** Story 6.19d (the copy as shipped)
+- **closure_criteria:** A recorded human review of the Hindi value of `certificate_sms.reminder` in `packages/i18n/locales/hi/claim.json` — agreed or corrected — and the `$comment.certificate_reminder` marker (*"agent-authored and NOT YET HUMAN-REVIEWED"*) replaced in the same commit. ⚠ A corrected text must be re-registered on the DLT portal (`dlt-template-requests-6-19.md`, template 5) — the send must byte-match the registered text. Testable signal: the marker is gone and `closure_evidence_link` names the review.
+- **target_date:** before the 6.19d family SMS goes live (relative-to-fact: the gate IS that go-live).
+- **current_status:** `open`
+- **closure_evidence_link:** (empty)
+- **missed_target_escalation_log:** (empty)
+- **cross_story_discharge_path:** a review recorded in the decision log (or on the 6.19d story) → the marker replaced; any change to the Hindi → re-registration (the DLT sheet's Record).
+- **notes:** The house words are `तिथि` and `प्रमाणपत्र` (`-244` §3 call 7; the shipped `certificate.replacement_body`). The English wording is 6.19d's (CR7). ⛔ Neither is machine-translated; the Hindi was agent-authored (2026-10-03) and is ⛔ never shown to a real family unreviewed. Counsel's M and S (Rows 18, 19) already name 6.19d's sends — ⛔ no edit there.

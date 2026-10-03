@@ -78,6 +78,7 @@ export * from './refile-guard.js';
 export * from './certificate-reminder-schedule.js';
 export * from './certificate-reminder.js';
 export * from './certificate-reminder-record.js';
+export * from './certificate-letter.js';
 export * from './admin-directory.js';
 // Story 6.20 (D7) — the genuine-mistake CORRECTION: raise, District Admin step, Pariwar Admin step (applies).
 export * from './nominee-correction-persist.js';

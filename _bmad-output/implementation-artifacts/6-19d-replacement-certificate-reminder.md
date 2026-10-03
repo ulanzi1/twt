@@ -21,7 +21,7 @@ every prepend rots every number). Cite decision ids + clauses, item headings and
 as of `06b3ebdf` — the function names are the stable handle.
 LETTERS: `CR1`…`CR15` are THIS story's author decisions (⏳ PROPOSED — committed by ONE author-commit in Task 0). `D1`…`D34` are
 the 6.19 shared spec's. Other stories' letters are qualified (`6.21a D8`, `6.19c AC6`). `CC1` is `-236`'s item. `Q1`…`Q4` are the
-confirms this story owes the Panel's next note.
+four confirms this story put to the Panel — ✅ RULED by `-275` (2026-10-03), all option A.
 -->
 
 # Story 6.19d: The Reminder for a Replacement Death Certificate — ⛔ Never a Deadline, ⛔ Never a Closure `[SURFACE]`
@@ -86,7 +86,7 @@ ratified.
 | `-260` **G6** | After day 90 the reminder goes on **days 120, 150 and 180** — ⛔ none after day 180. | Trustee-ratified | The days (CR4). |
 | `-260` **G4** | The first reminder of a **correction return where the family must act** stays the next morning. | Trustee-ratified | ⚠ ⛔ Not this story's ruling — `-260` does ⛔ not move `-259` *"beyond G5–G6"*. Cited by **analogy** only; the next-morning rule here comes from `-250` #5 through `-259` cl.1. |
 | `-259` **consequence 3** | F7's widening grows — PRD §4.10 / architecture §3.4 name both `-255` F7 and `-259` (✅ landed by `-265` §3); a **further DLT template** (hi + en); the family SMS stays **go-live gated on counsel** (M, S). | Trustee-ratified | AC7. |
-| `-273` (confirms) | *"the build takes the reading that closes or sends nothing more"* — the house rule while a confirm is open. | author-commit | ⭐ How Q1–Q4 are built meanwhile. |
+| `-273` (confirms) | *"the build takes the reading that closes or sends nothing more"* — the house rule while a confirm is open. | author-commit | ⭐ How Q1–Q4 were built while open (all four then ruled A by `-275`). |
 
 ## ⭐ THE INVARIANTS — every AC below serves one of them
 
@@ -129,17 +129,17 @@ as amended by the Panel, with G5's restart.
 | "Monthly" | ✅ RULED — days 120, 150, 180; ⛔ none after | `-260` G6 | ✅ CR4 |
 | First reminder | ✅ follows from `-259` cl.1 adopting `-250` #5's days (day 1 = the day after day 0, 10:00); day 0 itself is `-259`'s reading (CR3) | `-259` cl.1 + `-250` #5 | ✅ CR4 |
 | District Admin reminders for a certificate wait | **Ours** — `-259` *"staff reach is the author's"* (and `6-19-follow-ups-2`'s §0 lists it as ours) | CR10 | ✅ AC5 |
-| ⚠ **Q1** — a second **letter** after a second rejected certificate (or after a never-sent wait turns into a rejection) | ⏳ **A confirm for the Panel's next note.** Precedent both ways (`-272` §0: a clock restart is ⛔ not a letter-track restart; `-273` §1: a second return starts afresh). ⭐ **Built meanwhile: ONE letter per person per CLAIM** (`-259` detail 1's "ONE"; `-273`'s *"sends nothing more"*). Flipping is one UNIQUE. | CR9 | ✅ AC4 |
-| ⚠ **Q2** — a claim reversed on appeal after its run passed day 180 gets ⛔ no more reminders (the run is ⛔ never re-dated) | ⏳ Confirm. **Built: ⛔ no re-dating** (sends nothing more). | CR5 | ✅ AC2 |
-| ⚠ **Q3** — a never-sent wait that turns into a **first** rejection starts its own 180 days from the rejection | ⏳ Confirm. **Built: yes** — it is `-259`'s own day-0 reading for a rejected certificate, and the rejected case is the one cl.1 rules. | CR2, CR3 | ✅ AC1 |
-| ⚠ **Q4** — a certificate accepted and then re-rejected on re-review resumes its OLD run (⛔ not a new 180 days) | ⏳ Confirm. **Built: the run is paused while the certificate stands accepted and resumes if it is re-rejected** — between silence (which narrows `-259` cl.1) and a fresh 180 days (which sends more). | CR5 | ✅ AC2 |
+| ✅ **Q1** — a second **letter** after a second rejected certificate (or after a never-sent wait turns into a rejection) | ✅ **RULED A by `-275`** — ONE letter per person per CLAIM, ever. ⚠ Our reading (B, a letter with each rejected certificate) was ⛔ NOT taken. | `-275` · CR9 | ✅ AC4 |
+| ✅ **Q2** — a claim reversed on appeal after its run passed day 180 gets ⛔ no more reminders (the run is ⛔ never re-dated) | ✅ **RULED A by `-275`** — ⛔ no re-dating; ⛔ no restart. | `-275` · CR5 | ✅ AC2 |
+| ✅ **Q3** — a never-sent wait that turns into a **first** rejection starts its own 180 days from the rejection | ✅ **RULED A by `-275`** — its own 180 days from the rejection. | `-275` · CR2, CR3 | ✅ AC1 |
+| ✅ **Q4** — a certificate accepted and then re-rejected on re-review resumes its OLD run (⛔ not a new 180 days) | ✅ **RULED A by `-275`** — the run pauses while the certificate stands accepted and resumes on the re-rejection, counting from the first rejection. | `-275` · CR5 | ✅ AC2 |
 
 ⭐ **§0 run in this pass (the routing template's gate):** CR1–CR15's engineering is *"the code should do X"* ⇒ **the author's**. ⚠ But four
 sit on *"what a family receives, how often, for how long, and whether the Trust writes to them by post"* — the ground `-259`'s own gate
 gave to the Panel — and are therefore **mixed**: the build half is ours (taken under `-273`'s *"closes or sends nothing more"* rule), the
-person half is a confirm: **Q1–Q4** above. ⭐ **Routed 2026-10-03** (BigDev: *"create panel routing note"*) in
-`_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-03-6-19d-four-confirms.md` (⏳ awaiting) — and ⛔ none
-blocks the build (each is one UNIQUE or one planner arm to flip). **CR6** (the recipients) is ⛔ not a confirm: `-259` detail 2 and `-253`
+person half was a confirm: **Q1–Q4** above. ⭐ **Routed 2026-10-03** in
+`_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-03-6-19d-four-confirms.md` and ✅ **RULED the same day —
+`2026-10-03-275`, all A** (Q1's A is ⛔ not our reading; Q2–Q4 are) — ⭐ ⛔ no confirm is still owed, and the build is unchanged. **CR6** (the recipients) is ⛔ not a confirm: `-259` detail 2 and `-253`
 cl.1 rule it in words; its consequences both ways are stated in Trap 2.
 
 ## ⚠ THE TRAPS
@@ -229,7 +229,7 @@ story has followed); and the en ↔ hi key-parity check (every `en` key, incl. a
 
 ## ⚖️ Decisions — the AUTHOR's (⏳ PROPOSED; committed by ONE author-commit in Task 0, before any code)
 
-⛔ None is the Panel's alone (§0 above). Each is *"the code should do X"*; Q1–Q4 mark where the person-facing half is a confirm.
+⛔ None is the Panel's alone (§0 above). Each is *"the code should do X"*; Q1–Q4 mark where the person-facing half was a confirm — ✅ all ruled by `-275`.
 
 - **CR1 — Certificate reminders get their OWN tables; ⛔ not a kind on `claim_correction_runs`.** ✅ **Agreed by BigDev 2026-10-03** (*"yes, agreed"* — to CR1 and CR6, put explicitly); still committed by Task 0's author-commit. ⚠ **SUPERSEDES** `-266` §1's
   *"(6.19d adds its own kind by its own migration)"* and its *"6.19d adds its own kind's days (`-259`, `-260` G6) as data"* — an
@@ -357,8 +357,8 @@ story has followed); and the en ↔ hi key-parity check (every `en` key, incl. a
   **any outcome** — ⛔ never `epochRows` (which drops `skipped_superseded` / `attempting` and spans runs, so skipped slots would be planned
   again; 6.19b builds it the same way, `claim-correction-reminders.ts:1240`). A KMS failure while hashing fails **closed** (the child retries;
   the letter route answers 503 `certificate_letter.number_unverified`).
-- **CR9 — The ONE letter** (`-259` detail 1). ⭐ **One letter per person per CLAIM** — UNIQUE `(claim_case_id, person_key)`; ⚠ **Q1** asks the
-  Panel whether a G5 restart (or a never-sent wait turning into a rejection) allows a second; until it answers, the build sends nothing more.
+- **CR9 — The ONE letter** (`-259` detail 1). ⭐ **One letter per person per CLAIM** — UNIQUE `(claim_case_id, person_key)`; ✅ **the Panel's
+  rule, `-275` Q1 (A)**: a G5 restart, or a never-sent wait turning into a rejection, allows ⛔ no second letter.
   Recorded like a correction/closure letter: posting date, Tier-1 tracking number; within 14 days of posting, the delivery date + a screenshot
   (the `claimDocumentStorage` PORT, its own key prefix `…/certificate-letter/{letterId}`, MIME/size checked before `put`, read only by a
   TTL-signed URL; ⚠ ⛔ no virus scan — recorded, as D6). The **overdue flag** at posting + 14 days, shown, nothing else. ⛔ No second letter,
@@ -438,8 +438,8 @@ story has followed); and the en ↔ hi key-parity check (every `en` key, incl. a
 
 ### AC0 — Governance first (Task 0)
 **Given** this story is about to be built **Then** ONE author-commit decision recording **CR1–CR15** — stating CR1's supersession of `-266`
-§1's two 6.19d sentences, CR10's departure from shared-spec D11, the non-application of shared-spec T12 to CR6, Q1–Q4 as confirms owed to
-the Panel's next note (with what is built meanwhile), launch-gate row 21, and that ⛔ no Trustee-ratified clause moves; and recording, for
+§1's two 6.19d sentences, CR10's departure from shared-spec D11, the non-application of shared-spec T12 to CR6, `-275`'s ruling of Q1–Q4 (cited for
+the person-facing halves of CR2, CR3, CR5 and CR9 — ⛔ no confirm still owed), launch-gate row 21, and that ⛔ no Trustee-ratified clause moves; and recording, for
 the record, that the routing note's E3 described 6.19b's recipients as *"the people the family agreed may be contacted"* while 6.19b texts
 the effective declaration (T12) — the reading CR6 follows — is in `.decision-log.md` (⭐ **BigDev inserts it** —
 [[project_decision_log_writes_user_inserted]]: draft it, hold every code edit until it is on disk, verify `git diff --numstat` is
@@ -545,7 +545,7 @@ carry the Task 8–9 records, and `epics.md` §6.21a / §6.19d carry Task 11's a
 
 - [ ] **Task 0 — Governance first (AC0).** ⛔ No code before it lands.
   - [ ] 0.1 `git diff --name-only 06b3ebdf..HEAD -- packages apps scripts docs`; re-read anything cited here that moved. `git log 06b3ebdf..HEAD -- .decision-log.md` — read any new entry for `6.19d`, `certificate`, `claim_correction_runs`, `sendClaimCorrectionSms`; grep any routing note dated after 2026-10-03 for `6.19d` / `certificate`.
-  - [ ] 0.2 Draft the author-commit (next free id; Decision type **author-commit (BigDev)**; §0: the author's, with Q1–Q4 named as the person-facing halves owed as confirms; everything AC0 lists; Consequences: 6.19d may build; the shared spec and two code comments marked; Q1–Q4 go in the Panel's next note; ⛔ no status flip) to the scratchpad; BigDev inserts it above the newest `### Decision`; verify additive-only; commit `governance(6.19d): …` **alone**, first.
+  - [ ] 0.2 Draft the author-commit (next free id; Decision type **author-commit (BigDev)**; §0: the author's, with Q1–Q4's person-facing halves cited to `-275` (Trustee-ratified); everything AC0 lists; Consequences: 6.19d may build; the shared spec and two code comments marked; ⛔ no confirm still owed; ⛔ no status flip) to the scratchpad; BigDev inserts it above the newest `### Decision`; verify additive-only; commit `governance(6.19d): …` **alone**, first.
   - [ ] 0.3 Mark the shared spec (`6-19-correction-return-reminders-and-closure.md`): D3's *"6.19d adds its own kind's days"* → `⚠ SUPERSEDED by <id> CR1 — 6.19d has its own tables`; D11 → `⚠ 6.19d sends ⛔ no staff push (<id> CR10)`; T12 → `⚠ governs 6.19b; 6.19d's recipients are CR6`; the status table's 6.19d row → `ready-for-dev` (and its stale 6.19c row → `done`); a Change Log row. ⛔ No ratified text edited.
   - [ ] 0.4 Annotate `ux-design-specification.md` Journey 2's deferred-upload SMS and `<ClaimDocumentUpload>`'s deferred state (CR15): *"⛔ Not built — `-259` detail 3 rules no reminder while filing; see Story 6.19d."* Annotation only.
 - [ ] **Task 1 — Migrations + schema + RLS (AC1, AC4, AC8; CR1).** Next free numbers (**0137** at `06b3ebdf` — read `packages/domain/migrations/` and `meta/_journal.json` live; the journal steps `when` by +86 400 000 per entry). Hand-authored SQL, the 0127/0128/0134 headers as models (what, why, the CHECK/UNIQUE list, the grants). Drizzle schema in a NEW `packages/domain/src/schema/claim_certificate_reminder.ts`, TS mirrors of every CHECK list in LOCKSTEP (with a DB ↔ TS lockstep test, the 0135 precedent); RLS file(s) under `packages/domain/src/policies/`; register in both indexes. ⛔ Never edit 0126–0136.
@@ -564,7 +564,7 @@ carry the Task 8–9 records, and `epics.md` §6.21a / §6.19d carry Task 11's a
 - [ ] **Task 6 — Admin (AC5).** NEW route `/p/$pariwarId/certificate-reminders` + module `apps/admin/src/modules/certificate-reminders/` (list + letter form, copying `ClosureLettersOwed` and its form; its own `i18n-en.ts`); hooks + client in `apps/admin/src/api/{hooks,client}.ts`; the route in `router.tsx`; nav link in `routes/RootLayout.tsx` (Pariwar context only). ⚠ Test the success banner with a REAL refetching `useQuery` ([[project_tanstack_onsettled_before_success]]); disable the submit while the mutation **or** its refetch is pending (the 6.19b double-submit finding).
 - [ ] **Task 7 — Copy, the DLT sheet, the go-live row (AC7; CR13).** `claim.json` en + hi (+ `$comment.certificate_reminder` in both); extend the template test's `CASES`; the DLT sheet rows 5–6 (keys, texts, slots, cost, Record); `inventory-roster.md` row 21; run the microcopy gate and the i18n parity check.
 - [ ] **Task 8 — Records (AC10; CR13).** `docs/fallback-handler-ledger/ledger.md`: row 19's `surface_inventory_xref` via the rows-9–19 note (*"Amended … by Story 6.19d"*) **and** a §7 revision row superseding row 19's trigger (+ `rejected_unreachable`, `-269` §4) and fallback (District Admin; the found-dead + 13 escalation is RECORDED, ⛔ not delivered in v1 — ⛔ no push, ⛔ no Pariwar-Admin surface), citing Task 0's decision id (rows are append-only — supersede, ⛔ never edit); `docs/degradation-policy/surface-inventory.md`: a Tier-2 row **Certificate reminders list** (+ its letter form), `degraded-mode` — the sweep keeps running, ⛔ no claim is refused or closed; `permissions.ts` key (1) doc-block (CR11) — ⛔ no catalog bump.
-- [ ] **Task 9 — `deferred-work.md` (AC10; a new "Recorded during Story 6.19d" section):** the OCR-stall case (Trap 3 — ⭐ cross-reference the existing OCR-parity retry/decrypt items, ⛔ no duplicate); the zero-candidate peer-mesh stall (Trap 6); the T12 legacy `missing` and the tolerance path (Trap 6); ⛔ no staff push, and so the day-13 escalation reaches ⛔ no Pariwar Admin (CR10; trigger: an admin client that registers a device token, or a Pariwar-Admin view); the at-least-once double SMS (inherited; trigger: a gateway idempotency key / DLR seam); ⛔ no virus scan on the letter screenshot (D6); ⛔ no RTBF path on the new tables (T8's class); Q1–Q4 (trigger: the Panel's next note).
+- [ ] **Task 9 — `deferred-work.md` (AC10; a new "Recorded during Story 6.19d" section):** the OCR-stall case (Trap 3 — ⭐ cross-reference the existing OCR-parity retry/decrypt items, ⛔ no duplicate); the zero-candidate peer-mesh stall (Trap 6); the T12 legacy `missing` and the tolerance path (Trap 6); ⛔ no staff push, and so the day-13 escalation reaches ⛔ no Pariwar Admin (CR10; trigger: an admin client that registers a device token, or a Pariwar-Admin view); the at-least-once double SMS (inherited; trigger: a gateway idempotency key / DLR seam); ⛔ no virus scan on the letter screenshot (D6); ⛔ no RTBF path on the new tables (T8's class); ⛔ not Q1–Q4 (✅ ruled by `-275` — discharged, ⛔ nothing to defer).
 - [ ] **Task 10 — Tests (AC6, AC9, AC10)** — see *Testing*. Then `pnpm -w typecheck`, lint, the domain / jobs / api / admin / contracts / i18n suites and `ci:local` (⚠ [[project_ci_local_double_run_pollution]], [[project_known_livedb_test_failures]] — a known flake is named, ⛔ never silently re-run).
 - [ ] **Task 11 — Close-out (AC0's records).** `epics.md` §6.21a: an appended annotation *"coupling (2) DISCHARGED BY THE BUILD — Story 6.19d"*, and §6.19d: *"ACs derived 2026-10-03; built …"* (annotations only; ⚠ §6.19d's header and ledger row 19 say *"`-260` G4–G6"* — recorded, ⛔ not rewritten: G4 is the correction twin); the shared spec's header line on 6.19d left as written. Status → `review`.
 
@@ -653,9 +653,9 @@ immediate — set the policy explicitly (6.19b AC2).
 ### References
 - `.decision-log.md` — `-236` BB, CC1 · `-244` 6.21a D16, §3 call 7 · `-247` §2 · `-250` #1, #4, #5 · `-252` cl.1 · `-253` cl.1 · `-255` F6,
   F7 · `-259` · `-260` G5, G6 (G4 by analogy) · `-265` §2 (key (1)), §4 (DLT) · `-266` §1 (superseded in part by CR1), §5 (D32), §6 (D33) ·
-  `-267` §5b · `-269` §4, §5 · `-271` §1 · `-272` §0, §2 · `-273` §1 and its confirms rule · `-274` 1b, 2.
+  `-267` §5b · `-269` §4, §5 · `-271` §1 · `-272` §0, §2 · `-273` §1 and its confirms rule · `-274` 1b, 2. · ⭐ **`-275` Q1–Q4** (Trustee-ratified, 2026-10-03).
 - `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-09-27-6-19d-replacement-certificate-reminder.md` (the ⏳ block is filled:
-  `-259`); `…-2026-09-27-6-19-follow-ups-2.md` (G4–G6; G4 is Part 2, the correction return).
+  `-259`); `…-2026-09-27-6-19-follow-ups-2.md` (G4–G6; G4 is Part 2, the correction return). `…-2026-10-03-6-19d-four-confirms.md` (Q1–Q4; ruled `-275`).
 - The shared spec; Stories 6.19a (W1–W10), 6.19b (AC2–AC5), 6.19c (AC6, the closure letter), 6.21a, 6.21b.
 - `docs/launch-gate-inventory/{dlt-template-requests-6-19,inventory-roster}.md`; `docs/fallback-handler-ledger/ledger.md` row 19 and §7;
   `docs/degradation-policy/surface-inventory.md`.
@@ -683,3 +683,4 @@ immediate — set the policy explicitly (6.19b AC2).
 | **v2.2** | **2026-10-03** | ⭐ **Round-2 fresh-context validate of v2.1 — ⛔ no BLOCKER; 12 findings, all applied.** One text per NUMBER per slot, decided deterministically (the hash written on the `attempting` row; the lowest person key sends; a delivered letter stops the number; one letter per number) with a race test; the horizon checked BEFORE planning (⛔ never a "day 180" text on day 181; a run already past 180 opens and completes in one tx); the day-13 escalation is a RECORD that reaches ⛔ no Pariwar Admin in v1 (⛔ no push, ⛔ no Pariwar-Admin surface) — stated in CR10, the ledger row and Task 9, ⛔ never claimed as delivered; the staff chase carried across runs at today's slot (6.19b's K2), ⛔ never negative or skipped; the list reaches every owed letter (any run) and hides paused runs on finished claims; the list gate's missing `requirePermissionHook`; AC8's decrypt-to-hash sites; the catch-up's recorded-day set (this run, any outcome — ⛔ never `epochRows`); the opener's SAVEPOINT; the AC ↔ Task map (Task 10 → AC6/AC9; AC10 → Task 11); two cites (`:721`, `:790-807`). |
 | v2.3 | 2026-10-03 | BigDev agreed CR1 (own tables, superseding `-266` §1's two 6.19d sentences) and CR6 (the contact record's people) — *"yes, agreed"*. ⚠ Only those two were put; CR2–CR5 and CR7–CR15 stay ⏳ PROPOSED, and Task 0's author-commit must say which CRs BigDev agreed to and when ([[feedback_story_validate_footguns]] #33(c)). |
 | v2.4 | 2026-10-03 | Q1–Q4 routed: `trustee-panel-routing-note-2026-10-03-6-19d-four-confirms.md` (⏳ awaiting). Our readings put: Q1 **B** (a letter with each rejected certificate — A built meanwhile), Q2 A, Q3 A, Q4 A. ⛔ Nothing blocked. |
+| v2.5 | 2026-10-03 | ✅ **The Panel ruled Q1–Q4 — `2026-10-03-275`, all A** (DR + KB). Q1: ONE letter per claim, ever — ⚠ our reading B ⛔ not taken. Q2–Q4: our readings taken. Each A is what was already built ⇒ ⛔ no design change. Q1–Q4 marked RULED at every site (the Panel table, §0, CR9, AC0, Task 0.2, Task 9); ⛔ no confirm still owed. |

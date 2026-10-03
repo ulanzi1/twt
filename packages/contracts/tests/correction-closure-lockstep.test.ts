@@ -46,8 +46,9 @@ describe('the correction closure vocabularies (Story 6.19c)', () => {
 
   it('the request blocker carries AC6\'s codes in their order, then D14 and the retryable hash fault', () => {
     // Code review patch (2026-10-02): the AC6 prefix is compared against the domain's own runtime export
-    // (`claim.AC6_REQUEST_REFUSALS`), ⛔ an inline hand-copy — a domain-side rename/reorder of these codes would
-    // now be caught here, like every sibling vocabulary in this file. `claim_contact_required` (D14) and
+    // (`claim.AC6_REQUEST_REFUSALS`), ⛔ an inline hand-copy in this test — a rename of a code in the domain's
+    // `CorrectionClosureRefusal` is caught (via `satisfies`). ⚠ A REORDER of the readiness checks is ⛔ caught: the
+    // export is itself a hand-maintained literal the control flow never reads (corrected 2026-10-03). `claim_contact_required` (D14) and
     // `number_unverified` (the retryable hash fault) are NOT `CorrectionClosureRefusal` members at all — they
     // come from separate domain error types (`ClaimContactRequiredError` / `CorrectionNumberUnverifiedError`)
     // the API layer adds on top, so they stay an explicit literal tail, not a domain lockstep claim.

@@ -732,12 +732,45 @@ describe.skipIf(!hasDatabase)('claim_correction_no_correction_records — migrat
     await expectAccepted(client, () => insertRow(client, TABLE, validRow(s)));
   });
 
-  it('the only deletion is the ON DELETE cascade from claims', async () => {
+  // Code review (2026-10-03, second pass): the title said "the only deletion is the cascade from claims" — the DDL
+  // also cascades from the record's RETURN and its MARK. All three are asserted; twt_app still deletes ⛔ nothing.
+  it('the only deletions are the ON DELETE cascades — from the claim, from its return, from its mark', async () => {
     const { client } = getTx();
-    const s = await seedRecord(client, PARIWAR_A);
-    const count = async () => (await client.query(`SELECT count(*)::int AS n FROM ${TABLE} WHERE claim_case_id = $1`, [s.claimCaseId])).rows[0]!.n as number;
-    expect(await count()).toBe(1);
-    await client.query(`DELETE FROM claims WHERE claim_case_id = $1`, [s.claimCaseId]);
-    expect(await count()).toBe(0);
+    const count = async (claimCaseId: string) =>
+      (await client.query(`SELECT count(*)::int AS n FROM ${TABLE} WHERE claim_case_id = $1`, [claimCaseId])).rows[0]!.n as number;
+    const byClaim = await seedRecord(client, PARIWAR_A);
+    expect(await count(byClaim.claimCaseId)).toBe(1);
+    await client.query(`DELETE FROM claims WHERE claim_case_id = $1`, [byClaim.claimCaseId]);
+    expect(await count(byClaim.claimCaseId)).toBe(0);
+    const byMark = await seedRecord(client, PARIWAR_A);
+    await client.query(`DELETE FROM claim_correction_marks WHERE mark_id = $1`, [byMark.markId]);
+    expect(await count(byMark.claimCaseId)).toBe(0);
+    const byReturn = await seedRecord(client, PARIWAR_A);
+    await client.query(`DELETE FROM claim_state_trustee_decisions WHERE decision_id = $1`, [byReturn.decisionId]);
+    expect(await count(byReturn.claimCaseId)).toBe(0);
+  });
+
+  describe('FKs (23503) — code review (2026-10-03, second pass)', () => {
+    for (const [column, constraint] of [
+      ['claim_case_id', 'claim_correction_no_correction_records_claim_case_id_fk'],
+      ['return_decision_id', 'claim_correction_no_correction_records_return_decision_id_fk'],
+      ['mark_id', 'claim_correction_no_correction_records_mark_id_fk'],
+    ] as const) {
+      it(`${TABLE}.${column} is a foreign key`, async () => {
+        const { client } = getTx();
+        const s = await seedRecord(client, PARIWAR_A);
+        await expectPgError(client, () => insertRow(client, TABLE, { ...validRow(s), [column]: randomUUID() }), FK(constraint));
+      });
+    }
+  });
+
+  it('the tenant-scoped indexes exist — `..._pariwar_claim_idx` (pariwar_id, claim_case_id) and `..._return_idx`', async () => {
+    const { client } = getTx();
+    const idx = (
+      await client.query<{ indexname: string; indexdef: string }>(`SELECT indexname, indexdef FROM pg_indexes WHERE tablename = $1`, [TABLE])
+    ).rows;
+    const def = (name: string) => idx.find((i) => i.indexname === name)?.indexdef ?? '';
+    expect(def('claim_correction_no_correction_records_pariwar_claim_idx')).toMatch(/\(pariwar_id, claim_case_id\)/);
+    expect(def('claim_correction_no_correction_records_return_idx')).toMatch(/\(return_decision_id, recorded_at\)/);
   });
 });

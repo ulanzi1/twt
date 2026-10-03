@@ -31,15 +31,23 @@ export function ClosureColumn({ pariwarId, item }: ClosureColumnProps): ReactEle
   const noteId = useId();
   const ncNoteId = useId();
 
-  // Code review patch (2026-10-02): reset both mutations whenever the SERVER-driven blocker moves on, so a
-  // success banner from an earlier action doesn't keep rendering forever beside a now-current, possibly
-  // contradicting blocker line. `request`/`noCorrection` are freshly re-created on every render by `useMutation`,
-  // so this effect must read them through a ref to call `.reset()` without re-firing on their own identity churn.
+  // Code review patch (2026-10-02, corrected 2026-10-03): reset both mutations when the SERVER-driven blocker moves
+  // on AFTER the action's own result, so an earlier success banner doesn't keep rendering beside a later, possibly
+  // contradicting blocker line. ⚠ The FIRST blocker change after a submit IS that action's own result (a request
+  // → `request_pending`, D27 → `not_family_action`) — TanStack v5 awaits `onSettled`'s invalidate + refetch BEFORE it
+  // dispatches `success`, so a reset on that change would wipe the banner before it was ever seen. `actionPending`
+  // marks a submit; the first change after it is consumed, ⛔ reset; any later one resets. `request`/`noCorrection`
+  // are re-created on every render by `useMutation`, so the effect reads them through refs.
   const requestRef = useRef(request);
   requestRef.current = request;
   const noCorrectionRef = useRef(noCorrection);
   noCorrectionRef.current = noCorrection;
+  const actionPending = useRef(false);
   useEffect(() => {
+    if (actionPending.current) {
+      actionPending.current = false;
+      return;
+    }
     requestRef.current.reset();
     noCorrectionRef.current.reset();
   }, [c.blocker]);
@@ -58,6 +66,7 @@ export function ClosureColumn({ pariwarId, item }: ClosureColumnProps): ReactEle
       return;
     }
     setNoteMissing(false);
+    actionPending.current = true;
     await request.mutateAsync(note).then(
       () => setNote(''),
       () => undefined,
@@ -70,6 +79,7 @@ export function ClosureColumn({ pariwarId, item }: ClosureColumnProps): ReactEle
       return;
     }
     setNcNoteMissing(false);
+    actionPending.current = true;
     await noCorrection.mutateAsync(ncNote).then(
       () => setNcNote(''),
       () => undefined,

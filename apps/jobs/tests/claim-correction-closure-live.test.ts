@@ -23,7 +23,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { buildJobsEncryptionDeps } from '../src/deps.js';
 import { runClosureNoticeChild, runCorrectionClosureSweep, type ClosureNoticePayload } from '../src/scheduler/claim-correction-closure.js';
 import type { ClaimCorrectionReminderDeps } from '../src/scheduler/claim-correction-reminders.js';
-import { cleanupClaims, onOwnTx, seedReturnedClaim, type SeedReturnedClaimOptions } from './_claim-correction-seed.js';
+import { cleanupClaims, encryptField, onOwnTx, seedReturnedClaim, type SeedReturnedClaimOptions } from './_claim-correction-seed.js';
 
 const DATABASE_URL = process.env['DATABASE_URL'];
 const hasDatabase = Boolean(DATABASE_URL);
@@ -333,5 +333,123 @@ describe.skipIf(!hasDatabase)('Story 6.19c — the claim-correction closure swee
       [day(closedOn, 12), `staff:${da}`],
     ]);
     expect(rows.filter((r) => r.purpose === 'closure_letter_escalation').map((r) => [r.sent_on, r.recipient_key])).toEqual([[day(closedOn, 13), `staff:${pa}`]]);
+  });
+
+  // ⚠ These two LAST: each leaves a closure in the (B) scan (an un-done outbox / a letter in its window) that an
+  // earlier test's sweep of this Pariwar would otherwise pick up.
+  it('⭐ code review (2026-10-03, second pass) — a LOST finalise CAS after a real send reports `skipped`, ALARMS, and still completes the outbox', async () => {
+    const s = await seed({ contactLocale: 'en' });
+    await reach(s);
+    await request(s);
+    await approve(s);
+    const h = harness();
+    await sweepOn(h, day(s.day0, 97));
+    const notices = h.enqueued.filter((e) => e.queue === 'claim.correction.closure_notice');
+    expect(notices).toHaveLength(1);
+    // While the SMS is in flight, ANOTHER invocation takes the row over (its `claimed_by_job` moves) — the CAS loses.
+    const racing: SmsAppClient = {
+      isConfigured: () => true,
+      messaging: () => ({
+        send: async (m) => {
+          h.sent.push(m);
+          await pool.query(
+            `UPDATE claim_correction_reminders SET claimed_by_job = 'another-job' WHERE claim_case_id = $1 AND purpose = 'closure_notice'`,
+            [s.claimCaseId],
+          );
+          return `gw-${randomUUID()}`;
+        },
+      }),
+    };
+    const out = await runClosureNoticeChild({ ...h.deps, smsAppClient: racing }, notices[0]!.data as JobEnvelope<ClosureNoticePayload>, 'job-lost');
+    expect(out).toEqual({ status: 'skipped', reason: 'moved_before_finalise' });
+    expect(h.sent).toHaveLength(1);
+    expect(h.alarms.some((a) => a.includes('moved on before its finalise'))).toBe(true);
+    // The row is still the OTHER invocation's — this attempt wrote ⛔ its outcome.
+    expect(await rowsOf(s.claimCaseId, ['closure_notice'])).toEqual([expect.objectContaining({ outcome: 'attempting' })]);
+  });
+
+  it('⭐ code review (2026-10-03, second pass) — the (B) scan cutoff is an IST-midnight INSTANT: a closure at 00:30 IST on day D is still swept on D+14', async () => {
+    // Under a UTC session the old `$1::date - 14` cutoff was 05:30 IST — a closure between IST midnight and 05:30 on the
+    // cutoff day fell out of the scan a day early, and its once-only late catch-up (the day-13 escalation) never wrote.
+    const s = await seed();
+    const da = await shepherd(s.claimCaseId);
+    const pa = await thePariwarAdmin();
+    await reach(s, 'rejected_invalid_number');
+    const personKey = (await withPariwarScope(pool, PARIWAR, (db: Db) => claim.readCorrectionRecipients(db, ids.pariwarId(PARIWAR), ids.claimId(s.claimCaseId))))
+      .people[0]!.personKey;
+    const l = await act((client) =>
+      claim.recordCorrectionLetter(client, {
+        pariwarId: ids.pariwarId(PARIWAR), claimCaseId: ids.claimId(s.claimCaseId), personKey, postedOn: day(s.day0, 2),
+        trackingNumberCiphertext: 'enc:v1:t', actorId: da, actorDisplay: 'DA', crypto: enc,
+      }),
+    );
+    await act((client) =>
+      claim.recordCorrectionLetterDelivery(client, {
+        pariwarId: ids.pariwarId(PARIWAR), claimCaseId: ids.claimId(s.claimCaseId), letterId: l.letterId, deliveredOn: day(s.day0, 4),
+        screenshotStorageKey: 'k', screenshotContentType: 'image/png', screenshotSizeBytes: 1, actorId: da, actorDisplay: 'DA',
+      }),
+    );
+    await request(s);
+    const closed = await approve(s);
+    const closedOn = cycleCalendar.istDateOf(closed.closure.closedAt!);
+    await pool.query(`UPDATE claim_correction_closures SET closed_at = $2 WHERE closure_id = $1`, [
+      closed.closure.closureId,
+      new Date(Date.parse(`${closedOn}T00:30:00+05:30`)),
+    ]);
+    const h = harness();
+    await sweepOn(h, day(closedOn, 14));
+    const rows = await rowsOf(s.claimCaseId, ['closure_letter_escalation']);
+    expect(rows.map((r) => [r.sent_on, r.recipient_key, r.late])).toEqual([[day(closedOn, 14), `staff:${pa}`, true]]);
+  });
+
+  it('⭐ code review (2026-10-03, open item) — the `no_target` path: a LOST finalise CAS reports `skipped`, ALARMS, writes ⛔ its outcome', async () => {
+    const s = await seed({ contactLocale: 'en' });
+    await reach(s);
+    await request(s);
+    await approve(s);
+    const person = (await withPariwarScope(pool, PARIWAR, (db: Db) => claim.readCorrectionRecipients(db, ids.pariwarId(PARIWAR), ids.claimId(s.claimCaseId))))
+      .people[0]!;
+    const h = harness();
+    await sweepOn(h, day(s.day0, 97));
+    const notices = h.enqueued.filter((e) => e.queue === 'claim.correction.closure_notice' && (e.data.payload as ClosureNoticePayload).claimCaseId === s.claimCaseId);
+    expect(notices).toHaveLength(1);
+    // After the closure, the person's stored number stops being sendable (it decrypts to a value that ⛔ normalises),
+    // PLANTED RAW: the state a 6.20 correction to a bad number would leave.
+    const c = await pool.connect();
+    try {
+      await c.query('BEGIN');
+      await c.query("SET LOCAL session_replication_role = 'replica'");
+      await c.query('UPDATE member_nominee_versions SET mobile_ciphertext = $2 WHERE version_id = $1', [
+        person.versionId,
+        await encryptField('12345', PARIWAR, 'member_nominee', enc),
+      ]);
+      await c.query('COMMIT');
+    } finally {
+      c.release();
+    }
+    // The race: while the child decrypts that number, ANOTHER invocation takes the row over — the CAS then loses.
+    let raced = false;
+    const kms = new Proxy(enc.kms, {
+      get(target, prop, receiver) {
+        const v = Reflect.get(target, prop, receiver) as unknown;
+        if (prop !== 'decryptDek' || typeof v !== 'function') return v;
+        return async (...args: unknown[]) => {
+          if (!raced) {
+            raced = true;
+            await pool.query(
+              `UPDATE claim_correction_reminders SET claimed_by_job = 'another-job' WHERE claim_case_id = $1 AND purpose = 'closure_notice'`,
+              [s.claimCaseId],
+            );
+          }
+          return (v as (...a: unknown[]) => unknown).apply(target, args);
+        };
+      },
+    });
+    const out = await runClosureNoticeChild({ ...h.deps, encryption: { ...enc, kms } }, notices[0]!.data as JobEnvelope<ClosureNoticePayload>, 'job-nt');
+    expect(raced).toBe(true);
+    expect(out).toEqual({ status: 'skipped', reason: 'moved_before_finalise' });
+    expect(h.sent).toEqual([]);
+    expect(h.alarms.some((a) => a.includes('moved on before its no_target finalise'))).toBe(true);
+    expect(await rowsOf(s.claimCaseId, ['closure_notice'])).toEqual([expect.objectContaining({ outcome: 'attempting' })]);
   });
 });

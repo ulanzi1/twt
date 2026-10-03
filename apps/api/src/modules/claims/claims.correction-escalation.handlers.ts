@@ -191,8 +191,12 @@ export function createCorrectionEscalationHandlers(deps: AppDeps) {
       const ctx = contextOf(request);
       const body = request.body as ClosureDirectionRequest;
       const actorDisplay = await actorDisplayOf(deps, ctx.actorId);
+      // Code review (2026-10-03): lower-cased ONCE here — `z.string().uuid()` accepts upper case, the grant check below
+      // compares a `uuid` column (case-blind), but `directed_to_actor` is stored as `text` and the inbox / respond
+      // checks compare it to the lower-case session id: an upper-case id would make a direction ⛔ no one can see.
+      const directee = body.directed_to_actor.toLowerCase();
       // D18 — the directee must HOLD the named role in THIS Pariwar (a direction to a stranger is ⛔ a record of anything).
-      const directeeGrants = await loadActorGrants(request.scopeTx!, body.directed_to_actor);
+      const directeeGrants = await loadActorGrants(request.scopeTx!, directee);
       if (!directeeGrants.some((g) => g.pariwarId === ctx.pariwarIdStr && g.role === body.directed_to_role)) {
         throw closureRefusalError('directee_role_invalid');
       }
@@ -206,7 +210,7 @@ export function createCorrectionEscalationHandlers(deps: AppDeps) {
             actorId: ctx.actorId,
             actorDisplay,
             now: deps.clock(),
-            directedToActor: body.directed_to_actor,
+            directedToActor: directee,
             directedToRole: body.directed_to_role,
             kind: body.kind,
             textCiphertext,
@@ -217,7 +221,7 @@ export function createCorrectionEscalationHandlers(deps: AppDeps) {
       }
       auditClaim(deps, request, ctx, 'admin_claim_correction.direction_recorded', {
         direction_id: result!.direction.directionId,
-        directed_to_actor: body.directed_to_actor,
+        directed_to_actor: directee,
         directed_to_role: body.directed_to_role,
         kind: body.kind,
         opened_run_id: result!.openedRunId,

@@ -31,7 +31,6 @@ import {
   PARIWAR_B,
   enterAppRoleNoScope,
   enterAppScope,
-  lockTruncateSetNowait,
   seedClaim,
   seedMember,
 } from '../_helpers.js';
@@ -508,16 +507,31 @@ describe.skipIf(!hasDatabase)('migration 0119 — nominee declaration history: R
 
   it('⛔ TRUNCATE is refused (23000)', async () => {
     const { client } = getTx();
-    // ⚠ Lock order (6.19b review, 2026-10-01): `TRUNCATE … CASCADE` takes the parent's ACCESS EXCLUSIVE lock FIRST, then
-    // each FK child's — while a parallel spec file's INSERT into a child (e.g. `claim_correction_reminders.
-    // recipient_version_id`) holds the child and waits on the parent for its FK check ⇒ a deadlock between two files.
-    // ⛔ Pre-locking the children one at a time only MOVED it (a test that touched the parent, then a child, deadlocks
-    // with the held children) — the whole CASCADE set is taken ALL OR NOTHING with NOWAIT and retried
-    // (`lockTruncateSetNowait`), so this side ⛔ never waits while holding part of the set.
-    expect(await lockTruncateSetNowait(client, 'member_nominee_versions')).toContain('member_nominee_versions');
-    await expect(client.query('TRUNCATE member_nominee_versions CASCADE')).rejects.toSatisfy(
-      (err: unknown) => pgCode(err) === '23000',
+    // ⚠ Rewritten 2026-10-03 (6.19c review, open items) — ⛔ a live `TRUNCATE member_nominee_versions CASCADE` any more.
+    // That needs ACCESS EXCLUSIVE on the WHOLE CASCADE set (6 tables today: `claim_contacts`, `claim_contact_nominees`,
+    // `claim_correction_reminders`, `nominee_corrections`, `nominee_determination_items`, the table itself). Every
+    // tx-per-test spec that seeds a claim holds a lock on one of them for its whole test, so under the full parallel
+    // suite the set was ⛔ never free: `lockTruncateSetNowait` exhausted its 60 NOWAIT attempts (≈3.8 s) on 2 of 2 full
+    // runs. A waiting lock would bring back the cross-file DEADLOCK that helper was written to avoid (6.19b review).
+    // ⭐ The same guarantee, proven in two halves, with ⛔ none of those tables locked:
+    //   (1) the BINDING — the real table's TRUNCATE trigger exists, is ENABLED, fires BEFORE, per STATEMENT, and calls
+    //       `member_nominee_versions_reject_mutation`;
+    //   (2) the BEHAVIOUR — that same function, on a private temp twin, refuses a TRUNCATE with 23000. Its TRUNCATE path
+    //       reads ⛔ nothing of the table (it falls through to the RAISE), so the twin exercises the real code path.
+    const { rows } = await client.query<{ tgenabled: string; tgtype: number; fn: string }>(
+      `SELECT t.tgenabled, t.tgtype, p.proname AS fn FROM pg_trigger t JOIN pg_proc p ON p.oid = t.tgfoid
+        WHERE t.tgrelid = 'member_nominee_versions'::regclass AND t.tgname = 'member_nominee_versions_no_truncate'`,
     );
+    expect(rows).toHaveLength(1);
+    // tgtype bits: 2 = BEFORE, 32 = TRUNCATE, 1 (ROW) ⛔ set ⇒ 34; 'O' = enabled (origin + local).
+    expect(rows[0]).toEqual({ tgenabled: 'O', tgtype: 34, fn: 'member_nominee_versions_reject_mutation' });
+    await client.query('CREATE TEMP TABLE mnv_truncate_twin (id int) ON COMMIT DROP');
+    // Control: with ⛔ no trigger the twin truncates — so the 23000 below is the FUNCTION's, ⛔ not the table's.
+    await client.query('TRUNCATE mnv_truncate_twin');
+    await client.query(
+      'CREATE TRIGGER mnv_truncate_twin_no_truncate BEFORE TRUNCATE ON mnv_truncate_twin EXECUTE FUNCTION member_nominee_versions_reject_mutation()',
+    );
+    await expect(client.query('TRUNCATE mnv_truncate_twin')).rejects.toSatisfy((err: unknown) => pgCode(err) === '23000');
   });
 
   it('the `members` ON DELETE cascade still removes a hard-deleted member\'s versions (pg_trigger_depth > 1)', async () => {

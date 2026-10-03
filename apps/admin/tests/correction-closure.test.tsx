@@ -5,7 +5,7 @@
 // directee's inbox, the closure letter's two required points, the helpline's re-file card, and the highlight badge.
 // Family 13: every reachable state is announced (`role="status"` / `role="alert"`), every control is labelled.
 
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ReactElement } from 'react';
 import { describe, expect, it, vi } from 'vitest';
@@ -19,6 +19,7 @@ import type {
 } from '@twt/contracts';
 
 const { ApiError } = await import('../src/api/client.js');
+const { claimsUnderCorrectionKey } = await import('../src/api/hooks.js');
 
 const requestCorrectionClosure = vi.fn();
 const recordNoCorrectionNeeded = vi.fn();
@@ -142,7 +143,7 @@ describe('<ClosureColumn> — the District Admin (AC6, AC8c)', () => {
     await waitFor(() => expect(requestCorrectionClosure).toHaveBeenCalledWith(PARIWAR, CLAIM, 'reached in June, silent since'));
   });
 
-  it('⭐ code review patch (2026-10-02) — the success banner clears once the SERVER-driven blocker moves on, ⛔ stays forever', async () => {
+  it('⭐ code review (2026-10-03) — the success banner SURVIVES its own result and clears on the NEXT server move', async () => {
     requestCorrectionClosure.mockResolvedValue({});
     const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     const { rerender } = render(
@@ -153,17 +154,23 @@ describe('<ClosureColumn> — the District Admin (AC6, AC8c)', () => {
     fireEvent.change(screen.getByTestId('closure-request-note'), { target: { value: 'reached in June, silent since' } });
     fireEvent.click(screen.getByTestId('closure-request-submit'));
     expect(await screen.findByText('Closure requested — the Pariwar Admin decides.')).toBeInTheDocument();
-    // The server's next read now reports `blocker: 'request_pending'` — the success banner must clear, ⛔ sit
-    // beside the new blocker line forever.
+    // The server's next read reports `request_pending` — the request's OWN result: the banner stays.
     rerender(
       <QueryClientProvider client={qc}>
         <ClosureColumn pariwarId={PARIWAR} item={queueItem({ blocker: 'request_pending', state: 'requested' })} />
       </QueryClientProvider>,
     );
+    expect(screen.getByText('Closure requested — the Pariwar Admin decides.')).toBeInTheDocument();
+    // A LATER move (the Pariwar Admin declined → escalated) — the old banner clears, ⛔ sits beside it.
+    rerender(
+      <QueryClientProvider client={qc}>
+        <ClosureColumn pariwarId={PARIWAR} item={queueItem({ blocker: 'escalated', state: 'escalated' })} />
+      </QueryClientProvider>,
+    );
     await waitFor(() => expect(screen.queryByText('Closure requested — the Pariwar Admin decides.')).toBeNull());
   });
 
-  it('⭐ code review patch (2026-10-02, adversarial re-check) — the SAME reset covers the D27 "no correction needed" banner too, ⛔ only the request one', async () => {
+  it('⭐ code review (2026-10-03) — the SAME rule covers the D27 "no correction needed" banner', async () => {
     recordNoCorrectionNeeded.mockResolvedValue({ must_act: 'staff' });
     const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     const { rerender } = render(
@@ -174,14 +181,47 @@ describe('<ClosureColumn> — the District Admin (AC6, AC8c)', () => {
     fireEvent.change(screen.getByTestId('no-correction-note'), { target: { value: 'the bank details were already correct' } });
     fireEvent.click(screen.getByTestId('no-correction-submit'));
     expect(await screen.findByText('Recorded — staff must act until the Pariwar Admin decides.')).toBeInTheDocument();
-    // Recording D27 sets the mark to `staff`, so the NEXT server read reports `blocker: 'not_family_action'` —
-    // the success banner must clear here too, ⛔ only on the `request` path.
+    // D27 sets the mark to `staff` → `not_family_action`: the record's OWN result — the banner stays.
     rerender(
       <QueryClientProvider client={qc}>
         <ClosureColumn pariwarId={PARIWAR} item={queueItem({ blocker: 'not_family_action' })} />
       </QueryClientProvider>,
     );
+    expect(screen.getByText('Recorded — staff must act until the Pariwar Admin decides.')).toBeInTheDocument();
+    rerender(
+      <QueryClientProvider client={qc}>
+        <ClosureColumn pariwarId={PARIWAR} item={queueItem({ blocker: 'escalated' })} />
+      </QueryClientProvider>,
+    );
     await waitFor(() => expect(screen.queryByText('Recorded — staff must act until the Pariwar Admin decides.')).toBeNull());
+  });
+
+  it('⭐ code review (2026-10-03) — through the REAL hook order (invalidate + refetch BEFORE `success`), the banner is seen', async () => {
+    // The column fed by a LIVE query on the key the mutation invalidates: TanStack v5 awaits `onSettled` (the
+    // invalidate and this refetch) before it dispatches `success`, so the blocker moves first. A prop-fed test
+    // cannot see that order — this one does.
+    let serverBlocker: 'request_pending' | null = null;
+    requestCorrectionClosure.mockImplementation(async () => {
+      serverBlocker = 'request_pending';
+      return {};
+    });
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    function Live(): ReactElement | null {
+      const q = useQuery({
+        queryKey: [...claimsUnderCorrectionKey(PARIWAR), 'all'],
+        queryFn: async () => queueItem({ blocker: serverBlocker, state: serverBlocker === null ? null : 'requested' }),
+      });
+      return q.data === undefined ? null : <ClosureColumn pariwarId={PARIWAR} item={q.data} />;
+    }
+    render(
+      <QueryClientProvider client={qc}>
+        <Live />
+      </QueryClientProvider>,
+    );
+    fireEvent.change(await screen.findByTestId('closure-request-note'), { target: { value: 'silent since June' } });
+    fireEvent.click(screen.getByTestId('closure-request-submit'));
+    await waitFor(() => expect(screen.getByTestId('closure-blocker')).toHaveAttribute('data-blocker', 'request_pending'));
+    expect(await screen.findByText('Closure requested — the Pariwar Admin decides.')).toBeInTheDocument();
   });
 });
 
@@ -238,7 +278,30 @@ describe('<PariwarClosureList> — the Pariwar Admin (UX-DR54, UX-DR44)', () => 
     fireEvent.keyDown(screen.getByTestId('closure-approve'), { key: '1' });
     await waitFor(() => expect(decideCorrectionClosure).toHaveBeenCalledWith(PARIWAR, CLAIM, { decision: 'approve' }));
     expect(await screen.findByText('Approved — the claim is closed.')).toBeInTheDocument();
-    expect(screen.getByTestId('audit-trail-entry')).toHaveAttribute('data-outcome', 'denied');
+    // Code review (2026-10-03): the approve IS the closure for no response — "Closed by", like the Super Admin's close.
+    expect(screen.getByTestId('audit-trail-entry')).toHaveAttribute('data-outcome', 'closed');
+    expect(screen.getByTestId('audit-trail-entry').textContent).toContain('Closed by');
+  });
+
+  it('⭐ code review (2026-10-03) — the shortcuts: ctrl/alt/meta and auto-repeat SKIP; Shift does ⛔ not; a 2nd press while pending is ignored', async () => {
+    decideCorrectionClosure.mockReset();
+    let release: (v: typeof decided) => void = () => undefined;
+    decideCorrectionClosure.mockImplementation(() => new Promise((r) => (release = r)));
+    wrap(<PariwarClosureList pariwarId={PARIWAR} items={[closureQueueItem()]} />);
+    const strip = screen.getByTestId('closure-approve');
+    for (const mod of [{ ctrlKey: true }, { altKey: true }, { metaKey: true }, { repeat: true }]) {
+      fireEvent.keyDown(strip, { key: '1', ...mod });
+    }
+    expect(decideCorrectionClosure).not.toHaveBeenCalled();
+    // AZERTY: the digit itself arrives WITH Shift — it must still act.
+    fireEvent.keyDown(strip, { key: '1', shiftKey: true });
+    await waitFor(() => expect(decideCorrectionClosure).toHaveBeenCalledTimes(1));
+    // While that decision is pending, further presses are ignored (the synchronous `actingRef`).
+    fireEvent.keyDown(strip, { key: '1' });
+    fireEvent.keyDown(strip, { key: '2' });
+    await act(async () => release(decided));
+    expect(await screen.findByText('Approved — the claim is closed.')).toBeInTheDocument();
+    expect(decideCorrectionClosure).toHaveBeenCalledTimes(1);
   });
 
   it('a HELD "no correction needed" claim offers ⛔ no decision and SAYS who decides it now (`-273` §4)', () => {
@@ -385,7 +448,19 @@ describe('<EscalationDetail> — the Super Admin (AC14, AC17)', () => {
     fireEvent.change(await screen.findByTestId('decision-kind'), { target: { value: 'refuse' } });
     fireEvent.change(screen.getByTestId('decision-note'), { target: { value: 'the standing was never met' } });
     fireEvent.click(screen.getByTestId('decision-submit'));
-    await waitFor(() => expect(decideEscalatedClosure).toHaveBeenCalled());
+    // Code review (2026-10-03): the REQUEST itself — a refuse with a refuse-valid reason (⛔ close's stale default).
+    await waitFor(() =>
+      expect(decideEscalatedClosure).toHaveBeenCalledWith(
+        PARIWAR,
+        CLAIM,
+        expect.objectContaining({
+          decision: 'refuse',
+          reason: 'claim_not_payable',
+          note: 'the standing was never met',
+          refusal_reason_code: expect.any(String),
+        }),
+      ),
+    );
     expect(screen.getByTestId('audit-trail-entry')).toHaveAttribute('data-outcome', 'denied');
     expect(screen.getByTestId('audit-trail-entry')).toHaveTextContent('Denied by');
   });
@@ -468,11 +543,33 @@ describe('the directee, the closure letter, the helpline, the highlight', () => 
     expect(getClosureLetterAddress).toHaveBeenCalledTimes(2);
   });
 
+  it('⭐ code review (2026-10-03) — a FAILED step-up request shows ⛔ no code form, SAYS the error; a double click reveals once', async () => {
+    getClosureLetterAddress.mockReset();
+    requestStepUp.mockReset();
+    let rejectFirst: (e: unknown) => void = () => undefined;
+    getClosureLetterAddress.mockImplementationOnce(() => new Promise((_, rej) => (rejectFirst = rej)));
+    requestStepUp.mockRejectedValueOnce(new ApiError(503, 'auth.step_up_unavailable', 'Step-up unavailable'));
+    const items: ClosureLettersOwedResponse['items'] = [
+      { claim_case_id: CLAIM, deceased_member_id: CLAIM, short_reference: '11111111', closed_on: '2026-09-30', days_since_closure: 1, people: [{ person_key: 'claimant', letter: null }] },
+    ];
+    wrap(<ClosureLettersOwedList pariwarId={PARIWAR} items={items} />);
+    fireEvent.click(screen.getByTestId('closure-letter-reveal'));
+    fireEvent.click(screen.getByTestId('closure-letter-reveal'));
+    await waitFor(() => expect(getClosureLetterAddress).toHaveBeenCalledTimes(1));
+    await act(async () => rejectFirst(new ApiError(403, 'auth.step_up_required', 'Step up required')));
+    await waitFor(() => expect(requestStepUp).toHaveBeenCalledTimes(1));
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    expect(screen.queryByTestId('closure-letter-code')).toBeNull();
+    expect(getClosureLetterAddress).toHaveBeenCalledTimes(1);
+  });
+
   it('the helpline re-file card: a note is REQUIRED, then the confirmation is recorded against the CLOSED claim', async () => {
     recordRefileConfirmation.mockResolvedValue({ confirmation_id: CLOSURE, closed_claim_case_id: CLAIM, via: 'helpline' });
     wrap(<RefileConfirmationCard pariwarId={PARIWAR} closedClaimCaseId={CLAIM} />);
+    // Family 13(d): the card is mounted on the 409, so the step it asks for is an ALERT (announced on insertion).
+    expect(screen.getByTestId('refile-confirmation-announce')).toHaveAttribute('role', 'alert');
     fireEvent.click(screen.getByTestId('refile-confirmation-submit'));
-    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    expect(await screen.findByText('Write a note saying why.')).toHaveAttribute('role', 'alert');
     expect(recordRefileConfirmation).not.toHaveBeenCalled();
     fireEvent.change(screen.getByTestId('refile-confirmation-note'), { target: { value: 'the son called back' } });
     await act(async () => {

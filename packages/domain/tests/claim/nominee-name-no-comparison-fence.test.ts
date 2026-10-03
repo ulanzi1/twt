@@ -148,8 +148,9 @@ describe('⛔ the no-comparison fence (Trap 1, `-226` cl.5)', () => {
     for (const f of FENCED_FILES) {
       expect(() => read(f), `fenced file missing: ${f}`).not.toThrow();
     }
-    // Code review patch (2026-10-02): exact count, ⛔ a floor — a floor can't catch an accidental
-    // duplicate entry masking a dropped file (padding the array with any extra element keeps a `>=` green).
+    // Code review patch (2026-10-02, corrected 2026-10-03): exact count, ⛔ a floor — AND every entry unique. The
+    // count alone can't catch a duplicate standing in for a dropped file (one of each keeps the length at 34).
+    expect(new Set(FENCED_FILES).size, 'a FENCED_FILES entry is duplicated').toBe(FENCED_FILES.length);
     expect(FENCED_FILES.length).toBe(34); // Story 6.19c raised it FROM 26 (+1 domain module), then 27 → 32 (the highlight's read + its four wire / route surfaces), then 32 → 34 (its two admin render sites); Story 6.21a FROM 23 (+3 modules); Story 6.20 FROM 16 (+7)
   });
 

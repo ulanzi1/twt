@@ -467,6 +467,19 @@ describe.skipIf(!hasDatabase)('the correction closure — request, decision, hol
       expect(r.chain).toMatchObject({ claimState: 'denied' });
     });
 
+    it('⭐ code review Decision 3 (2026-10-03, second pass) — the `approve` leg: after the same D27 record, the Super Admin can still APPROVE', async () => {
+      const { client, tx } = getTx();
+      await enterAppScope(client, PARIWAR_A);
+      const c = await escalated(client, tx);
+      await recordNoCorrectionNeeded(client, {
+        pariwarId: PARIWAR_A, claimCaseId: c.cid, actorId: DA, actorDisplay: 'DA', now: c.day(99),
+        markNoteCiphertext: 'enc:v1:m', noteCiphertext: 'enc:v1:n', setByRole: 'district_admin', hold: isCorrectionClaimHeld,
+      });
+      await expectRefused(superAdmin(client, c, 'close', 'family_silent_after_reached'), 'not_family_action');
+      const a = await superAdmin(client, c, 'approve', 'details_verified');
+      expect(a.closure).toMatchObject({ state: 'approved', superAdminDecision: 'approved' });
+    });
+
     it('⭐ refuse ⇒ `state_trustee_denied` with the chosen code, ⛔ `denied_no_appeal` (appealable once); after a used appeal ⇒ `denied_no_appeal`', async () => {
       const { client, tx } = getTx();
       await enterAppScope(client, PARIWAR_A);
@@ -590,6 +603,36 @@ describe.skipIf(!hasDatabase)('the correction closure — request, decision, hol
       await seedNomineeNameCheck(client, PARIWAR_A, c.cid, { reuseAccounts: true });
       const ok = await approveD27();
       expect(ok.chain).toMatchObject({ claimState: 'state_trustee_approved', deniedNoAppeal: false });
+    });
+
+    it('⭐ D27 (2026-10-03) — "a check AFTER the record" is compared at MICROSECOND precision: a check in the SAME millisecond but later counts, an EQUAL one does ⛔ not — writer and queue agree', async () => {
+      const { client, tx } = getTx();
+      await enterAppScope(client, PARIWAR_A);
+      const c = await returnedClaim(client, { mustAct: 'family' });
+      await recordNoCorrectionNeeded(client, {
+        pariwarId: PARIWAR_A, claimCaseId: c.cid, actorId: DA, actorDisplay: 'DA', now: c.day(3),
+        markNoteCiphertext: 'enc:v1:m', noteCiphertext: 'enc:v1:n', setByRole: 'district_admin', hold: isCorrectionClaimHeld,
+      });
+      await seedNomineeNameCheck(client, PARIWAR_A, c.cid, { reuseAccounts: true });
+      // Pin both instants inside ONE millisecond (…123): as JS `Date`s they are EQUAL — the old comparison's blind spot.
+      const pin = (checkAt: string) =>
+        asSuperuser(client, async () => {
+          await client.query(`UPDATE claim_correction_no_correction_records SET recorded_at = '2026-06-01 10:00:00.123100+00' WHERE claim_case_id = $1`, [c.cid]);
+          await client.query("SET LOCAL session_replication_role = 'replica'");
+          await client.query(`UPDATE events_log SET occurred_at = $2 WHERE stream_id = $1 AND event_type = 'claim.nominee_name_checked'`, [c.cid, checkAt]);
+          await client.query("SET LOCAL session_replication_role = 'origin'");
+        });
+      const flag = async () => (await listPariwarClosureQueue(tx, PARIWAR_A, { limit: 200 })).find((i) => i.claimCaseId === c.cid)?.checkedAfterRecord;
+      const approveD27 = () => approveNoCorrectionNeeded(client, { pariwarId: PARIWAR_A, claimCaseId: c.cid, actorId: TRUSTEE, actorDisplay: 'PA', now: c.day(4), decisionRationaleCiphertext: 'enc:v1:x' });
+      // EQUAL to the microsecond ⇒ ⛔ after.
+      await pin('2026-06-01 10:00:00.123100+00');
+      expect(await flag()).toBe(false);
+      await expectRefused(approveD27(), 'check_required');
+      // 100 µs LATER, the SAME millisecond ⇒ after: the queue offers the approve, and the writer takes it.
+      await pin('2026-06-01 10:00:00.123200+00');
+      expect(await flag()).toBe(true);
+      const ok = await approveD27();
+      expect(ok.chain).toMatchObject({ claimState: 'state_trustee_approved' });
     });
 
     it('⭐ `-273` §4 — D27\'s approve on a HELD claim ⇒ cycle_freeze_escalated, while the "no correction needed" RECORD is accepted', async () => {
@@ -801,6 +844,35 @@ describe.skipIf(!hasDatabase)('the correction closure — request, decision, hol
       const a = await superAdmin(client, esc, 'approve', 'name_difference_accepted');
       expect(a).toMatchObject({ nameCheckWaived: true, approvalNameCheckState: 'never_checked' });
       expect(await readApprovalNameHighlight(tx, PARIWAR_A, esc.cid)).toBe('approved_without_passing_check');
+    });
+
+    it('⭐ code review (2026-10-03, second pass) — with TWO approved+waived rows, the NEWEST decides: a newer `passing` approval is ⛔ shadowed by an older mismatch', async () => {
+      const { client, tx } = getTx();
+      await enterAppScope(client, PARIWAR_A);
+      const esc = await reachedClaim(client, tx);
+      await request(client, esc);
+      await decline(client, esc);
+      await seedNomineeNameCheck(client, PARIWAR_A, esc.cid, { reuseAccounts: true, verdicts: ['matches', 'does_not_match'] });
+      await superAdmin(client, esc, 'approve', 'name_difference_accepted');
+      expect(await readApprovalNameHighlight(tx, PARIWAR_A, esc.cid)).toBe('approved_despite_name_mismatch');
+      // A LATER approval of the same claim (a second return, approved+waived with the check `passing`) — built by
+      // cloning the row: a new id, a new return (FK triggers off — the shape is what this read must handle).
+      await asSuperuser(client, async () => {
+        await client.query("SET LOCAL session_replication_role = 'replica'");
+        await client.query(
+          `CREATE TEMP TABLE closure_clone ON COMMIT DROP AS
+             SELECT * FROM claim_correction_closures WHERE claim_case_id = $1 AND state = 'approved'`,
+          [esc.cid],
+        );
+        await client.query(
+          `UPDATE closure_clone SET closure_id = gen_random_uuid(), return_decision_id = gen_random_uuid(),
+                  approval_name_check_state = 'passing', super_admin_decided_at = super_admin_decided_at + interval '1 minute'`,
+        );
+        await client.query('INSERT INTO claim_correction_closures SELECT * FROM closure_clone');
+        await client.query('DROP TABLE closure_clone');
+        await client.query("SET LOCAL session_replication_role = 'origin'");
+      });
+      expect(await readApprovalNameHighlight(tx, PARIWAR_A, esc.cid)).toBeNull();
     });
   });
 });

@@ -211,7 +211,7 @@ export async function runCertificateReminderSweep(
   const visit = async (row: { readonly claimCaseId: string; readonly pariwarId: string }): Promise<void> => {
     scannedClaims += 1;
     try {
-      const out = await planClaim(deps, row, now, today, alarm);
+      const out = await planClaim(deps, row, today, alarm);
       if (out.opened) openedRuns += 1;
       if (out.ended) endedRuns += 1;
       if (out.paused) pausedRuns += 1;
@@ -303,9 +303,12 @@ export async function runCertificateReminderSweep(
     );
   }
   if (movedClaims.length > 0) {
+    // ⚠ Code review, 2026-10-03: this also fires when ⛔ nothing in the contact record itself changed — only the
+    // plan's eligibility classification (`mayRemind`) flipped between the pre-lock read and the re-plan under the
+    // lock (a legitimate timing window, ⛔ not necessarily an edit). Worded to cover both causes.
     alarm(
-      `[jobs] claim-certificate-sweep: the contact record moved between the hash and the lock on ${String(movedClaims.length)} ` +
-        `claim(s) — ⛔ no family SMS planned for them today (claims: ${sampleIds(movedClaims)})`,
+      `[jobs] claim-certificate-sweep: the recipients (or the plan's eligibility) moved between the hash and the lock ` +
+        `on ${String(movedClaims.length)} claim(s) — ⛔ no family SMS planned for them today (claims: ${sampleIds(movedClaims)})`,
     );
   }
   if (timedOut.length > 0) {
@@ -346,7 +349,6 @@ export async function runCertificateReminderSweep(
 async function planClaim(
   deps: ClaimCertificateReminderDeps,
   row: { readonly claimCaseId: string; readonly pariwarId: string },
-  now: Date,
   today: string,
   alarm: (m: string) => void,
 ): Promise<ClaimPlanOutcome> {
@@ -402,6 +404,10 @@ async function planClaim(
         const open = facts.openRun!;
         run = { runId: open.runId, day0: open.day0 };
         break;
+      }
+      default: {
+        const unreachable: never = plan;
+        throw new Error(`[jobs] claim-certificate-sweep: unhandled plan.kind ${JSON.stringify(unreachable)}`);
       }
     }
 
@@ -484,7 +490,6 @@ async function planClaim(
         }
       }
     }
-    void now;
     return { ...base, opened, sms, staffRows: written };
   });
 }

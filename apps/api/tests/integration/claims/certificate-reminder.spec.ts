@@ -295,6 +295,9 @@ describe.skipIf(!hasDatabase)('the certificate reminder — routes (Story 6.19d)
     expect(posted.statusCode, posted.body).toBe(201);
     const letterId = (posted.json() as { letter_id: string }).letter_id;
     expect(posted.json()).toMatchObject({ person_key: personKey, posted_on: todayIst(), delivered_on: null, overdue: false, has_screenshot: false });
+    const noShotYet = await da.client.inject({ method: 'GET', url: `${base(pariwarId, claimCaseId)}/letters/${letterId}/screenshot` });
+    expect(noShotYet.statusCode, noShotYet.body).toBe(404);
+    expect(errCode(noShotYet)).toBe('certificate_letter.no_screenshot');
     const second = await post(da.client, pariwarId, claimCaseId, personKey);
     expect(errCode(second)).toBe('certificate_letter.already_recorded');
     const stored = await t.pool.query<{ tracking_number_ciphertext: string }>('SELECT tracking_number_ciphertext FROM claim_certificate_reminder_letters WHERE letter_id = $1', [letterId]);
@@ -310,9 +313,13 @@ describe.skipIf(!hasDatabase)('the certificate reminder — routes (Story 6.19d)
     expect(delivered.json()).toMatchObject({ letter_id: letterId, delivered_on: todayIst(), has_screenshot: true });
     const keys = await t.pool.query<{ screenshot_storage_key: string }>('SELECT screenshot_storage_key FROM claim_certificate_reminder_letters WHERE letter_id = $1', [letterId]);
     expect(keys.rows[0]!.screenshot_storage_key).toContain(`/certificate-letter/${letterId}/`);
+    // The orphan-cleanup compensating action: the upload lands BEFORE the DB write is attempted, so a refused
+    // write (`already_delivered`) must not leave the just-uploaded screenshot behind in storage.
+    const storeSizeBeforeOrphan = t.claimDocumentStorage.store.size;
     const mp2 = multipart(Buffer.from([0x89, 0x50, 0x4e, 0x47]), 'image/png', todayIst());
     const again = await da.client.inject({ method: 'POST', url: `${base(pariwarId, claimCaseId)}/letters/${letterId}/delivery`, payload: mp2.body, headers: { 'content-type': mp2.ct } });
     expect(errCode(again)).toBe('certificate_letter.already_delivered');
+    expect(t.claimDocumentStorage.store.size, 'the orphaned re-upload must be deleted, not left behind').toBe(storeSizeBeforeOrphan);
 
     const other = await staff(pariwarId, 'district_admin');
     const unelevatedShot = await other.client.inject({ method: 'GET', url: `${base(pariwarId, claimCaseId)}/letters/${letterId}/screenshot` });

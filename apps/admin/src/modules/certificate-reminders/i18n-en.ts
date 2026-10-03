@@ -14,6 +14,7 @@ export const certificateRemindersEn = {
   loading: 'Loading…',
   loadError: 'The list could not be loaded.',
   empty: 'No family is being reminded about a certificate.',
+  truncated: 'Only some claims are listed. Older, more overdue ones are kept, but are not shown here.',
   cause: {
     rejected: 'Certificate not accepted',
     missing: 'No certificate received',
@@ -54,6 +55,7 @@ export const certificateRemindersEn = {
     posted: 'posted',
     delivered: 'delivered',
     overdue: 'No delivery recorded within 14 days of posting.',
+    deliveredLate: 'Delivered more than 14 days after posting.',
     showAddress: 'Show the address (asks for a fresh code)',
     code: 'The code we sent you',
     postedOn: 'Posting date',
@@ -67,11 +69,17 @@ export const certificateRemindersEn = {
     deliveryRecorded: 'Delivery recorded.',
     deliverRequired: 'Enter the delivery date and add the screenshot.',
     onlyOne: 'Only one letter is sent to each person on a claim.',
+    screenshotLoad: 'Load the delivery screenshot (asks for a fresh code)',
+    screenshotOpen: 'Open the delivery screenshot',
+    screenshotExpired: 'The link expired — load it again.',
+    screenshotError: 'The screenshot could not be loaded.',
   },
   errors: {
     forbidden: 'Your access does not cover this.',
     sessionExpired: 'Your session has ended — sign in again.',
     rateLimited: 'Too many attempts — wait a minute and try again.',
     saveFailed: 'That did not go through — try again.',
+    tooLarge: 'The screenshot is too large. Upload an image of 10 MB or less.',
+    unsupportedMediaType: 'Upload the screenshot as a JPEG, PNG or WebP image.',
   },
 } as const;

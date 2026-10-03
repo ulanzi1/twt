@@ -73,8 +73,8 @@ the Hindi reminder 171 characters of Unicode (**3 segments** at 67 per concatena
 220 (hi, 4 segments), sent at most once per person. ⇒ a Hindi reminder costs about **1.5×** an English one (3 segments against 2). ⚠ The per-segment price is the
 gateway's and is ⛔ not recorded here (⛔ no contract exists yet).
 
-⭐ **The certificate reminder (templates 5–6, Story 6.19d):** ONE transactional DLT SMS per **contact-record person** (CR6 — each nominee
-person on the contact record, plus the claimant block; one text per NUMBER per slot) per slot — at most **25** slots per rejected
+⭐ **The certificate reminder (templates 5–6, Story 6.19d):** ONE transactional DLT SMS per **contact-record person** per slot (CR6 — each
+nominee person on the contact record, plus the claimant block; one text per NUMBER per slot) — at most **25** slots per rejected
 certificate (the 22 correction days to day 84, then days 120, 150 and 180 — `-259` cl.1, `-260` G6); a second rejected certificate
 (`-260` G5) starts a new 25. Rendered with an 8-character reference and a 13-character helpline number: the English reminder is 197
 characters (**2 GSM segments**), the Hindi 185 characters of Unicode (**3 segments**).

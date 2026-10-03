@@ -35,6 +35,12 @@ function CertificateRemindersView(): ReactElement {
         ) : (
           <CertificateRemindersList pariwarId={pariwarId} items={q.data.items} />
         )}
+        {/* The caller's ONLY signal that older, more-overdue claims were left out — ⛔ never let the list read as complete. */}
+        {q.data.truncated ? (
+          <p className="mt-2 text-xs" data-testid="certificate-reminders-truncated">
+            {t.truncated}
+          </p>
+        ) : null}
       </>
     );
   }

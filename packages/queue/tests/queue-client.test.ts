@@ -19,6 +19,13 @@ import { QUEUE_NAMES, createQueueClient, stopQueueClient, type QueueClient } fro
 const DATABASE_URL = process.env['DATABASE_URL'];
 const hasDatabase = Boolean(DATABASE_URL);
 
+describe('QUEUE_NAMES', () => {
+  it('⛔ no two queue names collide on the same underlying pg-boss queue string (code review, 2026-10-03)', () => {
+    const values = Object.values(QUEUE_NAMES);
+    expect(new Set(values).size).toBe(values.length);
+  });
+});
+
 describe.skipIf(!hasDatabase)('pg-boss queue client smoke (live DB)', () => {
   let boss: QueueClient;
 

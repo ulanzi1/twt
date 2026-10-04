@@ -263,7 +263,7 @@ describe.skipIf(!hasDatabase)('the certificate reminder — send/claim/finalize 
       });
     });
 
-    it('⭐ CR6 `same_number_in_slot` — the LOWER-keyed person at a shared number blocks the higher; a row already there blocks EITHER', async () => {
+    it('⭐ CR6 `same_number_in_slot` via `lower` — the LOWER-keyed person at a shared number blocks the higher, sent or not', async () => {
       const { client } = getTx();
       const c = await openMissingRun(client, { mobiles: ['9876543210', '9876543210'] });
       // `a` is the lower key (people is personKey-ordered) and hasn't sent yet ⇒ `b` is blocked by `lower`.
@@ -288,6 +288,8 @@ describe.skipIf(!hasDatabase)('the certificate reminder — send/claim/finalize 
       const c = await openMissingRun(client, { mobiles: ['9876543210', '9876543210'] });
       const shared = (c.hashes.get(c.a.personKey) as { hash: string }).hash;
       expect((c.hashes.get(c.b.personKey) as { hash: string }).hash).toBe(shared);
+      // ⚠ The isolation rests on `a` being the LOWER key (the recipients' roots are sorted) — asserted, ⛔ assumed.
+      expect(c.a.personKey < c.b.personKey).toBe(true);
       // `b` (the HIGHER key) already has this slot's row at the shared number — e.g. a child that ran first on a
       // fail-open hash. ⛔ Nobody is lower than `a`, so only `taken` can refuse it.
       await deadRow(client, c.cid, c.runId, c.b.personKey, shared);

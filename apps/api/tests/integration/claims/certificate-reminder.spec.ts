@@ -280,6 +280,10 @@ describe.skipIf(!hasDatabase)('the certificate reminder — routes (Story 6.19d)
     expect(cut.statusCode, cut.body).toBe(200);
     expect(cut.json()).toMatchObject({ truncated: true });
     expect((cut.json() as { items: unknown[] }).items).toHaveLength(1);
+    // The EXACT boundary (round 3): `limit` equal to the visible count drops nothing ⇒ ⛔ not truncated (`>`, ⛔ `>=`).
+    const exact = await da.client.inject({ method: 'GET', url: `${listUrl(pariwarId)}?limit=2` });
+    expect(exact.json()).toMatchObject({ truncated: false });
+    expect((exact.json() as { items: unknown[] }).items).toHaveLength(2);
     const whole = await da.client.inject({ method: 'GET', url: `${listUrl(pariwarId)}?limit=20` });
     expect(whole.json()).toMatchObject({ truncated: false });
     expect((whole.json() as { items: { claim_case_id: string }[] }).items.map((i) => i.claim_case_id)).toEqual(
@@ -327,17 +331,21 @@ describe.skipIf(!hasDatabase)('the certificate reminder — routes (Story 6.19d)
     const putSpy = vi.spyOn(t.claimDocumentStorage, 'put');
     // `delete` is OPTIONAL on the port type; the in-memory store always has it.
     const deleteSpy = vi.spyOn(t.claimDocumentStorage as Required<typeof t.claimDocumentStorage>, 'delete');
-    const before = multipart(Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47]), Buffer.from('proof')]), 'image/png', daysFromToday(-1));
-    const early = await da.client.inject({ method: 'POST', url: `${base(pariwarId, claimCaseId)}/letters/${letterId}/delivery`, payload: before.body, headers: { 'content-type': before.ct } });
-    expect(errCode(early)).toBe('certificate_letter.delivered_before_posted');
-    expect(putSpy, 'the screenshot was uploaded before the refused write').toHaveBeenCalledTimes(1);
-    const orphanKey = putSpy.mock.calls[0]![0];
-    expect(orphanKey).toContain(`/certificate-letter/${letterId}/`);
-    expect(deleteSpy).toHaveBeenCalledWith(orphanKey);
-    expect(t.claimDocumentStorage.store.has(orphanKey), 'the orphaned upload must be deleted, not left behind').toBe(false);
-    expect(t.claimDocumentStorage.store.size).toBe(storeSizeBeforeOrphan);
-    putSpy.mockRestore();
-    deleteSpy.mockRestore();
+    try {
+      const before = multipart(Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47]), Buffer.from('proof')]), 'image/png', daysFromToday(-1));
+      const early = await da.client.inject({ method: 'POST', url: `${base(pariwarId, claimCaseId)}/letters/${letterId}/delivery`, payload: before.body, headers: { 'content-type': before.ct } });
+      expect(errCode(early)).toBe('certificate_letter.delivered_before_posted');
+      expect(putSpy, 'the screenshot was uploaded before the refused write').toHaveBeenCalledTimes(1);
+      const orphanKey = putSpy.mock.calls[0]![0];
+      expect(orphanKey).toContain(`/certificate-letter/${letterId}/`);
+      expect(deleteSpy).toHaveBeenCalledWith(orphanKey);
+      expect(t.claimDocumentStorage.store.has(orphanKey), 'the orphaned upload must be deleted, not left behind').toBe(false);
+      expect(t.claimDocumentStorage.store.size).toBe(storeSizeBeforeOrphan);
+    } finally {
+      // ⛔ Never leave the spies on the shared harness when an assertion above fails (round 3).
+      putSpy.mockRestore();
+      deleteSpy.mockRestore();
+    }
     const mp = multipart(Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47]), Buffer.from('proof')]), 'image/png', todayIst());
     const delivered = await da.client.inject({ method: 'POST', url: `${base(pariwarId, claimCaseId)}/letters/${letterId}/delivery`, payload: mp.body, headers: { 'content-type': mp.ct } });
     expect(delivered.statusCode, delivered.body).toBe(201);

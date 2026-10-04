@@ -61,6 +61,10 @@ function LetterForm({ pariwarId, item, person }: { pariwarId: string; item: Item
   // Address-reveal and screenshot-load share the SAME fresh step-up context — one code entry serves whichever
   // action asked for it.
   const [pendingAction, setPendingAction] = useState<'address' | 'screenshot' | null>(null);
+  // ⭐ Set when a REPEAT code request succeeds — the only sign the click did anything (code review round 3).
+  const [newCodeSent, setNewCodeSent] = useState(false);
+  const codeInputId = useId();
+  const screenshotCodeInputId = useId();
   const postMissingId = useId();
   const deliverMissingId = useId();
   const testKey = `${item.claim_case_id}-${person.person_key}`;
@@ -76,24 +80,29 @@ function LetterForm({ pariwarId, item, person }: { pariwarId: string; item: Item
     return () => clearTimeout(id);
   }, [screenshotLink]);
 
-  async function doReveal(): Promise<void> {
+  /** `true` when a fresh code was requested (the address needs one); `false` when revealed or refused. */
+  async function doReveal(): Promise<boolean> {
     setAddressError(null);
     try {
       const r = await api.getCertificateLetterAddress(pariwarId, item.claim_case_id, person.person_key);
       setAddress(r.address);
       setNeedsCode(false);
+      setNewCodeSent(false);
+      return false;
     } catch (err) {
       if (err instanceof ApiError && err.code === STEP_UP_REQUIRED_CODE) {
         try {
           await api.requestStepUp(api.CERTIFICATE_LETTER_ADDRESS_STEP_UP_CONTEXT);
           setPendingAction('address');
           setNeedsCode(true);
+          return true;
         } catch (stepUpErr) {
           setAddressError(certificateErrorText(stepUpErr));
         }
-        return;
+        return false;
       }
       setAddressError(certificateErrorText(err));
+      return false;
     }
   }
 
@@ -127,6 +136,16 @@ function LetterForm({ pariwarId, item, person }: { pariwarId: string; item: Item
     if (revealPending) return;
     setRevealPending(true);
     await doReveal();
+    setRevealPending(false);
+  }
+
+  /** "Send a new code" — clears the dead code and SAYS when a new one went out. */
+  async function requestNewCode(): Promise<void> {
+    if (revealPending) return;
+    setRevealPending(true);
+    setCode('');
+    setNewCodeSent(false);
+    if (await doReveal()) setNewCodeSent(true);
     setRevealPending(false);
   }
 
@@ -178,9 +197,17 @@ function LetterForm({ pariwarId, item, person }: { pariwarId: string; item: Item
             </p>
           ) : null}
           {needsCode && pendingAction === 'address' ? (
-            <label className="flex flex-col">
-              {l.code}
-              <input value={code} onChange={(e) => setCode(e.target.value)} inputMode="numeric" data-testid="certificate-letter-code" />
+            // ⚠ The label names the INPUT alone — the buttons sit outside it (round 3: inside, they joined the
+            // input's accessible name).
+            <div className="flex flex-col">
+              <label htmlFor={codeInputId}>{l.code}</label>
+              <input
+                id={codeInputId}
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                inputMode="numeric"
+                data-testid="certificate-letter-code"
+              />
               <button
                 type="button"
                 className="self-start rounded border px-2 py-0.5"
@@ -188,20 +215,25 @@ function LetterForm({ pariwarId, item, person }: { pariwarId: string; item: Item
                 onClick={() => void verifyAndRetry()}
                 data-testid="certificate-letter-verify"
               >
-                {l.showAddress}
+                {l.verifyCode}
               </button>
               {/* ⭐ Code review round 2 — an expired / used-up code must never dead-end the reveal: this asks for a
-                  NEW code (the reveal's own 403 → requestStepUp), ⛔ not a second "Show the address". */}
+                  NEW code (the reveal's own 403 → requestStepUp). */}
               <button
                 type="button"
                 className="self-start underline"
                 disabled={revealPending}
-                onClick={() => void reveal()}
+                onClick={() => void requestNewCode()}
                 data-testid="certificate-letter-new-code"
               >
                 {l.newCode}
               </button>
-            </label>
+              {newCodeSent ? (
+                <p role="status" data-testid="certificate-letter-new-code-sent">
+                  {l.newCodeSent}
+                </p>
+              ) : null}
+            </div>
           ) : null}
           {addressError !== null ? <p role="alert">{addressError}</p> : null}
           <label className="flex flex-col">
@@ -321,9 +353,15 @@ function LetterForm({ pariwarId, item, person }: { pariwarId: string; item: Item
             )
           ) : null}
           {needsCode && pendingAction === 'screenshot' ? (
-            <label className="flex flex-col">
-              {l.code}
-              <input value={code} onChange={(e) => setCode(e.target.value)} inputMode="numeric" data-testid="certificate-letter-screenshot-code" />
+            <div className="flex flex-col">
+              <label htmlFor={screenshotCodeInputId}>{l.code}</label>
+              <input
+                id={screenshotCodeInputId}
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                inputMode="numeric"
+                data-testid="certificate-letter-screenshot-code"
+              />
               <button
                 type="button"
                 className="self-start rounded border px-2 py-0.5"
@@ -333,7 +371,7 @@ function LetterForm({ pariwarId, item, person }: { pariwarId: string; item: Item
               >
                 {l.screenshotLoad}
               </button>
-            </label>
+            </div>
           ) : null}
           {screenshotProblem !== null ? <p role="alert">{screenshotProblem}</p> : null}
         </>

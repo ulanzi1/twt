@@ -220,11 +220,28 @@ describe('the "Certificate reminders" list (Story 6.19d)', () => {
     await waitFor(() => expect(verifyStepUp).toHaveBeenCalled());
     const newCode = await screen.findByTestId('certificate-letter-new-code');
     await waitFor(() => expect(newCode).not.toBeDisabled());
+    expect(screen.queryByTestId('certificate-letter-new-code-sent')).toBeNull();
     const stepUpsBefore = requestStepUp.mock.calls.length;
+    const addressCallsBefore = getCertificateLetterAddress.mock.calls.length;
     fireEvent.click(newCode);
-    await waitFor(() => expect(requestStepUp.mock.calls.length).toBe(stepUpsBefore + 1));
+    // ⭐ Round 3 — the click SAYS it worked, the dead code is cleared, and it went through the reveal's own 403.
+    expect(await screen.findByTestId('certificate-letter-new-code-sent')).toHaveTextContent('A new code was sent.');
+    expect(screen.getByTestId('certificate-letter-new-code-sent')).toHaveAttribute('role', 'status');
+    expect(requestStepUp.mock.calls.length).toBe(stepUpsBefore + 1);
     expect(requestStepUp).toHaveBeenLastCalledWith('certificate_letter_address');
-    expect(screen.getByTestId('certificate-letter-code')).toBeInTheDocument();
+    expect(getCertificateLetterAddress.mock.calls.length).toBe(addressCallsBefore + 1);
+    expect(screen.getByTestId('certificate-letter-code')).toHaveValue('');
+  });
+
+  it('♿ round 3 — the code input is named by its label ALONE (⛔ the buttons are outside the label)', async () => {
+    getCertificateLetterAddress.mockRejectedValueOnce(new ApiError(403, 'auth.step_up_required', 'Step up required'));
+    requestStepUp.mockResolvedValueOnce({ sent: true, expiresInSeconds: 300 });
+    wrap(<CertificateRemindersList pariwarId={PARIWAR} items={[item()]} />);
+    fireEvent.click(screen.getByTestId('certificate-letter-reveal'));
+    expect(await screen.findByLabelText('The code we sent you')).toBe(screen.getByTestId('certificate-letter-code'));
+    expect(screen.getByTestId('certificate-letter-verify')).toHaveTextContent('Check the code and show the address');
+    expect(screen.getByTestId('certificate-letter-verify').closest('label')).toBeNull();
+    expect(screen.getByTestId('certificate-letter-new-code').closest('label')).toBeNull();
   });
 
   it('⭐ a delivery recorded LATE reads "delivered more than 14 days after posting", ⛔ never "no delivery recorded" (the letter WAS delivered)', () => {
@@ -299,7 +316,7 @@ describe('the "Certificate reminders" list (Story 6.19d)', () => {
     getCertificateReminders.mockResolvedValueOnce({ items: [item()], truncated: true });
     wrap(<CertificateRemindersRoute />);
     const banner = await screen.findByTestId('certificate-reminders-truncated');
-    expect(banner).toHaveTextContent('Only the most recently opened claims are listed. Earlier ones are not shown here.');
+    expect(banner).toHaveTextContent('Only the claims whose reminders began most recently are listed. Earlier ones are not shown here.');
     expect(banner).toHaveAttribute('role', 'status');
     expect(banner.textContent?.toLowerCase()).not.toContain('overdue');
   });

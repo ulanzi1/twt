@@ -122,7 +122,7 @@ export type CertificateReminderItemDto = z.output<typeof CertificateReminderItem
 export const CertificateRemindersResponse = z
   .object({
     items: z.array(CertificateReminderItemDto),
-    /** Claims were left out — the domain's bounded scan hit its cap, or more were visible than the page `limit`. */
+    /** Claims were left out — the domain's bounded scan (latest reminder run first) hit its cap, or more were visible than the page `limit`. */
     truncated: z.boolean(),
   })
   .strict();

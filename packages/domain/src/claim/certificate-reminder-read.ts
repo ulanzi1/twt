@@ -98,7 +98,7 @@ export interface CertificateListItem {
 
 export interface CertificateListScanResult {
   readonly items: readonly CertificateListItem[];
-  /** The scan hit `CERTIFICATE_LIST_SCAN_CAP` — older, more-overdue claims past the cap are NOT in `items`. */
+  /** The scan hit its limit — claims opened EARLIER than the last one scanned are NOT in `items`. */
   readonly truncated: boolean;
 }
 
@@ -119,13 +119,15 @@ export async function listCertificateReminderClaims(
     .where(eq(claimCertificateReminderRuns.pariwarId, pariwarId))
     .groupBy(claimCertificateReminderRuns.claimCaseId)
     .orderBy(desc(sql`max(${claimCertificateReminderRuns.openedAt})`))
-    .limit(limit);
+    // ONE PAST the limit — `truncated` only when a claim was REALLY left out (⛔ not at exactly `limit`). ⚠ The
+    // `clampLimit(...)` call stays INLINE in `.limit(...)` — the domain-accessor-invariants gate accepts nothing else.
+    .limit(clampLimit(limit + 1, { default: CERTIFICATE_LIST_SCAN_CAP + 1, cap: CERTIFICATE_LIST_SCAN_CAP + 1 }));
   const out: CertificateListItem[] = [];
-  for (const { claimCaseId } of claimRows) {
+  for (const { claimCaseId } of claimRows.slice(0, limit)) {
     const item = await readCertificateListItem(db, pariwarId, claimCaseId as ClaimId, today);
     if (item !== null) out.push(item);
   }
-  return { items: out, truncated: claimRows.length >= limit };
+  return { items: out, truncated: claimRows.length > limit };
 }
 
 /** One claim's row, or `null` when it is ⛔ not listed. */
@@ -150,6 +152,7 @@ export async function readCertificateListItem(
   let pauseReason: CertificatePauseReason | null = null;
   let runDay: number | null = null;
   let nextReminderOn: string | null = null;
+  const rows = await readClaimCertificateFamilyRows(db, pariwarId, claimCaseId);
   if (open !== null) {
     const facts = await readCertificatePlanFacts(db, pariwarId, claimCaseId);
     const plan = facts === null ? null : planCertificateRun(facts, today);
@@ -161,9 +164,11 @@ export async function readCertificateListItem(
       runState = 'open';
       if (plan?.kind === 'continue') {
         runDay = plan.runDay;
-        // ⚠ `>=`, ⛔ not `>`: a slot due TODAY (the sweep may not have run yet) still reads as "next", never
-        // understating urgency by skipping to the day after.
-        nextReminderOn = certificateReminderSchedule(open.day0).find((s) => s.date >= today)?.date ?? null;
+        // ⚠ Today's slot is "next" only while this run has ⛔ no row for it yet (the 10:00 IST sweep has not reached
+        // it); once it has, the next date is the following slot — ⛔ never "today" for a text already gone out.
+        const startedToday = (day: number) => rows.some((r) => r.runId === open.runId && r.slotDay === day);
+        nextReminderOn =
+          certificateReminderSchedule(open.day0).find((s) => s.date > today || (s.date === today && !startedToday(s.day)))?.date ?? null;
       }
       // `plan?.kind === 'end'` (completed / certificate received) or `'open'` (a restart about to supersede this
       // run) — the row is still open in the DB right now, but the next sweep ends/supersedes it: no further slot
@@ -172,7 +177,6 @@ export async function readCertificateListItem(
   }
 
   const recipients = await readCertificateRecipients(db, pariwarId, claimCaseId);
-  const rows = await readClaimCertificateFamilyRows(db, pariwarId, claimCaseId);
   const letters = await readClaimCertificateLetters(db, pariwarId, claimCaseId);
   const staff = await readClaimCertificateStaffRows(db, pariwarId, claimCaseId);
   const states = evaluateCertificatePersonStates(recipients.people, rows, letters, new Map());

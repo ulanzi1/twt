@@ -116,6 +116,15 @@ describe('the "Certificate reminders" list (Story 6.19d)', () => {
     expect(screen.getByTestId('certificate-cannot-remind')).toHaveTextContent('agreement to be contacted is not in force');
   });
 
+  it('⛔ code review round 2 — ⛔ no "next reminder on <date>" beside the "cannot remind" notice (the child sends nothing)', () => {
+    wrap(<CertificateRemindersList pariwarId={PARIWAR} items={[item({ cannot_remind: 'agreement_not_live' })]} />);
+    const row = screen.getByTestId(`certificate-reminders-item-${CLAIM}`);
+    expect(row).toHaveTextContent('day 9');
+    expect(row).not.toHaveTextContent('next reminder on');
+    expect(row).not.toHaveTextContent('No more reminders are scheduled.');
+    expect(screen.getByTestId('certificate-cannot-remind')).toBeInTheDocument();
+  });
+
   it('the letter form STATES what the letter must say, and a missing field is SAID (⛔ a silently disabled button)', () => {
     wrap(<CertificateRemindersList pariwarId={PARIWAR} items={[item()]} />);
     expect(screen.getByTestId('certificate-letter-must-say')).toHaveTextContent('clearly shows the date of death');
@@ -198,6 +207,26 @@ describe('the "Certificate reminders" list (Story 6.19d)', () => {
     expect(screen.queryByTestId('certificate-letter-address')).toBeNull();
   });
 
+  it('⭐ code review round 2 — a FAILED verify (expired / used-up code) never dead-ends the reveal: "Send a new code" asks for one', async () => {
+    getCertificateLetterAddress.mockRejectedValueOnce(new ApiError(403, 'auth.step_up_required', 'Step up required'));
+    requestStepUp.mockResolvedValueOnce({ sent: true, expiresInSeconds: 300 });
+    verifyStepUp.mockRejectedValueOnce(new ApiError(400, 'auth.step_up_invalid', 'That code has expired.'));
+    getCertificateLetterAddress.mockRejectedValueOnce(new ApiError(403, 'auth.step_up_required', 'Step up required'));
+    requestStepUp.mockResolvedValueOnce({ sent: true, expiresInSeconds: 300 });
+    wrap(<CertificateRemindersList pariwarId={PARIWAR} items={[item()]} />);
+    fireEvent.click(screen.getByTestId('certificate-letter-reveal'));
+    fireEvent.change(await screen.findByTestId('certificate-letter-code'), { target: { value: '000000' } });
+    fireEvent.click(screen.getByTestId('certificate-letter-verify'));
+    await waitFor(() => expect(verifyStepUp).toHaveBeenCalled());
+    const newCode = await screen.findByTestId('certificate-letter-new-code');
+    await waitFor(() => expect(newCode).not.toBeDisabled());
+    const stepUpsBefore = requestStepUp.mock.calls.length;
+    fireEvent.click(newCode);
+    await waitFor(() => expect(requestStepUp.mock.calls.length).toBe(stepUpsBefore + 1));
+    expect(requestStepUp).toHaveBeenLastCalledWith('certificate_letter_address');
+    expect(screen.getByTestId('certificate-letter-code')).toBeInTheDocument();
+  });
+
   it('⭐ a delivery recorded LATE reads "delivered more than 14 days after posting", ⛔ never "no delivery recorded" (the letter WAS delivered)', () => {
     const lateLetter = { letter_id: '99999999-9999-4999-8999-999999999999', posted_on: '2026-09-01', delivered_on: '2026-09-20', overdue: true, has_screenshot: false };
     wrap(
@@ -231,13 +260,56 @@ describe('the "Certificate reminders" list (Story 6.19d)', () => {
     const link = await screen.findByTestId('certificate-letter-screenshot-link');
     expect(link).toHaveAttribute('href', 'https://example.test/signed-screenshot');
     expect(link).toHaveTextContent('Open the delivery screenshot');
+    expect(getCertificateLetterScreenshot).toHaveBeenLastCalledWith(PARIWAR, CLAIM, delivered.letter_id);
   });
 
-  it('⭐ the list `truncated` flag is SHOWN — older, more-overdue claims are not silently dropped', async () => {
+  it('⭐ the signed screenshot link is DROPPED when its TTL runs out — and the page SAYS so', async () => {
+    const delivered = { letter_id: '99999999-9999-4999-8999-999999999999', posted_on: '2026-09-01', delivered_on: '2026-09-05', overdue: false, has_screenshot: true };
+    // 6 s − the 5 s safety margin ⇒ the link is offered for 1 s.
+    getCertificateLetterScreenshot.mockResolvedValueOnce({ url: 'https://example.test/signed-screenshot', expires_in_seconds: 6 });
+    wrap(
+      <CertificateRemindersList
+        pariwarId={PARIWAR}
+        items={[item({ people: [{ person_key: NOMINEE_A, role: 'nominee', position: 'A', sms_state: 'reminded', letter_eligible: true, letter: delivered, escalation_recorded_on: null }] })]}
+      />,
+    );
+    fireEvent.click(screen.getByTestId('certificate-letter-screenshot-load'));
+    expect(await screen.findByTestId('certificate-letter-screenshot-link')).toBeInTheDocument();
+    expect(await screen.findByText('The link expired — load it again.', {}, { timeout: 3000 })).toBeInTheDocument();
+    expect(screen.queryByTestId('certificate-letter-screenshot-link')).toBeNull();
+    expect(screen.getByTestId('certificate-letter-screenshot-load')).toBeInTheDocument();
+  });
+
+  it('⛔ a signed URL with ⛔ no usable lifetime (≤ the 5 s margin) is ⛔ never offered — "could not be loaded"', async () => {
+    const delivered = { letter_id: '99999999-9999-4999-8999-999999999999', posted_on: '2026-09-01', delivered_on: '2026-09-05', overdue: false, has_screenshot: true };
+    getCertificateLetterScreenshot.mockResolvedValueOnce({ url: 'https://example.test/signed-screenshot', expires_in_seconds: 5 });
+    wrap(
+      <CertificateRemindersList
+        pariwarId={PARIWAR}
+        items={[item({ people: [{ person_key: NOMINEE_A, role: 'nominee', position: 'A', sms_state: 'reminded', letter_eligible: true, letter: delivered, escalation_recorded_on: null }] })]}
+      />,
+    );
+    fireEvent.click(screen.getByTestId('certificate-letter-screenshot-load'));
+    expect(await screen.findByText('The screenshot could not be loaded.')).toBeInTheDocument();
+    expect(screen.queryByTestId('certificate-letter-screenshot-link')).toBeNull();
+  });
+
+  it('⭐ the list `truncated` flag is SHOWN — earlier claims are not silently dropped; ⛔ never "overdue" (a wait has no deadline)', async () => {
     params = { pariwarId: PARIWAR };
     getCertificateReminders.mockResolvedValueOnce({ items: [item()], truncated: true });
     wrap(<CertificateRemindersRoute />);
-    expect(await screen.findByTestId('certificate-reminders-truncated')).toHaveTextContent('Older, more overdue ones are kept');
+    const banner = await screen.findByTestId('certificate-reminders-truncated');
+    expect(banner).toHaveTextContent('Only the most recently opened claims are listed. Earlier ones are not shown here.');
+    expect(banner).toHaveAttribute('role', 'status');
+    expect(banner.textContent?.toLowerCase()).not.toContain('overdue');
+  });
+
+  it('⛔ code review round 2 — an EMPTY page that was cut ⛔ never says "No family is being reminded"', async () => {
+    params = { pariwarId: PARIWAR };
+    getCertificateReminders.mockResolvedValueOnce({ items: [], truncated: true });
+    wrap(<CertificateRemindersRoute />);
+    expect(await screen.findByTestId('certificate-reminders-truncated')).toHaveTextContent('No claim is shown here.');
+    expect(screen.queryByTestId('certificate-reminders-empty')).toBeNull();
   });
 
   it('the nav link — inside a Pariwar context only', async () => {

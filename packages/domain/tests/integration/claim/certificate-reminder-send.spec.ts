@@ -275,8 +275,23 @@ describe.skipIf(!hasDatabase)('the certificate reminder — send/claim/finalize 
       const sent = await beginCertificateFamilySend(client, sendInput(c, c.a.personKey));
       if (sent.kind !== 'send') throw new Error('expected a send');
       await finaliseCertificateReminder(bindScopedDb(client), { pariwarId: PID, reminderId: sent.reminderId, jobId: 'job-1', outcome: 'accepted' });
-      // `b` is now blocked by `taken`, ⛔ not `lower` (nobody lower than `b` remains unresolved).
+      // `b` is STILL blocked by `lower` (⚠ `lower` ignores whether `a` sent — code review round 2 corrected this
+      // comment, which said `taken`); `taken` alone is isolated in the next test.
       await expect(beginCertificateFamilySend(client, sendInput(c, c.b.personKey))).resolves.toMatchObject({
+        kind: 'skipped',
+        reason: 'same_number_in_slot',
+      });
+    });
+
+    it('⭐ CR6 `taken` ALONE — a HIGHER-keyed person\'s row at the shared number blocks the LOWER one (`lower` is false)', async () => {
+      const { client } = getTx();
+      const c = await openMissingRun(client, { mobiles: ['9876543210', '9876543210'] });
+      const shared = (c.hashes.get(c.a.personKey) as { hash: string }).hash;
+      expect((c.hashes.get(c.b.personKey) as { hash: string }).hash).toBe(shared);
+      // `b` (the HIGHER key) already has this slot's row at the shared number — e.g. a child that ran first on a
+      // fail-open hash. ⛔ Nobody is lower than `a`, so only `taken` can refuse it.
+      await deadRow(client, c.cid, c.runId, c.b.personKey, shared);
+      await expect(beginCertificateFamilySend(client, sendInput(c, c.a.personKey))).resolves.toMatchObject({
         kind: 'skipped',
         reason: 'same_number_in_slot',
       });

@@ -159,12 +159,12 @@ describe.skipIf(!hasDatabase)('the certificate reminder — admin LIST (live DB)
     const c = await openMissingRun(client, { mobiles: ['9876543210', '9123456789'] });
     const item = await readCertificateListItem(bindScopedDb(client), PID, c.cid, TODAY());
     expect(item).toMatchObject({ cause: 'missing', runState: 'open', runDay: 1 });
-    expect(item!.nextReminderOn).toBe(TODAY()); // day 1 is itself scheduled and due today (the `>=` fix)
+    expect(item!.nextReminderOn).toBe(TODAY()); // day 1 is itself scheduled, due today, and ⛔ not yet started
     expect(item!.people.map((p) => p.position).sort()).toEqual(['A', 'B']);
     expect(item!.people.every((p) => p.smsState === 'not_yet_reminded')).toBe(true);
   });
 
-  it('⭐ `nextReminderOn` uses `>=`, ⛔ not `>` — a slot due TODAY still reads as next (the sweep may not have run yet)', async () => {
+  it('⭐ a slot due TODAY, ⛔ not yet started, still reads as next (the sweep may not have run yet)', async () => {
     const { client } = getTx();
     // day0 two days back ⇒ today's runDay is 2, which is itself a scheduled day (CORRECTION_REMINDER_DAYS has 2).
     const c = await openMissingRun(client, { mobiles: ['9876543210', '9123456789'], daysAgo: 2 });
@@ -295,13 +295,37 @@ describe.skipIf(!hasDatabase)('the certificate reminder — admin LIST (live DB)
     expect(item).toMatchObject({ runState: 'open', runDay: null, nextReminderOn: null });
   });
 
-  it('⭐ `listCertificateReminderClaims` sets `truncated` exactly when the scan hits its limit', async () => {
+  it('⭐ `listCertificateReminderClaims` sets `truncated` only when a claim is REALLY left out — ⛔ not at exactly `limit`', async () => {
     const { client } = getTx();
-    await openMissingRun(client, { mobiles: ['9876543210', '9123456789'] });
-    await openMissingRun(client, { mobiles: ['9000000001', '9000000002'] });
-    await expect(listCertificateReminderClaims(bindScopedDb(client), PID, TODAY(), { limit: 1 })).resolves.toMatchObject({ truncated: true });
-    const full = await listCertificateReminderClaims(bindScopedDb(client), PID, TODAY(), { limit: 5 });
-    expect(full.truncated).toBe(false);
-    expect(full.items).toHaveLength(2);
+    const first = await openMissingRun(client, { mobiles: ['9876543210', '9123456789'] });
+    const second = await openMissingRun(client, { mobiles: ['9000000001', '9000000002'] });
+    // ⚠ Shared PARIWAR_A may hold residue (assert MEMBERSHIP, ⛔ never a total count): the scan is latest-opened
+    // first, so the two runs just opened are the newest — `limit: 1` keeps exactly one of them and leaves one out.
+    const one = await listCertificateReminderClaims(bindScopedDb(client), PID, TODAY(), { limit: 1 });
+    expect(one.truncated).toBe(true);
+    expect(one.items).toHaveLength(1);
+    const full = await listCertificateReminderClaims(bindScopedDb(client), PID, TODAY());
+    const ids = full.items.map((i) => i.claimCaseId);
+    expect(ids).toEqual(expect.arrayContaining([first.cid, second.cid]));
+    // The exact boundary: a limit equal to the number of claims with a run in the Pariwar is ⛔ NOT truncated.
+    const { rows } = await client.query<{ n: string }>(
+      'SELECT count(DISTINCT claim_case_id)::text AS n FROM claim_certificate_reminder_runs WHERE pariwar_id = $1',
+      [PARIWAR_A],
+    );
+    const exact = Number(rows[0]!.n);
+    await expect(listCertificateReminderClaims(bindScopedDb(client), PID, TODAY(), { limit: exact })).resolves.toMatchObject({ truncated: false });
+    await expect(listCertificateReminderClaims(bindScopedDb(client), PID, TODAY(), { limit: exact - 1 })).resolves.toMatchObject({ truncated: true });
+  });
+
+  it('⭐ once today\'s slot is STARTED (a row of this run for it), `nextReminderOn` moves past today — ⛔ never "today" for a text gone out', async () => {
+    const { client } = getTx();
+    const c = await openMissingRun(client, { mobiles: ['9876543210', '9123456789'] });
+    expect((await readCertificateListItem(bindScopedDb(client), PID, c.cid, TODAY()))!.nextReminderOn).toBe(TODAY());
+    const sent = await beginCertificateFamilySend(client, sendInput(c, c.a.personKey));
+    if (sent.kind !== 'send') throw new Error('expected a send');
+    const item = await readCertificateListItem(bindScopedDb(client), PID, c.cid, TODAY());
+    expect(item!.runDay).toBe(1);
+    expect(item!.nextReminderOn).not.toBeNull();
+    expect(item!.nextReminderOn! > TODAY()).toBe(true);
   });
 });

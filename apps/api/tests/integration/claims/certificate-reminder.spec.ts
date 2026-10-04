@@ -9,7 +9,7 @@
 import { randomUUID } from 'node:crypto';
 
 import { claim, cycleCalendar, encryption, ids, nominee, schema, bindScopedDb } from '@twt/domain';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import * as service from '../../../src/modules/auth/admin/admin-auth.service.js';
 import { MEMBER_NOMINEE_FIELD_CLASS } from '../../../src/context.js';
@@ -271,6 +271,22 @@ describe.skipIf(!hasDatabase)('the certificate reminder — routes (Story 6.19d)
     expect((await op.client.inject({ method: 'GET', url: listUrl(pariwarId) })).statusCode).toBe(403);
   });
 
+  it('⭐ code review round 2 — `truncated` is SET when the page `limit` drops a visible claim (⛔ only the scan cap before), clear when nothing is dropped', async () => {
+    const pariwarId = randomUUID();
+    const first = await certificateClaim(pariwarId);
+    const second = await certificateClaim(pariwarId);
+    const da = await staff(pariwarId, 'district_admin');
+    const cut = await da.client.inject({ method: 'GET', url: `${listUrl(pariwarId)}?limit=1` });
+    expect(cut.statusCode, cut.body).toBe(200);
+    expect(cut.json()).toMatchObject({ truncated: true });
+    expect((cut.json() as { items: unknown[] }).items).toHaveLength(1);
+    const whole = await da.client.inject({ method: 'GET', url: `${listUrl(pariwarId)}?limit=20` });
+    expect(whole.json()).toMatchObject({ truncated: false });
+    expect((whole.json() as { items: { claim_case_id: string }[] }).items.map((i) => i.claim_case_id)).toEqual(
+      expect.arrayContaining([first.claimCaseId, second.claimCaseId]),
+    );
+  });
+
   it('⭐ the ONE letter (CR9) — the address behind a FRESH step-up, recorded once (`-275` Q1 A), delivered once with a screenshot behind the SAME step-up; every audit line names the claim', async () => {
     const pariwarId = randomUUID();
     const { claimCaseId, people } = await certificateClaim(pariwarId);
@@ -304,22 +320,36 @@ describe.skipIf(!hasDatabase)('the certificate reminder — routes (Story 6.19d)
     expect(stored.rows[0]!.tracking_number_ciphertext.startsWith('enc:v1:')).toBe(true);
     expect(stored.rows[0]!.tracking_number_ciphertext).not.toContain('EE123456789IN');
 
+    // ⭐ The orphan-cleanup compensating action (code review round 2 — the earlier `already_delivered` probe was
+    // refused by the handler's pre-check BEFORE any upload, so it could not fail). `delivered_before_posted` is the
+    // DOMAIN's refusal, AFTER the screenshot is already in storage: the upload must happen AND be deleted again.
+    const storeSizeBeforeOrphan = t.claimDocumentStorage.store.size;
+    const putSpy = vi.spyOn(t.claimDocumentStorage, 'put');
+    // `delete` is OPTIONAL on the port type; the in-memory store always has it.
+    const deleteSpy = vi.spyOn(t.claimDocumentStorage as Required<typeof t.claimDocumentStorage>, 'delete');
     const before = multipart(Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47]), Buffer.from('proof')]), 'image/png', daysFromToday(-1));
     const early = await da.client.inject({ method: 'POST', url: `${base(pariwarId, claimCaseId)}/letters/${letterId}/delivery`, payload: before.body, headers: { 'content-type': before.ct } });
     expect(errCode(early)).toBe('certificate_letter.delivered_before_posted');
+    expect(putSpy, 'the screenshot was uploaded before the refused write').toHaveBeenCalledTimes(1);
+    const orphanKey = putSpy.mock.calls[0]![0];
+    expect(orphanKey).toContain(`/certificate-letter/${letterId}/`);
+    expect(deleteSpy).toHaveBeenCalledWith(orphanKey);
+    expect(t.claimDocumentStorage.store.has(orphanKey), 'the orphaned upload must be deleted, not left behind').toBe(false);
+    expect(t.claimDocumentStorage.store.size).toBe(storeSizeBeforeOrphan);
+    putSpy.mockRestore();
+    deleteSpy.mockRestore();
     const mp = multipart(Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47]), Buffer.from('proof')]), 'image/png', todayIst());
     const delivered = await da.client.inject({ method: 'POST', url: `${base(pariwarId, claimCaseId)}/letters/${letterId}/delivery`, payload: mp.body, headers: { 'content-type': mp.ct } });
     expect(delivered.statusCode, delivered.body).toBe(201);
     expect(delivered.json()).toMatchObject({ letter_id: letterId, delivered_on: todayIst(), has_screenshot: true });
     const keys = await t.pool.query<{ screenshot_storage_key: string }>('SELECT screenshot_storage_key FROM claim_certificate_reminder_letters WHERE letter_id = $1', [letterId]);
     expect(keys.rows[0]!.screenshot_storage_key).toContain(`/certificate-letter/${letterId}/`);
-    // The orphan-cleanup compensating action: the upload lands BEFORE the DB write is attempted, so a refused
-    // write (`already_delivered`) must not leave the just-uploaded screenshot behind in storage.
-    const storeSizeBeforeOrphan = t.claimDocumentStorage.store.size;
+    // A second delivery is refused by the handler's pre-check BEFORE any upload — ⛔ nothing reaches storage.
+    const storeSizeBeforeAgain = t.claimDocumentStorage.store.size;
     const mp2 = multipart(Buffer.from([0x89, 0x50, 0x4e, 0x47]), 'image/png', todayIst());
     const again = await da.client.inject({ method: 'POST', url: `${base(pariwarId, claimCaseId)}/letters/${letterId}/delivery`, payload: mp2.body, headers: { 'content-type': mp2.ct } });
     expect(errCode(again)).toBe('certificate_letter.already_delivered');
-    expect(t.claimDocumentStorage.store.size, 'the orphaned re-upload must be deleted, not left behind').toBe(storeSizeBeforeOrphan);
+    expect(t.claimDocumentStorage.store.size).toBe(storeSizeBeforeAgain);
 
     const other = await staff(pariwarId, 'district_admin');
     const unelevatedShot = await other.client.inject({ method: 'GET', url: `${base(pariwarId, claimCaseId)}/letters/${letterId}/screenshot` });

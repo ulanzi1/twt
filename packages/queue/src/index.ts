@@ -402,7 +402,7 @@ export const QUEUE_NAMES = {
    * CLAIM_CERTIFICATE_FAMILY_SMS child per due (run, slot, person). ⛔ It never refuses, closes, approves or
    * time-limits a claim (invariant 1); ⛔ no staff push (CR10). Job class C.
    */
-  CLAIM_CERTIFICATE_REMINDER_SWEEP: 'claim.certificate.reminder_sweep',
+  CLAIM_CERTIFICATE_REMINDER_SWEEP: 'claim.certificate.reminder.sweep',
   /**
    * ONE certificate-reminder SMS for one (run, slot, person) (Story 6.19d, AC3; CR6–CR8). It hashes EVERY person's
    * number BEFORE the claim-row lock, re-checks under it (the plan, the recipients, the per-number delivered-letter

@@ -190,6 +190,17 @@ function LetterForm({ pariwarId, item, person }: { pariwarId: string; item: Item
               >
                 {l.showAddress}
               </button>
+              {/* ⭐ Code review round 2 — an expired / used-up code must never dead-end the reveal: this asks for a
+                  NEW code (the reveal's own 403 → requestStepUp), ⛔ not a second "Show the address". */}
+              <button
+                type="button"
+                className="self-start underline"
+                disabled={revealPending}
+                onClick={() => void reveal()}
+                data-testid="certificate-letter-new-code"
+              >
+                {l.newCode}
+              </button>
             </label>
           ) : null}
           {addressError !== null ? <p role="alert">{addressError}</p> : null}
@@ -372,7 +383,12 @@ export function CertificateRemindersList({ pariwarId, items }: { pariwarId: stri
           ) : (
             <p className="text-xs">
               {item.run_day !== null ? `${t.run.day} ${String(item.run_day)}` : ''}
-              {item.next_reminder_on !== null ? ` · ${t.run.nextReminder} ${item.next_reminder_on}` : ` · ${t.run.noMore}`}
+              {/* ⛔ No reminder date beside the cannot-remind notice — the child sends nothing while it stands. */}
+              {item.cannot_remind !== null
+                ? ''
+                : item.next_reminder_on !== null
+                  ? ` · ${t.run.nextReminder} ${item.next_reminder_on}`
+                  : ` · ${t.run.noMore}`}
             </p>
           )}
           {item.cannot_remind !== null ? (

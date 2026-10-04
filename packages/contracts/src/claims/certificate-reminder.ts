@@ -85,11 +85,8 @@ export const CertificateLetterDto = z
   })
   .strict();
 export type CertificateLetterDto = z.output<typeof CertificateLetterDto>;
-
-/** The letter-record route's response (the 6.19b `RecordCorrectionLetterResponse` convention) — reused as-is for the
- * delivery route too: both write routes return the SAME updated letter row. */
-export const RecordCertificateLetterResponse = CertificateLetterDto;
-export type RecordCertificateLetterResponse = CertificateLetterDto;
+// ⭐ BOTH write routes (the letter, its delivery) respond with `CertificateLetterDto` itself — ⛔ no response alias (code
+// review round 2: an alias with zero consumers is a second source that drifts).
 
 export const CertificateReminderPersonDto = z
   .object({
@@ -113,7 +110,8 @@ export const CertificateReminderItemDto = z
     cause: z.enum(CERTIFICATE_REMINDER_CAUSES),
     run_state: z.enum(CERTIFICATE_REMINDER_RUN_STATES),
     pause_reason: z.enum(CERTIFICATE_REMINDER_PAUSE_REASONS).nullable(),
-    run_day: z.number().int().min(0).nullable(),
+    // ⛔ No `.min(0)` — an OUTPUT schema stays loose (footgun #29(a)): one anomalous row must not 500 the whole list.
+    run_day: z.number().int().nullable(),
     next_reminder_on: z.string().nullable(),
     cannot_remind: z.enum(CERTIFICATE_REMINDER_CANNOT_REMIND).nullable(),
     people: z.array(CertificateReminderPersonDto),
@@ -124,7 +122,7 @@ export type CertificateReminderItemDto = z.output<typeof CertificateReminderItem
 export const CertificateRemindersResponse = z
   .object({
     items: z.array(CertificateReminderItemDto),
-    /** The domain's bounded scan hit `CERTIFICATE_LIST_SCAN_CAP` — older, more-overdue claims are NOT in `items`. */
+    /** Claims were left out — the domain's bounded scan hit its cap, or more were visible than the page `limit`. */
     truncated: z.boolean(),
   })
   .strict();

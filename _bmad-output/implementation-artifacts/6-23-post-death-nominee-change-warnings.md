@@ -3,119 +3,147 @@ baseline_commit: 2059482b
 ---
 
 <!--
-BASELINE — `2059482b` on `main` (`story(6.19d): code review round 3 … ci:local 34/34 green`), in step with `origin/main` (fetched
-2026-10-04). Every code claim below was traced on this SHA on 2026-10-04. ⭐ Two facts are kept apart, as they must be: "the pin is
-an ancestor of HEAD" (durable) and "the code claims were re-derived at `2059482b`" (perishable). Before Task 1 run
-`git diff --name-only 2059482b..HEAD -- packages apps scripts docs` and re-read anything it lists that this file cites.
+BASELINE — `2059482b` on `main` (`story(6.19d): code review round 3 … ci:local 34/34 green`). Every code claim below was traced on this
+SHA on 2026-10-04. ⭐ Two facts are kept apart: "the pin is an ancestor of HEAD" (durable) and "the code claims were re-derived at
+`2059482b`" (perishable). Before Task 1 run `git diff --name-only 2059482b..HEAD -- packages apps scripts docs` and re-read anything it
+lists that this file cites. (The only commits since the pin are this story's own governance commits — ⛔ no code.)
 
-GLYPH REGISTER: `⛔` sits ONLY on a negation word (not / no / never / nothing / none / nobody / neither / cannot / don't); `⭐` = key
-fact or action; `⚠` = hazard. Doubling is volume only. ⭐ Sweep on every pass: `grep -oE "⛔ \**[A-Za-z]+"` — every head-word a negation.
+⭐ v2.x IS A DERIVATION, ⛔ NOT AN APPEND. v1.0–v1.2 (one story, Q1–Q3 built at "meanwhile" A) are kept in git on this branch. The Panel
+ruled Q1–Q3 (`2026-10-04-277`: Q1 A · Q2 C · Q3 B) and BigDev split the row (*"ok, split it"*, 2026-10-04): THIS file is Story **6.23a**
+(it KEEPS the key `6-23-post-death-nominee-change-warnings` because `-261`, `-262`, `-264` and `-277` cite it — the 6.21a precedent);
+the later approvers are Story **6.23b** (`6-23b-every-approver-gives-a-warning-reason.md`). v2.1 adds BigDev's REASON LIST (2026-10-04,
+NW16–NW18): one built-in generic reason, the Super Admin adds or replaces reasons in the UI (⛔ never deletes), every approver sees who added
+each reason and its "when to use" note, and a written note is ⛔ never replaced.
+
+GLYPH REGISTER: `⛔` sits ONLY on a negation word (not / no / never / nothing / none / nobody / neither / cannot / don't / nowhere); `⭐` =
+key fact or action; `⚠` = hazard. Doubling is volume only. ⭐ Sweep on every pass: `grep -oE "⛔ \**[A-Za-z]+"` — every head-word a negation.
 ⭐ The ONE exception: a `⛔` inside a verbatim quotation from another file (`epics.md` Story 6.20's AC3, quoted in AC0) belongs to the quote.
 ADDRESSING RULE: ⛔ no `file:NNN` pointers into `.decision-log.md`, `deferred-work.md` or `sprint-status.yaml` (newest-first — every
-prepend rots every number). Cite decision ids + clauses, item headings and row keys. `file:NNN` is used ONLY for code, as of
-`2059482b` — function names are the stable handle.
-LETTERS: `NW1`…`NW12` are THIS story's author decisions (⏳ PROPOSED — committed by ONE author-commit in Task 0). `Q1`…`Q3` are the three
-confirms owed to the Panel's next note (⛔ none blocks the build). Rulings are cited by decision id + item: `-261` D1, `-262` FQ1 / FQ2 /
-FQ8 A, `-264` FQ12. Other stories' letters are qualified (`6.20 D6`, `6.21a D7`, `6.19a D14`).
+prepend rots every number). Cite decision ids + clauses, item headings and row keys. `file:NNN` is used ONLY for code, as of `2059482b`.
+LETTERS: `NW1`…`NW18` are 6.23a's author decisions; `EA1`…`EA9` are 6.23b's (in its own file). Both sets are committed by ONE author-commit,
+`-278`, in Task 0 here (the 6.19 / 6.21 precedent: one decision for a split set). `Q1`…`Q3` are the confirms ✅ RULED by `-277`.
 -->
 
-# Story 6.23: The Post-Death and Recent Nominee-Change Warnings, the Correction Label, and One Rule for Approving Over a Warning `[SURFACE]`
+# Story 6.23a: The Post-Death and Recent Nominee-Change Warnings, the Correction Label, the Reason List, and the District Admin's Reason and Note — Including for a Warning That Appears After Approval `[SURFACE]`
 
 Status: ready-for-dev
 
-> ⭐⭐ **WHAT THIS STORY IS, IN ONE PARAGRAPH.** On the District Admin's console the system now **shows a warning** on any nominee
-> version dated **on or after the death** (`-261` D1 B) and on any nominee change made **within 90 days before the claim was filed**,
-> whatever the certificate says (`-262` FQ8 A). An approved **correction** is ⛔ never warned — it carries its own plain label,
-> *"corrected after the death — approved by [District Admin] and [Pariwar Admin]"* (`-262` FQ1 B). And there is **ONE rule for every
-> warning**: the District Admin may still approve the claim while a warning shows, but **only by choosing a reason and writing a note**
-> (`-262` FQ2 A, `-264` FQ12). ⭐ **The system still refuses nothing, marks nothing and changes nobody's payment** — the refusal stays
-> the District Admin's (`-239`, `-261` D1), and the determination form still pre-selects nothing (6.20 AC4).
+> ⭐⭐ **WHAT THIS STORY IS, IN ONE PARAGRAPH.** On the District Admin's console the system **shows a warning** on any nominee version
+> dated **on or after the death** (`-261` D1 B) and on any nominee naming or change made **within 90 days before the first claim was
+> filed** — a member's first nominee included (`-262` FQ8 A, `-277` Q1 A). An approved **correction** is ⛔ never warned — it carries
+> the ratified label *"corrected after the death — approved by [District Admin] and [Pariwar Admin]"* (`-262` FQ1 B). The District Admin
+> may approve while a warning shows **only by choosing a reason from the Pariwar's reason list and writing a note** (`-262` FQ2 A,
+> `-264` FQ12), and the system **records the reason chosen and which warnings that approval covered**. If a warning **appears after** they
+> approved (a re-reviewed certificate moves the date of death), the District Admin records a reason and a note for it too (`-277` Q3 B) —
+> at any point up to the final approval, even once the claim is frozen. ⭐ **The system still refuses nothing, marks nothing and pays no one
+> differently.**
 
-> ⚠⚠ **STOP — v1.2 (2026-10-04): THE PANEL RULED Q1–Q3 (`2026-10-04-277`, DR + KB): Q1 A · Q2 C · Q3 B.** Q1 A is what this file
-> builds (NW3). ⚠ **Q2 C and Q3 B are ⛔ not yet designed here:** Q2 C — **every approver** (the trustee resolving an escalation, the
-> Pariwar Admin's final vote, each R9 vote, 6.19c's Super Admin and "no correction needed" approvals) gives a reason and a note while a
-> warning shows; Q3 B — a warning that appears after the District Admin approved makes the final approval **wait** for the District Admin's
-> reason and note. ⇒ NW6, NW7, AC3–AC5, AC7 and Tasks 3, 5, 6 below still describe v1.1's *"meanwhile"* A — do ⛔ not build them as
-> written. ⭐ The design is re-derived (v2.0) **before** Task 0's author-commit, which is now **`-278`** (`-277` is the Panel's ruling).
+> ⭐⭐ **THE REASON LIST (BigDev, 2026-10-04 — NW16–NW18).** Every Pariwar starts with **one built-in generic reason** — *"Warnings reviewed —
+> approved despite them"*. The **Super Admin adds reasons in the UI**, each with a short **"when to use this reason" note**; a reason can
+> only be **replaced by a newer one** — ⛔ never edited, ⛔ never deleted — and the old one stays in the history, so every past approval
+> still shows the words that were chosen. **Every approver sees, beside each reason, who added it, when, and its note** — so the list
+> teaches (BigDev: *"this will also help other approver learn sth from super admin"*). ⭐ **A written note is ⛔ never replaced**: the
+> reason list can change; a note — a reason's, or an approver's — is audit evidence, written once (BigDev: *"Written note also serve the
+> later audit therefore replacing is no good"*). ⇒ an approval made over a warning can ⛔ never be revised (NW7).
 
-> ⭐ **Not in `epics.md`'s story list.** Minted by Trustee rulings `-261` / `-262` (row added 2026-09-28; ⛔ no story file until this one).
-> Like 6.20 it needs a `### Story 6.23` section with a `> ⚠ Minted by…` header in `epics.md` (Task 0). `epic-6-retrospective` stays `done`.
-> ⭐ **Owner of the ONE approval rule** (`-264` Consequence 2): rows **`6-26`** (FQ8 C — the date and time of death at the inspection) and
-> **`6-27`** (FQ8 E, FQ10 — the neighbours) **produce** warnings into it. 6.23 lands first and builds the rule so those rows add a
-> warning **kind**, ⛔ never a second rule (NW1).
+> ⭐ **THE SPLIT (`-277`; BigDev 2026-10-04).** **6.23a (this file) is everything the District Admin does and sees, plus the reason list.**
+> **6.23b** is every LATER approver (`-277` Q2 C): the trustee resolving an escalation, the Pariwar Admin's final vote, each R9 vote, 6.19c's
+> Super Admin and "no correction needed" approvals — each picks from the SAME list and writes a note while a warning shows — **and Q3 B's
+> WAIT** at the final approval (a conjunct in `assertClaimApprovable` that reads the District Admin's coverage this story records).
+> ⇒ 6.23b starts only when 6.23a is `done`. ⚠ **Go-live coupling:** `-277` Q2 C and Q3 B are ⛔ not in force until 6.23b ships. Merging 6.23a
+> alone is fine ([[project_not_in_production_merge_is_not_golive]]); going live with it alone would let the later approvers approve over a
+> warning with ⛔ no reason, and let a late warning go unanswered.
 
-> ⚠⚠ **FOUR FACTS THIS PASS FOUND THAT THE RULINGS' TEXT DOES ⛔ NOT SAY — read before anything else.**
-> 1. ⚠ **What the Panel was told about FQ2 is wrong in part.** The routing note said *"The system already requires a reason in one similar
->    case: approving a claim that carries a concealment flag."* Traced at `2059482b`: the verifier code `concealment_flag_override` is only
->    **permitted** on an approve (`REASON_CODE_OUTCOME_COMPAT`, `claim/verifier-decision.ts:64-72`); ⛔ nothing requires it when a flag is
->    present (`adjudicateClaim` checks only outcome compatibility, `verifier-decision-persist.ts:319-321`). The State Trustee's
->    `concealment_override` is likewise *"merely PERMITTED on an approve"* (`state-trustee-decision.ts:111-116`); the only enforced
->    concealment rule runs the **other** way — a concealment code needs a flagged signal (`resolveConcealmentSnapshot`,
->    `state-trustee-decision-persist.ts:449-474`). ⇒ **6.23 builds the FIRST "a warning present ⇒ a reason required" rule in the stack.**
->    ⭐ The ruling stands — FQ2 A is a requirement in its own right, ⛔ not an extension of a precedent. Recorded in Task 0's author-commit
->    and disclosed in the next Panel note ([[feedback_record_unattested_no_backfill]]; the `-263` correction is the model).
-> 2. ⚠ **FQ12 binds "the District Admin" — and two shipped paths approve a claim without one.** A **State Trustee resolving an escalation**
->    approves to `verifier_approved` with ⛔ no reason code required (`resolveEscalation`, `state-trustee-decision-persist.ts:1026-1040`;
->    `trusteeReasonCodeRequiredForOutcome('approved')` is false). An **appeal reversal** goes `reversed → state_trustee_freeze` and on to the
->    Pariwar Admin's final approval with ⛔ no District Admin approval at all (`claim/state.ts:257-259, 363, 385-390`) — and a `-239` refusal,
->    which is the commonest claim to carry a warning, is exactly what gets appealed. (A third path — the **R9 panel** — also bypasses the
->    District Admin, but every vote already requires a written rationale, `packages/contracts/src/claims/r9-voting.ts`; so does every appeal
->    stage, `appeal.ts`. ⇒ the escalation resolution is the ONLY one with ⛔ no written reason at all.) ⇒ 6.23 builds the rule **where it
->    was ruled** (the District Admin's approval) and carries the other approvers as **Q2** (⛔ not blocking).
-> 3. ⭐ **The approval rule needs ⛔ no decrypt.** The certificate date is Tier-1 ciphertext. But once `assertClaimApprovable` has passed, the
->    live determination is **current against the accepted certificate** (6.21a D7) and **every one of its marks agrees with the date**
->    (6.20 D6 — the writer refuses any other, `nominee-determination-persist.ts` header). ⇒ at the gate, *"a version dated on or after the
->    death"* is **exactly** *"a member-source version the live determination marks `discarded`"* — the same fact `-239`'s refusal is grounded
->    on (`assertPostDeathRefusalGrounded`, `verifier-decision-persist.ts:124-138`). The timeline, which already decrypts the accepted date on
->    its audited read (`claims.nominee-declaration.handlers.ts:227-238`), shows the warning **by date** — including before any determination.
->    ⚠ The equivalence holds **only after the gate** — the call ORDER is load-bearing (NW2, Trap 2).
-> 4. ⚠ **Two shipped tests pin the rule `-261` D1 superseded, and every approve-path fixture is one date away from the 90-day warning.**
+> ⭐ **Not in `epics.md`'s story list.** Minted by Trustee rulings `-261` / `-262` / `-264` / `-277`. Task 0 adds `### Story 6.23a` and
+> `### Story 6.23b` with `> ⚠ Minted by…` headers. `epic-6-retrospective` stays `done`.
+> ⭐ **Owner of the ONE approval rule** (`-264` Consequence 2): rows **`6-26`** (FQ8 C) and **`6-27`** (FQ8 E, FQ10) **produce** warnings
+> into it ⇒ they add a warning **kind** (with its key, NW1), ⛔ never a second rule.
+> ⭐ **No Panel note is owed for the reason list** (§0 gate, 2026-10-04): `-264` left the reasons' wording to us (*"an author-commit at the
+> row's Task 0"*), and who maintains a staff pick-list changes ⛔ nothing a family sees or is owed. `-278` records that this family departs
+> from UX-DR43's planning wording (*"categories agreed upfront by Trustee Panel"*) under `-264`'s delegation; an FYI line in the Panel's next
+> note is BigDev's option, ⛔ not a question.
+
+> ⚠⚠ **FIVE FACTS THE RULINGS' TEXT DOES ⛔ NOT SAY — read before anything else.**
+> 1. ⚠ **What the Panel was told about FQ2 was wrong in part — and they ruled with the correction in front of them.** The 2026-09-28 note
+>    said *"The system already requires a reason … approving a claim that carries a concealment flag."* Traced: `concealment_flag_override`
+>    is only **permitted** on an approve (`REASON_CODE_OUTCOME_COMPAT`, `claim/verifier-decision.ts:64-72`; `adjudicateClaim` checks only
+>    outcome compatibility, `verifier-decision-persist.ts:319-321`); the trustee `concealment_override` is *"merely PERMITTED"*
+>    (`state-trustee-decision.ts:111-116`). ⇒ **6.23a builds the FIRST "a warning present ⇒ a reason required" rule.** `-277` acknowledges
+>    the correction; `-262` FQ2 stands. ⚠ A concealment-flagged claim can still be approved with ⛔ no reason (⛔ not this story's — the
+>    Panel did ⛔ not take up the offer).
+> 2. ⭐ **The approval rule needs ⛔ no decrypt.** Once `assertClaimApprovable` has passed, the live determination is **current against the
+>    accepted certificate** (6.21a D7) and **every mark agrees with the date** (6.20 D6 — the writer refuses any other,
+>    `nominee-determination-persist.ts` header) ⇒ at the gate, *"a version dated on or after the death"* is **exactly** *"a member-source
+>    version the live determination marks `discarded`"* — the ground `-239`'s refusal stands on (`assertPostDeathRefusalGrounded`,
+>    `verifier-decision-persist.ts:124-138`). The timeline, which already decrypts the accepted date (`claims.nominee-declaration.handlers.ts:227-238`),
+>    shows the warning **by date**, before any determination. ⚠ The equivalence holds **only after the gate** (Trap 2).
+> 3. ⚠ **Q3 B cannot ride `reviseDecision`.** A District Admin revises their decision only in `verifier_approved` / `denied`
+>    (`VERIFIER_DECISION_REVISABLE_STATES`, `verifier-decision-persist.ts:51`), but a certificate can be re-reviewed — and a late warning born
+>    — in `state_trustee_freeze` too (`CLAIM_REVIEW_WINDOW_STATES`, `review-window.ts`). And a warned approval is ⛔ never revised anyway
+>    (NW7). ⇒ **the late reason is its own record** (NW14), allowed in both states.
+> 4. ⚠ **"Which warnings the approval covered" must be SNAPSHOTTED at approval.** The warnings move with the certificate date, so they ⛔
+>    cannot be recomputed later as "what the District Admin saw". ⇒ each District Admin approval over a warning writes a **record** of the
+>    warning KEYS and the reason chosen (NW13), and Q3 B's question becomes *"is every current key covered?"* — per warning, ⛔ not per kind.
+> 5. ⚠ **Two shipped tests pin the rule `-261` D1 superseded, and every approve-path fixture is one date away from the 90-day warning.**
 >    `apps/admin/tests/nominee-declaration-panel.test.tsx:159-169` asserts the timeline never says *"after death"*;
 >    `apps/api/tests/integration/claims/nominee-declaration.spec.ts:328-345` forbids `post_death` in the timeline body. Both are **amended,
->    ⛔ never deleted** (AC9). And the fixture declaration date `SEEDED_NOMINEES_DECLARED_AT = 2026-01-05` is what keeps every seeded claim
->    outside the 90-day window — a fixture dated within 90 days of the **test run** would flip behaviour as the calendar moves (Trap 5).
+>    ⛔ never deleted** (AC11). The fixture date `SEEDED_NOMINEES_DECLARED_AT = 2026-01-05` keeps every seeded claim outside the window (Trap 5).
 
 ## Story
 
 As the **District Admin** checking a family's death claim,
 I want **the system to warn me when the member's nominee was changed on or after the date of death, or named or changed in the 90 days
-before the claim was filed — and to label a genuine correction plainly instead of warning on it**,
-so that **I can never approve such a claim without first saying, in a reason and a note, why I am approving it** — while the refusal,
-and every mark on the declaration, stays my own judgement.
+before the claim was filed — to label a genuine correction plainly instead — to pick my reason from a list whose entries tell me who wrote
+them and when to use them — and to answer a warning that appears after I approved**,
+so that **I never approve such a claim, and it never goes on after my approval, without my reason and an unalterable note on record** —
+while the refusal, and every mark on the declaration, stays my own judgement.
+
+As the **Super Admin**, I want **to add a reason to my Pariwar's list, or replace one with a newer one, each with a note saying when to use
+it**, so that **approvers choose from words the Trust stands behind — and ⛔ no reason anyone ever chose can disappear**.
 
 ## The rulings this story builds — verbatim keys, and what is still OUR reading
 
-⚠ Verbatim text lives in `.decision-log.md`; the reading column is ours and is ⛔ **not ratified** — each reading this story BUILDS on is
-committed by Task 0's author-commit, and the three that change what staff see or must do are put to the Panel as Q1–Q3.
+⚠ Verbatim text lives in `.decision-log.md`; the reading column is ours and is ⛔ **not ratified** unless a later ruling says so (each row
+says which). Task 0's author-commit (`-278`) records every reading this story builds on.
 
-| Decision | The Panel said (verbatim, as relayed) | Our reading (⛔ not ratified) |
+| Decision | The Panel said (verbatim, as relayed) | Our reading |
 |---|---|---|
-| `-261` D1 | *"D1 - B"* — *"THE SYSTEM SHOWS A WARNING ON ANY NOMINEE VERSION DATED ON OR AFTER THE DEATH. The system **still refuses nothing** — the refusal stays the District Admin's."* | *"Dated"* = the version's `effective_at` against the claim's **current, accepted** certificate date — the comparison the marking already makes (6.20 D6). ⇒ ⛔ no accepted certificate, ⛔ no warning; the console says the date is not yet known. (`-261`'s own reading.) |
-| `-262` FQ1 | *"FQ1-D1 - B"* — *"AN APPROVED CORRECTION IS ⛔ NOT WARNED; IT CARRIES ITS OWN PLAIN LABEL — 'corrected after the death — approved by [District Admin] and [Pariwar Admin]'."* | A `source = 'correction'` version is ⛔ never warned (its target is, if dated so). The names are the correction row's snapshotted `da_display` / `pa_display` (NW4). |
-| `-262` FQ2 | *"FQ2-D1 - A"* — *"A CLAIM MAY BE APPROVED WHILE THE WARNING SHOWS, BUT THE DISTRICT ADMIN MUST CHOOSE A REASON AND WRITE A NOTE."* | *"A reason"* = a new approve-only reason code; *"a note"* = the existing rationale, made required (`-262`'s reading). |
-| `-262` FQ8 A | *"FQ8 A (within 90 days)"* — *"any nominee change made **within 90 days before the claim was filed** gets a warning, **whatever the certificate says**."* (⚠ the Panel **amended** our 30 to 90.) | IST calendar days between a version's `effective_at` and the **first** claim's filing for that death; **every** version, before or after the death; a correction is labelled, ⛔ not warned twice (`-262`'s reading). ⚠ Whether a member's **first** naming of a nominee is a "change" — **Q1**. |
-| `-264` FQ12 | *"1 - yes"* — *"A claim may be approved while **any** warning shows … **only if the District Admin chooses a reason and writes a note**."* | ONE reason-and-note per approval, ⛔ not one per warning; the reason names that warnings were present; a correction's label is ⛔ not a warning; a **refusal** is ⛔ never gated (`-264`'s reading). ⚠ Approvals made by **someone other than** the District Admin — **Q2**; a warning that appears **after** the District Admin approved — **Q3**. |
-| `-264` not-cover | *"The wording of the reasons (the reason codes are 6.20's family — an author-commit at the row's Task 0)."* | ⭐ The Panel **delegated** the reason code and its words to this story's Task 0 (NW5) — which satisfies UX-DR43's *"categories agreed upfront by Trustee Panel"*. |
+| `-261` D1 | *"THE SYSTEM SHOWS A WARNING ON ANY NOMINEE VERSION DATED ON OR AFTER THE DEATH. The system **still refuses nothing** — the refusal stays the District Admin's."* | *"Dated"* = `effective_at` against the claim's **current, accepted** certificate date (6.20 D6) ⇒ ⛔ no accepted certificate, ⛔ no warning; the console says the date is not yet known (`-261`'s reading). |
+| `-262` FQ1 | *"AN APPROVED CORRECTION IS ⛔ NOT WARNED; IT CARRIES ITS OWN PLAIN LABEL — 'corrected after the death — approved by [District Admin] and [Pariwar Admin]'."* | A `source = 'correction'` version is ⛔ never warned (its target is, if dated so). The names are the correction row's snapshotted `da_display` / `pa_display` (NW4). |
+| `-262` FQ2 | *"A CLAIM MAY BE APPROVED WHILE THE WARNING SHOWS, BUT THE DISTRICT ADMIN MUST CHOOSE A REASON AND WRITE A NOTE."* | *"A reason"* = an entry chosen from the Pariwar's reason list (NW5, NW16); *"a note"* = the rationale, made required and ⛔ never replaced (NW7, NW18). |
+| `-262` FQ8 A | *"any nominee change made **within 90 days before the claim was filed** gets a warning, **whatever the certificate says**."* (Panel-amended from 30.) | IST calendar days between a version's `effective_at` and the **first** claim's filing for that death; **every** version, before or after the death; a correction is labelled, ⛔ not warned twice (`-262`'s reading). |
+| `-264` FQ12 | *"A claim may be approved while **any** warning shows … **only if the District Admin chooses a reason and writes a note**."* | ONE reason + ONE note per approval, ⛔ not per warning; a correction's label is ⛔ not a warning; a **refusal** is ⛔ never gated (`-264`'s reading). |
+| `-264` not-cover | *"The wording of the reasons (the reason codes are 6.20's family — an author-commit at the row's Task 0)."* | ⭐ The reasons are ours to define. ⭐ BigDev (2026-10-04): one built-in generic + a Super-Admin-maintained, replace-only list (NW16, NW17). `-278` records it. |
+| ⭐ `-277` Q1 | *"Q1 - A"* — a member's **first** naming of a nominee within 90 days before filing is warned too. | ✅ **Ratified** — `-262`'s *"every version"* reading is now the Panel's rule. |
+| ⭐ `-277` Q2 | *"Q2 - C"* — *"every approver … also after an appeal and in the R9 vote … even where written reasons already exist."* | ⭐ **6.23b's**, from the SAME list. The District Admin's approval (`-264`) is this story's (`-277`'s reading, confirmed by BigDev in session). |
+| ⭐ `-277` Q3 | *"Q3 - B"* — *"The District Admin adds a reason and a note before the claim goes on … The claim is never refused for it."* | ⭐ **Split:** the District Admin's reason and note for a late warning — and the coverage it is judged against — are **this story's** (NW13, NW14); the **wait** at the final approval is **6.23b's** (EA2). Tracked **per warning**, ⛔ not per kind (`-277`'s reading). |
 
 ## ⭐ THE INVARIANTS — every AC below serves one of them
 
-1. **The system refuses nothing, marks nothing and pays no one differently.** A warning is information on the District Admin's console and a
-   condition on the **form** of their approval — ⛔ never a refusal, ⛔ never a wait, ⛔ never a determination mark, ⛔ never a change to
-   the effective declaration, the name check or the split (`-261` D1; 6.20 invariant 1 **as narrowed by D1**).
-2. **One rule, every warning, one place.** The rule is ONE assertion at the District Admin's approval (`adjudicateClaim`, approve) over ONE
-   set of warning kinds; 6-26 and 6-27 add **kinds**, ⛔ never a second rule (`-264` Consequence 2; NW1).
+1. **The system refuses nothing, marks nothing and pays no one differently.** A warning is information on the console and a condition on the
+   **form** of an approval — ⛔ never a refusal, ⛔ never a determination mark, ⛔ never a change to the effective declaration, the name check or
+   the split (`-261` D1; 6.20 invariant 1 **as narrowed by D1**).
+2. **One rule, every warning, one place.** ONE assertion over ONE set of warning kinds and keys and ONE reason list; 6-26 / 6-27 add **kinds**,
+   ⛔ never a second rule; 6.23b calls the SAME assertion at every later approver (`-264` Consequence 2; NW1).
 3. **A correction is ⛔ never a warning.** It carries the FQ1 label and ⛔ never triggers the rule (`-262` FQ1, `-264`'s reading).
 4. **A refusal is ⛔ never gated** — nor an escalation. The rule binds an approval only (`-264`'s reading; the 6.18 asymmetry, `-226` cl.6-7).
 5. **The determination form still pre-selects nothing.** `-261` D1 superseded *"highlights nothing / labels nothing"* — ⛔ not *"pre-selects
-   nothing"* or *"decides nothing"* (6.20 AC4). ⛔ No version is pre-marked, sorted or filtered by its warning.
+   nothing"* or *"decides nothing"* (6.20 AC4). ⛔ No version is pre-marked, sorted or filtered by its warning; ⛔ no reason is pre-selected.
 6. **⛔ No name is compared** — the warnings read ranks, version ids, instants and marks only (6.18 Trap 1 / Trap 4; the no-comparison fence).
-7. **⛔ No new decrypt on the console or at the gate** (fact 3). The only date-decrypt stays where it already is: the audited timeline read.
+7. **⛔ No new decrypt on the console or at the gate** (fact 2). The only date-decrypt stays where it already is: the audited timeline read.
+8. **What an approval covered is a RECORD, ⛔ never a recomputation** (fact 4). The record is append-only; a late reason adds to it.
+9. ⭐ **A written note is ⛔ never replaced** (NW18). Every note — an approver's, a late reason's, a reason's "when to use" — is written once;
+   ⛔ no route edits or replaces one. The ONE exception is legal erasure (RTBF), which overwrites a member's note text with the erased marker —
+   the house rule, ⛔ never a staff act.
+10. ⭐ **A reason is ⛔ never deleted** (NW16). It can be replaced by a newer one; the old one stays, and every approval keeps pointing at the
+    exact words it chose.
 
 ## 📜 Policy meaning (AI-10-1)
 
-⭐ **This story ADDS A CONJUNCT to a predicate that gates a member's death benefit:** the District Admin's approval of a claim now requires,
-whenever a warning shows, the reason *"warnings reviewed — approved despite them"* and a written note. It adds ⛔ no ground to refuse, ⛔ no
-wait and ⛔ no change to who is paid.
+⭐ **This story ADDS A CONJUNCT to a predicate that gates a member's death benefit:** the District Admin's approval of a claim requires,
+whenever a warning shows, a reason chosen from the Pariwar's reason list and a written note. It adds ⛔ no ground to refuse, ⛔ no wait (the
+wait is 6.23b's — its own note) and ⛔ no change to who is paid. The late-warning reason (NW14) is a **record**, ⛔ not a predicate on its
+own; it becomes one only through 6.23b's wait. The reason list (NW16, NW17) is staff tooling — ⛔ not a predicate.
 
 **The sentence, in the member's terms (ours, for the Panel to correct):** *"If your nominee is changed on or after the day you die, or
 named or changed in the 90 days before your family's claim is filed, your family's claim can still be approved — but only after the
@@ -124,30 +152,24 @@ District Admin has written down why they are approving it."*
 **Checked against the Niyamavali? ⭐ Yes — and it is silent.** `docs/legal/niyamavali.md` (present locally; an agent-drafted, **unratified**
 design reference that binds nothing — [[feedback_niyamavali_rulebook_not_spec]]) says only that *"the Trust verifies the qualifying event,
 the claimant's entitlement, and document authenticity"* (§6.2) and that disbursement follows the declared nominees and the 75/25 split
-(§2.4, §6.4). It says ⛔ nothing on nominee-change warnings, approval reasons or notes. The sentence is **consistent with §6.2** (a recorded
-reason is part of verifying entitlement). ⭐ **Checked against `-261` D1, `-262` FQ1 / FQ2 / FQ8 A and `-264` FQ12: it matches them as
-ruled.** ⚠ Three places it could be read more widely are **Q1–Q3** — the sentence above holds under the built default of each.
+(§2.4, §6.4); it says ⛔ nothing on nominee-change warnings, approval reasons or notes. The sentence is **consistent with §6.2**. ⭐ **Checked
+against `-261` D1, `-262` FQ1 / FQ2 / FQ8 A, `-264` FQ12 and `-277` Q1 / Q3: it matches them as ruled** — the first naming is included
+(`-277` Q1, ratified), which is why the sentence says *"named or changed"*.
 
-## ⚖️ The Panel's questions — three confirms owed to the next note (⛔ none blocks the build)
+## ⚖️ The Panel's questions — ✅ ALL RULED (`2026-10-04-277`); ⛔ none is owed
 
-⭐ The §0 gate (`trustee-panel-routing-note-TEMPLATE.md`) was applied to every open point. Everything that is *"which code is correct"* is
-an author decision (NW1–NW12). Three points survive the gate because each would **extend or narrow a ratified clause** (§0: *"a ratified
-clause that must be SUPERSEDED, narrowed or extended"*) or decide **what staff are warned of** — the very category the Panel ruled in FQ8.
-Each is built at the default below; a ruling the other way is an **additive** follow-up. ⭐ Write them into ONE note from the template
-(plain-English question first, the one deciding fact, options with an honest cost on each, evidence last), together with fact 1's
-correction in its *"How much to trust this note"* section — Task 0.4.
+The routing note `trustee-panel-routing-note-2026-10-04-6-23-warnings-confirms.md` (its ruling block filled) put three confirms; the Panel
+(DR + KB) answered **Q1 A · Q2 C · Q3 B**. ⚠ **Q2: our reading B was ⛔ NOT taken** — C (every approver) is 6.23b. ⭐ The FQ2-precedent
+correction (fact 1) was before the Panel; `-262` FQ2 stands.
 
-| | Plain-English question | Built default | Why it is the Panel's |
+| | Question as put | Ruled | Where it is built |
 |---|---|---|---|
-| **Q1** | When a member names their **first** nominee within 90 days before the claim (a member who joined recently), is that a "change" that gets the 90-day warning? | **Yes — warned** (`-262`'s own reading: *"it applies to **every** version"*); the words say *"named or changed"* | What staff are warned of (FQ8's category). ⚠ Cost of yes: every claim for a recently joined member needs a reason + note. Cost of no: a nominee named for the first time days before a death is ⛔ never flagged. |
-| **Q2** | When someone **other than the District Admin** approves while a warning shows — a State Trustee approving an escalated claim, the R9 panel, or the Pariwar Admin's final approval after an appeal **reversed** a refusal — must they also give a reason and a note? | **No — not built.** FQ12 as worded binds the District Admin's approval; the R9 votes and the appeal stages already carry **required** written rationales (`r9-voting.ts`; `appeal.ts:90-97, 225-231`). ⭐ The note suggests **B**: only the escalation approval — the one path with ⛔ no written reason — gains a reason + note | Extending a ratified obligation to other actors (§0). ⚠ Cost of no: an escalated claim can be approved over a warning with ⛔ no recorded reason. Cost of B: one required reason + note on the escalation decision. |
-| **Q3** | A warning that **first appears after the District Admin approved** — a replaced certificate moves the date of death earlier — must anyone record a reason before the claim goes on? | **No — not built.** The re-review stales the determination; the District Admin must redetermine and the name check must pass again before the Pariwar Admin's approval (6.21a D7) — but ⛔ no reason is asked. ⭐ The note suggests **B**: the final approval waits until the District Admin (already redetermining) records a reason + note | The same extension, in time rather than actor. ⚠ Cost of no: the redetermined claim proceeds with ⛔ no recorded reason for the new warning. Cost of B: a short wait at final approval, and NW7's *"⛔ never revise INTO `warning_override`"* would need a grounded exception. |
+| **Q1** | Is a member's first naming of a nominee within 90 days a "change"? | **A — yes, warned** | NW3, this story |
+| **Q2** | Must approvers other than the District Admin also give a reason and a note? | **C — every approver** | 6.23b (EA1, EA3–EA6) |
+| **Q3** | A warning that first appears after the District Admin approved? | **B — the District Admin records a reason and a note; the final approval waits** | the record: NW13 / NW14 here · the wait: 6.23b EA2 |
 
-⭐ **✅ RULED 2026-10-04 — `2026-10-04-277` (DR + KB): Q1 A (our reading, as built) · Q2 C (our reading B ⛔ NOT taken — every approver)
-· Q3 B (our reading).** The table above is kept as the questions were put; ⛔ no confirm is still owed. Q2 C / Q3 B: see the v1.2 STOP.
-
-⭐ **The correction (fact 1) is ⛔ not a question** — the answer to FQ2 is unchanged by it. It is recorded, and disclosed, so the Panel
-can weigh the evidence over our earlier words (the `-263` precedent).
+⭐ **An offer the Panel did ⛔ not take up** (recorded in `-277` "does NOT cover"): whether a **concealment-flagged** approval should also
+need a reason. ⛔ Not built; ⛔ not owed. ⭐ **The reason list needs ⛔ no Panel note** (the §0 box above).
 
 ## ⚠ THE TRAPS
 
@@ -156,14 +178,16 @@ can weigh the evidence over our earlier words (the `-263` precedent).
 date — i.e. `!versionStandsAt(effectiveAt, acceptedDate)` (`nominee-effective.ts:112-114`). The **timeline** evaluates it by date (it holds
 the decrypted date). The **gate and the console** evaluate it from the live determination's `discarded` member-source items (⛔ no decrypt).
 ⭐ Both derivations live in ONE module, the equivalence is stated in its doc-block, and a test proves they agree on a seeded post-death
-claim (AC10). ⛔ Never add a third derivation; ⛔ never decrypt the date on the console packet (6.21a T10: *"the accepted DATE stays on the
+claim (AC1). ⛔ Never add a third derivation; ⛔ never decrypt the date on the console packet (6.21a T10: *"the accepted DATE stays on the
 audited history read"*).
 
 **Trap 2 — the gate's derivation is exact ONLY after `assertClaimApprovable`.** Before it, the determination may be absent, stale (a
 re-reviewed certificate — 6.21a D7's `determination_stale`) or superseded by a correction (6.20 D7). ⇒ in `adjudicateClaim` the warnings
 are read **after** `assertClaimApprovable` and `assertClaimContactRecorded` (`verifier-decision-persist.ts:374-386`), so every existing
 refusal keeps its code and order (the 6.19a D14 precedent). ⚠ The console has no such guarantee: it reports `post_death_version` only
-when a live determination exists, and says *"awaiting the determination"* otherwise (NW8) — approval is blocked in that state anyway.
+when a live determination exists, and says *"awaiting the determination"* otherwise (NW8). ⚠ The late-reason writer (NW14) has none
+either — so it runs `assertDeathCertificateAcceptedForApproval` itself before reading the keys (a stale determination ⇒ its 409, ⛔ never a
+reason over warnings nobody can see).
 
 **Trap 3 — the anchor of the 90 days is the FIRST claim for the death, and a stray claim is ⛔ not one.** `-262`'s reading anchors on
 *"the **first** claim's filing for that death"* — so the true nominee's refile (row 6-24) does ⛔ not move the window. But a claim filed
@@ -191,22 +215,25 @@ Traced at `2059482b`: the only specs that both seed a `discarded` version and ca
 the warnings are read) and `packages/domain/tests/integration/claim/nominee-refusal-inheritance.spec.ts` (it **denies** with `-239`'s
 code — ⛔ never gated). ⛔ No spec that declares through the **real** route also approves (`claim-contact`, `nominee-bank`, `claims-intake`,
 `dpdpa-consent`), and every fixed fixture date is > 90 days before any run from 2026-09-08 on (Trap 5). ⇒ if an existing approve-path spec
-turns red, **read why**: either it genuinely approves over a warning (then approve with `warning_override` + a rationale — that IS the
-rule) or the reader is wrong. ⛔ Never by bypassing the reader, ⛔ never by an opt-out flag on the rule, ⛔ never by moving a fixture date
-into the window.
+turns red, **read why**: either it genuinely approves over a warning (then approve with `warning_override`, a listed reason and a rationale
+— that IS the rule) or the reader is wrong. ⛔ Never by bypassing the reader, ⛔ never by an opt-out flag on the rule, ⛔ never by moving a
+fixture date into the window. ⚠ **And one shipped behaviour is deliberately CHANGED (NW7):** any existing revise spec that revises a decision
+is unaffected unless it involves `warning_override` — which ⛔ no shipped spec does.
 
-**Trap 7 — the four enum edits, and the two exact lists.** A new `verifier_reason_code` value is: the migration (`ALTER TYPE … ADD VALUE`
-in its OWN file — a new value cannot be used in the transaction that added it, the 0120 header), the domain tuple +
+**Trap 7 — the four enum edits, and the two exact lists.** The ONE new `verifier_reason_code` value (the marker, NW5) is: the migration
+(`ALTER TYPE … ADD VALUE` in its OWN file — a new value cannot be used in the transaction that added it, the 0120 header), the domain tuple +
 `REASON_CODE_OUTCOME_COMPAT` (`claim/verifier-decision.ts:38-72`), the contracts mirror + its compat map (`verification-decision.ts:35-65`),
 and the lockstep tests — ⚠ which pin **exact** lists: `packages/contracts/tests/claims-verifier-decision.test.ts:44-67` (per-outcome
 sorted lists + the key list) and `packages/domain/tests/claim/verifier-decision.test.ts:26-44` (*"the matrix is exact"*)
 ([[feedback_story_validate_footguns]] #29(b)). ⚠ `t.reasonCodes` (`i18n-en.ts:502-511`) is indexed by `VerifierReasonCode` in
-`ReasonCodeDropdown.tsx` and `AuditTrailEntry.tsx` — a missing label is a **typecheck** error, which is the point.
+`ReasonCodeDropdown.tsx` and `AuditTrailEntry.tsx` — a missing label is a **typecheck** error, which is the point. ⭐ The Super Admin's
+reasons are DATA (NW16) — ⛔ never more enum values: that is why the list survives the Super Admin's edits without a migration.
 
-**Trap 8 — revise can silently undo the rule.** `reviseDecision` (`verifier-decision-persist.ts:497`) re-records an approved decision's
-reason and rationale in the post-verdict window, and **carries the old rationale forward when none is sent**. Left alone, a District
-Admin could approve with `warning_override` and then revise to `r8_90pct_met`, erasing the record that the approval was made over a
-warning. ⇒ NW7 fixes the `warning_override`-ness of an approval at the moment it is made.
+**Trap 8 — revise could silently undo the rule AND replace a note.** `reviseDecision` (`verifier-decision-persist.ts:497`) re-records an
+approved decision's reason and rationale in the post-verdict window, and **carries the old rationale forward when none is sent**. Left alone,
+a District Admin could approve with `warning_override` and then revise to `r8_90pct_met` — or write a new note over the one they gave. ⇒ NW7:
+a decision whose reason is `warning_override` is ⛔ never revised, and a revise INTO it is refused. ⚠ A **late** warning is answered by
+NW14's record, ⛔ never by a revise (fact 3).
 
 **Trap 9 — the console packet is PARSED and STRICT, and four test files build it by hand.** `VerifierConsolePacket` is `.strict()`
 (`packages/contracts/src/claims/verifier-console.ts:340-361`) and response schemas are parsed (`serializerCompiler`). A new section must
@@ -216,196 +243,312 @@ nominee-declaration-route}.test.tsx`, `packages/contracts/tests/claims-verifier-
 outside `tsc`, so **run vitest**, ⛔ never trust typecheck alone ([[project_contracts_tests_outside_tsc]]).
 
 **Trap 10 — the read ceiling.** `VERIFIER_CONSOLE_MAX_READS` is **18** (`claims.verifier-console.handlers.ts:150`), ⛔ not the 14 6.20's
-story carried. The new section is ONE counted read (18 → 19) with a written explanation in the ledger form above the constant — the
-doc-block says *"Any FURTHER increase requires an explanation at review, not a casual bump"*, and `verifier-console.spec.ts` measures real
-statements so an uncounted read is caught.
+story carried. The new section is ONE counted read (18 → 19) — the coverage AND the Pariwar's active reasons ride the SAME statement
+(`json_agg` subqueries) — with a written explanation in the ledger form above the constant; `verifier-console.spec.ts` measures real
+statements, so an uncounted read is caught.
 
-**Trap 11 — admin copy is scanned.** `microcopy.yaml` scans `apps/admin/src/**/*.{ts,tsx}` (`code_globs`) for the active vocabulary
-terms — `report`, `receipt`, `invoice`, `passbook` must ⛔ not appear in any new string. ⛔ No string says a version *"is suspicious"*
-or *"should be discarded"* (the warning informs; the District Admin judges).
+**Trap 11 — admin copy is scanned; the Super Admin's words are ⛔ not.** `microcopy.yaml` scans `apps/admin/src/**/*.{ts,tsx}` (`code_globs`)
+for the active vocabulary terms — `report`, `receipt`, `invoice`, `passbook` must ⛔ not appear in any new string; ⛔ no string says a version
+*"is suspicious"* or *"should be discarded"*. ⚠ A reason's label and note typed by the Super Admin are DATA — the static gate never sees them.
+⇒ the API validates them on write against the gate's vocabulary terms (a tiny server-side deny-list mirroring `microcopy.yaml`'s active
+`vocabulary` entries, with a lockstep test against the yaml) and lengths; anything subtler is the Super Admin's judgement, as for the
+Niyamavali display fields. Recorded as an accepted limit (Task 11's deferred item).
 
 **Trap 12 — the FQ1 label's words are ratified copy.** Render them **verbatim**: `corrected after the death — approved by {districtAdmin}
 and {pariwarAdmin}` (lower-case first word as ruled; an em dash). ⛔ Never paraphrase, ⛔ never re-case. The names are the correction
-row's `da_display` / `pa_display` (`schema/nominee_corrections.ts`), ⛔ never re-resolved.
+row's `da_display` / `pa_display` (`schema/nominee_corrections.ts`), ⛔ never re-resolved — 0119's step-coherence CHECK guarantees both
+are NOT NULL on `step = 'applied'`.
 
-## ⚖️ Decisions — the AUTHOR's (⏳ PROPOSED; committed by ONE author-commit in Task 0, before any code)
+**Trap 13 — the "live approval" is a decision ROW, ⛔ not a state.** Coverage is keyed to the **claim** and read as *"every District Admin
+record row for this claim, while its live verifier decision is an approval"* — `verifier_decision_id` is provenance, ⛔ not the key. ⚠ A claim
+whose live verifier decision is ⛔ not `approved` (escalated and resolved — the trustee row supersedes it; refused and reversed on appeal) has
+⛔ no District Admin approval to cover anything: NW14 refuses there, and 6.23b's Q2 C covers those approvers. (NW7 means a warned approval
+is ⛔ never revised, so a live `warning_override` decision is the very row the coverage was written for.)
 
-⛔ None is the Panel's — each is *"the code should do X"* (the §0 gate) — except where marked Q1–Q3, which are built at their default.
+**Trap 14 — erasure.** The late reason's note is Tier-1 staff text about the deceased's claim. ⚠ The 6.20 / 6.21a precedent scrubs such notes
+(`nominee_determinations`, `nominee_corrections`, `claim_death_certificate_reviews` — `member/anonymize.ts`), and a Tier-1 column that is ⛔ not
+in the anonymizer **survives erasure** (the 10.10 lesson, in that file's own words). ⇒ the record table carries `deceased_member_id` (the
+`nominee_determinations` shape — the anonymizer filters on it directly, ⛔ never a subquery inside its UPDATE), a column-level UPDATE grant on
+the note, and the RTBF pin moves **17 → 18 tables / 20 → 21 statements** with its TITLE (`packages/domain/tests/member/rtbf-anonymize.test.ts:98,
+159, 191`). ⭐ The reason list's labels and notes are staff policy text, ⛔ not member data — ⛔ not in the anonymizer (the form says so). ⚠
+Recorded, ⛔ not fixed here: `claim_verifier_decisions.rationale_ciphertext` — where the at-approval note lives — is ⛔ not in the anonymizer
+today (Task 10's deferred item).
 
-- **NW1 — ONE module, ONE rule, a list of KINDS.** NEW `packages/domain/src/claim/approval-warnings.ts`:
-  `APPROVAL_WARNING_KINDS = ['post_death_version', 'recent_nominee_change'] as const` and its type; the pure per-version classifier (NW2–NW4);
-  the claim-level read `readClaimApprovalWarnings(db, pariwarId, claimCaseId)` → `{ kinds, postDeath, anchorFiledAt }` (ONE statement); and the assertion
-  `assertApprovalReasonCoversWarnings(claimCaseId, kinds, reasonCode, rationaleCiphertext)` (NW6). ⭐ Rows `6-26` / `6-27` add a kind to the
-  tuple and a producer to the read — the assertion is ⛔ never edited. ⛔ No future kind is pre-minted (an inert kind is a second source —
-  [[feedback_no_premature_package]]). It must ⛔ never import `claim/events.ts` (6.20 T5(b): the TDZ cycle typecheck cannot see).
-- **NW2 — `post_death_version` (`-261` D1).** Per version: `source = 'member'` (kind `declared` **or** `vacated` — removing a nominee is a
-  change) and `!versionStandsAt(effectiveAt, acceptedDate)` when the accepted date is **known**; unknown ⇒ ⛔ no flag and the timeline
-  says the date is not known (no accepted certificate, or its date `unreadable` / `anonymized`). Claim-level, at the gate and on the
-  console: present ⇔ the **live** determination has a `discarded` item whose version is `source = 'member'`; ⛔ no live determination ⇒
-  `awaiting_determination` (console) — the gate never sees that state (Trap 2). ⭐ Doc-block the equivalence (Trap 1) and that it is the
-  same ground `-239`'s refusal stands on.
-- **NW3 — `recent_nominee_change` (`-262` FQ8 A).** Per version: `source = 'member'` and
-  `istDateOf(effectiveAt) >= addCalendarDays(istDateOf(anchor), -RECENT_NOMINEE_CHANGE_WINDOW_DAYS)` with
-  `RECENT_NOMINEE_CHANGE_WINDOW_DAYS = 90` (a named, exported constant citing `-262` FQ8 A *"amended by the Panel from 30"*) — one-sided
-  (Trap 4); the anchor per Trap 3. **Every** version, the member's first declaration included (**Q1**, built default: warned). Reuse
-  `istDateOf` / `addCalendarDays` (`cycle-calendar/holiday-resolver.ts:178, 187`) — ⛔ no new IST offset (6.20 found six copies).
+**Trap 15 — every business table here is per-Pariwar; the reason list is too.** At `2059482b` the only tables without `pariwar_id` are auth
+infrastructure (`admin_credentials`, `admin_sessions`, `webauthn_credentials`, the OTP / rate buckets …). ⇒ `approval_warning_reasons` carries
+`pariwar_id` with RLS + FORCE, and the Super Admin manages it from a Pariwar context (`/api/v1/p/:pariwarId/admin/…`), like every other
+Super Admin act. The **built-in generic** is a code constant, ⛔ not a row — so every Pariwar has it on day one with ⛔ no per-Pariwar seeding and ⛔
+no provisioning hook, and it can ⛔ never be replaced or lost.
+
+**Trap 16 — a reason can be replaced between the page load and the submit.** The picker shows the active list; a Super Admin may replace an
+entry meanwhile. ⇒ every writer re-validates the chosen code against the ACTIVE list under its own transaction: a replaced or unknown code ⇒
+409 `…warning_reason_unavailable` (*"that reason was replaced — please choose again"*), ⛔ never silently mapped to its replacement (the
+approver chose the words, and the new words may say something else).
+
+## ⚖️ Decisions — the AUTHOR's (⏳ PROPOSED; committed with 6.23b's EA1–EA9 by ONE author-commit, `-278`, in Task 0, before any code)
+
+⛔ None is the Panel's — each is *"the code should do X"* (the §0 gate). NW16–NW18 are BigDev's calls of 2026-10-04.
+
+- **NW1 — ONE module; KINDS and KEYS.** NEW `packages/domain/src/claim/approval-warnings.ts`: `APPROVAL_WARNING_KINDS = ['post_death_version',
+  'recent_nominee_change'] as const`; a warning **key** = `` `${kind}:${subjectId}` `` (6.23a's subjects are `version_id`s; 6-26 / 6-27 use
+  their own subject ids); the pure per-version classifier (NW2–NW4); the claim-level read `readClaimApprovalWarnings(db, pariwarId,
+  claimCaseId)` → `{ kinds, keys, postDeath: 'evaluated' | 'awaiting_determination', anchorFiledAt, coverage: { districtAdminApproved:
+  boolean, coveredKeys }, reasonOptions }` in **ONE** statement; `uncoveredKeys(warnings)`; and `assertApprovalReasonCoversWarnings(…)` — the
+  ONE rule every approver calls with `{ kinds, warningReasonCode, noteGiven, activeReasons }`. ⭐ 6-26 / 6-27 add a kind, its key and a
+  producer to the read — the assertion is ⛔ never edited. ⛔ No future kind is pre-minted ([[feedback_no_premature_package]]). It must ⛔ never
+  import `claim/events.ts` (6.20 T5(b)). ⭐ 6.23b adds the bulk form `readClaimApprovalWarningsBulk` here.
+- **NW2 — `post_death_version` (`-261` D1).** Per version: `source = 'member'` (`declared` **or** `vacated`) and `!versionStandsAt(effectiveAt,
+  acceptedDate)` when the accepted date is **known**; unknown ⇒ ⛔ no flag, and the timeline says the date is not known. Claim-level (gate,
+  console, NW14): present ⇔ the **live** determination has a `discarded` item whose version is `source = 'member'`; ⛔ no live determination ⇒
+  `awaiting_determination`. Doc-block the equivalence (Trap 1) and that it is `-239`'s refusal ground.
+- **NW3 — `recent_nominee_change` (`-262` FQ8 A; `-277` Q1 A).** Per version: `source = 'member'` and `istDateOf(effectiveAt) >=
+  addCalendarDays(istDateOf(anchor), -RECENT_NOMINEE_CHANGE_WINDOW_DAYS)` with `RECENT_NOMINEE_CHANGE_WINDOW_DAYS = 90` (exported, citing
+  `-262` FQ8 A *"amended by the Panel from 30"*); one-sided (Trap 4); the anchor per Trap 3; **every** version — the member's first declaration
+  included (✅ `-277` Q1, ratified). Reuse `istDateOf` / `addCalendarDays` (`cycle-calendar/holiday-resolver.ts:178, 187`) — ⛔ no new IST offset.
 - **NW4 — the FQ1 label.** A `source = 'correction'` version carries `correction_label = { district_admin_display, pariwar_admin_display }`
-  from the APPLIED correction whose `applied_version_id` is that version — read across **all** the deceased's corrections (a correction
-  applied under one claim shows on every claim for that death). ⭐ Both names are guaranteed present: 0119's step-coherence CHECK requires
-  `da_display` AND `pa_display` NOT NULL when `step = 'applied'` — ⛔ never re-resolve them, ⛔ never invent a fallback. It is ⛔ never a warning kind and ⛔ never triggers NW6. ⚠ The words say
-  *"after the death"* even for the (6-22-gated, test-only) living-member release case — recorded in Interactions, ⛔ not reworded.
-- **NW5 — the reason: a new verifier reason code `warning_override`.** Approve-only; label *"Warnings reviewed — approved despite them"*;
-  a rationale is **REQUIRED** with it (the contract `superRefine`, beside `other`, for BOTH the decision and the revise request) with a
-  domain backstop (`rationaleCiphertext === null` ⇒ typed refusal). Migration **0142** (`ALTER TYPE "verifier_reason_code" ADD VALUE IF NOT
-  EXISTS 'warning_override'`, its own file, the 0120 header as model; journal idx **142** — ⛔ never renumber the reverted-0140 gap; `when`
-  **> `1792899600000`**, the house step +86 400 000 ⇒ `1792986000000`). ⭐ ONE code, ⛔ not a family: the Panel ruled ⛔ no criteria for
-  what the District Admin weighs (`-262` not-cover), so the WHY lives in the note, ⛔ not in a code list we would be inventing.
-- **NW6 — the rule (`-262` FQ2, `-264` FQ12) at the District Admin's approval.** In `adjudicateClaim`, approve only, **after**
-  `assertClaimApprovable` and `assertClaimContactRecorded`, under the claim lock: read the kinds; kinds non-empty and reason ≠
-  `warning_override` ⇒ `ApprovalWarningReasonRequiredError` (409 `verifier_decision.warning_reason_required`, details `{ kinds }`); reason =
-  `warning_override` and kinds empty ⇒ `WarningOverrideUngroundedError` (409 `verifier_decision.warning_override_ungrounded` — the
-  `PostDeathRefusalUngroundedError` precedent: a code that names a ground must be grounded); `warning_override` with a NULL
-  `rationaleCiphertext` ⇒ `ApprovalWarningReasonRequiredError` with `missing: 'note'` (the domain backstop — the contract's 400 is the real
-  enforcement; `details` carries `{ kinds, missing: 'reason' | 'note' }`). A deny and an escalate are ⛔ never gated.
-  ONE reason + ONE note per approval, ⛔ not per warning. The result carries `approvalWarningKinds` so the handler can audit them.
-- **NW7 — revise fixes the warning-ness of an approval when it was made (Trap 8).** In `reviseDecision`, outcome `approved`: a live
-  `warning_override` decision may be revised ONLY to `warning_override` (its note may change); a revise INTO `warning_override` from another
-  code is refused. Both ⇒ `ClaimDecisionNotRevisableError` with a NEW reason `'warning_reason_fixed'` (→ the existing 409
-  `verifier_decision.not_revisable`, `details.reason`). The kinds are ⛔ not re-read at revise (the determination may be stale there —
-  Trap 2); a warning that appears after the approval is **Q3**.
-- **NW8 — the console: a non-PII `approvalWarnings` section.** `{ available, kinds, postDeath: 'evaluated' | 'awaiting_determination' }`
-  (camelCase — the packet's convention), assembled fail-soft like `nomineeNameCheck`: a throw ⇒ `available: false`, and the console then
-  **disables Approve** with its own words (⛔ never "no warnings" on an unknown — the 6.18 posture). ONE counted read (18 → 19), explained.
-  ⛔ No name, ⛔ no date, ⛔ no decrypt.
-- **NW9 — the decision strip.** When `kinds` is non-empty, Approve's reason dropdown offers **only** `warning_override`, the note is
-  mandatory (asterisk + validation) and one line names the warnings and the rule; when empty, `warning_override` is ⛔ not offered. Deny and
-  Escalate are unchanged. The confirmation modal restates the warnings (the attestation is what the District Admin saw).
-- **NW10 — the timeline (on demand, the audited read it already is).** Each version gains `warnings: ApprovalWarningKind[]` and
-  `correction_label`; the response gains `warning_basis: { death_date_known: boolean, first_filed_at: string }`. The panel renders a warning
-  line on each flagged row (status ⛔ never colour alone) and the label on each correction row. The marks stay unselected; ⛔ no sort,
-  filter or pre-mark by warning (invariant 5).
-- **NW11 — what the superseded and ratified texts become (annotate, ⛔ never delete the record).** `-261` D1 supersedes 6.20's *"⛔ no
-  version is highlighted, labelled 'after death'"* — amend, at each site, to say the warning is now shown **by `-261` D1** and that
-  pre-select / pre-mark / sort / decide stay banned: `NomineeDeclarationPanel.tsx:11-17`; `i18n-en.ts:228-229`; contracts
-  `nominee-declaration.ts:13-15`; `nominee-effective.ts`'s `versionStandsAt` doc (*"⛔ never to pre-select, highlight, label or
-  auto-mark"* → highlight/label now via `approval-warnings.ts`); the two tests of fact 4. And `-261` C1 **ratified** 6.20's proposed-side
-  `other` refusal (`-261` Consequence 2: *"corrected by the next row that touches those files (6-23)"*): every *"ENGINEERING READING … ⛔
-  not a ratified rule"* site becomes *"ratified by `-261` C1"* — `nominee-correction-persist.ts:21-26, 164-166` (incl. the refusal detail
-  string), contracts `nominee-declaration.ts:207-215`, `NomineeDeclarationPanel.tsx:642-646`, and the test titles/comments at
-  `apps/admin/tests/nominee-declaration-panel.test.tsx:12, 571`, `apps/mobile/tests/unit/nominee-history-copy.test.ts:197`,
+  from the APPLIED correction whose `applied_version_id` is that version — across **all** the deceased's corrections. ⛔ Never a warning kind;
+  ⛔ never triggers the rule. ⚠ The words say *"after the death"* even for the 6-22-gated living-member release case — ⛔ not reworded.
+- **NW5 — the reason: ONE marker code + a chosen LIST entry.** (a) The verifier vocabulary gains ONE marker, `warning_override` (approve-only;
+  label *"Approved over a warning — reason recorded"*), meaning *"this approval was made over a warning; the chosen reason is on the record"* —
+  the decision row's `reason_code` is NOT NULL, so it needs one. Migration **0142** (`ALTER TYPE "verifier_reason_code" ADD VALUE IF NOT EXISTS
+  'warning_override'`, its own file, the 0120 header as model; journal idx **142** — ⛔ never renumber the reverted-0140 gap; `when`
+  `1792986000000`). (b) The approve request gains `warning_reason_code` — REQUIRED iff `reason_code = 'warning_override'`, and then a rationale
+  is required too (contract `superRefine`); the server checks it against the Pariwar's ACTIVE list (NW16) at write time (Trap 16). (c) The
+  Super Admin's reasons are ⛔ never enum values (Trap 7).
+- **NW6 — the rule at the District Admin's approval (`-262` FQ2, `-264` FQ12).** In `adjudicateClaim`, approve only, **after**
+  `assertClaimApprovable` and `assertClaimContactRecorded`, under the claim lock: read the warnings; kinds non-empty and (reason ≠
+  `warning_override` or ⛔ no active `warning_reason_code`) ⇒ `ApprovalWarningReasonRequiredError` (409 `verifier_decision.warning_reason_required`,
+  details `{ kinds, missing: 'reason' | 'note' }`); a code ⛔ not in the active list ⇒ `WarningReasonUnavailableError` (409
+  `verifier_decision.warning_reason_unavailable`); `warning_override` with kinds empty ⇒ `WarningOverrideUngroundedError` (409
+  `verifier_decision.warning_override_ungrounded`); a NULL rationale ⇒ the first error with `missing: 'note'` (the backstop — the contract's 400
+  is the real enforcement). ⭐ **And when kinds are non-empty, the SAME transaction writes a `district_admin_approval` record row** — the
+  chosen reason (code + id) and the current keys (NW13). A deny and an escalate are ⛔ never gated. ONE reason + ONE note per approval.
+- **NW7 — a warned approval is FINAL in its words (Trap 8; NW18).** In `reviseDecision`: a live decision whose `reason_code` is
+  `warning_override` is ⛔ never revised (⛔ not its reason, ⛔ not its note), and a revise INTO `warning_override` is refused — both ⇒
+  `ClaimDecisionNotRevisableError` with a NEW reason `'warning_approval_final'` (→ 409 `verifier_decision.not_revisable`, `details.reason`).
+  ⭐ Every other revise is unchanged (6.11 D-E). Something new about a warned claim is ADDED (NW14), ⛔ never written over.
+- **NW8 — the console: a non-PII `approvalWarnings` section.** `{ available, kinds, postDeath, uncoveredSinceApproval, reasonOptions }`
+  (camelCase — the packet's convention): `uncoveredSinceApproval` = the number of current keys ⛔ not in the District Admin's coverage, only
+  when the live verifier decision is `approved` (else 0); `reasonOptions` = the active list (NW16 — each `{ code, label, whenToUse,
+  addedByDisplay | null, addedAt | null, replacesLabel | null }`; `null`s mark the built-in generic). Fail-soft like `nomineeNameCheck`: a
+  throw ⇒ `available: false`, Approve disabled with its own words (⛔ never "no warnings" on an unknown). ONE counted read (18 → 19), explained.
+  ⛔ No name of a member, ⛔ no date, ⛔ no decrypt.
+- **NW9 — the decision strip and the picker.** When `kinds` is non-empty: the strip's verifier reason becomes the marker (set by the client —
+  it is ⛔ not a choice, every approval over a warning carries it), and a **reason picker** lists `reasonOptions`, each showing its label, its
+  "when to use" note and *"added by {name} on {date}"* (or *"built in"*) — ⭐ BigDev's (b): approvers learn from the list. ⛔ Nothing is
+  pre-selected; the note is mandatory; one line names the warnings; the confirmation restates the warnings and the chosen reason. When kinds
+  are empty, ⛔ no marker and ⛔ no picker. Deny / Escalate unchanged. ⭐ The picker is ONE shared component (`ApprovalWarningReasonPicker`) —
+  6.23b mounts the same one on every later surface.
+- **NW10 — the timeline (the audited on-demand read it already is).** Each version gains `warnings: ApprovalWarningKind[]` and
+  `correction_label`; the response gains `warning_basis: { death_date_known, first_filed_at }`. The panel shows a warning line per flagged
+  row (⛔ never colour alone) and the label per correction row. Marks stay unselected; ⛔ no sort / filter / pre-mark by warning.
+- **NW11 — the superseded and ratified texts (annotate, ⛔ never delete the record).** `-261` D1 supersedes 6.20's *"⛔ no version is
+  highlighted, labelled 'after death'"* — amend, citing `-261` D1, that the warning is now shown and pre-select / pre-mark / sort / decide stay
+  banned: `NomineeDeclarationPanel.tsx:11-17`; `i18n-en.ts:228-229`; contracts `nominee-declaration.ts:13-15`; `versionStandsAt`'s doc; the two
+  tests of fact 5. `-261` C1 **ratified** 6.20's proposed-side `other` refusal (`-261` Consequence 2 names row 6-23): every *"ENGINEERING
+  READING … ⛔ not a ratified rule"* site becomes *"ratified by `-261` C1"* — `nominee-correction-persist.ts:21-26, 164-166` (incl. the
+  refusal detail string), contracts `nominee-declaration.ts:207-215`, `NomineeDeclarationPanel.tsx:642-646`, and the test titles / comments
+  at `apps/admin/tests/nominee-declaration-panel.test.tsx:12, 571`, `apps/mobile/tests/unit/nominee-history-copy.test.ts:197`,
   `packages/domain/tests/integration/claim/nominee-correction.spec.ts:135`,
-  `packages/domain/tests/integration/rls/nominee-declaration-history-policy-regression.spec.ts:17, 674`. Migration 0119's comment is
-  ⛔ not edited (applied). `nominee-refusal-read.ts`'s D2 / T17 sentences are rows 6-25's / 6-24's (⛔ not edited here).
+  `packages/domain/tests/integration/rls/nominee-declaration-history-policy-regression.spec.ts:17, 674`. Migration 0119's comment is ⛔ not
+  edited (applied). `nominee-refusal-read.ts`'s D2 / T17 sentences are rows 6-25's / 6-24's (⛔ not edited here).
 - **NW12 — audit.** The decision audit context (`auditDecision`, `claims.verification-decision.handlers.ts:196-212`) gains
-  `approval_warning_kinds` (codes only) on an approve — on success **and** on a `warning_reason_required` refusal; the timeline read's
-  audit context gains `warning_count` (a number). ⛔ No name, ⛔ no date.
+  `approval_warning_kinds` and `warning_reason_code` on an approve and on a `warning_reason_required` refusal; the timeline read gains
+  `warning_count`; the late reason audits `admin_claim.late_warning_reason_recorded` / `…_rejected` (`covered_key_count`, kinds, the code);
+  the Super Admin's acts audit `admin_approval_warning_reason.added` / `.replaced` / `.rejected` (ids, codes). ⛔ No member name, ⛔ no date,
+  ⛔ no note text.
+- **NW13 — the approval-over-warning RECORD (fact 4).** Migration **0144** (after NW16's table — its FK): NEW table
+  `claim_warning_approvals` — `record_id`, `pariwar_id`, `claim_case_id` (FK `claims`, cascade), `deceased_member_id` (Trap 14), `step`
+  (CHECK — 6.23a's two: `district_admin_approval`, `district_admin_late_reason`; 6.23b widens it), `verifier_decision_id` (FK
+  `claim_verifier_decisions`, NOT NULL for 6.23a's steps — provenance), `reason_code` (text — the chosen code, snapshotted), `reason_id` (FK
+  `approval_warning_reasons`, NULL ⇔ the built-in generic — a CHECK), `covered_keys text[]` (CHECK `cardinality >= 1`), `note_ciphertext`
+  (Tier-1, `piiColumn(1, 'claim_warning_approval')`; CHECK NOT NULL ⇔ `step = 'district_admin_late_reason'` — every other step's note lives on
+  its own decision row), `recorded_by_actor`, `recorded_by_display` (snapshotted — [[project_admin_display_name_attribution]]), `recorded_at`
+  (`clock_timestamp()`). Append-only by grant (`SELECT, INSERT` + column UPDATE on `note_ciphertext` for RTBF ONLY) **and** a column-aware
+  trigger (the 0119 idiom) — ⛔ no route edits a row (NW18); RLS + FORCE in the order `GRANT` → `ENABLE` → `FORCE` → `POLICY`
+  (`packages/domain/src/policies/`, the `claim-certificate-reminder-rls.ts` model); a policy-regression spec with a DB ↔ TS lockstep on `step`.
+  NEW field class `claim_warning_approval` in `apps/api/src/context.ts` and the anonymizer (Trap 14). **Coverage** (Q3 B) = the union of
+  `covered_keys` over the claim's `district_admin_*` rows (Trap 13) — 6.23b's rows ⛔ never count toward it.
+- **NW14 — the District Admin's reason for a LATE warning (`-277` Q3 B, the District Admin's half).** NEW `claim/approval-warnings-persist.ts`:
+  `recordLateWarningReason(client, { claimCaseId, pariwarId, warningReasonCode, noteCiphertext, actorId, actorDisplay })` — under the verifier
+  advisory lock + the claim row lock (the `adjudicateClaim` order): refused (typed, → 409) when the live verifier decision is ⛔ not `approved`
+  (`no_district_admin_approval`), the state is ⛔ not in `{verifier_approved, state_trustee_freeze}` (`not_recordable_state`), the certificate /
+  determination is ⛔ not current (`assertDeathCertificateAcceptedForApproval`'s own 409 — Trap 2), the reason is ⛔ not active (Trap 16), or
+  every current key is already covered (`nothing_uncovered`); else it inserts a `district_admin_late_reason` row — the chosen reason, ALL
+  current keys, the note. ⛔ No event, ⛔ no state change, ⛔ no decision row (the `return_to_district_admin` metadata-only shape). Route `POST
+  /api/v1/p/:pariwarId/admin/claims/:claimCaseId/verifier-decision/late-warning-reason` in `claims.verification-decision.routes.ts`
+  (`claim.approve`, district dimension, step-up as the decision route; a plain string-literal path); the human-actor gate entry's
+  `expectedMethods` `['post','post']` → `['post','post','post']`. Contract `LateWarningReasonRequest { warning_reason_code, note }`
+  (`.strict()`, both required; note ≤ 500) and a non-PII response. The console offers it (NW8's `uncoveredSinceApproval > 0`, viewer can
+  approve) as a small panel with the SAME picker — ⛔ not inside the strip (post-verdict the strip is revise-only, and in the freeze
+  non-interactive). ⭐ Each late reason is a NEW row — the earlier ones and their notes stay (NW18).
+- **NW15 — what 6.23b inherits.** The module (NW1), its rule, the keys, the record (NW13) and the reason list (NW16) are the CONTRACT 6.23b
+  builds on: the wait (EA2) reads coverage exactly as NW8 counts it — `uncoveredKeys`, ONE copy.
+- **NW16 — the REASON LIST (BigDev 2026-10-04).** Migration **0143**: NEW table `approval_warning_reasons` (per Pariwar — Trap 15):
+  `reason_id`, `pariwar_id`, `code` (server-generated, immutable, `UNIQUE (pariwar_id, code)`, ⛔ never reused — `awr_` + 8 hex), `label_en`
+  (1–120 chars), `when_to_use` (1–1000 chars — the Super Admin's note, Tier-3 staff policy text, ⛔ not member data; the form says so), `replaces_reason_id`
+  (self-FK, `UNIQUE` — a reason is replaced at most once), `replaced_at` (NULL while active; set ONCE, by the replacement's own transaction),
+  `created_by_actor`, `created_by_display` (snapshotted), `created_at` (`clock_timestamp()`). Append-only: `GRANT SELECT, INSERT` + a column
+  UPDATE on `replaced_at` ONLY, and a trigger that refuses every other UPDATE, any `replaced_at` change once set (one-way — the 6.20 review's
+  one-way `superseded_at` trigger on `nominee_determinations` is the model), and every DELETE / TRUNCATE. RLS + FORCE; policy-regression spec.
+  ⭐ **The built-in generic** — `APPROVAL_WARNING_GENERIC_REASON = { code: 'warnings_reviewed', label: 'Warnings reviewed — approved despite
+  them', whenToUse: 'Use when you have read every warning shown and still approve. Your note must say why.' }` — is a constant in domain +
+  contracts (lockstep test), offered first in every Pariwar, ⛔ never stored, ⛔ never replaceable. **Active list** = the generic + rows
+  with `replaced_at IS NULL`, oldest first. Domain: `claim/approval-warning-reasons.ts` — `listApprovalWarningReasons(db, pariwarId, { history
+  })`, `isActiveApprovalWarningReason`, and the two writers of NW17.
+- **NW17 — the Super Admin adds or REPLACES; ⛔ never edits, ⛔ never deletes.** Permission key **`approval_warning_reason.manage`** (pariwar
+  dimension; `super_admin` only; catalog **50 → 51**, keys **64 → 65**; `roles.ts`, `permissions.test.ts`, its doc-block's reuse-check: ⛔ no
+  existing key fits — `niyamavali.*` is the member-visible rulebook's review workflow, `pariwar.amend_rule` amends rule clauses; minted by
+  `-278`). NEW module `apps/api/src/modules/approval-warning-reasons/` — `GET …/admin/approval-warning-reasons` (active + history, the key),
+  `POST …/admin/approval-warning-reasons` (add — `{ label, when_to_use }`), `POST …/admin/approval-warning-reasons/:reasonId/replace` (`{ label,
+  when_to_use }` — a conditional `UPDATE … SET replaced_at WHERE reason_id AND replaced_at IS NULL`, 0 rows ⇒ 409 `already_replaced`, + the
+  new row with `replaces_reason_id`, ONE transaction); both POSTs need a fresh step-up; ⛔ no PUT, ⛔ no DELETE, ⛔ no route that touches a
+  label or a note. Server validation: lengths, non-blank, the vocabulary deny-list (Trap 11). Audit per NW12 via `emitAuthAudit`. Admin: NEW
+  `apps/admin/src/modules/approval-warning-reasons/` page (its own `i18n-en.ts`) under the Pariwar context — the active list (label, when to
+  use, added by / on, *"replaces …"*), the history (each replaced reason with *"replaced by … on …"*), an Add form and a Replace action (both
+  require a label and a "when to use" note; the screen says plainly that a reason can be replaced but ⛔ never edited or deleted); a nav link
+  for `super_admin` only. ⭐ Built so it can ship as its own pull request.
+- **NW18 — a written note is ⛔ never replaced (BigDev 2026-10-04).** Across this story: the approver's rationale is ⛔ never revised on a
+  warned approval (NW7); a late reason is a new row (NW14); a reason's "when to use" note is fixed with the reason, and a replacement brings
+  its OWN note while the old stays (NW16, NW17); every table here is append-only by grant and trigger; ⛔ no route edits a note. ⭐ The ONE
+  exception is legal erasure (Trap 14): `anonymizeMember` overwrites a member's note text with the erased marker — the house rule, ⛔ never a
+  staff act. ⚠ R9 votes are 6.23b's question (EA5): a panel member may change a vote before the panel finalizes (6.14), and every earlier
+  vote and note is already kept as history — BigDev accepted that (2026-10-04).
 
 ## Acceptance Criteria
 
 ### AC0 — Governance first (Task 0)
-**Given** this story is about to be built **Then** ONE author-commit decision records **NW1–NW12**, stating: the readings of `-261` D1,
-`-262` FQ1 / FQ2 / FQ8 A and `-264` FQ12 it builds (each as a reading, ⛔ not as Panel words); that `-264`'s not-cover delegated the reason
-code to this Task 0 (NW5); **fact 1's correction** of what the Panel was told about FQ2 (*"the system already requires a reason … concealment
-flag"* — it does ⛔ not; 6.23 builds the first such rule; the ruling is unchanged); NW11's supersession record (`-261` D1 over 6.20's
-no-highlight text; `-261` C1 over the *"engineering reading"* text); that Q1–Q3 are built at their defaults and owed to the Panel's next
-note; and that ⛔ no Trustee-ratified clause moves — **inserted by BigDev** ([[project_decision_log_writes_user_inserted]]: draft it in the
-scratchpad, hold every code edit until it is on disk, verify `git diff --numstat` is additive-only and equals the draft) and committed
-`governance(6.23): …` **alone, first** ([[feedback_governance_commits_precede_implementation]]) **and** `epics.md` gains `### Story 6.23`
-with a `> ⚠ Minted by…` header citing `-261` / `-262` / `-264`, after `### Story 6.19d`, **and** `epics.md` Story 6.20's AC3 (*"⛔ The system
-pre-selects nothing, highlights nothing and decides nothing"*) carries an appended annotation — *"highlights nothing" superseded by `-261` D1
-(built by 6.23); pre-selects nothing and decides nothing stand* — ⛔ never rewritten **and** the routing note for Q1–Q3 is drafted from
-the template (§0 first) **and** ⛔ no 6.20 Change Log row is rewritten.
+**Given** this story is about to be built **Then** `2026-10-04-277` is in `.decision-log.md` (✅ committed `1b38be9e`) **and** ONE author-commit
+**`-278`** records **NW1–NW18 and 6.23b's EA1–EA9**, stating: the readings of `-261` D1, `-262` FQ1 / FQ2 / FQ8 A, `-264` FQ12 and `-277` Q2 / Q3
+it builds (as readings); that `-264`'s not-cover delegated the reasons and BigDev's design of them (NW16–NW18, with his words); the departure
+from UX-DR43's *"categories agreed upfront by Trustee Panel"* for this family; the new permission key (NW17); fact 1's correction
+(acknowledged by `-277`); fact 3; NW11's supersession record; the split and its go-live coupling; and that ⛔ no Trustee-ratified clause moves —
+staged in the scratchpad and inserted (verified additive-only and byte-equal — [[project_decision_log_writes_user_inserted]]), committed
+`governance(6.23): …` **alone, first** **and** `epics.md` gains `### Story 6.23a` and `### Story 6.23b` (each `> ⚠ Minted by…`, citing `-261` /
+`-262` / `-264` / `-277`) after `### Story 6.19d`, **and** Story 6.20's AC3 (*"⛔ The system pre-selects nothing, highlights nothing and decides
+nothing"*) carries an appended annotation — *"highlights nothing" superseded by `-261` D1 (built by 6.23a); pre-selects nothing and decides
+nothing stand* — never rewritten **and** ⛔ no 6.20 Change Log row is rewritten.
 
 ### AC1 — The warnings, defined once (NW1–NW3)
-**Given** a claim **Then** `approval-warnings.ts`'s pure classifier flags a `source = 'member'` version `post_death_version` iff the accepted
-date is known and `!versionStandsAt(effectiveAt, acceptedDate)` (a 23:59 IST change the day before ⇒ ⛔ no flag; 00:00 IST on the day ⇒
-flagged; a `vacated` tombstone on the day ⇒ flagged), and `recent_nominee_change` iff its IST date is ≥ the anchor's IST date − 90 days
-(90 days before ⇒ flagged; 91 ⇒ ⛔ not; after the anchor ⇒ flagged; the member's first declaration ⇒ flagged — Q1's default); **and** a
-`source = 'correction'` version is ⛔ never flagged either way **and** the anchor is the earliest unreleased claim's `created_at` (a released
-earlier claim moves ⛔ nothing; all released ⇒ this claim's own) **and** `readClaimApprovalWarnings` returns the claim-level kinds in ONE
-statement with `post_death_version` from the live determination's `discarded` member-source items (`awaiting_determination` with none) —
-**and** on a seeded post-death claim with an accepted certificate and a current determination, the date derivation and the determination
-derivation flag the **same** versions (Trap 1) and `-239`'s grounding query (`assertPostDeathRefusalGrounded`) also passes; on a seeded
-pre-death claim neither derivation flags anything and the grounding query refuses.
+**Given** a claim **Then** the pure classifier flags a `source = 'member'` version `post_death_version` iff the accepted date is known and
+`!versionStandsAt(effectiveAt, acceptedDate)` (23:59 IST the day before ⇒ ⛔ no flag; 00:00 IST on the day ⇒ flagged; a `vacated` tombstone
+on the day ⇒ flagged), and `recent_nominee_change` iff its IST date is ≥ the anchor's IST date − 90 days (90 days before ⇒ flagged; 91 ⇒ ⛔
+not; after the anchor ⇒ flagged; the member's first declaration ⇒ flagged — `-277` Q1) **and** a `source = 'correction'` version is ⛔ never
+flagged **and** each warning has its key **and** the anchor is the earliest unreleased claim's `created_at` (a released earlier claim moves
+⛔ nothing; all released ⇒ this claim's own) **and** `readClaimApprovalWarnings` returns kinds, keys, `postDeath`, the anchor, the coverage and
+the active reasons in ONE statement **and** on a seeded post-death claim with a current determination the date derivation and the
+determination derivation flag the **same** versions and `assertPostDeathRefusalGrounded` passes; on a pre-death claim neither flags and the
+grounding refuses.
 
-### AC2 — The reason code (NW5)
-**Given** the four edits **Then** `warning_override` exists in the pgEnum (migration 0142), the domain tuple and compat map (`['approved']`),
-the contracts mirror and its compat map, `reasonCodesForOutcome('approved')` returns it, and the lockstep tests pass with their exact lists
-updated **and** `VerifierDecisionRequest` and `VerifierDecisionReviseRequest` refuse `warning_override` without a non-blank rationale (400)
-**and** the label *"Warnings reviewed — approved despite them"* is in `t.reasonCodes`.
+### AC2 — The marker and the chosen reason (NW5)
+**Given** the four edits **Then** `warning_override` exists in the pgEnum (0142), the domain tuple + compat (`['approved']`), the contracts mirror
++ compat; `reasonCodesForOutcome('approved')` returns it; the lockstep tests pass with their exact lists updated **and** both request schemas
+refuse `warning_override` without a `warning_reason_code` or a non-blank rationale (400), and a `warning_reason_code` without
+`warning_override` (400) **and** `t.reasonCodes` carries the marker's label **and** the generic reason constant is in lockstep between domain
+and contracts.
 
-### AC3 — The rule at the District Admin's approval (NW6; `-262` FQ2, `-264` FQ12)
-**Given** a claim that passes `assertClaimApprovable` and the contact check **When** the District Admin approves **Then** with any warning
-present and a reason other than `warning_override` ⇒ **409 `verifier_decision.warning_reason_required`** with `details.kinds`, ⛔ nothing
-written; with `warning_override` and ⛔ no warning ⇒ **409 `verifier_decision.warning_override_ungrounded`**, ⛔ nothing written; with a
-warning, `warning_override` and a rationale ⇒ approved, the decision row carrying `warning_override` **and** every earlier refusal keeps
-its code and order (a claim missing its certificate still answers `death_certificate_acceptance_required` first) **and** a **deny** (incl.
-`post_death_nominee_change`) and an **escalate** on a warned claim are unchanged **and** two warnings need ONE reason and ONE note
-**and** the decision audit line carries `approval_warning_kinds` (codes only) on the approval and on a `warning_reason_required` refusal (NW12).
+### AC3 — The rule at the District Admin's approval, and its record (NW6, NW13)
+**Given** a claim passing `assertClaimApprovable` and the contact check **When** the District Admin approves **Then** a warning + ⛔ no listed
+reason ⇒ **409 `verifier_decision.warning_reason_required`** (`details.kinds`), ⛔ nothing written; a replaced or unknown reason ⇒ **409
+`…warning_reason_unavailable`**, ⛔ nothing written; `warning_override` with ⛔ no warning ⇒ **409 `…warning_override_ungrounded`**; a warning +
+`warning_override` + an active reason (the generic, or a Super Admin's) + a rationale ⇒ approved **and** ONE `district_admin_approval` record
+row with that reason (code + id, or the generic's code and a NULL id) and exactly the current keys, in the same transaction (a forced failure
+after it leaves neither) **and** ⛔ no record row when there is no warning **and** every earlier refusal keeps its code and order **and** a deny
+(incl. `post_death_nominee_change`) and an escalate on a warned claim are unchanged **and** two warnings need ONE reason and ONE note **and**
+the audit line carries `approval_warning_kinds` and the code.
 
-### AC4 — Revise cannot undo it (NW7)
-**Given** an approved decision **Then** revising a live `warning_override` decision to any other code ⇒ 409 `verifier_decision.not_revisable`
-(`details.reason: 'warning_reason_fixed'`); revising it to `warning_override` with a new note ⇒ ok; revising an `r8_90pct_met` approval INTO
-`warning_override` ⇒ the same 409 **and** a denied decision's revise is unchanged.
+### AC4 — A warned approval is never revised (NW7, NW18)
+**Given** an approved decision **Then** any revise of a live `warning_override` decision — a new reason OR a new note — ⇒ 409
+`verifier_decision.not_revisable` (`details.reason: 'warning_approval_final'`), ⛔ nothing written; a revise of an `r8_90pct_met` approval INTO
+`warning_override` ⇒ the same 409 **and** every other revise (a different approve code, a denied decision) is unchanged.
 
 ### AC5 — The console says it before the button does (NW8, NW9)
-**Given** the verifier console **Then** the packet carries `approvalWarnings` — the kinds from `readClaimApprovalWarnings`, `postDeath`
-`awaiting_determination` while ⛔ no live determination exists, and `available: false` (with Approve disabled and its own message) when the
-section could not be read **and** `VERIFIER_CONSOLE_MAX_READS` is **19** with the written explanation **and** with kinds present the strip's
-Approve dropdown offers ONLY `warning_override`, the note is required before submit, a line names each warning and the rule, and the
-confirmation restates them; with none, `warning_override` is ⛔ not offered **and** `decisionErrorMessage` maps the two new 409 codes (and
-`not_revisable` / `warning_reason_fixed`) to their own words — ⛔ never *"try again"*.
+**Given** the verifier console **Then** the packet carries `approvalWarnings` — the kinds, `postDeath` (`awaiting_determination` with ⛔ no live
+determination), `uncoveredSinceApproval`, the `reasonOptions` (each with its label, "when to use", added by / on, or the built-in markers) and
+`available: false` (Approve disabled, its own message) when the section could not be read **and** `VERIFIER_CONSOLE_MAX_READS` is **19** with
+the written explanation **and** with kinds present the strip shows the shared picker — every option with its label, its "when to use" note and
+*"added by {name} on {date}"* / *"built in"*, ⛔ nothing pre-selected — the note is required, a line names each warning, the confirmation restates
+the warnings and the chosen reason; with none, ⛔ no picker and ⛔ no marker **and** `decisionErrorMessage` maps every new 409 code (and
+`warning_approval_final`) to its own words — ⛔ never *"try again"*.
 
 ### AC6 — The timeline shows the warnings and the label (NW2–NW4, NW10)
-**Given** the on-demand timeline **Then** each version carries `warnings` and `correction_label`, the response carries `warning_basis`
-**and** the panel shows a warning line on each flagged row — *"dated on or after the date of death on the accepted certificate"* /
-*"named or changed within 90 days before the first claim for this death was filed ({date})"* (words the developer's; ⛔ never "suspicious",
-"should be discarded", or any microcopy vocabulary term) — and the FQ1 words **verbatim** on each correction row (Trap 12) **and** ⛔ no
-accepted certificate (or an unreadable / erased date) ⇒ ⛔ no `post_death_version` flag and a line that the date of death is not known yet
-**and** the marks stay **unselected** and the rows keep their order **and** each warning is announced in words (status ⛔ never colour alone) **and** the timeline-read audit line gains `warning_count` (a number —
-⛔ no name, ⛔ no date; NW12).
+**Given** the on-demand timeline **Then** each version carries `warnings` and `correction_label`, the response carries `warning_basis` **and** the
+panel shows a warning line per flagged row — *"dated on or after the date of death on the accepted certificate"* / *"named or changed within
+90 days before the first claim for this death was filed ({date})"* (words the developer's; ⛔ never "suspicious", "should be discarded" or a
+microcopy vocabulary term) — and the FQ1 words **verbatim** per correction row (Trap 12) **and** ⛔ no accepted certificate (or an unreadable /
+erased date) ⇒ ⛔ no `post_death_version` flag and a line that the date is not known yet **and** marks stay **unselected**, rows keep their
+order **and** each warning is announced in words **and** the timeline audit gains `warning_count`.
 
-### AC7 — Nothing else moves
-**Then** `assertClaimApprovable`, `voteOnFrozenClaim`, `finalizeR9Outcome`, `resolveEscalation`, 6.19c's writers and the appeal flow are
-untouched (Q2); the determination writer, the effective accessor's SQL and token, the name check and `member_nominees` are untouched;
-⛔ no new claim event (`CLAIM_EVENT_TYPES` stays **35**, `dpdpa-consent-events.test.ts`); ⛔ no new permission key (catalog **50 / 64**);
-⛔ no new route (the human-actor gate and its `COVERAGE_FLOOR` are unchanged); ⛔ no new PII table (the RTBF statement count unchanged);
-⛔ no member-app or i18n-locale change; `openapi/v1.yaml` byte-identical (these schemas are ⛔ not registered — `contracts:check-openapi-determinism`
-must stay green).
+### AC7 — The District Admin answers a late warning (NW14; `-277` Q3 B)
+**Given** a claim the District Admin approved, in `verifier_approved` or `state_trustee_freeze`, with a current certificate and determination,
+some of whose current keys are ⛔ not covered **When** the District Admin picks an active reason and writes a note **Then** ONE
+`district_admin_late_reason` row covers **all** current keys, with the reason, the note and the snapshotted display name, ⛔ no event and ⛔ no
+state change **and** the console's `uncoveredSinceApproval` returns to 0 **and** a second late warning later adds a SECOND row (the first and its
+note untouched) **and** each refusal answers its own 409 — ⛔ no District Admin approval (escalated-and-resolved, refused, reversed), a state
+outside the two, a stale determination (the certificate gate's own code), an inactive reason, nothing uncovered — and a missing note or reason is
+a 400 **and** a non-district viewer, a cross-Pariwar claim and a system actor are refused **and** the audit lines carry codes and counts only.
 
-### AC8 — The fences
-**Then** the no-comparison fence (`packages/domain/tests/claim/nominee-name-no-comparison-fence.test.ts`) lists
-`packages/domain/src/claim/approval-warnings.ts` and its exact count goes **34 → 35** with the reason in the trailing comment; the new module
-trips ⛔ none of `FORBIDDEN_PATTERNS` **and** `pnpm microcopy:test && pnpm microcopy:check` exit 0 over the new admin strings.
+### AC8 — The record's policy, PII and erasure (NW13; Trap 14)
+**Then** migration 0144 creates `claim_warning_approvals` with every CHECK, FK, grant, trigger and RLS + FORCE of NW13, and the policy-regression
+spec proves: cross-Pariwar read / insert refused; ⛔ no DELETE / TRUNCATE; an UPDATE of any column but the note refused; the step ⇔ note CHECK;
+the generic ⇔ NULL `reason_id` CHECK; the `cardinality >= 1` CHECK; the DB ↔ TS `step` lockstep **and** `anonymizeMember` sentinels the note
+where present (a NULL note stays NULL — the coherence CHECK), with the RTBF pin moved **17 → 18 tables / 20 → 21 statements** and its title
+**and** the field class is registered in `context.ts` and the anonymizer.
 
-### AC9 — The superseded and ratified texts (NW11)
-**Then** every site NW11 lists is amended in place to cite `-261` D1 / `-261` C1, keeping the record of what it said **and** the admin
-panel test's *"⛔ nothing says after death"* becomes: a pre-death version shows ⛔ no warning; a post-death version shows the D1 line; ⛔
-nothing says *"suspicious"* or *"should be discarded"*; ⛔ no radio is checked **and** the API AC3 test keeps forbidding names, mobiles,
-`highlight` and `suggested`, drops `post_death` from that list **with a comment citing `-261` D1**, and positively asserts the new fields.
+### AC9 — Nothing else moves
+**Then** `assertClaimApprovable` and every later approver (`resolveEscalation`, `voteOnFrozenClaim`, `castR9Vote` / `finalizeR9Outcome`,
+6.19c's writers) are untouched — they are 6.23b's; the determination writer, the effective accessor's SQL and token, the name check and
+`member_nominees` are untouched; ⛔ no new claim event (`CLAIM_EVENT_TYPES` stays **35**); the permission catalog moves by **exactly ONE key**
+(**51 / 65** — NW17) and ⛔ no new role; the new routes are NW14's (human-actor gate entry updated; `COVERAGE_FLOOR` unchanged — ⛔ no new
+`claims.*.routes.ts` file) and NW17's (in their own module, outside the gate's scan); ⛔ no member-app or i18n-locale change; `openapi/v1.yaml`
+byte-identical (`contracts:check-openapi-determinism` green).
 
-### AC10 — The proof
+### AC10 — The fences
+**Then** the no-comparison fence lists `packages/domain/src/claim/approval-warnings.ts` and its exact count goes **34 → 35** (reason in the
+trailing comment); ⛔ none of `FORBIDDEN_PATTERNS` trips **and** `pnpm microcopy:test && pnpm microcopy:check` exit 0 **and** the access-wrapper
+gate passes with NW14's mutation + audit through `withCompensatingAudit` / `emitAuthAudit` (`pnpm access-wrapper:test && …:check`).
+
+### AC11 — The superseded and ratified texts (NW11)
+**Then** every site NW11 lists is amended in place to cite `-261` D1 / `-261` C1, keeping the record of what it said **and** the admin panel
+test's *"⛔ nothing says after death"* becomes: a pre-death version shows ⛔ no warning; a post-death version shows the D1 line; ⛔ nothing says
+*"suspicious"* or *"should be discarded"*; ⛔ no radio is checked **and** the API AC3 test keeps forbidding names, mobiles, `highlight` and
+`suggested`, drops `post_death` with a comment citing `-261` D1, and positively asserts the new fields.
+
+### AC12 — The reason list and the Super Admin's screen (NW16, NW17, NW18)
+**Given** a Pariwar with ⛔ no rows **Then** its active list is exactly the built-in generic **and** the Super Admin adds a reason (label + "when
+to use") ⇒ a new row with a server-generated code, their snapshotted name and the time, active at once **and** replaces it ⇒ the old row gains
+`replaced_at` (once), a new row with its own label and note carries `replaces_reason_id`; the old row, its note and every approval that chose
+it are unchanged; a second replace of the same row ⇒ 409 `already_replaced`; two Super Admins replacing it at once ⇒ exactly one wins **and**
+⛔ no route can edit or delete a reason — the policy spec proves `twt_app` cannot DELETE / TRUNCATE, cannot UPDATE any column but `replaced_at`,
+cannot set `replaced_at` twice or back to NULL; the generic can ⛔ never be replaced **and** only `super_admin` holds
+`approval_warning_reason.manage`; a fresh step-up is required; a cross-Pariwar write is refused **and** a label or note carrying a microcopy
+vocabulary term, blank, or too long ⇒ 400 **and** the screen shows the active list, the history and the "can be replaced, ⛔ never edited or
+deleted" line; the nav link shows for `super_admin` only.
+
+### AC13 — The proof
 **Then** the suites in *Testing* exist and each new test was shown to fail before its code; live-DB specs carry `{ timeout: 20000 }`, own-commit,
-assert **membership**, ⛔ not counts ([[project_live_db_test_gotchas]]); the red set of Trap 6 is fixed per Trap 6, ⛔ never by an opt-out;
-and `pnpm -w typecheck`, lint, the domain / contracts / api / admin / mobile suites and `ci:local` are run (a known flake is named, ⛔ never
-silently re-run — [[project_known_livedb_test_failures]]) **and** `deferred-work.md` carries Task 9's records.
+assert **membership**, ⛔ not counts ([[project_live_db_test_gotchas]]); the red set of Trap 6 is read per Trap 6; `pnpm -w typecheck`, lint, the
+domain / contracts / api / admin / mobile suites and `ci:local` are run (a known flake is named, ⛔ never silently re-run —
+[[project_known_livedb_test_failures]]) **and** `deferred-work.md` carries Task 10's records.
 
 ## Tasks / Subtasks
 
 - [ ] **Task 0 — Governance first (AC0).** ⛔ No code before 0.2 lands.
-  - [ ] 0.1 `git diff --name-only 2059482b..HEAD -- packages apps scripts docs`; re-read anything cited here that moved. `git log 2059482b..HEAD -- .decision-log.md` — read any new entry for `6-23`, `warning`, `FQ12`, `reason code`, `verifier_reason_code`; grep any routing note dated after 2026-10-04 for the same. ⚠ If 6-26 or 6-27 landed first, they carry the rule (`-264` Consequence 2) — re-plan NW1 before coding.
-  - [ ] 0.2 ⛔ **Not before the v2.0 re-derivation absorbs `-277` Q2 C / Q3 B.** Draft the author-commit (next free id — **`-278`**; `-277` is the Panel's ruling; **author-commit (BigDev)**; §0: the author's; everything AC0 lists; Consequences: 6.23 may build; the routing note for Q1–Q3; the code comments of NW11; ⛔ no status flip) to the scratchpad; BigDev inserts it above the newest `### Decision`; verify additive-only and byte-equal; commit `governance(6.23): …` **alone**, first.
-  - [ ] 0.3 `epics.md`: `### Story 6.23` (Minted-by header, the story statement, AC1–AC7 in brief, a pointer to this file) after `### Story 6.19d`; the appended annotation on Story 6.20's AC3. ⛔ Nothing rewritten.
-  - [ ] 0.4 ✅ **DRAFTED, SENT AND RULED 2026-10-04 (`-277`):** `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-04-6-23-warnings-confirms.md` (⏳ awaiting the Panel; its E4 commands run). Drafted from the TEMPLATE (§0 first; Q1–Q3 in plain English; the one deciding fact each; options with an honest cost on every one; *"How much to trust this note"* carrying fact 1's correction; evidence last with re-run commands). Sending it is BigDev's; the build does ⛔ not wait for it.
-- [ ] **Task 1 — Migration (AC2).** `packages/domain/migrations/0142_verifier-reason-code-warning-override.sql` (header on the 0120 model: the ruling, why a dedicated code, approve-only, its own file); `meta/_journal.json` idx 142, `when` 1792986000000 (> 0141's). ⛔ Never edit 0001–0141; ⛔ never regenerate.
-- [ ] **Task 2 — Domain: the warnings (AC1).** NEW `packages/domain/src/claim/approval-warnings.ts` per NW1–NW4: the kinds tuple; `RECENT_NOMINEE_CHANGE_WINDOW_DAYS`; pure `classifyNomineeVersionWarnings({ versions, acceptedDate: string | null, anchor: Date })` → per-version `{ warnings, isCorrection }`; pure `isRecentNomineeChange(effectiveAt, anchor)`; `readClaimApprovalWarnings` → `{ kinds, postDeath, anchorFiledAt }` (ONE raw-SQL statement: the anchor per Trap 3, the member-source versions' `version_id` / `effective_at`, the live determination's `discarded` member-source version ids; ⛔ no ciphertext column selected — the timeline reuses `anchorFiledAt`, ⛔ never a second anchor query); the two typed errors (in `claim/errors.ts` or the module — the errors-file convention); `assertApprovalReasonCoversWarnings`. Export from `packages/domain/src/claim/index.ts`. Amend `versionStandsAt`'s doc (NW11).
-- [ ] **Task 3 — Domain: the rule (AC2–AC4).** `verifier-decision.ts`: `warning_override` in the tuple + compat (`['approved']`) with a comment citing `-262` FQ2 / `-264` FQ12 / NW5. `verifier-decision-persist.ts`: in `adjudicateClaim`, approve branch, after `assertClaimContactRecorded` — read the kinds, assert (NW6), carry `approvalWarningKinds` on `VerifierDecisionResult` (optional field); in `reviseDecision`, outcome `approved` — NW7 after the existing window / live / same-outcome guards (so a revision that cannot happen is refused for its real reason, the `-239` grounding precedent); `DecisionNotRevisableReason` gains `'warning_reason_fixed'`.
-- [ ] **Task 4 — Contracts (AC2, AC5, AC6).** `verification-decision.ts`: the enum + compat + the `superRefine` rationale rule for `warning_override` (one condition beside `other`), and its comment. `verifier-console.ts`: NEW `ApprovalWarningsStatus` (`.strict()`, camelCase) on `VerifierConsolePacket`. `nominee-declaration.ts`: `warnings` + `correction_label` on `NomineeDeclarationVersionView`, `warning_basis` on the timeline response; the header (NW11) and the `:207-215` C1 text. ⛔ Never import `@twt/domain` ([[project_contracts_domain_bundle_boundary]]) — the kind list is re-declared with a lockstep test against the domain tuple.
-- [ ] **Task 5 — API (AC3–AC6, NW12).** `claims.verification-decision.handlers.ts`: map the two new errors in `translateDecisionError` (stable messages that say the claim is ⛔ not refused — *"choose the reason … and write a note"*; *"there is no warning on this claim"*), the `warning_reason_fixed` message on the `not_revisable` arm, and `approval_warning_kinds` in `auditDecision`'s context. `claims.verifier-console.handlers.ts`: `assembleApprovalWarnings` (fail-soft, ONE `reads.bump()`), the packet field, the ceiling 18 → 19 with its ledger line and explanation block. `claims.nominee-declaration.handlers.ts` `getTimeline`: `readClaimApprovalWarnings` (for `anchorFiledAt`), the applied corrections' displays for the deceased (one read; ⛔ no decrypt), the pure classifier over the versions with the already-decrypted accepted date (`readable` ⇒ known; `unreadable` / `anonymized` / ⛔ none ⇒ not known), the new fields, `warning_count` in its audit context.
-- [ ] **Task 6 — Admin (AC5, AC6, AC9).** `i18n-en.ts`: the reason label; the warning lines, the date-not-known line, the FQ1 label template, the strip's warning line and the two refusal messages; the header (NW11). `ReasonCodeDropdown.tsx`: an `approvalWarningsPresent` prop filtering per NW9. `VerificationDecisionStrip.tsx`: the prop(s), `rationaleRequired` includes `warning_override`, the warning line, the confirmation's restatement. `routes/VerifierConsoleRoute.tsx`: pass the section; `canApprove` also needs `approvalWarnings.available`; `approveBlockedReason` gains the unavailable message; `decisionErrorMessage` maps the new codes. `NomineeDeclarationPanel.tsx`: the warning lines, the label, the date-not-known line, the header and `:642-646` (NW11). ⚠ The strip's `key` already remounts per claim and state — keep it.
-- [ ] **Task 7 — Fences and superseded tests (AC8, AC9).** Add `approval-warnings.ts` to `FENCED_FILES`, count 34 → 35 (append to the trailing comment: *"Story 6.23 FROM 34 (+1)"*). Amend the two tests of fact 4 and the C1 test titles/comments (NW11). Run the microcopy gate.
-- [ ] **Task 8 — Tests (AC1–AC10, incl. AC7's unchanged suites)** — see *Testing*. Then run the approve-path suites and fix Trap 6's red set per its rule.
-- [ ] **Task 9 — Records (AC10).** `deferred-work.md` (a new "Recorded during Story 6.23" section): ~~Q1–Q3 as carried~~ ⭐ DISCHARGED by `-277` (2026-10-04) — ⛔ nothing to carry; the raw `verifier_reason_code` the Pariwar Admin sees on `PendingCaseCard.tsx:216` (pre-existing — now it can read `warning_override`; trigger: a label pass on that card); the FQ1 words on the 6-22-gated living-member release case; ⚠ a concealment-flagged claim can be approved today with ⛔ no reason (fact 1 — pre-existing; the routing note offers the Panel to look at it; trigger: the Panel's answer). `sprint-status.yaml`: ⛔ no other row moves.
+  - [ ] 0.1 `git diff --name-only 2059482b..HEAD -- packages apps scripts docs`; re-read anything cited here that moved. `git log 2059482b..HEAD -- .decision-log.md` — read any entry after `-277` for `6-23`, `warning`, `reason`, `coverage`. ⚠ If 6-26 or 6-27 landed first, re-plan NW1 before coding. Read the live permission catalog numbers (50 / 64 at `2059482b`).
+  - [ ] 0.2 Draft **`-278`** (author-commit (BigDev); §0: the author's; NW1–NW18 + 6.23b's EA1–EA9 and everything AC0 lists; the new key with its reuse-check; Consequences: 6.23a may build, 6.23b waits for 6.23a `done`; ⛔ no status flip) in the scratchpad; insert above the newest `### Decision`; verify additive-only and byte-equal; commit `governance(6.23): …` **alone**, first.
+  - [ ] 0.3 `epics.md`: `### Story 6.23a` and `### Story 6.23b` (Minted-by headers, story statements, ACs in brief, pointers to the two files) after `### Story 6.19d`; the appended annotation on Story 6.20's AC3. ⛔ Nothing rewritten.
+  - [x] 0.4 ✅ The Q1–Q3 routing note — drafted, sent and **RULED** (`-277`, 2026-10-04); its ruling block is filled. ⭐ The reason list needs ⛔ no note (§0, 2026-10-04).
+- [ ] **Task 1 — Migrations (AC2, AC8, AC12).** `0142_verifier-reason-code-warning-override.sql` (the 0120 model); `0143_approval-warning-reasons.sql` (NW16); `0144_claim-warning-approvals.sql` (NW13) — the 0119 / 0137 headers as models (what, why, every CHECK, the grants, the triggers, RLS order); `meta/_journal.json` idx 142 / 143 / 144, `when` 1792986000000 / 1793072400000 / 1793158800000. Drizzle schemas `schema/approval_warning_reasons.ts` and `schema/claim_warning_approvals.ts` (TS mirrors of the CHECK lists in LOCKSTEP); RLS files `policies/approval-warning-reasons-rls.ts` and `policies/claim-warning-approvals-rls.ts`; register all in their indexes. ⛔ Never edit 0001–0141.
+- [ ] **Task 2 — Domain: the warnings (AC1).** NEW `claim/approval-warnings.ts` per NW1–NW4 (kinds, keys, `RECENT_NOMINEE_CHANGE_WINDOW_DAYS`, the pure classifier, `isRecentNomineeChange`, `readClaimApprovalWarnings` — ONE raw-SQL statement: the anchor per Trap 3, the member-source versions' ids / `effective_at`, the live determination's `discarded` member-source ids, the live verifier decision's outcome, the claim's `district_admin_*` record keys, the active reasons; ⛔ no ciphertext selected — `uncoveredKeys`, `assertApprovalReasonCoversWarnings`); the typed errors (the `claim/errors.ts` convention); export from `claim/index.ts`. Amend `versionStandsAt`'s doc (NW11).
+- [ ] **Task 3 — Domain: the rule, its record, and the final words (AC2–AC4).** `verifier-decision.ts`: the marker + compat. `verifier-decision-persist.ts`: in `adjudicateClaim` (approve, after `assertClaimContactRecorded`) read, validate the reason against the active list, assert, and on a warned approval insert the `district_admin_approval` row after the decision row (its id is the FK) in the same tx; `approvalWarningKinds` on the result; in `reviseDecision` NW7 after the existing guards; `DecisionNotRevisableReason` += `'warning_approval_final'`.
+- [ ] **Task 4 — Domain: the late reason (AC7).** NEW `claim/approval-warnings-persist.ts` — `recordLateWarningReason` per NW14 (lock order as `adjudicateClaim`; `assertDeathCertificateAcceptedForApproval` before the read; the typed refusal `LateWarningReasonRefusedError` with a reason union and an exhaustive `never` switch at the route).
+- [ ] **Task 5 — Contracts (AC2, AC5–AC7, AC12).** `verification-decision.ts`: the marker + compat + `warning_reason_code` and its `superRefine` rules; NEW `LateWarningReasonRequest` / `…Response`; the generic-reason constant + an `ApprovalWarningReasonOption` DTO (shared by 6.23b). `verifier-console.ts`: `ApprovalWarningsStatus` on the packet. `nominee-declaration.ts`: `warnings`, `correction_label`, `warning_basis`; the header (NW11) and the `:207-215` C1 text. NEW `approval-warning-reasons.ts` (the list / add / replace DTOs, `.strict()`). ⛔ Never import `@twt/domain` — the kind list, the `step` values and the generic are re-declared with lockstep tests.
+- [ ] **Task 6 — API (AC3–AC7, NW12).** `claims.verification-decision.handlers.ts`: map the new errors (stable words that say the claim is ⛔ not refused), the `warning_approval_final` message, the audit fields, and the NW14 handler (`emitAuthAudit` / `withCompensatingAudit`; encrypt the note under the new field class first). `claims.verification-decision.routes.ts`: the NW14 route. `claims.verifier-console.handlers.ts`: `assembleApprovalWarnings` (fail-soft, ONE `reads.bump()`), the packet field, the ceiling 18 → 19 with its ledger line. `claims.nominee-declaration.handlers.ts` `getTimeline`: `readClaimApprovalWarnings` (for the anchor), the applied corrections' displays (one read; ⛔ no decrypt), the pure classifier with the already-decrypted date, the new fields, `warning_count`. `apps/api/src/context.ts`: the field class. `apps/api/src/audit/audit-sink.ts`: the new audit types. `scripts/claim-adjudication-human-actor-invariant/check.ts`: the entry's `expectedMethods`.
+- [ ] **Task 7 — Admin: the District Admin's surfaces (AC5–AC7, AC11).** NEW shared `apps/admin/src/modules/claim-verification/ApprovalWarningReasonPicker.tsx` (NW9 — label, "when to use", added by / on; ⛔ nothing pre-selected; announced selection). `i18n-en.ts`: the marker label; the warning lines, the date-not-known line, the FQ1 template, the strip's line, the late-reason panel's words, the refusal messages; the header (NW11). `ReasonCodeDropdown.tsx` / `VerificationDecisionStrip.tsx`: with warnings, the marker + the picker (NW9), `rationaleRequired`, the confirmation. NEW `LateWarningReasonPanel.tsx` (the picker + a required note; announced outcome; say why when unavailable). `routes/VerifierConsoleRoute.tsx`: pass the section; `canApprove` also needs `approvalWarnings.available`; mount the panel; `decisionErrorMessage`; client + hook in `apps/admin/src/api/{client,hooks}.ts`. `NomineeDeclarationPanel.tsx`: the warning lines, the label, the date-not-known line, the header and `:642-646` (NW11). ⚠ The strip's per-claim `key` stays.
+- [ ] **Task 8 — Erasure (AC8).** `member/anonymize.ts`: the record's note (sentinel where present), the field class; `packages/domain/tests/member/rtbf-anonymize.test.ts`: 17 → 18 tables, 20 → 21 statements, the title; the live RTBF spec proves the note is gone. The reason list is ⛔ not erased (staff policy text — Trap 14).
+- [ ] **Task 9 — Fences and superseded tests (AC10, AC11).** `FENCED_FILES` += `approval-warnings.ts`, 34 → 35 (*"Story 6.23a FROM 34 (+1)"*). Amend the two tests of fact 5 and the C1 titles / comments (NW11). Run the microcopy and access-wrapper gates.
+- [ ] **Task 10 — Tests and records (AC1–AC13).** See *Testing*; then the approve-path suites (Trap 6). `deferred-work.md` ("Recorded during Story 6.23a"): the raw `verifier_reason_code` the Pariwar Admin sees on `PendingCaseCard.tsx:216` (6.23b reads it next); the FQ1 words on the 6-22-gated release case; ⚠ a concealment-flagged claim approvable with ⛔ no reason (fact 1; trigger: a Panel instruction); ⚠ `claim_verifier_decisions.rationale_ciphertext` ⛔ not in the anonymizer (Trap 14; trigger: the next RTBF pass); ⚠ the Super Admin's words are checked only against the vocabulary deny-list, ⛔ not the full microcopy gate (Trap 11; trigger: a microcopy runtime library). `sprint-status.yaml`: ⛔ no other row moves.
+- [ ] **Task 11 — The reason list and the Super Admin's screen (AC12).** Domain `claim/approval-warning-reasons.ts` (NW16 reads; NW17's add / replace writers — the conditional UPDATE + insert in ONE tx, a 23505 on `replaces_reason_id` ⇒ `already_replaced`); the vocabulary deny-list + its lockstep test against `microcopy.yaml`; the key in `rbac/permissions.ts` + `roles.ts` + `permissions.test.ts` (51 / 65); the API module (`routes`, `handlers`, registered in the app); the admin module, route, nav link, client + hooks. ⭐ May ship as its own pull request after Task 1.
 
 ## Dev Notes
 
@@ -413,98 +556,113 @@ silently re-run — [[project_known_livedb_test_failures]]) **and** `deferred-wo
 
 | Thing | Where | Use |
 |---|---|---|
-| The approval gate | `assertClaimApprovable` (`claim/nominee-name-check.ts:383-402`) — certificate (6.21a) → accounts → effective determination → name check; `ClaimApprovalGateOptions` (6.19c's seam) | ⛔ never edited — NW6 runs AFTER it |
-| P1, the District Admin's verdict | `adjudicateClaim` (`claim/verifier-decision-persist.ts:315-419`): reason↔outcome compat `:319`, live-decision guard `:330`, `-239` grounding `:336-338`, the gate + contact check `:374-386` | NW6's insertion point (after `:385`) |
-| The `-239` ground | `assertPostDeathRefusalGrounded` (`:124-138`) — *a live determination with a `discarded` item* | NW2's claim-level twin; AC1's agreement test |
-| Revise | `reviseDecision` (`:497`); `DecisionNotRevisableReason` (`:82`); carry-forward of the old rationale | NW7 |
-| The reason vocabulary | domain `VERIFIER_REASON_CODES` / `REASON_CODE_OUTCOME_COMPAT` (`claim/verifier-decision.ts:38-72`); contracts mirror + `applyDecisionRefinements` (`packages/contracts/src/claims/verification-decision.ts:35-111`) | NW5 |
-| The cutoff | `versionStandsAt` (`claim/nominee-effective.ts:112-114`) over `istMidnightAt` | NW2 — reuse, amend its doc |
-| IST calendar | `istDateOf`, `addCalendarDays`, `istMidnightAt` (`cycle-calendar/holiday-resolver.ts:178, 187, 206`) | NW3 |
-| The versions | `member_nominee_versions` (`schema/member_nominee_versions.ts`: `kind` declared/vacated, `source` member/correction, `effective_at`, `corrects_version_id`); `listNomineeDeclarationVersions` (`nominee/declaration-history.ts:91`) | NW2–NW4 (select ⛔ no ciphertext in the new read) |
-| The determination | `nominee_determinations` + `_items` (`mark` stands/discarded; live = `superseded_at IS NULL`); the writer validates every mark against D6 (`claim/nominee-determination-persist.ts` header) | NW2's gate derivation |
-| The lock / release predicate | `isNomineeDeclarationLocked` (`claim/nominee-lock.ts`) — `NOT EXISTS (… claim_nominee_findings … 'member_found_innocent')` | Trap 3's anchor (same predicate) |
-| The corrections | `nominee_corrections` (`schema/nominee_corrections.ts`: `member_id`, `da_display`, `pa_display`, `applied_version_id`, `step`) | NW4 |
-| The timeline route | `getTimeline` (`apps/api/src/modules/claims/claims.nominee-declaration.handlers.ts:212-301`) — already decrypts the accepted date (`:227-238`) and audits `admin_nominee_declaration.timeline_read` | NW10 |
-| The console | `assembleVerifierConsole` / `assembleNomineeNameCheckStatus` (`claims.verifier-console.handlers.ts:284, 324-394`); the ceiling ledger + `VERIFIER_CONSOLE_MAX_READS = 18` (`:68-150`) | NW8 — the fail-soft model |
-| The decision route | `translateDecisionError` (`claims.verification-decision.handlers.ts:48-…`), `auditDecision` (`:196-212`) | NW6, NW12 |
-| The admin surfaces | `VerificationDecisionStrip.tsx` (props `:41-66`, `rationaleRequired` `:166-167`), `ReasonCodeDropdown.tsx:37`, `VerifierConsoleRoute.tsx` (`decisionErrorMessage` `:110-127`; the strip mount `:387-424`), `NomineeDeclarationPanel.tsx` (header `:11-17`, the timeline table `:216-274`), `i18n-en.ts` (`nomineeDeclaration` `:227-…`, `reasonCodes` `:502-511`) | NW9, NW10 |
-| The flag-banner precedent | `ConcealmentFlaggedBanner` (`SignalsPanel.tsx:185`) — a flag in words, ⛔ never colour alone | NW10's visual model |
+| The approval gate | `assertClaimApprovable` (`claim/nominee-name-check.ts:383-402`) — certificate (6.21a) → accounts → effective determination → name check; `ClaimApprovalGateOptions` (6.19c's seam) | untouched here — 6.23b adds the wait |
+| P1, the District Admin's verdict | `adjudicateClaim` (`claim/verifier-decision-persist.ts:315-419`): compat `:319`, live-decision guard `:330`, `-239` grounding `:336-338`, gate + contact `:374-386` | NW6 (after `:385`) |
+| The `-239` ground | `assertPostDeathRefusalGrounded` (`:124-138`) | NW2's twin; AC1's agreement test |
+| Revise | `reviseDecision` (`:497`); `DecisionNotRevisableReason` (`:82`); `VERIFIER_DECISION_REVISABLE_STATES` (`:51`); carry-forward of the old rationale | NW7; fact 3 |
+| The verifier lock | `verifierDecisionAdvisoryLockKey` / `acquireDecisionLock` / `lockClaim` (`:191-216`) | NW14's lock order |
+| The reason vocabulary | `VERIFIER_REASON_CODES` / `REASON_CODE_OUTCOME_COMPAT` (`claim/verifier-decision.ts:38-72`); contracts mirror + `applyDecisionRefinements` (`verification-decision.ts:35-111`) | NW5 |
+| The cutoff and the calendar | `versionStandsAt` (`claim/nominee-effective.ts:112-114`); `istDateOf`, `addCalendarDays`, `istMidnightAt` (`cycle-calendar/holiday-resolver.ts:178, 187, 206`) | NW2, NW3 |
+| The versions | `member_nominee_versions` (`kind`, `source`, `effective_at`, `corrects_version_id`); `listNomineeDeclarationVersions` (`nominee/declaration-history.ts:91`) | NW2–NW4 (select ⛔ no ciphertext in the new read) |
+| The determination | `nominee_determinations` + `_items` (live = `superseded_at IS NULL`; the writer validates every mark; the 6.20 review's one-way `superseded_at` trigger) | NW2; NW16's trigger model |
+| The certificate gate | `assertDeathCertificateAcceptedForApproval` (`claim/death-certificate-approval.ts`, its `determination_stale` arm) | NW14 (Trap 2) |
+| The review window | `CLAIM_REVIEW_WINDOW_STATES` (`claim/review-window.ts`) — includes `verifier_approved`, `state_trustee_freeze` | NW14 (fact 3) |
+| The lock / release predicate | `isNomineeDeclarationLocked` (`claim/nominee-lock.ts`) | Trap 3 |
+| The corrections | `nominee_corrections` (`member_id`, `da_display`, `pa_display`, `applied_version_id`, `step`; 0119's step-coherence CHECK) | NW4 |
+| The timeline route | `getTimeline` (`claims.nominee-declaration.handlers.ts:212-301`) — already decrypts the accepted date (`:227-238`) | NW10 |
+| The console | `assembleVerifierConsole` / `assembleNomineeNameCheckStatus` (`claims.verifier-console.handlers.ts:284, 324-394`); the ceiling ledger + `VERIFIER_CONSOLE_MAX_READS = 18` (`:68-150`) | NW8 |
+| The decision route | `translateDecisionError` (`claims.verification-decision.handlers.ts:48-…`), `auditDecision` (`:196-212`); the human-actor gate entry for `claims.verification-decision.routes.ts` (`expectedMethods: ['post','post']`, `scripts/claim-adjudication-human-actor-invariant/check.ts:61-64`) | NW6, NW12, NW14 |
+| The permission catalog | `PERMISSION_CATALOG_VERSION = 50` (`rbac/permissions.ts:748`), 64 keys (`tests/rbac/permissions.test.ts:229-231`); `super_admin` derives from the catalog (`rbac/roles.ts`) | NW17 |
+| The field classes | `apps/api/src/context.ts` (`CLAIM_VERIFIER_DECISION_FIELD_CLASS` `:216`, `NOMINEE_DETERMINATION_FIELD_CLASS` `:255`); the crypto helpers `apps/api/src/modules/claims/*-crypto.ts` | NW13 |
+| Erasure | `member/anonymize.ts` (the determination / correction / review blocks; the 10.10 comment); `tests/member/rtbf-anonymize.test.ts:98, 159, 191` (17 tables / 20 statements) | Trap 14 |
+| Append-only + RLS models | 0119 (versions — column-aware trigger), 0137 (the newest claim table), `policies/claim-certificate-reminder-rls.ts`, `tests/integration/rls/claim-certificate-reminder-policy-regression.spec.ts` | NW13, NW16 |
+| Per-Pariwar tables | every business table carries `pariwar_id`; only auth infrastructure is global (`schema/admin_credentials.ts`, `admin_sessions.ts`, …) | Trap 15 |
+| The microcopy gate | `microcopy.yaml` (`vocabulary` — `report`, `receipt`, `invoice`, `passbook` active; `code_globs` incl. `apps/admin/src/**`) | Trap 11 |
+| The admin surfaces | `VerificationDecisionStrip.tsx` (props `:41-66`, `rationaleRequired` `:166-167`), `ReasonCodeDropdown.tsx:37`, `VerifierConsoleRoute.tsx` (`decisionErrorMessage` `:110-127`; the strip mount `:387-424`), `NomineeDeclarationPanel.tsx` (header `:11-17`, the timeline table `:216-274`), `i18n-en.ts` (`nomineeDeclaration` `:227-…`, `reasonCodes` `:502-511`); the flag-banner precedent `ConcealmentFlaggedBanner` (`SignalsPanel.tsx:185`) | NW9, NW10, NW14 |
 
 ### What moves (the *UPDATE* list), and what must be preserved
-- **NEW:** `packages/domain/migrations/0142_verifier-reason-code-warning-override.sql`; `packages/domain/src/claim/approval-warnings.ts`;
-  `packages/domain/tests/claim/approval-warnings.test.ts`; `packages/domain/tests/integration/claim/approval-warnings.spec.ts`;
-  `apps/api/tests/integration/claims/approval-warnings.spec.ts`; `apps/admin/tests/approval-warnings-strip.test.tsx` (names the developer's);
-  the routing note (Task 0.4).
-- **UPDATE:** `packages/domain/migrations/meta/_journal.json`; `packages/domain/src/claim/{verifier-decision,verifier-decision-persist,
-  nominee-effective (doc only),nominee-correction-persist (comments + one detail string),index}.ts` (+ `errors.ts` if the errors live there);
-  `packages/contracts/src/claims/{verification-decision,verifier-console,nominee-declaration}.ts`;
-  `apps/api/src/modules/claims/{claims.verification-decision.handlers,claims.verifier-console.handlers,claims.nominee-declaration.handlers}.ts`;
+- **NEW:** migrations 0142, 0143, 0144; `schema/{approval_warning_reasons,claim_warning_approvals}.ts`; `policies/{approval-warning-reasons-rls,
+  claim-warning-approvals-rls}.ts`; `claim/{approval-warnings,approval-warnings-persist,approval-warning-reasons}.ts`;
+  `packages/contracts/src/claims/approval-warning-reasons.ts`; `apps/api/src/modules/approval-warning-reasons/**`;
+  `apps/admin/src/modules/claim-verification/{ApprovalWarningReasonPicker,LateWarningReasonPanel}.tsx`;
+  `apps/admin/src/modules/approval-warning-reasons/**` and its route; the tests in *Testing*.
+- **UPDATE:** `migrations/meta/_journal.json`; `packages/domain/src/{schema,policies,claim}/index.ts`; `claim/{verifier-decision,verifier-decision-persist,
+  errors,nominee-effective (doc),nominee-correction-persist (comments + one detail string)}.ts`; `rbac/{permissions,roles}.ts`; `member/anonymize.ts`;
+  `packages/contracts/src/claims/{verification-decision,verifier-console,nominee-declaration,index}.ts`; `apps/api/src/context.ts`;
+  `apps/api/src/audit/audit-sink.ts`; the app's module registration; `apps/api/src/modules/claims/{claims.verification-decision.handlers,
+  claims.verification-decision.routes,claims.verifier-console.handlers,claims.nominee-declaration.handlers}.ts`;
   `apps/admin/src/modules/claim-verification/{i18n-en.ts,ReasonCodeDropdown.tsx,VerificationDecisionStrip.tsx,NomineeDeclarationPanel.tsx}`;
-  `apps/admin/src/routes/VerifierConsoleRoute.tsx`; the tests of Trap 7, Trap 9, fact 4, NW11 and Trap 6's red set; the fence;
-  `.decision-log.md` (via BigDev); `epics.md`; `deferred-work.md`; `sprint-status.yaml`.
-- **⛔ NEVER edit:** `assertClaimApprovable` / `assertNomineeNameCheckForApproval`; `recordNomineeDetermination`; the effective accessor's SQL
-  and token; `voteOnFrozenClaim`, `finalizeR9Outcome`, `resolveEscalation`, `correction-closure.ts`; the appeal modules; any migration ≤ 0141;
-  `nominee-refusal-read.ts` (6-24's / 6-25's text); the member app and the i18n locales.
-- **Preserve:** every refusal code and its order at P1; the 6.18 / 6.20 / 6.21a / 6.19a / 6.19c behaviour; the determination form's
-  unselected marks; the strip's per-claim `key`.
+  `apps/admin/src/routes/VerifierConsoleRoute.tsx`; `apps/admin/src/{router.tsx,routes/RootLayout.tsx,api/client.ts,api/hooks.ts}`;
+  `scripts/claim-adjudication-human-actor-invariant/check.ts`; `packages/domain/tests/rbac/permissions.test.ts`; the tests of Traps 7, 9, 14,
+  fact 5 and NW11; the fence; `.decision-log.md`; `epics.md`; `deferred-work.md`; `sprint-status.yaml`.
+- **⛔ NEVER edit here:** `assertClaimApprovable` / `assertNomineeNameCheckForApproval`; `recordNomineeDetermination`; the effective accessor's
+  SQL and token; `voteOnFrozenClaim`, `finalizeR9Outcome`, `castR9Vote`, `resolveEscalation`, `correction-closure.ts` (all 6.23b's); the appeal
+  modules; any migration ≤ 0141; `nominee-refusal-read.ts`; the member app and the i18n locales.
+- **Preserve:** every refusal code and its order at P1; every revise that does ⛔ not involve `warning_override`; 6.18 / 6.20 / 6.21a / 6.19a /
+  6.19c behaviour; the determination form's unselected marks; the strip's per-claim `key`.
 
 ### Testing
-- **Unit (pure, DB-free):** `packages/domain/tests/claim/approval-warnings.test.ts` — the classifier at the IST edges (23:59 / 00:00 on the
-  certificate day; 90 / 91 days from an INJECTED anchor; after the anchor), `vacated` flagged, `correction` never flagged, accepted date
-  unknown ⇒ ⛔ no `post_death_version`; first declaration flagged (Q1 default); `assertApprovalReasonCoversWarnings` over the full kinds ×
-  reason matrix (+ `warning_override` with a null rationale); the anchor picker (earliest unreleased; released excluded; fallback).
-  `packages/domain/tests/claim/verifier-decision.test.ts` (*"the matrix is exact"* +1 row); `packages/contracts/tests/claims-verifier-decision.test.ts`
-  (the sorted lists; the `superRefine` on both requests); a contracts lockstep for the kind list.
+- **Unit (pure):** `packages/domain/tests/claim/approval-warnings.test.ts` — the classifier at the IST edges (23:59 / 00:00; 90 / 91 days from
+  an INJECTED anchor; after the anchor), `vacated` flagged, `correction` never, unknown date ⇒ ⛔ no `post_death_version`, the first declaration
+  flagged; the keys; `uncoveredKeys`; `assertApprovalReasonCoversWarnings` over kinds × reason (active / replaced / unknown / generic) × note;
+  the anchor picker; the vocabulary deny-list. `packages/domain/tests/claim/verifier-decision.test.ts` (the exact matrix +1 row);
+  `packages/contracts/tests/claims-verifier-decision.test.ts` (the sorted lists; the `superRefine` rules on both requests); contracts locksteps
+  for the kind list, the `step` values and the generic reason.
 - **Live-DB (`twt-test-pg :5433`, own-committing, `{ timeout: 20000 }`):** `packages/domain/tests/integration/claim/approval-warnings.spec.ts` —
-  every AC3 / AC4 arm on real rows (seed post-death with an explicit earlier certificate date + a determination that discards it; recent
-  with `declaredAt = now − 30 days`; old with `now − 200 days` — Trap 5); deny + escalate on a warned claim unchanged; the `-239` /
-  `post_death_version` agreement; the date-vs-determination agreement (AC1); a refile's anchor = the first claim; a test-seeded
-  `member_found_innocent` claim excluded from the anchor. `apps/api/tests/integration/claims/approval-warnings.spec.ts` — the two 409 codes
-  with `details`; the console `approvalWarnings` (present / absent / `awaiting_determination`); the timeline fields (accepted certificate
-  vs none ⇒ `death_date_known`); the audit contexts (codes only). `verifier-console.spec.ts` — the ceiling 19 and the real-statement test.
-- **Admin (RTL):** the strip (only `warning_override` offered with warnings; note required; hidden without; Approve disabled + words when
-  `available: false`); `decisionErrorMessage` for the new codes; `NomineeDeclarationPanel` (warning lines, the FQ1 words verbatim, the
-  date-not-known line, ⛔ no checked radio, ⛔ "suspicious" / "should be discarded").
-- **Regression:** the approve-path suites once after Task 3, before new specs — the expected red set is EMPTY (Trap 6).
-- **AC7 (unchanged, run unmodified):** `packages/domain/tests/rbac/permissions.test.ts` (50 / 64), `dpdpa-consent-events.test.ts` (35
-  claim events), the human-actor gate (`pnpm claim-adjudication-human-actor:test && …:check`), the RTBF statement-count spec, and
-  `pnpm turbo run contracts:check-openapi-determinism`.
-- ⚠ [[project_fk_truncate_cascade_deadlock]] — no new FK here; ⚠ assert membership, ⛔ not counts, on shared `PARIWAR_A`.
+  every AC3 / AC4 / AC7 arm on real rows (post-death via an explicit earlier certificate date + a discarding determination; recent via
+  `declaredAt = now − 30 days`; old via `now − 200 days` — Trap 5); the record row's atomicity; a reason replaced between read and write ⇒ 409
+  (Trap 16); a re-reviewed certificate making a new key uncovered, then NW14 covering it — in `verifier_approved` **and** in
+  `state_trustee_freeze` (fact 3); two late reasons ⇒ two rows; NW7's refusal; deny / escalate unchanged; the `-239` agreement; a refile's
+  anchor; a released claim excluded. `…/integration/claim/approval-warning-reasons.spec.ts` — add, replace, a double replace, two concurrent
+  replaces (two connections — exactly one wins), the active list order. `…/rls/{claim-warning-approvals,approval-warning-reasons}-policy-regression.spec.ts`
+  (AC8, AC12 — incl. the one-way `replaced_at`). `apps/api/tests/integration/claims/approval-warnings.spec.ts` — the 409 codes with `details`;
+  NW14's route; the console section incl. `uncoveredSinceApproval` and `reasonOptions`; the timeline fields; the audit contexts.
+  `apps/api/tests/integration/approval-warning-reasons/approval-warning-reasons.spec.ts` — the key (only `super_admin`), step-up,
+  cross-Pariwar, validation (incl. a vocabulary term), ⛔ no DELETE / PUT route (a 404 / 405 proves absence). `verifier-console.spec.ts` — the
+  ceiling 19 and the real-statement test. The RTBF live spec (AC8).
+- **Admin (RTL):** the picker (each option's label, "when to use", added by / on, *"built in"*; ⛔ nothing pre-selected; announced); the strip
+  (NW9); `available: false`; `decisionErrorMessage`; `NomineeDeclarationPanel` (warning lines, FQ1 verbatim, date-not-known, ⛔ no checked
+  radio); `LateWarningReasonPanel`; the Super Admin page (list, history, add, replace, the "never edited or deleted" line, the nav link's gate).
+- **AC9 (run):** `permissions.test.ts` (51 / 65), `dpdpa-consent-events.test.ts` (35), the human-actor gate (its entry edited, the floor
+  unchanged), `contracts:check-openapi-determinism`.
+- ⚠ [[project_fk_truncate_cascade_deadlock]] — the new tables' FKs join the TRUNCATE set: use `lockTruncateSetNowait`
+  (`tests/integration/_helpers.ts`), as 6.19b / 6.19d had to. ⚠ Assert membership on shared `PARIWAR_A`.
 
 ### Previous-story intelligence
-- **6.20** — the module-cycle trap (T5(b): ⛔ never import `claim/events.ts` from a module `nominee-name-check.ts` reaches); D6's marks
-  are mechanical once the date is entered (the basis of fact 3); the fixture convention `certificateDateAfterEverything()` (tomorrow) +
-  `SEEDED_NOMINEES_DECLARED_AT` (Trap 5); the review's `certificate_date` plausibility defer (⛔ not this story's); the D16 projection
-  lag (irrelevant here — the warnings read the versions, ⛔ never `member_nominees`).
-- **6.18** — the fail-soft console section that says `available: false` instead of lying (NW8); response schemas are PARSED; a new
-  approval precondition needs the console to say it before the button 409s (the ceiling's own rule).
-- **6.19a / 6.19c** — a new conjunct at P1 goes AFTER the gate so every existing refusal keeps its code; `adjudicateClaim` is the ONE P1
-  site; 6.19c's seam (`ClaimApprovalGateOptions`) is ⛔ not the place for a reason rule.
-- **6.19d** — a "sibling just adds X" sentence is a claim — trace it (fact 2 is that lesson applied to FQ12's actor).
-- ⚠ Inherited and ⛔ not fixed here: `PendingCaseCard` shows raw reason codes; the `certificate_date` plausibility bound (6.20 defer).
+- **6.20** — T5(b)'s TDZ cycle; D6's mechanical marks (fact 2); the fixture convention (Trap 5); the review's one-way `superseded_at` trigger
+  (NW16's model); the `certificate_date` plausibility defer (⛔ not this story's).
+- **6.18** — the fail-soft console section; response schemas are PARSED; a precondition must show before the button 409s.
+- **6.19a / 6.19c** — a new conjunct at P1 goes AFTER the gate; `adjudicateClaim` is the ONE P1 site; 6.19c's seam is ⛔ not the place for a
+  reason rule.
+- **6.19d** — a "the sibling just adds X" sentence is a claim — fact 3 is that lesson applied to *"the District Admin revises"*.
+- **2.4** — the Niyamavali amendment screen edits display fields only, ⛔ not structured payloads, and its content is member-facing ⇒ ⛔ not a home for
+  the reason list (checked 2026-10-04).
+- ⚠ Inherited, ⛔ not fixed: `PendingCaseCard` shows raw reason codes (6.23b); the `certificate_date` plausibility bound (6.20 defer).
 
 ### Interactions to state, ⛔ not prevent
-- The true nominee's refile (row 6-24) shows the **same** warnings as the refused claim — the versions belong to the deceased, ⛔ not the claim —
-  so approving it needs `warning_override` and a note (e.g. *"the post-death change was refused on claim X"*). Expected, ⛔ not a defect.
-- A claim can carry `post_death_version` on the timeline **before** its determination while the console says `awaiting_determination` —
-  approval is blocked there anyway (the determination gate).
-- A State Trustee can approve an escalated, warned claim with ⛔ no reason (Q2); a reversed refusal reaches the Pariwar Admin's approval
-  with ⛔ no District Admin reason (Q2); a warning born after approval asks nobody for a reason (Q3).
+- The true nominee's refile (row 6-24) shows the **same** warnings as the refused claim (the versions are the deceased's) ⇒ approving it needs a
+  reason and a note (e.g. *"the post-death change was refused on claim X"*). Expected — the routing note said so and the Panel let it stand.
+- A claim can show `post_death_version` on the timeline **before** its determination while the console says `awaiting_determination` — approval
+  is blocked there anyway.
+- **Until 6.23b ships:** the trustee, the final vote, R9 and 6.19c approve over a warning with ⛔ no reason, and a late warning, though
+  recordable here, holds ⛔ nothing up — the go-live coupling above.
+- The Super Admin who writes a reason may also approve with it (6.19c) — ⭐ answered by visibility (BigDev's (b)): every approver sees who
+  added each reason; ⛔ no two-person rule.
 - The FQ1 words say *"after the death"* on a correction made under a claim later released as filed against a living member (6-22-gated).
 
 ### Latest technical notes
-⛔ No new library. Postgres: `ALTER TYPE … ADD VALUE` cannot be used in the transaction that adds it ⇒ its own migration file (already the
-house rule, 0120 / 0040). Zod 3 `superRefine` as shipped; React 19 / TanStack Query as shipped in `apps/admin` — ⛔ no version change.
+⛔ No new library. Postgres: `ALTER TYPE … ADD VALUE` cannot be used in the transaction that adds it ⇒ its own file (0120 / 0040). `text[]`
+with a `cardinality()` CHECK; Drizzle `text().array()`. Zod 3 `superRefine`, React 19 / TanStack Query as shipped — ⛔ no version change.
 
 ### References
-- `.decision-log.md` — ⭐ `-261` D1, C1, Consequence 2 · `-262` FQ1, FQ2, FQ8 A (and its reading + not-cover) · `-264` FQ12, Consequence 2 ·
-  `-263` (the correction precedent; FQ9 / FQ10 for 6-26 / 6-27) · `-239` · `-241` (6.20's author-commit) · `-226` cl.6-7 (the asymmetry).
-- `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-09-28-6-20-follow-ups.md` (FQ1–FQ13; round 1's FQ2 text = fact 1);
-  `trustee-panel-routing-note-TEMPLATE.md` (Task 0.4).
-- Stories `6-20-…` (D4–D7, D14, D16, T5, T7, T16, AC3, AC4), `6-21a` (D7, T10), `6-19a` (D14; its row-6-23 dev note), `6-19c` (T10 seam).
-- `epics.md` Story 6.20 (AC3 — annotated by Task 0.3), Story 6.11 (UX-DR40 / 43 / 54); `ux-design-specification.md` (*"free-text note
-  mandatory on Approve-with-note"*); `docs/legal/niyamavali.md` §6.2 (unratified reference).
-- `microcopy.yaml` (`code_globs`, vocabulary); the no-comparison fence; `scripts/claim-adjudication-human-actor-invariant/check.ts` (unchanged).
+- `.decision-log.md` — ⭐ `-277` (Q1–Q3, its readings, Consequences) · `-261` D1, C1, Consequence 2 · `-262` FQ1, FQ2, FQ8 A (reading +
+  not-cover) · `-264` FQ12, Consequence 2, not-cover · `-263` (the correction precedent) · `-239` · `-241` · `-226` cl.6-7.
+- `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-04-6-23-warnings-confirms.md` (✅ ruled);
+  `…-2026-09-28-6-20-follow-ups.md` (FQ1–FQ13); `trustee-panel-routing-note-TEMPLATE.md` (its §0 gate — the reason list).
+- `6-23b-every-approver-gives-a-warning-reason.md` (the sibling); stories `6-20-…` (D4–D7, D14, D16, T5, T7, T16), `6-21a` (D7, T10), `6-19a`
+  (D14), `6-19c` (T10 seam), `6-19d` (the newest claim-table model), `2-4` (the Niyamavali amendment screen).
+- `epics.md` Story 6.20 (AC3 — annotated by Task 0.3), Story 6.11 (UX-DR40 / 43 / 54); `docs/legal/niyamavali.md` §6.2 (unratified reference).
+- `microcopy.yaml`; the no-comparison fence; `scripts/claim-adjudication-human-actor-invariant/check.ts`; `scripts/access-wrapper-invariants`.
 
 ## Dev Agent Record
 
@@ -514,7 +672,7 @@ house rule, 0120 / 0040). Zod 3 `superRefine` as shipped; React 19 / TanStack Qu
 
 ### Completion Notes List
 
-- (create-story, 2026-10-04) Ultimate context engine analysis completed — comprehensive developer guide created. ⛔ No code written; Task 0 (the author-commit, BigDev inserts) precedes any.
+- (create-story, 2026-10-04) Ultimate context engine analysis completed — comprehensive developer guide created. ⛔ No code written; Task 0 (the author-commit `-278`) precedes any.
 
 ### File List
 
@@ -522,6 +680,8 @@ house rule, 0120 / 0040). Zod 3 `superRefine` as shipped; React 19 / TanStack Qu
 
 | Version | Date | Change |
 |---|---|---|
-| v1.0 | 2026-10-04 | **Created (`bmad-create-story`)** from `-261` D1, `-262` FQ1 / FQ2 / FQ8 A and `-264` FQ12, traced at `2059482b`. Found: the FQ2 precedent the Panel was told of does ⛔ not exist (fact 1 — recorded, ⛔ not re-asked); FQ12's actor leaves two shipped approval paths uncovered (fact 2 ⇒ Q2, with Q1 / Q3 — confirms, ⛔ not blocking); the gate needs ⛔ no decrypt (fact 3); two tests pin the superseded rule and the 90-day window is date-sensitive (fact 4, Trap 5). Decisions NW1–NW12 ⏳ PROPOSED (Task 0's author-commit). Status `backlog` → **`ready-for-dev`**; code gated on Task 0. |
-| v1.1 | 2026-10-04 | **The Q1–Q3 routing note drafted** (`trustee-panel-routing-note-2026-10-04-6-23-warnings-confirms.md`, from the TEMPLATE; E4 commands run at `2059482b`). Tracing for it found a **third** non-District-Admin approval — the R9 panel — which, like an appeal reversal, already requires written reasons ⇒ fact 2 and Q2 amended; the escalation resolution is the only path with ⛔ no written reason. The note suggests Q1 A, Q2 B, Q3 B; the build stays at A for all three until the Panel answers. Task 9 gains the concealment-approval item. ⛔ No AC, Task or NW changed. |
-| v1.2 | 2026-10-04 | **APPENDED — the Panel ruled Q1–Q3: `2026-10-04-277`** (DR + KB, *"Q1 - A · Q2 - C · Q3 - B"*; staged for BigDev's insert). Q1 A = as built. ⚠ **Q2 C (our reading B ⛔ not taken) and Q3 B differ from v1.1's meanwhile A** ⇒ a STOP banner fences NW6, NW7, AC3–AC5, AC7 and Tasks 3, 5, 6 until the v2.0 re-derivation; Task 0's author-commit moves to **`-278`**; Task 9's Q1–Q3 entry DISCHARGED. ⛔ Nothing above rewritten. |
+| v1.0 | 2026-10-04 | **Created (`bmad-create-story`)** from `-261` D1, `-262` FQ1 / FQ2 / FQ8 A and `-264` FQ12, traced at `2059482b`. Four findings (the FQ2 precedent; FQ12's actor; no decrypt at the gate; two tests pin the superseded rule). NW1–NW12 ⏳ PROPOSED; Q1–Q3 confirms. `backlog` → `ready-for-dev`. *(Kept in git.)* |
+| v1.1 | 2026-10-04 | The Q1–Q3 routing note drafted; tracing found a third non-District-Admin approver (R9). *(Kept in git.)* |
+| v1.2 | 2026-10-04 | The Panel ruled `-277` (Q1 A · Q2 C · Q3 B); a STOP banner fenced the "meanwhile" design; Task 0's author-commit moved to `-278`. *(Kept in git — commit `1b38be9e`.)* |
+| v2.0 | 2026-10-04 | ⭐ **DERIVED, ⛔ not appended — the SPLIT** (BigDev: *"ok, split it"*). This file became **Story 6.23a**; every later approver and Q3 B's wait became **6.23b**. Fact 3 (Q3 B cannot ride `reviseDecision`) ⇒ NW14; fact 4 ⇒ NW13 (a coverage table); NW1 gained warning KEYS; NW8 `uncoveredSinceApproval`; `-277` Q1 ratified (NW3). |
+| **v2.1** | **2026-10-04** | ⭐ **THE REASON LIST (BigDev, 2026-10-04: *"Add one generic, and let the superadmin add the reason code from UI, whereby reason code can only be replaced by newer one but cannot be deleted"*; option (b) — every approver sees who added each reason; *"Written note also serve the later audit therefore replacing is no good"*).** NW5 now = ONE marker code + a chosen LIST entry; NEW **NW16** (`approval_warning_reasons`, per Pariwar, append-only, one-way `replaced_at`; the built-in generic is a constant), **NW17** (the Super Admin's add / replace screen; key `approval_warning_reason.manage` ⇒ catalog 51 / 65; ⛔ no edit, ⛔ no delete), **NW18** (a note is ⛔ never replaced); **NW7** tightened — a warned approval is ⛔ never revised (reason or note); NW13's table becomes `claim_warning_approvals` (records the chosen reason; 6.23b widens its steps); NW8 / NW9 carry the reasons with their "when to use" notes and authors; Traps 11 (Super-Admin words skip the static gate ⇒ a server deny-list), 15 (per-Pariwar), 16 (a reason replaced mid-submit). New AC12 (the list + screen), AC13 (the proof); AC9's catalog line moved to 51 / 65. ⭐ No Panel note for the list (§0 — `-264` delegated the wording). Status stays **`ready-for-dev`**; code gated on `-278`. |

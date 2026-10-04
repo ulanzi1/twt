@@ -30,17 +30,22 @@ function CertificateRemindersView(): ReactElement {
     body = (
       <>
         {q.isError ? <p role="alert">{t.loadError}</p> : null}
+        {/* The caller's ONLY signal that earlier claims were left out — ⛔ never let the list read as complete, and ⛔
+            never say "no family is being reminded" when the list was cut (code review round 2). */}
+        {q.data.truncated ? (
+          <p role="status" className="mt-2 text-xs" data-testid="certificate-reminders-truncated">
+            {q.data.items.length === 0 ? t.emptyTruncated : t.truncated}
+          </p>
+        ) : null}
         {q.data.items.length === 0 ? (
-          <p role="status" data-testid="certificate-reminders-empty">{t.empty}</p>
+          q.data.truncated ? null : (
+            <p role="status" data-testid="certificate-reminders-empty">
+              {t.empty}
+            </p>
+          )
         ) : (
           <CertificateRemindersList pariwarId={pariwarId} items={q.data.items} />
         )}
-        {/* The caller's ONLY signal that older, more-overdue claims were left out — ⛔ never let the list read as complete. */}
-        {q.data.truncated ? (
-          <p className="mt-2 text-xs" data-testid="certificate-reminders-truncated">
-            {t.truncated}
-          </p>
-        ) : null}
       </>
     );
   }

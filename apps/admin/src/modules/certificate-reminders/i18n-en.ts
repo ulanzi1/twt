@@ -14,7 +14,8 @@ export const certificateRemindersEn = {
   loading: 'Loading…',
   loadError: 'The list could not be loaded.',
   empty: 'No family is being reminded about a certificate.',
-  truncated: 'Only some claims are listed. Older, more overdue ones are kept, but are not shown here.',
+  truncated: 'Only the most recently opened claims are listed. Earlier ones are not shown here.',
+  emptyTruncated: 'No claim is shown here. Only the most recently opened claims are looked at — earlier ones are not shown.',
   cause: {
     rejected: 'Certificate not accepted',
     missing: 'No certificate received',
@@ -58,6 +59,7 @@ export const certificateRemindersEn = {
     deliveredLate: 'Delivered more than 14 days after posting.',
     showAddress: 'Show the address (asks for a fresh code)',
     code: 'The code we sent you',
+    newCode: 'Send a new code',
     postedOn: 'Posting date',
     tracking: 'Tracking number',
     record: 'Record the posted letter',

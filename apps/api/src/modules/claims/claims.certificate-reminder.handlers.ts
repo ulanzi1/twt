@@ -177,7 +177,9 @@ export function createCertificateReminderHandlers(deps: AppDeps) {
         pariwarId: scopeTx.pariwarId,
         context: { visible_count: items.length, scan_truncated: scan.truncated },
       });
-      return { items, truncated: scan.truncated };
+      // ⭐ `truncated` covers BOTH cuts — the domain's bounded scan AND this page's own `limit` slice (code review
+      // round 2: the slice alone dropped claims past `limit` while the response said nothing was left out).
+      return { items, truncated: scan.truncated || visible.length > limit };
     },
 
     /** POST …/certificate-reminders/letters — key (1): the ONE posted letter (CR9). */

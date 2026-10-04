@@ -20,10 +20,11 @@ import type { ClaimId, PariwarId } from '../ids/index.js';
 import { clampLimit } from '../pagination.js';
 import { claimCertificateReminderRuns } from '../schema/claim_certificate_reminder.js';
 import { claims } from '../schema/claims.js';
-import { certificateReminderSchedule } from './certificate-reminder-schedule.js';
+import { certificateCatchUp, certificateReminderSchedule } from './certificate-reminder-schedule.js';
 import {
   type CertificateCannotRemindReason,
   type CertificatePauseReason,
+  certificateRecordedDays,
   evaluateCertificatePersonStates,
   planCertificateRun,
   readCertificatePlanFacts,
@@ -98,13 +99,13 @@ export interface CertificateListItem {
 
 export interface CertificateListScanResult {
   readonly items: readonly CertificateListItem[];
-  /** The scan hit its limit — claims opened EARLIER than the last one scanned are NOT in `items`. */
+  /** The scan hit its limit — claims whose LATEST run began earlier than the last one scanned are NOT in `items`. */
   readonly truncated: boolean;
 }
 
 /**
- * ⭐ THE LIST's rows for one Pariwar — a bounded scan (latest-opened claim first), each claim evaluated in full. Reads
- * only; ⛔ nothing decrypted. The caller filters by district and pages.
+ * ⭐ THE LIST's rows for one Pariwar — a bounded scan (the claim whose LATEST run began most recently first), each claim
+ * evaluated in full. Reads only; ⛔ nothing decrypted. The caller filters by district and pages.
  */
 export async function listCertificateReminderClaims(
   db: Db,
@@ -153,6 +154,9 @@ export async function readCertificateListItem(
   let runDay: number | null = null;
   let nextReminderOn: string | null = null;
   const rows = await readClaimCertificateFamilyRows(db, pariwarId, claimCaseId);
+  const recipients = await readCertificateRecipients(db, pariwarId, claimCaseId);
+  const letters = await readClaimCertificateLetters(db, pariwarId, claimCaseId);
+  const states = evaluateCertificatePersonStates(recipients.people, rows, letters, new Map());
   if (open !== null) {
     const facts = await readCertificatePlanFacts(db, pariwarId, claimCaseId);
     const plan = facts === null ? null : planCertificateRun(facts, today);
@@ -164,11 +168,17 @@ export async function readCertificateListItem(
       runState = 'open';
       if (plan?.kind === 'continue') {
         runDay = plan.runDay;
-        // ⚠ Today's slot is "next" only while this run has ⛔ no row for it yet (the 10:00 IST sweep has not reached
-        // it); once it has, the next date is the following slot — ⛔ never "today" for a text already gone out.
-        const startedToday = (day: number) => rows.some((r) => r.runId === open.runId && r.slotDay === day);
-        nextReminderOn =
-          certificateReminderSchedule(open.day0).find((s) => s.date > today || (s.date === today && !startedToday(s.day)))?.date ?? null;
+        // ⭐ The SWEEP's own per-person rule, mirrored (code review round 3) — ⛔ never an approximation of it:
+        // ⛔ no date while the family cannot be reminded (the sweep sends nothing); TODAY while any person still has a
+        // send owed today — today's slot OR a late catch-up of a missed one (`certificateCatchUp`, a pause or an
+        // outage across a slot day) — ⛔ skipping a number whose letter was delivered; else the next slot after today.
+        if (recipients.cannotRemind === null) {
+          const runDayToday = plan.runDay;
+          const owedToday = states.some(
+            (st) => !st.numberLetterDelivered && certificateCatchUp(certificateRecordedDays(rows, open.runId, st.personKey), runDayToday).send !== null,
+          );
+          nextReminderOn = owedToday ? today : (certificateReminderSchedule(open.day0).find((sl) => sl.date > today)?.date ?? null);
+        }
       }
       // `plan?.kind === 'end'` (completed / certificate received) or `'open'` (a restart about to supersede this
       // run) — the row is still open in the DB right now, but the next sweep ends/supersedes it: no further slot
@@ -176,10 +186,7 @@ export async function readCertificateListItem(
     }
   }
 
-  const recipients = await readCertificateRecipients(db, pariwarId, claimCaseId);
-  const letters = await readClaimCertificateLetters(db, pariwarId, claimCaseId);
   const staff = await readClaimCertificateStaffRows(db, pariwarId, claimCaseId);
-  const states = evaluateCertificatePersonStates(recipients.people, rows, letters, new Map());
   const people: CertificateListPerson[] = recipients.people.map((p) => {
     const s = states.find((x) => x.personKey === p.personKey)!;
     const last = rows

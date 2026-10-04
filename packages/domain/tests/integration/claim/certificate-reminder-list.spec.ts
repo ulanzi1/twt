@@ -317,15 +317,46 @@ describe.skipIf(!hasDatabase)('the certificate reminder — admin LIST (live DB)
     await expect(listCertificateReminderClaims(bindScopedDb(client), PID, TODAY(), { limit: exact - 1 })).resolves.toMatchObject({ truncated: true });
   });
 
-  it('⭐ once today\'s slot is STARTED (a row of this run for it), `nextReminderOn` moves past today — ⛔ never "today" for a text gone out', async () => {
+  it('⭐ the sweep\'s per-person rule — today stays NEXT while ANY person is still owed today\'s text; past it only once all are recorded', async () => {
     const { client } = getTx();
     const c = await openMissingRun(client, { mobiles: ['9876543210', '9123456789'] });
     expect((await readCertificateListItem(bindScopedDb(client), PID, c.cid, TODAY()))!.nextReminderOn).toBe(TODAY());
-    const sent = await beginCertificateFamilySend(client, sendInput(c, c.a.personKey));
-    if (sent.kind !== 'send') throw new Error('expected a send');
+    const sentA = await beginCertificateFamilySend(client, sendInput(c, c.a.personKey));
+    if (sentA.kind !== 'send') throw new Error('expected a send');
+    // `b`'s child has ⛔ not run yet ⇒ `b` is still owed today's slot ⇒ still TODAY (round 2's "any row" moved past it).
+    expect((await readCertificateListItem(bindScopedDb(client), PID, c.cid, TODAY()))!.nextReminderOn).toBe(TODAY());
+    const sentB = await beginCertificateFamilySend(client, sendInput(c, c.b.personKey));
+    if (sentB.kind !== 'send') throw new Error('expected a send');
     const item = await readCertificateListItem(bindScopedDb(client), PID, c.cid, TODAY());
     expect(item!.runDay).toBe(1);
     expect(item!.nextReminderOn).not.toBeNull();
     expect(item!.nextReminderOn! > TODAY()).toBe(true);
+  });
+
+  it('⭐ a MISSED slot the sweep catches up today (a pause or an outage across a slot day) reads TODAY, ⛔ the next future slot', async () => {
+    const { client } = getTx();
+    // day0 nine days back ⇒ today is run day 9 — ⛔ a slot day (…, 7, 10, …); day 7 has ⛔ no row ⇒ `certificateCatchUp`
+    // sends it LATE today.
+    const c = await openMissingRun(client, { mobiles: ['9876543210', '9123456789'], daysAgo: 9 });
+    const day0 = addCalendarDays(TODAY(), -9);
+    expect((await readCertificateListItem(bindScopedDb(client), PID, c.cid, TODAY()))!.nextReminderOn).toBe(TODAY());
+    // Once day 7 is recorded for BOTH people, nothing is owed today ⇒ the next slot is day 10.
+    for (const person of [c.a, c.b]) {
+      await client.query(
+        `INSERT INTO claim_certificate_reminders (run_id, claim_case_id, pariwar_id, slot_day, sent_on, late, recipient_key, purpose, outcome)
+         VALUES ($1, $2, $3, 7, $4, true, $5, 'family_sms', 'no_target')`,
+        [c.runId, c.cid, PARIWAR_A, TODAY(), person.personKey],
+      );
+    }
+    expect((await readCertificateListItem(bindScopedDb(client), PID, c.cid, TODAY()))!.nextReminderOn).toBe(addCalendarDays(day0, 10));
+  });
+
+  it('⛔ "cannot remind" (⛔ no contact record) ⇒ ⛔ no next-reminder date — the sweep sends nothing', async () => {
+    const { client } = getTx();
+    const { cid } = await seedMissingWindowClaim(client, { mobiles: ['9876543210', '9123456789'] });
+    const opened = await openUnderLock(client, cid, await planNow(client, cid));
+    if (opened.status !== 'opened') throw new Error('run not opened');
+    const item = await readCertificateListItem(bindScopedDb(client), PID, cid, TODAY());
+    expect(item).toMatchObject({ runState: 'open', runDay: 1, cannotRemind: 'no_contact_record', nextReminderOn: null });
   });
 });

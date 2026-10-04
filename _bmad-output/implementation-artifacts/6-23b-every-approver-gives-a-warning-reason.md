@@ -3,6 +3,28 @@ baseline_commit: 2059482b
 ---
 
 <!--
+⭐⭐ MERGED 2026-10-04 as PR #253 (REBASE-merge) — THE SHA MAP. Every SHA this file (and `sprint-status.yaml`) cites for
+Story 6.23's own commits is a BRANCH SHA (`story/6-23-post-death-nominee-change-warnings`), ⛔ NOT reachable from `main`
+after the rebase-merge. The baseline pin `2059482b` IS on `main` and is unaffected. The citations are kept AS WRITTEN (the
+record); this is the map to their `main` twins, PROVED ⛔ not assumed: each pair has an IDENTICAL `git patch-id --stable`,
+and the merged tree (`c8632117`) is byte-identical to the branch head (`629aab2e`) — `main` had not moved (the merge-base
+was `2059482b`), so the rebase rewrote SHAs only.
+  · `6ab1d8d9` → `a21d69e7`  story: created (v1.0)                                        (⛔ not cited)
+  · `55f5be9a` → `15efa63d`  governance: the Q1–Q3 routing note                           (⛔ not cited)
+  · `1b38be9e` → `1ed071dd`  governance: `-277` (the Panel's Q1 A · Q2 C · Q3 B)
+  · `a55480a8` → `fb1f6a49`  story: the split into 6.23a / 6.23b (v2.1 / v1.1)
+  · `07dd88b0` → `e8930a40`  story: the first validate's fixes (v2.2 / v1.2)               (⛔ not cited)
+  · `a125a59d` → `a785eb0a`  governance: `-278` (NW1–NW18, EA1–EA9)
+  · `29d35996` → `6a54a174`  story: `-278` recorded (v2.3 / v1.3)
+  · `e2bcd2c3` → `73cf1358`  governance: `-279` (A1–A12)
+  · `66ad3f75` → `efb21a3f`  governance: `-280` (NW14's fourth state)
+  · `f17f4fab` → `52584c55`  story: the second validate (v2.4 / v1.4)                     (⛔ not cited)
+  · `629aab2e` → `c8632117`  story: the round-4 fixes (the merge head)                    (⛔ not cited)
+Re-verify (bash — zsh does not word-split `$p`): `for p in "a125a59d a785eb0a" …; do set -- $p; diff <(git show $1 | git patch-id --stable | cut -d' ' -f1) <(git show $2 | git patch-id --stable | cut -d' ' -f1); done`
+— ⚠ needs the branch SHAs, which survive only while the branch (local or `origin/story/6-23-post-death-nominee-change-warnings`) does.
+-->
+
+<!--
 BASELINE — `2059482b` on `main`, traced 2026-10-04 alongside Story 6.23a (the split of row `6-23`, BigDev: *"ok, split it"*). ⚠ This story
 starts only when 6.23a is `done` — at that point RE-PIN: `git diff --name-only 2059482b..HEAD -- packages apps scripts docs` will list 6.23a's
 whole build plus whatever else landed; re-derive every code claim below before Task 1 (two facts kept apart, as always: "the pin is an
@@ -434,3 +456,4 @@ trigger: a held R9 claim reported).
 | **v1.2** | **2026-10-04** | ⭐ **Follows 6.23a v2.2's validate** (fresh context, at `a55480a8`). The wait holds in `reversed` (6.23a fact 3 — a District Admin approval survives a denied final vote and an appeal reversal) — EA2 and an AC2 arm; *"reversed"* in AC2's never-waits list now reads *"refused by the District Admin and then reversed"*; the "no correction needed" note is new (the Q2 row — `-278` corrects `-277`'s reading); `castR9Vote` takes ⛔ no claim-row lock (Trap 6); the import direction (Trap 7); 6.23a's nullable `verifier_decision_id` and jsonb UPDATE guard (Trap 10); `writeApprovalChain` already returns its `decisionId` (EA6, Task 5); `r9-voting.test.ts` (Task 6); EA1's migration is **0144**; error / helper names follow 6.23a (`WarningReasonUngroundedError`, `lockActiveApprovalWarningReason`). Status stays **`backlog`**. |
 | **v1.3** | **2026-10-04** | ⭐ **`-278` COMMITTED** (`a125a59d`) — EA1–EA9 as written in v1.2. ⛔ No design change. Status stays **`backlog`**. |
 | **v1.4** | **2026-10-04** | ⭐ **Follows the second fresh-context validate of the set** (6.23a v2.4; three read-only verifiers; BigDev: *"All"*, *"Not the final approver"*, *"Correction queue, in 6.23b"*) — decision changes by author-commit **`-279`**. HIGH: R9 finalize checks each live approve vote's row covers EVERY current key, ⛔ not that a row exists (EA5, Trap 6, AC5 — `-279` A2; found by two verifiers independently). MEDIUM: the wait does ⛔ not count a late reason recorded by the approving actor — `approvingActorIds` on the gate's options seam (EA2, AC2 — A1); the District Admin's correction queue lists a waiting claim (NEW EA10, AC10, Task 10 — A4); `-277`'s *"R9 or an appeal reversal has none"* clause superseded (Q3 row — A5); `ClosureColumn.tsx` dropped and the closure-request `closure-approve` named as a refusal path that ⛔ never carries the picker (Trap 12, EA7, AC7); the bulk reader's out-of-date rule (Trap 13 — A3). LOW: `super_admin_approval` carries `trustee_decision_id` too (EA1 — A10); four translators, ⛔ not five (Trap 7, Task 7); ⛔ no contracts test pins the request shapes (Task 6); D27's `note` ⇔ code pairing and R9's first `superRefine` (EA5, EA6, AC5, AC6); the admin client + hooks (Task 8); the TRUNCATE note. ⭐ **Then the fresh-context RE-VALIDATE of `-279`** (before insertion): the 409 carries `own_reason_excluded` and names who can answer (6.23a's NW14 now judges `nothing_uncovered` for the recorder); the R9 panel's flag also excludes every live approve voter; EA10's TIGHT superset arm (a determination decided after the approval), the post-filter's THIRD arm and the module header; the inner helper's `Pick` and the T10 seam test; `voterActorId` on finalize's vote select; A7 withdrawn; AC5's first arm reworded. ⭐ **A third round** found an R9 approval from `state_trustee_approved` could stall under A1 (its voters are the late-reason recorders, and NW14 refused there) ⇒ `-280` adds that state to NW14 (AC2 arm); Task 10 names the header amendment and the hidden actions. ⭐ **Round 4: ⛔ no BLOCKER or HIGH** — the 409's words now exclude live R9 approve voters, and the all-voters R9 residual is recorded (Task 9); AC0's parenthetical placed after `-279`. Status stays **`backlog`**. |
+| **v1.5** | **2026-10-04** | **Merged as PR #253 (rebase), docs only.** Every branch SHA this file cites is mapped to its `main` twin in the header note (all 11 commits, proved by identical `patch-id`); ⛔ no citation rewritten. Status stays **`backlog`**. |

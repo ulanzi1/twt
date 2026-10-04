@@ -14,10 +14,24 @@
 
 ---
 
-> ## ⏳ AWAITING PANEL RULING
+> ## ✅ PANEL RULED — 2026-10-04 — recorded as `2026-10-04-277`
 >
-> ⛔ **Nothing is recorded here yet.** When the Panel rules, transcribe it into this block **and** into `.decision-log.md` as a new
-> decision id. ⭐ Everything below is then kept **unedited** as the question **as it was put**.
+> **Ruled by Dhiraj Rahul + Kalpana Bharti, relayed by BigDev — verbatim:**
+> *"by DR and KB — Q1 - A · Q2 - C · Q3 - B"*
+>
+> ⭐ Our readings **taken** for **Q1** (a member's first nominee is warned too) and **Q3** (a warning that appears after the District Admin
+> approved waits for the District Admin's reason and note). ⚠ **Q2: our reading (B — the escalation approval only) was ⛔ NOT taken** — the
+> Panel chose **C**: **every approver** gives a reason and a note while a warning shows, *"also after an appeal and in the R9 vote … even
+> where written reasons already exist"*, with the stated cost in front of them (*"the most new work"*). ⭐ The correction about FQ2's
+> precedent was before the Panel; `-262` FQ2 stands.
+> ⚠ **Q2 C and Q3 B differ from what Story 6.23 v1.1 built meanwhile (A)** — the story's design is re-derived before any code
+> (`-277` Consequence 1).
+>
+> **What this ruling does NOT cover** (full list in `2026-10-04-277`): the wording of the reason at each new step; whether a
+> concealment-flagged approval should also need a reason (offered, ⛔ not taken up); what an approver must weigh; whether the family is told
+> a claim is waiting for the District Admin.
+>
+> ⭐ Everything **below this block is kept UNEDITED** — it is the question as it was put.
 
 ---
 

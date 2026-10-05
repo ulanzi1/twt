@@ -31,17 +31,20 @@ ONLY (81 files) + `scripts/claim-adjudication-human-actor-invariant/check.ts`. T
   · DURABLE — the pin `b41ea25f` is an ancestor of HEAD (`git merge-base --is-ancestor b41ea25f HEAD`).
   · PERISHABLE — every code claim below was RE-DERIVED against `b41ea25f` on 2026-10-05 (each function opened, each `file:NNN` read with
     `sed -n`). ⚠ Before Task 1, run `git diff --name-only b41ea25f..HEAD -- packages apps scripts`; any cited file in that list is re-read.
+  · v2.1 (validate, 2026-10-05, at `9c3c6181` — ⛔ no code moved since `b41ea25f`): three fresh-context verifiers re-opened every code
+    claim; RD17–RD21 and the fixes below were found in the code, ⛔ never decided.
 
 STATUS: `ready-for-dev` (6.23a is `done` — the 6.21b precedent: the row flips when its sibling is `done`).
 
 GLYPH REGISTER: `⛔` sits ONLY on a negation word (not / no / never / nothing / none / nobody / neither / cannot / don't / nowhere); `⭐` =
-key fact or action; `⚠` = hazard. Doubling is volume only. ⭐ Sweep: `grep -oE "⛔ \**[A-Za-z]+"` — every head-word a negation.
+key fact or action; `⚠` = hazard. Doubling is volume only. ⭐ Sweep: `grep -noE "⛔ \**[^ ]+"` (this line's own hit excepted) — every head-word a negation (a backticked
+code word after `⛔` is a defect: write *"never `x`"*).
 ⭐ The ONE glyph exception: a `⛔` inside a verbatim quotation of code (a doc-block quoted in a Trap) belongs to the quote.
 ADDRESSING RULE: ⛔ no `file:NNN` pointers into `.decision-log.md`, `deferred-work.md` or `sprint-status.yaml` (newest-first files — every
 prepend rots them). Cite decisions by id + item, `deferred-work.md` by its section heading, `sprint-status.yaml` by row key. `file:NNN` is
 used ONLY for code, as of `b41ea25f`; function names are the stable handle.
-LETTERS: `EA1`…`EA10` are THIS story's author decisions (`-278` EA1–EA9; `-279` amends EA1, EA2, EA5 and adds EA10; `-280` adds
-`state_trustee_approved` to 6.23a NW14's states). `NW*` = Story 6.23a's. `RD1`…`RD16` (v2.0) are FOUND facts from re-deriving against
+LETTERS: `EA1`…`EA10` are THIS story's author decisions (`-278` EA1–EA9; `-279` amends EA1, EA2, EA5, reaches EA7 (A1, A3) and adds EA10; `-280` adds
+`state_trustee_approved` to 6.23a NW14's states). `NW*` = Story 6.23a's. `RD1`…`RD21` (v2.0 / v2.1) are FOUND facts from re-deriving against
 6.23a's shipped build — ⛔ none is a decision; each says what it changes in the build. Rulings are cited by id + item (`-277` Q2, Q3).
 -->
 
@@ -88,10 +91,10 @@ case that is most likely fraud.
 
 ## The rulings this story builds — verbatim keys, and what is still OUR reading
 
-| Decision | The Panel said (verbatim, as relayed) | Our reading |
+| Decision | The text ruled (`-277`: the relayed verbatim is *"Q2 - C"* / *"Q3 - B"*, quoted here as the option was put in the note; `-264`: its own text) | Our reading |
 |---|---|---|
 | `-277` Q2 | *"Q2 - C"* — *"Yes, every approver — also after an appeal and in the R9 vote … Every approval made while a warning shows records a reason and a note, even where written reasons already exist."* | Every writer that approves a claim, whenever any warning shows (the five above). ONE reason (from the list) + ONE note per approval (`-264`'s reading); where a note is already required (R9 votes, the Super Admin) only the reason is new. ⚠ The "no correction needed" approve has ⛔ no note today — it gains one (Trap 4); `-277`'s reading said *"6.19c's approvals"* already require one, and `-278` corrects that. ✅ BigDev confirmed the broad reading in session (`-277`). |
-| `-277` Q3 | *"Q3 - B"* — *"The final approval waits until the District Admin … records a reason and a note for the new warning. The claim is ⛔ never refused for it."* | The wait = a conjunct of the ONE approval gate: where a District Admin approval exists, every current warning key must be covered by the District Admin's record rows (6.23a NW13–NW15) — else a typed 409 *"waits for the District Admin"*. Per warning, ⛔ not per kind. ⭐ A late reason recorded by the approving actor does ⛔ not count for that approval (`-279` A1). ⚠ `-277`'s clause *"a claim approved through an escalation, R9 or an appeal reversal has none"* is SUPERSEDED (`-279` A5): R9 run after the District Admin's approval, and a reversed final-vote denial, KEEP the District Admin's live approval — the wait applies there. |
+| `-277` Q3 | *"Q3 - B"* — *"The final approval waits until the District Admin … records a reason and a note for the new warning. The claim is ⛔ never refused for it."* | The wait = a conjunct of the ONE approval gate: where a District Admin approval exists, every current warning key must be covered by the District Admin's record rows (6.23a NW13–NW15) — else a typed 409 *"waits for the District Admin"*. Per warning, ⛔ not per kind. ⭐ A late reason recorded by the approving actor does ⛔ not count for that approval (`-279` A1). ⚠ `-277`'s clause *"a claim approved through an escalation, R9 or an appeal reversal has none"* is SUPERSEDED (`-279` A5), as was its *"the District Admin re-records their approval (a revision)"* (`-278` supersession 2 → NW14): R9 run after the District Admin's approval, and a reversed final-vote denial, KEEP the District Admin's live approval — the wait applies there. |
 | `-264` FQ12 | *"APPROVING WHILE ANY WARNING SHOWS NEEDS A REASON AND A NOTE"* (its heading) | `-277` Q2 extends it to every approver; `-264` is ⛔ not edited. |
 | `-264` not-cover | *"The wording of the reasons … an author-commit at the row's Task 0."* | The reasons are 6.23a's list (NW16–NW17, BigDev's design) — this story ⛔ never mints its own. |
 
@@ -127,9 +130,9 @@ family's claim is never refused because of it."*
 **Checked against the Niyamavali? ⭐ Yes — silent** (§6.2 *"the Trust verifies … the claimant's entitlement"*; nothing on approval notes;
 the agent-drafted reference binds nothing — [[feedback_niyamavali_rulebook_not_spec]]). ⭐ **Checked against `-277` Q2 / Q3 and `-264` FQ12:
 matches as ruled**; the scope of "every approver" is `-277`'s reading, confirmed by BigDev. ⭐ v2.0 re-checked: ⛔ no predicate is added or
-changed beyond `-278` / `-279` / `-280` — RD1–RD16 change the build's mechanics, ⛔ never who may approve or when.
+changed beyond `-278` / `-279` / `-280` — RD1–RD21 (v2.0 / v2.1) change the build's mechanics, ⛔ never who may approve or when.
 
-## ⭐ v2.0 — WHAT RE-DERIVING AGAINST 6.23a's SHIPPED BUILD CHANGED (RD1–RD16; FOUND, ⛔ not decided)
+## ⭐ v2.0 / v2.1 — WHAT RE-DERIVING AGAINST 6.23a's SHIPPED BUILD CHANGED (RD1–RD16 v2.0, RD17–RD21 v2.1; FOUND, ⛔ not decided)
 
 v1.4 was traced at `2059482b`, before 6.23a existed; 6.23a then went through four review rounds. Each item below is a fact in the code at
 `b41ea25f` and what it changes here. ⛔ None moves a decision; each is threaded into the Traps, EAs, ACs and Tasks below.
@@ -156,10 +159,11 @@ v1.4 was traced at `2059482b`, before 6.23a existed; 6.23a then went through fou
 - **RD5 — every R9 route code is `r9_voting.*`** (25 codes in `claims.r9-voting.handlers.ts`; ⛔ none is `r9.*`). `-279` A2 wrote the refusal
   as `r9.approve_votes_need_warning_reason` — a string slip against the live prefix ⇒ the code is **`r9_voting.approve_votes_need_warning_reason`**.
   ⛔ No design change (A2's substance stands). An erratum line in the log is BigDev's option, ⛔ not owed.
-- **RD6 — `cycle-freeze/` and `r9-voting/` have ⛔ no `i18n-en.ts`.** Both import shared words from `claim-verification/` (`verifierConsoleEn`,
-  and the suffix matchers in `claim-verification/nominee-errors.ts` — `error.code.endsWith('.death_certificate_acceptance_required')` …). ⇒
-  the shared warning words go into `verifierConsoleEn.approvalWarnings` (`claim-verification/i18n-en.ts` — 6.23a's block: `kindLine`,
-  `pickerLabel`, `errors.*` …) and one message helper per new suffix into `nominee-errors.ts`; `correction-closure/` has its own `i18n-en.ts`
+- **RD6 — `cycle-freeze/` and `r9-voting/` have ⛔ no `i18n-en.ts`.** Both import shared words from `claim-verification/` (`verifierConsoleEn`
+  and the message helpers in `claim-verification/nominee-errors.ts`); the suffix MATCHERS live in each page's own `errorMessage`
+  (`error.code.endsWith('.death_certificate_acceptance_required')` … — `CycleFreezePage.tsx:55`, `R9CasePanel.tsx:26`). ⇒ the shared warning
+  words go into `verifierConsoleEn.approvalWarnings` (`claim-verification/i18n-en.ts` — 6.23a's block: `kindLine`, `pickerLabel`, `errors.*`
+  …), one message helper per new suffix into `nominee-errors.ts`, and one `endsWith` arm per new suffix in each page's `errorMessage`; `correction-closure/` has its own `i18n-en.ts`
   for D27's note label, and its `closureErrorText` (`correction-closure/errors.ts`) already shows the server's words for any `closure.*` code.
 - **RD7 — `correction-closure-shape.spec.ts` pins the EXACT keys** of `listPariwarClosureQueue` items, `listEscalatedClosures` items and
   `readEscalatedClosureDetail` (`Object.keys(...).sort()`); `getCycleFreezePending` is also read by the Trustee-Lite dashboard
@@ -176,7 +180,8 @@ v1.4 was traced at `2059482b`, before 6.23a existed; 6.23a then went through fou
   for the response (the active list does ⛔ not vary by claim).
 - **RD10 — the R9 per-vote coverage needs rows 6.23a's reader never selects.** `readClaimApprovalWarnings` aggregates
   `DISTRICT_ADMIN_WARNING_STEPS` rows only (correctly — Trap 13 of 6.23a). ⇒ NEW leaf read `readR9VoteWarningCoverage(db, pariwarId,
-  voteIds)` → `Map<voteId, coveredKeys[]>` over `step = 'r9_vote'` rows, used by `finalizeR9Outcome` AND by the panel (RD11).
+  voteIds)` → `Map<voteId, coveredKeys[]>` over `step = 'r9_vote'` rows, used by `finalizeR9Outcome` AND by the panel (RD11). The per-vote
+  comparison is NEW pure `keysNotCoveredBy(keys, coveredKeys)` (a plain set difference) — ⛔ never `uncoveredKeys` (RD17).
 - **RD11 — the R9 panel must show an out-of-date approve vote BEFORE finalize** (invariant 5; `-279` A2's 409 otherwise lands on a
   step-up-attested finalize with ⛔ nothing on screen to explain it). ⇒ `R9PanelVote` gains `covers_current_warnings: boolean | null`
   (`null` on a deny vote, or while ⛔ no warning shows), and the panel says which approve votes must be revised.
@@ -197,6 +202,34 @@ v1.4 was traced at `2059482b`, before 6.23a existed; 6.23a then went through fou
 - **RD16 — the `-251` waived approve is a seventh path through the wait**, ⛔ not an exception to it: `decideEscalatedClosure` calls
   `assertClaimApprovable(…, { nameCheck: 'waived_251' })`, which waives the name check ONLY ⇒ it waits too (Trap 17), and the rewritten T10
   seam test proves it.
+- **RD17 (v2.1) — `uncoveredKeys` returns `[]` whenever the District Admin has ⛔ not approved** (`approval-warnings.ts:406`, its first line:
+  `if (!warnings.coverage.districtAdminApproved) return [];`). That is right for the WAIT (EA2) and wrong for R9: `-279` A2's target case
+  is R9 run from `verification_in_progress` / `verifier_review`, where ⛔ no District Admin approval exists — `uncoveredKeys` there passes
+  EVERY vote. ⇒ the R9 per-vote check at finalize AND the panel's `covers_current_warnings` use `keysNotCoveredBy(w.keys, row.coveredKeys)`
+  (RD10), ⛔ never `uncoveredKeys`. (`-279` A2's parenthetical *"`uncoveredKeys` against that row's `covered_keys`"* is a slip against the
+  shipped function, as RD5's code string is — ⛔ no design change (A2's per-vote, per-key substance stands); an erratum line in the log is
+  BigDev's option, ⛔ not owed.)
+- **RD18 (v2.1) — the new domain inputs are OPTIONAL, as 6.23a's are.** `adjudicateClaim`'s input reads `warningReasonCode?: string | null`
+  (`verifier-decision-persist.ts:263`). Typechecked tests call the later writers directly — `voteOnFrozenClaim` 37×, `castR9Vote` 36×,
+  `resolveEscalation` 8×, `approveNoCorrectionNeeded` 5×, `decideEscalatedClosure` 2× (≈ 88 sites) ⇒ every new domain field is
+  `warningReasonCode?: string | null`, read as `input.warningReasonCode ?? null`; ⛔ never required (or ≈ 88 sites break `pnpm -w typecheck`).
+- **RD19 (v2.1) — the redetermination that creates a late key ALSO makes the recorded name check stale.** The effective declaration's
+  token carries `d=${determinationId}` (`nominee-effective.ts:216`) ⇒ after the redetermination the gate refuses with the stale-name-check
+  409 BEFORE its new last conjunct runs — at P3, R9 finalize, the full Super Admin approve and the "no correction needed" approve (its
+  gate call, `correction-closure.ts:1507`; its earlier `check_required` at `:1500` compares the latest check with the no-correction record's
+  `recorded_at`, which a redetermination does ⛔ not move). Only the `-251` waived arm reaches the wait directly. ⇒ every AC2 / Testing wait scenario re-records a PASSING name check after the redetermination (`seedNomineeNameCheck`,
+  `tests/integration/_helpers.ts:1099`, or the console's record path) and only THEN expects `…late_warning_reason_required`. ⭐ On a live
+  screen both can hold at once — the surface may show *"waits for the District Admin"* while the name check also blocks; that is correct.
+- **RD20 (v2.1) — `PariwarClosureQueueItemDto` is ONE `.strict()` item for both kinds** (`contracts/src/claims/correction-closure.ts:231-244`,
+  `kind: 'closure_request' | 'no_correction_needed'`). A closure request is a refusal path (Trap 12) ⇒ `approval_warnings:
+  ApprovalWarningsSummary.nullable()`, `null` EXACTLY on `kind: 'closure_request'` (the bulk read covers only the `no_correction_needed`
+  items' claims); AC7 pins both arms.
+- **RD21 (v2.1) — two shipped tests go red BY DESIGN, and each is rewritten, ⛔ never deleted.** (a)
+  `packages/domain/tests/integration/rls/claim-warning-approvals-policy-regression.spec.ts:227` inserts `step: 'r9_vote'` expecting
+  `claim_warning_approvals_step_check` — after 0144 `r9_vote` is valid (it would fail the new `…_later_step_fk_check` instead) ⇒ use a
+  still-invalid value (e.g. `'not_a_step'`) for the step-CHECK assertion and move `r9_vote` into AC1's per-step FK-set cases. (b)
+  `packages/contracts/tests/nominee-name-check-vocabulary-lockstep.test.ts:68-83` hand-builds a `CycleFreezePendingItem` and expects
+  `success === true` ⇒ it gains `approval_warnings` (contracts tests sit outside `tsc` — only vitest sees it).
 
 ## ⚠ THE TRAPS
 
@@ -236,8 +269,8 @@ the Panel ruled only the warned case). ⚠ `NoCorrectionStrip` (`PariwarClosureS
 **Trap 6 — an R9 approve vote can be cast BEFORE a warning exists, and votes are revisable until finalize (6.14).** ⇒ the vote-time check is
 best-effort (the reader's warnings, inexact like Trap 1; and `castR9Vote` takes ⛔ no claim-row lock, so a certificate re-review can commit
 between the read and the vote) and the binding check is at `finalizeR9Outcome` (after its gate — exact): **each** LIVE approve vote's own
-`r9_vote` record row must cover EVERY current key (RD10's `readR9VoteWarningCoverage`, then `uncoveredKeys`-style set difference against
-that row's `covered_keys`) — ⛔ never merely "a row exists" — else a typed 409 naming the vote ids, and the voters revise (`-279` A2). ⚠ Why
+`r9_vote` record row must cover EVERY current key (RD10's `readR9VoteWarningCoverage`, then `keysNotCoveredBy` against that row's
+`covered_keys` — ⛔ never `uncoveredKeys`, which returns `[]` without a District Admin approval, RD17) — ⛔ never merely "a row exists" — else a typed 409 naming the vote ids, and the voters revise (`-279` A2). ⚠ Why
 per key: R9 can run from `verification_in_progress` / `verifier_review` (`R9_OUTCOME_FROM_STATES`, `state.ts:78-85`), where ⛔ no District
 Admin approval exists and EA2 is vacuous — votes cast before the determination cover only the 90-day keys, and the post-death keys would
 otherwise pass unanswered. ⚠ A panel member who cannot be reached holds the approval until the session is cancelled and reopened — stated,
@@ -271,15 +304,18 @@ per-claim reader, ⛔ not the bulk one.
 **Trap 9 — sequencing.** Rows **6-24** (`-262` FQ5: the true nominee's claim waits at final approval for the appeal) and **6-26** (`-263`
 FQ9: no approval before a completed inspection — a conjunct INSIDE `assertClaimApprovable`) touch the same gate and the same writers
 (`-277` Consequence 2) — both `backlog` at `b41ea25f`. ⇒ whichever lands second rebases onto the other; ⛔ none drops another's check. Rows
-`6-26` / `6-27` owe `-279` A6's decision before extending `APPROVAL_WARNING_KINDS` (6.23a's pin test says so).
+`6-26` / `6-27` owe `-279` A6's decision before extending `APPROVAL_WARNING_KINDS` (6.23a's pin test says so). ⭐ Interaction to state, ⛔ not
+prevent (the routing note's *"not asked because your words already decide it"*; 6.23a's *"Interactions to state"*): the true nominee's
+refiled claim (row 6-24) shows the SAME warnings as the refused claim — the versions are the deceased's — so every later approver of it
+picks a reason and writes a note too (e.g. *"the post-death change was refused on claim X"*). Expected; ⛔ no special case.
 
 **Trap 10 — widening the record is a migration with THREE lockstep copies and composite FKs.** At `b41ea25f`: 0143's `step` CHECK lists two
 values; `claim_warning_approvals_step_decision_check` is `(left(step, 15) = 'district_admin_') = (verifier_decision_id IS NOT NULL)` — it
 ALREADY holds for every later step (⛔ not prefixed ⇒ `verifier_decision_id` NULL) and stays UNCHANGED; `…_step_note_check` likewise holds
 (later steps carry ⛔ no note). ⇒ **0144** (next free; journal `idx` 144 after 0143's `when` `1793072400000`): (a) drop and re-add ONLY the
 `step` CHECK with seven values; (b) three nullable columns `trustee_decision_id`, `r9_vote_id`, `closure_id`; (c) three UNIQUE targets (RD1)
-and three COMPOSITE FKs `(pariwar_id, x)` → each parent, `ON DELETE CASCADE` (the 0143 reasoning: ⛔ `set null` is an UPDATE the trigger
-refuses; ⛔ `restrict` breaks the `claims` cascade); (d) a NEW `claim_warning_approvals_later_step_fk_check` — exactly the step's own FK set
+and three COMPOSITE FKs `(pariwar_id, x)` → each parent, `ON DELETE CASCADE` (the 0143 reasoning: never `set null` — an UPDATE the trigger
+refuses; never `restrict` — it breaks the `claims` cascade); (d) a NEW `claim_warning_approvals_later_step_fk_check` — exactly the step's own FK set
 (`escalation_resolution` / `final_vote` / `no_correction_approval`: `trustee_decision_id` only; `r9_vote`: `r9_vote_id` only;
 `super_admin_approval`: `closure_id` AND `trustee_decision_id`; the two `district_admin_*` steps: ⛔ none of the three); (e) an index per new
 FK column. The THREE copies of the step list move in ONE commit: the migration CHECK, `CLAIM_WARNING_APPROVAL_STEPS` (+ the Drizzle `check()`)
@@ -305,14 +341,17 @@ in `denied_no_appeal` ⇒ a refusal path, and putting the picker on it would gat
 reader reports `awaiting_determination` then (6.23a NW2, `-279` A3) ⇒ the bulk form does the SAME comparison in its one statement (it reuses
 `deriveClaimApprovalWarnings` — RD9), so the *"waits for the District Admin"* line and the vote-time R9 check ⛔ never use the old date. ⭐ A
 parity test runs BOTH readers over DIRTY input (a stale determination, ⛔ no certificate, a released earlier claim, a vacated version) and
-asserts equal results ([[feedback_story_validate_footguns]] #26).
+asserts equal results on every field EXCEPT `reasonOptions` — the bulk reader reads the list once per response, so its per-claim
+`reasonOptions` is `[]` by design ([[feedback_story_validate_footguns]] #26).
 
 **Trap 14 — shape pins and strict fixtures.** (a) `packages/domain/tests/integration/claim/correction-closure-shape.spec.ts` pins exact keys
 ⇒ attach at the handler (RD7) and leave it green UNMODIFIED. (b) The admin client PARSES every response (`apiFetch` → `schema.parse`,
 `apps/admin/src/api/client.ts`) against `.strict()` DTOs ⇒ every hand-built fixture of a widened DTO must carry the new required fields:
 `apps/admin/tests/cycle-freeze-page.test.tsx`, `pending-case-card-return.test.tsx`, `r9-case-panel.test.tsx`, `correction-closure.test.tsx`,
-`correction-queue.test.tsx`, `correction-chase-forms.test.tsx` (the last two build `ClaimUnderCorrectionItem`s) — and the API specs that
-`.parse` them (`apps/api/tests/integration/claims/cycle-freeze.spec.ts`, `correction-closure.spec.ts`). `git grep` the field names again
+`correction-queue.test.tsx`, `correction-chase-forms.test.tsx` (the last two build `ClaimUnderCorrectionItem`s) — and the contracts test
+`packages/contracts/tests/nominee-name-check-vocabulary-lockstep.test.ts:68-83` (a hand-built `CycleFreezePendingItem`, RD21(b)). The API
+specs (`apps/api/tests/integration/claims/cycle-freeze.spec.ts`, `correction-closure.spec.ts`) do ⛔ not `.parse` — a missing field surfaces
+there ONLY through the route's response serializer (a 500, caught by their `statusCode` assertions); their partial matchers cannot see it. `git grep` the field names again
 before Task 8 ([[feedback_story_validate_footguns]] #31). ⛔ Never make a new field optional to dodge a fixture.
 
 **Trap 15 — a failed warnings read disables APPROVE only, and says so.** RD12's shape on every surface: `approval_warnings.available: false`
@@ -321,10 +360,12 @@ so approval is unavailable until they load. Reload to try again."* (6.23a's `app
 to R9, Return, Refuse, Close, Keep and a deny vote stay EXACTLY as today (invariant 4). The read runs LAST in the handler (or under a raw
 SAVEPOINT) so its SQL error cannot abort the transaction under another read (a 25P02 would 500 the whole list).
 
-**Trap 16 — the expected red set is EMPTY, so a red approve-path spec is a FINDING.** Re-verified at `b41ea25f`: the default seeded nominee
+**Trap 16 — the expected APPROVE-PATH red set is EMPTY, so a red approve-path spec is a FINDING.** Re-verified at `b41ea25f`: the default seeded nominee
 declaration is `SEEDED_NOMINEES_DECLARED_AT = 2026-01-05` (`packages/domain/tests/integration/_helpers.ts:761`; the API twin
 `apps/api/tests/integration/_nominee-name-check-fixture.ts:407`), already > 90 days before any run ⇒ ⛔ no default final-vote / R9 / closure
-fixture is warned, and ⛔ no shipped later-approver spec seeds a `discarded` version and approves. ⇒ if one turns red, read why (6.23a Trap 6):
+fixture is warned, and ⛔ no shipped later-approver spec seeds a `discarded` version and approves. ⚠ Red BY DESIGN, and ⛔ not approve-path
+findings: RD21's two (the policy spec's `step: 'r9_vote'` invalid-step assertion, the contracts lockstep fixture) and Trap 14's hand-built
+fixtures of every widened DTO — each gains the new fields. ⇒ if any OTHER approve-path spec turns red, read why (6.23a Trap 6):
 send a listed reason and a rationale if it genuinely approves over a warning — ⛔ never an opt-out flag, ⛔ never a fixture date moved into the
 window. New specs date a recent change RELATIVE to now (`Date.now() - 30 * DAY`) and an old one ≥ 200 days back (6.23a Trap 5).
 
@@ -335,13 +376,15 @@ reaches it BY CONSTRUCTION (the seam's own words: *"whatever conjunct is added l
 
 ## ⚖️ Decisions — the AUTHOR's (✅ COMMITTED by `-278` — `a125a59d` → `main` `a785eb0a`, 2026-10-04 — with 6.23a's NW1–NW18; EA1 / EA2 / EA5 amended and EA10 added by `-279`)
 
-⭐ The decision CONTENT below is the committed record. Lines marked **(v2.0 build)** restate HOW, after RD1–RD16 — ⛔ never what.
+⭐ The decision CONTENT below is the committed record, except where a **(v2.0 build)** / **(v2.1 build)** marker says otherwise: those
+restate HOW, after RD1–RD21 — ⛔ never what — and the one string they change is marked in place (EA5's refusal code, RD5).
 
 - **EA1 — the record's LATER steps.** Migration **0144** (Trap 10): `claim_warning_approvals.step` gains `escalation_resolution`,
   `final_vote`, `r9_vote`, `super_admin_approval`, `no_correction_approval`; three nullable FKs — `trustee_decision_id`
   (→ `claim_state_trustee_decisions`; for `escalation_resolution`, `final_vote`, `no_correction_approval`), `r9_vote_id` (→ `claim_r9_votes`),
   `closure_id` (→ `claim_correction_closures`) — `super_admin_approval` carries BOTH `closure_id` AND `trustee_decision_id`
-  (`writeApprovalChain` writes a trustee decision row for that approve too, and the handler audits its `decision_id` — `-279` A10) — and a
+  (`writeApprovalChain` writes a trustee decision row for that approve too — `-279` A10; the handler also audits its `decision_id`, a
+  found fact, ⛔ not A10's) — and a
   step ⇔ FK coherence CHECK (exactly the step's own FK set). Each new FK is `ON DELETE CASCADE`. Every later approval over a warning writes ONE
   row in its own transaction: the chosen reason (code + id, or the generic), ALL current keys, ⛔ no note (each step's note lives on its own
   decision row). These rows ⛔ never count toward the District Admin's coverage (6.23a NW13). ⛔ No trustee or R9 reason column, ⛔ no new enum
@@ -352,7 +395,8 @@ reaches it BY CONSTRUCTION (the seam's own words: *"whatever conjunct is added l
   approvingActorIds })` must be empty, else `LateWarningReasonRequiredError` (in `claim/errors.ts`; → 409 `<prefix>.late_warning_reason_required`,
   `details: { kinds, uncovered_count, own_reason_excluded }`; words: *"This claim is waiting for the District Admin to record a reason for a
   warning that appeared after their approval. It is not refused."*). The **LAST** conjunct of `assertClaimApprovable` (after the name check —
-  every existing refusal keeps its code and order) ⇒ P3, P4 and 6.19c's approvals by construction (Trap 7), the `-251` waived one included
+  every refusal INSIDE the gate keeps its code and order; ⚠ `assertClaimContactRecorded` (D14) runs AFTER the gate at every writer, so a
+  claim both missing its contact record and waiting now answers with the wait first — accepted: both are holds, ⛔ neither a refusal) ⇒ P3, P4 and 6.19c's approvals by construction (Trap 7), the `-251` waived one included
   (Trap 17). ⛔ Never a refusal. ⭐ It holds in `reversed` too: a District Admin approval survives a denied final vote and an appeal reversal
   (appeals ⛔ never write `claim_verifier_decisions` — 6.23a fact 3), and the District Admin answers there through 6.23a NW14.
   ⭐⭐ **The approving actors (`-279` A1).** Coverage, as judged for an approval, does ⛔ not count any `district_admin_late_reason` row whose
@@ -382,16 +426,19 @@ reaches it BY CONSTRUCTION (the seam's own words: *"whatever conjunct is added l
   `assertClaimContactRecorded`: the same rule, then the `final_vote` record row. ⭐ EVERY final approval over a warning — after a District
   Admin approval (who already wrote one), after a reversal, after an escalation — *"even where written reasons already exist"* (`-277` Q2 C).
   The trustee `reason_code` is untouched (Trap 3). **(v2.0 build)** the rule (and its `FOR SHARE` reason lock) runs right after
-  `assertClaimContactRecorded`, before the freeze-open event (the first write); the record row after `insertTrusteeDecisionRow` (its FK).
+  `assertClaimContactRecorded`, after every pre-gate write (the live-return supersession runs before the gate — leave it there; a refusal
+  rolls the transaction back); the record row after `insertTrusteeDecisionRow` (its FK).
 - **EA5 — the R9 vote.** `R9VoteRequest` gains optional `warning_reason_code`; `castR9Vote`: an approve vote while the reader shows warnings
   needs an active reason (the note — `rationale` — is already required), and writes the `r9_vote` record row in the vote's transaction; a
   reason with ⛔ no warning ⇒ ungrounded; `R9VoteRequest` (today `.strict()` with ⛔ no `superRefine`) gains one: `warning_reason_code` is
   refused on a `deny` vote. `finalizeR9Outcome` (approved outcome, after its gate): **each** LIVE approve vote's `r9_vote` row covers EVERY
-  current key, else `R9ApproveVotesNeedWarningReasonError` → 409 **`r9_voting.approve_votes_need_warning_reason`** (RD5; `details: { vote_ids,
+  current key, else `R9ApproveVotesNeedWarningReasonError` → 409 **`r9_voting.approve_votes_need_warning_reason`** (**(v2.0 build — RD5)**: `-279`
+  A2 wrote `r9.…`, a slip against the live prefix; `details: { vote_ids,
   uncovered_count }`) (Trap 6; `-279` A2). A deny vote and a denied outcome are ⛔ never gated. **(v2.0 build)** finalize's live-vote select
   (`r9-voting-persist.ts:599-604`, today `{ voteId, vote }`) gains `voterActorId` (A1's exclusion — the approving actors are known BEFORE the
-  gate runs); the per-vote check uses RD10's `readR9VoteWarningCoverage` and runs after `assertClaimContactRecorded`, before the session
-  UPDATE; the panel shows the same answer per vote (RD11).
+  gate runs); the per-vote check uses RD10's `readR9VoteWarningCoverage` + `keysNotCoveredBy` (⛔ never `uncoveredKeys` — RD17) and runs after
+  `assertClaimContactRecorded`, before the session UPDATE; the panel shows the same answer per vote (RD11). **(v2.1 build)** `castR9Vote`'s
+  input gains `warningReasonCode?: string | null` (RD18).
 - **EA6 — 6.19c's two approvals.** (a) **Super Admin** (`decideEscalatedClosure`, approve): `EscalatedClosureDecisionRequest` gains optional
   `warning_reason_code`, required on an approve while warnings show (the note is already `RequiredNote`); then the `super_admin_approval`
   record row (`closure_id` = the held row's `closureId`, `trustee_decision_id` = `chain.decisionId`). The closure reason and the 0131 CHECK
@@ -401,8 +448,8 @@ reaches it BY CONSTRUCTION (the seam's own words: *"whatever conjunct is added l
   Pariwar Admin's note from the constant — the code's presence is the signal, and a bare `note` on an unwarned claim must ⛔ never silently
   replace the constant. The handler encrypts THAT note as `decisionRationaleCiphertext` instead of the fixed constant (Trap 4); then the
   `no_correction_approval` record row (its `trustee_decision_id` is the chain's own row — `writeApprovalChain` ALREADY returns `{ claimState,
-  decisionId }`, `correction-closure.ts:667-678`; thread it, ⛔ no signature change). Refusals, closures and keeps are ⛔ never gated. **(v2.0
-  build)** the domain inputs gain `warningReasonCode: string | null`; the rule's `note` argument is the rationale ciphertext WHEN a code was
+  decisionId, deniedNoAppeal }` (`ClosureChainResult`), `correction-closure.ts:667-678`; thread `decisionId`, ⛔ no signature change). Refusals, closures and keeps are ⛔ never gated. **(v2.0
+  build)** the domain inputs gain `warningReasonCode?: string | null` (OPTIONAL — RD18); the rule's `note` argument is the rationale ciphertext WHEN a code was
   sent, else `null` (so a missing code is `missing: 'reason'` first). `refuse` / `close` with a `warning_reason_code` ⇒ 400 (the request
   `superRefine` — only `decision: 'approve'` carries it).
 - **EA7 — every later surface SHOWS the warnings and the reasons.** NEW `readClaimApprovalWarningsBulk(db, pariwarId, claimCaseIds)` in
@@ -418,7 +465,8 @@ reaches it BY CONSTRUCTION (the seam's own words: *"whatever conjunct is added l
   beside 6.23a's DTOs:
   `{ available: boolean, kinds: ApprovalWarningKind[], post_death: 'evaluated' | 'awaiting_determination', waiting_for_district_admin: boolean,
   own_reason_excluded: boolean }` — on `CycleFreezePendingItem.approval_warnings`, `R9PanelResponse.approval_warnings`,
-  `PariwarClosureQueueItemDto.approval_warnings` (the "no correction needed" items) and `EscalatedClosureDetailResponse.approval_warnings`;
+  `PariwarClosureQueueItemDto.approval_warnings` (`.nullable()` — `null` EXACTLY on `kind: 'closure_request'`, RD20) and
+  `EscalatedClosureDetailResponse.approval_warnings`;
   `reason_options: ApprovalWarningReasonOption[]` at each RESPONSE's top level (`CycleFreezePendingResponse`, `R9PanelResponse`,
   `PariwarClosureQueueResponse`, `EscalatedClosureDetailResponse`); `R9PanelVote.covers_current_warnings` (RD11). Attached in the HANDLER
   after the domain read (RD7) — the per-claim reader for the R9 panel and the Super Admin's detail, the bulk reader for the two lists (RD8) —
@@ -435,14 +483,15 @@ reaches it BY CONSTRUCTION (the seam's own words: *"whatever conjunct is added l
 - **EA10 — the District Admin is TOLD (`-279` A4; BigDev: *"Correction queue, in 6.23b"*).** Without it the wait is the 6.18 failure again
   (`correction-queue-read.ts`'s header: *"the District Admin could act on a return ONLY if somebody told them the claim id out of band"*).
   `listClaimsUnderCorrection` (`claim/correction-queue-read.ts`) also lists a claim whose live District Admin approval leaves a current
-  warning key uncovered by any District Admin row. ⭐ A late key can arise ONLY through a determination recorded after the approval (6.23a
-  fact 3) ⇒ the SQL superset (`candidateBatch`'s `OR EXISTS …` block) gains the TIGHT arm *"a live `approved` verifier decision AND a live
+  warning key uncovered by any District Admin row. ⭐ TODAY a late key can arise ONLY through a determination recorded after the approval (6.23a
+  fact 3; ⚠ until row 6-22 ships — Task 9's deferred item: once a member is found innocent, a member declare can add a
+  `recent_nominee_change` key with ⛔ no new determination, which this arm would miss) ⇒ the SQL superset (`candidateBatch`'s `OR EXISTS …` block) gains the TIGHT arm *"a live `approved` verifier decision AND a live
   `nominee_determinations` row whose `decided_at` > that decision's `decided_at`"* (both `timestamptz`, compared in SQL) — ⛔ never "every
   approved claim" (that re-creates the crowding the 2026-09-23b review removed); ⚠ the post-filter in `qualifyingRows` (`if
   (!hasLiveUnresubmittedReturn && !sentBackByCheck) continue;`, `:285`) gains a THIRD arm (`lateWarningAwaitingReason`), or it drops every new
   row; the module header (*"'Under correction' is `resolveClaimCorrectionState`'s answer"*) is amended to name the third arm; a
-  late-warning-only row has ⛔ no live return, so its chase summary is `empty` and closure readiness `no_live_return` — the UI hides those
-  actions for it. The arm is evaluated inside the existing `CORRECTABLE_SCAN_STATES` (`:47` — it covers `verifier_approved`, `reversed`,
+  late-warning-only row has ⛔ no live return, so its chase summary carries `return_decision_id: null` (null fields —
+  `CorrectionChaseSummaryDto` has ⛔ no `empty` state) and closure readiness `no_live_return` — the UI hides those actions for it. The arm is evaluated inside the existing `CORRECTABLE_SCAN_STATES` (`:47` — it covers `verifier_approved`, `reversed`,
   `state_trustee_freeze`, every state a late key can arise in, 6.23a fact 3), through `readClaimApprovalWarningsBulk` (⛔ no per-claim loop).
   Coverage here is the District Admin's own (⛔ no actor exclusion — the queue asks whether ANY District Admin answer exists). ⚠ Accepted gap,
   recorded (Task 9's deferred item): a key covered ONLY by a late reason whose recorder later approves is ⛔ not queued — the approver's 409
@@ -450,7 +499,13 @@ reaches it BY CONSTRUCTION (the seam's own words: *"whatever conjunct is added l
   `lateWarningAwaitingReason: boolean` and `lateWarningUncoveredCount: number`; the wire item (`ClaimUnderCorrectionItem`,
   `packages/contracts/src/claims/nominee-name-check.ts:380`) gains `late_warning_awaiting_reason` and `late_warning_uncovered_count` (RD4); the
   third arm's bulk read runs under a raw SAVEPOINT — on a throw the two existing arms still list, the late arm adds nothing, and the
-  RESPONSE carries `late_warnings_unavailable: true` so the queue says *"Late warnings could not be checked just now — reload to try again"*
+  RESPONSE carries `late_warnings_unavailable: true`. **(v2.1 build) — the channel:** the bulk read sits in `qualifyingRows` (the `:285`
+  post-filter would otherwise drop every late-only candidate); `listClaimsUnderCorrection` KEEPS its `Promise<ClaimUnderCorrectionRow[]>`
+  return (three domain spec files call it — `nominee-name-check-return-loop.spec.ts`, `nominee-name-check-tenant-isolation.spec.ts`,
+  `nominee-determination-bulk-path.spec.ts` — unchanged) and gains `opts.onLateWarningsUnavailable?: () => void`, which the handler passes
+  to set the flag, so the queue says *"Late warnings could not be checked just now — reload to try again"*. The SAVEPOINT is
+  ``db.execute(sql`SAVEPOINT late_warning_arm`)`` / `RELEASE` / `ROLLBACK TO` per batch — the in-package shape of
+  `packages/domain/src/contribution/write.ts:226` (``db.execute(sql`SAVEPOINT attest_contribution_utr`)``)
   (invariant 7; RD12). `CorrectionQueueRoute.tsx` shows *"a late warning awaits your reason"* and links to the console. ⛔ No new route — the
   queue's existing one (`claims.nominee-name-check.handlers.ts`, the `listClaimsUnderCorrection` call).
 
@@ -458,7 +513,8 @@ reaches it BY CONSTRUCTION (the seam's own words: *"whatever conjunct is added l
 
 ### AC0 — Governance and re-pin (Task 0)
 **Given** this story is about to start **Then** 6.23a is `done` (✅ row `6-23-post-death-nominee-change-warnings`, PR #255); `-278` carries
-EA1–EA9, `-279` carries A1, A2, A3, A4, A5, A10 as written here (EA1 / EA2 / EA5 amended, EA10 added), and `-280` adds `state_trustee_approved`
+EA1–EA9, `-279` carries A1, A2, A3, A4, A5, A6, A10, A11 as written here (EA1 / EA2 / EA5 amended, EA7 reached (A3), EA10 added; A6 → Trap 9,
+A11 → *What moves*), and `-280` adds `state_trustee_approved`
 to NW14 (✅ verified 2026-10-05: `-280` is the newest entry; ⛔ no later entry names `6-23`, `warning`, `reason` or `coverage`) — if a newer
 entry exists at build time, read it first and STOP on any that moves an EA; the baseline `b41ea25f` is an ancestor of HEAD, and
 `git diff --name-only b41ea25f..HEAD -- packages apps scripts` is re-read against every `file:NNN` below.
@@ -474,7 +530,8 @@ later step's row ⛔ never counts toward the District Admin's coverage (`readCla
 
 ### AC2 — The wait (EA2; `-277` Q3 B; Traps 7, 17)
 **Given** a claim the District Admin approved over a warning, whose certificate is then re-reviewed to an earlier date and redetermined, so a
-NEW warning key is uncovered **Then** the final vote, an R9 approve outcome and 6.19c's approvals answer **409 `…late_warning_reason_required`**
+NEW warning key is uncovered — ⭐ and a PASSING name check re-recorded after the redetermination (RD19: the new determination id makes the
+old check stale, and the gate would 409 on THAT first; every arm below except the `-251` waived one needs this step) **Then** the final vote, an R9 approve outcome and 6.19c's approvals answer **409 `…late_warning_reason_required`**
 (`cycle_freeze.` / `r9_voting.` / `closure.`; ⛔ nothing written; the claim is ⛔ not refused) **and** after the District Admin records a late
 reason (6.23a NW14) the same approval proceeds **and** the same holds on 6.23a fact 3's path — District Admin approved → final vote denied →
 appeal reversed → re-reviewed in `reversed` → the next final vote waits until NW14 **and** a claim with ⛔ no District Admin approval
@@ -511,8 +568,10 @@ row does ⛔ not cover every current key (or that has none) while warnings show 
 `vote_ids`, and after the voters revise ⇒ finalized **and** (`-279` A2) a session routed from `verification_in_progress` whose votes each
 covered only the 90-day key, then a determination adds a post-death key ⇒ finalize 409s with those vote ids, and after each voter revises
 with a reason covering every current key ⇒ finalized **and** a `warning_reason_code` on a deny vote ⇒ 400; a denied outcome is never gated
-**and** the panel's `covers_current_warnings` is `false` for exactly the vote ids that finalize would name, `true` for the others, `null` for
-deny votes and when ⛔ no warning shows.
+**and** for a claim whose determination is CURRENT, the panel's `covers_current_warnings` is `false` for exactly the vote ids that finalize
+would name, `true` for the others, `null` for deny votes and when ⛔ no warning shows (with a stale determination the panel sees ⛔ no
+post-death key and finalize refuses earlier, at the gate — ⛔ not compared) **and** both use `keysNotCoveredBy`, ⛔ never `uncoveredKeys`
+(RD17) — a session routed from `verification_in_progress` with ⛔ no District Admin approval still names its uncovered votes.
 
 ### AC6 — 6.19c's approvals (EA6; Trap 17)
 **Then** a Super Admin approve of a warned held claim without an active `warning_reason_code` ⇒ 409 `closure.warning_reason_required` (the
@@ -526,13 +585,15 @@ and stores the constant; a `note` without `warning_reason_code` (or the reverse)
 ### AC7 — Every surface shows the warnings and the reasons (EA7; Traps 8, 14, 15; RD4, RD6–RD9, RD11)
 **Then** `readClaimApprovalWarningsBulk` serves the two lists in ONE statement — a live statement-count test (the real-statement counter of
 `apps/api/tests/integration/claims/verifier-console.spec.ts`, *"rows grew the REAL statement count"*): ⛔ no growth from 1 to 10 warned claims
-— and returns, for every claim, exactly what `readClaimApprovalWarnings` returns (the dirty-input parity test, Trap 13); the reason options
+— and returns, for every claim, exactly what `readClaimApprovalWarnings` returns on every field except `reasonOptions` (the dirty-input
+parity test, Trap 13); the reason options
 are read once per response; each of the four surfaces shows the warning line (`kindLine` per kind) and 6.23a's picker — every reason with its
 label, "when to use" and *"added by {name} on {date}"* / *"built in"*, ⛔ nothing pre-selected — requires the note, and shows *"waits for the
 District Admin"* (Approve disabled, with those words; with `own_reason_excluded`, the own-reason words) when a late warning is uncovered for
 THIS viewer; `available: false` disables ONLY the approve control, with the unavailable words (Trap 15); every new 409 code maps to its own
 words — ⛔ never *"try again"* or a raw code **and** on `PariwarClosureStrip.tsx` ONLY `NoCorrectionStrip`'s approve carries the picker — the
-closure-request `closure-approve` has ⛔ none (Trap 12) **and** every fixture of a widened DTO carries the new fields and
+closure-request `closure-approve` has ⛔ none (Trap 12), and the queue's `approval_warnings` is `null` on every `closure_request` item and a
+summary on every `no_correction_needed` item (RD20) **and** every fixture of a widened DTO carries the new fields (incl. the contracts lockstep fixture — RD21(b)) and
 `correction-closure-shape.spec.ts` passes unmodified (Trap 14).
 
 ### AC8 — Nothing else moves (EA8, EA9)
@@ -566,41 +627,47 @@ the code itself, ⛔ never blank) **and** `deferred-work.md`'s item (section *"R
 - [ ] **Task 1 — Migration 0144 + schema (AC1).** EA1 / Trap 10 / RD1: the step CHECK, three columns, three UNIQUE targets, three composite
   FKs, the later-step FK CHECK, three indexes; journal entry (`idx` 144); Drizzle: `schema/claim_warning_approvals.ts` (the columns, the
   `foreignKey()`s, the `check()`s, `CLAIM_WARNING_APPROVAL_STEPS`) and a `unique()` in each parent's schema file; the contracts step mirror;
-  extend the policy-regression spec; `db:check` / `schema:check` green.
+  extend the policy-regression spec and REWRITE its `step: 'r9_vote'` invalid-step assertion (`:227`) to a still-invalid value (RD21(a));
+  `db:check` / `schema:check` green.
 - [ ] **Task 2 — Domain: the wait, the readers, the record insert (AC1, AC2, AC5, AC7).** In `claim/approval-warnings.ts`:
   `readClaimApprovalWarningsBulk` (RD9 — ONE statement, reusing `deriveClaimApprovalWarnings`), `readR9VoteWarningCoverage` (RD10),
-  `assertLateWarningsCovered` (EA2), RD3's exclusion widening, RD2's step-discriminated `insertClaimWarningApprovalRecord`. In
+  `assertLateWarningsCovered` (EA2), the pure `keysNotCoveredBy(keys, coveredKeys)` (RD17 — R9's comparison, ⛔ never `uncoveredKeys`),
+  RD3's exclusion widening, RD2's step-discriminated `insertClaimWarningApprovalRecord`. In
   `claim/errors.ts`: `LateWarningReasonRequiredError` (`kinds`, `uncoveredCount`, `ownReasonExcluded`) and
   `R9ApproveVotesNeedWarningReasonError` (`voteIds`, `uncoveredCount`). In `nominee-name-check.ts`: the LAST conjunct of `assertClaimApprovable`
   (and its doc-block's conjunct list + the seam doc-block), `ClaimApprovalGateOptions.approvingActorIds` (required; `opts` loses its default),
   the inner helper's `Pick<…,'nameCheck'>`; thread the actors at all seven gate calls; rewrite the T10 seam test
   (`nominee-name-check.spec.ts:715-753`) incl. Trap 17's arm. ⚠ Keep the import scan green (Trap 7).
 - [ ] **Task 3 — Domain: the final vote and the escalation (AC3, AC4).** `voteOnFrozenClaim` and `resolveEscalation` per EA3 / EA4 — input
-  `warningReasonCode: string | null`; `readClaimApprovalWarnings` → `lockActiveApprovalWarningReason` (only when kinds non-empty and a code
+  `warningReasonCode?: string | null`, read `?? null` (OPTIONAL — RD18; ≈ 45 typechecked test calls stay unchanged); `readClaimApprovalWarnings` → `lockActiveApprovalWarningReason` (only when kinds non-empty and a code
   was sent — the `adjudicateClaim` shape) → `assertApprovalReasonCoversWarnings` (note = the rationale ciphertext) → the record row after the
   decision row; `approvalWarningKinds` on `TrusteeDecisionResult`.
-- [ ] **Task 4 — Domain: R9 (AC5).** `castR9Vote` (best-effort rule + the `r9_vote` row, its `r9_vote_id` the new vote) and
-  `finalizeR9Outcome` (binding, PER VOTE, PER KEY — `-279` A2) per EA5; `voterActorId` on the live-vote select; the approving actors =
+- [ ] **Task 4 — Domain: R9 (AC5).** `castR9Vote` (input `warningReasonCode?: string | null` — RD18; best-effort rule + the `r9_vote` row,
+  its `r9_vote_id` the new vote) and
+  `finalizeR9Outcome` (binding, PER VOTE, PER KEY via `keysNotCoveredBy` — `-279` A2, RD17) per EA5; `voterActorId` on the live-vote select; the approving actors =
   finalizer + live approve voters; the per-vote check after `assertClaimContactRecorded`, before the session UPDATE; the typed error with
   `voteIds`.
 - [ ] **Task 5 — Domain: 6.19c (AC6).** `EscalatedClosureDecisionInput` (the `approve` arm) and `approveNoCorrectionNeeded`'s input gain
-  `warningReasonCode`; the rule after the gate + contact check; the record row after `writeApprovalChain` (its `decisionId`; the closure's
+  `warningReasonCode?: string | null` (OPTIONAL — RD18); the rule after the gate + contact check; the record row after `writeApprovalChain` (its `decisionId`; the closure's
   `closureId` for the Super Admin) — both the `-251` and the full-gate approve.
 - [ ] **Task 6 — Contracts (AC3–AC7, AC10).** `warning_reason_code` on `CycleFreezeDecisionRequest` (its `superRefine` via `effectiveOutcome`
   — ONE flat `.strict()` object, ⛔ not a discriminated union), `R9VoteRequest` (its FIRST `superRefine` — ⛔ no code on a deny),
   `EscalatedClosureDecisionRequest` (approve only); `{ warning_reason_code, note }` on `NoCorrectionNeededApproveRequest` (paired); NEW
-  `ApprovalWarningsSummary`; `approval_warnings` + `reason_options` on the four read DTOs; `R9PanelVote.covers_current_warnings`;
+  `ApprovalWarningsSummary`; `approval_warnings` + `reason_options` on the four read DTOs (`.nullable()` on `PariwarClosureQueueItemDto`,
+  `null` on `closure_request` — RD20); `R9PanelVote.covers_current_warnings`;
   `ClaimUnderCorrectionItem.late_warning_awaiting_reason` / `late_warning_uncovered_count` and the queue response's
   `late_warnings_unavailable`; the step mirror (Task 1). ⚠ ⛔ No contracts test pins these request shapes today (`claims-cycle-freeze.test.ts`,
   `r9-voting.test.ts`, `correction-closure-lockstep.test.ts` test `safeParse` behaviour and `.strict()` smuggling only;
-  `NoCorrectionNeededApproveRequest` has ⛔ no test at all) — WRITE the new rules' tests; contracts tests sit outside `tsc` — run vitest
-  ([[project_contracts_tests_outside_tsc]]).
-- [ ] **Task 7 — API (AC2–AC7, AC10).** Map `LateWarningReasonRequiredError`, `ApprovalWarningReasonRequiredError`,
+  `NoCorrectionNeededApproveRequest` has ⛔ no test at all) — WRITE the new rules' tests; add `approval_warnings` to the hand-built
+  `CycleFreezePendingItem` in `nominee-name-check-vocabulary-lockstep.test.ts:68-83` (RD21(b)); contracts tests sit outside `tsc` — run
+  vitest ([[project_contracts_tests_outside_tsc]]).
+- [ ] **Task 7 — API (AC2–AC8, AC10).** Map `LateWarningReasonRequiredError`, `ApprovalWarningReasonRequiredError`,
   `WarningReasonUnavailableError`, `WarningReasonUngroundedError` and `R9ApproveVotesNeedWarningReasonError` in the FOUR translators of Trap 7
   (each in words that say the claim is ⛔ not refused; `details` codes and counts only); pass `body.warning_reason_code` to each writer;
   D27's note encryption (Trap 4); the read DTOs attached in the handlers, fail-closed (Trap 15 — `getCycleFreezePending` handler `:288`,
-  `getR9Panel` handler `:276`, `listPariwarClosureQueue` handler `:449`, both `readEscalatedClosureDetail` calls in
-  `claims.correction-escalation.handlers.ts` — the GET's); the correction queue's new fields; the audit contexts (RD15).
+  `getR9Panel` handler `:276`, `listPariwarClosureQueue` handler `:449`, and `getEscalation` — the GET — at
+  `claims.correction-escalation.handlers.ts:127`; ⛔ never the `:239` call, which is `decideEscalation`'s POST pre-check (`-274` 1a), whose
+  response is `ClosureDecisionClaimResponse`); the correction queue's new fields; the audit contexts (RD15).
 - [ ] **Task 8 — Admin (AC7, AC10, AC11).** Mount 6.23a's picker on `PendingCaseCard.tsx` (Approve + Resolve → Approve; the warned body per
   Trap 2), `R9CasePanel.tsx` (an approve vote; the per-vote *"must be revised"* line from `covers_current_warnings`), `EscalationPanel.tsx`
   (approve), `PariwarClosureStrip.tsx` (`NoCorrectionStrip`'s approve ONLY + its OWN note field — Trap 4, Trap 12); `apps/admin/src/api/client.ts`
@@ -608,8 +675,8 @@ the code itself, ⛔ never blank) **and** `deferred-work.md`'s item (section *"R
   `claimCaseId`) take the optional body; the R9-vote, cycle-freeze and escalated-closure payload types gain `warning_reason_code`; the shared
   words in `verifierConsoleEn.approvalWarnings` (a `later` block: the waits line, the own-reason line, the R9 *"vote must be revised"* line,
   the D27 note label/error) and one message helper per new code suffix in `claim-verification/nominee-errors.ts`, wired into
-  `CycleFreezePage.tsx`'s and `R9CasePanel.tsx`'s `errorMessage` (RD6); `CorrectionQueueRoute.tsx` (EA10); AC11's label. English-only staff
-  copy (⛔ `report` / `receipt` / `invoice` / `passbook` — the active microcopy terms). Family-13 accessibility as 6.23a: the selection
+  `CycleFreezePage.tsx`'s (`:55`) and `R9CasePanel.tsx`'s (`:26`) `errorMessage` — one `endsWith` arm per new suffix (RD6); `CorrectionQueueRoute.tsx` (EA10); AC11's label. English-only staff
+  copy (never `report` / `receipt` / `invoice` / `passbook` — the active microcopy terms). Family-13 accessibility as 6.23a: the selection
   announced, a missing reason or note SAID (`role="alert"`), ⛔ never a silently disabled button; a 409 refetches the list (6.23a round 4).
 - [ ] **Task 9 — Tests and records (AC8, AC9, AC11).** See *Testing*. `deferred-work.md` — a NEW section *"Recorded during Story 6.23b"*:
   R9 votes revisable before finalize — notes kept as history (BigDev accepted; trigger: a Panel instruction to lock them); a late key covered
@@ -618,9 +685,14 @@ the code itself, ⛔ never blank) **and** `deferred-work.md`'s item (section *"R
   counts at finalize, and in a Pariwar where EVERY `claim.approve` holder at the district is a live approve voter or the finalizer, ⛔ nobody
   can answer (exit: a vote change, or the session re-run; trigger: a held R9 claim reported); ⚠ the later approvers' notes on
   `claim_state_trustee_decisions.rationale_ciphertext` / `claim_r9_votes.rationale_ciphertext` are ⛔ not in the anonymizer — the same class as
-  6.23a's verifier-rationale item (cross-reference it, ⛔ not a duplicate; trigger: the next RTBF pass over the claim-adjudication tables). AC11's
-  closure line on the RD13 item.
-- [ ] **Task 10 — The District Admin's queue (AC10).** EA10: the SQL superset arm + `readClaimApprovalWarningsBulk` under a raw SAVEPOINT;
+  6.23a's verifier-rationale item (cross-reference it, ⛔ not a duplicate; the Super Admin's note,
+  `claim_correction_closures.super_admin_note_ciphertext`, is ALREADY the item *"No RTBF path reaches the 6.19c tables' Tier-1 columns"* —
+  cross-reference that too; trigger: the next RTBF pass over the claim-adjudication tables); ⚠ EA10's late-warning arm keys on a NEW
+  determination, and once row 6-22 lifts the declaration lock for a member found innocent, a member declare can add a
+  `recent_nominee_change` key with ⛔ no new determination — ⛔ not queued (trigger: row 6-22 lands — add an arm on a member-source version
+  recorded after the live approval). AC11's closure line on the RD13 item.
+- [ ] **Task 10 — The District Admin's queue (AC10).** EA10: the SQL superset arm + `readClaimApprovalWarningsBulk` under a raw SAVEPOINT
+  inside `qualifyingRows`; the `opts.onLateWarningsUnavailable` callback (the return type stays an array — EA10's channel);
   `ClaimUnderCorrectionRow` / `ClaimUnderCorrectionItem` gain the two fields; the queue response gains `late_warnings_unavailable`;
   `claims.nominee-name-check.handlers.ts` maps them; the module header amended to name the third arm; `CorrectionQueueRoute.tsx` shows the
   line and the console link and HIDES the chase-summary and closure actions on a late-warning-only row (⛔ no live return); its tests.
@@ -640,8 +712,8 @@ the code itself, ⛔ never blank) **and** `deferred-work.md`'s item (section *"R
 | The ONE gate | `assertClaimApprovable` (`nominee-name-check.ts:383`); `ClaimApprovalGateOptions` (`:410`); the inner helper (`:463`, `opts` `:469`); `readNomineeNameCheckApprovalState` | EA2 |
 | The final vote / escalation | `voteOnFrozenClaim` (`state-trustee-decision-persist.ts:504`), `resolveEscalation` (`:1036`), `insertTrusteeDecisionRow` (`:420`, returns the row), `resolveConcealmentSnapshot`, `assertReasonCode` | EA3, EA4, Traps 1–3 |
 | R9 | `castR9Vote` (`r9-voting-persist.ts:494`), `finalizeR9Outcome` (`:569`; live votes `:599-604`, gate `:623`); `claim_r9_votes`; `R9VoteRequest` (`contracts/src/claims/r9-voting.ts:223`); `getR9Panel` (`claim/r9-voting-read.ts:131`); `R9_OUTCOME_FROM_STATES` (`state.ts:78-85`) | EA5 |
-| 6.19c | `decideEscalatedClosure` (`correction-closure.ts:1261`), `approveNoCorrectionNeeded` (`:1488`), `writeApprovalChain` (`:667-678`); `CLOSURE_SUPER_ADMIN_REASONS` + 0131's CHECK; `EscalatedClosureDecisionRequest` (`contracts/…/correction-closure.ts:142`), `NoCorrectionNeededApproveRequest` (`:178`); `NO_CORRECTION_NEEDED_DECISION_RATIONALE` (`claims.correction-closure.handlers.ts:90`) | EA6, Traps 4–5 |
-| The lists | `getCycleFreezePending` (`claim/cycle-freeze-read.ts`; handler `claims.cycle-freeze.handlers.ts:288`); `listPariwarClosureQueue` (handler `claims.correction-closure.handlers.ts:449`); `readEscalatedClosureDetail` (handler `claims.correction-escalation.handlers.ts:127`, `:239`) | EA7, RD7 |
+| 6.19c | `decideEscalatedClosure` (`correction-closure.ts:1261`), `approveNoCorrectionNeeded` (`:1488`), `writeApprovalChain` (`:667-678`, returns `{ claimState, decisionId, deniedNoAppeal }`); `CLOSURE_SUPER_ADMIN_REASONS` + 0131's CHECK; `EscalatedClosureDecisionRequest` (`contracts/…/correction-closure.ts:142`), `NoCorrectionNeededApproveRequest` (`:178`); `NO_CORRECTION_NEEDED_DECISION_RATIONALE` (`claims.correction-closure.handlers.ts:90`) | EA6, Traps 4–5 |
+| The lists | `getCycleFreezePending` (`claim/cycle-freeze-read.ts`; handler `claims.cycle-freeze.handlers.ts:288`); `listPariwarClosureQueue` (handler `claims.correction-closure.handlers.ts:449`); `readEscalatedClosureDetail` (the GET `getEscalation`, `claims.correction-escalation.handlers.ts:127` — the `:239` call is the POST's pre-check, untouched) | EA7, RD7 |
 | The fail-closed precedent | `assembleApprovalWarnings` (`claims.verifier-console.handlers.ts`); the raw SAVEPOINT in `claims.nominee-declaration.handlers.ts` (`timeline_warning_anchor`) | Trap 15, EA10 |
 | The admin surfaces | `cycle-freeze/{PendingCaseCard,CycleFreezePage}.tsx`; `r9-voting/{R9CasePanel,R9VotingPage}.tsx`; `correction-closure/{EscalationPanel,PariwarClosureStrip}.tsx` (⛔ not `ClosureColumn.tsx`); the picker `claim-verification/ApprovalWarningReasonPicker.tsx` (props: `options`, `value`, `onChange`, `disabled`, `error`, `idPrefix`); words `claim-verification/i18n-en.ts` (`approvalWarnings`, `reasonCodes`); `claim-verification/nominee-errors.ts` | EA7, RD6, AC11 |
 | The District Admin's queue | `listClaimsUnderCorrection` + `candidateBatch` + `qualifyingRows` + `CORRECTABLE_SCAN_STATES` (`claim/correction-queue-read.ts`); `ClaimUnderCorrectionItem` (`contracts/…/nominee-name-check.ts:380`); handler `claims.nominee-name-check.handlers.ts:462`; `apps/admin/src/routes/CorrectionQueueRoute.tsx` | EA10 |
@@ -650,10 +722,13 @@ the code itself, ⛔ never blank) **and** `deferred-work.md`'s item (section *"R
 - **Moves:** the files named in Tasks 1–10. **Preserved, byte-for-byte in behaviour:** every un-warned approval on every path; every deny /
   route / return / refuse / close / keep; the trustee presence rule (Trap 2); the closure reasons + 0131 CHECK (Trap 5); the domain list
   readers' shapes (RD7); 6.23a's console section and its 19-read ceiling (this story adds ⛔ no console read); the RTBF pin (18 tables / 21
-  statements — later rows carry ⛔ no note); the fence (36) unless a NEW module file is added (none is planned).
+  statements — later rows carry ⛔ no note); the fence (36) unless a NEW module file is added (none is planned); the appeal-reviewer
+  exclusion `getOriginalDeciderActorIds` (decisions and votes, ⛔ never records — `-279` A11, deliberate: do ⛔ not add
+  `claim_warning_approvals` to it).
 
 ### Testing
-- **Live-DB (domain):** `packages/domain/tests/integration/claim/approval-warnings-every-approver.spec.ts` — AC2–AC6 on real rows: a District
+- **Live-DB (domain):** `packages/domain/tests/integration/claim/approval-warnings-every-approver.spec.ts` — AC2–AC6 on real rows (⚠ every
+  wait scenario re-records a PASSING name check after its redetermination before expecting the wait — RD19): a District
   Admin approval over a warning, then the final vote (needs its own reason and row); a re-reviewed certificate making a key uncovered ⇒ the
   final vote, R9 finalize and the Super Admin approve (both the full and the `-251` waived) all 409; NW14 then unblocks them; 6.23a fact 3's
   path (approved → final vote denied → appeal reversed → re-reviewed in `reversed` → the next final vote waits); a reversed `-239` refusal
@@ -662,10 +737,11 @@ the code itself, ⛔ never blank) **and** `deferred-work.md`'s item (section *"R
   race shape 6.23a round 3 added); concealment + warning at the final vote (Trap 3); ⭐ (`-279`) the Pariwar Admin's own late reason ⛔ not
   clearing their own vote, another holder's clearing it (A1); R9 from `verification_in_progress` — votes over the 90-day key only, then a
   post-death key ⇒ finalize 409 per vote, revise ⇒ finalized (A2); `state_trustee_approved` → R9 (`-280`); a stale determination ⇒ the bulk
-  reader says awaiting (Trap 13) + the bulk ↔ per-claim parity over dirty input; the correction queue's late arm on / off / forced failure
+  reader says awaiting (Trap 13) + the bulk ↔ per-claim parity over dirty input (every field but `reasonOptions`); the correction queue's late arm on / off / forced failure
   (EA10). Seed dates per Trap 16. ⚠ ⛔ No TRUNCATE of a parent reaching `claim_warning_approvals` (6.23a's Testing note); ⚠ ⛔ no `DROP SCHEMA`.
 - **Policy:** the widened record table (AC1) — in `packages/domain/tests/integration/rls/claim-warning-approvals-policy-regression.spec.ts`.
-- **Unit (domain):** `uncoveredKeys` with a list exclusion; `own_reason_excluded`'s arithmetic; the step-discriminated insert types.
+- **Unit (domain):** `uncoveredKeys` with a list exclusion; `keysNotCoveredBy` as a plain set difference (RD17's no-District-Admin red
+  check is the live-DB R9 arm from `verification_in_progress`, AC5); `own_reason_excluded`'s arithmetic; the step-discriminated insert types.
 - **API:** the 409 codes and `details` through each route that reaches a later writer (the cycle-freeze decision, the R9 vote, R9
   finalize, the escalation decision, the D27 approve); the D27 note encrypted (⛔ not the constant) when warned; the read
   DTOs incl. `available: false` (a fault seam on the reader, as 6.23a's console fail-closed test); the audit lines.
@@ -682,7 +758,7 @@ the code itself, ⛔ never blank) **and** `deferred-work.md`'s item (section *"R
 - **6.23a** (`done`) — the module, the keys, the record, the list, the picker, NW14, NW18; its Traps 2 (gate order), 5 (date-bomb fixtures),
   13 (coverage is the District Admin's rows only), 16 (a replaced reason). ⭐ Its FOUR review rounds' lessons, each relevant here: composite
   tenant FKs (RD1); fail closed on a warnings read, ⛔ never "no warnings" (RD12); a raw SAVEPOINT where a soft read cannot run last; kinds
-  OMITTED when unknown in audit (RD15); code-point limits, ⛔ `.length`, on any new text bound; a step-up retry must ⛔ never resubmit a
+  OMITTED when unknown in audit (RD15); code-point limits, never `.length`, on any new text bound; a step-up retry must ⛔ never resubmit a
   cancelled or edited reason (R9 finalize is step-up gated); `confirm()` re-checks the pick; a 409 refetches; focus moves to the result;
   every new string a family-13 announcement; mount conditions must survive their own success (round 2's `status !== 'idle'`).
 - **6.18** — P3 is *"THE MOST LOAD-BEARING OF THE THREE GATES"* (its own comment): every reversal and post-approval correction passes it.
@@ -704,14 +780,16 @@ external research was needed; follow the patterns in the files named above.
 ⛔ No `project-context.md` exists in the repo; the house rules are the story files, `.decision-log.md` and the memory index.
 
 ### References
-- `.decision-log.md` — ⭐ `-280` · ⭐ `-279` A1–A5, A10 (A2's code: RD5) · ⭐ `-278` EA1–EA9 · ⭐ `-277` Q2, Q3 (readings — one Q3 clause superseded
-  by `-279` A5; BigDev's confirmation; Consequences 1–2) · `-264` FQ12 (heading), not-cover · `-262` FQ5 (row 6-24's wait) · `-263` FQ9 (row
+- `.decision-log.md` — ⭐ `-280` · ⭐ `-279` A1–A6, A10, A11 (A2's code: RD5) · ⭐ `-278` EA1–EA9 (and its supersession 2) · ⭐ `-277` Q2, Q3
+  (readings — two Q3 clauses superseded: *"re-records their approval (a revision)"* by `-278` supersession 2, *"R9 or an appeal reversal has
+  none"* by `-279` A5; BigDev's confirmation; Consequences 1–2) · `-264` FQ12 (heading), not-cover · `-262` FQ5 (row 6-24's wait) · `-263` FQ9 (row
   6-26's gate) · `-226` cl.7 · `-251` · `-273` §10.
 - `6-23-post-death-nominee-change-warnings.md` (Story 6.23a — NW1, NW5, NW13–NW18, Traps 2, 5, 13, 16; its Review Findings rounds 1–4).
 - `deferred-work.md` — sections *"Recorded during Story 6.23a"* (RD13's item; the verifier-rationale RTBF item) and *"Deferred from: code
   review of 6-23-…, round 3 chunk 1"* (RD14).
 - `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-04-6-23-warnings-confirms.md` (✅ ruled).
-- `epics.md` `### Story 6.23b` (Minted-by header; ACs in brief — consistent with this file).
+- `epics.md` `### Story 6.23b` (Minted-by header; ACs in brief — a summary, ⛔ not the full statement: its header omits `-280` and the
+  brief omits A1's own-reason exclusion and AC11, both noted in its appended 2026-10-05 annotation).
 
 ## Dev Agent Record
 
@@ -723,6 +801,7 @@ external research was needed; follow the patterns in the files named above.
 
 - (create-story, 2026-10-04) Written at the split of row `6-23` (BigDev: *"ok, split it"*), after `-277`. ⛔ No code; status `backlog` until 6.23a is `done` (the 6.21b precedent).
 - (create-story, 2026-10-05) ⭐ Re-derived against 6.23a's shipped build at `b41ea25f` (v2.0): RD1–RD16 threaded; ⛔ no decision moved. Status `backlog` → `ready-for-dev`. Ultimate context engine analysis completed — comprehensive developer guide created.
+- (validate, 2026-10-05) v2.1: three fresh-context read-only verifiers (code cites, design soundness, governance continuity); 23 findings, BigDev: *"all"*. ⛔ No decision moved; status stays `ready-for-dev`.
 
 ### File List
 
@@ -737,3 +816,4 @@ external research was needed; follow the patterns in the files named above.
 | **v1.4** | **2026-10-04** | ⭐ **Follows the second fresh-context validate of the set** (6.23a v2.4; three read-only verifiers; BigDev: *"All"*, *"Not the final approver"*, *"Correction queue, in 6.23b"*) — decision changes by author-commit **`-279`**. HIGH: R9 finalize checks each live approve vote's row covers EVERY current key, ⛔ not that a row exists (EA5, Trap 6, AC5 — `-279` A2; found by two verifiers independently). MEDIUM: the wait does ⛔ not count a late reason recorded by the approving actor — `approvingActorIds` on the gate's options seam (EA2, AC2 — A1); the District Admin's correction queue lists a waiting claim (NEW EA10, AC10, Task 10 — A4); `-277`'s *"R9 or an appeal reversal has none"* clause superseded (Q3 row — A5); `ClosureColumn.tsx` dropped and the closure-request `closure-approve` named as a refusal path that ⛔ never carries the picker (Trap 12, EA7, AC7); the bulk reader's out-of-date rule (Trap 13 — A3). LOW: `super_admin_approval` carries `trustee_decision_id` too (EA1 — A10); four translators, ⛔ not five (Trap 7, Task 7); ⛔ no contracts test pins the request shapes (Task 6); D27's `note` ⇔ code pairing and R9's first `superRefine` (EA5, EA6, AC5, AC6); the admin client + hooks (Task 8); the TRUNCATE note. ⭐ **Then the fresh-context RE-VALIDATE of `-279`** (before insertion): the 409 carries `own_reason_excluded` and names who can answer (6.23a's NW14 now judges `nothing_uncovered` for the recorder); the R9 panel's flag also excludes every live approve voter; EA10's TIGHT superset arm (a determination decided after the approval), the post-filter's THIRD arm and the module header; the inner helper's `Pick` and the T10 seam test; `voterActorId` on finalize's vote select; A7 withdrawn; AC5's first arm reworded. ⭐ **A third round** found an R9 approval from `state_trustee_approved` could stall under A1 (its voters are the late-reason recorders, and NW14 refused there) ⇒ `-280` adds that state to NW14 (AC2 arm); Task 10 names the header amendment and the hidden actions. ⭐ **Round 4: ⛔ no BLOCKER or HIGH** — the 409's words now exclude live R9 approve voters, and the all-voters R9 residual is recorded (Task 9); AC0's parenthetical placed after `-279`. Status stays **`backlog`**. |
 | **v1.5** | **2026-10-04** | **Merged as PR #253 (rebase), docs only.** Every branch SHA this file cites is mapped to its `main` twin in the header note (all 11 commits, proved by identical `patch-id`); ⛔ no citation rewritten. Status stays **`backlog`**. |
 | **v2.0** | **2026-10-05** | ⭐ **RE-DERIVED against 6.23a's SHIPPED build (`bmad-create-story 6.23b`) — re-pinned `2059482b` → `b41ea25f`; `backlog` → `ready-for-dev`.** 6.23a went `done` (PR #255) after four review rounds; every code claim here was re-opened at `b41ea25f`. ⛔ No decision moved — sixteen FOUND facts (RD1–RD16) change the build: the record's FKs are COMPOSITE with three new UNIQUE targets (RD1); the record insert takes a step-discriminated input (RD2); `uncoveredKeys`' exclusion widens to a list for P4 (RD3); the wire is snake_case while 6.23a's option DTO stays camelCase (RD4); every R9 code is `r9_voting.*`, so `-279` A2's `r9.` string is a slip (RD5); `cycle-freeze/` and `r9-voting/` have ⛔ no `i18n-en.ts` — shared words go to `claim-verification/` (RD6); `correction-closure-shape.spec.ts` pins exact keys ⇒ the warnings attach at the handler (RD7); the R9 panel and the Super Admin's detail are single-claim (RD8); the bulk reader reuses 6.23a's `deriveClaimApprovalWarnings` (RD9); per-vote coverage needs a new `r9_vote` read (RD10) and the panel shows out-of-date votes before finalize (RD11); 6.23a's fail-closed shape on every surface, a SAVEPOINT on the queue's arm (RD12); a `deferred-work.md` item routed here by name — the raw verifier reason code on the card (RD13, NEW AC11); 0144 adds ⛔ no deferred constraint (RD14); 6.23a's audit convention (RD15); the `-251` waived approve waits too — seven gate calls, ⛔ not six (RD16, NEW Trap 17). NEW Traps 14 (shape pins + strict fixtures), 15 (fail closed, Approve only), 16 (the red set is EMPTY — fixtures re-verified at 2026-01-05), 17; invariant 7; every `file:NNN` re-read (`client.ts` `:1534` → `:1539`; the rest held). |
+| **v2.1** | **2026-10-05** | ⭐ **Validate (`bmad-create-story validate 6.23b`, at `9c3c6181`; ⛔ no code moved since `b41ea25f`) — three fresh-context read-only verifiers; 23 findings, all applied (BigDev: *"all"*); then a fresh-context RE-VALIDATE of this pass's own edits found 11 defects IN THEM (4 MEDIUM: a false *"first SAVEPOINT in `packages/domain`"* precedent — `contribution/write.ts:226` is one; RD19's D27 refusal mis-located at `:1500` — it is the gate's stale check at `:1507`; *"EA7 amended"* — `-279` A3 only reaches it; Trap 16's heading contradicting its new exceptions) — all fixed. ⛔ No decision moved; status stays `ready-for-dev`.** HIGH: R9's per-vote check must ⛔ never reuse `uncoveredKeys`, which returns `[]` without a District Admin approval — exactly `-279` A2's target case — ⇒ NEW pure `keysNotCoveredBy` (RD17; Trap 6, EA5, AC5, Tasks 2/4, unit test); the new domain inputs are OPTIONAL `?: string \| null` as 6.23a's are — ≈ 88 typechecked test calls (RD18; EA5/EA6, Tasks 3–5). MEDIUM: every wait scenario re-records a passing name check after the redetermination, else the stale-check 409 fires first (RD19; AC2, Testing); two shipped tests red BY DESIGN, rewritten — the policy spec's `r9_vote` invalid-step line and the contracts lockstep fixture (RD21; Traps 14/16, Tasks 1/6); `PariwarClosureQueueItemDto.approval_warnings` nullable, `null` on `closure_request` (RD20; EA7, AC7, Task 6); EA10's channel named — `opts.onLateWarningsUnavailable`, the array return kept, a raw SAVEPOINT in `qualifyingRows` (Task 10). SHOULD: the GET is `:127` only, `:239` is the POST pre-check (Task 7, Dev Notes); parity excludes `reasonOptions` (Trap 13, AC7); AC5's "exactly" scoped to a current determination; the 6-22 member-declare gap in EA10 recorded as a deferred item (Task 9); `-279` A6/A11 carried, EA7 among the amended (LETTERS, AC0, References, *What moves*); row 6-24's refile shows the same warnings (Trap 9); the contact-check order change stated (EA2); EA5's code change marked in place (RD5); `epics.md` annotated for `-280`, A1 and AC11 (⛔ not rewritten). CLEANUPS: RD6's matchers live in each page's `errorMessage`; the API specs do ⛔ not `.parse`; EA4's "first write"; `deniedNoAppeal` and the chase summary's null fields; Task 7 tagged AC8; two `-277` Q3 supersessions, the rulings column header, EA1's A10 attribution, the 6.19c RTBF cross-reference; four `⛔`-on-code-word glyphs and a widened sweep regex. |

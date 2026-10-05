@@ -2,6 +2,11 @@
 // precedent: console chrome copy lives HERE, NOT in @twt/i18n runtime keys, so the i18n-parity gate
 // stays untouched (this admin surface is English-facing; there is no member-app locale parity to hold).
 
+import type { ApprovalWarningKind } from '@twt/contracts';
+
+/** Mirrors `VerificationDecisionStrip`'s own `reviseBlocked` prop union (re-review 2026-10-05). */
+type ReviseBlockedReason = 'warning_approval_final' | 'warnings_not_current' | 'unavailable';
+
 export const verifierConsoleEn = {
   shell: {
     title: 'Verifier console',
@@ -123,6 +128,60 @@ export const verifierConsoleEn = {
     displayNameMissing: 'Your account has no display name configured — contact an administrator to enable adjudication.',
     decisionConflict: 'This claim was already updated — reload to see the latest state before trying again.',
   },
+  // ── Story 6.23a — the nominee-change WARNINGS (`-261` D1, `-262` FQ2 / FQ8 A, `-264` FQ12, `-277` Q3 B) ──────
+  // ⛔ No string here says a version "is suspicious", "should be discarded", or that the claim is refused: a warning is
+  // information, and approving over it needs a warning reason and a note (NW6). ⛔ No microcopy vocabulary term.
+  approvalWarnings: {
+    heading: 'Nominee-change warnings on this claim',
+    kindLine: {
+      post_death_version: 'A nominee version is dated on or after the date of death on the accepted death certificate.',
+      recent_nominee_change: 'A nominee was named or changed within 90 days before the first claim for this death was filed.',
+    } satisfies Record<ApprovalWarningKind, string>,
+    stripIntro:
+      'You may still approve. Choose a warning reason and write a note saying why — the claim is not refused, and your approval reason above stays as it is.',
+    pickerLabel: 'Warning reason',
+    pickerHelp: 'Each reason was written by the Super Admin. Read when to use it before you choose.',
+    whenToUse: 'When to use',
+    builtIn: 'Built in',
+    addedBy: (name: string, date: string) => `Added by ${name} on ${date}`,
+    replaces: (label: string) => `Replaces “${label}”`,
+    selected: (label: string) => `Chosen warning reason: ${label}`,
+    noneChosen: 'No warning reason chosen yet.',
+    reasonRequiredError: 'Choose a warning reason before approving.',
+    noteRequiredError: 'Write a note saying why you approve despite the warnings.',
+    confirmWarnings: 'Warnings shown',
+    confirmReason: 'Warning reason',
+    unavailable: 'The nominee-change warnings could not be read, so approval is unavailable until they load. Reload to try again.',
+    reviseBlocked: {
+      warning_approval_final:
+        'This approval was given while a nominee-change warning showed (or one was answered since), so its reason and note are final and stay as written.',
+      warnings_not_current:
+        'Revising returns once the nominee determination is recorded again against the accepted death certificate.',
+      unavailable: 'The nominee-change warnings could not be read, so revising is unavailable until they load. Reload to try again.',
+    } satisfies Record<ReviseBlockedReason, string>,
+    // The District Admin's answer to a warning that appeared AFTER the approval (NW14 — its own record).
+    late: {
+      heading: 'A warning appeared after the approval',
+      intro:
+        'Record a warning reason and a note for the warnings that appeared after the District Admin approved. Earlier notes stay as written; this adds a new one.',
+      uncovered: (n: number) => (n === 1 ? '1 warning appeared after the approval.' : `${n} warnings appeared after the approval.`),
+      ownCannotClear:
+        'Another person has answered these warnings, but a late reason recorded by the approver cannot clear their own approval — record yours.',
+      noteLabel: 'Your note',
+      submit: 'Record the reason and note',
+      processing: 'Recording…',
+      recorded: 'Your reason and note are recorded.',
+    },
+    errors: {
+      warningReasonRequired: 'This claim shows a nominee-change warning — choose a warning reason and write a note to approve it. The claim is not refused.',
+      warningReasonUngrounded: 'This claim shows no nominee-change warning — approve it without a warning reason.',
+      warningReasonUnavailable: 'That warning reason was replaced or is no longer on the list — please choose again.',
+      lateNothingUncovered: 'Every warning that appeared after the approval is already answered by your own record.',
+      lateDeterminationRequired: 'Record the nominee determination against the accepted death certificate first — the warnings are not known until then.',
+      lateNoApproval: 'This claim has no live District Admin approval for a late reason to answer.',
+      lateNotRecordable: 'A late reason cannot be recorded in this claim’s current state.',
+    },
+  },
   // ── Story 6.18 — the nominee NAME CHECK (`2026-09-19-226` cl.3/cl.5) ──────────────────────
   // ⛔ NO match hint, NO score, NO diff wording anywhere in this block: the console SHOWS two lists
   // and RECORDS a human judgement. The only "highlight" is `approvedWithDifference`, which reports
@@ -227,6 +286,9 @@ export const verifierConsoleEn = {
   // ── Story 6.20 — the nominee declaration HISTORY (AC3, AC4, AC7, AC8, AC13, D14) ─────────────
   // ⛔⛔ No string here says a version "changed after the death", "is suspicious" or "should be
   // discarded" — the timeline shows two dates per version and the District Admin decides (invariant 1).
+  // ⚠ AMENDED by `2026-09-28-261` D1 (built by Story 6.23a): *"changed after the death"* is superseded — the timeline
+  // now shows a WARNING on a version dated on or after the death (`warning.post_death_version`). ⛔ "Is suspicious",
+  // "should be discarded", a pre-selected mark and a sort by warning stay banned; the District Admin still decides.
   // ⚠ "correction" here is a NOMINEE-DECLARATION correction — ⛔ never the bank-detail "correction"
   // of `correctionQueue` above; the copy names which one every time (D7).
   nomineeDeclaration: {
@@ -277,6 +339,18 @@ export const verifierConsoleEn = {
       other: 'Other',
     } as Record<string, string>,
     kindVacated: 'Removed (no nominee at this rank)',
+    // ⭐ Story 6.23a (NW10; `-261` D1, `-262` FQ1 / FQ8 A) — a warning line per flagged version, the date-not-known
+    // line, and an applied correction's label. ⚠ The label's words are RATIFIED copy (`-262` FQ1) — VERBATIM, ⛔ never
+    // re-cased or paraphrased (Trap 12).
+    warning: {
+      post_death_version: 'Warning: dated on or after the date of death on the accepted certificate',
+      recent_nominee_change: (firstFiled: string) =>
+        `Warning: named or changed within 90 days before the first claim for this death was filed (${firstFiled})`,
+      dateNotKnown:
+        'The date of death is not known yet (no accepted death certificate, or its date cannot be read), so a warning for a version dated on or after the death cannot be shown.',
+    },
+    correctionLabel: (districtAdmin: string, pariwarAdmin: string) =>
+      `corrected after the death — approved by ${districtAdmin} and ${pariwarAdmin}`,
     source: { member: 'By the member', correction: 'Approved correction' } as Record<string, string>,
     showDetails: 'Show names and numbers',
     detailsAudited: 'Opening the details is recorded in the audit trail.',

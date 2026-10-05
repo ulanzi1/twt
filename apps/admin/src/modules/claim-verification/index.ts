@@ -32,6 +32,10 @@ export {
   type DecisionSubmit,
 } from './VerificationDecisionStrip.js';
 export { ReasonCodeDropdown, type ReasonCodeDropdownProps } from './ReasonCodeDropdown.js';
+// Story 6.23a — the ONE shared warning-reason picker (6.23b mounts it on every later surface) and the late-warning
+// reason panel (NW9, NW14).
+export { ApprovalWarningReasonPicker, type ApprovalWarningReasonPickerProps } from './ApprovalWarningReasonPicker.js';
+export { LateWarningReasonPanel, type LateWarningReasonPanelProps } from './LateWarningReasonPanel.js';
 // Story 6.15 — the verifier concealment-linkage assessment capture control (tri-state + optional note).
 export {
   ConcealmentAssessmentControl,

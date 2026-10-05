@@ -1,3 +1,50 @@
+# last_updated: 2026-10-05d (⭐ **STORY 6.23a — THE RE-REVIEW'S 6 PRE-EXISTING FINDINGS TRIAGED; 5 fixed, 1 left as an action item.**
+# BigDev: *"apply all 6"*, then *"leave as an action item"* once the 6th (`postLateWarningReason` encrypts the late-reason note BEFORE
+# any of `recordLateWarningReason`'s business-rule checks) turned out to need a real design call — a callback-injection signature
+# change vs. duplicating cheap pre-checks at the API layer, neither mechanical. Fixed: `recordLateWarningReason`'s blank-display-name
+# guard now throws a typed, API-mapped refusal (`'missing_display'` added to `LateWarningReasonRefusal`) instead of a raw `Error`;
+# `i18n-en.ts`'s `kindLine`/`reviseBlocked` maps retyped `satisfies Record<…>` (lose the `Record<string,string>` cast, regain
+# compile-time exhaustiveness); `useReplaceApprovalWarningReason`'s stale doc comment corrected to match its actual (intentionally
+# kept) `onSettled` behavior; `assertApprovalWarningReasonText`'s length check switched to a codepoint count (`[...value].length`),
+# matching the DB's `char_length()` for astral characters; the reason-list write handlers' duplicated `ctxOf(request)` call removed
+# (`write()` now takes the caller's already-resolved context). `@twt/domain`/`@twt/api`/`@twt/admin` typecheck clean; domain's touched
+# suites (97 tests), api's touched suites (52 tests), and the FULL `apps/admin` suite (57 files / 844 tests) pass. `6-
+# 23-post-death-nominee-change-warnings` stays `in-progress` — the one left-open action item (the encrypt-ordering design call) is
+# the only unresolved item in the story file's Review Findings. ⛔ No other row moves.)
+# last_updated: 2026-10-05c (⭐ **STORY 6.23a — THE 11TH PATCH FIXED, then a RE-REVIEW (`bmad-code-review`).** Reconciles `-05b` below,
+# which this ledger never did at the time: `getTimeline`'s efficiency finding (left unchecked by `-05b`) WAS fixed in the same session
+# — `getClaimWarningAnchor`, a new domain function (THIRD copy of Trap 3's anchor predicate, same leaf, import-discipline scan still
+# green) — the story file's Review Findings already marked it `[x]`; this ledger just hadn't caught up (a BLIND HUNTER AND an Acceptance
+# Auditor, independently, both flagged exactly this staleness on the re-review below). A fresh 3-layer RE-REVIEW of the full diff then
+# found 5 more issues — 3 were gaps in `-05b`'s OWN fixes (the late-reason panel's mount condition needed `status !== 'idle'`, ⛔ not just
+# `isSuccess`, to survive a second submit; the same condition could flash the PREVIOUS claim's stale state for one frame on a claim
+# switch — fixed via a ref reset-during-render, ⛔ not `useLayoutEffect`, which broke 3 unrelated certificate-section tests and was
+# reverted; the new composite FKs had no regression test — two added) plus 2 new UI bugs in the ORIGINAL diff (NW9's "⛔ never
+# pre-selected" violated on an approve→deny→approve outcome switch; the Super Admin's Add-reason form never cleared after success) —
+# all 5 fixed. 1 low-confidence finding (`reviseDecision`'s NW7 check order) verified as correct, not a bug. 6 pre-existing, lower-
+# severity findings (raw-`Error` vs typed refusal; `Record<string,string>` losing exhaustiveness; a doc/code mismatch on `onSettled`;
+# JS `.length` vs `char_length()` on astral chars; encrypt-before-checks ordering; a duplicated `ctxOf()` call) are logged in the story
+# file's Review Findings as pending a decision, ⛔ not yet applied. `apps/admin` full suite (57 files / 844 tests) and the domain RLS
+# regression spec (14 tests) pass. ⛔ No other row moves.)
+# last_updated: 2026-10-05b (⭐ **STORY 6.23a — CODE REVIEW (`bmad-code-review`) ⇒ `in-progress`.** `6-23-post-death-nominee-change-warnings`
+# `review` → `in-progress` (one patch left as an action item). Three parallel layers (Blind Hunter, Edge Case Hunter, Acceptance Auditor)
+# against the uncommitted Tasks 1–11 diff: 21 raw findings → 17 after dedup → 11 patch, 1 defer, 5 dismissed (verified against this
+# story's own Traps/AC or `deferred-work.md` — the RTBF rationale-ciphertext gap, the 90-day window's missing upper bound, and the
+# `missing_display` → 409 mapping were each already-recorded or by-design, not oversights). 10 of 11 patches applied: a typed
+# `code_exhausted` refusal on reason-code-collision exhaustion; `claim_warning_approvals`' `claim_case_id`/`verifier_decision_id` FKs
+# made COMPOSITE `(pariwar_id, …)` (two NEW unique constraints added in 0143 on the pre-existing `claims`/`claim_verifier_decisions`
+# tables — ⛔ 0001–0141 untouched; re-migrated + verified live); the revise control now fails closed (`reviseBlocked: 'unavailable'`) on
+# a transient warnings-read error, matching `canApprove`; the nominee-declaration timeline now fails soft on the same read (mirrors the
+# console); the reasons admin page resets both mutations on form-switch (no more stale banners); `LateWarningReasonPanel` stays mounted
+# through its own success so `t.late.recorded` can't be unmounted before it's read; the `missing_display` i18n mapping was added; the
+# denied-vocabulary regex now escapes its term; the rejected-decision audit line now carries `warningReasonCode` for a
+# `WarningReasonUnavailableError` too; the duplicated inline row-shape type was replaced with `claim.ApprovalWarningReasonRow`. Left
+# UNCHECKED (needs a design call, not a mechanical patch): `getTimeline` still runs the full `readClaimApprovalWarnings` CTE just for
+# `anchorFiledAt` — a cheap fix needs a standalone anchor accessor, but that SQL is deliberately "COPIED, ⛔ never imported" (Trap 3) to
+# avoid cross-coupling. Verified: `@twt/domain`/`@twt/contracts`/`@twt/api`/`@twt/admin` typecheck clean; the full `packages/domain` suite
+# (322 files / 4458 tests) and every touched `apps/api` / `apps/admin` / `packages/contracts` test file pass against the re-migrated
+# local dev DB (one RLS-regression test's hardcoded old FK constraint name was updated to match). ⛔ No other row moves.)
+# last_updated: 2026-10-05 (⭐ **STORY 6.23a — BUILT (`/bmad-dev-story`) ⇒ `review`.** `6-23-post-death-nominee-change-warnings` `ready-for-dev` → `in-progress` → `review`, on branch `story/6-23a-post-death-nominee-change-warnings` (from `eb1c8620`; the merged `story/6-23-…` branch is left untouched — the SHA map needs its branch SHAs). Task 0.3 committed ALONE first (`aa4659cc` — `epics.md` gains Story 6.23a / 6.23b + the 6.20 AC3 annotation). Built: migrations 0142 (`approval_warning_reasons` — per Pariwar, add / replace only, deferred replacement checks) and 0143 (`claim_warning_approvals` — the approval-over-warning record); the warnings module + THE ONE RULE at the District Admin's approval (a warning reason from the list + a note; the approval keeps its REAL reason); NW7 (a warned approval is never revised); NW14 (the late-warning reason, four states incl. `state_trustee_approved` by `-280`, judged per recorder by `-279` A1); the console section (ceiling 18 → 19); the timeline's warnings + the FQ1 label verbatim; the Super Admin's reason list (catalog 50 → 51 / 64 → 65, `approval_warning_reason.manage`, super_admin only); erasure (RTBF 18 tables / 21 statements); fence 34 → 36. ⭐ Trap 6's approve-path red set stayed EMPTY. `ci:local` 34/34 green with `DATABASE_URL`. ⛔ No other row moves — `6-23b-every-approver-gives-a-warning-reason` stays `backlog` (flips when 6.23a is `done`). ⚠ Go-live coupling (1): Story 6.23b.)
 # last_updated: 2026-10-04k (⭐ **STORY 6.23 (6.23a + 6.23b) — MERGED as PR #253 (rebase), docs only; the `pre-push` `ci:local` passed.** ⛔ NO row moves (`6-23-post-death-nominee-change-warnings` stays `ready-for-dev`, `6-23b-every-approver-gives-a-warning-reason` stays `backlog`). Both story files now map every branch SHA they and this ledger cite to its `main` twin (all 11 commits, each pair proved by identical `patch-id`; merged tree byte-identical) — incl. this ledger's `a125a59d` → `a785eb0a` (`-278`), `e2bcd2c3` → `73cf1358` (`-279`), `66ad3f75` → `efb21a3f` (`-280`), `29d35996` → `6a54a174`, `a55480a8` → `fb1f6a49`; ⛔ no citation rewritten. Baseline pin `2059482b` on `main`, unaffected.)
 # last_updated: 2026-10-04j (⭐ **6.23 — A SECOND FRESH-CONTEXT VALIDATE of 6.23a / 6.23b, and `2026-10-04-279` COMMITTED (`e2bcd2c3`, alone), then `-280`.** Three read-only verifiers at `29d35996` (no code moved since `2059482b`): ⛔ no BLOCKER; 3 HIGH, 9 MEDIUM, ~25 LOW. HIGH: R9 finalize must check each approve vote covers EVERY current warning (R9 can run before the District Admin's verdict); the mobile test-title edit trips `friction-budget` (disposition block owed); the new tables need per-command RLS UPDATE policies (else erasure, `replaced_at` and `FOR SHARE` silently fail under FORCE). BigDev: *"All"*, *"Not the final approver"* (a late reason recorded by the person now approving does ⛔ not count for that approval), *"Correction queue, in 6.23b"* (new EA10). A fresh-context RE-VALIDATE of `-279` itself before insertion found 1 HIGH in A1 (a self-recorded reason stalled the claim with ⛔ no surface showing it ⇒ NW14's `nothing_uncovered` judged per recorder) and withdrew A7 (⛔ no late warning can arise in `state_trustee_approved`); BigDev agreed the six post-answer details (*"Agree to all six"*). ⭐ A THIRD round found an R9 approval from `state_trustee_approved` could stall under A1 ⇒ **`2026-10-04-280` COMMITTED (`66ad3f75`, alone)** — NW14 also records there (BigDev: *"Insert, then round 4"*). 6.23a v2.4 (Tasks 0.5, 0.6 ✅), 6.23b v1.4. ⚠ Rows `6-26` / `6-27` now owe `-279` A6's decision before adding a warning kind. ⛔ No row moves — `6-23-post-death-nominee-change-warnings` stays `ready-for-dev`, `6-23b-every-approver-gives-a-warning-reason` stays `backlog`.)
 # last_updated: 2026-10-04i (⭐ **6.23 — `2026-10-04-278` COMMITTED (`a125a59d`, alone).** Author-commit (BigDev) of 6.23a's NW1–NW18 and 6.23b's EA1–EA9; supersedes three earlier readings (`-262` FQ2's, `-277` Q3 B's, `-277` Q2 C's note claim), records the re-delegation of the reasons' wording to the Super Admin and the UX-DR43 departure. BigDev confirmed the validate's two adjacent changes first: *"yes to change 1, option A for change 2"* (the warning reason in its own field; ⛔ no revise once a claim shows any warning). 6.23a v2.3 Task 0.2 ✅; 6.23b v1.3. ⛔ No row moves — `6-23-post-death-nominee-change-warnings` stays `ready-for-dev`, `6-23b-every-approver-gives-a-warning-reason` stays `backlog`.)
@@ -18938,7 +18985,7 @@ development_status:
   #   6-27 — FINDING: 6.6's five requests are never SENT and cannot be ANSWERED · FQ10 A (a signal, not a gate) · FQ8 E (ask the date of death).
   #   + `2026-09-28-264`: FQ12 (ONE rule — approving over ANY warning needs a reason + note; owned by 6-23, fed by 6-26/6-27 ⇒ 6-23 first)
   #          · FQ13 (the refile's fresh original certificate seen by an inspector — 6-26; 6-24's approval waits on it).
-  6-23-post-death-nominee-change-warnings: ready-for-dev
+  6-23-post-death-nominee-change-warnings: in-progress
   # ⭐ 2026-10-04 SPLIT after `-277` (BigDev: "ok, split it"): the row above is STORY 6.23a (keeps its key — the rulings cite it); 6.23b below
   # is every later approver (`-277` Q2 C) + Q3 B's wait. 6.23b's file is written; it stays `backlog` until 6.23a is `done` (the 6.21b precedent).
   6-23b-every-approver-gives-a-warning-reason: backlog

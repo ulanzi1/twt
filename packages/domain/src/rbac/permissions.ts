@@ -745,7 +745,14 @@ export function permissionKey(value: string): PermissionKey {
 // ⛔ NOT `state_trustee` on any (the 6.10 `claim.verify` disposition; the pariwar keys are RANK-ORDER BLOCKED for it).
 // ⭐ A direction RESPONSE needs ⛔ no key (D8): the actor must be the NAMED directee AND hold
 // `claim.view_nominee_name_check` — an identity check, ⛔ a capability.
-export const PERMISSION_CATALOG_VERSION = 50 as const;
+//
+// ⭐ Story 6.23a (NW17; author-commit `2026-10-04-278`) — 50 → 51, ONE key: `approval_warning_reason.manage`
+// (pariwar-dimension; `super_admin` ONLY — it derives every catalog key, so `roles.ts` gets ⛔ no const: *"⛔ Do not
+// 'complete the pair'"*). The Super Admin adds a WARNING REASON to their Pariwar's list, or replaces one with a newer
+// one — ⛔ never edits, ⛔ never deletes. REUSE CHECK — ⛔ no existing key fits: `niyamavali.*` is the MEMBER-VISIBLE
+// rulebook's review workflow, `pariwar.amend_rule` amends rule clauses; the reason list is staff tooling with its own
+// append-only shape. `defaultRoleBundles` stays 13 — ⛔ no new role.
+export const PERMISSION_CATALOG_VERSION = 51 as const;
 
 /**
  * The grounded v1 seed keys (architecture + epic + PRD references only — see file
@@ -1304,6 +1311,11 @@ export const SEED_PERMISSION_KEYS = [
   // directions. NOT step-up-gated; accountability is the same rationale + actor + display snapshot
   // + §1.5 audit line.
   'pariwar.manage_drive_target_visibility',
+  // Story 6.23a (NW16, NW17) — the per-Pariwar WARNING-REASON LIST: GET the list (active + history), ADD a reason, and
+  // REPLACE one with a newer one (both writes step-up-gated). pariwar-dimension; `super_admin` ONLY (derived — ⛔ no
+  // `roles.ts` const). ⛔ There is ⛔ no edit and ⛔ no delete route: a reason is ⛔ never edited or deleted, and
+  // every past approval keeps the words it chose (`-278` NW16; BigDev 2026-10-04).
+  'approval_warning_reason.manage',
 ] as const;
 
 /** The literal union of the v1 seed keys (extends per-epic as keys are added). */

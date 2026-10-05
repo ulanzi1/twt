@@ -31,6 +31,7 @@ import {
   EscalationsPickerRoute,
 } from './routes/CorrectionClosureRoutes.js';
 import { CertificateRemindersRoute } from './routes/CertificateReminderRoutes.js';
+import { ApprovalWarningReasonsRoute } from './routes/ApprovalWarningReasonsRoute.js';
 import { NomineeRefusalsRoute } from './routes/NomineeRefusalsRoute.js';
 import { NomineeCorrectionsRoute } from './routes/NomineeCorrectionsRoute.js';
 import { HelpdeskQueueRoute } from './routes/HelpdeskQueueRoute.js';
@@ -289,6 +290,12 @@ const certificateRemindersRoute = createRoute({
   path: '/p/$pariwarId/certificate-reminders',
   component: CertificateRemindersRoute,
 });
+// Story 6.23a (NW17) — the Super Admin's warning-reason list (add / replace; ⛔ never edit or delete).
+const approvalWarningReasonsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/p/$pariwarId/approval-warning-reasons',
+  component: ApprovalWarningReasonsRoute,
+});
 const escalationsPickerRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/correction/escalations',
@@ -385,6 +392,7 @@ const routeTree = rootRoute.addChildren([
   correctionDirectionsRoute,
   closureLettersRoute,
   certificateRemindersRoute,
+  approvalWarningReasonsRoute,
   escalationsPickerRoute,
   nomineeRefusalsRoute,
   nomineeCorrectionsRoute,

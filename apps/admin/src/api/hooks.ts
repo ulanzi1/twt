@@ -1094,6 +1094,15 @@ export function usePostVerifierDecision(pariwarId: string, claimCaseId: string) 
   });
 }
 
+/** Story 6.23a (NW14) — POST a late-warning reason; refetches the console packet (its warnings section) on success. */
+export function usePostLateWarningReason(pariwarId: string, claimCaseId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: Parameters<typeof api.postLateWarningReason>[2]) => api.postLateWarningReason(pariwarId, claimCaseId, body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: verifierConsoleKey(pariwarId, claimCaseId) }),
+  });
+}
+
 /** POST a same-outcome revision (step-up-gated server-side); refetches the console packet on success. */
 export function useReviseVerifierDecision(pariwarId: string, claimCaseId: string) {
   const qc = useQueryClient();
@@ -2214,5 +2223,36 @@ export function usePostDeathCertificateReview(pariwarId: string, claimCaseId: st
     onError: (err: unknown) => {
       if (err instanceof ApiError && DEATH_CERTIFICATE_REVIEW_STALE_CODES.has(err.code)) void refreshPacket();
     },
+  });
+}
+
+// ── The Super Admin's WARNING-REASON LIST (Story 6.23a, NW17) ──────────────────────────────────────────────────
+export const approvalWarningReasonsKey = (pariwarId: string) => ['approval-warning-reasons', pariwarId] as const;
+
+export function useApprovalWarningReasons(pariwarId: string) {
+  return useQuery({ queryKey: approvalWarningReasonsKey(pariwarId), queryFn: () => api.getApprovalWarningReasons(pariwarId) });
+}
+
+/** ADD a reason; refetches the list on success. */
+export function useAddApprovalWarningReason(pariwarId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: Parameters<typeof api.addApprovalWarningReason>[1]) => api.addApprovalWarningReason(pariwarId, body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: approvalWarningReasonsKey(pariwarId) }),
+  });
+}
+
+/**
+ * REPLACE a reason with a newer one; refetches the list on EVERY outcome (`onSettled`, ⛔ not just
+ * `onSuccess`) — a 409 means the list is stale and needs a refetch regardless (re-review 2026-10-05:
+ * the comment used to claim "success AND a 409" specifically, but any other failure refetches too; the
+ * wasted GET on an unrelated error is harmless, so the broader `onSettled` is kept as written).
+ */
+export function useReplaceApprovalWarningReason(pariwarId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { reasonId: string; body: Parameters<typeof api.replaceApprovalWarningReason>[2] }) =>
+      api.replaceApprovalWarningReason(pariwarId, input.reasonId, input.body),
+    onSettled: () => qc.invalidateQueries({ queryKey: approvalWarningReasonsKey(pariwarId) }),
   });
 }

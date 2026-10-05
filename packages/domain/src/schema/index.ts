@@ -197,6 +197,10 @@ export * from './claim_correction_closure.js';
 // Story 6.19d — the replacement-certificate reminder (migrations 0137–0139): its OWN runs, reminder record and the
 // ONE letter per person per claim (`2026-10-03-276` CR1 — ⛔ never a kind on `claim_correction_runs`).
 export * from './claim_certificate_reminder.js';
+// Story 6.23a — the WARNING-REASON LIST (0142: per Pariwar; the Super Admin adds or replaces, ⛔ never edits or deletes)
+// and the record of every approval over a nominee-change warning (0143: the keys covered + the reason chosen; append-only).
+export * from './approval_warning_reasons.js';
+export * from './claim_warning_approvals.js';
 // Story 6.6 — peer-mesh deterministic 5-nearest selection: `claim_peer_mesh_selections`
 // (ONE row per claim — the audit-replay source: candidate snapshot + ordered output +
 // metric identity; immutable selection, mutable outcome/window) + `claim_peer_mesh_pings`

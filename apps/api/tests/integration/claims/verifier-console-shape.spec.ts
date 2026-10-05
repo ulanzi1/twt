@@ -471,4 +471,37 @@ describe.skipIf(!hasDatabase)('Verifier-console compound shape (AI-6-3 class) �
     const precedentsB = packetB.recentPrecedents.status === 'present' ? packetB.recentPrecedents.precedents : [];
     expect(precedentsB.map((p) => p.claimCaseId)).toEqual([claimA]);
   });
+
+  it('⭐ Story 6.23a (NW8, Trap 13) — the REAL packet carries `approvalWarnings`, keyed to the CLAIM: a District Admin record on decoy B (same deceased) ⛔ never reaches A', async () => {
+    const pariwarP = randomUUID();
+    const deceasedP = await seedDeceasedMember(pariwarP, DISTRICT);
+    const claimA = await seedClaimCase(pariwarP, deceasedP);
+    const claimB = await seedClaimCase(pariwarP, deceasedP);
+    const decisionB = randomUUID();
+    const c = await td.pool.connect();
+    try {
+      await c.query(
+        `INSERT INTO claim_verifier_decisions (decision_id, claim_case_id, pariwar_id, outcome, reason_code, rationale_ciphertext, actor_id, actor_display)
+         VALUES ($1, $2, $3, 'approved', 'r5_d_natural_death', 'enc:v1:why', 'da', 'Verifier Bravo')`,
+        [decisionB, claimB, pariwarP],
+      );
+      await c.query(
+        `INSERT INTO claim_warning_approvals (pariwar_id, claim_case_id, deceased_member_id, step, verifier_decision_id, reason_code,
+           reason_id, covered_keys, recorded_by_actor, recorded_by_display)
+         VALUES ($1, $2, $3, 'district_admin_approval', $4, 'warnings_reviewed', NULL, ARRAY['recent_nominee_change:x'], 'da', 'Verifier Bravo')`,
+        [pariwarP, claimB, deceasedP, decisionB],
+      );
+    } finally {
+      c.release();
+    }
+    const packetA = await assemble(pariwarP, claimA);
+    const packetB = await assemble(pariwarP, claimB);
+    expect(packetA.approvalWarnings).toMatchObject({ available: true, reviseBlocked: null, uncoveredSinceApproval: 0 });
+    expect(packetA.approvalWarnings.reasonOptions.map((o) => o.code)).toContain('warnings_reviewed');
+    expect(packetB.approvalWarnings.reviseBlocked).toBe('warning_approval_final');
+    // ⛔ No date, ⛔ no name on the section (the contract is strict; the keys are the contract's).
+    expect(Object.keys(packetA.approvalWarnings).sort()).toEqual(
+      ['available', 'kinds', 'lateKeysUncoveredForViewer', 'postDeath', 'reasonOptions', 'reviseBlocked', 'uncoveredSinceApproval', 'viewerCanRecordLateReason'].sort(),
+    );
+  });
 }, { timeout: 20000 });

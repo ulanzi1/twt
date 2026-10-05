@@ -433,6 +433,17 @@ export type AuthAuditEventType =
   | 'admin_claim.verifier_escalated'
   | 'admin_claim.decision_revised'
   | 'admin_claim.decision_rejected'
+  // ── Story 6.23a (NW12) — the nominee-change warnings. Context is NON-PII: codes, kinds and COUNTS only —
+  // ⛔ never a member name, ⛔ never a date, ⛔ never a note's text.
+  //   late_warning_reason_recorded / _rejected — the District Admin's (any `claim.approve` holder's) reason for a
+  //     warning that appeared after the approval (`covered_key_count`, `kinds`, `warning_reason_code`).
+  //   admin_approval_warning_reason.added / .replaced / .rejected — the Super Admin's acts on the reason list (ids
+  //     and codes only — ⛔ never the reason's words).
+  | 'admin_claim.late_warning_reason_recorded'
+  | 'admin_claim.late_warning_reason_rejected'
+  | 'admin_approval_warning_reason.added'
+  | 'admin_approval_warning_reason.replaced'
+  | 'admin_approval_warning_reason.rejected'
   // ── Nominee name-check surface (Story 6.18, `2026-09-19-226` cl.3/cl.5 / Epic 6) ──
   // The two names read + the District Admin's recorded verdict on them. The read is AUDITED on the
   // `admin_verifier_console.read` precedent, and for a sharper reason than that surface has: this

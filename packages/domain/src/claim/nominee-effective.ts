@@ -108,6 +108,10 @@ export class EffectiveNomineeDeclarationClaimNotFoundError extends Error {
  * ⭐ PURE, and used ONLY to VALIDATE the District Admin's marks (the writer refuses a mark that disagrees)
  * — ⛔ never to pre-select, highlight, label or auto-mark anything (invariant 1, AC3). ⚠ `effectiveAt`,
  * ⛔ not `recorded_at`: a correction inherits the corrected version's position (invariant 5).
+ * ⚠ AMENDED by `2026-09-28-261` D1 (built by Story 6.23a): *"highlight, label"* is superseded — the system now
+ * SHOWS a warning on a version dated on or after the death, and `approval-warnings.ts`'s `isPostDeathVersion`
+ * calls this to decide it (the timeline's by-date derivation). ⛔ Pre-selecting, pre-marking, sorting by it and
+ * deciding anything stay banned. The text above is kept as the record of what it said.
  */
 export function versionStandsAt(effectiveAt: Date, certificateDate: string): boolean {
   return effectiveAt.getTime() < istMidnightAt(certificateDate).getTime();

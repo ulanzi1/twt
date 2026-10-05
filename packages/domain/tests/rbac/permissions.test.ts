@@ -226,9 +226,10 @@ describe('PERMISSION_CATALOG', () => {
     // 9.8 reconciliation.review, 21 at 7.5 +2 pool.fixed_amount_set/…_emergency, 19 at 6.16, 16 at 6.14, 15 at 6.13, 14
     // at 6.12, 13 at 6.10, 12 at 6.9, 11 at 6.8, 9 at 6.7, 7 at 6.3, 6 at 5.8, 5 at 5.3, 4 at 4.8, 3 at 4.6, 2 at 2.6, 1
     // at 1.8)
-    expect(PERMISSION_CATALOG_VERSION).toBe(50);
+    // 51 at Story 6.23a +1 (approval_warning_reason.manage — the Super Admin's warning-reason list; 64 -> 65 keys).
+    expect(PERMISSION_CATALOG_VERSION).toBe(51);
     expect(PERMISSION_CATALOG.catalogVersion).toBe(PERMISSION_CATALOG_VERSION);
-    expect(PERMISSION_CATALOG.keys).toHaveLength(64);
+    expect(PERMISSION_CATALOG.keys).toHaveLength(65);
     expect([...PERMISSION_CATALOG.keys].sort()).toEqual(
       [...SEED_PERMISSION_KEYS].sort(),
     );

@@ -12,6 +12,10 @@
 //
 // ⛔⛔ INVARIANT 1 / 6 — nothing here computes "this changed after the death", highlights, pre-selects
 // or diffs anything. The timeline shows `recorded_at` AND `effective_at`; the District Admin decides.
+// ⚠ AMENDED by `2026-09-28-261` D1 (built by Story 6.23a, NW10): *"computes 'this changed after the death',
+// highlights"* is superseded — the timeline now carries each version's WARNINGS (by DATE, from the accepted date this
+// audited read already decrypts — Trap 1) and an applied correction's FQ1 LABEL. ⛔ Pre-selecting, pre-marking,
+// sorting by a warning and diffing names stay banned; the District Admin still decides. Kept as the record.
 // ⛔ It is ⛔ NOT in the console packet (D12, T7) — an on-demand route like 6.18's names read.
 // ⭐ Decrypt-AFTER-authorize (the route chain has run), strict helpers that map a failure to
 // `unreadable`, and an audit line with ids and codes ONLY — ⛔ never a name, date or note (AC9).
@@ -239,6 +243,31 @@ export function createNomineeDeclarationHandlers(deps: AppDeps) {
         : null;
       // ⭐ What THIS viewer may do (code review 2026-09-24b) — the same keys, at the same district, as the
       // write routes' preHandlers (`requireDetermine` / `requireDistrictApproval`). UI only; ⛔ never the gate.
+      // ⭐ Story 6.23a (NW2–NW4, NW10) — the WARNINGS by date (the accepted date decrypted just above — the ONE place
+      // the date is decrypted; ⛔ no new decrypt), the anchor from the claim-level read, and the FQ1 labels. A
+      // correction is ⛔ never warned; an unknown / unreadable / erased date ⇒ ⛔ no `post_death_version` flag.
+      // `getClaimWarningAnchor` — ⛔ not the full `readClaimApprovalWarnings` (code review 2026-10-05): this
+      // handler re-derives its own per-version warnings via `classifyNomineeVersion` below and only ever needed
+      // the anchor. Fails soft on a transient read error, mirroring `assembleApprovalWarnings` in
+      // `claims.verifier-console.handlers.ts`: the timeline still renders, just with the claim's own `createdAt`
+      // (⛔ not the earlier-claim-aware anchor) standing in, so no version is silently mis-flagged either way.
+      const anchorFiledAt = await claimDomain.getClaimWarningAnchor(scopeTx.tx, pariwarId, cid).catch((err: unknown) => {
+        request.log.warn(
+          { err: err instanceof Error ? err.name : 'unknown', claimCaseId },
+          'nominee-declaration timeline: approval-warnings anchor unavailable; falling back to claim.createdAt',
+        );
+        return claimRow.createdAt;
+      });
+      const correctionLabels = await claimDomain.listAppliedCorrectionLabels(scopeTx.tx, pariwarId, claimRow.deceasedMemberId);
+      const acceptedDate =
+        acceptedCertificate?.accepted_date.state === 'readable' && /^\d{4}-\d{2}-\d{2}$/.test(acceptedCertificate.accepted_date.value)
+          ? acceptedCertificate.accepted_date.value
+          : null;
+      const basis = { acceptedDate, anchorFiledAt };
+      const versionWarnings = versions.map((v) =>
+        claimDomain.classifyNomineeVersion({ source: v.source, effectiveAt: v.effectiveAt }, basis),
+      );
+      const warningCount = versionWarnings.reduce((n, w) => n + w.length, 0);
       const grants = request.scopeGrants ?? (await loadActorGrants(scopeTx, actorId));
       const atDistrict = { dimension: 'district' as const, value: request.nomineeNameCheckDistrict ?? null, pariwarId: scopeTx.pariwarId };
       const may = (key: string): boolean =>
@@ -254,6 +283,8 @@ export function createNomineeDeclarationHandlers(deps: AppDeps) {
           declaration_status: effective.status,
           // Story 6.21a — WHETHER the accepted date was decrypted here (⛔ never the date itself).
           accepted_certificate_read: acceptedCertificate !== null,
+          // Story 6.23a (NW12) — how many warnings the timeline showed (⛔ never which version, ⛔ never a date).
+          warning_count: warningCount,
         },
       });
 
@@ -261,18 +292,25 @@ export function createNomineeDeclarationHandlers(deps: AppDeps) {
         claim_case_id: claimCaseId,
         claim_state: claimRow.currentState,
         deceased_member_id: claimRow.deceasedMemberId,
-        versions: versions.map((v) => ({
-          version_id: v.versionId,
-          rank: v.rank as 1 | 2,
-          version_no: v.versionNo,
-          kind: v.kind,
-          source: v.source,
-          relationship: v.relationship,
-          split_pct: v.splitPct,
-          recorded_at: v.recordedAt.toISOString(),
-          effective_at: v.effectiveAt.toISOString(),
-          corrects_version_id: v.correctsVersionId,
-        })),
+        versions: versions.map((v, i) => {
+          const label = v.source === 'correction' ? correctionLabels.get(v.versionId.toLowerCase()) : undefined;
+          return {
+            version_id: v.versionId,
+            rank: v.rank as 1 | 2,
+            version_no: v.versionNo,
+            kind: v.kind,
+            source: v.source,
+            relationship: v.relationship,
+            split_pct: v.splitPct,
+            recorded_at: v.recordedAt.toISOString(),
+            effective_at: v.effectiveAt.toISOString(),
+            corrects_version_id: v.correctsVersionId,
+            warnings: versionWarnings[i]!,
+            correction_label: label
+              ? { district_admin_display: label.districtAdminDisplay, pariwar_admin_display: label.pariwarAdminDisplay }
+              : null,
+          };
+        }),
         watermark: { rank1: head(1), rank2: head(2) },
         live_determination: live
           ? {
@@ -297,6 +335,7 @@ export function createNomineeDeclarationHandlers(deps: AppDeps) {
         viewer: { can_determine: may(NOMINEE_DETERMINATION_KEY), can_decide_district: may(NOMINEE_CORRECTION_DISTRICT_KEY) },
         pending_corrections: { da_pending: pending.daPending, pa_pending: pending.paPending },
         accepted_certificate: acceptedCertificate,
+        warning_basis: { death_date_known: acceptedDate !== null, first_filed_at: anchorFiledAt.toISOString() },
       };
     },
 

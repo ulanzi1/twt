@@ -194,7 +194,7 @@ describe('Story 6.20 — the pickers take their codes from the contracts enum', 
     expect(src).not.toMatch(/['"](child|parent|sibling)['"]/)
   })
 
-  it('⭐ the CORRECTION picker offers only KNOWN relationships (target: `-237` cl.2; proposal: an ENGINEERING READING of it, ⛔ not a ratified rule — BigDev 2026-09-24)', () => {
+  it('⭐ the CORRECTION picker offers only KNOWN relationships (target: `-237` cl.2; proposal: an ENGINEERING READING of it when written — BigDev 2026-09-24 — ⭐ RATIFIED by `-261` C1)', () => {
     const src = code(read('apps/mobile/app/(life-events)/nominee-correction.tsx'))
     expect(src).toContain('KNOWN_RELATIONSHIPS.map')
     expect(src).not.toMatch(/\bRELATIONSHIPS\.map/)

@@ -58,10 +58,11 @@ const COVERAGE_SET: readonly CoverageEntry[] = [
     // Both routes MUST compose the human-actor chain [requireAdminSession, scopeResolutionHook,
     // requirePermissionHook(claim.approve, district)] — the runtime is the real control, this gate is
     // the structural defense-in-depth. `verifier-decision` matches BOTH the base + the /revise path.
+    // Story 6.23a (NW14) adds the third — the late-warning reason (`verifier-decision/late-warning-reason`).
     file: 'apps/api/src/modules/claims/claims.verification-decision.routes.ts',
     pathSubstrings: ['verifier-decision'],
     owner: 'Story 6.11',
-    expectedMethods: ['post', 'post'],
+    expectedMethods: ['post', 'post', 'post'],
   },
   {
     // Story 6.12 — the R6 manual shepherd reassignment WRITE. A human-actor write (routing the family's

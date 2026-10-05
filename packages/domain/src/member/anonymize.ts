@@ -52,6 +52,7 @@ import { memberNomineeVersions } from '../schema/member_nominee_versions.js';
 import { nomineeCorrections } from '../schema/nominee_corrections.js';
 import { nomineeDeterminations } from '../schema/nominee_determinations.js';
 import { claimDeathCertificateReviews } from '../schema/claim_death_certificate_reviews.js';
+import { claimWarningApprovals } from '../schema/claim_warning_approvals.js';
 import { memberWithdrawals } from '../schema/member_withdrawals.js';
 
 /** The KMS material the sentinel-encrypt uses. The caller (the RTBF handler) threads its `{ kms, kekRef }`
@@ -85,6 +86,9 @@ const FIELD_CLASS_NOMINEE_CORRECTION = 'nominee_correction';
 // Story 6.21a (D11) — the death-certificate REVIEW Tier-1 class (by-value twin of apps/api context.ts's
 // `DEATH_CERTIFICATE_REVIEW_FIELD_CLASS`; matches `piiColumn(1, 'death_certificate_review')`).
 const FIELD_CLASS_DEATH_CERTIFICATE_REVIEW = 'death_certificate_review';
+// Story 6.23a (NW13, Trap 14) — the approval-over-warning record's Tier-1 class (by-value twin of apps/api context.ts's
+// `CLAIM_WARNING_APPROVAL_FIELD_CLASS`; matches `piiColumn(1, 'claim_warning_approval')`).
+const FIELD_CLASS_CLAIM_WARNING_APPROVAL = 'claim_warning_approval';
 const FIELD_CLASS_ADDRESS = 'member_address';
 const FIELD_CLASS_MOBILE = 'member_mobile';
 // Story 10.10 — mirrors `piiColumn(1, 'member_moderation')` on member_moderation_actions.
@@ -238,6 +242,18 @@ export async function anonymizeMember(
       noteCiphertext: reviewSentinel,
     })
     .where(eq(claimDeathCertificateReviews.deceasedMemberId, memberId));
+
+  // ── ⭐ Story 6.23a (NW13, Trap 14) — the APPROVAL-OVER-WARNING record, keyed on the DECEASED member (the
+  // `nominee_determinations` shape — ⛔ never a subquery inside this UPDATE): a late-warning reason's Tier-1 note →
+  // sentinel. ⚠ Only a `district_admin_late_reason` row carries a note, and 0143's step ⇔ note CHECK requires every
+  // other row's to STAY null — so it is replaced only where present. The keys, the reason chosen and the attribution
+  // are governance history, kept. The column-level UPDATE grant + the per-command UPDATE policy exist for exactly
+  // this (`-279` A12 — without the policy the scrub matches 0 rows under FORCE). ⚠ Recorded, ⛔ not fixed here:
+  // `claim_verifier_decisions.rationale_ciphertext` (the at-approval note) is ⛔ not in this file (deferred-work).
+  await client
+    .update(claimWarningApprovals)
+    .set({ noteCiphertext: await encSentinel(pariwarId, FIELD_CLASS_CLAIM_WARNING_APPROVAL, enc) })
+    .where(and(eq(claimWarningApprovals.deceasedMemberId, memberId), isNotNull(claimWarningApprovals.noteCiphertext)));
 
   // ── member_medical_disclosures ── ALL rows: conditions → sentinel (NOT NULL); context → NULL. ──────
   await client

@@ -2562,3 +2562,17 @@ review introduced).
 **COMMITTED** history ([[project_friction_budget_baseline_ratchet]]), so once these changes land the
 gate reads this block; ⛔ no measured delta is claimed for the two mobile files
 ([[feedback_record_unattested_no_backfill]]).
+
+---
+
+**Story 6.23a disposition (declaration affirmed — ⛔ no new row: a test title only, ⛔ no member-facing change):** the
+story's ONE `apps/mobile/` change is the TITLE of one unit test, `apps/mobile/tests/unit/nominee-history-copy.test.ts`
+(*"the CORRECTION picker offers only KNOWN relationships …"*), which now records that the proposal-side refusal of
+`other` — written as an engineering reading of `-237` cl.2 — has been **ratified by `2026-09-28-261` C1** (`-278` NW11).
+⛔ No test body, ⛔ no app code, ⛔ no copy, ⛔ no screen and ⛔ no step a member or a family is made to take changes; the
+picker offered ⛔ `other` before and still does not. ⇒ there is ⛔ no payer and ⛔ no row to write, and ⛔ no row is
+retired. Everything else Story 6.23a builds (the nominee-change warnings, the warning reason, the late-warning reason
+and the Super Admin's reason list) is STAFF-facing (`apps/admin`, `apps/api`, `packages/*`) — ⛔ member-facing nowhere.
+
+⭐ **This disposition was written for changes that are UNCOMMITTED at the time of writing.** ⚠ AC-4 diffs **COMMITTED**
+history ([[project_friction_budget_baseline_ratchet]]), so the gate reads this block once the change lands.

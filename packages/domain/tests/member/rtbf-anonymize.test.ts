@@ -34,6 +34,7 @@ import {
   memberWithdrawals,
   nomineeCorrections,
   claimDeathCertificateReviews,
+  claimWarningApprovals,
   nomineeDeterminations,
 } from '../../src/schema/index.js';
 
@@ -95,7 +96,7 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
     return found.set;
   }
 
-  it('updates exactly the SEVENTEEN member-PII tables (twenty statements), once each except the three documented doubles', async () => {
+  it('updates exactly the EIGHTEEN member-PII tables (twenty-one statements), once each except the three documented doubles', async () => {
     // Seven since Story 10.10's review pass added `member_moderation_actions`; EIGHT since Story
     // 10.20 added `member_moderation_grounds`. This count is the completeness check for the RTBF
     // surface — a new Tier-1 column landing in a table absent from this list is exactly how the
@@ -155,8 +156,12 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
     // NULL (the verdict-coherence CHECK). ⛔ The uploads table has no PII column and needs none, and the
     // CERTIFICATES are ⛔ not erased — by ruling (`2026-09-25-243`, option C; counsel's basis owed before
     // go-live). Raised, never weakened.
+    //
+    // ⭐ MOVED AGAIN by Story 6.23a (NW13, Trap 14): EIGHTEEN tables, TWENTY-ONE statements. `claim_warning_approvals`
+    // holds a late-warning reason's NOTE (Tier-1, keyed on the DECEASED member) and takes ONE statement — the note
+    // replaced only where present (0143's step ⇔ note CHECK keeps every other row's NULL).
     const { captured } = await run();
-    expect(captured).toHaveLength(20);
+    expect(captured).toHaveLength(21);
     const tables = captured.map((c) => c.table);
     for (const t of [
       memberIdentities,
@@ -176,6 +181,7 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
       nomineeDeterminations,
       nomineeCorrections,
       claimDeathCertificateReviews,
+      claimWarningApprovals,
     ]) {
       expect(tables).toContain(t);
     }
@@ -188,7 +194,7 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
     expect(tables.filter((t) => t === dataExports)).toHaveLength(2);
     expect(tables.filter((t) => t === dataExportDeliveryGrants)).toHaveLength(2);
     expect(tables.filter((t) => t === memberModerationAppeals)).toHaveLength(2);
-    expect(new Set(tables).size).toBe(17);
+    expect(new Set(tables).size).toBe(18);
   });
 
   it('⭐ Story 10.21 (AC-R1/AC-R2): the staff attestation and the correction record are SCRUBBED but RETAINED', async () => {

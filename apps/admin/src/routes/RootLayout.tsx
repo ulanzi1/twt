@@ -14,6 +14,7 @@ import { hasAuditVerify, hasPariwarProvision, sessionKey, useSession } from '../
 import { correctionChaseEn } from '../modules/correction-chase/i18n-en.js';
 import { correctionClosureEn } from '../modules/correction-closure/i18n-en.js';
 import { certificateRemindersEn } from '../modules/certificate-reminders/i18n-en.js';
+import { approvalWarningReasonsEn } from '../modules/approval-warning-reasons/i18n-en.js';
 
 function TopBar(): ReactElement {
   const session = useSession();
@@ -25,6 +26,10 @@ function TopBar(): ReactElement {
   // Story 6.19c (AC8c) — the Super Admin's held claims are a GLOBAL role's queue: reachable from the TOP LEVEL (a Pariwar
   // picker) on the national grant — advisory, the server's key check is the boundary.
   const canReviewEscalations = session.data?.nationalGrants.includes('claim.review_escalated_closure') ?? false;
+  // Story 6.23a (NW17) — the warning-reason list is per-Pariwar AND Super-Admin-only: the link needs BOTH a Pariwar
+  // context (10.11's `useParams`) AND the national grant (6.19c's line above — `super_admin` is a global-scope bundle,
+  // so its keys reach `nationalGrants`). Advisory — the server's key check is the boundary.
+  const canManageWarningReasons = session.data?.nationalGrants.includes('approval_warning_reason.manage') ?? false;
   // Story 10.11 — the Trustee-Lite nav entry. The two entries above are gated on NATIONAL grants and
   // link to un-scoped routes; the worklist is per-Pariwar, so it can only be linked from inside a
   // Pariwar context. `strict: false` reads the CURRENT match's params without pinning this shared
@@ -109,6 +114,11 @@ function TopBar(): ReactElement {
           {pariwarId && (
             <Link to="/p/$pariwarId/certificate-reminders" params={{ pariwarId }} className="text-sm underline" data-testid="nav-certificate-reminders">
               {certificateRemindersEn.nav}
+            </Link>
+          )}
+          {pariwarId && canManageWarningReasons && (
+            <Link to="/p/$pariwarId/approval-warning-reasons" params={{ pariwarId }} className="text-sm underline" data-testid="nav-approval-warning-reasons">
+              {approvalWarningReasonsEn.nav}
             </Link>
           )}
           {pariwarId && canReviewEscalations && (

@@ -28,6 +28,7 @@ import {
   DeathCertificateHistory,
   DeathCertificateReviewControl,
   VerificationDecisionStrip,
+  LateWarningReasonPanel,
   type DeathCertificateReviewSubmit,
   type DecisionSubmit,
   type NomineeNameCheckSubmit,
@@ -60,6 +61,7 @@ import {
   usePostNomineeDetermination,
   usePostConcealmentAssessment,
   usePostNomineeNameCheck,
+  usePostLateWarningReason,
   usePostVerifierDecision,
   useReviseVerifierDecision,
   useSession,
@@ -122,8 +124,42 @@ export function decisionErrorMessage(err: unknown): string {
     // Story 6.19a (D14) — the contact record, checked AFTER the rest of the gate: say WHY the claim waits.
     if (err.code.endsWith('.claim_contact_required')) return claimContactRequiredMessage(err);
     if (err.code === 'verifier_decision.post_death_refusal_ungrounded') return t.nomineeDeclaration.postDeathRefusalUngrounded;
+    // Story 6.23a (NW6, NW7, NW14) — each new refusal in its own words; ⛔ never "try again".
+    const warningMessage = approvalWarningErrorMessage(err);
+    if (warningMessage !== null) return warningMessage;
   }
   return t.decision.submitError;
+}
+
+/**
+ * PURE — Story 6.23a's refusals in words (the decision strip AND the late-warning panel share it). `null` for a code
+ * this table does not own. ⛔ Never "Please try again": each is a rule, ⛔ not a glitch.
+ */
+export function approvalWarningErrorMessage(err: ApiError): string | null {
+  const e = t.approvalWarnings.errors;
+  switch (err.code) {
+    case 'verifier_decision.warning_reason_required':
+      return e.warningReasonRequired;
+    case 'verifier_decision.warning_reason_ungrounded':
+      return e.warningReasonUngrounded;
+    case 'verifier_decision.warning_reason_unavailable':
+      return e.warningReasonUnavailable;
+    case 'verifier_decision.late_warning_reason.nothing_uncovered':
+      return e.lateNothingUncovered;
+    case 'verifier_decision.late_warning_reason.determination_required':
+      return e.lateDeterminationRequired;
+    case 'verifier_decision.late_warning_reason.no_district_admin_approval':
+      return e.lateNoApproval;
+    case 'verifier_decision.late_warning_reason.not_recordable_state':
+      return e.lateNotRecordable;
+    case 'verifier_decision.not_revisable': {
+      const reason = (err.details as { reason?: string } | undefined)?.reason;
+      if (reason === 'warning_approval_final' || reason === 'warnings_not_current') return t.approvalWarnings.reviseBlocked[reason]!;
+      return null;
+    }
+    default:
+      return null;
+  }
 }
 
 /**
@@ -198,6 +234,8 @@ export function VerifierConsoleRoute(): ReactElement {
       outcome: input.outcome,
       reason_code: input.reasonCode,
       ...(input.rationale !== undefined ? { rationale: input.rationale } : {}),
+      // Story 6.23a (NW5) — the warning reason rides in its own field.
+      ...(input.warningReasonCode !== undefined ? { warning_reason_code: input.warningReasonCode } : {}),
     });
   };
   const submitRevise = async (input: DecisionSubmit): Promise<void> => {
@@ -207,6 +245,29 @@ export function VerifierConsoleRoute(): ReactElement {
       ...(input.rationale !== undefined ? { rationale: input.rationale } : {}),
     });
   };
+  // ── Story 6.23a (NW8, NW14) — the nominee-change warnings and the District Admin's late-warning reason. ──────
+  const approvalWarnings = packet?.approvalWarnings;
+  const lateReason = usePostLateWarningReason(pariwarId, claimCaseId);
+  const resetLateReason = lateReason.reset;
+  useEffect(() => {
+    // A claim change drops the previous claim's late-reason outcome (the 6.18 keyed-state lesson).
+    resetLateReason();
+  }, [claimCaseId, resetLateReason]);
+  // The mount condition below now also reads `lateReason.status` (code review 2026-10-05), and a plain
+  // `useEffect`'s post-paint timing would let the PREVIOUS claim's `isSuccess`/`isPending` flash the panel
+  // — with `recorded`/`processing` text for a claim where nothing happened — for one frame before the
+  // effect above lands. Fixed WITHOUT a `useLayoutEffect` (re-review 2026-10-05: that synchronous flush
+  // changed effect-ordering for the whole route and broke unrelated certificate-section tests) — instead,
+  // the React-docs "adjust state during rendering" pattern: a ref resets synchronously, in the SAME render
+  // that changes `claimCaseId`, so there is no intermediate frame to flash in the first place.
+  const lateReasonClaimRef = useRef(claimCaseId);
+  const lateReasonIsStale = lateReasonClaimRef.current !== claimCaseId;
+  if (lateReasonIsStale) lateReasonClaimRef.current = claimCaseId;
+  const submitLateReason = async (input: { warningReasonCode: string; note: string }): Promise<boolean> =>
+    lateReason
+      .mutateAsync({ warning_reason_code: input.warningReasonCode, note: input.note })
+      .then(() => true)
+      .catch(() => false);
   const submitError = decision.error ?? revise.error;
   const decisionErrorText = submitError ? decisionErrorMessage(submitError) : null;
 
@@ -396,7 +457,10 @@ export function VerifierConsoleRoute(): ReactElement {
               // accounts AND a current, passing District Admin name check. The domain refuses it
               // anyway under the claim lock; disabling here stops the console offering a control
               // that would 409, which would read to an operator as a glitch rather than a rule.
-              canApprove={certificateAccepted && packet.nomineeNameCheck.currentAndPassing}
+              canApprove={certificateAccepted && packet.nomineeNameCheck.currentAndPassing && packet.approvalWarnings.available}
+              // Story 6.23a (NW9) — the warnings + the reason list; (NW7) the revise control's words when blocked.
+              approvalWarnings={{ kinds: packet.approvalWarnings.kinds, reasonOptions: packet.approvalWarnings.reasonOptions }}
+              reviseBlocked={packet.approvalWarnings.reviseBlocked}
               // ⚠⚠ NAME THE ACTUAL BLOCKER (code review 2026-09-20). This fell through to
               // *"Record the nominee name check before approving"* for EVERY non-passing case —
               // including the one where the District Admin had just recorded `does_not_match`
@@ -405,6 +469,9 @@ export function VerifierConsoleRoute(): ReactElement {
               approveBlockedReason={
                 certificateBlockedReason !== null
                   ? certificateBlockedReason
+                  : !packet.approvalWarnings.available
+                  ? // Story 6.23a — ⛔ never "no warnings" on an unknown: Approve waits until the section loads.
+                    t.approvalWarnings.unavailable
                   : packet.nomineeNameCheck.currentAndPassing
                   ? null
                   : // ⛔ "we could not read this" is ⛔ NOT "the bank details are missing".
@@ -549,6 +616,29 @@ export function VerifierConsoleRoute(): ReactElement {
                 />
               ) : null}
             </section>
+            {/* Story 6.23a (NW14) — mounted on `viewerCanRecordLateReason` ALONE (the server judged NW14's whole
+                predicate for THIS viewer — `-279` A1), ⛔ never also on `uncoveredSinceApproval > 0`.
+                ⭐ Code review 2026-10-05: ALSO kept mounted while `lateReason.status !== 'idle'` — the mutation's
+                own success invalidates the console packet, which can flip `viewerCanRecordLateReason` to `false`
+                on the very next render (this recorder's reason now covers every remaining late key). Without
+                this, the panel — and `t.late.recorded` inside it — unmounts before the approver can read it.
+                `status !== 'idle'` (⛔ not just `isSuccess`, re-review 2026-10-05) ALSO covers a second submit
+                started right after the first success: the moment a new `mutate` begins, `isSuccess` flips back
+                to `false` before `isPending` is even visible, which would otherwise unmount the panel mid-submit
+                and hide its processing state (and any resulting error) from the operator.
+                `resetLateReason` on a claim change (above) still drops this once it no longer applies. */}
+            {approvalWarnings?.viewerCanRecordLateReason === true || (!lateReasonIsStale && lateReason.status !== 'idle') ? (
+              <LateWarningReasonPanel
+                key={claimCaseId}
+                options={approvalWarnings?.reasonOptions ?? []}
+                uncoveredSinceApproval={approvalWarnings?.uncoveredSinceApproval ?? 0}
+                lateKeysUncoveredForViewer={approvalWarnings?.lateKeysUncoveredForViewer ?? 0}
+                onSubmit={submitLateReason}
+                processing={lateReason.isPending}
+                error={lateReason.error ? decisionErrorMessage(lateReason.error) : null}
+                recorded={lateReason.isSuccess}
+              />
+            ) : null}
             {/* Story 6.20 (AC3, AC4, AC7) — the nominee declaration history, behind a disclosure. */}
             <section className="mt-4 border-t pt-4">
               <button

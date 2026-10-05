@@ -1,8 +1,9 @@
 // Verifier adjudication admin routes — Story 6.11 (Task 5; AC1/AC8/AC10, D-B).
 //
-// TWO scope-gated admin WRITE routes — the FIRST verifier WRITE surface:
+// THREE scope-gated admin WRITE routes — the FIRST verifier WRITE surface:
 //   · POST …/admin/claims/:claimCaseId/verifier-decision         → approve / deny / escalate
 //   · POST …/admin/claims/:claimCaseId/verifier-decision/revise  → same-outcome revise (step-up-gated)
+//   · POST …/admin/claims/:claimCaseId/verifier-decision/late-warning-reason → Story 6.23a NW14 (a record)
 //
 // The route IS the security control (AC10): an authenticated HUMAN admin session + the EXISTING
 // `claim.approve` WRITE key (D-B — NOT granted to the technical `verifier` role; Anita adjudicates as a
@@ -23,7 +24,13 @@ import type { FastifyInstance, FastifyRequest, preHandlerHookHandler } from 'fas
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import { z } from 'zod';
 
-import { VerifierDecisionRequest, VerifierDecisionResponse, VerifierDecisionReviseRequest } from '@twt/contracts';
+import {
+  LateWarningReasonRequest,
+  LateWarningReasonResponse,
+  VerifierDecisionRequest,
+  VerifierDecisionResponse,
+  VerifierDecisionReviseRequest,
+} from '@twt/contracts';
 
 import type { AppDeps } from '../../context.js';
 import { UnauthorizedError } from '../../http-errors.js';
@@ -116,5 +123,22 @@ export function registerVerificationDecisionRoutes(app: FastifyInstance, deps: A
       preHandler: [adminSession, scope, resolveDistrict, requireApprove, requireStepUp(deps, REVISE_STEP_UP_CONTEXT)],
     },
     h.postRevise,
+  );
+
+  // Story 6.23a (NW14; `-277` Q3 B) — the District Admin's reason for a warning that appeared AFTER the approval. The
+  // SAME human-actor chain [requireAdminSession, scopeResolutionHook, requirePermissionHook(claim.approve, district)];
+  // ⛔ no step-up (the decision route's posture — only revise is step-up-gated). A record, ⛔ never a decision.
+  r.post(
+    '/api/v1/p/:pariwarId/admin/claims/:claimCaseId/verifier-decision/late-warning-reason',
+    {
+      schema: {
+        params: DecisionParam,
+        body: LateWarningReasonRequest,
+        response: { 201: LateWarningReasonResponse },
+        tags: [TAG],
+      },
+      preHandler: [adminSession, scope, resolveDistrict, requireApprove],
+    },
+    h.postLateWarningReason,
   );
 }

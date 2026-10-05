@@ -643,7 +643,8 @@ export class LateWarningReasonRefusedError extends Error {
 
 /** NW17 — why the Super Admin's add / replace of a reason is refused. `not_found` → 404, `invalid_text` →
  *  400, the rest → 409. ⛔ There is no refusal for "edit" or "delete": ⛔ no such write exists. */
-export type ApprovalWarningReasonWriteRefusal = 'not_found' | 'already_replaced' | 'invalid_text' | 'missing_display' | 'code_exhausted';
+export const APPROVAL_WARNING_REASON_WRITE_REFUSALS = ['not_found', 'already_replaced', 'invalid_text', 'missing_display', 'code_exhausted'] as const;
+export type ApprovalWarningReasonWriteRefusal = (typeof APPROVAL_WARNING_REASON_WRITE_REFUSALS)[number];
 
 const APPROVAL_WARNING_REASON_REFUSAL_STATUS: Record<ApprovalWarningReasonWriteRefusal, 400 | 404 | 409> = {
   not_found: 404,

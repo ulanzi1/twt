@@ -54,7 +54,7 @@ const NOT_REVISABLE_MESSAGES: Record<claim.DecisionNotRevisableReason, string> =
   cross_outcome: 'A revision must keep the same outcome — a reversal is handled by the appeal flow (Story 6.16)',
   // Story 6.23a (NW7; NW18) — a written note is never replaced.
   warning_approval_final:
-    'This approval was given while a nominee-change warning showed, so its reason and note are final — a new warning is answered with a late-warning reason instead',
+    'This claim shows a nominee-change warning (or one has already been answered), so this approval is final and its reason and note stay as written — a new warning is answered with a late-warning reason instead',
   warnings_not_current:
     'Whether a nominee-change warning shows is not known yet — re-record the nominee determination against the accepted death certificate first',
 };
@@ -235,7 +235,9 @@ export function createVerificationDecisionHandlers(deps: AppDeps) {
     ctx: DecisionContext,
     outcome: string,
     reasonCode: string,
-    warnings?: { readonly kinds: readonly string[]; readonly warningReasonCode: string | null },
+    // `kinds: null` ⇔ ⛔ not known at the refusal (code review round 3) — the field is OMITTED, ⛔ never `[]`, which
+    // would read as "no warning showed".
+    warnings?: { readonly kinds: readonly string[] | null; readonly warningReasonCode: string | null },
   ): void {
     emitAuthAudit(deps, request, type, {
       actorId: ctx.actorId,
@@ -246,9 +248,8 @@ export function createVerificationDecisionHandlers(deps: AppDeps) {
         outcome,
         reason_code: reasonCode,
         // Story 6.23a (NW12) — codes and kinds only (⛔ never a name, a date or the note).
-        ...(warnings !== undefined
-          ? { approval_warning_kinds: [...warnings.kinds], warning_reason_code: warnings.warningReasonCode }
-          : {}),
+        ...(warnings !== undefined ? { warning_reason_code: warnings.warningReasonCode } : {}),
+        ...(warnings?.kinds != null ? { approval_warning_kinds: [...warnings.kinds] } : {}),
       },
     });
   }
@@ -309,8 +310,10 @@ export function createVerificationDecisionHandlers(deps: AppDeps) {
       } catch (err) {
         // Rejected attempts are audited too (AC10 — fail-closed AND audited, not just fail-closed).
         // Story 6.23a (NW12) — a `warning_reason_required` refusal carries the kinds it was refused over; a
-        // `warning_reason_unavailable` refusal (the reason was replaced mid-flight) still carries the code the
-        // actor submitted, so the audit line explains the race rather than reading like a plain rejection.
+        // `warning_reason_unavailable` refusal (the reason was replaced mid-flight) carries the code the actor
+        // submitted, so the audit line explains the race — its kinds are ⛔ not known here, so they are OMITTED (⛔
+        // never `[]`); an `…_ungrounded` refusal carries the code too, over the ⛔ no-warning claim it names (code
+        // review round 3).
         auditDecision(
           request,
           'admin_claim.decision_rejected',
@@ -320,8 +323,10 @@ export function createVerificationDecisionHandlers(deps: AppDeps) {
           err instanceof claim.ApprovalWarningReasonRequiredError
             ? { kinds: err.kinds, warningReasonCode: body.warning_reason_code ?? null }
             : err instanceof claim.WarningReasonUnavailableError
-              ? { kinds: [], warningReasonCode: body.warning_reason_code ?? null }
-              : undefined,
+              ? { kinds: null, warningReasonCode: err.warningReasonCode }
+              : err instanceof claim.WarningReasonUngroundedError
+                ? { kinds: [], warningReasonCode: body.warning_reason_code ?? null }
+                : undefined,
         );
         return translateDecisionError(err);
       } finally {

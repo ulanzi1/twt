@@ -154,7 +154,7 @@ export const verifierConsoleEn = {
     unavailable: 'The nominee-change warnings could not be read, so approval is unavailable until they load. Reload to try again.',
     reviseBlocked: {
       warning_approval_final:
-        'This approval was given while a nominee-change warning showed (or one was answered since), so its reason and note are final and stay as written.',
+        'This claim shows a nominee-change warning (or one has already been answered), so this approval is final and its reason and note stay as written.',
       warnings_not_current:
         'Revising returns once the nominee determination is recorded again against the accepted death certificate.',
       unavailable: 'The nominee-change warnings could not be read, so revising is unavailable until they load. Reload to try again.',
@@ -165,12 +165,17 @@ export const verifierConsoleEn = {
       intro:
         'Record a warning reason and a note for the warnings that appeared after the District Admin approved. Earlier notes stay as written; this adds a new one.',
       uncovered: (n: number) => (n === 1 ? '1 warning appeared after the approval.' : `${n} warnings appeared after the approval.`),
+      // The AC's clause VERBATIM (*"a late reason recorded by the approver cannot clear their own approval"* — `-279` A1:
+      // it fails to count ONLY for its own recorder's approval), then a PERMISSIVE tail that holds for every viewer, ⛔ not
+      // only the approver (code review round 4 — BigDev *"1"*; round 3's "yours is still needed" over-corrected).
       ownCannotClear:
-        'Another person has answered these warnings, but a late reason recorded by the approver cannot clear their own approval — record yours.',
+        'Another person has answered these warnings, but a late reason recorded by the approver cannot clear their own approval. You may record your own reason and note.',
       noteLabel: 'Your note',
       submit: 'Record the reason and note',
       processing: 'Recording…',
       recorded: 'Your reason and note are recorded.',
+      // The panel's OWN fallback — ⛔ never the decision strip's "The decision could not be submitted" (code review round 3).
+      submitError: 'The reason and note could not be recorded. Reload the claim to see its latest state.',
     },
     errors: {
       warningReasonRequired: 'This claim shows a nominee-change warning — choose a warning reason and write a note to approve it. The claim is not refused.',
@@ -180,6 +185,7 @@ export const verifierConsoleEn = {
       lateDeterminationRequired: 'Record the nominee determination against the accepted death certificate first — the warnings are not known until then.',
       lateNoApproval: 'This claim has no live District Admin approval for a late reason to answer.',
       lateNotRecordable: 'A late reason cannot be recorded in this claim’s current state.',
+      lateMissingDisplay: 'Your account has no display name configured — contact an administrator before recording a late reason.',
     },
   },
   // ── Story 6.18 — the nominee NAME CHECK (`2026-09-19-226` cl.3/cl.5) ──────────────────────
@@ -344,10 +350,13 @@ export const verifierConsoleEn = {
     // re-cased or paraphrased (Trap 12).
     warning: {
       post_death_version: 'Warning: dated on or after the date of death on the accepted certificate',
-      recent_nominee_change: (firstFiled: string) =>
-        `Warning: named or changed within 90 days before the first claim for this death was filed (${firstFiled})`,
+      // `null` ⇔ the anchor could ⛔ not be read (the server then judges ⛔ no such warning — kept total, ⛔ never a crash).
+      recent_nominee_change: (firstFiled: string | null) =>
+        `Warning: named or changed within 90 days before the first claim for this death was filed${firstFiled === null ? '' : ` (${firstFiled})`}`,
       dateNotKnown:
         'The date of death is not known yet (no accepted death certificate, or its date cannot be read), so a warning for a version dated on or after the death cannot be shown.',
+      anchorUnavailable:
+        'The date the first claim for this death was filed could not be read just now, so a warning for a nominee named or changed within 90 days before it cannot be shown. Reload to try again.',
     },
     correctionLabel: (districtAdmin: string, pariwarAdmin: string) =>
       `corrected after the death — approved by ${districtAdmin} and ${pariwarAdmin}`,

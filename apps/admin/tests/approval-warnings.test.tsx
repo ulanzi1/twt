@@ -62,6 +62,14 @@ describe('<ApprovalWarningReasonPicker> (NW9)', () => {
     expect(onChange).toHaveBeenCalledWith(STORED.code);
   });
 
+  it('code review round 3 — a RADIOGROUP (⛔ never `aria-invalid` on a plain fieldset): named by its legend, required, and pointing at its error', () => {
+    render(<ApprovalWarningReasonPicker idPrefix="t" options={OPTIONS} value="" onChange={vi.fn()} error="Choose one." />);
+    const group = screen.getByRole('radiogroup', { name: t.approvalWarnings.pickerLabel });
+    expect(group.getAttribute('aria-required')).toBe('true');
+    expect(group.getAttribute('aria-invalid')).toBe('true');
+    expect(group.getAttribute('aria-describedby')).toBe(screen.getByTestId('t-warning-reason-error').id);
+  });
+
   it('announces the choice in words', () => {
     render(<ApprovalWarningReasonPicker idPrefix="t" options={OPTIONS} value={STORED.code} onChange={vi.fn()} />);
     const status = screen.getByTestId('t-warning-reason-selected');
@@ -116,14 +124,82 @@ describe('<VerificationDecisionStrip> with warnings (NW9; AC5)', () => {
     expect(screen.queryByTestId('decision-warning-reason-picker')).toBeNull();
   });
 
-  it('a Deny on a warned claim shows ⛔ no picker', () => {
-    setup();
+  it('a Deny on a warned claim shows ⛔ no picker — and SUBMITS with ⛔ no `warningReasonCode` (code review round 3)', async () => {
+    const { onDecision } = setup();
     fireEvent.click(screen.getByTestId('action-deny'));
     expect(screen.queryByTestId('decision-warning-reason-picker')).toBeNull();
+    fireEvent.change(screen.getByTestId('reason-code-select'), { target: { value: 'other' } });
+    fireEvent.change(screen.getByTestId('rationale-input'), { target: { value: 'Refused on the record.' } });
+    fireEvent.click(screen.getByTestId('action-submit'));
+    expect(screen.queryByTestId('confirm-warnings')).toBeNull();
+    fireEvent.click(screen.getByTestId('confirm-submit'));
+    await waitFor(() => expect(onDecision).toHaveBeenCalledTimes(1));
+    expect(onDecision.mock.calls[0]![0]).toEqual({ outcome: 'denied', reasonCode: 'other', rationale: 'Refused on the record.' });
   });
 
-  it('⭐ `reviseBlocked` REPLACES the revise control with its own words — one per reason', () => {
-    for (const reason of ['warning_approval_final', 'warnings_not_current'] as const) {
+  it('NW9 (code review round 3 — the re-review 2026-10-05 fix had no test) — approve → deny → approve shows the picker with ⛔ nothing chosen; re-choosing Approve KEEPS the pick', () => {
+    setup();
+    fireEvent.click(screen.getByTestId('action-approve'));
+    fireEvent.click(screen.getByTestId(`decision-warning-reason-radio-${STORED.code}`));
+    fireEvent.click(screen.getByTestId('action-approve')); // the SAME outcome again — ⛔ not a switch
+    expect((screen.getByTestId(`decision-warning-reason-radio-${STORED.code}`) as HTMLInputElement).checked).toBe(true);
+    fireEvent.click(screen.getByTestId('action-deny'));
+    fireEvent.click(screen.getByTestId('action-approve'));
+    for (const o of OPTIONS) {
+      expect((screen.getByTestId(`decision-warning-reason-radio-${o.code}`) as HTMLInputElement).checked).toBe(false);
+    }
+    expect(screen.getByTestId('decision-warning-reason-selected').textContent).toBe(t.approvalWarnings.noneChosen);
+  });
+
+  it('code review round 3 — a "2" pressed under the open confirmation changes ⛔ nothing: the approval still carries its warning reason', async () => {
+    const { onDecision } = setup();
+    fireEvent.click(screen.getByTestId('action-approve'));
+    fireEvent.change(screen.getByTestId('reason-code-select'), { target: { value: 'r5_d_natural_death' } });
+    fireEvent.click(screen.getByTestId('decision-warning-reason-radio-warnings_reviewed'));
+    fireEvent.change(screen.getByTestId('rationale-input'), { target: { value: 'Seen the family.' } });
+    fireEvent.click(screen.getByTestId('action-submit'));
+    expect(screen.getByTestId('confirm-modal')).toBeInTheDocument();
+    fireEvent.keyDown(screen.getByTestId('confirm-submit'), { key: t.decision.denyShortcut });
+    fireEvent.click(screen.getByTestId('confirm-submit'));
+    await waitFor(() => expect(onDecision).toHaveBeenCalledTimes(1));
+    expect(onDecision.mock.calls[0]![0]).toMatchObject({ outcome: 'approved', warningReasonCode: 'warnings_reviewed' });
+  });
+
+  it('code review round 3 — a pick that LEFT the active list (replaced; the packet refetched) is ⛔ not a choice: none shown checked, and submitting asks again', () => {
+    const onDecision = vi.fn().mockResolvedValue(undefined);
+    const props = { claimState: 'verifier_review', onDecision };
+    const { rerender } = render(<VerificationDecisionStrip {...props} approvalWarnings={{ kinds: ['post_death_version'], reasonOptions: OPTIONS }} />);
+    fireEvent.click(screen.getByTestId('action-approve'));
+    fireEvent.change(screen.getByTestId('reason-code-select'), { target: { value: 'r5_d_natural_death' } });
+    fireEvent.click(screen.getByTestId(`decision-warning-reason-radio-${STORED.code}`));
+    fireEvent.change(screen.getByTestId('rationale-input'), { target: { value: 'Seen the family.' } });
+    rerender(<VerificationDecisionStrip {...props} approvalWarnings={{ kinds: ['post_death_version'], reasonOptions: [GENERIC] }} />);
+    expect(screen.getByTestId('decision-warning-reason-selected').textContent).toBe(t.approvalWarnings.noneChosen);
+    fireEvent.click(screen.getByTestId('action-submit'));
+    expect(screen.getByTestId('decision-warning-reason-error').textContent).toBe(t.approvalWarnings.reasonRequiredError);
+    expect(screen.queryByTestId('confirm-modal')).toBeNull();
+  });
+
+  it('code review round 4 — the pick LEAVES the list while the confirmation is OPEN: Confirm closes it and asks again, ⛔ never sends a known-refused approval', async () => {
+    const onDecision = vi.fn().mockResolvedValue(undefined);
+    const props = { claimState: 'verifier_review', onDecision };
+    const { rerender } = render(<VerificationDecisionStrip {...props} approvalWarnings={{ kinds: ['post_death_version'], reasonOptions: OPTIONS }} />);
+    fireEvent.click(screen.getByTestId('action-approve'));
+    fireEvent.change(screen.getByTestId('reason-code-select'), { target: { value: 'r5_d_natural_death' } });
+    fireEvent.click(screen.getByTestId(`decision-warning-reason-radio-${STORED.code}`));
+    fireEvent.change(screen.getByTestId('rationale-input'), { target: { value: 'Seen the family.' } });
+    fireEvent.click(screen.getByTestId('action-submit'));
+    expect(screen.getByTestId('confirm-modal')).toBeInTheDocument();
+    rerender(<VerificationDecisionStrip {...props} approvalWarnings={{ kinds: ['post_death_version'], reasonOptions: [GENERIC] }} />);
+    fireEvent.click(screen.getByTestId('confirm-submit'));
+    expect(screen.queryByTestId('confirm-modal')).toBeNull();
+    expect(screen.getByTestId('decision-warning-reason-error').textContent).toBe(t.approvalWarnings.reasonRequiredError);
+    await Promise.resolve();
+    expect(onDecision).not.toHaveBeenCalled();
+  });
+
+  it('⭐ `reviseBlocked` REPLACES the revise control with its own words — one per reason (all three — code review round 3 added `unavailable`)', () => {
+    for (const reason of ['warning_approval_final', 'warnings_not_current', 'unavailable'] as const) {
       const { unmount } = render(
         <VerificationDecisionStrip claimState="verifier_approved" onDecision={vi.fn()} onRevise={vi.fn()} reviseBlocked={reason} />,
       );
@@ -133,16 +209,25 @@ describe('<VerificationDecisionStrip> with warnings (NW9; AC5)', () => {
       unmount();
     }
   });
+
+  it('code review round 3 — NW7 is about APPROVALS: a DENIED decision\'s revise stays offered even when the warnings read failed (`unavailable`)', () => {
+    render(<VerificationDecisionStrip claimState="denied" onDecision={vi.fn()} onRevise={vi.fn()} reviseBlocked="unavailable" />);
+    expect(screen.queryByTestId('revise-blocked-unavailable')).toBeNull();
+    expect(screen.getByTestId('revise-window-note')).toBeInTheDocument();
+  });
 });
 
 describe('<LateWarningReasonPanel> (NW14; AC7)', () => {
-  it('needs a reason, then a note; says the approver cannot clear their own approval when another person answered', async () => {
+  it('needs a reason, then a note; says another person\'s answer does not stand for this viewer when another person answered', async () => {
     const onSubmit = vi.fn().mockResolvedValue(true);
-    render(<LateWarningReasonPanel options={OPTIONS} uncoveredSinceApproval={0} lateKeysUncoveredForViewer={1} onSubmit={onSubmit} />);
+    render(<LateWarningReasonPanel options={OPTIONS} uncoveredSinceApproval={0} lateKeysUncoveredForViewer={1} onSubmit={onSubmit} canRecord />);
     expect(screen.getByTestId('late-warning-reason-own-cannot-clear').textContent).toBe(t.approvalWarnings.late.ownCannotClear);
     expect(screen.getByTestId('late-warning-reason-count').textContent).toBe(t.approvalWarnings.late.uncovered(1));
     fireEvent.click(screen.getByTestId('late-warning-reason-submit'));
-    expect(screen.getByTestId('late-warning-reason-error')).toBeInTheDocument();
+    // The PICKER's own "choose a reason" line — asserted by its WORDS (code review round 3: the panel's server error
+    // used to share this id, so presence alone proved nothing).
+    expect(screen.getByTestId('late-warning-reason-error').textContent).toBe(t.approvalWarnings.reasonRequiredError);
+    expect(screen.queryByTestId('late-warning-reason-server-error')).toBeNull();
     fireEvent.click(screen.getByTestId('late-warning-reason-radio-warnings_reviewed'));
     fireEvent.click(screen.getByTestId('late-warning-reason-submit'));
     expect(screen.getByTestId('late-warning-reason-note-error').textContent).toBe(t.approvalWarnings.noteRequiredError);
@@ -152,8 +237,53 @@ describe('<LateWarningReasonPanel> (NW14; AC7)', () => {
   });
 
   it('⛔ no "cannot clear" line while the warnings are uncovered for everyone', () => {
-    render(<LateWarningReasonPanel options={OPTIONS} uncoveredSinceApproval={2} lateKeysUncoveredForViewer={2} onSubmit={vi.fn()} />);
+    render(<LateWarningReasonPanel options={OPTIONS} uncoveredSinceApproval={2} lateKeysUncoveredForViewer={2} onSubmit={vi.fn()} canRecord />);
     expect(screen.queryByTestId('late-warning-reason-own-cannot-clear')).toBeNull();
+  });
+
+  it('⭐ code review round 3 — mounted for its OWN outcome (`canRecord: false`) it shows the outcome ALONE: ⛔ no count, ⛔ no "cannot clear" line, ⛔ no form that would 409', () => {
+    render(
+      <LateWarningReasonPanel options={OPTIONS} uncoveredSinceApproval={0} lateKeysUncoveredForViewer={0} onSubmit={vi.fn()} recorded canRecord={false} />,
+    );
+    expect(screen.getByTestId('late-warning-reason-recorded').textContent).toBe(t.approvalWarnings.late.recorded);
+    for (const id of ['late-warning-reason-count', 'late-warning-reason-own-cannot-clear', 'late-warning-reason-submit', 'late-warning-picker', 'late-warning-reason-note']) {
+      expect(screen.queryByTestId(id)).toBeNull();
+    }
+  });
+
+  it('⭐ family 13(d) (code review round 3) — "recorded" is ANNOUNCED: the status region is mounted EMPTY first, and its TEXT changes', () => {
+    const props = { options: OPTIONS, uncoveredSinceApproval: 1, lateKeysUncoveredForViewer: 1, onSubmit: vi.fn() };
+    const { rerender } = render(<LateWarningReasonPanel {...props} canRecord />);
+    const region = screen.getByTestId('late-warning-reason-recorded');
+    expect(region.getAttribute('role')).toBe('status');
+    expect(region.textContent).toBe('');
+    rerender(<LateWarningReasonPanel {...props} recorded canRecord={false} />);
+    // The SAME node — a live region that mounts already holding its text is ⛔ never announced.
+    expect(screen.getByTestId('late-warning-reason-recorded')).toBe(region);
+    expect(region.textContent).toBe(t.approvalWarnings.late.recorded);
+  });
+
+  it('code review round 3 — a server error has its OWN id; a chosen code that LEFT the list is ⛔ not sent', async () => {
+    const onSubmit = vi.fn().mockResolvedValue(true);
+    const props = { uncoveredSinceApproval: 1, lateKeysUncoveredForViewer: 1, onSubmit, canRecord: true };
+    const { rerender } = render(<LateWarningReasonPanel {...props} options={OPTIONS} error="Refused." />);
+    expect(screen.getByTestId('late-warning-reason-server-error').textContent).toBe('Refused.');
+    fireEvent.click(screen.getByTestId(`late-warning-reason-radio-${STORED.code}`));
+    fireEvent.change(screen.getByTestId('late-warning-reason-note'), { target: { value: 'The date moved.' } });
+    rerender(<LateWarningReasonPanel {...props} options={[GENERIC]} error={null} />);
+    fireEvent.click(screen.getByTestId('late-warning-reason-submit'));
+    expect(screen.getByTestId('late-warning-reason-error').textContent).toBe(t.approvalWarnings.reasonRequiredError);
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it('code review round 3 — the note says it is REQUIRED and names its error in the accessibility tree', () => {
+    render(<LateWarningReasonPanel options={OPTIONS} uncoveredSinceApproval={1} lateKeysUncoveredForViewer={1} onSubmit={vi.fn()} canRecord />);
+    const note = screen.getByTestId('late-warning-reason-note');
+    expect(note.getAttribute('aria-required')).toBe('true');
+    fireEvent.click(screen.getByTestId('late-warning-reason-radio-warnings_reviewed'));
+    fireEvent.click(screen.getByTestId('late-warning-reason-submit'));
+    expect(note.getAttribute('aria-invalid')).toBe('true');
+    expect(note.getAttribute('aria-describedby')).toBe(screen.getByTestId('late-warning-reason-note-error').id);
   });
 });
 
@@ -216,6 +346,13 @@ describe('<NomineeDeclarationPanel> — the FQ1 label and the date-not-known lin
     expect(screen.getByTestId(`nominee-warning-recent_nominee_change-${V}`).textContent).toMatch(
       /^Warning: named or changed within 90 days before the first claim for this death was filed \(30 Aug 2026\)$/,
     );
+    expect(screen.queryByTestId('nominee-warning-anchor-unavailable')).toBeNull();
+  });
+
+  it('code review round 3 — an UNREADABLE anchor (`first_filed_at: null`) says the 90-day check is unavailable (⛔ never "no warnings" on an unknown)', () => {
+    render(<NomineeDeclarationPanel {...props(timeline({ warning_basis: { death_date_known: true, first_filed_at: null } }))} />);
+    expect(screen.getByTestId('nominee-warning-anchor-unavailable').textContent).toBe(t.nomineeDeclaration.warning.anchorUnavailable);
+    expect(screen.queryByTestId('nominee-warning-date-not-known')).toBeNull();
   });
 });
 
@@ -229,6 +366,7 @@ describe('decisionErrorMessage — Story 6.23a codes in their own words (AC5)', 
     ['verifier_decision.late_warning_reason.determination_required', e.lateDeterminationRequired],
     ['verifier_decision.late_warning_reason.no_district_admin_approval', e.lateNoApproval],
     ['verifier_decision.late_warning_reason.not_recordable_state', e.lateNotRecordable],
+    ['verifier_decision.late_warning_reason.missing_display', e.lateMissingDisplay],
   ])('%s', (code, words) => {
     expect(decisionErrorMessage(new ApiError(409, code, 'x'))).toBe(words);
   });

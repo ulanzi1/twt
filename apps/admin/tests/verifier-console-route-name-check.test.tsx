@@ -30,6 +30,7 @@ const getSession = vi.fn();
 const getVerifierConsole = vi.fn();
 const getNomineeNameCheck = vi.fn();
 const postNomineeNameCheck = vi.fn();
+const postLateWarningReason = vi.fn();
 vi.mock('../src/api/client.js', async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>();
   return {
@@ -38,6 +39,7 @@ vi.mock('../src/api/client.js', async (importOriginal) => {
     getVerifierConsole: (p: string, c: string) => getVerifierConsole(p, c),
     getNomineeNameCheck: (p: string, c: string) => getNomineeNameCheck(p, c),
     postNomineeNameCheck: (p: string, c: string, b: unknown) => postNomineeNameCheck(p, c, b),
+    postLateWarningReason: (p: string, c: string, b: unknown) => postLateWarningReason(p, c, b),
   };
 });
 
@@ -175,7 +177,7 @@ const mount = async (status: NameStatus): Promise<void> => {
 };
 
 beforeEach(() => {
-  for (const f of [getSession, getVerifierConsole, getNomineeNameCheck, postNomineeNameCheck])
+  for (const f of [getSession, getVerifierConsole, getNomineeNameCheck, postNomineeNameCheck, postLateWarningReason])
     f.mockReset();
   getSession.mockResolvedValue({
     userId: '33333333-3333-4333-8333-333333333333',
@@ -520,5 +522,115 @@ describe('<VerifierConsoleRoute> — Story 6.23a, the nominee-change warnings', 
   it('⛔ no panel when the server says the viewer cannot record (even with uncovered warnings)', async () => {
     await mountWith({ viewerCanRecordLateReason: false, uncoveredSinceApproval: 2 }, 'verifier_approved');
     expect(screen.queryByTestId('late-warning-reason-panel')).toBeNull();
+  });
+
+  const OTHER_CLAIM = '99999999-9999-4999-8999-999999999999';
+
+  const offeredPacket = () => {
+    const base = packet(PASSING);
+    return { ...base, claimState: 'verifier_approved', approvalWarnings: { ...base.approvalWarnings, kinds: ['post_death_version' as const], viewerCanRecordLateReason: true, uncoveredSinceApproval: 1, lateKeysUncoveredForViewer: 1 } };
+  };
+
+  /** Mount on CLAIM with the panel offered, then record a late reason; the REFETCHED packet says it is answered. */
+  const recordLateReason = async (): Promise<{ qc: QueryClient; ui: () => React.ReactElement; rerender: (ui: React.ReactElement) => void }> => {
+    const offered = offeredPacket();
+    const answered = { ...offered, approvalWarnings: { ...offered.approvalWarnings, viewerCanRecordLateReason: false, uncoveredSinceApproval: 0, lateKeysUncoveredForViewer: 0 } };
+    getVerifierConsole.mockResolvedValueOnce({ packet: offered }).mockResolvedValue({ packet: answered });
+    postLateWarningReason.mockResolvedValue({ claim_case_id: CLAIM, covered_key_count: 1, kinds: ['post_death_version'] });
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+    const ui = () => (
+      <QueryClientProvider client={qc}>
+        <VerifierConsoleRoute />
+      </QueryClientProvider>
+    );
+    const { rerender } = render(ui());
+    fireEvent.click(await screen.findByTestId('late-warning-reason-radio-warnings_reviewed'));
+    fireEvent.change(screen.getByTestId('late-warning-reason-note'), { target: { value: 'The date moved.' } });
+    fireEvent.click(screen.getByTestId('late-warning-reason-submit'));
+    return { qc, ui, rerender };
+  };
+
+  it('⭐ code review round 3 — after its OWN success (a REAL refetch flips `viewerCanRecordLateReason` to false) the panel STAYS, showing the outcome ALONE — ⛔ no form that would 409, ⛔ no contradictory count', async () => {
+    await recordLateReason();
+    await waitFor(() => expect(screen.getByTestId('late-warning-reason-recorded')).toHaveTextContent(t.approvalWarnings.late.recorded));
+    await waitFor(() => expect(getVerifierConsole).toHaveBeenCalledTimes(2));
+    expect(postLateWarningReason).toHaveBeenCalledWith(PARIWAR, CLAIM, { warning_reason_code: 'warnings_reviewed', note: 'The date moved.' });
+    await waitFor(() => expect(screen.queryByTestId('late-warning-reason-submit')).toBeNull());
+    expect(screen.getByTestId('late-warning-reason-panel')).toBeInTheDocument();
+    expect(screen.queryByTestId('late-warning-reason-count')).toBeNull();
+    expect(screen.queryByTestId('late-warning-reason-own-cannot-clear')).toBeNull();
+    // Code review round 4 — the focused Submit left with the form; focus is moved to the panel's heading, ⛔ never `<body>`.
+    expect(document.activeElement).toBe(screen.getByRole('heading', { name: t.approvalWarnings.late.heading }));
+  });
+
+  it('⭐ code review round 4 — the claim-switch guard, OBSERVED: with the next claim\'s packet already CACHED the panel ⛔ never mounts for it, not even for one commit', async () => {
+    // Round 3's version switched to an UNCACHED claim — the loading branch rendered, so the panel never could and the test
+    // was green with the guard removed. ⭐ Pre-seeding the next claim makes the first commit after the switch a real one.
+    const { qc, ui, rerender } = await recordLateReason();
+    await waitFor(() => expect(screen.getByTestId('late-warning-reason-recorded')).toHaveTextContent(t.approvalWarnings.late.recorded));
+    const other = { ...offeredPacket(), claimCaseId: OTHER_CLAIM };
+    qc.setQueryData(['verifier-console', PARIWAR, OTHER_CLAIM], {
+      packet: { ...other, approvalWarnings: { ...other.approvalWarnings, viewerCanRecordLateReason: false, uncoveredSinceApproval: 0, lateKeysUncoveredForViewer: 0 } },
+    });
+    // Every node ADDED from here on — a commit the reset effect later undoes still shows up in this record.
+    const added: Element[] = [];
+    const observer = new MutationObserver((records) => {
+      for (const r of records) for (const n of r.addedNodes) if (n instanceof Element) added.push(n);
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+    routeParams.claimCaseId = OTHER_CLAIM;
+    rerender(ui());
+    await waitFor(() => expect(screen.getByTestId('name-check-disclosure')).toBeInTheDocument());
+    for (const r of observer.takeRecords()) for (const n of r.addedNodes) if (n instanceof Element) added.push(n);
+    observer.disconnect();
+    const panelMounted = added.some((n) => n.matches('[data-testid="late-warning-reason-panel"]') || n.querySelector('[data-testid="late-warning-reason-panel"]') !== null);
+    expect(panelMounted).toBe(false);
+    expect(screen.queryByTestId('late-warning-reason-panel')).toBeNull();
+  });
+
+  it('code review round 4 — a 409 on the late reason REFETCHES the console, so a form that would 409 again is ⛔ not left on screen', async () => {
+    const offered = offeredPacket();
+    const answered = { ...offered, approvalWarnings: { ...offered.approvalWarnings, viewerCanRecordLateReason: false } };
+    getVerifierConsole.mockResolvedValueOnce({ packet: offered }).mockResolvedValue({ packet: answered });
+    postLateWarningReason.mockRejectedValue(new ApiError(409, 'verifier_decision.late_warning_reason.nothing_uncovered', 'x'));
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })}>
+        <VerifierConsoleRoute />
+      </QueryClientProvider>,
+    );
+    fireEvent.click(await screen.findByTestId('late-warning-reason-radio-warnings_reviewed'));
+    fireEvent.change(screen.getByTestId('late-warning-reason-note'), { target: { value: 'n' } });
+    fireEvent.click(screen.getByTestId('late-warning-reason-submit'));
+    expect(await screen.findByTestId('late-warning-reason-server-error')).toHaveTextContent(t.approvalWarnings.errors.lateNothingUncovered);
+    await waitFor(() => expect(getVerifierConsole).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(screen.queryByTestId('late-warning-reason-submit')).toBeNull());
+  });
+
+  it('code review round 3 — a CLAIM SWITCH drops the previous claim\'s outcome: ⛔ no panel on a claim where nothing was recorded', async () => {
+    const { ui, rerender } = await recordLateReason();
+    await waitFor(() => expect(screen.getByTestId('late-warning-reason-recorded')).toHaveTextContent(t.approvalWarnings.late.recorded));
+    routeParams.claimCaseId = OTHER_CLAIM;
+    rerender(ui());
+    await waitFor(() => expect(getVerifierConsole).toHaveBeenCalledWith(PARIWAR, OTHER_CLAIM));
+    await screen.findByTestId('name-check-disclosure');
+    expect(screen.queryByTestId('late-warning-reason-panel')).toBeNull();
+  });
+
+  it('code review round 3 — a late-reason failure reads in the PANEL\'s words, ⛔ never "The decision could not be submitted"', async () => {
+    const base = packet(PASSING);
+    getVerifierConsole.mockResolvedValue({
+      packet: { ...base, claimState: 'verifier_approved', approvalWarnings: { ...base.approvalWarnings, viewerCanRecordLateReason: true, uncoveredSinceApproval: 1, lateKeysUncoveredForViewer: 1 } },
+    });
+    postLateWarningReason.mockRejectedValue(new ApiError(500, 'internal', 'x'));
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })}>
+        <VerifierConsoleRoute />
+      </QueryClientProvider>,
+    );
+    fireEvent.click(await screen.findByTestId('late-warning-reason-radio-warnings_reviewed'));
+    fireEvent.change(screen.getByTestId('late-warning-reason-note'), { target: { value: 'n' } });
+    fireEvent.click(screen.getByTestId('late-warning-reason-submit'));
+    expect(await screen.findByTestId('late-warning-reason-server-error')).toHaveTextContent(t.approvalWarnings.late.submitError);
+    expect(screen.getByTestId('late-warning-reason-server-error')).not.toHaveTextContent(t.decision.submitError);
   });
 });

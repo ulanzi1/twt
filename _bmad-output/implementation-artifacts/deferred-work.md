@@ -4,6 +4,10 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: code review of 6-23-post-death-nominee-change-warnings, round 3 chunk 1 (server) (2026-10-05)
+
+- **`closeScopeTx` swallows every COMMIT error ("Never throws"), so a 2xx can report a write that was rolled back** [`apps/api/src/modules/multi-tenant/scope-tx.ts:56-61`]. This predates the story (Story 1.9). Round 3 found it through 0142's deferred coherence trigger, the codebase's only `DEFERRABLE INITIALLY DEFERRED` constraint; that trigger is patched locally with `SET CONSTRAINTS … IMMEDIATE`. The general case is still open: a connection lost at COMMIT, or any future deferred constraint, makes every handler that uses `closeScopeTx` (and the lifecycle hook's commit) report success with the audit's "done" line. Trigger: the next migration that adds a deferred constraint, or any incident where an acknowledged write is missing.
+
 ## Deferred from: code review of story-6-23-post-death-nominee-change-warnings (2026-10-05)
 
 - Both new append-only triggers' (`approval_warning_reasons_reject_mutation`, `claim_warning_approvals_reject_mutation`) exception message says "...is never deleted; it can only be replaced" even on a `TRUNCATE` — the operation is correctly blocked either way, but the wording is delete-specific. Pre-existing: mirrors `events_log_reject_mutation` (migration 0001), a codebase-wide convention predating this story, so not fixed here. Trigger: a pass that reworks the shared trigger wording across all append-only tables.

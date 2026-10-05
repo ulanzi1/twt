@@ -107,15 +107,19 @@ export function isRecentNomineeChange(effectiveAt: Date, anchorFiledAt: Date): b
 /**
  * The kinds ONE version carries. A `correction` is ⛔ never warned (`-262` FQ1 — it carries the label instead; its
  * TARGET is warned, if dated so). The member's FIRST declaration is warned like any other (`-277` Q1 A).
+ * A `null` anchor (code review round 3 — the timeline's anchor read failed) judges ⛔ no `recent_nominee_change`, the
+ * same way a `null` accepted date judges ⛔ no `post_death_version`: the CALLER must say the check could not be made.
  */
 export function classifyNomineeVersion(
   version: ClassifiableNomineeVersion,
-  basis: { readonly acceptedDate: string | null; readonly anchorFiledAt: Date },
+  basis: { readonly acceptedDate: string | null; readonly anchorFiledAt: Date | null },
 ): ApprovalWarningKind[] {
   if (version.source !== 'member') return [];
   const kinds: ApprovalWarningKind[] = [];
   if (isPostDeathVersion(version, basis.acceptedDate)) kinds.push('post_death_version');
-  if (isRecentNomineeChange(version.effectiveAt, basis.anchorFiledAt)) kinds.push('recent_nominee_change');
+  if (basis.anchorFiledAt !== null && isRecentNomineeChange(version.effectiveAt, basis.anchorFiledAt)) {
+    kinds.push('recent_nominee_change');
+  }
   return kinds;
 }
 
@@ -449,10 +453,10 @@ export function lateWarningNothingUncoveredFor(
  * ONE note per approval, ⛔ not per warning. In NW6's order:
  *   (1) ⛔ no warning, a reason sent        ⇒ `WarningReasonUngroundedError`;
  *   (2) a warning, ⛔ no reason             ⇒ `ApprovalWarningReasonRequiredError` (`missing: 'reason'`);
- *   (3) the reason ⛔ active                ⇒ `WarningReasonUnavailableError`;
+ *   (3) the reason ⛔ not active            ⇒ `WarningReasonUnavailableError`;
  *   (4) a warning, ⛔ no note               ⇒ `ApprovalWarningReasonRequiredError` (`missing: 'note'`) — the backstop
  *       (the contract's 400 is the real enforcement).
- * `resolvedReason` is the caller's `lockActiveApprovalWarningReason` result (`null` ⇔ ⛔ active). Returns the reason
+ * `resolvedReason` is the caller's `lockActiveApprovalWarningReason` result (`null` ⇔ ⛔ not active). Returns the reason
  * to record, or `null` when ⛔ no warning shows. ⛔ A refusal or an escalation is ⛔ never gated (invariant 4).
  */
 export function assertApprovalReasonCoversWarnings(input: {

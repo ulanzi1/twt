@@ -68,10 +68,10 @@ export interface RecordLateWarningReasonResult {
 /**
  * NW14 — record a reason and a note for the warnings that appeared after the District Admin's approval. Under the
  * verifier advisory lock + the claim row lock (the `adjudicateClaim` order, through its exported helpers). Refused
- * (typed → 409), in order: ⛔ claim (`not_found` → 404); the live verifier decision ⛔ `approved`
+ * (typed → 409), in order: ⛔ no claim (`not_found` → 404); the live verifier decision ⛔ not `approved`
  * (`no_district_admin_approval`); a state outside the four (`not_recordable_state`); the certificate / determination
- * ⛔ current (`assertDeathCertificateAcceptedForApproval`'s own 409); ⛔ live determination (`determination_required`
- * — Trap 2: the certificate gate PASSES with none); the reason ⛔ active (Trap 16); `nothing_uncovered` for THIS recorder.
+ * ⛔ not current (`assertDeathCertificateAcceptedForApproval`'s own 409); ⛔ no live determination (`determination_required`
+ * — Trap 2: the certificate gate PASSES with none); the reason ⛔ not active (Trap 16); `nothing_uncovered` for THIS recorder.
  */
 export async function recordLateWarningReason(
   client: pg.PoolClient,

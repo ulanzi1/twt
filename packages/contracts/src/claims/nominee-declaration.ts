@@ -148,8 +148,10 @@ export const NomineeDeclarationTimelineResponse = z
      * Story 6.23a (NW10) — what the warnings were judged against: whether the accepted date of death is KNOWN (⛔ no
      * accepted certificate, or an unreadable / erased date ⇒ ⛔ no `post_death_version` flag, and the panel says the
      * date is not known yet), and the FIRST claim's filing instant the 90 days count back from (Trap 3).
+     * `first_filed_at: null` (code review round 3) ⇔ that instant could ⛔ not be read: ⛔ no `recent_nominee_change`
+     * was judged, and the panel says the 90-day check is unavailable — ⛔ never "no warnings" on an unknown (NW10).
      */
-    warning_basis: z.object({ death_date_known: z.boolean(), first_filed_at: IsoInstant }).strict(),
+    warning_basis: z.object({ death_date_known: z.boolean(), first_filed_at: IsoInstant.nullable() }).strict(),
   })
   .strict();
 export type NomineeDeclarationTimelineResponse = z.output<typeof NomineeDeclarationTimelineResponse>;

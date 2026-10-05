@@ -18,7 +18,9 @@ export function ApprovalWarningReasonsRoute(): ReactElement {
   if (session.isError) return <p role="status">Redirecting to sign in…</p>;
   return (
     <main className="p-6">
-      <ApprovalWarningReasonsPage pariwarId={pariwarId} />
+      {/* `key` — the router REUSES this component when only `$pariwarId` changes, so without it an open form, its text
+          or a pending step-up retry would carry into the next Pariwar (code review round 3). */}
+      <ApprovalWarningReasonsPage key={pariwarId} pariwarId={pariwarId} />
     </main>
   );
 }

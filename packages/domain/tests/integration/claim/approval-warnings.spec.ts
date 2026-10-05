@@ -28,6 +28,7 @@ import {
   addApprovalWarningReason,
   adjudicateClaim,
   escalateClaim,
+  getClaimWarningAnchor,
   isPostDeathVersion,
   lateKeysUncoveredFor,
   projectClaimState,
@@ -252,6 +253,8 @@ describe.skipIf(!hasDatabase)('Story 6.23a — the nominee-change warnings at th
       const w = await readClaimApprovalWarnings(tx, pid, cid);
       expect(w.anchorFiledAt.getTime()).toBeLessThan(Date.now() - 99 * DAY);
       expect(w.kinds).toEqual(['recent_nominee_change']);
+      // Code review round 3 — the timeline's anchor read is a THIRD copy of this predicate: held EQUAL, both arms.
+      expect((await getClaimWarningAnchor(tx, pid, cid)).getTime()).toBe(w.anchorFiledAt.getTime());
       // The first claim released by an innocence finding ⇒ the anchor is this claim ⇒ ⛔ not recent.
       await tx.insert(schema.claimNomineeFindings).values({
         findingId: randomUUID() as never,
@@ -264,6 +267,8 @@ describe.skipIf(!hasDatabase)('Story 6.23a — the nominee-change warnings at th
       });
       const after = await readClaimApprovalWarnings(tx, pid, cid);
       expect(after.kinds).toEqual([]);
+      expect((await getClaimWarningAnchor(tx, pid, cid)).getTime()).toBe(after.anchorFiledAt.getTime());
+      expect(after.anchorFiledAt.getTime()).toBeGreaterThan(w.anchorFiledAt.getTime());
     });
   });
 

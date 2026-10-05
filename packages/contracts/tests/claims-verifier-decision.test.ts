@@ -13,6 +13,7 @@ import {
   APPROVAL_WARNING_GENERIC_REASON,
   APPROVAL_WARNING_KINDS,
   APPROVAL_WARNING_REASON_LABEL_MAX,
+  APPROVAL_WARNING_REASON_REFUSALS,
   APPROVAL_WARNING_REASON_WHEN_TO_USE_MAX,
   ApprovalWarningReasonWriteRequest,
   CLAIM_WARNING_APPROVAL_STEPS,
@@ -228,6 +229,9 @@ describe('Story 6.23a — contracts ↔ domain lockstep (the kinds, the record\'
   it('APPROVAL_WARNING_GENERIC_REASON', () => {
     expect(APPROVAL_WARNING_GENERIC_REASON).toEqual(claim.APPROVAL_WARNING_GENERIC_REASON);
   });
+  it('the reason-list refusals (code review round 4 — the admin\'s words are checked against THIS list)', () => {
+    expect([...APPROVAL_WARNING_REASON_REFUSALS]).toEqual([...claim.APPROVAL_WARNING_REASON_WRITE_REFUSALS]);
+  });
   it('the reason-text bounds', () => {
     expect(APPROVAL_WARNING_REASON_LABEL_MAX).toBe(schema.APPROVAL_WARNING_REASON_LABEL_MAX);
     expect(APPROVAL_WARNING_REASON_WHEN_TO_USE_MAX).toBe(schema.APPROVAL_WARNING_REASON_WHEN_TO_USE_MAX);
@@ -236,6 +240,10 @@ describe('Story 6.23a — contracts ↔ domain lockstep (the kinds, the record\'
     expect(ApprovalWarningReasonWriteRequest.safeParse({ label: 'Seen', when_to_use: 'Use when seen.' }).success).toBe(true);
     expect(ApprovalWarningReasonWriteRequest.safeParse({ label: ' ', when_to_use: 'x' }).success).toBe(false);
     expect(ApprovalWarningReasonWriteRequest.safeParse({ label: 'x'.repeat(121), when_to_use: 'x' }).success).toBe(false);
+    // Code review round 3 — counted in CODE POINTS (the DB's `char_length()`): 120 emoji are 240 UTF-16 units yet fit.
+    expect(ApprovalWarningReasonWriteRequest.safeParse({ label: '🙏'.repeat(120), when_to_use: '🙏'.repeat(1000) }).success).toBe(true);
+    expect(ApprovalWarningReasonWriteRequest.safeParse({ label: '🙏'.repeat(121), when_to_use: 'x' }).success).toBe(false);
+    expect(ApprovalWarningReasonWriteRequest.safeParse({ label: 'x', when_to_use: '🙏'.repeat(1001) }).success).toBe(false);
     expect(ApprovalWarningReasonWriteRequest.safeParse({ label: 'x', when_to_use: 'x', code: 'awr_00000000' }).success).toBe(false);
   });
 });

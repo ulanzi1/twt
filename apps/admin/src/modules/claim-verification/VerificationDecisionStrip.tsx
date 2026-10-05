@@ -90,7 +90,7 @@ export function VerificationDecisionStrip({
   canApprove = true,
   approveBlockedReason,
   approvalWarnings,
-  reviseBlocked = null,
+  reviseBlocked: reviseBlockedProp = null,
 }: VerificationDecisionStripProps): ReactElement {
   const isActive = ACTIVE_STATES.has(claimState);
   const isRevisable = REVISABLE_STATES.has(claimState);
@@ -110,7 +110,14 @@ export function VerificationDecisionStrip({
   const [pending, setPending] = useState<PendingAction>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
   // Story 6.23a (NW9) — ⛔ never pre-selected.
-  const [warningReasonCode, setWarningReasonCode] = useState('');
+  const [warningReasonPick, setWarningReasonCode] = useState('');
+  // A pick that has LEFT the active list (replaced by the Super Admin; the packet refetched) is ⛔ not a choice: the
+  // picker shows none checked, validation asks again, and the confirmation never shows a raw code (code review round 3).
+  const warningReasonCode = approvalWarnings?.reasonOptions.some((o) => o.code === warningReasonPick) ? warningReasonPick : '';
+  // NW7 is about APPROVALS — a denied decision's revise is unchanged (AC4). The console's fail-soft `'unavailable'`
+  // cannot tell the outcomes apart (the read that would is the one that failed), so the strip, which knows the revise
+  // window's outcome from the state, applies a block to an approval only (code review round 3).
+  const reviseBlocked = revisionOutcome === 'approved' ? reviseBlockedProp : null;
 
   /**
    * ⭐⭐ THE APPROVE FORM CLOSES WHEN APPROVAL STOPS BEING AVAILABLE (code review 2026-09-20).
@@ -134,14 +141,15 @@ export function VerificationDecisionStrip({
   /** Choose an outcome (active window) — reset an incompatible reason code. */
   const chooseOutcome = useCallback(
     (next: VerifierDecisionOutcome): void => {
+      // NW9 — ⛔ never pre-selected (re-review 2026-10-05): switching away from Approve and back must ⛔ not leave an
+      // earlier pick showing as already chosen. ⭐ Only on an actual CHANGE (code review round 3) — re-choosing the
+      // SAME outcome is ⛔ not a switch, and must ⛔ not silently drop the approver's pick.
+      if (next !== outcome) setWarningReasonCode('');
       setOutcome(next);
       setValidationError(null);
       setReasonCode((current) => (current !== '' && !isReasonCodeValidForOutcome(next, current) ? '' : current));
-      // NW9 — ⛔ never pre-selected (re-review 2026-10-05): switching away from Approve and back must
-      // ⛔ not leave an earlier pick showing as already chosen when the picker reappears.
-      setWarningReasonCode('');
     },
-    [],
+    [outcome],
   );
 
   // Keyboard shortcuts (1/2/3) — a real keydown listener, not the HTML `accessKey` attribute (which
@@ -149,7 +157,9 @@ export function VerificationDecisionStrip({
   // form field (so "1"/"2"/"3" in the rationale textarea doesn't fire an action), while processing, or
   // when the modal/non-active window means there's nothing to choose.
   useEffect(() => {
-    if (!isActive || processing) return;
+    // ⭐ `pending` too (code review round 3): while the confirmation is open the outcome is ⛔ not choosable — a "1"/"2"/
+    // "3" there used to re-run `chooseOutcome` under the modal, dropping the warning pick or blanking the reason.
+    if (!isActive || processing || pending !== null) return;
     const handler = (e: KeyboardEvent): void => {
       if (e.altKey || e.ctrlKey || e.metaKey) return;
       const target = e.target as HTMLElement | null;
@@ -172,7 +182,7 @@ export function VerificationDecisionStrip({
     // `canApprove` is in the deps because the handler CLOSES OVER it — without it the listener
     // would keep the value from the render that installed it, so a claim that became approvable
     // (or stopped being) would still answer to the old gate.
-  }, [isActive, processing, chooseOutcome, canApprove]);
+  }, [isActive, processing, pending, chooseOutcome, canApprove]);
 
   // Neither active nor revisable → a non-interactive historical summary (never reopens review).
   if (!isActive && !isRevisable) {
@@ -214,6 +224,13 @@ export function VerificationDecisionStrip({
    *  message rendered on the form underneath it. */
   const confirm = async (): Promise<void> => {
     if (!pending || reasonCode === '') return;
+    // The packet can refetch UNDER the open modal (code review round 4): the pick may have left the list, or a warning
+    // may have appeared. ⛔ Never send a known-refused approval with a blank "Warning reason:" — close and ask again.
+    if (warningsApply && warningReasonCode === '') {
+      setPending(null);
+      setValidationError(t.approvalWarnings.reasonRequiredError);
+      return;
+    }
     const input: DecisionSubmit = {
       outcome: pending.outcome,
       reasonCode,

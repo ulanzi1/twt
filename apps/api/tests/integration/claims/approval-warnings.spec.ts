@@ -282,6 +282,11 @@ describe.skipIf(!hasDatabase)('Story 6.23a — the nominee-change warnings throu
     });
     expect(ungrounded.statusCode).toBe(409);
     expect(errOf(ungrounded.body).code).toBe('verifier_decision.warning_reason_ungrounded');
+    // Code review round 3 — the refusal's audit names the code the actor submitted, over the ⛔ no-warning claim.
+    expect(auditsFor('admin_claim.decision_rejected', quiet.claimCaseId)[0]?.context).toMatchObject({
+      approval_warning_kinds: [],
+      warning_reason_code: GENERIC,
+    });
 
     const warned = await seedWorld([daysAgo(30)]);
     const da = await districtAdmin(warned.pariwarId);
@@ -292,6 +297,11 @@ describe.skipIf(!hasDatabase)('Story 6.23a — the nominee-change warnings throu
     });
     expect(unavailable.statusCode).toBe(409);
     expect(errOf(unavailable.body).code).toBe('verifier_decision.warning_reason_unavailable');
+    // …and the unavailable refusal's audit carries the submitted code with its kinds OMITTED — ⛔ never `[]`, which
+    // would read as "no warning showed" on a claim that DID show one.
+    const unavailableLine = auditsFor('admin_claim.decision_rejected', warned.claimCaseId)[0]?.context as Json | undefined;
+    expect(unavailableLine).toMatchObject({ warning_reason_code: 'awr_00000000' });
+    expect(unavailableLine).not.toHaveProperty('approval_warning_kinds');
     for (const payload of [
       { outcome: 'approved', reason_code: 'r5_d_natural_death', warning_reason_code: GENERIC },
       { outcome: 'denied', reason_code: 'other', rationale: 'x', warning_reason_code: GENERIC },
@@ -374,6 +384,35 @@ describe.skipIf(!hasDatabase)('Story 6.23a — the nominee-change warnings throu
     expect(auditsFor('admin_claim.late_warning_reason_rejected', w.claimCaseId)[0]?.context).toMatchObject({ refusal: 'nothing_uncovered' });
   });
 
+  it('AC5 / AC7 (code review round 3) — ⛔ no panel for a viewer without `claim.approve`, nor while the determination is AWAITING (and NW14 refuses it with the certificate gate\'s 409)', async () => {
+    const w = await seedWorld([daysAgo(400), daysAgo(200)]);
+    const da = await districtAdmin(w.pariwarId);
+    expect((await da.client.inject({ method: 'POST', url: decisionUrl(w.pariwarId, w.claimCaseId), payload: approveBody })).statusCode).toBe(201);
+    await redetermine(w.pariwarId, w.claimCaseId, istDaysAgo(300)); // a late `post_death_version`, evaluated
+    expect((await consoleOf(da.client, w.pariwarId, w.claimCaseId)).viewerCanRecordLateReason).toBe(true);
+
+    // A Verifier reads the console (`claim.verify`) but holds ⛔ no `claim.approve` ⇒ ⛔ never offered the panel.
+    const verifier = await authenticate('Vikram (Verifier)');
+    await grant(verifier.userId, w.pariwarId, 'verifier', 'district', DISTRICT);
+    const seen = await consoleOf(verifier.client, w.pariwarId, w.claimCaseId);
+    expect(seen).toMatchObject({ uncoveredSinceApproval: 1, viewerCanRecordLateReason: false });
+
+    // A NEWER accepted certificate with ⛔ no determination against it ⇒ AWAITING: ⛔ no panel, and NW14 says why.
+    await inScope(w.pariwarId, (s) => ensureAcceptedDeathCertificate(deps, s, w.pariwarId, w.claimCaseId, { date: istDaysAgo(250) }));
+    const awaiting = await consoleOf(da.client, w.pariwarId, w.claimCaseId);
+    expect(awaiting).toMatchObject({ postDeath: 'awaiting_determination', viewerCanRecordLateReason: false });
+    const refused = await da.client.inject({
+      method: 'POST',
+      url: lateUrl(w.pariwarId, w.claimCaseId),
+      payload: { warning_reason_code: GENERIC, note: 'n' },
+    });
+    expect(refused.statusCode).toBe(409);
+    // An OUT-OF-DATE determination is the certificate gate's own 409 (NW14's order); `…determination_required` is the
+    // ⛔ no-live-determination case only (Trap 2).
+    expect(errOf(refused.body).code).toBe('verifier_decision.death_certificate_acceptance_required');
+    expect(await records(w.claimCaseId)).toHaveLength(0);
+  });
+
   it('AC7 — a missing note ⇒ 400; a District Admin of ANOTHER district ⇒ 403; a non-human (tampered) session ⇒ 404; ⛔ no District Admin approval ⇒ 409', async () => {
     const w = await seedWorld([daysAgo(400), daysAgo(200)]);
     const da = await districtAdmin(w.pariwarId);
@@ -383,6 +422,11 @@ describe.skipIf(!hasDatabase)('Story 6.23a — the nominee-change warnings throu
     expect(errOf(none.body).code).toBe('verifier_decision.late_warning_reason.no_district_admin_approval');
 
     expect((await da.client.inject({ method: 'POST', url: lateUrl(w.pariwarId, w.claimCaseId), payload: { warning_reason_code: GENERIC } })).statusCode).toBe(400);
+    // Code review round 3 — a missing REASON (and a blank note) ⇒ 400 too.
+    expect((await da.client.inject({ method: 'POST', url: lateUrl(w.pariwarId, w.claimCaseId), payload: { note: 'n' } })).statusCode).toBe(400);
+    expect(
+      (await da.client.inject({ method: 'POST', url: lateUrl(w.pariwarId, w.claimCaseId), payload: { warning_reason_code: GENERIC, note: '   ' } })).statusCode,
+    ).toBe(400);
 
     const other = await districtAdmin(w.pariwarId, OTHER_DISTRICT);
     expect(

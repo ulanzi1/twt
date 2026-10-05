@@ -1084,22 +1084,35 @@ export function usePostNomineeNameCheck(pariwarId: string, claimCaseId: string) 
 // On success both mutations invalidate the console packet key so (e)/(f) + the audit trail refetch with
 // the just-written decision (fresh present/empty; the new AuditTrailEntry).
 
-/** POST an approve / deny / escalate decision; refetches the console packet on success. */
+/**
+ * Story 6.23a (code review round 4) — a 409 means the server's view of THIS claim differs from the packet on screen (a
+ * warning reason replaced in ANOTHER session, a warning that appeared, a late reason that now covers nothing). Refetch,
+ * so the pickers drop a dead code and the late panel stops offering a form that 409s — ⛔ never a resubmit loop. (The
+ * name-check hook's `onError` precedent; a 409 only, so a step-up 403 or a transient 5xx keeps the form as it was.)
+ */
+const invalidateConsoleOnConflict = (qc: QueryClient, pariwarId: string, claimCaseId: string) => (err: unknown) => {
+  if (err instanceof ApiError && err.status === 409) void qc.invalidateQueries({ queryKey: verifierConsoleKey(pariwarId, claimCaseId) });
+};
+
+/** POST an approve / deny / escalate decision; refetches the console packet on success (and on a 409 — round 4). */
 export function usePostVerifierDecision(pariwarId: string, claimCaseId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (body: Parameters<typeof api.postVerifierDecision>[2]) =>
       api.postVerifierDecision(pariwarId, claimCaseId, body),
     onSuccess: () => qc.invalidateQueries({ queryKey: verifierConsoleKey(pariwarId, claimCaseId) }),
+    onError: invalidateConsoleOnConflict(qc, pariwarId, claimCaseId),
   });
 }
 
-/** Story 6.23a (NW14) — POST a late-warning reason; refetches the console packet (its warnings section) on success. */
+/** Story 6.23a (NW14) — POST a late-warning reason; refetches the console packet (its warnings section) on success and
+ *  on a 409 (round 4). */
 export function usePostLateWarningReason(pariwarId: string, claimCaseId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (body: Parameters<typeof api.postLateWarningReason>[2]) => api.postLateWarningReason(pariwarId, claimCaseId, body),
     onSuccess: () => qc.invalidateQueries({ queryKey: verifierConsoleKey(pariwarId, claimCaseId) }),
+    onError: invalidateConsoleOnConflict(qc, pariwarId, claimCaseId),
   });
 }
 
@@ -2233,12 +2246,22 @@ export function useApprovalWarningReasons(pariwarId: string) {
   return useQuery({ queryKey: approvalWarningReasonsKey(pariwarId), queryFn: () => api.getApprovalWarningReasons(pariwarId) });
 }
 
-/** ADD a reason; refetches the list on success. */
+/**
+ * Every cached verifier console of this Pariwar (a key PREFIX of `verifierConsoleKey`) — its packet embeds
+ * `approvalWarnings.reasonOptions`, so a reason added or replaced here must reach an already-open console too (code
+ * review round 3: ⛔ never offer a replaced reason that 409s `warning_reason_unavailable`).
+ */
+const pariwarVerifierConsolesKey = (pariwarId: string) => ['verifier-console', pariwarId] as const;
+
+/** ADD a reason; refetches the list (and the Pariwar's cached consoles) on success. */
 export function useAddApprovalWarningReason(pariwarId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (body: Parameters<typeof api.addApprovalWarningReason>[1]) => api.addApprovalWarningReason(pariwarId, body),
-    onSuccess: () => qc.invalidateQueries({ queryKey: approvalWarningReasonsKey(pariwarId) }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: pariwarVerifierConsolesKey(pariwarId) });
+      return qc.invalidateQueries({ queryKey: approvalWarningReasonsKey(pariwarId) });
+    },
   });
 }
 
@@ -2253,6 +2276,9 @@ export function useReplaceApprovalWarningReason(pariwarId: string) {
   return useMutation({
     mutationFn: (input: { reasonId: string; body: Parameters<typeof api.replaceApprovalWarningReason>[2] }) =>
       api.replaceApprovalWarningReason(pariwarId, input.reasonId, input.body),
-    onSettled: () => qc.invalidateQueries({ queryKey: approvalWarningReasonsKey(pariwarId) }),
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: pariwarVerifierConsolesKey(pariwarId) });
+      return qc.invalidateQueries({ queryKey: approvalWarningReasonsKey(pariwarId) });
+    },
   });
 }

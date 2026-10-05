@@ -28,6 +28,7 @@ import {
   decideNomineeCorrectionAsDistrictAdmin,
   decideNomineeCorrectionAsPariwarAdmin,
   getEffectiveNomineeDeclaration,
+  listAppliedCorrectionLabels,
   raiseNomineeCorrection,
   type RaiseNomineeCorrectionInput,
 } from '../../../src/claim/index.js';
@@ -282,6 +283,22 @@ describe.skipIf(!hasDatabase)('Story 6.20 — the nominee correction (:5433)', {
     expect(ev).toHaveLength(1);
     expect(ev[0]!.payload).toMatchObject({ source: 'correction', versions: [{ rank: 1, version_no: 2, kind: 'declared' }] });
     expect(JSON.stringify(ev[0]!.payload)).not.toContain('rani');
+  });
+
+  it('Story 6.23a (NW4, code review round 3) — the FQ1 label reads the APPLIED correction\'s SNAPSHOTTED approvers, keyed by the version it wrote; a declined one is ⛔ absent', async () => {
+    const { client, tx, cid, mid } = await setup();
+    const declined = await raiseNomineeCorrection(client, raise(cid));
+    await decideNomineeCorrectionAsDistrictAdmin(client, step(cid, declined.correctionId, DA, 'decline'));
+    expect(await listAppliedCorrectionLabels(tx, PARIWAR_A, toMemberId(mid))).toEqual(new Map());
+    const { correctionId } = await raiseNomineeCorrection(client, raise(cid));
+    await decideNomineeCorrectionAsDistrictAdmin(client, step(cid, correctionId, DA));
+    const res = await decideNomineeCorrectionAsPariwarAdmin(client, step(cid, correctionId, PA));
+    const labels = await listAppliedCorrectionLabels(tx, PARIWAR_A, toMemberId(mid));
+    expect([...labels.entries()]).toEqual([
+      [res.appliedVersionId!.toLowerCase(), { districtAdminDisplay: 'Anita (District Admin)', pariwarAdminDisplay: 'Kalpana (Pariwar Admin)' }],
+    ]);
+    // Keyed on the DECEASED member — another member's read is empty.
+    expect(await listAppliedCorrectionLabels(tx, PARIWAR_A, toMemberId(randomUUID()))).toEqual(new Map());
   });
 
   it('⭐⭐ correction-then-determination ordering: the applied correction SUPERSEDES the determination, and AC5\'s 409 fires again', async () => {

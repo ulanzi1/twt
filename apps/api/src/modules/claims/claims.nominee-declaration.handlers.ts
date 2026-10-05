@@ -43,6 +43,7 @@ import type {
 import type { FastifyReply, FastifyRequest } from 'fastify';
 
 import type { AppDeps } from '../../context.js';
+import type { ScopeTx } from '../../types.js';
 import {
   AdminDisplayNameMissingError,
   ConflictError,
@@ -103,6 +104,23 @@ async function readableNomineeName(decrypt: () => Promise<string>, log: Log, cla
 async function readableCertificateDate(decrypt: () => Promise<string>, log: Log, claimCaseId: string): Promise<ReadableErasable> {
   const r = await readable(decrypt, log, 'accepted_certificate_date', claimCaseId);
   return r.state === 'readable' && r.value === SENTINEL ? { state: 'anonymized' } : r;
+}
+
+/**
+ * Story 6.23a (code review round 3) — run the timeline's anchor read under a raw SAVEPOINT, so a SQL error rolls back
+ * ONLY the read and the scope tx stays usable for the reads after it (an aborted tx 25P02s every later statement —
+ * [[project_domain_limit_clamp_and_savepoint_retry]]). Rethrows the read's error for the caller's fail-soft `.catch`.
+ */
+export async function readWarningAnchorSoft(scopeTx: ScopeTx, read: () => Promise<Date>): Promise<Date> {
+  await scopeTx.client.query('SAVEPOINT timeline_warning_anchor');
+  try {
+    const anchor = await read();
+    await scopeTx.client.query('RELEASE SAVEPOINT timeline_warning_anchor');
+    return anchor;
+  } catch (err) {
+    await scopeTx.client.query('ROLLBACK TO SAVEPOINT timeline_warning_anchor');
+    throw err;
+  }
 }
 
 function scopeOf(request: FastifyRequest) {
@@ -248,16 +266,20 @@ export function createNomineeDeclarationHandlers(deps: AppDeps) {
       // correction is ⛔ never warned; an unknown / unreadable / erased date ⇒ ⛔ no `post_death_version` flag.
       // `getClaimWarningAnchor` — ⛔ not the full `readClaimApprovalWarnings` (code review 2026-10-05): this
       // handler re-derives its own per-version warnings via `classifyNomineeVersion` below and only ever needed
-      // the anchor. Fails soft on a transient read error, mirroring `assembleApprovalWarnings` in
-      // `claims.verifier-console.handlers.ts`: the timeline still renders, just with the claim's own `createdAt`
-      // (⛔ not the earlier-claim-aware anchor) standing in, so no version is silently mis-flagged either way.
-      const anchorFiledAt = await claimDomain.getClaimWarningAnchor(scopeTx.tx, pariwarId, cid).catch((err: unknown) => {
-        request.log.warn(
-          { err: err instanceof Error ? err.name : 'unknown', claimCaseId },
-          'nominee-declaration timeline: approval-warnings anchor unavailable; falling back to claim.createdAt',
-        );
-        return claimRow.createdAt;
-      });
+      // the anchor. Fails soft on a read error, the console's way (`assembleApprovalWarnings` — "unavailable", ⛔ never
+      // a guess): a raw SAVEPOINT keeps a SQL error from aborting the scope tx (the reads below would 25P02), and the
+      // anchor is then `null` ⇒ ⛔ no `recent_nominee_change` is judged and `warning_basis.first_filed_at: null` makes
+      // the panel SAY the 90-day check is unavailable (code review round 3 — ⛔ never the claim's own `createdAt`,
+      // which can sit on either side of the real anchor and mis-flag silently).
+      const anchorFiledAt = await readWarningAnchorSoft(scopeTx, () => claimDomain.getClaimWarningAnchor(scopeTx.tx, pariwarId, cid)).catch(
+        (err: unknown) => {
+          request.log.warn(
+            { err: err instanceof Error ? err.name : 'unknown', claimCaseId },
+            'nominee-declaration timeline: approval-warnings anchor unavailable; the 90-day check is shown as unavailable',
+          );
+          return null;
+        },
+      );
       const correctionLabels = await claimDomain.listAppliedCorrectionLabels(scopeTx.tx, pariwarId, claimRow.deceasedMemberId);
       const acceptedDate =
         acceptedCertificate?.accepted_date.state === 'readable' && /^\d{4}-\d{2}-\d{2}$/.test(acceptedCertificate.accepted_date.value)
@@ -285,6 +307,9 @@ export function createNomineeDeclarationHandlers(deps: AppDeps) {
           accepted_certificate_read: acceptedCertificate !== null,
           // Story 6.23a (NW12) — how many warnings the timeline showed (⛔ never which version, ⛔ never a date).
           warning_count: warningCount,
+          // …and whether the 90-day check RAN (code review round 4): with the anchor unreadable ⛔ no `recent_nominee_change`
+          // was judged, so `warning_count` alone would read as a complete judgement with fewer warnings.
+          recent_change_checked: anchorFiledAt !== null,
         },
       });
 
@@ -335,7 +360,7 @@ export function createNomineeDeclarationHandlers(deps: AppDeps) {
         viewer: { can_determine: may(NOMINEE_DETERMINATION_KEY), can_decide_district: may(NOMINEE_CORRECTION_DISTRICT_KEY) },
         pending_corrections: { da_pending: pending.daPending, pa_pending: pending.paPending },
         accepted_certificate: acceptedCertificate,
-        warning_basis: { death_date_known: acceptedDate !== null, first_filed_at: anchorFiledAt.toISOString() },
+        warning_basis: { death_date_known: acceptedDate !== null, first_filed_at: anchorFiledAt?.toISOString() ?? null },
       };
     },
 

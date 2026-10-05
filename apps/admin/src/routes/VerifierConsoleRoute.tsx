@@ -152,6 +152,8 @@ export function approvalWarningErrorMessage(err: ApiError): string | null {
       return e.lateNoApproval;
     case 'verifier_decision.late_warning_reason.not_recordable_state':
       return e.lateNotRecordable;
+    case 'verifier_decision.late_warning_reason.missing_display':
+      return e.lateMissingDisplay;
     case 'verifier_decision.not_revisable': {
       const reason = (err.details as { reason?: string } | undefined)?.reason;
       if (reason === 'warning_approval_final' || reason === 'warnings_not_current') return t.approvalWarnings.reviseBlocked[reason]!;
@@ -160,6 +162,22 @@ export function approvalWarningErrorMessage(err: ApiError): string | null {
     default:
       return null;
   }
+}
+
+/**
+ * PURE — the LATE-WARNING-REASON panel's errors (code review round 3) — ⛔ deliberately ⛔ not `decisionErrorMessage`,
+ * whose fallback says "The decision could not be submitted" on a record that is ⛔ never a decision. Shares the
+ * warnings table and the two gate messages the NW14 route can return (the display name; the certificate gate's 409
+ * for an out-of-date determination — NW14's order).
+ */
+export function lateWarningReasonErrorMessage(err: unknown): string {
+  if (err instanceof ApiError) {
+    if (err.code === 'admin.display_name_missing') return t.approvalWarnings.errors.lateMissingDisplay;
+    if (err.code === 'verifier_decision.death_certificate_acceptance_required') return deathCertificateAcceptanceRequiredMessage(err);
+    const warningMessage = approvalWarningErrorMessage(err);
+    if (warningMessage !== null) return warningMessage;
+  }
+  return t.approvalWarnings.late.submitError;
 }
 
 /**
@@ -253,21 +271,21 @@ export function VerifierConsoleRoute(): ReactElement {
     // A claim change drops the previous claim's late-reason outcome (the 6.18 keyed-state lesson).
     resetLateReason();
   }, [claimCaseId, resetLateReason]);
-  // The mount condition below now also reads `lateReason.status` (code review 2026-10-05), and a plain
-  // `useEffect`'s post-paint timing would let the PREVIOUS claim's `isSuccess`/`isPending` flash the panel
-  // — with `recorded`/`processing` text for a claim where nothing happened — for one frame before the
-  // effect above lands. Fixed WITHOUT a `useLayoutEffect` (re-review 2026-10-05: that synchronous flush
-  // changed effect-ordering for the whole route and broke unrelated certificate-section tests) — instead,
-  // the React-docs "adjust state during rendering" pattern: a ref resets synchronously, in the SAME render
-  // that changes `claimCaseId`, so there is no intermediate frame to flash in the first place.
-  const lateReasonClaimRef = useRef(claimCaseId);
-  const lateReasonIsStale = lateReasonClaimRef.current !== claimCaseId;
-  if (lateReasonIsStale) lateReasonClaimRef.current = claimCaseId;
-  const submitLateReason = async (input: { warningReasonCode: string; note: string }): Promise<boolean> =>
-    lateReason
+  // The mount condition below also reads `lateReason.status` (code review 2026-10-05), and a plain `useEffect`'s
+  // post-paint timing would let the PREVIOUS claim's `isSuccess`/`isPending` flash the panel for one frame before the
+  // effect above lands. ⭐ Round 3: the outcome is tied to the claim it was SUBMITTED for, in STATE, set by the submit
+  // itself — ⛔ never a ref written during render (the round-2 shape), which StrictMode's double render and a discarded
+  // concurrent render both defeat. On the first render of another claim `lateReasonFor !== claimCaseId`, so there is
+  // no frame to flash, and nothing is written while rendering.
+  const [lateReasonFor, setLateReasonFor] = useState<string | null>(null);
+  const lateReasonHere = lateReasonFor === claimCaseId && lateReason.status !== 'idle';
+  const submitLateReason = async (input: { warningReasonCode: string; note: string }): Promise<boolean> => {
+    setLateReasonFor(claimCaseId);
+    return lateReason
       .mutateAsync({ warning_reason_code: input.warningReasonCode, note: input.note })
       .then(() => true)
       .catch(() => false);
+  };
   const submitError = decision.error ?? revise.error;
   const decisionErrorText = submitError ? decisionErrorMessage(submitError) : null;
 
@@ -627,7 +645,7 @@ export function VerifierConsoleRoute(): ReactElement {
                 to `false` before `isPending` is even visible, which would otherwise unmount the panel mid-submit
                 and hide its processing state (and any resulting error) from the operator.
                 `resetLateReason` on a claim change (above) still drops this once it no longer applies. */}
-            {approvalWarnings?.viewerCanRecordLateReason === true || (!lateReasonIsStale && lateReason.status !== 'idle') ? (
+            {approvalWarnings?.viewerCanRecordLateReason === true || lateReasonHere ? (
               <LateWarningReasonPanel
                 key={claimCaseId}
                 options={approvalWarnings?.reasonOptions ?? []}
@@ -635,8 +653,10 @@ export function VerifierConsoleRoute(): ReactElement {
                 lateKeysUncoveredForViewer={approvalWarnings?.lateKeysUncoveredForViewer ?? 0}
                 onSubmit={submitLateReason}
                 processing={lateReason.isPending}
-                error={lateReason.error ? decisionErrorMessage(lateReason.error) : null}
+                error={lateReason.error ? lateWarningReasonErrorMessage(lateReason.error) : null}
                 recorded={lateReason.isSuccess}
+                // Mounted for its own outcome after the server stopped offering it ⇒ the outcome alone (round 3).
+                canRecord={approvalWarnings?.viewerCanRecordLateReason === true}
               />
             ) : null}
             {/* Story 6.20 (AC3, AC4, AC7) — the nominee declaration history, behind a disclosure. */}

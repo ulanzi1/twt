@@ -29,6 +29,16 @@ are ⛔ not here — they are Story 6.23b's (go-live coupling (1) of 6.23a).
   deny-list, lockstep-tested against `microcopy.yaml`) — ⛔ not the full gate (tone, numerals) (Trap 11).** The words are
   runtime DATA the static gate never sees; anything subtler is the Super Admin's judgement, as for the Niyamavali display
   fields. ⭐ Trigger: a microcopy runtime library.
+- **The claim-decision handlers encrypt the Tier-1 text BEFORE the domain's business-rule checks run** (code review
+  round 2's action item, 2026-10-05; BigDev: *"Keep it, defer"*). `postLateWarningReason`, `postDecision` and the revise
+  handler (`apps/api/src/modules/claims/claims.verification-decision.handlers.ts`) all encrypt first and then hand the
+  ciphertext to a domain writer that may refuse with a 409. So a request that will be refused still pays for one KMS call,
+  and a transient KMS failure surfaces as a 500 where a clean 409 was owed. ⛔ Not fixed for one handler alone: it is the
+  file's shared convention. The callback fix (an `encryptNote` port called after the checks) would hold the decision advisory
+  lock + the claim's `FOR UPDATE` lock across a KMS round trip, and duplicating the pre-checks at the API would leave two
+  copies of one rule. ⭐ Trigger: the first KMS-failure 500 seen on a request the domain would have refused, OR any change
+  to the lock order or encryption seam of `adjudicateClaim` / `reviseDecision` / `recordLateWarningReason` (fix all three
+  together).
 
 ## Recorded during Story 6.19d's build — the replacement-certificate reminder (2026-10-03)
 

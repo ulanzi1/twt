@@ -25,6 +25,20 @@ Re-verify (bash — zsh does not word-split `$p`): `for p in "a125a59d a785eb0a"
 -->
 
 <!--
+⭐⭐ MERGED 2026-10-05 as PR #255 (REBASE-merge) — THE STORY-6.23a SHA MAP. The four commits of
+`story/6-23a-post-death-nominee-change-warnings` (from `eb1c8620`) were rewritten by the rebase; the citations below are
+kept AS WRITTEN (the record) and this maps them to their `main` twins, PROVED ⛔ not assumed: each pair has an IDENTICAL
+`git patch-id --stable`, and the merged tree (`b25b9f8e`) is byte-identical to the branch head (`7a4eb610`) — tree
+`ee0883d5` both. `main` had not moved (the merge-base was `eb1c8620`), so the rebase rewrote SHAs only.
+  · `aa4659cc` → `6929598c`  governance(6.23a): epics.md 6.23a / 6.23b + the 6.20 AC3 annotation   (cited)
+  · `a94fc44d` → `38a00962`  story: Tasks 1–11 built + review rounds 1–2                            (⛔ not cited)
+  · `c0dbb2bc` → `1d11973f`  story: the round-2 action item deferred (the round-3/4 diff base)       (cited)
+  · `7a4eb610` → `b25b9f8e`  story: review rounds 3–4 (the merge head)                              (⛔ not cited)
+Re-verify (bash — zsh does not word-split `$p`): `for p in "aa4659cc 6929598c" "a94fc44d 38a00962" "c0dbb2bc 1d11973f" "7a4eb610 b25b9f8e"; do set -- $p; diff <(git show $1 | git patch-id --stable | cut -d' ' -f1) <(git show $2 | git patch-id --stable | cut -d' ' -f1); done`
+— ⚠ needs the branch SHAs, which survive only while the branch (local or `origin/story/6-23a-post-death-nominee-change-warnings`) does.
+-->
+
+<!--
 BASELINE — `2059482b` on `main` (`story(6.19d): code review round 3 … ci:local 34/34 green`). Every code claim below was traced on this
 SHA on 2026-10-04 and RE-VERIFIED by a fresh-context validator at `a55480a8` (only `_bmad-output/` and `.decision-log.md` had moved). ⭐ Two
 facts are kept apart: "the pin is an ancestor of HEAD" (durable) and "the code claims were re-derived at `2059482b`" (perishable). Before
@@ -1160,3 +1174,4 @@ branch SHAs).
 | **v2.8** | **2026-10-05** | **Code review round 3 (`bmad-code-review`, 2 chunks × 3 layers in parallel).** Chunk 1 (server): 1 decision (the timeline's anchor fallback — BigDev *"2"*: a SAVEPOINT + `first_filed_at: null`), 9 patches, 1 defer (`closeScopeTx`). Chunk 2 (admin UI): 23 patches. Status → `done` (⚠ ran ahead of round 4; see v2.9). |
 | **v2.9** | **2026-10-05** | **Code review round 4 — a re-review of round 3's OWN uncommitted fixes (one pass × 3 layers in parallel).** 1 decision (`ownCannotClear` — BigDev *"1"*: the AC clause verbatim + a permissive tail), 15 patches, 7 dismissed. ⚠ Two round-3 records CORRECTED by appended notes (family 10): the console's fail-closed test WAS constructible, and the one-frame flash WAS observable. Status `done` → `in-progress` for the round. |
 | **v3.0** | **2026-10-05** | **Round 4's 1 decision and 16 patches applied; `ci:local` 34 / 34 green** with `DATABASE_URL` (:5433). Status `in-progress` → `done`. ⛔ Not committed. |
+| **v3.1** | **2026-10-05** | **Merged as PR #255 (rebase); the `pre-push` `ci:local` and all 34 GitHub checks passed.** The header gains the 6.23a SHA map (4 commits, each pair proved by identical `patch-id`; merged tree byte-identical). ⛔ No citation rewritten. |

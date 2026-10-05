@@ -92,6 +92,27 @@ const packet = (nomineeNameCheck: NameStatus): VerifierConsolePacket =>
     recentPrecedents: { status: 'not_available_yet' },
     shepherd: { status: 'empty' },
     nomineeNameCheck,
+    // Story 6.23a (NW8) — the nominee-change warnings section (⛔ no warning by default).
+    approvalWarnings: {
+      available: true,
+      kinds: [],
+      postDeath: 'evaluated',
+      uncoveredSinceApproval: 0,
+      reviseBlocked: null,
+      viewerCanRecordLateReason: false,
+      lateKeysUncoveredForViewer: 0,
+      reasonOptions: [
+        {
+          code: 'warnings_reviewed',
+          reasonId: null,
+          label: 'Warnings reviewed — approved despite them',
+          whenToUse: 'Use when you have read every warning shown and still approve. Your note must say why.',
+          addedByDisplay: null,
+          addedAt: null,
+          replacesLabel: null,
+        },
+      ],
+    },
   }) as VerifierConsolePacket;
 
 const PASSING: NameStatus = {
@@ -467,5 +488,37 @@ describe('<VerifierConsoleRoute> — the names are ⛔ never read for a claim no
     // The POST's onError invalidates the names read, and that refetch fails.
     expect(await screen.findByTestId('name-check-error')).toBeInTheDocument();
     expect(screen.queryByText('Rani Devi')).toBeNull();
+  });
+});
+
+// ── Story 6.23a (NW8, NW14; AC5, AC7) — the warnings section, MOUNTED ─────────────────────────────────────────
+describe('<VerifierConsoleRoute> — Story 6.23a, the nominee-change warnings', () => {
+  const mountWith = async (approvalWarnings: Partial<VerifierConsolePacket['approvalWarnings']>, claimState = 'verifier_review') => {
+    const base = packet(PASSING);
+    getVerifierConsole.mockResolvedValue({ packet: { ...base, claimState, approvalWarnings: { ...base.approvalWarnings, ...approvalWarnings } } });
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+    render(
+      <QueryClientProvider client={qc}>
+        <VerifierConsoleRoute />
+      </QueryClientProvider>,
+    );
+    await screen.findByTestId('name-check-disclosure');
+  };
+
+  it('⭐ `available: false` disables Approve with its OWN words — ⛔ never "no warnings" on an unknown', async () => {
+    await mountWith({ available: false });
+    expect(screen.getByTestId('action-approve')).toBeDisabled();
+    expect(screen.getByTestId('approve-blocked-reason')).toHaveTextContent(t.approvalWarnings.unavailable);
+  });
+
+  it('⭐ the late-reason panel mounts on `viewerCanRecordLateReason` ALONE — even with `uncoveredSinceApproval` 0 (`-279` A1)', async () => {
+    await mountWith({ viewerCanRecordLateReason: true, uncoveredSinceApproval: 0, lateKeysUncoveredForViewer: 1 }, 'verifier_approved');
+    expect(screen.getByTestId('late-warning-reason-panel')).toBeInTheDocument();
+    expect(screen.getByTestId('late-warning-reason-own-cannot-clear')).toHaveTextContent(t.approvalWarnings.late.ownCannotClear);
+  });
+
+  it('⛔ no panel when the server says the viewer cannot record (even with uncovered warnings)', async () => {
+    await mountWith({ viewerCanRecordLateReason: false, uncoveredSinceApproval: 2 }, 'verifier_approved');
+    expect(screen.queryByTestId('late-warning-reason-panel')).toBeNull();
   });
 });

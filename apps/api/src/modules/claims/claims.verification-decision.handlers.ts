@@ -22,6 +22,8 @@
 //     map to stable 4xx here; the advisory lock + state guard + unique indexes give idempotency (AC9).
 
 import {
+  type LateWarningReasonRequest,
+  type LateWarningReasonResponse,
   type VerifierDecisionRequest,
   type VerifierDecisionResponse,
   type VerifierDecisionReviseRequest,
@@ -43,6 +45,19 @@ import { emitAuthAudit } from '../auth/shared/audit.js';
 import { getDisplayName } from '../auth/admin/admin-auth.repo.js';
 import { closeScopeTx, openScopeTx } from '../multi-tenant/scope-tx.js';
 import { encryptOptionalVerifierRationale } from './verifier-decision-crypto.js';
+import { encryptLateWarningReasonNote } from './approval-warning-crypto.js';
+
+/** Why a revise was refused, in words (`details.reason` carries the code). Exhaustive — a new reason must say why. */
+const NOT_REVISABLE_MESSAGES: Record<claim.DecisionNotRevisableReason, string> = {
+  out_of_window: 'The decision cannot be revised in the claim’s current state',
+  no_live_decision: 'The decision cannot be revised in the claim’s current state',
+  cross_outcome: 'A revision must keep the same outcome — a reversal is handled by the appeal flow (Story 6.16)',
+  // Story 6.23a (NW7; NW18) — a written note is never replaced.
+  warning_approval_final:
+    'This approval was given while a nominee-change warning showed, so its reason and note are final — a new warning is answered with a late-warning reason instead',
+  warnings_not_current:
+    'Whether a nominee-change warning shows is not known yet — re-record the nominee determination against the accepted death certificate first',
+};
 
 /** Map a verifier-decision domain error to its stable HTTP shape. Rethrows anything unknown. */
 function translateDecisionError(err: unknown): never {
@@ -108,11 +123,32 @@ function translateDecisionError(err: unknown): never {
   }
   if (err instanceof claim.ClaimDecisionNotRevisableError) {
     throw new ConflictError(
-      err.reason === 'cross_outcome'
-        ? 'A revision must keep the same outcome — a reversal is handled by the appeal flow (Story 6.16)'
-        : 'The decision cannot be revised in the claim’s current state',
+      NOT_REVISABLE_MESSAGES[err.reason],
       'verifier_decision.not_revisable',
       { reason: err.reason },
+    );
+  }
+  // Story 6.23a (NW6) — the ONE rule over the nominee-change warnings. ⛔ NEVER a denial: the claim is ⛔ not refused —
+  // an approval needs a warning reason and a note. `details` carry kinds only — ⛔ never a name or a date.
+  if (err instanceof claim.ApprovalWarningReasonRequiredError) {
+    throw new ConflictError(
+      err.missing === 'reason'
+        ? 'This claim shows a nominee-change warning — choose a warning reason and write a note to approve it. The claim is not refused.'
+        : 'A note is needed with the warning reason — write why you approve despite the warning. The claim is not refused.',
+      'verifier_decision.warning_reason_required',
+      { kinds: err.kinds, missing: err.missing },
+    );
+  }
+  if (err instanceof claim.WarningReasonUngroundedError) {
+    throw new ConflictError(
+      'This claim shows no nominee-change warning — approve it without a warning reason',
+      'verifier_decision.warning_reason_ungrounded',
+    );
+  }
+  if (err instanceof claim.WarningReasonUnavailableError) {
+    throw new ConflictError(
+      'That warning reason was replaced or is not on the list — please choose again',
+      'verifier_decision.warning_reason_unavailable',
     );
   }
   // Story 6.20 (AC4, `-239`) — the post-death refusal needs a determination with a discarded version.
@@ -199,6 +235,7 @@ export function createVerificationDecisionHandlers(deps: AppDeps) {
     ctx: DecisionContext,
     outcome: string,
     reasonCode: string,
+    warnings?: { readonly kinds: readonly string[]; readonly warningReasonCode: string | null },
   ): void {
     emitAuthAudit(deps, request, type, {
       actorId: ctx.actorId,
@@ -208,6 +245,10 @@ export function createVerificationDecisionHandlers(deps: AppDeps) {
         district: ctx.district,
         outcome,
         reason_code: reasonCode,
+        // Story 6.23a (NW12) — codes and kinds only (⛔ never a name, a date or the note).
+        ...(warnings !== undefined
+          ? { approval_warning_kinds: [...warnings.kinds], warning_reason_code: warnings.warningReasonCode }
+          : {}),
       },
     });
   }
@@ -259,11 +300,29 @@ export function createVerificationDecisionHandlers(deps: AppDeps) {
         result =
           body.outcome === 'escalated'
             ? await claim.escalateClaim(scopeTx.client, base)
-            : await claim.adjudicateClaim(scopeTx.client, { ...base, outcome: body.outcome });
+            : await claim.adjudicateClaim(scopeTx.client, {
+                ...base,
+                outcome: body.outcome,
+                warningReasonCode: body.warning_reason_code ?? null,
+              });
         ok = true;
       } catch (err) {
         // Rejected attempts are audited too (AC10 — fail-closed AND audited, not just fail-closed).
-        auditDecision(request, 'admin_claim.decision_rejected', ctx, body.outcome, body.reason_code);
+        // Story 6.23a (NW12) — a `warning_reason_required` refusal carries the kinds it was refused over; a
+        // `warning_reason_unavailable` refusal (the reason was replaced mid-flight) still carries the code the
+        // actor submitted, so the audit line explains the race rather than reading like a plain rejection.
+        auditDecision(
+          request,
+          'admin_claim.decision_rejected',
+          ctx,
+          body.outcome,
+          body.reason_code,
+          err instanceof claim.ApprovalWarningReasonRequiredError
+            ? { kinds: err.kinds, warningReasonCode: body.warning_reason_code ?? null }
+            : err instanceof claim.WarningReasonUnavailableError
+              ? { kinds: [], warningReasonCode: body.warning_reason_code ?? null }
+              : undefined,
+        );
         return translateDecisionError(err);
       } finally {
         await closeScopeTx(scopeTx, ok);
@@ -275,7 +334,16 @@ export function createVerificationDecisionHandlers(deps: AppDeps) {
           : body.outcome === 'denied'
             ? 'admin_claim.verifier_denied'
             : 'admin_claim.verifier_escalated';
-      auditDecision(request, auditType, ctx, body.outcome, body.reason_code);
+      auditDecision(
+        request,
+        auditType,
+        ctx,
+        body.outcome,
+        body.reason_code,
+        body.outcome === 'approved'
+          ? { kinds: result.approvalWarningKinds ?? [], warningReasonCode: body.warning_reason_code ?? null }
+          : undefined,
+      );
 
       void reply.status(201);
       return toResponse(result);
@@ -325,5 +393,101 @@ export function createVerificationDecisionHandlers(deps: AppDeps) {
       void reply.status(201);
       return toResponse(result);
     },
+
+    /**
+     * POST …/admin/claims/:claimCaseId/verifier-decision/late-warning-reason — Story 6.23a (NW14; `-277` Q3 B): the
+     * District Admin's (any `claim.approve` holder's at the district) reason and note for a nominee-change warning
+     * that appeared AFTER the approval. Its OWN record (⛔ never a revision — fact 3): ⛔ no event, ⛔ no state change,
+     * ⛔ no decision row. ⛔ No step-up (the decision route's posture). The note is encrypted FIRST; audited
+     * post-commit with codes and counts only.
+     */
+    async postLateWarningReason(request: FastifyRequest, reply: FastifyReply): Promise<LateWarningReasonResponse> {
+      const ctx = await contextOf(request);
+      const body = request.body as LateWarningReasonRequest;
+      const noteCiphertext = await encryptLateWarningReasonNote(body.note, ctx.pariwarId, deps.encryption);
+      const auditLate = (type: AuthAuditEventType, extra: Record<string, unknown>) =>
+        emitAuthAudit(deps, request, type, {
+          actorId: ctx.actorId,
+          pariwarId: ctx.pariwarId,
+          context: {
+            claim_case_id: ctx.claimCaseId,
+            district: ctx.district,
+            warning_reason_code: body.warning_reason_code,
+            ...extra,
+          },
+        });
+
+      const scopeTx = await openScopeTx(deps, ctx.pariwarId);
+      let ok = false;
+      let result: claim.RecordLateWarningReasonResult;
+      try {
+        result = await claim.recordLateWarningReason(scopeTx.client, {
+          claimCaseId: ctx.claimCaseId,
+          pariwarId: ctx.pariwarId,
+          warningReasonCode: body.warning_reason_code,
+          noteCiphertext,
+          actorId: ctx.actorId,
+          actorDisplay: ctx.actorDisplay,
+        });
+        ok = true;
+      } catch (err) {
+        auditLate('admin_claim.late_warning_reason_rejected', {
+          refusal: err instanceof claim.LateWarningReasonRefusedError ? err.reason : (err as Error).name,
+        });
+        return translateLateWarningReasonError(err);
+      } finally {
+        await closeScopeTx(scopeTx, ok);
+      }
+
+      auditLate('admin_claim.late_warning_reason_recorded', {
+        covered_key_count: result.coveredKeyCount,
+        kinds: [...result.kinds],
+      });
+      void reply.status(201);
+      return {
+        claim_case_id: ctx.claimCaseId,
+        record_id: result.recordId,
+        covered_key_count: result.coveredKeyCount,
+        kinds: [...result.kinds],
+      };
+    },
   };
+}
+
+/** NW14's refusals → stable HTTP. Exhaustive over the domain's reason union (a new reason fails typecheck here). */
+function translateLateWarningReasonError(err: unknown): never {
+  if (err instanceof claim.LateWarningReasonRefusedError) {
+    const reason: claim.LateWarningReasonRefusal = err.reason;
+    switch (reason) {
+      case 'not_found':
+        throw new NotFoundError('Claim not found', 'claim.not_found');
+      case 'no_district_admin_approval':
+        throw new ConflictError(
+          'This claim has no live District Admin approval for a late-warning reason to answer',
+          'verifier_decision.late_warning_reason.no_district_admin_approval',
+        );
+      case 'not_recordable_state':
+        throw new ConflictError(
+          'A late-warning reason cannot be recorded in the claim’s current state',
+          'verifier_decision.late_warning_reason.not_recordable_state',
+        );
+      case 'determination_required':
+        throw new ConflictError(
+          'Record the nominee determination against the accepted death certificate first — the warnings are not known until then',
+          'verifier_decision.late_warning_reason.determination_required',
+        );
+      case 'nothing_uncovered':
+        throw new ConflictError(
+          'Every warning that appeared after the approval is already answered by your own record',
+          'verifier_decision.late_warning_reason.nothing_uncovered',
+        );
+      case 'missing_display':
+        throw new ConflictError('A late reason is attributed to a named person', 'verifier_decision.late_warning_reason.missing_display');
+      default: {
+        const unreachable: never = reason;
+        throw new Error(`unhandled late-warning refusal ${String(unreachable)}`);
+      }
+    }
+  }
+  return translateDecisionError(err);
 }

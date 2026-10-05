@@ -91,6 +91,27 @@ const PRESENT_PACKET: VerifierConsolePacket = {
     roleLabel: 'District Admin',
   },
   nomineeNameCheck: { available: true, accountsComplete: true, currentAndPassing: true, differenceReasons: [] },
+  // Story 6.23a (NW8) — the nominee-change warnings section (⛔ no warning by default).
+  approvalWarnings: {
+    available: true,
+    kinds: [],
+    postDeath: 'evaluated',
+    uncoveredSinceApproval: 0,
+    reviseBlocked: null,
+    viewerCanRecordLateReason: false,
+    lateKeysUncoveredForViewer: 0,
+    reasonOptions: [
+      {
+        code: 'warnings_reviewed',
+        reasonId: null,
+        label: 'Warnings reviewed — approved despite them',
+        whenToUse: 'Use when you have read every warning shown and still approve. Your note must say why.',
+        addedByDisplay: null,
+        addedAt: null,
+        replacesLabel: null,
+      },
+    ],
+  },
 };
 
 describe('<VerificationConsoleShell> — anatomy + read-only + decision slot (AC6)', () => {

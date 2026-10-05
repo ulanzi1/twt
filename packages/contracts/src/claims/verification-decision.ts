@@ -112,10 +112,54 @@ function applyDecisionRefinements<T extends { outcome: string; reason_code: stri
   });
 }
 
+// ── Story 6.23a — the nominee-change WARNINGS and the WARNING REASON (NW1, NW5, NW13, NW16) ─────────────────────
+// ⛔ `@twt/domain` is never imported here: the kinds, the record's steps and the built-in generic are RE-DECLARED,
+// each with a lockstep test against the domain's own copy. ⛔ The verifier vocabulary above is UNCHANGED (Trap 7) — the
+// warning reason is its OWN field, beside the approval's real reason (invariant 11).
+
+/** The warning kinds (NW1). ⚠ LOCKSTEP with `@twt/domain`'s `APPROVAL_WARNING_KINDS`. */
+export const APPROVAL_WARNING_KINDS = ['post_death_version', 'recent_nominee_change'] as const;
+export const ApprovalWarningKind = z.enum(APPROVAL_WARNING_KINDS);
+export type ApprovalWarningKind = z.output<typeof ApprovalWarningKind>;
+
+/** The approval-over-warning record's steps (NW13 — 6.23a's two). ⚠ LOCKSTEP with the domain + migration 0143. */
+export const CLAIM_WARNING_APPROVAL_STEPS = ['district_admin_approval', 'district_admin_late_reason'] as const;
+
+/** The BUILT-IN GENERIC warning reason (NW16) — every Pariwar has it, first. ⚠ LOCKSTEP with the domain. */
+export const APPROVAL_WARNING_GENERIC_REASON = {
+  code: 'warnings_reviewed',
+  label: 'Warnings reviewed — approved despite them',
+  whenToUse: 'Use when you have read every warning shown and still approve. Your note must say why.',
+} as const;
+
+/** A warning-reason code on the wire — the generic's or a stored `awr_…`. Bounded; ⛔ never free text. */
+export const WarningReasonCode = z.string().trim().min(1).max(64);
+
+/**
+ * One option on the shared picker (NW9) — 6.23b's surfaces reuse it. `null` provenance marks the built-in generic
+ * (*"built in"*). ⛔ No member data: the label and the note are the Super Admin's staff policy text.
+ */
+export const ApprovalWarningReasonOption = z
+  .object({
+    code: z.string(),
+    reasonId: z.string().uuid().nullable(),
+    label: z.string(),
+    whenToUse: z.string(),
+    addedByDisplay: z.string().nullable(),
+    addedAt: z.string().nullable(),
+    replacesLabel: z.string().nullable(),
+  })
+  .strict();
+export type ApprovalWarningReasonOption = z.output<typeof ApprovalWarningReasonOption>;
+
 /**
  * The approve/deny/escalate request (the `verifier-decision` route). `outcome` selects the verb; the
  * server derives the actor identity + district (never the client). `.strict()` — a smuggled
  * `actor_display`/`supersedes_decision_id`/unknown field is a 400.
+ * ⭐ Story 6.23a (NW5) — `warning_reason_code`: the WARNING REASON, in its own field. Allowed ONLY with
+ * `outcome: 'approved'`; when present, a non-blank rationale is required (the note `-262` FQ2 asks for). Whether a
+ * warning shows — and so whether it is REQUIRED — is the server's (409 `verifier_decision.warning_reason_required`).
+ * ⛔ The revise request does ⛔ not take it: a warned approval is ⛔ never revised (NW7).
  */
 export const VerifierDecisionRequest = applyDecisionRefinements(
   z
@@ -123,9 +167,26 @@ export const VerifierDecisionRequest = applyDecisionRefinements(
       outcome: VerifierDecisionOutcome,
       reason_code: VerifierReasonCode,
       rationale: z.string().max(VERIFIER_RATIONALE_MAX_CHARS).optional(),
+      warning_reason_code: WarningReasonCode.optional(),
     })
     .strict(),
-);
+).superRefine((val, ctx) => {
+  if (val.warning_reason_code === undefined) return;
+  if (val.outcome !== 'approved') {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['warning_reason_code'],
+      message: 'a warning reason belongs to an approval only',
+    });
+  }
+  if ((val.rationale?.trim() ?? '') === '') {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['rationale'],
+      message: 'a note is required when a warning reason is chosen',
+    });
+  }
+});
 export type VerifierDecisionRequest = z.output<typeof VerifierDecisionRequest>;
 
 /**
@@ -169,3 +230,26 @@ export const VerifierDecisionResponse = z
   })
   .strict();
 export type VerifierDecisionResponse = z.output<typeof VerifierDecisionResponse>;
+
+/**
+ * Story 6.23a (NW14) — the District Admin's (any `claim.approve` holder's) reason for a warning that appeared AFTER the
+ * approval. Both fields required; the note is written once and ⛔ never replaced (NW18). `.strict()`.
+ */
+export const LateWarningReasonRequest = z
+  .object({
+    warning_reason_code: WarningReasonCode,
+    note: z.string().trim().min(1).max(VERIFIER_RATIONALE_MAX_CHARS),
+  })
+  .strict();
+export type LateWarningReasonRequest = z.output<typeof LateWarningReasonRequest>;
+
+/** The late reason's response — NON-PII (⛔ never the note). */
+export const LateWarningReasonResponse = z
+  .object({
+    claim_case_id: z.string().uuid(),
+    record_id: z.string().uuid(),
+    covered_key_count: z.number().int().positive(),
+    kinds: z.array(ApprovalWarningKind),
+  })
+  .strict();
+export type LateWarningReasonResponse = z.output<typeof LateWarningReasonResponse>;

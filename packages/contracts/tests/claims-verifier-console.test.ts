@@ -108,6 +108,27 @@ describe('VerifierConsolePacket — full round-trip + ordering', () => {
       currentAndPassing: true,
       differenceReasons: [] as ('initial' | 'married_name' | 'bank_shortened_name')[],
     },
+    // Story 6.23a (NW8) — the nominee-change warnings: NON-PII (kinds, counts, the reason list).
+    approvalWarnings: {
+      available: true,
+      kinds: [] as ('post_death_version' | 'recent_nominee_change')[],
+      postDeath: 'evaluated' as const,
+      uncoveredSinceApproval: 0,
+      reviseBlocked: null as 'warning_approval_final' | 'warnings_not_current' | null,
+      viewerCanRecordLateReason: false,
+      lateKeysUncoveredForViewer: 0,
+      reasonOptions: [
+        {
+          code: 'warnings_reviewed',
+          reasonId: null as string | null,
+          label: 'Warnings reviewed — approved despite them',
+          whenToUse: 'Use when you have read every warning shown and still approve. Your note must say why.',
+          addedByDisplay: null as string | null,
+          addedAt: null as string | null,
+          replacesLabel: null as string | null,
+        },
+      ],
+    },
   };
 
   it('parses a full packet and preserves array order', () => {
@@ -121,6 +142,17 @@ describe('VerifierConsolePacket — full round-trip + ordering', () => {
 
   it('the response envelope wraps the packet', () => {
     expect(VerifierConsoleResponse.safeParse({ packet: PACKET }).success).toBe(true);
+  });
+
+  it('Story 6.23a (NW8) — `approvalWarnings` is REQUIRED and STRICT: ⛔ a date of death or a name can ⛔ never ride it', () => {
+    const { approvalWarnings, ...without } = PACKET;
+    expect(VerifierConsolePacket.safeParse(without).success).toBe(false);
+    for (const smuggled of [{ deathDate: '2026-05-10' }, { nomineeName: 'X' }]) {
+      expect(VerifierConsolePacket.safeParse({ ...PACKET, approvalWarnings: { ...approvalWarnings, ...smuggled } }).success).toBe(false);
+    }
+    expect(
+      VerifierConsolePacket.safeParse({ ...PACKET, approvalWarnings: { ...approvalWarnings, reviseBlocked: 'nope' } }).success,
+    ).toBe(false);
   });
 
   it('a non-response is never representable as a denial by absence (responses are explicit)', () => {

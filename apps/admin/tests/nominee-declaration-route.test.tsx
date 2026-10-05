@@ -83,6 +83,27 @@ const packet = (claimCaseId: string): VerifierConsolePacket =>
     recentPrecedents: { status: 'not_available_yet' },
     shepherd: { status: 'empty' },
     nomineeNameCheck: { available: true, accountsComplete: true, currentAndPassing: true, differenceReasons: [] },
+    // Story 6.23a (NW8) — the nominee-change warnings section (⛔ no warning by default).
+    approvalWarnings: {
+      available: true,
+      kinds: [],
+      postDeath: 'evaluated',
+      uncoveredSinceApproval: 0,
+      reviseBlocked: null,
+      viewerCanRecordLateReason: false,
+      lateKeysUncoveredForViewer: 0,
+      reasonOptions: [
+        {
+          code: 'warnings_reviewed',
+          reasonId: null,
+          label: 'Warnings reviewed — approved despite them',
+          whenToUse: 'Use when you have read every warning shown and still approve. Your note must say why.',
+          addedByDisplay: null,
+          addedAt: null,
+          replacesLabel: null,
+        },
+      ],
+    },
   }) as VerifierConsolePacket;
 
 const timeline = (claimCaseId: string): NomineeDeclarationTimelineResponse => ({
@@ -101,6 +122,8 @@ const timeline = (claimCaseId: string): NomineeDeclarationTimelineResponse => ({
       recorded_at: '2026-01-10T06:00:00.000Z',
       effective_at: '2026-01-05T06:00:00.000Z',
       corrects_version_id: null,
+      warnings: [],
+      correction_label: null,
     },
   ],
   watermark: { rank1: 1, rank2: null },
@@ -112,6 +135,7 @@ const timeline = (claimCaseId: string): NomineeDeclarationTimelineResponse => ({
   pending_corrections: { da_pending: 0, pa_pending: 0 },
   // Story 6.21a (D8) — the determination's date is the ACCEPTED certificate's (read-only in the form).
   accepted_certificate: { review_id: '00000000-0000-4000-8000-0000000000ac', accepted_date: { state: 'readable', value: '2026-05-01' } },
+  warning_basis: { death_date_known: true, first_filed_at: '2026-08-30T05:30:00.000Z' },
 });
 
 const snapshots = (claimCaseId: string): NomineeDeclarationSnapshotsResponse => ({

@@ -6,10 +6,17 @@
 //   · the request DTO is `.strict()` — a smuggled `actor_display` (or any unknown field) is rejected (R5);
 //   · the compat map + helpers match the domain source of truth (value-aligned).
 
-import { claim } from '@twt/domain';
+import { claim, schema } from '@twt/domain';
 import { describe, expect, it } from 'vitest';
 
 import {
+  APPROVAL_WARNING_GENERIC_REASON,
+  APPROVAL_WARNING_KINDS,
+  APPROVAL_WARNING_REASON_LABEL_MAX,
+  APPROVAL_WARNING_REASON_WHEN_TO_USE_MAX,
+  ApprovalWarningReasonWriteRequest,
+  CLAIM_WARNING_APPROVAL_STEPS,
+  LateWarningReasonRequest,
   isReasonCodeValidForOutcome,
   reasonCodesForOutcome,
   REASON_CODE_OUTCOME_COMPAT,
@@ -160,5 +167,75 @@ describe('VerifierDecisionReviseRequest (AC5)', () => {
     expect(
       VerifierDecisionReviseRequest.safeParse({ outcome: 'denied', reason_code: 'r5_d_natural_death' }).success,
     ).toBe(false);
+  });
+});
+
+// ── Story 6.23a (NW5, AC2) — the WARNING REASON, in its own field ─────────────────────────────────────────────
+describe('Story 6.23a — `warning_reason_code` on the decision request ONLY (NW5; AC2)', () => {
+  const approve = { outcome: 'approved', reason_code: 'r5_d_natural_death', rationale: 'seen in person' };
+
+  it('accepted with an approval and a non-blank rationale', () => {
+    const parsed = VerifierDecisionRequest.parse({ ...approve, warning_reason_code: 'warnings_reviewed' });
+    expect(parsed.warning_reason_code).toBe('warnings_reviewed');
+    // The REAL approval reason is untouched (invariant 11).
+    expect(parsed.reason_code).toBe('r5_d_natural_death');
+  });
+
+  it('⛔ with a deny or an escalate (400)', () => {
+    for (const body of [
+      { outcome: 'denied', reason_code: 'other', rationale: 'x', warning_reason_code: 'warnings_reviewed' },
+      { outcome: 'escalated', reason_code: 'r9_routed_to_voting', rationale: 'x', warning_reason_code: 'warnings_reviewed' },
+    ]) {
+      const r = VerifierDecisionRequest.safeParse(body);
+      expect(r.success).toBe(false);
+      expect(r.error?.issues.map((i) => i.path.join('.'))).toContain('warning_reason_code');
+    }
+  });
+
+  it('⛔ without a rationale, or with a blank one (400 — the note `-262` FQ2 asks for)', () => {
+    for (const rationale of [undefined, '   ']) {
+      const r = VerifierDecisionRequest.safeParse({ outcome: 'approved', reason_code: 'r8_90pct_met', rationale, warning_reason_code: 'warnings_reviewed' });
+      expect(r.success).toBe(false);
+      expect(r.error?.issues.map((i) => i.path.join('.'))).toContain('rationale');
+    }
+  });
+
+  it('a blank or over-long code is a 400', () => {
+    expect(VerifierDecisionRequest.safeParse({ ...approve, warning_reason_code: ' ' }).success).toBe(false);
+    expect(VerifierDecisionRequest.safeParse({ ...approve, warning_reason_code: 'x'.repeat(65) }).success).toBe(false);
+  });
+
+  it('⛔ the REVISE request does ⛔ not take it (a warned approval is never revised — NW7)', () => {
+    expect(VerifierDecisionReviseRequest.safeParse({ ...approve, warning_reason_code: 'warnings_reviewed' }).success).toBe(false);
+  });
+
+  it('LateWarningReasonRequest — both fields required; the note ≤ 500', () => {
+    expect(LateWarningReasonRequest.safeParse({ warning_reason_code: 'warnings_reviewed', note: 'the date moved' }).success).toBe(true);
+    expect(LateWarningReasonRequest.safeParse({ warning_reason_code: 'warnings_reviewed' }).success).toBe(false);
+    expect(LateWarningReasonRequest.safeParse({ note: 'x' }).success).toBe(false);
+    expect(LateWarningReasonRequest.safeParse({ warning_reason_code: 'warnings_reviewed', note: 'x'.repeat(501) }).success).toBe(false);
+    expect(LateWarningReasonRequest.safeParse({ warning_reason_code: 'warnings_reviewed', note: 'x', extra: 1 }).success).toBe(false);
+  });
+});
+
+describe('Story 6.23a — contracts ↔ domain lockstep (the kinds, the record\'s steps, the generic, the bounds)', () => {
+  it('APPROVAL_WARNING_KINDS', () => {
+    expect([...APPROVAL_WARNING_KINDS]).toEqual([...claim.APPROVAL_WARNING_KINDS]);
+  });
+  it('CLAIM_WARNING_APPROVAL_STEPS', () => {
+    expect([...CLAIM_WARNING_APPROVAL_STEPS]).toEqual([...schema.CLAIM_WARNING_APPROVAL_STEPS]);
+  });
+  it('APPROVAL_WARNING_GENERIC_REASON', () => {
+    expect(APPROVAL_WARNING_GENERIC_REASON).toEqual(claim.APPROVAL_WARNING_GENERIC_REASON);
+  });
+  it('the reason-text bounds', () => {
+    expect(APPROVAL_WARNING_REASON_LABEL_MAX).toBe(schema.APPROVAL_WARNING_REASON_LABEL_MAX);
+    expect(APPROVAL_WARNING_REASON_WHEN_TO_USE_MAX).toBe(schema.APPROVAL_WARNING_REASON_WHEN_TO_USE_MAX);
+  });
+  it('the reason write request — ⛔ blank, ⛔ too long, ⛔ an unknown field', () => {
+    expect(ApprovalWarningReasonWriteRequest.safeParse({ label: 'Seen', when_to_use: 'Use when seen.' }).success).toBe(true);
+    expect(ApprovalWarningReasonWriteRequest.safeParse({ label: ' ', when_to_use: 'x' }).success).toBe(false);
+    expect(ApprovalWarningReasonWriteRequest.safeParse({ label: 'x'.repeat(121), when_to_use: 'x' }).success).toBe(false);
+    expect(ApprovalWarningReasonWriteRequest.safeParse({ label: 'x', when_to_use: 'x', code: 'awr_00000000' }).success).toBe(false);
   });
 });

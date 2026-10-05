@@ -33,7 +33,15 @@ import {
   claimVerifierDecisions,
 } from '../schema/claim_verifier_decisions.js';
 import { type ClaimEventActor } from './events.js';
+import { lockActiveApprovalWarningReason } from './approval-warning-reasons.js';
+import {
+  type ApprovalWarningKind,
+  assertApprovalReasonCoversWarnings,
+  insertClaimWarningApprovalRecord,
+  readClaimApprovalWarnings,
+} from './approval-warnings.js';
 import { assertClaimContactRecorded } from './claim-contact-check.js';
+import { WarningReasonUngroundedError } from './errors.js';
 import { assertClaimApprovable } from './nominee-name-check.js';
 import { projectClaimState } from './project.js';
 import {
@@ -78,8 +86,17 @@ export class ClaimNotEscalatableError extends Error {
   }
 }
 
-/** Why a revision was rejected — drives the route's clear error message (AC5). */
-export type DecisionNotRevisableReason = 'out_of_window' | 'no_live_decision' | 'cross_outcome';
+/** Why a revision was rejected — drives the route's clear error message (AC5). Story 6.23a (NW7) adds two:
+ *  `warning_approval_final` — an approval on a claim that shows a warning, or that carries ANY District Admin
+ *  warning record (`-279` A8), is FINAL in its words (a written note is ⛔ never replaced — NW18);
+ *  `warnings_not_current` — the live determination is absent or out of date, so whether a warning shows is ⛔ not
+ *  known (fail closed — `-279` A3): re-record the determination against the accepted certificate first. */
+export type DecisionNotRevisableReason =
+  | 'out_of_window'
+  | 'no_live_decision'
+  | 'cross_outcome'
+  | 'warning_approval_final'
+  | 'warnings_not_current';
 
 /** Thrown by revise when the claim is out of the post-verdict pre-freeze window, has no live decision,
  *  or the requested outcome differs from the live decision's (cross-outcome reversal is Story 6.16). */
@@ -194,8 +211,9 @@ export function verifierDecisionAdvisoryLockKey(pariwarId: string, claimCaseId: 
   return BigInt(`0x${hex.slice(0, 15)}`);
 }
 
-/** Acquire the tx-scoped advisory lock for a claim's adjudication (released on COMMIT/ROLLBACK). */
-async function acquireDecisionLock(
+/** Acquire the tx-scoped advisory lock for a claim's adjudication (released on COMMIT/ROLLBACK).
+ *  Exported for Story 6.23a's late-warning reason (NW14), which takes the SAME lock order — ⛔ never copy it. */
+export async function acquireDecisionLock(
   client: pg.PoolClient,
   pariwarId: PariwarId,
   claimCaseId: ClaimId,
@@ -205,8 +223,9 @@ async function acquireDecisionLock(
   ]);
 }
 
-/** Lock the claim row (`SELECT … FOR UPDATE`) to serialize concurrent edits + read its state. */
-async function lockClaim(db: Db, pariwarId: PariwarId, claimCaseId: ClaimId) {
+/** Lock the claim row (`SELECT … FOR UPDATE`) to serialize concurrent edits + read its state.
+ *  Exported for Story 6.23a's NW14 (the SAME lock order). */
+export async function lockClaim(db: Db, pariwarId: PariwarId, claimCaseId: ClaimId) {
   const rows = await db
     .select()
     .from(claims)
@@ -236,6 +255,12 @@ interface DecisionWriteBase {
 export interface AdjudicateClaimInput extends DecisionWriteBase {
   /** `approved` or `denied` (escalate has its own writer). */
   outcome: 'approved' | 'denied';
+  /**
+   * Story 6.23a (NW5) — the WARNING REASON, in its OWN field beside the real `reasonCode` (invariant 11): a code from
+   * the Pariwar's ACTIVE list. Required on an approval while a warning shows (with a rationale); refused when ⛔ no
+   * warning shows, and on a denial (⛔ a denial is never gated — invariant 4).
+   */
+  warningReasonCode?: string | null;
 }
 
 export interface EscalateClaimInput extends DecisionWriteBase {
@@ -254,13 +279,15 @@ export interface VerifierDecisionResult {
   eventVersion: number;
   /** The claim's lifecycle state AFTER the decision (verdict advances it; escalate/revise leave it). */
   claimState: string;
+  /** Story 6.23a (NW12) — the warning kinds an APPROVAL covered (empty otherwise; for the audit line). */
+  approvalWarningKinds?: readonly ApprovalWarningKind[];
 }
 
 // ── Shared decision-row insert ────────────────────────────────────────────────
 
 /** The claim's LIVE (non-superseded) decision row, if any (partial-unique guarantees ≤1). Scope-safe
- *  (RLS + explicit predicate) — shared by the pre-write conflict check and `reviseDecision`. */
-async function getLiveDecision(
+ *  (RLS + explicit predicate) — shared by the pre-write conflict check, `reviseDecision` and Story 6.23a's NW14. */
+export async function getLiveDecision(
   db: Db,
   pariwarId: PariwarId,
   claimCaseId: ClaimId,
@@ -318,6 +345,11 @@ export async function adjudicateClaim(
 ): Promise<VerifierDecisionResult> {
   if (!isReasonCodeValidForOutcome(input.outcome, input.reasonCode)) {
     throw new ReasonCodeOutcomeMismatchError(input.outcome, input.reasonCode);
+  }
+  // Story 6.23a (NW5) — a warning reason belongs to an APPROVAL only (the contract's 400 is the real enforcement).
+  const warningReasonCode = input.warningReasonCode ?? null;
+  if (input.outcome !== 'approved' && warningReasonCode !== null) {
+    throw new WarningReasonUngroundedError(input.claimCaseId);
   }
   await acquireDecisionLock(client, input.pariwarId, input.claimCaseId);
   const db = bindScopedDb(client);
@@ -385,6 +417,30 @@ export async function adjudicateClaim(
     await assertClaimContactRecorded(db, input.pariwarId, input.claimCaseId);
   }
 
+  // (a3) ⭐ Story 6.23a (NW6; `-262` FQ2, `-264` FQ12) — THE ONE RULE: approving while ANY nominee-change warning shows
+  //      needs a warning reason from the Pariwar's ACTIVE list and a note. AFTER the gate and the contact check (every
+  //      earlier refusal keeps its code and order — 6.19a D14), so the determination is CURRENT here and the warnings
+  //      are exact (Trap 2). The chosen reason row is locked `FOR SHARE` (Trap 16). ⛔ A denial is never gated.
+  let warningKinds: readonly ApprovalWarningKind[] = [];
+  let warningKeys: readonly string[] = [];
+  let warningReason: Awaited<ReturnType<typeof lockActiveApprovalWarningReason>> = null;
+  if (input.outcome === 'approved') {
+    const warnings = await readClaimApprovalWarnings(db, input.pariwarId, input.claimCaseId);
+    warningKinds = warnings.kinds;
+    warningKeys = warnings.keys;
+    const resolved =
+      warnings.kinds.length > 0 && warningReasonCode !== null
+        ? await lockActiveApprovalWarningReason(db, input.pariwarId, warningReasonCode)
+        : null;
+    warningReason = assertApprovalReasonCoversWarnings({
+      claimCaseId: input.claimCaseId,
+      kinds: warnings.kinds,
+      warningReasonCode,
+      resolvedReason: resolved,
+      note: input.rationaleCiphertext,
+    });
+  }
+
   // (b) Emit the verdict event (auditShape only — reason/rationale live in the decision row, D-G).
   const verdictEvent = input.outcome === 'approved' ? 'claim.verifier_approved' : 'claim.verifier_denied';
   const projected = await projectClaimState(client, {
@@ -415,7 +471,29 @@ export async function adjudicateClaim(
     }
     throw err;
   }
-  return { decision, eventVersion: projected.eventVersion, claimState: projected.state };
+  // (d) ⭐ Story 6.23a (NW13; fact 4) — an approval over a warning SNAPSHOTS what it covered: the chosen reason and
+  //     EXACTLY the current keys, in the SAME transaction (its FK is the decision row just written). ⛔ No row when ⛔ no
+  //     warning shows. Its note is the decision's rationale.
+  if (warningReason !== null) {
+    await insertClaimWarningApprovalRecord(db, {
+      pariwarId: input.pariwarId,
+      claimCaseId: input.claimCaseId,
+      deceasedMemberId: claimRow.deceasedMemberId,
+      step: 'district_admin_approval',
+      verifierDecisionId: decision.decisionId,
+      reason: warningReason,
+      keys: warningKeys,
+      noteCiphertext: null,
+      actorId: input.actorId,
+      actorDisplay: input.actorDisplay,
+    });
+  }
+  return {
+    decision,
+    eventVersion: projected.eventVersion,
+    claimState: projected.state,
+    approvalWarningKinds: warningKinds,
+  };
 }
 
 // ── Escalate (its own annotation + guard, D-D) ────────────────────────────────
@@ -540,6 +618,27 @@ export async function reviseDecision(
   // revision that cannot happen is refused for its real reason.
   if (input.reasonCode === 'post_death_nominee_change') {
     await assertPostDeathRefusalGrounded(db, input.pariwarId, input.claimCaseId);
+  }
+  // ⭐ Story 6.23a (NW7; NW18) — an APPROVAL on a warned claim is FINAL in its words: a revise would re-record an
+  //    approval over a warning with ⛔ no reason channel, or replace a written note. AFTER the window / live /
+  //    same-outcome guards (a revise that cannot happen is refused for its real reason). Something new about a warned
+  //    claim is ADDED (NW14's late reason), ⛔ never written over. ⛔ A denied decision's revise is unchanged.
+  if (input.outcome === 'approved') {
+    const warnings = await readClaimApprovalWarnings(db, input.pariwarId, input.claimCaseId);
+    if (warnings.coverage.records.length > 0 || warnings.kinds.length > 0) {
+      throw new ClaimDecisionNotRevisableError(
+        input.claimCaseId,
+        'warning_approval_final',
+        'an approval on a claim that shows (or showed) a nominee-change warning is final in its words',
+      );
+    }
+    if (warnings.postDeath === 'awaiting_determination') {
+      throw new ClaimDecisionNotRevisableError(
+        input.claimCaseId,
+        'warnings_not_current',
+        'the nominee determination is not current — re-record it against the accepted death certificate first',
+      );
+    }
   }
 
   // Atomic supersession — 0 rows ⇒ a concurrent revise already superseded the target ⇒ conflict (409).

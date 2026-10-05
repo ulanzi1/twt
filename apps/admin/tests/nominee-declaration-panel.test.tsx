@@ -4,12 +4,15 @@
 //   · the determination form PRE-SELECTS NOTHING, and Record refuses — and SAYS WHY — until the District
 //     Admin has entered the date, marked EVERY version and written a note (invariant 1 — ⛔ never a default);
 //   · every version row shows BOTH its `recorded_at` and its `effective_at`, and ⛔ nothing says "after death";
+//     ⚠ AMENDED by `2026-09-28-261` D1 (built by Story 6.23a, AC11): a post-death version now shows the D1 WARNING
+//     line; ⛔ nothing says "suspicious" or "should be discarded", and ⛔ no radio is checked;
 //   · the marks RESET when what is being judged changes (6.18's stale-carry-over finding);
 //   · D10 — names, mobiles and the correction requests appear ONLY after the audited reveal;
 //   · a correction's target and proposal are shown side by side — with the mobile, address and BOTH notes
 //     the approvers act on — and only THIS surface's step carries controls;
 //   · the helpline's raise form ⛔ never offers `other` (the target side is `-237` cl.2; the PROPOSED side is
-//     an ENGINEERING READING of it, ⛔ not a ratified rule — BigDev 2026-09-24).
+//     an ENGINEERING READING of it when written, ⛔ then not a ratified rule — BigDev 2026-09-24; ⭐ since RATIFIED by
+//     `2026-09-28-261` C1).
 
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -46,6 +49,8 @@ const TIMELINE: NomineeDeclarationTimelineResponse = {
       recorded_at: '2026-01-10T06:00:00.000Z',
       effective_at: '2026-01-05T06:00:00.000Z',
       corrects_version_id: null,
+      warnings: [],
+      correction_label: null,
     },
     {
       version_id: V2,
@@ -58,6 +63,9 @@ const TIMELINE: NomineeDeclarationTimelineResponse = {
       recorded_at: '2026-06-10T06:00:00.000Z',
       effective_at: '2026-06-10T06:00:00.000Z',
       corrects_version_id: null,
+      // Story 6.23a — 10 Jun is on or after the accepted 1 May: the server flags it (`-261` D1).
+      warnings: ['post_death_version'],
+      correction_label: null,
     },
   ],
   watermark: { rank1: 2, rank2: null },
@@ -69,6 +77,7 @@ const TIMELINE: NomineeDeclarationTimelineResponse = {
   pending_corrections: { da_pending: 1, pa_pending: 1 },
   // Story 6.21a (D8) — the determination's date is the ACCEPTED certificate's (read-only in the form).
   accepted_certificate: { review_id: '00000000-0000-4000-8000-0000000000ac', accepted_date: { state: 'readable', value: '2026-05-01' } },
+  warning_basis: { death_date_known: true, first_filed_at: '2026-08-30T05:30:00.000Z' },
 };
 
 const CORRECTION_ID = '33333333-3333-4333-8333-333333333333';
@@ -156,14 +165,26 @@ describe('<NomineeDeclarationPanel> — the timeline and the determination', () 
     expect(screen.getByTestId('nominee-determination-submit').getAttribute('aria-disabled')).toBe('true');
   });
 
-  it('⭐ each version row shows its OWN "Recorded" and "Counts as of" instants, and ⛔ nothing says "after death"', () => {
+  it('⭐ each version row shows its OWN "Recorded" and "Counts as of" instants — and (`-261` D1, Story 6.23a) the post-death version its WARNING line', () => {
     setup();
     // V1 was recorded on 10 Jan but counts as of 5 Jan — the two cells must carry the two different days.
     expect(screen.getByTestId(`nominee-version-recorded-${V1}`).textContent).toMatch(/10 Jan 2026/);
     expect(screen.getByTestId(`nominee-version-effective-${V1}`).textContent).toMatch(/5 Jan 2026/);
     expect(screen.getByTestId(`nominee-version-recorded-${V2}`).textContent).toMatch(/10 Jun 2026/);
     expect(screen.getByTestId(`nominee-version-effective-${V2}`).textContent).toMatch(/10 Jun 2026/);
-    expect(screen.getByTestId('nominee-timeline').textContent).not.toMatch(/after (the )?death|suspicious|should be discarded/i);
+    // ⚠ AMENDED by `2026-09-28-261` D1 (AC11) — this used to assert ⛔ nothing says "after death". Now: the PRE-death
+    // version shows ⛔ no warning; the POST-death one shows the D1 line; ⛔ nothing says "suspicious" or "should be
+    // discarded"; ⛔ no radio is checked (pre-select / decide stay banned).
+    expect(screen.queryByTestId(`nominee-warning-post_death_version-${V1}`)).toBeNull();
+    expect(screen.getByTestId(`nominee-warning-post_death_version-${V2}`).textContent).toBe(
+      'Warning: dated on or after the date of death on the accepted certificate',
+    );
+    expect(screen.getByTestId('nominee-timeline').textContent).not.toMatch(/suspicious|should be discarded/i);
+    for (const v of [V1, V2]) {
+      for (const m of ['stands', 'discarded']) {
+        expect((screen.getByTestId(`mark-${v}-${m}`) as HTMLInputElement).checked).toBe(false);
+      }
+    }
     // Announced status — in words, ⛔ never colour alone.
     expect(screen.getByTestId('nominee-declaration-status').getAttribute('role')).toBe('status');
   });
@@ -568,7 +589,7 @@ describe('<NomineeDeclarationPanel> — nominee corrections', () => {
 });
 
 describe('<NomineeCorrectionRaiseForm> — the helpline raise', () => {
-  it('⭐ ⛔ never offers "other" (target: `-237` cl.2; proposal: an ENGINEERING READING of it), and shows the ratified labels', () => {
+  it('⭐ ⛔ never offers "other" (target: `-237` cl.2; proposal: an ENGINEERING READING of it when written, ⭐ RATIFIED by `-261` C1), and shows the ratified labels', () => {
     render(<NomineeCorrectionRaiseForm onRaise={vi.fn(async () => undefined)} sentCount={0} resetKey="k" />);
     const select = screen.getByTestId('raise-relationship') as HTMLSelectElement;
     const options = Array.from(select.options);

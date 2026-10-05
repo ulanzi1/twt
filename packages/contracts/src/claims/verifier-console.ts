@@ -30,6 +30,7 @@ import { ClaimDocumentParityOutcome } from './documents.js';
 // ⭐ The SINGLE clerical-reason tuple (a sibling contract, ⛔ not `@twt/domain` — the browser-bundle
 // rule is untouched). This file used to inline a fourth copy.
 import { NomineeNameClericalReason } from './nominee-name-check.js';
+import { ApprovalWarningKind, ApprovalWarningReasonOption } from './verification-decision.js';
 
 /** The four-state section vocabulary (AC7). Exported for the discriminants + the tests. */
 export const VERIFIER_CONSOLE_SECTION_STATES = [
@@ -337,6 +338,36 @@ export const NomineeNameCheckStatus = z
   .strict();
 export type NomineeNameCheckStatus = z.output<typeof NomineeNameCheckStatus>;
 
+/**
+ * (i) The nominee-change WARNINGS — Story 6.23a (NW8). NON-PII by construction: ⛔ no name of a member, ⛔ no date of
+ * death or of a nominee version (the reasons' `addedAt` is staff metadata), ⛔ no decrypt. The console says it BEFORE
+ * the button does (6.18): with `kinds` non-empty the approval needs a warning reason and a note.
+ */
+export const ApprovalWarningsStatus = z
+  .object({
+    /** `false` ⇒ the section could ⛔ not be read — Approve is disabled with its own words (⛔ never "no warnings"). */
+    available: z.boolean(),
+    kinds: z.array(ApprovalWarningKind),
+    /** `awaiting_determination` ⇔ ⛔ no live determination, or one made against an earlier certificate review. */
+    postDeath: z.enum(['evaluated', 'awaiting_determination']),
+    /** The current keys ⛔ covered by the District Admin's record — only while the live decision is an approval. */
+    uncoveredSinceApproval: z.number().int().nonnegative(),
+    /**
+     * NW7 — why a revise is refused (the strip REPLACES its revise control with words), or `null`.
+     * `unavailable` is a console-only preview state (the warnings read itself failed) — ⛔ not one of
+     * `DecisionNotRevisableReason`'s real domain refusals; it mirrors `available: false` fail-closed.
+     */
+    reviseBlocked: z.enum(['warning_approval_final', 'warnings_not_current', 'unavailable']).nullable(),
+    /** Server-computed: `claim.approve` at the district AND NW14's whole predicate passes for THIS viewer. */
+    viewerCanRecordLateReason: z.boolean(),
+    /** The late keys ⛔ covered by THIS viewer's own District Admin rows (`-279` A1). */
+    lateKeysUncoveredForViewer: z.number().int().nonnegative(),
+    /** The Pariwar's ACTIVE reasons — the built-in generic first. */
+    reasonOptions: z.array(ApprovalWarningReasonOption),
+  })
+  .strict();
+export type ApprovalWarningsStatus = z.output<typeof ApprovalWarningsStatus>;
+
 export const VerifierConsolePacket = z
   .object({
     claimCaseId: z.string(),
@@ -356,6 +387,8 @@ export const VerifierConsolePacket = z
     // Story 6.18 (AC4/AC8) — NON-PII: can this claim be approved, and did the District Admin record
     // an accepted name difference. The NAMES are a separate read behind their own key.
     nomineeNameCheck: NomineeNameCheckStatus,
+    // Story 6.23a (NW8) — NON-PII: which nominee-change warnings show, and the Pariwar's warning reasons.
+    approvalWarnings: ApprovalWarningsStatus,
   })
   .strict();
 export type VerifierConsolePacket = z.output<typeof VerifierConsolePacket>;

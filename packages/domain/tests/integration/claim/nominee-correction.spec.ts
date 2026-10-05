@@ -132,7 +132,7 @@ describe.skipIf(!hasDatabase)('Story 6.20 — the nominee correction (:5433)', {
     expect(res.correctionId).toMatch(/^[0-9a-f-]{36}$/);
   });
 
-  it('⛔ a PROPOSED relationship of `other` is refused too — an ENGINEERING READING of `-237` cl.2, ⛔ not a ratified rule (BigDev 2026-09-24)', async () => {
+  it('⛔ a PROPOSED relationship of `other` is refused too — an ENGINEERING READING of `-237` cl.2 when written (BigDev 2026-09-24), ⭐ RATIFIED by `-261` C1', async () => {
     const { client, cid } = await setup();
     await expect(raiseNomineeCorrection(client, raise(cid, { proposedRelationship: 'other' }))).rejects.toSatisfy(
       refusedWith('relationship_other'),

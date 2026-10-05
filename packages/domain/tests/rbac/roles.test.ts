@@ -387,6 +387,16 @@ describe('defaultRoleBundles — the seeded roles (FR-46)', () => {
     );
   });
 
+  it('Story 6.23a (NW17) — approval_warning_reason.manage is super_admin ONLY, derived (⛔ no roles.ts const)', () => {
+    const KEY = 'approval_warning_reason.manage';
+    const holders = defaultRoleBundles
+      .filter((b) => (b.permissions as readonly string[]).includes(KEY))
+      .map((b) => b.role)
+      .sort();
+    expect(holders).toEqual(['super_admin']);
+    expect(defaultRoleBundles).toHaveLength(13); // ⛔ no new role
+  });
+
   it('Story 11b.13 — pariwar.manage_drive_target_visibility is super_admin ONLY, and pariwar_admin does NOT hold it', () => {
     const VISIBILITY_KEY = 'pariwar.manage_drive_target_visibility';
     const holders = defaultRoleBundles

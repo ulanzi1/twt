@@ -1,0 +1,47 @@
+// Module-local English copy for the Super Admin's WARNING-REASON LIST (Story 6.23a, NW17) — the console precedent:
+// admin chrome copy lives HERE, ⛔ not in @twt/i18n runtime keys. ⛔ No microcopy vocabulary term (Trap 11).
+
+export const approvalWarningReasonsEn = {
+  nav: 'Warning reasons',
+  heading: 'Warning reasons for approving over a nominee-change warning',
+  intro:
+    'Approvers choose one of these reasons when they approve a claim while a nominee-change warning shows, and write their own note. Each reason shows who added it, when, and when to use it.',
+  neverEdited:
+    'A reason can be replaced by a newer one, but it is never edited or deleted. A replaced reason stays in the history, and every approval keeps the words that were chosen.',
+  staffText: 'These words are staff guidance for approvers — they are not shown to members or families.',
+  loading: 'Loading the reasons…',
+  loadError: 'The reasons could not be loaded.',
+  forbidden: 'Only the Super Admin can manage the warning reasons.',
+  activeHeading: 'In use',
+  historyHeading: 'Replaced (kept for the record)',
+  historyEmpty: 'No reason has been replaced yet.',
+  builtIn: 'Built in — every Pariwar has it, and it cannot be replaced.',
+  addedBy: (name: string, date: string) => `Added by ${name} on ${date}`,
+  replacedBy: (label: string, name: string, date: string) => `Replaced by “${label}” (${name}) on ${date}`,
+  replacedOn: (date: string) => `Replaced on ${date}`,
+  replaces: (label: string) => `Replaces “${label}”`,
+  whenToUse: 'When to use',
+  labelField: 'Reason (up to 120 characters)',
+  whenToUseField: 'When to use this reason (up to 1000 characters)',
+  addHeading: 'Add a reason',
+  addSubmit: 'Add the reason',
+  replace: 'Replace with a newer reason',
+  replaceHeading: (label: string) => `Replace “${label}”`,
+  replaceSubmit: 'Save the newer reason',
+  cancel: 'Cancel',
+  saving: 'Saving…',
+  saved: 'Saved.',
+  required: 'Both the reason and when to use it are needed.',
+  stepUpIntro: 'Confirm it is you: a fresh verification code is needed before this change is saved.',
+  stepUpSend: 'Send verification code',
+  stepUpCode: 'Enter code',
+  stepUpVerify: 'Verify and save',
+  errors: {
+    invalid_text: 'The reason or its note is blank, too long, or uses a word the Trust does not use. Please reword it.',
+    already_replaced: 'This reason was already replaced — the list has been reloaded.',
+    not_found: 'That reason is not in this Pariwar’s list.',
+    missing_display: 'A reason is attributed to a named person.',
+    code_exhausted: 'Could not generate a unique reason code — please try again.',
+    generic: 'The change could not be saved.',
+  } as Record<string, string>,
+} as const;

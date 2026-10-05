@@ -15,11 +15,14 @@
 import {
   isReasonCodeValidForOutcome,
   VERIFIER_RATIONALE_MAX_CHARS,
+  type ApprovalWarningKind,
+  type ApprovalWarningReasonOption,
   type VerifierDecisionOutcome,
   type VerifierReasonCode,
 } from '@twt/contracts';
 import { useCallback, useEffect, useState, type ReactElement } from 'react';
 
+import { ApprovalWarningReasonPicker } from './ApprovalWarningReasonPicker.js';
 import { ReasonCodeDropdown } from './ReasonCodeDropdown.js';
 import { verifierConsoleEn as t } from './i18n-en.js';
 
@@ -37,6 +40,8 @@ export interface DecisionSubmit {
   outcome: VerifierDecisionOutcome;
   reasonCode: VerifierReasonCode;
   rationale?: string;
+  /** Story 6.23a (NW5) — the WARNING REASON, in its own field (approve only, while a warning shows). */
+  warningReasonCode?: string;
 }
 
 export interface VerificationDecisionStripProps {
@@ -63,6 +68,14 @@ export interface VerificationDecisionStripProps {
   canApprove?: boolean;
   /** Why approve is unavailable — shown beside the disabled control so it is never a dead button. */
   approveBlockedReason?: string | null;
+  /**
+   * Story 6.23a (NW9) — the nominee-change warnings and the Pariwar's warning reasons. With `kinds` non-empty an
+   * APPROVAL shows the shared picker BESIDE the unchanged approval-reason dropdown, a line per warning, and a REQUIRED
+   * note; the confirmation restates them. ⛔ Deny and Escalate are never gated (invariant 4).
+   */
+  approvalWarnings?: { kinds: readonly ApprovalWarningKind[]; reasonOptions: readonly ApprovalWarningReasonOption[] };
+  /** Story 6.23a (NW7) — when non-null the revise control is REPLACED by its words (⛔ never a dead control). */
+  reviseBlocked?: 'warning_approval_final' | 'warnings_not_current' | 'unavailable' | null;
 }
 
 type PendingAction = { outcome: VerifierDecisionOutcome; label: string } | null;
@@ -76,6 +89,8 @@ export function VerificationDecisionStrip({
   error,
   canApprove = true,
   approveBlockedReason,
+  approvalWarnings,
+  reviseBlocked = null,
 }: VerificationDecisionStripProps): ReactElement {
   const isActive = ACTIVE_STATES.has(claimState);
   const isRevisable = REVISABLE_STATES.has(claimState);
@@ -94,6 +109,8 @@ export function VerificationDecisionStrip({
   const [rationale, setRationale] = useState(isRevisable ? (liveDecision?.rationale ?? '') : '');
   const [pending, setPending] = useState<PendingAction>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
+  // Story 6.23a (NW9) — ⛔ never pre-selected.
+  const [warningReasonCode, setWarningReasonCode] = useState('');
 
   /**
    * ⭐⭐ THE APPROVE FORM CLOSES WHEN APPROVAL STOPS BEING AVAILABLE (code review 2026-09-20).
@@ -120,6 +137,9 @@ export function VerificationDecisionStrip({
       setOutcome(next);
       setValidationError(null);
       setReasonCode((current) => (current !== '' && !isReasonCodeValidForOutcome(next, current) ? '' : current));
+      // NW9 — ⛔ never pre-selected (re-review 2026-10-05): switching away from Approve and back must
+      // ⛔ not leave an earlier pick showing as already chosen when the picker reappears.
+      setWarningReasonCode('');
     },
     [],
   );
@@ -163,8 +183,12 @@ export function VerificationDecisionStrip({
     );
   }
 
+  // Story 6.23a — a warning on an APPROVAL needs a warning reason and a note (NW6). ⛔ Never in the revise window: a
+  // warned approval is never revised (NW7), and an un-warned one being revised has ⛔ no warning to answer.
+  const warningKinds = approvalWarnings?.kinds ?? [];
+  const warningsApply = isActive && outcome === 'approved' && warningKinds.length > 0;
   const rationaleRequired =
-    outcome === 'denied' || reasonCode === 'other';
+    outcome === 'denied' || reasonCode === 'other' || warningsApply;
 
   /** Validate the form, then open the confirmation modal (the attestation). */
   const requestSubmit = (label: string): void => {
@@ -173,8 +197,12 @@ export function VerificationDecisionStrip({
       setValidationError(t.decision.reasonRequiredError);
       return;
     }
+    if (warningsApply && warningReasonCode === '') {
+      setValidationError(t.approvalWarnings.reasonRequiredError);
+      return;
+    }
     if (rationaleRequired && rationale.trim() === '') {
-      setValidationError(t.decision.rationaleRequiredError);
+      setValidationError(warningsApply ? t.approvalWarnings.noteRequiredError : t.decision.rationaleRequiredError);
       return;
     }
     setValidationError(null);
@@ -190,6 +218,7 @@ export function VerificationDecisionStrip({
       outcome: pending.outcome,
       reasonCode,
       ...(rationale.trim() !== '' ? { rationale: rationale.trim() } : {}),
+      ...(warningsApply && warningReasonCode !== '' ? { warningReasonCode } : {}),
     };
     const run = isRevisable && onRevise ? onRevise : onDecision;
     try {
@@ -262,13 +291,18 @@ export function VerificationDecisionStrip({
             {t.decision.escalateShortcut}. {t.decision.escalate}
           </button>
         </div>
+      ) : reviseBlocked !== null ? (
+        // Story 6.23a (NW7) — the revise control is REPLACED by its words, one per reason (⛔ never a dead control).
+        <p className="text-xs" role="status" data-testid={`revise-blocked-${reviseBlocked}`}>
+          {t.approvalWarnings.reviseBlocked[reviseBlocked]}
+        </p>
       ) : (
         <p className="text-xs opacity-70" data-testid="revise-window-note">
           {t.decision.revise}
         </p>
       )}
 
-      {outcome ? (
+      {outcome && !(isRevisable && reviseBlocked !== null) ? (
         <div className="flex flex-col gap-2" data-testid="decision-form">
           <ReasonCodeDropdown
             outcome={outcome}
@@ -280,6 +314,32 @@ export function VerificationDecisionStrip({
             disabled={processing}
             {...(validationError === t.decision.reasonRequiredError ? { error: validationError } : {})}
           />
+
+          {warningsApply ? (
+            // Story 6.23a (NW9) — BESIDE the unchanged approval-reason dropdown: a line per warning, then the picker.
+            <div className="flex flex-col gap-2 rounded border border-status-warn-fg p-2" data-testid="approval-warnings">
+              <h3 className="text-xs font-semibold">{t.approvalWarnings.heading}</h3>
+              <ul className="list-disc pl-4 text-xs">
+                {warningKinds.map((k) => (
+                  <li key={k} data-testid={`approval-warning-${k}`}>
+                    {t.approvalWarnings.kindLine[k]}
+                  </li>
+                ))}
+              </ul>
+              <p className="text-xs">{t.approvalWarnings.stripIntro}</p>
+              <ApprovalWarningReasonPicker
+                idPrefix="decision"
+                options={approvalWarnings?.reasonOptions ?? []}
+                value={warningReasonCode}
+                onChange={(c) => {
+                  setWarningReasonCode(c);
+                  setValidationError(null);
+                }}
+                disabled={processing}
+                error={validationError === t.approvalWarnings.reasonRequiredError ? validationError : null}
+              />
+            </div>
+          ) : null}
 
           <div className="flex flex-col gap-1">
             <label className="text-xs font-medium" htmlFor="rationale-input">
@@ -303,7 +363,7 @@ export function VerificationDecisionStrip({
             <p id="rationale-note" className="text-xs opacity-60">
               {t.decision.rationaleEncryptedNote} {t.decision.rationaleMaxNote}
             </p>
-            {validationError === t.decision.rationaleRequiredError ? (
+            {validationError === t.decision.rationaleRequiredError || validationError === t.approvalWarnings.noteRequiredError ? (
               <p className="text-xs text-status-fail-fg" role="alert" data-testid="rationale-error">
                 {validationError}
               </p>
@@ -343,6 +403,18 @@ export function VerificationDecisionStrip({
             <p className="text-sm font-semibold" data-testid="confirm-action-label">
               {pending.label}
             </p>
+            {warningsApply ? (
+              // Story 6.23a (NW9) — the confirmation restates the warnings and the chosen warning reason.
+              <div className="text-xs" data-testid="confirm-warnings">
+                <p>
+                  {t.approvalWarnings.confirmWarnings}: {warningKinds.map((k) => t.approvalWarnings.kindLine[k]).join(' ')}
+                </p>
+                <p data-testid="confirm-warning-reason">
+                  {t.approvalWarnings.confirmReason}:{' '}
+                  {approvalWarnings?.reasonOptions.find((o) => o.code === warningReasonCode)?.label ?? warningReasonCode}
+                </p>
+              </div>
+            ) : null}
             <div className="flex justify-end gap-2">
               <button
                 type="button"

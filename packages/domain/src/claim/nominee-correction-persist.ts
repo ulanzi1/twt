@@ -21,9 +21,10 @@
 //     superseded version is refused (and so is a raise with ⛔ no live determination at all);
 //   · ⭐⭐ the target's relationship is KNOWN — `other` FORECLOSES the correction, refused HERE, before
 //     either approval (`-237` cl.2; a REVERSAL of v0.1–v0.4's default). ⚠ The PROPOSED relationship may
-//     not be `other` either — an ENGINEERING READING of cl.2's rationale ("we cannot establish
-//     relationship"), ⛔ NOT a ratified extension of the Panel's ruling (which covers the TARGET only;
-//     BigDev 2026-09-24). Re-examine it when the Panel takes up `-237`'s open in-law/grandparent item.
+//     not be `other` either — written as an ENGINEERING READING of cl.2's rationale ("we cannot establish
+//     relationship"), ⛔ then NOT a ratified extension of the Panel's ruling (which covered the TARGET only;
+//     BigDev 2026-09-24) — ⭐ since RATIFIED by `2026-09-28-261` C1 (*"a correction cannot change a relationship
+//     TO `other`"*; recorded by Story 6.23a). The text before the ⭐ is kept as the record of what it said.
 //     A DIFFERENCE between the two known relationships is SHOWN, ⛔ never blocked;
 //   · ONE open correction per claim + rank (the partial unique index is the backstop).
 // DISTRICT ADMIN (`decideNomineeCorrectionAsDistrictAdmin`): `da_pending` → `pa_pending` | `declined`.
@@ -161,9 +162,9 @@ export async function raiseNomineeCorrection(
   if (!isKnownNomineeRelationship(target.relationship)) {
     throw refuse('relationship_other', 'the nominee\'s relationship is `other` — no correction can be made (`-237` cl.2)');
   }
-  // ⚠ ENGINEERING READING of `-237` cl.2, ⛔ NOT a ratified rule — see the header (BigDev 2026-09-24).
+  // ⚠ Written as an ENGINEERING READING of `-237` cl.2 (BigDev 2026-09-24) — ⭐ RATIFIED by `2026-09-28-261` C1.
   if (!isKnownNomineeRelationship(input.proposedRelationship)) {
-    throw refuse('relationship_other', 'a correction must name a known relationship (engineering reading of `-237` cl.2)');
+    throw refuse('relationship_other', 'a correction must name a known relationship (`-237` cl.2; ratified by `-261` C1)');
   }
   if (input.raiseNoteCiphertext.trim() === '') throw refuse('missing_note', 'a note explaining the mistake is required');
 

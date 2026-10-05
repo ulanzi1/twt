@@ -13,6 +13,10 @@
 //   · The form PRE-SELECTS NOTHING: every version starts unmarked. ⛔ No version is highlighted, labelled
 //     "after death", sorted by suspicion or pre-marked from the date — the server VALIDATES the marks
 //     against the date and refuses an inconsistent set; it ⛔ never fills one in, and neither does this.
+//     ⚠ AMENDED by `2026-09-28-261` D1 (built by Story 6.23a, NW10): *"highlighted, labelled 'after death'"* is
+//     superseded — a version dated on or after the death (or changed within 90 days before the first claim) now
+//     carries a WARNING LINE in words, and an applied correction its FQ1 LABEL (`-262` FQ1). ⛔ Pre-selecting,
+//     pre-marking, sorting or filtering by a warning stay banned; the rows keep their order. Kept as the record.
 //   · A correction's target and proposal are shown side by side, relationship beside relationship.
 //     ⛔ No diff, no "looks different" hint — two human approvals are the only defence (T15).
 // ⭐ PURE, the `<NomineeNameCheckPanel>` shape: every input arrives as a prop; the parent owns the
@@ -97,6 +101,11 @@ function fmt(iso: string): string {
 
 /** An instant in IST — shared with the Pariwar Admin's pages (the refusal list). */
 export const formatIst = fmt;
+
+/** A calendar day in IST (the 90-day warning's "first claim filed" date — the day is what the window counts). */
+function formatIstDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'medium' });
+}
 
 type Readable = { state: 'readable'; value: string } | { state: 'unreadable' } | { state: 'anonymized' } | null | undefined;
 
@@ -213,6 +222,12 @@ export function NomineeDeclarationPanel(props: NomineeDeclarationPanelProps): Re
       ) : null}
 
       {/* ── 1. The timeline ── */}
+      {/* Story 6.23a (NW10) — ⛔ no accepted date ⇒ ⛔ no post-death warning can be shown, and the panel says so. */}
+      {!timeline.warning_basis.death_date_known ? (
+        <p className="text-xs" data-testid="nominee-warning-date-not-known">
+          {t.warning.dateNotKnown}
+        </p>
+      ) : null}
       <table className="text-sm" data-testid="nominee-timeline">
         <thead>
           <tr>
@@ -236,7 +251,23 @@ export function NomineeDeclarationPanel(props: NomineeDeclarationPanelProps): Re
                 <td>v{v.version_no}</td>
                 <td data-testid={`nominee-version-recorded-${v.version_id}`}>{fmt(v.recorded_at)}</td>
                 <td data-testid={`nominee-version-effective-${v.version_id}`}>{fmt(v.effective_at)}</td>
-                <td>{t.source[v.source]}</td>
+                <td>
+                  {t.source[v.source]}
+                  {/* Story 6.23a — the FQ1 label VERBATIM (Trap 12), then a warning line per kind, in words (⛔ never
+                      colour alone). ⛔ Nothing here marks, sorts or pre-selects the row. */}
+                  {v.correction_label ? (
+                    <span className="block text-xs" data-testid={`nominee-correction-label-${v.version_id}`}>
+                      {t.correctionLabel(v.correction_label.district_admin_display, v.correction_label.pariwar_admin_display)}
+                    </span>
+                  ) : null}
+                  {v.warnings.map((k) => (
+                    <span key={k} className="block text-xs text-status-warn-fg" data-testid={`nominee-warning-${k}-${v.version_id}`}>
+                      {k === 'post_death_version'
+                        ? t.warning.post_death_version
+                        : t.warning.recent_nominee_change(formatIstDate(timeline.warning_basis.first_filed_at))}
+                    </span>
+                  ))}
+                </td>
                 <td>{v.kind === 'vacated' ? t.kindVacated : nomineeRelationshipLabel(v.relationship)}</td>
                 <td>
                   {snap ? (
@@ -642,7 +673,8 @@ export function NomineeCorrections(props: {
 /**
  * The helpline operator raises a correction on the family's behalf (CC2) — mounted ONLY where its viewer
  * holds `claim.raise_nominee_correction` (the helpline page). `other` is ⛔ not offered (`-237` cl.2 for the
- * target; for the proposal an ENGINEERING READING of it, ⛔ not a ratified rule — BigDev 2026-09-24).
+ * target; for the proposal an ENGINEERING READING of it when written, ⛔ then not a ratified rule — BigDev 2026-09-24;
+ * ⭐ since RATIFIED by `2026-09-28-261` C1).
  * ⭐ After a SUCCESSFUL send the form clears and says so (`raised`); on a failure it keeps what was typed.
  */
 export function NomineeCorrectionRaiseForm(props: {

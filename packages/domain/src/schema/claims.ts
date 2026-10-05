@@ -37,7 +37,7 @@
 // Naming discipline per architecture line 3663-3677: DB columns snake_case, TS
 // fields camelCase. Table snake_case-plural. Header style mirrors schema/members.ts.
 
-import { bigint, index, pgEnum, pgTable, timestamp, uuid } from 'drizzle-orm/pg-core';
+import { bigint, index, pgEnum, pgTable, timestamp, unique, uuid } from 'drizzle-orm/pg-core';
 
 import type { ClaimId, MemberId, PariwarId } from '../ids/index.js';
 
@@ -162,6 +162,10 @@ export const claims = pgTable(
     index('claims_pariwar_id_idx').on(t.pariwarId),
     // The overlay/validity consumers filter claims by the deceased member.
     index('claims_deceased_member_id_idx').on(t.deceasedMemberId),
+    // Redundant for uniqueness (claim_case_id alone is already the PK) — backs a COMPOSITE FK from a
+    // dependent's own (pariwar_id, …) pair, so a cross-tenant row can never slip past a bypassed RLS
+    // check (added in migration 0143; code review 2026-10-05, mirroring approval_warning_reasons' reason_fk).
+    unique('claims_pariwar_claim_case_uq').on(t.pariwarId, t.claimCaseId),
   ],
 );
 

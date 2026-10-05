@@ -14,7 +14,8 @@
 //   · the tombstone coherence CHECK (T4 — a vacated rank can ⛔ never claim a mobile);
 //   · ONE live determination per claim (D4) and ONE open correction per claim + rank (D7);
 //   · the two-DIFFERENT-approvers CHECK (D7) and the proposed-`other` CHECK — the DB backstop of an
-//     ENGINEERING READING of `-237` cl.2 (⛔ not a ratified rule; BigDev 2026-09-24);
+//     ENGINEERING READING of `-237` cl.2 when written (⛔ then not a ratified rule; BigDev 2026-09-24 — ⭐ since RATIFIED by
+//     `2026-09-28-261` C1);
 //   · (migration 0121) a determination's SUPERSESSION is ONE-WAY — a superseded row is never revived.
 //
 // Live DB only (`twt-test-pg :5433`); each test runs in its own rolled-back transaction.
@@ -671,7 +672,7 @@ describe.skipIf(!hasDatabase)('migration 0119 — nominee declaration history: R
     ).rejects.toSatisfy((err: unknown) => pgCode(err) === '23505');
   });
 
-  it('⭐ ⛔ a proposed relationship of `other` is refused at the DB (backstop of an ENGINEERING READING of `-237` cl.2, ⛔ not a ratified rule — 23514)', async () => {
+  it('⭐ ⛔ a proposed relationship of `other` is refused at the DB (backstop of an ENGINEERING READING of `-237` cl.2 when written, ⭐ RATIFIED by `-261` C1 — 23514)', async () => {
     const { tx, memberId, claimCaseId } = await seedMemberAndClaim();
     const v = await insertVersion(memberId);
     await expect(

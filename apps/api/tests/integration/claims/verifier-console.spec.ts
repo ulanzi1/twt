@@ -26,6 +26,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import type { AppDeps } from '../../../src/context.js';
 import {
+  assembleApprovalWarnings,
   assembleVerifierConsole,
   VERIFIER_CONSOLE_MAX_READS,
 } from '../../../src/modules/claims/claims.verifier-console.handlers.js';
@@ -1084,6 +1085,51 @@ describe.skipIf(!hasDatabase)('Verifier-console read surface — E2E (:5433)', (
     expect((baseline.packet.groundInspection as { inheritedFrom?: unknown }).inheritedFrom).toBeUndefined();
     expect(readCount - baseline.readCount, 'the two inheritance-only reads, booked').toBe(2);
     expect(actual - baseline.actual, 'statements Postgres received for the inheritance vs reads booked').toBe(readCount - baseline.readCount);
+  });
+
+  it('⭐⭐ Story 6.23a (Trap 10) — the ceiling is 19, and the warnings section books EXACTLY one read and sends EXACTLY one statement', async () => {
+    // The ledger above the constant says +1 → 19. ⚠ The shipped tests catch over-reporting only (`reported <=
+    // actual`) and a ceiling breach (`readCount <= MAX`); a forgotten `reads.bump()` stays green there. ⇒ the
+    // section is measured on its OWN: its booked reads AND the statements Postgres receives, each exactly 1 — the
+    // coverage AND the Pariwar's reason list ride ONE statement.
+    expect(VERIFIER_CONSOLE_MAX_READS).toBe(19);
+    const pariwarId = randomUUID();
+    const deceased = await seedDeceasedMember(pariwarId, DISTRICT);
+    const claimCaseId = await seedClaim(pariwarId, deceased);
+    const scopeTx = await openScopeTx(deps, pariwarId);
+    try {
+      let actual = 0;
+      const client = scopeTx.client as unknown as { query: (...a: unknown[]) => unknown };
+      const realQuery = client.query.bind(client);
+      client.query = (...args: unknown[]) => {
+        actual += 1;
+        return realQuery(...args);
+      };
+      let booked = 0;
+      const section = await assembleApprovalWarnings(
+        {
+          db: scopeTx.tx,
+          pariwarId,
+          claimCaseId,
+          district: DISTRICT,
+          actorId: randomUUID(),
+          grants: [{ pariwarId, role: 'super_admin', scopeDimension: 'global', scopeValue: null }],
+          traceId: null,
+        },
+        ids.claimId(claimCaseId),
+        'verifier_review',
+        { bump: () => (booked += 1) },
+      );
+      client.query = realQuery as never;
+      expect(section.available).toBe(true);
+      expect(section.reasonOptions[0]).toMatchObject({ code: 'warnings_reviewed', addedByDisplay: null });
+      expect(booked, 'the section\'s booked reads').toBe(1);
+      expect(actual, 'the statements Postgres received for the section').toBe(1);
+      await closeScopeTx(scopeTx, true);
+    } catch (err) {
+      await closeScopeTx(scopeTx, false);
+      throw err;
+    }
   });
 
   it('⭐ AC5 site D — the console\'s name-check status reads the EFFECTIVE declaration: a change to the CURRENT rows alone does ⛔ not stale it', async () => {

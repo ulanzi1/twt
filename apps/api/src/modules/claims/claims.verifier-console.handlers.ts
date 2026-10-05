@@ -32,6 +32,7 @@ import {
   type ValidityServiceDeps,
 } from '@twt/validity-service';
 import type {
+  ApprovalWarningsStatus,
   NomineeNameCheckStatus,
   DocumentReviewSection,
   GroundInspectionSection,
@@ -147,7 +148,18 @@ const SIGNED_URL_TTL_SECONDS = 300;
  * copy). Conditional — it runs ONLY when the certificate snapshot is already `accepted` (nothing to compare
  * otherwise), so a claim with no accepted certificate pays nothing for it.
  */
-export const VERIFIER_CONSOLE_MAX_READS = 18;
+/*
+ * ⭐ STORY 6.23a's ONE READ (NW8) — the explanation this counter demands. `-262` FQ2 / `-264` FQ12 make a WARNING
+ * REASON and a note a precondition of approving a claim that shows a nominee-change warning — so a console that could
+ * not say whether a warning shows would offer an Approve that 409s `warning_reason_required` (6.18's lesson, again).
+ * ⛔ It is the MINIMUM: `readClaimApprovalWarnings` answers the kinds, the coverage (`-277` Q3 B) AND the Pariwar's
+ * active reasons in ONE statement (`json_agg` subqueries) — the reason list does ⛔ not cost a second read. It
+ * decrypts ⛔ nothing (fact 2: the post-death warning is read from the live determination's marks, ⛔ never the date).
+ * It runs LAST, so a SQL throw inside it cannot abort the scope transaction under any later read (it has ⛔ no
+ * SAVEPOINT). ⭐ Ledger line:
+ *   + Story 6.23a (NW8): the nominee-change warnings, their coverage and the reason list   +1  → 19
+ */
+export const VERIFIER_CONSOLE_MAX_READS = 19;
 
 /** Counts the assembler's top-level bounded source reads (the no-N+1 fan-out width). */
 class ReadCounter {
@@ -283,6 +295,9 @@ export async function assembleVerifierConsole(
   // ── (h) nominee name-check status (Story 6.18) — NON-PII; ⛔ no name, ⛔ no note, ⛔ no decrypt ──
   const nomineeNameCheck = await assembleNomineeNameCheckStatus(ctx, claimCaseId, core.claim.deceasedMemberId, reads);
 
+  // ── (i) the nominee-change warnings (Story 6.23a, NW8) — NON-PII; ⛔ no decrypt. ⚠ LAST (⛔ no SAVEPOINT). ─────
+  const approvalWarnings = await assembleApprovalWarnings(ctx, claimCaseId, core.claim.currentState as string, reads);
+
   const packet: VerifierConsolePacket = {
     claimCaseId: ctx.claimCaseId,
     pariwarId: ctx.pariwarId,
@@ -298,6 +313,7 @@ export async function assembleVerifierConsole(
     recentPrecedents,
     shepherd,
     nomineeNameCheck,
+    approvalWarnings,
   };
   return { packet, readCount: reads.count };
 }
@@ -391,6 +407,92 @@ async function assembleNomineeNameCheckStatus(
     );
     // ⛔ `accountsComplete: false` here would be a LIE that reads as "-226 cl.7 is unmet".
     return { available: false, accountsComplete: false, currentAndPassing: false, differenceReasons: [] };
+  }
+}
+
+/** The `claim.approve` key (D-B) — NW14's route gate, judged here for `viewerCanRecordLateReason`. */
+const CLAIM_APPROVE_KEY = 'claim.approve';
+
+/**
+ * (i) The nominee-change WARNINGS (Story 6.23a, NW8; `-261` D1, `-262` FQ8 A, `-264` FQ12, `-277` Q3 B). ONE counted
+ * read, ⛔ no decrypt, ⛔ no name, ⛔ no date of death or of a version.
+ *   · `uncoveredSinceApproval` — current keys ⛔ covered by the District Admin's record (0 unless the live decision is
+ *     an approval);
+ *   · `reviseBlocked` — NW7's predicate with its reason, so the strip REPLACES its revise control with words;
+ *   · `viewerCanRecordLateReason` — the `viewer.canReview` shape (6.21a D10): `claim.approve` at the district AND
+ *     NW14's WHOLE refusal predicate passes for THIS viewer (`-279` A1, A12) — the console ⛔ never offers a panel that
+ *     would 409;
+ *   · `lateKeysUncoveredForViewer` — the late keys ⛔ covered by THIS viewer's own District Admin rows.
+ * Fail-soft like `nomineeNameCheck`: a throw ⇒ `available: false` (Approve disabled with its own words — ⛔ never
+ * "no warnings" on an unknown).
+ * ⭐ EXPORTED for Trap 10's EXACT test only (the section books ONE read and issues ONE statement); the route reaches it
+ * through `assembleVerifierConsole`.
+ */
+export async function assembleApprovalWarnings(
+  ctx: VerifierConsoleContext,
+  claimCaseId: ids.ClaimId,
+  claimState: string,
+  reads: { bump(): void },
+): Promise<ApprovalWarningsStatus> {
+  try {
+    reads.bump();
+    const w = await claim.readClaimApprovalWarnings(ctx.db, ids.pariwarId(ctx.pariwarId), claimCaseId);
+    const approved = w.liveDecision?.outcome === 'approved';
+    const reviseBlocked: ApprovalWarningsStatus['reviseBlocked'] = !approved
+      ? null
+      : w.coverage.records.length > 0 || w.kinds.length > 0
+        ? 'warning_approval_final'
+        : w.postDeath === 'awaiting_determination'
+          ? 'warnings_not_current'
+          : null;
+    const canApprove = rbac.hasPermission(
+      ctx.grants,
+      CLAIM_APPROVE_KEY,
+      { dimension: 'district', value: ctx.district, pariwarId: ctx.pariwarId },
+      ctx.geoResolver ? { resolver: ctx.geoResolver } : undefined,
+    );
+    const viewerCanRecordLateReason =
+      canApprove &&
+      approved &&
+      (claim.LATE_WARNING_REASON_RECORDABLE_STATES as readonly string[]).includes(claimState) &&
+      w.postDeath === 'evaluated' &&
+      !claim.lateWarningNothingUncoveredFor(w, ctx.actorId);
+    return {
+      available: true,
+      kinds: [...w.kinds],
+      postDeath: w.postDeath,
+      uncoveredSinceApproval: claim.uncoveredKeys(w).length,
+      reviseBlocked,
+      viewerCanRecordLateReason,
+      lateKeysUncoveredForViewer: approved ? claim.lateKeysUncoveredFor(w, ctx.actorId).length : 0,
+      reasonOptions: w.reasonOptions.map((o) => ({
+        code: o.code,
+        reasonId: o.reasonId,
+        label: o.label,
+        whenToUse: o.whenToUse,
+        addedByDisplay: o.addedByDisplay,
+        addedAt: o.addedAt?.toISOString() ?? null,
+        replacesLabel: o.replacesLabel,
+      })),
+    };
+  } catch (err) {
+    ctx.log?.warn(
+      { err: err instanceof Error ? err.name : 'unknown', claimCaseId: ctx.claimCaseId },
+      'verifier-console: nominee-change warnings unavailable; failing closed to cannot-approve',
+    );
+    return {
+      available: false,
+      kinds: [],
+      postDeath: 'awaiting_determination',
+      uncoveredSinceApproval: 0,
+      // Fail closed like `available` — ⛔ never `null` ("not blocked"), or the revise control would show as
+      // normal and then 409 on submit instead of telling the District Admin upfront. `'unavailable'` is a
+      // console-only preview state (no matching `DecisionNotRevisableReason` — the read simply didn't run).
+      reviseBlocked: 'unavailable',
+      viewerCanRecordLateReason: false,
+      lateKeysUncoveredForViewer: 0,
+      reasonOptions: [],
+    };
   }
 }
 

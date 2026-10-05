@@ -13,12 +13,17 @@
 // ⛔⛔ Invariant 1 / invariant 6 — ⛔ no response carries a "changed after death" flag, a highlight, a
 // pre-selected mark or a name diff. The timeline shows each version's `recorded_at` AND `effective_at`
 // beside the District Admin's own certificate-date field, and the District Admin decides.
+// ⚠ AMENDED by `2026-09-28-261` D1 (built by Story 6.23a, NW10): the *"changed after death" flag* and the *highlight* are
+// superseded — the timeline now carries each version's WARNINGS (`post_death_version`, `recent_nominee_change`) and an
+// approved correction's LABEL (`-262` FQ1). ⛔ A pre-selected mark, a sort / filter by warning and a name diff stay
+// banned; the District Admin still decides. The text above is kept as the record of what it said.
 
 import { z } from 'zod';
 
 import { EnglishScriptName, MobileNumber } from '../_common/primitives.js';
 import { NomineeRelationship } from '../nominee/declaration.js';
 import { ReadableErasable, ReadableName, ReadableNomineeName } from './nominee-name-check.js';
+import { ApprovalWarningKind } from './verification-decision.js';
 
 const Rank = z.union([z.literal(1), z.literal(2)]);
 const IsoInstant = z.string();
@@ -47,6 +52,16 @@ export const NomineeDeclarationVersionView = z
     recorded_at: IsoInstant,
     effective_at: IsoInstant,
     corrects_version_id: z.string().uuid().nullable(),
+    /** Story 6.23a (NW10; `-261` D1, `-262` FQ8 A) — the warnings this version carries. `[]` for a correction. */
+    warnings: z.array(ApprovalWarningKind),
+    /**
+     * Story 6.23a (NW4; `-262` FQ1) — an APPLIED correction's label: the two approvers' SNAPSHOTTED names, rendered
+     * VERBATIM as *"corrected after the death — approved by {district_admin} and {pariwar_admin}"*. `null` otherwise.
+     */
+    correction_label: z
+      .object({ district_admin_display: z.string(), pariwar_admin_display: z.string() })
+      .strict()
+      .nullable(),
   })
   .strict();
 export type NomineeDeclarationVersionView = z.output<typeof NomineeDeclarationVersionView>;
@@ -129,6 +144,12 @@ export const NomineeDeclarationTimelineResponse = z
       .object({ review_id: z.string().uuid(), accepted_date: ReadableErasable })
       .strict()
       .nullable(),
+    /**
+     * Story 6.23a (NW10) — what the warnings were judged against: whether the accepted date of death is KNOWN (⛔ no
+     * accepted certificate, or an unreadable / erased date ⇒ ⛔ no `post_death_version` flag, and the panel says the
+     * date is not known yet), and the FIRST claim's filing instant the 90 days count back from (Trap 3).
+     */
+    warning_basis: z.object({ death_date_known: z.boolean(), first_filed_at: IsoInstant }).strict(),
   })
   .strict();
 export type NomineeDeclarationTimelineResponse = z.output<typeof NomineeDeclarationTimelineResponse>;
@@ -208,8 +229,8 @@ export type NomineeDeterminationWriteResponse = z.output<typeof NomineeDetermina
  * Raise a genuine-mistake correction — by the helpline operator (admin route) or by the family through
  * the app (member route). The `proposed` details are an INPUT, so the name carries the English-script
  * gate (`-227` cl.9). ⚠ `other` is refused by the DOMAIN (a typed 409, ⛔ not a wire 400) for the TARGET
- * (`-237` cl.2) and for the PROPOSAL — the latter an ENGINEERING READING of cl.2, ⛔ not a ratified rule
- * (BigDev 2026-09-24).
+ * (`-237` cl.2) and for the PROPOSAL — the latter was an ENGINEERING READING of cl.2 (BigDev 2026-09-24), now
+ * ⭐ RATIFIED by `2026-09-28-261` C1 (*"a correction cannot change a relationship TO `other`"*).
  * `target_version_id` is optional: when omitted the server uses the rank's currently STANDING version,
  * and when given it must BE that version.
  */

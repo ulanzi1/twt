@@ -32,9 +32,14 @@ import {
   VerifierConsoleResponse,
   type VerifierConsoleResponse as VerifierConsole,
   VerifierDecisionResponse,
+  LateWarningReasonResponse,
+  ApprovalWarningReasonListResponse,
+  ApprovalWarningReasonWriteResponse,
   type VerifierDecisionResponse as VerifierDecision,
   type VerifierDecisionRequest as VerifierDecisionPayload,
   type VerifierDecisionReviseRequest as VerifierDecisionRevisePayload,
+  type LateWarningReasonRequest as LateWarningReasonPayload,
+  type ApprovalWarningReasonWriteRequest as ApprovalWarningReasonWritePayload,
   // Story 6.15 — the verifier concealment-linkage assessment surface (record/revise).
   ConcealmentAssessmentResponse,
   type ConcealmentAssessmentResponse as ConcealmentAssessment,
@@ -1846,6 +1851,17 @@ export function postVerifierDecision(
   });
 }
 
+/**
+ * Story 6.23a (NW14) — POST the District Admin's (any `claim.approve` holder's) reason and note for a nominee-change
+ * warning that appeared AFTER the approval. A record, ⛔ never a decision; ⛔ no step-up (the decision route's posture).
+ */
+export function postLateWarningReason(pariwarId: string, claimCaseId: string, body: LateWarningReasonPayload) {
+  return apiFetch(`${decisionBase(pariwarId, claimCaseId)}/late-warning-reason`, LateWarningReasonResponse, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
 /** POST a same-outcome revision (reason/rationale correction; step-up-gated server-side). */
 export function reviseVerifierDecision(
   pariwarId: string,
@@ -2773,4 +2789,26 @@ export function listSurveyFreeText(
     `${surveysBase(pariwarId)}/${encodeURIComponent(surveyId)}/questions/${encodeURIComponent(questionId)}/free-text?${q.toString()}`,
     SurveyFreeTextListResponse,
   );
+}
+
+// ── The Super Admin's WARNING-REASON LIST (Story 6.23a, NW17) ─────────────────────────────────────────────────
+// `approval_warning_reason.manage` (super_admin ONLY) — the server's chain is the boundary. Both writes are
+// step-up-gated ('approval_warning_reason_manage'): a 403 `auth.step_up_required` is the signal to elevate.
+// ⛔ There is ⛔ no edit and ⛔ no delete call — a reason is never edited or deleted.
+
+const reasonsBase = (pariwarId: string): string => `/api/v1/p/${encodeURIComponent(pariwarId)}/admin/approval-warning-reasons`;
+
+export function getApprovalWarningReasons(pariwarId: string) {
+  return apiFetch(reasonsBase(pariwarId), ApprovalWarningReasonListResponse);
+}
+
+export function addApprovalWarningReason(pariwarId: string, body: ApprovalWarningReasonWritePayload) {
+  return apiFetch(reasonsBase(pariwarId), ApprovalWarningReasonWriteResponse, { method: 'POST', body: JSON.stringify(body) });
+}
+
+export function replaceApprovalWarningReason(pariwarId: string, reasonId: string, body: ApprovalWarningReasonWritePayload) {
+  return apiFetch(`${reasonsBase(pariwarId)}/${encodeURIComponent(reasonId)}/replace`, ApprovalWarningReasonWriteResponse, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
 }

@@ -6,6 +6,8 @@
 //     without its key (403), and refused across Pariwars (403 — cross-tenant);
 //   · the timeline carries METADATA only (⛔ no name, mobile, address, date) and ⛔ no highlight; the
 //     snapshots decrypt ON DEMAND and audit with ids only;
+//     ⚠ AMENDED by `2026-09-28-261` D1 (built by Story 6.23a, AC11): *"⛔ no highlight"* now means ⛔ no pre-selection
+//     and ⛔ no suggested mark — the timeline DOES carry each version's warnings and an applied correction's label;
 //   · the determination validates against D6 (a lying mark is a typed 409) and returns the new status;
 //   · the correction runs raise (helpline) → District Admin → Pariwar Admin through HTTP; `other` is a
 //     typed 409 at the raise; a correction on a claim that does not exist is a 404 (⚠ a 404, ⛔ not a
@@ -325,7 +327,7 @@ describe.skipIf(!hasDatabase)('Story 6.20 — the nominee declaration surface �
   });
 
   // ── AC3 — the timeline + the snapshots ────────────────────────────────────────────────────────
-  it('⭐ AC3 — the timeline is METADATA ONLY (recorded_at AND effective_at), ⛔ no name and ⛔ no "after the death" label', async () => {
+  it('⭐ AC3 — the timeline is METADATA ONLY (recorded_at AND effective_at), ⛔ no name — and (Story 6.23a) each version\'s WARNINGS', async () => {
     const w = await world({ declarations: [PRE, POST_DEATH] });
     const { client } = await actor(w.pariwarId, 'district_admin', 'district', w.district, 'Anita (District Admin)');
     const res = await client.inject({ method: 'GET', url: `${base(w.pariwarId, w.claimCaseId)}/nominee-declaration` });
@@ -336,12 +338,20 @@ describe.skipIf(!hasDatabase)('Story 6.20 — the nominee declaration surface �
     expect(versions).toHaveLength(2);
     for (const v of versions) expect(Object.keys(v)).toEqual(expect.arrayContaining(['recorded_at', 'effective_at', 'source']));
     const text = res.body;
-    for (const forbidden of ['Asha', 'Mohan', '9876543210', 'after_death', 'post_death', 'highlight', 'suggested']) {
+    // ⚠ `post_death` is ⛔ no longer forbidden — `2026-09-28-261` D1 (built by Story 6.23a) makes the system SHOW a
+    // warning on a version dated on or after the death. Names, mobiles, a highlight and a suggested mark stay banned.
+    for (const forbidden of ['Asha', 'Mohan', '9876543210', 'after_death', 'highlight', 'suggested']) {
       expect(text).not.toContain(forbidden);
     }
+    // ⭐ Story 6.23a (NW10) — the POST_DEATH version (2026-06-10, ≥ the accepted CERT 2026-05-01) carries the warning;
+    // the PRE version ⛔ none; ⛔ no correction label; the basis says the date is known.
+    const [pre, post] = [...versions].sort((a, b) => Number(a.version_no) - Number(b.version_no));
+    expect(pre).toMatchObject({ warnings: [], correction_label: null });
+    expect(post).toMatchObject({ warnings: ['post_death_version'], correction_label: null });
+    expect(body.warning_basis).toMatchObject({ death_date_known: true });
     // Family 8 — the read is audited, naming the claim (a `claim:<uuid>` locator), with ids only.
     const [line] = auditsFor('admin_nominee_declaration.timeline_read', w.claimCaseId);
-    expect(line).toMatchObject({ resourceLocator: `claim:${w.claimCaseId}`, context: { version_count: 2 } });
+    expect(line).toMatchObject({ resourceLocator: `claim:${w.claimCaseId}`, context: { version_count: 2, warning_count: 1 } });
   });
 
   it('⭐ D10 — the snapshots DECRYPT on demand, and the audit line carries ids only', async () => {

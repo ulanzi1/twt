@@ -265,6 +265,14 @@ export const NOMINEE_CORRECTION_FIELD_CLASS = 'nominee_correction';
 export const DEATH_CERTIFICATE_REVIEW_FIELD_CLASS = 'death_certificate_review';
 
 /**
+ * Story 6.23a (NW13, NW14) — the APPROVAL-OVER-WARNING record's Tier-1 field class. The late-warning reason's note
+ * (`claim_warning_approvals.note_ciphertext`) is encrypted under this before the domain writer. Matches
+ * `piiColumn(1, 'claim_warning_approval')`. ⛔ NEVER in an event / audit line / log / the console packet. The note is
+ * written ONCE and ⛔ never replaced (NW18) — only erasure overwrites it (`anonymizeMember`, by-value twin there).
+ */
+export const CLAIM_WARNING_APPROVAL_FIELD_CLASS = 'claim_warning_approval';
+
+/**
  * The appeal Tier-1 field classes (Story 6.16, D-A/AC2/AC3). The appeal routes encrypt the mandatory reviewer
  * rationale (Stage 1/3 decisions + the Stage-2 finalize audit row) under `CLAIM_APPEAL_DECISION_FIELD_CLASS`
  * and each panel vote's rationale under `CLAIM_APPEAL_VOTE_FIELD_CLASS`, before the domain writer; authorized

@@ -30,7 +30,7 @@
 // Naming discipline per architecture L3663-3677: DB columns snake_case, TS camelCase.
 
 import { sql } from 'drizzle-orm';
-import { type AnyPgColumn, index, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { type AnyPgColumn, index, pgTable, text, timestamp, unique, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 
 import { verifierDecisionOutcomeEnum, verifierReasonCodeEnum } from '../claim/verifier-decision.js';
 import { piiColumn } from '../encryption/column.js';
@@ -106,6 +106,10 @@ export const claimVerifierDecisions = pgTable(
     uniqueIndex('claim_verifier_decisions_one_live_per_claim_uq')
       .on(t.claimCaseId)
       .where(sql`superseded_at IS NULL`),
+    // Redundant for uniqueness (decision_id alone is already the PK) — backs a COMPOSITE FK from a
+    // dependent's own (pariwar_id, …) pair, so a cross-tenant row can never slip past a bypassed RLS
+    // check (added in migration 0143; code review 2026-10-05, mirroring approval_warning_reasons' reason_fk).
+    unique('claim_verifier_decisions_pariwar_decision_uq').on(t.pariwarId, t.decisionId),
   ],
 );
 

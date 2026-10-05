@@ -582,3 +582,87 @@ export class ClaimContactWriteRefusedError extends Error {
     this.status = CLAIM_CONTACT_REFUSAL_STATUS[code];
   }
 }
+
+// ── Story 6.23a — the nominee-change warnings, the warning reason and the reason list ──────────────
+
+/** NW6 (`-262` FQ2, `-264` FQ12) — approving while a warning shows needs a WARNING REASON from the Pariwar's
+ *  list (`missing: 'reason'`) and a note (`missing: 'note'`). ⛔ NEVER a denial: the claim is ⛔ not refused —
+ *  the approver chooses a reason and writes a note, or does not approve. → 409
+ *  `verifier_decision.warning_reason_required`, `details: { kinds, missing }`. */
+export class ApprovalWarningReasonRequiredError extends Error {
+  public readonly name = 'ApprovalWarningReasonRequiredError';
+  public constructor(
+    public readonly claimCaseId: string,
+    public readonly kinds: readonly string[],
+    public readonly missing: 'reason' | 'note',
+  ) {
+    super(`[approval-warnings] claim ${claimCaseId} shows ${kinds.join(', ')} — an approval needs a warning reason and a note (${missing} missing)`);
+  }
+}
+
+/** NW6 (1) — a warning reason was sent for a claim that shows ⛔ no warning: a reason over nothing would put a
+ *  false record on the claim. → 409 `verifier_decision.warning_reason_ungrounded`. */
+export class WarningReasonUngroundedError extends Error {
+  public readonly name = 'WarningReasonUngroundedError';
+  public constructor(public readonly claimCaseId: string) {
+    super(`[approval-warnings] claim ${claimCaseId} shows no warning — a warning reason has nothing to answer`);
+  }
+}
+
+/** Trap 16 — the chosen reason is ⛔ not on the Pariwar's ACTIVE list (replaced since the page loaded, or
+ *  unknown). ⛔ Never silently mapped to its replacement: the approver chose the words. → 409
+ *  `…warning_reason_unavailable`. */
+export class WarningReasonUnavailableError extends Error {
+  public readonly name = 'WarningReasonUnavailableError';
+  public constructor(public readonly warningReasonCode: string) {
+    super(`[approval-warnings] warning reason '${warningReasonCode}' is not on the active list — choose again`);
+  }
+}
+
+/** NW14 — why a late-warning reason cannot be recorded. Each → 409 (`not_found` → 404). */
+export type LateWarningReasonRefusal =
+  | 'not_found'
+  | 'no_district_admin_approval'
+  | 'not_recordable_state'
+  | 'determination_required'
+  | 'nothing_uncovered'
+  | 'missing_display';
+
+/** NW14 — the District Admin's (any `claim.approve` holder's) reason for a warning that appeared AFTER the
+ *  approval is refused. A record, ⛔ never a decision: ⛔ no claim is refused by it. */
+export class LateWarningReasonRefusedError extends Error {
+  public readonly name = 'LateWarningReasonRefusedError';
+  public constructor(
+    public readonly claimCaseId: string,
+    public readonly reason: LateWarningReasonRefusal,
+    detail: string,
+  ) {
+    super(`[approval-warnings] claim ${claimCaseId}: late warning reason refused (${reason}) — ${detail}`);
+  }
+}
+
+/** NW17 — why the Super Admin's add / replace of a reason is refused. `not_found` → 404, `invalid_text` →
+ *  400, the rest → 409. ⛔ There is no refusal for "edit" or "delete": ⛔ no such write exists. */
+export type ApprovalWarningReasonWriteRefusal = 'not_found' | 'already_replaced' | 'invalid_text' | 'missing_display' | 'code_exhausted';
+
+const APPROVAL_WARNING_REASON_REFUSAL_STATUS: Record<ApprovalWarningReasonWriteRefusal, 400 | 404 | 409> = {
+  not_found: 404,
+  already_replaced: 409,
+  invalid_text: 400,
+  missing_display: 409,
+  code_exhausted: 409,
+};
+
+export class ApprovalWarningReasonWriteRefusedError extends Error {
+  public readonly name = 'ApprovalWarningReasonWriteRefusedError';
+  public readonly status: 400 | 404 | 409;
+  public constructor(
+    public readonly code: ApprovalWarningReasonWriteRefusal,
+    detail: string,
+    /** Non-PII details (a field name, a term) — ⛔ never the text the Super Admin typed. */
+    public readonly details: Readonly<Record<string, unknown>> = {},
+  ) {
+    super(`[approval-warning-reasons] ${code} — ${detail}`);
+    this.status = APPROVAL_WARNING_REASON_REFUSAL_STATUS[code];
+  }
+}

@@ -4,6 +4,32 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: code review of story-6-23-post-death-nominee-change-warnings (2026-10-05)
+
+- Both new append-only triggers' (`approval_warning_reasons_reject_mutation`, `claim_warning_approvals_reject_mutation`) exception message says "...is never deleted; it can only be replaced" even on a `TRUNCATE` — the operation is correctly blocked either way, but the wording is delete-specific. Pre-existing: mirrors `events_log_reject_mutation` (migration 0001), a codebase-wide convention predating this story, so not fixed here. Trigger: a pass that reworks the shared trigger wording across all append-only tables.
+
+## Recorded during Story 6.23a — the nominee-change warnings, the warning reason and the reason list (2026-10-05)
+
+Recorded under `2026-10-04-278` (NW1–NW18), as amended by `-279` and `-280`. ⛔ The later approvers' reason and Q3 B's WAIT
+are ⛔ not here — they are Story 6.23b's (go-live coupling (1) of 6.23a).
+
+- **The Pariwar Admin sees the raw `verifier_reason_code` on `PendingCaseCard.tsx:216`** (e.g. `r5_d_natural_death`), ⛔
+  not words — inherited from 6.13 and unchanged here (Trap 7 keeps the verifier vocabulary untouched). ⭐ Trigger: Story
+  6.23b, which mounts the warning-reason picker on that card and reads the reason next to it.
+- **The FQ1 label's words say *"corrected after the death"* even on a correction made under a claim later RELEASED as
+  filed against a living member** (6.20 AC2's innocence finding — ⛔ no production caller until row `6-22`). The words are
+  ratified copy (`-262` FQ1) and are ⛔ not reworded (NW4). ⭐ Trigger: row `6-22`'s first production release.
+- **⚠ A concealment-flagged claim is still approvable with ⛔ no reason (fact 1).** `concealment_flag_override` is only
+  PERMITTED on an approve; ⛔ no rule requires it. The Panel was offered this in the Q1–Q3 note and did ⛔ not take it up
+  (`-277` "does NOT cover"). ⛔ Not built, ⛔ not owed. ⭐ Trigger: a Panel instruction.
+- **⚠ `claim_verifier_decisions.rationale_ciphertext` — where the AT-APPROVAL note over a warning lives — is ⛔ not in
+  the anonymizer (Trap 14).** 6.23a's OWN Tier-1 column (`claim_warning_approvals.note_ciphertext`) is scrubbed; the
+  decision rationale (Story 6.11) never was. ⭐ Trigger: the next RTBF pass over the claim-adjudication tables.
+- **⚠ The Super Admin's reason words are checked only against the microcopy gate's ACTIVE vocabulary terms (a server
+  deny-list, lockstep-tested against `microcopy.yaml`) — ⛔ not the full gate (tone, numerals) (Trap 11).** The words are
+  runtime DATA the static gate never sees; anything subtler is the Super Admin's judgement, as for the Niyamavali display
+  fields. ⭐ Trigger: a microcopy runtime library.
+
 ## Recorded during Story 6.19d's build — the replacement-certificate reminder (2026-10-03)
 
 Recorded under `2026-10-03-276` (CR1–CR15). ⛔ Q1–Q4 are ⛔ not here — `-275` ruled them (all A); ⛔ nothing to defer.

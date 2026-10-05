@@ -33,6 +33,8 @@ export * from './verifier-console.js';
 // the request DTOs (outcome + reason_code + rationale?, .strict() — server-derived actor identity, R5),
 // the outcome↔reason-code compat superRefine (AC8), and the NON-PII decision response.
 export * from './verification-decision.js';
+// Story 6.23a (NW16, NW17) — the Super Admin's warning-reason list: list / add / replace (⛔ no edit, ⛔ no delete).
+export * from './approval-warning-reasons.js';
 // Story 6.18 — the nominee NAME CHECK DTOs (`2026-09-19-226` cl.3/cl.5): the district-gated read that
 // shows each live bank account's HOLDER NAME beside the nominees the deceased member DECLARED, plus the
 // filer's note — the ONE named exception to nominee-bank.ts's "never echo the holder name" rule, named

@@ -86,6 +86,12 @@ export * from './nominee-correction-persist.js';
 // Story 6.20 (D14, AC13) — the `-239` refusal's two reads: the Pariwar Admin's read surface and the
 // derived ground-inspection inheritance source. The refusal itself is the shipped verifier denial.
 export * from './nominee-refusal-read.js';
+// Story 6.23a — the nominee-change WARNINGS and the ONE approval rule over them (NW1–NW6), the WARNING-REASON LIST
+// (NW16, NW17), and the District Admin's reason for a LATE warning (NW14). ⛔ `approval-warnings.ts` and
+// `approval-warning-reasons.ts` never reach `events.ts`, `nominee-name-check.ts` or `nominee-lock.ts` (NW1).
+export * from './approval-warning-reasons.js';
+export * from './approval-warnings.js';
+export * from './approval-warnings-persist.js';
 // Story 11b.3a (AC3, AC4, AC5) — the per-Pariwar NOMINEE-BANK MASKING schedule: the PURE projection
 // + predicate, and the governed schedule accessor. ⛔ Neither ever touches a bank row: cl.10(g)
 // keeps the complete details in the protected internal record and masking is a PROJECTION.

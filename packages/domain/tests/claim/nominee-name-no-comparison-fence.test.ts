@@ -102,6 +102,11 @@ const FENCED_FILES = [
   // highlight badge the cycle-freeze card and the District Admin's panel render.
   'apps/admin/src/modules/correction-closure/EscalationPanel.tsx',
   'apps/admin/src/modules/correction-closure/ApprovalNameHighlightBadge.tsx',
+  // ⭐ STORY 6.23a (AC10; 6.21a T9's precedent) — the two NEW domain modules on the approval path: the warnings (the
+  // ONE rule every approver calls, the claim-level read, the FQ1 label read) and the late-warning reason's writer.
+  // Ref-only — version ids, instants, marks, keys and reason codes — ⛔ no name, ⛔ no decrypt (asserted below).
+  'packages/domain/src/claim/approval-warnings.ts',
+  'packages/domain/src/claim/approval-warnings-persist.ts',
 ] as const;
 
 /**
@@ -151,7 +156,7 @@ describe('⛔ the no-comparison fence (Trap 1, `-226` cl.5)', () => {
     // Code review patch (2026-10-02, corrected 2026-10-03): exact count, ⛔ a floor — AND every entry unique. The
     // count alone can't catch a duplicate standing in for a dropped file (one of each keeps the length at 34).
     expect(new Set(FENCED_FILES).size, 'a FENCED_FILES entry is duplicated').toBe(FENCED_FILES.length);
-    expect(FENCED_FILES.length).toBe(34); // Story 6.19c raised it FROM 26 (+1 domain module), then 27 → 32 (the highlight's read + its four wire / route surfaces), then 32 → 34 (its two admin render sites); Story 6.21a FROM 23 (+3 modules); Story 6.20 FROM 16 (+7)
+    expect(FENCED_FILES.length).toBe(36); // Story 6.23a FROM 34 (+2 — the warnings module and the late-reason writer); Story 6.19c raised it FROM 26 (+1 domain module), then 27 → 32 (the highlight's read + its four wire / route surfaces), then 32 → 34 (its two admin render sites); Story 6.21a FROM 23 (+3 modules); Story 6.20 FROM 16 (+7)
   });
 
   it('⭐⭐ POSITIVE CONTROL — the scanner actually FIRES on a planted violation of every pattern', () => {
@@ -320,6 +325,18 @@ describe('⛔ the no-comparison fence (Trap 1, `-226` cl.5)', () => {
     expect(stripComments(read('packages/domain/src/claim/nominee-name-check.ts'))).toContain(
       'assertDeathCertificateAcceptedForApproval',
     );
+  });
+
+  it('⛔⛔ Story 6.23a (AC10; invariant 7) — the warnings module and the late-reason writer ⛔ never decrypt', () => {
+    // ⭐ The post-death warning at the gate and on the console is read from the live determination's MARKS (fact 2);
+    // the only date-decrypt stays where it already was — the audited timeline read. A `decrypt` here would move a
+    // Tier-1 read into the approval path.
+    for (const f of ['packages/domain/src/claim/approval-warnings.ts', 'packages/domain/src/claim/approval-warnings-persist.ts']) {
+      const code = stripComments(read(f));
+      for (const forbidden of ['decrypt', 'nameCiphertext', 'mobileCiphertext', 'getMemberNominees', 'certificate_date_ciphertext', 'accepted_date_ciphertext']) {
+        expect(code.includes(forbidden), `${f} reached for '${forbidden}'`).toBe(false);
+      }
+    }
   });
 
   it('⛔ the APPROVAL GATES decide on recorded verdicts and timestamps — never on names', () => {

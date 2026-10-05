@@ -3118,6 +3118,12 @@ appeared after their approval, so that every approval of a claim over a warning 
 WAITS (⛔ never refuses) until every current warning is covered by the District Admin's records; every surface shows the warnings and the
 reasons; the District Admin is told in their correction queue.
 
+> ⚠ **ANNOTATION 2026-10-05 (Story `6-23b` validate v2.1) — ⛔ not rewritten.** The Minted-by header above omits
+> [`-280`](../../.decision-log.md#decision-2026-10-04-280), whose Consequence 1 routes one arm here: an R9 approval routed from
+> `state_trustee_approved` waits too, and the District Admin may answer it there. The brief also omits `-279` A1 (a late reason
+> recorded by the person now approving does ⛔ not count for that approval) and the story's AC11 (the verifier's reason shown in
+> words on the Pariwar Admin's card, closing a `deferred-work.md` item). The story file is the full statement.
+
 ---
 
 ## Epic 7: Pool Engine & Cycle Spawn

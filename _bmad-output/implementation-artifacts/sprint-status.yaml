@@ -1,3 +1,13 @@
+# last_updated: 2026-10-05e (⭐ **STORY 6.23a — THE LAST REVIEW ACTION ITEM RESOLVED (⛔ no code change, DEFERRED) ⇒ `review`.**
+# `6-23-post-death-nominee-change-warnings` `in-progress` → `review` (`/bmad-dev-story 6.23a`, review continuation). The ONE open
+# item (`2026-10-05d`'s 6th: `postLateWarningReason` encrypts the note before `recordLateWarningReason`'s checks) — BigDev chose
+# *"Keep it, defer"* over (a) callback injection and (b) API-side pre-checks. Traced first: the ordering is the handler FILE's
+# convention, ⛔ not this handler's own (`postDecision` and revise encrypt first too); (a) would hold the decision advisory lock +
+# the claim's `FOR UPDATE` lock across a KMS round trip. `deferred-work.md` ("Recorded during Story 6.23a") gains the item for
+# all three handlers, with a trigger that can fire (a KMS-failure 500 seen on a request that would have been refused, or any
+# change to the three writers' lock order or encryption seam). Every task and review item `[x]`; story v2.7. `ci:local`
+# **34 / 34 green** (after `twt-test-pg` `:5433` was brought up to the review-edited 0143 — it still held the pre-review FKs; ⛔ not a code defect) with `DATABASE_URL`, the first full run since both review rounds' fixes. ⛔ No other row moves — `6-23b-every-approver-
+# gives-a-warning-reason` stays `backlog` (flips when 6.23a is `done`).)
 # last_updated: 2026-10-05d (⭐ **STORY 6.23a — THE RE-REVIEW'S 6 PRE-EXISTING FINDINGS TRIAGED; 5 fixed, 1 left as an action item.**
 # BigDev: *"apply all 6"*, then *"leave as an action item"* once the 6th (`postLateWarningReason` encrypts the late-reason note BEFORE
 # any of `recordLateWarningReason`'s business-rule checks) turned out to need a real design call — a callback-injection signature
@@ -18985,7 +18995,7 @@ development_status:
   #   6-27 — FINDING: 6.6's five requests are never SENT and cannot be ANSWERED · FQ10 A (a signal, not a gate) · FQ8 E (ask the date of death).
   #   + `2026-09-28-264`: FQ12 (ONE rule — approving over ANY warning needs a reason + note; owned by 6-23, fed by 6-26/6-27 ⇒ 6-23 first)
   #          · FQ13 (the refile's fresh original certificate seen by an inspector — 6-26; 6-24's approval waits on it).
-  6-23-post-death-nominee-change-warnings: in-progress
+  6-23-post-death-nominee-change-warnings: review
   # ⭐ 2026-10-04 SPLIT after `-277` (BigDev: "ok, split it"): the row above is STORY 6.23a (keeps its key — the rulings cite it); 6.23b below
   # is every later approver (`-277` Q2 C) + Q3 B's wait. 6.23b's file is written; it stays `backlog` until 6.23a is `done` (the 6.21b precedent).
   6-23b-every-approver-gives-a-warning-reason: backlog

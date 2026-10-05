@@ -2896,6 +2896,9 @@ a route to fix it.
 3. The District Admin reads the **timeline** beside a certificate-date field and records a
    **determination** marking each version `stands` or `discarded`. ⛔ The system pre-selects nothing,
    highlights nothing and decides nothing (`-235` Y).
+   > ⚠ **ANNOTATION 2026-10-05 — *"highlights nothing"* superseded by [`-261`](../../.decision-log.md#decision-2026-09-28-261) D1
+   > (built by Story 6.23a): the system now shows a warning on a version dated on or after the death. *"Pre-selects nothing"* and
+   > *"decides nothing"* stand.** Appended; ⛔ nothing above rewritten.
 4. A change dated **on or after the day of death** raises **suspicion**; the **District Admin** refuses the
    claim, records a note and reason, and **notifies the Pariwar Admin**. The refusal is **appealable
    once**; the true nominee refiles with a fresh original certificate but **inherits the ground
@@ -3073,6 +3076,47 @@ unnoticed.
 > (Q1–Q4, all A): its own tables (migrations 0137–0139), the sweep and the SMS child, the ONE letter, the District Admin's "Certificate
 > reminders" list. ⚠ The header above says *"`-260` G4–G6"*: G4 is the correction-return twin, ⛔ this story's ruling (the next-morning rule
 > here is `-250` #5 through `-259` cl.1) — recorded, ⛔ not rewritten. *Appended; ⛔ nothing above edited.*
+
+
+### Story 6.23a: The Post-Death and Recent Nominee-Change Warnings, the Correction Label, the Reason List, and the District Admin's Reason and Note `[SURFACE]`
+
+> ⚠ **Minted by Trustee ruling, ⛔ not by the original epic plan** — [`-261`](../../.decision-log.md#decision-2026-09-28-261) D1,
+> [`-262`](../../.decision-log.md#decision-2026-09-28-262) FQ1 / FQ2 / FQ8 A, [`-264`](../../.decision-log.md#decision-2026-09-28-264) FQ12
+> and [`-277`](../../.decision-log.md#decision-2026-10-04-277) Q1 / Q3; the author's decisions are
+> [`-278`](../../.decision-log.md#decision-2026-10-04-278) (NW1–NW18), as amended by [`-279`](../../.decision-log.md#decision-2026-10-04-279)
+> and [`-280`](../../.decision-log.md#decision-2026-10-04-280). Row `6-23-post-death-nominee-change-warnings` (it keeps the key the rulings
+> cite). `epic-6-retrospective` stays `done`. Full ACs: `_bmad-output/implementation-artifacts/6-23-post-death-nominee-change-warnings.md`.
+> ⚠ **6.23a go-live coupling (1): Story 6.23b** — `-277` Q2 C and Q3 B are ⛔ not in force until it ships.
+
+As the District Admin checking a family's death claim, I want the system to warn me when the member's nominee was changed on or after the
+date of death, or named or changed in the 90 days before the first claim was filed — to label a genuine correction plainly instead — to pick
+my warning reason from a list whose entries tell me who wrote them and when to use them — and to answer a warning that appears after I
+approved, so that I never approve such a claim without my reason and an unalterable note on record. As the Super Admin, I want to add a
+reason to my Pariwar's list, or replace one with a newer one, so that ⛔ no reason anyone ever chose can disappear.
+
+**Acceptance Criteria (in brief):** the two warnings defined once (post-death version; a change within 90 days before the first claim's
+filing — the first naming included); an approved correction labelled *"corrected after the death — approved by [District Admin] and
+[Pariwar Admin]"*, ⛔ never warned; approving over a warning needs a warning reason from the Pariwar's list and a note, and records which
+warnings it covered; an approval on a warned claim is ⛔ never revised; the District Admin records a reason and a note for a warning that
+appears after approval; the reason list (a built-in generic + the Super Admin's entries, replaced ⛔ never edited or deleted). ⛔ The system
+still refuses nothing, marks nothing and pays no one differently.
+
+### Story 6.23b: Every Approver Picks a Reason and Writes a Note While a Warning Shows — and a Late Warning Waits for the District Admin `[SURFACE]`
+
+> ⚠ **Minted by Trustee ruling, ⛔ not by the original epic plan** — [`-277`](../../.decision-log.md#decision-2026-10-04-277) Q2 C and Q3 B
+> (building on `-261` D1, `-262` FQ2 and `-264` FQ12); the author's decisions are [`-278`](../../.decision-log.md#decision-2026-10-04-278)
+> (EA1–EA9), as amended by [`-279`](../../.decision-log.md#decision-2026-10-04-279) (incl. EA10). Row
+> `6-23b-every-approver-gives-a-warning-reason`; ⛔ starts only when 6.23a is `done`. Full ACs:
+> `_bmad-output/implementation-artifacts/6-23b-every-approver-gives-a-warning-reason.md`.
+
+As any approver of a death claim after the District Admin — the trustee resolving an escalation, the Pariwar Admin at the final vote, an R9
+panel member, the Super Admin — I want to see the nominee-change warnings on my own screen, to pick my reason from the Pariwar's list and to
+write my own note before I can approve, and to be told plainly when the claim is waiting for the District Admin to answer a warning that
+appeared after their approval, so that every approval of a claim over a warning carries a named person's chosen reason and unalterable note.
+
+**Acceptance Criteria (in brief):** each later approver picks from the SAME list and writes a note while a warning shows; the final approval
+WAITS (⛔ never refuses) until every current warning is covered by the District Admin's records; every surface shows the warnings and the
+reasons; the District Admin is told in their correction queue.
 
 ---
 

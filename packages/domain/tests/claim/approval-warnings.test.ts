@@ -90,6 +90,12 @@ describe('NW3 — recent_nominee_change against an INJECTED anchor (Trap 5)', ()
     expect(classifyNomineeVersion({ source: 'correction', effectiveAt: ist('2026-08-01', '10:00') }, basis)).toEqual([]);
   });
 
+  it('a `null` anchor (the read failed) judges ⛔ no `recent_nominee_change`; the post-death judgement still stands', () => {
+    const v = { source: 'member' as const, effectiveAt: ist('2026-08-20', '10:00') };
+    expect(classifyNomineeVersion(v, { acceptedDate: null, anchorFiledAt: null })).toEqual([]);
+    expect(classifyNomineeVersion(v, { acceptedDate: '2026-08-15', anchorFiledAt: null })).toEqual(['post_death_version']);
+  });
+
   it('a version can carry BOTH kinds', () => {
     expect(
       classifyNomineeVersion({ source: 'member', effectiveAt: ist('2026-08-20', '10:00') }, { acceptedDate: '2026-08-15', anchorFiledAt: anchor }),

@@ -300,19 +300,33 @@ function assertWriter(input: ApprovalWarningReasonWriteInput): void {
   assertApprovalWarningReasonText(input.label, input.whenToUse);
 }
 
+/**
+ * Fire 0142's DEFERRED coherence check NOW, inside the caller's transaction, then defer it again (code review round
+ * 3). ⚠ At COMMIT its failure would be invisible: the API's `closeScopeTx` ⛔ never throws, so a rolled-back write
+ * would answer 201 with an `…added` / `…replaced` audit line. Here it throws through the caller's own try instead.
+ * Re-deferring keeps a later write in the same tx (an UPDATE before its replacement row) judged at COMMIT as designed.
+ */
+async function assertReplacementCoherent(client: pg.PoolClient): Promise<void> {
+  await client.query('SET CONSTRAINTS approval_warning_reasons_replacement_coherence IMMEDIATE');
+  await client.query('SET CONSTRAINTS approval_warning_reasons_replacement_coherence DEFERRED');
+}
+
 /** NW17 — ADD a reason. Active at once; its code is server-generated. Runs in the caller's scope-tx. */
 export async function addApprovalWarningReason(
   client: pg.PoolClient,
   input: ApprovalWarningReasonWriteInput,
 ): Promise<ApprovalWarningReasonRow> {
   assertWriter(input);
-  return insertReasonRow(client, input, null);
+  const created = await insertReasonRow(client, input, null);
+  await assertReplacementCoherent(client);
+  return created;
 }
 
 /**
  * NW17 — REPLACE a reason with a newer one, in ONE transaction: a conditional `UPDATE … SET replaced_at WHERE
  * reason_id AND replaced_at IS NULL` (0 rows ⇒ `already_replaced`, or `not_found`), then the new row naming it.
- * 0142's deferred trigger proves both halves at COMMIT. The old row, its note and every approval that chose it are
+ * 0142's deferred trigger proves both halves — fired before return (`assertReplacementCoherent`), ⛔ not left to a
+ * COMMIT whose failure the API cannot see. The old row, its note and every approval that chose it are
  * untouched. ⛔ The generic is ⛔ never a row, so it can ⛔ never be replaced (`not_found`).
  */
 export async function replaceApprovalWarningReason(
@@ -347,5 +361,6 @@ export async function replaceApprovalWarningReason(
     throw new ApprovalWarningReasonWriteRefusedError('not_found', 'no such reason in this Pariwar');
   }
   const created = await insertReasonRow(client, input, replaced.reasonId);
+  await assertReplacementCoherent(client);
   return { replaced, created };
 }

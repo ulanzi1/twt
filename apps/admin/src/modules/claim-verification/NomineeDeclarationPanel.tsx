@@ -36,6 +36,7 @@
 import { useEffect, useState } from 'react';
 
 import type {
+  ApprovalWarningKind,
   NomineeCorrectionListResponse,
   NomineeCorrectionRaiseRequest,
   NomineeDeclarationSnapshotsResponse,
@@ -105,6 +106,20 @@ export const formatIst = fmt;
 /** A calendar day in IST (the 90-day warning's "first claim filed" date — the day is what the window counts). */
 function formatIstDate(iso: string): string {
   return new Date(iso).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'medium' });
+}
+
+/**
+ * A warning's words on its timeline row — one entry PER KIND, checked exhaustive (code review round 3): a new kind
+ * fails the build here, ⛔ never renders with another kind's words (the strip's `kindLine` precedent).
+ */
+const WARNING_LINES = {
+  post_death_version: () => t.warning.post_death_version,
+  recent_nominee_change: (firstFiledAt: string | null) =>
+    t.warning.recent_nominee_change(firstFiledAt === null ? null : formatIstDate(firstFiledAt)),
+} satisfies Record<ApprovalWarningKind, (firstFiledAt: string | null) => string>;
+
+function warningLine(kind: ApprovalWarningKind, firstFiledAt: string | null): string {
+  return WARNING_LINES[kind](firstFiledAt);
 }
 
 type Readable = { state: 'readable'; value: string } | { state: 'unreadable' } | { state: 'anonymized' } | null | undefined;
@@ -228,6 +243,13 @@ export function NomineeDeclarationPanel(props: NomineeDeclarationPanelProps): Re
           {t.warning.dateNotKnown}
         </p>
       ) : null}
+      {/* Code review round 3 — the 90-day anchor could ⛔ not be read ⇒ ⛔ no 90-day warning was judged, and the panel
+          says so (⛔ never "no warnings" on an unknown — NW10). */}
+      {timeline.warning_basis.first_filed_at === null ? (
+        <p className="text-xs" data-testid="nominee-warning-anchor-unavailable">
+          {t.warning.anchorUnavailable}
+        </p>
+      ) : null}
       <table className="text-sm" data-testid="nominee-timeline">
         <thead>
           <tr>
@@ -262,9 +284,7 @@ export function NomineeDeclarationPanel(props: NomineeDeclarationPanelProps): Re
                   ) : null}
                   {v.warnings.map((k) => (
                     <span key={k} className="block text-xs text-status-warn-fg" data-testid={`nominee-warning-${k}-${v.version_id}`}>
-                      {k === 'post_death_version'
-                        ? t.warning.post_death_version
-                        : t.warning.recent_nominee_change(formatIstDate(timeline.warning_basis.first_filed_at))}
+                      {warningLine(k, timeline.warning_basis.first_filed_at)}
                     </span>
                   ))}
                 </td>

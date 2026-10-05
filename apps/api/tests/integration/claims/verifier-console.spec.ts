@@ -1132,6 +1132,47 @@ describe.skipIf(!hasDatabase)('Verifier-console read surface — E2E (:5433)', (
     }
   });
 
+  it('⭐ Story 6.23a (NW8; code review round 4 — round 3 wrongly recorded this as "not constructible") — a FAILED warnings read fails CLOSED: ⛔ no approve, ⛔ no revise, ⛔ no late panel, ⛔ never "no warnings"', async () => {
+    const pariwarId = randomUUID();
+    const deceased = await seedDeceasedMember(pariwarId, DISTRICT);
+    const claimCaseId = await seedClaim(pariwarId, deceased);
+    const scopeTx = await openScopeTx(deps, pariwarId);
+    const client = scopeTx.client as unknown as { query: (...a: unknown[]) => unknown };
+    const realQuery = client.query.bind(client);
+    try {
+      // The section's ONE statement fails (the Trap-10 seam above, made to throw).
+      client.query = () => Promise.reject(new Error('simulated: the warnings read failed'));
+      const section = await assembleApprovalWarnings(
+        {
+          db: scopeTx.tx,
+          pariwarId,
+          claimCaseId,
+          district: DISTRICT,
+          actorId: randomUUID(),
+          // A viewer who COULD approve and record — so every `false` below is the fail-closed path, ⛔ not a missing key.
+          grants: [{ pariwarId, role: 'super_admin', scopeDimension: 'global', scopeValue: null }],
+          traceId: null,
+        },
+        ids.claimId(claimCaseId),
+        'verifier_approved',
+        { bump: () => undefined },
+      );
+      expect(section).toEqual({
+        available: false,
+        kinds: [],
+        postDeath: 'awaiting_determination',
+        uncoveredSinceApproval: 0,
+        reviseBlocked: 'unavailable',
+        viewerCanRecordLateReason: false,
+        lateKeysUncoveredForViewer: 0,
+        reasonOptions: [],
+      });
+    } finally {
+      client.query = realQuery as never;
+      await closeScopeTx(scopeTx, false);
+    }
+  });
+
   it('⭐ AC5 site D — the console\'s name-check status reads the EFFECTIVE declaration: a change to the CURRENT rows alone does ⛔ not stale it', async () => {
     const pariwarId = randomUUID();
     const deceased = await seedDeceasedMember(pariwarId, DISTRICT);

@@ -53,6 +53,16 @@ describe.skipIf(!hasDatabase)('Story 6.23a — the warning-reason list through H
   });
 
   async function actor(pariwarId: string, role: string, dim: string, value: string | null, displayName: string): Promise<Client> {
+    return (await actorWithId(pariwarId, role, dim, value, displayName)).client;
+  }
+
+  async function actorWithId(
+    pariwarId: string,
+    role: string,
+    dim: string,
+    value: string | null,
+    displayName: string,
+  ): Promise<{ client: Client; userId: string }> {
     const email = `awr-${randomUUID()}@example.test`;
     const password = 'CorrectHorseBatteryStaple9';
     const userId = await service.createAdminAccount(deps, { email, password, displayName });
@@ -75,7 +85,7 @@ describe.skipIf(!hasDatabase)('Story 6.23a — the warning-reason list through H
       dim,
       value,
     ]);
-    return client;
+    return { client, userId };
   }
 
   const superAdmin = (pariwarId: string) => actor(pariwarId, 'super_admin', 'global', null, 'Sunita (Super Admin)');
@@ -145,6 +155,30 @@ describe.skipIf(!hasDatabase)('Story 6.23a — the warning-reason list through H
 
     const cross = await sa.inject({ method: 'POST', url: `${url(q)}/${String(old.reason.reasonId)}/replace`, payload: { label: 'x', when_to_use: 'y' } });
     expect(cross.statusCode).toBe(404);
+  });
+
+  it('⭐ family 3 (code review round 3) — a TAMPERED session naming a non-human actor id is DENIED on both writes (EXACTLY 404), ⛔ nothing written', async () => {
+    const p = randomUUID();
+    const real = await actorWithId(p, 'super_admin', 'global', null, 'Sunita (Super Admin)');
+    await elevate(real.client);
+    // ⭐ POSITIVE CONTROL — the SAME client, elevated, DOES write: the refusals below are the actor boundary, ⛔ not a
+    // missing step-up or a session that never took.
+    const control = await real.client.inject({ method: 'POST', url: url(p), payload: { label: 'Control', when_to_use: 'Control.' } });
+    expect(control.statusCode).toBe(201);
+    const controlId = String((control.json() as { reason: Json }).reason.reasonId);
+    await td.pool.query(`UPDATE admin_sessions SET sess = jsonb_set(sess, '{userId}', to_jsonb($1::text)) WHERE user_id = $2`, [
+      randomUUID(),
+      real.userId,
+    ]);
+    // The swapped id holds no membership in this Pariwar: `scopeResolutionHook` treats it as any non-member — EXACTLY
+    // 404 (the NW14 / verifier-decision precedent). ⛔ A 401 would pass without ever reaching scope resolution.
+    const add = await real.client.inject({ method: 'POST', url: url(p), payload: { label: 'Tampered add', when_to_use: 'x' } });
+    expect(add.statusCode).toBe(404);
+    const rep = await real.client.inject({ method: 'POST', url: `${url(p)}/${controlId}/replace`, payload: { label: 'Tampered replace', when_to_use: 'x' } });
+    expect(rep.statusCode).toBe(404);
+    const list = (await (await superAdmin(p)).inject({ method: 'GET', url: url(p) })).json() as { active: Json[]; history: Json[] };
+    expect(list.active.map((o) => o.label)).toEqual(['Warnings reviewed — approved despite them', 'Control']);
+    expect(list.history).toEqual([]);
   });
 
   it('a vocabulary term, a blank, an over-long field or a smuggled `code` ⇒ 400', async () => {

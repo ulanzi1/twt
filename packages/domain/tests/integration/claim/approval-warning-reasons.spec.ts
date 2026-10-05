@@ -16,6 +16,7 @@ import {
   ApprovalWarningReasonWriteRefusedError,
   addApprovalWarningReason,
   listApprovalWarningReasons,
+  lockActiveApprovalWarningReason,
   replaceApprovalWarningReason,
 } from '../../../src/claim/index.js';
 import { bindScopedDb, setPariwarScope } from '../../../src/db.js';
@@ -49,6 +50,29 @@ describe.skipIf(!hasDatabase)('Story 6.23a — the warning-reason list (own-comm
     } finally {
       client.release();
     }
+  }
+
+  /** An OPEN scoped tx on its own connection (the caller commits / rolls back) — for the two-connection races. */
+  async function openTx(pid: PariwarId): Promise<{ client: pg.PoolClient; backendPid: number }> {
+    const client = await pool.connect();
+    await client.query('BEGIN');
+    await client.query('SET LOCAL ROLE twt_app');
+    await setPariwarScope(client, pid);
+    const { rows } = await client.query<{ pid: number }>('SELECT pg_backend_pid() AS pid');
+    return { client, backendPid: rows[0]!.pid };
+  }
+
+  /** Wait until `backendPid` is BLOCKED on a lock — proof the race is real, ⛔ never a sleep. */
+  async function waitUntilBlocked(backendPid: number): Promise<void> {
+    for (let i = 0; i < 200; i += 1) {
+      const { rows } = await pool.query<{ n: number }>(
+        `SELECT count(*)::int AS n FROM pg_stat_activity WHERE pid = $1 AND wait_event_type = 'Lock'`,
+        [backendPid],
+      );
+      if (rows[0]!.n === 1) return;
+      await new Promise((r) => setTimeout(r, 25));
+    }
+    throw new Error(`backend ${backendPid} never blocked on a lock`);
   }
 
   const write = { actorId: 'sa-1', actorDisplay: 'Super Admin One' };
@@ -103,6 +127,63 @@ describe.skipIf(!hasDatabase)('Story 6.23a — the warning-reason list (own-comm
     expect((loser.reason as ApprovalWarningReasonWriteRefusedError).code).toBe('already_replaced');
     const { active } = await list(pid);
     expect(active).toHaveLength(2);
+  });
+
+  it('code review round 3 — a pending INCOHERENCE surfaces from the write call itself, ⛔ never only at a COMMIT the API cannot see', async () => {
+    const pid = toPariwarId(randomUUID());
+    const old = await onOwnTx(pid, (c) => addApprovalWarningReason(c, { pariwarId: pid, label: 'Stamped', whenToUse: 'Stamped.', ...write }));
+    await onOwnTx(pid, async (c) => {
+      // A defect's shape: `replaced_at` stamped with ⛔ no replacement row (0142's check (1)) — then an ordinary add.
+      await c.query('UPDATE approval_warning_reasons SET replaced_at = clock_timestamp() WHERE reason_id = $1', [old.reasonId]);
+      await expect(
+        addApprovalWarningReason(c, { pariwarId: pid, label: 'Innocent add', whenToUse: 'Innocent.', ...write }),
+      ).rejects.toMatchObject({ code: '23000' });
+      // (the tx is now aborted; onOwnTx's COMMIT on it rolls back)
+    });
+    const { active, history } = await list(pid);
+    expect(active.map((o) => o.code)).toEqual([APPROVAL_WARNING_GENERIC_REASON.code, old.code]);
+    expect(history).toEqual([]);
+  });
+
+  it('⭐ Trap 16, family 2 (code review round 3) — two connections: an approval\'s `FOR SHARE` WAITS on an uncommitted replace, then sees it replaced (`null`)', async () => {
+    const pid = toPariwarId(randomUUID());
+    const old = await onOwnTx(pid, (c) => addApprovalWarningReason(c, { pariwarId: pid, label: 'Racing', whenToUse: 'Racing.', ...write }));
+    const replacer = await openTx(pid);
+    const approver = await openTx(pid);
+    try {
+      await replaceApprovalWarningReason(replacer.client, { pariwarId: pid, reasonId: old.reasonId, label: 'Newer', whenToUse: 'Newer.', ...write });
+      const locking = lockActiveApprovalWarningReason(bindScopedDb(approver.client), pid, old.code);
+      await waitUntilBlocked(approver.backendPid);
+      await replacer.client.query('COMMIT');
+      // READ COMMITTED re-checks the locked row's NEW version: `replaced_at IS NULL` no longer holds ⇒ ⛔ never mapped.
+      expect(await locking).toBeNull();
+    } finally {
+      await approver.client.query('ROLLBACK');
+      await replacer.client.query('ROLLBACK').catch(() => undefined);
+      approver.client.release();
+      replacer.client.release();
+    }
+  });
+
+  it('⭐ Trap 16, family 2 (code review round 3) — two connections: a replace WAITS on an approval\'s `FOR SHARE`, so the chosen words cannot change under it', async () => {
+    const pid = toPariwarId(randomUUID());
+    const old = await onOwnTx(pid, (c) => addApprovalWarningReason(c, { pariwarId: pid, label: 'Held', whenToUse: 'Held.', ...write }));
+    const approver = await openTx(pid);
+    const replacer = await openTx(pid);
+    try {
+      expect(await lockActiveApprovalWarningReason(bindScopedDb(approver.client), pid, old.code)).toEqual({ code: old.code, reasonId: old.reasonId });
+      const replacing = replaceApprovalWarningReason(replacer.client, { pariwarId: pid, reasonId: old.reasonId, label: 'Later', whenToUse: 'Later.', ...write });
+      await waitUntilBlocked(replacer.backendPid);
+      await approver.client.query('COMMIT'); // the approval's insert would land here, under the reason it chose
+      const { replaced } = await replacing;
+      expect(replaced.reasonId).toBe(old.reasonId);
+      await replacer.client.query('COMMIT');
+    } finally {
+      await approver.client.query('ROLLBACK').catch(() => undefined);
+      await replacer.client.query('ROLLBACK').catch(() => undefined);
+      approver.client.release();
+      replacer.client.release();
+    }
   });
 
   it('the generic can ⛔ never be replaced; an unknown or another Pariwar\'s reason ⇒ not_found', async () => {

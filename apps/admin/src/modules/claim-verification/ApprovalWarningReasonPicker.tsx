@@ -37,9 +37,23 @@ export function ApprovalWarningReasonPicker({
   idPrefix,
 }: ApprovalWarningReasonPickerProps): ReactElement {
   const chosen = options.find((o) => o.code === value);
+  const legendId = `${idPrefix}-warning-reason-legend`;
+  const errorId = `${idPrefix}-warning-reason-error`;
   return (
-    <fieldset className="flex flex-col gap-2" data-testid={`${idPrefix}-warning-reason-picker`} aria-invalid={error ? true : undefined}>
-      <legend className="text-xs font-medium">{t.pickerLabel}</legend>
+    // `role="radiogroup"` — ⛔ never `aria-invalid` on a plain `<fieldset>`: its `group` role does not support it (code
+    // review round 3). The radiogroup carries required / invalid / the error; an explicit role needs `aria-labelledby`.
+    <fieldset
+      className="flex flex-col gap-2"
+      data-testid={`${idPrefix}-warning-reason-picker`}
+      role="radiogroup"
+      aria-labelledby={legendId}
+      aria-required="true"
+      aria-invalid={error ? true : undefined}
+      aria-describedby={error ? errorId : undefined}
+    >
+      <legend id={legendId} className="text-xs font-medium">
+        {t.pickerLabel}
+      </legend>
       <p className="text-xs opacity-70">{t.pickerHelp}</p>
       {options.map((o) => (
         <label key={o.code} className="flex items-start gap-2 rounded border p-2 text-sm" data-testid={`${idPrefix}-warning-reason-${o.code}`}>
@@ -69,7 +83,7 @@ export function ApprovalWarningReasonPicker({
         {chosen ? t.selected(chosen.label) : t.noneChosen}
       </p>
       {error ? (
-        <p className="text-xs text-status-fail-fg" role="alert" data-testid={`${idPrefix}-warning-reason-error`}>
+        <p id={errorId} className="text-xs text-status-fail-fg" role="alert" data-testid={`${idPrefix}-warning-reason-error`}>
           {error}
         </p>
       ) : null}

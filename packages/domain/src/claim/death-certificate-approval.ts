@@ -387,8 +387,8 @@ export async function readDeathCertificateFamilyStatus(
  * both lock the claim row first, so a certificate cannot move under an approval).
  * Called ONLY by `assertClaimApprovable` (`nominee-name-check.ts`) — ⛔ never by `isReturnedClaimResubmitted`
  * (T4). ⚠ AMENDED by Story 6.23a (NW14): a SECOND caller, `recordLateWarningReason` (`approval-warnings-persist.ts`),
- * which refuses a late-warning reason while the certificate or determination is ⛔ current — and adds its own
- * `determination_required` refusal for the ⛔-live-determination case this function PASSES (Trap 2).
+ * which refuses a late-warning reason while the certificate or determination is ⛔ not current — and adds its own
+ * `determination_required` refusal for the ⛔ no-live-determination case this function PASSES (Trap 2).
  *
  * @throws DeathCertificateAcceptanceRequiredError (→ 409). ⛔ NOT a denial.
  */

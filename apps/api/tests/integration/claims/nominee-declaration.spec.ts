@@ -27,6 +27,7 @@ import * as memberAuthRepo from '../../../src/modules/auth/member/member-auth.re
 import { signAccessToken } from '../../../src/modules/auth/member/tokens.js';
 import * as service from '../../../src/modules/auth/admin/admin-auth.service.js';
 import { encryptVerifierRationale } from '../../../src/modules/claims/verifier-decision-crypto.js';
+import { readWarningAnchorSoft } from '../../../src/modules/claims/claims.nominee-declaration.handlers.js';
 import { closeScopeTx, openScopeTx } from '../../../src/modules/multi-tenant/scope-tx.js';
 import { encryptNomineeField } from '../../../src/modules/nominee/nominee-crypto.js';
 import { buildServer } from '../../../src/server.js';
@@ -349,9 +350,37 @@ describe.skipIf(!hasDatabase)('Story 6.20 — the nominee declaration surface �
     expect(pre).toMatchObject({ warnings: [], correction_label: null });
     expect(post).toMatchObject({ warnings: ['post_death_version'], correction_label: null });
     expect(body.warning_basis).toMatchObject({ death_date_known: true });
+    // Code review round 3 — the anchor IS the claim-level read's (⛔ never null when it reads cleanly).
+    const anchor = await inScope(w.pariwarId, (s) => claim.getClaimWarningAnchor(s.tx, ids.pariwarId(w.pariwarId), ids.claimId(w.claimCaseId)));
+    expect((body.warning_basis as Json).first_filed_at).toBe(anchor.toISOString());
     // Family 8 — the read is audited, naming the claim (a `claim:<uuid>` locator), with ids only.
     const [line] = auditsFor('admin_nominee_declaration.timeline_read', w.claimCaseId);
-    expect(line).toMatchObject({ resourceLocator: `claim:${w.claimCaseId}`, context: { version_count: 2, warning_count: 1 } });
+    expect(line).toMatchObject({
+      resourceLocator: `claim:${w.claimCaseId}`,
+      // `recent_change_checked` (code review round 4) — the 90-day check RAN, so `warning_count` is a complete judgement.
+      context: { version_count: 2, warning_count: 1, recent_change_checked: true },
+    });
+  });
+
+  it('code review round 3 — a FAILED anchor read rolls back to its SAVEPOINT: the error reaches the caller and the scope tx stays usable (⛔ never 25P02)', async () => {
+    const w = await world();
+    await inScope(w.pariwarId, async (s) => {
+      await expect(
+        readWarningAnchorSoft(s, async () => {
+          await s.client.query('SELECT 1 / 0'); // a real SQL error (22012) — it would abort the tx without the SAVEPOINT
+          return new Date();
+        }),
+      ).rejects.toThrow(/division by zero/);
+      // The NEXT statement on the same tx runs — the timeline's later reads (`listAppliedCorrectionLabels`, …) survive.
+      expect((await s.client.query<{ ok: number }>('SELECT 1 AS ok')).rows[0]?.ok).toBe(1);
+      // …and through DRIZZLE (`s.tx`, the handle production uses — code review round 4): the PRODUCTION read, given an id
+      // Postgres cannot parse, raises a real SQL error (22P02) on the same connection; the tx still survives it.
+      await expect(
+        readWarningAnchorSoft(s, () => claim.getClaimWarningAnchor(s.tx, ids.pariwarId(w.pariwarId), 'not-a-uuid' as never)),
+      ).rejects.toThrow();
+      expect((await s.client.query<{ ok: number }>('SELECT 1 AS ok')).rows[0]?.ok).toBe(1);
+      expect(await readWarningAnchorSoft(s, () => claim.getClaimWarningAnchor(s.tx, ids.pariwarId(w.pariwarId), ids.claimId(w.claimCaseId)))).toBeInstanceOf(Date);
+    });
   });
 
   it('⭐ D10 — the snapshots DECRYPT on demand, and the audit line carries ids only', async () => {

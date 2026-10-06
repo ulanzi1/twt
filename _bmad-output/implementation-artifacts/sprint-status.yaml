@@ -1,3 +1,4 @@
+# last_updated: 2026-10-06d (⭐ **STORY 6.23b — MERGED as PR #257 (rebase); the `pre-push` `ci:local` and all 34 GitHub checks passed.** ⛔ NO row moves (`6-23b-every-approver-gives-a-warning-reason` stays `done`). The story file's header now maps its 6 branch SHAs to their `main` twins (each pair proved by identical `patch-id`; merged tree `bbde4a5f` byte-identical to branch head `8770da31`) — incl. this ledger's `9c3c6181` → `4f041f36` and `50e3eef3` → `757b751b`; ⛔ no citation rewritten.)
 # last_updated: 2026-10-06c (⭐ **STORY 6.23b — CODE REVIEW ROUND 3 (a review of round 2's OWN 24 patches) ⇒ stays `done`.** BigDev asked
 # whether round 2's patches had been reviewed — they had ⛔ not (tests, red-checks, `ci:local` only). Three layers, parallel, read-only,
 # over `git diff HEAD` (1,374 lines) + the records diff: 37 raw → 15 patches, 12 dismissed, ⛔ no decision. Round 2 had introduced ONE

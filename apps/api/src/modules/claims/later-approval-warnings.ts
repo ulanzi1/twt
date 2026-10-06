@@ -18,9 +18,12 @@ export function lateWarningWaitMessage(ownReasonExcluded: boolean, prefix: Later
   const base =
     'This claim is waiting for the District Admin to record a reason for a warning that appeared after their approval. It is not refused.';
   if (!ownReasonExcluded) return base;
-  return `${base} A late reason you recorded cannot clear your own approval — someone else who can approve claims here (the District Admin, another Pariwar Admin or the Super Admin) and who is not approving it themselves${
-    prefix === 'r9_voting' ? ' (not an approve voter on this panel, nor the person finalizing it)' : ''
-  } must record theirs.`;
+  // Code review round 2: at R9 finalize the excluded recorder may be an APPROVE VOTER, ⛔ not the finalizer — "a late reason
+  // YOU recorded" was untrue to a finalizer who recorded nothing (the admin's `ownReasonExcludedR9` words, verbatim).
+  if (prefix === 'r9_voting') {
+    return `${base} A late reason recorded by an approve voter on this panel, or by the person finalizing it, cannot clear this approval — someone else who can approve claims here (the District Admin, another Pariwar Admin or the Super Admin) must record theirs.`;
+  }
+  return `${base} A late reason you recorded cannot clear your own approval — someone else who can approve claims here (the District Admin, another Pariwar Admin or the Super Admin) and who is not approving it themselves must record theirs.`;
 }
 
 /**

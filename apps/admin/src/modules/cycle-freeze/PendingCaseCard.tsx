@@ -318,6 +318,9 @@ export function PendingCaseCard({
         disabled={pending}
         idPrefix={pickerPrefix}
         showPicker={hasApprove}
+        // Code review round 2: a `voted_pending_commit` card offers Route-to-R9 ONLY — ⛔ never the WAIT's "approval is
+        // unavailable until they do" on a card with ⛔ no approve control (the lines, and a failed read, still show).
+        waitBlocksHere={hasApprove}
       />
 
       <div className="flex flex-wrap gap-2">

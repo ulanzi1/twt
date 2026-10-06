@@ -566,9 +566,10 @@ export function createCorrectionClosureHandlers(deps: AppDeps) {
       }
       // ⭐ Story 6.23b (EA6b; Trap 4) — while a warning shows, the Pariwar Admin's OWN note is the decision's rationale
       // (the same trustee field class), ⛔ the fixed text. The contract PAIRS it with the warning reason, so the code's
-      // presence is the signal; with ⛔ no code the constant stays (an un-warned approve sends `{}`).
+      // presence is the signal; with ⛔ no code the constant stays (an un-warned approve sends `{}`). Trimmed, as the
+      // escalation decision's rationale is (the same trustee field class — code review round 2).
       const decisionRationaleCiphertext = await encryptTrusteeRationale(
-        warningReasonCode !== null && body.note !== undefined ? body.note : NO_CORRECTION_NEEDED_DECISION_RATIONALE,
+        warningReasonCode !== null && body.note !== undefined ? body.note.trim() : NO_CORRECTION_NEEDED_DECISION_RATIONALE,
         ctx.pariwarIdStr,
         deps.encryption,
       );

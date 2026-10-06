@@ -121,6 +121,9 @@ describe.skipIf(!hasDatabase)('Story 6.23b — a reason replaced under a later a
       expect(rule.reason).toEqual({ code: old.code, reasonId: old.reasonId });
       expect(rule.kinds).toEqual(['recent_nominee_change']);
       const replacing = replaceApprovalWarningReason(replacer.client, { pariwarId: pid, reasonId: old.reasonId, label: 'Later', whenToUse: 'Later.', ...write });
+      // Code review round 2 — the same CI fix as `checking` above: if `waitUntilBlocked` throws first, `replacing` would
+      // otherwise reject unhandled (a false CI failure). The `await replacing` below still observes it normally.
+      replacing.catch(() => undefined);
       await waitUntilBlocked(replacer.backendPid);
       // Code review 2026-10-06 (P7): this test proves `checkLaterApprovalWarningReason`'s lock on the reason row is
       // held until THIS commit — the precondition any later `insertClaimWarningApprovalRecord` call relies on to

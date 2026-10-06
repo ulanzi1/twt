@@ -566,7 +566,7 @@ describe('<CorrectionQueueRoute> — a failed refetch is a banner, ⛔ a wiped l
     const { ApiError } = await import('../src/api/client.js');
     getClaimsUnderCorrection.mockReset();
     getClaimsUnderCorrection
-      .mockResolvedValueOnce({ pariwar_id: PARIWAR, items: [ITEM] })
+      .mockResolvedValueOnce({ pariwar_id: PARIWAR, items: [ITEM], late_warnings_unavailable: false })
       .mockRejectedValueOnce(new ApiError(503, 'internal', 'down'));
     const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     render(
@@ -658,6 +658,19 @@ describe('<CorrectionQueueRoute> — the late-warning row (Story 6.23b, AC10)', 
     expect(screen.queryByTestId('queue-badge-returned')).toBeNull();
   });
 
+  // Code review round 2 (BigDev "1"): the late arm FAILED and the row was kept on the candidate test alone — its count
+  // is `null` (uncounted). It says MAY, ⛔ never "0 nominee-change warnings appeared".
+  it('an UNCOUNTED late row (the late check failed) says it MAY await a reason — ⛔ never "0 warnings"', async () => {
+    setup([{ ...lateOnly, late_warning_uncovered_count: null }], true);
+    expect(await screen.findByTestId('queue-badge-late-warning')).toHaveTextContent('a late warning may await your reason');
+    const line = screen.getByTestId('queue-late-warning-line');
+    expect(line).toHaveTextContent(/may have appeared after your approval.*could not be checked/);
+    expect(line).not.toHaveTextContent(/\b0 nominee-change/);
+    expect(screen.getByTestId('correction-queue-late-unavailable')).toHaveTextContent(/may already be answered/);
+    // Code review round 3: uncounted candidates take page slots — a full page may be INCOMPLETE, and the banner says so.
+    expect(screen.getByTestId('correction-queue-late-unavailable')).toHaveTextContent(/may not be complete/);
+  });
+
   it('a claim BOTH returned and late-warned shows both, with its chase and closure', async () => {
     setup([{ ...ITEM, late_warning_awaiting_reason: true, late_warning_uncovered_count: 2 }]);
     expect(await screen.findByTestId('queue-badge-late-warning')).toBeInTheDocument();
@@ -679,9 +692,29 @@ describe('<CorrectionQueueRoute> — the late-warning row (Story 6.23b, AC10)', 
     expect(screen.getByTestId(`closure-column-${CLAIM}`)).toBeInTheDocument();
   });
 
-  it('⭐ invariant 7 — the late arm unavailable is SAID, and an empty list is ⛔ read as "nothing waiting"', async () => {
+  // Code review round 2: on the fault path every late-warning CANDIDATE is kept (uncounted), so an empty list IS empty —
+  // the empty line shows, and the banner still SAYS the check could ⛔ not run (invariant 7).
+  it('⭐ invariant 7 — the late arm unavailable is SAID; an empty list still says empty (every candidate is kept on a fault)', async () => {
     setup([], true);
     expect(await screen.findByTestId('correction-queue-late-unavailable')).toHaveTextContent(/could not be checked just now/);
-    expect(screen.queryByTestId('correction-queue-empty')).toBeNull();
+    expect(screen.getByTestId('correction-queue-empty')).toBeInTheDocument();
+  });
+
+  // Family 13(d), code review round 2: the banner's live region is PERSISTENT — mounted (empty) before the data, so its
+  // words are announced when they appear (a `role="status"` that mounts holding its text is ⛔ not).
+  it('the late-unavailable banner\'s live region is mounted BEFORE the data arrives, empty, and only its text changes', async () => {
+    let resolve: (v: unknown) => void = () => undefined;
+    getClaimsUnderCorrection.mockImplementation(() => new Promise((r) => (resolve = r)));
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <CorrectionQueueRoute />
+      </QueryClientProvider>,
+    );
+    const region = await screen.findByTestId('correction-queue-late-status'); // after the session gate, before the queue data
+    expect(region).toHaveAttribute('role', 'status');
+    expect(region).toBeEmptyDOMElement();
+    resolve({ pariwar_id: PARIWAR, items: [], late_warnings_unavailable: true });
+    expect(await screen.findByTestId('correction-queue-late-unavailable')).toBeInTheDocument();
+    expect(screen.getByTestId('correction-queue-late-status')).toBe(region);
   });
 });

@@ -457,6 +457,14 @@ describe.skipIf(!hasDatabase)('Story 6.23b — every approver gives a warning re
       expect(bulk.get(made[4]!.toLowerCase())!.coverage.records.map((r) => r.step)).toEqual(['district_admin_late_reason']);
       // An empty id list is ⛔ no statement and an empty map.
       expect((await readClaimApprovalWarningsBulk(tx, pid, [])).size).toBe(0);
+      // Code review round 2 — past one slice (> 500 ids: the cycle-freeze page reads three 500-row buckets) the reader
+      // SLICES, ⛔ never throws (a throw failed every case closed). Round 3: real claims on BOTH sides of the boundary — the
+      // first in slice 1, the rest in slice 2 — so a dropped, skipped or replacing slice fails this.
+      const filler = (n: number) => Array.from({ length: n }, () => toClaimId(randomUUID()));
+      const padded = [made[0]!, ...filler(600), ...made.slice(1)];
+      const sliced = await readClaimApprovalWarningsBulk(tx, pid, padded);
+      expect([...sliced.keys()].sort()).toEqual(made.map((c) => c.toLowerCase()).sort());
+      for (const cid of made) expect(sliced.get(cid.toLowerCase())).toEqual(bulk.get(cid.toLowerCase()));
     });
   });
 
@@ -839,6 +847,25 @@ describe.skipIf(!hasDatabase)('Story 6.23b — every approver gives a warning re
       });
     });
 
+    // Code review round 2 — *Testing* asks the Super Admin approve, "both the full and the `-251` waived", to 409 on a late
+    // key: the FULL-gate arm (the waived one is below).
+    it('the Super Admin (staff case, FULL gate) WAITS on a late key; their OWN late reason does ⛔ not clear it; NW14 by the District Admin does', async () => {
+      const { client, tx } = getTx();
+      await enterAppScope(client, PARIWAR_A);
+      const c = await returnedClaim(client, { mustAct: 'staff' });
+      await escalateStaffCase(client, { pariwarId: PARIWAR_A, claimCaseId: c.cid, now: c.day(90) });
+      await warn(client, c.cid);
+      await daApproval(client, c.cid);
+      const ctx = ctxOf(client, tx, c);
+      await refused(ctx, () => saApprove(client, c, 'details_verified', GENERIC), isWait({ own: false, count: 1 }));
+      await late(client, c.cid, CC_SA);
+      await refused(ctx, () => saApprove(client, c, 'details_verified', GENERIC), isWait({ own: true }));
+      await late(client, c.cid, CC_DA);
+      const res = await saApprove(client, c, 'details_verified', GENERIC);
+      expect(res).toMatchObject({ nameCheckWaived: false });
+      expect((await records(ctx)).map((r) => r.step).sort()).toEqual(['district_admin_late_reason', 'district_admin_late_reason', 'super_admin_approval']);
+    });
+
     it('⭐ Trap 17 — the `-251` WAIVED approve obeys the SAME rule, and WAITS on a late key; NW14 unblocks it', async () => {
       const { client, tx } = getTx();
       await enterAppScope(client, PARIWAR_A);
@@ -1013,9 +1040,10 @@ describe.skipIf(!hasDatabase)('Story 6.23b — every approver gives a warning re
           lateWarningUncoveredCount: 0,
         });
         for (const cid of [late.cid, second.cid]) {
+          // Round 2 (BigDev "1"): the count is UNKNOWN on the fault path — `null`, ⛔ never `0` ("0 warnings appeared").
           expect(degraded.find((r) => r.claimCaseId === cid)).toMatchObject({
             lateWarningAwaitingReason: true,
-            lateWarningUncoveredCount: 0,
+            lateWarningUncoveredCount: null,
           });
         }
         expect(told).toBe(1);

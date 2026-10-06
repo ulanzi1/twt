@@ -28,6 +28,9 @@ const getSession = vi.fn();
 const getEscalatedClosure = vi.fn();
 const decideEscalatedClosure = vi.fn();
 const approveNoCorrectionNeeded = vi.fn();
+const finalizeR9 = vi.fn();
+const requestStepUp = vi.fn();
+const verifyStepUp = vi.fn();
 vi.mock('../src/api/client.js', async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>();
   return {
@@ -40,6 +43,9 @@ vi.mock('../src/api/client.js', async (importOriginal) => {
     getEscalatedClosure: (...a: unknown[]) => getEscalatedClosure(...a),
     decideEscalatedClosure: (...a: unknown[]) => decideEscalatedClosure(...a),
     approveNoCorrectionNeeded: (...a: unknown[]) => approveNoCorrectionNeeded(...a),
+    finalizeR9: (...a: unknown[]) => finalizeR9(...a),
+    requestStepUp: (...a: unknown[]) => requestStepUp(...a),
+    verifyStepUp: (...a: unknown[]) => verifyStepUp(...a),
   };
 });
 
@@ -188,6 +194,14 @@ describe('<PendingCaseCard> — the final vote and the escalation (EA3, EA4, EA7
     expect(screen.queryByTestId(`${prefix}-warning-reason-picker`)).toBeNull();
   });
 
+  // Code review round 2: a voted case offers Route-to-R9 ONLY — ⛔ never the WAIT's "approval is unavailable until they do".
+  it('a voted case that WAITS shows the lines but ⛔ not the wait words (it has ⛔ no approve control to hold)', () => {
+    card({ current_state: 'state_trustee_approved', approval_warnings: summary({ waiting_for_district_admin: true }) }, 'voted_pending_commit');
+    expect(screen.getByTestId(`${prefix}-approval-warning-post_death_version`)).toBeInTheDocument();
+    expect(screen.queryByTestId(`${prefix}-approval-blocked`)).toBeNull();
+    expect(screen.queryByText(tw.later.waits)).toBeNull();
+  });
+
   it('⭐ AC11 — the verifier\'s reason as WORDS; an unknown code falls back to the code (⛔ blank)', () => {
     card();
     expect(screen.getByTestId('pending-case-verifier')).toHaveTextContent(`Anita Kumari · ${verifierConsoleEn.reasonCodes.r8_90pct_met}`);
@@ -231,6 +245,64 @@ describe('<CycleFreezePage> — the 409s in words, and a 409 refetches (a REAL u
     expect(alert).not.toHaveTextContent('cycle_freeze.');
     await waitFor(() => expect(getCycleFreezePending).toHaveBeenCalledTimes(2));
     expect(await screen.findByTestId(`${prefix}-approval-blocked`)).toHaveTextContent(tw.later.waits);
+    // Code review round 2 — the hazard the Testing line names: the words must SURVIVE the server-state refetch.
+    expect(screen.getByText((_, el) => el?.getAttribute('role') === 'alert' && (el.textContent ?? '').includes(tw.errors.lateWarningReasonRequired))).toBeInTheDocument();
+  });
+
+  // Code review round 2: the ONE page-level decision's error shows ONLY on the card that acted — ⛔ never as an alert on a
+  // claim with ⛔ no warning at all.
+  it('a 409 on one card shows its words on THAT card only', async () => {
+    const OTHER = '12121212-1212-4121-8121-121212121212';
+    getCycleFreezePending.mockResolvedValue({
+      pariwar_id: PARIWAR,
+      ready_to_freeze: [CASE, { ...CASE, claim_case_id: OTHER, approval_warnings: QUIET }],
+      escalated: [],
+      voted_pending_commit: [],
+      reason_options: OPTIONS,
+    });
+    postCycleFreezeDecision.mockRejectedValue(new ApiError(409, 'cycle_freeze.late_warning_reason_required', 'server words', { kinds: ['post_death_version'], uncovered_count: 1, own_reason_excluded: false }));
+    wrap(<CycleFreezePage pariwarId={PARIWAR} />);
+    const radio = await screen.findByTestId(`${prefix}-warning-reason-radio-${GENERIC}`);
+    fireEvent.click(radio);
+    const actingCard = radio.closest('li')!;
+    fireEvent.change(within(actingCard).getAllByRole('textbox')[0]!, { target: { value: 'why' } });
+    fireEvent.click(within(actingCard).getByTestId('cycle-freeze-approve'));
+    const isWaitAlert = (_: string, el: Element | null) => el?.getAttribute('role') === 'alert' && (el.textContent ?? '').includes(tw.errors.lateWarningReasonRequired);
+    expect(await within(actingCard).findByText(isWaitAlert)).toBeInTheDocument();
+    expect(screen.getAllByText(isWaitAlert)).toHaveLength(1);
+    expect(screen.queryByTestId('cycle-freeze-decision-error')).toBeNull();
+  });
+
+  // Code review round 3 — the REGRESSION round 2's per-card scoping introduced: a 409 whose refetch removes the acting
+  // claim from every bucket showed its words NOWHERE. They are said once, at the page.
+  it('a 409 whose refetch removes the acting claim from every bucket is said at the PAGE (⛔ never lost)', async () => {
+    getCycleFreezePending
+      .mockResolvedValueOnce({ pariwar_id: PARIWAR, ready_to_freeze: [CASE], escalated: [], voted_pending_commit: [], reason_options: OPTIONS })
+      .mockResolvedValue({ pariwar_id: PARIWAR, ready_to_freeze: [], escalated: [], voted_pending_commit: [], reason_options: OPTIONS });
+    postCycleFreezeDecision.mockRejectedValue(new ApiError(409, 'cycle_freeze.warning_reason_unavailable', 'x'));
+    wrap(<CycleFreezePage pariwarId={PARIWAR} />);
+    fireEvent.click(await screen.findByTestId(`${prefix}-warning-reason-radio-${GENERIC}`));
+    fireEvent.change(screen.getAllByRole('textbox')[0]!, { target: { value: 'why' } });
+    fireEvent.click(screen.getByTestId('cycle-freeze-approve'));
+    await waitFor(() => expect(getCycleFreezePending).toHaveBeenCalledTimes(2));
+    const pageError = await screen.findByTestId('cycle-freeze-decision-error');
+    expect(pageError).toHaveAttribute('role', 'alert');
+    expect(pageError).toHaveTextContent(tw.errors.warningReasonUnavailable);
+  });
+
+  // Code review round 3 — round 1's P36: the SERVER's `warning_reason_required` names what is missing (`details.missing`);
+  // `'note'` reads as the note words, anything else as the reason words.
+  it('`warning_reason_required` with `missing: "note"` reads as the NOTE words; with `"reason"`, the reason words', async () => {
+    getCycleFreezePending.mockResolvedValue({ pariwar_id: PARIWAR, ready_to_freeze: [CASE], escalated: [], voted_pending_commit: [], reason_options: OPTIONS });
+    postCycleFreezeDecision.mockRejectedValueOnce(new ApiError(409, 'cycle_freeze.warning_reason_required', 'x', { missing: 'note', kinds: ['post_death_version'] }));
+    wrap(<CycleFreezePage pariwarId={PARIWAR} />);
+    fireEvent.click(await screen.findByTestId(`${prefix}-warning-reason-radio-${GENERIC}`));
+    fireEvent.change(screen.getAllByRole('textbox')[0]!, { target: { value: 'why' } });
+    fireEvent.click(screen.getByTestId('cycle-freeze-approve'));
+    expect(await screen.findByText(tw.noteRequiredError, { selector: '[role="alert"]' })).toBeInTheDocument();
+    postCycleFreezeDecision.mockRejectedValueOnce(new ApiError(409, 'cycle_freeze.warning_reason_required', 'x', { missing: 'reason', kinds: ['post_death_version'] }));
+    fireEvent.click(screen.getByTestId('cycle-freeze-approve'));
+    expect(await screen.findByText(tw.errors.warningReasonRequired, { selector: '[role="alert"]' })).toBeInTheDocument();
   });
 
   it('a replaced reason (`warning_reason_unavailable`) reads as its own words', async () => {
@@ -288,6 +360,9 @@ describe('<R9CasePanel> — the approve vote and finalize (EA5; RD11)', () => {
   beforeEach(() => {
     getR9Panel.mockReset();
     castR9Vote.mockReset();
+    finalizeR9.mockReset();
+    requestStepUp.mockReset();
+    verifyStepUp.mockReset();
     getSession.mockResolvedValue({ userId: ME, nationalGrants: [] });
   });
 
@@ -318,9 +393,12 @@ describe('<R9CasePanel> — the approve vote and finalize (EA5; RD11)', () => {
     expect(await screen.findByTestId(`r9-vote-must-revise-${VOTE_ID}`)).toHaveTextContent(tw.later.voteMustBeRevised);
     expect(screen.getByTestId('r9-finalize-blocked')).toHaveTextContent(tw.errors.approveVotesNeedWarningReason(1));
     expect(screen.getByTestId('r9-finalize')).toBeDisabled();
+    expect(document.getElementById(screen.getByTestId('r9-finalize').getAttribute('aria-describedby') ?? '')).toHaveTextContent(
+      tw.errors.approveVotesNeedWarningReason(1),
+    );
   });
 
-  it('the WAIT holds Finalize (the R9 own-reason words) but ⛔ the vote; a denying outcome is ⛔ held', async () => {
+  it('the WAIT holds Finalize (the R9 own-reason words) but ⛔ not the vote', async () => {
     getR9Panel.mockResolvedValue(
       r9Panel({ votes: [approveVote(true)], tally: approvedTally, approval_warnings: summary({ waiting_for_district_admin: true, own_reason_excluded: true }) }),
     );
@@ -332,7 +410,7 @@ describe('<R9CasePanel> — the approve vote and finalize (EA5; RD11)', () => {
     expect(screen.getByTestId(`r9-${CLAIM}-warning-reason-picker`)).toBeInTheDocument();
   });
 
-  it('a covering vote shows ⛔ "must be revised"; a denied provisional outcome is ⛔ held', async () => {
+  it('a covering vote shows ⛔ no "must be revised" (and nothing holds Finalize)', async () => {
     getR9Panel.mockResolvedValue(r9Panel({ votes: [approveVote(true)], tally: { ...approvedTally, provisional_outcome: 'denied' } }));
     wrap(<R9CasePanel pariwarId={PARIWAR} claimCaseId={CLAIM} />);
     await screen.findByTestId('r9-finalize');
@@ -347,7 +425,9 @@ describe('<R9CasePanel> — the approve vote and finalize (EA5; RD11)', () => {
     getR9Panel
       .mockResolvedValueOnce(r9Panel())
       .mockResolvedValue(r9Panel({ tally: approvedTally, approval_warnings: summary({ waiting_for_district_admin: true }) }));
-    castR9Vote.mockRejectedValue(new ApiError(409, 'r9_voting.late_warning_reason_required', 'server words'));
+    // Code review round 3: a code the VOTE route really returns (the reason was replaced since the page loaded) — the WAIT
+    // holds finalize, ⛔ not the vote, so `late_warning_reason_required` is ⛔ never a vote's 409.
+    castR9Vote.mockRejectedValue(new ApiError(409, 'r9_voting.warning_reason_unavailable', 'server words'));
     wrap(<R9CasePanel pariwarId={PARIWAR} claimCaseId={CLAIM} />);
     const p = `r9-${CLAIM}`;
     fireEvent.click(await screen.findByTestId(`${p}-warning-reason-radio-${GENERIC}`));
@@ -359,6 +439,144 @@ describe('<R9CasePanel> — the approve vote and finalize (EA5; RD11)', () => {
     // The WAIT holds Finalize, ⛔ the vote (`waitBlocksHere={false}` on this picker) — so it shows here, not as
     // `${p}-approval-blocked`.
     expect(await screen.findByTestId('r9-finalize-blocked')).toHaveTextContent(tw.later.waits);
+    // Code review round 2 — the 409 in its OWN words (⛔ not the server's, ⛔ never a raw code). ⚠ The refetch itself is ALSO
+    // done by `useCastR9Vote`'s `onError` — this test proves "a 409 refetches", ⛔ not the component's own 409 branch.
+    const alert = screen.getByText((_, el) => el?.getAttribute('role') === 'alert' && (el.textContent ?? '').includes(tw.errors.warningReasonUnavailable));
+    expect(alert).not.toHaveTextContent('r9_voting.');
+    expect(alert).not.toHaveTextContent('server words');
+  });
+
+  // Code review round 3 — FINALIZE's real 409s in words: the WAIT (with the R9 own-reason words) and the COUNTED
+  // `approve_votes_need_warning_reason` (the count-free fallback has its own test below).
+  it('finalize\'s WAIT 409 reads as words, with the R9 own-reason words', async () => {
+    getR9Panel.mockResolvedValue(r9Panel({ votes: [approveVote(true)], tally: approvedTally }));
+    finalizeR9.mockRejectedValue(
+      new ApiError(409, 'r9_voting.late_warning_reason_required', 'server words', { kinds: ['post_death_version'], uncovered_count: 1, own_reason_excluded: true }),
+    );
+    wrap(<R9CasePanel pariwarId={PARIWAR} claimCaseId={CLAIM} />);
+    fireEvent.click(await screen.findByTestId('r9-finalize'));
+    const alert = await screen.findByText((_, el) => el?.getAttribute('role') === 'alert' && (el.textContent ?? '').includes(tw.errors.lateWarningReasonRequired));
+    expect(alert).toHaveTextContent(tw.later.ownReasonExcludedR9);
+    expect(alert).not.toHaveTextContent('server words');
+  });
+
+  it('finalize\'s `approve_votes_need_warning_reason` with `vote_ids` reads as the COUNTED words', async () => {
+    getR9Panel.mockResolvedValue(r9Panel({ votes: [approveVote(true)], tally: approvedTally }));
+    finalizeR9.mockRejectedValue(
+      new ApiError(409, 'r9_voting.approve_votes_need_warning_reason', 'server words', { vote_ids: [VOTE_ID, '89898989-8989-4898-8989-898989898989'], uncovered_count: 1 }),
+    );
+    wrap(<R9CasePanel pariwarId={PARIWAR} claimCaseId={CLAIM} />);
+    fireEvent.click(await screen.findByTestId('r9-finalize'));
+    expect(await screen.findByText(tw.errors.approveVotesNeedWarningReason(2))).toHaveAttribute('role', 'alert');
+  });
+
+  // ── Code review round 2 (AC9's admin list) ──
+  it('Trap 15 — a FAILED read disables an APPROVE vote, described by the unavailable words; a DENY vote stays open', async () => {
+    getR9Panel.mockResolvedValue(r9Panel({ approval_warnings: UNAVAILABLE, reason_options: [] }));
+    castR9Vote.mockResolvedValue({});
+    wrap(<R9CasePanel pariwarId={PARIWAR} claimCaseId={CLAIM} />);
+    const p = `r9-${CLAIM}`;
+    expect(await screen.findByTestId(`${p}-approval-blocked`)).toHaveTextContent(tw.unavailable);
+    fireEvent.change(screen.getByPlaceholderText('Rationale (required, ≤500 chars)'), { target: { value: 'x' } });
+    const submit = screen.getByTestId('r9-submit-vote');
+    expect(submit).toBeDisabled();
+    expect(submit).toHaveAttribute('aria-describedby', `${p}-approval-blocked`);
+    // Code review round 3: the target EXISTS (⛔ not a dangling id) and carries the words.
+    expect(document.getElementById(`${p}-approval-blocked`)).toHaveTextContent(tw.unavailable);
+    fireEvent.click(screen.getByRole('radio', { name: /Deny/ }));
+    expect(submit).toBeEnabled();
+    fireEvent.click(submit);
+    await waitFor(() => expect(castR9Vote).toHaveBeenCalledWith(PARIWAR, CLAIM, { vote: 'deny', rationale: 'x' }));
+  });
+
+  it('invariant 5 — the warning LINES show with Deny selected too (a Deny-selected member can still finalize an approval); the picker is approve-only', async () => {
+    getR9Panel.mockResolvedValue(r9Panel({ votes: [approveVote(true)], tally: approvedTally }));
+    wrap(<R9CasePanel pariwarId={PARIWAR} claimCaseId={CLAIM} />);
+    const p = `r9-${CLAIM}`;
+    await screen.findByTestId(`${p}-approval-warning-post_death_version`);
+    fireEvent.click(screen.getByRole('radio', { name: /Deny/ }));
+    expect(screen.getByTestId(`${p}-approval-warning-post_death_version`)).toBeInTheDocument();
+    expect(screen.queryByTestId(`${p}-warning-reason-picker`)).toBeNull();
+  });
+
+  it('a DENIED provisional outcome is ⛔ never held — even while the claim waits and a vote does ⛔ not cover the warnings', async () => {
+    getR9Panel.mockResolvedValue(
+      r9Panel({
+        votes: [approveVote(false)],
+        tally: { ...approvedTally, provisional_outcome: 'denied' },
+        approval_warnings: summary({ waiting_for_district_admin: true }),
+      }),
+    );
+    wrap(<R9CasePanel pariwarId={PARIWAR} claimCaseId={CLAIM} />);
+    expect(await screen.findByTestId('r9-finalize')).toBeEnabled();
+    expect(screen.queryByTestId('r9-finalize-blocked')).toBeNull();
+  });
+
+  it('a FINALIZED panel shows ⛔ no "must be revised" (finalizing is past)', async () => {
+    getR9Panel.mockResolvedValue(
+      r9Panel({
+        session: { ...r9Panel().session!, outcome: 'approved', finalized_display: 'Meera Joshi', finalized_at: '2026-09-22T10:00:00.000Z' },
+        votes: [approveVote(false)],
+        tally: approvedTally,
+      }),
+    );
+    wrap(<R9CasePanel pariwarId={PARIWAR} claimCaseId={CLAIM} />);
+    await screen.findByText(/finalized: approved/);
+    expect(screen.queryByTestId(`r9-vote-must-revise-${VOTE_ID}`)).toBeNull();
+  });
+
+  it('finalize\'s `approve_votes_need_warning_reason` reads as words — with ⛔ no `vote_ids`, the count-free words (⛔ never a guessed "one")', async () => {
+    getR9Panel.mockResolvedValue(r9Panel({ votes: [approveVote(true)], tally: approvedTally }));
+    finalizeR9.mockRejectedValue(new ApiError(409, 'r9_voting.approve_votes_need_warning_reason', 'server words', {}));
+    wrap(<R9CasePanel pariwarId={PARIWAR} claimCaseId={CLAIM} />);
+    fireEvent.click(await screen.findByTestId('r9-finalize'));
+    expect(await screen.findByText(tw.errors.approveVotesNeedWarningReasonUnknownCount)).toHaveAttribute('role', 'alert');
+  });
+
+  // Code review round 3: once Finalize is HELD, ⛔ no code is sent and ⛔ none is spent — both step-up buttons go disabled,
+  // described by the held words (in a PERSISTENT live region, so the change is announced).
+  it('"Send verification code" is disabled once Finalize is held after the step-up asked (⛔ no OTP sent for a refusal)', async () => {
+    getR9Panel
+      .mockResolvedValueOnce(r9Panel({ votes: [approveVote(true)], tally: approvedTally }))
+      .mockResolvedValue(r9Panel({ votes: [approveVote(true)], tally: approvedTally, approval_warnings: summary({ waiting_for_district_admin: true }) }));
+    finalizeR9.mockRejectedValue(new ApiError(403, 'auth.step_up_required', 'step up'));
+    wrap(<R9CasePanel pariwarId={PARIWAR} claimCaseId={CLAIM} />);
+    const status = await screen.findByTestId('r9-finalize-status');
+    expect(status).toHaveAttribute('role', 'status');
+    expect(status).toBeEmptyDOMElement();
+    fireEvent.click(screen.getByTestId('r9-finalize'));
+    // `useFinalizeR9`'s `onError` refetched the panel — the claim now WAITS; the SAME region carries the words.
+    expect(await screen.findByTestId('r9-finalize-blocked')).toHaveTextContent(tw.later.waits);
+    expect(screen.getByTestId('r9-finalize-status')).toBe(status);
+    const send = screen.getByRole('button', { name: 'Send verification code' });
+    expect(send).toBeDisabled();
+    expect(document.getElementById(send.getAttribute('aria-describedby') ?? '')).toHaveTextContent(tw.later.waits);
+    fireEvent.click(send);
+    expect(requestStepUp).not.toHaveBeenCalled();
+  });
+
+  it('"Verify & finalize" goes disabled when Finalize becomes held AFTER the code was entered (⛔ no OTP spent)', async () => {
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    getR9Panel.mockResolvedValue(r9Panel({ votes: [approveVote(true)], tally: approvedTally }));
+    finalizeR9.mockRejectedValue(new ApiError(403, 'auth.step_up_required', 'step up'));
+    requestStepUp.mockResolvedValue({});
+    render(
+      <QueryClientProvider client={qc}>
+        <R9CasePanel pariwarId={PARIWAR} claimCaseId={CLAIM} />
+      </QueryClientProvider>,
+    );
+    fireEvent.click(await screen.findByTestId('r9-finalize'));
+    fireEvent.click(await screen.findByRole('button', { name: 'Send verification code' }));
+    fireEvent.change(await screen.findByLabelText('Enter code'), { target: { value: '123456' } });
+    const verify = screen.getByRole('button', { name: /Verify & finalize/ });
+    expect(verify).toBeEnabled();
+    // The District Admin's approval state moves under the open box — the panel refetches and the claim WAITS.
+    getR9Panel.mockResolvedValue(r9Panel({ votes: [approveVote(true)], tally: approvedTally, approval_warnings: summary({ waiting_for_district_admin: true }) }));
+    await qc.invalidateQueries();
+    expect(await screen.findByTestId('r9-finalize-blocked')).toHaveTextContent(tw.later.waits);
+    expect(verify).toBeDisabled();
+    fireEvent.click(verify);
+    expect(verifyStepUp).not.toHaveBeenCalled();
   });
 });
 
@@ -452,6 +670,19 @@ describe('<EscalationDetail> — the Super Admin\'s approve (EA6a)', () => {
     // window-focus refetch); what this test proves is that the 409 triggers at least one more fetch than the load.
     await waitFor(() => expect(getEscalatedClosure.mock.calls.length).toBeGreaterThanOrEqual(2));
     expect(await screen.findByTestId('escalation-decision-approval-blocked')).toHaveTextContent(tw.later.waits);
+    // Code review round 2 — the 409 in words: `closure.*` refusals carry the server's own words (RD6 — `closureErrorText`),
+    // ⛔ never a raw code. ⚠ The refetch is ALSO done by the hook's `onSettled` — this proves "a 409 refetches", ⛔ not `onConflict`.
+    const alert = screen.getByText('server words');
+    expect(alert.closest('[role="alert"]')).not.toBeNull();
+  });
+
+  it('the WAIT with `own_reason_excluded` says the own-reason words (⛔ not the R9 variant) and disables the approve submit', async () => {
+    getEscalatedClosure.mockResolvedValue(detail({ approval_warnings: summary({ waiting_for_district_admin: true, own_reason_excluded: true }) }));
+    wrap(<EscalationDetail pariwarId={PARIWAR} claimCaseId={CLAIM} />);
+    const held = await screen.findByTestId('escalation-decision-approval-blocked');
+    expect(held).toHaveTextContent(tw.later.ownReasonExcluded);
+    expect(held).not.toHaveTextContent(tw.later.ownReasonExcludedR9);
+    expect(screen.getByTestId('decision-submit')).toBeDisabled();
   });
 });
 
@@ -491,9 +722,9 @@ describe('<PariwarClosureList> — D27\'s approve carries the picker and its OWN
     expect(screen.getByTestId(`${p}-warning-reason-error`)).toHaveTextContent(tw.reasonRequiredError);
     fireEvent.click(screen.getByTestId(`${p}-warning-reason-radio-${GENERIC}`));
     fireEvent.click(screen.getByTestId('no-correction-approve'));
-    expect(screen.getByTestId('no-correction-approve-note-missing')).toHaveTextContent(tw.noteRequiredError);
+    expect(screen.getByTestId(`no-correction-approve-note-missing-${CLAIM}`)).toHaveTextContent(tw.noteRequiredError);
     expect(approveNoCorrectionNeeded).not.toHaveBeenCalled();
-    fireEvent.change(screen.getByTestId('no-correction-approve-note'), { target: { value: ' The family showed the will. ' } });
+    fireEvent.change(screen.getByTestId(`no-correction-approve-note-${CLAIM}`), { target: { value: ' The family showed the will. ' } });
     fireEvent.click(screen.getByTestId('no-correction-approve'));
     await waitFor(() =>
       expect(approveNoCorrectionNeeded).toHaveBeenCalledWith(PARIWAR, CLAIM, { warning_reason_code: GENERIC, note: 'The family showed the will.' }),
@@ -503,7 +734,7 @@ describe('<PariwarClosureList> — D27\'s approve carries the picker and its OWN
   it('an UN-warned approve still posts `{}` (⛔ a note field); the WAIT disables it with words', async () => {
     approveNoCorrectionNeeded.mockResolvedValue({ claim_case_id: CLAIM, claim_state: 'state_trustee_approved', closure: null, decided_by: 'P', decided_at: 'x' });
     const { unmount } = wrap(<PariwarClosureList pariwarId={PARIWAR} reasonOptions={OPTIONS} items={[item({ approval_warnings: QUIET })]} />);
-    expect(screen.queryByTestId('no-correction-approve-note')).toBeNull();
+    expect(screen.queryByTestId(`no-correction-approve-note-${CLAIM}`)).toBeNull();
     fireEvent.click(screen.getByTestId('no-correction-approve'));
     await waitFor(() => expect(approveNoCorrectionNeeded).toHaveBeenCalledWith(PARIWAR, CLAIM, {}));
     unmount();
@@ -511,5 +742,30 @@ describe('<PariwarClosureList> — D27\'s approve carries the picker and its OWN
     expect(screen.getByTestId(`no-correction-${CLAIM}-approval-blocked`)).toHaveTextContent(tw.later.waits);
     expect(screen.getByTestId('no-correction-approve')).toBeDisabled();
     expect(screen.getByTestId('no-correction-keep')).toBeEnabled();
+  });
+
+  // ── Code review round 2 (AC9's admin list) ──
+  it('the kind line; a FAILED read disables ONLY Approve with the unavailable words; the own-reason words', () => {
+    const p = `no-correction-${CLAIM}`;
+    const { unmount } = wrap(<PariwarClosureList pariwarId={PARIWAR} reasonOptions={OPTIONS} items={[item()]} />);
+    expect(screen.getByTestId(`${p}-approval-warning-post_death_version`)).toHaveTextContent(tw.kindLine.post_death_version);
+    unmount();
+    const second = wrap(<PariwarClosureList pariwarId={PARIWAR} reasonOptions={[]} items={[item({ approval_warnings: UNAVAILABLE })]} />);
+    expect(screen.getByTestId(`${p}-approval-blocked`)).toHaveTextContent(tw.unavailable);
+    expect(screen.getByTestId('no-correction-approve')).toBeDisabled();
+    expect(screen.getByTestId('no-correction-keep')).toBeEnabled();
+    second.unmount();
+    wrap(<PariwarClosureList pariwarId={PARIWAR} reasonOptions={OPTIONS} items={[item({ approval_warnings: summary({ waiting_for_district_admin: true, own_reason_excluded: true }) })]} />);
+    expect(screen.getByTestId(`${p}-approval-blocked`)).toHaveTextContent(tw.later.ownReasonExcluded);
+  });
+
+  it('a 409 on the approve reads as words (the server\'s `closure.*` words — ⛔ never a raw code)', async () => {
+    approveNoCorrectionNeeded.mockRejectedValueOnce(new ApiError(409, 'closure.warning_reason_unavailable', 'That reason was replaced — choose again.'));
+    wrap(<PariwarClosureList pariwarId={PARIWAR} reasonOptions={OPTIONS} items={[item()]} />);
+    fireEvent.click(screen.getByTestId(`no-correction-${CLAIM}-warning-reason-radio-${GENERIC}`));
+    fireEvent.change(screen.getByTestId(`no-correction-approve-note-${CLAIM}`), { target: { value: 'why' } });
+    fireEvent.click(screen.getByTestId('no-correction-approve'));
+    const words = await screen.findByText('That reason was replaced — choose again.');
+    expect(words.closest('[role="alert"]')).not.toBeNull();
   });
 });

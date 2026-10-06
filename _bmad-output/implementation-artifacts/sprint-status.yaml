@@ -1,3 +1,25 @@
+# last_updated: 2026-10-06c (⭐ **STORY 6.23b — CODE REVIEW ROUND 3 (a review of round 2's OWN 24 patches) ⇒ stays `done`.** BigDev asked
+# whether round 2's patches had been reviewed — they had ⛔ not (tests, red-checks, `ci:local` only). Three layers, parallel, read-only,
+# over `git diff HEAD` (1,374 lines) + the records diff: 37 raw → 15 patches, 12 dismissed, ⛔ no decision. Round 2 had introduced ONE
+# regression (a 409 whose refetch removes the acting claim showed its words on ⛔ no card — now said at the page) and dropped the
+# queue banner's "may be missing" (on a fault, uncounted candidates take page slots — it says "may not be complete" again); the rest
+# were gaps in round 2's tests (a vote 409 on a code the vote route can ⛔ never return; a ticked item ⛔ never done; a slice test that
+# could ⛔ not catch a dropped slice; a closure UNIQUE wrongly called untestable; a hollow `verifyStepUp` proof) and records (four
+# overturned round-1 lines without appended corrections; an incomplete File List; ~30 inverted glyphs). All 15 applied (BigDev *"1"*);
+# the load-bearing ones red-checked. `ci:local` 34 / 34 green, first run. ⛔ Not committed. ⛔ No other row moves.)
+# last_updated: 2026-10-06b (⭐ **STORY 6.23b — CODE REVIEW ROUND 2 (`bmad-code-review`) ⇒ stays `done`.** `6-23b-every-approver-gives-a-warning-reason`
+# re-reviewed over the whole story diff `b41ea25f..50e3eef3` (round 1's fixes included), two chunks (server, then admin — BigDev:
+# *"Server, then admin"*), three layers each in parallel, read-only (*"Parallel, read-only"*; chunk 2's first launch died on an API
+# session limit and was re-run whole). Chunk 1: 28 raw → 1 decision (BigDev *"1"*: the queue's fault-path count is `null` = could ⛔ not
+# be counted, ⛔ `0` — the row said "0 warnings appeared"), 9 patches + it, 1 defer, 11 dismissed. ⚠ TWO round-1 dispositions were wrong
+# in the code: the 500-id cap THREW past one page (the cycle-freeze page reads three 500-row buckets ⇒ Approve disabled on EVERY case) —
+# now sliced; and decision #1's fault shape. Chunk 2: 37 raw → 13 patches, 1 defer, 13 dismissed — incl. an escalation reason picked on
+# one claim pre-selected on the next (⛔ keyed), one card's 409 on every cycle-freeze card, the queue banner's live region ⛔ announced,
+# AC9's admin test gaps on three surfaces, and round 1's unreachable "no reasons configured" branch. All 24 patches applied (BigDev
+# *"1"* ×2); the load-bearing ones red-checked. Suites: domain 324 / 4511, api 148 / 1529 (both :5433), contracts 74 / 1265, admin
+# 59 / 913. `ci:local` 34 / 34 after chunk 1; after chunk 2 run 1 31 / 34 (my own fixture cast — TS2352), run 2 34 / 34. ⛔ No migration
+# changed. `deferred-work.md`: round 1's unrecorded follow-up, a second row-`6-22` mechanism, a failed-refetch item. ⛔ Not committed.
+# ⛔ No other row moves.)
 # last_updated: 2026-10-06 (⭐ **STORY 6.23b — CODE REVIEW (`bmad-code-review`) ⇒ `done`.** `6-23b-every-approver-gives-a-warning-reason`
 # `review` → `done`. Chunked by layer (domain → contracts → api → admin), 3 layers per chunk (Blind Hunter, Edge Case Hunter, Acceptance
 # Auditor), run in parallel per BigDev's instruction. 12 layer runs, ~86 raw findings → 4 decisions (all resolved: 2 → patch after being

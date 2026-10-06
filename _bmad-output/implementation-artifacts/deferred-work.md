@@ -32,6 +32,25 @@ Recorded under `2026-10-04-278` (EA1–EA9), as amended by `-279` (A1–A6, A10,
   lifts the declaration lock for a member found innocent, a member declare can add a `recent_nominee_change` key with ⛔ no new
   determination — ⛔ not queued (the wait itself still holds at the gate). ⭐ Trigger: row `6-22` lands — add an arm on a
   member-source version recorded after the live approval.
+  - *Appended — code review round 2 of 6-23b (2026-10-06):* a SECOND mechanism under the same trigger. When an EARLIER claim on the
+    same deceased gains a `member_found_innocent` finding, `first_filed_at` (`approval-warnings.ts`, the `NOT EXISTS … member_found_innocent`
+    subquery) excludes it, the 90-day anchor moves LATER, and a `recent_nominee_change` key can appear with ⛔ no new determination —
+    ⛔ not queued by EA10 (the wait still holds at the gate). Unreachable today: `recordMemberInnocenceFinding` has ⛔ no production caller
+    until row `6-22`. The arm added at that trigger must also cover a finding recorded after the live approval.
+- **A FAILED refetch after a 409 hides the whole approval surface** [`apps/admin/src/modules/r9-voting/R9CasePanel.tsx`,
+  `apps/admin/src/modules/correction-closure/EscalationPanel.tsx`] — both branch on `isError` before `data`, so TanStack's kept data is
+  ignored: the R9 panel disappears and the escalation form unmounts, losing the typed note and pick (`ListStates` and
+  `CorrectionQueueRoute` already keep data on a failed refetch). Pre-existing (`R9CasePanel`'s `if (panel.isError)` at `b41ea25f:89`);
+  6.23b's 409 → refetch makes it likelier. *Recorded by code review round 2 of 6-23b (2026-10-06).* ⭐ Trigger: the next story touching
+  either surface — render the error as a banner while `data` exists.
+- **Each later approval reads the claim's warnings two or three times** (`assertClaimApprovable`'s wait conjunct →
+  `readClaimApprovalWarnings`; then `checkLaterApprovalWarningReason` → the same read; R9 finalize a third time for the per-vote
+  check) [`packages/domain/src/claim/{r9-voting-persist,state-trustee-decision-persist,correction-closure}.ts`]. Code review
+  round 1 (2026-10-06) SKIPPED threading ONE read through both functions — it changes two exported signatures and ≈ 88
+  typechecked test calls for a pure efficiency win. ⛔ Not a correctness gap: every binding approver holds the claim row
+  `FOR UPDATE` before the first read, as do the determination and certificate-review writers, so the reads cannot disagree
+  (round 2 traced it). *Recorded by code review round 2 — round 1 called it "a follow-up" and recorded it nowhere.* ⭐ Trigger:
+  a measured latency problem on an approval route, or the next signature change to either function.
 - **The cycle-freeze, R9 and 6.19c refusal audit lines carry the WAIT's counts; the 6.19c D27 / Super Admin routes have ⛔ no
   `rejected` audit line at all** (pre-existing — their refusals are translated, ⛔ audited). 6.23b adds ⛔ no new audit event
   type (EA9: ⛔ nothing else moves); the approve lines carry `approval_warning_kinds` + `warning_reason_code`. ⭐ Trigger: an

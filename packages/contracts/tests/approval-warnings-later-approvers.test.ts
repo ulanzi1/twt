@@ -189,6 +189,9 @@ describe('the read DTOs carry the block (EA7, RD11, RD20) — every field REQUIR
     expect(PariwarClosureQueueItemDto.safeParse(item).success).toBe(false);
     ok(PariwarClosureQueueItemDto.safeParse({ ...item, approval_warnings: null }));
     ok(PariwarClosureQueueItemDto.safeParse({ ...item, kind: 'no_correction_needed', approval_warnings: SUMMARY }));
+    // Code review round 2 — RD20's "EXACTLY", both directions.
+    failsAt(PariwarClosureQueueItemDto.safeParse({ ...item, kind: 'no_correction_needed', approval_warnings: null }), 'approval_warnings');
+    failsAt(PariwarClosureQueueItemDto.safeParse({ ...item, approval_warnings: SUMMARY }), 'approval_warnings');
   });
   it('EA10 — the correction queue item\'s two late-warning fields and the response\'s `late_warnings_unavailable`', () => {
     // `.innerType()` — the `superRefine` added below wraps the object in a `ZodEffects`, which has no `.shape`.
@@ -196,6 +199,8 @@ describe('the read DTOs carry the block (EA7, RD11, RD20) — every field REQUIR
     expect(shape.late_warning_awaiting_reason.safeParse(true).success).toBe(true);
     expect(shape.late_warning_uncovered_count.safeParse(2).success).toBe(true);
     expect(shape.late_warning_uncovered_count.safeParse(-1).success).toBe(false);
+    // Code review round 2 (BigDev "1"): `null` = could ⛔ not be counted.
+    expect(shape.late_warning_uncovered_count.safeParse(null).success).toBe(true);
     expect(ClaimsUnderCorrectionResponse.safeParse({ pariwar_id: CLAIM, items: [] }).success).toBe(false);
     ok(ClaimsUnderCorrectionResponse.safeParse({ pariwar_id: CLAIM, items: [], late_warnings_unavailable: false }));
     // Code review 2026-10-06 (P19): `true` — never read as "none waiting" — is parse-tested too, not just `false`.
@@ -205,7 +210,7 @@ describe('the read DTOs carry the block (EA7, RD11, RD20) — every field REQUIR
   // Code review 2026-10-06 (P48): the two late-warning fields as part of the REAL, full item — not just their own
   // schemas in isolation (`.shape.X.safeParse`, above) — so a break in how they interact with the item's many
   // pre-existing required fields, or with the new cross-field pairing below, is actually caught here.
-  it('P48 — ClaimUnderCorrectionItem end-to-end, and its cross-field pairing (a nonzero count implies the flag)', () => {
+  it('P48 — ClaimUnderCorrectionItem end-to-end, and its cross-field pairing (the flag ⇔ an uncounted or nonzero count)', () => {
     const fullItem = {
       claim_case_id: CLAIM,
       deceased_member_id: MEMBER,
@@ -243,13 +248,22 @@ describe('the read DTOs carry the block (EA7, RD11, RD20) — every field REQUIR
     };
     ok(ClaimUnderCorrectionItem.safeParse(fullItem));
     ok(ClaimUnderCorrectionItem.safeParse({ ...fullItem, late_warning_awaiting_reason: true, late_warning_uncovered_count: 2 }));
-    // The "⛔ never dropped on a fault" shape (decision-needed #1): the flag true, the count unknown (0).
-    ok(ClaimUnderCorrectionItem.safeParse({ ...fullItem, late_warning_awaiting_reason: true, late_warning_uncovered_count: 0 }));
-    // A nonzero count with the flag false is incoherent and must fail.
-    failsAt(
-      ClaimUnderCorrectionItem.safeParse({ ...fullItem, late_warning_awaiting_reason: false, late_warning_uncovered_count: 2 }),
-      'late_warning_awaiting_reason',
-    );
+    // The "⛔ never dropped on a fault" shape (decision-needed #1), round 2 (BigDev "1"): the flag true, the count
+    // UNCOUNTED — `null`, ⛔ never `0`.
+    ok(ClaimUnderCorrectionItem.safeParse({ ...fullItem, late_warning_awaiting_reason: true, late_warning_uncovered_count: null }));
+    // Incoherent pairs fail — each direction: a nonzero or uncounted count with the flag false; the flag with `0`
+    // (round 1's fault shape, which read "0 warnings appeared").
+    for (const [flag, count] of [[false, 2], [false, null], [true, 0]] as const) {
+      failsAt(
+        ClaimUnderCorrectionItem.safeParse({ ...fullItem, late_warning_awaiting_reason: flag, late_warning_uncovered_count: count }),
+        'late_warning_awaiting_reason',
+      );
+    }
+    // Code review round 3 — RESPONSE level: an uncounted item exists ONLY when the late arm failed.
+    const uncounted = { ...fullItem, late_warning_awaiting_reason: true, late_warning_uncovered_count: null };
+    ok(ClaimsUnderCorrectionResponse.safeParse({ pariwar_id: CLAIM, items: [uncounted], late_warnings_unavailable: true }));
+    failsAt(ClaimsUnderCorrectionResponse.safeParse({ pariwar_id: CLAIM, items: [uncounted], late_warnings_unavailable: false }), 'late_warnings_unavailable');
+    ok(ClaimsUnderCorrectionResponse.safeParse({ pariwar_id: CLAIM, items: [fullItem], late_warnings_unavailable: false }));
   });
 
   // Code review 2026-10-06 (P18): `true` — an approve vote whose rationale covers every current warning — is the

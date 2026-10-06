@@ -267,6 +267,7 @@ export function R9CasePanel({ pariwarId, claimCaseId }: R9CasePanelProps): React
       : [approvalBlockedReason(warnings, 'r9'), votesToRevise > 0 ? t.approvalWarnings.errors.approveVotesNeedWarningReason(votesToRevise) : null]
           .filter((m): m is string => m !== null)
           .join(' ') || null;
+  const approveVoteUnavailable = voteChoice === 'approve' && !warnings.available;
   const submitVote = (): void => {
     setVoteValidation(null);
     if (voteChoice === 'approve' && !warnings.available) {
@@ -345,10 +346,11 @@ export function R9CasePanel({ pariwarId, claimCaseId }: R9CasePanelProps): React
                 <strong>{v.vote}</strong> — {v.voter_display} <span className="opacity-50">({new Date(v.cast_at).toLocaleString()})</span>
                 <div className="opacity-70">{v.rationale}</div>
                 {/* ⭐ Story 6.23b (RD11) — the SAME answer finalize would give, BEFORE the step-up. */}
-                {v.covers_current_warnings === false ? (
-                  // Code review 2026-10-06 (P35): every sibling dynamically-appearing message in this diff uses
-                  // `role="status"`; this one didn't, so a screen-reader user got no announcement when a vote
-                  // flipped to "needs revision".
+                {/* Code review round 2: ⛔ not on a FINALIZED panel — "before the outcome can be finalized" is past. */}
+                {!finalized && v.covers_current_warnings === false ? (
+                  // Code review 2026-10-06 (P35) added `role="status"`. ⚠ Round 2 correction: a status region that MOUNTS
+                  // holding its text is ⛔ not announced — the line is in reading order beside its vote; the change that
+                  // reveals it after an action is announced by the finalize 409's own `role="alert"`.
                   <p role="status" className="mt-1 font-medium text-status-warn-fg" data-testid={`r9-vote-must-revise-${v.vote_id}`}>
                     {t.approvalWarnings.later.voteMustBeRevised}
                   </p>
@@ -397,11 +399,14 @@ export function R9CasePanel({ pariwarId, claimCaseId }: R9CasePanelProps): React
                     Deny
                   </label>
                 </fieldset>
-                {/* ⭐ Story 6.23b (EA5) — an APPROVE vote while a warning shows: the lines and 6.23a's picker; a deny vote
-                    is ⛔ never gated. The WAIT holds Finalize, ⛔ the vote — said beside Finalize. */}
-                {voteChoice === 'approve' ? (
+                {/* ⭐ Story 6.23b (EA5) — the warning LINES always (code review round 2: a member with Deny selected can still
+                    Finalize an approved outcome — invariant 5); 6.23a's picker only for an APPROVE vote; a deny vote is
+                    ⛔ never gated. The WAIT holds Finalize, ⛔ not the vote — said beside Finalize. */}
+                {/* Code review round 3: ⛔ no empty spacing wrapper on an un-warned panel (the block itself returns `null`). */}
+                {warnings.kinds.length > 0 || !warnings.available ? (
                   <div className="mb-2">
                     <LaterApprovalWarnings
+                      showPicker={voteChoice === 'approve'}
                       summary={warnings}
                       options={model.reason_options}
                       value={warningReasonCode}
@@ -429,7 +434,10 @@ export function R9CasePanel({ pariwarId, claimCaseId }: R9CasePanelProps): React
                   type="button"
                   data-testid="r9-submit-vote"
                   className="rounded bg-black px-3 py-1 text-sm text-white disabled:opacity-50"
-                  disabled={vote.isPending || rationale.trim() === ''}
+                  // Code review round 2 (Trap 15): an APPROVE vote is disabled while the warnings could ⛔ not be read,
+                  // described by the block's unavailable words; a DENY vote stays open.
+                  disabled={vote.isPending || rationale.trim() === '' || approveVoteUnavailable}
+                  aria-describedby={approveVoteUnavailable ? `r9-${claimCaseId}-approval-blocked` : undefined}
                   onClick={submitVote}
                 >
                   Submit vote
@@ -455,11 +463,15 @@ export function R9CasePanel({ pariwarId, claimCaseId }: R9CasePanelProps): React
                   outcome ({tally.provisional_outcome} on the current votes).
                 </p>
                 {/* ⭐ Story 6.23b — why an approving finalize is held, BEFORE the step-up (⛔ a 409 behind a code entry). */}
-                {finalizeBlocked !== null ? (
-                  <p id={`r9-${claimCaseId}-finalize-blocked`} role="status" className="mb-2 text-xs font-medium" data-testid="r9-finalize-blocked">
-                    {finalizeBlocked}
-                  </p>
-                ) : null}
+                {/* Code review round 3 (family 13(d)): a PERSISTENT live region — on the step-up path a 403 raises ⛔ no alert, and
+                    the refetch that makes the claim wait must still be ANNOUNCED (a region that mounts holding its text is ⛔ not). */}
+                <p role="status" data-testid="r9-finalize-status" className="text-xs font-medium">
+                  {finalizeBlocked !== null ? (
+                    <span id={`r9-${claimCaseId}-finalize-blocked`} className="mb-2 block" data-testid="r9-finalize-blocked">
+                      {finalizeBlocked}
+                    </span>
+                  ) : null}
+                </p>
                 <button
                   type="button"
                   data-testid="r9-finalize"
@@ -476,7 +488,9 @@ export function R9CasePanel({ pariwarId, claimCaseId }: R9CasePanelProps): React
                     <button
                       type="button"
                       className="w-fit rounded border px-3 py-1 text-sm disabled:opacity-50"
-                      disabled={requestStepUp.isPending}
+                      // Code review round 3: ⛔ never send a code for a finalize the screen already knows is held.
+                      disabled={requestStepUp.isPending || finalizeBlocked !== null}
+                      aria-describedby={finalizeBlocked !== null ? `r9-${claimCaseId}-finalize-blocked` : undefined}
                       onClick={() => requestStepUp.mutate(FINALIZE_STEP_UP_CONTEXT)}
                     >
                       Send verification code
@@ -490,7 +504,9 @@ export function R9CasePanel({ pariwarId, claimCaseId }: R9CasePanelProps): React
                         <button
                           type="button"
                           className="rounded bg-black px-3 py-1 text-sm text-white disabled:opacity-50"
-                          disabled={verifyStepUp.isPending || otp.trim() === ''}
+                          // Code review round 2: ⛔ never spend the code on a finalize the screen already knows is held.
+                          disabled={verifyStepUp.isPending || otp.trim() === '' || finalizeBlocked !== null}
+                          aria-describedby={finalizeBlocked !== null ? `r9-${claimCaseId}-finalize-blocked` : undefined}
                           onClick={verifyThenFinalize}
                         >
                           Verify &amp; finalize

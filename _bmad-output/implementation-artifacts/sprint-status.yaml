@@ -1,3 +1,8 @@
+# last_updated: 2026-10-06j (⭐ **STORY 6.26 — VALIDATE ROUND 3: ⛔ NO BLOCKER, ⛔ NO HIGH ⇒ THE ROUNDS STOP.** A fresh-context re-validate of
+# `-284` and v2.4/v1.3: 5 MEDIUM / 9 LOW, all story text, ⛔ no new decision entry — the R9 leaf also exports a SQL fragment (6.26b's queue
+# needs it in SQL), GI7's `-284` E1 line in 6.26a, the window evaluated on the LOCKED claim row in schedule/reschedule/complete, the console
+# context's `client` + its red-by-design test calls, 6.26b's red-by-design re-review specs and the RLS-spec legs. `deferred-work.md` carries
+# `-284` E5's NON-blocking Panel confirm. 6.26a → v2.5, 6.26b → v1.4. ⛔ No row moves — `6-26-…` is `ready-for-dev`, Task 1 may start.)
 # last_updated: 2026-10-06i (⭐ **STORY 6.26 — VALIDATE ROUND 2, and `2026-10-06-284` COMMITTED (`72afe24d`, alone).** A fresh-context
 # re-validate of `-283` and the v2.3 rewrite: 0 BLOCKER, 2 HIGH, 6 MEDIUM, ~10 LOW. HIGH: `-283` A1 lets an R9-routed claim complete an
 # inspection in `state_trustee_approved`, but the correction queue never scans that state ⇒ 6.26b's late key would wait unseen — BigDev:
@@ -19092,7 +19097,8 @@ development_status:
   # the row above is STORY 6.26a (keeps its key — the rulings cite it): the gate, the review-window widening, the inspector's record and the
   # certificate check. 6.26b below is the warnings (the date difference + `-281` Q1 B's two mismatches), the register check and 6.23b's
   # queue; its file is written, but it stays `backlog` until 6.26a is `done` (the 6.21b / 6.23b precedent).
-  # ⚠ 2026-10-06 (validate v2.3): `2026-10-06-283` amends `-282` GI2/GI3/GI5/GI6/GI16 — build from the story files' `⚠ AMENDED by -283` lines.
+  # ⚠ 2026-10-06 (validate v2.3–v2.5): `2026-10-06-283` amends `-282` GI2/GI3/GI5/GI6/GI16 and `-284` amends `-283` (GI5, GI7, E5) — build
+  # from the story files' `⚠ AMENDED by -283` / `-284` lines. Validate rounds STOPPED at round 3 (⛔ no BLOCKER / HIGH).
   6-26b-death-facts-warnings-and-register-check: backlog
   6-27-peer-mesh-sending-replies-and-date-of-death: backlog
   epic-6-retrospective: done

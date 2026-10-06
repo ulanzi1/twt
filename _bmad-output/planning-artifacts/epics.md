@@ -3137,7 +3137,8 @@ reasons; the District Admin is told in their correction queue.
 > `_bmad-output/implementation-artifacts/6-26-ground-inspection-before-approval-and-death-facts.md`.
 > ⚠ **6.26a go-live coupling: Story 6.26b** — until it ships, an inspector's "does not match" and the family's date of death are shown, but
 > ⛔ no difference from the certificate is flagged, ⛔ nothing asks an approver for a reason, and ⛔ no register check is recorded
-> (`2026-10-06-283` A8). ⚠ `-283` (A1–A8) amends `-282`'s GI2 / GI3 / GI5 / GI6 / GI16 — the story files carry it.
+> (`2026-10-06-283` A8). ⚠ `-283` (A1–A8) amends `-282`'s GI2 / GI3 / GI5 / GI6 / GI16, and `-284` (E1–E5) amends `-283` (GI5's
+> constant home, GI7's R9-routed queue scan, the `-263` reading kept with a NON-blocking Panel confirm) — the story files carry both.
 
 As the District Admin deciding a family's death claim — and every approver after me — I want the system to hold any approval until the
 claim's ground inspection is complete, with the inspector's photograph of the original certificate, their record of whether it matches the
@@ -3146,8 +3147,8 @@ altered certificate meets a person who has held the original before any member's
 
 **Acceptance Criteria (in brief):** ⛔ no approval — at any approver — before the ground inspection is complete (one condition in the one
 approval gate); a refusal, an escalation, a route to R9 and a return for correction ⛔ never wait for it; a claim whose visit cannot happen
-waits, ⛔ never refused for it; inspections can be recorded at any point in the review window, so a claim reversed on appeal or approved
-through an escalation can still be inspected; completing an inspection requires a photograph of the original certificate, a matches / does
+waits, ⛔ never refused for it; inspections can be recorded at any point in the review window — and while an R9-routed claim is in `state_trustee_approved` (`-283`
+A1) — so a claim reversed on appeal or approved through an escalation can still be inspected; completing an inspection requires a photograph of the original certificate, a matches / does
 ⛔ not match verdict against the current uploaded copy, and the family's date of death (time optional); a true nominee's refile, and a claim
 whose certificate was replaced after the visit, needs a short certificate check of the current original; the District Admin's console says
 why a claim waits. The system still refuses ⛔ nothing.

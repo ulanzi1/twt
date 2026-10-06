@@ -2572,6 +2572,9 @@ So that peer-mesh selection is reproducible, audit-replayable, and non-manipulab
 > never waits; a visit that cannot happen makes the claim wait). The inspector **sees and photographs the original certificate** and
 > records whether it matches the upload, and records the **date and time of death**; the District Admin records the **government-register
 > (CRS) check**. Owned by row `6-26-ground-inspection-before-approval-and-death-facts`.
+> ⚠ *Appended 2026-10-06:* the row SPLIT (`2026-10-06-281` Consequence 2) — the gate, the original certificate and the date and time of
+> death stay with row `6-26-…` (Story 6.26a); the **government-register check (FQ8 B)** and FQ8 C's *"shows … any difference"* moved to row
+> `6-26b-death-facts-warnings-and-register-check` (Story 6.26b).
 
 As a District Admin or designated field worker conducting ground inspection,
 I want a ground inspection workflow to schedule, record notes, and upload photos,
@@ -3132,8 +3135,9 @@ reasons; the District Admin is told in their correction queue.
 > [`-282`](../../.decision-log.md#decision-2026-10-06-282) (GI1–GI18, the [a] ones built here). Row
 > `6-26-ground-inspection-before-approval-and-death-facts` (it keeps the key the rulings cite). `epic-6-retrospective` stays `done`. Full ACs:
 > `_bmad-output/implementation-artifacts/6-26-ground-inspection-before-approval-and-death-facts.md`.
-> ⚠ **6.26a go-live coupling: Story 6.26b** — until it ships, an inspector's "does not match" and a differing date of death are shown but
-> ask nothing of an approver, and ⛔ no register check is recorded.
+> ⚠ **6.26a go-live coupling: Story 6.26b** — until it ships, an inspector's "does not match" and the family's date of death are shown, but
+> ⛔ no difference from the certificate is flagged, ⛔ nothing asks an approver for a reason, and ⛔ no register check is recorded
+> (`2026-10-06-283` A8). ⚠ `-283` (A1–A8) amends `-282`'s GI2 / GI3 / GI5 / GI6 / GI16 — the story files carry it.
 
 As the District Admin deciding a family's death claim — and every approver after me — I want the system to hold any approval until the
 claim's ground inspection is complete, with the inspector's photograph of the original certificate, their record of whether it matches the

@@ -1,3 +1,14 @@
+# last_updated: 2026-10-06h (⭐ **STORY 6.26 — THE FIRST FRESH-CONTEXT VALIDATE, and `2026-10-06-283` COMMITTED (`e8200366`, alone).** ⚠ First the
+# owed record: Task 0.6 was DONE in `e1907338` (`epics.md` 6.26a / 6.26b) — the `2026-10-06g` line below still says it is owed. Then
+# `bmad-create-story validate 6.26` at HEAD `e1907338` (⛔ no code moved since `3311fc97`): three read-only verifiers, 6.26a and 6.26b
+# reviewed COMBINED; every BLOCKER / HIGH re-checked against the code. 2 BLOCKER: the `NOT VALID` CHECKs vs GI13's erasure (Postgres
+# re-checks on every UPDATE ⇒ every erasure of an inspected deceased would fail 23514 — both halves); the API `schedule` handler's own
+# `verification_in_progress` pre-check (GI3 widened only the domain) + a "KEPT" wire code that exists nowhere (`ground_inspection.not_allowed`).
+# 6 HIGH incl. the lock order (assignment → claim — the reverse deadlocks reschedule), R9 finalize in `state_trustee_approved` stranding a
+# refile, an inherited `certificate_check` passing as a visit, the date rule with ⛔ no clock vs a tomorrow-dated fixture. BigDev: *"Admit
+# while R9-routed"* (A1), *"Add the stage filter"* (A2), *"Add currency filter"* (A3, 6.26b), *"All, with -283 first"*. 6.26a → v2.3, 6.26b
+# → v1.2; `epics.md` 6.7 annotation gains a dated split line, the 6.26a coupling reworded (A8). ⛔ No row moves — `6-26-…` stays
+# `ready-for-dev`, `6-26b-…` stays `backlog`. ⚠ A fresh-context RE-validate of `-283` and the rewrite is owed before Task 1.)
 # last_updated: 2026-10-06g (⭐ **STORY 6.26 — THE AUTHOR-COMMIT IS RECORDED.** `2026-10-06-282` (GI1–GI18, verbatim from Story 6.26a v2.0, both
 # halves, each tagged with its builder) committed ALONE as `97403945` on `story/6-26-ground-inspection-before-approval-and-death-facts`, after
 # the governance commit `9282d108` (the story, the note, `-281`, the split). ⛔ No GI changed; GI2's Q2-B branch recorded as moot. ⛔ No row
@@ -19059,6 +19070,7 @@ development_status:
   #   6-25 — D2 B + FQ3 A (email every Pariwar Admin of the Pariwar; ⛔ no names, ⛔ no note). ⚠ The FIRST staff-messaging path in the stack.
   #   6-26 — FQ9 A (⛔ no approval before a COMPLETED ground inspection; a refusal never waits) · FQ11 A (original certificate seen + photographed)
   #          · FQ8 B (government-register check recorded) · FQ8 C (date AND time of death at the inspection). ⚠ Same gate as 6.19c T10 — sequence them.
+  #          (2026-10-06: FQ8 B and FQ8 C's "shows any difference" → row 6-26b since the split; 6.19c landed first and its `-263` C4 note is in place.)
   #   6-27 — FINDING: 6.6's five requests are never SENT and cannot be ANSWERED · FQ10 A (a signal, not a gate) · FQ8 E (ask the date of death).
   #   + `2026-09-28-264`: FQ12 (ONE rule — approving over ANY warning needs a reason + note; owned by 6-23, fed by 6-26/6-27 ⇒ 6-23 first)
   #          · FQ13 (the refile's fresh original certificate seen by an inspector — 6-26; 6-24's approval waits on it).
@@ -19073,6 +19085,7 @@ development_status:
   # the row above is STORY 6.26a (keeps its key — the rulings cite it): the gate, the review-window widening, the inspector's record and the
   # certificate check. 6.26b below is the warnings (the date difference + `-281` Q1 B's two mismatches), the register check and 6.23b's
   # queue; its file is written, but it stays `backlog` until 6.26a is `done` (the 6.21b / 6.23b precedent).
+  # ⚠ 2026-10-06 (validate v2.3): `2026-10-06-283` amends `-282` GI2/GI3/GI5/GI6/GI16 — build from the story files' `⚠ AMENDED by -283` lines.
   6-26b-death-facts-warnings-and-register-check: backlog
   6-27-peer-mesh-sending-replies-and-date-of-death: backlog
   epic-6-retrospective: done

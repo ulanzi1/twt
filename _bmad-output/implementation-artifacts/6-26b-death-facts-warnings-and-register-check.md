@@ -12,6 +12,9 @@ LETTERS: `GI1`…`GI18` are Story 6.26's author decisions, defined ONCE in 6.26a
 This story BUILDS the ones tagged **[b]** or **[a+b]** there — GI6, GI7, GI8, GI17, GI18 and the [b] halves of GI10, GI11, GI13, GI15, GI16.
 This file ⛔ never restates a different version of a GI: where a summary below and 6.26a's text disagree, 6.26a's text (and the decision
 entry) is the record.
+⭐ v1.2 — `2026-10-06-283` (the first fresh-context validate of 6.26a and 6.26b, combined) amends GI6 here (**A3**: a printed date from
+a REPLACED original ⛔ no longer warns) and GI2/GI16 in 6.26a (**A2**: the inheritance needs a full visit). 6.26a's GI block carries a
+`⚠ AMENDED by -283` line under each amended GI; where a GI and its line disagree, the line is the build.
 -->
 
 # Story 6.26b: The Death Facts Become Warnings — a Differing Date of Death, an Original That Does Not Match, a Register That Does Not Match — and the District Admin Records the Government-Register Check `[SURFACE]`
@@ -44,8 +47,14 @@ Status: backlog
 >    determination decided after the live approval (`correction-queue-read.ts:162-173`, the `lateWarningCandidate` select, and `:196-209`,
 >    the SQL superset arm — two copies on purpose). 6.26a's window lets an assignment complete AFTER approval ⇒ a second source (GI7).
 > 4. ⭐ **The kind-label map is typed `satisfies Record<ApprovalWarningKind, string>`** (`apps/admin/src/modules/claim-verification/i18n-en.ts:136-139`)
->    ⇒ typecheck forces each new kind's words; the later surfaces render through the ONE shared block (`LaterApprovalWarnings.tsx`), so the
->    words reach the cycle-freeze, R9 and closure surfaces without per-surface edits (verify at the re-pin).
+>    ⇒ typecheck forces each new kind's words; the later surfaces render through the ONE shared block (`LaterApprovalWarnings.tsx` — used by
+>    `EscalationPanel`, `PariwarClosureStrip`, `PendingCaseCard`, `R9CasePanel`), so the words reach them without per-surface edits (verify
+>    at the re-pin). ⚠ **A SECOND typed map exists:** `NomineeDeclarationPanel.tsx:119` is `satisfies Record<ApprovalWarningKind,
+>    (firstFiledAt) => string>` and the contract `nominee-declaration.ts:56` is `warnings: z.array(ApprovalWarningKind)` — the timeline's
+>    per-VERSION warnings. Typecheck will demand timeline words for three kinds that are ⛔ never about a version ⇒ narrow the timeline's
+>    type (and its contract field) to the VERSION kinds (`post_death_version`, `recent_nominee_change`), ⛔ never write version words for
+>    them (Trap 7). ⚠ The block's heading reads *"Nominee-change warnings on this claim"* (`i18n-en.ts:135`) — it would mislabel the three new
+>    kinds ⇒ reword it to cover every kind (e.g. *"Warnings on this claim"*).
 
 ## Story
 
@@ -66,6 +75,8 @@ is ever refused because of one.**
 | `2026-10-06-281` Q1 B | a "does not match" — the original vs the copy, or the register — is a **warning** under the one rule; ⛔ never a refusal | ⭐ Trustee-ratified |
 | `-262` reading | the comparison is by **date**; the time is shown, compared with nothing; the register record is *matches / does not match / could not be checked online* | ⚠ OUR reading |
 | `-281` reading | a mismatch about a certificate the claim no longer relies on ⛔ no longer warns (it stays shown); `could_not_check` is ⛔ never a warning | ⚠ OUR reading |
+| `-264` reading | FQ13's check records the date of death on the fresh original against the District Admin's accepted date ⇒ a `certificate_check`'s printed date can raise the date kind | ⚠ OUR reading |
+| `2026-10-06-283` A3 | that printed date warns only while its original is the CURRENT upload (GI17's currency) | ⚠ Author-commit (BigDev) — amends GI6 |
 
 **⛔ Not covered by any ruling (stays open):** what an approver must weigh under a warning; which states' registers can be searched;
 whether an unsearchable register is ever treated differently.
@@ -82,9 +93,9 @@ whether an unsearchable register is ever treated differently.
 ⭐ This story ADDS conjuncts to an existing benefit-gating predicate (the warning rule). In the member's terms:
 - **P2 (GI8):** *"A District Admin cannot accept a death certificate without recording whether they checked it on the government's death
   register — 'could not be checked online' is always allowed, so this never stops a family's claim on its own."* — `-262` FQ8 B: consistent.
-- **P3 (GI6/GI7):** *"If the date of death the family gave the inspector differs from the certificate's, anyone approving must pick a reason
-  and write a note; if it appears after the District Admin approved, the claim waits for the District Admin's reason."* — `-264` FQ12 +
-  `-277` Q3 B: consistent.
+- **P3 (GI6/GI7 + `-283` A3):** *"If the date of death the family gave the inspector — or the date printed on the original certificate the
+  inspector held — differs from the certificate the Trust accepted, anyone approving must pick a reason and write a note; if it appears after
+  the District Admin approved, the claim waits for the District Admin's reason."* — `-264` FQ12 + its reading + `-277` Q3 B: consistent.
 - **P4 (GI17/GI18):** *"If the inspector finds the original does not match the copy, or the register does not match, anyone approving must
   pick a reason and write a note; it never refuses the claim."* — `-281` Q1 B: consistent.
 - Niyamavali §6.2 (document authenticity is verified): consistent; ⛔ no clause on any of these; ⛔ not ratified ([[feedback_niyamavali_rulebook_not_spec]]).
@@ -92,6 +103,8 @@ whether an unsearchable register is ever treated differently.
 ## ⚖️ Decisions built here (defined in 6.26a's file; ✅ committed by `2026-10-06-282`)
 - **GI6** `inspection_death_date_differs:<ground_inspection_id>` — an OWN completed assignment's `death_date_index` IS DISTINCT FROM the
   current accepted review's `accepted_date_index`, both non-null; ⛔ no accepted certificate ⇒ ⛔ no key; an inherited inspection ⇒ ⛔ no key.
+  ⚠ **`-283` A3:** a row whose `death_date_source = 'original_certificate'` counts only while its `compared_certificate_upload_id` is the
+  claim's CURRENT upload; a `family_statement` row is ⛔ not filtered.
 - **GI7** the date kind ENTERS the wait; 6.23b's queue gains the completed-after-approval disjunct in BOTH candidate copies.
 - **GI8** `register_check` required on ACCEPT, refused on REJECT; stored plaintext with `accepted_date_index` on the review row; ⛔ no new
   conjunct (the certificate conjunct already requires a current accepted review); ⛔ no certificate number stored.
@@ -118,7 +131,8 @@ form.
 ### AC8 — The warnings (GI6, GI7, GI17, GI18)
 **Given** an accepted certificate dated D:
 - a completed full assignment whose family date ≠ D ⇒ `inspection_death_date_differs`; = D ⇒ ⛔ no key; ⛔ no accepted certificate ⇒ ⛔ no key;
-  an inherited inspection ⇒ ⛔ no key; a `certificate_check` whose printed date ≠ D ⇒ the key too (6.26a GI5's `original_certificate` source);
+  an inherited inspection ⇒ ⛔ no key; a `certificate_check` whose printed date ≠ D ⇒ the key too (6.26a GI5's `original_certificate` source)
+  — but ⛔ no key once that original is ⛔ no longer the claim's current upload (`-283` A3; still shown);
 - a completed assignment with verdict `does_not_match` compared against the CURRENT upload ⇒ `original_certificate_mismatch`; against a
   replaced upload ⇒ ⛔ no key (still shown);
 - the current accepted review with `register_check = 'does_not_match'` ⇒ `register_check_mismatch`; `matches` / `could_not_check` ⇒ ⛔ no key;
@@ -141,21 +155,21 @@ The anonymizer sets the review's `accepted_date_index` NULL beside its accepted-
 Catalog version / key count unchanged; ⛔ no new event; ⛔ no new rule or reason code; ⛔ no member-facing file changes.
 
 ### AC13b — The proof
-Every test below passes; `pnpm ci:local` green with `DATABASE_URL` at :5433; the migration applied to BOTH :5432 and :5433.
+Every test below passes; GI15 [b]'s fixtures raise ⛔ no warning on any approve-path spec; `pnpm ci:local` green with `DATABASE_URL` at :5433; the migration applied to BOTH :5432 and :5433.
 
 ## Tasks / Subtasks
 - [ ] **Task 0 (AC0)** — confirm 6.26a `done`; `git fetch origin`; re-pin; re-read 6.26a's merged columns, constant and the warning module; branch.
-- [ ] **Task 1 — Migration (GI8)** — `0148_death-certificate-register-check.sql` (re-number at the re-pin): enum `death_certificate_register_check` (`matches`, `does_not_match`, `could_not_check`); `claim_death_certificate_reviews` + `register_check`, `accepted_date_index text`; a CHECK **`NOT VALID`** (an `accepted` review carries both, a `rejected` one neither); Drizzle schema; journal; :5432 AND :5433.
+- [ ] **Task 1 — Migration (GI8)** — `0148_death-certificate-register-check.sql` (re-number at the re-pin): enum `death_certificate_register_check` (`matches`, `does_not_match`, `could_not_check`); `claim_death_certificate_reviews` + `register_check`, `accepted_date_index text`; a CHECK **`NOT VALID`** that a `rejected` review carries ⛔ neither. ⚠⚠ "an `accepted` review carries both" is ⛔ NOT a CHECK — it is the WRITER's guard (Task 2) + a test: Postgres re-checks a `NOT VALID` constraint on every UPDATE, and every pre-6.26b accepted review lacks both columns, while two existing UPDATEs rewrite those rows — the anonymizer's note scrub sets `noteCiphertext` on EVERY review of the deceased (`member/anonymize.ts:237-243`), and the review writer's supersession (`death-certificate-review-persist.ts:178`, `SET superseded_at`) — so such a CHECK would fail every erasure and make every pre-6.26b certificate un-re-reviewable; and GI13 [b] NULLs `accepted_date_index` on erasure anyway. Drizzle schema; journal; :5432 AND :5433.
 - [ ] **Task 2 — Domain: the review writer (GI8)** — `recordDeathCertificateReview` takes `registerCheck` and `acceptedDateIndex`; the two refusals; `DeathCertificateReviewRefusedError`'s reason union widened.
 - [ ] **Task 3 — Domain: the kinds (GI6, GI17, GI18)** (`claim/approval-warnings.ts`)
   - [ ] 3.1 `APPROVAL_WARNING_KINDS` += the three; the pin test; the contracts mirror + its lockstep test.
   - [ ] 3.2 Both statements (`readClaimApprovalWarnings` and the bulk twin) select the own completed assignments' `(ground_inspection_id, death_date_index, original_certificate_verdict, compared_certificate_upload_id)`, the current upload id, and the current accepted review's `(review_id, accepted_date_index, register_check)` — ⛔ no ciphertext; the SHARED pure derivation adds the keys; raw SQL with explicit aliases ([[project_epic6_drizzle_correlated_subquery_bug]]); the bulk twin keeps 6.23b's slicing.
-- [ ] **Task 4 — Domain: the queue (GI7)** — `correction-queue-read.ts`: BOTH late-warning candidate copies gain *"or an own assignment of this claim `completed` with `completed_at > v.decided_at`"*; the *"ONLY that way"* comment amended (⛔ not deleted).
-- [ ] **Task 5 — Erasure (GI13 [b])** — `member/anonymize.ts` + RTBF spec counts.
+- [ ] **Task 4 — Domain: the queue (GI7)** — `correction-queue-read.ts`: BOTH late-warning candidate copies gain *"or an own assignment of this claim `completed` with `completed_at > v.decided_at`"*; the *"ONLY that way"* comment amended (⛔ not deleted); and append to `deferred-work.md`'s item *"⚠ EA10's late-warning arm keys on a NEW determination"* that 6.26b added the completed-after-approval arm — its row-6-22 trigger still stands for the member-declare and innocence-finding sources.
+- [ ] **Task 5 — Erasure (GI13 [b])** — `member/anonymize.ts`: `accepted_date_index` → NULL beside the existing accepted-date scrub (the Task 1 CHECK admits it); `packages/domain/tests/member/rtbf-anonymize.test.ts` pins + the live RTBF spec (erase a deceased whose claim has an accepted review written AFTER this migration — ⛔ no 23514).
 - [ ] **Task 6 — API** — `claims.death-certificate.handlers.ts`: `register_check` + the index on accept (via `DEATH_DATE_INDEX_FIELD_CLASS` — ⛔ never a second literal); map the two refusals; the console's document section and assignment rows (GI10 [b]).
 - [ ] **Task 7 — Contracts** — `death-certificate.ts` (`register_check` on the request + the history item); the console fields; the kind enum. Run contracts / mobile vitest ([[project_contracts_tests_outside_tsc]]).
-- [ ] **Task 8 — Admin** — `DeathCertificateReviewControl.tsx`: the register-check choice on accept (⛔ nothing pre-selected); the three kind lines in `i18n-en.ts` (typecheck forces them); the console's assignment-row and document-section words; `microcopy.yaml` check.
-- [ ] **Task 9 — Fixtures (GI15 [b])** — `seedAcceptedDeathCertificate` (domain) and `ensureAcceptedDeathCertificate` (API) pass `register_check: 'matches'` + the index; run the WHOLE suites first — any new red is a fixture gap, ⛔ never a weakened assertion.
+- [ ] **Task 8 — Admin** — `DeathCertificateReviewControl.tsx`: the register-check choice on accept (⛔ nothing pre-selected); the review HISTORY line showing it in words (AC7); the three kind lines in `i18n-en.ts` (typecheck forces them) and the block heading reworded (Fact 4); `NomineeDeclarationPanel.tsx`'s map narrowed to version kinds (Fact 4 / Trap 7); the console's assignment-row and document-section words; `microcopy.yaml` check (it scans all `apps/admin/src/**`; `report` is banned).
+- [ ] **Task 9 — Fixtures (GI15 [b]; AC13b)** — `seedAcceptedDeathCertificate` (domain) and `ensureAcceptedDeathCertificate` (API) pass `register_check: 'matches'` + the index; run the WHOLE suites first — any new red is a fixture gap, ⛔ never a weakened assertion.
 - [ ] **Task 10 — Tests** (below); red-check each load-bearing one.
 - [ ] **Task 11 — Records** — `sprint-status.yaml`; File List; Change Log.
 
@@ -171,17 +185,20 @@ Every test below passes; `pnpm ci:local` green with `DATABASE_URL` at :5433; the
 6. **Fixture defaults raise nothing** — register `matches`, family date = accepted date (6.26a GI15), verdict `matches`; otherwise every
    approve-path spec gains a warning (the 6.23a Trap-5 lesson).
 7. **The timeline** (`NomineeDeclarationPanel`, `claims.nominee-declaration.handlers.ts`) classifies VERSIONS only — the three new kinds are ⛔ not
-   version kinds; widening the shared enum must ⛔ not make the timeline emit them (check its exhaustiveness).
+   version kinds; widening the shared enum must ⛔ not make the timeline emit them, and its typed map (`NomineeDeclarationPanel.tsx:119`) and
+   contract field (`nominee-declaration.ts:56`) narrow to the version kinds (Fact 4).
+8. **Currency for the printed date** (`-283` A3) — a test replaces the original after a `certificate_check` and sees the date key go.
+9. **The review CHECK is narrow on purpose** (Task 1) — an UPDATE of any pre-6.26b accepted review must still pass it.
 
 ### Testing
 - **Domain unit:** the derivation table of AC8 (each kind: present / absent / no accepted review / replaced upload / superseded review / inherited).
-- **Domain live-DB:** `approval-warnings.spec.ts` + `approval-warnings-every-approver.spec.ts` (each kind blocks an un-reasoned approval at every approver; the late wait for GI6 and GI17); the bulk-vs-single parity; `correction-queue` (the completed-after-approval listing); `death-certificate.spec.ts` (AC7); the RTBF spec.
+- **Domain live-DB:** `approval-warnings.spec.ts` + `approval-warnings-every-approver.spec.ts` (each kind blocks an un-reasoned approval at every approver; the late wait for GI6 and GI17); the bulk-vs-single parity; the queue (`listClaimsUnderCorrection` — tested in `approval-warnings-every-approver.spec.ts`, domain and API; ⛔ no separate correction-queue spec exists): the completed-after-approval listing; `death-certificate.spec.ts` (AC7); the RTBF spec.
 - **API live-DB:** `death-certificate.spec.ts` (register check codes); `verifier-console.spec.ts` / `-shape.spec.ts` (the new fields); one approval-route test showing the reason requirement for a new kind.
 - **Admin:** `death-certificate-review.test.tsx` (the choice, nothing pre-selected); the kind lines on the console and on one later surface.
 - **Gate:** `pnpm ci:local` ([[project_known_livedb_test_failures]], [[project_ci_local_concurrency_oversubscription]] before calling a flake).
 
 ### References
-- `.decision-log.md`: `2026-10-06-281` · `2026-09-28-262` FQ8 B/C · `-264` FQ12 · `-277` Q2 C, Q3 B · `-278` NW1, NW6, NW14 · `-279` A4, A6 · `2026-10-06-282` (6.26's author-commit, GI1–GI18).
+- `.decision-log.md`: `2026-10-06-283` A2, A3 (amends `-282`) · `2026-10-06-281` · `2026-09-28-262` FQ8 B/C · `-264` FQ12 · `-277` Q2 C, Q3 B · `-278` NW1, NW6, NW14 · `-279` A4, A6 · `2026-10-06-282` (6.26's author-commit, GI1–GI18).
 - `_bmad-output/implementation-artifacts/6-26-ground-inspection-before-approval-and-death-facts.md` (Story 6.26a — GI1–GI18, the record).
 - `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-06-6-26-certificate-mismatch-and-replacement.md`.
 - Stories `6-23-post-death-nominee-change-warnings.md` (NW1–NW18), `6-23b-every-approver-gives-a-warning-reason.md` (EA2, EA7, EA10), `6-21-death-certificate-clear-date-rule.md` (the review writer).
@@ -202,3 +219,4 @@ Every test below passes; `pnpm ci:local` green with `DATABASE_URL` at :5433; the
 |---|---|---|
 | v1.0 | 2026-10-06 | Split out of Story 6.26 v1.1 (BigDev; `2026-10-06-281` Consequence 2) after the Panel ruled Q1 B · Q2 A. Owns GI6, GI7, GI8, GI17, GI18 and the [b] halves of GI10/11/13/15/16. `backlog` until 6.26a is `done`; ⛔ not re-pinned yet. |
 | v1.1 | 2026-10-06 | GI1–GI18 committed by `2026-10-06-282` (cited here). ⛔ No GI changed; still `backlog`. |
+| v1.2 | 2026-10-06 | The first fresh-context validate (combined with 6.26a's v2.3; `2026-10-06-283`, `e8200366`). GI6 amended by **A3** (a printed date from a replaced original ⛔ no longer warns — BigDev: *"Add currency filter"*; P3 now names the printed date; a `-264` reading row). Task 1's CHECK narrowed: "an accepted review carries both" is the writer's guard, ⛔ not a CHECK (a `NOT VALID` CHECK re-checks every pre-6.26b accepted review on the anonymizer's note scrub and on supersession — every erasure would fail). Fact 4 names the SECOND typed kind map (`NomineeDeclarationPanel.tsx:119`, narrowed to version kinds) and the mislabelling heading. Task 4 appends to the EA10 deferred item; Task 8 gains the review-history line; the queue's tests live in `approval-warnings-every-approver.spec.ts`. ⛔ Not re-pinned; still `backlog`. |

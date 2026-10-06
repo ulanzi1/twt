@@ -1,3 +1,20 @@
+# last_updated: 2026-10-06f (⭐ **STORY 6.26 — THE PANEL RULED, AND THE ROW SPLIT.** The routing note
+# `trustee-panel-routing-note-2026-10-06-6-26-certificate-mismatch-and-replacement.md` was put and answered the same day (DR + KB: *"Q1 - B ·
+# Q2 - A"*) ⇒ recorded as Trustee-ratified `2026-10-06-281`: a "does not match" (the inspector's look at the original, or the government
+# register) is a WARNING under the one rule — every approver gives a reason and a note, a late one waits for the District Admin, ⛔ never a
+# refusal; a certificate replaced after the visit is seen by an inspector too. Both as Story 6.26 v1.1 was written ⇒ ⛔ no design change.
+# ⭐ SPLIT (BigDev): `6-26-ground-inspection-before-approval-and-death-facts` stays `ready-for-dev` as Story 6.26a (v2.0 — the gate, the window,
+# the inspector's record, the certificate check); NEW row `6-26b-death-facts-warnings-and-register-check` = `backlog` (v1.0 — the three
+# warning kinds, the register check, 6.23b's queue). ⚠ Go-live coupling: 6.26a alone shows a mismatch but asks nothing. ⚠ STILL OWED before
+# any 6.26 code: the author-commit for GI1–GI18 (6.26a Task 0.3). ⛔ Not committed. ⛔ No other row moves.)
+# last_updated: 2026-10-06e (⭐ **STORY 6.26 — CREATED (`bmad-create-story 6.26`) ⇒ `ready-for-dev`.** `6-26-ground-inspection-before-approval-and-death-facts`
+# `backlog` → `ready-for-dev`, pinned `3311fc97`. Builds `-263` FQ9 A / FQ11 A, `-262` FQ8 B / C and `-264` FQ13 through ONE new conjunct in
+# `assertClaimApprovable` (reaches all six gate calls + the `-251` waived approve). ⭐ FOUND (⛔ not decided): the inspection writers accept only
+# `verification_in_progress`, so a claim denied before any inspection then reversed on appeal — or approved through an escalation — would wait
+# FOREVER under the gate ⇒ GI3 widens them to the review window; the console drops the inherited inspection once a refile has its own
+# assignment; 6.23b's correction queue assumes a late key comes ONLY from a new determination. 16 author decisions (GI1–GI16) commit in
+# Task 0 BEFORE any code; ⏳ TWO Panel questions routed there (Q1 — what a "does not match" means; Q2 — must an inspector see a certificate
+# replaced after the inspection). ⛔ No decision recorded, ⛔ not committed. ⛔ No other row moves.)
 # last_updated: 2026-10-06d (⭐ **STORY 6.23b — MERGED as PR #257 (rebase); the `pre-push` `ci:local` and all 34 GitHub checks passed.** ⛔ NO row moves (`6-23b-every-approver-gives-a-warning-reason` stays `done`). The story file's header now maps its 6 branch SHAs to their `main` twins (each pair proved by identical `patch-id`; merged tree `bbde4a5f` byte-identical to branch head `8770da31`) — incl. this ledger's `9c3c6181` → `4f041f36` and `50e3eef3` → `757b751b`; ⛔ no citation rewritten.)
 # last_updated: 2026-10-06c (⭐ **STORY 6.23b — CODE REVIEW ROUND 3 (a review of round 2's OWN 24 patches) ⇒ stays `done`.** BigDev asked
 # whether round 2's patches had been reviewed — they had ⛔ not (tests, red-checks, `ci:local` only). Three layers, parallel, read-only,
@@ -19046,7 +19063,12 @@ development_status:
   6-23b-every-approver-gives-a-warning-reason: done
   6-24-true-nominee-refile-after-a-suspicion-refusal: backlog
   6-25-staff-email-notice-of-a-suspicion-refusal: backlog
-  6-26-ground-inspection-before-approval-and-death-facts: backlog
+  6-26-ground-inspection-before-approval-and-death-facts: ready-for-dev
+  # ⭐ 2026-10-06 SPLIT after `2026-10-06-281` (the Panel: Q1 B · Q2 A; BigDev: "write the panel note then we get the answer and then we split"):
+  # the row above is STORY 6.26a (keeps its key — the rulings cite it): the gate, the review-window widening, the inspector's record and the
+  # certificate check. 6.26b below is the warnings (the date difference + `-281` Q1 B's two mismatches), the register check and 6.23b's
+  # queue; its file is written, but it stays `backlog` until 6.26a is `done` (the 6.21b / 6.23b precedent).
+  6-26b-death-facts-warnings-and-register-check: backlog
   6-27-peer-mesh-sending-replies-and-date-of-death: backlog
   epic-6-retrospective: done
 

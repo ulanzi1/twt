@@ -26,6 +26,11 @@ State Trustee's vote, or the special-case R9 panel's) also wait for a completed 
 **never approved** — because the District Admin refused and an appeal overturned it, because the District Admin passed the claim up instead
 of deciding, or because the claim was sent to the R9 panel before the District Admin decided?
 
+**What we mean by "the R9 panel":** the State Trustee panel that decides a death claim by **majority vote** when the claim is a **special
+case** under the rulebook's rule R9 — for example a death by suicide, a murder in which a nominee is accused, several members dying on the
+same date, or a death abroad. A claim can be sent to that panel at several points before it is finally approved, **including before the District Admin has decided it**; the
+panel then votes, and its majority approval is the claim's approval. ⛔ No District Admin approval need come before it.
+
 **Why it cannot be decided without you:** your ruling says two things that agree almost always and part ways only here. Its headline —
 *"every claim's ground inspection must be complete before the claim is approved"* — covers the final approval. Its next sentence — *"the
 District Admin cannot approve until a completed inspection is recorded"* — and your list of what the ruling does not cover (which says the
@@ -80,8 +85,9 @@ meanwhile:** A (`2026-10-06-284` E5) — the vote waits; ⛔ nobody at the vote 
 When you ruled that no claim may be approved before someone from the Trust has visited and held the original death certificate, you also
 wrote that the later, final approval was untouched — because the District Admin's approval always comes before it, and the District
 Admin's approval already has to wait. That is true for almost every claim. It is ⛔ not true for three kinds: a claim the District Admin
-refused and an appeal then overturned; a claim the District Admin passed upward instead of deciding; and a claim sent to the special-case
-panel before the District Admin decided. On those, the District Admin never approves, so the only approval is the final one.
+refused and an appeal then overturned; a claim the District Admin passed upward instead of deciding; and a special-case claim (a suicide,
+a murder with a nominee accused, several deaths on one date, a death abroad) sent to the State Trustees' majority-vote panel — the "R9
+panel" — before the District Admin decided. On those, the District Admin never approves, so the only approval is the final one.
 
 We suggest your rule holds there too: the final approval waits until the inspection is complete — never refused for it, only held. Those
 are the claims where someone already doubted the papers, so they are the last ones that should be paid without anyone holding the
@@ -106,6 +112,13 @@ original. We are building it that way now. Tell us if you meant otherwise.
 
 > - The **State Trustee** step — ⛔ untouched (FQ9 gates the District Admin's approval, which precedes it).
 
+What "R9" is — ⚠ the rulebook and the PRD, ⛔ neither a Panel ruling (the Niyamavali is a drafted rulebook, ⛔ not ratified):
+
+> **R9:** Special-death and denial adjudication is by **State Trustee panel majority vote**. — Niyamavali §5.4 (`docs/legal/niyamavali.md`)
+>
+> **FR-43: Special-case routing per Niyamavali R9.** Suicide / murder-with-nominee-accused / multiple-deaths-same-date / foreign-death →
+> State Trustee voting workflow. — PRD FR-43 (as carried in `_bmad-output/planning-artifacts/epics.md`)
+
 ## E2 — What is NOT ratified
 
 - **That FQ9 reaches the final vote and the R9 panel on the three paths** — `-263`'s reading (*"FQ9 is a new condition in the ONE approval
@@ -125,7 +138,7 @@ original. We are building it that way now. Tell us if you meant otherwise.
      the claim in `reversed`, from which the final vote approves (`TRUSTEE_VOTABLE_STATES`).
   2. *Passed up:* `resolveEscalation` (`state-trustee-decision-persist.ts`) approves an escalated claim with ⛔ no inspection check — by
      design — moving it to `verifier_approved`, from which the final vote approves.
-  3. *Sent to R9 first:* `routeToR9` accepts `verification_in_progress` and `verifier_review` (`TRUSTEE_ROUTABLE_STATES`), and R9's
+  3. *Sent to R9 first:* the R9 panel is Story 6.14's special-case majority vote (FR-43); `routeToR9` accepts `verification_in_progress` and `verifier_review` (`TRUSTEE_ROUTABLE_STATES`), and R9's
      finalize runs the same approval gate (`r9-voting-persist.ts`).
 - **Who approves at the end (v1):** the final vote is cast by the Pariwar Admin acting for the State Trustee (`cycle.freeze`, "Trustee-Lite");
   the R9 panel's members hold `claim.r9_vote` (Pariwar Admin, Super Admin).
@@ -140,6 +153,8 @@ grep -n '^### Decision .*-28[2-4]' .decision-log.md             # -282 / -283 / 
 grep -n "TRUSTEE_VOTABLE_STATES\|TRUSTEE_ROUTABLE_STATES" packages/domain/src/claim/state-trustee-decision-persist.ts
 grep -n "export async function resolveEscalation" packages/domain/src/claim/state-trustee-decision-persist.ts
 grep -n "assertClaimApprovable(" packages/domain/src/claim/*.ts  # the six call sites
+grep -n "R9:\*\*" docs/legal/niyamavali.md                       # R9's rulebook text (local only, gitignored)
+grep -n "FR-43: Special-case routing" _bmad-output/planning-artifacts/epics.md
 ```
 
 ---

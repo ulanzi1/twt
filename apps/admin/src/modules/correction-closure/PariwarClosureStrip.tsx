@@ -278,11 +278,11 @@ export function NoCorrectionStrip({
               aria-describedby={approveMissing === 'note' ? `${noteId}-approve-note` : undefined}
               // Code review 2026-10-06 (P32): the picker above gets `disabled={approve.isPending}` — this didn't.
               disabled={approve.isPending}
-              data-testid="no-correction-approve-note"
+              data-testid={`no-correction-approve-note-${item.claim_case_id}`}
             />
           </label>
           {approveMissing === 'note' ? (
-            <p role="alert" id={`${noteId}-approve-note`} data-testid="no-correction-approve-note-missing">
+            <p role="alert" id={`${noteId}-approve-note`} data-testid={`no-correction-approve-note-missing-${item.claim_case_id}`}>
               {tw.noteRequiredError}
             </p>
           ) : null}

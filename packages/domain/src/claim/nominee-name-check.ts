@@ -393,7 +393,8 @@ export async function assertClaimApprovable(
   deceasedMemberId: MemberId,
   /**
    * ⭐ Story 6.19c (`2026-09-27-251`, `2026-10-01-273` §8, T10) — the gate's ONE composition seam. ⭐ Story 6.23b
-   * (EA2, `-279` A1): every caller now PASSES it — `approvingActorIds` is REQUIRED (typecheck finds all seven calls).
+   * (EA2, `-279` A1): every caller now PASSES it — `approvingActorIds` is REQUIRED (typecheck finds every call — six in production at
+   * the time of writing: P1, the final vote, R9 finalize, D27, and the Super Admin's full and `-251` waived approves).
    * `nameCheck` stays optional and is omitted by every caller but one (P1 / P3 / P4, D27's and `-260` G1's approves
    * keep today's name check). ONLY
    * the `-251` Super Admin approve passes `{ nameCheck: 'waived_251' }` — the FULL gate minus the name-check conjunct,

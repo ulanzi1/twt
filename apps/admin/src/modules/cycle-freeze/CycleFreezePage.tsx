@@ -121,6 +121,10 @@ export function CycleFreezePage({ pariwarId }: CycleFreezePageProps): ReactEleme
 
   // ⭐ Story 6.23b — a 409 means the claim (or the reason list) moved under the card: refetch, so the screen shows the
   // warnings, the WAIT and the reasons as they now stand (6.23a round 4: "a 409 refetches").
+  // Code review round 2 (6.23b): the ONE page-level decision's error is shown ONLY on the card that acted — 6.23b's words
+  // are claim-specific ("waits for the District Admin"), and on every card they sat as an alert on claims with ⛔ no warning.
+  const errorOn = (claimCaseId: string): string | undefined =>
+    decision.variables?.claim_case_id === claimCaseId ? errorMessage(decision.error) : undefined;
   const decide = (
     body: Parameters<typeof decision.mutate>[0],
     opts?: { readonly onSuccess?: () => void },
@@ -134,6 +138,13 @@ export function CycleFreezePage({ pariwarId }: CycleFreezePageProps): ReactEleme
   };
 
   const data = pending.data;
+  // Code review round 3: when the refetch after a 409 removes the acting claim from EVERY bucket (it was resolved, frozen
+  // or returned by someone else), its card is gone — the words are said ONCE at the page instead of nowhere.
+  const actingId = decision.variables?.claim_case_id;
+  const actingListed =
+    data !== undefined &&
+    [...data.ready_to_freeze, ...data.escalated, ...data.voted_pending_commit].some((c) => c.claim_case_id === actingId);
+  const unlistedError = decision.isError && !actingListed ? errorMessage(decision.error) : undefined;
   const readyCount = data?.ready_to_freeze.length ?? 0;
   const escalatedCount = data?.escalated.length ?? 0;
   const votedCount = data?.voted_pending_commit.length ?? 0;
@@ -157,6 +168,11 @@ export function CycleFreezePage({ pariwarId }: CycleFreezePageProps): ReactEleme
         </p>
       ) : (
         <>
+          {unlistedError !== undefined ? (
+            <p role="alert" className="text-sm text-status-fail-fg" data-testid="cycle-freeze-decision-error">
+              {unlistedError}
+            </p>
+          ) : null}
           <section aria-label="Ready to freeze" className="rounded border p-4">
             <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide opacity-70">
               Ready to freeze ({readyCount})
@@ -173,7 +189,7 @@ export function CycleFreezePage({ pariwarId }: CycleFreezePageProps): ReactEleme
                     bucket="ready_to_freeze"
                     onDecision={decide}
                     pending={decision.isPending}
-                    error={errorMessage(decision.error)}
+                    error={errorOn(c.claim_case_id)}
                     reasonOptions={data!.reason_options}
                   />
                 ))}
@@ -197,7 +213,7 @@ export function CycleFreezePage({ pariwarId }: CycleFreezePageProps): ReactEleme
                     bucket="escalated"
                     onDecision={decide}
                     pending={decision.isPending}
-                    error={errorMessage(decision.error)}
+                    error={errorOn(c.claim_case_id)}
                     reasonOptions={data!.reason_options}
                   />
                 ))}
@@ -225,7 +241,7 @@ export function CycleFreezePage({ pariwarId }: CycleFreezePageProps): ReactEleme
                     bucket="voted_pending_commit"
                     onDecision={decide}
                     pending={decision.isPending}
-                    error={errorMessage(decision.error)}
+                    error={errorOn(c.claim_case_id)}
                     reasonOptions={data!.reason_options}
                   />
                 ))}

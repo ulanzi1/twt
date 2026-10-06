@@ -122,12 +122,16 @@ function CorrectionQueueView(): ReactElement {
       </p>
 
       {/* ⭐ Story 6.23b (EA10) — the late-warning arm could ⛔ not be read: the returned claims still list, and the page
-          SAYS a late-only claim may be missing (⛔ "nothing waiting"). */}
-      {queue.data?.late_warnings_unavailable === true ? (
-        <p role="status" data-testid="correction-queue-late-unavailable" className="mt-2 text-xs">
-          {t.correctionQueue.lateWarningsUnavailable}
-        </p>
-      ) : null}
+          SAYS so (⛔ never "nothing waiting"); a candidate it could ⛔ not count lists as MAY wait (code review round 2).
+          ⭐ PERSISTENT, as `queue-claim-status` above (family 13(d), code review round 2): the region is mounted before
+          the data arrives and only its text changes — a `role="status"` that mounts holding its text is ⛔ not announced. */}
+      <p role="status" data-testid="correction-queue-late-status" className="text-xs">
+        {queue.data?.late_warnings_unavailable === true ? (
+          <span className="mt-2 block" data-testid="correction-queue-late-unavailable">
+            {t.correctionQueue.lateWarningsUnavailable}
+          </span>
+        ) : null}
+      </p>
 
       {hasData && queue.isError ? (
         <p role="alert" data-testid="correction-queue-refetch-error" className="mt-2 text-xs">
@@ -147,10 +151,12 @@ function CorrectionQueueView(): ReactElement {
         <p role="alert" data-testid="correction-queue-error" className="mt-4 text-sm">
           {t.correctionQueue.loadError}
         </p>
-      ) : (queue.data?.items.length ?? 0) === 0 && queue.data?.late_warnings_unavailable !== true ? (
+      ) : (queue.data?.items.length ?? 0) === 0 ? (
         // ⭐ An EMPTY queue is good news and says so. A bare blank panel reads as a failed load —
         // and on a page whose whole job is "is anything waiting for me?", ambiguity is the one
-        // thing it must not have.
+        // thing it must not have. Code review round 2: shown with `late_warnings_unavailable` too — on that fault path
+        // every late-warning CANDIDATE is kept (uncounted), so an empty list there IS empty (the banner above still says
+        // the check could ⛔ not run).
         <p role="status" data-testid="correction-queue-empty" className="mt-4 text-sm text-slate-700">
           {t.correctionQueue.empty}
         </p>
@@ -201,7 +207,9 @@ function CorrectionQueueView(): ReactElement {
                     data-testid="queue-badge-late-warning"
                     className="rounded bg-status-warn-bg px-1.5 py-0.5 text-xs text-status-warn-fg"
                   >
-                    {t.correctionQueue.badgeLateWarning}
+                    {item.late_warning_uncovered_count === null
+                      ? t.correctionQueue.badgeLateWarningUncounted
+                      : t.correctionQueue.badgeLateWarning}
                   </span>
                 ) : null}
                 {!item.accounts_complete ? (

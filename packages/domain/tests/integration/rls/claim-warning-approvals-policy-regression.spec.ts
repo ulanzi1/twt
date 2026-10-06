@@ -448,6 +448,61 @@ describe.skipIf(!hasDatabase)('claim_warning_approvals — migration 0143 + RLS 
     expect(idx.rows).toHaveLength(3);
   });
 
+  // Code review round 2 (family 5): 0145's three UNIQUEs asserted DIRECTLY — before this, the spec only restructured
+  // fixtures to avoid them. A second row on the SAME trustee decision / R9 vote / closure is refused, each by name (round
+  // 3 corrected round 2's "the closure's only by the catalog" — two rows on their OWN trustee decisions share only the
+  // closure), and all three are in the catalog.
+  it('⭐ 0145: ONE record per approval event — a second row on the same trustee decision / R9 vote / closure ⇒ 23505; all three UNIQUEs exist', async () => {
+    const { client } = getTx();
+    const a = randomUUID();
+    const s = await seedRecord(client, a);
+    const p = await seedLaterParents(client, a, s.claimCaseId);
+    await insertRecord(client, laterRow(s, a, 'final_vote', p, ['trusteeDecisionId']));
+    await expectPgError(client, () => insertRecord(client, laterRow(s, a, 'escalation_resolution', p, ['trusteeDecisionId'])), {
+      code: '23505',
+      constraint: 'claim_warning_approvals_trustee_decision_uq',
+    });
+    await insertRecord(client, laterRow(s, a, 'r9_vote', p, ['r9VoteId']));
+    await expectPgError(client, () => insertRecord(client, laterRow(s, a, 'r9_vote', p, ['r9VoteId'])), {
+      code: '23505',
+      constraint: 'claim_warning_approvals_r9_vote_uq',
+    });
+    // Code review round 3: the closure's UNIQUE DRIVEN too (round 2 called it catalog-only — "a duplicate trips either
+    // first" — which was false): two `super_admin_approval` rows sharing ONLY `closure_id`, each on its OWN trustee
+    // decision (extra SUPERSEDED `correction_return` rows clear the one-live-per-phase unique).
+    const supersededDecision = async () => {
+      const id = randomUUID();
+      await client.query(
+        `INSERT INTO claim_state_trustee_decisions (decision_id, claim_case_id, pariwar_id, phase, outcome, reason_code, actor_id, actor_display, superseded_at)
+         VALUES ($1, $2, $3, 'correction_return', 'returned_for_correction', 'other', 'trustee', 'Pariwar Admin', now())`,
+        [id, s.claimCaseId, a],
+      );
+      return id;
+    };
+    const both = ['closureId', 'trusteeDecisionId'] as const;
+    await insertRecord(client, laterRow(s, a, 'super_admin_approval', { ...p, trusteeDecisionId: await supersededDecision() }, both));
+    const third = await supersededDecision();
+    await expectPgError(client, () => insertRecord(client, laterRow(s, a, 'super_admin_approval', { ...p, trusteeDecisionId: third }, both)), {
+      code: '23505',
+      constraint: 'claim_warning_approvals_closure_uq',
+    });
+    const uq = await client.query<{ conname: string; cols: string }>(
+      `SELECT c.conname, string_agg(att.attname, ',' ORDER BY att.attname) AS cols
+         FROM pg_constraint c
+         JOIN pg_attribute att ON att.attrelid = c.conrelid AND att.attnum = ANY (c.conkey)
+        WHERE c.conrelid = 'claim_warning_approvals'::regclass
+          AND c.contype = 'u'
+          AND c.conname IN ('claim_warning_approvals_trustee_decision_uq', 'claim_warning_approvals_r9_vote_uq', 'claim_warning_approvals_closure_uq')
+        GROUP BY c.conname
+        ORDER BY c.conname`,
+    );
+    expect(uq.rows).toEqual([
+      { conname: 'claim_warning_approvals_closure_uq', cols: 'closure_id' },
+      { conname: 'claim_warning_approvals_r9_vote_uq', cols: 'r9_vote_id' },
+      { conname: 'claim_warning_approvals_trustee_decision_uq', cols: 'trustee_decision_id' },
+    ]);
+  });
+
   it('⛔ 0144 adds no DEFERRABLE constraint and no constraint trigger (RD14 — `closeScopeTx` swallows a COMMIT error)', async () => {
     const { client } = getTx();
     const def = await client.query(

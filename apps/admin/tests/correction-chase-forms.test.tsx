@@ -745,7 +745,7 @@ describe('<CorrectionChasePanel> — a recorded delivery survives the refetch th
       reminders_accepted: 1,
       letters: [letter({ delivered_on: delivered ? '2026-09-28' : null, has_screenshot: delivered })],
     });
-    getClaimsUnderCorrection.mockImplementation(async () => ({ pariwar_id: PARIWAR, items: [item(person())] }));
+    getClaimsUnderCorrection.mockImplementation(async () => ({ pariwar_id: PARIWAR, items: [item(person())], late_warnings_unavailable: false }));
     recordCorrectionLetterDelivery.mockImplementation(async () => {
       delivered = true;
       return letter({ delivered_on: '2026-09-28', has_screenshot: true });
@@ -776,6 +776,7 @@ describe('<CorrectionChasePanel> — a recorded delivery survives the refetch th
     let delivered = false;
     getClaimsUnderCorrection.mockImplementation(async () => ({
       pariwar_id: PARIWAR,
+      late_warnings_unavailable: false, // Story 6.23b — the widened response's required field (code review round 2)
       items: [
         item({
           person_key: PERSON,
@@ -807,6 +808,7 @@ describe('<CorrectionChasePanel> — a recorded delivery survives the refetch th
   it('⭐ D30 (`cannot_remind`): the person and their letter STAY, the delivery form stays — ⛔ no NEW-letter form', async () => {
     getClaimsUnderCorrection.mockResolvedValue({
       pariwar_id: PARIWAR,
+      late_warnings_unavailable: false, // Story 6.23b — the widened response's required field (code review round 2)
       items: [
         item(
           {
@@ -834,6 +836,7 @@ describe('<CorrectionChasePanel> — a recorded delivery survives the refetch th
   it('⭐ D30 with ⛔ no letter yet: ⛔ no new-letter form (the family cannot be contacted)', async () => {
     getClaimsUnderCorrection.mockResolvedValue({
       pariwar_id: PARIWAR,
+      late_warnings_unavailable: false, // Story 6.23b — the widened response's required field (code review round 2)
       items: [
         item(
           { person_key: PERSON, role: 'nominee', rank: null, status: 'dead', found_dead_on: '2026-09-20', reminders_accepted: 0, letters: [] },

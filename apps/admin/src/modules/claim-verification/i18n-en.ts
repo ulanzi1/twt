@@ -215,7 +215,11 @@ export const verifierConsoleEn = {
       approveNoteLabel: 'Your note for this approval (required with a warning reason)',
       // Code review 2026-10-06 — a warning shows, approving is NOT blocked, but the Pariwar's reason list came back
       // empty. Without this, the picker renders zero options and Approve is stuck with no explanation on screen.
-      noOptionsConfigured: 'No warning reasons are configured for this Pariwar yet — ask a Super Admin to add one before approving.',
+      // Code review round 2: DEFENSIVE — ⛔ not reachable today (the built-in generic is always first in the list, and the list
+      // is read with the warnings, so an empty one comes only with `available: false`). Round 1's words ("⛔ none configured
+      // … ask a Super Admin to add one") described a state the system cannot be in.
+      // Round 3: ⛔ never "approving is unavailable" — the branch does ⛔ not disable Approve; it says only what it knows.
+      noOptionsConfigured: 'The warning reasons could not be loaded. Reload the page before approving.',
     },
   },
   // ── Story 6.18 — the nominee NAME CHECK (`2026-09-19-226` cl.3/cl.5) ──────────────────────
@@ -321,13 +325,18 @@ export const verifierConsoleEn = {
     // ⭐ Story 6.23b (EA10; `-279` A4) — the claim you approved shows a warning that appeared after your approval: the
     // final approval WAITS for your reason and note (recorded on the claim). ⛔ Not a correction, ⛔ not a refusal.
     badgeLateWarning: 'a late warning awaits your reason',
-    lateWarningLine: (n: number) =>
-      n === 1
+    // Code review round 2 (BigDev "1") — the late-warning check FAILED and the claim is listed on the cheap candidate
+    // test alone: it MAY wait (`late_warning_uncovered_count: null`). ⛔ Never "0 warnings" for an unknown.
+    badgeLateWarningUncounted: 'a late warning may await your reason',
+    lateWarningLine: (n: number | null) =>
+      n === null
+        ? 'A nominee-change warning may have appeared after your approval — it could not be checked just now. Open the claim to see whether the final approval waits for your reason and note. The claim is not refused.'
+        : n === 1
         ? 'A nominee-change warning appeared after your approval. The final approval waits until you record a reason and a note for it — open the claim to record them. The claim is not refused.'
         : `${n} nominee-change warnings appeared after your approval. The final approval waits until you record a reason and a note for them — open the claim to record them. The claim is not refused.`,
     // Invariant 7 — the late-warning check could ⛔ not run: ⛔ never read as "nothing waiting".
     lateWarningsUnavailable:
-      'Late nominee-change warnings could not be checked just now, so a claim waiting only for your late reason may be missing from this list. Reload to try again.',
+      'Late nominee-change warnings could not be checked just now, so this list may not be complete. A claim marked "may await your reason" may already be answered — open it to see. Reload to try again.',
   },
   // ── Story 6.20 — the nominee declaration HISTORY (AC3, AC4, AC7, AC8, AC13, D14) ─────────────
   // ⛔⛔ No string here says a version "changed after the death", "is suspicious" or "should be

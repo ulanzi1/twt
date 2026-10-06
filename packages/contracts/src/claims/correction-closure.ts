@@ -276,7 +276,18 @@ export const PariwarClosureQueueItemDto = z
      */
     approval_warnings: ApprovalWarningsSummary.nullable(),
   })
-  .strict();
+  .strict()
+  // Code review round 2 (2026-10-06): RD20's "EXACTLY" enforced — a `no_correction_needed` item with `null` would read
+  // as "no warning" on an approval, and a `closure_request` with a summary would put a picker on a refusal path.
+  .superRefine((v, ctx) => {
+    if ((v.kind === 'closure_request') !== (v.approval_warnings === null)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['approval_warnings'],
+        message: 'must be null exactly on a closure_request, and a summary on every no_correction_needed item',
+      });
+    }
+  });
 export const PariwarClosureQueueResponse = z
   .object({
     items: z.array(PariwarClosureQueueItemDto),

@@ -415,18 +415,23 @@ export const ClaimUnderCorrectionItem = z
      * reason: the final approval WAITS for theirs (6.23a's late reason). A late-warning-only row has ⛔ no live return.
      */
     late_warning_awaiting_reason: z.boolean(),
-    late_warning_uncovered_count: z.number().int().nonnegative(),
+    /**
+     * How many current keys no District Admin reason covers. ⭐ `null` = COULD ⛔ NOT BE COUNTED: the late arm failed
+     * (`late_warnings_unavailable`) and only the cheap candidate test kept the row — it MAY wait (code review round 2,
+     * BigDev *"1"*). ⛔ Never `0` for an unknown (invariant 7).
+     */
+    late_warning_uncovered_count: z.number().int().nonnegative().nullable(),
   })
   .strict()
-  // Code review 2026-10-06: a nonzero count always implies the flag (the reverse does ⛔ not hold — the flag can be
-  // `true` with `uncovered_count: 0` when `late_warnings_unavailable` degrades the read and only the cheap
-  // candidate check survived, not the detail).
+  // Code review round 2 (2026-10-06): the flag and the count agree BOTH ways — the flag is `true` exactly when the
+  // count is uncounted (`null`) or nonzero. (Round 1 allowed `true` with `0` on the fault path; that read "0 warnings".)
   .superRefine((v, ctx) => {
-    if (v.late_warning_uncovered_count > 0 && !v.late_warning_awaiting_reason) {
+    const n = v.late_warning_uncovered_count;
+    if (v.late_warning_awaiting_reason !== (n === null || n > 0)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['late_warning_awaiting_reason'],
-        message: 'must be true whenever late_warning_uncovered_count is nonzero',
+        message: 'must be true exactly when late_warning_uncovered_count is null (uncounted) or nonzero',
       });
     }
   });
@@ -447,9 +452,23 @@ export const ClaimsUnderCorrectionResponse = z
     items: z.array(ClaimUnderCorrectionItem),
     /**
      * ⭐ Story 6.23b (EA10; invariant 7) — the late-warning arm could ⛔ not be read just now: the returned claims still
-     * list, but a claim waiting ONLY for a late reason may be missing. ⛔ Never read as "none waiting".
+     * list, and every claim the cheap candidate test flags lists with `late_warning_uncovered_count: null` — it MAY wait
+     * (some listed this way may already be answered). Code review round 3: those candidates count toward the page, so a
+     * FULL page may be INCOMPLETE (answered candidates can take the slots of returned claims filed earlier) — the admin
+     * says so; an EMPTY list under the flag IS empty (every candidate is kept, the cheap test is the scan's own arm).
      */
     late_warnings_unavailable: z.boolean(),
   })
-  .strict();
+  .strict()
+  // Code review round 3: an uncounted (`null`) item exists ONLY when the late arm failed — ⛔ never a row saying "could not be
+  // checked" under a response that says it was.
+  .superRefine((v, ctx) => {
+    if (!v.late_warnings_unavailable && v.items.some((i) => i.late_warning_uncovered_count === null)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['late_warnings_unavailable'],
+        message: 'must be true whenever an item\'s late_warning_uncovered_count is null (uncounted)',
+      });
+    }
+  });
 export type ClaimsUnderCorrectionResponse = z.output<typeof ClaimsUnderCorrectionResponse>;

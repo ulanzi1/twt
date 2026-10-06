@@ -81,11 +81,17 @@ export interface ClaimUnderCorrectionRow {
   readonly accountsComplete: boolean;
   /**
    * ⭐ Story 6.23b (EA10) — the District Admin's live approval leaves a CURRENT warning key uncovered by any District
-   * Admin row: the final approval waits for their late reason. `false` when the late arm could ⛔ not be read (the
-   * caller is told through `onLateWarningsUnavailable`).
+   * Admin row: the final approval waits for their late reason. When the late arm could ⛔ not be read (the caller is
+   * told through `onLateWarningsUnavailable`), a claim the cheap SQL candidate test flags (a determination decided
+   * after the live approval) is KEPT, `true` — it MAY wait (code review round 1, decision #1) — ⛔ never dropped as
+   * "none waiting".
    */
   readonly lateWarningAwaitingReason: boolean;
-  readonly lateWarningUncoveredCount: number;
+  /**
+   * How many current keys no District Admin row covers. ⭐ `null` = COULD ⛔ NOT BE COUNTED — set ONLY on the fault
+   * path above (code review round 2, BigDev *"1"*): ⛔ never `0` for an unknown (invariant 7).
+   */
+  readonly lateWarningUncoveredCount: number | null;
 }
 
 export interface ListClaimsUnderCorrectionOptions {
@@ -100,8 +106,9 @@ export interface ListClaimsUnderCorrectionOptions {
   readonly isVisible?: (row: { readonly district: string | null }) => boolean;
   /**
    * ⭐ Story 6.23b (EA10; RD12, invariant 7) — called when the LATE-WARNING arm could ⛔ not be read for a batch (its
-   * bulk read runs under a raw SAVEPOINT): the two correction arms still list, the late arm adds nothing, and the
-   * caller says so (the response's `late_warnings_unavailable`) — ⛔ never read as "none waiting".
+   * bulk read runs under a raw SAVEPOINT): the two correction arms still list, every late-warning CANDIDATE is kept
+   * with an uncounted (`null`) count, and the caller says so (the response's `late_warnings_unavailable`) — ⛔ never
+   * read as "none waiting".
    */
   readonly onLateWarningsUnavailable?: () => void;
 }
@@ -343,10 +350,11 @@ async function qualifyingRows(
     // "checked, no warning" — `lateWarnings?.get(...)` must not be allowed to produce the same `undefined` as a
     // genuine miss would. On a fault, trust the cheap `lateWarningCandidate` flag (computed independently, in the
     // same statement as every other candidate arm) instead of silently defaulting to "no warning".
+    // Round 2 (BigDev "1"): on that fault path the count is UNKNOWN — `null`, ⛔ never `0` (the row said "0 warnings appeared").
+    const faultCandidate = lateWarnings === null && c.lateWarningCandidate;
     const w = lateWarnings === null ? undefined : lateWarnings.get(c.claimCaseId.toLowerCase());
-    const lateWarningUncoveredCount = w === undefined ? 0 : uncoveredKeys(w).length;
-    const lateWarningAwaitingReason =
-      lateWarningUncoveredCount > 0 || (lateWarnings === null && c.lateWarningCandidate);
+    const lateWarningUncoveredCount = faultCandidate ? null : w === undefined ? 0 : uncoveredKeys(w).length;
+    const lateWarningAwaitingReason = faultCandidate || (lateWarningUncoveredCount ?? 0) > 0;
     if (!hasLiveUnresubmittedReturn && !sentBackByCheck && !lateWarningAwaitingReason) continue;
 
     out.push({
@@ -378,7 +386,14 @@ async function readLateWarningArm(db: Db, pariwarId: PariwarId, claimCaseIds: re
     // Code review 2026-10-06: this `catch` is the ONLY signal a real bug (vs. a genuine, expected unavailability)
     // ever gets — the caller only sees `onLateWarningsUnavailable`'s zero-argument callback. Log before swallowing.
     console.warn(`[correction-queue-read] readLateWarningArm failed for pariwar ${pariwarId}:`, err);
-    await db.execute(sql`ROLLBACK TO SAVEPOINT late_warning_arm`);
+    // Code review round 2: if the ROLLBACK TO itself fails, the transaction is unusable — rethrow the ORIGINAL error
+    // (⛔ not the rollback's, which would hide it; ⛔ never `null`, which would let the queue run on an aborted transaction).
+    try {
+      await db.execute(sql`ROLLBACK TO SAVEPOINT late_warning_arm`);
+    } catch (rollbackErr) {
+      console.warn(`[correction-queue-read] ROLLBACK TO SAVEPOINT late_warning_arm failed:`, rollbackErr);
+      throw err;
+    }
     return null;
   }
 }

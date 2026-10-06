@@ -118,7 +118,9 @@ function EscalationsView(): ReactElement {
           />
         )}
       </ListStates>
-      {open !== null ? <EscalationDetail pariwarId={pariwarId} claimCaseId={open} /> : null}
+      {/* Code review round 2: KEYED by the claim — a cached detail never unmounts the form, so without the key the reason
+          picked (and the note typed) on one claim stayed CHOSEN on the next (invariant 5: ⛔ nothing pre-selected). */}
+      {open !== null ? <EscalationDetail key={open} pariwarId={pariwarId} claimCaseId={open} /> : null}
     </main>
   );
 }

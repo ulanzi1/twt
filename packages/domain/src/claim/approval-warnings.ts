@@ -323,11 +323,21 @@ export async function readClaimApprovalWarnings(
 }
 
 /**
- * Code review 2026-10-06 — both bulk readers below take a caller-supplied id list straight into a SQL `IN (…)`
- * clause with no cap, unlike this package's dynamic-limit-clamp discipline elsewhere ([[project_domain_limit_clamp_and_savepoint_retry]]).
- * Every current caller is already page-sized well under this, so the cap is defense-in-depth, not a live limit.
+ * Code review 2026-10-06 — both bulk readers below bound each SQL `IN (…)` list ([[project_domain_limit_clamp_and_savepoint_retry]]).
+ * ⚠ Round 2 (2026-10-06): a SLICE size, ⛔ not a cap that throws — round 1's throw assumed every caller was page-sized, but
+ * the cycle-freeze pending handler reads three buckets each scanned at `PENDING_SCAN_CAP = 500` (≤ 1,500 ids), and a
+ * throw there failed EVERY case closed (Approve disabled on the whole page, ⛔ not cleared by a reload). One statement per
+ * slice: a list of ≤ 500 ids stays ONE statement (AC7's 1-vs-10 count). ⚠ Round 3: past one slice the reads are
+ * SEPARATE statements, so under READ COMMITTED each slice sees its own snapshot — a reason recorded between two slices can
+ * show on one card and ⛔ not on another of the same page (each card is still a true reading; the approval re-checks it).
  */
-const MAX_BULK_READ_IDS = 500;
+const BULK_READ_SLICE = 500;
+
+function slicesOf(ids: readonly string[]): string[][] {
+  const out: string[][] = [];
+  for (let i = 0; i < ids.length; i += BULK_READ_SLICE) out.push(ids.slice(i, i + BULK_READ_SLICE));
+  return out;
+}
 
 /**
  * Story 6.23b (EA7, RD9; Traps 8, 13) — `readClaimApprovalWarnings` for MANY claims in ONE statement: the SAME columns
@@ -344,10 +354,17 @@ export async function readClaimApprovalWarningsBulk(
 ): Promise<Map<string, ClaimApprovalWarnings>> {
   const out = new Map<string, ClaimApprovalWarnings>();
   const ids = [...new Set(claimCaseIds.map((id) => id.toLowerCase()))];
-  if (ids.length === 0) return out;
-  if (ids.length > MAX_BULK_READ_IDS) {
-    throw new Error(`[approval-warnings] readClaimApprovalWarningsBulk: ${ids.length} ids exceeds the ${MAX_BULK_READ_IDS} cap`);
-  }
+  for (const slice of slicesOf(ids)) await readClaimApprovalWarningsSlice(db, pariwarId, slice, out);
+  return out;
+}
+
+/** ONE statement for ≤ `BULK_READ_SLICE` lower-cased, de-duplicated ids, written into `out`. */
+async function readClaimApprovalWarningsSlice(
+  db: Db,
+  pariwarId: PariwarId,
+  ids: readonly string[],
+  out: Map<string, ClaimApprovalWarnings>,
+): Promise<void> {
   const daSteps = [...DISTRICT_ADMIN_WARNING_STEPS];
   const result = await db.execute<RawWarningsRow & { claim_case_id: string }>(sql`
     SELECT c.claim_case_id,
@@ -437,7 +454,6 @@ export async function readClaimApprovalWarningsBulk(
     const id = row.claim_case_id.toLowerCase();
     out.set(id, { ...deriveClaimApprovalWarnings(id as ClaimId, row), reasonOptions: [] });
   }
-  return out;
 }
 
 /**
@@ -452,20 +468,18 @@ export async function readR9VoteWarningCoverage(
 ): Promise<Map<string, readonly string[]>> {
   const out = new Map<string, readonly string[]>();
   const ids = [...new Set(voteIds.map((id) => id.toLowerCase()))];
-  if (ids.length === 0) return out;
-  if (ids.length > MAX_BULK_READ_IDS) {
-    throw new Error(`[approval-warnings] readR9VoteWarningCoverage: ${ids.length} ids exceeds the ${MAX_BULK_READ_IDS} cap`);
-  }
-  const result = await db.execute<{ r9_vote_id: string; covered_keys: string[] }>(sql`
-    SELECT w.r9_vote_id, w.covered_keys
-      FROM claim_warning_approvals w
-     WHERE w.pariwar_id = ${pariwarId}
-       AND w.step = 'r9_vote'
-       AND w.r9_vote_id IN (${sql.join(ids.map((id) => sql`${id}`), sql`, `)})
-  `);
-  for (const r of result.rows ?? []) {
-    const id = r.r9_vote_id.toLowerCase();
-    out.set(id, [...new Set([...(out.get(id) ?? []), ...r.covered_keys])]);
+  for (const slice of slicesOf(ids)) {
+    const result = await db.execute<{ r9_vote_id: string; covered_keys: string[] }>(sql`
+      SELECT w.r9_vote_id, w.covered_keys
+        FROM claim_warning_approvals w
+       WHERE w.pariwar_id = ${pariwarId}
+         AND w.step = 'r9_vote'
+         AND w.r9_vote_id IN (${sql.join(slice.map((id) => sql`${id}`), sql`, `)})
+    `);
+    for (const r of result.rows ?? []) {
+      const id = r.r9_vote_id.toLowerCase();
+      out.set(id, [...new Set([...(out.get(id) ?? []), ...r.covered_keys])]);
+    }
   }
   return out;
 }

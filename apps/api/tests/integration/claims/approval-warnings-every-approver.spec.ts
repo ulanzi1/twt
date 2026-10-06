@@ -572,6 +572,10 @@ describe.skipIf(!hasDatabase)('Story 6.23b — every approver, through HTTP (:54
   describe('the R9 vote, panel and finalize', () => {
     async function r9World() {
       const w = await seedWorld([daysAgo(300), daysAgo(30)]);
+      return { ...w, pa: await routeToR9(w) };
+    }
+    /** Route `w` to R9 (the clause + the routing row) and open a one-member panel; returns that Pariwar Admin. */
+    async function routeToR9(w: { pariwarId: string; claimCaseId: string }) {
       await td.pool.query(
         `INSERT INTO clause_versions (clause_version_id, clause_id, pariwar_id, version, effective_date, payload, benefit_mechanism)
          VALUES (gen_random_uuid(), $1, $2, 1, now(), $3, 'pool')`,
@@ -585,7 +589,7 @@ describe.skipIf(!hasDatabase)('Story 6.23b — every approver, through HTTP (:54
       const pa = await staff(w.pariwarId, 'pariwar_admin');
       const open = await pa.client.inject({ method: 'POST', url: `${r9Url(w.pariwarId, w.claimCaseId)}/open`, payload: { clause_id: R9_CLAUSE, panel_actor_ids: [pa.userId] } });
       expect(open.statusCode, open.body).toBe(201);
-      return { ...w, pa };
+      return pa;
     }
     const panelOf = async (client: Client, p: string, c: string) => {
       const res = await client.inject({ method: 'GET', url: r9Url(p, c) });
@@ -645,13 +649,65 @@ describe.skipIf(!hasDatabase)('Story 6.23b — every approver, through HTTP (:54
         approval_warning_kinds: ['post_death_version', 'recent_nominee_change'],
       });
     });
+
+    // Code review round 2 — the WAIT over HTTP at R9 finalize (only `cycle_freeze.` was driven before), and the R9
+    // own-reason words: an approve VOTER recorded the late reason — ⛔ never "a late reason YOU recorded" to the finalizer.
+    it('⭐ AC2 — the WAIT at R9 finalize: `r9_voting.late_warning_reason_required`; a VOTER\'s own late reason ⇒ `own_reason_excluded` with the R9 words', async () => {
+      const w = await lateWarnedWorld();
+      const pa = await routeToR9(w);
+      const finalize = async () => {
+        await elevate(pa.client);
+        return pa.client.inject({ method: 'POST', url: `${r9Url(w.pariwarId, w.claimCaseId)}/finalize`, payload: {} });
+      };
+      const cast = await pa.client.inject({
+        method: 'POST',
+        url: `${r9Url(w.pariwarId, w.claimCaseId)}/vote`,
+        payload: { vote: 'approve', rationale: 'yes', warning_reason_code: GENERIC },
+      });
+      expect(cast.statusCode, cast.body).toBe(201);
+      const waits = await finalize();
+      expect(waits.statusCode, waits.body).toBe(409);
+      expect(errOf(waits.body)).toMatchObject({
+        code: 'r9_voting.late_warning_reason_required',
+        details: { kinds: ['post_death_version'], uncovered_count: 1, own_reason_excluded: false },
+      });
+      // The (only) approve voter answers the late warning THEMSELVES — it does ⛔ not count at finalize (`-279` A1).
+      await inScope(w.pariwarId, (s) =>
+        claim.recordLateWarningReason(s.client, {
+          claimCaseId: ids.claimId(w.claimCaseId),
+          pariwarId: ids.pariwarId(w.pariwarId),
+          warningReasonCode: GENERIC,
+          noteCiphertext: 'enc:v1:late',
+          actorId: pa.userId,
+          actorDisplay: 'Prakash (Pariwar Admin)',
+        }),
+      );
+      const own = await finalize();
+      expect(own.statusCode, own.body).toBe(409);
+      expect(errOf(own.body)).toMatchObject({ code: 'r9_voting.late_warning_reason_required', details: { own_reason_excluded: true } });
+      expect(errOf(own.body).message).toMatch(/recorded by an approve voter on this panel, or by the person finalizing it/);
+      expect(errOf(own.body).message).not.toMatch(/you recorded/);
+      // The District Admin answers ⇒ finalized.
+      await inScope(w.pariwarId, (s) =>
+        claim.recordLateWarningReason(s.client, {
+          claimCaseId: ids.claimId(w.claimCaseId),
+          pariwarId: ids.pariwarId(w.pariwarId),
+          warningReasonCode: GENERIC,
+          noteCiphertext: 'enc:v1:late-da',
+          actorId: w.da.userId,
+          actorDisplay: 'Anita (District Admin)',
+        }),
+      );
+      const fin = await finalize();
+      expect(fin.statusCode, fin.body).toBe(200);
+    });
   });
 
   // ── 6.19c (EA6) ─────────────────────────────────────────────────────────────────────────────────────────────────
   describe('6.19c — the "no correction needed" approve and the Super Admin', () => {
     /** A warned claim the District Admin approved over its warning, returned by the Pariwar Admin, marked `mustAct`. */
-    async function returnedWarned(mustAct: 'family' | 'staff') {
-      const w = await seedWorld([daysAgo(30)]);
+    async function returnedWarned(mustAct: 'family' | 'staff', declaredAt: Date[] = [daysAgo(30)]) {
+      const w = await seedWorld(declaredAt);
       const da = await staff(w.pariwarId, 'district_admin');
       await daApprove(da, w, true);
       const pa = await staff(w.pariwarId, 'pariwar_admin');
@@ -725,7 +781,8 @@ describe.skipIf(!hasDatabase)('Story 6.23b — every approver, through HTTP (:54
       expect((await w.pa.client.inject({ method: 'POST', url, payload: { note: 'why' } })).statusCode).toBe(400);
       expect((await w.pa.client.inject({ method: 'POST', url, payload: { warning_reason_code: GENERIC } })).statusCode).toBe(400);
       const NOTE = 'The family showed the original will — the change is genuine.';
-      const ok = await w.pa.client.inject({ method: 'POST', url, payload: { warning_reason_code: GENERIC, note: NOTE } });
+      // Sent padded — stored TRIMMED, as the escalation decision's rationale is (code review round 2).
+      const ok = await w.pa.client.inject({ method: 'POST', url, payload: { warning_reason_code: GENERIC, note: `  ${NOTE}\n` } });
       expect(ok.statusCode, ok.body).toBe(201);
       const row = (await records(w.claimCaseId)).find((r) => r.step === 'no_correction_approval')!;
       const decision = await td.pool.query<{ rationale_ciphertext: string }>(
@@ -739,7 +796,8 @@ describe.skipIf(!hasDatabase)('Story 6.23b — every approver, through HTTP (:54
     });
 
     it('⭐ AC6(a) — the Super Admin\'s detail SHOWS the warnings; approve ⛔ code ⇒ 409 `closure.warning_reason_required`; close + a code ⇒ 400; approve + a code ⇒ 201 and ONE `super_admin_approval` row', async () => {
-      const w = await returnedWarned('staff');
+      // An OLD declaration too, so a later re-review (below) still leaves an effective one.
+      const w = await returnedWarned('staff', [daysAgo(300), daysAgo(30)]);
       await inScope(w.pariwarId, (s) =>
         claim.escalateStaffCase(s.client, {
           pariwarId: ids.pariwarId(w.pariwarId),
@@ -767,15 +825,39 @@ describe.skipIf(!hasDatabase)('Story 6.23b — every approver, through HTTP (:54
         payload: { decision: 'close', reason: 'family_silent_after_reached', note: 'n', warning_reason_code: GENERIC },
       });
       expect(close.statusCode).toBe(400);
+      // Code review round 2 — the WAIT over HTTP on the `closure.` prefix: a re-review to 45 days back makes the 30-day
+      // change post-death — a key the District Admin's approval never covered (RD19: a passing check re-recorded).
+      await redetermine(w.pariwarId, w.claimCaseId, istDaysAgo(45));
+      const waits = await sa.client.inject({
+        method: 'POST',
+        url,
+        payload: { decision: 'approve', reason: 'details_verified', note: 'Checked.', warning_reason_code: GENERIC },
+      });
+      expect(waits.statusCode, waits.body).toBe(409);
+      expect(errOf(waits.body)).toMatchObject({
+        code: 'closure.late_warning_reason_required',
+        // `kinds` = the UNCOVERED keys' kinds (the recent change was covered by the District Admin's approval).
+        details: { kinds: ['post_death_version'], uncovered_count: 1, own_reason_excluded: false },
+      });
+      await inScope(w.pariwarId, (s) =>
+        claim.recordLateWarningReason(s.client, {
+          claimCaseId: ids.claimId(w.claimCaseId),
+          pariwarId: ids.pariwarId(w.pariwarId),
+          warningReasonCode: GENERIC,
+          noteCiphertext: 'enc:v1:late-da',
+          actorId: w.da.userId,
+          actorDisplay: 'Anita (District Admin)',
+        }),
+      );
       const ok = await sa.client.inject({
         method: 'POST',
         url,
         payload: { decision: 'approve', reason: 'details_verified', note: 'Checked.', warning_reason_code: GENERIC },
       });
       expect(ok.statusCode, ok.body).toBe(201);
-      expect((await records(w.claimCaseId)).map((r) => r.step)).toEqual(['district_admin_approval', 'super_admin_approval']);
+      expect((await records(w.claimCaseId)).map((r) => r.step)).toEqual(['district_admin_approval', 'district_admin_late_reason', 'super_admin_approval']);
       expect(auditsFor('admin_claim_correction.super_admin_decided', w.claimCaseId).at(-1)?.context).toMatchObject({
-        approval_warning_kinds: ['recent_nominee_change'],
+        approval_warning_kinds: ['post_death_version', 'recent_nominee_change'],
         warning_reason_code: GENERIC,
         reason: 'details_verified',
       });
@@ -816,7 +898,8 @@ describe.skipIf(!hasDatabase)('Story 6.23b — every approver, through HTTP (:54
       const queueBody = queue.json() as { items: Json[]; late_warnings_unavailable: boolean };
       expect(queueBody.late_warnings_unavailable).toBe(true);
       expect(queueBody.items).toEqual([
-        expect.objectContaining({ claim_case_id: w.claimCaseId, late_warning_awaiting_reason: true, late_warning_uncovered_count: 0 }),
+        // Round 2 (BigDev "1"): the count could ⛔ not be made — `null`, ⛔ never `0`.
+        expect.objectContaining({ claim_case_id: w.claimCaseId, late_warning_awaiting_reason: true, late_warning_uncovered_count: null }),
       ]);
     });
   });

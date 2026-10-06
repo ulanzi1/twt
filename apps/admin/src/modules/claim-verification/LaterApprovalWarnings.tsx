@@ -98,8 +98,9 @@ export function LaterApprovalWarnings({
           {blocked}
         </p>
       ) : showPicker && options.length === 0 ? (
-        // Code review 2026-10-06: a warning shows, approving is NOT blocked, but the reason list is empty — the
-        // picker would otherwise render zero options with no explanation, and Approve would stay stuck silently.
+        // Code review 2026-10-06: a warning shows, approving is NOT blocked, but the reason list is empty. ⚠ Round 2:
+        // DEFENSIVE ONLY — unreachable today (the built-in generic always heads the list, and the list is read under the
+        // SAME savepoint as the warnings: an empty list comes only with `available: false`, handled above).
         <p role="status" className="text-xs font-medium" data-testid={`${idPrefix}-no-reasons-configured`}>
           {t.later.noOptionsConfigured}
         </p>

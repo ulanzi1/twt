@@ -3139,6 +3139,8 @@ reasons; the District Admin is told in their correction queue.
 > ⛔ no difference from the certificate is flagged, ⛔ nothing asks an approver for a reason, and ⛔ no register check is recorded
 > (`2026-10-06-283` A8). ⚠ `-283` (A1–A8) amends `-282`'s GI2 / GI3 / GI5 / GI6 / GI16, and `-284` (E1–E5) amends `-283` (GI5's
 > constant home, GI7's R9-routed queue scan, the `-263` reading kept with a NON-blocking Panel confirm) — the story files carry both.
+> ⭐ [`-285`](../../.decision-log.md#decision-2026-10-06-285) (Trustee-ratified): FQ9 also holds the final vote and the R9 panel where
+> the District Admin never approved — `-284` E5's confirm, ruled A.
 
 As the District Admin deciding a family's death claim — and every approver after me — I want the system to hold any approval until the
 claim's ground inspection is complete, with the inspector's photograph of the original certificate, their record of whether it matches the

@@ -3124,6 +3124,50 @@ reasons; the District Admin is told in their correction queue.
 > recorded by the person now approving does ⛔ not count for that approval) and the story's AC11 (the verifier's reason shown in
 > words on the Pariwar Admin's card, closing a `deferred-work.md` item). The story file is the full statement.
 
+### Story 6.26a: No Approval Before the Ground Inspection Is Complete — the Inspector Sees and Photographs the Original Certificate, Matches It to the Copy, and Records the Date and Time of Death `[SURFACE]`
+
+> ⚠ **Minted by Trustee ruling, ⛔ not by the original epic plan** — [`-263`](../../.decision-log.md#decision-2026-09-28-263) FQ9 / FQ11,
+> [`-262`](../../.decision-log.md#decision-2026-09-28-262) FQ8 C, [`-264`](../../.decision-log.md#decision-2026-09-28-264) FQ13 and
+> [`-281`](../../.decision-log.md#decision-2026-10-06-281) Q2 A; the author's decisions are
+> [`-282`](../../.decision-log.md#decision-2026-10-06-282) (GI1–GI18, the [a] ones built here). Row
+> `6-26-ground-inspection-before-approval-and-death-facts` (it keeps the key the rulings cite). `epic-6-retrospective` stays `done`. Full ACs:
+> `_bmad-output/implementation-artifacts/6-26-ground-inspection-before-approval-and-death-facts.md`.
+> ⚠ **6.26a go-live coupling: Story 6.26b** — until it ships, an inspector's "does not match" and a differing date of death are shown but
+> ask nothing of an approver, and ⛔ no register check is recorded.
+
+As the District Admin deciding a family's death claim — and every approver after me — I want the system to hold any approval until the
+claim's ground inspection is complete, with the inspector's photograph of the original certificate, their record of whether it matches the
+copy we hold, and the date and time of death the family gave them — and to tell me plainly why a claim is waiting — so that a forged or
+altered certificate meets a person who has held the original before any member's money moves.
+
+**Acceptance Criteria (in brief):** ⛔ no approval — at any approver — before the ground inspection is complete (one condition in the one
+approval gate); a refusal, an escalation, a route to R9 and a return for correction ⛔ never wait for it; a claim whose visit cannot happen
+waits, ⛔ never refused for it; inspections can be recorded at any point in the review window, so a claim reversed on appeal or approved
+through an escalation can still be inspected; completing an inspection requires a photograph of the original certificate, a matches / does
+⛔ not match verdict against the current uploaded copy, and the family's date of death (time optional); a true nominee's refile, and a claim
+whose certificate was replaced after the visit, needs a short certificate check of the current original; the District Admin's console says
+why a claim waits. The system still refuses ⛔ nothing.
+
+### Story 6.26b: The Death Facts Become Warnings — a Differing Date of Death, an Original That Does Not Match, a Register That Does Not Match — and the District Admin Records the Government-Register Check `[SURFACE]`
+
+> ⚠ **Minted by Trustee ruling, ⛔ not by the original epic plan** — [`-262`](../../.decision-log.md#decision-2026-09-28-262) FQ8 B / FQ8 C,
+> [`-264`](../../.decision-log.md#decision-2026-09-28-264) FQ12, [`-277`](../../.decision-log.md#decision-2026-10-04-277) Q2 C / Q3 B and
+> [`-281`](../../.decision-log.md#decision-2026-10-06-281) Q1 B; the author's decisions are
+> [`-282`](../../.decision-log.md#decision-2026-10-06-282) (GI1–GI18, the [b] ones built here). Row
+> `6-26b-death-facts-warnings-and-register-check`; it starts only when 6.26a is `done` (⛔ never before). Full ACs:
+> `_bmad-output/implementation-artifacts/6-26b-death-facts-warnings-and-register-check.md`.
+
+As the District Admin — and every approver after me — I want the claim to warn me when the family's date of death differs from the
+certificate, when the inspector found the original does ⛔ not match the copy, or when the government register does ⛔ not match — and to
+record my own register check when I accept a certificate — so that ⛔ no sign of a forged certificate can be approved past without a named
+person's chosen reason and written note, while ⛔ no family is ever refused because of one.
+
+**Acceptance Criteria (in brief):** accepting a death certificate records the government-register (CRS) check — matches / does ⛔ not match /
+could ⛔ not be checked online; three new warnings under the one rule (a differing date of death at the inspection; the original does ⛔ not
+match the current copy; the register does ⛔ not match) — approving while one shows needs a reason and a note from every approver, and one
+that appears after the District Admin approved waits for their reason and is listed in their correction queue; "could ⛔ not be checked" is
+⛔ never a warning. The system still refuses ⛔ nothing.
+
 ---
 
 ## Epic 7: Pool Engine & Cycle Spawn

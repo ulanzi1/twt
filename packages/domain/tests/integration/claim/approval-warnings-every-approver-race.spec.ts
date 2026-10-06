@@ -94,6 +94,11 @@ describe.skipIf(!hasDatabase)('Story 6.23b — a reason replaced under a later a
     try {
       await replaceApprovalWarningReason(replacer.client, { pariwarId: pid, reasonId: old.reasonId, label: 'Seen at home', whenToUse: 'When visited.', ...write });
       const checking = checkLaterApprovalWarningReason(bindScopedDb(approver.client), pid, cid, old.code, 'enc:v1:note');
+      // CI fix (2026-10-06): under a loaded suite, `checking` can reject before the `await expect(checking).rejects…`
+      // below attaches its handler — Node then reports a false "Unhandled Rejection" (the job fails even though every
+      // test passes). A no-op `.catch` here marks the rejection handled immediately without affecting the real
+      // assertion below, which still observes the same promise's rejection normally.
+      checking.catch(() => undefined);
       await waitUntilBlocked(approver.backendPid);
       await replacer.client.query('COMMIT');
       await expect(checking).rejects.toBeInstanceOf(WarningReasonUnavailableError);

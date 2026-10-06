@@ -56,6 +56,11 @@ import {
 } from '../schema/claim_correction_closure.js';
 import { claimStateTrusteeDecisions } from '../schema/claim_state_trustee_decisions.js';
 import { claims } from '../schema/claims.js';
+import {
+  type ApprovalWarningKind,
+  checkLaterApprovalWarningReason,
+  insertClaimWarningApprovalRecord,
+} from './approval-warnings.js';
 import { assertClaimContactRecorded } from './claim-contact-check.js';
 import { ClaimContactRequiredError } from './errors.js';
 import {
@@ -1234,13 +1239,23 @@ export type EscalatedClosureDecisionInput = ActorInput & {
 } & (
     | { readonly decision: 'close'; readonly crypto: FieldCryptoDeps }
     | { readonly decision: 'refuse'; readonly refusalReasonCode: string }
-    | { readonly decision: 'approve' }
+    | {
+        readonly decision: 'approve';
+        /**
+         * ⭐ Story 6.23b (EA6a; Trap 5) — the WARNING REASON, its OWN field: required while a warning shows (the note
+         * is the Super Admin's required note, as `decisionRationaleCiphertext`); ⛔ never a new closure reason (the
+         * 0131 CHECK stays). OPTIONAL (RD18).
+         */
+        readonly warningReasonCode?: string | null;
+      }
   );
 
 export interface EscalatedClosureDecisionResult extends CorrectionClosureDecisionResult {
   /** `approve` only — the `-251` waiver ran (a declined-closure origin, ⛔ resubmitted). */
   readonly nameCheckWaived: boolean | null;
   readonly approvalNameCheckState: ApprovalNameCheckState | null;
+  /** ⭐ Story 6.23b (EA9) — `approve` only: the warning kinds it was judged against; ABSENT otherwise (RD15). */
+  readonly approvalWarningKinds?: readonly ApprovalWarningKind[];
 }
 
 /**
@@ -1343,9 +1358,12 @@ export async function decideEscalatedClosure(
   );
   const waive = row.origin === 'declined_closure' && !correction.resubmitted;
   let approvalNameCheckState: ApprovalNameCheckState;
+  // ⭐ Story 6.23b EA2 — both arms reach the WAIT (the `-251` waiver waives the name check ONLY — Trap 17); the Super
+  // Admin's own late reason does ⛔ not count for their own approval (`-279` A1).
   if (waive) {
     await assertClaimApprovable(db, input.pariwarId, input.claimCaseId, claimRow.deceasedMemberId, {
       nameCheck: 'waived_251',
+      approvingActorIds: [input.actorId],
     });
     approvalNameCheckState = await readNomineeNameCheckApprovalState(
       db,
@@ -1354,10 +1372,21 @@ export async function decideEscalatedClosure(
       claimRow.deceasedMemberId,
     );
   } else {
-    await assertClaimApprovable(db, input.pariwarId, input.claimCaseId, claimRow.deceasedMemberId);
+    await assertClaimApprovable(db, input.pariwarId, input.claimCaseId, claimRow.deceasedMemberId, {
+      approvingActorIds: [input.actorId],
+    });
     approvalNameCheckState = 'passing';
   }
   await assertClaimContactRecorded(db, input.pariwarId, input.claimCaseId);
+  // ⭐ Story 6.23b EA6(a) (`-277` Q2 C) — THE ONE RULE at the Super Admin's approval — BOTH arms, the `-251` waived one
+  // included (it waives the name check ONLY); AFTER the gate and D14, BEFORE any write.
+  const warningRule = await checkLaterApprovalWarningReason(
+    db,
+    input.pariwarId,
+    input.claimCaseId,
+    input.warningReasonCode ?? null,
+    input.decisionRationaleCiphertext,
+  );
   const chain = await writeApprovalChain(
     chainInput,
     waive ? 'correction_super_admin_approve_251' : 'correction_super_admin_approve',
@@ -1374,7 +1403,30 @@ export async function decideEscalatedClosure(
     })
     .where(eq(claimCorrectionClosures.closureId, row.closureId))
     .returning();
-  return { closure: closure!, chain, endedRun, nameCheckWaived: waive, approvalNameCheckState };
+  // ⭐ Story 6.23b EA6(a) — the `super_admin_approval` record row: its closure AND the chain's own decision (`-279` A10).
+  if (warningRule.reason !== null) {
+    await insertClaimWarningApprovalRecord(db, {
+      pariwarId: input.pariwarId,
+      claimCaseId: input.claimCaseId,
+      deceasedMemberId: claimRow.deceasedMemberId,
+      step: 'super_admin_approval',
+      closureId: row.closureId,
+      trusteeDecisionId: chain.decisionId as TrusteeDecisionId,
+      reason: warningRule.reason,
+      keys: warningRule.keys,
+      noteCiphertext: null,
+      actorId: input.actorId,
+      actorDisplay: input.actorDisplay,
+    });
+  }
+  return {
+    closure: closure!,
+    chain,
+    endedRun,
+    nameCheckWaived: waive,
+    approvalNameCheckState,
+    approvalWarningKinds: warningRule.kinds,
+  };
 }
 
 // ── (8) "NO CORRECTION NEEDED" — the District Admin's record, the Pariwar Admin's approve / keep (D27, `-260` G2) ───
@@ -1487,8 +1539,21 @@ export async function recordNoCorrectionNeeded(
  */
 export async function approveNoCorrectionNeeded(
   client: pg.PoolClient,
-  input: ActorInput & { readonly decisionRationaleCiphertext: string },
-): Promise<{ readonly chain: ClosureChainResult; readonly endedRun: boolean }> {
+  input: ActorInput & {
+    /**
+     * The decision row's rationale — the FIXED constant, or (6.23b Trap 4) the Pariwar Admin's OWN note when a warning
+     * reason was sent: the handler encrypts BEFORE the transaction, so the CODE's presence is the signal.
+     */
+    readonly decisionRationaleCiphertext: string;
+    /** ⭐ Story 6.23b (EA6b) — the WARNING REASON, required (with the note) while a warning shows. OPTIONAL (RD18). */
+    readonly warningReasonCode?: string | null;
+  },
+): Promise<{
+  readonly chain: ClosureChainResult;
+  readonly endedRun: boolean;
+  /** ⭐ Story 6.23b (EA9) — the warning kinds the approval was judged against. */
+  readonly approvalWarningKinds: readonly ApprovalWarningKind[];
+}> {
   const { db, claimRow } = await lockForClosure(client, input.pariwarId, input.claimCaseId);
   if (await isCorrectionClaimHeld(db, input.pariwarId, input.claimCaseId)) {
     throw new CorrectionClosureRefusedError(input.claimCaseId, 'cycle_freeze_escalated');
@@ -1504,8 +1569,21 @@ export async function approveNoCorrectionNeeded(
   if (await hasLiveRoutedRow(db, input.pariwarId, input.claimCaseId)) {
     throw new CorrectionClosureRefusedError(input.claimCaseId, 'claim_routed_to_r9');
   }
-  await assertClaimApprovable(db, input.pariwarId, input.claimCaseId, claimRow.deceasedMemberId);
+  // ⭐ Story 6.23b EA2 — the WAIT (the gate's last conjunct); the Pariwar Admin's own late reason does ⛔ not count.
+  await assertClaimApprovable(db, input.pariwarId, input.claimCaseId, claimRow.deceasedMemberId, {
+    approvingActorIds: [input.actorId],
+  });
   await assertClaimContactRecorded(db, input.pariwarId, input.claimCaseId);
+  // ⭐ Story 6.23b EA6(b) (`-277` Q2 C; Trap 4) — THE ONE RULE. The note is the rationale ONLY when a code was sent: the
+  // constant is ⛔ never a note, so a missing code answers `missing: 'reason'` first.
+  const warningReasonCode = input.warningReasonCode ?? null;
+  const warningRule = await checkLaterApprovalWarningReason(
+    db,
+    input.pariwarId,
+    input.claimCaseId,
+    warningReasonCode,
+    warningReasonCode !== null ? input.decisionRationaleCiphertext : null,
+  );
   const chainInput: ChainInput = {
     client,
     db,
@@ -1521,7 +1599,22 @@ export async function approveNoCorrectionNeeded(
   };
   const chain = await writeApprovalChain(chainInput, 'no_correction_needed_approve');
   const endedRun = await endOpenRunDecided(chainInput, chase);
-  return { chain, endedRun };
+  // ⭐ Story 6.23b EA6(b) — the `no_correction_approval` record row (its FK is the chain's own decision row).
+  if (warningRule.reason !== null) {
+    await insertClaimWarningApprovalRecord(db, {
+      pariwarId: input.pariwarId,
+      claimCaseId: input.claimCaseId,
+      deceasedMemberId: claimRow.deceasedMemberId,
+      step: 'no_correction_approval',
+      trusteeDecisionId: chain.decisionId as TrusteeDecisionId,
+      reason: warningRule.reason,
+      keys: warningRule.keys,
+      noteCiphertext: null,
+      actorId: input.actorId,
+      actorDisplay: input.actorDisplay,
+    });
+  }
+  return { chain, endedRun, approvalWarningKinds: warningRule.kinds };
 }
 
 /**

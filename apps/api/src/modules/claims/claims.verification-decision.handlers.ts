@@ -43,6 +43,7 @@ import {
 import type { AuthAuditEventType } from '../../audit/audit-sink.js';
 import { emitAuthAudit } from '../auth/shared/audit.js';
 import { getDisplayName } from '../auth/admin/admin-auth.repo.js';
+import { translateLaterApprovalWarningError } from './later-approval-warnings.js';
 import { closeScopeTx, openScopeTx } from '../multi-tenant/scope-tx.js';
 import { encryptOptionalVerifierRationale } from './verifier-decision-crypto.js';
 import { encryptLateWarningReasonNote } from './approval-warning-crypto.js';
@@ -130,27 +131,10 @@ function translateDecisionError(err: unknown): never {
   }
   // Story 6.23a (NW6) — the ONE rule over the nominee-change warnings. ⛔ NEVER a denial: the claim is ⛔ not refused —
   // an approval needs a warning reason and a note. `details` carry kinds only — ⛔ never a name or a date.
-  if (err instanceof claim.ApprovalWarningReasonRequiredError) {
-    throw new ConflictError(
-      err.missing === 'reason'
-        ? 'This claim shows a nominee-change warning — choose a warning reason and write a note to approve it. The claim is not refused.'
-        : 'A note is needed with the warning reason — write why you approve despite the warning. The claim is not refused.',
-      'verifier_decision.warning_reason_required',
-      { kinds: err.kinds, missing: err.missing },
-    );
-  }
-  if (err instanceof claim.WarningReasonUngroundedError) {
-    throw new ConflictError(
-      'This claim shows no nominee-change warning — approve it without a warning reason',
-      'verifier_decision.warning_reason_ungrounded',
-    );
-  }
-  if (err instanceof claim.WarningReasonUnavailableError) {
-    throw new ConflictError(
-      'That warning reason was replaced or is not on the list — please choose again',
-      'verifier_decision.warning_reason_unavailable',
-    );
-  }
+  // ⭐ Story 6.23b — the words live ONCE in `later-approval-warnings.ts` (every later route maps the same refusals with
+  // its own prefix), which also maps the WAIT: defensive here — P1's wait is vacuous (⛔ no live approval exists
+  // while the District Admin approves), but an unmapped typed error would be a 500 (Trap 7).
+  translateLaterApprovalWarningError(err, 'verifier_decision');
   // Story 6.20 (AC4, `-239`) — the post-death refusal needs a determination with a discarded version.
   if (err instanceof claim.PostDeathRefusalUngroundedError) {
     throw new ConflictError(

@@ -404,11 +404,13 @@ export async function adjudicateClaim(
   //      ⭐ Story 6.21a (D7) — through the OUTER helper, which first requires a CURRENT, ACCEPTED death
   //      certificate (a rejected one makes the claim WAIT, ⛔ never a denial — `-236` BB).
   if (input.outcome === 'approved') {
+    // 6.23b EA2 — the wait is VACUOUS here (⛔ no live approval exists while the District Admin approves).
     await assertClaimApprovable(
       db,
       input.pariwarId,
       input.claimCaseId,
       claimRow.deceasedMemberId,
+      { approvingActorIds: [input.actorId] },
     );
     // ⭐ Story 6.19a (D14) — then the claim's CONTACT RECORD: an address for each nominee in force at the death,
     // the claimant's details when the claimant is none of them, and a live agreement to be contacted. AFTER

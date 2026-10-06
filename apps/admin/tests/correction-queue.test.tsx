@@ -99,10 +99,13 @@ const ITEM: Item = {
     not_reached: null,
     family_run_day: 3,
   },
+  // Story 6.23b (EA10) — ⛔ waiting on a late warning reason.
+  late_warning_awaiting_reason: false,
+  late_warning_uncovered_count: 0,
 };
 
-const setup = (items: Item[]) => {
-  getClaimsUnderCorrection.mockResolvedValue({ pariwar_id: PARIWAR, items });
+const setup = (items: Item[], lateWarningsUnavailable = false) => {
+  getClaimsUnderCorrection.mockResolvedValue({ pariwar_id: PARIWAR, items, late_warnings_unavailable: lateWarningsUnavailable });
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={qc}>
@@ -631,5 +634,54 @@ describe('<CorrectionQueueRoute> — nominees WITHOUT a rank (D30) are told apar
     expect(labels.get('nominee:1')).toBe('Nominee 1');
     expect(labels.get('nominee:2')).toBe('Nominee 2');
     expect(labels.get('claimant')).toBe('Claimant');
+  });
+});
+
+// ── Story 6.23b (EA10; AC10) — the District Admin is TOLD a claim waits for their late reason ─────────────────────────
+describe('<CorrectionQueueRoute> — the late-warning row (Story 6.23b, AC10)', () => {
+  const lateOnly: Item = {
+    ...ITEM,
+    returned_at: null,
+    returned_by_actor_display: null,
+    return_note: null,
+    late_warning_awaiting_reason: true,
+    late_warning_uncovered_count: 1,
+  };
+
+  it('⭐ a late-warning-ONLY row: the badge, the words, the open-the-claim action — and ⛔ chase, ⛔ closure actions (⛔ live return)', async () => {
+    setup([lateOnly]);
+    expect(await screen.findByTestId('queue-badge-late-warning')).toHaveTextContent('a late warning awaits your reason');
+    expect(screen.getByTestId('queue-late-warning-line')).toHaveTextContent(/appeared after your approval.*not refused/);
+    expect(screen.getByTestId(`queue-open-${CLAIM}`)).toBeInTheDocument();
+    expect(screen.queryByTestId('queue-short-reference')).toBeNull();
+    expect(screen.queryByTestId(`closure-column-${CLAIM}`)).toBeNull();
+    expect(screen.queryByTestId('queue-badge-returned')).toBeNull();
+  });
+
+  it('a claim BOTH returned and late-warned shows both, with its chase and closure', async () => {
+    setup([{ ...ITEM, late_warning_awaiting_reason: true, late_warning_uncovered_count: 2 }]);
+    expect(await screen.findByTestId('queue-badge-late-warning')).toBeInTheDocument();
+    expect(screen.getByTestId('queue-badge-returned')).toBeInTheDocument();
+    expect(screen.getByTestId('queue-late-warning-line')).toHaveTextContent(/^2 nominee-change warnings/);
+    expect(screen.getByTestId('queue-short-reference')).toBeInTheDocument();
+    expect(screen.getByTestId(`closure-column-${CLAIM}`)).toBeInTheDocument();
+  });
+
+  // Code review 2026-10-06 (P39): the hide condition is a 3-way AND (`late_warning_awaiting_reason && returned_at
+  // === null && !sent_back_by_check`) — only "late-only, nothing else true" and "late + returned_at set" were
+  // exercised. This covers the third combination: late-warned AND sent-back-by-check, but ⛔ no live return.
+  it('a claim late-warned AND sent-back-by-check (⛔ no live return) shows its chase and closure too', async () => {
+    setup([{ ...lateOnly, sent_back_by_check: true }]);
+    expect(await screen.findByTestId('queue-badge-late-warning')).toBeInTheDocument();
+    expect(screen.getByTestId('queue-badge-check')).toBeInTheDocument();
+    expect(screen.getByTestId('queue-late-warning-line')).toBeInTheDocument();
+    expect(screen.getByTestId('queue-short-reference')).toBeInTheDocument();
+    expect(screen.getByTestId(`closure-column-${CLAIM}`)).toBeInTheDocument();
+  });
+
+  it('⭐ invariant 7 — the late arm unavailable is SAID, and an empty list is ⛔ read as "nothing waiting"', async () => {
+    setup([], true);
+    expect(await screen.findByTestId('correction-queue-late-unavailable')).toHaveTextContent(/could not be checked just now/);
+    expect(screen.queryByTestId('correction-queue-empty')).toBeNull();
   });
 });

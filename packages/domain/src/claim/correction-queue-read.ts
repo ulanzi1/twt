@@ -10,9 +10,12 @@
 // District Admin could act on a return ONLY if somebody told them the claim id out of band.
 // ⇒ the return loop `-227` ratified was, end to end, unusable (code review 2026-09-20, D4).
 //
-// ⭐ IT IS A READ OF THE SAME DERIVED CONDITION, ⛔ NOT A NEW STORE. "Under correction" is
-// `resolveClaimCorrectionState`'s answer (AC5): a live `correction_return` row that has not been
-// resubmitted, OR a CURRENT check carrying a `does_not_match`. There is ⛔ no new table, ⛔ no new
+// ⭐ IT IS A READ OF THE SAME DERIVED CONDITION, ⛔ NOT A NEW STORE. A claim is listed for one of THREE reasons. Two are
+// "under correction" — `resolveClaimCorrectionState`'s answer (AC5): a live `correction_return` row that has not been
+// resubmitted, OR a CURRENT check carrying a `does_not_match`. ⭐ The THIRD (Story 6.23b EA10; `-279` A4) is ⛔ not a
+// correction: the District Admin APPROVED and a CURRENT nominee-change warning key has ⛔ no District Admin reason — the
+// final approval WAITS for theirs (6.23a's late reason), and without this row nobody would tell them (the failure this
+// header describes, again). There is ⛔ no new table, ⛔ no new
 // event and ⛔ no new state; a claim enters and leaves this list purely by the facts already
 // recorded elsewhere. AC11's "⛔ no new route, ⛔ no new key" is about the RESUBMISSION, which stays
 // derived — the District Admin's fresh check IS the resubmission, and nothing here writes anything.
@@ -32,6 +35,7 @@ import { clampLimit } from '../pagination.js';
 import { claims } from '../schema/claims.js';
 import { claimStateTrusteeDecisions } from '../schema/claim_state_trustee_decisions.js';
 import { memberPostings } from '../schema/member_postings.js';
+import { readClaimApprovalWarningsBulk, uncoveredKeys } from './approval-warnings.js';
 import { readNomineeNameCheckFlagsBulk } from './nominee-name-check-read.js';
 
 /**
@@ -75,6 +79,13 @@ export interface ClaimUnderCorrectionRow {
   readonly sentBackByCheck: boolean;
   /** `-226` cl.7 — a claim can also be waiting simply for its two accounts. */
   readonly accountsComplete: boolean;
+  /**
+   * ⭐ Story 6.23b (EA10) — the District Admin's live approval leaves a CURRENT warning key uncovered by any District
+   * Admin row: the final approval waits for their late reason. `false` when the late arm could ⛔ not be read (the
+   * caller is told through `onLateWarningsUnavailable`).
+   */
+  readonly lateWarningAwaitingReason: boolean;
+  readonly lateWarningUncoveredCount: number;
 }
 
 export interface ListClaimsUnderCorrectionOptions {
@@ -87,6 +98,12 @@ export interface ListClaimsUnderCorrectionOptions {
    * Omitted ⇒ every row is visible (the whole Pariwar's queue).
    */
   readonly isVisible?: (row: { readonly district: string | null }) => boolean;
+  /**
+   * ⭐ Story 6.23b (EA10; RD12, invariant 7) — called when the LATE-WARNING arm could ⛔ not be read for a batch (its
+   * bulk read runs under a raw SAVEPOINT): the two correction arms still list, the late arm adds nothing, and the
+   * caller says so (the response's `late_warnings_unavailable`) — ⛔ never read as "none waiting".
+   */
+  readonly onLateWarningsUnavailable?: () => void;
 }
 
 /**
@@ -130,6 +147,23 @@ async function candidateBatch(
          ORDER BY p.created_at DESC, p.posting_id DESC
          LIMIT 1
       )`,
+        // Code review 2026-10-06 (decision-needed #1) — the SAME EXISTS the WHERE clause's third arm tests below,
+        // exposed as a column: `qualifyingRows` needs to know a candidate matched the (cheap, always-reliable)
+        // late-warning arm even when the separate, fallible `readLateWarningArm` enrichment read fails — otherwise a
+        // late-warning-only candidate silently drops out of the page on a fault, which is exactly what EA10's
+        // "⛔ never none waiting" invariant forbids.
+        lateWarningCandidate: sql<boolean>`EXISTS (
+          SELECT 1 FROM claim_verifier_decisions v
+            JOIN nominee_determinations nd
+              ON nd.pariwar_id = v.pariwar_id
+             AND nd.claim_case_id = v.claim_case_id
+             AND nd.superseded_at IS NULL
+             AND nd.decided_at > v.decided_at
+           WHERE v.pariwar_id = "claims"."pariwar_id"
+             AND v.claim_case_id = "claims"."claim_case_id"
+             AND v.outcome = 'approved'
+             AND v.superseded_at IS NULL
+        )`,
       })
       .from(claims)
       .where(
@@ -151,6 +185,21 @@ async function candidateBatch(
                AND e.stream_id = "claims"."claim_case_id"
                AND e.event_type = 'claim.nominee_name_checked'
                AND e.payload -> 'accounts' @> '[{"verdict":"does_not_match"}]'::jsonb
+          )
+          OR EXISTS (
+            -- ⭐ Story 6.23b (EA10) — the TIGHT late-warning arm: a live APPROVED verifier decision AND a live
+            -- determination decided AFTER it. TODAY a late key can arise ONLY that way (6.23a fact 3) — ⛔ never "every
+            -- approved claim" (the crowding the 2026-09-23b review removed). The exact answer is computed per row below.
+            SELECT 1 FROM claim_verifier_decisions v
+              JOIN nominee_determinations nd
+                ON nd.pariwar_id = v.pariwar_id
+               AND nd.claim_case_id = v.claim_case_id
+               AND nd.superseded_at IS NULL
+               AND nd.decided_at > v.decided_at
+             WHERE v.pariwar_id = "claims"."pariwar_id"
+               AND v.claim_case_id = "claims"."claim_case_id"
+               AND v.outcome = 'approved'
+               AND v.superseded_at IS NULL
           )
         )`,
           after === null
@@ -213,7 +262,7 @@ export async function listClaimsUnderCorrection(
       ? candidates.filter((c) => opts.isVisible!({ district: c.district }))
       : candidates;
     if (visibleCandidates.length > 0) {
-      out.push(...(await qualifyingRows(db, pariwarId, visibleCandidates)));
+      out.push(...(await qualifyingRows(db, pariwarId, visibleCandidates, opts.onLateWarningsUnavailable)));
     }
     if (out.length >= pageSize || candidates.length < scanBatch) break;
   }
@@ -235,6 +284,7 @@ async function qualifyingRows(
   db: Db,
   pariwarId: PariwarId,
   candidates: readonly Candidate[],
+  onLateWarningsUnavailable: (() => void) | undefined,
 ): Promise<ClaimUnderCorrectionRow[]> {
   const claimCaseIds = candidates.map((c) => c.claimCaseId);
   const returnRows = await db
@@ -265,6 +315,13 @@ async function qualifyingRows(
     })),
   );
 
+  // ⭐ Story 6.23b (EA10) — the late-warning arm, ONE bulk statement for the batch (⛔ no per-claim loop), under a raw
+  // SAVEPOINT (the in-package shape of `contribution/write.ts`'s): a SQL error rolls back ONLY this read, the two
+  // correction arms still list, and the caller is told. Coverage is the District Admin's own — ⛔ no actor exclusion:
+  // the queue asks whether ANY District Admin answer exists.
+  const lateWarnings = await readLateWarningArm(db, pariwarId, claimCaseIds);
+  if (lateWarnings === null) onLateWarningsUnavailable?.();
+
   const out: ClaimUnderCorrectionRow[] = [];
   for (const c of candidates) {
     const f = flags.get(c.claimCaseId);
@@ -282,7 +339,15 @@ async function qualifyingRows(
       f.liveAccounts.every((a) => a.updatedAt.getTime() > ret.decidedAt.getTime());
     const hasLiveUnresubmittedReturn = ret !== undefined && !resubmitted;
     const sentBackByCheck = f?.checkSendsBack ?? false;
-    if (!hasLiveUnresubmittedReturn && !sentBackByCheck) continue;
+    // Code review 2026-10-06 (decision-needed #1): `lateWarnings === null` means the enrichment read FAILED, not
+    // "checked, no warning" — `lateWarnings?.get(...)` must not be allowed to produce the same `undefined` as a
+    // genuine miss would. On a fault, trust the cheap `lateWarningCandidate` flag (computed independently, in the
+    // same statement as every other candidate arm) instead of silently defaulting to "no warning".
+    const w = lateWarnings === null ? undefined : lateWarnings.get(c.claimCaseId.toLowerCase());
+    const lateWarningUncoveredCount = w === undefined ? 0 : uncoveredKeys(w).length;
+    const lateWarningAwaitingReason =
+      lateWarningUncoveredCount > 0 || (lateWarnings === null && c.lateWarningCandidate);
+    if (!hasLiveUnresubmittedReturn && !sentBackByCheck && !lateWarningAwaitingReason) continue;
 
     out.push({
       claimCaseId: c.claimCaseId,
@@ -295,7 +360,25 @@ async function qualifyingRows(
       returnNoteCiphertext: hasLiveUnresubmittedReturn ? (ret?.rationaleCiphertext ?? null) : null,
       sentBackByCheck,
       accountsComplete: f?.accountsComplete ?? false,
+      lateWarningAwaitingReason,
+      lateWarningUncoveredCount,
     });
   }
   return out;
+}
+
+/** EA10's late arm under a raw SAVEPOINT — `null` when it could ⛔ not be read (the transaction stays usable). */
+async function readLateWarningArm(db: Db, pariwarId: PariwarId, claimCaseIds: readonly string[]) {
+  await db.execute(sql`SAVEPOINT late_warning_arm`);
+  try {
+    const byClaim = await readClaimApprovalWarningsBulk(db, pariwarId, claimCaseIds as readonly ClaimId[]);
+    await db.execute(sql`RELEASE SAVEPOINT late_warning_arm`);
+    return byClaim;
+  } catch (err) {
+    // Code review 2026-10-06: this `catch` is the ONLY signal a real bug (vs. a genuine, expected unavailability)
+    // ever gets — the caller only sees `onLateWarningsUnavailable`'s zero-argument callback. Log before swallowing.
+    console.warn(`[correction-queue-read] readLateWarningArm failed for pariwar ${pariwarId}:`, err);
+    await db.execute(sql`ROLLBACK TO SAVEPOINT late_warning_arm`);
+    return null;
+  }
 }

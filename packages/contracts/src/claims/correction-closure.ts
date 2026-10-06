@@ -31,7 +31,10 @@
 
 import { z } from 'zod';
 
+import { isBlank } from '../_common/primitives.js';
 import { CorrectionMustAct, CorrectionPersonKey, isRealCalendarDate } from './correction-chase.js';
+// Story 6.23b — a zod-only leaf (⛔ no sibling import), so this cannot close a cycle.
+import { ApprovalWarningReasonOption, ApprovalWarningsSummary, WarningReasonCode } from './verification-decision.js';
 
 const IsoDate = z
   .string()
@@ -44,7 +47,7 @@ export const CORRECTION_CLOSURE_NOTE_MAX_CHARS = 1000;
 const RequiredNote = z
   .string()
   .max(CORRECTION_CLOSURE_NOTE_MAX_CHARS)
-  .refine((v) => v.trim().length > 0, 'a note is required');
+  .refine((v) => !isBlank(v), 'a note is required');
 
 // ── The vocabularies (⚠ LOCKSTEP with the domain — `correction-closure-lockstep.test.ts`) ─────────────────────
 
@@ -146,9 +149,17 @@ export const EscalatedClosureDecisionRequest = z
     note: RequiredNote,
     /** REQUIRED on a refusal — the trustee reason code on the decision row (D17). */
     refusal_reason_code: SuperAdminRefusalReasonCode.optional(),
+    /**
+     * ⭐ Story 6.23b (EA6a; Trap 5) — the WARNING REASON, its OWN field (⛔ never a new closure reason — the 0131 CHECK
+     * stays). APPROVE only; required there while a warning shows (the server's 409). The note is `note`, already required.
+     */
+    warning_reason_code: WarningReasonCode.optional(),
   })
   .strict()
   .superRefine((v, ctx) => {
+    if (v.decision !== 'approve' && v.warning_reason_code !== undefined) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['warning_reason_code'], message: 'only an approval carries a warning reason' });
+    }
     if (!(CLOSURE_SUPER_ADMIN_REASONS[v.decision] as readonly string[]).includes(v.reason)) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['reason'], message: `the reason is not one for '${v.decision}'` });
     }
@@ -175,7 +186,26 @@ export type ClosureDirectionResponseRequest = z.output<typeof ClosureDirectionRe
 export const NoCorrectionNeededRequest = z.object({ note: RequiredNote }).strict();
 export type NoCorrectionNeededRequest = z.output<typeof NoCorrectionNeededRequest>;
 
-export const NoCorrectionNeededApproveRequest = z.object({}).strict();
+/**
+ * ⭐ Story 6.23b (EA6b; Trap 4) — D27's approve: `{}` on an un-warned claim (the decision keeps its FIXED rationale), or
+ * the Pariwar Admin's `warning_reason_code` AND their OWN `note` while a warning shows. PAIRED: the handler encrypts the
+ * rationale BEFORE the transaction, so the code's presence is the signal — a bare `note` must ⛔ never silently replace
+ * the constant. ⚠ This note is its OWN field — ⛔ never the Keep note.
+ */
+export const NoCorrectionNeededApproveRequest = z
+  .object({
+    warning_reason_code: WarningReasonCode.optional(),
+    note: RequiredNote.optional(),
+  })
+  .strict()
+  .superRefine((v, ctx) => {
+    if (v.note !== undefined && v.warning_reason_code === undefined) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['warning_reason_code'], message: 'a note is sent only with a warning reason' });
+    }
+    if (v.warning_reason_code !== undefined && v.note === undefined) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['note'], message: 'a note is required when a warning reason is chosen' });
+    }
+  });
 export type NoCorrectionNeededApproveRequest = z.output<typeof NoCorrectionNeededApproveRequest>;
 
 export const NoCorrectionNeededKeepRequest = z.object({ must_act: CorrectionMustAct, note: RequiredNote }).strict();
@@ -240,9 +270,20 @@ export const PariwarClosureQueueItemDto = z
     family_run_day0: IsoDate.nullable(),
     checked_after_record: z.boolean().nullable(),
     held: z.boolean(),
+    /**
+     * ⭐ Story 6.23b (EA7; RD20) — the warnings on a `no_correction_needed` item (its approve is an APPROVAL of the
+     * claim); ⛔ `null` EXACTLY on a `closure_request` — deciding a closure request is a refusal path (Trap 12).
+     */
+    approval_warnings: ApprovalWarningsSummary.nullable(),
   })
   .strict();
-export const PariwarClosureQueueResponse = z.object({ items: z.array(PariwarClosureQueueItemDto) }).strict();
+export const PariwarClosureQueueResponse = z
+  .object({
+    items: z.array(PariwarClosureQueueItemDto),
+    /** ⭐ Story 6.23b (EA7) — the Pariwar's ACTIVE warning reasons, ONCE per response. */
+    reason_options: z.array(ApprovalWarningReasonOption),
+  })
+  .strict();
 export type PariwarClosureQueueResponse = z.output<typeof PariwarClosureQueueResponse>;
 
 export const EscalatedClosureItemDto = z
@@ -311,6 +352,10 @@ export const EscalatedClosureDetailResponse = z
     name_check_state: z.enum(['passing', 'never_checked', 'stale', 'does_not_match', 'accounts_missing', 'undetermined']),
     /** Which writer an APPROVE would run (`-273` §8): the `-251` waiver, or the full gate. */
     approve_path: z.enum(['name_waived_251', 'full_gate']),
+    /** ⭐ Story 6.23b (EA7) — the warnings, as the viewing Super Admin would approve over them. */
+    approval_warnings: ApprovalWarningsSummary,
+    /** ⭐ Story 6.23b (EA7) — the Pariwar's ACTIVE warning reasons. */
+    reason_options: z.array(ApprovalWarningReasonOption),
   })
   .strict();
 export type EscalatedClosureDetailResponse = z.output<typeof EscalatedClosureDetailResponse>;

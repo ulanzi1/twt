@@ -31,11 +31,15 @@ import {
   returnToDistrictAdmin,
   voteOnFrozenClaim,
 } from '../../../src/claim/index.js';
-import { getEffectiveNomineeDeclaration } from '../../../src/claim/nominee-effective.js';
+import { getEffectiveNomineeDeclaration, versionStandsAt } from '../../../src/claim/nominee-effective.js';
+import { addCalendarDays, istDateOf } from '../../../src/cycle-calendar/holiday-resolver.js';
+import { pariwarId as toPariwarId } from '../../../src/ids/index.js';
+import { listNomineeDeclarationVersions } from '../../../src/nominee/declaration-history.js';
 import * as schema from '../../../src/schema/index.js';
 import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
 import {
   PARIWAR_A,
+  driveClaimTo,
   enterAppScope,
   seedAcceptedDeathCertificate,
   seedMember,
@@ -707,7 +711,8 @@ describe.skipIf(!hasDatabase)('Story 6.18 — the nominee name check (:5433)', (
     }
 
     // ── Story 6.19c (T10, `-273` §8) — THE `-251` COMPOSITION'S NEUTRALITY PROOF ─────────────────────────────
-    // ⭐ The gate gained ONE options parameter. For EVERY deficiency: (a) the default, `{}` and `{ nameCheck:
+    // ⭐ The gate gained ONE options parameter. Story 6.23b (EA2) made `approvingActorIds` REQUIRED on it, so every
+    // call below passes it. For EVERY deficiency: (a) ⛔ `nameCheck`, `nameCheck: undefined` and `{ nameCheck:
     // 'required' }` refuse with the SAME error — byte-identical behaviour for P1/P3/P4 and every caller that omits it;
     // (b) `{ nameCheck: 'waived_251' }` lets ONLY the three name-check deficiencies through (`never_checked`, `stale`,
     // `does_not_match` — invariant 7) and still refuses the accounts and the determination with their own errors.
@@ -721,10 +726,10 @@ describe.skipIf(!hasDatabase)('Story 6.18 — the nominee name check (:5433)', (
         await driveTo(client, cid, mid, 'verifier_approved');
         await seedAcceptedDeathCertificate(client, { pariwarId: PARIWAR_A, claimCaseId: cid });
         await d.seed(client, tx, cid);
-        for (const opts of [undefined, {}, { nameCheck: 'required' as const }]) {
-          await expect(assertClaimApprovable(tx, PARIWAR_A, cid, mid, opts)).rejects.toMatchObject({ name: d.error });
+        for (const opts of [{}, { nameCheck: undefined }, { nameCheck: 'required' as const }]) {
+          await expect(assertClaimApprovable(tx, PARIWAR_A, cid, mid, { ...opts, approvingActorIds: [TRUSTEE] })).rejects.toMatchObject({ name: d.error });
         }
-        const waived = assertClaimApprovable(tx, PARIWAR_A, cid, mid, { nameCheck: 'waived_251' });
+        const waived = assertClaimApprovable(tx, PARIWAR_A, cid, mid, { nameCheck: 'waived_251', approvingActorIds: [TRUSTEE] });
         if (NAME_CHECK_DEFICIENCIES.has(d.key)) {
           await expect(waived).resolves.toBeUndefined();
           // `-273` §7 — the recorded state the highlight derives from is the gate's OWN refusal reason.
@@ -743,15 +748,70 @@ describe.skipIf(!hasDatabase)('Story 6.18 — the nominee name check (:5433)', (
       const mid = toMemberId(randomUUID());
       await driveTo(client, cid, mid, 'verifier_approved');
       await seedNomineeNameCheck(client, PARIWAR_A, cid, { certificate: 'skip' });
-      for (const opts of [undefined, { nameCheck: 'waived_251' as const }]) {
-        await expect(assertClaimApprovable(tx, PARIWAR_A, cid, mid, opts)).rejects.toMatchObject({ name: 'DeathCertificateAcceptanceRequiredError' });
+      for (const opts of [{}, { nameCheck: 'waived_251' as const }]) {
+        await expect(assertClaimApprovable(tx, PARIWAR_A, cid, mid, { ...opts, approvingActorIds: [TRUSTEE] })).rejects.toMatchObject({
+          name: 'DeathCertificateAcceptanceRequiredError',
+        });
       }
       const ok = toClaimId(randomUUID());
       const okMid = toMemberId(randomUUID());
       await driveTo(client, ok, okMid, 'verifier_approved');
       await seedNomineeNameCheck(client, PARIWAR_A, ok);
-      await expect(assertClaimApprovable(tx, PARIWAR_A, ok, okMid)).resolves.toBeUndefined();
+      await expect(assertClaimApprovable(tx, PARIWAR_A, ok, okMid, { approvingActorIds: [TRUSTEE] })).resolves.toBeUndefined();
       expect(await readNomineeNameCheckApprovalState(tx, PARIWAR_A, ok, okMid)).toBe('passing');
+    });
+
+    it('⭐ 6.23b Trap 17 — the WAIT is the gate\'s LAST conjunct, so the `-251` waived arm STILL waits (⛔ never a refusal)', async () => {
+      // A District Admin approval over a recent change (30 days ago), then a re-review of the certificate to 45 days
+      // ago + a redetermination ⇒ that change is now ALSO post-death — a NEW key the approval never covered.
+      const { client, tx } = getTx();
+      const pid = toPariwarId(randomUUID());
+      await enterAppScope(client, pid);
+      const cid = toClaimId(randomUUID());
+      const mid = randomUUID();
+      const DAY = 86_400_000;
+      await driveClaimTo(client, pid, cid, mid, 'verifier_review');
+      await seedNomineeDeclaration(tx, pid, mid, { declaredAt: new Date(Date.now() - 300 * DAY), nominees: [{}, {}] });
+      await seedNomineeDeclaration(tx, pid, mid, { declaredAt: new Date(Date.now() - 30 * DAY), nominees: [{}, {}] });
+      const determine = async (date: string) => {
+        await seedAcceptedDeathCertificate(client, { pariwarId: pid, claimCaseId: cid, date });
+        const versions = await listNomineeDeclarationVersions(tx, pid, toMemberId(mid));
+        await seedNomineeDetermination(client, pid, cid, {
+          certificateDate: date,
+          marks: versions.map((v) => ({ versionId: v.versionId, mark: versionStandsAt(v.effectiveAt, date) ? ('stands' as const) : ('discarded' as const) })),
+        });
+      };
+      await determine(addCalendarDays(istDateOf(new Date()), 1));
+      await seedNomineeNameCheck(client, pid, cid);
+      await adjudicateClaim(client, {
+        claimCaseId: cid,
+        pariwarId: pid,
+        outcome: 'approved',
+        reasonCode: 'r5_d_natural_death',
+        rationaleCiphertext: 'enc:v1:why',
+        warningReasonCode: 'warnings_reviewed',
+        actorId: DISTRICT_ADMIN,
+        actorDisplay: 'District Admin',
+        actor: 'operator',
+      });
+      await determine(addCalendarDays(istDateOf(new Date()), -45));
+      const mmid = toMemberId(mid);
+      // The waived arm reaches the wait directly (it skips the now-stale name check — RD19).
+      await expect(assertClaimApprovable(tx, pid, cid, mmid, { nameCheck: 'waived_251', approvingActorIds: [TRUSTEE] })).rejects.toMatchObject({
+        name: 'LateWarningReasonRequiredError',
+        kinds: ['post_death_version'],
+        ownReasonExcluded: false,
+      });
+      // The full gate answers the STALE name check first (every refusal inside the gate keeps its order) …
+      await expect(assertClaimApprovable(tx, pid, cid, mmid, { approvingActorIds: [TRUSTEE] })).rejects.toMatchObject({
+        name: 'NomineeNameCheckRequiredError',
+        reason: 'stale',
+      });
+      // … and, re-checked, it waits too.
+      await seedNomineeNameCheck(client, pid, cid);
+      await expect(assertClaimApprovable(tx, pid, cid, mmid, { approvingActorIds: [TRUSTEE] })).rejects.toMatchObject({
+        name: 'LateWarningReasonRequiredError',
+      });
     });
 
     it('⭐⭐ cl.5 — a recorded `does_not_match` mints ⛔ NO escalation event, and ⛔ no denial', async () => {

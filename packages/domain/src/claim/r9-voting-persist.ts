@@ -47,6 +47,15 @@ import { claims } from '../schema/claims.js';
 import { type ClaimR9VoteRow, claimR9Votes } from '../schema/claim_r9_votes.js';
 import { type ClaimR9VotingSessionRow, claimR9VotingSessions } from '../schema/claim_r9_voting_sessions.js';
 import { claimStateTrusteeDecisions } from '../schema/claim_state_trustee_decisions.js';
+import {
+  type ApprovalWarningKind,
+  checkLaterApprovalWarningReason,
+  insertClaimWarningApprovalRecord,
+  r9ApproveVotesMissingKeys,
+  readClaimApprovalWarnings,
+  readR9VoteWarningCoverage,
+} from './approval-warnings.js';
+import { R9ApproveVotesNeedWarningReasonError, WarningReasonUngroundedError } from './errors.js';
 import { type ClaimEventActor } from './events.js';
 import { assertClaimContactRecorded } from './claim-contact-check.js';
 import { assertClaimApprovable } from './nominee-name-check.js';
@@ -383,6 +392,11 @@ export interface CastR9VoteInput extends R9WriteBase {
    * ceiling inside `prepareR9VoteCiphertext`.
    */
   rationaleCiphertext: PreparedR9VoteCiphertext;
+  /**
+   * ⭐ Story 6.23b (EA5) — the WARNING REASON on an APPROVE vote while a warning shows (the note is the vote's own
+   * required `rationaleCiphertext`). Refused on a deny vote and when ⛔ no warning shows. OPTIONAL (RD18).
+   */
+  warningReasonCode?: string | null;
 }
 
 export interface CancelR9VotingSessionInput extends R9WriteBase {
@@ -398,6 +412,8 @@ export interface R9VoteResult {
   vote: ClaimR9VoteRow;
   /** True when this replaced the voter's prior live vote (a revision), false for a first vote. */
   revised: boolean;
+  /** ⭐ Story 6.23b (EA9) — the warning kinds an APPROVE vote was judged against; ABSENT on a deny vote (RD15). */
+  approvalWarningKinds?: readonly ApprovalWarningKind[];
 }
 
 export interface R9FinalizeResult {
@@ -408,6 +424,8 @@ export interface R9FinalizeResult {
   eventVersion: number | null;
   /** True when this reflects a re-finalize of an already-finalized session (idempotent short-circuit). */
   idempotentReplay: boolean;
+  /** ⭐ Story 6.23b (EA9) — the warning kinds an APPROVED finalize was judged against; ABSENT otherwise (RD15). */
+  approvalWarningKinds?: readonly ApprovalWarningKind[];
 }
 
 // ── Open (snapshot the clause + capture the immutable panel, metadata-only, AC2) ──
@@ -493,6 +511,9 @@ export async function openR9VotingSession(
  */
 export async function castR9Vote(client: pg.PoolClient, input: CastR9VoteInput): Promise<R9VoteResult> {
   if (!input.rationaleCiphertext || input.rationaleCiphertext.trim() === '') throw new R9RationaleRequiredError();
+  const warningReasonCode = input.warningReasonCode ?? null;
+  // Story 6.23b — a warning reason is an APPROVE vote's only (the contract's 400 is the real enforcement).
+  if (input.vote !== 'approve' && warningReasonCode !== null) throw new WarningReasonUngroundedError(input.claimCaseId);
 
   await acquireR9Lock(client, input.pariwarId, input.claimCaseId);
   const db = bindScopedDb(client);
@@ -503,6 +524,15 @@ export async function castR9Vote(client: pg.PoolClient, input: CastR9VoteInput):
   // finalized — that would leak session state to someone not yet established as an eligible voter).
   if (!session.panelActorIds.includes(input.actorId)) throw new R9ActorNotOnPanelError(input.actorId);
   if (session.outcome !== null) throw new R9SessionFinalizedError(input.claimCaseId);
+
+  // ⭐ Story 6.23b EA5 (`-277` Q2 C) — THE ONE RULE on an APPROVE vote, BEFORE any write. BEST-EFFORT (Trap 6): the
+  // reader's warnings as they stand (inexact like an escalation's — ⛔ no gate runs here, and ⛔ no claim-row lock, so a
+  // certificate re-review can commit between this read and the vote); the BINDING check is at `finalizeR9Outcome`.
+  // A deny vote is ⛔ never gated.
+  const warningRule =
+    input.vote === 'approve'
+      ? await checkLaterApprovalWarningReason(db, input.pariwarId, input.claimCaseId, warningReasonCode, input.rationaleCiphertext)
+      : null;
 
   // Atomic supersede-then-insert. Find the voter's prior live vote; if present, supersede it (0-row ⇒ a
   // concurrent revise already won ⇒ 409, the 6.11 reviseDecision precedent) and back-reference it.
@@ -552,7 +582,27 @@ export async function castR9Vote(client: pg.PoolClient, input: CastR9VoteInput):
     if (isUniqueViolation(err)) throw new R9VoteConflictError(input.actorId);
     throw err;
   }
-  return { vote, revised: supersedesVoteId !== null };
+  // ⭐ Story 6.23b EA5 — the vote's OWN `r9_vote` record row, in the vote's transaction (its FK is the vote just
+  // written). A revision is a NEW vote with its OWN row; the earlier vote, its note and its row stay (history — Trap 6).
+  if (warningRule?.reason) {
+    await insertClaimWarningApprovalRecord(db, {
+      pariwarId: input.pariwarId,
+      claimCaseId: input.claimCaseId,
+      deceasedMemberId: warningRule.deceasedMemberId,
+      step: 'r9_vote',
+      r9VoteId: vote.voteId,
+      reason: warningRule.reason,
+      keys: warningRule.keys,
+      noteCiphertext: null,
+      actorId: input.actorId,
+      actorDisplay: input.actorDisplay,
+    });
+  }
+  return {
+    vote,
+    revised: supersedesVoteId !== null,
+    ...(warningRule !== null ? { approvalWarningKinds: warningRule.kinds } : {}),
+  };
 }
 
 // ── Finalize (the sole lifecycle-changing verb, AC0/AC4) ──────────────────────
@@ -596,8 +646,9 @@ export async function finalizeR9Outcome(client: pg.PoolClient, input: R9WriteBas
   }
 
   // Lock the live vote rows FOR UPDATE in a DETERMINISTIC order (by vote_id) BEFORE tallying (#6).
+  // 6.23b EA5 — `voterActorId` too: the live APPROVE voters are approving actors (`-279` A1), known BEFORE the gate.
   const liveVotes = await db
-    .select({ voteId: claimR9Votes.voteId, vote: claimR9Votes.vote })
+    .select({ voteId: claimR9Votes.voteId, vote: claimR9Votes.vote, voterActorId: claimR9Votes.voterActorId })
     .from(claimR9Votes)
     .where(and(eq(claimR9Votes.sessionId, session.sessionId), isNull(claimR9Votes.supersededAt)))
     .orderBy(asc(claimR9Votes.voteId))
@@ -620,17 +671,43 @@ export async function finalizeR9Outcome(client: pg.PoolClient, input: R9WriteBas
   // refusal aborts cleanly with no orphaned session outcome, no event and no metadata row.
   // ⭐ Story 6.21a (D7) — through the OUTER helper: a current, ACCEPTED death certificate first.
   if (outcome === 'approved') {
+    // ⭐ Story 6.23b EA2 — the approving actors: the finalizer AND every live approve voter (`-279` A1).
+    const approvingActorIds = [input.actorId, ...liveVotes.filter((v) => v.vote === 'approve').map((v) => v.voterActorId)];
     await assertClaimApprovable(
       db,
       input.pariwarId,
       input.claimCaseId,
       claimRow.deceasedMemberId,
+      { approvingActorIds },
     );
     // ⭐ Story 6.19a (D14) — then the claim's CONTACT RECORD: an address for each nominee in force at the death,
     // the claimant's details when the claimant is none of them, and a live agreement to be contacted. AFTER
     // the gate above (every existing refusal keeps its code when several are missing), approve-only, and
     // ⛔ never a denial — the claim WAITS, and the helpline can complete the record in this state (W3).
     await assertClaimContactRecorded(db, input.pariwarId, input.claimCaseId);
+  }
+
+  // ⭐ Story 6.23b EA5 (`-279` A2) — the BINDING R9 check, AFTER the gate (so the warnings are EXACT) and BEFORE any
+  // write: EACH live APPROVE vote's own `r9_vote` row must cover EVERY current key — ⛔ never merely "a row exists", and
+  // ⛔ never `uncoveredKeys`, which covers nothing without a District Admin approval (RD17): R9 can run from
+  // `verification_in_progress` / `verifier_review`, where votes cast before the determination cover only the 90-day
+  // keys. Else the voters REVISE (a typed 409 naming the vote ids) — ⛔ never a refusal. A denied outcome is ⛔ never gated.
+  let approvalWarningKinds: readonly ApprovalWarningKind[] | undefined;
+  if (outcome === 'approved') {
+    const warnings = await readClaimApprovalWarnings(db, input.pariwarId, input.claimCaseId);
+    approvalWarningKinds = warnings.kinds;
+    if (warnings.keys.length > 0) {
+      const approveVoteIds = liveVotes.filter((v) => v.vote === 'approve').map((v) => v.voteId);
+      const coverage = await readR9VoteWarningCoverage(db, input.pariwarId, approveVoteIds);
+      const short = r9ApproveVotesMissingKeys(warnings.keys, approveVoteIds, coverage);
+      if (short.length > 0) {
+        throw new R9ApproveVotesNeedWarningReasonError(
+          input.claimCaseId,
+          short.map((v) => v.voteId),
+          new Set(short.flatMap((v) => v.missing)).size,
+        );
+      }
+    }
   }
 
   // (a) Persist the outcome onto the session row.
@@ -706,7 +783,13 @@ export async function finalizeR9Outcome(client: pg.PoolClient, input: R9WriteBas
     actorDisplay: input.actorDisplay,
   });
 
-  return { session: finalizedSession, claimState: projected.state, eventVersion: projected.eventVersion, idempotentReplay: false };
+  return {
+    session: finalizedSession,
+    claimState: projected.state,
+    eventVersion: projected.eventVersion,
+    idempotentReplay: false,
+    ...(approvalWarningKinds !== undefined ? { approvalWarningKinds } : {}),
+  };
 }
 
 // ── Cancel (correction path, metadata-only, AC5) ──────────────────────────────

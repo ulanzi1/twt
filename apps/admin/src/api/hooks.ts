@@ -929,7 +929,9 @@ export function useDecideCorrectionClosure(pariwarId: string) {
 export function useApproveNoCorrectionNeeded(pariwarId: string) {
   const invalidate = useInvalidateClosureViews(pariwarId);
   return useMutation({
-    mutationFn: (claimCaseId: string) => api.approveNoCorrectionNeeded(pariwarId, claimCaseId),
+    // Story 6.23b (EA6b) — the optional `{ warning_reason_code, note }` while a warning shows.
+    mutationFn: (v: { claimCaseId: string; body?: Parameters<typeof api.approveNoCorrectionNeeded>[2] }) =>
+      api.approveNoCorrectionNeeded(pariwarId, v.claimCaseId, v.body ?? {}),
     onSettled: invalidate,
   });
 }

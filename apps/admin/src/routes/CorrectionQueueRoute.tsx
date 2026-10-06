@@ -121,6 +121,14 @@ function CorrectionQueueView(): ReactElement {
         ) : null}
       </p>
 
+      {/* ⭐ Story 6.23b (EA10) — the late-warning arm could ⛔ not be read: the returned claims still list, and the page
+          SAYS a late-only claim may be missing (⛔ "nothing waiting"). */}
+      {queue.data?.late_warnings_unavailable === true ? (
+        <p role="status" data-testid="correction-queue-late-unavailable" className="mt-2 text-xs">
+          {t.correctionQueue.lateWarningsUnavailable}
+        </p>
+      ) : null}
+
       {hasData && queue.isError ? (
         <p role="alert" data-testid="correction-queue-refetch-error" className="mt-2 text-xs">
           {queueStatus === 403 ? t.correctionQueue.forbidden : correctionChaseEn.queue.refetchError}
@@ -139,7 +147,7 @@ function CorrectionQueueView(): ReactElement {
         <p role="alert" data-testid="correction-queue-error" className="mt-4 text-sm">
           {t.correctionQueue.loadError}
         </p>
-      ) : (queue.data?.items.length ?? 0) === 0 ? (
+      ) : (queue.data?.items.length ?? 0) === 0 && queue.data?.late_warnings_unavailable !== true ? (
         // ⭐ An EMPTY queue is good news and says so. A bare blank panel reads as a failed load —
         // and on a page whose whole job is "is anything waiting for me?", ambiguity is the one
         // thing it must not have.
@@ -187,6 +195,15 @@ function CorrectionQueueView(): ReactElement {
                     {t.correctionQueue.badgeSentBackByCheck}
                   </span>
                 ) : null}
+                {/* ⭐ Story 6.23b (EA10) — the District Admin's approval waits on their late reason. */}
+                {item.late_warning_awaiting_reason ? (
+                  <span
+                    data-testid="queue-badge-late-warning"
+                    className="rounded bg-status-warn-bg px-1.5 py-0.5 text-xs text-status-warn-fg"
+                  >
+                    {t.correctionQueue.badgeLateWarning}
+                  </span>
+                ) : null}
                 {!item.accounts_complete ? (
                   <span
                     data-testid="queue-badge-accounts"
@@ -216,13 +233,28 @@ function CorrectionQueueView(): ReactElement {
                 </dl>
               ) : null}
 
-              {/* ⭐ Story 6.19b (AC8b) — the correction chase: the reference, who must act, the run, the flags, each
-                  person by role and their letters, and the letter form. */}
-              <CorrectionChasePanel pariwarId={pariwarId} item={item} />
+              {item.late_warning_awaiting_reason ? (
+                // Code review 2026-10-06 (P35): the sibling `correction-queue-late-unavailable` banner uses
+                // `role="status"`; this per-item advisory text didn't.
+                <p role="status" className="mt-2 text-xs" data-testid="queue-late-warning-line">
+                  {t.correctionQueue.lateWarningLine(item.late_warning_uncovered_count)}
+                </p>
+              ) : null}
 
-              {/* ⭐ Story 6.19c (AC8c) — the closure state, why a request would refuse now (plain words), the request and
-                  "no correction needed". */}
-              <ClosureColumn pariwarId={pariwarId} item={item} />
+              {/* ⭐ Story 6.23b (EA10) — a LATE-WARNING-ONLY row has ⛔ no live return: ⛔ chase and ⛔ closure actions (its
+                  chase summary is all nulls and a closure would refuse `no_live_return`). Its one action is opening the
+                  claim, where the late reason is recorded. */}
+              {item.late_warning_awaiting_reason && item.returned_at === null && !item.sent_back_by_check ? null : (
+                <>
+                  {/* ⭐ Story 6.19b (AC8b) — the correction chase: the reference, who must act, the run, the flags, each
+                      person by role and their letters, and the letter form. */}
+                  <CorrectionChasePanel pariwarId={pariwarId} item={item} />
+
+                  {/* ⭐ Story 6.19c (AC8c) — the closure state, why a request would refuse now (plain words), the request
+                      and "no correction needed". */}
+                  <ClosureColumn pariwarId={pariwarId} item={item} />
+                </>
+              )}
 
               {/* ⭐ The only action is OPEN THE CLAIM. ⛔ There is deliberately no "Re-submit"
                   button: the resubmission is DERIVED (AC11) — the District Admin records a fresh

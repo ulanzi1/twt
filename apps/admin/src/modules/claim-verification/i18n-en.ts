@@ -186,6 +186,36 @@ export const verifierConsoleEn = {
       lateNoApproval: 'This claim has no live District Admin approval for a late reason to answer.',
       lateNotRecordable: 'A late reason cannot be recorded in this claim’s current state.',
       lateMissingDisplay: 'Your account has no display name configured — contact an administrator before recording a late reason.',
+      // Story 6.23b — the WAIT (`-277` Q3 B) and R9's per-vote refusal (`-279` A2). ⛔ Never "try again", ⛔ never a refusal.
+      lateWarningReasonRequired:
+        'This claim is waiting for the District Admin to record a reason for a warning that appeared after their approval. It is not refused.',
+      approveVotesNeedWarningReason: (n: number) =>
+        n === 1
+          ? 'One approve vote does not answer every nominee-change warning now showing — that voter must revise their vote with a warning reason. The claim is not refused.'
+          : `${n} approve votes do not answer every nominee-change warning now showing — each of those voters must revise their vote with a warning reason. The claim is not refused.`,
+      // Code review 2026-10-06 (P37) — the `vote_ids`-missing fallback: never guess a count.
+      approveVotesNeedWarningReasonUnknownCount:
+        'Some approve votes do not answer every nominee-change warning now showing — each of those voters must revise their vote with a warning reason. The claim is not refused.',
+    },
+    // ⭐ Story 6.23b (EA7) — the LATER approvers' surfaces (the final vote, an escalation, an R9 vote, the Super Admin, "no
+    // correction needed"): the same kind lines and picker as the District Admin's, these words around them.
+    later: {
+      intro: 'You may still approve. Choose a warning reason and write a note saying why — the claim is not refused.',
+      // The WAIT, shown BEFORE the approve control (⛔ a 409 the screen did not explain).
+      waits:
+        'This claim is waiting for the District Admin to record a reason for a warning that appeared after their approval, so approval is unavailable until they do. It is not refused.',
+      // `-279` A1 — the person the wait holds can ⛔ not clear it.
+      ownReasonExcluded:
+        'A late reason you recorded cannot clear your own approval — someone else who can approve claims here (the District Admin, another Pariwar Admin or the Super Admin) and who is not approving it themselves must record theirs.',
+      ownReasonExcludedR9:
+        'A late reason recorded by an approve voter on this panel, or by the person finalizing it, cannot clear this approval — someone else who can approve claims here (the District Admin, another Pariwar Admin or the Super Admin) must record theirs.',
+      // RD11 — one approve vote's own reason does not answer every current warning.
+      voteMustBeRevised: 'This approve vote does not answer every warning now showing — it must be revised with a warning reason before the outcome can be finalized.',
+      // D27's approve — its OWN note, ⛔ the Keep note (Trap 4).
+      approveNoteLabel: 'Your note for this approval (required with a warning reason)',
+      // Code review 2026-10-06 — a warning shows, approving is NOT blocked, but the Pariwar's reason list came back
+      // empty. Without this, the picker renders zero options and Approve is stuck with no explanation on screen.
+      noOptionsConfigured: 'No warning reasons are configured for this Pariwar yet — ask a Super Admin to add one before approving.',
     },
   },
   // ── Story 6.18 — the nominee NAME CHECK (`2026-09-19-226` cl.3/cl.5) ──────────────────────
@@ -288,6 +318,16 @@ export const verifierConsoleEn = {
     returnedBy: 'Returned by',
     note: 'Their note',
     open: 'Open the claim',
+    // ⭐ Story 6.23b (EA10; `-279` A4) — the claim you approved shows a warning that appeared after your approval: the
+    // final approval WAITS for your reason and note (recorded on the claim). ⛔ Not a correction, ⛔ not a refusal.
+    badgeLateWarning: 'a late warning awaits your reason',
+    lateWarningLine: (n: number) =>
+      n === 1
+        ? 'A nominee-change warning appeared after your approval. The final approval waits until you record a reason and a note for it — open the claim to record them. The claim is not refused.'
+        : `${n} nominee-change warnings appeared after your approval. The final approval waits until you record a reason and a note for them — open the claim to record them. The claim is not refused.`,
+    // Invariant 7 — the late-warning check could ⛔ not run: ⛔ never read as "nothing waiting".
+    lateWarningsUnavailable:
+      'Late nominee-change warnings could not be checked just now, so a claim waiting only for your late reason may be missing from this list. Reload to try again.',
   },
   // ── Story 6.20 — the nominee declaration HISTORY (AC3, AC4, AC7, AC8, AC13, D14) ─────────────
   // ⛔⛔ No string here says a version "changed after the death", "is suspicious" or "should be
@@ -739,4 +779,13 @@ export type VerifierConsoleCopy = typeof verifierConsoleEn;
 export function nameDifferenceReasonLabel(code: string): string {
   const reasons: Record<string, string> = verifierConsoleEn.nameCheck.reasons;
   return Object.hasOwn(reasons, code) ? reasons[code]! : code;
+}
+
+/**
+ * ⭐ Story 6.23b (AC11; the `deferred-work.md` item routed here) — a verifier reason code AS WORDS on a trustee's card,
+ * from the SAME table the District Admin's dropdown reads; an unknown code falls back to the code itself, ⛔ never blank.
+ */
+export function verifierReasonCodeLabel(code: string): string {
+  const codes: Record<string, string> = verifierConsoleEn.reasonCodes;
+  return Object.hasOwn(codes, code) ? codes[code]! : code;
 }

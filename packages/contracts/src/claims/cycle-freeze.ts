@@ -27,6 +27,8 @@
 
 import { z } from 'zod';
 
+import { isBlank } from '../_common/primitives.js';
+
 // ⭐ ONE TUPLE, IMPORTED — ⛔ not a fourth hand-written copy (code review 2026-09-20). The
 // browser-bundle rule forbids importing `@twt/domain` from a contract; it says nothing about
 // importing a SIBLING CONTRACT in the same package, which is what this is. Before this there were
@@ -38,6 +40,8 @@ import { NomineeNameClericalReason } from './nominee-name-check.js';
 // import cycle through `nominee-name-check.ts` left a schema `undefined` at init).
 import { CorrectionMustAct } from './correction-chase.js';
 import { ApprovalNameHighlight } from './correction-closure.js';
+// Story 6.23b — `verification-decision.ts` imports ⛔ nothing but zod (a leaf), so this cannot close a cycle.
+import { ApprovalWarningReasonOption, ApprovalWarningsSummary, WarningReasonCode } from './verification-decision.js';
 
 // ── Trustee decision vocabulary wire mirror (value-aligned with @twt/domain) ────────────────
 
@@ -149,6 +153,8 @@ export const CycleFreezePendingItem = z
     name_difference_reasons: z.array(NomineeNameClericalReason),
     /** ⭐ Story 6.19c (`-273` §7) — a Super Admin approval made WITHOUT a current passing name check, or `null`. */
     approval_name_highlight: ApprovalNameHighlight.nullable(),
+    /** ⭐ Story 6.23b (EA7) — the nominee-change warnings, as the viewing Pariwar Admin would approve over them. */
+    approval_warnings: ApprovalWarningsSummary,
   })
   .strict();
 export type CycleFreezePendingItem = z.output<typeof CycleFreezePendingItem>;
@@ -167,6 +173,8 @@ export const CycleFreezePendingResponse = z
     ready_to_freeze: z.array(CycleFreezePendingItem),
     escalated: z.array(CycleFreezePendingItem),
     voted_pending_commit: z.array(CycleFreezePendingItem),
+    /** ⭐ Story 6.23b (EA7) — the Pariwar's ACTIVE warning reasons, ONCE per response (the generic first). */
+    reason_options: z.array(ApprovalWarningReasonOption),
   })
   .strict();
 export type CycleFreezePendingResponse = z.output<typeof CycleFreezePendingResponse>;
@@ -224,14 +232,18 @@ function effectiveOutcome(
       return 'denied';
     case 'route_to_r9':
       return 'routed_to_r9';
-    // ⚠⚠ LOAD-BEARING, and silent if omitted. This `switch` has ⛔ no `default`, and the `superRefine`
-    // below RETURNS EARLY on `undefined` — so a missing arm would make the required-reason-code AND
-    // required-rationale rules never run for this action, and `tsc` would ⛔ not catch it. A return
-    // with no note is precisely what `-227` cl.10 forbids.
     case 'return_to_district_admin':
       return 'returned_for_correction';
     case 'resolve_escalation':
       return escalationOutcome; // approved | denied (validated present by the superRefine)
+    // Code review 2026-10-06: this WAS a bare fallthrough with ⛔ no `default` — a missing arm for a future action
+    // would make the required-reason-code AND required-rationale rules never run for it, and `tsc` would ⛔ not
+    // catch it (a return with no note is precisely what `-227` cl.10 forbids). An exhaustiveness check now makes
+    // that a typecheck failure instead of a silent gap.
+    default: {
+      const exhaustive: never = action;
+      throw new Error(`[cycle-freeze] effectiveOutcome: unhandled action ${String(exhaustive)}`);
+    }
   }
 }
 
@@ -258,6 +270,13 @@ export const CycleFreezeDecisionRequest = z
      * in the object so every other action's payload is unchanged).
      */
     must_act: CorrectionMustAct.optional(),
+    /**
+     * ⭐ Story 6.23b (EA3, EA4; Trap 2) — the WARNING REASON, its OWN field (⛔ never `reason_code`, which stays free for
+     * `concealment_override` — Trap 3). Allowed ONLY when the action APPROVES (`approve`, or `resolve_escalation` →
+     * `approved`); when present a non-blank rationale is required (its note). Whether a warning shows — and so whether
+     * it is REQUIRED — is the server's (409 `cycle_freeze.warning_reason_required`). An un-warned approve omits it.
+     */
+    warning_reason_code: WarningReasonCode.optional(),
   })
   .strict()
   .superRefine((val, ctx) => {
@@ -295,6 +314,23 @@ export const CycleFreezeDecisionRequest = z
 
     const outcome = effectiveOutcome(val.action, val.escalation_outcome);
     if (outcome === undefined) return;
+
+    // (6.23b) a warning reason belongs to an APPROVAL only, and it needs its note.
+    if (val.warning_reason_code !== undefined) {
+      if (outcome !== 'approved') {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['warning_reason_code'],
+          message: 'a warning reason belongs to an approval only',
+        });
+      } else if (isBlank(val.rationale)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['rationale'],
+          message: 'a note is required when a warning reason is chosen',
+        });
+      }
+    }
 
     // (a) reason-code REQUIRED for deny + route_to_r9 (+ a denying escalation resolution) — D-F.
     if (trusteeReasonCodeRequiredForOutcome(outcome) && val.reason_code === undefined) {

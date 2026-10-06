@@ -53,6 +53,15 @@ import { geoTreeResolverForRequest, loadActorGrants } from '../rbac/index.js';
 import { closeScopeTx, openScopeTx } from '../multi-tenant/scope-tx.js';
 import { encryptOptionalTrusteeRationale } from './state-trustee-decision-crypto.js';
 import { decryptVerifierRationale } from './verifier-decision-crypto.js';
+import {
+  UNAVAILABLE_APPROVAL_WARNINGS,
+  approvedWarningAudit,
+  refusedApprovalWarningAudit,
+  toApprovalWarningsSummary,
+  toReasonOptionsDto,
+  translateLaterApprovalWarningError,
+  underSavepoint,
+} from './later-approval-warnings.js';
 
 /** Map a cycle-freeze domain error to its stable HTTP shape. Rethrows ApiErrors + anything unknown as-is. */
 function translateCycleFreezeError(err: unknown): never {
@@ -160,6 +169,9 @@ function translateCycleFreezeError(err: unknown): never {
       { reason: err.reason },
     );
   }
+  // ⭐ Story 6.23b (EA2–EA4) — the warning reason at the final vote and the escalation, and the WAIT (the gate's last
+  // conjunct). ⛔ Never a refusal of the claim.
+  translateLaterApprovalWarningError(err, 'cycle_freeze');
   if (err instanceof claim.ClaimAlreadyRoutedError) {
     throw new ConflictError(
       'This claim was routed to R9 and cannot be voted on',
@@ -288,11 +300,30 @@ export function createCycleFreezeHandlers(
         const pending = await claim.getCycleFreezePending(tx.tx, ctx.pariwarId);
         // ⭐ Story 6.19c (`-273` §7) — the highlight on a Super Admin approval made WITHOUT a current passing name
         // check, from the approval record and the check's RECORDED state (⛔ never a name comparison). One bulk read.
+        const allCases = [...pending.readyToFreeze, ...pending.escalated, ...pending.votedPendingCommit];
         const highlights = await claim.readApprovalNameHighlightBulk(
           tx.tx,
           ctx.pariwarId,
-          [...pending.readyToFreeze, ...pending.escalated, ...pending.votedPendingCommit].map((c) => c.claimCaseId),
+          allCases.map((c) => c.claimCaseId),
         );
+        // ⭐ Story 6.23b (EA7; Traps 8, 15; RD7, RD12) — the nominee-change warnings, attached HERE (the domain reader
+        // and its shape pins stay unchanged): ONE bulk statement for every bucket + the reason list ONCE, under a raw
+        // SAVEPOINT. A throw fails CLOSED — every case `available: false` (Approve disabled in its own words; Deny,
+        // Route and Return untouched) — ⛔ never "no warnings", and ⛔ never a 500 of the whole list.
+        const warnings = await underSavepoint(tx.client, 'cycle_freeze_approval_warnings', async () => ({
+          byClaim: await claim.readClaimApprovalWarningsBulk(tx.tx, ctx.pariwarId, allCases.map((c) => ids.claimId(c.claimCaseId))),
+          options: (await claim.listApprovalWarningReasons(tx.tx, ctx.pariwarId)).active,
+        })).catch((err: unknown) => {
+          request.log.warn(
+            { err: err instanceof Error ? err.name : 'unknown' },
+            'cycle-freeze pending: nominee-change warnings unavailable; failing closed to cannot-approve',
+          );
+          return null;
+        });
+        const warningsOf = (claimCaseId: string) => {
+          const w = warnings?.byClaim.get(claimCaseId.toLowerCase());
+          return w === undefined ? UNAVAILABLE_APPROVAL_WARNINGS : toApprovalWarningsSummary(w, [ctx.actorId]);
+        };
         const mapCase = async (c: claim.CycleFreezePendingCase) => {
           let verifierRationale: string | null = null;
           if (c.verifierRationaleCiphertext) {
@@ -321,6 +352,7 @@ export function createCycleFreezeHandlers(
     under_correction: c.underCorrection,
     name_difference_reasons: c.nameDifferenceReasons as ('initial' | 'married_name' | 'bank_shortened_name')[],
             approval_name_highlight: highlights.get(c.claimCaseId) ?? null,
+            approval_warnings: warningsOf(c.claimCaseId),
           };
         };
         const ready_to_freeze = await Promise.all(pending.readyToFreeze.map(mapCase));
@@ -328,7 +360,13 @@ export function createCycleFreezeHandlers(
         const voted_pending_commit = await Promise.all(pending.votedPendingCommit.map(mapCase));
         ok = true;
         void reply.status(200);
-        return { pariwar_id: ctx.pariwarIdStr, ready_to_freeze, escalated, voted_pending_commit };
+        return {
+          pariwar_id: ctx.pariwarIdStr,
+          ready_to_freeze,
+          escalated,
+          voted_pending_commit,
+          reason_options: warnings === null ? [] : toReasonOptionsDto(warnings.options),
+        };
       } finally {
         await closeScopeTx(tx, ok);
       }
@@ -386,7 +424,12 @@ export function createCycleFreezeHandlers(
         }
         switch (body.action) {
           case 'approve':
-            result = await claim.voteOnFrozenClaim(scopeTx.client, { ...base, outcome: 'approved' });
+            // ⭐ Story 6.23b (EA4; Trap 2) — the warning reason rides its OWN field (⛔ the trustee `reason_code`).
+            result = await claim.voteOnFrozenClaim(scopeTx.client, {
+              ...base,
+              outcome: 'approved',
+              warningReasonCode: body.warning_reason_code ?? null,
+            });
             break;
           case 'deny':
             result = await claim.voteOnFrozenClaim(scopeTx.client, { ...base, outcome: 'denied' });
@@ -456,6 +499,8 @@ export function createCycleFreezeHandlers(
             result = await claim.resolveEscalation(scopeTx.client, {
               ...base,
               outcome: body.escalation_outcome,
+              // ⭐ Story 6.23b (EA3) — the contract allows it only on a resolution to `approved`.
+              warningReasonCode: body.warning_reason_code ?? null,
             });
             break;
           default:
@@ -471,6 +516,8 @@ export function createCycleFreezeHandlers(
             claim_case_id: body.claim_case_id,
             action: body.action,
             reason_code: body.reason_code ?? null,
+            // Story 6.23b (EA9; RD15) — codes and counts only; kinds OMITTED when the refusal does ⛔ not know them.
+            ...(refusedApprovalWarningAudit(err, body.warning_reason_code ?? null) ?? {}),
           },
           body.claim_case_id,
         );
@@ -490,6 +537,10 @@ export function createCycleFreezeHandlers(
         // for every non-concealment decision.
         ...(result.concealmentClauseVersionId != null
           ? { concealment_clause_version_id: result.concealmentClauseVersionId }
+          : {}),
+        // ⭐ Story 6.23b (EA9; RD15) — an APPROVAL's warning kinds + the code sent (⛔ on a deny / route / return).
+        ...(result.decision.outcome === 'approved'
+          ? approvedWarningAudit(result.approvalWarningKinds, body.warning_reason_code ?? null)
           : {}),
       }, result.decision.claimCaseId);
       void reply.status(201);

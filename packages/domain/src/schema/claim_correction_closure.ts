@@ -17,7 +17,7 @@
 // claim-closure-letter-rls.ts.
 
 import { sql } from 'drizzle-orm';
-import { boolean, check, date, index, integer, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { boolean, check, date, index, integer, pgTable, text, timestamp, unique, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 
 import { piiColumn } from '../encryption/column.js';
 import type { ClaimId, MemberId, PariwarId, TrusteeDecisionId } from '../ids/index.js';
@@ -135,6 +135,9 @@ export const claimCorrectionClosures = pgTable(
   (t) => [
     uniqueIndex('claim_correction_closures_one_live_per_return_uq').on(t.returnDecisionId).where(sql`"state" <> 'lapsed'`),
     index('claim_correction_closures_pariwar_claim_idx').on(t.pariwarId, t.claimCaseId),
+    // Story 6.23b (0144, RD1) — the unique target for `claim_warning_approvals`' COMPOSITE tenant FK (redundant for
+    // uniqueness — the PK already is one).
+    unique('claim_correction_closures_pariwar_closure_uq').on(t.pariwarId, t.closureId),
     index('claim_correction_closures_held_idx').on(t.escalatedAt).where(sql`"state" IN ('escalated', 'under_review')`),
     index('claim_correction_closures_closed_idx').on(t.closedAt).where(sql`"state" = 'closed'`),
     check('claim_correction_closures_origin_check', sql`${t.origin} IN ('declined_closure', 'staff_case')`),

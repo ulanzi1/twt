@@ -29,6 +29,7 @@ import {
 } from './errors.js';
 // ⭐ Story 6.21a (T8) — the death-certificate conjunct lives in a LEAF (schema tables, ids, errors and the
 // import-free window only), so this import cannot close a runtime init cycle.
+import { assertLateWarningsCovered } from './approval-warnings.js';
 import { assertDeathCertificateAcceptedForApproval } from './death-certificate-approval.js';
 import { getEffectiveNomineeDeclaration } from './nominee-effective.js';
 import { CLAIM_REVIEW_WINDOW_STATES } from './review-window.js';
@@ -379,6 +380,11 @@ export async function readNomineeNameCheckSnapshot(
  * @throws NomineeBankAccountsRequiredError   fewer than two live accounts (→ 409). ⛔ NOT a denial.
  * @throws NomineeDeterminationRequiredError  no effective as-at-death declaration (→ 409, Story 6.20 AC5).
  * @throws NomineeNameCheckRequiredError      no check / stale / `does_not_match` (→ 409). ⛔ NOT a denial.
+ * @throws LateWarningReasonRequiredError     ⭐ Story 6.23b EA2 (`-277` Q3 B) — the LAST conjunct: a warning that
+ *                                            appeared after the District Admin's approval has ⛔ no District Admin
+ *                                            reason yet (⛔ counting a late reason an approving actor recorded —
+ *                                            `-279` A1). The claim WAITS (→ 409) — ⛔ NOT a denial. Every refusal
+ *                                            above keeps its code and order; the `-251` waived approve reaches it too.
  */
 export async function assertClaimApprovable(
   db: Db,
@@ -386,8 +392,10 @@ export async function assertClaimApprovable(
   claimCaseId: ClaimId,
   deceasedMemberId: MemberId,
   /**
-   * ⭐ Story 6.19c (`2026-09-27-251`, `2026-10-01-273` §8, T10) — the gate's ONE composition seam. OMITTED by every
-   * existing caller (P1 / P3 / P4, D27's and `-260` G1's approves): the behaviour is BYTE-IDENTICAL to before. ONLY
+   * ⭐ Story 6.19c (`2026-09-27-251`, `2026-10-01-273` §8, T10) — the gate's ONE composition seam. ⭐ Story 6.23b
+   * (EA2, `-279` A1): every caller now PASSES it — `approvingActorIds` is REQUIRED (typecheck finds all seven calls).
+   * `nameCheck` stays optional and is omitted by every caller but one (P1 / P3 / P4, D27's and `-260` G1's approves
+   * keep today's name check). ONLY
    * the `-251` Super Admin approve passes `{ nameCheck: 'waived_251' }` — the FULL gate minus the name-check conjunct,
    * BY CONSTRUCTION (⛔ a hand list of today's conjuncts): every OTHER conjunct here — the accepted certificate, the
    * two accounts, the effective determination, and whatever conjunct is added later — still refuses it.
@@ -395,10 +403,12 @@ export async function assertClaimApprovable(
    * neither may drop it."* `6-26` adds the ground-inspection conjunct HERE, ONCE, and the `-251` path inherits it
    * without an edit (D27's and G1's approves call the full gate and inherit it too).
    */
-  opts: ClaimApprovalGateOptions = {},
+  opts: ClaimApprovalGateOptions,
 ): Promise<void> {
   await assertDeathCertificateAcceptedForApproval(db, pariwarId, claimCaseId);
   await assertNomineeNameCheckForApproval(db, pariwarId, claimCaseId, deceasedMemberId, opts);
+  // ⭐ Story 6.23b EA2 — THE WAIT, LAST (after the `-251` waiver's early return INSIDE the inner helper — Trap 17).
+  await assertLateWarningsCovered(db, pariwarId, claimCaseId, opts.approvingActorIds);
 }
 
 /**
@@ -409,6 +419,13 @@ export async function assertClaimApprovable(
  */
 export interface ClaimApprovalGateOptions {
   readonly nameCheck?: 'required' | 'waived_251';
+  /**
+   * ⭐ Story 6.23b EA2 (`-279` A1) — the APPROVAL's approving actors: a late reason any of them recorded does ⛔ not
+   * count toward the wait for THIS approval. The final voter (P3); the finalizer AND every live approve voter (P4);
+   * the Super Admin (`decideEscalatedClosure`, both calls); the Pariwar Admin (`approveNoCorrectionNeeded`); the
+   * District Admin at P1 (vacuous — ⛔ no live approval exists while approving). REQUIRED.
+   */
+  readonly approvingActorIds: readonly string[];
 }
 
 /**
@@ -466,7 +483,7 @@ export async function assertNomineeNameCheckForApproval(
   claimCaseId: ClaimId,
   deceasedMemberId: MemberId,
   /** Story 6.19c — omitted by every caller but the `-251` approve (via `assertClaimApprovable`). */
-  opts: ClaimApprovalGateOptions = {},
+  opts: Pick<ClaimApprovalGateOptions, 'nameCheck'> = {},
 ): Promise<void> {
   const liveAccounts = await db
     .select({

@@ -13,9 +13,16 @@ import { useState } from 'react';
 import { ApiError, errorMessage as apiErrorMessage } from '../../api/client.js';
 import {
   claimContactRequiredMessage,
+  laterApprovalWarningErrorMessage,
   trusteeDeathCertificateAcceptanceRequiredMessage,
   trusteeDeterminationRequiredMessage,
 } from '../claim-verification/nominee-errors.js';
+import {
+  LaterApprovalWarnings,
+  approvalBlockedReason,
+  approvalNeedsWarningReason,
+  resolvedWarningReasonCode,
+} from '../claim-verification/LaterApprovalWarnings.js';
 
 /**
  * The panel's error text. Story 6.20 (AC5) — a nominee correction can supersede the determination after
@@ -33,6 +40,9 @@ function errorMessage(error: unknown): string | undefined {
   if (error instanceof ApiError && error.code.endsWith('.claim_contact_required')) {
     return claimContactRequiredMessage(error);
   }
+  // ⭐ Story 6.23b (EA5, EA2) — the warning reason on an approve vote, the votes to revise, and the WAIT, in words.
+  const warningWords = laterApprovalWarningErrorMessage(error, 'r9');
+  if (warningWords !== undefined) return warningWords;
   return apiErrorMessage(error);
 }
 import { NomineeNameCheckDisclosure } from '../claim-verification/NomineeNameCheckDisclosure.js';
@@ -77,6 +87,9 @@ export function R9CasePanel({ pariwarId, claimCaseId }: R9CasePanelProps): React
   // Vote form state.
   const [voteChoice, setVoteChoice] = useState<'approve' | 'deny'>('approve');
   const [rationale, setRationale] = useState('');
+  // ⭐ Story 6.23b (EA5) — the warning reason on an APPROVE vote. ⛔ No default; a pick that left the list reads as none.
+  const [warningPick, setWarningPick] = useState('');
+  const [voteValidation, setVoteValidation] = useState<string | null>(null);
   // Cancel form state.
   const [cancelReason, setCancelReason] = useState('');
   const [cancelRationale, setCancelRationale] = useState('');
@@ -160,6 +173,8 @@ export function R9CasePanel({ pariwarId, claimCaseId }: R9CasePanelProps): React
       },
       onError: (err) => {
         if (err instanceof ApiError && err.code === 'auth.step_up_required') setStepUpRequired(true);
+        // Story 6.23b — a 409 means the votes or the warnings moved: refetch so the panel shows them as they stand.
+        else if (err instanceof ApiError && err.status === 409) void panel.refetch();
       },
     });
   };
@@ -236,6 +251,49 @@ export function R9CasePanel({ pariwarId, claimCaseId }: R9CasePanelProps): React
   }
   const tally = model.tally;
   const finalized = s.outcome !== null;
+  // ⭐ Story 6.23b (EA5, EA7; RD11) — the warnings on THIS claim. An approve vote needs a warning reason while one shows
+  // (its note is the rationale); FINALIZE to an approval is held — and SAYS why — while the claim waits for the District
+  // Admin, while the warnings could ⛔ not be read, or while an approve vote does ⛔ not answer every current warning.
+  const warnings = model.approval_warnings;
+  const warningReasonCode = resolvedWarningReasonCode(model.reason_options, warningPick);
+  const approveVoteWarned = approvalNeedsWarningReason(warnings);
+  const votesToRevise = model.votes.filter((v) => v.covers_current_warnings === false).length;
+  // Code review 2026-10-06 (P42): both blockers can hold at once (waiting for the District Admin AND carrying
+  // unrevised votes) — join them rather than showing only the first, which would otherwise leave the second
+  // discovered only after the user clears the one they were told about.
+  const finalizeBlocked =
+    tally.provisional_outcome !== 'approved'
+      ? null
+      : [approvalBlockedReason(warnings, 'r9'), votesToRevise > 0 ? t.approvalWarnings.errors.approveVotesNeedWarningReason(votesToRevise) : null]
+          .filter((m): m is string => m !== null)
+          .join(' ') || null;
+  const submitVote = (): void => {
+    setVoteValidation(null);
+    if (voteChoice === 'approve' && !warnings.available) {
+      setVoteValidation(t.approvalWarnings.unavailable);
+      return;
+    }
+    if (voteChoice === 'approve' && approveVoteWarned && warningReasonCode === '') {
+      setVoteValidation(t.approvalWarnings.reasonRequiredError);
+      return;
+    }
+    vote.mutate(
+      {
+        vote: voteChoice,
+        rationale: rationale.trim(),
+        ...(voteChoice === 'approve' && approveVoteWarned ? { warning_reason_code: warningReasonCode } : {}),
+      },
+      {
+        onSuccess: () => {
+          setRationale('');
+          setWarningPick('');
+        },
+        onError: (err) => {
+          if (err instanceof ApiError && err.status === 409) void panel.refetch();
+        },
+      },
+    );
+  };
   const currentActorId = session.data?.userId;
   const onPanel = currentActorId !== undefined && s.panel.some((m) => m.actor_id === currentActorId);
 
@@ -286,6 +344,15 @@ export function R9CasePanel({ pariwarId, claimCaseId }: R9CasePanelProps): React
               <li key={v.vote_id} className="rounded border p-2">
                 <strong>{v.vote}</strong> — {v.voter_display} <span className="opacity-50">({new Date(v.cast_at).toLocaleString()})</span>
                 <div className="opacity-70">{v.rationale}</div>
+                {/* ⭐ Story 6.23b (RD11) — the SAME answer finalize would give, BEFORE the step-up. */}
+                {v.covers_current_warnings === false ? (
+                  // Code review 2026-10-06 (P35): every sibling dynamically-appearing message in this diff uses
+                  // `role="status"`; this one didn't, so a screen-reader user got no announcement when a vote
+                  // flipped to "needs revision".
+                  <p role="status" className="mt-1 font-medium text-status-warn-fg" data-testid={`r9-vote-must-revise-${v.vote_id}`}>
+                    {t.approvalWarnings.later.voteMustBeRevised}
+                  </p>
+                ) : null}
               </li>
             ))}
           </ul>
@@ -303,12 +370,53 @@ export function R9CasePanel({ pariwarId, claimCaseId }: R9CasePanelProps): React
                 <fieldset className="mb-2 flex gap-3 text-sm">
                   <legend className="sr-only">Vote choice</legend>
                   <label className="flex items-center gap-1">
-                    <input type="radio" name="vote" checked={voteChoice === 'approve'} onChange={() => setVoteChoice('approve')} /> Approve
+                    {/* Code review 2026-10-06 (P44): clear a stale approve-only validation (e.g. "warnings
+                        unavailable") — it is not gated behind `voteChoice === 'approve'` below, so it would
+                        otherwise keep showing while submitting an unrelated deny vote. */}
+                    <input
+                      type="radio"
+                      name="vote"
+                      checked={voteChoice === 'approve'}
+                      onChange={() => {
+                        setVoteChoice('approve');
+                        setVoteValidation(null);
+                      }}
+                    />{' '}
+                    Approve
                   </label>
                   <label className="flex items-center gap-1">
-                    <input type="radio" name="vote" checked={voteChoice === 'deny'} onChange={() => setVoteChoice('deny')} /> Deny
+                    <input
+                      type="radio"
+                      name="vote"
+                      checked={voteChoice === 'deny'}
+                      onChange={() => {
+                        setVoteChoice('deny');
+                        setVoteValidation(null);
+                      }}
+                    />{' '}
+                    Deny
                   </label>
                 </fieldset>
+                {/* ⭐ Story 6.23b (EA5) — an APPROVE vote while a warning shows: the lines and 6.23a's picker; a deny vote
+                    is ⛔ never gated. The WAIT holds Finalize, ⛔ the vote — said beside Finalize. */}
+                {voteChoice === 'approve' ? (
+                  <div className="mb-2">
+                    <LaterApprovalWarnings
+                      summary={warnings}
+                      options={model.reason_options}
+                      value={warningReasonCode}
+                      onChange={(code) => {
+                        setWarningPick(code);
+                        setVoteValidation(null);
+                      }}
+                      error={voteValidation === t.approvalWarnings.reasonRequiredError ? voteValidation : null}
+                      disabled={vote.isPending}
+                      idPrefix={`r9-${claimCaseId}`}
+                      surface="r9"
+                      waitBlocksHere={false}
+                    />
+                  </div>
+                ) : null}
                 <textarea
                   className="mb-2 w-full rounded border px-2 py-1 text-sm"
                   rows={2}
@@ -319,12 +427,18 @@ export function R9CasePanel({ pariwarId, claimCaseId }: R9CasePanelProps): React
                 />
                 <button
                   type="button"
+                  data-testid="r9-submit-vote"
                   className="rounded bg-black px-3 py-1 text-sm text-white disabled:opacity-50"
                   disabled={vote.isPending || rationale.trim() === ''}
-                  onClick={() => vote.mutate({ vote: voteChoice, rationale: rationale.trim() }, { onSuccess: () => setRationale('') })}
+                  onClick={submitVote}
                 >
                   Submit vote
                 </button>
+                {voteValidation !== null && voteValidation !== t.approvalWarnings.reasonRequiredError ? (
+                  <p role="alert" className="mt-1 text-xs text-status-fail-fg" data-testid="r9-vote-validation">
+                    {voteValidation}
+                  </p>
+                ) : null}
                 {errorMessage(vote.error) && <p role="alert" className="mt-1 text-xs text-status-fail-fg">{errorMessage(vote.error)}</p>}
               </>
             )}
@@ -340,10 +454,18 @@ export function R9CasePanel({ pariwarId, claimCaseId }: R9CasePanelProps): React
                   Finalizing is a separate, step-up-attested action. It requires quorum and commits the panel
                   outcome ({tally.provisional_outcome} on the current votes).
                 </p>
+                {/* ⭐ Story 6.23b — why an approving finalize is held, BEFORE the step-up (⛔ a 409 behind a code entry). */}
+                {finalizeBlocked !== null ? (
+                  <p id={`r9-${claimCaseId}-finalize-blocked`} role="status" className="mb-2 text-xs font-medium" data-testid="r9-finalize-blocked">
+                    {finalizeBlocked}
+                  </p>
+                ) : null}
                 <button
                   type="button"
+                  data-testid="r9-finalize"
                   className="rounded bg-black px-3 py-1 text-sm text-white disabled:opacity-50"
-                  disabled={finalize.isPending || !tally.quorum_met}
+                  disabled={finalize.isPending || !tally.quorum_met || finalizeBlocked !== null}
+                  aria-describedby={finalizeBlocked !== null ? `r9-${claimCaseId}-finalize-blocked` : undefined}
                   onClick={runFinalize}
                 >
                   Finalize

@@ -122,8 +122,19 @@ export const APPROVAL_WARNING_KINDS = ['post_death_version', 'recent_nominee_cha
 export const ApprovalWarningKind = z.enum(APPROVAL_WARNING_KINDS);
 export type ApprovalWarningKind = z.output<typeof ApprovalWarningKind>;
 
-/** The approval-over-warning record's steps (NW13 — 6.23a's two). ⚠ LOCKSTEP with the domain + migration 0143. */
-export const CLAIM_WARNING_APPROVAL_STEPS = ['district_admin_approval', 'district_admin_late_reason'] as const;
+/**
+ * The approval-over-warning record's steps (NW13 — 6.23a's two; 6.23b EA1 adds the five later approvers). ⚠ LOCKSTEP with
+ * the domain + migration 0144.
+ */
+export const CLAIM_WARNING_APPROVAL_STEPS = [
+  'district_admin_approval',
+  'district_admin_late_reason',
+  'escalation_resolution',
+  'final_vote',
+  'r9_vote',
+  'super_admin_approval',
+  'no_correction_approval',
+] as const;
 
 /** The BUILT-IN GENERIC warning reason (NW16) — every Pariwar has it, first. ⚠ LOCKSTEP with the domain. */
 export const APPROVAL_WARNING_GENERIC_REASON = {
@@ -151,6 +162,36 @@ export const ApprovalWarningReasonOption = z
   })
   .strict();
 export type ApprovalWarningReasonOption = z.output<typeof ApprovalWarningReasonOption>;
+
+/**
+ * ⭐ Story 6.23b (EA7; RD4) — what a LATER approver's screen shows for ONE claim, on every later read surface (the
+ * cycle-freeze pending case, the R9 panel, the Super Admin's detail, the "no correction needed" queue item). snake_case
+ * like the DTOs it rides on (6.23a's option DTO above stays camelCase). `available: false` ⇔ the warnings could ⛔ not
+ * be read (Trap 15): Approve is disabled with its own words — ⛔ never "no warnings" (invariant 7).
+ * `waiting_for_district_admin` is judged for the VIEWER as a prospective approver (their own late reasons excluded —
+ * `-279` A1; on the R9 panel every live approve voter's too); `own_reason_excluded` ⇔ only that exclusion holds it.
+ */
+export const ApprovalWarningsSummary = z
+  .object({
+    available: z.boolean(),
+    kinds: z.array(ApprovalWarningKind),
+    post_death: z.enum(['evaluated', 'awaiting_determination']),
+    waiting_for_district_admin: z.boolean(),
+    own_reason_excluded: z.boolean(),
+  })
+  .strict()
+  // Code review 2026-10-06: `available: false` means the warnings could ⛔ not be read (Trap 15) — it must carry no
+  // signal of its own, so a degraded read can never masquerade as a specific, known warning state.
+  .superRefine((v, ctx) => {
+    if (!v.available && (v.kinds.length > 0 || v.waiting_for_district_admin || v.own_reason_excluded)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['available'],
+        message: 'an unavailable summary must carry no kinds/waiting/own-reason signal',
+      });
+    }
+  });
+export type ApprovalWarningsSummary = z.output<typeof ApprovalWarningsSummary>;
 
 /**
  * The approve/deny/escalate request (the `verifier-decision` route). `outcome` selects the verb; the

@@ -100,3 +100,60 @@ export function nomineeCorrectionErrorMessage(err: unknown, kind: 'raise' | 'dec
   }
   return t.nomineeDeclaration.corrections.refusedGeneric;
 }
+
+// ── Story 6.23b — the LATER approvers' warning refusals (`cycle_freeze.` / `r9_voting.` / `closure.`), one helper per
+// code suffix, wired by each page's `errorMessage` through an `endsWith` arm (RD6). ⛔ Never "try again", ⛔ never a code.
+
+/** `….warning_reason_required` — a reason (or its note) is missing while a warning shows. */
+export function warningReasonRequiredMessage(err: ApiError): string {
+  // Code review 2026-10-06 (P36): a runtime check, not a blind `as` cast — `details` crosses the HTTP wire
+  // untyped (`Record<string, unknown>`), so a differently-shaped payload must not silently pick the wrong copy.
+  const details = err.details as Record<string, unknown> | undefined;
+  const missing = typeof details?.['missing'] === 'string' ? details['missing'] : undefined;
+  return missing === 'note' ? t.approvalWarnings.noteRequiredError : t.approvalWarnings.errors.warningReasonRequired;
+}
+
+/** `….warning_reason_ungrounded` — a reason was sent while ⛔ no warning shows. */
+export function warningReasonUngroundedMessage(): string {
+  return t.approvalWarnings.errors.warningReasonUngrounded;
+}
+
+/** `….warning_reason_unavailable` — the chosen reason was replaced since the page loaded. */
+export function warningReasonUnavailableMessage(): string {
+  return t.approvalWarnings.errors.warningReasonUnavailable;
+}
+
+/** `….late_warning_reason_required` — THE WAIT; with `own_reason_excluded`, why the approver's own reason cannot clear their own approval. */
+export function lateWarningReasonRequiredMessage(err: ApiError, surface: 'trustee' | 'r9' = 'trustee'): string {
+  const details = err.details as Record<string, unknown> | undefined;
+  const own = details?.['own_reason_excluded'] === true;
+  const base = t.approvalWarnings.errors.lateWarningReasonRequired;
+  if (!own) return base;
+  return `${base} ${surface === 'r9' ? t.approvalWarnings.later.ownReasonExcludedR9 : t.approvalWarnings.later.ownReasonExcluded}`;
+}
+
+/** `r9_voting.approve_votes_need_warning_reason` — the voters named must revise. */
+export function approveVotesNeedWarningReasonMessage(err: ApiError): string {
+  const details = err.details as Record<string, unknown> | undefined;
+  const rawIds = details?.['vote_ids'];
+  const ids = Array.isArray(rawIds) ? rawIds.filter((i): i is string => typeof i === 'string') : [];
+  // Code review 2026-10-06 (P37): `vote_ids` is always non-empty when the server throws this error — but if a
+  // malformed/missing payload ever slipped through, `Math.max(ids.length, 1)` would confidently show "One approve
+  // vote…" even when the true count is higher. Say so without a number instead of guessing one.
+  if (ids.length === 0) return t.approvalWarnings.errors.approveVotesNeedWarningReasonUnknownCount;
+  return t.approvalWarnings.errors.approveVotesNeedWarningReason(ids.length);
+}
+
+/**
+ * Every 6.23b warning refusal in ONE place for a page's `errorMessage` (each arm keyed on the code SUFFIX, so the same
+ * words reach `cycle_freeze.`, `r9_voting.` and `closure.`). `undefined` ⇔ none of them.
+ */
+export function laterApprovalWarningErrorMessage(err: unknown, surface: 'trustee' | 'r9' = 'trustee'): string | undefined {
+  if (!(err instanceof ApiError)) return undefined;
+  if (err.code.endsWith('.warning_reason_required')) return warningReasonRequiredMessage(err);
+  if (err.code.endsWith('.warning_reason_ungrounded')) return warningReasonUngroundedMessage();
+  if (err.code.endsWith('.warning_reason_unavailable')) return warningReasonUnavailableMessage();
+  if (err.code.endsWith('.late_warning_reason_required')) return lateWarningReasonRequiredMessage(err, surface);
+  if (err.code.endsWith('.approve_votes_need_warning_reason')) return approveVotesNeedWarningReasonMessage(err);
+  return undefined;
+}

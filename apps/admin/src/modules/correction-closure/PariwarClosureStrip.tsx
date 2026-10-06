@@ -7,20 +7,30 @@
 // held claim says so and offers ⛔ no decision (only the Super Admin decides it, `-273` §4).
 // ⛔ No name, ⛔ no number: the notes are staff notes.
 
-import type { ClosureDecisionClaimResponse, PariwarClosureQueueResponse } from '@twt/contracts';
+import type { ApprovalWarningReasonOption, ClosureDecisionClaimResponse, PariwarClosureQueueResponse } from '@twt/contracts';
 import type { KeyboardEvent, ReactElement } from 'react';
 import { useId, useRef, useState } from 'react';
 
+import { ApiError } from '../../api/client.js';
 import {
   useApproveNoCorrectionNeeded,
   useDecideCorrectionClosure,
   useKeepNoCorrectionNeeded,
 } from '../../api/hooks.js';
 import { AuditTrailEntry } from '../claim-verification/AuditTrailEntry.js';
+import {
+  LaterApprovalWarnings,
+  approvalBlockedReason,
+  approvalNeedsWarningReason,
+  resolvedWarningReasonCode,
+} from '../claim-verification/LaterApprovalWarnings.js';
+import { verifierConsoleEn } from '../claim-verification/i18n-en.js';
 import { closureErrorText } from './errors.js';
 import { correctionClosureEn as t } from './i18n-en.js';
 
 type QueueItem = PariwarClosureQueueResponse['items'][number];
+
+const tw = verifierConsoleEn.approvalWarnings;
 
 function NoteText({ note }: { note: QueueItem['note'] }): ReactElement {
   return <>{note.state === 'readable' ? note.value : '—'}</>;
@@ -148,14 +158,39 @@ export function ClosureRequestStrip({ pariwarId, item }: { pariwarId: string; it
   );
 }
 
-/** One live "no correction needed" record — D27's approve or `-260` G2's keep. */
-export function NoCorrectionStrip({ pariwarId, item }: { pariwarId: string; item: QueueItem }): ReactElement {
+/**
+ * One live "no correction needed" record — D27's approve or `-260` G2's keep. ⭐ Story 6.23b (EA6b; Traps 4, 12) — D27's
+ * approve APPROVES the claim, so while a warning shows it carries 6.23a's picker and its OWN note field (⛔ the Keep note
+ * reused); ⛔ the closure-request strip above carries none (deciding a closure request is a refusal path).
+ */
+export function NoCorrectionStrip({
+  pariwarId,
+  item,
+  reasonOptions,
+  onConflict,
+}: {
+  pariwarId: string;
+  item: QueueItem;
+  /** The response's ACTIVE warning reasons (read once per queue). */
+  reasonOptions: readonly ApprovalWarningReasonOption[];
+  /** Code review 2026-10-06 — a 409 refetches the queue, matching every other later-approver surface. */
+  onConflict?: () => void;
+}): ReactElement {
   const approve = useApproveNoCorrectionNeeded(pariwarId);
   const keep = useKeepNoCorrectionNeeded(pariwarId);
   const [mustAct, setMustAct] = useState<'family' | 'staff'>('family');
   const [note, setNote] = useState('');
   const [noteMissing, setNoteMissing] = useState(false);
   const [approved, setApproved] = useState<ClosureDecisionClaimResponse | null>(null);
+  // ⭐ Story 6.23b — the approve's warning reason and its OWN note. ⛔ No default; a pick that left the list reads as none.
+  const [warningPick, setWarningPick] = useState('');
+  const [approveNote, setApproveNote] = useState('');
+  const [approveMissing, setApproveMissing] = useState<'reason' | 'note' | null>(null);
+  const warningReasonCode = resolvedWarningReasonCode(reasonOptions, warningPick);
+  const summary = item.approval_warnings;
+  const warned = summary !== null && approvalNeedsWarningReason(summary);
+  const approveBlocked = summary !== null ? approvalBlockedReason(summary) : null;
+  const pickerPrefix = `no-correction-${item.claim_case_id}`;
   const noteId = useId();
   const n = t.strip.noCorrection;
 
@@ -183,24 +218,87 @@ export function NoCorrectionStrip({ pariwarId, item }: { pariwarId: string; item
     setNoteMissing(false);
     await keep.mutateAsync({ claimCaseId: item.claim_case_id, body: { must_act: mustAct, note } }).then(
       () => setNote(''),
-      () => undefined,
+      (err: unknown) => {
+        if (err instanceof ApiError && err.status === 409) onConflict?.();
+      },
     );
+  }
+
+  function onApprove(): void {
+    if (warned) {
+      const missing = warningReasonCode === '' ? 'reason' : approveNote.trim() === '' ? 'note' : null;
+      setApproveMissing(missing);
+      if (missing !== null) return;
+    }
+    void approve
+      .mutateAsync({
+        claimCaseId: item.claim_case_id,
+        ...(warned ? { body: { warning_reason_code: warningReasonCode, note: approveNote.trim() } } : {}),
+      })
+      .then(
+        (r) => setApproved(r),
+        // Code review 2026-10-06 (P31): matches the explicit `onConflict` pattern every other later-approver
+        // surface uses on a 409 (the item moved under the viewer). `useApproveNoCorrectionNeeded`'s own
+        // `onSettled: invalidate` already marks the closure queue stale on ANY outcome, so this is a deliberate,
+        // immediate refetch for the specific conflict case, layered on that general one — not the only thing
+        // that refreshes the list.
+        (err: unknown) => {
+          if (err instanceof ApiError && err.status === 409) onConflict?.();
+        },
+      );
   }
 
   return (
     <div className="mt-2 flex flex-col gap-1 border-t p-2" data-testid={`no-correction-strip-${item.claim_case_id}`}>
       <p className="text-xs">{item.checked_after_record === true ? n.checkedAfter : n.notChecked}</p>
+      {summary !== null ? (
+        <LaterApprovalWarnings
+          summary={summary}
+          options={reasonOptions}
+          value={warningReasonCode}
+          onChange={(code) => {
+            setWarningPick(code);
+            setApproveMissing(null);
+          }}
+          error={approveMissing === 'reason' ? tw.reasonRequiredError : null}
+          disabled={approve.isPending}
+          idPrefix={pickerPrefix}
+        />
+      ) : null}
+      {warned && approveBlocked === null ? (
+        <>
+          <label className="flex flex-col text-xs">
+            {tw.later.approveNoteLabel}
+            <textarea
+              value={approveNote}
+              onChange={(e) => {
+                setApproveNote(e.target.value);
+                setApproveMissing(null);
+              }}
+              aria-describedby={approveMissing === 'note' ? `${noteId}-approve-note` : undefined}
+              // Code review 2026-10-06 (P32): the picker above gets `disabled={approve.isPending}` — this didn't.
+              disabled={approve.isPending}
+              data-testid="no-correction-approve-note"
+            />
+          </label>
+          {approveMissing === 'note' ? (
+            <p role="alert" id={`${noteId}-approve-note`} data-testid="no-correction-approve-note-missing">
+              {tw.noteRequiredError}
+            </p>
+          ) : null}
+        </>
+      ) : null}
       <button
         type="button"
         className="self-start rounded border px-3 py-1"
-        disabled={approve.isPending || item.checked_after_record !== true}
-        aria-describedby={item.checked_after_record !== true ? `${noteId}-check` : undefined}
-        onClick={() =>
-          void approve.mutateAsync(item.claim_case_id).then(
-            (r) => setApproved(r),
-            () => undefined,
-          )
+        disabled={approve.isPending || item.checked_after_record !== true || approveBlocked !== null}
+        // Code review 2026-10-06 (P33): both reasons can hold at once — join them rather than picking one.
+        aria-describedby={
+          [approveBlocked !== null ? `${pickerPrefix}-approval-blocked` : null, item.checked_after_record !== true ? `${noteId}-check` : null]
+            .filter((id): id is string => id !== null)
+            .join(' ') || undefined
         }
+        onClick={onApprove}
         data-testid="no-correction-approve"
       >
         {n.approve}
@@ -240,7 +338,19 @@ export function NoCorrectionStrip({ pariwarId, item }: { pariwarId: string; item
 }
 
 /** The whole list — one card per item. */
-export function PariwarClosureList({ pariwarId, items }: { pariwarId: string; items: readonly QueueItem[] }): ReactElement {
+export function PariwarClosureList({
+  pariwarId,
+  items,
+  reasonOptions,
+  onConflict,
+}: {
+  pariwarId: string;
+  items: readonly QueueItem[];
+  /** Story 6.23b — the queue response's ACTIVE warning reasons (for the "no correction needed" approves only). */
+  reasonOptions: readonly ApprovalWarningReasonOption[];
+  /** Code review 2026-10-06 — a 409 on a "no correction needed" approve/keep refetches the queue. */
+  onConflict?: () => void;
+}): ReactElement {
   return (
     <ul className="mt-4 space-y-3" data-testid="closure-queue">
       {items.map((item) => (
@@ -268,7 +378,7 @@ export function PariwarClosureList({ pariwarId, items }: { pariwarId: string; it
           {item.kind === 'closure_request' ? (
             <ClosureRequestStrip pariwarId={pariwarId} item={item} />
           ) : (
-            <NoCorrectionStrip pariwarId={pariwarId} item={item} />
+            <NoCorrectionStrip pariwarId={pariwarId} item={item} reasonOptions={reasonOptions} onConflict={onConflict} />
           )}
         </li>
       ))}

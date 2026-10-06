@@ -21,6 +21,8 @@ import { z } from 'zod';
 
 // ⭐ The SINGLE clerical-reason tuple (a sibling contract). AC8's flag rides this surface's own read.
 import { NomineeNameClericalReason } from './nominee-name-check.js';
+// Story 6.23b — a zod-only leaf (⛔ no sibling import), so this cannot close a cycle.
+import { ApprovalWarningReasonOption, ApprovalWarningsSummary, WarningReasonCode } from './verification-decision.js';
 
 // ── R9 vocabulary wire mirror (value-aligned with @twt/domain) ──────────────────────────────
 
@@ -110,8 +112,24 @@ export const R9PanelVote = z
     cast_at: z.string(),
     clause_version_id: z.string().uuid(),
     rationale: z.string(),
+    /**
+     * ⭐ Story 6.23b (RD11; `-279` A2) — does this APPROVE vote's own reason answer EVERY current warning? `false` ⇒
+     * finalize would name it and the voter must revise; `null` on a deny vote, and while ⛔ no warning shows (or the
+     * warnings could ⛔ not be read). The SAME comparison finalize makes (`keysNotCoveredBy`, ⛔ `uncoveredKeys`).
+     */
+    covers_current_warnings: z.boolean().nullable(),
   })
-  .strict();
+  .strict()
+  // Code review 2026-10-06: null on a deny vote (the doc comment above) — a deny vote carries no coverage verdict.
+  .superRefine((v, ctx) => {
+    if (v.vote === 'deny' && v.covers_current_warnings !== null) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['covers_current_warnings'],
+        message: 'must be null on a deny vote',
+      });
+    }
+  });
 export type R9PanelVote = z.output<typeof R9PanelVote>;
 
 /** The running / final tally (panel-size denominator). `cast_votes` is the live-vote count. */
@@ -174,6 +192,10 @@ export const R9PanelResponse = z
      * Empty when no difference was recorded, when the check is STALE, or when it does not pass.
      */
     name_difference_reasons: z.array(NomineeNameClericalReason),
+    /** ⭐ Story 6.23b (EA7) — the warnings, the wait judged for the viewer AND every live approve voter. */
+    approval_warnings: ApprovalWarningsSummary,
+    /** ⭐ Story 6.23b (EA7) — the Pariwar's ACTIVE warning reasons (the generic first). */
+    reason_options: z.array(ApprovalWarningReasonOption),
   })
   .strict();
 export type R9PanelResponse = z.output<typeof R9PanelResponse>;
@@ -224,8 +246,22 @@ export const R9VoteRequest = z
   .object({
     vote: R9Vote,
     rationale: z.string().trim().min(1).max(R9_RATIONALE_MAX_CHARS),
+    /**
+     * ⭐ Story 6.23b (EA5) — the WARNING REASON on an APPROVE vote while a warning shows (the note is `rationale`,
+     * already required). ⛔ Refused on a deny vote — a deny is ⛔ never gated.
+     */
+    warning_reason_code: WarningReasonCode.optional(),
   })
-  .strict();
+  .strict()
+  .superRefine((val, ctx) => {
+    if (val.vote !== 'approve' && val.warning_reason_code !== undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['warning_reason_code'],
+        message: 'a warning reason belongs to an approve vote only',
+      });
+    }
+  });
 export type R9VoteRequest = z.output<typeof R9VoteRequest>;
 
 /** The vote response — NON-PII metadata (never the rationale). `revised` is true when it replaced a prior live vote. */

@@ -80,7 +80,9 @@ function ClosuresView(): ReactElement {
       <h1 className="text-lg font-semibold">{t.strip.heading}</h1>
       <p className="mt-1 text-sm text-slate-600">{t.strip.intro}</p>
       <ListStates query={q} isEmpty={(d) => d.items.length === 0} copy={t.strip} testId="closure-queue">
-        {(d) => <PariwarClosureList pariwarId={pariwarId} items={d.items} />}
+        {(d) => (
+          <PariwarClosureList pariwarId={pariwarId} items={d.items} reasonOptions={d.reason_options} onConflict={() => void q.refetch()} />
+        )}
       </ListStates>
     </main>
   );

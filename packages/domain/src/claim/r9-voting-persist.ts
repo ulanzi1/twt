@@ -70,6 +70,7 @@ import {
   r9QuorumFor,
   type R9Vote,
 } from './r9-voting.js';
+import { hasLiveRoutedRow } from './r9-routing.js';
 import { resolveByClauseId } from '../niyamavali/read.js';
 
 /** The RBAC key each panel member must hold @ pariwar (validated at open, AC2). */
@@ -270,24 +271,6 @@ async function lockClaim(db: Db, pariwarId: PariwarId, claimCaseId: ClaimId) {
     .where(and(eq(claims.pariwarId, pariwarId), eq(claims.claimCaseId, claimCaseId)))
     .for('update');
   return rows[0];
-}
-
-/** True iff `claimCaseId` carries a LIVE (non-superseded) routed_to_r9 decision row — the R9 queue predicate. */
-async function hasLiveRoutedRow(db: Db, pariwarId: PariwarId, claimCaseId: ClaimId): Promise<boolean> {
-  const rows = await db
-    .select({ claimCaseId: claimStateTrusteeDecisions.claimCaseId })
-    .from(claimStateTrusteeDecisions)
-    .where(
-      and(
-        eq(claimStateTrusteeDecisions.pariwarId, pariwarId),
-        eq(claimStateTrusteeDecisions.claimCaseId, claimCaseId),
-        eq(claimStateTrusteeDecisions.phase, 'routing'),
-        eq(claimStateTrusteeDecisions.outcome, 'routed_to_r9'),
-        isNull(claimStateTrusteeDecisions.supersededAt),
-      ),
-    )
-    .limit(1);
-  return rows.length > 0;
 }
 
 /** The claim's live (non-superseded) session, or undefined. Read under the caller's advisory lock. */

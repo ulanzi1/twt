@@ -9,6 +9,7 @@
 
 import type {
   ConcealmentSignal,
+  GroundInspectionItem,
   PeerMeshTranscript,
   VerifierConsolePacket,
   VerifierReviewItem,
@@ -236,6 +237,18 @@ export function SignalsPanel({
 
       {/* (d) ground inspection notes + photos */}
       <Section title={t.sections.groundInspection} testId="section-ground-inspection">
+        {/* ⭐ Story 6.26a (GI9) — WHY THE APPROVAL WAITS, in words, from the gate's own predicate. ⛔ Never "complete" on
+            an unknown (`available: false` says it could not be checked). */}
+        <p
+          className={`mb-2 text-sm ${packet.groundInspectionGate.available && packet.groundInspectionGate.complete ? 'text-green-800' : 'font-medium text-amber-800'}`}
+          data-testid="ground-inspection-gate"
+        >
+          {!packet.groundInspectionGate.available
+            ? t.groundInspectionGate.approveBlocked.unavailable
+            : packet.groundInspectionGate.complete
+              ? t.groundInspectionGate.complete
+              : t.groundInspectionGate.approveBlocked[packet.groundInspectionGate.waitReason ?? 'no_completed_inspection']}
+        </p>
         {packet.groundInspection.status === 'present' ? (
           <div className="flex flex-col gap-3">
             {/* Story 6.20 (AC13) — INHERITED from the claim refused on suspicion (`-239` (b)), labelled
@@ -249,24 +262,40 @@ export function SignalsPanel({
               </p>
             ) : null}
             {packet.groundInspection.assignments.map((a) => (
-              <div key={a.groundInspectionId} className="rounded border p-2 text-sm">
+              <div key={a.groundInspectionId} className="rounded border p-2 text-sm" data-testid="ground-inspection-assignment">
                 <p className="flex items-center justify-between gap-2">
-                  <span className="font-medium">{a.inspectionStage}</span>
+                  <span className="font-medium">
+                    {a.inspectionStage}
+                    {/* Story 6.26a (GI10) — the inherited visit and the claim's own check, each labelled. */}
+                    <span className="ml-2 text-xs font-normal opacity-70">
+                      ({a.inherited ? t.groundInspectionGate.record.inherited : t.groundInspectionGate.record.own})
+                    </span>
+                  </span>
                   <span className="text-xs opacity-70">{a.status}</span>
                 </p>
                 {a.notes ? <p className="mt-1 text-xs opacity-80">{a.notes}</p> : null}
-                {a.photos.length > 0 ? (
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {a.photos.map((ph) => (
-                      <img
-                        key={ph.photoId}
-                        src={ph.signedUrl}
-                        alt={ph.caption ?? 'Inspection photo'}
-                        className="h-16 w-16 rounded object-cover"
-                      />
-                    ))}
-                  </div>
-                ) : null}
+                <InspectorRecordLines assignment={a} />
+                {(['original_certificate', 'site'] as const).map((kind) => {
+                  const photos = a.photos.filter((ph) => ph.photoKind === kind);
+                  if (photos.length === 0) return null;
+                  return (
+                    <div key={kind} className="mt-2">
+                      <p className="text-xs font-medium opacity-80">
+                        {kind === 'original_certificate' ? t.groundInspectionGate.record.photosOriginal : t.groundInspectionGate.record.photosSite}
+                      </p>
+                      <div className="mt-1 flex flex-wrap gap-2">
+                        {photos.map((ph) => (
+                          <img
+                            key={ph.photoId}
+                            src={ph.signedUrl}
+                            alt={ph.caption ?? 'Inspection photo'}
+                            className="h-16 w-16 rounded object-cover"
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             ))}
           </div>
@@ -326,5 +355,36 @@ export function SignalsPanel({
         )}
       </Section>
     </div>
+  );
+}
+
+/**
+ * Story 6.26a (GI10 [a]) — what the inspector recorded on one assignment: the original-certificate verdict (and whether
+ * it was compared with the CURRENT certificate), and the date — and, from the family, the time — of death. A
+ * `does_not_match` is SHOWN plainly (Story 6.26b turns it into a warning). A recorded value that could ⛔ not be
+ * decrypted says so — ⛔ never a blank.
+ */
+function InspectorRecordLines({ assignment: a }: { assignment: GroundInspectionItem }): ReactElement | null {
+  const r = t.groundInspectionGate.record;
+  if (a.originalCertificateVerdict === null && a.deathDateSource === null) return null;
+  return (
+    <ul className="mt-1 text-xs" data-testid="ground-inspection-record">
+      {a.originalCertificateVerdict !== null ? (
+        <li className={a.originalCertificateVerdict === 'does_not_match' ? 'font-semibold text-red-800' : undefined}>
+          {r.verdict[a.originalCertificateVerdict]}
+          {a.comparedAgainst !== null ? ` — ${r.comparedAgainst[a.comparedAgainst]}` : ''}
+        </li>
+      ) : null}
+      {a.deathDateSource !== null ? (
+        <li>
+          {r.deathDate[a.deathDateSource]}: {a.deathDateUnreadable ? r.unreadable : (a.deathDate ?? '—')}
+        </li>
+      ) : null}
+      {a.deathDateSource === 'family_statement' ? (
+        <li>
+          {r.deathTime}: {a.deathTimeUnreadable ? r.unreadable : (a.deathTime ?? r.deathTimeUnknown)}
+        </li>
+      ) : null}
+    </ul>
   );
 }

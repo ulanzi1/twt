@@ -17,7 +17,7 @@
 
 import { randomUUID } from 'node:crypto';
 
-import { claim, geoTree, ids } from '@twt/domain';
+import { claim, encryption, geoTree, ids } from '@twt/domain';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import type { AppDeps } from '../../../src/context.js';
@@ -26,6 +26,7 @@ import { closeScopeTx, openScopeTx } from '../../../src/modules/multi-tenant/sco
 import { buildServer } from '../../../src/server.js';
 import { buildTestDeps, hasDatabase, makeClient, type TestDeps } from '../_setup.js';
 import { FakeWebAuthnProvider } from '../_webauthn-fake.js';
+import { insertDeathCertificate } from '../_nominee-name-check-fixture.js';
 
 type Client = ReturnType<typeof makeClient>;
 
@@ -34,12 +35,38 @@ const OTHER_DISTRICT = 'Vaishali';
 const BLOCK = 'Block-1';
 const OTHER_BLOCK = 'Block-2';
 
-/** A minimal multipart body: an optional `caption` field (before the file) + one `file` part. */
-function multipart(bytes: Buffer, filename: string, contentType: string, caption?: string): { body: Buffer; ct: string } {
+/** A minimal multipart body: an optional `caption` field (before the file), an optional `photoKind` field (Story 6.26a
+ *  GI4 — AFTER the file when `kindAfterFile`, proving it is read once the stream is drained) + one `file` part. */
+function multipart(
+  bytes: Buffer,
+  filename: string,
+  contentType: string,
+  caption?: string,
+  photoKind?: string,
+  kindAfterFile = false,
+): { body: Buffer; ct: string } {
   const boundary = `----twt${randomUUID().replace(/-/g, '')}`;
   const parts: Buffer[] = [];
+  const kindPart =
+    photoKind !== undefined
+      ? Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="photoKind"\r\n\r\n${photoKind}\r\n`)
+      : null;
   if (caption !== undefined) {
     parts.push(Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="caption"\r\n\r\n${caption}\r\n`));
+  }
+  if (kindPart && !kindAfterFile) parts.push(kindPart);
+  if (kindPart && kindAfterFile) {
+    parts.push(
+      Buffer.from(
+        `--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="${filename}"\r\n` +
+          `Content-Type: ${contentType}\r\n\r\n`,
+      ),
+      bytes,
+      Buffer.from('\r\n'),
+      kindPart,
+      Buffer.from(`--${boundary}--\r\n`),
+    );
+    return { body: Buffer.concat(parts), ct: `multipart/form-data; boundary=${boundary}` };
   }
   parts.push(
     Buffer.from(
@@ -138,6 +165,28 @@ describe.skipIf(!hasDatabase)('Ground-inspection admin surface — E2E (:5433)',
     }
     return String(claimCaseId);
   }
+
+  /** ⭐ Story 6.26a — give a claim a CURRENT death certificate (the fixture's raw insert). Returns its upload id. */
+  async function seedCertificate(pariwarId: string, claimCaseId: string): Promise<string> {
+    const scopeTx = await openScopeTx(deps, pariwarId);
+    try {
+      const { uploadId } = await insertDeathCertificate(scopeTx, pariwarId, claimCaseId);
+      await closeScopeTx(scopeTx, true);
+      return uploadId;
+    } catch (err) {
+      await closeScopeTx(scopeTx, false);
+      throw err;
+    }
+  }
+
+  /** ⭐ Story 6.26a (GI4 / GI5) — a full completion body against `token` (a fixed past date; the time optional). */
+  const completeBody = (token: string, over: Record<string, unknown> = {}) => ({
+    originalCertificateVerdict: 'matches',
+    comparedCertificateToken: token,
+    deathDate: '2026-06-01',
+    deathTime: '14:30',
+    ...over,
+  });
 
   /**
    * Publish a geo tree for `pariwarId` placing each block under `parentDistrict`. Story 1.18 shipped
@@ -359,6 +408,10 @@ describe.skipIf(!hasDatabase)('Ground-inspection admin surface — E2E (:5433)',
     const { client, userId } = await authenticate();
     await grant(userId, pariwarId, 'district_admin', 'district', DISTRICT);
     const claimCaseId = await seedClaim(pariwarId, { toVerification: true });
+    // ⚠ AMENDED by Story 6.26a (GI4 / GI5): a completion now needs the original-certificate record against the
+    // claim's CURRENT certificate and the family's date — so the claim gets a certificate, the photo is the
+    // original's, the inspector reads the copy they compare, and the completion carries the full record.
+    await seedCertificate(pariwarId, claimCaseId);
 
     // Schedule with the acting admin as the inspector (so complete passes the inspector guard).
     const sched = await schedule(client, pariwarId, claimCaseId, {
@@ -370,13 +423,16 @@ describe.skipIf(!hasDatabase)('Ground-inspection admin surface — E2E (:5433)',
     const gid = sched.json<{ groundInspectionId: string }>().groundInspectionId;
 
     const storeBefore = td.claimDocumentStorage.store.size;
-    const { body, ct } = multipart(Buffer.from([0xff, 0xd8, 0xff, 0x00]), 'p.jpg', 'image/jpeg', 'front gate');
+    const { body, ct } = multipart(Buffer.from([0xff, 0xd8, 0xff, 0x00]), 'p.jpg', 'image/jpeg', 'front gate', 'original_certificate');
     const photo = await client.inject({ method: 'POST', url: `${base(pariwarId, claimCaseId)}/${gid}/photos`, payload: body as unknown as object, headers: { 'content-type': ct } });
     expect(photo.statusCode).toBe(201);
     expect(td.claimDocumentStorage.store.size).toBe(storeBefore + 1);
 
-    const done = await client.inject({ method: 'POST', url: `${base(pariwarId, claimCaseId)}/${gid}/complete`, payload: {} });
-    expect(done.statusCode).toBe(200);
+    const cert = await client.inject({ method: 'GET', url: `${base(pariwarId, claimCaseId)}/${gid}/certificate` });
+    expect(cert.statusCode, cert.body).toBe(200);
+    const token = cert.json<{ certificateToken: string }>().certificateToken;
+    const done = await client.inject({ method: 'POST', url: `${base(pariwarId, claimCaseId)}/${gid}/complete`, payload: completeBody(token) });
+    expect(done.statusCode, done.body).toBe(200);
     expect(done.json<{ status: string; photoCount: number }>().status).toBe('completed');
 
     // Read (district-scoped) → decrypted PII + a signed URL for the photo.
@@ -389,6 +445,15 @@ describe.skipIf(!hasDatabase)('Ground-inspection admin surface — E2E (:5433)',
     expect(assignments[0]!.status).toBe('completed');
     expect(assignments[0]!.photos[0]!.signedUrl).toBeTruthy();
     expect(assignments[0]!.photos[0]!.caption).toBe('front gate');
+    // Story 6.26a — the inspector's record round-trips: the verdict, the compared upload, the decrypted date and time.
+    expect(assignments[0]).toMatchObject({
+      originalCertificateVerdict: 'matches',
+      comparedCertificateToken: token,
+      deathDateSource: 'family_statement',
+      deathDate: '2026-06-01',
+      deathTime: '14:30',
+      photos: [expect.objectContaining({ photoKind: 'original_certificate' })],
+    });
   });
 
   it('mandatory-photo completion: complete with zero photos → 409 ground_inspection.photo_required', async () => {
@@ -425,6 +490,8 @@ describe.skipIf(!hasDatabase)('Ground-inspection admin surface — E2E (:5433)',
       const c = await seedClaim(pariwarId, { toVerification: true });
       return c;
     })();
+    // ⚠ AMENDED by Story 6.26a (GI4): the completion below needs a current certificate to compare with.
+    await seedCertificate(pariwarId, claimCaseId);
 
     // (1) block_admin@Block-1 — the FR-40 actor this whole story exists for. EXACT-NODE match: no
     //     resolver participates at all, which is why the fix was never a resolver.
@@ -437,7 +504,7 @@ describe.skipIf(!hasDatabase)('Ground-inspection admin surface — E2E (:5433)',
     expect(sched.statusCode).toBe(201);
     const gid = sched.json<{ groundInspectionId: string }>().groundInspectionId;
 
-    const { body, ct } = multipart(Buffer.from([0xff, 0xd8, 0xff, 0x00]), 'p.jpg', 'image/jpeg');
+    const { body, ct } = multipart(Buffer.from([0xff, 0xd8, 0xff, 0x00]), 'p.jpg', 'image/jpeg', undefined, 'original_certificate');
     const photo = await blockAdmin.client.inject({
       method: 'POST',
       url: `${base(pariwarId, claimCaseId)}/${gid}/photos`,
@@ -445,8 +512,16 @@ describe.skipIf(!hasDatabase)('Ground-inspection admin surface — E2E (:5433)',
       headers: { 'content-type': ct },
     });
     expect(photo.statusCode).toBe(201);
-    const done = await blockAdmin.client.inject({ method: 'POST', url: `${base(pariwarId, claimCaseId)}/${gid}/complete`, payload: {} });
-    expect(done.statusCode).toBe(200);
+    // ⭐ Story 6.26a (GI4) — the block_admin inspector SEES the claim's uploaded certificate (an assignment they hold).
+    const cert = await blockAdmin.client.inject({ method: 'GET', url: `${base(pariwarId, claimCaseId)}/${gid}/certificate` });
+    expect(cert.statusCode, cert.body).toBe(200);
+    const token = cert.json<{ certificateToken: string }>().certificateToken;
+    const done = await blockAdmin.client.inject({
+      method: 'POST',
+      url: `${base(pariwarId, claimCaseId)}/${gid}/complete`,
+      payload: completeBody(token),
+    });
+    expect(done.statusCode, done.body).toBe(200);
 
     // (2) district_admin@Patna reaches the SAME row by district→block ancestry (AC3). ⚠ This is the
     //     capability recorded DECLARED, NOT PRODUCTION-ACTIVE: it is reachable here only because the
@@ -660,5 +735,202 @@ describe.skipIf(!hasDatabase)('Ground-inspection admin surface — E2E (:5433)',
     const gid = (await schedule(client, pariwarId, claimCaseId, { inspectorActorId: randomUUID() })).json<{ groundInspectionId: string }>().groundInspectionId;
     const res = await client.inject({ method: 'POST', url: `${base(pariwarId, claimCaseId)}/${gid}/complete`, payload: {} });
     expect(res.statusCode).toBe(403);
+  });
+
+  // ══════════════════════════════════════════════════════════════════════════════════════════════
+  // ⭐ Story 6.26a — the window through HTTP (GI3, `-283` A4), the original certificate (GI4), the dates (GI5), the
+  //    certificate read and its audit (GI14).
+  // ══════════════════════════════════════════════════════════════════════════════════════════════
+
+  /** Move a committed claim on from `verification_in_progress` through REAL events. */
+  async function drive(pariwarId: string, claimCaseId: string, steps: [string, string, string, Record<string, unknown>?][]): Promise<void> {
+    const scopeTx = await openScopeTx(deps, pariwarId);
+    try {
+      const row = await claim.getClaimCase(scopeTx.tx, ids.pariwarId(pariwarId), ids.claimId(claimCaseId));
+      for (const [from, to, eventType, extra] of steps) {
+        await claim.projectClaimState(scopeTx.client, {
+          claimCaseId: ids.claimId(claimCaseId), pariwarId: ids.pariwarId(pariwarId), deceasedMemberId: row!.deceasedMemberId,
+          intakeChannels: ['helpline'], claimantActorId: null, eventType: eventType as never,
+          payload: { from_state: from, to_state: to, trigger: 'seed', actor: 'system', ...(extra ?? {}) } as never, actorId: null,
+        });
+      }
+      await closeScopeTx(scopeTx, true);
+    } catch (err) {
+      await closeScopeTx(scopeTx, false);
+      throw err;
+    }
+  }
+  const TO_DENIED: [string, string, string][] = [
+    ['verification_in_progress', 'verifier_review', 'claim.verifier_reviewing'],
+    ['verifier_review', 'denied', 'claim.verifier_denied'],
+  ];
+  const TO_REVERSED: [string, string, string, Record<string, unknown>?][] = [
+    ...TO_DENIED,
+    ['denied', 'appeal_stage_1', 'claim.appeal_stage1_initiated'],
+    ['appeal_stage_1', 'reversed', 'claim.appeal_stage1_reviewed', { decision: 'reversed' }],
+  ];
+
+  async function uploadPhoto(client: Client, pariwarId: string, claimCaseId: string, gid: string, kind?: string, kindAfterFile = false) {
+    const { body, ct } = multipart(Buffer.from([0xff, 0xd8, 0xff, 0x00]), 'p.jpg', 'image/jpeg', undefined, kind, kindAfterFile);
+    return client.inject({ method: 'POST', url: `${base(pariwarId, claimCaseId)}/${gid}/photos`, payload: body as unknown as object, headers: { 'content-type': ct } });
+  }
+  const errCode = (res: { json: <T>() => T }) => res.json<{ error: { code: string; details?: Record<string, unknown> } }>().error;
+
+  /** A district admin who is ALSO the inspector of a fresh assignment on a claim with a current certificate. */
+  async function inspectorWorld(opts: { certificate?: boolean; stage?: 'initial' | 'certificate_check' } = {}) {
+    const pariwarId = randomUUID();
+    const { client, userId } = await authenticate();
+    await grant(userId, pariwarId, 'district_admin', 'district', DISTRICT);
+    const claimCaseId = await seedClaim(pariwarId, { toVerification: true });
+    const uploadId = opts.certificate === false ? null : await seedCertificate(pariwarId, claimCaseId);
+    const sched = await schedule(client, pariwarId, claimCaseId, { inspectorActorId: userId, inspectionStage: opts.stage ?? 'initial' });
+    expect(sched.statusCode, sched.body).toBe(201);
+    const gid = sched.json<{ groundInspectionId: string }>().groundInspectionId;
+    return { pariwarId, client, userId, claimCaseId, uploadId, gid };
+  }
+
+  it('⭐ AC3 (`-283` A4) — THROUGH HTTP: schedule in `reversed` (a denial overturned on appeal) → 201, ⛔ not `not_allowed`; in `denied` → 409 `ground_inspection.not_allowed` with the state', async () => {
+    const pariwarId = randomUUID();
+    const { client, userId } = await authenticate();
+    await grant(userId, pariwarId, 'district_admin', 'district', DISTRICT);
+    const reversed = await seedClaim(pariwarId, { toVerification: true });
+    await drive(pariwarId, reversed, TO_REVERSED);
+    const ok = await schedule(client, pariwarId, reversed, { inspectorActorId: userId });
+    expect(ok.statusCode, ok.body).toBe(201);
+    const denied = await seedClaim(pariwarId, { toVerification: true });
+    await drive(pariwarId, denied, TO_DENIED);
+    const refused = await schedule(client, pariwarId, denied, { inspectorActorId: userId });
+    expect(refused.statusCode).toBe(409);
+    expect(errCode(refused)).toMatchObject({ code: 'ground_inspection.not_allowed', details: { state: 'denied' } });
+  });
+
+  it('GI4 — the photo kind rides the multipart (before OR after the file part); an unknown kind → 400', async () => {
+    const w = await inspectorWorld();
+    expect((await uploadPhoto(w.client, w.pariwarId, w.claimCaseId, w.gid, 'original_certificate', true)).statusCode).toBe(201);
+    expect((await uploadPhoto(w.client, w.pariwarId, w.claimCaseId, w.gid)).json<{ photoKind: string }>().photoKind).toBe('site');
+    const bad = await uploadPhoto(w.client, w.pariwarId, w.claimCaseId, w.gid, 'selfie');
+    expect(bad.statusCode).toBe(400);
+    expect(errCode(bad).code).toBe('ground_inspection.invalid_photo_kind');
+    const read = await w.client.inject({ method: 'GET', url: `${base(w.pariwarId, w.claimCaseId)}?district=${DISTRICT}` });
+    const kinds = read.json<{ assignments: { photos: { photoKind: string }[] }[] }>().assignments[0]!.photos.map((p) => p.photoKind).sort();
+    expect(kinds).toEqual(['original_certificate', 'site']);
+  });
+
+  it('⭐ GI4 — the certificate read: 200 (token = the CURRENT upload, a signed URL) to the assigned inspector; 403 to another conduct-key holder; 409 with ⛔ no current certificate', async () => {
+    const pariwarId = randomUUID();
+    const inspector = await authenticate();
+    const other = await authenticate();
+    for (const u of [inspector, other]) await grant(u.userId, pariwarId, 'block_admin', 'block', BLOCK);
+    const claimCaseId = await seedClaim(pariwarId, { toVerification: true });
+    const uploadId = await seedCertificate(pariwarId, claimCaseId);
+    const gid = await seedAssignment(pariwarId, claimCaseId, { block: BLOCK, inspectorActorId: inspector.userId });
+    const ok = await inspector.client.inject({ method: 'GET', url: `${base(pariwarId, claimCaseId)}/${gid}/certificate` });
+    expect(ok.statusCode, ok.body).toBe(200);
+    expect(ok.json()).toMatchObject({ certificateToken: uploadId, contentType: 'application/pdf', expiresInSeconds: 300 });
+    expect(ok.json<{ signedUrl: string }>().signedUrl).toBeTruthy();
+    // ⭐ A block admin holding the conduct key on the SAME block, but ⛔ the inspector and ⛔ an override holder.
+    const denied = await other.client.inject({ method: 'GET', url: `${base(pariwarId, claimCaseId)}/${gid}/certificate` });
+    expect(denied.statusCode).toBe(403);
+
+    const none = await inspectorWorld({ certificate: false });
+    const res = await none.client.inject({ method: 'GET', url: `${base(none.pariwarId, none.claimCaseId)}/${none.gid}/certificate` });
+    expect(res.statusCode).toBe(409);
+    expect(errCode(res).code).toBe('ground_inspection.no_current_certificate');
+  });
+
+  it('⭐ GI4 / GI5 — every new completion refusal has its stable code (409s name what is missing; malformed values are 400s)', async () => {
+    const w = await inspectorWorld();
+    const url = `${base(w.pariwarId, w.claimCaseId)}/${w.gid}/complete`;
+    const complete = (payload: Record<string, unknown>) => w.client.inject({ method: 'POST', url, payload });
+    // A SITE photo only ⇒ the original's photo is missing.
+    await uploadPhoto(w.client, w.pariwarId, w.claimCaseId, w.gid, 'site');
+    let r = await complete(completeBody(w.uploadId!));
+    expect(r.statusCode).toBe(409);
+    expect(errCode(r)).toMatchObject({ code: 'ground_inspection.original_certificate_required', details: { missing: 'photo' } });
+    await uploadPhoto(w.client, w.pariwarId, w.claimCaseId, w.gid, 'original_certificate');
+    r = await complete(completeBody(w.uploadId!, { originalCertificateVerdict: undefined }));
+    expect(errCode(r)).toMatchObject({ code: 'ground_inspection.original_certificate_required', details: { missing: 'verdict' } });
+    r = await complete(completeBody(w.uploadId!, { comparedCertificateToken: undefined }));
+    expect(errCode(r)).toMatchObject({ code: 'ground_inspection.original_certificate_required', details: { missing: 'compared_certificate' } });
+    r = await complete(completeBody(w.uploadId!, { deathDate: undefined }));
+    expect([r.statusCode, errCode(r).code]).toEqual([409, 'ground_inspection.death_date_required']);
+    r = await complete(completeBody(w.uploadId!, { deathDate: '2099-01-01' }));
+    expect([r.statusCode, errCode(r).code]).toEqual([409, 'ground_inspection.death_date_in_future']);
+    r = await complete(completeBody(w.uploadId!, { deathDate: '2026-02-30' }));
+    expect(r.statusCode).toBe(400);
+    r = await complete(completeBody(w.uploadId!, { deathTime: '24:00' }));
+    expect(r.statusCode).toBe(400);
+    // The family replaces the certificate — the copy the inspector compared is ⛔ no longer current.
+    await seedCertificate(w.pariwarId, w.claimCaseId);
+    r = await complete(completeBody(w.uploadId!));
+    expect([r.statusCode, errCode(r).code]).toEqual([409, 'ground_inspection.certificate_changed']);
+
+    const check = await inspectorWorld({ stage: 'certificate_check' });
+    await uploadPhoto(check.client, check.pariwarId, check.claimCaseId, check.gid, 'original_certificate');
+    const checkUrl = `${base(check.pariwarId, check.claimCaseId)}/${check.gid}/complete`;
+    const withTime = await check.client.inject({ method: 'POST', url: checkUrl, payload: completeBody(check.uploadId!) });
+    expect(withTime.statusCode).toBe(400);
+    expect(errCode(withTime)).toMatchObject({ code: 'ground_inspection.invalid_death_facts', details: { problem: 'time_not_allowed' } });
+    const done = await check.client.inject({ method: 'POST', url: checkUrl, payload: completeBody(check.uploadId!, { deathTime: undefined }) });
+    expect(done.statusCode, done.body).toBe(200);
+
+    const none = await inspectorWorld({ certificate: false });
+    await uploadPhoto(none.client, none.pariwarId, none.claimCaseId, none.gid, 'original_certificate');
+    const noCert = await none.client.inject({
+      method: 'POST', url: `${base(none.pariwarId, none.claimCaseId)}/${none.gid}/complete`, payload: completeBody(randomUUID()),
+    });
+    expect([noCert.statusCode, errCode(noCert).code]).toEqual([409, 'ground_inspection.no_current_certificate']);
+  });
+
+  it('⭐ AC5 — the stored row holds the date ONLY as ciphertext + an index under `DEATH_DATE_INDEX_FIELD_CLASS` (from `@twt/domain`)', async () => {
+    const w = await inspectorWorld();
+    await uploadPhoto(w.client, w.pariwarId, w.claimCaseId, w.gid, 'original_certificate');
+    const r = await w.client.inject({ method: 'POST', url: `${base(w.pariwarId, w.claimCaseId)}/${w.gid}/complete`, payload: completeBody(w.uploadId!) });
+    expect(r.statusCode, r.body).toBe(200);
+    const c = await td.pool.connect();
+    try {
+      const { rows } = await c.query<Record<string, unknown>>('SELECT * FROM claim_ground_inspections WHERE ground_inspection_id = $1', [w.gid]);
+      const row = rows[0]!;
+      for (const [col, v] of Object.entries(row)) {
+        expect(String(v), col).not.toBe('2026-06-01');
+        expect(String(v), col).not.toBe('14:30');
+      }
+      expect(String(row['death_date_ciphertext'])).toMatch(/^enc:v1:/);
+      expect(String(row['death_time_ciphertext'])).toMatch(/^enc:v1:/);
+      const expectedIndex = await encryption.blindIndex(
+        encryption.DEATH_DATE_INDEX_FIELD_CLASS, '2026-06-01', { pariwarId: w.pariwarId }, deps.encryption.kms, deps.encryption.hmacKeyRef,
+      );
+      expect(row['death_date_index']).toBe(expectedIndex);
+      expect(encryption.DEATH_DATE_INDEX_FIELD_CLASS).toBe('death_date');
+    } finally {
+      c.release();
+    }
+  });
+
+  it('⭐ AC14 — the certificate read and the completion are audited with codes, ids and counts ONLY (⛔ a date, a time, a note or a name)', async () => {
+    const w = await inspectorWorld();
+    await w.client.inject({ method: 'GET', url: `${base(w.pariwarId, w.claimCaseId)}/${w.gid}/certificate` });
+    await uploadPhoto(w.client, w.pariwarId, w.claimCaseId, w.gid, 'original_certificate');
+    await uploadPhoto(w.client, w.pariwarId, w.claimCaseId, w.gid, 'site');
+    const r = await w.client.inject({
+      method: 'POST', url: `${base(w.pariwarId, w.claimCaseId)}/${w.gid}/complete`,
+      payload: completeBody(w.uploadId!, { notes: 'ZZ-INSPECTION-NOTE Ramesh' }),
+    });
+    expect(r.statusCode, r.body).toBe(200);
+    const viewed = td.auditSink.ofType('admin_ground_inspection.certificate_viewed').filter((e) => e.context?.['ground_inspection_id'] === w.gid);
+    expect(viewed).toHaveLength(1);
+    expect(viewed[0]!.context).toEqual({ claim_case_id: w.claimCaseId, ground_inspection_id: w.gid, certificate_token: w.uploadId });
+    const completed = td.auditSink.ofType('admin_ground_inspection.completed').filter((e) => e.context?.['ground_inspection_id'] === w.gid);
+    expect(completed).toHaveLength(1);
+    expect(completed[0]!.context).toMatchObject({
+      photo_count: 2,
+      photo_kind_counts: { site: 1, original_certificate: 1 },
+      original_certificate_verdict: 'matches',
+      death_date_source: 'family_statement',
+    });
+    for (const line of [...viewed, ...completed]) {
+      const dump = JSON.stringify(line);
+      for (const leaked of ['2026-06-01', '14:30', 'ZZ-INSPECTION-NOTE', 'Ramesh']) expect(dump, leaked).not.toContain(leaked);
+    }
   });
 });

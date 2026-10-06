@@ -38,6 +38,7 @@ import { emitAuthAudit } from '../auth/shared/audit.js';
 import { auditAuthorizationDenied, geoTreeResolverForRequest } from '../rbac/index.js';
 import { closeScopeTx, openScopeTx } from '../multi-tenant/scope-tx.js';
 import {
+  deathDateBlindIndex,
   decryptGroundInspectionField,
   encryptGroundInspectionField,
   encryptOptionalGroundInspectionField,
@@ -49,6 +50,8 @@ const PHOTO_ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as co
 const PHOTO_MAX_BYTES = CLAIM_DOCUMENT_MAX_BYTES;
 /** Signed-URL TTL for a photo read (short-lived — the 6.5 access pattern). */
 const PHOTO_SIGNED_URL_TTL_SECONDS = 300;
+/** Story 6.26a (GI4) — the signed-URL TTL of the inspector's view of the uploaded certificate. */
+const CERTIFICATE_SIGNED_URL_TTL_SECONDS = 300;
 
 /** The D6 supervisor-override key (catalog v9) — the conduct key is gated by the route preHandlers. */
 const OVERRIDE_KEY = 'claim.override_ground_inspection';
@@ -119,6 +122,46 @@ function translateGroundInspectionError(err: unknown): never {
       'The Idempotency-Key was already used for a different request',
       'ground_inspection.idempotency_mismatch',
       { field: err.field },
+    );
+  }
+  // ── Story 6.26a (GI4 / GI5) — the original-certificate record and the dates. ──
+  if (err instanceof claim.GroundInspectionOriginalCertificateRequiredError) {
+    const words = {
+      photo: 'a photo of the original death certificate',
+      verdict: 'whether the original matches the copy',
+      compared_certificate: 'which uploaded certificate the original was compared with',
+    } as const;
+    throw new ConflictError(
+      `To complete the inspection, record ${words[err.missing]}`,
+      'ground_inspection.original_certificate_required',
+      { missing: err.missing },
+    );
+  }
+  if (err instanceof claim.GroundInspectionCertificateChangedError) {
+    throw new ConflictError(
+      'The family has replaced the death certificate since you opened it — compare the original with the new one',
+      'ground_inspection.certificate_changed',
+    );
+  }
+  if (err instanceof claim.GroundInspectionNoCurrentCertificateError) {
+    throw new ConflictError(
+      'This claim has no uploaded death certificate to compare the original with yet',
+      'ground_inspection.no_current_certificate',
+    );
+  }
+  if (err instanceof claim.GroundInspectionDeathDateRequiredError) {
+    throw new ConflictError('To complete the inspection, record the date of death', 'ground_inspection.death_date_required');
+  }
+  if (err instanceof claim.GroundInspectionDeathDateInFutureError) {
+    throw new ConflictError('The date of death cannot be after today', 'ground_inspection.death_date_in_future');
+  }
+  if (err instanceof claim.GroundInspectionDeathFactsInvalidError) {
+    throw new BadRequestError(
+      err.detail === 'time_not_allowed'
+        ? 'A certificate check records the date printed on the original only — not a time'
+        : 'The date or time of death is not valid',
+      'ground_inspection.invalid_death_facts',
+      { problem: err.detail },
     );
   }
   if (err instanceof claim.GroundInspectionInspectorMismatchError) {
@@ -207,13 +250,22 @@ export function createGroundInspectionHandlers(deps: AppDeps) {
       const idempotencyKey = requireIdempotencyKey(request);
 
       // (D3) claim-state guard FIRST — a clean 409 before any write (the domain re-guards inside the tx).
+      // ⭐ Story 6.26a (GI3, `-283` A4): through the domain's ONE window predicate — a twin of the writer's guard
+      // widened alone would strand every claim that reached an approval with ⛔ no inspection HERE, at the API.
       const claimRow = await claim.getClaimCase(
         request.scopeTx!.tx,
         ids.pariwarId(ctx.pariwarId),
         ids.claimId(claimCaseId),
       );
       if (!claimRow) throw new NotFoundError('Claim not found', 'claim.not_found');
-      if (claimRow.currentState !== 'verification_in_progress') {
+      if (
+        !(await claim.isClaimInGroundInspectionWindow(
+          request.scopeTx!.tx,
+          ids.pariwarId(ctx.pariwarId),
+          ids.claimId(claimCaseId),
+          claimRow.currentState,
+        ))
+      ) {
         throw new ConflictError(
           'Ground inspection is not allowed for the claim in its current state',
           'ground_inspection.not_allowed',
@@ -448,6 +500,16 @@ export function createGroundInspectionHandlers(deps: AppDeps) {
       // silently dropped (review #8). `data.fields` accumulates parts as the stream is consumed.
       const captionField = (data.fields as Record<string, { value?: unknown } | undefined> | undefined)?.caption;
       const captionPlain = captionField && typeof captionField.value === 'string' ? captionField.value : undefined;
+      // ⭐ Story 6.26a (GI4) — what the photo shows (`site` default | `original_certificate`), read the same way as the
+      // caption: AFTER the file stream is drained, so the field is captured in either multipart position.
+      const kindField = (data.fields as Record<string, { value?: unknown } | undefined> | undefined)?.photoKind;
+      const kindRaw = kindField && typeof kindField.value === 'string' ? kindField.value : undefined;
+      if (kindRaw !== undefined && !(schema.GROUND_INSPECTION_PHOTO_KINDS as readonly string[]).includes(kindRaw)) {
+        throw new BadRequestError('Unknown photo kind', 'ground_inspection.invalid_photo_kind', {
+          allowed: schema.GROUND_INSPECTION_PHOTO_KINDS,
+        });
+      }
+      const photoKind = (kindRaw ?? 'site') as schema.GroundInspectionPhotoKind;
 
       const captionCiphertext = await encryptOptionalGroundInspectionField(captionPlain, ctx.pariwarId, deps.encryption);
 
@@ -470,6 +532,7 @@ export function createGroundInspectionHandlers(deps: AppDeps) {
           contentType: data.mimetype,
           byteSize: buffer.byteLength,
           captionCiphertext,
+          photoKind,
         });
         ok = true;
       } catch (err) {
@@ -501,11 +564,12 @@ export function createGroundInspectionHandlers(deps: AppDeps) {
           photo_id: photoRow!.photoId,
           byte_size: buffer.byteLength,
           content_type: data.mimetype,
+          photo_kind: photoKind,
           ...(override ? { override_actor_id: override.byActorId } : {}),
         },
       });
       void reply.status(201);
-      return { photoId: photoRow!.photoId };
+      return { photoId: photoRow!.photoId, photoKind };
     },
 
     /** POST …/ground-inspection/:ground_inspection_id/complete — complete (AC4). */
@@ -521,6 +585,28 @@ export function createGroundInspectionHandlers(deps: AppDeps) {
           ? await encryptOptionalGroundInspectionField(body.notes, ctx.pariwarId, deps.encryption)
           : undefined;
 
+      // ⭐ Story 6.26a (GI5) — the HANDLER holds the plaintext date, so it encrypts it (Tier-1) and computes its blind
+      // index under the ONE shared field class (the 6.21a "handler encrypts" pattern); the writer takes the
+      // plaintext for VALIDATION only. The source follows the stage (a certificate check records the printed date).
+      const deathDateSource: schema.GroundInspectionDeathDateSource =
+        assignment.inspectionStage === 'certificate_check' ? 'original_certificate' : 'family_statement';
+      const deathDate =
+        body.deathDate != null
+          ? {
+              plaintext: body.deathDate,
+              ciphertext: await encryptGroundInspectionField(body.deathDate, ctx.pariwarId, deps.encryption),
+              index: await deathDateBlindIndex(body.deathDate, ctx.pariwarId, deps.encryption),
+              source: deathDateSource,
+            }
+          : null;
+      const deathTime =
+        body.deathTime != null
+          ? {
+              plaintext: body.deathTime,
+              ciphertext: await encryptGroundInspectionField(body.deathTime, ctx.pariwarId, deps.encryption),
+            }
+          : null;
+
       const scopeTx = await openScopeTx(deps, ctx.pariwarId);
       let ok = false;
       let result;
@@ -532,6 +618,10 @@ export function createGroundInspectionHandlers(deps: AppDeps) {
           override,
           ...(body.structuredFindings !== undefined ? { structuredFindings: body.structuredFindings } : {}),
           ...(notesCiphertext !== undefined ? { notesCiphertext } : {}),
+          originalCertificateVerdict: body.originalCertificateVerdict ?? null,
+          comparedCertificateUploadId: body.comparedCertificateToken ?? null,
+          deathDate,
+          deathTime,
         });
         ok = true;
       } catch (err) {
@@ -549,11 +639,68 @@ export function createGroundInspectionHandlers(deps: AppDeps) {
           // Story 6.17 (review fix) — the dimension the conduct gate actually checked for this row.
           block: assignment.block,
           photo_count: result!.photoCount,
+          // ⭐ Story 6.26a (GI14) — codes and counts only: ⛔ never a date, a time, a note or a name.
+          photo_kind_counts: {
+            site: result!.photoCount - result!.originalCertificatePhotoCount,
+            original_certificate: result!.originalCertificatePhotoCount,
+          },
+          original_certificate_verdict: result!.groundInspection.originalCertificateVerdict,
+          death_date_source: result!.groundInspection.deathDateSource,
           ...(override ? { override_actor_id: override.byActorId } : {}),
         },
       });
       void reply.status(200);
       return { groundInspectionId: ground_inspection_id, status: result!.groundInspection.status, photoCount: result!.photoCount };
+    },
+
+    /**
+     * GET …/ground-inspection/:ground_inspection_id/certificate — ⭐ Story 6.26a (GI4; `-263` FQ11 A). The inspector is
+     * SHOWN the claim's CURRENT uploaded death certificate to compare with the original they hold: its token (the
+     * upload id they echo back as `comparedCertificateToken`), content type and a short-lived signed URL. Gated by the
+     * row's conduct dimension (the route) PLUS the D6 inspector guard: the assigned inspector, or a
+     * `claim.override_ground_inspection` holder — anyone else holding the conduct key gets 403. ⭐ This lets a
+     * `block_admin` inspector see a claim's uploaded certificate image — confined to an assignment they hold. ⛔ No
+     * current upload ⇒ 409 `ground_inspection.no_current_certificate` (⛔ never a 500, ⛔ never a 404 hiding the
+     * assignment). Audited `admin_ground_inspection.certificate_viewed` — ids only.
+     */
+    async certificate(request: FastifyRequest, reply: FastifyReply): Promise<unknown> {
+      const ctx = adminCtx(request);
+      const { ground_inspection_id } = request.params as { ground_inspection_id: string };
+      const assignment = loadAssignment(request, ctx, ground_inspection_id);
+      const override = resolveInspectorOverride(request, ctx, assignment);
+      const tx = request.scopeTx!.tx;
+      const pid = ids.pariwarId(ctx.pariwarId);
+
+      const snapshot = await claim.readDeathCertificateSnapshot(tx, pid, assignment.claimCaseId);
+      if (snapshot.currentUploadId === null) {
+        translateGroundInspectionError(new claim.GroundInspectionNoCurrentCertificateError(assignment.claimCaseId));
+      }
+      const upload = await claim.getDeathCertificateUpload(tx, pid, snapshot.currentUploadId);
+      if (!upload) {
+        translateGroundInspectionError(new claim.GroundInspectionNoCurrentCertificateError(assignment.claimCaseId));
+      }
+      const signedUrl = await deps.claimDocumentStorage.signedReadUrl(
+        upload.storageObjectKey,
+        CERTIFICATE_SIGNED_URL_TTL_SECONDS,
+      );
+
+      emitAuthAudit(deps, request, 'admin_ground_inspection.certificate_viewed', {
+        actorId: ctx.actorId,
+        pariwarId: ctx.pariwarId,
+        context: {
+          claim_case_id: assignment.claimCaseId,
+          ground_inspection_id,
+          certificate_token: upload.uploadId,
+          ...(override ? { override_actor_id: override.byActorId } : {}),
+        },
+      });
+      void reply.status(200);
+      return {
+        certificateToken: upload.uploadId,
+        contentType: upload.contentType,
+        signedUrl,
+        expiresInSeconds: CERTIFICATE_SIGNED_URL_TTL_SECONDS,
+      };
     },
 
     /** POST …/ground-inspection/:ground_inspection_id/refusal — refusal disposition (AC4a). */
@@ -684,6 +831,8 @@ export function createGroundInspectionHandlers(deps: AppDeps) {
               photoId: p.photoId,
               contentType: p.contentType,
               byteSize: p.byteSize,
+              // Story 6.26a (GI4) — `site` | `original_certificate` (labelled apart on the page).
+              photoKind: p.photoKind,
               caption: await decrypt(p.captionCiphertext),
               signedUrl: await deps.claimDocumentStorage.signedReadUrl(p.storageObjectKey, PHOTO_SIGNED_URL_TTL_SECONDS),
             })),
@@ -704,6 +853,13 @@ export function createGroundInspectionHandlers(deps: AppDeps) {
             locationDetail: await decrypt(r.inspection.locationCiphertext),
             familyContact: await decrypt(r.inspection.familyContactCiphertext),
             notes: await decrypt(r.inspection.notesCiphertext),
+            // ⭐ Story 6.26a (GI4 / GI5) — the inspector's record: the verdict, the upload it was compared with, and the
+            // date (+ the family's time) of death, decrypted here exactly as the notes are.
+            originalCertificateVerdict: r.inspection.originalCertificateVerdict,
+            comparedCertificateToken: r.inspection.comparedCertificateUploadId,
+            deathDateSource: r.inspection.deathDateSource,
+            deathDate: await decrypt(r.inspection.deathDateCiphertext),
+            deathTime: await decrypt(r.inspection.deathTimeCiphertext),
             photos,
           };
         }),
@@ -739,6 +895,11 @@ interface FindingsBody {
 interface CompleteBody {
   structuredFindings?: unknown;
   notes?: string | null;
+  /** Story 6.26a (GI4 / GI5) — the original-certificate record and the date / time of death. */
+  originalCertificateVerdict?: schema.GroundInspectionCertificateVerdict | null;
+  comparedCertificateToken?: string | null;
+  deathDate?: string | null;
+  deathTime?: string | null;
 }
 
 interface RefusalBody {

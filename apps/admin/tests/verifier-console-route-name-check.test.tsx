@@ -95,6 +95,8 @@ const packet = (nomineeNameCheck: NameStatus): VerifierConsolePacket =>
     shepherd: { status: 'empty' },
     nomineeNameCheck,
     // Story 6.23a (NW8) — the nominee-change warnings section (⛔ no warning by default).
+    // Story 6.26a (GI9) — the ground-inspection gate section (complete by default).
+    groundInspectionGate: { available: true, complete: true, waitReason: null },
     approvalWarnings: {
       available: true,
       kinds: [],
@@ -634,3 +636,50 @@ describe('<VerifierConsoleRoute> — Story 6.23a, the nominee-change warnings', 
     expect(screen.getByTestId('late-warning-reason-server-error')).not.toHaveTextContent(t.decision.submitError);
   });
 });
+
+// ── Story 6.26a (GI9, GI11; AC9, AC10) — the ground-inspection WAIT, MOUNTED ─────────────────────────────────────
+describe('<VerifierConsoleRoute> — Story 6.26a, why the approval waits for the ground inspection', () => {
+  const mountGate = async (groundInspectionGate: VerifierConsolePacket['groundInspectionGate']) => {
+    getVerifierConsole.mockResolvedValue({ packet: { ...packet(PASSING), groundInspectionGate } });
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+    render(
+      <QueryClientProvider client={qc}>
+        <VerifierConsoleRoute />
+      </QueryClientProvider>,
+    );
+    await screen.findByTestId('name-check-disclosure');
+  };
+
+  for (const reason of ['no_completed_inspection', 'certificate_check_required'] as const) {
+    it(`⭐ \`${reason}\` — Approve DISABLED with its own words (⛔ Deny), and the section says why`, async () => {
+      await mountGate({ available: true, complete: false, waitReason: reason });
+      expect(screen.getByTestId('action-approve')).toBeDisabled();
+      expect(screen.getByTestId('action-deny')).toBeEnabled();
+      expect(screen.getByTestId('approve-blocked-reason')).toHaveTextContent(t.groundInspectionGate.approveBlocked[reason]!);
+      expect(screen.getByTestId('ground-inspection-gate')).toHaveTextContent(t.groundInspectionGate.approveBlocked[reason]!);
+      expect(t.groundInspectionGate.approveBlocked[reason]).toMatch(/not refused/);
+    });
+  }
+
+  it('⭐ `available: false` — Approve disabled with "could not be checked" words, ⛔ never "complete"', async () => {
+    await mountGate({ available: false, complete: false, waitReason: null });
+    expect(screen.getByTestId('action-approve')).toBeDisabled();
+    expect(screen.getByTestId('approve-blocked-reason')).toHaveTextContent(t.groundInspectionGate.approveBlocked.unavailable!);
+    expect(screen.getByTestId('ground-inspection-gate')).not.toHaveTextContent(t.groundInspectionGate.complete);
+  });
+
+  it('the positive control — complete ⇒ Approve ENABLED, and the section says it is complete', async () => {
+    await mountGate({ available: true, complete: true, waitReason: null });
+    expect(screen.getByTestId('action-approve')).toBeEnabled();
+    expect(screen.getByTestId('ground-inspection-gate')).toHaveTextContent(t.groundInspectionGate.complete);
+  });
+
+  it('GI11 — the decision\'s 409 `verifier_decision.ground_inspection_required` is worded by its reason (⛔ "try again")', async () => {
+    const { decisionErrorMessage } = await import('../src/routes/VerifierConsoleRoute.js');
+    for (const reason of ['no_completed_inspection', 'certificate_check_required'] as const) {
+      const err = new ApiError(409, 'verifier_decision.ground_inspection_required', 'server words', { reason });
+      expect(decisionErrorMessage(err)).toBe(t.groundInspectionGate.approveBlocked[reason]);
+    }
+  });
+});
+

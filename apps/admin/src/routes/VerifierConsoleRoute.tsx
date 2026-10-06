@@ -40,6 +40,7 @@ import { ApiError } from '../api/client.js';
 import {
   claimContactRequiredMessage,
   deathCertificateAcceptanceRequiredMessage,
+  groundInspectionRequiredMessage,
   deathCertificateReviewErrorMessage,
   nomineeCorrectionErrorMessage,
   nomineeDeterminationErrorMessage,
@@ -121,6 +122,8 @@ export function decisionErrorMessage(err: unknown): string {
     if (err.code === 'verifier_decision.nominee_determination_required') return nomineeDeterminationRequiredMessage(err);
     // Story 6.21a (D7) — the certificate conjunct runs FIRST; name WHY (⛔ never "try again": the claim waits).
     if (err.code === 'verifier_decision.death_certificate_acceptance_required') return deathCertificateAcceptanceRequiredMessage(err);
+    // Story 6.26a (GI11) — the ground inspection, after the name check: say WHY the claim waits (⛔ never "try again").
+    if (err.code === 'verifier_decision.ground_inspection_required') return groundInspectionRequiredMessage(err);
     // Story 6.19a (D14) — the contact record, checked AFTER the rest of the gate: say WHY the claim waits.
     if (err.code.endsWith('.claim_contact_required')) return claimContactRequiredMessage(err);
     if (err.code === 'verifier_decision.post_death_refusal_ungrounded') return t.nomineeDeclaration.postDeathRefusalUngrounded;
@@ -475,7 +478,14 @@ export function VerifierConsoleRoute(): ReactElement {
               // accounts AND a current, passing District Admin name check. The domain refuses it
               // anyway under the claim lock; disabling here stops the console offering a control
               // that would 409, which would read to an operator as a glitch rather than a rule.
-              canApprove={certificateAccepted && packet.nomineeNameCheck.currentAndPassing && packet.approvalWarnings.available}
+              canApprove={
+                certificateAccepted &&
+                packet.nomineeNameCheck.currentAndPassing &&
+                // Story 6.26a (GI9) — approve waits for a COMPLETE ground inspection; ⛔ never on an unknown.
+                packet.groundInspectionGate.available &&
+                packet.groundInspectionGate.complete &&
+                packet.approvalWarnings.available
+              }
               // Story 6.23a (NW9) — the warnings + the reason list; (NW7) the revise control's words when blocked.
               approvalWarnings={{ kinds: packet.approvalWarnings.kinds, reasonOptions: packet.approvalWarnings.reasonOptions }}
               reviseBlocked={packet.approvalWarnings.reviseBlocked}
@@ -491,7 +501,12 @@ export function VerifierConsoleRoute(): ReactElement {
                   ? // Story 6.23a — ⛔ never "no warnings" on an unknown: Approve waits until the section loads.
                     t.approvalWarnings.unavailable
                   : packet.nomineeNameCheck.currentAndPassing
-                  ? null
+                  ? // Story 6.26a (GI9) — the ground inspection, AFTER the name check (the gate's own order).
+                    !packet.groundInspectionGate.available
+                    ? t.groundInspectionGate.approveBlocked.unavailable!
+                    : packet.groundInspectionGate.complete
+                      ? null
+                      : t.groundInspectionGate.approveBlocked[packet.groundInspectionGate.waitReason ?? 'no_completed_inspection']!
                   : // ⛔ "we could not read this" is ⛔ NOT "the bank details are missing".
                     !packet.nomineeNameCheck.available
                     ? t.nameCheck.statusUnavailable

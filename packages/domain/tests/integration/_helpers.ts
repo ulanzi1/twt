@@ -20,6 +20,15 @@ import { bindScopedDb, setPariwarScope, type Db } from '../../src/db.js';
 import { getEffectiveNomineeDeclaration } from '../../src/claim/nominee-effective.js';
 import { readClaimContact, readVersionChainIndex, resolveContactRow } from '../../src/claim/claim-contact-check.js';
 import { deathCertificateStatus, readDeathCertificateSnapshot } from '../../src/claim/death-certificate-approval.js';
+import {
+  groundInspectionApprovalState,
+  readGroundInspectionApprovalFacts,
+} from '../../src/claim/ground-inspection-approval.js';
+import {
+  addGroundInspectionPhoto,
+  completeGroundInspection,
+  scheduleGroundInspection,
+} from '../../src/claim/ground-inspection-persist.js';
 import { recordDeathCertificateReview } from '../../src/claim/death-certificate-review-persist.js';
 import { recordNomineeDetermination } from '../../src/claim/nominee-determination-persist.js';
 import { addCalendarDays, istDateOf } from '../../src/cycle-calendar/holiday-resolver.js';
@@ -1006,6 +1015,108 @@ export async function seedRejectedDeathCertificate(
   return result.reviewId as string;
 }
 
+/** The fixture ciphertext for an inspection's date of death (it carries the date, like the accepted one). */
+export function fixtureInspectionDeathDateCiphertext(date: string): string {
+  return `enc:v1:inspection-death-date:${date}`;
+}
+
+/** ⭐ Story 6.26a (GI5) — the fixture's stand-in for the date's blind index. ONE function for every fixture that
+ *  stores a date index (Story 6.26b's accepted-review index reuses it), so equal dates index equally — the
+ *  fixture twin of the ONE shared field class (Trap 2). */
+export function fixtureDeathDateIndex(date: string): string {
+  return `fixture-death-date-index:${date}`;
+}
+
+/** The accepted date a fixture review carries (`fixtureAcceptedDateCiphertext`), or `null` for a real one. */
+function fixtureAcceptedDateOf(ciphertext: string | null | undefined): string | null {
+  const prefix = 'enc:v1:accepted-date:';
+  return ciphertext?.startsWith(prefix) === true ? ciphertext.slice(prefix.length) : null;
+}
+
+/**
+ * ⭐ Story 6.26a (GI15, Task 10) — give a claim a COMPLETE ground inspection (`groundInspectionApprovalState`) through
+ * the REAL writers: an own FULL (`initial`) assignment scheduled, one `original_certificate` photo, completed against
+ * the CURRENT upload with verdict `matches` and a family date EQUAL to the accepted date (⛔ no warning by default —
+ * the 6.23a Trap-5 lesson), on the fixture's review clock (the date may be TOMORROW — Trap 9).
+ *   · already complete ⇒ ⛔ nothing seeded (the fixture is called repeatedly, and after certificate replacements);
+ *   · ⛔ no current upload ⇒ ⛔ nothing seeded (the certificate conjunct answers first).
+ * The claim must be in the inspection write window (GI3 makes `verifier_approved` / `reversed` / … legal).
+ * Returns the new assignment id, or `null` when nothing was seeded.
+ */
+export async function seedGroundInspection(
+  client: pg.PoolClient,
+  pariwarId: string,
+  claimCaseId: string,
+  opts: {
+    /** The family's date (`YYYY-MM-DD`). Default: the current accepted review's fixture date, else tomorrow (IST). */
+    readonly deathDate?: string;
+    readonly verdict?: 'matches' | 'does_not_match';
+    readonly stage?: 'initial' | 'certificate_check';
+    readonly inspectorActorId?: string;
+    /** Seed even when the state is already complete (a second assignment). */
+    readonly force?: boolean;
+  } = {},
+): Promise<string | null> {
+  const tx = bindScopedDb(client);
+  const pid = toPariwarId(pariwarId);
+  const cid = toClaimId(claimCaseId);
+  const facts = await readGroundInspectionApprovalFacts(tx, pid, cid);
+  if (facts.currentUploadId === null) return null;
+  if (opts.force !== true && groundInspectionApprovalState(facts).complete) return null;
+
+  let date = opts.deathDate ?? null;
+  if (date === null) {
+    const snapshot = await readDeathCertificateSnapshot(tx, pid, cid);
+    if (snapshot.currentReview?.verdict === 'accepted') {
+      const [row] = await tx
+        .select({ c: schema.claimDeathCertificateReviews.acceptedDateCiphertext })
+        .from(schema.claimDeathCertificateReviews)
+        .where(eq(schema.claimDeathCertificateReviews.reviewId, snapshot.currentReview.reviewId));
+      date = fixtureAcceptedDateOf(row?.c);
+    }
+  }
+  date ??= certificateDateAfterEverything();
+
+  const stage = opts.stage ?? 'initial';
+  const inspector = opts.inspectorActorId ?? randomUUID();
+  const { groundInspection } = await scheduleGroundInspection(client, {
+    claimCaseId: cid,
+    pariwarId: pid,
+    district: 'Patna',
+    inspectionStage: stage,
+    inspectionSiteType: 'family_residence',
+    inspectorActorId: inspector,
+    scheduledAt: new Date(),
+    scheduledByActor: inspector,
+    idempotencyKey: randomUUID(),
+  });
+  const gid = groundInspection.groundInspectionId;
+  await addGroundInspectionPhoto(client, {
+    pariwarId: pid,
+    groundInspectionId: gid,
+    actingActorId: inspector,
+    storageObjectKey: `fixture/ground-inspection/${gid}/original-certificate.jpg`,
+    contentType: 'image/jpeg',
+    byteSize: 1024,
+    photoKind: 'original_certificate',
+  });
+  await completeGroundInspection(client, {
+    pariwarId: pid,
+    groundInspectionId: gid,
+    actingActorId: inspector,
+    originalCertificateVerdict: opts.verdict ?? 'matches',
+    comparedCertificateUploadId: facts.currentUploadId,
+    deathDate: {
+      plaintext: date,
+      ciphertext: fixtureInspectionDeathDateCiphertext(date),
+      index: fixtureDeathDateIndex(date),
+      source: stage === 'certificate_check' ? 'original_certificate' : 'family_statement',
+    },
+    now: fixtureReviewNow(date),
+  });
+  return gid as string;
+}
+
 /** Tomorrow in IST — a certificate date against which every version dated up to now STANDS. */
 export function certificateDateAfterEverything(): string {
   return addCalendarDays(istDateOf(new Date()), 1);
@@ -1140,6 +1251,13 @@ export async function seedNomineeNameCheck(
      * gate's 409 `…claim_contact_required` (`no_record`).
      */
     readonly contact?: 'seed' | 'skip';
+    /**
+     * ⭐ Story 6.26a (GI15) — the COMPLETE ground inspection the approval gate now requires (`-263` FQ9 A), after the
+     * name check and before the late-warning wait. Default `'completed'` (`seedGroundInspection` — through the REAL
+     * writers; ⛔ nothing when already complete or when the claim has ⛔ no current upload). `'skip'` reaches a claim
+     * whose inspection is ⛔ not complete — the gate's 409 `…ground_inspection_required`.
+     */
+    readonly inspection?: 'completed' | 'skip';
   } = {},
 ): Promise<void> {
   if (opts.skip === true) return;
@@ -1245,6 +1363,7 @@ export async function seedNomineeNameCheck(
     actor: 'operator',
   });
 
+  if (opts.inspection !== 'skip') await seedGroundInspection(client, pariwarId, claimCaseId);
   if (opts.contact !== 'skip') await seedClaimContact(client, pariwarId, claimCaseId);
 }
 

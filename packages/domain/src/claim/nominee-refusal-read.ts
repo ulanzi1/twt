@@ -22,7 +22,7 @@
 // behaviour, ⛔ not changed here: the remedy is the shipped authorized convergence OVERRIDE, and an
 // overridden refile still inherits through this read (it is a distinct claim for the same death).
 
-import { sql } from 'drizzle-orm';
+import { type SQL, sql } from 'drizzle-orm';
 
 import type { Db } from '../db.js';
 import type { ClaimId, MemberId, PariwarId } from '../ids/index.js';
@@ -86,9 +86,51 @@ export async function listNomineeRefusals(
 }
 
 /**
+ * ⭐ THE INHERITANCE RULE, as SQL (Story 6.26a — `-283` A2): a scalar subquery yielding the claim whose COMPLETED
+ * ground inspection the claim `(pariwarId, claimCaseId)` INHERITS, or NULL. `getInheritedGroundInspectionSource`
+ * reads it through THIS fragment, and so do the approval gate's read (`readGroundInspectionApprovalFacts` — VISITED)
+ * and the verifier console's gate section — ⛔ never a second copy. `pariwarId` / `claimCaseId` are SQL (a bound
+ * parameter or an outer column reference); the inner aliases are prefixed `inh_` so an enclosing statement's own
+ * aliases are never shadowed by surprise.
+ *
+ * ⚠ `-283` A2: the source's completed assignment must be a FULL one (`inspection_stage <> 'certificate_check'`) — a
+ * certificate check is ⛔ never a visit (`-282` GI2), so an office check alone must ⛔ never pass on as one.
+ */
+export function inheritedGroundInspectionSourceSql(pariwarId: SQL, claimCaseId: SQL): SQL {
+  return sql`(
+    SELECT inh_src.claim_case_id
+      FROM claims inh_cur
+      JOIN claims inh_src
+        ON inh_src.pariwar_id = inh_cur.pariwar_id
+       AND inh_src.deceased_member_id = inh_cur.deceased_member_id
+       AND inh_src.claim_case_id <> inh_cur.claim_case_id
+       AND inh_src.created_at <= inh_cur.created_at
+      JOIN claim_verifier_decisions inh_d
+        ON inh_d.pariwar_id = inh_src.pariwar_id
+       AND inh_d.claim_case_id = inh_src.claim_case_id
+       AND inh_d.superseded_at IS NULL
+       AND inh_d.outcome = 'denied'
+       AND inh_d.reason_code = ${POST_DEATH_NOMINEE_CHANGE_REASON_CODE}
+     WHERE inh_cur.pariwar_id = ${pariwarId}
+       AND inh_cur.claim_case_id = ${claimCaseId}
+       AND EXISTS (
+         SELECT 1 FROM claim_ground_inspections inh_gi
+          WHERE inh_gi.pariwar_id = inh_src.pariwar_id
+            AND inh_gi.claim_case_id = inh_src.claim_case_id
+            AND inh_gi.status = 'completed'
+            AND inh_gi.inspection_stage <> 'certificate_check'
+       )
+     ORDER BY inh_src.created_at DESC, inh_src.claim_case_id DESC
+     LIMIT 1
+  )`;
+}
+
+/**
  * AC13 — the claim whose COMPLETED ground inspection this claim INHERITS, or `null`. ONE query. Derived:
  * the most recent EARLIER claim for the same deceased, in this Pariwar, whose live verifier decision is a
- * `-239` refusal AND which has at least one COMPLETED inspection. ⛔ Never another reason's denial.
+ * `-239` refusal AND which has at least one COMPLETED FULL inspection (Story 6.26a, `-283` A2 — ⛔ a
+ * `certificate_check` alone is never a visit). ⛔ Never another reason's denial. The rule itself is
+ * `inheritedGroundInspectionSourceSql` (shared with the approval gate and the verifier console).
  * ⭐ A TIE on `created_at` is broken by the claim id (code review 2026-09-24): `LIMIT 1` over a tie used to
  * pick whichever row the database returned first. ⚠ Two claims share a `created_at` only when minted in ONE
  * transaction — a test fixture; in production a refile is a later request, so a later claim can never be
@@ -99,31 +141,9 @@ export async function getInheritedGroundInspectionSource(
   pariwarId: PariwarId,
   claimCaseId: ClaimId,
 ): Promise<ClaimId | null> {
-  const result = await db.execute<{ claim_case_id: string }>(sql`
-    SELECT src.claim_case_id
-      FROM claims cur
-      JOIN claims src
-        ON src.pariwar_id = cur.pariwar_id
-       AND src.deceased_member_id = cur.deceased_member_id
-       AND src.claim_case_id <> cur.claim_case_id
-       AND src.created_at <= cur.created_at
-      JOIN claim_verifier_decisions d
-        ON d.pariwar_id = src.pariwar_id
-       AND d.claim_case_id = src.claim_case_id
-       AND d.superseded_at IS NULL
-       AND d.outcome = 'denied'
-       AND d.reason_code = ${POST_DEATH_NOMINEE_CHANGE_REASON_CODE}
-     WHERE cur.pariwar_id = ${pariwarId}
-       AND cur.claim_case_id = ${claimCaseId}
-       AND EXISTS (
-         SELECT 1 FROM claim_ground_inspections gi
-          WHERE gi.pariwar_id = src.pariwar_id
-            AND gi.claim_case_id = src.claim_case_id
-            AND gi.status = 'completed'
-       )
-     ORDER BY src.created_at DESC, src.claim_case_id DESC
-     LIMIT 1
+  const result = await db.execute<{ claim_case_id: string | null }>(sql`
+    SELECT ${inheritedGroundInspectionSourceSql(sql`${pariwarId}::uuid`, sql`${claimCaseId}::uuid`)} AS claim_case_id
   `);
   const row = result.rows?.[0];
-  return row ? (row.claim_case_id as ClaimId) : null;
+  return row?.claim_case_id ? (row.claim_case_id as ClaimId) : null;
 }

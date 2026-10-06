@@ -291,3 +291,38 @@ describe('<R9VotingPage> — AC8 on the R9 QUEUE, from the queue’s own read', 
     expect(getNomineeNameCheck).not.toHaveBeenCalled();
   });
 });
+
+describe('<R9CasePanel> — Story 6.26a (Task 9.4), a FAILED refetch keeps the panel and says so', () => {
+  it('⭐ the deferred 6.23b item: a refetch that fails AFTER a good read shows a banner ABOVE the kept panel — ⛔ the panel never vanishes', async () => {
+    getR9Panel.mockResolvedValueOnce(PANEL_OPEN);
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={qc}>
+        <R9CasePanel pariwarId={PARIWAR} claimCaseId={CLAIM} />
+      </QueryClientProvider>,
+    );
+    await screen.findByRole('region', { name: 'R9 voting panel' });
+    getR9Panel.mockRejectedValueOnce(new Error('network down'));
+    await qc.refetchQueries();
+    expect(await screen.findByTestId('r9-refetch-failed')).toHaveTextContent(/could not be refreshed.*may be out of date/);
+    // The panel the operator was working on is STILL there.
+    expect(screen.getByRole('region', { name: 'R9 voting panel' })).toBeInTheDocument();
+  });
+
+  it('a FIRST read that fails (⛔ data) still replaces the panel with the error alone', async () => {
+    getR9Panel.mockRejectedValue(new Error('network down'));
+    renderIt(<R9CasePanel pariwarId={PARIWAR} claimCaseId={CLAIM} />);
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'R9 voting panel' })).toBeNull();
+    expect(screen.queryByTestId('r9-refetch-failed')).toBeNull();
+  });
+
+  it('GI11 — the trustee words for `r9_voting.ground_inspection_required` (via the shared helper the panel uses)', async () => {
+    const { trusteeGroundInspectionRequiredMessage } = await import('../src/modules/claim-verification/nominee-errors.js');
+    const { ApiError } = await import('../src/api/client.js');
+    expect(
+      trusteeGroundInspectionRequiredMessage(new ApiError(409, 'r9_voting.ground_inspection_required', 'x', { reason: 'no_completed_inspection' })),
+    ).toBe(t.groundInspectionGate.trusteeApprovalGate.no_completed_inspection);
+  });
+});
+

@@ -4,6 +4,30 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Recorded during Story 6.26a's build — the ground-inspection gate and the inspector's record (2026-10-06)
+
+Recorded under `2026-10-06-282` (GI1–GI18), as amended by `-283` (A1–A8) and `-284` (E1–E5); `-285` ratified the final-vote reading.
+
+- **6.7's own Tier-1 inspection columns are ⛔ not in the member erasure** (`claim_ground_inspections.location_ciphertext`,
+  `family_contact_ciphertext`, `notes_ciphertext`; `claim_ground_inspection_photos.caption_ciphertext`) [`packages/domain/src/member/anonymize.ts`].
+  GI13 FOUND it, ⛔ not fixed: 6.26a scrubs only the columns it adds (the date and time of death, and the date's blind index). Whose data the
+  6.7 columns are is open — they describe the FAMILY (an address, a phone number, what the inspector saw), ⛔ the member — so erasing them on
+  the member's request is a question of basis, ⛔ a silent widening. ⭐ Trigger: counsel's read on the family's data under an erasure request
+  (the `-243` posture), or the next story that touches `anonymize.ts`.
+- **The R9 routing predicate's BULK inline twins were ⛔ not folded into `claim/r9-routing.ts`** [`claim/cycle-freeze-read.ts` (the pending
+  page's routed set), `claim/r9-voting-read.ts` (the R9 queue read), `claim/state-trustee-decision-persist.ts` (`commitCycleFreeze`'s exclusion,
+  which also covers `correction_return`)]. Task 2.1 moved the THREE private per-claim copies onto ONE leaf (`hasLiveRoutedRow` +
+  `liveRoutedToR9Exists`); the twins select ROWS over many claims (or a wider phase/outcome set), so folding them means rewriting each
+  query around the SQL fragment — same semantics today (pariwar + claim + `phase='routing'` + `outcome='routed_to_r9'` +
+  `superseded_at IS NULL`). ⭐ Trigger: the next change to the R9 queue predicate itself (e.g. a new routing outcome) — fold them then, or the
+  change lands in one copy.
+- **The `complete` vs R9-finalize race is tested against a SIMULATED finalize** [`packages/domain/tests/integration/claim/ground-inspection-concurrency.spec.ts`].
+  The test's second transaction takes the claim row `FOR UPDATE` and supersedes the routing row — what finalize does to the window — rather
+  than running `finalizeR9Outcome` own-committing (the R9 clause, panel grants and votes in committed rows). The property under test (the
+  window is read on the LOCKED row) is the same; the real writer is ⛔ exercised there. ⭐ Trigger: a change to finalize's lock order.
+
+---
+
 ## Recorded during Story 6.26 validate — owed to the Trustee Panel (2026-10-06)
 
 - **A NON-blocking Panel confirm owed in the NEXT routing note (`2026-10-06-284` E5).** `-263`'s "does NOT cover" list reads *"The **State
@@ -60,6 +84,10 @@ Recorded under `2026-10-04-278` (EA1–EA9), as amended by `-279` (A1–A6, A10,
   `CorrectionQueueRoute` already keep data on a failed refetch). Pre-existing (`R9CasePanel`'s `if (panel.isError)` at `b41ea25f:89`);
   6.23b's 409 → refetch makes it likelier. *Recorded by code review round 2 of 6-23b (2026-10-06).* ⭐ Trigger: the next story touching
   either surface — render the error as a banner while `data` exists.
+  - *Appended 2026-10-06 (Story 6.26a, Task 9.4 — the trigger fired: `R9CasePanel.tsx` is touched for GI11):* ✅ **the R9 half is FIXED** —
+    a failed REFETCH keeps TanStack's last good data on screen and says so in a banner above it (`r9-refetch-failed`); a failed FIRST read
+    still shows the error alone. Tested in `apps/admin/tests/r9-case-panel.test.tsx` (red-checked). ⛔ The `EscalationPanel.tsx` half stays
+    OPEN — 6.26a does ⛔ not touch that surface.
 - **Each later approval reads the claim's warnings two or three times** (`assertClaimApprovable`'s wait conjunct →
   `readClaimApprovalWarnings`; then `checkLaterApprovalWarningReason` → the same read; R9 finalize a third time for the per-vote
   check) [`packages/domain/src/claim/{r9-voting-persist,state-trustee-decision-persist,correction-closure}.ts`]. Code review
@@ -343,6 +371,10 @@ Recorded under `2026-10-03-276` (CR1–CR15). ⛔ Q1–Q4 are ⛔ not here — `
 - After an innocence release, a correction can still be raised/approved on the released claim and races a member declare (the correction path does not hold the D3 lock) [`packages/domain/src/claim/nominee-correction-persist.ts:300-306`] — deferred to Story 6-22 (the release has no production caller)
 - DB-level cross-table coherence is writer-enforced only: item `pariwar_id` vs its determination/version, version `pariwar_id` vs the member, correction target/applied vs member+rank, no FK on `nominee_determinations.deceased_member_id`; four FK columns unindexed; the append-only trigger's `pg_trigger_depth() > 1` exemption admits any trigger, not only the `members` cascade [`packages/domain/migrations/0119_nominee-declaration-history.sql:38`, `:118`, `:182-230`] — deferred, defence-in-depth hardening; RLS scopes every row and the writers validate
 - `-239` inheritance source: an appeal-overturned refusal is never superseded, so it stays in the refusal list and still passes its inspection on; the source filter falls back to an older refusal when the newest has no completed inspection [`packages/domain/src/claim/nominee-refusal-read.ts:65-76`, `:98-121`] — deferred, needs the appeal-outcome state mapping; a refile after an overturn is improbable
+  - *Appended 2026-10-06 (Story 6.26a):* this read is now an APPROVAL GATE INPUT — it is what makes a refile VISITED (GI2; it now counts
+    only a source with a completed FULL assignment, `-283` A2, through the shared `inheritedGroundInspectionSourceSql`). Still accepted:
+    the gate's ORIGINAL_SEEN half needs the refile's OWN certificate check against its current upload either way (FQ13), so an overturned
+    refusal can pass on a VISIT but never the sight of the refile's original. ⭐ Trigger unchanged.
 - Untraced: an erasure while a correction is `pa_pending` would apply the anonymised sentinel as the nominee (whether RTBF can pass for a member with a live claim is unknown); `EffectiveNomineeDeclarationClaimNotFoundError` from `readEffectiveFor` is unmapped where an invisible claim reaches it [`packages/domain/src/member/anonymize.ts:205`, `packages/domain/src/claim/nominee-name-check.ts:117`] — deferred, reachability not traced
   - ⭐ **2026-09-25 — the untraced half is ANSWERED by Story 6.21a (D11's trace):** RTBF **can** pass for a member with a live claim — `resolveRtbfLegality` (`packages/domain/src/member/rtbf-legality.ts`) is legal for a `withdrawn` lifecycle state or a `terminated` moderation overlay and reads ⛔ no claim at all (verified in the tree 2026-09-25). So the `pa_pending` sentinel case is REACHABLE; its fix stays deferred here. 6.21a's own share (the death-certificate reviews' date + note) is scrubbed by `anonymizeMember`. *Appended.*
 

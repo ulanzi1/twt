@@ -9,6 +9,8 @@
 
 import { randomUUID } from 'node:crypto';
 
+import { type SQL } from 'drizzle-orm';
+import { PgDialect } from 'drizzle-orm/pg-core';
 import { describe, expect, it } from 'vitest';
 
 import type { Db } from '../../src/db.js';
@@ -35,6 +37,8 @@ import {
   nomineeCorrections,
   claimDeathCertificateReviews,
   claimWarningApprovals,
+  claimGroundInspections,
+  claims,
   nomineeDeterminations,
 } from '../../src/schema/index.js';
 
@@ -53,16 +57,34 @@ function fakeKms(): { kms: KmsProvider; kekRef: KmsKeyRef } {
 interface Captured {
   table: unknown;
   set: Record<string, unknown>;
+  /** The `.where(cond)` argument (Story 6.26a — the inspection scrub's filter is asserted in SQL). */
+  where?: unknown;
 }
 
-/** A mock Drizzle client that records every `update(table).set(obj).where(cond)` chain (DB-free). */
-function mockClient(captured: Captured[]): Db {
+/** A mock Drizzle client that records every `update(table).set(obj).where(cond)` chain (DB-free).
+ *  ⭐ Story 6.26a (GI13): it also answers the ONE read the anonymizer makes — the deceased's claim ids
+ *  (`select(...).from(claims).where(...)`) — with `claimIds`, so the inspection scrub runs. */
+function mockClient(captured: Captured[], claimIds: readonly string[] = [randomUUID()]): Db {
   return {
+    select() {
+      return {
+        from(table: unknown) {
+          if (table !== claims) throw new Error('anonymizeMember: unexpected read');
+          return { where: () => Promise.resolve(claimIds.map((claimCaseId) => ({ claimCaseId }))) };
+        },
+      };
+    },
     update(table: unknown) {
       return {
         set(obj: Record<string, unknown>) {
-          captured.push({ table, set: obj });
-          return { where: () => Promise.resolve() };
+          const entry: Captured = { table, set: obj };
+          captured.push(entry);
+          return {
+            where: (cond: unknown) => {
+              entry.where = cond;
+              return Promise.resolve();
+            },
+          };
         },
       };
     },
@@ -79,11 +101,11 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
     return Buffer.from(bytes).toString('utf-8');
   }
 
-  async function run(): Promise<{ captured: Captured[]; pariwar: string }> {
+  async function run(claimIds?: readonly string[]): Promise<{ captured: Captured[]; pariwar: string }> {
     const captured: Captured[] = [];
     const memberId = toMemberId(randomUUID());
     const pariwar = randomUUID();
-    await anonymizeMember(mockClient(captured), { kms, kekRef }, {
+    await anonymizeMember(mockClient(captured, claimIds), { kms, kekRef }, {
       memberId,
       pariwarId: toPariwarId(pariwar),
     });
@@ -96,7 +118,7 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
     return found.set;
   }
 
-  it('updates exactly the EIGHTEEN member-PII tables (twenty-one statements), once each except the three documented doubles', async () => {
+  it('updates exactly the NINETEEN member-PII tables (twenty-two statements), once each except the three documented doubles', async () => {
     // Seven since Story 10.10's review pass added `member_moderation_actions`; EIGHT since Story
     // 10.20 added `member_moderation_grounds`. This count is the completeness check for the RTBF
     // surface — a new Tier-1 column landing in a table absent from this list is exactly how the
@@ -160,8 +182,13 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
     // ⭐ MOVED AGAIN by Story 6.23a (NW13, Trap 14): EIGHTEEN tables, TWENTY-ONE statements. `claim_warning_approvals`
     // holds a late-warning reason's NOTE (Tier-1, keyed on the DECEASED member) and takes ONE statement — the note
     // replaced only where present (0143's step ⇔ note CHECK keeps every other row's NULL).
+    //
+    // ⭐ MOVED AGAIN by Story 6.26a (GI13, AC11): NINETEEN tables, TWENTY-TWO statements. `claim_ground_inspections`
+    // holds the inspector's record of the DATE and TIME of death (Tier-1) and its blind index, on the DECEASED
+    // member's claims (read first — the table has ⛔ no `deceased_member_id`), and takes ONE statement, restricted to
+    // rows whose date is present (a pre-6.26 completed row fails 0147's NOT VALID CHECK on any rewrite).
     const { captured } = await run();
-    expect(captured).toHaveLength(21);
+    expect(captured).toHaveLength(22);
     const tables = captured.map((c) => c.table);
     for (const t of [
       memberIdentities,
@@ -182,6 +209,7 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
       nomineeCorrections,
       claimDeathCertificateReviews,
       claimWarningApprovals,
+      claimGroundInspections,
     ]) {
       expect(tables).toContain(t);
     }
@@ -194,7 +222,38 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
     expect(tables.filter((t) => t === dataExports)).toHaveLength(2);
     expect(tables.filter((t) => t === dataExportDeliveryGrants)).toHaveLength(2);
     expect(tables.filter((t) => t === memberModerationAppeals)).toHaveLength(2);
-    expect(new Set(tables).size).toBe(18);
+    expect(new Set(tables).size).toBe(19);
+  });
+
+  it('⭐ Story 6.26a (GI13): the inspection\'s date and time of death → sentinel, the date\'s blind index → NULL', async () => {
+    const { captured, pariwar } = await run();
+    const set = setFor(captured, claimGroundInspections);
+    expect(await dec(set.deathDateCiphertext, pariwar, 'ground_inspection')).toBe(ANONYMIZED_SENTINEL);
+    // The time is optional ⇒ a CASE (replaced only where present), ⛔ never an unconditional write.
+    expect(typeof set.deathTimeCiphertext).toBe('object');
+    expect(set.deathDateIndex).toBeNull();
+    // ⛔ The non-PII record (verdict, compared upload, source) is kept.
+    expect(set).not.toHaveProperty('originalCertificateVerdict');
+    expect(set).not.toHaveProperty('comparedCertificateUploadId');
+    expect(set).not.toHaveProperty('deathDateSource');
+  });
+
+  it('⭐⭐ Story 6.26a (AC11): the inspection scrub touches ONLY rows whose date ciphertext is present — a `WHERE`, ⛔ not merely a CASE', async () => {
+    // A pre-6.26 completed row (⛔ no FQ11 record, ⛔ never backfilled) FAILS 0147's NOT VALID CHECK, and Postgres re-checks it
+    // on EVERY row an UPDATE rewrites — so a scrub that touched it would abort the whole erasure with 23514.
+    const claimIds = [randomUUID(), randomUUID()];
+    const { captured } = await run(claimIds);
+    const found = captured.find((c) => c.table === claimGroundInspections)!;
+    const { sql: text, params } = new PgDialect().sqlToQuery(found.where as SQL);
+    expect(text).toMatch(/"claim_ground_inspections"\."death_date_ciphertext" is not null/);
+    expect(text).toMatch(/"claim_ground_inspections"\."claim_case_id" in \(/);
+    for (const id of claimIds) expect(params).toContain(id);
+  });
+
+  it('⭐ Story 6.26a (GI13): a member with ⛔ no claims writes ⛔ no inspection statement', async () => {
+    const { captured } = await run([]);
+    expect(captured.map((c) => c.table)).not.toContain(claimGroundInspections);
+    expect(captured).toHaveLength(21);
   });
 
   it('⭐ Story 10.21 (AC-R1/AC-R2): the staff attestation and the correction record are SCRUBBED but RETAINED', async () => {

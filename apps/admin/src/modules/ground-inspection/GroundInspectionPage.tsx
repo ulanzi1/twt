@@ -15,7 +15,9 @@ import { ApiError } from '../../api/client.js';
 import * as api from '../../api/client.js';
 import { resolveEn as t } from './i18n-en.js';
 
-const STAGES = ['initial', 'corroboration', 'additional_evidence'] as const;
+// ⚠ The page's OWN copies of the domain tuples (it imports no domain package) — kept in step by hand.
+// Story 6.26a (GI12): `certificate_check` — the short visit or office check limited to the original certificate.
+const STAGES = ['initial', 'corroboration', 'additional_evidence', 'certificate_check'] as const;
 const SITE_TYPES = [
   'family_residence',
   'current_residence',
@@ -33,8 +35,19 @@ const REFUSAL_REASONS: Record<'photo_refused' | 'evidence_unavailable', readonly
     'site_no_longer_exists',
     'inspector_safety_risk',
     'other_evidence_unavailable',
+    // Story 6.26a (GI4) — the family did not produce the original certificate (the claim then waits).
+    'original_certificate_not_produced',
   ],
 };
+/** Story 6.26a — the server's 409 / 400 codes that get their own words here (the rest show the server's message). */
+const WORDED_ERROR_CODES = [
+  'original_certificate_required',
+  'certificate_changed',
+  'no_current_certificate',
+  'death_date_required',
+  'death_date_in_future',
+  'invalid_death_facts',
+] as const;
 
 export interface GroundInspectionPageProps {
   pariwarId: string;
@@ -229,7 +242,7 @@ function ScheduleForm(props: {
         <select className="ml-2 rounded border px-2 py-1" value={inspectionStage} onChange={(e) => setStage(e.target.value)}>
           {STAGES.map((s) => (
             <option key={s} value={s}>
-              {s}
+              {s === 'certificate_check' ? t('gi.stage.certificate_check') : s}
             </option>
           ))}
         </select>
@@ -322,13 +335,24 @@ function AssignmentCard(props: {
           <strong>{t('gi.card.photos')}:</strong> {a.photos.length}
         </span>
       </div>
-      {a.photos.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {a.photos.map((p) => (
-            <img key={p.photoId} src={p.signedUrl} alt={p.caption ?? 'inspection photo'} className="h-20 w-20 rounded object-cover" />
-          ))}
-        </div>
-      )}
+      {/* Story 6.26a (GI4) — the original-certificate photos are labelled apart from the site photos. */}
+      {(['original_certificate', 'site'] as const).map((kind) => {
+        const photos = a.photos.filter((p) => p.photoKind === kind);
+        if (photos.length === 0) return null;
+        return (
+          <div key={kind} className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-gray-700">
+              {t(kind === 'original_certificate' ? 'gi.card.photosOriginal' : 'gi.card.photosSite')}
+            </span>
+            <div className="flex flex-wrap gap-2">
+              {photos.map((p) => (
+                <img key={p.photoId} src={p.signedUrl} alt={p.caption ?? t(`gi.photo.kind.${kind}`)} className="h-20 w-20 rounded object-cover" />
+              ))}
+            </div>
+          </div>
+        );
+      })}
+      {a.status === 'completed' && a.originalCertificateVerdict !== null && <InspectorRecord assignment={a} />}
       {isActive && (
         <div className="flex flex-wrap items-start gap-4">
           <PhotoUpload {...props} />
@@ -340,6 +364,30 @@ function AssignmentCard(props: {
   );
 }
 
+/** Story 6.26a (GI4 / GI5) — what the inspector recorded about the original certificate and the date of death. */
+function InspectorRecord({ assignment: a }: { assignment: api.GroundInspectionAssignmentT }): ReactElement {
+  return (
+    <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
+      <dt className="font-medium">{t('gi.card.verdict')}</dt>
+      <dd className={a.originalCertificateVerdict === 'does_not_match' ? 'font-semibold text-red-700' : undefined}>
+        {t(`gi.card.verdict.${a.originalCertificateVerdict}`)}
+      </dd>
+      {a.deathDateSource !== null && (
+        <>
+          <dt className="font-medium">{t(`gi.card.deathDate.${a.deathDateSource}`)}</dt>
+          <dd>{a.deathDate ?? '—'}</dd>
+        </>
+      )}
+      {a.deathDateSource === 'family_statement' && (
+        <>
+          <dt className="font-medium">{t('gi.card.deathTime')}</dt>
+          <dd>{a.deathTime ?? t('gi.card.deathTimeUnknown')}</dd>
+        </>
+      )}
+    </dl>
+  );
+}
+
 function PhotoUpload(props: {
   pariwarId: string;
   claimCaseId: string;
@@ -348,9 +396,20 @@ function PhotoUpload(props: {
 }): ReactElement {
   const [file, setFile] = useState<File | null>(null);
   const [caption, setCaption] = useState('');
+  // Story 6.26a (GI4) — a certificate check photographs only the original, so it defaults there.
+  const [photoKind, setPhotoKind] = useState<'site' | 'original_certificate'>(
+    props.assignment.inspectionStage === 'certificate_check' ? 'original_certificate' : 'site',
+  );
   const mutation = useMutation({
     mutationFn: () =>
-      api.uploadGroundInspectionPhoto(props.pariwarId, props.claimCaseId, props.assignment.groundInspectionId, file!, caption || undefined),
+      api.uploadGroundInspectionPhoto(
+        props.pariwarId,
+        props.claimCaseId,
+        props.assignment.groundInspectionId,
+        file!,
+        caption || undefined,
+        photoKind,
+      ),
     onSuccess: () => {
       setFile(null);
       setCaption('');
@@ -359,6 +418,17 @@ function PhotoUpload(props: {
   });
   return (
     <div className="flex flex-col gap-1">
+      <label className="text-sm">
+        {t('gi.photo.kind')}
+        <select
+          className="ml-2 rounded border px-2 py-1 text-sm"
+          value={photoKind}
+          onChange={(e) => setPhotoKind(e.target.value as 'site' | 'original_certificate')}
+        >
+          <option value="site">{t('gi.photo.kind.site')}</option>
+          <option value="original_certificate">{t('gi.photo.kind.original_certificate')}</option>
+        </select>
+      </label>
       <input type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => setFile(e.target.files?.[0] ?? null)} aria-label={t('gi.action.uploadPhoto')} />
       <input className="rounded border px-2 py-1 text-sm" placeholder={t('gi.action.caption')} value={caption} onChange={(e) => setCaption(e.target.value)} />
       <button className="rounded bg-gray-700 px-2 py-1 text-sm text-white disabled:opacity-50" type="button" disabled={!file || mutation.isPending} onClick={() => mutation.mutate()}>
@@ -369,6 +439,12 @@ function PhotoUpload(props: {
   );
 }
 
+/**
+ * Story 6.26a (GI4 / GI5 / GI12) — completing needs the original-certificate record: ≥1 photo of the original, the copy
+ * the inspector compared it with (opened here — its token rides the completion), whether it matches, and the date of
+ * death: the family's (+ an optional time) on a visit, the one printed on the original on a certificate check. The
+ * server re-checks every item; the form only says what is missing before the round-trip.
+ */
 function CompleteAction(props: {
   pariwarId: string;
   claimCaseId: string;
@@ -376,16 +452,71 @@ function CompleteAction(props: {
   photoCount: number;
   onMutated: () => void;
 }): ReactElement {
+  const isCheck = props.assignment.inspectionStage === 'certificate_check';
+  const originalPhotos = props.assignment.photos.filter((p) => p.photoKind === 'original_certificate').length;
+  const [verdict, setVerdict] = useState<'matches' | 'does_not_match' | null>(null);
+  const [deathDate, setDeathDate] = useState('');
+  const [deathTime, setDeathTime] = useState('');
+  const certificate = useMutation({
+    mutationFn: () => api.getGroundInspectionCertificate(props.pariwarId, props.claimCaseId, props.assignment.groundInspectionId),
+  });
   const mutation = useMutation({
-    mutationFn: () => api.completeGroundInspection(props.pariwarId, props.claimCaseId, props.assignment.groundInspectionId),
+    mutationFn: () =>
+      api.completeGroundInspection(props.pariwarId, props.claimCaseId, props.assignment.groundInspectionId, {
+        originalCertificateVerdict: verdict!,
+        comparedCertificateToken: certificate.data!.certificateToken,
+        deathDate,
+        ...(!isCheck && deathTime !== '' ? { deathTime } : {}),
+      }),
     onSuccess: () => props.onMutated(),
   });
+  const ready = props.photoCount >= 1 && originalPhotos >= 1 && certificate.data !== undefined && verdict !== null && deathDate !== '';
+  const radioName = `verdict-${props.assignment.groundInspectionId}`;
   return (
-    <div className="flex flex-col gap-1">
-      <button className="rounded bg-green-700 px-2 py-1 text-sm text-white disabled:opacity-50" type="button" disabled={mutation.isPending || props.photoCount < 1} onClick={() => mutation.mutate()}>
+    <div className="flex flex-col gap-2">
+      <button
+        className="self-start rounded border px-2 py-1 text-sm disabled:opacity-50"
+        type="button"
+        disabled={certificate.isPending}
+        onClick={() => certificate.mutate()}
+      >
+        {certificate.isPending ? t('gi.compare.pending') : t('gi.compare.open')}
+      </button>
+      {certificate.data && (
+        <div className="flex flex-col gap-1 text-sm">
+          <span>{t('gi.compare.heading')}</span>
+          <a className="text-blue-700 underline" href={certificate.data.signedUrl} target="_blank" rel="noreferrer">
+            {t('gi.compare.view')}
+          </a>
+        </div>
+      )}
+      {certificate.isError && <p role="alert" className="text-xs text-red-600">{errorText(certificate.error)}</p>}
+      <fieldset className="flex flex-col gap-1 text-sm" disabled={certificate.data === undefined}>
+        <legend>{t('gi.verdict.legend')}</legend>
+        <label>
+          <input type="radio" name={radioName} checked={verdict === 'matches'} onChange={() => setVerdict('matches')} /> {t('gi.verdict.matches')}
+        </label>
+        <label>
+          <input type="radio" name={radioName} checked={verdict === 'does_not_match'} onChange={() => setVerdict('does_not_match')} />{' '}
+          {t('gi.verdict.does_not_match')}
+        </label>
+      </fieldset>
+      {certificate.data === undefined && <p className="text-xs text-amber-700">{t('gi.compare.needed')}</p>}
+      <label className="text-sm">
+        {t(isCheck ? 'gi.date.printed' : 'gi.date.family')}
+        <input type="date" className="ml-2 rounded border px-2 py-1" value={deathDate} onChange={(e) => setDeathDate(e.target.value)} />
+      </label>
+      {!isCheck && (
+        <label className="text-sm">
+          {t('gi.time.family')}
+          <input type="time" className="ml-2 rounded border px-2 py-1" value={deathTime} onChange={(e) => setDeathTime(e.target.value)} />
+        </label>
+      )}
+      <button className="self-start rounded bg-green-700 px-2 py-1 text-sm text-white disabled:opacity-50" type="button" disabled={mutation.isPending || !ready} onClick={() => mutation.mutate()}>
         {mutation.isPending ? t('gi.action.completePending') : t('gi.action.complete')}
       </button>
       {props.photoCount < 1 && <p className="text-xs text-amber-700">{t('gi.action.completeNeedsPhoto')}</p>}
+      {props.photoCount >= 1 && originalPhotos < 1 && <p className="text-xs text-amber-700">{t('gi.action.completeNeedsOriginalPhoto')}</p>}
       {mutation.isError && <p role="alert" className="text-xs text-red-600">{errorText(mutation.error)}</p>}
     </div>
   );
@@ -423,7 +554,7 @@ function RefuseAction(props: {
       <select className="rounded border px-2 py-1 text-sm" aria-label={t('gi.refuse.reason')} value={refusalReason} onChange={(e) => setReason(e.target.value)}>
         {reasons.map((r) => (
           <option key={r} value={r}>
-            {r}
+            {r === 'original_certificate_not_produced' ? t('gi.refuse.originalNotProduced') : r}
           </option>
         ))}
       </select>
@@ -437,6 +568,11 @@ function RefuseAction(props: {
 }
 
 function errorText(err: unknown): string {
-  if (err instanceof ApiError) return err.message;
+  if (err instanceof ApiError) {
+    // Story 6.26a — the new codes in the page's own words (the rest show the server's message).
+    const code = err.code.replace(/^ground_inspection\./, '');
+    if ((WORDED_ERROR_CODES as readonly string[]).includes(code)) return t(`gi.error.${code}`);
+    return err.message;
+  }
   return t('gi.error.generic');
 }

@@ -112,3 +112,26 @@ describe('<CycleFreezePage> — the decision forwards the card’s `opts`', () =
     expect(select.value).toBe('r9_special_case');
   });
 });
+
+describe('<CycleFreezePage> — Story 6.26a (GI11), the ground-inspection WAIT in the trustee\'s words', () => {
+  for (const [reason, words] of [
+    ['no_completed_inspection', 'This claim is waiting for its ground inspection. It is not refused.'],
+    ['certificate_check_required', 'This claim is waiting for an inspector to see the original of its current death certificate. It is not refused.'],
+  ] as const) {
+    it(`⭐ \`cycle_freeze.ground_inspection_required\` (${reason}) ⇒ "${words}" — ⛔ a raw code, ⛔ "refused"`, async () => {
+      postCycleFreezeDecision.mockRejectedValue(new ApiError(409, 'cycle_freeze.ground_inspection_required', 'server words', { reason }));
+      const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+      render(
+        <QueryClientProvider client={qc}>
+          <CycleFreezePage pariwarId={PARIWAR} />
+        </QueryClientProvider>,
+      );
+      const section = await screen.findByRole('region', { name: 'Ready to freeze' });
+      fireEvent.click(within(section).getByRole('button', { name: 'Approve' }));
+      const alert = await screen.findByRole('alert');
+      expect(alert).toHaveTextContent(words);
+      expect(alert.textContent).not.toContain('cycle_freeze.');
+    });
+  }
+});
+

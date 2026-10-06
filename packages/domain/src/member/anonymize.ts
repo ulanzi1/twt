@@ -53,6 +53,8 @@ import { nomineeCorrections } from '../schema/nominee_corrections.js';
 import { nomineeDeterminations } from '../schema/nominee_determinations.js';
 import { claimDeathCertificateReviews } from '../schema/claim_death_certificate_reviews.js';
 import { claimWarningApprovals } from '../schema/claim_warning_approvals.js';
+import { claimGroundInspections } from '../schema/claim_ground_inspections.js';
+import { claims } from '../schema/claims.js';
 import { memberWithdrawals } from '../schema/member_withdrawals.js';
 
 /** The KMS material the sentinel-encrypt uses. The caller (the RTBF handler) threads its `{ kms, kekRef }`
@@ -89,6 +91,9 @@ const FIELD_CLASS_DEATH_CERTIFICATE_REVIEW = 'death_certificate_review';
 // Story 6.23a (NW13, Trap 14) — the approval-over-warning record's Tier-1 class (by-value twin of apps/api context.ts's
 // `CLAIM_WARNING_APPROVAL_FIELD_CLASS`; matches `piiColumn(1, 'claim_warning_approval')`).
 const FIELD_CLASS_CLAIM_WARNING_APPROVAL = 'claim_warning_approval';
+// Story 6.26a (GI13) — the ground-inspection Tier-1 class (by-value twin of apps/api context.ts's
+// `CLAIM_GROUND_INSPECTION_FIELD_CLASS`; matches `piiColumn(1, 'ground_inspection')`).
+const FIELD_CLASS_GROUND_INSPECTION = 'ground_inspection';
 const FIELD_CLASS_ADDRESS = 'member_address';
 const FIELD_CLASS_MOBILE = 'member_mobile';
 // Story 10.10 — mirrors `piiColumn(1, 'member_moderation')` on member_moderation_actions.
@@ -254,6 +259,37 @@ export async function anonymizeMember(
     .update(claimWarningApprovals)
     .set({ noteCiphertext: await encSentinel(pariwarId, FIELD_CLASS_CLAIM_WARNING_APPROVAL, enc) })
     .where(and(eq(claimWarningApprovals.deceasedMemberId, memberId), isNotNull(claimWarningApprovals.noteCiphertext)));
+
+  // ── ⭐ Story 6.26a (GI13) — the inspector's record of the date and time of death, on the DECEASED member's claims:
+  // both Tier-1 ciphertexts → sentinel, and the date's blind index → NULL (a keyed hash of a date of death is a
+  // correlatable token and must ⛔ not outlive the erasure). ⚠ `claim_ground_inspections` has ⛔ no
+  // `deceased_member_id` ⇒ read the deceased's claim ids FIRST, then `= ANY(...)` — ⛔ never a correlated subquery
+  // through the builder ([[project_epic6_drizzle_correlated_subquery_bug]]). ⚠⚠ ONLY rows whose date ciphertext is
+  // present (a `WHERE`, ⛔ not merely a `CASE`): Postgres re-checks 0147's NOT VALID completed-row CHECK on EVERY row an
+  // UPDATE rewrites, and a pre-6.26 completed row (⛔ no FQ11 record, ⛔ never backfilled) FAILS it — touching one would
+  // abort the erasure with 23514. The time is optional ⇒ replaced only where present. The verdict, the compared upload
+  // and the date's source are non-PII and kept. ⚠ FOUND, ⛔ not fixed here: 6.7's own Tier-1 inspection columns
+  // (location, family contact, notes, photo captions) are ⛔ not in this file — whose data they are is open
+  // (`deferred-work.md`).
+  const deceasedClaimIds = (
+    await client.select({ claimCaseId: claims.claimCaseId }).from(claims).where(eq(claims.deceasedMemberId, memberId))
+  ).map((r) => r.claimCaseId);
+  if (deceasedClaimIds.length > 0) {
+    const inspectionSentinel = await encSentinel(pariwarId, FIELD_CLASS_GROUND_INSPECTION, enc);
+    await client
+      .update(claimGroundInspections)
+      .set({
+        deathDateCiphertext: inspectionSentinel,
+        deathTimeCiphertext: sql`CASE WHEN ${claimGroundInspections.deathTimeCiphertext} IS NULL THEN NULL ELSE ${inspectionSentinel} END`,
+        deathDateIndex: null,
+      })
+      .where(
+        and(
+          inArray(claimGroundInspections.claimCaseId, deceasedClaimIds),
+          isNotNull(claimGroundInspections.deathDateCiphertext),
+        ),
+      );
+  }
 
   // ── member_medical_disclosures ── ALL rows: conditions → sentinel (NOT NULL); context → NULL. ──────
   await client

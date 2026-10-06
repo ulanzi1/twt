@@ -85,10 +85,27 @@ const FindingsBody = z
   })
   .strict();
 
+/**
+ * ⭐ Story 6.26a (GI4 / GI5) — the completion body gains the inspector's original-certificate record and the date of
+ * death. Each new field is OPTIONAL in the SCHEMA on purpose: a MISSING item is the writer's typed 409
+ * (`ground_inspection.original_certificate_required` / `…death_date_required`), which names what is missing; only a
+ * MALFORMED value is a 400 here (an unreal calendar date, a time ⛔ not `HH:MM` 24h).
+ */
 const CompleteBody = z
   .object({
     structuredFindings: StructuredFindings,
     notes: z.string().min(1).nullish(),
+    originalCertificateVerdict: z.enum(domainSchema.GROUND_INSPECTION_CERTIFICATE_VERDICTS).nullish(),
+    // The CURRENT certificate's token (= its upload id — the uuid the console already calls `certificateToken`).
+    comparedCertificateToken: z.string().uuid().nullish(),
+    // The family's date on a full visit; the date printed on the original on a certificate check.
+    deathDate: z
+      .string()
+      .refine((v) => claim.isRealCalendarDate(v), { message: 'deathDate must be a real YYYY-MM-DD date' })
+      .nullish(),
+    // The family's time (`HH:MM`, 24h) — omitted / null = "not known". ⛔ Refused on a certificate check (409-free:
+    // the writer's 400). The pattern is the domain's ONE definition.
+    deathTime: z.string().regex(claim.DEATH_TIME_PATTERN, 'deathTime must be HH:MM (24h)').nullish(),
   })
   .strict();
 
@@ -231,6 +248,18 @@ export function registerGroundInspectionRoutes(app: FastifyInstance, deps: AppDe
       preHandler: [adminSession, scope, resolveAssignment, conductFromRow],
     },
     h.complete,
+  );
+
+  // ⭐ Story 6.26a (GI4) — the inspector is SHOWN the claim's CURRENT uploaded certificate, to compare with the original
+  // they hold: the token, content type and a 300 s signed URL. Gated exactly as the other id-addressed verbs (the
+  // row's dimension), PLUS the D6 inspector guard in the handler (the assigned inspector, or an override holder).
+  r.get(
+    '/api/v1/p/:pariwarId/admin/claims/:claimCaseId/ground-inspection/:ground_inspection_id/certificate',
+    {
+      schema: { params: InspectionParam, tags: [TAG] },
+      preHandler: [adminSession, scope, resolveAssignment, conductFromRow],
+    },
+    h.certificate,
   );
 
   // AC4a — refusal disposition (district from row; + inspector guard in the handler).

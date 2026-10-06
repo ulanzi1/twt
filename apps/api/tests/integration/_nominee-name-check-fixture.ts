@@ -30,6 +30,7 @@ import {
   decryptDeathCertificateReviewField,
   encryptDeathCertificateReviewField,
 } from '../../src/modules/claims/death-certificate-crypto.js';
+import { deathDateBlindIndex, encryptGroundInspectionField } from '../../src/modules/claims/ground-inspection-crypto.js';
 import { closeScopeTx, openScopeTx } from '../../src/modules/multi-tenant/scope-tx.js';
 
 type ScopeTx = Awaited<ReturnType<typeof openScopeTx>>;
@@ -131,6 +132,71 @@ export async function ensureAcceptedDeathCertificate(
 }
 
 /**
+ * ⭐ Story 6.26a (GI15) — give a claim a COMPLETE ground inspection (`groundInspectionApprovalState`) through the REAL
+ * writers, in the caller's scope tx: an own FULL (`initial`) assignment, one `original_certificate` photo row, completed
+ * against the CURRENT upload with verdict `matches` and a family date EQUAL to the accepted date (⛔ no warning by
+ * default), encrypted and blind-indexed under the REAL field classes, on the review's clock (the date may be TOMORROW).
+ * ⛔ Nothing when already complete, or when the claim has ⛔ no current upload (the certificate conjunct answers first).
+ * The claim must be in the inspection write window. Returns the new assignment id, or `null`.
+ */
+export async function ensureGroundInspection(
+  deps: AppDeps,
+  scopeTx: ScopeTx,
+  pariwarId: string,
+  claimCaseId: string,
+  opts: { readonly force?: boolean; readonly stage?: 'initial' | 'certificate_check'; readonly verdict?: 'matches' | 'does_not_match' } = {},
+): Promise<string | null> {
+  const pid = ids.pariwarId(pariwarId);
+  const cid = ids.claimId(claimCaseId);
+  const facts = await claim.readGroundInspectionApprovalFacts(scopeTx.tx, pid, cid);
+  if (facts.currentUploadId === null) return null;
+  if (opts.force !== true && claim.groundInspectionApprovalState(facts).complete) return null;
+  const accepted = await claim.getCurrentAcceptedDeathCertificate(scopeTx.tx, pid, cid);
+  const date =
+    (accepted ? await decryptDeathCertificateReviewField(accepted.acceptedDateCiphertext, pariwarId, deps.encryption) : null) ??
+    certificateDateAfterEverything();
+  const stage = opts.stage ?? 'initial';
+  const inspector = randomUUID();
+  const { groundInspection } = await claim.scheduleGroundInspection(scopeTx.client, {
+    claimCaseId: cid,
+    pariwarId: pid,
+    district: 'Patna',
+    inspectionStage: stage,
+    inspectionSiteType: 'family_residence',
+    inspectorActorId: inspector,
+    scheduledAt: new Date(),
+    scheduledByActor: inspector,
+    idempotencyKey: randomUUID(),
+  });
+  const gid = groundInspection.groundInspectionId;
+  await claim.addGroundInspectionPhoto(scopeTx.client, {
+    pariwarId: pid,
+    groundInspectionId: gid,
+    actingActorId: inspector,
+    storageObjectKey: `fixture/ground-inspection/${gid}/original-certificate.jpg`,
+    contentType: 'image/jpeg',
+    byteSize: 1024,
+    photoKind: 'original_certificate',
+  });
+  await claim.completeGroundInspection(scopeTx.client, {
+    pariwarId: pid,
+    groundInspectionId: gid,
+    actingActorId: inspector,
+    originalCertificateVerdict: opts.verdict ?? 'matches',
+    comparedCertificateUploadId: facts.currentUploadId,
+    deathDate: {
+      plaintext: date,
+      ciphertext: await encryptGroundInspectionField(date, pariwarId, deps.encryption),
+      index: await deathDateBlindIndex(date, pariwarId, deps.encryption),
+      source: stage === 'certificate_check' ? 'original_certificate' : 'family_statement',
+    },
+    // The review's clock (the date may be TOMORROW, IST) — the inline twin of the review's `now` above.
+    now: new Date(Math.max(Date.now(), Date.parse(`${date}T12:00:00+05:30`))),
+  });
+  return gid;
+}
+
+/**
  * Give a claim its two bank accounts and a recorded, PASSING name check so it can pass the AC4 gate.
  * Opens and commits its own scope tx. The claim must already be in one of
  * `NOMINEE_NAME_CHECK_RECORDABLE_STATES`.
@@ -173,6 +239,11 @@ export async function seedNomineeNameCheck(
      *  determination is effective, else to the PROJECTED ones. `'skip'` reaches `…claim_contact_required`
      *  (`no_record`). A bare `skip: true` stays a pure no-op. */
     readonly contact?: 'seed' | 'skip';
+    /** ⭐ Story 6.26a (GI15) — the COMPLETE ground inspection the approval gate now requires (`-263` FQ9 A), AFTER the
+     *  name check. Default `'completed'` (`ensureGroundInspection` — real writers; ⛔ nothing when already complete or
+     *  ⛔ no current upload; in the `accountsOnly` / `singleAccount` modes too, where it is inert). `'skip'` reaches
+     *  `…ground_inspection_required`. A bare `skip: true` stays a pure no-op. */
+    readonly inspection?: 'completed' | 'skip';
   } = {},
 ): Promise<void> {
   if (opts.skip === true) {
@@ -236,6 +307,7 @@ export async function seedNomineeNameCheck(
     // ⛔ The "two accounts but NOBODY CHECKED" fixture stops here — exactly the claim AC4's gate
     // must refuse with `nominee_name_check_required`, and the one no test could build before.
     if (opts.accountsOnly === true || opts.singleAccount === true) {
+      if (opts.inspection !== 'skip') await ensureGroundInspection(deps, scopeTx, pariwarId, claimCaseId);
       if (opts.contact !== 'skip') await ensureClaimContact(scopeTx, pariwarId, claimCaseId);
       ok = true;
       return;
@@ -276,6 +348,7 @@ export async function seedNomineeNameCheck(
       actorDisplay: opts.actorDisplay ?? 'Anita (District Admin)',
       actor: 'operator',
     });
+    if (opts.inspection !== 'skip') await ensureGroundInspection(deps, scopeTx, pariwarId, claimCaseId);
     if (opts.contact !== 'skip') await ensureClaimContact(scopeTx, pariwarId, claimCaseId);
     ok = true;
   } finally {

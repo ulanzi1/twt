@@ -35,6 +35,7 @@ import type {
   ApprovalWarningsStatus,
   NomineeNameCheckStatus,
   DocumentReviewSection,
+  GroundInspectionGateStatus,
   GroundInspectionSection,
   MemberValidityPayloadDto,
   PeerMeshSection,
@@ -58,6 +59,7 @@ import { geoTreeResolverForRequest } from '../rbac/index.js';
 import { DEATH_CERTIFICATE_REVIEW_KEY } from './claims.death-certificate.handlers.js';
 import { decryptClaimDocumentField } from './claim-document-crypto.js';
 import { decryptGroundInspectionField } from './ground-inspection-crypto.js';
+import { underSavepoint } from './later-approval-warnings.js';
 import { decryptVerifierRationale } from './verifier-decision-crypto.js';
 
 /** The verifier-console READ key (Story 6.10, catalog v13) — gates the route (district dimension). */
@@ -159,7 +161,20 @@ const SIGNED_URL_TTL_SECONDS = 300;
  * SAVEPOINT). ⭐ Ledger line:
  *   + Story 6.23a (NW8): the nominee-change warnings, their coverage and the reason list   +1  → 19
  */
-export const VERIFIER_CONSOLE_MAX_READS = 19;
+/*
+ * ⭐ STORY 6.26a's ONE READ (GI9) — the explanation this counter demands. `-263` FQ9 A makes a COMPLETE ground inspection
+ * a precondition of approval, exactly as 6.18 / 6.21a / 6.23a made theirs — so a console that could not say whether the
+ * inspection is complete would offer an Approve that 409s `…ground_inspection_required`. ⛔ It is the MINIMUM:
+ * `readGroundInspectionApprovalFacts` answers the claim's own assignments, the inherited source (the shared
+ * inheritance fragment) AND the current upload (the shared current-upload rule) in ONE statement, and the section
+ * applies the gate's OWN pure predicate to it (⛔ never a re-derived copy). It decrypts ⛔ nothing. It runs under a raw
+ * SAVEPOINT (`underSavepoint`, 6.23b RD12 / Trap 15), so its SQL failure renders `available: false` and ⛔ never aborts
+ * the scope transaction under `approvalWarnings`, which stays LAST. ⭐ Ledger line:
+ *   + Story 6.26a (GI9): why the approval waits for the ground inspection                   +1  → 20
+ * (GI10's console inheritance change — read whenever ⛔ no OWN completed FULL visit, ⛔ not only when ⛔ no assignment
+ * at all — keeps Story 6.20's two conditional reads read-for-read.)
+ */
+export const VERIFIER_CONSOLE_MAX_READS = 20;
 
 /** Counts the assembler's top-level bounded source reads (the no-N+1 fan-out width). */
 class ReadCounter {
@@ -173,6 +188,10 @@ class ReadCounter {
 export interface VerifierConsoleContext {
   /** The RLS-scoped Drizzle handle (request.scopeTx.tx). */
   db: Db;
+  /** ⭐ Story 6.26a (AC9) — the SAME transaction's raw client (request.scopeTx.client), for `underSavepoint`'s
+   *  `SAVEPOINT` around the ground-inspection gate section. REQUIRED: a section that could abort the scope tx must
+   *  ⛔ never run without it. */
+  client: { query(text: string): Promise<unknown> };
   pariwarId: string;
   claimCaseId: string;
   /** The deceased member's server-derived posting district (the route resolved + authorized it). */
@@ -283,7 +302,15 @@ export async function assembleVerifierConsole(
   const peerMesh = await assemblePeerMesh(ctx, claimCaseId, reads);
 
   // ── (d) ground-inspection notes + photos (Story 6.7) — `[]` = a first-class absence signal ───────
-  const groundInspection = await assembleGroundInspection(deps, ctx, claimCaseId, reads);
+  // Story 6.26a (GI10) — "compared with the CURRENT certificate?" needs the current upload: the document-review section
+  // already read it (6.21a's snapshot) ⇒ passed through, ⛔ never a second read. `undefined` = that section failed.
+  const currentCertificateToken =
+    documentReview.status === 'present'
+      ? (documentReview.reviews.find((r) => r.documentType === 'death_certificate')?.review?.certificateToken ?? null)
+      : documentReview.status === 'empty'
+        ? null
+        : undefined;
+  const groundInspection = await assembleGroundInspection(deps, ctx, claimCaseId, currentCertificateToken, reads);
 
   // ── (e)/(f) prior comments + recent precedents — `not_available_yet` until Story 6.11 (D6) ───────
   const priorVerifierComments = await assemblePriorComments(deps, ctx, claimCaseId);
@@ -294,6 +321,10 @@ export async function assembleVerifierConsole(
 
   // ── (h) nominee name-check status (Story 6.18) — NON-PII; ⛔ no name, ⛔ no note, ⛔ no decrypt ──
   const nomineeNameCheck = await assembleNomineeNameCheckStatus(ctx, claimCaseId, core.claim.deceasedMemberId, reads);
+
+  // ── (j) why the approval waits for the ground inspection (Story 6.26a, GI9) — NON-PII; ⛔ no decrypt; under a
+  //    SAVEPOINT, BEFORE the warnings (which stay LAST). ─────────────────────────────────────────────────────────
+  const groundInspectionGate = await assembleGroundInspectionGate(ctx, claimCaseId, reads);
 
   // ── (i) the nominee-change warnings (Story 6.23a, NW8) — NON-PII; ⛔ no decrypt. ⚠ LAST (⛔ no SAVEPOINT). ─────
   const approvalWarnings = await assembleApprovalWarnings(ctx, claimCaseId, core.claim.currentState as string, reads);
@@ -313,6 +344,7 @@ export async function assembleVerifierConsole(
     recentPrecedents,
     shepherd,
     nomineeNameCheck,
+    groundInspectionGate,
     approvalWarnings,
   };
   return { packet, readCount: reads.count };
@@ -677,64 +709,135 @@ async function assemblePeerMesh(
   }
 }
 
+/**
+ * (j) WHY THE APPROVAL WAITS for the ground inspection — Story 6.26a (GI9; `-263` Consequence 1). ONE counted read
+ * (`readGroundInspectionApprovalFacts`) and the gate's OWN pure predicate (`groundInspectionApprovalState`) — so the
+ * console and `assertGroundInspectionCompleteForApproval` can ⛔ never disagree. Under a raw SAVEPOINT: a SQL failure
+ * rolls back ONLY this read and fails CLOSED (`available: false` — Approve disabled with "could not be checked" words,
+ * ⛔ never "complete"; 6.18's rule). ⭐ EXPORTED for AC9's exact tests; the route reaches it through
+ * `assembleVerifierConsole`.
+ */
+export async function assembleGroundInspectionGate(
+  ctx: VerifierConsoleContext,
+  claimCaseId: ids.ClaimId,
+  reads: { bump(): void },
+): Promise<GroundInspectionGateStatus> {
+  try {
+    reads.bump();
+    const facts = await underSavepoint(ctx.client, 'console_ground_inspection_gate', () =>
+      claim.readGroundInspectionApprovalFacts(ctx.db, ids.pariwarId(ctx.pariwarId), claimCaseId),
+    );
+    const state = claim.groundInspectionApprovalState(facts);
+    return { available: true, complete: state.complete, waitReason: state.waitReason };
+  } catch (err) {
+    ctx.log?.warn(
+      { err: err instanceof Error ? err.name : 'unknown', claimCaseId: ctx.claimCaseId },
+      'verifier-console: ground-inspection gate unavailable; failing closed to cannot-approve',
+    );
+    return { available: false, complete: false, waitReason: null };
+  }
+}
+
 async function assembleGroundInspection(
   deps: AppDeps,
   ctx: VerifierConsoleContext,
   claimCaseId: ids.ClaimId,
+  /** The claim's CURRENT certificate upload (from the document-review section); `null` = none; `undefined` = unknown. */
+  currentUploadId: string | null | undefined,
   reads: ReadCounter,
 ): Promise<GroundInspectionSection> {
   try {
     reads.bump();
     const own = await claim.getClaimGroundInspection(ctx.db, ids.pariwarId(ctx.pariwarId), claimCaseId);
-    let all = own;
+    let inherited: typeof own = [];
     let inheritedFrom: { claimCaseId: string } | undefined;
-    if (own.length === 0) {
+    // ⭐ Story 6.26a (GI10; Fact 3) — the inheritance is read whenever this claim has ⛔ no OWN completed FULL visit
+    // (⛔ not "no assignment at all"): once the refile gets its OWN certificate check, the inherited visit must stay
+    // in view beside it, labelled — it is still what makes the claim VISITED (GI2).
+    const ownVisited = own.some(
+      (r) => r.inspection.status === 'completed' && r.inspection.inspectionStage !== 'certificate_check',
+    );
+    if (!ownVisited) {
       // ⭐ Story 6.20 (AC13) — the true nominee's refile INHERITS the `-239`-refused claim's COMPLETED
       // inspection. Derived here, ⛔ never stored. ⚠ COUNTED (two reads, only on this path).
       reads.bump();
       const source = await claim.getInheritedGroundInspectionSource(ctx.db, ids.pariwarId(ctx.pariwarId), claimCaseId);
-      if (source === null) return { status: 'empty' }; // AC5 absence-is-a-signal — but a genuine [], not a failure
-      reads.bump();
-      all = (await claim.getClaimGroundInspection(ctx.db, ids.pariwarId(ctx.pariwarId), source)).filter(
-        (r) => r.inspection.status === 'completed',
-      );
-      if (all.length === 0) return { status: 'empty' };
-      inheritedFrom = { claimCaseId: source };
-    }
-
-    const assignments = await Promise.all(
-      all.map(async (r) => {
-        const photos = await Promise.all(
-          r.photos.map(async (p) => ({
-            photoId: p.photoId,
-            contentType: p.contentType,
-            byteSize: p.byteSize,
-            caption:
-              p.captionCiphertext == null
-                ? null
-                : await safeDecrypt(() => decryptGroundInspectionField(p.captionCiphertext!, ctx.pariwarId, deps.encryption), ctx, 'inspection.caption'),
-            signedUrl: await deps.claimDocumentStorage.signedReadUrl(p.storageObjectKey, SIGNED_URL_TTL_SECONDS),
-          })),
+      if (source !== null) {
+        reads.bump();
+        inherited = (await claim.getClaimGroundInspection(ctx.db, ids.pariwarId(ctx.pariwarId), source)).filter(
+          (r) => r.inspection.status === 'completed',
         );
-        return {
-          groundInspectionId: r.inspection.groundInspectionId,
-          district: r.inspection.district,
-          inspectionStage: r.inspection.inspectionStage,
-          inspectionSiteType: r.inspection.inspectionSiteType,
-          inspectorActorId: r.inspection.inspectorActorId,
-          scheduledAt: r.inspection.scheduledAt.toISOString(),
-          status: r.inspection.status,
-          refusalReason: r.inspection.refusalReason,
-          completedAt: r.inspection.completedAt ? r.inspection.completedAt.toISOString() : null,
-          notes:
-            r.inspection.notesCiphertext == null
+        if (inherited.length > 0) inheritedFrom = { claimCaseId: source };
+      }
+    }
+    if (own.length === 0 && inherited.length === 0) return { status: 'empty' }; // AC5 absence-is-a-signal
+
+
+    const decryptFact = async (ct: string | null, what: string): Promise<{ value: string | null; unreadable: boolean }> => {
+      if (ct == null) return { value: null, unreadable: false };
+      const value = await safeDecrypt(() => decryptGroundInspectionField(ct, ctx.pariwarId, deps.encryption), ctx, what);
+      return { value, unreadable: value === null };
+    };
+
+    const toItem = async (r: (typeof own)[number], isInherited: boolean) => {
+      const photos = await Promise.all(
+        r.photos.map(async (p) => ({
+          photoId: p.photoId,
+          contentType: p.contentType,
+          byteSize: p.byteSize,
+          caption:
+            p.captionCiphertext == null
               ? null
-              : await safeDecrypt(() => decryptGroundInspectionField(r.inspection.notesCiphertext!, ctx.pariwarId, deps.encryption), ctx, 'inspection.notes'),
-          structuredFindings: r.inspection.structuredFindings ?? null,
-          photos,
-        };
-      }),
-    );
+              : await safeDecrypt(() => decryptGroundInspectionField(p.captionCiphertext!, ctx.pariwarId, deps.encryption), ctx, 'inspection.caption'),
+          signedUrl: await deps.claimDocumentStorage.signedReadUrl(p.storageObjectKey, SIGNED_URL_TTL_SECONDS),
+          photoKind: p.photoKind,
+        })),
+      );
+      const compared = r.inspection.comparedCertificateUploadId;
+      const deathDate = await decryptFact(r.inspection.deathDateCiphertext, 'inspection.death_date');
+      const deathTime = await decryptFact(r.inspection.deathTimeCiphertext, 'inspection.death_time');
+      return {
+        groundInspectionId: r.inspection.groundInspectionId,
+        district: r.inspection.district,
+        inspectionStage: r.inspection.inspectionStage,
+        inspectionSiteType: r.inspection.inspectionSiteType,
+        inspectorActorId: r.inspection.inspectorActorId,
+        scheduledAt: r.inspection.scheduledAt.toISOString(),
+        status: r.inspection.status,
+        refusalReason: r.inspection.refusalReason,
+        completedAt: r.inspection.completedAt ? r.inspection.completedAt.toISOString() : null,
+        notes:
+          r.inspection.notesCiphertext == null
+            ? null
+            : await safeDecrypt(() => decryptGroundInspectionField(r.inspection.notesCiphertext!, ctx.pariwarId, deps.encryption), ctx, 'inspection.notes'),
+        structuredFindings: r.inspection.structuredFindings ?? null,
+        photos,
+        originalCertificateVerdict: r.inspection.originalCertificateVerdict,
+        // "Compared with the CURRENT certificate, or an earlier one" (GI10). An inherited inspection compared ANOTHER
+        // claim's certificate ⇒ always `earlier`; an unknown current upload ⇒ `unknown` (⛔ never a guess).
+        comparedAgainst:
+          compared === null
+            ? null
+            : isInherited
+              ? ('earlier' as const)
+              : currentUploadId === undefined
+                ? ('unknown' as const)
+                : currentUploadId !== null && compared.toLowerCase() === currentUploadId.toLowerCase()
+                  ? ('current' as const)
+                  : ('earlier' as const),
+        deathDateSource: r.inspection.deathDateSource,
+        deathDate: deathDate.value,
+        deathTime: deathTime.value,
+        deathDateUnreadable: deathDate.unreadable,
+        deathTimeUnreadable: deathTime.unreadable,
+        inherited: isInherited,
+      };
+    };
+
+    const assignments = [
+      ...(await Promise.all(own.map((r) => toItem(r, false)))),
+      ...(await Promise.all(inherited.map((r) => toItem(r, true)))),
+    ];
     return inheritedFrom ? { status: 'present', assignments, inheritedFrom } : { status: 'present', assignments };
   } catch (err) {
     ctx.log?.warn({ err, claimCaseId: ctx.claimCaseId }, 'verifier-console: ground-inspection section unavailable');
@@ -832,6 +935,7 @@ export function createVerifierConsoleHandlers(deps: AppDeps) {
 
       const { packet } = await assembleVerifierConsole(deps, {
         db: scopeTx.tx,
+        client: scopeTx.client,
         pariwarId: scopeTx.pariwarId,
         claimCaseId,
         district,

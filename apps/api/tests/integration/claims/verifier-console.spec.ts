@@ -34,7 +34,7 @@ import * as service from '../../../src/modules/auth/admin/admin-auth.service.js'
 import { closeScopeTx, openScopeTx } from '../../../src/modules/multi-tenant/scope-tx.js';
 import { buildServer } from '../../../src/server.js';
 import { buildTestDeps, hasDatabase, makeClient, type TestDeps } from '../_setup.js';
-import { seedNomineeNameCheck } from '../_nominee-name-check-fixture.js';
+import { insertDeathCertificate, seedNomineeNameCheck } from '../_nominee-name-check-fixture.js';
 import { FakeWebAuthnProvider } from '../_webauthn-fake.js';
 
 type Client = ReturnType<typeof makeClient>;
@@ -205,22 +205,48 @@ describe.skipIf(!hasDatabase)('Verifier-console read surface — E2E (:5433)', (
     }
   }
 
-  /** Create ONE ground-inspection assignment (no photos yet). */
-  async function seedGroundInspection(pariwarId: string, claimCaseId: string): Promise<string> {
+  /**
+   * Raw-insert ONE COMPLETED ground-inspection assignment (no photos).
+   * ⚠ AMENDED by Story 6.26a (GI4 / GI5): migration 0147's completed-row CHECK requires the inspector's FQ11 record
+   * and date on every completed row, so the row carries them — compared against the claim's CURRENT certificate (one is
+   * raw-inserted first when the claim has none, e.g. a `skip: true` claim).
+   */
+  async function insertCompletedInspection(
+    pariwarId: string,
+    claimCaseId: string,
+    opts: { readonly scheduledAt?: string; readonly completedAt?: string } = {},
+  ): Promise<string> {
+    const scopeTx = await openScopeTx(deps, pariwarId);
+    let uploadId: string;
+    try {
+      const facts = await claim.readGroundInspectionApprovalFacts(scopeTx.tx, ids.pariwarId(pariwarId), ids.claimId(claimCaseId));
+      uploadId = facts.currentUploadId ?? (await insertDeathCertificate(scopeTx, pariwarId, claimCaseId)).uploadId;
+      await closeScopeTx(scopeTx, true);
+    } catch (err) {
+      await closeScopeTx(scopeTx, false);
+      throw err;
+    }
     const groundInspectionId = randomUUID();
     const c = await td.pool.connect();
     try {
       await c.query(
         `INSERT INTO claim_ground_inspections
            (ground_inspection_id, claim_case_id, pariwar_id, district, inspection_stage, inspection_site_type,
-            inspector_actor_id, scheduled_at, status)
-         VALUES ($1, $2, $3, $4, 'initial', 'family_residence', 'inspector-1', now(), 'completed')`,
-        [groundInspectionId, claimCaseId, pariwarId, DISTRICT],
+            inspector_actor_id, scheduled_at, status, completed_at, original_certificate_verdict,
+            compared_certificate_upload_id, death_date_ciphertext, death_date_source, death_date_index)
+         VALUES ($1, $2, $3, $4, 'initial', 'family_residence', 'inspector-1', ${opts.scheduledAt ?? 'now()'}, 'completed',
+                 ${opts.completedAt ?? 'now()'}, 'matches', $5, 'enc:v1:death-date', 'family_statement', 'fixture-death-date-index')`,
+        [groundInspectionId, claimCaseId, pariwarId, DISTRICT, uploadId],
       );
     } finally {
       c.release();
     }
     return groundInspectionId;
+  }
+
+  /** Create ONE ground-inspection assignment (no photos yet). */
+  async function seedGroundInspection(pariwarId: string, claimCaseId: string): Promise<string> {
+    return insertCompletedInspection(pariwarId, claimCaseId);
   }
 
   /** Add `photoCount` more photos to an existing ground-inspection assignment. */
@@ -580,6 +606,7 @@ describe.skipIf(!hasDatabase)('Verifier-console read surface — E2E (:5433)', (
     try {
       const { packet } = await assembleVerifierConsole(spiedDeps, {
         db: scopeTx.tx,
+        client: scopeTx.client,
         pariwarId,
         claimCaseId,
         district: DISTRICT,
@@ -632,6 +659,7 @@ describe.skipIf(!hasDatabase)('Verifier-console read surface — E2E (:5433)', (
     try {
       const { packet } = await assembleVerifierConsole(brokenDeps, {
         db: scopeTx.tx,
+        client: scopeTx.client,
         pariwarId,
         claimCaseId,
         district: DISTRICT,
@@ -692,6 +720,7 @@ describe.skipIf(!hasDatabase)('Verifier-console read surface — E2E (:5433)', (
         };
         const { readCount } = await assembleVerifierConsole(deps, {
           db: scopeTx.tx,
+          client: scopeTx.client,
           pariwarId,
           claimCaseId,
           district: DISTRICT,
@@ -769,6 +798,7 @@ describe.skipIf(!hasDatabase)('Verifier-console read surface — E2E (:5433)', (
       try {
         const { readCount } = await assembleVerifierConsole(deps, {
           db: scopeTx.tx,
+          client: scopeTx.client,
           pariwarId,
           claimCaseId,
           district: DISTRICT,
@@ -832,6 +862,7 @@ describe.skipIf(!hasDatabase)('Verifier-console read surface — E2E (:5433)', (
       try {
         const { readCount } = await assembleVerifierConsole(deps, {
           db: scopeTx.tx,
+          client: scopeTx.client,
           pariwarId,
           claimCaseId,
           district: DISTRICT,
@@ -872,6 +903,7 @@ describe.skipIf(!hasDatabase)('Verifier-console read surface — E2E (:5433)', (
     try {
       const { packet } = await assembleVerifierConsole(deps, {
         db: scopeTx.tx,
+        client: scopeTx.client,
         pariwarId,
         claimCaseId,
         district: DISTRICT,
@@ -886,7 +918,11 @@ describe.skipIf(!hasDatabase)('Verifier-console read surface — E2E (:5433)', (
       }
       expect(packet.groundInspection.status).toBe('present');
       if (packet.groundInspection.status === 'present') {
-        expect(packet.groundInspection.assignments[0]?.photos).toHaveLength(3);
+        // Story 6.26a (GI15) — the fixture now also seeds a complete inspection, so THIS test's assignment is found
+        // by its id (⛔ no longer assumed to be the first).
+        expect(
+          packet.groundInspection.assignments.find((a) => a.groundInspectionId === groundInspectionId)?.photos,
+        ).toHaveLength(3);
       }
     } catch (err) {
       await closeScopeTx(scopeTx, false);
@@ -904,7 +940,7 @@ describe.skipIf(!hasDatabase)('Verifier-console read surface — E2E (:5433)', (
     const scopeTx = await openScopeTx(deps, pariwarId);
     try {
       const packet = await assembleVerifierConsole(deps, {
-        db: scopeTx.tx, pariwarId, claimCaseId, district: DISTRICT,
+        db: scopeTx.tx, client: scopeTx.client, pariwarId, claimCaseId, district: DISTRICT,
         actorId: randomUUID(),
         grants: [{ pariwarId, role: 'super_admin', scopeDimension: 'global', scopeValue: null }],
         traceId: null,
@@ -1007,6 +1043,7 @@ describe.skipIf(!hasDatabase)('Verifier-console read surface — E2E (:5433)', (
       };
       const out = await assembleVerifierConsole(deps, {
         db: scopeTx.tx,
+        client: scopeTx.client,
         pariwarId,
         claimCaseId,
         district: DISTRICT,
@@ -1031,14 +1068,12 @@ describe.skipIf(!hasDatabase)('Verifier-console read surface — E2E (:5433)', (
     const deceased = await seedDeceasedMember(pariwarId, DISTRICT);
     // The SOURCE: an earlier claim refused on `-239`, with a COMPLETED inspection.
     const source = await seedClaim(pariwarId, deceased, { skip: true });
+    await insertCompletedInspection(pariwarId, source, {
+      scheduledAt: "now() - interval '3 days'",
+      completedAt: "now() - interval '2 days'",
+    });
     const c = await td.pool.connect();
     try {
-      await c.query(
-        `INSERT INTO claim_ground_inspections (claim_case_id, pariwar_id, district, inspection_stage, inspection_site_type,
-           inspector_actor_id, scheduled_at, status, completed_at)
-         VALUES ($1, $2, $3, 'initial', 'family_residence', $4, now() - interval '3 days', 'completed', now() - interval '2 days')`,
-        [source, pariwarId, DISTRICT, randomUUID()],
-      );
       await c.query(
         `INSERT INTO claim_verifier_decisions (claim_case_id, pariwar_id, outcome, reason_code, actor_id, actor_display)
          VALUES ($1, $2, 'denied', 'post_death_nominee_change', $3, 'Anita (District Admin)')`,
@@ -1048,7 +1083,9 @@ describe.skipIf(!hasDatabase)('Verifier-console read surface — E2E (:5433)', (
       c.release();
     }
     // The REFILE — later, with ⛔ no inspection of its own: the path that pays the inheritance reads.
-    const refile = await seedClaim(pariwarId, deceased);
+    // ⚠ Story 6.26a (GI15): the fixture now seeds a complete inspection by default — skipped here, or the refile
+    // would hold its own visit and never take the inheritance path.
+    const refile = await seedClaim(pariwarId, deceased, { inspection: 'skip' });
     const { packet, readCount, actual } = await assembleMeasured(pariwarId, refile);
 
     // ⭐ The API wiring (not only the domain derivation): the section is PRESENT, from the source, labelled.
@@ -1068,18 +1105,13 @@ describe.skipIf(!hasDatabase)('Verifier-console read surface — E2E (:5433)', (
     // too). ⚠ Residual, named: this baseline has one MORE earlier claim than the refile (the refile itself) —
     // equal read counts rely on every section booking per CALL, ⛔ not per row; the `actual` delta would expose
     // a per-row section.
-    const own = await seedClaim(pariwarId, deceased);
-    const c2 = await td.pool.connect();
-    try {
-      await c2.query(
-        `INSERT INTO claim_ground_inspections (claim_case_id, pariwar_id, district, inspection_stage, inspection_site_type,
-           inspector_actor_id, scheduled_at, status, completed_at)
-         VALUES ($1, $2, $3, 'initial', 'family_residence', $4, now() - interval '3 days', 'completed', now() - interval '2 days')`,
-        [own, pariwarId, DISTRICT, randomUUID()],
-      );
-    } finally {
-      c2.release();
-    }
+    // Story 6.26a — `inspection: 'skip'` too, so the baseline's ONLY inspection is the raw one (photo-free, like the
+    // inherited source's): the two paths then differ by exactly the inheritance-only calls.
+    const own = await seedClaim(pariwarId, deceased, { inspection: 'skip' });
+    await insertCompletedInspection(pariwarId, own, {
+      scheduledAt: "now() - interval '3 days'",
+      completedAt: "now() - interval '2 days'",
+    });
     const baseline = await assembleMeasured(pariwarId, own);
     expect(baseline.packet.groundInspection.status).toBe('present');
     expect((baseline.packet.groundInspection as { inheritedFrom?: unknown }).inheritedFrom).toBeUndefined();
@@ -1087,12 +1119,13 @@ describe.skipIf(!hasDatabase)('Verifier-console read surface — E2E (:5433)', (
     expect(actual - baseline.actual, 'statements Postgres received for the inheritance vs reads booked').toBe(readCount - baseline.readCount);
   });
 
-  it('⭐⭐ Story 6.23a (Trap 10) — the ceiling is 19, and the warnings section books EXACTLY one read and sends EXACTLY one statement', async () => {
+  it('⭐⭐ Story 6.23a (Trap 10) — the ceiling is 20 (Story 6.26a: 19 → 20), and the warnings section books EXACTLY one read and sends EXACTLY one statement', async () => {
     // The ledger above the constant says +1 → 19. ⚠ The shipped tests catch over-reporting only (`reported <=
     // actual`) and a ceiling breach (`readCount <= MAX`); a forgotten `reads.bump()` stays green there. ⇒ the
     // section is measured on its OWN: its booked reads AND the statements Postgres receives, each exactly 1 — the
     // coverage AND the Pariwar's reason list ride ONE statement.
-    expect(VERIFIER_CONSOLE_MAX_READS).toBe(19);
+    // Story 6.26a (GI9, AC9) — moved 19 → 20 by the ground-inspection gate section (its own exact test below).
+    expect(VERIFIER_CONSOLE_MAX_READS).toBe(20);
     const pariwarId = randomUUID();
     const deceased = await seedDeceasedMember(pariwarId, DISTRICT);
     const claimCaseId = await seedClaim(pariwarId, deceased);
@@ -1109,6 +1142,7 @@ describe.skipIf(!hasDatabase)('Verifier-console read surface — E2E (:5433)', (
       const section = await assembleApprovalWarnings(
         {
           db: scopeTx.tx,
+          client: scopeTx.client,
           pariwarId,
           claimCaseId,
           district: DISTRICT,
@@ -1145,6 +1179,7 @@ describe.skipIf(!hasDatabase)('Verifier-console read surface — E2E (:5433)', (
       const section = await assembleApprovalWarnings(
         {
           db: scopeTx.tx,
+          client: scopeTx.client,
           pariwarId,
           claimCaseId,
           district: DISTRICT,

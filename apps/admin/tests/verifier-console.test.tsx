@@ -92,6 +92,8 @@ const PRESENT_PACKET: VerifierConsolePacket = {
   },
   nomineeNameCheck: { available: true, accountsComplete: true, currentAndPassing: true, differenceReasons: [] },
   // Story 6.23a (NW8) — the nominee-change warnings section (⛔ no warning by default).
+  // Story 6.26a (GI9) — the ground-inspection gate section (complete by default).
+  groundInspectionGate: { available: true, complete: true, waitReason: null },
   approvalWarnings: {
     available: true,
     kinds: [],
@@ -193,6 +195,15 @@ describe('<SignalsPanel> — six sections, four-state vocabulary, tri-state conc
                 notes: null,
                 structuredFindings: null,
                 photos: [],
+                // Story 6.26a (GI10) — a pre-6.26a inherited row: ⛔ no record, labelled as carried over.
+                originalCertificateVerdict: null,
+                comparedAgainst: null,
+                deathDateSource: null,
+                deathDate: null,
+                deathTime: null,
+                deathDateUnreadable: false,
+                deathTimeUnreadable: false,
+                inherited: true,
               },
             ],
             inheritedFrom: { claimCaseId: source },
@@ -206,6 +217,73 @@ describe('<SignalsPanel> — six sections, four-state vocabulary, tri-state conc
     // ⛔ NOT a live region (code review 2026-09-24): announcing a bare claim reference on every mount was
     // noise; it is static, labelled text.
     expect(label.getAttribute('role')).toBeNull();
+  });
+
+  it('⭐ Story 6.26a (GI10) — the refile\'s OWN certificate check and the INHERITED visit, each labelled; the verdict, the comparison, the dates; an unreadable date says so', () => {
+    const base = {
+      district: 'Patna',
+      inspectorActorId: 'inspector-1',
+      scheduledAt: '2026-05-01T06:00:00.000Z',
+      status: 'completed',
+      refusalReason: null,
+      completedAt: '2026-05-02T06:00:00.000Z',
+      notes: null,
+      structuredFindings: null,
+      deathTimeUnreadable: false,
+    };
+    render(
+      <SignalsPanel
+        packet={{
+          ...PRESENT_PACKET,
+          groundInspectionGate: { available: true, complete: true, waitReason: null },
+          groundInspection: {
+            status: 'present',
+            assignments: [
+              {
+                ...base,
+                groundInspectionId: 'own-check',
+                inspectionStage: 'certificate_check',
+                inspectionSiteType: 'school_or_office',
+                photos: [{ photoId: 'p1', contentType: 'image/jpeg', byteSize: 1, caption: null, signedUrl: 'https://x/p1', photoKind: 'original_certificate' }],
+                originalCertificateVerdict: 'does_not_match',
+                comparedAgainst: 'current',
+                deathDateSource: 'original_certificate',
+                deathDate: '2026-04-30',
+                deathTime: null,
+                deathDateUnreadable: false,
+                inherited: false,
+              },
+              {
+                ...base,
+                groundInspectionId: 'inherited-visit',
+                inspectionStage: 'initial',
+                inspectionSiteType: 'family_residence',
+                photos: [],
+                originalCertificateVerdict: 'matches',
+                comparedAgainst: 'earlier',
+                deathDateSource: 'family_statement',
+                deathDate: null,
+                deathTime: null,
+                deathDateUnreadable: true,
+                inherited: true,
+              },
+            ],
+            inheritedFrom: { claimCaseId: '99999999-9999-4999-8999-999999999999' },
+          },
+        }}
+      />,
+    );
+    const [own, inherited] = screen.getAllByTestId('ground-inspection-assignment');
+    expect(own).toHaveTextContent('(This claim)');
+    expect(own).toHaveTextContent('Original does NOT match the copy — compared with the current certificate');
+    expect(own).toHaveTextContent('Date printed on the original: 2026-04-30');
+    expect(own).not.toHaveTextContent('Time of death'); // ⛔ a time on a certificate check
+    expect(own).toHaveTextContent('Original certificate');
+    expect(inherited).toHaveTextContent('(Carried over)');
+    expect(inherited).toHaveTextContent('Original matches the copy — compared with an earlier certificate');
+    expect(inherited).toHaveTextContent("Date of death (the family's word): could not be read");
+    expect(inherited).toHaveTextContent('Time of death: not known');
+    expect(screen.getByTestId('ground-inspection-gate')).toHaveTextContent('The ground inspection is complete for approval.');
   });
 
   it('renders the shepherd section as empty when no shepherd is assigned yet (pre-verification)', () => {

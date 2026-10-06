@@ -393,6 +393,11 @@ export type AuthAuditEventType =
   | 'admin_ground_inspection.photo_uploaded'
   | 'admin_ground_inspection.completed'
   | 'admin_ground_inspection.refused'
+  // ⭐ Story 6.26a (GI14) — the inspector was SHOWN the claim's current uploaded death certificate (to compare with
+  // the original they hold). Ids only: claim_case_id + ground_inspection_id + certificate_token (+ override actor).
+  // The completion line also gains photo_kind_counts + original_certificate_verdict + death_date_source — codes and
+  // counts, ⛔ never a date, a time, a note or a name.
+  | 'admin_ground_inspection.certificate_viewed'
   // ── Claim-time nominee bank collection surface (Story 6.8, FR-37 / Epic 6) ────
   // The dual-account (#1/#2) disbursement-detail collection — member-app (Ravi-mode) + helpline
   // twin. Post-commit SINK lines (the durable record is the claim.nominee_bank_recorded event).

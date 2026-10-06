@@ -31,6 +31,7 @@ import {
 // import-free window only), so this import cannot close a runtime init cycle.
 import { assertLateWarningsCovered } from './approval-warnings.js';
 import { assertDeathCertificateAcceptedForApproval } from './death-certificate-approval.js';
+import { assertGroundInspectionCompleteForApproval } from './ground-inspection-approval.js';
 import { getEffectiveNomineeDeclaration } from './nominee-effective.js';
 import { CLAIM_REVIEW_WINDOW_STATES } from './review-window.js';
 import { eventsLog } from '../schema/events_log.js';
@@ -380,6 +381,12 @@ export async function readNomineeNameCheckSnapshot(
  * @throws NomineeBankAccountsRequiredError   fewer than two live accounts (→ 409). ⛔ NOT a denial.
  * @throws NomineeDeterminationRequiredError  no effective as-at-death declaration (→ 409, Story 6.20 AC5).
  * @throws NomineeNameCheckRequiredError      no check / stale / `does_not_match` (→ 409). ⛔ NOT a denial.
+ * @throws GroundInspectionRequiredError      ⭐ Story 6.26a GI1 (`-263` FQ9 A, `-285`) — the claim's ground inspection
+ *                                            is ⛔ not complete (`groundInspectionApprovalState`: ⛔ no completed visit,
+ *                                            or ⛔ no inspector has seen the original of the CURRENT certificate). The
+ *                                            claim WAITS (→ 409) — ⛔ NOT a denial. Runs after the name check (or the
+ *                                            `-251` waiver) and before the late-warning wait; it reaches all six call
+ *                                            sites and the waived approve from HERE, ONCE.
  * @throws LateWarningReasonRequiredError     ⭐ Story 6.23b EA2 (`-277` Q3 B) — the LAST conjunct: a warning that
  *                                            appeared after the District Admin's approval has ⛔ no District Admin
  *                                            reason yet (⛔ counting a late reason an approving actor recorded —
@@ -400,14 +407,17 @@ export async function assertClaimApprovable(
    * the `-251` Super Admin approve passes `{ nameCheck: 'waived_251' }` — the FULL gate minus the name-check conjunct,
    * BY CONSTRUCTION (⛔ a hand list of today's conjuncts): every OTHER conjunct here — the accepted certificate, the
    * two accounts, the effective determination, and whatever conjunct is added later — still refuses it.
-   * ⭐ `-263` Consequence 4 (FQ9, row `6-26`, `backlog`): *"whichever lands second carries FQ9 into both halves; ⛔
-   * neither may drop it."* `6-26` adds the ground-inspection conjunct HERE, ONCE, and the `-251` path inherits it
-   * without an edit (D27's and G1's approves call the full gate and inherit it too).
+   * ⭐ `-263` Consequence 4 (FQ9): *"whichever lands second carries FQ9 into both halves; ⛔ neither may drop it."*
+   * ✅ Story 6.26a (GI1) added the ground-inspection conjunct below, ONCE, and the `-251` path inherits it without an
+   * edit (D27's and G1's approves call the full gate and inherit it too) — ⛔ never waived by `nameCheck`.
    */
   opts: ClaimApprovalGateOptions,
 ): Promise<void> {
   await assertDeathCertificateAcceptedForApproval(db, pariwarId, claimCaseId);
   await assertNomineeNameCheckForApproval(db, pariwarId, claimCaseId, deceasedMemberId, opts);
+  // ⭐ Story 6.26a GI1 — the ground inspection, OUTSIDE the inner helper (its fourth caller `isReturnedClaimResubmitted`
+  // swallows exactly three typed errors — the 6.21a T4 reasoning), so the `-251` waived approve reaches it too.
+  await assertGroundInspectionCompleteForApproval(db, pariwarId, claimCaseId);
   // ⭐ Story 6.23b EA2 — THE WAIT, LAST (after the `-251` waiver's early return INSIDE the inner helper — Trap 17).
   await assertLateWarningsCovered(db, pariwarId, claimCaseId, opts.approvingActorIds);
 }

@@ -8,7 +8,7 @@ is `done` — it READS 6.26a's columns (`original_certificate_verdict`, `compare
 (`DEATH_DATE_INDEX_FIELD_CLASS`). ⇒ Task 0 RE-PINS to 6.26a's merge commit and re-derives every code claim below against it.
 
 GLYPH REGISTER / ADDRESSING RULE: as 6.26a's header (`⛔` sits only on a negation word; ⛔ no `file:NNN` into the newest-first ledgers).
-LETTERS: `GI1`…`GI18` are Story 6.26's author decisions, defined ONCE in 6.26a's file and committed by ONE author-commit in 6.26a's Task 0.
+LETTERS: `GI1`…`GI18` are Story 6.26's author decisions, defined ONCE in 6.26a's file and committed by ONE author-commit — ✅ `2026-10-06-282`.
 This story BUILDS the ones tagged **[b]** or **[a+b]** there — GI6, GI7, GI8, GI17, GI18 and the [b] halves of GI10, GI11, GI13, GI15, GI16.
 This file ⛔ never restates a different version of a GI: where a summary below and 6.26a's text disagree, 6.26a's text (and the decision
 entry) is the record.
@@ -89,7 +89,7 @@ whether an unsearchable register is ever treated differently.
   pick a reason and write a note; it never refuses the claim."* — `-281` Q1 B: consistent.
 - Niyamavali §6.2 (document authenticity is verified): consistent; ⛔ no clause on any of these; ⛔ not ratified ([[feedback_niyamavali_rulebook_not_spec]]).
 
-## ⚖️ Decisions built here (defined in 6.26a's file; committed by 6.26a's Task 0)
+## ⚖️ Decisions built here (defined in 6.26a's file; ✅ committed by `2026-10-06-282`)
 - **GI6** `inspection_death_date_differs:<ground_inspection_id>` — an OWN completed assignment's `death_date_index` IS DISTINCT FROM the
   current accepted review's `accepted_date_index`, both non-null; ⛔ no accepted certificate ⇒ ⛔ no key; an inherited inspection ⇒ ⛔ no key.
 - **GI7** the date kind ENTERS the wait; 6.23b's queue gains the completed-after-approval disjunct in BOTH candidate copies.
@@ -181,7 +181,7 @@ Every test below passes; `pnpm ci:local` green with `DATABASE_URL` at :5433; the
 - **Gate:** `pnpm ci:local` ([[project_known_livedb_test_failures]], [[project_ci_local_concurrency_oversubscription]] before calling a flake).
 
 ### References
-- `.decision-log.md`: `2026-10-06-281` · `2026-09-28-262` FQ8 B/C · `-264` FQ12 · `-277` Q2 C, Q3 B · `-278` NW1, NW6, NW14 · `-279` A4, A6 · 6.26's author-commit (6.26a Task 0).
+- `.decision-log.md`: `2026-10-06-281` · `2026-09-28-262` FQ8 B/C · `-264` FQ12 · `-277` Q2 C, Q3 B · `-278` NW1, NW6, NW14 · `-279` A4, A6 · `2026-10-06-282` (6.26's author-commit, GI1–GI18).
 - `_bmad-output/implementation-artifacts/6-26-ground-inspection-before-approval-and-death-facts.md` (Story 6.26a — GI1–GI18, the record).
 - `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-06-6-26-certificate-mismatch-and-replacement.md`.
 - Stories `6-23-post-death-nominee-change-warnings.md` (NW1–NW18), `6-23b-every-approver-gives-a-warning-reason.md` (EA2, EA7, EA10), `6-21-death-certificate-clear-date-rule.md` (the review writer).
@@ -201,3 +201,4 @@ Every test below passes; `pnpm ci:local` green with `DATABASE_URL` at :5433; the
 | Version | Date | Change |
 |---|---|---|
 | v1.0 | 2026-10-06 | Split out of Story 6.26 v1.1 (BigDev; `2026-10-06-281` Consequence 2) after the Panel ruled Q1 B · Q2 A. Owns GI6, GI7, GI8, GI17, GI18 and the [b] halves of GI10/11/13/15/16. `backlog` until 6.26a is `done`; ⛔ not re-pinned yet. |
+| v1.1 | 2026-10-06 | GI1–GI18 committed by `2026-10-06-282` (cited here). ⛔ No GI changed; still `backlog`. |

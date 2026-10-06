@@ -3160,6 +3160,8 @@ why a claim waits. The system still refuses ⛔ nothing.
 > [`-282`](../../.decision-log.md#decision-2026-10-06-282) (GI1–GI18, the [b] ones built here). Row
 > `6-26b-death-facts-warnings-and-register-check`; it starts only when 6.26a is `done` (⛔ never before). Full ACs:
 > `_bmad-output/implementation-artifacts/6-26b-death-facts-warnings-and-register-check.md`.
+> ⚠ Amended by [`-283`](../../.decision-log.md#decision-2026-10-06-283) A3 (a printed date from a replaced original ⛔ no longer warns) and
+> [`-284`](../../.decision-log.md#decision-2026-10-06-284) E1 (the correction queue also lists an R9-routed claim's late warning).
 
 As the District Admin — and every approver after me — I want the claim to warn me when the family's date of death differs from the
 certificate, when the inspector found the original does ⛔ not match the copy, or when the government register does ⛔ not match — and to

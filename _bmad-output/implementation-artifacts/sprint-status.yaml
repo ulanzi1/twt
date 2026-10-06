@@ -1,3 +1,10 @@
+# last_updated: 2026-10-06i (⭐ **STORY 6.26 — VALIDATE ROUND 2, and `2026-10-06-284` COMMITTED (`72afe24d`, alone).** A fresh-context
+# re-validate of `-283` and the v2.3 rewrite: 0 BLOCKER, 2 HIGH, 6 MEDIUM, ~10 LOW. HIGH: `-283` A1 lets an R9-routed claim complete an
+# inspection in `state_trustee_approved`, but the correction queue never scans that state ⇒ 6.26b's late key would wait unseen — BigDev:
+# *"Scan it while R9-routed"* (E1; `-280`'s "⛔ no late key arises there" stops holding once 6.26b ships); and 6.26b's erasure of
+# `accepted_date_index` lacked a column GRANT (`0122` grants four columns only ⇒ 42501). `-283`'s reading of `-263` kept, quote corrected, a
+# NON-blocking Panel confirm owed in the next note — BigDev: *"Keep reading + Panel confirm"* (E5). 6.26a → v2.4, 6.26b → v1.3. ⛔ No row
+# moves. ⚠ Round 3 owed before 6.26a's Task 1.)
 # last_updated: 2026-10-06h (⭐ **STORY 6.26 — THE FIRST FRESH-CONTEXT VALIDATE, and `2026-10-06-283` COMMITTED (`e8200366`, alone).** ⚠ First the
 # owed record: Task 0.6 was DONE in `e1907338` (`epics.md` 6.26a / 6.26b) — the `2026-10-06g` line below still says it is owed. Then
 # `bmad-create-story validate 6.26` at HEAD `e1907338` (⛔ no code moved since `3311fc97`): three read-only verifiers, 6.26a and 6.26b

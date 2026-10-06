@@ -29,6 +29,7 @@ import type {
   CorrectionClosureDto,
   ClosureLetterAddressResponse,
   ClosureLetterScreenshotResponse,
+  NoCorrectionNeededApproveRequest,
   NoCorrectionNeededKeepRequest,
   NoCorrectionNeededRequest,
   NoCorrectionNeededResponse,
@@ -72,6 +73,14 @@ import {
 } from './correction-closure-crypto.js';
 import { toClosureDto } from './correction-closure-dto.js';
 import { encryptTrusteeRationale } from './state-trustee-decision-crypto.js';
+import {
+  UNAVAILABLE_APPROVAL_WARNINGS,
+  approvedWarningAudit,
+  toApprovalWarningsSummary,
+  toReasonOptionsDto,
+  translateLaterApprovalWarningError,
+  underSavepoint,
+} from './later-approval-warnings.js';
 
 export const CLOSURE_REQUEST_KEY = 'claim.request_correction_closure';
 export const CLOSURE_DECIDE_KEY = 'claim.decide_correction_closure';
@@ -220,6 +229,9 @@ export function translateClosureError(err: unknown): never {
   if (err instanceof claim.ClaimStreamConcurrencyError) {
     throw new ConflictError('This claim was updated at the same time — reload and try again', 'closure.stream_conflict');
   }
+  // ⭐ Story 6.23b (EA6, EA2) — the warning reason at the Super Admin's and the "no correction needed" approval, and the
+  // WAIT. Mapped ONCE here — `claims.correction-escalation.handlers.ts` calls this translator too (Trap 7).
+  translateLaterApprovalWarningError(err, 'closure');
   throw err;
 }
 
@@ -447,6 +459,30 @@ export function createCorrectionClosureHandlers(deps: AppDeps) {
       if (!scopeTx || !actorId) throw new UnauthorizedError('Authentication required', 'auth.session_required');
       const pariwarId = ids.pariwarId(scopeTx.pariwarId);
       const rows = await claim.listPariwarClosureQueue(scopeTx.tx, pariwarId, { limit: limitOf(request) });
+      // ⭐ Story 6.23b (EA7; Traps 8, 12, 15; RD7, RD20) — the warnings on the "no correction needed" items ONLY (their
+      // approve approves the claim; deciding a closure REQUEST is a refusal path ⇒ `null`): ONE bulk statement + the
+      // reason list ONCE, attached HERE (the domain list and its shape pin stay unchanged), under a raw SAVEPOINT — a
+      // throw fails CLOSED (`available: false`), ⛔ never "no warnings", ⛔ never a 500 of the queue.
+      // Code review 2026-10-06 (P21): `ids.claimId()`'s brand validation moved INSIDE the guarded callback — it ran
+      // before `underSavepoint` before, so a single malformed id would 500 the whole queue instead of degrading.
+      const warnings = await underSavepoint(scopeTx.client, 'closure_queue_approval_warnings', async () => {
+        const noCorrectionIds = rows.filter((r) => r.kind === 'no_correction_needed').map((r) => ids.claimId(r.claimCaseId));
+        return {
+          byClaim: await claim.readClaimApprovalWarningsBulk(scopeTx.tx, pariwarId, noCorrectionIds),
+          options: (await claim.listApprovalWarningReasons(scopeTx.tx, pariwarId)).active,
+        };
+      }).catch((err: unknown) => {
+        request.log.warn(
+          { err: err instanceof Error ? err.name : 'unknown' },
+          'closure queue: nominee-change warnings unavailable; failing closed to cannot-approve',
+        );
+        return null;
+      });
+      const warningsOf = (r: (typeof rows)[number]) => {
+        if (r.kind !== 'no_correction_needed') return null;
+        const w = warnings?.byClaim.get(r.claimCaseId.toLowerCase());
+        return w === undefined ? UNAVAILABLE_APPROVAL_WARNINGS : toApprovalWarningsSummary(w, [actorId]);
+      };
       const items = await Promise.all(
         rows.map(async (r) => ({
           kind: r.kind,
@@ -465,6 +501,7 @@ export function createCorrectionClosureHandlers(deps: AppDeps) {
           family_run_day0: r.familyRunDay0,
           checked_after_record: r.checkedAfterRecord,
           held: r.held,
+          approval_warnings: warningsOf(r),
         })),
       );
       emitAuthAudit(deps, request, 'admin_claim_correction.closure_queue_read', {
@@ -472,7 +509,7 @@ export function createCorrectionClosureHandlers(deps: AppDeps) {
         pariwarId: scopeTx.pariwarId,
         context: { visible_count: items.length },
       });
-      return { items };
+      return { items, reason_options: warnings === null ? [] : toReasonOptionsDto(warnings.options) };
     },
 
     // ── (8) "NO CORRECTION NEEDED" (D27, `-260` G2) ───────────────────────────────────────────────────────────
@@ -520,13 +557,18 @@ export function createCorrectionClosureHandlers(deps: AppDeps) {
     /** POST …/correction/no-correction-needed/approve — `cycle.freeze`: D27's NEW approve writer (the FULL gate). */
     async approveNoCorrectionNeeded(request: FastifyRequest, reply: FastifyReply): Promise<ClosureDecisionClaimResponse> {
       const ctx = contextOf(request);
+      const body = (request.body ?? {}) as NoCorrectionNeededApproveRequest;
+      const warningReasonCode = body.warning_reason_code ?? null;
       const actorDisplay = await actorDisplayOf(deps, ctx.actorId);
       // `-273` §4 — while held only the Super Admin decides: refused BEFORE any KMS work (the writer re-checks).
       if (await claim.isCorrectionClaimHeld(request.scopeTx!.tx, ctx.pariwarId, ctx.claimCaseId)) {
         throw closureRefusalError('cycle_freeze_escalated');
       }
+      // ⭐ Story 6.23b (EA6b; Trap 4) — while a warning shows, the Pariwar Admin's OWN note is the decision's rationale
+      // (the same trustee field class), ⛔ the fixed text. The contract PAIRS it with the warning reason, so the code's
+      // presence is the signal; with ⛔ no code the constant stays (an un-warned approve sends `{}`).
       const decisionRationaleCiphertext = await encryptTrusteeRationale(
-        NO_CORRECTION_NEEDED_DECISION_RATIONALE,
+        warningReasonCode !== null && body.note !== undefined ? body.note : NO_CORRECTION_NEEDED_DECISION_RATIONALE,
         ctx.pariwarIdStr,
         deps.encryption,
       );
@@ -540,6 +582,7 @@ export function createCorrectionClosureHandlers(deps: AppDeps) {
             actorDisplay,
             now: deps.clock(),
             decisionRationaleCiphertext,
+            warningReasonCode,
           }),
         );
       } catch (err) {
@@ -548,6 +591,8 @@ export function createCorrectionClosureHandlers(deps: AppDeps) {
       auditClaim(deps, request, ctx, 'admin_claim_correction.no_correction_approved', {
         decision_id: result!.chain.decisionId,
         ended_run: result!.endedRun,
+        // ⭐ Story 6.23b (EA9; RD15) — the warning kinds it was judged against + the code sent (⛔ the note).
+        ...approvedWarningAudit(result!.approvalWarningKinds, warningReasonCode),
       });
       void reply.status(201);
       return {

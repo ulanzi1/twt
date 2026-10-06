@@ -15,6 +15,7 @@
 
 import { CYCLE_FREEZE_RETURNABLE_STATES, TRUSTEE_REASON_CODE_OUTCOME_COMPAT } from '@twt/contracts';
 import type {
+  ApprovalWarningReasonOption,
   CycleFreezeDecisionRequest,
   CycleFreezePendingResponse,
   StateTrusteeDecisionOutcome,
@@ -23,7 +24,13 @@ import type { ReactElement } from 'react';
 import { useState } from 'react';
 
 import { NomineeNameCheckDisclosure } from '../claim-verification/NomineeNameCheckDisclosure.js';
-import { nameDifferenceReasonLabel, verifierConsoleEn } from '../claim-verification/i18n-en.js';
+import {
+  LaterApprovalWarnings,
+  approvalBlockedReason,
+  approvalNeedsWarningReason,
+  resolvedWarningReasonCode,
+} from '../claim-verification/LaterApprovalWarnings.js';
+import { nameDifferenceReasonLabel, verifierConsoleEn, verifierReasonCodeLabel } from '../claim-verification/i18n-en.js';
 import { ApprovalNameHighlightBadge } from '../correction-closure/ApprovalNameHighlightBadge.js';
 
 type PendingCase = CycleFreezePendingResponse['ready_to_freeze'][number];
@@ -42,7 +49,11 @@ export interface PendingCaseCardProps {
   onDecision: (body: CycleFreezeDecisionRequest, opts?: { readonly onSuccess?: () => void }) => void;
   pending: boolean;
   error?: string | undefined;
+  /** ⭐ Story 6.23b (EA7) — the Pariwar's ACTIVE warning reasons (the response's `reason_options`, read once). */
+  reasonOptions: readonly ApprovalWarningReasonOption[];
 }
+
+const tw = verifierConsoleEn.approvalWarnings;
 
 /** The reason codes valid for an outcome (drives the dropdown; from the contract compat map). */
 function reasonCodesFor(outcome: 'denied' | 'routed_to_r9' | 'returned_for_correction'): string[] {
@@ -79,9 +90,20 @@ export function PendingCaseCard({
   onDecision,
   pending,
   error,
+  reasonOptions,
 }: PendingCaseCardProps): ReactElement {
   const [reasonCode, setReasonCode] = useState<string>('');
   const [rationale, setRationale] = useState<string>('');
+  // ⭐ Story 6.23b (EA3, EA4) — the WARNING REASON, its OWN field (⛔ never the trustee `reason_code` — Trap 2). ⛔ No
+  // default. A pick that has left the list (the list refetched) reads as ⛔ none (6.23a round 4).
+  const [warningPick, setWarningPick] = useState<string>('');
+  const warningReasonCode = resolvedWarningReasonCode(reasonOptions, warningPick);
+  const warnings = case_.approval_warnings;
+  const hasApprove = bucket === 'ready_to_freeze' || bucket === 'escalated';
+  const warned = approvalNeedsWarningReason(warnings);
+  // The WAIT or a failed read — Approve / Resolve → Approve disabled WITH these words; every other action untouched.
+  const approveBlocked = approvalBlockedReason(warnings);
+  const pickerPrefix = `cf-${case_.claim_case_id}`;
   // ⭐ Story 6.19b (AC16; `2026-09-27-258`, D25) — WHO MUST ACT on a return. ⛔ No default: the Pariwar Admin
   // chooses, because the choice decides whether the FAMILY is reminded (and can later be closed "for no
   // response") or STAFF are chased — a pre-selected value would be the system deciding for them.
@@ -99,6 +121,7 @@ export function PendingCaseCard({
     setReasonCode('');
     setRationale('');
     setMustAct('');
+    setWarningPick('');
   };
 
   const submit = (
@@ -108,8 +131,31 @@ export function PendingCaseCard({
     setValidationError(undefined);
 
     if (outcome === 'approved') {
+      if (approveBlocked !== null) {
+        setValidationError(approveBlocked);
+        return;
+      }
+      if (warned) {
+        // ⭐ Story 6.23b (EA3, EA4) — while a warning shows: a warning reason AND a note, SAID before the round trip
+        // (⛔ a silently disabled button). The body is `{ claim_case_id, action, [escalation_outcome],
+        // warning_reason_code, rationale }` — still ⛔ no `reason_code` (Trap 2).
+        if (warningReasonCode === '') {
+          setValidationError(tw.reasonRequiredError);
+          return;
+        }
+        if (rationale.trim() === '') {
+          setValidationError(tw.noteRequiredError);
+          return;
+        }
+        onDecision(
+          { claim_case_id: case_.claim_case_id, ...partial, warning_reason_code: warningReasonCode, rationale: rationale.trim() },
+          { onSuccess: resetInputs },
+        );
+        return;
+      }
       // Approve takes no reason code/rationale — the body is built WITHOUT them, so a leftover selection from a
       // different action can never leak into an approve decision; the inputs clear once the server accepts it.
+      // ⭐ Byte-identical to before Story 6.23b on a claim with ⛔ no warning.
       onDecision({ claim_case_id: case_.claim_case_id, ...partial }, { onSuccess: resetInputs });
       return;
     }
@@ -211,9 +257,10 @@ export function PendingCaseCard({
         <dt>Deceased</dt>
         <dd className="font-mono">{case_.deceased_member_id}</dd>
         <dt>Verifier</dt>
-        <dd>
+        <dd data-testid="pending-case-verifier">
           {case_.verifier_actor_display ?? '—'}
-          {case_.verifier_reason_code ? ` · ${case_.verifier_reason_code}` : ''}
+          {/* ⭐ Story 6.23b (AC11) — the verifier's reason AS WORDS (the District Admin's own table), ⛔ a raw code. */}
+          {case_.verifier_reason_code ? ` · ${verifierReasonCodeLabel(case_.verifier_reason_code)}` : ''}
         </dd>
         <dt>Verifier rationale</dt>
         <dd>{case_.verifier_rationale ? case_.verifier_rationale : '—'}</dd>
@@ -243,7 +290,11 @@ export function PendingCaseCard({
           </select>
         </label>
         <label className="flex flex-1 flex-col text-xs">
-          <span className="opacity-70">Rationale (required on deny / “other”)</span>
+          <span className="opacity-70">
+            {warned && hasApprove
+              ? 'Rationale (required on deny / “other”, and as your note when approving over a warning)'
+              : 'Rationale (required on deny / “other”)'}
+          </span>
           <input
             className="rounded border px-2 py-1 text-sm"
             value={rationale}
@@ -253,13 +304,31 @@ export function PendingCaseCard({
         </label>
       </div>
 
+      {/* ⭐ Story 6.23b (EA7) — the nominee-change warnings BEFORE the approve control: the lines on every bucket, the
+          picker only where the card can approve; the WAIT and a failed read in their own words. */}
+      <LaterApprovalWarnings
+        summary={warnings}
+        options={reasonOptions}
+        value={warningReasonCode}
+        onChange={(code) => {
+          setWarningPick(code);
+          setValidationError(undefined);
+        }}
+        error={validationError === tw.reasonRequiredError ? validationError : null}
+        disabled={pending}
+        idPrefix={pickerPrefix}
+        showPicker={hasApprove}
+      />
+
       <div className="flex flex-wrap gap-2">
         {bucket === 'ready_to_freeze' && (
           <>
             <button
               type="button"
+              data-testid="cycle-freeze-approve"
               className="rounded bg-status-ok-bg px-3 py-1 text-sm text-status-ok-fg disabled:opacity-50"
-              disabled={pending}
+              disabled={pending || approveBlocked !== null}
+              aria-describedby={approveBlocked !== null ? `${pickerPrefix}-approval-blocked` : undefined}
               onClick={() => submit({ action: 'approve' }, 'approved')}
             >
               Approve
@@ -286,8 +355,10 @@ export function PendingCaseCard({
           <>
             <button
               type="button"
+              data-testid="cycle-freeze-resolve-approve"
               className="rounded bg-status-ok-bg px-3 py-1 text-sm text-status-ok-fg disabled:opacity-50"
-              disabled={pending}
+              disabled={pending || approveBlocked !== null}
+              aria-describedby={approveBlocked !== null ? `${pickerPrefix}-approval-blocked` : undefined}
               onClick={() => submit({ action: 'resolve_escalation', escalation_outcome: 'approved' }, 'approved')}
             >
               Resolve → Approve
@@ -396,8 +467,9 @@ export function PendingCaseCard({
         testId={`pending-case-name-check-${case_.claim_case_id}`}
       />
 
-      {validationError && (
-        <p role="alert" className="text-xs text-status-fail-fg">
+      {/* The picker carries its own "choose a reason" alert — ⛔ said twice. */}
+      {validationError && validationError !== tw.reasonRequiredError && (
+        <p role="alert" className="text-xs text-status-fail-fg" data-testid="pending-case-validation">
           {validationError}
         </p>
       )}

@@ -280,6 +280,7 @@ import {
   type ClosureDirectionRequest,
   type CorrectionClosureDecisionRequest,
   type EscalatedClosureDecisionRequest,
+  type NoCorrectionNeededApproveRequest,
   type NoCorrectionNeededKeepRequest,
   type RecordClosureLetterRequest,
   CertificateLetterAddressResponse,
@@ -1535,9 +1536,12 @@ export function recordNoCorrectionNeeded(pariwarId: string, claimCaseId: string,
   return apiFetch(`${correctionBase(pariwarId, claimCaseId)}/no-correction-needed`, NoCorrectionNeededResponse, post({ note }));
 }
 
-/** D27 — the Pariwar Admin approves a "no correction needed" claim (the full approval gate). */
-export function approveNoCorrectionNeeded(pariwarId: string, claimCaseId: string) {
-  return apiFetch(`${correctionBase(pariwarId, claimCaseId)}/no-correction-needed/approve`, ClosureDecisionClaimResponse, post({}));
+/**
+ * D27 — the Pariwar Admin approves a "no correction needed" claim (the full approval gate). ⭐ Story 6.23b (EA6b) — while
+ * a warning shows, `{ warning_reason_code, note }` (PAIRED); an un-warned approve still posts `{}`.
+ */
+export function approveNoCorrectionNeeded(pariwarId: string, claimCaseId: string, body: NoCorrectionNeededApproveRequest = {}) {
+  return apiFetch(`${correctionBase(pariwarId, claimCaseId)}/no-correction-needed/approve`, ClosureDecisionClaimResponse, post(body));
 }
 
 /** `-260` G2 — the Pariwar Admin keeps it sent back, stating who must act, with a note. */

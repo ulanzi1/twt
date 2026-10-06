@@ -459,9 +459,18 @@ export function createNomineeNameCheckHandlers(deps: AppDeps) {
       // column), so filtering it AFTER the caller's page would silently drop escalations that fall outside a
       // small page — escalated rows are systematically NOT the newest returns (escalation fires at
       // found-dead+13). Scan the queue's full bounded space when filtering, then slice to the requested page.
+      // ⭐ Story 6.23b (EA10) — the late-warning arm runs under a raw SAVEPOINT in the domain read; when it could ⛔ not
+      // be read the returned claims still list and the response SAYS so (⛔ never "none waiting" — invariant 7).
+      let lateWarningsUnavailable = false;
       const visible = await claimDomain.listClaimsUnderCorrection(scopeTx.tx, pariwarId, {
         limit: escalatedOnly ? claimDomain.CORRECTION_QUEUE_MAX_LIMIT : limit,
         isVisible,
+        onLateWarningsUnavailable: () => {
+          if (!lateWarningsUnavailable) {
+            request.log.warn({ pariwarId: scopeTx.pariwarId }, 'correction-queue: the late-warning arm could not be read; returned claims still list');
+          }
+          lateWarningsUnavailable = true;
+        },
       });
 
       const today = cycleCalendar.istDateOf(deps.clock());
@@ -574,6 +583,9 @@ export function createNomineeNameCheckHandlers(deps: AppDeps) {
               crypto: deps.encryption,
             }),
           ),
+          // ⭐ Story 6.23b (EA10) — the District Admin's approval waits on their reason for a late warning.
+          late_warning_awaiting_reason: row.lateWarningAwaitingReason,
+          late_warning_uncovered_count: row.lateWarningUncoveredCount,
         })),
       );
 
@@ -600,7 +612,7 @@ export function createNomineeNameCheckHandlers(deps: AppDeps) {
         });
       }
 
-      return { pariwar_id: scopeTx.pariwarId, items };
+      return { pariwar_id: scopeTx.pariwarId, items, late_warnings_unavailable: lateWarningsUnavailable };
     },
 
     /**

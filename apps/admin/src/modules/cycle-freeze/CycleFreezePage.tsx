@@ -12,6 +12,7 @@ import { useState } from 'react';
 import { ApiError } from '../../api/client.js';
 import {
   claimContactRequiredMessage,
+  laterApprovalWarningErrorMessage,
   trusteeDeathCertificateAcceptanceRequiredMessage,
   trusteeDeterminationRequiredMessage,
 } from '../claim-verification/nominee-errors.js';
@@ -62,6 +63,10 @@ function errorMessage(error: unknown): string | undefined {
   if (error instanceof ApiError && error.code.endsWith('.claim_contact_required')) {
     return claimContactRequiredMessage(error);
   }
+  // ⭐ Story 6.23b (EA3, EA4, EA2) — the warning reason refusals and the WAIT, each in its own words (one `endsWith` arm
+  // per suffix inside the shared helper). ⛔ Never a raw code, ⛔ never "try again".
+  const warningWords = laterApprovalWarningErrorMessage(error);
+  if (warningWords !== undefined) return warningWords;
   if (error instanceof ApiError) return DECISION_REFUSAL_COPY[error.code] ?? `${error.code}: ${error.message}`;
   return error instanceof Error ? error.message : 'Something went wrong.';
 }
@@ -114,6 +119,20 @@ export function CycleFreezePage({ pariwarId }: CycleFreezePageProps): ReactEleme
     });
   };
 
+  // ⭐ Story 6.23b — a 409 means the claim (or the reason list) moved under the card: refetch, so the screen shows the
+  // warnings, the WAIT and the reasons as they now stand (6.23a round 4: "a 409 refetches").
+  const decide = (
+    body: Parameters<typeof decision.mutate>[0],
+    opts?: { readonly onSuccess?: () => void },
+  ): void => {
+    decision.mutate(body, {
+      ...(opts?.onSuccess ? { onSuccess: opts.onSuccess } : {}),
+      onError: (err) => {
+        if (err instanceof ApiError && err.status === 409) void pending.refetch();
+      },
+    });
+  };
+
   const data = pending.data;
   const readyCount = data?.ready_to_freeze.length ?? 0;
   const escalatedCount = data?.escalated.length ?? 0;
@@ -152,9 +171,10 @@ export function CycleFreezePage({ pariwarId }: CycleFreezePageProps): ReactEleme
                     key={c.claim_case_id}
                     case_={c}
                     bucket="ready_to_freeze"
-                    onDecision={(body, opts) => decision.mutate(body, opts)}
+                    onDecision={decide}
                     pending={decision.isPending}
                     error={errorMessage(decision.error)}
+                    reasonOptions={data!.reason_options}
                   />
                 ))}
               </ul>
@@ -175,9 +195,10 @@ export function CycleFreezePage({ pariwarId }: CycleFreezePageProps): ReactEleme
                     key={c.claim_case_id}
                     case_={c}
                     bucket="escalated"
-                    onDecision={(body, opts) => decision.mutate(body, opts)}
+                    onDecision={decide}
                     pending={decision.isPending}
                     error={errorMessage(decision.error)}
+                    reasonOptions={data!.reason_options}
                   />
                 ))}
               </ul>
@@ -202,9 +223,10 @@ export function CycleFreezePage({ pariwarId }: CycleFreezePageProps): ReactEleme
                     key={c.claim_case_id}
                     case_={c}
                     bucket="voted_pending_commit"
-                    onDecision={(body, opts) => decision.mutate(body, opts)}
+                    onDecision={decide}
                     pending={decision.isPending}
                     error={errorMessage(decision.error)}
+                    reasonOptions={data!.reason_options}
                   />
                 ))}
               </ul>

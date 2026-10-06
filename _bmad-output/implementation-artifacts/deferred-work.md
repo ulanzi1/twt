@@ -4,6 +4,39 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Recorded during Story 6.23b — every approver gives a warning reason; a late warning waits (2026-10-05)
+
+Recorded under `2026-10-04-278` (EA1–EA9), as amended by `-279` (A1–A6, A10, A11) and `-280`.
+
+- **R9 votes stay REVISABLE until finalize — a revised approve vote's earlier note and its `r9_vote` record row are kept
+  as history** (Trap 6; BigDev accepted R9's revisability, 2026-10-04). ⛔ Never edited, ⛔ never deleted; a revision is a
+  NEW vote with its OWN record row. ⭐ Trigger: a Panel instruction to lock a vote once cast.
+- **A late key covered ONLY by a late reason whose recorder then approves is ⛔ not listed by EA10's queue arm** (the queue
+  asks whether ANY District Admin answer exists — ⛔ no actor exclusion). The approver's 409 carries `own_reason_excluded`
+  and says who else must answer, and 6.23a's NW14 lets that other person record it (its `nothing_uncovered` is judged for
+  the recorder). ⭐ Trigger: a held claim reported where nobody knew to answer.
+- **⚠ The R9 residual: a live approve voter may still record a late reason (6.23a's NW14 knows ⛔ nothing of R9) that ⛔ never
+  counts at finalize** (`-279` A1 — the finalizer and every live approve voter are excluded). In a Pariwar where EVERY
+  `claim.approve` holder at the district is a live approve voter or the finalizer, ⛔ nobody can answer — the exits are a vote
+  change or the session re-run. ⭐ Trigger: a held R9 claim reported.
+- **⚠ The later approvers' notes — `claim_state_trustee_decisions.rationale_ciphertext` (the final vote, an escalation, the
+  "no correction needed" approve) and `claim_r9_votes.rationale_ciphertext` (an R9 vote) — are ⛔ not in the anonymizer.**
+  The same class as 6.23a's verifier-rationale item (section *"Recorded during Story 6.23a"*: *"`claim_verifier_decisions.
+  rationale_ciphertext` … is ⛔ not in the anonymizer"*) — cross-referenced, ⛔ a duplicate. The Super Admin's note
+  (`claim_correction_closures.super_admin_note_ciphertext`) is ALREADY the item *"⛔ No RTBF path reaches the 6.19c tables'
+  Tier-1 columns"* (section *"Deferred from: Story 6.19c dev — the correction closure, the Super Admin's review, the
+  re-file (2026-10-01)"*). 6.23b's own record rows carry ⛔ no
+  note (0144). ⭐ Trigger: the next RTBF pass over the claim-adjudication tables.
+- **⚠ EA10's late-warning arm keys on a NEW determination** (a live approved verifier decision AND a live
+  `nominee_determinations` row decided after it — the only way a late key can arise TODAY, 6.23a fact 3). Once row `6-22`
+  lifts the declaration lock for a member found innocent, a member declare can add a `recent_nominee_change` key with ⛔ no new
+  determination — ⛔ not queued (the wait itself still holds at the gate). ⭐ Trigger: row `6-22` lands — add an arm on a
+  member-source version recorded after the live approval.
+- **The cycle-freeze, R9 and 6.19c refusal audit lines carry the WAIT's counts; the 6.19c D27 / Super Admin routes have ⛔ no
+  `rejected` audit line at all** (pre-existing — their refusals are translated, ⛔ audited). 6.23b adds ⛔ no new audit event
+  type (EA9: ⛔ nothing else moves); the approve lines carry `approval_warning_kinds` + `warning_reason_code`. ⭐ Trigger: an
+  audit pass that adds rejected lines to the 6.19c routes.
+
 ## Deferred from: code review of 6-23-post-death-nominee-change-warnings, round 3 chunk 1 (server) (2026-10-05)
 
 - **`closeScopeTx` swallows every COMMIT error ("Never throws"), so a 2xx can report a write that was rolled back** [`apps/api/src/modules/multi-tenant/scope-tx.ts:56-61`]. This predates the story (Story 1.9). Round 3 found it through 0142's deferred coherence trigger, the codebase's only `DEFERRABLE INITIALLY DEFERRED` constraint; that trigger is patched locally with `SET CONSTRAINTS … IMMEDIATE`. The general case is still open: a connection lost at COMMIT, or any future deferred constraint, makes every handler that uses `closeScopeTx` (and the lifecycle hook's commit) report success with the audit's "done" line. Trigger: the next migration that adds a deferred constraint, or any incident where an acknowledged write is missing.
@@ -20,6 +53,8 @@ are ⛔ not here — they are Story 6.23b's (go-live coupling (1) of 6.23a).
 - **The Pariwar Admin sees the raw `verifier_reason_code` on `PendingCaseCard.tsx:216`** (e.g. `r5_d_natural_death`), ⛔
   not words — inherited from 6.13 and unchanged here (Trap 7 keeps the verifier vocabulary untouched). ⭐ Trigger: Story
   6.23b, which mounts the warning-reason picker on that card and reads the reason next to it.
+  ✅ Closed by Story 6.23b (AC11) — the card shows the reason as its words from `verifierConsoleEn.reasonCodes` (the
+  District Admin's own table; an unknown code falls back to the code itself, ⛔ never blank — `verifierReasonCodeLabel`).
 - **The FQ1 label's words say *"corrected after the death"* even on a correction made under a claim later RELEASED as
   filed against a living member** (6.20 AC2's innocence finding — ⛔ no production caller until row `6-22`). The words are
   ratified copy (`-262` FQ1) and are ⛔ not reworded (NW4). ⭐ Trigger: row `6-22`'s first production release.

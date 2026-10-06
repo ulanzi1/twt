@@ -32,7 +32,7 @@
 // Naming discipline per architecture L3663-3677: DB columns snake_case, TS camelCase.
 
 import { sql } from 'drizzle-orm';
-import { index, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { index, pgTable, text, timestamp, unique, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 
 import {
   stateTrusteeDecisionOutcomeEnum,
@@ -107,6 +107,9 @@ export const claimStateTrusteeDecisions = pgTable(
   (t) => [
     // Per-tenant scans / RLS-aware planner hint (pariwar_id leads, mirroring claims).
     index('claim_state_trustee_decisions_pariwar_id_idx').on(t.pariwarId),
+    // Story 6.23b (0144, RD1) — the unique target for `claim_warning_approvals`' COMPOSITE tenant FK (redundant for
+    // uniqueness — the PK already is one).
+    unique('claim_state_trustee_decisions_pariwar_decision_uq').on(t.pariwarId, t.decisionId),
     // This claim's ordered transcript + the per-claim / per-phase read (the commit query's routing check).
     index('claim_state_trustee_decisions_claim_case_id_idx').on(t.claimCaseId),
     // D-F (other suggestion #5) — at most ONE live row per (claim, phase). The freeze/vote → commit

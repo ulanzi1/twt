@@ -717,6 +717,9 @@ describe('<CorrectionChasePanel> — a recorded delivery survives the refetch th
       not_reached: null,
       family_run_day: 3,
     },
+    // Story 6.23b (EA10) — ⛔ waiting on a late warning reason.
+    late_warning_awaiting_reason: false,
+    late_warning_uncovered_count: 0,
   });
 
   function QueueHarness(): ReactElement {

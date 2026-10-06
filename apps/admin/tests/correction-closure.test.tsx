@@ -103,6 +103,9 @@ const queueItem = (closure: Partial<QueueItem['correction_closure']> = {}): Queu
     family_run_day: 96,
     ...closure,
   },
+  // Story 6.23b (EA10) — ⛔ waiting on a late warning reason.
+  late_warning_awaiting_reason: false,
+  late_warning_uncovered_count: 0,
 });
 
 describe('<ClosureColumn> — the District Admin (AC6, AC8c)', () => {
@@ -237,6 +240,11 @@ const closureQueueItem = (over: Partial<ClosureQueueItem> = {}): ClosureQueueIte
   family_run_day0: '2026-06-20',
   checked_after_record: null,
   held: false,
+  // Story 6.23b (RD20) — `null` EXACTLY on a closure request; a quiet block on a "no correction needed" item.
+  approval_warnings:
+    over.kind === 'no_correction_needed'
+      ? { available: true, kinds: [], post_death: 'evaluated', waiting_for_district_admin: false, own_reason_excluded: false }
+      : null,
   ...over,
 });
 const decided = {
@@ -250,7 +258,7 @@ const decided = {
 describe('<PariwarClosureList> — the Pariwar Admin (UX-DR54, UX-DR44)', () => {
   it('⭐ the PRIMARY action is leftmost; the DECLINE note is mandatory BEFORE the decline acts', async () => {
     decideCorrectionClosure.mockResolvedValue({ ...decided, claim_state: 'state_trustee_freeze' });
-    wrap(<PariwarClosureList pariwarId={PARIWAR} items={[closureQueueItem()]} />);
+    wrap(<PariwarClosureList pariwarId={PARIWAR} reasonOptions={[]} items={[closureQueueItem()]} />);
     expect(screen.getByTestId('closure-queue-note').textContent).toContain('silent since June');
     const buttons = screen.getByTestId(`closure-strip-${CLAIM}`).querySelectorAll('button');
     expect(buttons[0]).toBe(screen.getByTestId('closure-approve'));
@@ -272,7 +280,7 @@ describe('<PariwarClosureList> — the Pariwar Admin (UX-DR54, UX-DR44)', () => 
   it('⭐ the numbered shortcut 1 approves — and ⛔ a "1" typed INTO the note box does not', async () => {
     decideCorrectionClosure.mockReset();
     decideCorrectionClosure.mockResolvedValue(decided);
-    wrap(<PariwarClosureList pariwarId={PARIWAR} items={[closureQueueItem()]} />);
+    wrap(<PariwarClosureList pariwarId={PARIWAR} reasonOptions={[]} items={[closureQueueItem()]} />);
     fireEvent.keyDown(screen.getByTestId('closure-decision-note'), { key: '1' });
     expect(decideCorrectionClosure).not.toHaveBeenCalled();
     fireEvent.keyDown(screen.getByTestId('closure-approve'), { key: '1' });
@@ -287,7 +295,7 @@ describe('<PariwarClosureList> — the Pariwar Admin (UX-DR54, UX-DR44)', () => 
     decideCorrectionClosure.mockReset();
     let release: (v: typeof decided) => void = () => undefined;
     decideCorrectionClosure.mockImplementation(() => new Promise((r) => (release = r)));
-    wrap(<PariwarClosureList pariwarId={PARIWAR} items={[closureQueueItem()]} />);
+    wrap(<PariwarClosureList pariwarId={PARIWAR} reasonOptions={[]} items={[closureQueueItem()]} />);
     const strip = screen.getByTestId('closure-approve');
     for (const mod of [{ ctrlKey: true }, { altKey: true }, { metaKey: true }, { repeat: true }]) {
       fireEvent.keyDown(strip, { key: '1', ...mod });
@@ -305,13 +313,13 @@ describe('<PariwarClosureList> — the Pariwar Admin (UX-DR54, UX-DR44)', () => 
   });
 
   it('a HELD "no correction needed" claim offers ⛔ no decision and SAYS who decides it now (`-273` §4)', () => {
-    wrap(<PariwarClosureList pariwarId={PARIWAR} items={[closureQueueItem({ kind: 'no_correction_needed', held: true, checked_after_record: true, family_run_day0: null })]} />);
+    wrap(<PariwarClosureList pariwarId={PARIWAR} reasonOptions={[]} items={[closureQueueItem({ kind: 'no_correction_needed', held: true, checked_after_record: true, family_run_day0: null })]} />);
     expect(screen.getByTestId(`no-correction-held-${CLAIM}`)).toHaveTextContent('only the Super Admin can decide it now');
     expect(screen.queryByTestId('no-correction-approve')).toBeNull();
   });
 
   it('D27 — approve is unavailable until a passing check was recorded AFTER the record, and says why', () => {
-    wrap(<PariwarClosureList pariwarId={PARIWAR} items={[closureQueueItem({ kind: 'no_correction_needed', checked_after_record: false, family_run_day0: null })]} />);
+    wrap(<PariwarClosureList pariwarId={PARIWAR} reasonOptions={[]} items={[closureQueueItem({ kind: 'no_correction_needed', checked_after_record: false, family_run_day0: null })]} />);
     expect(screen.getByTestId('no-correction-approve')).toBeDisabled();
     expect(screen.getAllByText(/still needed before you can approve/).length).toBeGreaterThan(0);
   });
@@ -346,6 +354,9 @@ const detail = (over: Partial<EscalatedClosureDetailResponse> = {}): EscalatedCl
   family_part_done: false,
   name_check_state: 'does_not_match',
   approve_path: 'name_waived_251',
+  // Story 6.23b (EA7) — a quiet claim, and the Pariwar's list.
+  approval_warnings: { available: true, kinds: [], post_death: 'evaluated', waiting_for_district_admin: false, own_reason_excluded: false },
+  reason_options: [],
   ...over,
 });
 

@@ -47,6 +47,15 @@ import { emitAuthAudit } from '../auth/shared/audit.js';
 import { getDisplayName } from '../auth/admin/admin-auth.repo.js';
 import { closeScopeTx, openScopeTx } from '../multi-tenant/scope-tx.js';
 import { decryptR9VoteRationale, encryptR9VoteRationale } from './r9-vote-crypto.js';
+import {
+  UNAVAILABLE_APPROVAL_WARNINGS,
+  approvedWarningAudit,
+  refusedApprovalWarningAudit,
+  toApprovalWarningsSummary,
+  toReasonOptionsDto,
+  translateLaterApprovalWarningError,
+  underSavepoint,
+} from './later-approval-warnings.js';
 
 /** Map an R9-voting domain error to its stable HTTP shape. Rethrows ApiErrors + anything unknown as-is. */
 function translateR9Error(err: unknown): never {
@@ -159,6 +168,9 @@ function translateR9Error(err: unknown): never {
   if (err instanceof claim.ClaimStreamConcurrencyError) {
     throw new ConflictError('This claim was updated concurrently — reload and try again', 'r9_voting.stream_conflict');
   }
+  // ⭐ Story 6.23b (EA5, EA2) — the warning reason on an approve vote, the votes that must be revised, and the WAIT —
+  // every code `r9_voting.*` (RD5). ⛔ Never a refusal of the claim.
+  translateLaterApprovalWarningError(err, 'r9_voting');
   throw err;
 }
 
@@ -285,6 +297,28 @@ export function createR9VotingHandlers(deps: AppDeps) {
           ...(nameFlags.get(claimCaseId)?.differenceReasons ?? []),
         ];
 
+        // ⭐ Story 6.23b (EA7; RD8, RD11; Trap 15) — the nominee-change warnings for this ONE claim, and, per live APPROVE
+        // vote, whether its own reason answers EVERY current warning — the SAME comparison finalize makes
+        // (`r9ApproveVotesMissingKeys` — ⛔ never `uncoveredKeys`, RD17), so a vote finalize would name is shown BEFORE
+        // the step-up-attested finalize. The wait is judged for the viewer AND every live approve voter (what finalize
+        // excludes — `-279` A1). Under a raw SAVEPOINT; a throw fails CLOSED (`available: false`, ⛔ never "no warnings").
+        const approveVoteIds = model.votes.filter((v) => v.vote === 'approve').map((v) => v.voteId as string);
+        const approveVoterIds = model.votes.filter((v) => v.vote === 'approve').map((v) => v.voterActorId);
+        const warned = await underSavepoint(tx.client, 'r9_panel_approval_warnings', async () => {
+          const w = await claim.readClaimApprovalWarnings(tx.tx, ctx.pariwarId, claimCaseId);
+          const coverage = await claim.readR9VoteWarningCoverage(tx.tx, ctx.pariwarId, approveVoteIds);
+          const short = claim.r9ApproveVotesMissingKeys(w.keys, approveVoteIds, coverage);
+          return { w, shortVoteIds: new Set(short.map((v) => v.voteId.toLowerCase())) };
+        }).catch((err: unknown) => {
+          request.log.warn(
+            { err: err instanceof Error ? err.name : 'unknown', claimCaseId },
+            'r9 panel: nominee-change warnings unavailable; failing closed to cannot-approve',
+          );
+          return null;
+        });
+        const coversCurrentWarnings = (voteId: string, vote: string): boolean | null =>
+          warned === null || vote !== 'approve' || warned.w.keys.length === 0 ? null : !warned.shortVoteIds.has(voteId.toLowerCase());
+
         let session: R9PanelResponse['session'] = null;
         let tally: R9PanelResponse['tally'] = null;
         const votes: R9PanelResponse['votes'] = [];
@@ -318,6 +352,7 @@ export function createR9VotingHandlers(deps: AppDeps) {
               cast_at: v.castAt.toISOString(),
               clause_version_id: v.clauseVersionId,
               rationale,
+              covers_current_warnings: coversCurrentWarnings(v.voteId, v.vote),
             });
           }
           const panelSize = s.panelActorIds.length;
@@ -342,6 +377,9 @@ export function createR9VotingHandlers(deps: AppDeps) {
           votes,
           tally,
           name_difference_reasons: nameDifferenceReasons,
+          approval_warnings:
+            warned === null ? UNAVAILABLE_APPROVAL_WARNINGS : toApprovalWarningsSummary(warned.w, [ctx.actorId, ...approveVoterIds]),
+          reason_options: warned === null ? [] : toReasonOptionsDto(warned.w.reasonOptions),
         };
       } finally {
         await closeScopeTx(tx, ok);
@@ -409,13 +447,20 @@ export function createR9VotingHandlers(deps: AppDeps) {
           pariwarId: ctx.pariwarId,
           vote: body.vote,
           rationaleCiphertext,
+          // ⭐ Story 6.23b (EA5) — the contract refuses it on a deny vote.
+          warningReasonCode: body.warning_reason_code ?? null,
           actorId: ctx.actorId,
           actorDisplay: ctx.actorDisplay,
           actor: 'trustee',
         });
         ok = true;
       } catch (err) {
-        audit(request, 'admin_r9_voting.rejected', ctx, { claim_case_id: claimCaseId, action: 'vote', reason: r9RejectionReason(err) });
+        audit(request, 'admin_r9_voting.rejected', ctx, {
+          claim_case_id: claimCaseId,
+          action: 'vote',
+          reason: r9RejectionReason(err),
+          ...(refusedApprovalWarningAudit(err, body.warning_reason_code ?? null) ?? {}),
+        });
         return translateR9Error(err);
       } finally {
         await closeScopeTx(scopeTx, ok);
@@ -424,6 +469,8 @@ export function createR9VotingHandlers(deps: AppDeps) {
         claim_case_id: result.vote.claimCaseId,
         vote: result.vote.vote,
         revised: result.revised,
+        // ⭐ Story 6.23b (EA9; RD15) — an approve vote's warning kinds + the code sent.
+        ...(result.vote.vote === 'approve' ? approvedWarningAudit(result.approvalWarningKinds, body.warning_reason_code ?? null) : {}),
       });
       void reply.status(201);
       return {
@@ -455,7 +502,12 @@ export function createR9VotingHandlers(deps: AppDeps) {
         });
         ok = true;
       } catch (err) {
-        audit(request, 'admin_r9_voting.rejected', ctx, { claim_case_id: claimCaseId, action: 'finalize', reason: r9RejectionReason(err) });
+        audit(request, 'admin_r9_voting.rejected', ctx, {
+          claim_case_id: claimCaseId,
+          action: 'finalize',
+          reason: r9RejectionReason(err),
+          ...(refusedApprovalWarningAudit(err, null) ?? {}),
+        });
         return translateR9Error(err);
       } finally {
         await closeScopeTx(scopeTx, ok);
@@ -474,6 +526,8 @@ export function createR9VotingHandlers(deps: AppDeps) {
         approve_count: s.approveCount,
         deny_count: s.denyCount,
         idempotent_replay: result.idempotentReplay,
+        // ⭐ Story 6.23b (EA9; RD15) — an APPROVED finalize's warning kinds (OMITTED otherwise, and on a replay).
+        ...(result.approvalWarningKinds !== undefined ? { approval_warning_kinds: [...result.approvalWarningKinds] } : {}),
       });
       void reply.status(200);
       return {

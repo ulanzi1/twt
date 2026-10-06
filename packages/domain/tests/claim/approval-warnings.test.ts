@@ -2,6 +2,8 @@
 // the classifier at the IST edges, the 90 / 91-day boundary from an INJECTED anchor (Trap 5 — ⛔ never live), the
 // keys, the anchor picker, the coverage helpers, the ONE rule in NW6's order, the kinds pin (`-279` A6), the
 // TRANSITIVE import-discipline scan (NW1; `-279` A12) and the vocabulary deny-list's lockstep with `microcopy.yaml`.
+// Story 6.23b (Task 2): `uncoveredKeys` with a LIST exclusion (RD3), the pure `keysNotCoveredBy` (RD17 — R9's
+// comparison, ⛔ never `uncoveredKeys`), the wait's `own_reason_excluded` arithmetic (EA2) and its typed error.
 
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -24,15 +26,21 @@ import {
   classifyNomineeVersion,
   isPostDeathVersion,
   isRecentNomineeChange,
+  keysNotCoveredBy,
   lateKeysUncoveredFor,
+  lateWarningWait,
+  r9ApproveVotesMissingKeys,
   lateWarningKeys,
   lateWarningNothingUncoveredFor,
   pickWarningAnchor,
+  summarizeApprovalWarningsFor,
   uncoveredKeys,
 } from '../../src/claim/approval-warnings.js';
 import {
   ApprovalWarningReasonRequiredError,
   ApprovalWarningReasonWriteRefusedError,
+  LateWarningReasonRequiredError,
+  R9ApproveVotesNeedWarningReasonError,
   WarningReasonUnavailableError,
   WarningReasonUngroundedError,
 } from '../../src/claim/errors.js';
@@ -154,6 +162,123 @@ describe('coverage (NW8, NW14, NW15)', () => {
     expect(lateWarningNothingUncoveredFor(warnings, 'sa')).toBe(false);
     // ⛔ No late key ⇒ nothing for anyone.
     expect(lateWarningNothingUncoveredFor(w(['k1'], [approval]), 'sa')).toBe(true);
+  });
+});
+
+describe('6.23b — the wait\'s coverage (EA2, RD3, RD17)', () => {
+  const approval = { step: 'district_admin_approval', recordedByActor: 'da', keys: ['post_death_version:a'] };
+  const w = (keys: string[], records: { step: string; recordedByActor: string; keys: string[] }[], approved = true) => ({
+    keys,
+    coverage: {
+      districtAdminApproved: approved,
+      coveredKeys: [...new Set(records.flatMap((r) => r.keys))],
+      approvalKeys: records.filter((r) => r.step === 'district_admin_approval').flatMap((r) => r.keys),
+      records,
+    },
+  });
+  const both = ['post_death_version:a', 'post_death_version:b'];
+
+  it('RD3 — `excludeLateReasonsRecordedBy` takes a LIST (P4: the finalizer AND every live approve voter)', () => {
+    const lateV1 = { step: 'district_admin_late_reason', recordedByActor: 'v1', keys: ['post_death_version:b'] };
+    const lateDa = { step: 'district_admin_late_reason', recordedByActor: 'da2', keys: ['post_death_version:b'] };
+    expect(uncoveredKeys(w(both, [approval, lateV1]), { excludeLateReasonsRecordedBy: ['fin', 'v1'] })).toEqual(['post_death_version:b']);
+    expect(uncoveredKeys(w(both, [approval, lateV1]), { excludeLateReasonsRecordedBy: ['fin', 'v2'] })).toEqual([]);
+    expect(uncoveredKeys(w(both, [approval, lateV1, lateDa]), { excludeLateReasonsRecordedBy: ['fin', 'v1'] })).toEqual([]);
+    expect(uncoveredKeys(w(both, [approval, lateV1]), { excludeLateReasonsRecordedBy: [] })).toEqual([]);
+    // ⚠ A District Admin APPROVAL row is ⛔ never excluded (EA2 — one person at P1 and P3 is today's breadth).
+    expect(uncoveredKeys(w(['post_death_version:a'], [approval]), { excludeLateReasonsRecordedBy: ['da'] })).toEqual([]);
+  });
+
+  it('RD17 — `keysNotCoveredBy` is a plain set difference — it covers ⛔ nothing without a District Admin approval', () => {
+    expect(keysNotCoveredBy(both, ['post_death_version:a'])).toEqual(['post_death_version:b']);
+    expect(keysNotCoveredBy(both, both)).toEqual([]);
+    expect(keysNotCoveredBy(both, [])).toEqual(both);
+    expect(keysNotCoveredBy([], ['x'])).toEqual([]);
+    // The case `uncoveredKeys` gets wrong for R9: ⛔ no District Admin approval ⇒ `uncoveredKeys` says nothing is uncovered.
+    expect(uncoveredKeys(w(both, [], false))).toEqual([]);
+    expect(keysNotCoveredBy(both, ['post_death_version:a'])).toHaveLength(1);
+  });
+
+  it('EA2 — `lateWarningWait`: the uncovered keys, their kinds, and `ownReasonExcluded` = excluded > unexcluded', () => {
+    const late = { step: 'district_admin_late_reason', recordedByActor: 'pa', keys: ['post_death_version:b'] };
+    // Covered by someone ELSE's late reason ⇒ ⛔ no wait.
+    expect(lateWarningWait(w(both, [approval, late]), ['other'])).toEqual({ uncoveredKeys: [], kinds: [], ownReasonExcluded: false });
+    // Covered ONLY by the approver's own late reason ⇒ the wait, and it says so.
+    expect(lateWarningWait(w(both, [approval, late]), ['pa'])).toEqual({
+      uncoveredKeys: ['post_death_version:b'],
+      kinds: ['post_death_version'],
+      ownReasonExcluded: true,
+    });
+    // Uncovered by anyone ⇒ the wait, ⛔ not "own reason".
+    expect(lateWarningWait(w([...both, 'recent_nominee_change:c'], [approval]), ['pa'])).toEqual({
+      uncoveredKeys: ['post_death_version:b', 'recent_nominee_change:c'],
+      kinds: ['post_death_version', 'recent_nominee_change'],
+      ownReasonExcluded: false,
+    });
+    // ⛔ No District Admin approval ⇒ the conjunct is vacuous.
+    expect(lateWarningWait(w(both, [], false), ['pa']).uncoveredKeys).toEqual([]);
+  });
+
+  it('code review 2026-10-06 — `summarizeApprovalWarningsFor`: the DTO shape wraps `lateWarningWait` + echoes `kinds`/`postDeath`', () => {
+    const late = { step: 'district_admin_late_reason', recordedByActor: 'pa', keys: ['post_death_version:b'] };
+    // No current warnings at all ⇒ nothing to wait on.
+    expect(summarizeApprovalWarningsFor({ keys: [], kinds: [], postDeath: 'evaluated', coverage: w([], []).coverage }, ['other'])).toEqual({
+      kinds: [],
+      postDeath: 'evaluated',
+      waitingForDistrictAdmin: false,
+      ownReasonExcluded: false,
+    });
+    // Covered ONLY by the approver's OWN late reason ⇒ waiting, and it's an own-reason exclusion.
+    expect(
+      summarizeApprovalWarningsFor(
+        { keys: both, kinds: ['post_death_version'], postDeath: 'evaluated', coverage: w(both, [approval, late]).coverage },
+        ['pa'],
+      ),
+    ).toEqual({
+      kinds: ['post_death_version'],
+      postDeath: 'evaluated',
+      waitingForDistrictAdmin: true,
+      ownReasonExcluded: true,
+    });
+    // Uncovered by anyone ⇒ waiting, ⛔ not an own-reason exclusion.
+    expect(
+      summarizeApprovalWarningsFor(
+        { keys: both, kinds: ['post_death_version'], postDeath: 'awaiting_determination', coverage: w(both, [approval]).coverage },
+        ['pa'],
+      ),
+    ).toEqual({
+      kinds: ['post_death_version'],
+      postDeath: 'awaiting_determination',
+      waitingForDistrictAdmin: true,
+      ownReasonExcluded: false,
+    });
+  });
+
+  it('EA5 — `r9ApproveVotesMissingKeys`: each approve vote against EVERY key; ⛔ no keys ⇒ ⛔ none; a vote with ⛔ no row misses all', () => {
+    const coverage = new Map<string, readonly string[]>([
+      ['v1', ['post_death_version:a', 'post_death_version:b']],
+      ['v2', ['post_death_version:a']],
+    ]);
+    expect(r9ApproveVotesMissingKeys(both, ['V1', 'v2', 'v3'], coverage)).toEqual([
+      { voteId: 'v2', missing: ['post_death_version:b'] },
+      { voteId: 'v3', missing: both },
+    ]);
+    expect(r9ApproveVotesMissingKeys([], ['v3'], coverage)).toEqual([]);
+  });
+
+  it('a LATER step\'s row ⛔ never counts as District Admin coverage (only `district_admin_*` rows are read — NW13)', () => {
+    // The reader selects `DISTRICT_ADMIN_WARNING_STEPS` only; a record list with a later row (as if one leaked) still
+    // excludes nothing from the District Admin's own approval keys.
+    expect(lateWarningKeys(w(both, [approval]))).toEqual(['post_death_version:b']);
+  });
+
+  it('the typed errors carry what the routes map (codes + counts only)', () => {
+    const e = new LateWarningReasonRequiredError('c', ['post_death_version'], 1, true);
+    expect([e.name, e.claimCaseId, e.kinds, e.uncoveredCount, e.ownReasonExcluded]).toEqual([
+      'LateWarningReasonRequiredError', 'c', ['post_death_version'], 1, true,
+    ]);
+    const r = new R9ApproveVotesNeedWarningReasonError('c', ['v1', 'v2'], 2);
+    expect([r.name, r.voteIds, r.uncoveredCount]).toEqual(['R9ApproveVotesNeedWarningReasonError', ['v1', 'v2'], 2]);
   });
 });
 

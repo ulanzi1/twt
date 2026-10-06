@@ -134,6 +134,16 @@ export function isEnglishScriptName(value: string): boolean {
   return ENGLISH_NAME_REGEX.test(value.trim());
 }
 
+/**
+ * Code review 2026-10-06 — the "is this note/rationale blank" predicate, pulled out of
+ * `claims/correction-closure.ts`'s `RequiredNote` and `claims/cycle-freeze.ts`'s warning-reason
+ * `superRefine`, which each spelled it slightly differently (`v.trim().length > 0` vs.
+ * `(val.rationale?.trim() ?? '') === ''`). One predicate, so a future third spelling doesn't drift.
+ */
+export function isBlank(value: string | undefined): boolean {
+  return (value?.trim() ?? '') === '';
+}
+
 export const EnglishScriptName = z
   .string()
   .trim()

@@ -51,6 +51,13 @@ import {
 } from './correction-closure-crypto.js';
 import { toClosureDto } from './correction-closure-dto.js';
 import { encryptTrusteeRationale } from './state-trustee-decision-crypto.js';
+import {
+  UNAVAILABLE_APPROVAL_WARNINGS,
+  approvedWarningAudit,
+  toApprovalWarningsSummary,
+  toReasonOptionsDto,
+  underSavepoint,
+} from './later-approval-warnings.js';
 
 export const ESCALATION_DECIDE_KEY = 'claim.decide_escalated_closure';
 export const ESCALATION_REVIEW_KEY = 'claim.review_escalated_closure';
@@ -155,7 +162,27 @@ export function createCorrectionEscalationHandlers(deps: AppDeps) {
         name_check_state: detail.nameCheckState,
         // `-273` §8 — the SAME rule the writer decides under its locks; shown so the Super Admin knows what an approve asks.
         approve_path: row.origin === 'declined_closure' && !detail.resubmitted ? 'name_waived_251' : 'full_gate',
+        approval_warnings: UNAVAILABLE_APPROVAL_WARNINGS,
+        reason_options: [],
       };
+      // ⭐ Story 6.23b (EA7; RD7, RD8; Trap 15) — the nominee-change warnings for this ONE claim, attached HERE (the domain
+      // detail and its shape pin stay unchanged), LAST and under a raw SAVEPOINT: a throw fails CLOSED (`available: false`
+      // — the approve control disabled in its own words; close and refuse untouched), ⛔ never "no warnings". The wait is
+      // judged for the viewing Super Admin (`-279` A1). ⛔ Not the POST's pre-check read (`decideEscalation` — `-274` 1a).
+      const scopeTx = request.scopeTx!;
+      const warned = await underSavepoint(scopeTx.client, 'escalation_approval_warnings', () =>
+        claim.readClaimApprovalWarnings(scopeTx.tx, ctx.pariwarId, ctx.claimCaseId),
+      ).catch((err: unknown) => {
+        request.log.warn(
+          { err: err instanceof Error ? err.name : 'unknown', claimCaseId: ctx.claimCaseIdStr },
+          'escalation detail: nominee-change warnings unavailable; failing closed to cannot-approve',
+        );
+        return null;
+      });
+      if (warned !== null) {
+        response.approval_warnings = toApprovalWarningsSummary(warned, [ctx.actorId]);
+        response.reason_options = toReasonOptionsDto(warned.reasonOptions);
+      }
       auditClaim(deps, request, ctx, 'admin_claim_correction.escalation_read', { closure_id: row.closureId, origin: row.origin });
       return response;
     },
@@ -256,7 +283,8 @@ export function createCorrectionEscalationHandlers(deps: AppDeps) {
           ? { ...base, decision: 'close', crypto: deps.encryption }
           : body.decision === 'refuse'
             ? { ...base, decision: 'refuse', refusalReasonCode: body.refusal_reason_code! }
-            : { ...base, decision: 'approve' };
+            : // ⭐ Story 6.23b (EA6a; Trap 5) — the warning reason rides its OWN field (⛔ a closure reason).
+              { ...base, decision: 'approve', warningReasonCode: body.warning_reason_code ?? null };
       let result: claim.EscalatedClosureDecisionResult;
       try {
         result = await inWriteTx(deps, ctx.pariwarIdStr, (client) => claim.decideEscalatedClosure(client, input));
@@ -274,6 +302,8 @@ export function createCorrectionEscalationHandlers(deps: AppDeps) {
         name_check_waived: result!.nameCheckWaived,
         approval_name_check_state: result!.approvalNameCheckState,
         ended_run: result!.endedRun,
+        // ⭐ Story 6.23b (EA9; RD15) — an APPROVE's warning kinds + the code sent.
+        ...(body.decision === 'approve' ? approvedWarningAudit(result!.approvalWarningKinds, body.warning_reason_code ?? null) : {}),
       });
       void reply.status(201);
       return {

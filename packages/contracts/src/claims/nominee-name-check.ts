@@ -410,8 +410,26 @@ export const ClaimUnderCorrectionItem = z
     correction_chase: CorrectionChaseSummaryDto,
     /** ⭐ Story 6.19c (AC8c) — the closure state, and why a closure request would refuse now (⛔ `null` ⇒ it would pass). */
     correction_closure: CorrectionClosureStateDto,
+    /**
+     * ⭐ Story 6.23b (EA10; `-279` A4) — the District Admin approved, and a CURRENT warning key has ⛔ no District Admin
+     * reason: the final approval WAITS for theirs (6.23a's late reason). A late-warning-only row has ⛔ no live return.
+     */
+    late_warning_awaiting_reason: z.boolean(),
+    late_warning_uncovered_count: z.number().int().nonnegative(),
   })
-  .strict();
+  .strict()
+  // Code review 2026-10-06: a nonzero count always implies the flag (the reverse does ⛔ not hold — the flag can be
+  // `true` with `uncovered_count: 0` when `late_warnings_unavailable` degrades the read and only the cheap
+  // candidate check survived, not the detail).
+  .superRefine((v, ctx) => {
+    if (v.late_warning_uncovered_count > 0 && !v.late_warning_awaiting_reason) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['late_warning_awaiting_reason'],
+        message: 'must be true whenever late_warning_uncovered_count is nonzero',
+      });
+    }
+  });
 export type ClaimUnderCorrectionItem = z.output<typeof ClaimUnderCorrectionItem>;
 
 /**
@@ -427,6 +445,11 @@ export const ClaimsUnderCorrectionResponse = z
   .object({
     pariwar_id: z.string().uuid(),
     items: z.array(ClaimUnderCorrectionItem),
+    /**
+     * ⭐ Story 6.23b (EA10; invariant 7) — the late-warning arm could ⛔ not be read just now: the returned claims still
+     * list, but a claim waiting ONLY for a late reason may be missing. ⛔ Never read as "none waiting".
+     */
+    late_warnings_unavailable: z.boolean(),
   })
   .strict();
 export type ClaimsUnderCorrectionResponse = z.output<typeof ClaimsUnderCorrectionResponse>;

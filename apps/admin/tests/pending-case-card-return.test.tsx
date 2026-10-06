@@ -40,6 +40,14 @@ const CASE: PendingCase = {
   under_correction: false,
   name_difference_reasons: [],
   approval_name_highlight: null,
+  // Story 6.23b (EA7) — a quiet claim: the block every pending case now carries.
+  approval_warnings: {
+    available: true,
+    kinds: [],
+    post_death: 'evaluated',
+    waiting_for_district_admin: false,
+    own_reason_excluded: false,
+  },
 };
 
 const PARIWAR = '44444444-4444-4444-8444-444444444444';
@@ -61,6 +69,7 @@ const setup = (overrides: Partial<PendingCase> = {}, bucket: 'ready_to_freeze' |
           pariwarId={PARIWAR}
           onDecision={onDecision}
           pending={false}
+          reasonOptions={[]}
         />
       </ul>
     </QueryClientProvider>,
@@ -80,6 +89,7 @@ const renderCard = (overrides: Partial<PendingCase> = {}) => {
           pariwarId={PARIWAR}
           onDecision={vi.fn()}
           pending={false}
+          reasonOptions={[]}
         />
       </ul>
     </QueryClientProvider>,
@@ -179,7 +189,7 @@ describe('<PendingCaseCard> — AC11, the return to the District Admin', () => {
     render(
       <QueryClientProvider client={qc}>
         <ul>
-          <PendingCaseCard case_={CASE} bucket="ready_to_freeze" pariwarId={PARIWAR} onDecision={onDecision} pending={false} />
+          <PendingCaseCard case_={CASE} bucket="ready_to_freeze" pariwarId={PARIWAR} onDecision={onDecision} pending={false} reasonOptions={[]} />
         </ul>
       </QueryClientProvider>,
     );

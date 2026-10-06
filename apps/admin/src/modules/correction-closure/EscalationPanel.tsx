@@ -18,7 +18,15 @@ import {
   usePlaceClosureUnderReview,
   useRecordClosureDirection,
 } from '../../api/hooks.js';
+import { ApiError } from '../../api/client.js';
 import { AuditTrailEntry } from '../claim-verification/AuditTrailEntry.js';
+import {
+  LaterApprovalWarnings,
+  approvalBlockedReason,
+  approvalNeedsWarningReason,
+  resolvedWarningReasonCode,
+} from '../claim-verification/LaterApprovalWarnings.js';
+import { verifierConsoleEn } from '../claim-verification/i18n-en.js';
 import { correctionChaseEn } from '../correction-chase/i18n-en.js';
 import { ApprovalNameHighlightBadge } from './ApprovalNameHighlightBadge.js';
 import { closureErrorText } from './errors.js';
@@ -188,7 +196,18 @@ function DirectionForm({ pariwarId, claimCaseId }: { pariwarId: string; claimCas
 
 type Decision = 'close' | 'refuse' | 'approve';
 
-function DecisionForm({ pariwarId, detail }: { pariwarId: string; detail: EscalatedClosureDetailResponse }): ReactElement {
+const tw = verifierConsoleEn.approvalWarnings;
+
+function DecisionForm({
+  pariwarId,
+  detail,
+  onConflict,
+}: {
+  pariwarId: string;
+  detail: EscalatedClosureDetailResponse;
+  /** Story 6.23b — a 409 refetches the detail, so the warnings and the WAIT show as they now stand. */
+  onConflict: () => void;
+}): ReactElement {
   const decide = useDecideEscalatedClosure(pariwarId, detail.closure.claim_case_id);
   const staffCase = detail.closure.origin === 'staff_case';
   const decisions: Decision[] = staffCase ? ['approve', 'refuse'] : ['close', 'refuse', 'approve'];
@@ -202,6 +221,13 @@ function DecisionForm({ pariwarId, detail }: { pariwarId: string; detail: Escala
   const [note, setNote] = useState('');
   const [missing, setMissing] = useState(false);
   const [decided, setDecided] = useState<ClosureDecisionClaimResponse | null>(null);
+  // ⭐ Story 6.23b (EA6a; Trap 5) — the WARNING REASON on an approve, its OWN field (⛔ a closure reason). ⛔ No default.
+  const [warningPick, setWarningPick] = useState('');
+  const [warningMissing, setWarningMissing] = useState(false);
+  const warningReasonCode = resolvedWarningReasonCode(detail.reason_options, warningPick);
+  const warned = approvalNeedsWarningReason(detail.approval_warnings);
+  const approveBlocked = decision === 'approve' ? approvalBlockedReason(detail.approval_warnings) : null;
+  const pickerPrefix = 'escalation-decision';
   const x = e.decide;
 
   if (decided !== null) {
@@ -246,6 +272,9 @@ function DecisionForm({ pariwarId, detail }: { pariwarId: string; detail: Escala
             const next = ev.target.value as Decision;
             setDecision(next);
             setReason(CLOSURE_SUPER_ADMIN_REASONS[next][0]);
+            // Code review 2026-10-06 (P44): clear a stale "reason required" error — switching away from (and back
+            // to) 'approve' must not re-show last attempt's validation before a new submit.
+            setWarningMissing(false);
           }}
         >
           {decisions.map((d) => (
@@ -278,23 +307,47 @@ function DecisionForm({ pariwarId, detail }: { pariwarId: string; detail: Escala
         </label>
       ) : null}
       {decision === 'approve' ? <p className="text-xs" data-testid="decision-approve-path">{e.approvePath[detail.approve_path]}</p> : null}
+      {/* ⭐ Story 6.23b (EA6a, EA7) — the warnings on an APPROVE only (a close or a refusal is ⛔ never gated). */}
+      {decision === 'approve' ? (
+        <LaterApprovalWarnings
+          summary={detail.approval_warnings}
+          options={detail.reason_options}
+          value={warningReasonCode}
+          onChange={(code) => {
+            setWarningPick(code);
+            setWarningMissing(false);
+          }}
+          error={warningMissing ? tw.reasonRequiredError : null}
+          disabled={decide.isPending}
+          idPrefix={pickerPrefix}
+        />
+      ) : null}
       <RequiredText label={x.note} value={note} onChange={setNote} missing={missing} testId="decision-note" />
       <button
         type="button"
         className="self-start rounded border px-3 py-1"
-        disabled={decide.isPending}
+        disabled={decide.isPending || approveBlocked !== null}
+        // Code review 2026-10-06 (P34): derived from `pickerPrefix` (the SAME value passed to the picker's
+        // `idPrefix` above) rather than a hardcoded literal duplicating it.
+        aria-describedby={approveBlocked !== null ? `${pickerPrefix}-approval-blocked` : undefined}
         data-testid="decision-submit"
         onClick={() => {
-          if (note.trim() === '') return setMissing(true);
-          setMissing(false);
+          const noteMissing = note.trim() === '';
+          const reasonMissing = decision === 'approve' && warned && warningReasonCode === '';
+          setMissing(noteMissing);
+          setWarningMissing(reasonMissing);
+          if (noteMissing || reasonMissing) return;
           void decide
             .mutateAsync({
               decision,
               reason,
               note,
               ...(decision === 'refuse' ? { refusal_reason_code: refusalCode } : {}),
+              ...(decision === 'approve' && warned ? { warning_reason_code: warningReasonCode } : {}),
             })
-            .then(setDecided, () => undefined);
+            .then(setDecided, (err: unknown) => {
+              if (err instanceof ApiError && err.status === 409) onConflict();
+            });
         }}
       >
         {x.submit}
@@ -361,7 +414,7 @@ export function EscalationDetail({ pariwarId, claimCaseId }: { pariwarId: string
       </ul>
       <ReviewForm pariwarId={pariwarId} detail={d} />
       <DirectionForm pariwarId={pariwarId} claimCaseId={claimCaseId} />
-      <DecisionForm pariwarId={pariwarId} detail={d} />
+      <DecisionForm pariwarId={pariwarId} detail={d} onConflict={() => void q.refetch()} />
     </article>
   );
 }

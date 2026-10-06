@@ -47,12 +47,19 @@
 // `project.ts`, or anything that reaches them — TRANSITIVELY (a source-scan test follows relative imports to a
 // fixpoint). Safe leaves: `death-certificate-approval.ts`, `nominee-effective.ts`, `review-window.ts`, `errors.ts`,
 // `approval-warning-reasons.ts`, `cycle-calendar/holiday-resolver.ts`.
+//
+// ── Story 6.23b (`-277` Q2 C, Q3 B; `-278` EA1–EA10 as amended by `-279`) ────────────────────────────────────────
+// Every LATER approver calls THE ONE RULE below and writes a LATER-step row (0144). The WAIT (EA2) is
+// `assertLateWarningsCovered`, the LAST conjunct of `assertClaimApprovable` (`nominee-name-check.ts` imports THIS
+// module — ⛔ never the reverse). The lists read `readClaimApprovalWarningsBulk` (ONE statement, the SAME pure
+// derivation); R9's per-vote coverage is `readR9VoteWarningCoverage` + `keysNotCoveredBy` — ⛔ never `uncoveredKeys`,
+// which covers nothing without a District Admin approval (RD17).
 
 import { sql } from 'drizzle-orm';
 
 import { addCalendarDays, istDateOf } from '../cycle-calendar/holiday-resolver.js';
 import type { Db } from '../db.js';
-import type { ClaimId, MemberId, PariwarId, VerifierDecisionId } from '../ids/index.js';
+import type { ClaimId, MemberId, PariwarId, R9VoteId, TrusteeDecisionId, VerifierDecisionId } from '../ids/index.js';
 import {
   type ClaimWarningApprovalStep,
   claimWarningApprovals,
@@ -61,11 +68,13 @@ import {
 import {
   type ApprovalWarningReasonOption,
   activeReasonOptions,
+  lockActiveApprovalWarningReason,
   type RawActiveReason,
   type ResolvedApprovalWarningReason,
 } from './approval-warning-reasons.js';
 import {
   ApprovalWarningReasonRequiredError,
+  LateWarningReasonRequiredError,
   WarningReasonUnavailableError,
   WarningReasonUngroundedError,
 } from './errors.js';
@@ -215,7 +224,7 @@ export async function readClaimApprovalWarnings(
          AND cl.claim_case_id = ${claimCaseId}
     ),
     cur AS (
-      SELECT r.review_id
+      SELECT r.review_id, r.decided_at
         FROM c
         JOIN claim_documents cd
           ON cd.pariwar_id = c.pariwar_id
@@ -262,7 +271,13 @@ export async function readClaimApprovalWarnings(
                     AND f.claim_case_id = c2.claim_case_id
                     AND f.kind = 'member_found_innocent'
                )) AS first_filed_at,
-           (SELECT cur.review_id FROM cur LIMIT 1) AS current_review_id,
+           -- Code review follow-up 2026-10-06: matches the bulk reader's cur ORDER BY, for consistency -- a
+           -- fresh-context re-validation of that fix proved BOTH cur chains are actually deterministic by
+           -- construction (claim_documents/claim_death_certificate_uploads/claim_death_certificate_reviews each
+           -- carry a UNIQUE constraint that composes to at most one row here), so this is redundant defense, not a
+           -- live bug fix -- but leaving the two call sites asymmetric invites exactly the kind of "which one did
+           -- they mean to fix" confusion that caused the asymmetry to be flagged in the first place.
+           (SELECT cur.review_id FROM cur ORDER BY cur.decided_at DESC, cur.review_id DESC LIMIT 1) AS current_review_id,
            det.determination_id,
            det.death_certificate_review_id AS determination_review_id,
            (SELECT json_agg(json_build_object('version_id', mv.version_id, 'effective_at', mv.effective_at)
@@ -308,6 +323,154 @@ export async function readClaimApprovalWarnings(
 }
 
 /**
+ * Code review 2026-10-06 — both bulk readers below take a caller-supplied id list straight into a SQL `IN (…)`
+ * clause with no cap, unlike this package's dynamic-limit-clamp discipline elsewhere ([[project_domain_limit_clamp_and_savepoint_retry]]).
+ * Every current caller is already page-sized well under this, so the cap is defense-in-depth, not a live limit.
+ */
+const MAX_BULK_READ_IDS = 500;
+
+/**
+ * Story 6.23b (EA7, RD9; Traps 8, 13) — `readClaimApprovalWarnings` for MANY claims in ONE statement: the SAME columns
+ * per claim (per-claim `LATERAL` subqueries over `claim_case_id IN (…)`), each row mapped through the SAME pure
+ * `deriveClaimApprovalWarnings` — so the out-of-date rule (`-279` A3) and every key are identical, ⛔ never a second
+ * derivation. ⭐ `reasonOptions` is `[]` on every claim BY DESIGN: the active list does ⛔ not vary by claim, so the
+ * caller reads it ONCE per response (`listApprovalWarningReasons`). A claim ⛔ not in this Pariwar is absent from the
+ * map. Keys of the map are lower-case claim ids. ⚠ Raw SQL with explicit aliases ([[project_epic6_drizzle_correlated_subquery_bug]]).
+ */
+export async function readClaimApprovalWarningsBulk(
+  db: Db,
+  pariwarId: PariwarId,
+  claimCaseIds: readonly ClaimId[],
+): Promise<Map<string, ClaimApprovalWarnings>> {
+  const out = new Map<string, ClaimApprovalWarnings>();
+  const ids = [...new Set(claimCaseIds.map((id) => id.toLowerCase()))];
+  if (ids.length === 0) return out;
+  if (ids.length > MAX_BULK_READ_IDS) {
+    throw new Error(`[approval-warnings] readClaimApprovalWarningsBulk: ${ids.length} ids exceeds the ${MAX_BULK_READ_IDS} cap`);
+  }
+  const daSteps = [...DISTRICT_ADMIN_WARNING_STEPS];
+  const result = await db.execute<RawWarningsRow & { claim_case_id: string }>(sql`
+    SELECT c.claim_case_id,
+           c.deceased_member_id,
+           c.current_state,
+           c.created_at,
+           (SELECT min(c2.created_at)
+              FROM claims c2
+             WHERE c2.pariwar_id = c.pariwar_id
+               AND c2.deceased_member_id = c.deceased_member_id
+               AND NOT EXISTS (
+                 SELECT 1
+                   FROM claim_nominee_findings f
+                  WHERE f.pariwar_id = c2.pariwar_id
+                    AND f.claim_case_id = c2.claim_case_id
+                    AND f.kind = 'member_found_innocent'
+               )) AS first_filed_at,
+           cur.review_id AS current_review_id,
+           det.determination_id,
+           det.death_certificate_review_id AS determination_review_id,
+           (SELECT json_agg(json_build_object('version_id', mv.version_id, 'effective_at', mv.effective_at)
+                            ORDER BY mv.effective_at, mv.version_id)
+              FROM member_nominee_versions mv
+             WHERE mv.pariwar_id = c.pariwar_id
+               AND mv.member_id = c.deceased_member_id
+               AND mv.source = 'member') AS member_versions,
+           (SELECT json_agg(i.version_id ORDER BY i.version_id)
+              FROM nominee_determination_items i
+              JOIN member_nominee_versions iv
+                ON iv.pariwar_id = i.pariwar_id
+               AND iv.version_id = i.version_id
+               AND iv.source = 'member'
+             WHERE i.pariwar_id = c.pariwar_id
+               AND i.determination_id = det.determination_id
+               AND i.mark = 'discarded') AS discarded_member_version_ids,
+           vd.decision_id AS live_decision_id,
+           vd.outcome AS live_decision_outcome,
+           (SELECT json_agg(json_build_object('step', w.step, 'actor', w.recorded_by_actor, 'keys', w.covered_keys)
+                            ORDER BY w.recorded_at, w.record_id)
+              FROM claim_warning_approvals w
+             WHERE w.pariwar_id = c.pariwar_id
+               AND w.claim_case_id = c.claim_case_id
+               AND w.step IN (${sql.join(daSteps.map((step) => sql`${step}`), sql`, `)})) AS records,
+           NULL::json AS reasons
+      FROM claims c
+      LEFT JOIN LATERAL (
+        SELECT r.review_id
+          FROM claim_documents cd
+          JOIN claim_death_certificate_uploads u
+            ON u.pariwar_id = cd.pariwar_id
+           AND u.claim_case_id = cd.claim_case_id
+           AND u.storage_object_key = cd.storage_object_key
+          JOIN claim_death_certificate_reviews r
+            ON r.pariwar_id = cd.pariwar_id
+           AND r.claim_case_id = cd.claim_case_id
+           AND r.superseded_at IS NULL
+           AND r.upload_id = u.upload_id
+           AND r.verdict = 'accepted'
+         WHERE cd.pariwar_id = c.pariwar_id
+           AND cd.claim_case_id = c.claim_case_id
+           AND cd.document_type = 'death_certificate'
+         -- Code review 2026-10-06: deterministic, unlike det/vd below (each backed by a documented
+         -- partial-unique index) -- this chain has no such guarantee, so pin the LATEST accepted review.
+         ORDER BY r.decided_at DESC, r.review_id DESC
+         LIMIT 1
+      ) cur ON true
+      LEFT JOIN LATERAL (
+        SELECT d.determination_id, d.death_certificate_review_id
+          FROM nominee_determinations d
+         WHERE d.pariwar_id = c.pariwar_id
+           AND d.claim_case_id = c.claim_case_id
+           AND d.superseded_at IS NULL
+         LIMIT 1
+      ) det ON true
+      LEFT JOIN LATERAL (
+        SELECT v.decision_id, v.outcome::text AS outcome
+          FROM claim_verifier_decisions v
+         WHERE v.pariwar_id = c.pariwar_id
+           AND v.claim_case_id = c.claim_case_id
+           AND v.superseded_at IS NULL
+         LIMIT 1
+      ) vd ON true
+     WHERE c.pariwar_id = ${pariwarId}
+       AND c.claim_case_id IN (${sql.join(ids.map((id) => sql`${id}`), sql`, `)})
+  `);
+  for (const row of result.rows ?? []) {
+    const id = row.claim_case_id.toLowerCase();
+    out.set(id, { ...deriveClaimApprovalWarnings(id as ClaimId, row), reasonOptions: [] });
+  }
+  return out;
+}
+
+/**
+ * Story 6.23b (EA5, RD10) — the keys each R9 approve vote's OWN `r9_vote` record row covers, by vote id (lower-case).
+ * A vote with ⛔ no row is absent (⇒ it covers nothing). ONE statement over `step = 'r9_vote'` rows — the rows
+ * `readClaimApprovalWarnings` never selects (Trap 13 of 6.23a: they are ⛔ never District Admin coverage).
+ */
+export async function readR9VoteWarningCoverage(
+  db: Db,
+  pariwarId: PariwarId,
+  voteIds: readonly string[],
+): Promise<Map<string, readonly string[]>> {
+  const out = new Map<string, readonly string[]>();
+  const ids = [...new Set(voteIds.map((id) => id.toLowerCase()))];
+  if (ids.length === 0) return out;
+  if (ids.length > MAX_BULK_READ_IDS) {
+    throw new Error(`[approval-warnings] readR9VoteWarningCoverage: ${ids.length} ids exceeds the ${MAX_BULK_READ_IDS} cap`);
+  }
+  const result = await db.execute<{ r9_vote_id: string; covered_keys: string[] }>(sql`
+    SELECT w.r9_vote_id, w.covered_keys
+      FROM claim_warning_approvals w
+     WHERE w.pariwar_id = ${pariwarId}
+       AND w.step = 'r9_vote'
+       AND w.r9_vote_id IN (${sql.join(ids.map((id) => sql`${id}`), sql`, `)})
+  `);
+  for (const r of result.rows ?? []) {
+    const id = r.r9_vote_id.toLowerCase();
+    out.set(id, [...new Set([...(out.get(id) ?? []), ...r.covered_keys])]);
+  }
+  return out;
+}
+
+/**
  * JUST the 90-day anchor (`first_filed_at ?? created_at`) — for a caller that needs no other field of
  * `readClaimApprovalWarnings`'s full read (code review 2026-10-05; `claims.nominee-declaration.handlers.ts`'s
  * `getTimeline`, which re-derives its own per-version warnings via `classifyNomineeVersion` and only needed the
@@ -337,7 +500,7 @@ export async function getClaimWarningAnchor(db: Db, pariwarId: PariwarId, claimC
   return new Date(row.first_filed_at ?? row.created_at);
 }
 
-/** The pure half of the read (6.23b's bulk form reuses it). */
+/** The pure half of the read — 6.23b's bulk form (`readClaimApprovalWarningsBulk`) reuses it (RD9). */
 function deriveClaimApprovalWarnings(claimCaseId: ClaimId, row: RawWarningsRow): ClaimApprovalWarnings {
   const anchorFiledAt = new Date(row.first_filed_at ?? row.created_at);
   const currentReview = row.current_review_id?.toLowerCase() ?? null;
@@ -401,18 +564,115 @@ function deriveClaimApprovalWarnings(claimCaseId: ClaimId, row: RawWarningsRow):
  */
 export function uncoveredKeys(
   warnings: Pick<ClaimApprovalWarnings, 'keys' | 'coverage'>,
-  opts: { readonly excludeLateReasonsRecordedBy?: string } = {},
+  /** 6.23b RD3 — ONE actor, or a LIST (R9 finalize: the finalizer AND every live approve voter). */
+  opts: { readonly excludeLateReasonsRecordedBy?: string | readonly string[] } = {},
 ): string[] {
   if (!warnings.coverage.districtAdminApproved) return [];
+  const raw = opts.excludeLateReasonsRecordedBy;
+  const excluded = new Set(raw === undefined ? [] : typeof raw === 'string' ? [raw] : raw);
   const covered = new Set(
     warnings.coverage.records
-      .filter(
-        (r) =>
-          !(r.step === 'district_admin_late_reason' && opts.excludeLateReasonsRecordedBy !== undefined && r.recordedByActor === opts.excludeLateReasonsRecordedBy),
-      )
+      .filter((r) => !(r.step === 'district_admin_late_reason' && excluded.has(r.recordedByActor)))
       .flatMap((r) => r.keys),
   );
   return warnings.keys.filter((k) => !covered.has(k));
+}
+
+/**
+ * 6.23b RD17 — the keys in `keys` ⛔ in `coveredKeys`: a PLAIN set difference. R9's per-vote comparison (a vote's own
+ * `r9_vote` row against EVERY current key, `-279` A2) — ⛔ never `uncoveredKeys`, which returns `[]` whenever the
+ * District Admin has ⛔ not approved: exactly R9's case from `verification_in_progress` / `verifier_review`.
+ */
+export function keysNotCoveredBy(keys: readonly string[], coveredKeys: readonly string[]): string[] {
+  const covered = new Set(coveredKeys);
+  return keys.filter((k) => !covered.has(k));
+}
+
+/**
+ * 6.23b EA5 / RD11 (`-279` A2) — the APPROVE votes whose own `r9_vote` row does ⛔ not cover EVERY current key, each with
+ * the keys it misses. ONE copy: `finalizeR9Outcome` refuses on it, and the R9 panel's `covers_current_warnings` shows
+ * the SAME answer per vote before finalize. `coverage` is `readR9VoteWarningCoverage`'s map (lower-case vote ids).
+ */
+export function r9ApproveVotesMissingKeys(
+  keys: readonly string[],
+  approveVoteIds: readonly string[],
+  coverage: ReadonlyMap<string, readonly string[]>,
+): { voteId: string; missing: string[] }[] {
+  if (keys.length === 0) return [];
+  return approveVoteIds
+    .map((voteId) => ({ voteId, missing: keysNotCoveredBy(keys, coverage.get(voteId.toLowerCase()) ?? []) }))
+    .filter((v) => v.missing.length > 0);
+}
+
+/** The kinds of `keys`, in `APPROVAL_WARNING_KINDS` order (a key is `${kind}:${subjectId}`). */
+function kindsOfKeys(keys: readonly string[]): ApprovalWarningKind[] {
+  const prefixes = new Set(
+    keys.map((k) => {
+      const i = k.indexOf(':');
+      return i === -1 ? k : k.slice(0, i);
+    }),
+  );
+  return APPROVAL_WARNING_KINDS.filter((k) => prefixes.has(k));
+}
+
+/**
+ * 6.23b EA2 (`-277` Q3 B; `-279` A1) — the WAIT, as judged for an approval by `approvingActorIds`: the current keys the
+ * District Admin's rows leave uncovered, NOT counting a late reason any approving actor recorded. `ownReasonExcluded`
+ * ⇔ some key is uncovered ONLY because of that exclusion. Vacuous (⛔ no keys) without a live District Admin approval.
+ */
+export function lateWarningWait(
+  warnings: Pick<ClaimApprovalWarnings, 'keys' | 'coverage'>,
+  approvingActorIds: readonly string[],
+): { uncoveredKeys: string[]; kinds: ApprovalWarningKind[]; ownReasonExcluded: boolean } {
+  const uncovered = uncoveredKeys(warnings, { excludeLateReasonsRecordedBy: approvingActorIds });
+  return {
+    uncoveredKeys: uncovered,
+    kinds: kindsOfKeys(uncovered),
+    ownReasonExcluded: uncovered.length > uncoveredKeys(warnings).length,
+  };
+}
+
+/**
+ * ⭐ 6.23b EA2 — THE WAIT, the LAST conjunct of `assertClaimApprovable` (so P3, P4 and 6.19c's approvals reach it BY
+ * CONSTRUCTION, the `-251` waived one included — Trap 17). Where the live verifier decision is `approved`, every current
+ * warning key must be covered by a District Admin row (⛔ counting none an approving actor recorded as a late reason).
+ * ⛔ NEVER a refusal: the claim waits for the District Admin (6.23a NW14).
+ * @throws LateWarningReasonRequiredError
+ */
+export async function assertLateWarningsCovered(
+  db: Db,
+  pariwarId: PariwarId,
+  claimCaseId: ClaimId,
+  approvingActorIds: readonly string[],
+): Promise<void> {
+  const warnings = await readClaimApprovalWarnings(db, pariwarId, claimCaseId);
+  const wait = lateWarningWait(warnings, approvingActorIds);
+  if (wait.uncoveredKeys.length === 0) return;
+  throw new LateWarningReasonRequiredError(claimCaseId, wait.kinds, wait.uncoveredKeys.length, wait.ownReasonExcluded);
+}
+
+/**
+ * 6.23b EA7 — what a LATER approver's screen shows for one claim (the wire's `approval_warnings`, before snake-casing):
+ * the kinds, whether the post-death check is evaluated, and the WAIT judged for the VIEWER as a prospective approver
+ * (their own late reasons excluded — and, on the R9 panel, every live approve voter's — so the screen ⛔ never offers an
+ * approve that would 409).
+ */
+export function summarizeApprovalWarningsFor(
+  warnings: Pick<ClaimApprovalWarnings, 'keys' | 'kinds' | 'postDeath' | 'coverage'>,
+  approvingActorIds: readonly string[],
+): {
+  kinds: ApprovalWarningKind[];
+  postDeath: ClaimApprovalWarnings['postDeath'];
+  waitingForDistrictAdmin: boolean;
+  ownReasonExcluded: boolean;
+} {
+  const wait = lateWarningWait(warnings, approvingActorIds);
+  return {
+    kinds: [...warnings.kinds],
+    postDeath: warnings.postDeath,
+    waitingForDistrictAdmin: wait.uncoveredKeys.length > 0,
+    ownReasonExcluded: wait.ownReasonExcluded,
+  };
 }
 
 /** The current keys the District Admin's APPROVAL did ⛔ not cover — the LATE warnings (Q3 B). */
@@ -482,24 +742,76 @@ export function assertApprovalReasonCoversWarnings(input: {
   return input.resolvedReason;
 }
 
+/**
+ * ⭐ 6.23b (EA3–EA6; `-277` Q2 C) — THE ONE RULE as every LATER approver runs it, inside its own transaction, in
+ * `adjudicateClaim`'s (a3) shape: read the warnings, lock the chosen reason `FOR SHARE` ONLY when a warning shows AND a
+ * code was sent (Trap 11), then `assertApprovalReasonCoversWarnings`. `note` is the approval's own note (its rationale
+ * ciphertext). Returns the kinds (for the audit) and the keys + reason to record — `reason` is `null` ⇔ ⛔ no warning
+ * shows (⇒ ⛔ no record row). ⛔ Call it on an APPROVAL only — a refusal is never gated (invariant 4).
+ */
+export async function checkLaterApprovalWarningReason(
+  db: Db,
+  pariwarId: PariwarId,
+  claimCaseId: ClaimId,
+  warningReasonCode: string | null,
+  note: string | null,
+): Promise<{
+  kinds: readonly ApprovalWarningKind[];
+  keys: readonly string[];
+  reason: ResolvedApprovalWarningReason | null;
+  deceasedMemberId: MemberId;
+}> {
+  const warnings = await readClaimApprovalWarnings(db, pariwarId, claimCaseId);
+  const resolved =
+    warnings.kinds.length > 0 && warningReasonCode !== null
+      ? await lockActiveApprovalWarningReason(db, pariwarId, warningReasonCode)
+      : null;
+  const reason = assertApprovalReasonCoversWarnings({
+    claimCaseId,
+    kinds: warnings.kinds,
+    warningReasonCode,
+    resolvedReason: resolved,
+    note,
+  });
+  return { kinds: warnings.kinds, keys: warnings.keys, reason, deceasedMemberId: warnings.deceasedMemberId };
+}
+
 // ── The record (NW13) ───────────────────────────────────────────────────────────────────────────────────────────
+
+/**
+ * 6.23b RD2 — each step's PROVENANCE, exactly 0144's `claim_warning_approvals_later_step_fk_check`: the District
+ * Admin's steps carry the live verifier decision; the later steps carry the trustee decision / R9 vote / closure row
+ * they wrote (`super_admin_approval` both its closure and its trustee decision — `-279` A10).
+ */
+export type ClaimWarningApprovalProvenance =
+  | { readonly step: 'district_admin_approval' | 'district_admin_late_reason'; readonly verifierDecisionId: VerifierDecisionId }
+  | { readonly step: 'escalation_resolution' | 'final_vote' | 'no_correction_approval'; readonly trusteeDecisionId: TrusteeDecisionId }
+  | { readonly step: 'r9_vote'; readonly r9VoteId: R9VoteId }
+  | { readonly step: 'super_admin_approval'; readonly closureId: string; readonly trusteeDecisionId: TrusteeDecisionId };
+
+/**
+ * Compile-time lockstep with `CLAIM_WARNING_APPROVAL_STEPS`: a new step without a provenance arm fails typecheck here.
+ * Type-only (code review 2026-10-06) — a `type` alias is erased entirely, so this has zero runtime footprint, unlike
+ * the previous `const … = true` pattern.
+ */
+type AssertNever<T extends never> = T;
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- the exhaustiveness check IS the declaration.
+type _EveryStepHasProvenance = AssertNever<Exclude<ClaimWarningApprovalStep, ClaimWarningApprovalProvenance['step']>>;
 
 /**
  * Append ONE row to the approval-over-warning record (NW13) — the chosen reason and EXACTLY the current keys, in the
  * caller's transaction (the approval's own, or NW14's). Append-only by grant and trigger (0143): ⛔ no writer edits
- * a row (NW18).
+ * a row (NW18). The input is discriminated by `step` (6.23b RD2) — each step carries exactly its own FK set.
  */
 export async function insertClaimWarningApprovalRecord(
   db: Db,
-  input: {
+  input: ClaimWarningApprovalProvenance & {
     readonly pariwarId: PariwarId;
     readonly claimCaseId: ClaimId;
     readonly deceasedMemberId: MemberId;
-    readonly step: ClaimWarningApprovalStep;
-    readonly verifierDecisionId: VerifierDecisionId;
     readonly reason: ResolvedApprovalWarningReason;
     readonly keys: readonly string[];
-    /** Tier-1 ciphertext — NW14's late reason ONLY (0143's step ⇔ note CHECK). */
+    /** Tier-1 ciphertext — NW14's late reason ONLY (0143's step ⇔ note CHECK); `null` on every later step. */
     readonly noteCiphertext: string | null;
     readonly actorId: string;
     readonly actorDisplay: string;
@@ -512,7 +824,12 @@ export async function insertClaimWarningApprovalRecord(
       claimCaseId: input.claimCaseId,
       deceasedMemberId: input.deceasedMemberId,
       step: input.step,
-      verifierDecisionId: input.verifierDecisionId,
+      // Code review 2026-10-06: `in` alone only tests key PRESENCE — an explicit `x: undefined` (e.g. via a
+      // caller's object spread) would satisfy it and insert `undefined` instead of `null`. Check the value too.
+      verifierDecisionId: 'verifierDecisionId' in input && input.verifierDecisionId !== undefined ? input.verifierDecisionId : null,
+      trusteeDecisionId: 'trusteeDecisionId' in input && input.trusteeDecisionId !== undefined ? input.trusteeDecisionId : null,
+      r9VoteId: 'r9VoteId' in input && input.r9VoteId !== undefined ? input.r9VoteId : null,
+      closureId: 'closureId' in input && input.closureId !== undefined ? input.closureId : null,
       reasonCode: input.reason.code,
       reasonId: input.reason.reasonId,
       coveredKeys: [...input.keys],

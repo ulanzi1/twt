@@ -1002,6 +1002,20 @@
       "when": 1793072400000,
       "tag": "0143_claim-warning-approvals",
       "breakpoints": true
+    },
+    {
+      "idx": 144,
+      "version": "7",
+      "when": 1793158800000,
+      "tag": "0144_claim-warning-approvals-later-steps",
+      "breakpoints": true
+    },
+    {
+      "idx": 145,
+      "version": "7",
+      "when": 1793245200000,
+      "tag": "0145_claim-warning-approvals-event-uniqueness",
+      "breakpoints": true
     }
   ]
 }

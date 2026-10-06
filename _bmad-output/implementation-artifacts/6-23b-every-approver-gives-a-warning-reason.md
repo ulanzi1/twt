@@ -50,7 +50,7 @@ LETTERS: `EA1`…`EA10` are THIS story's author decisions (`-278` EA1–EA9; `-2
 
 # Story 6.23b: Every Approver Picks a Reason and Writes a Note While a Warning Shows — and a Late Warning Waits for the District Admin `[SURFACE]`
 
-Status: ready-for-dev
+Status: done
 
 > ⭐⭐ **WHAT THIS STORY IS, IN ONE PARAGRAPH.** The Trustee Panel ruled that **every approver** — not only the District Admin — gives a
 > reason and a note while a nominee-change warning shows, *"also after an appeal and in the R9 vote … even where written reasons already
@@ -621,15 +621,15 @@ the code itself, ⛔ never blank) **and** `deferred-work.md`'s item (section *"R
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0 — Re-pin and governance check (AC0).** `git merge-base --is-ancestor b41ea25f HEAD`; `git diff --name-only b41ea25f..HEAD --
+- [x] **Task 0 — Re-pin and governance check (AC0).** `git merge-base --is-ancestor b41ea25f HEAD`; `git diff --name-only b41ea25f..HEAD --
   packages apps scripts` — re-read any cited file in it; `grep -n "^### Decision" .decision-log.md | head -3` — `-280` must still be the newest,
   else read the newer ones for `6-23`, `warning`, `reason`, `coverage` (STOP on any that moves an EA).
-- [ ] **Task 1 — Migration 0144 + schema (AC1).** EA1 / Trap 10 / RD1: the step CHECK, three columns, three UNIQUE targets, three composite
+- [x] **Task 1 — Migration 0144 + schema (AC1).** EA1 / Trap 10 / RD1: the step CHECK, three columns, three UNIQUE targets, three composite
   FKs, the later-step FK CHECK, three indexes; journal entry (`idx` 144); Drizzle: `schema/claim_warning_approvals.ts` (the columns, the
   `foreignKey()`s, the `check()`s, `CLAIM_WARNING_APPROVAL_STEPS`) and a `unique()` in each parent's schema file; the contracts step mirror;
   extend the policy-regression spec and REWRITE its `step: 'r9_vote'` invalid-step assertion (`:227`) to a still-invalid value (RD21(a));
   `db:check` / `schema:check` green.
-- [ ] **Task 2 — Domain: the wait, the readers, the record insert (AC1, AC2, AC5, AC7).** In `claim/approval-warnings.ts`:
+- [x] **Task 2 — Domain: the wait, the readers, the record insert (AC1, AC2, AC5, AC7).** In `claim/approval-warnings.ts`:
   `readClaimApprovalWarningsBulk` (RD9 — ONE statement, reusing `deriveClaimApprovalWarnings`), `readR9VoteWarningCoverage` (RD10),
   `assertLateWarningsCovered` (EA2), the pure `keysNotCoveredBy(keys, coveredKeys)` (RD17 — R9's comparison, ⛔ never `uncoveredKeys`),
   RD3's exclusion widening, RD2's step-discriminated `insertClaimWarningApprovalRecord`. In
@@ -638,19 +638,19 @@ the code itself, ⛔ never blank) **and** `deferred-work.md`'s item (section *"R
   (and its doc-block's conjunct list + the seam doc-block), `ClaimApprovalGateOptions.approvingActorIds` (required; `opts` loses its default),
   the inner helper's `Pick<…,'nameCheck'>`; thread the actors at all seven gate calls; rewrite the T10 seam test
   (`nominee-name-check.spec.ts:715-753`) incl. Trap 17's arm. ⚠ Keep the import scan green (Trap 7).
-- [ ] **Task 3 — Domain: the final vote and the escalation (AC3, AC4).** `voteOnFrozenClaim` and `resolveEscalation` per EA3 / EA4 — input
+- [x] **Task 3 — Domain: the final vote and the escalation (AC3, AC4).** `voteOnFrozenClaim` and `resolveEscalation` per EA3 / EA4 — input
   `warningReasonCode?: string | null`, read `?? null` (OPTIONAL — RD18; ≈ 45 typechecked test calls stay unchanged); `readClaimApprovalWarnings` → `lockActiveApprovalWarningReason` (only when kinds non-empty and a code
   was sent — the `adjudicateClaim` shape) → `assertApprovalReasonCoversWarnings` (note = the rationale ciphertext) → the record row after the
   decision row; `approvalWarningKinds` on `TrusteeDecisionResult`.
-- [ ] **Task 4 — Domain: R9 (AC5).** `castR9Vote` (input `warningReasonCode?: string | null` — RD18; best-effort rule + the `r9_vote` row,
+- [x] **Task 4 — Domain: R9 (AC5).** `castR9Vote` (input `warningReasonCode?: string | null` — RD18; best-effort rule + the `r9_vote` row,
   its `r9_vote_id` the new vote) and
   `finalizeR9Outcome` (binding, PER VOTE, PER KEY via `keysNotCoveredBy` — `-279` A2, RD17) per EA5; `voterActorId` on the live-vote select; the approving actors =
   finalizer + live approve voters; the per-vote check after `assertClaimContactRecorded`, before the session UPDATE; the typed error with
   `voteIds`.
-- [ ] **Task 5 — Domain: 6.19c (AC6).** `EscalatedClosureDecisionInput` (the `approve` arm) and `approveNoCorrectionNeeded`'s input gain
+- [x] **Task 5 — Domain: 6.19c (AC6).** `EscalatedClosureDecisionInput` (the `approve` arm) and `approveNoCorrectionNeeded`'s input gain
   `warningReasonCode?: string | null` (OPTIONAL — RD18); the rule after the gate + contact check; the record row after `writeApprovalChain` (its `decisionId`; the closure's
   `closureId` for the Super Admin) — both the `-251` and the full-gate approve.
-- [ ] **Task 6 — Contracts (AC3–AC7, AC10).** `warning_reason_code` on `CycleFreezeDecisionRequest` (its `superRefine` via `effectiveOutcome`
+- [x] **Task 6 — Contracts (AC3–AC7, AC10).** `warning_reason_code` on `CycleFreezeDecisionRequest` (its `superRefine` via `effectiveOutcome`
   — ONE flat `.strict()` object, ⛔ not a discriminated union), `R9VoteRequest` (its FIRST `superRefine` — ⛔ no code on a deny),
   `EscalatedClosureDecisionRequest` (approve only); `{ warning_reason_code, note }` on `NoCorrectionNeededApproveRequest` (paired); NEW
   `ApprovalWarningsSummary`; `approval_warnings` + `reason_options` on the four read DTOs (`.nullable()` on `PariwarClosureQueueItemDto`,
@@ -661,14 +661,14 @@ the code itself, ⛔ never blank) **and** `deferred-work.md`'s item (section *"R
   `NoCorrectionNeededApproveRequest` has ⛔ no test at all) — WRITE the new rules' tests; add `approval_warnings` to the hand-built
   `CycleFreezePendingItem` in `nominee-name-check-vocabulary-lockstep.test.ts:68-83` (RD21(b)); contracts tests sit outside `tsc` — run
   vitest ([[project_contracts_tests_outside_tsc]]).
-- [ ] **Task 7 — API (AC2–AC8, AC10).** Map `LateWarningReasonRequiredError`, `ApprovalWarningReasonRequiredError`,
+- [x] **Task 7 — API (AC2–AC8, AC10).** Map `LateWarningReasonRequiredError`, `ApprovalWarningReasonRequiredError`,
   `WarningReasonUnavailableError`, `WarningReasonUngroundedError` and `R9ApproveVotesNeedWarningReasonError` in the FOUR translators of Trap 7
   (each in words that say the claim is ⛔ not refused; `details` codes and counts only); pass `body.warning_reason_code` to each writer;
   D27's note encryption (Trap 4); the read DTOs attached in the handlers, fail-closed (Trap 15 — `getCycleFreezePending` handler `:288`,
   `getR9Panel` handler `:276`, `listPariwarClosureQueue` handler `:449`, and `getEscalation` — the GET — at
   `claims.correction-escalation.handlers.ts:127`; ⛔ never the `:239` call, which is `decideEscalation`'s POST pre-check (`-274` 1a), whose
   response is `ClosureDecisionClaimResponse`); the correction queue's new fields; the audit contexts (RD15).
-- [ ] **Task 8 — Admin (AC7, AC10, AC11).** Mount 6.23a's picker on `PendingCaseCard.tsx` (Approve + Resolve → Approve; the warned body per
+- [x] **Task 8 — Admin (AC7, AC10, AC11).** Mount 6.23a's picker on `PendingCaseCard.tsx` (Approve + Resolve → Approve; the warned body per
   Trap 2), `R9CasePanel.tsx` (an approve vote; the per-vote *"must be revised"* line from `covers_current_warnings`), `EscalationPanel.tsx`
   (approve), `PariwarClosureStrip.tsx` (`NoCorrectionStrip`'s approve ONLY + its OWN note field — Trap 4, Trap 12); `apps/admin/src/api/client.ts`
   — `approveNoCorrectionNeeded(pariwarId, claimCaseId)` posts `{}` today (`:1539-1541`) — and its hook (`hooks.ts:932`, `mutationFn` takes only
@@ -678,7 +678,7 @@ the code itself, ⛔ never blank) **and** `deferred-work.md`'s item (section *"R
   `CycleFreezePage.tsx`'s (`:55`) and `R9CasePanel.tsx`'s (`:26`) `errorMessage` — one `endsWith` arm per new suffix (RD6); `CorrectionQueueRoute.tsx` (EA10); AC11's label. English-only staff
   copy (never `report` / `receipt` / `invoice` / `passbook` — the active microcopy terms). Family-13 accessibility as 6.23a: the selection
   announced, a missing reason or note SAID (`role="alert"`), ⛔ never a silently disabled button; a 409 refetches the list (6.23a round 4).
-- [ ] **Task 9 — Tests and records (AC8, AC9, AC11).** See *Testing*. `deferred-work.md` — a NEW section *"Recorded during Story 6.23b"*:
+- [x] **Task 9 — Tests and records (AC8, AC9, AC11).** See *Testing*. `deferred-work.md` — a NEW section *"Recorded during Story 6.23b"*:
   R9 votes revisable before finalize — notes kept as history (BigDev accepted; trigger: a Panel instruction to lock them); a late key covered
   ONLY by a late reason whose recorder then approves is ⛔ not queued by EA10 (the 409's `own_reason_excluded` words carry it; trigger: a held
   claim reported); ⚠ the R9 residual — a live approve voter may still record a late reason (6.23a's NW14 knows ⛔ nothing of R9) that ⛔ never
@@ -691,11 +691,123 @@ the code itself, ⛔ never blank) **and** `deferred-work.md`'s item (section *"R
   determination, and once row 6-22 lifts the declaration lock for a member found innocent, a member declare can add a
   `recent_nominee_change` key with ⛔ no new determination — ⛔ not queued (trigger: row 6-22 lands — add an arm on a member-source version
   recorded after the live approval). AC11's closure line on the RD13 item.
-- [ ] **Task 10 — The District Admin's queue (AC10).** EA10: the SQL superset arm + `readClaimApprovalWarningsBulk` under a raw SAVEPOINT
+- [x] **Task 10 — The District Admin's queue (AC10).** EA10: the SQL superset arm + `readClaimApprovalWarningsBulk` under a raw SAVEPOINT
   inside `qualifyingRows`; the `opts.onLateWarningsUnavailable` callback (the return type stays an array — EA10's channel);
   `ClaimUnderCorrectionRow` / `ClaimUnderCorrectionItem` gain the two fields; the queue response gains `late_warnings_unavailable`;
   `claims.nominee-name-check.handlers.ts` maps them; the module header amended to name the third arm; `CorrectionQueueRoute.tsx` shows the
   line and the console link and HIDES the chase-summary and closure actions on a late-warning-only row (⛔ no live return); its tests.
+
+### Review Findings
+
+Code review (2026-10-06), chunked by layer (domain → contracts → api → admin), 3 layers per chunk (Blind Hunter, Edge Case Hunter,
+Acceptance Auditor), run in parallel. 12 layer runs, ~86 raw findings → deduplicated and triaged. Every patch below was applied directly
+against the code (not just proposed) and verified: `tsc --noEmit` clean and the full test suite green in all four packages after each
+layer's changes (domain: 149 unit files / 2405 tests + 175 integration files / 2104 tests against :5433; contracts: 74 files / 1265 tests;
+api: 25 integration files / 363 tests against :5433; admin: 58 files / 899 tests). Several findings that looked real on first read turned
+out to be false positives once traced against the actual code or run against the real DB — see Dismissed, below — including a few found
+only while implementing the patches around them (noted inline).
+
+**Decision-needed — all 4 resolved (2 → Patch, 2 → Dismissed):** see below; the 2 resolved-to-patch are folded into the domain list.
+
+**Patch — domain (11 applied, 1 skipped):**
+
+- [x] EA10's "⛔ never none waiting" invariant silently broke on a fault [packages/domain/src/claim/correction-queue-read.ts] — `candidateBatch` now also SELECTs `lateWarningCandidate` (the same EXISTS the WHERE clause already tested, exposed as a column — no extra query cost); `qualifyingRows` no longer lets `lateWarnings === null` default a late-warning-only candidate's `lateWarningAwaitingReason` to `false` — it keeps the row with `lateWarningAwaitingReason: true` (count unknown, 0) instead of dropping it. Covered by the rewritten "ONE bulk evaluation per batch" domain test AND the API-layer Trap 15 test (both updated to assert the row now survives).
+- [x] Non-deterministic `LIMIT 1` in the `cur` LATERAL join [packages/domain/src/claim/approval-warnings.ts] — added `ORDER BY r.decided_at DESC, r.review_id DESC`.
+- [x] `readLateWarningArm`'s bare `catch` swallowed every exception with no logging [packages/domain/src/claim/correction-queue-read.ts] — now `console.warn`s the caught error before returning `null`.
+- [x] `kindsOfKeys` truncated the last character of a malformed key [packages/domain/src/claim/approval-warnings.ts] — guards `indexOf(':') === -1` explicitly.
+- [x] Unbounded `IN (...)` in both bulk readers [packages/domain/src/claim/approval-warnings.ts] — added a shared `MAX_BULK_READ_IDS = 500` cap, thrown past in both `readClaimApprovalWarningsBulk` and `readR9VoteWarningCoverage`.
+- [x] Hardcoded absolute dates in `seedLaterParents` [packages/domain/tests/integration/rls/claim-warning-approvals-policy-regression.spec.ts] — now `(now() - interval '95 days')::date` / `now() - interval '5 days'`, preserving the original 90-day gap.
+- [x] "Forced SQL failure" test didn't exercise the real failure mode [packages/domain/tests/integration/claim/approval-warnings-every-approver.spec.ts] — now corrupts every UUID-shaped bound parameter of the REAL statement (a genuine `invalid input syntax for type uuid` from Postgres) instead of substituting `SELECT 1/0`. Test also rewritten for the EA10 fix above: `late.cid`/`second.cid` now correctly survive the forced fault.
+- [x] Race test's comment overclaimed what it proves [packages/domain/tests/integration/claim/approval-warnings-every-approver-race.spec.ts] — corrected the comment to describe what's actually tested (the reason-lock held across commit) rather than seeding a full parent-decision chain just to validate an incidental claim (disproportionate for what this test's scope is).
+- [x] `insertClaimWarningApprovalRecord`'s `in`-only narrowing [packages/domain/src/claim/approval-warnings.ts] — now also checks `!== undefined` on each of the four FK fields' VALUES, not just key presence.
+- [x] Dead runtime code for a compile-time exhaustiveness check [packages/domain/src/claim/approval-warnings.ts] — replaced `const x: ... = true; void x;` with a type-only `AssertNever<T extends never>` pattern (erased entirely at compile time).
+- [x] `summarizeApprovalWarningsFor` had zero test coverage [packages/domain/src/claim/approval-warnings.ts; packages/domain/tests/claim/approval-warnings.test.ts] — **correction to the original finding**: it is NOT dead code — `apps/api/src/modules/claims/later-approval-warnings.ts:120` calls it; Blind Hunter couldn't see this (domain-only diff, blind to the api chunk). Added 3 unit-test cases covering the no-warning / own-reason-excluded-wait / anyone-uncovered-wait branches.
+- [ ] **SKIPPED** — Redundant duplicate reads of `readClaimApprovalWarnings` across 5 later-approver call sites [packages/domain/src/claim/{r9-voting-persist,state-trustee-decision-persist,correction-closure}.ts] — real, but the fix (thread one read through `assertLateWarningsCovered` → `assertClaimApprovable` → every caller, changing both functions' exported signatures) touches this story's own ~88 typechecked test call sites for a pure efficiency win with no correctness impact. Blast radius disproportionate to severity; left as a follow-up item, not applied.
+
+**Patch — contracts (11 applied, 1 found-already-done):**
+
+- [x] No cross-field validation between the two late-warning fields [packages/contracts/src/claims/nominee-name-check.ts] — `ClaimUnderCorrectionItem` gets a `superRefine`: a nonzero `late_warning_uncovered_count` now requires `late_warning_awaiting_reason: true` (one-directional, since the reverse can legitimately hold during a fault — see the EA10 fix above).
+- [x] Weak blank-note test assertion [packages/contracts/tests/approval-warnings-later-approvers.test.ts] — now asserts the failure path (`'note'`) via `failsAt`, not just `success: false`.
+- [x] "Warning code needs a non-blank note" implemented 3 ways [packages/contracts/src/_common/primitives.ts (new `isBlank` export); cycle-freeze.ts; correction-closure.ts] — both `CycleFreezeDecisionRequest`'s `superRefine` and `RequiredNote`'s field-level refine now call the SAME `isBlank` predicate.
+- [x] `reason_options` empty strands the UI [apps/admin/src/modules/claim-verification/LaterApprovalWarnings.tsx; i18n-en.ts] — a `.min(1)` at the contract layer was considered and REJECTED (it would break the deliberate, tested Trap-15 `reason_options: []` fail-closed shape). Fixed in the picker instead: when a warning is active, not blocked, and `options.length === 0`, a new `t.later.noOptionsConfigured` message renders in place of an empty picker.
+- [x] `warning_reason_code` check sat behind `if (outcome === undefined) return` [packages/contracts/src/claims/cycle-freeze.ts] — the REAL fix was upstream: `effectiveOutcome`'s `switch` had no `default`, so a future unhandled `action` would silently skip the check with `tsc` unable to catch it (the code's own doc comment already flagged this exact risk). Added a `default: { const exhaustive: never = action; throw ...}` arm — a missing case for a new action now fails typecheck instead.
+- [x] `R9PanelVote.covers_current_warnings` accepted non-null on deny [packages/contracts/src/claims/r9-voting.ts] — added a `superRefine` enforcing null-on-deny.
+- [x] `ApprovalWarningsSummary.available === false` left `kinds`/`waiting`/`own_reason_excluded` unconstrained [packages/contracts/src/claims/verification-decision.ts] — added a `superRefine`; verified against the real `UNAVAILABLE_APPROVAL_WARNINGS` sentinel (api layer) to confirm it still parses.
+- [x] `EscalatedClosureDetailResponse`/`R9PanelResponse` new fields untested [packages/contracts/tests/approval-warnings-later-approvers.test.ts] — added a full-fixture `R9PanelResponse` test and a required-field `.shape` test for `EscalatedClosureDetailResponse`.
+- [x] `covers_current_warnings: true` untested [packages/contracts/tests/approval-warnings-later-approvers.test.ts] — added, alongside a deny-vote-with-`true` refusal case (covers the new `superRefine` above too).
+- [x] `late_warnings_unavailable: true` untested [packages/contracts/tests/approval-warnings-later-approvers.test.ts] — added.
+- [x] New late-warning fields never tested as part of the real, full `ClaimUnderCorrectionItem` [packages/contracts/tests/approval-warnings-later-approvers.test.ts] — added a full-fixture end-to-end test, plus cases for the new cross-field `superRefine` above (valid pair, the fault-shape pair, and the incoherent pair that must fail).
+- [x] **Found already satisfied while implementing the above** — `CLAIM_WARNING_APPROVAL_STEPS`'s "LOCKSTEP" claim: a pre-existing test (`packages/contracts/tests/claims-verifier-decision.test.ts:226-227`, from Story 6.11, untouched by this diff) already does `expect([...CLAIM_WARNING_APPROVAL_STEPS]).toEqual([...schema.CLAIM_WARNING_APPROVAL_STEPS])` — a dynamic comparison against the live domain export, so it already covers the widened 7-value list with zero new code. Confirmed passing. Blind Hunter couldn't see it (wrong file, not in the diff). Moved to Dismissed.
+
+**Patch — api (9 applied, 1 moved to Dismissed on verification):**
+
+- [x] `underSavepoint`'s claim-id mapping could throw before the fail-closed block ran [apps/api/src/modules/claims/claims.correction-closure.handlers.ts] — `ids.claimId()` moved inside the `underSavepoint` callback.
+- [x] SAVEPOINT release/rollback errors could mask or override the real result [apps/api/src/modules/claims/later-approval-warnings.ts] — both wrapped in their own log-and-ignore `try/catch`.
+- [x] Inconsistent audit-field contract in `refusedApprovalWarningAudit` [apps/api/src/modules/claims/later-approval-warnings.ts] — every branch now reports `submittedCode` (never a field read off the error), and the `R9ApproveVotesNeedWarningReasonError` branch no longer omits `warning_reason_code`.
+- [x] SAVEPOINT name raw-interpolated with no runtime guard [apps/api/src/modules/claims/later-approval-warnings.ts] — added a `SAVEPOINT_NAME_RE` check, throws on anything that isn't a plain identifier.
+- [x] New error paths (`WarningReasonUnavailableError`, `WarningReasonUngroundedError`) untested [apps/api/tests/integration/claims/approval-warnings-every-approver.spec.ts] — added one test driving both through the real `/cycle-freeze/decision` route (representative of all four prefixes, since they share one translator).
+- [x] No partial-failure test for the correction queue [already covered] — the domain-layer "ONE bulk evaluation per batch" rewrite above (3 claims: 2 late-only, 1 returned, under a forced fault) already proves this: the returned claim is unaffected while the two late-only ones degrade. No separate api-layer test needed.
+- [x] **Error detail stripped to `err.name`** — reconsidered: `err instanceof Error ? err.name : 'unknown'` is the PERVASIVE, pre-existing convention across ~15+ sites in `apps/api/src/modules/claims/*.handlers.ts` (claims.appeal, claims.death-certificate, claims.nominee-declaration, claims.verifier-console, etc. — none of them 6.23b). Changing only the 4 new 6.23b sites would make them the odd ones out, and this codebase's heavy Tier-1/PII encryption discipline makes "log the class, not the message" a plausible deliberate choice (error messages can echo bound values). Not changed — moved to Dismissed.
+- [x] Type-unsafe `as string` on vote ids — **verified safe, moved to Dismissed** (see below).
+- [x] Unguarded duplicate actor id — **verified harmless, moved to Dismissed** (see below).
+- [x] Inconsistent HTTP status codes (409 vs 400) — **verified correct-by-design, moved to Dismissed** (see below).
+
+**Patch — admin (14 applied, 3 found-false-positive during implementation):**
+
+- [x] `NoCorrectionStrip.onApprove` error handling [apps/admin/src/modules/correction-closure/PariwarClosureStrip.tsx; PariwarClosureList; apps/admin/src/routes/CorrectionClosureRoutes.tsx] — **partly a false positive**: `approve.isError` already rendered `closureErrorText(approve.error)` (the "no error text shown" half of the claim was wrong). The real, narrower gap — no 409-specific refetch, unlike sibling surfaces — is fixed: added an `onConflict?: () => void` prop threaded from `ClosuresView`'s `q.refetch()` through `PariwarClosureList` into `NoCorrectionStrip`'s `onApprove`/`onKeep`. Note: `useApproveNoCorrectionNeeded`'s own `onSettled: invalidate` already marks the closure-queue query stale on ANY outcome (success or failure), so this explicit refetch is a deliberate immediate one for the conflict case specifically, layered on — not the only thing that refreshes the list, matching the SAME pre-existing redundancy `EscalationPanel`'s `onConflict` already has against its own `onSettled`.
+- [x] `approveNote` textarea not disabled while pending [PariwarClosureStrip.tsx] — added `disabled={approve.isPending}`.
+- [x] `aria-describedby` drops one of two disable-reasons [PariwarClosureStrip.tsx] — now joins both ids (space-separated) when both apply.
+- [x] Hardcoded ARIA id [EscalationPanel.tsx] — extracted `pickerPrefix = 'escalation-decision'`, used by both the picker's `idPrefix` and the button's `aria-describedby`.
+- [x] Missing `role="status"` on two dynamically-appearing messages [R9CasePanel.tsx; CorrectionQueueRoute.tsx] — added to the per-vote "must be revised" line and the queue's late-warning line.
+- [x] Unchecked `as` casts in error-copy helpers [apps/admin/src/modules/claim-verification/nominee-errors.ts] — all three (`missing`, `own_reason_excluded`, `vote_ids`) now runtime-checked (`typeof`/`Array.isArray`) before use.
+- [x] Silent undercount in `approveVotesNeedWarningReasonMessage` [nominee-errors.ts; i18n-en.ts] — an empty/malformed `vote_ids` now renders a new count-free `approveVotesNeedWarningReasonUnknownCount` message instead of confidently claiming "one".
+- [x] New 409/conflict-refetch logic untested [apps/admin/tests/later-approval-warnings.test.tsx] — added one test for `EscalationDetail`'s `onConflict` and one for `R9CasePanel`'s vote 409 (finalize's identical pattern needs the step-up flow mocked too, not set up in this file — out of scope for this coverage patch; both exercise the same `ApiError 409` mechanism). **Found while writing these**: both surfaces' mutations ALREADY double-refetch today (an existing `onError`/`onSettled` hook-level invalidation, layered under the component's own explicit refetch) — pre-existing, harmless redundancy, not something this patch introduced. Tests assert `>= 2` calls (proving a refetch happens) rather than an exact count tied to that incidental mechanism.
+- [x] Untested 3-way condition in the queue row-hide logic [apps/admin/tests/correction-queue.test.tsx] — added the missing `sent_back_by_check === true && returned_at === null` case.
+- [x] "Still in the option list" guard duplicated 4× [apps/admin/src/modules/claim-verification/LaterApprovalWarnings.tsx (new `resolvedWarningReasonCode` export); EscalationPanel.tsx; PariwarClosureStrip.tsx; PendingCaseCard.tsx; R9CasePanel.tsx] — all 4 call sites now call the one shared function.
+- [x] R9's `finalizeBlocked` could hide a second real blocker [R9CasePanel.tsx] — now joins the WAIT message and the "votes need revising" message when both apply, instead of showing only the first.
+- [x] Stale approve-only validation error persists across an unrelated input change [R9CasePanel.tsx; EscalationPanel.tsx] — both vote-choice radios now clear `voteValidation`; the escalation decision `<select>`'s `onChange` now clears `warningMissing`.
+- [x] No null-guard on `late_warning_uncovered_count` — **verified moot, moved to Dismissed** (see below).
+- [x] Two independent sources compute the same count — **left as-is, mitigated, not restructured** (see below).
+- [x] Approve-over-warning textarea no length cap — **verified intentional convention, moved to Dismissed** (see below).
+
+**Dismissed as noise (20 — verified, not hand-waved; 13 found during triage, 7 more found while implementing patches):**
+
+1. "SQL correlation bug: unaliased `\"claims\"` reference" — FALSE POSITIVE. `candidateBatch` consistently references the outer table as the literal `"claims"` (not a short alias) in every condition, old and new alike, per its own doc comment. The new line matches the established pattern exactly.
+2. "`approvingActorIds` required only at the type level, no runtime guard" — consistent with this codebase's established trust-the-type-system convention for internal TS callers.
+3. "`R9PanelVote.covers_current_warnings` has no backfill compat for old rows" — moot: the field is computed fresh per-request in the handler (`claims.r9-voting.handlers.ts:319-355`), never read from a stored column.
+4. "Mixed key casing in one wire payload" — confirmed intentional per RD4 (verified by the Acceptance Auditor: "no camelCase wire-field slip... per RD4's explicit prohibition").
+5. "`ApprovalWarningsSummary.post_death` has no 'not applicable' value" — confirmed exact match to spec's EA7 shape by the Acceptance Auditor; not a gap.
+6. "EscalationPanel doesn't call the dedicated warning-error-message helper" — sanctioned by RD6 (closure.* surfaces are documented to use the generic `closureErrorText` passthrough instead).
+7. "New copy only in `i18n-en.ts`, no other locale" — every module in `apps/admin` is English-only; no sibling locale file exists anywhere in the app.
+8. "Breaking signature change to `useApproveNoCorrectionNeeded`, only one call site migrated" — verified moot: it is the only call site in the entire app.
+9. "Backward-compat break from new required fields on `.strict()` schemas, no shim" — not applicable: internal monorepo contract shared only between `apps/api` and `apps/admin`, deployed together.
+10. "AC2's 'seven gate calls' vs. six actual call sites" — the code's six call sites exactly match Trap 7's own prose enumeration (also six); very likely a pre-existing miscount in the spec text, not a code gap.
+11. "Bulk reader's JSON field name (`actor`) possibly mismatching the derivation function's expected shape" — self-verifying: Trap 13's parity test asserts full deep equality (incl. `recordedByActor`) between the bulk and single-claim readers over dirty data.
+12. "`decided_at` tie-break excludes a same-instant redetermination from the late-warning queue (strict `>`)" — already resolved during this story's own development: a 2026-10-05 project memory documents that same-transaction test fixtures stamp equal `decided_at` values (a test artifact — real approvals and redeterminations are always separate transactions), and the prescribed fix was to backdate the *test* fixture, not loosen the production predicate. Confirmed already applied: `apps/api/tests/integration/claims/approval-warnings-every-approver.spec.ts:329-331`'s `backdateApproval` helper does exactly `decided_at = decided_at - interval '1 minute'`. The strict `>` is correct as shipped.
+13. "R9's binding warning-coverage check (EA5) is reachable-empty when `panelSize === 0` with `votingRequirement: 'supermajority'`" — traced and disproven: `r9-voting-persist.ts:445` throws `R9PanelEmptyError` before any session row is written if `panelActorIds.length === 0`, and no later path mutates `panelActorIds` downward (the dedup at `:472` runs after this guard and can only shrink toward a minimum of 1 from a non-empty input). `panelSize` can therefore never be `0` for any session that exists, so `computeR9Outcome`'s supermajority-threshold-zero path is unreachable. No guard added, per the project's convention against validating provably-unreachable states.
+14. (contracts) "`CLAIM_WARNING_APPROVAL_STEPS` LOCKSTEP claim is comment-only, unenforced" — FALSE POSITIVE: `packages/contracts/tests/claims-verifier-decision.test.ts:226-227` (pre-existing, from Story 6.11, untouched by this diff) already does a live, dynamic `toEqual` comparison against `schema.CLAIM_WARNING_APPROVAL_STEPS` — confirmed passing with the widened 7-value list. Blind Hunter was looking at the wrong file.
+15. (api) "Error detail stripped to `err.name`" — not fixed: this is the pervasive, pre-existing logging convention across ~15+ non-6.23b handler sites in `apps/api/src/modules/claims/`; changing only 4 of them would be the real inconsistency, and this codebase's PII/Tier-1 discipline makes "log the class, never the message" a plausible deliberate choice, not an oversight.
+16. (api) "Type-unsafe `as string` cast on vote ids" — verified SAFE: `v.voteId` is a branded `R9VoteId` (nominal-only, structurally a string); narrowing a branded id to plain `string` via `as` is the standard, safe direction in this codebase's type system (the unsafe direction is the reverse). Not a type-safety hole.
+17. (api) "Unguarded duplicate actor id in `[ctx.actorId, ...approveVoterIds]`" — verified HARMLESS: `uncoveredKeys`'s `excluded = new Set(raw ...)` immediately de-dupes the list before any membership test; a duplicate id in the source array has zero effect on behavior.
+18. (api) "Inconsistent HTTP status codes (409 vs 400) for sibling validation failures" — verified CORRECT BY DESIGN: `NoCorrectionNeededApproveRequest`'s note⇔code pairing is checkable from the request body alone (contract-level, 400); `cycle_freeze.warning_reason_required` depends on the claim's CURRENT warning state, unknowable until the DB read happens (domain-level, 409). These are genuinely different failure moments, not an inconsistency — matches this codebase's contracts-validate-shape / domain-validates-state split everywhere else.
+19. (admin) "No null-guard on `late_warning_uncovered_count`" — verified MOOT: `apps/admin/src/api/client.ts`'s generic fetch helper parses every response through its Zod schema (`ClaimsUnderCorrectionResponse`, whose `late_warning_uncovered_count` is `z.number().int().nonnegative()`, never nullable) before a component ever sees it — a server bug sending `null` would surface as a `.parse()` throw (a visible load-error state), never a silent "null" string in the rendered copy.
+20. (admin) "Approve-over-warning note textarea has no length cap" — verified INTENTIONAL: neither sibling textarea in the SAME component (`PariwarClosureStrip.tsx`'s decline-note at line 116, Keep-note at line 319) has a client-side `maxLength` either, despite being backed by the identical `CORRECTION_CLOSURE_NOTE_MAX_CHARS`-bounded contract type. This file's established convention is server-side-only length enforcement; adding `maxLength` only to the new field would be the inconsistent choice.
+
+**Fresh-context re-validation (2026-10-06, before commit):** 4 parallel fresh-context agents (no memory of making the fixes) independently
+re-verified every applied patch in their own layer against the actual current code — tracing logic by hand, diffing SQL predicates
+character-by-character, hand-computing expected values against real implementations, and (contracts/domain/api) re-running the real test
+suites. Result: **zero confirmed defects** across all 50 patches. Two small, cheap follow-ups surfaced and were applied:
+1. The single-claim reader's structurally-identical `cur` CTE (in `readClaimApprovalWarnings`) didn't get the same deterministic
+   `ORDER BY` the bulk reader's `cur` got — added for consistency, though a validator proved BOTH were already deterministic by
+   construction (three UNIQUE constraints across the join chain compose to at most one row), so this is redundant defense, not a live
+   bug fix either way.
+2. `underSavepoint`'s doc comment now states explicitly that its swallow-RELEASE/ROLLBACK-error behavior is safe only because every
+   current call site is read-only and runs before `closeScopeTx` — flagged by a validator as something a future write-then-read caller
+   under this helper would need to re-examine.
+
+**Left as-is, documented (not a patch, not dismissed):**
+
+- "Two independent sources compute the 'N votes need revising' count" [R9CasePanel.tsx client-side filter vs. the server's 409 `vote_ids`] — `runFinalize`'s existing `onError` already does `void panel.refetch()` on a 409, which updates `model.votes` (and so the client-side count) shortly after any divergence; the discrepancy is a transient, self-correcting one-render-frame window inherent to any optimistic-then-server-validated flow, not a lasting bug. No structural change made.
 
 ## Dev Notes
 
@@ -795,15 +907,110 @@ external research was needed; follow the patterns in the files named above.
 
 ### Agent Model Used
 
+Claude Opus 5.5 (`claude-opus-5-5`) — `/bmad-dev-story 6.23b`, 2026-10-05.
+
 ### Debug Log References
+
+- Task 0: `b41ea25f` an ancestor of HEAD; `git diff --name-only b41ea25f..HEAD -- packages apps scripts` EMPTY; `-280` still the newest decision.
+- 0144 applied to BOTH :5432 and :5433 (`db:migrate`; the new CHECK present on both). `db:check` / `schema:check` green.
+- Found while testing (fixture facts, ⛔ code defects): (1) the policy spec's lockstep regex `[a-z_]+` could ⛔ not match `r9_vote` — widened to
+  `[a-z0-9_]+`; (2) after a redetermination the fixture contact record's CLAIMANT is a discarded version, so the contact check (after the gate)
+  answers `claimant_details_missing` once the wait clears — the specs re-point it (domain) / top it up (API, `ensureClaimContact`); (3) one
+  test transaction stamps the approval and a later redetermination with the SAME `now()`, so EA10's tight `>` arm (correctly) does ⛔ not fire —
+  the specs backdate the approval a minute (separate transactions in life); (4) the API `seedNomineeNameCheck` re-accepts the certificate at
+  ITS default date and silently undid the redetermination — the API spec records the passing check through the real writer instead; (5) the
+  first statement counter counted the auth layer's pool-level reads (cache-timing noise, 27 → 29) — it now counts in-transaction statements
+  only (a planted per-claim loop then reads 22 → 31, red).
+- Red-checked (each restored after): the gate's wait conjunct (Trap 17 arm), the trustee writers' rule (AC3/AC4 — 7 red), R9's vote rule +
+  binding check (AC5 — 3 red), 6.19c's rule (AC6 — 4 red), EA10's post-filter arm (AC10 — 2 red), the API translator mapping (3 red), the
+  bulk read (statement count red), the card's warning rule (2 red), the queue route's hide rule (1 red); every new contracts test red before
+  its code (12 / 13).
 
 ### Completion Notes List
 
 - (create-story, 2026-10-04) Written at the split of row `6-23` (BigDev: *"ok, split it"*), after `-277`. ⛔ No code; status `backlog` until 6.23a is `done` (the 6.21b precedent).
 - (create-story, 2026-10-05) ⭐ Re-derived against 6.23a's shipped build at `b41ea25f` (v2.0): RD1–RD16 threaded; ⛔ no decision moved. Status `backlog` → `ready-for-dev`. Ultimate context engine analysis completed — comprehensive developer guide created.
 - (validate, 2026-10-05) v2.1: three fresh-context read-only verifiers (code cites, design soundness, governance continuity); 23 findings, BigDev: *"all"*. ⛔ No decision moved; status stays `ready-for-dev`.
+- (dev-story, 2026-10-05) ⭐ **Built — Tasks 0–10.** ⛔ No decision moved; every EA as written, every RD as found.
+  - **Migration 0144** (EA1, Trap 10, RD1, RD14): the `step` CHECK widened to seven; `trustee_decision_id`, `r9_vote_id`, `closure_id` with
+    three UNIQUE targets and three COMPOSITE `ON DELETE cascade` FKs; `claim_warning_approvals_later_step_fk_check` (exactly each step's FK
+    set — `super_admin_approval` both); an index per column; ⛔ no trigger edit (the jsonb guard covers the new columns — proved), ⛔ no
+    DEFERRABLE (proved). The three step copies moved together (migration, schema + Drizzle `check()`, contracts mirror).
+  - **The module** (`approval-warnings.ts`): `readClaimApprovalWarningsBulk` (ONE statement, `LATERAL` per claim, the SAME pure derivation;
+    per-claim `reasonOptions` `[]` by design — read once per response), `readR9VoteWarningCoverage`, the pure `keysNotCoveredBy` and
+    `r9ApproveVotesMissingKeys` (ONE copy for finalize AND the panel), `lateWarningWait` / `assertLateWarningsCovered` (EA2), a viewer
+    summary, the list exclusion (RD3), the step-discriminated insert (RD2 — 6.23a's two callers compile unchanged, plus a compile-time
+    lockstep), and ONE helper for THE ONE RULE at every later writer (`checkLaterApprovalWarningReason` — `adjudicateClaim`'s (a3) shape).
+  - **The WAIT** — the LAST conjunct of `assertClaimApprovable`; `approvingActorIds` REQUIRED (typecheck found exactly the seven calls); the
+    inner helper takes `Pick<…,'nameCheck'>`; the T10 seam test rewritten with Trap 17's `waived_251` arm.
+  - **The writers**: `voteOnFrozenClaim`, `resolveEscalation` (before the supersession — ⛔ nothing written before a refusal), `castR9Vote`
+    (best-effort) + `finalizeR9Outcome` (binding, per vote, per key; `voterActorId` on the live-vote select), `decideEscalatedClosure` (both
+    arms), `approveNoCorrectionNeeded` (the note only when a code was sent). Every input `warningReasonCode?: string | null` (RD18).
+  - **EA10**: the tight superset arm, the THIRD post-filter arm, the bulk read under a raw SAVEPOINT in `qualifyingRows`,
+    `opts.onLateWarningsUnavailable` (the array return kept), the header amended; the response's `late_warnings_unavailable`.
+  - **Contracts**: `ApprovalWarningsSummary`; the request fields and their `superRefine`s (R9's first; D27's pairing); the four read DTOs
+    (`.nullable()` on the closure-queue item — RD20); `covers_current_warnings`; the queue fields; RD21(b)'s fixture.
+  - **API**: ONE shared `later-approval-warnings.ts` (the error mapping per prefix — 6.23a's three inline mappings moved into it verbatim —,
+    the summary / options DTOs, the SAVEPOINT); the four translators; every read DTO attached in the handler, fail-closed; D27's note
+    encrypted instead of the constant; the RD15 audit fields.
+  - **Admin**: ONE shared `LaterApprovalWarnings` block mounted on the cycle-freeze card (Approve + Resolve → Approve; the warned body with ⛔
+    `reason_code`), the R9 panel (the approve vote; the per-vote "must be revised" line; Finalize held WITH words before the step-up — the
+    WAIT holds Finalize, ⛔ the vote), the Super Admin's decision (approve only), `NoCorrectionStrip` (its OWN note — ⛔ the Keep note; ⛔ the
+    closure-request strip); the error words per suffix; a 409 refetches; AC11's label; the correction queue's late row (chase + closure hidden
+    on a late-only row) and the unavailable line.
+  - **Records**: `deferred-work.md` — a new section *"Recorded during Story 6.23b"* (Task 9's five items + the pre-existing ⛔-rejected-line
+    gap on the 6.19c routes) and AC11's closure line on the RD13 item (its text kept).
+  - **Tests**: domain unit (32), the domain live-DB spec (28) + the two-connection race (2) + the policy spec (20, both DBs), contracts (13 +
+    the lockstep fixture), API (9, incl. the HTTP statement count and the fault seam), admin RTL (20 + 3 queue). Suites: domain 323 files /
+    4503 tests; contracts 74 / 1261; API 148 / 1527; admin 58 / 893 — all green with `DATABASE_URL` → :5433. Gates: human-actor,
+    access-wrapper, microcopy, domain-invariants, claim-state, canonical-id, OpenAPI determinism — green.
+  - **`ci:local` (with `DATABASE_URL` → :5433)** — run 1: 32 / 34; `lint` (two unused names in the new domain spec) and `microcopy` (the
+    tone rule's *"does not count"* in two of my code comments) — both mine, both fixed (`lint` exit 0 repo-wide; the microcopy gate passed).
+    Run 2: 33 / 34 — `test (unit)` failed ONLY on `@twt/channels`' 100-thread determinism test, a 90 s timeout under the job's
+    `--concurrency=4` load (96 s there; 3.2 s alone; ⛔ a file this story touches — `packages/channels` has 0 changes; it passed in run 1).
+    The job's exact command re-run alone: **37 / 37 green**. Named, ⛔ silently re-run ([[project_ci_local_concurrency_oversubscription]]).
 
 ### File List
+
+**New**
+- `packages/domain/migrations/0144_claim-warning-approvals-later-steps.sql`
+- `packages/domain/tests/integration/claim/approval-warnings-every-approver.spec.ts`
+- `packages/domain/tests/integration/claim/approval-warnings-every-approver-race.spec.ts`
+- `packages/contracts/tests/approval-warnings-later-approvers.test.ts`
+- `apps/api/src/modules/claims/later-approval-warnings.ts`
+- `apps/api/tests/integration/claims/approval-warnings-every-approver.spec.ts`
+- `apps/admin/src/modules/claim-verification/LaterApprovalWarnings.tsx`
+- `apps/admin/tests/later-approval-warnings.test.tsx`
+
+**Modified — domain**
+- `packages/domain/migrations/meta/_journal.json`
+- `packages/domain/src/schema/claim_warning_approvals.ts`, `claim_state_trustee_decisions.ts`, `claim_r9_votes.ts`, `claim_correction_closure.ts`
+- `packages/domain/src/claim/approval-warnings.ts`, `errors.ts`, `nominee-name-check.ts`, `verifier-decision-persist.ts`,
+  `state-trustee-decision-persist.ts`, `r9-voting-persist.ts`, `correction-closure.ts`, `correction-queue-read.ts`
+- `packages/domain/tests/claim/approval-warnings.test.ts`
+- `packages/domain/tests/integration/claim/nominee-name-check.spec.ts`
+- `packages/domain/tests/integration/rls/claim-warning-approvals-policy-regression.spec.ts`
+
+**Modified — contracts**
+- `packages/contracts/src/claims/verification-decision.ts`, `cycle-freeze.ts`, `r9-voting.ts`, `correction-closure.ts`, `nominee-name-check.ts`
+- `packages/contracts/tests/nominee-name-check-vocabulary-lockstep.test.ts`
+
+**Modified — API**
+- `apps/api/src/modules/claims/claims.verification-decision.handlers.ts`, `claims.cycle-freeze.handlers.ts`, `claims.r9-voting.handlers.ts`,
+  `claims.correction-closure.handlers.ts`, `claims.correction-escalation.handlers.ts`, `claims.nominee-name-check.handlers.ts`
+
+**Modified — admin**
+- `apps/admin/src/api/client.ts`, `apps/admin/src/api/hooks.ts`
+- `apps/admin/src/modules/claim-verification/i18n-en.ts`, `index.ts`, `nominee-errors.ts`
+- `apps/admin/src/modules/cycle-freeze/PendingCaseCard.tsx`, `CycleFreezePage.tsx`
+- `apps/admin/src/modules/r9-voting/R9CasePanel.tsx`
+- `apps/admin/src/modules/correction-closure/EscalationPanel.tsx`, `PariwarClosureStrip.tsx`
+- `apps/admin/src/routes/CorrectionClosureRoutes.tsx`, `CorrectionQueueRoute.tsx`
+- `apps/admin/tests/cycle-freeze-page.test.tsx`, `pending-case-card-return.test.tsx`, `r9-case-panel.test.tsx`, `correction-closure.test.tsx`,
+  `correction-queue.test.tsx`, `correction-chase-forms.test.tsx`
+
+**Modified — records**
+- `_bmad-output/implementation-artifacts/6-23b-every-approver-gives-a-warning-reason.md` (this file), `deferred-work.md`, `sprint-status.yaml`
 
 ## Change Log
 
@@ -817,3 +1024,4 @@ external research was needed; follow the patterns in the files named above.
 | **v1.5** | **2026-10-04** | **Merged as PR #253 (rebase), docs only.** Every branch SHA this file cites is mapped to its `main` twin in the header note (all 11 commits, proved by identical `patch-id`); ⛔ no citation rewritten. Status stays **`backlog`**. |
 | **v2.0** | **2026-10-05** | ⭐ **RE-DERIVED against 6.23a's SHIPPED build (`bmad-create-story 6.23b`) — re-pinned `2059482b` → `b41ea25f`; `backlog` → `ready-for-dev`.** 6.23a went `done` (PR #255) after four review rounds; every code claim here was re-opened at `b41ea25f`. ⛔ No decision moved — sixteen FOUND facts (RD1–RD16) change the build: the record's FKs are COMPOSITE with three new UNIQUE targets (RD1); the record insert takes a step-discriminated input (RD2); `uncoveredKeys`' exclusion widens to a list for P4 (RD3); the wire is snake_case while 6.23a's option DTO stays camelCase (RD4); every R9 code is `r9_voting.*`, so `-279` A2's `r9.` string is a slip (RD5); `cycle-freeze/` and `r9-voting/` have ⛔ no `i18n-en.ts` — shared words go to `claim-verification/` (RD6); `correction-closure-shape.spec.ts` pins exact keys ⇒ the warnings attach at the handler (RD7); the R9 panel and the Super Admin's detail are single-claim (RD8); the bulk reader reuses 6.23a's `deriveClaimApprovalWarnings` (RD9); per-vote coverage needs a new `r9_vote` read (RD10) and the panel shows out-of-date votes before finalize (RD11); 6.23a's fail-closed shape on every surface, a SAVEPOINT on the queue's arm (RD12); a `deferred-work.md` item routed here by name — the raw verifier reason code on the card (RD13, NEW AC11); 0144 adds ⛔ no deferred constraint (RD14); 6.23a's audit convention (RD15); the `-251` waived approve waits too — seven gate calls, ⛔ not six (RD16, NEW Trap 17). NEW Traps 14 (shape pins + strict fixtures), 15 (fail closed, Approve only), 16 (the red set is EMPTY — fixtures re-verified at 2026-01-05), 17; invariant 7; every `file:NNN` re-read (`client.ts` `:1534` → `:1539`; the rest held). |
 | **v2.1** | **2026-10-05** | ⭐ **Validate (`bmad-create-story validate 6.23b`, at `9c3c6181`; ⛔ no code moved since `b41ea25f`) — three fresh-context read-only verifiers; 23 findings, all applied (BigDev: *"all"*); then a fresh-context RE-VALIDATE of this pass's own edits found 11 defects IN THEM (4 MEDIUM: a false *"first SAVEPOINT in `packages/domain`"* precedent — `contribution/write.ts:226` is one; RD19's D27 refusal mis-located at `:1500` — it is the gate's stale check at `:1507`; *"EA7 amended"* — `-279` A3 only reaches it; Trap 16's heading contradicting its new exceptions) — all fixed. ⛔ No decision moved; status stays `ready-for-dev`.** HIGH: R9's per-vote check must ⛔ never reuse `uncoveredKeys`, which returns `[]` without a District Admin approval — exactly `-279` A2's target case — ⇒ NEW pure `keysNotCoveredBy` (RD17; Trap 6, EA5, AC5, Tasks 2/4, unit test); the new domain inputs are OPTIONAL `?: string \| null` as 6.23a's are — ≈ 88 typechecked test calls (RD18; EA5/EA6, Tasks 3–5). MEDIUM: every wait scenario re-records a passing name check after the redetermination, else the stale-check 409 fires first (RD19; AC2, Testing); two shipped tests red BY DESIGN, rewritten — the policy spec's `r9_vote` invalid-step line and the contracts lockstep fixture (RD21; Traps 14/16, Tasks 1/6); `PariwarClosureQueueItemDto.approval_warnings` nullable, `null` on `closure_request` (RD20; EA7, AC7, Task 6); EA10's channel named — `opts.onLateWarningsUnavailable`, the array return kept, a raw SAVEPOINT in `qualifyingRows` (Task 10). SHOULD: the GET is `:127` only, `:239` is the POST pre-check (Task 7, Dev Notes); parity excludes `reasonOptions` (Trap 13, AC7); AC5's "exactly" scoped to a current determination; the 6-22 member-declare gap in EA10 recorded as a deferred item (Task 9); `-279` A6/A11 carried, EA7 among the amended (LETTERS, AC0, References, *What moves*); row 6-24's refile shows the same warnings (Trap 9); the contact-check order change stated (EA2); EA5's code change marked in place (RD5); `epics.md` annotated for `-280`, A1 and AC11 (⛔ not rewritten). CLEANUPS: RD6's matchers live in each page's `errorMessage`; the API specs do ⛔ not `.parse`; EA4's "first write"; `deniedNoAppeal` and the chase summary's null fields; Task 7 tagged AC8; two `-277` Q3 supersessions, the rulings column header, EA1's A10 attribution, the 6.19c RTBF cross-reference; four `⛔`-on-code-word glyphs and a widened sweep regex. |
+| **v2.2** | **2026-10-05** | ⭐ **Built (`/bmad-dev-story 6.23b`) — Tasks 0–10; `ready-for-dev` → `in-progress` → `review`.** Migration 0144 (the later steps, composite FKs, the step ⇔ FK CHECK) on both DBs; the WAIT as the gate's last conjunct with REQUIRED `approvingActorIds` (seven calls); THE ONE RULE at every later writer through one helper; R9's binding per-vote, per-key check (`keysNotCoveredBy`); EA10's queue arm under a SAVEPOINT; the contracts, the API (one shared mapping; fail-closed reads; D27's note) and ONE shared admin block on the four surfaces; AC11's label; the `deferred-work.md` records. ⛔ No decision moved. See Completion Notes. |

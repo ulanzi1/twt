@@ -52,12 +52,18 @@ import {
   claimStateTrusteeDecisions,
 } from '../schema/claim_state_trustee_decisions.js';
 import { type CycleFreezeCommitRow, cycleFreezeCommits } from '../schema/cycle_freeze_commits.js';
+import {
+  type ApprovalWarningKind,
+  checkLaterApprovalWarningReason,
+  insertClaimWarningApprovalRecord,
+} from './approval-warnings.js';
 import { assessClaimConcealment } from './concealment-review.js';
 import { type ClaimEventActor } from './events.js';
 import {
   NomineeBankAccountsRequiredError,
   NomineeDeterminationRequiredError,
   NomineeNameCheckRequiredError,
+  WarningReasonUngroundedError,
 } from './errors.js';
 import { assertClaimContactRecorded } from './claim-contact-check.js';
 import {
@@ -390,7 +396,17 @@ interface TrusteeWriteBase {
   auditId?: string;
 }
 
-export interface VoteOnFrozenClaimInput extends TrusteeWriteBase {
+/**
+ * ⭐ Story 6.23b (EA3, EA4; Trap 2) — the WARNING REASON, its OWN optional field, ⛔ never the trustee `reasonCode`
+ * (which stays free for `concealment_override` — Trap 3): a code from the Pariwar's ACTIVE list, required on an
+ * approval while a warning shows (with the rationale as its note); refused when ⛔ no warning shows and on a denial.
+ * OPTIONAL (RD18 — the many typechecked callers that approve an un-warned claim omit it).
+ */
+interface LaterApprovalWarningReasonInput {
+  warningReasonCode?: string | null;
+}
+
+export interface VoteOnFrozenClaimInput extends TrusteeWriteBase, LaterApprovalWarningReasonInput {
   /** `approved` (→ state_trustee_approved) or `denied` (→ denied). */
   outcome: 'approved' | 'denied';
 }
@@ -400,7 +416,7 @@ export interface RouteToR9Input extends TrusteeWriteBase {
   outcome?: 'routed_to_r9';
 }
 
-export interface ResolveEscalationInput extends TrusteeWriteBase {
+export interface ResolveEscalationInput extends TrusteeWriteBase, LaterApprovalWarningReasonInput {
   /** The direction the escalation resolves to: `approved` (→ verifier_approved) or `denied` (→ denied). */
   outcome: 'approved' | 'denied';
 }
@@ -413,6 +429,14 @@ export interface TrusteeDecisionResult {
   /** Story 6.15 (AC3) — the resolved R14 clause-version snapshot on a concealment-coded decision (the route
    *  adds it to the non-PII audit-line context); `null`/absent for every non-concealment decision. */
   concealmentClauseVersionId?: string | null;
+  /** ⭐ Story 6.23b (EA9) — the warning kinds an APPROVAL was judged against (the audit's `approval_warning_kinds`);
+   *  ABSENT when ⛔ none were read (a denial) — ⛔ never `[]` for "unknown" (RD15). */
+  approvalWarningKinds?: readonly ApprovalWarningKind[];
+}
+
+/** Story 6.23b — a warning reason is only ever an APPROVAL's: one sent with a denial has nothing to answer. */
+function assertWarningReasonOnApprovalOnly(claimCaseId: ClaimId, outcome: string, warningReasonCode: string | null): void {
+  if (outcome !== 'approved' && warningReasonCode !== null) throw new WarningReasonUngroundedError(claimCaseId);
 }
 
 // ── Shared decision-row insert ────────────────────────────────────────────────
@@ -506,6 +530,8 @@ export async function voteOnFrozenClaim(
   input: VoteOnFrozenClaimInput,
 ): Promise<TrusteeDecisionResult> {
   assertReasonCode(input.outcome, input.reasonCode);
+  const warningReasonCode = input.warningReasonCode ?? null;
+  assertWarningReasonOnApprovalOnly(input.claimCaseId, input.outcome, warningReasonCode);
   await acquireTrusteeLock(client, input.pariwarId, input.claimCaseId);
   const db = bindScopedDb(client);
 
@@ -569,11 +595,14 @@ export async function voteOnFrozenClaim(
   // ⭐ Story 6.21a (D7) — through the OUTER helper: a current, ACCEPTED death certificate first.
   // ⛔ `isReturnedClaimResubmitted` below stays on the INNER helper (T4).
   if (input.outcome === 'approved') {
+    // ⭐ Story 6.23b EA2 — the gate's LAST conjunct is the WAIT; the final voter's own late reason does ⛔ not count
+    // for their own approval (`-279` A1).
     await assertClaimApprovable(
       db,
       input.pariwarId,
       input.claimCaseId,
       claimRow.deceasedMemberId,
+      { approvingActorIds: [input.actorId] },
     );
     // ⭐ Story 6.19a (D14) — then the claim's CONTACT RECORD: an address for each nominee in force at the death,
     // the claimant's details when the claimant is none of them, and a live agreement to be contacted. AFTER
@@ -581,6 +610,15 @@ export async function voteOnFrozenClaim(
     // ⛔ never a denial — the claim WAITS, and the helpline can complete the record in this state (W3).
     await assertClaimContactRecorded(db, input.pariwarId, input.claimCaseId);
   }
+
+  // ⭐ Story 6.23b EA4 (`-277` Q2 C) — THE ONE RULE at the FINAL approval: while ANY warning shows, a reason from the
+  // Pariwar's ACTIVE list + the rationale as its note — EVERY time, *"even where written reasons already exist"* (after a
+  // District Admin approval over it, after a reversal, after an escalation). AFTER the gate (so the determination is
+  // CURRENT and the warnings exact) and the contact check; the reason row locked `FOR SHARE`. ⛔ A denial is never gated.
+  const warningRule =
+    input.outcome === 'approved'
+      ? await checkLaterApprovalWarningReason(db, input.pariwarId, input.claimCaseId, warningReasonCode, input.rationaleCiphertext)
+      : null;
 
   // Story 6.15 (AC3) — resolve the R14 clause snapshot server-side INSIDE this tx for a concealment-coded
   // decision (uphold→deny, override→approve), BEFORE any write so a null resolution aborts cleanly (no
@@ -643,11 +681,27 @@ export async function voteOnFrozenClaim(
     if (isUniqueViolation(err)) throw new TrusteeDecisionConflictError(input.claimCaseId, 'frozen_vote');
     throw err;
   }
+  // (d) ⭐ Story 6.23b EA4 — the `final_vote` record row, in the SAME tx (its FK is the decision row just written).
+  if (warningRule?.reason) {
+    await insertClaimWarningApprovalRecord(db, {
+      pariwarId: input.pariwarId,
+      claimCaseId: input.claimCaseId,
+      deceasedMemberId: claimRow.deceasedMemberId,
+      step: 'final_vote',
+      trusteeDecisionId: decision.decisionId,
+      reason: warningRule.reason,
+      keys: warningRule.keys,
+      noteCiphertext: null,
+      actorId: input.actorId,
+      actorDisplay: input.actorDisplay,
+    });
+  }
   return {
     decision,
     eventVersion: projected.eventVersion,
     claimState: projected.state,
     concealmentClauseVersionId,
+    ...(warningRule !== null ? { approvalWarningKinds: warningRule.kinds } : {}),
   };
 }
 
@@ -1038,6 +1092,8 @@ export async function resolveEscalation(
   input: ResolveEscalationInput,
 ): Promise<TrusteeDecisionResult> {
   assertReasonCode(input.outcome, input.reasonCode);
+  const warningReasonCode = input.warningReasonCode ?? null;
+  assertWarningReasonOnApprovalOnly(input.claimCaseId, input.outcome, warningReasonCode);
   await acquireTrusteeLock(client, input.pariwarId, input.claimCaseId);
   const db = bindScopedDb(client);
 
@@ -1062,6 +1118,15 @@ export async function resolveEscalation(
     input.claimCaseId,
     input.reasonCode,
   );
+
+  // ⭐ Story 6.23b EA3 (`-277` Q2 C; Trap 1) — THE ONE RULE at an escalation's APPROVAL, BEFORE the supersession below
+  // (⛔ nothing written before a refusal). ⛔ No approval gate runs here (`-226` cl.7 — the gate's own doc-block), so
+  // the warnings are the reader's as they stand: `post_death_version` only from a CURRENT determination, else just the
+  // 90-day keys. Safe — the claim still reaches the final vote, where the gate runs and EA4 asks again, exactly.
+  const warningRule =
+    input.outcome === 'approved'
+      ? await checkLaterApprovalWarningReason(db, input.pariwarId, input.claimCaseId, warningReasonCode, input.rationaleCiphertext)
+      : null;
 
   // The live `escalated` verifier decision (partial-unique guarantees ≤1 live per claim).
   const liveEscalated = (
@@ -1134,7 +1199,28 @@ export async function resolveEscalation(
     outcome: input.outcome,
     concealmentClauseVersionId,
   });
-  return { decision, eventVersion: projected.eventVersion, claimState: projected.state, concealmentClauseVersionId };
+  // ⭐ Story 6.23b EA3 — the `escalation_resolution` record row (its FK is the decision row just written).
+  if (warningRule?.reason) {
+    await insertClaimWarningApprovalRecord(db, {
+      pariwarId: input.pariwarId,
+      claimCaseId: input.claimCaseId,
+      deceasedMemberId: claimRow.deceasedMemberId,
+      step: 'escalation_resolution',
+      trusteeDecisionId: decision.decisionId,
+      reason: warningRule.reason,
+      keys: warningRule.keys,
+      noteCiphertext: null,
+      actorId: input.actorId,
+      actorDisplay: input.actorDisplay,
+    });
+  }
+  return {
+    decision,
+    eventVersion: projected.eventVersion,
+    claimState: projected.state,
+    concealmentClauseVersionId,
+    ...(warningRule !== null ? { approvalWarningKinds: warningRule.kinds } : {}),
+  };
 }
 
 // ── Commit (bulk claim.approved milestone, DB-only, AC5) ──────────────────────

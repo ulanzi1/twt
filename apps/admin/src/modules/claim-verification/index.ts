@@ -36,6 +36,13 @@ export { ReasonCodeDropdown, type ReasonCodeDropdownProps } from './ReasonCodeDr
 // reason panel (NW9, NW14).
 export { ApprovalWarningReasonPicker, type ApprovalWarningReasonPickerProps } from './ApprovalWarningReasonPicker.js';
 export { LateWarningReasonPanel, type LateWarningReasonPanelProps } from './LateWarningReasonPanel.js';
+// Story 6.23b — the same warnings + picker on every LATER approver's surface (EA7).
+export {
+  LaterApprovalWarnings,
+  approvalBlockedReason,
+  approvalNeedsWarningReason,
+  type LaterApprovalWarningsProps,
+} from './LaterApprovalWarnings.js';
 // Story 6.15 — the verifier concealment-linkage assessment capture control (tri-state + optional note).
 export {
   ConcealmentAssessmentControl,

@@ -79,6 +79,14 @@ describe('EVERY clerical reason parses through EVERY schema that carries one', (
         under_correction: false,
         name_difference_reasons: [reason],
         approval_name_highlight: null,
+        // Story 6.23b (EA7, RD21(b)) — the warnings block every pending case now carries.
+        approval_warnings: {
+          available: true,
+          kinds: [],
+          post_death: 'evaluated',
+          waiting_for_district_admin: false,
+          own_reason_excluded: false,
+        },
       });
       expect(r.success, JSON.stringify(r.error?.issues)).toBe(true);
     });

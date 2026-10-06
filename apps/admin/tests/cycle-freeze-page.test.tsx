@@ -44,6 +44,14 @@ const CASE: PendingCase = {
   under_correction: false,
   name_difference_reasons: [],
   approval_name_highlight: null,
+  // Story 6.23b (EA7) — a quiet claim: the block every pending case now carries.
+  approval_warnings: {
+    available: true,
+    kinds: [],
+    post_death: 'evaluated',
+    waiting_for_district_admin: false,
+    own_reason_excluded: false,
+  },
 };
 
 const PENDING: CycleFreezePendingResponse = {
@@ -51,6 +59,7 @@ const PENDING: CycleFreezePendingResponse = {
   ready_to_freeze: [CASE],
   escalated: [],
   voted_pending_commit: [],
+  reason_options: [],
 };
 
 beforeEach(() => {

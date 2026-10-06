@@ -21,7 +21,7 @@
 // Naming discipline per architecture L3663-3677: DB columns snake_case, TS camelCase.
 
 import { sql } from 'drizzle-orm';
-import { type AnyPgColumn, index, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { type AnyPgColumn, index, pgTable, text, timestamp, unique, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 
 import { r9VoteEnum } from '../claim/r9-voting.js';
 import { piiColumn } from '../encryption/column.js';
@@ -91,6 +91,9 @@ export const claimR9Votes = pgTable(
   (t) => [
     // Per-tenant scans / RLS-aware planner hint.
     index('claim_r9_votes_pariwar_id_idx').on(t.pariwarId),
+    // Story 6.23b (0144, RD1) — the unique target for `claim_warning_approvals`' COMPOSITE tenant FK (redundant for
+    // uniqueness — the PK already is one).
+    unique('claim_r9_votes_pariwar_vote_uq').on(t.pariwarId, t.voteId),
     // The per-session live-votes read (the panel model + the finalize tally).
     index('claim_r9_votes_session_id_idx').on(t.sessionId),
     // The votes-by-trustee scan (AC8) — actor + Pariwar, time-ordered.

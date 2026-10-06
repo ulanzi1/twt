@@ -619,6 +619,46 @@ export class WarningReasonUnavailableError extends Error {
   }
 }
 
+/**
+ * Story 6.23b EA2 (`-277` Q3 B; `-279` A1) — THE WAIT: a final approval is held because a warning that appeared AFTER
+ * the District Admin's approval has ⛔ no District Admin reason yet. ⛔ NOT a refusal and ⛔ NOT a denial — the claim
+ * waits until the District Admin (any `claim.approve` holder ⛔ approving it themselves) records one (6.23a NW14).
+ * `ownReasonExcluded`: a key is uncovered ONLY because a late reason the approver recorded themselves does ⛔ not count
+ * for their own approval. → 409 `<prefix>.late_warning_reason_required`. ⚠ ⛔ Not `LateWarningReasonRefusedError`
+ * (NW14 — why a late reason cannot be RECORDED): one word apart, never mapped for each other.
+ */
+export class LateWarningReasonRequiredError extends Error {
+  public readonly name = 'LateWarningReasonRequiredError';
+  public constructor(
+    public readonly claimCaseId: string,
+    public readonly kinds: readonly string[],
+    public readonly uncoveredCount: number,
+    public readonly ownReasonExcluded: boolean,
+  ) {
+    super(
+      `[approval-warnings] claim ${claimCaseId} waits for the District Admin's reason for ${uncoveredCount} late warning(s) (${kinds.join(', ')})${ownReasonExcluded ? ' — the approver\'s own late reason does not count' : ''}`,
+    );
+  }
+}
+
+/**
+ * Story 6.23b EA5 (`-279` A2) — an R9 finalize to `approved` is held: ⛔ every LIVE approve vote's own `r9_vote` record
+ * row covers EVERY current warning key (a vote cast before a warning appeared, or before a determination added a
+ * post-death key). The voters revise. ⛔ NOT a refusal. → 409 `r9_voting.approve_votes_need_warning_reason`.
+ */
+export class R9ApproveVotesNeedWarningReasonError extends Error {
+  public readonly name = 'R9ApproveVotesNeedWarningReasonError';
+  public constructor(
+    public readonly claimCaseId: string,
+    public readonly voteIds: readonly string[],
+    public readonly uncoveredCount: number,
+  ) {
+    super(
+      `[approval-warnings] claim ${claimCaseId}: ${voteIds.length} approve vote(s) do not answer every current warning (${uncoveredCount} key(s)) — the voters revise`,
+    );
+  }
+}
+
 /** NW14 — why a late-warning reason cannot be recorded. Each → 409 (`not_found` → 404). */
 export type LateWarningReasonRefusal =
   | 'not_found'

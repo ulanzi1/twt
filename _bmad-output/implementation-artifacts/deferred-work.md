@@ -4,6 +4,18 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Recorded during Story 6.26 validate — owed to the Trustee Panel (2026-10-06)
+
+- **A NON-blocking Panel confirm owed in the NEXT routing note (`2026-10-06-284` E5).** `-263`'s "does NOT cover" list reads *"The **State
+  Trustee** step — ⛔ untouched (FQ9 gates the District Admin's approval, which precedes it)."* On `-282` Fact 1's paths (a denial reversed
+  on appeal; an escalation resolved as approve) the District Admin's approval does ⛔ not precede the final vote, so 6.26a's gate makes the
+  final vote and R9 WAIT for a complete inspection — our reading of FQ9's *"BEFORE THE CLAIM IS APPROVED"* (author's, ⛔ not ratified).
+  Put to the Panel as: *"we read FQ9 as also holding the final vote and R9 when the District Admin's approval did not come first —
+  confirm."* ⛔ No 6.26 work waits on it. ⭐ Trigger: the next `trustee-panel-routing-note-*` written for ANY story — add this line to it;
+  if the Panel says otherwise, a new decision entry supersedes the reading.
+
+---
+
 ## Recorded during Story 6.23b — every approver gives a warning reason; a late warning waits (2026-10-05)
 
 Recorded under `2026-10-04-278` (EA1–EA9), as amended by `-279` (A1–A6, A10, A11) and `-280`.

@@ -16,6 +16,11 @@ LETTERS: `GI1`…`GI18` are Story 6.26's author decisions — BOTH halves' (6.26
 in Task 0 here (the 6.23a/6.23b precedent: `-278` for a split set). Each GI is tagged with the half that BUILDS it.
 `Q1`, `Q2` are ✅ RULED by `2026-10-06-281` (Q1 B · Q2 A).
 
+⭐ v2.3 = THE FIRST FRESH-CONTEXT VALIDATE (2026-10-06, HEAD `e1907338` — ⛔ no code moved since `3311fc97`, so every code claim was
+re-derived at code identical to the pin). It found 2 blockers and 6 high findings; `2026-10-06-283` (author-commit, `e8200366`, committed
+alone) AMENDS `-282` GI2 / GI3 / GI5 / GI6 / GI16 — the GI block below stays `-282`'s verbatim text, and each amended GI carries a
+`⚠ AMENDED by -283` line directly under it. ⭐ Where a GI's text and its `-283` line disagree, the `-283` line is the build.
+
 ⭐ v2.0 IS THE SPLIT (BigDev 2026-10-06: *"write the panel note then we get the answer and then we split"*; `-281` Consequence 2). THIS file is
 Story **6.26a** — it KEEPS the key `6-26-ground-inspection-before-approval-and-death-facts` because `-262`, `-263`, `-264` and `-281` cite it
 (the 6.21a / 6.23a precedent). The warnings, the register check and 6.23b's queue are Story **6.26b**
@@ -33,10 +38,9 @@ Status: ready-for-dev
 > At the inspection the inspector **sees the original death certificate, photographs it, and records whether it matches the uploaded
 > copy** (FQ11 A), and **records the date — and, if known, the time — of death the family gives** (`-262` FQ8 C). When a true nominee
 > files again after a `-239` refusal, the inherited inspection saw the OTHER certificate, so **an inspector also sees the fresh original**
-> — a short visit or an office check limited to the certificate (`-264` FQ13). The District Admin, when accepting a certificate, **records
-> the government death-register (CRS) check** — matches / does not match / could not be checked online (`-262` FQ8 B). A family's date that
-> differs from the certificate is a **warning** under the ONE rule 6.23a built (`-264` FQ12: approving over it needs a reason and a note).
-> ⭐ **The system still refuses nothing.**
+> — a short visit or an office check limited to the certificate (`-264` FQ13); the same check serves a certificate replaced after the
+> visit (`-281` Q2 A). ➡ The District Admin's government-register (CRS) check (`-262` FQ8 B) and every **warning** these facts raise
+> (`-264` FQ12, `-281` Q1 B) are **Story 6.26b's**. ⭐ **The system still refuses nothing.**
 
 > ⭐⭐ **THE SPLIT (`-281` Consequence 2).** **6.26a (this file) is the GATE and everything the INSPECTOR records:** FQ9's conjunct, the
 > review-window widening that keeps "waits" from becoming "forever", FQ11's original-certificate record, FQ13's certificate check — which
@@ -44,14 +48,16 @@ Status: ready-for-dev
 > console's "why it waits" line and the inspector's facts. **6.26b** is everything that turns those facts into **warnings**, plus the
 > **District Admin's register check**: FQ8 C's date difference, `-281` Q1 B's two "does not match" warnings, the register check on the
 > accept (FQ8 B), and 6.23b's correction queue learning the new late source.
-> ⚠ **Go-live coupling of 6.26a: Story 6.26b** — until it ships, an inspector's *"does not match"* and a differing family date are SHOWN but
-> ask nothing of an approver (`-264` FQ12 and `-281` Q1 B are ⛔ not yet in force for them), and ⛔ no register check is recorded. Merging
-> 6.26a alone is fine ([[project_not_in_production_merge_is_not_golive]]); going live with it alone is ⛔ not.
+> ⚠ **Go-live coupling of 6.26a: Story 6.26b** — until it ships, an inspector's *"does not match"* and the family's date are SHOWN, but
+> ⛔ no difference from the certificate is flagged (FQ8 C's *"the system shows the District Admin any difference"* is 6.26b's GI10 [b] —
+> `-283` A8), ⛔ nothing asks an approver for a reason (`-264` FQ12 and `-281` Q1 B are ⛔ not yet in force for them), and ⛔ no register
+> check is recorded. Merging 6.26a alone is fine ([[project_not_in_production_merge_is_not_golive]]); going live with it alone is ⛔ not.
 
 > ⭐ **Not in `epics.md`'s story list.** Minted by Trustee rulings `-262` FQ8 B/C, `-263` FQ9/FQ11 and `-264` FQ13 (row
 > `6-26-ground-inspection-before-approval-and-death-facts`). ⭐ `epics.md` Story 6.7 and PRD FR-40 are **already annotated** (2026-09-28 —
-> verified at `3311fc97`); Task 0 adds `### Story 6.26a` and `### Story 6.26b` entries with `> ⚠ Minted by…` headers (the 6.23a/6.23b precedent).
-> `epic-6-retrospective` stays `done`.
+> verified at `3311fc97`); Task 0.6 added `### Story 6.26a` and `### Story 6.26b` entries with `> ⚠ Minted by…` headers (`e1907338`).
+> ⚠ Story 6.7's annotation names this row as owning FQ8 B — since the split it is `6-26b`'s; a dated line is appended there (v2.3); the
+> annotation is ⛔ not rewritten. `epic-6-retrospective` stays `done`.
 
 > ⚠⚠ **FIVE FACTS THE RULINGS' TEXT DOES ⛔ NOT SAY — read before anything else.**
 > 1. ⚠⚠ **A gate alone would strand claims FOREVER.** Every inspection writer refuses unless the claim is `verification_in_progress`
@@ -60,9 +66,17 @@ Status: ready-for-dev
 >    `reversed`, then the final vote; (b) an **escalation resolved as approve** (`resolveEscalation`, `state-trustee-decision-persist.ts:1090-…`
 >    — ⛔ not gated, by 6.18's design) → `verifier_approved`. In both, the new conjunct refuses the final approval AND ⛔ no inspection can be
 >    written ⇒ the claim waits with ⛔ no way out but a denial — exactly what FQ9 forbids (*"⛔ not refused for that reason"*). ⇒ **GI3 widens
->    the inspection writers to the claim REVIEW WINDOW** (`CLAIM_REVIEW_WINDOW_STATES`, `review-window.ts:15-21`). [[feedback_trace_reachability_before_escalating]]
-> 2. ⭐ **The gate has ONE composition seam, and it is already waiting for this story.** `assertClaimApprovable`'s doc-block
->    (`nominee-name-check.ts:396-405`) says: *"`6-26` adds the ground-inspection conjunct HERE, ONCE, and the `-251` path inherits it without
+>    the inspection writers to the claim REVIEW WINDOW** (`CLAIM_REVIEW_WINDOW_STATES`, `review-window.ts:15-21` = `verification_in_progress`,
+>    `verifier_review`, `verifier_approved`, `reversed`, `state_trustee_freeze`). [[feedback_trace_reachability_before_escalating]]
+>    ⚠⚠ **Two more exits the v2.2 text missed (`-283` A1, A4):** (c) **R9 finalize runs the gate in `state_trustee_approved` too**
+>    (`R9_OUTCOME_FROM_STATES`, `state.ts:78-85` — the window plus that state); a refile's VISITED-by-inheritance can VANISH there (the
+>    source's `-239` denial is revisable while `denied` — `VERIFIER_DECISION_REVISABLE_STATES`, `verifier-decision-persist.ts:59` — and the
+>    inheritance keys on the source's LIVE `-239` decision) ⇒ the writers also admit `state_trustee_approved` **while the claim carries a
+>    live `routed_to_r9` routing row**; (d) **the API `schedule` handler pre-checks the state itself**
+>    (`claims.ground-inspection.handlers.ts:216-222`, `currentState !== 'verification_in_progress'` → 409 `ground_inspection.not_allowed`)
+>    BEFORE the domain writer runs ⇒ widening only the domain guard leaves every Fact-1 claim stranded AT THE API with every domain test green.
+> 2. ⭐ **The gate has ONE composition seam, and it is already waiting for this story.** `assertClaimApprovable`'s `opts` parameter comment
+>    (`nominee-name-check.ts:394-406`; the function's own doc-block is `:344-388`) says: *"`6-26` adds the ground-inspection conjunct HERE, ONCE, and the `-251` path inherits it without
 >    an edit."* The `-251` waiver returns early INSIDE the inner helper (`nominee-name-check.ts:523`), so an OUTER conjunct reaches the waived
 >    approve by construction (`-263` Consequence 4 — 6.19c landed first; this story carries FQ9 into both halves). ⭐ Six production call
 >    sites in five writers: `adjudicateClaim` (`verifier-decision-persist.ts:408`), `voteOnFrozenClaim` (`state-trustee-decision-persist.ts:600`),
@@ -70,7 +84,8 @@ Status: ready-for-dev
 >    `approveNoCorrectionNeeded` (`correction-closure.ts:1573`). ⛔ None is edited.
 > 3. ⭐ **The refile's inheritance already exists — FQ13 is buildable now, ⛔ not after row 6-24.** 6.20 AC13 built
 >    `getInheritedGroundInspectionSource` (`nominee-refusal-read.ts:97-129`): a distinct claim for the same death inherits the most recent
->    earlier `-239`-refused claim's COMPLETED inspection. Today a refile reaches a distinct claim through the convergence OVERRIDE (6.20 T17);
+>    earlier `-239`-refused claim's COMPLETED inspection — ⚠ ANY completed assignment, ⛔ no stage filter (`:118-124`), so once GI12 mints
+>    `certificate_check` an office check would pass as a visit ⇒ `-283` A2 adds `AND gi.inspection_stage <> 'certificate_check'`. Today a refile reaches a distinct claim through the convergence OVERRIDE (6.20 T17);
 >    row 6-24 will keep it apart automatically. ⚠ The verifier console reads the inheritance ONLY when the claim has ⛔ no own assignment at all
 >    (`claims.verifier-console.handlers.ts:691-704`, `if (own.length === 0)`) — the moment the refile gets its OWN certificate check, the
 >    inherited inspection would vanish from the console. ⇒ GI10 fixes that read.
@@ -83,14 +98,15 @@ Status: ready-for-dev
 > 5. ⚠ **Every approval test in the repo turns red the moment the conjunct lands** — ⛔ no fixture seeds a completed inspection. The house
 >    pattern (6.18 → 6.20 → 6.21a → 6.19a each added a conjunct) is ONE option on the shared fixture `seedNomineeNameCheck`, in BOTH copies
 >    (`packages/domain/tests/integration/_helpers.ts:1099`, `apps/api/tests/integration/_nominee-name-check-fixture.ts:141`), default ON,
->    through the REAL writers. ⇒ GI15.
+>    through the REAL writers. ⇒ GI15. ⚠ And ~ten specs that write a completed inspection WITHOUT the fixture turn red by design (raw
+>    INSERTs and `/complete` with `{}`) — they are listed by name in Task 10 and AMENDED, ⛔ never treated as fixture gaps.
 
 ## Story
 
 As the **District Admin** deciding a family's death claim — and every approver after me —
 I want **the system to hold any approval until the claim's ground inspection is complete, with the inspector's photograph of the original
-certificate, their record of whether it matches the copy we hold, and the date and time of death the family gave them, plus my own record of
-the government death-register check — and to tell me plainly why a claim is waiting**,
+certificate, their record of whether it matches the copy we hold, and the date and time of death the family gave them — and to tell me
+plainly why a claim is waiting** (my own government-register check is Story 6.26b's),
 so that **a forged or altered certificate meets a person who has held the original before any member's money moves, while a refusal never
 waits and a family whose visit cannot happen is kept waiting, ⛔ never refused for it.**
 
@@ -100,16 +116,17 @@ waits and a family whose visit cannot happen is kept waiting, ⛔ never refused 
 |---|---|---|
 | `2026-09-28-263` FQ9 A | *"EVERY CLAIM'S GROUND INSPECTION MUST BE COMPLETE BEFORE THE CLAIM IS APPROVED … A refusal never waits for it. If the visit cannot happen … the claim waits and is ⛔ not refused for that reason."* | ⭐ Trustee-ratified |
 | `-263` FQ11 A | *"AT THE INSPECTION THE INSPECTOR SEES THE ORIGINAL DEATH CERTIFICATE, PHOTOGRAPHS IT, AND RECORDS WHETHER IT MATCHES THE UPLOADED COPY."* | ⭐ Trustee-ratified |
-| `-262` FQ8 B | *"the District Admin checks the certificate number on the government's online death register (CRS) and records that they did."* | ⭐ Trustee-ratified |
-| `-262` FQ8 C | *"the inspector records the date and the time of death the family gives; the system shows the District Admin any difference from the certificate."* | ⭐ Trustee-ratified (widened by the Panel to date AND time) |
-| `-264` FQ12 | approving while **any** warning shows — incl. *"a date of death that differs from the certificate (at the inspection, `-262` FQ8 C …)"* — needs a reason and a note | ⭐ Trustee-ratified |
+| `-262` FQ8 B | *"the District Admin checks the certificate number on the government's online death register (CRS) and records that they did."* | ⭐ Trustee-ratified — **built in 6.26b** |
+| `-262` FQ8 C | *"the inspector records the date and the time of death the family gives; the system shows the District Admin any difference from the certificate."* | ⭐ Trustee-ratified (widened by the Panel to date AND time) — the RECORD here; the *"shows … any difference"* in **6.26b** |
+| `-264` FQ12 | approving while **any** warning shows — incl. *"a date of death that differs from the certificate (at the inspection, `-262` FQ8 C …)"* — needs a reason and a note | ⭐ Trustee-ratified — **built in 6.26b** |
 | `-264` FQ13 | *"an inspector must also see the fresh original certificate — a short visit, or an office check, limited to the certificate (FQ11 A's see, photograph and match)."* | ⭐ Trustee-ratified |
-| `-277` Q3 B | a warning that first appears after the District Admin approved waits for their reason and note | ⭐ Trustee-ratified |
+| `-277` Q3 B | a warning that first appears after the District Admin approved waits for their reason and note | ⭐ Trustee-ratified — **built in 6.26b** |
 | `2026-10-06-281` Q1 B | a "does not match" — the inspector's look at the original, or the government register — is a **warning** under the one rule; a late one waits for the District Admin; ⛔ never a refusal | ⭐ Trustee-ratified — **built in 6.26b** |
 | `-281` Q2 A | a certificate replaced after the inspector's visit is seen, photographed and matched by an inspector before approval (the FQ13 check); the claim waits | ⭐ Trustee-ratified — **built HERE (GI2)** |
-| `-263` reading | "Complete" = an inspection whose status is `completed` on this claim; an inherited one counts; FQ9 is a new condition in `assertClaimApprovable`; "waits" is `-226` cl.7's shape; FQ11's photo is a claim document kept as `-243` keeps certificates; until built, a **go-live** condition (⛔ not a merge fence) | ⚠ OUR reading — ⛔ not ratified (GI1–GI3, GI13 build on it) |
+| `-263` reading | "Complete" = an inspection whose status is `completed` on this claim; an inherited one counts; FQ9 is a new condition in `assertClaimApprovable`; "waits" is `-226` cl.7's shape; FQ11's photo is a claim document kept as `-243` keeps certificates; until built, a **go-live** condition (⛔ not a merge fence). ⭐ `-263`'s *"does NOT cover — the State Trustee step, ⛔ untouched (FQ9 gates the District Admin's approval, which precedes it)"* assumed that approval always precedes the final vote; on Fact 1's paths it does ⛔ not, so the final vote and R9 meet the conjunct — FQ9's *"BEFORE THE CLAIM IS APPROVED"* governs; the vote waits, ⛔ never asked to inspect (`-283`'s recorded reading) | ⚠ OUR reading — ⛔ not ratified (GI1–GI3, GI13 build on it) |
 | `-262` reading | FQ8 C compares by **date**; the time is recorded and shown, compared with nothing. FQ8 B's record: *checked — matches / checked — does not match / could not be checked online* | ⚠ OUR reading (GI5, GI8) |
 | `-264` reading | FQ13 is part of FQ9's gate on the refiled claim; it records the date on the fresh original against the accepted date | ⚠ OUR reading (GI2, GI5) |
+| `2026-10-06-283` | A1–A8: the R9-routed window, the inherited visit must be a visit, a replaced original's printed date ⛔ no longer warns, five FOUND slips | ⚠ Author-commit (BigDev) — amends `-282` |
 
 **What the rulings do ⛔ NOT cover (each stays open — ⛔ not this story's to decide):** who may complete an inspection when the family refuses a
 visit, and how long a claim may wait (⛔ no deadline was ruled — `-263`); who performs the office check and where (`-264` — operational);
@@ -123,9 +140,13 @@ claim is waiting for an inspection (⛔ nothing was ruled ⇒ ⛔ no family mess
 2. **ONE gate, ONE conjunct, ONE definition of "complete".** The predicate is a pure function over ONE read; the gate, the console and every
    test call that same function. ⛔ No second copy of "is the inspection complete" anywhere.
 3. **"Waits" always has a way out.** For every state in which the conjunct can refuse, an inspection (or certificate check) can be written
-   (GI3). A test proves the two reversal paths of Fact 1 end in an approval.
-4. **The warning module still never decrypts** (6.23a invariant 7). Dates are compared by keyed index in SQL (GI6).
-5. **Warnings enter the ONE rule, ⛔ never a second one** (`-264` Consequence 2; 6.23a NW1). A new kind = a kind + a key + a producer.
+   (GI3 + `-283` A1): the five window states, and `state_trustee_approved` while R9-routed — the gate's six call sites run in exactly
+   these states. ⛔ No other state needs it: `state_trustee_approved` outside R9 is reached only through a gated vote (already complete), and
+   ⛔ no upload can become current there (`mayDeathCertificateUploadBecomeCurrent`). A test proves Fact 1's three paths end in an approval.
+4. **6.26a stores the date only as ciphertext + a keyed index** (GI5), so 6.26b's warning module can compare dates without a decrypt
+   (6.23a invariant 7; the comparison itself is 6.26b's GI6).
+5. **6.26a adds ⛔ no warning kind** — `APPROVAL_WARNING_KINDS` does ⛔ not move here; 6.26b adds three, through the ONE rule
+   (`-264` Consequence 2; 6.23a NW1).
 6. **Staff-only.** ⛔ No member-facing string, ⛔ no SMS / DLT template, ⛔ no new permission key, ⛔ no new claim event (GI16).
 
 ## 📜 Policy meaning (AI-10-1)
@@ -137,9 +158,10 @@ member's terms, and what it was checked against:
   short check, has held and photographed the original death certificate for the certificate the claim now relies on. Refusing a claim never
   waits for this; a family whose visit cannot happen is kept waiting, never refused for it."* — ⭐ checked against `-263` FQ9 A / FQ11 A and
   `-264` FQ13 (ratified): **consistent**, and the *"for the certificate the claim now relies on"* half is **`-281` Q2 A — ratified
-  2026-10-06**. Checked against the Niyamavali §6.2 (*"the Trust verifies the qualifying event, the claimant's eligibility and the
-  documents' authenticity (incl. the OCR parity check on the death certificate)"*, `docs/legal/niyamavali.md` / `.hi.md`): **consistent** —
-  ⛔ no clause on a ground inspection either way. ⚠ The Niyamavali is a rulebook, ⛔ not ratified and ⛔ not binding
+  2026-10-06**. Checked against the Niyamavali §6.2 (*"The Trust verifies the qualifying event, the claimant's entitlement, and document authenticity
+  (including an OCR parity check on the death certificate)."*, `docs/legal/niyamavali.md:146` / `.hi.md` — local only, gitignored by design
+  (`.gitignore:76`), [[project_legal_corpus_private_repo_split]]): **consistent** —
+  ⛔ no clause on a ground inspection either way. ⭐ *"has visited"* holds by `-283` A2: an inherited visit must itself be a full visit. ⚠ The Niyamavali is a rulebook, ⛔ not ratified and ⛔ not binding
   ([[feedback_niyamavali_rulebook_not_spec]]).
 - **P2 (GI8 — built in 6.26b):** *"A District Admin cannot accept a death certificate without recording whether they checked it on the government's death
   register — and 'could not be checked online' is always an allowed answer, so this never stops a family's claim on its own."* — checked
@@ -154,7 +176,7 @@ member's terms, and what it was checked against:
 
 ## The two Panel questions — ✅ RULED `2026-10-06-281` (Q1 B · Q2 A), as put below (kept as written)
 
-⭐ **§0 applied to every open item.** The rest are the author's (GI1–GI16: *"the code should do X"*). ⛔ Not routed: who completes a refused
+⭐ **§0 applied to every open item.** The rest are the author's (GI1–GI18: *"the code should do X"*). ⛔ Not routed: who completes a refused
 visit / how long a claim waits / where an office check happens / which registers (each `-262`/`-263`/`-264` "does NOT cover", operational,
 blocking ⛔ nothing here); the inspection-date warning entering 6.23b's wait (`-279` A6's obligation — `-277` Q3 B already rules it
 generically and ⛔ no clause says otherwise for the inspection, unlike FQ10's *"the neighbours can ⛔ never block a claim on their own"* ⇒
@@ -167,13 +189,13 @@ GI7, an author-commit).
   **B** — a **warning** under the one rule (a reason and a note to approve; a late one waits, `-277` Q3 B) *(our suggestion — the same
   treatment the Panel gave every other sign of a false date; cost: one more reason to give on a genuine clerical mismatch)*; **C** — approval
   waits until the certificate is re-reviewed or replaced *(cost: a new way for a family to wait, with ⛔ no exit if the register is simply
-  wrong)*. ⇒ **AC8 is written for B** and names exactly what A or C changes.
+  wrong)*. ⇒ **AC8 was written for B** (✅ ruled B; AC8 now lives in 6.26b).
 - **Q2 — when the family replaces the certificate AFTER the inspection (the District Admin turned the first back for an unclear date), must an
   inspector also see the new original?** Passes §0 (the FQ13 question, for a replacement inside one claim — ⛔ not ruled). ⭐ **The one fact
   that decides it:** a replacement after a rejection is exactly how a forged clear date can enter after an honest inspection saw a smudged
   real one. Options: **A** — yes, the same short certificate check as FQ13 *(our suggestion; cost: an extra check even for a plain rescan of
   the same paper)*; **B** — no, the inspection stands *(cost: the replacement is never seen by anyone)*. ⇒ **GI2 is written for A** and names
-  exactly what B changes (one conjunct of the predicate).
+  exactly what B changes (one conjunct of the predicate). (✅ ruled A — that branch is MOOT.)
 
 ⭐ **Order (the template's §0–§E):** the note is written from `_bmad-output/planning-artifacts/trustee-panel-routing-note-TEMPLATE.md` —
 plain-English question, THE ONE FACT, options with an honest cost on every option, evidence LAST — into
@@ -183,6 +205,9 @@ plain-English question, THE ONE FACT, options with an honest cost on every optio
 
 ⭐ **Owner tags:** **[a]** = built in 6.26a (this file) · **[b]** = built in 6.26b · **[a+b]** = split as stated. 6.26b's file cites these
 by number and ⛔ never restates a different version of one.
+
+⭐ **`-283` amends five of these** (GI2, GI3, GI5, GI6, GI16) — each by a `⚠ AMENDED by -283` line directly under the GI. The GI text
+itself stays `-282`'s, verbatim. ⚠ GI4's *"(⛔ ⇒ 409 …)"* breaks the glyph register, but it is verbatim `-282` text and is left as written.
 
 - **[a] GI1 — THE CONJUNCT, ONCE.** New `assertGroundInspectionCompleteForApproval(db, pariwarId, claimCaseId)` called by the OUTER
   `assertClaimApprovable` AFTER `assertNomineeNameCheckForApproval` and BEFORE `assertLateWarningsCovered` (6.23b EA2 stays LAST). It reaches
@@ -204,6 +229,11 @@ by number and ⛔ never restates a different version of one.
   except on an inheriting claim, where it stays *"against the current upload"* (FQ13 is ruled) — one conjunct changes, nothing else.
   ⚠ A completed assignment from before this story has ⛔ no `compared_certificate_upload_id` ⇒ it can be VISITED but never ORIGINAL_SEEN ⇒
   such a claim needs a certificate check. ⛔ Never backfilled ([[feedback_record_unattested_no_backfill]]) — the system is ⛔ not in production.
+  ⚠ **AMENDED by `-283` A2 / A7:** (A2) the inheritance counts only a source with a completed FULL assignment —
+  `getInheritedGroundInspectionSource`'s EXISTS gains `AND gi.inspection_stage <> 'certificate_check'` (GI16's *"⛔ no change"* superseded for
+  that one conjunct), and that predicate is ONE shared SQL fragment used by it AND by the gate's read; (A7) **null never matches** —
+  ORIGINAL_SEEN needs a non-null `compared_certificate_upload_id` equal to a non-null `currentUploadId`. ⭐ The *"If the Panel answers Q2 B"*
+  sentence above is MOOT (`-281` ruled Q2 A; recorded in `-282`).
 - **[a] GI3 — THE WINDOW (Fact 1).** All six inspection writers (`schedule`, `reschedule`, `recordFindings`, `addPhoto`, `complete`,
   `recordRefusal`) accept a claim whose state is in `CLAIM_REVIEW_WINDOW_STATES` (⛔ never a copied tuple — import it). Both events stay IDENTITY
   annotations but carry the claim's ACTUAL state (`from_state === to_state === claimRow.currentState` — `requireIdentityTransition` already
@@ -212,6 +242,14 @@ by number and ⛔ never restates a different version of one.
   contract); only its message and doc-comment say "outside the review window". `denied`, the appeal stages, `state_trustee_approved`,
   `approved`, `settled` stay refused. ⚠ `state.ts`'s identity comments (`:135-153`) and `events.ts`'s two payload doc-blocks (`:162-215`) are
   updated, ⛔ not deleted (a one-line "Story 6.26 GI3:" amendment each).
+  ⚠ **AMENDED by `-283` A1 / A4 / A5:** (A1) the writers ALSO admit `state_trustee_approved` **while the claim carries a live `routed_to_r9`
+  routing row** (the R9 queue predicate — `hasLiveRoutedRow`'s condition in `r9-voting-persist.ts:275-291`, reused, ⛔ never a second copy;
+  check the import graph) — ONE exported window predicate used by every writer AND the API pre-check; (A4) the API `schedule` handler's own
+  pre-check (`claims.ground-inspection.handlers.ts:216-222`) calls that same predicate; (A5) the KEPT wire code is
+  **`ground_inspection.not_allowed`** (`details.state`; mapped at `:61-66`, pre-check `:219`) — *"`…claim_not_in_verification`"* exists
+  nowhere; and THREE writers emit an event (`ground-inspection-persist.ts` — `schedule` `:437`, `reschedule` `:571`, `complete` `:756`), ⛔ not
+  four. Also amended: the completed event's registry description (`packages/events/src/registry.ts:227`, *"write-guarded to
+  verification_in_progress (Story 6.7)"*) — check first that ⛔ no test pins registry descriptions verbatim.
 - **[a] GI4 — THE FQ11 RECORD, on the assignment, required to complete.** Every completion (any stage) needs: (i) ≥1 photo of kind
   `original_certificate` (photos gain `photo_kind` — `site` (default) | `original_certificate`; the existing ≥1-photo rule and the cap of 20
   are unchanged); (ii) `original_certificate_verdict` ∈ `matches` | `does_not_match`; (iii) `compared_certificate_upload_id` — the upload the
@@ -232,6 +270,10 @@ by number and ⛔ never restates a different version of one.
   with nothing; it is shown. ⭐ **6.26a computes and stores the index NOW** (in the completion handler), so 6.26b needs ⛔ no backfill: ONE
   exported field-class constant (`DEATH_DATE_INDEX_FIELD_CLASS = 'death_date'`, beside the API's other field-class constants) that 6.26b's
   review writer MUST reuse — ⛔ never a second literal (Trap 2).
+  ⚠ **AMENDED by `-283` A6:** `DEATH_DATE_INDEX_FIELD_CLASS` is defined in `@twt/domain` (the `CLAIM_CONTACT_MOBILE_FIELD_CLASS` precedent,
+  `claim/correction-crypto.ts:59`) and re-exported beside the API's field-class constants (`apps/api/src/context.ts`) — domain code and
+  fixtures cannot import `apps/api`. The completion writer also takes the plaintext date (validation ONLY, ⛔ never stored) and an
+  injectable `now` (6.21a D4's shape) — "the day of completion" is India time (`istDateOf`).
 - **[b] GI6 — THE KIND `inspection_death_date_differs` (FQ8 C; `-264` FQ12).** Key `inspection_death_date_differs:<ground_inspection_id>`. Derived
   in the SAME pure derivation both readers share (`readClaimApprovalWarnings` and `readClaimApprovalWarningsBulk`, ONE statement each): an OWN
   `completed` assignment whose `death_date_index` IS DISTINCT FROM the claim's CURRENT accepted review's `accepted_date_index`, both non-null.
@@ -241,6 +283,8 @@ by number and ⛔ never restates a different version of one.
   review writer stores `accepted_date_index` on every ACCEPT (GI8's migration). ⚠ An inherited inspection produces ⛔ no key — its family
   statement was given on another claim; it is shown, labelled (GI10). ⚠ `-279` A6's pin test on `APPROVAL_WARNING_KINDS` is updated WITH a
   message citing this decision.
+  ⚠ **AMENDED by `-283` A3 [b]:** a row with `death_date_source = 'original_certificate'` produces the key only when its
+  `compared_certificate_upload_id` is the claim's CURRENT upload (GI17's currency); a `family_statement` row is ⛔ not filtered.
 - **[b] GI7 — THE WAIT (`-279` A6's obligation, discharged).** `inspection_death_date_differs` ENTERS 6.23b's wait: `-277` Q3 B is generic
   (*"a warning that first appears after the District Admin approved waits"*) and ⛔ no ruling carves the inspection out (FQ10's carve-out is
   the neighbours'). A late key is reachable only under GI3 (an assignment completed after the District Admin's approval, or a re-review that
@@ -295,6 +339,8 @@ by number and ⛔ never restates a different version of one.
 - **[a+b] GI16 — NOTHING ELSE MOVES.** ⛔ No new permission key (catalog stays **51** — re-read the live value; the certificate read rides
   `claim.conduct_ground_inspection`); ⛔ no new claim event and ⛔ no payload field; ⛔ no member-facing string or message; ⛔ no change to
   `getInheritedGroundInspectionSource`, to the `-251` waiver, to `resolveEscalation`'s ungated approve, or to `commitCycleFreeze`.
+  ⚠ **AMENDED by `-283` A2:** ⭐ ONE change to `getInheritedGroundInspectionSource` — the stage conjunct (see GI2's line). ⚠ The catalog
+  figure: `PERMISSION_CATALOG_VERSION` is **51** and the key COUNT is **65** (`permissions.test.ts`) — ⛔ neither moves.
 - **[b] GI17 — THE KIND `original_certificate_mismatch` (`-281` Q1 B).** Key `original_certificate_mismatch:<ground_inspection_id>`: an OWN
   `completed` assignment (any stage) whose `original_certificate_verdict = 'does_not_match'` AND whose `compared_certificate_upload_id` is
   the claim's CURRENT upload (a verdict on a replaced certificate ⛔ no longer warns — `-281`'s reading; it stays shown). Same derivation,
@@ -321,7 +367,7 @@ NOTHING (⛔ no decision row, ⛔ no event, ⛔ no warning-record row); **and** 
 **and** a DENY, an escalation, a route to R9 and a return for correction on that same claim SUCCEED; **and** the refusal order is: certificate
 → accounts / determination / name check (or the `-251` waiver) → inspection → the late-warning wait.
 
-### AC2 — "Complete" (GI2) — one predicate, a scenario table in a pure unit test
+### AC2 — "Complete" (GI2 + `-283` A2 / A7) — one predicate, a scenario table in a pure unit test
 | Own assignments | Inherits? | Current upload | Expected |
 |---|---|---|---|
 | none | no | U1 | `no_completed_inspection` |
@@ -332,33 +378,45 @@ NOTHING (⛔ no decision row, ⛔ no event, ⛔ no warning-record row); **and** 
 | `certificate_check` `completed` U1 only | no | U1 | `no_completed_inspection` |
 | none | yes | U1 | `certificate_check_required` (FQ13) |
 | `certificate_check` `completed` U1 | yes | U1 | complete |
-| full `completed` with ⛔ no FQ11 record (pre-6.26 row) | no | U1 | `certificate_check_required` |
-**And** a live-DB test proves the gate and the console's `groundInspectionGate` agree on every row (one function, two callers).
+| none | ⛔ no — the only refused source's completed assignment is a `certificate_check` (`-283` A2) | U1 | `no_completed_inspection` |
+| full `completed` with ⛔ no FQ11 record (pre-6.26 row, `compared = null`) | no | U1 | `certificate_check_required` |
+| full `completed` with `compared = null` | no | ⛔ none (`currentUploadId = null`) | `certificate_check_required` — **null never matches** (`-283` A7) |
+**And** a live-DB test proves the gate and the console's `groundInspectionGate` agree on every row (one function, two callers) — ⚠ except
+the two `compared = null` rows: the new CHECK refuses to INSERT a completed row without its FQ11 record, so they are unit-only (the
+predicate is pure — the unit table is their proof). **And** a live-DB test of the inheritance read itself: a refused source whose only
+completed assignment is a `certificate_check` is ⛔ not returned; an older refused claim with a full visit is.
 
-### AC3 — Reachability (GI3; invariant 3)
+### AC3 — Reachability (GI3 + `-283` A1 / A4 / A5; invariant 3)
 **Given** a claim the District Admin DENIED with ⛔ no inspection, **when** the family appeals and the appeal reverses it, **then** an
-inspection can be scheduled, photographed and completed in `reversed`, and the final vote then approves. **Given** an escalation resolved
-as approve with ⛔ no inspection, **then** the same holds in `verifier_approved`. **And** every inspection writer refuses in `denied`,
-`appeal_stage_1`, `state_trustee_approved`, `approved` and `settled` with the KEPT code; **and** both events carry `from_state === to_state ===`
-the claim's actual state. ⚠ The 6.7 test *"review 2a … LEFT verification_in_progress"* (`ground-inspection.spec.ts:399-427`) drives to
-`verifier_review` — now INSIDE the window: it is AMENDED to a state outside it (⛔ never deleted), with a comment citing GI3.
+inspection can be scheduled, photographed and completed in `reversed` — **through the API** (`POST …/ground-inspection` → 201, ⛔ not
+`not_allowed`) as well as the domain — and the final vote then approves. **Given** an escalation resolved as approve with ⛔ no inspection,
+**then** the same holds in `verifier_approved`. **Given** a refile R9-routed from `state_trustee_approved` whose inheritance then vanishes
+(the source's `-239` denial revised to another reason), **then** R9 finalize refuses `no_completed_inspection`, an inspection can be
+written in `state_trustee_approved` while the routing row is live, and R9 then approves; **and** the same claim with ⛔ no live routing row is
+refused. **And** every inspection writer — and the API pre-check — refuses in `denied`, `appeal_stage_1`, `state_trustee_approved` (⛔ not
+R9-routed), `approved` and `settled` with the KEPT code **`ground_inspection.not_allowed`** (`details.state`); **and** the three events carry
+`from_state === to_state ===` the claim's actual state. ⚠ The 6.7 test *"review 2a … LEFT verification_in_progress"*
+(`ground-inspection.spec.ts:399-427`) drives to `verifier_review` — now INSIDE the window: it is AMENDED to drive on to `denied` (via
+`claim.verifier_denied`) — ⛔ never deleted — with a comment citing GI3.
 
 ### AC4 — The original certificate (GI4, GI12)
 **Given** an assignment, **when** it is completed without an `original_certificate` photo, a verdict or a compared upload, **then** 409
 `ground_inspection.original_certificate_required` with the missing item; **when** the compared upload is ⛔ no longer the claim's current
-upload, **then** 409 `ground_inspection.certificate_changed`; **and** the inspector's certificate read returns the CURRENT upload to the
-assigned inspector (or an override holder) and 403 to anyone else holding the conduct key; **and** `original_certificate_not_produced`
-records as an `evidence_unavailable` refusal with its mandatory note, and the claim then WAITS (AC2 row 2). **And** a `certificate_check`
-assignment completes on GI4 + the printed date alone.
+upload, **then** 409 `ground_inspection.certificate_changed`; **when** the claim has ⛔ no current certificate upload at all, **then** both the
+completion and the certificate read answer 409 `ground_inspection.no_current_certificate` (⛔ never a 500, ⛔ never a 404 that hides the
+assignment); **and** the inspector's certificate read returns the CURRENT upload to the assigned inspector (or an override holder) and 403 to
+anyone else holding the conduct key; **and** `original_certificate_not_produced` records as an `evidence_unavailable` refusal with its
+mandatory note, and the claim then WAITS (AC2 row 2). **And** a `certificate_check` assignment completes on GI4 + the printed date alone.
 
-### AC5 — The dates (GI5)
-A FULL completion without the family's date → 409 `ground_inspection.death_date_required`; a date after the day of completion →
-`ground_inspection.death_date_in_future`; an unreal date (`2026-02-30`) → 400; the time is optional and, if sent, `HH:MM`. A
-`certificate_check` completion requires the printed date and REFUSES a time. Both dates are stored only as ciphertext + index (a test reads
-the raw row: ⛔ no plaintext date in any column).
+### AC5 — The dates (GI5 + `-283` A6)
+A FULL completion without the family's date → 409 `ground_inspection.death_date_required`; a date after the day of completion (India time,
+`istDateOf` of the writer's injected `now`) → `ground_inspection.death_date_in_future`; an unreal date (`2026-02-30`) → 400
+(`isRealCalendarDate`); the time is optional and, if sent, matches `^([01]\d|2[0-3]):[0-5]\d$` (else 400). A `certificate_check` completion
+requires the printed date and REFUSES a time. Both dates are stored only as ciphertext + index (a test reads the raw row: ⛔ no plaintext
+date in any column); the index is computed under `DEATH_DATE_INDEX_FIELD_CLASS`, imported from `@twt/domain`.
 
 ### AC6 — The refile (FQ13)
-**Given** a claim that inherits a `-239`-refused claim's completed inspection, **when** it is approved with ⛔ no own certificate check,
+**Given** a claim that inherits a `-239`-refused claim's completed FULL inspection, **when** it is approved with ⛔ no own certificate check,
 **then** 409 `…ground_inspection_required` `{ reason: 'certificate_check_required' }`; **after** an own `certificate_check` against its current
 upload completes, the gate passes; **and** the console shows the inherited inspection AND the own check, each labelled (GI10).
 
@@ -369,25 +427,42 @@ upload, GI5's `death_date_index` under the ONE shared field-class constant — 6
 
 ### AC9 — Why it waits (GI9, GI10)
 The console shows the `groundInspectionGate` line in words for each reason, disables Approve (⛔ not Deny), fails closed on `available: false`,
-and stays within `VERIFIER_CONSOLE_MAX_READS = 20` (exact test). GI10's **[a]** per-assignment facts render (an inspector's *"does not
-match"* is SHOWN, plainly — 6.26b makes it a warning); a date/time decrypt failure shows
-*"could not be read"*, ⛔ never a blank.
+and reads `VERIFIER_CONSOLE_MAX_READS = 20` — a NEW exact pin (`toBe(20)`; today every console test uses `toBeLessThanOrEqual`). The section
+is ONE statement (own assignments + the shared inheritance fragment + the current upload), placed BEFORE `approvalWarnings` (which stays LAST),
+inside a raw `SAVEPOINT` so its SQL failure renders `available: false` and ⛔ never aborts the scope transaction
+([[project_domain_limit_clamp_and_savepoint_retry]]); a test forces that failure and sees `approvalWarnings` still answer. GI10's **[a]**
+per-assignment facts render (an inspector's *"does not match"* is SHOWN, plainly — 6.26b makes it a warning); a date/time decrypt failure
+shows *"could not be read"*, ⛔ never a blank.
 
 ### AC10 — Every later surface (GI11)
-Each of the four API mappers answers 409 `…ground_inspection_required` with its reason (an HTTP test per route — ⛔ never a 500); each admin
-surface shows its own words. (The new kinds' words are 6.26b's.)
+Each of the four API mappers answers 409 `…ground_inspection_required` with its reason — an HTTP test per ROUTE, FIVE routes (the four
+mapper files, plus the correction-escalation route that reaches `decideEscalatedClosure` through `translateClosureError`,
+`claims.correction-escalation.handlers.ts:290`) — ⛔ never a 500; the console, cycle-freeze and R9 surfaces show their own words; the 6.19c
+closure surfaces show the server's message (they word ⛔ no certificate 409 themselves — `correction-closure/errors.ts`), so the API message
+is written for a reader. (The new kinds' words are 6.26b's.)
 
 ### AC11 — Erasure (GI13)
-The anonymizer scrubs the inspection's two date/time ciphertexts and its `death_date_index` (the review's index is 6.26b's); a live-DB RTBF test asserts it (and the anonymizer's
-table/statement counts move by exactly what this adds). The 6.7-columns gap is a `deferred-work.md` item.
+The anonymizer scrubs the inspection's two date/time ciphertexts to the sentinel and sets `death_date_index` NULL **only on rows whose
+`death_date_ciphertext IS NOT NULL`** — a `WHERE` filter, ⛔ not merely a `CASE WHEN` (6.21a D11's form): Postgres re-checks the CHECK on
+every row an UPDATE rewrites, even when no value changes, and a pre-6.26 completed row FAILS the new CHECK; `death_time_ciphertext` keeps
+the `CASE WHEN … IS NULL THEN NULL` form (it is optional). The new CHECK admits the erased row (Task 1.2). A live-DB RTBF
+test erases a deceased member whose claim carries a COMPLETED inspection and succeeds (⛔ no 23514); the unit pins in
+`packages/domain/tests/member/rtbf-anonymize.test.ts` (`toHaveLength(21)` statements, `18` tables) move by exactly what this adds. The
+6.7-columns gap is a `deferred-work.md` item.
 
 ### AC12 — Nothing else moves (GI16; invariant 6)
-The permission catalog version and key count are unchanged; the claim event vocabulary is unchanged; ⛔ no file under `apps/mobile`,
+`PERMISSION_CATALOG_VERSION` stays **51** and the key count **65**; the claim event vocabulary is unchanged; ⛔ no file under `apps/mobile`,
 `apps/public` or `packages/i18n` changes.
 
 ### AC13 — The proof
-Every test listed under **Testing** passes; `pnpm ci:local` is green with `DATABASE_URL` at :5433 (34 / 34); migrations applied to BOTH
-:5432 and :5433 ([[project_live_db_test_gotchas]]).
+Every test listed under **Testing** passes; GI15's fixture default is ON in both `seedNomineeNameCheck` copies and every approve-path spec is
+green on it; `pnpm ci:local` is green with `DATABASE_URL` at :5433 (34 / 34); migrations applied to BOTH :5432 and :5433
+([[project_live_db_test_gotchas]]).
+
+### AC14 — The audit (GI14)
+The certificate read writes `admin_ground_inspection.certificate_viewed` (ids only); the completion audit carries the `photo_kind` counts,
+`original_certificate_verdict` and `death_date_source`; a test reads both audit rows and finds ⛔ no date, ⛔ no time, ⛔ no note and ⛔ no
+name. Written through `emitAuthAudit` (the access-wrapper gate refuses a bare `audit.writeAuditEntry`).
 
 ## Tasks / Subtasks
 
@@ -398,70 +473,76 @@ Every test listed under **Testing** passes; `pnpm ci:local` is green with `DATAB
   - [x] 0.4 The Q1/Q2 routing note — ✅ written 2026-10-06 (`_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-06-6-26-certificate-mismatch-and-replacement.md`), its E4 commands run.
   - [x] 0.5 The ruling — ✅ `2026-10-06-281` (Q1 B · Q2 A), the note's block filled. Both match what v1.x was written for ⇒ ⛔ no re-derivation; the row split (v2.0).
   - [x] 0.6 `epics.md`: `### Story 6.26a` and `### Story 6.26b` after `### Story 6.23b`, each with a Minted-by header (`-262` FQ8 B/C, `-263` FQ9/FQ11, `-264` FQ12/FQ13, `-281`, the author-commit) and a brief. — ✅ 2026-10-06 (citing `-282`; every anchor resolves).
-- [ ] **Task 1 — Migrations (GI2–GI5, GI12)** — hand-authored, ⛔ never regenerated
+  - [x] 0.7 The first fresh-context validate (v2.3) — ✅ 2026-10-06: `2026-10-06-283` (A1–A8) committed alone as `e8200366`; this file and 6.26b rewritten to it. ⚠ A fresh-context RE-validate of `-283` and of this rewrite runs before Task 1 ([[feedback_story_validate_footguns]] #32 — a pass that writes a decision re-validates the decision).
+- [ ] **Task 1 — Migrations (GI2–GI5, GI12)** — hand-authored, ⛔ never regenerated (the latest applied is `0145`)
   - [ ] 1.1 `0146_ground-inspection-enum-values.sql` — its OWN file (a value added to an enum cannot be USED in the adding transaction — the 0120 posture): `ALTER TYPE "ground_inspection_stage" ADD VALUE IF NOT EXISTS 'certificate_check'`; `ALTER TYPE "ground_inspection_refusal_reason" ADD VALUE IF NOT EXISTS 'original_certificate_not_produced'`.
-  - [ ] 1.2 `0147_ground-inspection-death-facts.sql`: new enums `ground_inspection_photo_kind` (`site`, `original_certificate`), `ground_inspection_certificate_verdict` (`matches`, `does_not_match`), `ground_inspection_death_date_source` (`family_statement`, `original_certificate`), `claim_ground_inspection_photos.photo_kind NOT NULL DEFAULT 'site'`; `claim_ground_inspections` + `original_certificate_verdict`, `compared_certificate_upload_id uuid` (a composite FK `(pariwar_id, compared_certificate_upload_id)` → `claim_death_certificate_uploads` if a UNIQUE target exists — else add one; check 0144's composite-FK pattern), `death_date_ciphertext`, `death_time_ciphertext`, `death_date_source`, `death_date_index text`; the review-table columns are 6.26b's (`register_check`, `accepted_date_index`, `death_certificate_register_check` enum). CHECKs **`NOT VALID`** (pre-existing dev rows exempt; every NEW or UPDATED row checked): a `completed` inspection carries verdict + compared upload + date + index + source, its source matching its stage, and a time only on `family_statement`. Index `(pariwar_id, claim_case_id, status)` already exists — duplicate ⛔ none.
-  - [ ] 1.3 Drizzle schema files + the field-class registry (`encryption/field-classes.ts`) for the two new Tier-1 columns; `meta/_journal.json`. Apply to :5432 AND :5433.
+  - [ ] 1.2 `0147_ground-inspection-death-facts.sql`: new enums `ground_inspection_photo_kind` (`site`, `original_certificate`), `ground_inspection_certificate_verdict` (`matches`, `does_not_match`), `ground_inspection_death_date_source` (`family_statement`, `original_certificate`); `claim_ground_inspection_photos.photo_kind NOT NULL DEFAULT 'site'`; `claim_ground_inspections` + `original_certificate_verdict`, `compared_certificate_upload_id uuid REFERENCES claim_death_certificate_uploads(upload_id)` (a SINGLE-column FK — the table's PK is `upload_id` and it has ⛔ no `(pariwar_id, upload_id)` UNIQUE; the precedent is `0122` (reviews) and `0137` (reminder runs)), `death_date_ciphertext`, `death_time_ciphertext`, `death_date_source`, `death_date_index text`; the review-table columns are 6.26b's. CHECKs **`NOT VALID`**: a `completed` inspection carries `original_certificate_verdict` + `compared_certificate_upload_id` + `death_date_source` + `death_date_ciphertext` (⚠ ⛔ NOT `death_date_index` — GI13's erasure NULLs it, and Postgres re-checks a `NOT VALID` constraint on every UPDATE: requiring it would make every erasure of an inspected deceased fail 23514); its source matches its stage; a time only on `family_statement`. ⚠ A pre-6.26 completed row fails this CHECK on ANY update ⇒ GI13's scrub touches only rows whose `death_date_ciphertext IS NOT NULL` (AC11). The existing index is `(claim_case_id, status)` (`0055`) — add ⛔ none. Table grants (`0055`) already cover new columns.
+  - [ ] 1.3 Drizzle schema files; `meta/_journal.json`. ⛔ No new field-class entry: `'ground_inspection'` already exists (`CLAIM_GROUND_INSPECTION_FIELD_CLASS`, `apps/api/src/context.ts:188`) for the two Tier-1 columns. `DEATH_DATE_INDEX_FIELD_CLASS = 'death_date'` is defined in `@twt/domain` beside `CLAIM_CONTACT_MOBILE_FIELD_CLASS` (`claim/correction-crypto.ts:59`) and re-exported from `context.ts` (`-283` A6). Apply to :5432 AND :5433.
 - [ ] **Task 2 — Domain: the writers (GI3–GI5, GI12)** (`claim/ground-inspection-persist.ts`)
-  - [ ] 2.1 `assertClaimInVerification` → the review window (import `CLAIM_REVIEW_WINDOW_STATES`); every `projectClaimState` payload uses `claimRow.currentState`; doc-blocks amended (GI3).
+  - [ ] 2.1 `assertClaimInVerification` → ONE exported predicate: `CLAIM_REVIEW_WINDOW_STATES` (imported) **or** `state_trustee_approved` with a live `routed_to_r9` routing row (`-283` A1 — reuse the R9 queue predicate, `hasLiveRoutedRow` in `r9-voting-persist.ts:275-291`: export it or move it to a leaf; ⛔ never a second copy; prove ⛔ no import cycle). The THREE `projectClaimState` payloads (`:437`, `:571`, `:756`) use `claimRow.currentState`; doc-blocks amended (GI3), incl. `state.ts:135-154`, `events.ts:163-215` and `packages/events/src/registry.ts:227`. The error class and `ground_inspection.not_allowed` are KEPT.
   - [ ] 2.2 `addGroundInspectionPhoto` takes `photoKind` (default `site`).
-  - [ ] 2.3 `completeGroundInspection` takes `{ originalCertificateVerdict, comparedCertificateUploadId, deathDate: { ciphertext, index, source }, deathTimeCiphertext }`; ⚠ LOCK ORDER claim → assignment (resolve the claim id from an unlocked read, lock the claim row, then `lockActiveAssignment`) — ⛔ never assignment → claim, which inverts the approval writers' order ([[project_fk_truncate_cascade_deadlock]]); re-read `readDeathCertificateSnapshot` under the lock and refuse a non-current compared upload — ⭐ traced 2026-10-06 (re-verify): an upload is made CURRENT by the OCR job, which re-checks `mayDeathCertificateUploadBecomeCurrent` UNDER the claim-row lock (`death-certificate-approval.ts:199-213` doc-block) ⇒ holding the claim lock here serializes against it; confirm in the job's code, and if it does ⛔ not lock, record the race in the Completion Notes — ⛔ never assume it away; count `original_certificate` photos under the lock; validate source ⇔ stage.
-  - [ ] 2.4 `REFUSAL_REASONS_BY_DISPOSITION.evidence_unavailable` gains `original_certificate_not_produced`.
-  - [ ] 2.5 New typed errors (`GroundInspectionOriginalCertificateRequiredError`, `GroundInspectionCertificateChangedError`, `GroundInspectionDeathDateRequiredError` / `…InFutureError`) beside the existing ones.
+  - [ ] 2.3 `completeGroundInspection` takes `{ originalCertificateVerdict, comparedCertificateUploadId, deathDate: { plaintext, ciphertext, index, source }, deathTimeCiphertext, now? }` — the plaintext is for validation ONLY (`isRealCalendarDate`, `nominee-determination-persist.ts:71`; "⛔ never after the day of completion" = `istDateOf(now)`, `cycle-calendar/holiday-resolver.ts:178`), ⛔ never stored — 6.21a D4's own shape (`recordDeathCertificateReview`'s `acceptedDate` + `now`). ⚠ **LOCK ORDER: assignment → claim — the order EVERY inspection writer already uses** (`lockActiveAssignment` FOR UPDATE, then `projectClaimState`'s upsert takes the claim row). Here the claim row is locked EXPLICITLY right after `lockActiveAssignment` (`SELECT … FOR UPDATE` on `claims`), then `readDeathCertificateSnapshot` is re-read under it. ⛔ Never claim → assignment in this writer alone: `rescheduleGroundInspection` holds the assignment and then waits for the claim inside `projectClaimState` ⇒ a 40P01 deadlock (a 500). ⭐ Why holding the claim lock is enough: the OCR job makes an upload current only under the claim-row lock (`apps/jobs/src/claim-ocr-parity.ts:316-321`, re-checking `mayDeathCertificateUploadBecomeCurrent` at `:349-351`), and the approval writers read inspections under their claim lock without locking assignments ⇒ ⛔ no cycle. Refuse a non-current compared upload (`certificate_changed`) and ⛔ no current upload at all (`no_current_certificate`); count `original_certificate` photos under the lock; validate source ⇔ stage; `HH:MM` = `^([01]\d|2[0-3]):[0-5]\d$` (⛔ no helper exists — define it once).
+  - [ ] 2.4 `REFUSAL_REASONS_BY_DISPOSITION.evidence_unavailable` (`:180-189`) gains `original_certificate_not_produced`.
+  - [ ] 2.5 New typed errors (`GroundInspectionOriginalCertificateRequiredError`, `GroundInspectionCertificateChangedError`, `GroundInspectionNoCurrentCertificateError`, `GroundInspectionDeathDateRequiredError` / `…InFutureError`) beside the existing ones.
 - [ ] **Task 3 — Domain: the gate (GI1, GI2)**
-  - [ ] 3.1 `claim/ground-inspection-approval.ts`: `readGroundInspectionApprovalFacts` (ONE raw-SQL statement: own assignments' `status`, `inspection_stage`, `compared_certificate_upload_id`; whether the claim inherits — the SAME predicate as `getInheritedGroundInspectionSource`, ⛔ never a second copy: call it, or extract its SQL into one shared fragment both use) + the pure `groundInspectionApprovalState` + `assertGroundInspectionCompleteForApproval`. ⚠ Import discipline: ⛔ never reach `events.ts`, `project.ts`, `nominee-lock.ts` (6.23a NW1's transitive scan — add this module to it).
-  - [ ] 3.2 `assertClaimApprovable` calls it between the name-check helper and `assertLateWarningsCovered`; the doc-block's `@throws` list and the 6-26 note at `nominee-name-check.ts:403-405` updated (the note is deleted only once it is true — ⛔ never before).
+  - [ ] 3.1 `claim/ground-inspection-approval.ts`: `readGroundInspectionApprovalFacts` — ONE raw-SQL statement: own assignments' `status`, `inspection_stage`, `compared_certificate_upload_id`; the current upload id; whether the claim inherits, through the ONE shared inheritance fragment (`-283` A2: extracted from `getInheritedGroundInspectionSource`, which then uses it too, WITH the new `inspection_stage <> 'certificate_check'` conjunct) — ⛔ never a second copy of the inheritance predicate or of the current-upload rule. + the pure `groundInspectionApprovalState` (null never matches — A7) + `assertGroundInspectionCompleteForApproval`. ⚠ Import discipline: `nominee-name-check.ts` will import this module ⇒ it must ⛔ never reach `claim/events.ts`, `claim/nominee-name-check.ts` or `claim/nominee-lock.ts` — add it to 6.23a NW1's transitive scan (`packages/domain/tests/claim/approval-warnings.test.ts:342`, the `forbidden` list's `for (const entry of [...])` loop).
+  - [ ] 3.2 `assertClaimApprovable` calls it between the name-check helper and `assertLateWarningsCovered`; the `opts` comment's 6-26 note (`nominee-name-check.ts:403-405`) and the function doc-block (`:344-388`) updated — the note is deleted only once it is true, ⛔ never before.
   - [ ] 3.3 `GroundInspectionRequiredError` in `errors.ts`; re-export through `claim/index.ts`.
 - [ ] **Task 4 — ➡ MOVED to 6.26b** (the warnings, the queue).
 - [ ] **Task 5 — ➡ MOVED to 6.26b** (the register check).
-- [ ] **Task 6 — Erasure (GI13 [a])** — `member/anonymize.ts` (the inspection's date/time ciphertexts + `death_date_index`) + its RTBF spec counts; the `deferred-work.md` item for 6.7's columns.
+- [ ] **Task 6 — Erasure (GI13 [a]; AC11)** — `member/anonymize.ts`: the inspection's date/time ciphertexts → sentinel ONLY where present, `death_date_index` → NULL, on the deceased's claims (read the claim ids first, as GI13 says); `packages/domain/tests/member/rtbf-anonymize.test.ts`: its `mockClient` records only `update(table)` ⇒ extend it to answer the claim-id read, and move the two pins (`toHaveLength(21)`, `18` tables) by exactly what this adds; the live RTBF spec (AC11); the `deferred-work.md` item for 6.7's columns.
 - [ ] **Task 7 — API**
-  - [ ] 7.1 `claims.ground-inspection.routes.ts` / `.handlers.ts`: `CompleteBody` gains `original_certificate_verdict`, `compared_certificate_token`, `death_date`, `death_time` (nullish); the handler encrypts both and computes the index under `DEATH_DATE_INDEX_FIELD_CLASS` (GI5 — exported for 6.26b); the photo upload takes a `photo_kind` multipart field; `RefusalReasonEnum` follows the domain tuple; the new GET `…/certificate` route (GI4); map every new typed error (409/400) beside the existing ones.
+  - [ ] 7.1 `claims.ground-inspection.routes.ts` / `.handlers.ts`: the `schedule` handler's own state pre-check (`handlers.ts:216-222`) calls Task 2.1's predicate (`-283` A4); `CompleteBody` (camelCase, `.strict()`, routes `:88-93`) gains `originalCertificateVerdict`, `comparedCertificateToken` (= the current upload's id, the same uuid the console already calls `certificateToken` — compare lower-cased, [[project_branded_ids_lowercase]]), `deathDate`, `deathTime` (nullish); the handler encrypts both and computes the index under `DEATH_DATE_INDEX_FIELD_CLASS` (from `@twt/domain`); the photo upload takes a `photoKind` multipart field read AFTER the file stream is drained (the caption's pattern, `handlers.ts:446-450`); `RefusalReasonEnum` follows the domain tuple; the new GET `…/ground-inspection/:ground_inspection_id/certificate` (GI4 — `deps.claimDocumentStorage.signedReadUrl(key, 300)`, as the photo read does at `:688`; audited through `emitAuthAudit`, AC14); map every new typed error (409/400) beside the existing ones. ⚠ The routes file is on `claim-adjudication-human-actor`'s `ENROLMENT_OWED` list (`scripts/…/check.ts:266-268`) — a new route in it is fine; a NEW `claims.*.routes.ts` file would need classifying.
   - [ ] 7.2 ➡ MOVED to 6.26b (the register check on accept).
-  - [ ] 7.3 `claims.verifier-console.handlers.ts`: the `groundInspectionGate` section (one counted read, `MAX_READS` 19 → 20 with its doc comment); GI10's [a] per-assignment fields + the inheritance condition (Fact 3).
-  - [ ] 7.4 The four approval mappers (GI11).
+  - [ ] 7.3 `claims.verifier-console.handlers.ts`: the `groundInspectionGate` section (AC9 — one statement, SAVEPOINT, before `approvalWarnings`; `MAX_READS` 19 → 20 with a ledger line in its doc comment); GI10's [a] per-assignment fields + the inheritance condition (Fact 3).
+  - [ ] 7.4 The four approval mappers (GI11) — `claims.verification-decision.handlers.ts:90-96`, `claims.cycle-freeze.handlers.ts:151`, `claims.r9-voting.handlers.ts:105`, `claims.correction-closure.handlers.ts:202` (which also serves `claims.correction-escalation.handlers.ts:290`).
+  - [ ] 7.5 `apps/admin/src/api/client.ts`: the certificate read and the photo-kind / completion fields.
 - [ ] **Task 8 — Contracts** (`packages/contracts/src/claims/verifier-console.ts` — `groundInspectionGate` and the per-assignment fields): new fields; ⚠ a new REQUIRED field breaks contracts / mobile fixtures outside `tsc` — run their vitest ([[project_contracts_tests_outside_tsc]]).
 - [ ] **Task 9 — Admin**
-  - [ ] 9.1 `GroundInspectionPage.tsx` (+ `i18n-en.ts`): the `certificate_check` stage; on an open assignment, *"Compare with the certificate we hold"* (the signed image) and the verdict radio; the photo-kind choice on upload; the completion form's family date (required) + time (optional, "not known") for a full visit, the printed date for a certificate check; the new refusal reason; every new 409 in words.
+  - [ ] 9.1 `GroundInspectionPage.tsx` (+ `i18n-en.ts`): its own copies of the stage list (`:18`, `STAGES`) and the refusal map (`:29-35`) gain `certificate_check` / `original_certificate_not_produced`; on an open assignment, *"Compare with the certificate we hold"* (the signed image) and the verdict radio; the photo-kind choice on upload; the completion form's family date (required) + time (optional, "not known") for a full visit, the printed date for a certificate check; every new 409 in words.
   - [ ] 9.2 ➡ MOVED to 6.26b (the register-check choice).
   - [ ] 9.3 `VerifierConsoleRoute.tsx` / `SignalsPanel.tsx` / the decision strip: the why-it-waits line, Approve disabled, GI10's facts, the inherited + own labels.
-  - [ ] 9.4 GI11's [a] words on `CycleFreezePage.tsx`, `R9CasePanel.tsx`, the closure surfaces.
-  - [ ] 9.5 `microcopy.yaml` vocabulary check on every new string (the `ci:local` microcopy gate).
-- [ ] **Task 10 — Fixtures (GI15 [a])** — both `seedNomineeNameCheck` copies (the certificate fixtures' register check is 6.26b's); run the WHOLE domain, API and admin suites before writing a single new test (expect zero new reds from existing specs; any red is a fixture gap, ⛔ never a weakened assertion).
+  - [ ] 9.4 GI11's [a] words on `CycleFreezePage.tsx` and `R9CasePanel.tsx` (the closure surfaces show the server's message — AC10). ⭐ `R9CasePanel.tsx` is touched ⇒ the `deferred-work.md` item *"A FAILED refetch after a 409 hides the whole approval surface"* fires (*"the next story touching either surface"*): render the refetch error as a banner while `data` exists, on `R9CasePanel.tsx` (the `EscalationPanel.tsx` half stays open — ⛔ not touched here), and append the outcome to the item.
+  - [ ] 9.5 `microcopy.yaml` vocabulary check on every new string (the `ci:local` microcopy gate scans all of `apps/admin/src/**`; ⚠ `report` is banned — ⛔ no "inspection report").
+- [ ] **Task 10 — Fixtures (GI15 [a]; AC13)** — both `seedNomineeNameCheck` copies (`packages/domain/tests/integration/_helpers.ts:1099`, `apps/api/tests/integration/_nominee-name-check-fixture.ts:141`): seed the inspection ONLY when `groundInspectionApprovalState` is not already complete (the certificate fixture's "kept if one already is" pattern — the fixture is called repeatedly in some specs and after certificate replacements, e.g. `death-certificate.spec.ts:446-466`), and seed ⛔ nothing when the claim has ⛔ no current upload (`certificate: 'skip'` callers — the certificate conjunct answers first). The family date EQUALS the accepted date, which defaults to TOMORROW (India time, `certificateDateAfterEverything()`) ⇒ the completion passes `now: fixtureReviewNow(date)` (`_helpers.ts:913-916`), exactly as the review does. ⚠ **These specs turn red BY DESIGN and are AMENDED to the new shape** (⛔ never a weakened assertion): raw completed-row INSERTs — `apps/api/tests/integration/claims/verifier-console.spec.ts:214`, `:1037`, `:1075`, `…/claims/verifier-console-shape.spec.ts:216`, `packages/domain/tests/integration/claim/nominee-refusal-inheritance.spec.ts:72`; real-writer completions without the new inputs (and with ⛔ no certificate upload) — domain `ground-inspection.spec.ts` (two completions), `ground-inspection-concurrency.spec.ts:217` (complete vs refusal), API `apps/api/tests/integration/claims/ground-inspection.spec.ts:378`, `:448` (`payload: {}`). Then run the WHOLE domain, API and admin suites before writing a new test; any OTHER red is a fixture gap.
 - [ ] **Task 11 — Tests** — see **Testing**; red-check each load-bearing one (revert the line, watch it fail).
-- [ ] **Task 12 — Records** — `sprint-status.yaml` row + a prepended ledger entry ([[project_sprint_status_safe_prepend]]); the File List; the Change Log.
+- [ ] **Task 12 — Records** — `sprint-status.yaml` row + a prepended ledger entry ([[project_sprint_status_safe_prepend]]); `deferred-work.md`: the 6.7-columns item (Task 6), the R9CasePanel outcome (9.4), and an append to the 6.20 CHUNK-1 inheritance item (*"`-239` inheritance source: an appeal-overturned refusal is never superseded …"*) that 6.26a made that read a GATE input (VISITED) — still accepted: ORIGINAL_SEEN still needs the claim's own certificate check; the File List; the Change Log.
 
 ## Dev Notes
 
-### What already EXISTS — traced at `3311fc97` (rebuild ⛔ none of it)
-- **The gate and its seam:** `assertClaimApprovable` (`nominee-name-check.ts:389-414`), `ClaimApprovalGateOptions` (`:421-432`), the inner helper's `-251` early return (`:523`).
-- **The certificate snapshot:** `readDeathCertificateSnapshot` / `DeathCertificateSnapshot.currentUploadId` (`death-certificate-approval.ts:56-…`, `:83`); `assertDeathCertificateAcceptedForApproval` (`:395-410`).
-- **The inspection substrate:** writers (`ground-inspection-persist.ts` — schedule `:386`, reschedule `:493`, findings `:613`, photo `:661`, complete `:726`, refusal `:796`), reads (`ground-inspection-read.ts`), schema (`schema/claim_ground_inspections.ts`, `…_photos.ts`), routes (`claims.ground-inspection.routes.ts` — seven, with 6.17's row-dimension gate), admin page (`GroundInspectionPage.tsx`).
-- **The inheritance:** `getInheritedGroundInspectionSource` (`nominee-refusal-read.ts:97-129`); the console's use (`claims.verifier-console.handlers.ts:680-…`).
+### What already EXISTS — traced at `3311fc97`, re-derived at `e1907338` (identical code) by v2.3 (rebuild ⛔ none of it)
+- **The gate and its seam:** `assertClaimApprovable` (`nominee-name-check.ts:389-414`), `ClaimApprovalGateOptions` (`:421-430`), the inner helper's `-251` early return (`:523`).
+- **The certificate snapshot:** `DeathCertificateSnapshot` (`death-certificate-approval.ts:56`, `currentUploadId` `:61`) / `readDeathCertificateSnapshot` (`:83`, one statement); `mayDeathCertificateUploadBecomeCurrent` (`:210`, doc-block `:201-209`); `assertDeathCertificateAcceptedForApproval` (`:395-410`).
+- **The inspection substrate:** writers (`ground-inspection-persist.ts` — schedule `:386`, reschedule `:493`, findings `:613`, photo `:661`, complete `:726`, refusal `:796`; ALL six call `assertClaimInVerification` `:224-233`; the API `schedule` handler ALSO pre-checks the state, `claims.ground-inspection.handlers.ts:216-222`), reads (`ground-inspection-read.ts`), schema (`schema/claim_ground_inspections.ts`, `…_photos.ts`), routes (`claims.ground-inspection.routes.ts` — seven, with 6.17's row-dimension gate), admin page (`GroundInspectionPage.tsx`).
+- **The inheritance:** `getInheritedGroundInspectionSource` (`nominee-refusal-read.ts:97-129`; ⛔ no stage filter at `:118-124` — `-283` A2); the console's use (`claims.verifier-console.handlers.ts:680-…`, `if (own.length === 0)` at `:691`). ⚠ Known and accepted: `deferred-work.md`'s 6.20 CHUNK-1 item (*"`-239` inheritance source: an appeal-overturned refusal is never superseded …"*) — an overturned refusal still passes its inspection on. 6.26a makes this read a GATE input (VISITED); still accepted, because ORIGINAL_SEEN needs the claim's OWN certificate check either way (Task 12 appends this to the item).
+- **The R9 queue predicate:** `hasLiveRoutedRow` (`r9-voting-persist.ts:275-291`, private today — `-283` A1 reuses it); `R9_OUTCOME_FROM_STATES` (`state.ts:78-85`).
+- **6.21a D4's date shape:** `recordDeathCertificateReview` (plaintext `acceptedDate` + injected `now`), `isRealCalendarDate` (`nominee-determination-persist.ts:71`), `istDateOf` (`cycle-calendar/holiday-resolver.ts:178`); the fixtures' `fixtureReviewNow` (`_helpers.ts:913-916`) and `certificateDateAfterEverything` (`:1010-1012`, tomorrow in India time).
 - **The warnings:** `approval-warnings.ts` (kinds `:86`, key `:93`, the ONE statement `:213`, the bulk twin), the late reason (`approval-warnings-persist.ts`, NW14), the wait (`assertLateWarningsCovered`).
-- **The blind index:** `encryption/blind-index.ts`; the API's `deps.encryption.blindIndex` (`modules/auth/shared/email-index.ts:32`).
-- **The 409 mapping precedent:** `claims.verification-decision.handlers.ts:90-96` (the certificate arm) and its three siblings; the admin precedent `nominee-errors.ts` (`deathCertificateAcceptanceRequiredMessage`).
+- **The blind index:** `encryption/blind-index.ts` — `blindIndex(fieldClass, plaintext, { pariwarId }, kms, hmacKeyRef)`; the API's call shape `encryption.blindIndex(FIELD_CLASS, …, enc.kms, enc.hmacKeyRef)` (`modules/auth/shared/email-index.ts:32`); the domain-held field-class precedent `CLAIM_CONTACT_MOBILE_FIELD_CLASS` (`claim/correction-crypto.ts:59`).
+- **The 409 mapping precedent:** `claims.verification-decision.handlers.ts:90-96` (the certificate arm) and its three siblings (`claims.cycle-freeze.handlers.ts:151`, `claims.r9-voting.handlers.ts:105`, `claims.correction-closure.handlers.ts:202`); the admin precedent `nominee-errors.ts` (`deathCertificateAcceptanceRequiredMessage`).
 
 ### What moves, and what must be preserved
-- ⭐ Preserve: every existing refusal's code and order; the `-251` waiver's reach (name check ONLY); 6.17's row-dimension gate and the block/district immutability on reschedule; the idempotency of schedule/reschedule; the ≥1-photo and 20-photo rules; the inspector guard (D6); `resolveEscalation`'s ungated approve; 6.23a/b's single rule and the late-reason mechanism; the console's fail-closed sections.
-- ⚠ Moves: the inspection write window (GI3 — 6.7 behaviour, deliberately); the console's inheritance condition (GI10); the console read ceiling (19 → 20). ⛔ `APPROVAL_WARNING_KINDS` does ⛔ not move here (6.26b: +3).
+- ⭐ Preserve: every existing refusal's code and order; the `-251` waiver's reach (name check ONLY); 6.17's row-dimension gate and the block/district immutability on reschedule; the idempotency of schedule/reschedule; the ≥1-photo and 20-photo rules; the inspector guard (D6); `resolveEscalation`'s ungated approve; 6.23a/b's single rule and the late-reason mechanism; the console's fail-closed sections and `approvalWarnings` staying LAST; the lock order assignment → claim in every inspection writer.
+- ⚠ Moves: the inspection write window (GI3 + `-283` A1 — 6.7 behaviour, deliberately) AND the API schedule pre-check (A4); `getInheritedGroundInspectionSource`'s stage conjunct (A2); the console's inheritance condition (GI10); the console read ceiling (19 → 20). `APPROVAL_WARNING_KINDS` does ⛔ not move here (6.26b: +3).
 
 ### ⚠ Traps
-1. **Lock order** (Task 2.3) — claim → assignment, everywhere.
+1. **Lock order** (Task 2.3) — **assignment → claim**, as every inspection writer already does (v2.2's *"claim → assignment, everywhere"* was wrong: it would deadlock `complete` against `reschedule`).
 2. **One field class for both indexes** — 6.26a mints the constant; 6.26b's review writer reuses it. Two classes ⇒ every comparison differs ⇒ every claim warned.
 3. ➡ (the bulk-reader drift trap is 6.26b's.)
 4. **The console's inheritance** (Fact 3) — a refile with its own certificate check must still show the inherited inspection.
-5. **`NOT VALID` is not "no check"** — Postgres re-checks an old row on UPDATE; completed rows are immutable, so ⛔ nothing updates them — keep it so.
+5. **`NOT VALID` is not "no check"** — Postgres re-checks the row on EVERY UPDATE. ⚠ The anonymizer (GI13) DOES update completed rows (v2.2's *"⛔ nothing updates them"* was false) ⇒ the CHECK must ⛔ never require a column the erasure NULLs (`death_date_index`), and the scrub touches only rows whose ciphertext is present, so a pre-6.26 row (which fails the CHECK) is ⛔ never updated.
 6. **Enum values in their own migration** (Task 1.1) — using a value in the adding transaction fails.
 7. ➡ (the late-key traps are 6.26b's — but GI3 is what MAKES an inspection completable after approval; 6.26b depends on it.)
 8. ➡ (the queue trap is 6.26b's.)
-9. **The fixture default** must equal the accepted date, or every approve-path spec gains a warning (the 6.23a Trap-5 lesson).
-10. **A completed pre-6.26 row** has ⛔ no compared upload ⇒ ⛔ never ORIGINAL_SEEN — expected; backfill ⛔ nothing.
+9. **The fixture default** must equal the accepted date, or every approve-path spec gains a warning (the 6.23a Trap-5 lesson) — and that date is TOMORROW, so the completion must take the fixture's `now`, or every spec answers `death_date_in_future`.
+10. **A completed pre-6.26 row** has ⛔ no compared upload ⇒ ⛔ never ORIGINAL_SEEN — expected; backfill ⛔ nothing. Null never matches (`-283` A7).
+11. **The API pre-check is a twin of the domain guard** (`-283` A4) — widen BOTH through ONE predicate; an AC3 test goes through HTTP.
+12. **The R9 exception is scoped** (`-283` A1) — `state_trustee_approved` is admitted ONLY with a live routing row; a test proves the refusal without one.
 
 ### Testing
 - **Domain unit (pure):** AC2's table over `groundInspectionApprovalState`; the date/time validators.
-- **Domain live-DB:** `ground-inspection.spec.ts` (window widened: AC3's refuse list; events' actual state; the amended review-2a test; GI4/GI5 refusals; the lock order under a concurrent upload — `ground-inspection-concurrency.spec.ts`); a new `ground-inspection-approval.spec.ts` (AC1 at every one of the six calls + the waived approve; AC3's two Fact-1 paths end in approval; AC6); the RTBF spec (AC11).
-- **API live-DB:** `ground-inspection.spec.ts` (new body fields, photo kind, the certificate read's 200/403, every new code); `verifier-console.spec.ts` + `-shape.spec.ts` (the new section, the read ceiling exact, GI10's fields, inheritance + own); one 409 test per approval route (`verifier-decision`, `cycle-freeze`, `r9-voting`, `correction-closure`).
+- **Domain live-DB:** `ground-inspection.spec.ts` (window widened: AC3's refuse list incl. `state_trustee_approved` with and without a live R9 routing row; events' actual state; the amended review-2a test; GI4/GI5 refusals incl. `no_current_certificate`); `ground-inspection-concurrency.spec.ts` (complete vs a concurrent upload made current; **complete vs reschedule of the same assignment — ⛔ no deadlock**); a new `ground-inspection-approval.spec.ts` (AC1 at every one of the six calls + the waived approve; AC3's three paths end in approval; AC6; the inheritance stage filter); the RTBF live spec (AC11) + `tests/member/rtbf-anonymize.test.ts` pins; `approval-warnings.test.ts`' NW1 import scan with the new module.
+- **API live-DB:** `claims/ground-inspection.spec.ts` (schedule in `reversed` → 201 through HTTP; new body fields, photo kind, the certificate read's 200/403/409, every new code); `claims/verifier-console.spec.ts` + `-shape.spec.ts` (the new section, the read ceiling `toBe(20)`, the SAVEPOINT fail-closed case, GI10's fields, inheritance + own); one 409 test per approval ROUTE — five (`verifier-decision`, `cycle-freeze`, `r9-voting`, `correction-closure`, `correction-escalation`); AC14's audit rows.
 - **Admin (vitest + RTL):** `ground-inspection-page.test.tsx` (compare panel, verdict, photo kind, dates, refusal reason, 409 words); `verifier-console.test.tsx` (why-it-waits per reason, Approve disabled / Deny enabled, fail-closed, facts); the cycle-freeze / R9 / closure tests (the 409 words).
 - **Contracts:** the console packet schema.
 - **Gate:** `pnpm ci:local` with `DATABASE_URL` (:5433) — see [[project_ci_local_concurrency_oversubscription]] and [[project_known_livedb_test_failures]] before calling a red a flake.
@@ -483,7 +564,7 @@ All 6.23b: the story's SHA map; review rounds 2–3 (bulk-read slicing, fail-clo
 No `project-context.md` exists. The house rules this story leans on are in memory: [[feedback_governance_commits_precede_implementation]], [[feedback_supersede_never_reinterpret]], [[feedback_trace_reachability_before_escalating]], [[project_not_in_production_merge_is_not_golive]] (FQ9 is a GO-LIVE condition; merging is ⛔ not fenced), [[project_branded_ids_lowercase]], [[project_type_only_import_cycle_trap]].
 
 ### References
-- `.decision-log.md`: `2026-10-06-281` Q1 B / Q2 A and its reading · `2026-09-28-262` FQ8 B/C and its reading · `-263` FQ9–FQ11, its reading, Consequences 1/4 · `-264` FQ12/FQ13, its reading · `-277` Q3 B · `-278` NW1, NW6, NW12, NW14 · `-279` A1, A6 · `-239` (b) · `-243` · `-226` cl.7 · `-251` · `-260` G1.
+- `.decision-log.md`: `2026-10-06-283` A1–A8 (amends `-282`) · `2026-10-06-282` GI1–GI18 · `2026-10-06-281` Q1 B / Q2 A and its reading · `-280` (NW14 in `state_trustee_approved`) · `2026-09-28-262` FQ8 B/C and its reading · `-263` FQ9–FQ11, its reading, Consequences 1/4 · `-264` FQ12/FQ13, its reading · `-277` Q3 B · `-278` NW1, NW6, NW12, NW14 · `-279` A1, A6 · `-239` (b) · `-243` · `-226` cl.7 · `-251` · `-260` G1.
 - `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-09-28-6-20-follow-ups.md` (FQ8, FQ9, FQ11, FQ13 as put).
 - `_bmad-output/planning-artifacts/epics.md` Story 6.7 (the 2026-09-28 annotation) · PRD `prds/prd-TWT-2026-05-22/prd.md` FR-40 (annotated).
 - Stories: `6-7-ground-inspection-scheduling-notes-photos.md`, `6-17-block-dimension-ground-inspection-gate.md`, `6-20-…` (AC13), `6-21-death-certificate-clear-date-rule.md` (D4, D7, D12), `6-23-post-death-nominee-change-warnings.md` (NW1–NW18), `6-23b-every-approver-gives-a-warning-reason.md` (EA2, Trap 9).
@@ -509,3 +590,4 @@ No `project-context.md` exists. The house rules this story leans on are in memor
 | v2.0 | 2026-10-06 | **THE SPLIT** (BigDev; `-281` Consequence 2), after the Panel ruled **Q1 B · Q2 A** (`2026-10-06-281` — both as written, ⛔ no design change). THIS file becomes **6.26a** (the gate, the window, the inspector's record, the certificate check, why-it-waits; keeps the key); **6.26b** gets the warnings (GI6, GI7, GI17, GI18), the register check (GI8) and the queue. GI17 / GI18 added (Q1 B's two kinds). Every GI tagged [a]/[b]; AC7/AC8 and Tasks 4/5/7.2/9.2 moved (numbers kept). New: GI5's index is stored NOW under ONE exported field-class constant (6.26b needs ⛔ no backfill); Task 2.3's upload-lock trace answered (the OCR job makes an upload current under the claim-row lock). ⛔ Not committed. |
 | v2.1 | 2026-10-06 | Task 0.2 / 0.3 done: branch `story/6-26-ground-inspection-before-approval-and-death-facts`; governance commit `9282d108` (story, note, `-281`, split); the author-commit **`2026-10-06-282`** (GI1–GI18, verbatim, both halves) committed alone as `97403945`. ⛔ No GI changed. Remaining before code: Task 0.6 (`epics.md`) and Task 0.1's re-read at the build. ⚠ ⛔ No fresh-context validate has run (offered). |
 | v2.2 | 2026-10-06 | Task 0.6 done: `epics.md` gains `### Story 6.26a` and `### Story 6.26b` (Minted-by headers citing `-262`/`-263`/`-264`/`-277`/`-281`/`-282`, briefs). Task 0 now complete except 0.1's re-read at the build. |
+| v2.3 | 2026-10-06 | **The first fresh-context validate** (`bmad-create-story validate 6.26`, HEAD `e1907338`, ⛔ no code moved since `3311fc97`; three read-only verifiers — code cites, design/reachability, governance/split seams — every BLOCKER/HIGH re-checked against the code). **2 BLOCKER:** the `NOT VALID` CHECK required `death_date_index`, which GI13's erasure NULLs — every erasure of an inspected deceased would fail 23514 (Task 1.2, Trap 5, AC11 rewritten; 6.26b's twin too); the API `schedule` handler pre-checks `verification_in_progress` itself, so GI3 stranded every Fact-1 claim at the API (`-283` A4), and the "KEPT" code `…claim_not_in_verification` exists nowhere — it is `ground_inspection.not_allowed` (A5). **6 HIGH:** the lock order (assignment → claim, ⛔ not the reverse — reschedule would deadlock); R9 finalize in `state_trustee_approved` could strand a refile whose inheritance vanished (A1 — BigDev: *"Admit while R9-routed"*); an inherited `certificate_check` passed as a visit (A2 — BigDev: *"Add the stage filter"*); the date rule had ⛔ no plaintext and ⛔ no clock while the fixture's date is tomorrow (A6, Task 2.3, Trap 9); ~ten specs red by design, now listed (Task 10); the header/user story claimed 6.26b's work, GI14 had ⛔ no AC (AC14 added), and a `deferred-work.md` trigger fires on `R9CasePanel.tsx` (Task 9.4). Plus ~14 MEDIUM / ~30 LOW (one-statement console read in a SAVEPOINT, null never matches, the field-class constant's home, the NW1 scan list, the RTBF unit pins, the exact Niyamavali sentence, the go-live coupling (A8), the `-263` State-Trustee reading, single-column FK, existing index and field class, catalog 51 / 65 keys, five 409 routes, camelCase body, the admin page's own tuples, `report` banned, cite corrections). **`2026-10-06-283`** committed alone (`e8200366`); 6.26b → v1.2 (A3 — BigDev: *"Add currency filter"*). Status stays `ready-for-dev`. ⚠ A fresh-context RE-validate of `-283` and this rewrite is owed before Task 1 (Task 0.7). |

@@ -17,9 +17,22 @@
 //
 // The two events (`claim.ground_inspection_scheduled` / `_completed`) are IDENTITY annotations
 // emitted ONLY via `claim.projectClaimState` (the sole `claims.current_state` writer). Every
-// emission writer re-reads the claim's state INSIDE the scope-tx and rejects when it is not
-// `verification_in_progress` (GroundInspectionClaimNotInVerificationError — the 6.6 lesson: an
+// emission writer re-reads the claim's state INSIDE the scope-tx and rejects when it is outside the
+// inspection write window (GroundInspectionClaimNotInVerificationError — the 6.6 lesson: an
 // unconditional identity-event append onto a resolved claim is a false evidentiary fact).
+//
+// ⭐ Story 6.26 GI3 (`2026-10-06-282`, amended by `-283` A1 / A4 / A5): the window is no longer
+// `verification_in_progress` alone. The approval gate now waits for a completed inspection
+// (`ground-inspection-approval.ts`), and a claim can reach an approval with ⛔ no inspection (a denial
+// overturned on appeal → `reversed`; an escalation resolved as approve → `verifier_approved`; an R9
+// refile whose inheritance vanished → `state_trustee_approved`). So the window is every state in which
+// the gate can refuse: `CLAIM_REVIEW_WINDOW_STATES` (imported, ⛔ never copied) plus
+// `state_trustee_approved` WHILE the claim carries a live `routed_to_r9` routing row — ONE exported
+// predicate (`isClaimInGroundInspectionWindow`), used by every writer AND the API `schedule` pre-check.
+// The events stay identity annotations and carry the claim's ACTUAL state. ⭐ The three EVENT-EMITTING
+// writers (schedule / reschedule / complete) evaluate it on the claim row taken `FOR UPDATE` (lock
+// order assignment → claim, the order every writer here already used through `projectClaimState`);
+// findings / photo / refusal emit ⛔ no event, touch ⛔ no claim row, and keep an unlocked read.
 //
 // SCHEDULE/RESCHEDULE IDEMPOTENCY (the D5 substitute for a uniqueness constraint). With no DB
 // uniqueness on the assignment, a retried POST must not mint a duplicate. The writer generates
@@ -40,6 +53,7 @@ import { and, eq, sql } from 'drizzle-orm';
 import type pg from 'pg';
 
 import { bindScopedDb, type Db } from '../db.js';
+import { istDateOf } from '../cycle-calendar/holiday-resolver.js';
 import {
   type ClaimId,
   type GroundInspectionId,
@@ -47,8 +61,11 @@ import {
   groundInspectionId as brandGroundInspectionId,
 } from '../ids/index.js';
 import { idempotencyKeys } from '../schema/idempotency_keys.js';
+import type { ClaimRow } from '../schema/claims.js';
 import {
   type ClaimGroundInspectionRow,
+  type GroundInspectionCertificateVerdict,
+  type GroundInspectionDeathDateSource,
   type GroundInspectionRefusalReason,
   type GroundInspectionSiteType,
   type GroundInspectionStage,
@@ -56,15 +73,27 @@ import {
 } from '../schema/claim_ground_inspections.js';
 import {
   type ClaimGroundInspectionPhotoRow,
+  type GroundInspectionPhotoKind,
   claimGroundInspectionPhotos,
 } from '../schema/claim_ground_inspection_photos.js';
+import type { DeathCertificateUploadId } from '../ids/index.js';
+import { readDeathCertificateSnapshot } from './death-certificate-approval.js';
 import {
+  GroundInspectionCertificateChangedError,
   GroundInspectionClaimNotInVerificationError,
+  GroundInspectionDeathDateInFutureError,
+  GroundInspectionDeathDateRequiredError,
+  GroundInspectionDeathFactsInvalidError,
+  GroundInspectionNoCurrentCertificateError,
   GroundInspectionNotActiveError,
+  GroundInspectionOriginalCertificateRequiredError,
   GroundInspectionPhotoRequiredError,
 } from './errors.js';
-import { getClaimCase } from './read.js';
+import { isRealCalendarDate } from './nominee-determination-persist.js';
+import { getClaimCase, lockClaimCase } from './read.js';
 import { projectClaimState } from './project.js';
+import { hasLiveRoutedRow } from './r9-routing.js';
+import { CLAIM_REVIEW_WINDOW_STATES } from './review-window.js';
 
 /** Max photos per assignment (AC3) — a LOCKED named const, NOT a configurable registry. A byte
  *  cap bounds total payload independently; 20 is a generous storage-abuse boundary. */
@@ -176,7 +205,8 @@ export class GroundInspectionIdempotencyMismatchError extends Error {
 }
 
 /** The disposition→reason pairing (AC4a v1 closed set). `photo_refused` pairs ONLY with
- *  `family_refused_photography`; `evidence_unavailable` pairs with any of the other five. */
+ *  `family_refused_photography`; `evidence_unavailable` pairs with any of the others — incl. Story 6.26a's
+ *  `original_certificate_not_produced` (GI4: the family did ⛔ not produce the original; the claim WAITS). */
 const REFUSAL_REASONS_BY_DISPOSITION: Record<'photo_refused' | 'evidence_unavailable', readonly GroundInspectionRefusalReason[]> = {
   photo_refused: ['family_refused_photography'],
   evidence_unavailable: [
@@ -185,8 +215,12 @@ const REFUSAL_REASONS_BY_DISPOSITION: Record<'photo_refused' | 'evidence_unavail
     'site_no_longer_exists',
     'inspector_safety_risk',
     'other_evidence_unavailable',
+    'original_certificate_not_produced',
   ],
 };
+
+/** Story 6.26a (GI5) — a time of death the family gives: `HH:MM`, 24h. Defined ONCE (the route's schema reuses it). */
+export const DEATH_TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 /** The supervisor-override marker (D6) — recorded, never inferred. The route verifies the
  *  `claim.override_ground_inspection` key, then passes this so the writer STAMPS who overrode. */
@@ -221,15 +255,49 @@ async function lockActiveAssignment(
   return assignment;
 }
 
-/** Re-read the claim's cached state INSIDE the tx + assert `verification_in_progress` (the
- *  write-path guard that makes the identity annotation semantically correct). */
+/**
+ * ⭐ THE GROUND-INSPECTION WRITE WINDOW (Story 6.26 GI3, `-283` A1) — ONE predicate, used by every writer here AND
+ * by the API `schedule` handler's own pre-check (`-283` A4 — a twin guard widened alone would strand every claim at
+ * the API). True iff the claim's state is in `CLAIM_REVIEW_WINDOW_STATES`, or is `state_trustee_approved` while the
+ * claim carries a live `routed_to_r9` routing row (R9 finalize runs the approval gate there — invariant 3: "waits"
+ * always has a way out). `denied`, the appeal stages, `state_trustee_approved` outside R9, `approved` and `settled`
+ * stay refused. Read in the caller's tx; the event-emitting writers pass a state read from the LOCKED claim row.
+ */
+export async function isClaimInGroundInspectionWindow(
+  db: Db,
+  pariwarId: PariwarId,
+  claimCaseId: ClaimId,
+  currentState: string,
+): Promise<boolean> {
+  if ((CLAIM_REVIEW_WINDOW_STATES as readonly string[]).includes(currentState)) return true;
+  if (currentState === 'state_trustee_approved') return hasLiveRoutedRow(db, pariwarId, claimCaseId);
+  return false;
+}
+
+/** Assert the window on a claim row the caller already holds (locked or not). */
+async function assertClaimRowInWindow(db: Db, pariwarId: PariwarId, claimRow: ClaimRow): Promise<ClaimRow> {
+  if (!(await isClaimInGroundInspectionWindow(db, pariwarId, claimRow.claimCaseId, claimRow.currentState))) {
+    throw new GroundInspectionClaimNotInVerificationError(claimRow.claimCaseId, claimRow.currentState);
+  }
+  return claimRow;
+}
+
+/** Re-read the claim's cached state INSIDE the tx (⛔ no lock) + assert the window — the guard of the three
+ *  writers that emit ⛔ no event and touch ⛔ no claim row (findings / photo / refusal). */
 async function assertClaimInVerification(db: Db, pariwarId: PariwarId, claimCaseId: ClaimId) {
   const claimRow = await getClaimCase(db, pariwarId, claimCaseId);
   if (!claimRow) throw new GroundInspectionNotFoundError(claimCaseId);
-  if (claimRow.currentState !== 'verification_in_progress') {
-    throw new GroundInspectionClaimNotInVerificationError(claimCaseId, claimRow.currentState);
-  }
-  return claimRow;
+  return assertClaimRowInWindow(db, pariwarId, claimRow);
+}
+
+/** Take the claim row `FOR UPDATE` + assert the window ON THE LOCKED ROW — the guard of the three EVENT-EMITTING
+ *  writers (Story 6.26a Task 2.1). Without the lock an R9 finalize, a vote or an adjudication committing in between
+ *  would leave an assignment and an event with a stale `from_state` on a claim outside the window. ⚠ Lock order:
+ *  an assignment lock (when the writer takes one) is taken FIRST, then this — never the reverse. */
+async function lockClaimInWindow(db: Db, pariwarId: PariwarId, claimCaseId: ClaimId): Promise<ClaimRow> {
+  const claimRow = await lockClaimCase(db, pariwarId, claimCaseId);
+  if (!claimRow) throw new GroundInspectionNotFoundError(claimCaseId);
+  return assertClaimRowInWindow(db, pariwarId, claimRow);
 }
 
 /** Authorize an evidence-authoring verb: acting actor === assigned inspector, OR an explicit
@@ -244,8 +312,13 @@ function authorizeInspector(
   throw new GroundInspectionInspectorMismatchError(assignment.groundInspectionId, actingActorId);
 }
 
-/** Count an assignment's persisted photos (called while holding the parent row lock). */
-async function countPhotos(db: Db, pariwarId: PariwarId, groundInspectionId: GroundInspectionId): Promise<number> {
+/** Count an assignment's persisted photos (called while holding the parent row lock) — every kind, or one. */
+async function countPhotos(
+  db: Db,
+  pariwarId: PariwarId,
+  groundInspectionId: GroundInspectionId,
+  kind?: GroundInspectionPhotoKind,
+): Promise<number> {
   const rows = await db
     .select({ value: sql<number>`count(*)::int` })
     .from(claimGroundInspectionPhotos)
@@ -253,6 +326,7 @@ async function countPhotos(db: Db, pariwarId: PariwarId, groundInspectionId: Gro
       and(
         eq(claimGroundInspectionPhotos.pariwarId, pariwarId),
         eq(claimGroundInspectionPhotos.groundInspectionId, groundInspectionId),
+        ...(kind !== undefined ? [eq(claimGroundInspectionPhotos.photoKind, kind)] : []),
       ),
     );
   return rows[0]?.value ?? 0;
@@ -378,7 +452,8 @@ export interface ScheduleGroundInspectionResult {
 
 /**
  * Open a NEW ground-inspection assignment (AC1). Idempotent (claim-key-first). Guards the claim
- * state (`verification_in_progress`) + emits `claim.ground_inspection_scheduled` (identity,
+ * state (the inspection write window — Story 6.26 GI3, on the claim row taken `FOR UPDATE`) + emits
+ * `claim.ground_inspection_scheduled` (identity at the claim's actual state,
  * `supersedes_ground_inspection_id: null`). NO claim-wide supersede — parallel assignments are legal.
  *
  * Takes a raw `pg.PoolClient` (projectClaimState needs `SET LOCAL`); the caller owns the scope-tx.
@@ -405,8 +480,9 @@ export async function scheduleGroundInspection(
     return { groundInspection: bound, created: false };
   }
 
-  // (c) Guard claim state — reject a schedule onto a resolved/pre-verification claim.
-  const claimRow = await assertClaimInVerification(db, input.pariwarId, input.claimCaseId);
+  // (c) Guard claim state — reject a schedule onto a claim outside the window. Story 6.26a: on the
+  // claim row taken FOR UPDATE (there is ⛔ no assignment to lock first), so the event's state is current.
+  const claimRow = await lockClaimInWindow(db, input.pariwarId, input.claimCaseId);
 
   // (d) Insert the assignment row (PII already encrypted by the caller).
   const inserted = await db
@@ -442,8 +518,9 @@ export async function scheduleGroundInspection(
     claimantActorId: claimRow.claimantActorId,
     eventType: 'claim.ground_inspection_scheduled',
     payload: {
-      from_state: 'verification_in_progress',
-      to_state: 'verification_in_progress',
+      // Story 6.26 GI3 — identity at the claim's ACTUAL state (read from the locked row).
+      from_state: claimRow.currentState,
+      to_state: claimRow.currentState,
       trigger: 'admin_schedule_ground_inspection',
       actor: 'operator',
       ground_inspection_id: gid,
@@ -532,7 +609,8 @@ export async function rescheduleGroundInspection(
     throw new GroundInspectionBlockImmutableError(input.groundInspectionId, target.block, input.block ?? null);
   }
 
-  const claimRow = await assertClaimInVerification(db, input.pariwarId, target.claimCaseId);
+  // Story 6.26a — the window on the claim row taken FOR UPDATE (assignment → claim, as everywhere here).
+  const claimRow = await lockClaimInWindow(db, input.pariwarId, target.claimCaseId);
 
   await db
     .update(claimGroundInspections)
@@ -576,8 +654,8 @@ export async function rescheduleGroundInspection(
     claimantActorId: claimRow.claimantActorId,
     eventType: 'claim.ground_inspection_scheduled',
     payload: {
-      from_state: 'verification_in_progress',
-      to_state: 'verification_in_progress',
+      from_state: claimRow.currentState,
+      to_state: claimRow.currentState,
       trigger: 'admin_reschedule_ground_inspection',
       actor: 'operator',
       ground_inspection_id: replacementGid,
@@ -617,8 +695,8 @@ export async function recordGroundInspectionFindings(
   const db = bindScopedDb(client);
   const assignment = await lockActiveAssignment(db, input.pariwarId, input.groundInspectionId);
   // (review 2a) Guard the claim state exactly like complete/refusal — findings must not be authored
-  // once the claim has left `verification_in_progress` (e.g. a claim under verifier review or
-  // already resolved whose assignment row is still `scheduled`).
+  // once the claim has left the inspection write window (Story 6.26 GI3 — e.g. a resolved claim whose
+  // assignment row is still `scheduled`).
   await assertClaimInVerification(db, input.pariwarId, assignment.claimCaseId);
   authorizeInspector(assignment, input.actingActorId, input.override);
 
@@ -650,6 +728,8 @@ export interface AddGroundInspectionPhotoInput {
   byteSize: number;
   /** Free-text caption — PII, ALREADY encrypted by the caller (nullable). */
   captionCiphertext?: string | null;
+  /** Story 6.26a (GI4) — what the photo shows: the site (default) or the ORIGINAL death certificate. */
+  photoKind?: GroundInspectionPhotoKind;
 }
 
 /**
@@ -664,8 +744,8 @@ export async function addGroundInspectionPhoto(
 ): Promise<ClaimGroundInspectionPhotoRow> {
   const db = bindScopedDb(client);
   const assignment = await lockActiveAssignment(db, input.pariwarId, input.groundInspectionId);
-  // (review 2a) Guard the claim state — a photo must not be attached once the claim has left
-  // `verification_in_progress` (consistent with findings/complete/refusal).
+  // (review 2a) Guard the claim state — a photo must not be attached once the claim has left the
+  // inspection write window (Story 6.26 GI3; consistent with findings/complete/refusal).
   await assertClaimInVerification(db, input.pariwarId, assignment.claimCaseId);
   authorizeInspector(assignment, input.actingActorId, input.override);
 
@@ -683,6 +763,7 @@ export async function addGroundInspectionPhoto(
       contentType: input.contentType,
       byteSize: input.byteSize,
       captionCiphertext: input.captionCiphertext ?? null,
+      photoKind: input.photoKind ?? 'site',
     })
     .returning();
   return rows[0]!;
@@ -708,12 +789,35 @@ export interface CompleteGroundInspectionInput {
   /** Final findings/notes to write alongside completion (optional). */
   structuredFindings?: unknown;
   notesCiphertext?: string | null;
+  /** Story 6.26a (GI4; `-263` FQ11 A) — does the original the inspector held match the copy they were shown? */
+  originalCertificateVerdict?: GroundInspectionCertificateVerdict | null;
+  /** GI4 — the upload the inspector was SHOWN; re-asserted to be the claim's CURRENT upload under the claim lock. */
+  comparedCertificateUploadId?: DeathCertificateUploadId | string | null;
+  /**
+   * GI5 (`-262` FQ8 C / `-264` FQ13) — the date of death: the family's statement on a full visit
+   * (`family_statement`), the date printed on the original on a `certificate_check` (`original_certificate`).
+   * `plaintext` (`YYYY-MM-DD`) is for VALIDATION ONLY — ⛔ never stored (6.21a D4's shape); the HANDLER encrypts it
+   * (`ciphertext`, Tier-1) and computes its blind `index` under `DEATH_DATE_INDEX_FIELD_CLASS`.
+   */
+  deathDate?: {
+    plaintext: string;
+    ciphertext: string;
+    index: string;
+    source: GroundInspectionDeathDateSource;
+  } | null;
+  /** GI5 — the time of death the family gave (`HH:MM`, 24h) on a full visit; omitted / null = "not known".
+   *  ⛔ Refused on a `certificate_check`. `plaintext` validates only; `ciphertext` is stored. */
+  deathTime?: { plaintext: string; ciphertext: string } | null;
+  /** Injectable clock (6.21a D4) — "the day of completion" is `istDateOf(now)`. Defaults to the wall clock. */
+  now?: Date;
   auditId?: string;
 }
 
 export interface CompleteGroundInspectionResult {
   groundInspection: ClaimGroundInspectionRow;
   photoCount: number;
+  /** Story 6.26a (GI14) — how many of `photoCount` are `original_certificate` photos (non-PII audit count). */
+  originalCertificatePhotoCount: number;
 }
 
 /**
@@ -722,6 +826,15 @@ export interface CompleteGroundInspectionResult {
  * if zero — D6 mandatory evidence); update the row (`completed`, `completed_at`, final findings/notes);
  * emit `claim.ground_inspection_completed`. Object storage is NOT in this tx (it only COUNTS durable
  * photo rows); the audit-sink line is the ROUTE's post-commit obligation, NOT a same-tx write.
+ *
+ * ⭐ Story 6.26a (GI4 / GI5 / GI12). Every completion (any stage) also needs the FQ11 record — ≥1
+ * `original_certificate` photo, the verdict, and the compared upload, which must STILL be the claim's current
+ * upload — and a date of death: the family's (required, + an optional time) on a full visit, the date printed
+ * on the original (required, ⛔ no time) on a `certificate_check`. ⚠ LOCK ORDER assignment → claim (the order
+ * every inspection writer uses): `lockActiveAssignment` → the claim row `FOR UPDATE` → the window ON THE LOCKED
+ * ROW → `readDeathCertificateSnapshot`. Safe: the OCR job makes an upload current only under the claim-row lock,
+ * and the approval writers read inspections under their claim lock without locking assignments ⇒ ⛔ no cycle.
+ * ⛔ Never claim → assignment here: `rescheduleGroundInspection` holds the assignment, then waits on the claim.
  */
 export async function completeGroundInspection(
   client: pg.PoolClient,
@@ -729,11 +842,62 @@ export async function completeGroundInspection(
 ): Promise<CompleteGroundInspectionResult> {
   const db = bindScopedDb(client);
   const assignment = await lockActiveAssignment(db, input.pariwarId, input.groundInspectionId);
-  const claimRow = await assertClaimInVerification(db, input.pariwarId, assignment.claimCaseId);
+  const claimRow = await lockClaimInWindow(db, input.pariwarId, assignment.claimCaseId);
   authorizeInspector(assignment, input.actingActorId, input.override);
 
   const photoCount = await countPhotos(db, input.pariwarId, input.groundInspectionId);
   if (photoCount < 1) throw new GroundInspectionPhotoRequiredError(input.groundInspectionId);
+
+  // ── GI4 — the original-certificate record (counted under the assignment lock). ──
+  const originalCertificatePhotoCount = await countPhotos(
+    db,
+    input.pariwarId,
+    input.groundInspectionId,
+    'original_certificate',
+  );
+  if (originalCertificatePhotoCount < 1) {
+    throw new GroundInspectionOriginalCertificateRequiredError(input.groundInspectionId, 'photo');
+  }
+  if (input.originalCertificateVerdict == null) {
+    throw new GroundInspectionOriginalCertificateRequiredError(input.groundInspectionId, 'verdict');
+  }
+  if (input.comparedCertificateUploadId == null || input.comparedCertificateUploadId === '') {
+    throw new GroundInspectionOriginalCertificateRequiredError(input.groundInspectionId, 'compared_certificate');
+  }
+  const snapshot = await readDeathCertificateSnapshot(db, input.pariwarId, assignment.claimCaseId);
+  if (snapshot.currentUploadId === null) {
+    throw new GroundInspectionNoCurrentCertificateError(assignment.claimCaseId);
+  }
+  // Compared lower-cased ([[project_branded_ids_lowercase]] — the client may echo an upper-case uuid).
+  if (input.comparedCertificateUploadId.toLowerCase() !== snapshot.currentUploadId.toLowerCase()) {
+    throw new GroundInspectionCertificateChangedError(input.groundInspectionId, input.comparedCertificateUploadId);
+  }
+
+  // ── GI5 — the date (and, on a full visit, the optional time) of death. ──
+  const isCertificateCheck = assignment.inspectionStage === 'certificate_check';
+  const deathDate = input.deathDate;
+  if (deathDate == null || deathDate.plaintext === '' || deathDate.ciphertext === '' || deathDate.index === '') {
+    throw new GroundInspectionDeathDateRequiredError(input.groundInspectionId);
+  }
+  if (deathDate.source !== (isCertificateCheck ? 'original_certificate' : 'family_statement')) {
+    throw new GroundInspectionDeathFactsInvalidError(input.groundInspectionId, 'source_mismatch');
+  }
+  if (!isRealCalendarDate(deathDate.plaintext)) {
+    throw new GroundInspectionDeathFactsInvalidError(input.groundInspectionId, 'invalid_date');
+  }
+  // `YYYY-MM-DD` strings order lexically — the 6.21a D4 comparison.
+  if (deathDate.plaintext > istDateOf(input.now ?? new Date())) {
+    throw new GroundInspectionDeathDateInFutureError(input.groundInspectionId);
+  }
+  const deathTime = input.deathTime ?? null;
+  if (deathTime !== null) {
+    if (isCertificateCheck) {
+      throw new GroundInspectionDeathFactsInvalidError(input.groundInspectionId, 'time_not_allowed');
+    }
+    if (!DEATH_TIME_PATTERN.test(deathTime.plaintext) || deathTime.ciphertext === '') {
+      throw new GroundInspectionDeathFactsInvalidError(input.groundInspectionId, 'invalid_time');
+    }
+  }
 
   const rows = await db
     .update(claimGroundInspections)
@@ -742,6 +906,12 @@ export async function completeGroundInspection(
       completedAt: sql`now()`,
       ...(input.structuredFindings !== undefined ? { structuredFindings: input.structuredFindings } : {}),
       ...(input.notesCiphertext !== undefined ? { notesCiphertext: input.notesCiphertext } : {}),
+      originalCertificateVerdict: input.originalCertificateVerdict,
+      comparedCertificateUploadId: snapshot.currentUploadId,
+      deathDateCiphertext: deathDate.ciphertext,
+      deathTimeCiphertext: deathTime?.ciphertext ?? null,
+      deathDateSource: deathDate.source,
+      deathDateIndex: deathDate.index,
       updatedAt: sql`now()`,
     })
     .where(
@@ -761,8 +931,9 @@ export async function completeGroundInspection(
     claimantActorId: claimRow.claimantActorId,
     eventType: 'claim.ground_inspection_completed',
     payload: {
-      from_state: 'verification_in_progress',
-      to_state: 'verification_in_progress',
+      // Story 6.26 GI3 — identity at the claim's ACTUAL state (read from the locked row).
+      from_state: claimRow.currentState,
+      to_state: claimRow.currentState,
       trigger: 'admin_complete_ground_inspection',
       actor: 'operator',
       ground_inspection_id: input.groundInspectionId,
@@ -772,7 +943,7 @@ export async function completeGroundInspection(
     ...(input.auditId !== undefined ? { auditId: input.auditId } : {}),
   });
 
-  return { groundInspection: completed, photoCount };
+  return { groundInspection: completed, photoCount, originalCertificatePhotoCount };
 }
 
 export interface RecordGroundInspectionRefusalInput {

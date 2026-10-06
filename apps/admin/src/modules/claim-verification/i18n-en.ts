@@ -659,6 +659,44 @@ export const verifierConsoleEn = {
   // family for another, and the claim is ⛔ never refused for it. ⛔ No string here says the system judged
   // the date — the District Admin types it and decides (invariant 1). The OCR reading is labelled as a
   // MACHINE reading every time it appears.
+  // ⭐ Story 6.26a (GI9 / GI10 / GI11) — the ground inspection's approval WAIT (`-263` FQ9 A): every approval waits
+  // until the claim's ground inspection is complete; a refusal never waits; ⛔ the claim is never refused for it.
+  groundInspectionGate: {
+    complete: 'The ground inspection is complete for approval.',
+    approveBlocked: {
+      no_completed_inspection:
+        'Approval waits for the ground inspection: no inspector has completed a visit for this claim yet. The claim is not refused.',
+      certificate_check_required:
+        'Approval waits for an inspector to see the original of the current death certificate — a short visit or an office check. The claim is not refused.',
+      unavailable:
+        'Whether the ground inspection is complete could not be checked. Reload the page — approval stays unavailable until it can be checked.',
+    } as Record<string, string>,
+    trusteeApprovalGate: {
+      no_completed_inspection: 'This claim is waiting for its ground inspection. It is not refused.',
+      certificate_check_required:
+        'This claim is waiting for an inspector to see the original of its current death certificate. It is not refused.',
+    } as Record<string, string>,
+    // GI10 — what the console shows per assignment.
+    record: {
+      own: 'This claim',
+      inherited: 'Carried over',
+      verdict: { matches: 'Original matches the copy', does_not_match: 'Original does NOT match the copy' } as Record<string, string>,
+      comparedAgainst: {
+        current: 'compared with the current certificate',
+        earlier: 'compared with an earlier certificate',
+        unknown: 'compared certificate could not be checked',
+      } as Record<string, string>,
+      deathDate: {
+        family_statement: "Date of death (the family's word)",
+        original_certificate: 'Date printed on the original',
+      } as Record<string, string>,
+      deathTime: 'Time of death',
+      deathTimeUnknown: 'not known',
+      unreadable: 'could not be read',
+      photosOriginal: 'Original certificate',
+      photosSite: 'Site',
+    },
+  },
   deathCertificate: {
     heading: 'Death certificate review',
     intro:

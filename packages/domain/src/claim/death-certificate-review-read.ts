@@ -90,6 +90,29 @@ export const DEATH_CERTIFICATE_HISTORY_DEFAULT_LIMIT = 50;
 export const DEATH_CERTIFICATE_HISTORY_MAX_LIMIT = 100;
 
 /**
+ * ⭐ Story 6.26a (GI4) — ONE uploaded death certificate by its id (tenant-scoped), or `undefined`. The ground-inspection
+ * certificate read uses it to sign the CURRENT upload's object for the inspector. ⛔ No decryption (the row has no
+ * PII column).
+ */
+export async function getDeathCertificateUpload(
+  db: Db,
+  pariwarId: PariwarId,
+  uploadId: string,
+): Promise<typeof claimDeathCertificateUploads.$inferSelect | undefined> {
+  const rows = await db
+    .select()
+    .from(claimDeathCertificateUploads)
+    .where(
+      and(
+        eq(claimDeathCertificateUploads.pariwarId, pariwarId),
+        eq(claimDeathCertificateUploads.uploadId, uploadId as DeathCertificateUploadId),
+      ),
+    )
+    .limit(1);
+  return rows[0];
+}
+
+/**
  * EVERY uploaded death certificate for a claim, newest first — including never-reviewed ones — each with all
  * its reviews. Two statements, bounded. ⛔ No decryption.
  */

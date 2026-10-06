@@ -1193,6 +1193,8 @@ export const GroundInspectionPhoto = z.object({
   byteSize: z.number(),
   caption: z.string().nullable(),
   signedUrl: z.string(),
+  // Story 6.26a (GI4) — `site` | `original_certificate` (shown apart).
+  photoKind: z.enum(['site', 'original_certificate']),
 });
 export const GroundInspectionAssignment = z.object({
   groundInspectionId: z.string(),
@@ -1212,6 +1214,13 @@ export const GroundInspectionAssignment = z.object({
   familyContact: z.string().nullable(),
   notes: z.string().nullable(),
   photos: z.array(GroundInspectionPhoto),
+  // ⭐ Story 6.26a (GI4 / GI5) — the inspector's record: the verdict, the upload it was compared with, and the date
+  // (+ the family's time) of death, decrypted server-side. All `null` until completion (or on a pre-6.26a row).
+  originalCertificateVerdict: z.enum(['matches', 'does_not_match']).nullable(),
+  comparedCertificateToken: z.string().nullable(),
+  deathDateSource: z.enum(['family_statement', 'original_certificate']).nullable(),
+  deathDate: z.string().nullable(),
+  deathTime: z.string().nullable(),
 });
 const GroundInspectionReadResponse = z.object({ assignments: z.array(GroundInspectionAssignment) });
 const GroundInspectionWriteResponse = z.object({
@@ -1284,12 +1293,27 @@ export function recordGroundInspectionFindings(
   );
 }
 
+/**
+ * ⭐ Story 6.26a (GI4 / GI5) — what a completion carries: ≥1 photo (server-enforced, incl. ≥1 of the ORIGINAL
+ * certificate), the inspector's verdict on the original vs the copy, the token of the copy they were SHOWN (from
+ * `getGroundInspectionCertificate`), and the date of death — the family's on a visit (+ an optional `HH:MM` time), the
+ * one printed on the original on a certificate check (⛔ no time).
+ */
+export interface CompleteGroundInspectionBody {
+  structuredFindings?: Record<string, unknown>;
+  notes?: string | null;
+  originalCertificateVerdict?: 'matches' | 'does_not_match';
+  comparedCertificateToken?: string;
+  deathDate?: string;
+  deathTime?: string | null;
+}
+
 /** POST completion (requires ≥1 photo — the server enforces it). */
 export function completeGroundInspection(
   pariwarId: string,
   claimCaseId: string,
   groundInspectionId: string,
-  body: { structuredFindings?: Record<string, unknown>; notes?: string | null } = {},
+  body: CompleteGroundInspectionBody = {},
 ): Promise<{ groundInspectionId: string; status: string }> {
   return apiFetch(
     `${giBase(pariwarId, claimCaseId)}/${encodeURIComponent(groundInspectionId)}/complete`,
@@ -1312,16 +1336,19 @@ export function refuseGroundInspection(
   );
 }
 
-/** POST one photo (multipart). The caption (optional PII) rides a field before the file part. */
+/** POST one photo (multipart). The caption (optional PII) and the photo kind (Story 6.26a GI4 — `site` default |
+ *  `original_certificate`) ride fields before the file part. */
 export async function uploadGroundInspectionPhoto(
   pariwarId: string,
   claimCaseId: string,
   groundInspectionId: string,
   file: File,
   caption?: string,
+  photoKind: 'site' | 'original_certificate' = 'site',
 ): Promise<{ photoId: string }> {
   const form = new FormData();
   if (caption) form.append('caption', caption);
+  form.append('photoKind', photoKind);
   form.append('file', file);
   const res = await fetch(
     `${giBase(pariwarId, claimCaseId)}/${encodeURIComponent(groundInspectionId)}/photos`,
@@ -1329,6 +1356,30 @@ export async function uploadGroundInspectionPhoto(
   );
   await throwIfNotOk(res, 'Upload failed');
   return (await res.json()) as { photoId: string };
+}
+
+const GroundInspectionCertificateResponse = z.object({
+  certificateToken: z.string(),
+  contentType: z.string(),
+  signedUrl: z.string(),
+  expiresInSeconds: z.number(),
+});
+export type GroundInspectionCertificateT = z.infer<typeof GroundInspectionCertificateResponse>;
+
+/**
+ * ⭐ Story 6.26a (GI4) — GET the claim's CURRENT uploaded death certificate for the assigned inspector (or an override
+ * holder) to compare with the original: its token (echoed back on completion as `comparedCertificateToken`), content
+ * type and a short-lived signed URL. 403 to anyone else; 409 `ground_inspection.no_current_certificate` when there is none.
+ */
+export function getGroundInspectionCertificate(
+  pariwarId: string,
+  claimCaseId: string,
+  groundInspectionId: string,
+): Promise<GroundInspectionCertificateT> {
+  return apiFetch(
+    `${giBase(pariwarId, claimCaseId)}/${encodeURIComponent(groundInspectionId)}/certificate`,
+    GroundInspectionCertificateResponse,
+  );
 }
 
 // ── Verifier-console read surface (Story 6.10) ────────────────────────────────

@@ -21,11 +21,18 @@
 //
 // Naming discipline per architecture L3663-3677: DB columns snake_case, TS camelCase.
 
-import { index, integer, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import { index, integer, pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 
 import { piiColumn } from '../encryption/column.js';
 import type { GroundInspectionId, GroundInspectionPhotoId, PariwarId } from '../ids/index.js';
 import { claimGroundInspections } from './claim_ground_inspections.js';
+
+/** Story 6.26a (GI4, migration 0147; `-263` FQ11 A) — what a photo shows: the site (default — every pre-6.26 photo)
+ *  or the ORIGINAL death certificate the inspector held. Every completion needs ≥1 `original_certificate` photo;
+ *  the ≥1-photo rule and the cap of 20 count every kind. Non-PII. */
+export const GROUND_INSPECTION_PHOTO_KINDS = ['site', 'original_certificate'] as const;
+export const groundInspectionPhotoKindEnum = pgEnum('ground_inspection_photo_kind', GROUND_INSPECTION_PHOTO_KINDS);
+export type GroundInspectionPhotoKind = (typeof GROUND_INSPECTION_PHOTO_KINDS)[number];
 
 export const claimGroundInspectionPhotos = pgTable(
   'claim_ground_inspection_photos',
@@ -54,6 +61,9 @@ export const claimGroundInspectionPhotos = pgTable(
 
     // Operator free-text caption — CAN name a person/place → Tier-1 ciphertext, nullable (#11).
     captionCiphertext: piiColumn(1, 'ground_inspection')('caption_ciphertext'),
+
+    // Story 6.26a (GI4) — site | original_certificate. NOT NULL DEFAULT 'site'.
+    photoKind: groundInspectionPhotoKindEnum('photo_kind').notNull().default('site'),
 
     createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
   },

@@ -23,7 +23,7 @@
 //     review of an OLDER upload (a replacement arrived since) is ⛔ not current — the new certificate is
 //     `awaiting_review` until the District Admin judges it.
 
-import { and, eq, isNull, sql } from 'drizzle-orm';
+import { type SQL, and, eq, isNull, sql } from 'drizzle-orm';
 
 import type { Db } from '../db.js';
 import type {
@@ -76,6 +76,28 @@ export interface DeathCertificateSnapshot {
 export type DeathCertificateStatus = 'missing' | 'awaiting_review' | 'accepted' | 'rejected';
 
 /**
+ * ⭐ THE CURRENT-UPLOAD RULE, as SQL (Story 6.26a — `-283` A2's "⛔ never a second copy of the current-upload rule"):
+ * a scalar subquery yielding the claim's CURRENT death-certificate upload id — the upload whose storage key is the
+ * `death_certificate` row's key — or NULL (no row, or a legacy row with no upload row, T12). `readDeathCertificateSnapshot`
+ * reads it through THIS fragment, and so do the ground-inspection approval gate and the verifier console's gate
+ * section, so all three agree on "current" by construction. `pariwarId` / `claimCaseId` are SQL (a bound parameter or
+ * an outer column reference). ⛔ No ciphertext.
+ */
+export function currentDeathCertificateUploadIdSql(pariwarId: SQL, claimCaseId: SQL): SQL {
+  return sql`(
+    SELECT cur_u.upload_id
+      FROM claim_documents cur_cd
+      JOIN claim_death_certificate_uploads cur_u
+        ON cur_u.pariwar_id = cur_cd.pariwar_id
+       AND cur_u.claim_case_id = cur_cd.claim_case_id
+       AND cur_u.storage_object_key = cur_cd.storage_object_key
+     WHERE cur_cd.pariwar_id = ${pariwarId}
+       AND cur_cd.claim_case_id = ${claimCaseId}
+       AND cur_cd.document_type = 'death_certificate'
+  )`;
+}
+
+/**
  * Read a claim's death-certificate snapshot in ONE statement: the `claim_documents` row, the upload whose key
  * is the row's key (the CURRENT certificate), and the claim's live review. RLS-scoped with the explicit
  * `pariwar_id` predicate on every table. ⛔ No ciphertext.
@@ -96,7 +118,7 @@ export async function readDeathCertificateSnapshot(
     decided_at: string | Date | null;
   }>(sql`
     SELECT cd.claim_document_id,
-           u.upload_id  AS current_upload_id,
+           ${currentDeathCertificateUploadIdSql(sql`k.pariwar_id`, sql`k.claim_case_id`)} AS current_upload_id,
            r.review_id,
            r.upload_id  AS review_upload_id,
            r.verdict,
@@ -108,10 +130,6 @@ export async function readDeathCertificateSnapshot(
         ON cd.pariwar_id = k.pariwar_id
        AND cd.claim_case_id = k.claim_case_id
        AND cd.document_type = 'death_certificate'
-      LEFT JOIN claim_death_certificate_uploads u
-        ON u.pariwar_id = cd.pariwar_id
-       AND u.claim_case_id = cd.claim_case_id
-       AND u.storage_object_key = cd.storage_object_key
       LEFT JOIN claim_death_certificate_reviews r
         ON r.pariwar_id = k.pariwar_id
        AND r.claim_case_id = k.claim_case_id

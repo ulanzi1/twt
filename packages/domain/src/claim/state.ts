@@ -140,6 +140,8 @@ function reduce(state: ClaimLifecycleState, event: ClaimEventInput): ClaimLifecy
 
     // ANNOTATION: ground inspection scheduled — both signals required (PRD §4.6
     // "both, not either"), so this does NOT advance the primary state. Identity.
+    // Story 6.26 GI3: written anywhere in the inspection write window (the review window +
+    // `state_trustee_approved` while R9-routed), carrying the claim's actual state — still identity.
     case 'claim.ground_inspection_scheduled':
       return state;
 
@@ -150,6 +152,8 @@ function reduce(state: ClaimLifecycleState, event: ClaimEventInput): ClaimLifecy
     // identity from any state; the replay-robustness contract). Correctness lives in the
     // WRITE-PATH guard (ground-inspection-persist.ts: GroundInspectionClaimNotInVerificationError),
     // NOT here — an unconditional identity append onto a resolved claim is the exact 6.6 hazard.
+    // Story 6.26 GI3: that guard's window is now the review window + `state_trustee_approved` while
+    // R9-routed (the approval gate waits for a completed inspection), the event carrying the actual state.
     case 'claim.ground_inspection_completed':
       return state;
 

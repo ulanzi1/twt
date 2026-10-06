@@ -6,7 +6,7 @@
 // The api client module is mocked (mirrors helpline-claim-page.test.tsx); the real hooks + Query
 // cache are exercised via `renderWithClient`.
 
-import { screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -20,6 +20,10 @@ vi.mock('../src/api/client.js', async () => {
     ...actual,
     listGroundInspection: vi.fn(),
     scheduleGroundInspection: vi.fn(),
+    // Story 6.26a — the certificate read, the completion and the photo upload.
+    getGroundInspectionCertificate: vi.fn(),
+    completeGroundInspection: vi.fn(),
+    uploadGroundInspectionPhoto: vi.fn(),
   };
 });
 
@@ -44,6 +48,12 @@ function makeAssignment(over: Partial<api.GroundInspectionAssignmentT> = {}): ap
     familyContact: null,
     notes: null,
     photos: [],
+    // Story 6.26a (GI4 / GI5) — the inspector's record (none until completion).
+    originalCertificateVerdict: null,
+    comparedCertificateToken: null,
+    deathDateSource: null,
+    deathDate: null,
+    deathTime: null,
     ...over,
   };
 }
@@ -207,5 +217,139 @@ describe('<GroundInspectionPage>', () => {
 
     expect(screen.getByRole('button', { name: 'Schedule assignment' })).toBeDisabled();
     expect(screen.getByText(/'other' requires a location description/i)).toBeInTheDocument();
+  });
+
+  // ── Story 6.26a (GI4 / GI5 / GI12) — the original certificate, the dates, the certificate check ───────────────
+  describe('Story 6.26a — the original certificate and the date of death', () => {
+    const originalPhoto = { photoId: 'p-orig', contentType: 'image/jpeg', byteSize: 1, caption: null, signedUrl: 'https://x/p', photoKind: 'original_certificate' as const };
+    const sitePhoto = { ...originalPhoto, photoId: 'p-site', photoKind: 'site' as const };
+    const CERT = { certificateToken: 'tok-current', contentType: 'application/pdf', signedUrl: 'https://x/certificate', expiresInSeconds: 300 };
+
+    async function openAndFill(opts: { verdict?: 'It matches' | 'It does not match'; date?: string; time?: string } = {}) {
+      const user = userEvent.setup();
+      await user.click(screen.getByRole('button', { name: 'Compare with the certificate we hold' }));
+      await screen.findByRole('link', { name: 'Open the uploaded certificate' });
+      if (opts.verdict) await user.click(screen.getByLabelText(opts.verdict));
+      if (opts.date) fireEvent.change(screen.getByLabelText(/Date of death/), { target: { value: opts.date } });
+      if (opts.time) fireEvent.change(screen.getByLabelText(/Time of death/), { target: { value: opts.time } });
+      return user;
+    }
+
+    it('⭐ a FULL visit: open the uploaded copy, record the verdict + the family\'s date and time ⇒ the completion carries them, with the copy\'s token', async () => {
+      vi.mocked(api.listGroundInspection).mockResolvedValue({ assignments: [makeAssignment({ photos: [originalPhoto] })] });
+      vi.mocked(api.getGroundInspectionCertificate).mockResolvedValue(CERT);
+      vi.mocked(api.completeGroundInspection).mockResolvedValue({ groundInspectionId: 'gi', status: 'completed' });
+      renderWithClient(<GroundInspectionPage pariwarId={PARIWAR} />);
+      await loadScope();
+      await screen.findByText('inspector-1');
+      const complete = screen.getByRole('button', { name: 'Complete inspection' });
+      expect(complete).toBeDisabled(); // ⛔ copy opened yet
+      expect(screen.getByText(/Open the uploaded certificate before you record/)).toBeInTheDocument();
+      const user = await openAndFill({ verdict: 'It matches', date: '2026-06-01', time: '14:30' });
+      expect(api.getGroundInspectionCertificate).toHaveBeenCalledWith(PARIWAR, CLAIM, '33333333-3333-3333-3333-333333333333');
+      expect(screen.getByRole('link', { name: 'Open the uploaded certificate' })).toHaveAttribute('href', CERT.signedUrl);
+      expect(complete).toBeEnabled();
+      await user.click(complete);
+      await waitFor(() => expect(api.completeGroundInspection).toHaveBeenCalled());
+      expect(vi.mocked(api.completeGroundInspection).mock.calls[0]![3]).toEqual({
+        originalCertificateVerdict: 'matches',
+        comparedCertificateToken: 'tok-current',
+        deathDate: '2026-06-01',
+        deathTime: '14:30',
+      });
+    });
+
+    it('Complete stays DISABLED without a photo of the ORIGINAL (a site photo is ⛔ enough), and says so', async () => {
+      vi.mocked(api.listGroundInspection).mockResolvedValue({ assignments: [makeAssignment({ photos: [sitePhoto] })] });
+      vi.mocked(api.getGroundInspectionCertificate).mockResolvedValue(CERT);
+      renderWithClient(<GroundInspectionPage pariwarId={PARIWAR} />);
+      await loadScope();
+      await screen.findByText('inspector-1');
+      await openAndFill({ verdict: 'It matches', date: '2026-06-01' });
+      expect(screen.getByRole('button', { name: 'Complete inspection' })).toBeDisabled();
+      expect(screen.getByText(/Upload at least one photo of the original death certificate/)).toBeInTheDocument();
+    });
+
+    it('GI12 — a CERTIFICATE CHECK asks for the date PRINTED on the original and ⛔ no time; the body carries ⛔ no time', async () => {
+      vi.mocked(api.listGroundInspection).mockResolvedValue({
+        assignments: [makeAssignment({ inspectionStage: 'certificate_check', photos: [originalPhoto] })],
+      });
+      vi.mocked(api.getGroundInspectionCertificate).mockResolvedValue(CERT);
+      vi.mocked(api.completeGroundInspection).mockResolvedValue({ groundInspectionId: 'gi', status: 'completed' });
+      renderWithClient(<GroundInspectionPage pariwarId={PARIWAR} />);
+      await loadScope();
+      await screen.findByText('inspector-1');
+      expect(screen.getByLabelText(/Date of death printed on the original/)).toBeInTheDocument();
+      expect(screen.queryByLabelText(/Time of death/)).toBeNull();
+      const user = await openAndFill({ verdict: 'It does not match', date: '2026-04-30' });
+      await user.click(screen.getByRole('button', { name: 'Complete inspection' }));
+      await waitFor(() => expect(api.completeGroundInspection).toHaveBeenCalled());
+      expect(vi.mocked(api.completeGroundInspection).mock.calls[0]![3]).toEqual({
+        originalCertificateVerdict: 'does_not_match',
+        comparedCertificateToken: 'tok-current',
+        deathDate: '2026-04-30',
+      });
+    });
+
+    it('a 409 `certificate_changed` is said in the page\'s own words (open the new one and compare again)', async () => {
+      vi.mocked(api.listGroundInspection).mockResolvedValue({ assignments: [makeAssignment({ photos: [originalPhoto] })] });
+      vi.mocked(api.getGroundInspectionCertificate).mockResolvedValue(CERT);
+      vi.mocked(api.completeGroundInspection).mockRejectedValue(new api.ApiError(409, 'ground_inspection.certificate_changed', 'server words'));
+      renderWithClient(<GroundInspectionPage pariwarId={PARIWAR} />);
+      await loadScope();
+      await screen.findByText('inspector-1');
+      const user = await openAndFill({ verdict: 'It matches', date: '2026-06-01' });
+      await user.click(screen.getByRole('button', { name: 'Complete inspection' }));
+      expect(await screen.findByText(/replaced the certificate since you opened it/)).toBeInTheDocument();
+    });
+
+    it('the photo upload sends the chosen KIND; a certificate check defaults to the original', async () => {
+      vi.mocked(api.listGroundInspection).mockResolvedValue({ assignments: [makeAssignment({ inspectionStage: 'certificate_check' })] });
+      vi.mocked(api.uploadGroundInspectionPhoto).mockResolvedValue({ photoId: 'p' });
+      const user = userEvent.setup();
+      renderWithClient(<GroundInspectionPage pariwarId={PARIWAR} />);
+      await loadScope();
+      await screen.findByText('inspector-1');
+      expect(screen.getByLabelText('What the photo shows')).toHaveValue('original_certificate');
+      await user.upload(screen.getByLabelText('Upload photo'), new File([new Uint8Array([1])], 'o.jpg', { type: 'image/jpeg' }));
+      await user.click(screen.getByRole('button', { name: 'Upload photo' }));
+      await waitFor(() => expect(api.uploadGroundInspectionPhoto).toHaveBeenCalled());
+      expect(vi.mocked(api.uploadGroundInspectionPhoto).mock.calls[0]![5]).toBe('original_certificate');
+    });
+
+    it('GI4 — the refusal offers "the family did not produce the original certificate" under evidence_unavailable', async () => {
+      vi.mocked(api.listGroundInspection).mockResolvedValue({ assignments: [makeAssignment()] });
+      const user = userEvent.setup();
+      renderWithClient(<GroundInspectionPage pariwarId={PARIWAR} />);
+      await loadScope();
+      await screen.findByText('inspector-1');
+      await user.selectOptions(screen.getByLabelText('Disposition'), 'evidence_unavailable');
+      expect(within(screen.getByLabelText('Reason')).getByRole('option', { name: 'The family did not produce the original certificate' })).toHaveValue(
+        'original_certificate_not_produced',
+      );
+    });
+
+    it('a COMPLETED assignment shows the inspector\'s record: the verdict (a mismatch plainly), the family\'s date, the time "not known"', async () => {
+      vi.mocked(api.listGroundInspection).mockResolvedValue({
+        assignments: [
+          makeAssignment({
+            status: 'completed',
+            photos: [originalPhoto, sitePhoto],
+            originalCertificateVerdict: 'does_not_match',
+            comparedCertificateToken: 'tok',
+            deathDateSource: 'family_statement',
+            deathDate: '2026-06-01',
+            deathTime: null,
+          }),
+        ],
+      });
+      renderWithClient(<GroundInspectionPage pariwarId={PARIWAR} />);
+      await loadScope();
+      expect(await screen.findByText('Does NOT match the copy')).toBeInTheDocument();
+      expect(screen.getByText('2026-06-01')).toBeInTheDocument();
+      expect(screen.getByText('Not known')).toBeInTheDocument();
+      expect(screen.getByText('Original certificate photos')).toBeInTheDocument();
+      expect(screen.getByText('Site photos')).toBeInTheDocument();
+    });
   });
 });

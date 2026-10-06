@@ -1,3 +1,14 @@
+# last_updated: 2026-10-06m (⭐ **STORY 6.26a BUILT — `6-26-ground-inspection-before-approval-and-death-facts`: ready-for-dev → in-progress →
+# review via `bmad-dev-story`** (`-282` GI1–GI18 [a], amended by `-283` / `-284`; `-285` ratified). Every approval now WAITS for a complete
+# ground inspection — ONE conjunct in `assertClaimApprovable` (six call sites + the `-251` waived approve, ⛔ none edited), ONE pure predicate
+# over ONE read (shared inheritance + current-upload SQL fragments, `-283` A2's stage filter); a refusal, escalation, route or return ⛔ never
+# waits. The inspection writers widened to the review window + `state_trustee_approved` while R9-routed (ONE predicate, also the API
+# schedule pre-check; the R9 queue predicate moved to ONE leaf `claim/r9-routing.ts`); the event writers read it on the LOCKED claim row.
+# Migrations 0146 / 0147 (the original-certificate photo kind, verdict, compared upload, Tier-1 date/time + blind index under
+# `DEATH_DATE_INDEX_FIELD_CLASS`, a NOT VALID completed-row CHECK) applied to :5432 AND :5433. The certificate check stage, the certificate
+# read (audited), the console's `groundInspectionGate` (reads 19 → 20, SAVEPOINT, fail-closed) and GI10's facts, the admin page / console /
+# trustee words, the erasure scrub (WHERE-filtered), the default-ON fixtures. Task 9.4 fired: the R9 panel keeps its data on a failed refetch.
+# Red-checked 9 load-bearing lines. ci:local: 34 / 34 green with DATABASE_URL (:5433) — run 1 caught ONE story-caused contention red (the 0122 TRUNCATE leg: 0147's FK grew the uploads' CASCADE set; its lock retry budget widened). 6.26b stays `backlog` (the go-live coupling holds).)
 # last_updated: 2026-10-06l (⭐ **THE PANEL RULED THE 6.26 FQ9 CONFIRM — `2026-10-06-285` (Trustee-ratified, DR + KB: *"A"*), committed alone
 # (`ea9b1c55`).** FQ9 holds every approval — the State Trustee's vote and the R9 panel's included — on the three paths where the District
 # Admin never approved; a refusal never waits. `-263`'s "State Trustee step — untouched" superseded for those paths; `-284` E5's reading
@@ -19102,7 +19113,7 @@ development_status:
   6-23b-every-approver-gives-a-warning-reason: done
   6-24-true-nominee-refile-after-a-suspicion-refusal: backlog
   6-25-staff-email-notice-of-a-suspicion-refusal: backlog
-  6-26-ground-inspection-before-approval-and-death-facts: ready-for-dev
+  6-26-ground-inspection-before-approval-and-death-facts: review
   # ⭐ 2026-10-06 SPLIT after `2026-10-06-281` (the Panel: Q1 B · Q2 A; BigDev: "write the panel note then we get the answer and then we split"):
   # the row above is STORY 6.26a (keeps its key — the rulings cite it): the gate, the review-window widening, the inspector's record and the
   # certificate check. 6.26b below is the warnings (the date difference + `-281` Q1 B's two mismatches), the register check and 6.23b's

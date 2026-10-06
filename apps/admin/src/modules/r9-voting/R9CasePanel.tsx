@@ -16,6 +16,7 @@ import {
   laterApprovalWarningErrorMessage,
   trusteeDeathCertificateAcceptanceRequiredMessage,
   trusteeDeterminationRequiredMessage,
+  trusteeGroundInspectionRequiredMessage,
 } from '../claim-verification/nominee-errors.js';
 import {
   LaterApprovalWarnings,
@@ -35,6 +36,11 @@ function errorMessage(error: unknown): string | undefined {
   }
   if (error instanceof ApiError && error.code.endsWith('.nominee_determination_required')) {
     return trusteeDeterminationRequiredMessage(error);
+  }
+  // ⭐ Story 6.26a (GI11) — the approval waits for the claim's ground inspection (`-263` FQ9 A, `-285`): worded for the
+  // trustee — the inspector acts, the claim waits, ⛔ never a refusal.
+  if (error instanceof ApiError && error.code.endsWith('.ground_inspection_required')) {
+    return trusteeGroundInspectionRequiredMessage(error);
   }
   // Story 6.19a (D14) — the claim waits for the family's contact details; the helpline can add them.
   if (error instanceof ApiError && error.code.endsWith('.claim_contact_required')) {
@@ -99,17 +105,31 @@ export function R9CasePanel({ pariwarId, claimCaseId }: R9CasePanelProps): React
   const [otp, setOtp] = useState('');
 
   if (panel.isLoading) return <p role="status">Loading panel…</p>;
-  if (panel.isError) return <p role="alert" className="text-status-fail-fg">{errorMessage(panel.error)}</p>;
+  // ⭐ Story 6.26a (Task 9.4 — the 6.23b deferred-work item "A FAILED refetch after a 409 hides the whole approval
+  // surface"): a FAILED read with ⛔ no data replaces the panel; a failed REFETCH keeps TanStack's last good data on
+  // screen and says so in a banner above it (the `ListStates` / `CorrectionQueueRoute` posture) — ⛔ never a vanished
+  // panel and a lost form.
+  if (panel.isError && !panel.data) return <p role="alert" className="text-status-fail-fg">{errorMessage(panel.error)}</p>;
   // Guarded explicitly (not `!`-asserted) so an unexpected react-query state surfaces as a controlled
   // message rather than a crashed render — the same discipline the `!model.tally` guard below already uses.
   if (!panel.data) return <p role="alert" className="text-status-fail-fg">Panel data unavailable — reload.</p>;
   const model = panel.data;
-
-  const caseHeader = (
-    <p className="text-xs opacity-60">
-      Claim <code>{model.claim_case_id}</code> · deceased member <code>{model.deceased_member_id}</code> ·
-      state <strong>{model.current_state}</strong>
+  const refetchFailedBanner = panel.isError ? (
+    <p role="alert" className="text-status-fail-fg" data-testid="r9-refetch-failed">
+      The panel could not be refreshed: {errorMessage(panel.error)} What you see may be out of date — reload to check.
     </p>
+  ) : null;
+
+  // Story 6.26a (Task 9.4) — the failed-refetch banner rides the header, so BOTH render paths (no session / live
+  // session) show it above the data they keep.
+  const caseHeader = (
+    <>
+      {refetchFailedBanner}
+      <p className="text-xs opacity-60">
+        Claim <code>{model.claim_case_id}</code> · deceased member <code>{model.deceased_member_id}</code> ·
+        state <strong>{model.current_state}</strong>
+      </p>
+    </>
   );
 
   // ── Story 6.18 (AC2/AC8) — the nominee NAME CHECK, behind a disclosure ────────────────────────

@@ -26,6 +26,8 @@ import { setPariwarScope } from '../../../src/db.js';
 import { claimId as toClaimId, memberId as toMemberId, pariwarId as toPariwarId } from '../../../src/ids/index.js';
 import type { ClaimId, MemberId } from '../../../src/ids/index.js';
 import {
+  GroundInspectionCertificateChangedError,
+  GroundInspectionClaimNotInVerificationError,
   GroundInspectionNotActiveError,
   GroundInspectionPhotoLimitError,
   MAX_GROUND_INSPECTION_PHOTOS,
@@ -33,8 +35,10 @@ import {
   completeGroundInspection,
   projectClaimState,
   recordGroundInspectionRefusal,
+  rescheduleGroundInspection,
   scheduleGroundInspection,
 } from '../../../src/claim/index.js';
+import { seedDeathCertificate } from '../_helpers.js';
 
 const DATABASE_URL = process.env['DATABASE_URL'];
 const hasDatabase = Boolean(DATABASE_URL);
@@ -67,6 +71,21 @@ describe.skipIf(!hasDatabase)('ground inspection — two-connection concurrency 
       ...over,
     };
   };
+
+  /** Story 6.26a — a completion's FQ11 record + the family's date (a fixed past day), against `uploadId`. */
+  const completeInput = (groundInspectionId: string, uploadId: string) => ({
+    pariwarId: PARIWAR_A,
+    groundInspectionId: groundInspectionId as never,
+    actingActorId: INSPECTOR,
+    originalCertificateVerdict: 'matches' as const,
+    comparedCertificateUploadId: uploadId,
+    deathDate: {
+      plaintext: '2026-06-01',
+      ciphertext: 'enc:v1:death-date',
+      index: 'fixture-death-date-index:2026-06-01',
+      source: 'family_statement' as const,
+    },
+  });
 
   /** Run `fn` on a dedicated pooled connection inside its OWN committed scope-tx (role+scope like the
    *  app's openScopeTx). COMMITs on success; ROLLBACKs + rethrows on error. */
@@ -218,9 +237,13 @@ describe.skipIf(!hasDatabase)('ground inspection — two-connection concurrency 
     'BONUS — concurrent complete vs refusal on ONE assignment → exactly one terminal transition wins, the other gets NotActive; ≤1 completed event',
     async () => {
       const cid = await seedClaimInVerification();
+      // ⚠ AMENDED by Story 6.26a (GI4 / GI5): a completion now also needs the original-certificate record against
+      // the claim's CURRENT certificate and the family's date — without them the completion leg failed on its own
+      // validation and the test passed only when the refusal happened to win the lock.
+      const { uploadId } = await onOwnTx((c) => seedDeathCertificate(c, { pariwarId: PARIWAR_A, claimCaseId: cid }));
       const key = `complete-vs-refuse:${randomUUID()}`;
       const gid = (await onOwnTx((c) => scheduleGroundInspection(c, scheduleInput(cid, key)))).groundInspection.groundInspectionId;
-      // Completion requires ≥1 photo.
+      // Completion requires ≥1 photo — and ≥1 of the original certificate (6.26a GI4).
       await onOwnTx((c) =>
         addGroundInspectionPhoto(c, {
           pariwarId: PARIWAR_A,
@@ -229,11 +252,12 @@ describe.skipIf(!hasDatabase)('ground inspection — two-connection concurrency 
           storageObjectKey: `k-${randomUUID()}`,
           contentType: 'image/jpeg',
           byteSize: 100,
+          photoKind: 'original_certificate',
         }),
       );
 
       const [complete, refuse] = await Promise.allSettled([
-        onOwnTx((c) => completeGroundInspection(c, { pariwarId: PARIWAR_A, groundInspectionId: gid, actingActorId: INSPECTOR })),
+        onOwnTx((c) => completeGroundInspection(c, completeInput(gid, uploadId))),
         onOwnTx((c) =>
           recordGroundInspectionRefusal(c, {
             pariwarId: PARIWAR_A,
@@ -313,6 +337,150 @@ describe.skipIf(!hasDatabase)('ground inspection — two-connection concurrency 
       expect(await countRows('SELECT count(*)::text AS n FROM claim_ground_inspection_photos WHERE ground_inspection_id = $1', [gid])).toBe(
         MAX_GROUND_INSPECTION_PHOTOS,
       );
+    },
+    TIMEOUT,
+  );
+
+  // ── Story 6.26a (Task 2.1 / 2.3; Trap 1) — the lock order assignment → claim, and the window on the LOCKED row ──
+
+  /** Schedule + photograph the original on `cid` (committed); returns the assignment id. */
+  async function openAssignment(cid: ClaimId, keyPrefix: string): Promise<string> {
+    const key = `${keyPrefix}:${randomUUID()}`;
+    const gid = (await onOwnTx((c) => scheduleGroundInspection(c, scheduleInput(cid, key)))).groundInspection.groundInspectionId;
+    await onOwnTx((c) =>
+      addGroundInspectionPhoto(c, {
+        pariwarId: PARIWAR_A, groundInspectionId: gid, actingActorId: INSPECTOR,
+        storageObjectKey: `k-${randomUUID()}`, contentType: 'image/jpeg', byteSize: 100, photoKind: 'original_certificate',
+      }),
+    );
+    return gid;
+  }
+
+  /** Open a tx on its own connection that takes the claim row `FOR UPDATE`, runs `during`, and holds the lock until
+   *  `commit()` is called. Resolves once the lock is HELD. */
+  async function holdClaimLock(cid: ClaimId, during: (c: pg.PoolClient) => Promise<void>) {
+    const client = await pool.connect();
+    await client.query('BEGIN');
+    await client.query('SET LOCAL ROLE twt_app');
+    await setPariwarScope(client, PARIWAR_A);
+    await client.query('SELECT 1 FROM claims WHERE claim_case_id = $1 FOR UPDATE', [cid]);
+    await during(client);
+    return {
+      async commit() {
+        try {
+          await client.query('COMMIT');
+        } finally {
+          client.release();
+        }
+      },
+    };
+  }
+
+  /** Is `pid`'s backend currently blocked on a lock? (Proves the second tx really WAITED, not merely ran after.) */
+  async function waitUntilBlocked(): Promise<void> {
+    for (let i = 0; i < 50; i += 1) {
+      const r = await pool.query<{ n: string }>(
+        `SELECT count(*)::text AS n FROM pg_stat_activity WHERE wait_event_type = 'Lock' AND query ILIKE '%claims%'`,
+      );
+      if (Number(r.rows[0]!.n) > 0) return;
+      await new Promise((res) => setTimeout(res, 20));
+    }
+    throw new Error('the completion never blocked on the claim-row lock');
+  }
+
+  it(
+    '⭐ complete vs RESCHEDULE of the same assignment → exactly one wins, the other NotActive — ⛔ never a 40P01 deadlock',
+    async () => {
+      for (let round = 0; round < 3; round += 1) {
+        const cid = await seedClaimInVerification();
+        const { uploadId } = await onOwnTx((c) => seedDeathCertificate(c, { pariwarId: PARIWAR_A, claimCaseId: cid }));
+        const gid = await openAssignment(cid, 'complete-vs-reschedule');
+        const rescheduleKey = `reschedule:${randomUUID()}`;
+        createdKeys.push(`ground_inspection:reschedule:${PARIWAR_A}:${gid}:${rescheduleKey}`);
+        const outcomes = await Promise.allSettled([
+          onOwnTx((c) => completeGroundInspection(c, completeInput(gid, uploadId))),
+          onOwnTx((c) => rescheduleGroundInspection(c, { ...scheduleInput(cid, rescheduleKey), groundInspectionId: gid as never })),
+        ]);
+        const rejected = outcomes.flatMap((r) => (r.status === 'rejected' ? [r.reason] : []));
+        expect(rejected.map((e) => (e as { code?: string }).code)).not.toContain('40P01');
+        expect(outcomes.filter((r) => r.status === 'fulfilled')).toHaveLength(1);
+        expect(rejected).toHaveLength(1);
+        expect(rejected[0]).toBeInstanceOf(GroundInspectionNotActiveError);
+      }
+    },
+    TIMEOUT,
+  );
+
+  it(
+    '⭐ complete vs a certificate made CURRENT under the claim lock (the OCR job\'s posture) → the completion waits, then refuses `certificate_changed`',
+    async () => {
+      const cid = await seedClaimInVerification();
+      const { uploadId } = await onOwnTx((c) => seedDeathCertificate(c, { pariwarId: PARIWAR_A, claimCaseId: cid }));
+      const gid = await openAssignment(cid, 'complete-vs-upload');
+      // The OCR job makes a new upload current while holding the claim row (claim-ocr-parity.ts) — simulated here.
+      const holder = await holdClaimLock(cid, async (c) => {
+        await seedDeathCertificate(c, { pariwarId: PARIWAR_A, claimCaseId: cid });
+      });
+      const completion = onOwnTx((c) => completeGroundInspection(c, completeInput(gid, uploadId)));
+      await waitUntilBlocked();
+      await holder.commit();
+      await expect(completion).rejects.toBeInstanceOf(GroundInspectionCertificateChangedError);
+    },
+    TIMEOUT,
+  );
+
+  it(
+    '⭐ complete vs the R9 routing row SUPERSEDED under the claim lock (what R9 finalize does) → the completion waits, then refuses `not_allowed` — the window is read on the LOCKED row',
+    async () => {
+      const cid = await seedClaimInVerification();
+      const { uploadId } = await onOwnTx((c) => seedDeathCertificate(c, { pariwarId: PARIWAR_A, claimCaseId: cid }));
+      const gid = await openAssignment(cid, 'complete-vs-r9');
+      // Drive the claim to `state_trustee_approved`, R9-routed (a window state under `-283` A1).
+      await onOwnTx(async (c) => {
+        const emit = (from: string, to: string, eventType: string) =>
+          projectClaimState(c, {
+            claimCaseId: cid, pariwarId: PARIWAR_A, deceasedMemberId: toMemberId(randomUUID()), intakeChannels: ['member_app'],
+            claimantActorId: null, eventType: eventType as never,
+            payload: { from_state: from, to_state: to, trigger: 'test', actor: 'system' } as never, actorId: null,
+          });
+        await emit('verification_in_progress', 'verifier_review', 'claim.verifier_reviewing');
+        await emit('verifier_review', 'verifier_approved', 'claim.verifier_approved');
+        await emit('verifier_approved', 'state_trustee_freeze', 'claim.state_trustee_frozen');
+        await emit('state_trustee_freeze', 'state_trustee_approved', 'claim.state_trustee_approved');
+        await c.query(
+          `INSERT INTO claim_state_trustee_decisions (claim_case_id, pariwar_id, phase, outcome, reason_code, actor_id, actor_display)
+           VALUES ($1, $2, 'routing', 'routed_to_r9', 'r9_special_case', $3, 'Pariwar Admin')`,
+          [cid, PARIWAR_A, ADMIN],
+        );
+      });
+      const holder = await holdClaimLock(cid, async (c) => {
+        await c.query(`UPDATE claim_state_trustee_decisions SET superseded_at = now() WHERE claim_case_id = $1 AND phase = 'routing'`, [cid]);
+      });
+      const completion = onOwnTx((c) => completeGroundInspection(c, completeInput(gid, uploadId)));
+      await waitUntilBlocked();
+      await holder.commit();
+      await expect(completion).rejects.toBeInstanceOf(GroundInspectionClaimNotInVerificationError);
+      expect(
+        await countRows(
+          "SELECT count(*)::text AS n FROM events_log WHERE stream_id = $1 AND event_type = 'claim.ground_inspection_completed'",
+          [cid],
+        ),
+      ).toBe(0);
+    },
+    TIMEOUT,
+  );
+
+  it(
+    '⭐ complete vs SCHEDULE of another assignment on the same claim → both succeed (⛔ no lock cycle)',
+    async () => {
+      const cid = await seedClaimInVerification();
+      const { uploadId } = await onOwnTx((c) => seedDeathCertificate(c, { pariwarId: PARIWAR_A, claimCaseId: cid }));
+      const gid = await openAssignment(cid, 'complete-vs-schedule');
+      const outcomes = await Promise.allSettled([
+        onOwnTx((c) => completeGroundInspection(c, completeInput(gid, uploadId))),
+        onOwnTx((c) => scheduleGroundInspection(c, scheduleInput(cid, `second:${randomUUID()}`))),
+      ]);
+      expect(outcomes.map((o) => o.status)).toEqual(['fulfilled', 'fulfilled']);
     },
     TIMEOUT,
   );

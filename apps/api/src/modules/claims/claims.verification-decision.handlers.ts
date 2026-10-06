@@ -47,6 +47,7 @@ import { translateLaterApprovalWarningError } from './later-approval-warnings.js
 import { closeScopeTx, openScopeTx } from '../multi-tenant/scope-tx.js';
 import { encryptOptionalVerifierRationale } from './verifier-decision-crypto.js';
 import { encryptLateWarningReasonNote } from './approval-warning-crypto.js';
+import { groundInspectionRequiredMessage } from './ground-inspection-required-message.js';
 
 /** Why a revise was refused, in words (`details.reason` carries the code). Exhaustive — a new reason must say why. */
 const NOT_REVISABLE_MESSAGES: Record<claim.DecisionNotRevisableReason, string> = {
@@ -93,6 +94,12 @@ function translateDecisionError(err: unknown): never {
       'verifier_decision.death_certificate_acceptance_required',
       { reason: err.reason },
     );
+  }
+  // ⭐ Story 6.26a (GI11) — the claim WAITS for its ground inspection (`-263` FQ9 A) — ⛔ never a 500, ⛔ never a denial.
+  if (err instanceof claim.GroundInspectionRequiredError) {
+    throw new ConflictError(groundInspectionRequiredMessage(err.reason), 'verifier_decision.ground_inspection_required', {
+      reason: err.reason,
+    });
   }
   if (err instanceof claim.NomineeDeterminationRequiredError) {
     throw new ConflictError(

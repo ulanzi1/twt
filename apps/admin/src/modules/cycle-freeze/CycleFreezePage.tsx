@@ -15,6 +15,7 @@ import {
   laterApprovalWarningErrorMessage,
   trusteeDeathCertificateAcceptanceRequiredMessage,
   trusteeDeterminationRequiredMessage,
+  trusteeGroundInspectionRequiredMessage,
 } from '../claim-verification/nominee-errors.js';
 import {
   useCommitCycleFreeze,
@@ -58,6 +59,11 @@ function errorMessage(error: unknown): string | undefined {
   }
   if (error instanceof ApiError && error.code.endsWith('.nominee_determination_required')) {
     return trusteeDeterminationRequiredMessage(error);
+  }
+  // ⭐ Story 6.26a (GI11) — the approval waits for the claim's ground inspection (`-263` FQ9 A, `-285`): worded for the
+  // trustee — the inspector acts, the claim waits, ⛔ never a refusal.
+  if (error instanceof ApiError && error.code.endsWith('.ground_inspection_required')) {
+    return trusteeGroundInspectionRequiredMessage(error);
   }
   // Story 6.19a (D14) — the claim waits for the family's contact details; the helpline can add them.
   if (error instanceof ApiError && error.code.endsWith('.claim_contact_required')) {

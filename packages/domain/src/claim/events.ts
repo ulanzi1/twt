@@ -174,6 +174,8 @@ export const ClaimPeerMeshRespondedPayloadSchema = requireIdentityTransition({
  * SAME event for the NEW assignment with `supersedes_ground_inspection_id` = the superseded
  * assignment's id (a fresh schedule sets it `null`) — there is NO separate `superseded`
  * event; the new event's back-reference + the row status make the supersession replayable.
+ * Story 6.26 GI3: written anywhere in the inspection write window (`CLAIM_REVIEW_WINDOW_STATES` +
+ * `state_trustee_approved` while R9-routed) with `from_state === to_state ===` the claim's ACTUAL state.
  */
 export const ClaimGroundInspectionScheduledPayloadSchema = requireIdentityTransition({
   ...auditShape,
@@ -204,6 +206,10 @@ export const ClaimGroundInspectionScheduledPayloadSchema = requireIdentityTransi
  * completion counts; NO PII. The write path GUARDS emission to `verification_in_progress`
  * (a `completed` event is never appended to a resolved/pre-verification claim — the 6.6
  * `PeerMeshClaimNotInVerificationError` lesson). Owner: Story 6.7.
+ * Story 6.26 GI3: the guard's window is now `CLAIM_REVIEW_WINDOW_STATES` + `state_trustee_approved` while
+ * R9-routed (every state in which the approval gate can wait for an inspection), and the event carries
+ * `from_state === to_state ===` the claim's ACTUAL state. The inspector's record (verdict, dates) is ⛔ not
+ * in the payload — it lives on the assignment row (Tier-1 dates encrypted).
  */
 export const ClaimGroundInspectionCompletedPayloadSchema = requireIdentityTransition({
   ...auditShape,

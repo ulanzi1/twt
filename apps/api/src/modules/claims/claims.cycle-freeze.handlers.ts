@@ -62,6 +62,7 @@ import {
   translateLaterApprovalWarningError,
   underSavepoint,
 } from './later-approval-warnings.js';
+import { groundInspectionRequiredMessage } from './ground-inspection-required-message.js';
 
 /** Map a cycle-freeze domain error to its stable HTTP shape. Rethrows ApiErrors + anything unknown as-is. */
 function translateCycleFreezeError(err: unknown): never {
@@ -154,6 +155,12 @@ function translateCycleFreezeError(err: unknown): never {
       'cycle_freeze.death_certificate_acceptance_required',
       { reason: err.reason },
     );
+  }
+  // ⭐ Story 6.26a (GI11) — the claim WAITS for its ground inspection (`-263` FQ9 A) — ⛔ never a 500, ⛔ never a denial.
+  if (err instanceof claim.GroundInspectionRequiredError) {
+    throw new ConflictError(groundInspectionRequiredMessage(err.reason), 'cycle_freeze.ground_inspection_required', {
+      reason: err.reason,
+    });
   }
   if (err instanceof claim.NomineeDeterminationRequiredError) {
     throw new ConflictError(

@@ -395,7 +395,7 @@ describe.skipIf(!hasDatabase)('migration 0122 — death-certificate uploads + re
     }
   });
 
-  it('⛔ TRUNCATE is refused on both tables (23000)', async () => {
+  it('⛔ TRUNCATE is refused on both tables (23000)', { timeout: 60000 }, async () => {
     const { client } = getTx();
     for (const t of TABLES) {
       await client.query('SAVEPOINT tr');
@@ -404,7 +404,12 @@ describe.skipIf(!hasDatabase)('migration 0122 — death-certificate uploads + re
       // them holds it and waits on the parent for its FK check. The whole set is taken ALL OR NOTHING with NOWAIT and
       // retried (`lockTruncateSetNowait`) — this side ⛔ never waits while holding part of it. The `ROLLBACK TO
       // SAVEPOINT tr` below drops the set again before the next table.
-      expect(await lockTruncateSetNowait(client, t)).toContain(t);
+      // ⚠ Story 6.26a: migration 0147's `claim_ground_inspections.compared_certificate_upload_id` FK puts the inspection
+      // table (and its photos) into the uploads' CASCADE set, and the approval fixtures now write inspections in nearly
+      // every approve-path spec running in parallel — so the whole set is free less often. The retry budget is widened
+      // for THIS call (60 → 300 NOWAIT attempts, the test's timeout with it); the all-or-nothing, never-wait posture is
+      // unchanged.
+      expect(await lockTruncateSetNowait(client, t, { attempts: 300 })).toContain(t);
       const err = await client.query(`TRUNCATE ${t} CASCADE`).then(
         () => undefined,
         (e: unknown) => e,

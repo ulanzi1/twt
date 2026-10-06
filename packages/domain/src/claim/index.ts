@@ -27,6 +27,11 @@ export * from './peer-mesh-persist.js';
 // accessor (getClaimGroundInspection — ciphertext AS STORED; the AC5 absence-is-a-signal read).
 export * from './ground-inspection-persist.js';
 export * from './ground-inspection-read.js';
+// Story 6.26a (GI1 / GI2) — the ground-inspection approval conjunct: ONE pure predicate over ONE read, used by
+// the approval gate and the verifier console's "why it waits" section.
+export * from './ground-inspection-approval.js';
+// Story 6.26a (Task 2.1, `-283` A1) — the R9 queue predicate, once (a SQL fragment + the per-claim read).
+export * from './r9-routing.js';
 // Story 6.8 — claim-time nominee bank: the latest-wins dual-account writer
 // (recordClaimNomineeBankAccounts — claim row-lock + D3 collectable-window guard + delete-then-
 // insert both rows + the claim.nominee_bank_recorded identity annotation) + the read accessor

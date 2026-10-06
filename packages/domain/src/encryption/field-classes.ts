@@ -81,6 +81,16 @@ export const CLAIM_CONTACT_FIELD_CLASS = 'claim_contact';
 export const CLAIM_CONTACT_MOBILE_FIELD_CLASS = 'claim_contact_mobile';
 
 /**
+ * ⭐ NEW (Story 6.26a, GI5; `2026-10-06-282`, amended by `-283` A6 / `-284` E2) — the keyed-hash class of a date of
+ * death (`YYYY-MM-DD`), bound to the claim's REAL `pariwarId`. It indexes BOTH the inspector's recorded date
+ * (`claim_ground_inspections.death_date_index`, 6.26a) and the District Admin's accepted certificate date
+ * (`claim_death_certificate_reviews.accepted_date_index`, 6.26b), so Story 6.26b's warning module compares the two
+ * dates without a decrypt (6.23a invariant 7). ⚠ ONE class for both tables — a second literal would make every
+ * comparison "differs" and warn every claim (6.26a Trap 2). ⛔ Never re-declare it.
+ */
+export const DEATH_DATE_INDEX_FIELD_CLASS = 'death_date';
+
+/**
  * Envelope-encryption + blind-index key material for the member PII families. Structurally identical
  * to `apps/api`'s `EncryptionDeps` and `apps/jobs`'s `JobsEncryptionDeps` (both are
  * `{ kms, kekRef, hmacKeyRef }` over these same domain types), so BOTH apps pass their own bundle

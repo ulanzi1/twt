@@ -39,6 +39,21 @@ export function trusteeDeathCertificateAcceptanceRequiredMessage(err: ApiError):
 }
 
 /**
+ * ⭐ Story 6.26a (GI11) — the approval gate's `…ground_inspection_required` 409 (`verifier_decision.` / `cycle_freeze.` /
+ * `r9_voting.`), worded by its REASON (`no_completed_inspection` | `certificate_check_required`). ⛔ Never a denial.
+ */
+export function groundInspectionRequiredMessage(err: ApiError): string {
+  const reason = (err.details as { reason?: string } | undefined)?.reason ?? 'no_completed_inspection';
+  return t.groundInspectionGate.approveBlocked[reason] ?? t.groundInspectionGate.approveBlocked.no_completed_inspection!;
+}
+
+/** The same 409 on a TRUSTEE surface (the cycle freeze, R9 voting) — the inspector acts, the claim waits. */
+export function trusteeGroundInspectionRequiredMessage(err: ApiError): string {
+  const reason = (err.details as { reason?: string } | undefined)?.reason ?? 'no_completed_inspection';
+  return t.groundInspectionGate.trusteeApprovalGate[reason] ?? t.groundInspectionGate.trusteeApprovalGate.no_completed_inspection!;
+}
+
+/**
  * Story 6.19a (D14) — the approval gate's `…claim_contact_required` 409 (`verifier_decision.` / `cycle_freeze.` /
  * `r9_voting.`), worded by its REASON — the same words on every screen: the claim WAITS, and the helpline can add
  * the details. ⛔ Never a denial, ⛔ never "try again".

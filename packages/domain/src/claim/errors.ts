@@ -132,8 +132,12 @@ export class ClaimStreamConcurrencyError extends Error {
 // consolidated here alongside `ClaimStreamConcurrencyError`. NOT surfaced at the top-level
 // barrel (claim namespace only); the route maps them to stable 4xx codes.
 
-/** Thrown by a ground-inspection writer when the claim has left `verification_in_progress`
- *  (guards a false `scheduled`/`completed` audit fact on a resolved/pre-verification claim). */
+/** Thrown by a ground-inspection writer when the claim is OUTSIDE the inspection write window
+ *  (guards a false `scheduled`/`completed` audit fact on a resolved/pre-verification claim).
+ *  Story 6.26 GI3 (`2026-10-06-282`, amended by `-283` A1 / A5): the window is the claim REVIEW WINDOW
+ *  (`CLAIM_REVIEW_WINDOW_STATES`) plus `state_trustee_approved` while the claim is R9-routed — every state in
+ *  which the approval gate's ground-inspection conjunct can refuse, so "waits" always has a way out. The class
+ *  name and its wire code (`ground_inspection.not_allowed`) are KEPT — the code literal is a contract. */
 export class GroundInspectionClaimNotInVerificationError extends Error {
   public readonly name = 'GroundInspectionClaimNotInVerificationError';
   public constructor(
@@ -141,7 +145,7 @@ export class GroundInspectionClaimNotInVerificationError extends Error {
     public readonly currentState: string,
   ) {
     super(
-      `[ground-inspection] claim ${claimCaseId} is '${currentState}', not 'verification_in_progress' — rejected`,
+      `[ground-inspection] claim ${claimCaseId} is '${currentState}', outside the review window — rejected`,
     );
   }
 }
@@ -170,6 +174,93 @@ export class GroundInspectionNotActiveError extends Error {
   ) {
     super(
       `[ground-inspection] assignment ${groundInspectionId} is '${status}', not 'scheduled' — mutation rejected`,
+    );
+  }
+}
+
+// ── Story 6.26a — the inspector's original-certificate record and the dates (`2026-10-06-282` GI4 / GI5) ──
+
+/** GI4 (`-263` FQ11 A) — a completion is missing part of the original-certificate record: ≥1 photo of kind
+ *  `original_certificate`, the verdict, or the upload the inspector compared against. → 409
+ *  `ground_inspection.original_certificate_required` `{ missing }`. */
+export class GroundInspectionOriginalCertificateRequiredError extends Error {
+  public readonly name = 'GroundInspectionOriginalCertificateRequiredError';
+  public constructor(
+    public readonly groundInspectionId: string,
+    public readonly missing: 'photo' | 'verdict' | 'compared_certificate',
+  ) {
+    super(
+      `[ground-inspection] assignment ${groundInspectionId} cannot be completed without the original certificate's ${missing}`,
+    );
+  }
+}
+
+/** GI4 — the upload the inspector compared against is ⛔ no longer the claim's CURRENT certificate (re-asserted
+ *  under the claim-row lock). → 409 `ground_inspection.certificate_changed`. */
+export class GroundInspectionCertificateChangedError extends Error {
+  public readonly name = 'GroundInspectionCertificateChangedError';
+  public constructor(
+    public readonly groundInspectionId: string,
+    public readonly comparedUploadId: string,
+  ) {
+    super(
+      `[ground-inspection] assignment ${groundInspectionId} compared upload ${comparedUploadId}, which is no longer the claim's current certificate`,
+    );
+  }
+}
+
+/** GI4 — the claim has ⛔ no current death-certificate upload at all, so there is nothing to compare the original
+ *  against (both the completion and the certificate read). → 409 `ground_inspection.no_current_certificate`. */
+export class GroundInspectionNoCurrentCertificateError extends Error {
+  public readonly name = 'GroundInspectionNoCurrentCertificateError';
+  public constructor(public readonly claimCaseId: string) {
+    super(`[ground-inspection] claim ${claimCaseId} has no current death certificate upload`);
+  }
+}
+
+/** GI5 — a completion is missing its date of death (the family's on a full visit, the printed one on a
+ *  certificate check). → 409 `ground_inspection.death_date_required`. */
+export class GroundInspectionDeathDateRequiredError extends Error {
+  public readonly name = 'GroundInspectionDeathDateRequiredError';
+  public constructor(public readonly groundInspectionId: string) {
+    super(`[ground-inspection] assignment ${groundInspectionId} cannot be completed without a date of death`);
+  }
+}
+
+/** GI5 (6.21a D4's rule) — the date of death is after the day of completion (India time). → 409
+ *  `ground_inspection.death_date_in_future`. */
+export class GroundInspectionDeathDateInFutureError extends Error {
+  public readonly name = 'GroundInspectionDeathDateInFutureError';
+  public constructor(public readonly groundInspectionId: string) {
+    super(`[ground-inspection] assignment ${groundInspectionId}: the date of death is after the day of completion`);
+  }
+}
+
+/** GI5 — a malformed completion input the route's schema should have refused: an unreal calendar date, a time
+ *  ⛔ not `HH:MM` 24h, a time on a certificate check, or a date source that does not follow the stage. → 400. */
+export class GroundInspectionDeathFactsInvalidError extends Error {
+  public readonly name = 'GroundInspectionDeathFactsInvalidError';
+  public constructor(
+    public readonly groundInspectionId: string,
+    public readonly detail: 'invalid_date' | 'invalid_time' | 'time_not_allowed' | 'source_mismatch',
+  ) {
+    super(`[ground-inspection] assignment ${groundInspectionId}: invalid death facts (${detail})`);
+  }
+}
+
+/** Story 6.26a GI1 (`-263` FQ9 A) — the approval WAITS: the claim's ground inspection is ⛔ not complete
+ *  (`groundInspectionApprovalState`). ⛔ Never a refusal of the claim — every approval handler maps it to 409
+ *  `<prefix>.ground_inspection_required` `{ reason }`. */
+export class GroundInspectionRequiredError extends Error {
+  public readonly name = 'GroundInspectionRequiredError';
+  public constructor(
+    public readonly claimCaseId: string,
+    public readonly reason: 'no_completed_inspection' | 'certificate_check_required',
+  ) {
+    super(
+      reason === 'no_completed_inspection'
+        ? `[ground-inspection] claim ${claimCaseId} cannot be approved yet — its ground inspection is not complete`
+        : `[ground-inspection] claim ${claimCaseId} cannot be approved yet — an inspector must see the original of the current death certificate`,
     );
   }
 }

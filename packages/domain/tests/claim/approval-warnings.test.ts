@@ -341,7 +341,12 @@ describe('NW1 — import discipline, TRANSITIVELY (`-279` A12)', () => {
   }
   const forbidden = ['claim/events.ts', 'claim/nominee-name-check.ts', 'claim/nominee-lock.ts'];
 
-  for (const entry of ['claim/approval-warnings.ts', 'claim/approval-warning-reasons.ts']) {
+  // Story 6.26a (GI1, Task 3.1) — `nominee-name-check.ts` imports the ground-inspection conjunct too.
+  for (const entry of [
+    'claim/approval-warnings.ts',
+    'claim/approval-warning-reasons.ts',
+    'claim/ground-inspection-approval.ts',
+  ]) {
     it(`${entry} reaches ⛔ none of ${forbidden.join(', ')}`, () => {
       const files = [...reachable(path.join(srcRoot, entry))].map((f) => path.relative(srcRoot, f));
       for (const f of forbidden) expect(files, `${entry} reaches ${f}`).not.toContain(f);

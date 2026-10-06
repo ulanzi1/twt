@@ -42,6 +42,7 @@ import {
   driveClaimTo,
   enterAppScope,
   seedAcceptedDeathCertificate,
+  seedGroundInspection,
   seedMember,
   seedNomineeDeclaration,
   seedNomineeDetermination,
@@ -725,6 +726,10 @@ describe.skipIf(!hasDatabase)('Story 6.18 — the nominee name check (:5433)', (
         const mid = toMemberId(randomUUID());
         await driveTo(client, cid, mid, 'verifier_approved');
         await seedAcceptedDeathCertificate(client, { pariwarId: PARIWAR_A, claimCaseId: cid });
+        // Story 6.26a (GI1) — the ground-inspection conjunct runs AFTER the name check, so each row is given a
+        // complete inspection too: the waived approve then passes or fails on ITS OWN deficiency, ⛔ not on a
+        // missing inspection (the rows that skip `seedNomineeNameCheck` would otherwise seed none).
+        await seedGroundInspection(client, PARIWAR_A, cid);
         await d.seed(client, tx, cid);
         for (const opts of [{}, { nameCheck: undefined }, { nameCheck: 'required' as const }]) {
           await expect(assertClaimApprovable(tx, PARIWAR_A, cid, mid, { ...opts, approvingActorIds: [TRUSTEE] })).rejects.toMatchObject({ name: d.error });

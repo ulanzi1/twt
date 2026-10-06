@@ -207,17 +207,30 @@ describe.skipIf(!hasDatabase)('Verifier-console compound shape (AI-6-3 class) â€
     }
   }
 
-  /** One ground-inspection assignment + `photoIds` photos (caller-pinned ids = membership markers). */
+  /** One ground-inspection assignment + `photoIds` photos (caller-pinned ids = membership markers).
+   *  âš  AMENDED by Story 6.26a (GI4 / GI5): migration 0147's completed-row CHECK requires the inspector's FQ11 record
+   *  and date, so the row carries them â€” compared against the claim's CURRENT (pinned) certificate, which also makes
+   *  it the claim's complete inspection for the approval gate (the fixture's default inspection is skipped for the
+   *  claims seeded here, so each shows EXACTLY its pinned assignment). */
   async function seedInspection(pariwarId: string, claimCaseId: string, photoIds: readonly string[]): Promise<string> {
     const groundInspectionId = randomUUID();
     const c = await td.pool.connect();
     try {
+      const current = await c.query<{ upload_id: string }>(
+        `SELECT u.upload_id FROM claim_documents cd
+           JOIN claim_death_certificate_uploads u
+             ON u.pariwar_id = cd.pariwar_id AND u.claim_case_id = cd.claim_case_id AND u.storage_object_key = cd.storage_object_key
+          WHERE cd.claim_case_id = $1 AND cd.document_type = 'death_certificate'`,
+        [claimCaseId],
+      );
       await c.query(
         `INSERT INTO claim_ground_inspections
            (ground_inspection_id, claim_case_id, pariwar_id, district, inspection_stage, inspection_site_type,
-            inspector_actor_id, scheduled_at, status)
-         VALUES ($1, $2, $3, $4, 'initial', 'family_residence', 'inspector-1', now(), 'completed')`,
-        [groundInspectionId, claimCaseId, pariwarId, DISTRICT],
+            inspector_actor_id, scheduled_at, status, original_certificate_verdict, compared_certificate_upload_id,
+            death_date_ciphertext, death_date_source, death_date_index)
+         VALUES ($1, $2, $3, $4, 'initial', 'family_residence', 'inspector-1', now(), 'completed', 'matches', $5,
+                 'enc:v1:death-date', 'family_statement', 'fixture-death-date-index')`,
+        [groundInspectionId, claimCaseId, pariwarId, DISTRICT, current.rows[0]!.upload_id],
       );
       for (const photoId of photoIds) {
         await c.query(
@@ -279,6 +292,7 @@ describe.skipIf(!hasDatabase)('Verifier-console compound shape (AI-6-3 class) â€
     try {
       const { packet } = await assembleVerifierConsole(deps, {
         db: scopeTx.tx,
+        client: scopeTx.client,
         pariwarId,
         claimCaseId,
         district: DISTRICT,
@@ -346,7 +360,9 @@ describe.skipIf(!hasDatabase)('Verifier-console compound shape (AI-6-3 class) â€
     // then determine and re-check â€” so every approval below meets the certificate conjunct through the REAL
     // writers, and the pinned keys stay current.
     for (const [p, c] of [[pariwarP, claimA], [pariwarP, claimB], [pariwarQ, claimC], [pariwarP, claimD]] as const) {
-      await seedNomineeNameCheck(deps, p, c);
+      // Story 6.26a (GI15) â€” A, B and C get their OWN pinned inspection below (the panel's membership markers), so the
+      // fixture's default inspection is skipped for them; D (â›” no panel assertion) keeps the default.
+      await seedNomineeNameCheck(deps, p, c, c === claimD ? {} : { inspection: 'skip' });
     }
 
     await seedPeerMesh(pariwarP, claimA, deceasedP, [candA3, candA1, candA2], [candA1, candA2]);

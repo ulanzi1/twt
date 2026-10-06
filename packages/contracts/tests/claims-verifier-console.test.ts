@@ -108,6 +108,12 @@ describe('VerifierConsolePacket — full round-trip + ordering', () => {
       currentAndPassing: true,
       differenceReasons: [] as ('initial' | 'married_name' | 'bank_shortened_name')[],
     },
+    // Story 6.26a (GI9) — why the approval waits for the ground inspection: NON-PII.
+    groundInspectionGate: {
+      available: true,
+      complete: false,
+      waitReason: 'certificate_check_required' as 'no_completed_inspection' | 'certificate_check_required' | null,
+    },
     // Story 6.23a (NW8) — the nominee-change warnings: NON-PII (kinds, counts, the reason list).
     approvalWarnings: {
       available: true,
@@ -153,6 +159,51 @@ describe('VerifierConsolePacket — full round-trip + ordering', () => {
     expect(
       VerifierConsolePacket.safeParse({ ...PACKET, approvalWarnings: { ...approvalWarnings, reviseBlocked: 'nope' } }).success,
     ).toBe(false);
+  });
+
+  it('Story 6.26a (GI9) — `groundInspectionGate` is REQUIRED and STRICT, and its wait reason is a closed set', () => {
+    const { groundInspectionGate, ...without } = PACKET;
+    expect(VerifierConsolePacket.safeParse(without).success).toBe(false);
+    expect(VerifierConsolePacket.safeParse({ ...PACKET, groundInspectionGate: { ...groundInspectionGate, deathDate: '2026-05-10' } }).success).toBe(false);
+    expect(VerifierConsolePacket.safeParse({ ...PACKET, groundInspectionGate: { ...groundInspectionGate, waitReason: 'refused' } }).success).toBe(false);
+    expect(
+      VerifierConsolePacket.safeParse({ ...PACKET, groundInspectionGate: { available: false, complete: false, waitReason: null } }).success,
+    ).toBe(true);
+  });
+
+  it('Story 6.26a (GI10) — a ground-inspection assignment carries the inspector\'s record; the photo carries its kind', () => {
+    const assignment = {
+      groundInspectionId: 'gi-1',
+      district: 'Patna',
+      inspectionStage: 'certificate_check',
+      inspectionSiteType: 'school_or_office',
+      inspectorActorId: 'inspector-1',
+      scheduledAt: '2026-05-01T06:00:00.000Z',
+      status: 'completed',
+      refusalReason: null,
+      completedAt: '2026-05-02T06:00:00.000Z',
+      notes: null,
+      structuredFindings: null,
+      photos: [{ photoId: 'p1', contentType: 'image/jpeg', byteSize: 1, caption: null, signedUrl: 'u', photoKind: 'original_certificate' }],
+      originalCertificateVerdict: 'does_not_match',
+      comparedAgainst: 'current',
+      deathDateSource: 'original_certificate',
+      deathDate: '2026-04-30',
+      deathTime: null,
+      deathDateUnreadable: false,
+      deathTimeUnreadable: false,
+      inherited: false,
+    };
+    const ok = { ...PACKET, groundInspection: { status: 'present' as const, assignments: [assignment] } };
+    expect(VerifierConsolePacket.safeParse(ok).success).toBe(true);
+    // ⛔ An unknown verdict, comparison or photo kind is refused.
+    for (const bad of [
+      { ...assignment, originalCertificateVerdict: 'unclear' },
+      { ...assignment, comparedAgainst: 'later' },
+      { ...assignment, photos: [{ ...assignment.photos[0], photoKind: 'selfie' }] },
+    ]) {
+      expect(VerifierConsolePacket.safeParse({ ...PACKET, groundInspection: { status: 'present', assignments: [bad] } }).success).toBe(false);
+    }
   });
 
   it('a non-response is never representable as a denial by absence (responses are explicit)', () => {

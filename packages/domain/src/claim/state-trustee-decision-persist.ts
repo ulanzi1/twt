@@ -82,6 +82,7 @@ import {
   type StateTrusteeDecisionPhase,
   type StateTrusteeReasonCode,
 } from './state-trustee-decision.js';
+import { hasLiveRoutedRow } from './r9-routing.js';
 
 // ── State windows (the write-path allowlists) ─────────────────────────────────
 
@@ -330,25 +331,6 @@ function isUniqueViolation(err: unknown): boolean {
   const direct = (err as { code?: string }).code;
   const cause = (err as { cause?: { code?: string } }).cause?.code;
   return direct === '23505' || cause === '23505';
-}
-
-/** True iff `claimCaseId` carries a LIVE (non-superseded) `phase='routing'`/`routed_to_r9` decision row —
- *  the durable AC4 exclusion. Read under the caller's tx/lock so it reflects the current state. */
-async function hasLiveRoutedRow(db: Db, pariwarId: PariwarId, claimCaseId: ClaimId): Promise<boolean> {
-  const rows = await db
-    .select({ claimCaseId: claimStateTrusteeDecisions.claimCaseId })
-    .from(claimStateTrusteeDecisions)
-    .where(
-      and(
-        eq(claimStateTrusteeDecisions.pariwarId, pariwarId),
-        eq(claimStateTrusteeDecisions.claimCaseId, claimCaseId),
-        eq(claimStateTrusteeDecisions.phase, 'routing'),
-        eq(claimStateTrusteeDecisions.outcome, 'routed_to_r9'),
-        isNull(claimStateTrusteeDecisions.supersededAt),
-      ),
-    )
-    .limit(1);
-  return rows.length > 0;
 }
 
 // ── Advisory lock + claim row lock helpers ────────────────────────────────────

@@ -84,6 +84,8 @@ const packet = (claimCaseId: string): VerifierConsolePacket =>
     shepherd: { status: 'empty' },
     nomineeNameCheck: { available: true, accountsComplete: true, currentAndPassing: true, differenceReasons: [] },
     // Story 6.23a (NW8) — the nominee-change warnings section (⛔ no warning by default).
+    // Story 6.26a (GI9) — the ground-inspection gate section (complete by default).
+    groundInspectionGate: { available: true, complete: true, waitReason: null },
     approvalWarnings: {
       available: true,
       kinds: [],

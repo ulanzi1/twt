@@ -32,7 +32,14 @@ import { listNomineeDeclarationVersions } from '../../../src/nominee/declaration
 import { claimId as toClaimId, memberId as toMemberId, type ClaimId, type MemberId } from '../../../src/ids/index.js';
 import * as schema from '../../../src/schema/index.js';
 import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
-import { PARIWAR_A, driveClaimTo, enterAppScope, seedNomineeDeclaration, seedNomineeDetermination } from '../_helpers.js';
+import {
+  PARIWAR_A,
+  driveClaimTo,
+  enterAppScope,
+  seedDeathCertificate,
+  seedNomineeDeclaration,
+  seedNomineeDetermination,
+} from '../_helpers.js';
 
 type Client = ReturnType<typeof getTx>['client'];
 type Tx = ReturnType<typeof getTx>['tx'];
@@ -68,17 +75,29 @@ async function refuse(tx: Tx, claimCaseId: ClaimId, reasonCode: 'post_death_nomi
   });
 }
 
-async function completedInspection(tx: Tx, claimCaseId: ClaimId) {
+/**
+ * A COMPLETED inspection on `claimCaseId` (a raw insert — the inheritance read is what is under test here).
+ * ⚠ AMENDED by Story 6.26a (GI4 / GI5): migration 0147's completed-row CHECK requires the inspector's FQ11 record and
+ * date on every completed row written from now on, so the row carries them, against a certificate seeded for it.
+ * `stage` lets a test build a `certificate_check` source (`-283` A2 — ⛔ never inherited as a visit).
+ */
+async function completedInspection(tx: Tx, claimCaseId: ClaimId, stage: 'initial' | 'certificate_check' = 'initial') {
+  const { uploadId } = await seedDeathCertificate(getTx().client, { pariwarId: PARIWAR_A, claimCaseId });
   await tx.insert(schema.claimGroundInspections).values({
     claimCaseId,
     pariwarId: PARIWAR_A,
     district: 'Patna',
-    inspectionStage: 'initial',
+    inspectionStage: stage,
     inspectionSiteType: 'family_residence',
     inspectorActorId: randomUUID(),
     scheduledAt: new Date('2026-05-01T06:00:00.000Z'),
     status: 'completed',
     completedAt: new Date('2026-05-02T06:00:00.000Z'),
+    originalCertificateVerdict: 'matches',
+    comparedCertificateUploadId: uploadId as never,
+    deathDateCiphertext: 'enc:v1:death-date',
+    deathDateSource: stage === 'certificate_check' ? 'original_certificate' : 'family_statement',
+    deathDateIndex: 'fixture-death-date-index:2026-05-01',
   });
 }
 
@@ -298,5 +317,32 @@ describe.skipIf(!hasDatabase)('Story 6.20 — the `-239` refusal: inheritance + 
     // sort above IS uuid order. (Code review 2026-09-24b: `toContain` accepted either, and repeat reads in one
     // transaction reuse one plan, so dropping the tiebreak stayed green.)
     expect(await getInheritedGroundInspectionSource(tx, PARIWAR_A, refile)).toBe(ids[1]);
+  });
+
+  it('⭐ Story 6.26a (`-283` A2) — a refused source whose ONLY completed assignment is a `certificate_check` is ⛔ not returned (⛔ never a visit); an older refused claim with a FULL visit is', async () => {
+    const { client, tx } = getTx();
+    await enterAppScope(client, PARIWAR_A);
+    const mid = toMemberId(randomUUID());
+    // The OLDER refused claim — a full visit.
+    const older = await tryConverge(client, intake(mid, 'member_app', 'b1'));
+    const olderId = toClaimId(older.claimCaseId);
+    await completedInspection(tx, olderId, 'initial');
+    await refuse(tx, olderId, 'post_death_nominee_change');
+    await forceState(client, older.claimCaseId, 'denied');
+    // The NEWER refused claim — only an office check of the certificate.
+    const newer = await tryConverge(client, intake(mid, 'member_app', 'b2'));
+    const newerId = toClaimId(newer.claimCaseId);
+    await client.query("UPDATE claims SET created_at = created_at + interval '1 minute' WHERE claim_case_id = $1", [newer.claimCaseId]);
+    await completedInspection(tx, newerId, 'certificate_check');
+    await refuse(tx, newerId, 'post_death_nominee_change');
+    await forceState(client, newer.claimCaseId, 'denied');
+    // The refile, later still.
+    const refile = await tryConverge(client, intake(mid, 'member_app', 'b3'));
+    await client.query("UPDATE claims SET created_at = created_at + interval '2 minutes' WHERE claim_case_id = $1", [refile.claimCaseId]);
+    // The most recent refused claim holds ⛔ no visit, so the source is the OLDER one with the full visit.
+    expect(await getInheritedGroundInspectionSource(tx, PARIWAR_A, toClaimId(refile.claimCaseId))).toBe(older.claimCaseId);
+    // With the full visit gone (superseded), ⛔ nothing is inherited at all.
+    await client.query(`UPDATE claim_ground_inspections SET status = 'superseded' WHERE claim_case_id = $1`, [older.claimCaseId]);
+    expect(await getInheritedGroundInspectionSource(tx, PARIWAR_A, toClaimId(refile.claimCaseId))).toBeNull();
   });
 });

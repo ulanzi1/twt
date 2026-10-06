@@ -190,6 +190,8 @@ export const GroundInspectionPhotoItem = z
     caption: z.string().nullable(),
     /** Short-lived signed READ URL (300s TTL — minted request-time; never persisted client-side). */
     signedUrl: z.string(),
+    /** Story 6.26a (GI4, GI10) — what the photo shows; the console labels original-certificate photos apart. */
+    photoKind: z.enum(['site', 'original_certificate']),
   })
   .strict();
 export type GroundInspectionPhotoItem = z.output<typeof GroundInspectionPhotoItem>;
@@ -210,6 +212,27 @@ export const GroundInspectionItem = z
     /** The bounded non-PII structured findings map (as stored). */
     structuredFindings: z.unknown().nullable(),
     photos: z.array(GroundInspectionPhotoItem),
+    /**
+     * ⭐ Story 6.26a (GI10 [a]) — the inspector's record. `originalCertificateVerdict`: did the original they held
+     * match the copy (`-263` FQ11 A) — shown PLAINLY (Story 6.26b turns a `does_not_match` into a warning); `null` on
+     * an assignment that is not completed, or one completed before 6.26a.
+     */
+    originalCertificateVerdict: z.enum(['matches', 'does_not_match']).nullable(),
+    /** Was the original compared with the claim's CURRENT certificate, or with one since replaced (or another claim's —
+     *  an inherited inspection)? `unknown` = the current certificate could ⛔ not be read; `null` = never compared. */
+    comparedAgainst: z.enum(['current', 'earlier', 'unknown']).nullable(),
+    /** Whose date of death this is: the family's statement (a visit) or the date printed on the original (a check). */
+    deathDateSource: z.enum(['family_statement', 'original_certificate']).nullable(),
+    /** Decrypted server-side (`YYYY-MM-DD`); `null` = none recorded, or ⛔ readable (see the flag). */
+    deathDate: z.string().nullable(),
+    /** Decrypted server-side (`HH:MM`); `null` = "not known", none recorded, or ⛔ readable (see the flag). */
+    deathTime: z.string().nullable(),
+    /** `true` ⇔ a recorded date could ⛔ not be decrypted — the console says "could not be read", ⛔ never a blank. */
+    deathDateUnreadable: z.boolean(),
+    /** `true` ⇔ a recorded time could ⛔ not be decrypted. */
+    deathTimeUnreadable: z.boolean(),
+    /** Story 6.26a (GI10) — `true` ⇔ this is ANOTHER claim's inspection, inherited (see the section's `inheritedFrom`). */
+    inherited: z.boolean(),
   })
   .strict();
 export type GroundInspectionItem = z.output<typeof GroundInspectionItem>;
@@ -225,6 +248,9 @@ export const GroundInspectionSection = z.discriminatedUnion('status', [
        * (the `post_death_nominee_change` reason code) and this claim is the true nominee's refile.
        * ⭐ Labelled and NAMING its source, so the District Admin never mistakes it for this claim's own.
        * ⛔ Nothing else carries over.
+       * ⭐ Story 6.26a (GI10): the inherited inspection is read whenever this claim has ⛔ no OWN completed FULL
+       * visit — so it is shown BESIDE the claim's own certificate check (each item says `inherited`), and no longer
+       * vanishes the moment the refile gets an assignment of its own.
        */
       inheritedFrom: z.object({ claimCaseId: z.string().uuid() }).strict().optional(),
     })
@@ -368,6 +394,23 @@ export const ApprovalWarningsStatus = z
   .strict();
 export type ApprovalWarningsStatus = z.output<typeof ApprovalWarningsStatus>;
 
+/**
+ * (j) WHY THE APPROVAL WAITS for the ground inspection — Story 6.26a (GI9; `-263` FQ9 A, Consequence 1). NON-PII. From
+ * the SAME read and the SAME predicate as the approval gate (`groundInspectionApprovalState`), so the console can never
+ * offer an Approve that 409s `…ground_inspection_required`.
+ */
+export const GroundInspectionGateStatus = z
+  .object({
+    /** `false` ⇒ the section could ⛔ not be read — Approve is disabled with "could not be checked" words (⛔ never "complete"). */
+    available: z.boolean(),
+    /** The claim's ground inspection is complete for approval. */
+    complete: z.boolean(),
+    /** Why it waits: ⛔ no completed visit, or an inspector must still see the original of the CURRENT certificate. */
+    waitReason: z.enum(['no_completed_inspection', 'certificate_check_required']).nullable(),
+  })
+  .strict();
+export type GroundInspectionGateStatus = z.output<typeof GroundInspectionGateStatus>;
+
 export const VerifierConsolePacket = z
   .object({
     claimCaseId: z.string(),
@@ -387,6 +430,8 @@ export const VerifierConsolePacket = z
     // Story 6.18 (AC4/AC8) — NON-PII: can this claim be approved, and did the District Admin record
     // an accepted name difference. The NAMES are a separate read behind their own key.
     nomineeNameCheck: NomineeNameCheckStatus,
+    // Story 6.26a (GI9) — NON-PII: does the approval wait for the ground inspection, and why.
+    groundInspectionGate: GroundInspectionGateStatus,
     // Story 6.23a (NW8) — NON-PII: which nominee-change warnings show, and the Pariwar's warning reasons.
     approvalWarnings: ApprovalWarningsStatus,
   })

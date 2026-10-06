@@ -92,6 +92,7 @@ import { assertClaimApprovable, readNomineeNameCheckApprovalState } from './nomi
 import { projectClaimState } from './project.js';
 import { TRUSTEE_VOTABLE_STATES, resolveClaimCorrectionState } from './state-trustee-decision-persist.js';
 import { isTrusteeReasonCodeValidForOutcome, type StateTrusteeReasonCode } from './state-trustee-decision.js';
+import { hasLiveRoutedRow } from './r9-routing.js';
 
 // ── Refusals (the route maps each to a stable 409 / 403 / 404) ──────────────────────────────────────────────────
 
@@ -183,24 +184,6 @@ async function lockForClosure(client: pg.PoolClient, pariwarId: PariwarId, claim
     .for('update');
   if (!row) throw new CorrectionClosureRefusedError(claimCaseId, 'not_found');
   return { db, claimRow: row };
-}
-
-/** A LIVE route-to-R9 exclusion (re-queried — the persist module's own helper is private). */
-async function hasLiveRoutedRow(db: Db, pariwarId: PariwarId, claimCaseId: ClaimId): Promise<boolean> {
-  const rows = await db
-    .select({ id: claimStateTrusteeDecisions.decisionId })
-    .from(claimStateTrusteeDecisions)
-    .where(
-      and(
-        eq(claimStateTrusteeDecisions.pariwarId, pariwarId),
-        eq(claimStateTrusteeDecisions.claimCaseId, claimCaseId),
-        eq(claimStateTrusteeDecisions.phase, 'routing'),
-        eq(claimStateTrusteeDecisions.outcome, 'routed_to_r9'),
-        isNull(claimStateTrusteeDecisions.supersededAt),
-      ),
-    )
-    .limit(1);
-  return rows.length > 0;
 }
 
 /** The closures row of a RETURN that is ⛔ `lapsed` (⭐ at most one — `-273` §3b's partial UNIQUE), or `null`. */

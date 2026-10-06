@@ -52,3 +52,14 @@ export async function decryptGroundInspectionField(
   const bytes = await encryption.decryptTier1(ct, encContext(pariwarId), enc.kms, enc.kekRef);
   return Buffer.from(bytes).toString('utf-8');
 }
+
+/**
+ * ⭐ Story 6.26a (GI5; `-283` A6 / `-284` E2) — the keyed BLIND INDEX of a date of death (`YYYY-MM-DD`) under the ONE
+ * shared field class `DEATH_DATE_INDEX_FIELD_CLASS` (defined in `@twt/domain`'s `encryption/field-classes.ts` —
+ * ⛔ never a second literal), bound to the claim's REAL `pariwarId`. Story 6.26b's warning module compares the
+ * inspection's index with the accepted review's without a decrypt; its review writer MUST compute the review's index
+ * through this same class, or every comparison would read "differs" (6.26a Trap 2).
+ */
+export async function deathDateBlindIndex(date: string, pariwarId: string, enc: EncryptionDeps): Promise<string> {
+  return encryption.blindIndex(encryption.DEATH_DATE_INDEX_FIELD_CLASS, date, { pariwarId }, enc.kms, enc.hmacKeyRef);
+}

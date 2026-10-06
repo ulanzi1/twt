@@ -224,7 +224,7 @@ export const EVENT_TYPE_REGISTRY = {
   'claim.ground_inspection_completed': {
     type: 'claim.ground_inspection_completed',
     description:
-      'Ground inspection completed — annotation event (the 22nd claim event); identity transition (state unchanged); carries ground_inspection_id + optional photo_count, NO PII; write-guarded to verification_in_progress (Story 6.7).',
+      'Ground inspection completed — annotation event (the 22nd claim event); identity transition (state unchanged); carries ground_inspection_id + optional photo_count, NO PII; write-guarded to the inspection window — the claim review window, plus state_trustee_approved while R9-routed — carrying the actual claim state (Story 6.7; Story 6.26 GI3).',
     schema: claim.ClaimGroundInspectionCompletedPayloadSchema,
   },
   'claim.nominee_bank_recorded': {

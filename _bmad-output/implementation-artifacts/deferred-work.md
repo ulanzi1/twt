@@ -13,6 +13,9 @@ Tracks findings deferred from code reviews and other quality gates. Each section
   Put to the Panel as: *"we read FQ9 as also holding the final vote and R9 when the District Admin's approval did not come first —
   confirm."* ⛔ No 6.26 work waits on it. ⭐ Trigger: the next `trustee-panel-routing-note-*` written for ANY story — add this line to it;
   if the Panel says otherwise, a new decision entry supersedes the reading.
+  - *Appended 2026-10-06:* the trigger was taken early, at BigDev's request — the confirm is put on its own in
+    `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-06-6-26-fq9-final-vote-confirm.md` (⏳ AWAITING). ⛔ Not discharged
+    until the Panel answers.
 
 ---
 

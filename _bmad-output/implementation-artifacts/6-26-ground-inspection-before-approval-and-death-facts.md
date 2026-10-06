@@ -142,7 +142,9 @@ waits and a family whose visit cannot happen is kept waiting, ⛔ never refused 
 visit, and how long a claim may wait (⛔ no deadline was ruled — `-263`); who performs the office check and where (`-264` — operational);
 which states' registers can be searched (`-262`); what any approver must weigh under a warning (`-262`); whether the **family** is told the
 claim is waiting for an inspection (⛔ nothing was ruled ⇒ ⛔ no family message here). ⚠ One reading is ours and goes to the Panel as a
-NON-blocking confirm (`-284` E5): that FQ9 also holds the final vote and R9 when the District Admin's approval did ⛔ not come first.
+NON-blocking confirm (`-284` E5): that FQ9 also holds the final vote and R9 when the District Admin's approval did ⛔ not come first —
+put in `trustee-panel-routing-note-2026-10-06-6-26-fq9-final-vote-confirm.md` (⏳ awaiting; ⛔ nothing here waits on it; a B or C answer
+narrows the conjunct for those paths).
 
 ## ⭐ THE INVARIANTS
 

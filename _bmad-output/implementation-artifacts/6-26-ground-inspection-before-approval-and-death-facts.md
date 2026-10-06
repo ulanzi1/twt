@@ -179,7 +179,7 @@ GI7, an author-commit).
 plain-English question, THE ONE FACT, options with an honest cost on every option, evidence LAST — into
 `trustee-panel-routing-note-2026-10-06-6-26-certificate-mismatch-and-replacement.md` (✅ written 2026-10-06). ⛔ Never a second note shape.
 
-## ⚖️ Decisions — the AUTHOR's (committed by ONE author-commit in Task 0, BEFORE any code; ⛔ not yet recorded)
+## ⚖️ Decisions — the AUTHOR's (✅ COMMITTED by `2026-10-06-282` — `97403945`, 2026-10-06, on the story branch — BEFORE any code)
 
 ⭐ **Owner tags:** **[a]** = built in 6.26a (this file) · **[b]** = built in 6.26b · **[a+b]** = split as stated. 6.26b's file cites these
 by number and ⛔ never restates a different version of one.
@@ -393,8 +393,8 @@ Every test listed under **Testing** passes; `pnpm ci:local` is green with `DATAB
 
 - [ ] **Task 0 — Governance (AC0)** ⛔ no code before 0.3
   - [ ] 0.1 `git fetch origin`; `git diff --name-only 3311fc97..HEAD -- packages apps scripts docs`; re-read anything cited here that moved. Read every `.decision-log.md` entry after `-281` for `6-26`, `inspection`, `certificate`, `warning`. ⚠ If row 6-24 or 6-27 landed first, rebase onto their conjunct / kinds — ⛔ none drops another's check (`-277` Consequence 2).
-  - [ ] 0.2 `git switch -c story/6-26-ground-inspection-before-approval-and-death-facts`.
-  - [ ] 0.3 Write the author-commit decision entry (GI1–GI18, verbatim from this file, each with its [a]/[b] owner; Status, §0 gate, Consequences — incl. the split and 6.26a's go-live coupling to 6.26b — References) and commit it ALONE.
+  - [x] 0.2 `git switch -c story/6-26-ground-inspection-before-approval-and-death-facts` — ✅ 2026-10-06 (from `main` `3311fc97`); the story, note, `-281` and the split committed as `9282d108`.
+  - [x] 0.3 Write the author-commit decision entry (GI1–GI18, verbatim from this file, each with its [a]/[b] owner; Status, §0 gate, Consequences — incl. the split and 6.26a's go-live coupling to 6.26b — References) and commit it ALONE. — ✅ `2026-10-06-282`, committed alone as `97403945`; every cited anchor resolves. ⚠ GI2's *"If the Panel answers Q2 B"* sentence is recorded there as MOOT (`-281` ruled Q2 A).
   - [x] 0.4 The Q1/Q2 routing note — ✅ written 2026-10-06 (`_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-06-6-26-certificate-mismatch-and-replacement.md`), its E4 commands run.
   - [x] 0.5 The ruling — ✅ `2026-10-06-281` (Q1 B · Q2 A), the note's block filled. Both match what v1.x was written for ⇒ ⛔ no re-derivation; the row split (v2.0).
   - [ ] 0.6 `epics.md`: `### Story 6.26a` and `### Story 6.26b` after `### Story 6.23b`, each with a Minted-by header (`-262` FQ8 B/C, `-263` FQ9/FQ11, `-264` FQ12/FQ13, `-281`, the author-commit) and a brief.
@@ -507,3 +507,4 @@ No `project-context.md` exists. The house rules this story leans on are in memor
 | v1.0 | 2026-10-06 | Created (`bmad-create-story 6.26`) at `3311fc97`. ⛔ No decision recorded yet — GI1–GI16 commit in Task 0; Q1/Q2 are routed to the Panel in Task 0. Status `ready-for-dev` (Task 0 is governance-first). |
 | v1.1 | 2026-10-06 | The Q1/Q2 routing note written (Task 0.4, ahead of 0.3 at BigDev's direction: note → ruling → split). Writing it narrowed Q2: a certificate can be replaced only BEFORE acceptance (`isDeathCertificateUploadAllowedInReviewWindow`, `mayDeathCertificateUploadBecomeCurrent`) — the replacement case is a turned-back or unreviewed certificate. ⛔ No decision moved. |
 | v2.0 | 2026-10-06 | **THE SPLIT** (BigDev; `-281` Consequence 2), after the Panel ruled **Q1 B · Q2 A** (`2026-10-06-281` — both as written, ⛔ no design change). THIS file becomes **6.26a** (the gate, the window, the inspector's record, the certificate check, why-it-waits; keeps the key); **6.26b** gets the warnings (GI6, GI7, GI17, GI18), the register check (GI8) and the queue. GI17 / GI18 added (Q1 B's two kinds). Every GI tagged [a]/[b]; AC7/AC8 and Tasks 4/5/7.2/9.2 moved (numbers kept). New: GI5's index is stored NOW under ONE exported field-class constant (6.26b needs ⛔ no backfill); Task 2.3's upload-lock trace answered (the OCR job makes an upload current under the claim-row lock). ⛔ Not committed. |
+| v2.1 | 2026-10-06 | Task 0.2 / 0.3 done: branch `story/6-26-ground-inspection-before-approval-and-death-facts`; governance commit `9282d108` (story, note, `-281`, split); the author-commit **`2026-10-06-282`** (GI1–GI18, verbatim, both halves) committed alone as `97403945`. ⛔ No GI changed. Remaining before code: Task 0.6 (`epics.md`) and Task 0.1's re-read at the build. ⚠ ⛔ No fresh-context validate has run (offered). |

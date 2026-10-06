@@ -16,6 +16,8 @@ Tracks findings deferred from code reviews and other quality gates. Each section
   - *Appended 2026-10-06:* the trigger was taken early, at BigDev's request — the confirm is put on its own in
     `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-06-6-26-fq9-final-vote-confirm.md` (⏳ AWAITING). ⛔ Not discharged
     until the Panel answers.
+  - ✅ **DISCHARGED 2026-10-06 by `2026-10-06-285`** (Trustee-ratified, DR + KB: *"A"*) — FQ9 holds the final vote and the R9 panel on
+    those paths; our reading taken, ⛔ no design change.
 
 ---
 

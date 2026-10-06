@@ -12,10 +12,20 @@
 
 ---
 
-> ## ⏳ AWAITING PANEL RULING
+> ## ✅ PANEL RULED — 2026-10-06 — recorded as `2026-10-06-285`
 >
-> ⛔ **Nothing is recorded here yet.** When the Panel rules, transcribe it into this block **and** into `.decision-log.md` as a new
-> decision id. ⭐ Everything below is then kept **unedited** as the question **as it was put** ([[feedback_supersede_never_reinterpret]]).
+> **Ruled by Dhiraj Rahul + Kalpana Bharti, relayed by BigDev — verbatim:**
+> *"by DR and KB — A"*
+>
+> ⭐ Our reading **taken**. **A:** every approval waits for a completed ground inspection — the State Trustee's vote and the R9 panel's
+> included — on the paths where the District Admin never approved (a refusal overturned on appeal; a claim passed up; a special-case
+> claim sent to the R9 panel first). A refusal still never waits; the claim is ⛔ never refused for it. `-263`'s *"State Trustee step —
+> untouched"* is superseded for those paths. ⭐ Story 6.26a was built for A ⇒ ⛔ no design change.
+>
+> **What this ruling does NOT cover** (full list in `2026-10-06-285`): who completes an inspection when the family refuses a visit; how long
+> a claim may wait; the author's decision to let inspections be recorded on those paths (⛔ not put).
+>
+> ⭐ Everything **below this block is kept UNEDITED** — it is the question as it was put.
 
 ---
 

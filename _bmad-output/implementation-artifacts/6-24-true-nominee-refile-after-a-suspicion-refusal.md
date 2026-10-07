@@ -536,7 +536,7 @@ CLOSABLE state — incl. `denied`, `appeal_stage_1..3` (its anchor → `closed`)
 not moved and is recorded (log + audit); a closed claim's live return / run / R9 / appeal-panel sessions are ended (⛔ no reminder text after
 `closed` — a test); a closed claim ⛔ never stands (RF1) — so the reversed S's own final approval is ⛔ never held by it (a test with a second
 `-239` refusal of the death, closed by S's reversal); two concurrent reversals of one death serialise (⛔ 40P01). **And** a reversal of a refusal
-with ANY OTHER reason closes ⛔ nothing. **And** each claim so closed gets ONE `closed_after_appeal` text (`-291` Q2 B — AC7's machinery
+with ANY OTHER reason closes ⛔ nothing. **And** each claim so closed gets ONE `closed_after_appeal` text (`-291` Q2 B — ⚠ built by 6.24b's AC7b, ⛔ asserted here; AC7's machinery
 and assertions; ⛔ never a second on a re-run). **And** `closed` is terminal, ⛔ not appealable (`initiateAppeal` → the existing not-denied 409),
 ⛔ never a closures row, ⛔ never `denied_no_appeal`; the closed stream unfreezes (S's freeze stands while S is live). **And** the event-count
 pins move 35 → 36 with the reason; the contracts mirror and its lockstep test and the events registry gain `closed`; every state LIST
@@ -662,9 +662,8 @@ applied to BOTH :5432 and :5433, the enum values verified on each (0151 is 6.24b
     `Record<reason, string>`); mapped in all four translators (F9) → 409 `<prefix>.suspicion_appeal_pending`.
   - [ ] 5.2 → Story 6.24b (`sendHandoverOtp`).
   - [ ] 5.3 The verifier console section (RF10) under `underSavepoint`; `VERIFIER_CONSOLE_MAX_READS` bump + ledger line + exact `toBe`.
-  - [ ] 5.4 Specs (`apps/api/tests/integration/claims/`): five final-route 409s (beside `ground-inspection-required-routes.spec.ts`); AC6's
-    four legs incl. the no-op shape + timing (assert the response is byte-identical in shape to the ⛔-nominee branch); the console lines and
-    the failed-read line.
+  - [ ] 5.4 Specs (`apps/api/tests/integration/claims/`): five final-route 409s (beside `ground-inspection-required-routes.spec.ts`); the
+    console lines and the failed-read line (AC6's legs → 6.24b's Task 2.2).
 
 - [ ] **Task 6** → Story 6.24b (the jobs sweep and the texts).
 
@@ -695,7 +694,7 @@ applied to BOTH :5432 and :5433, the enum values verified on each (0151 is 6.24b
 4. **Holding the District Admin** — `step` exists so P1 is ⛔ never held. A test pins it.
 5. **Placing the conjunct LAST** — the late-warning wait stays last (6.23b EA2); the existing late-wait specs pin its 409.
 6. **Using `'closed'` in the migration that adds it** — Drizzle applies all pending files in ONE transaction; `ADD VALUE` can't be used in the
-   same transaction (55P04). 0150 is the `ALTER TYPE` alone; ⛔ no CHECK, index or default anywhere in 0150/0151 names `'closed'`.
+   same transaction (55P04). 0150 is the `ALTER TYPE` alone; ⛔ no CHECK, index or default in 0150 names `'closed'` (nor 6.24b's later migration, unless it runs in a later transaction — it does).
 7. **Writing a 6.19c closures row, `state_trustee_denied` or `denied_no_appeal` for "closed"** — forbidden (Fact 5); it would make the refile
    a refusal and arm the refile guard.
 8. **A lock cycle.** Reversal: refused S → held R. ⛔ Nothing may lock R then S: the gate and the commit only READ S's decision and anchor
@@ -718,9 +717,9 @@ applied to BOTH :5432 and :5433, the enum values verified on each (0151 is 6.24b
 - **Domain unit:** `suspicionAppealWaitState` table; the state-transition table for `claim.closed` (every CLOSABLE from-state; the five
   non-closable refused); NW1 import scan green; event-count pins 36.
 - **Domain live-DB (RLS, `setupLiveDb`):** AC1 matrix, AC3 per stage, AC4, AC5; ordering-sensitive legs in their own committed transactions.
-- **API live-DB:** five final-route 409s; AC6; console section; the convergence handlers' D4 behaviour over HTTP (one member-app same-channel
+- **API live-DB:** five final-route 409s; console section (AC6 → 6.24b); the convergence handlers' D4 behaviour over HTTP (one member-app same-channel
   refile spec — the F1 swallow).
-- **Jobs:** AC7 incl. the locked re-check and fail-closed.
+- **Jobs:** the commit re-check (RF7) only (AC7's texts → 6.24b).
 - **Admin / mobile / contracts / i18n / microcopy:** the new words, maps, lockstep tests.
 - **Gate:** `pnpm ci:local` with `DATABASE_URL` at :5433; migrations on both DBs.
 

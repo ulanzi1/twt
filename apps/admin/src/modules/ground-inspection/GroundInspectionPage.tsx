@@ -469,6 +469,18 @@ function CompleteAction(props: {
         ...(!isCheck && deathTime !== '' ? { deathTime } : {}),
       }),
     onSuccess: () => props.onMutated(),
+    onError: (err) => {
+      // The stale compared-certificate token must ⛔ never be resubmitted as-is (review 2026-10-07) — clear it
+      // so `ready` goes false, AND clear the verdict/date/time the inspector judged against the OLD certificate
+      // (adversarial review 2026-10-07: `certificate.reset()` alone left them resubmittable unchanged against
+      // the new one) — the inspector is forced to "Compare" and re-record both from scratch.
+      if (err instanceof ApiError && (err.code === 'ground_inspection.certificate_changed' || err.code === 'ground_inspection.no_current_certificate')) {
+        certificate.reset();
+        setVerdict(null);
+        setDeathDate('');
+        setDeathTime('');
+      }
+    },
   });
   const ready = props.photoCount >= 1 && originalPhotos >= 1 && certificate.data !== undefined && verdict !== null && deathDate !== '';
   const radioName = `verdict-${props.assignment.groundInspectionId}`;

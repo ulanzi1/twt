@@ -297,6 +297,33 @@ describe.skipIf(!hasDatabase)('ground inspection (PARIWAR_A scope)', () => {
     ).rejects.toBeInstanceOf(GroundInspectionPhotoLimitError);
   });
 
+  it('AC3 photo limit (review 2026-10-07): a capped assignment can still take its first original_certificate photo, but not a second one', async () => {
+    const { client } = getTx();
+    const cid = toClaimId(randomUUID());
+    const mid = toMemberId(randomUUID());
+    await enterAppScope(client, PARIWAR_A);
+    await driveToVerification(client, cid, mid);
+    const a = await scheduleGroundInspection(client, scheduleInput(cid, { idempotencyKey: randomUUID() }));
+    const gid = a.groundInspection.groundInspectionId;
+
+    for (let i = 0; i < MAX_GROUND_INSPECTION_PHOTOS; i += 1) {
+      await addGroundInspectionPhoto(client, { pariwarId: PARIWAR_A, groundInspectionId: gid, actingActorId: INSPECTOR, storageObjectKey: `s${i}`, contentType: 'image/png', byteSize: 10 });
+    }
+    // The 21st, reserved for the mandatory kind, is accepted...
+    const certificatePhoto = await addGroundInspectionPhoto(client, {
+      pariwarId: PARIWAR_A, groundInspectionId: gid, actingActorId: INSPECTOR,
+      storageObjectKey: 'cert-1', contentType: 'image/png', byteSize: 10, photoKind: 'original_certificate',
+    });
+    expect(certificatePhoto.photoKind).toBe('original_certificate');
+    // ...but the reservation is used up: a second original_certificate photo is still over the cap.
+    await expect(
+      addGroundInspectionPhoto(client, {
+        pariwarId: PARIWAR_A, groundInspectionId: gid, actingActorId: INSPECTOR,
+        storageObjectKey: 'cert-2', contentType: 'image/png', byteSize: 10, photoKind: 'original_certificate',
+      }),
+    ).rejects.toBeInstanceOf(GroundInspectionPhotoLimitError);
+  });
+
   it('AC4a refusal: a valid (disposition, reason) pair + mandatory note sets the disposition, emits NO completed event; a mismatched pair is rejected', async () => {
     const { client, tx } = getTx();
     const cid = toClaimId(randomUUID());
@@ -533,6 +560,9 @@ describe.skipIf(!hasDatabase)('ground inspection (PARIWAR_A scope)', () => {
       // The India-time "today" is admitted.
       const done = await completeGroundInspection(s.client, completeInput(s.gid, s.uploadId, { deathDate: date('2026-06-02'), now }));
       expect(done.groundInspection.status).toBe('completed');
+      // Review 2026-10-07: `completedAt` shares the SAME clock the future-date check just validated against —
+      // never the real wall clock when the caller injects one.
+      expect(done.groundInspection.completedAt?.toISOString()).toBe(now.toISOString());
     });
 
     it('AC5 — the dates are stored ONLY as ciphertext + index (⛔ no plaintext date in any column); the time is optional; the photo counts are returned', async () => {

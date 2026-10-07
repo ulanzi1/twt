@@ -291,7 +291,7 @@ describe('<GroundInspectionPage>', () => {
       });
     });
 
-    it('a 409 `certificate_changed` is said in the page\'s own words (open the new one and compare again)', async () => {
+    it('a 409 `certificate_changed` is said in the page\'s own words (open the new one and compare again); the stale token is ⛔ never resubmittable (review 2026-10-07)', async () => {
       vi.mocked(api.listGroundInspection).mockResolvedValue({ assignments: [makeAssignment({ photos: [originalPhoto] })] });
       vi.mocked(api.getGroundInspectionCertificate).mockResolvedValue(CERT);
       vi.mocked(api.completeGroundInspection).mockRejectedValue(new api.ApiError(409, 'ground_inspection.certificate_changed', 'server words'));
@@ -301,6 +301,28 @@ describe('<GroundInspectionPage>', () => {
       const user = await openAndFill({ verdict: 'It matches', date: '2026-06-01' });
       await user.click(screen.getByRole('button', { name: 'Complete inspection' }));
       expect(await screen.findByText(/replaced the certificate since you opened it/)).toBeInTheDocument();
+      // The stale token is cleared — Complete is disabled again until "Compare" is re-run.
+      expect(screen.getByRole('button', { name: 'Complete inspection' })).toBeDisabled();
+      expect(screen.getByText(/Open the uploaded certificate before you record/)).toBeInTheDocument();
+      // Adversarial review 2026-10-07: the verdict/date judged against the OLD certificate must ⛔ also clear —
+      // never resubmittable unchanged against the new one once "Compare" is re-run.
+      expect(screen.getByLabelText('It matches')).not.toBeChecked();
+      expect(screen.getByLabelText(/Date of death/)).toHaveValue('');
+    });
+
+    it('adversarial review 2026-10-07: a 409 `no_current_certificate` ALSO resets the stale token + verdict/date (the second of the two reset-triggering codes)', async () => {
+      vi.mocked(api.listGroundInspection).mockResolvedValue({ assignments: [makeAssignment({ photos: [originalPhoto] })] });
+      vi.mocked(api.getGroundInspectionCertificate).mockResolvedValue(CERT);
+      vi.mocked(api.completeGroundInspection).mockRejectedValue(new api.ApiError(409, 'ground_inspection.no_current_certificate', 'server words'));
+      renderWithClient(<GroundInspectionPage pariwarId={PARIWAR} />);
+      await loadScope();
+      await screen.findByText('inspector-1');
+      const user = await openAndFill({ verdict: 'It does not match', date: '2026-06-01' });
+      await user.click(screen.getByRole('button', { name: 'Complete inspection' }));
+      expect(await screen.findByText(/no uploaded death certificate to compare/)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Complete inspection' })).toBeDisabled();
+      expect(screen.getByLabelText('It does not match')).not.toBeChecked();
+      expect(screen.getByLabelText(/Date of death/)).toHaveValue('');
     });
 
     it('the photo upload sends the chosen KIND; a certificate check defaults to the original', async () => {

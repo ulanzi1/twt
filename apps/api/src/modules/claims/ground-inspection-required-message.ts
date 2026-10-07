@@ -6,8 +6,16 @@
 
 import type { claim } from '@twt/domain';
 
+// Exhaustive (review 2026-10-07) — a new `GroundInspectionWaitReason` must say why, like its sibling
+// `NOT_REVISABLE_MESSAGES` (`claims.verification-decision.handlers.ts`): a missing case is a compile error here,
+// never a silently wrong message on all five approval routes.
+const GROUND_INSPECTION_REQUIRED_MESSAGES: Record<claim.GroundInspectionWaitReason, string> = {
+  no_completed_inspection:
+    'This claim is waiting for its ground inspection — it can be approved once an inspector has completed the visit',
+  certificate_check_required:
+    'This claim is waiting for an inspector to see the original of its current death certificate — it can be approved once that check is complete',
+};
+
 export function groundInspectionRequiredMessage(reason: claim.GroundInspectionWaitReason): string {
-  return reason === 'no_completed_inspection'
-    ? 'This claim is waiting for its ground inspection — it can be approved once an inspector has completed the visit'
-    : 'This claim is waiting for an inspector to see the original of its current death certificate — it can be approved once that check is complete';
+  return GROUND_INSPECTION_REQUIRED_MESSAGES[reason];
 }

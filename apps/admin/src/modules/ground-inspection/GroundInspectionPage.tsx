@@ -8,8 +8,8 @@
 // operator affordances + the read that surfaces the signal (present, refused, unavailable, absent).
 
 import type { ReactElement } from 'react';
-import { useRef, useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useRef, useState } from 'react';
+import { type UseMutationResult, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { ApiError } from '../../api/client.js';
 import * as api from '../../api/client.js';
@@ -298,6 +298,15 @@ function ScheduleForm(props: {
 
 // ── Assignment card + inline actions ──────────────────────────────────────────
 
+/** The inspector's "Compare" read — ONE per assignment card, shared by the photo upload (an original's photo is
+ *  recorded against the certificate compared, `2026-10-07-287` J1) and the completion (which echoes the same token). */
+type CertificateCompare = UseMutationResult<Awaited<ReturnType<typeof api.getGroundInspectionCertificate>>, Error, void>;
+
+/** A 409 that means the compared certificate is no longer the claim's current one — the Compare must be re-run. */
+function isStaleCompare(err: unknown): boolean {
+  return err instanceof ApiError && (err.code === 'ground_inspection.certificate_changed' || err.code === 'ground_inspection.no_current_certificate');
+}
+
 function AssignmentCard(props: {
   pariwarId: string;
   claimCaseId: string;
@@ -306,6 +315,9 @@ function AssignmentCard(props: {
 }): ReactElement {
   const { assignment: a } = props;
   const isActive = a.status === 'scheduled';
+  const certificate: CertificateCompare = useMutation({
+    mutationFn: () => api.getGroundInspectionCertificate(props.pariwarId, props.claimCaseId, a.groundInspectionId),
+  });
 
   return (
     <li className="flex flex-col gap-2 rounded border p-4">
@@ -355,8 +367,8 @@ function AssignmentCard(props: {
       {a.status === 'completed' && a.originalCertificateVerdict !== null && <InspectorRecord assignment={a} />}
       {isActive && (
         <div className="flex flex-wrap items-start gap-4">
-          <PhotoUpload {...props} />
-          <CompleteAction {...props} photoCount={a.photos.length} />
+          <PhotoUpload {...props} certificate={certificate} />
+          <CompleteAction {...props} certificate={certificate} photoCount={a.photos.length} />
           <RefuseAction {...props} />
         </div>
       )}
@@ -392,6 +404,7 @@ function PhotoUpload(props: {
   pariwarId: string;
   claimCaseId: string;
   assignment: api.GroundInspectionAssignmentT;
+  certificate: CertificateCompare;
   onMutated: () => void;
 }): ReactElement {
   const [file, setFile] = useState<File | null>(null);
@@ -409,13 +422,20 @@ function PhotoUpload(props: {
         file!,
         caption || undefined,
         photoKind,
+        photoKind === 'original_certificate' ? props.certificate.data?.certificateToken : undefined,
       ),
     onSuccess: () => {
       setFile(null);
       setCaption('');
       props.onMutated();
     },
+    // The compared certificate was replaced (or removed) since "Compare" — re-run it (the photo is ⛔ not recorded).
+    onError: (err) => {
+      if (isStaleCompare(err)) props.certificate.reset();
+    },
   });
+  // ⭐ `2026-10-07-287` J1 — a photo of the original is recorded against the certificate the inspector COMPARED.
+  const needsCompare = photoKind === 'original_certificate' && props.certificate.data === undefined;
   return (
     <div className="flex flex-col gap-1">
       <label className="text-sm">
@@ -431,9 +451,10 @@ function PhotoUpload(props: {
       </label>
       <input type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => setFile(e.target.files?.[0] ?? null)} aria-label={t('gi.action.uploadPhoto')} />
       <input className="rounded border px-2 py-1 text-sm" placeholder={t('gi.action.caption')} value={caption} onChange={(e) => setCaption(e.target.value)} />
-      <button className="rounded bg-gray-700 px-2 py-1 text-sm text-white disabled:opacity-50" type="button" disabled={!file || mutation.isPending} onClick={() => mutation.mutate()}>
+      <button className="rounded bg-gray-700 px-2 py-1 text-sm text-white disabled:opacity-50" type="button" disabled={!file || needsCompare || mutation.isPending} onClick={() => mutation.mutate()}>
         {mutation.isPending ? t('gi.action.uploadPending') : t('gi.action.uploadPhoto')}
       </button>
+      {needsCompare && <p className="text-xs text-amber-700">{t('gi.photo.compareFirst')}</p>}
       {mutation.isError && <p role="alert" className="text-xs text-red-600">{errorText(mutation.error)}</p>}
     </div>
   );
@@ -449,6 +470,7 @@ function CompleteAction(props: {
   pariwarId: string;
   claimCaseId: string;
   assignment: api.GroundInspectionAssignmentT;
+  certificate: CertificateCompare;
   photoCount: number;
   onMutated: () => void;
 }): ReactElement {
@@ -464,17 +486,19 @@ function CompleteAction(props: {
   };
   // The token the inspector's verdict / date were recorded against (second code review 2026-10-07).
   const recordedAgainst = useRef<string | undefined>(undefined);
-  const certificate = useMutation({
-    mutationFn: () => api.getGroundInspectionCertificate(props.pariwarId, props.claimCaseId, props.assignment.groundInspectionId),
-    // A second "Compare" (the only way to re-open an expired link) can return a DIFFERENT certificate — the family
-    // replaced it. What was recorded was judged against the OLD one ⇒ cleared, ⛔ never submitted under the new token.
-    onSuccess: (data) => {
-      if (recordedAgainst.current !== undefined && recordedAgainst.current.toLowerCase() !== data.certificateToken.toLowerCase()) {
-        clearRecord();
-      }
-      recordedAgainst.current = data.certificateToken;
-    },
-  });
+  const certificate = props.certificate;
+  // A second "Compare" (the only way to re-open an expired link) can return a DIFFERENT certificate — the family
+  // replaced it. What was recorded was judged against the OLD one ⇒ cleared, ⛔ never submitted under the new token.
+  const shownToken = certificate.data?.certificateToken;
+  useEffect(() => {
+    if (shownToken === undefined) return;
+    if (recordedAgainst.current !== undefined && recordedAgainst.current.toLowerCase() !== shownToken.toLowerCase()) {
+      setVerdict(null);
+      setDeathDate('');
+      setDeathTime('');
+    }
+    recordedAgainst.current = shownToken;
+  }, [shownToken]);
   // `2026-10-07-286` H1 — only a photo of the COMPARED certificate's original counts (the server re-checks it).
   const comparedToken = certificate.data?.certificateToken.toLowerCase();
   const originalPhotos = originals.length;
@@ -494,7 +518,7 @@ function CompleteAction(props: {
       // so `ready` goes false, AND clear the verdict/date/time the inspector judged against the OLD certificate
       // (adversarial review 2026-10-07: `certificate.reset()` alone left them resubmittable unchanged against
       // the new one) — the inspector is forced to "Compare" and re-record both from scratch.
-      if (err instanceof ApiError && (err.code === 'ground_inspection.certificate_changed' || err.code === 'ground_inspection.no_current_certificate')) {
+      if (isStaleCompare(err)) {
         certificate.reset();
         recordedAgainst.current = undefined;
         clearRecord();
@@ -548,8 +572,8 @@ function CompleteAction(props: {
       </button>
       {props.photoCount < 1 && <p className="text-xs text-amber-700">{t('gi.action.completeNeedsPhoto')}</p>}
       {props.photoCount >= 1 && originalPhotos < 1 && <p className="text-xs text-amber-700">{t('gi.action.completeNeedsOriginalPhoto')}</p>}
-      {originalPhotos >= 1 && originalPhotosForCompared < 1 && (
-        <p className="text-xs text-amber-700">{t('gi.action.completeNeedsCurrentOriginalPhoto')}</p>
+      {certificate.data !== undefined && originalPhotos >= 1 && originalPhotosForCompared < 1 && (
+        <p className="text-xs text-amber-700">{t('gi.action.completeNeedsComparedOriginalPhoto')}</p>
       )}
       {mutation.isError && <p role="alert" className="text-xs text-red-600">{errorText(mutation.error)}</p>}
     </div>

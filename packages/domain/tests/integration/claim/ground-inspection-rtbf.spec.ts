@@ -47,6 +47,7 @@ describe.skipIf(!hasDatabase)('Story 6.26a — RTBF over the inspection\'s date 
     await addGroundInspectionPhoto(client, {
       pariwarId: PARIWAR_A, groundInspectionId: done, actingActorId: INSPECTOR,
       storageObjectKey: `k-${randomUUID()}`, contentType: 'image/jpeg', byteSize: 1, photoKind: 'original_certificate',
+      comparedCertificateUploadId: uploadId,
     });
     await completeGroundInspection(client, {
       pariwarId: PARIWAR_A, groundInspectionId: done, actingActorId: INSPECTOR, originalCertificateVerdict: 'does_not_match',

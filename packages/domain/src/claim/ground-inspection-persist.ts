@@ -768,6 +768,10 @@ export interface AddGroundInspectionPhotoInput {
   captionCiphertext?: string | null;
   /** Story 6.26a (GI4) — what the photo shows: the site (default) or the ORIGINAL death certificate. */
   photoKind?: GroundInspectionPhotoKind;
+  /** ⭐ `2026-10-07-287` J1 — REQUIRED for an `original_certificate` photo: the certificate token the inspector was
+   *  SHOWN (the Compare read's `certificateToken`). It must still be the claim's CURRENT upload; the photo is stamped
+   *  with it. Ignored for a `site` photo. */
+  comparedCertificateUploadId?: string | null;
 }
 
 /**
@@ -777,7 +781,10 @@ export interface AddGroundInspectionPhotoInput {
  * claim's CURRENT certificate: completion requires >=1 of that kind stamped with the compared upload (GI4 as
  * amended by `2026-10-07-286` H1), so the cap must never make it unreachable (H2) — an inspector who filled
  * the cap with `site` photos, or whose family replaced the certificate, can still add the mandatory one.
- * ⭐ An `original_certificate` photo is STAMPED with the claim's current upload (H1); a `site` photo ⛔ never. The
+ * ⭐ An `original_certificate` photo is STAMPED with the certificate the inspector COMPARED (`2026-10-07-287` J1,
+ * superseding `-286` H1's "current at upload"): the caller sends that token, and it must still be the claim's CURRENT
+ * upload — ⛔ none sent ⇒ `original_certificate_required` (`compared_certificate`), ⛔ no current upload ⇒
+ * `no_current_certificate`, another one current ⇒ `certificate_changed`. A `site` photo carries ⛔ no stamp. The
  * caller already `put` the bytes; if THIS insert fails the route best-effort-deletes the object
  * (orphan-safe — the route owns compensation).
  */
@@ -793,16 +800,28 @@ export async function addGroundInspectionPhoto(
   authorizeInspector(assignment, input.actingActorId, input.override);
 
   const photoKind = input.photoKind ?? 'site';
-  // ⭐ `2026-10-07-286` H1 — an original's photo is STAMPED with the certificate current NOW; completion counts only
-  // the ones stamped with the compared upload. Read without the claim lock: a stamp that lags a concurrent
-  // replacement makes the claim WAIT for another photo, ⛔ never pass (fail-safe).
-  const stamp =
-    photoKind === 'original_certificate'
-      ? await readCurrentDeathCertificateUploadId(db, input.pariwarId, assignment.claimCaseId)
-      : null;
+  // ⭐ `2026-10-07-287` J1 — an original's photo is STAMPED with the certificate the inspector COMPARED, and only while
+  // that is still the CURRENT upload; completion counts only the ones stamped with its compared upload. Read without
+  // the claim lock: a replacement committing after this read leaves the stamp behind the current upload, which makes
+  // the claim WAIT for another photo, ⛔ never pass (fail-safe).
+  let stamp: DeathCertificateUploadId | null = null;
+  if (photoKind === 'original_certificate') {
+    const compared = input.comparedCertificateUploadId;
+    if (compared == null || compared === '') {
+      throw new GroundInspectionOriginalCertificateRequiredError(input.groundInspectionId, 'compared_certificate');
+    }
+    const current = await readCurrentDeathCertificateUploadId(db, input.pariwarId, assignment.claimCaseId);
+    if (current === null) throw new GroundInspectionNoCurrentCertificateError(assignment.claimCaseId);
+    // Compared lower-cased ([[project_branded_ids_lowercase]] — the client may echo an upper-case uuid).
+    if (compared.toLowerCase() !== current.toLowerCase()) {
+      throw new GroundInspectionCertificateChangedError(input.groundInspectionId, compared);
+    }
+    stamp = current;
+  }
   const existing = await countPhotos(db, input.pariwarId, input.groundInspectionId);
   if (existing >= MAX_GROUND_INSPECTION_PHOTOS) {
-    // `-286` H2 — the reserved slot: the original's photo of the CURRENT certificate, while the assignment holds none.
+    // `-286` H2 — the reserved slot: the original's photo of the compared (= current) certificate, while the assignment
+    // holds none stamped with it.
     const reserved =
       stamp !== null && (await countOriginalPhotosFor(db, input.pariwarId, input.groundInspectionId, stamp)) === 0;
     if (!reserved) {
@@ -876,6 +895,9 @@ export interface CompleteGroundInspectionResult {
   photoCount: number;
   /** Story 6.26a (GI14) — how many of `photoCount` are `original_certificate` photos (non-PII audit count). */
   originalCertificatePhotoCount: number;
+  /** `2026-10-07-286` H1 / `-287` J1 — how many of those are stamped with the COMPARED upload (the ones GI4 (i) counts;
+   *  the rest were taken for a certificate since replaced). Non-PII audit count. */
+  originalCertificatePhotoForComparedCount: number;
 }
 
 /**
@@ -932,7 +954,13 @@ export async function completeGroundInspection(
   }
   // ⭐ `2026-10-07-286` H1 — the photo must be of THIS certificate's original: a photo taken for a certificate the
   // family has since replaced ⛔ never counts (`-281` Q2 A — "for the certificate the claim now relies on").
-  if ((await countOriginalPhotosFor(db, input.pariwarId, input.groundInspectionId, snapshot.currentUploadId)) < 1) {
+  const originalCertificatePhotoForComparedCount = await countOriginalPhotosFor(
+    db,
+    input.pariwarId,
+    input.groundInspectionId,
+    snapshot.currentUploadId,
+  );
+  if (originalCertificatePhotoForComparedCount < 1) {
     throw new GroundInspectionOriginalCertificateRequiredError(input.groundInspectionId, 'photo');
   }
 
@@ -1008,7 +1036,7 @@ export async function completeGroundInspection(
     ...(input.auditId !== undefined ? { auditId: input.auditId } : {}),
   });
 
-  return { groundInspection: completed, photoCount, originalCertificatePhotoCount };
+  return { groundInspection: completed, photoCount, originalCertificatePhotoCount, originalCertificatePhotoForComparedCount };
 }
 
 export interface RecordGroundInspectionRefusalInput {

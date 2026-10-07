@@ -522,6 +522,15 @@ export function createGroundInspectionHandlers(deps: AppDeps) {
         });
       }
       const photoKind = (kindRaw ?? 'site') as schema.GroundInspectionPhotoKind;
+      // ⭐ `2026-10-07-287` J1 — an original's photo carries the certificate token the inspector was SHOWN (the Compare
+      // read's `certificateToken`); the writer stamps with it only while it is still current. Read position-independently
+      // like the kind; a duplicate part is REJECTED (it decides which certificate the photo is evidence for).
+      const tokenField = (data.fields as Record<string, MultipartField> | undefined)?.comparedCertificateToken;
+      const comparedCertificateToken =
+        tokenField !== undefined && !Array.isArray(tokenField) && typeof tokenField.value === 'string' ? tokenField.value : undefined;
+      if (tokenField !== undefined && comparedCertificateToken === undefined) {
+        throw new BadRequestError('Malformed compared-certificate token', 'ground_inspection.invalid_compared_certificate');
+      }
 
       const captionCiphertext = await encryptOptionalGroundInspectionField(captionPlain, ctx.pariwarId, deps.encryption);
 
@@ -545,6 +554,7 @@ export function createGroundInspectionHandlers(deps: AppDeps) {
           byteSize: buffer.byteLength,
           captionCiphertext,
           photoKind,
+          comparedCertificateUploadId: comparedCertificateToken ?? null,
         });
         ok = true;
       } catch (err) {
@@ -577,6 +587,8 @@ export function createGroundInspectionHandlers(deps: AppDeps) {
           byte_size: buffer.byteLength,
           content_type: data.mimetype,
           photo_kind: photoKind,
+          // `-287` J1 — the certificate an original's photo is evidence for (an id, ⛔ never PII; null on a site photo).
+          certificate_token: photoRow!.certificateUploadId ?? null,
           ...(override ? { override_actor_id: override.byActorId } : {}),
         },
       });
@@ -655,6 +667,8 @@ export function createGroundInspectionHandlers(deps: AppDeps) {
           photo_kind_counts: {
             site: result!.photoCount - result!.originalCertificatePhotoCount,
             original_certificate: result!.originalCertificatePhotoCount,
+            // `-286` H1 / `-287` J1 — of those, the ones of the COMPARED certificate (the ones GI4 counts).
+            original_certificate_for_compared: result!.originalCertificatePhotoForComparedCount,
           },
           original_certificate_verdict: result!.groundInspection.originalCertificateVerdict,
           death_date_source: result!.groundInspection.deathDateSource,
@@ -693,11 +707,12 @@ export function createGroundInspectionHandlers(deps: AppDeps) {
         });
       }
       const claimRow = await claim.getClaimCase(tx, pid, assignment.claimCaseId);
-      if (!claimRow || !(await claim.isClaimInGroundInspectionWindow(tx, pid, assignment.claimCaseId, claimRow.currentState))) {
+      if (!claimRow) throw new NotFoundError('Claim not found', 'claim.not_found');
+      if (!(await claim.isClaimInGroundInspectionWindow(tx, pid, assignment.claimCaseId, claimRow.currentState))) {
         throw new ConflictError(
           'Ground inspection is not allowed for the claim in its current state',
           'ground_inspection.not_allowed',
-          { state: claimRow?.currentState ?? null },
+          { state: claimRow.currentState },
         );
       }
 

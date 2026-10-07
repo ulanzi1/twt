@@ -38,7 +38,7 @@ import {
   rescheduleGroundInspection,
   scheduleGroundInspection,
 } from '../../../src/claim/index.js';
-import { seedDeathCertificate } from '../_helpers.js';
+import { currentUploadIdOf, seedDeathCertificate } from '../_helpers.js';
 
 const DATABASE_URL = process.env['DATABASE_URL'];
 const hasDatabase = Boolean(DATABASE_URL);
@@ -253,6 +253,7 @@ describe.skipIf(!hasDatabase)('ground inspection — two-connection concurrency 
           contentType: 'image/jpeg',
           byteSize: 100,
           photoKind: 'original_certificate',
+          comparedCertificateUploadId: uploadId,
         }),
       );
 
@@ -341,16 +342,60 @@ describe.skipIf(!hasDatabase)('ground inspection — two-connection concurrency 
     TIMEOUT,
   );
 
+  it(
+    '⭐ `-286` H2 (checklist family 2) — two concurrent original\'s photos for the RESERVED slot at the cap → exactly ONE admitted (MAX + 1), the other refused at the limit',
+    async () => {
+      const cid = await seedClaimInVerification();
+      const { uploadId } = await onOwnTx((c) => seedDeathCertificate(c, { pariwarId: PARIWAR_A, claimCaseId: cid }));
+      const key = `reserved-slot:${randomUUID()}`;
+      const gid = (await onOwnTx((c) => scheduleGroundInspection(c, scheduleInput(cid, key)))).groundInspection.groundInspectionId;
+      // Fill the cap with SITE photos — the reserved slot is all that is left for the original's photo.
+      for (let i = 0; i < MAX_GROUND_INSPECTION_PHOTOS; i += 1) {
+        await onOwnTx((c) =>
+          addGroundInspectionPhoto(c, {
+            pariwarId: PARIWAR_A, groundInspectionId: gid, actingActorId: INSPECTOR,
+            storageObjectKey: `k-${i}-${randomUUID()}`, contentType: 'image/png', byteSize: 10,
+          }),
+        );
+      }
+      const contend = () =>
+        onOwnTx((c) =>
+          addGroundInspectionPhoto(c, {
+            pariwarId: PARIWAR_A, groundInspectionId: gid, actingActorId: INSPECTOR,
+            storageObjectKey: `k-orig-${randomUUID()}`, contentType: 'image/png', byteSize: 10,
+            photoKind: 'original_certificate', comparedCertificateUploadId: uploadId,
+          }),
+        );
+      const outcomes = await Promise.allSettled([contend(), contend()]);
+      expect(outcomes.filter((r) => r.status === 'fulfilled')).toHaveLength(1);
+      const rejected = outcomes.flatMap((r) => (r.status === 'rejected' ? [r.reason] : []));
+      expect(rejected).toHaveLength(1);
+      expect(rejected[0]).toBeInstanceOf(GroundInspectionPhotoLimitError);
+      // The reservation is ONE photo of the compared certificate's original — never two.
+      expect(
+        await countRows(
+          `SELECT count(*)::text AS n FROM claim_ground_inspection_photos WHERE ground_inspection_id = $1 AND photo_kind = 'original_certificate' AND certificate_upload_id = $2`,
+          [gid, uploadId],
+        ),
+      ).toBe(1);
+      expect(await countRows('SELECT count(*)::text AS n FROM claim_ground_inspection_photos WHERE ground_inspection_id = $1', [gid])).toBe(
+        MAX_GROUND_INSPECTION_PHOTOS + 1,
+      );
+    },
+    TIMEOUT,
+  );
+
   // ── Story 6.26a (Task 2.1 / 2.3; Trap 1) — the lock order assignment → claim, and the window on the LOCKED row ──
 
   /** Schedule + photograph the original on `cid` (committed); returns the assignment id. */
   async function openAssignment(cid: ClaimId, keyPrefix: string): Promise<string> {
     const key = `${keyPrefix}:${randomUUID()}`;
     const gid = (await onOwnTx((c) => scheduleGroundInspection(c, scheduleInput(cid, key)))).groundInspection.groundInspectionId;
-    await onOwnTx((c) =>
+    await onOwnTx(async (c) =>
       addGroundInspectionPhoto(c, {
         pariwarId: PARIWAR_A, groundInspectionId: gid, actingActorId: INSPECTOR,
         storageObjectKey: `k-${randomUUID()}`, contentType: 'image/jpeg', byteSize: 100, photoKind: 'original_certificate',
+        comparedCertificateUploadId: await currentUploadIdOf(c, PARIWAR_A, cid),
       }),
     );
     return gid;

@@ -88,8 +88,12 @@ const EN: Record<string, string> = {
   'gi.date.printed': 'Date of death printed on the original (required)',
   'gi.time.family': 'Time of death the family gives (24h, leave blank if not known)',
   'gi.action.completeNeedsOriginalPhoto': 'Upload at least one photo of the original death certificate before completing.',
-  'gi.action.completeNeedsCurrentOriginalPhoto':
-    'The photo of the original was taken for an earlier certificate. Photograph the original of the certificate the claim now relies on.',
+  // Narrow review 2026-10-07 — worded neutrally: the photo may be of an EARLIER certificate, or the Compare may be the
+  // stale one (the family replaced the certificate since) — either way the two must meet.
+  'gi.action.completeNeedsComparedOriginalPhoto':
+    'No photo of the original was taken against the certificate you compared. Compare again, then photograph the original the family now holds.',
+  'gi.photo.compareFirst':
+    'Open "Compare with the certificate we hold" first — a photo of the original is recorded against the certificate you compared.',
   'gi.refuse.originalNotProduced': 'The family did not produce the original certificate',
   // The new 409s, in words (Story 6.26a).
   'gi.error.original_certificate_required': 'Record the original certificate first: a photo of it, whether it matches, and the copy you compared it with.',

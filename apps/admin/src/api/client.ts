@@ -1195,9 +1195,11 @@ export const GroundInspectionPhoto = z.object({
   signedUrl: z.string(),
   // Story 6.26a (GI4) — `site` | `original_certificate` (shown apart).
   photoKind: z.enum(['site', 'original_certificate']),
-  // `2026-10-07-286` H1 — the certificate an original's photo was taken for (NULL on a site photo): only a photo of
-  // the COMPARED certificate's original lets the inspection complete.
-  certificateToken: z.string().nullable(),
+  // `2026-10-07-286` H1 / `-287` J1 — the certificate an original's photo was recorded against (NULL on a site photo):
+  // only a photo of the COMPARED certificate's original lets the inspection complete. Optional (narrow review
+  // 2026-10-07): an older API that does not send it must ⛔ not break the page — a missing value never matches, so
+  // Complete stays off and the server decides.
+  certificateToken: z.string().nullable().optional(),
 });
 export const GroundInspectionAssignment = z.object({
   groundInspectionId: z.string(),
@@ -1339,8 +1341,9 @@ export function refuseGroundInspection(
   );
 }
 
-/** POST one photo (multipart). The caption (optional PII) and the photo kind (Story 6.26a GI4 — `site` default |
- *  `original_certificate`) ride fields before the file part. */
+/** POST one photo (multipart). The caption (optional PII), the photo kind (Story 6.26a GI4 — `site` default |
+ *  `original_certificate`) and, for an original's photo, the compared certificate's token (`2026-10-07-287` J1) ride
+ *  fields before the file part. */
 export async function uploadGroundInspectionPhoto(
   pariwarId: string,
   claimCaseId: string,
@@ -1348,10 +1351,12 @@ export async function uploadGroundInspectionPhoto(
   file: File,
   caption?: string,
   photoKind: 'site' | 'original_certificate' = 'site',
+  comparedCertificateToken?: string,
 ): Promise<{ photoId: string }> {
   const form = new FormData();
   if (caption) form.append('caption', caption);
   form.append('photoKind', photoKind);
+  if (comparedCertificateToken !== undefined) form.append('comparedCertificateToken', comparedCertificateToken);
   form.append('file', file);
   const res = await fetch(
     `${giBase(pariwarId, claimCaseId)}/${encodeURIComponent(groundInspectionId)}/photos`,

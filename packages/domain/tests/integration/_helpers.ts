@@ -1099,6 +1099,8 @@ export async function seedGroundInspection(
     contentType: 'image/jpeg',
     byteSize: 1024,
     photoKind: 'original_certificate',
+    // `2026-10-07-287` J1 — the original's photo is recorded against the certificate compared.
+    comparedCertificateUploadId: facts.currentUploadId,
   });
   await completeGroundInspection(client, {
     pariwarId: pid,
@@ -1115,6 +1117,13 @@ export async function seedGroundInspection(
     now: fixtureReviewNow(date),
   });
   return gid as string;
+}
+
+/** ⭐ `2026-10-07-287` J1 — the claim's CURRENT death-certificate upload id (the token an inspector's "Compare" shows),
+ *  for a test that adds an `original_certificate` photo through the real writer. `null` when there is none. */
+export async function currentUploadIdOf(client: pg.PoolClient, pariwarId: string, claimCaseId: string): Promise<string | null> {
+  const snapshot = await readDeathCertificateSnapshot(bindScopedDb(client), toPariwarId(pariwarId), toClaimId(claimCaseId));
+  return snapshot.currentUploadId;
 }
 
 /** Tomorrow in IST — a certificate date against which every version dated up to now STANDS. */

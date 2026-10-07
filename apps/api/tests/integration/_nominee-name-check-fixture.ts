@@ -177,6 +177,8 @@ export async function ensureGroundInspection(
     contentType: 'image/jpeg',
     byteSize: 1024,
     photoKind: 'original_certificate',
+    // `2026-10-07-287` J1 — the original's photo is recorded against the certificate compared.
+    comparedCertificateUploadId: facts.currentUploadId,
   });
   await claim.completeGroundInspection(scopeTx.client, {
     pariwarId: pid,

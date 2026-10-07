@@ -3177,6 +3177,29 @@ match the current copy; the register does ⛔ not match) — approving while one
 that appears after the District Admin approved waits for their reason and is listed in their correction queue; "could ⛔ not be checked" is
 ⛔ never a warning. The system still refuses ⛔ nothing.
 
+### Story 6.24: The True Nominee's Refile After a Suspicion Refusal — Kept Apart, Waiting at Final Approval for the Appeal, Closed if the Appeal Is Allowed; the Filing Code and a Text to the Nominee in Place at the Death `[SURFACE]`
+
+> ⚠ **Minted by Trustee ruling, ⛔ not by the original epic plan** — [`-261`](../../.decision-log.md#decision-2026-09-28-261) D4 B and
+> [`-262`](../../.decision-log.md#decision-2026-09-28-262) FQ5 A / FQ6 B / FQ7 B (building on [`-239`](../../.decision-log.md#decision-2026-09-21-239)
+> (b), (c)), with [`-291`](../../.decision-log.md#decision-2026-10-07-291) Q1 A (a 90-day appeal limit for this refusal only) and Q2 B (the
+> closure text); the author's decisions are [`-292`](../../.decision-log.md#decision-2026-10-07-292) (RF1–RF16). Row
+> `6-24-true-nominee-refile-after-a-suspicion-refusal`. Full ACs: `_bmad-output/implementation-artifacts/6-24-true-nominee-refile-after-a-suspicion-refusal.md`.
+> ⚠ **Go-live coupling:** the two texts (FQ7's, `-291` Q2's) wait on counsel (a go-live roster row); ⛔ never a merge fence. A
+> non-blocking Panel question (how the refused person is told; a confirm on a mis-coded refusal) is open in
+> `trustee-panel-routing-note-2026-10-07-6-24-telling-the-refused-person.md`.
+
+As the true nominee of a member whose claim was refused because the nominee was changed after the death, I want my own claim kept apart
+from the refused one, checked in full, and approved once the refused person's appeal is decided or its 90 days have passed; the app's
+filing code sent to me rather than to the person who changed the nominee; and a text telling me to call the helpline — so that the Trust
+never pays the wrong person or pays twice for one death, while ⛔ nobody is refused, accused or kept from filing by another person's act.
+
+**Acceptance Criteria (in brief):** while a refusal on suspicion stands, a new claim for that death is ⛔ never merged into it; its final
+approval (⛔ never the District Admin's) waits while the refusal can still be appealed (90 days) or its appeal is open; an allowed appeal
+closes it — a `closed` claim, ⛔ never a refusal, ⛔ never appealable — and the nominee is texted once; the cycle commit re-checks; the
+handover code goes to the nominee in place at the death, else the family is sent to the helpline; that nominee is texted once on the
+refusal; a refusal on suspicion is appealable for 90 days, the helpline sees the date and can file the appeal for the family; the reason
+can ⛔ not be moved off "changed after the death" while a later claim of the death lives. The system still refuses ⛔ nothing.
+
 ---
 
 ## Epic 7: Pool Engine & Cycle Spawn

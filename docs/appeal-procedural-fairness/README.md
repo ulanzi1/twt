@@ -29,6 +29,9 @@ counsel-facing narrative + the go-live gate.
 - **No claimant-facing deadline (D-E).** The claimant may initiate an appeal on a `denied` claim **at any
   time** — the PRD's "no formal time limit … grief-aware" rule. There is NO `AppealWindowExpiredError` and NO
   elapsed-time gate on the right to initiate or continue.
+  ⚠ **Narrowed 2026-10-07 (`2026-10-07-291` Q1 A, Trustee-ratified) for ONE reason:** a refusal on suspicion of a
+  post-death nominee change (`post_death_nominee_change`) can be appealed within **90 days** of the refusal only —
+  then 409 `appeal.suspicion_refusal_time_limit_passed`. Every other refusal: unchanged. (Story 6.24, RF14.)
 - **Exactly one appeal journey per claim, ever (D-F).** Enforced by an unconditional `UNIQUE (claim_case_id)`
   on `claim_appeals`. After a Stage-3 uphold the claim is NOT re-appealable.
 - **Trust-side per-stage SLA (D-H).** Each stage carries a configurable, Pariwar-scoped SLA duration,

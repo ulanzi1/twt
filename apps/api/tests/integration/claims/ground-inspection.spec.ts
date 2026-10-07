@@ -880,6 +880,40 @@ describe.skipIf(!hasDatabase)('Ground-inspection admin surface — E2E (:5433)',
     expect(errCode(res).code).toBe('ground_inspection.no_current_certificate');
   });
 
+  it('⭐ GI4 (second code review 2026-10-07) — the certificate read is confined to an assignment the inspector HOLDS: 200 to an override holder; 409 `not_active` once completed; 409 `not_allowed` outside the window; 404 from another Pariwar', async () => {
+    // AC4's "(or an override holder)": a supervisor who reaches the route (the conduct key — district admin) and is
+    // ⛔ not the inspector, but holds `claim.override_ground_inspection` (pariwar admin).
+    const w = await inspectorWorld();
+    const supervisor = await authenticate();
+    await grant(supervisor.userId, w.pariwarId, 'district_admin', 'district', DISTRICT);
+    await grant(supervisor.userId, w.pariwarId, 'pariwar_admin', 'pariwar', w.pariwarId);
+    const certUrl = `${base(w.pariwarId, w.claimCaseId)}/${w.gid}/certificate`;
+    const viaOverride = await supervisor.client.inject({ method: 'GET', url: certUrl });
+    expect(viaOverride.statusCode, viaOverride.body).toBe(200);
+    expect(viaOverride.json()).toMatchObject({ certificateToken: w.uploadId });
+
+    // ⭐ Checklist family 3 — the same actor, granted in ANOTHER Pariwar, ⛔ never reaches this assignment through it.
+    const pariwarB = randomUUID();
+    await grant(w.userId, pariwarB, 'district_admin', 'district', DISTRICT);
+    const cross = await w.client.inject({ method: 'GET', url: `${base(pariwarB, w.claimCaseId)}/${w.gid}/certificate` });
+    expect(cross.statusCode).toBe(404);
+
+    // Once the assignment is completed it is ⛔ no longer held — the copy is ⛔ never re-opened through it.
+    await uploadPhoto(w.client, w.pariwarId, w.claimCaseId, w.gid, 'original_certificate');
+    const done = await w.client.inject({ method: 'POST', url: `${base(w.pariwarId, w.claimCaseId)}/${w.gid}/complete`, payload: completeBody(w.uploadId!) });
+    expect(done.statusCode, done.body).toBe(200);
+    const afterDone = await w.client.inject({ method: 'GET', url: certUrl });
+    expect(afterDone.statusCode).toBe(409);
+    expect(errCode(afterDone)).toMatchObject({ code: 'ground_inspection.not_active', details: { status: 'completed' } });
+
+    // A scheduled assignment on a claim that has LEFT the window (refused) ⇒ ⛔ no copy.
+    const d = await inspectorWorld();
+    await drive(d.pariwarId, d.claimCaseId, TO_DENIED);
+    const outside = await d.client.inject({ method: 'GET', url: `${base(d.pariwarId, d.claimCaseId)}/${d.gid}/certificate` });
+    expect(outside.statusCode).toBe(409);
+    expect(errCode(outside)).toMatchObject({ code: 'ground_inspection.not_allowed', details: { state: 'denied' } });
+  });
+
   it('⭐ GI4 / GI5 — every new completion refusal has its stable code (409s name what is missing; malformed values are 400s)', async () => {
     const w = await inspectorWorld();
     const url = `${base(w.pariwarId, w.claimCaseId)}/${w.gid}/complete`;

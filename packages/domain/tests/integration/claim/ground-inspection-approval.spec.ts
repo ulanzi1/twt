@@ -91,13 +91,17 @@ async function rowCounts(ctx: Pick<Ctx, 'client' | 'cid'>) {
   };
 }
 
-/** AC1 — the approval refuses with the typed wait and writes NOTHING (⛔ decision, ⛔ event, ⛔ warning record). */
+/** AC1 — the approval refuses with the typed wait and writes NOTHING (⛔ decision, ⛔ event, ⛔ warning record).
+ *  ⚠ Counted BEFORE the rollback (second code review 2026-10-07): counted after it, any write made before the throw is
+ *  undone first and the proof could never fail. The wait is a typed JS throw, ⛔ a SQL error, so the transaction is
+ *  still usable for the count. */
 async function refusesAndWritesNothing(ctx: Pick<Ctx, 'client' | 'cid'>, fn: () => Promise<unknown>, match: (e: unknown) => boolean) {
   const before = await rowCounts(ctx);
   await ctx.client.query('SAVEPOINT gi_gate');
   await expect(fn()).rejects.toSatisfy(match);
+  const after = await rowCounts(ctx);
   await ctx.client.query('ROLLBACK TO SAVEPOINT gi_gate');
-  expect(await rowCounts(ctx)).toEqual(before);
+  expect(after).toEqual(before);
 }
 
 /** Run `fn` and roll it back — for the "a refusal / escalation / route / return SUCCEEDS" legs on the same claim. */

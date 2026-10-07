@@ -221,8 +221,12 @@ describe('<GroundInspectionPage>', () => {
 
   // ── Story 6.26a (GI4 / GI5 / GI12) — the original certificate, the dates, the certificate check ───────────────
   describe('Story 6.26a — the original certificate and the date of death', () => {
-    const originalPhoto = { photoId: 'p-orig', contentType: 'image/jpeg', byteSize: 1, caption: null, signedUrl: 'https://x/p', photoKind: 'original_certificate' as const };
-    const sitePhoto = { ...originalPhoto, photoId: 'p-site', photoKind: 'site' as const };
+    // `2026-10-07-286` H1 — an original's photo carries the certificate it was taken for; a site photo ⛔ none.
+    const originalPhoto = {
+      photoId: 'p-orig', contentType: 'image/jpeg', byteSize: 1, caption: null, signedUrl: 'https://x/p',
+      photoKind: 'original_certificate' as const, certificateToken: 'tok-current' as string | null,
+    };
+    const sitePhoto = { ...originalPhoto, photoId: 'p-site', photoKind: 'site' as const, certificateToken: null };
     const CERT = { certificateToken: 'tok-current', contentType: 'application/pdf', signedUrl: 'https://x/certificate', expiresInSeconds: 300 };
 
     async function openAndFill(opts: { verdict?: 'It matches' | 'It does not match'; date?: string; time?: string } = {}) {
@@ -323,6 +327,43 @@ describe('<GroundInspectionPage>', () => {
       expect(screen.getByRole('button', { name: 'Complete inspection' })).toBeDisabled();
       expect(screen.getByLabelText('It does not match')).not.toBeChecked();
       expect(screen.getByLabelText(/Date of death/)).toHaveValue('');
+    });
+
+    it('⭐ second code review 2026-10-07 — a second "Compare" that returns a DIFFERENT certificate clears the verdict / date / time recorded against the old one', async () => {
+      const NEW = { ...CERT, certificateToken: 'tok-new', signedUrl: 'https://x/certificate-new' };
+      vi.mocked(api.listGroundInspection).mockResolvedValue({
+        assignments: [makeAssignment({ photos: [originalPhoto, { ...originalPhoto, photoId: 'p-orig-2', certificateToken: 'tok-new' }] })],
+      });
+      vi.mocked(api.getGroundInspectionCertificate).mockResolvedValueOnce(CERT).mockResolvedValueOnce(NEW).mockResolvedValueOnce(NEW);
+      renderWithClient(<GroundInspectionPage pariwarId={PARIWAR} />);
+      await loadScope();
+      await screen.findByText('inspector-1');
+      const user = await openAndFill({ verdict: 'It matches', date: '2026-06-01', time: '14:30' });
+      // Re-opened (an expired link) — the family has replaced the certificate in between.
+      await user.click(screen.getByRole('button', { name: 'Compare with the certificate we hold' }));
+      await waitFor(() => expect(screen.getByRole('link', { name: 'Open the uploaded certificate' })).toHaveAttribute('href', NEW.signedUrl));
+      expect(screen.getByLabelText('It matches')).not.toBeChecked();
+      expect(screen.getByLabelText(/Date of death/)).toHaveValue('');
+      expect(screen.getByLabelText(/Time of death/)).toHaveValue('');
+      expect(screen.getByRole('button', { name: 'Complete inspection' })).toBeDisabled();
+      // The SAME certificate again ⇒ what was re-recorded stays.
+      await user.click(screen.getByLabelText('It does not match'));
+      await user.click(screen.getByRole('button', { name: 'Compare with the certificate we hold' }));
+      await waitFor(() => expect(api.getGroundInspectionCertificate).toHaveBeenCalledTimes(3));
+      expect(screen.getByLabelText('It does not match')).toBeChecked();
+    });
+
+    it('⭐ `-286` H1 — a photo of an EARLIER certificate\'s original does ⛔ not count: Complete stays disabled, and the page says why', async () => {
+      vi.mocked(api.listGroundInspection).mockResolvedValue({
+        assignments: [makeAssignment({ photos: [{ ...originalPhoto, certificateToken: 'tok-earlier' }] })],
+      });
+      vi.mocked(api.getGroundInspectionCertificate).mockResolvedValue(CERT);
+      renderWithClient(<GroundInspectionPage pariwarId={PARIWAR} />);
+      await loadScope();
+      await screen.findByText('inspector-1');
+      await openAndFill({ verdict: 'It matches', date: '2026-06-01' });
+      expect(screen.getByRole('button', { name: 'Complete inspection' })).toBeDisabled();
+      expect(screen.getByText(/taken for an earlier certificate/)).toBeInTheDocument();
     });
 
     it('the photo upload sends the chosen KIND; a certificate check defaults to the original', async () => {

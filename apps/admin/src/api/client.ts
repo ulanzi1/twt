@@ -1195,6 +1195,9 @@ export const GroundInspectionPhoto = z.object({
   signedUrl: z.string(),
   // Story 6.26a (GI4) — `site` | `original_certificate` (shown apart).
   photoKind: z.enum(['site', 'original_certificate']),
+  // `2026-10-07-286` H1 — the certificate an original's photo was taken for (NULL on a site photo): only a photo of
+  // the COMPARED certificate's original lets the inspection complete.
+  certificateToken: z.string().nullable(),
 });
 export const GroundInspectionAssignment = z.object({
   groundInspectionId: z.string(),

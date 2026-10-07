@@ -1030,6 +1030,13 @@
       "when": 1793418000000,
       "tag": "0147_ground-inspection-death-facts",
       "breakpoints": true
+    },
+    {
+      "idx": 148,
+      "version": "7",
+      "when": 1793504400000,
+      "tag": "0148_ground-inspection-photo-certificate-stamp",
+      "breakpoints": true
     }
   ]
 }

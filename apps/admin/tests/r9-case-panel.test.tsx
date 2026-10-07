@@ -317,7 +317,8 @@ describe('<R9CasePanel> — Story 6.26a (Task 9.4), a FAILED refetch keeps the p
     expect(screen.queryByTestId('r9-refetch-failed')).toBeNull();
   });
 
-  it('GI11 — the trustee words for `r9_voting.ground_inspection_required` (via the shared helper the panel uses)', async () => {
+  // The panel itself is driven in `later-approval-warnings.test.tsx` (GI11 — finalize's `ground_inspection_required`).
+  it('GI11 — the shared helper\'s trustee words for `r9_voting.ground_inspection_required`', async () => {
     const { trusteeGroundInspectionRequiredMessage } = await import('../src/modules/claim-verification/nominee-errors.js');
     const { ApiError } = await import('../src/api/client.js');
     expect(

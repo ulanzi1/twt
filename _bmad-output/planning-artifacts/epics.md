@@ -3212,7 +3212,9 @@ can ⛔ not be moved off "changed after the death" while any other claim of the 
 > RF9, RF11 and RF12's Q2 text (defined in 6.24a's file). Row `6-24b-filing-code-and-texts-to-the-nominee-in-place-at-the-death`; it starts
 > only when 6.24a is `done` (it reads 6.24a's "refusal stands" fragment and `closed`). Full ACs:
 > `_bmad-output/implementation-artifacts/6-24b-filing-code-and-texts-to-the-nominee-in-place-at-the-death.md`.
-> ⚠ **Go-live coupling:** both texts wait on counsel (one go-live roster row); ⛔ never a merge fence.
+> ⚠ **Go-live coupling:** the texts wait on counsel (one go-live roster row); ⛔ never a merge fence.
+> ⚠ **Widened 2026-10-07 by [`-293`](../../.decision-log.md#decision-2026-10-07-293) item 1 B** — the refused person is also texted once
+> that the claim can be appealed until a date (a third text). The brief below is kept as written.
 
 As the true nominee of a member whose claim was refused because the nominee was changed after the death, I want the app's filing code sent
 to me rather than to the person who changed the nominee, a text telling me to call the helpline, and a text if my own claim is later

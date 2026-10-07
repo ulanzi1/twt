@@ -24,8 +24,9 @@ Status: backlog
 > of a post-death nominee change stands (`-239`), the app's **filing code goes to the nominee the District Admin found in place at the
 > death** — ⛔ never to the discarded one (`-262` FQ6 B); the system **texts that nominee once**: *"A claim for [member] could not go ahead.
 > Please call the helpline."* (FQ7 B); and when an allowed appeal **closes** her own claim (6.24a), she is **texted once**: *"Your claim for
-> [member] has been closed. Please call the helpline."* (`2026-10-07-291` Q2 B). ⚠ **Both texts are go-live gated on counsel** (one new
-> roster row); their DLT template ids stay unset so every send fails closed. ⭐ **The system still refuses nothing.**
+> [member] has been closed. Please call the helpline."* (`2026-10-07-291` Q2 B); and the **refused person is texted once** that the claim
+> can be appealed until a date (`2026-10-07-293` item 1 B). ⚠ **All three texts are go-live gated on counsel** (one new roster row); their
+> DLT template ids stay unset so every send fails closed. ⭐ **The system still refuses nothing.**
 
 > ⭐ **What 6.24a ships and this story READS — rebuild ⛔ none of it:** RF1's "a suspicion refusal stands" fragment and reader; the `closed`
 > state and `claim.closed` (trigger `suspicion_appeal_allowed`). And from earlier stories: the as-at-death nominee
@@ -36,7 +37,7 @@ Status: backlog
 
 As the **true nominee** of a member whose claim was refused because the nominee was changed after the death —
 I want **the app's filing code sent to me rather than to the person who changed the nominee, a text telling me to call the helpline, and a
-text if my own claim is later closed**,
+text if my own claim is later closed** — *and the refused person told, once, until when they can appeal (`-293`)*,
 so that **I can file and act, and the person who made the change can ⛔ not file again in the app — while ⛔ nobody is accused.**
 
 ## The rulings this story builds
@@ -49,7 +50,8 @@ so that **I can file and act, and the person who made the change can ⛔ not fil
 | `2026-10-07-291` Q2 B | *"a text, once: 'Your claim for [member] has been closed. Please call the helpline.'"* | ⭐ Trustee-ratified — ⚠ go-live with FQ7's counsel check |
 | `-291` reading | Q2's "her" = the nominee in place at the death, resolved as FQ7's | ⚠ OUR reading |
 | `-181` | the member-facing name form is MODE-RESOLVED (⛔ never hard-coded) | Author (BigDev) |
-| **Q3 item 1** (`trustee-panel-routing-note-2026-10-07-6-24-telling-the-refused-person.md`) | whether the REFUSED person is also texted (B) — our reading B | ⏳ open, non-blocking — if B, a third purpose joins this story (6.24a's RF14 (b) says what) |
+| `2026-10-07-293` Q3 item 1 B | *"one text … 'The claim for [member] could not go ahead. It can be appealed until [date]. Please call the helpline.'"* — to the REFUSED person, at the mobile they gave on the claim or, if they filed as a nominee, the mobile on that nominee entry | ⭐ Trustee-ratified — ⚠ go-live gated on counsel |
+| `-293` readings | once per refused claim, ever; while the refusal stands and its 90 days have ⛔ not passed; `[date]` = the last day to appeal (6.24a RF14); locale = the refused claim's own `contact_locale`; ⛔ no contact record ⇒ ⛔ no text | ⚠ OUR reading |
 
 ## ⭐ THE INVARIANTS (moved from 6.24)
 5. **⛔ No latest-nominee fallback** after a standing refusal: a non-effective determination or an unusable mobile ⇒ the existence-defended
@@ -110,6 +112,17 @@ so that **I can file and act, and the person who made the change can ⛔ not fil
   gains the two rows (a new section in `docs/launch-gate-inventory/dlt-template-requests-6-19.md`, or a sibling sheet — the dev picks and
   records). Template ids stay UNSET ⇒ the send fails closed
   (`error` + alarm) until go-live.
+- **⭐ `-293` Q3 item 1 B ACTIVATES the B branch `-292` RF14 (b) recorded in advance** (6.24a's file — *"If Q3 is answered B, a once-ever text
+  to the REFUSED FILER with the date joins RF11 as a third purpose, through a NEW resolver covering BOTH claimant sides of 6.19a W6 …"*):
+  a THIRD purpose `refusal_appeal_notice`, ONE row per refused claim (the same UNIQUE `(pariwar_id, claim_case_id, purpose)`), recipient by
+  a NEW domain resolver `readRefusedFilerRecipient(db, pariwarId, claimCaseId)` → the refused claim's `claim_contacts` row: a non-nominee
+  claimant's contact mobile, OR the `member_nominee_versions.mobile_ciphertext` of its `claimantNomineeVersionId`; ⛔ no contact record /
+  null / sentinel / unsendable ⇒ `no_target`. ⛔ Never `readCorrectionRecipients`. Words: copy key `claim.suspicionRefusalAppealNotice.sms`,
+  en verbatim from the ruling with `{member}`, `{date}` and `{helpline}`; locale = the refused claim's `contact_locale`; `{date}` = 6.24a's
+  `suspicionRefusalAppealUntil(...)` rendered as that locale's date words. The sweep's third selector: a claim on which RF1 STANDS, whose
+  90 days have ⛔ not passed, with ⛔ no finished `refusal_appeal_notice` row; re-checked under the claim lock. ⚠ Per `-293` Consequence 1
+  the purpose is in 6.24b's notice-table migration FROM THE START — RF11's *"a CHECK widening in its own migration"* is superseded as a
+  mechanic only (the migration is unbuilt).
 - **[b] RF12 (its `-291` Q2 paragraph only):**
   ⭐ **`-291` Q2 B — the closure text:** *"Your claim for {member} has been closed. Please call the helpline {helpline}."* (copy key
   `claim.suspicionClosedNotice.sms`, en + hi, the Hindi marker), once per closed claim, EVER, through RF11's machinery: the notice table
@@ -133,7 +146,7 @@ so that **I can file and act, and the person who made the change can ⛔ not fil
 
 ### AC0b — Governance and re-pin (Task 0)
 6.24a is `done`; the baseline is re-pinned to 6.24a's merged tree and every code claim re-derived; ⛔ no decision after `-292` (other than a
-Q3 ruling) touches FQ6 / FQ7 / `-291` Q2; a Q3 item 1 answer, if any, is recorded first; work is on
+`-293`) touches FQ6 / FQ7 / `-291` Q2 / `-293` item 1; work is on
 `story/6-24b-filing-code-and-texts-to-the-nominee-in-place-at-the-death`. ⛔ No code before.
 
 ### AC6b — The filing code (FQ6; RF9, F6, F10, F14)
@@ -144,15 +157,20 @@ number. **Before** any refusal, and **after** S's refusal is reversed, the code 
 **Given** a standing refusal whose determination is ⛔ not `effective`, or whose rank-1 mobile is null / erased / unsendable, **then** the
 response is the existence-defended no-op (identical shape and timing pad) — ⛔ never …2222. A two-nominee effective set sends to rank 1.
 
-### AC7b — The texts (FQ7; `-291` Q2 B; RF11, RF12)
+### AC7b — The texts (FQ7; `-291` Q2 B; `-293` item 1 B; RF11, RF12, RF14 (b))
 **Given** a standing `-239` refusal, **when** the sweep runs, **then** ONE notice row is written and one text is sent to the refused claim's
 rank-1 effective nominee, in Hindi (RF11), naming the member in the Pariwar's mode-resolved form (`-181`), carrying the helpline number; ⛔ no
 plaintext number or name is stored, logged or audited. A second run sends ⛔ nothing; a refusal revised away before the sweep's locked
 re-check sends ⛔ nothing; a revision away and back ⛔ never re-texts; a non-effective determination or unusable mobile records
 `no_target`; a crash after the claiming commit is reclaimed by the next run. **With the DLT template ids unset** (as shipped), the send fails closed (`error` + alarm) — ⛔ never a send on a
 wrong template. The SIBLING registry's lockstep test (6.19's stays unchanged), `i18n-parity`, `microcopy`, `pii-scrape` and the Hindi marker pass; the DLT request
-sheet and the go-live roster gain their rows (counsel basis for FQ7's text AND `-291` Q2's closure text — ONE NEW row, ⛔ not Row 18,
-which is the filer's agreement, ⛔ nor Row 19; and the Hindi review row).
+sheet and the go-live roster gain their rows (counsel basis for FQ7's text, `-291` Q2's closure text AND `-293`'s refusal-appeal text —
+ONE NEW row, ⛔ not Row 18, which is the filer's agreement, ⛔ nor Row 19; and the Hindi review row).
+**And (`-293` item 1 B)** given a standing `-239` refusal within its 90 days, the sweep texts the REFUSED filer once, in the refused claim's
+`contact_locale`, with the last date to appeal: a non-nominee claimant at their contact mobile; a nominee-claimant at the mobile on the
+version they are linked to (the post-death one in the Panel's scenario); ⛔ no contact record ⇒ `no_target`; a refusal whose 90 days passed
+before the sweep ⇒ ⛔ no text; a revision away and back ⛔ never re-texts; the true nominee is ⛔ never this text's recipient unless she IS
+the refused filer (then she gets both texts — a test).
 
 ### AC9b — Nothing else moves
 ⛔ No new permission key; ⛔ no change to the gate, convergence, the appeal or `closed` (6.24a's); ⛔ no `apps/public` change.
@@ -166,7 +184,7 @@ i18n, microcopy); the notice-table migration applied to BOTH :5432 and :5433, it
 - [ ] **Task 0 — Re-pin (AC0b)** — 6.24a `done`; `git fetch origin`; re-pin to 6.24a's merged tree; re-derive every `file:NNN` here; read
   6.24a's shipped `suspicion-refusal.ts` and `closed`; check `.decision-log.md` after `-292`; a fresh-context validate is offered to BigDev.
 - [ ] **Task 1 — Migration (AC7b; RF11)** — the next free migration number at the re-pin (6.24a takes 0150):
-  - [ ] 1.1 `0151_claim-suspicion-notices.sql`: the RF11 table (`claim_suspicion_notices`), composite FK `(pariwar_id, claim_case_id)` →
+  - [ ] 1.1 (with `refusal_appeal_notice` in the `purpose` CHECK from the start — `-293`) `0151_claim-suspicion-notices.sql`: the RF11 table (`claim_suspicion_notices`), composite FK `(pariwar_id, claim_case_id)` →
     `claims` (the 0143 UNIQUE target), the status CHECK, the `purpose` column + its CHECK, `recipient_number_hash`, the ONE UNIQUE `(pariwar_id, claim_case_id, purpose)` (RF11 v1.4), RLS policy + `twt_app` grants exactly as 6.19b's `claim_correction_reminders` (read its
     migration — `SELECT, INSERT` + `UPDATE` on the outcome columns only). ⛔ Nothing references `'closed'`. Journal idx 151.
 - [ ] **Task 2 — API: the filing code (AC6b; RF9)**
@@ -182,7 +200,9 @@ i18n, microcopy); the notice-table migration applied to BOTH :5432 and :5433, it
     18 is the filer's agreement on others' behalf and Row 19 names only the correction and certificate purposes, so ⛔ neither covers
     them — and the Hindi review row).
   - [ ] 6.2b The second purpose (RF12 / `-291` Q2 B): its copy key, sibling-registry entry, DLT rows and the sweep's second selector.
-  - [ ] 6.3 Specs: AC7b's legs for BOTH purposes incl. the locked re-check (revise away between selection and lock), once-ever, fail-closed on unset template
+  - [ ] 6.2c The THIRD purpose (`-293` item 1 B): `readRefusedFilerRecipient` (both claimant sides), its copy key, sibling-registry entry,
+    DLT rows and the sweep's third selector (RF1 stands AND within the 90 days).
+  - [ ] 6.3 Specs: AC7b's legs for ALL THREE purposes incl. the locked re-check (revise away between selection and lock), once-ever, fail-closed on unset template
     ids, the error classification (invalid number / carrier reject / transient), ⛔ no plaintext anywhere (assert the row's columns and the
     captured logs).
 
@@ -225,4 +245,5 @@ i18n, microcopy); the notice-table migration applied to BOTH :5432 and :5433, it
 
 | Version | Date | Change |
 |---|---|---|
+| 1.1 | 2026-10-07 | ✅ `2026-10-07-293` Q3 item 1 **B** (committed alone `2ada8f7b`): the THIRD text — to the refused filer, once, with the last date to appeal — joins this story (activating `-292` RF14 (b)'s recorded B branch): `readRefusedFilerRecipient`, purpose `refusal_appeal_notice` in the notice table from the start, AC7b's legs, Task 6.2c. Status stays `backlog`. |
 | 1.0 | 2026-10-07 | Split from Story 6.24 v2.0 (BigDev: *"ok, split it"*): RF9, RF11 and RF12's Q2 text, with P4, invariants 5–6, F6 / F10 / F14, AC6 / AC7 (→ AC6b / AC7b), Tasks 1.2 / 5.2 / 6 / 7.2's SMS key and Traps 10–14 — copied verbatim. Status `backlog` until 6.24a is `done`. |

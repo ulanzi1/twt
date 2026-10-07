@@ -1,3 +1,9 @@
+# last_updated: 2026-10-07t (⭐ **THE PANEL RULED STORY 6.24's Q3 — `2026-10-07-293` (Trustee-ratified, DR + KB: *"Q3 - B (one text)"*,
+# *"Confirm (item 2) - A"*), committed ALONE (`2ada8f7b`).** Item 1 B: the person refused on suspicion is texted once that the claim can be
+# appealed until a date — at the mobile they gave on the claim, or the mobile on the nominee entry they filed as (go-live with counsel);
+# built by 6.24b as a third text (it activates `-292` RF14 (b)'s recorded B branch). Item 2 A: RF13's reason lock is accepted — a family
+# refused under that reason by mistake keeps the 90 days; 6.24a ⛔ unchanged. The note's block is filled; 6.24a → v2.2, 6.24b → v1.1;
+# `epics.md` 6.24b gains a dated widening line. ⛔ No row moves (`6-24-…` `ready-for-dev`, `6-24b-…` `backlog`).)
 # last_updated: 2026-10-07s (⭐ **STORY 6.24 SPLIT (BigDev: *"ok, split it"*).** `6-24-true-nominee-refile-after-a-suspicion-refusal` stays
 # `ready-for-dev` as STORY 6.24a (keeps its key): RF1–RF8, RF10, RF12 (the closed words / routing), RF13–RF16 — kept apart, the wait,
 # `closed`, the commit re-check, the inheritance, the 90-day limit + its key, the helpline appeal screen, the reason lock; Q3 item 2. NEW row

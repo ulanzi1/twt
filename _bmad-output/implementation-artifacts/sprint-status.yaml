@@ -1,3 +1,8 @@
+# last_updated: 2026-10-07f (⭐ **STORY 6.26a — MERGED as PR #259 (rebase); the `pre-push` `ci:local` and all 34 GitHub checks passed.** ⛔ NO
+# row moves (`6-26-ground-inspection-before-approval-and-death-facts` stays `done`; `6-26b-…` stays `backlog`). The 6.26a story file's
+# header now maps the branch's 20 SHAs (6.26's governance + 6.26a's build and four review rounds) to their `main` twins (each pair
+# proved by identical `patch-id`; merged tree `264c8e4e` byte-identical to branch head `27c5f0ef`) — incl. this ledger's `9282d108` → `d54cfaf2`, `97403945` → `23959044`, `e1907338` → `4e591523`, `e8200366` → `42a0a2f0`; ⛔ no
+# citation rewritten.)
 # last_updated: 2026-10-07e (⭐ **STORY 6.26a — ROUND 4: a fresh-context check of `-287`** + the round-3 delta. `-287` STANDS (every fact
 # re-traced, J2 accurate, ⛔ no Panel question) ⇒ ⭐ **the review rounds STOP.** 1 medium patched: after a stale-Compare 409 the admin page
 # kept the OLD image selected, so one click after re-comparing stamped the old certificate's original with the new certificate — the

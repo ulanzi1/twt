@@ -366,7 +366,29 @@ describe.skipIf(!hasDatabase)('ground inspection — two-connection concurrency 
             photoKind: 'original_certificate', comparedCertificateUploadId: uploadId,
           }),
         );
-      const outcomes = await Promise.allSettled([contend(), contend()]);
+      // ⚠ A BARRIER (narrow review 2026-10-07 — without it the two transactions never overlapped, and the test stayed
+      // green with the assignment lock REMOVED): a third connection holds the photo table so that BOTH contenders are
+      // provably blocked before either can count. With the lock, the second waits on the assignment row and counts
+      // AFTER the first commits; without it, both count 20 and both insert — the red this test exists to show.
+      const barrier = await pool.connect();
+      let outcomes: PromiseSettledResult<unknown>[];
+      try {
+        await barrier.query('BEGIN');
+        await barrier.query('LOCK TABLE claim_ground_inspection_photos IN ACCESS EXCLUSIVE MODE');
+        const racing = Promise.allSettled([contend(), contend()]);
+        for (let i = 0; ; i += 1) {
+          const r = await pool.query<{ n: string }>(
+            `SELECT count(*)::text AS n FROM pg_stat_activity WHERE wait_event_type = 'Lock' AND query ILIKE '%claim_ground_inspection%'`,
+          );
+          if (Number(r.rows[0]!.n) >= 2) break;
+          if (i >= 250) throw new Error('the two contenders never both blocked behind the barrier');
+          await new Promise((res) => setTimeout(res, 20));
+        }
+        await barrier.query('COMMIT');
+        outcomes = await racing;
+      } finally {
+        barrier.release();
+      }
       expect(outcomes.filter((r) => r.status === 'fulfilled')).toHaveLength(1);
       const rejected = outcomes.flatMap((r) => (r.status === 'rejected' ? [r.reason] : []));
       expect(rejected).toHaveLength(1);

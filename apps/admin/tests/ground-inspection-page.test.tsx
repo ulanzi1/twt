@@ -334,7 +334,12 @@ describe('<GroundInspectionPage>', () => {
       vi.mocked(api.listGroundInspection).mockResolvedValue({
         assignments: [makeAssignment({ photos: [originalPhoto, { ...originalPhoto, photoId: 'p-orig-2', certificateToken: 'tok-new' }] })],
       });
-      vi.mocked(api.getGroundInspectionCertificate).mockResolvedValueOnce(CERT).mockResolvedValueOnce(NEW).mockResolvedValueOnce(NEW);
+      // The third read is DEFERRED so its pending render (⛔ data) really commits before it lands with the SAME token.
+      let landThird: (v: typeof NEW) => void = () => undefined;
+      vi.mocked(api.getGroundInspectionCertificate)
+        .mockResolvedValueOnce(CERT)
+        .mockResolvedValueOnce(NEW)
+        .mockImplementationOnce(() => new Promise((resolve) => (landThird = resolve)));
       renderWithClient(<GroundInspectionPage pariwarId={PARIWAR} />);
       await loadScope();
       await screen.findByText('inspector-1');
@@ -346,10 +351,14 @@ describe('<GroundInspectionPage>', () => {
       expect(screen.getByLabelText(/Date of death/)).toHaveValue('');
       expect(screen.getByLabelText(/Time of death/)).toHaveValue('');
       expect(screen.getByRole('button', { name: 'Complete inspection' })).toBeDisabled();
-      // The SAME certificate again ⇒ what was re-recorded stays.
+      // The SAME certificate again ⇒ what was re-recorded stays. ⚠ Wait for the third read to LAND (the Compare button
+      // returns from its pending label) — asserting on the call alone would run before the reset logic could act.
       await user.click(screen.getByLabelText('It does not match'));
       await user.click(screen.getByRole('button', { name: 'Compare with the certificate we hold' }));
       await waitFor(() => expect(api.getGroundInspectionCertificate).toHaveBeenCalledTimes(3));
+      await waitFor(() => expect(screen.queryByRole('link', { name: 'Open the uploaded certificate' })).toBeNull());
+      landThird({ ...NEW });
+      await screen.findByRole('link', { name: 'Open the uploaded certificate' });
       expect(screen.getByLabelText('It does not match')).toBeChecked();
     });
 
@@ -413,9 +422,18 @@ describe('<GroundInspectionPage>', () => {
       await screen.findByRole('link', { name: 'Open the uploaded certificate' });
       await user.upload(screen.getByLabelText('Upload photo'), new File([new Uint8Array([1])], 'o.jpg', { type: 'image/jpeg' }));
       await user.click(screen.getByRole('button', { name: 'Upload photo' }));
-      expect(await screen.findByText(/replaced the certificate since you opened it/)).toBeInTheDocument();
+      // The UPLOAD's own words: the photo was ⛔ not recorded and must be re-taken.
+      expect(await screen.findByText(/so this photo was not recorded\. Compare again, then photograph the original/)).toBeInTheDocument();
       expect(screen.queryByRole('link', { name: 'Open the uploaded certificate' })).toBeNull();
       expect(screen.getByRole('button', { name: 'Upload photo' })).toBeDisabled();
+      // ⭐ Narrow review 2026-10-07 — after the re-Compare the OLD image is ⛔ still selected: Upload stays disabled until a
+      // NEW photo is chosen (else one click would stamp the old certificate's original with the new certificate).
+      await user.click(screen.getByRole('button', { name: 'Compare with the certificate we hold' }));
+      await screen.findByRole('link', { name: 'Open the uploaded certificate' });
+      expect(screen.getByRole('button', { name: 'Upload photo' })).toBeDisabled();
+      expect(api.uploadGroundInspectionPhoto).toHaveBeenCalledTimes(1);
+      await user.upload(screen.getByLabelText('Upload photo'), new File([new Uint8Array([2])], 'new.jpg', { type: 'image/jpeg' }));
+      expect(screen.getByRole('button', { name: 'Upload photo' })).toBeEnabled();
     });
 
     it('GI4 — the refusal offers "the family did not produce the original certificate" under evidence_unavailable', async () => {

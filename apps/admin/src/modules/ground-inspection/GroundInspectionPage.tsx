@@ -409,6 +409,8 @@ function PhotoUpload(props: {
 }): ReactElement {
   const [file, setFile] = useState<File | null>(null);
   const [caption, setCaption] = useState('');
+  // Bumped to remount the (uncontrolled) file input — the only way to clear the browser's chosen file.
+  const [fileInputKey, setFileInputKey] = useState(0);
   // Story 6.26a (GI4) — a certificate check photographs only the original, so it defaults there.
   const [photoKind, setPhotoKind] = useState<'site' | 'original_certificate'>(
     props.assignment.inspectionStage === 'certificate_check' ? 'original_certificate' : 'site',
@@ -429,9 +431,16 @@ function PhotoUpload(props: {
       setCaption('');
       props.onMutated();
     },
-    // The compared certificate was replaced (or removed) since "Compare" — re-run it (the photo is ⛔ not recorded).
+    // The compared certificate was replaced (or removed) since "Compare" — re-run it, AND drop the chosen image (narrow
+    // review 2026-10-07): it is a photo of the OLD certificate's original, and kept selected it would be stamped with
+    // the new one on the very next click — the exact case `-287` J1 closes. The inspector re-compares AND re-photographs.
     onError: (err) => {
-      if (isStaleCompare(err)) props.certificate.reset();
+      if (isStaleCompare(err)) {
+        props.certificate.reset();
+        setFile(null);
+        setCaption('');
+        setFileInputKey((k) => k + 1);
+      }
     },
   });
   // ⭐ `2026-10-07-287` J1 — a photo of the original is recorded against the certificate the inspector COMPARED.
@@ -449,13 +458,19 @@ function PhotoUpload(props: {
           <option value="original_certificate">{t('gi.photo.kind.original_certificate')}</option>
         </select>
       </label>
-      <input type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => setFile(e.target.files?.[0] ?? null)} aria-label={t('gi.action.uploadPhoto')} />
+      <input key={fileInputKey} type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => setFile(e.target.files?.[0] ?? null)} aria-label={t('gi.action.uploadPhoto')} />
       <input className="rounded border px-2 py-1 text-sm" placeholder={t('gi.action.caption')} value={caption} onChange={(e) => setCaption(e.target.value)} />
       <button className="rounded bg-gray-700 px-2 py-1 text-sm text-white disabled:opacity-50" type="button" disabled={!file || needsCompare || mutation.isPending} onClick={() => mutation.mutate()}>
         {mutation.isPending ? t('gi.action.uploadPending') : t('gi.action.uploadPhoto')}
       </button>
       {needsCompare && <p className="text-xs text-amber-700">{t('gi.photo.compareFirst')}</p>}
-      {mutation.isError && <p role="alert" className="text-xs text-red-600">{errorText(mutation.error)}</p>}
+      {mutation.isError && (
+        <p role="alert" className="text-xs text-red-600">
+          {mutation.error instanceof ApiError && mutation.error.code === 'ground_inspection.certificate_changed'
+            ? t('gi.photo.certificateChanged')
+            : errorText(mutation.error)}
+        </p>
+      )}
     </div>
   );
 }

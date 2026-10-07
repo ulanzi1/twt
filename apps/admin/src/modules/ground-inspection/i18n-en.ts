@@ -92,6 +92,9 @@ const EN: Record<string, string> = {
   // stale one (the family replaced the certificate since) — either way the two must meet.
   'gi.action.completeNeedsComparedOriginalPhoto':
     'No photo of the original was taken against the certificate you compared. Compare again, then photograph the original the family now holds.',
+  // Narrow review 2026-10-07 — the UPLOAD's own words: the photo was ⛔ not recorded, and it must be RE-TAKEN.
+  'gi.photo.certificateChanged':
+    'The family has replaced the certificate since you compared it, so this photo was not recorded. Compare again, then photograph the original the family now holds.',
   'gi.photo.compareFirst':
     'Open "Compare with the certificate we hold" first — a photo of the original is recorded against the certificate you compared.',
   'gi.refuse.originalNotProduced': 'The family did not produce the original certificate',

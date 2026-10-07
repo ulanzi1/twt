@@ -131,8 +131,10 @@ function translateGroundInspectionError(err: unknown): never {
       verdict: 'whether the original matches the copy',
       compared_certificate: 'which uploaded certificate the original was compared with',
     } as const;
+    // Worded for BOTH callers (narrow review 2026-10-07): the completion, and — `-287` J1 — the upload of an original's
+    // photo, which is refused without the compared certificate's token.
     throw new ConflictError(
-      `To complete the inspection, record ${words[err.missing]}`,
+      `The original-certificate record needs ${words[err.missing]}`,
       'ground_inspection.original_certificate_required',
       { missing: err.missing },
     );

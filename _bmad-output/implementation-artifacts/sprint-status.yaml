@@ -1,3 +1,10 @@
+# last_updated: 2026-10-07e (⭐ **STORY 6.26a — ROUND 4: a fresh-context check of `-287`** + the round-3 delta. `-287` STANDS (every fact
+# re-traced, J2 accurate, ⛔ no Panel question) ⇒ ⭐ **the review rounds STOP.** 1 medium patched: after a stale-Compare 409 the admin page
+# kept the OLD image selected, so one click after re-comparing stamped the old certificate's original with the new certificate — the
+# upload's 409 now also clears the chosen file and caption, in its own words. 4 low patched: the server-vs-page split of "the token the
+# inspector was SHOWN" written down; the 400 `invalid_compared_certificate` recorded in GI4/AC4; two tests that could not fail now can
+# (a deferred third Compare; a BARRIER in the reserved-slot race — both red-checked); the upload's 409 wording. 1 deferred: the 6.7
+# site-photo race test has the same overlap blind spot. `pnpm ci:local` :5433 ⭐ **34 / 34**. ⛔ No row moves — `6-26-…` stays `done`.)
 # last_updated: 2026-10-07d (⭐ **STORY 6.26a — NARROW ROUND 3** (a fresh-context re-validate of `-286` + a fresh adversarial review of the
 # round-2 delta `1f45c6f5..0ac5165c`, in parallel, read-only): ⛔ no blocker, ⛔ no high; 1 decision, 11 patches, 1 deferred, 3 dismissed.
 # ⭐ **`2026-10-07-287` COMMITTED ALONE (`c1dda242`)** — J1 (BigDev: *"1"*): the original's photo is stamped with the certificate the

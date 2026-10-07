@@ -55,6 +55,16 @@ export const DEATH_CERTIFICATE_REJECTION_REASONS = [
 ] as const;
 export type DeathCertificateRejectionReason = (typeof DEATH_CERTIFICATE_REJECTION_REASONS)[number];
 
+/**
+ * The District Admin's government death-register (CRS) check, recorded on every ACCEPT (Story 6.26b GI8;
+ * `-262` FQ8 B). `could_not_check` is ⛔ not a warning (`-281` Q1 B makes only "does not match" one); a
+ * `does_not_match` is a warning for as long as its certificate is the current upload (`-289` L1/L2).
+ * ⚠ LOCKSTEP with migration 0149's `claim_death_certificate_reviews_register_check_check`, `@twt/contracts`'
+ * `DeathCertificateRegisterCheck` z.enum and the admin's local `RegisterCheck` type — four places.
+ */
+export const DEATH_CERTIFICATE_REGISTER_CHECKS = ['matches', 'does_not_match', 'could_not_check'] as const;
+export type DeathCertificateRegisterCheck = (typeof DEATH_CERTIFICATE_REGISTER_CHECKS)[number];
+
 /** Why a review stopped being live. */
 export const DEATH_CERTIFICATE_REVIEW_SUPERSESSION_REASONS = ['re_reviewed', 'replaced'] as const;
 export type DeathCertificateReviewSupersessionReason =
@@ -87,6 +97,15 @@ export const claimDeathCertificateReviews = pgTable(
 
     // Tier-1 — the date of death the District Admin entered (`YYYY-MM-DD`). Accepted only.
     acceptedDateCiphertext: piiColumn(1, 'death_certificate_review')('accepted_date_ciphertext'),
+    // Story 6.26b GI8 — the government-register check (plaintext code). Accepted only (the writer requires it
+    // on an accept; the 0149 coherence CHECK refuses it on a reject). NULL on a pre-0149 accepted review.
+    // Immutable (the append-only trigger).
+    registerCheck: text('register_check').$type<DeathCertificateRegisterCheck>(),
+    // Story 6.26b GI6 — the accepted date's keyed blind index (`DEATH_DATE_INDEX_FIELD_CLASS`, the same class as
+    // the inspection's `death_date_index`), so the warning module compares dates ⛔ without a decrypt. Accepted
+    // only; NULL on a pre-0149 accepted review (⛔ no backfill). NULLed by the RTBF scrub (GI13 [b]).
+    acceptedDateIndex: text('accepted_date_index'),
+
     // Tier-1 — the REQUIRED note.
     noteCiphertext: piiColumn(1, 'death_certificate_review')('note_ciphertext').notNull(),
 

@@ -56,9 +56,9 @@ const NOT_REVISABLE_MESSAGES: Record<claim.DecisionNotRevisableReason, string> =
   cross_outcome: 'A revision must keep the same outcome — a reversal is handled by the appeal flow (Story 6.16)',
   // Story 6.23a (NW7; NW18) — a written note is never replaced.
   warning_approval_final:
-    'This claim shows a nominee-change warning (or one has already been answered), so this approval is final and its reason and note stay as written — a new warning is answered with a late-warning reason instead',
+    'This claim shows a warning (or one has already been answered), so this approval is final and its reason and note stay as written — a new warning is answered with a late-warning reason instead',
   warnings_not_current:
-    'Whether a nominee-change warning shows is not known yet — re-record the nominee determination against the accepted death certificate first',
+    'Whether every warning on this claim shows is not known yet — re-record the nominee determination against the accepted death certificate first',
 };
 
 /** Map a verifier-decision domain error to its stable HTTP shape. Rethrows anything unknown. */

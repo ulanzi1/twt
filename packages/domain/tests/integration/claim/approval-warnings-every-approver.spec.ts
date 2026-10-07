@@ -284,7 +284,9 @@ const isRequired = (missing: 'reason' | 'note') => (e: unknown) => e instanceof 
 /**
  * A claim the District Admin APPROVED with ⛔ no warning showing, then re-reviewed to a certificate 250 days back and
  * redetermined — so its two 200-day-old versions are now post-death: two LATE keys nobody has answered. Name check
- * re-recorded (RD19).
+ * re-recorded (RD19). ⭐ Story 6.26b (RD19 (i)) — and a THIRD: the fixture inspection's family date (tomorrow) now differs
+ * from the re-reviewed certificate ⇒ `inspection_death_date_differs` (the correct behaviour — the certificate moved
+ * away from the family's date). Every count below is 3.
  */
 async function lateWarnedClaim(): Promise<Ctx> {
   const ctx = await quietClaim();
@@ -473,7 +475,7 @@ describe.skipIf(!hasDatabase)('Story 6.23b — every approver gives a warning re
     it('⭐ a late, unanswered key ⇒ the final vote WAITS (⛔ nothing written, ⛔ not refused); the District Admin answers ⇒ it proceeds', async () => {
       const ctx = await lateWarnedClaim();
       const events = await eventCount(ctx);
-      await refused(ctx, () => warnedVote(ctx), isWait({ own: false, count: 2 }));
+      await refused(ctx, () => warnedVote(ctx), isWait({ own: false, count: 3 }));
       expect(await eventCount(ctx)).toBe(events);
       expect(await claimState(ctx)).toBe('verifier_approved');
       expect(await records(ctx)).toHaveLength(0);
@@ -502,7 +504,7 @@ describe.skipIf(!hasDatabase)('Story 6.23b — every approver gives a warning re
     it('`-279` A1 — the Pariwar Admin\'s OWN late reason does ⛔ not clear their own vote (`own_reason_excluded`); another holder\'s does', async () => {
       const ctx = await lateWarnedClaim();
       await lateReason(ctx, PA);
-      await refused(ctx, () => warnedVote(ctx), isWait({ own: true, count: 2 }));
+      await refused(ctx, () => warnedVote(ctx), isWait({ own: true, count: 3 }));
       // A DIFFERENT Pariwar Admin voting is ⛔ held by PA's reason.
       await ctx.client.query('SAVEPOINT other_voter');
       expect((await warnedVote(ctx, { actorId: PA2, actorDisplay: 'Another Pariwar Admin' })).claimState).toBe('state_trustee_approved');
@@ -729,7 +731,8 @@ describe.skipIf(!hasDatabase)('Story 6.23b — every approver gives a warning re
       await cast(ctx, V2, 'approve', GENERIC);
       const res = await finalize(ctx);
       expect(res.claimState).toBe('state_trustee_approved');
-      expect(res.approvalWarningKinds).toEqual(['post_death_version', 'recent_nominee_change']);
+      // Story 6.26b (RD19 (i)) — the re-review also moved the certificate away from the inspection's family date.
+      expect(res.approvalWarningKinds).toEqual(['post_death_version', 'recent_nominee_change', 'inspection_death_date_differs']);
       expect(c.revised).toBe(true);
     });
 
@@ -760,7 +763,7 @@ describe.skipIf(!hasDatabase)('Story 6.23b — every approver gives a warning re
 
     it('a late key unanswered by the District Admin ⇒ finalize WAITS; their late reason ⇒ finalized', async () => {
       const ctx = await lateWarnedR9();
-      await refused(ctx, () => finalize(ctx), isWait({ own: false, count: 2 }));
+      await refused(ctx, () => finalize(ctx), isWait({ own: false, count: 3 })); // + the date key (RD19 (i))
       await lateReason(ctx);
       expect((await finalize(ctx)).claimState).toBe('state_trustee_approved');
     });
@@ -771,7 +774,7 @@ describe.skipIf(!hasDatabase)('Story 6.23b — every approver gives a warning re
       await refused(byFinalizer, () => finalize(byFinalizer, V3), isWait({ own: true }));
       const byVoter = await lateWarnedR9();
       await lateReason(byVoter, V2);
-      await refused(byVoter, () => finalize(byVoter, V3), isWait({ own: true, count: 2 }));
+      await refused(byVoter, () => finalize(byVoter, V3), isWait({ own: true, count: 3 })); // + the date key (RD19 (i))
       await lateReason(byVoter, DA);
       expect((await finalize(byVoter, V3)).claimState).toBe('state_trustee_approved');
     });
@@ -959,7 +962,7 @@ describe.skipIf(!hasDatabase)('Story 6.23b — every approver gives a warning re
       const ctx = await lateWarnedClaim();
       const rows = await queue(ctx);
       expect(rows.map((r) => r.claimCaseId)).toEqual([ctx.cid]);
-      expect(rows[0]).toMatchObject({ lateWarningAwaitingReason: true, lateWarningUncoveredCount: 2, returnedAt: null, sentBackByCheck: false });
+      expect(rows[0]).toMatchObject({ lateWarningAwaitingReason: true, lateWarningUncoveredCount: 3, returnedAt: null, sentBackByCheck: false });
       await lateReason(ctx, PA); // ANY District Admin answer — ⛔ no actor exclusion in the queue
       expect(await queue(ctx)).toEqual([]);
     });
@@ -976,7 +979,7 @@ describe.skipIf(!hasDatabase)('Story 6.23b — every approver gives a warning re
         actor: 'trustee',
       });
       const [row] = await queue(ctx);
-      expect(row).toMatchObject({ claimCaseId: ctx.cid, lateWarningAwaitingReason: true, lateWarningUncoveredCount: 2 });
+      expect(row).toMatchObject({ claimCaseId: ctx.cid, lateWarningAwaitingReason: true, lateWarningUncoveredCount: 3 });
       expect(row!.returnedAt).not.toBeNull();
       const quiet = await quietClaim();
       await approve(quiet);

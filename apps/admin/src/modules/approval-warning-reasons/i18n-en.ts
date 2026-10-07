@@ -13,9 +13,9 @@ import {
 
 export const approvalWarningReasonsEn = {
   nav: 'Warning reasons',
-  heading: 'Warning reasons for approving over a nominee-change warning',
+  heading: 'Warning reasons for approving over a warning',
   intro:
-    'Approvers choose one of these reasons when they approve a claim while a nominee-change warning shows, and write their own note. Each reason shows who added it, when, and when to use it.',
+    'Approvers choose one of these reasons when they approve a claim while a warning shows, and write their own note. Each reason shows who added it, when, and when to use it.',
   neverEdited:
     'A reason can be replaced by a newer one, but it is never edited or deleted. A replaced reason stays in the history, and every approval keeps the words that were chosen.',
   staffText: 'These words are staff guidance for approvers — they are not shown to members or families.',

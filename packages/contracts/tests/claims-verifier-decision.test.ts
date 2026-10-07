@@ -12,6 +12,8 @@ import { describe, expect, it } from 'vitest';
 import {
   APPROVAL_WARNING_GENERIC_REASON,
   APPROVAL_WARNING_KINDS,
+  NOMINEE_VERSION_WARNING_KINDS,
+  DeathCertificateRegisterCheck,
   APPROVAL_WARNING_REASON_LABEL_MAX,
   APPROVAL_WARNING_REASON_REFUSALS,
   APPROVAL_WARNING_REASON_WHEN_TO_USE_MAX,
@@ -222,6 +224,12 @@ describe('Story 6.23a — `warning_reason_code` on the decision request ONLY (NW
 describe('Story 6.23a — contracts ↔ domain lockstep (the kinds, the record\'s steps, the generic, the bounds)', () => {
   it('APPROVAL_WARNING_KINDS', () => {
     expect([...APPROVAL_WARNING_KINDS]).toEqual([...claim.APPROVAL_WARNING_KINDS]);
+  });
+  it('Story 6.26b (RD8) — NOMINEE_VERSION_WARNING_KINDS', () => {
+    expect([...NOMINEE_VERSION_WARNING_KINDS]).toEqual([...claim.NOMINEE_VERSION_WARNING_KINDS]);
+  });
+  it('Story 6.26b (GI8; RD14) — the register check\'s value set (the death-certificate contract)', () => {
+    expect([...DeathCertificateRegisterCheck.options]).toEqual([...schema.DEATH_CERTIFICATE_REGISTER_CHECKS]);
   });
   it('CLAIM_WARNING_APPROVAL_STEPS', () => {
     expect([...CLAIM_WARNING_APPROVAL_STEPS]).toEqual([...schema.CLAIM_WARNING_APPROVAL_STEPS]);

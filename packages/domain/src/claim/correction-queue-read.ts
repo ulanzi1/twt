@@ -27,7 +27,7 @@
 // authorization, the `cycle-freeze-read` posture for `verifier_rationale`: it is staff-authored text
 // about a claim, ⛔ never a data subject's name.
 
-import { and, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNull, or, sql } from 'drizzle-orm';
 
 import type { Db } from '../db.js';
 import type { ClaimId, MemberId, PariwarId } from '../ids/index.js';
@@ -37,6 +37,8 @@ import { claimStateTrusteeDecisions } from '../schema/claim_state_trustee_decisi
 import { memberPostings } from '../schema/member_postings.js';
 import { readClaimApprovalWarningsBulk, uncoveredKeys } from './approval-warnings.js';
 import { readNomineeNameCheckFlagsBulk } from './nominee-name-check-read.js';
+import { inheritedGroundInspectionSourceSql } from './nominee-refusal-read.js';
+import { liveRoutedToR9Exists } from './r9-routing.js';
 
 /**
  * The states a claim can be UNDER CORRECTION in — the union of the states a return may be written
@@ -82,9 +84,11 @@ export interface ClaimUnderCorrectionRow {
   /**
    * ⭐ Story 6.23b (EA10) — the District Admin's live approval leaves a CURRENT warning key uncovered by any District
    * Admin row: the final approval waits for their late reason. When the late arm could ⛔ not be read (the caller is
-   * told through `onLateWarningsUnavailable`), a claim the cheap SQL candidate test flags (a determination decided
-   * after the live approval) is KEPT, `true` — it MAY wait (code review round 1, decision #1) — ⛔ never dropped as
-   * "none waiting".
+   * told through `onLateWarningsUnavailable`), a claim the cheap SQL candidate test flags is KEPT, `true` — it MAY wait
+   * (code review round 1, decision #1) — ⛔ never dropped as "none waiting". ⚠ AMENDED by Story 6.26b (GI7, `-290` M2):
+   * the candidate test has THREE sources — a determination decided after the live approval, an OWN inspection completed
+   * after it, and reliance on an inherited visit (whose SOURCE can change after it) — and (`-284` E1) also admits an
+   * R9-routed claim in `state_trustee_approved`.
    */
   readonly lateWarningAwaitingReason: boolean;
   /**
@@ -134,6 +138,53 @@ async function candidateBatch(
   limit: number | undefined,
   after: { readonly createdAtExact: string; readonly claimCaseId: string } | null,
 ) {
+  // ⭐ Story 6.23b (EA10) — the TIGHT late-warning arm, ONE fragment for the column AND the WHERE (Story 6.26b RD2 (a);
+  // Trap 3): a live APPROVED verifier decision AND something after it that can bring a key its approval row did ⛔ not
+  // cover. ⚠ AMENDED by Story 6.26b — THREE sources now (6.23a's "TODAY a late key can arise ONLY that way" stopped
+  // holding when 6.26b shipped):
+  //   (1) a live determination decided after the approval (6.23b — a `post_death_version` key);
+  //   (2) an OWN inspection COMPLETED after the approval (GI7 — a date or `does_not_match` key; `completed_at` is the
+  //       DB clock read at the completion's UPDATE, `-288` K3);
+  //   (3) `-290` M2 — the claim has ⛔ no own completed full visit and relies on an INHERITED one: the source can gain a
+  //       completed visit (reversed on appeal and re-inspected) or change, with ⛔ no row of THIS claim moving, so every
+  //       such approved claim is a CANDIDATE (`qualifyingRows`' exact key check drops it when nothing is uncovered).
+  // ⛔ Still never "every approved claim" (the crowding the 2026-09-23b review removed) — only claims relying on an
+  // inherited visit, a rare refile path. The exact answer is computed per row below.
+  // ⚠ The determination arm compares two transaction-START `now()`s — a race recorded in `deferred-work.md`, ⛔ not
+  // changed here.
+  const lateArm = sql`EXISTS (
+          SELECT 1 FROM claim_verifier_decisions v
+           WHERE v.pariwar_id = "claims"."pariwar_id"
+             AND v.claim_case_id = "claims"."claim_case_id"
+             AND v.outcome = 'approved'
+             AND v.superseded_at IS NULL
+             AND (
+               EXISTS (
+                 SELECT 1 FROM nominee_determinations nd
+                  WHERE nd.pariwar_id = v.pariwar_id
+                    AND nd.claim_case_id = v.claim_case_id
+                    AND nd.superseded_at IS NULL
+                    AND nd.decided_at > v.decided_at
+               )
+               OR EXISTS (
+                 SELECT 1 FROM claim_ground_inspections gi
+                  WHERE gi.pariwar_id = v.pariwar_id
+                    AND gi.claim_case_id = v.claim_case_id
+                    AND gi.status = 'completed'
+                    AND gi.completed_at > v.decided_at
+               )
+               OR (
+                 NOT EXISTS (
+                   SELECT 1 FROM claim_ground_inspections own_gi
+                    WHERE own_gi.pariwar_id = v.pariwar_id
+                      AND own_gi.claim_case_id = v.claim_case_id
+                      AND own_gi.status = 'completed'
+                      AND own_gi.inspection_stage <> 'certificate_check'
+                 )
+                 AND ${inheritedGroundInspectionSourceSql(sql`v.pariwar_id`, sql`v.claim_case_id`)} IS NOT NULL
+               )
+             )
+        )`;
   return (
     db
       .select({
@@ -154,30 +205,21 @@ async function candidateBatch(
          ORDER BY p.created_at DESC, p.posting_id DESC
          LIMIT 1
       )`,
-        // Code review 2026-10-06 (decision-needed #1) — the SAME EXISTS the WHERE clause's third arm tests below,
-        // exposed as a column: `qualifyingRows` needs to know a candidate matched the (cheap, always-reliable)
-        // late-warning arm even when the separate, fallible `readLateWarningArm` enrichment read fails — otherwise a
-        // late-warning-only candidate silently drops out of the page on a fault, which is exactly what EA10's
-        // "⛔ never none waiting" invariant forbids.
-        lateWarningCandidate: sql<boolean>`EXISTS (
-          SELECT 1 FROM claim_verifier_decisions v
-            JOIN nominee_determinations nd
-              ON nd.pariwar_id = v.pariwar_id
-             AND nd.claim_case_id = v.claim_case_id
-             AND nd.superseded_at IS NULL
-             AND nd.decided_at > v.decided_at
-           WHERE v.pariwar_id = "claims"."pariwar_id"
-             AND v.claim_case_id = "claims"."claim_case_id"
-             AND v.outcome = 'approved'
-             AND v.superseded_at IS NULL
-        )`,
+        // Code review 2026-10-06 (decision-needed #1) — the SAME late arm the WHERE clause tests below (⭐ Story 6.26b
+        // RD2 (a): ONE hoisted fragment, `lateArm`, ⛔ never a second copy), exposed as a column: `qualifyingRows` needs
+        // to know a candidate matched the (cheap, always-reliable) late-warning arm even when the separate, fallible
+        // `readLateWarningArm` enrichment read fails — otherwise a late-warning-only candidate silently drops out of the
+        // page on a fault, which is exactly what EA10's "⛔ never none waiting" invariant forbids.
+        lateWarningCandidate: sql<boolean>`${lateArm}`,
       })
       .from(claims)
       .where(
         and(
           eq(claims.pariwarId, pariwarId),
-          inArray(claims.currentState, [...CORRECTABLE_SCAN_STATES]),
-          sql`(
+          or(
+            and(
+              inArray(claims.currentState, [...CORRECTABLE_SCAN_STATES]),
+              sql`(
           EXISTS (
             SELECT 1 FROM ${claimStateTrusteeDecisions} d
              WHERE d.pariwar_id = "claims"."pariwar_id"
@@ -193,22 +235,15 @@ async function candidateBatch(
                AND e.event_type = 'claim.nominee_name_checked'
                AND e.payload -> 'accounts' @> '[{"verdict":"does_not_match"}]'::jsonb
           )
-          OR EXISTS (
-            -- ⭐ Story 6.23b (EA10) — the TIGHT late-warning arm: a live APPROVED verifier decision AND a live
-            -- determination decided AFTER it. TODAY a late key can arise ONLY that way (6.23a fact 3) — ⛔ never "every
-            -- approved claim" (the crowding the 2026-09-23b review removed). The exact answer is computed per row below.
-            SELECT 1 FROM claim_verifier_decisions v
-              JOIN nominee_determinations nd
-                ON nd.pariwar_id = v.pariwar_id
-               AND nd.claim_case_id = v.claim_case_id
-               AND nd.superseded_at IS NULL
-               AND nd.decided_at > v.decided_at
-             WHERE v.pariwar_id = "claims"."pariwar_id"
-               AND v.claim_case_id = "claims"."claim_case_id"
-               AND v.outcome = 'approved'
-               AND v.superseded_at IS NULL
-          )
+          OR ${lateArm}
         )`,
+            ),
+            // ⭐ Story 6.26b (`-284` E1; RD2 (c)) — an R9-routed claim in `state_trustee_approved` can gain a late key
+            // (`-283` A1 lets its inspection complete there) and R9 finalize waits for the District Admin ⇒ the LATE arm
+            // ONLY also scans that state, while the claim carries a live routing row (6.26a's ONE predicate, RD3). Every
+            // other arm keeps `CORRECTABLE_SCAN_STATES`.
+            sql`("claims"."current_state" = 'state_trustee_approved' AND ${liveRoutedToR9Exists()} AND ${lateArm})`,
+          ),
           after === null
             ? undefined
             : sql`("claims"."created_at", "claims"."claim_case_id") < (${after.createdAtExact}::timestamptz, ${after.claimCaseId}::uuid)`,

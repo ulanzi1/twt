@@ -118,6 +118,10 @@ export const VerifierReviewItem = z
         /** `missing` = a row with no current upload (T12 legacy): no token, never reviewable (`2026-09-26-245` §3). */
         status: z.enum(['missing', 'not_reviewed', 'accepted', 'rejected']),
         rejectionReason: z.enum(['no_date_of_death', 'date_of_death_unclear', 'date_of_death_in_future']).nullable(),
+        /** Story 6.26b (GI8) — the CURRENT review's government-register check (the same review `status` describes);
+         *  `null` on a rejected review, on ⛔ review, and on an accepted review recorded before 6.26b. ⚠ LOCKSTEP with
+         *  `DeathCertificateRegisterCheck`. */
+        registerCheck: z.enum(['matches', 'does_not_match', 'could_not_check']).nullable(),
         decidedByDisplay: z.string().nullable(),
         decidedAt: z.string().datetime().nullable(),
         /** The claim's LIVE review (current or not) — echoed back as `expected_live_review_id`. */
@@ -214,8 +218,8 @@ export const GroundInspectionItem = z
     photos: z.array(GroundInspectionPhotoItem),
     /**
      * ⭐ Story 6.26a (GI10 [a]) — the inspector's record. `originalCertificateVerdict`: did the original they held
-     * match the copy (`-263` FQ11 A) — shown PLAINLY (Story 6.26b turns a `does_not_match` into a warning); `null` on
-     * an assignment that is not completed, or one completed before 6.26a.
+     * match the copy (`-263` FQ11 A) — a `does_not_match` against the CURRENT certificate is a WARNING (Story 6.26b
+     * GI17 — see `originalMismatchWarning`); `null` on an assignment that is not completed, or one completed before 6.26a.
      */
     originalCertificateVerdict: z.enum(['matches', 'does_not_match']).nullable(),
     /** Was the original compared with the claim's CURRENT certificate, or with one since replaced (or another claim's —
@@ -233,6 +237,20 @@ export const GroundInspectionItem = z
     deathTimeUnreadable: z.boolean(),
     /** Story 6.26a (GI10) — `true` ⇔ this is ANOTHER claim's inspection, inherited (see the section's `inheritedFrom`). */
     inherited: z.boolean(),
+    /**
+     * Story 6.26b (GI10 [b]; `-288` K2, `-289` L4; RD18) — how this assignment's date compares with the certificate the
+     * Trust accepted, by the SAME comparison the warnings use (⛔ never a date, ⛔ never an index on the wire):
+     * `differs` / `same`; `not_compared` (⛔ date, a replaced original's printed date, ⛔ accepted certificate, or ⛔
+     * completed); `not_indexed` (the accepted review predates 6.26b); `null` = could ⛔ not be checked just now (the
+     * warnings read failed, or did ⛔ not see this completed row).
+     */
+    dateComparison: z.enum(['differs', 'same', 'not_compared', 'not_indexed']).nullable(),
+    /** GI6 — this assignment's differing date IS a warning (`-289` L3: an inherited one too). `false` where ⛔ key can
+     *  exist (an un-completed row, or ⛔ `differs`); `null` = could ⛔ not be checked just now (invariant 5). */
+    dateDiffersWarning: z.boolean().nullable(),
+    /** GI17 — this assignment's `does_not_match` IS a warning. `false` by construction on an un-completed or inherited
+     *  row, or a verdict ⛔ `does_not_match`; `null` = could ⛔ not be checked just now. */
+    originalMismatchWarning: z.boolean().nullable(),
   })
   .strict();
 export type GroundInspectionItem = z.output<typeof GroundInspectionItem>;

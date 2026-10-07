@@ -27,7 +27,7 @@ import { ensureGroundInspection, insertDeathCertificate, seedNomineeNameCheck } 
 
 // ⭐ The fault seam — the gate section's ONE read made to fail ON DEMAND with a REAL SQL error first (so the SAVEPOINT
 // path is exercised: without it the error would abort the scope tx and every later section would 25P02). Off by default.
-const fault = vi.hoisted(() => ({ on: false }));
+const fault = vi.hoisted(() => ({ on: false, warnings: false }));
 vi.mock('@twt/domain', async (importActual) => {
   const actual = await importActual<typeof import('@twt/domain')>();
   const { sql } = await import('drizzle-orm');
@@ -38,6 +38,12 @@ vi.mock('@twt/domain', async (importActual) => {
       readGroundInspectionApprovalFacts: async (...a: Parameters<typeof actual.claim.readGroundInspectionApprovalFacts>) => {
         if (fault.on) await (a[0] as unknown as { execute: (q: unknown) => Promise<unknown> }).execute(sql`SELECT 1/0`);
         return actual.claim.readGroundInspectionApprovalFacts(...a);
+      },
+      // Story 6.26b (RD18) — the warnings read made to fail ON DEMAND (it is the LAST read, with ⛔ SAVEPOINT — a thrown
+      // JS error takes the same catch path without aborting the scope tx).
+      readClaimApprovalWarnings: async (...a: Parameters<typeof actual.claim.readClaimApprovalWarnings>) => {
+        if (fault.warnings) throw new Error('forced: the warnings read failed');
+        return actual.claim.readClaimApprovalWarnings(...a);
       },
     },
   };
@@ -103,12 +109,13 @@ describe.skipIf(!hasDatabase)('Story 6.26a — the console\'s ground-inspection 
     return claimCaseId;
   }
 
-  /** The `-239` SOURCE for `deceased`: an earlier claim refused on suspicion, with a completed FULL inspection. */
-  async function refusedSource(pariwarId: string, deceased: ids.MemberId): Promise<string> {
+  /** The `-239` SOURCE for `deceased`: an earlier claim refused on suspicion, with a completed FULL inspection (its family
+   *  date `deathDate`, default the fixture's — tomorrow, the refile's accepted date). */
+  async function refusedSource(pariwarId: string, deceased: ids.MemberId, opts: { deathDate?: string } = {}): Promise<string> {
     const source = await seedClaim(pariwarId, deceased, { skip: true });
     await inScope(pariwarId, async (s) => {
       await insertDeathCertificate(s, pariwarId, source);
-      await ensureGroundInspection(deps, s, pariwarId, source);
+      await ensureGroundInspection(deps, s, pariwarId, source, opts.deathDate ? { deathDate: opts.deathDate } : {});
     });
     await td.pool.query(
       `INSERT INTO claim_verifier_decisions (claim_case_id, pariwar_id, outcome, reason_code, actor_id, actor_display)
@@ -261,8 +268,9 @@ describe.skipIf(!hasDatabase)('Story 6.26a — the console\'s ground-inspection 
     expect(own).toMatchObject({
       inherited: false,
       inspectionStage: 'certificate_check',
-      // ⭐ SHOWN plainly — 6.26b makes it a warning.
+      // ⭐ Shown — and (6.26b GI17) a warning, compared against the CURRENT upload.
       originalCertificateVerdict: 'does_not_match',
+      originalMismatchWarning: true,
       comparedAgainst: 'current',
       deathDateSource: 'original_certificate',
       deathDate: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
@@ -283,5 +291,77 @@ describe.skipIf(!hasDatabase)('Story 6.26a — the console\'s ground-inspection 
     const { packet } = await inScope(pariwarId, (s) => assembleVerifierConsole(deps, ctxOf(s, pariwarId, claimCaseId)));
     if (packet.groundInspection.status !== 'present') throw new Error('expected a present section');
     expect(packet.groundInspection.assignments[0]).toMatchObject({ deathDate: null, deathDateUnreadable: true, deathDateSource: 'family_statement' });
+  });
+  // ── Story 6.26b (GI10 [b]; `-288` K2, `-289` L3/L4; RD18; invariant 5) ──────────────────────────────────────────────
+  const daysAgo = (n: number) => new Date(Date.now() - n * 86_400_000).toISOString().slice(0, 10);
+
+  it('⭐ Story 6.26b — the INHERITED visit\'s differing family date is a WARNING (`differs` + `dateDiffersWarning: true`); its verdict ⛔ never a GI17 key; the document section carries the register check', async () => {
+    const pariwarId = randomUUID();
+    const deceased = await seedDeceased(pariwarId);
+    const source = await refusedSource(pariwarId, deceased, { deathDate: daysAgo(3) });
+    const refile = await seedClaim(pariwarId, deceased, { inspection: 'skip', registerCheck: 'could_not_check' });
+    const ownCheck = await inScope(pariwarId, (s) => ensureGroundInspection(deps, s, pariwarId, refile, { stage: 'certificate_check', verdict: 'does_not_match' }));
+    const { packet } = await inScope(pariwarId, (s) => assembleVerifierConsole(deps, ctxOf(s, pariwarId, refile)));
+    if (packet.groundInspection.status !== 'present') throw new Error('expected a present section');
+    expect(packet.groundInspection.inheritedFrom).toEqual({ claimCaseId: source });
+    const own = packet.groundInspection.assignments.find((a) => a.groundInspectionId === ownCheck)!;
+    expect(own).toMatchObject({ dateComparison: 'same', dateDiffersWarning: false, originalMismatchWarning: true });
+    const [inherited] = packet.groundInspection.assignments.filter((a) => a.inherited);
+    expect(inherited).toMatchObject({ dateComparison: 'differs', dateDiffersWarning: true, originalMismatchWarning: false });
+    expect(packet.approvalWarnings.kinds).toEqual(['inspection_death_date_differs', 'original_certificate_mismatch']);
+    // The register check reaches the document section (the snapshot — ⛔ no new read).
+    const certificate = packet.documentReview.status === 'present' ? packet.documentReview.reviews.find((r) => r.documentType === 'death_certificate') : undefined;
+    expect(certificate?.review?.registerCheck).toBe('could_not_check');
+    // ⛔ No key and ⛔ no index on the wire — the section's shape is unchanged (the shape spec pins its exact keys).
+    expect(JSON.stringify(packet)).not.toMatch(/inspection_death_date_differs:|fixture-death-date-index|"keys"/);
+  });
+
+  it('Story 6.26b — a pre-6.26b accepted review (⛔ index) ⇒ `not_indexed`; ⛔ accepted certificate ⇒ `not_compared`; neither is a warning', async () => {
+    const pariwarId = randomUUID();
+    const old = await seedClaim(pariwarId, await seedDeceased(pariwarId));
+    await td.pool.query('UPDATE claim_death_certificate_reviews SET accepted_date_index = NULL WHERE claim_case_id = $1', [old]);
+    const oldPacket = (await inScope(pariwarId, (s) => assembleVerifierConsole(deps, ctxOf(s, pariwarId, old)))).packet;
+    if (oldPacket.groundInspection.status !== 'present') throw new Error('expected a present section');
+    expect(oldPacket.groundInspection.assignments[0]).toMatchObject({ dateComparison: 'not_indexed', dateDiffersWarning: false });
+
+    const bare = await seedClaim(pariwarId, await seedDeceased(pariwarId), { skip: true });
+    await inScope(pariwarId, async (s) => {
+      await insertDeathCertificate(s, pariwarId, bare);
+      await ensureGroundInspection(deps, s, pariwarId, bare, { deathDate: daysAgo(3) });
+    });
+    const barePacket = (await inScope(pariwarId, (s) => assembleVerifierConsole(deps, ctxOf(s, pariwarId, bare)))).packet;
+    if (barePacket.groundInspection.status !== 'present') throw new Error('expected a present section');
+    expect(barePacket.groundInspection.assignments[0]).toMatchObject({ dateComparison: 'not_compared', dateDiffersWarning: false });
+  });
+
+  it('⭐⭐ Story 6.26b (invariant 5; Trap 11) — a FAILED warnings read: `null` on every completed row\'s comparison and on every flag the section does ⛔ rule out; `false` where it does; MAX_READS stays 20', async () => {
+    expect(VERIFIER_CONSOLE_MAX_READS).toBe(20);
+    const pariwarId = randomUUID();
+    const deceased = await seedDeceased(pariwarId);
+    await refusedSource(pariwarId, deceased, { deathDate: daysAgo(3) });
+    const refile = await seedClaim(pariwarId, deceased, { inspection: 'skip' });
+    const mismatch = (await inScope(pariwarId, (s) => ensureGroundInspection(deps, s, pariwarId, refile, { stage: 'certificate_check', verdict: 'does_not_match' })))!;
+    const matches = (await inScope(pariwarId, (s) => ensureGroundInspection(deps, s, pariwarId, refile, { stage: 'certificate_check', force: true })))!;
+    const scheduled = (
+      await td.pool.query<{ id: string }>(
+        `INSERT INTO claim_ground_inspections (claim_case_id, pariwar_id, district, inspection_stage, inspection_site_type, inspector_actor_id, scheduled_at, status)
+         VALUES ($1, $2, $3, 'initial', 'family_residence', $4, now(), 'scheduled') RETURNING ground_inspection_id AS id`,
+        [refile, pariwarId, DISTRICT, randomUUID()],
+      )
+    ).rows[0]!.id;
+    fault.warnings = true;
+    try {
+      const { packet } = await inScope(pariwarId, (s) => assembleVerifierConsole(deps, ctxOf(s, pariwarId, refile)));
+      expect(packet.approvalWarnings.available).toBe(false);
+      if (packet.groundInspection.status !== 'present') throw new Error('expected a present section');
+      const by = (id: string) => packet.groundInspection.status === 'present' ? packet.groundInspection.assignments.find((a) => a.groundInspectionId === id)! : undefined;
+      expect(by(mismatch)).toMatchObject({ dateComparison: null, dateDiffersWarning: null, originalMismatchWarning: null });
+      expect(by(matches)).toMatchObject({ dateComparison: null, dateDiffersWarning: null, originalMismatchWarning: false });
+      expect(by(scheduled)).toMatchObject({ dateComparison: 'not_compared', dateDiffersWarning: false, originalMismatchWarning: false });
+      const [inherited] = packet.groundInspection.assignments.filter((a) => a.inherited);
+      expect(inherited).toMatchObject({ dateComparison: null, dateDiffersWarning: null, originalMismatchWarning: false });
+    } finally {
+      fault.warnings = false;
+    }
   });
 });

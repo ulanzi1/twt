@@ -43,7 +43,7 @@ export function translateLaterApprovalWarningError(err: unknown, prefix: LaterAp
   if (err instanceof claim.ApprovalWarningReasonRequiredError) {
     throw new ConflictError(
       err.missing === 'reason'
-        ? 'This claim shows a nominee-change warning — choose a warning reason and write a note to approve it. The claim is not refused.'
+        ? 'This claim shows a warning — choose a warning reason and write a note to approve it. The claim is not refused.'
         : 'A note is needed with the warning reason — write why you approve despite the warning. The claim is not refused.',
       `${prefix}.warning_reason_required`,
       { kinds: [...err.kinds], missing: err.missing },
@@ -51,7 +51,7 @@ export function translateLaterApprovalWarningError(err: unknown, prefix: LaterAp
   }
   if (err instanceof claim.WarningReasonUngroundedError) {
     throw new ConflictError(
-      'This claim shows no nominee-change warning — approve it without a warning reason',
+      'This claim shows no warning — approve it without a warning reason',
       `${prefix}.warning_reason_ungrounded`,
     );
   }
@@ -63,7 +63,7 @@ export function translateLaterApprovalWarningError(err: unknown, prefix: LaterAp
   }
   if (err instanceof claim.R9ApproveVotesNeedWarningReasonError) {
     throw new ConflictError(
-      'Some approve votes do not answer every nominee-change warning now showing — each of those voters must revise their vote with a warning reason. The claim is not refused.',
+      'Some approve votes do not answer every warning now showing on this claim — each of those voters must revise their vote with a warning reason. The claim is not refused.',
       `${prefix}.approve_votes_need_warning_reason`,
       { vote_ids: [...err.voteIds], uncovered_count: err.uncoveredCount },
     );

@@ -20,6 +20,7 @@ import {
 } from '../../src/claim/approval-warning-reasons.js';
 import {
   APPROVAL_WARNING_KINDS,
+  NOMINEE_VERSION_WARNING_KINDS,
   RECENT_NOMINEE_CHANGE_WINDOW_DAYS,
   approvalWarningKey,
   assertApprovalReasonCoversWarnings,
@@ -53,11 +54,23 @@ const repoRoot = path.resolve(here, '../../../..');
 const ist = (date: string, hhmm: string) => new Date(`${date}T${hhmm}:00+05:30`);
 
 describe('the warning kinds (NW1)', () => {
-  it('⭐ APPROVAL_WARNING_KINDS is exactly the two 6.23a kinds', () => {
+  it('⭐ APPROVAL_WARNING_KINDS is exactly the two 6.23a kinds and the three 6.26b death-fact kinds', () => {
     expect(
       [...APPROVAL_WARNING_KINDS],
-      'a new kind enters 6.23b\'s wait (`-277` Q3 B) — its producer row decides or routes that before extending this list',
-    ).toEqual(['post_death_version', 'recent_nominee_change']);
+      'a new kind enters 6.23b\'s wait (`-277` Q3 B) — its producer row decides or routes that before extending this list. ' +
+        'GI6 / GI7 (`-282`) and GI17 / GI18 (`-281` Q1 B) discharged it for the three death-fact kinds',
+    ).toEqual([
+      'post_death_version',
+      'recent_nominee_change',
+      'inspection_death_date_differs',
+      'original_certificate_mismatch',
+      'register_check_mismatch',
+    ]);
+  });
+
+  it('Story 6.26b RD8 — the timeline\'s VERSION kinds are exactly the two 6.23a kinds, the head of the full list', () => {
+    expect([...NOMINEE_VERSION_WARNING_KINDS]).toEqual(['post_death_version', 'recent_nominee_change']);
+    expect(APPROVAL_WARNING_KINDS.slice(0, NOMINEE_VERSION_WARNING_KINDS.length)).toEqual([...NOMINEE_VERSION_WARNING_KINDS]);
   });
 
   it('the window is the Panel\'s 90 days (`-262` FQ8 A, amended from 30)', () => {

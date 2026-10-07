@@ -414,7 +414,17 @@ describe.skipIf(!hasDatabase)('Story 6.23a — the nominee-change warnings at th
     it('`-279` A3 — a stale determination ⇒ `warnings_not_current`', async () => {
       const ctx = await quietClaim();
       await approve(ctx);
-      await rereviewOnly(ctx, istDaysAgo(10));
+      // ⚠ Story 6.26b (RD19 (iii)) — a SAME-date re-review (only the register check moves): a new review id makes the
+      // determination stale with ⛔ no key. A re-review to ANOTHER date would now raise `inspection_death_date_differs`
+      // (the family's date stays the old one), and `reviseDecision` would answer `warning_approval_final` FIRST —
+      // deleting this test's coverage instead of amending it.
+      await seedAcceptedDeathCertificate(ctx.client, {
+        pariwarId: ctx.pid,
+        claimCaseId: ctx.cid,
+        date: addCalendarDays(istDateOf(new Date()), 1),
+        registerCheck: 'could_not_check',
+      });
+      expect((await readClaimApprovalWarnings(ctx.tx, ctx.pid, ctx.cid)).kinds).toEqual([]);
       await refused(ctx, () => revise(ctx), notRevisable('warnings_not_current'));
     });
 
@@ -437,10 +447,13 @@ describe.skipIf(!hasDatabase)('Story 6.23a — the nominee-change warnings at th
       await approve(ctx);
       await determine(ctx, istDaysAgo(250));
       const w1 = await readClaimApprovalWarnings(ctx.tx, ctx.pid, ctx.cid);
-      expect(uncoveredKeys(w1)).toHaveLength(2);
+      // Two post-death versions + (Story 6.26b, RD19 (i)) the inspection's family date (tomorrow) now differs from the
+      // re-reviewed certificate ⇒ `inspection_death_date_differs` — the correct behaviour.
+      expect(uncoveredKeys(w1)).toHaveLength(3);
+      expect(w1.kinds).toEqual(['post_death_version', 'inspection_death_date_differs']);
       const events = await eventCount(ctx);
       const r1 = await lateReason(ctx);
-      expect(r1.coveredKeyCount).toBe(2);
+      expect(r1.coveredKeyCount).toBe(3);
       expect(await eventCount(ctx)).toBe(events);
       expect(await claimState(ctx)).toBe('verifier_approved');
       expect(uncoveredKeys(await readClaimApprovalWarnings(ctx.tx, ctx.pid, ctx.cid))).toEqual([]);
@@ -449,7 +462,8 @@ describe.skipIf(!hasDatabase)('Story 6.23a — the nominee-change warnings at th
       // A second late warning (an earlier date discards the 300-day versions too).
       await determine(ctx, istDaysAgo(350));
       const r2 = await lateReason(ctx, DA, { noteCiphertext: 'enc:v1:second-note' });
-      expect(r2.coveredKeyCount).toBe(4);
+      // Four post-death versions + the SAME date key (per inspection — `-288` K4).
+      expect(r2.coveredKeyCount).toBe(5);
       const rows = await records(ctx);
       expect(rows).toHaveLength(2);
       expect(rows.find((r) => r.recordId === r1.recordId)?.noteCiphertext).toBe('enc:v1:late-note');
@@ -477,8 +491,9 @@ describe.skipIf(!hasDatabase)('Story 6.23a — the nominee-change warnings at th
       await emit(ctx, 'state_trustee_freeze', 'state_trustee_approved', 'claim.state_trustee_approved');
       const w = await readClaimApprovalWarnings(ctx.tx, ctx.pid, ctx.cid);
       expect(uncoveredKeys(w)).toEqual([]); // covered for everyone …
-      expect(lateKeysUncoveredFor(w, DA)).toHaveLength(2); // … but ⛔ by the District Admin's own record
-      expect(uncoveredKeys(w, { excludeLateReasonsRecordedBy: PA })).toHaveLength(2); // ⛔ for the PA's own approval
+      // Two post-death versions + (Story 6.26b, RD19 (i)) the inspection's differing family date.
+      expect(lateKeysUncoveredFor(w, DA)).toHaveLength(3); // … but ⛔ by the District Admin's own record
+      expect(uncoveredKeys(w, { excludeLateReasonsRecordedBy: PA })).toHaveLength(3); // ⛔ for the PA's own approval
       await lateReason(ctx, DA);
       expect(await records(ctx)).toHaveLength(2);
     });

@@ -121,6 +121,14 @@ function card(over: Partial<PendingCase> = {}, bucket: 'ready_to_freeze' | 'esca
 
 const prefix = `cf-${CLAIM}`;
 
+describe('Story 6.26b (GI11 [b]) — a LATER surface words the three death-fact kinds through the shared map (⛔ per-surface edit)', () => {
+  it('the final-vote card shows each new kind\'s own line', () => {
+    const kinds = ['inspection_death_date_differs', 'original_certificate_mismatch', 'register_check_mismatch'] as const;
+    card({ approval_warnings: summary({ kinds: [...kinds] }) });
+    for (const k of kinds) expect(screen.getByTestId(`${prefix}-approval-warning-${k}`)).toHaveTextContent(tw.kindLine[k]);
+  });
+});
+
 describe('<PendingCaseCard> — the final vote and the escalation (EA3, EA4, EA7)', () => {
   it('⭐ shows the line and the picker (label, when to use, added by / built in, ⛔ nothing pre-selected) BEFORE Approve', () => {
     card();

@@ -12,6 +12,7 @@
 //   · `decisionErrorMessage` — every new 409 code and both `not_revisable` reasons in their own words.
 
 import type { ApprovalWarningReasonOption, NomineeDeclarationTimelineResponse } from '@twt/contracts';
+import { NOMINEE_VERSION_WARNING_KINDS, NomineeVersionWarningKind } from '@twt/contracts';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -75,6 +76,31 @@ describe('<ApprovalWarningReasonPicker> (NW9)', () => {
     const status = screen.getByTestId('t-warning-reason-selected');
     expect(status.getAttribute('role')).toBe('status');
     expect(status.textContent).toBe(t.approvalWarnings.selected(STORED.label));
+  });
+});
+
+describe('Story 6.26b (GI11 [b]; RD8, RD10) — the three death-fact kinds have their OWN words', () => {
+  const DEATH_FACT_KINDS = ['inspection_death_date_differs', 'original_certificate_mismatch', 'register_check_mismatch'] as const;
+
+  it('the District Admin\'s strip shows a line per new kind, in its own words, under a kind-neutral heading', () => {
+    render(
+      <VerificationDecisionStrip
+        claimState="verifier_review"
+        onDecision={vi.fn().mockResolvedValue(undefined)}
+        approvalWarnings={{ kinds: [...DEATH_FACT_KINDS], reasonOptions: OPTIONS }}
+      />,
+    );
+    fireEvent.click(screen.getByTestId('action-approve'));
+    for (const k of DEATH_FACT_KINDS) {
+      expect(screen.getByTestId(`approval-warning-${k}`).textContent).toBe(t.approvalWarnings.kindLine[k]);
+    }
+    expect(t.approvalWarnings.heading).not.toMatch(/nominee/i);
+  });
+
+  it('⛔ the timeline words them: its VERSION kinds are exactly the two 6.23a kinds (Trap 7)', () => {
+    expect([...NOMINEE_VERSION_WARNING_KINDS]).toEqual(['post_death_version', 'recent_nominee_change']);
+    for (const k of DEATH_FACT_KINDS) expect(Object.keys(t.nomineeDeclaration.warning)).not.toContain(k);
+    expect(NomineeVersionWarningKind.safeParse('inspection_death_date_differs').success).toBe(false);
   });
 });
 

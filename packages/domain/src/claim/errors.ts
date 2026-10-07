@@ -597,7 +597,10 @@ export class DeathCertificateReviewRefusedError extends Error {
       | 'accept_future_date'
       | 'reason_on_accept'
       | 'missing_reason'
-      | 'date_on_reject',
+      | 'date_on_reject'
+      // Story 6.26b GI8 — the government death-register check: required on an accept, refused on a reject.
+      | 'register_check_required'
+      | 'register_check_not_allowed',
     detail: string,
   ) {
     super(`[death-certificate-review] claim ${claimCaseId}: ${reason} — ${detail}`);

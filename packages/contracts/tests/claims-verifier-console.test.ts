@@ -193,14 +193,25 @@ describe('VerifierConsolePacket — full round-trip + ordering', () => {
       deathDateUnreadable: false,
       deathTimeUnreadable: false,
       inherited: false,
+      // Story 6.26b (GI10 [b]; RD18) — the per-assignment comparison and the two warning flags.
+      dateComparison: 'differs',
+      dateDiffersWarning: true,
+      originalMismatchWarning: true,
     };
     const ok = { ...PACKET, groundInspection: { status: 'present' as const, assignments: [assignment] } };
     expect(VerifierConsolePacket.safeParse(ok).success).toBe(true);
-    // ⛔ An unknown verdict, comparison or photo kind is refused.
+    // Story 6.26b — `null` ("could not be checked just now") is representable on all three; ⛔ absent is not.
+    const unknown = { ...assignment, dateComparison: null, dateDiffersWarning: null, originalMismatchWarning: null };
+    expect(VerifierConsolePacket.safeParse({ ...PACKET, groundInspection: { status: 'present', assignments: [unknown] } }).success).toBe(true);
+    const noComparison: Record<string, unknown> = { ...assignment };
+    delete noComparison.dateComparison;
+    // ⛔ An unknown verdict, comparison or photo kind is refused — and (6.26b) a missing comparison or an unknown one.
     for (const bad of [
       { ...assignment, originalCertificateVerdict: 'unclear' },
       { ...assignment, comparedAgainst: 'later' },
       { ...assignment, photos: [{ ...assignment.photos[0], photoKind: 'selfie' }] },
+      noComparison,
+      { ...assignment, dateComparison: 'later' },
     ]) {
       expect(VerifierConsolePacket.safeParse({ ...PACKET, groundInspection: { status: 'present', assignments: [bad] } }).success).toBe(false);
     }

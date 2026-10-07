@@ -25,7 +25,7 @@ import {
 import { setPariwarScope } from '../../../src/db.js';
 import { claimId as toClaimId, memberId as toMemberId, pariwarId as toPariwarId } from '../../../src/ids/index.js';
 import type { ClaimId } from '../../../src/ids/index.js';
-import { fixtureAcceptedDateCiphertext, seedDeathCertificate } from '../_helpers.js';
+import { fixtureAcceptedDateCiphertext, fixtureDeathDateIndex, seedDeathCertificate } from '../_helpers.js';
 
 const DATABASE_URL = process.env['DATABASE_URL'];
 const hasDatabase = Boolean(DATABASE_URL);
@@ -153,6 +153,8 @@ describe.skipIf(!hasDatabase)('Story 6.21a — death-certificate review two-conn
     certificateToken: uploadId,
     acceptedDate: verdict === 'accepted' ? '2026-03-10' : null,
     acceptedDateCiphertext: verdict === 'accepted' ? fixtureAcceptedDateCiphertext('2026-03-10') : null,
+    acceptedDateIndex: verdict === 'accepted' ? fixtureDeathDateIndex('2026-03-10') : null,
+    registerCheck: verdict === 'accepted' ? 'matches' : null,
     rejectionReason: verdict === 'rejected' ? 'no_date_of_death' : null,
     noteCiphertext: 'enc:v1:n',
     expectedLiveReviewId: null,

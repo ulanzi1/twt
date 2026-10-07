@@ -78,6 +78,7 @@ const packet = (nomineeNameCheck: NameStatus): VerifierConsolePacket =>
           review: {
             status: 'accepted',
             rejectionReason: null,
+            registerCheck: 'matches',
             decidedByDisplay: 'Anita (District Admin)',
             decidedAt: '2026-09-25T06:00:00.000Z',
             liveReviewId: '00000000-0000-4000-8000-0000000000ac',

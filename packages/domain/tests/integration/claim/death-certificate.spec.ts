@@ -35,6 +35,7 @@ import {
   CLAIM_REVIEW_WINDOW_STATES,
   DEATH_CERTIFICATE_REVIEWABLE_STATES,
   projectClaimState,
+  readClaimApprovalWarnings,
   readDeathCertificateSnapshot,
   recordDeathCertificateReview,
   replayClaimState,
@@ -48,6 +49,7 @@ import {
   PARIWAR_A,
   enterAppScope,
   fixtureAcceptedDateCiphertext,
+  fixtureDeathDateIndex,
   seedAcceptedDeathCertificate,
   seedDeathCertificate,
   seedNomineeDeclaration,
@@ -109,13 +111,18 @@ async function freshClaim(target: Parameters<typeof driveTo>[3] = 'verifier_revi
 }
 
 function accept(cid: ClaimId, token: string, over: Partial<RecordDeathCertificateReviewInput> = {}): RecordDeathCertificateReviewInput {
+  // Story 6.26b (RD20) — the index follows the SAME date the ciphertext carries (the inspection fixture reads the
+  // family date back from the ciphertext), ⛔ never a static `fixtureDeathDateIndex(PAST)`.
+  const date = over.acceptedDate ?? PAST;
   return {
     claimCaseId: cid,
     pariwarId: PARIWAR_A,
     verdict: 'accepted',
     certificateToken: token,
     acceptedDate: PAST,
-    acceptedDateCiphertext: fixtureAcceptedDateCiphertext(PAST),
+    acceptedDateCiphertext: fixtureAcceptedDateCiphertext(date),
+    acceptedDateIndex: fixtureDeathDateIndex(date),
+    registerCheck: 'matches',
     rejectionReason: null,
     noteCiphertext: 'enc:v1:note',
     expectedLiveReviewId: null,
@@ -131,6 +138,9 @@ function reject(cid: ClaimId, token: string, over: Partial<RecordDeathCertificat
     verdict: 'rejected',
     acceptedDate: null,
     acceptedDateCiphertext: null,
+    // Story 6.26b (RD20) — `accept()` now carries both; a reject carries neither.
+    acceptedDateIndex: null,
+    registerCheck: null,
     rejectionReason: 'date_of_death_unclear',
     ...over,
   });
@@ -236,6 +246,60 @@ describe.skipIf(!hasDatabase)('Story 6.21a — the death certificate clear-date 
     for (const [reason, input] of legs) {
       await expect(recordDeathCertificateReview(client, input), reason).rejects.toSatisfy(refusedWith(reason));
     }
+  });
+
+  // ── Story 6.26b AC7 — the government death-register check (GI8; RD15) ─────────────────────────────────────────
+  it('⭐ Story 6.26b AC7 — an ACCEPT stores the register check and the accepted date\'s index; the event payload carries ⛔ neither (GI16)', async () => {
+    const { client, tx, cid } = await freshClaim();
+    const { uploadId } = await seedDeathCertificate(client, { pariwarId: PARIWAR_A, claimCaseId: cid });
+    const r = await recordDeathCertificateReview(client, accept(cid, uploadId, { registerCheck: 'could_not_check' }));
+    const [row] = await tx.select().from(schema.claimDeathCertificateReviews).where(eq(schema.claimDeathCertificateReviews.reviewId, r.reviewId));
+    expect(row).toMatchObject({ registerCheck: 'could_not_check', acceptedDateIndex: fixtureDeathDateIndex(PAST) });
+    expect((await readDeathCertificateSnapshot(tx, PARIWAR_A, cid)).currentReview?.registerCheck).toBe('could_not_check');
+    const ev = (await events(tx, cid)).at(-1)!;
+    expect(ev.eventType).toBe('claim.death_certificate_reviewed');
+    expect(ev.payload).not.toHaveProperty('register_check');
+    expect(JSON.stringify(ev.payload)).not.toContain('could_not_check');
+    expect(JSON.stringify(ev.payload)).not.toContain(fixtureDeathDateIndex(PAST));
+  });
+
+  it('⭐ Story 6.26b AC7 / RD15 — `register_check_required` / `register_check_not_allowed`, AFTER the four shape guards; the index joins `invalid_date` / `date_on_reject`', async () => {
+    const { client, tx, cid } = await freshClaim();
+    const { uploadId } = await seedDeathCertificate(client, { pariwarId: PARIWAR_A, claimCaseId: cid });
+    const legs: [string, RecordDeathCertificateReviewInput][] = [
+      ['register_check_required', accept(cid, uploadId, { registerCheck: null })],
+      ['register_check_required', accept(cid, uploadId, { registerCheck: undefined })],
+      ['register_check_required', accept(cid, uploadId, { registerCheck: 'probably' as never })],
+      ['register_check_not_allowed', reject(cid, uploadId, { registerCheck: 'matches' })],
+      // The index travels with the date: an accept without it is `invalid_date`, a reject with it `date_on_reject`.
+      ['invalid_date', accept(cid, uploadId, { acceptedDateIndex: null })],
+      ['invalid_date', accept(cid, uploadId, { acceptedDateIndex: '' })],
+      ['date_on_reject', reject(cid, uploadId, { acceptedDateIndex: 'idx' })],
+      // ONE defined code each: an accept with NEITHER new field is `invalid_date` (the index is checked first) …
+      ['invalid_date', accept(cid, uploadId, { acceptedDateIndex: null, registerCheck: null })],
+      // … a reject with BOTH is `date_on_reject`.
+      ['date_on_reject', reject(cid, uploadId, { acceptedDateIndex: 'idx', registerCheck: 'matches' })],
+      // Every existing refusal keeps its code even when the register check is also missing.
+      ['reason_on_accept', accept(cid, uploadId, { rejectionReason: 'no_date_of_death', registerCheck: null })],
+      ['missing_reason', reject(cid, uploadId, { rejectionReason: null, registerCheck: 'matches' })],
+    ];
+    for (const [reason, input] of legs) {
+      await expect(recordDeathCertificateReview(client, input), reason).rejects.toSatisfy(refusedWith(reason));
+    }
+    expect(await tx.select().from(schema.claimDeathCertificateReviews).where(eq(schema.claimDeathCertificateReviews.claimCaseId, cid))).toEqual([]);
+  });
+
+  it('⭐ Story 6.26b RD15 / Trap 13 — a REJECT that OMITS both new fields (⛔ not even `null`) is ⛔ never refused for them', async () => {
+    const { client, tx, cid } = await freshClaim();
+    const { uploadId } = await seedDeathCertificate(client, { pariwarId: PARIWAR_A, claimCaseId: cid });
+    const omitted: RecordDeathCertificateReviewInput = { ...reject(cid, uploadId) };
+    delete (omitted as { acceptedDateIndex?: unknown }).acceptedDateIndex;
+    delete (omitted as { registerCheck?: unknown }).registerCheck;
+    expect(omitted).not.toHaveProperty('registerCheck');
+    expect(omitted).not.toHaveProperty('acceptedDateIndex');
+    const r = await recordDeathCertificateReview(client, omitted);
+    const [row] = await tx.select().from(schema.claimDeathCertificateReviews).where(eq(schema.claimDeathCertificateReviews.reviewId, r.reviewId));
+    expect(row).toMatchObject({ verdict: 'rejected', registerCheck: null, acceptedDateIndex: null });
   });
 
   it('⭐ AC1 — the STATE refusals: not_found, not_reviewable, no_certificate (none, and a legacy row), stale_certificate, stale_supersession', async () => {
@@ -453,12 +517,17 @@ describe.skipIf(!hasDatabase)('Story 6.21a — the death certificate clear-date 
     await seedNomineeDetermination(client, PARIWAR_A, cid, { certificateDate: PAST });
     // … moves the declaration token, so the name check must be re-recorded too (D8's admin-copy point).
     await seedNomineeNameCheck(client, PARIWAR_A, cid, { reuseAccounts: true });
+    // ⭐ Story 6.26b (RD19 (i)) — the re-review moved the certificate's date AWAY from the date the family gave the
+    // inspector (the fixture's, tomorrow) ⇒ `inspection_death_date_differs` shows, so P1 approves WITH a warning reason
+    // and a note (the correct behaviour — 6.23a NW6).
+    expect((await readClaimApprovalWarnings(tx, PARIWAR_A, cid)).kinds).toEqual(['inspection_death_date_differs']);
     await adjudicateClaim(client, {
       claimCaseId: cid,
       pariwarId: PARIWAR_A,
       outcome: 'approved',
       reasonCode: 'r8_90pct_met',
-      rationaleCiphertext: null,
+      rationaleCiphertext: 'enc:v1:why',
+      warningReasonCode: 'warnings_reviewed',
       actorId: DISTRICT_ADMIN,
       actorDisplay: 'Anita (District Admin)',
       actor: 'operator',

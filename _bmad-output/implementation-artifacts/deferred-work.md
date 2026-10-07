@@ -4,6 +4,15 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Recorded during Story 6.26b dev (2026-10-07)
+
+- **A recorded register mismatch (and GI17's verdict) stops only on a replaced upload, and an upload is allowed only after a REJECT**
+  [`packages/domain/src/claim/approval-warnings.ts` `deriveDeathFactWarningKeys`; `claim/death-certificate-approval.ts` (the upload rule)].
+  `-289` L2 / its Consequence 3: a `does_not_match` on the current upload is ANSWERED by every approver's reason and note, ⛔ never
+  withdrawn — but a District Admin can launder a real mismatch by rejecting a valid certificate with an untrue reason and having the family
+  re-upload the same paper (a NEW upload ⇒ ⛔ key). ⛔ Not closed here (RD29). ⭐ Trigger: the next story that touches the certificate
+  reject reasons or the upload rule.
+
 ## Deferred from: code review of 6-26-ground-inspection-before-approval-and-death-facts, ROUND 4 (2026-10-07)
 
 - **The 6.7 site-photo race test never makes its two transactions overlap** [`packages/domain/tests/integration/claim/ground-inspection-concurrency.spec.ts` › *"BONUS — concurrent photo uploads at the MAX boundary"*]. Its 6.26a twin (the `-286` H2 reserved-slot race) stayed GREEN with `lockActiveAssignment`'s `.for('update')` removed until a barrier was added (a third connection holding `claim_ground_inspection_photos` IN ACCESS EXCLUSIVE MODE until both contenders are blocked, polled via `pg_stat_activity`); the BONUS test has the same shape and so likely the same blind spot. ⭐ Trigger: the next story touching ground-inspection photos — add the same barrier and red-check it.
@@ -12,6 +21,13 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 - **An inherited visit that vanishes after the final vote is ⛔ not re-checked at the cycle commit** [`packages/domain/src/claim/state-trustee-decision-persist.ts` `commitCycleFreeze`]. A refile VISITED only by inheritance passes the gate at the final vote and reaches `state_trustee_approved` (not R9-routed); if the `-239` source's denial is then revised to another reason (`reviseDecision` — `denied` is in `VERIFIER_DECISION_REVISABLE_STATES`), `inheritedGroundInspectionSourceSql` drops the source, the window refuses every inspection write in a non-routed `state_trustee_approved`, and `commitCycleFreeze` still emits `claim.approved`. GI16 deliberately left `commitCycleFreeze` untouched and `-283` A1 closed only the R9 twin. ⚠ Reachability ⛔ not proven: the source must still be a pre-freeze `denied` when its refile reaches the final vote. ⭐ Trigger: 6.24's refile-basis handling, or any story that lets a `-239` denial be revised while a refile is open — then either re-run the gate per candidate in the commit loop (skip-and-keep, like `hasLiveReturnRow`) or record that commit is not an approval under `-285`.
 - **The fixture's completion clock can be in the FUTURE** [`packages/domain/tests/integration/_helpers.ts:922` `fixtureReviewNow`; `apps/api/tests/integration/_nominee-name-check-fixture.ts:194`]. `max(Date.now(), date 12:00 IST)` + review patch #2 (`completedAt: input.now ?? now()`) write a `completed_at` after the review's `decided_at`. ⭐ Owed to **6.26b Task 4 / Task 9**: its GI7 queue arm reads `completed_at > v.decided_at`, so every fixture-seeded claim would surface as a late warning — seed the completion before the review, or pin the clock.
+  - *Appended 2026-10-07 (Story 6.26b, Task 4.0):* ✅ **DISCHARGED** — `completeGroundInspection` stores `completedAt: sql\`clock_timestamp()\``
+    and the injected `now` validates only (RD1, BigDev-confirmed; refined by `2026-10-07-288` K3); 6.26a's review patch #2 is reversed (a
+    note appended to its finding). ⚠ **Correction to the item above (kept as written):** the formula (*"`completed_at > v.decided_at`"*) was
+    right, but `v` is the VERIFIER APPROVAL (`claim_verifier_decisions`), ⛔ the certificate review — so *"after the review's `decided_at`"*
+    is the wrong comparator, and the proposed fix *"seed the completion before the review"* would ⛔ not have fixed it. The fix is the
+    clock, ⛔ the seed order. Proved in `packages/domain/tests/integration/claim/correction-queue-late-inspection.spec.ts` (leg (a), red
+    against the injected clock) and the strict pin in `ground-inspection.spec.ts`.
 - **The `NOT VALID` completed-row CHECK refuses ANY later UPDATE of a pre-6.26 completed row** [`packages/domain/migrations/0147_ground-inspection-death-facts.sql`]. Documented (Task 1.2 / AC11) and no live writer updates a completed row today; ⚠ the 6.7-columns erasure item below must carry it — scrubbing `location` / `family_contact` / `notes` on a legacy completed row fails 23514 unless the CHECK is first relaxed or the legacy rows are made to satisfy it (⛔ never by backfilling a fake verdict).
 
 ## Deferred from: code review of 6-26-ground-inspection-before-approval-and-death-facts, packages/contracts+packages/events chunk (2026-10-07)
@@ -99,6 +115,9 @@ Recorded under `2026-10-06-282` (GI1–GI18), as amended by `-283` (A1–A8) and
   6.7 columns are is open — they describe the FAMILY (an address, a phone number, what the inspector saw), ⛔ the member — so erasing them on
   the member's request is a question of basis, ⛔ a silent widening. ⭐ Trigger: counsel's read on the family's data under an erasure request
   (the `-243` posture), or the next story that touches `anonymize.ts`.
+  - *Appended 2026-10-07 (Story 6.26b, RD28):* ⚠ **Trigger FIRED** — Story 6.26b touched `anonymize.ts` for GI13 [b] ONLY (the review's
+    `accepted_date_index` → NULL in the existing review scrub). ⛔ **NOT ADDRESSED**: whose data the 6.7 columns are is still counsel's
+    (the `-243` posture); ⛔ no widening.
 - **The R9 routing predicate's BULK inline twins were ⛔ not folded into `claim/r9-routing.ts`** [`claim/cycle-freeze-read.ts` (the pending
   page's routed set), `claim/r9-voting-read.ts` (the R9 queue read), `claim/state-trustee-decision-persist.ts` (`commitCycleFreeze`'s exclusion,
   which also covers `correction_return`)]. Task 2.1 moved the THREE private per-claim copies onto ONE leaf (`hasLiveRoutedRow` +
@@ -141,6 +160,9 @@ Recorded under `2026-10-04-278` (EA1–EA9), as amended by `-279` (A1–A6, A10,
   asks whether ANY District Admin answer exists — ⛔ no actor exclusion). The approver's 409 carries `own_reason_excluded`
   and says who else must answer, and 6.23a's NW14 lets that other person record it (its `nothing_uncovered` is judged for
   the recorder). ⭐ Trigger: a held claim reported where nobody knew to answer.
+  - *Appended 2026-10-07 (Story 6.26b, Task 4.2; RD27):* `-284` E1 makes this REACHABLE in R9 for the three new kinds — a Pariwar Admin
+    (who holds `claim.approve`) on the R9 panel may record the only late reason, which hides the claim from the queue while R9 finalize
+    still waits for the District Admin (the `-280` scenario). ⛔ Not fixed here: an actor-relative queue is this item's own question.
 - **⚠ The R9 residual: a live approve voter may still record a late reason (6.23a's NW14 knows ⛔ nothing of R9) that ⛔ never
   counts at finalize** (`-279` A1 — the finalizer and every live approve voter are excluded). In a Pariwar where EVERY
   `claim.approve` holder at the district is a live approve voter or the finalizer, ⛔ nobody can answer — the exits are a vote
@@ -163,6 +185,13 @@ Recorded under `2026-10-04-278` (EA1–EA9), as amended by `-279` (A1–A6, A10,
     subquery) excludes it, the 90-day anchor moves LATER, and a `recent_nominee_change` key can appear with ⛔ no new determination —
     ⛔ not queued by EA10 (the wait still holds at the gate). Unreachable today: `recordMemberInnocenceFinding` has ⛔ no production caller
     until row `6-22`. The arm added at that trigger must also cover a finding recorded after the live approval.
+  - *Appended 2026-10-07 (Story 6.26b, Task 4.2):* 6.26b ADDED two arms (GI7, `-290` M2) — an OWN inspection completed after the live
+    approval (`gi.completed_at > v.decided_at`), and reliance on an INHERITED visit (⛔ own completed full visit AND an inheritance source)
+    — and admits `state_trustee_approved` while R9-routed for the late arm only (`-284` E1). The `6-22` trigger above STILL STANDS for the
+    member-declare and innocence-finding sources (⛔ neither is covered by the new arms). ⚠ And the determination arm compares two
+    transaction-START `now()`s (`nd.decided_at > v.decided_at`): a re-determination whose transaction began before an approval but
+    committed after it reads as EARLIER ⇒ its late key is ⛔ listed (the race `-288` K3 closed for the inspection arm with
+    `clock_timestamp()`). ⛔ Not changed here. ⭐ Trigger: the same `6-22` work, or a held claim reported unlisted.
 - **A FAILED refetch after a 409 hides the whole approval surface** [`apps/admin/src/modules/r9-voting/R9CasePanel.tsx`,
   `apps/admin/src/modules/correction-closure/EscalationPanel.tsx`] — both branch on `isError` before `data`, so TanStack's kept data is
   ignored: the R9 panel disappears and the escalation form unmounts, losing the typed note and pick (`ListStates` and

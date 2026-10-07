@@ -665,7 +665,8 @@ describe('<CorrectionQueueRoute> — the late-warning row (Story 6.23b, AC10)', 
     expect(await screen.findByTestId('queue-badge-late-warning')).toHaveTextContent('a late warning may await your reason');
     const line = screen.getByTestId('queue-late-warning-line');
     expect(line).toHaveTextContent(/may have appeared after your approval.*could not be checked/);
-    expect(line).not.toHaveTextContent(/\b0 nominee-change/);
+    // Story 6.26b (RD10) — re-targeted to the kind-neutral words (⛔ left vacuous after the reword).
+    expect(line).not.toHaveTextContent(/\b0 warnings/);
     expect(screen.getByTestId('correction-queue-late-unavailable')).toHaveTextContent(/may already be answered/);
     // Code review round 3: uncounted candidates take page slots — a full page may be INCOMPLETE, and the banner says so.
     expect(screen.getByTestId('correction-queue-late-unavailable')).toHaveTextContent(/may not be complete/);
@@ -675,7 +676,7 @@ describe('<CorrectionQueueRoute> — the late-warning row (Story 6.23b, AC10)', 
     setup([{ ...ITEM, late_warning_awaiting_reason: true, late_warning_uncovered_count: 2 }]);
     expect(await screen.findByTestId('queue-badge-late-warning')).toBeInTheDocument();
     expect(screen.getByTestId('queue-badge-returned')).toBeInTheDocument();
-    expect(screen.getByTestId('queue-late-warning-line')).toHaveTextContent(/^2 nominee-change warnings/);
+    expect(screen.getByTestId('queue-late-warning-line')).toHaveTextContent(/^2 warnings appeared after your approval/);
     expect(screen.getByTestId('queue-short-reference')).toBeInTheDocument();
     expect(screen.getByTestId(`closure-column-${CLAIM}`)).toBeInTheDocument();
   });

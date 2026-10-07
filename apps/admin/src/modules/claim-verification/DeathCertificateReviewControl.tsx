@@ -23,12 +23,25 @@ const t = verifierConsoleEn.deathCertificate;
 export type DeathCertificateReview = NonNullable<VerifierReviewItem['review']>;
 export type DeathCertificateRejectionReason = 'no_date_of_death' | 'date_of_death_unclear' | 'date_of_death_in_future';
 const REASONS: readonly DeathCertificateRejectionReason[] = ['no_date_of_death', 'date_of_death_unclear', 'date_of_death_in_future'];
+/** Story 6.26b (GI8) — the government death-register check. ⚠ LOCKSTEP with `@twt/contracts`' `DeathCertificateRegisterCheck`,
+ *  `@twt/domain`'s `DEATH_CERTIFICATE_REGISTER_CHECKS` and migration 0149's CHECK — four places. */
+export type RegisterCheck = 'matches' | 'does_not_match' | 'could_not_check';
+const REGISTER_CHECKS: readonly RegisterCheck[] = ['matches', 'does_not_match', 'could_not_check'];
 
 export interface DeathCertificateReviewSubmit {
   verdict: 'accepted' | 'rejected';
   accepted_date?: string;
   rejection_reason?: DeathCertificateRejectionReason;
+  /** ACCEPT only (Story 6.26b GI8). */
+  register_check?: RegisterCheck;
   note: string;
+}
+
+/** Story 6.26b (GI8; RD31) — an accepted review's register check in WORDS; an accepted review with ⛔ check (recorded
+ *  before 6.26b) says so; a rejected review shows nothing. */
+function registerCheckWords(verdict: string, check: RegisterCheck | null): string | null {
+  if (verdict !== 'accepted') return null;
+  return check === null ? t.registerCheckNotRecorded : t.registerChecks[check]!;
 }
 
 function fmt(iso: string): string {
@@ -41,6 +54,12 @@ export function DeathCertificateReviewStatus({ review }: { review: DeathCertific
     <p className="text-sm" data-testid="death-certificate-review-status" data-status={review.status}>
       <span className="font-medium">{t.statusLabel}:</span> {t.status[review.status]}
       {review.rejectionReason ? <> — {t.reasons[review.rejectionReason]}</> : null}
+      {registerCheckWords(review.status, review.registerCheck) !== null ? (
+        <span data-testid="death-certificate-register-check">
+          {' '}
+          · {t.registerCheckLabel}: {registerCheckWords(review.status, review.registerCheck)}
+        </span>
+      ) : null}
       {review.decidedByDisplay ? (
         <>
           {' '}
@@ -75,6 +94,8 @@ export function DeathCertificateReviewControl(props: DeathCertificateReviewContr
   const { review, mode } = props;
   const [date, setDate] = useState('');
   const [reason, setReason] = useState<DeathCertificateRejectionReason | null>(null);
+  // Story 6.26b (GI8) — ⛔ nothing pre-selected (the reject-reason radio's pattern).
+  const [registerCheck, setRegisterCheck] = useState<RegisterCheck | null>(null);
   const [note, setNote] = useState('');
   const [incomplete, setIncomplete] = useState(false);
   // `onSubmit`'s contract is to resolve `false`, never reject (its real caller never does) — this is a
@@ -86,12 +107,16 @@ export function DeathCertificateReviewControl(props: DeathCertificateReviewContr
   useEffect(() => {
     setDate('');
     setReason(null);
+    setRegisterCheck(null);
     setNote('');
     setIncomplete(false);
     setSubmitError(false);
   }, [fingerprint]);
 
-  const ready = mode === 'accept' ? /^\d{4}-\d{2}-\d{2}$/.test(date) && note.trim() !== '' : reason !== null && note.trim() !== '';
+  const ready =
+    mode === 'accept'
+      ? /^\d{4}-\d{2}-\d{2}$/.test(date) && registerCheck !== null && note.trim() !== ''
+      : reason !== null && note.trim() !== '';
 
   // The refusal clears itself once the form becomes valid — ⛔ not only on the next submit attempt.
   // ⚠ MUST stay above the `certificateToken === null` early return below: `certificateToken` can flip on
@@ -133,7 +158,7 @@ export function DeathCertificateReviewControl(props: DeathCertificateReviewContr
     try {
       ok = await props.onSubmit(
         mode === 'accept'
-          ? { verdict: 'accepted', accepted_date: date, note: note.trim() }
+          ? { verdict: 'accepted', accepted_date: date, register_check: registerCheck!, note: note.trim() }
           : { verdict: 'rejected', rejection_reason: reason!, note: note.trim() },
       );
     } catch {
@@ -190,6 +215,26 @@ export function DeathCertificateReviewControl(props: DeathCertificateReviewContr
           </p>
           <p id="death-certificate-ocr" className="text-xs" data-testid="death-certificate-ocr">
             {t.ocrLabel}: {props.ocrDateOfDeath ?? t.ocrNone}
+          </p>
+          {/* Story 6.26b (GI8; `-262` FQ8 B) — the government register check, its OWN group named by the question. */}
+          <fieldset className="flex flex-col gap-2" data-testid="death-certificate-register-checks" aria-describedby="death-certificate-register-help">
+            <legend className="text-sm">{t.registerCheckLegend}</legend>
+            {REGISTER_CHECKS.map((c) => (
+              <label key={c} className="flex items-center gap-2 text-sm">
+                <input
+                  type="radio"
+                  name="death-certificate-register-check"
+                  value={c}
+                  checked={registerCheck === c}
+                  onChange={() => setRegisterCheck(c)}
+                  data-testid={`death-certificate-register-check-${c}`}
+                />
+                {t.registerChecks[c]}
+              </label>
+            ))}
+          </fieldset>
+          <p id="death-certificate-register-help" className="text-xs">
+            {t.registerCheckHelp}
           </p>
         </fieldset>
       ) : null}
@@ -329,6 +374,12 @@ export function DeathCertificateHistory({ history, loading, error }: DeathCertif
                   <li key={r.review_id} data-testid="death-certificate-history-review">
                     {t.status[r.verdict]}
                     {r.rejection_reason ? <> — {t.reasons[r.rejection_reason]}</> : null}
+                    {registerCheckWords(r.verdict, r.register_check) !== null ? (
+                      <span data-testid="death-certificate-history-register-check">
+                        {' '}
+                        · {t.registerCheckLabel}: {registerCheckWords(r.verdict, r.register_check)}
+                      </span>
+                    ) : null}
                     {r.accepted_date ? (
                       <>
                         {' '}

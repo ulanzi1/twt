@@ -42,6 +42,7 @@ import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integra
 import {
   PARIWAR_A,
   enterAppScope,
+  fixtureCurrentAcceptedDate,
   seedAcceptedDeathCertificate,
   seedClauseVersion,
   seedDeathCertificate,
@@ -472,7 +473,12 @@ describe.skipIf(!hasDatabase)('R9 voting (PARIWAR_A scope)', () => {
       reason: 'determination_stale',
       certificate: 'accepted' as const,
       spoil: async (client: Client, claimCaseId: ClaimId) => {
-        await seedAcceptedDeathCertificate(client, { pariwarId: PARIWAR_A, claimCaseId, date: '2026-03-10' });
+        // ⚠ Story 6.26b (RD19 (iii) — a FOUND red the story's list called "⛔ not red"): a re-review to ANOTHER date
+        // now raises `inspection_death_date_differs`, and the R9 VOTE's own reason rule refuses before finalize ever
+        // reaches the certificate conjunct. A SAME-date re-review (only the register check moves) makes the
+        // determination stale with ⛔ no key — this test's subject, kept.
+        const date = (await fixtureCurrentAcceptedDate(client, PARIWAR_A, claimCaseId))!;
+        await seedAcceptedDeathCertificate(client, { pariwarId: PARIWAR_A, claimCaseId, date, registerCheck: 'could_not_check' });
       },
     },
     {

@@ -27,6 +27,14 @@ export const DeathCertificateRejectionReason = z.enum([
 ]);
 export type DeathCertificateRejectionReason = z.output<typeof DeathCertificateRejectionReason>;
 
+/**
+ * Story 6.26b (GI8; `-262` FQ8 B) — the District Admin's government death-register (CRS) check, recorded on every
+ * ACCEPT. ⚠ LOCKSTEP with `@twt/domain`'s `DEATH_CERTIFICATE_REGISTER_CHECKS`, migration 0149's
+ * `claim_death_certificate_reviews_register_check_check` and the admin's local `RegisterCheck` type — four places.
+ */
+export const DeathCertificateRegisterCheck = z.enum(['matches', 'does_not_match', 'could_not_check']);
+export type DeathCertificateRegisterCheck = z.output<typeof DeathCertificateRegisterCheck>;
+
 /** `POST …/admin/claims/:claimCaseId/death-certificate/review`. */
 export const DeathCertificateReviewRequest = z
   .object({
@@ -37,6 +45,9 @@ export const DeathCertificateReviewRequest = z
     accepted_date: DateShape.optional(),
     /** REJECT — why the date is not clear. */
     rejection_reason: DeathCertificateRejectionReason.optional(),
+    /** ACCEPT — the government death-register check (Story 6.26b GI8). OPTIONAL here, like the fields above: the
+     *  writer owns `register_check_required` / `register_check_not_allowed`, each its own audited 409. */
+    register_check: DeathCertificateRegisterCheck.optional(),
     /** REQUIRED either way. Tier-1 at rest. ⛔ No `.min(1)`: an empty note must reach the writer's own
      * `missing_note` refusal (AC1) rather than an anonymous, unaudited 400 here. */
     note: z.string().trim().max(2000),
@@ -64,6 +75,9 @@ export const DeathCertificateHistoryReview = z
     review_id: z.string().uuid(),
     verdict: DeathCertificateReviewVerdict,
     rejection_reason: DeathCertificateRejectionReason.nullable(),
+    /** Story 6.26b (GI8) — ACCEPTED only; `null` on a rejected review AND on an accepted one recorded before 6.26b
+     *  (*"register check not recorded"*). A plaintext code — ⛔ never a certificate number. */
+    register_check: DeathCertificateRegisterCheck.nullable(),
     /** ACCEPTED only. ⚠ `ReadableErasable`, ⛔ not a date type: an RTBF-erased value is `anonymized`, a failed
      *  decrypt `unreadable` — ⛔ never a 500, ⛔ never the sentinel as a value (`2026-09-26-246` §2). */
     accepted_date: ReadableErasable.nullable(),

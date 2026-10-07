@@ -38,6 +38,7 @@ import {
   decryptDeathCertificateReviewField,
   encryptDeathCertificateReviewField,
 } from './death-certificate-crypto.js';
+import { deathDateBlindIndex } from './ground-inspection-crypto.js';
 
 /** D13 — the District Admin's review key (minted in `2026-09-25-244`). */
 export const DEATH_CERTIFICATE_REVIEW_KEY = 'claim.review_death_certificate';
@@ -172,11 +173,15 @@ export function createDeathCertificateHandlers(deps: AppDeps) {
             'a note is required',
           );
         }
-        const [noteCt, dateCt] = await Promise.all([
+        const [noteCt, dateCt, dateIndex] = await Promise.all([
           encryptDeathCertificateReviewField(body.note, p, enc),
           body.accepted_date !== undefined
             ? encryptDeathCertificateReviewField(body.accepted_date, p, enc)
             : Promise.resolve(null),
+          // ⭐ Story 6.26b (GI6; RD12; Trap 1) — the accepted date's keyed index, through the ONE helper under the ONE
+          // shared field class (⛔ never a second `blindIndex(` call, ⛔ never a literal class), from the SAME
+          // regex-checked plaintext — so the warning module can compare it with the inspection's ⛔ without a decrypt.
+          body.accepted_date !== undefined ? deathDateBlindIndex(body.accepted_date, p, enc) : Promise.resolve(null),
         ]);
         const scopeTx = await openScopeTx(deps, p);
         let ok = false;
@@ -188,6 +193,9 @@ export function createDeathCertificateHandlers(deps: AppDeps) {
             certificateToken: body.certificate_token,
             acceptedDate: body.accepted_date ?? null,
             acceptedDateCiphertext: dateCt,
+            acceptedDateIndex: dateIndex,
+            // Story 6.26b (GI8) — required on an accept, refused on a reject: the WRITER's two 409s.
+            registerCheck: body.register_check ?? null,
             rejectionReason: body.rejection_reason ?? null,
             noteCiphertext: noteCt,
             expectedLiveReviewId: body.expected_live_review_id,
@@ -232,6 +240,8 @@ export function createDeathCertificateHandlers(deps: AppDeps) {
           upload_id: result.uploadId,
           verdict: result.verdict,
           rejection_reason: body.verdict === 'rejected' ? (body.rejection_reason ?? null) : null,
+          // Story 6.26b (RD17; GI14's posture) — a plaintext non-PII code. ⛔ Never the date or its index.
+          register_check: body.verdict === 'accepted' ? (body.register_check ?? null) : null,
           superseded_review_id: result.supersededReviewId,
         },
       });
@@ -291,6 +301,8 @@ export function createDeathCertificateHandlers(deps: AppDeps) {
               review_id: r.reviewId,
               verdict: r.verdict,
               rejection_reason: r.rejectionReason,
+              // Story 6.26b (GI8) — `null` on a rejected review AND on an accepted one recorded before 6.26b.
+              register_check: r.registerCheck ?? null,
               accepted_date:
                 r.acceptedDateCiphertext === null
                   ? null

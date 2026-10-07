@@ -132,10 +132,18 @@ export const verifierConsoleEn = {
   // ⛔ No string here says a version "is suspicious", "should be discarded", or that the claim is refused: a warning is
   // information, and approving over it needs a warning reason and a note (NW6). ⛔ No microcopy vocabulary term.
   approvalWarnings: {
-    heading: 'Nominee-change warnings on this claim',
+    // Story 6.26b (RD10) — kind-neutral: the warnings are no longer only about a nominee change.
+    heading: 'Warnings on this claim',
     kindLine: {
       post_death_version: 'A nominee version is dated on or after the date of death on the accepted death certificate.',
       recent_nominee_change: 'A nominee was named or changed within 90 days before the first claim for this death was filed.',
+      // Story 6.26b (GI11 [b]) — ⛔ no date in any of these words (AC9b): the console's inspector lines show the dates.
+      inspection_death_date_differs:
+        'A date of death recorded at the ground inspection differs from the date on the accepted death certificate.',
+      original_certificate_mismatch:
+        'The inspector found that the original death certificate does not match the copy this claim relies on.',
+      // `-289` L1 — the warning stands for THIS certificate even if a later check of it was recorded as matching.
+      register_check_mismatch: 'The government death register was recorded as not matching this death certificate.',
     } satisfies Record<ApprovalWarningKind, string>,
     stripIntro:
       'You may still approve. Choose a warning reason and write a note saying why — the claim is not refused, and your approval reason above stays as it is.',
@@ -151,13 +159,13 @@ export const verifierConsoleEn = {
     noteRequiredError: 'Write a note saying why you approve despite the warnings.',
     confirmWarnings: 'Warnings shown',
     confirmReason: 'Warning reason',
-    unavailable: 'The nominee-change warnings could not be read, so approval is unavailable until they load. Reload to try again.',
+    unavailable: 'The warnings on this claim could not be read, so approval is unavailable until they load. Reload to try again.',
     reviseBlocked: {
       warning_approval_final:
-        'This claim shows a nominee-change warning (or one has already been answered), so this approval is final and its reason and note stay as written.',
+        'This claim shows a warning (or one has already been answered), so this approval is final and its reason and note stay as written.',
       warnings_not_current:
         'Revising returns once the nominee determination is recorded again against the accepted death certificate.',
-      unavailable: 'The nominee-change warnings could not be read, so revising is unavailable until they load. Reload to try again.',
+      unavailable: 'The warnings on this claim could not be read, so revising is unavailable until they load. Reload to try again.',
     } satisfies Record<ReviseBlockedReason, string>,
     // The District Admin's answer to a warning that appeared AFTER the approval (NW14 — its own record).
     late: {
@@ -178,8 +186,8 @@ export const verifierConsoleEn = {
       submitError: 'The reason and note could not be recorded. Reload the claim to see its latest state.',
     },
     errors: {
-      warningReasonRequired: 'This claim shows a nominee-change warning — choose a warning reason and write a note to approve it. The claim is not refused.',
-      warningReasonUngrounded: 'This claim shows no nominee-change warning — approve it without a warning reason.',
+      warningReasonRequired: 'This claim shows a warning — choose a warning reason and write a note to approve it. The claim is not refused.',
+      warningReasonUngrounded: 'This claim shows no warning — approve it without a warning reason.',
       warningReasonUnavailable: 'That warning reason was replaced or is no longer on the list — please choose again.',
       lateNothingUncovered: 'Every warning that appeared after the approval is already answered by your own record.',
       lateDeterminationRequired: 'Record the nominee determination against the accepted death certificate first — the warnings are not known until then.',
@@ -191,11 +199,11 @@ export const verifierConsoleEn = {
         'This claim is waiting for the District Admin to record a reason for a warning that appeared after their approval. It is not refused.',
       approveVotesNeedWarningReason: (n: number) =>
         n === 1
-          ? 'One approve vote does not answer every nominee-change warning now showing — that voter must revise their vote with a warning reason. The claim is not refused.'
-          : `${n} approve votes do not answer every nominee-change warning now showing — each of those voters must revise their vote with a warning reason. The claim is not refused.`,
+          ? 'One approve vote does not answer every warning now showing on this claim — that voter must revise their vote with a warning reason. The claim is not refused.'
+          : `${n} approve votes do not answer every warning now showing on this claim — each of those voters must revise their vote with a warning reason. The claim is not refused.`,
       // Code review 2026-10-06 (P37) — the `vote_ids`-missing fallback: never guess a count.
       approveVotesNeedWarningReasonUnknownCount:
-        'Some approve votes do not answer every nominee-change warning now showing — each of those voters must revise their vote with a warning reason. The claim is not refused.',
+        'Some approve votes do not answer every warning now showing on this claim — each of those voters must revise their vote with a warning reason. The claim is not refused.',
     },
     // ⭐ Story 6.23b (EA7) — the LATER approvers' surfaces (the final vote, an escalation, an R9 vote, the Super Admin, "no
     // correction needed"): the same kind lines and picker as the District Admin's, these words around them.
@@ -330,13 +338,13 @@ export const verifierConsoleEn = {
     badgeLateWarningUncounted: 'a late warning may await your reason',
     lateWarningLine: (n: number | null) =>
       n === null
-        ? 'A nominee-change warning may have appeared after your approval — it could not be checked just now. Open the claim to see whether the final approval waits for your reason and note. The claim is not refused.'
+        ? 'A warning may have appeared after your approval — it could not be checked just now. Open the claim to see whether the final approval waits for your reason and note. The claim is not refused.'
         : n === 1
-        ? 'A nominee-change warning appeared after your approval. The final approval waits until you record a reason and a note for it — open the claim to record them. The claim is not refused.'
-        : `${n} nominee-change warnings appeared after your approval. The final approval waits until you record a reason and a note for them — open the claim to record them. The claim is not refused.`,
+        ? 'A warning appeared after your approval. The final approval waits until you record a reason and a note for it — open the claim to record them. The claim is not refused.'
+        : `${n} warnings appeared after your approval. The final approval waits until you record a reason and a note for them — open the claim to record them. The claim is not refused.`,
     // Invariant 7 — the late-warning check could ⛔ not run: ⛔ never read as "nothing waiting".
     lateWarningsUnavailable:
-      'Late nominee-change warnings could not be checked just now, so this list may not be complete. A claim marked "may await your reason" may already be answered — open it to see. Reload to try again.',
+      'Late warnings could not be checked just now, so this list may not be complete. A claim marked "may await your reason" may already be answered — open it to see. Reload to try again.',
   },
   // ── Story 6.20 — the nominee declaration HISTORY (AC3, AC4, AC7, AC8, AC13, D14) ─────────────
   // ⛔⛔ No string here says a version "changed after the death", "is suspicious" or "should be
@@ -693,6 +701,15 @@ export const verifierConsoleEn = {
       deathTime: 'Time of death',
       deathTimeUnknown: 'not known',
       unreadable: 'could not be read',
+      // Story 6.26b (GI10 [b]; `-288` K2, `-289` L3/L4; RD18) — the date line's comparison with the accepted certificate,
+      // and the two warnings. ⛔ No date in any of these words (AC9b). "Just now" is said ONLY of a read that failed.
+      dateDiffers: 'differs from the certificate',
+      dateDiffersWarning: 'Warning: differs from the accepted death certificate',
+      dateDiffersWarningInherited: 'Warning: differs from the accepted death certificate (given on an earlier claim)',
+      dateNotIndexed: 'Could not be compared with the certificate',
+      dateUnknown: 'Whether this differs from the certificate could not be checked just now',
+      mismatchWarning: 'Warning: the original does not match the copy this claim relies on',
+      mismatchUnknown: 'Whether this is a warning could not be checked just now',
       photosOriginal: 'Original certificate',
       photosSite: 'Site',
     },
@@ -725,12 +742,25 @@ export const verifierConsoleEn = {
     ocrLabel: 'Read by OCR (a machine reading, not your entry)',
     ocrNone: 'OCR could not read a date',
     reasonLegend: 'Why can the certificate not be accepted?',
+    // ── Story 6.26b (GI8; `-262` FQ8 B) — the government death register (CRS) check. ⛔ Nothing pre-selected; "could not
+    // be checked online" is ALWAYS an allowed answer (`-263` FQ11), so it never stops a claim on its own. ──
+    registerCheckLegend: "Did you check this certificate on the government's online death register (CRS)?",
+    registerCheckHelp:
+      'Look the certificate up on the government death register. If the register could not be checked online, choose that — it is always an allowed answer.',
+    registerChecks: {
+      matches: 'Checked — the register matches the certificate',
+      does_not_match: 'Checked — the register does not match the certificate',
+      could_not_check: 'Could not be checked online',
+    } as Record<string, string>,
+    registerCheckLabel: 'Government register',
+    registerCheckNotRecorded: 'register check not recorded',
     note: 'Your note',
     noteHelp: 'Say what you checked. The note is required and is kept with the review.',
     submitAccept: 'Record the acceptance',
     submitReject: 'Record the rejection',
     cancel: 'Cancel',
-    incompleteAccept: 'Enter the date of death and write a note before recording.',
+    // Story 6.26b (RD31) — names the register check.
+    incompleteAccept: 'Enter the date of death, record the government death register check and write a note before recording.',
     incompleteReject: 'Choose a reason and write a note before recording.',
     recorded: 'The review was recorded.',
     redetermineHint:
@@ -741,6 +771,9 @@ export const verifierConsoleEn = {
       reason_on_accept: 'An accepted certificate carries no rejection reason.',
       missing_reason: 'Choose why the certificate cannot be accepted.',
       date_on_reject: 'A rejected certificate carries no date.',
+      // Story 6.26b (GI8; RD11) — the map is `Record<string, string>`, so these are added by hand (⛔ forced by typecheck).
+      register_check_required: 'Record whether the certificate was checked on the government death register before accepting it.',
+      register_check_not_allowed: 'A rejected certificate carries no register check.',
       missing_note: 'Write a note before recording.',
       missing_display:
         'Your account has no display name, so a review cannot be attributed to you. Ask a Super Admin to set it.',

@@ -28,7 +28,7 @@ action; `⚠` = hazard. Sweep on every pass: `grep -oE "⛔ \**[A-Za-z]+"` — e
 ADDRESSING RULE: ⛔ no `file:NNN` pointers into `.decision-log.md`, `deferred-work.md` or `sprint-status.yaml` (newest-first — every prepend
 rots every number). Cite decision ids + clauses, item headings and row keys. `file:NNN` is used ONLY for code, as of `6bb79afd`.
 LETTERS: `RF1`…`RF16` are THIS story's author decisions (✅ COMMITTED by ONE author-commit, `2026-10-07-292` (`f0801f1e`); `-291` is the
-Panel's ruling). Each is tagged **[a]** (built here) or **[b]** (built by 6.24b). `F1`…`F15` are FOUND facts (⛔ not decided). `Q1`, `Q2` are the ruled Panel questions (`-291`); `Q3` (items 1–2) is open, non-blocking.
+Panel's ruling). Each is tagged **[a]** (built here) or **[b]** (built by 6.24b). `F1`…`F15` are FOUND facts (⛔ not decided). `Q1`, `Q2` are ruled (`-291`); `Q3` items 1–2 are ruled (`2026-10-07-293`).
 -->
 
 # Story 6.24a: The True Nominee's Refile After a Suspicion Refusal — Kept Apart, Waiting at Final Approval for the Appeal, Closed if the Appeal Is Allowed, and the 90-Day Appeal Limit `[SURFACE]`
@@ -116,6 +116,7 @@ another person's act.**
 | `-291` readings | Q2's "her" = the nominee in place at the death, resolved as FQ7's | ⚠ OUR reading |
 | `-291` readings AMENDED by `2026-10-07-292` | ⚠ three `-291` readings move — two rested on false premises: *"the only path to a `-239` refusal is `adjudicateClaim`"* (false — `reviseDecision` can move a `denied` claim's reason ONTO `-239`) and *"is told = the existing appeal surfaces"* (⛔ none is reachable); a third is changed by choice: *"a later revision … does ⛔ not restart it"* ⇒ a revision away and back starts a NEW 90 days. ⇒ the clock starts at the first row of the claim's CURRENT unbroken `-239` chain (RF14); *"is told"* = a helpline appeal screen the operator uses with the family (RF14 (b)) — and WHETHER the refused person is also TEXTED is routed to the Panel as Q3 | ⚠ Author-commit (BigDev) — amends `-291`'s READINGS only, ⛔ never its ruling |
 | **Q3** (routing note `2026-10-07-6-24-telling-the-refused-person`) | how the refused person is TOLD they can appeal — A (staff tell them when they call or are called; the helpline screen shows the date — ⛔ no text) · B (a text to the refused filer — at their claimant contact mobile, or, when they filed as a nominee, the mobile on that nominee version) · plus a CONFIRM of RF13's residual | ⏳ **AWAITING PANEL** — non-blocking; built meanwhile as A |
+| `2026-10-07-293` | ✅ **Q3 RULED** (DR + KB): item 1 **B** — the refused person is texted once with the last date to appeal (built by 6.24b); item 2 **A** — RF13's reason lock is accepted as built (this story, ⛔ no change) | ⭐ Trustee-ratified |
 | ⭐ split | Q3 **item 1** (a text to the refused person) belongs to Story 6.24b; **item 2** (the reason lock) to this story | — |
 
 **⛔ Not covered by any ruling (stays open):** the exact wording of FQ7's and Q2's texts in Hindi and their DLT templates (`-262`, `-291`
@@ -147,7 +148,7 @@ FQ7's legal basis (counsel); who is paid when an allowed appeal moves the certif
 - **P4 (RF9 — the filing code)** → Story 6.24b.
 - **P7 (RF13 — the reason lock):** *"While any other claim for the same death is not closed, a refusal recorded as 'the nominee was changed
   after the death' cannot be re-recorded under another reason — so its 90-day appeal limit stands even if the reason was chosen by
-  mistake."* — ⚠ ⛔ no ruling yet: put to the Panel as a non-blocking confirm (Q3 item 2; our reading A = this sentence). Niyamavali: ⛔ no
+  mistake."* — ✅ `2026-10-07-293` item 2 A: consistent (the Panel accepted it — Trustee-ratified). Niyamavali: ⛔ no
   clause (Part 9 is silent on reasons and time).
 - **P6 (RF14 — the appeal time limit):** *"A claim refused because the nominee was changed after the death can be appealed for 90 days
   from the refusal, and the refusal's appeal screen says until when; after that it can ⛔ no longer be appealed. Every other refused claim
@@ -778,3 +779,4 @@ under `-210`) · [[project_contracts_domain_bundle_boundary]] · [[project_type_
 | 1.9 | 2026-10-07 | Validate ROUND 8 (narrow): **0 BLOCKER, 0 HIGH ⇒ the rounds STOP.** Applied its 1 MEDIUM and 3 LOW (the note's item 2: B's small real gain stated and the reading restated with *"because"*; "closing" ⛔ not "holding" in the deciding fact; the quoted earlier option made exact, "B is the earlier C"). Eight rounds in all: 1 BLOCKER and 15 HIGH found and fixed across them. |
 | 2.0 | 2026-10-07 | **Task 0 complete** (BigDev: *"complete the remaining steps"*): `2026-10-07-292` committed alone (`f0801f1e`); `epics.md` `### Story 6.24` + `-291` Consequence 2's three annotations (`5e77ca6e`); P7 added; the decisions marked committed. Q3 (items 1–2) stays open, non-blocking. Ready for `bmad-dev-story` (Task 0.1 runs at the build). |
 | 2.1 | 2026-10-07 | **SPLIT** (BigDev: *"ok, split it"*). This file becomes **Story 6.24a** (keeps the row key); **Story 6.24b** (new row `6-24b-filing-code-and-texts-to-the-nominee-in-place-at-the-death`, `backlog` until 6.24a is `done`) takes RF9, RF11 and RF12's Q2 text, with P4, invariants 5–6, AC6 / AC7 (as AC6b / AC7b), Tasks 1.2 / 5.2 / 6 / 7.2's SMS key, Traps 10–14 and Q3 item 1. ⛔ No RF moved or re-worded — each RF is tagged [a] / [b]; `-292` is ⛔ not edited. `epics.md` gains `### Story 6.24a` / `### Story 6.24b`. |
+| 2.2 | 2026-10-07 | ✅ **Q3 RULED — `2026-10-07-293`** (DR + KB: *"Q3 - B (one text)"*, *"Confirm (item 2) - A"*), committed alone (`2ada8f7b`); the note's block filled. For 6.24a: RF13's reason lock is RATIFIED as built (P7 ✅) — ⛔ no change; item 1 B (the refused person's text) is 6.24b's. The committed RF text is ⛔ not edited (its *"If Q3 is answered B …"* sentences are now the operative branch, per `-293`). |

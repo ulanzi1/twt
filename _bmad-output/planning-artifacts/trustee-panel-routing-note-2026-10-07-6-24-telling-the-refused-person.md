@@ -11,11 +11,20 @@
 
 ---
 
-> ## ⏳ AWAITING PANEL RULING
+> ## ✅ PANEL RULED — 2026-10-07 — recorded as `2026-10-07-293`
 >
-> ⛔ **Nothing is recorded here yet.** When the Panel rules, transcribe it into this block **and** into
-> `.decision-log.md` as a new decision id. ⭐ Everything below is then kept **unedited** as the question
-> **as it was put** ([[feedback_supersede_never_reinterpret]]).
+> **Ruled by Dhiraj Rahul + Kalpana Bharti, relayed by BigDev — verbatim:**
+> *"by DR and KB"* · *"Q3 - B (one text)"* · *"Confirm (item 2) - A"*
+>
+> ⭐ Our reading **taken on both.** **Item 1 B:** the refused person is texted once — *"The claim for [member] could not go ahead. It can be
+> appealed until [date]. Please call the helpline."* — at the mobile they gave on the claim, or, if they filed as a nominee, the mobile on
+> that nominee entry (go-live with counsel's check). **Item 2 A:** while any other claim for the death is not closed, the refusal's reason
+> can ⛔ not be changed; a family refused under it by mistake must appeal within the 90 days.
+>
+> **What this ruling does NOT cover** (full list in `2026-10-07-293`): the Hindi wording and DLT template; a refused filer with ⛔ no number
+> on record.
+>
+> ⭐ Everything **below this block is kept UNEDITED** — it is the question as it was put.
 
 ---
 

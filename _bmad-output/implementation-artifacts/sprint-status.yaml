@@ -1,3 +1,12 @@
+# last_updated: 2026-10-07l (⭐ **STORY 6.26b — CODE REVIEWED (`bmad-code-review 6.26b`, Blind Hunter + Edge Case Hunter + Acceptance
+# Auditor run in parallel per explicit instruction): review → done.** 0 decision-needed, 3 patch (all applied: admin's `RegisterCheck`
+# now a type alias of `@twt/contracts`' `DeathCertificateRegisterCheck` instead of a hand-redeclared union; the i18n `registerChecks`
+# map gained the `satisfies Record<…, string>` compiler lockstep its siblings already have; `warnings_not_current`'s message reverted
+# to its accurate nominee-determination-only wording, un-widened from a blanket "every warning" find-and-replace), 7 deferred to
+# `deferred-work.md`, 5 dismissed (two — the register-check CHECK-constraint gap and the `clock_timestamp()` "reversal" — were already
+# deliberate, governed decisions once checked against migration 0149's own comment and RD1/`-288` K3/`-283` A6; one Edge Case Hunter
+# finding quoted code that does not exist in the file). `apps/admin` (84), `apps/api` integration (34), `packages/contracts` (43) green
+# after the patches.)
 # last_updated: 2026-10-07k (⭐ **STORY 6.26b BUILT — `6-26b-death-facts-warnings-and-register-check`: in-progress → review.** Migration
 # `0149` (the register check + the accepted date's keyed index; :5432 + :5433); the three death-fact warning kinds (GI6 / GI17 / GI18 as
 # amended by `-283` A3, `-288` K1/K2, `-289` L1/L3/L4) through ONE fragment for both readers and ONE pure comparison; `completed_at =
@@ -19210,7 +19219,7 @@ development_status:
   # queue; its file is written, but it stays `backlog` until 6.26a is `done` (the 6.21b / 6.23b precedent).
   # ⚠ 2026-10-06 (validate v2.3–v2.5): `2026-10-06-283` amends `-282` GI2/GI3/GI5/GI6/GI16 and `-284` amends `-283` (GI5, GI7, E5) — build
   # from the story files' `⚠ AMENDED by -283` / `-284` lines. Validate rounds STOPPED at round 3 (⛔ no BLOCKER / HIGH).
-  6-26b-death-facts-warnings-and-register-check: review
+  6-26b-death-facts-warnings-and-register-check: done
   6-27-peer-mesh-sending-replies-and-date-of-death: backlog
   epic-6-retrospective: done
 

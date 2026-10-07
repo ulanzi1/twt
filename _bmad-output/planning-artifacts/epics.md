@@ -3198,7 +3198,7 @@ approval (⛔ never the District Admin's) waits while the refusal can still be a
 closes it — a `closed` claim, ⛔ never a refusal, ⛔ never appealable — and the nominee is texted once; the cycle commit re-checks; the
 handover code goes to the nominee in place at the death, else the family is sent to the helpline; that nominee is texted once on the
 refusal; a refusal on suspicion is appealable for 90 days, the helpline sees the date and can file the appeal for the family; the reason
-can ⛔ not be moved off "changed after the death" while a later claim of the death lives. The system still refuses ⛔ nothing.
+can ⛔ not be moved off "changed after the death" while any other claim of the death is not closed. The system still refuses ⛔ nothing.
 
 ---
 

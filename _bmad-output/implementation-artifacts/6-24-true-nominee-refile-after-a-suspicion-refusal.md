@@ -19,7 +19,7 @@ GLYPH REGISTER: `⛔` sits ONLY on a negation word (not / no / never / nothing /
 action; `⚠` = hazard. Sweep on every pass: `grep -oE "⛔ \**[A-Za-z]+"` — every head-word a negation.
 ADDRESSING RULE: ⛔ no `file:NNN` pointers into `.decision-log.md`, `deferred-work.md` or `sprint-status.yaml` (newest-first — every prepend
 rots every number). Cite decision ids + clauses, item headings and row keys. `file:NNN` is used ONLY for code, as of `6bb79afd`.
-LETTERS: `RF1`…`RF16` are THIS story's author decisions (⏳ PROPOSED — committed by ONE author-commit at Task 0.4, the next free id,
+LETTERS: `RF1`…`RF16` are THIS story's author decisions (✅ COMMITTED by ONE author-commit, `2026-10-07-292` (`f0801f1e`) — originally expected as the next free id,
 expected `2026-10-07-292` or later — `-291` is the Panel's ruling; ⛔ no code before it). `F1`…`F15` are FOUND facts (⛔ not decided). `Q1`, `Q2` are the ruled Panel questions (`-291`); `Q3` (items 1–2) is open, non-blocking.
 -->
 
@@ -104,7 +104,7 @@ another person's act.**
 | `2026-10-07-291` Q1 A | *"a time limit to appeal THIS kind of refusal only — 90 days from the refusal. After it, the refusal can ⛔ no longer be appealed, and the true nominee's claim may be approved … the refused person … is told the refusal can be appealed"* | ⭐ Trustee-ratified (the number confirmed by BigDev: *"90 days"*) — ⚠ narrows 6.16 D-E and the PRD line for `-239` only |
 | `2026-10-07-291` Q2 B | *"a text, once: 'Your claim for [member] has been closed. Please call the helpline.'"* | ⭐ Trustee-ratified — ⚠ go-live with FQ7's counsel check |
 | `-291` readings | Q2's "her" = the nominee in place at the death, resolved as FQ7's | ⚠ OUR reading |
-| `-291` readings TO BE AMENDED by the author-commit (⏳ `-292`, Task 0.4) | ⚠ three `-291` readings move — two rested on false premises: *"the only path to a `-239` refusal is `adjudicateClaim`"* (false — `reviseDecision` can move a `denied` claim's reason ONTO `-239`) and *"is told = the existing appeal surfaces"* (⛔ none is reachable); a third is changed by choice: *"a later revision … does ⛔ not restart it"* ⇒ a revision away and back starts a NEW 90 days. ⇒ the clock starts at the first row of the claim's CURRENT unbroken `-239` chain (RF14); *"is told"* = a helpline appeal screen the operator uses with the family (RF14 (b)) — and WHETHER the refused person is also TEXTED is routed to the Panel as Q3 | ⚠ Author-commit (BigDev) — amends `-291`'s READINGS only, ⛔ never its ruling |
+| `-291` readings AMENDED by `2026-10-07-292` | ⚠ three `-291` readings move — two rested on false premises: *"the only path to a `-239` refusal is `adjudicateClaim`"* (false — `reviseDecision` can move a `denied` claim's reason ONTO `-239`) and *"is told = the existing appeal surfaces"* (⛔ none is reachable); a third is changed by choice: *"a later revision … does ⛔ not restart it"* ⇒ a revision away and back starts a NEW 90 days. ⇒ the clock starts at the first row of the claim's CURRENT unbroken `-239` chain (RF14); *"is told"* = a helpline appeal screen the operator uses with the family (RF14 (b)) — and WHETHER the refused person is also TEXTED is routed to the Panel as Q3 | ⚠ Author-commit (BigDev) — amends `-291`'s READINGS only, ⛔ never its ruling |
 | **Q3** (routing note `2026-10-07-6-24-telling-the-refused-person`) | how the refused person is TOLD they can appeal — A (staff tell them when they call or are called; the helpline screen shows the date — ⛔ no text) · B (a text to the refused filer — at their claimant contact mobile, or, when they filed as a nominee, the mobile on that nominee version) · plus a CONFIRM of RF13's residual | ⏳ **AWAITING PANEL** — non-blocking; built meanwhile as A |
 
 **⛔ Not covered by any ruling (stays open):** the exact wording of FQ7's and Q2's texts in Hindi and their DLT templates (`-262`, `-291`
@@ -137,6 +137,10 @@ FQ7's legal basis (counsel); who is paid when an allowed appeal moves the certif
 - **P4 (RF9 — the filing code):** *"While a refusal on suspicion stands, the app's filing code goes only to the nominee the District Admin
   found in place at the death; if that nominee cannot be reached by text, the family is sent to the helpline — the code ⛔ never goes to
   the discarded nominee."* — FQ6 B: consistent.
+- **P7 (RF13 — the reason lock):** *"While any other claim for the same death is not closed, a refusal recorded as 'the nominee was changed
+  after the death' cannot be re-recorded under another reason — so its 90-day appeal limit stands even if the reason was chosen by
+  mistake."* — ⚠ ⛔ no ruling yet: put to the Panel as a non-blocking confirm (Q3 item 2; our reading A = this sentence). Niyamavali: ⛔ no
+  clause (Part 9 is silent on reasons and time).
 - **P6 (RF14 — the appeal time limit):** *"A claim refused because the nominee was changed after the death can be appealed for 90 days
   from the refusal, and the refusal's appeal screen says until when; after that it can ⛔ no longer be appealed. Every other refused claim
   can still be appealed at any time."* — `-291` Q1 A: consistent. ⚠ This NARROWS an appeal right (6.16 D-E, the PRD's *"no formal time
@@ -148,7 +152,7 @@ FQ7's legal basis (counsel); who is paid when an allowed appeal moves the certif
   2026-10-07, consistent, ⛔ no clause engaged** (P6's limit included — Part 9 is silent on time). §8.8's *"No deadline"* is the MODERATION appeal and says it does ⛔ not incorporate Part 9.
   §2.4 (one or two nominees, 75/25) is ⛔ not touched.
 
-## ⚖️ Decisions — the AUTHOR's (⏳ PROPOSED; ✅ committed by ONE author-commit at Task 0.4 — ⛔ no code before)
+## ⚖️ Decisions — the AUTHOR's (✅ COMMITTED by `2026-10-07-292`, `f0801f1e` — verbatim from v1.9; a later change is a NEW entry, ⛔ never an edit)
 ⭐ §0: each RF is *"the code should do X"* in service of a ruling already made; the person-facing halves are cited, decided ⛔ nowhere here.
 
 - **RF1 — "A SUSPICION REFUSAL STANDS", ONCE.** New module `packages/domain/src/claim/suspicion-refusal.ts`:
@@ -370,8 +374,8 @@ FQ7's legal basis (counsel); who is paid when an allowed appeal moves the certif
   ⛔ not be corrected, so a family whose refusal was ⛔ not truly on suspicion is bound by the 90 days instead of 6.16's no-limit appeal;
   their remedy is to appeal within them (the helpline screen shows the date). The confirm's options as put: A (accept — our reading), B (allow
   the correction only before another claim's final approval, the corrected refusal still holding the others with ⛔ no limit). ⭐ §0: the guard itself is a STAFF-action narrowing (ours);
-  its effect on a family is what the Trust owes them ⇒ the Panel's, put as a non-blocking confirm (our reading: accept it — B brings
-  back the true nominee's endless wait and depends on timing the family cannot see). Built as written meanwhile.
+  its effect on a family is what the Trust owes them ⇒ the Panel's, put as a non-blocking confirm (our reading: accept it — B adds little,
+  its correction window being mostly the same 90 days, while bringing back the true nominee's endless wait). Built as written meanwhile.
   Otherwise: ⛔ no new permission key (catalog version / key count unchanged — the `permissions.test.ts` pins stay green); the texts and
   the closure are the system's acts; the helpline appeal screen (RF14) reuses `claim.file`, the key the on-behalf route already requires.
   ⛔ No change to the reason codes, the one-journey appeal rule, 6.19c's closures or refile guard, the warning kinds, the bank/name checks,
@@ -478,8 +482,8 @@ FQ7's legal basis (counsel); who is paid when an allowed appeal moves the certif
 
 ### AC0 — Governance (Task 0)
 ✅ The Panel note `trustee-panel-routing-note-2026-10-07-6-24-appeal-never-filed.md` is ANSWERED and transcribed into its block; ✅
-`2026-10-07-291` (Q1 A, 90 days; Q2 B) is committed ALONE (`2f674a57`); the author-commit (RF1–RF16 as of v1.4 — incl. RF13's guard and RF14's clock — F1–F15 by reference) is in
-`.decision-log.md`, committed ALONE before any code; `epics.md` carries `### Story 6.24`, and `-291` Consequence 2's annotations are made
+`2026-10-07-291` (Q1 A, 90 days; Q2 B) is committed ALONE (`2f674a57`); ✅ the author-commit `2026-10-07-292` (RF1–RF16 as of v1.9, F1–F15 by reference) is in
+`.decision-log.md`, committed ALONE before any code (`f0801f1e`); ✅ `epics.md` carries `### Story 6.24`, and `-291` Consequence 2's annotations are made
 (6.16 D-E, the PRD's *"No formal time limit"* line, `docs/appeal-procedural-fairness/README.md`); work is on
 `story/6-24-true-nominee-refile-after-a-suspicion-refusal`. ⛔ No code before.
 
@@ -575,19 +579,19 @@ applied to BOTH :5432 and :5433, the enum value and the CHECKs verified by name 
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0 — Governance (AC0)** ⛔ no code before 0.4 is committed
-  - [ ] 0.1 `git fetch origin`; `git merge-base --is-ancestor 6bb79afd HEAD`; `git diff --name-only 6bb79afd..HEAD -- packages apps scripts`
+- [x] **Task 0 — Governance (AC0)** ✅ complete 2026-10-07 except 0.1, which runs at the build
+  - [ ] 0.1 (AT THE BUILD) `git fetch origin`; `git merge-base --is-ancestor 6bb79afd HEAD`; `git diff --name-only 6bb79afd..HEAD -- packages apps scripts`
     — re-read every cited file it lists ([[feedback_git_fetch_before_remote_reasoning]]). Confirm ⛔ no decision after `-290` touches the
     gate, convergence, the appeal, the handover OTP or rows 6-25 / 6-27; if row 6-25 or 6-27 landed first, rebase onto its conjuncts —
     ⛔ none drops another's check (`-277` Consequence 2, `-282` Consequence 4).
   - [x] 0.2 ✅ The Panel answered (DR + KB: *"Q1 - A · Q2 - B"*; BigDev: *"90 days"*) — transcribed into the note's block and recorded as
     `2026-10-07-291`, committed ALONE (`2f674a57`).
-  - [ ] 0.3 Re-validate every RF against the code at HEAD (a fresh-context validate is offered to BigDev — rounds until one finds ⛔ no
-    BLOCKER / HIGH; a pass that writes a decision re-validates THAT decision — [[feedback_story_validate_footguns]]).
-  - [ ] 0.4 The author-commit (expected `2026-10-07-292`) — RF1–RF16 verbatim from this file (v1.2: RF14 / RF15 built, RF12's Q2 text),
-    F1–F15 by reference — committed ALONE (`governance(6.24): …`) ([[feedback_governance_commits_precede_implementation]]).
-  - [ ] 0.5 Re-check the Policy-meaning sentences (P1–P6) against the author-commit (v1.2 already reflects `-291`).
-  - [ ] 0.6 `epics.md` — `### Story 6.24` after `### Story 6.26b` (the Minted-by header, the 6.23b / 6.26b shape: `-261` D4 B, `-262` FQ5–FQ7,
+  - [x] 0.3 ✅ Eight fresh-context read-only validate rounds (v1.1–v1.9); round 8 found ⛔ no BLOCKER / HIGH ⇒ the rounds stopped. Each
+    pass's own edits were re-validated by the next ([[feedback_story_validate_footguns]]).
+  - [x] 0.4 ✅ `2026-10-07-292` — RF1–RF16 verbatim from v1.9, the three amended `-291` readings, F1–F15 by reference — committed ALONE
+    (`f0801f1e`) ([[feedback_governance_commits_precede_implementation]]).
+  - [x] 0.5 ✅ P1–P6 re-checked against `-292`; P7 added for RF13's reason lock.
+  - [x] 0.6 ✅ (`5e77ca6e`) `epics.md` — `### Story 6.24` after `### Story 6.26b` (the Minted-by header, the 6.23b / 6.26b shape: `-261` D4 B, `-262` FQ5–FQ7,
     `-291`, the author-commit, the go-live coupling line for FQ7 and Q2's text), its own `governance(6.24)` commit — together with the
     annotations `-291` Consequence 2 owes (⛔ never rewrites): a dated line under 6.16's D-E
     (`6-16-3-stage-claim-denial-appeal-flow-reversed-denial-sahyog-vivran-publish-hook.md`), under the PRD's *"No formal time limit on the
@@ -797,3 +801,5 @@ under `-210`) · [[project_contracts_domain_bundle_boundary]] · [[project_type_
 | 1.6 | 2026-10-07 | Validate ROUND 5 (narrow, v1.5's edits; 0 BLOCKER, 1 HIGH, 2 MEDIUM, 6 LOW — all applied). HIGH: the Q3 note's item 2 option B was ⛔ not a real alternative (it could ⛔ not undo a payment) ⇒ rewritten as A / B / C with honest costs, A's cost conditional on item 1. MEDIUM: RF13's scope = RF5's (a claim predating the refusal included — else a move off and back reopened an expired window); item 2 A's scope stated in full. LOW: the rulings-row wording, AC2b's version label, `icp.ts:115`, RF12 names 6.19c's `closed_no_response` sibling, item 2's §0 line, the LETTERS line and Task 1.2 aligned with RF11. |
 | 1.7 | 2026-10-07 | Validate ROUND 6 (narrow; 0 BLOCKER, 1 HIGH, 2 MEDIUM, 2 LOW — all applied, all in the Q3 note's item 2 and RF13's residual line): B / C now state what happens if the corrected refusal's appeal is allowed (the true nominee's claim closed under a refusal no longer on suspicion — FQ5 ⛔ never ruled for that); item 2's deciding fact restated for the options actually put; A's cost (for good once the 90 days pass); item 2's sentence uses RF13's full scope; RF13's residual rationale aligned. |
 | 1.8 | 2026-10-07 | Validate ROUND 7 (narrow; 0 BLOCKER, 1 HIGH, 1 MEDIUM, 1 LOW — applied, all the Q3 note's item 2): the any-time correction option still paid a death twice once the other claim was paid ⇒ dropped; item 2 is A vs B (a correction only before another claim's final approval, honest costs); the deciding fact gains *"refused once another claim is finally approved"*; the note's "Corrected in this note" records both rewrites. |
+| 1.9 | 2026-10-07 | Validate ROUND 8 (narrow): **0 BLOCKER, 0 HIGH ⇒ the rounds STOP.** Applied its 1 MEDIUM and 3 LOW (the note's item 2: B's small real gain stated and the reading restated with *"because"*; "closing" ⛔ not "holding" in the deciding fact; the quoted earlier option made exact, "B is the earlier C"). Eight rounds in all: 1 BLOCKER and 15 HIGH found and fixed across them. |
+| 2.0 | 2026-10-07 | **Task 0 complete** (BigDev: *"complete the remaining steps"*): `2026-10-07-292` committed alone (`f0801f1e`); `epics.md` `### Story 6.24` + `-291` Consequence 2's three annotations (`5e77ca6e`); P7 added; the decisions marked committed. Q3 (items 1–2) stays open, non-blocking. Ready for `bmad-dev-story` (Task 0.1 runs at the build). |

@@ -3,6 +3,28 @@ baseline_commit: b665a19a
 ---
 
 <!--
+⭐⭐ MERGED 2026-10-07 as PR #261 (REBASE-merge) — THE STORY-6.26b SHA MAP. The 11 commits of
+`story/6-26b-death-facts-warnings-and-register-check` (from `b665a19a`) were rewritten by the rebase; the citations in this file are
+kept AS WRITTEN (the record) and this maps them to their `main` twins, PROVED ⛔ not assumed: each pair has an IDENTICAL
+`git patch-id --stable` and an identical subject, and the merged tree (`3c4f0ae4`) is byte-identical to the branch head (`46eb9f74`) —
+tree `20a8be0e` both. `main` had not moved (the merge-base was `b665a19a`), so the rebase rewrote SHAs only. Negative control: a WRONG
+pair (`7d576253` vs `5f3e0f36`) differs. ⛔ No branch SHA is cited in `sprint-status.yaml`, `deferred-work.md` or `.decision-log.md`.
+  · `7d576253` → `0d88b41d`  created for dev — v2.0 re-derived against 6.26a's shippe  (⛔ not cited)
+  · `4fc18fbc` → `5f3e0f36`  v2.1 — BigDev confirms RD1 = the DB clock; every approva  (⛔ not cited)
+  · `0152ead9` → `d536786a`  -288 author-commit — GI18 warns while its certificate is  (cited)
+  · `51c8eb4e` → `b71e4192`  -289 author-commit, an erratum to -288 — GI18 keyed by t  (cited)
+  · `94a0fad2` → `330eee52`  -290 author-commit, an erratum to -289 L3 — an inherited  (cited)
+  · `11aad616` → `251c3c95`  v2.2–v2.4 — the fresh-context validate (round 1: four ve  (⛔ not cited)
+  · `0b9cf300` → `25c7fda3`  v2.5 — round 4 of the validate finds no BLOCKER / HIGH,   (⛔ not cited)
+  · `cb26fb27` → `bdb01014`  built — the death facts become warnings and the District  (cited)
+  · `e6021c21` → `12fd830d`  code-reviewed — review → done. bmad-code-review 6.26b (B  (cited)
+  · `5bf0849f` → `e16bd42f`  code review round 2 — 1 decision (tighten), 7 patch (app  (cited)
+  · `46eb9f74` → `3c4f0ae4`  code review round 3 (narrow) — 1 decision (deferred), 6   (⛔ not cited)
+Re-verify (bash — zsh does not word-split `$p`): `for p in "7d576253 0d88b41d" "4fc18fbc 5f3e0f36" "0152ead9 d536786a" "51c8eb4e b71e4192" "94a0fad2 330eee52" "11aad616 251c3c95" "0b9cf300 25c7fda3" "cb26fb27 bdb01014" "e6021c21 12fd830d" "5bf0849f e16bd42f" "46eb9f74 3c4f0ae4"; do set -- $p; diff <(git show $1 | git patch-id --stable | cut -d' ' -f1) <(git show $2 | git patch-id --stable | cut -d' ' -f1); done`
+— ⚠ needs the branch SHAs, which survive only while the branch (local or `origin/story/6-26b-death-facts-warnings-and-register-check`) does.
+-->
+
+<!--
 ⭐ MERGED 2026-10-07 with Story 6.26a as PR #259 (REBASE-merge): every 6.26 SHA this file cites (`9282d108`, `97403945`, …) was
 rewritten by the rebase. The citations are kept AS WRITTEN; the proved map to their `main` twins is the header of
 `6-26-ground-inspection-before-approval-and-death-facts.md` (each pair by identical `git patch-id --stable`).

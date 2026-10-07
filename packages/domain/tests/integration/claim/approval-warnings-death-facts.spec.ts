@@ -324,6 +324,14 @@ describe.skipIf(!hasDatabase)('Story 6.26b — the death-fact warnings at the do
       expect((await warnings(ctx)).keys).toEqual([]);
     });
 
+    it('a reason from every approver — the District Admin AND a later approver (code review round 2)', async () => {
+      const ctx = await claim({ registerCheck: 'does_not_match' });
+      await refused(ctx, () => approve(ctx), needsReason);
+      expect((await approve(ctx, GENERIC)).claimState).toBe('verifier_approved');
+      await refused(ctx, () => vote(ctx), needsReason);
+      expect((await vote(ctx, GENERIC)).claimState).toBe('state_trustee_approved');
+    });
+
     it('`could_not_check` / `matches` alone ⇒ ⛔ key', async () => {
       expect((await warnings(await claim({ registerCheck: 'could_not_check' }))).keys).toEqual([]);
       expect((await warnings(await claim({ registerCheck: 'matches' }))).keys).toEqual([]);
@@ -398,7 +406,10 @@ describe.skipIf(!hasDatabase)('Story 6.26b — the death-fact warnings at the do
       const source = toClaimId(randomUUID());
       await driveClaimTo(client, pid, source, mid, 'verification_in_progress');
       await seedDeathCertificate(client, { pariwarId: pid, claimCaseId: source });
-      await seedGroundInspection(client, pid, source, { deathDate: addCalendarDays(istDateOf(new Date()), 1), verdict: 'does_not_match' });
+      const sourceGid = (await seedGroundInspection(client, pid, source, {
+        deathDate: addCalendarDays(istDateOf(new Date()), 1),
+        verdict: 'does_not_match',
+      }))!;
       await client.query(
         `INSERT INTO claim_verifier_decisions (claim_case_id, pariwar_id, outcome, reason_code, rationale_ciphertext, actor_id, actor_display)
          VALUES ($1, $2, 'denied', 'post_death_nominee_change', 'enc:v1:r', $3, 'Anita (District Admin)')`,
@@ -408,7 +419,11 @@ describe.skipIf(!hasDatabase)('Story 6.26b — the death-fact warnings at the do
       await driveClaimTo(client, pid, ctx.cid, mid, 'verifier_review');
       await seedNomineeNameCheck(client, pid, ctx.cid, { inspection: 'skip' });
       await seedGroundInspection(client, pid, ctx.cid, { stage: 'certificate_check' });
-      expect((await warnings(ctx)).kinds).toEqual([]);
+      const w = await warnings(ctx);
+      // Non-vacuity (code review round 2): the inherited row WAS read — an empty `inspections` aggregate would also
+      // give `kinds: []`. Its family date is the fixture's accepted date ⇒ `same`, so only GI17 is under test.
+      expect(w.inspectionComparisons.get(sourceGid)).toBe('same');
+      expect(w.kinds).toEqual([]);
     });
   });
 

@@ -63,7 +63,6 @@ describe('deathDateComparison — the ONE comparison, in `-289` L4\'s order', ()
     ['⛔ no current accepted review ⇒ not_compared (L4)', row({ deathDateIndex: 'idx-E' }), null, UP_CURRENT, 'not_compared'],
     ['⛔ no accepted index (pre-6.26b) ⇒ not_indexed', row({ deathDateIndex: 'idx-E' }), accepted(null), UP_CURRENT, 'not_indexed'],
     ['overlap: ⛔ no row index AND ⛔ no accepted index ⇒ not_compared', row({ deathDateIndex: null }), accepted(null), UP_CURRENT, 'not_compared'],
-    ['overlap: ⛔ no accepted review AND ⛔ no accepted index is not_compared', row(), null, UP_CURRENT, 'not_compared'],
   ] as const)('%s', (_label, r, review, upload, expected) => {
     expect(deathDateComparison(r, review, upload)).toBe(expected);
   });
@@ -155,13 +154,14 @@ describe('deriveDeathFactWarningKeys — the three kinds (GI6, GI17, GI18)', () 
       expect(out.keys).toEqual([`register_check_mismatch:${UP_CURRENT}`]);
       expect(out.kinds).toEqual(['register_check_mismatch']);
     });
-    it('it STAYS when a later `matches` re-review superseded it, and a second `does_not_match` is the SAME key (K1 / L1)', () => {
-      // The input is "ANY accepted review of the current upload recorded does_not_match" — the reader's EXISTS — so
-      // both cases arrive here as `true` and yield the SAME single key.
-      const once = deriveDeathFactWarningKeys(inputs({ registerMismatchPresent: true }));
-      const twice = deriveDeathFactWarningKeys(inputs({ registerMismatchPresent: true }));
-      expect(twice.keys).toEqual(once.keys);
-      expect(twice.keys).toHaveLength(1);
+    it('the key carries ⛔ no review id — it is the UPLOAD\'s, whatever the current review (K1 / L1)', () => {
+      // K1 ("a later `matches` ⛔ erases it") and L1 ("a second `does_not_match` is the SAME key") are properties of the
+      // reader's EXISTS over every accepted review of the current upload — asserted LIVE in
+      // `approval-warnings-death-facts.spec.ts` (GI18). Here: the key is the upload's, unchanged by the current review.
+      const withReview = deriveDeathFactWarningKeys(inputs({ registerMismatchPresent: true }));
+      const withoutReview = deriveDeathFactWarningKeys(inputs({ registerMismatchPresent: true, currentReview: null }));
+      expect(withoutReview.keys).toEqual(withReview.keys);
+      expect(withReview.keys).toEqual([`register_check_mismatch:${UP_CURRENT}`]);
     });
     it('⛔ no current upload (a replaced upload with no new one judged) ⇒ ⛔ no key', () => {
       expect(deriveDeathFactWarningKeys(inputs({ registerMismatchPresent: true, currentUploadId: null })).keys).toEqual([]);

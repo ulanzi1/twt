@@ -1,3 +1,12 @@
+# last_updated: 2026-10-07m (⭐ **STORY 6.26b — CODE REVIEW ROUND 2 (`bmad-code-review 6.26b`, a fresh full re-review of `b665a19a..HEAD`,
+# the three layers in parallel per explicit instruction): stays `done`.** 1 decision-needed (resolved), 7 patch (all applied), 2 deferred,
+# 8 dismissed; ⛔ no HIGH. DECISION (BigDev: "tighten"): `accepted_date_index` was UPDATE-able to ANY value — unlike the ciphertexts it
+# DECIDES GI6, so a forge silently turned `differs` into `same` ⇒ `0149`'s trigger now refuses any new non-NULL value (only the RTBF
+# scrub's NULL passes); `0149` edited in place, the function re-applied + the journal hash updated on :5432 AND :5433; RD14 carries an
+# ERRATUM. PATCHES: RD9 asserted (the death facts derive while the determination is stale); the console's fifth register-check copy now
+# reuses `DeathCertificateRegisterCheck` (+ "four places" comments corrected); three tests that could not fail made to fail (the inherited
+# GI17 leg, the API "no index on the wire", a tautological GI18 unit case); GI18 at a later approver; RD10 erratum for round 1's patch #3.
+# DEFERRED: an erasure mid-claim drops an unanswered GI6 key; an un-amended literal-index fixture. `ci:local` 34/34 green.)
 # last_updated: 2026-10-07l (⭐ **STORY 6.26b — CODE REVIEWED (`bmad-code-review 6.26b`, Blind Hunter + Edge Case Hunter + Acceptance
 # Auditor run in parallel per explicit instruction): review → done.** 0 decision-needed, 3 patch (all applied: admin's `RegisterCheck`
 # now a type alias of `@twt/contracts`' `DeathCertificateRegisterCheck` instead of a hand-redeclared union; the i18n `registerChecks`

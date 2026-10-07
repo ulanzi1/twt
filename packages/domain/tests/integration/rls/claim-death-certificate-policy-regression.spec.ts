@@ -390,7 +390,10 @@ describe.skipIf(!hasDatabase)('migration 0122 — death-certificate uploads + re
 
   it('⭐⭐ the append-only TRIGGERS refuse the table OWNER too — ⛔ no certificate is overwritten or deleted (23000)', async () => {
     const { tx, client, claimCaseId, memberId, uploadId } = await seedClaimWithCertificate();
-    const [r] = await tx.insert(schema.claimDeathCertificateReviews).values(review(claimCaseId, memberId, uploadId)).returning();
+    const [r] = await tx
+      .insert(schema.claimDeathCertificateReviews)
+      .values(review(claimCaseId, memberId, uploadId, { acceptedDateIndex: 'idx-a' }))
+      .returning();
     await client.query('RESET ROLE'); // the Docker superuser — grants no longer protect the tables
     const legs: [string, string, unknown[]][] = [
       ['upload DELETE', 'DELETE FROM claim_death_certificate_uploads WHERE upload_id = $1', [uploadId]],
@@ -400,6 +403,9 @@ describe.skipIf(!hasDatabase)('migration 0122 — death-certificate uploads + re
       ['review UPDATE decided_at', "UPDATE claim_death_certificate_reviews SET decided_at = decided_at - interval '1 day' WHERE review_id = $1", [r!.reviewId]],
       // Story 6.26b (0149) — the register check is IMMUTABLE, for the owner too (a later check is a NEW review — RD29).
       ['review UPDATE register_check', "UPDATE claim_death_certificate_reviews SET register_check = 'does_not_match' WHERE review_id = $1", [r!.reviewId]],
+      // Code review round 2 — the index DECIDES GI6: a rewrite (e.g. the inspection's index copied in) would turn
+      // `differs` into `same`, so ⛔ any new non-NULL value is refused; only the scrub's NULL passes (below).
+      ['review UPDATE accepted_date_index (a forge)', "UPDATE claim_death_certificate_reviews SET accepted_date_index = 'idx-forged' WHERE review_id = $1", [r!.reviewId]],
     ];
     for (const [label, text, args] of legs) {
       await client.query('SAVEPOINT t');
@@ -410,11 +416,21 @@ describe.skipIf(!hasDatabase)('migration 0122 — death-certificate uploads + re
       expect(pgCode(err), label).toBe('23000');
       await client.query('ROLLBACK TO SAVEPOINT t');
     }
-    // …while the trigger lets the RTBF scrub take the accepted date index to NULL (it is OUT of the deny-list, RD14).
-    await client.query("UPDATE claim_death_certificate_reviews SET accepted_date_index = 'idx' WHERE review_id = $1", [r!.reviewId]);
+    // …while the trigger lets the RTBF scrub take the accepted date index to NULL — and re-running it is a no-op…
+    await client.query('UPDATE claim_death_certificate_reviews SET accepted_date_index = NULL WHERE review_id = $1', [r!.reviewId]);
     await client.query('UPDATE claim_death_certificate_reviews SET accepted_date_index = NULL WHERE review_id = $1', [r!.reviewId]);
     const after = await client.query('SELECT accepted_date_index FROM claim_death_certificate_reviews WHERE review_id = $1', [r!.reviewId]);
     expect(after.rows[0]).toEqual({ accepted_date_index: null });
+    // …and an erased index is ⛔ never restored.
+    await client.query('SAVEPOINT t');
+    const restore = await client
+      .query("UPDATE claim_death_certificate_reviews SET accepted_date_index = 'idx-a' WHERE review_id = $1", [r!.reviewId])
+      .then(
+        () => undefined,
+        (e: unknown) => e,
+      );
+    expect(pgCode(restore)).toBe('23000');
+    await client.query('ROLLBACK TO SAVEPOINT t');
   });
 
   it('⛔ TRUNCATE is refused on both tables (23000)', { timeout: 60000 }, async () => {

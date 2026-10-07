@@ -223,6 +223,10 @@ describe.skipIf(!hasDatabase)('Story 6.23a — the nominee-change warnings at th
       const w = await readClaimApprovalWarnings(ctx.tx, ctx.pid, ctx.cid);
       expect(w.postDeath).toBe('awaiting_determination');
       expect(w.keys.some((k) => k.startsWith('post_death_version:'))).toBe(false);
+      // Story 6.26b RD9 — the death facts are derived OUTSIDE the post-death block: the re-review moved the accepted
+      // date away from the inspection's family date, so GI6 flags it even while the determination is stale (code
+      // review round 2 — ⛔ nothing else turns red if the derivation moves inside the block).
+      expect(w.kinds).toEqual(['inspection_death_date_differs']);
     });
 
     it('the reasons ride the same read — the generic first, then the Pariwar\'s active rows', async () => {

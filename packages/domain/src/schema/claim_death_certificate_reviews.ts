@@ -59,8 +59,9 @@ export type DeathCertificateRejectionReason = (typeof DEATH_CERTIFICATE_REJECTIO
  * The District Admin's government death-register (CRS) check, recorded on every ACCEPT (Story 6.26b GI8;
  * `-262` FQ8 B). `could_not_check` is ⛔ not a warning (`-281` Q1 B makes only "does not match" one); a
  * `does_not_match` is a warning for as long as its certificate is the current upload (`-289` L1/L2).
- * ⚠ LOCKSTEP with migration 0149's `claim_death_certificate_reviews_register_check_check`, `@twt/contracts`'
- * `DeathCertificateRegisterCheck` z.enum and the admin's local `RegisterCheck` type — four places.
+ * ⚠ LOCKSTEP with migration 0149's `claim_death_certificate_reviews_register_check_check` and `@twt/contracts`'
+ * `DeathCertificateRegisterCheck` z.enum — three declarations (the contract ↔ this one is pinned by `@twt/contracts`'
+ * `claims-verifier-decision.test.ts`; the console packet and the admin derive from the contract).
  */
 export const DEATH_CERTIFICATE_REGISTER_CHECKS = ['matches', 'does_not_match', 'could_not_check'] as const;
 export type DeathCertificateRegisterCheck = (typeof DEATH_CERTIFICATE_REGISTER_CHECKS)[number];

@@ -20,11 +20,13 @@
 -- Grants: `0122` gave `twt_app` SELECT, INSERT + a column UPDATE on the two supersession columns and the two
 -- ciphertexts. The RTBF scrub now also NULLs `accepted_date_index` (GI13 [b]) ⇒ a column UPDATE grant on it.
 -- `register_check` gets ⛔ no UPDATE grant and joins the append-only trigger's deny-list (immutable — a later check is
--- a NEW review). `accepted_date_index` stays OUT of the deny-list (the scrub NULLs it — the ciphertext precedent).
+-- a NEW review). `accepted_date_index` may change ONLY to NULL (the scrub): unlike the ciphertexts it DECIDES a
+-- warning (GI6), so the trigger refuses any other new value (code review round 2 — RD14's "⛔ not tightened" reversed).
 -- Hand-authored — ⛔ never regenerate.
 
--- ⚠ LOCKSTEP with `DEATH_CERTIFICATE_REGISTER_CHECKS` (schema/claim_death_certificate_reviews.ts), `@twt/contracts`'
--- `DeathCertificateRegisterCheck` z.enum and the admin's local `RegisterCheck` type — re-declared, not shared, in four places.
+-- ⚠ LOCKSTEP with `DEATH_CERTIFICATE_REGISTER_CHECKS` (schema/claim_death_certificate_reviews.ts) and `@twt/contracts`'
+-- `DeathCertificateRegisterCheck` z.enum — re-declared, not shared, in three places (the console packet and the admin derive
+-- from the contract).
 ALTER TABLE "claim_death_certificate_reviews" ADD COLUMN "register_check" text;--> statement-breakpoint
 ALTER TABLE "claim_death_certificate_reviews" ADD COLUMN "accepted_date_index" text;--> statement-breakpoint
 ALTER TABLE "claim_death_certificate_reviews" ADD CONSTRAINT "claim_death_certificate_reviews_register_check_check" CHECK (
@@ -37,7 +39,8 @@ ALTER TABLE "claim_death_certificate_reviews" ADD CONSTRAINT "claim_death_certif
 -- GI13 [b] — the DPDPA-RTBF scrub NULLs the index with the ciphertexts.
 GRANT UPDATE ("accepted_date_index") ON "claim_death_certificate_reviews" TO twt_app;--> statement-breakpoint
 
--- The `0122` function restated whole, with `register_check` added to the immutable list. The triggers stay.
+-- The `0122` function restated whole, with `register_check` added to the immutable list and `accepted_date_index`
+-- allowed only to go to NULL. The triggers stay.
 CREATE OR REPLACE FUNCTION claim_death_certificate_reviews_reject_mutation()
 RETURNS TRIGGER LANGUAGE plpgsql AS $$
 BEGIN
@@ -53,7 +56,10 @@ BEGIN
        OR NEW.decided_by_actor_id IS DISTINCT FROM OLD.decided_by_actor_id
        OR NEW.decided_by_display IS DISTINCT FROM OLD.decided_by_display
        OR NEW.decided_at IS DISTINCT FROM OLD.decided_at
-       OR NEW.supersedes_review_id IS DISTINCT FROM OLD.supersedes_review_id THEN
+       OR NEW.supersedes_review_id IS DISTINCT FROM OLD.supersedes_review_id
+       -- The index may only be ERASED (the RTBF scrub → NULL), ⛔ never rewritten: it decides GI6, so a forged
+       -- value would silently turn `differs` into `same` (code review round 2 of 6.26b).
+       OR (NEW.accepted_date_index IS NOT NULL AND NEW.accepted_date_index IS DISTINCT FROM OLD.accepted_date_index) THEN
       RAISE EXCEPTION
         'claim_death_certificate_reviews is append-only — only the supersession stamp and the RTBF scrub may update a review (Story 6.21a D1)'
         USING ERRCODE = 'integrity_constraint_violation';

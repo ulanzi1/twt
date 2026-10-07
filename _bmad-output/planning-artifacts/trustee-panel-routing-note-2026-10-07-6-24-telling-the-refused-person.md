@@ -1,4 +1,4 @@
-# Trustee Panel routing note — you ruled the refused person "is told the refusal can be appealed": how?
+# Trustee Panel routing note — you ruled the refused person "is told the refusal can be appealed": how? And one confirm about a refusal coded wrongly
 
 > **§0 gate — passed (2026-10-07).** This is the Panel's: it decides whether the Trust sends a **new message** to a person — the one whose
 > claim was refused on suspicion — and on what basis. Your ruling `2026-10-07-291` (Q1 A) said that person *"is told the refusal can be
@@ -31,8 +31,10 @@ nominee. Whether and how the Trust writes to them is a decision about what it te
 ⭐ **Today the system tells ⛔ nobody that a claim was refused.** So unless they are texted, the refused person learns of the refusal — and
 of the 90 days — only by calling the helpline or being called. A person who never calls can lose the appeal without knowing the clock ran.
 
-⚠ And the number we would text is one **they gave themselves** when they filed the claim, for being contacted about it — ⛔ not a number
-someone else gave (FQ7's case).
+⚠ **Which number:** if the refused person filed as someone other than a nominee, it is the mobile they gave on the claim for being
+contacted about it. But in the case your ruling was written for, the refused person filed **as the nominee they added after the death**
+— and then the only number is the one on that changed nominee entry, put there by whoever made the change (usually themselves). A claim
+with ⛔ no contact details has ⛔ no number at all.
 
 ---
 
@@ -41,18 +43,40 @@ someone else gave (FQ7's case).
 | | Option | What changes for a person | Cost |
 |---|---|---|---|
 | **A** | ⛔ No text. The helpline screen shows the last date to appeal; staff tell the person when they call or are called. | The refused person learns of the time limit only through the helpline. | Someone who never calls may let the 90 days pass without knowing. |
-| **B** | **One text** to the number the person gave when they filed the refused claim: *"The claim for [member] could not go ahead. It can be appealed until [date]. Please call the helpline."* — accusing no one. | The refused person is told the date directly, once. | A third new text (registered first — DLT), and the person told is the one suspected; the number may be out of date. Counsel confirms the basis, as for FQ7's text. |
+| **B** | **One text** to the refused person — at the mobile they gave on the claim, or, if they filed as a nominee, the mobile on that nominee entry: *"The claim for [member] could not go ahead. It can be appealed until [date]. Please call the helpline."* — accusing no one. | The refused person is told the date directly, once. | A third new text (registered first — DLT), and the person told is the one suspected. In the likeliest case the number is the one on the post-death nominee entry, ⛔ not one given for being contacted — so counsel must confirm the basis, as for FQ7's text; it may be out of date, and some refused claims have ⛔ no number. |
 
 **Our reading:** **B** — **because** your ruling made the 90 days fair on the condition that the person *"is told"*, and only a message
-reaches someone who does not call. The number is the one they gave for exactly this claim, and the words accuse no one.
+reaches someone who does not call. The words accuse no one; the number is the best the Trust holds for that person, and counsel checks
+the basis before it goes live.
+
+---
+
+# A confirm (item 2) — a refusal coded "on suspicion" by mistake
+
+**In one sentence:** To stop one death being paid twice, once the true nominee has filed her own claim, staff can ⛔ no longer change a
+refusal's reason away from *"nominee changed after the death"* — so if a District Admin chose that reason **by mistake**, the refused family
+keeps the 90-day appeal limit instead of the no-limit appeal every other refusal has. Do you accept that?
+
+**The one fact that decides it:** if staff could change the reason, the refused claim would become an ordinary refusal with ⛔ no time limit
+and could be appealed and paid **after** the true nominee's claim was paid — two payments for one death, and the closing rule (FQ5) would
+⛔ no longer reach it.
+
+| | Option | What changes for a person | Cost |
+|---|---|---|---|
+| **A** | **Accept it.** While the true nominee's claim is open (or paid), the reason can ⛔ not be changed. | A family refused under the wrong reason must appeal within 90 days. | A mis-coded refusal costs that family the no-limit appeal; they are still told the date (item 1). |
+| **B** | Allow the change, and close the true nominee's claim in that case instead. | The mis-coded family keeps the no-limit appeal. | The true nominee's claim — perhaps already paid — is closed by a staff correction she had ⛔ no part in. |
+
+**Our reading:** **A** — the mistake is rare, the family keeps a full appeal (only bounded in time) and is told the date, while B would
+let a staff correction undo an innocent nominee's claim.
 
 ---
 
 # What is at stake right now
 
 - **Live today:** ⛔ nothing (⛔ not in production).
-- **Blocked:** ⛔ nothing — Story 6.24 builds A meanwhile (the helpline screen), and B adds one more text to machinery the story already builds.
-- **If nothing is decided:** the system goes live on A.
+- **Blocked:** ⛔ nothing — Story 6.24 builds item 1 A meanwhile (the helpline screen; B adds one more text to machinery the story
+  already builds) and item 2 A (the reason lock).
+- **If nothing is decided:** the system goes live on item 1 A and item 2 A.
 
 ---
 
@@ -62,16 +86,22 @@ reaches someone who does not call. The number is the one they gave for exactly t
   without saying how. ⚠ Our first reading of it assumed the existing appeal screens would tell them — a fresh-context check found ⛔ none of
   those screens is reachable today. Our second attempt, a text to everyone on the refused claim's contact list, was caught before it was
   built: that list would have reached the **true nominee** and ⛔ not the refused person.
-- **Corrected in this note:** ⛔ nothing yet.
-- **Still uncertain:** whether every refused filer gave a usable number (the helpline path asks for one; an old number may be dead).
+- **Corrected in this note (before it was put):** the first draft said the number texted under B would be *"one they gave themselves when
+  they filed the claim, for being contacted about it"*. ⚠ A fresh-context check found that false in the likeliest case: a refused person
+  who filed as a nominee has ⛔ no separate contact number — only the one on the nominee entry. The one-fact paragraph and B's cost now say
+  so. Item 2 was added after the same check found the reason lock decides something for a family.
+- **Still uncertain:** how many refused claims will have ⛔ no usable number at all.
 
 ---
 
 # In plain English
 
 You said the person refused on suspicion gets 90 days to appeal and must be told they can. Right now the system tells nobody about a
-refusal. We suggest one short text to the number that person gave when they filed — saying the claim could not go ahead, that it can be
-appealed until a date, and to call the helpline. Without it, only people who call the helpline find out.
+refusal. We suggest one short text to the best number the Trust holds for that person — saying the claim could not go ahead, that it can
+be appealed until a date, and to call the helpline. Without it, only people who call the helpline find out.
+
+Separately, to stop one death being paid twice, staff will ⛔ not be able to change a refusal's reason once the true nominee has filed. If
+the reason was chosen by mistake, that family must appeal within the 90 days. We suggest accepting this.
 
 ---
 ---
@@ -95,6 +125,10 @@ appealed until a date, and to call the helpline. Without it, only people who cal
   helpline operator holds — `packages/domain/src/rbac/roles.ts:709-711`), but ⛔ no admin screen calls it.
 - `readCorrectionRecipients` (`packages/domain/src/claim/correction-chase.ts:601-653`) returns the claim's effective nominees and adds the
   claimant only when the claimant is none of them — so it is ⛔ not a way to reach the refused filer.
+- 6.19a W6: a claim's contact record carries a claimant MOBILE only when the claimant is ⛔ not one of the nominees
+  (`claim_contacts_one_claimant_side_check`, `packages/domain/src/schema/claim_contacts.ts`); a nominee-claimant is linked to the nominee
+  version instead (`claimantNomineeVersionId`), whose mobile is `member_nominee_versions.mobile_ciphertext`.
+- `reviseDecision` (`packages/domain/src/claim/verifier-decision-persist.ts:577`) can change a `denied` claim's reason (item 2's subject).
 
 ## E4 — Commands to re-verify every claim
 ```

@@ -104,7 +104,8 @@ another person's act.**
 | `2026-10-07-291` Q1 A | *"a time limit to appeal THIS kind of refusal only — 90 days from the refusal. After it, the refusal can ⛔ no longer be appealed, and the true nominee's claim may be approved … the refused person … is told the refusal can be appealed"* | ⭐ Trustee-ratified (the number confirmed by BigDev: *"90 days"*) — ⚠ narrows 6.16 D-E and the PRD line for `-239` only |
 | `2026-10-07-291` Q2 B | *"a text, once: 'Your claim for [member] has been closed. Please call the helpline.'"* | ⭐ Trustee-ratified — ⚠ go-live with FQ7's counsel check |
 | `-291` readings | Q2's "her" = the nominee in place at the death, resolved as FQ7's | ⚠ OUR reading |
-| `-291` readings AMENDED by the author-commit (v1.3, round-2 validate) | ⚠ two `-291` readings rested on false premises: *"the only path to a `-239` refusal is `adjudicateClaim`"* (false — `reviseDecision` can move a `denied` claim's reason ONTO `-239`) and *"is told = the existing appeal surfaces"* (⛔ none is reachable). ⇒ the clock starts at the claim's EARLIEST `-239` decision row (RF14); *"is told"* = a once-ever text to the refused claim's contact record + a helpline appeal screen (RF14) | ⚠ Author-commit (BigDev) — amends `-291`'s READINGS only, ⛔ never its ruling |
+| `-291` readings TO BE AMENDED by the author-commit (⏳ `-292`, Task 0.4) | ⚠ two `-291` readings rested on false premises: *"the only path to a `-239` refusal is `adjudicateClaim`"* (false — `reviseDecision` can move a `denied` claim's reason ONTO `-239`) and *"is told = the existing appeal surfaces"* (⛔ none is reachable). ⇒ the clock starts at the earliest row of the claim's CURRENT unbroken `-239` chain (RF14); *"is told"* = a helpline appeal screen the operator uses with the family (RF14 (b)) — and WHETHER the refused person is also TEXTED is routed to the Panel as Q3 | ⚠ Author-commit (BigDev) — amends `-291`'s READINGS only, ⛔ never its ruling |
+| **Q3** (routing note `2026-10-07-6-24-telling-the-refused-person`) | how the refused person is TOLD they can appeal — A (staff tell them when they call or are called; the helpline screen shows the date — ⛔ no text) · B (a text to the number the FILER gave on the refused claim) | ⏳ **AWAITING PANEL** — non-blocking; built meanwhile as A |
 
 **⛔ Not covered by any ruling (stays open):** the exact wording of FQ7's and Q2's texts in Hindi and their DLT templates (`-262`, `-291`
 *"does NOT cover"*); any extension of the 90 days for good cause; a timely appeal that stays undecided for long (6.16 D-H's SLA stays a signal);
@@ -248,8 +249,10 @@ FQ7's legal basis (counsel); who is paid when an allowed appeal moves the certif
   `appeal-panel-persist.ts:668-686`, and `cancelR9VotingSession`, `r9-voting-persist.ts:787-808`, throw `*ActorNotOnPanelError` unless the
   actor sits on R's panel, and the appeal one needs `appeal_final` once votes exist — S's reversal would throw and roll back) ⇒ EXTRACT
   each writer's actor-free core (`supersedeAppealPanelSession` / `supersedeR9VotingSession` — the row supersession + its audit; the
-  actor checks stay in the public writers) and call the cores with the system actor; the R9 core also supersedes R's live
-  `routed_to_r9` row. Each public writer keeps its behaviour (its specs green). Task 3.0 enumerates EVERY table with a live row keyed on a claim (returns, correction /
+  actor checks stay in the public writers) and call the cores with the system actor. R's live `routed_to_r9` row is superseded by RF6
+  ITSELF through a helper extracted from `finalizeR9Outcome`'s inline supersession (`r9-voting-persist.ts:714-727`) — ⛔ never inside the
+  shared R9 core (`cancelR9VotingSession` deliberately leaves the routing live, `:780-784`). Each public writer keeps its behaviour (its
+  specs green). Task 3.0 enumerates EVERY table with a live row keyed on a claim (returns, correction /
   certificate reminder runs, R9 and appeal-panel sessions, inspection and shepherd assignments, pending intake attempts, the RF11 notice) and
   records each: *"ended by RF6 via <writer>"*, *"inert — its reader checks the state (<cite>)"*, or *"accepted residual, because …"*. A test
   pins the reminder case (⛔ no text after `closed`).
@@ -285,16 +288,15 @@ FQ7's legal basis (counsel); who is paid when an allowed appeal moves the certif
   (⛔ no per-surface panel). The convergence strip's T17 note (`ConvergenceDecisionStrip.tsx:222-231`) is reworded to D4 B.
 - **RF11 — THE TEXT (FQ7).** A jobs sweep beside 6.19b's (`apps/jobs/src/scheduler/`), ⛔ never `dispatch()`: select claims with a
   standing refusal (RF1) and ⛔ no notice row; per claim, lock it, RE-CHECK RF1 under the lock, resolve the recipient exactly as RF9 does
-  (the refused claim's rank-1 effective version — ⛔ never `readCorrectionRecipients`, which keys on the filer's agreement), insert a
+  (the refused claim's rank-1 effective version — ⛔ never `readCorrectionRecipients`, which requires a live filing agreement and returns S's effective nominees plus a non-nominee claimant — a different set), insert a
   notice row in its claiming status, commit; then decrypt (the domain's `resolveCorrectionMobile`, `claim/correction-crypto.ts:~50`), send
   through `sendClaimCorrectionSms`'s path (`claim-correction-reminders.ts:247-320` — its fail-closed and error classification), and
   compare-and-set the outcome. New table `claim_suspicion_notices` (migration 0151 — v1.2: it carries both texts, RF12): `notice_id`, `pariwar_id`, `claim_case_id`
   (composite FK to `claims`), `recipient_version_id`, `recipient_number_hash` (keyed), `status`, `claimed_at`, `created_at`,
-  `updated_at`, `purpose` (`'suspicion_refusal' | 'closed_after_appeal' | 'refusal_appeal_notice'` — a CHECK + an `as const` tuple in
-  LOCKSTEP; v1.3); UNIQUE `(pariwar_id, claim_case_id, purpose)` — ⭐ ONCE per claim per purpose, EVER (a revision away and back ⛔ never
-  re-texts; a second refused claim of the death is its own notice). ⚠ `refusal_appeal_notice` may have SEVERAL recipients (the contact
-  record) ⇒ its rows carry a `recipient_key` and the UNIQUE for that purpose is `(pariwar_id, claim_case_id, purpose, recipient_key)` —
-  mirror 6.19b's `(claim_case_id, recipient_key)` closure-notice partial unique; the two single-recipient purposes keep one row each. ⚠ **v1.1 (validator M9) — invent ⛔ no vocabulary:** the status set, `claimed_at`, the
+  `updated_at`, `purpose` (`'suspicion_refusal' | 'closed_after_appeal'` — a CHECK + an `as const` tuple in LOCKSTEP; v1.4); UNIQUE
+  `(pariwar_id, claim_case_id, purpose)` — ⭐ ONCE per claim per purpose, EVER (a revision away and back ⛔ never re-texts; a second
+  refused claim of the death is its own notice). ⚠ If Q3 is answered B, a third purpose joins (one recipient — the refused claim's
+  FILER), a CHECK widening in its own migration. ⚠ **v1.1 (validator M9) — invent ⛔ no vocabulary:** the status set, `claimed_at`, the
   partial index on the claiming status and the exhausted-row finaliser are COPIED from 6.19b's reminder table (migration `0128` — its
   `attempting | accepted | no_target | …` set and its retry / stale-claim handling; read it, mirror it, a CHECK + an `as const` tuple in
   LOCKSTEP) — so a crash after the claiming commit is RECLAIMED by the next run, ⛔ never stranded (the selector is *"⛔ no FINISHED row"*,
@@ -335,9 +337,11 @@ FQ7's legal basis (counsel); who is paid when an allowed appeal moves the certif
   reading); the sibling registry gains its entry, the DLT sheet two rows; the same counsel row covers it (`-291` Consequence 3).
   ⚠ **v1.3 — the mobile never reaches the family status for a `closed` claim** (validator round 2, M6): `closed` joins
   `FAMILY_STATUS_TERMINAL_STATES` ⇒ the entry outcome is `terminal` ⇒ `resolveClaimEntryDecision` sends it to the WIZARD
-  (`claim-entry-gate.ts:46-48`) and the words would ⛔ never render ⇒ a 6.19c-style narrowing (the `refile_helpline` precedent,
-  `claim-entry-gate.ts:42-45`): a pointer claim in `closed` routes to a calm helpline screen carrying the closed words (⛔ never the wizard
-  — a new filing would converge onto the reversed claim anyway). A WAITING refile shows its existing status — ⛔ no new member-facing string for
+  (`claim-entry-gate.ts:47-48`) and the words would ⛔ never render ⇒ a 6.19c-style narrowing (the `refile_helpline` precedent,
+  `claim-entry-gate.ts:46`): the server read behind `fetch-claim-entry-outcome.ts` gains a `ClaimEntryReadOutcome` kind `closed`, and
+  the gate routes it to a calm helpline screen carrying the closed words (its own decision kind and words). ⚠ ⛔ Never the wizard — and
+  ⛔ not because a filing would converge onto the reversed claim (it would ⛔ not: the ±30-day window, `icp.ts:117`, has long passed, so a
+  filing would MINT a third claim for the death, which the helpline should prevent, ⛔ not the app invite). A WAITING refile shows its existing status — ⛔ no new member-facing string for
   the wait (6.23b's precedent: whether the family is told a claim waits was ⛔ never ruled). ⛔ No member-facing string anywhere says
   "suspicion", "fraud", "changed after the death" or names anyone.
 - **RF13 — ONE REVISION GUARD; NOTHING ELSE MOVES.** ⚠ **v1.3 (validator round 2, H2) — a revision OFF `-239` would let one death be paid
@@ -345,22 +349,32 @@ FQ7's legal basis (counsel); who is paid when an allowed appeal moves the certif
   `verifier-decision-persist.ts:577` — only a move ONTO `-239` is checked, `:621`) → S stops standing → R's final approval proceeds → S,
   now an ordinary refusal with ⛔ no time limit, is appealed and reversed → RF6 closes ⛔ nothing (S is ⛔ not `-239`) → S is approved too;
   ⛔ nothing per-death stops a second approval (`assertClaimApprovable` has ⛔ no such check; pools are keyed per cycle). ⇒
-  `reviseDecision` refuses to move a live decision's reason OFF `post_death_nominee_change` while ANY other claim of the same death is in
-  neither `closed` nor `settled`: new typed error `SuspicionReasonLockedError(claimCaseId, heldClaimCaseId)` → 409
-  `verifier_decision.suspicion_reason_locked` (the verifier-decision translator), read under the claim lock `reviseDecision` already holds.
-  A note-only revision that keeps `-239` is ⛔ not refused. ⭐ §0: this narrows a STAFF action, changes ⛔ nothing a family is owed or told
-  ⇒ the author's.
+  `reviseDecision` refuses to move a live decision's reason OFF `post_death_nominee_change` while ANY other claim of the same death,
+  created AFTER this claim's current `-239` chain began (i.e. kept apart by D4 B — a claim that predates the refusal is ⛔ not one), is
+  in any state but `closed` — incl. `approved`, `state_trustee_approved` and `settled` (v1.4, round 3 H: a settled R plus a later S
+  appeal is still two payments) and `denied` (its own appeal could revive it): new typed error `SuspicionReasonLockedError(claimCaseId,
+  heldClaimCaseId)` → 409 `verifier_decision.suspicion_reason_locked` (the verifier-decision translator). ⚠ **The lock (v1.4, round 3
+  M):** `reviseDecision` locks only S, and R is minted under the intake lock without reading a `denied` S ⇒ a revision and a mint could
+  both commit ⇒ `reviseDecision` takes `acquireIntakeLock(pariwar, deceased)` FIRST (the deceased id is immutable — read it unlocked),
+  then its decision lock and row — the intake-then-row order `convergeIntakeAttempt` already uses; a two-connection test.
+  A note-only revision that keeps `-239` is ⛔ not refused. ⚠ **Accepted residual (recorded, ⛔ not hidden):** while such a claim lives, a
+  MIS-CODED `-239` reason can ⛔ not be corrected — so the refused person's appeal stays bound by the 90 days; their remedy is to appeal
+  within them (the helpline screen shows the date). ⭐ §0: the guard narrows a STAFF action to keep one death from being paid twice; the
+  residual's effect on the refused person is ⛔ nothing `-291` did not already rule for a `-239` refusal ⇒ the author's.
   Otherwise: ⛔ no new permission key (catalog version / key count unchanged — the `permissions.test.ts` pins stay green); the texts and
   the closure are the system's acts; the helpline appeal screen (RF14) reuses `claim.file`, the key the on-behalf route already requires.
   ⛔ No change to the reason codes, the one-journey appeal rule, 6.19c's closures or refile guard, the warning kinds, the bank/name checks,
   or 6.20's determination. ⛔ No `apps/public` change.
 - **RF14 — THE 90-DAY LIMIT (`-291` Q1 A).** ⚠ **v1.3 — the clock (validator round 2, H1):** the refusal ON SUSPICION is the claim's
-  EARLIEST `claim_verifier_decisions` row with reason `post_death_nominee_change` (rows are immutable; on the normal path it IS the
-  District Admin's refusal) — ⛔ never the `claim.verifier_denied` event: `reviseDecision` can move a claim refused for another reason ONTO
+  earliest row of its CURRENT unbroken `-239` chain (v1.4, round 3 M: walk `supersedes_decision_id` back from the live row while the
+  reason stays `post_death_nominee_change`; on the normal path it IS the District Admin's refusal; ⛔ no writer updates a decision row
+  but its `superseded_at` — `verifier-decision-persist.ts:648`, `state-trustee-decision-persist.ts:1133` — a convention, grep-pinned in a
+  test, ⛔ not a DB rule: 0059 grants UPDATE on every column) — ⛔ never the `claim.verifier_denied` event: `reviseDecision` can move a claim refused for another reason ONTO
   `-239` long after the denial, and a clock from the denial would give that person ⛔ no days to appeal. A revision away and back does ⛔ not
   restart it. ONE pure helper `suspicionRefusalAppealUntil(firstSuspicionDecidedAtUtc)` → D + 90 where D = `istDateOf(...)`; the limit has
   passed when the clock ≥ `istMidnightAt(addCalendarDays(D, 91))` — the codebase's IST helpers (`istDateOf`, `addCalendarDays`,
-  `istMidnightAt` — `cycle-calendar/holiday-resolver.ts:178,187,206`, re-exported by `correction-schedule.ts:116-117`; ⛔ never a new date
+  `istMidnightAt` — `cycle-calendar/holiday-resolver.ts:178,187,206`, imported from there as `nominee-effective.ts:48` does
+  (`correction-schedule.ts:116-117` re-exports only `istDateOf`); ⛔ never a new date
   library or a hand-rolled offset). Readers OUTSIDE RF15's key (the console, RF7, RF9, RF11) use their statement's clock; a stale clock
   can only make RF7 skip-and-keep a claim one extra run (conservative) — stated, ⛔ not a defect. Then:
   · `assertAppealInitiable` (`appeal-eligibility.ts:148`) — AFTER its THREE existing guards (not-denied, 6.19c's closure, D-F) — refuses a
@@ -374,22 +388,27 @@ FQ7's legal basis (counsel); who is paid when an allowed appeal moves the certif
     REACHABLE today — `AppealStatusCard` is mounted on ⛔ no screen, the member appeal routes 404 for every production claim (`deferred-work.md`
     *"The member appeal routes 404 for every production claim…"*), and the admin client has ⛔ no call to the on-behalf initiate route
     (`claims.appeal.routes.ts:146`, `claim.file`-gated — `apps/admin/src/api/client.ts` carries ⛔ none) while the admin case read needs an
-    appeal key the operator lacks (`:110-125,151-155`). ⛔ Nothing tells a family a claim was refused at all (FQ6's Gap 2). ⇒ two builds:
-    (a) **a once-ever text to the refused claim's contact record** — the people the filer listed under the filing agreement (6.19a; the
-    6.19b basis and its counsel row, Row 18) — through RF11's machinery, a third `purpose` `refusal_appeal_notice`, recipients by
-    `readCorrectionRecipients` (here the RIGHT reader: these are S's own filer-agreed contacts — the opposite of FQ7's case), words: *"The
-    claim for {member} could not go ahead. It can be appealed until {date}. Please call the helpline {helpline}."* (en + hi, the Hindi
-    marker; accuses no one; ⚠ wording ⛔ not ruled — a NON-blocking confirm is owed to the Panel's next note, the `-284` E5 precedent);
+    appeal key the operator lacks (`:110-125,151-155`). ⛔ Nothing tells a family a claim was refused at all (FQ6's Gap 2). ⇒
+    ⚠ **v1.4 (round 3 BLOCKER) — ⛔ no text to the refused person is built.** v1.3's text used `readCorrectionRecipients`, which returns S's
+    EFFECTIVE NOMINEES (the true nominee — FQ7's own recipient) and adds the claimant only when the claimant is none of them
+    (`correction-chase.ts:601-653`) ⇒ it would have told the true nominee to appeal a refusal whose success closes her own claim, and ⛔
+    never the refused filer. Who is texted, on which number, on what basis is a NEW message to a person ⇒ the Panel's ⇒ **Q3**
+    (non-blocking). Built now:
     (b) **a helpline appeal screen**: a `claim.file`-gated read of a refused claim's appeal eligibility (eligible / open / ended, and for a
     `-239` refusal *"until <date>"* / *"ended on <date>"*) and a *"File an appeal for the family"* action calling the EXISTING on-behalf
     route — the operator files appeals for the family (AR-61). The admin appeal controls (`AppealStageControls.tsx`) show the date too. ⛔
-    The mobile `AppealStatusCard` stays unmounted (its deferred item is ⛔ not this story's).
+    The mobile `AppealStatusCard` stays unmounted (its deferred item is ⛔ not this story's). ⚠ This tells the refused person only when
+    they call or staff call them (option A of Q3). If Q3 is answered B, a once-ever text to the number the FILER gave on S (a NEW resolver
+    over S's claim-contact claimant row — ⛔ never `readCorrectionRecipients`) with the date joins RF11 as a third purpose.
 - **RF15 — THE PER-DEATH APPEAL KEY (built — `-291` Q1 A makes the race real).** At the limit's boundary an appeal can be initiated at the
   same moment the held claim's final approval reads *"time limit passed"*. ⇒ A dedicated transaction advisory key
   `suspicion-appeal:<pariwar>:<deceased>`, taken by RF5's conjunct UNCONDITIONALLY at `step: 'final'`, FIRST in the conjunct (after the
   caller's own locks), and by `initiateAppeal` AFTER its own `appeal:` lock and claim-row lock — where the live reason is stable (`reviseDecision`
   takes the same row lock) — when that reason is `-239`, and BEFORE `assertAppealInitiable`'s new guard, which receives the
-  `clock_timestamp()` read after the key; BOTH judge the limit with that clock (Trap 16). The holder of this key ⛔ never then waits on a claim lock. ⛔ Never the intake lock (`acquireIntakeLock` is taken by
+  `clock_timestamp()` read after the key; BOTH judge the limit with that clock (Trap 16). The holder of this key ⛔ never then waits on a claim lock
+  — ⚠ the key is held to COMMIT, so this must hold for ALL post-gate work of the six `assertClaimApprovable` sites
+  (`verifier-decision-persist.ts:408`, `state-trustee-decision-persist.ts:582`, `r9-voting-persist.ts:659`, `correction-closure.ts:1347,1358,1556`)
+  — Task 4b.2 enumerates each site's post-gate statements and records any lock on another claim (⛔ none expected) (round 3 traced ⛔ no cycle). ⛔ Never the intake lock (`acquireIntakeLock` is taken by
   `tryConverge`, which can insert against a held claim — a cycle) and ⛔ never RF6's reversal key. A two-connection test pins it (an
   initiation racing a final approval at the boundary: exactly one wins — either the appeal opens and the approval waits, or the approval
   proceeds and the initiation answers the time-limit 409).
@@ -443,7 +462,7 @@ FQ7's legal basis (counsel); who is paid when an allowed appeal moves the certif
 
 ### AC0 — Governance (Task 0)
 ✅ The Panel note `trustee-panel-routing-note-2026-10-07-6-24-appeal-never-filed.md` is ANSWERED and transcribed into its block; ✅
-`2026-10-07-291` (Q1 A, 90 days; Q2 B) is committed ALONE (`2f674a57`); the author-commit (RF1–RF16 as of v1.2, F1–F15 by reference) is in
+`2026-10-07-291` (Q1 A, 90 days; Q2 B) is committed ALONE (`2f674a57`); the author-commit (RF1–RF16 as of v1.4 — incl. RF13's guard and RF14's clock — F1–F15 by reference) is in
 `.decision-log.md`, committed ALONE before any code; `epics.md` carries `### Story 6.24`, and `-291` Consequence 2's annotations are made
 (6.16 D-E, the PRD's *"No formal time limit"* line, `docs/appeal-procedural-fairness/README.md`); work is on
 `story/6-24-true-nominee-refile-after-a-suspicion-refusal`. ⛔ No code before.
@@ -471,11 +490,13 @@ LAST (a test: a claim failing both answers the suspicion 409; a claim failing on
 refusal — a leg each), **then** `initiateAppeal` succeeds through 23:59:59.999 IST on D + 90 and answers 409
 `appeal.suspicion_refusal_time_limit_passed` (`details.appeal_until`) from 00:00 IST on D + 91 — ⛔ never a 500; a revision of the decision
 does ⛔ not move D; a refusal for ANY other reason is initiable past 90 days exactly as today (6.16 D-E unchanged for it). **And** an appeal
-initiation and a held claim's final approval racing at the boundary resolve one way only (RF15 — a two-connection test). **And** the refused claim's contact record is texted once (`refusal_appeal_notice`, with the date) and the helpline appeal
+initiation and a held claim's final approval racing at the boundary resolve one way only (RF15 — a two-connection test). **And** the helpline appeal
 screen shows *"Can be appealed until <date>"* / *"The time to appeal ended on <date>"* for a `-239` refusal (en + hi) and files an appeal
 for the family through the existing on-behalf route (an operator holding only `claim.file` can reach both — a test). **And** a revision of
-S's reason OFF `-239` while R lives answers 409 `verifier_decision.suspicion_reason_locked` (RF13); a note-only revision keeping `-239`
-succeeds; once R is `closed` or `settled` the reason may move. **And** the time-limit helper is ONE pure function with a unit table
+S's reason OFF `-239` while R (created after S's chain began) is in any state but `closed` — `settled` included — answers 409
+`verifier_decision.suspicion_reason_locked` (RF13); a claim that predates the refusal does ⛔ not block it; a note-only revision keeping
+`-239` succeeds; once R is `closed` the reason may move; a revision racing R's mint serialises (the intake lock — a two-connection test).
+**And** a revision away and back starts a NEW 90 days from the new chain's first row (RF14 v1.4). **And** the time-limit helper is ONE pure function with a unit table
 (IST midnight edges, a refusal at 23:59 IST, a refusal at 00:01 IST).
 
 ### AC3 — Closed when the appeal is allowed (FQ5; RF4, RF6, F5, F8, F13)
@@ -527,7 +548,7 @@ name and ⛔ no note; the read is counted (ceiling bumped, exact `toBe`). The 40
 translators. A `closed` claim shows *"This claim has been closed. Please call the helpline."* (en + hi) on the mobile's calm helpline screen (the entry
 routing sends a `closed` pointer claim there, ⛔ never to the wizard — RF12 v1.3) and in the helpline read-back, which now lists the member's `closed` claims; ⛔ no member-facing string mentions suspicion, fraud, a changed nominee or a name (a test greps the new strings).
 
-### AC9 — Nothing else moves (RF13)
+### AC9 — Nothing else moves (RF13 — its one revision guard aside)
 Permission catalog version and key count unchanged; ⛔ no new reason code; 6.19c's closure / refile-guard / appeal-closed paths unchanged
 (their specs green); ⛔ no `apps/public` file changes (`git diff --name-only 6bb79afd..HEAD -- apps/public` empty).
 
@@ -613,7 +634,8 @@ applied to BOTH :5432 and :5433, the enum value and the CHECKs verified by name 
 
 - [ ] **Task 4b — Domain + API: the 90-day limit (AC2b; RF14, RF15)**
   - [ ] 4b.1 `suspicionRefusalAppealUntil` (pure, in `suspicion-refusal.ts`) + its unit table; RF1's `time_limit_passed`.
-  - [ ] 4b.2 `assertAppealInitiable`'s third guard + `AppealTimeLimitPassedError` (exported) + its JSDoc amendment; RF15's key in
+  - [ ] 4b.2 (incl. the six sites' post-gate lock enumeration — RF15; and RF13's guard + `acquireIntakeLock` in `reviseDecision`)
+    `assertAppealInitiable`'s fourth guard + `AppealTimeLimitPassedError` (exported) + its JSDoc amendment; RF15's key in
     `initiateAppeal` and in RF5's conjunct, both judging with `clock_timestamp()` after the key.
   - [ ] 4b.3 The appeal handlers' 409 mapping; the contracts error-code union if one exists; RF13's revision guard + its 409 in the
     verifier-decision translator; the helpline appeal screen (a `claim.file`-gated eligibility read + the admin client call to the existing
@@ -635,10 +657,11 @@ applied to BOTH :5432 and :5433, the enum value and the CHECKs verified by name 
   - [ ] 6.1 The sweep module + its registration in the scheduler (beside 6.19b's — read `apps/jobs/src/boot.ts:591-612`); the domain reads
     it needs (the standing refusals without a notice row; the recipient — RF9's read; the member's name decrypt through the 8.8 jobs path).
   - [ ] 6.2 The SIBLING registry (RF11) + config keys; its own lockstep test (6.19's untouched); the shared send core extracted; the DLT request sheet rows; the go-live roster rows
-    (`docs/launch-gate-inventory/inventory-roster.md` — counsel basis for FQ7, the Hindi review).
-  - [ ] 6.2b The second and third purposes (RF12 / `-291` Q2 B; RF14 (a)): their copy keys, sibling-registry entries, DLT rows and the
-    sweep's selectors (`refusal_appeal_notice` reads `readCorrectionRecipients` on the refused claim and carries `{date}`).
-  - [ ] 6.3 Specs: AC7's legs for ALL THREE purposes incl. the locked re-check (revise away between selection and lock), once-ever, fail-closed on unset template
+    (`docs/launch-gate-inventory/inventory-roster.md` — a NEW row for the counsel basis of FQ7's text AND `-291` Q2's closure text — Row
+    18 is the filer's agreement on others' behalf and Row 19 names only the correction and certificate purposes, so ⛔ neither covers
+    them — and the Hindi review row).
+  - [ ] 6.2b The second purpose (RF12 / `-291` Q2 B): its copy key, sibling-registry entry, DLT rows and the sweep's second selector.
+  - [ ] 6.3 Specs: AC7's legs for BOTH purposes incl. the locked re-check (revise away between selection and lock), once-ever, fail-closed on unset template
     ids, the error classification (invalid number / carrier reject / transient), ⛔ no plaintext anywhere (assert the row's columns and the
     captured logs).
 
@@ -648,7 +671,7 @@ applied to BOTH :5432 and :5433, the enum value and the CHECKs verified by name 
   - [ ] 7.2 i18n: the SMS copy key (en + hi, Hindi marker); the closed-claim status words (en + hi) through the real `t()`
     ([[feedback_stub_must_call_not_transcribe]]); `classification.json`.
   - [ ] 7.3 Admin: the console section words; the 409 words; the strip note (RF16) and its test.
-  - [ ] 7.4 Mobile: the family status's `closed` rendering (RF12); `lib/appeal-status.ts` checked; the entry routing (RF2 v1.1) through the
+  - [ ] 7.4 Mobile: the `closed` entry outcome kind (server read behind `fetch-claim-entry-outcome.ts`) and its helpline screen (RF12); `lib/appeal-status.ts` checked; the entry routing (RF2 v1.1) through the
     server's outcome — verify `fetch-claim-entry-outcome.ts` and `app/(claim)/index.tsx`; the helpline read-back lists `closed` (RF12).
 
 - [ ] **Task 8 — Records and proof (AC9, AC10)**
@@ -678,8 +701,8 @@ applied to BOTH :5432 and :5433, the enum value and the CHECKs verified by name 
    vote while S's refusal stood and its 90 days ran or its appeal was open — `-291` Q1 A); reachable only through a revision ONTO `-239`
    after R's vote (F3), which RF7 holds at the commit. RF6 records it, ⛔ never moves an approved/settled claim.
 10. **The latest-nominee fallback** — after a standing refusal ⛔ never `getMemberNominees`; `none` ⇒ the no-op (invariant 5).
-11. **Reusing `readCorrectionRecipients` for FQ7** — it keys on the filer's agreement/contact record, which on S may be the person who made the
-    change (F10 / RF11).
+11. **Reusing `readCorrectionRecipients` for FQ7 or Q3** — it requires S's filing agreement (the filer may be the person who made the
+    change) and returns S's effective nominees plus a non-nominee claimant — ⛔ never the right set for either (F10 / RF11 / RF14).
 12. **Decrypting in the wrong layer / leaking the number** — the API decrypts with `decryptNomineeField`; jobs with the domain helper; the
     domain read modules never decrypt or import `claim/events.ts`. ⛔ No number, name or code in a log, audit, payload or job data.
 13. **Texting on the decision event** — a revised decision would text wrongly or twice. The sweep re-checks RF1 under the claim lock; the
@@ -752,3 +775,4 @@ under `-210`) · [[project_contracts_domain_bundle_boundary]] · [[project_type_
 | 1.1 | 2026-10-07 | Checklist validate (one fresh-context read-only validator, ~35 cites spot-checked; 0 BLOCKER, 5 HIGH, 6 MEDIUM, 4 LOW — all applied). HIGH: a closed claim ⛔ never stands and `denied` / appeal-stage / `reversed` held claims are CLOSABLE (an appeal anchor → `closed`) — else a double payment or an endless wait (RF1, RF4); closing ends the claim's live processes (RF6); the member app's entry routing would hide the wizard during the appeal (RF2); the member is named MODE-RESOLVED (`-181`), ⛔ not first name + initial (RF11, the Panel note corrected before it is put); a SIBLING SMS registry — 6.19's D33 *"⛔ No name"* pin stays (RF11). MEDIUM: ⛔ no typecheck-forced state map — an enumerated grep (Task 3.0); the real family / helpline surfaces (RF12); Q2 ROUTED to the Panel (the closure notice — v1.0 called it both "open" and "ours"); the notice table mirrors 6.19b's 0128 (⛔ no stranded row); a per-death reversal key (⛔ 40P01); F15 (the wizard shows the discarded nominee). LOW: NW1's fixed list, citation slips, `readGroundInspectionApprovalFacts`, `-290` M1's premise, `ADD VALUE IF NOT EXISTS`, the parked attempt. |
 | 1.2 | 2026-10-07 | ✅ The Panel ruled (DR + KB): **Q1 A** — 90 days (the number confirmed by BigDev), **Q2 B** — recorded `2026-10-07-291`, committed ALONE (`2f674a57`); the note's block filled. RF14 is BUILT (the 90-day limit: one pure helper, a third initiation guard + 409, the "until <date>" words on the appeal surfaces), RF15 is BUILT (the per-death appeal key, `clock_timestamp()` after it — Trap 20), RF12 gains the closure text (the notice table carries a `purpose`). New AC2b and Task 4b; P1 / P2 rewritten, P6 added; Task 0.6 owes the 6.16 D-E / PRD / appeal-fairness annotations. The author-commit moves to `-292`. ⛔ No status flip. |
 | 1.3 | 2026-10-07 | Validate ROUND 2 (fresh context, read-only; ~25 cites; 0 BLOCKER, 4 HIGH, 3 MEDIUM, 6 LOW — all applied). HIGH: the 90 days start at the claim's EARLIEST `-239` decision row, ⛔ not the denial event (a revision ONTO `-239` would otherwise leave ⛔ no days to appeal) — amends a `-291` READING; a revision OFF `-239` while another claim of the death lives is refused (RF13) — else one death is paid twice; *"is told"* had ⛔ no reachable surface ⇒ a once-ever text to the refused claim's own contact record + a `claim.file` helpline appeal screen on the existing on-behalf route (wording confirm owed, non-blocking); RF6's cancel writers could ⛔ not be called and its lock order deadlocked ⇒ key-then-row, actor-free cores. MEDIUM: RF15's key taken FIRST and unconditionally at `final`; a `closed` claim routes to a helpline screen (⛔ never the wizard); the notice table's `purpose` + UNIQUEs made consistent. LOW: the IST helpers named, the guard count (three), the outside-key clock, the appeal-status consumers, two cites, Traps renumbered, F15 after F14. |
+| 1.4 | 2026-10-07 | Validate ROUND 3 (narrow, v1.3's edits; 1 BLOCKER, 1 HIGH, 5 MEDIUM, 5 LOW — all applied). BLOCKER: v1.3's "is told" text used `readCorrectionRecipients`, which returns the true nominee and ⛔ never the refused filer — the text is REMOVED; who is texted, on which number and basis is routed to the Panel as **Q3** (non-blocking; built meanwhile as the helpline screen). HIGH: RF13's guard also holds while the other claim is `approved` / `state_trustee_approved` / `settled` (still two payments), scoped to claims created after the refusal chain began. MEDIUM: `reviseDecision` takes the intake lock first (a revision racing a mint); the mis-coded-reason residual recorded; the clock = the earliest row of the CURRENT `-239` chain (away-and-back restarts it, AC4 now true); a NEW roster row for the two texts; the `closed` entry outcome kind and its corrected rationale. LOW: `routed_to_r9` superseded by RF6 itself; the IST helper imports; "never updated" is a convention, test-pinned; stale governance text; the six sites' post-gate lock enumeration. |

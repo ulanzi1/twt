@@ -3,6 +3,38 @@ baseline_commit: 3311fc97
 ---
 
 <!--
+⭐⭐ MERGED 2026-10-07 as PR #259 (REBASE-merge) — THE STORY-6.26 SHA MAP (6.26a's branch carried the WHOLE of 6.26's
+governance too: the story, the routing notes, `-281`…`-287`). The 20 commits of
+`story/6-26-ground-inspection-before-approval-and-death-facts` (from `3311fc97`) were rewritten by the rebase; the citations in
+this file, in `6-26b-death-facts-warnings-and-register-check.md`, in `sprint-status.yaml` and in `.decision-log.md` are kept AS
+WRITTEN (the record — a decision entry is ⛔ never edited) and this maps them to their `main` twins, PROVED ⛔ not assumed: each
+pair has an IDENTICAL `git patch-id --stable` and an identical subject, and the merged tree (`264c8e4e`) is byte-identical to the
+branch head (`27c5f0ef`) — tree `fe7c91f4` both. `main` had not moved (the merge-base was `3311fc97`), so the rebase rewrote SHAs only.
+  · `9282d108` → `d54cfaf2`  story created, the Q1/Q2 routing note, the Panel's r  (cited)
+  · `97403945` → `23959044`  -282 — the author-commit for Story 6.26's eighteen b  (cited)
+  · `d5099d59` → `cdf6c08d`  record -282 in Story 6.26a (v2.1) and 6.26b (v1.1) — Task  (⛔ not cited)
+  · `e1907338` → `4e591523`  epics.md gains Story 6.26a and Story 6.26b (Minted-b  (cited)
+  · `e8200366` → `42a0a2f0`  -283 — author-commit correcting -282 after the first  (cited)
+  · `d7121017` → `ebca1e6e`  first fresh-context validate — Story 6.26a v2.3 and 6.26b  (cited)
+  · `72afe24d` → `cb205e22`  -284 — erratum to -283 from its fresh-context re-val  (cited)
+  · `e9df723e` → `4984a7a4`  validate round 2 — Story 6.26a v2.4 and 6.26b v1.3 rewrit  (⛔ not cited)
+  · `24037f02` → `52670cb6`  validate round 3 — no blocker/high, rounds stop; Story 6.  (⛔ not cited)
+  · `5fc25038` → `653623fe`  routing note — the -284 E5 Panel confirm: does FQ9 a  (⛔ not cited)
+  · `dd65d701` → `4821134c`  routing note — say what the R9 panel is, in plain wo  (⛔ not cited)
+  · `ea9b1c55` → `98e79a11`  -285 — Trustee-ratified (DR + KB, "A"): FQ9 holds ev  (cited)
+  · `4bdb72ed` → `1ef99933`  record -285 (Panel ruled A) — routing note block filled,  (⛔ not cited)
+  · `f4d533c3` → `6c83946b`  build — every approval waits for a complete ground inspe  (⛔ not cited)
+  · `c855d651` → `0ffedf22`  code review (4 chunks: domain / api / admin / contracts+  (cited)
+  · `1f45c6f5` → `ced2965d`  -286 — author-commit amending -282 GI4 from the sec  (cited)
+  · `0ac5165c` → `d2248f87`  second code review (full diff, 3 layers in parallel) — 2  (cited)
+  · `c1dda242` → `93bc0c93`  -287 — author-commit superseding -286 H1's stamp so  (cited)
+  · `e23c3546` → `f6d81f79`  narrow round 3 (re-validate of -286 + review of the roun  (cited)
+  · `27c5f0ef` → `264c8e4e`  round 4 — fresh check of -287 (stands; rounds stop); 1 m  (⛔ not cited)
+Re-verify (bash — zsh does not word-split `$p`): `for p in "9282d108 d54cfaf2" "97403945 23959044" "d5099d59 cdf6c08d" "e1907338 4e591523" "e8200366 42a0a2f0" "d7121017 ebca1e6e" "72afe24d cb205e22" "e9df723e 4984a7a4" "24037f02 52670cb6" "5fc25038 653623fe" "dd65d701 4821134c" "ea9b1c55 98e79a11" "4bdb72ed 1ef99933" "f4d533c3 6c83946b" "c855d651 0ffedf22" "1f45c6f5 ced2965d" "0ac5165c d2248f87" "c1dda242 93bc0c93" "e23c3546 f6d81f79" "27c5f0ef 264c8e4e"; do set -- $p; diff <(git show $1 | git patch-id --stable | cut -d' ' -f1) <(git show $2 | git patch-id --stable | cut -d' ' -f1); done`
+— ⚠ needs the branch SHAs, which survive only while the branch (local or `origin/story/6-26-ground-inspection-before-approval-and-death-facts`) does.
+-->
+
+<!--
 BASELINE — `3311fc97` on `main` (`governance(6.23b): map the story's branch SHAs to their main twins after the PR #257 rebase-merge`).
 Every code claim below was traced on this SHA on 2026-10-06. ⭐ Two facts are kept apart: "the pin is an ancestor of HEAD" (durable) and
 "the code claims were re-derived at `3311fc97`" (perishable). Before Task 1 run `git diff --name-only 3311fc97..HEAD -- packages apps scripts docs`
@@ -819,3 +851,4 @@ Claude Opus 5.5 (1M context) — `bmad-dev-story 6.26a`, 2026-10-06.
 | v2.8 | 2026-10-07 | **Second-pass code review** (`bmad-code-review 6.26a`, full diff `3311fc97..c855d651`, three layers in parallel): 2 decisions, 10 patches, 3 deferred, 17 dismissed. **`2026-10-07-286`** committed alone (`1f45c6f5`) — GI4 amended: H1 the original's photo is stamped with the certificate current when it was taken (migration `0148`, :5432 AND :5433), H2 the cap's reserved slot. Patches: the certificate read confined to a `scheduled` assignment in the window; a second Compare clears the stale record; the page counts only photos of the compared certificate; `0147`/`0148` constraints asserted directly (new policy-regression spec); the AC1 proof counts before its rollback; AC2's parity rows 2/5/9; the certificate read's cross-Pariwar 404 and override-holder 200; GI11 driven through the R9 panel. Each load-bearing change red-checked. |
 | v2.9 | 2026-10-07 | **Narrow round 3** — a fresh-context re-validate of `-286` and a fresh adversarial review of the round-2 delta (`1f45c6f5..0ac5165c`), in parallel: ⛔ no blocker, ⛔ no high; 1 decision, 11 patches, 1 deferred, 3 dismissed. **`2026-10-07-287`** committed alone (`c1dda242`): J1 the original's photo is stamped with the certificate the inspector COMPARED (the upload carries the Compare token; refused unless current) — superseding `-286` H1's "current at upload"; J2 four wording slips in `-286` corrected. Patches: GI4's `⚠ AMENDED by -286 / -287` line, AC4, Task 2.3, the header lists; the round-2 dismissal splice repaired; 6.26b Tasks 1/4/9; the admin hint reworded and a "Compare first" gate on an original's upload; `certificateToken` optional in the admin schema and asserted at the API; the completion audit's for-compared count; a live two-connection test of the reserved slot; the family-9 note; the bound wording; a 404 for the unreachable missing claim. J1 red-checked. `pnpm ci:local` :5433 — run 3: 33 / 34 (`cross-pariwar-leak.spec.ts` › COUNT aggregate, 2718 vs 2714: two `events_log` reads under the shared `PARIWAR_A` with concurrent own-committing specs between them — the known residual class; 19 / 19 in isolation); run 4: ⭐ **34 / 34 green** (domain 4565, api 1549, jobs 568). |
 | v2.10 | 2026-10-07 | **Round 4** — a fresh-context check of `-287` and the round-3 delta: `-287` stands, ⛔ no blocker/high ⇒ the rounds STOP. 1 medium (the page kept the old image after a stale-Compare 409) + 4 low, all patched and the load-bearing ones red-checked; 1 deferred (the 6.7 site-photo race test's overlap weakness). `pnpm ci:local` :5433 ⭐ **34 / 34 green** (domain 4565, api 1549, jobs 568). |
+| v2.11 | 2026-10-07 | **Merged as PR #259 (rebase); the `pre-push` `ci:local` and all 34 GitHub checks passed.** The header gains the Story 6.26 SHA map (20 commits — 6.26's governance and 6.26a's build and four review rounds — each pair proved by identical `patch-id`; merged tree byte-identical). ⛔ No citation rewritten. |

@@ -3,6 +3,12 @@ baseline_commit: 3311fc97
 ---
 
 <!--
+⭐ MERGED 2026-10-07 with Story 6.26a as PR #259 (REBASE-merge): every 6.26 SHA this file cites (`9282d108`, `97403945`, …) was
+rewritten by the rebase. The citations are kept AS WRITTEN; the proved map to their `main` twins is the header of
+`6-26-ground-inspection-before-approval-and-death-facts.md` (each pair by identical `git patch-id --stable`).
+-->
+
+<!--
 BASELINE — `3311fc97` on `main`. ⚠ This story starts only when Story 6.26a (`6-26-ground-inspection-before-approval-and-death-facts.md`)
 is `done` — it READS 6.26a's columns (`original_certificate_verdict`, `compared_certificate_upload_id`, `death_date_index`) and constant
 (`DEATH_DATE_INDEX_FIELD_CLASS`). ⇒ Task 0 RE-PINS to 6.26a's merge commit and re-derives every code claim below against it.

@@ -1,3 +1,13 @@
+# last_updated: 2026-10-07p (⭐ **STORY 6.24 — CREATED (`bmad-create-story 6.24`) ⇒ `ready-for-dev`.** `6-24-true-nominee-refile-after-a-suspicion-refusal`
+# `backlog` → `ready-for-dev`, pinned `6bb79afd`. Builds `-261` D4 B (kept apart — at the convergence CANDIDATE, since a same-channel refile is
+# SWALLOWED today), `-262` FQ5 A (a REQUIRED gate `step`: the five FINAL writers wait, the District Admin ⛔ never; a new `closed` state + event
+# in the reversal's own transaction — ⛔ never a 6.19c closures row; the cycle commit re-checks, discharging its deferred item), FQ6 B (the
+# handover code to the refused claim's rank-1 effective nominee) and FQ7 B (a once-ever text, a sibling SMS registry; ⚠ go-live gated on
+# counsel). RF1–RF16 PROPOSED — the author-commit is owed at Task 0.4, ⛔ no code before. ⭐ TWO Panel questions routed (note
+# `trustee-panel-routing-note-2026-10-07-6-24-appeal-never-filed.md`): Q1 — an appeal has ⛔ no deadline (6.16 D-E), so FQ5's wait never ends
+# when nobody appeals (our reading: a 90-day limit for this refusal only; meanwhile WAIT); Q2 — is the true nominee texted when her claim is
+# closed (our reading: yes; meanwhile ⛔ no text). ⛔ Neither blocks the build. One fresh-context validate (v1.1): 0 BLOCKER, 5 HIGH — all
+# applied. ⛔ No other row moves. On branch `story/6-24-true-nominee-refile-after-a-suspicion-refusal`.)
 # last_updated: 2026-10-07o (⭐ **STORY 6.26b MERGED — PR #261, REBASE-merge (34 / 34 GitHub checks green); the SHA map.** The 11 branch
 # commits (from `b665a19a`) map to their `main` twins `0d88b41d`…`3c4f0ae4`, each pair proved by an identical `git patch-id --stable` and
 # subject; the merged tree equals the branch head (`20a8be0e`); a wrong pair as negative control. The map + a re-verify command (run: empty)
@@ -19231,7 +19241,7 @@ development_status:
   # ⭐ 2026-10-04 SPLIT after `-277` (BigDev: "ok, split it"): the row above is STORY 6.23a (keeps its key — the rulings cite it); 6.23b below
   # is every later approver (`-277` Q2 C) + Q3 B's wait. 6.23b's file is written; it stays `backlog` until 6.23a is `done` (the 6.21b precedent).
   6-23b-every-approver-gives-a-warning-reason: done
-  6-24-true-nominee-refile-after-a-suspicion-refusal: backlog
+  6-24-true-nominee-refile-after-a-suspicion-refusal: ready-for-dev
   6-25-staff-email-notice-of-a-suspicion-refusal: backlog
   6-26-ground-inspection-before-approval-and-death-facts: done
   # ⭐ 2026-10-06 SPLIT after `2026-10-06-281` (the Panel: Q1 B · Q2 A; BigDev: "write the panel note then we get the answer and then we split"):

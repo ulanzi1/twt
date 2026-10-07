@@ -11,7 +11,15 @@ Two facts kept apart, as always:
     `sendHandoverOtp` at `claims.service.ts:97-135`, the T17 test, the event-count pin — re-read by the author). ⚠ Before Task 1, run
     `git diff --name-only 6bb79afd..HEAD -- packages apps scripts`; any cited file in that list is re-read.
 
-STATUS: `ready-for-dev`. ✅ Both Panel questions are RULED — `2026-10-07-291` (DR + KB, committed alone `2f674a57`): **Q1 A** — a `-239`
+⭐⭐ SPLIT 2026-10-07 (BigDev: *"ok, split it"*) — THIS FILE IS NOW STORY 6.24a and keeps the row key
+`6-24-true-nominee-refile-after-a-suspicion-refusal` (the rulings and `-292` cite it). It builds the RFs tagged **[a]** below; Story
+**6.24b** (`6-24b-filing-code-and-texts-to-the-nominee-in-place-at-the-death.md`, row `6-24b-…`, `backlog` until 6.24a is `done` — the
+6.21b / 6.23b / 6.26b precedent) builds **[b]**: RF9 (the filing code), RF11 (the texts' machinery and FQ7's text) and RF12's `-291` Q2
+closure text. ⭐ ⛔ No RF moves and ⛔ no RF is re-worded: every RF stays defined HERE, verbatim as `-292` committed it; the split only
+allocates them. Moved out with them: P4, invariants 5–6, F6 / F10 / F14 (copied), AC6, AC7, Task 1.2, Task 5.2, Task 6, Task 7.2's SMS
+key, Traps 10–14, and Q3 item 1.
+
+STATUS: `ready-for-dev` (6.24a). ✅ Both Panel questions are RULED — `2026-10-07-291` (DR + KB, committed alone `2f674a57`): **Q1 A** — a `-239`
 refusal can be appealed within **90 days**; after that with ⛔ no appeal, the true nominee's claim may be approved; **Q2 B** — she is texted
 once when an allowed appeal closes her claim. v1.2 builds both (RF14, RF15, RF12) — ⛔ nothing is conditional any more.
 
@@ -19,11 +27,11 @@ GLYPH REGISTER: `⛔` sits ONLY on a negation word (not / no / never / nothing /
 action; `⚠` = hazard. Sweep on every pass: `grep -oE "⛔ \**[A-Za-z]+"` — every head-word a negation.
 ADDRESSING RULE: ⛔ no `file:NNN` pointers into `.decision-log.md`, `deferred-work.md` or `sprint-status.yaml` (newest-first — every prepend
 rots every number). Cite decision ids + clauses, item headings and row keys. `file:NNN` is used ONLY for code, as of `6bb79afd`.
-LETTERS: `RF1`…`RF16` are THIS story's author decisions (✅ COMMITTED by ONE author-commit, `2026-10-07-292` (`f0801f1e`) — originally expected as the next free id,
-expected `2026-10-07-292` or later — `-291` is the Panel's ruling; ⛔ no code before it). `F1`…`F15` are FOUND facts (⛔ not decided). `Q1`, `Q2` are the ruled Panel questions (`-291`); `Q3` (items 1–2) is open, non-blocking.
+LETTERS: `RF1`…`RF16` are THIS story's author decisions (✅ COMMITTED by ONE author-commit, `2026-10-07-292` (`f0801f1e`); `-291` is the
+Panel's ruling). Each is tagged **[a]** (built here) or **[b]** (built by 6.24b). `F1`…`F15` are FOUND facts (⛔ not decided). `Q1`, `Q2` are the ruled Panel questions (`-291`); `Q3` (items 1–2) is open, non-blocking.
 -->
 
-# Story 6.24: The True Nominee's Refile After a Suspicion Refusal — Kept Apart, Waiting at Final Approval for the Appeal, Closed if the Appeal Is Allowed; the Filing Code and a Text to the Nominee in Place at the Death `[SURFACE]`
+# Story 6.24a: The True Nominee's Refile After a Suspicion Refusal — Kept Apart, Waiting at Final Approval for the Appeal, Closed if the Appeal Is Allowed, and the 90-Day Appeal Limit `[SURFACE]`
 
 Status: ready-for-dev
 
@@ -35,6 +43,8 @@ Status: ready-for-dev
 > the nominee the District Admin found in place at the death**, ⛔ never to the discarded one (FQ6 B); and the system **texts that
 > nominee** *"A claim for [member] could not go ahead. Please call the helpline."* (FQ7 B — ⚠ go-live gated on counsel).
 > ⭐ **The system still refuses nothing.**
+> ⚠ **SPLIT (2026-10-07):** this file is **6.24a** — kept apart, the wait, `closed`, the commit re-check, the inheritance, the 90-day limit,
+> the helpline appeal screen and the reason lock. The filing code (FQ6) and the two texts (FQ7; `-291` Q2) are **Story 6.24b**.
 
 > ⭐ **What already exists — rebuild ⛔ none of it:** the refusal (`adjudicateClaim` + reason `post_death_nominee_change`, 6.20 D14); the
 > refile's inherited ground inspection (`inheritedGroundInspectionSourceSql`, `claim/nominee-refusal-read.ts:99-126`) and FQ13's
@@ -81,8 +91,8 @@ Status: ready-for-dev
 ## Story
 
 As the **true nominee** of a member whose claim was refused because the nominee was changed after the death —
-I want **my own claim kept apart from the refused one, checked in full, and approved once the refused person's appeal is decided; the
-app's filing code sent to me rather than to the person who changed the nominee; and a text telling me to call the helpline**,
+I want **my own claim kept apart from the refused one, checked in full, and approved once the refused person's appeal is decided or its
+90 days have passed** *(the filing code and the texts: Story 6.24b)*,
 so that **the Trust never pays the wrong person or pays twice for one death, while ⛔ nobody is refused, accused or kept from filing by
 another person's act.**
 
@@ -106,6 +116,7 @@ another person's act.**
 | `-291` readings | Q2's "her" = the nominee in place at the death, resolved as FQ7's | ⚠ OUR reading |
 | `-291` readings AMENDED by `2026-10-07-292` | ⚠ three `-291` readings move — two rested on false premises: *"the only path to a `-239` refusal is `adjudicateClaim`"* (false — `reviseDecision` can move a `denied` claim's reason ONTO `-239`) and *"is told = the existing appeal surfaces"* (⛔ none is reachable); a third is changed by choice: *"a later revision … does ⛔ not restart it"* ⇒ a revision away and back starts a NEW 90 days. ⇒ the clock starts at the first row of the claim's CURRENT unbroken `-239` chain (RF14); *"is told"* = a helpline appeal screen the operator uses with the family (RF14 (b)) — and WHETHER the refused person is also TEXTED is routed to the Panel as Q3 | ⚠ Author-commit (BigDev) — amends `-291`'s READINGS only, ⛔ never its ruling |
 | **Q3** (routing note `2026-10-07-6-24-telling-the-refused-person`) | how the refused person is TOLD they can appeal — A (staff tell them when they call or are called; the helpline screen shows the date — ⛔ no text) · B (a text to the refused filer — at their claimant contact mobile, or, when they filed as a nominee, the mobile on that nominee version) · plus a CONFIRM of RF13's residual | ⏳ **AWAITING PANEL** — non-blocking; built meanwhile as A |
+| ⭐ split | Q3 **item 1** (a text to the refused person) belongs to Story 6.24b; **item 2** (the reason lock) to this story | — |
 
 **⛔ Not covered by any ruling (stays open):** the exact wording of FQ7's and Q2's texts in Hindi and their DLT templates (`-262`, `-291`
 *"does NOT cover"*); any extension of the 90 days for good cause; a timely appeal that stays undecided for long (6.16 D-H's SLA stays a signal);
@@ -119,9 +130,8 @@ FQ7's legal basis (counsel); who is paid when an allowed appeal moves the certif
 3. **Derived, ⛔ never stored** — the refile is ⛔ not linked by a column; every predicate re-reads the refused claim's live decision and
    appeal anchor at the moment it acts (F3: decisions are revisable).
 4. **The District Admin's approval is ⛔ never held by FQ5** — only the five final writers (RF5).
-5. **⛔ No latest-nominee fallback** after a standing refusal: a non-effective determination or an unusable mobile ⇒ the existence-defended
-   no-op (the code) / a recorded skip (the text) — ⛔ never the projection's rank-1.
-6. **⛔ No plaintext mobile or name** in a log, an audit, an event, a job payload or a table — a keyed hash and a masked last-4 only.
+5. → Story 6.24b (⛔ no latest-nominee fallback).
+6. → Story 6.24b (⛔ no plaintext mobile or name).
 
 ## 📜 Policy meaning (AI-10-1)
 ⭐ This story ADDS a conjunct to a benefit-gating predicate (the approval gate) and a new terminal outcome. In the member's terms:
@@ -134,9 +144,7 @@ FQ7's legal basis (counsel); who is paid when an allowed appeal moves the certif
   consistent.
 - **P3 (RF2 — kept apart):** *"While a refusal on suspicion stands, a new claim for that death is ⛔ never merged into the refused claim;
   once that refusal is overturned on appeal, a new filing joins the overturned claim as before."* — `-261` D4 B + its reading: consistent.
-- **P4 (RF9 — the filing code):** *"While a refusal on suspicion stands, the app's filing code goes only to the nominee the District Admin
-  found in place at the death; if that nominee cannot be reached by text, the family is sent to the helpline — the code ⛔ never goes to
-  the discarded nominee."* — FQ6 B: consistent.
+- **P4 (RF9 — the filing code)** → Story 6.24b.
 - **P7 (RF13 — the reason lock):** *"While any other claim for the same death is not closed, a refusal recorded as 'the nominee was changed
   after the death' cannot be re-recorded under another reason — so its 90-day appeal limit stands even if the reason was chosen by
   mistake."* — ⚠ ⛔ no ruling yet: put to the Panel as a non-blocking confirm (Q3 item 2; our reading A = this sentence). Niyamavali: ⛔ no
@@ -153,9 +161,11 @@ FQ7's legal basis (counsel); who is paid when an allowed appeal moves the certif
   §2.4 (one or two nominees, 75/25) is ⛔ not touched.
 
 ## ⚖️ Decisions — the AUTHOR's (✅ COMMITTED by `2026-10-07-292`, `f0801f1e` — verbatim from v1.9; a later change is a NEW entry, ⛔ never an edit)
+⭐ The **[a] / [b]** tags are the 2026-10-07 split's ONLY addition to this section. **[a+b]** RF12: its closed-claim words and entry
+routing are 6.24a's; its `-291` Q2 closure TEXT (the paragraph *"`-291` Q2 B — the closure text"*) is 6.24b's.
 ⭐ §0: each RF is *"the code should do X"* in service of a ruling already made; the person-facing halves are cited, decided ⛔ nowhere here.
 
-- **RF1 — "A SUSPICION REFUSAL STANDS", ONCE.** New module `packages/domain/src/claim/suspicion-refusal.ts`:
+- **[a] RF1 — "A SUSPICION REFUSAL STANDS", ONCE.** New module `packages/domain/src/claim/suspicion-refusal.ts`:
   · `standingSuspicionRefusalSql(claimAliasSql)` — raw SQL, for a claim `s`: EXISTS a live `claim_verifier_decisions` row
     (`superseded_at IS NULL AND outcome = 'denied' AND reason_code = <POST_DEATH_NOMINEE_CHANGE_REASON_CODE>`) AND NOT EXISTS a
     `claim_appeals` row of `s` with `status = 'reversed'` AND `s.current_state <> 'closed'` (v1.1 — a claim RF6 closed ⛔ never stands,
@@ -169,7 +179,7 @@ FQ7's legal basis (counsel); who is paid when an allowed appeal moves the certif
   · ⚠ RF1 must be added to NW1's fixed entry list (`approval-warnings.test.ts:357-361`) — the scan reaches ⛔ nothing it is not given.
   · *"Stands"* = the refusal is live AND ⛔ not overturned AND its claim ⛔ not closed. A stage-3 uphold (`upheld_final`) STANDS. A revision off `-239` ends it; a
     revision onto `-239` starts it (F3 — accepted, derived).
-- **RF2 — D4 B AT THE CANDIDATE.** `getConvergenceCandidate` gains `AND NOT (<RF1 on the candidate>)`; `getPendingIntakeAttempts`' LEFT
+- **[a] RF2 — D4 B AT THE CANDIDATE.** `getConvergenceCandidate` gains `AND NOT (<RF1 on the candidate>)`; `getPendingIntakeAttempts`' LEFT
   JOIN gains the SAME conjunct (the "EXACTLY" mirror); `confirmMerge` inherits through `getConvergenceCandidate`. ⭐ Built at the candidate,
   so (3b) can ⛔ no longer return the refused claim (F1) and (3c) ⛔ no longer parks a pending attempt on it. The window, the override-apart
   guard and 6.19c's refile guard (`assertRefileAllowed`, `icp.ts:293`) are ⛔ not changed — the refile still passes the refile guard (it keys
@@ -186,10 +196,10 @@ FQ7's legal basis (counsel); who is paid when an allowed appeal moves the certif
   consumers unchanged (the dev traces them and records each). The refile then needs FQ6's code, which reaches the true nominee only (RF9).
   ⚠ **An intake attempt parked `pending` against S BEFORE the refusal** is left with ⛔ no candidate once RF2 applies — recorded, ⛔ not
   migrated (the strip simply stops listing it; the attempt row stays as history).
-- **RF3 — "THE DEATH'S OTHER CLAIMS".** The wait (RF5) and the closure (RF6) concern every OTHER claim of the same `(pariwar_id,
+- **[a] RF3 — "THE DEATH'S OTHER CLAIMS".** The wait (RF5) and the closure (RF6) concern every OTHER claim of the same `(pariwar_id,
   deceased_member_id)` — ⛔ no ordering by `created_at` and ⛔ no "filed by the true nominee" test (the system cannot know who files;
   `claimant_actor_id` is null in v1). A later filing by the refuser is kept apart and waits the same way. ⛔ No link column.
-- **RF4 — THE NEW STATE: `closed`.** `claim_lifecycle_state` gains `closed` (migration 0150 — `ALTER TYPE … ADD VALUE` ALONE in its file;
+- **[a] RF4 — THE NEW STATE: `closed`.** `claim_lifecycle_state` gains `closed` (migration 0150 — `ALTER TYPE … ADD VALUE` ALONE in its file;
   ⛔ nothing in the same migration run may USE the value — Trap 6); `CLAIM_LIFECYCLE_STATES` (`schema/claims.ts:76`) and the contracts mirror
   (`packages/contracts/src/claims/filing.ts:47-62`) gain it; `CLAIM_TERMINAL_STATES` (`read.ts:33`) gains it; ONE new event
   `claim.closed` (a TRANSITION, ⛔ not an annotation) from every **CLOSABLE** state = every state except `settled`, `approved`,
@@ -213,7 +223,7 @@ FQ7's legal basis (counsel); who is paid when an allowed appeal moves the certif
   admin `claimStateLabels` (`claim-verification/i18n-en.ts:600`, cast `as Record<string,string>`) gains its words. Task 3.0 greps every
   literal list (`grep -rn "'settled'" packages apps --include='*.ts' --include='*.tsx' --include='*.sql'`, excluding dist / tests) and
   records each as *"gains `closed`"* or *"unchanged, because …"*.
-- **RF5 — THE WAIT (FQ5), ONE CONJUNCT, FINAL ONLY.** `ClaimApprovalGateOptions` gains REQUIRED `step: 'district_admin' | 'final'`
+- **[a] RF5 — THE WAIT (FQ5), ONE CONJUNCT, FINAL ONLY.** `ClaimApprovalGateOptions` gains REQUIRED `step: 'district_admin' | 'final'`
   (typecheck finds all six sites): P1 passes `'district_admin'`; `voteOnFrozenClaim`, `finalizeR9Outcome`, both `decideEscalatedClosure`
   arms and `approveNoCorrectionNeeded` pass `'final'`. New `assertSuspicionAppealDecidedForFinalApproval(db, pariwarId, claimCaseId,
   deceasedMemberId)` in `suspicion-refusal.ts`, called by the OUTER `assertClaimApprovable` only when `step === 'final'`, AFTER
@@ -229,7 +239,7 @@ FQ7's legal basis (counsel); who is paid when an allowed appeal moves the certif
   `SuspicionAppealPendingError(claimCaseId, reason)` in `claim/errors.ts` ⇒ every approval translator maps it to 409
   `<prefix>.suspicion_appeal_pending` with `details.reason` — ⛔ never a 500 (F9). One pure helper `suspicionAppealWaitState(rows,
   selfClaimId)` → `{ waits: false } | { waits: true, reason }` — the console (RF10) and the gate both call it.
-- **RF6 — CLOSED, IN THE REVERSAL'S OWN TRANSACTION.** ONE helper `closeClaimsHeldBySuspicionAppeal(client, { pariwarId, deceasedMemberId,
+- **[a] RF6 — CLOSED, IN THE REVERSAL'S OWN TRANSACTION.** ONE helper `closeClaimsHeldBySuspicionAppeal(client, { pariwarId, deceasedMemberId,
   reversedClaimCaseId, actor, actorId, auditId? })`, called by all THREE reversal writers — `reviewAppealStage1` (`appeal-persist.ts:349`),
   `finalizeAppealOutcome` (`appeal-panel-persist.ts:498`, the `reverses` arm) and `decideAppealStage3` (`appeal-persist.ts:423`) — AFTER their
   own `reversed` writes, and ONLY when the reversed claim's live decision is `-239` (read in the same transaction — and RF13's revision
@@ -260,20 +270,20 @@ FQ7's legal basis (counsel); who is paid when an allowed appeal moves the certif
   certificate reminder runs, R9 and appeal-panel sessions, inspection and shepherd assignments, pending intake attempts, the RF11 notice) and
   records each: *"ended by RF6 via <writer>"*, *"inert — its reader checks the state (<cite>)"*, or *"accepted residual, because …"*. A test
   pins the reminder case (⛔ no text after `closed`).
-- **RF7 — THE COMMIT RE-CHECK (discharges `deferred-work.md` *"An inherited visit that vanishes after the final vote is ⛔ not re-checked at
+- **[a] RF7 — THE COMMIT RE-CHECK (discharges `deferred-work.md` *"An inherited visit that vanishes after the final vote is ⛔ not re-checked at
   the cycle commit"*).** `commitCycleFreeze`, per candidate, under its lock, after the two existing skip-and-keep re-checks
   (`hasLiveRoutedRow`, `hasLiveReturnRow`): `continue` (skip-and-keep — the claim stays `state_trustee_approved` for the next commit) when
   `suspicionAppealWaitState(...).waits` OR `groundInspectionApprovalState(...)` is ⛔ not complete (it is PURE —
   `ground-inspection-approval.ts:64`; feed it `readGroundInspectionApprovalFacts`, the gate's own read). ⛔ Never the full gate (its name check,
   accounts and late-warning legs were the vote's; the commit re-applies only the two conditions that can move through ANOTHER claim). The
   commit's result gains ⛔ no new field unless the existing `skipped`/`committedClaimIds` shape requires it — the dev reports what it does.
-- **RF8 — THE INHERITANCE READS RF1 (discharges `deferred-work.md` *"`-239` inheritance source: an appeal-overturned refusal is never
+- **[a] RF8 — THE INHERITANCE READS RF1 (discharges `deferred-work.md` *"`-239` inheritance source: an appeal-overturned refusal is never
   superseded…"* for the APPROVAL input).** `inheritedGroundInspectionSourceSql` (`nominee-refusal-read.ts:99-126`) replaces its inline live-decision
   predicate with RF1's fragment ⇒ a reversed refusal is ⛔ no longer a source. ⚠ This AMENDS the input of 6.26a GI2's VISITED (*"6.20 AC13, ⛔
   not changed"*) and the premise of `-290` M1 (*"a source reversed on appeal stays the source"*) — both recorded in the author-commit as
   amendments, ⛔ never readings. The Pariwar Admin's refusal LIST (`listNomineeRefusals`)
   is ⛔ not changed (a display; the item's list half stays open — say so when marking it).
-- **RF9 — THE FILING CODE (FQ6).** `sendHandoverOtp` first calls a new domain read `readSuspicionRefusalRecipient(db, pariwarId,
+- **[b] RF9 — THE FILING CODE (FQ6).** `sendHandoverOtp` first calls a new domain read `readSuspicionRefusalRecipient(db, pariwarId,
   deceasedMemberId)` → `null` (⛔ no standing refusal ⇒ today's path, unchanged) | `{ kind: 'at_death', versionId }` | `{ kind: 'none' }`.
   It takes the MOST RECENT standing refusal (RF1's order), reads `getEffectiveNomineeDeclaration` on THAT claim, and returns the
   `versionId` of the entry with `rank === 1` (after 6.20's re-rank) when `status === 'effective'`; else `none`. The API reads the version's
@@ -283,14 +293,14 @@ FQ7's legal basis (counsel); who is paid when an allowed appeal moves the certif
   hint, `timingEqualizeDelay`) as today's ⛔-nominee branch. ⛔ Never `getMemberNominees` once a refusal stands. The send audit
   (`member_claim.handover_otp_send`) gains a non-PII `recipient: 'latest' | 'at_death'`. A determination with a NULL
   `death_certificate_review_id` (0119-era) is trusted as `effective` (⛔ not in production — ⛔ never backfilled).
-- **RF10 — WHAT STAFF SEE.** The verifier console (the District Admin's) shows, on a claim whose death has another claim with a standing
+- **[a] RF10 — WHAT STAFF SEE.** The verifier console (the District Admin's) shows, on a claim whose death has another claim with a standing
   refusal: *"Kept apart from an earlier claim for this death that was refused on suspicion"* and *"Final approval will wait for that
   claim's appeal — not yet filed / being decided"* (from `suspicionAppealWaitState`; ⛔ no names, ⛔ no note, the other claim by its
   claim reference only); a read failure ⇒ *"could not be checked just now"*, ⛔ never silence (6.18's fail-closed rule; the console's
   `underSavepoint` section pattern). The read counts against `VERIFIER_CONSOLE_MAX_READS` (`claims.verifier-console.handlers.ts:177`,
   20 — bump with a ledger line + exact `toBe`). Every later surface gets the 409's words through the existing translator paths
   (⛔ no per-surface panel). The convergence strip's T17 note (`ConvergenceDecisionStrip.tsx:222-231`) is reworded to D4 B.
-- **RF11 — THE TEXT (FQ7).** A jobs sweep beside 6.19b's (`apps/jobs/src/scheduler/`), ⛔ never `dispatch()`: select claims with a
+- **[b] RF11 — THE TEXT (FQ7).** A jobs sweep beside 6.19b's (`apps/jobs/src/scheduler/`), ⛔ never `dispatch()`: select claims with a
   standing refusal (RF1) and ⛔ no notice row; per claim, lock it, RE-CHECK RF1 under the lock, resolve the recipient exactly as RF9 does
   (the refused claim's rank-1 effective version — ⛔ never `readCorrectionRecipients`, which requires a live filing agreement and returns S's effective nominees plus a non-nominee claimant — a different set), insert a
   notice row in its claiming status, commit; then decrypt (the domain's `resolveCorrectionMobile`, `claim/correction-crypto.ts:~50`), send
@@ -326,7 +336,7 @@ FQ7's legal basis (counsel); who is paid when an allowed appeal moves the certif
   gains the two rows (a new section in `docs/launch-gate-inventory/dlt-template-requests-6-19.md`, or a sibling sheet — the dev picks and
   records). Template ids stay UNSET ⇒ the send fails closed
   (`error` + alarm) until go-live.
-- **RF12 — WHAT THE FAMILY SEES.** A `closed` claim's member-facing status: *"This claim has been closed. Please call the helpline."*
+- **[a+b] RF12 — WHAT THE FAMILY SEES.** A `closed` claim's member-facing status: *"This claim has been closed. Please call the helpline."*
   (en + hi) — ⛔ no reason, ⛔ no mention of the other claim. ⚠ **v1.1 (validator M7) — the real surfaces:** mobile has ⛔ no claim-state
   map; the family's status is `resolveDeathCertificateFamilyStatus` (`claim/death-certificate-approval.ts`, the read behind the mobile
   status and the entry outcome) ⇒ it gains a `closed` status the mobile renders with these words; the helpline read-back
@@ -353,7 +363,7 @@ FQ7's legal basis (counsel); who is paid when an allowed appeal moves the certif
   not the app invite. A WAITING refile shows its existing status — ⛔ no new member-facing string for
   the wait (6.23b's precedent: whether the family is told a claim waits was ⛔ never ruled). ⛔ No member-facing string anywhere says
   "suspicion", "fraud", "changed after the death" or names anyone.
-- **RF13 — ONE REVISION GUARD; NOTHING ELSE MOVES.** ⚠ **v1.3 (validator round 2, H2) — a revision OFF `-239` would let one death be paid
+- **[a] RF13 — ONE REVISION GUARD; NOTHING ELSE MOVES.** ⚠ **v1.3 (validator round 2, H2) — a revision OFF `-239` would let one death be paid
   twice:** S refused `-239` → R minted apart (RF2) → the District Admin revises S's reason to another (`reviseDecision`,
   `verifier-decision-persist.ts:577` — only a move ONTO `-239` is checked, `:621`) → S stops standing → R's final approval proceeds → S,
   now an ordinary refusal with ⛔ no time limit, is appealed and reversed → RF6 closes ⛔ nothing (S is ⛔ not `-239`) → S is approved too;
@@ -380,7 +390,7 @@ FQ7's legal basis (counsel); who is paid when an allowed appeal moves the certif
   the closure are the system's acts; the helpline appeal screen (RF14) reuses `claim.file`, the key the on-behalf route already requires.
   ⛔ No change to the reason codes, the one-journey appeal rule, 6.19c's closures or refile guard, the warning kinds, the bank/name checks,
   or 6.20's determination. ⛔ No `apps/public` change.
-- **RF14 — THE 90-DAY LIMIT (`-291` Q1 A).** ⚠ **v1.3 — the clock (validator round 2, H1):** the refusal ON SUSPICION is the claim's
+- **[a] RF14 — THE 90-DAY LIMIT (`-291` Q1 A).** ⚠ **v1.3 — the clock (validator round 2, H1):** the refusal ON SUSPICION is the claim's
   earliest row of its CURRENT unbroken `-239` chain (v1.4, round 3 M: walk `supersedes_decision_id` back from the live row while the
   reason stays `post_death_nominee_change`; on the normal path it IS the District Admin's refusal; ⛔ no writer updates a decision row
   but its `superseded_at` — `verifier-decision-persist.ts:648`, `state-trustee-decision-persist.ts:1133` — a convention, grep-pinned in a
@@ -420,7 +430,7 @@ FQ7's legal basis (counsel); who is paid when an allowed appeal moves the certif
     non-nominee claimant's own contact mobile, OR — the likeliest case — a claimant linked to a nominee version
     (`claimantNomineeVersionId`), whose only number is that version's `mobile_ciphertext` (the post-death declaration, entered by whoever
     made the change); ⛔ no contact record ⇒ ⛔ no number (`no_target`). ⛔ Never `readCorrectionRecipients`.
-- **RF15 — THE PER-DEATH APPEAL KEY (built — `-291` Q1 A makes the race real).** At the limit's boundary an appeal can be initiated at the
+- **[a] RF15 — THE PER-DEATH APPEAL KEY (built — `-291` Q1 A makes the race real).** At the limit's boundary an appeal can be initiated at the
   same moment the held claim's final approval reads *"time limit passed"*. ⇒ A dedicated transaction advisory key
   `suspicion-appeal:<pariwar>:<deceased>`, taken by RF5's conjunct UNCONDITIONALLY at `step: 'final'`, FIRST in the conjunct (after the
   caller's own locks), and by `initiateAppeal` AFTER its own `appeal:` lock and claim-row lock — where the live reason is stable (`reviseDecision`
@@ -432,7 +442,7 @@ FQ7's legal basis (counsel); who is paid when an allowed appeal moves the certif
   `tryConverge`, which can insert against a held claim — a cycle) and ⛔ never RF6's reversal key. A two-connection test pins it (an
   initiation racing a final approval at the boundary: exactly one wins — either the appeal opens and the approval waits, or the approval
   proceeds and the initiation answers the time-limit 409).
-- **RF16 — STALE TEXT IS CORRECTED WHERE IT LIVES** (⛔ never a standalone edit of a merged story above its Change Log): the T17 sentence in
+- **[a] RF16 — STALE TEXT IS CORRECTED WHERE IT LIVES** (⛔ never a standalone edit of a merged story above its Change Log): the T17 sentence in
   `nominee-refusal-read.ts:19-23`, `icp.ts:116`'s comment, `refile-guard.ts:10-12` and `claims.refile-confirmation.handlers.ts:10` (the
   *"Row 6-24 edits this"* notes — reworded to what 6.24 did), the strip note and its test (`apps/admin/tests/ConvergenceDecisionStrip.test.tsx:66-67`). 6.20's
   story gains a Change Log row only.
@@ -544,23 +554,9 @@ clears. A normal claim commits exactly as today. The deferred item is marked DIS
 A reversed `-239` refusal is ⛔ no longer an inheritance source (the refile, if any, is `closed` — AC3); a standing or `upheld_final` one still
 is. 6.26a's and 6.26b's inheritance specs stay green except those re-derived under F8.
 
-### AC6 — The filing code (FQ6; RF9, F6, F10, F14)
-**Given** the deceased's declaration had version 1 (nominee A, mobile …1111) and a post-death version 2 (nominee B, mobile …2222), and the
-District Admin's determination on claim S marks v1 `stands` / v2 `discarded`, and S is refused `-239`, **when** the Ravi-mode session
-requests the handover code, **then** it goes to …1111 (the masked hint ends 1111), the audit carries `recipient: 'at_death'` and ⛔ no
-number. **Before** any refusal, and **after** S's refusal is reversed, the code goes to the latest nominee as today (`recipient: 'latest'`).
-**Given** a standing refusal whose determination is ⛔ not `effective`, or whose rank-1 mobile is null / erased / unsendable, **then** the
-response is the existence-defended no-op (identical shape and timing pad) — ⛔ never …2222. A two-nominee effective set sends to rank 1.
+### AC6 → Story 6.24b (AC6b — the filing code)
 
-### AC7 — The texts (FQ7; `-291` Q2 B; RF11, RF12)
-**Given** a standing `-239` refusal, **when** the sweep runs, **then** ONE notice row is written and one text is sent to the refused claim's
-rank-1 effective nominee, in Hindi (RF11), naming the member in the Pariwar's mode-resolved form (`-181`), carrying the helpline number; ⛔ no
-plaintext number or name is stored, logged or audited. A second run sends ⛔ nothing; a refusal revised away before the sweep's locked
-re-check sends ⛔ nothing; a revision away and back ⛔ never re-texts; a non-effective determination or unusable mobile records
-`no_target`; a crash after the claiming commit is reclaimed by the next run. **With the DLT template ids unset** (as shipped), the send fails closed (`error` + alarm) — ⛔ never a send on a
-wrong template. The SIBLING registry's lockstep test (6.19's stays unchanged), `i18n-parity`, `microcopy`, `pii-scrape` and the Hindi marker pass; the DLT request
-sheet and the go-live roster gain their rows (counsel basis for FQ7's text AND `-291` Q2's closure text — ONE NEW row, ⛔ not Row 18,
-which is the filer's agreement, ⛔ nor Row 19; and the Hindi review row).
+### AC7 → Story 6.24b (AC7b — the texts)
 
 ### AC8 — What people see (RF10, RF12)
 The District Admin's console shows the kept-apart line and the wait line (or *"could not be checked just now"* on a failed read) with ⛔ no
@@ -574,8 +570,8 @@ Permission catalog version and key count unchanged; ⛔ no new reason code; 6.19
 
 ### AC10 — The proof
 Every test below passes; each load-bearing test is red-checked (revert the line, watch it fail, restore — listed in the Debug Log);
-`pnpm ci:local` green with `DATABASE_URL` at :5433 (domain, API, jobs, admin, mobile, contracts, i18n, microcopy); migrations 0150 and 0151
-applied to BOTH :5432 and :5433, the enum value and the CHECKs verified by name on each.
+`pnpm ci:local` green with `DATABASE_URL` at :5433 (domain, API, jobs, admin, mobile, contracts, i18n, microcopy); migration 0150
+applied to BOTH :5432 and :5433, the enum values verified on each (0151 is 6.24b's).
 
 ## Tasks / Subtasks
 
@@ -597,13 +593,11 @@ applied to BOTH :5432 and :5433, the enum value and the CHECKs verified by name 
     (`6-16-3-stage-claim-denial-appeal-flow-reversed-denial-sahyog-vivran-publish-hook.md`), under the PRD's *"No formal time limit on the
     family's right to appeal"* (`prds/prd-TWT-2026-05-22/prd.md:752`) and in `docs/appeal-procedural-fairness/README.md` where it repeats it.
 
-- [ ] **Task 1 — Migrations (AC3, AC7, AC10; RF4, RF11)**
+- [ ] **Task 1 — Migration (AC3, AC10; RF4)**
   - [ ] 1.1 `0150_claim-closed-enum-values.sql`: `ALTER TYPE "claim_lifecycle_state" ADD VALUE IF NOT EXISTS 'closed';` and
     `ALTER TYPE "appeal_journey_status" ADD VALUE IF NOT EXISTS 'closed';` (the 0146 `IF NOT EXISTS` form; confirm the enum's DB name in
     its creating migration) — ⛔ nothing else in the file (Trap 6). Journal idx 150, `when` > 0149's `1793590800000`.
-  - [ ] 1.2 `0151_claim-suspicion-notices.sql`: the RF11 table (`claim_suspicion_notices`), composite FK `(pariwar_id, claim_case_id)` →
-    `claims` (the 0143 UNIQUE target), the status CHECK, the `purpose` column + its CHECK, `recipient_number_hash`, the ONE UNIQUE `(pariwar_id, claim_case_id, purpose)` (RF11 v1.4), RLS policy + `twt_app` grants exactly as 6.19b's `claim_correction_reminders` (read its
-    migration — `SELECT, INSERT` + `UPDATE` on the outcome columns only). ⛔ Nothing references `'closed'`. Journal idx 151.
+  - [ ] 1.2 → Story 6.24b (the notice table).
   - [ ] 1.3 Drizzle schema: `CLAIM_LIFECYCLE_STATES` (`schema/claims.ts:73`) + `closed`; `APPEAL_JOURNEY_STATUSES` (`appeal.ts:71`) and its
     contracts mirror + `closed`; new `schema/claim_suspicion_notices.ts` (`as const` status tuple +
     LOCKSTEP comment); export from the schema index. Apply both to :5432 AND :5433 ([[project_live_db_test_gotchas]] — ⛔ never regenerate,
@@ -663,32 +657,21 @@ applied to BOTH :5432 and :5433, the enum value and the CHECKs verified by name 
   - [ ] 4b.4 Specs: AC2b's legs (a live-DB boundary pair with an injected refusal time; a non-`-239` refusal past 90 days still initiable;
     the two-connection race in its own committed transactions — the `ground-inspection-concurrency.spec.ts` pattern).
 
-- [ ] **Task 5 — API (AC2, AC6, AC8; RF5, RF9, RF10)**
+- [ ] **Task 5 — API (AC2, AC8; RF5, RF10)**
   - [ ] 5.1 One shared message helper for `SuspicionAppealPendingError` (the `ground-inspection-required-message.ts` pattern, an exhaustive
     `Record<reason, string>`); mapped in all four translators (F9) → 409 `<prefix>.suspicion_appeal_pending`.
-  - [ ] 5.2 `sendHandoverOtp` — RF9 (domain `readSuspicionRefusalRecipient` in `suspicion-refusal.ts`; the API reads + decrypts the version
-    mobile); the audit's `recipient` field.
+  - [ ] 5.2 → Story 6.24b (`sendHandoverOtp`).
   - [ ] 5.3 The verifier console section (RF10) under `underSavepoint`; `VERIFIER_CONSOLE_MAX_READS` bump + ledger line + exact `toBe`.
   - [ ] 5.4 Specs (`apps/api/tests/integration/claims/`): five final-route 409s (beside `ground-inspection-required-routes.spec.ts`); AC6's
     four legs incl. the no-op shape + timing (assert the response is byte-identical in shape to the ⛔-nominee branch); the console lines and
     the failed-read line.
 
-- [ ] **Task 6 — Jobs: the text (AC7; RF11)**
-  - [ ] 6.1 The sweep module + its registration in the scheduler (beside 6.19b's — read `apps/jobs/src/boot.ts:591-612`); the domain reads
-    it needs (the standing refusals without a notice row; the recipient — RF9's read; the member's name decrypt through the 8.8 jobs path).
-  - [ ] 6.2 The SIBLING registry (RF11) + config keys; its own lockstep test (6.19's untouched); the shared send core extracted; the DLT request sheet rows; the go-live roster rows
-    (`docs/launch-gate-inventory/inventory-roster.md` — a NEW row for the counsel basis of FQ7's text AND `-291` Q2's closure text — Row
-    18 is the filer's agreement on others' behalf and Row 19 names only the correction and certificate purposes, so ⛔ neither covers
-    them — and the Hindi review row).
-  - [ ] 6.2b The second purpose (RF12 / `-291` Q2 B): its copy key, sibling-registry entry, DLT rows and the sweep's second selector.
-  - [ ] 6.3 Specs: AC7's legs for BOTH purposes incl. the locked re-check (revise away between selection and lock), once-ever, fail-closed on unset template
-    ids, the error classification (invalid number / carrier reject / transient), ⛔ no plaintext anywhere (assert the row's columns and the
-    captured logs).
+- [ ] **Task 6** → Story 6.24b (the jobs sweep and the texts).
 
-- [ ] **Task 7 — Contracts, i18n, admin, mobile (AC3, AC7, AC8; RF4, RF10, RF11, RF12)**
+- [ ] **Task 7 — Contracts, i18n, admin, mobile (AC3, AC8; RF4, RF10, RF12)**
   - [ ] 7.1 Contracts: `ClaimLifecycleState` + `closed` (`filing.ts:47-62`) and its lockstep test; any 409-code union the admin client keys on;
     run the contracts vitest — its tests are outside tsc ([[project_contracts_tests_outside_tsc]]).
-  - [ ] 7.2 i18n: the SMS copy key (en + hi, Hindi marker); the closed-claim status words (en + hi) through the real `t()`
+  - [ ] 7.2 i18n: (the SMS copy keys → 6.24b) the closed-claim status words (en + hi) through the real `t()`
     ([[feedback_stub_must_call_not_transcribe]]); `classification.json`.
   - [ ] 7.3 Admin: the console section words; the 409 words; the strip note (RF16) and its test.
   - [ ] 7.4 Mobile + contracts: RF12's four pieces for the `closed` entry outcome (the contract field + producer, the classifier, the
@@ -721,15 +704,7 @@ applied to BOTH :5432 and :5433, the enum value and the CHECKs verified by name 
 9. **A held claim already past `state_trustee_approved` when S is reversed** — unreachable on the normal path (it could ⛔ not pass the
    vote while S's refusal stood and its 90 days ran or its appeal was open — `-291` Q1 A); reachable only through a revision ONTO `-239`
    after R's vote (F3), which RF7 holds at the commit. RF6 records it, ⛔ never moves an approved/settled claim.
-10. **The latest-nominee fallback** — after a standing refusal ⛔ never `getMemberNominees`; `none` ⇒ the no-op (invariant 5).
-11. **Reusing `readCorrectionRecipients` for FQ7 or Q3** — it requires S's filing agreement (the filer may be the person who made the
-    change) and returns S's effective nominees plus a non-nominee claimant — ⛔ never the right set for either (F10 / RF11 / RF14).
-12. **Decrypting in the wrong layer / leaking the number** — the API decrypts with `decryptNomineeField`; jobs with the domain helper; the
-    domain read modules never decrypt or import `claim/events.ts`. ⛔ No number, name or code in a log, audit, payload or job data.
-13. **Texting on the decision event** — a revised decision would text wrongly or twice. The sweep re-checks RF1 under the claim lock; the
-    UNIQUE makes it once ever.
-14. **The `[member]` placeholder** — the Pariwar's MODE-RESOLVED form (`-181`, `resolveMemberFacingDeceasedName`), ⛔ never a hard-coded
-    form; ⛔ never stretch the 6.19 registry (its D33 *"⛔ No name"* pin stays) — a sibling registry.
+10.–14. → Story 6.24b (the filing code and the texts).
 15. **Closing R but leaving its processes running** — the 6.19b sweep never reads the state; Task 3.0's enumeration is the guard.
 16. **Judging the 90 days with the transaction's `now()`** — `now()` is the transaction START; a transaction that waited on RF15's key would
     judge the limit at a stale instant and let an appeal in after the held claim was approved. Read `clock_timestamp()` AFTER the key, on
@@ -803,3 +778,4 @@ under `-210`) · [[project_contracts_domain_bundle_boundary]] · [[project_type_
 | 1.8 | 2026-10-07 | Validate ROUND 7 (narrow; 0 BLOCKER, 1 HIGH, 1 MEDIUM, 1 LOW — applied, all the Q3 note's item 2): the any-time correction option still paid a death twice once the other claim was paid ⇒ dropped; item 2 is A vs B (a correction only before another claim's final approval, honest costs); the deciding fact gains *"refused once another claim is finally approved"*; the note's "Corrected in this note" records both rewrites. |
 | 1.9 | 2026-10-07 | Validate ROUND 8 (narrow): **0 BLOCKER, 0 HIGH ⇒ the rounds STOP.** Applied its 1 MEDIUM and 3 LOW (the note's item 2: B's small real gain stated and the reading restated with *"because"*; "closing" ⛔ not "holding" in the deciding fact; the quoted earlier option made exact, "B is the earlier C"). Eight rounds in all: 1 BLOCKER and 15 HIGH found and fixed across them. |
 | 2.0 | 2026-10-07 | **Task 0 complete** (BigDev: *"complete the remaining steps"*): `2026-10-07-292` committed alone (`f0801f1e`); `epics.md` `### Story 6.24` + `-291` Consequence 2's three annotations (`5e77ca6e`); P7 added; the decisions marked committed. Q3 (items 1–2) stays open, non-blocking. Ready for `bmad-dev-story` (Task 0.1 runs at the build). |
+| 2.1 | 2026-10-07 | **SPLIT** (BigDev: *"ok, split it"*). This file becomes **Story 6.24a** (keeps the row key); **Story 6.24b** (new row `6-24b-filing-code-and-texts-to-the-nominee-in-place-at-the-death`, `backlog` until 6.24a is `done`) takes RF9, RF11 and RF12's Q2 text, with P4, invariants 5–6, AC6 / AC7 (as AC6b / AC7b), Tasks 1.2 / 5.2 / 6 / 7.2's SMS key, Traps 10–14 and Q3 item 1. ⛔ No RF moved or re-worded — each RF is tagged [a] / [b]; `-292` is ⛔ not edited. `epics.md` gains `### Story 6.24a` / `### Story 6.24b`. |

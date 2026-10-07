@@ -3177,7 +3177,12 @@ match the current copy; the register does ⛔ not match) — approving while one
 that appears after the District Admin approved waits for their reason and is listed in their correction queue; "could ⛔ not be checked" is
 ⛔ never a warning. The system still refuses ⛔ nothing.
 
-### Story 6.24: The True Nominee's Refile After a Suspicion Refusal — Kept Apart, Waiting at Final Approval for the Appeal, Closed if the Appeal Is Allowed; the Filing Code and a Text to the Nominee in Place at the Death `[SURFACE]`
+### Story 6.24a: The True Nominee's Refile After a Suspicion Refusal — Kept Apart, Waiting at Final Approval for the Appeal, Closed if the Appeal Is Allowed, and the 90-Day Appeal Limit `[SURFACE]`
+
+> ⚠ **SPLIT 2026-10-07 (BigDev: *"ok, split it"*).** Written today as `### Story 6.24`; this entry is now **6.24a** and keeps the row
+> `6-24-true-nominee-refile-after-a-suspicion-refusal`. The filing code and the two texts are **Story 6.24b** below. ⛔ No ruling or RF
+> moved — `-292`'s RF1–RF16 are only allocated ([a] / [b] in the story file). The brief below is kept as written; its filing-code and
+> text clauses are 6.24b's.
 
 > ⚠ **Minted by Trustee ruling, ⛔ not by the original epic plan** — [`-261`](../../.decision-log.md#decision-2026-09-28-261) D4 B and
 > [`-262`](../../.decision-log.md#decision-2026-09-28-262) FQ5 A / FQ6 B / FQ7 B (building on [`-239`](../../.decision-log.md#decision-2026-09-21-239)
@@ -3199,6 +3204,24 @@ closes it — a `closed` claim, ⛔ never a refusal, ⛔ never appealable — an
 handover code goes to the nominee in place at the death, else the family is sent to the helpline; that nominee is texted once on the
 refusal; a refusal on suspicion is appealable for 90 days, the helpline sees the date and can file the appeal for the family; the reason
 can ⛔ not be moved off "changed after the death" while any other claim of the death is not closed. The system still refuses ⛔ nothing.
+
+### Story 6.24b: The Filing Code and the Texts to the Nominee in Place at the Death — After a Suspicion Refusal, and When an Allowed Appeal Closes Her Claim `[SURFACE]`
+
+> ⚠ **Split from Story 6.24 (2026-10-07)** — [`-262`](../../.decision-log.md#decision-2026-09-28-262) FQ6 B / FQ7 B and
+> [`-291`](../../.decision-log.md#decision-2026-10-07-291) Q2 B; the author's decisions are [`-292`](../../.decision-log.md#decision-2026-10-07-292)
+> RF9, RF11 and RF12's Q2 text (defined in 6.24a's file). Row `6-24b-filing-code-and-texts-to-the-nominee-in-place-at-the-death`; it starts
+> only when 6.24a is `done` (it reads 6.24a's "refusal stands" fragment and `closed`). Full ACs:
+> `_bmad-output/implementation-artifacts/6-24b-filing-code-and-texts-to-the-nominee-in-place-at-the-death.md`.
+> ⚠ **Go-live coupling:** both texts wait on counsel (one go-live roster row); ⛔ never a merge fence.
+
+As the true nominee of a member whose claim was refused because the nominee was changed after the death, I want the app's filing code sent
+to me rather than to the person who changed the nominee, a text telling me to call the helpline, and a text if my own claim is later
+closed — so that I can file and act, and the person who made the change can ⛔ not file again in the app, while ⛔ nobody is accused.
+
+**Acceptance Criteria (in brief):** while a refusal on suspicion stands, the handover code goes to the rank-1 nominee of the refused
+claim's effective determination, else the same "no nominee" response (the helpline) — ⛔ never the latest, discarded nominee; that
+nominee is texted once on the refusal, and once when an allowed appeal closes her claim, in the Pariwar's name form; ⛔ no plaintext number
+or name stored or logged; the sends fail closed until the DLT template ids are set at go-live. The system still refuses ⛔ nothing.
 
 ---
 

@@ -37,7 +37,7 @@ implies (author mechanics under §0 — ⛔ no GI moves, ⛔ no entry owed). ⭐
 
 # Story 6.26b: The Death Facts Become Warnings — a Differing Date of Death, an Original That Does Not Match, a Register That Does Not Match — and the District Admin Records the Government-Register Check `[SURFACE]`
 
-Status: review
+Status: done
 
 > ⭐⭐ **WHAT THIS STORY IS, IN ONE PARAGRAPH.** Story 6.26a (**`done`**, PR #259) makes the inspector record the original certificate's
 > match and the family's date of death. This story makes those facts **ask something of an approver**: a family's date of death that
@@ -740,6 +740,23 @@ Every test below passes; GI15 [b]'s fixtures raise ⛔ no warning on any approve
   only on a replaced upload, and an upload is allowed only after a REJECT ⇒ a District Admin can launder a real mismatch by rejecting a valid
   certificate with an untrue reason and having the family re-upload the same paper"*, Trigger: the next story that touches the certificate
   reject reasons or the upload rule); AC12b's `git diff` check (empty).
+
+### Review Findings
+
+*(`bmad-code-review` 2026-10-07 — Blind Hunter + Edge Case Hunter + Acceptance Auditor, run in parallel per explicit instruction; triaged against `b665a19a..HEAD`.)*
+
+- [x] [Review][Patch] Admin hand-redeclares the register-check enum instead of importing `@twt/contracts`' `DeathCertificateRegisterCheck`; of the four declarations (contracts, domain schema, migration CHECK, admin), only contracts↔domain is lockstep-tested [apps/admin/src/modules/claim-verification/DeathCertificateReviewControl.tsx:25-29] — fixed: `RegisterCheck` is now a type alias of the contract's `DeathCertificateRegisterCheck`, `REGISTER_CHECKS` derives from its `.options` (admin typecheck + `apps/admin/tests` green)
+- [x] [Review][Patch] `registerChecks` i18n map is typed `as Record<string, string>` instead of `satisfies Record<RegisterCheck, string>` like every sibling kind-map in the file, losing the compile-time lockstep check [apps/admin/src/modules/claim-verification/i18n-en.ts:742-756] — fixed: now `satisfies Record<DeathCertificateRegisterCheck, string>`
+- [x] [Review][Patch] `warnings_not_current`'s reworded message now claims "every warning" is unknown, but the error only ever fires when the nominee determination is stale — wrong remedy for the three new death-fact kinds, which are computed outside the post-death block and are never stale [apps/api/src/modules/claims/claims.verification-decision.handlers.ts:60-61] — fixed: reverted to the accurate nominee-determination-specific wording, with a comment explaining why this message (unlike `warning_approval_final`) was never meant to widen (`apps/api`/`apps/admin`/`packages/contracts` suites green)
+- [x] [Review][Defer] `stitchDeathFactFlags` lowercases the ground-inspection id for one lookup but not the other two — harmless today (`uuidBrand` + Postgres `uuid` normalization already guarantee canonical lowercase) [apps/api/src/modules/claims/claims.verifier-console.handlers.ts:592-603] — deferred, zero functional risk, see `deferred-work.md`
+- [x] [Review][Defer] No test exercises `inspection_death_date_differs` and `determination_stale` co-occurring at R9 finalize; the fixture's own new comment documents the priority (warning-reason refusal wins) but nothing asserts it directly [packages/domain/tests/integration/claim/r9-voting.spec.ts:472-479] — deferred, test-coverage gap, see `deferred-work.md`
+- [x] [Review][Defer] The "no own completed FULL visit" inheritance cutoff is reimplemented independently in `deathFactColumnsSql()`'s raw SQL and in the console's own display logic, with nothing tying the two together [packages/domain/src/claim/approval-warnings.ts; apps/api/src/modules/claims/claims.verifier-console.handlers.ts] — deferred, maintainability risk, see `deferred-work.md`
+- [x] [Review][Defer] `dateComparison: null` conflates a failed warnings read with a benign READ-COMMITTED race, with no telemetry distinguishing the two [packages/contracts/src/claims/verifier-console.ts:218-237] — deferred, observability gap, see `deferred-work.md`
+- [x] [Review][Defer] The register-check guard runs after (and is dominated by) the pre-existing date/reason guards — deliberate, but means a client omitting both fields needs two round trips [packages/domain/src/claim/death-certificate-review-persist.ts:126-147] — deferred, minor UX rough edge, see `deferred-work.md`
+- [x] [Review][Defer] "Could not be checked online" is always allowed and never raises a warning by design, with no escalation signal if a Pariwar always answers it — observational, explicitly out of scope for 6.26b [apps/admin/src/modules/claim-verification/i18n-en.ts; packages/domain/src/claim/approval-warnings.ts] — deferred, out of scope, see `deferred-work.md`
+- [x] [Review][Defer] An assignment completing in the narrow window between `assembleGroundInspection`'s read and `readApprovalWarningsSection`'s read renders `not_compared` instead of reflecting the new warning [apps/api/src/modules/claims/claims.verifier-console.handlers.ts:313-336,588-589] — deferred, narrow race window, see `deferred-work.md`
+
+**Dismissed (5, not carried forward):** the `register_check` DB CHECK gap and the `completedAt: clock_timestamp()` change (both flagged by the diff-only layer) are deliberate, already-governed decisions — migration 0149's own comment explains the CHECK tradeoff; RD1/`-288` K3/`-283` A6 record the clock split — not defects. One Edge Case Hunter finding quoted a `mismatchRuledOut` expression with three conditions that does not match the actual code (it has two), and is independently corroborated as fine by the Acceptance Auditor's RD18 check. Two Acceptance Auditor notes resolved on inspection: a spec self-contradiction the diff over-delivers against, and a "missing Records files" observation that was an artifact of this review's diff being scoped to code dirs (`git show --stat cb26fb27` confirms the actual commit includes them).
 
 ## Dev Notes
 

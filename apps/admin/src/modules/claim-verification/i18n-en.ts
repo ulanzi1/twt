@@ -2,7 +2,7 @@
 // precedent: console chrome copy lives HERE, NOT in @twt/i18n runtime keys, so the i18n-parity gate
 // stays untouched (this admin surface is English-facing; there is no member-app locale parity to hold).
 
-import type { ApprovalWarningKind } from '@twt/contracts';
+import type { ApprovalWarningKind, DeathCertificateRegisterCheck } from '@twt/contracts';
 
 /** Mirrors `VerificationDecisionStrip`'s own `reviseBlocked` prop union (re-review 2026-10-05). */
 type ReviseBlockedReason = 'warning_approval_final' | 'warnings_not_current' | 'unavailable';
@@ -751,7 +751,7 @@ export const verifierConsoleEn = {
       matches: 'Checked — the register matches the certificate',
       does_not_match: 'Checked — the register does not match the certificate',
       could_not_check: 'Could not be checked online',
-    } as Record<string, string>,
+    } satisfies Record<DeathCertificateRegisterCheck, string>,
     registerCheckLabel: 'Government register',
     registerCheckNotRecorded: 'register check not recorded',
     note: 'Your note',

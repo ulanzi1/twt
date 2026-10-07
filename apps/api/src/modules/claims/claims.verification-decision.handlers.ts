@@ -57,8 +57,12 @@ const NOT_REVISABLE_MESSAGES: Record<claim.DecisionNotRevisableReason, string> =
   // Story 6.23a (NW7; NW18) — a written note is never replaced.
   warning_approval_final:
     'This claim shows a warning (or one has already been answered), so this approval is final and its reason and note stay as written — a new warning is answered with a late-warning reason instead',
+  // `warnings_not_current` fires ONLY on a stale/absent nominee determination (`postDeath === 'awaiting_determination'`)
+  // — unlike `warning_approval_final` above, it is ⛔ never about the 6.26b death-fact kinds, which are computed
+  // outside the post-death block and are never stale (code review 2026-10-07: corrected from a blanket "every
+  // warning" wording introduced alongside the sibling message's — correct — widening).
   warnings_not_current:
-    'Whether every warning on this claim shows is not known yet — re-record the nominee determination against the accepted death certificate first',
+    'Whether a nominee-change warning shows is not known yet — re-record the nominee determination against the accepted death certificate first',
 };
 
 /** Map a verifier-decision domain error to its stable HTTP shape. Rethrows anything unknown. */

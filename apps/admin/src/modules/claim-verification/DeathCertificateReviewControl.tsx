@@ -12,6 +12,7 @@
 //     DECRYPTED on demand. ⭐ Tier-1 shipped with ⛔ no reader is a defect: this is the notes' reader.
 // PURE presentational components — the route owns the queries, the forget-on-close and the claim keying.
 
+import { DeathCertificateRegisterCheck } from '@twt/contracts';
 import type { DeathCertificateHistoryResponse, VerifierReviewItem } from '@twt/contracts';
 import type { ReactElement } from 'react';
 import { useEffect, useRef, useState } from 'react';
@@ -23,10 +24,11 @@ const t = verifierConsoleEn.deathCertificate;
 export type DeathCertificateReview = NonNullable<VerifierReviewItem['review']>;
 export type DeathCertificateRejectionReason = 'no_date_of_death' | 'date_of_death_unclear' | 'date_of_death_in_future';
 const REASONS: readonly DeathCertificateRejectionReason[] = ['no_date_of_death', 'date_of_death_unclear', 'date_of_death_in_future'];
-/** Story 6.26b (GI8) — the government death-register check. ⚠ LOCKSTEP with `@twt/contracts`' `DeathCertificateRegisterCheck`,
- *  `@twt/domain`'s `DEATH_CERTIFICATE_REGISTER_CHECKS` and migration 0149's CHECK — four places. */
-export type RegisterCheck = 'matches' | 'does_not_match' | 'could_not_check';
-const REGISTER_CHECKS: readonly RegisterCheck[] = ['matches', 'does_not_match', 'could_not_check'];
+/** Story 6.26b (GI8) — the government death-register check, from `@twt/contracts` (code review 2026-10-07: was a
+ *  hand-redeclared literal union; lockstep now holds structurally, not by a separate test). LOCKSTEP remains with
+ *  `@twt/domain`'s `DEATH_CERTIFICATE_REGISTER_CHECKS` and migration 0149's CHECK. */
+export type RegisterCheck = DeathCertificateRegisterCheck;
+const REGISTER_CHECKS: readonly RegisterCheck[] = DeathCertificateRegisterCheck.options;
 
 export interface DeathCertificateReviewSubmit {
   verdict: 'accepted' | 'rejected';

@@ -4,6 +4,24 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: code review of 6-26b-death-facts-warnings-and-register-check, ROUND 3 (2026-10-07)
+
+- **The GI6 / GI17 inputs can still be forged by a `twt_app` UPDATE — round 2's backstop closes the REWRITE path of ONE operand only**
+  [`packages/domain/migrations/0149_death-certificate-register-check.sql` (the reviews trigger); `packages/domain/migrations/0055_claim-ground-inspection.sql:82`
+  (`GRANT SELECT, INSERT, UPDATE ON "claim_ground_inspections"`, table-wide, ⛔ no trigger); `packages/domain/src/claim/approval-warnings.ts`
+  `deathDateComparison`]. (i) `claim_death_certificate_reviews.accepted_date_index` → NULL passes for ANY writer (the trigger cannot tell
+  the RTBF scrub from another) and a NULL gives `not_indexed` ⇒ the GI6 key and any late wait lift (the console then says "could not be
+  compared"); (ii) GI6's OTHER operand `claim_ground_inspections.death_date_index`, GI17's decider `original_certificate_verdict`, and
+  `death_date_source` / `compared_certificate_upload_id` can be rewritten to any value ⇒ `differs` → `same`, a GI17 key gone. Pre-existing
+  (6.7's table, 6.26a's columns). The control TODAY is the writer set: the completion UPDATE writes them once from NULL
+  (`ground-inspection-persist.ts`), the erasure NULLs the indexes (`anonymize.ts`). ⛔ Not addressed: a DB-level guarantee. A partial
+  closure (a BEFORE UPDATE trigger on `claim_ground_inspections` refusing a change once non-NULL, except index → NULL — after walking the
+  lifecycle writers at `ground-inspection-persist.ts:654,742,994,1086`) still leaves (i) open on both sides; closing (i) needs the trigger
+  to know the deceased is erased (the scrub's sentinel is ciphertext — a cross-table check). BigDev: DEFER (round 3, 2026-10-07).
+  ⭐ Trigger: a pre-go-live hardening pass over `twt_app` write paths, OR the next story that adds a writer to either table, OR any HMAC
+  key-rotation / re-index path for the death-date index (0149 refuses re-indexing the review side while the inspection side would allow
+  it ⇒ every comparison would turn `differs`).
+
 ## Deferred from: code review of 6-26b-death-facts-warnings-and-register-check, ROUND 2 (2026-10-07)
 
 - **An erasure of the deceased while a claim is in flight silently removes an unanswered GI6 key**

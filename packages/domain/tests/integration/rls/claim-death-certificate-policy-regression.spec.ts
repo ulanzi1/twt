@@ -416,6 +416,9 @@ describe.skipIf(!hasDatabase)('migration 0122 — death-certificate uploads + re
       expect(pgCode(err), label).toBe('23000');
       await client.query('ROLLBACK TO SAVEPOINT t');
     }
+    // …the supersession stamp on an INDEXED row passes (the index unchanged — X→X; round 3: a tightening to
+    // `NEW … IS NOT NULL` would break every re-review)…
+    await client.query("UPDATE claim_death_certificate_reviews SET superseded_at = now(), superseded_reason = 're_reviewed' WHERE review_id = $1", [r!.reviewId]);
     // …while the trigger lets the RTBF scrub take the accepted date index to NULL — and re-running it is a no-op…
     await client.query('UPDATE claim_death_certificate_reviews SET accepted_date_index = NULL WHERE review_id = $1', [r!.reviewId]);
     await client.query('UPDATE claim_death_certificate_reviews SET accepted_date_index = NULL WHERE review_id = $1', [r!.reviewId]);

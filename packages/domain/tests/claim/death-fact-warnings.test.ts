@@ -154,7 +154,7 @@ describe('deriveDeathFactWarningKeys — the three kinds (GI6, GI17, GI18)', () 
       expect(out.keys).toEqual([`register_check_mismatch:${UP_CURRENT}`]);
       expect(out.kinds).toEqual(['register_check_mismatch']);
     });
-    it('the key carries ⛔ no review id — it is the UPLOAD\'s, whatever the current review (K1 / L1)', () => {
+    it('GI18 needs ⛔ no current accepted review — the key is the UPLOAD\'s (K1 / L1 are the reader\'s, asserted live)', () => {
       // K1 ("a later `matches` ⛔ erases it") and L1 ("a second `does_not_match` is the SAME key") are properties of the
       // reader's EXISTS over every accepted review of the current upload — asserted LIVE in
       // `approval-warnings-death-facts.spec.ts` (GI18). Here: the key is the upload's, unchanged by the current review.

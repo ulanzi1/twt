@@ -3,7 +3,9 @@
 > **§0 gate — passed (2026-10-07).** This is the Panel's: it decides whether the Trust sends a **new message** to a person — the one whose
 > claim was refused on suspicion — and on what basis. Your ruling `2026-10-07-291` (Q1 A) said that person *"is told the refusal can be
 > appealed"*; it did ⛔ not say how, and we found that ⛔ nothing in the system tells anyone a claim was refused at all.
-> ⭐ **A confirm-shaped question, ⛔ not a blocker:** Story 6.24 builds option A meanwhile, so ⛔ nothing waits on this note.
+> **Item 2** is the Panel's too: a lock that stops staff correcting a refusal's reason changes what a mis-coded family is **owed** (a
+> no-limit appeal, or 90 days).
+> ⭐ **Confirm-shaped questions, ⛔ not blockers:** Story 6.24 builds option A meanwhile, so ⛔ nothing waits on this note.
 > ⚠ **Deliberately ⛔ not asked**, because it is ours: building a helpline screen that shows the operator the last date to appeal and lets
 > the operator file the appeal for the family (the operator already files appeals on a family's behalf; the screen was missing).
 
@@ -63,11 +65,12 @@ and could be appealed and paid **after** the true nominee's claim was paid — t
 
 | | Option | What changes for a person | Cost |
 |---|---|---|---|
-| **A** | **Accept it.** While the true nominee's claim is open (or paid), the reason can ⛔ not be changed. | A family refused under the wrong reason must appeal within 90 days. | A mis-coded refusal costs that family the no-limit appeal; they are still told the date (item 1). |
-| **B** | Allow the change, and close the true nominee's claim in that case instead. | The mis-coded family keeps the no-limit appeal. | The true nominee's claim — perhaps already paid — is closed by a staff correction she had ⛔ no part in. |
+| **A** | **Accept it.** While ANY other claim for the same death is anything but closed — the true nominee's, or anyone's, open, refused or paid — the reason can ⛔ not be changed. | A family refused under the wrong reason must appeal within 90 days. | A mis-coded refusal costs that family the no-limit appeal, possibly for good (a refused other claim can stay that way indefinitely). They learn the date by text only if item 1 is answered B; otherwise only through the helpline. |
+| **B** | Allow the correction, but the corrected refusal **keeps holding** every other claim for the death at final approval — now with ⛔ no time limit — until its appeal is decided. | The mis-coded family keeps the no-limit appeal. | The true nominee's claim can again wait with ⛔ no end — the very problem your Q1 ruling solved — and the system must remember that the refusal was once "on suspicion". |
+| **C** | Allow the correction only **until** another claim for the death has its final approval; after that, as A. | The mis-coded family can be corrected early, while nothing has been paid. | After the other claim's final approval, A's cost applies; and while it waits, a correction releases nothing (the true nominee still waits on the corrected refusal, as in B). |
 
-**Our reading:** **A** — the mistake is rare, the family keeps a full appeal (only bounded in time) and is told the date, while B would
-let a staff correction undo an innocent nominee's claim.
+**Our reading:** **A** — the mistake should be rare, the family keeps a full appeal (only bounded in time), and B or C bring back the
+endless wait or depend on timing the family cannot see.
 
 ---
 
@@ -100,8 +103,9 @@ You said the person refused on suspicion gets 90 days to appeal and must be told
 refusal. We suggest one short text to the best number the Trust holds for that person — saying the claim could not go ahead, that it can
 be appealed until a date, and to call the helpline. Without it, only people who call the helpline find out.
 
-Separately, to stop one death being paid twice, staff will ⛔ not be able to change a refusal's reason once the true nominee has filed. If
-the reason was chosen by mistake, that family must appeal within the 90 days. We suggest accepting this.
+Separately, to stop one death being paid twice, staff will ⛔ not be able to change a refusal's reason while any other claim for that
+death is still open, refused or paid. If the reason was chosen by mistake, that family must appeal within the 90 days. We suggest
+accepting this.
 
 ---
 ---

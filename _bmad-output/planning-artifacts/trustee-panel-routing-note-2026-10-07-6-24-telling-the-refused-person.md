@@ -55,19 +55,19 @@ the basis before it goes live.
 
 # A confirm (item 2) — a refusal coded "on suspicion" by mistake
 
-**In one sentence:** To stop one death being paid twice, once the true nominee has filed her own claim, staff can ⛔ no longer change a
-refusal's reason away from *"nominee changed after the death"* — so if a District Admin chose that reason **by mistake**, the refused family
+**In one sentence:** To stop one death being paid twice, while any other claim for the same death is not closed, staff can ⛔ no longer
+change a refusal's reason away from *"nominee changed after the death"* — so if a District Admin chose that reason **by mistake**, the refused family
 keeps the 90-day appeal limit instead of the no-limit appeal every other refusal has. Do you accept that?
 
-**The one fact that decides it:** if staff could change the reason, the refused claim would become an ordinary refusal with ⛔ no time limit
-and could be appealed and paid **after** the true nominee's claim was paid — two payments for one death, and the closing rule (FQ5) would
-⛔ no longer reach it.
+**The one fact that decides it:** a plain correction would turn the refusal into an ordinary one that ⛔ no longer holds the true nominee's
+claim — two payments for one death. So ANY correction must keep the hold and the closing rule (FQ5) in place; the real choice is therefore
+between the mis-coded family's no-limit appeal and the true nominee's wait with ⛔ no end.
 
 | | Option | What changes for a person | Cost |
 |---|---|---|---|
-| **A** | **Accept it.** While ANY other claim for the same death is anything but closed — the true nominee's, or anyone's, open, refused or paid — the reason can ⛔ not be changed. | A family refused under the wrong reason must appeal within 90 days. | A mis-coded refusal costs that family the no-limit appeal, possibly for good (a refused other claim can stay that way indefinitely). They learn the date by text only if item 1 is answered B; otherwise only through the helpline. |
-| **B** | Allow the correction, but the corrected refusal **keeps holding** every other claim for the death at final approval — now with ⛔ no time limit — until its appeal is decided. | The mis-coded family keeps the no-limit appeal. | The true nominee's claim can again wait with ⛔ no end — the very problem your Q1 ruling solved — and the system must remember that the refusal was once "on suspicion". |
-| **C** | Allow the correction only **until** another claim for the death has its final approval; after that, as A. | The mis-coded family can be corrected early, while nothing has been paid. | After the other claim's final approval, A's cost applies; and while it waits, a correction releases nothing (the true nominee still waits on the corrected refusal, as in B). |
+| **A** | **Accept it.** While ANY other claim for the same death is anything but closed — the true nominee's, or anyone's, open, refused or paid — the reason can ⛔ not be changed. | A family refused under the wrong reason must appeal within 90 days. | A mis-coded refusal costs that family the no-limit appeal — for good once the 90 days pass, since a paid claim is ⛔ never closed and a refused one can stay refused. They learn the date by text only if item 1 is answered B; otherwise only through the helpline. |
+| **B** | Allow the correction, but the corrected refusal **keeps holding** every other claim for the death at final approval — now with ⛔ no time limit — until its appeal is decided. | The mis-coded family keeps the no-limit appeal. | The true nominee's claim can again wait with ⛔ no end — the very problem your Q1 ruling solved; and if the corrected refusal's appeal is **allowed**, the true nominee's claim is closed, as FQ5 does now, though the refusal is ⛔ no longer one on suspicion (FQ5 was ⛔ never ruled for that). The system must also remember that the refusal was once "on suspicion". |
+| **C** | Allow the correction only **until** another claim for the death has its final approval; after that, as A. | The mis-coded family can be corrected early, while nothing has been paid. | After the other claim's final approval, A's cost applies; and while it waits, a correction releases nothing — the true nominee still waits on the corrected refusal, ⛔ no time limit, and is closed if its appeal is allowed, as in B. |
 
 **Our reading:** **A** — the mistake should be rare, the family keeps a full appeal (only bounded in time), and B or C bring back the
 endless wait or depend on timing the family cannot see.

@@ -29,8 +29,9 @@ export type DeathCertificateRejectionReason = z.output<typeof DeathCertificateRe
 
 /**
  * Story 6.26b (GI8; `-262` FQ8 B) — the District Admin's government death-register (CRS) check, recorded on every
- * ACCEPT. ⚠ LOCKSTEP with `@twt/domain`'s `DEATH_CERTIFICATE_REGISTER_CHECKS`, migration 0149's
- * `claim_death_certificate_reviews_register_check_check` and the admin's local `RegisterCheck` type — four places.
+ * ACCEPT. ⚠ LOCKSTEP with `@twt/domain`'s `DEATH_CERTIFICATE_REGISTER_CHECKS` and migration 0149's
+ * `claim_death_certificate_reviews_register_check_check` — three declarations (this one ↔ the domain's is pinned by
+ * `claims-verifier-decision.test.ts`); the console packet's `registerCheck` and the admin's `RegisterCheck` DERIVE from it.
  */
 export const DeathCertificateRegisterCheck = z.enum(['matches', 'does_not_match', 'could_not_check']);
 export type DeathCertificateRegisterCheck = z.output<typeof DeathCertificateRegisterCheck>;

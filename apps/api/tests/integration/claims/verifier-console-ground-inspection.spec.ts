@@ -314,6 +314,17 @@ describe.skipIf(!hasDatabase)('Story 6.26a — the console\'s ground-inspection 
     expect(certificate?.review?.registerCheck).toBe('could_not_check');
     // ⛔ No key and ⛔ no index on the wire — the section's shape is unchanged (the shape spec pins its exact keys).
     expect(JSON.stringify(packet)).not.toMatch(/inspection_death_date_differs:|fixture-death-date-index|"keys"/);
+    // …asserted against the claims' REAL indexes (the fixture indexes through `deathDateBlindIndex`, so the literal
+    // above never occurs — code review round 2).
+    const indexes = (
+      await td.pool.query<{ idx: string }>(
+        `SELECT death_date_index AS idx FROM claim_ground_inspections WHERE claim_case_id = ANY($1::uuid[]) AND death_date_index IS NOT NULL
+         UNION SELECT accepted_date_index FROM claim_death_certificate_reviews WHERE claim_case_id = ANY($1::uuid[]) AND accepted_date_index IS NOT NULL`,
+        [[source, refile]],
+      )
+    ).rows.map((r) => r.idx);
+    expect(indexes.length).toBeGreaterThanOrEqual(2);
+    for (const idx of indexes) expect(JSON.stringify(packet)).not.toContain(idx);
   });
 
   it('Story 6.26b — a pre-6.26b accepted review (⛔ index) ⇒ `not_indexed`; ⛔ accepted certificate ⇒ `not_compared`; neither is a warning', async () => {

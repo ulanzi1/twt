@@ -4,6 +4,22 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: code review of 6-26b-death-facts-warnings-and-register-check, ROUND 2 (2026-10-07)
+
+- **An erasure of the deceased while a claim is in flight silently removes an unanswered GI6 key**
+  [`packages/domain/src/claim/approval-warnings.ts` `deathDateComparison` / the `DeathDateComparison` doc; `packages/domain/src/member/anonymize.ts`].
+  GI13 [a]+[b] NULL both the inspection's `death_date_index` and the review's `accepted_date_index` ⇒ every `differs` becomes
+  `not_compared`; an uncovered `inspection_death_date_differs:<gid>` (incl. a late one the final vote waits on) leaves the set and the wait
+  lifts with ⛔ no reason recorded; an inspection completed AFTER the erasure reads `not_indexed`, whose doc says "predates 6.26b … dev
+  data only" — ⛔ false once an erasure has run. ⛔ Not addressed: whether a warning should outlive the erasure of the facts it compared.
+  Reachability is narrow — erasure needs a `withdrawn` member or a `terminated` overlay (`rtbf-legality.ts`) AND a claim still in flight.
+  ⭐ Trigger: the first erasure request for a deceased member whose claim is not closed, or the RTBF story that covers the claim tables.
+- **The API console spec's literal-index fixture was ⛔ not amended by RD19**
+  [`apps/api/tests/integration/claims/verifier-console.spec.ts` `insertCompletedInspection`]. It raw-inserts `'fixture-death-date-index'`
+  while the accepted review now carries a real `deathDateBlindIndex` ⇒ its read-count and AC13 inheritance claims carry an unintended
+  `inspection_death_date_differs`. ⛔ Nothing approves there, so ⛔ nothing is red; a later assertion on those claims' warnings would
+  inherit a key it did not ask for. ⭐ Trigger: the next change that asserts warnings or kinds in `verifier-console.spec.ts`.
+
 ## Recorded during Story 6.26b dev (2026-10-07)
 
 - **A recorded register mismatch (and GI17's verdict) stops only on a replaced upload, and an upload is allowed only after a REJECT**

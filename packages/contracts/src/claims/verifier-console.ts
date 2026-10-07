@@ -26,6 +26,7 @@
 import { z } from 'zod';
 
 import { MemberValidityPayloadDto } from '../members/validity.js';
+import { DeathCertificateRegisterCheck } from './death-certificate.js';
 import { ClaimDocumentParityOutcome } from './documents.js';
 // ⭐ The SINGLE clerical-reason tuple (a sibling contract, ⛔ not `@twt/domain` — the browser-bundle
 // rule is untouched). This file used to inline a fourth copy.
@@ -119,9 +120,9 @@ export const VerifierReviewItem = z
         status: z.enum(['missing', 'not_reviewed', 'accepted', 'rejected']),
         rejectionReason: z.enum(['no_date_of_death', 'date_of_death_unclear', 'date_of_death_in_future']).nullable(),
         /** Story 6.26b (GI8) — the CURRENT review's government-register check (the same review `status` describes);
-         *  `null` on a rejected review, on ⛔ review, and on an accepted review recorded before 6.26b. ⚠ LOCKSTEP with
-         *  `DeathCertificateRegisterCheck`. */
-        registerCheck: z.enum(['matches', 'does_not_match', 'could_not_check']).nullable(),
+         *  `null` on a rejected review, on ⛔ review, and on an accepted review recorded before 6.26b. The value set IS
+         *  `DeathCertificateRegisterCheck` (code review round 2 — was a fifth, untested inline copy). */
+        registerCheck: DeathCertificateRegisterCheck.nullable(),
         decidedByDisplay: z.string().nullable(),
         decidedAt: z.string().datetime().nullable(),
         /** The claim's LIVE review (current or not) — echoed back as `expected_live_review_id`. */

@@ -4,6 +4,81 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: code review of 6-26-ground-inspection-before-approval-and-death-facts, packages/contracts+packages/events chunk (2026-10-07)
+
+- **`packages/contracts/src/claims/verifier-console.ts` (443 lines) uses zero `.refine()`/`.superRefine()` anywhere** —
+  confirmed this is the file's pre-existing, file-wide convention, not a 6.26a deviation — so several cross-field
+  invariants the new fields imply are schema-legal to violate even though the one real producer never does:
+  (a) `GroundInspectionGateStatus`'s `available`/`complete`/`waitReason` accepts all 12 combinations though
+  `assembleGroundInspectionGate` only ever emits 3 — governance-sensitive, since a future producer bug here would
+  silently show the WRONG blocking reason to a District Admin on a death-claim approval gate with no crash or warning;
+  (b) a per-item `inherited: true` has no schema link to the section-level `inheritedFrom`, so a future regression
+  could ship an inherited record with no source attribution and no parse error; (c) `inherited: true` +
+  `comparedAgainst: 'current'` is schema-legal despite being impossible by the handler's own logic; (d) `deathDate`/
+  `deathTime` are bare `z.string()` with no format constraint despite doc comments promising `YYYY-MM-DD`/`HH:MM`;
+  (e) `deathDate`/`deathDateUnreadable` (and the time pair) have no mutual-exclusion refinement — confirmed unreachable
+  today, since `decryptFact` (`apps/api/src/modules/claims/claims.verifier-console.handlers.ts:776-780`) makes
+  `unreadable` and a non-null `value` complementary by construction. All five are proven not to manifest today via
+  dedicated tests + the single producer's construction; introducing refinements would be a new pattern for this file —
+  a design decision broader than one patch round. ⭐ Trigger: the next bug report of a wrong/blank blocking reason on
+  the verifier console, or a deliberate pass to harden this contract file with `.refine()`/`.superRefine()` invariants.
+
+## Deferred from: code review of 6-26-ground-inspection-before-approval-and-death-facts, apps/admin chunk (2026-10-07)
+
+- **`GroundInspectionPage`'s own inspector record collapses a decrypt failure and "nothing recorded" into the same
+  blank/"—" rendering**, unlike the verifier-console's `SignalsPanel`/`InspectorRecordLines` (same diff), which renders
+  "could not be read" via `deathDateUnreadable`/`deathTimeUnreadable` flags
+  (`apps/admin/src/modules/ground-inspection/GroundInspectionPage.tsx:368-388` vs
+  `apps/admin/src/modules/claim-verification/SignalsPanel.tsx:367-390`). Pre-existing: `GroundInspectionPage`'s backend
+  read handler (`apps/api/src/modules/claims/claims.ground-inspection.handlers.ts:816-825`, a "review #4" fail-soft
+  convention predating 6.26a) already collapses decrypt failures to `null` for `notes`/`locationDetail`/`familyContact`
+  too, not just date/time. GI10's "never blank" rule is textually scoped to the verifier-console surface (AC9/GI10,
+  Task 9.3), not this page (Task 9.1). ⭐ Trigger: the next UX-consistency pass across admin surfaces, or the next story
+  that retrofits `GroundInspectionPage`'s decrypt path — give it the same `…Unreadable` flags as the console, for every
+  field it decrypts, not just date/time.
+- **`SignalsPanel.tsx:250` / `VerifierConsoleRoute.tsx:509` index `approveBlocked[waitReason ?? 'no_completed_inspection']`
+  with no `??` fallback for an unrecognized key**, unlike the sibling message-helper functions in `nominee-errors.ts`
+  (both guard with `?? approveBlocked.no_completed_inspection!`). NOT reachable today —
+  `packages/contracts/src/claims/verifier-console.ts:409` closes `waitReason` to exactly two values via zod before
+  either component renders. ⭐ Trigger: the next story that adds a third `GroundInspectionWaitReason` — add the `??`
+  guard to both display call sites at the same time the contracts enum widens.
+- **The certificate-view signed URL's `expiresInSeconds` is parsed but never consumed** on `GroundInspectionPage` — no
+  countdown, re-fetch-on-expiry, or warning if the inspector fills the form slowly and opens an already-expired link.
+  Low-severity UX gap. ⭐ Trigger: a support report of a dead certificate link, or the next pass over this page's UX.
+- **The same domain copy (e.g. "Date of death (the family's word)") is hand-duplicated across two independently-
+  maintained per-module i18n files** (`apps/admin/src/modules/claim-verification/i18n-en.ts` and
+  `apps/admin/src/modules/ground-inspection/i18n-en.ts`) with no shared source — a drift risk if one is edited and the
+  other isn't. ⭐ Trigger: the next admin i18n consolidation effort, or the next time one of these two strings needs to
+  change (check the other file too).
+
+## Deferred from: code review of 6-26-ground-inspection-before-approval-and-death-facts, apps/api chunk (2026-10-07)
+
+- **`comparedAgainst` in the verifier-console's per-assignment facts collapses "no current certificate exists at all" and
+  "compared against a certificate that was later superseded" into the same `'earlier'` value**
+  (`apps/api/src/modules/claims/claims.verifier-console.handlers.ts:818-827`) — could mislead a verifier into thinking a newer
+  certificate exists when none does. Reachability is uncertain: it requires a claim whose current-certificate pointer reverts to
+  null AFTER an inspection was already completed against a real one, which the `-243` "every certificate kept forever" posture
+  makes unlikely. ⭐ Trigger: the next story that touches the death-certificate lifecycle (upload/supersession) — confirm whether
+  `currentUploadId` can ever revert to null after being non-null; if so, give that case its own `comparedAgainst` value instead of
+  `'earlier'`.
+- **`photo_kind_counts`'s per-kind audit tally is computed by subtraction** (`site: photoCount - originalCertificatePhotoCount`,
+  `apps/api/src/modules/claims/claims.ground-inspection.handlers.ts:242-248`), which silently folds any future third photo kind
+  into `site`. Correct today (exactly two kinds exist in `GROUND_INSPECTION_PHOTO_KINDS`); fixing it now would be engineering
+  against a hypothetical. ⭐ Trigger: the next story that adds a third `ground_inspection_photo_kind` value — derive real per-kind
+  counts there instead of by subtraction.
+
+## Deferred from: code review of 6-26-ground-inspection-before-approval-and-death-facts, packages/domain chunk (2026-10-07)
+
+- **The findings/photo/refusal writers still check the claim window on an UNLOCKED read** (`assertClaimInVerification`,
+  `packages/domain/src/claim/ground-inspection-persist.ts:285-291`), and GI3 widened that window (the whole review window plus a conditional
+  R9 state) — the pre-existing TOCTOU race's opportunity window is proportionally larger now. A documented architectural split between
+  event-emitting writers (locked) and non-event-emitting ones (unlocked), widened in scope by this story, not introduced by it; worst case
+  is a stray photo/finding/refusal note attached after the claim leaves the window, not a data-integrity or approval-correctness hazard.
+- **The TRUNCATE-lock regression test's NOWAIT retry budget was bumped 60-to-300 attempts** to absorb new lock contention from this diff's
+  `compared_certificate_upload_id` FK (`packages/domain/tests/integration/rls/claim-death-certificate-policy-regression.spec.ts:398-412`),
+  with no independent evidence the new ceiling holds under heavier CI load. Matches this repo's known history of tuning lock-contention test
+  retry budgets — worth monitoring for flakes.
+
 ## Recorded during Story 6.26a's build — the ground-inspection gate and the inspector's record (2026-10-06)
 
 Recorded under `2026-10-06-282` (GI1–GI18), as amended by `-283` (A1–A8) and `-284` (E1–E5); `-285` ratified the final-vote reading.

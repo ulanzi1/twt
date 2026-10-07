@@ -45,9 +45,11 @@ ALTER TABLE "claim_ground_inspections" ADD CONSTRAINT "claim_ground_inspections_
   "death_date_source" IS NULL
   OR ("inspection_stage"::text = 'certificate_check') = ("death_date_source" = 'original_certificate')
 );--> statement-breakpoint
--- A time of death is the family's statement only (⛔ never on a certificate check).
+-- A time of death is the family's statement only (⛔ never on a certificate check). ⚠ `death_date_source IS NOT
+-- NULL` is explicit (review 2026-10-07) — without it, a time with a NULL source passes: a NULL disjunct makes
+-- the whole CHECK NULL, which Postgres treats as satisfied.
 ALTER TABLE "claim_ground_inspections" ADD CONSTRAINT "claim_ground_inspections_death_time_source_check" CHECK (
-  "death_time_ciphertext" IS NULL OR "death_date_source" = 'family_statement'
+  "death_time_ciphertext" IS NULL OR ("death_date_source" IS NOT NULL AND "death_date_source" = 'family_statement')
 );--> statement-breakpoint
 -- `-282` GI4 / GI5 — every inspection completed from HERE ON carries its FQ11 record and its date.
 -- ⚠ `NOT VALID` (see the header) — ⛔ never `VALIDATE` it while a pre-6.26 completed row exists.

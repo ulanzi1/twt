@@ -735,8 +735,11 @@ export interface AddGroundInspectionPhotoInput {
 /**
  * Append ONE photo row to a scheduled assignment (AC3). Under the PARENT row lock: assert
  * `scheduled` + inspector guard + count-then-insert so the max-count cap is race-proof (#7) —
- * reject the 21st (`MAX_GROUND_INSPECTION_PHOTOS`). The caller already `put` the bytes; if THIS
- * insert fails the route best-effort-deletes the object (orphan-safe — the route owns compensation).
+ * reject the 21st (`MAX_GROUND_INSPECTION_PHOTOS`), EXCEPT the assignment's first `original_certificate`
+ * photo: completion requires >=1 of that kind (GI4), so the cap must never make it unreachable (review
+ * 2026-10-07) — an inspector who filled the cap with `site` photos can still add the mandatory one. The
+ * caller already `put` the bytes; if THIS insert fails the route best-effort-deletes the object
+ * (orphan-safe — the route owns compensation).
  */
 export async function addGroundInspectionPhoto(
   client: pg.PoolClient,
@@ -749,9 +752,16 @@ export async function addGroundInspectionPhoto(
   await assertClaimInVerification(db, input.pariwarId, assignment.claimCaseId);
   authorizeInspector(assignment, input.actingActorId, input.override);
 
+  const photoKind = input.photoKind ?? 'site';
   const existing = await countPhotos(db, input.pariwarId, input.groundInspectionId);
   if (existing >= MAX_GROUND_INSPECTION_PHOTOS) {
-    throw new GroundInspectionPhotoLimitError(input.groundInspectionId, MAX_GROUND_INSPECTION_PHOTOS);
+    const certificatePhotos =
+      photoKind === 'original_certificate'
+        ? await countPhotos(db, input.pariwarId, input.groundInspectionId, 'original_certificate')
+        : null;
+    if (certificatePhotos === null || certificatePhotos > 0) {
+      throw new GroundInspectionPhotoLimitError(input.groundInspectionId, MAX_GROUND_INSPECTION_PHOTOS);
+    }
   }
 
   const rows = await db
@@ -763,14 +773,15 @@ export async function addGroundInspectionPhoto(
       contentType: input.contentType,
       byteSize: input.byteSize,
       captionCiphertext: input.captionCiphertext ?? null,
-      photoKind: input.photoKind ?? 'site',
+      photoKind,
     })
     .returning();
   return rows[0]!;
 }
 
 /** Thrown when an assignment already holds `MAX_GROUND_INSPECTION_PHOTOS` (the 21st is rejected
- *  under the parent row lock). */
+ *  under the parent row lock) — except the assignment's first `original_certificate` photo, which the cap
+ *  must never block (review 2026-10-07; see `addGroundInspectionPhoto`'s doc comment). */
 export class GroundInspectionPhotoLimitError extends Error {
   constructor(
     public readonly groundInspectionId: string,
@@ -903,7 +914,9 @@ export async function completeGroundInspection(
     .update(claimGroundInspections)
     .set({
       status: 'completed',
-      completedAt: sql`now()`,
+      // Same clock the "day of completion" check above just validated against (review 2026-10-07) — an
+      // injected `now` must not leave `completedAt` reflecting a different moment than what was validated.
+      completedAt: input.now ?? sql`now()`,
       ...(input.structuredFindings !== undefined ? { structuredFindings: input.structuredFindings } : {}),
       ...(input.notesCiphertext !== undefined ? { notesCiphertext: input.notesCiphertext } : {}),
       originalCertificateVerdict: input.originalCertificateVerdict,

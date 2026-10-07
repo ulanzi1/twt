@@ -1,3 +1,23 @@
+# last_updated: 2026-10-07b (⭐ **STORY 6.26a's 8 code-review patches themselves ADVERSARIALLY RE-REVIEWED** (a fresh, context-free pass —
+# diff only, no knowledge of the original reasoning). Found 5 real issues in the patches and fixed all 5: the `certificate_changed` /
+# `no_current_certificate` reset cleared the stale token but left `verdict`/`deathDate`/`deathTime` resubmittable unchanged against the NEW
+# certificate (now also cleared); fix #6 (reject malformed/duplicate `photoKind`) and fix #2 (`completedAt` shares the injected clock) both
+# shipped with zero regression coverage (both now tested); the admin test only covered one of the two reset-triggering 409 codes (both now
+# tested); a stale doc comment and an unsound type cast (cheap doc/type fixes). One finding (the exhaustive message map returning `undefined`
+# for an unreachable out-of-union `reason`) considered and NOT fixed — matches the established sibling convention
+# (`NOT_REVISABLE_MESSAGES`), and the scenario requires an actual type-system violation. Re-verified: full domain (327/4560) + api (150/1547)
+# + admin (59/937) suites green on both `:5432` and `:5433`. Status stays `done`. ⛔ No design change.)
+# last_updated: 2026-10-07a (⭐ **STORY 6.26a CODE-REVIEWED (`bmad-code-review`, chunked: `packages/domain` / `apps/api` / `apps/admin` /
+# `packages/contracts`+`packages/events`) → `done`.** 1 decision (the 20-photo cap could strand an assignment short of its mandatory
+# certificate photo — resolved: reserve a slot for the first `original_certificate` upload) + 8 patches FIXED and verified (full domain/api/admin
+# suites green on BOTH `:5432` and `:5433`): the photo-cap reservation; `completedAt` now shares the injectable `now` with the future-date
+# check; `claim_ground_inspections_death_time_source_check`'s NULL-propagation hole closed (migration edited pre-merge + the fix applied by
+# hand to both DBs); `getDeathCertificateUpload` gained a `claimCaseId` scope; an exhaustive wait-reason message map; a malformed/duplicate
+# multipart `photoKind` now rejected instead of silently defaulting; an HTTP-level test for the `original_certificate_not_produced` refusal
+# path; a `certificate_changed` 409 resubmission loop on the admin Complete button (the stale token is now cleared, forcing a fresh compare).
+# 9 items DEFERRED to `deferred-work.md` (pre-existing patterns widened in scope, or design decisions broader than one patch round — none
+# blocking); 32 findings DISMISSED as verified false positives across the four review layers (reachability traced against the live code each
+# time, not taken on the subagents' word). ⛔ No design change.)
 # last_updated: 2026-10-06m (⭐ **STORY 6.26a BUILT — `6-26-ground-inspection-before-approval-and-death-facts`: ready-for-dev → in-progress →
 # review via `bmad-dev-story`** (`-282` GI1–GI18 [a], amended by `-283` / `-284`; `-285` ratified). Every approval now WAITS for a complete
 # ground inspection — ONE conjunct in `assertClaimApprovable` (six call sites + the `-251` waived approve, ⛔ none edited), ONE pure predicate
@@ -19113,7 +19133,7 @@ development_status:
   6-23b-every-approver-gives-a-warning-reason: done
   6-24-true-nominee-refile-after-a-suspicion-refusal: backlog
   6-25-staff-email-notice-of-a-suspicion-refusal: backlog
-  6-26-ground-inspection-before-approval-and-death-facts: review
+  6-26-ground-inspection-before-approval-and-death-facts: done
   # ⭐ 2026-10-06 SPLIT after `2026-10-06-281` (the Panel: Q1 B · Q2 A; BigDev: "write the panel note then we get the answer and then we split"):
   # the row above is STORY 6.26a (keeps its key — the rulings cite it): the gate, the review-window widening, the inspector's record and the
   # certificate check. 6.26b below is the warnings (the date difference + `-281` Q1 B's two mismatches), the register check and 6.23b's

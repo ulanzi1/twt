@@ -498,13 +498,25 @@ export function createGroundInspectionHandlers(deps: AppDeps) {
       // Optional caption (PII) — read AFTER draining the file stream so a `caption` field that
       // arrives in EITHER multipart position (before or after the file part) is captured, not
       // silently dropped (review #8). `data.fields` accumulates parts as the stream is consumed.
-      const captionField = (data.fields as Record<string, { value?: unknown } | undefined> | undefined)?.caption;
-      const captionPlain = captionField && typeof captionField.value === 'string' ? captionField.value : undefined;
-      // ⭐ Story 6.26a (GI4) — what the photo shows (`site` default | `original_certificate`), read the same way as the
-      // caption: AFTER the file stream is drained, so the field is captured in either multipart position.
-      const kindField = (data.fields as Record<string, { value?: unknown } | undefined> | undefined)?.photoKind;
-      const kindRaw = kindField && typeof kindField.value === 'string' ? kindField.value : undefined;
-      if (kindRaw !== undefined && !(schema.GROUND_INSPECTION_PHOTO_KINDS as readonly string[]).includes(kindRaw)) {
+      // ⚠ A duplicate `caption` part (array, not a single field) falls through to "no caption" below —
+      // harmless, since caption carries no business meaning and is always optional (review 2026-10-07).
+      // A duplicate part under the same field name arrives as an ARRAY, not a single field object (review
+      // 2026-10-07) — the cast must admit that shape, even where (as for `caption`) it's then treated as absent.
+      type MultipartField = { value?: unknown } | { value?: unknown }[] | undefined;
+      const captionField = (data.fields as Record<string, MultipartField> | undefined)?.caption;
+      const captionPlain = captionField && !Array.isArray(captionField) && typeof captionField.value === 'string' ? captionField.value : undefined;
+      // ⭐ Story 6.26a (GI4) — what the photo shows (`site` default | `original_certificate`), read the same
+      // position-independent way as the caption — but UNLIKE caption, this one gates a mandatory business
+      // requirement (GI4's "≥1 original_certificate photo"), so a malformed/duplicate value is REJECTED, never
+      // silently defaulted (review 2026-10-07).
+      const kindField = (data.fields as Record<string, MultipartField> | undefined)?.photoKind;
+      // A duplicate `photoKind` part arrives as an ARRAY, not a single field object (review 2026-10-07) — that
+      // must be rejected too, same as an explicitly-unknown kind, ⛔ never silently fall back to the default.
+      const kindRaw = kindField !== undefined && !Array.isArray(kindField) && typeof kindField.value === 'string' ? kindField.value : undefined;
+      if (
+        kindField !== undefined &&
+        (kindRaw === undefined || !(schema.GROUND_INSPECTION_PHOTO_KINDS as readonly string[]).includes(kindRaw))
+      ) {
         throw new BadRequestError('Unknown photo kind', 'ground_inspection.invalid_photo_kind', {
           allowed: schema.GROUND_INSPECTION_PHOTO_KINDS,
         });
@@ -675,7 +687,7 @@ export function createGroundInspectionHandlers(deps: AppDeps) {
       if (snapshot.currentUploadId === null) {
         translateGroundInspectionError(new claim.GroundInspectionNoCurrentCertificateError(assignment.claimCaseId));
       }
-      const upload = await claim.getDeathCertificateUpload(tx, pid, snapshot.currentUploadId);
+      const upload = await claim.getDeathCertificateUpload(tx, pid, assignment.claimCaseId, snapshot.currentUploadId);
       if (!upload) {
         translateGroundInspectionError(new claim.GroundInspectionNoCurrentCertificateError(assignment.claimCaseId));
       }

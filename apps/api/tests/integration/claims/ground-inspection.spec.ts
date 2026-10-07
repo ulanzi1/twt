@@ -467,6 +467,26 @@ describe.skipIf(!hasDatabase)('Ground-inspection admin surface — E2E (:5433)',
     expect(res.json<{ error: { code: string } }>().error.code).toBe('ground_inspection.photo_required');
   });
 
+  it('AC4 (review 2026-10-07): original_certificate_not_produced records as an evidence_unavailable refusal with its mandatory note — through HTTP', async () => {
+    const pariwarId = randomUUID();
+    const { client, userId } = await authenticate();
+    await grant(userId, pariwarId, 'district_admin', 'district', DISTRICT);
+    const claimCaseId = await seedClaim(pariwarId, { toVerification: true });
+    const gid = (await schedule(client, pariwarId, claimCaseId, { inspectorActorId: userId })).json<{ groundInspectionId: string }>().groundInspectionId;
+
+    const res = await client.inject({
+      method: 'POST',
+      url: `${base(pariwarId, claimCaseId)}/${gid}/refusal`,
+      payload: { disposition: 'evidence_unavailable', refusalReason: 'original_certificate_not_produced', reasonNote: 'The family could not produce the original certificate at the visit' },
+    });
+    expect(res.statusCode, res.body).toBe(200);
+    expect(res.json<{ status: string }>().status).toBe('evidence_unavailable');
+
+    const read = await client.inject({ method: 'GET', url: `${base(pariwarId, claimCaseId)}?district=${DISTRICT}` });
+    const assignments = read.json<{ assignments: Array<{ status: string; refusalReason: string | null }> }>().assignments;
+    expect(assignments[0]).toMatchObject({ status: 'evidence_unavailable', refusalReason: 'original_certificate_not_produced' });
+  });
+
   it('non-image MIME → 415 and NO bytes stored (checked before the put)', async () => {
     const pariwarId = randomUUID();
     const { client, userId } = await authenticate();
@@ -814,6 +834,28 @@ describe.skipIf(!hasDatabase)('Ground-inspection admin surface — E2E (:5433)',
     const read = await w.client.inject({ method: 'GET', url: `${base(w.pariwarId, w.claimCaseId)}?district=${DISTRICT}` });
     const kinds = read.json<{ assignments: { photos: { photoKind: string }[] }[] }>().assignments[0]!.photos.map((p) => p.photoKind).sort();
     expect(kinds).toEqual(['original_certificate', 'site']);
+  });
+
+  it('adversarial review 2026-10-07: a DUPLICATE `photoKind` multipart field (fastify delivers it as an array) → 400, ⛔ never a silent default to `site`', async () => {
+    const w = await inspectorWorld();
+    // Two `photoKind` parts under the same name — @fastify/multipart turns `data.fields.photoKind` into an
+    // array in this case, which must be rejected the same as an explicitly-unknown kind.
+    const boundary = `----twt${randomUUID().replace(/-/g, '')}`;
+    const body = Buffer.concat([
+      Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="photoKind"\r\n\r\noriginal_certificate\r\n`),
+      Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="photoKind"\r\n\r\nsite\r\n`),
+      Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="p.jpg"\r\nContent-Type: image/jpeg\r\n\r\n`),
+      Buffer.from([0xff, 0xd8, 0xff, 0x00]),
+      Buffer.from(`\r\n--${boundary}--\r\n`),
+    ]);
+    const res = await w.client.inject({
+      method: 'POST',
+      url: `${base(w.pariwarId, w.claimCaseId)}/${w.gid}/photos`,
+      payload: body as unknown as object,
+      headers: { 'content-type': `multipart/form-data; boundary=${boundary}` },
+    });
+    expect(res.statusCode, res.body).toBe(400);
+    expect(errCode(res).code).toBe('ground_inspection.invalid_photo_kind');
   });
 
   it('⭐ GI4 — the certificate read: 200 (token = the CURRENT upload, a signed URL) to the assigned inspector; 403 to another conduct-key holder; 409 with ⛔ no current certificate', async () => {

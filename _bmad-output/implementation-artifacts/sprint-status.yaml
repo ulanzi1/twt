@@ -1,3 +1,13 @@
+# last_updated: 2026-10-07r (⭐ **STORY 6.24 — TASK 0 COMPLETE (BigDev: *"complete the remaining steps"*).** Seven more fresh-context validate
+# rounds (2–8, each narrow on the last pass's edits) until round 8 found ⛔ no BLOCKER / HIGH — eight in all, 1 BLOCKER + 15 HIGH found and
+# fixed (v1.3–v1.9): the 90-day clock = the first row of the CURRENT `-239` chain; a reason lock (RF13) so one death is ⛔ never paid twice;
+# RF6's key-then-row order + actor-free session cores; a `claim.file` helpline appeal screen on the existing on-behalf route; the closed
+# entry outcome. ⚠ The round-3 BLOCKER: an "is told" text to the refused claim's contacts would have reached the TRUE nominee ⇒ removed and
+# routed as **Q3** (`trustee-panel-routing-note-2026-10-07-6-24-telling-the-refused-person.md`, items 1–2 — whether the refused person is
+# texted; a confirm of RF13's lock on a mis-coded refusal) — non-blocking, built meanwhile as each item's A. `2026-10-07-292` (author-commit,
+# RF1–RF16 + three amended `-291` readings) committed ALONE `f0801f1e`; `epics.md` `### Story 6.24` + `-291` Consequence 2's annotations (6.16
+# D-E, PRD, appeal-fairness README) `5e77ca6e`. Story → v2.0. ⛔ No row moves — `6-24-true-nominee-refile-after-a-suspicion-refusal` stays
+# `ready-for-dev`.)
 # last_updated: 2026-10-07q (⭐ **THE PANEL RULED STORY 6.24's TWO QUESTIONS — `2026-10-07-291` (Trustee-ratified, DR + KB: *"Q1 - A · Q2 - B"*;
 # BigDev confirmed the number: *"90 days"*), committed ALONE (`2f674a57`).** Q1 A: a refusal on suspicion of a post-death nominee change
 # (`-239`) can be appealed within 90 days of the refusal; after that, with ⛔ no appeal, the true nominee's claim may be approved; every other

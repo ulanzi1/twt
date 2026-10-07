@@ -77,7 +77,7 @@ import {
   claimGroundInspectionPhotos,
 } from '../schema/claim_ground_inspection_photos.js';
 import type { DeathCertificateUploadId } from '../ids/index.js';
-import { readDeathCertificateSnapshot } from './death-certificate-approval.js';
+import { currentDeathCertificateUploadIdSql, readDeathCertificateSnapshot } from './death-certificate-approval.js';
 import {
   GroundInspectionCertificateChangedError,
   GroundInspectionClaimNotInVerificationError,
@@ -96,7 +96,8 @@ import { hasLiveRoutedRow } from './r9-routing.js';
 import { CLAIM_REVIEW_WINDOW_STATES } from './review-window.js';
 
 /** Max photos per assignment (AC3) — a LOCKED named const, NOT a configurable registry. A byte
- *  cap bounds total payload independently; 20 is a generous storage-abuse boundary. */
+ *  cap bounds total payload independently; 20 is a generous storage-abuse boundary. ⭐ `2026-10-07-286` H2:
+ *  one reserved slot over it for the original's photo of the CURRENT certificate (`addGroundInspectionPhoto`). */
 export const MAX_GROUND_INSPECTION_PHOTOS = 20;
 
 /** How long a schedule/reschedule idempotency binding is honoured on replay (a retry window;
@@ -310,6 +311,43 @@ function authorizeInspector(
   if (actingActorId === assignment.inspectorActorId) return;
   if (override) return;
   throw new GroundInspectionInspectorMismatchError(assignment.groundInspectionId, actingActorId);
+}
+
+/** The claim's CURRENT death-certificate upload id — the ONE current-upload rule (`currentDeathCertificateUploadIdSql`),
+ *  ⛔ never a copy — or `null`. `2026-10-07-286` H1: the stamp an `original_certificate` photo carries. */
+async function readCurrentDeathCertificateUploadId(
+  db: Db,
+  pariwarId: PariwarId,
+  claimCaseId: ClaimId,
+): Promise<DeathCertificateUploadId | null> {
+  const result = await db.execute<{ upload_id: string | null }>(
+    sql`SELECT ${currentDeathCertificateUploadIdSql(sql`${pariwarId}`, sql`${claimCaseId}`)} AS upload_id`,
+  );
+  const id = result.rows[0]?.upload_id ?? null;
+  return id === null ? null : (id as DeathCertificateUploadId);
+}
+
+/** Count an assignment's `original_certificate` photos STAMPED with `uploadId` (`2026-10-07-286` H1) — under the
+ *  parent row lock. A NULL stamp never matches. */
+async function countOriginalPhotosFor(
+  db: Db,
+  pariwarId: PariwarId,
+  groundInspectionId: GroundInspectionId,
+  uploadId: string,
+): Promise<number> {
+  const rows = await db
+    .select({ value: sql<number>`count(*)::int` })
+    .from(claimGroundInspectionPhotos)
+    .where(
+      and(
+        eq(claimGroundInspectionPhotos.pariwarId, pariwarId),
+        eq(claimGroundInspectionPhotos.groundInspectionId, groundInspectionId),
+        eq(claimGroundInspectionPhotos.photoKind, 'original_certificate'),
+        // A `uuid` compare — Postgres parses either case, so an upper-case echo still matches.
+        eq(claimGroundInspectionPhotos.certificateUploadId, uploadId as DeathCertificateUploadId),
+      ),
+    );
+  return rows[0]?.value ?? 0;
 }
 
 /** Count an assignment's persisted photos (called while holding the parent row lock) — every kind, or one. */
@@ -735,9 +773,11 @@ export interface AddGroundInspectionPhotoInput {
 /**
  * Append ONE photo row to a scheduled assignment (AC3). Under the PARENT row lock: assert
  * `scheduled` + inspector guard + count-then-insert so the max-count cap is race-proof (#7) —
- * reject the 21st (`MAX_GROUND_INSPECTION_PHOTOS`), EXCEPT the assignment's first `original_certificate`
- * photo: completion requires >=1 of that kind (GI4), so the cap must never make it unreachable (review
- * 2026-10-07) — an inspector who filled the cap with `site` photos can still add the mandatory one. The
+ * reject the 21st (`MAX_GROUND_INSPECTION_PHOTOS`), EXCEPT the first `original_certificate` photo of the
+ * claim's CURRENT certificate: completion requires >=1 of that kind stamped with the compared upload (GI4 as
+ * amended by `2026-10-07-286` H1), so the cap must never make it unreachable (H2) — an inspector who filled
+ * the cap with `site` photos, or whose family replaced the certificate, can still add the mandatory one.
+ * ⭐ An `original_certificate` photo is STAMPED with the claim's current upload (H1); a `site` photo ⛔ never. The
  * caller already `put` the bytes; if THIS insert fails the route best-effort-deletes the object
  * (orphan-safe — the route owns compensation).
  */
@@ -753,13 +793,19 @@ export async function addGroundInspectionPhoto(
   authorizeInspector(assignment, input.actingActorId, input.override);
 
   const photoKind = input.photoKind ?? 'site';
+  // ⭐ `2026-10-07-286` H1 — an original's photo is STAMPED with the certificate current NOW; completion counts only
+  // the ones stamped with the compared upload. Read without the claim lock: a stamp that lags a concurrent
+  // replacement makes the claim WAIT for another photo, ⛔ never pass (fail-safe).
+  const stamp =
+    photoKind === 'original_certificate'
+      ? await readCurrentDeathCertificateUploadId(db, input.pariwarId, assignment.claimCaseId)
+      : null;
   const existing = await countPhotos(db, input.pariwarId, input.groundInspectionId);
   if (existing >= MAX_GROUND_INSPECTION_PHOTOS) {
-    const certificatePhotos =
-      photoKind === 'original_certificate'
-        ? await countPhotos(db, input.pariwarId, input.groundInspectionId, 'original_certificate')
-        : null;
-    if (certificatePhotos === null || certificatePhotos > 0) {
+    // `-286` H2 — the reserved slot: the original's photo of the CURRENT certificate, while the assignment holds none.
+    const reserved =
+      stamp !== null && (await countOriginalPhotosFor(db, input.pariwarId, input.groundInspectionId, stamp)) === 0;
+    if (!reserved) {
       throw new GroundInspectionPhotoLimitError(input.groundInspectionId, MAX_GROUND_INSPECTION_PHOTOS);
     }
   }
@@ -774,14 +820,15 @@ export async function addGroundInspectionPhoto(
       byteSize: input.byteSize,
       captionCiphertext: input.captionCiphertext ?? null,
       photoKind,
+      certificateUploadId: stamp,
     })
     .returning();
   return rows[0]!;
 }
 
 /** Thrown when an assignment already holds `MAX_GROUND_INSPECTION_PHOTOS` (the 21st is rejected
- *  under the parent row lock) — except the assignment's first `original_certificate` photo, which the cap
- *  must never block (review 2026-10-07; see `addGroundInspectionPhoto`'s doc comment). */
+ *  under the parent row lock) — except the first `original_certificate` photo of the claim's CURRENT certificate,
+ *  which the cap must never block (`2026-10-07-286` H2; see `addGroundInspectionPhoto`'s doc comment). */
 export class GroundInspectionPhotoLimitError extends Error {
   constructor(
     public readonly groundInspectionId: string,
@@ -882,6 +929,11 @@ export async function completeGroundInspection(
   // Compared lower-cased ([[project_branded_ids_lowercase]] — the client may echo an upper-case uuid).
   if (input.comparedCertificateUploadId.toLowerCase() !== snapshot.currentUploadId.toLowerCase()) {
     throw new GroundInspectionCertificateChangedError(input.groundInspectionId, input.comparedCertificateUploadId);
+  }
+  // ⭐ `2026-10-07-286` H1 — the photo must be of THIS certificate's original: a photo taken for a certificate the
+  // family has since replaced ⛔ never counts (`-281` Q2 A — "for the certificate the claim now relies on").
+  if ((await countOriginalPhotosFor(db, input.pariwarId, input.groundInspectionId, snapshot.currentUploadId)) < 1) {
+    throw new GroundInspectionOriginalCertificateRequiredError(input.groundInspectionId, 'photo');
   }
 
   // ── GI5 — the date (and, on a full visit, the optional time) of death. ──

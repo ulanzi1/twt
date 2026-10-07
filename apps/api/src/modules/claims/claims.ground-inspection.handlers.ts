@@ -671,9 +671,12 @@ export function createGroundInspectionHandlers(deps: AppDeps) {
      * upload id they echo back as `comparedCertificateToken`), content type and a short-lived signed URL. Gated by the
      * row's conduct dimension (the route) PLUS the D6 inspector guard: the assigned inspector, or a
      * `claim.override_ground_inspection` holder — anyone else holding the conduct key gets 403. ⭐ This lets a
-     * `block_admin` inspector see a claim's uploaded certificate image — confined to an assignment they hold. ⛔ No
-     * current upload ⇒ 409 `ground_inspection.no_current_certificate` (⛔ never a 500, ⛔ never a 404 hiding the
-     * assignment). Audited `admin_ground_inspection.certificate_viewed` — ids only.
+     * `block_admin` inspector see a claim's uploaded certificate image — confined to an assignment they HOLD: a
+     * `scheduled` one (409 `ground_inspection.not_active` otherwise — a superseded, completed or refused assignment
+     * ⛔ never re-opens the copy, second code review 2026-10-07) on a claim in the inspection window (409
+     * `ground_inspection.not_allowed` — the one predicate every writer uses; outside it nothing could be recorded
+     * against the copy anyway). ⛔ No current upload ⇒ 409 `ground_inspection.no_current_certificate` (⛔ never a
+     * 500, ⛔ never a 404 hiding the assignment). Audited `admin_ground_inspection.certificate_viewed` — ids only.
      */
     async certificate(request: FastifyRequest, reply: FastifyReply): Promise<unknown> {
       const ctx = adminCtx(request);
@@ -682,6 +685,21 @@ export function createGroundInspectionHandlers(deps: AppDeps) {
       const override = resolveInspectorOverride(request, ctx, assignment);
       const tx = request.scopeTx!.tx;
       const pid = ids.pariwarId(ctx.pariwarId);
+
+      // GI4 — "confined to an assignment they hold": ⛔ a terminal assignment, ⛔ a claim outside the window.
+      if (assignment.status !== 'scheduled') {
+        throw new ConflictError('The ground-inspection assignment is not active', 'ground_inspection.not_active', {
+          status: assignment.status,
+        });
+      }
+      const claimRow = await claim.getClaimCase(tx, pid, assignment.claimCaseId);
+      if (!claimRow || !(await claim.isClaimInGroundInspectionWindow(tx, pid, assignment.claimCaseId, claimRow.currentState))) {
+        throw new ConflictError(
+          'Ground inspection is not allowed for the claim in its current state',
+          'ground_inspection.not_allowed',
+          { state: claimRow?.currentState ?? null },
+        );
+      }
 
       const snapshot = await claim.readDeathCertificateSnapshot(tx, pid, assignment.claimCaseId);
       if (snapshot.currentUploadId === null) {
@@ -845,6 +863,10 @@ export function createGroundInspectionHandlers(deps: AppDeps) {
               byteSize: p.byteSize,
               // Story 6.26a (GI4) — `site` | `original_certificate` (labelled apart on the page).
               photoKind: p.photoKind,
+              // `2026-10-07-286` H1 — the certificate an original's photo was taken for (the token the Compare read
+              // returns), so the page can tell the inspector a photo of a REPLACED certificate's original ⛔ counts
+              // for nothing. NULL on a site photo. Non-PII.
+              certificateToken: p.certificateUploadId ?? null,
               caption: await decrypt(p.captionCiphertext),
               signedUrl: await deps.claimDocumentStorage.signedReadUrl(p.storageObjectKey, PHOTO_SIGNED_URL_TTL_SECONDS),
             })),

@@ -8,7 +8,7 @@
 // operator affordances + the read that surfaces the signal (present, refused, unavailable, absent).
 
 import type { ReactElement } from 'react';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { ApiError } from '../../api/client.js';
@@ -453,13 +453,33 @@ function CompleteAction(props: {
   onMutated: () => void;
 }): ReactElement {
   const isCheck = props.assignment.inspectionStage === 'certificate_check';
-  const originalPhotos = props.assignment.photos.filter((p) => p.photoKind === 'original_certificate').length;
+  const originals = props.assignment.photos.filter((p) => p.photoKind === 'original_certificate');
   const [verdict, setVerdict] = useState<'matches' | 'does_not_match' | null>(null);
   const [deathDate, setDeathDate] = useState('');
   const [deathTime, setDeathTime] = useState('');
+  const clearRecord = (): void => {
+    setVerdict(null);
+    setDeathDate('');
+    setDeathTime('');
+  };
+  // The token the inspector's verdict / date were recorded against (second code review 2026-10-07).
+  const recordedAgainst = useRef<string | undefined>(undefined);
   const certificate = useMutation({
     mutationFn: () => api.getGroundInspectionCertificate(props.pariwarId, props.claimCaseId, props.assignment.groundInspectionId),
+    // A second "Compare" (the only way to re-open an expired link) can return a DIFFERENT certificate — the family
+    // replaced it. What was recorded was judged against the OLD one ⇒ cleared, ⛔ never submitted under the new token.
+    onSuccess: (data) => {
+      if (recordedAgainst.current !== undefined && recordedAgainst.current.toLowerCase() !== data.certificateToken.toLowerCase()) {
+        clearRecord();
+      }
+      recordedAgainst.current = data.certificateToken;
+    },
   });
+  // `2026-10-07-286` H1 — only a photo of the COMPARED certificate's original counts (the server re-checks it).
+  const comparedToken = certificate.data?.certificateToken.toLowerCase();
+  const originalPhotos = originals.length;
+  const originalPhotosForCompared =
+    comparedToken === undefined ? originalPhotos : originals.filter((p) => p.certificateToken?.toLowerCase() === comparedToken).length;
   const mutation = useMutation({
     mutationFn: () =>
       api.completeGroundInspection(props.pariwarId, props.claimCaseId, props.assignment.groundInspectionId, {
@@ -476,13 +496,12 @@ function CompleteAction(props: {
       // the new one) — the inspector is forced to "Compare" and re-record both from scratch.
       if (err instanceof ApiError && (err.code === 'ground_inspection.certificate_changed' || err.code === 'ground_inspection.no_current_certificate')) {
         certificate.reset();
-        setVerdict(null);
-        setDeathDate('');
-        setDeathTime('');
+        recordedAgainst.current = undefined;
+        clearRecord();
       }
     },
   });
-  const ready = props.photoCount >= 1 && originalPhotos >= 1 && certificate.data !== undefined && verdict !== null && deathDate !== '';
+  const ready = props.photoCount >= 1 && originalPhotosForCompared >= 1 && certificate.data !== undefined && verdict !== null && deathDate !== '';
   const radioName = `verdict-${props.assignment.groundInspectionId}`;
   return (
     <div className="flex flex-col gap-2">
@@ -529,6 +548,9 @@ function CompleteAction(props: {
       </button>
       {props.photoCount < 1 && <p className="text-xs text-amber-700">{t('gi.action.completeNeedsPhoto')}</p>}
       {props.photoCount >= 1 && originalPhotos < 1 && <p className="text-xs text-amber-700">{t('gi.action.completeNeedsOriginalPhoto')}</p>}
+      {originalPhotos >= 1 && originalPhotosForCompared < 1 && (
+        <p className="text-xs text-amber-700">{t('gi.action.completeNeedsCurrentOriginalPhoto')}</p>
+      )}
       {mutation.isError && <p role="alert" className="text-xs text-red-600">{errorText(mutation.error)}</p>}
     </div>
   );

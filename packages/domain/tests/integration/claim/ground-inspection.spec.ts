@@ -297,7 +297,7 @@ describe.skipIf(!hasDatabase)('ground inspection (PARIWAR_A scope)', () => {
     ).rejects.toBeInstanceOf(GroundInspectionPhotoLimitError);
   });
 
-  it('AC3 photo limit (review 2026-10-07): a capped assignment can still take its first original_certificate photo, but not a second one', async () => {
+  it('AC3 photo limit (`-286` H2): a capped assignment still takes ONE original_certificate photo per CURRENT certificate — and ⛔ none with no current certificate', async () => {
     const { client } = getTx();
     const cid = toClaimId(randomUUID());
     const mid = toMemberId(randomUUID());
@@ -309,17 +309,44 @@ describe.skipIf(!hasDatabase)('ground inspection (PARIWAR_A scope)', () => {
     for (let i = 0; i < MAX_GROUND_INSPECTION_PHOTOS; i += 1) {
       await addGroundInspectionPhoto(client, { pariwarId: PARIWAR_A, groundInspectionId: gid, actingActorId: INSPECTOR, storageObjectKey: `s${i}`, contentType: 'image/png', byteSize: 10 });
     }
+    // ⛔ No current certificate ⇒ ⛔ no reserved slot (a NULL-stamped original never counts — H1).
+    await client.query('SAVEPOINT cap_no_cert');
+    await expect(
+      addGroundInspectionPhoto(client, {
+        pariwarId: PARIWAR_A, groundInspectionId: gid, actingActorId: INSPECTOR,
+        storageObjectKey: 'cert-0', contentType: 'image/png', byteSize: 10, photoKind: 'original_certificate',
+      }),
+    ).rejects.toBeInstanceOf(GroundInspectionPhotoLimitError);
+    await client.query('ROLLBACK TO SAVEPOINT cap_no_cert');
+    const { uploadId: u1 } = await seedDeathCertificate(client, { pariwarId: PARIWAR_A, claimCaseId: cid });
     // The 21st, reserved for the mandatory kind, is accepted...
     const certificatePhoto = await addGroundInspectionPhoto(client, {
       pariwarId: PARIWAR_A, groundInspectionId: gid, actingActorId: INSPECTOR,
       storageObjectKey: 'cert-1', contentType: 'image/png', byteSize: 10, photoKind: 'original_certificate',
     });
     expect(certificatePhoto.photoKind).toBe('original_certificate');
+    expect(certificatePhoto.certificateUploadId).toBe(u1);
     // ...but the reservation is used up: a second original_certificate photo is still over the cap.
+    await client.query('SAVEPOINT cap_second');
     await expect(
       addGroundInspectionPhoto(client, {
         pariwarId: PARIWAR_A, groundInspectionId: gid, actingActorId: INSPECTOR,
         storageObjectKey: 'cert-2', contentType: 'image/png', byteSize: 10, photoKind: 'original_certificate',
+      }),
+    ).rejects.toBeInstanceOf(GroundInspectionPhotoLimitError);
+    await client.query('ROLLBACK TO SAVEPOINT cap_second');
+    // The family replaces the certificate ⇒ ONE more slot, for the NEW certificate's original (else the assignment
+    // could never complete against it), and then ⛔ another.
+    const { uploadId: u2 } = await seedDeathCertificate(client, { pariwarId: PARIWAR_A, claimCaseId: cid });
+    const second = await addGroundInspectionPhoto(client, {
+      pariwarId: PARIWAR_A, groundInspectionId: gid, actingActorId: INSPECTOR,
+      storageObjectKey: 'cert-3', contentType: 'image/png', byteSize: 10, photoKind: 'original_certificate',
+    });
+    expect(second.certificateUploadId).toBe(u2);
+    await expect(
+      addGroundInspectionPhoto(client, {
+        pariwarId: PARIWAR_A, groundInspectionId: gid, actingActorId: INSPECTOR,
+        storageObjectKey: 'cert-4', contentType: 'image/png', byteSize: 10, photoKind: 'original_certificate',
       }),
     ).rejects.toBeInstanceOf(GroundInspectionPhotoLimitError);
   });
@@ -543,6 +570,29 @@ describe.skipIf(!hasDatabase)('ground inspection (PARIWAR_A scope)', () => {
       });
       await refuses(client, () => completeGroundInspection(client, completeInput(gid, randomUUID())), (e) => e instanceof GroundInspectionNoCurrentCertificateError);
       expect(await countEvents(tx, cid, 'claim.ground_inspection_completed')).toBe(0);
+    });
+
+    it('⭐ `-286` H1 — an original\'s photo is STAMPED with the current upload; after a replacement the earlier photo ⛔ never counts, a new one does', async () => {
+      const s = await scheduled();
+      const stamps = async () =>
+        (await s.tx.select().from(schema.claimGroundInspectionPhotos).where(eq(schema.claimGroundInspectionPhotos.groundInspectionId, s.gid)))
+          .map((p) => ({ kind: p.photoKind, stamp: p.certificateUploadId }));
+      await addGroundInspectionPhoto(s.client, {
+        pariwarId: PARIWAR_A, groundInspectionId: s.gid, actingActorId: INSPECTOR,
+        storageObjectKey: `k-${randomUUID()}`, contentType: 'image/jpeg', byteSize: 100, photoKind: 'site',
+      });
+      // The original's photo carries the certificate current when it was taken; a site photo carries ⛔ none.
+      expect(await stamps()).toEqual(expect.arrayContaining([{ kind: 'original_certificate', stamp: s.uploadId }, { kind: 'site', stamp: null }]));
+      // The family replaces the certificate; the inspector re-compares against the NEW one — the old photo ⛔ never counts.
+      const { uploadId: u2 } = await seedDeathCertificate(s.client, { pariwarId: PARIWAR_A, claimCaseId: s.cid });
+      await refuses(s.client, () => completeGroundInspection(s.client, completeInput(s.gid, u2)), missing('photo'));
+      // A photo of the NEW certificate's original ⇒ completes, compared against it.
+      await addGroundInspectionPhoto(s.client, {
+        pariwarId: PARIWAR_A, groundInspectionId: s.gid, actingActorId: INSPECTOR,
+        storageObjectKey: `k-${randomUUID()}`, contentType: 'image/jpeg', byteSize: 100, photoKind: 'original_certificate',
+      });
+      const done = await completeGroundInspection(s.client, completeInput(s.gid, u2.toUpperCase()));
+      expect(done.groundInspection.comparedCertificateUploadId).toBe(u2);
     });
 
     it('GI5 — ⛔ no date ⇒ `death_date_required`; after the day of completion (India time, the injected clock) ⇒ `death_date_in_future`; an unreal date / a bad time / a source off its stage ⇒ invalid', async () => {

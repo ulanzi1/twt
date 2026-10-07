@@ -460,6 +460,18 @@ describe('<R9CasePanel> — the approve vote and finalize (EA5; RD11)', () => {
     expect(alert).not.toHaveTextContent('server words');
   });
 
+  // ⭐ Story 6.26a GI11 (second code review 2026-10-07) — THROUGH the panel, ⛔ not the helper alone: removing the
+  // panel's `.ground_inspection_required` branch must turn this red.
+  it('GI11 — finalize\'s `ground_inspection_required` 409 reads as the trustee words (the claim waits), ⛔ never the server text', async () => {
+    getR9Panel.mockResolvedValue(r9Panel({ votes: [approveVote(true)], tally: approvedTally }));
+    finalizeR9.mockRejectedValue(new ApiError(409, 'r9_voting.ground_inspection_required', 'server words', { reason: 'no_completed_inspection' }));
+    wrap(<R9CasePanel pariwarId={PARIWAR} claimCaseId={CLAIM} />);
+    fireEvent.click(await screen.findByTestId('r9-finalize'));
+    const words = verifierConsoleEn.groundInspectionGate.trusteeApprovalGate.no_completed_inspection!;
+    const alert = await screen.findByText((_, el) => el?.getAttribute('role') === 'alert' && (el.textContent ?? '').includes(words));
+    expect(alert).not.toHaveTextContent('server words');
+  });
+
   it('finalize\'s `approve_votes_need_warning_reason` with `vote_ids` reads as the COUNTED words', async () => {
     getR9Panel.mockResolvedValue(r9Panel({ votes: [approveVote(true)], tally: approvedTally }));
     finalizeR9.mockRejectedValue(

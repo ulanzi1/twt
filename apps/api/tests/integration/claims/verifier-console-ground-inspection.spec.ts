@@ -163,6 +163,38 @@ describe.skipIf(!hasDatabase)('Story 6.26a — the console\'s ground-inspection 
     await refusedSource(pariwarId, deceased);
     const refile = await seedClaim(pariwarId, deceased, { inspection: 'skip' });
     rows.push(['a refile, inheriting, ⛔ own check', refile, { complete: false, waitReason: 'certificate_check_required' }]);
+    // ── The three rows the second code review (2026-10-07) found missing. ──
+    // Row 2 — own FULL assignments, ⛔ none completed: scheduled / refused / unavailable / superseded count for nothing.
+    const notCompleted = await seedClaim(pariwarId, await seedDeceased(pariwarId), { inspection: 'skip' });
+    for (const status of ['scheduled', 'photo_refused', 'evidence_unavailable', 'superseded']) {
+      await td.pool.query(
+        `INSERT INTO claim_ground_inspections (claim_case_id, pariwar_id, district, inspection_stage, inspection_site_type, inspector_actor_id, scheduled_at, status)
+         VALUES ($1, $2, $3, 'initial', 'family_residence', $4, now(), $5)`,
+        [notCompleted, pariwarId, DISTRICT, randomUUID(), status],
+      );
+    }
+    rows.push(['own full assignments, ⛔ none completed', notCompleted, { complete: false, waitReason: 'no_completed_inspection' }]);
+    // Row 5 — a full visit against U1, the certificate replaced, then a certificate check against U2 (current).
+    const visitThenCheck = await seedClaim(pariwarId, await seedDeceased(pariwarId));
+    await inScope(pariwarId, async (s) => {
+      await insertDeathCertificate(s, pariwarId, visitThenCheck);
+      await ensureGroundInspection(deps, s, pariwarId, visitThenCheck, { stage: 'certificate_check' });
+    });
+    rows.push(['a full visit against U1 + a certificate check against U2 (current)', visitThenCheck, { complete: true, waitReason: null }]);
+    // Row 9 — the only refused source's completed assignment is a CERTIFICATE CHECK ⇒ ⛔ nothing inherited (`-283` A2).
+    const checkOnlyDeceased = await seedDeceased(pariwarId);
+    const checkOnlySource = await seedClaim(pariwarId, checkOnlyDeceased, { skip: true });
+    await inScope(pariwarId, async (s) => {
+      await insertDeathCertificate(s, pariwarId, checkOnlySource);
+      await ensureGroundInspection(deps, s, pariwarId, checkOnlySource, { stage: 'certificate_check' });
+    });
+    await td.pool.query(
+      `INSERT INTO claim_verifier_decisions (claim_case_id, pariwar_id, outcome, reason_code, actor_id, actor_display)
+       VALUES ($1, $2, 'denied', 'post_death_nominee_change', $3, 'Anita (District Admin)')`,
+      [checkOnlySource, pariwarId, randomUUID()],
+    );
+    const refileOfCheck = await seedClaim(pariwarId, checkOnlyDeceased, { inspection: 'skip' });
+    rows.push(['a refile whose only refused source has a certificate check only', refileOfCheck, { complete: false, waitReason: 'no_completed_inspection' }]);
 
     for (const [label, cid, expected] of rows) {
       const { packet, gate } = await bothOf(pariwarId, cid);

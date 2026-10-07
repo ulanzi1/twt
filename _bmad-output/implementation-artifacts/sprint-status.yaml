@@ -1,3 +1,15 @@
+# last_updated: 2026-10-07c (⭐ **STORY 6.26a — SECOND-PASS CODE REVIEW (`bmad-code-review 6.26a`, full diff `3311fc97..c855d651`, three
+# layers in PARALLEL, read-only).** 2 decisions, 10 patches (all applied), 3 deferred, 17 dismissed. Decisions (BigDev, "1-1, 2-1"):
+# ⭐ **`2026-10-07-286` COMMITTED ALONE (`1f45c6f5`)** — GI4 amended: H1 an original's photo is STAMPED with the certificate current when it
+# was taken (migration `0148`, applied :5432 AND :5433) — a photo of a REPLACED certificate's original no longer satisfies `-281` Q2 A; H2
+# the cap of 20 keeps one reserved slot per current certificate (records the first review's "Resolved (BigDev)" fix). Patches: the
+# certificate read confined to a `scheduled` assignment in the window (GI4's own words; author choice (3) corrected); a second Compare
+# clears a verdict recorded against the old certificate; `0147`/`0148` constraints asserted directly (family 5); the AC1 proof counts before
+# its rollback; AC2 parity rows 2/5/9; cross-Pariwar 404 + override-holder 200 on the certificate read; GI11 driven through the R9 panel.
+# Each load-bearing change red-checked. ⭐ AC13 re-attested: `pnpm ci:local` :5433 run 2 **34 / 34 green** (run 1 red on a type error in a
+# new test + 3 load timeouts, green in isolation). Deferred: commit-step re-check of a vanished inherited visit (reachability unproven);
+# fixture future `completed_at` (owed to 6.26b Task 4/9); the NOT VALID CHECK vs the 6.7-columns erasure. ⛔ No row moves — `6-26-…`
+# stays `done`.)
 # last_updated: 2026-10-07b (⭐ **STORY 6.26a's 8 code-review patches themselves ADVERSARIALLY RE-REVIEWED** (a fresh, context-free pass —
 # diff only, no knowledge of the original reasoning). Found 5 real issues in the patches and fixed all 5: the `certificate_changed` /
 # `no_current_certificate` reset cleared the stale token but left `verdict`/`deathDate`/`deathTime` resubmittable unchanged against the NEW

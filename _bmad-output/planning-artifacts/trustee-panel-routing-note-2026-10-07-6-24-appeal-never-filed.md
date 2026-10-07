@@ -14,11 +14,23 @@
 
 ---
 
-> ## ⏳ AWAITING PANEL RULING
+> ## ✅ PANEL RULED — 2026-10-07 — recorded as `2026-10-07-291`
 >
-> ⛔ **Nothing is recorded here yet.** When the Panel rules, transcribe it into this block **and** into
-> `.decision-log.md` as a new decision id. ⭐ Everything below is then kept **unedited** as the question
-> **as it was put** ([[feedback_supersede_never_reinterpret]]).
+> **Ruled by Dhiraj Rahul + Kalpana Bharti, relayed by BigDev — verbatim:**
+> *"by DR and KB"* · *"Q1 - A"* · *"Q2 - B"* — and, asked which number A carries, BigDev: *"90 days"*.
+>
+> ⭐ Our reading **taken on both.** **Q1 A:** a refusal on suspicion of a post-death nominee change can be appealed within **90 days**
+> of the refusal; an appeal filed in time is heard as today and the true nominee's claim keeps waiting for it; after 90 days with ⛔ no
+> appeal, her claim may be approved; the refused person is told the refusal can be appealed. Every other refusal keeps ⛔ no time limit.
+> **Q2 B:** when an allowed appeal closes her claim, she is texted once — *"Your claim for [member] has been closed. Please call the
+> helpline."* (go-live with FQ7's counsel check).
+>
+> **What this ruling does NOT cover** (full list in `2026-10-07-291`): the Hindi wording and DLT templates; any extension of the 90 days
+> for good cause; a timely appeal that stays undecided for long.
+> ⚠ Recorded in `-291`, ⛔ not edited below: Q2's cost line (*"she never agreed to be contacted"*) holds only where she did ⛔ not file the
+> closed claim herself — ⛔ the answer does not turn on it.
+>
+> ⭐ Everything **below this block is kept UNEDITED** — it is the question as it was put.
 
 ---
 

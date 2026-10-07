@@ -751,6 +751,12 @@ When a claim is denied (R7/R8 failure, R9 special-case exclusion, R11 concealmen
 - The appeal flow is intentionally separate from R9 special-case voting (FR-43) — R9 is *pre-decision* trustee voting for ambiguous claims; FR-43A is *post-decision* appeal of a denial.
 - No formal time limit on the family's right to appeal — grief-aware. But each stage has a trust-side SLA so a stalled appeal doesn't sit indefinitely.
 
+> ⚠ **ANNOTATION 2026-10-07 (`2026-10-07-291` Q1 A) — the time limit is NARROWED for ONE refusal. ⭐ Annotated, ⛔ not rewritten.**
+> A claim refused because the nominee was changed on or after the death (`-239`, reason `post_death_nominee_change`) can be appealed
+> **within 90 days of the refusal**; after that it can ⛔ no longer be appealed, and the true nominee's separate claim may be approved
+> (`-262` FQ5). The refused person is told until when. ⭐ **Every other refusal keeps ⛔ no time limit** — the line above stands for it.
+> Built by Story 6.24 (RF14).
+
 **Why this exists:** Indian courts routinely set aside ouster-of-jurisdiction clauses, and TWT's *mandatory* ₹110 fee creates contract-law consideration. Internal appeal is the practical alternative to "no judicial challenge permitted" — gives members a real grievance channel so few cases reach court.
 
 **Out of Scope (v1):**

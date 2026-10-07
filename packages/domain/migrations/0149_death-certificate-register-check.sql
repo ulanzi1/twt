@@ -20,9 +20,17 @@
 -- Grants: `0122` gave `twt_app` SELECT, INSERT + a column UPDATE on the two supersession columns and the two
 -- ciphertexts. The RTBF scrub now also NULLs `accepted_date_index` (GI13 [b]) ⇒ a column UPDATE grant on it.
 -- `register_check` gets ⛔ no UPDATE grant and joins the append-only trigger's deny-list (immutable — a later check is
--- a NEW review). `accepted_date_index` may change ONLY to NULL (the scrub): unlike the ciphertexts it DECIDES a
--- warning (GI6), so the trigger refuses any other new value (code review round 2 — RD14's "⛔ not tightened" reversed).
+-- a NEW review). `accepted_date_index` may change ONLY to NULL: unlike the ciphertexts it DECIDES a warning (GI6), so
+-- the trigger refuses any NEW non-NULL value (code review round 2 — RD14's "⛔ not tightened" reversed). ⚠ The trigger
+-- cannot tell the RTBF scrub from any other writer: ANY UPDATE to NULL passes, and a NULL also lifts GI6 (`not_indexed`);
+-- GI6's other operand (`claim_ground_inspections.death_date_index`) has ⛔ no trigger — both are DEFERRED, ⛔ not closed
+-- (code review round 3; `deferred-work.md`).
 -- Hand-authored — ⛔ never regenerate.
+--
+-- ⚠ Amended post-review (code review of 6.26b, rounds 2–3, 2026-10-07, before merge — file hand-edited IN PLACE, ⛔ NOT
+-- regenerated): the trigger arm on `accepted_date_index` and these comments. The migrator skips by the journal `when`, so
+-- a database that applied the EARLIER 0149 keeps the old function: re-run the `CREATE OR REPLACE FUNCTION` below there
+-- (done for local :5432 and :5433 on 2026-10-07). A fresh database runs this file and needs nothing.
 
 -- ⚠ LOCKSTEP with `DEATH_CERTIFICATE_REGISTER_CHECKS` (schema/claim_death_certificate_reviews.ts) and `@twt/contracts`'
 -- `DeathCertificateRegisterCheck` z.enum — re-declared, not shared, in three places (the console packet and the admin derive

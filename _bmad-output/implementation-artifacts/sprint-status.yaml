@@ -1,3 +1,11 @@
+# last_updated: 2026-10-07n (⭐ **STORY 6.26b — CODE REVIEW ROUND 3 (narrow: the round-2 fixes only, the three layers SEQUENTIALLY): stays `done`;
+# ⛔ no BLOCKER / HIGH ⇒ the rounds stop.** Every round-2 "fixed" claim re-verified; the new `0149` arm refuses ⛔ no legitimate writer (every
+# UPDATE of the table walked). ⚠ CORRECTION to 2026-10-07m: *"only the scrub's NULL passes"* was WRONG — ANY writer's NULL passes (the
+# trigger cannot tell the scrub apart) and a NULL also lifts GI6; and *"the journal hash"* was the `drizzle.__drizzle_migrations.hash` ROW
+# (the journal holds none). DECISION (BigDev: "defer the class"): the forge class — the any-writer NULL, and GI6's other operand /
+# GI17's verdict on `claim_ground_inspections` (table-wide UPDATE grant, ⛔ no trigger, pre-existing) — ONE `deferred-work.md` item. 6
+# patches applied (the wording; `0149` records its in-place amendment; erratum pointers on Task 1 / Testing / AC9b; `UNION ALL`; an X→X
+# supersession leg; a GI18 title). `0149`'s hash row re-updated on :5432 + :5433, function body unchanged.)
 # last_updated: 2026-10-07m (⭐ **STORY 6.26b — CODE REVIEW ROUND 2 (`bmad-code-review 6.26b`, a fresh full re-review of `b665a19a..HEAD`,
 # the three layers in parallel per explicit instruction): stays `done`.** 1 decision-needed (resolved), 7 patch (all applied), 2 deferred,
 # 8 dismissed; ⛔ no HIGH. DECISION (BigDev: "tighten"): `accepted_date_index` was UPDATE-able to ANY value — unlike the ciphertexts it

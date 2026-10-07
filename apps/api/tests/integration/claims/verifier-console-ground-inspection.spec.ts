@@ -313,13 +313,13 @@ describe.skipIf(!hasDatabase)('Story 6.26a — the console\'s ground-inspection 
     const certificate = packet.documentReview.status === 'present' ? packet.documentReview.reviews.find((r) => r.documentType === 'death_certificate') : undefined;
     expect(certificate?.review?.registerCheck).toBe('could_not_check');
     // ⛔ No key and ⛔ no index on the wire — the section's shape is unchanged (the shape spec pins its exact keys).
-    expect(JSON.stringify(packet)).not.toMatch(/inspection_death_date_differs:|fixture-death-date-index|"keys"/);
-    // …asserted against the claims' REAL indexes (the fixture indexes through `deathDateBlindIndex`, so the literal
-    // above never occurs — code review round 2).
+    expect(JSON.stringify(packet)).not.toMatch(/inspection_death_date_differs:|"keys"/);
+    // ⛔ No index: asserted against the claims' REAL indexes — the fixture indexes through `deathDateBlindIndex`, so a
+    // literal never occurs (code review rounds 2–3).
     const indexes = (
       await td.pool.query<{ idx: string }>(
         `SELECT death_date_index AS idx FROM claim_ground_inspections WHERE claim_case_id = ANY($1::uuid[]) AND death_date_index IS NOT NULL
-         UNION SELECT accepted_date_index FROM claim_death_certificate_reviews WHERE claim_case_id = ANY($1::uuid[]) AND accepted_date_index IS NOT NULL`,
+         UNION ALL SELECT accepted_date_index FROM claim_death_certificate_reviews WHERE claim_case_id = ANY($1::uuid[]) AND accepted_date_index IS NOT NULL`,
         [[source, refile]],
       )
     ).rows.map((r) => r.idx);

@@ -26,9 +26,13 @@ rots every number). Cite decision ids + clauses, item headings and row keys. `fi
 LETTERS: `GI1`…`GI18` are Story 6.26's author decisions, defined ONCE in 6.26a's file and committed by ONE author-commit — ✅ `2026-10-06-282`.
 This story BUILDS the ones tagged **[b]** or **[a+b]** there — GI6, GI7, GI8, GI17, GI18 and the [b] halves of GI10, GI11, GI13, GI15, GI16.
 This file ⛔ never restates a different version of a GI: where a summary below and 6.26a's text disagree, 6.26a's text (and the decision
-entry) is the record. `-283` A3 amends GI6; `-284` E1 amends GI7 (6.26a's GI block carries each as an `⚠ AMENDED` line — the line is the build).
-`RD1`…`RD21` (v2.0) are FOUND facts from re-deriving against 6.26a's shipped build — ⛔ none is a decision; each says what it changes in the
-build. ⭐ ONE of them (RD1) carried an author choice — ✅ CONFIRMED by BigDev 2026-10-07 (*"Confirm RD1 = DB clock"*, v2.1).
+entry) is the record. `-283` A3 amends GI6; `-284` E1 amends GI7; `2026-10-07-288` K1 amends GI18 and K2 amends GI10 [b], K3 records the
+completion clock, K4 records GI6's key; `2026-10-07-289` (an erratum to `-288`) keys GI18 by UPLOAD (L1), makes a recorded register
+mismatch un-withdrawable (L2), makes an INHERITED visit's differing date a GI6 key (L3) and sets "nothing compared" without an accepted
+certificate (L4) (6.26a's GI block carries each as an `⚠ AMENDED` line — the line is the build).
+`RD1`…`RD21` (v2.0) and `RD22`…`RD31` (v2.2) are FOUND facts from re-deriving against 6.26a's shipped build, each with the build response it
+implies (author mechanics under §0 — ⛔ no GI moves, ⛔ no entry owed). ⭐ Where a fact needed a CHOICE, the choice is recorded: RD1's clock
+(BigDev 2026-10-07, *"Confirm RD1 = DB clock"*, v2.1; refined to `clock_timestamp()` by `-288` K3, v2.2).
 -->
 
 # Story 6.26b: The Death Facts Become Warnings — a Differing Date of Death, an Original That Does Not Match, a Register That Does Not Match — and the District Admin Records the Government-Register Check `[SURFACE]`
@@ -96,50 +100,66 @@ is ever refused because of one.**
 
 | Ruling | Key | Status |
 |---|---|---|
-| `-262` FQ8 B | the District Admin checks the certificate on the government's online death register (CRS) and records that they did | ⭐ Trustee-ratified |
+| `-262` FQ8 B | *"the District Admin checks the certificate number on the government's online death register (CRS) and records that they did"* | ⭐ Trustee-ratified |
 | `-262` FQ8 C | the inspector records the family's date and time of death; *"the system shows the District Admin any difference from the certificate"* | ⭐ Trustee-ratified |
 | `-264` FQ12 | approving while any warning shows — incl. *"a date of death that differs from the certificate (at the inspection …)"* — needs a reason and a note | ⭐ Trustee-ratified |
 | `-277` Q2 C / Q3 B | every approver gives a reason and a note; a late warning waits for the District Admin | ⭐ Trustee-ratified |
-| `2026-10-06-281` Q1 B | a "does not match" — the original vs the copy, or the register — is a **warning** under the one rule; ⛔ never a refusal | ⭐ Trustee-ratified |
-| `2026-10-06-285` A | FQ9 holds every approval, incl. where the District Admin never approved | ⭐ Trustee-ratified — ⛔ no effect here (⛔ no District Admin approval ⇒ ⛔ no late key; the reason rule applies at whichever approval comes) |
-| `-262` reading | the comparison is by **date**; the time is shown, compared with nothing; the register record is *matches / does not match / could not be checked online* | ⚠ OUR reading |
-| `-281` reading | a mismatch about a certificate the claim no longer relies on ⛔ no longer warns (it stays shown); `could_not_check` is ⛔ never a warning | ⚠ OUR reading |
+| `2026-10-06-281` Q1 B | a "does not match" — the original vs the copy, or the register — is a **warning** under the one rule; a late one waits for the District Admin; ⛔ never a refusal | ⭐ Trustee-ratified |
+| `2026-10-06-285` A | FQ9 holds every approval, incl. where the District Admin never approved | ⭐ Trustee-ratified — ⛔ no new mechanism. ⛔ No District Admin approval ⇒ ⛔ no late key. ⚠ Interaction: on its R9-first path an inspection completing mid-session makes every approve vote cast before it short (RD4, `-279` A2) — an AC8 leg |
+| `-262` reading | the comparison is by **date**; the time is shown, compared with nothing; the register record is *matches / does not match / could not be checked online*; *"'Could not be checked' is covered by `-263` FQ11"* | ⚠ OUR reading |
+| `-281` reading (recorded in `-281`, ⛔ not ratified; built by `-282` GI17/GI18, `-283` A3, `-288` K1) | a verdict against a REPLACED upload ⛔ no longer warns (it stays shown). ⚠ GI18 as first written also dropped a SUPERSEDED review's mismatch — and a review is superseded mostly by a re-review of the SAME certificate, where *"no longer relies on"* does ⛔ not hold ⇒ `-288` K1 keys GI18 on the current UPLOAD | ⚠ OUR reading (K1 / `-289` L1 remove the narrowing) |
+| `-281` Q1 B on `could_not_check` | it is ⛔ not a warning — Q1 B makes only *"does not match"* one (FOUND); whether an unsearchable register should ever be treated differently is open (`-281` *"does NOT cover"*) | FOUND + open |
 | `-264` reading | FQ13's check records the date of death on the fresh original against the District Admin's accepted date ⇒ a `certificate_check`'s printed date can raise the date kind | ⚠ OUR reading |
 | `2026-10-06-283` A3 | that printed date warns only while its original is the CURRENT upload (GI17's currency) | ⚠ Author-commit (BigDev) — amends GI6 |
 | `2026-10-06-284` E1 | the queue's late-warning arm also scans `state_trustee_approved` while R9-routed | ⚠ Author-commit (BigDev) — amends GI7 |
+| `2026-10-07-288` K1–K4 | K1 GI18 warns while its certificate is the current upload; K2 the console shows ANY date difference, inherited included (`-262` FQ8 C *"any difference"*); K3 `completed_at = clock_timestamp()`; K4 GI6's key stays per inspection | ⚠ Author-commit (BigDev) — amends GI18, GI10 [b] |
+| `2026-10-07-289` L1–L5 | erratum to `-288`: L1 GI18's key is `register_check_mismatch:<upload_id>`; L2 a recorded mismatch is answered, ⛔ never withdrawn; L3 an inherited visit's differing family date IS a GI6 key while the inheritance applies (`-264` FQ12); L4 ⛔ no accepted certificate ⇒ nothing compared; L5 six text corrections | ⚠ Author-commit (BigDev) — amends GI6, supersedes K1's key and K2's label |
 
 **⛔ Not covered by any ruling (stays open):** what an approver must weigh under a warning; which states' registers can be searched;
-whether an unsearchable register is ever treated differently.
+whether an unsearchable register is ever treated differently; whether the **family** is told that a claim is waiting for the District
+Admin (`-277` *"does NOT cover"* — this story creates new late waits; GI16 keeps ⛔ no member-facing string).
 
 ## ⭐ THE INVARIANTS
 1. **The system refuses nothing** — every kind is a condition on the FORM of an approval (a reason + a note) or a WAIT; ⛔ never a denial.
 2. **ONE rule, ONE derivation** — three kinds, three keys, three producers; the assertion is ⛔ never edited; both readers share the pure
    derivation.
 3. **⛔ No decrypt in the warning module** — indexes and plaintext codes only.
-4. **⛔ No staff surface learns a date it did not show before** — the warning carries a KIND (and, on the console, a per-assignment boolean),
-   ⛔ never a date (the console's GI10 [a] display of the family's date is 6.26a's, behind its own decrypt).
-5. **An unknown is ⛔ never shown as "no warning"** (6.18's fail-closed rule): a warnings read that fails makes the console's per-assignment
-   flags `null` ("could not be checked"), ⛔ never `false`.
+4. **⛔ No staff surface learns a date it did not show before** — the warning carries a KIND (and, on the console, per-assignment
+   comparison codes and booleans — RD18), ⛔ never a date and ⛔ never an index (the console's GI10 [a] display of the family's date is
+   6.26a's, behind its own decrypt).
+5. **An unknown is ⛔ never shown as "no warning"** (6.18's fail-closed rule): a warnings read that fails makes every per-assignment flag
+   that COULD carry a key, and every completed row's date comparison, `null` ("could not be checked just now"), ⛔ never `false`; a flag the
+   assignment section alone rules out (an un-completed row; `originalMismatchWarning` on an inherited row or a verdict ≠ `does_not_match`)
+   stays `false` (RD18).
 
 ## 📜 Policy meaning (AI-10-1)
 ⭐ This story ADDS conjuncts to an existing benefit-gating predicate (the warning rule). In the member's terms:
 - **P2 (GI8):** *"A District Admin cannot accept a death certificate without recording whether they checked it on the government's death
   register — and 'could not be checked online' is always an allowed answer, so this never stops a family's claim on its own."* — `-262` FQ8 B: consistent.
-- **P3 (GI6/GI7 + `-283` A3):** *"If the date of death the family gave the inspector — or the date printed on the original certificate the
+- **P3 (GI6/GI7 + `-283` A3 + `-289` L3):** *"If the date of death the family gave the inspector — on this claim, or on an earlier claim whose
+  visit this claim relies on — or the date printed on the original certificate the
   inspector held, while that original is still the certificate the claim relies on — differs from the certificate the Trust accepted, anyone
   approving the claim must pick a reason and write a note; and if it appears after the District Admin approved, the claim waits for the District Admin's
   reason."* — `-264` FQ12 + its reading + `-277` Q3 B: consistent.
-- **P4 (GI17/GI18):** *"If the inspector finds the original does not match the copy the claim relies on, or the government register does
-  not match the certificate the Trust accepted, anyone approving the claim must pick a reason and write a note; it never refuses the claim."* — `-281` Q1 B: consistent.
+- **P4 (GI17/GI18 + `-288` K1):** *"If the inspector finds the original does not match the copy the claim relies on, or the government
+  register did not match the certificate the claim relies on (even if a later check of that same certificate says otherwise), anyone
+  approving the claim must pick a reason and write a note; and if it appears after the District Admin approved, the claim waits for the
+  District Admin's reason; it never refuses the claim."* — `-281` Q1 B: consistent. ⚠ 6.26a's P4 (written before `-288`) omits the wait
+  clause and K1's parenthetical; `-288` Consequence 2 amends it — 6.26a carries an `⚠ AMENDED by -288` line.
+- **K2 (GI10 [b]) adds no predicate** — it changes what a staff screen SHOWS (any date difference, inherited included), ⛔ never who may approve.
 - Niyamavali §6.2 (document authenticity is verified): consistent; ⛔ no clause on any of these; ⛔ not ratified ([[feedback_niyamavali_rulebook_not_spec]]).
 - ⭐ **v2.0 re-checked:** RD1–RD21 change the build's mechanics, ⛔ never who may approve or when. RD4 (an R9 approve vote cast before a new
   key must be revised) is `-279` A2's existing rule meeting a new key — "anyone approving" already says it. P2–P4 read the same in 6.26a's file.
 
-## ⚖️ Decisions built here (defined in 6.26a's file; ✅ committed by `2026-10-06-282`)
+## ⚖️ Decisions built here (defined in 6.26a's file; ✅ committed by `2026-10-06-282`; amended by `-283`, `-284`, `-288`, `-289`)
 - **GI6** `inspection_death_date_differs:<ground_inspection_id>` — an OWN completed assignment's `death_date_index` IS DISTINCT FROM the
-  current accepted review's `accepted_date_index`, both non-null; ⛔ no accepted certificate ⇒ ⛔ no key; an inherited inspection ⇒ ⛔ no key.
+  current accepted review's `accepted_date_index`, both non-null; ⛔ no accepted certificate ⇒ ⛔ no key.
   ⚠ **`-283` A3:** a row whose `death_date_source = 'original_certificate'` counts only while its `compared_certificate_upload_id` is the
   claim's CURRENT upload; a `family_statement` row is ⛔ not filtered.
+  ⚠ **AMENDED by `-289` L3** (supersedes GI6's *"an inherited inspection produces ⛔ no key"*): a completed row of the INHERITED source
+  (`inheritedGroundInspectionSourceSql`) raises the key too — counted ONLY while the claim has ⛔ no own completed FULL assignment (the
+  inheritance's own condition, and the console's). An inherited `original_certificate` row was compared against the OTHER claim's upload ⇒
+  ⛔ never current ⇒ ⛔ no key (A3); an inherited `family_statement` row is compared.
 - **GI7** the date kind ENTERS the wait; 6.23b's queue gains the completed-after-approval disjunct (RD2: ONE hoisted fragment, used by the
   column and the WHERE). ⚠ **`-284` E1:** the scan ALSO admits `state_trustee_approved` for the LATE-WARNING arm only, while the claim
   carries a live `routed_to_r9` routing row (6.26a's leaf, through `liveRoutedToR9Exists()` — ⛔ never a new copy); every other arm keeps
@@ -148,13 +168,27 @@ whether an unsearchable register is ever treated differently.
   conjunct (the certificate conjunct already requires a current accepted review); ⛔ no certificate number stored.
 - **GI17** `original_certificate_mismatch:<ground_inspection_id>` — an OWN completed assignment, verdict `does_not_match`, compared against the
   CURRENT upload. Enters the wait.
-- **GI18** `register_check_mismatch:<review_id>` — the CURRENT accepted review's `register_check = 'does_not_match'`. Enters the wait.
-- **GI10 [b]** the console shows *"differs from the certificate"*, the two mismatch warnings, and the register check (document section +
-  history). **GI11 [b]** the three kinds' words wherever kinds render. **GI13 [b]** erasure sets the review's `accepted_date_index` NULL.
+- **GI18** ⚠ **AMENDED by `-288` K1, its key by `-289` L1:** ONE key `register_check_mismatch:<upload_id>` for the claim's CURRENT upload,
+  present while ANY `accepted` review of that upload (live OR superseded) recorded `register_check = 'does_not_match'`. Re-stating the mismatch
+  is the SAME key (still covered); a later `matches` / `could_not_check` re-review does ⛔ not erase it; a first `does_not_match` after the
+  District Admin approved is a new key ⇒ late; a replaced upload stops it. `could_not_check` is ⛔ not a warning. Enters the wait.
+  ⚠ **`-289` L2:** a mistaken mismatch is ANSWERED by each approver's reason and note — ⛔ never withdrawn (RD29).
+- **GI10 [b]** the console shows the two mismatch warnings and the register check (document section + history). ⚠ **AMENDED by `-288`
+  K2:** each assignment's date line shows *"differs from the certificate"* wherever its `death_date_index` and the current accepted review's
+  `accepted_date_index` both exist and differ — own OR inherited, by the SAME pure comparison GI6 uses; a row with GI6's key is a warning
+  (an inherited one labelled *"given on an earlier claim"* — provenance only, `-289` L3); a printed date from a replaced original is ⛔ not
+  compared; ⛔ no current accepted certificate ⇒ nothing compared (`-289` L4); *"could not be compared with the certificate"* when the
+  current accepted review has ⛔ no index (pre-6.26b — `'not_indexed'`), *"could not be checked just now"* when a read failed (L4's fixed
+  point: "just now" is said ONLY of a failed read).
+  **GI11 [b]** the three kinds' words wherever kinds render. **GI13 [b]** erasure sets the review's `accepted_date_index` NULL.
   **GI15 [b]** the certificate fixtures pass `register_check: 'matches'` + the index; a default fixture raises ⛔ no new warning.
-  **GI16** ⛔ no new permission key, event, rule code or member-facing string.
+  **GI16** ⛔ no new permission key, event, payload field, rule code or member-facing string (`claim.death_certificate_reviewed`'s explicit
+  payload, `death-certificate-review-persist.ts:215-225`, gains ⛔ no `register_check` — only the AUDIT does, RD17).
+- **`-288` K3** the completion stores `completed_at = clock_timestamp()` (RD1). **`-288` K4** GI6's key stays per inspection — a re-review
+  after the District Admin's approval that moves the accepted date to ANOTHER differing date keeps the key covered (⛔ no late wait, ⛔ no
+  queue listing for that move); every later approver still gives a reason. Recorded, ⛔ not a defect to "fix".
 
-## ⭐ v2.0 — WHAT RE-DERIVING AGAINST 6.26a's SHIPPED BUILD CHANGED (RD1–RD21; FOUND, ⛔ not decided)
+## ⭐ v2.0 / v2.2 — WHAT RE-DERIVING AGAINST 6.26a's SHIPPED BUILD CHANGED (RD1–RD31; FOUND, ⛔ not decided)
 
 v1.4 was traced at `3311fc97`, before 6.26a existed; 6.26a then went through four review rounds (`-286`, `-287`). Each item below is a fact in
 the code at `b665a19a` and what it changes here. ⛔ None moves a GI; each is threaded into the ACs, Tasks and Traps below.
@@ -165,28 +199,44 @@ the code at `b665a19a` and what it changes here. ⛔ None moves a GI; each is th
   — 6.26a's first code review, patch #2, pinned at `packages/domain/tests/integration/claim/ground-inspection.spec.ts:640-642`). Both fixtures
   pass `max(Date.now(), date 12:00 IST)` (domain `fixtureReviewNow`, `_helpers.ts:922-924`; API inline, `_nominee-name-check-fixture.ts:129`,
   `:196`) with a default date of TOMORROW (IST) ⇒ `completed_at` is always in the future. And GI7's arm compares it with the **verifier
-  approval's** `decided_at` (`claim_verifier_decisions v`), ⛔ not the review's (the `deferred-work.md` item *"The fixture's completion clock can
-  be in the FUTURE"* names the review) — so *"seed the completion before the review"* would ⛔ not fix it; in a domain BEGIN/ROLLBACK test
-  every DB `now()` is the transaction start, so even a PAST date stores a JS clock later than any approval in the same test.
-  ⭐ **AUTHOR CHOICE — ✅ CONFIRMED by BigDev 2026-10-07 (*"Confirm RD1 = DB clock"*):** the completion writer stores the DB clock (`completedAt: sql\`now()\``) and keeps
-  `input.now` for the "day of completion" validation ONLY — exactly the review writer's posture (`decided_at` is the DB default; its injected
-  `now` serves the D4 check alone, `death-certificate-review-persist.ts:167`). Production is unaffected (the route passes ⛔ no `now`). This
-  REVERSES 6.26a's review patch #2 (*"the two should share one time source"*) — record the reversal and its reason in this file's Change Log and
-  in 6.26a's review-findings section as an appended note (⛔ never an edit of the finding), and amend the pin to assert `completedAt` is ⛔ not
-  the injected clock. (The alternative — a fixture-only fix — was ⛔ not clean: the date check needs `now` on or after a TOMORROW date.)
-  It lands BEFORE the GI7 disjunct (Task 4.0).
-  ⚠⚠ **The consequence for every ORDERING test (BigDev, v2.1):** with the DB clock, every `now()` inside ONE transaction is that transaction's
-  START ⇒ inside a domain BEGIN/ROLLBACK test an approval and a completion TIE (`completed_at = v.decided_at`; GI7's strict `>` is false)
-  whatever order the statements run in. A single-transaction test can therefore ⛔ never prove "completed after approval" ⛔ nor "completed
-  before approval" — it would pass with the disjunct deleted, or with `>` written `>=`. ⇒ every test that asserts an ORDER between an
-  approval and a completion runs the two in SEPARATE COMMITTED transactions (Task 4.0, Trap 10, Testing).
+  approval's** `decided_at` (`claim_verifier_decisions v`). The `deferred-work.md` item *"The fixture's completion clock can be in the FUTURE"*
+  has the right FORMULA (*"`completed_at > v.decided_at`"*) but wrong prose and a wrong proposed fix (*"seed the completion before the
+  review"* would ⛔ not fix it — the comparator is the approval, ⛔ not the review).
+  ⭐ **AUTHOR CHOICE — ✅ CONFIRMED by BigDev 2026-10-07 (*"Confirm RD1 = DB clock"*), refined by `-288` K3 (*"clock_timestamp()"*):** the
+  completion writer stores `completedAt: sql\`clock_timestamp()\`` and keeps `input.now` for the "day of completion" validation ONLY. This
+  RESTORES `-283` A6's *"6.21a D4's own shape"* (validation-only `now`, as the review writer: `decided_at` is the DB default; its injected `now`
+  serves the D4 check alone, `death-certificate-review-persist.ts:167`) — 6.26a's first review patch #2 (*"the two should share one time
+  source"*) had departed from A6 without an entry. Production is unaffected (the route passes ⛔ no `now`). Record the reversal and its reason
+  in this file's Change Log and as an appended note in 6.26a's *"Review Findings — bmad-code-review 2026-10-07 (chunked: …)"* section,
+  `packages/domain` chunk, citing `-283` A6 and `-288` K3 (⛔ never an edit of the finding). It lands BEFORE the GI7 disjunct (Task 4.0).
+  ⭐ **Why `clock_timestamp()`, ⛔ not `now()` (`-288` K3):** `now()` is the transaction START. A completion transaction that began before an
+  approval's but took the claim lock after it (`lockActiveAssignment` → `lockClaimInWindow`, `ground-inspection-persist.ts:924-925`) would
+  store `completed_at < v.decided_at` ⇒ never a queue candidate, while its key is late (absent from the approval row's keys) ⇒ the claim
+  waits and the District Admin is ⛔ never told — permanently. `clock_timestamp()` is read at the UPDATE, after the lock ⇒ later than any
+  approval that committed first. (The reverse race is harmless: an approval that locks after a committed completion reads its key and
+  covers it ⇒ a candidate with ⛔ no uncovered key, dropped by `qualifyingRows`.) ⚠ The determination arm (`nd.decided_at > v.decided_at`,
+  both transaction-start `now()`) has the same race — ⛔ not changed here; a `deferred-work.md` item (Task 4.2).
+  ⚠⚠ **The ordering tests (BigDev, v2.1):** every test that asserts an ORDER between an approval and a completion runs the two in
+  SEPARATE COMMITTED transactions (Task 4.0, Trap 10, Testing). `clock_timestamp()` would also order two statements inside ONE
+  transaction, but the approval's `decided_at` is still transaction-start `now()` ⇒ inside one BEGIN/ROLLBACK the completion is always
+  "after" whatever order the statements run in, and the test proves nothing. (The repo's other single-transaction ordering technique —
+  `backdateApproval`, `approval-warnings-every-approver.spec.ts:295-308`, a superuser UPDATE of `decided_at` — orders by forging a timestamp,
+  ⛔ not by running the writers in order; it stays valid for the determination arm, ⛔ never as proof of GI7's ordering.) ⚠ Side effect:
+  after K3 every `backdateApproval` claim's fixture inspection is also a gi-disjunct candidate (`completed_at` > the back-dated approval) —
+  harmless, those claims are determination-arm candidates already.
 - **RD2 — the queue's WHERE is Drizzle, and the late arm is an INNER JOIN.** `candidateBatch` is `.where(and(eq(claims.pariwarId, …),
   inArray(claims.currentState, [...CORRECTABLE_SCAN_STATES]), sql\`( EXISTS(return) OR EXISTS(check) OR EXISTS(late) )\`, <keyset>))`
   (`correction-queue-read.ts:176-216`) — ⛔ not one raw WHERE. ⇒ (a) hoist the late arm into ONE local `const lateArm = sql\`EXISTS (…)\``
   used by the `lateWarningCandidate` column AND both WHERE uses (Trap 3 becomes "one fragment" — the two copies existed so the column and the
   WHERE agree, which one fragment guarantees); (b) rewrite it as `EXISTS (SELECT 1 FROM claim_verifier_decisions v WHERE <v live approved,
   this claim> AND (EXISTS (nd … nd.decided_at > v.decided_at) OR EXISTS (SELECT 1 FROM claim_ground_inspections gi WHERE gi.pariwar_id =
-  v.pariwar_id AND gi.claim_case_id = v.claim_case_id AND gi.status = 'completed' AND gi.completed_at > v.decided_at)))`; (c) replace the
+  v.pariwar_id AND gi.claim_case_id = v.claim_case_id AND gi.status = 'completed' AND gi.completed_at > v.decided_at) OR (NOT EXISTS
+  (SELECT 1 FROM claim_ground_inspections own_gi WHERE own_gi.pariwar_id = v.pariwar_id AND own_gi.claim_case_id = v.claim_case_id AND
+  own_gi.status = 'completed' AND own_gi.inspection_stage <> 'certificate_check') AND ${inheritedGroundInspectionSourceSql(sql\`v.pariwar_id\`,
+  sql\`v.claim_case_id\`)} IS NOT NULL)))` — ⭐ the THIRD disjunct is `-290` M2: an inherited key can turn late through the SOURCE claim
+  (reversed on appeal and re-inspected, or a changed source) with ⛔ no row of THIS claim completing after the approval ⇒ every approved
+  claim relying on an inherited visit is a CANDIDATE; `qualifyingRows`' exact key check drops it when nothing is uncovered (the bulk reader
+  carries the inherited rows — RD6); (c) replace the
   `inArray` conjunct and the arms fragment with `or(and(inArray(…CORRECTABLE…), sql\`(<three arms>)\`), sql\`("claims"."current_state" =
   'state_trustee_approved' AND ${liveRoutedToR9Exists()} AND ${lateArm})\`)` — `eq(pariwarId)` and the keyset stay outer conjuncts.
 - **RD3 — `liveRoutedToR9Exists(claimRef: SQL = sql.raw('"claims"'))`** takes SQL, ⛔ not the Drizzle table: v1.4's
@@ -204,16 +254,27 @@ the code at `b665a19a` and what it changes here. ⛔ None moves a GI; each is th
   `z.string()` (`nominee-name-check.ts:384`); `CorrectionQueueRoute.tsx:181` renders it, `:255` offers a late-only row "open the claim" alone.
 
 **The warning module**
-- **RD6 — the per-assignment select needs `death_date_source` too** (`-283` A3 keys on it), and `status = 'completed'` own rows only.
-  `RawWarningsRow` gains an `inspections` array of `(ground_inspection_id, death_date_index, death_date_source, original_certificate_verdict,
-  compared_certificate_upload_id)`, the `current_upload_id`, and the current review's `accepted_date_index` + `register_check`.
+- **RD6 — the per-assignment select needs `death_date_source` too** (`-283` A3 keys on it), and `status = 'completed'` rows.
+  `RawWarningsRow` gains an `inspections` array of `(ground_inspection_id, inherited, death_date_index, death_date_source,
+  original_certificate_verdict, compared_certificate_upload_id)`, the `current_upload_id`, whether a current accepted review EXISTS and its
+  `accepted_date_index`, and ⭐ (`-288` K1 / `-289` L1) `register_mismatch_present` — a boolean: EXISTS an `accepted` review of the claim
+  (live OR superseded) with `register_check = 'does_not_match'` AND `upload_id = current_upload_id`. ⭐ (`-288` K2 / `-289` L3) The
+  `inspections` array carries the OWN completed rows AND — ONLY when the claim has ⛔ no own completed FULL assignment (`status =
+  'completed' AND inspection_stage <> 'certificate_check'`, the console's `ownVisited`, `claims.verifier-console.handlers.ts:757-759`) — the
+  inherited source's completed rows of EVERY stage (`inherited = true`; the console's list, `:766-768`, has ⛔ no stage filter — `-283` A2's
+  stage conjunct lives only INSIDE the fragment, choosing the SOURCE, `nominee-refusal-read.ts:122`). The source comes through the EXISTING
+  fragment `inheritedGroundInspectionSourceSql(p, c)` (`claim/nominee-refusal-read.ts:99`, already used by `ground-inspection-approval.ts:99`;
+  it imports only drizzle / `db` types / ids / pagination ⇒ a safe leaf — add it to the module's safe-leaves comment and keep the transitive
+  import scan green). Inherited rows feed GI6's key (`-289` L3) and the console's date comparison; GI17 makes ⛔ no key from them (their
+  compared upload is the other claim's). Both readers select them — the keys stay in bulk / single parity.
 - **RD7 — reuse `currentDeathCertificateUploadIdSql(pariwarIdSql, claimCaseIdSql)`** (`death-certificate-approval.ts:86-98`; inner aliases
   `cur_cd`/`cur_u`) for `current_upload_id` — ⛔ never a third copy of the current-upload JOIN (two pre-exist in this module: the single
   reader's `cur` CTE `:226-241` and the bulk LATERAL `:414-432` — left as they are). `death-certificate-approval.ts` is already on the
   module's "safe leaves" list (`:44-46`); re-run the transitive import-scan test (`approval-warnings.test.ts:344-349`). The existing `cur`
   row IS the current accepted review (`superseded_at IS NULL AND verdict = 'accepted' AND upload_id = current`, ordered `decided_at DESC,
   review_id DESC LIMIT 1`, `:280` / `:431`; at most one live review by a partial unique index) — today it selects only `review_id, decided_at`;
-  it gains `accepted_date_index, register_check` (⛔ no new review read).
+  it gains `accepted_date_index` (⛔ no new review read). GI18's input is `register_mismatch_present`, an EXISTS in the SAME statement (⛔ not
+  the `cur` row's `register_check` — that would drop a superseded same-upload mismatch).
 - **RD8 — the timeline's narrowing reaches the DOMAIN and the API.** `classifyNomineeVersion` (`approval-warnings.ts:122-135`) returns
   `ApprovalWarningKind[]` and `claims.nominee-declaration.handlers.ts:289-333` passes it to `warnings:` ⇒ narrowing only the contract
   (`nominee-declaration.ts:56`) breaks the API typecheck. ⇒ export `NOMINEE_VERSION_WARNING_KINDS = ['post_death_version',
@@ -223,15 +284,30 @@ the code at `b665a19a` and what it changes here. ⛔ None moves a GI; each is th
 - **RD9 — the derivation is private.** `deriveClaimApprovalWarnings` (`:518`) is ⛔ not exported; today's parity is live only
   (`approval-warnings-every-approver.spec.ts:443-466`, bulk vs single). ⇒ put the three kinds' rule in ONE exported pure helper
   (`deriveDeathFactWarningKeys`) that the private derivation calls; the AC8 unit table targets it; the live parity test gains rows carrying
-  each new kind.
+  each new kind. ⭐ The same module exports the ONE date comparison (`deathDateComparison(row, currentReview, currentUploadId)` →
+  `'differs' | 'same' | 'not_compared' | 'not_indexed'`) that BOTH `deriveDeathFactWarningKeys` (GI6) and the console's per-assignment line (K2) use —
+  ⛔ never a second comparison. Its ORDER (`-289` L4): (1) `'not_compared'` when the row has ⛔ no `death_date_index`, or is an
+  `original_certificate` row whose compared upload is ⛔ not the current upload; (2) `'not_compared'` when the claim has ⛔ no current
+  accepted review; (3) `'not_indexed'` when the current accepted review has ⛔ no `accepted_date_index` (pre-6.26b — dev data only, Trap 5);
+  (4) `'differs'` / `'same'`. The pure function ⛔ never returns `null`; `null` is the CONSOLE's word for a failed read (RD18). ⚠ The three new kinds are derived OUTSIDE the `if (postDeath === 'evaluated')` block (`:529-534`) — their
+  inputs (the current review, the inspections) are exact whatever the determination's state; `approval-warnings.spec.ts:414-418` depends on it.
 
 **The review writer, the migration, erasure**
 - **RD10 — "nominee-change" in ~15 staff strings**, ⛔ not only the heading: admin `claim-verification/i18n-en.ts` `:135` (heading), `:154`,
   `:160` (`unavailable`), `:157` (revise blocked), `:181-182` (`warningReasonRequired` / `…Ungrounded`), `:194-198` (R9 votes), `:333-339`
   (the correction queue's late lines — which GI7 now fills with date and inspection keys); `approval-warning-reasons/i18n-en.ts:16`, `:18` (the
   Super Admin's reason page — its reasons now serve every kind); API `later-approval-warnings.ts:46`, `:54`, `:66` and
-  `claims.verification-decision.handlers.ts:59`, `:61`. ⇒ reword each kind-neutral ("warning(s) on this claim"). Every one is staff-facing ⇒
-  GI16's *"⛔ no member-facing string"* holds; `grep -rn -i "nominee-change\|nominee change" apps/admin/src apps/api/src` is the completeness check.
+  `claims.verification-decision.handlers.ts:59`, `:61`. ⇒ reword EXACTLY these kind-neutral ("warning(s) on this claim"). Every one is
+  staff-facing ⇒ GI16's *"⛔ no member-facing string"* holds. ⚠ ⛔ No blanket reword: `grep -rn -i "nominee-change\|nominee change"
+  apps/admin/src apps/api/src` returns 51 hits at `b665a19a`, and afterwards it must still show the ones that are GENUINELY about a nominee
+  change — the `-239` refusal list and its heading (`i18n-en.ts:580`, *"Claims refused on suspicion of a nominee change"*),
+  `ConvergenceDecisionStrip.tsx:223`, `NomineeRefusalsRoute.tsx:3`, the AR-24 step-up text (`nominee.handlers.ts:34`, `claims.routes.ts:181`),
+  log lines and code comments (optional). ⛔ Never reword `kindLine.recent_nominee_change` (`:138`) or the timeline's
+  `nomineeDeclaration.warning.*` (`:399-410`). Optional, ⛔ not staff-visible: the error detail at `verifier-decision-persist.ts:634` and five
+  warn-log lines (`verifier-console.handlers.ts:513`, `correction-escalation`, `correction-closure`, `r9-voting`, `cycle-freeze` handlers).
+  ⚠ Tests: `apps/admin/tests/correction-queue.test.tsx:678` (`/^2 nominee-change warnings/`) goes red — amend it to the new words; `:668`
+  (`not.toHaveTextContent(/\b0 nominee-change/)`) would pass VACUOUSLY after the reword — re-target it to the new wording (e.g. `/\b0 warnings/`),
+  ⛔ never left vacuous. ⛔ No other test asserts an RD10 string.
 - **RD11 — the review's 409s need ⛔ no API mapping, but the admin words are ⛔ not forced.** `translateReview`
   (`claims.death-certificate.handlers.ts:99-115`) maps EVERY reason to 409 `death_certificate_review.${err.reason}` (only `not_found` → 404) and
   `auditReason` (`:120`) returns `err.reason` ⇒ widening `DeathCertificateReviewRefusedError`'s union (`claim/errors.ts:584-604`) is enough.
@@ -244,7 +320,7 @@ the code at `b665a19a` and what it changes here. ⛔ None moves a GI; each is th
   `fixtureDeathDateIndex(date)` (`_helpers.ts:1026-1028`) — the same function 6.26a's inspection fixture uses, so the two indexes agree.
 - **RD13 — the wire is `.strict()`.** `DeathCertificateReviewRequest` (`packages/contracts/src/claims/death-certificate.ts:31-45`) is strict
   (*"loose"* means ⛔ no verdict⇔field `superRefine`, so each refusal reaches its own audited 409) ⇒ `register_check` is
-  `.optional()` there. The history item `DeathCertificateHistoryReview` (`:64-79`, strict) is served by `getHistory` (handler `:253-341`; its
+  `.optional()` there. The history item `DeathCertificateHistoryReview` (`:62-76`, strict) is served by `getHistory` (handler `:253-341`; its
   explicit object `:290-313` needs the field — the domain read `.select()`s full rows) and rendered by `DeathCertificateHistory`
   (`DeathCertificateReviewControl.tsx:290-358`, review line `:328-340`). The admin submit spreads each field explicitly
   (`VerifierConsoleRoute.tsx:419-431`). ⛔ No contracts test pins these review shapes.
@@ -253,13 +329,32 @@ the code at `b665a19a` and what it changes here. ⛔ None moves a GI; each is th
   coherence CHECK (*a `rejected` review carries ⛔ neither column*) holds on EVERY existing row (both columns are new, NULL) ⇒ a plain
   VALIDATED CHECK (6.26a author choice 2's precedent), ⛔ not `NOT VALID` — Trap 9's reasoning still decides what is ⛔ not a CHECK. The
   trigger function `claim_death_certificate_reviews_reject_mutation` (`0122_death-certificate-clear-date-rule.sql:159-187`) is a deny-list ⇒
-  `CREATE OR REPLACE FUNCTION` restating the whole body + `register_check` (the triggers themselves stay). GRANTs at `0122:143-145` confirmed;
-  ⛔ no later migration alters the table (`0137:33` only references it). `0149` is free (journal ends at idx 148, `0148_ground-inspection-photo-certificate-stamp`).
+  `CREATE OR REPLACE FUNCTION` restating the whole body + `register_check` (the triggers themselves stay). GRANTs at `0122:138` (SELECT, INSERT)
+  and `:140` (the column UPDATE) — `:143-145` are the POLICIES; ⛔ no later migration alters the table (`0137:33` only references it). `0149`
+  is free (journal ends at idx 148, `0148_ground-inspection-photo-certificate-stamp`, `when: 1793504400000`) ⇒ idx 149's `when` =
+  `1793590800000` (+86400000, the convention) — ⚠ Drizzle's migrator runs an entry only if its `when` exceeds the last applied one; a copied
+  or lower `when` is SILENTLY skipped, and ⛔ nothing in `scripts/` checks the journal. ⚠ Constraint names ≤ 63 chars (Postgres truncates
+  silently; the RLS spec asserts each by exact name): `claim_death_certificate_reviews_register_check_check` (52) and
+  `claim_death_certificate_reviews_register_check_coherence_check` (62), the latter written null-safe as `"verdict" <> 'rejected' OR
+  ("register_check" IS NULL AND "accepted_date_index" IS NULL)`. ⚠ The trigger's deny-list (11 columns) leaves the two scrub targets
+  (`accepted_date_ciphertext`, `note_ciphertext`) free of ANY transition — only the column grant limits `twt_app`. `accepted_date_index`
+  follows that precedent (OUT of the list, granted UPDATE for the scrub); ⇒ a `twt_app` UPDATE could forge an index — the same exposure the
+  ciphertext columns carry today, ⛔ not tightened here. The `register_check` value set is declared in FOUR places (domain const, SQL CHECK,
+  contracts `z.enum`, the admin local type) — a LOCKSTEP comment at each, the `0122:44-45` pattern.
 - **RD15 — the index needs a writer guard too.** v1.4 named none. ⇒ an accept without a non-empty `acceptedDateIndex` ⇒ `invalid_date` (the
-  date and its index travel together); a reject with one ⇒ `date_on_reject`. ⭐ **Guard order:** the four existing shape guards
-  (`death-certificate-review-persist.ts:113-128` — `reason_on_accept`, `invalid_date`, `date_on_reject`, `missing_reason`) run FIRST, then
-  `register_check_required` / `register_check_not_allowed` — so every existing refusal keeps its code (the API refusal table builds its reject
-  rows from `acceptBody`, `apps/api/tests/integration/claims/death-certificate.spec.ts:238-247`).
+  date and its index travel together; the API computes the index from the same regex-checked `body.accepted_date`, so `blindIndex('')` is
+  unreachable); a reject with one ⇒ `date_on_reject`. ⭐ **Placement (pinned):** the index checks go INSIDE the existing guards — joined to
+  `invalid_date` (`:115`) and to `date_on_reject` (`:119`); then `register_check_required` / `register_check_not_allowed` AFTER `:128`. The
+  four existing shape guards (`death-certificate-review-persist.ts:113-128` — `reason_on_accept`, `invalid_date`, `date_on_reject`,
+  `missing_reason`; `missing_display` `:108` and `missing_note` `:112` before them) keep their order, so every existing refusal keeps its code
+  (the API refusal table builds its reject rows from `acceptBody`, `apps/api/tests/integration/claims/death-certificate.spec.ts:238-247`), and
+  "accept with neither field" / "reject with both" each have ONE defined code a test pins.
+  ⚠⚠ **The two new input fields are OPTIONAL and every new guard tests NULLISH** — `readonly registerCheck?: DeathCertificateRegisterCheck |
+  null; readonly acceptedDateIndex?: string | null;` and `== null` / `!= null`, ⛔ never `!== null`. The house style (`readonly acceptedDate:
+  string | null;` at `:65`, guarded `!== null` at `:119`) would either break every typed reject caller at typecheck (required `T | null`) or,
+  if made optional but guarded `!== null`, refuse EVERY reject that leaves them out at RUNTIME (`undefined !== null`) — including the callers
+  cast `as never`, which typecheck cannot see (jobs `claim-certificate-reminders-live.test.ts:188`, API `certificate-reminder.spec.ts:203`).
+  ⇒ find those by `grep`, ⛔ never by `tsc`.
 - **RD16 — erasure moved and adds ⛔ no statement.** The review scrub is `member/anonymize.ts:242-249` (⛔ no row filter — every review of the
   deceased); `acceptedDateIndex: null` joins its existing `.set` ⇒ the pins stay **22 statements / 19 tables** (`rtbf-anonymize.test.ts:191`,
   `:225`) and **21** with ⛔ no claims (`:256`). Live specs: `packages/domain/tests/integration/claim/death-certificate-rtbf.spec.ts:38` (raw
@@ -271,26 +366,74 @@ the code at `b665a19a` and what it changes here. ⛔ None moves a GI; each is th
 **The console and the fixtures**
 - **RD18 — the console has ⛔ no per-assignment warning source.** `approvalWarnings` carries `kinds` only (`verifier-console.ts:376`; the shape
   spec pins its exact keys, `verifier-console-shape.spec.ts:519-520`; the handler drops `w.keys`, `:494`), and the date flag can ⛔ not be derived
-  client-side (the console never carries the accepted date). ⇒ the handler STITCHES two per-item fields from `w.keys` after both sections are
-  assembled (`groundInspection` at `:313`, `approvalWarnings` at `:330`): `dateDiffersWarning` and `originalMismatchWarning`, each
-  `boolean | null` (`null` when the warnings read failed — invariant 5). ⛔ No new read (`VERIFIER_CONSOLE_MAX_READS` stays **20**,
-  `:177`, pinned `toBe(20)` at `verifier-console-ground-inspection.spec.ts:212`); ⛔ no key exposed on the wire. The register check reaches the
-  document section through `readDeathCertificateSnapshot`'s explicit SELECT (`death-certificate-approval.ts:121-128`) + `LiveDeathCertificateReview`
-  (`:46-53`) ⇒ `review.registerCheck` — ⛔ no new read. Fixtures that gain the strict fields: `packages/contracts/tests/claims-verifier-console.test.ts:177-195`,
-  `apps/admin/tests/verifier-console.test.tsx`, `apps/api/tests/integration/claims/verifier-console-ground-inspection.spec.ts`, the `review`
-  fixtures in `apps/admin/tests/death-certificate-review.test.tsx` and `verifier-console-route-name-check.test.tsx`.
+  client-side (the console never carries the accepted date). ⇒ the handler STITCHES three per-item fields after both sections are
+  assembled (`groundInspection` at `:313`, `approvalWarnings` at `:330`), on `GroundInspectionItem` (`packages/contracts/src/claims/verifier-console.ts:199-237`
+  — strict, camelCase, consumed only by the console handler and `SignalsPanel`):
+  · `dateComparison: 'differs' | 'same' | 'not_compared' | 'not_indexed' | null` (`-288` K2, `-289` L4) — from the warnings result's per-inspection
+    comparison (RD9's ONE `deathDateComparison`, its order), for every completed row the console shows, own AND inherited; an un-completed
+    row ⇒ `'not_compared'`; a completed row absent from the warnings result's map ⇒ `null` (the stitch matches by `ground_inspection_id`;
+    the console and warnings reads are separate READ COMMITTED statements, so a row can appear between them — an unknown, ⛔ never
+    "nothing"); on a FAILED read ⇒ `null` on every completed row.
+  · `dateDiffersWarning: boolean | null` and `originalMismatchWarning: boolean | null` — from the warnings KEYS. ⭐ `false` wherever the
+    ASSIGNMENT SECTION ALONE rules a key out (⛔ never judged from the warnings result): both flags on an un-completed row;
+    `originalMismatchWarning` on an inherited row (`-289` L3 — its compared upload is the other claim's) or where the verdict is ⛔ not
+    `does_not_match`. On a SUCCESSFUL read the rest come from the keys (`dateDiffersWarning` is then `false` wherever `dateComparison` ≠
+    `'differs'`). On a FAILED read every flag the section does ⛔ not rule out is `null`. (A flat "`null` for every row" would print "could
+    not be checked" on rows that can ⛔ never warn; a "`false` where `dateComparison` ≠ `'differs'`" judged on a failed read would turn every
+    unknown into "no warning" — invariant 5.)
+  ⭐ **How the keys reach the stitch:** `w` is local to the exported `assembleApprovalWarnings` (`:464-529`), which returns the strict
+  `ApprovalWarningsStatus` (⛔ no keys); `w.keys` exists (`ClaimApprovalWarnings.keys`, `approval-warnings.ts:163`). ⇒ an INTERNAL
+  `readApprovalWarningsSection` returns `{ section, keys: readonly string[] | null, inspectionComparisons: … | null }` (`null` on the catch
+  path); the exported `assembleApprovalWarnings` keeps its signature (returns `.section`) so `verifier-console.spec.ts:1142` (the exact read
+  count) and `:1179` (the call; its `toEqual` on the whole failure shape at `:1195`) stand UNCHANGED; `assembleVerifierConsole` stitches from the internal result.
+  The shape pin `verifier-console-shape.spec.ts:519-520` stays byte-identical — the proof ⛔ no key reaches the wire.
+  ⛔ No new read (`VERIFIER_CONSOLE_MAX_READS` stays **20**, `:177`, pinned `toBe(20)` at `verifier-console-ground-inspection.spec.ts:212`).
+  The register check reaches the document section (`VerifierReviewItem.review`, `verifier-console.ts:116-133`) through
+  `readDeathCertificateSnapshot`'s explicit SELECT (`death-certificate-approval.ts:121-128`) + `LiveDeathCertificateReview` (`:46-53`) + its
+  row mapping (`:148`) ⇒ `review.registerCheck` — a DOMAIN edit (Task 2), ⛔ no new read. Fixtures that gain the strict fields:
+  `packages/contracts/tests/claims-verifier-console.test.ts:177-195`, `apps/admin/tests/verifier-console.test.tsx`,
+  `apps/api/tests/integration/claims/verifier-console-ground-inspection.spec.ts`, the `review` fixtures in
+  `apps/admin/tests/death-certificate-review.test.tsx` and `verifier-console-route-name-check.test.tsx`, and the domain unit fixture
+  `packages/domain/tests/claim/death-certificate-family-status.test.ts:41` (`reviewOf` — a typed `LiveDeathCertificateReview`; domain tests
+  are typechecked).
 - **RD19 — the red-by-design list is far wider than v1.4's one spec.** The 6.23a/b warning specs BUILD their late keys by re-reviewing with
   another date after the default fixture ⇒ the fixture's `family_statement` row (⛔ not currency-filtered — A3) now differs ⇒ +1
   `inspection_death_date_differs` key, and the exact counts move:
   domain `approval-warnings.spec.ts` (`determine(ctx, istDaysAgo(…))` at `:400`, `:407`, `:438`, `:450`, `:466`, `:474`, `:489`, `:513`, `:526`;
   pins `:440-452`, `~:494`) · domain `approval-warnings-every-approver.spec.ts` (`redetermineAndRecheck` at `:293`, `:496`, `:520`, `:536`, `:723`,
   `:754`, `:782`, `:998`; `determine` at `:439`) · API `approval-warnings.spec.ts` (`redetermine` `:338`, `:391`; `uncoveredSinceApproval: 1` at
-  `:398`; the `:401` re-accept) · API `approval-warnings-every-approver.spec.ts` (`redetermine` `:342`, `:630`, `:830`; `kinds:
-  ['post_death_version'], uncovered_count: 1` at `:413`, `:416`, `:638`, `:640`, `:672`, `:840`, `:879`) · domain `death-certificate.spec.ts:448-466`
-  (v1.4's one). ⚠ `death-certificate.spec.ts:387` and `r9-voting.spec.ts:475` are ⛔ not red (the certificate conjunct answers first,
-  `nominee-name-check.ts:416`).
+  `:398`; the `:401` re-accept; kind pins `:342-343`, `:356`, `:360`, `:382`) · API `approval-warnings-every-approver.spec.ts` (`redetermine`
+  `:342`, `:630`, `:830`; `kinds: ['post_death_version'], uncovered_count: 1` at `:413`, `:416`, `:638`, `:640`, `:672`, `:840`, `:879`; kind
+  arrays `:404`, `:649`, `:860`) · domain `death-certificate.spec.ts:448-466` (v1.4's one) · domain `nominee-name-check.spec.ts:769-818`
+  (6.23b Trap 17 — `determine(-45)` after the fixture; `toMatchObject({ kinds: ['post_death_version'] })` at `:805-808` compares the ARRAY
+  exactly). ⚠ `death-certificate.spec.ts:387`, `r9-voting.spec.ts:475` and `approval-warnings.spec.ts:501` are ⛔ not red (the certificate
+  conjunct answers first, `nominee-name-check.ts:416`); `approval-warnings.spec.ts:409` stays `kinds: []` (the family date is tomorrow).
+  ⭐ **A SECOND mechanism — a literal index stand-in** on a claim whose accepted review now carries the fixture's (or the real) index ⇒ the
+  date "differs": domain `ground-inspection-approval.spec.ts` (`inspectNow`, `:207-229`, completes with `index: 'idx'` ⇒ AC3 (a) `:365-373`
+  and (b) `:375-387` throw `ApprovalWarningReasonRequiredError` on `vote(ctx)`; AC3 (c) `:389-436`'s finalize throws
+  `R9ApproveVotesNeedWarningReasonError`) — amend `inspectNow` to `fixtureDeathDateIndex(<the accepted date>)`; API
+  `verifier-console-shape.spec.ts:215-247` (`seedInspection` raw-inserts `'fixture-death-date-index'`; `adjudicate(…'approved')` at `:381`,
+  `:384` sends ⛔ no reason ⇒ throws) — amend the raw row to `deathDateBlindIndex(<accepted date>, p, deps.encryption)`.
+  ⚠⚠ **⛔ NOT amended by naming the key: `approval-warnings.spec.ts:414-418`** (`-279` A3 — *"a stale determination ⇒ `warnings_not_current`"*).
+  Its `rereviewOnly(ctx, istDaysAgo(10))` makes the family date differ ⇒ a date key ⇒ `reviseDecision` answers `warning_approval_final`
+  FIRST (`kinds.length > 0` is checked before `awaiting_determination`, `verifier-decision-persist.ts:629-642`) ⇒ naming the key would delete
+  A3's coverage. ⇒ rebuild it on a SAME-date re-review — a new review id makes the determination stale with ⛔ no date key — through a
+  DIRECT `recordDeathCertificateReview` call (`seedAcceptedDeathCertificate` returns early on a same-date ciphertext, `_helpers.ts:951-959`).
+  ⭐ **A THIRD, checked and EMPTY — `-288` K3 inside one BEGIN/ROLLBACK:** every claim approved through `adjudicateClaim` in a
+  single-transaction test becomes a candidate for the inspection arm (its completion's `clock_timestamp()` is later than the approval's
+  transaction-start `now()`, whatever the statement order). On the normal path it is dropped (⛔ no uncovered key); on the FAULT path it
+  lists — but the only domain fault-path spec (`approval-warnings-every-approver.spec.ts:986-1050`) already lists its two approved claims
+  (`late`, `second`), and `returned.cid` has ⛔ no verifier-decision row (`driveClaimTo` only projects events, `_helpers.ts:722-759`; the
+  late arm needs a live APPROVED `v` row) ⇒ ⛔ nothing red, ⛔ no `backdateCompletion` helper. API Trap 15 (`:886-905`): `lateWarnedWorld`
+  seeds its inspection BEFORE the approval request ⇒ ⛔ not a candidate. ⚠ v2.2 wrote that `:1000-1046` goes red and ordered a back-date —
+  false (struck in v2.3).
 - **RD20 — direct accept callers break when `registerCheck` becomes required** (Task 2), incl. **`apps/jobs`, which v1.4 never named**:
-  domain `death-certificate.spec.ts` (`accept()` helper `:111` → `:171`, `:213`, `:218`, `:237-298`), `death-certificate-concurrency.spec.ts:149-155`;
+  domain `death-certificate.spec.ts` (`accept()` helper `:111` → `:171`, `:213`, `:218`, `:237-298`; ⚠ `reject()` `:128-136` is BUILT FROM
+  `accept()` ⇒ once `accept()` carries `registerCheck: 'matches'` + an index, every valid `reject()` (`:269`, `:287`, `:298`, `:331`, `:577`,
+  `:610`) is refused — `date_on_reject` first (the index check joins `:119`), else `register_check_not_allowed` — `reject()` overrides `registerCheck: null, acceptedDateIndex: null`; and `accept()`
+  derives its index from the SAME date its ciphertext carries — `fixtureDeathDateIndex(over.acceptedDate ?? PAST)`, ⛔ never a static
+  `fixtureDeathDateIndex(PAST)`, since `seedGroundInspection` reads the family date back from the ciphertext, `fixtureAcceptedDateOf`,
+  `_helpers.ts:1031-1034`), `death-certificate-concurrency.spec.ts:149-155`;
   API `death-certificate.spec.ts`'s `acceptBody` (`:197-207` → every HTTP accept `:215`, `:266`, `:270`, `:281`, `:344`, `:353`); jobs
   `apps/jobs/tests/_claim-correction-seed.ts:164-167`, `claim-certificate-reminders-live.test.ts:527-528`,
   `claim-ocr-parity-death-certificate.test.ts:192-199` (its accept leg). The rejects (`certificate-reminder.spec.ts:203`, API
@@ -298,49 +441,127 @@ the code at `b665a19a` and what it changes here. ⛔ None moves a GI; each is th
   requires the new columns on accept). ⇒ run the **jobs** suite too.
 - **RD21 — the test helpers exist.** Domain `seedGroundInspection(client, p, c, { deathDate?, verdict?, stage?, force? })` (`_helpers.ts:1046`)
   already takes a date and a verdict; the API twin `ensureGroundInspection(deps, scopeTx, p, c, { force, verdict })`
-  (`_nominee-name-check-fixture.ts:142-198`) copies the accepted date (`:156-159`) ⇒ it gains a `deathDate?` option for the date kind. ⭐ Both
-  default fixtures seed the review FIRST and the inspection LAST (domain `_helpers.ts:1335` → `:1375`; API `:304` → `:312`/`:353`).
+  (`apps/api/tests/integration/_nominee-name-check-fixture.ts:142-198` — ⚠ under `integration/`, ⛔ not `claims/`) takes `{ force, stage,
+  verdict }` and copies the accepted date (`:156-159`) ⇒ it gains a `deathDate?` option for the date kind. ⚠ Without `force` it returns null
+  at `:153` once the default inspection is complete ⇒ every per-kind call is `{ force: true, deathDate }` / `{ force: true, verdict }`.
+  ⭐ Both default fixtures seed the review FIRST and the inspection LAST (domain `_helpers.ts:1336` → `:1375`; API `:304` → `:312`/`:353`).
+- **RD22 — GI18 has ⛔ no fixture path, and building it by re-review drags in the re-determination.** Neither certificate fixture takes a
+  register check, and both reuse an accepted review by comparing the DATE only (domain `_helpers.ts:958`, after the `opts.date === undefined`
+  early return at `:953`; API a decrypted-date compare at `:103`) ⇒ passing `does_not_match` to an already-accepted claim with the same date silently gets the reused `matches` review. A second
+  review stales the determination (`assertDeathCertificateAcceptedForApproval` → `determination_stale`, `death-certificate-approval.ts:424-425`)
+  ⇒ a test that re-reviews meets that 409 before the warning. ⇒ both certificate fixtures gain `registerCheck?` (default `'matches'`), threaded
+  through BOTH `seedNomineeNameCheck` copies' opts so a GI18 claim is accepted `does_not_match` BEFORE its determination, and the reuse path
+  (incl. the `opts.date === undefined` early return) compares `register_check` too — ⛔ never the date alone. K1's same-certificate leg (a `does_not_match` review superseded by a `matches`
+  re-review of the SAME upload ⇒ the key STAYS; and L1's — a second `does_not_match` re-review ⇒ the SAME key, still covered) re-determines after the re-review (the `death-certificate.spec.ts:448-466` dance).
+
+**v2.2 additions (the fresh-context validate of v2.1)**
+- **RD23 — a name-scanning source fence covers four of the files this story edits.** `packages/domain/tests/claim/nominee-name-no-comparison-fence.test.ts`
+  — `FENCED_FILES` (`:38-110`) includes `approval-warnings.ts`, `death-certificate-review-persist.ts`, `death-certificate-approval.ts`,
+  `correction-queue-read.ts`; the rule at `:136` forbids `toLowerCase()\s*===` / `toUpperCase()\s*===` / `trim()\s*=== '<x>'`; `:331-336` forbids
+  `decrypt`, `accepted_date_ciphertext` (and four more) in `approval-warnings.ts`; `:159` pins `FENCED_FILES.length` at `toBe(36)`. ⇒ compare
+  ids with plain `===` (PG returns lower-case uuids — [[project_branded_ids_lowercase]]), ⛔ never `.toLowerCase() ===`; ⛔ never
+  `registerCheck.trim() === …`; `deriveDeathFactWarningKeys` / `deathDateComparison` live IN `approval-warnings.ts` (a new module would
+  join `FENCED_FILES`, 36 → 37, in the same commit).
+- **RD24 — the kind-pin test's message carries a tripwire for row 6-27.** `approval-warnings.test.ts:56-61` reads *"a new kind enters 6.23b's
+  wait (`-277` Q3 B) — its producer row decides or routes that before extending this list"*; `-279` A6 + its Consequence 2 bind rows 6-26
+  AND 6-27. ⇒ the message KEEPS that sentence (6-27 still owes it) and ADDS *"GI6 / GI7 (`-282`) and GI17 / GI18 (`-281` Q1 B) discharged
+  it for these three"* — ⛔ never replaced ([[feedback_mechanization_split_commitment]]).
+- **RD25 — the leg-(a) / RD1 "not a candidate" assertion is INVISIBLE on the queue's normal path.** `qualifyingRows` drops a candidate with
+  ⛔ no uncovered key (`correction-queue-read.ts:354-358` — `if (!hasLiveUnresubmittedReturn && !sentBackByCheck && !lateWarningAwaitingReason)
+  continue;`) and a fixture inspection before approval yields ⛔ no key, or keys the approval row covered (`verifier-decision-persist.ts:478-490`) ⇒ the
+  claim is unlisted whether or not it is a candidate; a normal-path leg (a) stays green with the comparator reversed or K3 reverted.
+  ⇒ candidacy is asserted on the FAULT path (force the late-arm read to fail — `approval-warnings-every-approver.spec.ts:1022-1031`,
+  corrupting the UUID parameters of the statement containing `discarded_member_version_ids`; candidates then list with
+  `lateWarningAwaitingReason: true, lateWarningUncoveredCount: null`; the API twin's `withFault`, `:62-69`, its proxy `:39-49`). ⚠ **Non-vacuity:** in a fresh Pariwar with ⛔ no other candidate the late-arm
+  statement never runs and the fault never fires — seed a CONTROL candidate (e.g. a returned claim) and assert the fault fired (`told === 1`,
+  as `:1049` does).
+- **RD26 — "⛔ not listed once its routing row is superseded" is HOLLOW with real writers.** Only `finalizeR9Outcome` supersedes a routing
+  row (`r9-voting-persist.ts:714-726`); finalize-approve cannot pass the late wait (the gate runs first, `:657-667`); finalize-deny moves the
+  claim to `denied`, which `CORRECTABLE_SCAN_STATES` already excludes ⇒ that leg stays green with `liveRoutedToR9Exists()` deleted. ⇒ the
+  routing row is superseded by a direct superuser UPDATE (the `verifier-console-shape.spec.ts:276-286` `supersedeDecision` pattern), the claim
+  still in `state_trustee_approved`; red-check: deleting the `liveRoutedToR9Exists()` conjunct turns it red.
+- **RD27 — E1 widens an existing deferred gap.** The queue's coverage has ⛔ no actor exclusion (`correction-queue-read.ts:326-329`; the
+  `deferred-work.md` item *"A late key covered ONLY by a late reason whose recorder then approves is ⛔ not listed"*). Pariwar Admins hold
+  `claim.approve` (`roles.ts:348`) and may record the late reason (`claims.verification-decision.routes.ts:131-142`) ⇒ in R9 an approve voter's
+  own late reason hides the claim from the queue while finalize still waits for the District Admin — the `-280` scenario
+  (`approval-warnings.spec.ts:471-484`), now reachable for the new kinds. ⛔ Not fixed here (an actor-relative queue is the item's own
+  question) — appended to that item (Task 4.2).
+- **RD28 — the erasure item's trigger FIRES.** `deferred-work.md`'s *"6.7's own Tier-1 inspection columns are ⛔ not in the member erasure"*
+  ends *"⭐ Trigger: … or the next story that touches `anonymize.ts`"* — this story. Whose data those columns are is still counsel's
+  (the `-243` posture) ⇒ recorded as FIRED, ⛔ NOT ADDRESSED, ⛔ no widening (Task 11).
+- **RD29 — a register check is immutable, and a recorded mismatch is ANSWERED, ⛔ never withdrawn (`-289` L2).** `register_check` is
+  immutable (the trigger) ⇒ a District Admin who recorded `could_not_check` and later checks writes a NEW review, which stales the
+  determination and the name check (6.21a D8). ⛔ Never "fixed" with an UPDATE path. ⭐ A `does_not_match`, once recorded on the current
+  upload, stays a warning for that certificate whatever later reviews say (GI18 / L1) — a mistaken one is answered by each approver's reason
+  and note. ⚠ The only way it stops is a replaced upload, allowed only after a REJECT (`death-certificate-approval.ts:196`) — a loophole
+  recorded in `deferred-work.md` (Task 11), ⛔ not closed here. A re-review after approval lists the claim in the queue once the District
+  Admin RE-DETERMINES (the `nd.decided_at > v.decided_at` arm); until then the gate answers `determination_stale` (6.21a, unchanged).
+- **RD30 — the domain snapshot change is a domain task.** `death-certificate-approval.ts:121-128` (SELECT gains `r.register_check`), `:46-53`
+  (`LiveDeathCertificateReview` gains `registerCheck`), `:148` (the row mapping) — Task 2, ⛔ not Task 6.
+- **RD31 — admin pieces v2.1 left out:** the accept-object builder in `submit()` (`DeathCertificateReviewControl.tsx:133-137`); the
+  `incompleteAccept` words (`claim-verification/i18n-en.ts:733`, *"Enter the date of death and write a note…"*) must name the register check;
+  words for `register_check: null` on an ACCEPTED pre-6.26b review (*"register check not recorded"*) in the history line and the status line
+  (a rejected row shows nothing); `NomineeDeclarationPanel.tsx:121`'s `warningLine(kind: ApprovalWarningKind…)` takes the narrowed type too;
+  `DeathCertificateReviewStatus` is DEFINED at `DeathCertificateReviewControl.tsx:39-56` (rendered at `VerifierReviewPanel.tsx:114`); the
+  doc-blocks addressed to this story — `SignalsPanel.tsx:364` (*"(Story 6.26b turns it into a warning)"*) and contracts `verifier-console.ts:217` (*"(Story 6.26b turns a `does_not_match` into a warning)"*), `verifier-console-ground-inspection.spec.ts:264` (*"6.26b makes it a warning"*) — amended to the present tense where the files are touched.
 
 ## Acceptance Criteria
 
 ### AC0 — Governance and re-pin (Task 0)
-6.26a is `done` ✅; the author-commit (GI1–GI18), `-281`, `-283`, `-284` (and `-285`, `-286`, `-287`, which move ⛔ nothing here) are in
-`.decision-log.md` ✅; the baseline is re-pinned to `b665a19a` and every code claim re-derived ✅ (v2.0); work is on
-`story/6-26b-death-facts-warnings-and-register-check` ✅. RD1's author choice (the DB clock) ✅ confirmed by BigDev 2026-10-07.
-⛔ No code before.
+6.26a is `done` ✅; the author-commit (GI1–GI18), `-281`, `-283`, `-284`, `-288`, `-289`, `-290` (and `-285`, `-286`, `-287`, which add
+⛔ no mechanism here) are in `.decision-log.md` ✅ (`-288` `0152ead9`, `-289` `51c8eb4e`, `-290` `94a0fad2` — each committed alone); the baseline is re-pinned to `b665a19a` and every code claim
+re-derived ✅ (v2.0, re-verified v2.2); work is on `story/6-26b-death-facts-warnings-and-register-check` ✅. RD1's author choice ✅ confirmed
+by BigDev 2026-10-07 and refined by `-288` K3. ⛔ No code before.
 
 ### AC7 — The register check (GI8) *(the number is kept from v1 of Story 6.26 — 6.26a cites it)*
 An ACCEPT without `register_check` → 409 `death_certificate_review.register_check_required`; a REJECT with one →
 `…register_check_not_allowed` (after the existing four guards — RD15); an accept stores it and `accepted_date_index` (computed by the handler
-through `deathDateBlindIndex` — RD12); the success audit carries the code (RD17); the console's document section and the review history show it
-in words; ⛔ no certificate number is stored; ⛔ nothing pre-selected in the form; the two new codes have their own admin words (RD11).
+through `deathDateBlindIndex` — RD12); the success audit carries the code (RD17) and the `claim.death_certificate_reviewed` payload does
+⛔ not (GI16); the console's document section and the review history show it in words, and an accepted review with ⛔ no register check
+(pre-6.26b) shows *"register check not recorded"* (RD31); ⛔ no certificate number is stored; ⛔ nothing pre-selected in the form; Submit
+stays disabled on accept until one is chosen, and the incomplete-accept words name it (RD31); the two new codes have their own admin words
+(RD11). Every existing refusal keeps its code, and a reject that omits the new fields is ⛔ never refused for them (RD15). The value is
+immutable — a later check is a new review, and a recorded `does_not_match` is ⛔ never withdrawn by one (RD29, `-289` L2).
 
 ### AC8 — The warnings (GI6, GI7, GI17, GI18)
 **Given** an accepted certificate dated D:
 - a completed full assignment whose family date ≠ D ⇒ `inspection_death_date_differs`; = D ⇒ ⛔ no key; ⛔ no accepted certificate ⇒ ⛔ no key;
-  an inherited inspection ⇒ ⛔ no key; a `certificate_check` whose printed date ≠ D ⇒ the key too (6.26a GI5's `original_certificate` source)
+  an INHERITED visit whose family date ≠ D ⇒ the key too, while the claim has ⛔ no own completed full visit, and ⛔ no key once it has one
+  (`-289` L3); an inherited `certificate_check` ⇒ ⛔ no key (the other claim's upload); a `certificate_check` whose printed date ≠ D ⇒ the key too (6.26a GI5's `original_certificate` source)
   — but ⛔ no key once that original is ⛔ no longer the claim's current upload (`-283` A3; still shown); a pre-6.26b accepted review (⛔ no
   index) ⇒ ⛔ no date key;
 - a completed assignment with verdict `does_not_match` compared against the CURRENT upload ⇒ `original_certificate_mismatch`; against a
   replaced upload ⇒ ⛔ no key (still shown);
-- the current accepted review with `register_check = 'does_not_match'` ⇒ `register_check_mismatch`; `matches` / `could_not_check` ⇒ ⛔ no key;
-  a superseded review's ⇒ ⛔ no key.
+- any accepted review of the CURRENT upload with `register_check = 'does_not_match'` ⇒ ONE key `register_check_mismatch:<upload_id>` —
+  ⭐ STILL when a later `matches` / `could_not_check` re-review of the SAME upload superseded it (`-288` K1); a second `does_not_match`
+  re-review ⇒ the SAME key, still covered (⛔ no new wait — `-289` L1); a first `does_not_match` after the District Admin approved ⇒ late;
+  ⛔ no key once the upload is replaced; `matches` / `could_not_check` alone ⇒ ⛔ no key.
 **And** the District Admin's approval while any of these shows needs a warning reason and a note (6.23a NW6 — unchanged code path), and
 every later approver's too (6.23b). **Given** the District Admin approved and an assignment then completes with a differing date or a
 `does_not_match` verdict ⇒ the final approval WAITS (`LateWarningReasonRequiredError`) until the District Admin's NW14 late reason covers
 the new key, **and meanwhile the claim is listed in the District Admin's correction queue** (`lateWarningAwaitingReason: true`) — **including an
-R9-routed claim in `state_trustee_approved`** (`-284` E1), which is ⛔ not listed once its routing row is superseded; and at R9 finalize
-every approve vote cast before the new key must be revised (RD4). **And** a default-fixture claim that is approved is ⛔ not a late-warning
-candidate (RD1) — every ordering assertion proved in SEPARATE COMMITTED transactions (Task 4.0).
-**And** both readers derive every kind from the SAME pure helper (`deriveDeathFactWarningKeys` — a unit table, plus the live bulk-vs-single
-parity with each kind); `APPROVAL_WARNING_KINDS`' pin test and the contracts mirror are updated with a message citing GI6 / GI17 / GI18 and
-`-281`; the timeline's kind type is `NOMINEE_VERSION_WARNING_KINDS` (RD8).
+R9-routed claim in `state_trustee_approved`** (`-284` E1), which is ⛔ not listed once its routing row is superseded (RD26 — a direct
+supersession, the claim still in that state); and at R9 finalize every approve vote cast before the new key must be revised (RD4) —
+including on `-285`'s R9-first path, where ⛔ no District Admin approved (⛔ no late wait, only the votes' revision). **And** a claim whose
+inspection completed BEFORE its approval is ⛔ not a late-warning candidate (RD1 / K3) — asserted on the queue's FAULT path (RD25), every
+ordering assertion proved in SEPARATE COMMITTED transactions (Task 4.0). **And** a re-review after the District Admin's approval that
+moves the accepted date to ANOTHER differing date keeps GI6's key covered (`-288` K4 — a pinned test, ⛔ not a defect).
+**And** both readers derive every kind from the SAME pure helper (`deriveDeathFactWarningKeys`, over the ONE `deathDateComparison` — a unit
+table for each, plus the live bulk-vs-single parity with each kind); `APPROVAL_WARNING_KINDS`' pin test and the contracts mirror are updated,
+the pin's message KEEPING the row-6-27 sentence and adding GI6 / GI7 / GI17 / GI18 and `-281` (RD24); the timeline's kind type is
+`NOMINEE_VERSION_WARNING_KINDS` (RD8); the no-comparison fence stays green at its count (RD23).
 
 ### AC9b — What the console and the later surfaces say (GI10 [b], GI11 [b])
-Each kind has its own words (in the typed map); every staff string that said "nominee-change" is kind-neutral (RD10); the console's
-assignment rows show *"differs from the certificate"* where `dateDiffersWarning` is true, the mismatch warning where `originalMismatchWarning`
-is true, and *"could not be checked"* where either is `null` (RD18); the register check shows on the document section and in the review
-history. ⛔ No warning text carries a date.
+Each kind has its own words (in the typed map); every RD10 staff string is kind-neutral and every genuinely nominee-change string is
+unchanged (RD10); the console's assignment rows (RD18, `-288` K2) show *"differs from the certificate"* wherever `dateComparison` is
+`'differs'` — as a WARNING where `dateDiffersWarning` is true (an inherited one labelled *"given on an earlier claim"*, provenance only —
+`-289` L3); *"Could not be compared with the certificate"* where `'not_indexed'`; *"Whether this differs from the certificate could not be
+checked just now"* (words distinct from the register check's *"could not be checked online"*) where `dateComparison` is `null` (a failed
+read); nothing where `'same'` / `'not_compared'`. On the VERDICT line: the mismatch warning where `originalMismatchWarning` is true;
+*"Whether this is a warning could not be checked just now"* where it is `null`; nothing where `false`. The register check shows on the
+document section and in the review history. ⛔ No warning text carries a date — a test renders every kind line, every new date-comparison
+line and the mismatch line, and asserts ⛔ no `YYYY-MM-DD` / day-month pattern IN THEM (the GI10 [a] date line is 6.26a's and shows the date
+by design).
 
 ### AC11b — Erasure (GI13 [b])
 The anonymizer sets the review's `accepted_date_index` NULL in the existing review scrub (RD16 — ⛔ no new statement; pins unchanged); the
@@ -348,104 +569,165 @@ unit test asserts the column in the SET; the live RTBF spec erases a deceased wh
 migration — ⛔ no 23514, ⛔ no 42501.
 
 ### AC12b — Nothing else moves (GI16)
-Catalog version **51** / key count **65** unchanged; ⛔ no new event; ⛔ no new rule or reason code beyond GI8's two refusals; ⛔ no file under
-`apps/mobile`, `apps/public` or `packages/i18n` changes.
+Catalog version **51** / key count **65** unchanged (`permissions.test.ts` — its existing pins stay green); ⛔ no new event and ⛔ no new
+payload field; ⛔ no new rule or reason code beyond GI8's two refusals; ⛔ no file under `apps/mobile`, `apps/public` or `packages/i18n`
+changes — checked at Task 11 by `git diff --name-only b665a19a..HEAD -- apps/mobile apps/public packages/i18n` (empty).
 
 ### AC13b — The proof
 Every test below passes; GI15 [b]'s fixtures raise ⛔ no warning on any approve-path spec; every RD19 / RD20 spec is amended, ⛔ never weakened;
 `pnpm ci:local` green with `DATABASE_URL` at :5433 (domain, API, **jobs**, admin, contracts); the migration applied to BOTH :5432 and :5433.
 
 ## Tasks / Subtasks
-- [ ] **Task 0 (AC0)** — ✅ 6.26a `done`; ✅ re-pinned to `b665a19a` and re-derived (v2.0, 2026-10-07); ✅ branch. At the build:
-  `git fetch origin`; `git diff --name-only b665a19a..HEAD -- packages apps scripts` (re-read any cited file it lists); confirm ⛔ no decision
-  after `-287` touches GI6–GI8 / GI17 / GI18. (RD1 ✅ confirmed by BigDev 2026-10-07 — ⛔ nothing left to ask.)
-- [ ] **Task 1 — Migration (GI8; RD14)** — `0149_death-certificate-register-check.sql`: `claim_death_certificate_reviews` + `register_check text`
-  (CHECK `IN ('matches','does_not_match','could_not_check')`, NULL allowed) + `accepted_date_index text`; a VALIDATED CHECK that a `rejected`
-  review carries ⛔ neither. ⚠⚠ "an `accepted` review carries both" is ⛔ NOT a CHECK — it is the WRITER's guard (Task 2) + a test: every
-  pre-6.26b accepted review lacks both, and two existing UPDATEs rewrite those rows — the anonymizer's review scrub sets `noteCiphertext` on EVERY
-  review of the deceased (`member/anonymize.ts:242-249`) and the review writer's supersession (`death-certificate-review-persist.ts:178`) —
-  so such a CHECK would fail every erasure and make every pre-6.26b certificate un-re-reviewable. ⚠⚠ **GRANTS and the trigger:** `0122:143-145`
-  grants `twt_app` only `SELECT, INSERT` + `UPDATE ("superseded_at", "superseded_reason", "accepted_date_ciphertext", "note_ciphertext")` ⇒ add
-  `GRANT UPDATE ("accepted_date_index") ON "claim_death_certificate_reviews" TO twt_app` (GI13 [b]'s scrub — else 42501); `CREATE OR REPLACE
-  FUNCTION claim_death_certificate_reviews_reject_mutation()` restating `0122:159-187`'s body with `register_check` added to the
-  `IS DISTINCT FROM` list (`accepted_date_index` stays OUT — the scrub NULLs it). Drizzle schema (`schema/claim_death_certificate_reviews.ts` — an
-  `as const` values array + type, the table's convention); journal idx 149; apply to :5432 AND :5433 ([[project_live_db_test_gotchas]]).
-- [ ] **Task 2 — Domain: the review writer (GI8; RD15)** — `RecordDeathCertificateReviewInput` (`death-certificate-review-persist.ts:58-81`) gains
-  `registerCheck` and `acceptedDateIndex`; the guards AFTER the existing four (`:113-128`): accept ⇒ `registerCheck` required
-  (`register_check_required`) and a non-empty index (`invalid_date`); reject ⇒ neither (`register_check_not_allowed` / `date_on_reject`);
-  `DeathCertificateReviewRefusedError`'s union (`claim/errors.ts:584-604`) widened by the two codes. ⛔ No API mapping change (RD11).
-- [ ] **Task 3 — Domain: the kinds (GI6, GI17, GI18; RD6–RD9)** (`claim/approval-warnings.ts`)
+- [ ] **Task 0 (AC0)** — ✅ 6.26a `done`; ✅ re-pinned to `b665a19a` and re-derived (v2.0; re-verified v2.2, 2026-10-07); ✅ `-288` / `-289` / `-290`
+  committed (`0152ead9`, `51c8eb4e`, `94a0fad2`); ✅ branch. At the build: `git fetch origin`; `git diff --name-only b665a19a..HEAD -- packages apps scripts` (re-read any cited
+  file it lists); confirm ⛔ no decision after `-290` touches GI6–GI8 / GI17 / GI18 or the [b] halves of GI10 / GI11 / GI13 / GI15 / GI16.
+  (RD1 ✅ confirmed by BigDev 2026-10-07, refined by `-288` K3 — ⛔ nothing left to ask.)
+- [ ] **Task 1 — Migration (AC7, AC11b, AC13b; GI8; RD14)** — `0149_death-certificate-register-check.sql`: `claim_death_certificate_reviews` +
+  `register_check text` (`claim_death_certificate_reviews_register_check_check`: `IN ('matches','does_not_match','could_not_check')`, NULL
+  allowed) + `accepted_date_index text`; a VALIDATED CHECK `claim_death_certificate_reviews_register_check_coherence_check` — `"verdict" <>
+  'rejected' OR ("register_check" IS NULL AND "accepted_date_index" IS NULL)`. ⚠⚠ "an `accepted` review carries both" is ⛔ NOT a CHECK — it
+  is the WRITER's guard (Task 2) + a test: every pre-6.26b accepted review lacks both, and two existing UPDATEs rewrite those rows — the
+  anonymizer's review scrub sets `noteCiphertext` on EVERY review of the deceased (`member/anonymize.ts:242-249`) and the review writer's
+  supersession (`death-certificate-review-persist.ts:178`) — so such a CHECK would fail every erasure and make every pre-6.26b certificate
+  un-re-reviewable. ⚠⚠ **GRANTS and the trigger:** `0122:138` / `:140` grant `twt_app` only `SELECT, INSERT` + `UPDATE ("superseded_at",
+  "superseded_reason", "accepted_date_ciphertext", "note_ciphertext")` ⇒ add `GRANT UPDATE ("accepted_date_index") ON
+  "claim_death_certificate_reviews" TO twt_app` (GI13 [b]'s scrub — else 42501); `CREATE OR REPLACE FUNCTION
+  claim_death_certificate_reviews_reject_mutation()` restating `0122:159-187`'s body with `register_check` added to the `IS DISTINCT FROM`
+  list (`accepted_date_index` stays OUT — the scrub NULLs it; the ciphertext precedent, RD14). Drizzle schema
+  (`schema/claim_death_certificate_reviews.ts` — an `as const` values array + type, the table's convention, with a LOCKSTEP comment); journal
+  idx 149, `when: 1793590800000` (> 0148's `1793504400000`); apply to :5432 AND :5433 ([[project_live_db_test_gotchas]]).
+- [ ] **Task 2 — Domain: the review writer and the snapshot (AC7; GI8; RD15, RD29, RD30)** — `RecordDeathCertificateReviewInput`
+  (`death-certificate-review-persist.ts:58-81`) gains OPTIONAL `registerCheck?: … | null` and `acceptedDateIndex?: string | null`; every new
+  guard tests NULLISH (RD15 — ⛔ never `!== null`). The index checks join `invalid_date` (`:115`, accept without a non-empty index) and
+  `date_on_reject` (`:119`, reject with one); then, after `:128`, accept ⇒ `register_check_required`, reject ⇒ `register_check_not_allowed`.
+  `DeathCertificateReviewRefusedError`'s union (`claim/errors.ts:584-604`) widened by the two codes. ⛔ No API mapping change (RD11); ⛔ no
+  event-payload field (GI16, `:215-225`). The snapshot (RD30): `death-certificate-approval.ts:121-128` SELECT gains `r.register_check`,
+  `LiveDeathCertificateReview` (`:46-53`) gains `registerCheck`, the mapping at `:148` carries it; `death-certificate-family-status.test.ts:41`'s
+  `reviewOf` gains it. ⛔ No compare written `.toLowerCase() ===` / `.trim() === '…'` (RD23).
+- [ ] **Task 3 — Domain: the kinds and the comparison (AC8, AC9b; GI6, GI17, GI18, `-288` K1/K2; RD6–RD9, RD23, RD24)** (`claim/approval-warnings.ts`)
   - [ ] 3.1 `NOMINEE_VERSION_WARNING_KINDS` exported; `APPROVAL_WARNING_KINDS = [...NOMINEE_VERSION_WARNING_KINDS, 'inspection_death_date_differs',
     'original_certificate_mismatch', 'register_check_mismatch']`; `classifyNomineeVersion` returns the version type (RD8); the pin test's
-    expected list + message (citing GI6/GI17/GI18, `-281`); the contracts mirror (+ `NomineeVersionWarningKind`) and both lockstep tests.
-  - [ ] 3.2 Both statements select the own `completed` assignments' `(ground_inspection_id, death_date_index, death_date_source,
-    original_certificate_verdict, compared_certificate_upload_id)` as a JSON array (single: a CTE / scalar subselect; bulk: a `LEFT JOIN LATERAL`
-    with `coalesce(json_agg(…), '[]')`), `current_upload_id` via `currentDeathCertificateUploadIdSql(sql\`c.pariwar_id\`, sql\`c.claim_case_id\`)`
-    (RD7), and the `cur` review's `accepted_date_index, register_check` — ⛔ no ciphertext; raw SQL with explicit aliases
-    ([[project_epic6_drizzle_correlated_subquery_bug]]); the bulk twin keeps its slicing.
-  - [ ] 3.3 `deriveDeathFactWarningKeys` (exported, pure) — GI6 (+ A3's currency on `original_certificate` rows), GI17 (currency), GI18 (current
-    review only); called by `deriveClaimApprovalWarnings` (RD9). Keys via `approvalWarningKey`.
-- [ ] **Task 4 — Domain: the queue (GI7 + `-284` E1; RD1–RD5)** — `correction-queue-read.ts`
-  - [ ] 4.0 ⭐ FIRST, the clock (RD1 — ✅ confirmed by BigDev): `completeGroundInspection` stores `completedAt: sql\`now()\``; `input.now`
-    validates only; amend the pin (`ground-inspection.spec.ts:640-642`) and its comment — `completedAt` equals the transaction's own
-    `SELECT now()` (read in the same test transaction) and ⛔ never the injected clock; append the reversal note to 6.26a's review-findings section;
-    in `deferred-work.md`, mark *"The fixture's completion clock can be in the FUTURE"* DISCHARGED with an appended line correcting its
-    comparator (the verifier approval's `decided_at`) — ⛔ never deleted ([[feedback_closure_language_precision]]).
-    ⭐ **Transaction-separated ordering tests (BigDev, v2.1 — RD1's consequence):** every assertion of an ORDER between an approval and a
-    completion runs them in SEPARATE COMMITTED transactions — ⛔ never inside one `setupLiveDb` BEGIN/ROLLBACK envelope, where they tie.
-    · **Domain:** the own-committing pattern (`packages/domain/tests/integration/claim/ground-inspection-concurrency.spec.ts`'s header: its
-      own `pg.Pool`, each step `BEGIN` → `setPariwarScope` → work → `COMMIT` on its own client; cleanup by THIS suite's claim ids + derived
-      idempotency keys — a `claims` delete cascades to inspections and photos, `events_log` rows removed under
-      `SET LOCAL session_replication_role = 'replica'`; assertions key on OWN ids, ⛔ never absolute counts — [[project_live_db_test_gotchas]]).
-      A new own-committing spec file (e.g. `claim/correction-queue-late-inspection.spec.ts`), ⛔ not a leg inside the BEGIN/ROLLBACK specs.
-    · **API:** each HTTP request is its own transaction (`openScopeTx`) ⇒ separate requests ARE separate transactions; ⛔ never collapse the
-      steps into one `scopeTx` fixture call.
-    · **The legs (each in BOTH layers):** (a) the fixture inspection COMMITTED, THEN the approval COMMITTED ⇒ ⛔ not a late-warning candidate,
-      ⛔ no late key; (b) the approval COMMITTED, THEN a completion with a differing date (and, separately, a `does_not_match` verdict)
-      COMMITTED ⇒ listed, `lateWarningAwaitingReason: true`, the final approval waits; (c) leg (b) on an R9-routed claim in
-      `state_trustee_approved` ⇒ listed, and ⛔ not listed once its routing row is superseded. ⭐ Red-checks: (b) goes red when the disjunct is
-      deleted; (a) goes red when the comparator is reversed (`completed_at < v.decided_at`). ⚠ In ONE transaction (a) stays green under that
-      reversal (a tie satisfies neither) — a leg that survives it is hollow, i.e. its steps share a transaction.
-  - [ ] 4.1 Hoist `lateArm` (RD2 a), rewrite it with the completed-after-approval disjunct (RD2 b), and restructure the WHERE with the R9
+    expected list, its message KEEPING the row-6-27 sentence and ADDING the discharge (RD24); the contracts mirror (+ `NomineeVersionWarningKind`)
+    and both lockstep tests.
+  - [ ] 3.2 Both statements select (RD6) the completed `inspections` — own, AND inherited (through `inheritedGroundInspectionSourceSql`,
+    every stage, ONLY while the claim has ⛔ no own completed FULL assignment; `inherited` flag) — `(ground_inspection_id, inherited, death_date_index, death_date_source,
+    original_certificate_verdict, compared_certificate_upload_id)` as a JSON array (single: a CTE / scalar subselect; bulk: a `LEFT JOIN
+    LATERAL` with `coalesce(json_agg(…), '[]')`); `current_upload_id` via `currentDeathCertificateUploadIdSql(sql\`c.pariwar_id\`,
+    sql\`c.claim_case_id\`)` (RD7); whether a current accepted review exists and its `accepted_date_index`; and `register_mismatch_present`
+    (`-289` L1 — EXISTS an accepted `does_not_match` review of the current upload, live or superseded). ⛔ No ciphertext; raw SQL with explicit aliases
+    ([[project_epic6_drizzle_correlated_subquery_bug]]); the bulk twin keeps its slicing; `nominee-refusal-read.ts` added to the safe-leaves
+    comment and the transitive import scan (`approval-warnings.test.ts:330-349`) stays green.
+  - [ ] 3.3 Exported, pure, in THIS module (RD9, RD23): `deathDateComparison(row, currentReview, currentUploadId)` →
+    `'differs' | 'same' | 'not_compared' | 'not_indexed'`, in RD9's ORDER (`-289` L4); `deriveDeathFactWarningKeys` — GI6 (every selected
+    row, own or inherited, whose comparison is `'differs'` — `-289` L3), GI17 (OWN rows only, `does_not_match`, compared upload = current),
+    GI18 (ONE key `register_check_mismatch:<current upload_id>` when `register_mismatch_present` — `-289` L1). Called by `deriveClaimApprovalWarnings` OUTSIDE the `postDeath === 'evaluated'` block (`:529-534`); the result also carries the
+    per-inspection comparisons for the console (K2). Keys via `approvalWarningKey`.
+- [ ] **Task 4 — Domain: the clock and the queue (AC8; GI7 + `-284` E1, `-288` K3; RD1–RD5, RD25–RD27)** — `correction-queue-read.ts`
+  - [ ] 4.0 ⭐ FIRST, the clock (RD1, `-288` K3): `completeGroundInspection` stores `completedAt: sql\`clock_timestamp()\``; `input.now`
+    validates only; amend the pin (`ground-inspection.spec.ts:631-642`) and its comment — in SQL, in the same test transaction, after a
+    `SELECT pg_sleep(0.001)` before the completion: `completed_at > now()` (STRICT — `clock_timestamp()` at the UPDATE is after the
+    transaction start; a revert to `now()` ties and fails) AND `completed_at <>` the injected `now` (the pin injects a PAST `now`,
+    `2026-06-01T19:00Z`, so a revert to the injected clock fails too); append the reversal note to
+    6.26a's *"Review Findings — bmad-code-review 2026-10-07 (chunked: …)"* section, `packages/domain` chunk (citing `-283` A6 and `-288` K3);
+    in `deferred-work.md`, mark *"The fixture's completion clock can be in the FUTURE"* DISCHARGED with an appended line correcting its prose
+    and its proposed fix (the comparator is the verifier approval's `decided_at`, as its own formula says) — ⛔ never deleted
+    ([[feedback_closure_language_precision]]).
+    ⭐ **Transaction-separated ordering tests (BigDev, v2.1):** every assertion of an ORDER between an approval and a completion runs them
+    in SEPARATE COMMITTED transactions — ⛔ never inside one `setupLiveDb` BEGIN/ROLLBACK envelope (there `clock_timestamp()` is always later
+    than the approval's transaction-start `now()`, whatever the statement order).
+    · **Domain:** a NEW own-committing spec (e.g. `claim/correction-queue-late-inspection.spec.ts`), the
+      `packages/domain/tests/integration/claim/ground-inspection-concurrency.spec.ts` pattern (its own `pg.Pool`, each step `BEGIN` →
+      `setPariwarScope` → work → `COMMIT` on its own client; cleanup by THIS suite's claim ids + derived idempotency keys — a `claims` delete
+      cascades to inspections and photos; `events_log` rows removed under `SET LOCAL session_replication_role = 'replica'`; members and nominee
+      versions are ⛔ not removed by the cascade — delete them too). ⭐ A FRESH random Pariwar per test (the queue is Pariwar-scoped and pages
+      newest-first at 50; the concurrency spec's shared `PARIWAR_A` would mix suites). Precedent for domain fixtures in own transactions:
+      `nominee/nominee-history-concurrency.spec.ts:146-150`. Sequence: tx1 `driveClaimTo(…'verifier_review')` + `seedNomineeDeclaration` +
+      `seedNomineeNameCheck`; tx2 `adjudicateClaim` approve; tx3 `seedGroundInspection(c, p, cid, { force: true, deathDate | verdict })`;
+      tx4 `listClaimsUnderCorrection` + `voteOnFrozenClaim` (it reaches the wait first — the gate runs at `state-trustee-decision-persist.ts:582`,
+      before the reason rule at `:602`). Leg (c): `seedR9` (superuser), the P3 vote, `routeToR9` from `state_trustee_approved`.
+    · **API:** each HTTP request is its own transaction (`openScopeTx`, `scope-tx.ts:34-48`; fixtures commit via `closeScopeTx(…, true)`) ⇒
+      ⛔ never collapse the steps into one `scopeTx` fixture call.
+    · **The legs (each in BOTH layers):** (a) the fixture inspection COMMITTED, THEN the approval COMMITTED ⇒ ⛔ not a candidate, asserted on
+      the queue's FAULT path (RD25 — absent from the degraded list); (b) the approval COMMITTED, THEN a completion with a differing date (and,
+      separately, a `does_not_match` verdict) COMMITTED ⇒ listed, `lateWarningAwaitingReason: true`, the final approval waits; (c) leg (b) on
+      an R9-routed claim in `state_trustee_approved` ⇒ listed, and ⛔ not listed once its routing row is superseded by a direct superuser
+      UPDATE, the claim still in that state (RD26). ⭐ Red-checks: (b) goes red when the disjunct is deleted; (a) goes red when the comparator
+      is reversed (`completed_at < v.decided_at`) AND when K3 is reverted to the injected clock; (c)'s second half goes red when the
+      `liveRoutedToR9Exists()` conjunct is deleted. Leg (a) seeds a CONTROL candidate and asserts the fault fired (RD25 non-vacuity).
+      (d) ⭐ **THE RACE K3 EXISTS FOR (`-288` K3 (ii)), domain only:** connection A `BEGIN`s and runs one statement (fixing its `now()`);
+      connection B commits the approval (the gate needs the fixture's completed visit first — so a SECOND assignment is scheduled, its
+      original-certificate photo added against the current upload, and committed beforehand); A then runs `completeGroundInspection` on that second assignment (a differing date) and commits ⇒ the claim IS a candidate
+      (fault path) and listed with `lateWarningAwaitingReason: true` (normal path). Red-check: revert K3 to `now()` ⇒ A's `completed_at`
+      precedes the approval ⇒ red. (A blocks on B's claim lock only if B still holds it — commit B first, as written.)
+      (e) ⭐ **THE INHERITED-SOURCE PATH (`-290` M2), domain:** refile R inherits refused S (the T17 path,
+      `nominee-refusal-inheritance.spec.ts:152-186`) and is approved, COMMITTED; S's appeal reverses (S in `reversed`), COMMITTED; a new full
+      visit on S completes with a family date ≠ R's accepted date, COMMITTED ⇒ R is listed, `lateWarningAwaitingReason: true`, and R's final
+      approval waits. Red-check: delete the third disjunct ⇒ R unlisted ⇒ red. ⚠ A leg that survives its red-check is hollow — its steps share a transaction, or it
+      reads the normal path where candidacy is invisible.
+  - [ ] 4.1 Hoist `lateArm` (RD2 a), rewrite it with the completed-after-approval disjunct AND `-290` M2's inherited-visit disjunct (RD2 b —
+    `inheritedGroundInspectionSourceSql`, the one fragment, ⛔ never a copy; the queue module imports it from `nominee-refusal-read.ts`), and restructure the WHERE with the R9
     admission (RD2 c, `liveRoutedToR9Exists()` — RD3). ⛔ Never a per-claim call (an N+1); ⛔ never a new copy of the R9 predicate. The
     *"TODAY a late key can arise ONLY that way"* comment (`:198`) and the `lateWarningCandidate` doc-block (`:157-161`) amended (⛔ not deleted):
     two sources now, plus the R9 admission.
-  - [ ] 4.2 Append to `deferred-work.md`'s item *"⚠ EA10's late-warning arm keys on a NEW determination"* that 6.26b added the
-    completed-after-approval arm — its row-6-22 trigger still stands for the member-declare and innocence-finding sources.
-- [ ] **Task 5 — Erasure (GI13 [b]; RD16)** — `member/anonymize.ts:242-249`: `acceptedDateIndex: null` in the existing `.set`;
+  - [ ] 4.2 `deferred-work.md` appends (⛔ never edits): to *"⚠ EA10's late-warning arm keys on a NEW determination"* — 6.26b added the
+    completed-after-approval arm; its row-6-22 trigger still stands for the member-declare and innocence-finding sources; and the
+    determination arm's transaction-start race (`-288` K3 (ii) — ⛔ not changed). To *"A late key covered ONLY by a late reason whose recorder
+    then approves is ⛔ not listed"* — E1 makes it reachable in R9 for the new kinds (RD27).
+- [ ] **Task 5 — Erasure (AC11b; GI13 [b]; RD16)** — `member/anonymize.ts:242-249`: `acceptedDateIndex: null` in the existing `.set`;
   `rtbf-anonymize.test.ts` asserts the column (counts unchanged: 22 / 19 / 21); `death-certificate-rtbf.spec.ts` (insert an index, assert NULL
   after erasure) + the API `death-certificate.spec.ts:519` leg. The immutability of `register_check` is proved in the RLS spec (Task 10) —
   ⛔ not here (as `twt_app`, the missing column grant refuses it first, 42501).
-- [ ] **Task 6 — API (RD12, RD13, RD17, RD18)** — `claims.death-certificate.handlers.ts`: pass `registerCheck: body.register_check ?? null` and
-  `acceptedDateIndex` (`deathDateBlindIndex(body.accepted_date, p, deps.encryption)` when the date is present) to the writer; `register_check` in
-  the success audit context and in `getHistory`'s explicit object. `claims.verifier-console.handlers.ts`: `review.registerCheck` from the
-  snapshot (`death-certificate-approval.ts:121-128` SELECT + `LiveDeathCertificateReview`); the two per-assignment flags stitched from `w.keys`
-  after both sections (RD18) — `null` when `approvalWarnings.available` is false. The API server strings of RD10.
-- [ ] **Task 7 — Contracts (RD8, RD13, RD18)** — `death-certificate.ts`: `register_check` optional on the request, on the history item (nullable);
-  `verifier-console.ts`: `review.registerCheck` (nullable) and the two per-item flags (`boolean | null`); the kind enum + `NomineeVersionWarningKind`;
-  `nominee-declaration.ts:56` narrowed. Run contracts + mobile vitest ([[project_contracts_tests_outside_tsc]]).
-- [ ] **Task 8 — Admin (RD10, RD11, RD13, RD18)** — `DeathCertificateReviewControl.tsx`: the register-check radio inside the accept fieldset
-  (`useState<…|null>(null)` — the reject-reason radio's ⛔-pre-selected pattern, `:200-220`); `ready` (`:94`) requires it on accept; the fingerprint
-  reset (`:87-93`) clears it; the local submit type (`:26-31`); the history line (`:328-340`) shows it in words. `VerifierConsoleRoute.tsx:419-431`
-  passes it. The three kind lines in `i18n-en.ts` (typecheck forces them) and every RD10 string reworded; the two refusal words (RD11);
-  `NomineeDeclarationPanel.tsx:115-119` narrowed to the version type (RD8); `SignalsPanel.tsx` `InspectorRecordLines` (`:367-390`) — the mismatch
-  warning on the verdict `<li>`, *"differs from the certificate"* after the date line, *"could not be checked"* on `null`; the register check in
-  `DeathCertificateReviewStatus` (`VerifierReviewPanel.tsx:114`). `microcopy.yaml` (whole-word scan of `apps/admin/src/**`; `report`,
-  `passbook`, `receipt`, `invoice` banned). ⚠ `EscalationPanel.tsx` itself is ⛔ not edited (its words come through the shared map) ⇒ the
-  deferred *"A FAILED refetch after a 409 hides the whole approval surface"* item's `EscalationPanel` half does ⛔ not trigger here.
-- [ ] **Task 9 — Fixtures and the red-by-design specs (GI15 [b]; RD19–RD21; AC13b)**
-  - [ ] 9.1 `seedAcceptedDeathCertificate` (domain, `_helpers.ts:935-982`) passes `registerCheck: 'matches'` + `fixtureDeathDateIndex(date)`;
-    `ensureAcceptedDeathCertificate` (API, `_nominee-name-check-fixture.ts:89-132`) passes `'matches'` + `deathDateBlindIndex(date, …)`;
-    `ensureGroundInspection` gains `deathDate?` (RD21).
-  - [ ] 9.2 Every direct accept caller of RD20 (domain, API, **jobs**) passes a register check and an index.
-  - [ ] 9.3 ⚠ **RED BY DESIGN, listed and AMENDED (⛔ never a weakened assertion):** every RD19 spec. Each amended to name the new
-    `inspection_death_date_differs` key/kind and count it (it IS the correct behaviour — the certificate moved away from the family's date).
+- [ ] **Task 6 — API (AC7, AC9b; RD12, RD13, RD17, RD18)** — `claims.death-certificate.handlers.ts`: pass `registerCheck: body.register_check ??
+  null` and `acceptedDateIndex` (`deathDateBlindIndex(body.accepted_date, p, deps.encryption)` when the date is present) to the writer;
+  `register_check` in the success audit context and in `getHistory`'s explicit object. `claims.verifier-console.handlers.ts`:
+  `review.registerCheck` from the snapshot (Task 2); the internal `readApprovalWarningsSection` (RD18 — `assembleApprovalWarnings` keeps its
+  signature); the three per-assignment fields stitched after both sections per RD18's rules. The API server strings of RD10.
+- [ ] **Task 7 — Contracts (AC7, AC8, AC9b; RD8, RD13, RD18)** — `death-certificate.ts`: `register_check` optional on the request, nullable on
+  the history item; `verifier-console.ts`: `VerifierReviewItem.review.registerCheck` (nullable) and, on `GroundInspectionItem`, `dateComparison`,
+  `dateDiffersWarning`, `originalMismatchWarning` (RD18); the kind enum + `NomineeVersionWarningKind`; `nominee-declaration.ts:56` narrowed;
+  the `:217` doc-block's *"(Story 6.26b turns a `does_not_match` into a warning)"* to the present tense (RD31). Run contracts + mobile vitest
+  ([[project_contracts_tests_outside_tsc]]).
+- [ ] **Task 8 — Admin (AC7, AC9b; RD10, RD11, RD13, RD18, RD31)** — `DeathCertificateReviewControl.tsx`: the register-check radio inside the accept
+  fieldset (`useState<…|null>(null)` — the reject-reason radio's pattern, `:200-220`, ⛔ nothing pre-selected); `ready` (`:94`) requires it on
+  accept; the fingerprint reset (`:87-93`) clears it; the local submit type (`:26-31`); the accept-object builder in `submit()` (`:133-137`);
+  the history line (`:328-340`) and `DeathCertificateReviewStatus` (`:39-56`, rendered at `VerifierReviewPanel.tsx:114`) show it in words,
+  and *"register check not recorded"* for an accepted review with ⛔ none. `incompleteAccept` (`i18n-en.ts:733`) names the register check.
+  `VerifierConsoleRoute.tsx:419-431` passes it. The three kind lines in `i18n-en.ts` (typecheck forces them — ⚠ `register_check_mismatch`'s words say the mismatch was recorded on a
+  review of THIS certificate, e.g. *"The government register was recorded as not matching this certificate"*, since under `-289` L1 the
+  document section can show a later `matches` while the warning stands) and EXACTLY the RD10 strings
+  reworded; the two refusal words (RD11); `NomineeDeclarationPanel.tsx:115-119` and `:121` narrowed to the version type (RD8);
+  `SignalsPanel.tsx` `InspectorRecordLines` (`:367-390`) — the mismatch warning on the verdict `<li>`, the date line per AC9b (warning, inherited
+  ones labelled "given on an earlier claim" / "could not be compared" on `'not_indexed'` / "could not be checked just now" on `null`), the `:364` doc-block to the present tense. `microcopy.yaml` (`scope.code_globs`
+  scans every line of `apps/admin/src/**/*.ts(x)`, comments included: `report`, `passbook`, `receipt`, `invoice` whole-word, and ALL tone
+  patterns — e.g. *"action required"*, *"needs action"*, *"outside the system"*, *"not counted"*, *"by mistake"*). ⚠ `EscalationPanel.tsx` is ⛔
+  not touched (its words come through the shared map) ⇒ the deferred *"A FAILED refetch after a 409 hides the whole approval surface"*
+  item's `EscalationPanel` half — whose trigger reads "touching either surface", judged here as the FILE — does ⛔ not trigger.
+- [ ] **Task 9 — Fixtures and the red-by-design specs (AC8, AC13b; GI15 [b]; RD19–RD22)**
+  - [ ] 9.1 `seedAcceptedDeathCertificate` (domain, `_helpers.ts:935-982`) passes `registerCheck` (default `'matches'`) + `fixtureDeathDateIndex(date)`;
+    `ensureAcceptedDeathCertificate` (API, `apps/api/tests/integration/_nominee-name-check-fixture.ts:89-132`) passes the same +
+    `deathDateBlindIndex(date, …)`; both take `registerCheck?`, threaded through BOTH `seedNomineeNameCheck` copies, and their reuse path
+    compares it (RD22); `ensureGroundInspection` gains `deathDate?` (RD21).
+  - [ ] 9.2 Every direct accept caller of RD20 (domain, API, **jobs**) passes a register check and an index; the domain `reject()` overrides
+    both to `null`; `accept()`'s index follows its date (RD20).
+  - [ ] 9.3 ⚠ **RED BY DESIGN, listed and AMENDED (⛔ never a weakened assertion):** every RD19 spec, by its mechanism — (i) re-review /
+    re-determine after the fixture ⇒ name the new `inspection_death_date_differs` key/kind and count it (it IS the correct behaviour — the
+    certificate moved away from the family's date); (ii) a literal index stand-in ⇒ the matching index; (iii) ⚠ `approval-warnings.spec.ts:414-418`
+    is REBUILT on a same-date re-review (⛔ not by naming the key — that deletes `-279` A3's coverage) — once RD22 lands,
+    `seedAcceptedDeathCertificate(…, { date: <same>, registerCheck: 'could_not_check' })` (a new review id stales the determination,
+    `approval-warnings.ts:521-526`, and raises ⛔ no key); a direct `recordDeathCertificateReview` would need a `now` on or after TOMORROW.
+    (K3's single-transaction effect turns ⛔ nothing red — RD19's checked-and-EMPTY third mechanism; v2.2's back-date order is struck.)
     ⛔ No `inspection: 'skip'` route (removed in v2.1, BigDev): these specs approve BEFORE they re-review, the gate needs a complete
-    inspection before that first approval, and the family's date is fixed at completion ⇒ whatever date an explicit completion uses differs
-    from the certificate either before or after the re-review — skipping only MOVES the key, ⛔ never removes it. ⛔ Never loosened to
-    `toContain` without its count. Then run the WHOLE domain, API and jobs suites — any OTHER red is a fixture gap.
-- [ ] **Task 10 — Tests** (below); red-check each load-bearing one (revert the line, watch it fail, restore).
-- [ ] **Task 11 — Records** — `sprint-status.yaml` (row + one ledger entry); File List; Change Log; `deferred-work.md` (Task 4.0, 4.2).
+    inspection before that first approval, and the family's date is fixed at completion ⇒ skipping only MOVES the key, ⛔ never removes it.
+    ⛔ Never loosened to `toContain` without its count. Then run the WHOLE domain, API and jobs suites — any OTHER red is a fixture gap.
+- [ ] **Task 10 — Tests (AC7–AC13b)** (below); red-check each load-bearing one (revert the line, watch it fail, restore).
+- [ ] **Task 11 — Records (AC12b, AC13b)** — `sprint-status.yaml`: the row flips per [[project_sprint_status_ledger]], and ONE ledger entry
+  PREPENDED as the top `last_updated` comment (size-guarded, YAML re-verified — [[project_sprint_status_safe_prepend]]); File List; Change
+  Log; `deferred-work.md` (Task 4.0, Task 4.2, and RD28: append to *"6.7's own Tier-1 inspection columns are ⛔ not in the member erasure"* —
+  *"Trigger fired <date> (Story 6.26b touched `anonymize.ts` for GI13 [b] only). ⛔ Not addressed: whose data the 6.7 columns are is still
+  counsel's; ⛔ no widening."*; and a NEW item for `-289` L2 / Consequence 3 — *"A recorded register mismatch (and GI17's verdict) stops
+  only on a replaced upload, and an upload is allowed only after a REJECT ⇒ a District Admin can launder a real mismatch by rejecting a valid
+  certificate with an untrue reason and having the family re-upload the same paper"*, Trigger: the next story that touches the certificate
+  reject reasons or the upload rule); AC12b's `git diff` check (empty).
 
 ## Dev Notes
 
@@ -454,44 +736,83 @@ Every test below passes; GI15 [b]'s fixtures raise ⛔ no warning on any approve
    literal or a different stand-in makes every claim "differ".
 2. **The bulk reader drifts** — derive ONLY in the shared pure helper; the live parity test is the guard (6.23b's pattern).
 3. **One late-arm fragment** (RD2) — the column and the WHERE read the SAME `lateArm`; the R9 admission ANDs it, ⛔ never a copy.
-4. **Currency** — GI17 compares against the CURRENT upload, GI18 reads the CURRENT accepted review; a test replaces each and sees the key go.
+4. **Currency** — GI17 compares against the CURRENT upload; GI18 (`-288` K1) reads every accepted `does_not_match` review of the CURRENT
+   upload. A test replaces the upload and sees each key go; a second test re-reviews the SAME upload `does_not_match` → `matches` and sees
+   GI18's key STAY (the case a "current review only" reading would silently drop).
 5. **Pre-6.26b accepted reviews have ⛔ no index** ⇒ ⛔ no date key on them (dev data only — ⛔ not in production); backfill ⛔ nothing
    ([[feedback_record_unattested_no_backfill]]). A re-review writes it.
 6. **Fixture defaults raise nothing** — register `matches`, family date = accepted date (6.26a GI15), verdict `matches`; otherwise every
-   approve-path spec gains a warning (the 6.23a Trap-5 lesson). ⚠ Except a spec that RE-REVIEWS with a different date after the fixture —
-   red by design (RD19, Task 9.3).
+   approve-path spec gains a warning (the 6.23a Trap-5 lesson). ⚠ Except a spec that RE-REVIEWS with a different date after the fixture,
+   or completes with a LITERAL index stand-in (`'idx'`, `'fixture-death-date-index'`) — red by design (RD19, Task 9.3).
 7. **The timeline classifies VERSIONS only** — `NOMINEE_VERSION_WARNING_KINDS` (RD8); widening the shared enum must ⛔ not make the timeline
    emit or word the three new kinds.
 8. **Currency for the printed date** (`-283` A3) — a test replaces the original after a `certificate_check` and sees the date key go.
 9. **The review CHECK is narrow on purpose** (Task 1) — an UPDATE of any pre-6.26b accepted review must still pass it.
-10. **The clock** (RD1) — a fixture-completed inspection followed by an approval must ⛔ not read as "completed after approval"; and a REAL
-    completion after approval must. ⚠⚠ Both legs run in SEPARATE COMMITTED transactions (Task 4.0): with the DB clock, one BEGIN/ROLLBACK
-    makes every `now()` the same instant, so a single-transaction ordering test ties, passes for the wrong reason, and stays green with the
-    disjunct deleted or the comparator flipped.
-11. **`null` is ⛔ never `false`** (RD18, invariant 5) — a failed warnings read on the console shows "could not be checked" per assignment.
-12. **Guard order** (RD15) — the new refusals run AFTER the existing four; the API refusal table proves each existing code survives.
+10. **The clock** (RD1, `-288` K3) — a completion committed before an approval must ⛔ not read as "completed after approval"; a REAL
+    completion after approval must. ⚠⚠ Both legs run in SEPARATE COMMITTED transactions (Task 4.0): inside one BEGIN/ROLLBACK the
+    completion's `clock_timestamp()` is always later than the approval's transaction-start `now()`, so a single-transaction ordering test
+    passes or fails by construction, ⛔ never by the code. ⚠ And the "not a candidate" leg is read on the FAULT path (RD25) — on the normal
+    path an un-keyed candidate is dropped and the leg proves nothing.
+11. **`null` is ⛔ never `false` — and `false` is ⛔ never `null` where the section rules a key out** (RD18, invariant 5) — a failed read
+    shows "could not be checked just now" on every completed row's DATE line (own or inherited) and on the VERDICT line only where the
+    verdict is `does_not_match` on an own row; an un-completed row, an inherited row's verdict line, and a `matches` verdict line show ⛔ no
+    such line. `'not_indexed'` (pre-6.26b) is its own words, ⛔ never "just now".
+12. **Guard order** (RD15) — the index checks sit inside `invalid_date` / `date_on_reject`; the two register-check refusals run after the
+    existing four; the API refusal table proves each existing code survives.
+13. **Nullish, ⛔ never `!== null`** (RD15) — the two new writer inputs are optional; a reject that leaves them out must ⛔ never be refused.
+    Callers cast `as never` hide from `tsc` — grep them.
+14. **The no-comparison fence** (RD23) — plain `===` on ids, ⛔ never `.toLowerCase() ===`; the helpers live in `approval-warnings.ts`.
+15. **ONE date comparison** (RD9, `-288` K2) — GI6's key and the console's date line both call `deathDateComparison`; a second comparison
+    is the Trap-2 drift in a new place.
+16. **GI6's key is stable on purpose** (`-288` K4) — a re-review to ANOTHER differing date keeps the key covered; ⛔ never re-key it by
+    review to "fix" it (that is a GI6 amendment, ⛔ not a patch). GI18's key is per UPLOAD (`-289` L1) — re-stating a mismatch is the same key.
+17. **A recorded register mismatch is ⛔ never withdrawn** (`-289` L2, RD29) — ⛔ no code path clears it short of a replaced upload; ⛔ never
+    add one.
 
 ### Testing
-- **Domain unit:** `deriveDeathFactWarningKeys`' table (each kind: present / absent / ⛔ no accepted review / pre-6.26b review ⛔ no index /
-  replaced upload / superseded review / inherited / `could_not_check`); the pin + lockstep tests; `rtbf-anonymize.test.ts` (the column in the SET).
+- **Domain unit:** `deathDateComparison`'s table, in its ORDER (`differs` / `same` / ⛔ no row index ⇒ `not_compared` / a replaced
+  original ⇒ `not_compared` / ⛔ no current accepted review ⇒ `not_compared` / ⛔ no accepted index ⇒ `not_indexed` / the overlap cases —
+  ⛔ no row index AND ⛔ no accepted index ⇒ `not_compared`); `deriveDeathFactWarningKeys`' table (each kind: present / absent / ⛔ no
+  accepted review / pre-6.26b review ⛔ no index / replaced upload / GI18 superseded by a same-upload `matches` re-review ⇒ STAYS (K1) / a
+  second `does_not_match` ⇒ the SAME single key (L1) / GI18 on a replaced upload ⇒ goes / an inherited `family_statement` row ⇒ the GI6 key
+  (L3) / an inherited `original_certificate` row ⇒ ⛔ no key / an inherited `does_not_match` ⇒ ⛔ no GI17 key / `could_not_check` /
+  `postDeath` ≠ `evaluated` ⇒ the three kinds still derived); the pin (its message keeps the
+  6-27 sentence — RD24) + lockstep tests; the no-comparison fence green at 36 (RD23); `rtbf-anonymize.test.ts` (the column in the SET).
 - **Domain live-DB (RLS):** `rls/claim-death-certificate-policy-regression.spec.ts` — the owner-role trigger test (after `RESET ROLE`, `:376-396`)
-  gains a `register_check` leg; the 42501 test (`:330`) gains a `register_check` leg; *"twt_app CAN scrub"* (`:353`) gains `accepted_date_index`;
-  the per-name CHECK test (`:208`) gains both new CHECKs.
+  gains a `register_check` leg and a leg showing the trigger lets `accepted_date_index` go to NULL; the 42501 test (`:330`) gains a
+  `register_check` leg; *"twt_app CAN scrub"* (`:353`) seeds `accepted_date_index: 'idx'` (the default `review()` has none — NULL→NULL would
+  prove nothing) and asserts NULL after; the per-name CHECK test (`:208`) gains both new CHECKs by their exact names (RD14).
 - **Domain live-DB:** `approval-warnings.spec.ts` + `approval-warnings-every-approver.spec.ts` (each kind blocks an un-reasoned approval at
   every approver; the late wait for GI6 and GI17; RD4's R9 finalize — the District Admin's wait first, then the approve votes' revision); the
   bulk-vs-single parity with each kind; the queue (`listClaimsUnderCorrection` — tested in `approval-warnings-every-approver.spec.ts`; ⛔ no
   separate correction-queue spec exists): the completed-after-approval listing, an R9-routed claim in `state_trustee_approved` (listed) and the
-  same claim with its routing row superseded (⛔ not listed), and a default-fixture approved claim (⛔ not a candidate — RD1) — ⚠ every
-  ORDERING leg in a NEW own-committing spec (Task 4.0: legs a/b/c, separate committed transactions), ⛔ never inside these BEGIN/ROLLBACK
-  files; `ground-inspection.spec.ts` (the amended clock pin — `completedAt` = the transaction's `now()`); `death-certificate.spec.ts` (AC7, guard order); `death-certificate-rtbf.spec.ts`.
-- **API live-DB:** `death-certificate.spec.ts` (register-check codes; the refusal table; the history field; the audit code); `verifier-console.spec.ts`
-  / `-shape.spec.ts` / `verifier-console-ground-inspection.spec.ts` (`registerCheck`, the two flags incl. `null`; MAX_READS still 20); one
-  approval-route test per new kind showing the reason requirement (`ensureGroundInspection({ force: true, verdict: 'does_not_match' })` /
-  `{ deathDate }`); Task 4.0's ordering legs a/b/c over HTTP — each step its own request (its own transaction).
+  same claim with its routing row superseded by a direct UPDATE (⛔ not listed — RD26), and a claim inspected before approval (⛔ not a
+  candidate, on the FAULT path — RD25) — ⚠ every ORDERING leg in a NEW own-committing spec (Task 4.0: legs a–e, separate committed
+  transactions), ⛔ never inside these BEGIN/ROLLBACK files; K4's pinned leg (re-review after approval to another differing date ⇒ ⛔ no
+  late key); `-285`'s R9-first leg (an inspection completing mid-session ⇒ the earlier approve votes must revise, ⛔ no late wait);
+  `ground-inspection.spec.ts` (the amended clock pin — `completed_at` ⛔ never the injected clock, STRICTLY `>` the transaction's `now()` after `pg_sleep(0.001)` — Task 4.0);
+  `death-certificate.spec.ts` (AC7, guard order, a reject OMITTING both fields still succeeds, the K1 / L1 same-upload re-reviews);
+  the inherited leg (a refile with ⛔ no own visit whose inherited family date differs ⇒ the key at the District Admin's approval; then an
+  own full visit completes ⇒ the inherited key LEAVES the set — `-289` L3; ⚠ if that own visit records the SAME differing date, its own
+  key is NEW and late ⇒ the District Admin answers again — correct under GI6 / K4's per-inspection key, ⛔ not a defect to "fix");
+  `death-certificate-rtbf.spec.ts`.
+- **API live-DB:** `death-certificate.spec.ts` (register-check codes; the refusal table; the history field; the audit code; the
+  `claim.death_certificate_reviewed` event payload carries ⛔ no `register_check` — GI16); `verifier-console.spec.ts`
+  / `-shape.spec.ts` / `verifier-console-ground-inspection.spec.ts` (`registerCheck`; `dateComparison` incl. an INHERITED differing row
+  (with `dateDiffersWarning: true`), `'not_indexed'` on a pre-6.26b review, `'not_compared'` with ⛔ no accepted certificate, and `null` on
+  every completed row on a failed read; the two flags incl. `null` on a failed read and `false` by construction on an un-completed row and on
+  `originalMismatchWarning` of an inherited or `matches` row; MAX_READS still 20; `:1142` / `:1179` (`:1195`) and the `:519-520` shape pin
+  UNCHANGED); one approval-route test per new kind showing the reason
+  requirement (`ensureGroundInspection({ force: true, verdict: 'does_not_match' })` / `{ force: true, deathDate }` /
+  `seedNomineeNameCheck(…, { registerCheck: 'does_not_match' })` — RD22); Task 4.0's ordering legs a/b/c over HTTP — each step its own
+  request (its own transaction).
 - **Jobs:** the three RD20 files.
-- **Admin:** `death-certificate-review.test.tsx` (the choice, ⛔ nothing pre-selected, Submit disabled without it, the history words, the two
-  refusal words; its exact payload assertions `:190-199`, `:347-370` amended); the kind lines on the console and on one later surface; the
-  per-assignment lines incl. "could not be checked"; the timeline still words only its two kinds.
+- **Admin:** `death-certificate-review.test.tsx` (the choice, ⛔ nothing pre-selected, Submit disabled without it, the incomplete-accept words,
+  the history words incl. *"register check not recorded"*, the two refusal words; its exact payload assertions `:190-199`, `:347-370`
+  amended); the kind lines on the console and on one later surface; the per-assignment lines — warning (an inherited one labelled "given
+  on an earlier claim") / "could not be compared" on `not_indexed` / "could not be checked just now" on `null` / nothing on `same` and
+  `not_compared`; ⛔ no date in any kind, date-comparison or mismatch line (AC9b — ⛔ not the GI10 [a] date line); the timeline still words only its
+  two kinds; `correction-queue.test.tsx:678` amended and `:668` re-targeted (RD10 — ⛔ never left vacuous).
 - **Gate:** `pnpm ci:local` ([[project_known_livedb_test_failures]], [[project_ci_local_concurrency_oversubscription]],
   [[project_fk_truncate_cascade_deadlock]] before calling a flake).
 
@@ -510,7 +831,8 @@ Every test below passes; GI15 [b]'s fixtures raise ⛔ no warning on any approve
 already used in these files. ⛔ No web research needed.
 
 ### References
-- `.decision-log.md`: `2026-10-06-284` E1 (amends GI7) · `2026-10-06-283` A1, A2, A3 · `2026-10-06-285` · `-280` · `2026-10-06-281` ·
+- `.decision-log.md`: `2026-10-07-290` M1–M3 (erratum to `-289` L3 — the inherited-source queue disjunct) · `2026-10-07-289` L1–L5
+  (erratum to `-288`; amends GI6) · `2026-10-07-288` K1–K4 (amends GI18, GI10 [b]) · `2026-10-06-284` E1 (amends GI7) · `2026-10-06-283` A1, A2, A3, A6, A8 · `2026-10-06-285` · `-280` · `2026-10-06-281` ·
   `2026-09-28-262` FQ8 B/C · `-264` FQ12 · `-277` Q2 C, Q3 B · `-278` NW1, NW6, NW14 · `-279` A2, A4, A6 · `2026-10-06-282` (GI1–GI18) ·
   `2026-10-07-286` / `-287` (GI4 — ⛔ no effect here).
 - `_bmad-output/implementation-artifacts/6-26-ground-inspection-before-approval-and-death-facts.md` (Story 6.26a — GI1–GI18, the record;
@@ -519,7 +841,9 @@ already used in these files. ⛔ No web research needed.
 - Stories `6-23-post-death-nominee-change-warnings.md` (NW1–NW18), `6-23b-every-approver-gives-a-warning-reason.md` (EA2, EA5, EA7, EA10),
   `6-21-death-certificate-clear-date-rule.md` (the review writer).
 - `deferred-work.md`: *"The fixture's completion clock can be in the FUTURE"*; *"⚠ EA10's late-warning arm keys on a NEW determination"*;
-  *"The R9 routing predicate's BULK inline twins …"*; *"A FAILED refetch after a 409 hides the whole approval surface"*.
+  *"A late key covered ONLY by a late reason whose recorder then approves is ⛔ not listed"*; *"6.7's own Tier-1 inspection columns are ⛔
+  not in the member erasure"*; *"The R9 routing predicate's BULK inline twins …"*; *"A FAILED refetch after a 409 hides the whole approval surface"*.
+- Gates: `packages/domain/tests/claim/nominee-name-no-comparison-fence.test.ts` (RD23); `microcopy.yaml` (Task 8).
 
 ## Dev Agent Record
 
@@ -542,3 +866,6 @@ already used in these files. ⛔ No web research needed.
 | v1.4 | 2026-10-06 | Round 3 (with 6.26a v2.5): ⛔ no BLOCKER / HIGH. Task 4 rewritten — the state admission lives ONCE in the shared WHERE and uses 6.26a's SQL fragment `liveRoutedToR9Exists` (⛔ never a per-claim call); why `qualifyingRows` needs ⛔ no change. Task 9 / Trap 6 list the red-by-design re-review specs (A3 leaves `family_statement` unfiltered). Task 5 and Testing: `register_check`'s immutability is proved in `rls/claim-death-certificate-policy-regression.spec.ts` (four legs), ⛔ not through `twt_app`. P2 now identical to 6.26a's. ⛔ Not re-pinned; still `backlog`. |
 | v2.0 | 2026-10-07 | **Created for dev** (`bmad-create-story 6.26b`) — re-pinned `3311fc97` → `b665a19a` (6.26a merged as PR #259) and every code claim re-derived by three fresh-context read-only verifiers (warnings + queue; review writer + migration + erasure + fixtures; API + contracts + admin), the load-bearing ones re-read by the author. ⛔ No GI or ruling moved. **RD1–RD21** (found facts) change the build: ⚠ RD1 the fixture clock (6.26a's completion stores the injected clock, always in the future; GI7 compares the VERIFIER approval's `decided_at`) — author choice: store the DB clock, `now` validates only (reverses 6.26a review patch #2; BigDev confirms at Task 0); RD2 the queue's WHERE is Drizzle and its late arm an INNER JOIN — one hoisted fragment, an `or(and(…), R9 admission)`; RD3 `liveRoutedToR9Exists()` takes SQL; RD4 a late key during R9 also makes the approve votes short (`-279` A2); RD6–RD9 the select needs `death_date_source`, reuse `currentDeathCertificateUploadIdSql`, `NOMINEE_VERSION_WARNING_KINDS` reaches the classifier + API, an exported pure `deriveDeathFactWarningKeys`; RD10 ~15 "nominee-change" staff strings reworded; RD11 the review 409s need ⛔ no mapping but the admin words are unforced; RD12 `deathDateBlindIndex` reused; RD13 strict contracts; RD14 text + CHECK, a VALIDATED coherence CHECK, the trigger restated; RD15 the index guard and guard order; RD16 erasure adds ⛔ no statement; RD17 the audit code; RD18 the console's per-assignment flags stitched from `w.keys` (`boolean | null`, ⛔ no new read); RD19–RD20 the red-by-design list (four warning specs) and the direct accept callers incl. `apps/jobs`; RD21 the helpers. `backlog` → **`ready-for-dev`**. |
 | v2.1 | 2026-10-07 | BigDev: *"Confirm RD1 = DB clock and amend Task 4.0 / Trap 10 / Testing to require transaction-separated ordering tests"* and *"Remove the unsupported inspection: 'skip' fixture option from Task 9.3"*. **RD1 ✅ confirmed** (AC0, Task 0, the RD1 text). With the DB clock every `now()` in one BEGIN/ROLLBACK is the same instant ⇒ an approval and a completion TIE and a single-transaction ordering test proves nothing ⇒ Task 4.0 requires every approval↔completion ORDER to be asserted in SEPARATE COMMITTED transactions — domain: a new own-committing spec (the `ground-inspection-concurrency.spec.ts` pattern); API: one request per step — legs (a) inspection-then-approval ⛔ not a candidate, (b) approval-then-completion listed and waiting, (c) the R9-routed leg, with red-checks that expose a hollow single-transaction leg; the clock pin asserts the transaction's own `now()`. Trap 10, Testing (domain + API) and AC8 carry it. **Task 9.3's `inspection: 'skip'` route removed** — ⚠ the option itself EXISTS in both fixtures (domain `_helpers.ts:1269`, API `_nominee-name-check-fixture.ts:248`; 18 specs use it); it is removed because it cannot do what 9.3 asked: those specs approve before they re-review, the gate needs a complete inspection first, and the family's date is fixed at completion ⇒ skipping only moves the key. ⛔ No GI or ruling moved; still `ready-for-dev`. |
+| v2.2 | 2026-10-07 | The fresh-context validate of v2.1 (`bmad-create-story validate 6.26b`; four read-only verifiers — warnings + queue + clock; review writer + migration + erasure; API + contracts + admin; governance). ⛔ No code moved since `b665a19a`; ⛔ no decision after `-287` before this pass. 2 HIGH, 16 MEDIUM, ~39 LOW — all applied. **`2026-10-07-288` written and committed ALONE first (`0152ead9`)**, BigDev answering each item in session: **K1** GI18 keyed on the current UPLOAD (*"Key on current upload"* — a same-certificate re-review ⛔ no longer erases a `does_not_match`); **K2** the console shows ANY date difference, inherited included, as `-262` FQ8 C says (*"Show it, as not a warning"*); **K3** `completed_at = clock_timestamp()` (*"clock_timestamp()"* — the `now()` commit-order race left a late key unlisted for good); **K4** GI6's key kept, recorded (*"Keep, record it"*). HIGH: (1) leg (a) / the RD1 "not a candidate" assertion was invisible on the queue's normal path (`qualifyingRows` drops an un-keyed candidate) ⇒ asserted on the FAULT path (RD25); (2) RD19 missed `nominee-name-check.spec.ts:769-818`, the literal-index specs (`ground-inspection-approval.spec.ts`'s `inspectNow`, API `verifier-console-shape.spec.ts`'s `seedInspection`) and K3's single-transaction side effect (`approval-warnings-every-approver.spec.ts:1000-1046`), and its "name the key and count it" would have DELETED `-279` A3's coverage at `approval-warnings.spec.ts:414-418` ⇒ rebuilt on a same-date re-review. MEDIUM (found): optional + nullish writer inputs (RD15); the domain `reject()` built from `accept()` (RD20); GI18's fixture path (RD22); the no-comparison fence (RD23); the pin message keeps row 6-27's tripwire (RD24); the R9 supersession leg was hollow (RD26); E1 widens the actor-exclusion deferred item (RD27); the erasure item's trigger fires (RD28); RD10 is an exact list, ⛔ never a blanket reword, and two admin tests move; the console's keys reach the stitch through an internal section reader, and flags are `false` by construction where ⛔ no key can exist (RD18). LOW: cites (`0122:138`/`:140`, not `:143-145`; the history item `:62-76`; the default-fixture call `:1336`; `DeathCertificateReviewStatus` DEFINED in `DeathCertificateReviewControl.tsx:39-56`); the journal `when`; constraint names ≤ 63; the trigger precedent stated; the RLS scrub leg seeded; RD29–RD31; AC tags on every Task (AC12b now carried by Task 11); `-281` Q1 B's wait clause, P4's wait clause, FQ8 B's *"certificate number"*; `-285`'s R9-first interaction; RD1 restores `-283` A6; the header's "⛔ none is a decision" reworded; `-277`'s open family-notice item. ⚠ **Correction to v2.1's row (kept as written):** *"18 specs use it"* — `inspection: 'skip'` appears in **4** spec files at **16** call sites (18 lines, two of them comments); the two option sites it named are right. Still `ready-for-dev`. |
+| v2.3 | 2026-10-07 | Round 2 of the validate — a fresh-context re-validate of `-288` and of the v2.2 rewrite, in parallel. ⛔ No blocker; 3 HIGH (all in v2.2's OWN edits), ~10 MEDIUM, ~20 LOW — all applied. **`2026-10-07-289` written and committed ALONE first (`51c8eb4e`)**, an erratum to `-288`, BigDev answering each item: **L1** GI18 keyed by UPLOAD (*"Key by upload"* — keyed by review, re-entering a true `does_not_match` to fix a typed date made a new late key); **L2** a recorded mismatch is answered, ⛔ never withdrawn (*"Reasons are the path"*); **L3** an inherited visit's differing family date IS a GI6 key (*"Make it a warning"* — K2 had made GI6's narrowing of the ratified `-264` FQ12 visible); **L4** ⛔ no accepted certificate ⇒ nothing compared (*"Nothing compared"*); L5 six found text corrections to `-288`. HIGH: (1) ⛔ no test distinguished K3's `clock_timestamp()` from `now()` ⇒ the pin is STRICT (`completed_at > now()` after `pg_sleep`) and a two-connection leg (d) proves the race; (2) **v2.2's RD19 "third mechanism" was FALSE** — `returned.cid` has ⛔ no verifier-decision row (`driveClaimTo` only projects events) ⇒ never a candidate ⇒ ⛔ nothing red; the `backdateCompletion` order is struck (the paragraph now records it as checked and EMPTY); (3) the console's failed-read rules contradicted each other (RD18 vs invariant 5, Trap 11, AC9b) ⇒ ONE rule set: `false` only where the assignment section alone rules a key out, `null` otherwise on a failed read; `'not_indexed'` split from `null` so "just now" means only a failed read. MEDIUM: AC9b's no-date test scoped to the NEW lines (the GI10 [a] date line shows the date by design); `deathDateComparison`'s ORDER; the inherited row set (every stage, only while ⛔ no own full visit — the console's `ownVisited`, ⛔ not a stage filter); the fault-path leg's non-vacuity control; RD29 rewritten for L2; RD19 (iii) via the fixture once RD22 lands. LOW: cites (`_helpers.ts:958`/`:953`, API `:103`, `ground-inspection-persist.ts:924-925`, `verifier-console.spec.ts:1195`, `approval-warnings.spec.ts:471-484`, API `withFault` `:62-69`, `ground-inspection.spec.ts:631-642`); RD20's first refusal is `date_on_reject`; RD25 "⛔ no key, or covered keys"; the two doc-block quotes; RD10's count is 51; the event-payload test; Trap 6 names the literal-index mechanism; 6.26a's K2 line moved out of `-282`'s GI10 sentence. Still `ready-for-dev`. |
+| v2.4 | 2026-10-07 | Round 3 of the validate — a fresh-context re-validate of `-289` and the v2.3 rewrite: ⛔ no blocker, **1 HIGH**, 3 MEDIUM, ~8 LOW — all applied. **HIGH:** `-289` L3 opened a late-key path the queue never lists — a refile relying on an inherited visit gains a late key when the SOURCE is reversed on appeal and re-inspected (or the source changes), with ⛔ no row of the refile completing after its approval ⇒ it waits and the District Admin is ⛔ never told. **`2026-10-07-290` written and committed ALONE first (`94a0fad2`)**, BigDev: *"Add the queue condition"* — RD2 (b) gains a third disjunct (⛔ no own completed full visit AND `inheritedGroundInspectionSourceSql(…) IS NOT NULL` — the one fragment), Task 4.1 builds it, Task 4.0 gains leg (e) with its red-check. MEDIUM: AC0 / Task 0 / References name `-289` and `-290` (Task 0's "⛔ no decision after" check moves to `-290`); Testing's clock pin is STRICT `>` (the `≥` that round 2's HIGH (1) removed had survived there); `'not_indexed'` words reconciled (*"could not be compared with the certificate"*; "just now" ONLY for a failed read — L4's fixed point). LOW: a console row absent from the warnings map ⇒ `null` (⛔ "nothing" — the reads are separate statements); leg (d)'s second assignment carries its original-certificate photo; the own-visit-same-date re-answer recorded as correct; the register-mismatch kind line names THIS certificate. ⛔ Not applied: extending the failed-read rule-out list to rows the section alone can rule out (fail-closed as written; cosmetic). Rounds: 1 (4 verifiers) → 2 (3 HIGH, all the pass's own) → 3 (1 HIGH, in `-289`) → stop pending round 4. Still `ready-for-dev`. |

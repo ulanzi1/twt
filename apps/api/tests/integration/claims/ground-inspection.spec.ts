@@ -44,9 +44,16 @@ function multipart(
   caption?: string,
   photoKind?: string,
   kindAfterFile = false,
+  comparedCertificateToken?: string,
 ): { body: Buffer; ct: string } {
   const boundary = `----twt${randomUUID().replace(/-/g, '')}`;
   const parts: Buffer[] = [];
+  // `2026-10-07-287` J1 — an original's photo carries the token of the certificate the inspector compared.
+  if (comparedCertificateToken !== undefined) {
+    parts.push(
+      Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="comparedCertificateToken"\r\n\r\n${comparedCertificateToken}\r\n`),
+    );
+  }
   const kindPart =
     photoKind !== undefined
       ? Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="photoKind"\r\n\r\n${photoKind}\r\n`)
@@ -422,15 +429,16 @@ describe.skipIf(!hasDatabase)('Ground-inspection admin surface — E2E (:5433)',
     expect(sched.statusCode).toBe(201);
     const gid = sched.json<{ groundInspectionId: string }>().groundInspectionId;
 
-    const storeBefore = td.claimDocumentStorage.store.size;
-    const { body, ct } = multipart(Buffer.from([0xff, 0xd8, 0xff, 0x00]), 'p.jpg', 'image/jpeg', 'front gate', 'original_certificate');
-    const photo = await client.inject({ method: 'POST', url: `${base(pariwarId, claimCaseId)}/${gid}/photos`, payload: body as unknown as object, headers: { 'content-type': ct } });
-    expect(photo.statusCode).toBe(201);
-    expect(td.claimDocumentStorage.store.size).toBe(storeBefore + 1);
-
+    // The inspector opens the copy FIRST — an original's photo is recorded against it (`2026-10-07-287` J1).
     const cert = await client.inject({ method: 'GET', url: `${base(pariwarId, claimCaseId)}/${gid}/certificate` });
     expect(cert.statusCode, cert.body).toBe(200);
     const token = cert.json<{ certificateToken: string }>().certificateToken;
+
+    const storeBefore = td.claimDocumentStorage.store.size;
+    const { body, ct } = multipart(Buffer.from([0xff, 0xd8, 0xff, 0x00]), 'p.jpg', 'image/jpeg', 'front gate', 'original_certificate', false, token);
+    const photo = await client.inject({ method: 'POST', url: `${base(pariwarId, claimCaseId)}/${gid}/photos`, payload: body as unknown as object, headers: { 'content-type': ct } });
+    expect(photo.statusCode).toBe(201);
+    expect(td.claimDocumentStorage.store.size).toBe(storeBefore + 1);
     const done = await client.inject({ method: 'POST', url: `${base(pariwarId, claimCaseId)}/${gid}/complete`, payload: completeBody(token) });
     expect(done.statusCode, done.body).toBe(200);
     expect(done.json<{ status: string; photoCount: number }>().status).toBe('completed');
@@ -452,7 +460,9 @@ describe.skipIf(!hasDatabase)('Ground-inspection admin surface — E2E (:5433)',
       deathDateSource: 'family_statement',
       deathDate: '2026-06-01',
       deathTime: '14:30',
-      photos: [expect.objectContaining({ photoKind: 'original_certificate' })],
+      // `-286` H1 / `-287` J1 — the list says which certificate the original's photo was recorded against (the page's
+      // Complete gate reads it; renaming it would break the page while every mocked admin test stayed green).
+      photos: [expect.objectContaining({ photoKind: 'original_certificate', certificateToken: token })],
     });
   });
 
@@ -524,7 +534,11 @@ describe.skipIf(!hasDatabase)('Ground-inspection admin surface — E2E (:5433)',
     expect(sched.statusCode).toBe(201);
     const gid = sched.json<{ groundInspectionId: string }>().groundInspectionId;
 
-    const { body, ct } = multipart(Buffer.from([0xff, 0xd8, 0xff, 0x00]), 'p.jpg', 'image/jpeg', undefined, 'original_certificate');
+    // ⭐ Story 6.26a (GI4) — the block_admin inspector SEES the claim's uploaded certificate (an assignment they hold).
+    const cert = await blockAdmin.client.inject({ method: 'GET', url: `${base(pariwarId, claimCaseId)}/${gid}/certificate` });
+    expect(cert.statusCode, cert.body).toBe(200);
+    const token = cert.json<{ certificateToken: string }>().certificateToken;
+    const { body, ct } = multipart(Buffer.from([0xff, 0xd8, 0xff, 0x00]), 'p.jpg', 'image/jpeg', undefined, 'original_certificate', false, token);
     const photo = await blockAdmin.client.inject({
       method: 'POST',
       url: `${base(pariwarId, claimCaseId)}/${gid}/photos`,
@@ -532,10 +546,6 @@ describe.skipIf(!hasDatabase)('Ground-inspection admin surface — E2E (:5433)',
       headers: { 'content-type': ct },
     });
     expect(photo.statusCode).toBe(201);
-    // ⭐ Story 6.26a (GI4) — the block_admin inspector SEES the claim's uploaded certificate (an assignment they hold).
-    const cert = await blockAdmin.client.inject({ method: 'GET', url: `${base(pariwarId, claimCaseId)}/${gid}/certificate` });
-    expect(cert.statusCode, cert.body).toBe(200);
-    const token = cert.json<{ certificateToken: string }>().certificateToken;
     const done = await blockAdmin.client.inject({
       method: 'POST',
       url: `${base(pariwarId, claimCaseId)}/${gid}/complete`,
@@ -790,8 +800,8 @@ describe.skipIf(!hasDatabase)('Ground-inspection admin surface — E2E (:5433)',
     ['appeal_stage_1', 'reversed', 'claim.appeal_stage1_reviewed', { decision: 'reversed' }],
   ];
 
-  async function uploadPhoto(client: Client, pariwarId: string, claimCaseId: string, gid: string, kind?: string, kindAfterFile = false) {
-    const { body, ct } = multipart(Buffer.from([0xff, 0xd8, 0xff, 0x00]), 'p.jpg', 'image/jpeg', undefined, kind, kindAfterFile);
+  async function uploadPhoto(client: Client, pariwarId: string, claimCaseId: string, gid: string, kind?: string, kindAfterFile = false, token?: string) {
+    const { body, ct } = multipart(Buffer.from([0xff, 0xd8, 0xff, 0x00]), 'p.jpg', 'image/jpeg', undefined, kind, kindAfterFile, token);
     return client.inject({ method: 'POST', url: `${base(pariwarId, claimCaseId)}/${gid}/photos`, payload: body as unknown as object, headers: { 'content-type': ct } });
   }
   const errCode = (res: { json: <T>() => T }) => res.json<{ error: { code: string; details?: Record<string, unknown> } }>().error;
@@ -826,7 +836,7 @@ describe.skipIf(!hasDatabase)('Ground-inspection admin surface — E2E (:5433)',
 
   it('GI4 — the photo kind rides the multipart (before OR after the file part); an unknown kind → 400', async () => {
     const w = await inspectorWorld();
-    expect((await uploadPhoto(w.client, w.pariwarId, w.claimCaseId, w.gid, 'original_certificate', true)).statusCode).toBe(201);
+    expect((await uploadPhoto(w.client, w.pariwarId, w.claimCaseId, w.gid, 'original_certificate', true, w.uploadId!)).statusCode).toBe(201);
     expect((await uploadPhoto(w.client, w.pariwarId, w.claimCaseId, w.gid)).json<{ photoKind: string }>().photoKind).toBe('site');
     const bad = await uploadPhoto(w.client, w.pariwarId, w.claimCaseId, w.gid, 'selfie');
     expect(bad.statusCode).toBe(400);
@@ -856,6 +866,37 @@ describe.skipIf(!hasDatabase)('Ground-inspection admin surface — E2E (:5433)',
     });
     expect(res.statusCode, res.body).toBe(400);
     expect(errCode(res).code).toBe('ground_inspection.invalid_photo_kind');
+  });
+
+  it('⭐ `-287` J1 — an original\'s photo needs the COMPARED token: ⛔ none ⇒ 409 `original_certificate_required` (`compared_certificate`); a stale one ⇒ 409 `certificate_changed`; a duplicate part ⇒ 400; the list carries the stamp (⛔ none on a site photo)', async () => {
+    const w = await inspectorWorld();
+    const none = await uploadPhoto(w.client, w.pariwarId, w.claimCaseId, w.gid, 'original_certificate');
+    expect([none.statusCode, errCode(none)]).toEqual([409, expect.objectContaining({ code: 'ground_inspection.original_certificate_required', details: { missing: 'compared_certificate' } })]);
+    const stale = await uploadPhoto(w.client, w.pariwarId, w.claimCaseId, w.gid, 'original_certificate', false, randomUUID());
+    expect([stale.statusCode, errCode(stale).code]).toEqual([409, 'ground_inspection.certificate_changed']);
+    const boundary = `----twt${randomUUID().replace(/-/g, '')}`;
+    const tokenPart = Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="comparedCertificateToken"\r\n\r\n${w.uploadId}\r\n`);
+    const dup = await w.client.inject({
+      method: 'POST', url: `${base(w.pariwarId, w.claimCaseId)}/${w.gid}/photos`,
+      payload: Buffer.concat([
+        tokenPart, tokenPart,
+        Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="photoKind"\r\n\r\noriginal_certificate\r\n`),
+        Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="p.jpg"\r\nContent-Type: image/jpeg\r\n\r\n`),
+        Buffer.from([0xff, 0xd8, 0xff, 0x00]),
+        Buffer.from(`\r\n--${boundary}--\r\n`),
+      ]) as unknown as object,
+      headers: { 'content-type': `multipart/form-data; boundary=${boundary}` },
+    });
+    expect([dup.statusCode, errCode(dup).code]).toEqual([400, 'ground_inspection.invalid_compared_certificate']);
+    // The current token ⇒ 201, stamped; a site photo ⇒ ⛔ no stamp. The list says which is which.
+    expect((await uploadPhoto(w.client, w.pariwarId, w.claimCaseId, w.gid, 'original_certificate', false, w.uploadId!.toUpperCase())).statusCode).toBe(201);
+    expect((await uploadPhoto(w.client, w.pariwarId, w.claimCaseId, w.gid, 'site')).statusCode).toBe(201);
+    const read = await w.client.inject({ method: 'GET', url: `${base(w.pariwarId, w.claimCaseId)}?district=${DISTRICT}` });
+    const photos = read.json<{ assignments: { photos: { photoKind: string; certificateToken: string | null }[] }[] }>().assignments[0]!.photos;
+    expect(photos.map((p) => [p.photoKind, p.certificateToken]).sort()).toEqual([
+      ['original_certificate', w.uploadId],
+      ['site', null],
+    ]);
   });
 
   it('⭐ GI4 — the certificate read: 200 (token = the CURRENT upload, a signed URL) to the assigned inspector; 403 to another conduct-key holder; 409 with ⛔ no current certificate', async () => {
@@ -899,7 +940,7 @@ describe.skipIf(!hasDatabase)('Ground-inspection admin surface — E2E (:5433)',
     expect(cross.statusCode).toBe(404);
 
     // Once the assignment is completed it is ⛔ no longer held — the copy is ⛔ never re-opened through it.
-    await uploadPhoto(w.client, w.pariwarId, w.claimCaseId, w.gid, 'original_certificate');
+    await uploadPhoto(w.client, w.pariwarId, w.claimCaseId, w.gid, 'original_certificate', false, w.uploadId ?? randomUUID());
     const done = await w.client.inject({ method: 'POST', url: `${base(w.pariwarId, w.claimCaseId)}/${w.gid}/complete`, payload: completeBody(w.uploadId!) });
     expect(done.statusCode, done.body).toBe(200);
     const afterDone = await w.client.inject({ method: 'GET', url: certUrl });
@@ -923,7 +964,7 @@ describe.skipIf(!hasDatabase)('Ground-inspection admin surface — E2E (:5433)',
     let r = await complete(completeBody(w.uploadId!));
     expect(r.statusCode).toBe(409);
     expect(errCode(r)).toMatchObject({ code: 'ground_inspection.original_certificate_required', details: { missing: 'photo' } });
-    await uploadPhoto(w.client, w.pariwarId, w.claimCaseId, w.gid, 'original_certificate');
+    await uploadPhoto(w.client, w.pariwarId, w.claimCaseId, w.gid, 'original_certificate', false, w.uploadId ?? randomUUID());
     r = await complete(completeBody(w.uploadId!, { originalCertificateVerdict: undefined }));
     expect(errCode(r)).toMatchObject({ code: 'ground_inspection.original_certificate_required', details: { missing: 'verdict' } });
     r = await complete(completeBody(w.uploadId!, { comparedCertificateToken: undefined }));
@@ -942,7 +983,7 @@ describe.skipIf(!hasDatabase)('Ground-inspection admin surface — E2E (:5433)',
     expect([r.statusCode, errCode(r).code]).toEqual([409, 'ground_inspection.certificate_changed']);
 
     const check = await inspectorWorld({ stage: 'certificate_check' });
-    await uploadPhoto(check.client, check.pariwarId, check.claimCaseId, check.gid, 'original_certificate');
+    await uploadPhoto(check.client, check.pariwarId, check.claimCaseId, check.gid, 'original_certificate', false, check.uploadId ?? randomUUID());
     const checkUrl = `${base(check.pariwarId, check.claimCaseId)}/${check.gid}/complete`;
     const withTime = await check.client.inject({ method: 'POST', url: checkUrl, payload: completeBody(check.uploadId!) });
     expect(withTime.statusCode).toBe(400);
@@ -950,17 +991,15 @@ describe.skipIf(!hasDatabase)('Ground-inspection admin surface — E2E (:5433)',
     const done = await check.client.inject({ method: 'POST', url: checkUrl, payload: completeBody(check.uploadId!, { deathTime: undefined }) });
     expect(done.statusCode, done.body).toBe(200);
 
+    // ⛔ No current certificate ⇒ an original's photo has nothing to have been compared against (`-287` J1).
     const none = await inspectorWorld({ certificate: false });
-    await uploadPhoto(none.client, none.pariwarId, none.claimCaseId, none.gid, 'original_certificate');
-    const noCert = await none.client.inject({
-      method: 'POST', url: `${base(none.pariwarId, none.claimCaseId)}/${none.gid}/complete`, payload: completeBody(randomUUID()),
-    });
+    const noCert = await uploadPhoto(none.client, none.pariwarId, none.claimCaseId, none.gid, 'original_certificate', false, randomUUID());
     expect([noCert.statusCode, errCode(noCert).code]).toEqual([409, 'ground_inspection.no_current_certificate']);
   });
 
   it('⭐ AC5 — the stored row holds the date ONLY as ciphertext + an index under `DEATH_DATE_INDEX_FIELD_CLASS` (from `@twt/domain`)', async () => {
     const w = await inspectorWorld();
-    await uploadPhoto(w.client, w.pariwarId, w.claimCaseId, w.gid, 'original_certificate');
+    await uploadPhoto(w.client, w.pariwarId, w.claimCaseId, w.gid, 'original_certificate', false, w.uploadId ?? randomUUID());
     const r = await w.client.inject({ method: 'POST', url: `${base(w.pariwarId, w.claimCaseId)}/${w.gid}/complete`, payload: completeBody(w.uploadId!) });
     expect(r.statusCode, r.body).toBe(200);
     const c = await td.pool.connect();
@@ -986,7 +1025,7 @@ describe.skipIf(!hasDatabase)('Ground-inspection admin surface — E2E (:5433)',
   it('⭐ AC14 — the certificate read and the completion are audited with codes, ids and counts ONLY (⛔ a date, a time, a note or a name)', async () => {
     const w = await inspectorWorld();
     await w.client.inject({ method: 'GET', url: `${base(w.pariwarId, w.claimCaseId)}/${w.gid}/certificate` });
-    await uploadPhoto(w.client, w.pariwarId, w.claimCaseId, w.gid, 'original_certificate');
+    await uploadPhoto(w.client, w.pariwarId, w.claimCaseId, w.gid, 'original_certificate', false, w.uploadId ?? randomUUID());
     await uploadPhoto(w.client, w.pariwarId, w.claimCaseId, w.gid, 'site');
     const r = await w.client.inject({
       method: 'POST', url: `${base(w.pariwarId, w.claimCaseId)}/${w.gid}/complete`,
@@ -1000,7 +1039,7 @@ describe.skipIf(!hasDatabase)('Ground-inspection admin surface — E2E (:5433)',
     expect(completed).toHaveLength(1);
     expect(completed[0]!.context).toMatchObject({
       photo_count: 2,
-      photo_kind_counts: { site: 1, original_certificate: 1 },
+      photo_kind_counts: { site: 1, original_certificate: 1, original_certificate_for_compared: 1 },
       original_certificate_verdict: 'matches',
       death_date_source: 'family_statement',
     });

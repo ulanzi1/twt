@@ -273,6 +273,7 @@ describe.skipIf(!hasDatabase)('ground inspection (PARIWAR_A scope)', () => {
     await addGroundInspectionPhoto(client, {
       pariwarId: PARIWAR_A, groundInspectionId: gid, actingActorId: INSPECTOR,
       storageObjectKey: 'k1', contentType: 'image/jpeg', byteSize: 100, photoKind: 'original_certificate',
+      comparedCertificateUploadId: uploadId,
     });
     const done = await completeGroundInspection(client, completeInput(gid, uploadId));
     expect(done.groundInspection.status).toBe('completed');
@@ -309,20 +310,22 @@ describe.skipIf(!hasDatabase)('ground inspection (PARIWAR_A scope)', () => {
     for (let i = 0; i < MAX_GROUND_INSPECTION_PHOTOS; i += 1) {
       await addGroundInspectionPhoto(client, { pariwarId: PARIWAR_A, groundInspectionId: gid, actingActorId: INSPECTOR, storageObjectKey: `s${i}`, contentType: 'image/png', byteSize: 10 });
     }
-    // ⛔ No current certificate ⇒ ⛔ no reserved slot (a NULL-stamped original never counts — H1).
+    // ⛔ No current certificate ⇒ ⛔ no original's photo at all (`-287` J1 — there is nothing to have compared).
     await client.query('SAVEPOINT cap_no_cert');
     await expect(
       addGroundInspectionPhoto(client, {
         pariwarId: PARIWAR_A, groundInspectionId: gid, actingActorId: INSPECTOR,
         storageObjectKey: 'cert-0', contentType: 'image/png', byteSize: 10, photoKind: 'original_certificate',
+        comparedCertificateUploadId: randomUUID(),
       }),
-    ).rejects.toBeInstanceOf(GroundInspectionPhotoLimitError);
+    ).rejects.toBeInstanceOf(GroundInspectionNoCurrentCertificateError);
     await client.query('ROLLBACK TO SAVEPOINT cap_no_cert');
     const { uploadId: u1 } = await seedDeathCertificate(client, { pariwarId: PARIWAR_A, claimCaseId: cid });
     // The 21st, reserved for the mandatory kind, is accepted...
     const certificatePhoto = await addGroundInspectionPhoto(client, {
       pariwarId: PARIWAR_A, groundInspectionId: gid, actingActorId: INSPECTOR,
       storageObjectKey: 'cert-1', contentType: 'image/png', byteSize: 10, photoKind: 'original_certificate',
+      comparedCertificateUploadId: u1,
     });
     expect(certificatePhoto.photoKind).toBe('original_certificate');
     expect(certificatePhoto.certificateUploadId).toBe(u1);
@@ -332,6 +335,7 @@ describe.skipIf(!hasDatabase)('ground inspection (PARIWAR_A scope)', () => {
       addGroundInspectionPhoto(client, {
         pariwarId: PARIWAR_A, groundInspectionId: gid, actingActorId: INSPECTOR,
         storageObjectKey: 'cert-2', contentType: 'image/png', byteSize: 10, photoKind: 'original_certificate',
+        comparedCertificateUploadId: u1,
       }),
     ).rejects.toBeInstanceOf(GroundInspectionPhotoLimitError);
     await client.query('ROLLBACK TO SAVEPOINT cap_second');
@@ -341,12 +345,14 @@ describe.skipIf(!hasDatabase)('ground inspection (PARIWAR_A scope)', () => {
     const second = await addGroundInspectionPhoto(client, {
       pariwarId: PARIWAR_A, groundInspectionId: gid, actingActorId: INSPECTOR,
       storageObjectKey: 'cert-3', contentType: 'image/png', byteSize: 10, photoKind: 'original_certificate',
+      comparedCertificateUploadId: u2,
     });
     expect(second.certificateUploadId).toBe(u2);
     await expect(
       addGroundInspectionPhoto(client, {
         pariwarId: PARIWAR_A, groundInspectionId: gid, actingActorId: INSPECTOR,
         storageObjectKey: 'cert-4', contentType: 'image/png', byteSize: 10, photoKind: 'original_certificate',
+        comparedCertificateUploadId: u2,
       }),
     ).rejects.toBeInstanceOf(GroundInspectionPhotoLimitError);
   });
@@ -529,6 +535,7 @@ describe.skipIf(!hasDatabase)('ground inspection (PARIWAR_A scope)', () => {
         await addGroundInspectionPhoto(client, {
           pariwarId: PARIWAR_A, groundInspectionId: gid, actingActorId: INSPECTOR,
           storageObjectKey: `k-${randomUUID()}`, contentType: 'image/jpeg', byteSize: 100, photoKind: photo,
+          ...(photo === 'original_certificate' ? { comparedCertificateUploadId: uploadId } : {}),
         });
       }
       return { client, tx, cid, gid, uploadId };
@@ -564,15 +571,28 @@ describe.skipIf(!hasDatabase)('ground inspection (PARIWAR_A scope)', () => {
       await enterAppScope(client, PARIWAR_A);
       await driveToVerification(client, cid, toMemberId(randomUUID()));
       const gid = (await scheduleGroundInspection(client, scheduleInput(cid))).groundInspection.groundInspectionId;
-      await addGroundInspectionPhoto(client, {
-        pariwarId: PARIWAR_A, groundInspectionId: gid, actingActorId: INSPECTOR,
-        storageObjectKey: `k-${randomUUID()}`, contentType: 'image/jpeg', byteSize: 100, photoKind: 'original_certificate',
-      });
+      // `-287` J1 — the writer refuses an original's photo with ⛔ no current certificate to have compared…
+      await refuses(
+        client,
+        () =>
+          addGroundInspectionPhoto(client, {
+            pariwarId: PARIWAR_A, groundInspectionId: gid, actingActorId: INSPECTOR,
+            storageObjectKey: `k-${randomUUID()}`, contentType: 'image/jpeg', byteSize: 100, photoKind: 'original_certificate',
+            comparedCertificateUploadId: randomUUID(),
+          }),
+        (e) => e instanceof GroundInspectionNoCurrentCertificateError,
+      );
+      // …so the completion's own `no_current_certificate` leg is reached through a raw (NULL-stamped) original photo.
+      await client.query(
+        `INSERT INTO claim_ground_inspection_photos (ground_inspection_id, pariwar_id, storage_object_key, content_type, byte_size, photo_kind)
+         VALUES ($1, $2, $3, 'image/jpeg', 100, 'original_certificate')`,
+        [gid, PARIWAR_A, `k-${randomUUID()}`],
+      );
       await refuses(client, () => completeGroundInspection(client, completeInput(gid, randomUUID())), (e) => e instanceof GroundInspectionNoCurrentCertificateError);
       expect(await countEvents(tx, cid, 'claim.ground_inspection_completed')).toBe(0);
     });
 
-    it('⭐ `-286` H1 — an original\'s photo is STAMPED with the current upload; after a replacement the earlier photo ⛔ never counts, a new one does', async () => {
+    it('⭐ `-286` H1 / `-287` J1 — an original\'s photo is STAMPED with the COMPARED upload; after a replacement the earlier photo ⛔ never counts, a photo recorded against the OLD compare is refused, one against the new compare counts', async () => {
       const s = await scheduled();
       const stamps = async () =>
         (await s.tx.select().from(schema.claimGroundInspectionPhotos).where(eq(schema.claimGroundInspectionPhotos.groundInspectionId, s.gid)))
@@ -581,16 +601,23 @@ describe.skipIf(!hasDatabase)('ground inspection (PARIWAR_A scope)', () => {
         pariwarId: PARIWAR_A, groundInspectionId: s.gid, actingActorId: INSPECTOR,
         storageObjectKey: `k-${randomUUID()}`, contentType: 'image/jpeg', byteSize: 100, photoKind: 'site',
       });
-      // The original's photo carries the certificate current when it was taken; a site photo carries ⛔ none.
+      // The original's photo carries the certificate the inspector compared; a site photo carries ⛔ none.
       expect(await stamps()).toEqual(expect.arrayContaining([{ kind: 'original_certificate', stamp: s.uploadId }, { kind: 'site', stamp: null }]));
+      // ⛔ No compared token ⇒ refused (an original's photo is evidence FOR a certificate).
+      const original = (compared?: string) => () =>
+        addGroundInspectionPhoto(s.client, {
+          pariwarId: PARIWAR_A, groundInspectionId: s.gid, actingActorId: INSPECTOR,
+          storageObjectKey: `k-${randomUUID()}`, contentType: 'image/jpeg', byteSize: 100, photoKind: 'original_certificate',
+          ...(compared !== undefined ? { comparedCertificateUploadId: compared } : {}),
+        });
+      await refuses(s.client, original(), missing('compared_certificate'));
       // The family replaces the certificate; the inspector re-compares against the NEW one — the old photo ⛔ never counts.
       const { uploadId: u2 } = await seedDeathCertificate(s.client, { pariwarId: PARIWAR_A, claimCaseId: s.cid });
       await refuses(s.client, () => completeGroundInspection(s.client, completeInput(s.gid, u2)), missing('photo'));
-      // A photo of the NEW certificate's original ⇒ completes, compared against it.
-      await addGroundInspectionPhoto(s.client, {
-        pariwarId: PARIWAR_A, groundInspectionId: s.gid, actingActorId: INSPECTOR,
-        storageObjectKey: `k-${randomUUID()}`, contentType: 'image/jpeg', byteSize: 100, photoKind: 'original_certificate',
-      });
+      // ⭐ J1 — a photo uploaded AFTER the replacement but recorded against the OLD compare ⇒ refused, ⛔ never stamped u2.
+      await refuses(s.client, original(s.uploadId), (e) => e instanceof GroundInspectionCertificateChangedError);
+      // A photo recorded against the NEW compare ⇒ completes, compared against it.
+      await original(u2.toUpperCase())();
       const done = await completeGroundInspection(s.client, completeInput(s.gid, u2.toUpperCase()));
       expect(done.groundInspection.comparedCertificateUploadId).toBe(u2);
     });
@@ -762,6 +789,7 @@ describe.skipIf(!hasDatabase)('ground inspection (PARIWAR_A scope)', () => {
         await addGroundInspectionPhoto(client, {
           pariwarId: PARIWAR_A, groundInspectionId: gid, actingActorId: INSPECTOR,
           storageObjectKey: `k-${randomUUID()}`, contentType: 'image/jpeg', byteSize: 100, photoKind: 'original_certificate',
+          comparedCertificateUploadId: uploadId,
         });
         await completeGroundInspection(client, completeInput(gid, uploadId));
         const events = await tx

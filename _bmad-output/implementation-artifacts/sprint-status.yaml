@@ -1,3 +1,13 @@
+# last_updated: 2026-10-07d (⭐ **STORY 6.26a — NARROW ROUND 3** (a fresh-context re-validate of `-286` + a fresh adversarial review of the
+# round-2 delta `1f45c6f5..0ac5165c`, in parallel, read-only): ⛔ no blocker, ⛔ no high; 1 decision, 11 patches, 1 deferred, 3 dismissed.
+# ⭐ **`2026-10-07-287` COMMITTED ALONE (`c1dda242`)** — J1 (BigDev: *"1"*): the original's photo is stamped with the certificate the
+# inspector COMPARED (the upload carries the Compare token, refused unless still current) — superseding `-286` H1's "current at upload",
+# which let a photo uploaded after a replacement be stamped with the NEW certificate; J2 four wording slips in `-286` corrected. Patches:
+# GI4's `⚠ AMENDED by -286 / -287` line + AC4 + Task 2.3 + the header lists; the round-2 dismissal-line splice repaired; 6.26b Tasks 1
+# (migration now `0149`) / 4 / 9 carry the fixture-clock item; admin "Compare first" gate on an original's upload, neutral hint, optional
+# `certificateToken`; API test of the list's stamp; the audit's for-compared count; a LIVE two-connection test of the reserved slot; the
+# family-9 note; a 404 for the unreachable missing claim. `pnpm ci:local` :5433: run 3 33 / 34 (the known shared-`PARIWAR_A` COUNT race,
+# green alone), run 4 ⭐ **34 / 34**. ⛔ No row moves — `6-26-…` stays `done`.)
 # last_updated: 2026-10-07c (⭐ **STORY 6.26a — SECOND-PASS CODE REVIEW (`bmad-code-review 6.26a`, full diff `3311fc97..c855d651`, three
 # layers in PARALLEL, read-only).** 2 decisions, 10 patches (all applied), 3 deferred, 17 dismissed. Decisions (BigDev, "1-1, 2-1"):
 # ⭐ **`2026-10-07-286` COMMITTED ALONE (`1f45c6f5`)** — GI4 amended: H1 an original's photo is STAMPED with the certificate current when it

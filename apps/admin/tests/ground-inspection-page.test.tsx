@@ -363,21 +363,59 @@ describe('<GroundInspectionPage>', () => {
       await screen.findByText('inspector-1');
       await openAndFill({ verdict: 'It matches', date: '2026-06-01' });
       expect(screen.getByRole('button', { name: 'Complete inspection' })).toBeDisabled();
-      expect(screen.getByText(/taken for an earlier certificate/)).toBeInTheDocument();
+      expect(screen.getByText(/No photo of the original was taken against the certificate you compared/)).toBeInTheDocument();
     });
 
-    it('the photo upload sends the chosen KIND; a certificate check defaults to the original', async () => {
+    it('the photo upload sends the chosen KIND; a certificate check defaults to the original — whose photo needs "Compare" first and carries its token (`-287` J1)', async () => {
       vi.mocked(api.listGroundInspection).mockResolvedValue({ assignments: [makeAssignment({ inspectionStage: 'certificate_check' })] });
       vi.mocked(api.uploadGroundInspectionPhoto).mockResolvedValue({ photoId: 'p' });
+      vi.mocked(api.getGroundInspectionCertificate).mockResolvedValue(CERT);
       const user = userEvent.setup();
       renderWithClient(<GroundInspectionPage pariwarId={PARIWAR} />);
       await loadScope();
       await screen.findByText('inspector-1');
       expect(screen.getByLabelText('What the photo shows')).toHaveValue('original_certificate');
       await user.upload(screen.getByLabelText('Upload photo'), new File([new Uint8Array([1])], 'o.jpg', { type: 'image/jpeg' }));
+      // ⛔ No Compare yet ⇒ the original's photo can ⛔ not be recorded against anything.
+      expect(screen.getByRole('button', { name: 'Upload photo' })).toBeDisabled();
+      expect(screen.getByText(/a photo of the original is recorded against the certificate you compared/)).toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: 'Compare with the certificate we hold' }));
+      await screen.findByRole('link', { name: 'Open the uploaded certificate' });
       await user.click(screen.getByRole('button', { name: 'Upload photo' }));
       await waitFor(() => expect(api.uploadGroundInspectionPhoto).toHaveBeenCalled());
       expect(vi.mocked(api.uploadGroundInspectionPhoto).mock.calls[0]![5]).toBe('original_certificate');
+      expect(vi.mocked(api.uploadGroundInspectionPhoto).mock.calls[0]![6]).toBe('tok-current');
+    });
+
+    it('`-287` J1 — a SITE photo needs ⛔ no Compare and carries ⛔ no token', async () => {
+      vi.mocked(api.listGroundInspection).mockResolvedValue({ assignments: [makeAssignment()] });
+      vi.mocked(api.uploadGroundInspectionPhoto).mockResolvedValue({ photoId: 'p' });
+      const user = userEvent.setup();
+      renderWithClient(<GroundInspectionPage pariwarId={PARIWAR} />);
+      await loadScope();
+      await screen.findByText('inspector-1');
+      expect(screen.getByLabelText('What the photo shows')).toHaveValue('site');
+      await user.upload(screen.getByLabelText('Upload photo'), new File([new Uint8Array([1])], 's.jpg', { type: 'image/jpeg' }));
+      await user.click(screen.getByRole('button', { name: 'Upload photo' }));
+      await waitFor(() => expect(api.uploadGroundInspectionPhoto).toHaveBeenCalled());
+      expect(vi.mocked(api.uploadGroundInspectionPhoto).mock.calls[0]![6]).toBeUndefined();
+    });
+
+    it('`-287` J1 — an original\'s photo refused 409 `certificate_changed` clears the stale Compare (re-compare, re-photograph)', async () => {
+      vi.mocked(api.listGroundInspection).mockResolvedValue({ assignments: [makeAssignment({ inspectionStage: 'certificate_check' })] });
+      vi.mocked(api.getGroundInspectionCertificate).mockResolvedValue(CERT);
+      vi.mocked(api.uploadGroundInspectionPhoto).mockRejectedValue(new api.ApiError(409, 'ground_inspection.certificate_changed', 'server words'));
+      const user = userEvent.setup();
+      renderWithClient(<GroundInspectionPage pariwarId={PARIWAR} />);
+      await loadScope();
+      await screen.findByText('inspector-1');
+      await user.click(screen.getByRole('button', { name: 'Compare with the certificate we hold' }));
+      await screen.findByRole('link', { name: 'Open the uploaded certificate' });
+      await user.upload(screen.getByLabelText('Upload photo'), new File([new Uint8Array([1])], 'o.jpg', { type: 'image/jpeg' }));
+      await user.click(screen.getByRole('button', { name: 'Upload photo' }));
+      expect(await screen.findByText(/replaced the certificate since you opened it/)).toBeInTheDocument();
+      expect(screen.queryByRole('link', { name: 'Open the uploaded certificate' })).toBeNull();
+      expect(screen.getByRole('button', { name: 'Upload photo' })).toBeDisabled();
     });
 
     it('GI4 — the refusal offers "the family did not produce the original certificate" under evidence_unavailable', async () => {

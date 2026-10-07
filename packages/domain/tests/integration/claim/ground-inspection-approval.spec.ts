@@ -215,6 +215,7 @@ async function inspectNow(ctx: Ctx): Promise<Record<string, unknown>> {
   await addGroundInspectionPhoto(ctx.client, {
     pariwarId: ctx.pid, groundInspectionId: gid, actingActorId: INSPECTOR,
     storageObjectKey: `k-${randomUUID()}`, contentType: 'image/jpeg', byteSize: 100, photoKind: 'original_certificate',
+    comparedCertificateUploadId: facts.currentUploadId,
   });
   await completeGroundInspection(ctx.client, {
     pariwarId: ctx.pid, groundInspectionId: gid, actingActorId: INSPECTOR, originalCertificateVerdict: 'matches',

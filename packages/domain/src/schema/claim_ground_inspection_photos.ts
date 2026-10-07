@@ -10,8 +10,13 @@
 // The max-photo-count per assignment (20, a named const in ground-inspection-persist.ts) is
 // enforced in the writer UNDER the parent-assignment row lock (a route-level pre-check would race,
 // #7), not by a DB constraint here. ⭐ `2026-10-07-286` H2: at the cap, an `original_certificate` photo is
-// still admitted while the assignment holds none stamped with the claim's CURRENT upload — the hard bound
-// is 20 + one per certificate made current during the assignment.
+// still admitted while the assignment holds none stamped with the certificate it is compared against — the
+// hard bound is 20 + one per distinct certificate the inspector compared during the assignment (`-287` J2(c)).
+//
+// ⚠ DELIBERATE (checklist family 9) — "a COMPLETED assignment holds ≥1 `original_certificate` photo stamped with its
+// `compared_certificate_upload_id`" is enforced by the WRITER only (`completeGroundInspection`, under the assignment
+// and claim locks): it is a cross-row rule, which a CHECK cannot express, and a constraint trigger was ⛔ not judged
+// worth its cost while ONE writer completes an assignment. Re-examine if a second completion path is ever added.
 //
 // ── PII discipline ────────────────────────────────────────────────────────────────────
 //   · caption_ciphertext (free-text — can name a person/place) → Tier-1 envelope ciphertext
@@ -69,10 +74,10 @@ export const claimGroundInspectionPhotos = pgTable(
     // Story 6.26a (GI4) — site | original_certificate. NOT NULL DEFAULT 'site'.
     photoKind: groundInspectionPhotoKindEnum('photo_kind').notNull().default('site'),
 
-    // ⭐ `2026-10-07-286` H1 (migration 0148) — on an `original_certificate` photo, the claim's CURRENT death-certificate
-    // upload when it was added (the ONE current-upload rule); NULL on a `site` photo (CHECK) and on an original taken
-    // while the claim had no current certificate. Completion counts only originals stamped with the COMPARED upload.
-    // FK ON DELETE NO ACTION (0147's posture). Non-PII.
+    // ⭐ `2026-10-07-286` H1 (migration 0148), as superseded by `-287` J1 — on an `original_certificate` photo, the
+    // certificate the inspector COMPARED (the upload carries the Compare token; the writer refuses it unless it is still
+    // the claim's CURRENT upload); NULL on a `site` photo (CHECK). Completion counts only originals stamped with the
+    // COMPARED upload. FK ON DELETE NO ACTION (0147's posture). Non-PII.
     certificateUploadId: uuid('certificate_upload_id')
       .$type<DeathCertificateUploadId>()
       .references(() => claimDeathCertificateUploads.uploadId, { onDelete: 'no action' }),

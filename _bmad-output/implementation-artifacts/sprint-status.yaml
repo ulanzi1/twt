@@ -1,3 +1,7 @@
+# last_updated: 2026-10-07o (⭐ **STORY 6.26b MERGED — PR #261, REBASE-merge (34 / 34 GitHub checks green); the SHA map.** The 11 branch
+# commits (from `b665a19a`) map to their `main` twins `0d88b41d`…`3c4f0ae4`, each pair proved by an identical `git patch-id --stable` and
+# subject; the merged tree equals the branch head (`20a8be0e`); a wrong pair as negative control. The map + a re-verify command (run: empty)
+# head `6-26b-death-facts-warnings-and-register-check.md`; citations kept as written. ⛔ No row moves (`6-26b-…` stays `done`). Docs only.)
 # last_updated: 2026-10-07n (⭐ **STORY 6.26b — CODE REVIEW ROUND 3 (narrow: the round-2 fixes only, the three layers SEQUENTIALLY): stays `done`;
 # ⛔ no BLOCKER / HIGH ⇒ the rounds stop.** Every round-2 "fixed" claim re-verified; the new `0149` arm refuses ⛔ no legitimate writer (every
 # UPDATE of the table walked). ⚠ CORRECTION to 2026-10-07m: *"only the scrub's NULL passes"* was WRONG — ANY writer's NULL passes (the

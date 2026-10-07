@@ -1,3 +1,14 @@
+# last_updated: 2026-10-07g (⭐ **STORY 6.26b — CREATED FOR DEV (`bmad-create-story 6.26b`): v2.0 re-derived against 6.26a's shipped build,
+# re-pinned `3311fc97` → `b665a19a`; `6-26b-death-facts-warnings-and-register-check` backlog → ready-for-dev** (6.26a `done`, PR #259 — the
+# 6.21b / 6.23b precedent). Three fresh-context read-only verifiers (warnings + queue; review writer + migration + erasure + fixtures; API +
+# contracts + admin). ⛔ No GI or ruling moved; `-285` / `-286` / `-287` touch ⛔ nothing here. 21 FOUND facts (RD1–RD21) change the build —
+# ⚠ RD1: 6.26a's completion stores the INJECTED clock (always in the future under the fixtures) and GI7 compares the VERIFIER approval's
+# `decided_at`, ⛔ not the review's ⇒ every fixture-seeded claim would be a late-warning candidate; author choice (BigDev confirms at Task 0):
+# store the DB clock, `now` validates only (reverses 6.26a review patch #2). Also: the queue's WHERE is Drizzle and its late arm an INNER JOIN
+# (one hoisted fragment + `or(and(…), R9 admission)`); `liveRoutedToR9Exists()` takes SQL; a late key during R9 also makes the approve votes
+# short (`-279` A2); `NOMINEE_VERSION_WARNING_KINDS` reaches the classifier and the API; ~15 "nominee-change" staff strings reworded; the
+# console's per-assignment flags stitched from the warning keys (`boolean | null`, ⛔ no new read); a VALIDATED coherence CHECK (text + CHECK,
+# the table's convention); the red-by-design list grows to the four 6.23a/b warning specs and the direct accept callers incl. `apps/jobs`.)
 # last_updated: 2026-10-07f (⭐ **STORY 6.26a — MERGED as PR #259 (rebase); the `pre-push` `ci:local` and all 34 GitHub checks passed.** ⛔ NO
 # row moves (`6-26-ground-inspection-before-approval-and-death-facts` stays `done`; `6-26b-…` stays `backlog`). The 6.26a story file's
 # header now maps the branch's 20 SHAs (6.26's governance + 6.26a's build and four review rounds) to their `main` twins (each pair
@@ -19174,7 +19185,7 @@ development_status:
   # queue; its file is written, but it stays `backlog` until 6.26a is `done` (the 6.21b / 6.23b precedent).
   # ⚠ 2026-10-06 (validate v2.3–v2.5): `2026-10-06-283` amends `-282` GI2/GI3/GI5/GI6/GI16 and `-284` amends `-283` (GI5, GI7, E5) — build
   # from the story files' `⚠ AMENDED by -283` / `-284` lines. Validate rounds STOPPED at round 3 (⛔ no BLOCKER / HIGH).
-  6-26b-death-facts-warnings-and-register-check: backlog
+  6-26b-death-facts-warnings-and-register-check: ready-for-dev
   6-27-peer-mesh-sending-replies-and-date-of-death: backlog
   epic-6-retrospective: done
 

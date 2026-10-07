@@ -1,3 +1,9 @@
+# last_updated: 2026-10-07s (⭐ **STORY 6.24 SPLIT (BigDev: *"ok, split it"*).** `6-24-true-nominee-refile-after-a-suspicion-refusal` stays
+# `ready-for-dev` as STORY 6.24a (keeps its key): RF1–RF8, RF10, RF12 (the closed words / routing), RF13–RF16 — kept apart, the wait,
+# `closed`, the commit re-check, the inheritance, the 90-day limit + its key, the helpline appeal screen, the reason lock; Q3 item 2. NEW row
+# `6-24b-filing-code-and-texts-to-the-nominee-in-place-at-the-death` = `backlog` (file written): RF9 (the filing code), RF11 (the texts'
+# machinery + FQ7's text), RF12's `-291` Q2 closure text; Q3 item 1. ⛔ No RF moved or re-worded; `-292` ⛔ not edited. `epics.md`: `### Story
+# 6.24` → `### Story 6.24a` (a dated split line) + `### Story 6.24b`.)
 # last_updated: 2026-10-07r (⭐ **STORY 6.24 — TASK 0 COMPLETE (BigDev: *"complete the remaining steps"*).** Seven more fresh-context validate
 # rounds (2–8, each narrow on the last pass's edits) until round 8 found ⛔ no BLOCKER / HIGH — eight in all, 1 BLOCKER + 15 HIGH found and
 # fixed (v1.3–v1.9): the 90-day clock = the first row of the CURRENT `-239` chain; a reason lock (RF13) so one death is ⛔ never paid twice;
@@ -19259,6 +19265,11 @@ development_status:
   # is every later approver (`-277` Q2 C) + Q3 B's wait. 6.23b's file is written; it stays `backlog` until 6.23a is `done` (the 6.21b precedent).
   6-23b-every-approver-gives-a-warning-reason: done
   6-24-true-nominee-refile-after-a-suspicion-refusal: ready-for-dev
+  # ⭐ 2026-10-07 SPLIT (BigDev: "ok, split it"): the row above is STORY 6.24a (keeps its key — the rulings and `-292` cite it): kept apart,
+  # the wait, `closed`, the commit re-check, the inheritance, the 90-day limit, the helpline appeal screen and the reason lock. 6.24b below is
+  # the filing code (FQ6) and the two texts (FQ7, `-291` Q2); its file is written, but it stays `backlog` until 6.24a is `done` (the
+  # 6.21b / 6.23b / 6.26b precedent). ⛔ No RF moved — `-292`'s RF1–RF16 are tagged [a] / [b] in 6.24a's file.
+  6-24b-filing-code-and-texts-to-the-nominee-in-place-at-the-death: backlog
   6-25-staff-email-notice-of-a-suspicion-refusal: backlog
   6-26-ground-inspection-before-approval-and-death-facts: done
   # ⭐ 2026-10-06 SPLIT after `2026-10-06-281` (the Panel: Q1 B · Q2 A; BigDev: "write the panel note then we get the answer and then we split"):

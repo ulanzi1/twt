@@ -527,6 +527,8 @@ describe.skipIf(!hasDatabase)('Story 6.19d — the certificate reminder (live DB
       await claim.recordDeathCertificateReview(client, {
         claimCaseId: cid, pariwarId: pid, verdict: 'accepted', certificateToken: uploadId, acceptedDate: date,
         acceptedDateCiphertext: `enc:v1:accepted-date:${date}`, rejectionReason: null, noteCiphertext: 'enc:v1:n',
+        // Story 6.26b (GI8; RD20).
+        acceptedDateIndex: `fixture-death-date-index:${date}`, registerCheck: 'matches',
         expectedLiveReviewId: (await claim.readDeathCertificateSnapshot(db, pid, cid)).liveReview?.reviewId ?? null,
         actorId: randomUUID(), actorDisplay: 'Test District Admin', actor: 'operator',
       } as never);

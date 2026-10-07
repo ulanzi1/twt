@@ -83,15 +83,17 @@ export async function insertDeathCertificate(
 
 /**
  * Ensure the claim's CURRENT certificate is ACCEPTED with `date` (default tomorrow, IST) — through the REAL
- * review writer, reusing an accepted review with the same date. Returns its review id. The claim must be in
- * the review window.
+ * review writer, reusing an accepted review with the same date (and, when `registerCheck` is GIVEN, the same register
+ * check — Story 6.26b RD22: ⛔ never the date alone). Returns its review id. The claim must be in the review window.
+ * Story 6.26b (GI8, GI15 [b]) — a NEW accept records `registerCheck` (default `'matches'` ⇒ ⛔ no warning) and the
+ * accepted date's index through the REAL helper (`deathDateBlindIndex` — the ONE field class, Trap 1).
  */
 export async function ensureAcceptedDeathCertificate(
   deps: AppDeps,
   scopeTx: ScopeTx,
   pariwarId: string,
   claimCaseId: string,
-  opts: { readonly date?: string } = {},
+  opts: { readonly date?: string; readonly registerCheck?: 'matches' | 'does_not_match' | 'could_not_check' } = {},
 ): Promise<string> {
   const pid = ids.pariwarId(pariwarId);
   const cid = ids.claimId(claimCaseId);
@@ -100,7 +102,12 @@ export async function ensureAcceptedDeathCertificate(
   const status = claim.deathCertificateStatus(snap);
   if (status === 'accepted') {
     const accepted = await claim.getCurrentAcceptedDeathCertificate(scopeTx.tx, pid, cid);
-    if (accepted && (await decryptDeathCertificateReviewField(accepted.acceptedDateCiphertext, pariwarId, deps.encryption)) === date) {
+    const checkKept = opts.registerCheck === undefined || snap.currentReview?.registerCheck === opts.registerCheck;
+    if (
+      accepted &&
+      checkKept &&
+      (await decryptDeathCertificateReviewField(accepted.acceptedDateCiphertext, pariwarId, deps.encryption)) === date
+    ) {
       return accepted.reviewId;
     }
   }
@@ -108,9 +115,10 @@ export async function ensureAcceptedDeathCertificate(
   if (status === 'missing' || status === 'rejected' || token === null) {
     token = (await insertDeathCertificate(scopeTx, pariwarId, claimCaseId)).uploadId;
   }
-  const [dateCt, noteCt] = await Promise.all([
+  const [dateCt, noteCt, dateIndex] = await Promise.all([
     encryptDeathCertificateReviewField(date, pariwarId, deps.encryption),
     encryptDeathCertificateReviewField('fixture: the date is clear', pariwarId, deps.encryption),
+    deathDateBlindIndex(date, pariwarId, deps.encryption),
   ]);
   const r = await claim.recordDeathCertificateReview(scopeTx.client, {
     claimCaseId: cid,
@@ -119,6 +127,8 @@ export async function ensureAcceptedDeathCertificate(
     certificateToken: token,
     acceptedDate: date,
     acceptedDateCiphertext: dateCt,
+    acceptedDateIndex: dateIndex,
+    registerCheck: opts.registerCheck ?? 'matches',
     rejectionReason: null,
     noteCiphertext: noteCt,
     expectedLiveReviewId: (snap.liveReview?.reviewId as string | undefined) ?? null,
@@ -144,7 +154,13 @@ export async function ensureGroundInspection(
   scopeTx: ScopeTx,
   pariwarId: string,
   claimCaseId: string,
-  opts: { readonly force?: boolean; readonly stage?: 'initial' | 'certificate_check'; readonly verdict?: 'matches' | 'does_not_match' } = {},
+  opts: {
+    readonly force?: boolean;
+    readonly stage?: 'initial' | 'certificate_check';
+    readonly verdict?: 'matches' | 'does_not_match';
+    /** Story 6.26b (RD21) — the family's (or the printed) date; default the accepted date (⛔ no warning). */
+    readonly deathDate?: string;
+  } = {},
 ): Promise<string | null> {
   const pid = ids.pariwarId(pariwarId);
   const cid = ids.claimId(claimCaseId);
@@ -153,6 +169,7 @@ export async function ensureGroundInspection(
   if (opts.force !== true && claim.groundInspectionApprovalState(facts).complete) return null;
   const accepted = await claim.getCurrentAcceptedDeathCertificate(scopeTx.tx, pid, cid);
   const date =
+    opts.deathDate ??
     (accepted ? await decryptDeathCertificateReviewField(accepted.acceptedDateCiphertext, pariwarId, deps.encryption) : null) ??
     certificateDateAfterEverything();
   const stage = opts.stage ?? 'initial';
@@ -246,6 +263,9 @@ export async function seedNomineeNameCheck(
      *  ⛔ no current upload; in the `accountsOnly` / `singleAccount` modes too, where it is inert). `'skip'` reaches
      *  `…ground_inspection_required`. A bare `skip: true` stays a pure no-op. */
     readonly inspection?: 'completed' | 'skip';
+    /** Story 6.26b (RD22) — the register check of the certificate this helper accepts, BEFORE the determination (a
+     *  re-review afterwards would stale it). Default: keep any accepted certificate; a NEW accept records `'matches'`. */
+    readonly registerCheck?: 'matches' | 'does_not_match' | 'could_not_check';
   } = {},
 ): Promise<void> {
   if (opts.skip === true) {
@@ -301,7 +321,15 @@ export async function seedNomineeNameCheck(
     // builds the UNDETERMINED claim instead.
     // ⭐ Story 6.21a (D7, D8) — the ACCEPTED certificate the gate asks for FIRST, and the determination's date.
     const reviewId =
-      opts.certificate === 'skip' ? null : await ensureAcceptedDeathCertificate(deps, scopeTx, pariwarId, claimCaseId);
+      opts.certificate === 'skip'
+        ? null
+        : await ensureAcceptedDeathCertificate(
+            deps,
+            scopeTx,
+            pariwarId,
+            claimCaseId,
+            opts.registerCheck !== undefined ? { registerCheck: opts.registerCheck } : {},
+          );
     if (opts.determination !== 'skip' && reviewId !== null) {
       await seedDeclarationAndDetermination(scopeTx, pariwarId, claimCaseId, reviewId);
     }

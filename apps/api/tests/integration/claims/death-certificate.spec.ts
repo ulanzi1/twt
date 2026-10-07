@@ -22,6 +22,7 @@ import type { AppDeps } from '../../../src/context.js';
 import * as service from '../../../src/modules/auth/admin/admin-auth.service.js';
 import { signAccessToken } from '../../../src/modules/auth/member/tokens.js';
 import { encryptDeathCertificateReviewField } from '../../../src/modules/claims/death-certificate-crypto.js';
+import { deathDateBlindIndex } from '../../../src/modules/claims/ground-inspection-crypto.js';
 import { closeScopeTx, openScopeTx } from '../../../src/modules/multi-tenant/scope-tx.js';
 import { buildServer } from '../../../src/server.js';
 import { ensureAcceptedDeathCertificate, insertDeathCertificate, seedNomineeNameCheck } from '../_nominee-name-check-fixture.js';
@@ -200,6 +201,8 @@ describe.skipIf(!hasDatabase)('Story 6.21a — the death-certificate review surf
       verdict: 'accepted',
       certificate_token: snap.currentUploadId ?? randomUUID(),
       accepted_date: ACCEPTED,
+      // Story 6.26b (GI8; RD20) — every HTTP accept records the government register check.
+      register_check: 'matches',
       note: NOTE,
       expected_live_review_id: snap.liveReview?.reviewId ?? null,
       ...over,
@@ -224,10 +227,29 @@ describe.skipIf(!hasDatabase)('Story 6.21a — the death-certificate review surf
 
     const lines = auditsFor('admin_claim.death_certificate_reviewed', w.claimCaseId);
     expect(lines).toHaveLength(1);
-    expect(lines[0]!.context).toMatchObject({ review_id: body.review_id, upload_id: uploadId, verdict: 'accepted' });
+    // Story 6.26b (RD17) — the success audit carries the register check: a plaintext non-PII code.
+    expect(lines[0]!.context).toMatchObject({ review_id: body.review_id, upload_id: uploadId, verdict: 'accepted', register_check: 'matches' });
     // ⛔ T10 — ⛔ no date, ⛔ no note, anywhere in the line.
     expect(JSON.stringify(lines[0])).not.toContain(ACCEPTED);
     expect(JSON.stringify(lines[0])).not.toContain(NOTE);
+
+    // ⭐ Story 6.26b (GI8; RD12) — the row stores the code and the accepted date's index under the ONE field class (the
+    // index the inspection's would carry for the same date); ⛔ the index is never in the audit line.
+    const [row] = (
+      await td.pool.query('SELECT register_check, accepted_date_index FROM claim_death_certificate_reviews WHERE review_id = $1', [body.review_id])
+    ).rows;
+    expect(row.register_check).toBe('matches');
+    expect(row.accepted_date_index).toBe(await deathDateBlindIndex(ACCEPTED, w.pariwarId, deps.encryption));
+    expect(JSON.stringify(lines[0])).not.toContain(row.accepted_date_index);
+    // GI16 — the `claim.death_certificate_reviewed` event payload carries ⛔ no register check (only the audit does).
+    const [ev] = (
+      await td.pool.query(
+        `SELECT payload FROM events_log WHERE stream_id = $1 AND event_type = 'claim.death_certificate_reviewed' ORDER BY event_version DESC LIMIT 1`,
+        [w.claimCaseId],
+      )
+    ).rows;
+    expect(ev.payload).not.toHaveProperty('register_check');
+    expect(JSON.stringify(ev.payload)).not.toContain(row.accepted_date_index);
   });
 
   it('⭐ AC1 — every HTTP-reachable REFUSAL returns its exact wire code AND is audited `_review_rejected` with its reason', async () => {
@@ -245,6 +267,10 @@ describe.skipIf(!hasDatabase)('Story 6.21a — the death-certificate review surf
       ['date_on_reject', await acceptBody(w, { verdict: 'rejected', rejection_reason: 'no_date_of_death' })],
       ['stale_certificate', await acceptBody(w, { certificate_token: randomUUID() })],
       ['stale_supersession', await acceptBody(w, { expected_live_review_id: randomUUID() })],
+      // Story 6.26b (GI8; RD15) — after the four shape guards (the reject rows ABOVE carry `register_check` from
+      // `acceptBody` and keep their own codes — `missing_reason`, `date_on_reject` answer first).
+      ['register_check_required', await acceptBody(w, { register_check: undefined })],
+      ['register_check_not_allowed', await acceptBody(w, { verdict: 'rejected', accepted_date: undefined, rejection_reason: 'no_date_of_death' })],
     ];
     for (const [reason, payload] of legs) {
       const res = await client.inject({ method: 'POST', url: reviewUrl(w), payload });
@@ -366,6 +392,8 @@ describe.skipIf(!hasDatabase)('Story 6.21a — the death-certificate review surf
     const reviews = uploads[1]!.reviews as Json[];
     expect(reviews.map((r) => r.verdict)).toEqual(['rejected', 'accepted']);
     expect(reviews[1]).toMatchObject({ accepted_date: { state: 'readable', value: ACCEPTED }, note: { state: 'readable', value: NOTE }, superseded_reason: 're_reviewed' });
+    // Story 6.26b (GI8) — the register check on the history: the accepted review's code; ⛔ none on the rejected one.
+    expect(reviews.map((r) => r.register_check)).toEqual([null, 'matches']);
     expect((uploads[1]!.preview as Json).signed_url).toBeTruthy();
 
     const lines = auditsFor('admin_death_certificate.history_read', w.claimCaseId);
@@ -533,6 +561,12 @@ describe.skipIf(!hasDatabase)('Story 6.21a — the death-certificate review surf
     expect(history.body).not.toContain(memberDomain.ANONYMIZED_SENTINEL);
     const reviews = ((history.json() as Json).uploads as Json[]).flatMap((u) => u.reviews as Json[]);
     expect(reviews[0]).toMatchObject({ accepted_date: { state: 'anonymized' }, note: { state: 'anonymized' } });
+    // ⭐ Story 6.26b (AC11b; GI13 [b]) — a review written AFTER 0149 (the real writer, with an index) is erased by the
+    // real anonymizer ⛔ without 23514 / 42501, and its index is NULL; the register check (a code) stays.
+    const [erased] = (
+      await td.pool.query('SELECT accepted_date_index, register_check FROM claim_death_certificate_reviews WHERE claim_case_id = $1', [w.claimCaseId])
+    ).rows;
+    expect(erased).toEqual({ accepted_date_index: null, register_check: 'matches' });
     const res = await client.inject({
       method: 'POST',
       url: `${base(w.pariwarId, w.claimCaseId)}/nominee-determination`,

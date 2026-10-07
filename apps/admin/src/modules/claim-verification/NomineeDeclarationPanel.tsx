@@ -36,11 +36,11 @@
 import { useEffect, useState } from 'react';
 
 import type {
-  ApprovalWarningKind,
   NomineeCorrectionListResponse,
   NomineeCorrectionRaiseRequest,
   NomineeDeclarationSnapshotsResponse,
   NomineeDeclarationTimelineResponse,
+  NomineeVersionWarningKind,
 } from '@twt/contracts';
 import { CLAIMANT_NOMINEE_RELATIONSHIP_CODES, MobileNumber, isEnglishScriptName } from '@twt/contracts';
 
@@ -116,9 +116,10 @@ const WARNING_LINES = {
   post_death_version: () => t.warning.post_death_version,
   recent_nominee_change: (firstFiledAt: string | null) =>
     t.warning.recent_nominee_change(firstFiledAt === null ? null : formatIstDate(firstFiledAt)),
-} satisfies Record<ApprovalWarningKind, (firstFiledAt: string | null) => string>;
+} satisfies Record<NomineeVersionWarningKind, (firstFiledAt: string | null) => string>;
 
-function warningLine(kind: ApprovalWarningKind, firstFiledAt: string | null): string {
+/** Story 6.26b (RD8; Trap 7) — a VERSION's kinds only: the death-fact kinds are claim-level and ⛔ never worded here. */
+function warningLine(kind: NomineeVersionWarningKind, firstFiledAt: string | null): string {
   return WARNING_LINES[kind](firstFiledAt);
 }
 

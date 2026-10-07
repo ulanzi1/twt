@@ -1037,6 +1037,13 @@
       "when": 1793504400000,
       "tag": "0148_ground-inspection-photo-certificate-stamp",
       "breakpoints": true
+    },
+    {
+      "idx": 149,
+      "version": "7",
+      "when": 1793590800000,
+      "tag": "0149_death-certificate-register-check",
+      "breakpoints": true
     }
   ]
 }

@@ -338,12 +338,14 @@ describe.skipIf(!hasDatabase)('Story 6.23a — the nominee-change warnings throu
     await redetermine(w.pariwarId, w.claimCaseId, istDaysAgo(300)); // the 200-day version is now post-death
 
     const before = await consoleOf(da.client, w.pariwarId, w.claimCaseId);
+    // + Story 6.26b (RD19 (i)): the re-review moved the certificate away from the fixture inspection's family date ⇒
+    // `inspection_death_date_differs` — a SECOND late key (the correct behaviour).
     expect(before).toMatchObject({
-      kinds: ['post_death_version'],
-      uncoveredSinceApproval: 1,
+      kinds: ['post_death_version', 'inspection_death_date_differs'],
+      uncoveredSinceApproval: 2,
       reviseBlocked: 'warning_approval_final',
       viewerCanRecordLateReason: true,
-      lateKeysUncoveredForViewer: 1,
+      lateKeysUncoveredForViewer: 2,
     });
 
     const pa = await pariwarAdmin(w.pariwarId);
@@ -353,11 +355,11 @@ describe.skipIf(!hasDatabase)('Story 6.23a — the nominee-change warnings throu
       payload: { warning_reason_code: GENERIC, note: 'The certificate was re-read; the change is after the date.' },
     });
     expect(paRes.statusCode).toBe(201);
-    expect(paRes.json()).toMatchObject({ covered_key_count: 1, kinds: ['post_death_version'] });
+    expect(paRes.json()).toMatchObject({ covered_key_count: 2, kinds: ['post_death_version', 'inspection_death_date_differs'] });
 
     // ⭐ `-279` A1 — covered for everyone else, ⛔ by the District Admin's own record ⇒ the panel stays.
     const after = await consoleOf(da.client, w.pariwarId, w.claimCaseId);
-    expect(after).toMatchObject({ uncoveredSinceApproval: 0, viewerCanRecordLateReason: true, lateKeysUncoveredForViewer: 1 });
+    expect(after).toMatchObject({ uncoveredSinceApproval: 0, viewerCanRecordLateReason: true, lateKeysUncoveredForViewer: 2 });
 
     const daRes = await da.client.inject({
       method: 'POST',
@@ -379,7 +381,11 @@ describe.skipIf(!hasDatabase)('Story 6.23a — the nominee-change warnings throu
 
     // Codes and counts only — ⛔ never the note.
     const [recorded] = auditsFor('admin_claim.late_warning_reason_recorded', w.claimCaseId);
-    expect(recorded?.context).toMatchObject({ warning_reason_code: GENERIC, covered_key_count: 1, kinds: ['post_death_version'] });
+    expect(recorded?.context).toMatchObject({
+      warning_reason_code: GENERIC,
+      covered_key_count: 2,
+      kinds: ['post_death_version', 'inspection_death_date_differs'],
+    });
     expect(JSON.stringify(td.auditSink.ofType('admin_claim.late_warning_reason_recorded'))).not.toContain('re-read');
     expect(auditsFor('admin_claim.late_warning_reason_rejected', w.claimCaseId)[0]?.context).toMatchObject({ refusal: 'nothing_uncovered' });
   });
@@ -395,7 +401,7 @@ describe.skipIf(!hasDatabase)('Story 6.23a — the nominee-change warnings throu
     const verifier = await authenticate('Vikram (Verifier)');
     await grant(verifier.userId, w.pariwarId, 'verifier', 'district', DISTRICT);
     const seen = await consoleOf(verifier.client, w.pariwarId, w.claimCaseId);
-    expect(seen).toMatchObject({ uncoveredSinceApproval: 1, viewerCanRecordLateReason: false });
+    expect(seen).toMatchObject({ uncoveredSinceApproval: 2, viewerCanRecordLateReason: false }); // + the date key (RD19 (i))
 
     // A NEWER accepted certificate with ⛔ no determination against it ⇒ AWAITING: ⛔ no panel, and NW14 says why.
     await inScope(w.pariwarId, (s) => ensureAcceptedDeathCertificate(deps, s, w.pariwarId, w.claimCaseId, { date: istDaysAgo(250) }));

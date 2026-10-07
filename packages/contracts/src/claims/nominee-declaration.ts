@@ -23,7 +23,7 @@ import { z } from 'zod';
 import { EnglishScriptName, MobileNumber } from '../_common/primitives.js';
 import { NomineeRelationship } from '../nominee/declaration.js';
 import { ReadableErasable, ReadableName, ReadableNomineeName } from './nominee-name-check.js';
-import { ApprovalWarningKind } from './verification-decision.js';
+import { NomineeVersionWarningKind } from './verification-decision.js';
 
 const Rank = z.union([z.literal(1), z.literal(2)]);
 const IsoInstant = z.string();
@@ -52,8 +52,9 @@ export const NomineeDeclarationVersionView = z
     recorded_at: IsoInstant,
     effective_at: IsoInstant,
     corrects_version_id: z.string().uuid().nullable(),
-    /** Story 6.23a (NW10; `-261` D1, `-262` FQ8 A) — the warnings this version carries. `[]` for a correction. */
-    warnings: z.array(ApprovalWarningKind),
+    /** Story 6.23a (NW10; `-261` D1, `-262` FQ8 A) — the warnings this version carries. `[]` for a correction.
+     *  Story 6.26b (RD8) — a VERSION's kinds only; the death-fact kinds are claim-level, ⛔ never a version's. */
+    warnings: z.array(NomineeVersionWarningKind),
     /**
      * Story 6.23a (NW4; `-262` FQ1) — an APPLIED correction's label: the two approvers' SNAPSHOTTED names, rendered
      * VERBATIM as *"corrected after the death — approved by {district_admin} and {pariwar_admin}"*. `null` otherwise.

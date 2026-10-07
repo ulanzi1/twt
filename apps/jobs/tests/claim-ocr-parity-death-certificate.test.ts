@@ -203,6 +203,9 @@ describe.skipIf(!hasDatabase)('Story 6.21a — death-certificate uploads through
         certificateToken: token,
         acceptedDate: verdict === 'accepted' ? '2026-06-30' : null,
         acceptedDateCiphertext: verdict === 'accepted' ? 'enc:v1:d' : null,
+        // Story 6.26b (GI8; RD20) — the accept leg records both; the reject leg carries neither.
+        acceptedDateIndex: verdict === 'accepted' ? 'fixture-death-date-index:2026-06-30' : null,
+        registerCheck: verdict === 'accepted' ? 'matches' : null,
         rejectionReason: verdict === 'rejected' ? 'date_of_death_unclear' : null,
         noteCiphertext: 'enc:v1:n',
         expectedLiveReviewId: (snap.liveReview?.reviewId as string | undefined) ?? null,

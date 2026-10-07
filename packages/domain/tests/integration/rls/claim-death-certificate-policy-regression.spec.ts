@@ -226,6 +226,10 @@ describe.skipIf(!hasDatabase)('migration 0122 — death-certificate uploads + re
       ['superseded without a reason', 'claim_death_certificate_reviews_supersession_coherence_check', () => r({ supersededAt: new Date() })],
       ['a reason without superseded_at', 'claim_death_certificate_reviews_supersession_coherence_check', () => r({ supersededReason: 're_reviewed' })],
       ['an unknown supersession reason', 'claim_death_certificate_reviews_supersession_coherence_check', () => r({ supersededAt: new Date(), supersededReason: 'expired' as never })],
+      // Story 6.26b (0149, RD14) — the register check's value set, and a REJECTED review carries neither new column.
+      ['an unknown register check', 'claim_death_certificate_reviews_register_check_check', () => r({ registerCheck: 'probably' as never })],
+      ['rejected with a register check', 'claim_death_certificate_reviews_register_check_coherence_check', () => r({ ...rejected, registerCheck: 'matches' })],
+      ['rejected with a date index', 'claim_death_certificate_reviews_register_check_coherence_check', () => r({ ...rejected, acceptedDateIndex: 'idx' })],
     ];
     for (const [label, name, attempt] of attempts) {
       await client.query('SAVEPOINT ck');
@@ -334,6 +338,8 @@ describe.skipIf(!hasDatabase)('migration 0122 — death-certificate uploads + re
       ['review verdict', () => tx.update(schema.claimDeathCertificateReviews).set({ verdict: 'accepted' }).where(eq(schema.claimDeathCertificateReviews.reviewId, r!.reviewId))],
       ['review upload', () => tx.update(schema.claimDeathCertificateReviews).set({ uploadId: randomUUID() as never }).where(eq(schema.claimDeathCertificateReviews.reviewId, r!.reviewId))],
       ['review decided_by', () => tx.update(schema.claimDeathCertificateReviews).set({ decidedByDisplay: 'Someone Else' }).where(eq(schema.claimDeathCertificateReviews.reviewId, r!.reviewId))],
+      // Story 6.26b (0149) — the register check is ⛔ never granted for UPDATE (a later check is a NEW review).
+      ['review register_check', () => tx.update(schema.claimDeathCertificateReviews).set({ registerCheck: 'could_not_check' }).where(eq(schema.claimDeathCertificateReviews.reviewId, r!.reviewId))],
       ['upload key', () => tx.update(schema.claimDeathCertificateUploads).set({ storageObjectKey: 'k/other' }).where(eq(schema.claimDeathCertificateUploads.uploadId, uploadId as never))],
       ['upload uploaded_at', () => tx.update(schema.claimDeathCertificateUploads).set({ uploadedAt: new Date(0) }).where(eq(schema.claimDeathCertificateUploads.uploadId, uploadId as never))],
       // `-245` §1 — the kept verdict is written once, ⛔ never rewritten.
@@ -350,14 +356,23 @@ describe.skipIf(!hasDatabase)('migration 0122 — death-certificate uploads + re
     }
   });
 
-  it('twt_app CAN scrub the two review ciphertexts (the DPDPA-RTBF leg, D11)', async () => {
+  it('twt_app CAN scrub the two review ciphertexts and (Story 6.26b, GI13 [b]) the accepted date index (the DPDPA-RTBF leg, D11)', async () => {
     const { tx, claimCaseId, memberId, uploadId } = await seedClaimWithCertificate();
-    const [r] = await tx.insert(schema.claimDeathCertificateReviews).values(review(claimCaseId, memberId, uploadId)).returning();
+    // Seeded WITH an index — the default `review()` has none, and NULL → NULL would prove nothing.
+    const [r] = await tx
+      .insert(schema.claimDeathCertificateReviews)
+      .values(review(claimCaseId, memberId, uploadId, { acceptedDateIndex: 'idx', registerCheck: 'matches' }))
+      .returning();
     const byId = eq(schema.claimDeathCertificateReviews.reviewId, r!.reviewId);
-    await tx.update(schema.claimDeathCertificateReviews).set({ acceptedDateCiphertext: '[anonymized]', noteCiphertext: '[anonymized]' }).where(byId);
+    await tx
+      .update(schema.claimDeathCertificateReviews)
+      .set({ acceptedDateCiphertext: '[anonymized]', noteCiphertext: '[anonymized]', acceptedDateIndex: null })
+      .where(byId);
     const [row] = await tx.select().from(schema.claimDeathCertificateReviews).where(byId);
     expect(row!.acceptedDateCiphertext).toBe('[anonymized]');
     expect(row!.noteCiphertext).toBe('[anonymized]');
+    expect(row!.acceptedDateIndex).toBeNull();
+    expect(row!.registerCheck).toBe('matches');
   });
 
   it('⛔ twt_app holds no DELETE on either table (42501)', async () => {
@@ -383,6 +398,8 @@ describe.skipIf(!hasDatabase)('migration 0122 — death-certificate uploads + re
       ['review DELETE', 'DELETE FROM claim_death_certificate_reviews WHERE review_id = $1', [r!.reviewId]],
       ['review UPDATE verdict', "UPDATE claim_death_certificate_reviews SET verdict = 'rejected', rejection_reason = 'no_date_of_death', accepted_date_ciphertext = NULL WHERE review_id = $1", [r!.reviewId]],
       ['review UPDATE decided_at', "UPDATE claim_death_certificate_reviews SET decided_at = decided_at - interval '1 day' WHERE review_id = $1", [r!.reviewId]],
+      // Story 6.26b (0149) — the register check is IMMUTABLE, for the owner too (a later check is a NEW review — RD29).
+      ['review UPDATE register_check', "UPDATE claim_death_certificate_reviews SET register_check = 'does_not_match' WHERE review_id = $1", [r!.reviewId]],
     ];
     for (const [label, text, args] of legs) {
       await client.query('SAVEPOINT t');
@@ -393,6 +410,11 @@ describe.skipIf(!hasDatabase)('migration 0122 — death-certificate uploads + re
       expect(pgCode(err), label).toBe('23000');
       await client.query('ROLLBACK TO SAVEPOINT t');
     }
+    // …while the trigger lets the RTBF scrub take the accepted date index to NULL (it is OUT of the deny-list, RD14).
+    await client.query("UPDATE claim_death_certificate_reviews SET accepted_date_index = 'idx' WHERE review_id = $1", [r!.reviewId]);
+    await client.query('UPDATE claim_death_certificate_reviews SET accepted_date_index = NULL WHERE review_id = $1', [r!.reviewId]);
+    const after = await client.query('SELECT accepted_date_index FROM claim_death_certificate_reviews WHERE review_id = $1', [r!.reviewId]);
+    expect(after.rows[0]).toEqual({ accepted_date_index: null });
   });
 
   it('⛔ TRUNCATE is refused on both tables (23000)', { timeout: 60000 }, async () => {

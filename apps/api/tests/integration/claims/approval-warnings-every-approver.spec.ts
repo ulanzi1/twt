@@ -82,7 +82,7 @@ import { decryptTrusteeRationale } from '../../../src/modules/claims/state-trust
 import { closeScopeTx, openScopeTx } from '../../../src/modules/multi-tenant/scope-tx.js';
 import { buildServer } from '../../../src/server.js';
 import { buildTestDeps, hasDatabase, makeClient, type CapturingStepUpDelivery, type TestDeps } from '../_setup.js';
-import { ensureAcceptedDeathCertificate, ensureClaimContact, seedNomineeNameCheck } from '../_nominee-name-check-fixture.js';
+import { ensureAcceptedDeathCertificate, ensureClaimContact, ensureGroundInspection, seedNomineeNameCheck } from '../_nominee-name-check-fixture.js';
 import { FakeWebAuthnProvider } from '../_webauthn-fake.js';
 
 type Client = ReturnType<typeof makeClient>;
@@ -182,7 +182,12 @@ describe.skipIf(!hasDatabase)('Story 6.23b — every approver, through HTTP (:54
    * each time), with the fixture's accepted certificate (tomorrow), its all-`stands` determination, a passing name check
    * and a contact record — 6.23a's API world, in a FRESH Pariwar unless one is given.
    */
-  async function seedWorld(declaredAt: Date[], pariwarId = randomUUID()): Promise<{ pariwarId: string; claimCaseId: string }> {
+  async function seedWorld(
+    declaredAt: Date[],
+    pariwarId: string = randomUUID(),
+    // Story 6.26b (RD22) — the accepted certificate's register check, threaded to the fixture BEFORE the determination.
+    opts: { registerCheck?: 'matches' | 'does_not_match' | 'could_not_check' } = {},
+  ): Promise<{ pariwarId: string; claimCaseId: string }> {
     const memberId = randomUUID();
     const claimCaseId = randomUUID();
     await inScope(pariwarId, async (s) => {
@@ -235,7 +240,7 @@ describe.skipIf(!hasDatabase)('Story 6.23b — every approver, through HTTP (:54
         metric_version: 1,
       });
     });
-    await seedNomineeNameCheck(deps, pariwarId, claimCaseId);
+    await seedNomineeNameCheck(deps, pariwarId, claimCaseId, opts.registerCheck ? { registerCheck: opts.registerCheck } : {});
     return { pariwarId, claimCaseId };
   }
 
@@ -333,7 +338,9 @@ describe.skipIf(!hasDatabase)('Story 6.23b — every approver, through HTTP (:54
     );
   }
 
-  /** The District Admin approved with ⛔ no warning; a re-review to 250 days back makes the 200-day version post-death. */
+  /** The District Admin approved with ⛔ no warning; a re-review to 250 days back makes the 200-day version post-death.
+   *  ⭐ Story 6.26b (RD19 (i)) — and moves the certificate away from the fixture inspection's family date (tomorrow) ⇒ a
+   *  SECOND late key, `inspection_death_date_differs` (the correct behaviour): every count below is 2. */
   async function lateWarnedWorld() {
     const w = await seedWorld([daysAgo(400), daysAgo(200)]);
     const da = await staff(w.pariwarId, 'district_admin');
@@ -401,7 +408,7 @@ describe.skipIf(!hasDatabase)('Story 6.23b — every approver, through HTTP (:54
       const w = await lateWarnedWorld();
       const pa = await staff(w.pariwarId, 'pariwar_admin');
       expect((await pendingOf(pa.client, w.pariwarId)).all.find((i) => i.claim_case_id === w.claimCaseId)?.approval_warnings).toMatchObject({
-        kinds: ['post_death_version'],
+        kinds: ['post_death_version', 'inspection_death_date_differs'],
         waiting_for_district_admin: true,
         own_reason_excluded: false,
       });
@@ -410,10 +417,10 @@ describe.skipIf(!hasDatabase)('Story 6.23b — every approver, through HTTP (:54
       expect(waits.statusCode).toBe(409);
       expect(errOf(waits.body)).toMatchObject({
         code: 'cycle_freeze.late_warning_reason_required',
-        details: { kinds: ['post_death_version'], uncovered_count: 1, own_reason_excluded: false },
+        details: { kinds: ['post_death_version', 'inspection_death_date_differs'], uncovered_count: 2, own_reason_excluded: false },
       });
       expect(errOf(waits.body).message).toMatch(/waiting for the District Admin.*It is not refused/);
-      expect(auditsFor('admin_cycle_freeze.rejected', w.claimCaseId).at(-1)?.context).toMatchObject({ uncovered_count: 1, own_reason_excluded: false });
+      expect(auditsFor('admin_cycle_freeze.rejected', w.claimCaseId).at(-1)?.context).toMatchObject({ uncovered_count: 2, own_reason_excluded: false });
 
       // The Pariwar Admin answers the late warning THEMSELVES (6.23a NW14) — it does ⛔ not clear their own vote.
       await inScope(w.pariwarId, (s) =>
@@ -626,7 +633,8 @@ describe.skipIf(!hasDatabase)('Story 6.23b — every approver, through HTTP (:54
       expect(failed.reason_options).toEqual([]);
       expect(failed.votes.map((v) => v.covers_current_warnings)).toEqual([null]);
 
-      // The certificate re-reviewed to 45 days back + redetermined ⇒ the 30-day change is post-death too.
+      // The certificate re-reviewed to 45 days back + redetermined ⇒ the 30-day change is post-death too — and (Story
+      // 6.26b, RD19 (i)) the certificate now differs from the fixture inspection's family date: a second key the vote misses.
       await redetermine(w.pariwarId, w.claimCaseId, istDaysAgo(45));
       panel = await panelOf(w.pa.client, w.pariwarId, w.claimCaseId);
       expect(panel.votes).toEqual([expect.objectContaining({ vote_id: voteId, covers_current_warnings: false })]);
@@ -635,9 +643,9 @@ describe.skipIf(!hasDatabase)('Story 6.23b — every approver, through HTTP (:54
       expect(short.statusCode).toBe(409);
       expect(errOf(short.body)).toMatchObject({
         code: 'r9_voting.approve_votes_need_warning_reason',
-        details: { vote_ids: [voteId], uncovered_count: 1 },
+        details: { vote_ids: [voteId], uncovered_count: 2 },
       });
-      expect(auditsFor('admin_r9_voting.rejected', w.claimCaseId).at(-1)?.context).toMatchObject({ uncovered_count: 1, vote_count: 1 });
+      expect(auditsFor('admin_r9_voting.rejected', w.claimCaseId).at(-1)?.context).toMatchObject({ uncovered_count: 2, vote_count: 1 });
       const revised = await vote({ vote: 'approve', rationale: 'yes, still', warning_reason_code: GENERIC });
       expect(revised.statusCode).toBe(201);
       panel = await panelOf(w.pa.client, w.pariwarId, w.claimCaseId);
@@ -646,7 +654,7 @@ describe.skipIf(!hasDatabase)('Story 6.23b — every approver, through HTTP (:54
       const fin = await w.pa.client.inject({ method: 'POST', url: `${r9Url(w.pariwarId, w.claimCaseId)}/finalize`, payload: {} });
       expect(fin.statusCode, fin.body).toBe(200);
       expect(auditsFor('admin_r9_voting.finalize', w.claimCaseId).at(-1)?.context).toMatchObject({
-        approval_warning_kinds: ['post_death_version', 'recent_nominee_change'],
+        approval_warning_kinds: ['post_death_version', 'recent_nominee_change', 'inspection_death_date_differs'],
       });
     });
 
@@ -669,7 +677,7 @@ describe.skipIf(!hasDatabase)('Story 6.23b — every approver, through HTTP (:54
       expect(waits.statusCode, waits.body).toBe(409);
       expect(errOf(waits.body)).toMatchObject({
         code: 'r9_voting.late_warning_reason_required',
-        details: { kinds: ['post_death_version'], uncovered_count: 1, own_reason_excluded: false },
+        details: { kinds: ['post_death_version', 'inspection_death_date_differs'], uncovered_count: 2, own_reason_excluded: false },
       });
       // The (only) approve voter answers the late warning THEMSELVES — it does ⛔ not count at finalize (`-279` A1).
       await inScope(w.pariwarId, (s) =>
@@ -836,8 +844,9 @@ describe.skipIf(!hasDatabase)('Story 6.23b — every approver, through HTTP (:54
       expect(waits.statusCode, waits.body).toBe(409);
       expect(errOf(waits.body)).toMatchObject({
         code: 'closure.late_warning_reason_required',
-        // `kinds` = the UNCOVERED keys' kinds (the recent change was covered by the District Admin's approval).
-        details: { kinds: ['post_death_version'], uncovered_count: 1, own_reason_excluded: false },
+        // `kinds` = the UNCOVERED keys' kinds (the recent change was covered by the District Admin's approval; Story 6.26b
+        // RD19 (i) — the re-review also made the inspection's family date differ).
+        details: { kinds: ['post_death_version', 'inspection_death_date_differs'], uncovered_count: 2, own_reason_excluded: false },
       });
       await inScope(w.pariwarId, (s) =>
         claim.recordLateWarningReason(s.client, {
@@ -857,7 +866,7 @@ describe.skipIf(!hasDatabase)('Story 6.23b — every approver, through HTTP (:54
       expect(ok.statusCode, ok.body).toBe(201);
       expect((await records(w.claimCaseId)).map((r) => r.step)).toEqual(['district_admin_approval', 'district_admin_late_reason', 'super_admin_approval']);
       expect(auditsFor('admin_claim_correction.super_admin_decided', w.claimCaseId).at(-1)?.context).toMatchObject({
-        approval_warning_kinds: ['post_death_version', 'recent_nominee_change'],
+        approval_warning_kinds: ['post_death_version', 'recent_nominee_change', 'inspection_death_date_differs'],
         warning_reason_code: GENERIC,
         reason: 'details_verified',
       });
@@ -876,7 +885,7 @@ describe.skipIf(!hasDatabase)('Story 6.23b — every approver, through HTTP (:54
         claim_case_id: w.claimCaseId,
         returned_at: null,
         late_warning_awaiting_reason: true,
-        late_warning_uncovered_count: 1,
+        late_warning_uncovered_count: 2,
         correction_chase: expect.objectContaining({ return_decision_id: null }),
       }),
     ]);
@@ -901,6 +910,101 @@ describe.skipIf(!hasDatabase)('Story 6.23b — every approver, through HTTP (:54
         // Round 2 (BigDev "1"): the count could ⛔ not be made — `null`, ⛔ never `0`.
         expect.objectContaining({ claim_case_id: w.claimCaseId, late_warning_awaiting_reason: true, late_warning_uncovered_count: null }),
       ]);
+    });
+  });
+  // ── Story 6.26b — the three death-fact kinds over HTTP (AC8; GI6, GI7, GI17, GI18; Task 4.0's legs a–c) ─────────────
+  describe('Story 6.26b — the death-fact kinds over HTTP', () => {
+    const queueOf = async (client: Client, p: string) => {
+      const res = await client.inject({ method: 'GET', url: `/api/v1/p/${p}/admin/claims/under-correction` });
+      expect(res.statusCode, res.body).toBe(200);
+      return res.json() as { items: Json[]; late_warnings_unavailable: boolean };
+    };
+    /** A completed assignment, COMMITTED in its own transaction: a differing family date, or a `does_not_match`. */
+    const completeLater = (w: { pariwarId: string; claimCaseId: string }, opts: { deathDate?: string; verdict?: 'does_not_match' }) =>
+      inScope(w.pariwarId, (s) =>
+        ensureGroundInspection(deps, s, w.pariwarId, w.claimCaseId, {
+          force: true,
+          ...(opts.verdict ? { verdict: opts.verdict } : { deathDate: opts.deathDate ?? istDaysAgo(3) }),
+        }),
+      );
+    const finalVote = (pa: { client: Client }, w: { pariwarId: string; claimCaseId: string }, warned = true) =>
+      pa.client.inject({
+        method: 'POST',
+        url: cycleDecisionUrl(w.pariwarId),
+        payload: warned
+          ? { claim_case_id: w.claimCaseId, action: 'approve', warning_reason_code: GENERIC, rationale: 'why' }
+          : { claim_case_id: w.claimCaseId, action: 'approve' },
+      });
+
+    for (const kind of ['inspection_death_date_differs', 'original_certificate_mismatch', 'register_check_mismatch'] as const) {
+      it(`⭐ AC8 — \`${kind}\`: the District Admin's approval with ⛔ warning reason ⇒ 409 naming it; with one ⇒ 201`, async () => {
+        const w = await seedWorld([daysAgo(400)], undefined, kind === 'register_check_mismatch' ? { registerCheck: 'does_not_match' } : {});
+        if (kind === 'inspection_death_date_differs') await completeLater(w, { deathDate: istDaysAgo(3) });
+        if (kind === 'original_certificate_mismatch') await completeLater(w, { verdict: 'does_not_match' });
+        const target = w;
+        const da = await staff(target.pariwarId, 'district_admin');
+        const bare = await da.client.inject({ method: 'POST', url: `${claimBase(target.pariwarId, target.claimCaseId)}/verifier-decision`, payload: daApproveBody });
+        expect(bare.statusCode, bare.body).toBe(409);
+        expect(errOf(bare.body)).toMatchObject({ code: 'verifier_decision.warning_reason_required', details: { kinds: [kind], missing: 'reason' } });
+        await daApprove(da, target, true);
+      });
+    }
+
+    it('(a) inspected (committed) THEN approved (its own request) ⇒ ⛔ a late-warning candidate — on the FAULT path, beside a control that IS one', async () => {
+      const before = await seedWorld([daysAgo(400)]);
+      const da = await staff(before.pariwarId, 'district_admin');
+      await daApprove(da, before, false);
+      const control = await seedWorld([daysAgo(400)], before.pariwarId);
+      await daApprove(da, control, false);
+      await completeLater(control, { deathDate: istDaysAgo(3) });
+      await withFault(async () => {
+        const body = await queueOf(da.client, before.pariwarId);
+        expect(body.late_warnings_unavailable).toBe(true);
+        expect(body.items.map((i) => i.claim_case_id)).toEqual([control.claimCaseId]);
+      });
+    });
+
+    it('(b) approved THEN a differing date / a `does_not_match` (each its own transaction) ⇒ listed, and the final vote 409s `late_warning_reason_required`', async () => {
+      const dated = await seedWorld([daysAgo(400)]);
+      const da = await staff(dated.pariwarId, 'district_admin');
+      await daApprove(da, dated, false);
+      await completeLater(dated, { deathDate: istDaysAgo(3) });
+      const verdict = await seedWorld([daysAgo(400)], dated.pariwarId);
+      await daApprove(da, verdict, false);
+      await completeLater(verdict, { verdict: 'does_not_match' });
+      const body = await queueOf(da.client, dated.pariwarId);
+      expect(body.items.map((i) => i.claim_case_id).sort()).toEqual([dated.claimCaseId, verdict.claimCaseId].sort());
+      for (const i of body.items) expect(i).toMatchObject({ late_warning_awaiting_reason: true, late_warning_uncovered_count: 1 });
+      const pa = await staff(dated.pariwarId, 'pariwar_admin');
+      for (const w of [dated, verdict]) {
+        const waits = await finalVote(pa, w);
+        expect(waits.statusCode, waits.body).toBe(409);
+        expect(errOf(waits.body).code).toBe('cycle_freeze.late_warning_reason_required');
+      }
+    });
+
+    it('(c) `-284` E1 — R9-routed in `state_trustee_approved`, a differing completion ⇒ listed; the routing row superseded ⇒ ⛔ listed', async () => {
+      const w = await seedWorld([daysAgo(400)]);
+      const da = await staff(w.pariwarId, 'district_admin');
+      await daApprove(da, w, false);
+      const pa = await staff(w.pariwarId, 'pariwar_admin');
+      const voted = await finalVote(pa, w, false);
+      expect(voted.statusCode, voted.body).toBe(201);
+      await td.pool.query(
+        `INSERT INTO claim_state_trustee_decisions (claim_case_id, pariwar_id, phase, outcome, reason_code, actor_id, actor_display)
+         VALUES ($1, $2, 'routing', 'routed_to_r9', 'r9_special_case', $3, 'Router')`,
+        [w.claimCaseId, w.pariwarId, randomUUID()],
+      );
+      await completeLater(w, { deathDate: istDaysAgo(3) });
+      const listed = await queueOf(da.client, w.pariwarId);
+      expect(listed.items).toEqual([
+        expect.objectContaining({ claim_case_id: w.claimCaseId, claim_state: 'state_trustee_approved', late_warning_awaiting_reason: true, late_warning_uncovered_count: 1 }),
+      ]);
+      await td.pool.query(
+        `UPDATE claim_state_trustee_decisions SET superseded_at = now() WHERE claim_case_id = $1 AND phase = 'routing' AND superseded_at IS NULL`,
+        [w.claimCaseId],
+      );
+      expect((await queueOf(da.client, w.pariwarId)).items).toEqual([]);
     });
   });
 });

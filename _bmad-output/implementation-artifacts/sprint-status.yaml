@@ -1,3 +1,13 @@
+# last_updated: 2026-10-07k (⭐ **STORY 6.26b BUILT — `6-26b-death-facts-warnings-and-register-check`: in-progress → review.** Migration
+# `0149` (the register check + the accepted date's keyed index; :5432 + :5433); the three death-fact warning kinds (GI6 / GI17 / GI18 as
+# amended by `-283` A3, `-288` K1/K2, `-289` L1/L3/L4) through ONE fragment for both readers and ONE pure comparison; `completed_at =
+# clock_timestamp()` (RD1 / K3 — 6.26a's review patch #2 reversed, noted there); the queue's late arm with three sources + the `-284` E1 R9
+# admission (legs a–e proved in committed transactions, each red-checked); the console's per-assignment flags; the register-check form.
+# FOUND: `r9-voting.spec.ts` P4 was red despite RD19 — rebuilt on a same-date re-review. `deferred-work.md`: the clock item DISCHARGED, three
+# appends, one new item (the reject-and-re-upload laundering path). `ci:local` 34/34 green.)
+# last_updated: 2026-10-07j (⭐ **STORY 6.26b — DEV STARTED (`bmad-dev-story 6.26b`): `6-26b-death-facts-warnings-and-register-check`
+# ready-for-dev → in-progress.** Task 0 re-checked: `git fetch origin`; ⛔ no file under packages/apps/scripts changed since `b665a19a`;
+# ⛔ no decision after `-290`.)
 # last_updated: 2026-10-07i (⭐ **STORY 6.26b — VALIDATED (`bmad-create-story validate 6.26b`), v2.2 → v2.5, four fresh-context rounds** (round
 # 1: four read-only verifiers — 2 HIGH / 16 MEDIUM / ~39 LOW; round 2: 3 HIGH, all the pass's OWN edits; round 3: 1 HIGH; round 4: ⛔ no
 # BLOCKER / HIGH ⇒ stopped). Three author-commits, each committed ALONE before the story edits: `2026-10-07-288` (K1 GI18 warns while its
@@ -19200,7 +19210,7 @@ development_status:
   # queue; its file is written, but it stays `backlog` until 6.26a is `done` (the 6.21b / 6.23b precedent).
   # ⚠ 2026-10-06 (validate v2.3–v2.5): `2026-10-06-283` amends `-282` GI2/GI3/GI5/GI6/GI16 and `-284` amends `-283` (GI5, GI7, E5) — build
   # from the story files' `⚠ AMENDED by -283` / `-284` lines. Validate rounds STOPPED at round 3 (⛔ no BLOCKER / HIGH).
-  6-26b-death-facts-warnings-and-register-check: ready-for-dev
+  6-26b-death-facts-warnings-and-register-check: review
   6-27-peer-mesh-sending-replies-and-date-of-death: backlog
   epic-6-retrospective: done
 

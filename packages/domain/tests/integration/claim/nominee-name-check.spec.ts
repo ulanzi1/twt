@@ -804,7 +804,8 @@ describe.skipIf(!hasDatabase)('Story 6.18 — the nominee name check (:5433)', (
       // The waived arm reaches the wait directly (it skips the now-stale name check — RD19).
       await expect(assertClaimApprovable(tx, pid, cid, mmid, { nameCheck: 'waived_251', approvingActorIds: [TRUSTEE] })).rejects.toMatchObject({
         name: 'LateWarningReasonRequiredError',
-        kinds: ['post_death_version'],
+        // + Story 6.26b (RD19 (i)): the re-review moved the certificate away from the inspection's family date.
+        kinds: ['post_death_version', 'inspection_death_date_differs'],
         ownReasonExcluded: false,
       });
       // The full gate answers the STALE name check first (every refusal inside the gate keeps its order) …

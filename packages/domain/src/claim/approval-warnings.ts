@@ -46,7 +46,16 @@
 // ⚠⚠ IMPORT DISCIPLINE (NW1; `-279` A12): ⛔ never import `events.ts`, `nominee-name-check.ts`, `nominee-lock.ts`,
 // `project.ts`, or anything that reaches them — TRANSITIVELY (a source-scan test follows relative imports to a
 // fixpoint). Safe leaves: `death-certificate-approval.ts`, `nominee-effective.ts`, `review-window.ts`, `errors.ts`,
-// `approval-warning-reasons.ts`, `cycle-calendar/holiday-resolver.ts`.
+// `approval-warning-reasons.ts`, `cycle-calendar/holiday-resolver.ts`, `nominee-refusal-read.ts` (Story 6.26b — its
+// `inheritedGroundInspectionSourceSql`; it imports only drizzle, `db` types, ids and `pagination.ts`).
+//
+// ── Story 6.26b — the DEATH-FACT kinds (`-262` FQ8 B/C, `-264` FQ12, `-281` Q1 B; `-282` GI6, GI17, GI18 as amended by
+// `-283` A3, `-288` K1/K2, `-289` L1/L3/L4) ──────────────────────────────────────────────────────────────────────────
+// Three kinds, three keys, three producers — derived OUTSIDE the post-death block (their inputs are exact whatever the
+// determination's state), in ONE exported pure helper both readers call (`deriveDeathFactWarningKeys`), over ONE date
+// comparison the console's per-assignment line also calls (`deathDateComparison`). ⛔ No decrypt: the dates are
+// compared as keyed INDEXES (the inspection's `death_date_index` against the current accepted review's
+// `accepted_date_index`, both under `DEATH_DATE_INDEX_FIELD_CLASS`). All three ENTER the wait (GI7; `-281` Q1 B).
 //
 // ── Story 6.23b (`-277` Q2 C, Q3 B; `-278` EA1–EA10 as amended by `-279`) ────────────────────────────────────────
 // Every LATER approver calls THE ONE RULE below and writes a LATER-step row (0144). The WAIT (EA2) is
@@ -55,7 +64,7 @@
 // derivation); R9's per-vote coverage is `readR9VoteWarningCoverage` + `keysNotCoveredBy` — ⛔ never `uncoveredKeys`,
 // which covers nothing without a District Admin approval (RD17).
 
-import { sql } from 'drizzle-orm';
+import { type SQL, sql } from 'drizzle-orm';
 
 import { addCalendarDays, istDateOf } from '../cycle-calendar/holiday-resolver.js';
 import type { Db } from '../db.js';
@@ -78,12 +87,29 @@ import {
   WarningReasonUnavailableError,
   WarningReasonUngroundedError,
 } from './errors.js';
+import { currentDeathCertificateUploadIdSql } from './death-certificate-approval.js';
 import { versionStandsAt } from './nominee-effective.js';
+import { inheritedGroundInspectionSourceSql } from './nominee-refusal-read.js';
 
 // ── Kinds, keys, the window ─────────────────────────────────────────────────────────────────────────────────────
 
-/** The warning kinds (NW1). ⚠ A new kind enters 6.23b's WAIT (`-277` Q3 B) — its producer row decides that first. */
-export const APPROVAL_WARNING_KINDS = ['post_death_version', 'recent_nominee_change'] as const;
+/**
+ * The kinds a NOMINEE VERSION carries (NW2–NW3) — the timeline's per-version warnings classify ONLY these (Story 6.26b
+ * RD8): the death-fact kinds below are claim-level, ⛔ never a version's.
+ */
+export const NOMINEE_VERSION_WARNING_KINDS = ['post_death_version', 'recent_nominee_change'] as const;
+export type NomineeVersionWarningKind = (typeof NOMINEE_VERSION_WARNING_KINDS)[number];
+
+/**
+ * The warning kinds (NW1). ⚠ A new kind enters 6.23b's WAIT (`-277` Q3 B) — its producer row decides that first.
+ * Story 6.26b adds the three death-fact kinds (`-282` GI6 / GI7, GI17 / GI18; `-281` Q1 B decided they wait).
+ */
+export const APPROVAL_WARNING_KINDS = [
+  ...NOMINEE_VERSION_WARNING_KINDS,
+  'inspection_death_date_differs',
+  'original_certificate_mismatch',
+  'register_check_mismatch',
+] as const;
 export type ApprovalWarningKind = (typeof APPROVAL_WARNING_KINDS)[number];
 
 /** `-262` FQ8 A — *"within 90 days before the claim was filed"* (amended by the Panel from 30). */
@@ -122,9 +148,9 @@ export function isRecentNomineeChange(effectiveAt: Date, anchorFiledAt: Date): b
 export function classifyNomineeVersion(
   version: ClassifiableNomineeVersion,
   basis: { readonly acceptedDate: string | null; readonly anchorFiledAt: Date | null },
-): ApprovalWarningKind[] {
+): NomineeVersionWarningKind[] {
   if (version.source !== 'member') return [];
-  const kinds: ApprovalWarningKind[] = [];
+  const kinds: NomineeVersionWarningKind[] = [];
   if (isPostDeathVersion(version, basis.acceptedDate)) kinds.push('post_death_version');
   if (basis.anchorFiledAt !== null && isRecentNomineeChange(version.effectiveAt, basis.anchorFiledAt)) {
     kinds.push('recent_nominee_change');
@@ -142,6 +168,113 @@ export function pickWarningAnchor(
 ): Date {
   const unreleased = claims.filter((c) => !c.released).map((c) => c.createdAt.getTime());
   return unreleased.length === 0 ? ownCreatedAt : new Date(Math.min(...unreleased));
+}
+
+// ── The death-fact kinds (Story 6.26b) — ONE comparison, ONE derivation, both readers ─────────────────────────────
+
+/**
+ * One COMPLETED inspection assignment as the death-fact kinds need it (⛔ no ciphertext): the claim's OWN completed rows
+ * and — ONLY while the claim has ⛔ no own completed FULL assignment — the inherited source's completed rows of every
+ * stage (`inherited: true`; the console's list, `-289` L3).
+ */
+export interface DeathFactInspection {
+  readonly groundInspectionId: string;
+  readonly inherited: boolean;
+  /** 6.26a's keyed index of the date the inspector recorded; `null` ⇒ ⛔ none recorded. */
+  readonly deathDateIndex: string | null;
+  readonly deathDateSource: 'family_statement' | 'original_certificate' | null;
+  readonly originalCertificateVerdict: 'matches' | 'does_not_match' | null;
+  readonly comparedCertificateUploadId: string | null;
+}
+
+/**
+ * `-288` K2 / `-289` L4 — how ONE inspection's date compares with the certificate the Trust accepted:
+ *   · `differs` / `same`  — both indexes exist (they are compared, ⛔ never the dates);
+ *   · `not_compared`      — the row has ⛔ no date, or its printed date is from an original that is ⛔ no longer the
+ *                           current upload (`-283` A3), or the claim has ⛔ no current accepted certificate (L4);
+ *   · `not_indexed`       — the current accepted review predates 6.26b (⛔ no `accepted_date_index`; dev data only).
+ * ⛔ Never `null` — `null` is the CONSOLE's word for a read that failed.
+ */
+export type DeathDateComparison = 'differs' | 'same' | 'not_compared' | 'not_indexed';
+
+/**
+ * ⭐ THE ONE DATE COMPARISON (RD9; Trap 15) — GI6's key and the console's per-assignment line both call it, in this
+ * ORDER (`-289` L4). Ids are compared with plain `===` (PG returns lower-case uuids — the no-comparison fence).
+ */
+export function deathDateComparison(
+  row: Pick<DeathFactInspection, 'deathDateIndex' | 'deathDateSource' | 'comparedCertificateUploadId'>,
+  currentReview: { readonly acceptedDateIndex: string | null } | null,
+  currentUploadId: string | null,
+): DeathDateComparison {
+  // (1) Nothing to compare: ⛔ no date on the row, or a printed date from an original that is ⛔ not current (A3).
+  if (row.deathDateIndex === null) return 'not_compared';
+  if (
+    row.deathDateSource === 'original_certificate' &&
+    (currentUploadId === null || row.comparedCertificateUploadId !== currentUploadId)
+  ) {
+    return 'not_compared';
+  }
+  // (2) ⛔ No current accepted certificate ⇒ nothing compared (L4).
+  if (currentReview === null) return 'not_compared';
+  // (3) A pre-6.26b accepted review carries ⛔ no index.
+  if (currentReview.acceptedDateIndex === null) return 'not_indexed';
+  // (4)
+  return row.deathDateIndex === currentReview.acceptedDateIndex ? 'same' : 'differs';
+}
+
+/** The inputs of the three death-fact kinds, as both readers select them (⛔ no ciphertext). */
+export interface DeathFactWarningInputs {
+  readonly inspections: readonly DeathFactInspection[];
+  /** The claim's CURRENT accepted review (live, accepted, of the current upload), or `null`. */
+  readonly currentReview: { readonly acceptedDateIndex: string | null } | null;
+  readonly currentUploadId: string | null;
+  /** `-289` L1 — ANY accepted review of the CURRENT upload (live OR superseded) recorded `does_not_match`. */
+  readonly registerMismatchPresent: boolean;
+}
+
+/**
+ * ⭐ THE THREE DEATH-FACT KINDS (Story 6.26b; RD9) — pure, called by `deriveClaimApprovalWarnings` (so the single and the
+ * bulk readers agree by construction) OUTSIDE its post-death block:
+ *   · GI6  `inspection_death_date_differs:<ground_inspection_id>` — every row (own OR inherited, `-289` L3) whose
+ *          `deathDateComparison` is `differs`. Per inspection (`-288` K4): a re-review to ANOTHER differing date keeps
+ *          the key — ⛔ never re-key it by review.
+ *   · GI17 `original_certificate_mismatch:<ground_inspection_id>` — an OWN row whose verdict is `does_not_match`,
+ *          compared against the CURRENT upload (an inherited row compared ANOTHER claim's upload ⇒ ⛔ never).
+ *   · GI18 `register_check_mismatch:<current upload_id>` — ONE key while any accepted review of the current upload
+ *          recorded `does_not_match` (`-289` L1/L2 — re-stating it is the SAME key; a later `matches` ⛔ never erases
+ *          it; only a replaced upload stops it).
+ * Also returns every row's comparison, keyed by lower-case `ground_inspection_id` — the console's per-assignment line.
+ */
+export function deriveDeathFactWarningKeys(input: DeathFactWarningInputs): {
+  readonly keys: readonly string[];
+  readonly kinds: readonly ApprovalWarningKind[];
+  readonly comparisons: ReadonlyMap<string, DeathDateComparison>;
+} {
+  const keys = new Set<string>();
+  const kinds = new Set<ApprovalWarningKind>();
+  const comparisons = new Map<string, DeathDateComparison>();
+  for (const row of input.inspections) {
+    const comparison = deathDateComparison(row, input.currentReview, input.currentUploadId);
+    comparisons.set(row.groundInspectionId.toLowerCase(), comparison);
+    if (comparison === 'differs') {
+      keys.add(approvalWarningKey('inspection_death_date_differs', row.groundInspectionId));
+      kinds.add('inspection_death_date_differs');
+    }
+    if (
+      !row.inherited &&
+      row.originalCertificateVerdict === 'does_not_match' &&
+      input.currentUploadId !== null &&
+      row.comparedCertificateUploadId === input.currentUploadId
+    ) {
+      keys.add(approvalWarningKey('original_certificate_mismatch', row.groundInspectionId));
+      kinds.add('original_certificate_mismatch');
+    }
+  }
+  if (input.registerMismatchPresent && input.currentUploadId !== null) {
+    keys.add(approvalWarningKey('register_check_mismatch', input.currentUploadId));
+    kinds.add('register_check_mismatch');
+  }
+  return { keys: [...keys].sort(), kinds: APPROVAL_WARNING_KINDS.filter((k) => kinds.has(k)), comparisons };
 }
 
 // ── The claim-level read (ONE statement) ────────────────────────────────────────────────────────────────────────
@@ -177,6 +310,12 @@ export interface ClaimApprovalWarnings {
   };
   /** The Pariwar's ACTIVE reasons — the built-in generic first (NW16). */
   readonly reasonOptions: readonly ApprovalWarningReasonOption[];
+  /**
+   * Story 6.26b (`-288` K2) — every completed inspection's date comparison (own, and inherited while the claim has ⛔ no
+   * own completed full visit), keyed by lower-case `ground_inspection_id`. The console's per-assignment line reads it;
+   * ⛔ never a key, ⛔ never a date.
+   */
+  readonly inspectionComparisons: ReadonlyMap<string, DeathDateComparison>;
 }
 
 /** The claim was not found in this Pariwar. */
@@ -193,6 +332,23 @@ type RawWarningsRow = {
   created_at: string | Date;
   first_filed_at: string | Date | null;
   current_review_id: string | null;
+  /** Story 6.26b — the current accepted review's `accepted_date_index` (NULL on a pre-6.26b review or ⛔ no review). */
+  current_accepted_date_index: string | null;
+  /** Story 6.26b (RD7) — the CURRENT upload, through `currentDeathCertificateUploadIdSql`. */
+  current_upload_id: string | null;
+  /** Story 6.26b (`-289` L1) — an accepted `does_not_match` review of the current upload, live OR superseded. */
+  register_mismatch_present: boolean | null;
+  /** Story 6.26b (RD6) — the completed inspections, own + inherited (⛔ no ciphertext). */
+  inspections:
+    | {
+        id: string;
+        inherited: boolean;
+        death_date_index: string | null;
+        death_date_source: 'family_statement' | 'original_certificate' | null;
+        verdict: 'matches' | 'does_not_match' | null;
+        compared: string | null;
+      }[]
+    | null;
   determination_id: string | null;
   determination_review_id: string | null;
   member_versions: { version_id: string; effective_at: string }[] | null;
@@ -202,6 +358,64 @@ type RawWarningsRow = {
   records: { step: string; actor: string; keys: string[] }[] | null;
   reasons: RawActiveReason[] | null;
 };
+
+/**
+ * Story 6.26b (RD6, RD7) — the death-fact columns, ONE fragment for BOTH readers (each aliases its claim row `c`):
+ *   · `current_upload_id` — the ONE current-upload rule (`currentDeathCertificateUploadIdSql`, ⛔ never a copy);
+ *   · `register_mismatch_present` — `-289` L1: an ACCEPTED review of the current upload, live OR superseded, recorded
+ *     `does_not_match` (⛔ not the live review's code — a later `matches` re-review must ⛔ not erase it);
+ *   · `inspections` — the OWN completed assignments, plus — ONLY while the claim has ⛔ no own completed FULL assignment
+ *     (the console's `ownVisited`) — the inherited source's completed assignments of EVERY stage (`-289` L3), through
+ *     the ONE inheritance fragment (`inheritedGroundInspectionSourceSql`; its inner aliases are `inh_*`, these `wgi_*`).
+ * ⛔ No ciphertext.
+ */
+function deathFactColumnsSql(): SQL {
+  const p = sql.raw('c.pariwar_id');
+  const cc = sql.raw('c.claim_case_id');
+  return sql`${currentDeathCertificateUploadIdSql(p, cc)} AS current_upload_id,
+           EXISTS (
+             SELECT 1
+               FROM claim_death_certificate_reviews wrm
+              WHERE wrm.pariwar_id = c.pariwar_id
+                AND wrm.claim_case_id = c.claim_case_id
+                AND wrm.verdict = 'accepted'
+                AND wrm.register_check = 'does_not_match'
+                AND wrm.upload_id = ${currentDeathCertificateUploadIdSql(p, cc)}
+           ) AS register_mismatch_present,
+           (SELECT json_agg(json_build_object(
+                     'id', wgi.ground_inspection_id,
+                     'inherited', wgi.inherited,
+                     'death_date_index', wgi.death_date_index,
+                     'death_date_source', wgi.death_date_source,
+                     'verdict', wgi.original_certificate_verdict,
+                     'compared', wgi.compared_certificate_upload_id)
+                   ORDER BY wgi.inherited, wgi.created_at, wgi.ground_inspection_id)
+              FROM (
+                SELECT wgi_own.ground_inspection_id, false AS inherited, wgi_own.death_date_index,
+                       wgi_own.death_date_source, wgi_own.original_certificate_verdict,
+                       wgi_own.compared_certificate_upload_id, wgi_own.created_at
+                  FROM claim_ground_inspections wgi_own
+                 WHERE wgi_own.pariwar_id = c.pariwar_id
+                   AND wgi_own.claim_case_id = c.claim_case_id
+                   AND wgi_own.status = 'completed'
+                UNION ALL
+                SELECT wgi_inh.ground_inspection_id, true AS inherited, wgi_inh.death_date_index,
+                       wgi_inh.death_date_source, wgi_inh.original_certificate_verdict,
+                       wgi_inh.compared_certificate_upload_id, wgi_inh.created_at
+                  FROM claim_ground_inspections wgi_inh
+                 WHERE wgi_inh.pariwar_id = c.pariwar_id
+                   AND wgi_inh.status = 'completed'
+                   AND NOT EXISTS (
+                     SELECT 1
+                       FROM claim_ground_inspections wgi_full
+                      WHERE wgi_full.pariwar_id = c.pariwar_id
+                        AND wgi_full.claim_case_id = c.claim_case_id
+                        AND wgi_full.status = 'completed'
+                        AND wgi_full.inspection_stage <> 'certificate_check'
+                   )
+                   AND wgi_inh.claim_case_id = ${inheritedGroundInspectionSourceSql(p, cc)}
+              ) wgi) AS inspections`;
+}
 
 /**
  * NW1 — the claim-level warnings in ONE statement: the anchor (Trap 3), the member-source versions' ids and
@@ -224,7 +438,7 @@ export async function readClaimApprovalWarnings(
          AND cl.claim_case_id = ${claimCaseId}
     ),
     cur AS (
-      SELECT r.review_id, r.decided_at
+      SELECT r.review_id, r.decided_at, r.accepted_date_index
         FROM c
         JOIN claim_documents cd
           ON cd.pariwar_id = c.pariwar_id
@@ -278,6 +492,9 @@ export async function readClaimApprovalWarnings(
            -- live bug fix -- but leaving the two call sites asymmetric invites exactly the kind of "which one did
            -- they mean to fix" confusion that caused the asymmetry to be flagged in the first place.
            (SELECT cur.review_id FROM cur ORDER BY cur.decided_at DESC, cur.review_id DESC LIMIT 1) AS current_review_id,
+           (SELECT cur.accepted_date_index FROM cur ORDER BY cur.decided_at DESC, cur.review_id DESC LIMIT 1)
+             AS current_accepted_date_index,
+           ${deathFactColumnsSql()},
            det.determination_id,
            det.death_certificate_review_id AS determination_review_id,
            (SELECT json_agg(json_build_object('version_id', mv.version_id, 'effective_at', mv.effective_at)
@@ -383,6 +600,8 @@ async function readClaimApprovalWarningsSlice(
                     AND f.kind = 'member_found_innocent'
                )) AS first_filed_at,
            cur.review_id AS current_review_id,
+           cur.accepted_date_index AS current_accepted_date_index,
+           ${deathFactColumnsSql()},
            det.determination_id,
            det.death_certificate_review_id AS determination_review_id,
            (SELECT json_agg(json_build_object('version_id', mv.version_id, 'effective_at', mv.effective_at)
@@ -411,7 +630,7 @@ async function readClaimApprovalWarningsSlice(
            NULL::json AS reasons
       FROM claims c
       LEFT JOIN LATERAL (
-        SELECT r.review_id
+        SELECT r.review_id, r.accepted_date_index
           FROM claim_documents cd
           JOIN claim_death_certificate_uploads u
             ON u.pariwar_id = cd.pariwar_id
@@ -538,6 +757,23 @@ function deriveClaimApprovalWarnings(claimCaseId: ClaimId, row: RawWarningsRow):
       kinds.add('recent_nominee_change');
     }
   }
+  // Story 6.26b — OUTSIDE the post-death block: the current review and the inspections are exact whatever the
+  // determination's state (RD9).
+  const deathFacts = deriveDeathFactWarningKeys({
+    inspections: (row.inspections ?? []).map((i) => ({
+      groundInspectionId: i.id,
+      inherited: i.inherited,
+      deathDateIndex: i.death_date_index,
+      deathDateSource: i.death_date_source,
+      originalCertificateVerdict: i.verdict,
+      comparedCertificateUploadId: i.compared,
+    })),
+    currentReview: currentReview !== null ? { acceptedDateIndex: row.current_accepted_date_index } : null,
+    currentUploadId: row.current_upload_id,
+    registerMismatchPresent: row.register_mismatch_present === true,
+  });
+  for (const k of deathFacts.keys) keys.add(k);
+  for (const k of deathFacts.kinds) kinds.add(k);
 
   const liveDecision =
     row.live_decision_id !== null
@@ -565,6 +801,7 @@ function deriveClaimApprovalWarnings(claimCaseId: ClaimId, row: RawWarningsRow):
     liveDecision,
     coverage: { districtAdminApproved, coveredKeys, approvalKeys, records },
     reasonOptions: activeReasonOptions(row.reasons ?? []),
+    inspectionComparisons: deathFacts.comparisons,
   };
 }
 

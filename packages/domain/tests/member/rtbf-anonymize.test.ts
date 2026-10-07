@@ -350,6 +350,16 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
     }
   });
 
+  it('⭐ Story 6.26b (GI13 [b]): the death-certificate review scrub also NULLs the accepted date\'s index — in the SAME statement', async () => {
+    const { captured } = await run();
+    const set = setFor(captured, claimDeathCertificateReviews);
+    expect(set).toHaveProperty('acceptedDateIndex', null);
+    expect(set).toHaveProperty('noteCiphertext');
+    expect(set).toHaveProperty('acceptedDateCiphertext');
+    // The register check is a governance code, kept (and immutable — the 0149 trigger).
+    expect(set).not.toHaveProperty('registerCheck');
+  });
+
   it('⭐ Story 10.20: the grounds note is scrubbed via the table\'s OWN member_id', async () => {
     // This one-liner is why `member_id` is denormalized onto `member_moderation_grounds`. Every
     // scrub in `anonymize.ts` keys on `<table>.memberId` — an erasure request carries a member id

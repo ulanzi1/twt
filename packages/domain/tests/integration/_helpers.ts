@@ -926,8 +926,9 @@ function fixtureReviewNow(date: string): Date {
 /**
  * Ensure the claim's CURRENT death certificate is ACCEPTED — through the REAL review writer, ⛔ never a raw
  * insert of a review (the writer's window, token and supersession guards run). Returns the accepted review id.
- *   · already accepted, and (when `date` is given) with that fixture date ⇒ reused as is;
- *   · accepted with ANOTHER date ⇒ re-reviewed (`re_reviewed`) with this one;
+ *   · already accepted, and (when `date` is given) with that fixture date, and (when `registerCheck` is given) with
+ *     that register check ⇒ reused as is;
+ *   · accepted with ANOTHER date or (Story 6.26b RD22) ANOTHER given register check ⇒ re-reviewed (`re_reviewed`);
  *   · awaiting review with an upload ⇒ accepted;
  *   · missing, rejected, or a legacy row with no upload ⇒ a NEW certificate is seeded, then accepted.
  * The claim must be in the review window (the writer refuses otherwise).
@@ -939,6 +940,12 @@ export async function seedAcceptedDeathCertificate(
     readonly claimCaseId: string;
     /** The date of death to accept. Omitted ⇒ keep any accepted certificate, else accept tomorrow (IST). */
     readonly date?: string;
+    /**
+     * Story 6.26b (GI8, GI15 [b]; RD22) — the government-register check a NEW accept records. Default `'matches'`
+     * (⛔ no warning). When GIVEN, an accepted review with another check is ⛔ not reused (re-reviewed instead); when
+     * omitted, any accepted review is kept whatever its check.
+     */
+    readonly registerCheck?: 'matches' | 'does_not_match' | 'could_not_check';
     readonly now?: Date;
     readonly actorId?: string;
     readonly actorDisplay?: string;
@@ -950,12 +957,18 @@ export async function seedAcceptedDeathCertificate(
   const snapshot = await readDeathCertificateSnapshot(tx, pid, cid);
   const status = deathCertificateStatus(snapshot);
   if (status === 'accepted') {
-    if (opts.date === undefined) return snapshot.currentReview!.reviewId as string;
+    const checkKept = opts.registerCheck === undefined || snapshot.currentReview!.registerCheck === opts.registerCheck;
+    if (opts.date === undefined && checkKept) return snapshot.currentReview!.reviewId as string;
     const [row] = await tx
       .select({ c: schema.claimDeathCertificateReviews.acceptedDateCiphertext })
       .from(schema.claimDeathCertificateReviews)
       .where(eq(schema.claimDeathCertificateReviews.reviewId, snapshot.currentReview!.reviewId));
-    if (row?.c === fixtureAcceptedDateCiphertext(opts.date)) return snapshot.currentReview!.reviewId as string;
+    const keptDate = fixtureAcceptedDateOf(row?.c);
+    if (checkKept && (opts.date === undefined || keptDate === opts.date)) return snapshot.currentReview!.reviewId as string;
+    // A re-review for the register check alone keeps the accepted date (when the fixture can read it back).
+    if (opts.date === undefined && keptDate !== null) {
+      return seedAcceptedDeathCertificate(client, { ...opts, date: keptDate });
+    }
   }
   let token = snapshot.currentUploadId as string | null;
   if (status === 'missing' || status === 'rejected' || token === null) {
@@ -969,6 +982,9 @@ export async function seedAcceptedDeathCertificate(
     certificateToken: token,
     acceptedDate: date,
     acceptedDateCiphertext: fixtureAcceptedDateCiphertext(date),
+    // Story 6.26b — the SAME stand-in the inspection fixture indexes with (Trap 1), so equal dates index equally.
+    acceptedDateIndex: fixtureDeathDateIndex(date),
+    registerCheck: opts.registerCheck ?? 'matches',
     rejectionReason: null,
     noteCiphertext: 'enc:v1:review-note',
     expectedLiveReviewId: (snapshot.liveReview?.reviewId as string | undefined) ?? null,
@@ -1034,6 +1050,27 @@ function fixtureAcceptedDateOf(ciphertext: string | null | undefined): string | 
 }
 
 /**
+ * Story 6.26b — the fixture date of the claim's CURRENT accepted review (read back from its fixture ciphertext), or
+ * `null` (⛔ no current accepted review, or a real ciphertext). For a test that completes an inspection by hand and must
+ * index the family's date EQUAL to the certificate's (`fixtureDeathDateIndex`) — ⛔ never a literal stand-in, which now
+ * "differs" from every indexed review (RD19).
+ */
+export async function fixtureCurrentAcceptedDate(
+  client: pg.PoolClient,
+  pariwarId: string,
+  claimCaseId: string,
+): Promise<string | null> {
+  const tx = bindScopedDb(client);
+  const snapshot = await readDeathCertificateSnapshot(tx, toPariwarId(pariwarId), toClaimId(claimCaseId));
+  if (snapshot.currentReview?.verdict !== 'accepted') return null;
+  const [row] = await tx
+    .select({ c: schema.claimDeathCertificateReviews.acceptedDateCiphertext })
+    .from(schema.claimDeathCertificateReviews)
+    .where(eq(schema.claimDeathCertificateReviews.reviewId, snapshot.currentReview.reviewId));
+  return fixtureAcceptedDateOf(row?.c);
+}
+
+/**
  * ⭐ Story 6.26a (GI15, Task 10) — give a claim a COMPLETE ground inspection (`groundInspectionApprovalState`) through
  * the REAL writers: an own FULL (`initial`) assignment scheduled, one `original_certificate` photo, completed against
  * the CURRENT upload with verdict `matches` and a family date EQUAL to the accepted date (⛔ no warning by default —
@@ -1064,17 +1101,7 @@ export async function seedGroundInspection(
   if (facts.currentUploadId === null) return null;
   if (opts.force !== true && groundInspectionApprovalState(facts).complete) return null;
 
-  let date = opts.deathDate ?? null;
-  if (date === null) {
-    const snapshot = await readDeathCertificateSnapshot(tx, pid, cid);
-    if (snapshot.currentReview?.verdict === 'accepted') {
-      const [row] = await tx
-        .select({ c: schema.claimDeathCertificateReviews.acceptedDateCiphertext })
-        .from(schema.claimDeathCertificateReviews)
-        .where(eq(schema.claimDeathCertificateReviews.reviewId, snapshot.currentReview.reviewId));
-      date = fixtureAcceptedDateOf(row?.c);
-    }
-  }
+  let date = opts.deathDate ?? (await fixtureCurrentAcceptedDate(client, pariwarId, claimCaseId));
   date ??= certificateDateAfterEverything();
 
   const stage = opts.stage ?? 'initial';
@@ -1267,6 +1294,11 @@ export async function seedNomineeNameCheck(
      * whose inspection is ⛔ not complete — the gate's 409 `…ground_inspection_required`.
      */
     readonly inspection?: 'completed' | 'skip';
+    /**
+     * Story 6.26b (RD22) — the register check of the certificate this helper accepts, threaded to
+     * `seedAcceptedDeathCertificate` BEFORE the determination (a re-review afterwards would stale it).
+     */
+    readonly registerCheck?: 'matches' | 'does_not_match' | 'could_not_check';
   } = {},
 ): Promise<void> {
   if (opts.skip === true) return;
@@ -1333,7 +1365,11 @@ export async function seedNomineeNameCheck(
     .where(and(eq(schema.claims.pariwarId, pid), eq(schema.claims.claimCaseId, cid)));
   const deceasedMemberId = claimRows[0]!.deceasedMemberId;
   if (opts.certificate !== 'skip') {
-    await seedAcceptedDeathCertificate(client, { pariwarId, claimCaseId });
+    await seedAcceptedDeathCertificate(client, {
+      pariwarId,
+      claimCaseId,
+      ...(opts.registerCheck !== undefined ? { registerCheck: opts.registerCheck } : {}),
+    });
   }
   if (opts.determination !== 'skip') {
     const before = await getEffectiveNomineeDeclaration(tx, pid, cid);

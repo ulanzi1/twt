@@ -635,11 +635,19 @@ describe.skipIf(!hasDatabase)('ground inspection (PARIWAR_A scope)', () => {
       await refuses(s.client, () => completeGroundInspection(s.client, completeInput(s.gid, s.uploadId, { deathTime: { plaintext: '24:00', ciphertext: 'enc:v1:t' } })), invalid('invalid_time'));
       await refuses(s.client, () => completeGroundInspection(s.client, completeInput(s.gid, s.uploadId, { deathDate: date('2026-05-01', 'original_certificate') })), invalid('source_mismatch'));
       // The India-time "today" is admitted.
+      // ⭐ Story 6.26b (RD1; `2026-10-07-288` K3) — the injected `now` VALIDATES only; `completed_at` is the DB clock
+      // read AT the UPDATE (`clock_timestamp()`). A `pg_sleep` first, so the transaction's own `now()` (its START) is
+      // strictly earlier: a revert to `now()` ties and fails `>`, a revert to the injected clock fails `<>`. (This
+      // reverses 6.26a's review 2026-10-07 patch #2, which pinned the injected clock — recorded in 6.26a's file.)
+      await s.client.query('SELECT pg_sleep(0.001)');
       const done = await completeGroundInspection(s.client, completeInput(s.gid, s.uploadId, { deathDate: date('2026-06-02'), now }));
       expect(done.groundInspection.status).toBe('completed');
-      // Review 2026-10-07: `completedAt` shares the SAME clock the future-date check just validated against —
-      // never the real wall clock when the caller injects one.
-      expect(done.groundInspection.completedAt?.toISOString()).toBe(now.toISOString());
+      const clock = await s.client.query<{ after_start: boolean; not_injected: boolean }>(
+        `SELECT completed_at > now() AS after_start, completed_at <> $1::timestamptz AS not_injected
+           FROM claim_ground_inspections WHERE ground_inspection_id = $2`,
+        [now.toISOString(), s.gid],
+      );
+      expect(clock.rows[0]).toEqual({ after_start: true, not_injected: true });
     });
 
     it('AC5 — the dates are stored ONLY as ciphertext + index (⛔ no plaintext date in any column); the time is optional; the photo counts are returned', async () => {

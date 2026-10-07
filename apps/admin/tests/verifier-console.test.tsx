@@ -204,6 +204,10 @@ describe('<SignalsPanel> — six sections, four-state vocabulary, tri-state conc
                 deathDateUnreadable: false,
                 deathTimeUnreadable: false,
                 inherited: true,
+                // Story 6.26b — ⛔ date recorded ⇒ nothing compared, ⛔ warning.
+                dateComparison: 'not_compared',
+                dateDiffersWarning: false,
+                originalMismatchWarning: false,
               },
             ],
             inheritedFrom: { claimCaseId: source },
@@ -252,6 +256,9 @@ describe('<SignalsPanel> — six sections, four-state vocabulary, tri-state conc
                 deathTime: null,
                 deathDateUnreadable: false,
                 inherited: false,
+                dateComparison: 'same',
+                dateDiffersWarning: false,
+                originalMismatchWarning: true,
               },
               {
                 ...base,
@@ -266,6 +273,9 @@ describe('<SignalsPanel> — six sections, four-state vocabulary, tri-state conc
                 deathTime: null,
                 deathDateUnreadable: true,
                 inherited: true,
+                dateComparison: 'same',
+                dateDiffersWarning: false,
+                originalMismatchWarning: false,
               },
             ],
             inheritedFrom: { claimCaseId: '99999999-9999-4999-8999-999999999999' },
@@ -284,6 +294,107 @@ describe('<SignalsPanel> — six sections, four-state vocabulary, tri-state conc
     expect(inherited).toHaveTextContent("Date of death (the family's word): could not be read");
     expect(inherited).toHaveTextContent('Time of death: not known');
     expect(screen.getByTestId('ground-inspection-gate')).toHaveTextContent('The ground inspection is complete for approval.');
+  });
+
+  describe('⭐ Story 6.26b (GI10 [b]; `-288` K2, `-289` L3/L4; RD18; Trap 11; AC9b) — the date comparison and the two warnings', () => {
+    const base = {
+      district: 'Patna',
+      inspectorActorId: 'inspector-1',
+      scheduledAt: '2026-05-01T06:00:00.000Z',
+      status: 'completed',
+      refusalReason: null,
+      completedAt: '2026-05-02T06:00:00.000Z',
+      notes: null,
+      structuredFindings: null,
+      inspectionStage: 'initial',
+      inspectionSiteType: 'family_residence',
+      photos: [],
+      originalCertificateVerdict: 'matches' as const,
+      comparedAgainst: 'current' as const,
+      deathDateSource: 'family_statement' as const,
+      deathDate: '2026-04-28',
+      deathTime: null,
+      deathDateUnreadable: false,
+      deathTimeUnreadable: false,
+      inherited: false,
+      dateComparison: 'same' as const,
+      dateDiffersWarning: false,
+      originalMismatchWarning: false,
+    };
+    type Item = Extract<VerifierConsolePacket['groundInspection'], { status: 'present' }>['assignments'][number];
+    const renderRows = (assignments: Item[]) => {
+      render(<SignalsPanel packet={{ ...PRESENT_PACKET, groundInspection: { status: 'present', assignments } }} />);
+      return screen.getAllByTestId('ground-inspection-assignment');
+    };
+    const r = t.groundInspectionGate.record;
+
+    it('a differing date is a WARNING (an inherited one says "given on an earlier claim"); `not_indexed` and a failed read have their OWN words; `same` / `not_compared` show nothing', () => {
+      const rows = renderRows([
+        { ...base, groundInspectionId: 'own', dateComparison: 'differs', dateDiffersWarning: true },
+        { ...base, groundInspectionId: 'inh', inherited: true, dateComparison: 'differs', dateDiffersWarning: true },
+        { ...base, groundInspectionId: 'old', dateComparison: 'not_indexed' },
+        { ...base, groundInspectionId: 'unknown', dateComparison: null, dateDiffersWarning: null },
+        { ...base, groundInspectionId: 'same' },
+        { ...base, groundInspectionId: 'none', dateComparison: 'not_compared' },
+      ]);
+      const line = (i: number) => within(rows[i]!).queryByTestId('ground-inspection-date-comparison');
+      expect(line(0)).toHaveTextContent(r.dateDiffersWarning);
+      expect(line(0)).toHaveAttribute('data-warning', 'true');
+      expect(line(1)).toHaveTextContent(r.dateDiffersWarningInherited);
+      expect(line(2)).toHaveTextContent(r.dateNotIndexed);
+      expect(line(2)).not.toHaveAttribute('data-warning');
+      expect(line(3)).toHaveTextContent(r.dateUnknown);
+      // "just now" is said ONLY of a read that failed — ⛔ of a pre-6.26b certificate.
+      expect(r.dateNotIndexed).not.toMatch(/just now/);
+      expect(line(4)).toBeNull();
+      expect(line(5)).toBeNull();
+    });
+
+    it('the VERDICT line: the mismatch warning where `true`; "could not be checked just now" where `null`; nothing where `false` — and an un-completed row shows ⛔ such line', () => {
+      const rows = renderRows([
+        { ...base, groundInspectionId: 'warned', originalCertificateVerdict: 'does_not_match', originalMismatchWarning: true },
+        { ...base, groundInspectionId: 'unknown', originalCertificateVerdict: 'does_not_match', originalMismatchWarning: null, dateComparison: null, dateDiffersWarning: null },
+        { ...base, groundInspectionId: 'replaced', originalCertificateVerdict: 'does_not_match', comparedAgainst: 'earlier' },
+        {
+          ...base,
+          groundInspectionId: 'scheduled',
+          status: 'scheduled',
+          completedAt: null,
+          originalCertificateVerdict: null,
+          comparedAgainst: null,
+          deathDateSource: null,
+          deathDate: null,
+          dateComparison: 'not_compared',
+        },
+      ]);
+      const mismatch = (i: number) => within(rows[i]!).queryByTestId('ground-inspection-mismatch-line');
+      expect(mismatch(0)).toHaveTextContent(r.mismatchWarning);
+      expect(mismatch(0)).toHaveAttribute('data-warning', 'true');
+      expect(mismatch(1)).toHaveTextContent(r.mismatchUnknown);
+      expect(within(rows[1]!).getByTestId('ground-inspection-date-comparison')).toHaveTextContent(r.dateUnknown);
+      expect(mismatch(2)).toBeNull(); // shown plainly, ⛔ a warning (a replaced certificate's verdict)
+      expect(mismatch(3)).toBeNull();
+      expect(within(rows[3]!).queryByTestId('ground-inspection-date-comparison')).toBeNull();
+    });
+
+    it('⛔ NO DATE in any kind line, any date-comparison line or the mismatch line (AC9b — the GI10 [a] date line above them is 6.26a\'s)', () => {
+      const DATE = /\d{4}-\d{2}-\d{2}|\b\d{1,2}\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)|\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\w*\s+\d{1,2}\b/i;
+      const rows = renderRows([
+        { ...base, groundInspectionId: 'a', originalCertificateVerdict: 'does_not_match', originalMismatchWarning: true, dateComparison: 'differs', dateDiffersWarning: true },
+        { ...base, groundInspectionId: 'b', inherited: true, dateComparison: 'differs', dateDiffersWarning: true },
+        { ...base, groundInspectionId: 'c', originalCertificateVerdict: 'does_not_match', originalMismatchWarning: null, dateComparison: null, dateDiffersWarning: null },
+        { ...base, groundInspectionId: 'd', dateComparison: 'not_indexed' },
+      ]);
+      const lines = rows.flatMap((row) => [
+        ...within(row).queryAllByTestId('ground-inspection-date-comparison'),
+        ...within(row).queryAllByTestId('ground-inspection-mismatch-line'),
+      ]);
+      expect(lines.length).toBe(6);
+      for (const l of lines) expect(l.textContent).not.toMatch(DATE);
+      for (const words of Object.values(t.approvalWarnings.kindLine)) expect(words).not.toMatch(DATE);
+      // The date line itself DOES show the date, by design (6.26a's GI10 [a]).
+      expect(rows[0]).toHaveTextContent('2026-04-28');
+    });
   });
 
   it('renders the shepherd section as empty when no shepherd is assigned yet (pre-verification)', () => {

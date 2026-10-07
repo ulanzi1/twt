@@ -44,6 +44,8 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import type { AppDeps } from '../../../src/context.js';
 import { assembleVerifierConsole } from '../../../src/modules/claims/claims.verifier-console.handlers.js';
+import { decryptDeathCertificateReviewField } from '../../../src/modules/claims/death-certificate-crypto.js';
+import { deathDateBlindIndex } from '../../../src/modules/claims/ground-inspection-crypto.js';
 import { closeScopeTx, openScopeTx } from '../../../src/modules/multi-tenant/scope-tx.js';
 import { buildTestDeps, hasDatabase, type TestDeps } from '../_setup.js';
 import { insertDeathCertificate, seedNomineeNameCheck } from '../_nominee-name-check-fixture.js';
@@ -223,14 +225,29 @@ describe.skipIf(!hasDatabase)('Verifier-console compound shape (AI-6-3 class) �
           WHERE cd.claim_case_id = $1 AND cd.document_type = 'death_certificate'`,
         [claimCaseId],
       );
+      // ⚠ Story 6.26b (RD19 (ii)) — the family's date indexed EQUAL to the accepted certificate's, through the REAL
+      // helper: a literal stand-in now "differs" from every indexed review and raises `inspection_death_date_differs`.
+      const acceptedDateCt = await c.query<{ accepted_date_ciphertext: string }>(
+        `SELECT r.accepted_date_ciphertext FROM claim_death_certificate_reviews r
+          WHERE r.claim_case_id = $1 AND r.upload_id = $2 AND r.verdict = 'accepted' AND r.superseded_at IS NULL`,
+        [claimCaseId, current.rows[0]!.upload_id],
+      );
+      const acceptedDate = await decryptDeathCertificateReviewField(acceptedDateCt.rows[0]!.accepted_date_ciphertext, pariwarId, deps.encryption);
       await c.query(
         `INSERT INTO claim_ground_inspections
            (ground_inspection_id, claim_case_id, pariwar_id, district, inspection_stage, inspection_site_type,
             inspector_actor_id, scheduled_at, status, original_certificate_verdict, compared_certificate_upload_id,
             death_date_ciphertext, death_date_source, death_date_index)
          VALUES ($1, $2, $3, $4, 'initial', 'family_residence', 'inspector-1', now(), 'completed', 'matches', $5,
-                 'enc:v1:death-date', 'family_statement', 'fixture-death-date-index')`,
-        [groundInspectionId, claimCaseId, pariwarId, DISTRICT, current.rows[0]!.upload_id],
+                 'enc:v1:death-date', 'family_statement', $6)`,
+        [
+          groundInspectionId,
+          claimCaseId,
+          pariwarId,
+          DISTRICT,
+          current.rows[0]!.upload_id,
+          await deathDateBlindIndex(acceptedDate, pariwarId, deps.encryption),
+        ],
       );
       for (const photoId of photoIds) {
         await c.query(

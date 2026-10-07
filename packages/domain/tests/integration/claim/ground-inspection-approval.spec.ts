@@ -45,6 +45,8 @@ import {
   SEEDED_NOMINEES_DECLARED_AT,
   driveClaimTo,
   enterAppScope,
+  fixtureCurrentAcceptedDate,
+  fixtureDeathDateIndex,
   seedClauseVersion,
   seedDeathCertificate,
   seedGroundInspection,
@@ -220,7 +222,14 @@ async function inspectNow(ctx: Ctx): Promise<Record<string, unknown>> {
   await completeGroundInspection(ctx.client, {
     pariwarId: ctx.pid, groundInspectionId: gid, actingActorId: INSPECTOR, originalCertificateVerdict: 'matches',
     comparedCertificateUploadId: facts.currentUploadId,
-    deathDate: { plaintext: '2026-06-01', ciphertext: 'enc:v1:d', index: 'idx', source: 'family_statement' },
+    // Story 6.26b (RD19 (ii)) — the family's date indexed EQUAL to the accepted certificate's (the fixture stand-in):
+    // a literal `'idx'` now "differs" from every indexed review and raises `inspection_death_date_differs`.
+    deathDate: {
+      plaintext: '2026-06-01',
+      ciphertext: 'enc:v1:d',
+      index: fixtureDeathDateIndex((await fixtureCurrentAcceptedDate(ctx.client, ctx.pid, ctx.cid)) ?? '2026-06-01'),
+      source: 'family_statement',
+    },
   });
   const completed = await ctx.tx
     .select()

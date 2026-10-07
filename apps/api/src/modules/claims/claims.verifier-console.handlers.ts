@@ -326,8 +326,14 @@ export async function assembleVerifierConsole(
   //    SAVEPOINT, BEFORE the warnings (which stay LAST). ─────────────────────────────────────────────────────────
   const groundInspectionGate = await assembleGroundInspectionGate(ctx, claimCaseId, reads);
 
-  // ── (i) the nominee-change warnings (Story 6.23a, NW8) — NON-PII; ⛔ no decrypt. ⚠ LAST (⛔ no SAVEPOINT). ─────
-  const approvalWarnings = await assembleApprovalWarnings(ctx, claimCaseId, core.claim.currentState as string, reads);
+  // ── (i) the approval warnings (Story 6.23a, NW8; 6.26b's death-fact kinds) — NON-PII; ⛔ no decrypt. ⚠ LAST (⛔ no
+  //    SAVEPOINT). The internal read also hands back the keys and the per-inspection comparisons (⛔ never on the wire). ─
+  const warningsRead = await readApprovalWarningsSection(ctx, claimCaseId, core.claim.currentState as string, reads);
+  const approvalWarnings = warningsRead.section;
+
+  // ── Story 6.26b (GI10 [b]; `-288` K2; RD18) — each assignment's date comparison and its two warning flags, STITCHED
+  //    from the warnings read after both sections exist (⛔ no new read; ⛔ no date, ⛔ no index on the wire). ─────────
+  const groundInspectionWithFlags = stitchDeathFactFlags(groundInspection, warningsRead);
 
   const packet: VerifierConsolePacket = {
     claimCaseId: ctx.claimCaseId,
@@ -339,7 +345,7 @@ export async function assembleVerifierConsole(
     concealment,
     documentReview,
     peerMesh,
-    groundInspection,
+    groundInspection: groundInspectionWithFlags,
     priorVerifierComments,
     recentPrecedents,
     shepherd,
@@ -466,6 +472,25 @@ export async function assembleApprovalWarnings(
   claimState: string,
   reads: { bump(): void },
 ): Promise<ApprovalWarningsStatus> {
+  return (await readApprovalWarningsSection(ctx, claimCaseId, claimState, reads)).section;
+}
+
+/** Story 6.26b (RD18) — the warnings section AND what the console's per-assignment flags are stitched from: the keys and
+ *  each completed inspection's date comparison. Both `null` when the read failed (⛔ never "no warning"). ⛔ On the wire:
+ *  the section's strict shape carries neither. */
+interface ApprovalWarningsRead {
+  readonly section: ApprovalWarningsStatus;
+  readonly keys: readonly string[] | null;
+  readonly inspectionComparisons: ReadonlyMap<string, claim.DeathDateComparison> | null;
+}
+
+/** The ONE counted read behind `assembleApprovalWarnings` (its signature, read count and failure shape unchanged). */
+async function readApprovalWarningsSection(
+  ctx: VerifierConsoleContext,
+  claimCaseId: ids.ClaimId,
+  claimState: string,
+  reads: { bump(): void },
+): Promise<ApprovalWarningsRead> {
   try {
     reads.bump();
     const w = await claim.readClaimApprovalWarnings(ctx.db, ids.pariwarId(ctx.pariwarId), claimCaseId);
@@ -489,7 +514,7 @@ export async function assembleApprovalWarnings(
       (claim.LATE_WARNING_REASON_RECORDABLE_STATES as readonly string[]).includes(claimState) &&
       w.postDeath === 'evaluated' &&
       !claim.lateWarningNothingUncoveredFor(w, ctx.actorId);
-    return {
+    const section: ApprovalWarningsStatus = {
       available: true,
       kinds: [...w.kinds],
       postDeath: w.postDeath,
@@ -507,12 +532,13 @@ export async function assembleApprovalWarnings(
         replacesLabel: o.replacesLabel,
       })),
     };
+    return { section, keys: w.keys, inspectionComparisons: w.inspectionComparisons };
   } catch (err) {
     ctx.log?.warn(
       { err: err instanceof Error ? err.name : 'unknown', claimCaseId: ctx.claimCaseId },
-      'verifier-console: nominee-change warnings unavailable; failing closed to cannot-approve',
+      'verifier-console: approval warnings unavailable; failing closed to cannot-approve',
     );
-    return {
+    const section: ApprovalWarningsStatus = {
       available: false,
       kinds: [],
       postDeath: 'awaiting_determination',
@@ -525,7 +551,58 @@ export async function assembleApprovalWarnings(
       lateKeysUncoveredForViewer: 0,
       reasonOptions: [],
     };
+    return { section, keys: null, inspectionComparisons: null };
   }
+}
+
+/** A ground-inspection section before Story 6.26b's per-assignment flags are stitched on (RD18). */
+type UnstitchedGroundInspectionItem = Omit<
+  Extract<GroundInspectionSection, { status: 'present' }>['assignments'][number],
+  'dateComparison' | 'dateDiffersWarning' | 'originalMismatchWarning'
+>;
+type UnstitchedGroundInspectionSection =
+  | (Omit<Extract<GroundInspectionSection, { status: 'present' }>, 'assignments'> & {
+      assignments: UnstitchedGroundInspectionItem[];
+    })
+  | Exclude<GroundInspectionSection, { status: 'present' }>;
+
+/**
+ * ⭐ Story 6.26b (GI10 [b]; `-288` K2, `-289` L3/L4; RD18; invariant 5, Trap 11) — each assignment's DATE COMPARISON and
+ * its two WARNING FLAGS, from the warnings read (the ONE `deathDateComparison`, the ONE key derivation):
+ *   · `false` wherever the ASSIGNMENT SECTION ALONE rules a key out — both flags on an un-completed row (whose
+ *     comparison is `not_compared`); `originalMismatchWarning` on an inherited row (its compared upload is another
+ *     claim's) or a verdict ⛔ `does_not_match` — judged ⛔ from the warnings result;
+ *   · otherwise, on a SUCCESSFUL read, from the comparison and the keys — and `null` for a completed row the read did ⛔
+ *     see (two READ COMMITTED statements: a row can appear between them — an unknown, ⛔ never "nothing");
+ *   · on a FAILED read, `null` ("could not be checked just now") for every flag and comparison the section does ⛔ rule out.
+ */
+export function stitchDeathFactFlags(
+  section: UnstitchedGroundInspectionSection,
+  read: Pick<ApprovalWarningsRead, 'keys' | 'inspectionComparisons'>,
+): GroundInspectionSection {
+  if (section.status !== 'present') return section;
+  const keys = read.keys === null ? null : new Set(read.keys);
+  return {
+    ...section,
+    assignments: section.assignments.map((a) => {
+      if (a.status !== 'completed') {
+        return { ...a, dateComparison: 'not_compared' as const, dateDiffersWarning: false, originalMismatchWarning: false };
+      }
+      const mismatchRuledOut = a.inherited || a.originalCertificateVerdict !== 'does_not_match';
+      const comparison = read.inspectionComparisons?.get(a.groundInspectionId.toLowerCase());
+      if (keys === null || comparison === undefined) {
+        return { ...a, dateComparison: null, dateDiffersWarning: null, originalMismatchWarning: mismatchRuledOut ? false : null };
+      }
+      return {
+        ...a,
+        dateComparison: comparison,
+        dateDiffersWarning:
+          comparison === 'differs' && keys.has(claim.approvalWarningKey('inspection_death_date_differs', a.groundInspectionId)),
+        originalMismatchWarning:
+          !mismatchRuledOut && keys.has(claim.approvalWarningKey('original_certificate_mismatch', a.groundInspectionId)),
+      };
+    }),
+  };
 }
 
 /**
@@ -622,6 +699,8 @@ async function assembleDocumentReview(
         status:
           status === 'accepted' ? 'accepted' : status === 'rejected' ? 'rejected' : status === 'missing' ? 'missing' : 'not_reviewed',
         rejectionReason: current?.rejectionReason ?? null,
+        // Story 6.26b (GI8; RD30) — from the SAME snapshot (⛔ no new read).
+        registerCheck: current?.registerCheck ?? null,
         decidedByDisplay: current?.decidedByDisplay ?? null,
         decidedAt: current?.decidedAt.toISOString() ?? null,
         liveReviewId: snap.liveReview?.reviewId ?? null,
@@ -745,7 +824,7 @@ async function assembleGroundInspection(
   /** The claim's CURRENT certificate upload (from the document-review section); `null` = none; `undefined` = unknown. */
   currentUploadId: string | null | undefined,
   reads: ReadCounter,
-): Promise<GroundInspectionSection> {
+): Promise<UnstitchedGroundInspectionSection> {
   try {
     reads.bump();
     const own = await claim.getClaimGroundInspection(ctx.db, ids.pariwarId(ctx.pariwarId), claimCaseId);

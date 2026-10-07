@@ -994,9 +994,13 @@ export async function completeGroundInspection(
     .update(claimGroundInspections)
     .set({
       status: 'completed',
-      // Same clock the "day of completion" check above just validated against (review 2026-10-07) — an
-      // injected `now` must not leave `completedAt` reflecting a different moment than what was validated.
-      completedAt: input.now ?? sql`now()`,
+      // ⭐ Story 6.26b (RD1; `2026-10-07-288` K3, restoring `-283` A6's "6.21a D4's own shape") — the DB clock,
+      // READ AT THIS UPDATE (after the assignment and claim locks), ⛔ never the injected `now` (which validates the
+      // "day of completion" above ONLY) and ⛔ never `now()` (the transaction START): the District Admin's correction
+      // queue lists a claim whose inspection completed AFTER its approval (`completed_at > v.decided_at`), and a
+      // completion whose transaction began before an approval but took the claim lock after it must still read as
+      // later. (Reverses 6.26a's first code review, patch #2 — recorded there.)
+      completedAt: sql`clock_timestamp()`,
       ...(input.structuredFindings !== undefined ? { structuredFindings: input.structuredFindings } : {}),
       ...(input.notesCiphertext !== undefined ? { notesCiphertext: input.notesCiphertext } : {}),
       originalCertificateVerdict: input.originalCertificateVerdict,

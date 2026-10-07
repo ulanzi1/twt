@@ -34,6 +34,7 @@ import type {
   PariwarId,
 } from '../ids/index.js';
 import type {
+  DeathCertificateRegisterCheck,
   DeathCertificateRejectionReason,
   DeathCertificateReviewVerdict,
 } from '../schema/claim_death_certificate_reviews.js';
@@ -48,6 +49,8 @@ export interface LiveDeathCertificateReview {
   readonly uploadId: DeathCertificateUploadId;
   readonly verdict: DeathCertificateReviewVerdict;
   readonly rejectionReason: DeathCertificateRejectionReason | null;
+  /** Story 6.26b GI8 — the government-register check; `null` on a rejected or a pre-6.26b accepted review. */
+  readonly registerCheck: DeathCertificateRegisterCheck | null;
   readonly decidedByDisplay: string;
   readonly decidedAt: Date;
 }
@@ -114,6 +117,7 @@ export async function readDeathCertificateSnapshot(
     review_upload_id: string | null;
     verdict: DeathCertificateReviewVerdict | null;
     rejection_reason: DeathCertificateRejectionReason | null;
+    register_check: DeathCertificateRegisterCheck | null;
     decided_by_display: string | null;
     decided_at: string | Date | null;
   }>(sql`
@@ -123,6 +127,7 @@ export async function readDeathCertificateSnapshot(
            r.upload_id  AS review_upload_id,
            r.verdict,
            r.rejection_reason,
+           r.register_check,
            r.decided_by_display,
            r.decided_at
       FROM (SELECT ${pariwarId}::uuid AS pariwar_id, ${claimCaseId}::uuid AS claim_case_id) k
@@ -152,6 +157,7 @@ export async function readDeathCertificateSnapshot(
           uploadId: row.review_upload_id as DeathCertificateUploadId,
           verdict: row.verdict!,
           rejectionReason: row.rejection_reason,
+          registerCheck: row.register_check ?? null,
           decidedByDisplay: row.decided_by_display!,
           decidedAt: new Date(row.decided_at!),
         }

@@ -55,7 +55,15 @@ describe.skipIf(!hasDatabase)('Story 6.21a — RTBF over the death-certificate r
     };
     const [accepted] = await tx
       .insert(schema.claimDeathCertificateReviews)
-      .values({ ...base, verdict: 'accepted', acceptedDateCiphertext: date, noteCiphertext: acceptNote })
+      // Story 6.26b (AC11b) — an accept written the 0149 way: a register check and the accepted date's index.
+      .values({
+        ...base,
+        verdict: 'accepted',
+        acceptedDateCiphertext: date,
+        acceptedDateIndex: 'ZZ-DATE-INDEX',
+        registerCheck: 'does_not_match',
+        noteCiphertext: acceptNote,
+      })
       .returning();
     await tx
       .update(schema.claimDeathCertificateReviews)
@@ -89,6 +97,11 @@ describe.skipIf(!hasDatabase)('Story 6.21a — RTBF over the death-certificate r
     expect(await dec(acc.noteCiphertext)).toBe(ANONYMIZED_SENTINEL);
     expect(await dec(rej.noteCiphertext)).toBe(ANONYMIZED_SENTINEL);
     expect(rej.acceptedDateCiphertext).toBeNull(); // the coherence CHECK
+    // ⭐ Story 6.26b (GI13 [b]) — the index is NULLed in the same scrub (as `twt_app`: the 0149 column grant — 42501
+    // without it; ⛔ no 23514 from the 0149 coherence CHECK). The register check is a governance code, kept.
+    expect(acc.acceptedDateIndex).toBeNull();
+    expect(acc.registerCheck).toBe('does_not_match');
+    expect(dump.includes('ZZ-DATE-INDEX'), 'the accepted date index survived the erasure').toBe(false);
     // Governance history kept: the verdicts, the reason, who, and the chain.
     expect(acc.supersededReason).toBe('re_reviewed');
     expect(rej.rejectionReason).toBe('date_of_death_unclear');

@@ -168,6 +168,9 @@ export async function seedReturnedClaim(
       certificateToken: uploadId,
       acceptedDate: certificateDate,
       acceptedDateCiphertext: `enc:v1:accepted-date:${certificateDate}`,
+      // Story 6.26b (GI8; RD20) — the register check and the accepted date's index (the domain fixtures' stand-in shape).
+      acceptedDateIndex: `fixture-death-date-index:${certificateDate}`,
+      registerCheck: 'matches',
       rejectionReason: null,
       noteCiphertext: 'enc:v1:review-note',
       expectedLiveReviewId: null,

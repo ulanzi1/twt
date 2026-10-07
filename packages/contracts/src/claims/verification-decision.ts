@@ -117,8 +117,22 @@ function applyDecisionRefinements<T extends { outcome: string; reason_code: stri
 // each with a lockstep test against the domain's own copy. ⛔ The verifier vocabulary above is UNCHANGED (Trap 7) — the
 // warning reason is its OWN field, beside the approval's real reason (invariant 11).
 
-/** The warning kinds (NW1). ⚠ LOCKSTEP with `@twt/domain`'s `APPROVAL_WARNING_KINDS`. */
-export const APPROVAL_WARNING_KINDS = ['post_death_version', 'recent_nominee_change'] as const;
+/**
+ * Story 6.26b (RD8) — the kinds a NOMINEE VERSION carries: the timeline's per-version warnings classify ONLY these.
+ * ⚠ LOCKSTEP with `@twt/domain`'s `NOMINEE_VERSION_WARNING_KINDS`.
+ */
+export const NOMINEE_VERSION_WARNING_KINDS = ['post_death_version', 'recent_nominee_change'] as const;
+export const NomineeVersionWarningKind = z.enum(NOMINEE_VERSION_WARNING_KINDS);
+export type NomineeVersionWarningKind = z.output<typeof NomineeVersionWarningKind>;
+
+/** The warning kinds (NW1; Story 6.26b adds the three death-fact kinds). ⚠ LOCKSTEP with `@twt/domain`'s
+ *  `APPROVAL_WARNING_KINDS`. */
+export const APPROVAL_WARNING_KINDS = [
+  ...NOMINEE_VERSION_WARNING_KINDS,
+  'inspection_death_date_differs',
+  'original_certificate_mismatch',
+  'register_check_mismatch',
+] as const;
 export const ApprovalWarningKind = z.enum(APPROVAL_WARNING_KINDS);
 export type ApprovalWarningKind = z.output<typeof ApprovalWarningKind>;
 

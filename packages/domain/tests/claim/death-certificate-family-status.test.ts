@@ -44,6 +44,7 @@ function reviewOf(over: Partial<LiveDeathCertificateReview> = {}): LiveDeathCert
     uploadId: UPLOAD_A,
     verdict: 'rejected',
     rejectionReason: 'date_of_death_unclear',
+    registerCheck: null,
     decidedByDisplay: 'District Admin',
     decidedAt: new Date('2026-09-01T00:00:00Z'),
     ...over,

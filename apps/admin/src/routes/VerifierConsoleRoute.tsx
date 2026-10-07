@@ -424,6 +424,8 @@ export function VerifierConsoleRoute(): ReactElement {
         certificate_token: certificateReview.certificateToken,
         ...(input.accepted_date !== undefined ? { accepted_date: input.accepted_date } : {}),
         ...(input.rejection_reason !== undefined ? { rejection_reason: input.rejection_reason } : {}),
+        // Story 6.26b (GI8) — the government death-register check, on an accept.
+        ...(input.register_check !== undefined ? { register_check: input.register_check } : {}),
         note: input.note,
         expected_live_review_id: certificateReview.liveReviewId,
       })

@@ -58,6 +58,7 @@ type Review = NonNullable<VerifierReviewItem['review']>;
 const review = (over: Partial<Review> = {}): Review => ({
   status: 'not_reviewed',
   rejectionReason: null,
+  registerCheck: null,
   decidedByDisplay: null,
   decidedAt: null,
   liveReviewId: null,
@@ -135,6 +136,7 @@ const HISTORY: DeathCertificateHistoryResponse = {
           review_id: LIVE,
           verdict: 'rejected',
           rejection_reason: 'date_of_death_unclear',
+          register_check: null,
           accepted_date: null,
           note: { state: 'readable', value: 'ZZ-NOTE-the ink is smudged' },
           decided_by_display: 'Anita (District Admin)',
@@ -171,6 +173,41 @@ afterEach(() => {
   routeParams.claimCaseId = CLAIM;
 });
 
+describe('Story 6.26b (GI8; RD31) — the register check in WORDS on the status line and in the history', () => {
+  it('an accepted review shows its check; a pre-6.26b accepted one says "register check not recorded"; a rejected one shows nothing', () => {
+    const { unmount } = render(<DeathCertificateReviewStatus review={review({ status: 'accepted', registerCheck: 'does_not_match' })} />);
+    expect(screen.getByTestId('death-certificate-register-check')).toHaveTextContent(`${t.registerCheckLabel}: ${t.registerChecks.does_not_match}`);
+    unmount();
+    const second = render(<DeathCertificateReviewStatus review={review({ status: 'accepted', registerCheck: null })} />);
+    expect(screen.getByTestId('death-certificate-register-check')).toHaveTextContent(t.registerCheckNotRecorded);
+    second.unmount();
+    render(<DeathCertificateReviewStatus review={review({ status: 'rejected', rejectionReason: 'no_date_of_death' })} />);
+    expect(screen.queryByTestId('death-certificate-register-check')).toBeNull();
+  });
+
+  it('the history line words each accepted review\'s check (and "not recorded" for one with none)', async () => {
+    getDeathCertificateHistory.mockResolvedValue({
+      ...HISTORY,
+      uploads: [
+        {
+          ...HISTORY.uploads[0]!,
+          reviews: [
+            { ...HISTORY.uploads[0]!.reviews[0]!, review_id: 'r-2', verdict: 'accepted', rejection_reason: null, register_check: 'matches', accepted_date: { state: 'readable', value: '2026-04-29' } },
+            { ...HISTORY.uploads[0]!.reviews[0]!, review_id: 'r-1', verdict: 'accepted', rejection_reason: null, register_check: null, accepted_date: { state: 'readable', value: '2026-04-29' } },
+            HISTORY.uploads[0]!.reviews[0]!,
+          ],
+        },
+      ],
+    });
+    await mount([certificateItem(review())]);
+    fireEvent.click(screen.getByTestId('death-certificate-history-disclosure'));
+    const lines = await screen.findAllByTestId('death-certificate-history-review');
+    expect(lines[0]).toHaveTextContent(t.registerChecks.matches!);
+    expect(lines[1]).toHaveTextContent(t.registerCheckNotRecorded);
+    expect(lines[2]!.querySelector('[data-testid="death-certificate-history-register-check"]')).toBeNull();
+  });
+});
+
 describe('<DeathCertificateReviewControl> — invariant 1 and the refusals in words', () => {
   const setup = (mode: 'accept' | 'reject' | null) => {
     const onSubmit = vi.fn(async () => true);
@@ -187,15 +224,39 @@ describe('<DeathCertificateReviewControl> — invariant 1 and the refusals in wo
     expect(screen.getByTestId('death-certificate-ocr').textContent).toBe(`${t.ocrLabel}: 2026-04-30`);
   });
 
-  it('⭐ an incomplete accept is REFUSED IN WORDS and submits nothing; typed date + note submits exactly those', async () => {
+  it('⭐ an incomplete accept is REFUSED IN WORDS and submits nothing; typed date + register check + note submits exactly those', async () => {
     const { onSubmit } = setup('accept');
     fireEvent.click(screen.getByTestId('death-certificate-submit'));
     expect(screen.getByTestId('death-certificate-incomplete').getAttribute('role')).toBe('alert');
     expect(onSubmit).not.toHaveBeenCalled();
     fireEvent.change(screen.getByTestId('death-certificate-date'), { target: { value: '2026-04-29' } });
     fireEvent.change(screen.getByTestId('death-certificate-note'), { target: { value: ' Clear stamp. ' } });
+    // Story 6.26b (GI8; RD31) — a date and a note are ⛔ not enough: Submit stays disabled until the register check is
+    // chosen, and the incomplete-accept words name it.
+    expect(screen.getByTestId('death-certificate-submit').getAttribute('aria-disabled')).toBe('true');
     fireEvent.click(screen.getByTestId('death-certificate-submit'));
-    await waitFor(() => expect(onSubmit).toHaveBeenCalledWith({ verdict: 'accepted', accepted_date: '2026-04-29', note: 'Clear stamp.' }));
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(screen.getByTestId('death-certificate-incomplete').textContent).toBe(t.incompleteAccept);
+    expect(t.incompleteAccept).toMatch(/register check/);
+    fireEvent.click(screen.getByTestId('death-certificate-register-check-could_not_check'));
+    expect(screen.getByTestId('death-certificate-submit').getAttribute('aria-disabled')).toBe('false');
+    fireEvent.click(screen.getByTestId('death-certificate-submit'));
+    await waitFor(() =>
+      expect(onSubmit).toHaveBeenCalledWith({
+        verdict: 'accepted',
+        accepted_date: '2026-04-29',
+        register_check: 'could_not_check',
+        note: 'Clear stamp.',
+      }),
+    );
+  });
+
+  it('⭐ Story 6.26b (GI8) — the accept form offers EXACTLY the three register answers, ⛔ nothing pre-selected', () => {
+    setup('accept');
+    const radios = screen.getAllByRole('radio') as HTMLInputElement[];
+    expect(radios.map((r) => r.value)).toEqual(['matches', 'does_not_match', 'could_not_check']);
+    expect(radios.every((r) => !r.checked)).toBe(true);
+    expect(screen.getByTestId('death-certificate-register-checks')).toHaveTextContent(t.registerCheckLegend);
   });
 
   it('⭐ the reject form offers EXACTLY the three reasons, and needs one and a note', async () => {
@@ -250,6 +311,12 @@ describe('<DeathCertificateReviewControl> — invariant 1 and the refusals in wo
     expect(deathCertificateReviewErrorMessage(new ApiError(409, 'death_certificate_review.accept_future_date', 'x'))).toBe(
       t.refused.accept_future_date,
     );
+    // Story 6.26b (RD11) — the map is untyped, so the two new codes are pinned here (⛔ falling to the generic words).
+    for (const code of ['register_check_required', 'register_check_not_allowed']) {
+      const words = deathCertificateReviewErrorMessage(new ApiError(409, `death_certificate_review.${code}`, 'x'));
+      expect(words).toBe(t.refused[code]);
+      expect(words).not.toBe(t.refusedGeneric);
+    }
     expect(deathCertificateReviewErrorMessage(new ApiError(403, 'auth.forbidden', 'x'))).toBe(t.forbidden);
     expect(
       trusteeDeathCertificateAcceptanceRequiredMessage(
@@ -356,6 +423,7 @@ describe('<VerifierConsoleRoute> — the certificate section (D10, AC5)', () => 
     await mount([certificateItem(review({ liveReviewId: LIVE }))]);
     fireEvent.click(screen.getByTestId('death-certificate-accept'));
     fireEvent.change(screen.getByTestId('death-certificate-date'), { target: { value: '2026-04-29' } });
+    fireEvent.click(screen.getByTestId('death-certificate-register-check-does_not_match'));
     fireEvent.change(screen.getByTestId('death-certificate-note'), { target: { value: 'Clear.' } });
     fireEvent.click(screen.getByTestId('death-certificate-submit'));
     await waitFor(() =>
@@ -363,6 +431,7 @@ describe('<VerifierConsoleRoute> — the certificate section (D10, AC5)', () => 
         verdict: 'accepted',
         certificate_token: TOKEN,
         accepted_date: '2026-04-29',
+        register_check: 'does_not_match',
         note: 'Clear.',
         expected_live_review_id: LIVE,
       }),

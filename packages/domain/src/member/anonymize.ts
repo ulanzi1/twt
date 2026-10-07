@@ -245,6 +245,9 @@ export async function anonymizeMember(
     .set({
       acceptedDateCiphertext: sql`CASE WHEN ${claimDeathCertificateReviews.acceptedDateCiphertext} IS NULL THEN NULL ELSE ${reviewSentinel} END`,
       noteCiphertext: reviewSentinel,
+      // ⭐ Story 6.26b (GI13 [b]) — the accepted date's keyed index goes with its ciphertext (NULL — an index of a
+      // sentinel would be a fabricated date). The 0149 column grant exists for exactly this; ⛔ no new statement.
+      acceptedDateIndex: null,
     })
     .where(eq(claimDeathCertificateReviews.deceasedMemberId, memberId));
 

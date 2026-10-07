@@ -9,7 +9,8 @@
 // VALIDATES and RECORDS; it ⛔ never decides, and it ⛔ never turns an accept into a reject (D4).
 //
 // ── The order (Task 2) ───────────────────────────────────────────────────────────────────────────────
-//   (0) the SHAPE — display, note, verdict ⇔ date ⇔ reason, a real date: refused before any read;
+//   (0) the SHAPE — display, note, verdict ⇔ date (and its index) ⇔ reason, a real date, then the register
+//       check (Story 6.26b GI8 — required on an accept, refused on a reject): refused before any read;
 //   (1) the claim-row `FOR UPDATE` lock — serializes this with the OCR job (which locks the same row
 //       before moving "current", D2) and with every other claim write;
 //   (2) the WINDOW (D3 — 6.20's determination window, reused);
@@ -35,9 +36,11 @@ import { bindScopedDb } from '../db.js';
 import { istDateOf } from '../cycle-calendar/holiday-resolver.js';
 import type { ClaimId, DeathCertificateReviewId, DeathCertificateUploadId, PariwarId } from '../ids/index.js';
 import {
+  type DeathCertificateRegisterCheck,
   type DeathCertificateRejectionReason,
   type DeathCertificateReviewSupersessionReason,
   type DeathCertificateReviewVerdict,
+  DEATH_CERTIFICATE_REGISTER_CHECKS,
   DEATH_CERTIFICATE_REJECTION_REASONS,
   claimDeathCertificateReviews,
 } from '../schema/claim_death_certificate_reviews.js';
@@ -65,6 +68,17 @@ export interface RecordDeathCertificateReviewInput {
   readonly acceptedDate: string | null;
   /** ACCEPT only — the same date, Tier-1-encrypted by the handler. */
   readonly acceptedDateCiphertext: string | null;
+  /**
+   * ACCEPT only — the accepted date's keyed blind index (Story 6.26b GI6; the API computes it through
+   * `deathDateBlindIndex` from the same plaintext date). OPTIONAL and tested NULLISH: a reject that leaves it
+   * out is ⛔ never refused for it (RD15).
+   */
+  readonly acceptedDateIndex?: string | null;
+  /**
+   * ACCEPT only — the government death-register check (Story 6.26b GI8; `-262` FQ8 B). OPTIONAL and tested
+   * NULLISH, like `acceptedDateIndex`.
+   */
+  readonly registerCheck?: DeathCertificateRegisterCheck | null;
   /** REJECT only — one of the three reasons. */
   readonly rejectionReason: DeathCertificateRejectionReason | null;
   /** The REQUIRED note, Tier-1-encrypted by the handler (the handler refuses an empty note first). */
@@ -112,11 +126,18 @@ export async function recordDeathCertificateReview(
   if (input.noteCiphertext.trim() === '') throw refuse('missing_note', 'a note is required');
   if (input.verdict === 'accepted') {
     if (input.rejectionReason !== null) throw refuse('reason_on_accept', 'an accepted certificate carries no rejection reason');
-    if (input.acceptedDate === null || input.acceptedDateCiphertext === null || !isRealCalendarDate(input.acceptedDate)) {
+    // The date and its index travel together (Story 6.26b RD15) — an accept without the index is `invalid_date`.
+    if (
+      input.acceptedDate === null ||
+      input.acceptedDateCiphertext === null ||
+      !isRealCalendarDate(input.acceptedDate) ||
+      input.acceptedDateIndex == null ||
+      input.acceptedDateIndex.length === 0
+    ) {
       throw refuse('invalid_date', 'accepting a certificate needs the real YYYY-MM-DD date of death read off it');
     }
   } else {
-    if (input.acceptedDate !== null || input.acceptedDateCiphertext !== null) {
+    if (input.acceptedDate !== null || input.acceptedDateCiphertext !== null || input.acceptedDateIndex != null) {
       throw refuse('date_on_reject', 'a rejected certificate carries no accepted date');
     }
     if (
@@ -125,6 +146,18 @@ export async function recordDeathCertificateReview(
     ) {
       throw refuse('missing_reason', 'rejecting a certificate needs one of the three reasons');
     }
+  }
+  // Story 6.26b GI8 — AFTER the four guards above, so every existing refusal keeps its code (RD15). NULLISH, ⛔ never
+  // `!== null`: the field is optional and a reject that leaves it out must pass.
+  if (input.verdict === 'accepted') {
+    if (
+      input.registerCheck == null ||
+      !(DEATH_CERTIFICATE_REGISTER_CHECKS as readonly string[]).includes(input.registerCheck)
+    ) {
+      throw refuse('register_check_required', 'accepting a certificate needs the government death-register check recorded');
+    }
+  } else if (input.registerCheck != null) {
+    throw refuse('register_check_not_allowed', 'a rejected certificate carries no register check');
   }
 
   const db = bindScopedDb(client);
@@ -197,6 +230,8 @@ export async function recordDeathCertificateReview(
       verdict: input.verdict,
       rejectionReason: input.verdict === 'rejected' ? input.rejectionReason : null,
       acceptedDateCiphertext: input.verdict === 'accepted' ? input.acceptedDateCiphertext : null,
+      acceptedDateIndex: input.verdict === 'accepted' ? (input.acceptedDateIndex ?? null) : null,
+      registerCheck: input.verdict === 'accepted' ? (input.registerCheck ?? null) : null,
       noteCiphertext: input.noteCiphertext,
       decidedByActorId: input.actorId,
       decidedByDisplay: input.actorDisplay,

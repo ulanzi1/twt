@@ -360,13 +360,33 @@ export function SignalsPanel({
 
 /**
  * Story 6.26a (GI10 [a]) — what the inspector recorded on one assignment: the original-certificate verdict (and whether
- * it was compared with the CURRENT certificate), and the date — and, from the family, the time — of death. A
- * `does_not_match` is SHOWN plainly (Story 6.26b turns it into a warning). A recorded value that could ⛔ not be
- * decrypted says so — ⛔ never a blank.
+ * it was compared with the CURRENT certificate), and the date — and, from the family, the time — of death. A recorded
+ * value that could ⛔ not be decrypted says so — ⛔ never a blank.
+ * ⭐ Story 6.26b (GI10 [b]; `-288` K2, `-289` L3/L4; RD18; Trap 11) — a `does_not_match` against the current certificate
+ * IS a warning (GI17), and so is a date that differs from the accepted certificate (GI6 — an inherited one labelled
+ * "given on an earlier claim", provenance only). The comparison words come from the server's ONE comparison: "differs" /
+ * "could not be compared" (`not_indexed`) / "could not be checked just now" (`null` — a read that failed); nothing for
+ * `same` / `not_compared`. ⛔ No date in any of those words — the date line above them is 6.26a's.
  */
 function InspectorRecordLines({ assignment: a }: { assignment: GroundInspectionItem }): ReactElement | null {
   const r = t.groundInspectionGate.record;
-  if (a.originalCertificateVerdict === null && a.deathDateSource === null) return null;
+  const comparisonLine =
+    a.dateComparison === 'differs'
+      ? a.dateDiffersWarning === true
+        ? a.inherited
+          ? r.dateDiffersWarningInherited
+          : r.dateDiffersWarning
+        : r.dateDiffers
+      : a.dateComparison === 'not_indexed'
+        ? r.dateNotIndexed
+        : a.dateComparison === null
+          ? r.dateUnknown
+          : null;
+  const mismatchLine =
+    a.originalMismatchWarning === true ? r.mismatchWarning : a.originalMismatchWarning === null ? r.mismatchUnknown : null;
+  if (a.originalCertificateVerdict === null && a.deathDateSource === null && comparisonLine === null && mismatchLine === null) {
+    return null;
+  }
   return (
     <ul className="mt-1 text-xs" data-testid="ground-inspection-record">
       {a.originalCertificateVerdict !== null ? (
@@ -375,9 +395,28 @@ function InspectorRecordLines({ assignment: a }: { assignment: GroundInspectionI
           {a.comparedAgainst !== null ? ` — ${r.comparedAgainst[a.comparedAgainst]}` : ''}
         </li>
       ) : null}
+      {mismatchLine !== null ? (
+        <li
+          className={a.originalMismatchWarning === true ? 'font-semibold text-red-800' : 'italic'}
+          data-testid="ground-inspection-mismatch-line"
+          data-warning={a.originalMismatchWarning === true ? 'true' : undefined}
+        >
+          {mismatchLine}
+        </li>
+      ) : null}
       {a.deathDateSource !== null ? (
         <li>
           {r.deathDate[a.deathDateSource]}: {a.deathDateUnreadable ? r.unreadable : (a.deathDate ?? '—')}
+        </li>
+      ) : null}
+      {comparisonLine !== null ? (
+        <li
+          className={a.dateDiffersWarning === true ? 'font-semibold text-red-800' : 'italic'}
+          data-testid="ground-inspection-date-comparison"
+          data-comparison={a.dateComparison ?? 'unknown'}
+          data-warning={a.dateDiffersWarning === true ? 'true' : undefined}
+        >
+          {comparisonLine}
         </li>
       ) : null}
       {a.deathDateSource === 'family_statement' ? (

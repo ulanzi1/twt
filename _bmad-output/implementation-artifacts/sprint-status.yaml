@@ -1,3 +1,12 @@
+# last_updated: 2026-10-07i (⭐ **STORY 6.26b — VALIDATED (`bmad-create-story validate 6.26b`), v2.2 → v2.5, four fresh-context rounds** (round
+# 1: four read-only verifiers — 2 HIGH / 16 MEDIUM / ~39 LOW; round 2: 3 HIGH, all the pass's OWN edits; round 3: 1 HIGH; round 4: ⛔ no
+# BLOCKER / HIGH ⇒ stopped). Three author-commits, each committed ALONE before the story edits: `2026-10-07-288` (K1 GI18 warns while its
+# certificate is the current upload; K2 the console shows ANY date difference — `-262` FQ8 C; K3 `completed_at = clock_timestamp()` — the
+# `now()` commit-order race left a late key unlisted for good; K4 GI6's key kept), `-289` (erratum: L1 GI18 keyed by UPLOAD; L2 a recorded
+# mismatch is ⛔ never withdrawn; L3 an inherited visit's differing family date IS a GI6 key — `-264` FQ12; L4 ⛔ no accepted certificate ⇒
+# nothing compared), `-290` (erratum to L3: the queue lists every approved claim relying on an inherited visit). Leg (a) asserted on the
+# queue's FAULT path; the red-by-design list completed (literal-index specs; the `-279` A3 test rebuilt, ⛔ not "name the key"); RD22–RD31.
+# ⛔ No row moves: `6-26b-death-facts-warnings-and-register-check` stays `ready-for-dev`.)
 # last_updated: 2026-10-07h (⭐ **STORY 6.26b v2.1 — BigDev confirms RD1 = the DB clock** (the inspection's completion stores `now()`; the
 # injected `now` validates only — reverses 6.26a review patch #2). ⚠ Its consequence: inside one BEGIN/ROLLBACK every `now()` is the same
 # instant, so an approval and a completion TIE ⇒ Task 4.0 / Trap 10 / Testing / AC8 now require every approval↔completion ORDER to be proved

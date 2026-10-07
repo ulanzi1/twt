@@ -4,6 +4,10 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: code review of 6-26-ground-inspection-before-approval-and-death-facts, ROUND 4 (2026-10-07)
+
+- **The 6.7 site-photo race test never makes its two transactions overlap** [`packages/domain/tests/integration/claim/ground-inspection-concurrency.spec.ts` › *"BONUS — concurrent photo uploads at the MAX boundary"*]. Its 6.26a twin (the `-286` H2 reserved-slot race) stayed GREEN with `lockActiveAssignment`'s `.for('update')` removed until a barrier was added (a third connection holding `claim_ground_inspection_photos` IN ACCESS EXCLUSIVE MODE until both contenders are blocked, polled via `pg_stat_activity`); the BONUS test has the same shape and so likely the same blind spot. ⭐ Trigger: the next story touching ground-inspection photos — add the same barrier and red-check it.
+
 ## Deferred from: code review of 6-26-ground-inspection-before-approval-and-death-facts, SECOND PASS — full diff (2026-10-07)
 
 - **An inherited visit that vanishes after the final vote is ⛔ not re-checked at the cycle commit** [`packages/domain/src/claim/state-trustee-decision-persist.ts` `commitCycleFreeze`]. A refile VISITED only by inheritance passes the gate at the final vote and reaches `state_trustee_approved` (not R9-routed); if the `-239` source's denial is then revised to another reason (`reviseDecision` — `denied` is in `VERIFIER_DECISION_REVISABLE_STATES`), `inheritedGroundInspectionSourceSql` drops the source, the window refuses every inspection write in a non-routed `state_trustee_approved`, and `commitCycleFreeze` still emits `claim.approved`. GI16 deliberately left `commitCycleFreeze` untouched and `-283` A1 closed only the R9 twin. ⚠ Reachability ⛔ not proven: the source must still be a pre-freeze `denied` when its refile reaches the final vote. ⭐ Trigger: 6.24's refile-basis handling, or any story that lets a `-239` denial be revised while a refile is open — then either re-run the gate per candidate in the commit loop (skip-and-keep, like `hasLiveReturnRow`) or record that commit is not an approval under `-285`.

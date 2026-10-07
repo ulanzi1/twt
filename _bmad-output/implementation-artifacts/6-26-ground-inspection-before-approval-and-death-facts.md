@@ -219,10 +219,16 @@ member's terms, and what it was checked against:
   accepted, anyone approving the claim must pick a reason and write a note; and if it appears after the District Admin approved, the claim
   waits for the District Admin's reason."* — checked against `-264` FQ12 (named verbatim), `-264`'s reading and `-277` Q3 B: **consistent**.
   Niyamavali: ⛔ no clause.
+  ⚠ **AMENDED by `2026-10-07-289` (Consequence 2):** P3 reads *"If the date of death the family gave the inspector — on this claim, or on an
+  earlier claim whose visit this claim relies on — or …"* (L3). 6.26b's file carries the same sentence.
 - **P4 (GI17/GI18 — built in 6.26b):** *"If the inspector finds the original does not match the copy the claim relies on, or the government
   register does not match the certificate the Trust accepted, anyone approving the claim must pick a reason and write a note; it never
   refuses the claim."* — checked against `-281` Q1 B
   (ratified): **consistent**. Niyamavali: ⛔ no clause.
+  ⚠ **AMENDED by `2026-10-07-288` (Consequence 2):** P4 reads *"… or the government register did not match the certificate the claim
+  relies on (even if a later check of that same certificate says otherwise), anyone approving the claim must pick a reason and write a note;
+  and if it appears after the District Admin approved, the claim waits for the District Admin's reason; it never refuses the claim."* (the
+  wait clause `-281` Q1 B rules was missing here; K1's parenthetical is new). 6.26b's file carries the same sentence.
 - ⭐ **6.26a's own predicate is P1 alone.** It RECORDS the facts P3/P4 act on, but ⛔ nothing in 6.26a turns them into a condition.
 
 ## The two Panel questions — ✅ RULED `2026-10-06-281` (Q1 B · Q2 A), as put below (kept as written)
@@ -338,6 +344,9 @@ itself stays `-282`'s, verbatim. ⚠ GI4's *"(⛔ ⇒ 409 …)"* breaks the glyp
   added to the barrel's named export list (`packages/domain/src/encryption/index.ts:49-60`); `apps/api` imports it from `@twt/domain`
   (re-export it from `context.ts` only if the call site wants that name there) — domain code and fixtures cannot import `apps/api`. The completion writer also takes the plaintext date (validation ONLY, ⛔ never stored) and an
   injectable `now` (6.21a D4's shape) — "the day of completion" is India time (`istDateOf`).
+  ⚠ **AMENDED by `2026-10-07-288` K3 [b]:** the completion stores `completed_at = clock_timestamp()` (after the claim lock) and uses the
+  injected `now` for the validation ONLY — restoring A6's "D4 shape", from which this story's first code review patch #2
+  (`input.now ?? now()`) departed. Built by Story 6.26b (its RD1 / Task 4.0).
 - **[b] GI6 — THE KIND `inspection_death_date_differs` (FQ8 C; `-264` FQ12).** Key `inspection_death_date_differs:<ground_inspection_id>`. Derived
   in the SAME pure derivation both readers share (`readClaimApprovalWarnings` and `readClaimApprovalWarningsBulk`, ONE statement each): an OWN
   `completed` assignment whose `death_date_index` IS DISTINCT FROM the claim's CURRENT accepted review's `accepted_date_index`, both non-null.
@@ -349,6 +358,13 @@ itself stays `-282`'s, verbatim. ⚠ GI4's *"(⛔ ⇒ 409 …)"* breaks the glyp
   message citing this decision.
   ⚠ **AMENDED by `-283` A3 [b]:** a row with `death_date_source = 'original_certificate'` produces the key only when its
   `compared_certificate_upload_id` is the claim's CURRENT upload (GI17's currency); a `family_statement` row is ⛔ not filtered.
+  ⚠ **RECORDED by `2026-10-07-288` K4 [b]:** the key stays per inspection — a re-review after the District Admin's approval that moves the
+  accepted date to ANOTHER differing date keeps it covered (⛔ no late wait, ⛔ no queue listing for that move); every later approver still
+  gives a reason. A found consequence, kept by decision.
+  ⚠ **AMENDED by `2026-10-07-289` L3 [b]:** supersedes *"⚠ An inherited inspection produces ⛔ no key"* — a completed row of the INHERITED
+  source raises the key too, counted ONLY while the claim has ⛔ no own completed FULL assignment (the inheritance's own condition, and the
+  console's); an inherited `original_certificate` row was compared against the other claim's upload ⇒ ⛔ no key (A3). The console labels it
+  *"given on an earlier claim"* (provenance only).
 - **[b] GI7 — THE WAIT (`-279` A6's obligation, discharged).** `inspection_death_date_differs` ENTERS 6.23b's wait: `-277` Q3 B is generic
   (*"a warning that first appears after the District Admin approved waits"*) and ⛔ no ruling carves the inspection out (FQ10's carve-out is
   the neighbours'). A late key is reachable only under GI3 (an assignment completed after the District Admin's approval, or a re-review that
@@ -362,6 +378,8 @@ itself stays `-282`'s, verbatim. ⚠ GI4's *"(⛔ ⇒ 409 …)"* breaks the glyp
   ⚠ **AMENDED by `-284` E1 [b]:** the queue's scan ALSO admits `state_trustee_approved` for the LATE-WARNING arm only, while the claim
   carries a live `routed_to_r9` routing row (`-283` A1 lets an inspection complete there) — through the leaf's SQL fragment (Task 2.1);
   every other arm keeps `CORRECTABLE_SCAN_STATES`. `-280`'s *"⛔ no late key arises there"* stops holding once 6.26b ships.
+  ⚠ **AMENDED by `2026-10-07-289` L5 (f) [b]:** *"a re-review that moves the date"* is a late-key source only for a move from EQUAL to
+  DIFFERING (`-288` K4 keeps a differing → differing move covered).
 - **[b] GI8 — THE REGISTER CHECK (FQ8 B), on the ACCEPT.** The 6.21a review request gains `register_check` ∈ `matches` | `does_not_match` |
   `could_not_check` — **required** with `verdict: 'accepted'`, refused with `rejected` (409 `death_certificate_review.register_check_required`
   / `…register_check_not_allowed`, the writer's own guard; the contract stays loose, as today). Stored plaintext on the review row (non-PII), with
@@ -378,6 +396,13 @@ itself stays `-282`'s, verbatim. ⚠ GI4's *"(⛔ ⇒ 409 …)"* breaks the glyp
   console handler, as it already decrypts the notes — `safeDecrypt`) **[a]**; *"differs from the certificate"* where GI6's key exists, the
   mismatch warnings, and the register check on the document section **[b]**. ⭐ The inheritance read changes **[a]**: the inherited inspection is read when the claim has ⛔ no OWN
   completed FULL assignment (⛔ not "no assignment at all" — Fact 3), and shown beside the own certificate check, labelled.
+  ⚠ **AMENDED by `2026-10-07-288` K2 [b]:** *"differs from the certificate"* shows wherever an assignment's `death_date_index` and the
+  current accepted review's `accepted_date_index` both exist and differ — own OR inherited, by the same comparison GI6 uses; own with GI6's
+  key = a warning, inherited = *"given on an earlier claim — not a warning"*; a printed date from a replaced original ⛔ not compared;
+  *"could not be checked"* when the current review has ⛔ no index or a read failed (`-262` FQ8 C *"any difference"*; `-283` A8).
+  ⚠ **AMENDED by `2026-10-07-289` L3 / L4 [b]:** an inherited differing row IS a warning (labelled *"given on an earlier claim"*, provenance
+  only); ⛔ no current accepted certificate ⇒ nothing compared; *"could not be checked"* only for an accepted review with ⛔ no index or a
+  failed read.
 - **[a+b] GI11 — EVERY LATER SURFACE.** The 409 `…ground_inspection_required` gets its own words at the four handler mappers
   (`claims.verification-decision.handlers.ts`, `claims.cycle-freeze.handlers.ts`, `claims.r9-voting.handlers.ts`,
   `claims.correction-closure.handlers.ts` — beside each `DeathCertificateAcceptanceRequiredError` arm) and at the admin surfaces that word the
@@ -417,6 +442,12 @@ itself stays `-282`'s, verbatim. ⚠ GI4's *"(⛔ ⇒ 409 …)"* breaks the glyp
   review when its `register_check = 'does_not_match'` (a superseded review's ⛔ no longer warns). `could_not_check` is ⛔ never a warning
   (`-281` *"does not cover"*). Enters the wait. A late key needs a re-review after approval, which needs a new determination before the gate
   passes — the queue's existing determination arm fires.
+  ⚠ **AMENDED by `2026-10-07-288` K1 [b]:** a key for EVERY `accepted` review (live OR superseded) with `register_check = 'does_not_match'`
+  whose `upload_id` is the claim's CURRENT upload — a later `matches` / `could_not_check` re-review of the SAME certificate does ⛔ not erase
+  it; a replaced upload stops it (GI17's currency).
+  ⚠ **AMENDED by `2026-10-07-289` L1 / L2 [b]:** the key is ONE `register_check_mismatch:<upload_id>` for the current upload, present while
+  any such review exists (re-stating the mismatch is the SAME key); a recorded mismatch is answered by each approver's reason and note,
+  ⛔ never withdrawn.
 
 ## Acceptance Criteria
 

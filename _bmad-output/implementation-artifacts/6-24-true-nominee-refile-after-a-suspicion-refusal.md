@@ -536,7 +536,7 @@ CLOSABLE state — incl. `denied`, `appeal_stage_1..3` (its anchor → `closed`)
 not moved and is recorded (log + audit); a closed claim's live return / run / R9 / appeal-panel sessions are ended (⛔ no reminder text after
 `closed` — a test); a closed claim ⛔ never stands (RF1) — so the reversed S's own final approval is ⛔ never held by it (a test with a second
 `-239` refusal of the death, closed by S's reversal); two concurrent reversals of one death serialise (⛔ 40P01). **And** a reversal of a refusal
-with ANY OTHER reason closes ⛔ nothing. **And** each claim so closed gets ONE `closed_after_appeal` text (`-291` Q2 B — ⚠ built by 6.24b's AC7b, ⛔ asserted here; AC7's machinery
+with ANY OTHER reason closes ⛔ nothing. **And** each claim so closed gets ONE `closed_after_appeal` text (`-291` Q2 B — ⚠ built by 6.24b's AC7b, ⛔ not asserted here; AC7's machinery
 and assertions; ⛔ never a second on a re-run). **And** `closed` is terminal, ⛔ not appealable (`initiateAppeal` → the existing not-denied 409),
 ⛔ never a closures row, ⛔ never `denied_no_appeal`; the closed stream unfreezes (S's freeze stands while S is live). **And** the event-count
 pins move 35 → 36 with the reason; the contracts mirror and its lockstep test and the events registry gain `closed`; every state LIST

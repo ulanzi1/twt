@@ -1,3 +1,9 @@
+# last_updated: 2026-10-07h (⭐ **STORY 6.26b v2.1 — BigDev confirms RD1 = the DB clock** (the inspection's completion stores `now()`; the
+# injected `now` validates only — reverses 6.26a review patch #2). ⚠ Its consequence: inside one BEGIN/ROLLBACK every `now()` is the same
+# instant, so an approval and a completion TIE ⇒ Task 4.0 / Trap 10 / Testing / AC8 now require every approval↔completion ORDER to be proved
+# in SEPARATE COMMITTED transactions (domain: a new own-committing spec; API: one request per step; legs a/b/c + red-checks that expose a
+# hollow leg). Task 9.3's `inspection: 'skip'` route removed (the option exists; it only MOVES the date key, ⛔ never removes it). ⛔ No row
+# moves: `6-26b-death-facts-warnings-and-register-check` stays `ready-for-dev`.)
 # last_updated: 2026-10-07g (⭐ **STORY 6.26b — CREATED FOR DEV (`bmad-create-story 6.26b`): v2.0 re-derived against 6.26a's shipped build,
 # re-pinned `3311fc97` → `b665a19a`; `6-26b-death-facts-warnings-and-register-check` backlog → ready-for-dev** (6.26a `done`, PR #259 — the
 # 6.21b / 6.23b precedent). Three fresh-context read-only verifiers (warnings + queue; review writer + migration + erasure + fixtures; API +

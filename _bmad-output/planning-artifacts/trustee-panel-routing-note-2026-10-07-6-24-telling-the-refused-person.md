@@ -60,17 +60,17 @@ change a refusal's reason away from *"nominee changed after the death"* — so i
 keeps the 90-day appeal limit instead of the no-limit appeal every other refusal has. Do you accept that?
 
 **The one fact that decides it:** a plain correction would turn the refusal into an ordinary one that ⛔ no longer holds the true nominee's
-claim — two payments for one death. So ANY correction must keep the hold and the closing rule (FQ5) in place; the real choice is therefore
-between the mis-coded family's no-limit appeal and the true nominee's wait with ⛔ no end.
+claim — two payments for one death. So any correction must keep the hold and the closing rule (FQ5) in place, **and must be refused once
+another claim for the death is finally approved** (holding and closing can ⛔ never reach a claim already approved or paid). The real
+choice is therefore between the mis-coded family's no-limit appeal and the true nominee's wait with ⛔ no end.
 
 | | Option | What changes for a person | Cost |
 |---|---|---|---|
 | **A** | **Accept it.** While ANY other claim for the same death is anything but closed — the true nominee's, or anyone's, open, refused or paid — the reason can ⛔ not be changed. | A family refused under the wrong reason must appeal within 90 days. | A mis-coded refusal costs that family the no-limit appeal — for good once the 90 days pass, since a paid claim is ⛔ never closed and a refused one can stay refused. They learn the date by text only if item 1 is answered B; otherwise only through the helpline. |
-| **B** | Allow the correction, but the corrected refusal **keeps holding** every other claim for the death at final approval — now with ⛔ no time limit — until its appeal is decided. | The mis-coded family keeps the no-limit appeal. | The true nominee's claim can again wait with ⛔ no end — the very problem your Q1 ruling solved; and if the corrected refusal's appeal is **allowed**, the true nominee's claim is closed, as FQ5 does now, though the refusal is ⛔ no longer one on suspicion (FQ5 was ⛔ never ruled for that). The system must also remember that the refusal was once "on suspicion". |
-| **C** | Allow the correction only **until** another claim for the death has its final approval; after that, as A. | The mis-coded family can be corrected early, while nothing has been paid. | After the other claim's final approval, A's cost applies; and while it waits, a correction releases nothing — the true nominee still waits on the corrected refusal, ⛔ no time limit, and is closed if its appeal is allowed, as in B. |
+| **B** | Allow the correction only **until** another claim for the death has its final approval; after that, as A. The corrected refusal keeps holding the other claims at final approval — now with ⛔ no time limit — and if its appeal is allowed they are closed, as FQ5 does now. | The mis-coded family can be corrected early, while nothing has been paid, and then keeps the no-limit appeal. | The true nominee's claim can again wait with ⛔ no end (the problem your Q1 ruling solved); if the corrected appeal is allowed, her claim is closed under a refusal ⛔ no longer on suspicion (FQ5 was ⛔ never ruled for that); the system must remember that the refusal was once "on suspicion"; and after the other claim's final approval, A's cost applies. |
 
-**Our reading:** **A** — the mistake should be rare, the family keeps a full appeal (only bounded in time), and B or C bring back the
-endless wait or depend on timing the family cannot see.
+**Our reading:** **A** — the mistake should be rare, the family keeps a full appeal (only bounded in time), and B brings back the
+endless wait and depends on timing the family cannot see.
 
 ---
 
@@ -93,6 +93,10 @@ endless wait or depend on timing the family cannot see.
   they filed the claim, for being contacted about it"*. ⚠ A fresh-context check found that false in the likeliest case: a refused person
   who filed as a nominee has ⛔ no separate contact number — only the one on the nominee entry. The one-fact paragraph and B's cost now say
   so. Item 2 was added after the same check found the reason lock decides something for a family.
+  ⚠ Item 2 itself was then rewritten twice before it was put: its first option B (*"allow the correction, and close the true nominee's
+  claim instead"*) could ⛔ not undo a payment and was ⛔ not a real alternative; its second version offered three options, one of which
+  (a correction allowed at any time) would still pay a death twice if the other claim was already paid — it was dropped, the deciding
+  fact gained *"refused once another claim is finally approved"*, and the remaining two options are A and B.
 - **Still uncertain:** how many refused claims will have ⛔ no usable number at all.
 
 ---

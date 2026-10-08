@@ -357,3 +357,42 @@
 - **missed_target_escalation_log:** (empty)
 - **cross_story_discharge_path:** a review recorded in the decision log (or on the 6.19d story) → the marker replaced; any change to the Hindi → re-registration (the DLT sheet's Record).
 - **notes:** The house words are `तिथि` and `प्रमाणपत्र` (`-244` §3 call 7; the shipped `certificate.replacement_body` in `packages/i18n/locales/{en,hi}/claim.json` — a DIFFERENT, pre-existing key from this row's own `certificate_sms.reminder`, cited here only as the shared-terminology precedent). The English wording is 6.19d's (CR7). ⛔ Neither is machine-translated; the Hindi was agent-authored (2026-10-03) and is ⛔ never shown to a real family unreviewed. Counsel's M and S (Rows 18, 19) already name 6.19d's sends — ⛔ no edit there.
+
+## Rows 22-23 — Story 6.24b: the suspicion notices' go-live gates (decision-authored, `-295` RB11)
+
+> ⭐ **Appended 2026-10-08 by Story 6.24b (Task 6.3) under [Decision 2026-10-08-295](../../.decision-log.md#decision-2026-10-08-295) RB11** —
+> the three once-ever texts of a refusal on suspicion of a post-death nominee change (FQ7 B's text to the nominee in place at the death,
+> `-291` Q2 B's closure text, `-293` item 1 B's text to the refused person) are gated on **their own** counsel row, ⛔ **not** Row 18 / 19:
+> Row 18 is the filer's agreement, and Row 19's purpose covers *"the claim contact record and its SMS / postal use"*, while FQ7's and Q2's
+> texts use the DECLARATION mobile. Like Rows 17–21 neither row has an architecture source line; each cites the decision that created it.
+> ⛔ Neither blocks a **build** or a merge — nothing is in production ([[project_not_in_production_merge_is_not_golive]]); **every deploy
+> before counsel clears is a dev / staging deploy, where the DLT template ids stay unset** (templates 7–12 of `dlt-template-requests-6-19.md`)
+> and the sweep HOLDS every notice and alarms (`-295` RB12).
+
+### Row 22 — `suspicion-notice-counsel-basis`
+
+- **gate_name:** Counsel's basis for texting, after a refusal on suspicion of a post-death nominee change, the nominee in place at the death, the true nominee when an allowed appeal closes her claim, and the refused person
+- **architecture_source_line:** N/A — **Trustee-ratified decision-authored**: [`-262`](../../.decision-log.md#decision-2026-09-28-262) FQ7 B's *"does NOT cover"* (the counsel check), [`-291`](../../.decision-log.md#decision-2026-10-07-291) Consequence 3, [`-293`](../../.decision-log.md#decision-2026-10-07-293) Consequence 2; the row itself by [`-295`](../../.decision-log.md#decision-2026-10-08-295) RB11.
+- **owner:** Trustee Panel (gate); counsel (Story 0.13) — the answer
+- **support:** BigDev (the question as put; the build — Story 6.24b)
+- **closure_criteria:** ALL THREE, each recorded as a Decision: **(a)** a counsel return on the basis for the three texts (each names the member; each goes to a mobile from the declaration or the claim's contact record; ⛔ none accuses anyone); **(b)** a published privacy-policy revision naming these purposes; **(c)** the Trustee Panel's answer to [`-295`](../../.decision-log.md#decision-2026-10-08-295) §8 **Confirm 2** (RB13 — the refused person is ⛔ texted once an appeal is filed; RB18 — ⛔ closure text about a claim whose claimant's chain holds a version the determination discarded, incl. residuals (ii)–(iii)). Testable signal: `closure_evidence_link` resolves to all three; only then are the ids of DLT templates 7–12 provisioned.
+- **target_date:** before any of the three texts goes live (relative-to-fact: the gate IS that go-live).
+- **current_status:** `open`
+- **closure_evidence_link:** (empty)
+- **missed_target_escalation_log:** (empty)
+- **cross_story_discharge_path:** Story 0.13 (counsel) → a Decision for (a); a privacy-policy revision → a Decision for (b); the NEXT Trustee Panel routing note carries `-295` §8 Confirm 2 → a Decision for (c) (`-295` Consequence 2 — this row is ⛔ itself a routing note). The code already ships the sweep (Story 6.24b), each send go-live gated here.
+- **notes:** ⚠ Counsel IS engaged (since 2026-06-21, [[project_dpdpa_counsel_engaged_but_unrecorded]]) — this row records a question ⛔ not yet put to them. The Row 18 / Row 19 split is the precedent for keeping the basis and the purpose in one row here: the three texts share one basis question and one purpose line. ⚠ RB17's confirm (F14 — the filing code is requested from the member's own account) is a SEPARATE non-blocking item for the same routing note and is ⛔ part of this row's closure.
+
+### Row 23 — `suspicion-notice-hindi-human-review`
+
+- **gate_name:** A human review of the Hindi of the three suspicion-notice texts (`suspicion_sms.refusal_notice`, `suspicion_sms.closed_notice`, `suspicion_sms.appeal_notice`)
+- **architecture_source_line:** N/A — **decision-authored**: [`-295`](../../.decision-log.md#decision-2026-10-08-295) RB11 (Row 21's precedent); `-262`, `-291` and `-293` each list the Hindi wording under *"does NOT cover"*.
+- **owner:** BigDev (gate); a Hindi-first reviewer named by BigDev — the review
+- **support:** Story 6.24b (the copy as shipped)
+- **closure_criteria:** A recorded human review of the Hindi values of the three `suspicion_sms.*` keys in `packages/i18n/locales/hi/claim.json` — agreed or corrected — and the `$comment.suspicion_sms` marker (*"agent-authored and NOT YET HUMAN-REVIEWED"*) replaced in the same commit. ⚠ A corrected text must be re-registered on the DLT portal (`dlt-template-requests-6-19.md`, templates 7, 9, 11) — the send must byte-match the registered text. Testable signal: the marker is gone and `closure_evidence_link` names the review.
+- **target_date:** before any of the three texts goes live (relative-to-fact: the gate IS that go-live).
+- **current_status:** `open`
+- **closure_evidence_link:** (empty)
+- **missed_target_escalation_log:** (empty)
+- **cross_story_discharge_path:** a review recorded in the decision log (or on the 6.24b story) → the marker replaced; any change to the Hindi → re-registration (the DLT sheet's Record).
+- **notes:** The English wording is the Trustee Panel's (FQ7 B, `-291` Q2 B, `-293` item 1 B) plus the helpline number, settled by `-292` RF11 and `-295` RB1. ⛔ No Hindi deadline word — RB16's deny-list (`दिन`, `अंतिम`, …) holds; the appeal date reads *"{date} तक अपील की जा सकती है"*. ⛔ Machine-translated; agent-authored (2026-10-08) and ⛔ never shown to a real family unreviewed.

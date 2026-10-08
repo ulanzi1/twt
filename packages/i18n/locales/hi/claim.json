@@ -160,5 +160,9 @@
   "closed.call": "हेल्पलाइन पर कॉल करें",
   "closed.back": "वापस जाएँ",
   "appeal_helpline.until": "{date} तक अपील की जा सकती है।",
-  "appeal_helpline.ended": "अपील करने का समय {date} को समाप्त हो गया।"
+  "appeal_helpline.ended": "अपील करने का समय {date} को समाप्त हो गया।",
+  "$comment.suspicion_sms": "Story 6.24b (`2026-10-08-295` RB1): suspicion_sms.* are the three once-ever texts of a refusal on suspicion of a post-death nominee change — refusal_notice to the nominee in place at the death (`-262` FQ7 B), closed_notice to her when an allowed appeal closes her claim (`-291` Q2 B), appeal_notice to the refused person with the last date to appeal (`-293` item 1 B). The en words are the Trustee Panel's plus the helpline number; {member} is the Pariwar's mode-resolved member name, {date} is DD-MM-YYYY. The Hindi was agent-authored and is NOT YET HUMAN-REVIEWED — go-live gate Row 23 (suspicion-notice-hindi-human-review). The SMS keys must match the registered DLT content byte for byte: any later change must be re-registered.",
+  "suspicion_sms.refusal_notice": "{member} के लिए किया गया एक दावा आगे नहीं बढ़ सका। कृपया हेल्पलाइन {helpline} पर कॉल करें।",
+  "suspicion_sms.closed_notice": "{member} के लिए आपका दावा बंद कर दिया गया है। कृपया हेल्पलाइन {helpline} पर कॉल करें।",
+  "suspicion_sms.appeal_notice": "{member} के लिए किया गया दावा आगे नहीं बढ़ सका। इसके विरुद्ध {date} तक अपील की जा सकती है। कृपया हेल्पलाइन {helpline} पर कॉल करें।"
 }

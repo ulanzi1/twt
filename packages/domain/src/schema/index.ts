@@ -201,6 +201,9 @@ export * from './claim_certificate_reminder.js';
 // and the record of every approval over a nominee-change warning (0143: the keys covered + the reason chosen; append-only).
 export * from './approval_warning_reasons.js';
 export * from './claim_warning_approvals.js';
+// Story 6.24b — the SUSPICION NOTICE record (0151): ONE row per (claim, purpose), EVER — the once-ever texts of a `-239`
+// suspicion refusal (RF11 / RF12, `-293` item 1 B). Tenant-isolated; ⛔ no DELETE; ⛔ no number, ⛔ no name.
+export * from './claim_suspicion_notices.js';
 // Story 6.6 — peer-mesh deterministic 5-nearest selection: `claim_peer_mesh_selections`
 // (ONE row per claim — the audit-replay source: candidate snapshot + ordered output +
 // metric identity; immutable selection, mutable outcome/window) + `claim_peer_mesh_pings`

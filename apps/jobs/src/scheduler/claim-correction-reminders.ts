@@ -52,7 +52,6 @@
 import { createHash } from 'node:crypto';
 
 import {
-  createSmsDltProvider,
   dispatch,
   type AuditPort,
   type ProviderRegistry,
@@ -74,12 +73,11 @@ import type pg from 'pg';
 
 import {
   CLAIM_CORRECTION_SMS_TEMPLATES,
-  claimCorrectionHelplineConfigKey,
   renderClaimCorrectionSms,
   type ClaimCorrectionSmsLocale,
   type ClaimCorrectionSmsMessage,
 } from './claim-correction-sms-templates.js';
-import { classifySecretManagerFault } from './contribution-providers.js';
+import { sendClaimDltSms, type ClaimCorrectionSmsResult } from './claim-dlt-sms-send.js';
 
 // ── Operational knobs ────────────────────────────────────────────────────────────────────────────────────────
 
@@ -108,8 +106,8 @@ export const CORRECTION_SWEEP_EXPIRE_SECONDS = 90 * 60;
  */
 export const CORRECTION_PLAN_LOCK_TIMEOUT = '30s';
 export const CORRECTION_PLAN_STATEMENT_TIMEOUT = '120s';
-/** A send is abandoned after this and counted `api_unavailable` (the OTP path's `sms-step-up-delivery.ts` budget). */
-export const CORRECTION_SEND_TIMEOUT_MS = 10_000;
+/** A send is abandoned after this and counted `api_unavailable` — moved with the send core (RB4), re-exported here. */
+export { CORRECTION_SEND_TIMEOUT_MS, type ClaimCorrectionSmsResult } from './claim-dlt-sms-send.js';
 /** D26's marker window — runs ended `mark_changed` within this are checked for a slot-day marker. */
 export const CORRECTION_MARK_CHANGE_LOOKBACK_MS = 36 * 60 * 60 * 1000;
 /** `-269` §4 — one day's `rejected_unreachable` sends at or above this alarm (a content-level carrier block). */
@@ -201,47 +199,12 @@ function alarmOf(deps: ClaimCorrectionReminderDeps): (m: string) => void {
 
 // ── The exported SEND (6.19c calls it for the closure notice — D32) ─────────────────────────────────────────
 
-/** What one claim-correction SMS attempt came to. `transient` ⇒ the caller throws so pg-boss retries. */
-export type ClaimCorrectionSmsResult =
-  | { readonly kind: 'final'; readonly outcome: 'accepted'; readonly providerMessageId: string | null; readonly detail: null }
-  | {
-      readonly kind: 'final';
-      readonly outcome: 'rejected_invalid_number' | 'rejected_unreachable' | 'error';
-      readonly providerMessageId: null;
-      readonly detail: string;
-      /** A permanent failure that needs a human (config, template, auth) — the caller alarms. */
-      readonly alarm: boolean;
-    }
-  | { readonly kind: 'transient'; readonly detail: string };
-
-class SendTimeoutError extends Error {}
-
-function withTimeout<T>(pending: Promise<T>, ms: number): Promise<T> {
-  return new Promise<T>((resolve, reject) => {
-    const timer = setTimeout(() => reject(new SendTimeoutError('timeout')), ms);
-    pending.then(
-      (v) => {
-        clearTimeout(timer);
-        resolve(v);
-      },
-      (err: unknown) => {
-        clearTimeout(timer);
-        reject(err);
-      },
-    );
-  });
-}
-
 /**
  * ⭐ SEND ONE CLAIM-CORRECTION SMS (D7 — a DIRECT DLT SMS to an explicit E.164 number; ⛔ not `dispatch()`, ⛔ not an
- * Alert). Fails CLOSED on a missing DLT template id, an unset helpline number (per Pariwar, `-269` §5) or an
- * unconfigured gateway — `error`, alarm, ⛔ never a fixture `accepted` (T13). The provider never throws (S3): its
- * `rejected` is classified — `invalid_number` → `rejected_invalid_number`; `carrier_reject` → `rejected_unreachable`
- * (`-269` §4); `dlt_template_not_approved` / `auth` / `unknown` → `error` + alarm, FINAL; `rate_limited` /
- * `api_unavailable` (and a timeout, and any Secret Manager fault that is ⛔ not a known CONFIG fault — incl.
- * `UNAUTHENTICATED`, a token-refresh blip) → TRANSIENT; a known Secret Manager config fault
- * (`classifySecretManagerFault`: `INVALID_ARGUMENT`, `PERMISSION_DENIED`, `FAILED_PRECONDITION`, `UNIMPLEMENTED`) →
- * `error` + alarm, FINAL (`config:secret_manager_<code>`).
+ * Alert). Since Story 6.24b (RB4) a WRAPPER over the shared core `sendClaimDltSms` (`claim-dlt-sms-send.ts`), which holds
+ * the fail-closed rules and the provider-result classification ONCE — behaviour byte-identical (proved by
+ * `claim-correction-send.test.ts`, UNEDITED). This wrapper keeps the 6.19 registry lookup and the `{ reference, helpline }`
+ * render.
  */
 export async function sendClaimCorrectionSms(
   deps: Pick<ClaimCorrectionReminderDeps, 'smsAppClient' | 'resolveConfig' | 'sendTimeoutMs'>,
@@ -255,61 +218,16 @@ export async function sendClaimCorrectionSms(
   },
 ): Promise<ClaimCorrectionSmsResult> {
   const template = CLAIM_CORRECTION_SMS_TEMPLATES[input.message][input.locale];
-  let dltTemplateId: string | null;
-  let helpline: string | null;
-  try {
-    dltTemplateId = await deps.resolveConfig(template.dltTemplateIdConfigKey);
-    helpline = await deps.resolveConfig(claimCorrectionHelplineConfigKey(input.pariwarId));
-  } catch (err) {
-    // `resolveSmsDltConfig` re-throws everything but "not provisioned" (`NOT_FOUND` ⇒ `null`, handled below). Only
-    // a KNOWN config fault (`PERMISSION_DENIED`, `INVALID_ARGUMENT`, `FAILED_PRECONDITION`, `UNIMPLEMENTED`) is
-    // FINAL + alarm; everything else (a quota spike, an outage, a token-refresh `UNAUTHENTICATED`, a socket error,
-    // ⛔ no code) retries — ⚠ one that never clears surfaces at the next day's exhausted-row finaliser (`error` +
-    // alarm), which costs one slot, where a wrongly-final code would cost EVERY family's slot that day.
-    const fault = classifySecretManagerFault(err);
-    if (fault.transient) return { kind: 'transient', detail: 'config_unavailable:secret_manager' };
-    return { kind: 'final', outcome: 'error', providerMessageId: null, detail: `config:secret_manager_${fault.code}`, alarm: true };
-  }
-  if (dltTemplateId === null || dltTemplateId.trim() === '') {
-    return { kind: 'final', outcome: 'error', providerMessageId: null, detail: 'config:dlt_template_id_missing', alarm: true };
-  }
-  if (helpline === null || helpline.trim() === '') {
-    return { kind: 'final', outcome: 'error', providerMessageId: null, detail: 'config:helpline_number_missing', alarm: true };
-  }
-  if (!deps.smsAppClient.isConfigured()) {
-    return { kind: 'final', outcome: 'error', providerMessageId: null, detail: 'config:sms_gateway_unconfigured', alarm: true };
-  }
-  const body = renderClaimCorrectionSms(input.message, input.locale, {
-    reference: claimDomain.claimShortReference(input.claimCaseId),
-    helpline: helpline.trim(),
+  return sendClaimDltSms(deps, {
+    dltTemplateIdConfigKey: template.dltTemplateIdConfigKey,
+    pariwarId: input.pariwarId,
+    e164: input.e164,
+    render: (helpline) =>
+      renderClaimCorrectionSms(input.message, input.locale, {
+        reference: claimDomain.claimShortReference(input.claimCaseId),
+        helpline,
+      }),
   });
-  try {
-    // ⚠ `messaging()` INSIDE the try: a half-configured client throws here, and that is a config fault, ⛔ a crash.
-    const provider = createSmsDltProvider({ messaging: deps.smsAppClient.messaging(), dltTemplateId: dltTemplateId.trim() });
-    const result = await withTimeout(
-      provider.send({ channel: 'sms', title: null, body, deepLink: null }, { channel: 'sms', address: input.e164 }),
-      deps.sendTimeoutMs ?? CORRECTION_SEND_TIMEOUT_MS,
-    );
-    if (result.status === 'accepted') {
-      return { kind: 'final', outcome: 'accepted', providerMessageId: result.providerMessageId, detail: null };
-    }
-    const detail = result.detail ?? 'unknown:NO_DETAIL';
-    const errorClass = detail.split(':')[0];
-    switch (errorClass) {
-      case 'invalid_number':
-        return { kind: 'final', outcome: 'rejected_invalid_number', providerMessageId: null, detail, alarm: false };
-      case 'carrier_reject':
-        return { kind: 'final', outcome: 'rejected_unreachable', providerMessageId: null, detail, alarm: false };
-      case 'rate_limited':
-      case 'api_unavailable':
-        return { kind: 'transient', detail };
-      default:
-        return { kind: 'final', outcome: 'error', providerMessageId: null, detail, alarm: true };
-    }
-  } catch (err) {
-    if (err instanceof SendTimeoutError) return { kind: 'transient', detail: 'api_unavailable:timeout' };
-    return { kind: 'final', outcome: 'error', providerMessageId: null, detail: 'config:sms_messaging_unavailable', alarm: true };
-  }
 }
 
 // ── The CHILD — one family SMS ──────────────────────────────────────────────────────────────────────────────

@@ -1,8 +1,9 @@
 // Member-app claim-filing service — Story 6.2 (Tasks 2 + 3; AC2/AC3).
 //
 // Two responsibilities, both orchestrated by claims.handlers.ts:
-//   · the handover-trust OTP (AC2) — sent to the NOMINEE's declared mobile, verified from
-//     Ravi's own phone, establishing the step-up elevation the intake route requires;
+//   · the handover-trust OTP (AC2) — sent to the NOMINEE's declared mobile (the LATEST nominee; or, while a `-239`
+//     suspicion refusal stands for the death, the nominee the District Admin found in place AT THE DEATH — Story
+//     6.24b RF9), verified from Ravi's own phone, establishing the step-up elevation the intake route requires;
 //   · the intake emission (AC3) — mint claim_case_id + project claim.intake_initiated,
 //     idempotently (single-channel trivial-duplicate guard).
 //
@@ -17,9 +18,9 @@
 //     `claim_handover`) — the intake route gates on `requireMemberStepUp(deps,
 //     'claim_handover')`, exactly the Story 3.9 nominee-change precedent;
 //   · the `stepUpDelivery` port with the `login` intent variant — the variant that carries
-//     an already-resolved E.164 (we decrypt the NOMINEE's Tier-1 mobile ourselves; the
-//     `step_up` variant would instead decrypt the SESSION member's mobile — the wrong
-//     target for Ravi-mode).
+//     an already-resolved E.164 (we decrypt the chosen nominee's Tier-1 mobile ourselves —
+//     the latest nominee's, or the at-death version's (RF9); the `step_up` variant would
+//     instead decrypt the SESSION member's mobile — the wrong target for Ravi-mode).
 // This is why NO enum value / migration is added (Dev Notes "Decisions"). The nominee's
 // mobile is decrypted ONLY to deliver + mask — never persisted, never the pool key.
 //
@@ -69,6 +70,9 @@ function handoverPoolKey(deceasedMemberId: string): string {
   return `handover:${deceasedMemberId}`;
 }
 
+/** Which nominee the code was resolved for (Story 6.24b RF9) — the send audit's non-PII `recipient`. */
+export type HandoverOtpRecipient = 'latest' | 'at_death';
+
 export interface HandoverOtpSendOutcome {
   /** Always true (existence defense — a member with no resolvable nominee gets the same
    * shape; the flow then routes to the helpline per AC5). */
@@ -78,14 +82,11 @@ export interface HandoverOtpSendOutcome {
   /** The SHA-256 hash of the delivered code, for the HMAC-keyed send audit (never the code);
    * `null` when nothing was sent. */
   otpHash: string | null;
+  /** INTERNAL (⛔ on the wire) — `latest` when ⛔ no suspicion refusal stands (today's path, its no-ops included);
+   * `at_death` while one stands (sent, unsendable, sentinel or ⛔ effective determination). */
+  recipient: HandoverOtpRecipient;
 }
 
-/**
- * Send the handover-trust OTP to the deceased's PRIMARY nominee's declared mobile (AC2).
- * Reads the nominee row inside the tenant scope tx, Tier-1-decrypts the mobile, delivers the
- * code via the SMS-DLT seam, and persists only the hash. Returns an existence-defended
- * outcome (never reveals whether a nominee exists) + the hash for the caller's audit line.
- */
 /** P6-style timing-equalization delay (mirrors member-auth.handlers.ts's withdrawn-member
  * guard) — the no-nominee and undeliverable-mobile early-returns below are otherwise
  * measurably faster than the real-SMS-send path, letting a caller distinguish "no nominee"
@@ -94,17 +95,36 @@ async function timingEqualizeDelay(): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, 150 + Math.random() * 150));
 }
 
+/** ⭐ RB9 — EVERY existence-defended no-op goes through here, so its shape and its pad cannot drift between paths. */
+async function noOp(recipient: HandoverOtpRecipient): Promise<HandoverOtpSendOutcome> {
+  await timingEqualizeDelay();
+  return { sent: true, nomineeMobileMasked: '', otpHash: null, recipient };
+}
+
+/**
+ * Send the handover-trust OTP (AC2) to:
+ *   · ⭐ while a `-239` suspicion refusal STANDS for the death (Story 6.24b RF9; `-262` FQ6 B) — the rank-1 nominee of
+ *     the refused claim's EFFECTIVE determination (the nominee the District Admin found in place at the death), read by
+ *     VERSION ID; a non-effective determination, the erasure sentinel or an unsendable number ⇒ the no-op. ⛔ Never
+ *     the latest nominee once a refusal stands (invariant 5);
+ *   · otherwise — the deceased's PRIMARY nominee's declared mobile (the LATEST nominee — today's path, unchanged).
+ * Reads inside the tenant scope tx, Tier-1-decrypts the mobile, delivers the code via the SMS-DLT seam, and persists
+ * only the hash. Returns an existence-defended outcome (never reveals whether a nominee exists) + the hash and the
+ * non-PII `recipient` for the caller's audit line. A malformed envelope THROWS on both paths (a data fault — RB9).
+ */
 export async function sendHandoverOtp(
   deps: AppDeps,
   scopeTx: ScopeTx,
   ctx: { deceasedMemberId: ids.MemberId; pariwarId: ids.PariwarId },
 ): Promise<HandoverOtpSendOutcome> {
+  const refusal = await claim.readSuspicionRefusalRecipient(scopeTx.tx, ctx.pariwarId, ctx.deceasedMemberId);
+  if (refusal !== null) return sendToAtDeathNominee(deps, scopeTx, ctx, refusal);
+
   const nominees = await nomineeDomain.getMemberNominees(scopeTx.tx, ctx.pariwarId, ctx.deceasedMemberId);
   const primary = nominees[0]; // rank-ordered (primary first) by the accessor.
   if (!primary) {
     // No nominee to reach — existence-defended no-op; the UI routes to the helpline (AC5).
-    await timingEqualizeDelay();
-    return { sent: true, nomineeMobileMasked: '', otpHash: null };
+    return noOp('latest');
   }
 
   const plaintextMobile = await decryptNomineeField(
@@ -115,9 +135,34 @@ export async function sendHandoverOtp(
   const canonical = normalizeMobile(plaintextMobile);
   if (canonical === null) {
     // Stored nominee mobile is not a deliverable Indian mobile — existence-defended no-op.
-    await timingEqualizeDelay();
-    return { sent: true, nomineeMobileMasked: '', otpHash: null };
+    return noOp('latest');
   }
+  return deliverHandoverOtp(deps, ctx, canonical, 'latest');
+}
+
+/** RF9 — the at-death path. ⛔ Never `getMemberNominees` here. */
+async function sendToAtDeathNominee(
+  deps: AppDeps,
+  scopeTx: ScopeTx,
+  ctx: { deceasedMemberId: ids.MemberId; pariwarId: ids.PariwarId },
+  refusal: claim.SuspicionRefusalRecipient,
+): Promise<HandoverOtpSendOutcome> {
+  if (refusal.kind === 'none') return noOp('at_death');
+  const [version] = await nomineeDomain.getNomineeVersionsByIds(scopeTx.tx, ctx.pariwarId, [refusal.versionId]);
+  // A determination's rank-1 version always exists (`twt_app` has ⛔ no DELETE on the table) — a data fault (RB9).
+  if (!version) throw new Error(`[claims] the at-death nominee version ${refusal.versionId} is missing`);
+  // Handles null, the erasure sentinel and normalisation; THROWS on a malformed envelope (RB9).
+  const canonical = await claim.resolveCorrectionMobile(version.mobileCiphertext, 'member_nominee', ctx.pariwarId, deps.encryption);
+  if (canonical === null) return noOp('at_death');
+  return deliverHandoverOtp(deps, ctx, canonical, 'at_death');
+}
+
+async function deliverHandoverOtp(
+  deps: AppDeps,
+  ctx: { deceasedMemberId: ids.MemberId },
+  canonical: string,
+  recipient: HandoverOtpRecipient,
+): Promise<HandoverOtpSendOutcome> {
   const masked = maskMobile(canonical);
 
   const poolKey = handoverPoolKey(ctx.deceasedMemberId);
@@ -127,7 +172,7 @@ export async function sendHandoverOtp(
   });
 
   // Deliver via the `login` intent variant — it carries an already-resolved E.164 (we hold
-  // the NOMINEE's decrypted mobile). The `step_up` variant would decrypt the SESSION
+  // the chosen nominee's decrypted mobile). The `step_up` variant would decrypt the SESSION
   // member's mobile — the wrong target for Ravi-mode. The plaintext mobile + code appear
   // ONLY in the outbound SMS; never logged/audited/persisted (only the hash is).
   await deps.stepUpDelivery.deliver({
@@ -139,7 +184,7 @@ export async function sendHandoverOtp(
     destinationHint: masked,
   });
 
-  return { sent: true, nomineeMobileMasked: masked, otpHash: otp.otpHash };
+  return { sent: true, nomineeMobileMasked: masked, otpHash: otp.otpHash, recipient };
 }
 
 export interface HandoverOtpVerifyOutcome {

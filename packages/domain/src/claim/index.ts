@@ -98,6 +98,10 @@ export * from './suspicion-refusal.js';
 // per-death reversal key; and the two leaves it needs without an import cycle (`appeal-lock.ts` is re-exported through
 // `appeal-persist.ts`, `appeal-panel-session.ts` through `appeal-panel-persist.ts`).
 export * from './suspicion-refusal-persist.js';
+// Story 6.24b (`2026-10-08-295` RB8, RB10) — the SUSPICION NOTICES' domain half: the three selectors, the claim-row lock and
+// its re-check, the recipients (`readRefusedFilerRecipient`) and the notice-row claim / finalise / expire helpers. A WRITE
+// module (⛔ an NW1 entry); ⛔ nothing here decrypts.
+export * from './suspicion-notice.js';
 // Story 6.23a — the nominee-change WARNINGS and the ONE approval rule over them (NW1–NW6), the WARNING-REASON LIST
 // (NW16, NW17), and the District Admin's reason for a LATE warning (NW14). ⛔ `approval-warnings.ts` and
 // `approval-warning-reasons.ts` never reach `events.ts`, `nominee-name-check.ts` or `nominee-lock.ts` (NW1).

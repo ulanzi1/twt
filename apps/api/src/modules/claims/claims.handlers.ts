@@ -1,7 +1,8 @@
 // Member-app claim-filing handlers — Story 6.2 (Tasks 2 + 3; AC2/AC3/AC5/AC6).
 //
 // Three member-session-gated handlers for the Ravi-mode intake flow:
-//   · requestHandoverOtp — send the handover-trust OTP to the nominee's mobile (AC2);
+//   · requestHandoverOtp — send the handover-trust OTP to the nominee's mobile (AC2) — the latest nominee, or the
+//                          at-death one while a `-239` suspicion refusal stands (Story 6.24b RF9);
 //   · verifyHandoverOtp  — verify it → record the `claim_handover` elevation (AC2);
 //   · initiateIntake     — relationship-confirm → mint + freeze, idempotently (AC3).
 //
@@ -57,7 +58,9 @@ export function createClaimsHandlers(deps: AppDeps) {
   return {
     /**
      * POST /api/v1/member/claims/handover-otp — send the handover-trust OTP to the deceased's
-     * primary nominee's declared mobile. Existence-defended: always `{ sent: true }`.
+     * primary nominee's declared mobile — or, while a `-239` suspicion refusal stands for the death, to the
+     * nominee the District Admin found in place at the death (Story 6.24b RF9; the audit's non-PII `recipient`
+     * says which). Existence-defended: always `{ sent: true }`.
      */
     async requestHandoverOtp(request: FastifyRequest): Promise<HandoverOtpResponse> {
       const { memberIdStr, pariwarIdStr } = memberCtx(request);
@@ -76,6 +79,7 @@ export function createClaimsHandlers(deps: AppDeps) {
             deceased_member_id: memberIdStr,
             nominee_mobile_masked: outcome.nomineeMobileMasked || null,
             delivered: outcome.otpHash !== null,
+            recipient: outcome.recipient,
             ...(outcome.otpHash
               ? { otp_audit_tag: hmacOtpAuditCorrelation(outcome.otpHash, deps.config.auditOtpCorrelationKey) }
               : {}),

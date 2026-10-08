@@ -4,6 +4,21 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: dev-story of story-6.24b (2026-10-08)
+
+- **An erased deceased member's name would render `[anonymized]` in a contribution text (the 8.8 name path has ⛔ no erasure guard)**
+  [`packages/domain/src/notifications/pool-identity.ts` — `resolvePoolIdentity` / `resolveMemberFacingDeceasedName`] — an RTBF-erased
+  deceased's `member_kyc_profiles.name_ciphertext` decrypts to the sentinel `'[anonymized]'` (`member/anonymize.ts`), and neither function
+  checks `ANONYMIZED_SENTINEL`, so the sentinel would be shortened / rendered as a name. ⚠ By READING only — ⛔ not verified by a test
+  (Story 6.24b F22). Story 6.24b guards its OWN texts (RB5: an erased name ⇒ `no_target` / `name:erased`, red-checked) and does ⛔ not
+  change 8.8's path. ⭐ Trigger: any change to `resolvePoolIdentity`, or an RTBF of a member who has a live pool.
+- **The helpline's appeal-date read-back should adopt the texts' `DD-MM-YYYY`** — the refused person's appeal text (`-295` RB6) renders
+  the last date to appeal `DD-MM-YYYY`, Latin digits, both locales; the helpline read-back still shows raw `YYYY-MM-DD` (the 6.24a ROUND 2
+  item *"The appeal date is read to the family as raw `YYYY-MM-DD`"* below). The family meets two forms of one date — recorded by RB6.
+  ⭐ Trigger: that item's fix (adopt `formatAppealUntil`'s form).
+
+---
+
 ## Deferred from: code review of story-6.24a, ROUND 3 — narrow, round 2's fixes `6fc5dce0..HEAD` (2026-10-08)
 
 - **The two-connection race tests leave their transactions open when an assertion fails before `commit()`**

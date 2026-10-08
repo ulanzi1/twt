@@ -224,17 +224,31 @@ export function resolveEffectiveNomineeDeclaration(input: {
  * The raw read, for ANY number of claims, in ONE statement. Every sub-select is RLS-scoped and carries
  * the explicit `pariwar_id` predicate. Raw SQL with explicit aliases (⛔ never a Drizzle correlated
  * subquery — [[project_epic6_drizzle_correlated_subquery_bug]]).
+ * ⭐ Story 6.24b (RB15) — `asOf` selects the determination LIVE AT THAT INSTANT instead of the live one (half-open:
+ * `decided_at <= asOf AND (superseded_at IS NULL OR superseded_at > asOf)` — a redetermination stamps the old row's
+ * `superseded_at` and the new row's `decided_at` with the same `now()`, so at most one row matches), and bounds the
+ * disqualification findings to `recorded_at <= asOf`. The selection RULE is the same — ⛔ a copy of it.
  */
 async function readRaw(
   db: Db,
   pariwarId: PariwarId,
   claimCaseIds: readonly ClaimId[],
+  asOf?: Date | string,
 ): Promise<RawRow[]> {
   if (claimCaseIds.length === 0) return [];
   const ids = sql.join(
     claimCaseIds.map((id) => sql`${id}::uuid`),
     sql`, `,
   );
+  // ⚠ A `Date` is MILLISECOND-precise and Postgres MICROSECOND-precise — an instant read from the DB is passed as its exact
+  // text (`asOf: string`), else a determination decided in the same microsecond-range would fall outside (`decided_at <=`).
+  const at = asOf === undefined ? null : typeof asOf === 'string' ? asOf : asOf.toISOString();
+  const determinationAt =
+    at === null
+      ? sql`d.superseded_at IS NULL`
+      : sql`d.decided_at <= ${at}::timestamptz AND (d.superseded_at IS NULL OR d.superseded_at > ${at}::timestamptz)`;
+  const findingAt = (alias: string) =>
+    at === null ? sql`` : sql` AND ${sql.raw(alias)}.recorded_at <= ${at}::timestamptz`;
   const result = await db.execute<RawRow>(sql`
     SELECT c.claim_case_id,
            c.deceased_member_id,
@@ -270,14 +284,14 @@ async function readRaw(
                FROM claim_nominee_findings f
               WHERE f.pariwar_id = c.pariwar_id
                 AND f.claim_case_id = c.claim_case_id
-                AND f.kind = 'nominee_disqualified'
+                AND f.kind = 'nominee_disqualified'${findingAt('f')}
            ) AS disqualified_ranks,
            (
              SELECT array_agg(f2.finding_id::text ORDER BY f2.finding_id)
                FROM claim_nominee_findings f2
               WHERE f2.pariwar_id = c.pariwar_id
                 AND f2.claim_case_id = c.claim_case_id
-                AND f2.kind = 'nominee_disqualified'
+                AND f2.kind = 'nominee_disqualified'${findingAt('f2')}
            ) AS disqualification_ids,
            (
              SELECT array_agg(h.rank || ':' || h.head_no ORDER BY h.rank)
@@ -292,7 +306,7 @@ async function readRaw(
       LEFT JOIN nominee_determinations d
         ON d.pariwar_id = c.pariwar_id
        AND d.claim_case_id = c.claim_case_id
-       AND d.superseded_at IS NULL
+       AND ${determinationAt}
      WHERE c.pariwar_id = ${pariwarId}
        AND c.claim_case_id IN (${ids})
   `);
@@ -331,6 +345,27 @@ export async function getEffectiveNomineeDeclaration(
   claimCaseId: ClaimId,
 ): Promise<EffectiveNomineeDeclaration> {
   const rows = await readRaw(db, pariwarId, [claimCaseId]);
+  const row = rows[0];
+  if (!row) throw new EffectiveNomineeDeclarationClaimNotFoundError(claimCaseId);
+  return fromRaw(row);
+}
+
+/**
+ * ⭐ Story 6.24b (RB15) — the effective declaration of ONE claim AS IT STOOD at `asOf`: the determination live at that
+ * instant (⛔ the live one), routed through the SAME rule (`resolveEffectiveNomineeDeclaration`). The closure text's
+ * fallback reads the reversed claim's determination as of the closure (a later re-determination of the reversed claim
+ * can name the post-death nominee). ⚠ The projection / version reads stay CURRENT (versions are append-only).
+ *
+ * @throws EffectiveNomineeDeclarationClaimNotFoundError  the claim is not in this Pariwar
+ */
+export async function getEffectiveNomineeDeclarationAsOf(
+  db: Db,
+  pariwarId: PariwarId,
+  claimCaseId: ClaimId,
+  /** The instant — a `Date`, or the EXACT `timestamptz` text of an instant read from the DB (microseconds kept). */
+  asOf: Date | string,
+): Promise<EffectiveNomineeDeclaration> {
+  const rows = await readRaw(db, pariwarId, [claimCaseId], asOf);
   const row = rows[0];
   if (!row) throw new EffectiveNomineeDeclarationClaimNotFoundError(claimCaseId);
   return fromRaw(row);

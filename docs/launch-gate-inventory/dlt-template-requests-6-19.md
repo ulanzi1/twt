@@ -6,11 +6,15 @@
 **What it gates:** the **real** sends of Stories 6.19b, 6.19c and 6.19d — ⛔ never a build. A missing template id fails **closed and loud**
 (the send is recorded `error`, an alarm fires), ⛔ never falling back to a fixture that reports `accepted` (shared spec T13).
 Go-live is additionally gated on counsel's M and S (`inventory-roster.md` rows 18, 19).
+⭐ **Templates 7–12** (Story 6.24b — the three texts of a refusal on suspicion of a post-death nominee change) gate the **real** sends of
+Story 6.24b's suspicion notices, and are gated on **`inventory-roster.md` rows 22 and 23** (counsel's basis for the three texts, the
+privacy-policy purpose and the Panel's answer to `2026-10-08-295` §8 Confirm 2; and the Hindi human review) — ⛔ **not** on rows 18 / 19,
+whose closure must ⛔ never be read as clearing 7–12. ⛔ **Do not provision the ids of 7–12 until Row 22 closes.**
 
 **Why it is started early:** DLT content-template registration has an external lead time, per template, per locale. Hindi is Unicode — a
 shorter per-segment length.
 
-## The six templates owed
+## The templates owed (1–6: Story 6.19; 7–12: Story 6.24b)
 
 | # | Message | Locale | Owning story | Config key (D7) | Variable slots (`{#var#}`) — to confirm with the wording |
 |---|---|---|---|---|---|
@@ -20,9 +24,16 @@ shorter per-segment length.
 | 4 | Closure notice | en | 6.19b builds (D32); 6.19c sends | `sms.dlt.template_id.claim_correction.closure_notice.en` | as #3 |
 | 5 | Replacement-certificate reminder | hi | 6.19d | `sms.dlt.template_id.claim_correction.certificate_reminder.hi` | a non-name claim reference; the helpline number |
 | 6 | Replacement-certificate reminder | en | 6.19d | `sms.dlt.template_id.claim_correction.certificate_reminder.en` | as #5 |
+| 7 | Suspicion refusal notice (`-262` FQ7 B) | hi | 6.24b | `sms.dlt.template_id.suspicion_notice.refusal_notice.hi` | the member's name (mode-resolved, `-181`); the helpline number |
+| 8 | Suspicion refusal notice (`-262` FQ7 B) | en | 6.24b | `sms.dlt.template_id.suspicion_notice.refusal_notice.en` | as #7 |
+| 9 | Closure after an allowed appeal (`-291` Q2 B) | hi | 6.24b | `sms.dlt.template_id.suspicion_notice.closed_notice.hi` | the member's name; the helpline number |
+| 10 | Closure after an allowed appeal (`-291` Q2 B) | en | 6.24b | `sms.dlt.template_id.suspicion_notice.closed_notice.en` | as #9 |
+| 11 | The refused person's appeal date (`-293` item 1 B) | hi | 6.24b | `sms.dlt.template_id.suspicion_notice.appeal_notice.hi` | the member's name; the last date to appeal (`DD-MM-YYYY`); the helpline number |
+| 12 | The refused person's appeal date (`-293` item 1 B) | en | 6.24b | `sms.dlt.template_id.suspicion_notice.appeal_notice.en` | as #11 |
 
 ⚠ A template registered before the wording is final must be re-registered if a word changes: the send must match the registered text
-exactly. ⭐ **Templates 1–4's wording is now written (Story 6.19b, 2026-09-30)** — below; ⭐ **5–6's too (Story 6.19d, 2026-10-03)** — below them.
+exactly. ⭐ **Templates 1–4's wording is now written (Story 6.19b, 2026-09-30)** — below; ⭐ **5–6's too (Story 6.19d, 2026-10-03)** — below them;
+⭐ **and 7–12's (Story 6.24b, 2026-10-08)** — below those.
 
 ## The wording of templates 1–4 (Story 6.19b — the text to register)
 
@@ -55,6 +66,34 @@ gate **row 21** (`inventory-roster.md`, `certificate-reminder-hindi-human-review
 | 5 | दावा {#var#}: आपके परिवार के दावे के लिए ऐसा मृत्यु प्रमाणपत्र चाहिए जिसमें मृत्यु की तिथि स्पष्ट हो। कृपया ऐप से भेजें या हेल्पलाइन {#var#} पर कॉल करें। आपका दावा अब भी खुला है। |
 | 6 | Claim {#var#}: your family's claim still needs a death certificate that clearly shows the date of death. Please send it in the app, or call the helpline on {#var#}. Your claim is still open. |
 
+## The wording of templates 7–12 (Story 6.24b — the text to register)
+
+⛔ **Do not provision the ids of 7–12 until Row 22 closes** (`inventory-roster.md`, `suspicion-notice-counsel-basis`): every deploy before
+then is a dev / staging deploy, where these ids stay unset and every send fails closed. ⭐ **Set each id only after the operator confirms
+that template's approval** — a provider-side template fault after the sweep's config check (`dlt_template_not_approved`, `auth`) is a FINAL
+`error`, and for a once-ever notice that uses up its only slot (`2026-10-08-295` RB12, edge ii).
+
+The en words are the Trustee Panel's, verbatim (`-262` FQ7 B, `-291` Q2 B, `-293` item 1 B), with ONE addition: the Pariwar's helpline
+number after *"Please call the helpline"* — 6.19's per-Pariwar key (`claimCorrectionHelplineConfigKey`), the number the Panel told the
+family to call. The variables, in order: **(1) the member's name** in the Pariwar's mode-resolved form (`-181`); for 11–12 **(2) the last
+date to appeal**, `DD-MM-YYYY`, Latin digits in BOTH locales (RB6); then **the helpline number**.
+⭐ **Two carve-outs from 1–6's rules, recorded in `2026-10-08-295`:** (a) **D33** — 7–12 **name the member**, because the Panel's ratified
+texts do; 1–6 stay name-free (D33 is ⛔ not weakened). (b) **S4 / T6** — ⛔ no deadline threat in 7–12 EXCEPT 11–12's date slot (the Panel's
+*"until [date]"*, RB16). ⛔ No other person is named; ⛔ nobody is accused. The copy is `suspicion_sms.*` in
+`packages/i18n/locales/{en,hi}/claim.json`; the registry is `apps/jobs/src/scheduler/suspicion-notice-sms-templates.ts`, and
+`apps/jobs/tests/suspicion-notice-sms-templates.test.ts` proves the real `t()` renders EXACTLY the text below and that this sheet carries
+it. ⚠ The **Hindi** is agent-authored and ⛔ not yet human-reviewed — go-live gate **row 23** (`suspicion-notice-hindi-human-review`); a
+reviewed change means re-registering.
+
+| # | Registered text |
+|---|---|
+| 7 | {#var#} के लिए किया गया एक दावा आगे नहीं बढ़ सका। कृपया हेल्पलाइन {#var#} पर कॉल करें। |
+| 8 | A claim for {#var#} could not go ahead. Please call the helpline {#var#}. |
+| 9 | {#var#} के लिए आपका दावा बंद कर दिया गया है। कृपया हेल्पलाइन {#var#} पर कॉल करें। |
+| 10 | Your claim for {#var#} has been closed. Please call the helpline {#var#}. |
+| 11 | {#var#} के लिए किया गया दावा आगे नहीं बढ़ सका। इसके विरुद्ध {#var#} तक अपील की जा सकती है। कृपया हेल्पलाइन {#var#} पर कॉल करें। |
+| 12 | The claim for {#var#} could not go ahead. It can be appealed until {#var#}. Please call the helpline {#var#}. |
+
 ## The per-Pariwar helpline number (D33(b), `-269` §5)
 
 | Config key | Holds | Unset ⇒ |
@@ -79,6 +118,12 @@ certificate (the 22 correction days to day 84, then days 120, 150 and 180 — `-
 (`-260` G5) starts a new 25. Rendered with an 8-character reference and a 13-character helpline number: the English reminder is 197
 characters (**2 GSM segments**), the Hindi 185 characters of Unicode (**3 segments**).
 
+⭐ **The suspicion notices (templates 7–12, Story 6.24b):** ONE transactional DLT SMS per claim per purpose, **EVER** (the notice table's
+UNIQUE) — a refused claim's notice (7–8) and its refused person's appeal date (11–12), and a closed claim's notice (9–10); refusals are
+rare. ⚠ Delivery is at-least-once (a timeout or crash after a gateway accept may send a second — recorded, ⛔ never hidden). Rendered with
+a 19-character name, a 13-character helpline number and a 10-character date: 8 and 10 are 91 characters (**1 GSM segment**), 12 is 130
+(**1**); 7 is 104 and 9 is 99 characters of Unicode (**2 segments** each), 11 is 148 (**3**). A longer name can add a segment.
+
 ## Record
 
 | Date | Template(s) | Action | By | Reference |
@@ -86,3 +131,4 @@ characters (**2 GSM segments**), the Hindi 185 characters of Unicode (**3 segmen
 | 2026-09-28 | 1–6 | ⛔ Not started — recorded as owed | BigDev | — |
 | 2026-09-30 | 1–4 | ⭐ Wording and `{#var#}` slots written (Story 6.19b, D32); 3–4 now BUILT by 6.19b (6.19c sends); the per-Pariwar helpline keys added (`-269` §5). ⛔ Still not submitted | Story 6.19b | `claim-correction-sms-templates.ts` |
 | 2026-10-03 | 5–6 | ⭐ Wording, `{#var#}` slots and config keys written (Story 6.19d, `2026-10-03-276` CR7, CR13); its cost line added. ⛔ Still not submitted | Story 6.19d | `claim-correction-sms-templates.ts` |
+| 2026-10-08 | 7–12 | ⭐ Wording, `{#var#}` slots and config keys written (Story 6.24b, `2026-10-08-295` RB1, RB4, RB11); its cost line added. ⛔ Still not submitted. ⛔ **Do not provision the ids of 7–12 until Row 22 closes**; set each id only after the operator confirms that template's approval | Story 6.24b | `suspicion-notice-sms-templates.ts` |

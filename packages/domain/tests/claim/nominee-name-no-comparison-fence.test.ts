@@ -112,6 +112,10 @@ const FENCED_FILES = [
   // Ref-only — claim ids, instants, appeal statuses, reason codes — ⛔ no name, ⛔ no decrypt (asserted below).
   'packages/domain/src/claim/suspicion-refusal.ts',
   'packages/domain/src/claim/suspicion-refusal-persist.ts',
+  // ⭐ STORY 6.24b (`2026-10-08-295` RB8) — the suspicion NOTICES' domain module: it resolves who is texted (version ids,
+  // chain heads, determination marks — RB18 judges a version's MARK, ⛔ a name). It returns ciphertext AS STORED and
+  // ⛔ never decrypts; it is ⛔ an NW1 read module (it is a write module, off the approval path).
+  'packages/domain/src/claim/suspicion-notice.ts',
 ] as const;
 
 /**
@@ -161,7 +165,7 @@ describe('⛔ the no-comparison fence (Trap 1, `-226` cl.5)', () => {
     // Code review patch (2026-10-02, corrected 2026-10-03): exact count, ⛔ a floor — AND every entry unique. The
     // count alone can't catch a duplicate standing in for a dropped file (one of each keeps the length at 34).
     expect(new Set(FENCED_FILES).size, 'a FENCED_FILES entry is duplicated').toBe(FENCED_FILES.length);
-    expect(FENCED_FILES.length).toBe(38); // Story 6.24a FROM 36 (+2 — the suspicion refusal's read and its closure writer); Story 6.23a FROM 34 (+2 — the warnings module and the late-reason writer); Story 6.19c raised it FROM 26 (+1 domain module), then 27 → 32 (the highlight's read + its four wire / route surfaces), then 32 → 34 (its two admin render sites); Story 6.21a FROM 23 (+3 modules); Story 6.20 FROM 16 (+7)
+    expect(FENCED_FILES.length).toBe(39); // Story 6.24b FROM 38 (+1 — the suspicion notices' domain module, RB8); Story 6.24a FROM 36 (+2 — the suspicion refusal's read and its closure writer); Story 6.23a FROM 34 (+2 — the warnings module and the late-reason writer); Story 6.19c raised it FROM 26 (+1 domain module), then 27 → 32 (the highlight's read + its four wire / route surfaces), then 32 → 34 (its two admin render sites); Story 6.21a FROM 23 (+3 modules); Story 6.20 FROM 16 (+7)
   });
 
   it('⭐⭐ POSITIVE CONTROL — the scanner actually FIRES on a planted violation of every pattern', () => {
@@ -352,6 +356,17 @@ describe('⛔ the no-comparison fence (Trap 1, `-226` cl.5)', () => {
     // ⛔ And no decryption anywhere in the module that owns the gate.
     expect(code.includes('decrypt')).toBe(false);
     expect(code.includes('nameCiphertext')).toBe(false);
+  });
+
+  it('⛔⛔ Story 6.24b (RB8) — the suspicion refusal READ is ref-only: it returns a version id, ⛔ never a number or a name', () => {
+    // ⭐ 6.24a's FENCED_FILES comment said *"⛔ no decrypt (asserted below)"* with ⛔ no assertion behind it; RF9's
+    // `readSuspicionRefusalRecipient` now lives here, so the convention becomes a check. The API reads the ciphertext by
+    // VERSION ID, after it.
+    const code = stripComments(read('packages/domain/src/claim/suspicion-refusal.ts'));
+    for (const forbidden of ['mobileCiphertext', 'nameCiphertext', 'decrypt', 'getMemberNominees', 'getNomineeVersionsByIds']) {
+      expect(code.includes(forbidden), `suspicion-refusal.ts reached for '${forbidden}'`).toBe(false);
+    }
+    expect(code).toContain('getEffectiveNomineeDeclaration');
   });
 
   it('⛔ the clerical vocabulary carries no escape hatch and no transliteration', () => {

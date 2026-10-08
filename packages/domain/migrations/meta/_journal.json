@@ -1051,6 +1051,13 @@
       "when": 1793677200000,
       "tag": "0150_claim-closed-enum-values",
       "breakpoints": true
+    },
+    {
+      "idx": 151,
+      "version": "7",
+      "when": 1793763600000,
+      "tag": "0151_claim-suspicion-notices",
+      "breakpoints": true
     }
   ]
 }

@@ -294,6 +294,8 @@ export async function anonymizeMember(
       );
   }
 
+  // Story 6.24b (RF11, 0151) — `claim_suspicion_notices` holds ⛔ no plaintext (ids + a KEYED number hash) ⇒ nothing to scrub.
+
   // ── member_medical_disclosures ── ALL rows: conditions → sentinel (NOT NULL); context → NULL. ──────
   await client
     .update(memberMedicalDisclosures)

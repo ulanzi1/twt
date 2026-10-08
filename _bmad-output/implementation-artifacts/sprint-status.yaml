@@ -1,3 +1,15 @@
+# last_updated: 2026-10-08i (⭐ **STORY 6.24b — DEV-STORY COMPLETE (`bmad-dev-story 6.24b`) ⇒ `ready-for-dev` → `in-progress` → `review`.**
+# Tasks 1–7 built on `story/6-24b-…` (Task 0 was `-295`, committed earlier). RF9: while a `-239` suspicion refusal stands, the app's
+# filing code goes to the rank-1 nominee of the refused claim's EFFECTIVE determination (`readSuspicionRefusalRecipient`, ref-only) —
+# ⛔ never the latest nominee; every no-op through ONE `noOp(recipient)`; the audit gains `recipient`. Migration 0151
+# `claim_suspicion_notices` (ONCE per claim per purpose; applied to :5432 AND :5433, CHECKs verified by name); the domain's
+# `suspicion-notice.ts` (three selectors, the claim-row lock + RB10's one re-check rule, RB15's as-of read, RB18 under the lock, RB7);
+# the jobs sweep + child (RB12 config check — the shipped UNSET DLT ids HOLD every notice and alarm); the FIRST extraction of the DLT
+# send core (`claim-dlt-sms-send.ts`, 6.19b/c/d tests UNEDITED); the sibling registry + `suspicion_sms.*` (en + hi, marker); DLT sheet
+# templates 7–12; roster Rows 22 (counsel + privacy purpose + `-295` §8 Confirm 2) and 23 (Hindi review); a friction-budget row; two
+# `deferred-work.md` items. Every load-bearing test red-checked (Debug Log). `pnpm ci:local` (:5433) 34/34 on run 2 — run 1 caught a
+# `created_at` tie in this story's own spec (one test transaction ⇒ equal `now()`; fixed in the test). ⚠ Owed, ⛔ blocking: `-295` §8
+# Confirms 1–2 to the next Panel routing note. `6-24b-…` → `review`.)
 # last_updated: 2026-10-08h (⭐ **STORY 6.24b — TASK 0 DONE.** Task 0.2: BigDev answered every RB as recommended. Task 0.3:
 # `2026-10-08-295` (author-commit, RB1–RB18) committed ALONE as `a6d55b1d`, after three fresh-context rounds on the draft
 # (1 BLOCKER + 2 HIGH → 1 HIGH → 0). The blocker — RB13 and RB18's residuals (ii)–(iii) narrow WHEN a ratified text goes — went
@@ -19339,7 +19351,7 @@ development_status:
   # 6.21b / 6.23b / 6.26b precedent). ⛔ No RF moved — `-292`'s RF1–RF16 are tagged [a] / [b] in 6.24a's file.
   # ⭐ 2026-10-08: 6.24a is `done` (PR #263) ⇒ 6.24b RE-PINNED to `b6a63a81`, VALIDATED (v2.1) and `ready-for-dev`; its Task 0 owes
   # ONE author-commit (RB1–RB18) before any code — see the 2026-10-08f / 2026-10-08g ledger blocks.
-  6-24b-filing-code-and-texts-to-the-nominee-in-place-at-the-death: ready-for-dev
+  6-24b-filing-code-and-texts-to-the-nominee-in-place-at-the-death: review
   6-25-staff-email-notice-of-a-suspicion-refusal: backlog
   6-26-ground-inspection-before-approval-and-death-facts: done
   # ⭐ 2026-10-06 SPLIT after `2026-10-06-281` (the Panel: Q1 B · Q2 A; BigDev: "write the panel note then we get the answer and then we split"):

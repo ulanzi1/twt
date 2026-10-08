@@ -49,6 +49,7 @@ deliberately accepted.
 | family at claim filing (a NEW `contact` step — a postal address for EACH nominee, even one already on the declaration; when the claimant is none of the nominees, the claimant's name, mobile, address and relationship to each nominee; and an agreement that these people may be contacted by text message and post) | Reaching the family if the claim is ever sent back for a bank-name correction, so a claim is ⛔ never closed "for no response" without the people named having been reached (`2026-09-20-232` G, `2026-09-27-253`, `2026-09-27-255` F7; Story 6.19a). ⭐ The step never blocks FILING: a missing detail makes only the APPROVAL wait, and the helpline can add it at any point before approval. ⚠ Declining the agreement leaves the claim unapprovable for as long as it is declined — whether the agreement may be a condition of approval is counsel's M (launch-gate row 18), ⛔ not settled here | forced |
 | family whose claim is sent back for a bank-name correction and whose part it is to act (a TEXT MESSAGE to each nominee and to a claimant who is none of them, on the Panel's fixed days — up to 22 over 90 days, the reference and the helpline number only — and a POSTED letter to anyone the texts cannot reach; ⭐ in a STAFF case, or once the family has sent the corrected details, ⛔ none of it — the app says "we are checking the bank details" instead) | Every attempt to reach the family is ON THE RECORD before anyone can ask for the claim to be closed for no response (`2026-09-20-229`/`-230`, `2026-09-27-250` #5, `-252` cl.1–2, `-255` F5–F7, `-258`; Story 6.19b). ⭐ The mobile claim screen gains ⛔ no step and ⛔ no field: a staff case REPLACES the correction line with the calmer D28 line (the friction goes DOWN for a family that has nothing to do). ⚠ The texts are go-live gated on counsel's M and S and on DLT registration (launch-gate rows 18, 19) | forced |
 | family whose last claim was CLOSED for no response (the bank details were never corrected after every person was reached) and who want to file again (the app shows a calm "this claim was closed — please call the helpline" state instead of the filing wizard, and a new claim is minted only after a District Admin or the helpline RECORDS a confirmation with a note) | A claim closed for silence is the second refusal (`2026-09-20-231` A, `-254`, D19): a re-file is a person's recorded decision, ⛔ an automatic re-entry that would put the same unreachable family back into the same 90-day loop. ⭐ It never traps the family: once a confirmation is recorded the wizard is open again, and once a new claim is live the old claim no longer routes anywhere (`-273` §9). An ordinary refusal and a stage-3-upheld appeal re-file exactly as today (Story 6.19c) | forced |
+| family whose filed claim was CLOSED because ANOTHER claim for the same death won its appeal against a refusal on suspicion of a post-death nominee change (the app shows a calm "this claim has been closed — please call the helpline" screen instead of the filing wizard; ⛔ no reason and ⛔ no mention of the other claim) | Story 6.24a RF12 v1.3 (`2026-10-07-292`; `-262` FQ5 A): a filing after such a closure would join the overturned claim only inside the 30-day convergence window, else MINT a further claim beside it that ⛔ nothing holds (`2026-10-08-294` §2 (b), row `6-28-…`) — the helpline guides the family instead of the app inviting it. ⚠ Device-scoped: an offline / failed read still falls through to the wizard (`-249` §2), and a device with ⛔ no pointer to the closed claim is ⛔ not routed | forced |
 
 
 **Story 11b.3b disposition (SECOND review — declaration affirmed, ⛔ no new row):** the Sahyog Vivran
@@ -2576,3 +2577,27 @@ and the Super Admin's reason list) is STAFF-facing (`apps/admin`, `apps/api`, `p
 
 ⭐ **This disposition was written for changes that are UNCOMMITTED at the time of writing.** ⚠ AC-4 diffs **COMMITTED**
 history ([[project_friction_budget_baseline_ratchet]]), so the gate reads this block once the change lands.
+
+---
+
+**Story 6.24a disposition (ONE new row — the closed claim's helpline screen; ⛔ no row retired):** the story's member-facing
+changes are `apps/mobile/app/(claim)/closed-helpline.tsx` (new), `app/(claim)/index.tsx`, `lib/claim-entry-gate.ts`,
+`lib/fetch-claim-entry-outcome.ts`, `lib/closed-helpline-copy.ts` (new), `lib/death-certificate-view.ts`, `lib/appeal-status.ts`
+and their unit tests. Two of them change what a family is made to do:
+
+1. ⭐ **ADDS friction — the new row above.** A filed claim the server reports `claim_closed` (closed because another claim
+   for the death won its appeal — `-262` FQ5 A) routes to a calm *"This claim has been closed. Please call the helpline."*
+   screen, ⛔ never the filing wizard (RF12 v1.3). Payer: that family. Protects: the death against a further claim minted
+   beside the overturned one (`2026-10-08-294` §2 (b)). Forced on the device that holds the pointer.
+2. ⭐ **REMOVES friction (⛔ no row).** A pointer claim on which a suspicion refusal STANDS now reads `claim_live: false`, so the
+   device that filed it reaches the wizard — the refile `-261` D4 B keeps apart (RF2 v1.1) — instead of the shepherd screen
+   of a refused claim.
+
+⛔ **Not friction:** the certificate notice's `closed` status (words only — ⛔ no upload, ⛔ no new step); `appeal-status.ts`'s
+`closed` value (⛔ mounted on no screen — `AppealStatusCard` is unmounted, RF14 v1.3). Everything else 6.24a builds (the
+wait, the 90-day limit, the reason lock, the console section, the helpline appeal screen) is STAFF-facing (`apps/admin`,
+`apps/api`, `packages/*`).
+
+⭐ **Written AFTER the changes were committed**, when the pre-push `ci:local` run reported the AC-4 failure this block answers
+(the story's earlier green `friction:check` runs read uncommitted work — [[project_friction_budget_baseline_ratchet]]).
+⛔ No measured delta is claimed for the mobile files ([[feedback_record_unattested_no_backfill]]).

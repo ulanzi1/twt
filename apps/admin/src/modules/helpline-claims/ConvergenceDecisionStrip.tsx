@@ -227,7 +227,8 @@ export function ConvergenceDecisionStrip(props: ConvergenceDecisionStripProps): 
             While a claim stands refused because the nominee was changed on or after the date of death — under appeal
             included — a refile for that death is kept as its own claim and never joins the refused claim; its ground
             inspection is carried over from the refused claim. Once that refusal is overturned on appeal, a new filing
-            joins the overturned claim as before.
+            joins the overturned claim as before — but only while that claim is less than 30 days old; a later filing
+            becomes a separate claim.
           </p>
           <label htmlFor="convergence-override-reason" className="text-sm font-medium">
             Reason (required, ≥ {CONVERGENCE_OVERRIDE_REASON_MIN} chars)

@@ -10,7 +10,7 @@
 //
 // ⚠ DELIBERATE — the read-back gate is CLIENT-SIDE ONLY (the D5 precedent `<HelplineCertificateReplacement>` records).
 
-import { useState, type ReactElement } from 'react';
+import { useEffect, useRef, useState, type ReactElement } from 'react';
 
 import { ApiError } from '../../api/client.js';
 import { useHelplineAppealClaims, useInitiateAppealOnBehalf } from '../../api/hooks.js';
@@ -51,6 +51,13 @@ export function HelplineAppeal({
   const [filingOutcomes, setFilingOutcomes] = useState<
     Record<string, { readonly outcome: 'pending' } | { readonly outcome: 'success' } | { readonly outcome: 'error'; readonly error: unknown }>
   >({});
+  // The outcomes belong to the SELECTED member: a switch clears them, and a call still in flight for the previous member
+  // ⛔ never writes into the new member's map (code review round 3 — A → B → A brought A's old alerts back).
+  const memberRef = useRef(memberId);
+  useEffect(() => {
+    memberRef.current = memberId;
+    setFilingOutcomes({});
+  }, [memberId]);
 
   let body: ReactElement;
   if (!ready) {
@@ -117,10 +124,14 @@ export function HelplineAppeal({
                   disabled={filingThis || filedThis}
                   onClick={() => {
                     const id = c.claim_case_id;
+                    const forMember = memberRef.current;
+                    const settle = (next: { readonly outcome: 'success' } | { readonly outcome: 'error'; readonly error: unknown }) => {
+                      if (memberRef.current === forMember) setFilingOutcomes((prev) => ({ ...prev, [id]: next }));
+                    };
                     setFilingOutcomes((prev) => ({ ...prev, [id]: { outcome: 'pending' } }));
-                    file.mutateAsync(id).then(
-                      () => setFilingOutcomes((prev) => ({ ...prev, [id]: { outcome: 'success' } })),
-                      (error: unknown) => setFilingOutcomes((prev) => ({ ...prev, [id]: { outcome: 'error', error } })),
+                    void file.mutateAsync(id).then(
+                      () => settle({ outcome: 'success' }),
+                      (error: unknown) => settle({ outcome: 'error', error }),
                     );
                   }}
                   data-testid={`helpline-appeal-file-${c.claim_case_id}`}
@@ -133,7 +144,10 @@ export function HelplineAppeal({
                   {resolveEn('helpline.appeal.filed')}
                 </p>
               ) : null}
-              {outcome?.outcome === 'error' ? (
+              {/* A refusal shows only while the row is still `can_appeal`: once the refetch says the claim is under appeal
+                  (another operator filed it, or the POST landed and only the response was lost), "could not be filed"
+                  would contradict the row beside it (code review round 3). */}
+              {outcome?.outcome === 'error' && c.eligibility === 'can_appeal' ? (
                 <p role="alert" className="text-red-700" data-testid="helpline-appeal-refused">
                   {filingRefusal(outcome.error)}
                 </p>

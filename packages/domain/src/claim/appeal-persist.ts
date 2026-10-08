@@ -370,7 +370,8 @@ export async function reviewAppealStage1(
   input: ReviewAppealStage1Input,
 ): Promise<AppealDecisionResult> {
   assertDisposition(input.decision, input.dispositionCategory);
-  // ⭐ Story 6.24a RF6 (v1.1) — a REVERSAL takes the per-death reversal key FIRST, before this claim's locks.
+  // ⭐ Story 6.24a RF6 (v1.1; `2026-10-08-294` §1) — a REVERSAL takes the death's INTAKE key, then the per-death reversal
+  // key, FIRST — before this claim's locks (`acquireSuspicionReversalLockForClaim`).
   if (input.decision === 'reversed') await acquireSuspicionReversalLockForClaim(client, input.pariwarId, input.claimCaseId);
   await acquireAppealLock(client, input.pariwarId, input.claimCaseId);
   const db = bindScopedDb(client);
@@ -462,7 +463,8 @@ export async function decideAppealStage3(
   input: DecideAppealStage3Input,
 ): Promise<AppealDecisionResult> {
   assertDisposition(input.decision, input.dispositionCategory);
-  // ⭐ Story 6.24a RF6 (v1.1) — a REVERSAL takes the per-death reversal key FIRST, before this claim's locks.
+  // ⭐ Story 6.24a RF6 (v1.1; `2026-10-08-294` §1) — a REVERSAL takes the death's INTAKE key, then the per-death reversal
+  // key, FIRST — before this claim's locks (`acquireSuspicionReversalLockForClaim`).
   if (input.decision === 'reversed') await acquireSuspicionReversalLockForClaim(client, input.pariwarId, input.claimCaseId);
   await acquireAppealLock(client, input.pariwarId, input.claimCaseId);
   const db = bindScopedDb(client);

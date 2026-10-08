@@ -277,7 +277,7 @@ describe.skipIf(!hasDatabase)('Story 6.24a — the refile after a suspicion refu
 
   // ── AC3 — closed when the appeal is allowed ───────────────────────────────────────────────────────────────────────
   describe('AC3 — closed when the appeal is allowed (RF4, RF6)', () => {
-    it('⭐ 0150 — `closed` is a label of EXACTLY the two enum types it was added to (family 5 — a direct catalog assertion, code review round 2)', async () => {
+    it('⭐ 0150 — `closed` is a label of BOTH enum types it was added to (family 5 — a direct catalog assertion, code review round 2)', async () => {
       const { client } = getTx();
       const r = await client.query<{ typname: string }>(
         `SELECT t.typname FROM pg_enum e JOIN pg_type t ON t.oid = e.enumtypid
@@ -285,7 +285,8 @@ describe.skipIf(!hasDatabase)('Story 6.24a — the refile after a suspicion refu
           ORDER BY t.typname`,
       );
       // ⚠ EXACT type names (the 6.18 precedent): a label on the wrong type passes an existence check and fails at the one
-      // write that uses it — `claim.closed`'s projection, or `endLiveProcesses`' anchor update.
+      // write that uses it — `claim.closed`'s projection, or `endLiveProcesses`' anchor update. ⚠ It proves PRESENCE on both,
+      // ⛔ not absence elsewhere — other enums legitimately carry `closed` (code review round 3).
       expect(r.rows.map((x) => x.typname), 'a 0150 label is missing — the migration did not run on this database').toEqual([
         'appeal_journey_status',
         'claim_lifecycle_state',
@@ -646,7 +647,9 @@ describe.skipIf(!hasDatabase)('Story 6.24a — the refile after a suspicion refu
   // ── AC2b — the 90-day limit at initiation (RF14) and the reason lock (RF13) ─────────────────────────────────────────
   describe('AC2b — the 90 days (RF14) and the reason lock (RF13)', () => {
     /** A refusal whose current `-239` chain begins on IST date `today − ago`, mid-morning IST. `today` is read ONCE per
-     *  test and passed in — two separate `new Date()` reads straddling 00:00 IST disagreed (code review round 2). */
+     *  test and passed in — two separate `new Date()` reads straddling 00:00 IST disagreed (code review round 2). ⚠ This
+     *  NARROWS the flake, ⛔ not removes it: `initiateAppeal` judges the 90 days with the SERVER's `clock_timestamp()`, so a
+     *  run crossing 00:00 IST between this read and the call still sees D + 91 (code review round 3). */
     const refusedOnDaysAgo = (today: string, ago: number) => new Date(istMidnightAt(addCalendarDays(today, -ago)).getTime() + 3 * 3_600_000);
 
     it('the boundary pair — refused on D = today − 90 ⇒ initiable (today is D + 90); D = today − 91 ⇒ the time-limit 409 with `appeal_until`', async () => {
@@ -680,9 +683,12 @@ describe.skipIf(!hasDatabase)('Story 6.24a — the refile after a suspicion refu
       await reviseDecision(client, revise(s, 'post_death_nominee_change'));
       expect((await savepoint(client, () => openAppeal(client, PARIWAR_A, s))) as unknown).toBeInstanceOf(AppealTimeLimitPassedError);
       // AWAY (no other claim of the death ⇒ ⛔ not locked) and BACK ⇒ a new chain from today ⇒ initiable.
+      const before = istDateOf(new Date());
       await reviseDecision(client, revise(s, 'other'));
       await reviseDecision(client, revise(s, 'post_death_nominee_change'));
-      expect((await readStandingSuspicionRefusals(tx, PARIWAR_A, toMemberId(mid)))[0]!.refusedOn).toBe(istDateOf(new Date()));
+      // The revision's DATABASE clock lies between the two test-side reads — either IST date is the revision's (code review
+      // round 3: one `new Date()` after the write straddled 00:00 IST).
+      expect([before, istDateOf(new Date())]).toContain((await readStandingSuspicionRefusals(tx, PARIWAR_A, toMemberId(mid)))[0]!.refusedOn);
       await expect(openAppeal(client, PARIWAR_A, s)).resolves.toMatchObject({ claimState: 'appeal_stage_1' });
     });
 

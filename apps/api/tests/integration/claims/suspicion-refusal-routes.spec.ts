@@ -359,7 +359,9 @@ describe.skipIf(!hasDatabase)('Story 6.24a — the suspicion refusal through HTT
     const read = async () => (await op.client.inject({ method: 'GET', url })).json() as { claims: Json[] };
     const before = await read();
     const byId = (rows: Json[], id: string) => rows.find((c) => c['claim_case_id'] === id);
-    expect(byId(before.claims, recent)).toMatchObject({ eligibility: 'can_appeal', appeal_until: claim.suspicionRefusalAppealUntil(recentAt) });
+    // The expectation is computed INDEPENDENTLY of the server's helper (an off-by-one in it would otherwise shift both
+    // sides — code review round 3), from the same fixed instant (00:00 IST).
+    expect(byId(before.claims, recent)).toMatchObject({ eligibility: 'can_appeal', appeal_until: cycleCalendar.addCalendarDays(cycleCalendar.istDateOf(recentAt), 90) });
     expect(byId(before.claims, expired)).toMatchObject({ eligibility: 'time_limit_passed' });
     expect(byId(before.claims, other)).toMatchObject({ eligibility: 'can_appeal', appeal_until: null });
     expect(byId(before.claims, w.claimCaseId)).toBeUndefined(); // R is ⛔ not refused
@@ -376,6 +378,10 @@ describe.skipIf(!hasDatabase)('Story 6.24a — the suspicion refusal through HTT
     const s = await refuseSibling(w);
     const otherPariwar = randomUUID();
     const op = await staff(otherPariwar, 'helpline_operator');
+    // POSITIVE CONTROL (code review round 3) — the same session reads its OWN Pariwar's route, so a refusal below is the
+    // tenant boundary, ⛔ never a broken session.
+    const own = await op.client.inject({ method: 'GET', url: `/api/v1/p/${otherPariwar}/admin/members/${randomUUID()}/appeals` });
+    expect(own.statusCode, own.body).toBe(200);
     const read = await op.client.inject({ method: 'GET', url: `/api/v1/p/${w.pariwarId}/admin/members/${w.memberId}/appeals` });
     expect([401, 403, 404], read.body).toContain(read.statusCode);
     const file = await op.client.inject({ method: 'POST', url: `${claimBase(w.pariwarId, s)}/appeal`, payload: {} });
@@ -475,7 +481,7 @@ describe.skipIf(!hasDatabase)('Story 6.24a — the suspicion refusal through HTT
     const { packet, readCount } = await inScope(w.pariwarId, (sc) => assembleVerifierConsole(deps, ctxOf(sc, w.pariwarId, w.claimCaseId)));
     expect(packet.suspicionRefusal).toEqual({
       available: true,
-      keptApartFrom: [{ reference: claim.claimShortReference(s), appeal: 'not_filed', appealUntil: claim.suspicionRefusalAppealUntil(refusedAt) }],
+      keptApartFrom: [{ reference: claim.claimShortReference(s), appeal: 'not_filed', appealUntil: cycleCalendar.addCalendarDays(cycleCalendar.istDateOf(refusedAt), 90) }],
       finalApprovalWaits: 'appeal_not_filed',
     });
     expect(readCount).toBeLessThanOrEqual(VERIFIER_CONSOLE_MAX_READS);

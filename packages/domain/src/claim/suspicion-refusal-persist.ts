@@ -27,7 +27,8 @@
 //
 // ⚠ LOCK ORDER (Trap 8; `2026-10-08-294` §1): the reversal writer took the death's INTAKE key, then the per-death
 // `suspicion-reversal:` key, then the REFUSED claim's `appeal:` key and row; here it takes each HELD claim's keys and row.
-// The intake key makes the "other claims" list below COMPLETE: ⛔ no claim of the death can be minted while it is held. ⛔ No writer takes a held claim's lock and THEN
+// The intake key makes the "other claims" list below COMPLETE: both mint paths (`tryConverge`, `overrideIntakeAttempt`)
+// take it, so ⛔ no claim of the death can be minted while it is held. ⛔ No writer takes a held claim's lock and THEN
 // waits on the refused claim's: the approval gate (RF5) and the cycle commit (RF7) only READ the refused claim.
 
 import { and, asc, eq, isNull, ne, sql } from 'drizzle-orm';
@@ -95,9 +96,16 @@ export interface CloseClaimsHeldBySuspicionAppealResult {
  * (⛔ no 40P01). ⛔ Never RF15's appeal key.
  * ⭐ `2026-10-08-294` §1 (supersedes `-292` RF6's "⛔ never the intake lock") — the death's INTAKE key is taken FIRST,
  * immediately before the reversal key: a mint racing the reversal then either committed first (the closure's list sees
- * it and CLOSES it) or waits and sees the reversed claim as a candidate — ⛔ never a claim minted unseen beside it. Every
- * intake-key taker takes it first (or after one unlocked read) and ⛔ none waits on a reversal / `appeal:` key or a claim
- * row while holding it ⇒ ⛔ no cycle.
+ * it and CLOSES it) or waits behind the reversal and then runs the ordinary convergence — it JOINS the reversed claim
+ * only while that claim is inside the 30-day convergence window (`CONVERGENCE_WINDOW_DAYS`); an older reversed claim is
+ * ⛔ not a candidate, and the filing MINTS beside it, unheld — `-294` §2 (b), carried by row
+ * `6-28-one-payment-per-death-second-approval-guard`. What §1 closes is the race: ⛔ never a claim minted UNSEEN by the
+ * reversal's own closure.
+ * ⚠ WHY ⛔ NO CYCLE — the property is the REVERSE of "who waits after taking the intake key" (this writer does: on the
+ * reversal key, `appeal:` keys and rows): ⛔ nobody holding a claim row, an `appeal:` / `r9:` / trustee key or a
+ * `suspicion-*` key then asks for the INTAKE key. Every intake-key taker — `tryConverge`, `convergeIntakeAttempt`,
+ * `overrideIntakeAttempt`, `recordRefileConfirmation`, `reviseDecision`, `acquireNomineeDeclarationLock` and the three
+ * reversal writers (through this helper) — takes it FIRST, or after ONE unlocked read; none holds a lock on entry.
  */
 export async function acquireSuspicionReversalLockForClaim(
   client: pg.PoolClient,
@@ -111,7 +119,7 @@ export async function acquireSuspicionReversalLockForClaim(
     .where(and(eq(claims.pariwarId, pariwarId), eq(claims.claimCaseId, claimCaseId)))
     .limit(1);
   if (!row) return;
-  await client.query('SELECT pg_advisory_xact_lock($1)', [intakeAdvisoryLockKey(pariwarId, row.deceasedMemberId).toString()]);
+  await takeKey(client, intakeAdvisoryLockKey(pariwarId, row.deceasedMemberId));
   await acquireSuspicionReversalLock(db, pariwarId, row.deceasedMemberId);
 }
 

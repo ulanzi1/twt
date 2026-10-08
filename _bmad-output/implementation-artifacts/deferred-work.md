@@ -4,6 +4,23 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: code review of story-6.24a, ROUND 3 — narrow, round 2's fixes `6fc5dce0..HEAD` (2026-10-08)
+
+- **The two-connection race tests leave their transactions open when an assertion fails before `commit()`**
+  [`packages/domain/tests/integration/claim/suspicion-refusal-concurrency.spec.ts`, every leg] — ⛔ no `try/finally` rollback ⇒ the
+  `afterAll` DELETE blocks on the held row locks and `pool.end()` waits: a hang instead of a clean failure (⛔ never a wrong pass).
+  Inherited from the file's earlier legs. ⭐ Trigger: the next leg added to this file, or a CI hang traced here.
+- **`HelplineClaimContact` silently falls to the lone live claim when the operator's pick is closed by a concurrent reversal**
+  [`apps/admin/src/modules/helpline-claims/HelplineClaimContact.tsx:76-81`] — the reset clears typed data, so ⛔ nothing is written to a
+  claim the operator did not see; the card just changes subject without a notice. ⭐ Trigger: a staff report.
+- **The closed SCREEN shows its title above a body whose first sentence is the title** [`apps/mobile/app/(claim)/closed-helpline.tsx`] —
+  round 2 fixed the screen-reader double and the notice; the screen keeps `closed.title` as its heading (AC8 fixes the body's words).
+  ⭐ Trigger: the next copy pass on `closed.*`, or the pending Hindi human review.
+- **Round 2's extra cache invalidation on an appeal filing has ⛔ no test** [`apps/admin/src/api/hooks.ts:2232`] — one line.
+  ⭐ Trigger: any change to `useInitiateAppealOnBehalf`.
+
+---
+
 ## Deferred from: code review of story-6.24a, ROUND 2 — full re-review `de2355a6..HEAD`, two chunks (2026-10-08)
 
 ⚠ Scope: the whole 6.24a build + round 1's fixes (`packages/` and `apps/`). The round's two decision-needed items (D1 — RF6 misses a

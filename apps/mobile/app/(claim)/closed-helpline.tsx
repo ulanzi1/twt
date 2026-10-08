@@ -23,13 +23,15 @@ export default function ClosedHelplineScreen(): React.ReactElement {
   const title = t(CLOSED_HELPLINE_COPY.title)
   const body = t(CLOSED_HELPLINE_COPY.body)
 
+  // ⭐ The BODY alone is announced and labelled: its first sentence IS the title (RF12's words), so `${title}. ${body}`
+  // read "This claim has been closed" twice (code review round 2, 2026-10-08).
   useEffect(() => {
-    AccessibilityInfo.announceForAccessibility(`${title}. ${body}`)
-  }, [title, body])
+    AccessibilityInfo.announceForAccessibility(body)
+  }, [body])
 
   return (
     <YStack flex={1} justify="center" gap="$4" px="$6" bg="$background" testID="claim-closed-helpline">
-      <YStack gap="$3" accessible={true} accessibilityLabel={`${title}. ${body}`}>
+      <YStack gap="$3" accessible={true} accessibilityLabel={body}>
         <H2>{title}</H2>
         <Paragraph>{body}</Paragraph>
       </YStack>

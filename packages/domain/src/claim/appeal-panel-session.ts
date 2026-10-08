@@ -48,6 +48,10 @@ export async function readLiveAppealPanelSession(
  * its behaviour. The closure writer (`closeClaimsHeldBySuspicionAppeal`) calls it with the system actor, so a claim closed
  * mid-appeal leaves ⛔ no live panel behind. MUST run under the claim's `appeal:` advisory lock. 0 rows ⇒ a concurrent
  * cancel already won (→ `AppealPanelSessionAlreadySupersededError`).
+ * ⚠ DELIBERATE (checklist family 9) — bypassing the public writer's actor checks is confined to a caller that already passed
+ * its OWN human-actor gate in the same transaction (today ONE: the RF6 closure, inside a reversal writer behind its route's
+ * appeal key). ⭐ Re-examine when a second caller is added, or when `cancelAppealPanel` gains a check that is ⛔ not about
+ * WHO acts (code review round 2, 2026-10-08).
  */
 export async function supersedeAppealPanelSession(
   db: Db,

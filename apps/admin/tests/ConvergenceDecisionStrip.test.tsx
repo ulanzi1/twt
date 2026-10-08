@@ -66,8 +66,12 @@ describe('<ConvergenceDecisionStrip>', () => {
     // Story 6.20 (AC13) — AMENDED by Story 6.24a (`-261` D4 B supersedes T17, RF16): the note now says a refile after a
     // suspicion refusal is ALWAYS kept apart — ⛔ "joins it automatically".
     const note = screen.getByTestId('convergence-override-refile-note').textContent ?? '';
-    expect(note).toMatch(/always kept as its own claim/);
+    expect(note).toMatch(/kept as its own claim/);
     expect(note).not.toMatch(/joins it automatically/);
+    // Code review round 2 (P3): SCOPED to while the refusal stands — ⛔ never "always" (a reversed refusal converges again).
+    expect(note).toMatch(/While a claim stands refused/);
+    expect(note).not.toMatch(/always kept/);
+    expect(note).toMatch(/overturned on appeal, a new filing\s+joins the overturned claim/);
 
     // Confirm is disabled with an empty / too-short reason (mandatory-reason gate).
     const confirm = screen.getByTestId('convergence-override-confirm');

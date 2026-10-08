@@ -2,7 +2,10 @@
 // precedent: console chrome copy lives HERE, NOT in @twt/i18n runtime keys, so the i18n-parity gate
 // stays untouched (this admin surface is English-facing; there is no member-app locale parity to hold).
 
-import type { ApprovalWarningKind, DeathCertificateRegisterCheck } from '@twt/contracts';
+import type { ApprovalWarningKind, DeathCertificateRegisterCheck, VerifierConsolePacket } from '@twt/contracts';
+
+type SuspicionRefusalAppealPosition = VerifierConsolePacket['suspicionRefusal']['keptApartFrom'][number]['appeal'];
+type SuspicionAppealWaitReason = NonNullable<VerifierConsolePacket['suspicionRefusal']['finalApprovalWaits']>;
 
 /** Mirrors `VerificationDecisionStrip`'s own `reviseBlocked` prop union (re-review 2026-10-05). */
 type ReviseBlockedReason = 'warning_approval_final' | 'warnings_not_current' | 'unavailable';
@@ -682,13 +685,16 @@ export const verifierConsoleEn = {
       time_limit_passed: 'the time to appeal it ended on',
       open: 'its appeal is being decided',
       upheld_final: 'its refusal was upheld on appeal',
-    } as Record<string, string>,
+    } satisfies Record<SuspicionRefusalAppealPosition, string>,
     waits: {
       appeal_not_filed: "Final approval will wait for that claim's appeal — not yet filed.",
       appeal_open: "Final approval will wait for that claim's appeal — being decided.",
-    } as Record<string, string>,
-    noWait: 'Final approval does not wait for it — its appeal is decided.',
-    districtAdminNotHeld: 'Your approval as District Admin does not wait for it.',
+    } satisfies Record<SuspicionAppealWaitReason, string>,
+    // ⛔ Never "its appeal is decided": `time_limit_passed` also means ⛔ no wait, and ⛔ no appeal was ever filed
+    // (code review round 2, 2026-10-08) — true of BOTH no-wait positions (upheld at stage 3, or the 90 days ended).
+    noWait: 'Final approval does not wait for it — it can no longer be appealed.',
+    // Third person — the console is read by more than the District Admin (a Super Admin included).
+    districtAdminNotHeld: "The District Admin's approval does not wait for it.",
     unavailable: 'Whether this claim is kept apart from a refused claim could not be checked just now.',
     // The FINAL approvers' 409 (`cycle_freeze.` / `r9_voting.` / `verifier_decision.` `suspicion_appeal_pending`).
     approvalGate: {
@@ -696,7 +702,12 @@ export const verifierConsoleEn = {
         'This claim cannot be finally approved yet: an earlier claim for this death was refused on suspicion and can still be appealed (for 90 days from the refusal). It is not refused.',
       appeal_open:
         'This claim cannot be finally approved yet: an earlier claim for this death was refused on suspicion and its appeal is being decided. It is not refused.',
-    } as Record<string, string>,
+    } satisfies Record<SuspicionAppealWaitReason, string>,
+    // The server's details are missing or unknown — ⛔ never assert either reason (code review round 2, 2026-10-08).
+    approvalGateUnknown:
+      'This claim cannot be finally approved yet: another claim for this death was refused on suspicion and its appeal is not yet decided. It is not refused.',
+    // `reasonLocked`'s `{held}` when the server sends ⛔ no reference.
+    anotherClaim: 'another claim',
     // RF13 — the revise strip's refusal. `{held}` — "claim <reference>" (RF10's "claim reference only" convention —
     // ⛔ no name, ⛔ no note) or, server details missing, the grammatical fallback "another claim" (`reasonLockedMessage`
     // builds this phrase — ⛔ never a bare reference spliced in, which would read as "while  for this death..."); AC2b's

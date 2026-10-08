@@ -4,6 +4,35 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: code review of story-6.24a, ROUND 2 — full re-review `de2355a6..HEAD`, two chunks (2026-10-08)
+
+⚠ Scope: the whole 6.24a build + round 1's fixes (`packages/` and `apps/`). The round's two decision-needed items (D1 — RF6 misses a
+claim minted during the reversal; D2 — ⛔ no per-death second-approval guard) are in the story's Review Findings, ⛔ not here.
+
+- **Member appeal-status `can_initiate` ignores RF14** [`apps/api/src/modules/claims/claims.appeal.handlers.ts:371`] — true for a `-239`
+  refusal past its 90 days; the POST then answers 409 `appeal.suspicion_refusal_time_limit_passed`, and the unmounted `AppealStatusCard`
+  would say "no time limit". Latent: the member appeal routes 404 for every production claim (RF14 v1.3). ⭐ Trigger: the story that makes
+  the member appeal routes reachable — derive `can_initiate` from `assertAppealInitiable` as `listHelplineAppealEligibility` does.
+- **The cycle commit's RF7 skip-and-keep is silent** [`apps/admin/src/modules/cycle-freeze/CycleFreezePage.tsx:318`;
+  `packages/domain/src/claim/state-trustee-decision-persist.ts:1329-1339`] — a held claim stays "Voted — pending commit" across commits
+  with ⛔ no reason shown. RF7 specifies ⛔ no surface. ⭐ Trigger: a staff report, or the next cycle-freeze UI story.
+- **"An earlier claim" where RF3 sets ⛔ no order** [`apps/api/src/modules/claims/suspicion-appeal-pending-message.ts:13,15`;
+  `apps/admin/src/modules/claim-verification/i18n-en.ts:677,678,696,698`] — a held claim filed BEFORE the refused one (filings >30 days
+  apart) is told the refused claim is "earlier". The console line copies RF10/P1's own words. ⭐ Trigger: any copy pass on these surfaces.
+- **The appeal date is read to the family as raw `YYYY-MM-DD`** (en and hi) [`apps/admin/src/modules/helpline-claims/HelplineAppeal.tsx:84-91`;
+  `AppealStageControls.tsx:222`; `SignalsPanel.tsx:53`] — ⭐ Trigger: the pending Hindi human review of `appeal_helpline.*`.
+- **The helpline filing refusal makes PERMANENT refusals sound temporary** [`HelplineAppeal.tsx:24-29`] — `appeal.already_exhausted` /
+  `not_denied` / `closed_no_response` / 403 all read "could not be filed just now"; the list's refetch corrects the row.
+- **"An appeal anchor is `closed` only on a `closed` claim" has ⛔ no DB backstop** [`packages/domain/src/claim/suspicion-refusal.ts:207-213`]
+  — a violation throws inside the final-approval conjunct and RF7 ⇒ a 500 at every final writer for the death and the whole commit batch.
+  One writer today (`endLiveProcesses`, same transaction as `claim.closed`). ⭐ Trigger: a second writer of `claim_appeals.status`.
+- **A `-239` refusal whose 90 days pass unappealed emits ⛔ no unfreeze event** [`packages/domain/src/member/overlay.ts:52`] — its stream
+  stays frozen. Pre-existing for every denial (6.16 D-E has ⛔ no end); 6.24a gave `-239` a definite end and emits nothing at it.
+- **The console-section test counts `bump()`, ⛔ not the statements Postgres receives** [`apps/api/tests/integration/claims/suspicion-refusal-routes.spec.ts:432-448`]
+  — an N+1 regression in `readStandingSuspicionRefusals` stays green; the 6.23a / 6.26a siblings count statements.
+
+---
+
 ## Deferred from: code review of story-6.24a, apps/mobile chunk (2026-10-08, final chunk)
 
 ⚠ Scope: chunk 4 of 4 (`apps/mobile/lib/{appeal-status,claim-entry-gate,closed-helpline-copy,death-certificate-view,fetch-claim-entry-outcome}.ts`, `app/(claim)/{closed-helpline,index}.tsx` + their tests).

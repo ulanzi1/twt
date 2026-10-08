@@ -92,6 +92,20 @@ describe('<HelplineClaimContact>', () => {
     expect(mocked.getClaimContactPresence).not.toHaveBeenCalled();
   });
 
+  it('code review round 2 (6.24a): a CLOSED claim beside the one live claim is ⛔ never listed — the live claim stays the lone auto-pick', async () => {
+    mocked.getDeathCertificateClaimsForMember.mockResolvedValue({
+      member_id: MEMBER_ID,
+      claims: [
+        { claim_case_id: CLAIM_A, claim_state: 'verification_in_progress', created_at: '2026-09-01T00:00:00.000Z', status: 'awaiting_review', replacement_reason: null, upload_allowed: false, reassurance: null },
+        { claim_case_id: '33333333-3333-3333-3333-333333333333', claim_state: 'closed', created_at: '2026-08-01T00:00:00.000Z', status: 'closed', replacement_reason: null, upload_allowed: false, reassurance: null },
+      ],
+    });
+    renderCard();
+    expect(await screen.findByTestId('helpline-contact-missing')).toBeInTheDocument();
+    expect(mocked.getClaimContactPresence).toHaveBeenCalledWith('p1', CLAIM_A);
+    expect(mocked.getClaimContactPresence).not.toHaveBeenCalledWith('p1', '33333333-3333-3333-3333-333333333333');
+  });
+
   it('⭐ shows what the approval still needs, and ⛔ never fetches the plaintext until asked', async () => {
     renderCard();
     expect(await screen.findByTestId('helpline-contact-missing')).toHaveTextContent(/has not yet given the nominees’ postal addresses/);

@@ -13,6 +13,9 @@ import {
   HelplineAppealClaimsResponse,
   HelplineAppealEligibility,
   MemberDeathCertificateStatusResponse,
+  SUSPICION_APPEAL_WAIT_REASONS,
+  SUSPICION_REFUSAL_APPEAL_POSITIONS,
+  SuspicionRefusalSection,
 } from '../src/claims/index.js';
 
 describe('Story 6.24a — the wire changes', () => {
@@ -58,6 +61,21 @@ describe('Story 6.24a — the wire changes', () => {
     expect(HelplineAppealClaimsResponse.safeParse(ok).success).toBe(true);
     expect(HelplineAppealClaimsResponse.safeParse({ ...ok, claims: [{ ...row, name: 'X' }] }).success).toBe(false);
     expect(HelplineAppealClaimsResponse.safeParse({ ...ok, claims: [{ ...row, eligibility: 'refused' }] }).success).toBe(false);
+  });
+
+  it('LOCKSTEP — the console section\'s appeal positions and wait reasons === the domain tuples (code review round 2)', () => {
+    expect([...SUSPICION_REFUSAL_APPEAL_POSITIONS].sort()).toEqual([...claim.SUSPICION_REFUSAL_APPEAL_POSITIONS].sort());
+    expect([...SUSPICION_APPEAL_WAIT_REASONS].sort()).toEqual([...claim.SUSPICION_APPEAL_PENDING_REASONS].sort());
+  });
+
+  it('the console section\'s date is a calendar date, and the helpline row\'s state a lifecycle state (code review round 2)', () => {
+    const section = { available: true, keptApartFrom: [{ reference: 'C-1', appeal: 'not_filed', appealUntil: '2026-12-30' }], finalApprovalWaits: 'appeal_not_filed' };
+    expect(SuspicionRefusalSection.safeParse(section).success).toBe(true);
+    expect(SuspicionRefusalSection.safeParse({ ...section, keptApartFrom: [{ ...section.keptApartFrom[0], appealUntil: '30/12/2026' }] }).success).toBe(false);
+    const row = { claim_case_id: '11111111-1111-4111-8111-111111111111', claim_state: 'denied', created_at: '2026-10-01T00:00:00.000Z', eligibility: 'can_appeal', appeal_until: null };
+    const res = { member_id: '22222222-2222-4222-8222-222222222222', claims: [row] };
+    expect(HelplineAppealClaimsResponse.safeParse(res).success).toBe(true);
+    expect(HelplineAppealClaimsResponse.safeParse({ ...res, claims: [{ ...row, claim_state: 'refused' }] }).success).toBe(false);
   });
 
   it('the admin case read REQUIRES `suspicion_appeal_limit` (nullable)', () => {

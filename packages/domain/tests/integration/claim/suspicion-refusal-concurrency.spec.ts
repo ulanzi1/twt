@@ -8,6 +8,9 @@
 //          reversed, the other is CLOSED by it and its own reversal then finds it ⛔ not at a stage.
 //   RF13 — `reviseDecision` takes the death's INTAKE lock first: a revision OFF `-239` racing a new claim's MINT waits
 //          for it, then sees the minted claim and is refused (`SuspicionReasonLockedError`).
+//   RF6 × MINT (`2026-10-08-294` §1) — the reversal writers take the death's INTAKE key first: a reversal and a new
+//          filing for the death in flight together ⇒ the filing is either CLOSED by the reversal (it committed first) or
+//          JOINS the reversed claim (it waited) — ⛔ never a claim minted unseen beside it (code review round 2, D1).
 //
 // ⚠ WHY OWN-COMMITTING: a race needs REAL concurrent transactions on SEPARATE pool clients (the per-test BEGIN/ROLLBACK
 // envelope would serialise everything). Each test proves the BLOCKING itself — B is still pending while A holds its key —
@@ -252,5 +255,71 @@ describe.skipIf(!hasDatabase)('Story 6.24a — the per-death serialisations (two
     expect(out.ok).toBe(false);
     expect((out as { error: unknown }).error).toBeInstanceOf(SuspicionReasonLockedError);
     expect(((out as { error: SuspicionReasonLockedError }).error).heldClaimCaseId).toBe(minted.claimCaseId);
+  });
+
+  const intakeFor = (pid: PariwarId, mid: ReturnType<typeof toMemberId>) => ({
+    pariwarId: pid, deceasedMemberId: mid, intakeChannel: 'helpline' as const, actor: 'operator' as const, claimantActorId: null, trigger: 'test_intake', actorId: null, auditId: randomUUID(),
+  });
+  const reverseAt1 = (client: pg.PoolClient, pid: PariwarId, cid: ClaimId) =>
+    reviewAppealStage1(client, {
+      claimCaseId: cid, pariwarId: pid, decision: 'reversed', dispositionCategory: 'reconsideration_on_merits',
+      reviewerActorId: REVIEWER, reviewerDisplay: 'Another District Admin', rationaleCiphertext: CIPHER, actor: 'operator',
+    });
+
+  it('RF6 × MINT (a) — the MINT holds the intake key first: the reversal BLOCKS, then lists the minted claim and CLOSES it (`-294` §1)', { timeout: TIMEOUT }, async () => {
+    const pid = freshPariwar();
+    const mid = toMemberId(randomUUID());
+    const s = await onOwnTx(pid, async (c) => {
+      const id = await refusedClaim(c, pid, mid);
+      await openAppeal(c, pid, id);
+      return id;
+    });
+
+    const a = await openTx(pid);
+    const minted = await tryConverge(a.client, intakeFor(pid, mid));
+    expect(minted.minted).toBe(true); // S stands ⇒ ⛔ not a candidate ⇒ a new claim (RF2)
+    const b = await openTx(pid);
+    const reversal = track(reverseAt1(b.client, pid, s));
+    await pause(BLOCKED_MS);
+    expect(reversal.state.settled, 'the reversal must WAIT on the intake key').toBe(false);
+    await a.commit();
+    const out = await reversal.settled;
+    expect(out.ok, String((out as { error?: unknown }).error)).toBe(true);
+    await b.commit();
+    // ⭐ The closure's list saw the minted claim — ⛔ never left live beside the reversed S.
+    expect((out as { value: Awaited<ReturnType<typeof reviewAppealStage1>> }).value.heldClaims?.closed).toEqual([minted.claimCaseId]);
+    const states = await onOwnTx(pid, async (c) =>
+      (await c.query<{ id: string; s: string }>('SELECT claim_case_id AS id, current_state AS s FROM claims WHERE claim_case_id = ANY($1)', [[s, minted.claimCaseId]])).rows,
+    );
+    expect(Object.fromEntries(states.map((x) => [x.id, x.s]))).toEqual({ [s]: 'reversed', [minted.claimCaseId]: 'closed' });
+  });
+
+  it('RF6 × MINT (b) — the REVERSAL holds the intake key first: the filing BLOCKS, then sees S reversed and JOINS it (⛔ no new claim)', { timeout: TIMEOUT }, async () => {
+    const pid = freshPariwar();
+    const mid = toMemberId(randomUUID());
+    const s = await onOwnTx(pid, async (c) => {
+      const id = await refusedClaim(c, pid, mid);
+      await openAppeal(c, pid, id);
+      return id;
+    });
+
+    const a = await openTx(pid);
+    expect((await reverseAt1(a.client, pid, s)).claimState).toBe('reversed');
+    const b = await openTx(pid);
+    const filing = track(tryConverge(b.client, intakeFor(pid, mid)));
+    await pause(BLOCKED_MS);
+    expect(filing.state.settled, 'the filing must WAIT on the intake key').toBe(false);
+    await a.commit();
+    const out = await filing.settled;
+    expect(out.ok, String((out as { error?: unknown }).error)).toBe(true);
+    await b.commit();
+    const converged = (out as { value: Awaited<ReturnType<typeof tryConverge>> }).value;
+    // ⭐ S no longer stands ⇒ it is a candidate again ⇒ the filing joins it (inside the convergence window).
+    expect(converged.minted).toBe(false);
+    expect(converged.claimCaseId).toBe(s);
+    const count = await onOwnTx(pid, async (c) =>
+      (await c.query<{ n: string }>('SELECT count(*)::text AS n FROM claims WHERE pariwar_id = $1 AND deceased_member_id = $2', [pid, mid])).rows[0]!.n,
+    );
+    expect(count).toBe('1');
   });
 });

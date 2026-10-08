@@ -436,6 +436,11 @@ export type GroundInspectionGateStatus = z.output<typeof GroundInspectionGateSta
  * REFERENCE only (⛔ no name, ⛔ no note) — and whether this claim's FINAL approval waits for one of them (the gate's OWN
  * pure helper, `suspicionAppealWaitState`). The District Admin's own approval is ⛔ never held.
  */
+/** RF1's appeal positions — in LOCKSTEP with the domain's `SUSPICION_REFUSAL_APPEAL_POSITIONS` (contracts test). */
+export const SUSPICION_REFUSAL_APPEAL_POSITIONS = ['not_filed', 'time_limit_passed', 'open', 'upheld_final'] as const;
+/** RF5's wait reasons — in LOCKSTEP with the domain's `SUSPICION_APPEAL_PENDING_REASONS` (contracts test). */
+export const SUSPICION_APPEAL_WAIT_REASONS = ['appeal_not_filed', 'appeal_open'] as const;
+
 export const SuspicionRefusalSection = z
   .object({
     /** `false` ⇒ the section could ⛔ not be read — the console says "could not be checked just now" (⛔ never silence). */
@@ -445,14 +450,14 @@ export const SuspicionRefusalSection = z
       z
         .object({
           reference: z.string(),
-          appeal: z.enum(['not_filed', 'time_limit_passed', 'open', 'upheld_final']),
+          appeal: z.enum(SUSPICION_REFUSAL_APPEAL_POSITIONS),
           /** The last IST date the refusal can be appealed (`YYYY-MM-DD`, D + 90). */
-          appealUntil: z.string(),
+          appealUntil: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'a YYYY-MM-DD calendar date'),
         })
         .strict(),
     ),
     /** Why this claim's FINAL approval waits, or `null` (⛔ not waiting). */
-    finalApprovalWaits: z.enum(['appeal_not_filed', 'appeal_open']).nullable(),
+    finalApprovalWaits: z.enum(SUSPICION_APPEAL_WAIT_REASONS).nullable(),
   })
   .strict();
 export type SuspicionRefusalSection = z.output<typeof SuspicionRefusalSection>;

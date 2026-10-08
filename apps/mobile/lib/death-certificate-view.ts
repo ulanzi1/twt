@@ -116,19 +116,24 @@ export const HELPLINE_LABEL_KEY = 'certificate.replacement_helpline'
 
 /** The two action labels follow the two flags — ONE place, so a surface can never show a control
  *  with a label the view did not choose. */
-function withLabels(copy: Omit<CertificateNoticeCopy, 'uploadLabelKey' | 'helplineLabelKey'>): CertificateNoticeCopy {
+function withLabels(flags: NoticeFlags): CertificateNoticeCopy {
+  const { helplineLabel, ...copy } = flags
   return {
     ...copy,
     uploadLabelKey: copy.showUpload ? UPLOAD_LABEL_KEY : null,
-    helplineLabelKey: copy.showHelpline ? HELPLINE_LABEL_KEY : null,
+    helplineLabelKey: copy.showHelpline ? (helplineLabel ?? HELPLINE_LABEL_KEY) : null,
   }
 }
+
+/** The flags a status decides. `helplineLabel` — a status whose helpline call is ⛔ not about an upload names its own
+ *  label (else BigDev's upload line, `HELPLINE_LABEL_KEY`). */
+type NoticeFlags = Omit<CertificateNoticeCopy, 'uploadLabelKey' | 'helplineLabelKey'> & { readonly helplineLabel?: string }
 
 export function certificateNoticeCopy(notice: CertificateNoticeView): CertificateNoticeCopy {
   return withLabels(certificateNoticeFlags(notice))
 }
 
-function certificateNoticeFlags(notice: CertificateNoticeView): Omit<CertificateNoticeCopy, 'uploadLabelKey' | 'helplineLabelKey'> {
+function certificateNoticeFlags(notice: CertificateNoticeView): NoticeFlags {
   switch (notice.status) {
     case 'not_needed':
       return { titleKey: null, bodyKey: null, reassuranceKey: null, showUpload: false, showHelpline: false }
@@ -165,8 +170,10 @@ function certificateNoticeFlags(notice: CertificateNoticeView): Omit<Certificate
         showHelpline: notice.uploadAllowed,
       }
     // ⭐ Story 6.24a (`2026-10-07-292` RF12) — the claim is CLOSED (another claim for the death won its appeal): only that,
-    // and the helpline (⛔ no reason, ⛔ no other claim, ⛔ no upload).
+    // and the helpline (⛔ no reason, ⛔ no other claim, ⛔ no upload). Code review round 2 (2026-10-08): ⛔ no title — the
+    // body's first sentence IS the title, so it read twice — and the CTA says "Call the helpline", ⛔ never BigDev's
+    // "If you can't upload it…" line (there is nothing to upload).
     case 'closed':
-      return { titleKey: 'closed.title', bodyKey: 'closed.body', reassuranceKey: null, showUpload: false, showHelpline: true }
+      return { titleKey: null, bodyKey: 'closed.body', reassuranceKey: null, showUpload: false, showHelpline: true, helplineLabel: 'closed.call' }
   }
 }

@@ -134,7 +134,8 @@ export function hasSuspicionRefusalAppealLimitPassed(firstSuspicionDecidedAtUtc:
 // ── RF1 — the read ───────────────────────────────────────────────────────────────────────────────────
 
 /** Where a standing refusal's appeal is: ⛔ not filed (within 90 days), its time limit passed, open, or upheld at stage 3. */
-export type SuspicionRefusalAppealPosition = 'not_filed' | 'time_limit_passed' | 'open' | 'upheld_final';
+export const SUSPICION_REFUSAL_APPEAL_POSITIONS = ['not_filed', 'time_limit_passed', 'open', 'upheld_final'] as const;
+export type SuspicionRefusalAppealPosition = (typeof SUSPICION_REFUSAL_APPEAL_POSITIONS)[number];
 
 export interface StandingSuspicionRefusal {
   readonly claimCaseId: ClaimId;

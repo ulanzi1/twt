@@ -277,6 +277,21 @@ describe.skipIf(!hasDatabase)('Story 6.24a — the refile after a suspicion refu
 
   // ── AC3 — closed when the appeal is allowed ───────────────────────────────────────────────────────────────────────
   describe('AC3 — closed when the appeal is allowed (RF4, RF6)', () => {
+    it('⭐ 0150 — `closed` is a label of EXACTLY the two enum types it was added to (family 5 — a direct catalog assertion, code review round 2)', async () => {
+      const { client } = getTx();
+      const r = await client.query<{ typname: string }>(
+        `SELECT t.typname FROM pg_enum e JOIN pg_type t ON t.oid = e.enumtypid
+          WHERE e.enumlabel = 'closed' AND t.typname IN ('claim_lifecycle_state', 'appeal_journey_status')
+          ORDER BY t.typname`,
+      );
+      // ⚠ EXACT type names (the 6.18 precedent): a label on the wrong type passes an existence check and fails at the one
+      // write that uses it — `claim.closed`'s projection, or `endLiveProcesses`' anchor update.
+      expect(r.rows.map((x) => x.typname), 'a 0150 label is missing — the migration did not run on this database').toEqual([
+        'appeal_journey_status',
+        'claim_lifecycle_state',
+      ]);
+    });
+
     it('stage 1 — R in `verification_in_progress` is closed in the reversal\'s transaction (`claim.closed`, the payload, the event-count)', async () => {
       const { client, tx } = getTx();
       const mid = randomUUID();
@@ -508,6 +523,11 @@ describe.skipIf(!hasDatabase)('Story 6.24a — the refile after a suspicion refu
       const r = await approvableHeldClaim(client, PARIWAR_A, mid);
       await expect(finalGate(client, PARIWAR_A, r, mid)).rejects.toSatisfy(pending('appeal_not_filed'));
       await expect(finalGate(client, PARIWAR_A, r, mid, 'district_admin')).resolves.toBeUndefined();
+      // AC2 names the Super Admin's `-251` WAIVED approve too: the waiver drops only the name check — the suspicion wait
+      // still holds it (code review round 2: ⛔ no leg drove this arm).
+      await expect(
+        assertClaimApprovable(getTx().tx, PARIWAR_A, r, toMemberId(mid), { approvingActorIds: [PA], step: 'final', nameCheck: 'waived_251' }),
+      ).rejects.toSatisfy(pending('appeal_not_filed'));
     });
 
     it('S `open` ⇒ waits `appeal_open` — through the REAL final vote too (⛔ not a denial: R stays `verifier_approved`, ⛔ no event)', async () => {
@@ -604,6 +624,11 @@ describe.skipIf(!hasDatabase)('Story 6.24a — the refile after a suspicion refu
       // here — this death carries ⛔ no `-239` refusal) and the inspection (seeded by `seedNomineeNameCheck`'s default).
       await seedNomineeNameCheck(client, pid2, cid2);
       await expect(finalGate(client, pid2, cid2, mid2)).rejects.toBeInstanceOf(LateWarningReasonRequiredError);
+      // ⭐ The SAME claim failing BOTH — a `-239` refusal of its death now stands as well — answers the SUSPICION 409:
+      // RF5's conjunct precedes the late-warning wait (code review round 2: AC2 names this leg; it was never built, so
+      // moving the conjunct after the late wait stayed green).
+      await refusedClaim(client, pid2, mid2);
+      await expect(finalGate(client, pid2, cid2, mid2)).rejects.toSatisfy(pending('appeal_not_filed'));
     });
 
     it('a claim never waits on its OWN refusal (self excluded)', async () => {
@@ -620,24 +645,28 @@ describe.skipIf(!hasDatabase)('Story 6.24a — the refile after a suspicion refu
 
   // ── AC2b — the 90-day limit at initiation (RF14) and the reason lock (RF13) ─────────────────────────────────────────
   describe('AC2b — the 90 days (RF14) and the reason lock (RF13)', () => {
-    /** A refusal whose current `-239` chain begins on IST date `today − ago`, mid-morning IST. */
-    const refusedOnDaysAgo = (ago: number) => new Date(istMidnightAt(addCalendarDays(istDateOf(new Date()), -ago)).getTime() + 3 * 3_600_000);
+    /** A refusal whose current `-239` chain begins on IST date `today − ago`, mid-morning IST. `today` is read ONCE per
+     *  test and passed in — two separate `new Date()` reads straddling 00:00 IST disagreed (code review round 2). */
+    const refusedOnDaysAgo = (today: string, ago: number) => new Date(istMidnightAt(addCalendarDays(today, -ago)).getTime() + 3 * 3_600_000);
 
     it('the boundary pair — refused on D = today − 90 ⇒ initiable (today is D + 90); D = today − 91 ⇒ the time-limit 409 with `appeal_until`', async () => {
       const { client } = getTx();
-      const inside = await refusedClaim(client, PARIWAR_A, randomUUID(), { decidedAt: refusedOnDaysAgo(90) });
+      const today = istDateOf(new Date());
+      const inside = await refusedClaim(client, PARIWAR_A, randomUUID(), { decidedAt: refusedOnDaysAgo(today, 90) });
       await expect(openAppeal(client, PARIWAR_A, inside)).resolves.toMatchObject({ claimState: 'appeal_stage_1' });
-      const outsideAt = refusedOnDaysAgo(91);
+      const outsideAt = refusedOnDaysAgo(today, 91);
       const outside = await refusedClaim(client, PARIWAR_A, randomUUID(), { decidedAt: outsideAt });
       const err = await savepoint(client, () => openAppeal(client, PARIWAR_A, outside));
       expect(err).toBeInstanceOf(AppealTimeLimitPassedError);
       expect((err as AppealTimeLimitPassedError).appealUntil).toBe(suspicionRefusalAppealUntil(outsideAt));
-      expect((err as AppealTimeLimitPassedError).appealUntil).toBe(addCalendarDays(istDateOf(new Date()), -1));
+      expect((err as AppealTimeLimitPassedError).appealUntil).toBe(addCalendarDays(today, -1));
     });
 
     it('a refusal for ANY OTHER reason is initiable long past 90 days (6.16 D-E unchanged for it)', async () => {
       const { client } = getTx();
-      for (const reason of ['other'] as const) {
+      // EVERY denied-only reason family but `-239` (`REASON_CODE_OUTCOME_COMPAT`): `other` and `concealment_flag_uphold`
+      // (code review round 2 — RF14 asks a test per family; only `other` was driven).
+      for (const reason of ['other', 'concealment_flag_uphold'] as const) {
         const s = await refusedClaim(client, PARIWAR_A, randomUUID(), { reason, decidedAt: new Date(Date.now() - 400 * DAY) });
         await expect(openAppeal(client, PARIWAR_A, s)).resolves.toMatchObject({ claimState: 'appeal_stage_1' });
       }
@@ -679,6 +708,14 @@ describe.skipIf(!hasDatabase)('Story 6.24a — the refile after a suspicion refu
       const s2 = await refusedClaim(client, PARIWAR_A, mid2, { ground: true });
       const settled = await votedHeldClaim(client, PARIWAR_A, mid2);
       await emit(client, PARIWAR_A, settled, mid2, 'state_trustee_approved', 'approved', 'claim.approved');
+      // …and on to `settled` — the leg this test names (code review round 2: it stopped at `approved`).
+      await projectClaimState(client, {
+        claimCaseId: settled, pariwarId: PARIWAR_A, deceasedMemberId: toMemberId(mid2), intakeChannels: ['member_app'], claimantActorId: null,
+        eventType: 'claim.settled',
+        payload: { from_state: 'approved', to_state: 'settled', trigger: 'test', actor: 'system', deceased_member_id: mid2 } as never,
+        actorId: null,
+      });
+      expect(await stateOf(client, settled)).toBe('settled');
       await expect(savepoint(client, () => reviseDecision(client, revise(s2, 'other')))).resolves.toBeInstanceOf(SuspicionReasonLockedError);
     });
 

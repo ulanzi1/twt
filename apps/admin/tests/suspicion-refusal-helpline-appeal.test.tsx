@@ -133,6 +133,35 @@ describe('<HelplineAppeal>', () => {
     expect(screen.getByTestId(`helpline-appeal-file-${OTHER}`)).toBeDisabled();
   });
 
+  it('code review round 2: filing B BEFORE A settles keeps A disabled while in flight and still confirms A (per-call promises — TanStack fires per-`mutate` callbacks for the LATEST call only)', async () => {
+    mocked.getHelplineAppealClaims.mockResolvedValue({ member_id: MEMBER_ID, claims: [row(CAN), row(OTHER)] });
+    type Initiated = Awaited<ReturnType<typeof api.initiateAppealOnBehalf>>;
+    const ok = (id: string): Initiated => ({
+      appeal_id: '55555555-5555-4555-8555-555555555555', claim_case_id: id, current_stage: '1', status: 'open', initiated_on_behalf: true, claim_state: 'appeal_stage_1',
+    });
+    let resolveA: ((v: Initiated) => void) | undefined;
+    let resolveB: ((v: Initiated) => void) | undefined;
+    mocked.initiateAppealOnBehalf
+      .mockReturnValueOnce(new Promise<Initiated>((resolve) => { resolveA = resolve; }))
+      .mockReturnValueOnce(new Promise<Initiated>((resolve) => { resolveB = resolve; }));
+    renderWithClient(<HelplineAppeal pariwarId="p1" memberId={MEMBER_ID} identityConfirmed={true} />);
+    const fileA = await screen.findByTestId(`helpline-appeal-file-${CAN}`);
+    fireEvent.click(fileA);
+    await waitFor(() => expect(mocked.initiateAppealOnBehalf).toHaveBeenCalledWith('p1', CAN));
+    fireEvent.click(screen.getByTestId(`helpline-appeal-file-${OTHER}`));
+    await waitFor(() => expect(mocked.initiateAppealOnBehalf).toHaveBeenCalledWith('p1', OTHER));
+    // A is STILL in flight — its button must stay disabled though B is now the mutation's latest call.
+    expect(screen.getByTestId(`helpline-appeal-file-${CAN}`)).toBeDisabled();
+    fireEvent.click(screen.getByTestId(`helpline-appeal-file-${CAN}`));
+    expect(mocked.initiateAppealOnBehalf).toHaveBeenCalledTimes(2);
+    resolveB!(ok(OTHER));
+    resolveA!(ok(CAN));
+    // BOTH confirmed — A's outcome is ⛔ never dropped.
+    await waitFor(() => expect(screen.getAllByTestId('helpline-appeal-filed')).toHaveLength(2));
+    expect(screen.getByTestId(`helpline-appeal-file-${CAN}`)).toBeDisabled();
+    expect(screen.getByTestId(`helpline-appeal-file-${OTHER}`)).toBeDisabled();
+  });
+
   it('a SECOND claim\'s rejection does ⛔ not erase the FIRST\'s already-filed confirmation', async () => {
     mocked.getHelplineAppealClaims.mockResolvedValue({ member_id: MEMBER_ID, claims: [row(CAN), row(OTHER)] });
     mocked.initiateAppealOnBehalf.mockResolvedValueOnce({

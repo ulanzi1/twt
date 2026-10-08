@@ -43,11 +43,14 @@ export function HelplineAppeal({
   const listQ = useHelplineAppealClaims(pariwarId, memberId, ready);
   const claims = listQ.data?.member_id === memberId ? listQ.data.claims : [];
   const file = useInitiateAppealOnBehalf(pariwarId, memberId);
-  // ⭐ ONE shared mutation object covers every row (`file.variables`/`.isSuccess`/`.isError` reflect only the LAST
-  // call) — filing claim B would otherwise erase claim A's already-settled outcome. Per-claim OUTCOME is tracked
-  // here instead, set from each call's OWN `onSuccess`/`onError` (bound to that claim id, ⛔ never read off `file`
-  // directly), so filing a second claim can ⛔ never un-disable or un-confirm a claim already filed.
-  const [filingOutcomes, setFilingOutcomes] = useState<Record<string, { readonly outcome: 'success' } | { readonly outcome: 'error'; readonly error: unknown }>>({});
+  // ⭐ ONE shared mutation object covers every row (`file.variables`/`.isPending`/`.isSuccess`/`.isError` reflect only
+  // the LAST call) — filing claim B would otherwise erase claim A's state. Per-claim state is tracked here instead,
+  // set from each call's OWN promise (`mutateAsync`). ⚠ ⛔ Never the per-`mutate` `onSuccess`/`onError` options:
+  // TanStack fires those for the LATEST call only, so filing B before A settled would drop A's outcome and
+  // re-enable A's button while A's POST is still in flight (code review round 2, 2026-10-08).
+  const [filingOutcomes, setFilingOutcomes] = useState<
+    Record<string, { readonly outcome: 'pending' } | { readonly outcome: 'success' } | { readonly outcome: 'error'; readonly error: unknown }>
+  >({});
 
   let body: ReactElement;
   if (!ready) {
@@ -89,8 +92,8 @@ export function HelplineAppeal({
                 : c.eligibility === 'can_appeal'
                   ? appealReadBack('until', c.appeal_until)
                   : null;
-          const filingThis = file.isPending && file.variables === c.claim_case_id;
           const outcome = filingOutcomes[c.claim_case_id];
+          const filingThis = outcome?.outcome === 'pending';
           // Held disabled once filed, through the window before the list's refetch moves this claim off `can_appeal`
           // — and stays that way even after a LATER claim is filed (the per-claim outcome map, not `file.isSuccess`).
           const filedThis = outcome?.outcome === 'success';
@@ -112,12 +115,14 @@ export function HelplineAppeal({
                   type="button"
                   className="self-start rounded border px-3 py-1"
                   disabled={filingThis || filedThis}
-                  onClick={() =>
-                    file.mutate(c.claim_case_id, {
-                      onSuccess: () => setFilingOutcomes((prev) => ({ ...prev, [c.claim_case_id]: { outcome: 'success' } })),
-                      onError: (error) => setFilingOutcomes((prev) => ({ ...prev, [c.claim_case_id]: { outcome: 'error', error } })),
-                    })
-                  }
+                  onClick={() => {
+                    const id = c.claim_case_id;
+                    setFilingOutcomes((prev) => ({ ...prev, [id]: { outcome: 'pending' } }));
+                    file.mutateAsync(id).then(
+                      () => setFilingOutcomes((prev) => ({ ...prev, [id]: { outcome: 'success' } })),
+                      (error: unknown) => setFilingOutcomes((prev) => ({ ...prev, [id]: { outcome: 'error', error } })),
+                    );
+                  }}
                   data-testid={`helpline-appeal-file-${c.claim_case_id}`}
                 >
                   {resolveEn(filingThis ? 'helpline.appeal.filing' : 'helpline.appeal.file')}

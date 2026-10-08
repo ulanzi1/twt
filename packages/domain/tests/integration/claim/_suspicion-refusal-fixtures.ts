@@ -40,7 +40,7 @@ export const REVIEWER = 'e2e2e2e2-0000-4000-8000-000000000002';
 export const TRUSTEE = 'f2f2f2f2-0000-4000-8000-000000000003';
 export const CIPHER = prepareAppealCiphertext('enc:v1:appeal');
 
-export type SuspicionReason = 'post_death_nominee_change' | 'other';
+export type SuspicionReason = 'post_death_nominee_change' | 'other' | 'concealment_flag_uphold';
 
 const CERTIFICATE_DATE = '2026-05-01';
 

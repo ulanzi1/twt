@@ -1,3 +1,12 @@
+# last_updated: 2026-10-08a (⭐ **STORY 6.24a BUILT (`bmad-dev-story 6.24a`) — `6-24-true-nominee-refile-after-a-suspicion-refusal`
+# ready-for-dev → in-progress → review.** Builds `-292` RF1–RF8, RF10, RF12 (6.24a's half), RF13–RF16: ONE "a suspicion refusal stands"
+# (`claim/suspicion-refusal.ts`); a refile is ⛔ never merged into the refused claim (the convergence candidate, its strip mirror and the
+# intake backstop); a REQUIRED gate `step` — the five FINAL writers wait (`suspicion_appeal_pending`), the District Admin ⛔ never;
+# migration 0150 (`closed` on both enums, :5432 + :5433) and the 36th event `claim.closed` — the three reversal writers close the death's
+# other claims in their own transaction and end their live processes; the cycle commit re-checks (deferred item DISCHARGED); the
+# inheritance reads RF1 (partly discharged); the 90-day appeal limit + the per-death keys; the reason lock; the console section (reads
+# 20 → 21); a `claim.file` helpline appeal screen; the mobile closed screen. Red-checks 22 domain + 7 API. `ci:local` 34/34.
+# `deferred-work.md`: F15 + three new items. ⛔ No other row moves (`6-24b-…` stays `backlog`).)
 # last_updated: 2026-10-07t (⭐ **THE PANEL RULED STORY 6.24's Q3 — `2026-10-07-293` (Trustee-ratified, DR + KB: *"Q3 - B (one text)"*,
 # *"Confirm (item 2) - A"*), committed ALONE (`2ada8f7b`).** Item 1 B: the person refused on suspicion is texted once that the claim can be
 # appealed until a date — at the mobile they gave on the claim, or the mobile on the nominee entry they filed as (go-live with counsel);
@@ -19270,7 +19279,7 @@ development_status:
   # ⭐ 2026-10-04 SPLIT after `-277` (BigDev: "ok, split it"): the row above is STORY 6.23a (keeps its key — the rulings cite it); 6.23b below
   # is every later approver (`-277` Q2 C) + Q3 B's wait. 6.23b's file is written; it stays `backlog` until 6.23a is `done` (the 6.21b precedent).
   6-23b-every-approver-gives-a-warning-reason: done
-  6-24-true-nominee-refile-after-a-suspicion-refusal: ready-for-dev
+  6-24-true-nominee-refile-after-a-suspicion-refusal: review
   # ⭐ 2026-10-07 SPLIT (BigDev: "ok, split it"): the row above is STORY 6.24a (keeps its key — the rulings and `-292` cite it): kept apart,
   # the wait, `closed`, the commit re-check, the inheritance, the 90-day limit, the helpline appeal screen and the reason lock. 6.24b below is
   # the filing code (FQ6) and the two texts (FQ7, `-291` Q2); its file is written, but it stays `backlog` until 6.24a is `done` (the

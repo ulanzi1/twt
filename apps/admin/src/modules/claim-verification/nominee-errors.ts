@@ -54,6 +54,15 @@ export function trusteeGroundInspectionRequiredMessage(err: ApiError): string {
 }
 
 /**
+ * ⭐ Story 6.24a (RF5, F9) — a FINAL approval's `…suspicion_appeal_pending` 409 (`cycle_freeze.` / `r9_voting.` /
+ * `verifier_decision.`), worded by its REASON (`appeal_not_filed` | `appeal_open`). ⛔ Never a denial: the claim waits.
+ */
+export function suspicionAppealPendingMessage(err: ApiError): string {
+  const reason = (err.details as { reason?: string } | undefined)?.reason ?? 'appeal_open';
+  return t.suspicionRefusal.approvalGate[reason] ?? t.suspicionRefusal.approvalGate.appeal_open!;
+}
+
+/**
  * Story 6.19a (D14) — the approval gate's `…claim_contact_required` 409 (`verifier_decision.` / `cycle_freeze.` /
  * `r9_voting.`), worded by its REASON — the same words on every screen: the claim WAITS, and the helpline can add
  * the details. ⛔ Never a denial, ⛔ never "try again".

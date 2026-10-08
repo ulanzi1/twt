@@ -107,6 +107,11 @@ const FENCED_FILES = [
   // Ref-only — version ids, instants, marks, keys and reason codes — ⛔ no name, ⛔ no decrypt (asserted below).
   'packages/domain/src/claim/approval-warnings.ts',
   'packages/domain/src/claim/approval-warnings-persist.ts',
+  // ⭐ STORY 6.24a (`2026-10-07-292` RF1, RF5, RF6; 6.23a's precedent) — the two NEW domain modules on the approval path:
+  // the suspicion refusal's READ (RF5's FINAL-approval conjunct, the cycle commit's re-check) and its closure WRITER.
+  // Ref-only — claim ids, instants, appeal statuses, reason codes — ⛔ no name, ⛔ no decrypt (asserted below).
+  'packages/domain/src/claim/suspicion-refusal.ts',
+  'packages/domain/src/claim/suspicion-refusal-persist.ts',
 ] as const;
 
 /**
@@ -156,7 +161,7 @@ describe('⛔ the no-comparison fence (Trap 1, `-226` cl.5)', () => {
     // Code review patch (2026-10-02, corrected 2026-10-03): exact count, ⛔ a floor — AND every entry unique. The
     // count alone can't catch a duplicate standing in for a dropped file (one of each keeps the length at 34).
     expect(new Set(FENCED_FILES).size, 'a FENCED_FILES entry is duplicated').toBe(FENCED_FILES.length);
-    expect(FENCED_FILES.length).toBe(36); // Story 6.23a FROM 34 (+2 — the warnings module and the late-reason writer); Story 6.19c raised it FROM 26 (+1 domain module), then 27 → 32 (the highlight's read + its four wire / route surfaces), then 32 → 34 (its two admin render sites); Story 6.21a FROM 23 (+3 modules); Story 6.20 FROM 16 (+7)
+    expect(FENCED_FILES.length).toBe(38); // Story 6.24a FROM 36 (+2 — the suspicion refusal's read and its closure writer); Story 6.23a FROM 34 (+2 — the warnings module and the late-reason writer); Story 6.19c raised it FROM 26 (+1 domain module), then 27 → 32 (the highlight's read + its four wire / route surfaces), then 32 → 34 (its two admin render sites); Story 6.21a FROM 23 (+3 modules); Story 6.20 FROM 16 (+7)
   });
 
   it('⭐⭐ POSITIVE CONTROL — the scanner actually FIRES on a planted violation of every pattern', () => {

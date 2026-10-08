@@ -140,6 +140,28 @@ const EN: Record<string, string> = {
     "We have the certificate; it is waiting for the District Admin's review. Nothing more is needed from the family.",
   'helpline.certificate.line.accepted': 'The death certificate has been accepted.',
   'helpline.certificate.line.not_needed': 'Nothing is needed about the death certificate on this claim right now.',
+  // ⭐ Story 6.24a (`2026-10-07-292` RF12) — a CLOSED claim: the family's own words (⛔ no reason, ⛔ no other claim).
+  'helpline.certificate.line.closed': 'This claim has been closed. Please call the helpline.',
+  // ⭐ Story 6.24a (`2026-10-07-292` RF14 (b)) — the helpline APPEAL card: the operator files an appeal FOR THE FAMILY
+  // (AR-61) through the existing on-behalf route. Staff chrome in English; the line read to the family is bilingual
+  // (`appealReadBack` — the shared @twt/i18n `claim` namespace).
+  'helpline.appeal.heading': 'Appeal a refused claim',
+  'helpline.appeal.needMember': 'Select the member and confirm the read-back to see their refused claims.',
+  'helpline.appeal.loading': 'Loading refused claims…',
+  'helpline.appeal.error': 'The refused claims could not be loaded just now.',
+  'helpline.appeal.retry': 'Try again',
+  'helpline.appeal.none': 'This member has no refused claim.',
+  'helpline.appeal.state.can_appeal': 'Can be appealed.',
+  'helpline.appeal.state.under_appeal': 'Under appeal — it is being decided.',
+  'helpline.appeal.state.time_limit_passed': 'The time to appeal has ended.',
+  'helpline.appeal.state.already_appealed': 'Already appealed — the appeal has been decided.',
+  'helpline.appeal.state.not_appealable': 'This claim cannot be appealed.',
+  'helpline.appeal.readBack': 'Read to the family',
+  'helpline.appeal.file': 'File an appeal for the family',
+  'helpline.appeal.filing': 'Filing…',
+  'helpline.appeal.filed': 'The appeal was filed. It is now under appeal.',
+  'helpline.appeal.refusal.time_limit_passed': 'The time to appeal this refusal has ended — it can no longer be appealed.',
+  'helpline.appeal.refusal.generic': 'The appeal could not be filed just now.',
   // The refusal lines (C6) — never a raw error code.
   'helpline.certificate.refusal.certificate_accepted':
     "This claim's death certificate has already been accepted. Another one can't be sent.",
@@ -230,6 +252,18 @@ const EN: Record<string, string> = {
 /** Resolve a console-chrome key to English (loud-ish fallback: return the key if unmapped). */
 export function resolveEn(key: string): string {
   return EN[key] ?? key;
+}
+
+/**
+ * ⭐ Story 6.24a (RF14 (b)) — the line the operator READS to the family about a refusal's appeal date, in BOTH English
+ * and Hindi (the `readBackScript` precedent): "Can be appealed until {date}." / "The time to appeal ended on {date}.".
+ */
+export function appealReadBack(kind: 'until' | 'ended', date: string): { en: string; hi: string } {
+  const key = kind === 'until' ? 'appeal_helpline.until' : 'appeal_helpline.ended';
+  return {
+    en: t(key, { date }, { locale: 'en', namespace: 'claim' }),
+    hi: t(key, { date }, { locale: 'hi', namespace: 'claim' }),
+  };
 }
 
 /** Story 6.21b (D5) — the pick-a-claim radio label, mirroring the nominee-correction `claimOption` precedent. */

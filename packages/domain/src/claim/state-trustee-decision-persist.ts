@@ -83,6 +83,8 @@ import {
   type StateTrusteeReasonCode,
 } from './state-trustee-decision.js';
 import { hasLiveRoutedRow } from './r9-routing.js';
+import { groundInspectionApprovalState, readGroundInspectionApprovalFacts } from './ground-inspection-approval.js';
+import { readStandingSuspicionRefusals, suspicionAppealWaitState } from './suspicion-refusal.js';
 
 // ── State windows (the write-path allowlists) ─────────────────────────────────
 
@@ -584,7 +586,8 @@ export async function voteOnFrozenClaim(
       input.pariwarId,
       input.claimCaseId,
       claimRow.deceasedMemberId,
-      { approvingActorIds: [input.actorId] },
+      // ⭐ Story 6.24a RF5 — a FINAL approval: it waits for another claim's suspicion appeal (FQ5).
+      { approvingActorIds: [input.actorId], step: 'final' },
     );
     // ⭐ Story 6.19a (D14) — then the claim's CONTACT RECORD: an address for each nominee in force at the death,
     // the claimant's details when the claimant is none of them, and a live agreement to be contacted. AFTER
@@ -1315,6 +1318,25 @@ export async function commitCycleFreeze(
     // Story 6.18 (AC11) — the same re-check for a claim under correction: a Pariwar Admin may have
     // returned it after the candidate set was selected but before this claim's lock was acquired.
     if (await hasLiveReturnRow(db, input.pariwarId, candidate.claimCaseId)) continue;
+    // ⭐ Story 6.24a RF7 (P5; discharges `deferred-work.md` *"An inherited visit that vanishes after the final vote is ⛔ not
+    // re-checked at the cycle commit"*) — two more SKIP-AND-KEEP re-checks, the two approval conditions that can move
+    // through ANOTHER claim after the vote: (1) a suspicion refusal of another claim of the death that now holds the final
+    // approval (RF5 — e.g. a revision ONTO `-239` after this claim's vote), and (2) the ground inspection — an inherited
+    // visit can vanish when the source's refusal is revised away or reversed (RF8). ⛔ Never the full gate (its name
+    // check, accounts and late-warning legs were the vote's). The claim stays `state_trustee_approved` for a later commit;
+    // ⛔ no `claim.approved`. These READ the other claim with ⛔ no lock (Trap 8) at this statement's clock — a stale clock
+    // can only keep a claim one more run (conservative).
+    if (
+      suspicionAppealWaitState(
+        await readStandingSuspicionRefusals(db, input.pariwarId, locked.deceasedMemberId),
+        candidate.claimCaseId,
+      ).waits
+    ) {
+      continue;
+    }
+    if (!groundInspectionApprovalState(await readGroundInspectionApprovalFacts(db, input.pariwarId, candidate.claimCaseId)).complete) {
+      continue;
+    }
 
     await projectClaimState(client, {
       claimCaseId: candidate.claimCaseId,

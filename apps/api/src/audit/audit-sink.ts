@@ -589,6 +589,8 @@ export type AuthAuditEventType =
   | 'admin_appeal.stage2_cancel'
   | 'admin_appeal.stage3'
   | 'admin_appeal.rejected'
+  // Story 6.24a (`2026-10-07-292` RF14 (b)) — the helpline appeal screen's read of a member's refused claims (`claim.file`).
+  | 'admin_appeal.helpline_read'
   // Story 7.5 — the per-Pariwar fixed-amount schedule surface (the FR-15 90-day-notice standard change +
   // the emergency adjustment override). Post-action SINK lines (the durable records are the
   // pool_fixed_amount_schedule row + the immutable pool_fixed_amount_emergency_attestations record). Context

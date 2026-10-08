@@ -15,6 +15,11 @@ const base: MemberAppealStatus = {
 }
 
 describe('deriveAppealView (AC7)', () => {
+  it('⭐ Story 6.24a — a journey CLOSED with its claim shows ⛔ no affordance, ⛔ no status line, ⛔ no outcome', () => {
+    const v = deriveAppealView({ ...base, claim_state: 'closed', appeal_status: 'closed', current_stage: '1' })
+    expect(v).toEqual({ showFileAffordance: false, statusKey: null, showReversed: false, showExhausted: false, showExternalRemedy: false })
+  })
+
   it('a denied claim with no prior journey shows the file affordance (no deadline, D-E)', () => {
     const v = deriveAppealView({ ...base, can_initiate: true })
     expect(v.showFileAffordance).toBe(true)

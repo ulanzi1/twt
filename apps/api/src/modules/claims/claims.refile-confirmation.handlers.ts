@@ -7,8 +7,9 @@
 //     auto-derived key) records ⛔ no confirmation — `-254` names the District Admin or the helpline — 403
 //     `refile_confirmation.role_not_recordable`.
 // The note is Tier-1 (`claim_refile_confirmation`); the audit line names the CLOSED claim and carries ⛔ no note.
-// ⚠ Row `6-24` (`-261` D4 B) will keep a suspicion refusal's new claim apart at the same convergence code — the guard
-// keys on the closures row, ⛔ never on `denied_no_appeal` (see `refile-guard.ts`).
+// ⭐ Story 6.24a (`-261` D4 B) keeps a suspicion refusal's new claim apart at the convergence candidate; the guard still
+// keys on the closures row, ⛔ never on `denied_no_appeal`, and FQ5's `closed` claim writes ⛔ no closures row (see
+// `refile-guard.ts`).
 
 import type { RefileConfirmationRequest, RefileConfirmationResponse } from '@twt/contracts';
 import { claim, rbac, schema } from '@twt/domain';

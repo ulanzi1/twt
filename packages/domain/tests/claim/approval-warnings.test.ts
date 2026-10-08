@@ -359,6 +359,9 @@ describe('NW1 — import discipline, TRANSITIVELY (`-279` A12)', () => {
     'claim/approval-warnings.ts',
     'claim/approval-warning-reasons.ts',
     'claim/ground-inspection-approval.ts',
+    // ⭐ Story 6.24a (`2026-10-07-292` RF1) — the suspicion-refusal READ module joins the approval gate (RF5's conjunct).
+    // Its closure WRITER (`suspicion-refusal-persist.ts`, RF6) emits events and is deliberately ⛔ not listed.
+    'claim/suspicion-refusal.ts',
   ]) {
     it(`${entry} reaches ⛔ none of ${forbidden.join(', ')}`, () => {
       const files = [...reachable(path.join(srcRoot, entry))].map((f) => path.relative(srcRoot, f));

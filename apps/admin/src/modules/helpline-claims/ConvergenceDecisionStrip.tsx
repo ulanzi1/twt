@@ -219,15 +219,14 @@ export function ConvergenceDecisionStrip(props: ConvergenceDecisionStripProps): 
             <code>{overrideTarget.againstClaimCaseId}</code>. The account stays frozen while either
             claim is open. This cannot be undone from here.
           </p>
-          {/* Story 6.20 (AC13, T17) — why a TRUE nominee's refile can land here: while a claim refused on
-              suspicion of a post-death nominee change is under APPEAL it is not closed, so a refile
-              within 30 days converges onto it. Overriding keeps the refile apart, and it still carries
-              over the refused claim's ground inspection. */}
+          {/* Story 6.20 (AC13) — T17 SUPERSEDED by Story 6.24a (`-261` D4 B, `2026-10-07-292` RF2/RF16): a claim refused on
+              suspicion of a post-death nominee change is ⛔ never a convergence candidate while that refusal stands
+              (under appeal included), so a refile is kept apart AUTOMATICALLY — it never lands here against such a
+              claim. The note says so, so an operator does ⛔ not expect to rescue a refile by overriding. */}
           <p className="text-sm" data-testid="convergence-override-refile-note">
-            If the claim above was refused because the nominee was changed on or after the date of death
-            and is now under appeal, a refile by the member&apos;s true nominee joins it automatically.
-            Overriding keeps the refile as its own claim; its ground inspection is carried over from the
-            refused claim.
+            A refile for a death whose earlier claim was refused because the nominee was changed on or after the date
+            of death is always kept as its own claim — it never joins the refused claim, even while that claim is under
+            appeal — and its ground inspection is carried over from the refused claim.
           </p>
           <label htmlFor="convergence-override-reason" className="text-sm font-medium">
             Reason (required, ≥ {CONVERGENCE_OVERRIDE_REASON_MIN} chars)

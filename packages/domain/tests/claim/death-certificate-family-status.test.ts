@@ -84,13 +84,24 @@ const ACCEPTED_ROW: DeathCertificateSnapshot = (() => {
 const IN_WINDOW_STATE = 'verification_in_progress';
 // Derived from the CANONICAL constants (⛔ never hand-copied — a new lifecycle state or a window change
 // must move these tests, not slip past them).
+// ⭐ Story 6.24a (RF12) — `closed` has its OWN row (row 0), so row 1 still covers exactly the eight it always did.
 const OUT_OF_WINDOW_EIGHT: string[] = CLAIM_LIFECYCLE_STATES.filter(
   (s) =>
+    s !== 'closed' &&
     !(CLAIM_REVIEW_WINDOW_STATES as readonly string[]).includes(s) &&
     !(CLAIM_DOCUMENT_UPLOADABLE_STATES as readonly string[]).includes(s),
 );
 
 describe('resolveDeathCertificateFamilyStatus — the D1 state table (AC1)', () => {
+  it('⭐ Story 6.24a row 0 — `closed` ⇒ status `closed`, ⛔ not live, ⛔ no upload, regardless of snapshot (RF12)', () => {
+    for (const snapshot of [NO_ROW, LEGACY_ROW, AWAITING_ROW]) {
+      const r = resolveDeathCertificateFamilyStatus('closed', snapshot);
+      expect(r).toMatchObject({ status: 'closed', claimLive: false, replacementAllowed: false, uploadAllowed: false, replacementReason: null, reassurance: null });
+    }
+    expect(isInDeathCertificateReviewWindow('closed')).toBe(false);
+    expect((CLAIM_DOCUMENT_UPLOADABLE_STATES as readonly string[]).includes('closed')).toBe(false);
+  });
+
   it('row 1 — all eight out-of-window states return not_needed, regardless of snapshot', () => {
     const snapshots: Array<[string, DeathCertificateSnapshot]> = [
       ['no row', NO_ROW],

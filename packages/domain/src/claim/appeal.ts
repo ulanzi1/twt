@@ -67,8 +67,12 @@ export const APPEAL_DISPOSITION_CATEGORIES = [
 export const appealDispositionCategoryEnum = pgEnum('appeal_disposition_category', APPEAL_DISPOSITION_CATEGORIES);
 export type AppealDispositionCategory = (typeof APPEAL_DISPOSITION_CATEGORIES)[number];
 
-/** The `claim_appeals` anchor journey status (`open` → terminal `reversed` | `upheld_final`, D-F). */
-export const APPEAL_JOURNEY_STATUSES = ['open', 'reversed', 'upheld_final'] as const;
+/**
+ * The `claim_appeals` anchor journey status (`open` → terminal `reversed` | `upheld_final`, D-F; `closed` — Story 6.24a
+ * `2026-10-07-292` RF4: the claim was CLOSED mid-appeal because another claim of the death had its suspicion refusal reversed,
+ * so ⛔ no open journey outlives its claim; ⛔ nothing reopens it). Migration 0150 adds the value.
+ */
+export const APPEAL_JOURNEY_STATUSES = ['open', 'reversed', 'upheld_final', 'closed'] as const;
 export const appealJourneyStatusEnum = pgEnum('appeal_journey_status', APPEAL_JOURNEY_STATUSES);
 export type AppealJourneyStatus = (typeof APPEAL_JOURNEY_STATUSES)[number];
 

@@ -114,6 +114,7 @@ describe('VerifierConsolePacket — full round-trip + ordering', () => {
       complete: false,
       waitReason: 'certificate_check_required' as 'no_completed_inspection' | 'certificate_check_required' | null,
     },
+    suspicionRefusal: { available: true, keptApartFrom: [], finalApprovalWaits: null },
     // Story 6.23a (NW8) — the nominee-change warnings: NON-PII (kinds, counts, the reason list).
     approvalWarnings: {
       available: true,
@@ -169,6 +170,18 @@ describe('VerifierConsolePacket — full round-trip + ordering', () => {
     expect(
       VerifierConsolePacket.safeParse({ ...PACKET, groundInspectionGate: { available: false, complete: false, waitReason: null } }).success,
     ).toBe(true);
+  });
+
+  it('Story 6.24a (RF10) — `suspicionRefusal` is REQUIRED and STRICT: the other claim by REFERENCE (⛔ not an id field, ⛔ not a name), closed sets', () => {
+    const { suspicionRefusal, ...without } = PACKET;
+    expect(VerifierConsolePacket.safeParse(without).success).toBe(false);
+    const kept = { reference: 'ABC-1234', appeal: 'not_filed', appealUntil: '2026-12-30' };
+    expect(
+      VerifierConsolePacket.safeParse({ ...PACKET, suspicionRefusal: { available: true, keptApartFrom: [kept], finalApprovalWaits: 'appeal_not_filed' } }).success,
+    ).toBe(true);
+    expect(VerifierConsolePacket.safeParse({ ...PACKET, suspicionRefusal: { ...suspicionRefusal, keptApartFrom: [{ ...kept, name: 'X' }] } }).success).toBe(false);
+    expect(VerifierConsolePacket.safeParse({ ...PACKET, suspicionRefusal: { ...suspicionRefusal, keptApartFrom: [{ ...kept, appeal: 'reversed' }] } }).success).toBe(false);
+    expect(VerifierConsolePacket.safeParse({ ...PACKET, suspicionRefusal: { ...suspicionRefusal, finalApprovalWaits: 'refused' } }).success).toBe(false);
   });
 
   it('Story 6.26a (GI10) — a ground-inspection assignment carries the inspector\'s record; the photo carries its kind', () => {

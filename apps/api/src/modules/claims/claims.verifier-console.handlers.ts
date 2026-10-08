@@ -36,6 +36,7 @@ import type {
   NomineeNameCheckStatus,
   DocumentReviewSection,
   GroundInspectionGateStatus,
+  SuspicionRefusalSection,
   GroundInspectionSection,
   MemberValidityPayloadDto,
   PeerMeshSection,
@@ -174,7 +175,16 @@ const SIGNED_URL_TTL_SECONDS = 300;
  * (GI10's console inheritance change — read whenever ⛔ no OWN completed FULL visit, ⛔ not only when ⛔ no assignment
  * at all — keeps Story 6.20's two conditional reads read-for-read.)
  */
-export const VERIFIER_CONSOLE_MAX_READS = 20;
+/*
+ * ⭐ STORY 6.24a's ONE READ (RF10) — the explanation this counter demands. `-262` FQ5 A makes a claim's FINAL approval
+ * wait while another claim of the death's refusal on suspicion can still be appealed, and `-261` D4 B keeps the two
+ * apart — so the District Admin's console must say both, or the case looks ordinary until a later approver meets a 409.
+ * ⛔ It is the MINIMUM: `readStandingSuspicionRefusals` answers every other claim's standing refusal, its appeal position
+ * and its 90-day date in ONE statement, and the section applies the gate's OWN pure helper (`suspicionAppealWaitState`).
+ * It decrypts ⛔ nothing. Under a raw SAVEPOINT (`underSavepoint`), BEFORE the warnings (which stay LAST). ⭐ Ledger line:
+ *   + Story 6.24a (RF10): kept apart from a refused claim, and the final-approval wait      +1  → 21
+ */
+export const VERIFIER_CONSOLE_MAX_READS = 21;
 
 /** Counts the assembler's top-level bounded source reads (the no-N+1 fan-out width). */
 class ReadCounter {
@@ -326,6 +336,10 @@ export async function assembleVerifierConsole(
   //    SAVEPOINT, BEFORE the warnings (which stay LAST). ─────────────────────────────────────────────────────────
   const groundInspectionGate = await assembleGroundInspectionGate(ctx, claimCaseId, reads);
 
+  // ── (k) kept apart / the final-approval wait (Story 6.24a, RF10) — NON-PII; ⛔ no decrypt; under a SAVEPOINT, BEFORE
+  //    the warnings (which stay LAST). ──────────────────────────────────────────────────────────────────────────────
+  const suspicionRefusal = await assembleSuspicionRefusal(ctx, claimCaseId, ids.memberId(deceasedMemberId), reads);
+
   // ── (i) the approval warnings (Story 6.23a, NW8; 6.26b's death-fact kinds) — NON-PII; ⛔ no decrypt. ⚠ LAST (⛔ no
   //    SAVEPOINT). The internal read also hands back the keys and the per-inspection comparisons (⛔ never on the wire). ─
   const warningsRead = await readApprovalWarningsSection(ctx, claimCaseId, core.claim.currentState as string, reads);
@@ -351,6 +365,7 @@ export async function assembleVerifierConsole(
     shepherd,
     nomineeNameCheck,
     groundInspectionGate,
+    suspicionRefusal,
     approvalWarnings,
   };
   return { packet, readCount: reads.count };
@@ -814,6 +829,43 @@ export async function assembleGroundInspectionGate(
       'verifier-console: ground-inspection gate unavailable; failing closed to cannot-approve',
     );
     return { available: false, complete: false, waitReason: null };
+  }
+}
+
+/**
+ * (k) KEPT APART and THE FINAL-APPROVAL WAIT — Story 6.24a (RF10). ONE counted read (`readStandingSuspicionRefusals`) and
+ * the gate's OWN pure helper (`suspicionAppealWaitState`) — so the console and the final approvers' 409 can ⛔ never
+ * disagree. The other claim by its SHORT REFERENCE only (⛔ no name, ⛔ no note). Under a raw SAVEPOINT: a SQL failure
+ * rolls back ONLY this read and says "could not be checked just now" (`available: false`) — ⛔ never silence (6.18's
+ * fail-closed rule). ⭐ EXPORTED for its exact tests; the route reaches it through `assembleVerifierConsole`.
+ */
+export async function assembleSuspicionRefusal(
+  ctx: VerifierConsoleContext,
+  claimCaseId: ids.ClaimId,
+  deceasedMemberId: ids.MemberId,
+  reads: { bump(): void },
+): Promise<SuspicionRefusalSection> {
+  try {
+    reads.bump();
+    const rows = await underSavepoint(ctx.client, 'console_suspicion_refusal', () =>
+      claim.readStandingSuspicionRefusals(ctx.db, ids.pariwarId(ctx.pariwarId), deceasedMemberId),
+    );
+    const wait = claim.suspicionAppealWaitState(rows, claimCaseId);
+    return {
+      available: true,
+      keptApartFrom: claim.otherStandingSuspicionRefusals(rows, claimCaseId).map((r) => ({
+        reference: claim.claimShortReference(r.claimCaseId),
+        appeal: r.appeal,
+        appealUntil: r.appealUntil,
+      })),
+      finalApprovalWaits: wait.waits ? wait.reason : null,
+    };
+  } catch (err) {
+    ctx.log?.warn(
+      { err: err instanceof Error ? err.name : 'unknown', claimCaseId: ctx.claimCaseId },
+      'verifier-console: suspicion-refusal section unavailable; saying "could not be checked"',
+    );
+    return { available: false, keptApartFrom: [], finalApprovalWaits: null };
   }
 }
 

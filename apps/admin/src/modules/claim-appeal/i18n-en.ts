@@ -62,6 +62,11 @@ export const appealEn = {
   rationaleLabel: 'Rationale (required, ≤500 chars — confidential, never published)',
   externalRemedy:
     'Note: exhausting this internal appeal does NOT waive the claimant’s right to external legal or consumer-forum recourse (district/state consumer commission, civil court).',
+  // ⭐ Story 6.24a (`2026-10-07-291` Q1 A) — the 90-day limit on appealing a refusal on suspicion of a post-death nominee change.
+  suspicionLimit: {
+    until: 'Can be appealed until {date}.',
+    ended: 'The time to appeal ended on {date}.',
+  },
   outcome: {
     reversed: 'This claim’s denial was REVERSED on appeal and has been republished to Sahyog Vivran.',
     upheldFinal: 'This claim’s denial was UPHELD at Stage 3 — the internal appeal ladder is exhausted.',

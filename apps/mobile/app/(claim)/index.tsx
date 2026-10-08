@@ -58,6 +58,11 @@ export default function ClaimEntryScreen(): React.ReactElement {
         router.replace('/(claim)/refile-helpline')
         return
       }
+      // ⭐ Story 6.24a (RF12 v1.3) — a CLOSED claim: the calm "please call the helpline" screen, ⛔ never the wizard.
+      if (decision.kind === 'closed_helpline') {
+        router.replace('/(claim)/closed-helpline')
+        return
+      }
       setGateChecked(true)
     })
     return () => {

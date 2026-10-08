@@ -17,6 +17,7 @@ import {
   trusteeDeathCertificateAcceptanceRequiredMessage,
   trusteeDeterminationRequiredMessage,
   trusteeGroundInspectionRequiredMessage,
+  suspicionAppealPendingMessage,
 } from '../claim-verification/nominee-errors.js';
 import {
   LaterApprovalWarnings,
@@ -41,6 +42,10 @@ function errorMessage(error: unknown): string | undefined {
   // trustee — the inspector acts, the claim waits, ⛔ never a refusal.
   if (error instanceof ApiError && error.code.endsWith('.ground_inspection_required')) {
     return trusteeGroundInspectionRequiredMessage(error);
+  }
+  // ⭐ Story 6.24a (RF5) — the FINAL approval waits for another claim's suspicion appeal (⛔ never a refusal).
+  if (error instanceof ApiError && error.code.endsWith('.suspicion_appeal_pending')) {
+    return suspicionAppealPendingMessage(error);
   }
   // Story 6.19a (D14) — the claim waits for the family's contact details; the helpline can add them.
   if (error instanceof ApiError && error.code.endsWith('.claim_contact_required')) {

@@ -348,7 +348,7 @@ describe.skipIf(!hasDatabase)('Story 6.26a — the ground-inspection approval ga
       // ⛔ certificate, ⛔ inspection ⇒ the certificate answers.
       const noCert = await claimAt('verifier_approved', { inspection: 'skip' });
       await noCert.client.query('UPDATE claim_documents SET storage_object_key = $2 WHERE claim_case_id = $1', [noCert.cid, `gone/${randomUUID()}`]);
-      await expect(assertClaimApprovable(noCert.tx, noCert.pid, noCert.cid, toMemberId(noCert.mid), { approvingActorIds: [PA] })).rejects.toMatchObject({
+      await expect(assertClaimApprovable(noCert.tx, noCert.pid, noCert.cid, toMemberId(noCert.mid), { approvingActorIds: [PA], step: 'final' })).rejects.toMatchObject({
         name: 'DeathCertificateAcceptanceRequiredError',
       });
       // A failing name check, ⛔ inspection ⇒ the name check answers.
@@ -358,12 +358,12 @@ describe.skipIf(!hasDatabase)('Story 6.26a — the ground-inspection approval ga
       const mid = randomUUID();
       await driveClaimTo(client, PARIWAR_A, cid, mid, 'verifier_approved');
       await seedNomineeNameCheck(client, PARIWAR_A, cid, { verdicts: ['matches', 'does_not_match'], inspection: 'skip' });
-      await expect(assertClaimApprovable(tx, PARIWAR_A, cid, toMemberId(mid), { approvingActorIds: [PA] })).rejects.toMatchObject({
+      await expect(assertClaimApprovable(tx, PARIWAR_A, cid, toMemberId(mid), { approvingActorIds: [PA], step: 'final' })).rejects.toMatchObject({
         name: 'NomineeNameCheckRequiredError',
       });
       // Everything else in place, ⛔ inspection ⇒ the inspection answers.
       const noVisit = await claimAt('verifier_approved', { inspection: 'skip' });
-      await expect(assertClaimApprovable(noVisit.tx, noVisit.pid, noVisit.cid, toMemberId(noVisit.mid), { approvingActorIds: [PA] })).rejects.toSatisfy(
+      await expect(assertClaimApprovable(noVisit.tx, noVisit.pid, noVisit.cid, toMemberId(noVisit.mid), { approvingActorIds: [PA], step: 'final' })).rejects.toSatisfy(
         waits('no_completed_inspection'),
       );
     });
@@ -403,13 +403,17 @@ describe.skipIf(!hasDatabase)('Story 6.26a — the ground-inspection approval ga
       await enterAppScope(client, pid);
       const mid = randomUUID();
       // The SOURCE: an earlier claim for the same death, refused on `-239`, with a completed FULL inspection.
+      // ⚠ AMENDED by Story 6.24a (F-class re-derivation, ⛔ not weakened): a standing `-239` refusal still inside its 90 days
+      // now HOLDS the refile's final approval (`-292` RF5) — so the refusal is dated 100 days back: its appeal time has
+      // PASSED (⛔ no wait), it still STANDS and is still the inheritance source, and this leg keeps its purpose (the
+      // inheritance vanishing makes the finalize wait for an inspection).
       const source = toClaimId(randomUUID());
       await driveClaimTo(client, pid, source, mid, 'verification_in_progress');
       await seedDeathCertificate(client, { pariwarId: pid, claimCaseId: source });
       await seedGroundInspection(client, pid, source);
       await client.query(
-        `INSERT INTO claim_verifier_decisions (claim_case_id, pariwar_id, outcome, reason_code, rationale_ciphertext, actor_id, actor_display)
-         VALUES ($1, $2, 'denied', 'post_death_nominee_change', 'enc:v1:r', $3, 'Anita (District Admin)')`,
+        `INSERT INTO claim_verifier_decisions (claim_case_id, pariwar_id, outcome, reason_code, rationale_ciphertext, actor_id, actor_display, decided_at)
+         VALUES ($1, $2, 'denied', 'post_death_nominee_change', 'enc:v1:r', $3, 'Anita (District Admin)', now() - interval '100 days')`,
         [source, pid, DA],
       );
       // The REFILE: ⛔ visit of its own; VISITED by inheritance; its OWN certificate check makes it complete (FQ13).

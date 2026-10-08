@@ -153,5 +153,12 @@
   "refile.title": "यह दावा बंद कर दिया गया है",
   "refile.body": "यह दावा बंद कर दिया गया, क्योंकि बैंक विवरण में सुधार हमें नहीं मिला। हेल्पलाइन की सहायता से नया दावा दर्ज किया जा सकता है। कृपया हमें कॉल करें, हम आपका मार्गदर्शन करेंगे।",
   "refile.call": "हेल्पलाइन पर कॉल करें",
-  "refile.back": "वापस जाएँ"
+  "refile.back": "वापस जाएँ",
+  "$comment.closed": "Story 6.24a: the Hindi of closed.* and appeal_helpline.* was agent-authored and is NOT YET HUMAN-REVIEWED.",
+  "closed.title": "यह दावा बंद कर दिया गया है",
+  "closed.body": "यह दावा बंद कर दिया गया है। कृपया हेल्पलाइन पर कॉल करें।",
+  "closed.call": "हेल्पलाइन पर कॉल करें",
+  "closed.back": "वापस जाएँ",
+  "appeal_helpline.until": "{date} तक अपील की जा सकती है।",
+  "appeal_helpline.ended": "अपील करने का समय {date} को समाप्त हो गया।"
 }

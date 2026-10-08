@@ -164,5 +164,9 @@ function certificateNoticeFlags(notice: CertificateNoticeView): Omit<Certificate
         showUpload: notice.uploadAllowed,
         showHelpline: notice.uploadAllowed,
       }
+    // ⭐ Story 6.24a (`2026-10-07-292` RF12) — the claim is CLOSED (another claim for the death won its appeal): only that,
+    // and the helpline (⛔ no reason, ⛔ no other claim, ⛔ no upload).
+    case 'closed':
+      return { titleKey: 'closed.title', bodyKey: 'closed.body', reassuranceKey: null, showUpload: false, showHelpline: true }
   }
 }

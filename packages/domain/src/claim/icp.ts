@@ -56,6 +56,7 @@ import { projectClaimState } from './project.js';
 import { intakeAdvisoryLockKey } from './icp-lock.js';
 import { CLAIM_TERMINAL_STATES } from './read.js';
 import { assertRefileAllowed, consumeRefileConfirmation } from './refile-guard.js';
+import { standingSuspicionRefusalSql } from './suspicion-refusal.js';
 
 /**
  * The dedup-window HALF-WIDTH in days (AC1). A policy knob (architecture-vs-PRD boundary):
@@ -98,6 +99,12 @@ async function acquireIntakeLock(
  * the override-apart guard (AC4: a claim explicitly overridden apart for this death is NOT a
  * candidate — future intakes never re-attempt convergence with it). Tenant-scoped by RLS +
  * the explicit `pariwar_id` predicate.
+ *
+ * ⭐ Story 6.24a RF2 (`-261` D4 B): a claim on which a SUSPICION REFUSAL STANDS (`standingSuspicionRefusalSql` — RF1) is
+ * ⛔ never a candidate, so a new filing for that death is ALWAYS kept apart — it MINTS, on the same channel as the refused
+ * claim or another. Built HERE, at the candidate, so (3b) can ⛔ no longer return the refused claim's id (the same-channel
+ * swallow) and (3c) ⛔ no longer parks a pending attempt on it; `getPendingIntakeAttempts` mirrors it and `confirmMerge`
+ * inherits it. Any other refusal converges as before; a refusal REVERSED on appeal no longer stands ⇒ a candidate again.
  */
 export async function getConvergenceCandidate(
   db: Db,
@@ -113,7 +120,7 @@ export async function getConvergenceCandidate(
         eq(claims.pariwarId, pariwarId),
         eq(claims.deceasedMemberId, deceasedMemberId),
         gte(claims.createdAt, windowStartAt),
-        // non-terminal (a settled/denied claim must not capture a fresh intake)
+        // non-terminal (a settled/denied/closed claim must not capture a fresh intake)
         notInArray(claims.currentState, [...CLAIM_TERMINAL_STATES]),
         // AC4 override-apart guard: skip any claim explicitly kept separate for this death.
         sql`NOT EXISTS (
@@ -122,6 +129,8 @@ export async function getConvergenceCandidate(
             AND o.deceased_member_id = ${deceasedMemberId}
             AND o.pariwar_id = ${pariwarId}
         )`,
+        // ⭐ Story 6.24a RF2 (`-261` D4 B) — ⛔ never a claim on which a suspicion refusal stands.
+        sql`NOT ${standingSuspicionRefusalSql('claims')}`,
       ),
     )
     .orderBy(desc(claims.createdAt))
@@ -147,7 +156,7 @@ export interface PendingIntakeAttemptView {
  * Feeds the <ConvergenceDecisionStrip>. Tenant-scoped by RLS + the explicit predicate.
  *
  * Candidate filters mirror `getConvergenceCandidate` EXACTLY (non-terminal, ±30-day window,
- * AC4 override-apart guard) — Edge Case Hunter: these had drifted apart, letting the strip
+ * AC4 override-apart guard, and Story 6.24a RF2's suspicion-refusal conjunct) — Edge Case Hunter: these had drifted apart, letting the strip
  * show (and `confirmMerge` merge into) out-of-window or explicitly-overridden-apart claims.
  * The window is anchored to EACH attempt's own `created_at`, not to "now" at query time, so
  * re-querying the strip later never silently shrinks a pending attempt's candidate set
@@ -182,6 +191,10 @@ export async function getPendingIntakeAttempts(
             AND o.deceased_member_id = ${intakeAttempts.deceasedMemberId}
             AND o.pariwar_id = ${intakeAttempts.pariwarId}
         )`,
+        // ⭐ Story 6.24a RF2 — the SAME conjunct as the candidate (the "EXACTLY" mirror). ⚠ An attempt parked `pending`
+        // against a claim BEFORE its refusal is left with ⛔ no candidate: the strip stops listing it as against that
+        // claim; the attempt row stays as history (recorded, ⛔ not migrated).
+        sql`NOT ${standingSuspicionRefusalSql('claims')}`,
       ),
     )
     .where(and(eq(intakeAttempts.pariwarId, pariwarId), eq(intakeAttempts.attemptStatus, 'pending')))
@@ -288,8 +301,9 @@ export async function tryConverge(
     // ⭐ Story 6.19c (AC15, D19, T9) — the RE-FILE GUARD, under this intake lock: a death whose most recent terminal
     // claim was CLOSED for no response is minted again only with a person's recorded confirmation (`-254`), which
     // this mint CONSUMES below in the same transaction; else 409 `claim.refile_requires_confirmation`. ⛔ Keyed on the
-    // closure row, ⛔ `denied_no_appeal` (a stage-3 uphold re-files freely). ⚠ Row `6-24` edits this same branch —
-    // see `refile-guard.ts`.
+    // closure row, ⛔ not `denied_no_appeal` (a stage-3 uphold re-files freely). ⭐ Story 6.24a (RF2) reaches this branch
+    // too — a refile while a suspicion refusal stands has ⛔ no candidate and so mints HERE, through this same guard
+    // (it keys on a closures row, ⛔ not a suspicion refusal — see `refile-guard.ts`).
     const refileConfirmationId = await assertRefileAllowed(db, input.pariwarId, input.deceasedMemberId);
     const claimCaseId = toClaimId(randomUUID());
     const deceasedMemberIdStr = String(input.deceasedMemberId);

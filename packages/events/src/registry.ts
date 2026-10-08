@@ -387,6 +387,12 @@ export const EVENT_TYPE_REGISTRY = {
       'Appeal window closed/exhausted — claim stays denied (terminal); annotation event that clears the account-frozen overlay (Story 6.16).',
     schema: claim.ClaimDeniedNoAppealPayloadSchema,
   },
+  'claim.closed': {
+    type: 'claim.closed',
+    description:
+      'Closed because another claim for the same death was refused on suspicion of a post-death nominee change and its appeal was ALLOWED (Story 6.24a, `2026-10-07-292` RF4 — the 36th claim event). A TRANSITION from every closable state (all but settled / approved / state_trustee_approved / closed) to the terminal `closed`; ⛔ not a denial, ⛔ not appealable, ⛔ never a 6.19c closures row. Non-PII (held_by_claim_case_id + deceased_member_id); clears this stream in the account-frozen overlay.',
+    schema: claim.ClaimClosedPayloadSchema,
+  },
   // ── Story 7.1 — pool.* lifecycle vocabulary (the pool-object state machine) ──
   // Payload schemas live in @twt/domain (packages/domain/src/pool/events.ts). Names are
   // single-dot snake_case — the merged-registry convention (contrast the epic AC's

@@ -18,6 +18,9 @@ export function fetchClaimEntryReadOutcome(claimCaseId: string): Promise<ClaimEn
 async function readClaimEntryOutcome(claimCaseId: string): Promise<ClaimEntryReadOutcome> {
   try {
     const data = await claimApi.getDeathCertificateStatus(claimCaseId)
+    // ⭐ Story 6.24a (RF12 v1.3) — a CLOSED filed claim routes to its own helpline screen (⛔ not the wizard), FIRST: it is a
+    // fact of THIS claim, while the re-file bit is about the death.
+    if (data.claim_closed) return { kind: 'closed' }
     // Story 6.19c — the routing bit wins: it is true only while the death has ⛔ no live claim.
     if (data.refile_requires_confirmation) return { kind: 'refile_needs_confirmation' }
     return data.claim_live ? { kind: 'live' } : { kind: 'terminal' }

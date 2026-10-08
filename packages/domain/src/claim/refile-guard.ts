@@ -7,9 +7,12 @@
 // filing time) carries a `closed` closures row and ⛔ no UNCONSUMED confirmation exists for it.
 // ⭐ BOTH mint paths call it (T9): `tryConverge`'s "no candidate" branch and `overrideIntakeAttempt` — each under the
 // intake advisory lock it already holds, and the mint CONSUMES the confirmation in the same transaction.
-// ⚠ Row `6-24` (`backlog`, `-261` D4 B, `-262` FQ5) edits the same convergence code: a suspicion refusal's new claim is
-// kept apart and waits at final approval for the appeal — and FQ5's *"appeal allowed → the new claim is closed"* must
-// ⛔ NEVER write a closures row (this guard keys on it). Leave this guard's key alone when 6-24 lands.
+// ⭐ Story 6.24a (`-261` D4 B, `-262` FQ5, `2026-10-07-292` RF2 / RF4) — what it did here: a suspicion refusal's new claim
+// is kept apart at the convergence CANDIDATE (so it mints through this guard, which it passes — the guard keys on a
+// closures row, ⛔ not a suspicion refusal) and waits at final approval; FQ5's *"appeal allowed → the new claim is closed"*
+// is the `closed` STATE (`claim.closed`) and ⛔ never a closures row — this guard's key is unchanged. ⚠ The EFFECT, stated:
+// `closed` is in `CLAIM_TERMINAL_STATES`, so `mostRecentTerminalClaim` / `hasLiveClaim` see it; a closed claim has ⛔ no
+// closures row ⇒ when it is the death's most recent terminal claim, the death re-files freely.
 // Transport-free: ⛔ no HTTP, ⛔ no audit, ⛔ no decryption.
 
 import { and, desc, eq, inArray, isNull, notInArray, sql } from 'drizzle-orm';

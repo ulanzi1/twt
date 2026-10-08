@@ -34,7 +34,7 @@ import { z } from 'zod';
 
 import { defineStateMachine, type StateMachine } from '../state-machine.js';
 import { eventsLog } from '../schema/events_log.js';
-import { type ClaimLifecycleState } from '../schema/claims.js';
+import { CLAIM_LIFECYCLE_STATES, type ClaimLifecycleState } from '../schema/claims.js';
 import { appealReviewDecisionSchema } from './events.js';
 
 export { CLAIM_LIFECYCLE_STATES, type ClaimLifecycleState } from '../schema/claims.js';
@@ -336,10 +336,31 @@ function reduce(state: ClaimLifecycleState, event: ClaimEventInput): ClaimLifecy
     case 'claim.denied_no_appeal':
       return state;
 
+    // ⭐ Story 6.24a (`2026-10-07-292` RF4) — another claim of the death won its suspicion appeal ⇒ CLOSED, from every
+    // CLOSABLE state (incl. `denied`, `appeal_stage_1..3` and `reversed`); a claim already finally approved (or paid,
+    // or closed) is ⛔ never moved — identity. ⛔ Nothing leaves `closed`.
+    case 'claim.closed':
+      if (isClaimClosable(state)) return 'closed';
+      return state;
+
     // Any unknown/forward-compat event type → identity.
     default:
       return state;
   }
+}
+
+/**
+ * ⭐ Story 6.24a (`2026-10-07-292` RF4, v1.1) — the states `claim.closed` does ⛔ NOT move: a claim already FINALLY
+ * approved (`state_trustee_approved`, `approved`), paid (`settled`), or closed. Every other state is CLOSABLE — `denied`,
+ * the three appeal stages and `reversed` included (FQ5: *"the new claim is closed"* whatever its state short of final
+ * approval — else a held claim refused for another reason could later be appealed, reversed and approved beside the
+ * reversed claim: two payments for one death).
+ */
+export const CLAIM_NOT_CLOSABLE_STATES = ['settled', 'approved', 'state_trustee_approved', 'closed'] as const satisfies readonly ClaimLifecycleState[];
+
+/** True iff `claim.closed` moves a claim in `state` (RF4). */
+export function isClaimClosable(state: ClaimLifecycleState | string): boolean {
+  return !(CLAIM_NOT_CLOSABLE_STATES as readonly string[]).includes(state);
 }
 
 /**
@@ -393,6 +414,12 @@ export const claimStateMachine: StateMachine<ClaimLifecycleState, ClaimEventInpu
       { from: 'appeal_stage_2', event: 'claim.appeal_stage2_reviewed', to: 'denied' },
       { from: 'appeal_stage_3', event: 'claim.appeal_stage3_reviewed', to: 'reversed' },
       { from: 'appeal_stage_3', event: 'claim.appeal_stage3_reviewed', to: 'denied' },
+      // Story 6.24a (RF4) — `claim.closed` from every CLOSABLE state (`isClaimClosable`).
+      ...CLAIM_LIFECYCLE_STATES.filter(isClaimClosable).map((from) => ({
+        from,
+        event: 'claim.closed',
+        to: 'closed' as const,
+      })),
     ],
   });
 

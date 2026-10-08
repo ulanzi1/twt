@@ -16,8 +16,11 @@
 // The legs: (a) inspected THEN approved ⇒ ⛔ candidate; (b) approved THEN a differing date / a `does_not_match` ⇒ listed
 // and the final vote waits; (c) leg (b) on an R9-routed claim in `state_trustee_approved` ⇒ listed, and ⛔ listed once
 // its routing row is superseded (RD26); (d) THE RACE `-288` K3 exists for — a completion whose transaction BEGAN before
-// the approval committed; (e) `-290` M2 — a refile relying on an inherited visit, whose SOURCE (reversed on appeal by
-// the REAL writers) gains a differing visit after the refile's approval.
+// the approval committed; (e) `-290` M2 — a refile relying on an inherited visit, whose SOURCE gains a differing visit
+// after the refile's approval. ⚠ AMENDED by Story 6.24a (F8 — re-derived for its PURPOSE, ⛔ never weakened): the source
+// was REVERSED on appeal; under `2026-10-07-292` RF6 a reversal now CLOSES the refile and under RF8 a reversed refusal is
+// ⛔ no source — so the source's refusal now STANDS with its appeal UPHELD at stage 3 (the REAL writers). (f) NEW — the
+// reversal itself ⇒ the refile is `closed` and leaves the queue.
 //
 // Cleanup: every row of this suite's Pariwars, table by table, in replica mode (append-only triggers and RI cascades
 // off) — fixture cleanup ONLY.
@@ -33,6 +36,10 @@ import {
   LateWarningReasonRequiredError,
   addGroundInspectionPhoto,
   adjudicateClaim,
+  castAppealVote,
+  decideAppealStage3,
+  finalizeAppealOutcome,
+  openAppealPanel,
   completeGroundInspection,
   initiateAppeal,
   listClaimsUnderCorrection,
@@ -50,6 +57,7 @@ import {
   currentUploadIdOf,
   driveClaimTo,
   fixtureDeathDateIndex,
+  fixtureInspectionDeathDateCiphertext,
   seedAcceptedDeathCertificate,
   seedClauseVersion,
   seedGroundInspection,
@@ -333,13 +341,13 @@ describe.skipIf(!hasDatabase)('Story 6.26b — the queue lists a claim inspected
     expect(rows[0]).toMatchObject({ lateWarningAwaitingReason: true, lateWarningUncoveredCount: 1 });
   });
 
-  it('(e) ⭐ `-290` M2 — a refile relying on an INHERITED visit is listed when its SOURCE, reversed on appeal, gains a differing visit after the refile\'s approval', { timeout: TIMEOUT }, async () => {
-    const pid = freshPariwar();
+  /** tx1 of legs (e)/(f) — S: a post-death nominee change, determined (a discarded version), an accepted certificate, a
+   *  full visit, then the REAL `-239` refusal and the REAL appeal; and R (the same deceased): ⛔ no visit of its own (its
+   *  certificate check completes it — FQ13), approved by the District Admin WITH a reason (P1 — ⛔ never held, RF5). */
+  async function refusedSourceAndApprovedRefile(pid: PariwarId): Promise<{ source: ClaimId; refile: ClaimId }> {
     const mid = randomUUID();
     const source = toClaimId(randomUUID());
     const sourceDate = istDaysAgo(45);
-    // tx1 — S: a post-death nominee change, determined (a discarded version), an accepted certificate, a full visit,
-    // then the REAL `-239` refusal and the REAL appeal.
     await onOwnTx(pid, async (c) => {
       const tx = bindScopedDb(c);
       await driveClaimTo(c, pid, source, mid, 'verifier_review');
@@ -358,8 +366,6 @@ describe.skipIf(!hasDatabase)('Story 6.26b — the queue lists a claim inspected
       });
       await initiateAppeal(c, { claimCaseId: source, pariwarId: pid, initiatedByActor: randomUUID(), initiatedOnBehalf: false, actor: 'member' });
     });
-    // tx2 — R (the same deceased): ⛔ visit of its own (its certificate check completes it — FQ13); the District Admin
-    // approves WITH a reason (the inherited family date already differs from R's certificate, and a recent change shows).
     const refile = toClaimId(randomUUID());
     await onOwnTx(pid, async (c) => {
       await driveClaimTo(c, pid, refile, mid, 'verifier_review');
@@ -367,20 +373,74 @@ describe.skipIf(!hasDatabase)('Story 6.26b — the queue lists a claim inspected
       await seedGroundInspection(c, pid, refile, { stage: 'certificate_check' });
     });
     await approve(pid, refile, GENERIC);
+    return { source, refile };
+  }
+
+  it('(e) ⭐ `-290` M2 — a refile relying on an INHERITED visit is listed when its SOURCE — whose refusal STANDS, its appeal UPHELD at stage 3 — gains a differing visit after the refile\'s approval (re-derived by Story 6.24a, F8)', { timeout: TIMEOUT }, async () => {
+    const pid = freshPariwar();
+    const { source, refile } = await refusedSourceAndApprovedRefile(pid);
     expect(await list(pid)).toEqual([]); // nothing uncovered yet ⇒ ⛔ listed on the normal path
-    // tx3 — S reversed on appeal by a reviewer who is ⛔ none of its deciders (its `-239` denial stays live ⇒ S stays the source).
-    await onOwnTx(pid, (c) =>
-      reviewAppealStage1(c, {
-        claimCaseId: source, pariwarId: pid, decision: 'reversed', dispositionCategory: 'reconsideration_on_merits',
-        reviewerActorId: REVIEWER, reviewerDisplay: 'Another District Admin', rationaleCiphertext: prepareAppealCiphertext('enc:v1:reverse'), actor: 'operator',
-      }),
-    );
+    // tx3 — S's appeal runs the whole ladder and is UPHELD at stage 3 (the REAL writers): its `-239` refusal STANDS
+    // (`upheld_final` — decided, so R's final approval is ⛔ not held by it, `-292` RF5) and S stays the source (RF8).
+    const panel = [randomUUID(), randomUUID()];
+    await onOwnTx(pid, async (c) => {
+      for (const uid of panel) {
+        await seedRoleGrant(bindScopedDb(c), pid, { userId: uid, role: 'pariwar_admin', scopeDimension: 'pariwar', scopeValue: pid });
+      }
+    }, true);
+    await onOwnTx(pid, async (c) => {
+      const cipher = prepareAppealCiphertext('enc:v1:appeal');
+      await reviewAppealStage1(c, {
+        claimCaseId: source, pariwarId: pid, decision: 'advance', dispositionCategory: null,
+        reviewerActorId: REVIEWER, reviewerDisplay: 'Another District Admin', rationaleCiphertext: cipher, actor: 'operator',
+      });
+      await openAppealPanel(c, { claimCaseId: source, pariwarId: pid, panelActorIds: panel, actorId: panel[0]!, actorDisplay: 'P1', actor: 'trustee' });
+      for (const uid of panel) {
+        await castAppealVote(c, { claimCaseId: source, pariwarId: pid, vote: 'deny', rationaleCiphertext: cipher, actorId: uid, actorDisplay: 'P', actor: 'trustee' });
+      }
+      await finalizeAppealOutcome(c, { claimCaseId: source, pariwarId: pid, rationaleCiphertext: cipher, dispositionCategory: null, actorId: panel[0]!, actorDisplay: 'P1', actor: 'trustee' });
+      await decideAppealStage3(c, {
+        claimCaseId: source, pariwarId: pid, decision: 'upheld', dispositionCategory: null,
+        reviewerActorId: randomUUID(), reviewerDisplay: 'Trustee', rationaleCiphertext: cipher, actor: 'trustee',
+      });
+    });
     // tx4 — S gains a NEW full visit whose family date differs from R's accepted certificate.
-    await completeLate(pid, source, { deathDate: istDaysAgo(10) });
+    // ⚠ Story 6.24a FOUND (recorded in its Debug Log + `deferred-work.md`): through the WRITERS this is now unreachable — a
+    // STANDING source is `denied` / under appeal, OUTSIDE the inspection window (`isClaimInGroundInspectionWindow`), and a
+    // REVERSED one is ⛔ no longer a source (RF8). So `-290` M2's arm is pinned here as a READ: the late visit is a raw,
+    // COMMITTED completed row (the inheritance spec's own raw-insert precedent — the queue's late arm is what is under
+    // test), written AFTER R's approval committed. The assertions below are UNCHANGED.
+    await onOwnTx(pid, async (c) => {
+      const date = istDaysAgo(10);
+      const upload = await currentUploadIdOf(c, pid, source);
+      await c.query(
+        `INSERT INTO claim_ground_inspections (claim_case_id, pariwar_id, district, inspection_stage, inspection_site_type, inspector_actor_id,
+                                              scheduled_at, status, completed_at, original_certificate_verdict, compared_certificate_upload_id,
+                                              death_date_ciphertext, death_date_source, death_date_index)
+         VALUES ($1, $2, 'Patna', 'initial', 'family_residence', $3, now(), 'completed', clock_timestamp(), 'matches', $4, $5, 'family_statement', $6)`,
+        [source, pid, INSPECTOR, upload, fixtureInspectionDeathDateCiphertext(date), fixtureDeathDateIndex(date)],
+      );
+    }, true);
 
     const rows = await list(pid);
     expect(rows.map((r) => r.claimCaseId)).toEqual([refile]);
     expect(rows[0]).toMatchObject({ lateWarningAwaitingReason: true, lateWarningUncoveredCount: 1 });
     await finalVoteWaits(pid, refile);
+  });
+
+  it('(f) ⭐ Story 6.24a (F8, `2026-10-07-292` RF6) — S\'s appeal ALLOWED ⇒ the approved refile is `closed` in the reversal\'s transaction and leaves the queue', { timeout: TIMEOUT }, async () => {
+    const pid = freshPariwar();
+    const { source, refile } = await refusedSourceAndApprovedRefile(pid);
+    const reversal = await onOwnTx(pid, (c) =>
+      reviewAppealStage1(c, {
+        claimCaseId: source, pariwarId: pid, decision: 'reversed', dispositionCategory: 'reconsideration_on_merits',
+        reviewerActorId: REVIEWER, reviewerDisplay: 'Another District Admin', rationaleCiphertext: prepareAppealCiphertext('enc:v1:reverse'), actor: 'operator',
+      }),
+    );
+    expect(reversal.heldClaims).toEqual({ applied: true, closed: [refile], notClosed: [] });
+    const state = await onOwnTx(pid, async (c) => (await c.query<{ s: string }>('SELECT current_state AS s FROM claims WHERE claim_case_id = $1', [refile])).rows[0]?.s);
+    expect(state).toBe('closed');
+    await completeLate(pid, source, { deathDate: istDaysAgo(10) }).catch(() => undefined); // a reversed source passes ⛔ nothing on (RF8)
+    expect((await list(pid)).map((r) => r.claimCaseId)).not.toContain(refile);
   });
 });

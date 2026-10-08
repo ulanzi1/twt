@@ -66,6 +66,7 @@ describe('claim.reversed — reducer identity', () => {
 describe('claim.reversed — NOT an unfreeze event (D-A)', () => {
   it('is deliberately absent from ACCOUNT_UNFREEZE_EVENT_TYPES (the freeze persists on a reversal)', () => {
     expect((ACCOUNT_UNFREEZE_EVENT_TYPES as readonly string[])).not.toContain('claim.reversed')
-    expect(ACCOUNT_UNFREEZE_EVENT_TYPES).toEqual(['claim.settled', 'claim.denied_no_appeal'])
+    // Story 6.24a (`2026-10-07-292` RF4) appended `claim.closed` — a CLOSED claim's stream resolves (⛔ not a reversal's).
+    expect(ACCOUNT_UNFREEZE_EVENT_TYPES).toEqual(['claim.settled', 'claim.denied_no_appeal', 'claim.closed'])
   })
 })

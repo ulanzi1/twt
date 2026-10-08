@@ -430,6 +430,33 @@ export const GroundInspectionGateStatus = z
   .strict();
 export type GroundInspectionGateStatus = z.output<typeof GroundInspectionGateStatus>;
 
+/**
+ * (k) KEPT APART / THE FINAL-APPROVAL WAIT — Story 6.24a (`2026-10-07-292` RF10; `-261` D4 B, `-262` FQ5 A). NON-PII: the
+ * OTHER claims of this death whose refusal on suspicion of a post-death nominee change STANDS — each by its SHORT
+ * REFERENCE only (⛔ no name, ⛔ no note) — and whether this claim's FINAL approval waits for one of them (the gate's OWN
+ * pure helper, `suspicionAppealWaitState`). The District Admin's own approval is ⛔ never held.
+ */
+export const SuspicionRefusalSection = z
+  .object({
+    /** `false` ⇒ the section could ⛔ not be read — the console says "could not be checked just now" (⛔ never silence). */
+    available: z.boolean(),
+    /** The other claims of the death with a STANDING suspicion refusal (empty ⇒ nothing is kept apart). */
+    keptApartFrom: z.array(
+      z
+        .object({
+          reference: z.string(),
+          appeal: z.enum(['not_filed', 'time_limit_passed', 'open', 'upheld_final']),
+          /** The last IST date the refusal can be appealed (`YYYY-MM-DD`, D + 90). */
+          appealUntil: z.string(),
+        })
+        .strict(),
+    ),
+    /** Why this claim's FINAL approval waits, or `null` (⛔ not waiting). */
+    finalApprovalWaits: z.enum(['appeal_not_filed', 'appeal_open']).nullable(),
+  })
+  .strict();
+export type SuspicionRefusalSection = z.output<typeof SuspicionRefusalSection>;
+
 export const VerifierConsolePacket = z
   .object({
     claimCaseId: z.string(),
@@ -451,6 +478,8 @@ export const VerifierConsolePacket = z
     nomineeNameCheck: NomineeNameCheckStatus,
     // Story 6.26a (GI9) — NON-PII: does the approval wait for the ground inspection, and why.
     groundInspectionGate: GroundInspectionGateStatus,
+    // Story 6.24a (RF10) — NON-PII: kept apart from a refused claim of this death, and does the FINAL approval wait.
+    suspicionRefusal: SuspicionRefusalSection,
     // Story 6.23a (NW8) — NON-PII: which nominee-change warnings show, and the Pariwar's warning reasons.
     approvalWarnings: ApprovalWarningsStatus,
   })

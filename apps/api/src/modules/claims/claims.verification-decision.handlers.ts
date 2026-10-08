@@ -48,6 +48,7 @@ import { closeScopeTx, openScopeTx } from '../multi-tenant/scope-tx.js';
 import { encryptOptionalVerifierRationale } from './verifier-decision-crypto.js';
 import { encryptLateWarningReasonNote } from './approval-warning-crypto.js';
 import { groundInspectionRequiredMessage } from './ground-inspection-required-message.js';
+import { suspicionAppealPendingMessage } from './suspicion-appeal-pending-message.js';
 
 /** Why a revise was refused, in words (`details.reason` carries the code). Exhaustive — a new reason must say why. */
 const NOT_REVISABLE_MESSAGES: Record<claim.DecisionNotRevisableReason, string> = {
@@ -102,6 +103,12 @@ function translateDecisionError(err: unknown): never {
   // ⭐ Story 6.26a (GI11) — the claim WAITS for its ground inspection (`-263` FQ9 A) — ⛔ never a 500, ⛔ never a denial.
   if (err instanceof claim.GroundInspectionRequiredError) {
     throw new ConflictError(groundInspectionRequiredMessage(err.reason), 'verifier_decision.ground_inspection_required', {
+      reason: err.reason,
+    });
+  }
+  // ⭐ Story 6.24a RF5 (F9) — the FINAL approval WAITS for another claim's suspicion appeal (⛔ not a denial, ⛔ not a 500).
+  if (err instanceof claim.SuspicionAppealPendingError) {
+    throw new ConflictError(suspicionAppealPendingMessage(err.reason), 'verifier_decision.suspicion_appeal_pending', {
       reason: err.reason,
     });
   }
@@ -163,6 +170,16 @@ function translateDecisionError(err: unknown): never {
     throw new ConflictError(
       'This decision was revised by someone else — reload and try again',
       'verifier_decision.revision_conflict',
+    );
+  }
+  // ⭐ Story 6.24a RF13 (`2026-10-07-293` item 2 A) — the reason lock: a refusal recorded as "the nominee was changed after
+  // the death" keeps that reason while another claim for the death is ⛔ not closed. Staff words; the other claim by its
+  // short reference only (⛔ not a name).
+  if (err instanceof claim.SuspicionReasonLockedError) {
+    throw new ConflictError(
+      'This refusal\'s reason cannot be changed while another claim for the same death is still open — its 90-day appeal limit stands',
+      'verifier_decision.suspicion_reason_locked',
+      { held_claim_reference: claim.claimShortReference(err.heldClaimCaseId) },
     );
   }
   if (err instanceof claim.ClaimDecisionConflictError) {

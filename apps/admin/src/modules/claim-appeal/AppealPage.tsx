@@ -84,6 +84,7 @@ export function AppealPage({ pariwarId }: AppealPageProps): ReactElement {
           session={cse.data.session}
           tally={cse.data.tally}
           sla={cse.data.sla}
+          suspicionAppealLimit={cse.data.suspicion_appeal_limit}
           conflict={conflict}
           busy={busy}
           {...(actionError !== undefined ? { error: actionError } : {})}

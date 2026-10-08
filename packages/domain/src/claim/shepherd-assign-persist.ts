@@ -100,6 +100,8 @@ const SHEPHERD_ASSIGNMENT_BLOCKED_STATES = [
   'intake_converged',
   'documents_pending',
   'settled',
+  // Story 6.24a (`2026-10-07-292` RF4) — `closed` is terminal too: nothing left to shepherd.
+  'closed',
 ] as const;
 
 /** Thrown when an assign/reassign is attempted on a claim outside the valid window (pre-verification or

@@ -304,6 +304,8 @@ import {
   type NomineeCorrectionRaiseRequest,
   type NomineeDeterminationRequest,
   DeathCertificateHelplineClaimsResponse,
+  HelplineAppealClaimsResponse,
+  InitiateAppealResponse,
   DeathCertificateHistoryResponse,
   DeathCertificateReviewWriteResponse,
   type DeathCertificateReviewRequest,
@@ -1812,6 +1814,24 @@ export function getDeathCertificateClaimsForMember(pariwarId: string, memberId: 
     `/api/v1/p/${encodeURIComponent(pariwarId)}/admin/members/${encodeURIComponent(memberId)}/death-certificate/claims`,
     DeathCertificateHelplineClaimsResponse,
   );
+}
+
+// ── Story 6.24a RF14 (b) — the helpline appeal screen (`claim.file`) ──────────────────────────────────────────────
+
+/** The selected deceased member's refused claims and whether each can be appealed now (the `-239` date). Audited. */
+export function getHelplineAppealClaims(pariwarId: string, memberId: string) {
+  return apiFetch(
+    `/api/v1/p/${encodeURIComponent(pariwarId)}/admin/members/${encodeURIComponent(memberId)}/appeals`,
+    HelplineAppealClaimsResponse,
+  );
+}
+
+/** File an appeal FOR THE FAMILY (AR-61) through the EXISTING on-behalf route (`claim.file`). */
+export function initiateAppealOnBehalf(pariwarId: string, claimCaseId: string) {
+  return apiFetch(`${claimBase(pariwarId, claimCaseId)}/appeal`, InitiateAppealResponse, {
+    method: 'POST',
+    body: JSON.stringify({}),
+  });
 }
 
 /**

@@ -371,7 +371,11 @@ export function createDeathCertificateHandlers(deps: AppDeps) {
       const { scopeTx, actorId, pariwarId } = scopeOf(request);
       const { memberId } = request.params as { memberId: string };
       const memberIdBrand = ids.memberId(memberId);
-      const liveClaims = await claimDomain.listLiveClaimsForDeceasedMember(scopeTx.tx, pariwarId, memberIdBrand);
+      // ⭐ Story 6.24a (RF12) — the member's `closed` claims are listed too (status `closed`: "This claim has been closed.
+      // Please call the helpline."), so the helpline sees the claim the family was told to call about.
+      const liveClaims = await claimDomain.listLiveClaimsForDeceasedMember(scopeTx.tx, pariwarId, memberIdBrand, {
+        includeClosed: true,
+      });
       const claims = await Promise.all(
         liveClaims.map(async (c) => {
           const result = await claimDomain.readDeathCertificateFamilyStatus(

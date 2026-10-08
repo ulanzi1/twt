@@ -74,6 +74,8 @@ const CONCEALMENT_ASSESSMENT_BLOCKED_STATES = [
   'denied',
   'denied_no_appeal',
   'settled',
+  // Story 6.24a (`2026-10-07-292` RF4) — `closed` is terminal: ⛔ no re-adjudication trigger.
+  'closed',
 ] as const;
 
 /** Thrown when a concealment assessment is recorded/revised on a claim outside the valid window (D2 → 409).

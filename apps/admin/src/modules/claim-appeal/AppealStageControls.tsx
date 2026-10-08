@@ -25,6 +25,8 @@ export interface AppealStageControlsProps {
   session: AppealPanelSessionView | null;
   tally: AppealPanelTally | null;
   sla: AppealSlaStatus | null;
+  /** ⭐ Story 6.24a (RF14) — a `-239` refusal's 90-day date, or null (⛔ no time limit). Optional: older call sites omit it. */
+  suspicionAppealLimit?: AdminAppealCaseResponse['suspicion_appeal_limit'];
   /** D-D: surface the "you already adjudicated this claim" read-only state on Stage 1. */
   conflict?: boolean;
   busy?: boolean;
@@ -212,6 +214,15 @@ export function AppealStageControls(props: AppealStageControlsProps): ReactEleme
         </div>
       ) : null}
 
+      {/* ⭐ Story 6.24a (RF14) — a refusal on suspicion of a post-death nominee change can be appealed for 90 days. */}
+      {props.suspicionAppealLimit && claimState === 'denied' && journey === null ? (
+        <p data-testid="suspicion-appeal-limit" className="text-sm">
+          {(props.suspicionAppealLimit.passed ? t.suspicionLimit.ended : t.suspicionLimit.until).replace(
+            '{date}',
+            props.suspicionAppealLimit.appeal_until,
+          )}
+        </p>
+      ) : null}
       {claimState === 'reversed' ? <p data-testid="outcome-reversed" className="text-sm text-status-ok-fg">{t.outcome.reversed}</p> : null}
       {claimState === 'denied' && journey?.status === 'upheld_final' ? (
         <div data-testid="outcome-denied" className="flex flex-col gap-1">

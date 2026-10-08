@@ -732,9 +732,9 @@ describe.skipIf(!hasDatabase)('Story 6.18 — the nominee name check (:5433)', (
         await seedGroundInspection(client, PARIWAR_A, cid);
         await d.seed(client, tx, cid);
         for (const opts of [{}, { nameCheck: undefined }, { nameCheck: 'required' as const }]) {
-          await expect(assertClaimApprovable(tx, PARIWAR_A, cid, mid, { ...opts, approvingActorIds: [TRUSTEE] })).rejects.toMatchObject({ name: d.error });
+          await expect(assertClaimApprovable(tx, PARIWAR_A, cid, mid, { ...opts, approvingActorIds: [TRUSTEE], step: 'final' })).rejects.toMatchObject({ name: d.error });
         }
-        const waived = assertClaimApprovable(tx, PARIWAR_A, cid, mid, { nameCheck: 'waived_251', approvingActorIds: [TRUSTEE] });
+        const waived = assertClaimApprovable(tx, PARIWAR_A, cid, mid, { nameCheck: 'waived_251', approvingActorIds: [TRUSTEE], step: 'final' });
         if (NAME_CHECK_DEFICIENCIES.has(d.key)) {
           await expect(waived).resolves.toBeUndefined();
           // `-273` §7 — the recorded state the highlight derives from is the gate's OWN refusal reason.
@@ -754,7 +754,7 @@ describe.skipIf(!hasDatabase)('Story 6.18 — the nominee name check (:5433)', (
       await driveTo(client, cid, mid, 'verifier_approved');
       await seedNomineeNameCheck(client, PARIWAR_A, cid, { certificate: 'skip' });
       for (const opts of [{}, { nameCheck: 'waived_251' as const }]) {
-        await expect(assertClaimApprovable(tx, PARIWAR_A, cid, mid, { ...opts, approvingActorIds: [TRUSTEE] })).rejects.toMatchObject({
+        await expect(assertClaimApprovable(tx, PARIWAR_A, cid, mid, { ...opts, approvingActorIds: [TRUSTEE], step: 'final' })).rejects.toMatchObject({
           name: 'DeathCertificateAcceptanceRequiredError',
         });
       }
@@ -762,7 +762,7 @@ describe.skipIf(!hasDatabase)('Story 6.18 — the nominee name check (:5433)', (
       const okMid = toMemberId(randomUUID());
       await driveTo(client, ok, okMid, 'verifier_approved');
       await seedNomineeNameCheck(client, PARIWAR_A, ok);
-      await expect(assertClaimApprovable(tx, PARIWAR_A, ok, okMid, { approvingActorIds: [TRUSTEE] })).resolves.toBeUndefined();
+      await expect(assertClaimApprovable(tx, PARIWAR_A, ok, okMid, { approvingActorIds: [TRUSTEE], step: 'final' })).resolves.toBeUndefined();
       expect(await readNomineeNameCheckApprovalState(tx, PARIWAR_A, ok, okMid)).toBe('passing');
     });
 
@@ -802,20 +802,20 @@ describe.skipIf(!hasDatabase)('Story 6.18 — the nominee name check (:5433)', (
       await determine(addCalendarDays(istDateOf(new Date()), -45));
       const mmid = toMemberId(mid);
       // The waived arm reaches the wait directly (it skips the now-stale name check — RD19).
-      await expect(assertClaimApprovable(tx, pid, cid, mmid, { nameCheck: 'waived_251', approvingActorIds: [TRUSTEE] })).rejects.toMatchObject({
+      await expect(assertClaimApprovable(tx, pid, cid, mmid, { nameCheck: 'waived_251', approvingActorIds: [TRUSTEE], step: 'final' })).rejects.toMatchObject({
         name: 'LateWarningReasonRequiredError',
         // + Story 6.26b (RD19 (i)): the re-review moved the certificate away from the inspection's family date.
         kinds: ['post_death_version', 'inspection_death_date_differs'],
         ownReasonExcluded: false,
       });
       // The full gate answers the STALE name check first (every refusal inside the gate keeps its order) …
-      await expect(assertClaimApprovable(tx, pid, cid, mmid, { approvingActorIds: [TRUSTEE] })).rejects.toMatchObject({
+      await expect(assertClaimApprovable(tx, pid, cid, mmid, { approvingActorIds: [TRUSTEE], step: 'final' })).rejects.toMatchObject({
         name: 'NomineeNameCheckRequiredError',
         reason: 'stale',
       });
       // … and, re-checked, it waits too.
       await seedNomineeNameCheck(client, pid, cid);
-      await expect(assertClaimApprovable(tx, pid, cid, mmid, { approvingActorIds: [TRUSTEE] })).rejects.toMatchObject({
+      await expect(assertClaimApprovable(tx, pid, cid, mmid, { approvingActorIds: [TRUSTEE], step: 'final' })).rejects.toMatchObject({
         name: 'LateWarningReasonRequiredError',
       });
     });

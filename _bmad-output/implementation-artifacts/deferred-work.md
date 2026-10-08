@@ -4,6 +4,32 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: dev-story 6-24-true-nominee-refile-after-a-suspicion-refusal (Story 6.24a, 2026-10-08)
+
+- **F15 — the refile wizard shows the DISCARDED nominee** [`apps/mobile/app/(claim)/contact.tsx:8,131` (`nomineesStatus()` — the latest
+  `member_nominees` projection); the nominee-review step]. A true nominee's refile after a `-239` refusal shows — and its contact record may
+  link the claimant to — the version the District Admin DISCARDED (6.20 D16: the projection is always the latest). ⛔ No ruling covers what
+  the wizard shows ⇒ ⛔ not built by 6.24a; the refile's own determination (6.20 D17, per claim) still decides who is paid. RECORDED.
+  ⭐ Trigger: any story that touches the wizard's nominee steps, or a ruling on it.
+- **`-290` M2's late arm (an inherited key turning late through its SOURCE) is now unreachable through the writers** [`packages/domain/src/claim/correction-queue-read.ts`
+  (the late arm); `packages/domain/tests/integration/claim/correction-queue-late-inspection.spec.ts` leg (e)]. FOUND by 6.24a (F8): a
+  STANDING source is `denied` / under appeal — OUTSIDE the inspection window (`isClaimInGroundInspectionWindow`) — and a REVERSED one is ⛔
+  no longer a source (RF8), so ⛔ no writer can give a source a visit after its refile's approval. Leg (e) keeps `-290` M2's READ pinned with
+  a committed raw completed row (assertions unchanged); the arm stays as defence. ⛔ Not removed. ⭐ Trigger: any story that widens the
+  inspection window to a refused claim, or that removes the arm.
+- **A CLOSED claim's leftovers that are ⛔ not ended by RF6 — accepted residuals (Task 3.0's enumeration)**:
+  (a) an OPEN closure DIRECTION (`claim_correction_directions.responded_at IS NULL`) stays listed by `listOpenDirectionsFor` (⛔ no state or
+  live-return filter) — the directed staff member can still answer it; (b) a PENDING nominee correction (`nominee_corrections.step IN
+  ('da_pending','pa_pending')`) stays listed — its approve is refused out of the window, its decline still works; (c) a SCHEDULED ground
+  inspection (`status = 'scheduled'`) stays as a row — every writer refuses a closed claim (the window) and ⛔ no job acts on it; (d) a
+  certificate-reminder run stays OPEN until its day-180 `completed` end — its planner pauses outside the window (⛔ no text) and the list
+  drops a paused run of a `closed` claim (`NEVER_REENTERS`), a letter owed or undelivered still lists it. ⛔ None sends a family text.
+  ⭐ Trigger: a staff report of a stale queue item for a closed claim, or the next story that adds a sweep over any of these tables.
+- **The `closed` claim's Hindi words and the helpline appeal read-back are NOT YET HUMAN-REVIEWED** [`packages/i18n/locales/hi/claim.json`
+  `closed.*`, `appeal_helpline.*`]. Agent-authored, marked with a `$comment`. ⭐ Trigger: the next Hindi review pass, before go-live.
+
+---
+
 ## Deferred from: code review of 6-26b-death-facts-warnings-and-register-check, ROUND 3 (2026-10-07)
 
 - **The GI6 / GI17 inputs can still be forged by a `twt_app` UPDATE — round 2's backstop closes the REWRITE path of ONE operand only**
@@ -64,6 +90,14 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 ## Deferred from: code review of 6-26-ground-inspection-before-approval-and-death-facts, SECOND PASS — full diff (2026-10-07)
 
 - **An inherited visit that vanishes after the final vote is ⛔ not re-checked at the cycle commit** [`packages/domain/src/claim/state-trustee-decision-persist.ts` `commitCycleFreeze`]. A refile VISITED only by inheritance passes the gate at the final vote and reaches `state_trustee_approved` (not R9-routed); if the `-239` source's denial is then revised to another reason (`reviseDecision` — `denied` is in `VERIFIER_DECISION_REVISABLE_STATES`), `inheritedGroundInspectionSourceSql` drops the source, the window refuses every inspection write in a non-routed `state_trustee_approved`, and `commitCycleFreeze` still emits `claim.approved`. GI16 deliberately left `commitCycleFreeze` untouched and `-283` A1 closed only the R9 twin. ⚠ Reachability ⛔ not proven: the source must still be a pre-freeze `denied` when its refile reaches the final vote. ⭐ Trigger: 6.24's refile-basis handling, or any story that lets a `-239` denial be revised while a refile is open — then either re-run the gate per candidate in the commit loop (skip-and-keep, like `hasLiveReturnRow`) or record that commit is not an approval under `-285`.
+  - *Appended 2026-10-08 (Story 6.24a, `2026-10-07-292` RF7):* ✅ **DISCHARGED** — `commitCycleFreeze` now re-checks, per candidate, under
+    its lock and after `hasLiveReturnRow`, the two approval conditions that can move through ANOTHER claim: the suspicion-appeal wait
+    (`suspicionAppealWaitState`) and the ground inspection (`groundInspectionApprovalState` over `readGroundInspectionApprovalFacts`, the
+    gate's own read) — skip-and-keep (the claim stays `state_trustee_approved`, ⛔ no `claim.approved`; a later commit takes it once the
+    condition clears). ⛔ Never the full gate. Pinned: `packages/domain/tests/integration/claim/suspicion-refusal.spec.ts` AC4 (both
+    legs red-checked). ⚠ The item's own path ("the source's denial is revised to another reason") is now REFUSED by RF13's reason lock
+    while the refile lives; the reachable way an inherited visit vanishes after the vote is the source being CLOSED by a third claim's
+    `-239` reversal (it then ⛔ never stands — RF1) — the AC4 leg drives exactly that.
 - **The fixture's completion clock can be in the FUTURE** [`packages/domain/tests/integration/_helpers.ts:922` `fixtureReviewNow`; `apps/api/tests/integration/_nominee-name-check-fixture.ts:194`]. `max(Date.now(), date 12:00 IST)` + review patch #2 (`completedAt: input.now ?? now()`) write a `completed_at` after the review's `decided_at`. ⭐ Owed to **6.26b Task 4 / Task 9**: its GI7 queue arm reads `completed_at > v.decided_at`, so every fixture-seeded claim would surface as a late warning — seed the completion before the review, or pin the clock.
   - *Appended 2026-10-07 (Story 6.26b, Task 4.0):* ✅ **DISCHARGED** — `completeGroundInspection` stores `completedAt: sql\`clock_timestamp()\``
     and the injected `now` validates only (RD1, BigDev-confirmed; refined by `2026-10-07-288` K3); 6.26a's review patch #2 is reversed (a
@@ -529,6 +563,12 @@ Recorded under `2026-10-03-276` (CR1–CR15). ⛔ Q1–Q4 are ⛔ not here — `
 - After an innocence release, a correction can still be raised/approved on the released claim and races a member declare (the correction path does not hold the D3 lock) [`packages/domain/src/claim/nominee-correction-persist.ts:300-306`] — deferred to Story 6-22 (the release has no production caller)
 - DB-level cross-table coherence is writer-enforced only: item `pariwar_id` vs its determination/version, version `pariwar_id` vs the member, correction target/applied vs member+rank, no FK on `nominee_determinations.deceased_member_id`; four FK columns unindexed; the append-only trigger's `pg_trigger_depth() > 1` exemption admits any trigger, not only the `members` cascade [`packages/domain/migrations/0119_nominee-declaration-history.sql:38`, `:118`, `:182-230`] — deferred, defence-in-depth hardening; RLS scopes every row and the writers validate
 - `-239` inheritance source: an appeal-overturned refusal is never superseded, so it stays in the refusal list and still passes its inspection on; the source filter falls back to an older refusal when the newest has no completed inspection [`packages/domain/src/claim/nominee-refusal-read.ts:65-76`, `:98-121`] — deferred, needs the appeal-outcome state mapping; a refile after an overturn is improbable
+  - *Appended 2026-10-08 (Story 6.24a, `2026-10-07-292` RF8):* ✅ **PARTLY DISCHARGED — the APPROVAL input only.**
+    `inheritedGroundInspectionSourceSql` now reads RF1's `standingSuspicionRefusalSql`: a refusal REVERSED on appeal (or a claim closed) is
+    ⛔ no longer a source — and its refile is CLOSED in the reversal's transaction (RF6). ⚠ **Still open — ⛔ not addressed:** the Pariwar
+    Admin's refusal LIST (`listNomineeRefusals`) is unchanged (a display; an overturned refusal still lists), and the "falls back to an
+    older refusal when the newest has no completed inspection" half is unchanged (it is the rule's ORDER, ⛔ not an RF1 question). Trigger
+    unchanged.
   - *Appended 2026-10-06 (Story 6.26a):* this read is now an APPROVAL GATE INPUT — it is what makes a refile VISITED (GI2; it now counts
     only a source with a completed FULL assignment, `-283` A2, through the shared `inheritedGroundInspectionSourceSql`). Still accepted:
     the gate's ORIGINAL_SEEN half needs the refile's OWN certificate check against its current upload either way (FQ13), so an overturned

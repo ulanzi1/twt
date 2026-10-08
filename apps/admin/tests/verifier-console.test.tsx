@@ -616,10 +616,30 @@ describe('<SignalsPanel> — Story 6.24a (RF10), kept apart from a claim refused
       />,
     );
     expect(screen.getByTestId('suspicion-refusal-kept-apart')).toHaveTextContent(sr.keptApart);
-    expect(screen.getByTestId('suspicion-refusal-claim')).toHaveTextContent('REF-1234');
-    expect(screen.getByTestId('suspicion-refusal-claim')).toHaveTextContent('2026-12-30');
+    expect(screen.getByTestId('suspicion-refusal-claim-REF-1234')).toHaveTextContent('REF-1234');
+    expect(screen.getByTestId('suspicion-refusal-claim-REF-1234')).toHaveTextContent('2026-12-30');
     expect(screen.getByTestId('suspicion-refusal-wait')).toHaveTextContent(sr.waits.appeal_not_filed!);
     expect(screen.getByText(sr.districtAdminNotHeld)).toBeInTheDocument();
+  });
+
+  it('TWO kept-apart claims ⇒ each gets its OWN testid (⛔ a duplicate id would throw on more than one)', () => {
+    render(
+      <SignalsPanel
+        packet={{
+          ...PRESENT_PACKET,
+          suspicionRefusal: {
+            available: true,
+            keptApartFrom: [
+              { reference: 'REF-1234', appeal: 'not_filed', appealUntil: '2026-12-30' },
+              { reference: 'REF-5678', appeal: 'open', appealUntil: '2026-11-15' },
+            ],
+            finalApprovalWaits: 'appeal_open',
+          },
+        }}
+      />,
+    );
+    expect(screen.getByTestId('suspicion-refusal-claim-REF-1234')).toHaveTextContent('REF-1234');
+    expect(screen.getByTestId('suspicion-refusal-claim-REF-5678')).toHaveTextContent('REF-5678');
   });
 
   it('an UPHELD refusal ⇒ kept apart, but the final approval does ⛔ not wait', () => {
@@ -641,6 +661,17 @@ describe('<SignalsPanel> — Story 6.24a (RF10), kept apart from a claim refused
 
   it('the decision strip\'s words — the wait (defensive) and the reason lock — ⛔ "try again"', () => {
     expect(decisionErrorMessage(new ApiError(409, 'verifier_decision.suspicion_appeal_pending', 'x', { reason: 'appeal_open' }))).toBe(sr.approvalGate.appeal_open);
-    expect(decisionErrorMessage(new ApiError(409, 'verifier_decision.suspicion_reason_locked', 'x', {}))).toBe(sr.reasonLocked);
+    // RF13's lock holds through `approved` / `settled` / `denied` — ⛔ not just "open" (AC2b); the message names the
+    // held claim by its reference ONLY (RF10's convention), read from the server's `details.held_claim_reference`.
+    expect(sr.reasonLocked).not.toMatch(/still open/i);
+    expect(sr.reasonLocked).toMatch(/has not been closed/i);
+    expect(
+      decisionErrorMessage(new ApiError(409, 'verifier_decision.suspicion_reason_locked', 'x', { held_claim_reference: 'A1B2C3D4' })),
+    ).toBe(sr.reasonLocked.replace('{held}', `${sr.claim} A1B2C3D4`));
+    // The reference is missing ⇒ a complete, grammatical fallback — ⛔ never a bare splice ("while  for this death…").
+    const fallback = decisionErrorMessage(new ApiError(409, 'verifier_decision.suspicion_reason_locked', 'x', {}));
+    expect(fallback).not.toContain('{held}');
+    expect(fallback).not.toMatch(/while\s+for this death/i);
+    expect(fallback).toBe(sr.reasonLocked.replace('{held}', 'another claim'));
   });
 });

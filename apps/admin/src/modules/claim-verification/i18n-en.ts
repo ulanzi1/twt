@@ -697,9 +697,13 @@ export const verifierConsoleEn = {
       appeal_open:
         'This claim cannot be finally approved yet: an earlier claim for this death was refused on suspicion and its appeal is being decided. It is not refused.',
     } as Record<string, string>,
-    // RF13 — the revise strip's refusal.
+    // RF13 — the revise strip's refusal. `{held}` — "claim <reference>" (RF10's "claim reference only" convention —
+    // ⛔ no name, ⛔ no note) or, server details missing, the grammatical fallback "another claim" (`reasonLockedMessage`
+    // builds this phrase — ⛔ never a bare reference spliced in, which would read as "while  for this death..."); AC2b's
+    // rule holds through `approved`/`settled`/`denied`, ⛔ only released once that claim is `closed` — "still open" would
+    // wrongly read as "released once decided".
     reasonLocked:
-      'This refusal’s reason cannot be changed while another claim for this death is still open — its 90-day appeal limit stands.',
+      'This refusal’s reason cannot be changed while {held} for this death has not been closed — its 90-day appeal limit stands.',
   },
   groundInspectionGate: {
     complete: 'The ground inspection is complete for approval.',

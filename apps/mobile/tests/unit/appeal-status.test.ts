@@ -16,7 +16,9 @@ const base: MemberAppealStatus = {
 
 describe('deriveAppealView (AC7)', () => {
   it('⭐ Story 6.24a — a journey CLOSED with its claim shows ⛔ no affordance, ⛔ no status line, ⛔ no outcome', () => {
-    const v = deriveAppealView({ ...base, claim_state: 'closed', appeal_status: 'closed', current_stage: '1' })
+    // Even were the server's `can_initiate` / `appeal_exhausted` true, the closure wins (the `closed_no_response`
+    // precedent, same isolation): the guard must be `appeal_status`-keyed, ⛔ never riding only on those fields.
+    const v = deriveAppealView({ ...base, claim_state: 'closed', appeal_status: 'closed', current_stage: '1', can_initiate: true, appeal_exhausted: true })
     expect(v).toEqual({ showFileAffordance: false, statusKey: null, showReversed: false, showExhausted: false, showExternalRemedy: false })
   })
 

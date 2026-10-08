@@ -10,7 +10,7 @@
 //
 // ⚠ DELIBERATE — the read-back gate is CLIENT-SIDE ONLY (the D5 precedent `<HelplineCertificateReplacement>` records).
 
-import type { ReactElement } from 'react';
+import { useState, type ReactElement } from 'react';
 
 import { ApiError } from '../../api/client.js';
 import { useHelplineAppealClaims, useInitiateAppealOnBehalf } from '../../api/hooks.js';
@@ -43,6 +43,11 @@ export function HelplineAppeal({
   const listQ = useHelplineAppealClaims(pariwarId, memberId, ready);
   const claims = listQ.data?.member_id === memberId ? listQ.data.claims : [];
   const file = useInitiateAppealOnBehalf(pariwarId, memberId);
+  // ⭐ ONE shared mutation object covers every row (`file.variables`/`.isSuccess`/`.isError` reflect only the LAST
+  // call) — filing claim B would otherwise erase claim A's already-settled outcome. Per-claim OUTCOME is tracked
+  // here instead, set from each call's OWN `onSuccess`/`onError` (bound to that claim id, ⛔ never read off `file`
+  // directly), so filing a second claim can ⛔ never un-disable or un-confirm a claim already filed.
+  const [filingOutcomes, setFilingOutcomes] = useState<Record<string, { readonly outcome: 'success' } | { readonly outcome: 'error'; readonly error: unknown }>>({});
 
   let body: ReactElement;
   if (!ready) {
@@ -61,7 +66,7 @@ export function HelplineAppeal({
     body = (
       <div role="alert" className="text-sm" data-testid="helpline-appeal-error">
         <p>{resolveEn('helpline.appeal.error')}</p>
-        <button type="button" className="underline" onClick={() => void listQ.refetch()}>
+        <button type="button" className="underline" disabled={listQ.isFetching} onClick={() => void listQ.refetch()}>
           {resolveEn('helpline.appeal.retry')}
         </button>
       </div>
@@ -85,6 +90,10 @@ export function HelplineAppeal({
                   ? appealReadBack('until', c.appeal_until)
                   : null;
           const filingThis = file.isPending && file.variables === c.claim_case_id;
+          const outcome = filingOutcomes[c.claim_case_id];
+          // Held disabled once filed, through the window before the list's refetch moves this claim off `can_appeal`
+          // — and stays that way even after a LATER claim is filed (the per-claim outcome map, not `file.isSuccess`).
+          const filedThis = outcome?.outcome === 'success';
           return (
             <li key={c.claim_case_id} className="flex flex-col gap-1 text-sm" data-testid={`helpline-appeal-claim-${c.claim_case_id}`}>
               <span className="font-medium">
@@ -102,21 +111,26 @@ export function HelplineAppeal({
                 <button
                   type="button"
                   className="self-start rounded border px-3 py-1"
-                  disabled={file.isPending}
-                  onClick={() => file.mutate(c.claim_case_id)}
+                  disabled={filingThis || filedThis}
+                  onClick={() =>
+                    file.mutate(c.claim_case_id, {
+                      onSuccess: () => setFilingOutcomes((prev) => ({ ...prev, [c.claim_case_id]: { outcome: 'success' } })),
+                      onError: (error) => setFilingOutcomes((prev) => ({ ...prev, [c.claim_case_id]: { outcome: 'error', error } })),
+                    })
+                  }
                   data-testid={`helpline-appeal-file-${c.claim_case_id}`}
                 >
                   {resolveEn(filingThis ? 'helpline.appeal.filing' : 'helpline.appeal.file')}
                 </button>
               ) : null}
-              {file.isSuccess && file.variables === c.claim_case_id ? (
+              {filedThis ? (
                 <p role="status" data-testid="helpline-appeal-filed">
                   {resolveEn('helpline.appeal.filed')}
                 </p>
               ) : null}
-              {file.isError && file.variables === c.claim_case_id ? (
+              {outcome?.outcome === 'error' ? (
                 <p role="alert" className="text-red-700" data-testid="helpline-appeal-refused">
-                  {filingRefusal(file.error)}
+                  {filingRefusal(outcome.error)}
                 </p>
               ) : null}
             </li>

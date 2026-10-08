@@ -172,12 +172,15 @@ export function isOriginalDecider(set: OriginalDeciderActorIds, actorId: string)
  *
  * `opts.clock` — the instant the limit is judged at: `initiateAppeal` passes the `clock_timestamp()` it read AFTER RF15's
  * per-death key (Trap 16 — ⛔ never the transaction's `now()`); absent ⇒ the guard's own statement clock.
+ * `opts.chain` — the chain-start read, when the caller already took it (`initiateAppeal`, under this claim's row
+ * lock — stable for the rest of that transaction): reused here instead of a second identical query. Omitted ⇒ read
+ * it here (the helpline screen's lock-free read has no earlier read to reuse).
  */
 export async function assertAppealInitiable(
   db: Db,
   pariwarId: PariwarId,
   claimCaseId: ClaimId,
-  opts: { readonly clock?: Date } = {},
+  opts: { readonly clock?: Date; readonly chain?: { readonly chainStartedAt: Date; readonly clock: Date } | null } = {},
 ): Promise<void> {
   const claimRows = await db
     .select({ currentState: claims.currentState })
@@ -214,7 +217,7 @@ export async function assertAppealInitiable(
   if (existing[0]) throw new AppealAlreadyExhaustedError(claimCaseId, existing[0].status);
 
   // ⭐ Story 6.24a RF14 — the FOURTH guard: a `-239` refusal past its 90 days (the first row of its CURRENT `-239` chain).
-  const chain = await readSuspicionChainStart(db, pariwarId, claimCaseId);
+  const chain = opts.chain !== undefined ? opts.chain : await readSuspicionChainStart(db, pariwarId, claimCaseId);
   if (chain && hasSuspicionRefusalAppealLimitPassed(chain.chainStartedAt, opts.clock ?? chain.clock)) {
     throw new AppealTimeLimitPassedError(claimCaseId, suspicionRefusalAppealUntil(chain.chainStartedAt));
   }
@@ -226,8 +229,11 @@ export async function assertAppealInitiable(
  * Where a refused claim stands for an appeal the helpline could file for the family (AR-61): `can_appeal`;
  * `under_appeal` (a journey is open); `time_limit_passed` (a `-239` refusal past its 90 days — RF14);
  * `already_appealed` (a journey reached its end — D-F); `not_appealable` (⛔ not `denied`, or closed for no response).
+ * A runtime tuple (the `APPEAL_JOURNEY_STATUSES` precedent) so the contracts lockstep test can compare against it
+ * directly, instead of a hand-maintained literal.
  */
-export type HelplineAppealEligibility = 'can_appeal' | 'under_appeal' | 'time_limit_passed' | 'already_appealed' | 'not_appealable';
+export const HELPLINE_APPEAL_ELIGIBILITY_VALUES = ['can_appeal', 'under_appeal', 'time_limit_passed', 'already_appealed', 'not_appealable'] as const;
+export type HelplineAppealEligibility = (typeof HELPLINE_APPEAL_ELIGIBILITY_VALUES)[number];
 
 export interface HelplineAppealEligibilityRow {
   readonly claimCaseId: ClaimId;

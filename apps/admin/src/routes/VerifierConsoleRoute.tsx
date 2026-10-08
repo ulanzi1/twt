@@ -41,6 +41,7 @@ import {
   claimContactRequiredMessage,
   deathCertificateAcceptanceRequiredMessage,
   groundInspectionRequiredMessage,
+  reasonLockedMessage,
   suspicionAppealPendingMessage,
   deathCertificateReviewErrorMessage,
   nomineeCorrectionErrorMessage,
@@ -127,7 +128,7 @@ export function decisionErrorMessage(err: unknown): string {
     if (err.code === 'verifier_decision.ground_inspection_required') return groundInspectionRequiredMessage(err);
     // Story 6.24a (RF5 — defensive: P1 is ⛔ not held, a future caller can never show a raw code) and RF13 (the revise).
     if (err.code === 'verifier_decision.suspicion_appeal_pending') return suspicionAppealPendingMessage(err);
-    if (err.code === 'verifier_decision.suspicion_reason_locked') return t.suspicionRefusal.reasonLocked;
+    if (err.code === 'verifier_decision.suspicion_reason_locked') return reasonLockedMessage(err);
     // Story 6.19a (D14) — the contact record, checked AFTER the rest of the gate: say WHY the claim waits.
     if (err.code.endsWith('.claim_contact_required')) return claimContactRequiredMessage(err);
     if (err.code === 'verifier_decision.post_death_refusal_ungrounded') return t.nomineeDeclaration.postDeathRefusalUngrounded;

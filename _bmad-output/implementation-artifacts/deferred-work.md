@@ -4,6 +4,100 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: code review of story-6.24a, apps/mobile chunk (2026-10-08, final chunk)
+
+⚠ Scope: chunk 4 of 4 (`apps/mobile/lib/{appeal-status,claim-entry-gate,closed-helpline-copy,death-certificate-view,fetch-claim-entry-outcome}.ts`, `app/(claim)/{closed-helpline,index}.tsx` + their tests).
+
+- **`appeal-status.ts`'s `'closed'` value produces the same observable output as the pre-existing `null` value** (now
+  that it is properly guarded — see the chunk's patch). Not documented why a distinct enum member earns its own case
+  rather than reusing `null`. A reasonable design choice (letting "no journey ever" and "a journey existed, then the
+  claim was closed out from under it" diverge later without a breaking type change), but worth a one-line comment
+  explaining the rationale.
+
+---
+
+## Deferred from: code review of story-6.24a, apps/admin chunk (2026-10-08)
+
+⚠ Scope: chunk 3 of 4 (`apps/admin/src/modules/claim-appeal/`, `claim-verification/`, `helpline-claims/`, `cycle-freeze/`, `r9-voting/`, `routes/VerifierConsoleRoute.tsx` + their tests).
+
+- **`SuspicionRefusalNotice`'s `not_filed`/`time_limit_passed` list items have no trailing period** [`apps/admin/src/modules/claim-verification/SignalsPanel.tsx:57`], inconsistent with the fully-punctuated sentences elsewhere in the same i18n block. Cosmetic copy polish.
+- **Two different i18n mechanisms for date interpolation**: `AppealStageControls.tsx` does manual `.replace('{date}', …)` while `HelplineAppeal.tsx`'s `appealReadBack` uses the shared bilingual `t()` call. These serve genuinely different purposes (admin-only English chrome vs. member-facing bilingual script) — not a true inconsistency today, but worth a note if a third such string is added.
+- **No severity color-coding on `AppealStageControls.tsx`'s expired-deadline paragraph**, unlike `SignalsPanel`'s analogous amber/green wait indicator. Minor visual-polish inconsistency.
+- **`ConvergenceDecisionStrip.tsx`'s rewritten override-refile paragraph (RF16's correct reword) reads as a dense double-em-dash sentence** — a readability regression from the two clearer sentences it replaced. Subjective copy-quality nit, not a correctness issue.
+- **`HelplineAppeal`'s eligibility vocabulary and `SignalsPanel`'s kept-apart appeal vocabulary describe different things but read as confusingly similar** (this claim's own filing eligibility vs. another claim's appeal position). A naming/documentation clarity candidate for a future pass, not a functional defect.
+
+---
+
+## Deferred from: code review of story-6.24a, apps/api chunk (2026-10-08)
+
+⚠ Scope: chunk 2 of 4 (`apps/api/src/modules/claims/*` handlers/routes + its integration specs).
+
+- **`assembleSuspicionRefusal`'s (and the pre-existing `assembleGroundInspectionGate`'s) try/catch wraps pure post-processing
+  logic together with its SAVEPOINT-protected SQL read** [`apps/api/src/modules/claims/claims.verifier-console.handlers.ts:842-868`
+  vs `:820-832`]. A logic bug in `suspicionAppealWaitState` or the `.map` would be reported identically to a genuine SQL/infra
+  failure ("could not be checked just now"), masking it as infra flakiness. A file-wide convention predating this diff (Story
+  6.26a GI9) — worth a dedicated hardening pass across every `assemble*` section, not a one-off fix for 6.24a alone.
+- **`listLiveClaimsForDeceasedMember` is now called with `{ includeClosed: true }`, but its name still says "Live"**
+  [`apps/api/src/modules/claims/claims.death-certificate.handlers.ts:376`]. Cosmetic naming nit on a pre-existing, extended
+  function.
+- **RF6's auto-closure of other claims of the death is captured in the audit/error log but not echoed in the HTTP response**
+  [`apps/api/src/modules/claims/claims.appeal.handlers.ts:202-218`, `heldClaimsAuditContext`]. A UX-enhancement candidate; no
+  AC requires it in the response body.
+- **`suspicion-refusal-routes.spec.ts`'s fault-injection flag (`fault.on`) is shared mutable module state** — correctly
+  guarded today (`try`/`finally` + an `afterAll` backstop), but a future test inserted between the fault-toggling tests
+  without the same care could flake.
+- **`expectWaits()`'s leak-detection regex is narrow** (guards against "this claim is refused" wording specifically); a
+  differently-phrased future message could still misleadingly imply the current claim was refused without tripping it.
+- **The `SuspicionAppealPendingError` → 409 mapping is duplicated across all four approval translators** (sharing only the
+  message helper) rather than unified into one shared translator — matches the pre-existing `ground-inspection-required-message.ts`
+  convention each translator already follows for other shared errors; an architectural choice predating this diff.
+
+---
+
+## Deferred from: code review of story-6.24a, domain-core chunk (2026-10-08)
+
+⚠ Scope: chunk 1 of 4 (`packages/domain/src/claim/*` + tests, migration 0150, `packages/contracts/src/claims/*`). `apps/api` / `apps/admin` /
+`apps/mobile` chunks are reviewed separately.
+
+- **`reviseDecision` takes the per-death INTAKE advisory lock unconditionally on every revision, not only ones touching `-239`**
+  [`packages/domain/src/claim/verifier-decision-persist.ts:~596`]. A blanket serialization cost on all decision revisions for a narrow
+  feature. Deferred, pre-existing trade-off: narrowing it to only `-239`-touching revisions would require reading the live reason code
+  UNLOCKED before deciding whether to take the lock, reintroducing the TOCTOU race the unconditional lock currently avoids.
+- **`readStandingSuspicionRefusals`'s SQL projects `clock_timestamp()` as a column in a multi-row query**
+  [`packages/domain/src/claim/suspicion-refusal.ts:172`]. Technically evaluated per-row (volatile), despite the comment's "ONE statement"
+  framing. Deferred: the stated fallback (a stale clock only ever causes one extra conservative commit-skip) already bounds the
+  consequence at IST day-granularity; a cross-day-boundary split within one query's execution window is not practically reachable.
+- **`reviseDecision`'s "held" claim lookup for `SuspicionReasonLockedError`'s cited blocker orders by `claimCaseId` (UUID) ascending, not
+  relevance/recency** [`packages/domain/src/claim/verifier-decision-persist.ts:~639`]. Cosmetic only — the operator sees an arbitrary
+  blocking-claim reference in the 409, not necessarily the most relevant one. Doesn't affect the lock's correctness.
+- **`closed_no_response` and `claim_closed` (`MemberDeathCertificateStatusResponse`) have no schema-level mutual-exclusivity guard**
+  [`packages/contracts/src/claims/death-certificate.ts:171,185`]. Verified reachable: a claim already closed-for-no-response by 6.19c
+  (state stays `denied`) can later be RF6-closed by a sibling claim's appeal reversal (`denied` is RF4-closable), making both booleans
+  true at once. The one real consumer, `apps/mobile/lib/fetch-claim-entry-outcome.ts`, already has correct precedence (`claim_closed`
+  checked first) — not a live bug, but worth a schema-level tightening (e.g. a `.refine()`) if a second consumer is ever added.
+- **`suspicionChainStartedAtSql`'s recursive CTE (`WITH RECURSIVE sr_chain`) has no cycle guard** against a corrupted
+  `supersedes_decision_id` chain [`packages/domain/src/claim/suspicion-refusal.ts:92`]. Only reachable under the data-corruption scenario
+  the spec itself already flags ("a convention, grep-pinned in a test, ⛔ not a DB rule"). A future hardening candidate (a depth cap or
+  `CYCLE` clause), not a live bug.
+- **`endLiveProcesses` supersedes the correction-return row with `now()` while `endCorrectionRun` ends the run with `clock_timestamp()`**
+  [`packages/domain/src/claim/suspicion-refusal-persist.ts:210` vs `packages/domain/src/claim/correction-chase.ts:372`]. A clock-source
+  mismatch between two causally-ordered writes in one transaction. No identified consumer depends on their relative ordering.
+- **AC4's own wording ("the source's refusal revised away") describes a scenario RF13's guard now makes unreachable** — the dev's test
+  substitutes a reachable scenario (the source CLOSED by a third claim's reversal) but the AC text itself was never reconciled. Already
+  disclosed in the story's own Debug Log / Deviations list. A documentation-reconciliation nit, not a code defect.
+- **F8 / leg (e)'s original fact pattern is unreachable through the real writers** [`packages/domain/tests/integration/claim/correction-queue-late-inspection.spec.ts`
+  leg (e)]. The re-derived spec drives a raw DB insert instead of a writer path. Already disclosed in the story's Debug Log; tracked
+  above under "`-290` M2's late arm."
+- **`standingSuspicionRefusalSql(claimAlias)` trusts a caller-supplied alias string** (bare-identifier regex only; no tie to the actual
+  query alias) [`packages/domain/src/claim/suspicion-refusal.ts:60`]. Inherent to the deliberate raw-SQL-fragment approach chosen to avoid
+  the Epic 6 Drizzle correlated-subquery bug ([[project_epic6_drizzle_correlated_subquery_bug]]). A mismatch fails loudly in CI, not
+  silently in production.
+- **`listHelplineAppealEligibility` runs an N+1 query pattern and reads two independent `clock_timestamp()` statements per row**
+  (`appealUntil` vs `eligibility`) that could rarely disagree at a midnight-IST boundary [`packages/domain/src/claim/appeal-eligibility.ts:261-280`].
+  Bounded by `HELPLINE_APPEAL_LIST_CAP=10`; a low-traffic staff-only display screen that self-corrects on the next read.
+
+---
+
 ## Deferred from: dev-story 6-24-true-nominee-refile-after-a-suspicion-refusal (Story 6.24a, 2026-10-08)
 
 - **F15 — the refile wizard shows the DISCARDED nominee** [`apps/mobile/app/(claim)/contact.tsx:8,131` (`nomineesStatus()` — the latest

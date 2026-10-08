@@ -1,3 +1,12 @@
+# last_updated: 2026-10-08b (⭐ **STORY 6.24a — CODE REVIEW COMPLETE (`bmad-code-review`) — review → done.** Four chunked
+# passes (domain-core, `apps/api`, `apps/admin`, `apps/mobile` — the diff exceeded the single-pass line threshold), each
+# with Blind Hunter + Edge Case Hunter + Acceptance Auditor running in parallel. 93 raw findings → 12 patch (all fixed
+# and verified — typecheck + the relevant live-DB/unit suites green after each, one red-checked against a deliberate
+# regression), 22 defer (`deferred-work.md`), 46 confirmed non-issues after checking the actual code. The two most
+# load-bearing fixes: the `SuspicionReasonLockedError` 409 message said "still open" on BOTH the API and the admin
+# console, contradicting RF13's actual rule (holds through `approved`/`settled`/`denied`, only released at `closed`);
+# the mobile `appeal-status.ts`'s new `closed` value had no actual guard (relied on an unenforced cross-field
+# assumption), independently caught by all three layers. 0 decision-needed. `6-24a` row → `done`.)
 # last_updated: 2026-10-08a (⭐ **STORY 6.24a BUILT (`bmad-dev-story 6.24a`) — `6-24-true-nominee-refile-after-a-suspicion-refusal`
 # ready-for-dev → in-progress → review.** Builds `-292` RF1–RF8, RF10, RF12 (6.24a's half), RF13–RF16: ONE "a suspicion refusal stands"
 # (`claim/suspicion-refusal.ts`); a refile is ⛔ never merged into the refused claim (the convergence candidate, its strip mirror and the
@@ -19279,7 +19288,7 @@ development_status:
   # ⭐ 2026-10-04 SPLIT after `-277` (BigDev: "ok, split it"): the row above is STORY 6.23a (keeps its key — the rulings cite it); 6.23b below
   # is every later approver (`-277` Q2 C) + Q3 B's wait. 6.23b's file is written; it stays `backlog` until 6.23a is `done` (the 6.21b precedent).
   6-23b-every-approver-gives-a-warning-reason: done
-  6-24-true-nominee-refile-after-a-suspicion-refusal: review
+  6-24-true-nominee-refile-after-a-suspicion-refusal: done
   # ⭐ 2026-10-07 SPLIT (BigDev: "ok, split it"): the row above is STORY 6.24a (keeps its key — the rulings and `-292` cite it): kept apart,
   # the wait, `closed`, the commit re-check, the inheritance, the 90-day limit, the helpline appeal screen and the reason lock. 6.24b below is
   # the filing code (FQ6) and the two texts (FQ7, `-291` Q2); its file is written, but it stays `backlog` until 6.24a is `done` (the

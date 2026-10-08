@@ -481,15 +481,18 @@ describe('<R9CasePanel> — the approve vote and finalize (EA5; RD11)', () => {
   });
 
   // ⭐ Story 6.24a (RF5) — THROUGH the panel: removing the panel's `.suspicion_appeal_pending` branch turns this red.
-  it('6.24a — finalize\'s `suspicion_appeal_pending` 409 reads as the wait words (the claim waits), ⛔ never the server text', async () => {
-    getR9Panel.mockResolvedValue(r9Panel({ votes: [approveVote(true)], tally: approvedTally }));
-    finalizeR9.mockRejectedValue(new ApiError(409, 'r9_voting.suspicion_appeal_pending', 'server words', { reason: 'appeal_open' }));
-    wrap(<R9CasePanel pariwarId={PARIWAR} claimCaseId={CLAIM} />);
-    fireEvent.click(await screen.findByTestId('r9-finalize'));
-    const words = verifierConsoleEn.suspicionRefusal.approvalGate.appeal_open!;
-    const alert = await screen.findByText((_, el) => el?.getAttribute('role') === 'alert' && (el.textContent ?? '').includes(words));
-    expect(alert).not.toHaveTextContent('server words');
-  });
+  // Both reasons (the `cycle-freeze-page.test.tsx` precedent) — the same shared Record lookup serves either.
+  for (const reason of ['appeal_not_filed', 'appeal_open'] as const) {
+    it(`6.24a — finalize's \`suspicion_appeal_pending\` 409 (${reason}) reads as the wait words, ⛔ never the server text`, async () => {
+      getR9Panel.mockResolvedValue(r9Panel({ votes: [approveVote(true)], tally: approvedTally }));
+      finalizeR9.mockRejectedValue(new ApiError(409, 'r9_voting.suspicion_appeal_pending', 'server words', { reason }));
+      wrap(<R9CasePanel pariwarId={PARIWAR} claimCaseId={CLAIM} />);
+      fireEvent.click(await screen.findByTestId('r9-finalize'));
+      const words = verifierConsoleEn.suspicionRefusal.approvalGate[reason]!;
+      const alert = await screen.findByText((_, el) => el?.getAttribute('role') === 'alert' && (el.textContent ?? '').includes(words));
+      expect(alert).not.toHaveTextContent('server words');
+    });
+  }
 
   it('finalize\'s `approve_votes_need_warning_reason` with `vote_ids` reads as the COUNTED words', async () => {
     getR9Panel.mockResolvedValue(r9Panel({ votes: [approveVote(true)], tally: approvedTally }));

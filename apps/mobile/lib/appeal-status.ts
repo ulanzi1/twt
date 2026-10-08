@@ -43,9 +43,12 @@ const STAGE_STATUS_KEY: Record<'1' | '2' | '3', string> = {
 export function deriveAppealView(status: MemberAppealStatus): AppealView {
   const showReversed = status.appeal_status === 'reversed'
   // A closure is ⛔ an exhausted appeal: the family files again through the helpline (the re-file state), ⛔ appeals.
-  const showExhausted = status.appeal_exhausted && !status.closed_no_response
+  // Story 6.24a (RF4) — a claim CLOSED mid-appeal (`appeal_status: 'closed'`) is the SAME "nothing to show" rule,
+  // defensively guarded here too (⛔ never trusting `can_initiate` / `appeal_exhausted` alone — the `closed_no_response`
+  // precedent).
+  const showExhausted = status.appeal_exhausted && !status.closed_no_response && status.appeal_status !== 'closed'
   return {
-    showFileAffordance: status.can_initiate && !status.closed_no_response,
+    showFileAffordance: status.can_initiate && !status.closed_no_response && status.appeal_status !== 'closed',
     statusKey: status.appeal_status === 'open' && status.current_stage ? STAGE_STATUS_KEY[status.current_stage] : null,
     showReversed,
     showExhausted,

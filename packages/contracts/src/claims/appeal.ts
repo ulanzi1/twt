@@ -19,6 +19,9 @@
 
 import { z } from 'zod';
 
+/** `YYYY-MM-DD`, IST (the `death-certificate.ts` / `nominee-declaration.ts` `DateShape` / `CalendarDate` precedent). */
+const CalendarDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'a YYYY-MM-DD calendar date');
+
 // ── Appeal vocabulary wire mirror (value-aligned with @twt/domain) ──────────────────────────
 
 /** The appeal stage (value-aligned with the domain `appeal_stage`). */
@@ -397,7 +400,7 @@ export const AdminAppealCaseResponse = z
      * change: the last IST date it can be appealed (`YYYY-MM-DD`, D + 90) and whether that limit has passed; `null` for
      * any other claim (⛔ no time limit — 6.16 D-E).
      */
-    suspicion_appeal_limit: z.object({ appeal_until: z.string(), passed: z.boolean() }).strict().nullable(),
+    suspicion_appeal_limit: z.object({ appeal_until: CalendarDate, passed: z.boolean() }).strict().nullable(),
   })
   .strict();
 export type AdminAppealCaseResponse = z.output<typeof AdminAppealCaseResponse>;
@@ -456,7 +459,7 @@ export const HelplineAppealClaimsResponse = z
           claim_state: z.string(),
           created_at: z.string().datetime(),
           eligibility: HelplineAppealEligibility,
-          appeal_until: z.string().nullable(),
+          appeal_until: CalendarDate.nullable(),
         })
         .strict(),
     ),

@@ -45,6 +45,31 @@ describe('<HelplineAppeal>', () => {
     expect(mocked.getHelplineAppealClaims).not.toHaveBeenCalled();
   });
 
+  it('shows the loading state while the read is in flight, then the empty-list state once it resolves', async () => {
+    let resolveRead: ((v: HelplineAppealClaimsResponse) => void) | undefined;
+    mocked.getHelplineAppealClaims.mockReturnValue(new Promise((resolve) => { resolveRead = resolve; }));
+    renderWithClient(<HelplineAppeal pariwarId="p1" memberId={MEMBER_ID} identityConfirmed={true} />);
+    expect(await screen.findByTestId('helpline-appeal-loading')).toBeInTheDocument();
+    resolveRead!({ member_id: MEMBER_ID, claims: [] });
+    expect(await screen.findByTestId('helpline-appeal-none')).toBeInTheDocument();
+  });
+
+  it('a failed read shows an error with a retry that re-fetches', async () => {
+    mocked.getHelplineAppealClaims.mockRejectedValueOnce(new Error('network down'));
+    renderWithClient(<HelplineAppeal pariwarId="p1" memberId={MEMBER_ID} identityConfirmed={true} />);
+    expect(await screen.findByTestId('helpline-appeal-error')).toBeInTheDocument();
+    const retryButton = screen.getByText(resolveEn('helpline.appeal.retry'));
+    expect(retryButton).not.toBeDisabled();
+    // ⚠ The retry button's `disabled={listQ.isFetching}` guard isn't exercised here: on a FIRST-load failure (no
+    // cached data) the retry goes through `isLoading`, which replaces this whole view with the loading one before
+    // the button could ever render disabled. It matters for a refetch that fails WITH cached data already present
+    // (`isLoading` stays false there) — this test harness's `createQueryClient()` (`gcTime: 0`) can't construct
+    // that state without reaching into the QueryClient directly, which `renderWithClient` doesn't expose.
+    mocked.getHelplineAppealClaims.mockResolvedValueOnce({ member_id: MEMBER_ID, claims: [] });
+    fireEvent.click(retryButton);
+    expect(await screen.findByTestId('helpline-appeal-none')).toBeInTheDocument();
+  });
+
   it('⭐ a `-239` refusal shows its date in the words read to the family — English AND Hindi (the real `t()`)', async () => {
     mocked.getHelplineAppealClaims.mockResolvedValue({
       member_id: MEMBER_ID,
@@ -68,21 +93,74 @@ describe('<HelplineAppeal>', () => {
     expect(screen.getByTestId(`helpline-appeal-file-${OTHER}`)).toBeInTheDocument();
   });
 
-  it('files an appeal FOR THE FAMILY through the on-behalf route; the time-limit refusal reads in words (⛔ not a raw code)', async () => {
+  it('files an appeal FOR THE FAMILY through the on-behalf route; the button then stays disabled (⛔ no duplicate POST before the list catches up)', async () => {
     mocked.getHelplineAppealClaims.mockResolvedValue({ member_id: MEMBER_ID, claims: [row(CAN, { appeal_until: '2026-12-30' })] });
+    mocked.initiateAppealOnBehalf.mockResolvedValueOnce({
+      appeal_id: '55555555-5555-4555-8555-555555555555', claim_case_id: CAN, current_stage: '1', status: 'open', initiated_on_behalf: true, claim_state: 'appeal_stage_1',
+    });
+    renderWithClient(<HelplineAppeal pariwarId="p1" memberId={MEMBER_ID} identityConfirmed={true} />);
+    const fileButton = await screen.findByTestId(`helpline-appeal-file-${CAN}`);
+    fireEvent.click(fileButton);
+    await waitFor(() => expect(mocked.initiateAppealOnBehalf).toHaveBeenCalledWith('p1', CAN));
+    expect(await screen.findByTestId('helpline-appeal-filed')).toHaveTextContent(resolveEn('helpline.appeal.filed'));
+    // The list is still the STALE `can_appeal` response (⛔ no refetch mocked here) — the button must stay disabled
+    // through that window, or a second click would file a duplicate appeal for an already-filed claim.
+    expect(fileButton).toBeDisabled();
+    fireEvent.click(fileButton);
+    expect(mocked.initiateAppealOnBehalf).toHaveBeenCalledTimes(1);
+  });
+
+  it('filing a SECOND claim does ⛔ not un-disable or un-confirm the FIRST (one shared mutation object, per-claim outcome)', async () => {
+    mocked.getHelplineAppealClaims.mockResolvedValue({ member_id: MEMBER_ID, claims: [row(CAN), row(OTHER)] });
+    mocked.initiateAppealOnBehalf.mockResolvedValueOnce({
+      appeal_id: '55555555-5555-4555-8555-555555555555', claim_case_id: CAN, current_stage: '1', status: 'open', initiated_on_behalf: true, claim_state: 'appeal_stage_1',
+    });
+    renderWithClient(<HelplineAppeal pariwarId="p1" memberId={MEMBER_ID} identityConfirmed={true} />);
+    const fileCan = await screen.findByTestId(`helpline-appeal-file-${CAN}`);
+    fireEvent.click(fileCan);
+    await waitFor(() => expect(mocked.initiateAppealOnBehalf).toHaveBeenCalledWith('p1', CAN));
+    expect(await screen.findByTestId('helpline-appeal-filed')).toBeInTheDocument();
+    expect(fileCan).toBeDisabled();
+
+    mocked.initiateAppealOnBehalf.mockResolvedValueOnce({
+      appeal_id: '66666666-6666-4666-8666-666666666666', claim_case_id: OTHER, current_stage: '1', status: 'open', initiated_on_behalf: true, claim_state: 'appeal_stage_1',
+    });
+    fireEvent.click(await screen.findByTestId(`helpline-appeal-file-${OTHER}`));
+    await waitFor(() => expect(mocked.initiateAppealOnBehalf).toHaveBeenCalledWith('p1', OTHER));
+    // Both stay filed/disabled — the second call must ⛔ never reset the first's outcome.
+    expect(await screen.findAllByTestId('helpline-appeal-filed')).toHaveLength(2);
+    expect(screen.getByTestId(`helpline-appeal-file-${CAN}`)).toBeDisabled();
+    expect(screen.getByTestId(`helpline-appeal-file-${OTHER}`)).toBeDisabled();
+  });
+
+  it('a SECOND claim\'s rejection does ⛔ not erase the FIRST\'s already-filed confirmation', async () => {
+    mocked.getHelplineAppealClaims.mockResolvedValue({ member_id: MEMBER_ID, claims: [row(CAN), row(OTHER)] });
     mocked.initiateAppealOnBehalf.mockResolvedValueOnce({
       appeal_id: '55555555-5555-4555-8555-555555555555', claim_case_id: CAN, current_stage: '1', status: 'open', initiated_on_behalf: true, claim_state: 'appeal_stage_1',
     });
     renderWithClient(<HelplineAppeal pariwarId="p1" memberId={MEMBER_ID} identityConfirmed={true} />);
     fireEvent.click(await screen.findByTestId(`helpline-appeal-file-${CAN}`));
     await waitFor(() => expect(mocked.initiateAppealOnBehalf).toHaveBeenCalledWith('p1', CAN));
-    expect(await screen.findByTestId('helpline-appeal-filed')).toHaveTextContent(resolveEn('helpline.appeal.filed'));
+    expect(await screen.findByTestId('helpline-appeal-filed')).toBeInTheDocument();
 
     mocked.initiateAppealOnBehalf.mockRejectedValueOnce(new ApiError(409, 'appeal.suspicion_refusal_time_limit_passed', 'x', { appeal_until: '2026-12-30' }));
+    fireEvent.click(await screen.findByTestId(`helpline-appeal-file-${OTHER}`));
+    expect(await screen.findByTestId('helpline-appeal-refused')).toBeInTheDocument();
+    // CAN's confirmation must survive OTHER's rejection.
+    expect(screen.getByTestId('helpline-appeal-filed')).toBeInTheDocument();
+    expect(screen.getByTestId(`helpline-appeal-file-${CAN}`)).toBeDisabled();
+  });
+
+  it('the time-limit refusal reads in words (⛔ not a raw code)', async () => {
+    mocked.getHelplineAppealClaims.mockResolvedValue({ member_id: MEMBER_ID, claims: [row(CAN, { appeal_until: '2026-12-30' })] });
+    mocked.initiateAppealOnBehalf.mockRejectedValueOnce(new ApiError(409, 'appeal.suspicion_refusal_time_limit_passed', 'x', { appeal_until: '2026-12-30' }));
+    renderWithClient(<HelplineAppeal pariwarId="p1" memberId={MEMBER_ID} identityConfirmed={true} />);
     fireEvent.click(await screen.findByTestId(`helpline-appeal-file-${CAN}`));
     const refused = await screen.findByTestId('helpline-appeal-refused');
     expect(refused).toHaveTextContent(resolveEn('helpline.appeal.refusal.time_limit_passed'));
     expect(refused.textContent).not.toContain('appeal.');
+    // A rejected attempt is NOT a success — the button is re-enabled for a retry.
+    expect(await screen.findByTestId(`helpline-appeal-file-${CAN}`)).not.toBeDisabled();
   });
 });
 

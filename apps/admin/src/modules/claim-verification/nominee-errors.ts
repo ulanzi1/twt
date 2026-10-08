@@ -63,6 +63,17 @@ export function suspicionAppealPendingMessage(err: ApiError): string {
 }
 
 /**
+ * ⭐ Story 6.24a (RF13) — `reviseDecision`'s `…suspicion_reason_locked` 409. Names the HELD claim by its reference
+ * only (RF10's convention — ⛔ no name, ⛔ no note), read from the server's `details.held_claim_reference`. Missing
+ * ⇒ "another claim" (a complete, grammatical phrase — ⛔ never a bare empty splice).
+ */
+export function reasonLockedMessage(err: ApiError): string {
+  const reference = (err.details as { held_claim_reference?: string } | undefined)?.held_claim_reference;
+  const held = reference ? `${t.suspicionRefusal.claim} ${reference}` : 'another claim';
+  return t.suspicionRefusal.reasonLocked.replace('{held}', held);
+}
+
+/**
  * Story 6.19a (D14) — the approval gate's `…claim_contact_required` 409 (`verifier_decision.` / `cycle_freeze.` /
  * `r9_voting.`), worded by its REASON — the same words on every screen: the claim WAITS, and the helpline can add
  * the details. ⛔ Never a denial, ⛔ never "try again".

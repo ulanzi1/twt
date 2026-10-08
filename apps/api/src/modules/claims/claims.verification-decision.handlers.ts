@@ -177,7 +177,7 @@ function translateDecisionError(err: unknown): never {
   // short reference only (⛔ not a name).
   if (err instanceof claim.SuspicionReasonLockedError) {
     throw new ConflictError(
-      'This refusal\'s reason cannot be changed while another claim for the same death is still open — its 90-day appeal limit stands',
+      'This refusal\'s reason cannot be changed while another claim for the same death has not been closed — its 90-day appeal limit stands',
       'verifier_decision.suspicion_reason_locked',
       { held_claim_reference: claim.claimShortReference(err.heldClaimCaseId) },
     );

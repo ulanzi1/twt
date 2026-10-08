@@ -300,15 +300,17 @@ export async function initiateAppeal(
   // so an initiation racing a held claim's final approval at the limit resolves one way only. Its holder ⛔ never then
   // waits on another claim's lock.
   let clock: Date | undefined;
-  if ((await readSuspicionChainStart(db, input.pariwarId, input.claimCaseId)) !== null) {
+  const chain = await readSuspicionChainStart(db, input.pariwarId, input.claimCaseId);
+  if (chain !== null) {
     await acquireSuspicionAppealLock(db, input.pariwarId, claimRow.deceasedMemberId);
     const [row] = (await db.execute<{ clock: Date | string }>(sql`SELECT clock_timestamp() AS clock`)).rows ?? [];
     clock = row ? new Date(row.clock) : undefined;
   }
 
   // Guards: denied + no prior journey (D-E has NO elapsed-time gate; D-F exactly one journey) + Story 6.24a's 90 days
-  // for a `-239` refusal.
-  await assertAppealInitiable(db, input.pariwarId, input.claimCaseId, clock !== undefined ? { clock } : {});
+  // for a `-239` refusal. `chain` is already read above, under this claim's row lock (stable for the rest of this
+  // transaction) — reused here instead of a second identical query; only the CLOCK is re-read, AFTER RF15's key.
+  await assertAppealInitiable(db, input.pariwarId, input.claimCaseId, { chain, ...(clock !== undefined ? { clock } : {}) });
 
   // Emit the initiate transition (denied → appeal_stage_1).
   const projected = await projectClaimState(client, {

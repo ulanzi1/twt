@@ -23,6 +23,7 @@ import {
   LateWarningReasonRequiredError,
   SuspicionAppealPendingError,
   SuspicionReasonLockedError,
+  adjudicateClaim,
   assertClaimApprovable,
   assertRefileAllowed,
   assertSuspicionAppealDecidedForFinalApproval,
@@ -47,6 +48,8 @@ import { addCalendarDays, istDateOf, istMidnightAt } from '../../../src/cycle-ca
 import { claimId as toClaimId, memberId as toMemberId, pariwarId as toPariwarId } from '../../../src/ids/index.js';
 import type { ClaimId, CycleFreezeCommitId, MemberId, PariwarId } from '../../../src/ids/index.js';
 import { getMemberAccountOverlay } from '../../../src/member/overlay.js';
+import { versionStandsAt } from '../../../src/claim/nominee-effective.js';
+import { listNomineeDeclarationVersions } from '../../../src/nominee/declaration-history.js';
 import * as schema from '../../../src/schema/index.js';
 import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
 import {
@@ -54,8 +57,11 @@ import {
   currentUploadIdOf,
   driveClaimTo,
   enterAppScope,
+  seedAcceptedDeathCertificate,
   seedClauseVersion,
   seedGroundInspection,
+  seedNomineeDeclaration,
+  seedNomineeDetermination,
   seedNomineeNameCheck,
   seedRoleGrant,
 } from '../_helpers.js';
@@ -546,7 +552,7 @@ describe.skipIf(!hasDatabase)('Story 6.24a — the refile after a suspicion refu
     });
 
     it('ORDER — after the ground inspection, BEFORE the late-warning wait (which stays LAST)', async () => {
-      const { client } = getTx();
+      const { client, tx } = getTx();
       const mid = randomUUID();
       await refusedClaim(client, PARIWAR_A, mid);
       // ⛔ no inspection AND a standing refusal ⇒ the inspection answers first (its conjunct precedes RF5's).
@@ -557,9 +563,47 @@ describe.skipIf(!hasDatabase)('Story 6.24a — the refile after a suspicion refu
       // A claim failing the suspicion wait (and complete otherwise) answers the suspicion 409, ⛔ not the late-warning one.
       const r = await approvableHeldClaim(client, PARIWAR_A, mid);
       await expect(finalGate(client, PARIWAR_A, r, mid)).rejects.toBeInstanceOf(SuspicionAppealPendingError);
-      // With ⛔ no refusal standing, the late-warning wait is still reached and still LAST (6.23b's own specs pin its 409;
-      // here: the class is unchanged and ⛔ not shadowed — a claim of an unrelated death).
-      expect(LateWarningReasonRequiredError.name).toBe('LateWarningReasonRequiredError');
+      // With ⛔ no refusal standing, the late-warning wait is still reached and still LAST — driven for real, on a claim
+      // of an UNRELATED death (its own fresh Pariwar — 6.23b Trap 17's own construction: a District Admin approval over
+      // a recent nominee change, then a certificate re-review that makes that change ALSO post-death — a NEW warning
+      // key the earlier approval never covered). ⚠ Inlined rather than imported from
+      // `approval-warnings-every-approver.spec.ts`'s own `determine`/redetermine pattern — safe here ONLY because
+      // `finalGate` calls `assertClaimApprovable` directly (no contact-check conjunct in this path); a future reuse of
+      // this inline copy on a path that DOES run the contact check would need that file's full RD19 handling too.
+      const pid2 = toPariwarId(randomUUID());
+      await enterAppScope(client, pid2);
+      const cid2 = toClaimId(randomUUID());
+      const mid2 = randomUUID();
+      await driveClaimTo(client, pid2, cid2, mid2, 'verifier_review');
+      await seedNomineeDeclaration(tx, pid2, mid2, { declaredAt: new Date(Date.now() - 300 * DAY), nominees: [{}, {}] });
+      await seedNomineeDeclaration(tx, pid2, mid2, { declaredAt: new Date(Date.now() - 30 * DAY), nominees: [{}, {}] });
+      const determine = async (date: string) => {
+        await seedAcceptedDeathCertificate(client, { pariwarId: pid2, claimCaseId: cid2, date });
+        const versions = await listNomineeDeclarationVersions(tx, pid2, toMemberId(mid2));
+        await seedNomineeDetermination(client, pid2, cid2, {
+          certificateDate: date,
+          marks: versions.map((v) => ({ versionId: v.versionId, mark: versionStandsAt(v.effectiveAt, date) ? ('stands' as const) : ('discarded' as const) })),
+        });
+      };
+      await determine(addCalendarDays(istDateOf(new Date()), 1));
+      await seedNomineeNameCheck(client, pid2, cid2);
+      await adjudicateClaim(client, {
+        claimCaseId: cid2,
+        pariwarId: pid2,
+        outcome: 'approved',
+        reasonCode: 'r5_d_natural_death',
+        rationaleCiphertext: 'enc:v1:why',
+        warningReasonCode: 'warnings_reviewed',
+        actorId: DA,
+        actorDisplay: 'District Admin',
+        actor: 'operator',
+      });
+      await determine(addCalendarDays(istDateOf(new Date()), -45));
+      // RD19 — the redetermination makes the recorded name check stale; re-record a PASSING one so the gate reaches
+      // the late-warning conjunct (⛔ not the stale name check) — and still LAST, after the suspicion wait (vacuous
+      // here — this death carries ⛔ no `-239` refusal) and the inspection (seeded by `seedNomineeNameCheck`'s default).
+      await seedNomineeNameCheck(client, pid2, cid2);
+      await expect(finalGate(client, pid2, cid2, mid2)).rejects.toBeInstanceOf(LateWarningReasonRequiredError);
     });
 
     it('a claim never waits on its OWN refusal (self excluded)', async () => {

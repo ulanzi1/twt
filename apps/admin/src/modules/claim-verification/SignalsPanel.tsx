@@ -51,7 +51,7 @@ function SuspicionRefusalNotice({ section }: { section: VerifierConsolePacket['s
           </p>
           <ul className="list-disc pl-5 text-sm">
             {section.keptApartFrom.map((r) => (
-              <li key={r.reference} data-testid="suspicion-refusal-claim">
+              <li key={r.reference} data-testid={`suspicion-refusal-claim-${r.reference}`}>
                 {words.claim} {r.reference} —{' '}
                 {r.appeal === 'not_filed' || r.appeal === 'time_limit_passed'
                   ? `${words.appeal[r.appeal]} ${r.appealUntil}`

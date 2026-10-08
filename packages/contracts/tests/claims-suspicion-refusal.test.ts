@@ -42,10 +42,11 @@ describe('Story 6.24a — the wire changes', () => {
     expect(MemberDeathCertificateStatusResponse.safeParse({ ...read, reason: 'suspicion' }).success).toBe(false);
   });
 
+  it('LOCKSTEP — wire HelplineAppealEligibility === domain HELPLINE_APPEAL_ELIGIBILITY_VALUES', () => {
+    expect([...HelplineAppealEligibility.options].sort()).toEqual([...claim.HELPLINE_APPEAL_ELIGIBILITY_VALUES].sort());
+  });
+
   it('the helpline appeal response — a closed eligibility set, a nullable date, ⛔ not an extra field (strict)', () => {
-    expect([...HelplineAppealEligibility.options].sort()).toEqual(
-      ['already_appealed', 'can_appeal', 'not_appealable', 'time_limit_passed', 'under_appeal'].sort(),
-    );
     const row = {
       claim_case_id: '11111111-1111-4111-8111-111111111111',
       claim_state: 'denied',

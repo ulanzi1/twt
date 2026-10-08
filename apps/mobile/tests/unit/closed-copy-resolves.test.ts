@@ -33,7 +33,11 @@ describe('Story 6.24a — the closed claim', () => {
     const en = Object.values(CLOSED_HELPLINE_COPY).map((k) => t(k, undefined, { locale: 'en', namespace: 'claim' })).join(' ')
     expect(en).not.toMatch(/suspicio|fraud|chang|nominee|appeal|refus|after the death/i)
     const hi = Object.values(CLOSED_HELPLINE_COPY).map((k) => t(k, undefined, { locale: 'hi', namespace: 'claim' })).join(' ')
-    expect(hi).not.toMatch(/संदेह|धोखा|नामांकित|अपील/)
+    // Symmetric with the English check above: suspicion, fraud, nominee, appeal, changed, refused/refusal, after-the-death.
+    // अस्वीक — the stem shared by both this app's OWN inflections for "refused" (अस्वीकार — see `claim.json`'s
+    // `certificate.not_refused` / `nominee.bank.correction_needed_staff`, the actual in-namespace usage — and
+    // अस्वीकृत), so either leaking in is caught.
+    expect(hi).not.toMatch(/संदेह|धोखा|नामांकित|अपील|बदल|अस्वीक|इनकार|मृत्यु के बाद/)
   })
 
   it('the family-status view renders a `closed` claim with the SAME words and the helpline (⛔ no upload)', () => {

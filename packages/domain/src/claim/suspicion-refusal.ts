@@ -24,7 +24,7 @@ import { createHash } from 'node:crypto';
 import { type SQL, sql } from 'drizzle-orm';
 
 import type { Db } from '../db.js';
-import type { ClaimId, MemberId, PariwarId } from '../ids/index.js';
+import type { ClaimId, MemberId, NomineeVersionId, PariwarId } from '../ids/index.js';
 import { clampLimit } from '../pagination.js';
 import {
   addCalendarDays,
@@ -33,6 +33,7 @@ import {
   istMidnightAt,
 } from '../cycle-calendar/holiday-resolver.js';
 import { SuspicionAppealPendingError } from './errors.js';
+import { getEffectiveNomineeDeclaration } from './nominee-effective.js';
 
 /**
  * The dedicated `-239` reason code (⛔ never `other` — the inheritance and every rule here must RECOGNISE it). Defined
@@ -249,6 +250,40 @@ export async function readSuspicionChainStart(
   const row = result.rows?.[0];
   if (!row || row.chain_started_at === null) return null;
   return { chainStartedAt: toDate(row.chain_started_at), clock: toDate(row.clock) };
+}
+
+// ── RF9 — who the filing code goes to (Story 6.24b) ──────────────────────────────────────────────────
+
+/**
+ * Who the app's filing code goes to while a suspicion refusal stands for the death (RF9; `-262` FQ6 B):
+ *   · `null` — ⛔ no refusal stands ⇒ today's path, unchanged (the latest nominee);
+ *   · `at_death` — the rank-1 version of the refused claim's EFFECTIVE determination (the nominee the District Admin
+ *     found in place at the death);
+ *   · `none` — a refusal stands but its determination is ⛔ not `effective` ⇒ the existence-defended no-op.
+ * ⛔ Never the latest nominee once a refusal stands (invariant 5).
+ */
+export type SuspicionRefusalRecipient =
+  | { readonly kind: 'at_death'; readonly versionId: NomineeVersionId }
+  | { readonly kind: 'none' };
+
+/**
+ * ⭐ RF9 — the MOST RECENT standing refusal of the death (RF1's order — the most recently CREATED refused claim), its
+ * `getEffectiveNomineeDeclaration`, and the `versionId` of the entry with `rank === 1` (after any re-rank) when
+ * `effective`. Ref-only: a version id, ⛔ never a number or a name — the caller reads the ciphertext BY VERSION ID.
+ * ⚠ A data fault in RF1's read (a null chain start) THROWS — a 500 for the whole death (RB9).
+ */
+export async function readSuspicionRefusalRecipient(
+  db: Db,
+  pariwarId: PariwarId,
+  deceasedMemberId: MemberId,
+): Promise<SuspicionRefusalRecipient | null> {
+  const standing = await readStandingSuspicionRefusals(db, pariwarId, deceasedMemberId);
+  const refused = standing[0];
+  if (!refused) return null;
+  const declaration = await getEffectiveNomineeDeclaration(db, pariwarId, refused.claimCaseId);
+  if (declaration.status !== 'effective') return { kind: 'none' };
+  const rankOne = declaration.entries.find((e) => e.rank === 1);
+  return rankOne ? { kind: 'at_death', versionId: rankOne.versionId } : { kind: 'none' };
 }
 
 // ── RF5 — the wait (pure + the conjunct) ─────────────────────────────────────────────────────────────

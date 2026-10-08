@@ -212,7 +212,9 @@ export type AuthAuditEventType =
   // the otp_hash HMAC correlation (never the code) + masked nominee mobile (last-4) ONLY —
   // NEVER the nominee's name/mobile/UPI/Aadhaar; the intake lines carry claim_case_id +
   // deceased_member_id + intake_channel + relationship ONLY — NEVER any claimant PII.
-  //   handover_otp_send    — a handover-trust OTP was sent to the nominee's declared mobile.
+  //   handover_otp_send    — a handover-trust OTP was sent to the nominee's declared mobile — the latest nominee
+  //                          (`recipient: 'latest'`) or, while a `-239` suspicion refusal stands for the death, the
+  //                          nominee in place at the death (`recipient: 'at_death'`, Story 6.24b RF9).
   //   handover_otp_consume — a submitted handover-trust OTP verified (elevation recorded).
   //   handover_otp_failure — a wrong/expired/absent handover-trust OTP verify attempt.
   //   intake_initiated     — claim.intake_initiated appended → a new claim frozen the account.

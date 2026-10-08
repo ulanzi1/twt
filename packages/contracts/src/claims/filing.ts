@@ -69,7 +69,10 @@ export type ClaimLifecycleState = z.output<typeof ClaimLifecycleState>;
 
 /**
  * `POST /member/claims/handover-otp` — send the handover-trust OTP to the NOMINEE's
- * declared mobile (Story 3.4 `member_nominees`, Tier-1 decrypt). No body: the deceased
+ * declared mobile, Tier-1 decrypted: the LATEST nominee (Story 3.4 `member_nominees`), or —
+ * while a `-239` suspicion refusal stands for the death — the rank-1 nominee of the refused
+ * claim's effective determination, the nominee in place at the death (Story 6.24b RF9;
+ * ⛔ never the latest one then). No body: the deceased
  * member is derived from the authenticated (Ravi-mode) session; the nominee is resolved
  * server-side. An empty strict object so an unexpected key is still rejected.
  */

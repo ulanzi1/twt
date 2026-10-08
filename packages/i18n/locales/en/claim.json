@@ -160,5 +160,9 @@
   "closed.call": "Call the helpline",
   "closed.back": "Go back",
   "appeal_helpline.until": "Can be appealed until {date}.",
-  "appeal_helpline.ended": "The time to appeal ended on {date}."
+  "appeal_helpline.ended": "The time to appeal ended on {date}.",
+  "$comment.suspicion_sms": "Story 6.24b (`2026-10-08-295` RB1): suspicion_sms.* are the three once-ever texts of a refusal on suspicion of a post-death nominee change — refusal_notice to the nominee in place at the death (`-262` FQ7 B), closed_notice to her when an allowed appeal closes her claim (`-291` Q2 B), appeal_notice to the refused person with the last date to appeal (`-293` item 1 B). The en words are the Trustee Panel's plus the helpline number; {member} is the Pariwar's mode-resolved member name, {date} is DD-MM-YYYY. The Hindi was agent-authored and is NOT YET HUMAN-REVIEWED — go-live gate Row 23 (suspicion-notice-hindi-human-review). The SMS keys must match the registered DLT content byte for byte: any later change must be re-registered.",
+  "suspicion_sms.refusal_notice": "A claim for {member} could not go ahead. Please call the helpline {helpline}.",
+  "suspicion_sms.closed_notice": "Your claim for {member} has been closed. Please call the helpline {helpline}.",
+  "suspicion_sms.appeal_notice": "The claim for {member} could not go ahead. It can be appealed until {date}. Please call the helpline {helpline}."
 }

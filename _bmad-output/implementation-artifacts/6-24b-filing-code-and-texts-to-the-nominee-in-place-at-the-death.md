@@ -26,7 +26,7 @@ the shipped tree makes a committed detail wrong or unbuildable, the change is PR
 
 # Story 6.24b: The Filing Code and the Texts to the Nominee in Place at the Death — After a Suspicion Refusal, and When an Allowed Appeal Closes Her Claim `[SURFACE]`
 
-Status: ready-for-dev
+Status: review
 
 > ⭐⭐ **WHAT THIS STORY IS, IN ONE PARAGRAPH.** Split from Story 6.24 on 2026-10-07 (BigDev: *"ok, split it"*). While a refusal on suspicion
 > of a post-death nominee change stands (`-239`), the app's **filing code goes to the nominee the District Admin found in place at the
@@ -562,8 +562,8 @@ verified BY NAME on each ([[project_live_db_test_gotchas]]).
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0 — Governance (AC0b)** — ⛔ no code before 0.3 is committed.
-  - [ ] 0.1 `git fetch origin`; confirm `main` still carries 6.24a and no new `.decision-log.md` entry after `-294` touches FQ6 / FQ7 / `-291`
+- [x] **Task 0 — Governance (AC0b)** — ⛔ no code before 0.3 is committed.
+  - [x] 0.1 `git fetch origin`; confirm `main` still carries 6.24a and no new `.decision-log.md` entry after `-294` touches FQ6 / FQ7 / `-291`
     Q2 / `-293` item 1 / RF9 / RF11 / RF12; if `main` moved, re-derive the `file:NNN`s of the files this story edits.
   - [x] 0.2 Put RB1–RB11, RB15, RB16 and RB18 to BigDev (each with its recommended option), and RB12's MECHANISM (the policy is answered);
     RB13 and RB17 are answered (2026-10-08); RB14 is withdrawn (recorded, ⛔ committed as a rule).
@@ -575,8 +575,8 @@ verified BY NAME on each ([[project_live_db_test_gotchas]]).
     ([[project_decision_log_writes_user_inserted]]); commit it ALONE (`governance(6.24b): …`).
   - [x] 0.4 The story's `RB` block gains each answer (the copied RF text is ⛔ never edited); per `-295` Consequence 1, RB11, RB13,
     RB18, AC7b and Task 6.3 gain Confirm 2 / Row 22's (c), and RB17's precedent cite is `-284` E5.
-- [ ] **Task 1 — Migration 0151 + schema (AC7b, AC10b; RF11, RB2)**
-  - [ ] 1.1 `packages/domain/migrations/0151_claim-suspicion-notices.sql`, HAND-AUTHORED (F29), plus its `meta/_journal.json` entry (idx
+- [x] **Task 1 — Migration 0151 + schema (AC7b, AC10b; RF11, RB2)**
+  - [x] 1.1 `packages/domain/migrations/0151_claim-suspicion-notices.sql`, HAND-AUTHORED (F29), plus its `meta/_journal.json` entry (idx
     151, the 0150 entry's shape `{ idx, version: '7', when, tag, breakpoints: true }`; ⚠ idx 140 is a pre-existing gap — leave it):
     table `claim_suspicion_notices` — `notice_id uuid PK DEFAULT gen_random_uuid()`, `pariwar_id uuid NOT NULL`, `claim_case_id uuid NOT
     NULL`, `purpose text NOT NULL`, `outcome text NOT NULL`, `recipient_version_id uuid NULL` (FK → `member_nominee_versions(version_id)`
@@ -590,21 +590,21 @@ verified BY NAME on each ([[project_live_db_test_gotchas]]).
     claimed_at, claimed_by_job, updated_at)` to `twt_app` (⛔ no DELETE); ENABLE + FORCE RLS; three policies (select / insert / update) on
     `pariwar_id = nullif(current_setting('app.pariwar_id', true), '')::uuid` — copy 0138 `:49-72` line for line where they apply.
     Nothing names `'closed'` (an enum literal — and this is a text table anyway).
-  - [ ] 1.2 `packages/domain/src/schema/claim_suspicion_notices.ts` (Drizzle; `SUSPICION_NOTICE_PURPOSES` and `SUSPICION_NOTICE_OUTCOMES`
+  - [x] 1.2 `packages/domain/src/schema/claim_suspicion_notices.ts` (Drizzle; `SUSPICION_NOTICE_PURPOSES` and `SUSPICION_NOTICE_OUTCOMES`
     `as const` — the outcomes tuple may RE-EXPORT 6.19d's `CERTIFICATE_REMINDER_OUTCOMES`, `claim_certificate_reminder.ts:53`, ⛔ never a
     hand copy) + schema index export; `packages/domain/src/policies/claim-suspicion-notice-rls.ts` (the
     `claim-correction-reminder-rls.ts:13-34` template) + its `policies/index.ts` line.
-  - [ ] 1.3 ⛔ Never run `pnpm db:generate` — it diffs against the `0020` snapshot and would emit ~130 migrations' drift (F29).
+  - [x] 1.3 ⛔ Never run `pnpm db:generate` — it diffs against the `0020` snapshot and would emit ~130 migrations' drift (F29).
     Schema ↔ migration parity is proved by Task 1.4 (CHECKs by name, the `checkValues` exact-set lockstep). Apply to :5432 AND :5433;
     verify by name.
-  - [ ] 1.4 `packages/domain/tests/integration/rls/claim-suspicion-notice-policy-regression.spec.ts` — the 0138 spec's
+  - [x] 1.4 `packages/domain/tests/integration/rls/claim-suspicion-notice-policy-regression.spec.ts` — the 0138 spec's
     (`claim-certificate-reminder-policy-regression.spec.ts`) shape: cross-tenant SELECT / INSERT refused, ⛔-scope fail-closed (`:175-180`
     form), FORCE RLS (`:182-190` form), denied columns 42501 + one positive UPDATE of every granted column (`:290-323` form), both
     CHECKs EXACT-SET vs the tuples (`checkValues`, `:148`, `:385-389`), the UNIQUE, the composite FK.
-  - [ ] 1.5 `member/anonymize.ts` near `:186-191`: one comment line — `claim_suspicion_notices` holds ⛔ no plaintext (a keyed hash, ids)
+  - [x] 1.5 `member/anonymize.ts` near `:186-191`: one comment line — `claim_suspicion_notices` holds ⛔ no plaintext (a keyed hash, ids)
     ⇒ nothing to scrub (RF11; F28).
-- [ ] **Task 2 — API: the filing code (AC6b; RF9, RB8, RB9)**
-  - [ ] 2.1 Domain `readSuspicionRefusalRecipient(db, pariwarId, deceasedMemberId)` in `suspicion-refusal.ts`: `readStandingSuspicionRefusals`
+- [x] **Task 2 — API: the filing code (AC6b; RF9, RB8, RB9)**
+  - [x] 2.1 Domain `readSuspicionRefusalRecipient(db, pariwarId, deceasedMemberId)` in `suspicion-refusal.ts`: `readStandingSuspicionRefusals`
     → `[]` ⇒ `null`; else `getEffectiveNomineeDeclaration(db, pariwarId, rows[0].claimCaseId)` → `status === 'effective'` and
     `entries.find(e => e.rank === 1)` ⇒ `{ kind: 'at_death', versionId }`, else `{ kind: 'none' }`. ⛔ No ciphertext. Unit + integration
     tests (`packages/domain/tests/integration/claim/` — `_suspicion-refusal-fixtures.ts` `refusedClaim(…, { ground: true })` seeds the
@@ -612,26 +612,26 @@ verified BY NAME on each ([[project_live_db_test_gotchas]]).
     (`approval-warnings.test.ts:355-365` already lists the module). ⭐ Add the missing ref-only assertion to
     `nominee-name-no-comparison-fence.test.ts` (RB8): `suspicion-refusal.ts`'s source (comments stripped) contains ⛔ none of
     `mobileCiphertext`, `nameCiphertext`, `decrypt`, `getMemberNominees`, `getNomineeVersionsByIds`; red-check it.
-  - [ ] 2.2 `sendHandoverOtp` (`claims.service.ts:97-143`): call it first; `null` ⇒ today's body, behaviour-identical, `recipient:
+  - [x] 2.2 `sendHandoverOtp` (`claims.service.ts:97-143`): call it first; `null` ⇒ today's body, behaviour-identical, `recipient:
     'latest'`; `none` ⇒ `noOp('at_death')`; `at_death` ⇒ `nominee.getNomineeVersionsByIds(scopeTx.tx, pariwarId, [versionId])` (empty ⇒
     THROW, RB9) → `claim.resolveCorrectionMobile(row.mobileCiphertext, 'member_nominee', pariwarId, deps.encryption)` (`AppDeps.encryption`
     is structurally `FieldCryptoDeps`; the same `normalizeMobile` as the latest path) → `null` ⇒ `noOp('at_death')`; else mask +
     `requestOtp` + `deliver` exactly as today. `HandoverOtpSendOutcome` gains `recipient: 'latest' | 'at_death'` (internal); the
     handler's `emitAuthAudit` context gains `recipient` (`claims.handlers.ts:72-83`). ⛔ Never `getMemberNominees` on the `none` /
     `at_death` paths. RB9's `noOp(recipient)` serves every no-op, the latest path's two included.
-  - [ ] 2.3 Stale text corrected where it lives (the RF16 rule) — name both recipients: `apps/api/src/audit/audit-sink.ts:210-221` (*"sent
+  - [x] 2.3 Stale text corrected where it lives (the RF16 rule) — name both recipients: `apps/api/src/audit/audit-sink.ts:210-221` (*"sent
     to the nominee's declared mobile"*); `packages/contracts/src/claims/filing.ts:71-75` (*"Story 3.4 `member_nominees`"* → the RF9 rule);
     `claims.service.ts:4-5` (*"sent to the NOMINEE's declared mobile"*), `:19-22`, the outcome comments `:73-77`, and `:83-88` (*"…the
     deceased's PRIMARY nominee's declared mobile … Reads the nominee row"* — also move it above `sendHandoverOtp`, it sits orphaned
     above `timingEqualizeDelay`'s own docstring); `claims.handlers.ts:4` and `:59-60`. Leave `apps/mobile/lib/use-handover-otp.ts:7-8`
     (still true). Contract SHAPE ⛔ unchanged.
-  - [ ] 2.4 Trace F16's four flows (intake, upload incl. certificate replacement, nominee bank, reconciliation) and record per flow in
+  - [x] 2.4 Trace F16's four flows (intake, upload incl. certificate replacement, nominee bank, reconciliation) and record per flow in
     the Debug Log whether a family of a claim with a standing refusal can reach it — ⛔ no code change (P4′). Record too what is ⛔ NOT
     behind the code (`claims.routes.ts`, by path): `…/:claimCaseId/contact`, `…/dpdpa-consent` and `…/dpdpa-consent/revoke` —
     session only; `…/:claimCaseId/nominee-corrections` — the `nominee_change` step-up, whose code goes to the SESSION member's registered mobile (the phone
     holder, F14). And the two leftover windows: a code sent to the latest nominee before the refusal stays verifiable for
     `stepUpOtpTtlMs` (verify keys only on `handover:<id>`), and a `claim_handover` elevation lasts `STEP_UP_ELEVATED_MS` (`config.ts:384`).
-  - [ ] 2.5 Specs, `apps/api/tests/integration/claims/handover-otp-suspicion.spec.ts`: AC6b's legs — at-death (hint …1111,
+  - [x] 2.5 Specs, `apps/api/tests/integration/claims/handover-otp-suspicion.spec.ts`: AC6b's legs — at-death (hint …1111,
     `resolvedMobile` via `CapturingStepUpDelivery.last` / `.deliveries`, `_setup.ts:162-172`; audit `recipient` on `CapturingAuditSink`
     filtered by `context.deceased_member_id` — the `auditsFor` filter form, `nominee-declaration.spec.ts:194-195`; A's 10-digit and E.164 forms
     absent from `JSON.stringify` of those events), latest before / after an allowed appeal / after a revision off `-239` / for a
@@ -643,34 +643,34 @@ verified BY NAME on each ([[project_live_db_test_gotchas]]).
     (the real-writer form at `apps/api/tests/integration/_nominee-name-check-fixture.ts:518`). Either way: REAL envelopes, a DISTINCT mobile per version
     (`world()` writes ONE mobile for every version, `:147`); ⛔ `suspicion-refusal-routes.spec.ts`'s `'enc:v1:m'` placeholder (`:173`)
     cannot decrypt. Also ONE spec asserting today's `member_claim.handover_otp_send` line (F17 — none exists).
-- [ ] **Task 3 — The send core and the sibling registry (AC7b; RF11, RB1, RB4, RB6, RB16)**
-  - [ ] 3.1 Extract `sendClaimDltSms` (RB4) into `apps/jobs/src/scheduler/claim-dlt-sms-send.ts`; `sendClaimCorrectionSms` becomes the
+- [x] **Task 3 — The send core and the sibling registry (AC7b; RF11, RB1, RB4, RB6, RB16)**
+  - [x] 3.1 Extract `sendClaimDltSms` (RB4) into `apps/jobs/src/scheduler/claim-dlt-sms-send.ts`; `sendClaimCorrectionSms` becomes the
     wrapper; `CORRECTION_SEND_TIMEOUT_MS` and `ClaimCorrectionSmsResult` move and are re-exported from `claim-correction-reminders.ts`;
     `withTimeout` and `SendTimeoutError` move and stay private; ⛔ no value import back into `claim-correction-reminders.ts`. Run, with ⛔ no
     test line edited: `claim-correction-send.test.ts`, `claim-correction-control-paths.test.ts`, `claim-certificate-reminders.test.ts`,
     and the 6.19b / 6.19c / 6.19d live tests — any test line edited = the extraction is wrong.
-  - [ ] 3.2 `apps/jobs/src/scheduler/suspicion-notice-sms-templates.ts` (the name RF11 gives, `suspicion-refusal-sms-templates.ts`, is also
+  - [x] 3.2 `apps/jobs/src/scheduler/suspicion-notice-sms-templates.ts` (the name RF11 gives, `suspicion-refusal-sms-templates.ts`, is also
     fine — ⚠ avoid a `SuspicionRefusalNotice` export: that identifier is 6.24a's console component, `SignalsPanel.tsx:38`): header carries
     the D33 and S4 / T6 carve-out sentences; `SuspicionNoticeSmsMessage = 'refusal_notice' | 'closed_notice' | 'appeal_notice'`; locale
     `'hi' | 'en'`; per entry `{ copyKey, dltTemplateIdConfigKey, registeredText }` with `{#var#}` slots; variables `{ member, helpline }`
     and, for `appeal_notice`, `{ member, date, helpline }`; `renderSuspicionNoticeSms(message, locale, vars)` through the REAL `t()`
     (`t(key, params, { locale, namespace: 'claim' })`); `formatAppealUntil(d: CalendarDateString): string` → `DD-MM-YYYY` (RB6, a pure
     string reorder, unit-tested incl. a year boundary).
-  - [ ] 3.3 `apps/jobs/tests/suspicion-notice-sms-templates.test.ts` (the 6.19 test's shape, ⛔ its D33 name assertion): the real `t()` with
+  - [x] 3.3 `apps/jobs/tests/suspicion-notice-sms-templates.test.ts` (the 6.19 test's shape, ⛔ its D33 name assertion): the real `t()` with
     distinct markers renders EXACTLY `registeredText`; each variable once, in the order of the Panel's words; the slot count (2 or 3); the
     DLT sheet contains each text and each key; the key equals `sms.dlt.template_id.suspicion_notice.${message}.${locale}`; ⛔ no unfilled
     `{x}`; the en texts pinned byte-for-byte to the Panel's words (+ `{helpline}`); RB16's no-deadline deny-list on every body (its own
     copy of `assertNoDeadlineThreat` + the full `HINDI_DEADLINE_TERMS`; `appeal_notice` rendered with a non-digit `{date}` marker); and
     `$comment.suspicion_sms` contains `NOT YET HUMAN-REVIEWED` in BOTH `en` and `hi` `claim.json` (F27 — ⛔ no other gate reads it).
-- [ ] **Task 4 — The domain half of the sweep (AC7b; RB2, RB3, RB5, RB7, RB8, RB10, RB13, RB15, RB18)** — new `packages/domain/src/claim/suspicion-notice.ts`
+- [x] **Task 4 — The domain half of the sweep (AC7b; RB2, RB3, RB5, RB7, RB8, RB10, RB13, RB15, RB18)** — new `packages/domain/src/claim/suspicion-notice.ts`
   (exported from `claim/index.ts`):
-  - [ ] 4.1 Cross-tenant selectors on the BYPASSRLS pool, keyset-paged, raw SQL with explicit aliases (⛔ a Drizzle correlated subquery —
+  - [x] 4.1 Cross-tenant selectors on the BYPASSRLS pool, keyset-paged, raw SQL with explicit aliases (⛔ a Drizzle correlated subquery —
     [[project_epic6_drizzle_correlated_subquery_bug]]), `LIMIT ${clampLimit(…)}` (RB10 — the gate is blind to raw SQL ⇒ a spec asserts
     the page cap): `selectDueSuspicionNotices(db, { purpose, after, limit, allow })` per RB10; *"finished"* = `outcome <> 'attempting'`;
     (b) joins `events_log` on `stream_id` (RB10) — RB18 is judged ONLY under the lock (Task 4.2), ⛔ here; (c) projects the chain start + `clock_timestamp()` and
     is filtered in TS. Row shape: `{ pariwarId, claimCaseId, hasAttemptingRow }` (+ `chainStartedAt`, `clock` for (c)); every TS
     filter — RB10's 90 days, RB12's hold — runs AFTER the page, so the keyset cursor and the last-page test see the UNFILTERED page.
-  - [ ] 4.2 `beginSuspicionNotice(client, { pariwarId, claimCaseId, purpose, jobId, now })`: `SET LOCAL lock_timeout`; the claim row
+  - [x] 4.2 `beginSuspicionNotice(client, { pariwarId, claimCaseId, purpose, jobId, now })`: `SET LOCAL lock_timeout`; the claim row
     `FOR UPDATE` — ONE statement, inline (the `suspicion-refusal-persist.ts:179-183` form; `lockClaimCase`, `read.ts:95-106`, is
     equally acceptable since this module is ⛔ not an NW1 entry); RE-CHECK the purpose's predicate (a: `isSuspicionRefusalStanding`;
     b: still `closed` + the trigger; c: this claim's row of `readStandingSuspicionRefusals` has `appeal === 'not_filed'` — RB13);
@@ -686,7 +686,7 @@ verified BY NAME on each ([[project_live_db_test_gotchas]]).
     'not_due' | { kind: 'skipped', expiredAttempt } | { kind: 'no_target', reason: 'closed_no_determination' | 'excluded_claimant' }` (`not_due` = a FRESH claim whose locked re-check failed — ⛔ row written). A failed re-check follows RB10's ONE rule (a FRESH claim writes ⛔ no row; an
     existing `attempting` row — own, or another job's past the lease, taken over first — ⇒ `skipped_superseded` when `detail IS NULL`,
     else `error` / `exhausted:recheck_<reason>` with `expiredAttempt: true`; another job's row within the lease ⇒ `held_by_other`).
-  - [ ] 4.3 Recipients: purposes a / b — RF9's rule via `getEffectiveNomineeDeclaration` + `getNomineeVersionsByIds` (b: the CLOSED claim's
+  - [x] 4.3 Recipients: purposes a / b — RF9's rule via `getEffectiveNomineeDeclaration` + `getNomineeVersionsByIds` (b: the CLOSED claim's
     OWN live determination when `effective`, else the reversed claim S's determination AS OF R's `claim.closed` event — S =
     `held_by_claim_case_id`; the rank-1 rule shared with `getEffectiveNomineeDeclaration`, ⛔ copied — else `no_target` + an alarm (the row written by 4.2),
     RB15; RB18 judged after RB15's source is chosen, before any mobile is read; the mobile at the chain head, root first, for BOTH
@@ -694,12 +694,12 @@ verified BY NAME on each ([[project_live_db_test_gotchas]]).
     `readClaimContact` (`claim-contact-check.ts:49-64`) → ⛔ row ⇒ none; `contact.claimantNomineeVersionId === null` ⇒
     `contact.claimantMobileCiphertext`, source `claim_contact`; else the chain HEAD's `mobileCiphertext` (RB7: root = last of
     `correctionChainOf`, head = `chainHeadOf(root, versions)`), source `member_nominee`; locale = `contact.contactLocale`.
-  - [ ] 4.4 `finaliseSuspicionNotice` (CAS on `outcome = 'attempting' AND claimed_by_job = $job`), `noteSuspicionNoticeTransient`,
+  - [x] 4.4 `finaliseSuspicionNotice` (CAS on `outcome = 'attempting' AND claimed_by_job = $job`), `noteSuspicionNoticeTransient`,
     `expireExhaustedSuspicionNotices(db, { cutoff, allow })` (RB3; cross-tenant, the
     "DELIBERATE" justification block of `claim-correction-reminders.ts:778-788` copied in spirit) — `correction-reminder-record.ts:187-321`'s
     shapes for this table.
-  - [ ] 4.5 Add the module to `FENCED_FILES` (38 → 39, the reason in the pin's comment); ⛔ not to NW1's entry list.
-  - [ ] 4.6 Domain integration specs (`packages/domain/tests/integration/claim/suspicion-notice.spec.ts`): each selector incl. `allow`
+  - [x] 4.5 Add the module to `FENCED_FILES` (38 → 39, the reason in the pin's comment); ⛔ not to NW1's entry list.
+  - [x] 4.6 Domain integration specs (`packages/domain/tests/integration/claim/suspicion-notice.spec.ts`): each selector incl. `allow`
     (a reversed S, a `closed` R, an appeal filed, a refusal ≥ 1 day either side of its 90-day limit — the ±1 ms boundary is 6.24a's
     `hasSuspicionRefusalAppealLimitPassed` test, ⛔ re-run here: the statement clock cannot be injected); the locked re-check (revise
     away between selection and lock — two connections, COMMITTED txns [[project_db_clock_ordering_tests_tie]]); RB10's re-check rule
@@ -709,21 +709,21 @@ verified BY NAME on each ([[project_live_db_test_gotchas]]).
     (a post-death-nominee claimant ⇒ a finished `no_target` row; a non-nominee claimant texted — residual i; a second run silent); a duplicate child after a committed `no_target` ⇒ `already_final`, ⛔ second alarm; RB15 and RB18 both
     applying ⇒ ONE row, detail `no_target:closed_no_determination` (RB18 ⛔ evaluated); the lease takeover ± 1 ms (`packages/domain/tests/integration/claim/correction-chase.spec.ts:1046-1056` form); once-ever under UNIQUE; both claimant sides + a corrected chain head + a FORKED chain (root's head ≠ the linked
     version's head); ⛔ contact ⇒ none; the page cap.
-- [ ] **Task 5 — The jobs sweep (AC7b, AC9b; RF11, RB3, RB5, RB12, RB15, RB18)** — `apps/jobs/src/scheduler/claim-suspicion-notices.ts`:
-  - [ ] 5.1 Queues in `packages/queue/src/index.ts` (beside `:365-405`): `CLAIM_SUSPICION_NOTICE_SWEEP: 'claim.suspicion.notice.sweep'`,
+- [x] **Task 5 — The jobs sweep (AC7b, AC9b; RF11, RB3, RB5, RB12, RB15, RB18)** — `apps/jobs/src/scheduler/claim-suspicion-notices.ts`:
+  - [x] 5.1 Queues in `packages/queue/src/index.ts` (beside `:365-405`): `CLAIM_SUSPICION_NOTICE_SWEEP: 'claim.suspicion.notice.sweep'`,
     `CLAIM_SUSPICION_NOTICE_SMS: 'claim.suspicion.notice.sms'`; register in `apps/jobs/src/boot.ts` after 6.19d (`:612`) with the shared
     `claimCorrectionDeps` (`:591-601`; deps type `Omit<ClaimCorrectionReminderDeps, 'push'>`, 6.19d's form); cron `'0 10 * * *'`
     `CLAIM_CORRECTION_TZ`; the bound and budget IMPORTED as 6.19d does (`claim-certificate-reminders.ts:36-52`, `:713-734`):
     `DEFAULT_CORRECTION_SWEEP_MAX_RUNS`, `DEFAULT_CORRECTION_SWEEP_BUDGET_MS`, `CORRECTION_SWEEP_EXPIRE_SECONDS` (set on BOTH
     `createQueue` and `schedule`), `CORRECTION_SWEEP_RETRY` — the expiry > budget rule (stated `claim-correction-reminders.ts:98-104`, applied `:1424-1477`).
-  - [ ] 5.2 The sweep: (1) `expireExhaustedSuspicionNotices` + an alarm listing claim ids; (2) RB12's config check —
+  - [x] 5.2 The sweep: (1) `expireExhaustedSuspicionNotices` + an alarm listing claim ids; (2) RB12's config check —
     `isConfigured()` and each needed template key once per run (`appeal_notice`: both locales); the helpline LAZILY, memoised per
     Pariwar, as (3)'s pages reveal Pariwars; any gap or ANY Secret Manager fault ⇒ that purpose / Pariwar's claims are ⛔ enqueued and
     are collected (a post-page filter); (3) per purpose, page the selector and enqueue one child per (claim, purpose) — payload ids only; a summary
     `console.info` (`:1017` form). ⛔ `dispatch()`. The Pariwar allowlist exactly as 6.19b's (`:765-774`): an EMPTY allowlist is refused,
     and an allowlist in production is refused; `allow` passed to every selector and the finaliser; (4) ONE end-of-run alarm for the
     claims held by (2) — per purpose, the count and the claim ids (RB12).
-  - [ ] 5.3 The child: RB12's race-guard check first (the same three — a gap or a Secret Manager fault ⇒ return `held_config`, ⛔ no
+  - [x] 5.3 The child: RB12's race-guard check first (the same three — a gap or a Secret Manager fault ⇒ return `held_config`, ⛔ no
     row, ⛔ decrypt, an alarm with ids only) → read
     the presentation mode ONCE in its OWN `withPariwarScope` (RB5) → `withPariwarScope` → `beginSuspicionNotice`
     → COMMIT (⛔ a caught DB error inside it); `skipped` + `expiredAttempt` ⇒ alarm (ids only, the `claim-correction-reminders.ts:433-445`
@@ -735,7 +735,7 @@ verified BY NAME on each ([[project_live_db_test_gotchas]]).
     alarm — RB12's recorded edges i / ii) (hash + version + outcome); `alarm: true` ⇒ `onAlarm`; `!moved` ⇒
     alarm. Transient ⇒ note + throw `ClaimCorrectionTransientError` (reuse it). Detail names: 6.19b's `no_target:no_sendable_number`
     (`claim-correction-reminders.ts:486`) — ⛔ never `mobile_unreachable` / `mobileUnreachable` (forbidden by `delivery-terminology-gate.test.ts:45-71`).
-  - [ ] 5.4 Specs: `apps/jobs/tests/claim-suspicion-notices-live.test.ts` (6.19d's harness form — `pariwarAllowlist: [PARIWAR]`
+  - [x] 5.4 Specs: `apps/jobs/tests/claim-suspicion-notices-live.test.ts` (6.19d's harness form — `pariwarAllowlist: [PARIWAR]`
     (`claim-certificate-reminders-live.test.ts:241`), a `resolveConfig` map answering the `sms.dlt.template_id.suspicion_notice.` prefix
     (6.19d's answers only `…claim_correction.`, `:235`), `gateway`, `onAlarm`, `setNow`; seed with real envelopes as
     `_claim-correction-seed.ts` does) — AC7b's legs for ALL THREE purposes: one row + one text; second run silent; revised away ⇒
@@ -751,13 +751,13 @@ verified BY NAME on each ([[project_live_db_test_gotchas]]).
     check and the send ⇒ `error` + alarm (the recorded edge); R undetermined and S's as-of ⛔ effective ⇒ `no_target` + alarm (RB15); `INVALID_NUMBER` / `CARRIER_REJECT` / 503 classification; crash-after-claim reclaimed next day, given up after
     three IST days (RB3); ⛔ plaintext: `JSON.stringify({ enqueued, alarms, rows })` contains ⛔ neither mobile nor the deceased's name
     (the `claim-correction-reminders-live.test.ts:606-620` form).
-  - [ ] 5.5 `apps/jobs/tests/claim-suspicion-notice-no-decision.test.ts` — 6.19d's `claim-certificate-reminder-no-decision.test.ts` form
+  - [x] 5.5 `apps/jobs/tests/claim-suspicion-notice-no-decision.test.ts` — 6.19d's `claim-certificate-reminder-no-decision.test.ts` form
     (comments stripped; a source scan, since a runtime spy cannot see module-internal calls): `claim-suspicion-notices.ts`,
     `claim-dlt-sms-send.ts`, `suspicion-notice-sms-templates.ts` and `packages/domain/src/claim/suspicion-notice.ts` reference ⛔ none of
     its FORBIDDEN list (`adjudicateClaim`, `appendEvent`, `projectClaimState`, …) plus 6.24a's writers (`closeClaimsHeldBySuspicionAppeal`,
     …); a positive control that `beginSuspicionNotice` IS referenced (invariant 7, AC9b). Red-check it.
-- [ ] **Task 6 — i18n and the go-live records (AC7b; 6.4 → AC6b; RB1, RB11, RB16)**
-  - [ ] 6.1 `packages/i18n/locales/{en,hi}/claim.json`: the three `suspicion_sms.*` keys + `$comment.suspicion_sms` in BOTH files. en =
+- [x] **Task 6 — i18n and the go-live records (AC7b; 6.4 → AC6b; RB1, RB11, RB16)**
+  - [x] 6.1 `packages/i18n/locales/{en,hi}/claim.json`: the three `suspicion_sms.*` keys + `$comment.suspicion_sms` in BOTH files. en =
     the Panel's words + `{helpline}`: *"A claim for {member} could not go ahead. Please call the helpline {helpline}."* · *"Your claim for
     {member} has been closed. Please call the helpline {helpline}."* · *"The claim for {member} could not go ahead. It can be appealed until
     {date}. Please call the helpline {helpline}."* Hindi agent-authored, marked, ⛔ a deadline word (RB16 — ⚠ `दिनांक` contains `दिन` and
@@ -765,12 +765,12 @@ verified BY NAME on each ([[project_live_db_test_gotchas]]).
     ⛔ nothing (namespace default member-facing). `i18n-parity`, `microcopy` (it scans `claim.json`, `microcopy.yaml:386-387`, line by line
     — `$comment` text included, `scripts/microcopy/lib.ts:307`: ⚠ avoid the always-on terms, e.g. `report`, `by mistake`, in the
     comment) green.
-  - [ ] 6.2 `docs/launch-gate-inventory/dlt-template-requests-6-19.md` (RB11): owed rows 7–12 (3 messages × hi/en, the sibling's keys,
+  - [x] 6.2 `docs/launch-gate-inventory/dlt-template-requests-6-19.md` (RB11): owed rows 7–12 (3 messages × hi/en, the sibling's keys,
     slots), a `## The wording of templates 7–12 (Story 6.24b — the text to register)` section stating the D33 / S4 carve-outs, a cost
     line, a Record row (still not submitted); *"What it gates"* names Rows 22 / 23 for 7–12; *"## The six templates owed"* renamed; the
     7–12 section and its Record row: *"⛔ do not provision the ids of 7–12 until Row 22 closes"* and *"set each id only after the
     operator confirms that template's approval"* (RB12 edge ii).
-  - [ ] 6.3 `docs/launch-gate-inventory/inventory-roster.md`: **Row 22** `suspicion-notice-counsel-basis` (counsel's basis for texting
+  - [x] 6.3 `docs/launch-gate-inventory/inventory-roster.md`: **Row 22** `suspicion-notice-counsel-basis` (counsel's basis for texting
     the nominee in place at the death, the true nominee on closure, and the refused person — `-262` *"does NOT cover"*, `-291` Consequence
     3, `-293` Consequence 2; closure needs (a) counsel's basis, (b) a privacy-policy revision naming these purposes AND (c) the Panel's
     answer to `-295` §8 Confirm 2 (RB13 + RB18); its blockquote
@@ -779,22 +779,22 @@ verified BY NAME on each ([[project_live_db_test_gotchas]]).
     Consequence 2) and **Row 23** `suspicion-notice-hindi-human-review` (Row 21's form —
     `-262`, `-291`, `-293` each exclude the Hindi; closure replaces the marker in the same commit + re-registers any corrected Hindi
     template). The appended-row heading + blockquote + bullet order exactly as Rows 18–21.
-  - [ ] 6.4 `friction-budget.md`: one voluntary `forced` row (6.19b's precedent — its row in that file) — *"the family of a member whose
+  - [x] 6.4 `friction-budget.md`: one voluntary `forced` row (6.19b's precedent — its row in that file) — *"the family of a member whose
     claim was refused on suspicion of a post-death nominee change (the app's filing code now goes only to the nominee in place at the
     death; the person who made the change files through the helpline)"* — payer/subsystem per FQ6 B. The gate is path-dormant
     (`MEMBER_FACING_PREFIXES`, `scripts/friction-budget/lib.ts:453`); if its committed-diff check refuses a voluntary row, drop it and
     record why ([[project_friction_budget_baseline_ratchet]]).
-- [ ] **Task 7 — Records and proof (AC9b, AC10b)**
-  - [ ] 7.1 Red-checks in the Debug Log, at least: RF9 → `getMemberNominees` on the at-death path; the selector's *"finished"* → *"no row"*;
+- [x] **Task 7 — Records and proof (AC9b, AC10b)**
+  - [x] 7.1 Red-checks in the Debug Log, at least: RF9 → `getMemberNominees` on the at-death path; the selector's *"finished"* → *"no row"*;
     the locked re-check removed; RB13's `not_filed` removed; RB10's `detail` branch removed; RB12's sweep check removed (⇒ the "enqueues ⛔ child" leg red); the child's race guard removed (⇒ its leg red; both removed ⇒ a row burnt); RB15's as-of read swapped for S's LIVE determination (⇒ the "still A" leg red); RB15's alarm removed; RB18's exclusion removed (⇒ its leg red); RB5's
     sentinel check removed; RB6's reorder swapped; the ref-only assertion (Task 2.1); the no-decision fence (Task 5.5); the UNIQUE dropped
     (in a throwaway DB).
-  - [ ] 7.2 `pnpm ci:local` with `DATABASE_URL=…:5433` → 34/34 ([[project_ci_local_double_run_pollution]]); typecheck, lint; `pnpm
+  - [x] 7.2 `pnpm ci:local` with `DATABASE_URL=…:5433` → 34/34 ([[project_ci_local_double_run_pollution]]); typecheck, lint; `pnpm
     domain-invariants:check` (every AST `.limit()` clamped — raw SQL is Task 4.1's spec).
-  - [ ] 7.3 `deferred-work.md`: F22's 8.8 gap (an erased deceased's name would render `[anonymized]` in a contribution text — by reading,
+  - [x] 7.3 `deferred-work.md`: F22's 8.8 gap (an erased deceased's name would render `[anonymized]` in a contribution text — by reading,
     ⛔ not verified) as a new item.
-  - [ ] 7.4 `sprint-status.yaml` via the SAFE prepend ([[project_sprint_status_safe_prepend]]); commit on the story branch.
-  - [ ] 7.5 AC9b proved: `git diff --exit-code origin/main -- apps/mobile apps/public apps/jobs/src/scheduler/claim-correction-sms-templates.ts
+  - [x] 7.4 `sprint-status.yaml` via the SAFE prepend ([[project_sprint_status_safe_prepend]]); commit on the story branch.
+  - [x] 7.5 AC9b proved: `git diff --exit-code origin/main -- apps/mobile apps/public apps/jobs/src/scheduler/claim-correction-sms-templates.ts
     apps/jobs/tests/claim-correction-sms-templates.test.ts apps/jobs/tests/claim-correction-send.test.ts` is empty; the permission
     pins (`permissions.test.ts`) unchanged; `HandoverOtpResponse`'s schema unchanged.
 
@@ -895,16 +895,95 @@ DLT template ids and the helpline number are Secret Manager names with an env fa
 
 ### Agent Model Used
 
+Claude Opus 5.5 (1M context) — `bmad-dev-story 6.24b`, 2026-10-08.
+
 ### Debug Log References
+
+- **Task 0.1 (2026-10-08):** `git fetch origin` — `origin/main` = `b6a63a81` (unmoved since the pin); the only `.decision-log.md` entry after `-294` is this story's own `-295` ⇒ ⛔ re-derivation needed.
+- **Task 1.3:** 0151 applied by `pnpm db:migrate` to :5432 AND :5433 (⛔ `db:generate`); CHECKs / FK / UNIQUE / index verified BY NAME on each (`pg_constraint` / `pg_indexes`), FORCE RLS `t` on both. Task 1.4's spec 15/15.
+- **Task 2.1 red-check:** the new ref-only fence assertion was written FIRST and ran red (`expected … to contain 'getEffectiveNomineeDeclaration'`) before `readSuspicionRefusalRecipient` existed; green after. NW1 (`approval-warnings.test.ts`) 36/36 with the new `nominee-effective.ts` import.
+- **Task 7.1 — RF9 red-check:** the at-death branch in `sendHandoverOtp` disabled (`refusal !== null && Math.random() > 2` — every send falls to `getMemberNominees`) ⇒ `handover-otp-suspicion.spec.ts` 7 RED (at-death …1111, ⛔-effective no-op, sentinel, unsendable, two nominees, two refusals, malformed-500 at-death); reverted ⇒ 14/14.
+- **Task 2.4 — F16's four flows (⛔ code change; P4′).** Every one gates on `requireMemberStepUp(deps, 'claim_handover')`, i.e. on the ONE elevation `verifyHandoverOtp` records — so while a refusal stands, each needs the code that now goes to the nominee in place at the death: (1) intake `POST /member/claims/intake` (`claims.routes.ts:124`); (2) document upload `POST /member/claims/:claimCaseId/documents` (`:142`) — incl. 6.21b's certificate replacement (`apps/mobile/lib/use-handover-otp.ts` shared by `(claim)/handover-otp.tsx` and `(claim)/certificate-replacement.tsx`); (3) nominee bank `POST …/:claimCaseId/nominee-bank` (`:174`); (4) reconciliation's bank-statement upload (`apps/api/src/modules/reconciliation/routes.ts:87`). A family of a claim with a standing refusal can reach each ONLY with the code (⇒ only with the true nominee's phone). ⛔ NOT behind the code (session only): `…/:claimCaseId/contact` (`:237`), `…/dpdpa-consent` (`:219`, `:253`), `…/dpdpa-consent/revoke` (`:268`), and the reads (`GET …/nominee-bank` `:203`, `…/shepherd`, `…/death-certificate`). `…/:claimCaseId/nominee-corrections` (`:194`) is behind the `nominee_change` step-up, whose code goes to the SESSION member's registered mobile (the phone holder — F14), ⛔ the handover code. Leftover windows: a code already sent to the latest nominee before the refusal stays verifiable for `stepUpOtpTtlMs` (3 min default, `config.ts:383` — verify keys only on `handover:<id>`), and a `claim_handover` elevation lasts `STEP_UP_ELEVATED_MS` (5 min default, `config.ts:384`). Both bounded; recorded, ⛔ engineered around (P4′).
+- **Task 3.1 — the extraction (RB4):** `sendClaimDltSms` in `claim-dlt-sms-send.ts`; `sendClaimCorrectionSms` is the wrapper; `CORRECTION_SEND_TIMEOUT_MS` / `ClaimCorrectionSmsResult` moved and re-exported, `withTimeout` / `SendTimeoutError` moved and private; ⛔ value import back. Proof with ⛔ test line edited: `claim-correction-send.test.ts` + `claim-correction-control-paths.test.ts` + `claim-certificate-reminders.test.ts` 83/83; the 6.19b / 6.19c / 6.19d live tests (:5433) 58/58.
+- **Task 3.3:** the sibling lockstep test ran 12 RED (the sheet legs) before Task 6.2 wrote templates 7–12; green after (with 6.19's unchanged test, 74/74). **Task 7.1 — RB6 red-check:** `formatAppealUntil`'s reorder swapped to `YYYY-MM-DD` ⇒ the date legs RED; reverted ⇒ green.
+- **Task 4.6 — two defects found by the spec's first run and fixed:** (1) a bare JS array in a Drizzle `sql` template is EXPANDED into one parameter per element, so `ANY(${allow}::uuid[])` failed `malformed array literal` ⇒ `sql.param([...allow])`; (2) RB15's as-of instant lost its microseconds through a JS `Date` (`decided_at <= occurred_at` false for a determination in the same millisecond — the ms-truncation class) ⇒ the closing event's `occurred_at` travels as its EXACT `to_char(… 'US')` text, and `getEffectiveNomineeDeclarationAsOf` takes `Date | string`. ⚠ Test-only: every `now()` of one test transaction TIES ([[project_db_clock_ordering_tests_tie]]), so the real re-determination writer would stamp S's supersession AT the closure's own instant — the "S re-determined after the closure" and half-open legs re-determine through a raw supersession at `now() + 1 minute` (the subject is the as-of read; 6.20's specs prove the writer). Also: the "revised away between selection and the lock" leg runs in ONE transaction (select → revise → begin), ⛔ two committed connections — the re-check reads the decision under the lock, so the ordering it proves does not depend on commit visibility; recorded as a deviation from Task 4.6's wording.
+- **Task 7.1 — domain red-checks** (`redcheck.py`: plant → run `suspicion-notice.spec.ts` → revert; 25/25 before and after): the selector's attempting-bypass removed + "finished" → "any row" ⇒ 2 RED (the stranded and crashed `attempting` legs, the 90-day-passed `attempting` leg); the locked re-check removed ⇒ 6 RED; RB13's `not_filed` removed ⇒ 2 RED; RB10's `detail` branch removed ⇒ 1 RED (K4); RB15's as-of read swapped for S's LIVE determination ⇒ 1 RED ("still v1"); RB18's exclusion removed ⇒ 1 RED.
+- **Task 5.4:** the live test's first run failed 24/24 on a fixture defect (`actorId: 'da'` — `events_log.actor_id` is a uuid); fixed ⇒ 24/24. ⚠ The determinations are RAW rows with `death_certificate_review_id` NULL (0119-era — trusted as effective, RF9; ⛔ never backfilled) — the subject is the sweep, and 6.20 / 6.21a's specs prove the determination writer; in the own-committing test each step is its own transaction, so S's later re-determination gets a LATER `now()` naturally.
+- **Task 7.1 — jobs red-checks** (plant → run → revert; `claim-suspicion-notices-live.test.ts` 24/24 and the fence 5/5 after): RB12's SWEEP config check removed ⇒ 5 RED (template unset, one-locale unset, gateway unconfigured, transient Secret Manager fault, edge i); the CHILD's race guard removed ⇒ 2 RED (config vanishing between the sweep and the child; edge i); BOTH removed ⇒ the template-unset leg RED at its first assertion (a child IS enqueued — the claim would then be claimed and its slot burnt by the core's final `error`); RB5's sentinel check removed ⇒ 1 RED (the erased-name leg); the child's RB15 / RB18 `no_target` alarm removed ⇒ 2 RED; Task 5.5's fence with a planted `closeClaimsHeldBySuspicionAppeal` reference ⇒ 1 RED.
+- **Task 7.1 — the UNIQUE dropped, in a THROWAWAY database:** `CREATE DATABASE twt_redcheck_624b TEMPLATE twt_dev` on :5432, `DROP INDEX claim_suspicion_notices_claim_purpose_uq` there ⇒ `claim-suspicion-notice-policy-regression.spec.ts` 1 RED (the once-per-claim-per-purpose leg), 14 green; the throwaway database DROPPED (⛔ either live database touched).
+- **Task 7.5 — AC9b proved:** `git diff --exit-code origin/main -- apps/mobile apps/public apps/jobs/src/scheduler/claim-correction-sms-templates.ts apps/jobs/tests/claim-correction-sms-templates.test.ts apps/jobs/tests/claim-correction-send.test.ts` ⇒ EMPTY; ⛔ permission file touched; `packages/contracts/src/claims/filing.ts` changes are doc-comment lines only (`HandoverOtpResponse`'s schema unchanged). `pnpm domain-invariants:check` green (the raw-SQL `LIMIT` is clamped and asserted by Task 4.6's page-cap leg).
+- **Task 7.2 — `ci:local` run 1 (`DATABASE_URL` :5433): 33/34 — `integration-tests` RED, 2 legs of MY spec** (`suspicion-refusal-recipient.spec.ts`, the two-refusal legs; domain 4741 passed / 2 failed). Root cause: both claims were created in ONE test transaction, so their `created_at` TIED (`now()`) and RF1's `created_at DESC, claim_case_id DESC` order fell to the random claim-id tiebreak — the legs had passed earlier by chance ([[project_db_clock_ordering_tests_tie]]). ⛔ A production defect (RF1's order is 6.24a's, unchanged; the API spec's two-refusal leg uses separate committed transactions). Fixed in the TEST: the first-created claim's `created_at` moved back an hour (`createdEarlier`); 5/5 consecutive runs green; the notice + RLS specs 3/3 runs green.
+- **Task 7.2 — `ci:local` run 2 (`DATABASE_URL` :5433): ⭐ 34/34 GREEN** — `integration-tests` incl. domain 4743 passed / 1 skipped, API 1590 / 1, jobs 637 / 0; lint, typecheck, build, `i18n-parity`, `microcopy`, `friction-budget`, `schema-diff`, `domain-invariants` all green.
 
 ### Completion Notes List
 
+- ⭐ **RF9 — the filing code (AC6b).** `readSuspicionRefusalRecipient` (domain, ref-only — a version id) is read FIRST by
+  `sendHandoverOtp`: ⛔ standing refusal ⇒ today's path, behaviour-identical (`recipient: 'latest'`); a standing refusal ⇒ the rank-1
+  version of the most recently CREATED refused claim's EFFECTIVE determination, its mobile resolved by the domain's
+  `resolveCorrectionMobile` (null / erasure sentinel / unsendable ⇒ the no-op; a malformed envelope ⇒ 500 — RB9), `recipient:
+  'at_death'`; ⛔ effective ⇒ the no-op. Every no-op runs through ONE `noOp(recipient)`. The audit line gains the non-PII `recipient`.
+  ⛔ `getMemberNominees` on the at-death path (red-checked). F16's four flows traced (Debug Log, ⛔ code change — P4′).
+- ⭐ **The notices (AC7b).** Migration 0151 `claim_suspicion_notices` (0138's vocabulary, the composite FK, ONCE per claim per purpose —
+  three purposes from the start); the domain's `suspicion-notice.ts` (three keyset selectors on the BYPASSRLS pool with the
+  `attempting` bypass, the claim-row lock + RB10's ONE re-check rule, RB15's as-of read + RB18's exclusion under the lock, RB7's
+  refused-filer recipient, RB3's three-IST-day give-up); the jobs sweep + child (`claim-suspicion-notices.ts` — RB12's config check
+  in the sweep and again in the child, RB5's mode-resolved / erasure-guarded name, ⛔ `dispatch()`), registered in `boot.ts`.
+- ⭐ **RB4 — the shared send core** `claim-dlt-sms-send.ts`: 6.19b's body verbatim but one token; `sendClaimCorrectionSms` is a wrapper —
+  proved by 6.19b/c/d's unit (83) and live (58) tests passing with ⛔ test line edited.
+- **The words (RB1, RB6, RB16).** The sibling registry `suspicion-notice-sms-templates.ts` (D33 and S4 / T6 carve-out sentences in its
+  header) + `suspicion_sms.*` in en + hi (`$comment.suspicion_sms` marker in BOTH); en = the Panel's words + `{helpline}`; `{date}` =
+  `DD-MM-YYYY` (a pure reorder). The lockstep test renders through the REAL `t()` and carries the full no-deadline deny-list.
+- **The records (RB11).** DLT sheet templates 7–12 (wording, keys, slots, cost, Record row; *"What it gates"* names Rows 22 / 23; ⛔ provision
+  before Row 22); roster Rows 22 (counsel basis + privacy-policy purpose + `-295` §8 Confirm 2) and 23 (Hindi review); one voluntary
+  `forced` friction-budget row (the gate accepted it); `deferred-work.md` gains F22's 8.8 gap + the date-form item.
+- ⚠ **Two defects the first spec runs found and fixed** (Debug Log): a JS array in a Drizzle template is expanded per element (`sql.param`);
+  RB15's as-of instant lost microseconds through a JS `Date` (the instant now travels as exact text). ⚠ **Recorded deviations:** the
+  domain spec's "revised away between selection and the lock" leg runs in ONE transaction (⛔ two committed connections); RB15's test
+  re-determinations use a raw supersession at `now() + 1 minute` (every `now()` of one test transaction ties); the jobs live test seeds
+  RAW determinations (0119-era, trusted as effective — RF9).
+- ⚠ **Owed, ⛔ blocking the build** (unchanged): `-295` §8 Confirms 1–2 to the next Panel routing note (Row 22's (c)); Rows 22 / 23 open;
+  the DLT ids stay UNSET ⇒ every notice is HELD and alarmed until go-live (RB12).
+
 ### File List
+
+**New**
+- `packages/domain/migrations/0151_claim-suspicion-notices.sql`
+- `packages/domain/src/schema/claim_suspicion_notices.ts`
+- `packages/domain/src/policies/claim-suspicion-notice-rls.ts`
+- `packages/domain/src/claim/suspicion-notice.ts`
+- `packages/domain/tests/integration/rls/claim-suspicion-notice-policy-regression.spec.ts`
+- `packages/domain/tests/integration/claim/suspicion-refusal-recipient.spec.ts`
+- `packages/domain/tests/integration/claim/suspicion-notice.spec.ts`
+- `apps/api/tests/integration/claims/handover-otp-suspicion.spec.ts`
+- `apps/jobs/src/scheduler/claim-dlt-sms-send.ts`
+- `apps/jobs/src/scheduler/suspicion-notice-sms-templates.ts`
+- `apps/jobs/src/scheduler/claim-suspicion-notices.ts`
+- `apps/jobs/tests/suspicion-notice-sms-templates.test.ts`
+- `apps/jobs/tests/claim-suspicion-notices-live.test.ts`
+- `apps/jobs/tests/claim-suspicion-notice-no-decision.test.ts`
+
+**Modified**
+- `packages/domain/migrations/meta/_journal.json` (idx 151)
+- `packages/domain/src/schema/index.ts`, `packages/domain/src/policies/index.ts`, `packages/domain/src/claim/index.ts`
+- `packages/domain/src/claim/suspicion-refusal.ts` (`readSuspicionRefusalRecipient`)
+- `packages/domain/src/claim/nominee-effective.ts` (RB15's as-of selector, `getEffectiveNomineeDeclarationAsOf`)
+- `packages/domain/src/member/anonymize.ts` (comment)
+- `packages/domain/tests/claim/nominee-name-no-comparison-fence.test.ts` (39 files + the ref-only assertion)
+- `packages/queue/src/index.ts` (two queue names)
+- `packages/contracts/src/claims/filing.ts` (doc comment only)
+- `packages/i18n/locales/en/claim.json`, `packages/i18n/locales/hi/claim.json`
+- `apps/api/src/modules/claims/claims.service.ts`, `apps/api/src/modules/claims/claims.handlers.ts`, `apps/api/src/audit/audit-sink.ts` (comment)
+- `apps/jobs/src/scheduler/claim-correction-reminders.ts` (the wrapper), `apps/jobs/src/boot.ts`
+- `docs/launch-gate-inventory/dlt-template-requests-6-19.md`, `docs/launch-gate-inventory/inventory-roster.md`
+- `friction-budget.md`
+- `_bmad-output/implementation-artifacts/deferred-work.md`, `_bmad-output/implementation-artifacts/sprint-status.yaml`
+- `_bmad-output/implementation-artifacts/6-24b-filing-code-and-texts-to-the-nominee-in-place-at-the-death.md`
 
 ## Change Log
 
 | Version | Date | Change |
 |---|---|---|
+| 2.3 | 2026-10-08 | ⭐ **DEV-STORY COMPLETE ⇒ `review`.** Tasks 1–7 built: migration 0151 + RLS; RF9's filing code to the nominee in place at the death (`readSuspicionRefusalRecipient`, `noOp(recipient)`, the audit `recipient`); the shared DLT send core (6.19b/c/d tests unedited); the sibling registry + `suspicion_sms.*`; the domain's `suspicion-notice.ts` and the jobs sweep + child for all three purposes; DLT templates 7–12, roster Rows 22–23, a friction-budget row, two deferred items. Every load-bearing test red-checked. `ci:local` 34/34 (run 1 caught a `created_at` tie in this story's own spec — fixed in the test). ⛔ The copied RF text and the RB block are unedited. |
 | 2.2 | 2026-10-08 | ✅ **Task 0 DONE.** Task 0.2: BigDev answered every RB as recommended. Task 0.3: `2026-10-08-295` committed ALONE (`a6d55b1d`) after three fresh-context rounds on the draft (1 BLOCKER + 2 HIGH → 1 HIGH → 0); the blocker — RB18 (residuals ii–iii) and RB13 narrow WHEN a ratified text goes — was put back to BigDev (*"Keep + Panel confirm"*) ⇒ `-295` §8 Confirm 2, answered before Row 22 closes. Task 0.4: the RB block records the answers; per `-295` Consequence 1, RB11, RB13, RB18, AC7b and Task 6.3 gain Confirm 2 / Row 22's closure item (c); RB17's precedent cite corrected to `-284` E5. |
 | 2.1 | 2026-10-08 | ⭐ **VALIDATED (`bmad-create-story validate 6.24b`; four read-only verifiers — domain, API, jobs / gates, governance / copy; 0 BLOCKER, 6 HIGH, 20 MEDIUM, ~25 LOW; all applied).** New FOUND F29–F37. BigDev answered three: **RB12** (a config fault keeps the once-ever slot open), **RB13** (the refused-person text only while ⛔ no appeal is filed), **RB17** (F14 disclosed to the Panel as a NON-blocking confirm; the user story and P4 reworded — FQ6 half-closes the note's Gap 1). Added RB14 (`undetermined` ⇒ not due), RB15 (trace the closure fallback), RB16 (the no-deadline deny-list stays); RB2 / RB3 / RB4 / RB5 / RB7–RB11 corrected (K4's re-check rule, the Pariwar allowlist, at-least-once, the extraction's cycle and private helpers, the mode read outside the claiming tx, `chainRootOf` private, the ref-only assertion, `noOp(recipient)`, the `events_log` join, the DLT sheet's Row-22 link + the privacy-policy purpose). `db:generate` removed (F29). The `-293` paragraph moved under its own heading (⛔ committed by `-292`). AC6b / AC7b / AC9b rewritten; Tasks 1.3, 2.1–2.5, 3.1, 3.3, 4.1–4.6, 5.1–5.4 corrected; new Tasks 5.5 (no-decision fence) and 7.5 (AC9b's proof); Traps 22–28; stale cites fixed. The copied RF text (RF9, RF11, RF12) is byte-unchanged. **Fresh-context re-validate of v2.1 itself: 3 HIGH, 5 MEDIUM — all in this pass's own additions, all applied:** RB14 WITHDRAWN (F37 corrected — a standing or closed claim's determination is FROZEN, so `undetermined ⇒ not due` looped for ever); RB12's MECHANISM revised to a config PRE-CHECK that writes ⛔ no row (parked rows stranded once their predicate turned false, and a config note could mask a possible send) — BigDev's answer was the policy, the mechanism is put back at Task 0.2; RB15 RESOLVED from code (S's re-determination can name the post-death nominee ⇒ the fallback is dropped, PROPOSED); every selector also returns a claim with an `attempting` row; ONE re-check rule; `{date}` from the same row's `appealUntil`; Trap 29 (the reason lock in test fixtures); cites fixed. **Round 2 (narrow): 2 HIGH, 3 MEDIUM, all applied:** RB12's summary alarm had ⛔ no channel from the children ⇒ the config check moved into the SWEEP (both locales for `appeal_notice`; any Secret Manager fault held and alarmed; the child's check is a race guard; edges i–iii recorded); RB15 re-traced — an R closed before verification has ⛔ determination of its own, so the fallback is NEEDED ⇒ S's determination AS OF R's closure (⛔ S's live one) + an alarm on `no_target`; new RB18 (⛔ closure text for a closed claim the changer's side filed); `not_due` defined; cites fixed. **Round 3 (narrow): 1 HIGH, 4 MEDIUM, all applied:** RB18's `-239` predicate did ⛔ mark the filer (grounding is per death) ⇒ the test is the CLAIMANT's chain holding a discarded version, judged at selection and under the lock, every exclusion alarmed; RB15's as-of read uses the real columns (`occurred_at`, `decided_at`, half-open) and follows the rank-1 entry's correction chain head; RB15's `no_target` alarm reaches the child (`noTargetReason`); RB12's hold is a post-page filter with a lazy per-Pariwar helpline check; the child's return renamed `held_config`; red-checks and specs for every new rule. **Round 4 (narrow): 1 HIGH, 3 MEDIUM, all applied:** RB18 judged ONLY under the lock after RB15 (a finished `no_target` row + one alarm — a closed claim's verdict cannot change), its residuals (ii)–(iv) recorded; the chain-head rule for both of (b)'s sources moved into Task 4.3, the (a)/(b) two-number divergence recorded; `nominee-effective.ts` added to Modified. **Round 5 (narrow): 1 HIGH, 1 MEDIUM, applied:** RB15's and RB18's `no_target` are both written FINISHED by the domain in the claiming transaction and returned as `{ kind: 'no_target', reason }`; the child alarms once and stops; both stated as ⛔ re-check failures. **Round 6 (narrow): 0 BLOCKER, 0 HIGH ⇒ rounds stop;** its MEDIUM applied (the `no_target` write uses the claim's INSERT … ON CONFLICT path — a duplicate child ⇒ `already_final`, ⛔ second alarm). |
 | 2.0 | 2026-10-08 | ⭐ **RE-PINNED (`bmad-create-story 6.24b`) to `b6a63a81` (6.24a merged, PR #263) ⇒ `ready-for-dev`.** Four read-only research passes re-derived every code claim. New FOUND F16–F28 (the code's four flows; the audit lives in memory; a bad envelope is a 500; ⛔ no send core ever extracted; 0128 says `outcome`, single-column FK, an end-of-day finaliser; the house key form; ⛔ no erasure guard on the 8.8 name path; ⛔ no date-words helper; the 90 days have ⛔ no SQL form; the trigger lives only in `events_log`; chain head vs linked version; the marker; ⛔ no anonymizer list). **RB1–RB11 PROPOSED** (the author-commit owed at Task 0.3, ⛔ no code before); P4′ + the Niyamavali re-check; AC6b / AC7b / AC9b / AC10b sharpened; Tasks rebuilt 0–7; Traps 15–21; Locks. The copied RF text is unedited. |

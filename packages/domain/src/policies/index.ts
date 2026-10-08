@@ -232,3 +232,6 @@ export * from './claim-certificate-reminder-rls.js';
 // and ⛔ no `FOR ALL`; each UPDATE leg is narrowed by its migration's column grant (and is load-bearing — `-279` A12).
 export * from './approval-warning-reasons-rls.js';
 export * from './claim-warning-approvals-rls.js';
+// Story 6.24b (0151) — the suspicion notice record. Per command; ⛔ no DELETE leg and ⛔ no `FOR ALL`; the UPDATE leg is
+// narrowed by its migration's column grant.
+export * from './claim-suspicion-notice-rls.js';

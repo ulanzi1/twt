@@ -112,6 +112,7 @@ import { buildContributionProviderResolver, resolveSmsDltConfig } from './schedu
 import { registerClaimCorrectionReminderWorkers } from './scheduler/claim-correction-reminders.js';
 import { registerClaimCorrectionClosureWorkers } from './scheduler/claim-correction-closure.js';
 import { registerClaimCertificateReminderWorkers } from './scheduler/claim-certificate-reminders.js';
+import { registerClaimSuspicionNoticeWorkers } from './scheduler/claim-suspicion-notices.js';
 import { createConfigShepherdFallbackResolver } from './shepherd-fallback-resolver.js';
 import { consoleShepherdAssignedNotificationHook } from './shepherd-notification-hook.js';
 import { createDeterministicOcrProvider } from './ocr/index.js';
@@ -610,6 +611,11 @@ async function main(): Promise<void> {
     // `certificate_reminder`); its staff push is ⛔ never used (CR10). ⛔ Neither ever refuses, closes, approves or
     // time-limits a claim (invariant 1).
     await registerClaimCertificateReminderWorkers(boss, claimCorrectionDeps);
+    // Story 6.24b (AC7b) — the SUSPICION NOTICES: its OWN daily 10:00 IST sweep and SMS child — the three once-ever texts
+    // of a `-239` refusal (FQ7 B, `-291` Q2 B, `-293` item 1 B). The SAME deps (the shared DLT core `sendClaimDltSms`,
+    // its sibling registry); ⛔ never `dispatch()`. Its DLT template ids stay UNSET until go-live (Row 22) — the sweep
+    // HOLDS every notice and alarms (RB12). ⛔ Neither ever refuses, closes or approves a claim.
+    await registerClaimSuspicionNoticeWorkers(boss, claimCorrectionDeps);
 
     // Story 10.5 (Task 5) — the News/Blog scheduled + immediate publish worker. Reuses the SAME
     // contribution-notify deps (BYPASSRLS pool + member Tier-1 crypto) for the shipped

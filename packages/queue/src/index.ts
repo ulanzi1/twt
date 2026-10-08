@@ -411,6 +411,25 @@ export const QUEUE_NAMES = {
    * Job class B.
    */
   CLAIM_CERTIFICATE_FAMILY_SMS: 'claim.certificate.family_sms',
+  /**
+   * The SUSPICION NOTICE SWEEP (Story 6.24b, AC7b; `2026-10-07-292` RF11 / RF12, `2026-10-07-293` item 1 B,
+   * `2026-10-08-295` RB10, RB12) — daily 10:00 IST, its OWN queue. Three keyset-paged cross-tenant scans on the BYPASSRLS
+   * pool — a standing `-239` refusal (FQ7 B's text to the nominee in place at the death), a claim CLOSED by an allowed
+   * appeal (`-291` Q2 B), and a standing refusal still open to appeal (`-293` item 1 B's text to the refused person) —
+   * each with ⛔ FINISHED notice row. It gives up `attempting` rows three IST days old (RB3), checks the DLT / helpline /
+   * gateway config FIRST (a gap enqueues and writes ⛔ nothing — one end-of-run alarm, RB12) and enqueues one
+   * CLAIM_SUSPICION_NOTICE_SMS child per (claim, purpose). ⛔ Never `dispatch()`; ⛔ it never refuses, closes or approves
+   * a claim. Job class C.
+   */
+  CLAIM_SUSPICION_NOTICE_SWEEP: 'claim.suspicion.notice.sweep',
+  /**
+   * ONE suspicion notice for one (claim, purpose) (Story 6.24b, AC7b). It re-checks the config (a race guard), reads the
+   * Pariwar's name mode, then under the CLAIM-ROW lock re-checks the purpose's predicate, resolves the recipient and
+   * claims its ONCE-EVER row `attempting`, commits, THEN decrypts and sends through the shared DLT core
+   * (`sendClaimDltSms`). It throws ONLY on a transient failure. Its `singletonKey` is a LABEL — the table's UNIQUE is
+   * the dedup. The payload carries ids only, ⛔ never a number or a name. Job class B.
+   */
+  CLAIM_SUSPICION_NOTICE_SMS: 'claim.suspicion.notice.sms',
 } as const;
 
 /** Union of the registered queue names. */

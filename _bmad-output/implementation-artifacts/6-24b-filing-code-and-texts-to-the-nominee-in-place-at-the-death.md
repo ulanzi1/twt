@@ -10,8 +10,9 @@ Every `file:NNN` below is AS OF `b6a63a81`, re-derived by four read-only researc
 pre-pin citations in the copied RF text are kept AS WRITTEN and their current positions are given in `## Re-pin` below.
 Branch SHA cited below as written: `2ada8f7b` (`-293`) ⇒ `main` `c31ae2cf`.
 
-STATUS: `ready-for-dev`. ⚠ Task 0 owes ONE author-commit (RB1–RB18 below — RB13 and RB17 answered by BigDev, RB12's policy too
-2026-10-08; RB14 withdrawn; the rest PROPOSED) BEFORE any code ([[feedback_governance_commits_precede_implementation]]).
+STATUS: `ready-for-dev`. ✅ Task 0's author-commit is DONE — RB1–RB18 committed by `2026-10-08-295` (`a6d55b1d`), alone, before any
+code ([[feedback_governance_commits_precede_implementation]]). ⚠ Owed to the Panel (⛔ not blocking the build): `-295` §8 Confirms 1–2 —
+Confirm 2 must be answered before Row 22 closes.
 
 GLYPH REGISTER, ADDRESSING RULE: as 6.24a's — `⛔` negates the word it precedes · `⭐` = emphasis / action · `⚠` = hazard ·
 doubling is volume only. ⛔ No `file:NNN` into `.decision-log.md`, `deferred-work.md` or `sprint-status.yaml` (newest-first files —
@@ -273,12 +274,15 @@ RB11), ⛔ not a clause conflict. ⛔ No clause on refusal
   :453-476`, `determination_stale`) whose marks follow the NEW death date ⇒ the post-death version can stand at rank 1 ⇒ **RB15**
   (RB14 withdrawn).
 
-### Build decisions RB1–RB18 — ⚠ the author's; owed as ONE author-commit at Task 0.3, ⛔ no code before
+### Build decisions RB1–RB18 — ⚠ the author's; ✅ committed by `2026-10-08-295`
 > §0 gate: each is *"the code should do X"*, a key name, a column name, or a reading of an UNRATIFIED reading — ⛔ none changes what the
 > Trust owes or discloses (checked against the template's §0). RB6, RB7 and RB13 AMEND `-293` readings; RB15 amends a `-291` reading
 > and supersedes `-292` RF12's fallback mechanism; RB18 narrows OUR reading of `-291` Q2 toward its ratified words (*"the true nominee's claim"*) (⚠ OUR, ⛔ not ratified) — by the new entry, ⛔ never by editing `-293` / `-291`. RB7's basis is the RATIFIED word *"the
-> mobile on that nominee **entry**"* (an entry, ⛔ a version). **ANSWERED by BigDev 2026-10-08:** RB12 (policy — its mechanism to confirm), RB13, RB17 (each as
-> recommended). RB14 is WITHDRAWN. RB1–RB11, RB15, RB16 and RB18 are PROPOSED: **the recommended option is built unless BigDev picks another** at Task 0.2.
+> mobile on that nominee **entry**"* (an entry, ⛔ a version). **ANSWERED by BigDev 2026-10-08 — EVERY RB as recommended:** RB13, RB17 and RB12's policy (validate pass); at Task 0.2, RB1–RB5,
+> RB8–RB11, RB12's MECHANISM (the sweep-side config check) and RB16 (*"Accept all (Recommended)"*), RB15 (*"S's, as of R's closure"*),
+> RB18 (*"Skip it, alarm"*), RB6 (*"DD-MM-YYYY"*), RB7 (*"Head of the chain"*). RB14 is WITHDRAWN. ✅ **COMMITTED by `2026-10-08-295`** (`a6d55b1d`,
+> alone, before any code) — with, after its fresh-context check, RB13 + RB18's narrowing put to the Panel as `-295` §8 Confirm 2
+> (BigDev: *"Keep + Panel confirm (Recommended)"*), answered before Row 22 closes.
 
 - **RB1 — the copy keys (F21).** House form, namespace `claim`: `suspicion_sms.refusal_notice` (FQ7), `suspicion_sms.closed_notice`
   (`-291` Q2), `suspicion_sms.appeal_notice` (`-293` item 1), plus `$comment.suspicion_sms` in en AND hi (the NOT-YET-HUMAN-REVIEWED
@@ -396,7 +400,8 @@ RB11), ⛔ not a clause conflict. ⛔ No clause on refusal
   purpose for that claim for good (UNIQUE) — nothing was sent, and a later standing refusal of the SAME claim gets ⛔ no text;
   recorded, ⛔ not engineered around.
 - **RB11 — the go-live records (F34).** ONE new roster row (Row 22, counsel's basis for all three texts — ⛔ not Row 18 / 19) whose
-  closure needs BOTH (a) counsel's basis and (b) a privacy-policy revision naming these purposes (the Row 18 / Row 19 split is the
+  closure needs (a) counsel's basis, (b) a privacy-policy revision naming these purposes and (c) the Panel's answer to `-295` §8
+  Confirm 2 (RB13 + RB18) (the Row 18 / Row 19 split is the
   precedent; Row 19's purpose covers *"the claim contact record and its SMS / postal use"*, while FQ7's and Q2's texts use the
   DECLARATION mobile); and ONE Hindi human-review row (Row 23, the Row 21 precedent — `-262`, `-291` and `-293` each list the Hindi
   wording under *"does NOT cover"*; the en wording was settled by `-292` RF11). The DLT sheet gains templates 7–12 as a NEW section of
@@ -424,7 +429,8 @@ RB11), ⛔ not a clause conflict. ⛔ No clause on refusal
 - **RB13 — the refused-person text only while ⛔ no appeal is filed (F32).** ✅ **BigDev 2026-10-08.** Selector (c) and its locked
   re-check require the claim's appeal position `not_filed`. An appeal filed (`open`) or upheld (`upheld_final`) before the sweep ⇒ ⛔ no
   text, ⛔ no row (a row left `attempting` by a crash ⇒ RB10's K4). Amends `-293`'s reading *"while the refusal stands and its 90 days have ⛔ not
-  passed"* — a person who has appealed is ⛔ never told they can appeal.
+  passed"* — a person who has appealed is ⛔ never told they can appeal. ⚠ This narrows WHEN `-293` item 1's ratified text goes ⇒ put
+  to the Panel as `-295` §8 Confirm 2 (a), answered before Row 22 closes.
 - **RB14 — WITHDRAWN at the re-validate (F37 corrected).** v2.1 proposed *"`undetermined` ⇒ not due"*; a standing S's or a closed R's
   determination ⛔ cannot change (F37), so the rule would re-select the claim daily for ever and its AC leg could ⛔ never be built. ⇒
   RF11's rule stands as written: any non-`effective` status ⇒ `no_target` (finished). ⛔ No rule here.
@@ -461,7 +467,7 @@ RB11), ⛔ not a clause conflict. ⛔ No clause on refusal
   beside D33's in the author-commit and in the sibling registry's header; the DLT sheet's 6.19 note (*"⛔ No name … ⛔ no deadline"*)
   states the 7–12 carve-outs.
 - **RB17 — F14 is disclosed to the Panel, ⛔ blocking nothing.** ✅ **BigDev 2026-10-08.** The user story and P4 say what FQ6 does and
-  does ⛔ not do (above). A NON-blocking confirm goes into the NEXT Trustee Panel routing note (the `-283` E5 precedent): *"FQ6 stops
+  does ⛔ not do (above). A NON-blocking confirm goes into the NEXT Trustee Panel routing note (the `-284` E5 precedent): *"FQ6 stops
   the person who made the change from filing in the app. The filing code is requested from the member's own account, so the true
   nominee files and completes her claim in the app only if she has access to that account — otherwise through the helpline — and
   whoever holds that phone sees
@@ -483,7 +489,8 @@ RB11), ⛔ not a clause conflict. ⛔ No clause on refusal
   the TRUE nominee herself (e.g. her new number entered after the death) ⇒ her own claim linked to it is EXCLUDED (alarmed); (iii)
   before R is determined, a claimant filing as the rank-1 nominee can only be linked to the CURRENT (post-death) version
   (`claim-contact-persist.ts:187-207` — the member app always, the admin surface until R's determination is effective) ⇒ such a claim
-  is excluded (alarmed); (iv) a claim filed by a rank-2 true nominee (a pre-death version) still texts rank-1. PROPOSED (recommended)
+  is excluded (alarmed); (iv) a claim filed by a rank-2 true nominee (a pre-death version) still texts rank-1. ⚠ (ii)–(iii) can withhold
+  `-291` Q2 B's ratified text from the true nominee about her OWN claim ⇒ `-295` §8 Confirm 2 (b), answered before Row 22 closes. PROPOSED (recommended)
   at Task 0.2. *(Alt: text every closed claim — a confusing text about a claim she did not file.)*
 
 ## Acceptance Criteria
@@ -524,8 +531,8 @@ child's own check is a race guard); **when the ids are
 later set, the next run sends it** (RB12); the same for a missing helpline number or an unconfigured gateway. The SIBLING registry's lockstep test (6.19's
 stays unchanged — and `claim-correction-send.test.ts` passes UNEDITED, RB4) incl. the no-deadline deny-list (RB16), `i18n-parity`,
 `microcopy` and an assertion that `$comment.suspicion_sms` carries the NOT-YET-HUMAN-REVIEWED marker in BOTH locales pass; the DLT
-request sheet and the go-live roster gain their rows (counsel basis + privacy-policy purpose for FQ7's text, `-291` Q2's closure text
-AND `-293`'s refusal-appeal text — ONE NEW row, ⛔ not Row 18, which is the filer's agreement, ⛔ nor Row 19; and the Hindi review row);
+request sheet and the go-live roster gain their rows (counsel basis + privacy-policy purpose + the Panel's answer to `-295` §8 Confirm 2, for FQ7's
+text, `-291` Q2's closure text AND `-293`'s refusal-appeal text — ONE NEW row, ⛔ not Row 18, which is the filer's agreement, ⛔ nor Row 19; and the Hindi review row);
 the sheet says 7–12 are ⛔ provisioned before Row 22 closes (RB11).
 **And (`-291` Q2 B)** given a claim R `closed` by S's allowed appeal, the sweep texts R's rank-1 effective nominee once (R's own live
 determination when `effective`, else S's determination AS OF R's `claim.closed` event, else `no_target` + an alarm — RB15), in Hindi;
@@ -558,15 +565,16 @@ verified BY NAME on each ([[project_live_db_test_gotchas]]).
 - [ ] **Task 0 — Governance (AC0b)** — ⛔ no code before 0.3 is committed.
   - [ ] 0.1 `git fetch origin`; confirm `main` still carries 6.24a and no new `.decision-log.md` entry after `-294` touches FQ6 / FQ7 / `-291`
     Q2 / `-293` item 1 / RF9 / RF11 / RF12; if `main` moved, re-derive the `file:NNN`s of the files this story edits.
-  - [ ] 0.2 Put RB1–RB11, RB15, RB16 and RB18 to BigDev (each with its recommended option), and RB12's MECHANISM (the policy is answered);
+  - [x] 0.2 Put RB1–RB11, RB15, RB16 and RB18 to BigDev (each with its recommended option), and RB12's MECHANISM (the policy is answered);
     RB13 and RB17 are answered (2026-10-08); RB14 is withdrawn (recorded, ⛔ committed as a rule).
-  - [ ] 0.3 Author-commit (next free id, `2026-10-0X-295` or later): RB1–RB18 as answered; the v1.1 `-293` paragraph's mechanics (as
+  - [x] 0.3 Author-commit (✅ `2026-10-08-295`, `a6d55b1d`) (next free id, `2026-10-0X-295` or later): RB1–RB18 as answered; the v1.1 `-293` paragraph's mechanics (as
     amended by RB1 / RB6 / RB7 / RB13); the D33 carve-out sentence (RF11: *"recorded in the author-commit"* — the sibling registry names
     the member because the Panel's ratified texts do; 6.19's D33 is ⛔ not weakened) and the S4 / T6 carve-out for `appeal_notice`'s
     `{date}` (RB16); the RB17 confirm recorded as OWED to the next routing note. Each answer the user gave is quoted as given; anything
     added after an answer is put to BigDev before the insert. Stage in the scratchpad, try the insert
     ([[project_decision_log_writes_user_inserted]]); commit it ALONE (`governance(6.24b): …`).
-  - [ ] 0.4 The story's `RB` block gains each answer (⛔ the copied RF text is never edited).
+  - [x] 0.4 The story's `RB` block gains each answer (the copied RF text is ⛔ never edited); per `-295` Consequence 1, RB11, RB13,
+    RB18, AC7b and Task 6.3 gain Confirm 2 / Row 22's (c), and RB17's precedent cite is `-284` E5.
 - [ ] **Task 1 — Migration 0151 + schema (AC7b, AC10b; RF11, RB2)**
   - [ ] 1.1 `packages/domain/migrations/0151_claim-suspicion-notices.sql`, HAND-AUTHORED (F29), plus its `meta/_journal.json` entry (idx
     151, the 0150 entry's shape `{ idx, version: '7', when, tag, breakpoints: true }`; ⚠ idx 140 is a pre-existing gap — leave it):
@@ -764,9 +772,11 @@ verified BY NAME on each ([[project_live_db_test_gotchas]]).
     operator confirms that template's approval"* (RB12 edge ii).
   - [ ] 6.3 `docs/launch-gate-inventory/inventory-roster.md`: **Row 22** `suspicion-notice-counsel-basis` (counsel's basis for texting
     the nominee in place at the death, the true nominee on closure, and the refused person — `-262` *"does NOT cover"*, `-291` Consequence
-    3, `-293` Consequence 2; closure needs (a) counsel's basis AND (b) a privacy-policy revision naming these purposes; its blockquote
+    3, `-293` Consequence 2; closure needs (a) counsel's basis, (b) a privacy-policy revision naming these purposes AND (c) the Panel's
+    answer to `-295` §8 Confirm 2 (RB13 + RB18); its blockquote
     carries Row 18's *"every deploy before counsel clears is a dev / staging deploy, where the DLT template ids stay unset"*; owner
-    Trustee Panel / counsel Story 0.13; ⛔ never a Panel note) and **Row 23** `suspicion-notice-hindi-human-review` (Row 21's form —
+    Trustee Panel / counsel Story 0.13; the row itself is ⛔ not a Panel routing note — Confirm 2 travels in the NEXT routing note, `-295`
+    Consequence 2) and **Row 23** `suspicion-notice-hindi-human-review` (Row 21's form —
     `-262`, `-291`, `-293` each exclude the Hindi; closure replaces the marker in the same commit + re-registers any corrected Hindi
     template). The appended-row heading + blockquote + bullet order exactly as Rows 18–21.
   - [ ] 6.4 `friction-budget.md`: one voluntary `forced` row (6.19b's precedent — its row in that file) — *"the family of a member whose
@@ -895,6 +905,7 @@ DLT template ids and the helpline number are Secret Manager names with an env fa
 
 | Version | Date | Change |
 |---|---|---|
+| 2.2 | 2026-10-08 | ✅ **Task 0 DONE.** Task 0.2: BigDev answered every RB as recommended. Task 0.3: `2026-10-08-295` committed ALONE (`a6d55b1d`) after three fresh-context rounds on the draft (1 BLOCKER + 2 HIGH → 1 HIGH → 0); the blocker — RB18 (residuals ii–iii) and RB13 narrow WHEN a ratified text goes — was put back to BigDev (*"Keep + Panel confirm"*) ⇒ `-295` §8 Confirm 2, answered before Row 22 closes. Task 0.4: the RB block records the answers; per `-295` Consequence 1, RB11, RB13, RB18, AC7b and Task 6.3 gain Confirm 2 / Row 22's closure item (c); RB17's precedent cite corrected to `-284` E5. |
 | 2.1 | 2026-10-08 | ⭐ **VALIDATED (`bmad-create-story validate 6.24b`; four read-only verifiers — domain, API, jobs / gates, governance / copy; 0 BLOCKER, 6 HIGH, 20 MEDIUM, ~25 LOW; all applied).** New FOUND F29–F37. BigDev answered three: **RB12** (a config fault keeps the once-ever slot open), **RB13** (the refused-person text only while ⛔ no appeal is filed), **RB17** (F14 disclosed to the Panel as a NON-blocking confirm; the user story and P4 reworded — FQ6 half-closes the note's Gap 1). Added RB14 (`undetermined` ⇒ not due), RB15 (trace the closure fallback), RB16 (the no-deadline deny-list stays); RB2 / RB3 / RB4 / RB5 / RB7–RB11 corrected (K4's re-check rule, the Pariwar allowlist, at-least-once, the extraction's cycle and private helpers, the mode read outside the claiming tx, `chainRootOf` private, the ref-only assertion, `noOp(recipient)`, the `events_log` join, the DLT sheet's Row-22 link + the privacy-policy purpose). `db:generate` removed (F29). The `-293` paragraph moved under its own heading (⛔ committed by `-292`). AC6b / AC7b / AC9b rewritten; Tasks 1.3, 2.1–2.5, 3.1, 3.3, 4.1–4.6, 5.1–5.4 corrected; new Tasks 5.5 (no-decision fence) and 7.5 (AC9b's proof); Traps 22–28; stale cites fixed. The copied RF text (RF9, RF11, RF12) is byte-unchanged. **Fresh-context re-validate of v2.1 itself: 3 HIGH, 5 MEDIUM — all in this pass's own additions, all applied:** RB14 WITHDRAWN (F37 corrected — a standing or closed claim's determination is FROZEN, so `undetermined ⇒ not due` looped for ever); RB12's MECHANISM revised to a config PRE-CHECK that writes ⛔ no row (parked rows stranded once their predicate turned false, and a config note could mask a possible send) — BigDev's answer was the policy, the mechanism is put back at Task 0.2; RB15 RESOLVED from code (S's re-determination can name the post-death nominee ⇒ the fallback is dropped, PROPOSED); every selector also returns a claim with an `attempting` row; ONE re-check rule; `{date}` from the same row's `appealUntil`; Trap 29 (the reason lock in test fixtures); cites fixed. **Round 2 (narrow): 2 HIGH, 3 MEDIUM, all applied:** RB12's summary alarm had ⛔ no channel from the children ⇒ the config check moved into the SWEEP (both locales for `appeal_notice`; any Secret Manager fault held and alarmed; the child's check is a race guard; edges i–iii recorded); RB15 re-traced — an R closed before verification has ⛔ determination of its own, so the fallback is NEEDED ⇒ S's determination AS OF R's closure (⛔ S's live one) + an alarm on `no_target`; new RB18 (⛔ closure text for a closed claim the changer's side filed); `not_due` defined; cites fixed. **Round 3 (narrow): 1 HIGH, 4 MEDIUM, all applied:** RB18's `-239` predicate did ⛔ mark the filer (grounding is per death) ⇒ the test is the CLAIMANT's chain holding a discarded version, judged at selection and under the lock, every exclusion alarmed; RB15's as-of read uses the real columns (`occurred_at`, `decided_at`, half-open) and follows the rank-1 entry's correction chain head; RB15's `no_target` alarm reaches the child (`noTargetReason`); RB12's hold is a post-page filter with a lazy per-Pariwar helpline check; the child's return renamed `held_config`; red-checks and specs for every new rule. **Round 4 (narrow): 1 HIGH, 3 MEDIUM, all applied:** RB18 judged ONLY under the lock after RB15 (a finished `no_target` row + one alarm — a closed claim's verdict cannot change), its residuals (ii)–(iv) recorded; the chain-head rule for both of (b)'s sources moved into Task 4.3, the (a)/(b) two-number divergence recorded; `nominee-effective.ts` added to Modified. **Round 5 (narrow): 1 HIGH, 1 MEDIUM, applied:** RB15's and RB18's `no_target` are both written FINISHED by the domain in the claiming transaction and returned as `{ kind: 'no_target', reason }`; the child alarms once and stops; both stated as ⛔ re-check failures. **Round 6 (narrow): 0 BLOCKER, 0 HIGH ⇒ rounds stop;** its MEDIUM applied (the `no_target` write uses the claim's INSERT … ON CONFLICT path — a duplicate child ⇒ `already_final`, ⛔ second alarm). |
 | 2.0 | 2026-10-08 | ⭐ **RE-PINNED (`bmad-create-story 6.24b`) to `b6a63a81` (6.24a merged, PR #263) ⇒ `ready-for-dev`.** Four read-only research passes re-derived every code claim. New FOUND F16–F28 (the code's four flows; the audit lives in memory; a bad envelope is a 500; ⛔ no send core ever extracted; 0128 says `outcome`, single-column FK, an end-of-day finaliser; the house key form; ⛔ no erasure guard on the 8.8 name path; ⛔ no date-words helper; the 90 days have ⛔ no SQL form; the trigger lives only in `events_log`; chain head vs linked version; the marker; ⛔ no anonymizer list). **RB1–RB11 PROPOSED** (the author-commit owed at Task 0.3, ⛔ no code before); P4′ + the Niyamavali re-check; AC6b / AC7b / AC9b / AC10b sharpened; Tasks rebuilt 0–7; Traps 15–21; Locks. The copied RF text is unedited. |
 | 1.1 | 2026-10-07 | ✅ `2026-10-07-293` Q3 item 1 **B** (committed alone `2ada8f7b`): the THIRD text — to the refused filer, once, with the last date to appeal — joins this story (activating `-292` RF14 (b)'s recorded B branch): `readRefusedFilerRecipient`, purpose `refusal_appeal_notice` in the notice table from the start, AC7b's legs, Task 6.2c. Status stays `backlog`. |

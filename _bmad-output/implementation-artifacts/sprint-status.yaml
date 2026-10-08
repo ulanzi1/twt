@@ -1,3 +1,24 @@
+# last_updated: 2026-10-08g (⭐ **STORY 6.24b — VALIDATED (`bmad-create-story validate 6.24b`) ⇒ v2.1, stays `ready-for-dev`.** Four
+# read-only verifiers (domain, API, jobs / gates, governance / copy): 0 BLOCKER, 6 HIGH, 20 MEDIUM, ~25 LOW — all applied; then SIX
+# fresh-context re-validate rounds of the pass's OWN edits (3 → 2 → 1 → 1 → 1 → 0 HIGH; stopped at round 6). New FOUND F29–F37
+# (⛔ `db:generate` — hand-author 0151; 6.19b's K4 re-check rule; the Pariwar allowlist; RF1 STANDS while an appeal is open/upheld;
+# a config fault is FINAL; the DLT sheet gated only by Rows 18/19; a declared version always has a mobile; S's own appeal never closes
+# S; a refused / closed claim's determination is FROZEN). ⭐ BigDev answered: RB13 (the refused-person text only while ⛔ appeal is
+# filed), RB17 (F14 disclosed to the Panel as a NON-blocking confirm — the user story / P4 reworded), RB12's POLICY (a missing config
+# never uses up the once-ever slot — its MECHANISM, a sweep-side config check writing ⛔ row, revised over two rounds, is put back at
+# Task 0.2). RB14 WITHDRAWN. PROPOSED: RB15 (closure-text fallback = S's determination AS OF R's closure, ⛔ S's live one; supersedes
+# `-292` RF12's mechanism), RB16 (the no-deadline deny-list stays), RB18 (⛔ closure text about a claim the post-death nominee filed).
+# ⭐ Task 0 still owes ONE author-commit (RB1–RB18) before any code. ⛔ The copied RF9 / RF11 / RF12 text is unedited. ⛔ No other row moves.)
+# last_updated: 2026-10-08f (⭐ **STORY 6.24b — RE-PINNED + CREATED (`bmad-create-story 6.24b`) ⇒ `ready-for-dev`.**
+# `6-24b-filing-code-and-texts-to-the-nominee-in-place-at-the-death` `backlog` → `ready-for-dev`, pinned `b6a63a81` (6.24a merged, PR #263).
+# Four read-only research passes (domain, API, jobs, i18n/docs/gates) re-derived every code claim; new FOUND F16–F28 — ⚠ the filing code
+# is ONE code gating intake / upload / nominee bank / reconciliation (P4′ added); ⛔ no SMS send core was ever extracted (6.24b is the
+# first); 0128 names its column `outcome` and its end-of-day finaliser would STRAND a once-ever notice; ⛔ no erasure guard on the 8.8
+# name path (an erased deceased would render `[anonymized]` — `deferred-work.md` item owed); ⛔ no date-words helper; the 90 days have ⛔ no
+# SQL form; the `claim.closed` trigger lives only in `events_log`. **RB1–RB11 PROPOSED** (key spelling, table vocabulary, a three-run
+# reclaim, the send-core extraction, the name / date / chain-head rules, module placement, the 500 parity, the selectors, Rows 22–23) —
+# ⭐ the author-commit is owed at Task 0.3, ⛔ no code before. `-294` checked: ⛔ touches nothing here. Niyamavali re-checked (§6.1, Part 10):
+# ⛔ no conflict. ⛔ No other row moves. On branch `story/6-24b-filing-code-and-texts-to-the-nominee-in-place-at-the-death`.)
 # last_updated: 2026-10-08e (⭐ **STORY 6.24a MERGED — PR #263, REBASE-merge (34 / 34 GitHub checks green); the SHA map.** The 23 branch
 # commits (from `6bb79afd`) map to their `main` twins `ebecc47f`…`c5d282ec`, each pair proved by an identical `git patch-id --stable` and
 # subject; the merged tree equals the branch head (`3d31b753`); a wrong pair as negative control. The map + a re-verify command (run: empty)
@@ -19310,7 +19331,9 @@ development_status:
   # the wait, `closed`, the commit re-check, the inheritance, the 90-day limit, the helpline appeal screen and the reason lock. 6.24b below is
   # the filing code (FQ6) and the two texts (FQ7, `-291` Q2); its file is written, but it stays `backlog` until 6.24a is `done` (the
   # 6.21b / 6.23b / 6.26b precedent). ⛔ No RF moved — `-292`'s RF1–RF16 are tagged [a] / [b] in 6.24a's file.
-  6-24b-filing-code-and-texts-to-the-nominee-in-place-at-the-death: backlog
+  # ⭐ 2026-10-08: 6.24a is `done` (PR #263) ⇒ 6.24b RE-PINNED to `b6a63a81`, VALIDATED (v2.1) and `ready-for-dev`; its Task 0 owes
+  # ONE author-commit (RB1–RB18) before any code — see the 2026-10-08f / 2026-10-08g ledger blocks.
+  6-24b-filing-code-and-texts-to-the-nominee-in-place-at-the-death: ready-for-dev
   6-25-staff-email-notice-of-a-suspicion-refusal: backlog
   6-26-ground-inspection-before-approval-and-death-facts: done
   # ⭐ 2026-10-06 SPLIT after `2026-10-06-281` (the Panel: Q1 B · Q2 A; BigDev: "write the panel note then we get the answer and then we split"):

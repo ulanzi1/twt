@@ -4,9 +4,10 @@
 //   (v)  ⭐ THE GROUND INSPECTION IS INHERITED: a claim refused with `post_death_nominee_change` has a
 //        COMPLETED inspection; the true nominee's refile derives it as its source. ⛔ A claim denied for
 //        ANY OTHER reason passes nothing on (the non-vacuity sibling).
-//   (vi) ⚠ THE REFILE-DURING-APPEAL TRAP (T17): once the refused claim is at `appeal_stage_1`, a refile
-//        inside ±30 days CONVERGES onto it — asserted as TODAY'S BEHAVIOUR, ⛔ never as a defect — and the
-//        shipped AUTHORIZED OVERRIDE mints a distinct claim that still inherits (v).
+//   (vi) ⭐ THE REFILE DURING THE APPEAL — ⚠ AMENDED by Story 6.24a (F7; `-261` D4 B SUPERSEDES 6.20 T17, ⛔ not deleted):
+//        once the refused claim is at `appeal_stage_1`, a refile used to CONVERGE onto it (T17 — today's behaviour
+//        then). Now the refused claim is ⛔ never a candidate while its refusal stands, so the refile MINTS a distinct
+//        claim on BOTH channels — the same one as the refused claim and another — and still inherits (v).
 // The refile path is the REAL `tryConverge` / `overrideIntakeAttempt`, so the claim ids and `created_at`
 // ordering are production's.
 
@@ -25,7 +26,6 @@ import {
   getConvergenceCandidate,
   getInheritedGroundInspectionSource,
   listNomineeRefusals,
-  overrideIntakeAttempt,
   tryConverge,
 } from '../../../src/claim/index.js';
 import { listNomineeDeclarationVersions } from '../../../src/nominee/declaration-history.js';
@@ -40,6 +40,7 @@ import {
   seedNomineeDeclaration,
   seedNomineeDetermination,
 } from '../_helpers.js';
+import { completedVisit, openAppeal, refusedClaim } from './_suspicion-refusal-fixtures.js';
 
 type Client = ReturnType<typeof getTx>['client'];
 type Tx = ReturnType<typeof getTx>['tx'];
@@ -149,39 +150,25 @@ describe.skipIf(!hasDatabase)('Story 6.20 — the `-239` refusal: inheritance + 
     expect(await getInheritedGroundInspectionSource(tx, PARIWAR_A, toClaimId(refile.claimCaseId))).toBeNull();
   });
 
-  it('⚠⚠ AC11(vi) / T17 — during the refuser\'s APPEAL a refile CONVERGES onto the refused claim (today\'s behaviour); the OVERRIDE mints a distinct claim that still inherits', async () => {
+  it('⭐⭐ AC11(vi) — SUPERSEDED T17 by `-261` D4 B (Story 6.24a, F7): during the refuser\'s APPEAL a refile MINTS a distinct claim on BOTH channels (⛔ never converges onto the refused claim) and still inherits', async () => {
     const { client, tx } = getTx();
     await enterAppScope(client, PARIWAR_A);
-    const mid = toMemberId(randomUUID());
-    const refused = await tryConverge(client, intake(mid, 'member_app', 'd1'));
-    const refusedId = toClaimId(refused.claimCaseId);
-    await completedInspection(tx, refusedId);
-    await refuse(tx, refusedId, 'post_death_nominee_change');
-    await forceState(client, refused.claimCaseId, 'appeal_stage_1');
+    for (const channel of ['member_app', 'helpline'] as const) {
+      const mid = toMemberId(randomUUID());
+      // S through the projector to `denied` (the denial is ⛔ not the subject), then the REAL appeal writer — a forced state
+      // would ⛔ never survive the projector's replay (Story 6.24a Trap 19).
+      const refusedId = await refusedClaim(client, PARIWAR_A, mid);
+      await completedVisit(client, PARIWAR_A, refusedId);
+      await openAppeal(client, PARIWAR_A, refusedId);
 
-    // ⚠ `appeal_stage_1` is ⛔ not terminal, so inside ±30 days the refused claim IS the candidate …
-    const candidate = await getConvergenceCandidate(tx, PARIWAR_A, mid, new Date(Date.now() - 30 * 86_400_000));
-    expect(candidate?.claimCaseId).toBe(refused.claimCaseId);
-    // … and a cross-channel refile lands as an attempt PENDING against it (⛔ a new claim is NOT minted).
-    const refile = await tryConverge(client, intake(mid, 'helpline', 'd2'));
-    expect(refile.claimCaseId).toBe(refused.claimCaseId);
-    expect(refile.intakeAttemptId).toBeTruthy();
-
-    // ⭐ The remedy is the SHIPPED authorized override, ⛔ never a new convergence rule.
-    const ov = await overrideIntakeAttempt(client, {
-      intakeAttemptId: refile.intakeAttemptId!,
-      pariwarId: PARIWAR_A,
-      deceasedMemberId: mid,
-      intakeChannel: 'helpline',
-      againstClaimCaseId: refusedId,
-      reason: 'true nominee refile during the refuser\'s appeal (`-239`)',
-      actor: 'operator',
-      claimantActorId: null,
-      decidedByActor: randomUUID(),
-      auditId: 'd3',
-    });
-    expect(ov.newClaimCaseId).not.toBe(refused.claimCaseId);
-    expect(await getInheritedGroundInspectionSource(tx, PARIWAR_A, toClaimId(ov.newClaimCaseId))).toBe(refused.claimCaseId);
+      // The refused claim is ⛔ not a candidate (D4 B) …
+      expect(await getConvergenceCandidate(tx, PARIWAR_A, mid, new Date(Date.now() - 30 * 86_400_000))).toBeUndefined();
+      // … so the refile — on the refused claim's OWN channel (`member_app`) or another — MINTS, with ⛔ no pending attempt.
+      const refile = await tryConverge(client, intake(mid, channel, `d2-${channel}`));
+      expect(refile).toMatchObject({ minted: true, convergencePending: false });
+      expect(refile.claimCaseId).not.toBe(refusedId);
+      expect(await getInheritedGroundInspectionSource(tx, PARIWAR_A, toClaimId(refile.claimCaseId))).toBe(refusedId);
+    }
   });
 
   // ── Code review 2026-09-24 ──────────────────────────────────────────────────────────────────────

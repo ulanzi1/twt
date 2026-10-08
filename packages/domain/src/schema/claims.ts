@@ -69,6 +69,9 @@ import type { ClaimId, MemberId, PariwarId } from '../ids/index.js';
  *   · `appeal_stage_3`          — internal appeal stage 3, Trustee discretion (6.16).
  *   · `reversed`                — an appeal reversed a denial (6.16; re-enters approval).
  *   · `settled`                 — pool spawn + disbursement (Epic 7/9; terminal).
+ *   · `closed`                  — Story 6.24a (`2026-10-07-292` RF4, `-262` FQ5 A): another claim of the same death was
+ *                                 refused on suspicion and its appeal was ALLOWED ⇒ this claim is closed (terminal; ⛔ not a
+ *                                 denial, ⛔ not appealable). Added by migration 0150 — `ADD VALUE` alone in its file.
  */
 export const CLAIM_LIFECYCLE_STATES = [
   'intake_pending',
@@ -86,6 +89,7 @@ export const CLAIM_LIFECYCLE_STATES = [
   'appeal_stage_3',
   'reversed',
   'settled',
+  'closed',
 ] as const;
 
 /** pgEnum (`CREATE TYPE claim_lifecycle_state`) derived from the one tuple. */

@@ -274,7 +274,10 @@ export type DeathCertificateFamilyStatus =
   | 'missing'
   | 'awaiting_review'
   | 'accepted'
-  | 'replacement_requested';
+  | 'replacement_requested'
+  // ⭐ Story 6.24a (`2026-10-07-292` RF12) — the claim is `closed` (another claim of the death won its suspicion appeal).
+  // The family is told only *"This claim has been closed. Please call the helpline."* — ⛔ no reason, ⛔ no other claim.
+  | 'closed';
 
 /** Why a replacement is being asked for — `null` unless `status === 'replacement_requested'`. */
 export type DeathCertificateReplacementReason = 'unclear_date' | 'future_date' | null;
@@ -326,10 +329,10 @@ function replacementReasonFor(reason: DeathCertificateRejectionReason | null): '
 /**
  * Duplicated BY VALUE from `claim/read.ts`'s `CLAIM_TERMINAL_STATES` — the leaf import fence (T8)
  * permits only schema tables, id types, `errors.ts` and `review-window.ts`, so `read.ts` itself is
- * ⛔ off limits here. Two literal states, unlikely to drift independently; if they ever do, update
- * both together.
+ * ⛔ off limits here. Three literal states (Story 6.24a added `closed` to both — RF4), unlikely to drift
+ * independently; if they ever do, update both together (a unit test pins the two equal for EVERY state).
  */
-const FAMILY_STATUS_TERMINAL_STATES: readonly string[] = ['settled', 'denied'];
+const FAMILY_STATUS_TERMINAL_STATES: readonly string[] = ['settled', 'denied', 'closed'];
 
 /**
  * ⭐ D1 (`-247`, `-249`) — the member/helpline status read, table-driven, first match wins. A PURE
@@ -353,6 +356,11 @@ export function resolveDeathCertificateFamilyStatus(
   // ⛔ never a second offer). Built from the named predicates + the constant, ⛔ never a state list.
   const uploadAllowed = preVerification ? status === 'missing' : replacementAllowed;
   const base = { replacementAllowed, uploadAllowed, certificateToken, claimLive } as const;
+
+  // Row 0 — ⭐ Story 6.24a (RF12): a `closed` claim says only that it is closed (out of the window, so ⛔ no upload).
+  if (claimState === 'closed') {
+    return { ...base, status: 'closed', replacementReason: null, reassurance: null };
+  }
 
   // Rows 1a/1b (`-247` §2) — the two pre-verification states, BEFORE row 1's out-of-window check
   // (they are NOT part of the eight states row 1 still covers).

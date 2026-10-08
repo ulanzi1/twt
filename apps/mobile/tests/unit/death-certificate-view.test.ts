@@ -24,6 +24,10 @@ function read(over: Partial<MemberDeathCertificateStatusResponse> = {}): MemberD
     certificate_token: null,
     claim_live: true,
     reassurance: null,
+    // Story 6.19c's two routing fields and Story 6.24a's `claim_closed` (RF12) — the full wire shape.
+    closed_no_response: false,
+    refile_requires_confirmation: false,
+    claim_closed: false,
     ...over,
   }
 }

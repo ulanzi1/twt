@@ -613,6 +613,8 @@ export const verifierConsoleEn = {
         appeal_stage_3: 'Under appeal (stage 3)',
         reversed: 'Refusal reversed on appeal',
         settled: 'Settled',
+        // Story 6.24a (`2026-10-07-292` RF4) — staff words for the new terminal state.
+        closed: 'Closed — another claim for this death won its appeal',
       } as Record<string, string>,
     },
     // The same 409 met on a TRUSTEE surface (the cycle freeze, R9 voting) — the State Trustee cannot
@@ -669,6 +671,36 @@ export const verifierConsoleEn = {
   // MACHINE reading every time it appears.
   // ⭐ Story 6.26a (GI9 / GI10 / GI11) — the ground inspection's approval WAIT (`-263` FQ9 A): every approval waits
   // until the claim's ground inspection is complete; a refusal never waits; ⛔ the claim is never refused for it.
+  // ⭐ Story 6.24a (`2026-10-07-292` RF10, RF13; `-261` D4 B, `-262` FQ5 A) — kept apart from a claim refused on suspicion,
+  // and the FINAL-approval wait. STAFF words: the other claim by its reference only — ⛔ no name, ⛔ no note.
+  suspicionRefusal: {
+    heading: 'An earlier claim for this death',
+    keptApart: 'Kept apart from an earlier claim for this death that was refused on suspicion',
+    claim: 'claim',
+    appeal: {
+      not_filed: 'its appeal not yet filed — it can be appealed until',
+      time_limit_passed: 'the time to appeal it ended on',
+      open: 'its appeal is being decided',
+      upheld_final: 'its refusal was upheld on appeal',
+    } as Record<string, string>,
+    waits: {
+      appeal_not_filed: "Final approval will wait for that claim's appeal — not yet filed.",
+      appeal_open: "Final approval will wait for that claim's appeal — being decided.",
+    } as Record<string, string>,
+    noWait: 'Final approval does not wait for it — its appeal is decided.',
+    districtAdminNotHeld: 'Your approval as District Admin does not wait for it.',
+    unavailable: 'Whether this claim is kept apart from a refused claim could not be checked just now.',
+    // The FINAL approvers' 409 (`cycle_freeze.` / `r9_voting.` / `verifier_decision.` `suspicion_appeal_pending`).
+    approvalGate: {
+      appeal_not_filed:
+        'This claim cannot be finally approved yet: an earlier claim for this death was refused on suspicion and can still be appealed (for 90 days from the refusal). It is not refused.',
+      appeal_open:
+        'This claim cannot be finally approved yet: an earlier claim for this death was refused on suspicion and its appeal is being decided. It is not refused.',
+    } as Record<string, string>,
+    // RF13 — the revise strip's refusal.
+    reasonLocked:
+      'This refusal’s reason cannot be changed while another claim for this death is still open — its 90-day appeal limit stands.',
+  },
   groundInspectionGate: {
     complete: 'The ground inspection is complete for approval.',
     approveBlocked: {

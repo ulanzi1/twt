@@ -51,7 +51,8 @@ export const AppealDispositionCategory = z.enum([
 export type AppealDispositionCategory = z.output<typeof AppealDispositionCategory>;
 
 /** The journey terminal status (value-aligned with the domain `appeal_journey_status`). */
-export const AppealJourneyStatus = z.enum(['open', 'reversed', 'upheld_final']);
+// Story 6.24a (`2026-10-07-292` RF4) — `closed`: the claim was closed mid-appeal (another claim of the death won its appeal).
+export const AppealJourneyStatus = z.enum(['open', 'reversed', 'upheld_final', 'closed']);
 export type AppealJourneyStatus = z.output<typeof AppealJourneyStatus>;
 
 /** Max rationale length (mirrors the 6.11/6.13/6.14 ≤500 posture). */
@@ -391,6 +392,12 @@ export const AdminAppealCaseResponse = z
     tally: AppealPanelTally.nullable(),
     /** The current stage's SLA status (D-H), or null when not in an appeal stage. */
     sla: AppealSlaStatus.nullable(),
+    /**
+     * ⭐ Story 6.24a (`2026-10-07-291` Q1 A, RF14) — for a claim whose LIVE refusal is on suspicion of a post-death nominee
+     * change: the last IST date it can be appealed (`YYYY-MM-DD`, D + 90) and whether that limit has passed; `null` for
+     * any other claim (⛔ no time limit — 6.16 D-E).
+     */
+    suspicion_appeal_limit: z.object({ appeal_until: z.string(), passed: z.boolean() }).strict().nullable(),
   })
   .strict();
 export type AdminAppealCaseResponse = z.output<typeof AdminAppealCaseResponse>;
@@ -417,3 +424,42 @@ function enforceDisposition(
     });
   }
 }
+
+// ── Story 6.24a RF14 (b) — the HELPLINE appeal screen (`2026-10-07-292`; AR-61) ───────────────────────────────────
+
+/**
+ * Where a refused claim stands for an appeal the helpline files for the family (value-aligned with the domain
+ * `HelplineAppealEligibility` — judged by the initiation guard itself).
+ */
+export const HelplineAppealEligibility = z.enum([
+  'can_appeal',
+  'under_appeal',
+  'time_limit_passed',
+  'already_appealed',
+  'not_appealable',
+]);
+export type HelplineAppealEligibility = z.output<typeof HelplineAppealEligibility>;
+
+/**
+ * `GET /api/v1/p/:pariwarId/admin/members/:memberId/appeals` (`claim.file`) — the selected deceased member's refused
+ * claims and whether each can be appealed now. ⛔ No PII — ids, states, a date. `appeal_until` (`YYYY-MM-DD`, IST) only
+ * for a refusal on suspicion of a post-death nominee change (`2026-10-07-291` Q1 A — 90 days); `null` for any other
+ * refusal (⛔ no time limit). The operator files through the EXISTING on-behalf route (`POST …/admin/claims/:id/appeal`).
+ */
+export const HelplineAppealClaimsResponse = z
+  .object({
+    member_id: z.string().uuid(),
+    claims: z.array(
+      z
+        .object({
+          claim_case_id: z.string().uuid(),
+          claim_state: z.string(),
+          created_at: z.string().datetime(),
+          eligibility: HelplineAppealEligibility,
+          appeal_until: z.string().nullable(),
+        })
+        .strict(),
+    ),
+  })
+  .strict();
+export type HelplineAppealClaimsResponse = z.output<typeof HelplineAppealClaimsResponse>;

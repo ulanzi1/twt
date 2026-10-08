@@ -1119,13 +1119,14 @@ describe.skipIf(!hasDatabase)('Verifier-console read surface — E2E (:5433)', (
     expect(actual - baseline.actual, 'statements Postgres received for the inheritance vs reads booked').toBe(readCount - baseline.readCount);
   });
 
-  it('⭐⭐ Story 6.23a (Trap 10) — the ceiling is 20 (Story 6.26a: 19 → 20), and the warnings section books EXACTLY one read and sends EXACTLY one statement', async () => {
+  it('⭐⭐ Story 6.23a (Trap 10) — the ceiling is 21 (Story 6.26a: 19 → 20; Story 6.24a: 20 → 21), and the warnings section books EXACTLY one read and sends EXACTLY one statement', async () => {
     // The ledger above the constant says +1 → 19. ⚠ The shipped tests catch over-reporting only (`reported <=
     // actual`) and a ceiling breach (`readCount <= MAX`); a forgotten `reads.bump()` stays green there. ⇒ the
     // section is measured on its OWN: its booked reads AND the statements Postgres receives, each exactly 1 — the
     // coverage AND the Pariwar's reason list ride ONE statement.
     // Story 6.26a (GI9, AC9) — moved 19 → 20 by the ground-inspection gate section (its own exact test below).
-    expect(VERIFIER_CONSOLE_MAX_READS).toBe(20);
+    // Story 6.24a (RF10) — moved 20 → 21 by the suspicion-refusal section (its own exact test: `suspicion-refusal-routes.spec.ts`).
+    expect(VERIFIER_CONSOLE_MAX_READS).toBe(21);
     const pariwarId = randomUUID();
     const deceased = await seedDeceasedMember(pariwarId, DISTRICT);
     const claimCaseId = await seedClaim(pariwarId, deceased);

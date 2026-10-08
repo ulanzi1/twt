@@ -62,6 +62,10 @@ export function createDeathCertificateMemberHandlers(deps: AppDeps) {
           pariwarId,
           claimRow.deceasedMemberId,
         );
+        // ⭐ Story 6.24a (`2026-10-07-292` RF2 v1.1) — ONE conjunct in this read only: a pointer claim on which a suspicion
+        // refusal STANDS (refused on `-239`, under appeal) routes like a TERMINAL one, so the wizard — the refile — is
+        // reachable on the device that filed it (`-261` D4 B's window). `claim_live`'s other consumers are unchanged.
+        const suspicionStanding = await claim.isSuspicionRefusalStanding(tx.tx, pariwarId, claimCaseIdBrand);
         ok = true;
         void reply.status(200);
         return {
@@ -70,10 +74,12 @@ export function createDeathCertificateMemberHandlers(deps: AppDeps) {
           replacement_allowed: result.replacementAllowed,
           upload_allowed: result.uploadAllowed,
           certificate_token: result.certificateToken,
-          claim_live: result.claimLive,
+          claim_live: result.claimLive && !suspicionStanding,
           reassurance: result.reassurance,
           closed_no_response: closedNoResponse,
           refile_requires_confirmation: refileRequiresConfirmation,
+          // ⭐ Story 6.24a (RF12 v1.3) — the closed claim's routing bit (the calm helpline screen, ⛔ not the wizard).
+          claim_closed: claimRow.currentState === 'closed',
         };
       } finally {
         await closeScopeTx(tx, ok);

@@ -7,7 +7,8 @@
 export interface MemberAppealStatus {
   claim_state: string
   can_initiate: boolean
-  appeal_status: 'open' | 'reversed' | 'upheld_final' | null
+  /** Story 6.24a (RF4) — `closed`: the claim was closed mid-appeal (⛔ no affordance, ⛔ no status line — nothing to show). */
+  appeal_status: 'open' | 'reversed' | 'upheld_final' | 'closed' | null
   current_stage: '1' | '2' | '3' | null
   appeal_exhausted: boolean
   /** Story 6.19c (AC7, `-273` §9) — the claim was CLOSED for no response: ⛔ appealable, ⛔ no affordance, ⛔ no

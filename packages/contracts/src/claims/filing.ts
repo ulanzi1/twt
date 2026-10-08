@@ -60,6 +60,8 @@ export const ClaimLifecycleState = z.enum([
   'appeal_stage_3',
   'reversed',
   'settled',
+  // Story 6.24a (`2026-10-07-292` RF4) — terminal; another claim of the death had its suspicion refusal reversed.
+  'closed',
 ]);
 export type ClaimLifecycleState = z.output<typeof ClaimLifecycleState>;
 

@@ -2205,6 +2205,32 @@ export function useDeathCertificateClaimsForMember(pariwarId: string, memberId: 
   });
 }
 
+// ── Story 6.24a RF14 (b) — the helpline appeal screen ─────────────────────────────────────────────────────────────
+
+export const helplineAppealClaimsKey = (pariwarId: string, memberId: string) =>
+  ['helpline-appeal-claims', pariwarId, memberId] as const;
+
+/** The selected member's refused claims and whether each can be appealed now. Audited ⇒ ⛔ not a window-focus refetch. */
+export function useHelplineAppealClaims(pariwarId: string, memberId: string | null, enabled: boolean) {
+  return useQuery({
+    queryKey: helplineAppealClaimsKey(pariwarId, memberId ?? ''),
+    queryFn: () => api.getHelplineAppealClaims(pariwarId, memberId as string),
+    enabled: Boolean(memberId) && enabled,
+    refetchOnWindowFocus: false,
+  });
+}
+
+/** File an appeal for the family. Re-reads the list on EVERY settle — a refusal (the time limit) moves it too. */
+export function useInitiateAppealOnBehalf(pariwarId: string, memberId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (claimCaseId: string) => api.initiateAppealOnBehalf(pariwarId, claimCaseId),
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: helplineAppealClaimsKey(pariwarId, memberId ?? '') });
+    },
+  });
+}
+
 /** Send a replacement death certificate on the family's behalf. Invalidates the claims-for-member
  *  list on EVERY settle — a success (the fresh status) AND a refusal: a 409 means the server's status
  *  moved on since the list was read (the family's own upload landed, or the claim left the window), and

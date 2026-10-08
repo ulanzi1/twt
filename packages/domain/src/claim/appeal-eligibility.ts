@@ -7,14 +7,15 @@
 //     live+superseded, any outcome). A Stage-1 reviewer must be in NEITHER set.
 //   · assertAppealInitiable — the D-E/D-F initiation guard: `current_state === 'denied'` (no elapsed-time
 //     gate — D-E removed the claimant-facing deadline) AND no prior appeal journey exists (D-F — exactly one
-//     journey per claim, ever).
+//     journey per claim, ever). ⚠ Story 6.24a (`2026-10-07-291` Q1 A, RF14): EXCEPT a refusal whose live reason is
+//     `post_death_nominee_change` — it can be appealed for 90 days from the refusal (its fourth guard).
 //   · getAppealConfig / computeStageSlaStatus — the D-H trust-side per-stage SLA read: derived at query time
 //     from the stage-entry event's occurred_at vs the Pariwar-scoped config duration. NEVER a write-path gate.
 
 import { and, desc, eq, inArray } from 'drizzle-orm';
 
 import { type Db } from '../db.js';
-import type { ClaimId, PariwarId } from '../ids/index.js';
+import type { ClaimId, MemberId, PariwarId } from '../ids/index.js';
 import { clampLimit } from '../pagination.js';
 import { claims } from '../schema/claims.js';
 import { claimVerifierDecisions } from '../schema/claim_verifier_decisions.js';
@@ -24,6 +25,12 @@ import { claimAppeals } from '../schema/claim_appeals.js';
 import { claimCorrectionClosures } from '../schema/claim_correction_closure.js';
 import { pariwarAppealConfig } from '../schema/pariwar_appeal_config.js';
 import { eventsLog } from '../schema/events_log.js';
+import type { CalendarDateString } from '../cycle-calendar/holiday-resolver.js';
+import {
+  hasSuspicionRefusalAppealLimitPassed,
+  readSuspicionChainStart,
+  suspicionRefusalAppealUntil,
+} from './suspicion-refusal.js';
 import {
   type AppealStage,
   type AppealStageSlaDays,
@@ -74,6 +81,22 @@ export class AppealAlreadyExhaustedError extends Error {
       `[appeal] claim ${claimCaseId} already has an appeal journey (status '${status}') — exactly one appeal ` +
         `journey per claim is permitted, ever (D-F)`,
     );
+  }
+}
+
+/**
+ * ⭐ Story 6.24a RF14 (`2026-10-07-291` Q1 A) — a refusal on suspicion of a post-death nominee change (live reason
+ * `post_death_nominee_change`) can be appealed for 90 days from the refusal; from 00:00 IST on D + 91 it can ⛔ no longer
+ * be. `appealUntil` is the last IST date it could be (D + 90). → 409 `appeal.suspicion_refusal_time_limit_passed`
+ * `{ appeal_until }` — ⛔ never a 500. Every other reason: ⛔ no time limit (6.16 D-E unchanged for it).
+ */
+export class AppealTimeLimitPassedError extends Error {
+  public readonly name = 'AppealTimeLimitPassedError';
+  public constructor(
+    public readonly claimCaseId: string,
+    public readonly appealUntil: CalendarDateString,
+  ) {
+    super(`[appeal] claim ${claimCaseId}'s refusal could be appealed until ${appealUntil} — the time to appeal has ended`);
   }
 }
 
@@ -142,10 +165,20 @@ export function isOriginalDecider(set: OriginalDeciderActorIds, actorId: string)
  * Assert an appeal may be initiated on this claim (AC1). Throws `AppealNotDeniedError` when the claim's live
  * state is not `denied`, or `AppealAlreadyExhaustedError` when a prior appeal journey already exists (D-F —
  * exactly one journey per claim, ever). There is deliberately NO window/deadline check (D-E removed the
- * claimant-facing deadline — do NOT reintroduce an elapsed-time gate here). Reads the claim row + the
+ * claimant-facing deadline — do NOT reintroduce an elapsed-time gate here) — except for a `-239` refusal
+ * (`2026-10-07-291` Q1 A): Story 6.24a's FOURTH guard, AFTER the three above, refuses a claim whose LIVE decision is
+ * the `-239` refusal once its 90 days have passed (`AppealTimeLimitPassedError`). Reads the claim row + the
  * claim_appeals anchor; the caller (initiateAppeal) holds the claim row lock.
+ *
+ * `opts.clock` — the instant the limit is judged at: `initiateAppeal` passes the `clock_timestamp()` it read AFTER RF15's
+ * per-death key (Trap 16 — ⛔ never the transaction's `now()`); absent ⇒ the guard's own statement clock.
  */
-export async function assertAppealInitiable(db: Db, pariwarId: PariwarId, claimCaseId: ClaimId): Promise<void> {
+export async function assertAppealInitiable(
+  db: Db,
+  pariwarId: PariwarId,
+  claimCaseId: ClaimId,
+  opts: { readonly clock?: Date } = {},
+): Promise<void> {
   const claimRows = await db
     .select({ currentState: claims.currentState })
     .from(claims)
@@ -179,6 +212,92 @@ export async function assertAppealInitiable(db: Db, pariwarId: PariwarId, claimC
     .where(and(eq(claimAppeals.pariwarId, pariwarId), eq(claimAppeals.claimCaseId, claimCaseId)))
     .limit(1);
   if (existing[0]) throw new AppealAlreadyExhaustedError(claimCaseId, existing[0].status);
+
+  // ⭐ Story 6.24a RF14 — the FOURTH guard: a `-239` refusal past its 90 days (the first row of its CURRENT `-239` chain).
+  const chain = await readSuspicionChainStart(db, pariwarId, claimCaseId);
+  if (chain && hasSuspicionRefusalAppealLimitPassed(chain.chainStartedAt, opts.clock ?? chain.clock)) {
+    throw new AppealTimeLimitPassedError(claimCaseId, suspicionRefusalAppealUntil(chain.chainStartedAt));
+  }
+}
+
+// ── Story 6.24a RF14 (b) — the helpline appeal screen's read ───────────────────────────────────────────────────
+
+/**
+ * Where a refused claim stands for an appeal the helpline could file for the family (AR-61): `can_appeal`;
+ * `under_appeal` (a journey is open); `time_limit_passed` (a `-239` refusal past its 90 days — RF14);
+ * `already_appealed` (a journey reached its end — D-F); `not_appealable` (⛔ not `denied`, or closed for no response).
+ */
+export type HelplineAppealEligibility = 'can_appeal' | 'under_appeal' | 'time_limit_passed' | 'already_appealed' | 'not_appealable';
+
+export interface HelplineAppealEligibilityRow {
+  readonly claimCaseId: ClaimId;
+  readonly currentState: string;
+  readonly createdAt: Date;
+  readonly eligibility: HelplineAppealEligibility;
+  /** For a `-239` refusal: the last IST date it can be appealed (D + 90); `null` for any other refusal (⛔ no limit). */
+  readonly appealUntil: CalendarDateString | null;
+}
+
+/** The claim states the helpline appeal screen lists: a refusal, or an appeal in progress. */
+const HELPLINE_APPEAL_LISTED_STATES = ['denied', 'appeal_stage_1', 'appeal_stage_2', 'appeal_stage_3'] as const;
+const HELPLINE_APPEAL_LIST_CAP = 10;
+
+/**
+ * ⭐ Story 6.24a RF14 (b) (`-292` — "is told" = a helpline appeal screen): a deceased member's REFUSED claims and, for
+ * each, whether the family can appeal it now — judged by `assertAppealInitiable` ITSELF (⛔ not a second copy of its rules:
+ * the screen and the initiation route can ⛔ never disagree) at this statement's clock. Read-only (the guard writes
+ * nothing). Bounded. ⛔ No PII — ids, states, a date.
+ */
+export async function listHelplineAppealEligibility(
+  db: Db,
+  pariwarId: PariwarId,
+  deceasedMemberId: MemberId,
+): Promise<HelplineAppealEligibilityRow[]> {
+  const rows = await db
+    .select({ claimCaseId: claims.claimCaseId, currentState: claims.currentState, createdAt: claims.createdAt })
+    .from(claims)
+    .where(
+      and(
+        eq(claims.pariwarId, pariwarId),
+        eq(claims.deceasedMemberId, deceasedMemberId),
+        inArray(claims.currentState, [...HELPLINE_APPEAL_LISTED_STATES]),
+      ),
+    )
+    .orderBy(desc(claims.createdAt), desc(claims.claimCaseId))
+    .limit(clampLimit(HELPLINE_APPEAL_LIST_CAP, { default: HELPLINE_APPEAL_LIST_CAP, cap: HELPLINE_APPEAL_LIST_CAP }));
+  const out: HelplineAppealEligibilityRow[] = [];
+  for (const row of rows) {
+    const chain = await readSuspicionChainStart(db, pariwarId, row.claimCaseId);
+    out.push({
+      claimCaseId: row.claimCaseId,
+      currentState: row.currentState,
+      createdAt: row.createdAt,
+      eligibility: await eligibilityOf(db, pariwarId, row.claimCaseId),
+      appealUntil: chain ? suspicionRefusalAppealUntil(chain.chainStartedAt) : null,
+    });
+  }
+  return out;
+}
+
+async function eligibilityOf(db: Db, pariwarId: PariwarId, claimCaseId: ClaimId): Promise<HelplineAppealEligibility> {
+  try {
+    await assertAppealInitiable(db, pariwarId, claimCaseId);
+    return 'can_appeal';
+  } catch (err) {
+    if (err instanceof AppealTimeLimitPassedError) return 'time_limit_passed';
+    if (err instanceof AppealAlreadyExhaustedError) return err.status === 'open' ? 'under_appeal' : 'already_appealed';
+    if (err instanceof AppealNotDeniedError) {
+      // An appeal stage with its journey open reads as under appeal (the guard's first refusal is "not denied").
+      const [anchor] = await db
+        .select({ status: claimAppeals.status })
+        .from(claimAppeals)
+        .where(and(eq(claimAppeals.pariwarId, pariwarId), eq(claimAppeals.claimCaseId, claimCaseId)))
+        .limit(1);
+      return anchor?.status === 'open' ? 'under_appeal' : 'not_appealable';
+    }
+    if (err instanceof AppealClosedNoResponseError) return 'not_appealable';
+    throw err;
+  }
 }
 
 // ── D-H trust-side per-stage SLA read ──────────────────────────────────────────

@@ -31,6 +31,7 @@ import {
   AppealStage2OpenRequest,
   AppealStage2VoteRequest,
   AppealStage3DecideRequest,
+  HelplineAppealClaimsResponse,
   InitiateAppealRequest,
   InitiateAppealResponse,
   MemberAppealStatusResponse,
@@ -65,6 +66,7 @@ const STAGE3_DECIDE_STEP_UP = 'appeal_stage3_decide';
 const ClaimParam = z.object({ pariwarId: z.string().uuid(), claimCaseId: z.string().uuid() }).strict();
 const PariwarParam = z.object({ pariwarId: z.string().uuid() }).strict();
 const MemberClaimParam = z.object({ claimCaseId: z.string().uuid() }).strict();
+const MemberParam = z.object({ pariwarId: z.string().uuid(), memberId: z.string().uuid() }).strict();
 
 /**
  * PreHandler: derive the deceased member's latest posting district SERVER-SIDE and stash it so the
@@ -145,6 +147,15 @@ export function registerAppealRoutes(app: FastifyInstance, deps: AppDeps): void 
     '/api/v1/p/:pariwarId/admin/claims/:claimCaseId/appeal',
     { schema: { params: ClaimParam, body: InitiateAppealRequest, response: { 201: InitiateAppealResponse }, tags: [TAG] }, preHandler: [adminSession, scope, requireClaimFile] },
     h.postOperatorInitiate,
+  );
+
+  // ── ⭐ Story 6.24a RF14 (b) — the HELPLINE appeal screen's read: the selected member's refused claims and whether each
+  //    can be appealed now (the `-239` refusal's 90-day date). `claim.file` — the key the on-behalf initiate already
+  //    requires, so an operator holding ONLY `claim.file` reaches both (⛔ no new permission key). ──
+  r.get(
+    '/api/v1/p/:pariwarId/admin/members/:memberId/appeals',
+    { schema: { params: MemberParam, response: { 200: HelplineAppealClaimsResponse }, tags: [TAG] }, preHandler: [adminSession, scope, requireClaimFile] },
+    h.getHelplineAppealClaims,
   );
 
   // ── Admin per-claim appeal case model (readable by any stage's adjudicator — the Stage surfaces render

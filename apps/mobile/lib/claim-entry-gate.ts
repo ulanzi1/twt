@@ -18,6 +18,9 @@ export type ClaimEntryReadOutcome =
   /** ⭐ Story 6.19c (`-273` §9) — the server's `refile_requires_confirmation` routing bit (D19's guard): the death's
    *  latest claim was CLOSED for no response and ⛔ no re-file confirmation waits. ⛔ Never shown as such. */
   | { readonly kind: 'refile_needs_confirmation' }
+  /** ⭐ Story 6.24a (`2026-10-07-292` RF12 v1.3) — the server's `claim_closed` routing bit: the filed claim was CLOSED
+   *  because another claim for the same death won its appeal. ⛔ Never shown as such. */
+  | { readonly kind: 'closed' }
   | { readonly kind: 'offline' }
   | { readonly kind: 'error' }
   | { readonly kind: 'not_found' }
@@ -28,6 +31,10 @@ export type ClaimEntryDecision =
   | { readonly kind: 'shepherd' }
   | { readonly kind: 'wizard' }
   | { readonly kind: 'refile_helpline' }
+  /** ⭐ Story 6.24a (RF12 v1.3) — the calm "this claim has been closed — please call the helpline" screen. ⛔ Never the
+   *  wizard: a filing would converge onto the reversed claim only inside the 30-day look-back, else MINT a third claim
+   *  for the death — which the helpline should prevent, ⛔ not the app invite. */
+  | { readonly kind: 'closed_helpline' }
 
 /**
  * `hasFiledClaimPointer` — the MMKV filed-claim pointer (`getFiledClaimCaseId`) is on record.
@@ -44,6 +51,8 @@ export function resolveClaimEntryDecision(
   // helpline records one the bit is false and the wizard is open again; once a new claim is live it is false too
   // (the old pointer ⛔ never traps the family).
   if (outcome.kind === 'refile_needs_confirmation') return { kind: 'refile_helpline' }
+  // ⭐ Story 6.24a (RF12 v1.3) narrows `-249` §2 for ONE more terminal claim: a CLOSED one goes to its helpline screen.
+  if (outcome.kind === 'closed') return { kind: 'closed_helpline' }
   // terminal | offline | error | not_found — all fall through, unchanged.
   return { kind: 'wizard' }
 }

@@ -47,9 +47,23 @@ import {
   computeAppealOutcome,
   type PreparedAppealCiphertext,
 } from './appeal.js';
-import { AppealDispositionCategoryError, appealAdvisoryLockKey } from './appeal-persist.js';
+import { AppealDispositionCategoryError } from './appeal-persist.js';
+import { appealAdvisoryLockKey } from './appeal-lock.js';
+// Story 6.24a (RF6) — the session's actor-free core + its error live in the leaf `appeal-panel-session.ts` (the closure
+// writer calls the core; it cannot import this module without a cycle). Re-exported: every caller keeps its import.
+import {
+  AppealPanelSessionAlreadySupersededError,
+  readLiveAppealPanelSession,
+  supersedeAppealPanelSession,
+} from './appeal-panel-session.js';
+export { AppealPanelSessionAlreadySupersededError, readLiveAppealPanelSession, supersedeAppealPanelSession };
 import { type ClaimEventActor } from './events.js';
 import { projectClaimState } from './project.js';
+import {
+  type CloseClaimsHeldBySuspicionAppealResult,
+  acquireSuspicionReversalLockForClaim,
+  closeClaimsHeldBySuspicionAppeal,
+} from './suspicion-refusal-persist.js';
 
 /** The RBAC key each panel member must hold @ pariwar (validated at open, AC3). */
 const APPEAL_VOTE_PERMISSION_KEY = 'claim.appeal_vote';
@@ -164,14 +178,6 @@ export class AppealPanelDispositionRequiredError extends Error {
   public readonly name = 'AppealPanelDispositionRequiredError';
   public constructor() {
     super(`[appeal-panel] a disposition_category is required when the panel tally reverses (D-A)`);
-  }
-}
-
-/** Thrown by cancel when the session is already superseded (409). */
-export class AppealPanelSessionAlreadySupersededError extends Error {
-  public readonly name = 'AppealPanelSessionAlreadySupersededError';
-  public constructor(public readonly claimCaseId: string) {
-    super(`[appeal-panel] claim ${claimCaseId}'s appeal panel session was already cancelled — reload and try again`);
   }
 }
 
@@ -346,6 +352,9 @@ export interface AppealPanelFinalizeResult {
   reversedEventVersion: number | null;
   /** True when this reflects a re-finalize of an already-finalized session (idempotent short-circuit). */
   idempotentReplay: boolean;
+  /** ⭐ Story 6.24a RF6 — on a REVERSE of a `-239` refusal: the other claims of the death closed / ⛔ not closable (the caller
+   *  logs + audits each ⛔ not closable one). Absent on an advance or an idempotent replay. */
+  heldClaims?: CloseClaimsHeldBySuspicionAppealResult;
 }
 
 // ── Open (capture the immutable panel, emit the initiated marker, AC3) ─────────
@@ -499,6 +508,9 @@ export async function finalizeAppealOutcome(
   client: pg.PoolClient,
   input: FinalizeAppealPanelInput,
 ): Promise<AppealPanelFinalizeResult> {
+  // ⭐ Story 6.24a RF6 (v1.1) — the per-death REVERSAL key FIRST, before this claim's `appeal:` lock and row (the tally —
+  // and so whether this finalize reverses — is known only under them, so the key is taken on every finalize).
+  await acquireSuspicionReversalLockForClaim(client, input.pariwarId, input.claimCaseId);
   await acquireAppealLock(client, input.pariwarId, input.claimCaseId);
   const db = bindScopedDb(client);
 
@@ -603,6 +615,7 @@ export async function finalizeAppealOutcome(
   // (c) On a reverse, emit the claim.reversed publish hook (D-A) + close the anchor; on advance, advance the
   //     anchor stage.
   let reversedEventVersion: number | null = null;
+  let heldClaims: CloseClaimsHeldBySuspicionAppealResult | undefined;
   if (reverses) {
     const rev = await projectClaimState(client, {
       claimCaseId: input.claimCaseId,
@@ -627,6 +640,15 @@ export async function finalizeAppealOutcome(
       .update(claimAppeals)
       .set({ status: 'reversed', updatedAt: sql`now()` })
       .where(and(eq(claimAppeals.pariwarId, input.pariwarId), eq(claimAppeals.claimCaseId, input.claimCaseId)));
+    // ⭐ Story 6.24a RF6 — a reversed `-239` refusal CLOSES the death's other claims, in THIS transaction.
+    heldClaims = await closeClaimsHeldBySuspicionAppeal(client, {
+      pariwarId: input.pariwarId,
+      deceasedMemberId: claimRow.deceasedMemberId,
+      reversedClaimCaseId: input.claimCaseId,
+      actor: 'system',
+      actorId: input.actorId,
+      ...(input.auditId !== undefined ? { auditId: input.auditId } : {}),
+    });
   } else {
     await db
       .update(claimAppeals)
@@ -656,6 +678,7 @@ export async function finalizeAppealOutcome(
     eventVersion: projected.eventVersion,
     reversedEventVersion,
     idempotentReplay: false,
+    ...(heldClaims !== undefined ? { heldClaims } : {}),
   };
 }
 
@@ -693,17 +716,5 @@ export async function cancelAppealPanel(
     throw new AppealPanelCancelUnauthorizedError(input.actorId);
   }
 
-  const superseded = await db
-    .update(claimAppealPanelSessions)
-    .set({ supersededAt: sql`now()` })
-    .where(and(eq(claimAppealPanelSessions.sessionId, session.sessionId), isNull(claimAppealPanelSessions.supersededAt)))
-    .returning();
-  if (superseded.length === 0) throw new AppealPanelSessionAlreadySupersededError(input.claimCaseId);
-
-  await db
-    .update(claimAppealPanelVotes)
-    .set({ supersededAt: sql`now()` })
-    .where(and(eq(claimAppealPanelVotes.sessionId, session.sessionId), isNull(claimAppealPanelVotes.supersededAt)));
-
-  return { session: superseded[0]!, eventVersion: null };
+  return { session: await supersedeAppealPanelSession(db, input.claimCaseId, session.sessionId), eventVersion: null };
 }

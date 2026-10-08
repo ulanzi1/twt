@@ -63,8 +63,11 @@ describe('<ConvergenceDecisionStrip>', () => {
     expect(screen.queryByTestId('convergence-override-modal')).not.toBeInTheDocument();
     fireEvent.click(screen.getByTestId(`convergence-override-${ATTEMPT_ID}-${CLAIM_ID}`));
     expect(screen.getByTestId('convergence-override-modal')).toBeInTheDocument();
-    // Story 6.20 (AC13, T17) — the refile-during-appeal trap is named where the override is exercised.
-    expect(screen.getByTestId('convergence-override-refile-note').textContent).toMatch(/under appeal/);
+    // Story 6.20 (AC13) — AMENDED by Story 6.24a (`-261` D4 B supersedes T17, RF16): the note now says a refile after a
+    // suspicion refusal is ALWAYS kept apart — ⛔ "joins it automatically".
+    const note = screen.getByTestId('convergence-override-refile-note').textContent ?? '';
+    expect(note).toMatch(/always kept as its own claim/);
+    expect(note).not.toMatch(/joins it automatically/);
 
     // Confirm is disabled with an empty / too-short reason (mandatory-reason gate).
     const confirm = screen.getByTestId('convergence-override-confirm');

@@ -129,13 +129,15 @@ export type DeathCertificateHistoryResponse = z.output<typeof DeathCertificateHi
 // `2026-09-26-248` corrects `-247` §3's "the client maps them"; every member method returns its
 // contract type AS-IS, ⛔ no camelCase mapping layer). `.strict()`, per the contracts discipline.
 
-/** The FIVE-value status a family (or the helpline, on their behalf) is shown. */
+/** The status a family (or the helpline, on their behalf) is shown — five values, plus Story 6.24a's `closed`
+ *  (`2026-10-07-292` RF12: *"This claim has been closed. Please call the helpline."* — ⛔ no reason, ⛔ no other claim). */
 export const DeathCertificateFamilyStatus = z.enum([
   'not_needed',
   'missing',
   'awaiting_review',
   'accepted',
   'replacement_requested',
+  'closed',
 ]);
 export type DeathCertificateFamilyStatus = z.output<typeof DeathCertificateFamilyStatus>;
 
@@ -173,6 +175,14 @@ export const MemberDeathCertificateStatusResponse = z
      * calm "please call the helpline" state while it is true. ⛔ Never shown.
      */
     refile_requires_confirmation: z.boolean(),
+    /**
+     * ⭐ Story 6.24a (`2026-10-07-292` RF12 v1.3) — a ROUTING BIT: this claim is `closed` (another claim of the death won
+     * its suspicion appeal). The claim-entry gate routes to the calm "this claim has been closed — please call the
+     * helpline" screen while it is true — ⛔ never the wizard (a filing would converge onto the reversed claim only inside
+     * the 30-day look-back, else mint a third claim for the death). ⛔ Never merged with `closed_no_response` (a closure
+     * for no response is a different thing). ⛔ Never shown as such.
+     */
+    claim_closed: z.boolean(),
   })
   .strict();
 export type MemberDeathCertificateStatusResponse = z.output<typeof MemberDeathCertificateStatusResponse>;

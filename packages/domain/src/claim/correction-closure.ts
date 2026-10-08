@@ -1347,6 +1347,7 @@ export async function decideEscalatedClosure(
     await assertClaimApprovable(db, input.pariwarId, input.claimCaseId, claimRow.deceasedMemberId, {
       nameCheck: 'waived_251',
       approvingActorIds: [input.actorId],
+      step: 'final', // Story 6.24a RF5 — a FINAL approval (the waiver waives the name check ONLY).
     });
     approvalNameCheckState = await readNomineeNameCheckApprovalState(
       db,
@@ -1357,6 +1358,7 @@ export async function decideEscalatedClosure(
   } else {
     await assertClaimApprovable(db, input.pariwarId, input.claimCaseId, claimRow.deceasedMemberId, {
       approvingActorIds: [input.actorId],
+      step: 'final', // Story 6.24a RF5 — a FINAL approval.
     });
     approvalNameCheckState = 'passing';
   }
@@ -1555,6 +1557,7 @@ export async function approveNoCorrectionNeeded(
   // ⭐ Story 6.23b EA2 — the WAIT (the gate's last conjunct); the Pariwar Admin's own late reason does ⛔ not count.
   await assertClaimApprovable(db, input.pariwarId, input.claimCaseId, claimRow.deceasedMemberId, {
     approvingActorIds: [input.actorId],
+    step: 'final', // Story 6.24a RF5 — a FINAL approval.
   });
   await assertClaimContactRecorded(db, input.pariwarId, input.claimCaseId);
   // ⭐ Story 6.23b EA6(b) (`-277` Q2 C; Trap 4) — THE ONE RULE. The note is the rationale ONLY when a code was sent: the

@@ -26,8 +26,6 @@
 // PII: the rationale is ALREADY ENCRYPTED + BRANDED by the caller (PreparedAppealCiphertext). The
 // reviewerDisplay is ALREADY RESOLVED server-side (R5) — non-empty; the writer never falls back.
 
-import { createHash } from 'node:crypto';
-
 import { and, eq, sql } from 'drizzle-orm';
 import type pg from 'pg';
 
@@ -47,8 +45,15 @@ import {
   getOriginalDeciderActorIds,
   isOriginalDecider,
 } from './appeal-eligibility.js';
+import { appealAdvisoryLockKey } from './appeal-lock.js';
+import { acquireSuspicionAppealLock, readSuspicionChainStart } from './suspicion-refusal.js';
 import { type ClaimEventActor } from './events.js';
 import { projectClaimState } from './project.js';
+import {
+  type CloseClaimsHeldBySuspicionAppealResult,
+  acquireSuspicionReversalLockForClaim,
+  closeClaimsHeldBySuspicionAppeal,
+} from './suspicion-refusal-persist.js';
 
 // ── Typed write-path guards (the route maps each to a stable 4xx) ─────────────
 
@@ -123,12 +128,9 @@ function isUniqueViolation(err: unknown): boolean {
 
 // ── Advisory lock + claim row lock helpers ────────────────────────────────────
 
-/** The transaction-scoped advisory-lock key for one claim's appeal action (AC9). A DISTINCT namespace prefix
- *  (`appeal:`) from the verifier / cycle-freeze / r9 locks so the four never collide on one claim. */
-export function appealAdvisoryLockKey(pariwarId: string, claimCaseId: string): bigint {
-  const hex = createHash('sha256').update(`appeal:${pariwarId}:${claimCaseId}`).digest('hex');
-  return BigInt(`0x${hex.slice(0, 15)}`);
-}
+// The appeal advisory-lock key lives in the leaf `appeal-lock.ts` (Story 6.24a moved it there, unchanged, so the
+// suspicion-appeal closure writer can take it without an import cycle). Re-exported: every caller keeps its import.
+export { appealAdvisoryLockKey };
 
 async function acquireAppealLock(client: pg.PoolClient, pariwarId: PariwarId, claimCaseId: ClaimId): Promise<void> {
   await client.query('SELECT pg_advisory_xact_lock($1)', [appealAdvisoryLockKey(pariwarId, claimCaseId).toString()]);
@@ -217,6 +219,9 @@ export interface AppealDecisionResult {
   eventVersion: number;
   /** The appended claim.reversed publish-hook event version (only on a reversal; null otherwise). */
   reversedEventVersion: number | null;
+  /** ⭐ Story 6.24a RF6 — on a reversal of a `-239` refusal: the other claims of the death closed / ⛔ not closable (the
+   *  caller logs + audits each ⛔ not closable one). Absent otherwise. */
+  heldClaims?: CloseClaimsHeldBySuspicionAppealResult;
 }
 
 // ── Shared writes ──────────────────────────────────────────────────────────────
@@ -290,8 +295,20 @@ export async function initiateAppeal(
   const claimRow = await lockClaim(db, input.pariwarId, input.claimCaseId);
   if (!claimRow) throw new AppealClaimNotFoundError(input.claimCaseId);
 
-  // Guards: denied + no prior journey (D-E has NO elapsed-time gate; D-F exactly one journey).
-  await assertAppealInitiable(db, input.pariwarId, input.claimCaseId);
+  // ⭐ Story 6.24a RF15 — when the live reason is `-239` (stable here: `reviseDecision` takes this same row lock), take the
+  // per-death APPEAL key, AFTER this claim's own locks, and judge the 90 days with the `clock_timestamp()` read AFTER it —
+  // so an initiation racing a held claim's final approval at the limit resolves one way only. Its holder ⛔ never then
+  // waits on another claim's lock.
+  let clock: Date | undefined;
+  if ((await readSuspicionChainStart(db, input.pariwarId, input.claimCaseId)) !== null) {
+    await acquireSuspicionAppealLock(db, input.pariwarId, claimRow.deceasedMemberId);
+    const [row] = (await db.execute<{ clock: Date | string }>(sql`SELECT clock_timestamp() AS clock`)).rows ?? [];
+    clock = row ? new Date(row.clock) : undefined;
+  }
+
+  // Guards: denied + no prior journey (D-E has NO elapsed-time gate; D-F exactly one journey) + Story 6.24a's 90 days
+  // for a `-239` refusal.
+  await assertAppealInitiable(db, input.pariwarId, input.claimCaseId, clock !== undefined ? { clock } : {});
 
   // Emit the initiate transition (denied → appeal_stage_1).
   const projected = await projectClaimState(client, {
@@ -351,6 +368,8 @@ export async function reviewAppealStage1(
   input: ReviewAppealStage1Input,
 ): Promise<AppealDecisionResult> {
   assertDisposition(input.decision, input.dispositionCategory);
+  // ⭐ Story 6.24a RF6 (v1.1) — a REVERSAL takes the per-death reversal key FIRST, before this claim's locks.
+  if (input.decision === 'reversed') await acquireSuspicionReversalLockForClaim(client, input.pariwarId, input.claimCaseId);
   await acquireAppealLock(client, input.pariwarId, input.claimCaseId);
   const db = bindScopedDb(client);
 
@@ -388,6 +407,7 @@ export async function reviewAppealStage1(
   });
 
   let reversedEventVersion: number | null = null;
+  let heldClaims: CloseClaimsHeldBySuspicionAppealResult | undefined;
   if (input.decision === 'reversed') {
     reversedEventVersion = await emitReversedHook(
       client,
@@ -400,6 +420,15 @@ export async function reviewAppealStage1(
       .update(claimAppeals)
       .set({ status: 'reversed', updatedAt: sql`now()` })
       .where(eq(claimAppeals.appealId, anchor.appealId));
+    // ⭐ Story 6.24a RF6 — a reversed `-239` refusal CLOSES the death's other claims, in THIS transaction.
+    heldClaims = await closeClaimsHeldBySuspicionAppeal(client, {
+      pariwarId: input.pariwarId,
+      deceasedMemberId: claimRow.deceasedMemberId,
+      reversedClaimCaseId: input.claimCaseId,
+      actor: 'system',
+      actorId: input.reviewerActorId,
+      ...(input.auditId !== undefined ? { auditId: input.auditId } : {}),
+    });
   } else {
     await db
       .update(claimAppeals)
@@ -408,7 +437,13 @@ export async function reviewAppealStage1(
   }
 
   const decision = await insertDecisionRow(db, { ...input, stage: '1', decision: input.decision });
-  return { decision, claimState: projected.state, eventVersion: projected.eventVersion, reversedEventVersion };
+  return {
+    decision,
+    claimState: projected.state,
+    eventVersion: projected.eventVersion,
+    reversedEventVersion,
+    ...(heldClaims !== undefined ? { heldClaims } : {}),
+  };
 }
 
 // ── Stage 3 decision (Trustee discretion — final, AC4) ───────────────────────────
@@ -425,6 +460,8 @@ export async function decideAppealStage3(
   input: DecideAppealStage3Input,
 ): Promise<AppealDecisionResult> {
   assertDisposition(input.decision, input.dispositionCategory);
+  // ⭐ Story 6.24a RF6 (v1.1) — a REVERSAL takes the per-death reversal key FIRST, before this claim's locks.
+  if (input.decision === 'reversed') await acquireSuspicionReversalLockForClaim(client, input.pariwarId, input.claimCaseId);
   await acquireAppealLock(client, input.pariwarId, input.claimCaseId);
   const db = bindScopedDb(client);
 
@@ -456,6 +493,7 @@ export async function decideAppealStage3(
   });
 
   let reversedEventVersion: number | null = null;
+  let heldClaims: CloseClaimsHeldBySuspicionAppealResult | undefined;
   if (input.decision === 'reversed') {
     reversedEventVersion = await emitReversedHook(
       client,
@@ -468,6 +506,15 @@ export async function decideAppealStage3(
       .update(claimAppeals)
       .set({ status: 'reversed', updatedAt: sql`now()` })
       .where(eq(claimAppeals.appealId, anchor.appealId));
+    // ⭐ Story 6.24a RF6 — a reversed `-239` refusal CLOSES the death's other claims, in THIS transaction.
+    heldClaims = await closeClaimsHeldBySuspicionAppeal(client, {
+      pariwarId: input.pariwarId,
+      deceasedMemberId: claimRow.deceasedMemberId,
+      reversedClaimCaseId: input.claimCaseId,
+      actor: 'system',
+      actorId: input.reviewerActorId,
+      ...(input.auditId !== undefined ? { auditId: input.auditId } : {}),
+    });
   } else {
     // Uphold — the appeal ladder is exhausted. Emit claim.denied_no_appeal (the freeze-clearing terminal;
     // carries deceased_member_id so the account-frozen overlay's payload->>'deceased_member_id' query
@@ -496,5 +543,11 @@ export async function decideAppealStage3(
   }
 
   const decision = await insertDecisionRow(db, { ...input, stage: '3', decision: input.decision });
-  return { decision, claimState: projected.state, eventVersion: projected.eventVersion, reversedEventVersion };
+  return {
+    decision,
+    claimState: projected.state,
+    eventVersion: projected.eventVersion,
+    reversedEventVersion,
+    ...(heldClaims !== undefined ? { heldClaims } : {}),
+  };
 }

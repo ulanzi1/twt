@@ -34,6 +34,44 @@ function Section({ title, testId, children }: { title: string; testId: string; c
   );
 }
 
+/** Story 6.24a (RF10) — the kept-apart line and the final-approval wait, from the server's section. */
+function SuspicionRefusalNotice({ section }: { section: VerifierConsolePacket['suspicionRefusal'] }): ReactElement | null {
+  const words = t.suspicionRefusal;
+  if (section.available && section.keptApartFrom.length === 0) return null;
+  return (
+    <Section title={words.heading} testId="section-suspicion-refusal">
+      {!section.available ? (
+        <p className="text-sm font-medium text-amber-800" data-testid="suspicion-refusal-unavailable">
+          {words.unavailable}
+        </p>
+      ) : (
+        <>
+          <p className="text-sm font-medium" data-testid="suspicion-refusal-kept-apart">
+            {words.keptApart}
+          </p>
+          <ul className="list-disc pl-5 text-sm">
+            {section.keptApartFrom.map((r) => (
+              <li key={r.reference} data-testid="suspicion-refusal-claim">
+                {words.claim} {r.reference} —{' '}
+                {r.appeal === 'not_filed' || r.appeal === 'time_limit_passed'
+                  ? `${words.appeal[r.appeal]} ${r.appealUntil}`
+                  : words.appeal[r.appeal]}
+              </li>
+            ))}
+          </ul>
+          <p
+            className={`text-sm ${section.finalApprovalWaits ? 'font-medium text-amber-800' : 'text-green-800'}`}
+            data-testid="suspicion-refusal-wait"
+          >
+            {section.finalApprovalWaits ? words.waits[section.finalApprovalWaits] : words.noWait}
+          </p>
+          {section.finalApprovalWaits ? <p className="text-sm">{words.districtAdminNotHeld}</p> : null}
+        </>
+      )}
+    </Section>
+  );
+}
+
 /** Render one of the three non-present states with its DISTINCT copy (never collapsed). */
 function NonPresent({ status }: { status: 'empty' | 'unavailable' | 'not_available_yet' }): ReactElement {
   const copy =
@@ -303,6 +341,11 @@ export function SignalsPanel({
           <NonPresent status={packet.groundInspection.status} />
         )}
       </Section>
+
+      {/* ⭐ (k) Story 6.24a (RF10; `-261` D4 B, `-262` FQ5 A) — KEPT APART from an earlier claim of this death refused on
+          suspicion, and whether this claim's FINAL approval waits for its appeal. The other claim by its REFERENCE only
+          (⛔ no name, ⛔ no note). Shown only when there IS such a claim — or when the read failed (⛔ never silence). */}
+      <SuspicionRefusalNotice section={packet.suspicionRefusal} />
 
       {/* (e) prior verifier comments — the full transcript for this claim, semantic-verb entries (AC4).
           NOTE: `superseded`/`isRevision` linkage isn't rendered here — the wire model (PriorVerifierComment)

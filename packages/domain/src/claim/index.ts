@@ -91,6 +91,13 @@ export * from './nominee-correction-persist.js';
 // Story 6.20 (D14, AC13) — the `-239` refusal's two reads: the Pariwar Admin's read surface and the
 // derived ground-inspection inheritance source. The refusal itself is the shipped verifier denial.
 export * from './nominee-refusal-read.js';
+// Story 6.24a (`2026-10-07-292` RF1, RF5, RF14, RF15) — "a suspicion refusal STANDS", once: the fragment, the per-death
+// read, the FINAL-approval wait, the 90-day appeal limit and the per-death keys. Read-only (⛔ never reaches `events.ts`).
+export * from './suspicion-refusal.js';
+// Story 6.24a (RF6) — the CLOSURE writer (`closeClaimsHeldBySuspicionAppeal`, called by the three reversal writers) and the
+// per-death reversal key; and the two leaves it needs without an import cycle (`appeal-lock.ts` is re-exported through
+// `appeal-persist.ts`, `appeal-panel-session.ts` through `appeal-panel-persist.ts`).
+export * from './suspicion-refusal-persist.js';
 // Story 6.23a — the nominee-change WARNINGS and the ONE approval rule over them (NW1–NW6), the WARNING-REASON LIST
 // (NW16, NW17), and the District Admin's reason for a LATE warning (NW14). ⛔ `approval-warnings.ts` and
 // `approval-warning-reasons.ts` never reach `events.ts`, `nominee-name-check.ts` or `nominee-lock.ts` (NW1).

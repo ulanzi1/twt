@@ -153,5 +153,12 @@
   "refile.title": "This claim was closed",
   "refile.body": "This claim was closed because the corrected bank details did not reach us. A new claim can be filed with the helpline's help. Please call us and we will guide you through it.",
   "refile.call": "Call the helpline",
-  "refile.back": "Go back"
+  "refile.back": "Go back",
+  "$comment.closed": "Story 6.24a (`2026-10-07-292` RF12, RF14 (b)): closed.* is the member app's calm screen for a claim CLOSED because another claim for the same death won its appeal — it states only that the claim is closed and to call the helpline (no reason, no other claim, no name). appeal_helpline.* is the line the helpline operator reads to the family about a refusal's appeal date (`2026-10-07-291` Q1 A). The Hindi was agent-authored and is NOT YET HUMAN-REVIEWED.",
+  "closed.title": "This claim has been closed",
+  "closed.body": "This claim has been closed. Please call the helpline.",
+  "closed.call": "Call the helpline",
+  "closed.back": "Go back",
+  "appeal_helpline.until": "Can be appealed until {date}.",
+  "appeal_helpline.ended": "The time to appeal ended on {date}."
 }

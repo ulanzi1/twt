@@ -36,6 +36,7 @@ import { MemberLookupForm } from '../member-status/MemberLookupForm.js';
 import { MemberSearchResults } from '../member-status/MemberSearchResults.js';
 import { BankDetailsCard } from './BankDetailsCard.js';
 import { HelplineCertificateReplacement } from './HelplineCertificateReplacement.js';
+import { HelplineAppeal } from './HelplineAppeal.js';
 import { HelplineClaimContact } from './HelplineClaimContact.js';
 import { HelplineConsoleShell, type HelplineIntakeResult } from './HelplineConsoleShell.js';
 import { HelplineNomineeCorrection } from './HelplineNomineeCorrection.js';
@@ -441,6 +442,9 @@ export function HelplineClaimPage({ pariwarId }: HelplineClaimPageProps): ReactE
         memberId={selected?.memberId ?? null}
         identityConfirmed={identityConfirmed}
       />
+      {/* ⭐ Story 6.24a (RF14 (b)) — the operator files an APPEAL for the family; a refusal on suspicion of a post-death
+          nominee change shows its 90-day date, read to the family in English and Hindi. */}
+      <HelplineAppeal pariwarId={pariwarId} memberId={selected?.memberId ?? null} identityConfirmed={identityConfirmed} />
       {/* Story 6.19a (AC1) — the claim's CONTACT RECORD and the family's agreement to be contacted. Its save sits
           behind the operator's own step-up, so a step-up 403 opens the page's panel (the bank card's treatment). */}
       <HelplineClaimContact

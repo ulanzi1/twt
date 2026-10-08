@@ -32,6 +32,7 @@ import {
 import { assertLateWarningsCovered } from './approval-warnings.js';
 import { assertDeathCertificateAcceptedForApproval } from './death-certificate-approval.js';
 import { assertGroundInspectionCompleteForApproval } from './ground-inspection-approval.js';
+import { assertSuspicionAppealDecidedForFinalApproval } from './suspicion-refusal.js';
 import { getEffectiveNomineeDeclaration } from './nominee-effective.js';
 import { CLAIM_REVIEW_WINDOW_STATES } from './review-window.js';
 import { eventsLog } from '../schema/events_log.js';
@@ -392,6 +393,12 @@ export async function readNomineeNameCheckSnapshot(
  *                                            reason yet (⛔ counting a late reason an approving actor recorded —
  *                                            `-279` A1). The claim WAITS (→ 409) — ⛔ NOT a denial. Every refusal
  *                                            above keeps its code and order; the `-251` waived approve reaches it too.
+ * @throws SuspicionAppealPendingError        ⭐ Story 6.24a RF5 (`-262` FQ5 A, `-291` Q1 A) — FINAL approvals ONLY
+ *                                            (`step: 'final'`): another claim of the death was refused on suspicion
+ *                                            and its appeal is open, or ⛔ not filed while its 90 days run. The claim
+ *                                            WAITS (→ 409) — ⛔ NOT a denial. After the ground inspection, BEFORE the
+ *                                            late-warning wait (which stays LAST). The District Admin (P1) is ⛔ never
+ *                                            held by it.
  */
 export async function assertClaimApprovable(
   db: Db,
@@ -418,6 +425,11 @@ export async function assertClaimApprovable(
   // ⭐ Story 6.26a GI1 — the ground inspection, OUTSIDE the inner helper (its fourth caller `isReturnedClaimResubmitted`
   // swallows exactly three typed errors — the 6.21a T4 reasoning), so the `-251` waived approve reaches it too.
   await assertGroundInspectionCompleteForApproval(db, pariwarId, claimCaseId);
+  // ⭐ Story 6.24a RF5 — the suspicion appeal's wait, FINAL approvals only; OUTSIDE the inner helper for the 6.26a GI1
+  // reason. It takes RF15's per-death key FIRST inside itself and ⛔ never waits on another claim's lock (Trap 8).
+  if (opts.step === 'final') {
+    await assertSuspicionAppealDecidedForFinalApproval(db, pariwarId, claimCaseId, deceasedMemberId);
+  }
   // ⭐ Story 6.23b EA2 — THE WAIT, LAST (after the `-251` waiver's early return INSIDE the inner helper — Trap 17).
   await assertLateWarningsCovered(db, pariwarId, claimCaseId, opts.approvingActorIds);
 }
@@ -437,6 +449,13 @@ export interface ClaimApprovalGateOptions {
    * District Admin at P1 (vacuous — ⛔ no live approval exists while approving). REQUIRED.
    */
   readonly approvingActorIds: readonly string[];
+  /**
+   * ⭐ Story 6.24a RF5 (`-262` FQ5 A: the refile *"goes through every check but WAITS AT FINAL APPROVAL"*) — WHICH approval
+   * this is. REQUIRED (typecheck finds every call): `'district_admin'` — P1 (`adjudicateClaim`), ⛔ never held by the
+   * suspicion appeal; `'final'` — the five FINAL writers (`voteOnFrozenClaim`, `finalizeR9Outcome`, both
+   * `decideEscalatedClosure` arms, `approveNoCorrectionNeeded`), which add the suspicion-appeal conjunct.
+   */
+  readonly step: 'district_admin' | 'final';
 }
 
 /**

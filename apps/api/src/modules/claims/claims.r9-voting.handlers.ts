@@ -57,6 +57,7 @@ import {
   underSavepoint,
 } from './later-approval-warnings.js';
 import { groundInspectionRequiredMessage } from './ground-inspection-required-message.js';
+import { suspicionAppealPendingMessage } from './suspicion-appeal-pending-message.js';
 
 /** Map an R9-voting domain error to its stable HTTP shape. Rethrows ApiErrors + anything unknown as-is. */
 function translateR9Error(err: unknown): never {
@@ -113,6 +114,12 @@ function translateR9Error(err: unknown): never {
   // ⭐ Story 6.26a (GI11) — the claim WAITS for its ground inspection (`-263` FQ9 A) — ⛔ never a 500, ⛔ never a denial.
   if (err instanceof claim.GroundInspectionRequiredError) {
     throw new ConflictError(groundInspectionRequiredMessage(err.reason), 'r9_voting.ground_inspection_required', {
+      reason: err.reason,
+    });
+  }
+  // ⭐ Story 6.24a RF5 (F9) — the FINAL approval WAITS for another claim's suspicion appeal (⛔ not a denial, ⛔ not a 500).
+  if (err instanceof claim.SuspicionAppealPendingError) {
+    throw new ConflictError(suspicionAppealPendingMessage(err.reason), 'r9_voting.suspicion_appeal_pending', {
       reason: err.reason,
     });
   }

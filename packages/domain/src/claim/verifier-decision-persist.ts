@@ -41,7 +41,9 @@ import {
   readClaimApprovalWarnings,
 } from './approval-warnings.js';
 import { assertClaimContactRecorded } from './claim-contact-check.js';
-import { WarningReasonUngroundedError } from './errors.js';
+import { SuspicionReasonLockedError, WarningReasonUngroundedError } from './errors.js';
+import { intakeAdvisoryLockKey } from './icp-lock.js';
+import { POST_DEATH_NOMINEE_CHANGE_REASON_CODE } from './suspicion-refusal.js';
 import { assertClaimApprovable } from './nominee-name-check.js';
 import { projectClaimState } from './project.js';
 import {
@@ -410,7 +412,8 @@ export async function adjudicateClaim(
       input.pariwarId,
       input.claimCaseId,
       claimRow.deceasedMemberId,
-      { approvingActorIds: [input.actorId] },
+      // ⭐ Story 6.24a RF5 — the District Admin's approval is ⛔ never held by the suspicion appeal (FQ5).
+      { approvingActorIds: [input.actorId], step: 'district_admin' },
     );
     // ⭐ Story 6.19a (D14) — then the claim's CONTACT RECORD: an address for each nominee in force at the death,
     // the claimant's details when the claimant is none of them, and a live agreement to be contacted. AFTER
@@ -581,8 +584,23 @@ export async function reviseDecision(
   if (!isReasonCodeValidForOutcome(input.outcome, input.reasonCode)) {
     throw new ReasonCodeOutcomeMismatchError(input.outcome, input.reasonCode);
   }
-  await acquireDecisionLock(client, input.pariwarId, input.claimCaseId);
   const db = bindScopedDb(client);
+  // ⭐ Story 6.24a RF13 (v1.4 — the lock): a revision OFF `-239` must serialise with a new claim being MINTED for the same
+  // death (the mint runs under the death's intake lock and never reads a `denied` claim). ⇒ read the claim's immutable
+  // `deceased_member_id` UNLOCKED, take the INTAKE lock FIRST, THEN the decision lock and the row — the intake-then-row
+  // order `convergeIntakeAttempt` already uses (the `refile-guard.ts` read-then-key precedent). A missing claim takes ⛔
+  // no key (the not-found check below answers).
+  const [deathOf] = await db
+    .select({ deceasedMemberId: claims.deceasedMemberId })
+    .from(claims)
+    .where(and(eq(claims.pariwarId, input.pariwarId), eq(claims.claimCaseId, input.claimCaseId)))
+    .limit(1);
+  if (deathOf) {
+    await client.query('SELECT pg_advisory_xact_lock($1)', [
+      intakeAdvisoryLockKey(input.pariwarId, deathOf.deceasedMemberId).toString(),
+    ]);
+  }
+  await acquireDecisionLock(client, input.pariwarId, input.claimCaseId);
 
   const claimRow = await lockClaim(db, input.pariwarId, input.claimCaseId);
   if (!claimRow) throw new VerifierDecisionClaimNotFoundError(input.claimCaseId);
@@ -615,6 +633,28 @@ export async function reviseDecision(
   // Optional client optimistic assertion: the decision it thinks it is revising must be the live one.
   if (input.supersedesDecisionId != null && input.supersedesDecisionId !== live.decisionId) {
     throw new DecisionRevisionConflictError(input.claimCaseId);
+  }
+  // ⭐ Story 6.24a RF13 (`2026-10-07-293` item 2 A — the reason lock): a live `-239` reason can ⛔ not be moved OFF while ANY
+  // other claim of the same death — RF5's own scope, a claim that PREDATES the refusal included — is in any state but
+  // `closed` (`approved` / `state_trustee_approved` / `settled` and `denied` included): else S would stop standing, R's
+  // final approval would proceed, and S — now an ordinary refusal with ⛔ no time limit — could be appealed, reversed and
+  // approved too: one death paid twice. A note-only revision that KEEPS `-239` is ⛔ not refused. AFTER the window / live
+  // / same-outcome guards (a revision that cannot happen is refused for its real reason).
+  if (live.reasonCode === POST_DEATH_NOMINEE_CHANGE_REASON_CODE && input.reasonCode !== POST_DEATH_NOMINEE_CHANGE_REASON_CODE) {
+    const [held] = await db
+      .select({ claimCaseId: claims.claimCaseId })
+      .from(claims)
+      .where(
+        and(
+          eq(claims.pariwarId, input.pariwarId),
+          eq(claims.deceasedMemberId, claimRow.deceasedMemberId),
+          sql`${claims.claimCaseId} <> ${input.claimCaseId}`,
+          sql`${claims.currentState} <> 'closed'`,
+        ),
+      )
+      .orderBy(claims.claimCaseId)
+      .limit(1);
+    if (held) throw new SuspicionReasonLockedError(input.claimCaseId, held.claimCaseId);
   }
   // `-239` grounding — AFTER the window / live-decision / same-outcome guards (code review 2026-09-24b), so a
   // revision that cannot happen is refused for its real reason.

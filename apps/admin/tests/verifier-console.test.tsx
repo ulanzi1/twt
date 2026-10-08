@@ -94,6 +94,7 @@ const PRESENT_PACKET: VerifierConsolePacket = {
   // Story 6.23a (NW8) — the nominee-change warnings section (⛔ no warning by default).
   // Story 6.26a (GI9) — the ground-inspection gate section (complete by default).
   groundInspectionGate: { available: true, complete: true, waitReason: null },
+  suspicionRefusal: { available: true, keptApartFrom: [], finalApprovalWaits: null },
   approvalWarnings: {
     available: true,
     kinds: [],
@@ -240,6 +241,7 @@ describe('<SignalsPanel> — six sections, four-state vocabulary, tri-state conc
         packet={{
           ...PRESENT_PACKET,
           groundInspectionGate: { available: true, complete: true, waitReason: null },
+          suspicionRefusal: { available: true, keptApartFrom: [], finalApprovalWaits: null },
           groundInspection: {
             status: 'present',
             assignments: [
@@ -590,5 +592,55 @@ describe('decisionErrorMessage — distinct submit-error messages (Review Findin
     expect(decisionErrorMessage(new ApiError(403, 'auth.forbidden', 'x'))).toBe(t.decision.submitError);
     expect(decisionErrorMessage(new ApiError(500, 'request.internal', 'x'))).toBe(t.decision.submitError);
     expect(decisionErrorMessage(new Error('boom'))).toBe(t.decision.submitError);
+  });
+});
+
+describe('<SignalsPanel> — Story 6.24a (RF10), kept apart from a claim refused on suspicion', () => {
+  const sr = t.suspicionRefusal;
+  it('⛔ no such claim ⇒ ⛔ no section at all', () => {
+    render(<SignalsPanel packet={PRESENT_PACKET} />);
+    expect(screen.queryByTestId('section-suspicion-refusal')).not.toBeInTheDocument();
+  });
+
+  it('a standing refusal ⇒ the kept-apart line, the other claim by REFERENCE with its appeal date, and the wait line', () => {
+    render(
+      <SignalsPanel
+        packet={{
+          ...PRESENT_PACKET,
+          suspicionRefusal: {
+            available: true,
+            keptApartFrom: [{ reference: 'REF-1234', appeal: 'not_filed', appealUntil: '2026-12-30' }],
+            finalApprovalWaits: 'appeal_not_filed',
+          },
+        }}
+      />,
+    );
+    expect(screen.getByTestId('suspicion-refusal-kept-apart')).toHaveTextContent(sr.keptApart);
+    expect(screen.getByTestId('suspicion-refusal-claim')).toHaveTextContent('REF-1234');
+    expect(screen.getByTestId('suspicion-refusal-claim')).toHaveTextContent('2026-12-30');
+    expect(screen.getByTestId('suspicion-refusal-wait')).toHaveTextContent(sr.waits.appeal_not_filed!);
+    expect(screen.getByText(sr.districtAdminNotHeld)).toBeInTheDocument();
+  });
+
+  it('an UPHELD refusal ⇒ kept apart, but the final approval does ⛔ not wait', () => {
+    render(
+      <SignalsPanel
+        packet={{
+          ...PRESENT_PACKET,
+          suspicionRefusal: { available: true, keptApartFrom: [{ reference: 'REF-1', appeal: 'upheld_final', appealUntil: '2026-12-30' }], finalApprovalWaits: null },
+        }}
+      />,
+    );
+    expect(screen.getByTestId('suspicion-refusal-wait')).toHaveTextContent(sr.noWait);
+  });
+
+  it('a FAILED read ⇒ "could not be checked just now" — ⛔ never silence', () => {
+    render(<SignalsPanel packet={{ ...PRESENT_PACKET, suspicionRefusal: { available: false, keptApartFrom: [], finalApprovalWaits: null } }} />);
+    expect(screen.getByTestId('suspicion-refusal-unavailable')).toHaveTextContent(sr.unavailable);
+  });
+
+  it('the decision strip\'s words — the wait (defensive) and the reason lock — ⛔ "try again"', () => {
+    expect(decisionErrorMessage(new ApiError(409, 'verifier_decision.suspicion_appeal_pending', 'x', { reason: 'appeal_open' }))).toBe(sr.approvalGate.appeal_open);
+    expect(decisionErrorMessage(new ApiError(409, 'verifier_decision.suspicion_reason_locked', 'x', {}))).toBe(sr.reasonLocked);
   });
 });

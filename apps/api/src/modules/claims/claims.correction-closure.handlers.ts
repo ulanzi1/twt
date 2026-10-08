@@ -82,6 +82,7 @@ import {
   underSavepoint,
 } from './later-approval-warnings.js';
 import { groundInspectionRequiredMessage } from './ground-inspection-required-message.js';
+import { suspicionAppealPendingMessage } from './suspicion-appeal-pending-message.js';
 
 export const CLOSURE_REQUEST_KEY = 'claim.request_correction_closure';
 export const CLOSURE_DECIDE_KEY = 'claim.decide_correction_closure';
@@ -210,6 +211,12 @@ export function translateClosureError(err: unknown): never {
   // ⭐ Story 6.26a (GI11) — the claim WAITS for its ground inspection (`-263` FQ9 A) — ⛔ never a 500, ⛔ never a denial.
   if (err instanceof claim.GroundInspectionRequiredError) {
     throw new ConflictError(groundInspectionRequiredMessage(err.reason), 'closure.ground_inspection_required', {
+      reason: err.reason,
+    });
+  }
+  // ⭐ Story 6.24a RF5 (F9) — the FINAL approval WAITS for another claim's suspicion appeal (⛔ not a denial, ⛔ not a 500).
+  if (err instanceof claim.SuspicionAppealPendingError) {
+    throw new ConflictError(suspicionAppealPendingMessage(err.reason), 'closure.suspicion_appeal_pending', {
       reason: err.reason,
     });
   }

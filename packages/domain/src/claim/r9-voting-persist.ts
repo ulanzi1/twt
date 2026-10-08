@@ -273,7 +273,16 @@ async function lockClaim(db: Db, pariwarId: PariwarId, claimCaseId: ClaimId) {
   return rows[0];
 }
 
-/** The claim's live (non-superseded) session, or undefined. Read under the caller's advisory lock. */
+/** The claim's live (non-superseded) session, or undefined. Read under the caller's advisory lock. Exported (Story 6.24a,
+ *  RF6) as `readLiveR9VotingSession` — the closure writer ends a closed claim's un-finalized session. */
+export async function readLiveR9VotingSession(
+  db: Db,
+  pariwarId: PariwarId,
+  claimCaseId: ClaimId,
+): Promise<ClaimR9VotingSessionRow | undefined> {
+  return liveSession(db, pariwarId, claimCaseId);
+}
+
 async function liveSession(
   db: Db,
   pariwarId: PariwarId,
@@ -661,7 +670,8 @@ export async function finalizeR9Outcome(client: pg.PoolClient, input: R9WriteBas
       input.pariwarId,
       input.claimCaseId,
       claimRow.deceasedMemberId,
-      { approvingActorIds },
+      // ⭐ Story 6.24a RF5 — a FINAL approval: it waits for another claim's suspicion appeal (FQ5).
+      { approvingActorIds, step: 'final' },
     );
     // ⭐ Story 6.19a (D14) — then the claim's CONTACT RECORD: an address for each nominee in force at the death,
     // the claimant's details when the claimant is none of them, and a live agreement to be contacted. AFTER
@@ -713,18 +723,7 @@ export async function finalizeR9Outcome(client: pg.PoolClient, input: R9WriteBas
 
   // (b) Supersede the live routed_to_r9 routing row (an approved claim rejoins the 6.13 commit set; a denied
   //     one is out — either way the durable exclusion is lifted now the R9 outcome exists).
-  await db
-    .update(claimStateTrusteeDecisions)
-    .set({ supersededAt: sql`now()` })
-    .where(
-      and(
-        eq(claimStateTrusteeDecisions.pariwarId, input.pariwarId),
-        eq(claimStateTrusteeDecisions.claimCaseId, input.claimCaseId),
-        eq(claimStateTrusteeDecisions.phase, 'routing'),
-        eq(claimStateTrusteeDecisions.outcome, 'routed_to_r9'),
-        isNull(claimStateTrusteeDecisions.supersededAt),
-      ),
-    );
+  await supersedeLiveR9Routing(db, input.pariwarId, input.claimCaseId);
 
   // (c) Emit the claim.r9_outcome lifecycle event (the LIFECYCLE authority) — non-PII tally/rule snapshot only.
   const projected = await projectClaimState(client, {
@@ -807,19 +806,55 @@ export async function cancelR9VotingSession(
   // Fail-closed on an already-finalized session (its outcome already advanced the lifecycle — AC5).
   if (session.outcome !== null) throw new R9SessionFinalizedError(input.claimCaseId);
 
-  // Atomic supersession — 0 rows ⇒ a concurrent cancel already won ⇒ conflict (409).
+  return { session: await supersedeR9VotingSession(db, input.claimCaseId, session.sessionId) };
+}
+
+/**
+ * ⭐ Story 6.24a (`2026-10-07-292` RF6 v1.3) — the ACTOR-FREE CORE of `cancelR9VotingSession`: atomically supersede the
+ * session AND all its live votes (retained in the transcript — the supersession IS the audit). ⛔ No actor check here —
+ * those stay in the public writer, which keeps its behaviour. It leaves the `routed_to_r9` row live (the public
+ * writer's contract — a corrected session can re-open); the closure writer supersedes that row itself
+ * (`supersedeLiveR9Routing`). MUST run under the claim's `r9:` advisory lock. 0 rows ⇒ a concurrent cancel won (409).
+ */
+export async function supersedeR9VotingSession(
+  db: Db,
+  claimCaseId: ClaimId,
+  sessionId: ClaimR9VotingSessionRow['sessionId'],
+): Promise<ClaimR9VotingSessionRow> {
   const superseded = await db
     .update(claimR9VotingSessions)
     .set({ supersededAt: sql`now()` })
-    .where(and(eq(claimR9VotingSessions.sessionId, session.sessionId), isNull(claimR9VotingSessions.supersededAt)))
+    .where(and(eq(claimR9VotingSessions.sessionId, sessionId), isNull(claimR9VotingSessions.supersededAt)))
     .returning();
-  if (superseded.length === 0) throw new R9SessionAlreadySupersededError(input.claimCaseId);
+  if (superseded.length === 0) throw new R9SessionAlreadySupersededError(claimCaseId);
 
   // Supersede every LIVE vote under the session (retained in the transcript — the supersession IS the audit).
   await db
     .update(claimR9Votes)
     .set({ supersededAt: sql`now()` })
-    .where(and(eq(claimR9Votes.sessionId, session.sessionId), isNull(claimR9Votes.supersededAt)));
+    .where(and(eq(claimR9Votes.sessionId, sessionId), isNull(claimR9Votes.supersededAt)));
 
-  return { session: superseded[0]! };
+  return superseded[0]!;
+}
+
+/**
+ * Supersede the claim's live `routed_to_r9` routing row (unconditional — ⛔ none is a no-op). Extracted from
+ * `finalizeR9Outcome`'s step (b) by Story 6.24a (RF6 v1.3), which calls it to lift a CLOSED claim's routing — ⛔ never
+ * from inside `supersedeR9VotingSession` (the cancel deliberately leaves the routing live). Returns the rows superseded.
+ */
+export async function supersedeLiveR9Routing(db: Db, pariwarId: PariwarId, claimCaseId: ClaimId): Promise<number> {
+  const rows = await db
+    .update(claimStateTrusteeDecisions)
+    .set({ supersededAt: sql`now()` })
+    .where(
+      and(
+        eq(claimStateTrusteeDecisions.pariwarId, pariwarId),
+        eq(claimStateTrusteeDecisions.claimCaseId, claimCaseId),
+        eq(claimStateTrusteeDecisions.phase, 'routing'),
+        eq(claimStateTrusteeDecisions.outcome, 'routed_to_r9'),
+        isNull(claimStateTrusteeDecisions.supersededAt),
+      ),
+    )
+    .returning({ id: claimStateTrusteeDecisions.decisionId });
+  return rows.length;
 }

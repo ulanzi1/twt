@@ -47,7 +47,9 @@ import { eventsLog } from '../schema/events_log.js';
 export const ACCOUNT_FREEZE_EVENT_TYPE = 'claim.intake_initiated';
 
 /** Claim-resolution events that REMOVE the overlay (configurable policy, Story 6.x). */
-export const ACCOUNT_UNFREEZE_EVENT_TYPES = ['claim.settled', 'claim.denied_no_appeal'] as const;
+/** Story 6.24a (`2026-10-07-292` RF4) adds `claim.closed` — the closed claim's stream resolves; the account stays frozen
+ *  while ANY other stream (the reversed claim) is unresolved. */
+export const ACCOUNT_UNFREEZE_EVENT_TYPES = ['claim.settled', 'claim.denied_no_appeal', 'claim.closed'] as const;
 
 /** The overlay-relevant claim event types (freeze + unfreeze). */
 const OVERLAY_EVENT_TYPES = [ACCOUNT_FREEZE_EVENT_TYPE, ...ACCOUNT_UNFREEZE_EVENT_TYPES];

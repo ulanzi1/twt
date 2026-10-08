@@ -44,6 +44,11 @@ describe('resolveClaimEntryDecision', () => {
     expect(resolveClaimEntryDecision(true, { kind: 'terminal' })).toEqual({ kind: 'wizard' })
   })
 
+  it('⭐ Story 6.24a — a pointer + a CLOSED claim ⇒ its calm helpline screen (⛔ not the wizard); ⛔ no pointer ⇒ the wizard', () => {
+    expect(resolveClaimEntryDecision(true, { kind: 'closed' })).toEqual({ kind: 'closed_helpline' })
+    expect(resolveClaimEntryDecision(false, { kind: 'closed' })).toEqual({ kind: 'wizard' })
+  })
+
   it('no pointer ⇒ the wizard even for a guarded death (its submit maps the 409 to the same state)', () => {
     expect(resolveClaimEntryDecision(false, { kind: 'refile_needs_confirmation' })).toEqual({ kind: 'wizard' })
   })

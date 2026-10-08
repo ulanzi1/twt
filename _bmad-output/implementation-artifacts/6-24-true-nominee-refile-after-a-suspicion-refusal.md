@@ -33,7 +33,7 @@ Panel's ruling). Each is tagged **[a]** (built here) or **[b]** (built by 6.24b)
 
 # Story 6.24a: The True Nominee's Refile After a Suspicion Refusal — Kept Apart, Waiting at Final Approval for the Appeal, Closed if the Appeal Is Allowed, and the 90-Day Appeal Limit `[SURFACE]`
 
-Status: ready-for-dev
+Status: review
 
 > ⭐⭐ **WHAT THIS STORY IS, IN ONE PARAGRAPH.** When a District Admin refuses a claim because the nominee was changed on or after the
 > death (`-239`, reason `post_death_nominee_change`), the member's true nominee may file again. This story builds the four Panel rulings
@@ -577,7 +577,7 @@ applied to BOTH :5432 and :5433, the enum values verified on each (0151 is 6.24b
 ## Tasks / Subtasks
 
 - [x] **Task 0 — Governance (AC0)** ✅ complete 2026-10-07 except 0.1, which runs at the build
-  - [ ] 0.1 (AT THE BUILD) `git fetch origin`; `git merge-base --is-ancestor 6bb79afd HEAD`; `git diff --name-only 6bb79afd..HEAD -- packages apps scripts`
+  - [x] 0.1 (AT THE BUILD) `git fetch origin`; `git merge-base --is-ancestor 6bb79afd HEAD`; `git diff --name-only 6bb79afd..HEAD -- packages apps scripts`
     — re-read every cited file it lists ([[feedback_git_fetch_before_remote_reasoning]]). Confirm ⛔ no decision after `-290` touches the
     gate, convergence, the appeal, the handover OTP or rows 6-25 / 6-27; if row 6-25 or 6-27 landed first, rebase onto its conjuncts —
     ⛔ none drops another's check (`-277` Consequence 2, `-282` Consequence 4).
@@ -594,95 +594,95 @@ applied to BOTH :5432 and :5433, the enum values verified on each (0151 is 6.24b
     (`6-16-3-stage-claim-denial-appeal-flow-reversed-denial-sahyog-vivran-publish-hook.md`), under the PRD's *"No formal time limit on the
     family's right to appeal"* (`prds/prd-TWT-2026-05-22/prd.md:752`) and in `docs/appeal-procedural-fairness/README.md` where it repeats it.
 
-- [ ] **Task 1 — Migration (AC3, AC10; RF4)**
-  - [ ] 1.1 `0150_claim-closed-enum-values.sql`: `ALTER TYPE "claim_lifecycle_state" ADD VALUE IF NOT EXISTS 'closed';` and
+- [x] **Task 1 — Migration (AC3, AC10; RF4)**
+  - [x] 1.1 `0150_claim-closed-enum-values.sql`: `ALTER TYPE "claim_lifecycle_state" ADD VALUE IF NOT EXISTS 'closed';` and
     `ALTER TYPE "appeal_journey_status" ADD VALUE IF NOT EXISTS 'closed';` (the 0146 `IF NOT EXISTS` form; confirm the enum's DB name in
     its creating migration) — ⛔ nothing else in the file (Trap 6). Journal idx 150, `when` > 0149's `1793590800000`.
-  - [ ] 1.2 → Story 6.24b (the notice table).
-  - [ ] 1.3 Drizzle schema: `CLAIM_LIFECYCLE_STATES` (`schema/claims.ts:73`) + `closed`; `APPEAL_JOURNEY_STATUSES` (`appeal.ts:71`) and its
+  - [x] 1.2 → Story 6.24b (the notice table).
+  - [x] 1.3 Drizzle schema: `CLAIM_LIFECYCLE_STATES` (`schema/claims.ts:73`) + `closed`; `APPEAL_JOURNEY_STATUSES` (`appeal.ts:71`) and its
     contracts mirror + `closed`; new `schema/claim_suspicion_notices.ts` (`as const` status tuple +
     LOCKSTEP comment); export from the schema index. Apply both to :5432 AND :5433 ([[project_live_db_test_gotchas]] — ⛔ never regenerate,
     ⛔ never DROP SCHEMA); verify `enum_range(NULL::claim_lifecycle_state)` and the CHECK names on each. ⚠ An FK to `claims` can trip the
     TRUNCATE-lock spec — that is the story's, ⛔ not a flake ([[project_fk_truncate_cascade_deadlock]]).
 
-- [ ] **Task 2 — Domain: the standing refusal and convergence (AC1, AC5; RF1, RF2, RF8, RF16)**
-  - [ ] 2.1 `claim/suspicion-refusal.ts` — RF1's fragment, `readStandingSuspicionRefusals`, `suspicionAppealWaitState` (pure), exported via
+- [x] **Task 2 — Domain: the standing refusal and convergence (AC1, AC5; RF1, RF2, RF8, RF16)**
+  - [x] 2.1 `claim/suspicion-refusal.ts` — RF1's fragment, `readStandingSuspicionRefusals`, `suspicionAppealWaitState` (pure), exported via
     `claim/index.ts`. Unit table for the pure helper (not_filed / open / upheld_final / reversed-absent / several refusals / self excluded).
-  - [ ] 2.2 `icp.ts` — RF2 in `getConvergenceCandidate` AND `getPendingIntakeAttempts`' JOIN (raw SQL, explicit aliases).
-  - [ ] 2.3 `getClaimByDeceasedMember` (`read.ts:119-123`): list every caller (`grep -rn "getClaimByDeceasedMember" packages apps`), decide each
+  - [x] 2.2 `icp.ts` — RF2 in `getConvergenceCandidate` AND `getPendingIntakeAttempts`' JOIN (raw SQL, explicit aliases).
+  - [x] 2.3 `getClaimByDeceasedMember` (`read.ts:119-123`): list every caller (`grep -rn "getClaimByDeceasedMember" packages apps`), decide each
     per RF2, record the list in the Debug Log.
-  - [ ] 2.4 `nominee-refusal-read.ts` — `inheritedGroundInspectionSourceSql` reads RF1's fragment (RF8); the T17 header sentence reworded (RF16).
-  - [ ] 2.5 Live-DB specs (`packages/domain/tests/integration/claim/`): AC1's matrix (same channel / other channel × `denied` /
+  - [x] 2.4 `nominee-refusal-read.ts` — `inheritedGroundInspectionSourceSql` reads RF1's fragment (RF8); the T17 header sentence reworded (RF16).
+  - [x] 2.5 Live-DB specs (`packages/domain/tests/integration/claim/`): AC1's matrix (same channel / other channel × `denied` /
     `appeal_stage_1..3`; other-reason refusal converges; reversed converges; revision off / onto `-239`); the AMENDED T17 spec (F7); AC5.
     ⚠ Drive states through the REAL writers (`initiateAppeal`, `reviewAppealStage1`, …) — a forced `current_state` does ⛔ not survive
     `projectClaimState`'s replay; where a spec forces a state today (`forceState`), keep it only where the writer path is ⛔ not the subject.
 
-- [ ] **Task 3 — Domain: `closed` (AC3; RF4, RF6, F13)**
-  - [ ] 3.0 FIRST, the two enumerations RF4 / RF6 require, recorded in the Debug Log: every literal state LIST (and its decision) and every
+- [x] **Task 3 — Domain: `closed` (AC3; RF4, RF6, F13)**
+  - [x] 3.0 FIRST, the two enumerations RF4 / RF6 require, recorded in the Debug Log: every literal state LIST (and its decision) and every
     table with a live row keyed on a claim (and how RF6 ends it, or why it is inert / a residual); and every literal consumer of
     `appeal_journey_status` (`apps/mobile/lib/appeal-status.ts:10`, `packages/contracts/src/claims/appeal.ts:54`,
     `AppealStageControls.tsx:216`, `appeal-read.ts:138` — grep for more).
-  - [ ] 3.1 `claim/state.ts`: the `claim.closed` transition from each CLOSABLE state (the transition table ~:360-395); `CLAIM_TERMINAL_STATES`
+  - [x] 3.1 `claim/state.ts`: the `claim.closed` transition from each CLOSABLE state (the transition table ~:360-395); `CLAIM_TERMINAL_STATES`
     + `closed`; `claim/events.ts` `CLAIM_EVENT_TYPES` + payload type; `packages/events` registry; `member/overlay.ts`
     `ACCOUNT_UNFREEZE_EVENT_TYPES` + `claim.closed`. Pins 35 → 36 (every `toHaveLength(35)` twin, with the reason appended).
-  - [ ] 3.1b The two session cores extracted (`supersedeAppealPanelSession`, `supersedeR9VotingSession` — RF6 v1.3), the public writers
+  - [x] 3.1b The two session cores extracted (`supersedeAppealPanelSession`, `supersedeR9VotingSession` — RF6 v1.3), the public writers
     unchanged in behaviour.
-  - [ ] 3.2 `closeClaimsHeldBySuspicionAppeal` (in `suspicion-refusal.ts`, or a sibling `-persist` module if NW1's import scan forbids
+  - [x] 3.2 `closeClaimsHeldBySuspicionAppeal` (in `suspicion-refusal.ts`, or a sibling `-persist` module if NW1's import scan forbids
     `events.ts` in the read module — it will: keep the READ module free of `claim/events.ts`), called from the three reversal sites.
-  - [ ] 3.3 Specs: stage 1 / stage 2 / stage 3 reversal each close R in the same transaction (R in `verification_in_progress`, `denied`,
+  - [x] 3.3 Specs: stage 1 / stage 2 / stage 3 reversal each close R in the same transaction (R in `verification_in_progress`, `denied`,
     `appeal_stage_1` — its anchor → `closed` —, `reversed`) (assert R's state AND that a rolled-back
     reversal leaves R untouched); other-reason reversal closes ⛔ nothing; R in `state_trustee_approved` is ⛔ not moved and is logged;
     `initiateAppeal` on a closed R → not-denied 409; overlay: R's stream resolved, the member stays frozen while S lives; `closed` ⛔ never a
     candidate (`CLAIM_TERMINAL_STATES`). F8's re-derived leg (e) + the new *"reversal ⇒ closed"* leg.
 
-- [ ] **Task 4 — Domain: the gate and the commit (AC2, AC4; RF5, RF7)**
-  - [ ] 4.1 `ClaimApprovalGateOptions.step` (REQUIRED) + the six call sites; `assertSuspicionAppealDecidedForFinalApproval` in the OUTER gate
+- [x] **Task 4 — Domain: the gate and the commit (AC2, AC4; RF5, RF7)**
+  - [x] 4.1 `ClaimApprovalGateOptions.step` (REQUIRED) + the six call sites; `assertSuspicionAppealDecidedForFinalApproval` in the OUTER gate
     at RF5's position; `SuspicionAppealPendingError` in `claim/errors.ts` (exported).
-  - [ ] 4.2 `commitCycleFreeze` — RF7's two skip-and-keep re-checks after `hasLiveReturnRow`.
-  - [ ] 4.3 Fixtures: the shared approve-path seed (`seedNomineeNameCheck`, both copies — [[feedback_story_validate_footguns]] "grep TESTS for
+  - [x] 4.2 `commitCycleFreeze` — RF7's two skip-and-keep re-checks after `hasLiveReturnRow`.
+  - [x] 4.3 Fixtures: the shared approve-path seed (`seedNomineeNameCheck`, both copies — [[feedback_story_validate_footguns]] "grep TESTS for
     twins") needs ⛔ nothing new by default (⛔ no other claim of the death ⇒ ⛔ no wait); grep every spec that files TWO claims for one death
     and reaches a final approval — each now waits or is re-derived.
-  - [ ] 4.4 Specs: each final writer waits (`appeal_not_filed`, `appeal_open`) and proceeds on `upheld_final`; P1 ⛔ never waits; the order
+  - [x] 4.4 Specs: each final writer waits (`appeal_not_filed`, `appeal_open`) and proceeds on `upheld_final`; P1 ⛔ never waits; the order
     test (AC2); AC4's two legs (the revision onto `-239` is REAL — `reviseDecision` on a `denied` claim; the vanishing inheritance by
     revising the source off `-239`) — the commit leg runs in its own committed transactions where an ORDER matters
     ([[project_db_clock_ordering_tests_tie]]).
 
-- [ ] **Task 4b — Domain + API: the 90-day limit (AC2b; RF14, RF15)**
-  - [ ] 4b.1 `suspicionRefusalAppealUntil` (pure, in `suspicion-refusal.ts`) + its unit table; RF1's `time_limit_passed`.
-  - [ ] 4b.2 (incl. the six sites' post-gate lock enumeration — RF15; and RF13's guard + `acquireIntakeLock` in `reviseDecision`)
+- [x] **Task 4b — Domain + API: the 90-day limit (AC2b; RF14, RF15)**
+  - [x] 4b.1 `suspicionRefusalAppealUntil` (pure, in `suspicion-refusal.ts`) + its unit table; RF1's `time_limit_passed`.
+  - [x] 4b.2 (incl. the six sites' post-gate lock enumeration — RF15; and RF13's guard + `acquireIntakeLock` in `reviseDecision`)
     `assertAppealInitiable`'s fourth guard + `AppealTimeLimitPassedError` (exported) + its JSDoc amendment; RF15's key in
     `initiateAppeal` and in RF5's conjunct, both judging with `clock_timestamp()` after the key.
-  - [ ] 4b.3 The appeal handlers' 409 mapping; the contracts error-code union if one exists; RF13's revision guard + its 409 in the
+  - [x] 4b.3 The appeal handlers' 409 mapping; the contracts error-code union if one exists; RF13's revision guard + its 409 in the
     verifier-decision translator; the helpline appeal screen (a `claim.file`-gated eligibility read + the admin client call to the existing
     on-behalf route + the UI, en + hi) and the date on `AppealStageControls.tsx`.
-  - [ ] 4b.4 Specs: AC2b's legs (a live-DB boundary pair with an injected refusal time; a non-`-239` refusal past 90 days still initiable;
+  - [x] 4b.4 Specs: AC2b's legs (a live-DB boundary pair with an injected refusal time; a non-`-239` refusal past 90 days still initiable;
     the two-connection race in its own committed transactions — the `ground-inspection-concurrency.spec.ts` pattern).
 
-- [ ] **Task 5 — API (AC2, AC8; RF5, RF10)**
-  - [ ] 5.1 One shared message helper for `SuspicionAppealPendingError` (the `ground-inspection-required-message.ts` pattern, an exhaustive
+- [x] **Task 5 — API (AC2, AC8; RF5, RF10)**
+  - [x] 5.1 One shared message helper for `SuspicionAppealPendingError` (the `ground-inspection-required-message.ts` pattern, an exhaustive
     `Record<reason, string>`); mapped in all four translators (F9) → 409 `<prefix>.suspicion_appeal_pending`.
-  - [ ] 5.2 → Story 6.24b (`sendHandoverOtp`).
-  - [ ] 5.3 The verifier console section (RF10) under `underSavepoint`; `VERIFIER_CONSOLE_MAX_READS` bump + ledger line + exact `toBe`.
-  - [ ] 5.4 Specs (`apps/api/tests/integration/claims/`): five final-route 409s (beside `ground-inspection-required-routes.spec.ts`); the
+  - [x] 5.2 → Story 6.24b (`sendHandoverOtp`).
+  - [x] 5.3 The verifier console section (RF10) under `underSavepoint`; `VERIFIER_CONSOLE_MAX_READS` bump + ledger line + exact `toBe`.
+  - [x] 5.4 Specs (`apps/api/tests/integration/claims/`): five final-route 409s (beside `ground-inspection-required-routes.spec.ts`); the
     console lines and the failed-read line (AC6's legs → 6.24b's Task 2.2).
 
-- [ ] **Task 6** → Story 6.24b (the jobs sweep and the texts).
+- [x] **Task 6** → Story 6.24b (the jobs sweep and the texts).
 
-- [ ] **Task 7 — Contracts, i18n, admin, mobile (AC3, AC8; RF4, RF10, RF12)**
-  - [ ] 7.1 Contracts: `ClaimLifecycleState` + `closed` (`filing.ts:47-62`) and its lockstep test; any 409-code union the admin client keys on;
+- [x] **Task 7 — Contracts, i18n, admin, mobile (AC3, AC8; RF4, RF10, RF12)**
+  - [x] 7.1 Contracts: `ClaimLifecycleState` + `closed` (`filing.ts:47-62`) and its lockstep test; any 409-code union the admin client keys on;
     run the contracts vitest — its tests are outside tsc ([[project_contracts_tests_outside_tsc]]).
-  - [ ] 7.2 i18n: (the SMS copy keys → 6.24b) the closed-claim status words (en + hi) through the real `t()`
+  - [x] 7.2 i18n: (the SMS copy keys → 6.24b) the closed-claim status words (en + hi) through the real `t()`
     ([[feedback_stub_must_call_not_transcribe]]); `classification.json`.
-  - [ ] 7.3 Admin: the console section words; the 409 words; the strip note (RF16) and its test.
-  - [ ] 7.4 Mobile + contracts: RF12's four pieces for the `closed` entry outcome (the contract field + producer, the classifier, the
+  - [x] 7.3 Admin: the console section words; the 409 words; the strip note (RF16) and its test.
+  - [x] 7.4 Mobile + contracts: RF12's four pieces for the `closed` entry outcome (the contract field + producer, the classifier, the
     `ClaimEntryReadOutcome` / `ClaimEntryDecision` kinds and the helpline screen, the fixtures); `lib/appeal-status.ts` checked; the entry routing (RF2 v1.1) through the
     server's outcome — verify `fetch-claim-entry-outcome.ts` and `app/(claim)/index.tsx`; the helpline read-back lists `closed` (RF12).
 
-- [ ] **Task 8 — Records and proof (AC9, AC10)**
-  - [ ] 8.1 `deferred-work.md`: F15 as a new item; the two items DISCHARGED / partly discharged (RF7, RF8 — appended lines, ⛔ never deleted
+- [x] **Task 8 — Records and proof (AC9, AC10)**
+  - [x] 8.1 `deferred-work.md`: F15 as a new item; the two items DISCHARGED / partly discharged (RF7, RF8 — appended lines, ⛔ never deleted
     [[feedback_closure_language_precision]]); a 6.24 section for anything deferred.
-  - [ ] 8.2 6.20's story: one Change Log row (T17 superseded as built by 6.24). The stale code comments (RF16).
-  - [ ] 8.3 `pnpm ci:local` with `DATABASE_URL` at :5433; the red-checks in the Debug Log; `sprint-status.yaml` via the safe prepend
+  - [x] 8.2 6.20's story: one Change Log row (T17 superseded as built by 6.24). The stale code comments (RF16).
+  - [x] 8.3 `pnpm ci:local` with `DATABASE_URL` at :5433; the red-checks in the Debug Log; `sprint-status.yaml` via the safe prepend
     ([[project_sprint_status_safe_prepend]]); commit on the story branch ([[feedback_commit_on_story_branch]]).
 
 ## Dev Notes
@@ -757,11 +757,138 @@ under `-210`) · [[project_contracts_domain_bundle_boundary]] · [[project_type_
 
 ### Agent Model Used
 
+Claude Opus 5.5 (1M context) — `claude-opus-5-5[1m]`, `bmad-dev-story 6.24a`, 2026-10-08.
+
 ### Debug Log References
+
+**Task 0.1 (at the build).** `git fetch origin`; `6bb79afd` IS an ancestor of HEAD; `git diff --name-only 6bb79afd..HEAD -- packages apps scripts` is EMPTY (origin/main = `6bb79afd`; HEAD = 17 governance-only commits) ⇒ every `file:NNN` cite was still exact. ⛔ No decision after `-290` touches the gate, convergence, the appeal, the handover OTP or rows 6-25 / 6-27 other than this story's own `-291` / `-292` / `-293`; rows `6-25` and `6-27` are `backlog` (⛔ not landed) ⇒ ⛔ no rebase owed.
+
+**Task 2.3 — every caller of `getClaimByDeceasedMember`.** `apps/api/src/modules/claims/claims.service.ts:312` (`initiateIntake`'s `ClaimStreamConcurrencyError` backstop) — **same conjunct** (RF2 is now inside `getClaimByDeceasedMember` itself). `packages/domain/tests/integration/claim/claim-lifecycle.spec.ts:266-299` — **unchanged, because** its fixtures carry ⛔ `-239` refusal (the conjunct is vacuous there; the spec stays green). Every other hit is a COMMENT (`contracts/claims/helpline.ts:11`, `claim/errors.ts:459`, `claim/nominee-lock.ts:10`, `claim/icp.ts:6,97`, `nominee.handlers.ts:27`, `claims.service.ts:31`) — ⛔ no code.
+
+**Task 3.0 (a) — every literal claim-state LIST** (`grep -rn "'settled'" …` + `grep -rn "'denied'" …` + `'reversed'` / `'appeal_stage_1'` across `packages/*/src`, `apps/*/src`, `apps/mobile/{lib,app}`, `packages/contracts/src`):
+- `claim/read.ts` `CLAIM_TERMINAL_STATES` — **gains `closed`** (RF4).
+- `claim/death-certificate-approval.ts` `FAMILY_STATUS_TERMINAL_STATES` (by-value twin) — **gains `closed`**; the family status gains a `closed` row (RF12).
+- `claim/shepherd-assign-persist.ts` `SHEPHERD_ASSIGNMENT_BLOCKED_STATES` (blocklist) — **gains `closed`**.
+- `claim/concealment-assessment-persist.ts` `CONCEALMENT_ASSESSMENT_BLOCKED_STATES` (blocklist) — **gains `closed`**.
+- `claim/certificate-reminder-read.ts` `NEVER_REENTERS` — **gains `closed`** (⛔ nothing leaves it; a paused run of a closed claim drops off the list).
+- `claim/state.ts` — the reducer's `claim.closed` case + `CLAIM_NOT_CLOSABLE_STATES` / `isClaimClosable` + the documentation transitions — **new**.
+- `apps/admin/.../claim-verification/i18n-en.ts` `claimStateLabels` — **gains `closed`** (staff words).
+- `contracts/claims/filing.ts` `ClaimLifecycleState` — **gains `closed`** (the lockstep test `contracts/tests/claims-filing.test.ts` stays green).
+- ALLOWLISTS — **unchanged, because** an allowlist cannot admit a value it does not name: `review-window.ts` `CLAIM_REVIEW_WINDOW_STATES`, `approval-warnings-persist.ts:46`, `correction-queue-read.ts:57`, `cycle-freeze-read.ts:127`, `verifier-decision-persist.ts` `VERIFIER_DECISION_REVISABLE_STATES`, `errors.ts` `NOMINEE_BANK_COLLECTABLE_STATES` / `DPDPA_CONSENT_RECORDABLE_STATES`, `state.ts` `R9_OUTCOME_FROM_STATES`, the trustee `TRUSTEE_VOTABLE_STATES`, `claims.appeal.handlers.ts:623` `stageOfState` (stages only).
+- `alert/*`, `pool/*`, `contribution/*` `'settled'` / `'closed'` — **unchanged, because** they are the ALERT / POOL lifecycles, ⛔ not the claim's.
+- ⚠ FOUND: ⛔ no `Record<ClaimLifecycleState, …>` exists (validator M6 confirmed) — the typecheck forced ⛔ no list; only the mobile `death-certificate-view.ts` switch over the FAMILY status was forced (it gained `closed`).
+
+**Task 3.0 (b) — every table with a live row keyed on a claim, and how RF6 treats it** (an Explore pass + re-reading each cited writer):
+- `claim_appeals` (`status='open'`) — **ended by RF6** (anchor → `closed`).
+- `claim_appeal_panel_sessions` / `_votes` (un-finalized) — **ended by RF6 via the extracted core `supersedeAppealPanelSession`** (now in the leaf `appeal-panel-session.ts`; `cancelAppealPanel` keeps its actor checks and behaviour).
+- `claim_r9_voting_sessions` / `claim_r9_votes` (un-finalized) — **ended by RF6 via `supersedeR9VotingSession`**; the `routed_to_r9` row — **ended by RF6 via `supersedeLiveR9Routing`** (extracted from `finalizeR9Outcome` step (b); ⛔ not inside the R9 core).
+- `claim_state_trustee_decisions` live `correction_return` — **ended by RF6** (the 6.19 terminal writers' conditional supersession shape); `claim_correction_runs` open run — **ended by RF6 via `endCorrectionRun(reason 'decided')`**. ⇒ the 6.19b family sweep (pages ONLY open runs) sends ⛔ no text after `closed`; the 6.19c day-90 scan (live returns only) escalates ⛔ nothing; `listEscalatedClosures` / the Pariwar queue (join a LIVE return) drop it. Pinned (the "live processes" leg).
+- `claim_correction_closures` escalated / under-review rows — **inert once the return is superseded** (both closure queues join the LIVE return).
+- `claim_correction_directions` open — **accepted residual** (listed by `listOpenDirectionsFor`, answerable; `deferred-work.md`).
+- `nominee_corrections` pending — **accepted residual** (approve refused out of the window; decline works; `deferred-work.md`).
+- `claim_ground_inspections` scheduled — **inert — every writer checks the window** (`isClaimInGroundInspectionWindow`); ⛔ no job (`deferred-work.md` notes the row).
+- `claim_certificate_reminder_runs` open — **inert — its planner checks the window** (`planCertificateRun`: `pause` / `outside_window`, ⛔ no text) — left open to day-180 `completed` (`deferred-work.md`).
+- `claim_shepherd_assignments` live — **inert** (writers gated by `SHEPHERD_ASSIGNMENT_BLOCKED_STATES`, now incl. `closed`; load count filters terminal).
+- `claim_peer_mesh_selections` pending — **inert** (the window job writes only an outcome; ⛔ no dispatch).
+- `intake_attempts` pending — **inert** (a closed claim is terminal ⇒ ⛔ no candidate in `getPendingIntakeAttempts`).
+- "The RF11 notice" — **6.24b's** (⛔ no table in 6.24a).
+
+**Task 3.0 (c) — every literal consumer of `appeal_journey_status`:** `contracts/claims/appeal.ts:54` — **gains `closed`** (+ a new lockstep test); `apps/mobile/lib/appeal-status.ts:10` — **gains `closed`** (⛔ no affordance / status line — a unit leg); `AppealStageControls.tsx:216` (`upheld_final` on `denied`) — **unchanged, because** a closed claim is ⛔ not `denied`; `appeal-read.ts:138` (`status='open'`) — **unchanged, because** a closed anchor correctly leaves the open list; `claims.appeal.handlers.ts:304` (`upheld_final`) — **unchanged** (same reason).
+
+**Task 4b.2 — RF15's key is held to COMMIT: each FINAL site's post-gate statements, for a lock on ANOTHER claim.** `voteOnFrozenClaim` (`state-trustee-decision-persist.ts`): `assertClaimContactRecorded`, `checkLaterApprovalWarningReason`, `resolveConcealmentSnapshot`, `projectClaimState` ×2, `insertTrusteeDecisionRow`, `insertClaimWarningApprovalRecord` — all on its OWN claim. `finalizeR9Outcome`: contact check, `readClaimApprovalWarnings`, the session UPDATE, `supersedeLiveR9Routing`, `projectClaimState`, the `r9_outcome` row — own claim. `decideEscalatedClosure` (both arms) / `approveNoCorrectionNeeded`: contact check, `checkLaterApprovalWarningReason`, `writeApprovalChain` (`supersedeReturn`, `projectClaimState`, the decision row), `endOpenRunDecided` (`endCorrectionRun` — the trustee key of the SAME claim, already held by `lockForClosure`), `insertClaimWarningApprovalRecord` — own claim. ⇒ ⛔ none takes a lock on another claim (⛔ no cycle — matches round 3). Every final writer runs at the default READ COMMITTED (⛔ never raises it). P1 (`adjudicateClaim`) passes `district_admin` ⇒ ⛔ never takes the key.
+
+**RF13 lock order.** `reviseDecision` now reads `deceased_member_id` unlocked, takes the death's INTAKE lock, then its decision lock and row. ⛔ no Writer holds a claim's decision key / row and then waits on the intake lock (checked: `adjudicateClaim`, `tryConverge`, `convergeIntakeAttempt`, `overrideIntakeAttempt`, `refile-guard` — each takes the intake lock FIRST or never).
+
+**RF6 lock order.** Each reversal writer takes `suspicion-reversal:<pariwar>:<deceased>` FIRST (stage 1 / stage 3: only when reversing; stage 2: on every finalize — the tally is known only under the claim's locks). For each held claim, in `claim_case_id` order: its `appeal:` key, its `r9:` key, ⚠ ALSO its TRUSTEE key (an addition to RF6's text: `endCorrectionRun` takes the trustee key, and `voteOnFrozenClaim` / the 6.19c writers take trustee-key → row, so taking it AFTER the row would deadlock), THEN its row. Every other writer takes ONE of these keys then the row ⇒ ⛔ no cycle.
+
+**AC10 — red-checks** (each load-bearing line reverted, its test watched FAIL, the line restored — a scripted runner, every file restored from a byte copy):
+R1 RF2 candidate conjunct → AC1 matrix 7 failed · R2 RF2 strip mirror → ⚠ FIRST run stayed GREEN (the matrix never parks an attempt — a hollow test) ⇒ added the "attempt parked BEFORE the refusal" leg ⇒ 1 failed · R3 RF2 backstop conjunct → 4 failed · R4 RF1 `reversed` leg → 2 failed · R5 RF1 `closed` leg → 1 failed (two `-239` refusals) · R6 RF5 conjunct off → 3 failed · R7 RF15 key in the gate → concurrency (a) failed (the approval read `appeal_not_filed`, ⛔ not blocked) · R8 RF15 key in `initiateAppeal` → concurrency (b) failed · R9 RF14 guard → the boundary pair failed · R10 RF13 lock → 1 failed · R11 RF13 intake lock → the revision-vs-mint race failed · R12 RF6 call at stage 1 → failed · R13 RF6 call at stage 2 → failed · R14 RF6 reversal key → the concurrent-reversals race failed · R15 RF7 suspicion re-check → AC4 leg 1 failed · R16 RF7 inspection re-check → AC4 leg 2 failed · R17 RF8 (the inline predicate restored) → AC5 failed · R18 overlay `claim.closed` → the overlay leg failed · R19 the return supersession → "live processes" failed · R20 the R9 routing supersession → failed · R21 the panel core → failed · R22 the anchor → `closed` → failed.
+API (`suspicion-refusal-routes.spec.ts`): A1 `cycle_freeze` wait mapping → 2/5 failed (a 500) · A2 `closure` mapping → 4/5 failed · A3 `r9_voting` mapping → 3/5 failed · A4 the time-limit mapping → the on-behalf leg failed · A5 the reason-lock mapping → the RF13 leg failed · A6 the entry read's `claim_live` conjunct → the member-entry leg failed · A7 the helpline read-back's `includeClosed` → the member-entry leg failed.
+
+**`ci:local`** (`DATABASE_URL` at :5433): run 1 — 33/34, the one red was `domain-invariants` (`suspicion-refusal-persist.ts`'s `.limit(HELD_CLAIMS_CAP)` ⛔ not clamped — the limit-clamp gate, a REAL finding) ⇒ routed through `clampLimit`; files were also edited during run 1 (glyph-register comment fixes) ⇒ ⛔ not counted. Run 2 (clean) — **ci:local PASSED — 34 job(s) green** (integration-tests: domain + API 152 files / 1574 passed).
+
+**Deviations, recorded (⛔ not silent):**
+- `POST_DEATH_NOMINEE_CHANGE_REASON_CODE` is now DEFINED in `suspicion-refusal.ts` and re-exported unchanged by `nominee-refusal-read.ts` (RF1 said "import it from `nominee-refusal-read.ts:32`" — that module now reads RF1's fragment, so importing back would close an import cycle).
+- RF6's helper lives in `suspicion-refusal-persist.ts` (Task 3.2's sibling option — NW1 forbids `events.ts` in the read module). To call the actor-free panel core and the appeal key without a runtime cycle (the reversal writers call the closure writer), the key moved to the leaf `appeal-lock.ts` and the panel core + its error to the leaf `appeal-panel-session.ts` (the 6.19c `icp-lock.ts` precedent); both re-exported where they were.
+- `claim.closed`'s payload ALSO carries `deceased_member_id` (an id, ⛔ no PII): the account-frozen overlay matches events by `payload ->> 'deceased_member_id'` (the `claim.settled` precedent) — without it the closed stream could ⛔ never resolve.
+- RF6's `actor` on `claim.closed` is `system` (the closure is the system's consequence — RF13's "the closure is the system's act"); `events_log.actor_id` = the reversing reviewer.
+- AC4 leg 2 names "the source's refusal revised away" — RF13 now REFUSES that while the refile lives. The leg drives the reachable path instead: the source CLOSED by a third claim's `-239` reversal (it then ⛔ never stands — RF1), the refile ⛔ not closable (`state_trustee_approved`, Trap 9).
+- F8 / leg (e): the re-derivation "with a source that is ⛔ not reversed (`upheld_final`)" cannot be driven through the writers — a standing source is OUTSIDE the inspection window. Leg (e)'s late visit is a committed raw row (assertions unchanged) and the unreachability is a `deferred-work.md` item.
+- The F1 swallow over HTTP is driven on the HELPLINE channel (helpline → helpline): the member-app intake needs the Ravi-mode handover OTP; the swallow is channel-agnostic (branch (3b)), and the domain matrix drives `member_app` → `member_app` too.
+- The helpline appeal screen's "(en + hi)": the admin console is English-only (6.3 AC6); the two lines the operator READS to the family are bilingual through the shared `@twt/i18n` `claim` namespace (the `readBackScript` precedent) — `appeal_helpline.until` / `.ended`. The appeal controls' date line is staff chrome (English).
+- The helpline read is a NEW member-scoped route (`GET …/admin/members/:memberId/appeals`, `claim.file`) because refused claims are `denied` (terminal) and the existing helpline claim lists show only live ones; its eligibility is judged by CALLING `assertAppealInitiable` (⛔ not a second copy). A new audit event type `admin_appeal.helpline_read` (⛔ not a permission key).
+- RF10's console section is a new packet field `suspicionRefusal` (other claims by `claimShortReference` only, their appeal position and date, and the wait) — read under a SAVEPOINT; the ceiling 20 → 21 (three exact pins moved, each with the reason).
+- RF12 v1.3's contract field is named `claim_closed` (⛔ not merged with `closed_no_response`).
+- Task 1.3's "new `schema/claim_suspicion_notices.ts`" is 6.24b's notice table (Task 1.2 → 6.24b) — ⛔ not built here.
+- The `refusedApprovalWarningAudit` switch (F9) enumerates the WARNING refusals only (6.26a's `GroundInspectionRequiredError` is ⛔ no there either) ⇒ unchanged.
+- "Jobs: the commit re-check" — ⛔ no jobs path calls `commitCycleFreeze` (it is the API route; jobs only fires the post-commit pool trigger) ⇒ RF7 is pinned at the domain writer (AC4).
 
 ### Completion Notes List
 
+- ✅ **RF1** — `claim/suspicion-refusal.ts` (READ-only; NW1-clean, fenced): `standingSuspicionRefusalSql` (live `-239` ∧ ⛔ no reversed anchor ∧ ⛔ not `closed`), `suspicionChainStartedAtSql` (the CURRENT unbroken `-239` chain's first row — RF14), `readStandingSuspicionRefusals` (ordered `created_at DESC, claim_case_id DESC`, clamped, judged at its statement's `clock_timestamp()`), `isSuspicionRefusalStanding`, `readSuspicionChainStart`, the pure `suspicionAppealWaitState` / `suspicionRefusalAppealUntil` / `hasSuspicionRefusalAppealLimitPassed`, the two per-death keys, and `assertSuspicionAppealDecidedForFinalApproval` (RF15's key FIRST, then the read).
+- ✅ **RF2** — the conjunct in `getConvergenceCandidate`, in `getPendingIntakeAttempts`' LEFT JOIN (the "EXACTLY" mirror) and in `getClaimByDeceasedMember` (the intake backstop); `confirmMerge` inherits. The member entry read reports `claim_live: false` for a pointer claim on which RF1 stands (one conjunct, that read only).
+- ✅ **RF4** — migration `0150` (two `ADD VALUE IF NOT EXISTS`, alone; :5432 AND :5433, `enum_range` verified on each); `closed` in `CLAIM_LIFECYCLE_STATES` / `APPEAL_JOURNEY_STATUSES` / both contracts mirrors / `CLAIM_TERMINAL_STATES` / `FAMILY_STATUS_TERMINAL_STATES` / the two blocklists / `NEVER_REENTERS` / the staff labels; the 36th event `claim.closed` (a TRANSITION from every closable state — `isClaimClosable`) in the vocabulary, the payload map, the `packages/events` registry, the reducer and `ACCOUNT_UNFREEZE_EVENT_TYPES`; pins 35 → 36 with the reason; a fourth frozen literal in the vocabulary test.
+- ✅ **RF5** — `ClaimApprovalGateOptions.step` REQUIRED (a `@ts-expect-error` pin); P1 passes `district_admin`, the five final writers `final`; the conjunct after the ground inspection, before the late wait; `SuspicionAppealPendingError` → 409 `<prefix>.suspicion_appeal_pending` `{ reason }` in all four translators through one exhaustive message helper.
+- ✅ **RF6** — `claim/suspicion-refusal-persist.ts` `closeClaimsHeldBySuspicionAppeal`, called by `reviewAppealStage1`, `finalizeAppealOutcome` (reverse arm) and `decideAppealStage3` after their `reversed` writes; the per-death reversal key FIRST; per held claim (claim-id order) appeal → r9 → trustee keys → row; closes every closable claim (`claim.closed`, actor `system`) and ends its live processes (open anchor → `closed`, un-finalized panel / R9 sessions through the extracted actor-free cores, the `routed_to_r9` row, the live correction return + its run `decided`); a claim ⛔ not closable is REPORTED (`heldClaims.notClosed`) and the API logs it at error level (ids only) and puts it in the reversal's audit line.
+- ✅ **RF7** — `commitCycleFreeze` skip-and-keep on the suspicion wait and on the ground inspection (the gate's own read + pure predicate) — discharges the deferred item.
+- ✅ **RF8** — `inheritedGroundInspectionSourceSql` reads RF1's fragment (a reversed refusal is ⛔ no longer a source); the refusal LIST unchanged — the deferred item marked PARTLY discharged.
+- ✅ **RF10** — the console's `suspicionRefusal` section (one read, SAVEPOINT, fail-closed words), ceiling 20 → 21; admin `SignalsPanel` lines; the 409 words on the cycle-freeze, R9 and District Admin surfaces (the 6.19c closure surfaces show the server words, as for 6.26a).
+- ✅ **RF12** (6.24a's half) — the family status `closed` (domain + contract), the mobile view's `closed` copy, the `claim_closed` routing bit → `closed` outcome → `closed_helpline` decision → `app/(claim)/closed-helpline.tsx` (⛔ never the wizard); the helpline read-back lists `closed` claims (`includeClosed`). Words: `closed.*` (en + hi, real-`t()` test, a no-suspicion-words check). The `-291` Q2 TEXT is 6.24b's.
+- ✅ **RF13** — `reviseDecision` takes the INTAKE lock first, then refuses a move OFF `-239` while any other claim of the death is ⛔ not closed (`SuspicionReasonLockedError` → 409 `verifier_decision.suspicion_reason_locked`); a note-only revision passes.
+- ✅ **RF14** — the fourth initiation guard (`AppealTimeLimitPassedError` → 409 `appeal.suspicion_refusal_time_limit_passed` `{ appeal_until }`), its JSDoc amended; the helpline appeal screen (a `claim.file` route + `<HelplineAppeal>`, the date read to the family in en + hi, filing through the EXISTING on-behalf route); the date on `AppealStageControls` (`suspicion_appeal_limit` on the case read).
+- ✅ **RF15** — the per-death appeal key in the gate (FIRST, unconditional at `final`) and in `initiateAppeal` (after its own locks, `-239` only), both judging with `clock_timestamp()` read after it; two-connection races pinned.
+- ✅ **RF16** — the T17 sentence (`nominee-refusal-read.ts`), the candidate comment (`icp.ts`), `refile-guard.ts`'s and `claims.refile-confirmation.handlers.ts`'s "Row 6-24" notes, the strip note + its test — reworded to what 6.24a did; 6.20's story gains a Change Log row only.
+- ✅ **F7 / F8** — the T17 spec AMENDED (both channels mint, still inherit); 6.26b's leg (e) re-derived for its purpose (assertions unchanged) + a new leg (f) "reversal ⇒ the refile is closed"; one 6.26a two-claims leg re-derived (the source's 90 days passed — it still stands and still sources).
+- ⚠ The `[x]` on a "→ Story 6.24b" line (1.2, 5.2, Task 6) means *allocated out by the split — ⛔ nothing to build here*, ⛔ not "built".
+- Tests: domain unit 24 (new) + amended pins; domain live-DB `suspicion-refusal.spec.ts` (39) + `suspicion-refusal-concurrency.spec.ts` (4, own-committing); API `suspicion-refusal-routes.spec.ts` (12); contracts (5 new); admin (4 page legs + 9 new); mobile (8 new). Full suites: domain 334 files / 4692 passed; API 152 files / 1574 passed; admin 59 / 951; contracts 75; mobile 45 / 676; jobs 48 / 568; i18n 110; typecheck 20/20. ⭐ `ci:local` — see the Change Log row.
+
 ### File List
+
+**New**
+- `packages/domain/migrations/0150_claim-closed-enum-values.sql`
+- `packages/domain/src/claim/suspicion-refusal.ts`
+- `packages/domain/src/claim/suspicion-refusal-persist.ts`
+- `packages/domain/src/claim/appeal-lock.ts`
+- `packages/domain/src/claim/appeal-panel-session.ts`
+- `packages/domain/tests/claim/suspicion-refusal.test.ts`
+- `packages/domain/tests/integration/claim/_suspicion-refusal-fixtures.ts`
+- `packages/domain/tests/integration/claim/suspicion-refusal.spec.ts`
+- `packages/domain/tests/integration/claim/suspicion-refusal-concurrency.spec.ts`
+- `packages/contracts/tests/claims-suspicion-refusal.test.ts`
+- `apps/api/src/modules/claims/suspicion-appeal-pending-message.ts`
+- `apps/api/tests/integration/claims/suspicion-refusal-routes.spec.ts`
+- `apps/admin/src/modules/helpline-claims/HelplineAppeal.tsx`
+- `apps/admin/tests/suspicion-refusal-helpline-appeal.test.tsx`
+- `apps/mobile/app/(claim)/closed-helpline.tsx`
+- `apps/mobile/lib/closed-helpline-copy.ts`
+- `apps/mobile/tests/unit/closed-copy-resolves.test.ts`
+
+**Modified**
+- `packages/domain/migrations/meta/_journal.json`
+- `packages/domain/src/schema/claims.ts`
+- `packages/domain/src/claim/{appeal.ts, appeal-eligibility.ts, appeal-persist.ts, appeal-panel-persist.ts, certificate-reminder-read.ts, concealment-assessment-persist.ts, correction-closure.ts, death-certificate-approval.ts, errors.ts, events.ts, icp.ts, index.ts, nominee-name-check.ts, nominee-refusal-read.ts, r9-voting-persist.ts, read.ts, refile-guard.ts, shepherd-assign-persist.ts, state.ts, state-trustee-decision-persist.ts, verifier-decision-persist.ts}`
+- `packages/domain/src/member/overlay.ts`
+- `packages/domain/tests/claim/{approval-warnings.test.ts, claim-reversed-event.test.ts, death-certificate-family-status.test.ts, dpdpa-consent-events.test.ts, nominee-name-check-events.test.ts, nominee-name-no-comparison-fence.test.ts}`
+- `packages/domain/tests/integration/claim/{correction-queue-late-inspection.spec.ts, ground-inspection-approval.spec.ts, nominee-name-check.spec.ts, nominee-refusal-inheritance.spec.ts}`
+- `packages/events/src/registry.ts`
+- `packages/contracts/src/claims/{appeal.ts, death-certificate.ts, filing.ts, verifier-console.ts}`
+- `packages/contracts/tests/claims-verifier-console.test.ts`
+- `packages/i18n/locales/{en,hi}/claim.json`
+- `apps/api/src/audit/audit-sink.ts`
+- `apps/api/src/modules/claims/{claims.appeal.handlers.ts, claims.appeal.routes.ts, claims.correction-closure.handlers.ts, claims.cycle-freeze.handlers.ts, claims.death-certificate-member.handlers.ts, claims.death-certificate.handlers.ts, claims.r9-voting.handlers.ts, claims.refile-confirmation.handlers.ts, claims.verification-decision.handlers.ts, claims.verifier-console.handlers.ts}`
+- `apps/api/tests/integration/claims/{verifier-console-ground-inspection.spec.ts, verifier-console.spec.ts}`
+- `apps/admin/src/api/{client.ts, hooks.ts}`
+- `apps/admin/src/modules/claim-appeal/{AppealPage.tsx, AppealStageControls.tsx, i18n-en.ts}`
+- `apps/admin/src/modules/claim-verification/{SignalsPanel.tsx, i18n-en.ts, nominee-errors.ts}`
+- `apps/admin/src/modules/cycle-freeze/CycleFreezePage.tsx`
+- `apps/admin/src/modules/helpline-claims/{ConvergenceDecisionStrip.tsx, HelplineClaimPage.tsx, i18n-en.ts}`
+- `apps/admin/src/modules/r9-voting/R9CasePanel.tsx`
+- `apps/admin/src/routes/VerifierConsoleRoute.tsx`
+- `apps/admin/tests/{ConvergenceDecisionStrip.test.tsx, cycle-freeze-page.test.tsx, death-certificate-review.test.tsx, later-approval-warnings.test.tsx, nominee-declaration-route.test.tsx, verifier-console-route-name-check.test.tsx, verifier-console.test.tsx}`
+- `apps/mobile/app/(claim)/index.tsx`
+- `apps/mobile/lib/{appeal-status.ts, claim-entry-gate.ts, death-certificate-view.ts, fetch-claim-entry-outcome.ts}`
+- `apps/mobile/tests/unit/{appeal-status.test.ts, claim-entry-gate.test.ts, death-certificate-view.test.ts}`
+- `_bmad-output/implementation-artifacts/{6-24-true-nominee-refile-after-a-suspicion-refusal.md, 6-20-nominee-declaration-history-and-as-at-death-rule.md, deferred-work.md, sprint-status.yaml}`
 
 ## Change Log
 
@@ -780,3 +907,4 @@ under `-210`) · [[project_contracts_domain_bundle_boundary]] · [[project_type_
 | 2.0 | 2026-10-07 | **Task 0 complete** (BigDev: *"complete the remaining steps"*): `2026-10-07-292` committed alone (`f0801f1e`); `epics.md` `### Story 6.24` + `-291` Consequence 2's three annotations (`5e77ca6e`); P7 added; the decisions marked committed. Q3 (items 1–2) stays open, non-blocking. Ready for `bmad-dev-story` (Task 0.1 runs at the build). |
 | 2.1 | 2026-10-07 | **SPLIT** (BigDev: *"ok, split it"*). This file becomes **Story 6.24a** (keeps the row key); **Story 6.24b** (new row `6-24b-filing-code-and-texts-to-the-nominee-in-place-at-the-death`, `backlog` until 6.24a is `done`) takes RF9, RF11 and RF12's Q2 text, with P4, invariants 5–6, AC6 / AC7 (as AC6b / AC7b), Tasks 1.2 / 5.2 / 6 / 7.2's SMS key, Traps 10–14 and Q3 item 1. ⛔ No RF moved or re-worded — each RF is tagged [a] / [b]; `-292` is ⛔ not edited. `epics.md` gains `### Story 6.24a` / `### Story 6.24b`. |
 | 2.2 | 2026-10-07 | ✅ **Q3 RULED — `2026-10-07-293`** (DR + KB: *"Q3 - B (one text)"*, *"Confirm (item 2) - A"*), committed alone (`2ada8f7b`); the note's block filled. For 6.24a: RF13's reason lock is RATIFIED as built (P7 ✅) — ⛔ no change; item 1 B (the refused person's text) is 6.24b's. The committed RF text is ⛔ not edited (its *"If Q3 is answered B …"* sentences are now the operative branch, per `-293`). |
+| 2.3 | 2026-10-08 | **Built (`bmad-dev-story 6.24a`) — in-progress → review.** RF1–RF8, RF10, RF12 (6.24a's half), RF13–RF16 as `-292` committed them: `claim/suspicion-refusal.ts` (+ `-persist`, two cycle-breaking leaves), migration `0150` (:5432 + :5433), the 36th event `claim.closed`, the gate's REQUIRED `step`, the three reversal writers closing the death's other claims and their live processes, the commit re-checks, the 90-day guard + per-death keys, the reason lock, the console section (reads 20 → 21), the helpline appeal screen, the mobile closed screen. F7 / F8 re-derived (⛔ weakened). Red-checks: 22 domain + 7 API (one hollow strip test FOUND and fixed). Deviations recorded in the Debug Log (e.g. RF6 also takes the trustee key; AC4 leg 2 drives the reachable path under RF13; `-290` M2's arm now unreachable through the writers — `deferred-work.md`). `ci:local` 34/34. |

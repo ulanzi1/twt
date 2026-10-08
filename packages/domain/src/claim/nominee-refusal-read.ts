@@ -17,19 +17,23 @@
 //     nothing on, and ⛔ nothing but the inspection carries over (a fresh original certificate is
 //     required; consents, pings, documents and bank details are ⛔ not inherited — `-239`).
 //
-// ⚠ T17 — a refile during the refuser's APPEAL converges onto the refused claim (`getConvergenceCandidate`
-// excludes only `settled` / `denied`), so the true nominee's intake merges into it. That is TODAY's
-// behaviour, ⛔ not changed here: the remedy is the shipped authorized convergence OVERRIDE, and an
-// overridden refile still inherits through this read (it is a distinct claim for the same death).
+// ⭐ T17 — SUPERSEDED by Story 6.24a (`-261` D4 B, `2026-10-07-292` RF2): a refile during the refuser's APPEAL used to
+// converge onto the refused claim. Now, while a suspicion refusal STANDS (`claim/suspicion-refusal.ts` — RF1), a new
+// filing for that death is ⛔ never merged into it: `getConvergenceCandidate` skips the refused claim, so the refile
+// MINTS a distinct claim on every channel and inherits through this read. ⭐ RF8: the inheritance source is a claim on
+// which RF1 stands — a refusal REVERSED on appeal is ⛔ no longer a source (its refile is `closed` — RF6).
 
 import { type SQL, sql } from 'drizzle-orm';
 
 import type { Db } from '../db.js';
 import type { ClaimId, MemberId, PariwarId } from '../ids/index.js';
 import { clampLimit } from '../pagination.js';
+import { POST_DEATH_NOMINEE_CHANGE_REASON_CODE, standingSuspicionRefusalSql } from './suspicion-refusal.js';
 
-/** The dedicated `-239` reason code (⛔ never `other` — the inheritance must RECOGNISE it). */
-export const POST_DEATH_NOMINEE_CHANGE_REASON_CODE = 'post_death_nominee_change' as const;
+/** The dedicated `-239` reason code (⛔ never `other` — the inheritance must RECOGNISE it). Story 6.24a moved its
+ *  definition to `suspicion-refusal.ts` (this module reads RF1's fragment from there — an import cycle otherwise);
+ *  re-exported here unchanged. */
+export { POST_DEATH_NOMINEE_CHANGE_REASON_CODE };
 
 export interface NomineeRefusalRow {
   readonly claimCaseId: ClaimId;
@@ -95,6 +99,12 @@ export async function listNomineeRefusals(
  *
  * ⚠ `-283` A2: the source's completed assignment must be a FULL one (`inspection_stage <> 'certificate_check'`) — a
  * certificate check is ⛔ never a visit (`-282` GI2), so an office check alone must ⛔ never pass on as one.
+ *
+ * ⭐ Story 6.24a RF8 (`2026-10-07-292` — discharges, for the APPROVAL input, the deferred item *"`-239` inheritance source:
+ * an appeal-overturned refusal is never superseded…"*): the source is a claim on which RF1 STANDS
+ * (`standingSuspicionRefusalSql`) — its live decision is the `-239` refusal AND its appeal was ⛔ not allowed AND it is ⛔
+ * not `closed`. ⚠ This AMENDS the input of 6.26a GI2's VISITED and the premise of `-290` M1 (*"a source reversed on appeal
+ * stays the source"*) — recorded in `-292` as amendments. A standing or `upheld_final` refusal is still a source.
  */
 export function inheritedGroundInspectionSourceSql(pariwarId: SQL, claimCaseId: SQL): SQL {
   return sql`(
@@ -105,14 +115,9 @@ export function inheritedGroundInspectionSourceSql(pariwarId: SQL, claimCaseId: 
        AND inh_src.deceased_member_id = inh_cur.deceased_member_id
        AND inh_src.claim_case_id <> inh_cur.claim_case_id
        AND inh_src.created_at <= inh_cur.created_at
-      JOIN claim_verifier_decisions inh_d
-        ON inh_d.pariwar_id = inh_src.pariwar_id
-       AND inh_d.claim_case_id = inh_src.claim_case_id
-       AND inh_d.superseded_at IS NULL
-       AND inh_d.outcome = 'denied'
-       AND inh_d.reason_code = ${POST_DEATH_NOMINEE_CHANGE_REASON_CODE}
      WHERE inh_cur.pariwar_id = ${pariwarId}
        AND inh_cur.claim_case_id = ${claimCaseId}
+       AND ${standingSuspicionRefusalSql('inh_src')}
        AND EXISTS (
          SELECT 1 FROM claim_ground_inspections inh_gi
           WHERE inh_gi.pariwar_id = inh_src.pariwar_id

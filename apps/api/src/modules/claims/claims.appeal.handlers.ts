@@ -34,6 +34,7 @@ import {
   type AppealStage2OpenRequest,
   type AppealStage2VoteRequest,
   type AppealStage3DecideRequest,
+  type HelplineAppealClaimsResponse,
   type InitiateAppealResponse,
   type MemberAppealStatusResponse,
 } from '@twt/contracts';
@@ -79,6 +80,15 @@ function translateAppealError(err: unknown): never {
   }
   if (err instanceof claim.AppealAlreadyExhaustedError) {
     throw new ConflictError('This claim already has an appeal journey', 'appeal.already_exhausted');
+  }
+  // ⭐ Story 6.24a RF14 (`2026-10-07-291` Q1 A) — a refusal on suspicion of a post-death nominee change can be appealed for
+  // 90 days from the refusal; after that, ⛔ never a 500. `appeal_until` = the last IST date it could be (YYYY-MM-DD).
+  if (err instanceof claim.AppealTimeLimitPassedError) {
+    throw new ConflictError(
+      `The time to appeal this refusal ended on ${err.appealUntil}`,
+      'appeal.suspicion_refusal_time_limit_passed',
+      { appeal_until: err.appealUntil },
+    );
   }
   if (err instanceof claim.AppealStageMismatchError) {
     throw new ConflictError('This claim is not at the expected appeal stage', 'appeal.stage_mismatch');
@@ -184,6 +194,29 @@ export function createAppealHandlers(deps: AppDeps) {
     emitAuthAudit(deps, request, type, { actorId, pariwarId, context });
   }
 
+  /**
+   * ⭐ Story 6.24a RF6 — a reversal of a `-239` refusal CLOSES the death's other claims in its own transaction. A claim it
+   * could ⛔ never close (already finally approved / paid — unreachable under RF5 + RF7, Trap 9) is RECORDED, ⛔ never silently:
+   * an error-level log with ids only, and the ids in the reversal's own audit line (returned here as audit context).
+   */
+  function heldClaimsAuditContext(
+    request: FastifyRequest,
+    claimCaseId: string,
+    held: claim.CloseClaimsHeldBySuspicionAppealResult | undefined,
+  ): Record<string, unknown> {
+    if (!held || !held.applied) return {};
+    for (const n of held.notClosed) {
+      request.log.error(
+        { claim_case_id: claimCaseId, held_claim_case_id: n.claimCaseId, held_claim_state: n.state },
+        'suspicion appeal allowed: another claim of the death is already finally approved — NOT closed',
+      );
+    }
+    return {
+      held_claims_closed: held.closed,
+      held_claims_not_closed: held.notClosed.map((n) => ({ claim_case_id: n.claimCaseId, state: n.state })),
+    };
+  }
+
   function toDecisionResponse(decision: claim.AppealDecisionResult['decision'], claimState: string, reversed: boolean): AppealDecisionResponse {
     return {
       appeal_decision_id: decision.appealDecisionId,
@@ -274,6 +307,43 @@ export function createAppealHandlers(deps: AppDeps) {
       };
     },
 
+    // ── ⭐ Story 6.24a RF14 (b) — the helpline appeal screen's read (`claim.file`) ──
+    /**
+     * GET …/admin/members/:memberId/appeals — the SELECTED deceased member's refused claims, each with whether the family
+     * can appeal it now (judged by the initiation guard itself) and, for a `-239` refusal, its last date. ⛔ No PII. The
+     * operator's read-back of the caller is the helpline page's SCRIPT (client-side, the D5 precedent). Audited.
+     */
+    async getHelplineAppealClaims(request: FastifyRequest, reply: FastifyReply): Promise<HelplineAppealClaimsResponse> {
+      const ctx = await adminContextOf(request);
+      const { memberId } = request.params as { memberId: string };
+      const memberIdBrand = ids.memberId(memberId);
+      const tx = await openScopeTx(deps, ctx.pariwarIdStr);
+      let ok = false;
+      let rows: claim.HelplineAppealEligibilityRow[];
+      try {
+        rows = await claim.listHelplineAppealEligibility(tx.tx, ctx.pariwarId, memberIdBrand);
+        ok = true;
+      } finally {
+        await closeScopeTx(tx, ok);
+      }
+      audit(request, 'admin_appeal.helpline_read', ctx.actorId, ctx.pariwarId, {
+        member_id: memberIdBrand,
+        claim_count: rows.length,
+        eligibilities: rows.map((r) => r.eligibility),
+      });
+      void reply.status(200);
+      return {
+        member_id: memberId,
+        claims: rows.map((r) => ({
+          claim_case_id: r.claimCaseId,
+          claim_state: r.currentState,
+          created_at: r.createdAt.toISOString(),
+          eligibility: r.eligibility,
+          appeal_until: r.appealUntil,
+        })),
+      };
+    },
+
     // ── AC7 — member appeal-status ──
     async getMemberStatus(request: FastifyRequest, reply: FastifyReply): Promise<MemberAppealStatusResponse> {
       const memberIdStr = request.requestContext.actorId;
@@ -352,6 +422,7 @@ export function createAppealHandlers(deps: AppDeps) {
         decision: body.decision,
         disposition_category: result.decision.dispositionCategory,
         reversed: result.reversedEventVersion !== null,
+        ...heldClaimsAuditContext(request, claimCaseId, result.heldClaims),
       });
       void reply.status(201);
       return toDecisionResponse(result.decision, result.claimState, result.reversedEventVersion !== null);
@@ -471,6 +542,7 @@ export function createAppealHandlers(deps: AppDeps) {
         deny_count: s.denyCount,
         disposition_category: result.decision.dispositionCategory,
         idempotent_replay: result.idempotentReplay,
+        ...heldClaimsAuditContext(request, claimCaseId, result.heldClaims),
       });
       void reply.status(200);
       return {
@@ -551,6 +623,7 @@ export function createAppealHandlers(deps: AppDeps) {
         decision: body.decision,
         disposition_category: result.decision.dispositionCategory,
         reversed: result.reversedEventVersion !== null,
+        ...heldClaimsAuditContext(request, claimCaseId, result.heldClaims),
       });
       void reply.status(201);
       return toDecisionResponse(result.decision, result.claimState, result.reversedEventVersion !== null);
@@ -624,6 +697,8 @@ export function createAppealHandlers(deps: AppDeps) {
           appeal_stage_2: '2',
           appeal_stage_3: '3',
         };
+        // ⭐ Story 6.24a RF14 — a `-239` refusal's 90-day date (the controls show it; null for any other refusal).
+        const suspicionChain = await claim.readSuspicionChainStart(tx.tx, ctx.pariwarId, claimCaseId);
         const currentStage = stageOfState[claimRow.currentState];
         let sla: AdminAppealCaseResponse['sla'] = null;
         if (currentStage) {
@@ -643,6 +718,12 @@ export function createAppealHandlers(deps: AppDeps) {
           votes,
           tally,
           sla,
+          suspicion_appeal_limit: suspicionChain
+            ? {
+                appeal_until: claim.suspicionRefusalAppealUntil(suspicionChain.chainStartedAt),
+                passed: claim.hasSuspicionRefusalAppealLimitPassed(suspicionChain.chainStartedAt, suspicionChain.clock),
+              }
+            : null,
         };
       } finally {
         await closeScopeTx(tx, ok);

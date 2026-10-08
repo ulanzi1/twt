@@ -643,6 +643,27 @@ export const ClaimDeniedNoAppealPayloadSchema = requireIdentityTransition({
   deceased_member_id: z.string().uuid(),
 });
 
+/**
+ * ⭐ Story 6.24a (`2026-10-07-292` RF4, `-262` FQ5 A — the 36th claim event): another claim of the same death was refused on
+ * suspicion of a post-death nominee change and its appeal was ALLOWED ⇒ this claim is CLOSED. A TRANSITION (⛔ not an
+ * annotation): every CLOSABLE state → `closed` (`isClaimClosable` — every state but `settled`, `approved`,
+ * `state_trustee_approved` and `closed` itself). ⛔ Not a denial, ⛔ not appealable, ⛔ never a 6.19c closures row, ⛔ never
+ * `denied_no_appeal`. Emitted ONLY by `closeClaimsHeldBySuspicionAppeal`, in the reversal's own transaction.
+ * `held_by_claim_case_id` = the reversed claim. Non-PII.
+ * PINNED SEAM (the `claim.settled` precedent): it UNFREEZES this claim's stream in the account-frozen overlay
+ * (`member/overlay.ts` ACCOUNT_UNFREEZE_EVENT_TYPES), whose query matches by `payload ->> 'deceased_member_id'` — so it
+ * MUST carry `deceased_member_id` (an id, ⛔ no PII). The member stays frozen while the reversed claim is live.
+ */
+export const ClaimClosedPayloadSchema = z
+  .object({
+    ...auditShape,
+    to_state: z.literal('closed'),
+    trigger: z.literal('suspicion_appeal_allowed'),
+    held_by_claim_case_id: z.string().uuid(),
+    deceased_member_id: z.string().uuid(),
+  })
+  .strict();
+
 // ── Story 6.20 — the nominee declaration history (two IDENTITY annotations) ───────────────────
 
 /**
@@ -699,7 +720,7 @@ export const ClaimDeathCertificateReviewedPayloadSchema = requireIdentityTransit
   supersedes_review_id: z.string().uuid().nullable(),
 });
 
-// ── The 35-event vocabulary + the type→schema map (single source) ─────────────
+// ── The 36-event vocabulary + the type→schema map (single source) ─────────────
 // (Story 6.1 committed the 20 state-advancing events; Story 6.6 added the 21st —
 // `claim.peer_mesh_responded`; Story 6.7 added the 22nd — `claim.ground_inspection_completed`;
 // Story 6.8 added the 23rd — `claim.nominee_bank_recorded`; Story 6.9 added the 24th —
@@ -725,7 +746,10 @@ export const ClaimDeathCertificateReviewedPayloadSchema = requireIdentityTransit
 // nominee lock reads (AC2). ⛔ Neither is a lifecycle state (AC10); ⛔ neither carries PII.
 // Story 6.21a adds the 35th — `claim.death_certificate_reviewed` (D5), an IDENTITY annotation with a no-op
 // reducer recording the District Admin's accept / reject verdict on the current death certificate. The
-// approval gates read the review ROW, ⛔ not the event; a rejection is ⛔ not a denial (invariant 2).)
+// approval gates read the review ROW, ⛔ not the event; a rejection is ⛔ not a denial (invariant 2).
+// Story 6.24a adds the 36th — `claim.closed` (`2026-10-07-292` RF4), a LIFECYCLE TRANSITION (⛔ not an annotation) from
+// every CLOSABLE state to the new terminal `closed`, emitted when another claim of the death wins its suspicion appeal.
+// It unfreezes its stream (the overlay); it is ⛔ never a denial.)
 
 export const CLAIM_EVENT_TYPES = [
   'claim.intake_initiated',
@@ -763,13 +787,14 @@ export const CLAIM_EVENT_TYPES = [
   'claim.reversed',
   'claim.settled',
   'claim.denied_no_appeal',
+  'claim.closed',
 ] as const;
 
-/** The dotted `claim.*` event-type literal union (the 35 claim events). */
+/** The dotted `claim.*` event-type literal union (the 36 claim events). */
 export type ClaimEventType = (typeof CLAIM_EVENT_TYPES)[number];
 
 /**
- * type → payload-schema map. The ONE place the 35 events bind to their schemas;
+ * type → payload-schema map. The ONE place the 36 events bind to their schemas;
  * `EVENT_TYPE_REGISTRY` (packages/events) and the projector both consume it. The
  * `satisfies` keeps it exhaustive — adding a `ClaimEventType` without a schema is a
  * compile error.
@@ -810,4 +835,5 @@ export const CLAIM_EVENT_PAYLOAD_SCHEMAS = {
   'claim.reversed': ClaimReversedPayloadSchema,
   'claim.settled': ClaimSettledPayloadSchema,
   'claim.denied_no_appeal': ClaimDeniedNoAppealPayloadSchema,
+  'claim.closed': ClaimClosedPayloadSchema,
 } as const satisfies Record<ClaimEventType, z.ZodTypeAny>;

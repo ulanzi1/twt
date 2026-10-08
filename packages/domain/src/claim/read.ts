@@ -17,20 +17,22 @@
 // @twt/events.loadEvents — domain cannot import @twt/events (the cycle); see
 // claim/project.ts header. The stream is small per claim.
 
-import { and, asc, desc, eq, lte, notInArray } from 'drizzle-orm';
+import { and, asc, desc, eq, lte, notInArray, sql } from 'drizzle-orm';
 
 import type { Db } from '../db.js';
 import type { ClaimId, MemberId, PariwarId } from '../ids/index.js';
 import { eventsLog } from '../schema/events_log.js';
 import { claims, type ClaimRow } from '../schema/claims.js';
 import { type ClaimLifecycleState, replayClaimState } from './state.js';
+import { standingSuspicionRefusalSql } from './suspicion-refusal.js';
 
 /**
  * Lifecycle states from which a claim never re-opens (Story 6.1 state.ts:
  * `settled` and `denied` are both annotated terminal; `reversed` re-enters
- * `approved` via an appeal, so it is NOT terminal).
+ * `approved` via an appeal, so it is NOT terminal). Story 6.24a (`2026-10-07-292` RF4) adds `closed` — another claim of
+ * the death won its suspicion appeal; ⛔ nothing leaves `closed`.
  */
-export const CLAIM_TERMINAL_STATES: readonly ClaimLifecycleState[] = ['settled', 'denied'] as const;
+export const CLAIM_TERMINAL_STATES: readonly ClaimLifecycleState[] = ['settled', 'denied', 'closed'] as const;
 
 /**
  * Compute a claim's lifecycle state as of `atTimestamp` by replaying its event stream
@@ -119,6 +121,10 @@ export async function lockClaimCase(
  * `CLAIM_TERMINAL_STATES` (`settled`/`denied`): a death whose earlier claim already reached a
  * terminal outcome must be able to re-file (e.g. a fresh claim after `denied`), so a terminal
  * row must not be handed back as "the existing intake."
+ *
+ * ⭐ Story 6.24a RF2 (`-261` D4 B): it also skips a claim on which a SUSPICION REFUSAL STANDS (RF1) — the SAME conjunct as
+ * `getConvergenceCandidate`, because its production caller is `initiateIntake`'s `ClaimStreamConcurrencyError` backstop,
+ * which must ⛔ never hand back a claim the candidate rule now keeps apart.
  */
 export async function getClaimByDeceasedMember(
   db: Db,
@@ -133,6 +139,7 @@ export async function getClaimByDeceasedMember(
         eq(claims.pariwarId, pariwarId),
         eq(claims.deceasedMemberId, deceasedMemberId),
         notInArray(claims.currentState, [...CLAIM_TERMINAL_STATES]),
+        sql`NOT ${standingSuspicionRefusalSql('claims')}`,
       ),
     )
     .orderBy(desc(claims.createdAt))
@@ -151,7 +158,14 @@ export async function listLiveClaimsForDeceasedMember(
   db: Db,
   pariwarId: PariwarId,
   deceasedMemberId: MemberId,
+  /**
+   * ⭐ Story 6.24a (`2026-10-07-292` RF12) — `includeClosed`: ALSO list the member's `closed` claims (the helpline
+   * read-back — a closed claim must ⛔ never vanish exactly when the family is told to call the helpline). Other terminal
+   * states stay excluded; every other caller is unchanged.
+   */
+  opts: { readonly includeClosed?: boolean } = {},
 ): Promise<Pick<ClaimRow, 'claimCaseId' | 'currentState' | 'createdAt'>[]> {
+  const excluded = opts.includeClosed ? CLAIM_TERMINAL_STATES.filter((s) => s !== 'closed') : CLAIM_TERMINAL_STATES;
   return db
     .select({ claimCaseId: claims.claimCaseId, currentState: claims.currentState, createdAt: claims.createdAt })
     .from(claims)
@@ -159,7 +173,7 @@ export async function listLiveClaimsForDeceasedMember(
       and(
         eq(claims.pariwarId, pariwarId),
         eq(claims.deceasedMemberId, deceasedMemberId),
-        notInArray(claims.currentState, [...CLAIM_TERMINAL_STATES]),
+        notInArray(claims.currentState, [...excluded]),
       ),
     )
     .orderBy(desc(claims.createdAt), desc(claims.claimCaseId))

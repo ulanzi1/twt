@@ -801,3 +801,48 @@ export class ApprovalWarningReasonWriteRefusedError extends Error {
     this.status = APPROVAL_WARNING_REASON_REFUSAL_STATUS[code];
   }
 }
+
+// ── Story 6.24a — the refile after a suspicion refusal (`2026-10-07-292` RF5, RF13) ────────────────────────────────
+
+/** The two reasons a FINAL approval waits on another claim of the death (`-262` FQ5 A, `-291` Q1 A). */
+export const SUSPICION_APPEAL_PENDING_REASONS = ['appeal_not_filed', 'appeal_open'] as const;
+export type SuspicionAppealPendingReason = (typeof SUSPICION_APPEAL_PENDING_REASONS)[number];
+
+/**
+ * Story 6.24a RF5 (`-262` FQ5 A) — the FINAL approval WAITS: another claim of the same death was refused on suspicion of a
+ * post-death nominee change and that refusal can still be appealed (`appeal_not_filed` — within its 90 days, `-291` Q1 A)
+ * or is under appeal (`appeal_open`). ⛔ NOT a refusal and ⛔ NOT a denial — every final-approval handler maps it to 409
+ * `<prefix>.suspicion_appeal_pending` `{ reason }`. The District Admin's approval (P1) is ⛔ never held by it.
+ * `heldByClaimCaseId` is the other claim's reference (staff surfaces only — ⛔ never a name).
+ */
+export class SuspicionAppealPendingError extends Error {
+  public readonly name = 'SuspicionAppealPendingError';
+  public constructor(
+    public readonly claimCaseId: string,
+    public readonly reason: SuspicionAppealPendingReason,
+    public readonly heldByClaimCaseId: string,
+  ) {
+    super(
+      reason === 'appeal_open'
+        ? `[suspicion-refusal] claim ${claimCaseId} cannot be finally approved yet — an earlier claim for this death is under appeal`
+        : `[suspicion-refusal] claim ${claimCaseId} cannot be finally approved yet — an earlier claim for this death can still be appealed`,
+    );
+  }
+}
+
+/**
+ * Story 6.24a RF13 (`2026-10-07-293` item 2 A) — `reviseDecision` refuses to move a live decision's reason OFF
+ * `post_death_nominee_change` while ANY other claim of the same death is in any state but `closed` (else one death could be
+ * paid twice). A note-only revision that keeps the reason is ⛔ not refused. → 409 `verifier_decision.suspicion_reason_locked`.
+ */
+export class SuspicionReasonLockedError extends Error {
+  public readonly name = 'SuspicionReasonLockedError';
+  public constructor(
+    public readonly claimCaseId: string,
+    public readonly heldClaimCaseId: string,
+  ) {
+    super(
+      `[suspicion-refusal] claim ${claimCaseId}'s refusal reason cannot be changed while another claim for this death (${heldClaimCaseId}) is not closed`,
+    );
+  }
+}

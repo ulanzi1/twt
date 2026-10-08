@@ -121,6 +121,9 @@ describe('ClaimNomineeNameCheckedPayloadSchema (the 32nd claim event)', () => {
     // (the District Admin's accept / reject verdict on the death certificate), named in a THIRD frozen
     // literal. ⛔ Neither 6.18's nor 6.20's assertion is widened; ANY other addition still fails.
     const STORY_6_21A_CLAIM_EVENTS: readonly string[] = ['claim.death_certificate_reviewed'];
+    // ⭐⭐ AMENDED BY STORY 6.24a (`2026-10-07-292` RF4) — ⛔ NOT LOOSENED, the same way: 6.24a mints ONE lifecycle
+    // TRANSITION (`claim.closed`), named in a FOURTH frozen literal. ⛔ No earlier assertion is widened.
+    const STORY_6_24A_CLAIM_EVENTS: readonly string[] = ['claim.closed'];
     const live = [...CLAIM_EVENT_TYPES] as string[];
 
     // ⭐ ADDED — exactly one, and it is the one AC3 names.
@@ -129,7 +132,8 @@ describe('ClaimNomineeNameCheckedPayloadSchema (the 32nd claim event)', () => {
         (t) =>
           !PRE_6_18_CLAIM_EVENTS.includes(t) &&
           !STORY_6_20_CLAIM_EVENTS.includes(t) &&
-          !STORY_6_21A_CLAIM_EVENTS.includes(t),
+          !STORY_6_21A_CLAIM_EVENTS.includes(t) &&
+          !STORY_6_24A_CLAIM_EVENTS.includes(t),
       ),
     ).toEqual(['claim.nominee_name_checked']);
     // Story 6.20 — its additions are EXACTLY its two, and both are live (a dropped one fails here too).
@@ -139,6 +143,8 @@ describe('ClaimNomineeNameCheckedPayloadSchema (the 32nd claim event)', () => {
     );
     // Story 6.21a — its addition is EXACTLY its one, and it is live.
     expect(STORY_6_21A_CLAIM_EVENTS.filter((t) => !live.includes(t))).toEqual([]);
+    // Story 6.24a — its addition is EXACTLY its one, and it is live.
+    expect(STORY_6_24A_CLAIM_EVENTS.filter((t) => !live.includes(t))).toEqual([]);
     // REMOVED — ⛔ none. A rename is an add AND a delete, and only checking additions would read a
     // rename as a clean addition.
     expect(PRE_6_18_CLAIM_EVENTS.filter((t) => !live.includes(t))).toEqual([]);

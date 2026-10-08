@@ -3,6 +3,42 @@ baseline_commit: 6bb79afd
 ---
 
 <!--
+⭐⭐ MERGED 2026-10-08 as PR #263 (REBASE-merge, 34 / 34 GitHub checks green) — THE STORY-6.24a SHA MAP. The 23 commits of
+`story/6-24-true-nominee-refile-after-a-suspicion-refusal` (from `6bb79afd`) were rewritten by the rebase; the citations in this file
+(and in the files below) are kept AS WRITTEN (the record) and this maps them to their `main` twins, PROVED ⛔ not assumed: each pair has
+an IDENTICAL `git patch-id --stable` and an identical subject, and the merged tree (`c5d282ec`) is byte-identical to the branch head
+(`82ed0034`) — tree `3d31b753` both. `main` had not moved (the merge-base was `6bb79afd`), so the rebase rewrote SHAs only. Negative
+control: a WRONG pair (`1f3246e4` vs `3b1ea3d8`) differs. ⭐ Branch SHAs are ALSO cited OUTSIDE this file — resolve them here:
+`sprint-status.yaml` (`2f674a57`, `f0801f1e`, `5e77ca6e`, `2ada8f7b`, `de2355a6`, `6fc5dce0`, `2dd7b7b3`), `deferred-work.md`
+(`de2355a6`, `6fc5dce0`), `.decision-log.md` `2026-10-08-294` (`de2355a6`, `6fc5dce0` — ⛔ never edited) and the 6.24b story (`2ada8f7b`).
+  · `1f3246e4` → `ebecc47f`  created for dev — backlog → ready-for-dev. bmad-create-sto  (⛔ not cited)
+  · `2f674a57` → `3b1ea3d8`  2026-10-07-291 — Trustee-ratified (DR + KB): a suspicion r  (cited)
+  · `ac8ad8db` → `178bfaab`  v1.2 — the Panel's ruling built in. -291 Q1 A (a -239 refu  (⛔ not cited)
+  · `53f5a1dd` → `b4dc5385`  v1.3 — validate round 2 (fresh context; 0 BLOCKER, 4 HIGH,  (⛔ not cited)
+  · `ce915d1b` → `8ce14acd`  v1.4 — validate round 3 (narrow; 1 BLOCKER, 1 HIGH — appli  (⛔ not cited)
+  · `940ef3a3` → `f041ef4e`  v1.5 — validate round 4 (narrow; 0 BLOCKER, 2 HIGH — appli  (⛔ not cited)
+  · `2c19ef74` → `376f8326`  v1.6 — validate round 5 (narrow; 0 BLOCKER, 1 HIGH — appli  (⛔ not cited)
+  · `e1fbadd9` → `3b959199`  v1.7 — validate round 6 (narrow; 0 BLOCKER, 1 HIGH — appli  (⛔ not cited)
+  · `ce89326a` → `99e1244b`  v1.8 — validate round 7 (narrow; 0 BLOCKER, 1 HIGH — appli  (⛔ not cited)
+  · `f0801f1e` → `03f8ec53`  2026-10-07-292 — author-commit: Story 6.24's RF1–RF16 (v1.  (cited)
+  · `5e77ca6e` → `0ababe14`  epics.md gains ### Story 6.24 (minted by -261 D4 B, -262 F  (cited)
+  · `882f0d5b` → `90117177`  v2.0 — Task 0 complete: validate round 8 found no BLOCKER/  (⛔ not cited)
+  · `bb323f61` → `49facd29`  SPLIT (BigDev: "ok, split it") — 6.24a keeps the row and f  (⛔ not cited)
+  · `8c07afbb` → `2ecae359`  the split's stale cross-references — AC6/AC7 legs and the   (⛔ not cited)
+  · `fc6c82fa` → `ddbb276c`  glyph slip — the closure text is not asserted in 6.24a.     (⛔ not cited)
+  · `2ada8f7b` → `c31ae2cf`  2026-10-07-293 — Trustee-ratified (DR + KB): the person re  (cited)
+  · `de2355a6` → `56242613`  -293 folded in — Q3 item 1 B (the refused person's once-ev  (cited)
+  · `5aaeb4b6` → `f4173521`  built — the refile after a suspicion refusal is kept apart  (⛔ not cited)
+  · `6fc5dce0` → `7520716d`  code review — review → done. 12 patches across 4 chunks, v  (cited)
+  · `2dd7b7b3` → `150ce503`  2026-10-08-294 — author-commit (BigDev: "D1:1, D2:1"): RF6  (cited)
+  · `42ca4e07` → `44d2ab96`  code review ROUND 2 — a fresh full re-review of de2355a6..  (cited)
+  · `e30addc3` → `71dd4eef`  code review ROUND 3 (narrow — round 2's fixes, 6fc5dce0..H  (⛔ not cited)
+  · `82ed0034` → `c5d282ec`  friction-budget — the closed claim's helpline screen decla  (⛔ not cited)
+Re-verify (bash — zsh does not word-split `$p`): `for p in "1f3246e4 ebecc47f" "2f674a57 3b1ea3d8" "ac8ad8db 178bfaab" "53f5a1dd b4dc5385" "ce915d1b 8ce14acd" "940ef3a3 f041ef4e" "2c19ef74 376f8326" "e1fbadd9 3b959199" "ce89326a 99e1244b" "f0801f1e 03f8ec53" "5e77ca6e 0ababe14" "882f0d5b 90117177" "bb323f61 49facd29" "8c07afbb 2ecae359" "fc6c82fa ddbb276c" "2ada8f7b c31ae2cf" "de2355a6 56242613" "5aaeb4b6 f4173521" "6fc5dce0 7520716d" "2dd7b7b3 150ce503" "42ca4e07 44d2ab96" "e30addc3 71dd4eef" "82ed0034 c5d282ec"; do set -- $p; a=$(git show $1 | git patch-id --stable | cut -d' ' -f1); b=$(git show $2 | git patch-id --stable | cut -d' ' -f1); [ "$a" = "$b" ] || echo "MISMATCH $p"; done` (run 2026-10-08: empty)
+— ⚠ needs the branch SHAs, which survive only while the branch (local or `origin/story/6-24-true-nominee-refile-after-a-suspicion-refusal`) does.
+-->
+
+<!--
 BASELINE — PINNED 2026-10-07 to `6bb79afd` on `main` (`bmad-create-story 6.24`; `6bb79afd` = 6.26b's SHA-map commit after PR #261).
 Two facts kept apart, as always:
   · DURABLE — the pin `6bb79afd` is an ancestor of HEAD (`git merge-base --is-ancestor 6bb79afd HEAD`).

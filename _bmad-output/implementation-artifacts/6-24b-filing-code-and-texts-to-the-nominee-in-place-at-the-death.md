@@ -3,6 +3,12 @@ baseline_commit: 6bb79afd
 ---
 
 <!--
+⭐ MERGED 2026-10-08 with Story 6.24a as PR #263 (REBASE-merge): the 6.24 SHA this file cites (`2ada8f7b` — `-293`) was rewritten by the
+rebase (→ `c31ae2cf` on `main`). The citation is kept AS WRITTEN; the proved map of all 23 commits is the header of
+`6-24-true-nominee-refile-after-a-suspicion-refusal.md`. ⚠ RE-PIN at this story's start to the `main` that carries 6.24a (`c5d282ec` or later).
+-->
+
+<!--
 BASELINE — written 2026-10-07 at the split of Story 6.24 (pin `6bb79afd`, as 6.24a). ⚠ RE-PIN AT THE START: this story begins only once
 6.24a is `done` (the 6.21b / 6.23b / 6.26b precedent) and reads 6.24a's SHIPPED build — RF1's fragment `standingSuspicionRefusalSql` /
 `readStandingSuspicionRefusals` (`packages/domain/src/claim/suspicion-refusal.ts`), the `closed` state and its `claim.closed` event. Every

@@ -1,3 +1,8 @@
+# last_updated: 2026-10-08e (⭐ **STORY 6.24a MERGED — PR #263, REBASE-merge (34 / 34 GitHub checks green); the SHA map.** The 23 branch
+# commits (from `6bb79afd`) map to their `main` twins `ebecc47f`…`c5d282ec`, each pair proved by an identical `git patch-id --stable` and
+# subject; the merged tree equals the branch head (`3d31b753`); a wrong pair as negative control. The map + a re-verify command (run: empty)
+# head `6-24-true-nominee-refile-after-a-suspicion-refusal.md` (it also resolves the branch SHAs cited here, in `deferred-work.md`, in
+# `-294` and in 6.24b); citations kept as written; 6.24b gains a pointer. ⛔ No row moves (`6-24-…` stays `done`). Docs only.)
 # last_updated: 2026-10-08d (⭐ **STORY 6.24a — CODE REVIEW ROUND 3 (narrow: round 2's fixes `6fc5dce0..HEAD`; three layers in PARALLEL per
 # BigDev, read-only) — ROUNDS STOP (⛔ no HIGH).** All 21 round-2 patches verified, `-294` §1's lock exact, ⛔ no deadlock cycle repo-wide.
 # 0 decision-needed, 12 patch (all fixed — MEDIUM: a filing after a reversal joins only inside the 30-day window; comments, copy and the

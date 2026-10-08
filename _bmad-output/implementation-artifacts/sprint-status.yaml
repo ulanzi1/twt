@@ -1,3 +1,11 @@
+# last_updated: 2026-10-08c (⭐ **STORY 6.24a — CODE REVIEW ROUND 2 (`bmad-code-review 6.24a`; a fresh full re-review of `de2355a6..HEAD`,
+# two chunks, Blind Hunter + Edge Case Hunter + Acceptance Auditor in PARALLEL per BigDev, read-only).** ~70 raw → 2 decision-needed, 21 patch,
+# 8 defer, 22 dismissed. ⭐ BigDev *"D1:1, D2:1"* → author-commit `2026-10-08-294` (committed ALONE, `2dd7b7b3`): §1 the three reversal writers take the
+# death's INTAKE lock first (supersedes `-292` RF6's *"⛔ never the intake lock"* — a claim minted during a reversal was ⛔ never closed);
+# §2 Trap 9's *"unreachable"* CORRECTED (a claim voted before the other becomes `-239`, or a filing after the closure outside the 30-day
+# window, reaches two payments for one death); §3 ROW ADDED `6-28-one-payment-per-death-second-approval-guard` → `backlog` (the Panel
+# question is owed BEFORE its code). ALL 21 patches fixed (D1's lock + two race legs after `-294` landed) — `6-24-…` stays `done`.
+# ⛔ No other row moves.)
 # last_updated: 2026-10-08b (⭐ **STORY 6.24a — CODE REVIEW COMPLETE (`bmad-code-review`) — review → done.** Four chunked
 # passes (domain-core, `apps/api`, `apps/admin`, `apps/mobile` — the diff exceeded the single-pass line threshold), each
 # with Blind Hunter + Edge Case Hunter + Acceptance Auditor running in parallel. 93 raw findings → 12 patch (all fixed
@@ -19304,6 +19312,10 @@ development_status:
   # from the story files' `⚠ AMENDED by -283` / `-284` lines. Validate rounds STOPPED at round 3 (⛔ no BLOCKER / HIGH).
   6-26b-death-facts-warnings-and-register-check: done
   6-27-peer-mesh-sending-replies-and-date-of-death: backlog
+  # ⭐ 2026-10-08 ADDED by `2026-10-08-294` §3 (6.24a code review round 2): ⛔ nothing per-death stops a second approval (`-292` FOUND it);
+  # 6.24a's RF6 closure is the only control and three paths pass it (`-294` §2 (a)–(c)). ⭐ BEFORE any code: the Panel question — which
+  # family is paid when two claims for one death both qualify, and what the other is owed — then the guard. ⛔ No story file yet.
+  6-28-one-payment-per-death-second-approval-guard: backlog
   epic-6-retrospective: done
 
   # ==========================================================================

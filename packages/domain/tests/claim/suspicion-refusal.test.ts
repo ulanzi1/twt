@@ -26,6 +26,7 @@ import {
   type StandingSuspicionRefusal,
 } from '../../src/claim/suspicion-refusal.js';
 import { CLAIM_TERMINAL_STATES } from '../../src/claim/read.js';
+import { CLAIM_EVENT_TYPES } from '../../src/claim/events.js';
 import type { ClaimApprovalGateOptions } from '../../src/claim/nominee-name-check.js';
 import { claimId, type ClaimId } from '../../src/ids/index.js';
 
@@ -138,9 +139,13 @@ describe('RF4 — `claim.closed` (the 36th event)', () => {
   it('⛔ never moves a claim already finally approved, paid or closed (identity)', () => {
     for (const from of ['state_trustee_approved', 'approved', 'settled', 'closed']) expect(closed(from), from).toBe(from);
   });
-  it('⛔ nothing leaves `closed`', () => {
-    for (const type of ['claim.appeal_stage1_initiated', 'claim.verifier_approved', 'claim.state_trustee_frozen', 'claim.r9_outcome', 'claim.settled']) {
-      expect(claimStateMachine.step('closed', { type, payload: { outcome: 'approved' } }), type).toBe('closed');
+  it('⛔ nothing leaves `closed` — EVERY claim event, under every payload shape the reducer branches on (code review round 2)', () => {
+    const payloads = [{}, { outcome: 'approved' }, { outcome: 'denied' }, { decision: 'reversed' }, { decision: 'upheld' }, { to_state: 'approved' }];
+    expect(CLAIM_EVENT_TYPES.length).toBeGreaterThan(30);
+    for (const type of CLAIM_EVENT_TYPES) {
+      for (const payload of payloads) {
+        expect(claimStateMachine.step('closed', { type, payload } as never), `${type} ${JSON.stringify(payload)}`).toBe('closed');
+      }
     }
   });
   it('`closed` is terminal (CLAIM_TERMINAL_STATES) — ⛔ never a convergence candidate', () => {

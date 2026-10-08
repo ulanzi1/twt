@@ -15,10 +15,19 @@
 //     session → superseded through the actor-free cores; its `routed_to_r9` row → superseded; a live correction return →
 //     superseded and its open run ended `decided` — the supersession the 6.19 terminal writers use;
 //   · a claim already `state_trustee_approved` / `approved` / `settled` is ⛔ NOT moved — it is REPORTED in the result
-//     (the caller logs it at error level with ids only and writes an audit line). Unreachable under RF5 + RF7 (Trap 9).
+//     (the caller logs it at error level with ids only and writes an audit line). ⚠ REACHABLE — `2026-10-08-294` §2
+//     corrects Trap 9's "unreachable under RF5 + RF7" (a claim voted BEFORE the other became a `-239` refusal); the
+//     per-death second-approval guard is row `6-28-one-payment-per-death-second-approval-guard`.
 //
-// ⚠ LOCK ORDER (Trap 8): the reversal writer took the per-death `suspicion-reversal:` key FIRST, then the REFUSED claim's
-// `appeal:` key and row; here it takes each HELD claim's keys and row. ⛔ No writer takes a held claim's lock and THEN
+// ⚠ DELIBERATE (checklist family 9) — the closure ends another claim's panel and R9 session through the ACTOR-FREE cores
+// (`supersedeAppealPanelSession`, `supersedeR9VotingSession`) and emits `claim.closed` as `actor: 'system'`: it is the
+// system's consequence of a reversal whose human reviewer already passed the reversal route's own gate in this transaction.
+// ⭐ Re-examine when a caller OTHER than the three reversal writers calls `closeClaimsHeldBySuspicionAppeal`, or when the
+// public cancel writers gain a check that is ⛔ not about WHO acts (code review round 2, 2026-10-08).
+//
+// ⚠ LOCK ORDER (Trap 8; `2026-10-08-294` §1): the reversal writer took the death's INTAKE key, then the per-death
+// `suspicion-reversal:` key, then the REFUSED claim's `appeal:` key and row; here it takes each HELD claim's keys and row.
+// The intake key makes the "other claims" list below COMPLETE: ⛔ no claim of the death can be minted while it is held. ⛔ No writer takes a held claim's lock and THEN
 // waits on the refused claim's: the approval gate (RF5) and the cycle commit (RF7) only READ the refused claim.
 
 import { and, asc, eq, isNull, ne, sql } from 'drizzle-orm';
@@ -34,6 +43,7 @@ import { claimVerifierDecisions } from '../schema/claim_verifier_decisions.js';
 import { appealAdvisoryLockKey } from './appeal-lock.js';
 import { readLiveAppealPanelSession, supersedeAppealPanelSession } from './appeal-panel-session.js';
 import { endCorrectionRun, readOpenCorrectionRun } from './correction-chase.js';
+import { intakeAdvisoryLockKey } from './icp-lock.js';
 import type { ClaimEventActor } from './events.js';
 import { projectClaimState } from './project.js';
 import {
@@ -82,7 +92,12 @@ export interface CloseClaimsHeldBySuspicionAppealResult {
  * ⭐ RF6 v1.1 — take the per-death REVERSAL key. Each reversal writer calls this FIRST — before its own `appeal:` lock and
  * claim-row lock — reading the claim's immutable `deceased_member_id` UNLOCKED to build it. A missing claim takes ⛔ no
  * key (the writer's own not-found check answers). Two `-239` claims of one death reversed at once then serialise
- * (⛔ no 40P01). ⛔ Never the intake lock, ⛔ never RF15's appeal key.
+ * (⛔ no 40P01). ⛔ Never RF15's appeal key.
+ * ⭐ `2026-10-08-294` §1 (supersedes `-292` RF6's "⛔ never the intake lock") — the death's INTAKE key is taken FIRST,
+ * immediately before the reversal key: a mint racing the reversal then either committed first (the closure's list sees
+ * it and CLOSES it) or waits and sees the reversed claim as a candidate — ⛔ never a claim minted unseen beside it. Every
+ * intake-key taker takes it first (or after one unlocked read) and ⛔ none waits on a reversal / `appeal:` key or a claim
+ * row while holding it ⇒ ⛔ no cycle.
  */
 export async function acquireSuspicionReversalLockForClaim(
   client: pg.PoolClient,
@@ -95,7 +110,9 @@ export async function acquireSuspicionReversalLockForClaim(
     .from(claims)
     .where(and(eq(claims.pariwarId, pariwarId), eq(claims.claimCaseId, claimCaseId)))
     .limit(1);
-  if (row) await acquireSuspicionReversalLock(db, pariwarId, row.deceasedMemberId);
+  if (!row) return;
+  await client.query('SELECT pg_advisory_xact_lock($1)', [intakeAdvisoryLockKey(pariwarId, row.deceasedMemberId).toString()]);
+  await acquireSuspicionReversalLock(db, pariwarId, row.deceasedMemberId);
 }
 
 async function takeKey(client: pg.PoolClient, key: bigint): Promise<void> {

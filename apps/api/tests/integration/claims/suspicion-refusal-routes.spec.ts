@@ -348,7 +348,10 @@ describe.skipIf(!hasDatabase)('Story 6.24a — the suspicion refusal through HTT
 
   it('⭐ the helpline appeal screen — an operator holding ONLY `claim.file` reads the member\'s refused claims (the `-239` date) and files an appeal for the family', async () => {
     const w = await seedWorld();
-    const recent = await refuseSibling(w);
+    // ONE instant for the refusal AND the expected date — two `new Date()` reads straddling 00:00 IST disagreed (code
+    // review round 2).
+    const recentAt = new Date();
+    const recent = await refuseSibling(w, { decidedAt: recentAt });
     const expired = await refuseSibling(w, { decidedAt: new Date(Date.now() - 100 * DAY) });
     const other = await refuseSibling(w, { reason: 'other' });
     const op = await staff(w.pariwarId, 'helpline_operator');
@@ -356,7 +359,7 @@ describe.skipIf(!hasDatabase)('Story 6.24a — the suspicion refusal through HTT
     const read = async () => (await op.client.inject({ method: 'GET', url })).json() as { claims: Json[] };
     const before = await read();
     const byId = (rows: Json[], id: string) => rows.find((c) => c['claim_case_id'] === id);
-    expect(byId(before.claims, recent)).toMatchObject({ eligibility: 'can_appeal', appeal_until: cycleCalendar.addCalendarDays(cycleCalendar.istDateOf(new Date()), 90) });
+    expect(byId(before.claims, recent)).toMatchObject({ eligibility: 'can_appeal', appeal_until: claim.suspicionRefusalAppealUntil(recentAt) });
     expect(byId(before.claims, expired)).toMatchObject({ eligibility: 'time_limit_passed' });
     expect(byId(before.claims, other)).toMatchObject({ eligibility: 'can_appeal', appeal_until: null });
     expect(byId(before.claims, w.claimCaseId)).toBeUndefined(); // R is ⛔ not refused
@@ -366,6 +369,57 @@ describe.skipIf(!hasDatabase)('Story 6.24a — the suspicion refusal through HTT
     // A role WITHOUT `claim.file` is refused the read (⛔ not an empty 200).
     const da = await staff(w.pariwarId, 'district_admin');
     expect((await da.client.inject({ method: 'GET', url })).statusCode).toBe(403);
+  });
+
+  it('⛔ CROSS-PARIWAR (family 3) — a `claim.file` operator of ANOTHER Pariwar is refused the read and the filing, and ⛔ nothing is written', async () => {
+    const w = await seedWorld();
+    const s = await refuseSibling(w);
+    const otherPariwar = randomUUID();
+    const op = await staff(otherPariwar, 'helpline_operator');
+    const read = await op.client.inject({ method: 'GET', url: `/api/v1/p/${w.pariwarId}/admin/members/${w.memberId}/appeals` });
+    expect([401, 403, 404], read.body).toContain(read.statusCode);
+    const file = await op.client.inject({ method: 'POST', url: `${claimBase(w.pariwarId, s)}/appeal`, payload: {} });
+    expect([401, 403, 404], file.body).toContain(file.statusCode);
+    const { rows } = await td.pool.query(`SELECT current_state FROM claims WHERE claim_case_id = $1`, [s]);
+    expect(rows[0]).toEqual({ current_state: 'denied' });
+    expect((await td.pool.query(`SELECT 1 FROM claim_appeals WHERE claim_case_id = $1`, [s])).rowCount).toBe(0);
+  });
+
+  it('RF6 — a held claim the reversal can ⛔ not close (already `state_trustee_approved` — `-294` §2 (a)) is RECORDED in the stage-1 audit line, ⛔ never silently (family 8)', async () => {
+    const w = await seedWorld();
+    // H — past its final vote BEFORE S stands (the `-294` §2 (a) shape), through events.
+    await inScope(w.pariwarId, async (sc) => {
+      const emit = emitter(sc, w.pariwarId, w.memberId, w.claimCaseId);
+      await emit('verification_in_progress', 'verifier_review', 'claim.verifier_reviewing');
+      await emit('verifier_review', 'verifier_approved', 'claim.verifier_approved');
+      await emit('verifier_approved', 'state_trustee_freeze', 'claim.state_trustee_frozen');
+      await emit('state_trustee_freeze', 'state_trustee_approved', 'claim.state_trustee_approved');
+    });
+    const s = await refuseSibling(w);
+    await td.pool.query(
+      `INSERT INTO pariwar_appeal_config (pariwar_id, legal_review_status) VALUES ($1, 'cleared')
+         ON CONFLICT (pariwar_id) DO UPDATE SET legal_review_status = 'cleared'`,
+      [w.pariwarId],
+    );
+    const op = await staff(w.pariwarId, 'helpline_operator');
+    const filed = await op.client.inject({ method: 'POST', url: `${claimBase(w.pariwarId, s)}/appeal`, payload: {} });
+    expect(filed.statusCode, filed.body).toBe(201);
+    const reviewer = await staff(w.pariwarId, 'district_admin');
+    td.auditSink.events.length = 0;
+    const reversed = await reviewer.client.inject({
+      method: 'POST', url: `${claimBase(w.pariwarId, s)}/appeal/stage1`,
+      payload: { decision: 'reversed', rationale: 'Reconsidered on the merits.', disposition_category: 'reconsideration_on_merits' },
+    });
+    expect(reversed.statusCode, reversed.body).toBe(201);
+    const line = td.auditSink.ofType('admin_appeal.stage1').at(-1);
+    expect(line?.context).toMatchObject({
+      claim_case_id: s,
+      reversed: true,
+      held_claims_closed: [],
+      held_claims_not_closed: [{ claim_case_id: w.claimCaseId, state: 'state_trustee_approved' }],
+    });
+    // H is ⛔ not moved.
+    expect((await td.pool.query(`SELECT current_state FROM claims WHERE claim_case_id = $1`, [w.claimCaseId])).rows[0]).toEqual({ current_state: 'state_trustee_approved' });
   });
 
   it('RF13 — the District Admin\'s revision of S OFF `-239` while R is open → 409 `verifier_decision.suspicion_reason_locked`', async () => {
@@ -416,11 +470,12 @@ describe.skipIf(!hasDatabase)('Story 6.24a — the suspicion refusal through HTT
   it('the console — R is KEPT APART (S by reference only) and its final approval waits `appeal_not_filed`; S itself shows nothing; the ceiling is 21', async () => {
     expect(VERIFIER_CONSOLE_MAX_READS).toBe(21);
     const w = await seedWorld();
-    const s = await refuseSibling(w);
+    const refusedAt = new Date(); // ONE instant for the seed and the expectation (code review round 2 — 00:00 IST)
+    const s = await refuseSibling(w, { decidedAt: refusedAt });
     const { packet, readCount } = await inScope(w.pariwarId, (sc) => assembleVerifierConsole(deps, ctxOf(sc, w.pariwarId, w.claimCaseId)));
     expect(packet.suspicionRefusal).toEqual({
       available: true,
-      keptApartFrom: [{ reference: claim.claimShortReference(s), appeal: 'not_filed', appealUntil: cycleCalendar.addCalendarDays(cycleCalendar.istDateOf(new Date()), 90) }],
+      keptApartFrom: [{ reference: claim.claimShortReference(s), appeal: 'not_filed', appealUntil: claim.suspicionRefusalAppealUntil(refusedAt) }],
       finalApprovalWaits: 'appeal_not_filed',
     });
     expect(readCount).toBeLessThanOrEqual(VERIFIER_CONSOLE_MAX_READS);

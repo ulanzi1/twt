@@ -17,7 +17,7 @@ import { and, desc, eq, inArray } from 'drizzle-orm';
 import { type Db } from '../db.js';
 import type { ClaimId, MemberId, PariwarId } from '../ids/index.js';
 import { clampLimit } from '../pagination.js';
-import { claims } from '../schema/claims.js';
+import { claims, type ClaimLifecycleState } from '../schema/claims.js';
 import { claimVerifierDecisions } from '../schema/claim_verifier_decisions.js';
 import { claimStateTrusteeDecisions } from '../schema/claim_state_trustee_decisions.js';
 import { claimR9Votes } from '../schema/claim_r9_votes.js';
@@ -237,7 +237,7 @@ export type HelplineAppealEligibility = (typeof HELPLINE_APPEAL_ELIGIBILITY_VALU
 
 export interface HelplineAppealEligibilityRow {
   readonly claimCaseId: ClaimId;
-  readonly currentState: string;
+  readonly currentState: ClaimLifecycleState;
   readonly createdAt: Date;
   readonly eligibility: HelplineAppealEligibility;
   /** For a `-239` refusal: the last IST date it can be appealed (D + 90); `null` for any other refusal (⛔ no limit). */

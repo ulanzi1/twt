@@ -654,6 +654,21 @@ describe('<SignalsPanel> — Story 6.24a (RF10), kept apart from a claim refused
     expect(screen.getByTestId('suspicion-refusal-wait')).toHaveTextContent(sr.noWait);
   });
 
+  it('a refusal NEVER appealed whose 90 days ended ⇒ ⛔ no wait, and ⛔ never "its appeal is decided" (code review round 2)', () => {
+    render(
+      <SignalsPanel
+        packet={{
+          ...PRESENT_PACKET,
+          suspicionRefusal: { available: true, keptApartFrom: [{ reference: 'REF-1', appeal: 'time_limit_passed', appealUntil: '2026-09-01' }], finalApprovalWaits: null },
+        }}
+      />,
+    );
+    expect(screen.getByTestId('suspicion-refusal-claim-REF-1')).toHaveTextContent(`${sr.appeal.time_limit_passed} 2026-09-01`);
+    expect(screen.getByTestId('suspicion-refusal-wait')).toHaveTextContent(sr.noWait);
+    expect(screen.getByTestId('suspicion-refusal-wait')).not.toHaveTextContent(/appeal is decided/i);
+    expect(screen.queryByText(sr.districtAdminNotHeld)).not.toBeInTheDocument();
+  });
+
   it('a FAILED read ⇒ "could not be checked just now" — ⛔ never silence', () => {
     render(<SignalsPanel packet={{ ...PRESENT_PACKET, suspicionRefusal: { available: false, keptApartFrom: [], finalApprovalWaits: null } }} />);
     expect(screen.getByTestId('suspicion-refusal-unavailable')).toHaveTextContent(sr.unavailable);
@@ -672,6 +687,15 @@ describe('<SignalsPanel> — Story 6.24a (RF10), kept apart from a claim refused
     const fallback = decisionErrorMessage(new ApiError(409, 'verifier_decision.suspicion_reason_locked', 'x', {}));
     expect(fallback).not.toContain('{held}');
     expect(fallback).not.toMatch(/while\s+for this death/i);
-    expect(fallback).toBe(sr.reasonLocked.replace('{held}', 'another claim'));
+    expect(fallback).toBe(sr.reasonLocked.replace('{held}', sr.anotherClaim));
+  });
+
+  it('the wait 409 with ⛔ no / an unknown reason ⇒ neutral words — ⛔ never asserts an appeal is being decided (code review round 2)', () => {
+    for (const details of [undefined, {}, { reason: 'something_new' }]) {
+      const msg = decisionErrorMessage(new ApiError(409, 'verifier_decision.suspicion_appeal_pending', 'x', details));
+      expect(msg).toBe(sr.approvalGateUnknown);
+      expect(msg).not.toBe(sr.approvalGate.appeal_open);
+    }
+    expect(decisionErrorMessage(new ApiError(409, 'verifier_decision.suspicion_appeal_pending', 'x', { reason: 'appeal_not_filed' }))).toBe(sr.approvalGate.appeal_not_filed);
   });
 });

@@ -67,7 +67,10 @@ export function HelplineClaimContact({
 }): ReactElement {
   const ready = memberId !== null && identityConfirmed;
   const claimsQ = useDeathCertificateClaimsForMember(pariwarId, memberId, ready);
-  const claims = claimsQ.data?.member_id === memberId ? claimsQ.data.claims : [];
+  // ⛔ Never a `closed` claim (Story 6.24a RF12 — the shared list now carries the member's CLOSED claims for the certificate
+  // read-back): a contact record cannot be written to one, and listing it would take the lone auto-pick away from the one
+  // live claim (code review round 2, 2026-10-08).
+  const claims = (claimsQ.data?.member_id === memberId ? claimsQ.data.claims : []).filter((c) => c.claim_state !== 'closed');
   const [picked, setPicked] = useState<string | null>(null);
   const lone = claims.length === 1 ? claims[0]!.claim_case_id : null;
   useEffect(() => {

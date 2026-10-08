@@ -19,6 +19,8 @@
 
 import { z } from 'zod';
 
+import { ClaimLifecycleState } from './filing.js';
+
 /** `YYYY-MM-DD`, IST (the `death-certificate.ts` / `nominee-declaration.ts` `DateShape` / `CalendarDate` precedent). */
 const CalendarDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'a YYYY-MM-DD calendar date');
 
@@ -456,7 +458,7 @@ export const HelplineAppealClaimsResponse = z
       z
         .object({
           claim_case_id: z.string().uuid(),
-          claim_state: z.string(),
+          claim_state: ClaimLifecycleState,
           created_at: z.string().datetime(),
           eligibility: HelplineAppealEligibility,
           appeal_until: CalendarDate.nullable(),

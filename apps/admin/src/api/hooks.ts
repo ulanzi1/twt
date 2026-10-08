@@ -2227,6 +2227,9 @@ export function useInitiateAppealOnBehalf(pariwarId: string, memberId: string | 
     mutationFn: (claimCaseId: string) => api.initiateAppealOnBehalf(pariwarId, claimCaseId),
     onSettled: () => {
       void qc.invalidateQueries({ queryKey: helplineAppealClaimsKey(pariwarId, memberId ?? '') });
+      // An appeal moves the claim `denied` → `appeal_stage_1` (live) — the page's certificate and contact cards read
+      // the same member's claims and must ⛔ not keep showing it refused (code review round 2, 2026-10-08).
+      void qc.invalidateQueries({ queryKey: deathCertificateClaimsForMemberKey(pariwarId, memberId ?? '') });
     },
   });
 }

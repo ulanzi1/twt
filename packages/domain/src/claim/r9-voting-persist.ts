@@ -815,6 +815,10 @@ export async function cancelR9VotingSession(
  * those stay in the public writer, which keeps its behaviour. It leaves the `routed_to_r9` row live (the public
  * writer's contract — a corrected session can re-open); the closure writer supersedes that row itself
  * (`supersedeLiveR9Routing`). MUST run under the claim's `r9:` advisory lock. 0 rows ⇒ a concurrent cancel won (409).
+ * ⚠ DELIBERATE (checklist family 9) — bypassing the public writer's actor checks is confined to a caller that already passed
+ * its OWN human-actor gate in the same transaction (today ONE: the RF6 closure, inside a reversal writer behind its route's
+ * appeal key). ⭐ Re-examine when a second caller is added, or when `cancelR9VotingSession` gains a check that is ⛔ not about
+ * WHO acts (code review round 2, 2026-10-08).
  */
 export async function supersedeR9VotingSession(
   db: Db,

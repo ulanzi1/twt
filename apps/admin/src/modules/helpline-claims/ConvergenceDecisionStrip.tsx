@@ -224,9 +224,10 @@ export function ConvergenceDecisionStrip(props: ConvergenceDecisionStripProps): 
               (under appeal included), so a refile is kept apart AUTOMATICALLY — it never lands here against such a
               claim. The note says so, so an operator does ⛔ not expect to rescue a refile by overriding. */}
           <p className="text-sm" data-testid="convergence-override-refile-note">
-            A refile for a death whose earlier claim was refused because the nominee was changed on or after the date
-            of death is always kept as its own claim — it never joins the refused claim, even while that claim is under
-            appeal — and its ground inspection is carried over from the refused claim.
+            While a claim stands refused because the nominee was changed on or after the date of death — under appeal
+            included — a refile for that death is kept as its own claim and never joins the refused claim; its ground
+            inspection is carried over from the refused claim. Once that refusal is overturned on appeal, a new filing
+            joins the overturned claim as before.
           </p>
           <label htmlFor="convergence-override-reason" className="text-sm font-medium">
             Reason (required, ≥ {CONVERGENCE_OVERRIDE_REASON_MIN} chars)

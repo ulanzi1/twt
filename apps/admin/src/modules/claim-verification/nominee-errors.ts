@@ -58,8 +58,9 @@ export function trusteeGroundInspectionRequiredMessage(err: ApiError): string {
  * `verifier_decision.`), worded by its REASON (`appeal_not_filed` | `appeal_open`). ⛔ Never a denial: the claim waits.
  */
 export function suspicionAppealPendingMessage(err: ApiError): string {
-  const reason = (err.details as { reason?: string } | undefined)?.reason ?? 'appeal_open';
-  return t.suspicionRefusal.approvalGate[reason] ?? t.suspicionRefusal.approvalGate.appeal_open!;
+  const reason = (err.details as { reason?: string } | undefined)?.reason;
+  const gate = t.suspicionRefusal.approvalGate;
+  return reason === 'appeal_not_filed' || reason === 'appeal_open' ? gate[reason] : t.suspicionRefusal.approvalGateUnknown;
 }
 
 /**
@@ -69,7 +70,7 @@ export function suspicionAppealPendingMessage(err: ApiError): string {
  */
 export function reasonLockedMessage(err: ApiError): string {
   const reference = (err.details as { held_claim_reference?: string } | undefined)?.held_claim_reference;
-  const held = reference ? `${t.suspicionRefusal.claim} ${reference}` : 'another claim';
+  const held = reference ? `${t.suspicionRefusal.claim} ${reference}` : t.suspicionRefusal.anotherClaim;
   return t.suspicionRefusal.reasonLocked.replace('{held}', held);
 }
 

@@ -42,7 +42,17 @@ describe('Story 6.24a — the closed claim', () => {
 
   it('the family-status view renders a `closed` claim with the SAME words and the helpline (⛔ no upload)', () => {
     const copy = certificateNoticeCopy({ status: 'closed', replacementReason: null, uploadAllowed: false, reassurance: null } as never)
-    expect(copy).toMatchObject({ titleKey: 'closed.title', bodyKey: 'closed.body', showUpload: false, showHelpline: true })
+    expect(copy).toMatchObject({ titleKey: null, bodyKey: 'closed.body', showUpload: false, showHelpline: true })
+    // Code review round 2: the CTA is "Call the helpline" — ⛔ never the upload line (there is nothing to upload).
+    expect(copy.helplineLabelKey).toBe('closed.call')
+    expect(copy.uploadLabelKey).toBeNull()
+  })
+
+  it('code review round 2: the closed screen announces and labels the BODY once — its first sentence IS the title (⛔ read twice)', () => {
+    const src = stripComments(read('app/(claim)/closed-helpline.tsx'))
+    expect(src).toContain('announceForAccessibility(body)')
+    expect(src).toContain('accessibilityLabel={body}')
+    expect(src).not.toContain('`${title}. ${body}`')
   })
 
   it('the screen renders <CallHelplineCTA>, an accessible labelled container, an announcement and a real back handler', () => {

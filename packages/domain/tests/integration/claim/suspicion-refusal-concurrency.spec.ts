@@ -10,7 +10,8 @@
 //          for it, then sees the minted claim and is refused (`SuspicionReasonLockedError`).
 //   RF6 × MINT (`2026-10-08-294` §1) — the reversal writers take the death's INTAKE key first: a reversal and a new
 //          filing for the death in flight together ⇒ the filing is either CLOSED by the reversal (it committed first) or
-//          JOINS the reversed claim (it waited) — ⛔ never a claim minted unseen beside it (code review round 2, D1).
+//          JOINS the reversed claim (it waited; inside the 30-day convergence window only — `-294` §2 (b)) — ⛔ never a
+//          claim minted UNSEEN by the reversal's closure (code review round 2, D1).
 //
 // ⚠ WHY OWN-COMMITTING: a race needs REAL concurrent transactions on SEPARATE pool clients (the per-test BEGIN/ROLLBACK
 // envelope would serialise everything). Each test proves the BLOCKING itself — B is still pending while A holds its key —
@@ -314,7 +315,9 @@ describe.skipIf(!hasDatabase)('Story 6.24a — the per-death serialisations (two
     expect(out.ok, String((out as { error?: unknown }).error)).toBe(true);
     await b.commit();
     const converged = (out as { value: Awaited<ReturnType<typeof tryConverge>> }).value;
-    // ⭐ S no longer stands ⇒ it is a candidate again ⇒ the filing joins it (inside the convergence window).
+    // ⭐ S no longer stands ⇒ it is a candidate again ⇒ the filing joins it — ONLY because S was created moments ago, inside
+    // the 30-day convergence window. An older reversed S is ⛔ not a candidate and the filing mints beside it (`-294` §2 (b),
+    // row `6-28-…`) — §1 closes the race, ⛔ not that.
     expect(converged.minted).toBe(false);
     expect(converged.claimCaseId).toBe(s);
     const count = await onOwnTx(pid, async (c) =>

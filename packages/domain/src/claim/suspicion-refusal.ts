@@ -133,8 +133,9 @@ export function hasSuspicionRefusalAppealLimitPassed(firstSuspicionDecidedAtUtc:
 
 // ── RF1 — the read ───────────────────────────────────────────────────────────────────────────────────
 
-/** Where a standing refusal's appeal is: ⛔ not filed (within 90 days), its time limit passed, open, or upheld at stage 3. */
+/** The four appeal positions as a runtime tuple — the contracts' lockstep test compares its wire enum against it. */
 export const SUSPICION_REFUSAL_APPEAL_POSITIONS = ['not_filed', 'time_limit_passed', 'open', 'upheld_final'] as const;
+/** Where a standing refusal's appeal is: ⛔ not filed (within 90 days), its time limit passed, open, or upheld at stage 3. */
 export type SuspicionRefusalAppealPosition = (typeof SUSPICION_REFUSAL_APPEAL_POSITIONS)[number];
 
 export interface StandingSuspicionRefusal {

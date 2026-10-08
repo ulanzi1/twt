@@ -508,8 +508,9 @@ export async function finalizeAppealOutcome(
   client: pg.PoolClient,
   input: FinalizeAppealPanelInput,
 ): Promise<AppealPanelFinalizeResult> {
-  // ⭐ Story 6.24a RF6 (v1.1) — the per-death REVERSAL key FIRST, before this claim's `appeal:` lock and row (the tally —
-  // and so whether this finalize reverses — is known only under them, so the key is taken on every finalize).
+  // ⭐ Story 6.24a RF6 (v1.1; `2026-10-08-294` §1) — the death's INTAKE key, then the per-death REVERSAL key, FIRST, before
+  // this claim's `appeal:` lock and row (the tally — and so whether this finalize reverses — is known only under them, so
+  // the keys are taken on every finalize).
   await acquireSuspicionReversalLockForClaim(client, input.pariwarId, input.claimCaseId);
   await acquireAppealLock(client, input.pariwarId, input.claimCaseId);
   const db = bindScopedDb(client);

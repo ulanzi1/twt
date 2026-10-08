@@ -1,13 +1,15 @@
 // Story 6.24a (`2026-10-07-292` RF14 (b); AR-61) — the helpline APPEAL card and the appeal controls' 90-day date.
 // The api client module is mocked (the `helpline-certificate-replacement.test.tsx` pattern); the real hooks run.
 
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { HelplineAppealClaimsResponse } from '@twt/contracts';
 import { t } from '@twt/i18n';
 
 import * as api from '../src/api/client.js';
+import { createQueryClient } from '../src/api/hooks.js';
 import { ApiError } from '../src/api/client.js';
 import { AppealStageControls } from '../src/modules/claim-appeal/index.js';
 import { HelplineAppeal } from '../src/modules/helpline-claims/HelplineAppeal.js';
@@ -28,6 +30,14 @@ vi.mock('../src/api/client.js', async () => {
   };
 });
 const mocked = vi.mocked(api);
+
+/** Let any call a click could have queued land BEFORE counting — TanStack runs `mutationFn` asynchronously, so a count read
+ *  synchronously after the click would miss an extra POST (code review round 3). */
+async function settleQueuedWork(): Promise<void> {
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  });
+}
 
 function row(id: string, over: Partial<HelplineAppealClaimsResponse['claims'][number]> = {}): HelplineAppealClaimsResponse['claims'][number] {
   return { claim_case_id: id, claim_state: 'denied', created_at: '2026-09-01T00:00:00.000Z', eligibility: 'can_appeal', appeal_until: null, ...over };
@@ -107,6 +117,7 @@ describe('<HelplineAppeal>', () => {
     // through that window, or a second click would file a duplicate appeal for an already-filed claim.
     expect(fileButton).toBeDisabled();
     fireEvent.click(fileButton);
+    await settleQueuedWork();
     expect(mocked.initiateAppealOnBehalf).toHaveBeenCalledTimes(1);
   });
 
@@ -153,6 +164,7 @@ describe('<HelplineAppeal>', () => {
     // A is STILL in flight — its button must stay disabled though B is now the mutation's latest call.
     expect(screen.getByTestId(`helpline-appeal-file-${CAN}`)).toBeDisabled();
     fireEvent.click(screen.getByTestId(`helpline-appeal-file-${CAN}`));
+    await settleQueuedWork();
     expect(mocked.initiateAppealOnBehalf).toHaveBeenCalledTimes(2);
     resolveB!(ok(OTHER));
     resolveA!(ok(CAN));
@@ -178,6 +190,38 @@ describe('<HelplineAppeal>', () => {
     // CAN's confirmation must survive OTHER's rejection.
     expect(screen.getByTestId('helpline-appeal-filed')).toBeInTheDocument();
     expect(screen.getByTestId(`helpline-appeal-file-${CAN}`)).toBeDisabled();
+  });
+
+  it('code review round 3: a refusal is ⛔ not shown beside a row the refetch now shows UNDER APPEAL (the POST landed; only the response was lost)', async () => {
+    mocked.getHelplineAppealClaims
+      .mockResolvedValueOnce({ member_id: MEMBER_ID, claims: [row(CAN)] })
+      .mockResolvedValue({ member_id: MEMBER_ID, claims: [row(CAN, { claim_state: 'appeal_stage_1', eligibility: 'under_appeal' })] });
+    mocked.initiateAppealOnBehalf.mockRejectedValueOnce(new Error('response lost'));
+    renderWithClient(<HelplineAppeal pariwarId="p1" memberId={MEMBER_ID} identityConfirmed={true} />);
+    fireEvent.click(await screen.findByTestId(`helpline-appeal-file-${CAN}`));
+    await waitFor(() => expect(screen.getByTestId(`helpline-appeal-state-${CAN}`)).toHaveTextContent(resolveEn('helpline.appeal.state.under_appeal')));
+    expect(screen.queryByTestId('helpline-appeal-refused')).not.toBeInTheDocument();
+  });
+
+  it('code review round 3: switching member clears the outcomes — switching BACK ⛔ never brings the old alert back', async () => {
+    const OTHER_MEMBER = '99999999-9999-4999-8999-999999999999';
+    mocked.getHelplineAppealClaims.mockImplementation(async (_p: string, m: string) => ({ member_id: m, claims: [row(m === MEMBER_ID ? CAN : OTHER)] }));
+    mocked.initiateAppealOnBehalf.mockRejectedValueOnce(new ApiError(409, 'appeal.not_denied', 'x'));
+    // ONE provider across the rerenders (`renderWithClient`'s root would be replaced by a bare rerender).
+    const client = createQueryClient();
+    const at = (m: string) => (
+      <QueryClientProvider client={client}>
+        <HelplineAppeal pariwarId="p1" memberId={m} identityConfirmed={true} />
+      </QueryClientProvider>
+    );
+    const view = render(at(MEMBER_ID));
+    fireEvent.click(await screen.findByTestId(`helpline-appeal-file-${CAN}`));
+    expect(await screen.findByTestId('helpline-appeal-refused')).toBeInTheDocument();
+    view.rerender(at(OTHER_MEMBER));
+    expect(await screen.findByTestId(`helpline-appeal-claim-${OTHER}`)).toBeInTheDocument();
+    view.rerender(at(MEMBER_ID));
+    expect(await screen.findByTestId(`helpline-appeal-claim-${CAN}`)).toBeInTheDocument();
+    expect(screen.queryByTestId('helpline-appeal-refused')).not.toBeInTheDocument();
   });
 
   it('the time-limit refusal reads in words (⛔ not a raw code)', async () => {

@@ -139,8 +139,10 @@ describe('RF4 — `claim.closed` (the 36th event)', () => {
   it('⛔ never moves a claim already finally approved, paid or closed (identity)', () => {
     for (const from of ['state_trustee_approved', 'approved', 'settled', 'closed']) expect(closed(from), from).toBe(from);
   });
-  it('⛔ nothing leaves `closed` — EVERY claim event, under every payload shape the reducer branches on (code review round 2)', () => {
-    const payloads = [{}, { outcome: 'approved' }, { outcome: 'denied' }, { decision: 'reversed' }, { decision: 'upheld' }, { to_state: 'approved' }];
+  it('⛔ nothing leaves `closed` — EVERY claim event, under every payload shape the reducer branches on (code review rounds 2–3)', () => {
+    const payloads = [
+      {}, { outcome: 'approved' }, { outcome: 'denied' }, { decision: 'reversed' }, { decision: 'upheld' }, { decision: 'advance' }, { to_state: 'approved' },
+    ];
     expect(CLAIM_EVENT_TYPES.length).toBeGreaterThan(30);
     for (const type of CLAIM_EVENT_TYPES) {
       for (const payload of payloads) {

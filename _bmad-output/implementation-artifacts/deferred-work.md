@@ -4,6 +4,16 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: Story 6.25 merge housekeeping (2026-10-09)
+
+- **6.24a (PR #264) and 6.24b (PR #265) still have ⛔ SHA map** [their story files] — both were REBASE-merged, so the commit SHAs their
+  story files cite are BRANCH SHAs ⛔ on `main` (6.25's story pins a few `main` twins by hand: `-295`…`-298`, the 6.24b build). 6.25 now
+  carries a verified branch → `main` map (subject + `git patch-id --stable` per pair). ⭐ Trigger: any reader who needs a 6.24a / 6.24b
+  citation resolved — build the same map for that story then (the branch heads are gone from `origin`; the pairs are recoverable
+  from the PR's commit list on GitHub).
+
+---
+
 ## Deferred from: code review of story-6.25, ROUND 3 (2026-10-09)
 
 - **0152 (like 0151) grants only `twt_app`; the jobs service login has ⛔ privilege on either table, and RLS / the column-narrowed

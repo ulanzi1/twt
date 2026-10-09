@@ -10,7 +10,8 @@ Every `file:NNN` below is AS OF `b6a63a81`, re-derived by four read-only researc
 pre-pin citations in the copied RF text are kept AS WRITTEN and their current positions are given in `## Re-pin` below.
 Branch SHA cited below as written: `2ada8f7b` (`-293`) ⇒ `main` `c31ae2cf`.
 
-STATUS: `ready-for-dev`. ✅ Task 0's author-commit is DONE — RB1–RB18 committed by `2026-10-08-295` (`a6d55b1d`), alone, before any
+STATUS: `done` (code review 2026-10-09 — 2 decisions resolved by `2026-10-09-297` (`cc474987`), 12 patches applied; ⚠ this line
+read `ready-for-dev` through the build and review — stale, corrected here). ✅ Task 0's author-commit is DONE — RB1–RB18 committed by `2026-10-08-295` (`a6d55b1d`), alone, before any
 code ([[feedback_governance_commits_precede_implementation]]). ✅ `-295` §8 Confirms 1–2 — ANSWERED: the Panel ruled **A on both**
 (`2026-10-09-296`, routing note `6-24b-two-confirms`) — RB13 / RB17 / RB18 stand as built; Row 22's condition (c) is met.
 
@@ -26,7 +27,7 @@ the shipped tree makes a committed detail wrong or unbuildable, the change is PR
 
 # Story 6.24b: The Filing Code and the Texts to the Nominee in Place at the Death — After a Suspicion Refusal, and When an Allowed Appeal Closes Her Claim `[SURFACE]`
 
-Status: review
+Status: done
 
 > ⭐⭐ **WHAT THIS STORY IS, IN ONE PARAGRAPH.** Split from Story 6.24 on 2026-10-07 (BigDev: *"ok, split it"*). While a refusal on suspicion
 > of a post-death nominee change stands (`-239`), the app's **filing code goes to the nominee the District Admin found in place at the
@@ -396,7 +397,10 @@ RB11), ⛔ not a clause conflict. ⛔ No clause on refusal
   `skipped_superseded`; `detail` set ⇒ `error` / `exhausted:recheck_<reason>` (the detail kept in `first_detail`) + an alarm, ids only.
   ⭐ The extension (⛔ in 6.19b, which leaves another job's row alone): another job's `attempting` row PAST `CORRECTION_SEND_LEASE_MS`
   is taken over first (the claim rule), then judged as THIS job's; one still WITHIN the lease ⇒ `held_by_other`, left alone. ⚠ RB15's `no_target` and RB18's exclusion are ⛔ re-check failures — the predicate HELD; they FINISH the slot (a
-  `no_target` row); RB10's no-row rule does ⛔ apply to them. ⚠ Accepted edge: a reclaimed NULL-`detail` row finished `skipped_superseded` blocks that
+  `no_target` row); RB10's no-row rule does ⛔ apply to them. ⚠ **AMENDED 2026-10-09 by `2026-10-09-297` §2** (the text below is
+kept as committed): ANY existing `attempting` row whose re-check fails ⇒ `error` + alarm, ⛔ `skipped_superseded` — so the edge that
+follows is now an ALARMED `error`, and its *"nothing was sent"* was false (a crash after the gateway's accept leaves `detail` NULL).
+⚠ Accepted edge: a reclaimed NULL-`detail` row finished `skipped_superseded` blocks that
   purpose for that claim for good (UNIQUE) — nothing was sent, and a later standing refusal of the SAME claim gets ⛔ no text;
   recorded, ⛔ not engineered around.
 - **RB11 — the go-live records (F34).** ONE new roster row (Row 22, counsel's basis for all three texts — ⛔ not Row 18 / 19) whose
@@ -524,7 +528,8 @@ re-texts; a non-`effective` determination (final for a standing or closed claim 
 unresolvable member name records `no_target`; a crash after the claiming commit is reclaimed by the next run (also once its predicate
 has turned false — the selector returns any claim with an `attempting` row) and given up only after three IST days (RB3); a row whose
 locked re-check fails follows RB10's one rule (`detail` NULL ⇒ `skipped_superseded`; set ⇒ `error` / `exhausted:recheck_<reason>` +
-alarm). ⚠ Delivery is at-least-once
+alarm). ⚠ **AMENDED 2026-10-09 by `2026-10-09-297` §2:** ANY existing `attempting` row whose re-check fails ⇒ `error` /
+`exhausted:recheck_<reason>` + alarm — ⛔ `skipped_superseded` (a NULL `detail` does ⛔ not prove nothing was sent). ⚠ Delivery is at-least-once
 (RB3) — recorded in `attempt_count` / `first_detail`, ⛔ never hidden. **With the DLT template ids unset** (as shipped), the send fails closed — ⛔ never a send on a
 wrong template — the SWEEP's config check finds it, enqueues and writes ⛔ nothing, and its ONE end-of-run alarm lists the claim (the
 child's own check is a race guard); **when the ids are
@@ -702,7 +707,9 @@ verified BY NAME on each ([[project_live_db_test_gotchas]]).
   - [x] 4.6 Domain integration specs (`packages/domain/tests/integration/claim/suspicion-notice.spec.ts`): each selector incl. `allow`
     (a reversed S, a `closed` R, an appeal filed, a refusal ≥ 1 day either side of its 90-day limit — the ±1 ms boundary is 6.24a's
     `hasSuspicionRefusalAppealLimitPassed` test, ⛔ re-run here: the statement clock cannot be injected); the locked re-check (revise
-    away between selection and lock — two connections, COMMITTED txns [[project_db_clock_ordering_tests_tie]]); RB10's re-check rule
+    away between selection and lock — two connections, COMMITTED txns [[project_db_clock_ordering_tests_tie]] — ⚠ built in ONE
+    transaction while ticked; the two-connection leg + a true N-children race + the give-up race were ADDED by the 2026-10-09 code
+    review in `suspicion-notice-concurrency.spec.ts`); RB10's re-check rule
     (NULL and set `detail`; another job's row past and within the lease); a row whose predicate turned false is still selected and
     finished; RB15's as-of read (the half-open boundary at `occurred_at`; S redetermined AFTER the closure ⇒ still the as-of rank 1;
     a corrected rank-1 entry ⇒ its chain head; ⛔ effective ⇒ a finished `no_target:closed_no_determination` row + `{ kind: 'no_target' }`); RB18's exclusion under the lock, after RB15
@@ -797,6 +804,75 @@ verified BY NAME on each ([[project_live_db_test_gotchas]]).
   - [x] 7.5 AC9b proved: `git diff --exit-code origin/main -- apps/mobile apps/public apps/jobs/src/scheduler/claim-correction-sms-templates.ts
     apps/jobs/tests/claim-correction-sms-templates.test.ts apps/jobs/tests/claim-correction-send.test.ts` is empty; the permission
     pins (`permissions.test.ts`) unchanged; `HandoverOtpResponse`'s schema unchanged.
+
+### Review Findings
+
+> Code review 2026-10-09 (`bmad-code-review`, full diff `b6a63a81..53b5d548`, code + docs; three layers in PARALLEL, read-only — the tree
+> verified clean after). Triage: **2 decision-needed, 10 patch, 2 defer, 10 dismissed**; both decisions resolved by `-297` (`cc474987`) ⇒ **12 patch**. §0 gate applied: ⛔ neither decision is the
+> Panel's — both are the author's (a committed RB / a roster row of an author-commit). Dismissed (each re-traced, ⛔ not taken on the
+> layer's word): the (c) date after a chain restart (`-293` itself: *"a new chain and a new 90 days but ⛔ no second text"*); (b)/(c)
+> to the chain head (RB7, RB15); the handover-OTP / elevation windows (Task 2.4, recorded); RB9's 500; `no_target` on a first run
+> (each cause is final — F37, a deceased's absent KYC name, and a refused claim is in ⛔ neither contact-writable set); (b) churn on a
+> missing `held_by_claim_case_id` (required by the payload schema); a null `appealUntil` / foreign locale (unreachable — RF14 row, DB
+> CHECK); the Drizzle FK name (0128 / 0138's precedent; ⛔ no drizzle-kit snapshot past 0020); sweep starvation by held claims (bound
+> 20 000, refusals rare, the bound alarms); the re-export binding (typecheck).
+
+- [x] [Review][Decision] ✅ RESOLVED 2026-10-09 by `-297` §1 (BigDev *"D1 - 1"* — option A) ⇒ a patch below. **Row 22 does ⛔ not carry `-296` Confirm 2 A's basis (an alarm that reaches staff)** — `-296` accepted the
+  RB13 / RB18 narrowings *because "each such skip raises an alarm to staff"*; the alarm is `console.warn` (`boot.ts` passes ⛔ no
+  `onAlarm`), and the trigger to fix it lives ONLY in `deferred-work.md` (*"before Row 22 closes"*). Row 22's closure_criteria list
+  (a)–(c), and (c) is MET — so Row 22 can close, the ids be set and the texts go live while the alarm reaches ⛔ no one: the condition
+  sits in the un-mechanized half ([[feedback_mechanization_split_commitment]]). Options: (A) a new author-commit adds criterion (d) to
+  Row 22 — an owner named + `onAlarm` wired for this sweep (or 8.14's system-wide item closed); (B) wire a transport now, in this story;
+  (C) leave it as the deferred trigger. Recommended: A.
+- [x] [Review][Decision] ✅ RESOLVED 2026-10-09 by `-297` §2 (BigDev *"D2 - 1"* — option A) ⇒ a patch below. **RB10 / K4's *"`detail` NULL ⇒ nothing was sent"* is false after a crash between the gateway's accept and the
+  finalise** — `beginSuspicionNotice` (`suspicion-notice.ts:500`) judges *"may have sent"* by `detail !== null`, but `detail` is written
+  only by a TRANSIENT failure. Gateway accepts → the process dies (or `finaliseSuspicionNotice` throws) → the row stays `attempting`,
+  `detail` NULL; the next run's locked re-check fails (refusal revised off) ⇒ `skipped_superseded`, ⛔ no alarm — the record says
+  nothing went when a text did. `-295` RB10's recorded edge rests on the same false premise. Inherited from 6.19b's K4 (the same rule in
+  `correction-reminder-record.ts` / `certificate-reminder-record.ts`). Options: (A) a new author-commit amends RB10: ANY existing
+  `attempting` row whose re-check fails ⇒ `error` / `exhausted:recheck_<reason>` + alarm (a claiming commit happened, so a send may
+  have) — 6.19b's K4 left as a deferred item; (B) the same, extended to 6.19b's two records now; (C) accept and record the edge
+  honestly (RB10's *"nothing was sent"* corrected). Recommended: A.
+- [x] [Review][Patch] **`-297` §1 — Row 22 gains closure condition (d)** (the alarm reaches a named owner through a real transport;
+  Row 22 ⛔ closes, the ids of templates 7–12 stay unset, until it is met); the `-296` deferred item points to it.
+  [docs/launch-gate-inventory/inventory-roster.md:378]
+- [x] [Review][Patch] **`-297` §2 — ANY existing `attempting` row whose locked re-check fails ⇒ `error` / `exhausted:recheck_<reason>` +
+  alarm** (⛔ `skipped_superseded`); the K4 tests re-pinned; RB10 / AC7b gain a dated `⚠ AMENDED by -297` note; a deferred item for
+  6.19b's K4. [packages/domain/src/claim/suspicion-notice.ts:500]
+- [x] [Review][Patch] **AC7b's legs for purposes (b) and (c) are missing though Task 5.4 is ticked** — ⛔ (c): second-run, revised-away,
+  away-and-back, after-upheld; ⛔ (b): the accepted path's second run. Only (a) has them. [apps/jobs/tests/claim-suspicion-notices-live.test.ts:364]
+- [x] [Review][Patch] **Family 2 REAL GAP — ⛔ no true two-connection race; Task 4.6's specified leg was replaced by one transaction while
+  ticked** — race two children on one (claim, purpose), separate COMMITTED connections: exactly one row / one send, N−1 `held_by_other`
+  or `already_final`; and select → revise → begin across connections. [packages/domain/tests/integration/claim/suspicion-notice.spec.ts:370]
+- [x] [Review][Patch] **The give-up races a live child and the losing UPDATEs report outcomes they never wrote** — `expireExhaustedSuspicionNotices`
+  keys on `created_at` only (⛔ lease / `claimed_at` guard), so a day-3 reclaim mid-send is set `error` under it; `beginSuspicionNotice`'s
+  skipped / `no_target` UPDATEs ignore `rowCount` and return their kind anyway ⇒ a wrong alarm. Add the lease guard; `rowCount === 0`
+  ⇒ `already_final`; align the module header's *"attempting since"* wording. [packages/domain/src/claim/suspicion-notice.ts:210]
+- [x] [Review][Patch] **The expired-recheck alarm prints the literal `exhausted:recheck_…`** — carry the reason in the `skipped` result and
+  print it. [apps/jobs/src/scheduler/claim-suspicion-notices.ts:320]
+- [x] [Review][Patch] **The no-decision fence matches function NAMES only, and its "planted writer" control is a tautology** — add the
+  raw-SQL writes (`INSERT INTO events_log`, `claim_verifier_decisions`, `UPDATE claims … current_state`) and make the control scan a
+  mutated copy of the real module. [apps/jobs/tests/claim-suspicion-notice-no-decision.test.ts:73]
+- [x] [Review][Patch] **Vacuous assertions** — the keyset test's `expect(lo).toBeDefined()` never proves both claims appear across the two
+  pages; `expect(s/v1).toBeDefined()` are filler. [packages/domain/tests/integration/claim/suspicion-notice.spec.ts:329]
+- [x] [Review][Patch] **The live suite's HELD assertions are order-dependent** — one shared `PARIWAR`; held claims leave ⛔ no row and pile
+  up; the alarm samples 5 ids ⇒ a later test's `includes(s)` flips as tests are added. Give the held legs their own Pariwar.
+  [apps/jobs/tests/claim-suspicion-notices-live.test.ts:532]
+- [x] [Review][Patch] **Family 9 — the cross-tenant bypass blocks carry ⛔ no re-examination trigger; the three selectors carry ⛔ no
+  DELIBERATE block** (6.19b's `claim-correction-reminders.ts` block is the form). [apps/jobs/src/scheduler/claim-suspicion-notices.ts:173]
+- [x] [Review][Patch] **Small test / doc gaps** — the recipient spec header claims a *"revision off `-239` ⇒ null"* leg it lacks; AC6b
+  stringifies only the filtered `handover_otp_send` lines (⛔ every captured audit event); the empty / production allowlist refusals
+  untested; the transient Secret-Manager leg asserts ⛔ no RB12 alarm; `DueSuspicionNotice`'s doc names `chainStartedAt` / `clock` it
+  lacks. [packages/domain/tests/integration/claim/suspicion-refusal-recipient.spec.ts:4]
+- [x] [Review][Patch] **Closure language stale after `-296`** — the header comment's `STATUS: ready-for-dev`; Completion Notes'
+  *"Owed … `-295` §8 Confirms 1–2"* (discharged); roster Row 22 notes frame RB17's confirm as pending (Confirm 1 A answered it).
+  [docs/launch-gate-inventory/inventory-roster.md:384]
+- [x] [Review][Defer] **`recipient_number_hash` survives the deceased's erasure** [packages/domain/src/member/anonymize.ts:297] — deferred,
+  pre-existing (0128 / 0138 keep theirs the same way); the hash is the NOMINEE's / claimant's number, ⛔ the erased member's — but GI13
+  nulls a keyed hash on the same rationale, so the exemption is owed a recorded reason.
+- [x] [Review][Defer] **`{member}` has ⛔ no length guard against the operator's DLT per-variable limit** [apps/jobs/src/scheduler/claim-suspicion-notices.ts:361]
+  — deferred, ⛔ not pre-existing but blocked on an external fact (the operator's limit is ⛔ in the repo); a provider mismatch spends the
+  once-ever slot as `error` + alarm. ⭐ Trigger: provisioning templates 7–12 (Row 22).
 
 ## Dev Notes
 
@@ -943,6 +1019,14 @@ Claude Opus 5.5 (1M context) — `bmad-dev-story 6.24b`, 2026-10-08.
   RAW determinations (0119-era, trusted as effective — RF9).
 - ⚠ **Owed, ⛔ blocking the build** (unchanged): `-295` §8 Confirms 1–2 to the next Panel routing note (Row 22's (c)); Rows 22 / 23 open;
   the DLT ids stay UNSET ⇒ every notice is HELD and alarmed until go-live (RB12).
+  ⭐ **2026-10-09:** Confirms 1–2 DISCHARGED by `-296` (A on both); Row 22 gained condition **(d)** by `-297` §1 (the alarm reaches a
+  named owner) ⇒ Row 22 is open on (a), (b) and (d); Row 23 open; the DLT ids stay UNSET.
+- ⭐ **Code review 2026-10-09** (three layers in parallel, read-only): 2 decisions → `-297` (committed alone, `cc474987`); 12 patches
+  applied (see Review Findings). Red-checked: the give-up's lease guard and the losing UPDATE's `rowCount` (both legs red with the
+  guard removed); `-297` §2 (three legs red with the NULL-`detail` ⇒ `skipped_superseded` rule restored). Runs on :5433: domain
+  `tests/integration/claim` + `tests/claim` + the policy regression 1344 / 1344; jobs 641 / 641; the API spec 14 / 14; typecheck +
+  lint clean (domain, jobs, api). The new race spec first FAILED on its own fixture (a loser holds the claim row until its tx ends —
+  committed in turn, fixed in the test).
 
 ### File List
 
@@ -954,6 +1038,7 @@ Claude Opus 5.5 (1M context) — `bmad-dev-story 6.24b`, 2026-10-08.
 - `packages/domain/tests/integration/rls/claim-suspicion-notice-policy-regression.spec.ts`
 - `packages/domain/tests/integration/claim/suspicion-refusal-recipient.spec.ts`
 - `packages/domain/tests/integration/claim/suspicion-notice.spec.ts`
+- `packages/domain/tests/integration/claim/suspicion-notice-concurrency.spec.ts` (code review 2026-10-09)
 - `apps/api/tests/integration/claims/handover-otp-suspicion.spec.ts`
 - `apps/jobs/src/scheduler/claim-dlt-sms-send.ts`
 - `apps/jobs/src/scheduler/suspicion-notice-sms-templates.ts`
@@ -983,6 +1068,7 @@ Claude Opus 5.5 (1M context) — `bmad-dev-story 6.24b`, 2026-10-08.
 
 | Version | Date | Change |
 |---|---|---|
+| 2.5 | 2026-10-09 | ⭐ **CODE REVIEW ⇒ `done`.** `bmad-code-review 6.24b` (full diff `b6a63a81..53b5d548`; Blind Hunter, Edge Case Hunter, Acceptance Auditor in parallel, read-only): 2 decision-needed, 10 patch, 2 defer, 10 dismissed. BigDev *"D1 - 1, D2 - 1"* ⇒ `2026-10-09-297` (author-commit, alone, `cc474987`): §1 Row 22 gains closure condition (d) — `-296` Confirm 2 A's alarm must reach a named owner; §2 RB10 amended — ANY existing `attempting` row whose re-check fails ⇒ `error` + alarm (a NULL `detail` does ⛔ not prove nothing went). 12 patches applied: `-297` §1–§2 built; the give-up's lease guard + `rowCount` on the losing UPDATEs; the alarm prints its detail; DELIBERATE blocks with RE-EXAMINE triggers; the no-decision fence catches raw writes, with a real planted control; AC7b's (b)/(c) legs and the upheld-appeal leg; a two-connection race spec; vacuous asserts replaced; held-alarm tests isolated; allowlist refusals, the transient-fault alarm, AC6b over every audit event, the revision-off recipient leg; stale lines dated. 2 deferred (`recipient_number_hash` on erasure; `{member}` vs the DLT variable limit) + 6.19b's K4 recorded. The RB block and the copied RF text are unedited (dated `⚠ AMENDED` notes only). |
 | 2.4 | 2026-10-09 | ✅ **`-295` §8 Confirms 1–2 ANSWERED — `2026-10-09-296` (Trustee-ratified, DR + KB): Confirm 1 A, Confirm 2 A.** Put by the standalone routing note `trustee-panel-routing-note-2026-10-09-6-24b-two-confirms.md` (`57a65f55`; one fresh-context check, all findings applied). RB13 / RB17 / RB18 stand as built — ⛔ no code change. Roster Row 22 condition (c) met; the row stays `open` on (a) counsel and (b) the privacy-policy revision. Only the header's owed-line is updated; the RB block is unedited. Status stays `review`. |
 | 2.3 | 2026-10-08 | ⭐ **DEV-STORY COMPLETE ⇒ `review`.** Tasks 1–7 built: migration 0151 + RLS; RF9's filing code to the nominee in place at the death (`readSuspicionRefusalRecipient`, `noOp(recipient)`, the audit `recipient`); the shared DLT send core (6.19b/c/d tests unedited); the sibling registry + `suspicion_sms.*`; the domain's `suspicion-notice.ts` and the jobs sweep + child for all three purposes; DLT templates 7–12, roster Rows 22–23, a friction-budget row, two deferred items. Every load-bearing test red-checked. `ci:local` 34/34 (run 1 caught a `created_at` tie in this story's own spec — fixed in the test). ⛔ The copied RF text and the RB block are unedited. |
 | 2.2 | 2026-10-08 | ✅ **Task 0 DONE.** Task 0.2: BigDev answered every RB as recommended. Task 0.3: `2026-10-08-295` committed ALONE (`a6d55b1d`) after three fresh-context rounds on the draft (1 BLOCKER + 2 HIGH → 1 HIGH → 0); the blocker — RB18 (residuals ii–iii) and RB13 narrow WHEN a ratified text goes — was put back to BigDev (*"Keep + Panel confirm"*) ⇒ `-295` §8 Confirm 2, answered before Row 22 closes. Task 0.4: the RB block records the answers; per `-295` Consequence 1, RB11, RB13, RB18, AC7b and Task 6.3 gain Confirm 2 / Row 22's closure item (c); RB17's precedent cite corrected to `-284` E5. |

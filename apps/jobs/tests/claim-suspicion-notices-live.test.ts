@@ -1,7 +1,9 @@
 // The SUSPICION NOTICES — the sweep and the child against the live DB (Story 6.24b, Task 5.4; AC7b; `2026-10-07-292` RF11 /
 // RF12, `2026-10-07-293` item 1 B, `2026-10-08-295` RB3, RB5, RB10, RB12, RB13, RB15, RB18). Own-committing (the sweep
 // reads COMMITTED rows across tenants), an INJECTED clock, a fake SMS gateway and a capturing queue. ⭐ ISOLATED: every
-// sweep runs with `pariwarAllowlist` = this suite's own random Pariwars. ⭐ REAL envelopes: the nominee / claimant mobiles
+// sweep runs with `pariwarAllowlist` = this suite's own random Pariwars — and every test that asserts a HELD alarm runs in
+// a Pariwar of its OWN (`isolated()`): a held claim writes ⛔ row, so it stays due for every later sweep of a shared
+// Pariwar, and the alarm samples only five ids. ⭐ REAL envelopes: the nominee / claimant mobiles
 // and the deceased's KYC name are encrypted under the SAME fake-KMS deps the child decrypts with. Assertions key on OUR
 // claim ids (membership, ⛔ never counts of the shared tables).
 //
@@ -255,7 +257,10 @@ describe.skipIf(!hasDatabase)('Story 6.24b — the suspicion notices (live DB, o
     setNow: (d: Date) => void;
     configured: { value: boolean };
   }
-  function harness(o: { gateway?: (m: SmsGatewayMessage) => Promise<string>; config?: Record<string, string | null>; resolveConfig?: (key: string) => Promise<string | null> } = {}): Harness {
+  /** A fresh Pariwar of the test's OWN — its sweeps see ⛔ other test's held claims. */
+  const isolated = (): string => randomUUID();
+
+  function harness(o: { gateway?: (m: SmsGatewayMessage) => Promise<string>; config?: Record<string, string | null>; resolveConfig?: (key: string) => Promise<string | null>; allow?: readonly string[] } = {}): Harness {
     const enqueued: Harness['enqueued'] = [];
     const sent: SmsGatewayMessage[] = [];
     const alarms: string[] = [];
@@ -280,12 +285,12 @@ describe.skipIf(!hasDatabase)('Story 6.24b — the suspicion notices (live DB, o
         (async (key) => {
           if (key in config) return config[key]!;
           if (key.startsWith('sms.dlt.template_id.suspicion_notice.')) return 'TPL-SUSPICION';
-          if (key === `sms.claim_correction.helpline_number.${PARIWAR}` || key === `sms.claim_correction.helpline_number.${SHIELDED}`) return HELPLINE;
+          if (key.startsWith('sms.claim_correction.helpline_number.')) return HELPLINE;
           return null;
         }),
       now: () => now,
       onAlarm: (m) => alarms.push(m),
-      pariwarAllowlist: [PARIWAR, SHIELDED],
+      pariwarAllowlist: [...(o.allow ?? [PARIWAR, SHIELDED])],
     };
     return { deps, enqueued, sent, alarms, config, configured, setNow: (d) => (now = d) };
   }
@@ -452,6 +457,36 @@ describe.skipIf(!hasDatabase)('Story 6.24b — the suspicion notices (live DB, o
     expect(textsTo(h, CLAIMANT)).toEqual([]);
   });
 
+  it('(c) a second run sends ⛔ nothing; a revision away and BACK (a new chain, a new 90 days) ⛔ never re-texts (`-293`)', async () => {
+    const d = await seedDeath();
+    const s = await refusedS(d);
+    await contact(d, s, { linked: null });
+    const h = harness();
+    await tick(h, [s]);
+    expect(textsTo(h, CLAIMANT)).toHaveLength(1);
+    await tick(h, [s]);
+    expect(textsTo(h, CLAIMANT)).toHaveLength(1);
+    await reviseOff(d, s);
+    await reviseOff(d, s, 'post_death_nominee_change');
+    await tick(h, [s]);
+    expect(childrenFor(h, s, 'refusal_appeal_notice')).toEqual([]);
+    expect(textsTo(h, CLAIMANT)).toHaveLength(1);
+    expect((await rowsOf(s)).filter((r) => r.purpose === 'refusal_appeal_notice')).toMatchObject([{ outcome: 'accepted', attempt_count: 1 }]);
+  });
+
+  it('(c) a refusal revised away AFTER the sweep enqueued but BEFORE the child ⇒ ⛔ text, ⛔ row (a FRESH claim)', async () => {
+    const d = await seedDeath();
+    const s = await refusedS(d);
+    await contact(d, s, { linked: null });
+    const h = harness();
+    await runSuspicionNoticeSweep(h.deps, boss(h));
+    const [child] = childrenFor(h, s, 'refusal_appeal_notice');
+    await reviseOff(d, s);
+    expect(await runSuspicionNoticeChild(h.deps, child!.data, randomUUID())).toEqual({ status: 'skipped', reason: 'not_due' });
+    expect((await rowsOf(s)).filter((r) => r.purpose === 'refusal_appeal_notice')).toEqual([]);
+    expect(textsTo(h, CLAIMANT)).toEqual([]);
+  });
+
   // ── (b) `-291` Q2 B — the closure text ─────────────────────────────────────────────────────────────────────────
 
   it('⭐ (b) R closed BEFORE its own determination ⇒ texted at S\'s as-of rank 1 (A); S re-determined to the post-death nominee afterwards ⇒ STILL A', async () => {
@@ -468,6 +503,9 @@ describe.skipIf(!hasDatabase)('Story 6.24b — the suspicion notices (live DB, o
     expect(closure[0]!.to.endsWith(A)).toBe(true);
     expect(closure[0]!.body).toBe(`${NAME} के लिए आपका दावा बंद कर दिया गया है। कृपया हेल्पलाइन ${HELPLINE} पर कॉल करें।`);
     expect((await rowsOf(r)).find((x) => x.purpose === 'closed_after_appeal')).toMatchObject({ outcome: 'accepted', recipient_version_id: d.v1 });
+    // A second run: ⛔ second closure text (the finished row).
+    await tick(h, [r, s]);
+    expect(h.sent.filter((m) => m.body.includes('बंद कर दिया गया है'))).toHaveLength(1);
   });
 
   it('⭐ RB18 — a closed claim filed by the POST-DEATH nominee ⇒ a `no_target` row + ONE alarm, ⛔ text; silent on the second run', async () => {
@@ -523,9 +561,10 @@ describe.skipIf(!hasDatabase)('Story 6.24b — the suspicion notices (live DB, o
   // ── RB12 — a missing config never uses up the slot ──────────────────────────────────────────────────────────
 
   it('⭐ the template id UNSET (as shipped) ⇒ the sweep enqueues ⛔ child, writes ⛔ row, ONE end-of-run alarm naming the claim; set ⇒ sent next run', async () => {
-    const d = await seedDeath();
+    const own = isolated();
+    const d = await seedDeath({ pariwarId: own });
     const s = await refusedS(d);
-    const h = harness({ config: { 'sms.dlt.template_id.suspicion_notice.refusal_notice.hi': null } });
+    const h = harness({ config: { 'sms.dlt.template_id.suspicion_notice.refusal_notice.hi': null }, allow: [own] });
     await tick(h, [s]);
     expect(childrenFor(h, s, 'suspicion_refusal')).toEqual([]);
     expect((await rowsOf(s)).filter((r) => r.purpose === 'suspicion_refusal')).toEqual([]);
@@ -536,47 +575,74 @@ describe.skipIf(!hasDatabase)('Story 6.24b — the suspicion notices (live DB, o
   });
 
   it('`appeal_notice` with ONE locale\'s id unset ⇒ held (both are checked — its locale is known only under the lock)', async () => {
-    const d = await seedDeath();
+    const own = isolated();
+    const d = await seedDeath({ pariwarId: own });
     const s = await refusedS(d);
     await contact(d, s, { locale: 'hi' });
-    const h = harness({ config: { 'sms.dlt.template_id.suspicion_notice.appeal_notice.en': null } });
+    const h = harness({ config: { 'sms.dlt.template_id.suspicion_notice.appeal_notice.en': null }, allow: [own] });
     await tick(h, [s]);
     expect(childrenFor(h, s, 'refusal_appeal_notice')).toEqual([]);
     expect((await rowsOf(s)).filter((r) => r.purpose === 'refusal_appeal_notice')).toEqual([]);
   });
 
   it.each([
-    ['the helpline number missing', (h: Harness) => (h.config[`sms.claim_correction.helpline_number.${PARIWAR}`] = null)],
+    ['the helpline number missing', (h: Harness, own: string) => (h.config[`sms.claim_correction.helpline_number.${own}`] = null)],
     ['the gateway unconfigured', (h: Harness) => (h.configured.value = false)],
   ])('%s ⇒ held, ⛔ row, the alarm', async (_label, gap) => {
-    const d = await seedDeath();
+    const own = isolated();
+    const d = await seedDeath({ pariwarId: own });
     const s = await refusedS(d);
-    const h = harness();
-    gap(h);
+    const h = harness({ allow: [own] });
+    gap(h, own);
     await tick(h, [s]);
     expect(childrenFor(h, s)).toEqual([]);
     expect(await rowsOf(s)).toEqual([]);
     expect(h.alarms.some((a) => a.includes('HELD') && a.includes(s))).toBe(true);
   });
 
-  it('a TRANSIENT Secret Manager fault ⇒ held too (⛔ a slot spent on it)', async () => {
-    const d = await seedDeath();
+  it('a TRANSIENT Secret Manager fault ⇒ held too (⛔ a slot spent on it), and RB12\'s end-of-run alarm names the claim', async () => {
+    const own = isolated();
+    const d = await seedDeath({ pariwarId: own });
     const s = await refusedS(d);
     const h = harness({
       resolveConfig: async (key) => {
         if (key.startsWith('sms.dlt.template_id.suspicion_notice.')) throw Object.assign(new Error('unavailable'), { code: 14 });
         return HELPLINE;
       },
+      allow: [own],
     });
     await tick(h, [s]);
     expect(childrenFor(h, s)).toEqual([]);
     expect(await rowsOf(s)).toEqual([]);
+    expect(h.alarms.filter((a) => a.includes('HELD') && a.includes(s))).toHaveLength(1);
+  });
+
+  it.each([
+    ['EMPTY', true, false],
+    ['set while NODE_ENV is production', false, true],
+  ])('the Pariwar allowlist %s ⇒ the sweep REFUSES — ⛔ give-up, ⛔ enqueue, ONE alarm', async (_label, empty, production) => {
+    const own = isolated();
+    const d = await seedDeath({ pariwarId: own });
+    const s = await refusedS(d);
+    const h = harness({ allow: empty ? [] : [own] });
+    const before = process.env['NODE_ENV'];
+    if (production) process.env['NODE_ENV'] = 'production';
+    try {
+      expect(await runSuspicionNoticeSweep(h.deps, boss(h))).toMatchObject({ scannedClaims: 0, enqueued: 0, finalisedStuck: 0 });
+    } finally {
+      if (before === undefined) delete process.env['NODE_ENV'];
+      else process.env['NODE_ENV'] = before;
+    }
+    expect(h.enqueued).toEqual([]);
+    expect(h.alarms.filter((a) => a.includes('REFUSED'))).toHaveLength(1);
+    expect(await rowsOf(s)).toEqual([]);
   });
 
   it('config VANISHING between the sweep\'s check and the child\'s ⇒ `held_config`, ⛔ row, an alarm', async () => {
-    const d = await seedDeath();
+    const own = isolated();
+    const d = await seedDeath({ pariwarId: own });
     const s = await refusedS(d);
-    const h = harness();
+    const h = harness({ allow: [own] });
     await runSuspicionNoticeSweep(h.deps, boss(h));
     const [child] = childrenFor(h, s, 'suspicion_refusal');
     h.config['sms.dlt.template_id.suspicion_notice.refusal_notice.hi'] = null;

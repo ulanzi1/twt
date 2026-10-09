@@ -2,8 +2,11 @@
 //
 //   · the three selectors (RB10) — the predicate, "⛔ FINISHED row" (⛔ "⛔ row"), a claim with an `attempting` row ALWAYS
 //     returned, (b) by the EVENT's trigger (⛔ the state alone), (c)'s prefilter + the TS 90 days, `allow`, the page cap;
-//   · the locked re-check and RB10's ONE rule (a FRESH claim ⇒ ⛔ row; NULL `detail` ⇒ `skipped_superseded`; set ⇒ `error`;
-//     another job's row past the lease taken over, within it `held_by_other`; the lease ± 1 ms); once-ever;
+//   · the locked re-check and RB10's ONE rule AS AMENDED BY `2026-10-09-297` §2 (a FRESH claim ⇒ ⛔ row; ANY existing
+//     `attempting` row ⇒ `error` / `exhausted:recheck_<reason>` — a NULL `detail` too, ⛔ `skipped_superseded`; another
+//     job's row past the lease taken over, within it `held_by_other`; the lease ± 1 ms); once-ever; the give-up's lease
+//     guard; (c) after an UPHELD appeal and a revision away and back ⇒ ⛔ text. The TRUE two-connection races are in
+//     `suspicion-notice-concurrency.spec.ts`;
 //   · the recipients — (a) RF9's rank 1; (b) RB15's as-of read (the half-open boundary, a later re-determination of S, a
 //     corrected entry's chain head, ⛔ effective ⇒ a finished `no_target` row) and RB18's exclusion under the lock; (c)
 //     RB7's refused filer on both claimant sides, a corrected head and a FORKED chain, ⛔ contact ⇒ unresolved.
@@ -42,7 +45,7 @@ import {
   seedClaim,
   seedNomineeDeclaration,
 } from '../_helpers.js';
-import { openAppeal, refusedClaim, reverseAtStage1 } from './_suspicion-refusal-fixtures.js';
+import { appealAtStage, openAppeal, refusedClaim, reverseAtStage1, seedAppealPanel, stage3 } from './_suspicion-refusal-fixtures.js';
 
 type Client = ReturnType<typeof getTx>['client'];
 
@@ -321,12 +324,19 @@ describe.skipIf(!hasDatabase)('Story 6.24b — the suspicion notices, domain (:5
       const { client } = getTx();
       const a = await refusedClaim(client, PARIWAR_A, randomUUID(), { ground: true });
       const b = await refusedClaim(client, PARIWAR_A, randomUUID(), { ground: true });
-      const [lo] = [a, b].sort();
-      const page = await selectDueSuspicionNotices(client, { purpose: 'suspicion_refusal', after: null, limit: 1, allow: ALLOW });
-      expect(page.scanned).toBe(1);
-      const next = await selectDueSuspicionNotices(client, { purpose: 'suspicion_refusal', after: page.lastClaimCaseId, limit: 1, allow: ALLOW });
-      expect(next.lastClaimCaseId! > page.lastClaimCaseId!).toBe(true);
-      expect(lo).toBeDefined();
+      // Page ONE claim at a time to the end: every page holds one, the cursor strictly rises, and BOTH claims are seen.
+      const seenIds: string[] = [];
+      let after: string | null = null;
+      for (;;) {
+        const page = await selectDueSuspicionNotices(client, { purpose: 'suspicion_refusal', after, limit: 1, allow: ALLOW });
+        if (page.lastClaimCaseId === null) break;
+        expect(page.scanned).toBe(1);
+        if (after !== null) expect(page.lastClaimCaseId > after).toBe(true);
+        seenIds.push(...page.due.map((d) => d.claimCaseId as string));
+        after = page.lastClaimCaseId;
+      }
+      expect(seenIds).toEqual(expect.arrayContaining([a, b]));
+      expect(new Set(seenIds).size).toBe(seenIds.length);
     });
   });
 
@@ -376,18 +386,18 @@ describe.skipIf(!hasDatabase)('Story 6.24b — the suspicion notices, domain (:5
       expect(await noticeOf(client, s, 'suspicion_refusal')).toEqual([]);
     });
 
-    it('⭐ K4 extended — own `attempting` row: NULL detail ⇒ `skipped_superseded`; a detail ⇒ `error` / `exhausted:recheck_…` + expiredAttempt', async () => {
+    it('⭐ `-297` §2 — own `attempting` row whose re-check fails ⇒ ALWAYS `error` / `exhausted:recheck_…` — a NULL detail too (a crash after the gateway\'s accept leaves it NULL)', async () => {
       const { client } = getTx();
       const quiet = await refusedClaim(client, PARIWAR_A, randomUUID(), { ground: true });
       await reviseOff(client, quiet);
       await attemptingRow(client, quiet, 'suspicion_refusal');
-      expect(await begin(client, quiet, 'suspicion_refusal')).toEqual({ kind: 'skipped', expiredAttempt: false });
-      expect(await noticeOf(client, quiet, 'suspicion_refusal')).toMatchObject([{ outcome: 'skipped_superseded', detail: 'not_standing' }]);
+      expect(await begin(client, quiet, 'suspicion_refusal')).toEqual({ kind: 'expired', detail: 'exhausted:recheck_not_standing' });
+      expect(await noticeOf(client, quiet, 'suspicion_refusal')).toMatchObject([{ outcome: 'error', detail: 'exhausted:recheck_not_standing', first_detail: null }]);
 
       const tried = await refusedClaim(client, PARIWAR_A, randomUUID(), { ground: true });
       await reviseOff(client, tried);
       await attemptingRow(client, tried, 'suspicion_refusal', { detail: 'api_unavailable:timeout' });
-      expect(await begin(client, tried, 'suspicion_refusal')).toEqual({ kind: 'skipped', expiredAttempt: true });
+      expect(await begin(client, tried, 'suspicion_refusal')).toEqual({ kind: 'expired', detail: 'exhausted:recheck_not_standing' });
       expect(await noticeOf(client, tried, 'suspicion_refusal')).toMatchObject([
         { outcome: 'error', detail: 'exhausted:recheck_not_standing', first_detail: 'api_unavailable:timeout' },
       ]);
@@ -404,8 +414,8 @@ describe.skipIf(!hasDatabase)('Story 6.24b — the suspicion notices, domain (:5
       const past = await refusedClaim(client, PARIWAR_A, randomUUID(), { ground: true });
       await reviseOff(client, past);
       await attemptingRow(client, past, 'suspicion_refusal', { job: 'other', claimedAt: new Date(now.getTime() - CORRECTION_SEND_LEASE_MS - 1) });
-      expect(await begin(client, past, 'suspicion_refusal', { now })).toEqual({ kind: 'skipped', expiredAttempt: false });
-      expect(await noticeOf(client, past, 'suspicion_refusal')).toMatchObject([{ outcome: 'skipped_superseded', claimed_by_job: 'job-1' }]);
+      expect(await begin(client, past, 'suspicion_refusal', { now })).toEqual({ kind: 'expired', detail: 'exhausted:recheck_not_standing' });
+      expect(await noticeOf(client, past, 'suspicion_refusal')).toMatchObject([{ outcome: 'error', claimed_by_job: 'job-1' }]);
 
       // A HELD predicate + another job's row past the lease ⇒ re-claimed (attempt 2, the transient detail kept).
       const live = await refusedClaim(client, PARIWAR_A, randomUUID(), { ground: true });
@@ -433,11 +443,17 @@ describe.skipIf(!hasDatabase)('Story 6.24b — the suspicion notices, domain (:5
       const cutoff = suspicionNoticeReclaimCutoff(now);
       const old = await refusedClaim(client, PARIWAR_A, randomUUID(), { ground: true });
       const young = await refusedClaim(client, PARIWAR_A, randomUUID(), { ground: true });
-      await attemptingRow(client, old, 'suspicion_refusal', { createdAt: new Date(cutoff.getTime() - 1), detail: 'api_unavailable:x' });
-      await attemptingRow(client, young, 'suspicion_refusal', { createdAt: cutoff });
-      const done = await expireExhaustedSuspicionNotices(client, { cutoff, allow: ALLOW });
+      const leased = await refusedClaim(client, PARIWAR_A, randomUUID(), { ground: true });
+      const stale = new Date(now.getTime() - CORRECTION_SEND_LEASE_MS - 1);
+      await attemptingRow(client, old, 'suspicion_refusal', { createdAt: new Date(cutoff.getTime() - 1), claimedAt: stale, detail: 'api_unavailable:x' });
+      await attemptingRow(client, young, 'suspicion_refusal', { createdAt: cutoff, claimedAt: stale });
+      // ⭐ Old enough, but RE-CLAIMED within the send lease (a live child may be sending it) ⇒ left to that child.
+      await attemptingRow(client, leased, 'suspicion_refusal', { createdAt: new Date(cutoff.getTime() - 1), claimedAt: new Date(now.getTime() - CORRECTION_SEND_LEASE_MS + 1000) });
+      const done = await expireExhaustedSuspicionNotices(client, { cutoff, now, allow: ALLOW });
       expect(done).toContainEqual({ claimCaseId: old, purpose: 'suspicion_refusal' });
       expect(done.map((d) => d.claimCaseId)).not.toContain(young);
+      expect(done.map((d) => d.claimCaseId)).not.toContain(leased);
+      expect(await noticeOf(client, leased, 'suspicion_refusal')).toMatchObject([{ outcome: 'attempting' }]);
       expect(await noticeOf(client, old, 'suspicion_refusal')).toMatchObject([{ outcome: 'error', detail: 'exhausted:attempting_three_days', first_detail: 'api_unavailable:x' }]);
       // Three IST days: a row created today is given up on the day after tomorrow's next day — ⛔ before.
       expect(cutoff.getTime()).toBeLessThan(now.getTime() - DAY);
@@ -504,8 +520,8 @@ describe.skipIf(!hasDatabase)('Story 6.24b — the suspicion notices, domain (:5
 
     it('⭐ RB18 — R filed by the POST-DEATH nominee (linked to v2, discarded) ⇒ a finished `excluded:…` row, ⛔ text; the true nominee\'s claim ⇒ texted', async () => {
       const { client } = getTx();
-      const { mid, s, r } = await closedR(client);
-      const { v1, v2 } = await versionsOf(mid);
+      const { mid, r } = await closedR(client);
+      const { v2 } = await versionsOf(mid);
       await contact(client, r, mid, { claimantVersionId: v2 });
       expect(await begin(client, r, 'closed_after_appeal')).toEqual({ kind: 'no_target', reason: 'excluded_claimant' });
       expect(await noticeOf(client, r, 'closed_after_appeal')).toMatchObject([{ outcome: 'no_target', detail: 'excluded:claimant_discarded_version' }]);
@@ -519,8 +535,6 @@ describe.skipIf(!hasDatabase)('Story 6.24b — the suspicion notices, domain (:5
       await openAppeal(client, PARIWAR_A, s2);
       await reverseAtStage1(client, PARIWAR_A, s2);
       expect(await begin(client, r2, 'closed_after_appeal')).toMatchObject({ kind: 'begun', recipient: { versionId: v.v1 } });
-      expect(s).toBeDefined();
-      expect(v1).toBeDefined();
     });
 
     it('RB18 residual (i) — a NON-nominee claimant ⇒ texted', async () => {
@@ -591,13 +605,37 @@ describe.skipIf(!hasDatabase)('Story 6.24b — the suspicion notices, domain (:5
       expect(await noticeOf(client, passed, 'refusal_appeal_notice')).toEqual([]);
     });
 
-    it('an own `attempting` row whose appeal was filed since ⇒ `skipped_superseded` / `appeal_open`', async () => {
+    it('an own `attempting` row whose appeal was filed since ⇒ `error` / `exhausted:recheck_appeal_open` (`-297` §2)', async () => {
       const { client } = getTx();
       const s = await refusedClaim(client, PARIWAR_A, randomUUID());
       await attemptingRow(client, s, 'refusal_appeal_notice');
       await openAppeal(client, PARIWAR_A, s);
-      expect(await begin(client, s, 'refusal_appeal_notice')).toEqual({ kind: 'skipped', expiredAttempt: false });
-      expect(await noticeOf(client, s, 'refusal_appeal_notice')).toMatchObject([{ outcome: 'skipped_superseded', detail: 'appeal_open' }]);
+      expect(await begin(client, s, 'refusal_appeal_notice')).toEqual({ kind: 'expired', detail: 'exhausted:recheck_appeal_open' });
+      expect(await noticeOf(client, s, 'refusal_appeal_notice')).toMatchObject([{ outcome: 'error', detail: 'exhausted:recheck_appeal_open' }]);
+    });
+
+    it('⭐ AC7b — an appeal UPHELD at stage 3, then a revision away and BACK (a new chain) ⇒ ⛔ text: ⛔ selected, `not_due`, ⛔ row', async () => {
+      const { client } = getTx();
+      const panel = await seedAppealPanel(client, PARIWAR_A);
+      const s = await refusedClaim(client, PARIWAR_A, randomUUID());
+      await appealAtStage(client, PARIWAR_A, s, 3, panel);
+      await stage3(client, PARIWAR_A, s, 'upheld');
+      await client.query('RESET ROLE'); // `seedAppealPanel` left the app scope on — the raw rows + the selector are the superuser's
+      await reviseOff(client, s);
+      // Back ONTO `-239` — a NEW chain (and a new 90 days); the claim's appeal anchor is still the upheld one.
+      const { rows } = await client.query<{ decision_id: string }>(
+        `UPDATE claim_verifier_decisions SET superseded_at = clock_timestamp() WHERE claim_case_id = $1 AND superseded_at IS NULL RETURNING decision_id`,
+        [s],
+      );
+      await client.query(
+        `INSERT INTO claim_verifier_decisions (claim_case_id, pariwar_id, outcome, reason_code, rationale_ciphertext, actor_id, actor_display, supersedes_decision_id)
+         VALUES ($1, $2, 'denied', 'post_death_nominee_change', 'enc:v1:r', $3, 'Anita (District Admin)', $4)`,
+        [s, PARIWAR_A, randomUUID(), rows[0]!.decision_id],
+      );
+      expect((await dueIds(client, 'suspicion_refusal')).has(s)).toBe(true); // it stands again …
+      expect((await dueIds(client, 'refusal_appeal_notice')).has(s)).toBe(false); // … but (c) is ⛔ selected
+      expect(await begin(client, s, 'refusal_appeal_notice')).toEqual({ kind: 'not_due' });
+      expect(await noticeOf(client, s, 'refusal_appeal_notice')).toEqual([]);
     });
   });
 });

@@ -17,10 +17,11 @@
 //
 // ⭐ THE DEDUP IS THE TABLE + THE CLAIM-ROW LOCK (a pg-boss `singletonKey` is a label only). `beginSuspicionNotice` locks the
 // claim row, RE-CHECKS the purpose's predicate under it, resolves the recipient and claims the row — ONE transaction; the
-// send happens after that commit. ⭐ RB10's ONE re-check rule (6.19b's K4, EXTENDED): a FRESH claim whose re-check fails
-// writes ⛔ no row (`not_due`); an existing `attempting` row — this job's, or another job's past the lease (taken over
-// first) — becomes `skipped_superseded` when its `detail` is NULL, else `error` / `exhausted:recheck_<reason>` (+ an alarm
-// by the caller); another job's row within the lease ⇒ `held_by_other`. ⚠ RB15's and RB18's `no_target` are ⛔ re-check
+// send happens after that commit. ⭐ RB10's ONE re-check rule, AS AMENDED BY `2026-10-09-297` §2: a FRESH claim whose
+// re-check fails writes ⛔ no row (`not_due`); ANY existing `attempting` row — this job's, or another job's past the lease
+// (taken over first) — becomes `error` / `exhausted:recheck_<reason>` (+ an alarm by the caller): a claiming commit
+// happened, so a send MAY have — ⛔ never `skipped_superseded` (`detail` is written only by a TRANSIENT failure, so a NULL
+// `detail` does ⛔ not prove nothing went); another job's row within the lease ⇒ `held_by_other`. ⚠ RB15's and RB18's `no_target` are ⛔ re-check
 // failures — the predicate HELD; they FINISH the slot here (a `no_target` row) and the caller alarms once.
 // ⭐ Every selector also returns a claim with an `attempting` row of that purpose (a crash left it) — bypassing the
 // predicate — so its locked re-check runs and finishes it (⛔ stranded once its predicate turns false). A row still
@@ -85,7 +86,7 @@ function toDate(v: Date | string): Date {
 
 // ── The selectors (RB10) — cross-tenant, BYPASSRLS pool, keyset-paged on `claim_case_id`, clamped ──────────────────
 
-/** One due claim. `chainStartedAt` / `clock` are projected for (c) only (the TS 90-day filter). */
+/** One due claim. (c)'s chain start and clock are read for the TS 90-day filter only — ⛔ carried on the result. */
 export interface DueSuspicionNotice {
   readonly pariwarId: PariwarId;
   readonly claimCaseId: ClaimId;
@@ -121,7 +122,14 @@ const closedByAppealSql = (alias: string) => sql`EXISTS (
 
 /**
  * ⭐ RB10 — the claims due a notice of `purpose`, one keyset page (cross-tenant — the BYPASSRLS pool only; `allow` (tests)
- * narrows it to some Pariwars). "Finished" = `outcome <> 'attempting'`; a claim with an `attempting` row is ALWAYS
+ * narrows it to some Pariwars).
+ *
+ * ── DELIBERATE: a CROSS-TENANT READ on the BYPASSRLS pool (family 9) ──
+ * The sweep has ⛔ no tenant to start from: it must find every Pariwar's due claims, and a per-tenant loop would first
+ * need a cross-tenant read to enumerate the Pariwars (the same bypass). It returns IDS ONLY (`pariwar_id`, `claim_case_id`,
+ * a boolean) — ⛔ no PII, ⛔ no value from one tenant reaches another; every write that follows runs in the child's own
+ * `withPariwarScope` transaction, under RLS, after a locked re-check. RE-EXAMINE when: the selector ever projects a
+ * column beyond ids / flags, a write is added on this pool, the pool loses BYPASSRLS, or a per-tenant scheduler exists. "Finished" = `outcome <> 'attempting'`; a claim with an `attempting` row is ALWAYS
  * returned. (c) is filtered in TS by `hasSuspicionRefusalAppealLimitPassed` (⛔ a SQL re-derivation of the 90 days); the
  * cursor and the last-page test see the UNFILTERED page.
  */
@@ -192,14 +200,23 @@ export function suspicionNoticeReclaimCutoff(now: Date): Date {
 }
 
 /**
- * ⭐ RB3 — THE EXHAUSTED-ROW FINALISER: every row still `attempting` that was created before `cutoff` becomes `error` /
- * `exhausted:attempting_three_days` (the transient detail kept in `first_detail`). ⚠ DELIBERATELY CROSS-TENANT (6.19b's
- * reasoning — a time bound over every tenant's rows; its predicate and effect read and write ⛔ nothing tenant-derived):
- * the BYPASSRLS pool only, `allow` (tests) narrowing it. Returns the claims finalised, for the caller's alarm (ids only).
+ * ⭐ RB3 — THE EXHAUSTED-ROW FINALISER: every row still `attempting` that was created before `cutoff` — and whose LAST claim
+ * is older than the send lease — becomes `error` / `exhausted:attempting_three_days` (the transient detail kept in
+ * `first_detail`). Returns the claims finalised, for the caller's alarm (ids only).
+ *
+ * ── DELIBERATE: a CROSS-TENANT WRITE on the BYPASSRLS pool (family 9) ──
+ * 6.19b's reasoning (`claim-correction-reminders.ts`): a time bound over EVERY tenant's rows; its predicate (`attempting`,
+ * created before the cutoff, claimed before the lease) and its effect (→ `error`, the detail moved to `first_detail`) read
+ * and write ⛔ nothing tenant-derived — ⛔ no PII, ⛔ no cross-row join; `allow` (tests) narrows it. ⚠ Unlike 6.19b's
+ * one-day bound, a three-day-old row can be RE-CLAIMED today (every selector returns an `attempting` row), so a live child
+ * may hold it ⇒ the lease guard (`claimed_at < now − CORRECTION_SEND_LEASE_MS`) leaves a row claimed within the lease to
+ * that child's own compare-and-set. It takes ⛔ no claim-row lock; a child that finalises after it loses its
+ * compare-and-set and alarms. RE-EXAMINE when: the statement ever writes a value derived from another row or tenant, the
+ * pool loses BYPASSRLS, a per-tenant scheduler exists, or the lease approaches the reclaim horizon.
  */
 export async function expireExhaustedSuspicionNotices(
   q: Queryable,
-  input: { readonly cutoff: Date; readonly allow: readonly string[] | null },
+  input: { readonly cutoff: Date; readonly now: Date; readonly allow: readonly string[] | null },
 ): Promise<{ readonly claimCaseId: ClaimId; readonly purpose: SuspicionNoticePurpose }[]> {
   const { rows } = await q.query<{ claim_case_id: string; purpose: SuspicionNoticePurpose }>(
     `UPDATE claim_suspicion_notices
@@ -207,10 +224,10 @@ export async function expireExhaustedSuspicionNotices(
             first_detail = COALESCE(first_detail, detail),
             detail = 'exhausted:attempting_three_days',
             updated_at = clock_timestamp()
-      WHERE outcome = 'attempting' AND created_at < $1
+      WHERE outcome = 'attempting' AND created_at < $1 AND claimed_at < $3
         AND ($2::uuid[] IS NULL OR pariwar_id = ANY($2::uuid[]))
       RETURNING claim_case_id, purpose`,
-    [input.cutoff, input.allow === null ? null : [...input.allow]],
+    [input.cutoff, input.allow === null ? null : [...input.allow], new Date(input.now.getTime() - CORRECTION_SEND_LEASE_MS)],
   );
   return rows.map((r) => ({ claimCaseId: r.claim_case_id as ClaimId, purpose: r.purpose }));
 }
@@ -408,8 +425,8 @@ export type BeginSuspicionNoticeResult =
   | { readonly kind: 'held_by_other' }
   /** A FRESH claim whose locked re-check failed — ⛔ row written. */
   | { readonly kind: 'not_due' }
-  /** An existing `attempting` row finished by a failed re-check — `expiredAttempt` ⇒ `error` (the caller alarms). */
-  | { readonly kind: 'skipped'; readonly expiredAttempt: boolean }
+  /** An existing `attempting` row finished `error` by a failed re-check (`-297` §2) — `detail` as written; the caller alarms. */
+  | { readonly kind: 'expired'; readonly detail: string }
   | { readonly kind: 'no_target'; readonly reason: SuspicionNoticeNoTargetReason };
 
 interface NoticeRow {
@@ -496,21 +513,20 @@ export async function beginSuspicionNotice(
   const check = await recheck(db, pariwarId, claimCaseId, claim, purpose);
   if (!check.ok) {
     if (!existing) return { kind: 'not_due' };
-    // RB10 / K4 — an attempt that may have sent (a `detail`) is ⛔ never `skipped_superseded`.
-    const expiredAttempt = existing.detail !== null;
-    await client.query(
-      expiredAttempt
-        ? `UPDATE claim_suspicion_notices
-              SET outcome = 'error', first_detail = COALESCE(first_detail, detail), detail = $2,
-                  claimed_by_job = $3, claimed_at = $4, updated_at = clock_timestamp()
-            WHERE notice_id = $1 AND outcome = 'attempting'`
-        : `UPDATE claim_suspicion_notices
-              SET outcome = 'skipped_superseded', detail = $2,
-                  claimed_by_job = $3, claimed_at = $4, updated_at = clock_timestamp()
-            WHERE notice_id = $1 AND outcome = 'attempting'`,
-      [existing.notice_id, expiredAttempt ? `exhausted:recheck_${check.reason}` : check.reason, jobId, now],
+    // RB10 as amended by `-297` §2 — an existing `attempting` row means a claiming commit happened, so a send MAY have:
+    // ALWAYS `error`, ⛔ never `skipped_superseded` (a NULL `detail` does ⛔ not prove nothing went — a crash between the
+    // gateway's accept and the finalise leaves it NULL).
+    const detail = `exhausted:recheck_${check.reason}`;
+    const expired = await client.query(
+      `UPDATE claim_suspicion_notices
+          SET outcome = 'error', first_detail = COALESCE(first_detail, detail), detail = $2,
+              claimed_by_job = $3, claimed_at = $4, updated_at = clock_timestamp()
+        WHERE notice_id = $1 AND outcome = 'attempting'`,
+      [existing.notice_id, detail, jobId, now],
     );
-    return { kind: 'skipped', expiredAttempt };
+    // The give-up (RB3) takes ⛔ claim-row lock, so it can finish the row between the SELECT above and this UPDATE.
+    if ((expired.rowCount ?? 0) === 0) return { kind: 'already_final' };
+    return { kind: 'expired', detail };
   }
 
   let recipient: SuspicionNoticeRecipient;
@@ -523,13 +539,15 @@ export async function beginSuspicionNotice(
       // RB15 / RB18 — the predicate HELD; the slot FINISHES here (the claim's own INSERT … ON CONFLICT path).
       const detail = NO_TARGET_DETAIL[resolved.reason];
       if (existing) {
-        await client.query(
+        const finished = await client.query(
           `UPDATE claim_suspicion_notices
               SET outcome = 'no_target', first_detail = COALESCE(first_detail, detail), detail = $2,
                   claimed_by_job = $3, claimed_at = $4, updated_at = clock_timestamp()
             WHERE notice_id = $1 AND outcome = 'attempting'`,
           [existing.notice_id, detail, jobId, now],
         );
+        // Lost to the give-up (⛔ claim-row lock there) — the row is final already; ⛔ report an outcome ⛔ written.
+        if ((finished.rowCount ?? 0) === 0) return { kind: 'already_final' };
       } else {
         const inserted = await client.query(
           `INSERT INTO claim_suspicion_notices (pariwar_id, claim_case_id, purpose, outcome, detail)

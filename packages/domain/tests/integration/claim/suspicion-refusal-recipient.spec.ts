@@ -64,6 +64,23 @@ describe.skipIf(!hasDatabase)('Story 6.24b — RF9: readSuspicionRefusalRecipien
     expect(await readSuspicionRefusalRecipient(tx, pid, toMemberId(mid))).toEqual({ kind: 'none' });
   });
 
+  it('a revision OFF `-239` (the live decision superseded by another reason) ⇒ null', async () => {
+    const { client, tx } = getTx();
+    const mid = randomUUID();
+    const s = await refusedClaim(client, PARIWAR_A, mid, { ground: true });
+    expect(await readSuspicionRefusalRecipient(tx, pid, toMemberId(mid))).toMatchObject({ kind: 'at_death' });
+    const { rows } = await client.query<{ decision_id: string }>(
+      `UPDATE claim_verifier_decisions SET superseded_at = clock_timestamp() WHERE claim_case_id = $1 AND superseded_at IS NULL RETURNING decision_id`,
+      [s],
+    );
+    await client.query(
+      `INSERT INTO claim_verifier_decisions (claim_case_id, pariwar_id, outcome, reason_code, rationale_ciphertext, actor_id, actor_display, supersedes_decision_id)
+       VALUES ($1, $2, 'denied', 'other', 'enc:v1:r', $3, 'Anita (District Admin)', $4)`,
+      [s, PARIWAR_A, randomUUID(), rows[0]!.decision_id],
+    );
+    expect(await readSuspicionRefusalRecipient(tx, pid, toMemberId(mid))).toBeNull();
+  });
+
   it('after S\'s appeal is ALLOWED (the anchor `reversed`) ⇒ null', async () => {
     const { client, tx } = getTx();
     const mid = randomUUID();

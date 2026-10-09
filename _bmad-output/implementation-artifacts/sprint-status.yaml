@@ -19416,7 +19416,7 @@ development_status:
   # ⭐ 2026-10-08: 6.24a is `done` (PR #263) ⇒ 6.24b RE-PINNED to `b6a63a81`, VALIDATED (v2.1) and `ready-for-dev`; its Task 0 owes
   # ONE author-commit (RB1–RB18) before any code — see the 2026-10-08f / 2026-10-08g ledger blocks.
   6-24b-filing-code-and-texts-to-the-nominee-in-place-at-the-death: done
-  6-25-staff-email-notice-of-a-suspicion-refusal: ready-for-dev
+  6-25-staff-email-notice-of-a-suspicion-refusal: in-progress
   6-26-ground-inspection-before-approval-and-death-facts: done
   # ⭐ 2026-10-06 SPLIT after `2026-10-06-281` (the Panel: Q1 B · Q2 A; BigDev: "write the panel note then we get the answer and then we split"):
   # the row above is STORY 6.26a (keeps its key — the rulings cite it): the gate, the review-window widening, the inspector's record and the

@@ -228,6 +228,7 @@ describe.skipIf(!hasDatabase)('Story 6.25 — the staff email: who, when, and th
       const l = await admin(client, { grantedAt: AFTER });
       await revise(client, c, 'post_death_nominee_change', new Date(AFTER.getTime() + 60 * MIN));
       expect(await recipientsDue(client, c)).toEqual([early]);
+      expect(await recipientsDue(client, c)).not.toContain(l);
     });
 
     it('⭐ FREEZE (ii) — revised AWAY and BACK after L\'s grant ⇒ L IS due (a new chain); an admin already emailed is ⛔ due again (RE2)', async () => {

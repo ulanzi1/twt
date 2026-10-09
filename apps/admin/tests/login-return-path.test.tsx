@@ -118,7 +118,8 @@ describe('the refusal list sends a signed-out admin to sign-in WITH its own path
   });
 
   it('a 401 on the list ⇒ /login?next=<the list>', async () => {
-    list.error = new ApiError(401);
+    // The MOCK's constructor takes the status alone (the real one takes 3–4 arguments).
+    list.error = new (ApiError as unknown as new (status: number) => Error)(401);
     renderWithClient(<NomineeRefusalsRoute />);
     await waitFor(() => expect(navigate).toHaveBeenCalledWith({ to: '/login', search: { next: `/p/${P}/nominee-refusals` } }));
   });

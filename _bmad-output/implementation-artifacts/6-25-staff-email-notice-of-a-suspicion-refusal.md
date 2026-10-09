@@ -684,55 +684,55 @@ at :5433; `pnpm domain-invariants:check` green.
         ⛔ not edited now — its in-body pointer is added only when ADR-0040 is ratified, by the ratifying decision.
   - [x] 0.5 Record the answers in this file's RE block (`✅ committed by -299`); never edit RE text after commit — a later change is a NEW
         entry + a dated `⚠ AMENDED` line.
-- [ ] **Task 1 — Migration 0152 + schema + RLS (AC8; RE5).**
-  - [ ] 1.1 Hand-author `packages/domain/migrations/0152_claim-suspicion-staff-emails.sql` (`--> statement-breakpoint` separators) + journal
+- [x] **Task 1 — Migration 0152 + schema + RLS (AC8; RE5).**
+  - [x] 1.1 Hand-author `packages/domain/migrations/0152_claim-suspicion-staff-emails.sql` (`--> statement-breakpoint` separators) + journal
         idx 152. Never `db:generate` (42P07). Apply via `pnpm db:migrate` to :5432 AND :5433.
-  - [ ] 1.2 `src/schema/claim_suspicion_staff_emails.ts` (+ `SUSPICION_STAFF_EMAIL_OUTCOMES` `as const`; the UNIQUE via drizzle's
+  - [x] 1.2 `src/schema/claim_suspicion_staff_emails.ts` (+ `SUSPICION_STAFF_EMAIL_OUTCOMES` `as const`; the UNIQUE via drizzle's
         `unique(…).on(…).nullsNotDistinct()` — `feature_flag_versions.ts:170`), `src/policies/claim-suspicion-staff-email-rls.ts`;
         barrels `schema/index.ts`, `policies/index.ts`; `member/anonymize.ts` comment (precedent `:297`).
-  - [ ] 1.3 `tests/integration/rls/claim-suspicion-staff-email-policy-regression.spec.ts`; constraint-by-name + exact-set + column-grant spec.
-- [ ] **Task 2 — Admin email relocation + reader (AC7; RE8).**
-  - [ ] 2.1 New `packages/domain/src/encryption/admin-email.ts` (`ADMIN_EMAIL_FIELD_CLASS`, the envelope context, `decryptAdminEmail`;
+  - [x] 1.3 `tests/integration/rls/claim-suspicion-staff-email-policy-regression.spec.ts`; constraint-by-name + exact-set + column-grant spec.
+- [x] **Task 2 — Admin email relocation + reader (AC7; RE8).**
+  - [x] 2.1 New `packages/domain/src/encryption/admin-email.ts` (`ADMIN_EMAIL_FIELD_CLASS`, the envelope context, `decryptAdminEmail`;
         exported by the encryption barrel); `apps/api/src/context.ts`, `email-index.ts` and `middleware/request-context/index.ts` import /
         re-export it. `auth-primitives.test.ts` passes UNEDITED; ADD the encrypt⇒decrypt cross-check test.
-  - [ ] 2.2 `readAdminEmailCiphertext(db, userId)` (Q2: ONE column, ONE user). The RE8 source fence (exact allowlist, Q1/Q2 projection
+  - [x] 2.2 `readAdminEmailCiphertext(db, userId)` (Q2: ONE column, ONE user). The RE8 source fence (exact allowlist, Q1/Q2 projection
         rules, `decryptAdminEmail` caller allowlist, comments stripped, one plant per rule).
-- [ ] **Task 3 — Domain module `claim/suspicion-staff-email.ts` (AC1, AC2, AC4, AC5, AC7; RE1–RE5, RE11).**
-  - [ ] 3.1 The RE3 eligibility (Q1) as ONE raw-SQL fragment — (a) text compare, (b) `suspicionChainStartedAtSql`, (c), (d) `EXISTS` —
+- [x] **Task 3 — Domain module `claim/suspicion-staff-email.ts` (AC1, AC2, AC4, AC5, AC7; RE1–RE5, RE11).**
+  - [x] 3.1 The RE3 eligibility (Q1) as ONE raw-SQL fragment — (a) text compare, (b) `suspicionChainStartedAtSql`, (c), (d) `EXISTS` —
         used by BOTH the selector and the locked re-check (⛔ two derivations).
-  - [ ] 3.2 Selector, give-up, begin, finalise, noteTransient — exactly RE11's kinds, reasons, lease and rules; `STAFF_EMAIL_SEND_LEASE_MS`;
+  - [x] 3.2 Selector, give-up, begin, finalise, noteTransient — exactly RE11's kinds, reasons, lease and rules; `STAFF_EMAIL_SEND_LEASE_MS`;
         the `detail` vocabulary as ONE exported builder (⛔ free text); `clampLimit`; `sql.param([...allow])` for arrays (⛔ a JS array in a
         `sql` template — 6.24b's "malformed array literal").
-  - [ ] 3.3 `claim/index.ts` barrel; `FENCED_FILES` (`packages/domain/tests/claim/nominee-name-no-comparison-fence.test.ts:38`) += the
+  - [x] 3.3 `claim/index.ts` barrel; `FENCED_FILES` (`packages/domain/tests/claim/nominee-name-no-comparison-fence.test.ts:38`) += the
         module (+ the sibling reader if separate) — its EXACT pin `toBe(39)` (`:168`) becomes 40 (41), reason in the comment; ⛔ a
         `toLowerCase() ===` anywhere in the module (the fence's `:145` pattern — address handling stays in jobs); a dedicated ref-only /
         no-decrypt test (precedent `:370-381`).
-  - [ ] 3.4 `tests/integration/claim/suspicion-staff-email.spec.ts` (every AC1/AC2/AC5 leg, each in its OWN Pariwar where alarms are
+  - [x] 3.4 `tests/integration/claim/suspicion-staff-email.spec.ts` (every AC1/AC2/AC5 leg, each in its OWN Pariwar where alarms are
         sampled; explicit instants per AC1) + `suspicion-staff-email-concurrency.spec.ts` (AC4 i, iv races; rollback in `afterEach`;
         `lock_timeout`; leftover check). Fixtures: `_helpers.ts` (`seedUser` with status, `seedRoleGrant` — ⚠ its defaults are
         `district_admin` @ `Patna` and `now()`; pass `pariwar_admin`, `'pariwar'`, `P::text` — and it can ⛔ set `created_at`: a freeze-leg grant is a raw `INSERT INTO role_grants
         (…, created_at)` with an explicit instant in its own committed tx), `_suspicion-refusal-fixtures.ts`
         (`refusedClaim`, `openAppeal`, `reverseAtStage1`, …); `admin_credentials` has ⛔ shared seed — a raw INSERT (NOT NULL
         `email_ciphertext`, `email_blind_index`, `password_hash`; precedent `cross-pariwar-leak.spec.ts:488`) with a test-unique blind index.
-- [ ] **Task 4 — Transport + templates (AC3, AC6; RE6, RE7, RE9).**
-  - [ ] 4.1 `apps/jobs/src/scheduler/staff-email-client.ts` — the port, the chosen provider's `fetch` adapter (injectable `fetch` — the
+- [x] **Task 4 — Transport + templates (AC3, AC6; RE6, RE7, RE9).**
+  - [x] 4.1 `apps/jobs/src/scheduler/staff-email-client.ts` — the port, the chosen provider's `fetch` adapter (injectable `fetch` — the
         `packages/channels/src/providers/sms-app.ts:187` shape; `AbortSignal.timeout(ms)` — the `packages/edge/src/turnstile.ts:183`
         precedent; Node ≥ 22.12 has both), the fake; classification by error NAME per Task 0.2's recorded table; `Charset: 'UTF-8'`;
         the `detail` builder; deps declared LOCALLY (⛔ a type-only→value import cycle — [[project_type_only_import_cycle_trap]]).
-  - [ ] 4.2 Config resolution in `contribution-providers.ts:218-237`'s pattern (or a sibling), the RE7 answer on an unresolvable name,
+  - [x] 4.2 Config resolution in `contribution-providers.ts:218-237`'s pattern (or a sibling), the RE7 answer on an unresolvable name,
         the provider pre-flight; boot wiring; document the variables in `apps/jobs/README.md` (⛔ `apps/jobs/.env.example` exists — and
         the SMS precedent's variables are in ⛔ `.env.example` either).
-  - [ ] 4.3 `suspicion-staff-email-templates.ts` + `claim.json` en/hi keys + `$comment.suspicion_staff_email` in BOTH locales; tests
+  - [x] 4.3 `suspicion-staff-email-templates.ts` + `claim.json` en/hi keys + `$comment.suspicion_staff_email` in BOTH locales; tests
         through the real `t()`. (⛔ `microcopy.yaml` change — `claim.json` is already scoped.)
-  - [ ] 4.4 Per RE9's answer: (A) `router.tsx`'s `loginRoute` (`:72-76`) gains `validateSearch` ⇒ `{ next?: string }` (or `LoginPage`
+  - [x] 4.4 Per RE9's answer: (A) `router.tsx`'s `loginRoute` (`:72-76`) gains `validateSearch` ⇒ `{ next?: string }` (or `LoginPage`
         reads it via `useSearch({ strict: false })` — the dev's pick, recorded); BOTH redirects in `NomineeRefusalsRoute.tsx` (`:25`, `:38`)
         pass `search: { next: <its own path> }`; `LoginPage.tsx:138` honours an allowlisted relative `next`; admin-app tests for the round
         trip and the open-redirect refusals. (B) nothing.
-- [ ] **Task 5 — The sweep + child (AC2, AC4–AC7; RE10–RE12).**
-  - [ ] 5.1 `apps/jobs/src/scheduler/claim-suspicion-staff-emails.ts` (new budget/expiry/lease constants; the send worker's explicit
+- [x] **Task 5 — The sweep + child (AC2, AC4–AC7; RE10–RE12).**
+  - [x] 5.1 `apps/jobs/src/scheduler/claim-suspicion-staff-emails.ts` (new budget/expiry/lease constants; the send worker's explicit
         `batchSize: 1`; the tick catch through `alarm()`); `QUEUE_NAMES` pair in `packages/queue/src/index.ts` (its test asserts uniqueness only);
         register in `boot.ts` after `registerClaimSuspicionNoticeWorkers` (`:619`) with its own deps. Do ⛔ not wire `onAlarm`.
-  - [ ] 5.2 `apps/jobs/tests/claim-suspicion-staff-emails-live.test.ts` (own-committing, `describe.skipIf(!DATABASE_URL)`, random Pariwar +
+  - [x] 5.2 `apps/jobs/tests/claim-suspicion-staff-emails-live.test.ts` (own-committing, `describe.skipIf(!DATABASE_URL)`, random Pariwar +
         allowlist, injected clock, fake client capturing `to`; every AC leg; the AC7 stringify sweep). ⚠ 6.24b's world helpers in
         `claim-suspicion-notices-live.test.ts` (`seedDeath`, `claimOf`, `determine`, `refuse` — accepts `decidedAt`, `reviseOff`,
         `openAppeal`, `allowAppeal`, `harness`, `isolated`, `tick`, `:82-320`) are CLOSURES inside that file's `describe` block (capturing
@@ -740,7 +740,7 @@ at :5433; `pnpm domain-invariants:check` green.
         call-site refactor of that file — record it). EXTEND `cleanupClaims`
         (`_claim-correction-seed.ts:333-420`): it deletes `users` under `session_replication_role='replica'`, which DISABLES the FK
         cascade ⇒ delete `admin_credentials` (and the new table) explicitly, and add both to its leftover count (`:402-409`).
-  - [ ] 5.3 `claim-suspicion-staff-email-no-decision.test.ts` (AC9 fence, per AC9's model and table list).
+  - [x] 5.3 `claim-suspicion-staff-email-no-decision.test.ts` (AC9 fence, per AC9's model and table list).
 - [ ] **Task 6 — RE15 comments + sprint ledger (AC9 (b)).** The RE15 comment hunks (four sites); `sprint-status.yaml` row + a prepended
       `last_updated` comment block ([[project_sprint_status_safe_prepend]] — guard size, verify YAML). (`deferred-work.md` is Task 0.4's.)
 - [ ] **Task 7 — Proof (AC9, AC10).** Red-checks logged; AC9 (a) `git diff --exit-code`, (b) comment-only, (c) import-only;
@@ -909,6 +909,50 @@ probes with bogus credentials — nothing sent):
   `TM_3601.SM_133`, `TM_3601.AE_101`, `TM_4001.SM_111`, `TM_4001.SM_128`, `TM_4001.SERR_157`, the caller-bug codes (`TM_3201.*`,
   `TM_3301.*`, `TM_3501.UE_106|MTR_101`, `TM_8001.*`), + ANY other name. **`rejected`:** ONLY `TM_4001.SM_113` with `target` `to`.
   **Pre-flight: ⛔ none** (log APIs need OAuth) ⇒ a recorded no-op. UTF-8 = the JSON body's encoding.
+
+**Task 0.3 / 0.4 (2026-10-09).** `-299` drafted in the scratchpad; fresh-context check 1 ⇒ 0 BLOCKER / **1 HIGH** (the 5xx-as-maybe-sent
+rule had been added without asking — put to BigDev ⇒ RE5-bis) + 10 MEDIUM/LOW, all applied; check 2 (narrow) ⇒ 0 BLOCKER / 0 HIGH, 3
+MEDIUM + 3 LOW, all applied. Committed ALONE `8fbf718b`; second governance commit `d04748b8` (ADR-0040 `drafted`, adr-index row + ledger
+`drafted` 0→1 / Total 150→151, `epics.md` 6.25, roster Rows 24–25, `deferred-work.md` top section + two OBSERVATIONS).
+
+**Dev picks, recorded.**
+- `aws4fetch@1.0.20` added EXACT to `@twt/jobs` (BigDev-approved). ⚠ pnpm hoists it to the root `node_modules`, and astro's optional
+  peer now resolves it ⇒ astro's lockfile snapshot keys gained `(aws4fetch@1.0.20)` — key churn only, ⛔ version change.
+- The SES adapter uses `AwsClient.sign()` (⛔ `.fetch()`) and sends through the injectable `fetch` ⇒ ⛔ library retry at all;
+  `retries: 0` is set as well.
+- Q1 + Q2 live in a SIBLING module `claim/staff-email-identity-read.ts` (both on the fences' allowlists); the sweep's domain half is
+  `claim/suspicion-staff-email.ts`.
+- `previousDetail` (begin's result) carries the row's `detail` from BEFORE the re-claim, because a re-claim now CLEARS `detail` (its
+  value moves to `first_detail` once) — so the NEXT re-claim can tell whether THIS attempt ended with a note (RE5's NULL-detail ⇒
+  `may_have_sent`), and the held-fault alarm can still fire once per DISTINCT fault per row.
+- 0152's grants, EXACTLY the writers' columns: INSERT `(pariwar_id, claim_case_id, recipient_user_id, outcome, detail, claimed_at,
+  claimed_by_job)` — ⛔ `attempt_count` (RE5's list named it; the writers never set it — it takes its DEFAULT); UPDATE `(outcome,
+  provider_message_id, detail, first_detail, attempt_count, may_have_sent, claimed_at, claimed_by_job, updated_at)`.
+- RE9 A: `loginRoute` gains `validateSearch` ⇒ `{ next?: string }` (typed redirects); `LoginPage` reads `next` from
+  `window.location.search` at sign-in completion (⛔ a router hook — the existing `login-turnstile` test's router mock stays valid);
+  the allowlist (`login-next.ts`) is a strict lower-case UUID (a subset of the story's `[0-9a-f-]{36}`).
+- AC9 (c): `email-index.ts`'s local `ENC_CONTEXT` literal is replaced by a ONE-LINE alias to `encryption.ADMIN_EMAIL_ENCRYPTION_CONTEXT`
+  (⛔ deleting the name would have edited `encryptEmail`'s body); `request-context/index.ts` needed ⛔ change (it imports the
+  constant from `context.ts`, which now re-exports the domain one).
+- The live suite's world helpers are COPIED (cut down) from 6.24b's (Task 5.2's recommended option).
+- A fixture finding: `PARIWAR_A` (`11111111-…`) is all digits — an upper-cased copy is identical, so the "case-sensitive scope value"
+  leg uses a trailing space instead.
+
+**Red-checks (AC10) — plant ⇒ red ⇒ revert ⇒ green:**
+1. NULLS NOT DISTINCT — the UNIQUE swapped for a plain one on :5433 ⇒ the policy spec's two-NULL leg + by-name leg RED (2/19); restored.
+2. The freeze anchor — Q1 compared to the LIVE row's `decided_at` ⇒ domain spec "FREEZE (i)" RED; reverted.
+3. The display-name non-conjunct — `listAdminsByRole`'s filter planted into Q1 ⇒ "every eligible Pariwar Admin" RED; reverted.
+4. The no-decrypt fence — a `decryptAdminEmail(` call planted into the domain module ⇒ the fence RED; reverted.
+5. The HELD class — status-based classification (`4xx ⇒ rejected`) planted into `classifySesFailure` ⇒ AC4 (ix) RED (+2 dependent
+   legs); reverted.
+6. The after-commit decrypt — Q2 + decrypt planted INSIDE the claiming transaction ⇒ the KMS probe saw 55P03 ⇒ the AC1/AC7 leg RED;
+   reverted.
+7. The config pre-check — the sweep's hold removed ⇒ AC6 RED; reverted.
+8. The lease — `STAFF_EMAIL_SEND_LEASE_MS` = 10 min ⇒ ⚠ FIRST stayed GREEN (the outage test's ticks ran 30 s after each attempt —
+   too weak); the test was strengthened to tick 30 s BEFORE each retry (the end of the gap) ⇒ AC4 (viii) RED at 10 min, GREEN at 30.
+9. `-297` §2 — a failed re-check on an existing row returned `not_due` ⇒ AC4 (iii) + (x) RED; reverted.
+10. The `detail` vocabulary — SES / ZeptoMail bodies (and an `x-amzn-errortype` header) that ECHO the address ⇒ the result carries
+    `held:unknown` only (unit test); the param-type guard is a `@ts-expect-error` pair (typecheck-enforced).
 
 ### Completion Notes List
 

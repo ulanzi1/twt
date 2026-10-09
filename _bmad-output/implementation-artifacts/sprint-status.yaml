@@ -1,3 +1,10 @@
+# last_updated: 2026-10-09n (⭐ **STORY 6.29 — CREATED (`bmad-create-story 6.29`) ⇒ `ready-for-dev`.** `6-29-suspicion-notice-parity-
+# and-jobs-login-grants` ADDED after `6-28`: 6.24b's 0151 gains 6.25's hold-park / `aging_since` credit / DB backstops, ADAPTED to SMS (per
+# purpose / per Pariwar holds, ⛔ pre-flight, daily cadence, raw gateway codes sanitised before any CHECK). Three read-only research passes;
+# FOUND: the jobs-login privileges gap is SYSTEMIC (`twt_service` holds 12 of 133 tables; every claim-touching sweep would 42501 in
+# production) ⇒ BigDev's scope call *"1"*: 6.29 = 0151 parity only, the gap recorded (deferred-work) + roster Row 26 proposed (RN9). RN1–RN10
+# PROPOSED; ⛔ code until Task 0.3's author-commit. ⛔ No other row moves. On branch `story/6-29-suspicion-notice-parity-and-jobs-login-
+# grants` (first commit `6a223e7a`: the 6.25 SHA map).)
 # last_updated: 2026-10-09m (⭐ **STORY 6.25 — CODE REVIEW ROUND 5 (narrow — round 4's changes, 14 files; three layers in PARALLEL,
 # read-only) ⇒ stays `done`.** D4 [HIGH] → A (the user's call) + 9 patch ⇒ 10 patch, 0 defer, 4 dismissed, all applied. Round 4's
 # reset of the give-up anchor to now let repeated short pre-flight holds keep a failing row (and its re-sends) alive forever ⇒
@@ -19493,6 +19500,10 @@ development_status:
   # 6.24a's RF6 closure is the only control and three paths pass it (`-294` §2 (a)–(c)). ⭐ BEFORE any code: the Panel question — which
   # family is paid when two claims for one death both qualify, and what the other is owed — then the guard. ⛔ No story file yet.
   6-28-one-payment-per-death-second-approval-guard: backlog
+  # ⭐ 2026-10-09 ADDED by `bmad-create-story 6.29` (BigDev): 0151 PARITY with 6.25's hold / give-up anchor / DB backstops (`-300` /
+  # `-301` Consequence 3), adapted to SMS — RN1–RN10 PROPOSED, author-commit owed at Task 0.3. The jobs-login gap the key names is SYSTEMIC
+  # and scoped OUT (deferred-work 2026-10-09; RN9 proposes roster Row 26). ⛔ No epics.md entry yet (owed at Task 0.4).
+  6-29-suspicion-notice-parity-and-jobs-login-grants: ready-for-dev
   epic-6-retrospective: done
 
   # ==========================================================================

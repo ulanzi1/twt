@@ -277,6 +277,10 @@ under C's lock, only when C stands, has ⛔ no row at all, and RE3 yields ⛔ no
 no person today (F13) ⇒ the residual is recorded: the list stays the only notice — exactly FQ3's *"until the email exists"* state,
 ⛔ worse than today. ⭐ Recommended.
 
+> ⚠ **AMENDED 2026-10-09 by `-300` §2 (ii)–(iii)** (code review rounds 3–4; the text below is kept as committed): migration **0153**
+> adds `detail` / `first_detail` vocabulary CHECKs (exactly `suspicionStaffEmailDetail`'s grammar), a BEFORE UPDATE trigger freezing a
+> FINISHED row and `may_have_sent` true → false, and the give-up anchor `aging_since` (see RE11's amendment).
+
 **RE5 — A NEW table `claim_suspicion_staff_emails` (migration 0152)** — ⛔ not a 4th purpose on 0151 (its UNIQUE is per claim/purpose
 and its recipient columns are nominee/SMS-shaped). Columns: `notice_id uuid PK default gen_random_uuid()`; `pariwar_id`,
 `claim_case_id` NOT NULL; `recipient_user_id uuid NULL REFERENCES users(id)` (⛔ no cascade — F6: users are never deleted);
@@ -450,6 +454,11 @@ English (the `email-channel.md` bilingual convention), plain text:
 recorded. ⛔ No quiet hours (staff email, ⛔ an SMS to a family). Meets "same day" (scenario row 8) except a refusal in the last ≤ 15 min
 before IST midnight ⇒ recorded residual, ⛔ a Panel confirm (the scenario row is ⛔ a ruled clause). ⭐ Recommended. *(Alternative: a
 post-commit enqueue from the API — rejected: a second trigger path, and RE1's derivation would still be needed as the backstop.)*
+
+> ⚠ **AMENDED 2026-10-09 by `-300` §2 (i)–(ii)** (code review rounds 3–4; the text below is kept as committed): the sweep checks config
+> + pre-flight FIRST; a HELD run PARKS every `attempting` row past the lease (`claimed_by_job` = `'sweep:held'`) and runs ⛔ give-up;
+> the give-up (un-held runs only) SKIPS a parked row and counts its three IST days from `aging_since` (⛔ `created_at`), which
+> re-claiming a parked row resets to now.
 
 **RE11 — The sweep/child = 6.24b's skeleton AS AMENDED (`-297` §2, `-298`), in NEW modules.**
 Domain `packages/domain/src/claim/suspicion-staff-email.ts` (add to `FENCED_FILES`, with reason; a dedicated no-decrypt test):

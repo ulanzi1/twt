@@ -137,5 +137,5 @@ Before any row is written, the sweep runs a provider pre-flight (SES `GetAccount
 ZeptoMail has none). Provider errors are classified by their error NAME — an account or config fault is HELD (the row stays
 `attempting`, alarmed once per fault), ⛔ a final failure. ⛔ An address or a provider error message is ever logged or stored.
 ⭐ A HELD run (a config gap or a failing pre-flight) PARKS every in-flight row past its lease (⛔ live child holds one) and skips the
-three-day give-up; the next child re-claims a parked row and restarts its three days (`aging_since`), so a hold never burns a row
-that had no chance to retry (`2026-10-09-300`). ⚠ A pre-flight hold does ⛔ stop children already queued or retrying.
+three-day give-up; the next child re-claims a parked row and credits its give-up anchor (`aging_since`) the time it sat parked, so
+a hold never burns a row it parked, and repeated short holds credit only their own length (`2026-10-09-300` / `-301`). ⚠ A pre-flight hold does ⛔ stop children already queued or retrying.

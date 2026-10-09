@@ -1,3 +1,10 @@
+# last_updated: 2026-10-09m (⭐ **STORY 6.25 — CODE REVIEW ROUND 5 (narrow — round 4's changes, 14 files; three layers in PARALLEL,
+# read-only) ⇒ stays `done`.** D4 [HIGH] → A (the user's call) + 9 patch ⇒ 10 patch, 0 defer, 4 dismissed, all applied. Round 4's
+# reset of the give-up anchor to now let repeated short pre-flight holds keep a failing row (and its re-sends) alive forever ⇒
+# `2026-10-09-301` (author-commit, supersedes `-300` §2 (ii)) + migration 0154 (`parked_at`; the re-claim credits ONLY the parked
+# time; a trigger arm: `aging_since` only forward, only on a parked re-claim), applied to :5432 + :5433. AMENDED lines on AC4 (iv) /
+# AC6 / RE5 / RE11; record and test hardening; red-checks #17–#18. `ci:local` green (34 jobs). Story Change Log 1.8. ⛔ No other row
+# moves. On branch `story/6-25-staff-email-notice-of-a-suspicion-refusal`.)
 # last_updated: 2026-10-09l (⭐ **STORY 6.25 — CODE REVIEW ROUND 4 (narrow — round 3's uncommitted fixes, 19 files; three layers in
 # PARALLEL, read-only) ⇒ stays `done`.** D3 → A (the user's call) + 8 patch ⇒ 9 patch, 0 defer, 6 dismissed, all applied. ⭐ HIGH:
 # round 3 had changed BigDev's committed `-299` RE11 (+ RE5) without an entry ⇒ `2026-10-09-300` (author-commit, the slip

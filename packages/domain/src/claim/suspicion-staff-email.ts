@@ -57,7 +57,8 @@ export const STAFF_EMAIL_SEND_LEASE_MS = 30 * 60 * 1000;
  * ⭐ THE PARKED MARKER (code review rounds 3–4, `-300` §2 (i)) — `claimed_by_job` of an `attempting` row a HELD sweep parked: it
  * was past the lease, i.e. ⛔ live child holds it (a live child's claim or note keeps its row inside the lease). The held sweep
  * enqueues ⛔ new child for it; the give-up SKIPS it; the next child RE-CLAIMS it (⛔ lease wait — defensive, a parked row is
- * already past the lease barring clock skew) and restarts its `aging_since`. ⛔ A pg-boss job id (a UUID).
+ * already past the lease barring clock skew) and moves its `aging_since` forward by the time it sat parked (`-301`).
+ * ⛔ A pg-boss job id (a UUID).
  */
 export const SUSPICION_STAFF_EMAIL_PARKED_BY = 'sweep:held';
 
@@ -258,16 +259,16 @@ export function suspicionStaffEmailReclaimCutoff(now: Date): Date {
 }
 
 /**
- * ⭐ RE11 (AMENDED by `-300`) — THE EXHAUSTED-ROW FINALISER: every row still `attempting` whose `aging_since` (its creation, or
- * its re-claim after a hold) is before `cutoff` AND whose LAST claim (or
- * note) is older than `STAFF_EMAIL_SEND_LEASE_MS` becomes `error` / `exhausted:attempting_three_days` (its detail kept in
- * `first_detail`) — ⛔ a PARKED row (a held sweep parked it; the first child after the hold retries it — round 3 Decision 1 A).
- * The caller runs this ONLY on an un-held run. Returns the pairs finalised, for the caller's ONE alarm — which ALWAYS says a prior attempt may have sent
- * (every given-up row had a claiming commit — `-298`'s principle).
+ * ⭐ RE11 (AMENDED by `-300` / `-301`) — THE EXHAUSTED-ROW FINALISER: every row still `attempting` whose `aging_since` (its
+ * creation, moved forward by any time it sat parked) is before `cutoff` AND whose LAST claim (or note) is older than
+ * `STAFF_EMAIL_SEND_LEASE_MS` becomes `error` / `exhausted:attempting_three_days` (its detail kept in `first_detail`) — ⛔ a
+ * PARKED row (a held sweep parked it; the next child retries it). The caller runs this ONLY on an un-held run. Returns the pairs
+ * finalised, for the caller's ONE alarm — which ALWAYS says a prior attempt may have sent (every given-up row had a claiming
+ * commit — `-298`'s principle).
  *
  * ── DELIBERATE: a CROSS-TENANT WRITE on the BYPASSRLS pool (family 9) ──
- * A time bound over EVERY tenant's rows; its predicate (`attempting`, created before the cutoff, claimed before the lease) and
- * its effect (→ `error`) read and write ⛔ nothing tenant-derived — ⛔ PII, ⛔ cross-row join; `allow` (tests) narrows it. A live
+ * A time bound over EVERY tenant's rows; its predicate (`attempting`, `aging_since` before the cutoff, claimed before the lease,
+ * ⛔ parked) and its effect (→ `error`) read and write ⛔ nothing tenant-derived — ⛔ PII, ⛔ cross-row join; `allow` (tests) narrows it. A live
  * child's row is inside the lease (its re-claim and its transient note both refresh `claimed_at`) ⇒ left to its own
  * compare-and-set. It takes ⛔ claim-row lock: a child past its claim loses `finaliseSuspicionStaffEmail`'s compare-and-set and
  * ALARMS; a child still in `beginSuspicionStaffEmail` loses its UPDATE and returns `already_final` silently — this statement's
@@ -303,7 +304,8 @@ export async function expireExhaustedSuspicionStaffEmails(
  * ⭐ THE HOLD PARK (code review rounds 3–4, `-300` §2 (i)): on a run the config check / provider pre-flight HOLDS, every
  * `attempting` row past the lease (⛔ live child holds it — a live child's claim or note keeps it inside) is marked
  * `claimed_by_job` = `SUSPICION_STAFF_EMAIL_PARKED_BY`, so the give-up cannot burn it while the sweep enqueues ⛔ retry, and the
- * next child re-claims it (restarting its `aging_since`). ⚠ A held run does ⛔ stop children ALREADY queued or retrying: their
+ * next child re-claims it (crediting its `aging_since` the parked time — `parked_at`, set here; `-301`).
+ * ⚠ A held run does ⛔ stop children ALREADY queued or retrying: their
  * race guard checks the config gap only (⛔ the pre-flight), so during a `preflight:*` hold they still run and may send — safe
  * here, since their rows stay inside the lease (⛔ parked) and a parked row is re-claimed by whichever child comes next. ⛔ `claimed_at`, ⛔ `detail`, ⛔ `may_have_sent` are touched (the re-claim still sees a NULL detail).
  * Returns how many rows it parked (for the caller's ONE end-of-run alarm).
@@ -322,10 +324,10 @@ export async function parkHeldSuspicionStaffEmails(
 ): Promise<number> {
   const { rowCount } = await q.query(
     `UPDATE claim_suspicion_staff_emails
-        SET claimed_by_job = $3, updated_at = clock_timestamp()
+        SET claimed_by_job = $3, parked_at = $4, updated_at = clock_timestamp()
       WHERE outcome = 'attempting' AND claimed_at < $1 AND claimed_by_job <> $3
         AND ($2::uuid[] IS NULL OR pariwar_id = ANY($2::uuid[]))`,
-    [new Date(input.now.getTime() - STAFF_EMAIL_SEND_LEASE_MS), input.allow === null ? null : [...input.allow], SUSPICION_STAFF_EMAIL_PARKED_BY],
+    [new Date(input.now.getTime() - STAFF_EMAIL_SEND_LEASE_MS), input.allow === null ? null : [...input.allow], SUSPICION_STAFF_EMAIL_PARKED_BY, input.now],
   );
   return rowCount ?? 0;
 }
@@ -466,8 +468,12 @@ export async function beginSuspicionStaffEmail(
       await client.query<{ notice_id: string; attempt_count: number; may_have_sent: boolean }>(
         `UPDATE claim_suspicion_staff_emails
             SET claimed_at = $2, claimed_by_job = $3, attempt_count = attempt_count + 1,
-                -- decision -300 §2 (ii): a PARKED row (it sat out a hold) restarts its three IST days now (SET reads the OLD holder).
-                aging_since = CASE WHEN claimed_by_job = $4 THEN $2 ELSE aging_since END,
+                -- decision -301 §2 (i): a PARKED row is credited ONLY the time it sat parked (SET reads the OLD holder / parked_at);
+                -- never backward (0154's trigger arm), so a clock-skewed negative span credits nothing.
+                aging_since = CASE WHEN claimed_by_job = $4
+                                   THEN aging_since + GREATEST($2::timestamptz - parked_at, interval '0')
+                                   ELSE aging_since END,
+                parked_at = NULL,
                 may_have_sent = may_have_sent OR detail IS NULL,
                 first_detail = COALESCE(first_detail, detail), detail = NULL, updated_at = clock_timestamp()
           WHERE notice_id = $1 AND outcome = 'attempting'

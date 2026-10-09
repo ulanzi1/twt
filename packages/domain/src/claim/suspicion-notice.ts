@@ -52,6 +52,7 @@ import { CORRECTION_SEND_LEASE_MS } from './correction-reminder-record.js';
 import type { CorrectionMobileSource } from './correction-crypto.js';
 import {
   type EffectiveNomineeDeclaration,
+  EffectiveNomineeDeclarationClaimNotFoundError,
   getEffectiveNomineeDeclaration,
   getEffectiveNomineeDeclarationAsOf,
 } from './nominee-effective.js';
@@ -146,7 +147,6 @@ export async function selectDueSuspicionNotices(
   },
 ): Promise<DueSuspicionNoticePage> {
   const size = clampLimit(input.limit, { default: SUSPICION_NOTICE_PAGE_CAP, cap: SUSPICION_NOTICE_PAGE_CAP });
-  const attempting = noticeRowSql('sn_c', input.purpose, sql`sn_n.outcome = 'attempting'`);
   const finished = noticeRowSql('sn_c', input.purpose, sql`sn_n.outcome <> 'attempting'`);
   const predicate =
     input.purpose === 'suspicion_refusal'
@@ -164,6 +164,8 @@ export async function selectDueSuspicionNotices(
   const after = input.after === null ? sql`` : sql` AND sn_c.claim_case_id > ${input.after}::uuid`;
   // ⚠ `sql.param` — a bare array in a Drizzle template is EXPANDED into one parameter per element.
   const allow = input.allow === null ? sql`` : sql` AND sn_c.pariwar_id = ANY(${sql.param([...input.allow])}::uuid[])`;
+  // `sn_att` computes the `attempting`-row EXISTS ONCE per candidate claim (a LATERAL join, not a re-run subquery) —
+  // the SELECT projection and the WHERE clause's OR both reference its `has_attempting` column.
   const rows = await run<{
     pariwar_id: string;
     claim_case_id: string;
@@ -173,9 +175,16 @@ export async function selectDueSuspicionNotices(
   }>(
     q,
     sql`
-      SELECT sn_c.pariwar_id, sn_c.claim_case_id, ${attempting} AS has_attempting${projections}
+      SELECT sn_c.pariwar_id, sn_c.claim_case_id, sn_att.has_attempting${projections}
         FROM claims sn_c
-       WHERE ((${predicate} AND NOT ${finished}) OR ${attempting})${after}${allow}
+        CROSS JOIN LATERAL (
+          SELECT EXISTS (
+            SELECT 1 FROM claim_suspicion_notices sn_n
+             WHERE sn_n.pariwar_id = sn_c.pariwar_id AND sn_n.claim_case_id = sn_c.claim_case_id
+               AND sn_n.purpose = ${input.purpose} AND sn_n.outcome = 'attempting'
+          ) AS has_attempting
+        ) sn_att
+       WHERE ((${predicate} AND NOT ${finished}) OR sn_att.has_attempting)${after}${allow}
        ORDER BY sn_c.claim_case_id ASC
        LIMIT ${sql.raw(String(size))}
     `,
@@ -374,7 +383,13 @@ async function resolveClosedRecipient(db: Db, pariwarId: PariwarId, claimCaseId:
   if (rankOneOf(declaration) === null) {
     const closing = await readClosingEvent(db, pariwarId, claimCaseId);
     if (closing === null) return { kind: 'no_target', reason: 'closed_no_determination' };
-    declaration = await getEffectiveNomineeDeclarationAsOf(db, pariwarId, closing.heldByClaimCaseId, closing.occurredAt);
+    try {
+      declaration = await getEffectiveNomineeDeclarationAsOf(db, pariwarId, closing.heldByClaimCaseId, closing.occurredAt);
+    } catch (err) {
+      // S (the reversed claim) is gone from this Pariwar — same outcome as the `closing === null` branch above.
+      if (err instanceof EffectiveNomineeDeclarationClaimNotFoundError) return { kind: 'no_target', reason: 'closed_no_determination' };
+      throw err;
+    }
   }
   const rankOne = rankOneOf(declaration);
   if (rankOne === null || declaration.determinationId === null) return { kind: 'no_target', reason: 'closed_no_determination' };
@@ -499,7 +514,8 @@ export async function beginSuspicionNotice(
     [pariwarId, claimCaseId],
   );
   const claimRow = locked.rows[0];
-  if (!claimRow) return { kind: 'not_due' };
+  // The selector read this claim moments ago under this same Pariwar; claims are ⛔ never deleted — a data fault (RB9's style).
+  if (!claimRow) throw new Error(`[suspicion-notice] claim ${claimCaseId} is missing under Pariwar ${pariwarId}`);
   const claim = { currentState: claimRow.current_state, deceasedMemberId: claimRow.deceased_member_id as MemberId };
 
   const existing = (
@@ -647,18 +663,21 @@ export async function finaliseSuspicionNotice(
 
 /**
  * A TRANSIENT failure: keep the row `attempting` (the retry re-claims it at once) and record the classified detail —
- * the re-claim moves it to `first_detail`.
+ * the re-claim moves it to `first_detail`. Returns `false` when the row moved on (the finaliser, or a job that
+ * re-claimed it after the lease) — the note was a no-op, as `finaliseSuspicionNotice`'s compare-and-set reports.
  */
 export async function noteSuspicionNoticeTransient(
   db: Db,
   input: { readonly pariwarId: PariwarId; readonly noticeId: string; readonly jobId: string; readonly detail: string },
-): Promise<void> {
-  await db.execute(sql`
+): Promise<boolean> {
+  const result = await db.execute<{ notice_id: string }>(sql`
     UPDATE claim_suspicion_notices
        SET detail = ${input.detail}, updated_at = clock_timestamp()
      WHERE pariwar_id = ${input.pariwarId}
        AND notice_id = ${input.noticeId}::uuid
        AND outcome = 'attempting'
        AND claimed_by_job = ${input.jobId}
+     RETURNING notice_id
   `);
+  return (result.rows?.length ?? 0) > 0;
 }

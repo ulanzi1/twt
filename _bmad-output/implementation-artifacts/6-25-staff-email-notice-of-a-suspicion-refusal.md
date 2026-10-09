@@ -3,6 +3,28 @@ baseline_commit: 3a7d3a1f
 ---
 
 <!--
+⭐ SHA MAP — added 2026-10-09 after PR #266 was REBASE-merged (merge `9f4d684a`). Every commit SHA this file cites (Change Log, Review
+Findings, Debug Log, File List) is a BRANCH SHA ⛔ on `main`; its `main` twin, verified per pair by identical subject AND identical
+`git patch-id --stable` (the final trees are identical). The citations below are kept AS WRITTEN ([[feedback_supersede_never_reinterpret]]).
+  branch     → main       commit
+  c3f38618   → d1a9f43c   story created + validated (v1.2)
+  8fbf718b   → a0d5c1fa   governance — `2026-10-09-299`
+  d04748b8   → 7fa10e12   governance — ADR-0040 drafted, index, epics, roster Rows 24–25, deferred-work
+  ebc78c65   → c2aa01a4   Task 1 — migration 0152
+  b01340a1   → 2c4be008   Tasks 2.1 + 3
+  6b48c9a2   → fc93e21b   Task 4 + RE15
+  5234f2af   → 12bec664   Task 5
+  19d09477   → cc4fc02d   ci:local fixes
+  391a670c   → 8e2c34f4   dev complete ⇒ review
+  1f557e06   → 4e9a3959   code review rounds 1–2
+  2cd71a92   → c106e650   governance — `2026-10-09-300`
+  89fc8187   → 8301f63d   code review rounds 3–4 (0153)
+  fcbd2cb2   → fe71617a   governance — `2026-10-09-301`
+  834c4cd0   → 9f4d684a   code review round 5 (0154)
+⚠ `-300`'s Occasion line cites the range `3a7d3a1f..1f557e06` = `3a7d3a1f..4e9a3959` on `main`.
+-->
+
+<!--
 ⭐ PINNED 2026-10-09 (`bmad-create-story 6.25`) to `main` at `3a7d3a1f` — the tree that carries Story 6.24b (PR #265, REBASE-merge; branch
 head `4a9b92c0`). Every `file:NNN` below is AS OF `3a7d3a1f`, derived by three read-only research passes (governance trail; code
 substrate; 6.24a/6.24b learnings) and spot-checked by hand.

@@ -281,6 +281,11 @@ no person today (F13) ⇒ the residual is recorded: the list stays the only noti
 > adds `detail` / `first_detail` vocabulary CHECKs (exactly `suspicionStaffEmailDetail`'s grammar), a BEFORE UPDATE trigger freezing a
 > FINISHED row and `may_have_sent` true → false, and the give-up anchor `aging_since` (see RE11's amendment).
 
+> ⚠ **AMENDED 2026-10-09 by `-301` §2** (code review round 5): migration **0154** adds `parked_at` (+ a CHECK: an `attempting` row is
+> parked ⟺ it carries `parked_at`) and a trigger arm letting `aging_since` move ONLY forward on a parked re-claim; ⭐ completing the
+> `-300` line above: 0153 also moved the give-up's partial index to `(aging_since, claimed_at)` and granted `twt_app` UPDATE on
+> `aging_since` (0154: and `parked_at`).
+
 **RE5 — A NEW table `claim_suspicion_staff_emails` (migration 0152)** — ⛔ not a 4th purpose on 0151 (its UNIQUE is per claim/purpose
 and its recipient columns are nominee/SMS-shaped). Columns: `notice_id uuid PK default gen_random_uuid()`; `pariwar_id`,
 `claim_case_id` NOT NULL; `recipient_user_id uuid NULL REFERENCES users(id)` (⛔ no cascade — F6: users are never deleted);
@@ -460,6 +465,9 @@ post-commit enqueue from the API — rejected: a second trigger path, and RE1's 
 > the give-up (un-held runs only) SKIPS a parked row and counts its three IST days from `aging_since` (⛔ `created_at`), which
 > re-claiming a parked row resets to now.
 
+> ⚠ **AMENDED 2026-10-09 by `-301` §2 (i)** (code review round 5): ⛔ the reset to now in the `-300` line above — re-claiming a parked
+> row moves `aging_since` FORWARD by (now − `parked_at`), so a row's three IST days are three days of NON-parked time.
+
 **RE11 — The sweep/child = 6.24b's skeleton AS AMENDED (`-297` §2, `-298`), in NEW modules.**
 Domain `packages/domain/src/claim/suspicion-staff-email.ts` (add to `FENCED_FILES`, with reason; a dedicated no-decrypt test):
 - `selectDueSuspicionStaffEmails(db, { afterKey, limit, allow })` — BYPASSRLS cross-tenant read (a DELIBERATE family-9 comment block with
@@ -605,6 +613,9 @@ template's param type admits `link` only (a type-level test). The adapter unit t
 recorded.
 
 ### AC4 — Once ever, at-least-once recorded (RE2, RE11)
+> ⚠ **AMENDED 2026-10-09 by `-300` §2 (i)–(ii) and `-301` §2** (code review rounds 3–5; the text below is kept as written): (iv)'s three IST
+> days count from `aging_since` (⛔ creation) — three days of NON-parked time; a HELD run runs ⛔ give-up and parks stalled rows, the
+> give-up skips a parked row, and re-claiming one moves `aging_since` forward by the time it sat parked.
 (i) N concurrent children for one pair, ⛔ child stalling past the lease ⇒ ONE send, ONE `accepted` row (a true two-connection COMMITTED
 race, waiting on `pg_stat_activity` lock waits — ⛔ sleeps); (ii) a crash-left `attempting` row past `STAFF_EMAIL_SEND_LEASE_MS` is
 reclaimed by the next sweep (`attempt_count 2`, `first_detail` kept); within the lease ⇒ `held_by_other`; (iii) an `attempting` row whose
@@ -626,6 +637,9 @@ A standing refusal in a Pariwar with ⛔ no eligible admin ⇒ ONE `no_target` r
 who already has a row ⇒ ⛔ `no_target` row even if that admin is later disabled.
 
 ### AC6 — Config gaps hold, never lose (RE7)
+> ⚠ **AMENDED 2026-10-09 by `-300` §2 (i) and §2 (iv)** (code review rounds 3–5; the text below is kept as written): a held sweep writes
+> ⛔ NEW row but PARKS every `attempting` row past the lease (`claimed_by_job` = `'sweep:held'`, `parked_at`); EVERY client config gap
+> — and an unusable `ADMIN_APP_ORIGIN` with a provider set — raises ONE boot alarm.
 With the API key / sender / `ADMIN_APP_ORIGIN` unset (each leg separately, and a non-https origin, and an origin with a path), AND
 with the provider pre-flight reporting sending disabled or sandboxed: the sweep enqueues ⛔ nothing, writes ⛔ no row, raises ONE
 end-of-run alarm (count + ids); then fixed ⇒ the next sweep sends. A child racing a config removal ⇒ `held_config`, ⛔ row, ⛔ decrypt, and

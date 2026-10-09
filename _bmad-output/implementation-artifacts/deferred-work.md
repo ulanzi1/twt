@@ -4,6 +4,31 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: code review of story-6.24b (2026-10-09)
+
+- **`recipient_number_hash` survives the deceased member's erasure** [`packages/domain/src/member/anonymize.ts` — the 6.24b line
+  *"`claim_suspicion_notices` holds ⛔ no plaintext … ⇒ nothing to scrub"*; `0151`'s column] — the keyed blind index of the nominee's /
+  claimant's E.164 stays on notice rows linked by `claim_case_id` to the erased deceased. Pre-existing pattern: `0128` / `0138` keep
+  theirs the same way. ⚠ The hash is ⛔ the erased member's own number, but GI13 (same file) nulls `death_date_index` because *"a keyed
+  hash … is a correlatable token and must ⛔ not outlive the erasure"* — so the exemption is owed a recorded reason, for all three
+  tables at once. ⭐ Trigger: any change to `anonymize.ts`'s claim-side scrub, or a DPDPA review of erasure scope.
+- **`{member}` has ⛔ no length guard against the operator's DLT per-variable limit** [`apps/jobs/src/scheduler/claim-suspicion-notices.ts`
+  — `resolveMemberFacingDeceasedName` → render] — in full-name mode a long KYC name may exceed the operator's variable limit (often 30
+  characters; ⛔ confirmed for this operator — the limit is ⛔ in the repo). A provider-side mismatch lands in the shared core's
+  `default` ⇒ a final `error` + alarm, spending the once-ever slot. ⛔ Not pre-existing (6.19's texts carry ⛔ no name); ⛔ actionable
+  without the operator's fact. ⭐ Trigger: provisioning DLT templates 7–12 (roster Row 22) — confirm the limit, then truncate / shield or
+  route to `no_target` + alarm.
+- **6.19b's K4 carries the premise `-297` §2 found false: "`detail` NULL ⇒ nothing was sent"** [`packages/domain/src/claim/correction-reminder-record.ts`
+  — `skipCorrectionReminder` / its `expiredAttempt`; `packages/domain/src/claim/certificate-reminder-record.ts` — `skipCertificateReminder`]
+  — a `detail` is written ONLY by a transient failure, so a crash between the gateway's accept and the finalise leaves an
+  `attempting` row with `detail` NULL; a failed re-check on its retry then records `skipped_superseded` with ⛔ no alarm — a sent
+  reminder recorded as unsent. Story 6.24b's notices were moved to *"ANY existing `attempting` row ⇒ `error` + alarm"* by `-297` §2;
+  the 6.19b / 6.19d records were ⛔ changed (`-297`: ⛔ moved there). ⚠ The 6.19 texts are reminders, ⛔ once-ever, so the cost
+  is a record error, ⛔ a lost ratified text. ⭐ Trigger: any change to either record's skip path, or the 6.19 texts' go-live.
+  ⭐ Fix: the same rule (an author-commit superseding 6.19b's K4 for those records).
+
+---
+
 ## Deferred from: Trustee Panel ruling `2026-10-09-296` on story-6.24b (2026-10-09)
 
 - **⛔ Nobody is assigned to act on the skipped-closure-text alarms, and the "alarm" reaches ⛔ no person — a `console.warn` line only**
@@ -20,6 +45,9 @@ Tracks findings deferred from code reviews and other quality gates. Each section
   closes (its DLT ids stay unset). ⭐ Trigger: **before Row 22 closes** (the three texts' go-live) — name an owner (the helpline? the
   District Admin of the claim's district?) and wire `onAlarm` for this sweep (or close the 8.14 item for every job); if neither is done
   by then, put it back to the Panel, since `-296`'s basis would not hold at go-live.
+  ⭐ **2026-10-09 — now MECHANIZED on the roster:** [`-297`](../../.decision-log.md#decision-2026-10-09-297) §1 added this as
+  Row 22's closure condition **(d)** (code review of story-6.24b) — Row 22 can ⛔ close, and templates 7–12 stay unprovisioned,
+  until it is met. This item stays OPEN (the work is ⛔ done); it is no longer the ONLY record of the trigger.
 
 ---
 

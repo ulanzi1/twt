@@ -254,9 +254,12 @@ describe.skipIf(!hasDatabase)('Story 6.24b — the filing code to the nominee in
       expect(t.stepUpDelivery.last?.resolvedMobile).toBe(A);
       expect(recipientOf(t, w)).toBe('at_death');
       const audits = JSON.stringify(sendAudits(t, w));
-      expect(audits).not.toContain('9876501111');
-      expect(audits).not.toContain(A);
       expect(audits).toContain(encryption.maskMobile(A));
+      // AC6b — ⛔ A's number ANYWHERE in the captured audit events (every type, ⛔ only the send lines).
+      const everything = JSON.stringify(t.auditSink.events);
+      expect(t.auditSink.events.length).toBeGreaterThan(0);
+      expect(everything).not.toContain('9876501111');
+      expect(everything).not.toContain(A);
     });
   });
 

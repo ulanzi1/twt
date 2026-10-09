@@ -8,7 +8,8 @@
 // ⛔ Never `dispatch()` — a DIRECT DLT SMS through the shared core (`sendClaimDltSms`, RB4), the sibling registry's words.
 //
 // ── The sweep, daily 10:00 IST ─────────────────────────────────────────────────────────────────────────────────
-//   (1) RB3's give-up — rows `attempting` since before (today − 2) IST ⇒ `error` + an alarm (claim ids);
+//   (1) RB3's give-up — rows CREATED before 00:00 IST of (today − 2), still `attempting` and ⛔ claimed within the send
+//       lease ⇒ `error` + an alarm (claim ids);
 //   (2) RB12's CONFIG CHECK, BEFORE anything is enqueued: the gateway and each needed template id once per run (both
 //       locales for `appeal_notice` — its locale is known only under the lock), the per-Pariwar helpline LAZILY,
 //       memoised, as the pages reveal Pariwars. A gap — null / blank / unconfigured, or ANY Secret Manager fault — HOLDS
@@ -170,10 +171,12 @@ export async function runSuspicionNoticeSweep(deps: ClaimSuspicionNoticeDeps, bo
     return empty;
   }
 
-  // (1) RB3 — THE GIVE-UP. ⚠ A CROSS-TENANT WRITE on the BYPASSRLS pool, DELIBERATELY (6.19b's reasoning — a time bound
-  // over every tenant's rows; its predicate and effect read and write ⛔ nothing tenant-derived).
+  // (1) RB3 — THE GIVE-UP. ⚠ A CROSS-TENANT WRITE on the BYPASSRLS pool, DELIBERATELY — the reasoning, the lease guard
+  // and the RE-EXAMINE triggers are at `expireExhaustedSuspicionNotices`' DELIBERATE block. The cross-tenant READ that
+  // follows (the selectors) carries its own block at `selectDueSuspicionNotices`.
   const stuck = await claimDomain.expireExhaustedSuspicionNotices(deps.pool, {
     cutoff: claimDomain.suspicionNoticeReclaimCutoff(now),
+    now,
     allow,
   });
   if (stuck.length > 0) {
@@ -315,10 +318,9 @@ export async function runSuspicionNoticeChild(
   if (begun.kind === 'already_final' || begun.kind === 'held_by_other' || begun.kind === 'not_due') {
     return { status: 'skipped', reason: begun.kind };
   }
-  if (begun.kind === 'skipped') {
-    if (begun.expiredAttempt) {
-      alarm(`[jobs] claim-suspicion-notice: the ${tag} — the re-check now fails after an attempt already ran; recorded 'error' (exhausted:recheck_…)`);
-    }
+  if (begun.kind === 'expired') {
+    // `-297` §2 — a claiming commit happened, so a text MAY have gone: ALWAYS alarmed (ids + the detail only).
+    alarm(`[jobs] claim-suspicion-notice: the ${tag} — the re-check now fails after an attempt was claimed (a text may have gone); recorded 'error' (${begun.detail})`);
     return { status: 'skipped', reason: 'recheck_failed' };
   }
   if (begun.kind === 'no_target') {

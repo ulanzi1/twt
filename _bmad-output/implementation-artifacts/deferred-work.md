@@ -4,6 +4,25 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: Trustee Panel ruling `2026-10-09-296` on story-6.24b (2026-10-09)
+
+- **⛔ Nobody is assigned to act on the skipped-closure-text alarms, and the "alarm" reaches ⛔ no person — a `console.warn` line only**
+  [`apps/jobs/src/scheduler/claim-suspicion-notices.ts` — `alarmOf` (`deps.onAlarm ?? console.warn`); the `no_target` alarm
+  *"… was NOT sent — excluded_claimant …"*; `apps/jobs/src/boot.ts` passes `claimCorrectionDeps` with ⛔ no `onAlarm`] — `-296`
+  Confirm 2 A accepted that the `-291` Q2 B closure text is ⛔ not sent about a claim recorded against a nominee entry saved after the
+  death — the true nominee's OWN claim included in `-295` RB18 residuals (ii)–(iii) — on the basis that *"each such skip raises an
+  alarm to staff"*, so staff can call her. ⚠ Two gaps under that basis: (1) ⛔ no owner — the routing note put *"nothing assigns the
+  alarm to anyone yet"* as A's cost, and `-296` lists *"who acts on the (b) alarms"* under what it does ⛔ NOT cover; (2) ⛔ no
+  transport — found while recording this item: in production the alarm is a log line in the jobs process, the same system-wide gap as
+  the 8.14 item *"No real alerting/paging channel is wired for `onAlarm`"* (below). Until both are closed, a skipped text about her own
+  claim reaches her only if she calls. ⚠ The note told the Panel *"raises an alarm to staff"* — true of the code's intent, ⛔ not of
+  its delivery today. ⛔ Not a merge fence ([[project_not_in_production_merge_is_not_golive]]); ⛔ nothing sends before roster Row 22
+  closes (its DLT ids stay unset). ⭐ Trigger: **before Row 22 closes** (the three texts' go-live) — name an owner (the helpline? the
+  District Admin of the claim's district?) and wire `onAlarm` for this sweep (or close the 8.14 item for every job); if neither is done
+  by then, put it back to the Panel, since `-296`'s basis would not hold at go-live.
+
+---
+
 ## Deferred from: dev-story of story-6.24b (2026-10-08)
 
 - **An erased deceased member's name would render `[anonymized]` in a contribution text (the 8.8 name path has ⛔ no erasure guard)**

@@ -235,3 +235,6 @@ export * from './claim-warning-approvals-rls.js';
 // Story 6.24b (0151) — the suspicion notice record. Per command; ⛔ no DELETE leg and ⛔ no `FOR ALL`; the UPDATE leg is
 // narrowed by its migration's column grant.
 export * from './claim-suspicion-notice-rls.js';
+// Story 6.25 (0152) — the staff email record. Per command; ⛔ no DELETE leg and ⛔ no `FOR ALL`; INSERT and UPDATE narrowed by
+// its migration's column grants.
+export * from './claim-suspicion-staff-email-rls.js';

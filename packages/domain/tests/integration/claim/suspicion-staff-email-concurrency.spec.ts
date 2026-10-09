@@ -5,7 +5,9 @@
 //     the N−1 others `held_by_other` (the winner's row is within the lease) — ⛔ a second row, ⛔ a second claim;
 //   · two children of the claim-level NULL pair at once (RE4) — ONE `no_target` row, the other `already_final` (⛔ a second alarm);
 //   · the give-up (⛔ claim-row lock) finishing a row WHILE a child's claiming transaction re-claims it: the child's UPDATE waits on
-//     the row, re-reads it `error` and reports `already_final` — ⛔ an outcome it did ⛔ write.
+//     the row, re-reads it `error` and reports `already_final` — ⛔ an outcome it did ⛔ write;
+//   · ⭐ round 3 — a live holder's transient note committing WHILE another job takes over its stale-looking row: the taker's
+//     re-claim UPDATE waits on the row, re-checks the lease the note just refreshed and reports `held_by_other` — ⛔ a take-over.
 //
 // ⚠ WHY OWN-COMMITTING: a race needs REAL concurrent transactions on SEPARATE pool clients (the per-test BEGIN/ROLLBACK envelope
 // would serialise everything). Each test proves WHERE the loser blocks — its backend in a `Lock` wait (`pg_stat_activity`, ⛔ a
@@ -21,9 +23,10 @@ import {
   STAFF_EMAIL_SEND_LEASE_MS,
   beginSuspicionStaffEmail,
   expireExhaustedSuspicionStaffEmails,
+  noteSuspicionStaffEmailTransient,
   suspicionStaffEmailReclaimCutoff,
 } from '../../../src/claim/index.js';
-import { setPariwarScope } from '../../../src/db.js';
+import { bindScopedDb, setPariwarScope } from '../../../src/db.js';
 import { pariwarId as toPariwarId, type ClaimId, type PariwarId, type UserId } from '../../../src/ids/index.js';
 import { refusedClaim } from './_suspicion-refusal-fixtures.js';
 
@@ -218,8 +221,8 @@ describe.skipIf(!hasDatabase)("Story 6.25 — the staff email's claiming transac
     const now = new Date();
     const cutoff = suspicionStaffEmailReclaimCutoff(now);
     await pool.query(
-      `INSERT INTO claim_suspicion_staff_emails (pariwar_id, claim_case_id, recipient_user_id, outcome, claimed_at, claimed_by_job, created_at)
-       VALUES ($1, $2, $3, 'attempting', $4, 'crashed', $5)`,
+      `INSERT INTO claim_suspicion_staff_emails (pariwar_id, claim_case_id, recipient_user_id, outcome, claimed_at, claimed_by_job, created_at, aging_since)
+       VALUES ($1, $2, $3, 'attempting', $4, 'crashed', $5, $5)`,
       [pid, cid, u, new Date(now.getTime() - STAFF_EMAIL_SEND_LEASE_MS - 1), new Date(cutoff.getTime() - 1)],
     );
     // The give-up UPDATEs the row and holds its row lock (⛔ committed yet).
@@ -233,5 +236,37 @@ describe.skipIf(!hasDatabase)("Story 6.25 — the staff email's claiming transac
     expect(await pending).toEqual({ kind: 'already_final' });
     await child.commit();
     expect(await rowsOf(cid)).toMatchObject([{ outcome: 'error', detail: 'exhausted:attempting_three_days', attempt_count: 1 }]);
+  });
+
+  it('⭐ round 3 — a holder\'s note commits WHILE another job takes its stale-looking row over ⇒ the taker re-checks the lease: `held_by_other`', { timeout: TIMEOUT }, async () => {
+    const pid = freshPariwar();
+    const cid = await committedRefusal(pid);
+    const u = await committedAdmin(pid);
+    const now = new Date();
+    const { rows } = await pool.query<{ notice_id: string }>(
+      `INSERT INTO claim_suspicion_staff_emails (pariwar_id, claim_case_id, recipient_user_id, outcome, claimed_at, claimed_by_job)
+       VALUES ($1, $2, $3, 'attempting', $4, 'job-live') RETURNING notice_id`,
+      [pid, cid, u, new Date(now.getTime() - STAFF_EMAIL_SEND_LEASE_MS - 1)],
+    );
+    // The live holder's transient note refreshes the lease and holds the row lock (⛔ committed yet; it takes ⛔ claim lock).
+    const holder = await openTx(pid);
+    expect(
+      await noteSuspicionStaffEmailTransient(bindScopedDb(holder.client), {
+        pariwarId: pid,
+        noticeId: rows[0]!.notice_id,
+        jobId: 'job-live',
+        detail: 'transient:TooManyRequestsException',
+        mayHaveSent: false,
+        now,
+      }),
+    ).toBe(1);
+    // The taker reads the STALE claimed_at under the claim lock, decides "past the lease", and waits on the row in its UPDATE.
+    const taker = await openTx(pid);
+    const pending = begin(taker.client, pid, cid, u, 'job-new', now);
+    expect(await waitingOn(taker.backendPid)).toMatch(/UPDATE claim_suspicion_staff_emails/);
+    await holder.commit();
+    expect(await pending).toEqual({ kind: 'held_by_other' });
+    await taker.commit();
+    expect(await rowsOf(cid)).toMatchObject([{ outcome: 'attempting', attempt_count: 1, claimed_by_job: 'job-live', detail: 'transient:TooManyRequestsException' }]);
   });
 });

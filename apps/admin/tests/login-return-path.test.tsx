@@ -4,28 +4,39 @@
 //     segment, an upper-cased or malformed id ⇒ the default landing page (⛔ an open redirect);
 //   · the round trip: a signed-out admin on `/login?next=/p/<P>/nominee-refusals` completes sign-in and is taken to THAT list; a
 //     refused `next` lands on `/audit/integrity` as before;
-//   · the refusal list's BOTH redirects (a session error, a 401 on the list) carry `next` = its own path.
+//   · the refusal list's BOTH redirects (a session error, a 401 on the list) carry `next` = its own path (lower-cased);
+//   · ⭐ round 3 — `useSearch` runs the REAL `/login` `validateSearch` (`validateLoginSearch`, the function `router.tsx` uses) over
+//     TanStack's REAL default search PARSER, and the redirect's `search` is serialised by TanStack's REAL stringifier and parsed
+//     back — so the round trip is proven through the router's own search handling, ⛔ a hand-rolled `URLSearchParams` stand-in.
+
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { allowedNextPariwarId, nomineeRefusalsPath } from '../src/routes/login-next.js';
+import { defaultParseSearch, defaultStringifySearch } from '@tanstack/react-router';
+
+import { allowedNextPariwarId, nomineeRefusalsPath, validateLoginSearch } from '../src/routes/login-next.js';
 import { renderWithClient } from './_helpers.js';
 
 const P = '2b7c0a4e-5d1f-4e8a-9c3b-1f2e3d4c5b6a';
 const navigate = vi.fn();
+const params = { pariwarId: P };
 const session = { isLoading: false, isError: false };
 const list = { isLoading: false, error: null as unknown, data: undefined as unknown };
 
-vi.mock('@tanstack/react-router', () => ({
-  useNavigate: () => navigate,
-  useParams: () => ({ pariwarId: P }),
-  // Mirrors `loginRoute`'s own `validateSearch` (`router.tsx`) against the test's simulated URL.
-  useSearch: () => {
-    const next = new URLSearchParams(window.location.search).get('next');
-    return next === null ? {} : { next };
-  },
-}));
+vi.mock('@tanstack/react-router', async (importActual) => {
+  const actual = await importActual<typeof import('@tanstack/react-router')>();
+  const { validateLoginSearch: validate } = await import('../src/routes/login-next.js');
+  return {
+    ...actual,
+    useNavigate: () => navigate,
+    useParams: () => params,
+    // ⭐ The REAL parser + the REAL `/login` validateSearch over the test's simulated URL (round 3).
+    useSearch: () => validate(actual.defaultParseSearch(window.location.search)),
+  };
+});
 vi.mock('../src/api/client.js', () => ({
   ApiError: class ApiError extends Error {
     public constructor(public status: number) {
@@ -52,6 +63,7 @@ const { ApiError } = await import('../src/api/client.js');
 
 beforeEach(() => {
   navigate.mockClear();
+  params.pariwarId = P;
   session.isError = false;
   list.error = null;
 });
@@ -72,7 +84,7 @@ describe('the allowlist (⛔ an open redirect)', () => {
       `/p/${P}/nominee-refusals?x=1`,
       `/p/${P}/nominee-refusals/`,
       `/p/${P}/nominee-refusals/../../audit`,
-      `/p/${P.toUpperCase()}/nominee-refusals`,
+      `/p/${P.toUpperCase()}/nominee-refusals`, // the allowlist stays strict — `nomineeRefusalsPath` lower-cases instead
       `/p/${P}x/nominee-refusals`,
       '/p/not-a-uuid/nominee-refusals',
       `/p/${P}/nominee-corrections`,
@@ -98,6 +110,31 @@ async function signIn(): Promise<unknown> {
   return navigate.mock.calls.at(-1)![0];
 }
 
+describe('⭐ round 3 — the `/login` validateSearch (THE function `router.tsx` uses) over TanStack\'s real parser', () => {
+  it('a string `next` is kept as given; a number / an object / an absent `next` is dropped', () => {
+    const parse = (q: string) => validateLoginSearch(defaultParseSearch(q));
+    expect(parse(`?next=${encodeURIComponent(nomineeRefusalsPath(P))}`)).toEqual({ next: `/p/${P}/nominee-refusals` });
+    expect(parse('?next=123')).toEqual({}); // JSON-parsed to a number first
+    expect(parse(`?next=${encodeURIComponent('{"a":1}')}`)).toEqual({});
+    expect(parse('?other=1')).toEqual({});
+    expect(parse('')).toEqual({});
+  });
+
+  it('⭐ round 4 — the `/login` route IS wired to `validateLoginSearch` (an inline parser in `router.tsx` turns this red)', () => {
+    // ⚠ jsdom's `import.meta.url` is ⛔ a file URL here — resolve from the package root vitest runs in.
+    const router = readFileSync(path.resolve(process.cwd(), 'src/router.tsx'), 'utf-8');
+    const login = /const loginRoute = createRoute\(\{([\s\S]*?)\n\}\);/.exec(router)?.[1] ?? '';
+    expect(login).toContain("path: '/login'");
+    expect(login).toMatch(/\bvalidateSearch: validateLoginSearch,/);
+    expect(router).toContain("import { validateLoginSearch } from './routes/login-next.js';");
+  });
+
+  it('⭐ the list\'s redirect `search` survives the router\'s OWN serialise → parse → validate → allowlist', () => {
+    const search = { next: nomineeRefusalsPath(P.toUpperCase()) };
+    expect(allowedNextPariwarId(validateLoginSearch(defaultParseSearch(defaultStringifySearch(search))).next)).toBe(P);
+  });
+});
+
 describe('⭐ the round trip', () => {
   it('a signed-out admin who followed the email signs in and lands ON the list', async () => {
     window.history.replaceState(null, '', `/login?next=${encodeURIComponent(nomineeRefusalsPath(P))}`);
@@ -120,6 +157,14 @@ describe('the refusal list sends a signed-out admin to sign-in WITH its own path
     session.isError = true;
     renderWithClient(<NomineeRefusalsRoute />);
     await waitFor(() => expect(navigate).toHaveBeenCalledWith({ to: '/login', search: { next: `/p/${P}/nominee-refusals` } }));
+  });
+
+  it('⭐ round 3 — a RE-CASED Pariwar id in the URL ⇒ `next` is the LOWER-cased path (it passes the allowlist)', async () => {
+    params.pariwarId = P.toUpperCase();
+    session.isError = true;
+    renderWithClient(<NomineeRefusalsRoute />);
+    await waitFor(() => expect(navigate).toHaveBeenCalledWith({ to: '/login', search: { next: `/p/${P}/nominee-refusals` } }));
+    expect(allowedNextPariwarId(`/p/${P}/nominee-refusals`)).toBe(P);
   });
 
   it('a 401 on the list ⇒ /login?next=<the list>', async () => {

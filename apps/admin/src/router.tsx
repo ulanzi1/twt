@@ -51,6 +51,7 @@ import { ModerationAppealsRoute } from './routes/ModerationAppealsRoute.js';
 import { VerifierConsoleRoute } from './routes/VerifierConsoleRoute.js';
 import { IntegrityRoute } from './routes/IntegrityRoute.js';
 import { LoginPage } from './routes/LoginPage.js';
+import { validateLoginSearch } from './routes/login-next.js';
 import { MemberSearchRoute } from './routes/MemberSearchRoute.js';
 import { NiyamavaliRoute } from './routes/NiyamavaliRoute.js';
 import { ProvisioningRoute } from './routes/ProvisioningRoute.js';
@@ -74,8 +75,7 @@ const loginRoute = createRoute({
   path: '/login',
   // Story 6.25 (RE9 A) — the sign-in return path: `next` is carried as given and ALLOWLISTED by `LoginPage` (`login-next.ts`) —
   // only the nominee-refusal list's own path is ever followed (⛔ an open redirect).
-  validateSearch: (search: Record<string, unknown>): { next?: string } =>
-    typeof search['next'] === 'string' ? { next: search['next'] } : {},
+  validateSearch: validateLoginSearch,
   component: LoginPage,
 });
 

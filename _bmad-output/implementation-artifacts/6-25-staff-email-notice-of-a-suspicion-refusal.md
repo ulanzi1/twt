@@ -899,6 +899,246 @@ SEQUENTIAL, read-only — 2026-10-09)
   any future change to `provision-admin.ts`'s validation or write logic, or a decision to stand up test infra for it
   generally.
 
+#### Review Findings — ROUND 3 (full diff `3a7d3a1f..1f557e06`, code only — 43 files; three chunks (domain / jobs / admin+api+scripts) ×
+three layers = nine reviewers in PARALLEL, read-only — 2026-10-09)
+
+> Triage: **2 decision-needed, 12 patch, 3 defer, 27 dismissed** (duplicates merged across the nine reports); both decisions
+> resolved 2026-10-09 (the user's call: A, A) ⇒ **14 patch, 3 defer, 27 dismissed**, all 14 patches applied. §0 gate: ⛔ neither
+> decision is the Panel's — stripped of citations, D1 is *"should the code's give-up clock run while the whole channel is held by a
+> config fault?"* and D2 is *"should 0152 carry a CHECK / trigger the writers already honour?"* — both "the code should do X" (the
+> Panel's *"every Pariwar Admin"* is ⛔ re-opened; D1 is how the code FAILS it). Dismissed (each re-traced, ⛔ taken on a layer's
+> word): ⚠ the one HIGH raised (chunk B Blind Hunter — "a DB failure after an `accepted` send re-sends with `may_have_sent` never
+> set") is FALSE: the re-claim UPDATE sets `may_have_sent = may_have_sent OR detail IS NULL` (`suspicion-staff-email.ts`, the
+> `begin` re-claim), and a throwing finalise / note or a killed process leaves the claim's NULL `detail` ⇒ flagged; AC4 (ii)'s
+> `false` is right (its row was noted with a 429) — the layer was blind to the domain half. Also dismissed: no cap on re-sends
+> after an ambiguous failure (Invariant 6 — at-least-once RECORDED, by design); the give-up stamping `may_have_sent` on a row that
+> only saw pre-call failures (`-297` §2 / `-298`, round 1); ZeptoMail reading `details[0]` only (fails SAFE — HELD + alarmed); the
+> ZeptoMail `cpaas.zoho.in` host (ADR-0040 + Latest tech notes record it ⚠ UNVERIFIED, Row 24); `singletonKey` re-enqueue per tick
+> (documented ×3; a duplicate child is `held_by_other`); per-pair enqueue-failure alarm volume (speculative); the `@ts-expect-error`
+> template test (`apps/jobs/tsconfig.json` includes `tests/**` — tsc enforces it); SES `BadRequestException` / `MessageRejected`
+> HELD (round 1); a bare 408 HELD (conforms to the RE6 table); a mid-run sweep throw losing its end-of-run alarms (the tick-FAILED
+> alarm + pg-boss's retry cover it); keyset / give-up lacking `pariwar_id` (`claims.claim_case_id` is a GLOBAL primary key); worker
+> clock skew on the lease (one jobs process, the injected clock); a stale `previousDetail` (alarm dedup only); `pre_call` words
+> sharing the `transient:` namespace (speculative); the Drizzle `.references()` FK name ≠ 0152's (0151 has the same shape; ⛔
+> snapshot diffing); a `no_target` row beside a later chain's recipient rows, and once-ever spanning chains (RE2 rules both); live
+> (⛔ frozen) active / credential checks (RE3 edge (i) ACCEPTED); a permanent-401 sign-in loop (speculative — a broken session
+> breaks every page); provision's raw-vs-normalised gate (`requireEnv` trims; a raw pass ⇒ a lower-cased pass), the gate running
+> before the existing-admin branch (surfacing a bad stored address is the point), the import of the jobs client module (⛔ top-level
+> side effects), its hand-written error text (cosmetic); the "⛔ `next` at all" test title (the glyph register reads it right);
+> `request-context`'s by-value context + `email-index`'s `ENC_CONTEXT` alias (recorded residuals; both values single-sourced);
+> the Policy-meaning sentence's "predates" vs the code's `<=` (a same-instant appointment only); shared `PARIWAR_A` state in the
+> domain spec (the known residual — [[project_ci_local_double_run_pollution]]).
+
+- [x] [Review][Decision] ✅ RESOLVED 2026-10-09 (option A — the user's call) ⇒ patch P-D1 below. **The give-up runs while a channel-wide hold blocks every retry — rows burn without one attempt, and the
+  hold alarm then says something false** — `runSuspicionStaffEmailSweep` runs step (1) `expireExhaustedSuspicionStaffEmails` BEFORE
+  step (2)'s config / pre-flight check and ignores it; a held run enqueues ⛔ nothing, so an existing `attempting` row (selector
+  branch 3) is never re-claimed, its `claimed_at` ages past the lease, and once `created_at` < 00:00 IST of today − 2 it becomes
+  `error` / `exhausted:attempting_three_days` with `may_have_sent = true` — while the end-of-run alarm says *"⛔ nothing was enqueued
+  or written for them, and they will be sent once it is fixed"*. Trigger: sends start failing `SendingPausedException` (rows stay
+  `attempting`), then `GetAccount` shows `SendingEnabled: false` ⇒ `preflight:sending_disabled` for 2+ IST days (or an IAM key
+  lacking `ses:GetAccount` ⇒ `preflight:AccessDeniedException` from day one). Pairs with ⛔ row are sent after the fix; pairs that
+  had begun are lost — an admin never emailed, recorded "may have sent". Options: (A) skip the give-up on a held run AND age only
+  non-held time — e.g. the give-up also requires `claimed_at` ≥ the last held run's end, or the sweep refreshes `claimed_at` on the
+  rows it holds (one bounded UPDATE, ⛔ a send) so the lease-predicate keeps them alive; (B) skip the give-up on a held run only
+  (simpler; but on the first un-held tick the give-up runs BEFORE any retry and burns them anyway — insufficient alone); (C) accept
+  as residual and correct the alarm text to say in-flight rows may still be given up. [apps/jobs/src/scheduler/claim-suspicion-staff-emails.ts:133-213;
+  packages/domain/src/claim/suspicion-staff-email.ts:249-266] (Edge Case Hunter, chunk B)
+- [x] [Review][Decision] ✅ RESOLVED 2026-10-09 (option A — the user's call) ⇒ patch P-D2 below. **0152 has no DB backstop for the `detail` vocabulary or for terminal immutability** (checklist family 5 —
+  REAL GAP; family 1 partial) — the only `detail` CHECK is `char_length <= 200`; `finaliseSuspicionStaffEmail` / `noteSuspicionStaffEmailTransient`
+  take a bare `string`, so "a fixed vocabulary, ⛔ provider text that could echo an address" (Invariant 2) rests on every caller
+  routing through `suspicionStaffEmailDetail`. And the `twt_app` UPDATE grant covers `outcome` / `may_have_sent` with ⛔ trigger:
+  `accepted → attempting` or `may_have_sent true → false` is accepted by the DB (the policy-regression spec's "one positive UPDATE
+  of every granted column" even exercises it), so "once ever for FINISHED rows" and "set TRUE, never back" rest on every writer's
+  `outcome = 'attempting'` / `may_have_sent OR …` form (all of today's do). 0151 has the same shape. Options: (A) a new migration
+  0153 — a `detail` / `first_detail` shape CHECK (`^[a-z_]+:[A-Za-z0-9_.:-]*$`, ⛔ `@`) + a BEFORE UPDATE trigger refusing a move
+  OUT of a final outcome and `may_have_sent` true → false, applied to :5432 AND :5433, with policy-regression legs; also type the
+  two writers' `detail` as the builder's output; (B) type the writers only (app-level, no migration); (C) defer to a joint 0151 +
+  0152 hardening row. [packages/domain/migrations/0152_claim-suspicion-staff-emails.sql:46-47,59;
+  packages/domain/src/claim/suspicion-staff-email.ts:448,479] (Acceptance Auditor + Edge Case Hunter + Blind Hunter, chunk A)
+
+- [x] [Review][Patch] ✅ APPLIED 2026-10-09 — ⚠ BY A DIFFERENT MECHANISM than the one recorded here, kept as written: refreshing
+  `claimed_at` does ⛔ work — once the hold lifts, every un-held run's give-up runs BEFORE any retry and fires at the SAME instant the
+  refreshed lease lapses (both key on `claimed_at < now − lease`), so the row still burns without a retry. ⭐ Built instead (Decision
+  1 A's intent — ⛔ count held time): a held run PARKS every `attempting` row past the lease (`claimed_by_job` =
+  `SUSPICION_STAFF_EMAIL_PARKED_BY` = `'sweep:held'`; ⛔ `claimed_at` / `detail` / `may_have_sent` touched) via
+  `parkHeldSuspicionStaffEmails` (DELIBERATE cross-tenant block); the give-up SKIPS parked rows and runs ONLY on an un-held run (the
+  sweep now checks config + pre-flight FIRST); `beginSuspicionStaffEmail` re-claims a parked row at once (⛔ lease wait); the held
+  alarm reports "N in-flight row(s) newly parked — ⛔ given up while held". Domain legs (park scope; give-up skips a parked row past
+  both bounds; re-claim at once; ordinary after) + a live leg (held 24 h past the horizon ⇒ parked, ⛔ given up; fixed ⇒ sent on the
+  next tick), red-checked at both layers. README updated. **P-D1 (from Decision 1, option A) — a held run keeps its in-flight rows alive** — on a run where the config
+  check / pre-flight holds, refresh `claimed_at` (one bounded UPDATE, ⛔ a send, ⛔ an `attempt_count` change) on the `attempting`
+  rows it holds, so the give-up's lease predicate cannot reach them; correct the end-of-run alarm's wording to match; a live leg:
+  an `attempting` row held across > 3 IST days survives the hold and is sent on the first un-held tick.
+  [apps/jobs/src/scheduler/claim-suspicion-staff-emails.ts:133-213; packages/domain/src/claim/suspicion-staff-email.ts]
+- [x] [Review][Patch] ✅ APPLIED 2026-10-09 — `0153_claim-suspicion-staff-email-backstops.sql` (hand-authored, journal idx 153) applied
+  to :5433 AND :5432 (both clean — ⛔ existing row violated it): two `*_vocabulary_check` CHECKs (named AFTER the length CHECKs, so an
+  over-long value still reports length) + `claim_suspicion_staff_emails_guard_update` BEFORE UPDATE trigger (a finished row is frozen
+  — ANY column, even for the superuser; `may_have_sent` true → false refused; ⛔ DELETE arm, so the claim cascade still deletes).
+  `SUSPICION_STAFF_EMAIL_DETAIL_PATTERN` in the schema file is the ONE grammar (the Drizzle `check()`s use it; a policy-regression
+  leg pins the catalog's pattern to it). ⚠ The writers' `detail` is guarded by a RUNTIME assertion (`isSuspicionStaffEmailDetail`,
+  thrown before the UPDATE, ⛔ value echoed) rather than a branded TYPE — a brand would have re-typed every scripted fake result in
+  the jobs tests for the same protection. Policy spec: `seedEmail` now seeds an IN-FLIGHT row (the trigger freezes a finished one);
+  the "every granted column" UPDATE goes `attempting → error`; vocabulary + trigger + lockstep legs added. **P-D2 (from Decision 2, option A) — migration 0153: 0152's DB backstops** — a `detail` / `first_detail` shape
+  CHECK (the fixed vocabulary's grammar, ⛔ `@`); a BEFORE UPDATE trigger refusing a move OUT of a final outcome and `may_have_sent`
+  true → false; applied to :5432 AND :5433; policy-regression legs (each refused, red-checked); the two writers' `detail` typed as the
+  builder's output. [packages/domain/migrations/0153_*; packages/domain/src/claim/suspicion-staff-email.ts:448,479;
+  packages/domain/tests/integration/rls/claim-suspicion-staff-email-policy-regression.spec.ts]
+- [x] [Review][Patch] ✅ APPLIED 2026-10-09 — `bootAlarm` IS `client.configGap()` in both provider branches; an unknown provider ⇒ `config:provider_unknown` boot alarm; `provider_unset` stays silent; unit legs for sender_missing / credentials_missing / ses_region_invalid / zeptomail_host_invalid + `bootAlarm === configGap()` for each. **`bootAlarm` still diverges from the client's own gap** — round 1 / 2 fixed only the sender; `config:credentials_missing`
+  (SES secret-NAME vars unset), `config:ses_region_invalid`, `config:zeptomail_host_invalid` and `config:provider_unknown` (a typo)
+  all boot SILENT and surface only when a first real refusal makes a pair due; the comment *"computed once so the two can ⛔
+  diverge"* is untrue. Fix: `bootAlarm: client.configGap()` in both provider branches; `provider_unknown` ⇒ its own word;
+  `provider_unset` stays `null` (deliberately off). [apps/jobs/src/scheduler/staff-email-config.ts:70-97] (all three layers, chunk B)
+- [x] [Review][Patch] ✅ APPLIED 2026-10-09 — domain: `upheld_final` (⚠ that is the APPEAL's status — the claim stays `denied`), the no-admin NULL pair through open → reversed; jobs live: RE3 (a) with a lettered Pariwar id and an UPPER-cased `scope_value`, AC6 `sender_missing` / `credentials_missing` legs + the pre-flight-throws leg's ⛔ row / ONE `preflight:failed` alarm, AC7 on the error paths (5xx retry, HELD, `rejected`, `error:invalid_address` — rows, alarms, logs, thrown messages); RE11's empty / production allowlist refusals and AC2 (ix)'s schedule pin moved OUT of `skipIf(!hasDatabase)` (a no-DB describe). **Missing AC legs** — AC2 (vi)'s `upheld_final` appeal is tested NOWHERE (⛔ `upheld` in any 6.25 spec; the
+  `stage3(…, 'upheld')` fixture exists) though Tasks 3.4 / 5.2 are ticked "every AC2 leg" (family 10); RE3 (a)'s case-sensitive
+  compare never sees a letter (the trailing-space substitute is honest, but `lower(scope_value)` would pass — use an `isolated()`
+  hex Pariwar with an upper-cased `scope_value`); AC6's `config:sender_missing` leg is untested and the "pre-flight throws" leg
+  asserts only `enqueued === []` (⛔ "⛔ row", ⛔ "ONE end-of-run alarm"); RE11's empty / production allowlist refusals are untested;
+  AC7's address-echo leg is unit-only — ⛔ stringify sweep over a transient / held / rejected / error run's rows, alarms and thrown
+  messages; AC2 (ix)'s schedule pin needs ⛔ DB yet sits inside `describe.skipIf(!hasDatabase)`.
+  [packages/domain/tests/integration/claim/suspicion-staff-email.spec.ts:196,285; apps/jobs/tests/claim-suspicion-staff-emails-live.test.ts:367,419,445,701]
+  (Acceptance Auditors, chunks A + B)
+- [x] [Review][Patch] ✅ APPLIED 2026-10-09 — `name === 'http_429'`; named-429 legs (a HELD code, an unknown code ⇒ held; `TM_3601.SMI_115` stays transient). **ZeptoMail classifies a NAMED 429 by status** — `status === 429` makes a 429 carrying a recorded HELD code
+  (e.g. `TM_3601.SM_133`) or an unknown code `transient:` with ⛔ held alarm, against RE6 (by NAME, ⛔ status alone) and the table's
+  `http_429` (the NAMELESS 429); the SES twin does it right (`name === http_<status>`). Fix: `name === 'http_429'`; "any 5xx" stays
+  status-keyed (the table says so); a named-429 test. [apps/jobs/src/scheduler/staff-email-client.ts:269] (Acceptance Auditor, chunk B)
+- [x] [Review][Patch] ✅ APPLIED 2026-10-09 — the SES client trims both secrets; `sign()` runs OUTSIDE the fetch's `try` — a throw ⇒ `held:sign_failed` (⛔ may-have-sent) / `preflight:sign_failed`; unit legs (a trimmed key signs; a mocked `AwsClient.sign` rejection). **SES signing shares the send's `try`, and the SES secrets are untrimmed** — `aws.sign()` throwing (e.g. a
+  trailing newline from Secret Manager in the key) is recorded `transient:network` + `may_have_sent` though ⛔ request existed (RE6:
+  ambiguous = AFTER the request was written), and the pre-flight reports it as `preflight:unreachable`; ZeptoMail trims its token,
+  SES does not. Fix: trim both secrets in `buildStaffEmailClient`; sign OUTSIDE the `try` and classify a sign throw HELD
+  (`held:sign_failed`, `mayHaveSent: false`). [apps/jobs/src/scheduler/staff-email-client.ts:171-217; staff-email-config.ts:76-83]
+  (Blind Hunter + Acceptance Auditor + Edge Case Hunter, chunk B)
+- [x] [Review][Patch] ✅ APPLIED 2026-10-09 — `decrypt_failed` / `render_failed` alarm like a HELD fault (once per row per distinct fault); `read_failed` unchanged; the live (vi) (c) leg asserts ONE alarm across two attempts. **A deterministic pre-call fault never alarms until the give-up** — `preCall` passes `held: false`, so a wrong
+  KEK / corrupt envelope (`decrypt_failed`) or a missing i18n key in the deployed bundle (`render_failed`) retries for up to three IST
+  days with ZERO alarms. Fix: alarm ONCE per row per distinct pre-call fault (the HELD dedup against `previousDetail`) for
+  `decrypt_failed` and `render_failed` — the stored `detail` and round 1's classification decision are unchanged.
+  [apps/jobs/src/scheduler/claim-suspicion-staff-emails.ts:305-307] (Blind Hunter, chunk B)
+- [x] [Review][Patch] ✅ APPLIED 2026-10-09 — the re-claim UPDATE predicates `claimed_by_job = $job OR = parked OR claimed_at < leaseCutoff`; 0 rows ⇒ re-read ⇒ `held_by_other` / `already_final`; a two-connection race leg (a holder's note commits while a taker waits in its UPDATE ⇒ `held_by_other`), red-checked. **The take-over UPDATE does not re-check the lease it read** — `begin` reads `claimed_at` / `claimed_by_job`
+  with ⛔ row lock (notes and finalises ⛔ take the claim lock), and the re-claim UPDATE predicates only `outcome = 'attempting'`: a
+  live job's transient note committing between the SELECT and the UPDATE is overwritten (`claimed_by_job` taken over despite the
+  refreshed lease). Fix: add `AND (claimed_by_job = $job OR claimed_at < $leaseCutoff)` to the re-claim UPDATE; 0 rows ⇒ re-read:
+  still `attempting` ⇒ `held_by_other`, else `already_final`. [packages/domain/src/claim/suspicion-staff-email.ts:353-365,400-409]
+  (Blind Hunter, chunk A)
+- [x] [Review][Patch] ✅ APPLIED 2026-10-09 — a dot-atom `local@domain` (local ≤ 64, labels ⛔ hyphen-edged); `provision-admin` also requires the contracts `Email` schema (probed: `a!b@x.org` and `"x"<o@h.com>` refused before any write); unit legs. **`isSendableEmailAddress` admits RFC 5322 specials, and provisioning admits addresses the login form
+  rejects** — `[\x21-\x7e]` lets `"x"<other@host.com>` (display-name syntax — a provider may route to the OTHER mailbox) and
+  `a,b@x.com` (⇒ `BadRequestException` ⇒ HELD for three days) through; and `a..b@x.org` / `.a@x.org` / `a!b@x.org` pass provisioning
+  but fail `LoginRequest`'s `z.string().email()` — an admin emailed a link they can never sign in to open. Fix: a dot-atom local
+  part (⛔ `"(),:;<>[\]\\`, ⛔ leading / trailing / doubled dots) in `isSendableEmailAddress`; provision ALSO requires the contracts
+  `Email` schema. [apps/jobs/src/scheduler/staff-email-client.ts:380-382; scripts/provision-admin.ts:126] (Blind + Edge, chunks B + C)
+- [x] [Review][Patch] ✅ APPLIED 2026-10-09 — `nomineeRefusalsPath` lower-cases; a re-cased URL leg. **A mixed-case Pariwar id in the URL loses the return path** — the route builds `next` from the raw `pariwarId`;
+  the allowlist accepts lower-case hex only ⇒ `/p/2B7C…/nominee-refusals` → sign-in → `/audit/integrity` (F18's symptom). Fix:
+  lower-case the id in `nomineeRefusalsPath` (the allowlist stays strict). [apps/admin/src/routes/NomineeRefusalsRoute.tsx:89-104;
+  apps/admin/src/routes/login-next.ts] (Blind Hunter, chunk C)
+- [x] [Review][Patch] ✅ APPLIED 2026-10-09 — `validateLoginSearch` (login-next.ts) IS the `/login` route's `validateSearch`; the test's `useSearch` mock runs it over TanStack's REAL `defaultParseSearch`; legs for number / object / absent `next` and the redirect's serialise → parse → validate → allowlist round trip. **The real `loginRoute.validateSearch` is never run by a test** — every test mocks `@tanstack/react-router`
+  and re-parses `window.location.search`, so RE9 A's `validateSearch` (and the router's JSON-first search parsing — `?next=123`
+  arrives a number) is unproven; narrower than round 2's dismissed mock-shape point. Fix: unit-test the route's `validateSearch`
+  directly (string / number / array / absent). [apps/admin/src/router.tsx:77-78; apps/admin/tests/login-return-path.test.tsx]
+  (all three layers, chunk C)
+- [x] [Review][Patch] ✅ APPLIED 2026-10-09 — a jobs test reads the admin `router.tsx` (exactly ONE `…nominee-refusals` route) and `login-next.ts` (the list's own `next` + the allowlist regex) and pins the email link to both. **The emailed link's path exists in three uncoupled copies** — the jobs template, the admin route and the
+  `login-next` allowlist each write `/p/<P>/nominee-refusals`; a renamed route leaves every email 404-ing with all tests green
+  ([[feedback_stub_must_call_not_transcribe]]). Fix: a source-text fence test pinning the three to one literal.
+  [apps/jobs/src/scheduler/suspicion-staff-email-templates.ts:31; apps/admin/src/router.tsx:313; apps/admin/src/routes/login-next.ts:9,13]
+  (Edge Case Hunter + Acceptance Auditor, chunk C)
+- [x] [Review][Patch] ✅ APPLIED 2026-10-09 — literal pins (`admin_email`, the nil UUID); a ciphertext FROZEN at 6.25 must decrypt through the domain AND the API; the wrong-context leg runs through `decryptAdminEmail` (a member field class, a real tenant); fence rule (4) — every file naming `ADMIN_EMAIL_ENCRYPTION_CONTEXT` or a by-value `fieldClass: ADMIN_EMAIL_FIELD_CLASS | 'admin_email'` is on an exact allowlist (4 files), with two positive-control plants. **The relocation cross-check's constant assertions are tautological, and the decrypt fence covers a name, ⛔
+  the capability** — `ADMIN_EMAIL_FIELD_CLASS` / `ADMIN_GLOBAL_NAMESPACE` are now DEFINED as the domain's values, so `toBe(domain…)`
+  compares a value with itself; the "different envelope context" leg calls `decryptTier1` directly (⛔ the relocated helper); and
+  `staff-email-identity-read-fence` matches only `decryptAdminEmail`, so a new `decryptTier1(…, ADMIN_EMAIL_ENCRYPTION_CONTEXT, …)`
+  site passes. Fix: pin the literals; run the wrong-context leg through the relocated helper; extend the fence to
+  `ADMIN_EMAIL_ENCRYPTION_CONTEXT` outside its allowlist. [apps/api/tests/unit/admin-email-relocation-crosscheck.test.ts;
+  apps/jobs/tests/staff-email-identity-read-fence.test.ts:25] (Blind Hunter chunk C + Acceptance Auditor chunk B)
+- [x] [Review][Patch] ✅ APPLIED 2026-10-09 — the real `claim_has_rows` reason; the NULL-pair leg built; the clamp proven with TWO due pairs (`limit: 0` ⇒ exactly 1); the over-cap call asserted equal to the full due set (the cap's range is `pagination.test.ts`'s). **Domain-spec assertions that cannot fail** — `'claims_has_rows' as never` pins a reason that does not exist
+  (the real `exhausted:recheck_claim_has_rows` is never pinned; the cast hides it); the title "…and a no-admin claim's NULL pair goes
+  too" asserts ⛔ NULL pair (⛔ no-admin claim is built); `first.scanned <= 1` / `capped.scanned <= CAP` hold whatever the clamp does.
+  Fix: the real reason; build the no-admin claim and assert its NULL pair; seed past the bound so the clamp is observable.
+  [packages/domain/tests/integration/claim/suspicion-staff-email.spec.ts:285,492-494,516] (Blind + Edge, chunk A)
+
+- [x] [Review][Defer] **0152 (like 0151) grants only `twt_app`; the jobs service login is a BYPASSRLS `twt_service` member with ⛔
+  privilege on either table, and RLS / the column-narrowed grants do ⛔ bind it** [packages/domain/migrations/0152_claim-suspicion-staff-emails.sql:53-59;
+  packages/domain/src/claim/suspicion-staff-email.ts:157] — deferred, pre-existing (0151's identical shape; other jobs-written tables
+  — 0093/0094 — grant `twt_service` explicitly). Every test runs the selector / give-up as superuser, so a 42501 is invisible; the
+  "under RLS" doc wording overstates production. ⭐ Trigger: Row 24 (b) — it must state the jobs login's SELECT / INSERT / UPDATE on
+  0151 + 0152, ⛔ only Q1 / Q2's reads.
+- [x] [Review][Defer] **Two handlers can run the SAME job after pg-boss's handler timeout** [apps/jobs/src/scheduler/claim-suspicion-staff-emails.ts:366;
+  packages/domain/src/claim/suspicion-staff-email.ts:362] — deferred, pre-existing (6.24b's job-id compare-and-set): the SEND queue
+  keeps pg-boss's 15-min default expiry, a stalled child is failed + retried under the same id while still running, and `ownRetry`
+  re-claims at once; the double IS recorded (`detail IS NULL` ⇒ `may_have_sent`). ⭐ Trigger: any child step without its own bound
+  (pool connect, KMS) or a joint 6.24b / 6.25 CAS rework (add `attempt_count` to the CAS).
+- [x] [Review][Defer] **Boot awaits Secret Manager with ⛔ timeout** [apps/jobs/src/boot.ts:627] — deferred, pre-existing (the pepper
+  at `:286` and `buildContributionProviderResolver` at `:572` await the same way); a hung resolve stalls every later scheduler's
+  registration. ⭐ Trigger: a boot-wide secret-resolution timeout.
+
+#### Review Findings — ROUND 4 (narrow, round 3's uncommitted fixes `git diff HEAD` excl. `_bmad-output` — 19 files, ~1,600 lines;
+three layers in PARALLEL, read-only — 2026-10-09)
+
+> Triage: **1 decision-needed, 8 patch, 0 defer, 6 dismissed** (duplicates merged); D3 resolved 2026-10-09 (A) ⇒ **9 patch**, all 9 applied. §0 gate: ⛔ the Panel's — D3 is *"how should the
+> code age a row that sat out a hold?"* (engineering), and P1 is an AUTHOR-commit owed to BigDev's own `-299` (RE11 / RE5), ⛔ a ratified
+> clause. Dismissed (each re-traced): a NULL `claimed_by_job` skipping the park / give-up (0152's `attempting_claimed_check` makes an
+> `attempting` row with a NULL holder impossible); `assertDetail` throwing after an `accepted` send (the accepted finalise writes ⛔
+> detail; `sanitizeProviderErrorName`'s class IS the pattern's); the trigger blocking referential / maintenance UPDATEs (both FKs are
+> `NO ACTION` on update, the recipient FK `NO ACTION` on delete, the anonymizer ⛔ touches the table — the only referential action is
+> the claim's DELETE cascade, tested); the `-297` §2 UPDATE lacking the take-over's lease re-check (Blind + Edge — a holder whose note
+> lands in that window THROWS after the note and ⛔ sends; its retry waits on the claim lock the taker holds, then reads the row
+> final; the refusal no longer stands, so `error` + `may_have_sent` is the right record either way — a holder mid-SEND past a 30-min
+> stale claim is the deferred stall class); a NAMED ZeptoMail 429 outside the table being HELD (the RE6 table: "+ ANY other name" ⇒
+> held — round 3's P3 is that rule); the AC7 leg spying `console.*` only (the jobs code logs through `console` / `alarm()` only).
+
+- [x] [Review][Decision] ✅ RESOLVED 2026-10-09 (option A — the user's call) ⇒ patch P-D3 below. **D3 — a parked row loses its hold protection after ONE post-hold child** (Edge Case Hunter + Acceptance
+  Auditor) — the first child after the hold re-claims the row (`claimed_by_job` = its job — the marker is gone) while the give-up
+  still keys on the unchanged `created_at`: once that ONE child's pg-boss retries (≤ 5 tries over ~15 min) fail — plausible in the
+  burst of every held pair firing at once — the next un-held tick past the lease gives it up `error` / "may have sent". Held time is
+  still counted; round 3's APPLIED note ("⛔ count held time") and Change Log 1.6 overclaim, and the held alarm's "they will be sent
+  once it is fixed" is ⛔ guaranteed for parked rows. Options: (A) a give-up ANCHOR — a new `aging_since` column (DEFAULT
+  `clock_timestamp()`; the give-up keys on it, ⛔ `created_at`; the index moves to it); re-claiming a PARKED row resets it to now, so
+  a row that sat out a hold gets a fresh three IST days of ordinary retries — in 0153 (⛔ yet committed: edited in place, the delta
+  applied by hand to :5432 AND :5433, catalog verified); (B) subtract held time exactly (accumulate a `held_ms`) — exact, more
+  moving parts; (C) accept one post-hold child lifecycle as residual and correct the notes, README and alarm text.
+  [packages/domain/src/claim/suspicion-staff-email.ts:280,456-463; apps/jobs/src/scheduler/claim-suspicion-staff-emails.ts:219-224]
+
+- [x] [Review][Patch] ✅ APPLIED 2026-10-09 — 0153 edited in place (⛔ yet committed — `aging_since` ADDED before the trigger, backfilled from `created_at`, DEFAULT `clock_timestamp()`, NOT NULL, UPDATE grant, the partial index moved to `(aging_since, claimed_at)`); the delta run by hand on :5433 AND :5432 in one transaction (the freeze trigger disabled for the backfill, re-enabled; column / default / index / trigger verified on both); a SCRATCH database migrated from zero (153 migrations) proved the edited file applies clean, then was dropped. The give-up keys on `aging_since`; the re-claim sets `aging_since = now` ONLY for a parked row (`CASE WHEN claimed_by_job = parked`); test seeds that set `created_at` now also set `aging_since`; legs (a parked row's ONE failed post-hold child ⇒ ⛔ given up; three IST days after the re-claim ⇒ given up; ONLY a parked re-claim restarts it); red-check #15. **P-D3 (from D3, option A) — a give-up ANCHOR (`aging_since`)** — 0153 (⛔ yet committed) gains `aging_since
+  timestamptz NOT NULL DEFAULT clock_timestamp()` + its UPDATE grant; the give-up keys on `aging_since` (⛔ `created_at`) and the
+  attempting index moves to `(aging_since, claimed_at)`; re-claiming a PARKED row sets `aging_since = now` (a fresh three IST days
+  of ordinary retries after a hold); the delta applied by hand to :5432 AND :5433 and the catalog verified; legs (a parked row's
+  first post-hold child fails ⇒ ⛔ given up; three IST days later ⇒ given up) + a red-check; the alarm / README / notes corrected.
+  [packages/domain/migrations/0153_*; packages/domain/src/claim/suspicion-staff-email.ts; the schema]
+- [x] [Review][Patch] ✅ APPLIED 2026-10-09 — `2026-10-09-300` inserted at the top of `.decision-log.md` (author-commit; amends RE11's give-up, extends RE5 / RE6 / RE7 A; DISCLOSES the process slip — round 3's code was written before the entry); dated `⚠ AMENDED by -300` lines added above RE5 and RE11 (their committed text kept). ⭐ Commit ORDER owed: the `-300` entry (+ this file's AMENDED lines) is committed BEFORE any round-3 / round-4 code. **P1 [HIGH] — round 3 changed BigDev's COMMITTED `-299` RE11 (and extended RE5) with ⛔ new decision entry and ⛔
+  `⚠ AMENDED` line** (Acceptance Auditor) — the give-up now skips a parked row and runs only on an un-held run; the sweep checks
+  config / pre-flight FIRST; 0153 adds the `detail` CHECKs + the finished-row trigger. Task 0.5's rule (*"never edit RE text after
+  commit — a later change is a NEW entry + a dated `⚠ AMENDED` line"*) and the `-297` / `-298` precedent (each "RECORDED BEFORE ANY
+  REVIEW FIX") require an author-commit `2026-10-09-300` amending RE11 (+ RE5, + AC4 (iv) / AC6's "⛔ written") — carrying D3's
+  outcome — committed BEFORE round 3's code, and dated `⚠ AMENDED` lines on RE11 / RE5 here. [.decision-log.md; this file RE5 / RE11]
+- [x] [Review][Patch] ✅ APPLIED 2026-10-09 — the parked marker's and the park's doc blocks restate the premise (past the lease ⇒ ⛔ live child; a PRE-FLIGHT hold does ⛔ stop queued / retrying children — safe, their rows stay inside the lease) and a new RE-EXAMINE trigger (the lease stops bounding a live child's silence); the alarm now says "this run enqueued ⛔ child for them … will be retried once it is fixed"; "⛔ NEW row written" in the sweep header, `heldForConfig`, the README and ADR-0040 (`drafted`). **P2 — the park's premise and the held-run wording are false** (all three layers) — children never run the
+  pre-flight (their race guard checks `configGap` only), so on a `preflight:*` hold queued children and pg-boss retries still run
+  and can send: the park's DELIBERATE rationale ("⛔ child can run while held") and its RE-EXAMINE trigger are wrong at birth (the
+  park stays SAFE — a live child keeps its row inside the lease); the held alarm's "⛔ nothing was enqueued or sent" can be untrue
+  for a pair with a live child; and "⛔ written" / "writes ⛔ row" survives in the sweep header, `heldForConfig`'s doc, the README and
+  ADR-0040 though a held run now UPDATEs (parks) existing rows. Fix: restate the premise (the park touches only rows past the lease
+  ⇒ ⛔ live child), the alarm ("⛔ enqueued by this run"), and "⛔ NEW row" everywhere. [packages/domain/src/claim/suspicion-staff-email.ts:58,296-306;
+  apps/jobs/src/scheduler/claim-suspicion-staff-emails.ts:11-15,107,146,219-224; apps/jobs/README.md:118; docs/adr/ADR-0040-staff-email-transport.md:91]
+- [x] [Review][Patch] ✅ APPLIED 2026-10-09 — registration alarms `config:admin_app_origin_invalid` once when the client has ⛔ config gap and the origin does ⛔ resolve (an unset provider stays silent); a no-DB leg (http, unset, valid, provider off); README. **P3 — an invalid `ADMIN_APP_ORIGIN` is silent at boot**, against the README's new "EVERY config gap raises
+  ONE boot alarm" (Edge Case Hunter) — the origin is checked per run only, and the HELD alarm needs a due pair. Fix: registration
+  alarms `config:admin_app_origin_invalid` once when a provider is configured and the origin does ⛔ resolve; a no-DB leg.
+  [apps/jobs/src/scheduler/claim-suspicion-staff-emails.ts (registration); apps/jobs/README.md]
+- [x] [Review][Patch] ✅ APPLIED 2026-10-09 — `SUSPICION_STAFF_EMAIL_RECHECK_REASONS` / `_ERROR_REASONS` / `_PRE_CALL_STEPS` exported `as const`, the types derive from them, and the grammar leg iterates them. **P4 — the 0153 grammar is hand-listed, ⛔ tied to the reason unions** (Edge Case Hunter) — a new recheck /
+  error reason compiles, is emitted, and is refused by `assertDetail` / the CHECK at runtime (a non-transient throw; on `noAddress` a
+  row left `attempting` with a NULL detail ⇒ a false `may_have_sent`); the round-3 leg lists the four reasons by hand. Fix: the
+  reasons become exported `as const` arrays the types derive from, and the grammar leg iterates THEM.
+  [packages/domain/src/claim/suspicion-staff-email.ts:71-89; packages/domain/tests/integration/claim/suspicion-staff-email.spec.ts]
+- [x] [Review][Patch] ✅ APPLIED 2026-10-09 — the domain is `LABEL(\.LABEL)+` (every label ⛔ hyphen-edged) and the last ≥ 2 characters; legs `a@x.-org`, `a@x.org-`, `a@x.--`, `a@x.o`, `a@x.org.`. **P5 — the dot-atom check still admits a hyphen-edged final label** (`a@x.-org`, `a@x.org-`, `a@x.--`) — round
+  3's note says "labels ⛔ hyphen-edged" but only the first label was tested (Blind Hunter + Acceptance Auditor). Fix: the final
+  label is a `LABEL` of ≥ 2 characters; legs. [apps/jobs/src/scheduler/staff-email-client.ts:398]
+- [x] [Review][Patch] ✅ APPLIED 2026-10-09 — the rule matches `fieldClass: <ns>.ADMIN_EMAIL_FIELD_CLASS` and a template literal; two more positive-control plants; the shorthand limit recorded in the fence's comment. **P6 — fence rule (4) misses a namespaced / template-literal field class** (`fieldClass:
+  encryption.ADMIN_EMAIL_FIELD_CLASS`, `` `admin_email` ``) (Blind Hunter). Fix: match the namespaced constant and a template literal;
+  plants for both. (A shorthand `{ fieldClass }` stays out of reach of a source fence — recorded.)
+  [apps/jobs/tests/staff-email-identity-read-fence.test.ts]
+- [x] [Review][Patch] ✅ APPLIED 2026-10-09 — a source pin that the `/login` route's `validateSearch` IS `validateLoginSearch` (red-check #16); a live leg where the REAL renderer throws (a switch) ⇒ ONE `render_failed` alarm over two tries, and a Q2 read that fails ⇒ `transient:read_failed`, ⛔ alarm; a domain leg with a parked row INSIDE the lease (only the `parked` bypass admits it); the thrown messages asserted EXACTLY (two `ClaimCorrectionTransientError`s); `NODE_ENV` deleted when it was unset. **P7 — tests narrower than round 3's notes** (Blind Hunter + Acceptance Auditor) — the `/login` route's wiring to
+  `validateLoginSearch` is unpinned (an inline parser in `router.tsx` stays green); `render_failed`'s new alarm and `read_failed`'s
+  per-attempt behaviour have ⛔ leg; the parked-row "re-claimed AT ONCE" legs seed `claimed_at` far past the lease, so the `parked`
+  bypass is never what admits them (⇒ a leg with a parked row INSIDE the lease); `thrown.length >= 2` is weaker than the exact count;
+  the `NODE_ENV` restore writes the string `"undefined"` when it was unset. [apps/admin/tests/login-return-path.test.tsx;
+  apps/jobs/tests/claim-suspicion-staff-emails-live.test.ts; packages/domain/tests/integration/claim/suspicion-staff-email.spec.ts]
+- [x] [Review][Patch] ✅ APPLIED 2026-10-09 — the Debug Log gains red-checks #11–#16 (rounds 3–4), incl. #14 — 0153's trigger + vocabulary CHECK dropped on :5433 ⇒ 4 policy legs RED ⇒ restored from 0153's own statements. **P8 — round 3's red-checks are ⛔ in the Debug Log (AC10)** and P-D2's policy legs were ⛔ red-checked (Acceptance
+  Auditor). Fix: run a P-D2 red-check (drop the trigger / CHECK on :5433, see the legs fail, restore) and record every round 3–4
+  red-check (plant, red, revert) in the Debug Log.
+
 ## Dev Notes
 
 ### Traps
@@ -1107,6 +1347,20 @@ MEDIUM + 3 LOW, all applied. Committed ALONE `8fbf718b`; second governance commi
 10. The `detail` vocabulary — SES / ZeptoMail bodies (and an `x-amzn-errortype` header) that ECHO the address ⇒ the result carries
     `held:unknown` only (unit test); the param-type guard is a `@ts-expect-error` pair (typecheck-enforced).
 
+**Red-checks — code review rounds 3–4 (2026-10-09; plant ⇒ red ⇒ revert ⇒ green):**
+11. (round 3, P6) The take-over's lease re-check — the re-claim UPDATE's `(claimed_by_job = … OR … OR claimed_at < cutoff)` neutralised
+    ⇒ the concurrency spec's "a holder's note commits WHILE another job takes…" RED (`begun`, ⛔ `held_by_other`); reverted.
+12. (round 3, P-D1) The give-up's parked skip — `claimed_by_job <> parked` neutralised ⇒ the domain "give-up SKIPS a parked row" RED;
+    reverted.
+13. (round 3, P-D1) The held-run park — the sweep made to give up instead of park on a held run ⇒ the live "a HOLD past the give-up
+    horizon ⇒ PARKED" RED; reverted.
+14. (round 4, P8 / round 3 P-D2) 0153 on :5433 — the freeze trigger and `detail_vocabulary_check` DROPPED ⇒ the policy spec RED (4/21:
+    by-name, the vocabulary legs, the LOCKSTEP pin, the trigger leg); both restored from 0153's own statements (1 trigger, 2 CHECKs).
+15. (round 4, P-D3) The `aging_since` reset — the re-claim's `CASE WHEN claimed_by_job = parked` replaced by `aging_since = aging_since`
+    ⇒ the domain "give-up SKIPS a parked row … restarted" + "ONLY a PARKED row's re-claim restarts `aging_since`" RED (2); reverted.
+16. (round 4, P7) The `/login` wiring — `router.tsx`'s `validateSearch` replaced by an inline arrow ⇒ "the `/login` route IS wired to
+    `validateLoginSearch`" RED; restored.
+
 ### Completion Notes List
 
 - Ultimate context engine analysis completed — comprehensive developer guide created (2026-10-09, `bmad-create-story 6.25`).
@@ -1136,7 +1390,7 @@ MEDIUM + 3 LOW, all applied. Committed ALONE `8fbf718b`; second governance commi
 
 ### File List
 
-Governance: `.decision-log.md` (`2026-10-09-299`) · `docs/adr/ADR-0040-staff-email-transport.md` (new) · `docs/knowledge-transfer/adr-index.md` ·
+Governance: `.decision-log.md` (`2026-10-09-299`; round 4 — `2026-10-09-300`) · `docs/adr/ADR-0040-staff-email-transport.md` (new; round 4 — the held-run wording) · `docs/knowledge-transfer/adr-index.md` ·
 `docs/launch-gate-inventory/inventory-roster.md` · `_bmad-output/planning-artifacts/epics.md` · `_bmad-output/implementation-artifacts/deferred-work.md` ·
 `_bmad-output/implementation-artifacts/sprint-status.yaml` · `_bmad-output/implementation-artifacts/6-25-staff-email-notice-of-a-suspicion-refusal.md`
 
@@ -1148,7 +1402,9 @@ Domain: `packages/domain/migrations/0152_claim-suspicion-staff-emails.sql` (new)
 `packages/domain/src/claim/index.ts` · `packages/domain/src/claim/nominee-refusal-read.ts` (comments) · `packages/domain/src/member/anonymize.ts` (comment) ·
 `packages/domain/tests/claim/nominee-name-no-comparison-fence.test.ts` · `packages/domain/tests/integration/rls/claim-suspicion-staff-email-policy-regression.spec.ts` (new) ·
 `packages/domain/tests/integration/claim/suspicion-staff-email.spec.ts` (new; review fix — `may_have_sent` assertions) ·
-`packages/domain/tests/integration/claim/suspicion-staff-email-concurrency.spec.ts` (new)
+`packages/domain/tests/integration/claim/suspicion-staff-email-concurrency.spec.ts` (new) ·
+round 3: `packages/domain/migrations/0153_claim-suspicion-staff-email-backstops.sql` (new) + journal; the schema (the `detail` grammar
++ two checks), `suspicion-staff-email.ts` (park, give-up skip, lease re-check, writer guard) and the three specs above
 
 Jobs: `apps/jobs/package.json` + `pnpm-lock.yaml` (`aws4fetch` 1.0.20) · `apps/jobs/src/boot.ts` · `apps/jobs/README.md` ·
 `apps/jobs/src/index.ts` (review fix — exports `buildJobsEncryptionDeps`) ·
@@ -1156,19 +1412,22 @@ Jobs: `apps/jobs/package.json` + `pnpm-lock.yaml` (`aws4fetch` 1.0.20) · `apps/
 `apps/jobs/src/scheduler/staff-email-config.ts` (new) · `apps/jobs/src/scheduler/suspicion-staff-email-templates.ts` (new) ·
 `apps/jobs/tests/_claim-correction-seed.ts` · `apps/jobs/tests/claim-suspicion-staff-emails-live.test.ts` (new) ·
 `apps/jobs/tests/staff-email-client.test.ts` (new) · `apps/jobs/tests/claim-suspicion-staff-email-no-decision.test.ts` (new) ·
-`apps/jobs/tests/staff-email-identity-read-fence.test.ts` (new) · `packages/queue/src/index.ts`
+`apps/jobs/tests/staff-email-identity-read-fence.test.ts` (new) · `packages/queue/src/index.ts` ·
+round 3: the sweep (config check first, park-or-give-up, alarms), the client (named 429, sign / trim, dot-atom address), the config
+(`bootAlarm` = `configGap()`), the README, and the four jobs test files above
 
-API: `apps/api/src/context.ts` · `apps/api/src/modules/auth/shared/email-index.ts` · `apps/api/tests/unit/admin-email-relocation-crosscheck.test.ts` (new; review fix — barrel import)
+API: `apps/api/src/context.ts` · `apps/api/src/modules/auth/shared/email-index.ts` · `apps/api/tests/unit/admin-email-relocation-crosscheck.test.ts` (new; review fix — barrel import; round 3 — literal pins, frozen fixture, helper-level wrong context)
 
 Admin: `apps/admin/src/router.tsx` · `apps/admin/src/routes/LoginPage.tsx` (review fix — `useSearch`) ·
 `apps/admin/src/routes/NomineeRefusalsRoute.tsx` · `apps/admin/src/routes/RootLayout.tsx` (comment) ·
 `apps/admin/src/routes/login-next.ts` (new; review fix — dropped `nextFromLocation`) ·
 `apps/admin/tests/login-return-path.test.tsx` (new; review fix — mock) ·
-`apps/admin/tests/login-turnstile.test.tsx` (review fix — mock, pre-existing file)
+`apps/admin/tests/login-turnstile.test.tsx` (review fix — mock, pre-existing file) ·
+round 3: `login-next.ts` (`validateLoginSearch`, lower-cased `next`), `router.tsx` (uses it), `login-return-path.test.tsx`
 
 i18n: `packages/i18n/locales/en/claim.json` · `packages/i18n/locales/hi/claim.json`
 
-Ops: `scripts/provision-admin.ts` (review fix — ASCII gate on `ADMIN_EMAIL`)
+Ops: `scripts/provision-admin.ts` (review fix — ASCII gate on `ADMIN_EMAIL`; round 3 — also the contracts `Email` schema)
 
 ## Change Log
 
@@ -1180,3 +1439,5 @@ Ops: `scripts/provision-admin.ts` (review fix — ASCII gate on `ADMIN_EMAIL`)
 | 1.3 | 2026-10-09 | Developed (`bmad-dev-story 6.25`) ⇒ `review`. Task 0: BigDev's answers (RE6 = BOTH adapters; RE5-bis added), `-299` (`8fbf718b`) + ADR-0040 `drafted` / index / epics / roster Rows 24–25 / deferred-work (`d04748b8`). Tasks 1–7: 0152 + schema/RLS (`ebc78c65`); admin-email relocation + Q1/Q2 + domain sweep half (`b01340a1`); SES/ZeptoMail port, config, template, sign-in return path, RE15 comments (`6b48c9a2`); 15-min sweep + child + boot + fences + live suite (`5234f2af`); CI fixes (`19d09477`). Ten red-checks; `ci:local` green on run 3 (34 jobs). Only permitted story sections edited (+ Task 0.5's committed-marker the story's own task requires). |
 | 1.4 | 2026-10-09 | Code-reviewed (`bmad-code-review 6.25`; full diff `3a7d3a1f..391a670c`; Blind Hunter / Edge Case Hunter / Acceptance Auditor in parallel) ⇒ `done`. 3 decision-needed, 6 patch, 1 defer, 8 dismissed; all 3 decisions resolved by the user (options A/A/B) ⇒ 2 more patches ⇒ **8 patch, 1 defer, 9 dismissed**, all 8 patches applied: both `may_have_sent` gaps on an `error` finish (the give-up and the locked-recheck-failure UPDATEs); `LoginPage` now reads the `/login` route's typed `useSearch` instead of re-parsing `window.location.search` (`nextFromLocation` dropped as dead code; `login-turnstile.test.tsx`'s router mock, which also renders `LoginPage`, needed the same `useSearch` stub); `resolveAdminAppOrigin` accepts a mixed-case scheme/host and an explicit default port (`:443`) without weakening its path-smuggling guard; `buildStaffEmailClient`'s `bootAlarm` now also fires on a bad/missing `STAFF_EMAIL_FROM`; the `CLAIM_SUSPICION_STAFF_EMAIL_SEND` worker now alarms on an unexpected (non-transient) throw instead of silently exhausting pg-boss's retries; `scripts/provision-admin.ts` now rejects a non-ASCII `ADMIN_EMAIL` at provisioning; `buildJobsEncryptionDeps` exported from the `@twt/jobs` barrel (the cross-check test no longer deep-imports `@twt/jobs/src/deps.js`). Existing `may_have_sent` / `bootAlarm` / origin assertions strengthened in place; full `ci:local`-equivalent (admin 982, jobs 693, api 1594, domain 4798 tests; domain-accessor-invariants gate) green after. |
 | 1.5 | 2026-10-09 | Code review ROUND 2 (narrow re-review of round 1's own fixes, `391a670c..HEAD`, 16 files/495 lines; three layers sequential) ⇒ stays `done`. 0 decision-needed, 3 patch, 1 defer, 7 dismissed (B2 folded into the B1/E1 patch): `scripts/provision-admin.ts` now imports and calls `isSendableEmailAddress` directly (Blind Hunter + Edge Case Hunter independently found round 1's hand-rolled ASCII-only regex was narrower than the runtime gate it backstops — e.g. `a@b` passed provisioning but would still be permanently rejected later); a new no-DB test pins the SEND worker's catch-and-alarm behavior for an unexpected throw (a malformed `claimCaseId` via `ids.claimId`); `buildStaffEmailClient`'s `gap`/`bootAlarm` ternary de-duplicated per provider branch (the exact pattern that caused round 1's bug). Deferred: `provision-admin.ts`'s total pre-existing lack of test infrastructure (disproportionate to bootstrap for one wiring line now that it delegates to an already-tested function). Full suite re-green after (jobs 694 tests incl. the new one; `domain-accessor-invariants` gate). |
+| 1.6 | 2026-10-09 | Code review ROUND 3 (full code diff `3a7d3a1f..1f557e06`, 43 files; three chunks × three layers = nine reviewers in PARALLEL, read-only) ⇒ stays `done`. 2 decision-needed (both A — the user's call), 12 patch ⇒ **14 patch, 3 defer, 27 dismissed**; the one HIGH raised was FALSE (the re-claim's `may_have_sent OR detail IS NULL`). Applied: a HELD run PARKS stale in-flight rows and skips the give-up (⚠ by a parked marker, ⛔ the `claimed_at` refresh first recorded — that would still burn the row; the reason is in the finding); migration **0153** (the `detail` vocabulary CHECKs + a trigger freezing a finished row and `may_have_sent`; applied :5432 + :5433); `bootAlarm` = `configGap()`; ZeptoMail's named 429 by NAME; SES sign outside the fetch `try` + trimmed secrets; deterministic pre-call faults alarm; the take-over UPDATE re-checks the lease; a dot-atom address check + provisioning also checks the login form's `Email`; a lower-cased `next`; the real `validateSearch` over TanStack's real parser; the email link pinned to the admin route + allowlist; literal / frozen-fixture / helper-level cross-check + a context-capability fence rule; the domain spec's un-failable assertions fixed; missing AC legs added (`upheld_final`, RE3 (a) case, AC6, AC7 error paths, RE11, AC2 (ix) outside the DB gate). Red-checked: the lease re-check, the give-up's parked skip, the held-run park. `ci:local` green (34 jobs). Deferred (pre-existing): 0151/0152 grants for the jobs service login (Row 24 (b)); a same-job-id concurrent run after pg-boss's handler timeout; boot's un-timed Secret Manager awaits. |
+| 1.7 | 2026-10-09 | Code review ROUND 4 (narrow — round 3's uncommitted fixes, `git diff HEAD` excl. `_bmad-output`, 19 files / ~1,600 lines; three layers in PARALLEL, read-only) ⇒ stays `done`. 1 decision-needed (D3 → A, the user's call) + 8 patch ⇒ **9 patch, 0 defer, 6 dismissed**, all applied. ⭐ P1 [HIGH]: round 3 had changed `-299` RE11 (and extended RE5) with ⛔ entry — `2026-10-09-300` (author-commit, the slip disclosed) inserted, `⚠ AMENDED` lines on RE5 / RE11; it must be COMMITTED before any round-3 / round-4 code. P-D3: 0153 gains `aging_since` (the give-up's anchor, reset when a PARKED row is re-claimed — round 3's park had still counted held time after ONE post-hold child), applied by hand to :5432 + :5433 and proven on a scratch database migrated from zero. Also: the park's premise / held-run wording corrected (code, README, ADR-0040), an invalid `ADMIN_APP_ORIGIN` boot alarm, reason arrays tied to the grammar, every domain label ⛔ hyphen-edged, the fence's namespaced / template-literal match, the `/login` wiring pin, render / read legs, exact thrown count, the `NODE_ENV` restore. Red-checks #11–#16 logged (incl. 0153's trigger + CHECK dropped on :5433). `ci:local` green (34 jobs). |

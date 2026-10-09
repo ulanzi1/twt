@@ -71,8 +71,6 @@ export async function buildStaffEmailClient(env: Env = process.env, resolve: Res
     const accessKeyId = await secret(env, resolve, 'STAFF_EMAIL_SES_ACCESS_KEY_ID_SECRET_NAME', 'STAFF_EMAIL_SES_ACCESS_KEY_ID');
     const secretAccessKey = await secret(env, resolve, 'STAFF_EMAIL_SES_SECRET_ACCESS_KEY_SECRET_NAME', 'STAFF_EMAIL_SES_SECRET_ACCESS_KEY');
     const unresolvable = accessKeyId === null || secretAccessKey === null;
-    // ONE value for both the client's own gap AND the boot alarm — computed once so the two can ⛔ diverge (the exact
-    // "two places, one invariant" shape that let `bootAlarm` silently drop the sender-address gap before).
     const gap = unresolvable ? 'config:secret_unresolvable' : fromGap;
     const client = createSesStaffEmailClient({
       region: env['STAFF_EMAIL_SES_REGION']?.trim() || DEFAULT_SES_REGION,
@@ -82,7 +80,9 @@ export async function buildStaffEmailClient(env: Env = process.env, resolve: Res
       configurationSet: env['STAFF_EMAIL_SES_CONFIGURATION_SET']?.trim() || null,
       gap,
     });
-    return { client, bootAlarm: gap };
+    // ⭐ Round 3 — the boot alarm IS the client's own `configGap()` (the boot gap, then its own checks: region, credentials,
+    // sender), so the two can ⛔ diverge — rounds 1–2 mirrored only the sender and missed `credentials_missing` / `ses_region_invalid`.
+    return { client, bootAlarm: client.configGap() };
   }
   if (provider === 'zeptomail') {
     const token = await secret(env, resolve, 'STAFF_EMAIL_ZEPTOMAIL_TOKEN_SECRET_NAME', 'STAFF_EMAIL_ZEPTOMAIL_TOKEN');
@@ -93,9 +93,10 @@ export async function buildStaffEmailClient(env: Env = process.env, resolve: Res
       from,
       gap,
     });
-    return { client, bootAlarm: gap };
+    return { client, bootAlarm: client.configGap() };
   }
-  return { client: createUnconfiguredStaffEmailClient('config:provider_unknown'), bootAlarm: null };
+  // A provider NAME that is set but unknown is a typo — ALARMED at boot (⛔ like `provider_unset`, which is deliberately "off").
+  return { client: createUnconfiguredStaffEmailClient('config:provider_unknown'), bootAlarm: 'config:provider_unknown' };
 }
 
 /**

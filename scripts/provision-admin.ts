@@ -53,6 +53,7 @@ import {
 } from '../apps/api/src/modules/auth/admin/admin-auth.service.js';
 import { emailBlindIndex } from '../apps/api/src/modules/auth/shared/email-index.js';
 import { isSendableEmailAddress } from '../apps/jobs/src/scheduler/staff-email-client.js';
+import { Email } from '../packages/contracts/src/_common/primitives.js';
 import {
   createDb,
   rbac,
@@ -125,9 +126,16 @@ async function main(): Promise<void> {
   // admin from every future suspicion-refusal notice.
   if (!isSendableEmailAddress(email)) {
     throw new Error(
-      `[provision-admin] ADMIN_EMAIL fails the staff-email sweep's sendable-address check (ASCII, a well-formed ` +
-        `local@domain.tld shape, ≤254 chars) — it would be permanently rejected with no retry, silently excluding this ` +
-        `admin from every future suspicion-refusal notice.`,
+      `[provision-admin] ADMIN_EMAIL fails the staff-email sweep's sendable-address check (isSendableEmailAddress) — it ` +
+        `would be permanently rejected with no retry, silently excluding this admin from every future suspicion-refusal notice.`,
+    );
+  }
+  // ⭐ Code review round 3 — ALSO the admin sign-in form's own schema (`LoginRequest.email` = contracts `Email`): an address the
+  // sweep can send to but the login form refuses (e.g. `a!b@x.org`) would email a link its admin can never sign in to open.
+  if (!Email.safeParse(email).success) {
+    throw new Error(
+      `[provision-admin] ADMIN_EMAIL fails the admin sign-in form's email check (contracts \`Email\`) — this admin could never ` +
+        `sign in, nor open the staff email's link.`,
     );
   }
   // Story 6.11 (R5): display_name is the controlled staff-attribution source and is NEVER

@@ -4,6 +4,26 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: code review of story-6.25, ROUND 3 (2026-10-09)
+
+- **0152 (like 0151) grants only `twt_app`; the jobs service login has ⛔ privilege on either table, and RLS / the column-narrowed
+  grants do ⛔ bind it** [`packages/domain/migrations/0152_claim-suspicion-staff-emails.sql:53-59`; `0151_claim-suspicion-notices.sql:43-46`;
+  `packages/domain/src/claim/suspicion-staff-email.ts:157`] — production's jobs pool is a BYPASSRLS login that inherits its grants
+  from `twt_service` (0007 DD-3); 0151 / 0152 grant nothing to `twt_service` (0093 / 0094 do, for their jobs-written tables). Every
+  test runs the cross-tenant selector / give-up as superuser, so a 42501 is invisible; the "under RLS" doc wording overstates what
+  binds the real writer. Pre-existing (0151's identical shape); ⛔ in production. ⭐ Trigger: roster Row 24 (b) — it must state the
+  jobs login's SELECT / INSERT / UPDATE on 0151 + 0152, ⛔ only ADR-0040 Q1 / Q2's reads.
+- **Two handlers can run the SAME staff-email (or SMS) job after pg-boss's handler timeout** [`apps/jobs/src/scheduler/claim-suspicion-staff-emails.ts:366`;
+  `packages/domain/src/claim/suspicion-staff-email.ts:362`] — the SEND queue keeps pg-boss's default 15-min expiry; a stalled child is
+  failed and retried under the SAME job id while still running, and `ownRetry` re-claims at once, so both executions satisfy the
+  job-id compare-and-set. The double IS recorded (`detail IS NULL` ⇒ `may_have_sent`). Pre-existing (6.24b's job-id CAS). ⭐ Trigger:
+  any child step without its own time bound (pool connect, KMS), or a joint 6.24b / 6.25 CAS rework (add `attempt_count`).
+- **`apps/jobs` boot awaits Secret Manager with ⛔ timeout** [`apps/jobs/src/boot.ts:627` (staff email), `:286` (pepper), `:572`
+  (contribution providers)] — a hung (⛔ failing) resolve stalls every later scheduler's registration, against RE7 A's "a non-critical
+  channel never stops boot". Pre-existing pattern. ⭐ Trigger: a boot-wide secret-resolution timeout.
+
+---
+
 ## Deferred from: code review of story-6.25, ROUND 2 (2026-10-09)
 
 - **`scripts/provision-admin.ts` has ZERO test coverage of any kind (pre-existing)** [scripts/provision-admin.ts] — no test file

@@ -7,12 +7,16 @@
 // claim, writes a claim event or touches an identity table (Invariant 4; the no-decision fence).
 //
 // ── The sweep, every 15 minutes IST (RE10) ─────────────────────────────────────────────────────────────────────────────────
-//   (1) the give-up — rows CREATED before 00:00 IST of (today − 2), still `attempting` AND past the 30-minute lease ⇒ `error` +
-//       ONE alarm that says a prior attempt may have sent;
-//   (2) RE7's CONFIG CHECK, BEFORE anything is enqueued: the provider's config gap, `ADMIN_APP_ORIGIN`, and the provider
+//   (1) RE7's CONFIG CHECK, BEFORE anything is enqueued: the provider's config gap, `ADMIN_APP_ORIGIN`, and the provider
 //       PRE-FLIGHT (SES `GetAccount`: sending enabled AND out of the sandbox). A gap — or a pre-flight that itself fails — HOLDS
-//       every pair: ⛔ enqueued, ⛔ written. The next run re-selects them (⛔ finished row) ⇒ once go-live sets the config, every
-//       email still due is sent;
+//       every pair: ⛔ enqueued, ⛔ NEW row written. The next run re-selects them (⛔ finished row) ⇒ once go-live sets the config,
+//       every email still due is sent;
+//   (2) ⭐ `-300` §2 (i)–(ii) — a HELD run PARKS every in-flight row past the lease (`parkHeldSuspicionStaffEmails` — ⛔ live child
+//       holds such a row) and does ⛔ run the give-up: the sweep enqueues ⛔ retry while held, so the give-up must ⛔ age those rows
+//       out. An UN-held run runs the give-up — rows whose `aging_since` is before 00:00 IST of (today − 2), still `attempting`,
+//       past the 30-minute lease and ⛔ parked ⇒ `error` + ONE alarm that says a prior attempt may have sent. The next child
+//       re-claims a parked row and restarts its `aging_since` (a fresh three IST days). ⚠ Children already queued or retrying are
+//       ⛔ stopped by a PRE-FLIGHT hold (their guard checks the config gap only) — their rows stay inside the lease, ⛔ parked;
 //   (3) page the domain's selector (keyset, the Pariwar allowlist) and enqueue ONE child per (claim, recipient) — ids only;
 //   (4) ONE end-of-run alarm for the held pairs — the gap word, the count and the claim ids.
 // ── The child ──────────────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -102,7 +106,7 @@ function configGap(deps: ClaimSuspicionStaffEmailDeps): string | null {
 export interface SuspicionStaffEmailSweepResult {
   readonly scannedPairs: number;
   readonly enqueued: number;
-  /** Pairs held by a config gap or a failed pre-flight (RE7) — ⛔ enqueued, ⛔ written. */
+  /** Pairs held by a config gap or a failed pre-flight (RE7) — ⛔ enqueued, ⛔ NEW row written (stalled in-flight rows are parked). */
   readonly heldForConfig: number;
   readonly finalisedStuck: number;
   readonly budgetExhausted: boolean;
@@ -130,21 +134,7 @@ export async function runSuspicionStaffEmailSweep(deps: ClaimSuspicionStaffEmail
     return empty;
   }
 
-  // (1) THE GIVE-UP — a CROSS-TENANT WRITE on the BYPASSRLS pool, DELIBERATELY (the block at `expireExhaustedSuspicionStaffEmails`).
-  const stuck = await claimDomain.expireExhaustedSuspicionStaffEmails(deps.pool, {
-    cutoff: claimDomain.suspicionStaffEmailReclaimCutoff(now),
-    now,
-    allow,
-  });
-  if (stuck.length > 0) {
-    alarm(
-      `${ALARM}-sweep: gave up ${String(stuck.length)} email(s) still 'attempting' after ${String(claimDomain.SUSPICION_STAFF_EMAIL_RECLAIM_DAYS)} ` +
-        `IST days — recorded 'error' (exhausted:attempting_three_days); a prior attempt may have sent ` +
-        `(claims: ${sampleIds([...new Set(stuck.map((s) => s.claimCaseId as string))])})`,
-    );
-  }
-
-  // (2) RE7 — the config check + the provider pre-flight, ONCE per run. ⭐ ANY failure of the pre-flight itself also holds.
+  // (1) RE7 — the config check + the provider pre-flight, ONCE per run. ⭐ ANY failure of the pre-flight itself also holds.
   let gap = configGap(deps);
   if (gap === null) {
     try {
@@ -153,6 +143,27 @@ export async function runSuspicionStaffEmailSweep(deps: ClaimSuspicionStaffEmail
     } catch {
       gap = 'preflight:failed';
     }
+  }
+
+  // (2) A HELD run PARKS its stale in-flight rows (⛔ give-up — ⛔ child can retry while held); an UN-held run gives up. Both are
+  // CROSS-TENANT WRITES on the BYPASSRLS pool, DELIBERATELY (the blocks at `parkHeldSuspicionStaffEmails` / `expireExhausted…`).
+  let parked = 0;
+  let stuck: readonly { readonly claimCaseId: string; readonly recipientUserId: string | null }[] = [];
+  if (gap !== null) {
+    parked = await claimDomain.parkHeldSuspicionStaffEmails(deps.pool, { now, allow });
+  } else {
+    stuck = await claimDomain.expireExhaustedSuspicionStaffEmails(deps.pool, {
+      cutoff: claimDomain.suspicionStaffEmailReclaimCutoff(now),
+      now,
+      allow,
+    });
+  }
+  if (stuck.length > 0) {
+    alarm(
+      `${ALARM}-sweep: gave up ${String(stuck.length)} email(s) still 'attempting' after ${String(claimDomain.SUSPICION_STAFF_EMAIL_RECLAIM_DAYS)} ` +
+        `IST days — recorded 'error' (exhausted:attempting_three_days); a prior attempt may have sent ` +
+        `(claims: ${sampleIds([...new Set(stuck.map((s) => s.claimCaseId))])})`,
+    );
   }
 
   let scannedPairs = 0;
@@ -206,11 +217,13 @@ export async function runSuspicionStaffEmailSweep(deps: ClaimSuspicionStaffEmail
     after = page.last;
   }
 
-  // (4) ONE end-of-run alarm for every pair a config gap held — the gap word, the count and the claim ids.
+  // (4) ONE end-of-run alarm for every pair a config gap held — the gap word, the count, the parked rows and the claim ids.
   if (held.length > 0) {
     alarm(
-      `${ALARM}-sweep: ${String(held.length)} email(s) HELD — ${gap ?? 'config'}; ⛔ nothing was enqueued or written for them, and ` +
-        `they will be sent once it is fixed (claims: ${sampleIds([...new Set(held)])})`,
+      `${ALARM}-sweep: ${String(held.length)} email(s) HELD — ${gap ?? 'config'}; this run enqueued ⛔ child for them ` +
+        `(${String(parked)} in-flight row(s) newly parked — ⛔ given up while held; each restarts its three days when re-claimed), ` +
+        `and they will be retried once it is fixed ` +
+        `(claims: ${sampleIds([...new Set(held)])})`,
     );
   }
   if (budgetExhausted) {
@@ -299,12 +312,15 @@ export async function runSuspicionStaffEmailChild(
     if (noted === 0) alarm(`${ALARM}: the row of the ${tag} moved on before its transient note (${r.detail})`);
     // RE6 — a HELD account / config fault alarms ONCE per row per DISTINCT fault (⛔ per pg-boss attempt).
     else if (r.held && r.detail !== begun.previousDetail) {
-      alarm(`${ALARM}: the ${tag} is HELD by a provider account / config fault — ${r.detail}; it stays 'attempting' and retries (⛔ final)`);
+      alarm(`${ALARM}: the ${tag} is HELD by an account / config / deployment fault — ${r.detail}; it stays 'attempting' and retries (⛔ final)`);
     }
     throw new ClaimCorrectionTransientError(`${ALARM}: transient ${r.detail} for claim ${p.claimCaseId}`);
   };
+  // ⭐ Round 3 — a DECRYPT or RENDER failure can be DETERMINISTIC (a wrong KEK, a key missing from the deployed bundle), so it alarms
+  // like a HELD fault (once per row per distinct fault); a Q2 read failure is a DB blip (⛔ alarmed per attempt). The stored
+  // `detail` is unchanged (`transient:<step>`).
   const preCall = (step: 'read_failed' | 'decrypt_failed' | 'render_failed') =>
-    transient({ detail: claimDomain.suspicionStaffEmailDetail({ kind: 'pre_call', step }), held: false, mayHaveSent: false });
+    transient({ detail: claimDomain.suspicionStaffEmailDetail({ kind: 'pre_call', step }), held: step !== 'read_failed', mayHaveSent: false });
   const noAddress = async (reason: 'no_address' | 'invalid_address'): Promise<SuspicionStaffEmailChildResult> => {
     const d = claimDomain.suspicionStaffEmailDetail({ kind: 'error', reason });
     await finalise({ outcome: 'error', detail: d });
@@ -362,6 +378,10 @@ export async function registerClaimSuspicionStaffEmailWorkers(
   const alarm = alarmOf(deps);
   if (opts.bootAlarm) {
     alarm(`${ALARM}: the staff email client is HELD at boot — ${opts.bootAlarm}; every email waits until it is fixed (boot proceeds)`);
+  } else if (deps.staffEmail.configGap() === null && resolveAdminAppOrigin(deps.adminAppOrigin) === null) {
+    // ⭐ Round 4 (`-300` §2 (iv)) — a configured provider with an unusable list-link origin is ALSO alarmed at boot (⛔ silent until
+    // the first refusal makes a pair due). An unset provider stays silent (deliberately off).
+    alarm(`${ALARM}: the staff email client is HELD at boot — config:admin_app_origin_invalid; every email waits until it is fixed (boot proceeds)`);
   }
   await boss.createQueue(QUEUE_NAMES.CLAIM_SUSPICION_STAFF_EMAIL_SEND);
   // ⭐ `batchSize: 1` EXPLICITLY — pg-boss 12.19.1 already defaults to it, so a throw fails only its own job; stated so a changed

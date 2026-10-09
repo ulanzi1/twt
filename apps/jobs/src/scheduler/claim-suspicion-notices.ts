@@ -338,7 +338,10 @@ export async function runSuspicionNoticeChild(
     if (!moved) alarm(`[jobs] claim-suspicion-notice: the row of the ${tag} moved on before its finalise (the outcome was ${input.outcome})`);
   };
   const transient = async (detail: string): Promise<never> => {
-    await db((d) => claimDomain.noteSuspicionNoticeTransient(d, { pariwarId, noticeId: begun.noticeId, jobId, detail }));
+    const noted = (await db((d) =>
+      claimDomain.noteSuspicionNoticeTransient(d, { pariwarId, noticeId: begun.noticeId, jobId, detail }),
+    )) as boolean;
+    if (!noted) alarm(`[jobs] claim-suspicion-notice: the row of the ${tag} moved on before its transient note (${detail})`);
     throw new ClaimCorrectionTransientError(`[jobs] claim-suspicion-notice: transient ${detail} for claim ${p.claimCaseId}`);
   };
   const noTarget = async (detail: string): Promise<SuspicionNoticeChildResult> => {

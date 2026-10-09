@@ -369,6 +369,19 @@ describe('⛔ the no-comparison fence (Trap 1, `-226` cl.5)', () => {
     expect(code).toContain('getEffectiveNomineeDeclaration');
   });
 
+  it('⛔⛔ Story 6.24b (RB8) — the suspicion NOTICES module returns ciphertext AS STORED, ⛔ never decrypts', () => {
+    // The FENCED_FILES comment above said *"It returns ciphertext AS STORED and ⛔ never decrypts"* with ⛔ no
+    // assertion behind it — code review round 3 added this one, by the same convention as the sibling test above.
+    // Unlike `suspicion-refusal.ts` (ref-only, ⛔ no ciphertext at all), this module DOES return `mobileCiphertext` —
+    // the invariant is narrower: it never calls a decrypt helper, and never reaches `getMemberNominees` (RF9's
+    // forbidden latest-nominee fallback once a refusal stands).
+    const code = stripComments(read('packages/domain/src/claim/suspicion-notice.ts'));
+    expect(code).toContain('mobileCiphertext');
+    for (const forbidden of ['decrypt', 'getMemberNominees', 'nameCiphertext']) {
+      expect(code.includes(forbidden), `suspicion-notice.ts reached for '${forbidden}'`).toBe(false);
+    }
+  });
+
   it('⛔ the clerical vocabulary carries no escape hatch and no transliteration', () => {
     // A future `other` would let a District Admin approve past the judgement cl.6 asked them to
     // make; a future `transliteration` would reverse `-227` cl.9 outright.

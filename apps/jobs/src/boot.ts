@@ -613,8 +613,9 @@ async function main(): Promise<void> {
     await registerClaimCertificateReminderWorkers(boss, claimCorrectionDeps);
     // Story 6.24b (AC7b) — the SUSPICION NOTICES: its OWN daily 10:00 IST sweep and SMS child — the three once-ever texts
     // of a `-239` refusal (FQ7 B, `-291` Q2 B, `-293` item 1 B). The SAME deps (the shared DLT core `sendClaimDltSms`,
-    // its sibling registry); ⛔ never `dispatch()`. Its DLT template ids stay UNSET until go-live (Row 22) — the sweep
-    // HOLDS every notice and alarms (RB12). ⛔ Neither ever refuses, closes or approves a claim.
+    // its sibling registry); ⛔ never `dispatch()`. Its DLT template ids stay UNSET until go-live (Row 22 AND Row 23 —
+    // the separate Hindi human-review gate) — the sweep HOLDS every notice and alarms (RB12). ⛔ Neither ever refuses,
+    // closes or approves a claim.
     await registerClaimSuspicionNoticeWorkers(boss, claimCorrectionDeps);
 
     // Story 10.5 (Task 5) — the News/Blog scheduled + immediate publish worker. Reuses the SAME

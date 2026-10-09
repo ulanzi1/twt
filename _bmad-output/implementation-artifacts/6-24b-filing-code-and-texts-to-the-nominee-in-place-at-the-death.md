@@ -927,6 +927,95 @@ verified BY NAME on each ([[project_live_db_test_gotchas]]).
 - [x] [Review][Patch] **Row 22's `gate_name` / `owner` ⛔ cover (d), and the DLT request sheet lists three conditions** —
   [docs/launch-gate-inventory/inventory-roster.md:374] · [docs/launch-gate-inventory/dlt-template-requests-6-19.md:9]
 
+#### Review Findings — ROUND 3 (full diff `b6a63a81..HEAD`, re-chunked into 2 parallel groups — domain substrate / API+jobs dispatch — six layers total; read-only; 2026-10-09)
+
+> Triage (as first merged): **1 decision-needed, 9 patch, 3 defer, 16 dismissed.** The decision resolved (option C — accept as
+> residual risk) ⇒ **4 defer**; 2 of the 9 patches were reclassified to `defer` after verification against the sibling
+> `claim-correction-reminders.ts` (pre-existing, copied-verbatim precedent, not this story's bug) ⇒ **final: 7 patch (all applied),
+> 6 defer, 16 dismissed.** §0 gate: the decision is a judgment call on an already-shipped privacy
+> control's residual risk, not a Panel matter. Dismissed (each re-traced, ⛔ not taken on a layer's word): the `outcome` CHECK permitting
+> `skipped_superseded` / `recorded` (RB2 — *"the EXACT 0128/0138 set… invent none, drop none"*, confirmed verbatim in 0138); no down/
+> rollback migration (universal — 0/151 migration files have one); `unresolved: null` + a null `mobileCiphertext` (already distinguished
+> downstream by the child's `resolveCorrectionMobile` / `e164 === null` ⇒ its own `no_target:no_sendable_number`); `expireExhaustedSuspicionNotices`
+> "overwrites `claimed_by_job` / `claimed_at`" (factually false — that UPDATE never touches either column); the two "closed by appeal"
+> queries (`closedByAppealSql` vs `readClosingEvent`) — the EXISTS is an explicitly-documented PREFILTER only, the locked re-check is
+> authoritative; `attempt_count` incrementing on every re-claim — 6.19b's documented AT-LEAST-ONCE semantics, by design; purposes (a)/(c)
+> vs (b) resolving "no recipient" differently — a different, ratified contract per RB15 / RB18 (*"the slot FINISHES here"*), and the
+> type's own doc comment states the (a)/(c) contract; the mobile-chain `.get(head) ?? null` fallback — unreachable by construction
+> (`mobileOf` and the chain `index` share the identical keyset); `finaliseSuspicionNotice` accepting `'accepted'` with nullable recipient
+> fields unguarded — never exercised that way at the one real call site (the hash is always computed first); the test's
+> `'excluded:claimant_discarded_version'` (detail) vs `'excluded_claimant'` (alarm substring) "mismatch" — two different fields by design
+> (the alarm interpolates the raw `reason` enum, not `detail`); `ClaimCorrectionTransientError` / `claimCorrectionHelplineConfigKey`
+> naming reused across features — deliberate reuse per this story's own RB2–RB4 "copy verbatim" directives; `claimCorrectionDeps` shared
+> with no independent budget override — a reasonable simplification, same shape round 1 already reasoned about; the opaque `noOp()`
+> collapsing every no-send reason — the explicit point of RB9's privacy design, not a gap; `formatAppealUntil`'s shape-only date
+> validation — `appealUntil` is computed (RB13), not user-supplied, so an out-of-range date is unreachable; RB12's generic
+> "the DLT template id, the helpline number or the SMS gateway is not configured" alarm (not the specific one) — low-value, the row
+> stays safely held and retried either way; **the sweep's shared scan budget / `break sweep` spanning all three purposes** — round 1
+> (`c2d78f10`) already considered and dismissed this exact class of concern (*"sweep starvation by held claims (bound 20 000, refusals
+> rare, the bound alarms)"*); `maxClaims` defaults to 20 000, `budgetMs` to 45 minutes, and hitting either alarms — the reasoning still
+> holds.
+
+- [x] [Review][Defer] ✅ RESOLVED 2026-10-09 (option C — accept as residual risk). **`sendHandoverOtp`'s P6 timing-equalization pad
+  (`timingEqualizeDelay`, `claims.service.ts:90-101`) wraps only the no-op return — but `readSuspicionRefusalRecipient` itself does
+  ONE DB round-trip when no `-239` refusal stands vs TWO when one does** (`suspicion-refusal.ts:275-287`), before the pad. Deferred,
+  recorded risk — the signal is a single extra same-DC round-trip (likely single-digit ms) submerged in a 150–450 ms random pad, so
+  exploiting it needs many repeated, timed samples against the same death. See `deferred-work.md`'s matching entry.
+  [apps/api/src/modules/claims/claims.service.ts:120]
+- [x] [Review][Defer] **The SMS-child worker's batch loop has no per-job isolation** — `registerClaimSuspicionNoticeWorkers`'s
+  `boss.work` handler runs `for (const job of jobs) { results.push(await runSuspicionNoticeChild(...)) }` with no try/catch; a single
+  transient throw (the function's OWN designed retry signal) aborts every other job already pulled into that batch. Deferred,
+  pre-existing — reclassified from `patch` on verification: `claim-correction-reminders.ts`'s `registerClaimCorrectionReminderWorkers`
+  (`:1350-1364`) has the IDENTICAL shape (even the same claim, *"a transient throw fails THIS job... ⛔ never a sibling's"*, in its own
+  comment) — not introduced by this story; fixing only here would diverge from the sibling this story was told to copy verbatim.
+  [apps/jobs/src/scheduler/claim-suspicion-notices.ts:422]
+- [x] [Review][Defer] **The sweep-tick's top-level catch uses a raw `console.error` instead of the injected `alarm()`** — deferred,
+  pre-existing: reclassified from `patch` on verification — `claim-correction-reminders.ts`'s own sweep-tick catch
+  (`:1384-1386`) is WORD-FOR-WORD the same shape (`console.error(...); throw err;`). Both end up equivalent today (`alarm()` itself
+  resolves to `console.warn` in prod — Row 22(d)'s open, tracked gate), but a fix here alone would diverge from the sibling; worth
+  fixing in both files together in a future pass, not this story's scope.
+  [apps/jobs/src/scheduler/claim-suspicion-notices.ts:438]
+- [x] [Review][Patch] **`resolveClosedRecipient` doesn't guard `EffectiveNomineeDeclarationClaimNotFoundError` on the reversed claim S**
+  — unlike the sibling branch two lines above it, which already models a missing determination as `{ kind: 'no_target', reason:
+  'closed_no_determination' }` when `closing === null`. Catch that one exception type around the `getEffectiveNomineeDeclarationAsOf`
+  call and return the same already-modeled outcome instead of letting it escape the claiming transaction uncaught.
+  [packages/domain/src/claim/suspicion-notice.ts:377]
+- [x] [Review][Patch] **`boot.ts`'s comment cites only Row 22 for the DLT template ids staying unset** — `inventory-roster.md` shows
+  they're gated on BOTH Row 22 AND Row 23 (the separate Hindi human-review gate, for templates 7 / 9 / 11). Expand the comment to cite
+  both rows. [apps/jobs/src/boot.ts:616]
+- [x] [Review][Patch] **`audit-sink.ts`'s `handover_otp_send` doc comment says "a handover-trust OTP was sent," without distinguishing
+  RB9's existence-defended no-op** (`delivered: false`, nothing actually sent) from a real send. Clarify the comment.
+  [apps/api/src/audit/audit-sink.ts]
+- [x] [Review][Patch] **The new `suspicion-notice.ts` gets only the no-comparison fence's generic scan, while the sibling
+  `suspicion-refusal.ts` (same diff, same "ref-only, never decrypts" invariant) gets its own dedicated unit test asserting that
+  guarantee by name.** Add the equivalent dedicated test for `suspicion-notice.ts`.
+  [packages/domain/tests/claim/nominee-name-no-comparison-fence.test.ts]
+- [x] [Review][Patch] **`selectDueSuspicionNotices` computes the same `attempting`-row `EXISTS` subquery twice per candidate row** (once
+  for the `has_attempting` projection, once again inside the `WHERE` clause's `OR`) instead of computing it once and reusing it.
+  [packages/domain/src/claim/suspicion-notice.ts:176]
+- [x] [Review][Patch] **`beginSuspicionNotice` returns the identical `{ kind: 'not_due' }` whether the claim row is genuinely missing
+  under this Pariwar or exists with a false predicate** — the "missing claim" branch is effectively unreachable (claims aren't
+  deleted) but differs stylistically from this same file's own throw-on-impossible-fault precedent (RB9, `:406`). Low priority.
+  [packages/domain/src/claim/suspicion-notice.ts:502]
+- [x] [Review][Patch] **`noteSuspicionNoticeTransient` returns `void`, so a zero-row UPDATE (the lease already lost or the row already
+  finalised) isn't surfaced to the caller** — low-impact (the next retry's `beginSuspicionNotice` re-derives the correct state fresh),
+  but `finaliseSuspicionNotice` already returns a boolean for the same situation; return one here too for symmetry. Low priority.
+  [packages/domain/src/claim/suspicion-notice.ts:652]
+- [x] [Review][Defer] **`recipient_version_id`'s FK is single-column (`member_nominee_versions(version_id)`), no `pariwar_id`
+  component, unlike the composite claim FK a few lines above** — deferred, pre-existing: copied verbatim from 0128 (`:54`) / 0138
+  (`:46`) per RB2's explicit "copy 0138… invent none, drop none" (confirmed identical in `0138_claim-certificate-reminder.sql:46`) — a
+  multi-tenancy gap across the whole reminder-table family, not introduced by this story.
+  [packages/domain/migrations/0151_claim-suspicion-notices.sql:36]
+- [x] [Review][Defer] **`attempting_claimed_check` doesn't also require `claimed_by_job IS NOT NULL`, and `GRANT INSERT` isn't
+  column-narrowed the way `GRANT UPDATE` is** — deferred, pre-existing: also copied verbatim from 0138/RB2 (confirmed identical GRANT
+  shape in `0138_claim-certificate-reminder.sql:59`).
+  [packages/domain/migrations/0151_claim-suspicion-notices.sql:42]
+- [x] [Review][Defer] **The partial index `claim_suspicion_notices_attempting_idx` covers `claimed_at` only (not `created_at`), and its
+  existence is never asserted in the regression spec** — deferred, pre-existing: also RB2's copied-verbatim 0138 shape (confirmed
+  identical in `0138_claim-certificate-reminder.sql:72`); a dedicated index-existence assertion would be a cheap addition but isn't
+  this story's gap to fix.
+  [packages/domain/migrations/0151_claim-suspicion-notices.sql:55]
+
 ## Dev Notes
 
 ### Traps (moved from 6.24 — numbers kept; 15–29 added at the re-pin)

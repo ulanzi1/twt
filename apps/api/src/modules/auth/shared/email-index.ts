@@ -18,10 +18,9 @@ import {
   type EncryptionDeps,
 } from '../../../context.js';
 
-const ENC_CONTEXT = {
-  pariwarId: ADMIN_GLOBAL_NAMESPACE,
-  fieldClass: ADMIN_EMAIL_FIELD_CLASS,
-} as const;
+// Story 6.25 (ADR-0040) — the envelope context lives in @twt/domain (`encryption/admin-email.ts`), so the jobs-side decrypt
+// reads under the SAME context this module writes under.
+const ENC_CONTEXT = encryption.ADMIN_EMAIL_ENCRYPTION_CONTEXT;
 
 export function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
@@ -51,7 +50,5 @@ export async function encryptEmail(email: string, enc: EncryptionDeps): Promise<
 
 /** Decrypt a stored email envelope back to plaintext (display/recovery only). */
 export async function decryptEmail(serialized: string, enc: EncryptionDeps): Promise<string> {
-  const ct = encryption.parseEnvelope(serialized);
-  const bytes = await encryption.decryptTier1(ct, ENC_CONTEXT, enc.kms, enc.kekRef);
-  return Buffer.from(bytes).toString('utf-8');
+  return encryption.decryptAdminEmail(serialized, enc);
 }

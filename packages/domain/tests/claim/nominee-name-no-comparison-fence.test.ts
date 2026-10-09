@@ -116,6 +116,12 @@ const FENCED_FILES = [
   // chain heads, determination marks — RB18 judges a version's MARK, ⛔ a name). It returns ciphertext AS STORED and
   // ⛔ never decrypts; it is ⛔ an NW1 read module (it is a write module, off the approval path).
   'packages/domain/src/claim/suspicion-notice.ts',
+  // ⭐ STORY 6.25 (`2026-10-09-299` RE11) — the STAFF EMAIL's domain module and its identity-read sibling (ADR-0040's Q1 / Q2):
+  // they decide WHO among the Pariwar Admins is emailed about a `-239` refusal, off the approval path. ⛔ A name reaches neither
+  // (Q1 has ⛔ display-name conjunct at all); Q2 returns the address ciphertext AS STORED and ⛔ nothing here decrypts — address
+  // handling (blank / validity checks) stays in `apps/jobs`, so ⛔ a `toLowerCase() ===` can ever appear here.
+  'packages/domain/src/claim/suspicion-staff-email.ts',
+  'packages/domain/src/claim/staff-email-identity-read.ts',
 ] as const;
 
 /**
@@ -165,7 +171,7 @@ describe('⛔ the no-comparison fence (Trap 1, `-226` cl.5)', () => {
     // Code review patch (2026-10-02, corrected 2026-10-03): exact count, ⛔ a floor — AND every entry unique. The
     // count alone can't catch a duplicate standing in for a dropped file (one of each keeps the length at 34).
     expect(new Set(FENCED_FILES).size, 'a FENCED_FILES entry is duplicated').toBe(FENCED_FILES.length);
-    expect(FENCED_FILES.length).toBe(39); // Story 6.24b FROM 38 (+1 — the suspicion notices' domain module, RB8); Story 6.24a FROM 36 (+2 — the suspicion refusal's read and its closure writer); Story 6.23a FROM 34 (+2 — the warnings module and the late-reason writer); Story 6.19c raised it FROM 26 (+1 domain module), then 27 → 32 (the highlight's read + its four wire / route surfaces), then 32 → 34 (its two admin render sites); Story 6.21a FROM 23 (+3 modules); Story 6.20 FROM 16 (+7)
+    expect(FENCED_FILES.length).toBe(41); // Story 6.25 FROM 39 (+2 — the staff email's domain module and its identity-read sibling, RE11 / ADR-0040); Story 6.24b FROM 38 (+1 — the suspicion notices' domain module, RB8); Story 6.24a FROM 36 (+2 — the suspicion refusal's read and its closure writer); Story 6.23a FROM 34 (+2 — the warnings module and the late-reason writer); Story 6.19c raised it FROM 26 (+1 domain module), then 27 → 32 (the highlight's read + its four wire / route surfaces), then 32 → 34 (its two admin render sites); Story 6.21a FROM 23 (+3 modules); Story 6.20 FROM 16 (+7)
   });
 
   it('⭐⭐ POSITIVE CONTROL — the scanner actually FIRES on a planted violation of every pattern', () => {
@@ -380,6 +386,19 @@ describe('⛔ the no-comparison fence (Trap 1, `-226` cl.5)', () => {
     for (const forbidden of ['decrypt', 'getMemberNominees', 'nameCiphertext']) {
       expect(code.includes(forbidden), `suspicion-notice.ts reached for '${forbidden}'`).toBe(false);
     }
+  });
+
+  it('⛔⛔ Story 6.25 (RE8, ADR-0040) — the STAFF EMAIL modules ⛔ never decrypt; Q2 projects ONLY the address ciphertext', () => {
+    // The staff email's child decrypts in `apps/jobs`, AFTER the claiming commit (Invariant 3) — so ⛔ decrypt helper, ⛔ KMS and
+    // ⛔ name field may appear in the domain half. Q2's ONE projected column is pinned by the jobs-side identity-read fence too.
+    for (const rel of ['packages/domain/src/claim/suspicion-staff-email.ts', 'packages/domain/src/claim/staff-email-identity-read.ts']) {
+      const code = stripComments(read(rel));
+      // A decrypt CALL (⛔ the `decrypt_failed` detail word, which names the jobs child's step), any KMS / encryption seam, a name.
+      for (const forbidden of [/decrypt\w*\s*\(/i, /\bkms\b/i, /\bencryption\b/, /nameCiphertext|display_?name/i]) {
+        expect(forbidden.test(code), `${rel} reached for ${String(forbidden)}`).toBe(false);
+      }
+    }
+    expect(stripComments(read('packages/domain/src/claim/staff-email-identity-read.ts'))).toContain('SELECT se_q2.email_ciphertext FROM admin_credentials');
   });
 
   it('⛔ the clerical vocabulary carries no escape hatch and no transliteration', () => {

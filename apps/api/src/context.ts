@@ -47,8 +47,8 @@ import type { ToneReviewAuditSink } from './modules/tone-review/index.js';
  */
 export const ADMIN_GLOBAL_NAMESPACE = encryptionRuntime.ADMIN_GLOBAL_NAMESPACE;
 
-/** Field-class namespace for the admin email blind index (HMAC input prefix). */
-export const ADMIN_EMAIL_FIELD_CLASS = 'admin_email';
+/** Field-class namespace for the admin email blind index (HMAC input prefix) — relocated to @twt/domain by Story 6.25 (ADR-0040). */
+export const ADMIN_EMAIL_FIELD_CLASS = encryptionRuntime.ADMIN_EMAIL_FIELD_CLASS;
 
 /**
  * The fixed namespace the member mobile-number blind index + Tier-1 encryption

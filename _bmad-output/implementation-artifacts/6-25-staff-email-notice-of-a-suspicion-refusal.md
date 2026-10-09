@@ -1153,6 +1153,68 @@ three layers in PARALLEL, read-only — 2026-10-09)
   Auditor). Fix: run a P-D2 red-check (drop the trigger / CHECK on :5433, see the legs fail, restore) and record every round 3–4
   red-check (plant, red, revert) in the Debug Log.
 
+#### Review Findings — ROUND 5 (narrow — ROUND 4's changes only, rebuilt as the diff between round 3's state and `89fc8187`, excl.
+`_bmad-output` / the decision log — 14 files, ~650 lines; three layers in PARALLEL, read-only — 2026-10-09)
+
+> Triage: **1 decision-needed, 9 patch, 0 defer, 4 dismissed** (duplicates merged); D4 resolved 2026-10-09 (A) ⇒ **10 patch**, all 10 applied. §0 gate: ⛔ the Panel's — D4 is *"how long may the
+> code keep retrying an email the provider keeps failing?"* (engineering; BigDev's own `-300`, ⛔ a ratified clause). Dismissed: a
+> queued child spending a row as `rejected` during a sandbox pre-flight hold (SES `MessageRejected` is HELD — RE6's table, round 1); a
+> parked row orphaned when the selector stops picking it (selector branch (3) returns EVERY `attempting` row regardless of the
+> predicate, and a failed re-check finishes it via `-297` §2; a NULL `claimed_by_job` on an `attempting` row is impossible — 0152's
+> CHECK); `aging_since`'s DEFAULT (DB clock) vs the re-claim's injected `now` (the same two clocks `created_at` vs the cutoff always
+> mixed — round 3's lease-skew dismissal); the `/login` pin's cwd (admin tests run per package — `turbo`, `pnpm --filter`).
+
+- [x] [Review][Decision] ✅ RESOLVED 2026-10-09 (option A — the user's call) ⇒ patch P-D4 below. **D4 [HIGH] — resetting `aging_since` to NOW removed the only lifetime bound on a row** (Blind Hunter HIGH, Edge
+  Case Hunter + Acceptance Auditor MEDIUM) — ANY failing pre-flight HOLDS a run (`preflight:unreachable`, a throttled / 5xx `GetAccount`,
+  a throw ⇒ `preflight:failed` — ~96 pre-flights a day); a held run parks every row past the lease; the next child restarts the row's
+  three IST days. One blip inside each three-day window ⇒ a row that keeps failing (a 5xx, an unrecognised HELD name, a wrong KEK) stays
+  `attempting` FOREVER: re-claimed about hourly, `attempt_count` unbounded, a `may_have_sent` row RE-SENT each cycle (duplicate emails to
+  one admin, ⛔ end), and the give-up's "may have sent" alarm never fires. `-300`'s Cost records only "a LONG hold"; its Status still
+  quotes Decision 1 A's "age only non-held time", which the reset does ⛔ do (it discards pre-hold ageing and grants three days for a
+  15-minute hold). ⚠ Related, narrower (Acceptance Auditor): a row kept inside the lease by queued children's notes during a SHORT
+  pre-flight hold (< ~45 min) is ⛔ parked, and when the lease lapses after the hold the give-up (which runs before the enqueue) can burn it
+  with ⛔ post-hold attempt — `-300`'s headline "A HOLD NEVER BURNS A STAFF EMAIL" overclaims. Options: (A) CREDIT ONLY THE PARKED TIME —
+  a new migration 0154 adds `parked_at` (set by the park); re-claiming a parked row moves `aging_since` FORWARD by (now − `parked_at`); a
+  trigger arm lets `aging_since` change ONLY on a parked re-claim and ONLY forward; the lifetime bound returns (three IST days of
+  NON-parked time); a new author-commit `-301` supersedes `-300` §2 (ii)'s reset and corrects its headline / Cost (the short-hold edge
+  recorded as an accepted residual — those rows DID get attempts during the hold); (B) keep the reset, add a HARD ceiling (e.g. 7 IST
+  days from `created_at`, parked or not) — simplest, but up to ~10 days of hourly re-sends remain possible; (C) park only on a CONFIG gap
+  or a DEFINITE pre-flight answer (`sending_disabled` / `sandbox`), ⛔ on a transient pre-flight failure — fewer resets, still ⛔ bounded.
+  [packages/domain/src/claim/suspicion-staff-email.ts:288,326,470; apps/jobs/src/scheduler/claim-suspicion-staff-emails.ts:138-160; .decision-log.md (`-300`)]
+
+- [x] [Review][Patch] ✅ APPLIED 2026-10-09 — `2026-10-09-301` inserted above `-300` (supersedes its reset, corrects its headline / Cost, records the short-hold edge as accepted); migration **0154** (journal idx 154; applied by the migrator to :5433 AND :5432): `parked_at` (backfilled for any parked row, then a CHECK — an `attempting` row is parked ⟺ it carries `parked_at`), its UPDATE grant, and the trigger arm (`aging_since` only forward, only on a parked row); the park stamps `parked_at` = the run's instant; the re-claim moves `aging_since` forward by `GREATEST(now − parked_at, 0)` and clears `parked_at`. Legs: the credited re-claim, ONLY a parked re-claim moves it, FLAPPING (three 15-min parks credit 45 min and the row IS given up), the CHECK both ways, the arm (backward / non-parked refused, forward on a parked row accepted). Red-checks #17, #18. **P-D4 (from D4, option A) — credit only the PARKED time** — governance FIRST: author-commit `2026-10-09-301`
+  superseding `-300` §2 (ii)'s reset (and correcting `-300`'s headline / Cost; the short-hold edge recorded as an accepted residual),
+  committed before the code; then migration **0154**: `parked_at` (set by the park, cleared on re-claim); re-claiming a parked row sets
+  `aging_since = aging_since + (now − parked_at)`; a trigger arm refusing any `aging_since` change except FORWARD on a parked re-claim;
+  applied to :5432 and :5433; legs (flapping holds: N short parks credit only their parked time and the row IS given up; a long park
+  credits its length; the arm refuses a backward / non-parked move) + red-checks. [packages/domain/migrations/0154_*; suspicion-staff-email.ts]
+- [x] [Review][Patch] ✅ APPLIED 2026-10-09 — dated `⚠ AMENDED by -300 / -301` lines on AC4 (iv) and AC6; a second RE5 line (`-301`) also completes `-300`'s (0153's moved index and `aging_since` grant); a `-301` line on RE11. **P1 — round 4's P1 was ticked closed but its own fix named AC4 (iv) and AC6 too** (Acceptance Auditor) — only RE5 /
+  RE11 got `⚠ AMENDED` lines; AC6 still says a held sweep "writes ⛔ no row" (it now parks), AC4 (iv) still ages from creation with ⛔ held
+  exemption, and RE5's AMENDED line omits 0153's moved index and the `aging_since` UPDATE grant (Acceptance Auditor). Fix: dated
+  AMENDED lines on AC4 (iv) and AC6, RE5's line completed — carried by D4's decision entry.
+- [x] [Review][Patch] ✅ APPLIED 2026-10-09 — it says `aging_since` before the cutoff, claimed before the lease, ⛔ parked; the doc above it states the credited anchor. **P2 — the give-up's DELIBERATE block still says "created before the cutoff"** — it keys on `aging_since`.
+  [packages/domain/src/claim/suspicion-staff-email.ts:269]
+- [x] [Review][Patch] ✅ APPLIED 2026-10-09 — the header names the DISABLE / ENABLE TRIGGER wrap and that "Added BEFORE the trigger" holds only for a fresh apply (comment-only — the migrator skips 0153 by its `when`); a SUPERSEDED-by-0154 note on its reset sentence. **P3 — 0153's hand-run note is incomplete** — on a database that applied round 3's 0153 the freeze trigger already
+  exists, so the backfill fails on finished rows unless the trigger is disabled (as was done on :5432 / :5433); the header's "Added
+  BEFORE the trigger" holds only for a fresh apply. Fix: the header states the disable / enable steps. [0153:19-23]
+- [x] [Review][Patch] ✅ APPLIED 2026-10-09 — a catalog leg (`aging_since` NOT NULL, DEFAULT `clock_timestamp()`; `parked_at` nullable, ⛔ default) and a domain leg where a child-INSERTed row takes its DEFAULT and is given up by it. **P4 — `aging_since`'s NOT NULL / DEFAULT are ⛔ asserted, and ⛔ give-up leg runs on a DEFAULT-populated row** (Edge
+  Case Hunter) — every seed sets `aging_since` by hand. Fix: a catalog leg (`is_nullable = 'NO'`, `column_default ~ clock_timestamp`) and a
+  give-up leg on a child-INSERTed row.
+- [x] [Review][Patch] ✅ APPLIED 2026-10-09 — the origin check is a separate `if` (⛔ `else if`) — a client gap AND a bad origin are BOTH alarmed; an unset provider stays silent; a leg with both. **P5 — the boot alarm names only the FIRST gap** (Blind + Edge) — with a client gap AND a bad `ADMIN_APP_ORIGIN`
+  only the gap is named (`else if`), against the README's "EVERY gap". Fix: alarm the origin gap too; a leg with both.
+  [apps/jobs/src/scheduler/claim-suspicion-staff-emails.ts:379-385]
+- [x] [Review][Patch] ✅ APPLIED 2026-10-09 — rule (4) matches ANY mention of `ADMIN_EMAIL_FIELD_CLASS` / `ADMIN_EMAIL_ENCRYPTION_CONTEXT` (+ a literal `fieldClass: 'admin_email'`, quoted key included); the allowlist gains `apps/api/src/context.ts` (the re-export); four more plants (optional chaining, a bracket key, a renamed destructure, a quoted key). **P6 — the fence's rule (4) still misses `encryption?.ADMIN_EMAIL_FIELD_CLASS`, `encryption['ADMIN_EMAIL_FIELD_CLASS']`,
+  a renamed destructure** (Blind + Edge). Fix: any bare `ADMIN_EMAIL_FIELD_CLASS` / `ADMIN_EMAIL_ENCRYPTION_CONTEXT` outside an exact
+  allowlist. [apps/jobs/tests/staff-email-identity-read-fence.test.ts:31]
+- [x] [Review][Patch] ✅ APPLIED 2026-10-09 — the leg asserts ⛔ alarm of ANY shape was added; the wrapper's own `query` rejects loudly. **P7 — the Q2-read leg's "⛔ alarm" only filters by the claim id; the failing-pool wrapper would HANG on a `pool.query`
+  path** (Blind Hunter). Fix: assert `h.alarms` did not grow; make the wrapper's own `query` reject loudly.
+  [apps/jobs/tests/claim-suspicion-staff-emails-live.test.ts ~591-610]
+- [x] [Review][Patch] ✅ APPLIED 2026-10-09 — #14 now says the trigger and ONLY `detail_vocabulary_check` were dropped and restored (the count was the post-restore total). **P8 — red-check #14's record is imprecise** (Acceptance Auditor) — the trigger and ONLY `detail_vocabulary_check`
+  were dropped and those two restored; "(1 trigger, 2 CHECKs)" is the post-restore COUNT (the `first_detail` CHECK was never dropped).
+  Fix: say so. [this file, Debug Log #14]
+- [x] [Review][Patch] ✅ APPLIED 2026-10-09 — `/\bvalidateSearch\s*:\s*validateLoginSearch\b/` (no trailing-comma dependency). **P9 — the router-pin regex is formatting-bound** (Blind Hunter, low) — fold into P7's test pass: tolerate a missing
+  trailing comma. [apps/admin/tests/login-return-path.test.tsx:124-128]
+
 ## Dev Notes
 
 ### Traps
@@ -1368,12 +1430,19 @@ MEDIUM + 3 LOW, all applied. Committed ALONE `8fbf718b`; second governance commi
     reverted.
 13. (round 3, P-D1) The held-run park — the sweep made to give up instead of park on a held run ⇒ the live "a HOLD past the give-up
     horizon ⇒ PARKED" RED; reverted.
-14. (round 4, P8 / round 3 P-D2) 0153 on :5433 — the freeze trigger and `detail_vocabulary_check` DROPPED ⇒ the policy spec RED (4/21:
-    by-name, the vocabulary legs, the LOCKSTEP pin, the trigger leg); both restored from 0153's own statements (1 trigger, 2 CHECKs).
+14. (round 4, P8 / round 3 P-D2) 0153 on :5433 — the freeze trigger and `detail_vocabulary_check` DROPPED (⛔ the `first_detail`
+    CHECK — never touched) ⇒ the policy spec RED (4/21: by-name, the vocabulary legs, the LOCKSTEP pin, the trigger leg); THOSE TWO
+    restored from 0153's own statements; then verified present: 1 trigger, both vocabulary CHECKs (round 5 P8 — the count was the
+    post-restore total, ⛔ the number restored).
 15. (round 4, P-D3) The `aging_since` reset — the re-claim's `CASE WHEN claimed_by_job = parked` replaced by `aging_since = aging_since`
     ⇒ the domain "give-up SKIPS a parked row … restarted" + "ONLY a PARKED row's re-claim restarts `aging_since`" RED (2); reverted.
 16. (round 4, P7) The `/login` wiring — `router.tsx`'s `validateSearch` replaced by an inline arrow ⇒ "the `/login` route IS wired to
     `validateLoginSearch`" RED; restored.
+17. (round 5, P-D4) The credit — the re-claim's `aging_since + GREATEST(now − parked_at, 0)` replaced by round 4's reset to now ⇒ the
+    domain "crediting ONLY the parked time", "ONLY a PARKED row's re-claim moves `aging_since`" and "FLAPPING short holds … IS given
+    up" RED (3); reverted.
+18. (round 5, P-D4) 0154's trigger arm on :5433 — the function re-created WITHOUT the `aging_since` arm ⇒ the policy "0154 trigger arm"
+    leg RED; restored from 0154's own `CREATE OR REPLACE FUNCTION` (verified by its source).
 
 ### Completion Notes List
 
@@ -1404,7 +1473,7 @@ MEDIUM + 3 LOW, all applied. Committed ALONE `8fbf718b`; second governance commi
 
 ### File List
 
-Governance: `.decision-log.md` (`2026-10-09-299`; round 4 — `2026-10-09-300`) · `docs/adr/ADR-0040-staff-email-transport.md` (new; round 4 — the held-run wording) · `docs/knowledge-transfer/adr-index.md` ·
+Governance: `.decision-log.md` (`2026-10-09-299`; round 4 — `2026-10-09-300`; round 5 — `2026-10-09-301`) · `docs/adr/ADR-0040-staff-email-transport.md` (new; round 4 — the held-run wording) · `docs/knowledge-transfer/adr-index.md` ·
 `docs/launch-gate-inventory/inventory-roster.md` · `_bmad-output/planning-artifacts/epics.md` · `_bmad-output/implementation-artifacts/deferred-work.md` ·
 `_bmad-output/implementation-artifacts/sprint-status.yaml` · `_bmad-output/implementation-artifacts/6-25-staff-email-notice-of-a-suspicion-refusal.md`
 
@@ -1417,7 +1486,8 @@ Domain: `packages/domain/migrations/0152_claim-suspicion-staff-emails.sql` (new)
 `packages/domain/tests/claim/nominee-name-no-comparison-fence.test.ts` · `packages/domain/tests/integration/rls/claim-suspicion-staff-email-policy-regression.spec.ts` (new) ·
 `packages/domain/tests/integration/claim/suspicion-staff-email.spec.ts` (new; review fix — `may_have_sent` assertions) ·
 `packages/domain/tests/integration/claim/suspicion-staff-email-concurrency.spec.ts` (new) ·
-round 3: `packages/domain/migrations/0153_claim-suspicion-staff-email-backstops.sql` (new) + journal; the schema (the `detail` grammar
+round 3: `packages/domain/migrations/0153_claim-suspicion-staff-email-backstops.sql` (new) + journal; round 5:
+`packages/domain/migrations/0154_claim-suspicion-staff-email-parked-at.sql` (new) + journal; the schema (the `detail` grammar
 + two checks), `suspicion-staff-email.ts` (park, give-up skip, lease re-check, writer guard) and the three specs above
 
 Jobs: `apps/jobs/package.json` + `pnpm-lock.yaml` (`aws4fetch` 1.0.20) · `apps/jobs/src/boot.ts` · `apps/jobs/README.md` ·
@@ -1455,3 +1525,4 @@ Ops: `scripts/provision-admin.ts` (review fix — ASCII gate on `ADMIN_EMAIL`; r
 | 1.5 | 2026-10-09 | Code review ROUND 2 (narrow re-review of round 1's own fixes, `391a670c..HEAD`, 16 files/495 lines; three layers sequential) ⇒ stays `done`. 0 decision-needed, 3 patch, 1 defer, 7 dismissed (B2 folded into the B1/E1 patch): `scripts/provision-admin.ts` now imports and calls `isSendableEmailAddress` directly (Blind Hunter + Edge Case Hunter independently found round 1's hand-rolled ASCII-only regex was narrower than the runtime gate it backstops — e.g. `a@b` passed provisioning but would still be permanently rejected later); a new no-DB test pins the SEND worker's catch-and-alarm behavior for an unexpected throw (a malformed `claimCaseId` via `ids.claimId`); `buildStaffEmailClient`'s `gap`/`bootAlarm` ternary de-duplicated per provider branch (the exact pattern that caused round 1's bug). Deferred: `provision-admin.ts`'s total pre-existing lack of test infrastructure (disproportionate to bootstrap for one wiring line now that it delegates to an already-tested function). Full suite re-green after (jobs 694 tests incl. the new one; `domain-accessor-invariants` gate). |
 | 1.6 | 2026-10-09 | Code review ROUND 3 (full code diff `3a7d3a1f..1f557e06`, 43 files; three chunks × three layers = nine reviewers in PARALLEL, read-only) ⇒ stays `done`. 2 decision-needed (both A — the user's call), 12 patch ⇒ **14 patch, 3 defer, 27 dismissed**; the one HIGH raised was FALSE (the re-claim's `may_have_sent OR detail IS NULL`). Applied: a HELD run PARKS stale in-flight rows and skips the give-up (⚠ by a parked marker, ⛔ the `claimed_at` refresh first recorded — that would still burn the row; the reason is in the finding); migration **0153** (the `detail` vocabulary CHECKs + a trigger freezing a finished row and `may_have_sent`; applied :5432 + :5433); `bootAlarm` = `configGap()`; ZeptoMail's named 429 by NAME; SES sign outside the fetch `try` + trimmed secrets; deterministic pre-call faults alarm; the take-over UPDATE re-checks the lease; a dot-atom address check + provisioning also checks the login form's `Email`; a lower-cased `next`; the real `validateSearch` over TanStack's real parser; the email link pinned to the admin route + allowlist; literal / frozen-fixture / helper-level cross-check + a context-capability fence rule; the domain spec's un-failable assertions fixed; missing AC legs added (`upheld_final`, RE3 (a) case, AC6, AC7 error paths, RE11, AC2 (ix) outside the DB gate). Red-checked: the lease re-check, the give-up's parked skip, the held-run park. `ci:local` green (34 jobs). Deferred (pre-existing): 0151/0152 grants for the jobs service login (Row 24 (b)); a same-job-id concurrent run after pg-boss's handler timeout; boot's un-timed Secret Manager awaits. |
 | 1.7 | 2026-10-09 | Code review ROUND 4 (narrow — round 3's uncommitted fixes, `git diff HEAD` excl. `_bmad-output`, 19 files / ~1,600 lines; three layers in PARALLEL, read-only) ⇒ stays `done`. 1 decision-needed (D3 → A, the user's call) + 8 patch ⇒ **9 patch, 0 defer, 6 dismissed**, all applied. ⭐ P1 [HIGH]: round 3 had changed `-299` RE11 (and extended RE5) with ⛔ entry — `2026-10-09-300` (author-commit, the slip disclosed) inserted, `⚠ AMENDED` lines on RE5 / RE11; it must be COMMITTED before any round-3 / round-4 code. P-D3: 0153 gains `aging_since` (the give-up's anchor, reset when a PARKED row is re-claimed — round 3's park had still counted held time after ONE post-hold child), applied by hand to :5432 + :5433 and proven on a scratch database migrated from zero. Also: the park's premise / held-run wording corrected (code, README, ADR-0040), an invalid `ADMIN_APP_ORIGIN` boot alarm, reason arrays tied to the grammar, every domain label ⛔ hyphen-edged, the fence's namespaced / template-literal match, the `/login` wiring pin, render / read legs, exact thrown count, the `NODE_ENV` restore. Red-checks #11–#16 logged (incl. 0153's trigger + CHECK dropped on :5433). `ci:local` green (34 jobs). |
+| 1.8 | 2026-10-09 | Code review ROUND 5 (narrow — round 4's changes only, rebuilt as round 3's state → `89fc8187`, 14 files / ~650 lines; three layers in PARALLEL, read-only) ⇒ stays `done`. 1 decision-needed (D4 [HIGH] → A, the user's call) + 9 patch ⇒ **10 patch, 0 defer, 4 dismissed**, all applied. D4: round 4's reset of `aging_since` to now removed the only lifetime bound (one pre-flight blip every few days kept a failing row — and its re-sends — alive forever); `2026-10-09-301` supersedes it — migration **0154** adds `parked_at`, the re-claim credits ONLY the parked time, a trigger arm lets `aging_since` move only forward on a parked re-claim (applied to :5432 + :5433). Also: `⚠ AMENDED` lines on AC4 (iv) / AC6 (+ RE5 completed, RE11), the give-up's DELIBERATE wording, 0153's hand-run note, `aging_since` NOT NULL / DEFAULT asserted + a DEFAULT give-up leg, both boot gaps named, a stricter fence, sturdier test wrappers / pins, red-check #14's record. Red-checks #17–#18. `ci:local` green (34 jobs). |

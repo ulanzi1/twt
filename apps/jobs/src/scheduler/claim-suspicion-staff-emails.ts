@@ -15,7 +15,7 @@
 //       holds such a row) and does ⛔ run the give-up: the sweep enqueues ⛔ retry while held, so the give-up must ⛔ age those rows
 //       out. An UN-held run runs the give-up — rows whose `aging_since` is before 00:00 IST of (today − 2), still `attempting`,
 //       past the 30-minute lease and ⛔ parked ⇒ `error` + ONE alarm that says a prior attempt may have sent. The next child
-//       re-claims a parked row and restarts its `aging_since` (a fresh three IST days). ⚠ Children already queued or retrying are
+//       re-claims a parked row and moves its `aging_since` forward by the time it sat parked (`-301`). ⚠ Children already queued or retrying are
 //       ⛔ stopped by a PRE-FLIGHT hold (their guard checks the config gap only) — their rows stay inside the lease, ⛔ parked;
 //   (3) page the domain's selector (keyset, the Pariwar allowlist) and enqueue ONE child per (claim, recipient) — ids only;
 //   (4) ONE end-of-run alarm for the held pairs — the gap word, the count and the claim ids.
@@ -221,7 +221,7 @@ export async function runSuspicionStaffEmailSweep(deps: ClaimSuspicionStaffEmail
   if (held.length > 0) {
     alarm(
       `${ALARM}-sweep: ${String(held.length)} email(s) HELD — ${gap ?? 'config'}; this run enqueued ⛔ child for them ` +
-        `(${String(parked)} in-flight row(s) newly parked — ⛔ given up while held; each restarts its three days when re-claimed), ` +
+        `(${String(parked)} in-flight row(s) newly parked — ⛔ given up while held; the parked time is credited when each is re-claimed), ` +
         `and they will be retried once it is fixed ` +
         `(claims: ${sampleIds([...new Set(held)])})`,
     );
@@ -378,9 +378,10 @@ export async function registerClaimSuspicionStaffEmailWorkers(
   const alarm = alarmOf(deps);
   if (opts.bootAlarm) {
     alarm(`${ALARM}: the staff email client is HELD at boot — ${opts.bootAlarm}; every email waits until it is fixed (boot proceeds)`);
-  } else if (deps.staffEmail.configGap() === null && resolveAdminAppOrigin(deps.adminAppOrigin) === null) {
-    // ⭐ Round 4 (`-300` §2 (iv)) — a configured provider with an unusable list-link origin is ALSO alarmed at boot (⛔ silent until
-    // the first refusal makes a pair due). An unset provider stays silent (deliberately off).
+  }
+  if (deps.staffEmail.configGap() !== 'config:provider_unset' && resolveAdminAppOrigin(deps.adminAppOrigin) === null) {
+    // ⭐ Rounds 4–5 (`-300` §2 (iv)) — an unusable list-link origin is ALSO alarmed at boot, alongside any client gap (⛔ only the
+    // first — the fix-and-redeploy cycle would run twice); an UNSET provider stays silent (deliberately off).
     alarm(`${ALARM}: the staff email client is HELD at boot — config:admin_app_origin_invalid; every email waits until it is fixed (boot proceeds)`);
   }
   await boss.createQueue(QUEUE_NAMES.CLAIM_SUSPICION_STAFF_EMAIL_SEND);

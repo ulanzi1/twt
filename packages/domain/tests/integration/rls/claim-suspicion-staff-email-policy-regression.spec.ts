@@ -208,7 +208,7 @@ describe.skipIf(!hasDatabase)('the staff email record — migration 0152 + RLS p
         ['claim_case_id', 'claimed_at', 'claimed_by_job', 'detail', 'outcome', 'pariwar_id', 'recipient_user_id'].sort(),
       );
       expect(await grantedColumns(client, 'UPDATE')).toEqual(
-        ['aging_since', 'attempt_count', 'claimed_at', 'claimed_by_job', 'detail', 'first_detail', 'may_have_sent', 'outcome', 'provider_message_id', 'updated_at'].sort(),
+        ['aging_since', 'attempt_count', 'claimed_at', 'claimed_by_job', 'detail', 'first_detail', 'may_have_sent', 'outcome', 'parked_at', 'provider_message_id', 'updated_at'].sort(),
       );
       const { rows } = await client.query<{ n: number }>(
         `SELECT count(*)::int AS n FROM information_schema.table_privileges
@@ -223,7 +223,7 @@ describe.skipIf(!hasDatabase)('the staff email record — migration 0152 + RLS p
       const { client } = getTx();
       const s = await seedEmail(client, PARIWAR_A);
       await enterAppScope(client, PARIWAR_A);
-      for (const over of [{ notice_id: randomUUID() }, { attempt_count: 2 }, { may_have_sent: true }, { created_at: new Date() }, { first_detail: 'x' }, { aging_since: new Date() }]) {
+      for (const over of [{ notice_id: randomUUID() }, { attempt_count: 2 }, { may_have_sent: true }, { created_at: new Date() }, { first_detail: 'x' }, { aging_since: new Date() }, { parked_at: new Date() }]) {
         await expectPgError(client, () => insertRow(client, { ...validRow(s), ...over }), DENIED);
       }
       await expectAccepted(client, () =>
@@ -255,7 +255,7 @@ describe.skipIf(!hasDatabase)('the staff email record — migration 0152 + RLS p
       await expectAccepted(client, () =>
         client.query(
           `UPDATE ${TABLE} SET outcome = 'error', provider_message_id = 'p', detail = 'error:no_address', first_detail = 'transient:network',
-             attempt_count = 2, may_have_sent = true, claimed_at = now(), claimed_by_job = 'j', updated_at = now(), aging_since = now()
+             attempt_count = 2, may_have_sent = true, claimed_at = now(), claimed_by_job = 'sweep:held', parked_at = now(), updated_at = now()
            WHERE notice_id = $1`,
           [s.noticeId],
         ),
@@ -282,6 +282,7 @@ describe.skipIf(!hasDatabase)('the staff email record — migration 0152 + RLS p
           'claim_suspicion_staff_emails_first_detail_vocabulary_check',
           'claim_suspicion_staff_emails_no_target_recipient_check',
           'claim_suspicion_staff_emails_outcome_check',
+          'claim_suspicion_staff_emails_parked_check',
           'claim_suspicion_staff_emails_pkey',
           'claim_suspicion_staff_emails_recipient_user_fk',
         ].sort(),
@@ -371,6 +372,43 @@ describe.skipIf(!hasDatabase)('the staff email record — migration 0152 + RLS p
         [TABLE],
       );
       expect(trg.rows).toEqual([{ tgenabled: 'O' }]);
+    });
+
+    it('⭐ 0153 / 0154 — `aging_since` is NOT NULL with a clock_timestamp() DEFAULT; `parked_at` is nullable with ⛔ default', async () => {
+      const { client } = getTx();
+      const { rows } = await client.query<{ column_name: string; is_nullable: string; column_default: string | null }>(
+        `SELECT column_name, is_nullable, column_default FROM information_schema.columns
+          WHERE table_name = $1 AND column_name IN ('aging_since', 'parked_at') ORDER BY column_name`,
+        [TABLE],
+      );
+      expect(rows).toEqual([
+        { column_name: 'aging_since', is_nullable: 'NO', column_default: 'clock_timestamp()' },
+        { column_name: 'parked_at', is_nullable: 'YES', column_default: null },
+      ]);
+    });
+
+    it('⭐ 0154 — an `attempting` row is parked ⟺ it carries `parked_at` (both directions); a finished row may keep it', async () => {
+      const { client } = getTx();
+      const s = await seedEmail(client, PARIWAR_A);
+      const user = await seedUser(getTx().tx);
+      const check = CHECK('claim_suspicion_staff_emails_parked_check');
+      const row = (o: Record<string, unknown>) => () =>
+        insertRow(client, { ...validRow(s), recipient_user_id: user, outcome: 'attempting', claimed_at: new Date(), detail: null, ...o });
+      await expectPgError(client, row({ claimed_by_job: 'sweep:held' }), check);
+      await expectPgError(client, row({ claimed_by_job: 'job-1', parked_at: new Date() }), check);
+      await expectAccepted(client, row({ claimed_by_job: 'sweep:held', parked_at: new Date() }));
+      await expectAccepted(client, () => insertRow(client, { ...validRow(s), recipient_user_id: user, outcome: 'error', detail: 'error:no_address', parked_at: new Date() }));
+    });
+
+    it('⭐ 0154 trigger arm — `aging_since` moves ONLY forward and ONLY on a PARKED row (even for the superuser)', async () => {
+      const { client } = getTx();
+      const s = await seedEmail(client, PARIWAR_A); // in flight, ⛔ parked (`job-seed`)
+      const ARM = { code: '23000', message: expect.stringMatching(/aging_since moves only forward/) };
+      const upd = (set: string) => () => client.query(`UPDATE ${TABLE} SET ${set} WHERE notice_id = $1`, [s.noticeId]);
+      await expectPgError(client, upd("aging_since = aging_since + interval '1 hour'"), ARM); // ⛔ parked
+      await client.query(`UPDATE ${TABLE} SET claimed_by_job = 'sweep:held', parked_at = now() WHERE notice_id = $1`, [s.noticeId]);
+      await expectPgError(client, upd("aging_since = aging_since - interval '1 minute'"), ARM); // parked, but BACKWARD
+      await expectAccepted(client, upd("aging_since = aging_since + interval '1 hour', claimed_by_job = 'job-2', parked_at = NULL"));
     });
 
     it('⭐ RE4 / RE5 — `no_target` ⟺ a NULL recipient (both directions)', async () => {

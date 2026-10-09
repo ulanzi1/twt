@@ -16,11 +16,13 @@
 -- ⭐ (3) THE GIVE-UP ANCHOR — `aging_since` (code review round 4, D3 option A; `2026-10-09-300` §2 (ii)). The three-IST-day give-up
 -- counted from `created_at`, so a row that sat out a HOLD (parked — `claimed_by_job` = 'sweep:held') burned after ONE post-hold
 -- child. The give-up now counts from `aging_since`, which re-claiming a PARKED row resets to now (a fresh three IST days of ordinary
--- retries). Existing rows start from their `created_at`. The give-up's partial index moves to it. Added BEFORE the trigger so the
+-- retries) — ⚠ SUPERSEDED by 0154 (`2026-10-09-301`): the re-claim moves it forward by the time it sat parked, ⛔ to now. Existing rows start from their `created_at`. The give-up's partial index moves to it. Added BEFORE the trigger so the
 -- backfill can touch finished rows.
 -- ⚠ 0151 (`claim_suspicion_notices`) has the same gaps — ⛔ touched here (a joint 0151 hardening stays with its own deferred items).
 -- ⚠ Never committed before this edit: a database that applied the EARLIER 0153 (round 3) needs the `aging_since` statements below
--- run by hand (the migrator skips by the journal `when`) — done on :5432 and :5433 on 2026-10-09.
+-- run by hand (the migrator skips by the journal `when`), in ONE transaction and WRAPPED in `ALTER TABLE … DISABLE TRIGGER
+-- claim_suspicion_staff_emails_guard_update` / `ENABLE TRIGGER …` — that database already has the trigger, which would refuse the
+-- backfill on every finished row ("Added BEFORE the trigger" holds only for a fresh apply). Done so on :5432 and :5433, 2026-10-09.
 
 ALTER TABLE "claim_suspicion_staff_emails" ADD COLUMN "aging_since" timestamp with time zone;--> statement-breakpoint
 UPDATE "claim_suspicion_staff_emails" SET "aging_since" = "created_at";--> statement-breakpoint

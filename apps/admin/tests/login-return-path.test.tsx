@@ -125,7 +125,7 @@ describe('⭐ round 3 — the `/login` validateSearch (THE function `router.tsx`
     const router = readFileSync(path.resolve(process.cwd(), 'src/router.tsx'), 'utf-8');
     const login = /const loginRoute = createRoute\(\{([\s\S]*?)\n\}\);/.exec(router)?.[1] ?? '';
     expect(login).toContain("path: '/login'");
-    expect(login).toMatch(/\bvalidateSearch: validateLoginSearch,/);
+    expect(login).toMatch(/\bvalidateSearch\s*:\s*validateLoginSearch\b/);
     expect(router).toContain("import { validateLoginSearch } from './routes/login-next.js';");
   });
 

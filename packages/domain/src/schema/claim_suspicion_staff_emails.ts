@@ -54,6 +54,8 @@ export const claimSuspicionStaffEmails = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().default(sql`clock_timestamp()`),
     /** 0153 — the give-up's anchor (three IST days from here, ⛔ `created_at`); reset when a PARKED row is re-claimed (`-300`). */
     agingSince: timestamp('aging_since', { withTimezone: true, mode: 'date' }).notNull().default(sql`clock_timestamp()`),
+    /** 0154 — when a HELD sweep parked the row (`claimed_by_job` = 'sweep:held'); cleared by the re-claim (`-301`). */
+    parkedAt: timestamp('parked_at', { withTimezone: true, mode: 'date' }),
     updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' }).notNull().default(sql`clock_timestamp()`),
   },
   (t) => [
@@ -82,6 +84,10 @@ export const claimSuspicionStaffEmails = pgTable(
       sql`${t.firstDetail} IS NULL OR char_length(${t.firstDetail}) <= 200`,
     ),
     // 0153 — the vocabulary (+ a BEFORE UPDATE trigger freezing a finished row; ⛔ expressible here).
+    check(
+      'claim_suspicion_staff_emails_parked_check',
+      sql`${t.outcome} <> 'attempting' OR ((${t.claimedByJob} = 'sweep:held') = (${t.parkedAt} IS NOT NULL))`,
+    ),
     check(
       'claim_suspicion_staff_emails_detail_vocabulary_check',
       sql`${t.detail} IS NULL OR ${t.detail} ~ ${sql.raw(`'${SUSPICION_STAFF_EMAIL_DETAIL_PATTERN}'`)}`,

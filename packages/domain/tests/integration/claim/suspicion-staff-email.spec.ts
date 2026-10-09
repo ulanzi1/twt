@@ -176,13 +176,28 @@ async function rowsOf(client: Client, cid: string) {
 }
 
 /** A crash-left `attempting` row (as the superuser). */
-/** `createdAt` also sets `aging_since` (the give-up's anchor — 0153). */
-async function attemptingRow(client: Client, cid: string, recipient: string, o: { job?: string; claimedAt?: Date; createdAt?: Date; detail?: string | null } = {}) {
+/** `createdAt` also sets `aging_since` (the give-up's anchor — 0153); a PARKED row carries `parked_at` (0154's CHECK — default its claim). */
+async function attemptingRow(
+  client: Client,
+  cid: string,
+  recipient: string,
+  o: { job?: string; claimedAt?: Date; createdAt?: Date; detail?: string | null; parkedAt?: Date } = {},
+) {
+  const job = o.job ?? 'job-crashed';
+  const claimedAt = o.claimedAt ?? new Date();
   await client.query(
-    `INSERT INTO claim_suspicion_staff_emails (pariwar_id, claim_case_id, recipient_user_id, outcome, claimed_at, claimed_by_job, created_at, detail, aging_since)
-     VALUES ($1, $2, $3, 'attempting', $4, $5, $6, $7, $6)`,
-    [PARIWAR_A, cid, recipient, o.claimedAt ?? new Date(), o.job ?? 'job-crashed', o.createdAt ?? new Date(), o.detail ?? null],
+    `INSERT INTO claim_suspicion_staff_emails (pariwar_id, claim_case_id, recipient_user_id, outcome, claimed_at, claimed_by_job, created_at, detail, aging_since, parked_at)
+     VALUES ($1, $2, $3, 'attempting', $4, $5, $6, $7, $6, $8)`,
+    [PARIWAR_A, cid, recipient, claimedAt, job, o.createdAt ?? new Date(), o.detail ?? null, job === SUSPICION_STAFF_EMAIL_PARKED_BY ? (o.parkedAt ?? claimedAt) : null],
   );
+}
+
+async function agingOf(client: Client, cid: string, recipient: string): Promise<{ aging: number; parked: Date | null }> {
+  const { rows } = await client.query<{ aging_since: Date; parked_at: Date | null }>(
+    `SELECT aging_since, parked_at FROM claim_suspicion_staff_emails WHERE claim_case_id = $1 AND recipient_user_id = $2`,
+    [cid, recipient],
+  );
+  return { aging: rows[0]!.aging_since.getTime(), parked: rows[0]!.parked_at };
 }
 
 describe.skipIf(!hasDatabase)('Story 6.25 — the staff email: who, when, and the claiming transaction', { timeout: 20000 }, () => {
@@ -613,11 +628,12 @@ describe.skipIf(!hasDatabase)('Story 6.25 — the staff email: who, when, and th
         [c, stale],
       );
       expect(at[0]!.claimed_at.getTime()).toBe(staleAt.getTime());
+      expect((await agingOf(client, c, stale)).parked?.getTime()).toBe(now.getTime()); // 0154 — the park's instant
       expect(rows.find((r) => r.recipient_user_id === live)).toMatchObject({ claimed_by_job: 'job-live' });
       expect(rows.find((r) => r.recipient_user_id === done)).toMatchObject({ outcome: 'accepted' });
     });
 
-    it('⭐ the give-up SKIPS a parked row past BOTH bounds; the first child re-claims it AT ONCE (⛔ lease wait) and the give-up then may', async () => {
+    it('⭐ the give-up SKIPS a parked row past BOTH bounds; the next child re-claims it AT ONCE, crediting ONLY the parked time', async () => {
       const { client } = getTx();
       const c = await refused(client);
       const u = await admin(client);
@@ -634,25 +650,28 @@ describe.skipIf(!hasDatabase)('Story 6.25 — the staff email: who, when, and th
       const taken = await begin(client, c, u, { jobId: 'job-after-hold', now });
       expect(taken).toMatchObject({ kind: 'begun', attemptCount: 2, previousDetail: 'held:SendingPausedException', mayHaveSent: false });
       expect(await rowsOf(client, c)).toMatchObject([{ claimed_by_job: 'job-after-hold', first_detail: 'held:SendingPausedException' }]);
-      // ⭐ Round 4 (`-300` §2 (ii)) — the re-claim RESTARTED its three IST days: its ONE post-hold child failing (past the lease again)
-      // does ⛔ burn it under today's cutoff …
+      // ⭐ Round 5 (`-301` §2 (i)) — the re-claim CREDITED the parked time (5 h: parked at its claim), ⛔ a reset: its ONE post-hold
+      // child failing does ⛔ burn it under today's cutoff …
+      const credited = await agingOf(client, c, u);
+      expect(credited.aging).toBe(cutoff.getTime() - 1 + 10 * STAFF_EMAIL_SEND_LEASE_MS);
+      expect(credited.parked).toBeNull();
       const later = new Date(now.getTime() + STAFF_EMAIL_SEND_LEASE_MS + 1);
       expect(await expireExhaustedSuspicionStaffEmails(client, { cutoff, now: later, allow: [PARIWAR_A] })).toEqual([]);
-      // … and three IST days after the re-claim it is given up like any row.
-      const threeDays = new Date(now.getTime() + 3 * 24 * 60 * MIN);
+      // … and once the cutoff passes its CREDITED anchor, it is given up like any row.
       expect(
-        await expireExhaustedSuspicionStaffEmails(client, { cutoff: suspicionStaffEmailReclaimCutoff(threeDays), now: threeDays, allow: [PARIWAR_A] }),
+        await expireExhaustedSuspicionStaffEmails(client, { cutoff: new Date(credited.aging + 1), now: later, allow: [PARIWAR_A] }),
       ).toEqual([{ claimCaseId: c, recipientUserId: u }]);
     });
 
-    it('⭐ round 4 — ONLY a PARKED row\'s re-claim restarts `aging_since`; another job\'s take-over past the lease keeps it', async () => {
+    it('⭐ round 5 — ONLY a PARKED row\'s re-claim moves `aging_since` (forward by its parked time); another job\'s take-over keeps it', async () => {
       const { client } = getTx();
       const c = await refused(client);
       const [parked, crashed] = [await admin(client), await admin(client)];
       const now = new Date();
       const old = new Date(now.getTime() - 4 * 24 * 60 * MIN);
       const stale = new Date(now.getTime() - 2 * STAFF_EMAIL_SEND_LEASE_MS);
-      await attemptingRow(client, c, parked, { createdAt: old, claimedAt: stale, job: SUSPICION_STAFF_EMAIL_PARKED_BY, detail: 'held:x' });
+      const parkedAt = new Date(now.getTime() - 60 * MIN);
+      await attemptingRow(client, c, parked, { createdAt: old, claimedAt: stale, job: SUSPICION_STAFF_EMAIL_PARKED_BY, detail: 'held:x', parkedAt });
       await attemptingRow(client, c, crashed, { createdAt: old, claimedAt: stale, job: 'job-crashed', detail: 'held:x' });
       expect(await begin(client, c, parked, { jobId: 'job-p', now })).toMatchObject({ kind: 'begun' });
       expect(await begin(client, c, crashed, { jobId: 'job-c', now })).toMatchObject({ kind: 'begun' });
@@ -660,7 +679,7 @@ describe.skipIf(!hasDatabase)('Story 6.25 — the staff email: who, when, and th
         `SELECT recipient_user_id, aging_since FROM claim_suspicion_staff_emails WHERE claim_case_id = $1`,
         [c],
       );
-      expect(rows.find((r) => r.recipient_user_id === parked)!.aging_since.getTime()).toBe(now.getTime());
+      expect(rows.find((r) => r.recipient_user_id === parked)!.aging_since.getTime()).toBe(old.getTime() + 60 * MIN); // ⛔ now
       expect(rows.find((r) => r.recipient_user_id === crashed)!.aging_since.getTime()).toBe(old.getTime());
     });
 
@@ -672,6 +691,47 @@ describe.skipIf(!hasDatabase)('Story 6.25 — the staff email: who, when, and th
       await attemptingRow(client, c, u, { claimedAt: now, job: SUSPICION_STAFF_EMAIL_PARKED_BY, detail: 'held:x' });
       expect(await begin(client, c, u, { jobId: 'job-other', now })).toMatchObject({ kind: 'begun', attemptCount: 2 });
       expect(await rowsOf(client, c)).toMatchObject([{ claimed_by_job: 'job-other' }]);
+    });
+
+    it('⭐ round 5 (D4) — FLAPPING short holds credit only their own length: three 15-min parks, and the row IS given up', async () => {
+      const { client, tx } = getTx();
+      const c = await refused(client);
+      const u = await admin(client);
+      let t = new Date();
+      const cutoff = suspicionStaffEmailReclaimCutoff(t);
+      // In flight since a day BEFORE the give-up horizon.
+      await attemptingRow(client, c, u, { createdAt: new Date(cutoff.getTime() - 24 * 60 * MIN), claimedAt: new Date(t.getTime() - 2 * STAFF_EMAIL_SEND_LEASE_MS), detail: 'held:x' });
+      const start = (await agingOf(client, c, u)).aging;
+      for (let i = 0; i < 3; i += 1) {
+        // A held tick past the lease parks it; the next child re-claims it 15 min later and fails (a transient note).
+        t = new Date(t.getTime() + STAFF_EMAIL_SEND_LEASE_MS + MIN);
+        expect(await parkHeldSuspicionStaffEmails(client, { now: t, allow: [PARIWAR_A] })).toBe(1);
+        t = new Date(t.getTime() + 15 * MIN);
+        const b = await begin(client, c, u, { jobId: `job-${String(i)}`, now: t });
+        if (b.kind !== 'begun') throw new Error('expected begun');
+        await enterAppScope(client, PARIWAR_A);
+        await noteSuspicionStaffEmailTransient(tx, { pariwarId: pid, noticeId: b.noticeId, jobId: `job-${String(i)}`, detail: 'held:x', mayHaveSent: true, now: t });
+        await client.query('RESET ROLE');
+      }
+      // ⭐ ONLY 3 × 15 min credited (round 4's reset would have handed it three fresh days each time).
+      expect((await agingOf(client, c, u)).aging).toBe(start + 3 * 15 * MIN);
+      const after = new Date(t.getTime() + STAFF_EMAIL_SEND_LEASE_MS + MIN);
+      expect(await expireExhaustedSuspicionStaffEmails(client, { cutoff, now: after, allow: [PARIWAR_A] })).toEqual([{ claimCaseId: c, recipientUserId: u }]);
+    });
+
+    it('⭐ round 5 (P4) — a child-INSERTed row takes `aging_since` from its DEFAULT and is given up by it', async () => {
+      const { client } = getTx();
+      const c = await refused(client);
+      const u = await admin(client);
+      const b = await begin(client, c, u, { jobId: 'job-fresh' });
+      if (b.kind !== 'begun') throw new Error('expected begun');
+      const { aging } = await agingOf(client, c, u);
+      expect(Number.isFinite(aging)).toBe(true);
+      const farLater = new Date(Date.now() + 10 * STAFF_EMAIL_SEND_LEASE_MS);
+      expect(await expireExhaustedSuspicionStaffEmails(client, { cutoff: new Date(aging - 1), now: farLater, allow: [PARIWAR_A] })).toEqual([]);
+      expect(await expireExhaustedSuspicionStaffEmails(client, { cutoff: new Date(aging + 1), now: farLater, allow: [PARIWAR_A] })).toEqual([
+        { claimCaseId: c, recipientUserId: u },
+      ]);
     });
   });
 });

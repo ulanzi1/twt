@@ -589,6 +589,8 @@ describe.skipIf(!hasDatabase)('Story 6.25 — the staff email (live DB, own-comm
     expect(h.alarms.filter((x) => x.includes(cr) && x.includes('transient:render_failed'))).toHaveLength(1);
     // Q2's read fails — a pool whose clients reject that ONE statement (restored on release).
     const failing = Object.create(pool) as pg.Pool;
+    // ⚠ The child reaches the DB through `connect` only (withPariwarScope); a `pool.query` path would bypass the wrapper — fail LOUDLY.
+    (failing as { query: unknown }).query = () => Promise.reject(new Error('the failing-pool wrapper only supports connect()'));
     failing.connect = (async () => {
       const c = await pool.connect();
       const realQuery = c.query.bind(c);
@@ -605,11 +607,12 @@ describe.skipIf(!hasDatabase)('Story 6.25 — the staff email (live DB, own-comm
       return c;
     }) as never;
     probe.claim = { pariwarId: P, claimCaseId: cq };
+    const alarmsBefore = h.alarms.length;
     for (let i = 0; i < 2; i += 1) {
       await expect(runSuspicionStaffEmailChild({ ...h.deps, pool: failing }, envelope(P, cq, aq.id), 'job-q')).rejects.toBeInstanceOf(ClaimCorrectionTransientError);
     }
     expect(await rowsOf(cq)).toMatchObject([{ outcome: 'attempting', detail: 'transient:read_failed', may_have_sent: false }]);
-    expect(h.alarms.filter((x) => x.includes(cq))).toEqual([]);
+    expect(h.alarms.slice(alarmsBefore)).toEqual([]); // ⛔ alarm of ANY shape for a read failure
     expect(h.client.sent).toHaveLength(0);
   });
 
@@ -918,6 +921,17 @@ describe('the registration and the sweep guards (⛔ database)', () => {
     const off = createFakeStaffEmailClient();
     off.state.gap = 'config:provider_unset';
     expect(await reg(off, undefined)).toEqual([]);
+    // ⭐ Round 5 — a client gap AND a bad origin ⇒ BOTH named at boot (⛔ only the first).
+    const both: string[] = [];
+    const gapped = createFakeStaffEmailClient();
+    gapped.state.gap = 'config:sender_invalid';
+    const fn = () => Promise.resolve('w');
+    await registerClaimSuspicionStaffEmailWorkers(
+      { createQueue: fn, schedule: fn, work: fn } as never,
+      { pool: {} as pg.Pool, encryption: {} as ClaimSuspicionStaffEmailDeps['encryption'], staffEmail: gapped, adminAppOrigin: 'http://x', onAlarm: (m) => both.push(m) },
+      { bootAlarm: 'config:sender_invalid' },
+    );
+    expect(both).toEqual([expect.stringContaining('config:sender_invalid'), expect.stringContaining('config:admin_app_origin_invalid')]);
   });
 
   it('⭐ round 3 — RE11: an EMPTY allowlist, and ANY allowlist in production, are REFUSED (alarmed) — ⛔ statement runs', async () => {

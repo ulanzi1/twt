@@ -374,6 +374,9 @@ export async function cleanupClaims(
       if (userIds.length > 0) {
         await each('member_device_tokens', 'DELETE FROM member_device_tokens WHERE principal_id = ANY($1::uuid[])', [userIds]);
         await each('role_grants', 'DELETE FROM role_grants WHERE user_id = ANY($1::uuid[])', [userIds]);
+        // Story 6.25 — the replica role DISABLES the `users` → `admin_credentials` cascade, and a surviving credentials row (its
+        // UNIQUE `email_blind_index`) would poison the next run: delete it explicitly, BEFORE its user.
+        await each('admin_credentials', 'DELETE FROM admin_credentials WHERE user_id = ANY($1::uuid[])', [userIds]);
         await each('users', 'DELETE FROM users WHERE id = ANY($1::uuid[])', [userIds]);
       }
       await c.query('COMMIT');
@@ -398,6 +401,8 @@ export async function cleanupClaims(
       users: number;
       grants: number;
       tokens: number;
+      credentials: number;
+      staff_emails: number;
     }>(
       `SELECT (SELECT count(*) FROM claims WHERE claim_case_id = ANY($1::uuid[]))::int AS claims,
               (SELECT count(*) FROM claim_correction_runs WHERE claim_case_id = ANY($1::uuid[]))::int AS runs,
@@ -406,7 +411,9 @@ export async function cleanupClaims(
               (SELECT count(*) FROM members WHERE member_id = ANY($3::uuid[]))::int AS members,
               (SELECT count(*) FROM users WHERE id = ANY($2::uuid[]))::int AS users,
               (SELECT count(*) FROM role_grants WHERE user_id = ANY($2::uuid[]))::int AS grants,
-              (SELECT count(*) FROM member_device_tokens WHERE principal_id = ANY($2::uuid[]))::int AS tokens`,
+              (SELECT count(*) FROM member_device_tokens WHERE principal_id = ANY($2::uuid[]))::int AS tokens,
+              (SELECT count(*) FROM admin_credentials WHERE user_id = ANY($2::uuid[]))::int AS credentials,
+              (SELECT count(*) FROM claim_suspicion_staff_emails WHERE claim_case_id = ANY($1::uuid[]))::int AS staff_emails`,
       [claimCaseIds, userIds, memberIds],
     );
     leftovers = Object.entries(rows[0]!).filter(([, n]) => n > 0);

@@ -113,6 +113,8 @@ import { registerClaimCorrectionReminderWorkers } from './scheduler/claim-correc
 import { registerClaimCorrectionClosureWorkers } from './scheduler/claim-correction-closure.js';
 import { registerClaimCertificateReminderWorkers } from './scheduler/claim-certificate-reminders.js';
 import { registerClaimSuspicionNoticeWorkers } from './scheduler/claim-suspicion-notices.js';
+import { registerClaimSuspicionStaffEmailWorkers } from './scheduler/claim-suspicion-staff-emails.js';
+import { buildStaffEmailClient } from './scheduler/staff-email-config.js';
 import { createConfigShepherdFallbackResolver } from './shepherd-fallback-resolver.js';
 import { consoleShepherdAssignedNotificationHook } from './shepherd-notification-hook.js';
 import { createDeterministicOcrProvider } from './ocr/index.js';
@@ -617,6 +619,17 @@ async function main(): Promise<void> {
     // the separate Hindi human-review gate) — the sweep HOLDS every notice and alarms (RB12). ⛔ Neither ever refuses,
     // closes or approves a claim.
     await registerClaimSuspicionNoticeWorkers(boss, claimCorrectionDeps);
+    // Story 6.25 (`2026-10-09-299`) — the STAFF EMAIL: every Pariwar Admin appointed before a `-239` refusal, active and with a
+    // login, is emailed ONCE per standing refusal (`-262` FQ3 A — "open the list", ⛔ no names, ⛔ no note). Its OWN 15-minute IST
+    // sweep and email child; the jobs KMS deps decrypt the admin email AFTER the claiming commit (ADR-0040 Q2). The client is
+    // built FAIL-CLOSED from STAFF_EMAIL_* (RE7 — an unresolvable secret HOLDS, ⛔ fails boot); `STAFF_EMAIL_PROVIDER` stays unset
+    // until roster Row 24 closes ⇒ the sweep HOLDS every email and alarms. `onAlarm` is ⛔ wired (deferred-work's 8.14 item).
+    const staffEmail = await buildStaffEmailClient();
+    await registerClaimSuspicionStaffEmailWorkers(
+      boss,
+      { pool, encryption: jobsEncryption, staffEmail: staffEmail.client, adminAppOrigin: process.env['ADMIN_APP_ORIGIN'] },
+      { bootAlarm: staffEmail.bootAlarm },
+    );
 
     // Story 10.5 (Task 5) — the News/Blog scheduled + immediate publish worker. Reuses the SAME
     // contribution-notify deps (BYPASSRLS pool + member Tier-1 crypto) for the shipped

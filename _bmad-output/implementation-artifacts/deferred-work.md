@@ -4,6 +4,19 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: dev-story 6-25-staff-email-notice-of-a-suspicion-refusal, Task 0 (2026-10-09)
+
+- **Two NON-BLOCKING confirms are owed to the NEXT Trustee Panel routing note (any story)** [`.decision-log.md` — `2026-10-09-299`
+  §7 (RE16); the `-295` Consequence 2 shape] — ⛔ carried yet. **Confirm 1 (RE3 (b)'s freeze):** *"for this email, a Pariwar Admin =
+  a Pariwar-wide appointment made before the refusal, active, with a login"* — a READING that narrows `-262` FQ3 A's *"every Pariwar
+  Admin of that Pariwar"* (an admin appointed after the refusal is ⛔ emailed; they find it on the list). ⚠ Must be answered before
+  roster Row 24 closes (Row 24 (f)). **Confirm 2 (a disclosure — F10):** the FQ3 note said *"for staff, the system holds only an email
+  address"*; `users.contact_phone` / `contact_whatsapp` exist (Story 6.12) — the email was chosen against B "note by email" and C
+  "console only", ⛔ against a phone option. ⭐ Trigger: the next routing note to the Panel. Close this item when both are carried
+  (and Confirm 1 answered — a Decision closes Row 24 (f)).
+
+---
+
 ## Deferred from: code review of story-6.24b (2026-10-09)
 
 - **`recipient_number_hash` survives the deceased member's erasure** [`packages/domain/src/member/anonymize.ts` — the 6.24b line
@@ -7436,6 +7449,10 @@ worked example, having sat mis-marked as pending for seven epics after its trigg
   their `boot.ts` call sites either. Not a defect introduced by this story. **Re-trigger:** whichever
   story first wires real alerting/paging for the `apps/jobs` sweep family should cover all of them
   together, not just this one. [apps/jobs/src/boot.ts:622]
+  ⭐ **2026-10-09 — OBSERVATION (Story 6.25, `-299` RE12; ⛔ a closure):** Story 6.25 built the stack's first staff EMAIL port
+  (`apps/jobs/src/scheduler/staff-email-client.ts`) — a candidate `onAlarm` transport once an alarm OWNER is named. 6.25 does ⛔ not
+  wire `onAlarm` (⛔ owner is named — Row 22 (d)'s gap); its own sweep's alarms are `console.warn` like every job's. Roster Row 24
+  (e) now carries this item's bar for the staff email too. This item stays OPEN.
 
 - **No backoff, circuit breaker, or dead-letter handling for a candidate that fails every tick** — a
   genuine data defect causing `closeCycleAlert` to throw a non-concurrency error is counted `failed`
@@ -10869,4 +10886,9 @@ explicitly disclosed by the commit's own comments — ⛔ none blocks `11b-17`, 
 
 - **`sendHandoverOtp`'s P6 timing-equalization pad (`timingEqualizeDelay`) wraps only the no-op return; `readSuspicionRefusalRecipient` itself does ONE DB round-trip when no `-239` refusal stands vs TWO when one does** [`packages/domain/src/claim/suspicion-refusal.ts:275`, consumed at `apps/api/src/modules/claims/claims.service.ts:120`] — a residual, weak timing side channel: a caller sampling many requests for the same death could statistically detect whether a suspicion refusal stands, ahead of the pad. Accepted as residual risk (not fixed): the signal is a single extra same-DC round-trip (likely single-digit ms) submerged in a 150–450 ms random pad, so exploiting it needs many repeated, timed samples against the same death. **Trigger:** a future hardening pass on `sendHandoverOtp`, or evidence this channel is being probed (e.g. repeated handover-OTP requests for the same death from one actor).
 - **The SMS-child worker's batch loop in `claim-suspicion-notices.ts` (`registerClaimSuspicionNoticeWorkers`) has no per-job try/catch — a transient throw from one job aborts the rest of that `boss.work` batch pull** [`apps/jobs/src/scheduler/claim-suspicion-notices.ts:422`] — pre-existing, NOT introduced by Story 6.24b: `claim-correction-reminders.ts`'s `registerClaimCorrectionReminderWorkers` (`:1350-1364`) has the identical shape, including the same unverified claim in its own comment that pg-boss isolates per-job failure within a batch. **Trigger:** confirming (or refuting) pg-boss's actual per-job batch-failure semantics, then fixing both files together in one pass.
+  ⭐ **2026-10-09 — OBSERVATION (Story 6.25, `-299` RE11; ⛔ a closure):** this item's own trigger question — *"confirming pg-boss's
+  actual per-job batch-failure semantics"* — is answered for the DEFAULT: pg-boss 12.19.1's `work()` defaults to `batchSize = 1`
+  (`node_modules/pg-boss/dist/manager.js`), so today a throw fails only its own job. Story 6.25's new send worker states `batchSize: 1`
+  EXPLICITLY so that stays true if the default changes. ⛔ This item's two files are ⛔ touched by 6.25 (AC9 (a)); it stays OPEN — an
+  explicit option (or a per-job try/catch) on THEM is still owed.
 - **The suspicion-notice sweep-tick's top-level catch logs via `console.error` instead of the injected `alarm()`** [`apps/jobs/src/scheduler/claim-suspicion-notices.ts:438`] — pre-existing, NOT introduced by Story 6.24b: `claim-correction-reminders.ts`'s own sweep-tick catch (`:1384-1386`) is word-for-word the same shape. Both resolve to the same console output today (`alarm()` → `console.warn` until Row 22(d)'s real transport is wired), but once a real transport IS wired, only paths that call `alarm()` will reach it. **Trigger:** Row 22(d) closing (a real `onAlarm` transport gets wired) — fix both files' sweep-tick catches to route through `alarm()` at the same time.

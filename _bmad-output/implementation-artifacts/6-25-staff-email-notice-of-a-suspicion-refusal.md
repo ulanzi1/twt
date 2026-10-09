@@ -221,6 +221,11 @@ leaves the system by email.**
 
 ## ⚖️ Build decisions RE1–RE17 — ⚠ the author's; PROPOSED, ⛔ not committed until Task 0.3
 
+> ✅ **COMMITTED by [`2026-10-09-299`](../../.decision-log.md#decision-2026-10-09-299) (`8fbf718b`, 2026-10-09)** — BigDev's answers are quoted
+> in the Dev Agent Record (Task 0.2). Every RE as recommended, EXCEPT: **RE6 — BOTH adapters** (A: SES v2 via `aws4fetch` 1.0.20,
+> B: ZeptoMail), selected by `STAFF_EMAIL_PROVIDER`; and ONE rule ADDED: **RE5-bis** — an SES 5xx / 408 or a ZeptoMail 5xx also sets
+> `may_have_sent`. The RE text below is kept as written ([[feedback_supersede_never_reinterpret]]) — `-299` governs where they differ.
+
 > ⭐ Each RE carries a recommendation. BigDev answers each at Task 0.2 (quote the answer as given). §0 gate: every RE is the author's
 > EXCEPT the two marked ⚠ — RE3 (b) (a reading that narrows *"every Pariwar Admin"* ⇒ a non-blocking Panel confirm) and RE8 (a ratified
 > ADR control ⇒ ADR-0040). ⛔ No RE changes WHAT anyone is told.
@@ -658,17 +663,17 @@ at :5433; `pnpm domain-invariants:check` green.
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0 — Governance (AC0). ⛔ NO CODE BEFORE 0.3 IS COMMITTED.**
-  - [ ] 0.1 `git fetch origin`; confirm `origin/main` still `3a7d3a1f` (else re-derive every `file:NNN` used); grep `.decision-log.md`
+- [x] **Task 0 — Governance (AC0). ⛔ NO CODE BEFORE 0.3 IS COMMITTED.**
+  - [x] 0.1 `git fetch origin`; confirm `origin/main` still `3a7d3a1f` (else re-derive every `file:NNN` used); grep `.decision-log.md`
         for any entry after `-298` touching `-239`, D2, FQ3, rows 6-25 / 6-27 (none ⇒ record "none"); re-locate F9's stale lines.
-  - [ ] 0.2 Put RE1–RE17 to BigDev with each recommendation (RE3: the freeze confirm A/B + the two edges A/B; RE6: the provider; RE7:
+  - [x] 0.2 Put RE1–RE17 to BigDev with each recommendation (RE3: the freeze confirm A/B + the two edges A/B; RE6: the provider; RE7:
         hold vs boot-fail; RE8: A or B; RE9: the words + the return path A/B; RE12: Row 24 (e) A/B); quote each answer AS GIVEN.
         Re-verify the chosen provider's current API + region endpoint (Context7 / docs) and RECORD in the story: the request shape, the
         error-NAME classification table (transient / held / `rejected`), the pre-flight call, and the tracking-off settings.
-  - [ ] 0.3 Draft the author-commit `2026-10-09-299` (or next free) in the scratchpad (header shape: `-295`'s); run ≥1 fresh-context check
+  - [x] 0.3 Draft the author-commit `2026-10-09-299` (or next free) in the scratchpad (header shape: `-295`'s); run ≥1 fresh-context check
         on the draft until it finds ⛔ no BLOCKER/HIGH; insert into `.decision-log.md` (newest first) — if the write is refused, ask once
         ([[project_decision_log_writes_user_inserted]]); commit ALONE: `governance(6.25): 2026-10-09-299 — …`.
-  - [ ] 0.4 Second governance commit: `docs/adr/ADR-0040-staff-email-transport.md` (from `_adr-template.md`; status `drafted`;
+  - [x] 0.4 Second governance commit: `docs/adr/ADR-0040-staff-email-transport.md` (from `_adr-template.md`; status `drafted`;
         `Supersedes: —`; Context = F3 (incl. the existing `users` drift) + F16 + F17 + FQ3 A; Decision = the provider + the residency
         reading + tracking-off + the jobs DB role + Q1/Q2 as an in-body AMENDMENT of ADR-0009 §5's identity-data controls, ADR-0004's
         `> **Amendment — …**` form; a cross-link to `email-channel.md`'s provider-ADR placeholder) + the `adr-index.md` row AND its ledger
@@ -677,7 +682,7 @@ at :5433; `pnpm domain-invariants:check` green.
         routing note + RE12's observation on the 8.14 item + RE11's `batchSize = 1` observation on the 6.24b round-3 batch-loop item
         (⭐ this task is the ONLY place these lines are written). ADR-0009 itself is
         ⛔ not edited now — its in-body pointer is added only when ADR-0040 is ratified, by the ratifying decision.
-  - [ ] 0.5 Record the answers in this file's RE block (`✅ committed by -299`); never edit RE text after commit — a later change is a NEW
+  - [x] 0.5 Record the answers in this file's RE block (`✅ committed by -299`); never edit RE text after commit — a later change is a NEW
         entry + a dated `⚠ AMENDED` line.
 - [ ] **Task 1 — Migration 0152 + schema + RLS (AC8; RE5).**
   - [ ] 1.1 Hand-author `packages/domain/migrations/0152_claim-suspicion-staff-emails.sql` (`--> statement-breakpoint` separators) + journal
@@ -857,7 +862,53 @@ positive control on every negative leg; every AC leg present before its Task is 
 
 ### Agent Model Used
 
+Claude Opus 5.5 (1M context) — `bmad-dev-story 6.25`, 2026-10-09.
+
 ### Debug Log References
+
+**Task 0.1 (2026-10-09).** `git fetch origin` ⇒ `origin/main` = `3a7d3a1f` (= the pin; ⛔ re-derivation owed). `.decision-log.md` newest
+entry = `-298` ⇒ ⛔ later decision touching `-239` / D2 / FQ3 / rows 6-25 / 6-27 — **none**. 6-27 = `backlog` (⛔ rebase owed, `-292`
+Consequence 4). F9's stale lines re-located unchanged: `nominee-refusal-read.ts:13`, `NomineeRefusalsRoute.tsx:4,91`, `RootLayout.tsx:135`.
+
+**Task 0.2 — BigDev's answers (2026-10-09, verbatim):** RE6 *"build both A and B."* · RE3 (b) *"A — freeze + Panel confirm
+(Recommended)"* · RE3 edges *"A — accept both, recorded (Recommended)"* · RE7 *"A — hold (Recommended)"* · RE8 *"A — build now, ADR-0040
+drafted (Recommended)"* · RE9 (return path) *"A — return path (Recommended)"* · RE12 *"A — Row 24 (e) = Row 22 (d) (Recommended)"* · the
+SES signing dependency (with `STAFF_EMAIL_PROVIDER` = `ses` | `zeptomail` stated in the question) *"aws4fetch 1.0.20 (Recommended)"* ·
+RE1, RE2, RE4, RE5, RE10, RE11, RE13–RE17 *"Accept all as recommended (Recommended)"* · and, after the `-299` draft's fresh-context
+check (1 HIGH), RE5-bis *"Yes — SES 5xx/408 + ZeptoMail 5xx (Recommended)"*.
+
+**Task 0.2 — the providers, re-verified against CURRENT official docs 2026-10-09** (a read-only research pass: AWS SES v2
+`API_SendEmail`, `CommonErrors`, `API_GetAccount`, `API_TrackingConfigurationOverrides`, `configuration-overrides`,
+`troubleshoot-error-messages`, `gr/ses.html`, botocore's sesv2 model, aws4fetch 1.0.20's dist; Zoho CPaaS `email-sending`,
+`error-codes`, `multiple-data-centers`, the 2026-09-23 rename blog, the Feb/Mar-2026 web-archive copies; plus unauthenticated live
+probes with bogus credentials — nothing sent):
+- **SES v2** — `POST https://email.ap-south-1.amazonaws.com/v2/email/outbound-emails`, SigV4 service `ses` (aws4fetch maps the `email`
+  prefix itself; passed explicitly). Body `{ FromEmailAddress, Destination: { ToAddresses: [to] }, Content: { Simple: { Subject: { Data,
+  Charset: 'UTF-8' }, Body: { Text: { Data, Charset: 'UTF-8' } } } }, ConfigurationSetName? }`; 200 ⇒ `{ MessageId }`. ⛔ Idempotency
+  token; AWS: a timed-out / 5xx send may already be accepted ⇒ **`AwsClient({ retries: 0 })`** (its default retries 5xx/429 ×10).
+  Error NAME: `x-amzn-ErrorType` header, else body `__type`, else body `code`; keep before the first `:`, after the first `#`; ⛔ name ⇒
+  `http_<status>`. Live probe: 403 `MissingAuthenticationTokenException` / `UnrecognizedClientException` (header only, body `message`).
+  ⚠ Error messages LIST identities (addresses) ⇒ ⛔ read. **Transient:** `TooManyRequestsException` 429, `ThrottlingException` (400!),
+  `InternalFailure` 500, `ServiceUnavailable` 503, `RequestTimeoutException` 408, `http_5xx`, `http_429`, network, own timeout —
+  `may_have_sent` on a 5xx / 408 / network / timeout (RE5-bis). **Held:** `AccountSuspendedException`, `SendingPausedException`,
+  `MailFromDomainNotVerifiedException`, `MessageRejected`, `NotFoundException`, `LimitExceededException`, `BadRequestException`,
+  `AccessDeniedException`, `ExpiredTokenException`, `IncompleteSignature`, `MissingAuthenticationTokenException`, `NotAuthorized`,
+  `OptInRequired`, `UnrecognizedClientException`, `ValidationError`, `MalformedHttpRequestException`, `RequestAbortedException`,
+  `RequestEntityTooLargeException`, `UnknownOperationException`, + ANY other name. **`rejected`: ⛔ none.** **Pre-flight:** `GET
+  /v2/email/account` — `SendingEnabled` && `ProductionAccessEnabled`. **Tracking:** ⛔ the per-message override (needs IAM
+  `ses:ApplyTrackingConfigurationOverrides`); ⛔ configuration set unless configured; Row 24 (b) verifies ⛔ OPEN/CLICK destination
+  (incl. any sender-identity default set) and VDM engagement OFF. ⚠ Unverified by the docs: the v2 name for a daily-quota / max-rate
+  throttle (falls into transient by `TooManyRequestsException` / `http_429`, else held — alarmed, ⛔ lost).
+- **ZeptoMail (= Zoho CPaaS since 2026-09-23)** — `POST {host}/v1.1/email`, `Authorization: Zoho-enczapikey <token>`, host default
+  `https://cpaas.zoho.in` (India DC; legacy `api.zeptomail.in` answers identically — ⛔ relied on). Body `{ from: { address }, to: [{
+  email_address: { address } }], subject, textbody, track_opens: false, track_clicks: false, client_reference: <notice_id> }`
+  (`client_reference` = correlation only). 200 ⇒ `{ data: [{ code: 'EM_104', … }], message: 'OK', request_id }` ⇒ store `request_id`.
+  Error `{ error: { code, details: [{ code, message, target }], message } }` (live: 401 `TM_4001` / `SERR_157`; the new docs' 400 sample
+  `data.error_code` tolerated) ⇒ NAME `<code>.<sub-code>`. **Transient:** any 5xx (+ `may_have_sent`, RE5-bis), `http_429`,
+  `TM_3601.SMI_115` (per-day limit), network, own timeout. **Held:** `TM_3501.LE_101`, `TM_5001.LE_102`, `TM_3601.SERR_156`,
+  `TM_3601.SM_133`, `TM_3601.AE_101`, `TM_4001.SM_111`, `TM_4001.SM_128`, `TM_4001.SERR_157`, the caller-bug codes (`TM_3201.*`,
+  `TM_3301.*`, `TM_3501.UE_106|MTR_101`, `TM_8001.*`), + ANY other name. **`rejected`:** ONLY `TM_4001.SM_113` with `target` `to`.
+  **Pre-flight: ⛔ none** (log APIs need OAuth) ⇒ a recorded no-op. UTF-8 = the JSON body's encoding.
 
 ### Completion Notes List
 

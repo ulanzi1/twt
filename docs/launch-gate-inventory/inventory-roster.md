@@ -396,3 +396,40 @@
 - **missed_target_escalation_log:** (empty)
 - **cross_story_discharge_path:** a review recorded in the decision log (or on the 6.24b story) → the marker replaced; any change to the Hindi → re-registration (the DLT sheet's Record).
 - **notes:** The English wording is the Trustee Panel's (FQ7 B, `-291` Q2 B, `-293` item 1 B) plus the helpline number, settled by `-292` RF11 and `-295` RB1. ⛔ No Hindi deadline word — RB16's deny-list (`दिन`, `अंतिम`, …) holds; the appeal date reads *"{date} तक अपील की जा सकती है"*. ⛔ Machine-translated; agent-authored (2026-10-08) and ⛔ never shown to a real family unreviewed.
+
+## Rows 24-25 — Story 6.25: the staff email's go-live gates (decision-authored, `-299` RE14)
+
+> ⭐ **Appended 2026-10-09 by Story 6.25 (Task 0.4) under [Decision 2026-10-09-299](../../.decision-log.md#decision-2026-10-09-299) RE14** —
+> the email `-262` FQ3 A ordered (every Pariwar Admin of a Pariwar is told *"a claim was refused on suspicion of a nominee change — open
+> the list"*, ⛔ no names, ⛔ no note) is the stack's FIRST email: a transport, a provider and two new identity-data read paths (ADR-0040)
+> that ⛔ no earlier row covers. Like Rows 17–23 neither row has an architecture source line; each cites the decision that created it.
+> ⛔ Neither blocks a **build** or a merge — nothing is in production ([[project_not_in_production_merge_is_not_golive]]); **every deploy
+> before Row 24 closes leaves `STAFF_EMAIL_PROVIDER` unset**, and the sweep HOLDS every email (⛔ row written) and alarms (`-299` RE7).
+
+### Row 24 — `staff-email-transport`
+
+- **gate_name:** The staff email's transport is provisioned, ratified and cleared — the provider, the sender domain, the identity-data read paths (ADR-0040), counsel's clearance of delivery, a proven real send, an alarm that reaches a person, and the Panel's answer to the recipient confirm
+- **architecture_source_line:** N/A — **decision-authored**: [`-299`](../../.decision-log.md#decision-2026-10-09-299) RE14 (building [`-262`](../../.decision-log.md#decision-2026-09-28-262) FQ3 A, Trustee-ratified); architecture Project Context lines 49 / 100 (the residency posture (c) reads).
+- **owner:** Trustee Panel (gate — (a), (f)); BigDev (provisioning — (b), (d)); counsel (Story 0.13) — (c); for (e), the alarm owner is ⛔ yet NAMED (Row 22 (d)'s same gap)
+- **support:** BigDev (the build — Story 6.25; the routing note that carries (f))
+- **closure_criteria:** ALL SIX, each recorded as a Decision: **(a)** ADR-0040 ratified — the provider enabled in production, and the amendment of ADR-0009 §5 admitting Q1 / Q2; **(b)** the sender domain's SPF / DKIM / DMARC set; the secrets provisioned; the provider OUT of its sandbox (SES production access granted — `GetAccount` `ProductionAccessEnabled`); the IAM / API grants the adapter needs (SES `ses:SendEmail` + `ses:GetAccount`); the production jobs login able to make Q1's and Q2's reads, its role and privileges stated (⛔ committed file says so today — ADR-0040 F17); tracking verifiably off (SES: ⛔ OPEN/CLICK event destination on the configured set or on a default configuration set of the sender identity, VDM engagement metrics OFF at the set and the account; ZeptoMail: the Mail Agent tracking toggle off); and `STAFF_EMAIL_FROM` / Return-Path a MONITORED mailbox or a bounce / complaint destination (`accepted` ⛔ means delivered); **(c)** the ESP's region is India (or counsel clears otherwise) AND counsel clears delivery to each staff member's own mailbox provider (architecture *"final scope per counsel"*); **(d)** a real send to a test staff inbox — the `accepted` row seen AND the message observed IN the inbox; **(e)** an alarm of the sweep reaches a NAMED person through a real transport — Row 22 (d)'s bar (`-299` RE12 A): an owner recorded, and `onAlarm` wired for this sweep (or `deferred-work.md`'s 8.14 item *"No real alerting/paging channel is wired for `onAlarm`"* closed for every job); **(f)** the Trustee Panel's answer to `-299` §7 **Confirm 1** — *"for this email, a Pariwar Admin = a Pariwar-wide appointment made before the refusal, active, with a login"* (RE3 (b)'s freeze narrows FQ3 A's *"every Pariwar Admin"* — the `-295` §0 precedent). Testable signal: `closure_evidence_link` resolves to all six; only then is `STAFF_EMAIL_PROVIDER` set in production.
+- **target_date:** before the staff email goes live (relative-to-fact: the gate IS that go-live).
+- **current_status:** `open`
+- **closure_evidence_link:** (a) — (empty). (b) — (empty). (c) — (empty). (d) — (empty). (e) — (empty). (f) — (empty).
+- **missed_target_escalation_log:** (empty)
+- **cross_story_discharge_path:** ADR-0040 presented to the Panel → a ratifying Decision for (a) (which also authorises ADR-0009's in-body pointer); provisioning → a Decision for (b) and (d); Story 0.13 (counsel) → a Decision for (c); an alarm owner named + `onAlarm` wired (or the 8.14 item closed) → a Decision for (e); the next Trustee Panel routing note carrying `-299` §7 Confirm 1 → a Decision for (f) (this row is ⛔ itself a routing note). The code already ships the sweep (Story 6.25); ⛔ nothing sends before this row closes.
+- **notes:** Until this row closes the console list (`/p/$pariwarId/nominee-refusals`, Story 6.20) stays the only notice — exactly FQ3 A's *"Until the email exists, the list is the only notice."* ⚠ The email is ADDITIVE: the list still shows every refusal. ⚠ BigDev built BOTH adapters (`-299` §3) — (a) records which ONE is enabled in production; the other stays built and unset.
+
+### Row 25 — `suspicion-staff-email-hindi-review`
+
+- **gate_name:** A human review of the Hindi of the staff email (`suspicion_staff_email.subject`, `suspicion_staff_email.body`)
+- **architecture_source_line:** N/A — **decision-authored**: [`-299`](../../.decision-log.md#decision-2026-10-09-299) RE14 (Rows 20 / 21 / 23's precedent); `-262` lists the email's wording (en + hi) under *"does NOT cover"*.
+- **owner:** BigDev (gate); a Hindi-first reviewer named by BigDev — the review
+- **support:** Story 6.25 (the copy as shipped)
+- **closure_criteria:** A recorded human review of the Hindi values of the two `suspicion_staff_email.*` keys in `packages/i18n/locales/hi/claim.json` — agreed or corrected — and the `$comment.suspicion_staff_email` marker (*"agent-authored, NOT YET HUMAN-REVIEWED"*) replaced in the same commit. Testable signal: the marker is gone and `closure_evidence_link` names the review.
+- **target_date:** before the staff email goes live (relative-to-fact: the gate IS that go-live).
+- **current_status:** `open`
+- **closure_evidence_link:** (empty)
+- **missed_target_escalation_log:** (empty)
+- **cross_story_discharge_path:** a review recorded in the decision log (or on the 6.25 story) → the marker replaced. (⛔ DLT re-registration — an email has ⛔ registered template.)
+- **notes:** The gist is the Trustee Panel's (`-262` FQ3 A); the words are agent-drafted (`-299` RE9) and carry ⛔ a name, ⛔ a note, ⛔ a claim id, ⛔ a count, ⛔ a date — only the list link. ⛔ Machine-translated; agent-authored (2026-10-09) and ⛔ never sent to a real admin unreviewed.

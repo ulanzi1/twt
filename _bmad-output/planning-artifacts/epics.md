@@ -3225,6 +3225,28 @@ claim's effective determination, else the same "no nominee" response (the helpli
 nominee is texted once on the refusal, and once when an allowed appeal closes her claim, in the Pariwar's name form; ⛔ no plaintext number
 or name stored or logged; the sends fail closed until the DLT template ids are set at go-live. The system still refuses ⛔ nothing.
 
+### Story 6.25: Every Pariwar Admin Is Emailed When a Claim Is Refused on Suspicion of a Nominee Change — "Open the List", With No Names and No Note `[SURFACE]`
+
+> ⚠ **Added 2026-10-09 (Story 6.25, Task 0.4)** — the row `6-25-staff-email-notice-of-a-suspicion-refusal` was created by
+> [`-262`](../../.decision-log.md#decision-2026-09-28-262) Consequence 3 with ⛔ no `epics.md` entry (the `-292` Consequence 1 precedent).
+> Source: [`-261`](../../.decision-log.md#decision-2026-09-28-261) D2 B and `-262` FQ3 A (both Trustee-ratified), inside
+> [`-239`](../../.decision-log.md#decision-2026-09-21-239) (a); the author's build decisions are
+> [`-299`](../../.decision-log.md#decision-2026-10-09-299) RE1–RE17. Full ACs:
+> `_bmad-output/implementation-artifacts/6-25-staff-email-notice-of-a-suspicion-refusal.md`.
+> ⚠ **Go-live coupling:** the email waits on roster Rows 24 (transport, ADR-0040, counsel, a real send, an alarm owner, a Panel confirm)
+> and 25 (the Hindi review); ⛔ never a merge fence.
+
+As a Pariwar Admin, I want an email whenever a claim in my Pariwar is refused on suspicion of a nominee change, telling me to open the
+list, so that I learn of every such refusal the same day without having to check the console — and ⛔ no name or note ever leaves the
+system by email.
+
+**Acceptance Criteria (in brief):** while a `-239` refusal stands, every Pariwar Admin appointed Pariwar-wide before it, active and with a
+login, is emailed ONCE (⛔ a second email on a revision away and back); nobody to email ⇒ one record + an alarm; the email (Hindi then
+English, plain text) carries only the list link — ⛔ a name, a note, a claim id, a count or a date; ⛔ no plaintext address stored or
+logged, and the address is decrypted only after the claiming commit; a missing config or a provider account fault HOLDS the email (⛔ a
+lost send); a signed-out admin who follows the link reaches the list after signing in. The system still refuses ⛔ nothing — the email
+is a notification, ⛔ never an approval step.
+
 ---
 
 ## Epic 7: Pool Engine & Cycle Spawn

@@ -1,3 +1,26 @@
+# last_updated: 2026-10-09j (⭐ **STORY 6.25 — CODE REVIEW ROUND 2 (narrow re-review of round 1's own fixes, `391a670c..HEAD`,
+# 16 files / 495 lines; three layers SEQUENTIAL, read-only) ⇒ stays `done`.** 0 decision-needed, 3 patch, 1 defer, 7 dismissed
+# (B2 folded into the B1/E1 patch — one code change closed both): `scripts/provision-admin.ts` now imports and calls
+# `isSendableEmailAddress` directly instead of a hand-rolled ASCII-only regex (Blind Hunter + Edge Case Hunter independently
+# found round 1's regex narrower than the runtime gate it backstops — e.g. `a@b` passed provisioning but would still be
+# permanently rejected later); a new no-DB test pins the SEND worker's catch-and-alarm for an unexpected throw (a malformed
+# `claimCaseId` via `ids.claimId`); `buildStaffEmailClient`'s `gap`/`bootAlarm` ternary de-duplicated per provider branch (the
+# exact pattern that caused round 1's bug). Deferred: `provision-admin.ts`'s total pre-existing lack of test infrastructure.
+# Full suite re-green after (jobs 694 tests incl. the new one; domain-accessor-invariants gate). Story Change Log 1.5. On
+# branch `story/6-25-staff-email-notice-of-a-suspicion-refusal`.)
+# last_updated: 2026-10-09i (⭐ **STORY 6.25 — CODE REVIEWED (`bmad-code-review 6.25`; full diff `3a7d3a1f..391a670c`; Blind Hunter /
+# Edge Case Hunter / Acceptance Auditor in parallel) ⇒ `review` → `done`.** Triage: 3 decision-needed, 6 patch, 1 defer, 8 dismissed;
+# all 3 decisions resolved by the user (options A/A/B) ⇒ 2 more patches ⇒ 8 patch, 1 defer, 9 dismissed — all 8 applied: both
+# `may_have_sent` gaps on an `error` finish (the give-up UPDATE and the locked-recheck-failure UPDATE); `LoginPage` reads the `/login`
+# route's typed `useSearch` instead of re-parsing `window.location.search` (`nextFromLocation` dropped; `login-turnstile.test.tsx`'s
+# router mock, which also renders `LoginPage`, needed the same stub); `resolveAdminAppOrigin` accepts a mixed-case scheme/host and an
+# explicit default port without weakening its path-smuggling guard; `buildStaffEmailClient`'s `bootAlarm` now also fires on a bad/missing
+# `STAFF_EMAIL_FROM`; the `CLAIM_SUSPICION_STAFF_EMAIL_SEND` worker now alarms on an unexpected non-transient throw instead of silently
+# exhausting pg-boss's retries; `scripts/provision-admin.ts` rejects a non-ASCII `ADMIN_EMAIL` at provisioning; `buildJobsEncryptionDeps`
+# exported from the `@twt/jobs` barrel (the cross-check test no longer deep-imports `@twt/jobs/src/deps.js`). The 1 defer (the keyset
+# selector's unparameterized `LIMIT`, pre-existing — `suspicion-notice.ts:189` has the identical pattern) recorded in `deferred-work.md`.
+# Full suite green after: admin 982, jobs 693, api 1594, domain 4798 tests + the domain-accessor-invariants gate. Story Change Log 1.4.
+# On branch `story/6-25-staff-email-notice-of-a-suspicion-refusal`.)
 # last_updated: 2026-10-09h (⭐ **STORY 6.25 — DEV COMPLETE (`bmad-dev-story 6.25`) ⇒ `ready-for-dev` → `in-progress` → `review`.**
 # Governance FIRST: BigDev answered RE1–RE17 (RE6 "build both A and B" — SES v2 ap-south-1 via `aws4fetch` 1.0.20 AND ZeptoMail/Zoho
 # CPaaS, one chosen by `STAFF_EMAIL_PROVIDER`; every other RE as recommended) + RE5-bis (a provider 5xx/408 ⇒ `may_have_sent`, asked
@@ -19429,7 +19452,7 @@ development_status:
   # ⭐ 2026-10-08: 6.24a is `done` (PR #263) ⇒ 6.24b RE-PINNED to `b6a63a81`, VALIDATED (v2.1) and `ready-for-dev`; its Task 0 owes
   # ONE author-commit (RB1–RB18) before any code — see the 2026-10-08f / 2026-10-08g ledger blocks.
   6-24b-filing-code-and-texts-to-the-nominee-in-place-at-the-death: done
-  6-25-staff-email-notice-of-a-suspicion-refusal: review
+  6-25-staff-email-notice-of-a-suspicion-refusal: done
   6-26-ground-inspection-before-approval-and-death-facts: done
   # ⭐ 2026-10-06 SPLIT after `2026-10-06-281` (the Panel: Q1 B · Q2 A; BigDev: "write the panel note then we get the answer and then we split"):
   # the row above is STORY 6.26a (keeps its key — the rulings cite it): the gate, the review-window widening, the inspector's record and the

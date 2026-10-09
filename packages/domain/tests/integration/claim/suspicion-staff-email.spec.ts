@@ -417,7 +417,7 @@ describe.skipIf(!hasDatabase)('Story 6.25 — the staff email: who, when, and th
       await revise(client, c, 'other', AFTER);
       expect(await begin(client, c, u)).toEqual({ kind: 'expired', detail: 'exhausted:recheck_refusal_not_standing' });
       expect(await begin(client, c, fresh)).toEqual({ kind: 'not_due', reason: 'refusal_not_standing' });
-      expect(await rowsOf(client, c)).toMatchObject([{ recipient_user_id: u, outcome: 'error', detail: 'exhausted:recheck_refusal_not_standing', attempt_count: 1 }]);
+      expect(await rowsOf(client, c)).toMatchObject([{ recipient_user_id: u, outcome: 'error', detail: 'exhausted:recheck_refusal_not_standing', attempt_count: 1, may_have_sent: true }]);
     });
 
     it('a recipient who is ⛔ eligible at the lock ⇒ `not_due` / `recipient_not_eligible` (fresh), `exhausted:recheck_recipient_not_eligible` (existing)', async () => {
@@ -468,7 +468,7 @@ describe.skipIf(!hasDatabase)('Story 6.25 — the staff email: who, when, and th
       const gone = await expireExhaustedSuspicionStaffEmails(client, { cutoff, now, allow: [PARIWAR_A] });
       expect(gone).toEqual([{ claimCaseId: c, recipientUserId: old }]);
       const rows = await rowsOf(client, c);
-      expect(rows.find((r) => r.recipient_user_id === old)).toMatchObject({ outcome: 'error', detail: 'exhausted:attempting_three_days', first_detail: 'held:SendingPausedException' });
+      expect(rows.find((r) => r.recipient_user_id === old)).toMatchObject({ outcome: 'error', detail: 'exhausted:attempting_three_days', first_detail: 'held:SendingPausedException', may_have_sent: true });
       expect(rows.filter((r) => r.outcome === 'attempting').map((r) => r.recipient_user_id).sort()).toEqual([live, young].sort());
     });
 

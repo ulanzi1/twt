@@ -29,7 +29,7 @@ LETTERS: `RE` = this story's build decisions (the author's); `F` = FOUND facts; 
 
 # Story 6.25: Every Pariwar Admin Is Emailed When a Claim Is Refused on Suspicion of a Nominee Change — "Open the List", With No Names and No Note `[SURFACE]`
 
-Status: review
+Status: done
 
 > ⭐⭐ **WHAT THIS STORY IS, IN ONE PARAGRAPH.** When a District Admin refuses a claim on suspicion of a nominee change made after the
 > death (`-239` — the verifier denial with reason `post_death_nominee_change`), the Panel ruled that **every Pariwar Admin of that
@@ -746,6 +746,150 @@ at :5433; `pnpm domain-invariants:check` green.
 - [x] **Task 7 — Proof (AC9, AC10).** Red-checks logged; AC9 (a) `git diff --exit-code`, (b) comment-only, (c) import-only;
       `pnpm domain-invariants:check`; `pnpm ci:local` at :5433; grep `\*\*/` over every edited JSDoc block; File List complete.
 
+### Review Findings
+
+> Code review 2026-10-09 (`bmad-code-review 6.25`, full diff `3a7d3a1f..391a670c`, code + docs; three layers (Blind Hunter, Edge
+> Case Hunter, Acceptance Auditor) in PARALLEL, read-only). Triage: **3 decision-needed, 6 patch, 1 defer, 8 dismissed**; all three
+> decisions resolved 2026-10-09 (user's call: options 1, 1, 2) ⇒ **8 patch, 1 defer, 9 dismissed.** §0 gate:
+> ⛔ none of the three decisions are the Panel's — all three are engineering/implementation calls (an address-validation policy, a
+> package-boundary call, a retry-classification call), ⛔ a roster row, ⛔ a ratified clause. Dismissed (each re-traced, ⛔ taken on
+> a layer's word): SES's empty `rejected` set / unrecognized-name-⇒-HELD default (RE6, re-verified against the providers' docs — a
+> 400 `MessageRejected` is EXPLICITLY the sandbox/account case the table records, ⛔ a missed per-recipient signal — `:206, :330, :609`
+> of this file); `staffEmailRecipientsSql`'s hardcoded `se_` aliases (the doc comment at `staff-email-identity-read.ts:33` already
+> states + mitigates the exact nesting risk raised); the ZeptoMail `data.error_code` fallback never producing a `<code>.<sub-code>`
+> name (`staff-email-client.test.ts:218` pins the bare-code / `held:` outcome as INTENDED, ⛔ a gap); the provider pre-flight running
+> once per 15-minute tick, ⛔ mid-run (RE7's explicit "ONCE per run" design; this channel is go-live-gated and non-critical — a
+> transient blip costs one bounded 15-minute tick); the migration's `UNIQUE NULLS NOT DISTINCT` needing PG 15+ (CI runs
+> `postgres:16-alpine`; the identical syntax is already used elsewhere in `packages/domain/migrations`); `login-next.ts`'s allowlist
+> regex being "only" a shape check (the destination route's own 401/403 handling — `NomineeRefusalsRoute.tsx`, Story 6.20 — is the
+> real authorization boundary, pre-existing and untouched by this diff); `createFakeStaffEmailClient`'s default responder having no
+> once-per-row tracking (speculative — no current test exercises a double-send through it; the DB's own UNIQUE constraint is the
+> real guard, by design); ZeptoMail's rejected-by-NAME classification outranking its 5xx/429 `mayHaveSent` status check (RE6's
+> explicit, repeatedly-stated design: NAME always wins over status, and the `rejected` type deliberately carries no `mayHaveSent`
+> field at all — an untested combination, ⛔ a behavioral bug).
+
+- [x] [Review][Decision] ✅ RESOLVED 2026-10-09 (option 1) ⇒ a patch below. **`isSendableEmailAddress`'s ASCII-only gate
+  (`apps/jobs/src/scheduler/staff-email-client.ts:380-382`) applies to the DECRYPTED STORED admin address, not just
+  `STAFF_EMAIL_FROM`** — a historically-registered non-ASCII admin email (nothing in `scripts/provision-admin.ts` enforces ASCII
+  at provisioning) hits `noAddress('invalid_address')`: a FINAL `error` row, no retry, that admin silently and permanently
+  excluded from every future suspicion-refusal notice for their Pariwar — against the Panel's "every Pariwar Admin" ruling.
+  Options were: reject non-ASCII by design + validate at provisioning (A); admit SMTPUTF8 / percent-encoded addresses through to
+  the provider (B); accept as residual risk (C). Chosen: **A** — validate at `scripts/provision-admin.ts` so the invariant holds
+  by construction; the runtime check stays as a backstop. ⚠ Scoped to FUTURE provisioning only — no production data audited from
+  a code review.
+- [x] [Review][Decision] ✅ RESOLVED 2026-10-09 (option 1) ⇒ a patch below. **`apps/api/tests/unit/admin-email-relocation-crosscheck.test.ts:9`
+  deep-imports `@twt/jobs/src/deps.js`** instead of the `@twt/jobs` public barrel — every other `apps/api → @twt/jobs` import in
+  the codebase (`context.ts`, `deps.ts`, the shepherd / cycle-freeze handlers, `tests/integration/_setup.ts`) goes through the
+  barrel (`apps/jobs/src/index.ts`); `buildJobsEncryptionDeps` just isn't exported from it. Options were: export it from the jobs
+  barrel (A); rework the test to build an equivalent `JobsEncryptionDeps` without reaching into jobs' internals (B); accept as
+  residual risk (C). Chosen: **A** — the test's point is proving byte-identical behavior against the EXACT function the jobs
+  child calls; a hand-rolled equivalent (B) would weaken that guarantee.
+- [x] [Review][Decision] ✅ RESOLVED 2026-10-09 (option 2) ⇒ dismissed, no action. **`render_failed` (a static template / `t()`
+  defect) is routed through the exact same transient-retry path as a network hiccup** (`apps/jobs/src/scheduler/claim-suspicion-staff-emails.ts:332-337`
+  → `transient({ held: false, … })`) — unlike `read_failed` / `decrypt_failed` (plausibly transient DB/KMS hiccups), a rendering
+  defect reproduces identically on every pg-boss retry and gives up after 3 IST days with no distinct alarm. Options were: a
+  distinct, more urgent classification — a 0152 CHECK / detail-vocabulary change (A); accept as a code-bug class tests should
+  catch before it ships, no change (B); accept as residual risk (C). Chosen: **B** — Task 4.3's real-`t()` tests should catch
+  this in CI; the channel is already non-critical and go-live-gated, and the retry window is bounded (3 IST days, no data loss).
+
+- [x] [Review][Patch] ✅ APPLIED 2026-10-09. **`expireExhaustedSuspicionStaffEmails`'s give-up UPDATE never sets
+  `may_have_sent = true`**, though the function's own doc and the sweep's alarm both say a given-up row ALWAYS may have sent.
+  [packages/domain/src/claim/suspicion-staff-email.ts:250-257] — added `may_have_sent = true` to the SET clause; strengthened
+  both the existing live (`apps/jobs/tests/claim-suspicion-staff-emails-live.test.ts`) and domain
+  (`packages/domain/tests/integration/claim/suspicion-staff-email.spec.ts`) give-up assertions to check it.
+- [x] [Review][Patch] ✅ APPLIED 2026-10-09. **`beginSuspicionStaffEmail`'s locked-recheck-failure UPDATE has the identical
+  gap** — an existing `attempting` row finished to `error` by a failed re-check never sets `may_have_sent = true` either, though
+  the `'expired'` contract and the child's own alarm both say "a prior attempt may have sent."
+  [packages/domain/src/claim/suspicion-staff-email.ts:372-378] — same fix + the same two test files' recheck-failure assertions
+  strengthened.
+- [x] [Review][Patch] ✅ APPLIED 2026-10-09. **`LoginPage.completeLogin()` re-parses `next` from `window.location.search`
+  instead of the `/login` route's own `validateSearch`-typed state** — both added by this diff; the route's own comment says
+  the typed value should be consumed. [apps/admin/src/routes/LoginPage.tsx:141] — now reads `useSearch({ from: '/login' })`;
+  removed the now-dead `nextFromLocation` from `login-next.ts`; updated both `login-return-path.test.tsx`'s and
+  `login-turnstile.test.tsx`'s `@tanstack/react-router` mocks to supply `useSearch` (the latter rendered `LoginPage` too and
+  would otherwise crash).
+- [x] [Review][Patch] ✅ APPLIED 2026-10-09. **`resolveAdminAppOrigin` rejects semantically-valid origins differing only in
+  case or an explicit default port** (`https://Example.com`, `https://admin.example.com:443`) — a verbatim string compare
+  against the URL-normalized `.origin` silently HOLDS every email behind `config:admin_app_origin_invalid`.
+  [apps/jobs/src/scheduler/staff-email-config.ts:112] — compares a lowercased, slash-stripped raw against EITHER `url.origin`
+  or `` `${url.origin}:443` `` (https's own default), preserving the existing path-smuggling guard; added coverage for the
+  case, default-port, and default-port-plus-smuggled-path cases.
+- [x] [Review][Patch] ✅ APPLIED 2026-10-09. **`buildStaffEmailClient`'s `bootAlarm` omits the sender-address gap** — a
+  broken/missing `STAFF_EMAIL_FROM` with otherwise-resolving secrets raised no boot alarm, and the sweep alarms on a config gap
+  only when a pair is actually due, so it stayed silent until the first real suspicion refusal.
+  [apps/jobs/src/scheduler/staff-email-config.ts:82] — `bootAlarm` now mirrors the client's own `gap:` line
+  (`unresolvable ? 'config:secret_unresolvable' : fromGap`) for both providers; added a `bootAlarm` assertion to the existing
+  bad-sender test.
+- [x] [Review][Patch] ✅ APPLIED 2026-10-09. **No catch/alarm around the per-job handler in the `CLAIM_SUSPICION_STAFF_EMAIL_SEND`
+  worker** — unlike the sweep tick's own try/catch + alarm, an unexpected non-`ClaimCorrectionTransientError` throw (e.g.
+  `beginSuspicionStaffEmail`'s documented "should never happen" Error on a missing claim row) propagated to pg-boss with zero
+  alarm from this code. [apps/jobs/src/scheduler/claim-suspicion-staff-emails.ts:369-375] — wrapped the per-job call in
+  try/catch; alarms (ids + error name only) on anything that ISN'T `ClaimCorrectionTransientError` (⛔ double-alarming the
+  designed transient/HELD path, which already alarms internally), then rethrows so pg-boss's retry/failure bookkeeping is
+  unaffected.
+
+- [x] [Review][Patch] ✅ APPLIED 2026-10-09 (from Decision 1, option A). **`scripts/provision-admin.ts` didn't validate
+  `ADMIN_EMAIL` is ASCII-sendable before provisioning** [scripts/provision-admin.ts:120] — added an ASCII-shape check
+  (mirroring `isSendableEmailAddress`'s gate) that throws before any write, so the staff-email invariant holds by construction;
+  scoped to future provisioning only, per the decision.
+- [x] [Review][Patch] ✅ APPLIED 2026-10-09 (from Decision 2, option A). **`buildJobsEncryptionDeps` wasn't exported from the
+  `@twt/jobs` barrel** [apps/jobs/src/index.ts] — exported it (+ `JobsEncryptionDeps`) from `apps/jobs/src/index.ts`; changed
+  the cross-check test's import from the deep `@twt/jobs/src/deps.js` path to the public `@twt/jobs` barrel.
+
+- [x] [Review][Defer] **The keyset selector's `LIMIT` is spliced via `sql.raw(String(size))`, trusted on `clampLimit` alone for
+  integer-safety** [packages/domain/src/claim/suspicion-staff-email.ts:206] — deferred, pre-existing: the identical pattern
+  already exists at `packages/domain/src/claim/suspicion-notice.ts:189`; not introduced by 6.25.
+
+#### Review Findings — ROUND 2 (narrow, round 1's fixes `391a670c..HEAD` — 16 files, 495 lines, uncommitted; three layers
+SEQUENTIAL, read-only — 2026-10-09)
+
+> Triage: **0 decision-needed, 3 patch, 1 defer, 7 dismissed** (B2 folded into the B1/E1 patch below — one code change
+> closed both). All 3 patches applied. §0 gate: N/A (no decisions this round). Dismissed (each re-traced, ⛔ taken on a
+> layer's word): the outer catch's alarm text omitting `err.message`/stack/claim-recipient ids (`job.id` is enough to look
+> the job up in pg-boss; `err.message` is ⛔ sanitised like `detail` is — Invariant 2 forbids it); the catch trusting every
+> `ClaimCorrectionTransientError` site to already self-alarm (traced `runSuspicionStaffEmailChild` — every HELD/transient
+> path already throws it via `transient()`, which already alarms; a FUTURE un-alarmed throw site would be a defect of
+> THAT site, not this wrapper); the try/catch only making sense under `batchSize: 1` (true, but IDENTICAL before this
+> round — a throw of ANY kind already aborted the loop under a higher `batchSize`; not introduced or worsened here);
+> `login-return-path.test.tsx`'s `useSearch` mock re-deriving `window.location.search` internally (standard, correct
+> practice for mocking a framework hook in a component unit test — it mirrors `loginRoute`'s OWN `validateSearch`, by
+> design and by comment); both mocks ignoring the `{ from }` argument (TypeScript's OWN route-id typing is the real
+> safety net for a misspelled route, not a runtime mock — confirmed by a clean `tsc --noEmit`); the jobs-barrel export
+> "pulling in the whole `@twt/jobs` module graph" (true of ANY barrel import, but `apps/api` already imports the SAME
+> barrel in PRODUCTION code — `deps.ts`, `context.ts` — so this is ⛔ a new exposure); `resolveAdminAppOrigin` lowercasing
+> the whole raw string rather than just the scheme/host (correct only because an earlier check in the SAME short,
+> adjacent, well-commented function already emptied path/query/hash — a real but low-severity, speculative
+> future-refactor risk, not a current defect).
+
+- [x] [Review][Patch] ✅ APPLIED 2026-10-09. **`scripts/provision-admin.ts`'s new ASCII-only gate was narrower than the
+  runtime check it exists to backstop** (Blind Hunter + Edge Case Hunter, independently converged) — `ASCII_EMAIL_SHAPE`
+  caught non-ASCII but NOT a pure-ASCII, still-invalid shape (`a@b`, no dotted domain; 250+ chars), which
+  `isSendableEmailAddress` would still reject later, reproducing the exact silent permanent exclusion this patch exists
+  to prevent — via a different cause. [scripts/provision-admin.ts:126] — now imports and calls
+  `isSendableEmailAddress` directly from `apps/jobs/src/scheduler/staff-email-client.ts` instead of a hand-rolled
+  regex, closing the gap AND the duplication/drift risk (B2) in one change — the two can ⛔ diverge again, by
+  construction.
+- [x] [Review][Patch] ✅ APPLIED 2026-10-09. **No test exercised the new try/catch's alarm-and-rethrow behavior for an
+  unexpected throw** — the one behavioral change most likely to regress silently had nothing pinning it.
+  [apps/jobs/tests/claim-suspicion-staff-emails-live.test.ts] — added a NO-DATABASE test: a malformed `claimCaseId`
+  throws `InvalidBrandedIdError` out of `ids.claimId(...)` before any DB/network call: asserts the handler rejects,
+  exactly one alarm fires (job id + the error NAME only — ⛔ the bad value, Invariant 2), and the designed transient
+  path's own internal alarming is untouched (traced, not re-tested — a live-DB transient scenario is already covered
+  extensively elsewhere in this file).
+- [x] [Review][Patch] ✅ APPLIED 2026-10-09. **`buildStaffEmailClient`'s `bootAlarm` fix (round 1) re-derived the SAME
+  `unresolvable ? 'config:secret_unresolvable' : fromGap` ternary already computed for `gap`, duplicated across both
+  provider branches** — the identical "two places, one invariant" shape that let `bootAlarm` silently diverge from
+  `gap` in the first place. [apps/jobs/src/scheduler/staff-email-config.ts:70-92] — each branch now computes `gap`
+  ONCE and passes the SAME value to both the client's `gap` option and the returned `bootAlarm`.
+
+- [x] [Review][Defer] **`scripts/provision-admin.ts` has ZERO test coverage of any kind (pre-existing — no test file
+  for this script exists at all), including the new/round-2-fixed ASCII/shape validation** — deferred: the validation
+  now delegates entirely to `isSendableEmailAddress`, which already has extensive dedicated coverage
+  (`apps/jobs/tests/staff-email-client.test.ts`); bootstrapping first-ever test infrastructure for this never-tested
+  ops script (DB mocking, `PROVISION_DRY_RUN` simulation, etc.) is disproportionate to this one wiring line. ⭐ Trigger:
+  any future change to `provision-admin.ts`'s validation or write logic, or a decision to stand up test infra for it
+  generally.
+
 ## Dev Notes
 
 ### Traps
@@ -994,21 +1138,28 @@ Domain: `packages/domain/migrations/0152_claim-suspicion-staff-emails.sql` (new)
 `packages/domain/src/claim/suspicion-staff-email.ts` (new) · `packages/domain/src/claim/staff-email-identity-read.ts` (new) ·
 `packages/domain/src/claim/index.ts` · `packages/domain/src/claim/nominee-refusal-read.ts` (comments) · `packages/domain/src/member/anonymize.ts` (comment) ·
 `packages/domain/tests/claim/nominee-name-no-comparison-fence.test.ts` · `packages/domain/tests/integration/rls/claim-suspicion-staff-email-policy-regression.spec.ts` (new) ·
-`packages/domain/tests/integration/claim/suspicion-staff-email.spec.ts` (new) · `packages/domain/tests/integration/claim/suspicion-staff-email-concurrency.spec.ts` (new)
+`packages/domain/tests/integration/claim/suspicion-staff-email.spec.ts` (new; review fix — `may_have_sent` assertions) ·
+`packages/domain/tests/integration/claim/suspicion-staff-email-concurrency.spec.ts` (new)
 
 Jobs: `apps/jobs/package.json` + `pnpm-lock.yaml` (`aws4fetch` 1.0.20) · `apps/jobs/src/boot.ts` · `apps/jobs/README.md` ·
+`apps/jobs/src/index.ts` (review fix — exports `buildJobsEncryptionDeps`) ·
 `apps/jobs/src/scheduler/claim-suspicion-staff-emails.ts` (new) · `apps/jobs/src/scheduler/staff-email-client.ts` (new) ·
 `apps/jobs/src/scheduler/staff-email-config.ts` (new) · `apps/jobs/src/scheduler/suspicion-staff-email-templates.ts` (new) ·
 `apps/jobs/tests/_claim-correction-seed.ts` · `apps/jobs/tests/claim-suspicion-staff-emails-live.test.ts` (new) ·
 `apps/jobs/tests/staff-email-client.test.ts` (new) · `apps/jobs/tests/claim-suspicion-staff-email-no-decision.test.ts` (new) ·
 `apps/jobs/tests/staff-email-identity-read-fence.test.ts` (new) · `packages/queue/src/index.ts`
 
-API: `apps/api/src/context.ts` · `apps/api/src/modules/auth/shared/email-index.ts` · `apps/api/tests/unit/admin-email-relocation-crosscheck.test.ts` (new)
+API: `apps/api/src/context.ts` · `apps/api/src/modules/auth/shared/email-index.ts` · `apps/api/tests/unit/admin-email-relocation-crosscheck.test.ts` (new; review fix — barrel import)
 
-Admin: `apps/admin/src/router.tsx` · `apps/admin/src/routes/LoginPage.tsx` · `apps/admin/src/routes/NomineeRefusalsRoute.tsx` ·
-`apps/admin/src/routes/RootLayout.tsx` (comment) · `apps/admin/src/routes/login-next.ts` (new) · `apps/admin/tests/login-return-path.test.tsx` (new)
+Admin: `apps/admin/src/router.tsx` · `apps/admin/src/routes/LoginPage.tsx` (review fix — `useSearch`) ·
+`apps/admin/src/routes/NomineeRefusalsRoute.tsx` · `apps/admin/src/routes/RootLayout.tsx` (comment) ·
+`apps/admin/src/routes/login-next.ts` (new; review fix — dropped `nextFromLocation`) ·
+`apps/admin/tests/login-return-path.test.tsx` (new; review fix — mock) ·
+`apps/admin/tests/login-turnstile.test.tsx` (review fix — mock, pre-existing file)
 
 i18n: `packages/i18n/locales/en/claim.json` · `packages/i18n/locales/hi/claim.json`
+
+Ops: `scripts/provision-admin.ts` (review fix — ASCII gate on `ADMIN_EMAIL`)
 
 ## Change Log
 
@@ -1018,3 +1169,5 @@ i18n: `packages/i18n/locales/en/claim.json` · `packages/i18n/locales/hi/claim.j
 | 1.1 | 2026-10-09 | Validated (`bmad-create-story validate 6.25`; four fresh-context read-only verifiers — governance trail, code claims, design reachability, provider + test gates; BigDev: "all"). Pin unchanged (`3a7d3a1f` = `origin/main`, ⛔ code moved). 5 critical: RE3 (b)'s freeze re-anchored on RF14's chain start (the live `decided_at` moves on a note-only revision); RE6 classifies by error NAME with a HELD account/config class (SES 400s include pauses / sandbox / unverified domain — status-based would burn once-ever rows); §0 corrected — RE3 (b) narrows a ratified obligation ⇒ a non-blocking Panel confirm before Row 24 closes (`-295` precedent), so 1.0's "no routing note owed" is superseded; ADR-0009 §5 quoted in full (identity DATA) ⇒ ADR-0040 names Q1 + Q2, the jobs DB role and the existing `users` drift, and AC7's fence was rebuilt (it failed on RE3 (d)); a 30-min lease (the 10-min lease vs a 15-min cadence handed retrying rows to the next tick). Also: F16–F20 added; F2/F3/F5/F9/F12/F14 corrected; RE4/RE5/RE7/RE9–RE17 extended (no-address `error`, fixed `detail` vocabulary + length CHECK, column-narrowed INSERT + `(created_at, claimed_at)` index, hold-vs-boot-fail option, provider pre-flight, UTF-8, tracking-off conditions, the sign-in return path option, Row 24 (b)–(f), ADR-0040 `drafted` + `Supersedes: —`); AC1/AC3/AC4/AC6–AC10 and Tasks re-mapped (Task 4.4, 5.3 added; deferred-work lines single-homed in Task 0.4); Traps 16–20. |
 | 1.2 | 2026-10-09 | Re-validated (one fresh-context read-only verifier against 1.1's rewrite): 0 BLOCKER / 0 HIGH; 8 MEDIUM + 12 LOW — all defects OF 1.1 — applied: `expired` and a failed re-check ALWAYS alarm *"may have sent"* (`-297` §2; 1.1 had weakened it to `attempt_count > 1`); unrecognised error names are HELD, exact SES names, ⛔ provider-driven final `error`; a `may_have_sent` column replaces the `attempt_count > 1` trigger (every own retry increments it ⇒ near-universal false alarms); held-fault alarm once per distinct fault per row + its volume stated; a failing pre-flight holds; `ses:GetAccount` in Row 24 (b); AC9 (c) admits `decryptEmail`'s delegation (1.1 contradicted itself); RE9 A names `router.tsx` `validateSearch` and BOTH redirects (`:25`, `:38`); four "FIXED here" claims withdrawn — the 0151 / sweep-tick items are ⛔ repeated, ⛔ fixed, and stay OPEN; glyph inversions (Task 0.5 and six others); `detail` vocabulary completed (pre-call transients, `held:`); `seedRoleGrant` cannot set `created_at`; 6.24b's helpers are closures; AC1's admin renamed L. |
 | 1.3 | 2026-10-09 | Developed (`bmad-dev-story 6.25`) ⇒ `review`. Task 0: BigDev's answers (RE6 = BOTH adapters; RE5-bis added), `-299` (`8fbf718b`) + ADR-0040 `drafted` / index / epics / roster Rows 24–25 / deferred-work (`d04748b8`). Tasks 1–7: 0152 + schema/RLS (`ebc78c65`); admin-email relocation + Q1/Q2 + domain sweep half (`b01340a1`); SES/ZeptoMail port, config, template, sign-in return path, RE15 comments (`6b48c9a2`); 15-min sweep + child + boot + fences + live suite (`5234f2af`); CI fixes (`19d09477`). Ten red-checks; `ci:local` green on run 3 (34 jobs). Only permitted story sections edited (+ Task 0.5's committed-marker the story's own task requires). |
+| 1.4 | 2026-10-09 | Code-reviewed (`bmad-code-review 6.25`; full diff `3a7d3a1f..391a670c`; Blind Hunter / Edge Case Hunter / Acceptance Auditor in parallel) ⇒ `done`. 3 decision-needed, 6 patch, 1 defer, 8 dismissed; all 3 decisions resolved by the user (options A/A/B) ⇒ 2 more patches ⇒ **8 patch, 1 defer, 9 dismissed**, all 8 patches applied: both `may_have_sent` gaps on an `error` finish (the give-up and the locked-recheck-failure UPDATEs); `LoginPage` now reads the `/login` route's typed `useSearch` instead of re-parsing `window.location.search` (`nextFromLocation` dropped as dead code; `login-turnstile.test.tsx`'s router mock, which also renders `LoginPage`, needed the same `useSearch` stub); `resolveAdminAppOrigin` accepts a mixed-case scheme/host and an explicit default port (`:443`) without weakening its path-smuggling guard; `buildStaffEmailClient`'s `bootAlarm` now also fires on a bad/missing `STAFF_EMAIL_FROM`; the `CLAIM_SUSPICION_STAFF_EMAIL_SEND` worker now alarms on an unexpected (non-transient) throw instead of silently exhausting pg-boss's retries; `scripts/provision-admin.ts` now rejects a non-ASCII `ADMIN_EMAIL` at provisioning; `buildJobsEncryptionDeps` exported from the `@twt/jobs` barrel (the cross-check test no longer deep-imports `@twt/jobs/src/deps.js`). Existing `may_have_sent` / `bootAlarm` / origin assertions strengthened in place; full `ci:local`-equivalent (admin 982, jobs 693, api 1594, domain 4798 tests; domain-accessor-invariants gate) green after. |
+| 1.5 | 2026-10-09 | Code review ROUND 2 (narrow re-review of round 1's own fixes, `391a670c..HEAD`, 16 files/495 lines; three layers sequential) ⇒ stays `done`. 0 decision-needed, 3 patch, 1 defer, 7 dismissed (B2 folded into the B1/E1 patch): `scripts/provision-admin.ts` now imports and calls `isSendableEmailAddress` directly (Blind Hunter + Edge Case Hunter independently found round 1's hand-rolled ASCII-only regex was narrower than the runtime gate it backstops — e.g. `a@b` passed provisioning but would still be permanently rejected later); a new no-DB test pins the SEND worker's catch-and-alarm behavior for an unexpected throw (a malformed `claimCaseId` via `ids.claimId`); `buildStaffEmailClient`'s `gap`/`bootAlarm` ternary de-duplicated per provider branch (the exact pattern that caused round 1's bug). Deferred: `provision-admin.ts`'s total pre-existing lack of test infrastructure (disproportionate to bootstrap for one wiring line now that it delegates to an already-tested function). Full suite re-green after (jobs 694 tests incl. the new one; `domain-accessor-invariants` gate). |

@@ -20,6 +20,11 @@ const list = { isLoading: false, error: null as unknown, data: undefined as unkn
 vi.mock('@tanstack/react-router', () => ({
   useNavigate: () => navigate,
   useParams: () => ({ pariwarId: P }),
+  // Mirrors `loginRoute`'s own `validateSearch` (`router.tsx`) against the test's simulated URL.
+  useSearch: () => {
+    const next = new URLSearchParams(window.location.search).get('next');
+    return next === null ? {} : { next };
+  },
 }));
 vi.mock('../src/api/client.js', () => ({
   ApiError: class ApiError extends Error {

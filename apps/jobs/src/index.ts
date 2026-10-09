@@ -110,3 +110,8 @@ export {
   type RestorationDisciplineDeps,
   type RestorationDisciplineRunResult,
 } from './restoration-discipline.js';
+
+// Story 6.25 (Task 2.1; AC7; ADR-0040) — the jobs-side KMS deps builder. Exported from this barrel (pure;
+// no pg-boss/GCS/aws4fetch pulled in) so apps/api's admin-email relocation cross-check test can decrypt
+// under the EXACT deps the staff-email child uses, rather than a hand-rolled equivalent that could drift.
+export { buildJobsEncryptionDeps, type JobsEncryptionDeps } from './deps.js';

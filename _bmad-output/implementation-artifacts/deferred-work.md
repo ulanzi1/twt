@@ -4,6 +4,29 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: code review of story-6.25, ROUND 2 (2026-10-09)
+
+- **`scripts/provision-admin.ts` has ZERO test coverage of any kind (pre-existing)** [scripts/provision-admin.ts] — no test file
+  for this script exists at all, including for the round-2-fixed ASCII/shape validation on `ADMIN_EMAIL`. The validation itself
+  now delegates entirely to `isSendableEmailAddress` (`apps/jobs/src/scheduler/staff-email-client.ts`), which already has
+  extensive dedicated coverage — bootstrapping first-ever test infrastructure for this never-tested ops script (DB mocking,
+  `PROVISION_DRY_RUN` simulation, etc.) is disproportionate to this one wiring line. ⭐ Trigger: any future change to
+  `provision-admin.ts`'s validation or write logic, or a decision to stand up test infra for it generally.
+
+---
+
+## Deferred from: code review of story-6.25 (2026-10-09)
+
+- **The keyset selector's `LIMIT` is spliced via `sql.raw(String(size))`, trusted on `clampLimit` alone for integer-safety**
+  [`packages/domain/src/claim/suspicion-staff-email.ts:206`; `packages/domain/src/pagination.ts:30`] — `clampLimit` clamps RANGE
+  (`Math.max(1, Math.min(limit, cap))`) but not TYPE: a `NaN` or non-integer `limit` propagates through unclamped into a bare
+  `LIMIT` fragment (a syntax error, ⛔ an injection vector, given the current call site always passes a validated integer).
+  Pre-existing pattern — `packages/domain/src/claim/suspicion-notice.ts:189` does the identical thing; ⛔ introduced by 6.25.
+  ⭐ Trigger: any change loosening what `clampLimit`'s callers may pass, or a future caller of either fragment that skips
+  pre-validating its `limit`.
+
+---
+
 ## Deferred from: dev-story 6-25-staff-email-notice-of-a-suspicion-refusal, Task 0 (2026-10-09)
 
 - **Two NON-BLOCKING confirms are owed to the NEXT Trustee Panel routing note (any story)** [`.decision-log.md` — `2026-10-09-299`

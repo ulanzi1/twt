@@ -52,6 +52,7 @@ import {
   mintEnrollmentToken,
 } from '../apps/api/src/modules/auth/admin/admin-auth.service.js';
 import { emailBlindIndex } from '../apps/api/src/modules/auth/shared/email-index.js';
+import { isSendableEmailAddress } from '../apps/jobs/src/scheduler/staff-email-client.js';
 import {
   createDb,
   rbac,
@@ -118,6 +119,17 @@ function grantShapeFor(
 
 async function main(): Promise<void> {
   const email = requireEnv('ADMIN_EMAIL');
+  // The EXACT gate the staff-email sweep (Story 6.25) applies to the decrypted stored address — reused directly, ⛔
+  // re-derived, so the two can ⛔ drift: a historical ASCII-but-malformed or over-length address would pass a narrower,
+  // hand-rolled check here and still hit `noAddress('invalid_address')` later, permanently and silently excluding this
+  // admin from every future suspicion-refusal notice.
+  if (!isSendableEmailAddress(email)) {
+    throw new Error(
+      `[provision-admin] ADMIN_EMAIL fails the staff-email sweep's sendable-address check (ASCII, a well-formed ` +
+        `local@domain.tld shape, ≤254 chars) — it would be permanently rejected with no retry, silently excluding this ` +
+        `admin from every future suspicion-refusal notice.`,
+    );
+  }
   // Story 6.11 (R5): display_name is the controlled staff-attribution source and is NEVER
   // email-derived. Omitting it leaves it NULL, which blocks adjudication later — so it is required
   // here rather than silently deferred.

@@ -1,3 +1,21 @@
+# last_updated: 2026-10-09g (⭐ **STORY 6.25 — VALIDATED (`bmad-create-story validate 6.25`, v1.1; four fresh-context read-only verifiers;
+# BigDev: "all") ⇒ stays `ready-for-dev`.** Pin unchanged (`3a7d3a1f` = `origin/main`). 5 critical applied: RE3 (b)'s freeze re-anchored on
+# RF14's chain start (`suspicionChainStartedAtSql` — the live `decided_at` moves on a note-only revision); RE6 classifies provider faults
+# by error NAME with a HELD account/config class (SES 400s include pauses, the sandbox, an unverified domain); ⚠ the 2026-10-09f block's
+# "§0 gate: ⛔ no routing note owed" is SUPERSEDED — RE3 (b) narrows a ratified obligation ⇒ a NON-BLOCKING Panel confirm before roster
+# Row 24 closes (`-295` precedent); ADR-0009 §5 covers identity DATA ⇒ ADR-0040 (now `drafted`, ⚠ the 2026-10-09f block's
+# "`under-trustee-review`" is SUPERSEDED) names both new read paths + the jobs DB role; a 30-min lease (a 10-min lease vs a 15-min cadence
+# handed retrying rows to the next tick). Plus F16–F20, RE/AC/Task re-mapping, Traps 16–20 — see the story's Change Log 1.1. A fresh-context
+# RE-VALIDATE of the rewrite found 0 BLOCKER / 0 HIGH and 20 MEDIUM/LOW defects of the pass's own (Change Log 1.2) — all applied. ⛔ No other row
+# moves. On branch `story/6-25-staff-email-notice-of-a-suspicion-refusal`.)
+# last_updated: 2026-10-09f (⭐ **STORY 6.25 — CREATED (`bmad-create-story 6.25`) ⇒ `ready-for-dev`.** `6-25-staff-email-notice-of-a-suspicion-refusal`
+# `backlog` → `ready-for-dev`, pinned `3a7d3a1f` (6.24b merged, PR #265). Built from `-261` D2 B + `-262` FQ3 A (⛔ no `epics.md` entry existed —
+# owed at Task 0.4). Every Pariwar Admin of the Pariwar is emailed once per standing `-239` refusal: "open the list", ⛔ no names, ⛔ no note.
+# F1–F15 found (⛔ no email transport anywhere; a staff PUSH exists but is inert; `listAdminsByRole` drops blank-name admins; the FQ3 note's
+# "staff hold only an email" is imprecise — `users.contact_phone` exists). RE1–RE17 PROPOSED — ONE author-commit (`-299` or next free) owed at
+# Task 0.3 before any code. ⚠ RE8: ADR-0009 (ratified) names the API auth repo the "sole query path" for `admin_credentials` ⇒ a second, fenced
+# read path ⇒ ADR-0040 (`under-trustee-review`) + roster Rows 24 (transport: ADR ratified, SPF/DKIM, residency, a real send) and 25 (Hindi).
+# §0 gate: ⛔ no routing note owed. ⛔ No other row moves. On branch `story/6-25-staff-email-notice-of-a-suspicion-refusal`.)
 # last_updated: 2026-10-09e (⭐ **STORY 6.24b — CODE REVIEW ROUND 3 (full diff `b6a63a81..HEAD`, re-chunked into 2 parallel groups —
 # domain substrate / API+jobs dispatch; six layers total, read-only) ⇒ stays `done`.** As first merged: 1 decision-needed, 9 patch, 3
 # defer, 16 dismissed. The decision (P6's timing-equalization pad vs `readSuspicionRefusalRecipient`'s 1-vs-2-query asymmetry) was
@@ -19398,7 +19416,7 @@ development_status:
   # ⭐ 2026-10-08: 6.24a is `done` (PR #263) ⇒ 6.24b RE-PINNED to `b6a63a81`, VALIDATED (v2.1) and `ready-for-dev`; its Task 0 owes
   # ONE author-commit (RB1–RB18) before any code — see the 2026-10-08f / 2026-10-08g ledger blocks.
   6-24b-filing-code-and-texts-to-the-nominee-in-place-at-the-death: done
-  6-25-staff-email-notice-of-a-suspicion-refusal: backlog
+  6-25-staff-email-notice-of-a-suspicion-refusal: ready-for-dev
   6-26-ground-inspection-before-approval-and-death-facts: done
   # ⭐ 2026-10-06 SPLIT after `2026-10-06-281` (the Panel: Q1 B · Q2 A; BigDev: "write the panel note then we get the answer and then we split"):
   # the row above is STORY 6.26a (keeps its key — the rulings cite it): the gate, the review-window widening, the inspector's record and the

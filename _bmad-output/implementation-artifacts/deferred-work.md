@@ -4,6 +4,24 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: bmad-create-story 6.29 — FOUND, scoped OUT by BigDev (2026-10-09)
+
+- **⚠ The production jobs login cannot read or write most of what the jobs sweeps touch — SYSTEMIC, ⛔ specific to 0151 / 0152**
+  [`apps/jobs/src/boot.ts:271`; `packages/domain/src/db.ts:117, :161-180`; 0007 DD-3; 0013 `:20-33`] — `apps/jobs` has ONE pool, from
+  `SERVICE_DATABASE_URL`; in production that is a BYPASSRLS login inheriting `twt_service` (0007 DD-3), and `withPariwarScope` sets only
+  `app.pariwar_id`, ⛔ a role. `twt_service` holds privileges on 12 of 133 public tables (catalog, :5433) — ⛔ `claims`, ⛔ claim-family,
+  nominee, KYC or identity table — and BYPASSRLS waives policies, ⛔ GRANTs. ⇒ every jobs sweep touching those tables (6.19b/c/d, shepherd,
+  pools, alerts, data export, 6.24b, 6.25) would 42501 in production. ⛔ Test runs jobs code as that role (all as superuser); Terraform
+  provisions ⛔ jobs login (`infra/gcp/modules/cloud-sql/main.tf:97-101`; D3-1.10 open). Committed texts that wrongly say jobs runs as
+  `twt_app`: ADR-0040 (`:38-40`, `:95-96`), `staff-email-identity-read.ts:5`, `suspicion-notice.ts:135-136`, 0097 `:37-38`, 0109
+  `:27-34` / `:44`, `apps/jobs/src/data-export.ts:48` / `:243`. ⛔ Fixed by 6.29 (BigDev's scope call, *"1"*: 6.29 = 0151 parity only).
+  ⭐ Trigger: Story 6.29's author-commit (its RN9 proposes launch-gate roster **Row 26 `jobs-db-role`**); a decision on the jobs login's
+  role posture (membership of `twt_app` + `SET LOCAL ROLE` in `withPariwarScope`, and `twt_service` grants for the cross-tenant reads —
+  OR broad `twt_service` grants); identity-table grants stay inside ADR-0040's ratification (Row 24 (a)). Supersedes the NARROWER framing
+  of the "0152 (like 0151) grants only `twt_app`" item below (code review of story-6.25, ROUND 3) — that item stays as written.
+
+---
+
 ## Deferred from: Story 6.25 merge housekeeping (2026-10-09)
 
 - **6.24a (PR #264) and 6.24b (PR #265) still have ⛔ SHA map** [their story files] — both were REBASE-merged, so the commit SHAs their

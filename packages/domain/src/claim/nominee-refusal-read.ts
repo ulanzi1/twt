@@ -9,8 +9,9 @@
 // dedicated reason code `post_death_nominee_change` (migration 0120). ⛔ There is no parallel path: the
 // rationale is required, the refuser is (correctly) disqualified from reviewing the appeal of their own
 // refusal, and 6.16 makes it appealable once. This module only READS those rows:
-//   · `listNomineeRefusals` — the Pariwar Admin's READ SURFACE. A NOTIFICATION, ⛔ not an approval step
-//     (`-239` consequence 3). ⛔ No staff-notification primitive exists and ⛔ none is invented here.
+//   · `listNomineeRefusals` — the Pariwar Admin's READ SURFACE: the console list that PRESENTS the note and
+//     reason; the NOTICE is Story 6.25's email (`-261` D2 B, `-262` FQ3 A) — a notification, ⛔ not an
+//     approval step (`-239` consequence 3).
 //   · `getInheritedGroundInspectionSource` — AC13's DERIVED source (⛔ never stored, ⛔ never client-
 //     supplied): the most recent OTHER claim for the same `(pariwar_id, deceased_member_id)` whose LIVE
 //     verifier decision is `denied` with the `-239` code. A claim denied for ANY OTHER reason passes ⛔

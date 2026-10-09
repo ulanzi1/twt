@@ -15,11 +15,22 @@
 
 ---
 
-> ## ⏳ AWAITING PANEL RULING
+> ## ✅ PANEL RULED — 2026-10-09 — recorded as `2026-10-09-296`
 >
-> ⛔ **Nothing is recorded here yet.** When the Panel rules, transcribe it into this block **and** into
-> `.decision-log.md` as a new decision id. ⭐ Everything below is then kept **unedited** as the question
-> **as it was put** ([[feedback_supersede_never_reinterpret]]).
+> **Ruled by Dhiraj Rahul + Kalpana Bharti, relayed by BigDev — verbatim:**
+> *"by DR and KB"* · *"Confirm 1: A"* · *"COnfirm 2: A"*
+>
+> ⭐ Our reading **taken on both.** **Confirm 1 A:** the filing code is accepted as built — the true nominee files in the app only from
+> the member's own account, otherwise through the helpline; whoever asks for the code sees four digits of her number. **Confirm 2 A:**
+> (a) ⛔ no appeal-date text once an appeal is filed (⛔ no alarm); (b) ⛔ no closure text about a claim recorded against a nominee entry
+> saved after the death — her own claim included in the two recorded cases — each skip alarmed; accepted with A's stated cost.
+> ⭐ `-295` RB13 / RB17 / RB18 stand as built ⇒ ⛔ no code change. Roster Row 22's condition (c) is met; the row stays `open` on counsel's
+> basis and the privacy-policy revision.
+>
+> **What this ruling does NOT cover** (full list in `2026-10-09-296`): counsel's basis and the privacy-policy revision (Row 22 (a), (b));
+> the Hindi wording (Row 23); who acts on the (b) alarms; how often the own-claim cases occur.
+>
+> ⭐ Everything **below this block is kept UNEDITED** — it is the question as it was put.
 
 ---
 

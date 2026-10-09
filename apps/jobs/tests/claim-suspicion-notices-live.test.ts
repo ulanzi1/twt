@@ -692,6 +692,50 @@ describe.skipIf(!hasDatabase)('Story 6.24b — the suspicion notices (live DB, o
     expect((await rowsOf(s)).find((r) => r.purpose === 'suspicion_refusal')).toMatchObject({ outcome: 'attempting', detail: expect.stringMatching(/^api_unavailable:/) });
   });
 
+  it('⭐ `-297` §2 — a crash-left row whose re-check now FAILS ⇒ `error` / `exhausted:recheck_…` + the alarm naming the detail (a text may have gone)', async () => {
+    const own = isolated();
+    const d = await seedDeath({ pariwarId: own });
+    const s = await refusedS(d);
+    const today = new Date();
+    // "Crash": the claiming transaction commits (detail NULL), the child dies — maybe AFTER the gateway accepted.
+    await onOwnTx(pool, own, (client) =>
+      claim.beginSuspicionNotice(client, { pariwarId: ids.pariwarId(own), claimCaseId: ids.claimId(s), purpose: 'suspicion_refusal', jobId: 'crashed', now: today }),
+    );
+    await reviseOff(d, s);
+    const h = harness({ allow: [own] });
+    h.setNow(new Date(today.getTime() + DAY));
+    const out = await tick(h, [s]);
+    expect(out.find((o) => o.payload.purpose === 'suspicion_refusal')?.result).toEqual({ status: 'skipped', reason: 'recheck_failed' });
+    expect((await rowsOf(s)).find((r) => r.purpose === 'suspicion_refusal')).toMatchObject({ outcome: 'error', detail: 'exhausted:recheck_not_standing' });
+    const alarm = h.alarms.filter((a) => a.includes(s) && a.includes('a text may have gone'));
+    expect(alarm).toHaveLength(1);
+    expect(alarm[0]).toContain('(exhausted:recheck_not_standing)');
+    expect(h.sent).toEqual([]);
+  });
+
+  it('⭐ `-298` — a crash-left row whose name is ERASED before attempt 2 ⇒ `no_target` (`name:erased`) + ONE "prior attempt may have sent" alarm; a FIRST-attempt `no_target` ⛔ alarms so', async () => {
+    const own = isolated();
+    const d = await seedDeath({ pariwarId: own });
+    const s = await refusedS(d);
+    const fresh = await seedDeath({ pariwarId: own, kycName: '[anonymized]' });
+    const first = await refusedS(fresh);
+    const today = new Date();
+    await onOwnTx(pool, own, (client) =>
+      claim.beginSuspicionNotice(client, { pariwarId: ids.pariwarId(own), claimCaseId: ids.claimId(s), purpose: 'suspicion_refusal', jobId: 'crashed', now: today }),
+    );
+    // Between the attempts the deceased's KYC name is erased (an RTBF).
+    await pool.query('UPDATE member_kyc_profiles SET name_ciphertext = $2 WHERE member_id = $1', [d.mid, await encryption.encryptKycField('[anonymized]', own, enc)]);
+    const h = harness({ allow: [own] });
+    h.setNow(new Date(today.getTime() + DAY));
+    await tick(h, [s, first]);
+    expect((await rowsOf(s)).find((r) => r.purpose === 'suspicion_refusal')).toMatchObject({ outcome: 'no_target', detail: 'name:erased', attempt_count: 2 });
+    expect(h.alarms.filter((a) => a.includes(s) && a.includes('a prior attempt was claimed and may have sent'))).toHaveLength(1);
+    // The first-attempt `no_target` (erased before any attempt): ⛔ such alarm.
+    expect((await rowsOf(first)).find((r) => r.purpose === 'suspicion_refusal')).toMatchObject({ outcome: 'no_target', detail: 'name:erased', attempt_count: 1 });
+    expect(h.alarms.filter((a) => a.includes(first) && a.includes('prior attempt'))).toEqual([]);
+    expect(h.sent).toEqual([]);
+  });
+
   it('⭐ RB3 — a crash after the claiming commit is RECLAIMED by the next day\'s run (attempt 2); one left three IST days is GIVEN UP', async () => {
     const d = await seedDeath();
     const s = await refusedS(d);

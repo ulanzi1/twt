@@ -618,6 +618,10 @@ describe.skipIf(!hasDatabase)('Story 6.24b — the suspicion notices, domain (:5
       const { client } = getTx();
       const panel = await seedAppealPanel(client, PARIWAR_A);
       const s = await refusedClaim(client, PARIWAR_A, randomUUID());
+      // ⭐ POSITIVE CONTROL — before its appeal the SAME claim IS due a (c) text (⛔ a selector blind to (c) passes vacuously).
+      await client.query('RESET ROLE');
+      expect((await dueIds(client, 'refusal_appeal_notice')).has(s)).toBe(true);
+      await enterAppScope(client, PARIWAR_A);
       await appealAtStage(client, PARIWAR_A, s, 3, panel);
       await stage3(client, PARIWAR_A, s, 'upheld');
       await client.query('RESET ROLE'); // `seedAppealPanel` left the app scope on — the raw rows + the selector are the superuser's

@@ -8,7 +8,8 @@
 Go-live is additionally gated on counsel's M and S (`inventory-roster.md` rows 18, 19).
 ⭐ **Templates 7–12** (Story 6.24b — the three texts of a refusal on suspicion of a post-death nominee change) gate the **real** sends of
 Story 6.24b's suspicion notices, and are gated on **`inventory-roster.md` rows 22 and 23** (counsel's basis for the three texts, the
-privacy-policy purpose and the Panel's answer to `2026-10-08-295` §8 Confirm 2; and the Hindi human review) — ⛔ **not** on rows 18 / 19,
+privacy-policy purpose, the Panel's answer to `2026-10-08-295` §8 Confirm 2 and — `2026-10-09-297` §1 — the sweep's alarm reaching a
+named owner; and the Hindi human review) — ⛔ **not** on rows 18 / 19,
 whose closure must ⛔ never be read as clearing 7–12. ⛔ **Do not provision the ids of 7–12 until Row 22 closes.**
 
 **Why it is started early:** DLT content-template registration has an external lead time, per template, per locale. Hindi is Unicode — a

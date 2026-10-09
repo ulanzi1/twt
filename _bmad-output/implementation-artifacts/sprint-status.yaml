@@ -1,3 +1,12 @@
+# last_updated: 2026-10-09c (⭐ **STORY 6.24b — CODE REVIEW ⇒ `done`.** `bmad-code-review 6.24b`, full diff `b6a63a81..53b5d548`, three
+# layers in parallel (read-only): 2 decision-needed, 10 patch, 2 defer, 10 dismissed. BigDev *"D1 - 1, D2 - 1"* ⇒ `2026-10-09-297`
+# (author-commit, committed ALONE `cc474987`): §1 roster Row 22 gains closure condition (d) — `-296` Confirm 2 A's alarm must reach a
+# named owner (else Confirm 2 goes back to the Panel); §2 RB10 amended — ANY existing `attempting` row whose re-check fails ⇒ `error` +
+# alarm (⛔ `skipped_superseded`). 12 patches applied + red-checked (`c2d78f10`): the give-up's lease guard + `rowCount` on the losing
+# UPDATEs, a two-connection race spec, AC7b's (b)/(c) legs, a raw-write no-decision fence with a real control, isolated held-alarm
+# tests, and more. Domain claim 1344/1344, jobs 641/641, API spec 14/14 on :5433. `6-24b-…` `review` → `done`. Row 22 open on (a),
+# (b), (d); Row 23 open; DLT ids 7–12 stay unset. Deferred: `recipient_number_hash` on erasure; `{member}` vs the DLT variable limit;
+# 6.19b's K4 premise.)
 # last_updated: 2026-10-09b (✅ **STORY 6.24b — THE PANEL RULED `-295` §8: CONFIRM 1 A, CONFIRM 2 A ⇒ `2026-10-09-296` (Trustee-
 # ratified, Dhiraj Rahul + Kalpana Bharti, relayed by BigDev: *"by DR and KB"* · *"Confirm 1: A"* · *"COnfirm 2: A"*).** ⛔ No status
 # flip; `6-24b` stays `review`. Our reading taken on both: the filing code is accepted as built (the true nominee files in the app only
@@ -19371,7 +19380,7 @@ development_status:
   # 6.21b / 6.23b / 6.26b precedent). ⛔ No RF moved — `-292`'s RF1–RF16 are tagged [a] / [b] in 6.24a's file.
   # ⭐ 2026-10-08: 6.24a is `done` (PR #263) ⇒ 6.24b RE-PINNED to `b6a63a81`, VALIDATED (v2.1) and `ready-for-dev`; its Task 0 owes
   # ONE author-commit (RB1–RB18) before any code — see the 2026-10-08f / 2026-10-08g ledger blocks.
-  6-24b-filing-code-and-texts-to-the-nominee-in-place-at-the-death: review
+  6-24b-filing-code-and-texts-to-the-nominee-in-place-at-the-death: done
   6-25-staff-email-notice-of-a-suspicion-refusal: backlog
   6-26-ground-inspection-before-approval-and-death-facts: done
   # ⭐ 2026-10-06 SPLIT after `2026-10-06-281` (the Panel: Q1 B · Q2 A; BigDev: "write the panel note then we get the answer and then we split"):

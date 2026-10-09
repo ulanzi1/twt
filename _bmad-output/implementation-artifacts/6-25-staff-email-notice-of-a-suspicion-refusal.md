@@ -29,7 +29,7 @@ LETTERS: `RE` = this story's build decisions (the author's); `F` = FOUND facts; 
 
 # Story 6.25: Every Pariwar Admin Is Emailed When a Claim Is Refused on Suspicion of a Nominee Change — "Open the List", With No Names and No Note `[SURFACE]`
 
-Status: ready-for-dev
+Status: review
 
 > ⭐⭐ **WHAT THIS STORY IS, IN ONE PARAGRAPH.** When a District Admin refuses a claim on suspicion of a nominee change made after the
 > death (`-239` — the verifier denial with reason `post_death_nominee_change`), the Panel ruled that **every Pariwar Admin of that
@@ -741,9 +741,9 @@ at :5433; `pnpm domain-invariants:check` green.
         (`_claim-correction-seed.ts:333-420`): it deletes `users` under `session_replication_role='replica'`, which DISABLES the FK
         cascade ⇒ delete `admin_credentials` (and the new table) explicitly, and add both to its leftover count (`:402-409`).
   - [x] 5.3 `claim-suspicion-staff-email-no-decision.test.ts` (AC9 fence, per AC9's model and table list).
-- [ ] **Task 6 — RE15 comments + sprint ledger (AC9 (b)).** The RE15 comment hunks (four sites); `sprint-status.yaml` row + a prepended
+- [x] **Task 6 — RE15 comments + sprint ledger (AC9 (b)).** The RE15 comment hunks (four sites); `sprint-status.yaml` row + a prepended
       `last_updated` comment block ([[project_sprint_status_safe_prepend]] — guard size, verify YAML). (`deferred-work.md` is Task 0.4's.)
-- [ ] **Task 7 — Proof (AC9, AC10).** Red-checks logged; AC9 (a) `git diff --exit-code`, (b) comment-only, (c) import-only;
+- [x] **Task 7 — Proof (AC9, AC10).** Red-checks logged; AC9 (a) `git diff --exit-code`, (b) comment-only, (c) import-only;
       `pnpm domain-invariants:check`; `pnpm ci:local` at :5433; grep `\*\*/` over every edited JSDoc block; File List complete.
 
 ## Dev Notes
@@ -957,8 +957,58 @@ MEDIUM + 3 LOW, all applied. Committed ALONE `8fbf718b`; second governance commi
 ### Completion Notes List
 
 - Ultimate context engine analysis completed — comprehensive developer guide created (2026-10-09, `bmad-create-story 6.25`).
+- ✅ **Governance before code (AC0):** RE1–RE17 answered by BigDev (quoted in the Debug Log); `2026-10-09-299` committed ALONE
+  (`8fbf718b`) after two fresh-context checks; ADR-0040 `drafted` + index/ledger, `epics.md` 6.25, roster Rows 24–25, deferred-work
+  lines (`d04748b8`). ⚠ RE6 departs from the story's recommendation (BOTH adapters), and RE5-bis was ADDED after Task 0.2 — both in `-299`.
+- ✅ **AC8 — 0152** `claim_suspicion_staff_emails`, applied to :5432 AND :5433; policy-regression spec (19) incl. the EXACT column grants
+  and the two-NULL UNIQUE leg (red-checked).
+- ✅ **AC1 / AC2 / AC4 / AC5 — domain:** Q1 (`staffEmailRecipientsSql`) used by BOTH the selector and the locked re-check; the claiming
+  transaction with `-297` §2's rule, a 30-min lease refreshed by the transient note, the give-up (both bounds), the NULL pair's
+  `no_target`; domain spec (25) + two-connection races (3).
+- ✅ **AC3 / AC6 / AC4 (ix) — transport:** SES v2 + ZeptoMail adapters classified by error NAME (held class; ⛔ provider-driven final
+  error; SES `rejected` table EMPTY), status-keyed `may_have_sent` (RE5-bis), pre-flight, fail-closed config; the en+hi template
+  (link only, real `t()`, type-level guard); the sign-in return path (allowlisted `next`); unit tests (21) + admin tests (6).
+- ✅ **AC7 — ⛔ plaintext address:** the stringify sweep over payloads / alarms / console / rows; the KMS probe proves the decrypt is
+  AFTER the claiming commit (red-checked); `auth-primitives.test.ts` passes UNEDITED + the api-encrypt ⇒ jobs-decrypt cross-check;
+  the ADR-0040 identity-read fence (exact allowlists + one plant per rule).
+- ✅ **AC9:** `git diff --exit-code origin/main` over the frozen files ⇒ 0; RE15 files comment-only (+ RE9 A's two redirects); RE8
+  relocation files import / re-export / delegation only; the no-decision fence (identity tables added) — 8 green.
+- ✅ **AC10:** ten red-checks logged; `pnpm domain-invariants:check` green; `\*\*/` scan clean; full `apps/jobs` suite 692 / 692.
+  `pnpm ci:local` (:5433): run 1 — lint + an admin test-typing error of this story's (fixed `19d09477`) and one load-timed-out admin
+  test that passes alone; run 2 — every job green but `integration-tests`: ONE api spec (`cycle-freeze.spec.ts`, Story 6.19b — a
+  test-only DDL on `claim_correction_marks` with a 5-s `lock_timeout`, built to fail FAST under contention; ⛔ touched by 6.25)
+  timed out under the concurrent suites and passes 27 / 27 alone; **run 3 — `ci:local PASSED — 34 job(s) green`** (exit 0).
+- ⚠ **Go-live:** ⛔ nothing sends until roster Row 24 closes (ADR-0040 ratified, provisioning, counsel, a real send, a named alarm
+  owner, the Panel's Confirm 1) and Row 25 (the Hindi review). The two non-blocking Panel confirms are owed to the next routing note.
 
 ### File List
+
+Governance: `.decision-log.md` (`2026-10-09-299`) · `docs/adr/ADR-0040-staff-email-transport.md` (new) · `docs/knowledge-transfer/adr-index.md` ·
+`docs/launch-gate-inventory/inventory-roster.md` · `_bmad-output/planning-artifacts/epics.md` · `_bmad-output/implementation-artifacts/deferred-work.md` ·
+`_bmad-output/implementation-artifacts/sprint-status.yaml` · `_bmad-output/implementation-artifacts/6-25-staff-email-notice-of-a-suspicion-refusal.md`
+
+Domain: `packages/domain/migrations/0152_claim-suspicion-staff-emails.sql` (new) · `packages/domain/migrations/meta/_journal.json` ·
+`packages/domain/src/schema/claim_suspicion_staff_emails.ts` (new) · `packages/domain/src/schema/index.ts` ·
+`packages/domain/src/policies/claim-suspicion-staff-email-rls.ts` (new) · `packages/domain/src/policies/index.ts` ·
+`packages/domain/src/encryption/admin-email.ts` (new) · `packages/domain/src/encryption/index.ts` ·
+`packages/domain/src/claim/suspicion-staff-email.ts` (new) · `packages/domain/src/claim/staff-email-identity-read.ts` (new) ·
+`packages/domain/src/claim/index.ts` · `packages/domain/src/claim/nominee-refusal-read.ts` (comments) · `packages/domain/src/member/anonymize.ts` (comment) ·
+`packages/domain/tests/claim/nominee-name-no-comparison-fence.test.ts` · `packages/domain/tests/integration/rls/claim-suspicion-staff-email-policy-regression.spec.ts` (new) ·
+`packages/domain/tests/integration/claim/suspicion-staff-email.spec.ts` (new) · `packages/domain/tests/integration/claim/suspicion-staff-email-concurrency.spec.ts` (new)
+
+Jobs: `apps/jobs/package.json` + `pnpm-lock.yaml` (`aws4fetch` 1.0.20) · `apps/jobs/src/boot.ts` · `apps/jobs/README.md` ·
+`apps/jobs/src/scheduler/claim-suspicion-staff-emails.ts` (new) · `apps/jobs/src/scheduler/staff-email-client.ts` (new) ·
+`apps/jobs/src/scheduler/staff-email-config.ts` (new) · `apps/jobs/src/scheduler/suspicion-staff-email-templates.ts` (new) ·
+`apps/jobs/tests/_claim-correction-seed.ts` · `apps/jobs/tests/claim-suspicion-staff-emails-live.test.ts` (new) ·
+`apps/jobs/tests/staff-email-client.test.ts` (new) · `apps/jobs/tests/claim-suspicion-staff-email-no-decision.test.ts` (new) ·
+`apps/jobs/tests/staff-email-identity-read-fence.test.ts` (new) · `packages/queue/src/index.ts`
+
+API: `apps/api/src/context.ts` · `apps/api/src/modules/auth/shared/email-index.ts` · `apps/api/tests/unit/admin-email-relocation-crosscheck.test.ts` (new)
+
+Admin: `apps/admin/src/router.tsx` · `apps/admin/src/routes/LoginPage.tsx` · `apps/admin/src/routes/NomineeRefusalsRoute.tsx` ·
+`apps/admin/src/routes/RootLayout.tsx` (comment) · `apps/admin/src/routes/login-next.ts` (new) · `apps/admin/tests/login-return-path.test.tsx` (new)
+
+i18n: `packages/i18n/locales/en/claim.json` · `packages/i18n/locales/hi/claim.json`
 
 ## Change Log
 
@@ -967,3 +1017,4 @@ MEDIUM + 3 LOW, all applied. Committed ALONE `8fbf718b`; second governance commi
 | 1.0 | 2026-10-09 | Created (`bmad-create-story 6.25`) from `-261` D2 B + `-262` FQ3 A (⛔ no `epics.md` entry existed — owed at Task 0.4). Pinned `3a7d3a1f`. F1–F15 found; RE1–RE17 PROPOSED (author-commit owed at Task 0.3). ⚠ RE8: ADR-0009's ratified "sole query path" ⇒ ADR-0040. ⚠ *"⛔ No routing note owed (§0)"* — SUPERSEDED by 1.1 (kept as written). |
 | 1.1 | 2026-10-09 | Validated (`bmad-create-story validate 6.25`; four fresh-context read-only verifiers — governance trail, code claims, design reachability, provider + test gates; BigDev: "all"). Pin unchanged (`3a7d3a1f` = `origin/main`, ⛔ code moved). 5 critical: RE3 (b)'s freeze re-anchored on RF14's chain start (the live `decided_at` moves on a note-only revision); RE6 classifies by error NAME with a HELD account/config class (SES 400s include pauses / sandbox / unverified domain — status-based would burn once-ever rows); §0 corrected — RE3 (b) narrows a ratified obligation ⇒ a non-blocking Panel confirm before Row 24 closes (`-295` precedent), so 1.0's "no routing note owed" is superseded; ADR-0009 §5 quoted in full (identity DATA) ⇒ ADR-0040 names Q1 + Q2, the jobs DB role and the existing `users` drift, and AC7's fence was rebuilt (it failed on RE3 (d)); a 30-min lease (the 10-min lease vs a 15-min cadence handed retrying rows to the next tick). Also: F16–F20 added; F2/F3/F5/F9/F12/F14 corrected; RE4/RE5/RE7/RE9–RE17 extended (no-address `error`, fixed `detail` vocabulary + length CHECK, column-narrowed INSERT + `(created_at, claimed_at)` index, hold-vs-boot-fail option, provider pre-flight, UTF-8, tracking-off conditions, the sign-in return path option, Row 24 (b)–(f), ADR-0040 `drafted` + `Supersedes: —`); AC1/AC3/AC4/AC6–AC10 and Tasks re-mapped (Task 4.4, 5.3 added; deferred-work lines single-homed in Task 0.4); Traps 16–20. |
 | 1.2 | 2026-10-09 | Re-validated (one fresh-context read-only verifier against 1.1's rewrite): 0 BLOCKER / 0 HIGH; 8 MEDIUM + 12 LOW — all defects OF 1.1 — applied: `expired` and a failed re-check ALWAYS alarm *"may have sent"* (`-297` §2; 1.1 had weakened it to `attempt_count > 1`); unrecognised error names are HELD, exact SES names, ⛔ provider-driven final `error`; a `may_have_sent` column replaces the `attempt_count > 1` trigger (every own retry increments it ⇒ near-universal false alarms); held-fault alarm once per distinct fault per row + its volume stated; a failing pre-flight holds; `ses:GetAccount` in Row 24 (b); AC9 (c) admits `decryptEmail`'s delegation (1.1 contradicted itself); RE9 A names `router.tsx` `validateSearch` and BOTH redirects (`:25`, `:38`); four "FIXED here" claims withdrawn — the 0151 / sweep-tick items are ⛔ repeated, ⛔ fixed, and stay OPEN; glyph inversions (Task 0.5 and six others); `detail` vocabulary completed (pre-call transients, `held:`); `seedRoleGrant` cannot set `created_at`; 6.24b's helpers are closures; AC1's admin renamed L. |
+| 1.3 | 2026-10-09 | Developed (`bmad-dev-story 6.25`) ⇒ `review`. Task 0: BigDev's answers (RE6 = BOTH adapters; RE5-bis added), `-299` (`8fbf718b`) + ADR-0040 `drafted` / index / epics / roster Rows 24–25 / deferred-work (`d04748b8`). Tasks 1–7: 0152 + schema/RLS (`ebc78c65`); admin-email relocation + Q1/Q2 + domain sweep half (`b01340a1`); SES/ZeptoMail port, config, template, sign-in return path, RE15 comments (`6b48c9a2`); 15-min sweep + child + boot + fences + live suite (`5234f2af`); CI fixes (`19d09477`). Ten red-checks; `ci:local` green on run 3 (34 jobs). Only permitted story sections edited (+ Task 0.5's committed-marker the story's own task requires). |

@@ -249,6 +249,7 @@ export async function expireExhaustedSuspicionStaffEmails(
   const { rows } = await q.query<{ claim_case_id: string; recipient_user_id: string | null }>(
     `UPDATE claim_suspicion_staff_emails
         SET outcome = 'error',
+            may_have_sent = true,
             first_detail = COALESCE(first_detail, detail),
             detail = $4,
             updated_at = clock_timestamp()
@@ -371,7 +372,7 @@ export async function beginSuspicionStaffEmail(
     const detail = suspicionStaffEmailDetail({ kind: 'recheck', reason: failed });
     const expired = await client.query(
       `UPDATE claim_suspicion_staff_emails
-          SET outcome = 'error', first_detail = COALESCE(first_detail, detail), detail = $2,
+          SET outcome = 'error', may_have_sent = true, first_detail = COALESCE(first_detail, detail), detail = $2,
               claimed_by_job = $3, claimed_at = $4, updated_at = clock_timestamp()
         WHERE notice_id = $1 AND outcome = 'attempting'`,
       [existing.notice_id, detail, jobId, now],

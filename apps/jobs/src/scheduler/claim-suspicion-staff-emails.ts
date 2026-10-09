@@ -369,7 +369,19 @@ export async function registerClaimSuspicionStaffEmailWorkers(
   await boss.work(QUEUE_NAMES.CLAIM_SUSPICION_STAFF_EMAIL_SEND, { batchSize: 1 }, async (jobs: Job[]) => {
     const results = [];
     for (const job of jobs) {
-      results.push(await runSuspicionStaffEmailChild(deps, job.data as JobEnvelope<SuspicionStaffEmailPayload>, job.id));
+      try {
+        results.push(await runSuspicionStaffEmailChild(deps, job.data as JobEnvelope<SuspicionStaffEmailPayload>, job.id));
+      } catch (err) {
+        // ⭐ The designed transient-retry signal (RE6's HELD class included) is alarmed internally, once per distinct fault —
+        // ⛔ double-alarm it here. Anything else is UNEXPECTED (e.g. `beginSuspicionStaffEmail`'s "should never happen" data
+        // fault) and would otherwise exhaust pg-boss's retries in silence (unlike the sweep tick's own try/catch below).
+        // ⛔ `err.message` / stack here — unlike `detail`, it is ⛔ sanitised (Invariant 2); the job id + the error NAME only
+        // (the job's own data, incl. the claim/recipient ids, is already in pg-boss's own job record under `job.id`).
+        if (!(err instanceof ClaimCorrectionTransientError)) {
+          alarm(`${ALARM}: job ${job.id} FAILED unexpectedly (non-transient) — ${err instanceof Error ? err.name : 'error'} (pg-boss retries it)`);
+        }
+        throw err;
+      }
     }
     return { processed: results.length, results };
   });

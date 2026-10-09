@@ -13,7 +13,7 @@ import { renderWithClient } from './_helpers.js';
 
 // LoginPage calls useNavigate at the top level — stub the router so it renders without
 // a RouterProvider. The api client is stubbed (no calls happen on a bare render).
-vi.mock('@tanstack/react-router', () => ({ useNavigate: () => vi.fn() }));
+vi.mock('@tanstack/react-router', () => ({ useNavigate: () => vi.fn(), useSearch: () => ({}) }));
 vi.mock('../src/api/client.js', () => ({
   ApiError: class ApiError extends Error {
     public status = 0;

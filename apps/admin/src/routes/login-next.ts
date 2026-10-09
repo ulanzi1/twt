@@ -19,8 +19,3 @@ export function allowedNextPariwarId(next: unknown): string | null {
   const m = NOMINEE_REFUSALS_PATH.exec(next);
   return m ? m[1]! : null;
 }
-
-/** `next` as it stands in the CURRENT URL's query (read at sign-in completion). */
-export function nextFromLocation(search: string): string | null {
-  return new URLSearchParams(search).get('next');
-}

@@ -6,7 +6,7 @@
 // derivation drift between the two apps turns it red.
 
 import { encryption } from '@twt/domain';
-import { buildJobsEncryptionDeps } from '@twt/jobs/src/deps.js';
+import { buildJobsEncryptionDeps } from '@twt/jobs';
 import { describe, expect, it } from 'vitest';
 
 import { ADMIN_EMAIL_FIELD_CLASS, ADMIN_GLOBAL_NAMESPACE } from '../../src/context.js';

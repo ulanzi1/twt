@@ -269,6 +269,9 @@ describe('the config (RE7)', () => {
     expect(z.client.configGap()).toBeNull();
     const bad = await buildStaffEmailClient({ ...sesEnv, STAFF_EMAIL_FROM: 'not-an-address' }, resolveFromEnv({ MY_ID: 'AKID', STAFF_EMAIL_SES_SECRET_ACCESS_KEY: 's' }));
     expect(bad.client.configGap()).toBe('config:sender_invalid');
+    // ⭐ A bad sender ALSO raises the boot alarm (⛔ silent until the first real refusal) — otherwise-resolving secrets alone
+    // are ⛔ "ready".
+    expect(bad.bootAlarm).toBe('config:sender_invalid');
     const http = await buildStaffEmailClient({ STAFF_EMAIL_PROVIDER: 'zeptomail', STAFF_EMAIL_FROM: 'noreply@twt.example', STAFF_EMAIL_ZEPTOMAIL_TOKEN_SECRET_NAME: 't', STAFF_EMAIL_ZEPTOMAIL_HOST: 'http://cpaas.zoho.in' }, resolveFromEnv({ STAFF_EMAIL_ZEPTOMAIL_TOKEN: 'k' }));
     expect(http.client.configGap()).toBe('config:zeptomail_host_invalid');
   });
@@ -280,6 +283,14 @@ describe('the config (RE7)', () => {
     for (const bad of [undefined, '', '   ', 'http://admin.twt.example', 'https://admin.twt.example/admin', 'https://admin.twt.example?x=1', 'https://admin.twt.example/#a', 'https://u:p@admin.twt.example', 'admin.twt.example', 'https://evil.example//admin.twt.example', 'javascript:alert(1)']) {
       expect(resolveAdminAppOrigin(bad), String(bad)).toBeNull();
     }
+  });
+
+  it('⭐ ADMIN_APP_ORIGIN accepts a mixed-case scheme/host and an explicit default port — both normalised away by `url.origin`, ⛔ a real rejection', () => {
+    expect(resolveAdminAppOrigin('HTTPS://Admin.TWT.Example')).toBe('https://admin.twt.example');
+    expect(resolveAdminAppOrigin('https://admin.twt.example:443')).toBe('https://admin.twt.example');
+    expect(resolveAdminAppOrigin('https://admin.twt.example:443/')).toBe('https://admin.twt.example');
+    // ⛔ a path still smuggled through under the port relaxation.
+    expect(resolveAdminAppOrigin('https://admin.twt.example:443/admin')).toBeNull();
   });
 
   it('isSendableEmailAddress — ASCII, one @, a dotted domain', () => {

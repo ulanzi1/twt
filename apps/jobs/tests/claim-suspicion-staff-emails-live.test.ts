@@ -515,7 +515,7 @@ describe.skipIf(!hasDatabase)('Story 6.25 — the staff email (live DB, own-comm
     );
     await revise(P, c, 'other', AFTER);
     await tick(h);
-    expect(await rowsOf(c)).toMatchObject([{ outcome: 'error', detail: 'exhausted:recheck_refusal_not_standing', attempt_count: 1 }]);
+    expect(await rowsOf(c)).toMatchObject([{ outcome: 'error', detail: 'exhausted:recheck_refusal_not_standing', attempt_count: 1, may_have_sent: true }]);
     expect(h.alarms.filter((x) => x.includes('may have sent') && x.includes(c))).toHaveLength(1);
     expect(h.client.sent).toHaveLength(0);
   });
@@ -536,7 +536,7 @@ describe.skipIf(!hasDatabase)('Story 6.25 — the staff email (live DB, own-comm
     );
     await tick(h);
     const rows = await rowsOf(c);
-    expect(rows.find((r) => r.recipient_user_id === old.id)).toMatchObject({ outcome: 'error', detail: 'exhausted:attempting_three_days' });
+    expect(rows.find((r) => r.recipient_user_id === old.id)).toMatchObject({ outcome: 'error', detail: 'exhausted:attempting_three_days', may_have_sent: true });
     expect(rows.find((r) => r.recipient_user_id === live.id)).toMatchObject({ outcome: 'attempting' });
     expect(h.alarms.filter((x) => x.includes('gave up') && x.includes('may have sent'))).toHaveLength(1);
   });
@@ -720,5 +720,36 @@ describe.skipIf(!hasDatabase)('Story 6.25 — the staff email (live DB, own-comm
     });
     expect(work).toHaveBeenCalledWith(SEND_QUEUE, { batchSize: 1 }, expect.any(Function));
     expect(alarms).toEqual([expect.stringContaining('config:secret_unresolvable')]);
+  });
+});
+
+// ── Review Finding (round 2) — the SEND worker's catch around an unexpected (non-transient) throw. NO database needed: a
+// malformed `claimCaseId` throws `InvalidBrandedIdError` out of `ids.claimId(...)`, before any DB/network call. ──────────────
+describe('the CLAIM_SUSPICION_STAFF_EMAIL_SEND worker — an unexpected (non-transient) throw', () => {
+  it('alarms once (ids + the error NAME only, ⛔ the bad value) and rethrows — pg-boss keeps its retry/failure bookkeeping', async () => {
+    const createQueue = vi.fn(() => Promise.resolve());
+    const schedule = vi.fn(() => Promise.resolve());
+    const work = vi.fn().mockResolvedValue('w');
+    const alarms: string[] = [];
+    const deps = {
+      pool: {} as pg.Pool,
+      encryption: {} as ClaimSuspicionStaffEmailDeps['encryption'],
+      staffEmail: createFakeStaffEmailClient(),
+      adminAppOrigin: ORIGIN,
+      onAlarm: (m: string) => alarms.push(m),
+    } satisfies ClaimSuspicionStaffEmailDeps;
+    await registerClaimSuspicionStaffEmailWorkers({ createQueue, schedule, work } as never, deps);
+    const sendHandler = work.mock.calls[0]![2] as (jobs: { id: string; data: unknown }[]) => Promise<unknown>;
+
+    const badJob = {
+      id: 'job-x',
+      data: { pariwarId: DA, requestId: 'r', actorId: null, traceId: 't', payload: { claimCaseId: 'not-a-uuid', recipientUserId: null } },
+    };
+    await expect(sendHandler([badJob])).rejects.toThrow(/InvalidBrandedIdError|must be a UUID/);
+
+    expect(alarms).toHaveLength(1);
+    expect(alarms[0]).toContain('job-x');
+    expect(alarms[0]).toContain('InvalidBrandedIdError');
+    expect(alarms[0]).not.toContain('not-a-uuid'); // ⛔ the bad value itself (Invariant 2) — ids + fixed words only.
   });
 });

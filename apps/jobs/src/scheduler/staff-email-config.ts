@@ -71,25 +71,29 @@ export async function buildStaffEmailClient(env: Env = process.env, resolve: Res
     const accessKeyId = await secret(env, resolve, 'STAFF_EMAIL_SES_ACCESS_KEY_ID_SECRET_NAME', 'STAFF_EMAIL_SES_ACCESS_KEY_ID');
     const secretAccessKey = await secret(env, resolve, 'STAFF_EMAIL_SES_SECRET_ACCESS_KEY_SECRET_NAME', 'STAFF_EMAIL_SES_SECRET_ACCESS_KEY');
     const unresolvable = accessKeyId === null || secretAccessKey === null;
+    // ONE value for both the client's own gap AND the boot alarm — computed once so the two can ⛔ diverge (the exact
+    // "two places, one invariant" shape that let `bootAlarm` silently drop the sender-address gap before).
+    const gap = unresolvable ? 'config:secret_unresolvable' : fromGap;
     const client = createSesStaffEmailClient({
       region: env['STAFF_EMAIL_SES_REGION']?.trim() || DEFAULT_SES_REGION,
       accessKeyId: accessKeyId ?? '',
       secretAccessKey: secretAccessKey ?? '',
       from,
       configurationSet: env['STAFF_EMAIL_SES_CONFIGURATION_SET']?.trim() || null,
-      gap: unresolvable ? 'config:secret_unresolvable' : fromGap,
+      gap,
     });
-    return { client, bootAlarm: unresolvable ? 'config:secret_unresolvable' : null };
+    return { client, bootAlarm: gap };
   }
   if (provider === 'zeptomail') {
     const token = await secret(env, resolve, 'STAFF_EMAIL_ZEPTOMAIL_TOKEN_SECRET_NAME', 'STAFF_EMAIL_ZEPTOMAIL_TOKEN');
+    const gap = token === null ? 'config:secret_unresolvable' : fromGap;
     const client = createZeptoMailStaffEmailClient({
       host: env['STAFF_EMAIL_ZEPTOMAIL_HOST']?.trim() || DEFAULT_ZEPTOMAIL_HOST,
       token: token ?? '',
       from,
-      gap: token === null ? 'config:secret_unresolvable' : fromGap,
+      gap,
     });
-    return { client, bootAlarm: token === null ? 'config:secret_unresolvable' : null };
+    return { client, bootAlarm: gap };
   }
   return { client: createUnconfiguredStaffEmailClient('config:provider_unknown'), bootAlarm: null };
 }
@@ -108,7 +112,9 @@ export function resolveAdminAppOrigin(raw: string | undefined | null): string | 
   }
   if (url.protocol !== 'https:' || url.username !== '' || url.password !== '') return null;
   if ((url.pathname !== '/' && url.pathname !== '') || url.search !== '' || url.hash !== '') return null;
-  // `new URL` normalises a bare origin to `…/`; the RAW must be that origin (⛔ a `/` path segment smuggled through).
-  if (raw.trim().replace(/\/$/, '') !== url.origin) return null;
+  // `new URL` normalises a bare origin to `…/`; the RAW (modulo case and an explicit default port, both of which `url.origin`
+  // normalises away) must be that origin (⛔ a `/` path segment smuggled through).
+  const normalizedRaw = raw.trim().replace(/\/$/, '').toLowerCase();
+  if (normalizedRaw !== url.origin && normalizedRaw !== `${url.origin}:443`) return null;
   return url.origin;
 }

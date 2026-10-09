@@ -5,11 +5,12 @@
 //     a scope value ⛔ byte-equal to the Pariwar id, district_admin, suspended / disabled, a later grant, ⛔ credentials, another Pariwar's admin
 //     (positive control in the same run); duplicate grants ⇒ ONE pair; the FREEZE legs (a note-only revision does ⛔ move the
 //     chain start; away and back starts a new chain) and RE3's two accepted edges;
-//   · WHEN (AC2, RE1): standing only — another reason, revised off, revised ONTO `-239`, an open appeal, a reversed appeal;
+//   · WHEN (AC2, RE1): standing only — another reason, revised off, revised ONTO `-239`, an open appeal, an `upheld_final` appeal,
+//     a reversed appeal (a no-admin claim's NULL pair included);
 //   · the claiming transaction (AC4, AC5): every kind and re-check reason; `-297` §2 (an existing `attempting` row whose re-check
 //     fails ⇒ `error`, at `attempt_count` 1 too); the lease (± 1 ms) and the take-over; `may_have_sent` set by a NULL-detail
 //     re-claim and by a transient note, ⛔ by a held note; `previousDetail`; the NULL pair's `no_target` (RE4) and its once-ever;
-//     the compare-and-set; the give-up (BOTH bounds); a missing claim THROWS;
+//     the compare-and-set; the give-up (BOTH bounds, ⛔ a parked row); a missing claim THROWS; the HELD-run park (round 3);
 //   · the selector's keyset (NULLS FIRST, every pair once across pages of 1) and the `detail` vocabulary.
 // Every instant that the freeze compares is set EXPLICITLY (one per-test transaction ⇒ every `now()` is equal —
 // [[project_db_clock_ordering_tests_tie]]). The TRUE two-connection races are in `suspicion-staff-email-concurrency.spec.ts`.
@@ -21,10 +22,16 @@ import { describe, expect, it } from 'vitest';
 import {
   STAFF_EMAIL_SEND_LEASE_MS,
   SUSPICION_STAFF_EMAIL_PAGE_CAP,
+  SUSPICION_STAFF_EMAIL_ERROR_REASONS,
+  SUSPICION_STAFF_EMAIL_PARKED_BY,
+  SUSPICION_STAFF_EMAIL_PRE_CALL_STEPS,
+  SUSPICION_STAFF_EMAIL_RECHECK_REASONS,
   beginSuspicionStaffEmail,
   expireExhaustedSuspicionStaffEmails,
   finaliseSuspicionStaffEmail,
+  isSuspicionStaffEmailDetail,
   noteSuspicionStaffEmailTransient,
+  parkHeldSuspicionStaffEmails,
   readAdminEmailCiphertext,
   sanitizeProviderErrorName,
   selectDueSuspicionStaffEmails,
@@ -36,7 +43,7 @@ import { bindScopedDb } from '../../../src/db.js';
 import { pariwarId as toPariwarId, type ClaimId, type UserId } from '../../../src/ids/index.js';
 import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
 import { PARIWAR_A, PARIWAR_B, enterAppScope } from '../_helpers.js';
-import { openAppeal, refusedClaim, reverseAtStage1 } from './_suspicion-refusal-fixtures.js';
+import { appealAtStage, openAppeal, refusedClaim, reverseAtStage1, seedAppealPanel, stage3 } from './_suspicion-refusal-fixtures.js';
 
 type Client = ReturnType<typeof getTx>['client'];
 
@@ -169,10 +176,11 @@ async function rowsOf(client: Client, cid: string) {
 }
 
 /** A crash-left `attempting` row (as the superuser). */
+/** `createdAt` also sets `aging_since` (the give-up's anchor — 0153). */
 async function attemptingRow(client: Client, cid: string, recipient: string, o: { job?: string; claimedAt?: Date; createdAt?: Date; detail?: string | null } = {}) {
   await client.query(
-    `INSERT INTO claim_suspicion_staff_emails (pariwar_id, claim_case_id, recipient_user_id, outcome, claimed_at, claimed_by_job, created_at, detail)
-     VALUES ($1, $2, $3, 'attempting', $4, $5, $6, $7)`,
+    `INSERT INTO claim_suspicion_staff_emails (pariwar_id, claim_case_id, recipient_user_id, outcome, claimed_at, claimed_by_job, created_at, detail, aging_since)
+     VALUES ($1, $2, $3, 'attempting', $4, $5, $6, $7, $6)`,
     [PARIWAR_A, cid, recipient, o.claimedAt ?? new Date(), o.job ?? 'job-crashed', o.createdAt ?? new Date(), o.detail ?? null],
   );
 }
@@ -290,6 +298,26 @@ describe.skipIf(!hasDatabase)('Story 6.25 — the staff email: who, when, and th
       expect(await recipientsDue(client, appealed)).toEqual([u]);
       await reverseAtStage1(client, PARIWAR_A, appealed);
       expect(await recipientsDue(client, appealed)).toEqual([]);
+      // A claim with ⛔ eligible admin (Pariwar B — this spec seeds ⛔ admin there): its NULL pair is due while the appeal is open
+      // and goes with the reversal.
+      const lonely = await refused(client, { pariwarId: PARIWAR_B });
+      await openAppeal(client, PARIWAR_B, lonely);
+      expect((await duePairs(client)).has(`${lonely}|-`)).toBe(true);
+      await reverseAtStage1(client, PARIWAR_B, lonely);
+      expect((await duePairs(client)).has(`${lonely}|-`)).toBe(false);
+    });
+
+    it('⭐ AC2 (vi) — an `upheld_final` appeal ⇒ STILL due (the refusal stands — RE1, RF1)', async () => {
+      const { client } = getTx();
+      const u = await admin(client);
+      const panel = await seedAppealPanel(client, PARIWAR_A);
+      const upheld = await refused(client);
+      await appealAtStage(client, PARIWAR_A, upheld, 3, panel);
+      await stage3(client, PARIWAR_A, upheld, 'upheld');
+      await client.query('RESET ROLE'); // `seedAppealPanel` left the app scope on — the selector is the superuser's (6.24b's pattern)
+      // `upheld_final` is the APPEAL's status (the claim itself stays `denied`).
+      expect((await client.query<{ s: string }>('SELECT status AS s FROM claim_appeals WHERE claim_case_id = $1', [upheld])).rows[0]!.s).toBe('upheld_final');
+      expect(await recipientsDue(client, upheld)).toEqual([u]);
     });
 
     it('a FINISHED row ends the pair; an `attempting` row is ALWAYS returned (flagged), even once the refusal no longer stands', async () => {
@@ -389,7 +417,7 @@ describe.skipIf(!hasDatabase)('Story 6.25 — the staff email: who, when, and th
       await noteSuspicionStaffEmailTransient(tx, { pariwarId: pid, noticeId: b.noticeId, jobId: 'job-1', detail: 'transient:InternalFailure', mayHaveSent: true, now: t1 });
       await noteSuspicionStaffEmailTransient(tx, { pariwarId: pid, noticeId: b.noticeId, jobId: 'job-1', detail: 'transient:TooManyRequestsException', mayHaveSent: false, now: t1 });
       // A note by ANOTHER job is a no-op (0 rows).
-      expect(await noteSuspicionStaffEmailTransient(tx, { pariwarId: pid, noticeId: b.noticeId, jobId: 'job-x', detail: 'x', mayHaveSent: false, now: t1 })).toBe(0);
+      expect(await noteSuspicionStaffEmailTransient(tx, { pariwarId: pid, noticeId: b.noticeId, jobId: 'job-x', detail: 'transient:network', mayHaveSent: false, now: t1 })).toBe(0);
       await client.query('RESET ROLE');
       expect(await rowsOf(client, c)).toMatchObject([{ may_have_sent: true, detail: 'transient:TooManyRequestsException' }]);
       // The note at t1 refreshed the lease ⇒ another job is held off although the CLAIM (t0) is two leases old.
@@ -488,10 +516,13 @@ describe.skipIf(!hasDatabase)('Story 6.25 — the staff email: who, when, and th
       expect([...paged.keys()].sort()).toEqual([...all.keys()].sort());
       expect(paged.has(`${lonely}|-`)).toBe(true);
       expect(paged.has(`${c}|${u1}`) && paged.has(`${c}|${u2}`)).toBe(true);
-      const first = await selectDueSuspicionStaffEmails(client, { after: null, limit: 0, allow: [PARIWAR_B] });
-      expect(first.scanned).toBeLessThanOrEqual(1); // a 0 limit is CLAMPED up to 1, ⛔ unbounded
+      // The cap DOWN (`clampLimit`'s range) is unit-tested in `tests/pagination.test.ts`; an over-cap limit still pages cleanly.
       const capped = await selectDueSuspicionStaffEmails(client, { after: null, limit: 1_000_000, allow: ALLOW });
-      expect(capped.scanned).toBeLessThanOrEqual(SUSPICION_STAFF_EMAIL_PAGE_CAP);
+      expect(capped.scanned).toBe(all.size);
+      // ⭐ Pariwar B now holds TWO due NULL pairs ⇒ a 0 limit returning exactly ONE proves the clamp UP to 1 (⛔ 0, ⛔ unbounded).
+      await refused(client, { pariwarId: PARIWAR_B });
+      const first = await selectDueSuspicionStaffEmails(client, { after: null, limit: 0, allow: [PARIWAR_B] });
+      expect(first.scanned).toBe(1);
     });
 
     it('Q2 reads ONE admin\'s ciphertext AS STORED under the app scope; ⛔ credentials ⇒ null', async () => {
@@ -513,12 +544,134 @@ describe.skipIf(!hasDatabase)('Story 6.25 — the staff email: who, when, and th
       expect(suspicionStaffEmailDetail({ kind: 'pre_call', step: 'decrypt_failed' })).toBe('transient:decrypt_failed');
       expect(suspicionStaffEmailDetail({ kind: 'rejected', http: 400, name: 'TM_4001.SM_113' })).toBe('rejected:400:TM_4001.SM_113');
       expect(suspicionStaffEmailDetail({ kind: 'error', reason: 'invalid_address' })).toBe('error:invalid_address');
-      expect(suspicionStaffEmailDetail({ kind: 'recheck', reason: 'claims_has_rows' as never })).toBe('exhausted:recheck_claims_has_rows');
+      expect(suspicionStaffEmailDetail({ kind: 'recheck', reason: 'claim_has_rows' })).toBe('exhausted:recheck_claim_has_rows');
       expect(suspicionStaffEmailDetail({ kind: 'exhausted_three_days' })).toBe('exhausted:attempting_three_days');
       for (const leak of ['priya@example.com is not verified', 'a b', 'x'.repeat(65), '', 'Message rejected: admin@x.in']) {
         expect(sanitizeProviderErrorName(leak)).toBe('unknown');
       }
       expect(suspicionStaffEmailDetail({ kind: 'held', name: 'admin@example.com' })).toBe('held:unknown');
+    });
+
+    it('⭐ round 3 — every builder output matches the grammar 0153 CHECKs; free text / an address does ⛔; a writer refuses it BEFORE the UPDATE', async () => {
+      const built = [
+        suspicionStaffEmailDetail({ kind: 'no_pariwar_admin' }),
+        suspicionStaffEmailDetail({ kind: 'transient', name: 'x'.repeat(64) }),
+        suspicionStaffEmailDetail({ kind: 'held', name: 'priya@example.com' }),
+        suspicionStaffEmailDetail({ kind: 'rejected', http: 999, name: 'TM_4001.SM_113' }),
+        suspicionStaffEmailDetail({ kind: 'exhausted_three_days' }),
+        // ⭐ Round 4 — the EXPORTED reason arrays the types derive from (a new reason is iterated here, ⛔ hand-listed).
+        ...SUSPICION_STAFF_EMAIL_PRE_CALL_STEPS.map((step) => suspicionStaffEmailDetail({ kind: 'pre_call', step })),
+        ...SUSPICION_STAFF_EMAIL_ERROR_REASONS.map((reason) => suspicionStaffEmailDetail({ kind: 'error', reason })),
+        ...SUSPICION_STAFF_EMAIL_RECHECK_REASONS.map((reason) => suspicionStaffEmailDetail({ kind: 'recheck', reason })),
+      ];
+      for (const d of built) expect(isSuspicionStaffEmailDetail(d), d).toBe(true);
+      for (const bad of ['x', 'held:priya@example.com', 'transient:a b', 'Message rejected: admin@x.in', 'error:other', 'transient:', '']) {
+        expect(isSuspicionStaffEmailDetail(bad), bad).toBe(false);
+      }
+      const { client, tx } = getTx();
+      const c = await refused(client);
+      const u = await admin(client);
+      const b = await begin(client, c, u);
+      if (b.kind !== 'begun') throw new Error('expected begun');
+      await enterAppScope(client, PARIWAR_A);
+      const leak = 'Message rejected: priya@example.com';
+      await expect(
+        noteSuspicionStaffEmailTransient(tx, { pariwarId: pid, noticeId: b.noticeId, jobId: 'job-1', detail: leak, mayHaveSent: false, now: new Date() }),
+      ).rejects.toThrow(/outside the fixed vocabulary/);
+      await expect(
+        finaliseSuspicionStaffEmail(tx, { pariwarId: pid, noticeId: b.noticeId, jobId: 'job-1', outcome: 'error', detail: leak }),
+      ).rejects.toThrow(/outside the fixed vocabulary/);
+      await client.query('RESET ROLE');
+      expect(await rowsOf(client, c)).toMatchObject([{ outcome: 'attempting', detail: null }]);
+    });
+  });
+
+  describe('⭐ round 3 (Decision 1 A) — a HELD run PARKS a stale row; the give-up skips it; the first child after the hold re-claims it', () => {
+    it('park: past the lease ⇒ parked; inside the lease, finished or already parked ⇒ ⛔ touched (claimed_at / detail / may_have_sent kept)', async () => {
+      const { client } = getTx();
+      const c = await refused(client);
+      const [stale, live, done] = [await admin(client), await admin(client), await admin(client)];
+      const now = new Date();
+      const staleAt = new Date(now.getTime() - STAFF_EMAIL_SEND_LEASE_MS - 1);
+      await attemptingRow(client, c, stale, { claimedAt: staleAt, detail: 'held:SendingPausedException' });
+      await attemptingRow(client, c, live, { claimedAt: new Date(now.getTime() - STAFF_EMAIL_SEND_LEASE_MS + MIN), job: 'job-live' });
+      await client.query(
+        `INSERT INTO claim_suspicion_staff_emails (pariwar_id, claim_case_id, recipient_user_id, outcome) VALUES ($1, $2, $3, 'accepted')`,
+        [PARIWAR_A, c, done],
+      );
+      expect(await parkHeldSuspicionStaffEmails(client, { now, allow: [PARIWAR_A] })).toBe(1);
+      expect(await parkHeldSuspicionStaffEmails(client, { now, allow: [PARIWAR_A] })).toBe(0);
+      const rows = await rowsOf(client, c);
+      expect(rows.find((r) => r.recipient_user_id === stale)).toMatchObject({
+        outcome: 'attempting',
+        claimed_by_job: SUSPICION_STAFF_EMAIL_PARKED_BY,
+        detail: 'held:SendingPausedException',
+        may_have_sent: false,
+      });
+      const { rows: at } = await client.query<{ claimed_at: Date }>(
+        `SELECT claimed_at FROM claim_suspicion_staff_emails WHERE claim_case_id = $1 AND recipient_user_id = $2`,
+        [c, stale],
+      );
+      expect(at[0]!.claimed_at.getTime()).toBe(staleAt.getTime());
+      expect(rows.find((r) => r.recipient_user_id === live)).toMatchObject({ claimed_by_job: 'job-live' });
+      expect(rows.find((r) => r.recipient_user_id === done)).toMatchObject({ outcome: 'accepted' });
+    });
+
+    it('⭐ the give-up SKIPS a parked row past BOTH bounds; the first child re-claims it AT ONCE (⛔ lease wait) and the give-up then may', async () => {
+      const { client } = getTx();
+      const c = await refused(client);
+      const u = await admin(client);
+      const now = new Date();
+      const cutoff = suspicionStaffEmailReclaimCutoff(now);
+      await attemptingRow(client, c, u, {
+        createdAt: new Date(cutoff.getTime() - 1),
+        claimedAt: new Date(now.getTime() - 10 * STAFF_EMAIL_SEND_LEASE_MS),
+        detail: 'held:SendingPausedException',
+        job: SUSPICION_STAFF_EMAIL_PARKED_BY,
+      });
+      expect(await expireExhaustedSuspicionStaffEmails(client, { cutoff, now, allow: [PARIWAR_A] })).toEqual([]);
+      // ⭐ A fresh job re-claims the parked row at once — the HELD note means ⛔ may_have_sent.
+      const taken = await begin(client, c, u, { jobId: 'job-after-hold', now });
+      expect(taken).toMatchObject({ kind: 'begun', attemptCount: 2, previousDetail: 'held:SendingPausedException', mayHaveSent: false });
+      expect(await rowsOf(client, c)).toMatchObject([{ claimed_by_job: 'job-after-hold', first_detail: 'held:SendingPausedException' }]);
+      // ⭐ Round 4 (`-300` §2 (ii)) — the re-claim RESTARTED its three IST days: its ONE post-hold child failing (past the lease again)
+      // does ⛔ burn it under today's cutoff …
+      const later = new Date(now.getTime() + STAFF_EMAIL_SEND_LEASE_MS + 1);
+      expect(await expireExhaustedSuspicionStaffEmails(client, { cutoff, now: later, allow: [PARIWAR_A] })).toEqual([]);
+      // … and three IST days after the re-claim it is given up like any row.
+      const threeDays = new Date(now.getTime() + 3 * 24 * 60 * MIN);
+      expect(
+        await expireExhaustedSuspicionStaffEmails(client, { cutoff: suspicionStaffEmailReclaimCutoff(threeDays), now: threeDays, allow: [PARIWAR_A] }),
+      ).toEqual([{ claimCaseId: c, recipientUserId: u }]);
+    });
+
+    it('⭐ round 4 — ONLY a PARKED row\'s re-claim restarts `aging_since`; another job\'s take-over past the lease keeps it', async () => {
+      const { client } = getTx();
+      const c = await refused(client);
+      const [parked, crashed] = [await admin(client), await admin(client)];
+      const now = new Date();
+      const old = new Date(now.getTime() - 4 * 24 * 60 * MIN);
+      const stale = new Date(now.getTime() - 2 * STAFF_EMAIL_SEND_LEASE_MS);
+      await attemptingRow(client, c, parked, { createdAt: old, claimedAt: stale, job: SUSPICION_STAFF_EMAIL_PARKED_BY, detail: 'held:x' });
+      await attemptingRow(client, c, crashed, { createdAt: old, claimedAt: stale, job: 'job-crashed', detail: 'held:x' });
+      expect(await begin(client, c, parked, { jobId: 'job-p', now })).toMatchObject({ kind: 'begun' });
+      expect(await begin(client, c, crashed, { jobId: 'job-c', now })).toMatchObject({ kind: 'begun' });
+      const { rows } = await client.query<{ recipient_user_id: string; aging_since: Date }>(
+        `SELECT recipient_user_id, aging_since FROM claim_suspicion_staff_emails WHERE claim_case_id = $1`,
+        [c],
+      );
+      expect(rows.find((r) => r.recipient_user_id === parked)!.aging_since.getTime()).toBe(now.getTime());
+      expect(rows.find((r) => r.recipient_user_id === crashed)!.aging_since.getTime()).toBe(old.getTime());
+    });
+
+    it('⭐ round 4 — a parked row INSIDE the lease (clock skew) is still re-claimed by another job — the `parked` bypass, ⛔ the lease, admits it', async () => {
+      const { client } = getTx();
+      const c = await refused(client);
+      const u = await admin(client);
+      const now = new Date();
+      await attemptingRow(client, c, u, { claimedAt: now, job: SUSPICION_STAFF_EMAIL_PARKED_BY, detail: 'held:x' });
+      expect(await begin(client, c, u, { jobId: 'job-other', now })).toMatchObject({ kind: 'begun', attemptCount: 2 });
+      expect(await rowsOf(client, c)).toMatchObject([{ claimed_by_job: 'job-other' }]);
     });
   });
 });

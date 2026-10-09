@@ -1,5 +1,5 @@
 // The STAFF EMAIL record of a `-239` suspicion refusal — Story 6.25 (Task 1; AC8), migration 0152 (`2026-10-09-299` RE2, RE4,
-// RE5, RE5-bis, RE11).
+// RE5, RE5-bis, RE11) + 0153 (code review round 3 — the `detail` vocabulary CHECKs and the finished-row trigger).
 //
 //   · `claim_suspicion_staff_emails` — ONE row per (claim, recipient), EVER: `-262` FQ3 A's email to every Pariwar Admin of the
 //                                      claim's Pariwar; ONE claim-level `no_target` row (recipient NULL) when ⛔ admin is
@@ -19,6 +19,14 @@ import { users } from './users.js';
 /** What is KNOWN about one (claim, recipient) email. ⚠ LOCKSTEP with 0152's outcome CHECK (an exact-set spec pins it). */
 export const SUSPICION_STAFF_EMAIL_OUTCOMES = ['attempting', 'accepted', 'rejected', 'no_target', 'error'] as const;
 export type SuspicionStaffEmailOutcome = (typeof SUSPICION_STAFF_EMAIL_OUTCOMES)[number];
+
+/**
+ * ⭐ THE `detail` / `first_detail` GRAMMAR — exactly what `suspicionStaffEmailDetail` builds (⛔ `@`, ⛔ a space, ⛔ free text).
+ * ⚠ LOCKSTEP with 0153's two `*_vocabulary_check` CHECKs (a spec pins the catalog's pattern to this string) and asserted by both
+ * writers before they UPDATE (code review round 3, Decision 2 A).
+ */
+export const SUSPICION_STAFF_EMAIL_DETAIL_PATTERN =
+  '^(no_pariwar_admin|(transient|held):[A-Za-z0-9_.]{1,64}|rejected:[0-9]{1,3}:[A-Za-z0-9_.]{1,64}|error:(no_address|invalid_address)|exhausted:(attempting_three_days|recheck_(refusal_not_standing|recipient_not_eligible|recipients_exist|claim_has_rows)))$';
 
 export const claimSuspicionStaffEmails = pgTable(
   'claim_suspicion_staff_emails',
@@ -44,6 +52,8 @@ export const claimSuspicionStaffEmails = pgTable(
     /** The pg-boss job id that holds an `attempting` row (a retry of the SAME job keeps it). */
     claimedByJob: text('claimed_by_job'),
     createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().default(sql`clock_timestamp()`),
+    /** 0153 — the give-up's anchor (three IST days from here, ⛔ `created_at`); reset when a PARKED row is re-claimed (`-300`). */
+    agingSince: timestamp('aging_since', { withTimezone: true, mode: 'date' }).notNull().default(sql`clock_timestamp()`),
     updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' }).notNull().default(sql`clock_timestamp()`),
   },
   (t) => [
@@ -55,7 +65,7 @@ export const claimSuspicionStaffEmails = pgTable(
     // ⚠ A UNIQUE CONSTRAINT (⛔ `uniqueIndex`): in drizzle 0.45 `nullsNotDistinct()` exists ONLY on the constraint builder
     // (`feature_flag_versions.ts`) — and WITHOUT it the NULL-recipient `no_target` row would not be once-ever.
     unique('claim_suspicion_staff_emails_claim_recipient_uq').on(t.pariwarId, t.claimCaseId, t.recipientUserId).nullsNotDistinct(),
-    index('claim_suspicion_staff_emails_attempting_idx').on(t.createdAt, t.claimedAt).where(sql`"outcome" = 'attempting'`),
+    index('claim_suspicion_staff_emails_attempting_idx').on(t.agingSince, t.claimedAt).where(sql`"outcome" = 'attempting'`),
     check(
       'claim_suspicion_staff_emails_outcome_check',
       sql`${t.outcome} IN ('attempting', 'accepted', 'rejected', 'no_target', 'error')`,
@@ -70,6 +80,15 @@ export const claimSuspicionStaffEmails = pgTable(
     check(
       'claim_suspicion_staff_emails_first_detail_length_check',
       sql`${t.firstDetail} IS NULL OR char_length(${t.firstDetail}) <= 200`,
+    ),
+    // 0153 — the vocabulary (+ a BEFORE UPDATE trigger freezing a finished row; ⛔ expressible here).
+    check(
+      'claim_suspicion_staff_emails_detail_vocabulary_check',
+      sql`${t.detail} IS NULL OR ${t.detail} ~ ${sql.raw(`'${SUSPICION_STAFF_EMAIL_DETAIL_PATTERN}'`)}`,
+    ),
+    check(
+      'claim_suspicion_staff_emails_first_detail_vocabulary_check',
+      sql`${t.firstDetail} IS NULL OR ${t.firstDetail} ~ ${sql.raw(`'${SUSPICION_STAFF_EMAIL_DETAIL_PATTERN}'`)}`,
     ),
   ],
 );

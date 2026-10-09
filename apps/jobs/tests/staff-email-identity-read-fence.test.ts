@@ -8,7 +8,10 @@
 //       that names `admin_credentials` / `adminCredentials` is on an EXACT allowlist;
 //   (2) in the 6.25 identity-read module, every `SELECT … FROM admin_credentials` projects `1` (Q1) or exactly
 //       `se_q2.email_ciphertext` (Q2, once), and every `se_ac.` column is `user_id`;
-//   (3) every caller of `decryptAdminEmail` is on an EXACT allowlist (the barrel export makes it importable anywhere).
+//   (3) every caller of `decryptAdminEmail` is on an EXACT allowlist (the barrel export makes it importable anywhere);
+//   (4) ⭐ round 3 — the CAPABILITY, ⛔ only the name: every file naming the admin email's envelope context
+//       (`ADMIN_EMAIL_ENCRYPTION_CONTEXT`, or a by-value `fieldClass: ADMIN_EMAIL_FIELD_CLASS | 'admin_email'`) is on an EXACT
+//       allowlist — a new `decryptTier1(…, ADMIN_EMAIL_ENCRYPTION_CONTEXT, …)` decrypts admin emails without the helper's name.
 // ⭐ POSITIVE CONTROL: one planted violation per rule, into a COPY of the scanned tree, IS caught by the same checker; a commented
 // plant is ⛔ caught. A new reader or caller is a NEW ADR, ⛔ an allowlist edit.
 
@@ -23,6 +26,9 @@ const stripComments = (src: string) => src.replace(/\/\*[\s\S]*?\*\//g, '').repl
 
 const IDENTITY_TABLE = /\badmin_credentials\b|\badminCredentials\b/;
 const DECRYPT = /\bdecryptAdminEmail\b/;
+// Round 4 — also a NAMESPACED constant (`encryption.ADMIN_EMAIL_FIELD_CLASS`) and a template literal. ⚠ A shorthand `{ fieldClass }`
+// built from a local is out of a source fence's reach — recorded, ⛔ claimed.
+const ADMIN_EMAIL_CONTEXT = /\bADMIN_EMAIL_ENCRYPTION_CONTEXT\b|fieldClass:\s*(?:[\w.]*\bADMIN_EMAIL_FIELD_CLASS\b|['"`]admin_email['"`])/;
 const Q_MODULE = 'packages/domain/src/claim/staff-email-identity-read.ts';
 
 /** The ONLY files whose code names the admin credentials table (ADR-0009's repo + the schema family + ADR-0040's Q1 / Q2). */
@@ -40,6 +46,14 @@ const DECRYPT_ALLOWLIST = [
   'packages/domain/src/encryption/index.ts',
   'apps/api/src/modules/auth/shared/email-index.ts',
   'apps/jobs/src/scheduler/claim-suspicion-staff-emails.ts',
+].sort();
+
+/** The ONLY files that name the admin email's envelope context (its definition + barrel, the API's write path + request scope). */
+const CONTEXT_ALLOWLIST = [
+  'apps/api/src/middleware/request-context/index.ts',
+  'apps/api/src/modules/auth/shared/email-index.ts',
+  'packages/domain/src/encryption/admin-email.ts',
+  'packages/domain/src/encryption/index.ts',
 ].sort();
 
 const SOURCE = /\.(?:ts|tsx|mts|cts|js|mjs)$/;
@@ -78,6 +92,8 @@ function violationsOf(files: ReadonlyMap<string, string>): string[] {
   for (const f of identityReaders) if (!IDENTITY_ALLOWLIST.includes(f)) out.push(`reader:${f}`);
   const callers = [...files].filter(([, src]) => DECRYPT.test(stripComments(src))).map(([f]) => f).sort();
   for (const f of callers) if (!DECRYPT_ALLOWLIST.includes(f)) out.push(`decrypt-caller:${f}`);
+  const contextUsers = [...files].filter(([, src]) => ADMIN_EMAIL_CONTEXT.test(stripComments(src))).map(([f]) => f).sort();
+  for (const f of contextUsers) if (!CONTEXT_ALLOWLIST.includes(f)) out.push(`admin-email-context:${f}`);
   const q = files.get(Q_MODULE);
   if (q === undefined) {
     out.push(`missing:${Q_MODULE}`);
@@ -101,6 +117,8 @@ describe('⛔ ADR-0040 — the identity-data read paths are EXACTLY the allowlis
     expect(readers).toEqual(IDENTITY_ALLOWLIST);
     const callers = [...tree].filter(([, s]) => DECRYPT.test(stripComments(s))).map(([f]) => f).sort();
     expect(callers).toEqual(DECRYPT_ALLOWLIST);
+    const contextUsers = [...tree].filter(([, s]) => ADMIN_EMAIL_CONTEXT.test(stripComments(s))).map(([f]) => f).sort();
+    expect(contextUsers).toEqual(CONTEXT_ALLOWLIST);
   });
 
   it('⭐ POSITIVE CONTROL — one plant per rule IS caught; a COMMENTED plant is ⛔', () => {
@@ -124,6 +142,19 @@ describe('⛔ ADR-0040 — the identity-data read paths are EXACTLY the allowlis
     // (3) a new decrypt caller.
     expect(plant('apps/jobs/src/scheduler/staff-email-client.ts', 'await encryption.decryptAdminEmail(ct, deps);')).toContain(
       'decrypt-caller:apps/jobs/src/scheduler/staff-email-client.ts',
+    );
+    // (4) the capability without the helper's name — the constant, or a by-value context.
+    expect(plant('apps/jobs/src/scheduler/staff-email-client.ts', 'await encryption.decryptTier1(ct, encryption.ADMIN_EMAIL_ENCRYPTION_CONTEXT, k, r);')).toContain(
+      'admin-email-context:apps/jobs/src/scheduler/staff-email-client.ts',
+    );
+    expect(plant('apps/jobs/src/scheduler/staff-email-config.ts', "const c = { pariwarId: NS, fieldClass: 'admin_email' };")).toContain(
+      'admin-email-context:apps/jobs/src/scheduler/staff-email-config.ts',
+    );
+    expect(plant('apps/jobs/src/scheduler/staff-email-config.ts', 'const c = { pariwarId: NS, fieldClass: encryption.ADMIN_EMAIL_FIELD_CLASS };')).toContain(
+      'admin-email-context:apps/jobs/src/scheduler/staff-email-config.ts',
+    );
+    expect(plant('apps/jobs/src/scheduler/staff-email-config.ts', 'const c = { pariwarId: NS, fieldClass: `admin_email` };')).toContain(
+      'admin-email-context:apps/jobs/src/scheduler/staff-email-config.ts',
     );
     // A COMMENTED plant is ⛔ caught (the doc-blocks name what they forbid).
     expect(plant('apps/jobs/src/scheduler/staff-email-config.ts', '// SELECT user_id FROM admin_credentials; decryptAdminEmail(x)')).toEqual([]);

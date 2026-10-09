@@ -8,9 +8,19 @@
 
 const NOMINEE_REFUSALS_PATH = /^\/p\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/nominee-refusals$/;
 
-/** The refusal list's own path — what it passes as `next`. */
+/** The refusal list's own path — what it passes as `next`. ⭐ Lower-cased (round 3): a re-cased link (`/p/2B7C…/…`) renders the
+ * list, so its `next` must still pass the lower-case allowlist (which stays strict) — else sign-in lands on `/audit/integrity`. */
 export function nomineeRefusalsPath(pariwarId: string): string {
-  return `/p/${pariwarId}/nominee-refusals`;
+  return `/p/${pariwarId.toLowerCase()}/nominee-refusals`;
+}
+
+/**
+ * ⭐ THE `/login` route's `validateSearch` (`router.tsx` uses THIS function — round 3, so a test runs the real one): `next` is
+ * carried only as a STRING, as given — TanStack's default parser `JSON.parse`s each value first, so `?next=123` arrives a number
+ * and is dropped here. The ALLOWLIST (`allowedNextPariwarId`) is applied by `LoginPage`, ⛔ here.
+ */
+export function validateLoginSearch(search: Record<string, unknown>): { next?: string } {
+  return typeof search['next'] === 'string' ? { next: search['next'] } : {};
 }
 
 /** The Pariwar id of an ALLOWLISTED `next`, or `null` (⇒ the default landing page). */

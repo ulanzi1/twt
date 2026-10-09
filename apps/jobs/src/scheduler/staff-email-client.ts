@@ -168,11 +168,22 @@ export function createSesStaffEmailClient(o: SesStaffEmailClientOpts): StaffEmai
     if (o.from.trim() === '') return 'config:sender_missing';
     return null;
   };
-  const aws = new AwsClient({ accessKeyId: o.accessKeyId, secretAccessKey: o.secretAccessKey, service: 'ses', region: o.region, retries: 0 });
+  // ⭐ Trimmed (round 3) — a Secret Manager payload's trailing newline would otherwise land in the signature / header.
+  const aws = new AwsClient({
+    accessKeyId: o.accessKeyId.trim(),
+    secretAccessKey: o.secretAccessKey.trim(),
+    service: 'ses',
+    region: o.region,
+    retries: 0,
+  });
 
-  async function signed(path: string, init: RequestInit, timeoutMs: number): Promise<Response> {
-    const request = await aws.sign(`${base}${path}`, init);
-    return fetchImpl(request, { signal: AbortSignal.timeout(timeoutMs) });
+  /** Sign ONLY — a throw here means ⛔ request exists (⛔ "may have sent"); the caller classifies it apart from the fetch. */
+  async function sign(path: string, init: RequestInit): Promise<Request | null> {
+    try {
+      return await aws.sign(`${base}${path}`, init);
+    } catch {
+      return null;
+    }
   }
 
   return {
@@ -180,9 +191,11 @@ export function createSesStaffEmailClient(o: SesStaffEmailClientOpts): StaffEmai
     configGap: gap,
     async preflight(opts = {}) {
       if (gap() !== null) return { ok: false, detail: gap()! };
+      const request = await sign('/account', { method: 'GET' });
+      if (request === null) return { ok: false, detail: 'preflight:sign_failed' };
       let res: Response;
       try {
-        res = await signed('/account', { method: 'GET' }, opts.timeoutMs ?? STAFF_EMAIL_SEND_TIMEOUT_MS);
+        res = await fetchImpl(request, { signal: AbortSignal.timeout(opts.timeoutMs ?? STAFF_EMAIL_SEND_TIMEOUT_MS) });
       } catch {
         return { ok: false, detail: 'preflight:unreachable' };
       }
@@ -206,13 +219,12 @@ export function createSesStaffEmailClient(o: SesStaffEmailClientOpts): StaffEmai
         EmailTags: [{ Name: 'notice_id', Value: msg.reference }],
       };
       if (o.configurationSet) payload['ConfigurationSetName'] = o.configurationSet;
+      const request = await sign('/outbound-emails', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload) });
+      // ⭐ Round 3 — a signing failure is a CONFIG fault (e.g. a malformed secret) with ⛔ request written ⇒ HELD, ⛔ may-have-sent.
+      if (request === null) return { kind: 'transient', detail: detail({ kind: 'held', name: 'sign_failed' }), held: true, mayHaveSent: false };
       let res: Response;
       try {
-        res = await signed(
-          '/outbound-emails',
-          { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload) },
-          opts.timeoutMs ?? STAFF_EMAIL_SEND_TIMEOUT_MS,
-        );
+        res = await fetchImpl(request, { signal: AbortSignal.timeout(opts.timeoutMs ?? STAFF_EMAIL_SEND_TIMEOUT_MS) });
       } catch (err) {
         return failureBeforeResponse(err);
       }
@@ -260,13 +272,17 @@ export function zeptoMailErrorName(status: number, body: Record<string, unknown>
   return { name: sub === null ? code : `${code}.${sub}`, target };
 }
 
-/** ⭐ The ZeptoMail classification — by NAME (and `to` target for the one rejected name); `mayHaveSent` on any 5xx. */
+/**
+ * ⭐ The ZeptoMail classification — by NAME (and `to` target for the one rejected name); `mayHaveSent` on any 5xx. "Any 5xx" is
+ * transient by STATUS (the table); a 429 only when it is NAMELESS (`http_429`) — a NAMED 429 (e.g. `TM_3601.SM_133`, a trial
+ * limit) keeps its own class, so a HELD code is alarmed (round 3; RE6: by NAME, ⛔ status alone).
+ */
 export function classifyZeptoMailFailure(status: number, name: string, target: string | null): StaffEmailSendResult {
   const mayHaveSent = status >= 500;
   if (name === ZEPTOMAIL_REJECTED_NAME && target === 'to') {
     return { kind: 'final', outcome: 'rejected', detail: detail({ kind: 'rejected', http: status, name }) };
   }
-  if (ZEPTOMAIL_TRANSIENT_ERROR_NAMES.has(name) || status >= 500 || status === 429) {
+  if (ZEPTOMAIL_TRANSIENT_ERROR_NAMES.has(name) || status >= 500 || name === 'http_429') {
     return { kind: 'transient', detail: detail({ kind: 'transient', name }), held: false, mayHaveSent };
   }
   return { kind: 'transient', detail: detail({ kind: 'held', name }), held: true, mayHaveSent };
@@ -376,7 +392,18 @@ export function createFakeStaffEmailClient(): FakeStaffEmailClient {
 
 // ── The address (⛔ ever logged) ─────────────────────────────────────────────────────────────────────────────────────────
 
-/** A syntactically sendable ASCII address (the provider decides the rest). ⛔ Used on a value that is ever logged. */
+const ATOM = "[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+";
+const LABEL = '[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?';
+/** RFC 5321 dot-atom `local@domain` — ⛔ quoted / display-name / list syntax (`"`, `<`, `>`, `,`, `;`, …), ⛔ empty or doubled dots. */
+const DOT_ATOM_ADDRESS = new RegExp(`^${ATOM}(?:\\.${ATOM})*@${LABEL}(?:\\.${LABEL})+$`);
+
+/**
+ * A syntactically sendable ASCII address (the provider decides the rest). ⛔ Used on a value that is ever logged.
+ * ⭐ Round 3 — a DOT-ATOM only: `[\x21-\x7e]` used to admit `"x"<other@host.com>` (a provider may route display-name syntax to
+ * the OTHER mailbox) and `a,b@x.com` (⇒ a HELD `BadRequestException` for three days).
+ */
 export function isSendableEmailAddress(address: string): boolean {
-  return address.length <= 254 && /^[\x21-\x7e]+$/.test(address) && /^[^@\s]+@[^@\s]+\.[^@\s.]{2,}$/.test(address);
+  const at = address.lastIndexOf('@');
+  // ⭐ Round 4 — EVERY domain label (the last included) is ⛔ hyphen-edged; the last is ≥ 2 characters.
+  return address.length <= 254 && at > 0 && at <= 64 && DOT_ATOM_ADDRESS.test(address) && address.length - address.lastIndexOf('.') - 1 >= 2;
 }

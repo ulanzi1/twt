@@ -32,6 +32,19 @@ import {
 import { createFakeStaffEmailClient, type FakeStaffEmailClient, type StaffEmailSendResult } from '../src/scheduler/staff-email-client.js';
 import { cleanupClaims, onOwnTx } from './_claim-correction-seed.js';
 
+// ⭐ Round 4 — a switch to make the REAL template renderer throw (a deterministic `render_failed`); OFF ⇒ the real renderer.
+const renderSwitch = vi.hoisted(() => ({ fail: false }));
+vi.mock('../src/scheduler/suspicion-staff-email-templates.js', async (importActual) => {
+  const actual = await importActual<typeof import('../src/scheduler/suspicion-staff-email-templates.js')>();
+  return {
+    ...actual,
+    renderSuspicionStaffEmail: (p: Parameters<typeof actual.renderSuspicionStaffEmail>[0]) => {
+      if (renderSwitch.fail) throw new Error('render failed (test switch)');
+      return actual.renderSuspicionStaffEmail(p);
+    },
+  };
+});
+
 const DATABASE_URL = process.env['DATABASE_URL'];
 const hasDatabase = Boolean(DATABASE_URL);
 const ORIGIN = 'https://admin.twt.example';
@@ -423,6 +436,8 @@ describe.skipIf(!hasDatabase)('Story 6.25 — the staff email (live DB, own-comm
     const h = harness([P]);
     const legs: [string, () => void, () => void][] = [
       ['config:provider_unset', () => (h.client.state.gap = 'config:provider_unset'), () => (h.client.state.gap = null)],
+      ['config:sender_missing', () => (h.client.state.gap = 'config:sender_missing'), () => (h.client.state.gap = null)],
+      ['config:credentials_missing', () => (h.client.state.gap = 'config:credentials_missing'), () => (h.client.state.gap = null)],
       ['config:admin_app_origin_invalid', () => (h.origin.value = undefined), () => (h.origin.value = ORIGIN)],
       ['config:admin_app_origin_invalid', () => (h.origin.value = 'http://admin.twt.example'), () => (h.origin.value = ORIGIN)],
       ['config:admin_app_origin_invalid', () => (h.origin.value = `${ORIGIN}/admin`), () => (h.origin.value = ORIGIN)],
@@ -445,8 +460,11 @@ describe.skipIf(!hasDatabase)('Story 6.25 — the staff email (live DB, own-comm
     // A pre-flight that ITSELF throws also holds.
     const realPreflight = h.client.preflight;
     (h.client as { preflight: unknown }).preflight = () => Promise.reject(new Error('boom'));
+    h.alarms.length = 0;
     await tick(h);
     expect(h.enqueued).toEqual([]);
+    expect(await rowsOf(c)).toEqual([]);
+    expect(h.alarms.filter((x) => x.includes('HELD'))).toEqual([expect.stringContaining('preflight:failed')]);
     (h.client as { preflight: unknown }).preflight = realPreflight;
     // Fixed ⇒ the next sweep sends.
     await tick(h);
@@ -467,6 +485,132 @@ describe.skipIf(!hasDatabase)('Story 6.25 — the staff email (live DB, own-comm
     h.client.state.gap = null;
     await tick(h);
     expect(sentTo(h)).toEqual([a.address]);
+  });
+
+  it('⭐ round 3 (Decision 1 A) — a HOLD past the give-up horizon ⇒ the in-flight row is PARKED, ⛔ given up; fixed ⇒ re-claimed AT ONCE and sent', async () => {
+    const P = isolated();
+    const c = await refused(P);
+    const a = await admin(P);
+    const h = harness([P]);
+    const now = new Date();
+    h.setNow(now);
+    // A row in flight since BEFORE the give-up horizon whose child is gone (a held fault, then the channel went down).
+    await pool.query(
+      `INSERT INTO claim_suspicion_staff_emails (pariwar_id, claim_case_id, recipient_user_id, outcome, claimed_at, claimed_by_job, created_at, detail, aging_since)
+       VALUES ($1, $2, $3, 'attempting', $4, 'gone', $5, 'held:SendingPausedException', $5)`,
+      [P, c, a.id, new Date(now.getTime() - 2 * claim.STAFF_EMAIL_SEND_LEASE_MS), new Date(claim.suspicionStaffEmailReclaimCutoff(now).getTime() - MIN)],
+    );
+    h.client.state.preflight = { ok: false, detail: 'preflight:sending_disabled' };
+    await tick(h);
+    expect(await rowsOf(c)).toMatchObject([{ outcome: 'attempting', claimed_by_job: claim.SUSPICION_STAFF_EMAIL_PARKED_BY, detail: 'held:SendingPausedException' }]);
+    expect(h.alarms.filter((x) => x.includes('gave up'))).toEqual([]);
+    expect(h.alarms.filter((x) => x.includes('HELD'))).toEqual([expect.stringContaining('1 in-flight row(s) newly parked')]);
+    // Still held a day later ⇒ still parked, still ⛔ given up (⛔ re-parked — the alarm counts only NEW parks).
+    h.setNow(new Date(now.getTime() + 24 * 60 * MIN));
+    h.alarms.length = 0;
+    await tick(h);
+    expect(await rowsOf(c)).toMatchObject([{ outcome: 'attempting', claimed_by_job: claim.SUSPICION_STAFF_EMAIL_PARKED_BY }]);
+    expect(h.alarms.filter((x) => x.includes('gave up'))).toEqual([]);
+    expect(h.alarms.filter((x) => x.includes('HELD'))).toEqual([expect.stringContaining('0 in-flight row(s) newly parked')]);
+    // Fixed ⇒ the very next tick re-claims the parked row (⛔ lease wait) and sends.
+    h.client.state.preflight = { ok: true };
+    h.setNow(new Date(now.getTime() + 24 * 60 * MIN + 15 * MIN));
+    await tick(h);
+    expect(sentTo(h)).toEqual([a.address]);
+    expect(await rowsOf(c)).toMatchObject([{ outcome: 'accepted', attempt_count: 2, first_detail: 'held:SendingPausedException', may_have_sent: false }]);
+    expect(h.alarms.filter((x) => x.includes('gave up'))).toEqual([]);
+  });
+
+  it('⭐ round 3 — RE3 (a) the scope value is compared EXACTLY (case-sensitive): an UPPER-cased copy of the Pariwar id is ⛔ emailed', async () => {
+    let P = isolated();
+    while (!/[a-f]/.test(P)) P = isolated(); // ⭐ a Pariwar id WITH letters (an all-digit one upper-cases to itself)
+    const c = await refused(P);
+    const exact = await admin(P);
+    const upper = await admin(P, { scopeValue: P.toUpperCase() });
+    const h = harness([P]);
+    await tick(h);
+    expect(sentTo(h)).toEqual([exact.address]);
+    expect((await rowsOf(c)).map((r) => r.recipient_user_id)).toEqual([exact.id]);
+    expect(sentTo(h)).not.toContain(upper.address);
+  });
+
+  it('⭐ round 3 — AC7 on the ERROR paths: a 5xx retry, a HELD fault, a `rejected`, an `error:invalid_address` ⇒ ⛔ address in rows, alarms, logs or thrown messages', async () => {
+    const P = isolated();
+    const h = harness([P]);
+    const [c1, c2, c3] = [await refused(P), await refused(P), await refused(P)];
+    const [a1, a2, a3] = [await admin(P), await admin(P), await admin(P)];
+    const bad = await admin(P, { address: 'x"<priya.leak@pariwar.example>' });
+    const cBad = await refused(P);
+    const logs: string[] = [];
+    const thrown: string[] = [];
+    const spies = (['log', 'info', 'warn', 'error'] as const).map((k) => vi.spyOn(console, k).mockImplementation((...a: unknown[]) => void logs.push(JSON.stringify(a))));
+    const run = async (cid: string, uid: string, job: string, respond: StaffEmailSendResult) => {
+      h.client.state.respond = () => respond;
+      probe.claim = { pariwarId: P, claimCaseId: cid };
+      try {
+        return await runSuspicionStaffEmailChild(h.deps, envelope(P, cid, uid), job);
+      } catch (e) {
+        thrown.push(`${(e as Error).name}: ${(e as Error).message}`);
+        return null;
+      }
+    };
+    try {
+      await run(c1, a1.id, 'j1', { kind: 'transient', detail: 'transient:InternalFailure', held: false, mayHaveSent: true });
+      await run(c1, a1.id, 'j1', { kind: 'final', outcome: 'accepted', providerMessageId: 'm1' });
+      await run(c2, a2.id, 'j2', { kind: 'transient', detail: 'held:MessageRejected', held: true, mayHaveSent: false });
+      await run(c3, a3.id, 'j3', { kind: 'final', outcome: 'rejected', detail: 'rejected:400:TM_4001.SM_113' });
+      await run(cBad, bad.id, 'j4', { kind: 'final', outcome: 'accepted', providerMessageId: 'never' });
+    } finally {
+      for (const sp of spies) sp.mockRestore();
+    }
+    // EXACTLY the two transient paths threw (the 5xx and the HELD fault) — the designed retry signal.
+    expect(thrown).toEqual([expect.stringMatching(/^ClaimCorrectionTransientError: /), expect.stringMatching(/^ClaimCorrectionTransientError: /)]);
+    expect(await rowsOf(cBad)).toMatchObject([{ outcome: 'error', detail: 'error:invalid_address' }]);
+    const rows = (await pool.query(`SELECT * FROM claim_suspicion_staff_emails WHERE claim_case_id = ANY($1::uuid[])`, [[c1, c2, c3, cBad]])).rows;
+    const artifacts = JSON.stringify({ alarms: h.alarms, logs, thrown, rows });
+    for (const x of [a1, a2, a3]) expect(artifacts).not.toContain(x.address);
+    expect(artifacts).not.toContain('priya.leak');
+    expect(h.client.sent.map((m) => m.to)).not.toContain(bad.address);
+  });
+
+  it('⭐ round 4 — a RENDER failure alarms ONCE per row (twice tried); a Q2 READ failure (a DB blip) is ⛔ alarmed; both stay `attempting`', async () => {
+    const P = isolated();
+    const h = harness([P]);
+    const [cr, cq] = [await refused(P), await refused(P)];
+    const [ar, aq] = [await admin(P), await admin(P)];
+    renderSwitch.fail = true;
+    try {
+      probe.claim = { pariwarId: P, claimCaseId: cr };
+      for (let i = 0; i < 2; i += 1) await expect(runSuspicionStaffEmailChild(h.deps, envelope(P, cr, ar.id), 'job-r')).rejects.toBeInstanceOf(ClaimCorrectionTransientError);
+    } finally {
+      renderSwitch.fail = false;
+    }
+    expect(await rowsOf(cr)).toMatchObject([{ outcome: 'attempting', detail: 'transient:render_failed', may_have_sent: false }]);
+    expect(h.alarms.filter((x) => x.includes(cr) && x.includes('transient:render_failed'))).toHaveLength(1);
+    // Q2's read fails — a pool whose clients reject that ONE statement (restored on release).
+    const failing = Object.create(pool) as pg.Pool;
+    failing.connect = (async () => {
+      const c = await pool.connect();
+      const realQuery = c.query.bind(c);
+      const realRelease = c.release.bind(c);
+      (c as { query: unknown }).query = (q: unknown, ...rest: unknown[]) => {
+        const text = typeof q === 'string' ? q : ((q as { text?: string } | null)?.text ?? '');
+        return text.includes('se_q2.email_ciphertext') ? Promise.reject(new Error('read failed (test)')) : (realQuery as (...a: unknown[]) => unknown)(q, ...rest);
+      };
+      (c as { release: unknown }).release = (...a: unknown[]) => {
+        (c as { query: unknown }).query = realQuery;
+        (c as { release: unknown }).release = realRelease;
+        return (realRelease as (...x: unknown[]) => void)(...a);
+      };
+      return c;
+    }) as never;
+    probe.claim = { pariwarId: P, claimCaseId: cq };
+    for (let i = 0; i < 2; i += 1) {
+      await expect(runSuspicionStaffEmailChild({ ...h.deps, pool: failing }, envelope(P, cq, aq.id), 'job-q')).rejects.toBeInstanceOf(ClaimCorrectionTransientError);
+    }
+    expect(await rowsOf(cq)).toMatchObject([{ outcome: 'attempting', detail: 'transient:read_failed', may_have_sent: false }]);
+    expect(h.alarms.filter((x) => x.includes(cq))).toEqual([]);
+    expect(h.client.sent).toHaveLength(0);
   });
 
   // ── AC4 — once ever, at-least-once recorded ──────────────────────────────────────────────────────────────────────────────
@@ -529,9 +673,9 @@ describe.skipIf(!hasDatabase)('Story 6.25 — the staff email (live DB, own-comm
     h.setNow(now);
     const created = new Date(claim.suspicionStaffEmailReclaimCutoff(now).getTime() - MIN);
     await pool.query(
-      `INSERT INTO claim_suspicion_staff_emails (pariwar_id, claim_case_id, recipient_user_id, outcome, claimed_at, claimed_by_job, created_at, detail)
-       VALUES ($1, $2, $3, 'attempting', $4, 'old', $6, 'held:SendingPausedException'),
-              ($1, $2, $5, 'attempting', $7, 'live', $6, 'held:SendingPausedException')`,
+      `INSERT INTO claim_suspicion_staff_emails (pariwar_id, claim_case_id, recipient_user_id, outcome, claimed_at, claimed_by_job, created_at, detail, aging_since)
+       VALUES ($1, $2, $3, 'attempting', $4, 'old', $6, 'held:SendingPausedException', $6),
+              ($1, $2, $5, 'attempting', $7, 'live', $6, 'held:SendingPausedException', $6)`,
       [P, c, old.id, new Date(now.getTime() - claim.STAFF_EMAIL_SEND_LEASE_MS - MIN), live.id, created, new Date(now.getTime() - MIN)],
     );
     await tick(h);
@@ -577,7 +721,10 @@ describe.skipIf(!hasDatabase)('Story 6.25 — the staff email (live DB, own-comm
     await pool.query(`UPDATE admin_credentials SET email_ciphertext = 'enc:v1:not-an-envelope' WHERE user_id = $1`, [a3.id]);
     probe.claim = { pariwarId: P, claimCaseId: c3 };
     await expect(runSuspicionStaffEmailChild(h.deps, envelope(P, c3, a3.id), job)).rejects.toBeInstanceOf(ClaimCorrectionTransientError);
+    await expect(runSuspicionStaffEmailChild(h.deps, envelope(P, c3, a3.id), job)).rejects.toBeInstanceOf(ClaimCorrectionTransientError);
     expect(await rowsOf(c3)).toMatchObject([{ outcome: 'attempting', detail: 'transient:decrypt_failed', may_have_sent: false }]);
+    // ⭐ Round 3 — a decrypt failure can be DETERMINISTIC (a wrong KEK) ⇒ alarmed like a HELD fault: ONCE across two attempts.
+    expect(h.alarms.filter((x) => x.includes(c3) && x.includes('transient:decrypt_failed'))).toHaveLength(1);
     const ct = await encryption.encryptTier1(Buffer.from(a3.address, 'utf-8'), encryption.ADMIN_EMAIL_ENCRYPTION_CONTEXT, enc.kms, enc.kekRef);
     await pool.query(`UPDATE admin_credentials SET email_ciphertext = $2 WHERE user_id = $1`, [a3.id, encryption.serializeEnvelope(ct)]);
     expect(await runSuspicionStaffEmailChild(h.deps, envelope(P, c3, a3.id), job)).toEqual({ status: 'sent', outcome: 'accepted' });
@@ -599,7 +746,7 @@ describe.skipIf(!hasDatabase)('Story 6.25 — the staff email (live DB, own-comm
     probe.claim = { pariwarId: P, claimCaseId: c };
     for (let i = 0; i < 4; i += 1) await expect(runSuspicionStaffEmailChild(h.deps, envelope(P, c, a.id), 'job-1')).rejects.toBeInstanceOf(ClaimCorrectionTransientError);
     expect(await rowsOf(c)).toMatchObject([{ outcome: 'attempting', attempt_count: 4, detail: 'held:unknown', claimed_by_job: 'job-1' }]);
-    const heldAlarms = h.alarms.filter((x) => x.includes('HELD by a provider'));
+    const heldAlarms = h.alarms.filter((x) => x.includes('HELD by an account'));
     expect(heldAlarms).toHaveLength(3); // SendingPaused ONCE (two tries), AccessDenied, unknown
     // A recorded recipient-specific name ⇒ `rejected` + alarm — the ONLY final failure.
     const c2 = await refused(P);
@@ -695,32 +842,6 @@ describe.skipIf(!hasDatabase)('Story 6.25 — the staff email (live DB, own-comm
     expect(await rowsOf(c)).toMatchObject([{ outcome: 'error', detail: 'error:no_address' }]);
     expect(h.alarms.filter((m) => m.includes(c) && m.includes('error:no_address'))).toHaveLength(1);
   });
-
-  // ── AC2 (ix) — the schedule ─────────────────────────────────────────────────────────────────────────────────────────────
-
-  it('⭐ AC2 (ix) — `*/15 * * * *` IST; budget < expiry < cadence, on BOTH createQueue and schedule; the send worker states batchSize 1; a boot alarm is raised once', async () => {
-    const createQueue = vi.fn(() => Promise.resolve());
-    const schedule = vi.fn(() => Promise.resolve());
-    const work = vi.fn(() => Promise.resolve('w'));
-    const alarms: string[] = [];
-    await registerClaimSuspicionStaffEmailWorkers(
-      { createQueue, schedule, work } as never,
-      { ...harness([randomUUID()]).deps, onAlarm: (m) => alarms.push(m) },
-      { bootAlarm: 'config:secret_unresolvable' },
-    );
-    expect(STAFF_EMAIL_SWEEP_CRON).toBe('*/15 * * * *');
-    expect(STAFF_EMAIL_SWEEP_BUDGET_MS).toBeLessThan(STAFF_EMAIL_SWEEP_EXPIRE_SECONDS * 1000);
-    expect(STAFF_EMAIL_SWEEP_EXPIRE_SECONDS * 1000).toBeLessThan(15 * 60 * 1000);
-    expect(createQueue).toHaveBeenCalledWith(QUEUE_NAMES.CLAIM_SUSPICION_STAFF_EMAIL_SWEEP, { expireInSeconds: STAFF_EMAIL_SWEEP_EXPIRE_SECONDS });
-    expect(createQueue).toHaveBeenCalledWith(SEND_QUEUE);
-    expect(schedule).toHaveBeenCalledWith(QUEUE_NAMES.CLAIM_SUSPICION_STAFF_EMAIL_SWEEP, '*/15 * * * *', {}, {
-      tz: CLAIM_CORRECTION_TZ,
-      ...CORRECTION_SWEEP_RETRY,
-      expireInSeconds: STAFF_EMAIL_SWEEP_EXPIRE_SECONDS,
-    });
-    expect(work).toHaveBeenCalledWith(SEND_QUEUE, { batchSize: 1 }, expect.any(Function));
-    expect(alarms).toEqual([expect.stringContaining('config:secret_unresolvable')]);
-  });
 });
 
 // ── Review Finding (round 2) — the SEND worker's catch around an unexpected (non-transient) throw. NO database needed: a
@@ -751,5 +872,80 @@ describe('the CLAIM_SUSPICION_STAFF_EMAIL_SEND worker — an unexpected (non-tra
     expect(alarms[0]).toContain('job-x');
     expect(alarms[0]).toContain('InvalidBrandedIdError');
     expect(alarms[0]).not.toContain('not-a-uuid'); // ⛔ the bad value itself (Invariant 2) — ids + fixed words only.
+  });
+});
+
+describe('the registration and the sweep guards (⛔ database)', () => {
+  // ── AC2 (ix) — the schedule (⭐ round 3: ⛔ DB needed — outside the `skipIf(!hasDatabase)` block) ──────────────────────────
+
+  it('⭐ AC2 (ix) — `*/15 * * * *` IST; budget < expiry < cadence, on BOTH createQueue and schedule; the send worker states batchSize 1; a boot alarm is raised once', async () => {
+    const createQueue = vi.fn(() => Promise.resolve());
+    const schedule = vi.fn(() => Promise.resolve());
+    const work = vi.fn(() => Promise.resolve('w'));
+    const alarms: string[] = [];
+    await registerClaimSuspicionStaffEmailWorkers(
+      { createQueue, schedule, work } as never,
+      { pool: {} as pg.Pool, encryption: {} as ClaimSuspicionStaffEmailDeps['encryption'], staffEmail: createFakeStaffEmailClient(), adminAppOrigin: ORIGIN, onAlarm: (m) => alarms.push(m) },
+      { bootAlarm: 'config:secret_unresolvable' },
+    );
+    expect(STAFF_EMAIL_SWEEP_CRON).toBe('*/15 * * * *');
+    expect(STAFF_EMAIL_SWEEP_BUDGET_MS).toBeLessThan(STAFF_EMAIL_SWEEP_EXPIRE_SECONDS * 1000);
+    expect(STAFF_EMAIL_SWEEP_EXPIRE_SECONDS * 1000).toBeLessThan(15 * 60 * 1000);
+    expect(createQueue).toHaveBeenCalledWith(QUEUE_NAMES.CLAIM_SUSPICION_STAFF_EMAIL_SWEEP, { expireInSeconds: STAFF_EMAIL_SWEEP_EXPIRE_SECONDS });
+    expect(createQueue).toHaveBeenCalledWith(SEND_QUEUE);
+    expect(schedule).toHaveBeenCalledWith(QUEUE_NAMES.CLAIM_SUSPICION_STAFF_EMAIL_SWEEP, '*/15 * * * *', {}, {
+      tz: CLAIM_CORRECTION_TZ,
+      ...CORRECTION_SWEEP_RETRY,
+      expireInSeconds: STAFF_EMAIL_SWEEP_EXPIRE_SECONDS,
+    });
+    expect(work).toHaveBeenCalledWith(SEND_QUEUE, { batchSize: 1 }, expect.any(Function));
+    expect(alarms).toEqual([expect.stringContaining('config:secret_unresolvable')]);
+  });
+
+  it('⭐ round 4 — a CONFIGURED provider with an unusable `ADMIN_APP_ORIGIN` raises ONE boot alarm; an unset provider stays silent', async () => {
+    const reg = async (staffEmail: ClaimSuspicionStaffEmailDeps['staffEmail'], adminAppOrigin: string | undefined) => {
+      const alarms: string[] = [];
+      const fn = () => Promise.resolve('w');
+      await registerClaimSuspicionStaffEmailWorkers(
+        { createQueue: fn, schedule: fn, work: fn } as never,
+        { pool: {} as pg.Pool, encryption: {} as ClaimSuspicionStaffEmailDeps['encryption'], staffEmail, adminAppOrigin, onAlarm: (m) => alarms.push(m) },
+      );
+      return alarms;
+    };
+    expect(await reg(createFakeStaffEmailClient(), 'http://admin.twt.example')).toEqual([expect.stringContaining('config:admin_app_origin_invalid')]);
+    expect(await reg(createFakeStaffEmailClient(), undefined)).toEqual([expect.stringContaining('config:admin_app_origin_invalid')]);
+    expect(await reg(createFakeStaffEmailClient(), ORIGIN)).toEqual([]);
+    const off = createFakeStaffEmailClient();
+    off.state.gap = 'config:provider_unset';
+    expect(await reg(off, undefined)).toEqual([]);
+  });
+
+  it('⭐ round 3 — RE11: an EMPTY allowlist, and ANY allowlist in production, are REFUSED (alarmed) — ⛔ statement runs', async () => {
+    const alarms: string[] = [];
+    const query = vi.fn(() => Promise.reject(new Error('the pool must not be touched')));
+    const deps = (allow: readonly string[]) =>
+      ({
+        pool: { query, connect: query } as unknown as pg.Pool,
+        encryption: {} as ClaimSuspicionStaffEmailDeps['encryption'],
+        staffEmail: createFakeStaffEmailClient(),
+        adminAppOrigin: ORIGIN,
+        onAlarm: (m: string) => alarms.push(m),
+        pariwarAllowlist: allow,
+      }) satisfies ClaimSuspicionStaffEmailDeps;
+    const send = vi.fn();
+    const empty = { scannedPairs: 0, enqueued: 0, heldForConfig: 0, finalisedStuck: 0, budgetExhausted: false };
+    expect(await runSuspicionStaffEmailSweep(deps([]), { send } as never)).toEqual(empty);
+    expect(alarms).toEqual([expect.stringContaining('`pariwarAllowlist` is EMPTY')]);
+    const prev = process.env['NODE_ENV'];
+    process.env['NODE_ENV'] = 'production';
+    try {
+      expect(await runSuspicionStaffEmailSweep(deps([DA]), { send } as never)).toEqual(empty);
+    } finally {
+      if (prev === undefined) delete process.env['NODE_ENV'];
+      else process.env['NODE_ENV'] = prev;
+    }
+    expect(alarms[1]).toContain('while NODE_ENV is production');
+    expect(query).not.toHaveBeenCalled();
+    expect(send).not.toHaveBeenCalled();
   });
 });

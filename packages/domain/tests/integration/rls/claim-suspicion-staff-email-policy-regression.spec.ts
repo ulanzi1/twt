@@ -4,13 +4,16 @@
 // composite claim FK and the recipient FK, the column-narrowed INSERT and UPDATE grants (verified in
 // `information_schema.column_privileges` as EXACT sets, a denied column 42501, ONE positive write of every granted column),
 // ⭐ the once-per-(claim, recipient) UNIQUE NULLS NOT DISTINCT (a two-NULL insert FAILS), every CHECK and the partial index BY
-// NAME, and the DB ↔ TS outcome CHECK lockstep (EXACT set). Live DB only; per-test ROLLBACK (setupLiveDb).
+// NAME, and the DB ↔ TS outcome CHECK lockstep (EXACT set). ⭐ 0153 (code review round 3, Decision 2 A): the `detail` /
+// `first_detail` vocabulary CHECKs (pattern pinned to the TS constant) and the BEFORE UPDATE trigger — a FINISHED row is frozen
+// (even for the superuser), `may_have_sent` never goes back, and the claim cascade still deletes. Live DB only; per-test ROLLBACK
+// (setupLiveDb).
 
 import { randomUUID } from 'node:crypto';
 
 import { describe, expect, it } from 'vitest';
 
-import { SUSPICION_STAFF_EMAIL_OUTCOMES } from '../../../src/schema/claim_suspicion_staff_emails.js';
+import { SUSPICION_STAFF_EMAIL_DETAIL_PATTERN, SUSPICION_STAFF_EMAIL_OUTCOMES } from '../../../src/schema/claim_suspicion_staff_emails.js';
 import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
 import { PARIWAR_A, PARIWAR_B, enterAppRoleNoScope, enterAppScope, seedClaim, seedUser } from '../_helpers.js';
 
@@ -18,15 +21,15 @@ type Client = ReturnType<typeof getTx>['client'];
 
 const TABLE = 'claim_suspicion_staff_emails';
 
-/** As the superuser: a refused claim, one Pariwar Admin user and their finished email. */
+/** As the superuser: a refused claim, one Pariwar Admin user and their IN-FLIGHT email (`attempting` — 0153 freezes a finished one). */
 async function seedEmail(client: Client, pariwarId: string) {
   const { tx } = getTx();
   const claimCaseId = await seedClaim(tx, pariwarId, { currentState: 'denied' });
   const userId = await seedUser(tx);
   const noticeId = randomUUID();
   await client.query(
-    `INSERT INTO ${TABLE} (notice_id, pariwar_id, claim_case_id, recipient_user_id, outcome, provider_message_id)
-     VALUES ($1, $2, $3, $4, 'accepted', 'msg-1')`,
+    `INSERT INTO ${TABLE} (notice_id, pariwar_id, claim_case_id, recipient_user_id, outcome, claimed_at, claimed_by_job)
+     VALUES ($1, $2, $3, $4, 'attempting', now(), 'job-seed')`,
     [noticeId, pariwarId, claimCaseId, userId],
   );
   return { claimCaseId, userId, noticeId };
@@ -205,7 +208,7 @@ describe.skipIf(!hasDatabase)('the staff email record — migration 0152 + RLS p
         ['claim_case_id', 'claimed_at', 'claimed_by_job', 'detail', 'outcome', 'pariwar_id', 'recipient_user_id'].sort(),
       );
       expect(await grantedColumns(client, 'UPDATE')).toEqual(
-        ['attempt_count', 'claimed_at', 'claimed_by_job', 'detail', 'first_detail', 'may_have_sent', 'outcome', 'provider_message_id', 'updated_at'].sort(),
+        ['aging_since', 'attempt_count', 'claimed_at', 'claimed_by_job', 'detail', 'first_detail', 'may_have_sent', 'outcome', 'provider_message_id', 'updated_at'].sort(),
       );
       const { rows } = await client.query<{ n: number }>(
         `SELECT count(*)::int AS n FROM information_schema.table_privileges
@@ -220,7 +223,7 @@ describe.skipIf(!hasDatabase)('the staff email record — migration 0152 + RLS p
       const { client } = getTx();
       const s = await seedEmail(client, PARIWAR_A);
       await enterAppScope(client, PARIWAR_A);
-      for (const over of [{ notice_id: randomUUID() }, { attempt_count: 2 }, { may_have_sent: true }, { created_at: new Date() }, { first_detail: 'x' }]) {
+      for (const over of [{ notice_id: randomUUID() }, { attempt_count: 2 }, { may_have_sent: true }, { created_at: new Date() }, { first_detail: 'x' }, { aging_since: new Date() }]) {
         await expectPgError(client, () => insertRow(client, { ...validRow(s), ...over }), DENIED);
       }
       await expectAccepted(client, () =>
@@ -251,8 +254,8 @@ describe.skipIf(!hasDatabase)('the staff email record — migration 0152 + RLS p
       await enterAppScope(client, PARIWAR_A);
       await expectAccepted(client, () =>
         client.query(
-          `UPDATE ${TABLE} SET outcome = 'attempting', provider_message_id = 'p', detail = 'd', first_detail = 'f',
-             attempt_count = 2, may_have_sent = true, claimed_at = now(), claimed_by_job = 'j', updated_at = now()
+          `UPDATE ${TABLE} SET outcome = 'error', provider_message_id = 'p', detail = 'error:no_address', first_detail = 'transient:network',
+             attempt_count = 2, may_have_sent = true, claimed_at = now(), claimed_by_job = 'j', updated_at = now(), aging_since = now()
            WHERE notice_id = $1`,
           [s.noticeId],
         ),
@@ -274,7 +277,9 @@ describe.skipIf(!hasDatabase)('the staff email record — migration 0152 + RLS p
           'claim_suspicion_staff_emails_claim_case_fk',
           'claim_suspicion_staff_emails_claim_recipient_uq',
           'claim_suspicion_staff_emails_detail_length_check',
+          'claim_suspicion_staff_emails_detail_vocabulary_check',
           'claim_suspicion_staff_emails_first_detail_length_check',
+          'claim_suspicion_staff_emails_first_detail_vocabulary_check',
           'claim_suspicion_staff_emails_no_target_recipient_check',
           'claim_suspicion_staff_emails_outcome_check',
           'claim_suspicion_staff_emails_pkey',
@@ -286,7 +291,8 @@ describe.skipIf(!hasDatabase)('the staff email record — migration 0152 + RLS p
         [TABLE],
       );
       expect(idx.rows).toHaveLength(1);
-      expect(idx.rows[0]!.indexdef).toMatch(/\(created_at, claimed_at\) WHERE \(outcome = 'attempting'::text\)/);
+      // 0153 — the give-up's anchor moved from `created_at` to `aging_since` (`-300` §2 (ii)).
+      expect(idx.rows[0]!.indexdef).toMatch(/\(aging_since, claimed_at\) WHERE \(outcome = 'attempting'::text\)/);
       const uq = await client.query<{ def: string }>(
         `SELECT pg_get_constraintdef(oid) AS def FROM pg_constraint WHERE conname = 'claim_suspicion_staff_emails_claim_recipient_uq'`,
       );
@@ -324,8 +330,47 @@ describe.skipIf(!hasDatabase)('the staff email record — migration 0152 + RLS p
       );
       await expectPgError(client, ins({ detail: 'x'.repeat(201) }), CHECK('claim_suspicion_staff_emails_detail_length_check'));
       await expectPgError(client, ins({ first_detail: 'x'.repeat(201) }), CHECK('claim_suspicion_staff_emails_first_detail_length_check'));
-      await expectAccepted(client, ins({ detail: 'x'.repeat(200), first_detail: 'y'.repeat(200) }));
+      // 0153 — the length CHECKs are named BEFORE the vocabulary ones (PG checks in name order) ⇒ an over-long value still
+      // reports length; a short off-vocabulary value reports the vocabulary.
+      await expectPgError(client, ins({ detail: 'x' }), CHECK('claim_suspicion_staff_emails_detail_vocabulary_check'));
+      await expectPgError(client, ins({ detail: 'held:priya@example.com' }), CHECK('claim_suspicion_staff_emails_detail_vocabulary_check'));
+      await expectPgError(client, ins({ first_detail: 'Message rejected: a@b.in' }), CHECK('claim_suspicion_staff_emails_first_detail_vocabulary_check'));
+      await expectAccepted(client, ins({ detail: `rejected:599:${'A'.repeat(64)}`, first_detail: `held:${'b'.repeat(64)}` }));
       await expectAccepted(client, ins({ outcome: 'attempting', claimed_at: '2026-10-09T04:30:00Z', claimed_by_job: 'j', detail: null }));
+    });
+
+    it('⭐ 0153 LOCKSTEP — both vocabulary CHECKs carry EXACTLY `SUSPICION_STAFF_EMAIL_DETAIL_PATTERN`', async () => {
+      const { client } = getTx();
+      const { rows } = await client.query<{ conname: string; def: string }>(
+        `SELECT conname, pg_get_constraintdef(oid) AS def FROM pg_constraint
+          WHERE conname IN ('claim_suspicion_staff_emails_detail_vocabulary_check', 'claim_suspicion_staff_emails_first_detail_vocabulary_check')`,
+      );
+      expect(rows).toHaveLength(2);
+      for (const r of rows) expect(r.def.match(/~ '(.*)'::text/)?.[1], r.conname).toBe(SUSPICION_STAFF_EMAIL_DETAIL_PATTERN);
+    });
+
+    it('⭐ 0153 trigger — a FINISHED row is frozen (any column, even the superuser); `may_have_sent` never goes back; the cascade still deletes', async () => {
+      const { client } = getTx();
+      const s = await seedEmail(client, PARIWAR_A);
+      const FROZEN = { code: '23000', message: expect.stringMatching(/finished row/) };
+      const NEVER_BACK = { code: '23000', message: expect.stringMatching(/never back/) };
+      const upd = (set: string) => () => client.query(`UPDATE ${TABLE} SET ${set} WHERE notice_id = $1`, [s.noticeId]);
+      // In flight: may_have_sent TRUE is accepted, TRUE → FALSE is refused.
+      await client.query(`UPDATE ${TABLE} SET may_have_sent = true WHERE notice_id = $1`, [s.noticeId]);
+      await expectPgError(client, upd('may_have_sent = false'), NEVER_BACK);
+      // Finished ⇒ frozen: back to attempting, another outcome, and even a harmless column.
+      await client.query(`UPDATE ${TABLE} SET outcome = 'accepted', provider_message_id = 'msg-1' WHERE notice_id = $1`, [s.noticeId]);
+      for (const set of ["outcome = 'attempting'", "outcome = 'error'", 'updated_at = now()', "detail = 'error:no_address'"]) {
+        await expectPgError(client, upd(set), FROZEN);
+      }
+      // ⛔ A DELETE arm — the claim's ON DELETE cascade still removes the finished row.
+      await client.query(`DELETE FROM claims WHERE claim_case_id = $1`, [s.claimCaseId]);
+      expect((await client.query(`SELECT 1 FROM ${TABLE} WHERE notice_id = $1`, [s.noticeId])).rowCount).toBe(0);
+      const trg = await client.query<{ tgenabled: string }>(
+        `SELECT tgenabled FROM pg_trigger WHERE tgname = 'claim_suspicion_staff_emails_guard_update' AND tgrelid = $1::regclass`,
+        [TABLE],
+      );
+      expect(trg.rows).toEqual([{ tgenabled: 'O' }]);
     });
 
     it('⭐ RE4 / RE5 — `no_target` ⟺ a NULL recipient (both directions)', async () => {

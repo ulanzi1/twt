@@ -1,3 +1,23 @@
+# last_updated: 2026-10-09l (⭐ **STORY 6.25 — CODE REVIEW ROUND 4 (narrow — round 3's uncommitted fixes, 19 files; three layers in
+# PARALLEL, read-only) ⇒ stays `done`.** D3 → A (the user's call) + 8 patch ⇒ 9 patch, 0 defer, 6 dismissed, all applied. ⭐ HIGH:
+# round 3 had changed BigDev's committed `-299` RE11 (+ RE5) without an entry ⇒ `2026-10-09-300` (author-commit, the slip
+# disclosed) + `⚠ AMENDED` lines — ⚠ commit it BEFORE the round-3/4 code. 0153 gains `aging_since` (the give-up's anchor, reset when
+# a parked row is re-claimed — a hold no longer counts against a row after its first post-hold child), applied to :5432 + :5433 and
+# proven on a scratch DB from zero. Park premise / held wording corrected; origin boot alarm; tighter address labels; fence and test
+# hardening; red-checks #11–#16 logged. `ci:local` green (34 jobs). Story Change Log 1.7. ⛔ No other row moves. On branch
+# `story/6-25-staff-email-notice-of-a-suspicion-refusal`.)
+# last_updated: 2026-10-09k (⭐ **STORY 6.25 — CODE REVIEW ROUND 3 (full code diff `3a7d3a1f..1f557e06`, 43 files; three chunks ×
+# three layers = nine reviewers in PARALLEL, read-only) ⇒ stays `done`.** 2 decision-needed (both A — the user's call) + 12 patch
+# ⇒ 14 patch, 3 defer, 27 dismissed; the one HIGH raised was FALSE. Applied: a HELD sweep PARKS stale in-flight rows and skips the
+# three-day give-up (a hold no longer burns a row that never retried); migration 0153 (the `detail` vocabulary CHECKs + a trigger
+# freezing finished rows and `may_have_sent`) applied to :5432 + :5433; `bootAlarm` = the client's `configGap()`; ZeptoMail's
+# named 429 classified by NAME; SES signing outside the fetch `try` + trimmed secrets; decrypt / render failures alarm; the
+# take-over re-checks the lease; a dot-atom address check + provisioning checks the login form's `Email`; the sign-in `next`
+# lower-cased and its real `validateSearch` tested; the email link pinned to the admin route; cross-check + fence hardened;
+# missing AC legs added (`upheld_final`, RE3 (a), AC6, AC7 error paths, RE11). Deferred (pre-existing): 0151/0152 grants for
+# the jobs service login (Row 24 (b)); a same-job-id concurrent run after pg-boss's timeout; boot's un-timed Secret Manager
+# awaits. `ci:local` green (34 jobs). Story Change Log 1.6. ⛔ No other row moves. On branch
+# `story/6-25-staff-email-notice-of-a-suspicion-refusal`.)
 # last_updated: 2026-10-09j (⭐ **STORY 6.25 — CODE REVIEW ROUND 2 (narrow re-review of round 1's own fixes, `391a670c..HEAD`,
 # 16 files / 495 lines; three layers SEQUENTIAL, read-only) ⇒ stays `done`.** 0 decision-needed, 3 patch, 1 defer, 7 dismissed
 # (B2 folded into the B1/E1 patch — one code change closed both): `scripts/provision-admin.ts` now imports and calls

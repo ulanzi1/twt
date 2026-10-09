@@ -115,8 +115,11 @@ list link. A 15-minute IST sweep (`claim.suspicion.staff_email.sweep`) enqueues 
 (`claim.suspicion.staff_email.send`); decisions in `.decision-log.md` `2026-10-09-299`, the transport in ADR-0040.
 
 **Configuration — FAIL-CLOSED** (`src/scheduler/staff-email-config.ts`). Unset in every environment until launch-gate roster
-Row 24 closes ⇒ the sweep HOLDS every email (writes ⛔ row) and raises one alarm per run. A secret NAME that is set but cannot be
-resolved also HOLDS (one boot alarm) — it does ⛔ fail boot (a recorded divergence from the SMS gateway's rule).
+Row 24 closes ⇒ the sweep HOLDS every email (writes ⛔ NEW row) and raises one alarm per run. A secret NAME that is set but cannot be
+resolved also HOLDS — it does ⛔ fail boot (a recorded divergence from the SMS gateway's rule). ⭐ EVERY client config gap
+(an unresolvable secret, missing credentials, a bad region / host / sender, an unknown provider name — and an unusable
+`ADMIN_APP_ORIGIN` once a provider is configured) raises ONE boot alarm;
+only an UNSET provider (deliberately off) is silent at boot.
 
 | Variable | Meaning |
 | --- | --- |
@@ -133,3 +136,6 @@ resolved also HOLDS (one boot alarm) — it does ⛔ fail boot (a recorded diver
 Before any row is written, the sweep runs a provider pre-flight (SES `GetAccount`: sending enabled AND out of the sandbox;
 ZeptoMail has none). Provider errors are classified by their error NAME — an account or config fault is HELD (the row stays
 `attempting`, alarmed once per fault), ⛔ a final failure. ⛔ An address or a provider error message is ever logged or stored.
+⭐ A HELD run (a config gap or a failing pre-flight) PARKS every in-flight row past its lease (⛔ live child holds one) and skips the
+three-day give-up; the next child re-claims a parked row and restarts its three days (`aging_since`), so a hold never burns a row
+that had no chance to retry (`2026-10-09-300`). ⚠ A pre-flight hold does ⛔ stop children already queued or retrying.

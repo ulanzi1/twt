@@ -88,7 +88,8 @@ Load-bearing details:
 - **Classification by error NAME, ⛔ by HTTP status alone** — SES returns a paused account, the sandbox and an unverified MAIL FROM
   domain as 400s; a status-based `4xx ⇒ rejected` would permanently spend once-ever rows during a fault fixed the next day. Account /
   config faults and ANY unrecognised name are HELD (the row stays `attempting`, alarmed once per distinct fault), ⛔ final.
-- **Fail-closed config.** Unset ⇒ every email held, ⛔ a row written, one alarm per sweep. A SET but unresolvable secret name HOLDS
+- **Fail-closed config.** Unset ⇒ every email held, ⛔ a NEW row written (stalled in-flight rows are parked, ⛔ given up —
+  `2026-10-09-300`), one alarm per sweep. A SET but unresolvable secret name HOLDS
   (⛔ fails boot — `apps/jobs` also runs the money jobs). The sweep runs a provider pre-flight (SES `GetAccount`: `SendingEnabled` and
   `ProductionAccessEnabled`) and holds on any failure.
 - **The DB role (F17).** Q1's selector runs on the jobs service login (BYPASSRLS); Q1's re-check and Q2 run under `SET LOCAL ROLE twt_app`

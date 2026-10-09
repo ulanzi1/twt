@@ -11,7 +11,10 @@
 //   · the config (RE7 A — an unresolvable secret HOLDS + one boot alarm, ⛔ throws) and `ADMIN_APP_ORIGIN`;
 //   · the template (AC3) — Hindi then English through the REAL `t()`, the ONLY variable `{link}`, a type-level guard.
 
-import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
+
+import { AwsClient } from 'aws4fetch';
+import { describe, expect, it, vi } from 'vitest';
 
 import {
   SES_HELD_ERROR_NAMES,
@@ -169,6 +172,27 @@ describe('AWS SES v2 adapter', () => {
     expect(await client.send(MSG)).toMatchObject({ kind: 'transient', held: true });
     expect(f.calls).toHaveLength(0);
   });
+
+  it('⭐ round 3 — the secrets are TRIMMED (a Secret Manager trailing newline ⛔ reaches the signature)', async () => {
+    const f = fakeFetch(() => json(200, { MessageId: 'm' }));
+    const client = createSesStaffEmailClient({ region: 'ap-south-1', accessKeyId: 'AKIDEXAMPLE\n', secretAccessKey: ' secret\n', from: 'noreply@twt.example', fetch: f.fn });
+    expect(await client.send(MSG)).toEqual({ kind: 'final', outcome: 'accepted', providerMessageId: 'm' });
+    expect(f.calls[0]!.headers.get('authorization')).toMatch(/Credential=AKIDEXAMPLE\//);
+  });
+
+  it('⭐ round 3 — a SIGNING failure is HELD `held:sign_failed` (⛔ may-have-sent: ⛔ request exists); the pre-flight reports `preflight:sign_failed`', async () => {
+    const f = fakeFetch(() => json(200, { MessageId: 'm' }));
+    const client = createSesStaffEmailClient({ region: 'ap-south-1', accessKeyId: 'AKID', secretAccessKey: 'k', from: 'noreply@twt.example', fetch: f.fn });
+    // `aws.sign` throws (e.g. a header value no `Request` can carry) ⇒ ⛔ request exists.
+    const spy = vi.spyOn(AwsClient.prototype, 'sign').mockRejectedValue(new TypeError('Invalid header value'));
+    try {
+      expect(await client.send(MSG)).toEqual({ kind: 'transient', detail: 'held:sign_failed', held: true, mayHaveSent: false });
+      expect(await client.preflight()).toEqual({ ok: false, detail: 'preflight:sign_failed' });
+      expect(f.calls).toHaveLength(0);
+    } finally {
+      spy.mockRestore();
+    }
+  });
 });
 
 describe('Zoho ZeptoMail adapter', () => {
@@ -213,6 +237,10 @@ describe('Zoho ZeptoMail adapter', () => {
     }
     expect(await zepto(() => zError(400, 'TM_3601', 'SMI_115')).client.send(MSG)).toEqual({ kind: 'transient', detail: 'transient:TM_3601.SMI_115', held: false, mayHaveSent: false });
     expect(await zepto(() => new Response('busy', { status: 429 })).client.send(MSG)).toEqual({ kind: 'transient', detail: 'transient:http_429', held: false, mayHaveSent: false });
+    // ⭐ Round 3 — a NAMED 429 keeps its own class (RE6: by NAME, ⛔ status alone): a recorded HELD code / an unknown code is HELD.
+    expect(await zepto(() => zError(429, 'TM_3601', 'SM_133')).client.send(MSG)).toEqual({ kind: 'transient', detail: 'held:TM_3601.SM_133', held: true, mayHaveSent: false });
+    expect(await zepto(() => zError(429, 'TM_7777', 'NEW_9')).client.send(MSG)).toMatchObject({ detail: 'held:TM_7777.NEW_9', held: true });
+    expect(await zepto(() => zError(429, 'TM_3601', 'SMI_115')).client.send(MSG)).toMatchObject({ detail: 'transient:TM_3601.SMI_115', held: false });
     expect(await zepto(() => new Response('<html>bad gateway</html>', { status: 502 })).client.send(MSG)).toEqual({ kind: 'transient', detail: 'transient:http_502', held: false, mayHaveSent: true });
     // The new docs' alternative error shape.
     expect(await zepto(() => json(400, { data: { error_code: 'TM_3004' }, message: 'error' })).client.send(MSG)).toMatchObject({ detail: 'held:TM_3004', held: true });
@@ -235,10 +263,12 @@ describe('the config (RE7)', () => {
     return v;
   };
 
-  it('unset / unknown provider ⇒ unconfigured (⛔ boot alarm); every send HELD', async () => {
-    expect((await buildStaffEmailClient({}, resolveFromEnv({}))).client.configGap()).toBe('config:provider_unset');
+  it('unset provider ⇒ unconfigured, ⛔ boot alarm (deliberately off); an UNKNOWN provider (a typo) ⇒ a boot alarm; every send HELD', async () => {
+    const unset = await buildStaffEmailClient({}, resolveFromEnv({}));
+    expect(unset.client.configGap()).toBe('config:provider_unset');
+    expect(unset.bootAlarm).toBeNull();
     const typo = await buildStaffEmailClient({ STAFF_EMAIL_PROVIDER: 'sess' }, resolveFromEnv({}));
-    expect(typo).toMatchObject({ bootAlarm: null });
+    expect(typo).toMatchObject({ bootAlarm: 'config:provider_unknown' });
     expect(typo.client.configGap()).toBe('config:provider_unknown');
     expect(await createUnconfiguredStaffEmailClient('config:provider_unset').send(MSG)).toMatchObject({ kind: 'transient', held: true });
   });
@@ -274,6 +304,17 @@ describe('the config (RE7)', () => {
     expect(bad.bootAlarm).toBe('config:sender_invalid');
     const http = await buildStaffEmailClient({ STAFF_EMAIL_PROVIDER: 'zeptomail', STAFF_EMAIL_FROM: 'noreply@twt.example', STAFF_EMAIL_ZEPTOMAIL_TOKEN_SECRET_NAME: 't', STAFF_EMAIL_ZEPTOMAIL_HOST: 'http://cpaas.zoho.in' }, resolveFromEnv({ STAFF_EMAIL_ZEPTOMAIL_TOKEN: 'k' }));
     expect(http.client.configGap()).toBe('config:zeptomail_host_invalid');
+    // ⭐ Round 3 — EVERY client gap is the boot alarm (⛔ only the sender): an unset sender, missing credentials, a bad region,
+    // a bad host.
+    expect(http.bootAlarm).toBe('config:zeptomail_host_invalid');
+    const noFrom = await buildStaffEmailClient({ ...sesEnv, STAFF_EMAIL_FROM: '' }, resolveFromEnv({ MY_ID: 'AKID', STAFF_EMAIL_SES_SECRET_ACCESS_KEY: 's' }));
+    expect(noFrom).toMatchObject({ bootAlarm: 'config:sender_missing' });
+    const noCreds = await buildStaffEmailClient({ STAFF_EMAIL_PROVIDER: 'ses', STAFF_EMAIL_FROM: 'noreply@twt.example' }, resolveFromEnv({}));
+    expect(noCreds.client.configGap()).toBe('config:credentials_missing');
+    expect(noCreds.bootAlarm).toBe('config:credentials_missing');
+    const badRegion = await buildStaffEmailClient({ ...sesEnv, STAFF_EMAIL_SES_REGION: 'ap-south1' }, resolveFromEnv({ MY_ID: 'AKID', STAFF_EMAIL_SES_SECRET_ACCESS_KEY: 's' }));
+    expect(badRegion.bootAlarm).toBe('config:ses_region_invalid');
+    for (const w of [noFrom, noCreds, badRegion, http, bad]) expect(w.bootAlarm).toBe(w.client.configGap());
   });
 
   it('⭐ ADMIN_APP_ORIGIN — an https ORIGIN only; ⛔ http, a path, a query, a fragment, credentials, garbage', () => {
@@ -293,15 +334,36 @@ describe('the config (RE7)', () => {
     expect(resolveAdminAppOrigin('https://admin.twt.example:443/admin')).toBeNull();
   });
 
-  it('isSendableEmailAddress — ASCII, one @, a dotted domain', () => {
-    for (const ok of ['a@b.co', 'priya.admin+x@example.org']) expect(isSendableEmailAddress(ok), ok).toBe(true);
-    for (const bad of ['', ' ', 'a@b', 'a b@c.co', 'a@@b.co', 'प्रिया@example.org', `${'x'.repeat(250)}@b.co`]) expect(isSendableEmailAddress(bad), bad).toBe(false);
+  it('isSendableEmailAddress — an ASCII dot-atom `local@domain` with a dotted domain', () => {
+    for (const ok of ['a@b.co', 'priya.admin+x@example.org', "o'brien@ex.in", 'x@xn--p1ai.xn--p1ai']) expect(isSendableEmailAddress(ok), ok).toBe(true);
+    for (const bad of ['', ' ', 'a@b', 'a b@c.co', 'a@@b.co', 'प्रिया@example.org', `${'x'.repeat(250)}@b.co`, `${'x'.repeat(65)}@b.co`]) {
+      expect(isSendableEmailAddress(bad), bad).toBe(false);
+    }
+    // ⭐ Round 3 — ⛔ display-name / quoted / list syntax (a provider may route `"x"<other@host.com>` to the OTHER mailbox), ⛔ empty
+    // or doubled dots, ⛔ a hyphen-edged label.
+    for (const bad of ['"x"<other@host.com>', 'Foo<victim@x.com>', 'a,b@x.com', 'a;b@x.com', '"a b"@x.com', 'a..b@x.org', '.a@x.org', 'a.@x.org', 'a@x..org', 'a@-x.org', 'a@x.-org', 'a@x.org-', 'a@x.--', 'a@x.o', 'a@x.org.']) {
+      expect(isSendableEmailAddress(bad), bad).toBe(false);
+    }
   });
 });
 
 describe('AC3 — the template (RE9, Invariant 1)', () => {
   const PARIWAR = '2b7c0a4e-5d1f-4e8a-9c3b-1f2e3d4c5b6a';
   const LINK = suspicionStaffEmailLink('https://admin.twt.example', PARIWAR);
+
+  it('⭐ round 3 — the link\'s path is the admin app\'s REAL route AND what its sign-in allowlist follows (three copies, ONE path)', () => {
+    const adminSrc = (rel: string) => readFileSync(new URL(`../../admin/src/${rel}`, import.meta.url), 'utf-8');
+    // (1) the route: exactly ONE admin route ends in `nominee-refusals`, and the link is it with the Pariwar id filled in.
+    const routes = [...adminSrc('router.tsx').matchAll(/path:\s*'([^']*nominee-refusals)'/g)].map((m) => m[1]!);
+    expect(routes).toEqual(['/p/$pariwarId/nominee-refusals']);
+    expect(new URL(LINK).pathname).toBe(routes[0]!.replace('$pariwarId', PARIWAR));
+    // (2) the sign-in return path: the list's own `next` and the allowlist regex name the SAME path.
+    const loginNext = adminSrc('routes/login-next.ts');
+    expect(loginNext).toContain('return `/p/${pariwarId.toLowerCase()}/nominee-refusals`;');
+    const allow = /const NOMINEE_REFUSALS_PATH = \/(.+)\/;/.exec(loginNext)?.[1];
+    expect(allow).toBeDefined();
+    expect(new RegExp(allow!).exec(new URL(LINK).pathname)?.[1]).toBe(PARIWAR);
+  });
 
   it('⭐ subject `<hi> / <en>`; body Hindi THEN English, the list link in BOTH; ⛔ unresolved token', () => {
     const { subject, text } = renderSuspicionStaffEmail({ link: LINK });

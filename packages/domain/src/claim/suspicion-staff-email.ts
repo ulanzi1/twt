@@ -16,6 +16,8 @@
 // ⭐ THE LEASE (RE11) is `STAFF_EMAIL_SEND_LEASE_MS` = 30 min — ⛔ `CORRECTION_SEND_LEASE_MS` (10 min, tuned for a DAILY sweep): at
 // a 15-minute cadence it would hand a still-retrying row to the next tick. The own-retry re-claim AND the transient note both
 // refresh `claimed_at`, so a live, retrying child keeps its row; a CRASHED child's row goes stale 30 min after its last touch.
+// The take-over UPDATE re-checks the lease itself (round 3). ⭐ A HELD sweep PARKS a stale row (`SUSPICION_STAFF_EMAIL_PARKED_BY`)
+// instead of letting the give-up age it out while ⛔ retry can run; the first child after the hold re-claims it at once.
 // ⭐ `may_have_sent` (RE5, RE5-bis) — set TRUE, never back: by a transient note whose result says so (a timeout, a dropped
 // connection, a provider 5xx / 408), and by a re-claim that finds `detail` NULL on an `attempting` row (the previous attempt
 // ended with ⛔ note — a crash after its claiming commit). The re-claim then CLEARS `detail` (its value moves to `first_detail`
@@ -35,6 +37,7 @@ import { addCalendarDays, istDateOf, istMidnightAt } from '../cycle-calendar/hol
 import { bindScopedDb, type Db } from '../db.js';
 import type { ClaimId, PariwarId, UserId } from '../ids/index.js';
 import { clampLimit } from '../pagination.js';
+import { SUSPICION_STAFF_EMAIL_DETAIL_PATTERN } from '../schema/claim_suspicion_staff_emails.js';
 import { staffEmailRecipientsSql } from './staff-email-identity-read.js';
 import { isSuspicionRefusalStanding, standingSuspicionRefusalSql } from './suspicion-refusal.js';
 
@@ -50,6 +53,13 @@ export const SUSPICION_STAFF_EMAIL_LOCK_TIMEOUT = '30s';
  * plus the send timeout — ⛔ `CORRECTION_SEND_LEASE_MS` (10 min).
  */
 export const STAFF_EMAIL_SEND_LEASE_MS = 30 * 60 * 1000;
+/**
+ * ⭐ THE PARKED MARKER (code review rounds 3–4, `-300` §2 (i)) — `claimed_by_job` of an `attempting` row a HELD sweep parked: it
+ * was past the lease, i.e. ⛔ live child holds it (a live child's claim or note keeps its row inside the lease). The held sweep
+ * enqueues ⛔ new child for it; the give-up SKIPS it; the next child RE-CLAIMS it (⛔ lease wait — defensive, a parked row is
+ * already past the lease barring clock skew) and restarts its `aging_since`. ⛔ A pg-boss job id (a UUID).
+ */
+export const SUSPICION_STAFF_EMAIL_PARKED_BY = 'sweep:held';
 
 type Queryable = Pick<pg.Pool, 'query'> | Pick<pg.PoolClient, 'query'>;
 
@@ -67,17 +77,23 @@ function toDate(v: Date | string): Date {
 
 // ── The `detail` vocabulary (RE5) — ONE builder; ⛔ free text, ⛔ ever provider message text ─────────────────────────────
 
-/** Why a locked re-check failed (RE11). */
-export type SuspicionStaffEmailRecheckReason = 'refusal_not_standing' | 'recipient_not_eligible' | 'recipients_exist' | 'claim_has_rows';
+/** Why a locked re-check failed (RE11). ⚠ LOCKSTEP with 0153's grammar — the grammar leg iterates THIS array (round 4). */
+export const SUSPICION_STAFF_EMAIL_RECHECK_REASONS = ['refusal_not_standing', 'recipient_not_eligible', 'recipients_exist', 'claim_has_rows'] as const;
+export type SuspicionStaffEmailRecheckReason = (typeof SUSPICION_STAFF_EMAIL_RECHECK_REASONS)[number];
+/** Why ⛔ address could be used after `begun` (RE11). ⚠ LOCKSTEP with 0153's grammar, as above. */
+export const SUSPICION_STAFF_EMAIL_ERROR_REASONS = ['no_address', 'invalid_address'] as const;
+export type SuspicionStaffEmailErrorReason = (typeof SUSPICION_STAFF_EMAIL_ERROR_REASONS)[number];
+/** The pre-call steps (RE5). */
+export const SUSPICION_STAFF_EMAIL_PRE_CALL_STEPS = ['read_failed', 'decrypt_failed', 'render_failed'] as const;
 
 /** What a `detail` can say. `name` is a provider error NAME (or `network` / `timeout` / `http_<status>`) — sanitised here. */
 export type SuspicionStaffEmailDetailInput =
   | { readonly kind: 'no_pariwar_admin' }
   | { readonly kind: 'transient'; readonly name: string }
   | { readonly kind: 'held'; readonly name: string }
-  | { readonly kind: 'pre_call'; readonly step: 'read_failed' | 'decrypt_failed' | 'render_failed' }
+  | { readonly kind: 'pre_call'; readonly step: (typeof SUSPICION_STAFF_EMAIL_PRE_CALL_STEPS)[number] }
   | { readonly kind: 'rejected'; readonly http: number; readonly name: string }
-  | { readonly kind: 'error'; readonly reason: 'no_address' | 'invalid_address' }
+  | { readonly kind: 'error'; readonly reason: SuspicionStaffEmailErrorReason }
   | { readonly kind: 'exhausted_three_days' }
   | { readonly kind: 'recheck'; readonly reason: SuspicionStaffEmailRecheckReason };
 
@@ -107,6 +123,20 @@ export function suspicionStaffEmailDetail(d: SuspicionStaffEmailDetailInput): st
       return 'exhausted:attempting_three_days';
     case 'recheck':
       return `exhausted:recheck_${d.reason}`;
+  }
+}
+
+const DETAIL_PATTERN = new RegExp(SUSPICION_STAFF_EMAIL_DETAIL_PATTERN);
+
+/** Does `detail` match the vocabulary's grammar (0153's CHECK — the SAME pattern)? */
+export function isSuspicionStaffEmailDetail(detail: string): boolean {
+  return DETAIL_PATTERN.test(detail);
+}
+
+/** ⛔ A writer stores a `detail` outside the vocabulary (0153 would refuse it too — this fails BEFORE the statement, ⛔ value echoed). */
+function assertDetail(detail: string | null): void {
+  if (detail !== null && !isSuspicionStaffEmailDetail(detail)) {
+    throw new Error('[suspicion-staff-email] a detail outside the fixed vocabulary — build it with suspicionStaffEmailDetail');
   }
 }
 
@@ -222,15 +252,17 @@ export async function selectDueSuspicionStaffEmails(
 
 // ── The give-up (RE11) ───────────────────────────────────────────────────────────────────────────────────────────────────
 
-/** Rows created before this instant and still `attempting` are given up: 00:00 IST of (today − 2). */
+/** Rows whose `aging_since` is before this instant and still `attempting` are given up: 00:00 IST of (today − 2). */
 export function suspicionStaffEmailReclaimCutoff(now: Date): Date {
   return istMidnightAt(addCalendarDays(istDateOf(now), -(SUSPICION_STAFF_EMAIL_RECLAIM_DAYS - 1)));
 }
 
 /**
- * ⭐ RE11 — THE EXHAUSTED-ROW FINALISER: every row still `attempting` that was created before `cutoff` AND whose LAST claim (or
+ * ⭐ RE11 (AMENDED by `-300`) — THE EXHAUSTED-ROW FINALISER: every row still `attempting` whose `aging_since` (its creation, or
+ * its re-claim after a hold) is before `cutoff` AND whose LAST claim (or
  * note) is older than `STAFF_EMAIL_SEND_LEASE_MS` becomes `error` / `exhausted:attempting_three_days` (its detail kept in
- * `first_detail`). Returns the pairs finalised, for the caller's ONE alarm — which ALWAYS says a prior attempt may have sent
+ * `first_detail`) — ⛔ a PARKED row (a held sweep parked it; the first child after the hold retries it — round 3 Decision 1 A).
+ * The caller runs this ONLY on an un-held run. Returns the pairs finalised, for the caller's ONE alarm — which ALWAYS says a prior attempt may have sent
  * (every given-up row had a claiming commit — `-298`'s principle).
  *
  * ── DELIBERATE: a CROSS-TENANT WRITE on the BYPASSRLS pool (family 9) ──
@@ -253,7 +285,7 @@ export async function expireExhaustedSuspicionStaffEmails(
             first_detail = COALESCE(first_detail, detail),
             detail = $4,
             updated_at = clock_timestamp()
-      WHERE outcome = 'attempting' AND created_at < $1 AND claimed_at < $3
+      WHERE outcome = 'attempting' AND aging_since < $1 AND claimed_at < $3 AND claimed_by_job <> $5
         AND ($2::uuid[] IS NULL OR pariwar_id = ANY($2::uuid[]))
       RETURNING claim_case_id, recipient_user_id`,
     [
@@ -261,9 +293,41 @@ export async function expireExhaustedSuspicionStaffEmails(
       input.allow === null ? null : [...input.allow],
       new Date(input.now.getTime() - STAFF_EMAIL_SEND_LEASE_MS),
       suspicionStaffEmailDetail({ kind: 'exhausted_three_days' }),
+      SUSPICION_STAFF_EMAIL_PARKED_BY,
     ],
   );
   return rows.map((r) => ({ claimCaseId: r.claim_case_id as ClaimId, recipientUserId: (r.recipient_user_id ?? null) as UserId | null }));
+}
+
+/**
+ * ⭐ THE HOLD PARK (code review rounds 3–4, `-300` §2 (i)): on a run the config check / provider pre-flight HOLDS, every
+ * `attempting` row past the lease (⛔ live child holds it — a live child's claim or note keeps it inside) is marked
+ * `claimed_by_job` = `SUSPICION_STAFF_EMAIL_PARKED_BY`, so the give-up cannot burn it while the sweep enqueues ⛔ retry, and the
+ * next child re-claims it (restarting its `aging_since`). ⚠ A held run does ⛔ stop children ALREADY queued or retrying: their
+ * race guard checks the config gap only (⛔ the pre-flight), so during a `preflight:*` hold they still run and may send — safe
+ * here, since their rows stay inside the lease (⛔ parked) and a parked row is re-claimed by whichever child comes next. ⛔ `claimed_at`, ⛔ `detail`, ⛔ `may_have_sent` are touched (the re-claim still sees a NULL detail).
+ * Returns how many rows it parked (for the caller's ONE end-of-run alarm).
+ *
+ * ── DELIBERATE: a CROSS-TENANT WRITE on the BYPASSRLS pool (family 9) ──
+ * The give-up's twin: a time bound over EVERY tenant's rows; its predicate (`attempting`, claimed before the lease, ⛔ parked) and
+ * its effect (one marker value) read and write ⛔ nothing tenant-derived — ⛔ PII, ⛔ cross-row join; `allow` (tests) narrows it.
+ * It takes ⛔ claim-row lock: a child re-claiming the row concurrently is re-evaluated by its own UPDATE's lease predicate.
+ * RE-EXAMINE when: the statement ever writes a value derived from another row or tenant, the pool loses BYPASSRLS, a
+ * per-tenant scheduler exists, or the lease stops bounding a live child's silence (the park relies on "past the lease ⇒ ⛔ live
+ * child").
+ */
+export async function parkHeldSuspicionStaffEmails(
+  q: Queryable,
+  input: { readonly now: Date; readonly allow: readonly string[] | null },
+): Promise<number> {
+  const { rowCount } = await q.query(
+    `UPDATE claim_suspicion_staff_emails
+        SET claimed_by_job = $3, updated_at = clock_timestamp()
+      WHERE outcome = 'attempting' AND claimed_at < $1 AND claimed_by_job <> $3
+        AND ($2::uuid[] IS NULL OR pariwar_id = ANY($2::uuid[]))`,
+    [new Date(input.now.getTime() - STAFF_EMAIL_SEND_LEASE_MS), input.allow === null ? null : [...input.allow], SUSPICION_STAFF_EMAIL_PARKED_BY],
+  );
+  return rowCount ?? 0;
 }
 
 // ── The claiming transaction (RE11) ──────────────────────────────────────────────────────────────────────────────────────
@@ -360,9 +424,10 @@ export async function beginSuspicionStaffEmail(
   if (existing && existing.outcome !== 'attempting') return { kind: 'already_final' };
   if (existing) {
     const ownRetry = existing.claimed_by_job === jobId;
+    const parked = existing.claimed_by_job === SUSPICION_STAFF_EMAIL_PARKED_BY;
     const leaseExpired =
       existing.claimed_at !== null && toDate(existing.claimed_at).getTime() < now.getTime() - STAFF_EMAIL_SEND_LEASE_MS;
-    if (!ownRetry && !leaseExpired) return { kind: 'held_by_other' };
+    if (!ownRetry && !parked && !leaseExpired) return { kind: 'held_by_other' };
   }
 
   const failed = await recheck(db, client, pariwarId, claimCaseId, recipientUserId);
@@ -401,13 +466,24 @@ export async function beginSuspicionStaffEmail(
       await client.query<{ notice_id: string; attempt_count: number; may_have_sent: boolean }>(
         `UPDATE claim_suspicion_staff_emails
             SET claimed_at = $2, claimed_by_job = $3, attempt_count = attempt_count + 1,
+                -- decision -300 §2 (ii): a PARKED row (it sat out a hold) restarts its three IST days now (SET reads the OLD holder).
+                aging_since = CASE WHEN claimed_by_job = $4 THEN $2 ELSE aging_since END,
                 may_have_sent = may_have_sent OR detail IS NULL,
                 first_detail = COALESCE(first_detail, detail), detail = NULL, updated_at = clock_timestamp()
           WHERE notice_id = $1 AND outcome = 'attempting'
+            AND (claimed_by_job = $3 OR claimed_by_job = $4 OR claimed_at < $5)
           RETURNING notice_id, attempt_count, may_have_sent`,
-        [existing.notice_id, now, jobId],
+        [existing.notice_id, now, jobId, SUSPICION_STAFF_EMAIL_PARKED_BY, new Date(now.getTime() - STAFF_EMAIL_SEND_LEASE_MS)],
       )
     ).rows[0];
+    if (!claimed) {
+      // ⭐ Round 3 — the lease is RE-CHECKED by the UPDATE itself (the SELECT above took ⛔ row lock, and a live holder's note /
+      // re-claim takes ⛔ claim lock): a holder that refreshed the lease meanwhile keeps its row; a row finished meanwhile is final.
+      const current = (
+        await client.query<{ outcome: string }>(`SELECT outcome FROM claim_suspicion_staff_emails WHERE notice_id = $1`, [existing.notice_id])
+      ).rows[0];
+      return current?.outcome === 'attempting' ? { kind: 'held_by_other' } : { kind: 'already_final' };
+    }
   } else {
     claimed = (
       await client.query<{ notice_id: string; attempt_count: number; may_have_sent: boolean }>(
@@ -448,6 +524,7 @@ export async function finaliseSuspicionStaffEmail(
     readonly detail?: string | null;
   },
 ): Promise<{ readonly mayHaveSent: boolean } | null> {
+  assertDetail(input.detail ?? null);
   const result = await db.execute<{ may_have_sent: boolean }>(sql`
     UPDATE claim_suspicion_staff_emails
        SET outcome = ${input.outcome},
@@ -481,6 +558,7 @@ export async function noteSuspicionStaffEmailTransient(
     readonly now: Date;
   },
 ): Promise<number> {
+  assertDetail(input.detail);
   const result = await db.execute<{ notice_id: string }>(sql`
     UPDATE claim_suspicion_staff_emails
        SET detail = ${input.detail},

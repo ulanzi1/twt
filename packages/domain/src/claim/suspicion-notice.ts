@@ -25,7 +25,8 @@
 // failures — the predicate HELD; they FINISH the slot here (a `no_target` row) and the caller alarms once.
 // ⭐ Every selector also returns a claim with an `attempting` row of that purpose (a crash left it) — bypassing the
 // predicate — so its locked re-check runs and finishes it (⛔ stranded once its predicate turns false). A row still
-// `attempting` three IST days after it was created is given up (`expireExhaustedSuspicionNotices`, RB3).
+// `attempting` three IST days after it was created is given up (`expireExhaustedSuspicionNotices`, RB3) — unless it was
+// re-claimed within the send lease (a live child may be sending it; the next sweep takes it).
 // ⚠ AT-LEAST-ONCE (6.19b's): a timeout or a crash after a gateway accept may produce a second text; `attempt_count` and
 // `first_detail` record it. "Once ever" holds for FINISHED rows.
 // ⭐ LOCKS (`-294` §1): ONLY the claim row (`FOR UPDATE`, `SET LOCAL lock_timeout`) — ⛔ no advisory key, ⛔ never a second
@@ -122,16 +123,18 @@ const closedByAppealSql = (alias: string) => sql`EXISTS (
 
 /**
  * ⭐ RB10 — the claims due a notice of `purpose`, one keyset page (cross-tenant — the BYPASSRLS pool only; `allow` (tests)
- * narrows it to some Pariwars).
+ * narrows it to some Pariwars). "Finished" = `outcome <> 'attempting'`; a claim with an `attempting` row is ALWAYS
+ * returned. (c) is filtered in TS by `hasSuspicionRefusalAppealLimitPassed` (⛔ a SQL re-derivation of the 90 days); the
+ * cursor and the last-page test see the UNFILTERED page.
  *
  * ── DELIBERATE: a CROSS-TENANT READ on the BYPASSRLS pool (family 9) ──
  * The sweep has ⛔ no tenant to start from: it must find every Pariwar's due claims, and a per-tenant loop would first
- * need a cross-tenant read to enumerate the Pariwars (the same bypass). It returns IDS ONLY (`pariwar_id`, `claim_case_id`,
- * a boolean) — ⛔ no PII, ⛔ no value from one tenant reaches another; every write that follows runs in the child's own
- * `withPariwarScope` transaction, under RLS, after a locked re-check. RE-EXAMINE when: the selector ever projects a
- * column beyond ids / flags, a write is added on this pool, the pool loses BYPASSRLS, or a per-tenant scheduler exists. "Finished" = `outcome <> 'attempting'`; a claim with an `attempting` row is ALWAYS
- * returned. (c) is filtered in TS by `hasSuspicionRefusalAppealLimitPassed` (⛔ a SQL re-derivation of the 90 days); the
- * cursor and the last-page test see the UNFILTERED page.
+ * need a cross-tenant read to enumerate the Pariwars (the same bypass). It RETURNS ids only (`pariwar_id`,
+ * `claim_case_id`, a boolean); (c) also READS the claim's own `-239` chain start and the statement clock, for the TS
+ * 90-day filter, and ⛔ returns them — ⛔ PII, ⛔ value from one tenant reaches another; every write that follows runs
+ * in the child's own `withPariwarScope` transaction, under RLS, after a locked re-check. RE-EXAMINE when: the result
+ * ever carries more than ids / flags, the read projects PII, a write is added on this pool, the pool loses BYPASSRLS,
+ * or a per-tenant scheduler exists.
  */
 export async function selectDueSuspicionNotices(
   q: Queryable,
@@ -210,9 +213,13 @@ export function suspicionNoticeReclaimCutoff(now: Date): Date {
  * and write ⛔ nothing tenant-derived — ⛔ no PII, ⛔ no cross-row join; `allow` (tests) narrows it. ⚠ Unlike 6.19b's
  * one-day bound, a three-day-old row can be RE-CLAIMED today (every selector returns an `attempting` row), so a live child
  * may hold it ⇒ the lease guard (`claimed_at < now − CORRECTION_SEND_LEASE_MS`) leaves a row claimed within the lease to
- * that child's own compare-and-set. It takes ⛔ no claim-row lock; a child that finalises after it loses its
- * compare-and-set and alarms. RE-EXAMINE when: the statement ever writes a value derived from another row or tenant, the
- * pool loses BYPASSRLS, a per-tenant scheduler exists, or the lease approaches the reclaim horizon.
+ * that child's own compare-and-set. ⚠ The lease is 6.19b's constant (`correction-reminder-record.ts`) — a change THERE
+ * moves this guard. It takes ⛔ no claim-row lock, so a child can lose to it two ways: a child past its claim loses
+ * `finaliseSuspicionNotice`'s compare-and-set and ALARMS (*"moved on before its finalise"*); a child still in
+ * `beginSuspicionNotice` loses its UPDATE (`rowCount` 0) and returns `already_final` SILENTLY — this statement's own
+ * alarm (the caller's, ids) covers the row. RE-EXAMINE when: the statement ever writes a value derived from another row
+ * or tenant, the pool loses BYPASSRLS, a per-tenant scheduler exists, or `CORRECTION_SEND_LEASE_MS` approaches the
+ * reclaim horizon (or moves at all).
  */
 export async function expireExhaustedSuspicionNotices(
   q: Queryable,

@@ -343,6 +343,11 @@ export async function runSuspicionNoticeChild(
   };
   const noTarget = async (detail: string): Promise<SuspicionNoticeChildResult> => {
     await finalise({ outcome: 'no_target', detail, recipientVersionId: begun.recipient.versionId });
+    // `2026-10-09-298` — the reason is TRUE for this attempt, but a re-claimed row (attempt 2+) had a prior attempt claimed,
+    // which MAY have sent before it died: say so to staff (ids + the reason only). A first attempt is unchanged.
+    if (begun.attemptCount > 1) {
+      alarm(`[jobs] claim-suspicion-notice: the ${tag} finished 'no_target' (${detail}) on attempt ${String(begun.attemptCount)} — a prior attempt was claimed and may have sent`);
+    }
     return { status: 'no_target', reason: detail };
   };
 

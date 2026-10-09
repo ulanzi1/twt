@@ -310,6 +310,10 @@ RB11), ⛔ not a clause conflict. ⛔ No clause on refusal
   **At-least-once (6.19b's, `claim-correction-reminders.ts:46` — recorded, ⛔ never hidden):** a timeout or a crash after a
   gateway accept may produce a second text; `attempt_count` and `first_detail` record it. *"Once ever"* holds for FINISHED rows.
   *(Alt: 6.19b's end-of-day finaliser verbatim — one crash = a permanent `error`, contradicting RF11's "never stranded".)*
+  ⚠ **AS BUILT, 2026-10-09 (code review round 1 — a narrowing, ⛔ a change of rule):** the finaliser ALSO requires `claimed_at <
+  now − CORRECTION_SEND_LEASE_MS`, so a row re-claimed within the lease (a live child may be sending it) is left to that child and
+  taken by the next sweep. `-295` RB3's *"given up only after THREE IST calendar days from `created_at`"* still holds — a row is
+  given up ⛔ earlier, only (at most a day) later. ⛔ No entry: ⛔ committed clause moves.
 - **RB4 — the extraction (F19).** New `apps/jobs/src/scheduler/claim-dlt-sms-send.ts` exports `sendClaimDltSms(deps, { dltTemplateIdConfigKey,
   pariwarId, e164, render: (helpline: string) => string })` (sufficient: the body uses only `deps.{smsAppClient, resolveConfig,
   sendTimeoutMs}`, the two config keys and the render; it never alarms or logs — callers add ids). The core keeps
@@ -691,6 +695,9 @@ verified BY NAME on each ([[project_live_db_test_gotchas]]).
     'not_due' | { kind: 'skipped', expiredAttempt } | { kind: 'no_target', reason: 'closed_no_determination' | 'excluded_claimant' }` (`not_due` = a FRESH claim whose locked re-check failed — ⛔ row written). A failed re-check follows RB10's ONE rule (a FRESH claim writes ⛔ no row; an
     existing `attempting` row — own, or another job's past the lease, taken over first — ⇒ `skipped_superseded` when `detail IS NULL`,
     else `error` / `exhausted:recheck_<reason>` with `expiredAttempt: true`; another job's row within the lease ⇒ `held_by_other`).
+    ⚠ **AMENDED 2026-10-09 by `-297` §2 (as built):** ANY existing `attempting` row whose re-check fails ⇒ `error` /
+    `exhausted:recheck_<reason>`, returned as `{ kind: 'expired', detail }` (⛔ `skipped` / `expiredAttempt`); a losing UPDATE
+    (`rowCount` 0 — the give-up won) ⇒ `already_final`.
   - [x] 4.3 Recipients: purposes a / b — RF9's rule via `getEffectiveNomineeDeclaration` + `getNomineeVersionsByIds` (b: the CLOSED claim's
     OWN live determination when `effective`, else the reversed claim S's determination AS OF R's `claim.closed` event — S =
     `held_by_claim_case_id`; the rank-1 rule shared with `getEffectiveNomineeDeclaration`, ⛔ copied — else `no_target` + an alarm (the row written by 4.2),
@@ -700,7 +707,8 @@ verified BY NAME on each ([[project_live_db_test_gotchas]]).
     `contact.claimantMobileCiphertext`, source `claim_contact`; else the chain HEAD's `mobileCiphertext` (RB7: root = last of
     `correctionChainOf`, head = `chainHeadOf(root, versions)`), source `member_nominee`; locale = `contact.contactLocale`.
   - [x] 4.4 `finaliseSuspicionNotice` (CAS on `outcome = 'attempting' AND claimed_by_job = $job`), `noteSuspicionNoticeTransient`,
-    `expireExhaustedSuspicionNotices(db, { cutoff, allow })` (RB3; cross-tenant, the
+    `expireExhaustedSuspicionNotices(db, { cutoff, allow })` (⚠ as built 2026-10-09: `{ cutoff, now, allow }` + the lease guard —
+    RB3's note) (RB3; cross-tenant, the
     "DELIBERATE" justification block of `claim-correction-reminders.ts:778-788` copied in spirit) — `correction-reminder-record.ts:187-321`'s
     shapes for this table.
   - [x] 4.5 Add the module to `FENCED_FILES` (38 → 39, the reason in the pin's comment); ⛔ not to NW1's entry list.
@@ -734,7 +742,8 @@ verified BY NAME on each ([[project_live_db_test_gotchas]]).
     row, ⛔ decrypt, an alarm with ids only) → read
     the presentation mode ONCE in its OWN `withPariwarScope` (RB5) → `withPariwarScope` → `beginSuspicionNotice`
     → COMMIT (⛔ a caught DB error inside it); `skipped` + `expiredAttempt` ⇒ alarm (ids only, the `claim-correction-reminders.ts:433-445`
-    form); `{ kind: 'no_target', reason }` ⇒ ONE alarm (ids + reason) and return — ⛔ decrypt, ⛔ hash, ⛔ finalise (RB15 / RB18);
+    form) (⚠ AMENDED 2026-10-09 by `-297` §2: `expired` ⇒ alarm with its detail; and by `-298`: a `no_target` on attempt 2+ ALSO
+    alarms *"a prior attempt … may have sent"*); `{ kind: 'no_target', reason }` ⇒ ONE alarm (ids + reason) and return — ⛔ decrypt, ⛔ hash, ⛔ finalise (RB15 / RB18);
     then (⛔ no KMS under the row lock) `decryptKycField` the deceased's name → RB5 → `resolveCorrectionMobile(cipher, source,
     pariwarId, enc)` (`null` ⇒ `no_target`; throw ⇒ transient `decrypt_failed:tier1`) → `correctionNumberHash` (throw ⇒ transient
     `hash_failed:tier1`) → `sendClaimDltSms` with the sibling's key and render (`appeal_notice`: `{ date:
@@ -873,6 +882,50 @@ verified BY NAME on each ([[project_live_db_test_gotchas]]).
 - [x] [Review][Defer] **`{member}` has ⛔ no length guard against the operator's DLT per-variable limit** [apps/jobs/src/scheduler/claim-suspicion-notices.ts:361]
   — deferred, ⛔ not pre-existing but blocked on an external fact (the operator's limit is ⛔ in the repo); a provider mismatch spends the
   once-ever slot as `error` + alarm. ⭐ Trigger: provisioning templates 7–12 (Row 22).
+
+#### Review Findings — ROUND 2 (narrow, round 1's fixes `53b5d548..fdce5c6a`; three layers in parallel, read-only — 2026-10-09)
+
+> Triage: **1 decision-needed, 8 patch, 0 defer, 8 dismissed**; the decision resolved by `-298` ⇒ **9 patch**. §0 gate: the decision is the AUTHOR's (a record-accuracy rule).
+> Dismissed (re-traced): the re-claim UPDATE unchecked (it is — `if (!claimed) return { kind: 'already_final' }`); a NULL
+> `claimed_at` (0151's `attempting_claimed_check` forbids it); the keyset loop dropping a last page (`lastClaimCaseId` is null only on
+> an EMPTY page); prose in a string tripping the fence (it fails LOUD, ⛔ silent); the `expired` UPDATE overwriting `claimed_by_job`
+> (6.19b's K4 shape; `first_detail` kept); a `no_target` lost to the give-up dropping RB18's reason (the give-up runs BEFORE the
+> same sweep enqueues, and a prior day's child is past its minutes-long retry horizon — theoretical; the give-up alarms anyway); Row 22
+> (d)'s *"each … (at least every …)"* (`-297` §1's own words — ⛔ re-worded on the roster); the harness's any-Pariwar helpline default
+> and AC6b's string forms (test-only; both forms of A are checked).
+
+- [x] [Review][Decision] ✅ RESOLVED 2026-10-09 by `2026-10-09-298` (BigDev *"1"* — option A) ⇒ a patch below. **A `no_target` written over a RE-CLAIMED row records "not sent" when a prior attempt may have sent** —
+  `-297` §2 covers only a FAILED re-check. A crash after the gateway's accept, then attempt 2 resolving `no_target` (the child's
+  `name:erased` / `name:none` / `name:unresolvable` / `no_target:no_sendable_number` / unresolved — reachable through an RTBF or a
+  number erased between attempts; the domain's RB15 / RB18 `no_target` is ⛔ reachable after a `begun`, a standing / closed claim's
+  determination being frozen, F37) finishes `no_target` with ⛔ alarm on the child paths. `attempt_count` ≥ 2 DOES record a prior
+  attempt. Options: (A) a new author-commit: `no_target` over a row with `attempt_count > 1` keeps its true reason but ALSO alarms
+  *"a prior attempt may have sent"* (ids only); (B) the strict `-297` §2 analogue — `error` / `exhausted:no_target_after_claim` + alarm;
+  (C) record it as an accepted edge (`attempt_count` shows it). Recommended: A.
+  [apps/jobs/src/scheduler/claim-suspicion-notices.ts:344]
+- [x] [Review][Patch] **`-298` — a `no_target` the child writes on a row with `attempt_count` > 1 ALSO alarms *"a prior attempt may have
+  sent"* (ids + reason); a jobs test.** [apps/jobs/src/scheduler/claim-suspicion-notices.ts:344]
+- [x] [Review][Patch] **`-297` §2's "+ an alarm" has ⛔ test** — the child's `expired` branch and its alarm text (with the detail) are
+  reached by ⛔ jobs test; the Completion Notes' red-check covers the domain half only. [apps/jobs/src/scheduler/claim-suspicion-notices.ts:321]
+- [x] [Review][Patch] **The losing `no_target` UPDATE's `rowCount` guard is untested (family 2)** — a race leg: the give-up holds a
+  crash-left (b) row while a child resolves RB15's `no_target` ⇒ `already_final`. [packages/domain/src/claim/suspicion-notice.ts:550]
+- [x] [Review][Patch] **The race spec proves THAT a child blocked, ⛔ WHERE, and leaks on failure** — wait on `pg_stat_activity` (the
+  child's pid in a `Lock` wait on `UPDATE claim_suspicion_notices` / the claim row) instead of a fixed 500 ms; roll every open tx
+  back in `finally`; `lock_timeout` + a leftover check in the cleanup. [packages/domain/tests/integration/claim/suspicion-notice-concurrency.spec.ts:178]
+- [x] [Review][Patch] **The no-decision fence claims more than it catches** — schema-qualified names, `ONLY`, `MERGE`, `TRUNCATE`, a
+  namespace alias, `${schema.x}` interpolation, and six decision tables are missed; ⛔ plant for `DELETE` / `.update(` / `.delete(`;
+  each plant asserted against ITS pattern; the header's *"ANY"* made true. [apps/jobs/tests/claim-suspicion-notice-no-decision.test.ts:63]
+- [x] [Review][Patch] **The upheld-appeal leg has ⛔ positive control** — the same claim IS due for (c) before its appeal.
+  [packages/domain/tests/integration/claim/suspicion-notice.spec.ts:610]
+- [x] [Review][Patch] **Domain comments lag the fixes** — the header's give-up line ⛔ mentions the lease; *"a child that finalises
+  after it loses … alarms"* (the begin-path losers return `already_final` silently); the selectors' DELIBERATE block says *"IDS ONLY"*
+  though (c) reads two timestamps (⛔ returned); the lease is 6.19b's constant (a change there moves this); the fused JSDoc line.
+  [packages/domain/src/claim/suspicion-notice.ts:28]
+- [x] [Review][Patch] **The story's own text drifts from round 1** — RB3 ⛔ dated note for the lease guard (it narrows WHEN, *"only
+  after three IST days"* still holds); Tasks 4.2 / 4.4 / 5.3 still prescribe `skipped` / `expiredAttempt` / `{ cutoff, allow }`
+  ([[feedback_spec_edits_must_propagate_to_tasks]]); the Completion Notes' one-transaction deviation ⛔ dated.
+- [x] [Review][Patch] **Row 22's `gate_name` / `owner` ⛔ cover (d), and the DLT request sheet lists three conditions** —
+  [docs/launch-gate-inventory/inventory-roster.md:374] · [docs/launch-gate-inventory/dlt-template-requests-6-19.md:9]
 
 ## Dev Notes
 
@@ -1014,7 +1067,8 @@ Claude Opus 5.5 (1M context) — `bmad-dev-story 6.24b`, 2026-10-08.
   `forced` friction-budget row (the gate accepted it); `deferred-work.md` gains F22's 8.8 gap + the date-form item.
 - ⚠ **Two defects the first spec runs found and fixed** (Debug Log): a JS array in a Drizzle template is expanded per element (`sql.param`);
   RB15's as-of instant lost microseconds through a JS `Date` (the instant now travels as exact text). ⚠ **Recorded deviations:** the
-  domain spec's "revised away between selection and the lock" leg runs in ONE transaction (⛔ two committed connections); RB15's test
+  domain spec's "revised away between selection and the lock" leg runs in ONE transaction (⛔ two committed connections) (⭐ 2026-10-09:
+  ALSO built on two committed connections — `suspicion-notice-concurrency.spec.ts`; the one-transaction leg stays); RB15's test
   re-determinations use a raw supersession at `now() + 1 minute` (every `now()` of one test transaction ties); the jobs live test seeds
   RAW determinations (0119-era, trusted as effective — RF9).
 - ⚠ **Owed, ⛔ blocking the build** (unchanged): `-295` §8 Confirms 1–2 to the next Panel routing note (Row 22's (c)); Rows 22 / 23 open;
@@ -1027,6 +1081,11 @@ Claude Opus 5.5 (1M context) — `bmad-dev-story 6.24b`, 2026-10-08.
   `tests/integration/claim` + `tests/claim` + the policy regression 1344 / 1344; jobs 641 / 641; the API spec 14 / 14; typecheck +
   lint clean (domain, jobs, api). The new race spec first FAILED on its own fixture (a loser holds the claim row until its tx ends —
   committed in turn, fixed in the test).
+- ⭐ **Code review ROUND 2 (2026-10-09, narrow — round 1's fixes):** 1 decision → `2026-10-09-298` (committed alone, `b9fdc5a7`); 9
+  patches applied. Red-checked: the losing `no_target` UPDATE's `rowCount` (its race leg red with the guard removed); `-297` §2's
+  `expired` alarm and `-298`'s prior-attempt alarm (both jobs legs red with each alarm removed). The race spec now waits on
+  `pg_stat_activity` (WHERE each loser blocks), rolls every open tx back in `afterEach`, and bounds + checks its cleanup. Runs on
+  :5433: domain claim + policy regression 1345 / 1345; jobs 641 → 644 / 644; typecheck + lint clean.
 
 ### File List
 
@@ -1038,7 +1097,7 @@ Claude Opus 5.5 (1M context) — `bmad-dev-story 6.24b`, 2026-10-08.
 - `packages/domain/tests/integration/rls/claim-suspicion-notice-policy-regression.spec.ts`
 - `packages/domain/tests/integration/claim/suspicion-refusal-recipient.spec.ts`
 - `packages/domain/tests/integration/claim/suspicion-notice.spec.ts`
-- `packages/domain/tests/integration/claim/suspicion-notice-concurrency.spec.ts` (code review 2026-10-09)
+- `packages/domain/tests/integration/claim/suspicion-notice-concurrency.spec.ts` (code review 2026-10-09; round 2 reworked it)
 - `apps/api/tests/integration/claims/handover-otp-suspicion.spec.ts`
 - `apps/jobs/src/scheduler/claim-dlt-sms-send.ts`
 - `apps/jobs/src/scheduler/suspicion-notice-sms-templates.ts`
@@ -1059,7 +1118,7 @@ Claude Opus 5.5 (1M context) — `bmad-dev-story 6.24b`, 2026-10-08.
 - `packages/i18n/locales/en/claim.json`, `packages/i18n/locales/hi/claim.json`
 - `apps/api/src/modules/claims/claims.service.ts`, `apps/api/src/modules/claims/claims.handlers.ts`, `apps/api/src/audit/audit-sink.ts` (comment)
 - `apps/jobs/src/scheduler/claim-correction-reminders.ts` (the wrapper), `apps/jobs/src/boot.ts`
-- `docs/launch-gate-inventory/dlt-template-requests-6-19.md`, `docs/launch-gate-inventory/inventory-roster.md`
+- `docs/launch-gate-inventory/dlt-template-requests-6-19.md`, `docs/launch-gate-inventory/inventory-roster.md` (both again in review rounds 1–2)
 - `friction-budget.md`
 - `_bmad-output/implementation-artifacts/deferred-work.md`, `_bmad-output/implementation-artifacts/sprint-status.yaml`
 - `_bmad-output/implementation-artifacts/6-24b-filing-code-and-texts-to-the-nominee-in-place-at-the-death.md`
@@ -1068,6 +1127,7 @@ Claude Opus 5.5 (1M context) — `bmad-dev-story 6.24b`, 2026-10-08.
 
 | Version | Date | Change |
 |---|---|---|
+| 2.6 | 2026-10-09 | ⭐ **CODE REVIEW ROUND 2 (narrow — `53b5d548..fdce5c6a`, three layers in parallel, read-only) ⇒ stays `done`.** 1 decision-needed, 8 patch, 0 defer, 8 dismissed. BigDev *"1"* ⇒ `2026-10-09-298` (author-commit, alone, `b9fdc5a7`): a `no_target` on a re-claimed row (attempt 2+) keeps its reason AND alarms *"a prior attempt may have sent"*. 9 patches applied: `-298` built; jobs tests for the `-297` §2 and `-298` alarms; a `no_target` race leg; the race spec proves WHERE each loser waits (`pg_stat_activity`), cleans up on failure; the fence covers schema-qualified / `ONLY` / `MERGE` / `TRUNCATE` / any-namespace Drizzle / interpolated writes over 16 schema-checked tables, one plant per form; the upheld leg's positive control; domain comments aligned; RB3 + Tasks 4.2 / 4.4 / 5.3 + a deviation dated; Row 22's gate_name / owner and the DLT sheet carry (d). No HIGH ⇒ rounds stop. |
 | 2.5 | 2026-10-09 | ⭐ **CODE REVIEW ⇒ `done`.** `bmad-code-review 6.24b` (full diff `b6a63a81..53b5d548`; Blind Hunter, Edge Case Hunter, Acceptance Auditor in parallel, read-only): 2 decision-needed, 10 patch, 2 defer, 10 dismissed. BigDev *"D1 - 1, D2 - 1"* ⇒ `2026-10-09-297` (author-commit, alone, `cc474987`): §1 Row 22 gains closure condition (d) — `-296` Confirm 2 A's alarm must reach a named owner; §2 RB10 amended — ANY existing `attempting` row whose re-check fails ⇒ `error` + alarm (a NULL `detail` does ⛔ not prove nothing went). 12 patches applied: `-297` §1–§2 built; the give-up's lease guard + `rowCount` on the losing UPDATEs; the alarm prints its detail; DELIBERATE blocks with RE-EXAMINE triggers; the no-decision fence catches raw writes, with a real planted control; AC7b's (b)/(c) legs and the upheld-appeal leg; a two-connection race spec; vacuous asserts replaced; held-alarm tests isolated; allowlist refusals, the transient-fault alarm, AC6b over every audit event, the revision-off recipient leg; stale lines dated. 2 deferred (`recipient_number_hash` on erasure; `{member}` vs the DLT variable limit) + 6.19b's K4 recorded. The RB block and the copied RF text are unedited (dated `⚠ AMENDED` notes only). |
 | 2.4 | 2026-10-09 | ✅ **`-295` §8 Confirms 1–2 ANSWERED — `2026-10-09-296` (Trustee-ratified, DR + KB): Confirm 1 A, Confirm 2 A.** Put by the standalone routing note `trustee-panel-routing-note-2026-10-09-6-24b-two-confirms.md` (`57a65f55`; one fresh-context check, all findings applied). RB13 / RB17 / RB18 stand as built — ⛔ no code change. Roster Row 22 condition (c) met; the row stays `open` on (a) counsel and (b) the privacy-policy revision. Only the header's owed-line is updated; the RB block is unedited. Status stays `review`. |
 | 2.3 | 2026-10-08 | ⭐ **DEV-STORY COMPLETE ⇒ `review`.** Tasks 1–7 built: migration 0151 + RLS; RF9's filing code to the nominee in place at the death (`readSuspicionRefusalRecipient`, `noOp(recipient)`, the audit `recipient`); the shared DLT send core (6.19b/c/d tests unedited); the sibling registry + `suspicion_sms.*`; the domain's `suspicion-notice.ts` and the jobs sweep + child for all three purposes; DLT templates 7–12, roster Rows 22–23, a friction-budget row, two deferred items. Every load-bearing test red-checked. `ci:local` 34/34 (run 1 caught a `created_at` tie in this story's own spec — fixed in the test). ⛔ The copied RF text and the RB block are unedited. |

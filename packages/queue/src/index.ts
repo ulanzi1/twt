@@ -430,6 +430,22 @@ export const QUEUE_NAMES = {
    * the dedup. The payload carries ids only, ⛔ never a number or a name. Job class B.
    */
   CLAIM_SUSPICION_NOTICE_SMS: 'claim.suspicion.notice.sms',
+  /**
+   * The STAFF EMAIL sweep (Story 6.25, `2026-10-09-299` RE10 / RE11) — every 15 minutes IST: every Pariwar Admin appointed before a
+   * `-239` refusal that STANDS (RF1), active and with a login, with ⛔ FINISHED row for (claim, recipient) — or the claim-level
+   * NULL pair when ⛔ admin is eligible (RE4). It gives up `attempting` rows three IST days old AND past the 30-minute lease,
+   * checks the provider config + pre-flight FIRST (a gap enqueues and writes ⛔ nothing — one end-of-run alarm, RE7) and
+   * enqueues one CLAIM_SUSPICION_STAFF_EMAIL_SEND child per pair. ⛔ It never refuses, closes or approves a claim. Job class C.
+   */
+  CLAIM_SUSPICION_STAFF_EMAIL_SWEEP: 'claim.suspicion.staff_email.sweep',
+  /**
+   * ONE staff email for one (claim, recipient) (Story 6.25). It re-checks the config (a race guard), then under the CLAIM-ROW
+   * lock re-checks the refusal and the recipient and claims the row; AFTER that commit it reads the address ciphertext (ADR-0040
+   * Q2), decrypts, renders the ONE template (the list link only) and sends. It throws ONLY on a transient failure (incl. a HELD
+   * account / config fault). Its `singletonKey` is a LABEL — the table's UNIQUE + the lease are the dedup. The payload carries
+   * ids only, ⛔ never an address. Job class B.
+   */
+  CLAIM_SUSPICION_STAFF_EMAIL_SEND: 'claim.suspicion.staff_email.send',
 } as const;
 
 /** Union of the registered queue names. */

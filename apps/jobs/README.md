@@ -106,3 +106,30 @@ WHERE expires_at < now()`). Proves the cron + worker-registration substrate end-
   apps/api but no live send path is wired.
 
 Full operational detail: [`docs/runbooks/job-queue-operations.md`](../../docs/runbooks/job-queue-operations.md).
+
+## Story 6.25 — the staff email of a suspicion refusal (`src/scheduler/claim-suspicion-staff-emails.ts`)
+
+Every Pariwar Admin appointed (Pariwar-wide) before a `-239` refusal, active and with a login, is emailed ONCE per standing
+refusal: *"a claim was refused on suspicion of a nominee change — open the list"* (`-262` FQ3 A) — no names, no note, only the
+list link. A 15-minute IST sweep (`claim.suspicion.staff_email.sweep`) enqueues one child per (claim, recipient)
+(`claim.suspicion.staff_email.send`); decisions in `.decision-log.md` `2026-10-09-299`, the transport in ADR-0040.
+
+**Configuration — FAIL-CLOSED** (`src/scheduler/staff-email-config.ts`). Unset in every environment until launch-gate roster
+Row 24 closes ⇒ the sweep HOLDS every email (writes ⛔ row) and raises one alarm per run. A secret NAME that is set but cannot be
+resolved also HOLDS (one boot alarm) — it does ⛔ fail boot (a recorded divergence from the SMS gateway's rule).
+
+| Variable | Meaning |
+| --- | --- |
+| `STAFF_EMAIL_PROVIDER` | `ses` or `zeptomail`; unset ⇒ held (`config:provider_unset`), any other value ⇒ held (`config:provider_unknown`) |
+| `STAFF_EMAIL_FROM` | the sender address (ASCII) — a MONITORED mailbox (bounces are ⛔ ingested) |
+| `ADMIN_APP_ORIGIN` | the list link's base — an `https://` origin with ⛔ path (else held: `config:admin_app_origin_invalid`) |
+| `STAFF_EMAIL_SES_ACCESS_KEY_ID_SECRET_NAME` | Secret Manager name of the SES access key id (local fallback env: `STAFF_EMAIL_SES_ACCESS_KEY_ID_ENV_FALLBACK`, default `STAFF_EMAIL_SES_ACCESS_KEY_ID`) |
+| `STAFF_EMAIL_SES_SECRET_ACCESS_KEY_SECRET_NAME` | Secret Manager name of the SES secret key (fallback `STAFF_EMAIL_SES_SECRET_ACCESS_KEY_ENV_FALLBACK`, default `STAFF_EMAIL_SES_SECRET_ACCESS_KEY`) |
+| `STAFF_EMAIL_SES_REGION` | default `ap-south-1` |
+| `STAFF_EMAIL_SES_CONFIGURATION_SET` | optional; it must carry ⛔ OPEN/CLICK event destination (tracking stays off) |
+| `STAFF_EMAIL_ZEPTOMAIL_TOKEN_SECRET_NAME` | Secret Manager name of the ZeptoMail send-mail token (fallback `STAFF_EMAIL_ZEPTOMAIL_TOKEN_ENV_FALLBACK`, default `STAFF_EMAIL_ZEPTOMAIL_TOKEN`) |
+| `STAFF_EMAIL_ZEPTOMAIL_HOST` | default `https://cpaas.zoho.in` (the India data centre; ZeptoMail is now *Zoho CPaaS*) |
+
+Before any row is written, the sweep runs a provider pre-flight (SES `GetAccount`: sending enabled AND out of the sandbox;
+ZeptoMail has none). Provider errors are classified by their error NAME — an account or config fault is HELD (the row stays
+`attempting`, alarmed once per fault), ⛔ a final failure. ⛔ An address or a provider error message is ever logged or stored.

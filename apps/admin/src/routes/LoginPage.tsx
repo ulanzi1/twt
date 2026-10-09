@@ -19,6 +19,7 @@ import { useForm } from 'react-hook-form';
 
 import * as api from '../api/client.js';
 import { sessionKey } from '../api/hooks.js';
+import { allowedNextPariwarId, nextFromLocation } from './login-next.js';
 
 // The Cloudflare Turnstile widget (api.js) is the ONE admin-side vendor touch-point
 // (Story 1.13, AC-5). It mirrors `@twt/edge`'s TURNSTILE_WIDGET_SCRIPT_URL but is NOT
@@ -135,6 +136,13 @@ export function LoginPage(): ReactElement {
 
   async function completeLogin(): Promise<void> {
     await queryClient.invalidateQueries({ queryKey: sessionKey });
+    // Story 6.25 (RE9 A) — return to the nominee-refusal list the staff email linked to, IFF `next` is EXACTLY its allowlisted
+    // relative path (`login-next.ts`); anything else lands on the default page as before (⛔ an open redirect).
+    const pariwarId = allowedNextPariwarId(nextFromLocation(window.location.search));
+    if (pariwarId !== null) {
+      void navigate({ to: '/p/$pariwarId/nominee-refusals', params: { pariwarId } });
+      return;
+    }
     void navigate({ to: '/audit/integrity' });
   }
 

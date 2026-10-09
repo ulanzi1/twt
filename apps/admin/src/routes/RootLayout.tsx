@@ -132,7 +132,8 @@ function TopBar(): ReactElement {
             </Link>
           )}
           {/* Story 6.20 (AC7, D14) — the Pariwar Admin's two nominee pages. ⭐ Linked here because the
-              refusal list IS the `-239` notification and the queue is the only way to FIND a correction
+              refusal list is the `-239` console surface (it presents the note and reason; the NOTICE is
+              Story 6.25's email, which links to it) and the queue is the only way to FIND a correction
               waiting at step 2 (code review 2026-09-24: both were reachable only by a typed URL). The
               server's key check is the boundary; each page shows its own "no access" state. */}
           {pariwarId && (

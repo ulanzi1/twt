@@ -1,10 +1,12 @@
 // The Pariwar Admin's `-239` REFUSAL read surface — Story 6.20 (D14, AC4).
 //
 // `2026-09-21-239`: the District Admin refuses a claim on SUSPICION of a post-death nominee change and
-// NOTIFIES the Pariwar Admin with a note and reason. ⭐ This page IS that notification (⛔ no staff push
-// channel exists and ⛔ none is invented): a list, ⛔ never an approval step — nothing here waits for the
+// NOTIFIES the Pariwar Admin with a note and reason. ⭐ This page is the console surface — it PRESENTS the
+// note and reason; the NOTICE is Story 6.25's email (`-261` D2 B, `-262` FQ3 A: *"open the list"*, ⛔ no names,
+// ⛔ no note), which links here — a notification, ⛔ never an approval step: nothing here waits for the
 // Pariwar Admin, and there is ⛔ no approve / reverse control (`-239` consequence 3). The refusal is
-// appealable once through the ordinary appeal path.
+// appealable once through the ordinary appeal path. A signed-out admin is sent to sign-in WITH a return
+// path to this page (Story 6.25 RE9 A — `login-next.ts`).
 // The CorrectionQueueRoute shape: a session gate, then the list's own 401/403 handling.
 
 import { useNavigate, useParams } from '@tanstack/react-router';
@@ -15,15 +17,17 @@ import { ApiError } from '../api/client.js';
 import { useNomineeRefusals, useSession } from '../api/hooks.js';
 import { formatIst } from '../modules/claim-verification/NomineeDeclarationPanel.js';
 import { verifierConsoleEn } from '../modules/claim-verification/i18n-en.js';
+import { nomineeRefusalsPath } from './login-next.js';
 
 const t = verifierConsoleEn.nomineeDeclaration.refusals;
 
 export function NomineeRefusalsRoute(): ReactElement {
   const session = useSession();
   const navigate = useNavigate();
+  const { pariwarId } = useParams({ from: '/p/$pariwarId/nominee-refusals' });
   useEffect(() => {
-    if (session.isError) void navigate({ to: '/login' });
-  }, [session.isError, navigate]);
+    if (session.isError) void navigate({ to: '/login', search: { next: nomineeRefusalsPath(pariwarId) } });
+  }, [session.isError, navigate, pariwarId]);
   if (session.isLoading) return <p role="status">Checking your session…</p>;
   if (session.isError) return <p role="status">Redirecting to sign in…</p>;
   return <NomineeRefusalsView />;
@@ -35,8 +39,8 @@ function NomineeRefusalsView(): ReactElement {
   const list = useNomineeRefusals(pariwarId);
   const status = list.error instanceof ApiError ? list.error.status : null;
   useEffect(() => {
-    if (status === 401) void navigate({ to: '/login' });
-  }, [status, navigate]);
+    if (status === 401) void navigate({ to: '/login', search: { next: nomineeRefusalsPath(pariwarId) } });
+  }, [status, navigate, pariwarId]);
 
   return (
     <main className="mx-auto max-w-4xl p-4">
@@ -88,8 +92,9 @@ function NomineeRefusalsView(): ReactElement {
                 </dd>
               </dl>
               {/* ⛔ No "open the claim" link (code review 2026-09-24): it pointed at the verifier console,
-                  which the Pariwar Admin cannot open (`claim.verify`). This page IS the notification
-                  (`-239`); the claim reference is what the Pariwar Admin quotes to the District Admin. */}
+                  which the Pariwar Admin cannot open (`claim.verify`). This page PRESENTS the refusal
+                  (`-239`; the email of Story 6.25 is the notice that points here); the claim reference is
+                  what the Pariwar Admin quotes to the District Admin. */}
             </li>
           ))}
         </ul>

@@ -102,6 +102,10 @@ export * from './suspicion-refusal-persist.js';
 // its re-check, the recipients (`readRefusedFilerRecipient`) and the notice-row claim / finalise / expire helpers. A WRITE
 // module (⛔ an NW1 entry); ⛔ nothing here decrypts.
 export * from './suspicion-notice.js';
+// Story 6.25 (`2026-10-09-299` RE1–RE5, RE8, RE11) — the STAFF EMAIL of a `-239` refusal: the sweep's domain half (selector,
+// give-up, claiming transaction, compare-and-set) and ADR-0040's two identity-data reads (Q1 recipients, Q2 the address ciphertext).
+export * from './suspicion-staff-email.js';
+export * from './staff-email-identity-read.js';
 // Story 6.23a — the nominee-change WARNINGS and the ONE approval rule over them (NW1–NW6), the WARNING-REASON LIST
 // (NW16, NW17), and the District Admin's reason for a LATE warning (NW14). ⛔ `approval-warnings.ts` and
 // `approval-warning-reasons.ts` never reach `events.ts`, `nominee-name-check.ts` or `nominee-lock.ts` (NW1).

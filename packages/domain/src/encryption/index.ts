@@ -72,3 +72,6 @@ export {
   encryptKycField,
   decryptKycField,
 } from './member-fields.js';
+// Story 6.25 (`-299` RE8 (i), ADR-0040) — the ADMIN email's class, envelope context and decrypt, relocated from apps/api for the
+// staff-email child in apps/jobs. ⚠ `decryptAdminEmail`'s callers are allowlisted by a source fence.
+export { ADMIN_EMAIL_FIELD_CLASS, ADMIN_EMAIL_ENCRYPTION_CONTEXT, decryptAdminEmail } from './admin-email.js';

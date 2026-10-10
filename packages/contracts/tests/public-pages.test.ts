@@ -447,6 +447,9 @@ describe('committed matrix — the POPULATED invariants (Story 11a.1)', () => {
         '/blog/[postId]',
         '/members',
         '/niyamavali',
+        // Story 6.30 — the app-link fallback page (`2026-10-10-312` AL11): `fields: []`, noindex — it
+        // shows NO data and never reads the link's code; one page per `APP_LINK_PATHS` entry.
+        '/peer-request',
         // Story 11b.1 — the first Epic 11b surface to be declared, and declared only
         // because it SHIPPED A ROUTE.
         '/sahyog',

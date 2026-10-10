@@ -1,3 +1,13 @@
+# last_updated: 2026-10-10ab (⭐ **STORY 6.28 — VALIDATED (v1.1), all findings applied (BigDev: *"all"*); still ⛔ NO CODE, the note still ⛔ NOT SENT.**
+# Four fresh-context read-only verifiers (cites; design + locks; governance + siblings; warning + member surfaces), the load-bearing ones
+# re-checked by hand. ⭐ OP4 now closes the other claims at the CYCLE COMMIT, ⛔ not the final vote (R9 can still deny a voted claim ⇒ a
+# death paid by ⛔ no claim); H(ii) moved INSIDE the mint (the helpline / override request transaction would have hung a handler-side
+# closure on its own intake key); H(iii) inside the reversal; OP5 gains a correction-queue arm (`-279` A4) and its wait is put to the Panel
+# (`-279` A6); path (a) — an allowed suspicion appeal after the other claim's vote pays nothing — disclosed (FQ5 B's cost), ⛔ never "FQ5
+# exact". The routing note and `epics.md`'s brief re-worded to match. ⚠ Ids `-313`–`-316` are TAKEN on `story/6-34-…` / `story/6-30-…` ⇒
+# 6.28's start at `-317`+. ⭐ v1.2: one fresh-context re-validate of v1.1's OWN design (2 HIGH, 4 MEDIUM, 8 LOW, all applied) — the intake
+# signal is `state === 'closed'` (both responses `.strict()`), the app sets the filed-claim pointer (⛔ no re-mint loop). ⭐ v1.3: round 3 — **0 BLOCKER / 0 HIGH**; 2 MEDIUM + 9 LOW applied (the note's
+# Q1 A: the warning runs only until one claim passes the final vote); ids now from `-318` (`-317` taken on `story/6-30-…`). ⛔ No row moves.)
 # last_updated: 2026-10-10aa (⭐ **STORY 6.28 — CREATED via `bmad-create-story 6.28` ⇒ `backlog → ready-for-dev`; ⛔ NO CODE until the Panel rules
 # and the author-commit lands (`-294` §3).** Pinned `34b9bab6`. Three read-only research passes (the six approval writers + their locks;
 # the reachability of two live claims for one death; the money path). FOUND: ⛔ nothing per death in the gate, the DB, the commit or the

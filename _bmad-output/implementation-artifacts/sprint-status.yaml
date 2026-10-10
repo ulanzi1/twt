@@ -1,3 +1,11 @@
+# last_updated: 2026-10-10ac (⭐ **6.30 RE-VALIDATED — rounds 7–9, v1.6 → v1.9, on `story/6-30-app-links-open-the-app-from-a-text`.** Round 7 (four
+# read-only reviewers): 2 BLOCKER / 4 HIGH / 13 MEDIUM / 15 LOW — AL1's `EAS_BUILD_PROFILE` is unset when EAS CLI evaluates the config locally
+# (⇒ `APP_VARIANT` from `eas.json` `env`); AL10's separate ruleset cannot coexist with `waf_custom` (⇒ one always-present ruleset, the skip
+# first); an expired login never reached the login screen; two consume-once sites raced; the fallback page was unstyled (`/_astro/`) and its
+# "minimal layout" option failed the PII gate. BigDev: *"All"* ⇒ `2026-10-10-315` (C1–C8, alone). Round 8: 0 BLOCKER / 2 HIGH, all round 7's
+# own ⇒ `2026-10-10-316` erratum (E1 — the EAS project id one literal for every variant). Round 9: 0 BLOCKER / 0 HIGH — the rounds END ⇒
+# `2026-10-10-317` reading (E1's reason; three residuals accepted). Decision numbers: `-313` / `-314` are 6.34's (unmerged) — they interleave
+# on merge. ⛔ No row moves — `6-30` stays `ready-for-dev`.)
 # last_updated: 2026-10-10v (⭐ **6.30's AL1–AL16 COMMITTED — `2026-10-10-312` (`21e89ed6`, alone)**, all as written (BigDev: *"… - OK"*; AL13 — the
 # inert `twt://` push links left untouched — explained, then *"ok"*). ⇒ BOTH 6.30 and 6.27a are now buildable: 6.30 first (its route shell
 # precedes 6.27a's Task 5; 6.30 precedes 6.27c). The production app identity stays BigDev's decision (Row 29 (a)). ⛔ No row moves.)

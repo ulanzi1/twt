@@ -950,6 +950,11 @@ member's terms:
 - **6.26b**: adding a kind touches ~60 files; derive ONLY in the shared helper; one hoisted queue fragment; fixture defaults raise ⛔ no
   warning; `null` is ⛔ never `false`; the key's stability is a ruling-sized choice; re-judge exclusions at every reader.
 - **6.25**: `ADMIN_APP_ORIGIN` — the env + per-run validator + hold pattern (6.30 generalises it as `resolveHttpsOrigin`).
+- **6.30 (dev, 2026-10-10 — its Task 9 check)**: roster **Rows 27 / 28 are ⛔ not yet written** (this story's Task 0.6 has ⛔ not landed); 6.30
+  wrote **Row 29** (`app-links-live`) at its reserved number. When Task 0.6 writes them, Row 27 (e) names Row 29, and Row 28 names 6.30's
+  fallback page (`apps/public/src/pages/peer-request.astro` — copy `packages/i18n/locales/{en,hi}/app-links.json`), the not-found screen
+  (`apps/mobile/app/+not-found.tsx` — `common.json` `not_found.*`) AND the route-shell placeholder (`common.json`
+  `peer_request.placeholder`) — PM16 already says so; 6.30's Row 29 (h) points at Row 28 for that review.
 - **6.6**: the SELECT worker is "frozen" — extend through injected deps only.
 - **This story's own validate (2026-10-10)**: nine revisions in a day left ACs, Tasks and Invariants behind the PMs — the split exists so each
   part stays in sync with itself ([[feedback_spec_edits_must_propagate_to_tasks]]).

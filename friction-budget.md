@@ -2602,3 +2602,28 @@ wait, the 90-day limit, the reason lock, the console section, the helpline appea
 ⭐ **Written AFTER the changes were committed**, when the pre-push `ci:local` run reported the AC-4 failure this block answers
 (the story's earlier green `friction:check` runs read uncommitted work — [[project_friction_budget_baseline_ratchet]]).
 ⛔ No measured delta is claimed for the mobile files ([[feedback_record_unattested_no_backfill]]).
+
+**Story 6.30 disposition (⛔ no new row — the link REMOVES friction; "install the app, then open the link again" decided ⛔ not a new declared cost):** the
+story's member-facing changes span BOTH apps. `apps/mobile`: `app.config.ts` (replaces `app.json` — the non-production identity
+is byte-for-byte the prototype's), `lib/link-target.ts` (new), `lib/session.ts`, `lib/session-context.tsx`, `app/_layout.tsx`,
+`app/(auth)/otp.tsx`, `app/+not-found.tsx`, `app/(peer-request)/` (new — the route shell), `components/peer-request/
+PeerRequestSlot.tsx` (new) and their tests. `apps/public`: `pages/peer-request.astro` (new — the plain fallback page),
+`pages/.well-known/*.ts` (new — two JSON files for the OS verifiers, ⛔ seen by no person), `layouts/PublicShell.astro`
+(`hideLanguageToggle`), `lib/peer-request-render.ts`, `lib/well-known.server.ts` and their tests.
+
+1. ⭐ **REMOVES friction (⛔ no row).** A link in a text now opens the app AT the screen it names; a member without a session
+   logs in and is RETURNED there (`2026-10-10-312` AL6) instead of landing on the home tab; a member whose 90-day login
+   expired now reaches the login screen instead of an error (AL6 (i)); a link the app cannot place shows a calm bilingual
+   "this page could not be opened" with "Go to home" and the helpline, instead of the template's English "Oops!" (AL14).
+2. ⭐ **The fallback page — decided ⛔ not a new declared cost.** A phone WITHOUT the app sees static words (Hindi first, then
+   English): open the app, the request is on its home screen, or install it and open the link again — or call the helpline in
+   the message. ⛔ No form, ⛔ no login, ⛔ no field, ⛔ no number asked (Invariant 2; ADR-0022's public shell). The cost "you need
+   the app to answer" is ⛔ not introduced here: before 6.30 the link could open nothing at all, and answering only in the app is
+   6.27's design (`-303` Q1 A; 6.27 PM21), whose member flow 6.27a declares when it lands. The page adds ⛔ no scoped style
+   (it rides `PublicShell`'s stylesheet) ⇒ ~0 bytes of its own beyond the shell.
+3. ⛔ **Not friction:** the `/peer-request` route shell (one line + the helpline until 6.27a fills it — ⛔ no step);
+   `app.config.ts` (build configuration — ⛔ no member-visible change for any non-production build); the two `.well-known`
+   files (read by the OS, never shown).
+
+⛔ No measured delta is claimed for the mobile files ([[feedback_record_unattested_no_backfill]]); the public build's
+page-weight run (`apps/public` `pnpm build`, 2026-10-10) reported `aggregate js=0`.

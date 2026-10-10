@@ -11,10 +11,12 @@ import type { ReactNode } from 'react'
 import type { MemberFullSession } from '@twt/contracts'
 
 import { memberAuth } from './member-api'
+import { clearLinkTarget } from './link-target'
 import {
   clearSession,
   loadSession,
   saveSession,
+  setRefreshRejectedHandler,
   setTerminatedDuringRefreshHandler,
   type StoredSession,
   type TerminationDuringRefresh,
@@ -61,8 +63,16 @@ export function SessionProvider({ children }: { children: ReactNode }): ReactNod
       // clear REACTIVE — without it `session` stays stale in context and the root guard never fires.
       setSession(null)
       setTerminationNotice(notice)
+      // Story 6.30 AL6 (iv) — the termination redirect WINS over any link target.
+      clearLinkTarget()
     })
-    return () => setTerminatedDuringRefreshHandler(null)
+    // Story 6.30 AL6 (i) — every refresh refused with a 4xx makes the SecureStore clear reactive too, so the
+    // guard sends the member to login FROM the link's screen (and records it as the target).
+    setRefreshRejectedHandler(() => setSession(null))
+    return () => {
+      setTerminatedDuringRefreshHandler(null)
+      setRefreshRejectedHandler(null)
+    }
   }, [])
 
   async function signIn(full: MemberFullSession): Promise<void> {
@@ -86,6 +96,8 @@ export function SessionProvider({ children }: { children: ReactNode }): ReactNod
       // Best-effort server revoke; clear locally regardless.
     }
     await clearSession()
+    // Story 6.30 AL6 (iv) — a link target ⛔ never survives a sign-out.
+    clearLinkTarget()
     setSession(null)
   }
 

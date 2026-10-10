@@ -6,10 +6,11 @@ import { StatusBar } from 'expo-status-bar'
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native'
 import { LocaleProvider } from '@twt/i18n/react'
 import { useFonts } from 'expo-font'
-import { SplashScreen, Stack, useRouter, useSegments } from 'expo-router'
+import { SplashScreen, Stack, useGlobalSearchParams, usePathname, useRouter, useSegments } from 'expo-router'
 import { Provider } from 'components/Provider'
 import { useTheme } from 'tamagui'
 import { SessionProvider, useSession } from '../lib/session-context'
+import { recordLinkTarget } from '../lib/link-target'
 import { markLoopPhase } from '../lib/loop-timing-session'
 
 // Devanagari font roles per UX spec lines 712-714 + 1108-1114
@@ -102,6 +103,10 @@ function RootLayoutNav() {
   const theme = useTheme()
   const { session, isLoading, terminationNotice, clearTerminationNotice } = useSession()
   const segments = useSegments()
+  // Story 6.30 AL6 (ii) — `useSegments()` carries ⛔ no query and keeps group names, so the screen a link
+  // asked for is read from the pathname + the GLOBAL search params (this layout is above the leaf).
+  const pathname = usePathname()
+  const searchParams = useGlobalSearchParams()
   const router = useRouter()
 
   // Expo Router auth guard: redirect unauthenticated users into the (auth) group,
@@ -126,11 +131,16 @@ function RootLayoutNav() {
     }
     const inAuthGroup = segments[0] === '(auth)'
     if (!session && !inAuthGroup) {
+      // Story 6.30 AL6 (ii) — record the requested screen IN MEMORY (an app-link path + its `c` only;
+      // anything else records ⛔ no target) so `otp.tsx` can return to it after the login.
+      recordLinkTarget(pathname, searchParams)
       router.replace('/(auth)/login')
     } else if (session && inAuthGroup) {
+      // ⛔ Never reads the link-target holder — `otp.tsx` is its ONE consumer (AL6 (iii)); this branch can
+      // fire only before `otp.tsx`'s own replace commits, so that replace lands last.
       router.replace('/(tabs)')
     }
-  }, [session, isLoading, segments, router, terminationNotice, clearTerminationNotice])
+  }, [session, isLoading, segments, pathname, searchParams, router, terminationNotice, clearTerminationNotice])
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
@@ -217,6 +227,14 @@ function RootLayoutNav() {
             tickets/:ticketId deep-link destination (the pre-wired helpdesk_reply target). */}
         <Stack.Screen
           name="(helpdesk)"
+          options={{
+            headerShown: false,
+          }}
+        />
+
+        {/* Story 6.30 (AL16) — the app-link route shell for `/peer-request` (6.27a fills it). */}
+        <Stack.Screen
+          name="(peer-request)"
           options={{
             headerShown: false,
           }}

@@ -98,6 +98,21 @@ export function setTerminatedDuringRefreshHandler(
   onTerminatedDuringRefresh = handler
 }
 
+// Story 6.30 (`2026-10-10-312` AL6 (i), `-315` C3) — EVERY refresh refused with a 4xx must reset the
+// IN-APP session, not only a termination: `clearSession()` below empties SecureStore, but without this
+// the React `session` stays stale, so a member whose 90-day refresh token died sees an error on the
+// screen a link opened and ⛔ never reaches login (the guard keys on `session`). Same registration seam as
+// the termination handler (⛔ no upward import into React). Called AFTER the termination callback in the
+// same synchronous run — React batches both `setSession(null)` calls, and the termination notice wins.
+// ⚠ "Every 4xx" includes a 429 from the per-IP refresh limit, which already cleared the tokens before
+// this story — recorded (deferred-work, roster Row 29 note 5), ⛔ not changed here.
+let onRefreshRejected: (() => void) | null = null
+
+/** Registered by `SessionProvider` on mount; `null` unregisters (its cleanup). */
+export function setRefreshRejectedHandler(handler: (() => void) | null): void {
+  onRefreshRejected = handler
+}
+
 /**
  * The current access token for the api-client bearer header, refreshing the stored
  * session first when the token is expired (or within REFRESH_SKEW_MS of it). Returns
@@ -174,6 +189,8 @@ async function refreshAccessToken(): Promise<string | null> {
             typeof details.further_communication === 'object',
         })
       }
+      // Story 6.30 AL6 (i) — every 4xx, after the termination callback (see `setRefreshRejectedHandler`).
+      onRefreshRejected?.()
     }
     return null
   }

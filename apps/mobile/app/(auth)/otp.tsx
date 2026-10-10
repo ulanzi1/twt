@@ -14,6 +14,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router'
 import { Button, H2, Input, Paragraph, Spinner, Text, YStack } from 'tamagui'
 
 import { memberAuth } from '../../lib/member-api'
+import { clearLinkTarget, takeLinkTarget } from '../../lib/link-target'
 import { getDeviceId } from '../../lib/session'
 import { useSession } from '../../lib/session-context'
 
@@ -35,13 +36,22 @@ export default function OtpScreen() {
       const deviceId = await getDeviceId()
       const res = await memberAuth.verifyOtp({ mobile, otp, deviceId })
       if (res.sessionType === 'full_session') {
+        // Story 6.30 AL6 (iii) — the ONE consumer of the link target: taken BEFORE `signIn` (its state
+        // change re-runs the root guard), consumed once; ⛔ no target ⇒ home.
+        const target = takeLinkTarget()
         await signIn(res)
-        router.replace('/(tabs)')
+        if (target) {
+          router.replace({ pathname: target.pathname, params: { c: target.params.c } })
+        } else {
+          router.replace('/(tabs)')
+        }
       } else if (res.sessionType === 'signup_continuation') {
         // First signup (Story 3.6a) — create the member from the continuation token, store the full
         // session it returns, and enter the wizard at the first step (T&C). No second OTP. A failure
         // here is its own dignified message (the OTP WAS valid — only member-creation failed).
         setNotice(t('signup.creating'))
+        // Story 6.30 AL6 (iv) — a first signup goes to the wizard; a link target ⛔ never carries over.
+        clearLinkTarget()
         try {
           const full = await memberAuth.signupCreate(res.signupContinuationToken, { mobile, deviceId })
           await signIn(full)
@@ -102,6 +112,8 @@ export default function OtpScreen() {
           raw.further_communication !== null &&
           typeof raw.further_communication === 'object' &&
           raw.further_communication !== undefined
+        // Story 6.30 AL6 (iv) — the termination surface WINS over any link target.
+        clearLinkTarget()
         router.replace({
           pathname: '/(auth)/terminated',
           params: {

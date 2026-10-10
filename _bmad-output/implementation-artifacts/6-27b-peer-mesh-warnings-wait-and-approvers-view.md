@@ -95,8 +95,8 @@ Consequence 1) · `-261` C3 (⛔ never inherited) · `-282` GI7 / `-281` Q1 B (p
       (`i18n-en.ts:138-150`); `peerReplyColumnsSql()` in `readClaimApprovalWarnings` (`:427`) and `readClaimApprovalWarningsSlice` (`:579`);
       `RawWarningsRow`; the pure helper (the `deriveDeathFactWarningKeys` pattern, `:248`); the pin test (`approval-warnings.test.ts:56-68`)
       with the discharge; unit table + live tests per approver (6.26b's spec shapes).
-- [ ] **Task 2 — the queue (AC5).** PM10's hoisted disjunct in `correction-queue-read.ts:155-187` (the answer window read through
-      6.27a's `answerWindowSql`, ⛔ never a hand-composed copy); the comment amended; a NEW own-committing
+- [ ] **Task 2 — the queue (AC5).** PM10's hoisted disjunct in `correction-queue-read.ts:155-187` (⛔ no window term — the scan states +
+      the R9 arm already equal the answer window, and answers exist only in-window; 6.27a PM8 / PM10); the comment amended; a NEW own-committing
       spec `correction-queue-late-peer-reply.spec.ts`.
 - [ ] **Task 3 — the approvers' read (AC6).** `claims.peer-answers.routes.ts` + handler (the step disjunction); the panel component used by
       `PendingCaseCard`, `EscalationPanel`, `PariwarClosureStrip`, `R9CasePanel`; api-client; tests.
@@ -124,6 +124,7 @@ Consequence 1) · `-261` C3 (⛔ never inherited) · `-282` GI7 / `-281` Q1 B (p
 ## Change Log
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-10 | 2.5 | Round 6: Task 2's queue disjunct needs ⛔ no window term (its scan states + R9 arm already equal the window) — the v2.4 wording withdrawn. |
 | 2026-10-10 | 2.4 | Round 5: Task 2's queue disjunct reads the answer window through 6.27a's `answerWindowSql` (PM8's reader list includes it). |
 | 2026-10-10 | 2.3 | Round 4: change-log row only (6.27a's set-based `answerWindowSql` is what 6.27b's queue reads for the window). |
 | 2026-10-10 | 2.2 | Round-3 validate: no change to this part's scope; the shared record (6.27a v2.2) scopes the seven-key rule to `peer_mesh` from v2, extracts the answer window, and records `has_died` as neighbour-only in `COMPARABLE_QUESTION_KEYS`. |

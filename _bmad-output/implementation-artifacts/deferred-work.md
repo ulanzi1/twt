@@ -19,6 +19,9 @@ Tracks findings deferred from code reviews and other quality gates. Each section
   role posture (membership of `twt_app` + `SET LOCAL ROLE` in `withPariwarScope`, and `twt_service` grants for the cross-tenant reads —
   OR broad `twt_service` grants); identity-table grants stay inside ADR-0040's ratification (Row 24 (a)). Supersedes the NARROWER framing
   of the "0152 (like 0151) grants only `twt_app`" item below (code review of story-6.25, ROUND 3) — that item stays as written.
+  ⭐ **2026-10-10 — now MECHANIZED on the roster (⛔ a closure):** [`-302`](../../.decision-log.md#decision-2026-10-10-302) RN9
+  appended launch-gate roster **Row 26 `jobs-db-role`** (`open`; `docs/launch-gate-inventory/inventory-roster.md`) — its four closure
+  conditions are this item's trigger. This item stays OPEN until Row 26 closes.
 
 ---
 

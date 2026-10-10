@@ -433,3 +433,24 @@
 - **missed_target_escalation_log:** (empty)
 - **cross_story_discharge_path:** a review recorded in the decision log (or on the 6.25 story) → the marker replaced. (⛔ DLT re-registration — an email has ⛔ registered template.)
 - **notes:** The gist is the Trustee Panel's (`-262` FQ3 A); the words are agent-drafted (`-299` RE9) and carry ⛔ a name, ⛔ a note, ⛔ a claim id, ⛔ a count, ⛔ a date — only the list link. ⛔ Machine-translated; agent-authored (2026-10-09) and ⛔ never sent to a real admin unreviewed.
+
+## Row 26 — Story 6.29: the production jobs login's database role (decision-authored, `-302` RN9)
+
+> ⭐ **Appended 2026-10-10 by Story 6.29 (Task 0.4) under [Decision 2026-10-10-302](../../.decision-log.md#decision-2026-10-10-302) RN9** —
+> FOUND while creating Story 6.29 (its F15–F18) and scoped OUT of it by BigDev (6.29 = 0151 parity only). Like Rows 17–25 the row has
+> ⛔ architecture source line; it cites the decision that created it. ⛔ It blocks ⛔ build or merge — nothing is in production
+> ([[project_not_in_production_merge_is_not_golive]]).
+
+### Row 26 — `jobs-db-role`
+
+- **gate_name:** The production jobs login can read and write what the jobs sweeps touch — its role posture decided, provisioned, exercised in CI, and the committed texts that misstate it corrected
+- **architecture_source_line:** N/A — **decision-authored**: [`-302`](../../.decision-log.md#decision-2026-10-10-302) RN9 (§1 (f)); the 0007 DD-3 service-role model it inherits.
+- **owner:** BigDev (gate — the decision, the provisioning, the CI leg); Trustee Panel — only where (a) grants on the identity tables (ADR-0040's ratification, Row 24 (a))
+- **support:** Story D3-1.10 (the jobs login's Terraform provisioning — `infra/gcp/modules/cloud-sql/main.tf` provisions ⛔ jobs login today)
+- **closure_criteria:** ALL FOUR, each recorded as a Decision: **(a)** a decision states the production jobs login's role posture — e.g. a member of `twt_app` with `withPariwarScope` doing `SET LOCAL ROLE twt_app`, plus `twt_service` grants for the cross-tenant reads and writes (the selectors, the give-ups, the parks) — OR broad `twt_service` grants; ⚠ any grant on the identity tables stays inside ADR-0040's ratification (Row 24 (a)), ⛔ this row; **(b)** that login is provisioned (D3-1.10 / Terraform); **(c)** at least one jobs sweep is exercised AS that login in CI (today ⛔ test runs jobs code as that role — every live test connects as the superuser); **(d)** the committed texts that say jobs runs as `twt_app` are corrected (`deferred-work.md`, 2026-10-09 item: ADR-0040, `staff-email-identity-read.ts`, `suspicion-notice.ts`'s selector DELIBERATE block, 0097, 0109, `apps/jobs/src/data-export.ts`). Testable signal: `closure_evidence_link` resolves to all four.
+- **target_date:** before the first jobs sweep runs against a production database (relative-to-fact: the gate IS that first production run).
+- **current_status:** `open`
+- **closure_evidence_link:** (a) — (empty). (b) — (empty). (c) — (empty). (d) — (empty).
+- **missed_target_escalation_log:** (empty)
+- **cross_story_discharge_path:** a story (or decision) choosing the posture → a Decision for (a); D3-1.10 → a Decision for (b); a CI job running a sweep as the provisioned role → a Decision for (c); the corrections committed → (d).
+- **notes:** SYSTEMIC, ⛔ specific to 0151 / 0152: `apps/jobs` has ONE pool, from `SERVICE_DATABASE_URL` (in production a BYPASSRLS login inheriting `twt_service`); `twt_service` holds privileges on 12 of 133 public tables (catalog, :5433, 2026-10-09) — ⛔ `claims`, ⛔ claim-family, nominee, KYC or identity table — and BYPASSRLS waives policies, ⛔ GRANTs ⇒ every jobs sweep touching them (6.19b/c/d, shepherd, pools, alerts, data export, 6.24b, 6.25, 6.29) would 42501 in production. ⚠ 0155's column-narrowed INSERT grant (`-302` RN8 (b)) binds `twt_app` only; its CHECKs and trigger bind every role. Row 24 (b)'s *"the production jobs login able to make Q1's and Q2's reads"* is a NARROWER slice of this row, ⛔ superseded by it.

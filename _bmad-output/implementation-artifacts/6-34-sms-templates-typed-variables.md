@@ -7,11 +7,15 @@ baseline_commit: 34b9bab6
 `34b9bab6`, derived by three read-only research passes (the code inventory of every SMS template and its send path; TRAI's typed-variable
 rule — the Direction, the regulations and the operators' manuals, fetched 2026-10-10; the governance and planning trail) and spot-checked
 by hand (F14 / F15 / F17 / F18 re-read directly).
+⭐ v1.1 (2026-10-10, BigDev in session): *"We will use STPL, and [STPL] uses {#var#} for variable"* — the PE registers on **STPL**
+(Satzilio Telecom Pvt Ltd, ex-V-Con / Videocon — the **SmartPing** DLT portal, `smartping.live`). On SmartPing the template TEXT keeps
+`{#var#}` and each variable's TYPE is chosen in a separate tagging section (MSG91's carrier guide; F3). ⇒ the texts in code and in the
+sheet are ⛔ retagged; each `{#var#}` gains a DECLARED TYPE. TV1–TV4, TV7, TV8, TV10 (a), TV11 rewritten; the rest stands.
 
 STATUS: `ready-for-dev`. ⛔ NO CODE until Task 0.3's author-commit is committed ALONE (TV1–TV12 below, answered by BigDev at Task 0.2)
 ([[feedback_governance_commits_precede_implementation]]).
 ⭐ §0 gate (template `trustee-panel-routing-note-TEMPLATE.md`): every TV strips to "the code / the registration sheet should do X". ⛔ No
-word of any Panel-ratified text changes — a variable TAG is registration metadata the member ⛔ never sees, and every rendered body stays
+word of any Panel-ratified text changes — a variable's TYPE is registration metadata the member ⛔ never sees, and every rendered body stays
 byte-identical (Invariant 1). TV5 HOLDS a text while a helpline number is malformed — it reuses 6.29's hold (`-302` RN2), so ⛔ no text is
 spent, ⛔ none is dropped, and ⛔ who / what / when is unchanged. TV6 keeps the SMS alert fallback dark; it was ⛔ never live (⛔ no id was
 ever provisioned). TV9 fixes a FACTUAL error in an OTP text that no Panel ruled. ⇒ ⛔ no routing note owed. ⚠ It BECOMES the Panel's if
@@ -24,7 +28,7 @@ LETTERS: `TV` = this story's build decisions (the author's); `F` = FOUND facts; 
 `RN` = 6.29's (`-302`); `RB` = 6.24b's (`-295`).
 -->
 
-# Story 6.34: Every SMS Template Carries TRAI's Typed Variables — One Vocabulary, a Gate, the Login OTP First `[GOVERNANCE]`
+# Story 6.34: Every SMS Template's Variables Are Typed for TRAI — One Vocabulary, a Gate, the Login OTP First `[GOVERNANCE]`
 
 Status: ready-for-dev
 
@@ -33,12 +37,15 @@ Status: ready-for-dev
 > the old untyped `{#var#}` is refused at registration, and once scrubbing has run 60 days a message failing the tag check is
 > *"rejected outright and not delivered"*. Every SMS template in this repo uses the untyped `{#var#}` — **19 of them**: the login and
 > step-up OTP (2), the alert registry's five whole-body entries (5), and 6.19 / 6.24b's twelve claim texts (12). ⛔ None has been
-> submitted, so ⛔ nothing has to be migrated — they must be registered TYPED the first time. ⚠ The login OTP is the urgent one: an
-> unregistrable OTP template means ⛔ nobody can log in (6.30 AL15 — Row 29 (e)'s logged-out leg waits for it). This story builds ONE
-> typed-variable vocabulary in `@twt/channels`, retags every template to it, adds a CI gate so an untyped or unknown tag can ⛔ never
-> return, makes the registration sheet cover EVERY template, and records the go-live row (Row 30) that only BigDev can close (only BigDev
-> can submit on the DLT portal). ⭐ **⛔ No member sees any difference** — every rendered SMS body stays byte-identical (the tag is never
-> on the wire), with one deliberate exception: TV9's handover OTP text, which today says *"Valid 5 min"* for a code that lives 3.
+> submitted, so ⛔ nothing has to be migrated — they must be registered TYPED the first time. ⭐ The PE registers on **STPL's SmartPing
+> portal** (BigDev, 2026-10-10), where the text KEEPS `{#var#}` and each variable's type is picked in a separate tagging section — so the
+> work is ⛔ to rewrite texts but to give EVERY `{#var#}` a declared, checked TYPE that BigDev copies into that section. ⚠ The login OTP
+> is the urgent one: an untyped OTP template means ⛔ nobody can log in (6.30 AL15 — Row 29 (e)'s logged-out leg waits for it). This
+> story builds ONE typed-variable vocabulary in `@twt/channels`, declares the type of every variable of every template, checks each
+> template against TRAI's shape rules, adds a CI gate so a variable can ⛔ never ship untyped, makes the registration sheet cover EVERY
+> template (with the type to select for each `{#var#}`), and records the go-live row (Row 30) that only BigDev can close (only BigDev
+> can submit on the DLT portal). ⭐ **⛔ No member sees any difference** — every rendered SMS body stays byte-identical, with one
+> deliberate exception: TV9's handover OTP text, which today says *"Valid 5 min"* for a code that lives 3.
 
 > ⭐ **What already ships and this story READS — rebuild ⛔ none of it:** the OTP registry `packages/channels/src/otp-sms-template.ts`;
 > the alert registry `packages/channels/src/sms-dlt-registry.ts`; the composition seam `packages/channels/src/composition/provider-composition.ts`;
@@ -61,6 +68,7 @@ a template or a message the day the rule began to bite.**
 |---|---|---|
 | **`2026-10-10-305`** §2 item 5 | *"`6-34-sms-templates-typed-variables` — every SMS template (the login and step-up OTP …; the alert registry …; 6.19's and 6.24b's twelve drafted templates; 6.27c's two) retagged with TRAI's typed variables … BEFORE any is submitted — ⚠ an untyped login OTP template blocks every login"* | author-commit (BigDev) — THIS ROW |
 | `2026-10-10-305` §4 | roster Rows 27 / 28 / 29 RESERVED (6.27 / 6.27 / 6.30) | author-commit ⇒ this story's row is **30** |
+| BigDev 2026-10-10 (in session, on v1.0) | *"We will use STPL, and [STPL] uses {#var#} for variable"* — the PE's DLT portal is STPL's SmartPing | BigDev's fact — recorded in the Task 0.3 author-commit |
 | `2026-10-10-312` AL15 | the typed-variable rule is a POINTER to this row; Row 29 (e)'s logged-out leg waits for the OTP retag | author-commit (6.30) |
 | `2026-10-10-311` PM3 | 6.27c's two templates are registered TYPED from the start: `{member}` = `{#alphanumeric#}` (≤ 40), `{link}` = `{#url#}`, `{helpline}` = `{#cbn#}` | author-commit (6.27) |
 | `2026-10-08-295` RB1 / RB11 / RB12 | templates 7–12 byte-match the DLT content; *"⛔ do not provision the ids of 7–12 until Row 22 closes"*; a config gap ⛔ spends no notice | author-commit (6.24b) |
@@ -74,12 +82,14 @@ a template or a message the day the rule began to bite.**
 
 1. **⛔ No member-visible change** — every rendered SMS body (OTP, claim correction, certificate, suspicion) is byte-identical before and
    after, EXCEPT TV9's handover selection (it then reads the step-up wording, which already exists). The existing `toBe` pins prove it.
-2. **⛔ No word of a registered text changes** — only `{#var#}` → a typed tag. ⇒ ⛔ no Hindi re-review (Rows 20 / 21 / 23 untouched),
-   ⛔ no i18n key or copy change (`packages/i18n/locales/*/claim.json` is ⛔ edited).
+2. **⛔ No registered text changes at all** — on SmartPing the text keeps `{#var#}` (v1.1); the TYPE is declared beside it. ⇒ ⛔ no
+   Hindi re-review (Rows 20 / 21 / 23 untouched), ⛔ no i18n key or copy change (`packages/i18n/locales/*/claim.json` is ⛔ edited).
 3. **ONE vocabulary** — the six TRAI Annexure-I types live in ONE module (`packages/channels/src/dlt-variables.ts`); every template and
    the gate import / mirror it; ⛔ a second list anywhere ([[feedback_stub_must_call_not_transcribe]]).
-4. **⛔ `{#var#}` anywhere it can be registered** — code under `apps/*/src`, `packages/*/src`, and `docs/launch-gate-inventory/*.md`; the
-   gate (TV7) fails on it and on any `{#…#}` tag outside the six.
+4. **Every `{#var#}` has exactly one declared type, in order** — a template whose `{#var#}` count ≠ its declared `slots` fails its
+   registry test; a file under `apps/*/src` / `packages/*/src` that holds `{#var#}` but is ⛔ a known, shape-tested registry fails the gate
+   (TV7); and ⛔ any OTHER `{#…#}` tag (`{#numeric#}`, `{#number#}`, …) appears in registrable text — on SmartPing a typed tag IN the text
+   would be registered as literal text and never match.
 5. **⛔ No new `detail` code, ⛔ no migration, ⛔ no CHECK change** — 0138 / 0151's grammars stay as 6.29 left them (TV5 reuses
    `config:helpline_number_missing`).
 6. **⛔ No template id, helpline or secret is set** — provisioning stays behind each template's own roster row (Rows 18–23, 27, 30).
@@ -105,7 +115,13 @@ because the operator accepts them."* Niyamavali check: ⛔ not applicable (the N
   `#cbn#` validated against a registered callback NUMBER; `#email#` email regex. ⛔ No date type. ⇒ TV1.
 - **F3 — the SPELLING differs per DLT portal:** TRAI writes `#number# / #numeric#`; Jio's portal inserts `{#number#}`
   (`{#alphanumeric#}`, `{#url#}`, `{#urlott#}`, `{#cbn#}`, `{#email#}`); Vi uses `{#num#} {#alp#} {#urg#} {#uro#} {#cbn#} {#eml#}`;
-  SmartPing / Tata tag in a separate field, ⛔ in the text. ⛔ The PE's portal is recorded nowhere in the repo. ⇒ TV1, TV8, TV10 (a).
+  SmartPing / Tata: *"Variable tags are **not appended in the template text** … variables must be tagged in the designated variable
+  tagging section provided on the DLT portal during template registration"* (MSG91, `msg91.com/help/dlt-registration-in-india/
+  variable-tagging-on-dlt-sms-templates`, re-fetched 2026-10-10). ⭐ **BigDev (2026-10-10): the PE uses STPL** — Satzilio Telecom Pvt Ltd
+  (ex-V-Con / Videocon), operator of the SmartPing DLT portal `smartping.live` (authkey.io's *"Smartping DLT Registration (STPL
+  Videocon)"*; STPL's consumer charter on `smartping.live`) — *"and [STPL] uses {#var#} for variable"*. ⇒ the text keeps `{#var#}`; the
+  type is a per-variable SELECTION. ⚠ The exact labels in SmartPing's tagging section (e.g. "Numeric" vs `#numeric#`) are ⛔ seen in the
+  repo — Row 30 (a) records them with a screenshot. ⇒ TV1, TV8, TV10 (a).
 - **F4 — shape rules:** ≥ 30 % of a template must be FIXED content (TCCCPR 2nd Amendment, 12 Feb 2025, Sch.-I CTRF (j)(iii)) ⇒ a
   whole-body variable is ⛔ registrable; ≤ 2 variables, a THIRD *"in case of exigency"* (more with recorded justification); adjacent
   variables only when both are alphanumeric (Vi, Jio); per-variable limit 40 (Annexure) vs 30 (regulation (k)) — a conflict. ⇒ TV1, TV6, TV8.
@@ -119,15 +135,18 @@ because the operator accepts them."* Niyamavali check: ⛔ not applicable (the N
 
 **The code (as of `34b9bab6`):**
 - **F8 — the OTP marker is read at runtime in exactly ONE place:** `renderOtpBody` (`otp-sms-template.ts:80-82`) —
-  `template.contentTemplate.replace(OTP_VAR_SLOT, code)` (first occurrence). ⚠ Change the texts without `OTP_VAR_SLOT` and the code is
-  ⛔ inserted — the SMS goes out with NO CODE; `otp-sms-template.test.ts:34`'s `not.toContain('{#var#}')` would then pass VACUOUSLY
-  (`:35` / `:42`'s `toBe` and `apps/api/tests/unit/sms-step-up-delivery.test.ts:100,130` catch it). ⇒ TV3.
+  `template.contentTemplate.replace(OTP_VAR_SLOT, code)` (first occurrence). ⚠ Change the marker in the texts without `OTP_VAR_SLOT` (or
+  vice versa) and the code is ⛔ inserted — the SMS goes out with NO CODE. Since v1.1 the marker STAYS `{#var#}` ⇒ ⛔ this edit is
+  needed; the hazard is recorded so ⛔ one "tidies" the marker into a typed tag (Trap 2). `:35` / `:42`'s `toBe` and
+  `apps/api/tests/unit/sms-step-up-delivery.test.ts:100,130` pin the rendered bodies. ⇒ TV3.
 - **F9 — the claim registries' `registeredText` and `DLT_VAR` are read ONLY by tests** — the runtime renders through the real `t()` with
   named params (`claim-correction-sms-templates.ts:93-100`, `suspicion-notice-sms-templates.ts:89-101`; the interpolator
   `packages/i18n/src/resolver.ts:33-43` matches `\{(\w+)\}` — `#` is ⛔ `\w`, so a typed tag could never be interpolated by accident).
-  The lockstep tests assume ONE shared token for every slot: `claim-correction-sms-templates.test.ts:71,73` (`replace(REF, DLT_VAR)
+  The lockstep tests use ONE shared token for every slot: `claim-correction-sms-templates.test.ts:71,73` (`replace(REF, DLT_VAR)
   .replace(HELP, DLT_VAR)`, `split(DLT_VAR)` length 3) and `:137-142` (two en literals); `suspicion-notice-sms-templates.test.ts:56-61`
-  (`PANEL_EN` literals), `:84,86,101`. Typed tags need a PER-SLOT marker. ⇒ TV2, TV4.
+  (`PANEL_EN` literals), `:84,86,101`. Since v1.1 (SmartPing keeps `{#var#}`) that single token is CORRECT and stays; what is missing is
+  the TYPE of each slot — declared nowhere in code or sheet (the sheet's column says only *"Variable slots (`{#var#}`) — to confirm with
+  the wording"*). ⇒ TV2, TV4.
 - **F10 — the five alert-registry entries are WHOLE-BODY variables** (`sms-dlt-registry.ts:58-82`, `contentTemplate: '{#var#}'`). The body
   is `` `${heading}: ${line}` `` (`render.ts:152-153`): an English heading + an escaped, UNBOUNDED line (en day-14 subject > 110
   characters before `{pool}` / `{family}`; Hindi mixed with the English heading; `(` arrives as `\(`). ⛔ Registrable (F4's 30 % rule),
@@ -152,7 +171,11 @@ because the operator accepts them."* Niyamavali check: ⛔ not applicable (the N
   — exactly the class 6.29 closed. ⇒ TV5 (both readers, one predicate).
 - **F13 — 6.27c's two templates exist only as drafts** (6.27a `…:418-427`; 6.27c `…:95-96,127-128` says *"registered typed from the start
   by 6.27c and VERIFIED by 6-34 with every other"*); 6.27c is `backlog`. ⚠ If 6.34 lands first it has ⛔ nothing to verify; if it waits,
-  6.27c and 6.34 defer to EACH OTHER ([[feedback_circular_deferral_between_sibling_stories]]). ⇒ TV11.
+  6.27c and 6.34 defer to EACH OTHER ([[feedback_circular_deferral_between_sibling_stories]]). ⚠ And the drafts write the TYPED TAG IN THE
+  TEXT (`{member}` = `{#alphanumeric#}`, `{link}` = `{#url#}`, `{helpline}` = `{#cbn#}` — `-311` PM3), as does 6.30's SIX FACTS #3
+  (*"should be `{#numeric#}`"*) — the Airtel / Jio / Vi form. On STPL's SmartPing the text keeps `{#var#}` and those are the slots' TYPES.
+  The TYPES in `-311` PM3 stand; only the NOTATION is portal-specific ⇒ the Task 0.3 author-commit records this as a FOUND correction
+  beside `-311` / `-312` (⛔ edited — [[feedback_supersede_never_reinterpret]]). ⇒ TV11.
 - **F14 — two OTP texts state the WRONG validity** (verified by hand): the claim HANDOVER OTP is minted in the `step_up` pool (3 min —
   `claims.service.ts:56`, TTL `apps/api/src/config.ts:383`) but delivered with `intent: 'login'` (`:178-179`) ⇒ the LOGIN template —
   *"Valid 5 min"*; a nominee who types it in minute 4 is refused. The DATA-EXPORT delivery OTP lives 60 min (`config.ts:386`,
@@ -180,28 +203,28 @@ because the operator accepts them."* Niyamavali check: ⛔ not applicable (the N
 
 ## ⚖️ Build decisions TV1–TV12 (PROPOSED — answered by BigDev at Task 0.2, committed by ONE author-commit at Task 0.3)
 
-- **TV1 — ONE vocabulary, TRAI's spelling, in `@twt/channels`.** New `packages/channels/src/dlt-variables.ts` (barrel-exported):
-  `DltVariableType = 'numeric' | 'alphanumeric' | 'url' | 'urlott' | 'cbn' | 'email'`; `DLT_VARIABLE_TAG` (`{#numeric#}`,
-  `{#alphanumeric#}`, `{#url#}`, `{#urlott#}`, `{#cbn#}`, `{#email#}` — the Annexure-I names, ONE spelling in code); `DltSlot = { type,
-  maxLength }` (`maxLength` ≤ the type's ceiling: numeric / alphanumeric / email 40, cbn 14, url / urlott 120);
-  `checkDltTemplateShape(text, slots)` → a list of problems (⛔ `{#var#}`; ⛔ unknown tag; the tags in the text equal `slots` IN ORDER;
-  ≤ 3 variables; ⛔ two adjacent tags unless both alphanumeric; fixed characters ≥ 30 % of (fixed + Σ `maxLength`) — the conservative
-  reading of F4); `isDltNumeric` / `isDltCallbackNumber` (digits only, 3–14) value predicates. ⭐ The PORTAL spelling (`{#number#}` on Jio,
-  `{#num#}` / `{#alp#}` on Vi, a separate field on SmartPing) is a TRANSCRIPTION at registration — the sheet carries the table (TV8); the
-  code ⛔ follows a portal (F3, F7: the tag is ⛔ on the wire). *Alternative:* the PE's portal spelling in code — ⛔ the portal is unknown
-  and a second portal would need a second spelling.
+- **TV1 — ONE vocabulary in `@twt/channels`; the text keeps `{#var#}` (STPL / SmartPing — BigDev, v1.1).** New
+  `packages/channels/src/dlt-variables.ts` (barrel-exported): `DLT_VAR = '{#var#}'` (the ONE marker — SmartPing's, F3);
+  `DltVariableType = 'numeric' | 'alphanumeric' | 'url' | 'urlott' | 'cbn' | 'email'` (TRAI Annexure-I's six; the names are TRAI's, the
+  same words the sheet tells BigDev to select); `DltSlot = { type, maxLength, label }` (`label` = what the slot holds, for the sheet —
+  e.g. *"claim reference"*; `maxLength` ≤ the type's ceiling: numeric / alphanumeric / email 40, cbn 14, url / urlott 120);
+  `checkDltTemplateShape(text, slots)` → a list of problems (the count of `{#var#}` equals `slots.length`; ⛔ any other `{#…#}` tag; ≤ 3
+  variables; ⛔ two adjacent `{#var#}` unless both slots are alphanumeric; fixed characters ≥ 30 % of (fixed + Σ `maxLength`) — the
+  conservative reading of F4); `isDltNumeric` / `isDltCallbackNumber` (digits only, 3–14) value predicates. *Alternative:* typed tags in
+  the text (the Airtel / Jio / Vi form) — ⛔ on SmartPing they would be registered as literal text and ⛔ match a single send.
 - **TV2 — every registered template declares its slots.** `OtpDltTemplate`, `DltTemplate`, the claim-correction and suspicion entries gain
-  `slots: readonly DltSlot[]` (in text order); `DLT_VAR` (`claim-correction-sms-templates.ts:37`, `suspicion-notice-sms-templates.ts:49`)
-  is DELETED. Each registry's test runs `checkDltTemplateShape` over EVERY entry and the lockstep tests replace each rendered value with ITS
-  slot's tag (a per-slot map, ⛔ one shared token — F9). The registered text stays a hand-written literal (byte-matching the sheet).
-- **TV3 — the OTP first.** `OTP_VAR_SLOT` = `DLT_VARIABLE_TAG.numeric`; both texts' wording ⛔ changed; `slots: [{ type: 'numeric',
-  maxLength: 6 }]`; `version` 1 → 2 (the registered text changed); the vacuous `not.toContain('{#var#}')` (`otp-sms-template.test.ts:34`)
-  becomes "contains ⛔ `{#`" + the digits; a test that the rendered body CONTAINS the code (F8's no-code failure). Category Transactional
-  (F6) — recorded in the sheet.
-- **TV4 — the twelve claim texts:** `{reference}` → `{#alphanumeric#}` (maxLength 8); `{member}` → `{#alphanumeric#}` (40); `{date}` →
-  `{#alphanumeric#}` (10 — ⚠ the hyphens depend on F2's ambiguity ⇒ Row 30 (d)); `{helpline}` → `{#cbn#}` (14). Templates 11 / 12 carry
-  THREE variables — the sheet records the justification (*"the last date to appeal is the substance of the notice — `-293` item 1 B"*).
-  ⛔ Any word changes; ⛔ `claim.json` is edited. ⚠ `{member}` > 40 characters (or Devanagari, if the operator refuses it) stays the open
+  `slots: readonly DltSlot[]` (in text order). The two local `DLT_VAR` constants (`claim-correction-sms-templates.ts:37`,
+  `suspicion-notice-sms-templates.ts:49`) and `OTP_VAR_SLOT` (`otp-sms-template.ts:47`) become imports of TV1's `DLT_VAR` (same value —
+  ⛔ a second copy). Each registry's test runs `checkDltTemplateShape` over EVERY entry; the lockstep tests keep their single-token
+  replacement (F9 — correct on SmartPing) and ADD: the sheet's row for the template lists the same types in the same order (TV8).
+- **TV3 — the OTP first.** Texts, marker and wording ⛔ changed (F8 — Trap 2); `slots: [{ type: 'numeric', maxLength: 6, label: 'OTP
+  code' }]`; `version` STAYS 1 (the registered text is unchanged); a test that each OTP template passes `checkDltTemplateShape` and that the
+  rendered body CONTAINS the code and ⛔ `{#` (F8's no-code failure). Category **Transactional** (F6) and the slot type recorded in the
+  sheet as templates 15 / 16 (TV8).
+- **TV4 — the twelve claim texts:** `{reference}` = `alphanumeric` (maxLength 8); `{member}` = `alphanumeric` (40); `{date}` =
+  `alphanumeric` (10 — ⚠ the hyphens depend on F2's ambiguity ⇒ Row 30 (d)); `{helpline}` = `cbn` (14). Templates 11 / 12 carry THREE
+  variables — the sheet records the justification (*"the last date to appeal is the substance of the notice — `-293` item 1 B"*).
+  ⛔ Any text changes; ⛔ `claim.json` is edited. ⚠ `{member}` > 40 characters (or Devanagari, if the operator refuses it) stays the open
   deferred-work item *"`{member}` has ⛔ no length guard …"* — its trigger (provisioning 7–12, Row 22) is unchanged; this story updates
   the item with F2 / F4's figures (40 vs 30) and ⛔ adds a guard (a guard changes WHO is texted ⇒ §0).
 - **TV5 — the helpline is a callback number, checked in BOTH readers.** ONE predicate (`isDltCallbackNumber`, TV1) — digits only, 3–14
@@ -222,37 +245,46 @@ because the operator accepts them."* Niyamavali check: ⛔ not applicable (the N
   turning it ON needs per-category FIXED wording (en + hi) = a later story (⚠ new member-facing wording ⇒ its own §0). *Alternatives:*
   (a) delete the five entries — the same tests churn and the 5.6 set disappears from view; (c) write the five fixed-text templates now —
   new member-facing copy, Hindi review, a story of its own. **Recommended: as written.**
-- **TV7 — the gate `scripts/dlt-typed-variables/`** (mirror `kyc-provider-boundary`, F18): `lib.ts` (`scanDltTags(text)` → findings for
-  `{#var#}` and any `{#…#}` whose name ⛔ in TV1's six — the six MIRRORED from `dlt-variables.ts` by a lockstep test that imports both,
-  ⛔ a hand copy), `check.ts` (scans tracked files under `apps/*/src`, `packages/*/src` and `docs/launch-gate-inventory/*.md`; exit 1
-  naming file + line + tag), `lib.test.ts` (a seeded `{#var#}` FAILS, a seeded `{#number#}` FAILS, the six pass — the negative control,
-  [[feedback_gate_scope_semantic_coverage]]), `README.md`; `package.json` `dlt-typed-variables:check` / `:test`; `scripts/ci-local.sh` +
-  `.github/workflows/ci.yml` (BOTH — F18). SHAPE (30 %, ≤ 3, adjacency, slot order) is checked by each registry's unit test (TV2), ⛔ by
-  parsing the sheet's Markdown.
+- **TV7 — the gate `scripts/dlt-typed-variables/`** (mirror `kyc-provider-boundary`, F18): `lib.ts` — `scanDltText(path, text)` → findings
+  for (i) ANY `{#…#}` tag other than `{#var#}` (a typed tag in registrable text — Invariant 4), and (ii) a source file holding `{#var#}`
+  that is ⛔ on `REGISTRY_FILES` — the allowlist of registry modules whose unit tests run `checkDltTemplateShape` over every entry (today:
+  `packages/channels/src/{otp-sms-template.ts,sms-dlt-registry.ts,dlt-variables.ts}`, `apps/jobs/src/scheduler/{claim-correction-sms-templates.ts,
+  suspicion-notice-sms-templates.ts}`; 6.27c ADDS its file — TV11); `check.ts` scans tracked files under `apps/*/src`, `packages/*/src`
+  (rule i + ii) and `docs/launch-gate-inventory/*.md` (rule i), exit 1 naming file + line; `lib.test.ts` — the negative controls (a seeded
+  `{#numeric#}` FAILS; a seeded `{#var#}` in an unlisted file FAILS; a listed file passes —
+  [[feedback_gate_scope_semantic_coverage]]) and a test that every `REGISTRY_FILES` path EXISTS (a renamed registry ⛔ silently drops out);
+  `README.md`; `package.json` `dlt-typed-variables:check` / `:test`; `scripts/ci-local.sh` + `.github/workflows/ci.yml` (BOTH — F18).
+  SHAPE (30 %, ≤ 3, adjacency, slot count) is checked by each registry's unit test (TV2), ⛔ by parsing the sheet's Markdown.
 - **TV8 — the sheet covers EVERY template.** Keep the path `docs/launch-gate-inventory/dlt-template-requests-6-19.md` (F19); retitle to
   *"DLT Template Registration Requests — every SMS template (first opened for Story 6.19)"*; replace the column *"Variable slots
-  (`{#var#}`)"* with *"Variables (typed — TV1)"*; retag texts 1–12; ADD **15 (OTP login, en)** and **16 (OTP step-up, en)** with their
-  config keys, Transactional category and TTL wording (13 / 14 stay 6.27c's — ⛔ written here); list the five alert categories as
-  *"⛔ not registrable — whole-body (TV6)"*; NEW sections: *"The typed variables"* (the six, their limits, the portal-spelling table — F3),
-  *"Shape rules"* (F4 + the 11 / 12 justification), the corrected helpline section (F5 / TV5); a Record line (*"retagged typed — ⛔ still
-  not submitted"*). ⚠ Templates 1–12 keep their numbers.
+  (`{#var#}`) — to confirm with the wording"* with *"Variable types — select in SmartPing's tagging section, in order"* (e.g. *"1
+  alphanumeric (claim reference, ≤ 8) · 2 cbn (helpline)"*); texts 1–12 ⛔ changed; ADD **15 (OTP login, en)** and **16 (OTP step-up,
+  en)** with their config keys, Transactional category, TTL wording and `numeric` slot (13 / 14 stay 6.27c's — ⛔ written here); list the
+  five alert categories as *"⛔ not registrable — whole-body (TV6)"*; NEW sections: *"Where and how we register"* (STPL / SmartPing; the
+  text keeps `{#var#}`; the type is chosen per variable in the tagging section; ⛔ never type a tag like `{#numeric#}` into the text),
+  *"The variable types"* (the six, their limits), *"Shape rules"* (F4 + the 11 / 12 justification), the corrected helpline section (F5 /
+  TV5); a Record line (*"variable types declared — ⛔ still not submitted"*). ⚠ Templates 1–12 keep their numbers.
 - **TV9 — the OTP texts tell the truth about their validity.** The delivery payload gains an optional `template?: OtpIntent` (default =
   `intent`) that selects the TEMPLATE only — the recipient path still follows `intent` (F14). The handover passes `template: 'step_up'`
   (its code lives 3 min — the step-up wording says 3 min). The data-export OTP (60 min, told *"3 min"*) is RECORDED in deferred-work
   (understates; ⛔ refuses anyone; a third template = a third registration). *Alternatives:* (b) record both — the handover keeps
   misleading a bereaved nominee into a refusal; (c) a third template now for data export. **Recommended: as written.**
 - **TV10 — roster Row 30 `sms-dlt-templates-typed-and-registered`** (owner BigDev — only BigDev submits; support: the SMS provider).
-  Closure: (a) the PE's DLT portal and aggregator NAMED, and the sheet's tags transcribed in that portal's spelling; (b) templates 15 / 16
+  Closure: (a) the PE's DLT portal — ✅ STPL / SmartPing (BigDev, 2026-10-10) — and the SMS GATEWAY that will send (the API behind
+  `sms-app.ts`'s `apiUrl`, F7) NAMED; a screenshot of SmartPing's tagging section recorded, and the sheet's type words matched to its
+  labels; (b) templates 15 / 16
   registered TYPED as Transactional and APPROVED, both ids set in the deployed environment, and a real login OTP AND a step-up OTP
   received on a device (proves F16's key resolution; discharges 6.30 AL15's dependency for Row 29 (e)); (c) each Pariwar's helpline
   whitelisted as a CBN CTA in the TV5 form; (d) the provider's written answers: Devanagari and spaces in `#alphanumeric#`, the hyphen in
   a `DD-MM-YYYY` `#alphanumeric#`, the per-variable limit (40 vs 30), a leading-zero `#numeric#`; (e) the enforcement state recorded with
   a date (logger mode started? rejection date?). Templates 1–14 keep their OWN provisioning gates (Rows 18–23, 27) — Row 30 ⛔ licenses
   their ids. ⭐ Row 30 is ⛔ a merge fence ([[project_not_in_production_merge_is_not_golive]]).
-- **TV11 — 6.27c, ⛔ a circular deferral.** 6.34 does ⛔ hand-verify 6.27c's texts: 6.27c USES TV1's vocabulary and `checkDltTemplateShape`
-  in its own registry test, and TV7's gate covers its file the moment it lands. The pointer lines in 6.27a (`…:423-424`, `…:615`) and
-  6.27c (`…:96`, `…:127-128`) are reworded at Task 0.4 to say so (a Change-Log line in each; ⛔ a PM moved). ⚠ If 6.27c lands FIRST, it
-  STOPS and asks rather than re-creating TV1.
+- **TV11 — 6.27c, ⛔ a circular deferral; the notation corrected.** 6.34 does ⛔ hand-verify 6.27c's texts: 6.27c USES TV1's vocabulary,
+  writes its two texts with `{#var#}` + `slots` (`member` alphanumeric ≤ 40, `link` url, `helpline` cbn — `-311` PM3's TYPES, unchanged),
+  runs `checkDltTemplateShape` in its own registry test and ADDS its file to TV7's `REGISTRY_FILES`. The pointer lines in 6.27a
+  (`…:423-424`, `…:615`) and 6.27c (`…:96`, `…:127-128`) and 6.30's SIX FACTS #3 / AL15 get an annotation at Task 0.4 (*"⚠ on STPL /
+  SmartPing the text keeps `{#var#}`; the tag names here are the slot TYPES — 6.34 TV1 / TV11"*; a Change-Log line in each; ⛔ a PM or AL
+  moved). ⚠ If 6.27c lands FIRST, it STOPS and asks rather than re-creating TV1.
 - **TV12 — recorded, ⛔ changed:** the brand "TWT" and English-only OTP (F15 — a re-registration when the name is fixed / a Hindi OTP is
   added; row 6-35 is the language switch); the dotted key names (F16 — Row 30 (b) proves them); `sms-channel.md`'s degraded-mode draft
   (F20 — when registered it must be typed; a deferred-work line); the missing DLT runbook (F17 — the sheet + Row 30 are the record).
@@ -264,19 +296,21 @@ TV1–TV12 put to BigDev and committed ALONE as one author-commit before any cod
 ledger.
 
 ### AC1 — One vocabulary (TV1)
-**Given** `packages/channels/src/dlt-variables.ts` **then** it exports the six types, their tags and ceilings, `DltSlot`,
+**Given** `packages/channels/src/dlt-variables.ts` **then** it exports `DLT_VAR`, the six types and their ceilings, `DltSlot`,
 `checkDltTemplateShape` and the two value predicates, barrel-exported from `@twt/channels`; unit tests cover each shape rule with a
-passing and a failing case (incl. a whole-body template, a 4-variable template, two adjacent `{#cbn#}`, a 29 %-fixed template).
+passing and a failing case (incl. a whole-body template, a 4-variable template, two adjacent cbn slots, a 29 %-fixed template, a slot
+count ≠ the `{#var#}` count, a `{#numeric#}` tag in the text).
 
 ### AC2 — The OTP is typed and still carries the code (TV3)
-**Given** either OTP template **then** its text contains `{#numeric#}` and ⛔ `{#var#}`, `checkDltTemplateShape` returns ⛔ problems,
-`version` is 2, and `renderOtpBody(…, '048213')` is byte-identical to today's (`otp-sms-template.test.ts:35,42`;
-`sms-step-up-delivery.test.ts:100,130` unchanged and green) and contains `048213`.
+**Given** either OTP template **then** its text is UNCHANGED (still `{#var#}`), it declares one `numeric` slot (≤ 6),
+`checkDltTemplateShape` returns ⛔ problems, `version` is still 1, and `renderOtpBody(…, '048213')` is byte-identical to today's
+(`otp-sms-template.test.ts:35,42`; `sms-step-up-delivery.test.ts:100,130` unchanged and green), contains `048213` and ⛔ `{#`.
 
-### AC3 — The twelve claim texts are typed, words unchanged (TV2, TV4)
-**Given** every claim-correction and suspicion entry **then** it declares `slots`, passes `checkDltTemplateShape`, its rendered body
-(through the real `t()`) is byte-identical to today's, the per-slot lockstep reproduces `registeredText`, and the sheet contains it;
-`DLT_VAR` exists nowhere; `claim.json` is ⛔ in the diff.
+### AC3 — The twelve claim texts are typed, text unchanged (TV2, TV4)
+**Given** every claim-correction and suspicion entry **then** its `registeredText` is unchanged, it declares `slots` per TV4, passes
+`checkDltTemplateShape`, its rendered body (through the real `t()`) is byte-identical to today's, the lockstep reproduces
+`registeredText`, and the sheet contains it with the same types in the same order; the local `DLT_VAR` / `OTP_VAR_SLOT` constants are
+imports of TV1's; `claim.json` is ⛔ in the diff.
 
 ### AC4 — A malformed helpline HOLDS, ⛔ burns (TV5)
 **Given** a Pariwar's helpline set to `+911800123456` (or with a space) **when** the suspicion sweep runs **then** the (purpose, Pariwar)
@@ -290,11 +324,12 @@ mocked registrable entry.
 
 ### AC6 — The gate (TV7)
 `pnpm dlt-typed-variables:test && pnpm dlt-typed-variables:check` pass on the tree and run in `ci-local.sh` AND `ci.yml`; the negative
-controls (`{#var#}`, `{#number#}`) fail in `lib.test.ts`; the six-name mirror is pinned by a lockstep test.
+controls (a `{#numeric#}` tag; a `{#var#}` in an unlisted source file) fail in `lib.test.ts`; every `REGISTRY_FILES` path exists.
 
 ### AC7 — The sheet (TV8)
-Every template 1–12, 15, 16 appears typed with its config key; the typed-variables, shape-rules and helpline sections exist; the five
-alert categories are listed as not registrable; a Record line dated at the change; ⛔ `{#var#}` remains (the gate proves it).
+Every template 1–12, 15, 16 appears with its config key and its variable types in order; the where-and-how (STPL / SmartPing),
+variable-types, shape-rules and helpline sections exist; the five alert categories are listed as not registrable; a Record line dated at
+the change; ⛔ typed tag appears in any registered text (the gate proves it).
 
 ### AC8 — The handover OTP says 3 minutes (TV9)
 **Given** a claim handover OTP **then** it is sent to the SAME number as today (the caller-supplied E.164) with the step-up text
@@ -303,7 +338,7 @@ export).
 
 ### AC9 — The records (TV10–TV12)
 Roster Row 30 written at its number; deferred-work items (TV6 §3.4 (iii); TV9 data export; TV12 lines; the `{member}` item updated —
-TV4); 6.27a / 6.27c pointers reworded (TV11); this file's Change Log + File List.
+TV4); 6.27a / 6.27c / 6.30 annotations (TV11); this file's Change Log + File List.
 
 ### AC10 — Nothing else moves; the proof
 ⛔ Migration, ⛔ `detail` code, ⛔ i18n change, ⛔ template id / secret / helpline set; `pnpm ci:local` green — run it, paste the summary.
@@ -314,21 +349,24 @@ TV4); 6.27a / 6.27c pointers reworded (TV11); this file's Change Log + File List
   - [ ] 0.1 Re-check `git diff --name-only 34b9bab6..HEAD -- packages/channels apps/jobs/src/scheduler apps/api/src/modules/auth
         apps/api/src/modules/claims apps/api/src/modules/member-data-rights docs/launch-gate-inventory scripts`; re-read any cited file
         that moved. Re-fetch F1–F6 (the Direction PDF; Vi's `Entity_Content_template_registration.pdf` and `CTA_Whitelisting.pdf`; Jio's
-        TrueConnect guide) — record the fetch date; ask BigDev which DLT portal / aggregator the PE uses (TV10 (a)) — ⛔ guess.
+        TrueConnect guide) and the SmartPing / STPL tagging guidance (MSG91's carrier guide; any STPL help page) — record the fetch
+        date. The portal is ANSWERED (STPL / SmartPing — BigDev, 2026-10-10); ask which SMS GATEWAY will send (TV10 (a)) — ⛔ guess.
   - [ ] 0.2 Put TV1–TV12 to BigDev (short option summaries; recommendations stated).
-  - [ ] 0.3 ONE author-commit (the next free decision id — expected `2026-10-1x-313`) recording the answers, committed ALONE
-        ([[project_decision_log_writes_user_inserted]] — stage in the scratchpad, try the insert first).
+  - [ ] 0.3 ONE author-commit (the next free decision id — expected `2026-10-1x-313`) recording the answers AND BigDev's portal fact
+        (STPL / SmartPing; the text keeps `{#var#}`) with the FOUND notation correction to `-311` PM3 / `-312` AL15 (F13 — ⛔ editing
+        either), committed ALONE ([[project_decision_log_writes_user_inserted]] — stage in the scratchpad, try the insert first).
   - [ ] 0.4 `epics.md` `### Story 6.34` after the last Epic 6 entry (6.29's format — *"⚠ Added … (Story 6.34, Task 0.4)"*, ⛔ a merge
         fence); roster **Row 30** (TV10, the Row 26 block format — `## Row 30 — Story 6.34: …`, the `> ⭐ Appended …` line, the eleven
-        fields; note the 27–29 gap is RESERVED); 6.27a / 6.27c pointer lines (TV11); sprint ledger line
+        fields; note the 27–29 gap is RESERVED); 6.27a / 6.27c / 6.30 annotations (TV11); sprint ledger line
         ([[project_sprint_status_safe_prepend]]).
 - [ ] **Task 1 — the vocabulary (AC1).** `packages/channels/src/dlt-variables.ts` + barrel export in `packages/channels/src/index.ts`
       (beside `resolveOtpTemplate` / `resolveDltTemplate`, `:101-110`); `packages/channels/tests/dlt-variables.test.ts`.
-- [ ] **Task 2 — the OTP (AC2).** `otp-sms-template.ts` (TV3: `OTP_VAR_SLOT` from TV1, `slots`, `version: 2`, the header comment's
-      *"single variable slot"* paragraph); `otp-sms-template.test.ts` (shape, the non-vacuous assertion, contains-the-code).
-- [ ] **Task 3 — the claim texts (AC3).** `claim-correction-sms-templates.ts`, `suspicion-notice-sms-templates.ts` (typed literals,
-      `slots`, `DLT_VAR` deleted, header comments); the two jobs tests (per-slot lockstep — F9's lines; the `PANEL_EN` literals retagged —
-      ⚠ they are the Panel's EN wording: only the tags change).
+- [ ] **Task 2 — the OTP (AC2).** `otp-sms-template.ts` (TV3: `OTP_VAR_SLOT` = TV1's `DLT_VAR`, `slots`, `version` unchanged, the
+      header comment's *"single variable slot"* paragraph names the `numeric` type); `otp-sms-template.test.ts` (shape, contains-the-code,
+      ⛔ `{#` in the body).
+- [ ] **Task 3 — the claim texts (AC3).** `claim-correction-sms-templates.ts`, `suspicion-notice-sms-templates.ts` (`slots` per TV4; the
+      local `DLT_VAR` → TV1's import, re-exported if the tests import it; texts ⛔ changed; header comments); the two jobs tests (shape over
+      every entry; the sheet row carries the same types in order; the `PANEL_EN` literals ⛔ changed — they are the Panel's EN wording).
 - [ ] **Task 4 — the helpline (AC4).** `claim-dlt-sms-send.ts:99` and `claim-suspicion-notices.ts` `configSet` / `helplineGap` → the ONE
       predicate; ⚠ `configSet` also checks TEMPLATE IDS — apply the predicate to the HELPLINE read only (a `helplineGap`-local check on the
       resolved value, or a `configSet` variant) — ⛔ to template ids; tests in `apps/jobs/tests/` (the sweep holds; the core refuses; a
@@ -353,14 +391,15 @@ TV4); 6.27a / 6.27c pointers reworded (TV11); this file's Change Log + File List
 ### ⚠ TRAPS
 1. **⛔ Change a WORD of a registered text** — templates 1–12 are Panel-ratified wording (and 1–4's Hindi is human-reviewed — Row 20);
    only `{#var#}` → a tag. A text that "reads better" is a §0 event. ⛔ Turn the alert SMS fallback ON (TV6). ⛔ Change who is texted.
-2. **The OTP marker and the texts move TOGETHER** (F8) — change `OTP_VAR_SLOT` via TV1 and the texts in the same edit; the rendered-body
-   `toBe` pins are the proof.
+2. **⛔ "Tidy" `{#var#}` into a typed tag** — on STPL / SmartPing the text KEEPS `{#var#}` (v1.1); a `{#numeric#}` in the OTP text would
+   be registered as literal text, AND `renderOtpBody` would stop inserting the code (F8) — the SMS would go out with ⛔ code. The
+   rendered-body `toBe` pins and TV7's gate are the proof.
 3. **Both helpline readers or neither** (F12) — a check in the send core alone re-opens the slot-burning bug 6.29 closed.
 4. **`configSet` reads template ids too** — the callback-number predicate is for the HELPLINE value only; applied to a template id it
    would hold every notice forever.
-5. **⛔ A second list of the six tags** — the gate mirrors `dlt-variables.ts` and a lockstep test pins the mirror
-   ([[feedback_stub_must_call_not_transcribe]]); a gate under `scripts/` cannot import a workspace package's TS by bare name — read the
-   names via a relative path import or a lockstep test, as `kyc-provider-boundary` does with its own list.
+5. **⛔ A second copy of the vocabulary** — `DLT_VAR` and the six types live in `dlt-variables.ts` only
+   ([[feedback_stub_must_call_not_transcribe]]); the gate needs only the literal `{#var#}` and a "⛔ any other `{#…#}`" regex — if it
+   imports anything from the package, use a relative path (a `scripts/` gate cannot import a workspace package's TS by bare name).
 6. **`ci.yml` AND `ci-local.sh`** — drift between them is invisible ([[project_ci_actions_suspension_local_mirror]]).
 7. **⛔ Provision anything** — ⛔ template id, ⛔ helpline, ⛔ secret (Invariant 6). Row 30 is BigDev's.
 8. **Contracts / jobs tests are outside tsc in places** — run vitest for every touched package ([[project_contracts_tests_outside_tsc]]).
@@ -382,7 +421,7 @@ Vitest per package (`packages/channels`, `apps/jobs`, `apps/api`, `scripts/dlt-t
   suspicion-notice-sms-templates.ts,claim-dlt-sms-send.ts,claim-suspicion-notices.ts}`; `apps/api/src/modules/auth/shared/{step-up-delivery.ts,
   sms-step-up-delivery.ts}`; `apps/api/src/modules/claims/claims.service.ts`; tests as above; `package.json`; `scripts/ci-local.sh`;
   `.github/workflows/ci.yml`; `docs/launch-gate-inventory/{dlt-template-requests-6-19.md,inventory-roster.md}`; `epics.md`;
-  `deferred-work.md`; 6.27a / 6.27c story files (pointer lines only).
+  `deferred-work.md`; 6.27a / 6.27c / 6.30 story files (annotation lines only).
 - ⛔ Touched: `packages/i18n/locales/**`, any migration, `packages/domain/src/claim/suspicion-notice.ts`'s `detail` grammar.
 
 ### Sequencing
@@ -408,7 +447,11 @@ decision entry → records → build → review; REBASE-merge ([[project_story_a
   ⛔ yet started, Sep 2026); `…/CTA_Whitelisting.pdf` (CBN formats).
 - Jio: `https://trueconnect.jio.com/assets/Trai_module/SampleFileDownloads/Content%20template%20registration%20user%20guide.pdf` (`{#number#}`;
   internally inconsistent on number length / special characters); `…/CTA%20Whitelisting%20USER%20GUIDE.pdf`.
-- MSG91 variable-tagging help (SmartPing / Tata tag in a separate field): `https://msg91.com/help/dlt-registration-in-india/variable-tagging-on-dlt-sms-templates`.
+- MSG91 variable-tagging help (SmartPing / Tata: *"Variable tags are not appended in the template text"* — tagged in the portal's
+  tagging section): `https://msg91.com/help/dlt-registration-in-india/variable-tagging-on-dlt-sms-templates` (re-fetched 2026-10-10).
+- ⭐ STPL = Satzilio Telecom Pvt Ltd (ex-V-Con / Videocon), the SmartPing DLT portal `https://smartping.live/entity/home`
+  (`https://help.authkey.io/dlt-registration/smartping-dlt-registration-stpl-videocon/`); PingConnect profiles migrated to SmartPing from
+  8 Oct 2025 (MSG91). The PE's portal per BigDev, 2026-10-10.
 - UNVERIFIED (single source): the 15 Jan 2026 date; leading zeros; Devanagari in `#alphanumeric#`; template-id behaviour outside Vi.
 
 ### References
@@ -432,3 +475,4 @@ decision entry → records → build → review; REBASE-merge ([[project_story_a
 | Date | Version | Change |
 |---|---|---|
 | 2026-10-10 | 1.0 | Created via `bmad-create-story 6.34` (pinned `34b9bab6`): three research passes (code inventory; TRAI / operator rules; governance). FOUND F1–F20 — incl. 19 untyped templates; per-portal tag spelling; whole-body alert templates unregistrable; the helpline's `+` invalid as `#cbn#` with TWO readers; the handover OTP's *"Valid 5 min"* for a 3-minute code; ⛔ DLT row or runbook. TV1–TV12 PROPOSED (author-commit owed at Task 0.3); ⛔ no Panel question (§0). Status `ready-for-dev`. |
+| 2026-10-10 | 1.1 | BigDev, in session: *"We will use STPL, and [STPL] uses {#var#} for variable"* — the PE registers on STPL's SmartPing portal, where the text KEEPS `{#var#}` and each variable's type is picked in a separate tagging section (confirmed against MSG91's carrier guide). ⇒ ⛔ text is retagged: TV1 (one `DLT_VAR` + the six types as slot metadata), TV2 (slots declared; single-token lockstep kept), TV3 (OTP text and `version` unchanged), TV4 (types, ⛔ tags), TV7 (gate: ⛔ typed tag in text; `{#var#}` only in shape-tested registry files), TV8 (sheet: the type to select per `{#var#}`; a where-and-how section), TV10 (a) (portal answered; the gateway still owed), TV11 (6.27c writes `{#var#}` + slots; annotations on 6.27a / 6.27c / 6.30); Invariants 2 / 4, F3 / F8 / F9 / F13, AC1–AC3 / AC6 / AC7 / AC9, Tasks 0.1 / 0.3 / 0.4 / 2 / 3, Traps 2 / 5 aligned. TV5 / TV6 / TV9 / TV10 (b)–(e) / TV12 unchanged. |

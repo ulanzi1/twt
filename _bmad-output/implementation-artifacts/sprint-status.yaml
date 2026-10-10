@@ -1,3 +1,8 @@
+# last_updated: 2026-10-10x (⭐ **6.34 → v1.1 — THE PE REGISTERS ON STPL (BigDev, in session: *"We will use STPL, and [STPL] uses {#var#} for
+# variable"*).** STPL = Satzilio Telecom (the SmartPing DLT portal): the template TEXT keeps `{#var#}` and each variable's TYPE is picked in
+# a separate tagging section. ⇒ ⛔ text is retagged; every `{#var#}` gets a DECLARED type (TV1–TV4), the gate forbids a typed tag IN the
+# text (TV7), the sheet lists the type to select per variable (TV8); 6.27c's drafted typed tags and 6.30's SIX FACTS #3 are the slot
+# TYPES — a notation correction for the Task 0.3 author-commit (TV11). The SMS gateway is still owed (Row 30 (a)). ⛔ No row moves.)
 # last_updated: 2026-10-10w (⭐ **STORY 6.34 — CREATED via `bmad-create-story 6.34` ⇒ `backlog → ready-for-dev`.** Pinned `34b9bab6`, branch
 # `story/6-34-sms-templates-typed-variables` (from `main`). Three read-only research passes (the code's SMS templates + send path; TRAI's
 # 18 Nov 2025 Direction, the Feb 2025 regulation and the Vi / Jio manuals, fetched 2026-10-10; the governance trail). FOUND: 19 untyped

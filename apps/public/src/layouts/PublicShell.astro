@@ -22,9 +22,15 @@ interface Props {
   branding: BrandingBundle | null;
   /** When true, emit `<meta name="robots" content="noindex">` (error/utility pages). */
   noindex?: boolean;
+  /**
+   * When true, render ⛔ NO language toggle — and ⛔ never call `withLang()`, which copies EVERY query
+   * parameter of the current URL into its links. Story 6.30 (`2026-10-10-312` AL11): the app-link fallback
+   * page shows both languages on one page, and under `/peer-request?c=<code>` a toggle would echo the code.
+   */
+  hideLanguageToggle?: boolean;
 }
 
-const { locale, title, description, trustName, branding, noindex = false } = Astro.props;
+const { locale, title, description, trustName, branding, noindex = false, hideLanguageToggle = false } = Astro.props;
 
 // Build the locale-toggle links from the current URL, preserving any selector params
 // (clause/from/to). Distinct URLs ⇒ distinct edge-cache entries (no Vary needed for
@@ -131,14 +137,16 @@ const pageTitle = title === trustName ? title : `${title} · ${trustName}`;
           {logoUrl && <img class="shell-brand__logo" src={logoUrl} alt={trustName} />}
           <p class="shell-brand__name" style={`color:${brandPrimary}`}>{trustName}</p>
         </div>
-        <nav class="lang-toggle" aria-label={t('language_label', undefined, { locale, namespace: 'niyamavali' })}>
-          <a href={withLang('hi')} aria-current={locale === 'hi' ? 'true' : 'false'} hreflang="hi">
-            {t('switch_to_hindi', undefined, { locale, namespace: 'niyamavali' })}
-          </a>
-          <a href={withLang('en')} aria-current={locale === 'en' ? 'true' : 'false'} hreflang="en">
-            {t('switch_to_english', undefined, { locale, namespace: 'niyamavali' })}
-          </a>
-        </nav>
+        {!hideLanguageToggle && (
+          <nav class="lang-toggle" aria-label={t('language_label', undefined, { locale, namespace: 'niyamavali' })}>
+            <a href={withLang('hi')} aria-current={locale === 'hi' ? 'true' : 'false'} hreflang="hi">
+              {t('switch_to_hindi', undefined, { locale, namespace: 'niyamavali' })}
+            </a>
+            <a href={withLang('en')} aria-current={locale === 'en' ? 'true' : 'false'} hreflang="en">
+              {t('switch_to_english', undefined, { locale, namespace: 'niyamavali' })}
+            </a>
+          </nav>
+        )}
       </div>
     </header>
     <main class="shell-main">

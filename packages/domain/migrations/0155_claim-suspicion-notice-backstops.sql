@@ -52,9 +52,14 @@ BEGIN
       'claim_suspicion_notices: a finished row (%) is never updated — once per (claim, purpose), ever (Story 6.29, -302 RN6)', OLD.outcome
       USING ERRCODE = 'integrity_constraint_violation';
   END IF;
-  -- `-302` RN3 — the give-up's anchor moves ONLY forward, and ONLY when a PARKED row is re-claimed.
+  -- `-302` RN3 — the give-up's anchor moves ONLY forward, and ONLY when a PARKED row is RE-CLAIMED: the SAME statement must
+  -- ALSO clear `parked_at` (⛔ a repeated forward credit on a row left parked) and ⛔ finish the row (review findings, Story
+  -- 6.29 code review 2026-10-10, round 2 — `IS DISTINCT FROM` throughout for NULL-safety, ⛔ `<>`).
   IF NEW.aging_since IS DISTINCT FROM OLD.aging_since
-     AND (OLD.claimed_by_job IS DISTINCT FROM 'sweep:held' OR NEW.aging_since < OLD.aging_since) THEN
+     AND (OLD.claimed_by_job IS DISTINCT FROM 'sweep:held'
+          OR NEW.aging_since < OLD.aging_since
+          OR NEW.outcome IS DISTINCT FROM 'attempting'
+          OR NEW.parked_at IS NOT NULL) THEN
     RAISE EXCEPTION
       'claim_suspicion_notices: aging_since moves only forward, and only on the re-claim of a parked row (Story 6.29, -302 RN3)'
       USING ERRCODE = 'integrity_constraint_violation';

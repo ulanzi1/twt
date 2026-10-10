@@ -26,7 +26,7 @@ LETTERS: `RN` = this story's build decisions (the author's); `F` = FOUND facts; 
 
 # Story 6.29: A Config Hold Never Burns a Suspicion Text — 0151 Gains 6.25's Hold, Give-Up Anchor and DB Backstops, Adapted to SMS `[PRIMITIVE]`
 
-Status: review
+Status: done
 
 > ⭐⭐ **WHAT THIS STORY IS, IN ONE PARAGRAPH.** Story 6.24b's three SMS texts (the filing code / "could not go ahead" to the nominee in
 > place at the death; the closure text after an allowed appeal; the appeal-date text to the refused person) are recorded in 0151
@@ -340,6 +340,100 @@ scratch database migrated from zero; `pnpm ci:local` green.
       grants exact, index); the domain legs (park scope, give-up skip, credit, flapping, DEFAULT); a two-connection lease race; the jobs
       live legs (each hold kind × a crash-left row; an un-held purpose in the same run; the post-hold re-claim; every F12 class finalising).
 - [x] **Task 6 — Proof (AC7, AC8).** Red-checks logged; `git diff --stat` against AC7's list; `pnpm ci:local` green; story records.
+
+### Review Findings
+
+> Code review 2026-10-10 (`bmad-code-review`, full diff `9f4d684a..fc017bdc`; three layers — Blind Hunter diff-only, Edge Case Hunter
+> diff+read, Acceptance Auditor diff+spec+checklist — in PARALLEL, read-only throughout). Triage: **0 decision-needed, 5 patch, 1 defer,
+> 7 dismissed**. Acceptance Auditor: all 8 ACs (AC0–AC8) satisfied with direct evidence; zero REAL GAP on every touched load-bearing-
+> invariant family (1, 2, 5, 6, 8, 9, 10, 11, 12 touched and covered; 3, 4, 7, 13 untouched, skipped silently). §0 gate: ⛔ nothing here
+> is the Panel's — every finding is "the code should do X," ⛔ change to who is texted, what a text says, or when it is due. Dismissed
+> (each re-traced against the actual code and types, ⛔ taken on a layer's word): a `detail!` non-null assertion flagged as unsafe —
+> `result.detail` is null ONLY when `kind==='final' && outcome==='accepted'` (the shared send core's own discriminated union), excluded
+> at both assertion sites by their own enclosing branch; the recheck-expiry path's missing `assertDetail` — `check.reason`'s type is a
+> closed 3-member literal union derived from `SuspicionRefusalAppealPosition`, so an out-of-grammar value is unrepresentable at compile
+> time, unlike the two asserted writers, which accept untrusted `string` from the gateway; roster Row 22(d) ⛔ edited — its wording
+> already reads "every `claim-suspicion-notice` alarm," a category match the new PARK alarm (same alarm prefix) falls under without an
+> edit; a given-up parked row keeping its stale `parked_at` / `claimed_by_job='sweep:held'` — explicitly documented as intended in 0155's
+> own comment ("a finished row may keep it — the trigger freezes it anyway"), harmless since any reader must already gate on
+> `outcome='attempting'` before the fields mean "currently parked"; no down-migration for 0155 — matches all 154 other migrations in this
+> package, none of which ship one; the `claimCaseId as string` cast — ordinary branded-ID widening needed for `Set<string>` /
+> `sampleIds(list: readonly string[])`; REVOKE-then-GRANT transaction-wrapping "unverified" — Drizzle's migrator wraps each migration
+> file's statements in one transaction by default, so no window exists where `twt_app` holds zero INSERT privilege.
+
+- [x] [Review][Patch] ✅ **Fixed 2026-10-10.** **0155's finished-row trigger lets a hypothetical combined "finish + advance `aging_since`" UPDATE through** — the
+  forward-move exemption (`claim_suspicion_notices_guard_update()`) checks only `OLD.claimed_by_job = 'sweep:held'`, ⛔ that `NEW.outcome`
+  also stays `'attempting'`; no current write path combines the two (the re-claim UPDATE never touches `outcome`, the finalise UPDATE
+  never touches `aging_since`), but the trigger's own guard is looser than RN6's stated invariant ("ANY change of `aging_since` except
+  FORWARD on a parked re-claim"). Fix: added `OR NEW.outcome <> 'attempting'` to the exemption's RAISE condition
+  [packages/domain/migrations/0155_claim-suspicion-notice-backstops.sql:55-61]; reapplied via `CREATE OR REPLACE FUNCTION` directly to
+  :5432 and :5433 (0155 was already applied — the migrator would skip the edited file, so this went straight to both live instances,
+  ⛔ a fresh migration, pre-merge); a regression test proving the old gap is closed (and the legitimate re-claim shape still accepted)
+  added at `packages/domain/tests/integration/rls/claim-suspicion-notice-policy-regression.spec.ts`.
+- [x] [Review][Patch] ✅ **Fixed 2026-10-10.** **`SUSPICION_NOTICE_PARKED_BY` ('sweep:held') is duplicated in four places with no lockstep test** — the 0155
+  trigger function, the `parked_check` CHECK (migration SQL and the Drizzle `check()` call), and the JS export — unlike the `detail`
+  grammar, which has a dedicated test pinning the SQL CHECK pattern to `SUSPICION_NOTICE_DETAIL_PATTERN`. A future rename of the JS
+  constant would silently desync from the (immutable, already-applied) migration. Fix: a new LOCKSTEP test asserting the `parked_check`
+  CHECK definition and the trigger function's source both carry the exact quoted `SUSPICION_NOTICE_PARKED_BY` literal
+  [packages/domain/tests/integration/rls/claim-suspicion-notice-policy-regression.spec.ts].
+  [packages/domain/src/claim/suspicion-notice.ts:84; packages/domain/migrations/0155_claim-suspicion-notice-backstops.sql:34,57]
+- [x] [Review][Patch] ✅ **Fixed 2026-10-10.** **`SUSPICION_NOTICE_SMS_ERROR_CLASSES` has no lockstep test against `@twt/channels`'s `SmsErrorClass`** — the two
+  lists match exactly today (the same 7 members), but nothing pins them equal; a future gateway error class added to
+  `packages/channels/src/providers/sms-errors.ts` without a matching update here would silently degrade through `sendDetail()` to
+  `unknown:unknown`, discarding diagnostic content with no test to catch the drift. Fix: a pinned-snapshot test (`suspicion-notice.spec.ts`)
+  asserting the exact 7-member array, plus a strengthened comment — ⛔ a live cross-package import is possible here (`@twt/channels`
+  depends on `@twt/domain`, ⛔ the reverse; importing it would cycle the workspace graph), so the other half stays a by-hand cross-check,
+  called out explicitly in both the code comment and the test name. [packages/domain/src/claim/suspicion-notice.ts:126-134,159-169]
+- [x] [Review][Patch] ✅ **Fixed 2026-10-10.** **The park phase's per-Pariwar Secret Manager lookups (`helplineGap` via `gapOf`) have no budget/timeout guard**,
+  unlike the main enqueue loop which checks `budgetMs` on every iteration (`:239`) — a run with many distinct stalled (purpose, Pariwar)
+  scopes could spend unbounded time/cost in the park phase before the give-up or enqueue loop even starts. Low severity: the design's
+  own comment calls the stalled set "a small set" (crash-left rows past the lease only). Fix: the same `budgetMs` check now runs inside
+  the park-phase scope loop too; exhausting it there skips the rest of that run's enqueue loop as well (reported via the existing
+  "ran out of its N-minute budget" alarm). [apps/jobs/src/scheduler/claim-suspicion-notices.ts:191-198]
+- [x] [Review][Patch] ✅ **Fixed 2026-10-10.** **The new "newly PARKED" alarm loses the per-purpose/per-Pariwar breakdown the sibling HELD alarm has** — it is a
+  flat count plus a dedup'd claim-id list (`:199-204`), while the HELD alarm groups by purpose (`:279-284`). An on-call reader of the
+  PARK alarm can't tell which purpose/Pariwar is affected without querying the database. Fix: the PARK alarm now groups by purpose,
+  mirroring the HELD alarm's shape exactly. [apps/jobs/src/scheduler/claim-suspicion-notices.ts:199-205]
+- [x] [Review][Defer] **A send that succeeds just as the park takes the row underneath it can cause a resend (duplicate SMS) on the
+  next un-held sweep's re-claim** — `finaliseSuspicionNotice`'s compare-and-set loses (`claimed_by_job` is now `'sweep:held'`, ⛔ the
+  sender's `jobId`), alarms *"moved on before its finalise,"* and the row stays `attempting`; the next re-claim's child does ⛔ know the
+  gateway already accepted the send and resends. This is the SAME at-least-once race the project already accepts for lease-expiry
+  redelivery (RB3's documented, recorded cost) — the park path is one more door onto it, ⛔ a new race. Invariant 6's "benign" framing
+  covers stranding (a parked row is always eventually retried), ⛔ this resend angle explicitly. Not actionable inside this story's
+  scope (RN1 puts the shared send core and provider pre-flight out of bounds) — deferred, pre-existing risk class.
+  [packages/domain/src/claim/suspicion-notice.ts:634-662 (`finaliseSuspicionNotice`); apps/jobs/src/scheduler/claim-suspicion-notices.ts:191-205]
+
+> **Round 2** (2026-10-10, narrowed diff — the 5 files round 1's patches touched, 162 diff lines; three layers in PARALLEL, read-only).
+> Triage: **0 decision-needed, 4 patch, 0 defer, 2 dismissed**. Acceptance Auditor independently re-verified all 5 round-1 fixes against
+> BOTH live DBs and the actual write paths — all 5 confirmed genuine, no new AC/RN violation. Dismissed: the shared `budgetExhausted`
+> flag zeroing the whole enqueue loop when the park phase alone exhausts the budget — confirmed INTENTIONAL (a single run-wide budget
+> across phases was the point of round 1's fix, not a side effect); a suspected duplicate import path in the policy-regression spec —
+> verified the two import paths are genuinely different files.
+
+- [x] [Review][Patch] ✅ **Fixed 2026-10-10 (round 2).** **The round-1 trigger fix was still incomplete** — two merged issues: (a) `NEW.outcome <> 'attempting'`
+  is NULL-unsafe (Postgres `<>` against NULL yields NULL, not TRUE, so the `IF` would not raise — inconsistent with the `IS DISTINCT
+  FROM` used two lines above it for the same reason); (b) more seriously, the guard never required the row actually be UN-parked —
+  an UPDATE that only credits `aging_since` forward while leaving `claimed_by_job = 'sweep:held'` / `parked_at` untouched still passed,
+  letting a row's give-up clock be pushed out repeatedly without a real re-claim. Not exploited by any current write path (the real
+  re-claim UPDATE always clears `parked_at` in the same statement), but the same class of latent gap as round 1's finding, just not
+  fully closed. Fix: `<>` → `IS DISTINCT FROM` throughout, and `OR NEW.parked_at IS NOT NULL` added to the RAISE condition; reapplied
+  via `CREATE OR REPLACE FUNCTION` to :5432 + :5433 a third time; the regression test extended with the un-parked-credit case.
+  [packages/domain/migrations/0155_claim-suspicion-notice-backstops.sql:55-63]
+- [x] [Review][Patch] ✅ **Fixed 2026-10-10 (round 2).** **The end-of-run "ran out of budget" alarm was misleading when the PARK phase (not the enqueue
+  loop) consumed the whole budget** — it read "...after 0 claim(s)," which reads as "nothing was due," not "we never got to look."
+  Fix: a `budgetExhaustedDuringScopeScan` flag distinguishes the two cases; the park-phase exhaustion now alarms its own, accurate
+  message ("ran out of its N-minute budget scanning stalled scopes (park phase) — the enqueue scan did ⛔ run today").
+  [apps/jobs/src/scheduler/claim-suspicion-notices.ts:195,199-202,297-302]
+- [x] [Review][Patch] ✅ **Fixed 2026-10-10 (round 2).** **The round-1 SQL lockstep test's `.toContain('sweep:held')` matched anywhere in the trigger's
+  FULL `pg_get_functiondef` text, including its `--` comments** — would still pass if the real comparison literal changed but an
+  unrelated comment still said "sweep:held" (this file's comments are prose-heavy and already mention the literal by name). Fix: the
+  trigger half now anchors to the actual code via `/claimed_by_job\s+IS\s+DISTINCT\s+FROM\s+('[^']*')/`, immune to comment text.
+  [packages/domain/tests/integration/rls/claim-suspicion-notice-policy-regression.spec.ts:366-381]
+- [x] [Review][Patch] ✅ **Fixed 2026-10-10 (round 2).** **The round-1 SMS-error-class test's name overstated what it verifies** ("LOCKSTEP... is EXACTLY
+  `SmsErrorClass`") — it is a one-sided pin against a hand-copied snapshot, structurally incapable of catching drift from
+  `@twt/channels`'s side (confirmed again this round: the one-way `channels→domain` dependency really does block a live cross-import).
+  Fix: reworded to "PINNED... this test fails if OUR array drifts, ⛔ if THEIRS does" — accurate about the one-sided guarantee.
+  [packages/domain/tests/integration/claim/suspicion-notice.spec.ts:709]
 
 ## Dev Notes
 

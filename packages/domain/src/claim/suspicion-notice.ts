@@ -122,7 +122,12 @@ export const SUSPICION_NOTICE_SEND_CONFIG_DETAILS = [
   'config:sms_gateway_unconfigured',
   'config:sms_messaging_unavailable',
 ] as const;
-/** The SMS gateway's failure classes (`@twt/channels` `SmsErrorClass` — the send core's `<class>:<code>`). ⚠ LOCKSTEP, as above. */
+/**
+ * The SMS gateway's failure classes (`@twt/channels` `SmsErrorClass` — the send core's `<class>:<code>`). ⚠ LOCKSTEP, as above —
+ * ⛔ enforced by a cross-package import (`@twt/channels` depends on `@twt/domain`, ⛔ the reverse — importing it HERE would cycle the
+ * workspace graph), so a test pins this EXACT array; `packages/channels/src/providers/sms-errors.ts`'s `SmsErrorClass` union is the
+ * other half of the lockstep and must be checked BY HAND whenever either changes.
+ */
 export const SUSPICION_NOTICE_SMS_ERROR_CLASSES = [
   'invalid_number',
   'carrier_reject',

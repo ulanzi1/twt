@@ -13,6 +13,7 @@ import { randomUUID } from 'node:crypto';
 
 import { describe, expect, it } from 'vitest';
 
+import { SUSPICION_NOTICE_PARKED_BY } from '../../../src/claim/index.js';
 import {
   SUSPICION_NOTICE_DETAIL_PATTERN,
   SUSPICION_NOTICE_OUTCOMES,
@@ -360,6 +361,60 @@ describe.skipIf(!hasDatabase)('the suspicion notice record — migration 0151 + 
       );
       expect(rows).toHaveLength(2);
       for (const r of rows) expect(r.def.match(/~ '(.*)'::text/)?.[1], r.conname).toBe(SUSPICION_NOTICE_DETAIL_PATTERN);
+    });
+
+    it('⭐ 0155 LOCKSTEP — the `parked_check` CHECK and the guard trigger both name EXACTLY `SUSPICION_NOTICE_PARKED_BY`', async () => {
+      // ⚠ The trigger half is anchored to the ACTUAL comparison (`claimed_by_job IS DISTINCT FROM '…'`), ⛔ a bare substring
+      // over the whole `pg_get_functiondef` text — that text also carries a `--` comment mentioning "sweep:held" in prose, so
+      // a substring check would still pass if the real comparison literal changed but the comment did ⛔ (review round 2).
+      const { client } = getTx();
+      const quoted = `'${SUSPICION_NOTICE_PARKED_BY}'`;
+      const check = await client.query<{ def: string }>(
+        `SELECT pg_get_constraintdef(oid) AS def FROM pg_constraint WHERE conname = 'claim_suspicion_notices_parked_check'`,
+      );
+      expect(check.rows).toHaveLength(1);
+      expect(check.rows[0]!.def).toContain(quoted);
+      const fn = await client.query<{ def: string }>(
+        `SELECT pg_get_functiondef(oid) AS def FROM pg_proc WHERE proname = 'claim_suspicion_notices_guard_update'`,
+      );
+      expect(fn.rows).toHaveLength(1);
+      expect(fn.rows[0]!.def.match(/claimed_by_job\s+IS\s+DISTINCT\s+FROM\s+('[^']*')/)?.[1]).toBe(quoted);
+    });
+
+    it('⭐ review fix (2026-10-10, rounds 1-2) — a PARKED row cannot be finished, OR left parked, while credited forward; a plain re-claim still is', async () => {
+      const { client } = getTx();
+      const s = await seedNotice(client, PARIWAR_A);
+      // Park it (⛔ change `aging_since` — this alone must stay accepted).
+      await client.query(
+        `UPDATE ${TABLE} SET claimed_by_job = $2, parked_at = now() - interval '1 day' WHERE notice_id = $1`,
+        [s.noticeId, SUSPICION_NOTICE_PARKED_BY],
+      );
+      const movesOnlyForward = { code: '23000', message: expect.stringMatching(/aging_since moves only forward/) };
+      // ROUND 1 gap (closed): a combined "finish + credit the parked time forward" update — the OLD trigger only required
+      // the row to have BEEN parked, ⛔ that it STAY `attempting`.
+      await expectPgError(
+        client,
+        () =>
+          client.query(
+            `UPDATE ${TABLE} SET outcome = 'error', aging_since = aging_since + interval '1 hour', parked_at = NULL WHERE notice_id = $1`,
+            [s.noticeId],
+          ),
+        movesOnlyForward,
+      );
+      // ROUND 2 gap (closed): crediting `aging_since` forward WITHOUT actually un-parking the row — ⛔ a re-claim at all,
+      // just a repeated credit on a row left `claimed_by_job = 'sweep:held'` / `parked_at` non-null.
+      await expectPgError(
+        client,
+        () => client.query(`UPDATE ${TABLE} SET aging_since = aging_since + interval '1 hour' WHERE notice_id = $1`, [s.noticeId]),
+        movesOnlyForward,
+      );
+      // The LEGITIMATE re-claim shape — same forward credit, row STAYS `attempting` AND is actually un-parked — is still accepted.
+      await expectAccepted(client, () =>
+        client.query(
+          `UPDATE ${TABLE} SET aging_since = aging_since + interval '1 hour', parked_at = NULL, claimed_by_job = 'job-2' WHERE notice_id = $1`,
+          [s.noticeId],
+        ),
+      );
     });
 
     it('⭐ 0155 RN6 trigger — a FINISHED row is frozen (any column, even the superuser); the cascade still deletes', async () => {

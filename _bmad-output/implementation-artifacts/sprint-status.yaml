@@ -1,3 +1,23 @@
+# last_updated: 2026-10-10c (⭐ **STORY 6.29 — CODE REVIEW ROUND 2 (narrow — round 1's 5-file, 162-line fix diff; three layers in
+# PARALLEL, read-only) ⇒ stays `done`.** Triage: 0 decision-needed, 4 patch, 0 defer, 2 dismissed. Acceptance Auditor independently
+# re-verified all 5 round-1 fixes against both live DBs and the real write paths — all genuine. 4 patches: round 1's trigger fix was
+# still incomplete (NULL-unsafe `<>`, and never required the row actually be un-parked — a repeated forward credit on a row left
+# `claimed_by_job='sweep:held'` could slip through); fixed with `IS DISTINCT FROM` throughout + `OR NEW.parked_at IS NOT NULL`,
+# reapplied to :5432 + :5433 a third time, regression test extended. The budget-exhausted alarm's wording was misleading when the park
+# phase (not the enqueue loop) spent the budget — now distinguished. The new SQL lockstep test could pass on a stray comment mention,
+# not the real code — anchored to the actual comparison via regex. The SMS-error-class test's name overstated a one-sided pin as a
+# two-sided lockstep — reworded. `pnpm ci:local` green. ⛔ No other row moves.)
+# last_updated: 2026-10-10b (⭐ **STORY 6.29 — CODE REVIEW (full diff `9f4d684a..fc017bdc`; three layers — Blind Hunter diff-only,
+# Edge Case Hunter diff+read, Acceptance Auditor diff+spec+checklist — in PARALLEL, read-only) ⇒ `done`.** Triage: 0 decision-needed,
+# 5 patch, 1 defer, 7 dismissed (each re-traced against the actual code/types before being dropped). Acceptance Auditor: all 8 ACs
+# satisfied, zero REAL GAP on every touched load-bearing-invariant family. 5 patches applied: 0155's finished-row trigger tightened
+# (a hypothetical combined "finish + advance `aging_since`" update is now refused — `OR NEW.outcome <> 'attempting'` added to the
+# guard, reapplied via `CREATE OR REPLACE FUNCTION` directly to :5432 + :5433 since 0155 was already applied there, + a regression
+# test); two new LOCKSTEP tests (`SUSPICION_NOTICE_PARKED_BY` across the CHECK/trigger/JS constant; `SUSPICION_NOTICE_SMS_ERROR_CLASSES`
+# pinned — a live cross-package check isn't possible, `@twt/channels` depends on `@twt/domain`, not the reverse); the park phase's
+# Secret Manager lookups gained the same `budgetMs` guard the main enqueue loop has; the new PARK alarm now groups by purpose like its
+# HELD sibling. 1 deferred (pre-existing at-least-once risk class, same root as RB3 — a park racing a successful send can cause a
+# resend; not actionable in this story's scope). `pnpm ci:local` green (34 jobs) after the fixes. ⛔ No other row moves.)
 # last_updated: 2026-10-10 (⭐ **STORY 6.29 — DEVELOPED (`bmad-dev-story 6.29`) ⇒ `review`.** `ready-for-dev → in-progress → review`.
 # Governance FIRST: `2026-10-10-302` (RN1–RN10, BigDev *"Accept all recommended"*) committed ALONE, then its records (epics `### Story
 # 6.29`, launch-gate roster Row 26 `jobs-db-role` `open`, `⚠ AMENDED by -302` on 6.24b RB3 / RB12, deferred-work → Row 26). Migration
@@ -19512,7 +19532,7 @@ development_status:
   # ⭐ 2026-10-09 ADDED by `bmad-create-story 6.29` (BigDev): 0151 PARITY with 6.25's hold / give-up anchor / DB backstops (`-300` /
   # `-301` Consequence 3), adapted to SMS — RN1–RN10 PROPOSED, author-commit owed at Task 0.3. The jobs-login gap the key names is SYSTEMIC
   # and scoped OUT (deferred-work 2026-10-09; RN9 proposes roster Row 26). ⛔ No epics.md entry yet (owed at Task 0.4).
-  6-29-suspicion-notice-parity-and-jobs-login-grants: review
+  6-29-suspicion-notice-parity-and-jobs-login-grants: done
   epic-6-retrospective: done
 
   # ==========================================================================

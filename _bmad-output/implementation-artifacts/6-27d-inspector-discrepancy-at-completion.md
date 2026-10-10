@@ -69,7 +69,8 @@ closing note (*"never the family"*). **Policy meaning:** ⛔ no predicate (6.27a
    in separate committed transactions); the completed inspection record is ⛔ never changed; the showing write is IDEMPOTENT (`UNIQUE` per
    assignment); the inspector can re-read their OWN completed assignment's showing, and if the row is ABSENT (the post-commit write failed)
    the re-read RECOMPUTES it against the answers live AS OF `completed_at` (`saved_at ≤ completed_at AND (superseded_at IS NULL OR
-   superseded_at > completed_at)`) and writes it — a test for each (a lost completion response; a failed showing write).
+   superseded_at > completed_at)`) and writes it — a test for each (a lost completion response; a failed showing write); a completion with
+   ⛔ no discrepancy writes a showing row with an EMPTY key list (a test).
 6. **AC6 — late answers:** an answer saved after completion ⛔ never reaches the inspector's screen; it reaches the District Admin's console.
 7. **AC7 — erasure and gates:** the notes table's erasure arm and the rtbf pin; RLS + policy spec; the handler contract's new field
    (`claims.ground-inspection.handlers.ts:640-681` returns `{groundInspectionId, status, photoCount}` today — it gains the result); `pnpm
@@ -115,6 +116,7 @@ closing note (*"never the family"*). **Policy meaning:** ⛔ no predicate (6.27a
 ## Change Log
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-10 | 2.4 | Round 5: AC5 gains the leg for the empty showing row. |
 | 2026-10-10 | 2.3 | Round 4: Task 4 names the inspector's own re-read and its idempotent recompute (`ON CONFLICT DO NOTHING`); a showing row is written even when nothing differs, so "absent" can only mean a failed write. |
 | 2026-10-10 | 2.2 | Round-3 validate: AC2 ⛔ never judged on 6.27b's code (its kinds filter applies once b lands); the showing write IDEMPOTENT (`UNIQUE` per assignment) with an as-of-`completed_at` RECOMPUTE when absent — "never lost for good" now holds. |
 | 2026-10-10 | 2.1 | Round-2 validate: ①'s wording (*"The family reported that the member has died …"* — the family has ⛔ no `has_died` field); ② gated on `death_date_source = 'family_statement'` (a source value); the family's date shown is the inspector's own entry, decrypted in the handler after commit; the showing record is a SEPARATE table written in its own transaction after the completion commit (the ordering test is buildable); the erasure arm in 0143's form (F37 corrected); *"no FULL visit"* for the blind-first rule. |

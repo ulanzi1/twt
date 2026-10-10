@@ -117,7 +117,7 @@ ever refused because of a neighbour's answer.**
 | `-255` F7 · architecture §3.4 | SMS widened to a claim's family only; members get ⛔ no ordinary text | Trustee-ratified / plan ⇒ **ROUTED** as Q1 |
 | **Q1** (routing note 2026-10-10) → **`2026-10-10-303`** | the five are texted, naming the member, with the link and the helpline, plus one WhatsApp reminder at 48 h (option A as put); ⭐ **rider:** *"Send Text in Hindi to those whose preferred langauge is Hindi and in English to those whose preferred language in English"* | ⭐ Trustee-ratified (A + rider) |
 | **Q2** (routing note 2026-10-10) → **`2026-10-10-303`** | a neighbour's late warning makes the final approval wait for the District Admin's reason and note — ⛔ never a refusal | ⭐ Trustee-ratified (A) — discharges `-279` A6 for this row |
-| **Q3–Q7** (follow-up note `…-the-neighbours-questions.md`, 2026-10-10) | the full question list (the Panel's own question in `-303`): Q3 how the member died — what may that answer do (our reading A: staff context only); Q4 which illness (A: context only, ⛔ never compared automatically; counsel-gated); Q5 alcohol (A: ⛔ not asked); Q6 *"a few"* questions + the three new ones; Q7 who approves a change (B) | ⏳ **AWAITING PANEL RULING** — PM23 (b): only APPROVED questions reach a member |
+| **Q3–Q7** (follow-up note `…-the-neighbours-questions.md`, 2026-10-10) | the full question list (the Panel's own question in `-303`): Q3 how the member died — what may that answer do (our reading A: staff context only); Q4 which illness (A: context only, ⛔ never compared automatically; counsel-gated); Q5 alcohol (A: ⛔ not asked); Q6 *"a few"* questions + the three new ones; Q7 who approves a change; Q8 the inspector's questionnaire → **`2026-10-10-304`**: Q3 A, Q4 A, Q5 A, Q6 A; ⚠ **Q7 / Q8 = the Panel's own chain** — the Pariwar Admin proposes, a State Trustee proposes or approves (with or without changes), the Super Admin makes a version live for one Pariwar or all (with or without changes) and may add a question directly | ⭐ Trustee-ratified — PM23 (b) builds v2 from it; row 6-33 builds the chain |
 | `-303` reading | "preferred language" = the language the member chose in the app, recorded on the server; ⛔ none recorded ⇒ the Pariwar's default; the app screen asks exactly TWO questions | ⚠ OUR reading — PM22 / PM7 |
 | `-282` GI7 · `-281` Q1 B | the two precedents for a kind entering the wait (author call where ⛔ no carve-out; Panel where there is one) | precedent |
 | `-295` RB4 / RB5 / RB11 / RB12 / RB16 · `-302` RN2–RN8 | one send core, ⛔ never copied; the mode-resolved name or `no_target`; go-live rows; a held config never uses up the slot; the deadline-word deny-list; 0155's backstops | author-commit — the TEMPLATE |
@@ -176,10 +176,9 @@ a family's claim must take, and whether the final approval waits). In the member
   date on the certificate the Trust accepted, anyone approving the family's claim must choose a reason and write a note, with the same
   wait — never a refusal."* — `-262` FQ8 E (*"more than a day"*) + FQ12: consistent; ⚠ *"two or more days"* is OUR reading of *"more
   than a day"* (PM9).
-- **Q3 / Q4 (the cause of death, the illness) add ⛔ no predicate on our reading A** — an answer is context staff SEE, ⛔ never a
-  warning, a flag or a wait. ⚠ If the Panel rules B or C on either, it BECOMES a benefit-gating predicate (a reason-and-note or a
-  special-death review on a neighbour's word) ⇒ this note is RE-WRITTEN and re-checked against Niyamavali §5.1 / §5.5 / §5.6 before any
-  code (PM23 (g)).
+- **Q3 / Q4 (the cause of death, the illness) add ⛔ no predicate** — ✅ RULED A (`-304`): an answer is context staff SEE, ⛔ never a
+  warning, a flag or a wait. ⚠ And a question added later through the Q7 chain is ⛔ never a warning or a flag either (`-304`'s reading)
+  — PM23 (a)'s `warning` test refuses it, so the chain can ⛔ never create a benefit-gating predicate.
 - **PM8 (the acceptance window) adds ⛔ no predicate on the family** — it changes WHEN a neighbour may answer, ⛔ not who may be paid; PM1
   (who is ⛔ not texted) changes ⛔ nothing about who may be paid.
 - **Niyamavali check:** §6.2 (*"The Trust verifies the qualifying event …"*) — consistent; ⛔ no clause mentions neighbours or the peer
@@ -312,7 +311,7 @@ a family's claim must take, and whether the final approval waits). In the member
   ⚠ Re-plan: Q1 B ⇒ PM3 only; Q1 C / D ⇒ this PM, PM3–PM5 and Tasks 2–3 drop (see *"Re-plan by answer"*).
 - **PM3 — what the text says (Q1 A).** Copy key `peer_mesh_sms.request` in `packages/i18n/locales/{en,hi}/claim.json` (+
   `$comment.peer_mesh_sms` in BOTH: NOT-YET-HUMAN-REVIEWED + *"must match the registered DLT content byte for byte"*, RB1's form).
-  en: *"We have been told that {member} has died. If you knew them, please answer two short questions: {link} — or call the helpline
+  en: *"We have been told that {member} has died. If you knew them, please answer a few short questions: {link} — or call the helpline
   {helpline}."* (the routing note's wording minus its *"TWT:"* prefix — the DLT header names the sender; `{link}` per PM21; the slots in
   order: member, link, helpline). ⚠ Hindi is Unicode — 70 characters per segment (67 when concatenated) — so the Hindi text with a name,
   a link and a number is likely THREE segments: the DLT sheet's cost section records the per-text segment count (`-255` consequence 2's
@@ -513,18 +512,25 @@ a family's claim must take, and whether the final approval waits). In the member
   answer), `sensitive` (⇒ encrypted, PM7 (a)), `warning` (ONLY `has_died` and `death_date` — FQ10 / FQ8 E; a test refuses any other),
   copy keys (en + hi), and `approvedBy` — the decision id that approved it. ⭐ A test refuses a current version whose any question lacks
   `approvedBy` ⇒ ⛔ no question reaches a member un-approved.
-  (b) **v1 = page 1 only** (`has_died`, `death_date` — approved by `-262` FQ8 E / `-263` FQ10 / `-303`), plus the closing note. ⭐ The
-  Panel's answer to Q3–Q7 becomes v2 (the approved questions only, its decision id as `approvedBy`) — ⛔ no other code change.
+  (b) **v1 = page 1 only** (`has_died`, `death_date` — approved by `-262` FQ8 E / `-263` FQ10 / `-303`), plus the closing note.
+  ⭐ **v2 = `2026-10-10-304`, exactly as ruled** (`approvedBy: '2026-10-10-304'`): page 1 (`has_died`; `death_date` after *"Yes"*);
+  page 2 (`how_known` — *"How do you know they died?"*; `relationship` — *"How do you know [member]?"*); page 3 (`death_cause` after
+  *"Yes"* — Q3's list; `death_illness` after an illness cause — Q4's list, multi); page 4 (`callback_consent`); the closing note. ⛔ No
+  alcohol question (Q5 A). `death_cause` / `death_illness` are `sensitive` and in `COMPARABLE_QUESTION_KEYS`; ⚠ `death_illness` is shown
+  to members ONLY once counsel's basis is recorded (Q4 A) — a version flag `requiresCounselBasis`, its question skipped until set.
+  ⭐ A test pins the RULED questions (`has_died`, `death_date`) into EVERY version (`-304` reading — a version may ⛔ never drop them).
   (c) **Pinning:** a reply pins the version at its first save; answers are validated against it; a newer version applies to new replies only.
   (d) **The app renders the server's definition** (generic widgets per `kind`), so a new version needs ⛔ no app release.
-  (e) **Who approves a version** follows the Panel's Q7 (⏳; our reading B: BigDev for wording and options within an approved question;
-  the Panel for any NEW question or anything about health, cause of death or habits). ⛔ No admin editor in this story — a new version is a
-  reviewed code change until row `6-33-questionnaire-editor-versions-and-approval` lands (staff write versions, a DIFFERENT person
-  approves, every version kept; its own Panel question Q8). This story keeps the definitions loadable from a registry 6-33 can later back
+  (e) **Who approves a version — ✅ RULED (`-304` Q7):** the Pariwar Admin proposes; a State Trustee proposes or approves, with or
+  without changes; the Super Admin makes it live for ONE Pariwar or ALL, with or without changes, and may add a question directly — ⛔ no
+  extra permission for the Super Admin. ⇒ a version is scoped (`pariwarId | 'all'`), and the reply pins the version live for ITS Pariwar
+  (a Pariwar version, else the all-Pariwar one). ⛔ No admin editor in this story — v2 is a reviewed code change; row
+  `6-33-questionnaire-editor-versions-and-approval` builds the chain (both questionnaires, Q8). After v2, `approvedBy` records the chain's
+  acts (proposer, approver, the Super Admin who made it live) instead of a decision id. This story keeps the definitions loadable from a registry 6-33 can later back
   with a table — ⛔ never hard-wired into the screens.
-  (f) **The text's *"two"* / *"a few"*** follows Q6 — the copy is registered with the DLT only after that ruling.
-  (g) ⚠ **Re-plan by the Panel's answer:** Q3 / Q4 B or C would turn an answer into a warning or a flag — ⛔ never built without a new
-  author-commit and the Policy-meaning note re-checked; Q5 A (our reading) ⇒ ⛔ no alcohol question.
+  (f) **The text says *"a few short questions"*** (`-304` Q6 A).
+  (g) ✅ Q3 / Q4 ruled A ⇒ ⛔ no warning or flag from either; Q5 A ⇒ ⛔ no alcohol question — a later one needs the Panel to supersede Q5
+  first (`-304` reading), ⛔ never the chain alone.
 - **PM24 — every approver sees the neighbours' answers for the claim in front of them** (BigDev 2026-10-10, *"yes, make those
   changes"*). FOUND: the full answers (PM13) live in the verifier console, gated by `claim.verify` (`claims.verifier-console.handlers.ts:67`),
   which only `district_admin`, `verifier` and `super_admin` hold (`packages/domain/src/rbac/roles.ts:496,649`; `super_admin` holds every
@@ -829,6 +835,7 @@ route and resolver are built and tested here against a config base URL; only the
 | Date | Version | Change |
 |---|---|---|
 | 2026-10-10 | 1.0 | Created (`bmad-create-story 6.27`); pinned `5946e411`; routing note Q1 / Q2 written; PM1–PM20 proposed. |
+| 2026-10-10 | 1.9 | ⭐ The Panel RULED the follow-up note (`2026-10-10-304`): Q3 A, Q4 A, Q5 A, Q6 A; Q7 / Q8 = the Panel's own chain (Pariwar Admin proposes → State Trustee proposes / approves → Super Admin makes live for one Pariwar or all; the Super Admin may add directly). Rulings table, Policy meaning, PM3's text (*"a few"*), PM23 (b) v2 as ruled (incl. the counsel flag on `death_illness` and the ruled questions pinned into every version), (e) the chain (versions scoped per Pariwar / all), (f), (g). |
 | 2026-10-10 | 1.8 | BigDev: an inspector questionnaire, possibly long, authored by Pariwar Admin / State Trustee / Super Admin — *"Yes, do it"*. ⛔ No story existed. PM23: the engine is SHARED (contracts `questionnaires/`, kinds `peer_mesh` / `ground_inspection`, shared question KEYS for comparable questions; ⛔ never Polls' engine); the editor is row `6-33`. PM25 (a): the family's cause / illness answers come from row `6-32`; this story compares ① and ② only until then. New rows 6-32 and 6-33 (`backlog`); Panel Q8 added to the unsent note. |
 | 2026-10-10 | 1.7 | BigDev: the inspector is shown ⛔ nothing before completing (⛔ no "hidden" line), and at completion only DISCREPANCIES between the family's and the neighbours' answers (⛔ never who said it, ⛔ no exact count), with a note box each — else *"No further action needed"*. PM25 (a) rewritten: the family's comparable answers recorded at inspection (cause / illness only if the Panel approves Q3 / Q4), four fixed discrepancy rules, a discrepancy-notes table, late answers to the District Admin only. AC8, Task 8 follow; the follow-up note gains the family's question and a corrected "one fact". |
 | 2026-10-10 | 1.6 | BigDev: who sees the answers. FOUND: the console key `claim.verify` is held only by District Admins, verifiers and the Super Admin — State Trustees, R9 voters and Pariwar Admins would approve over a warning they cannot see. NEW PM24 (every approver sees the answers for the claim at its current step — one shared assembler, one read, ⛔ no new key); NEW PM25 (the inspector sees ⛔ nothing until their inspection is completed, then at once — a follow-up note, the reveal recorded; the helpline operator sees only the caller's own answers). PM13, AC8, Task 8 follow. |

@@ -381,10 +381,12 @@ describe('⛔ the no-comparison fence (Trap 1, `-226` cl.5)', () => {
     // Unlike `suspicion-refusal.ts` (ref-only, ⛔ no ciphertext at all), this module DOES return `mobileCiphertext` —
     // the invariant is narrower: it never calls a decrypt helper, and never reaches `getMemberNominees` (RF9's
     // forbidden latest-nominee fallback once a refusal stands).
+    // ⚠ Story 6.29 (`2026-10-10-302` RN5): the module now OWNS the `detail` vocabulary, which names the jobs child's
+    // `decrypt_failed:*` step — so the decrypt arm matches a decrypt CALL, ⛔ the bare word (6.25's sibling fence below, RE8's form).
     const code = stripComments(read('packages/domain/src/claim/suspicion-notice.ts'));
     expect(code).toContain('mobileCiphertext');
-    for (const forbidden of ['decrypt', 'getMemberNominees', 'nameCiphertext']) {
-      expect(code.includes(forbidden), `suspicion-notice.ts reached for '${forbidden}'`).toBe(false);
+    for (const forbidden of [/decrypt\w*\s*\(/i, /\bkms\b/i, /\bencryption\b/, /getMemberNominees/, /nameCiphertext/]) {
+      expect(forbidden.test(code), `suspicion-notice.ts reached for ${String(forbidden)}`).toBe(false);
     }
   });
 

@@ -7,7 +7,10 @@
 //     ⛔ row (a FRESH claim);
 //   · the give-up (RB3 — ⛔ claim-row lock) finishing a row WHILE a child's claiming transaction is about to — on BOTH
 //     losing UPDATEs (the `-297` §2 `error` and RB15's `no_target`): the child's UPDATE waits on the row, re-reads it
-//     `error` and reports `already_final` — ⛔ an outcome it did ⛔ write.
+//     `error` and reports `already_final` — ⛔ an outcome it did ⛔ write;
+//   · ⭐ Story 6.29 (`2026-10-10-302` RN7, AC5): a PLANTED refresh of `claimed_at` (standing in for a FUTURE refresher — ⛔ 6.24b
+//     writer refreshes it today) committing WHILE a taker waits in its re-claim UPDATE ⇒ the taker reports `held_by_other`; the
+//     PARK racing a re-claim, in both orders ⇒ exactly ONE holder (each UPDATE's own predicate re-evaluates the row).
 //
 // ⚠ WHY OWN-COMMITTING: a race needs REAL concurrent transactions on SEPARATE pool clients (the per-test BEGIN/ROLLBACK
 // envelope would serialise everything). Each test proves WHERE the loser blocks — its backend is in a `Lock` wait on the
@@ -26,6 +29,7 @@ import {
   CORRECTION_SEND_LEASE_MS,
   beginSuspicionNotice,
   expireExhaustedSuspicionNotices,
+  parkHeldSuspicionNotices,
   projectClaimState,
   selectDueSuspicionNotices,
   suspicionNoticeReclaimCutoff,
@@ -197,13 +201,21 @@ describe.skipIf(!hasDatabase)('Story 6.24b — the suspicion notices\' claiming 
     return rows;
   }
 
-  /** A crash-left `attempting` row the give-up is due to take: created before `cutoff`, last claimed past the lease. */
+  /** A crash-left `attempting` row the give-up is due to take: created (and aged — 0155) before `cutoff`, last claimed past the lease. */
   async function crashLeftRow(pid: PariwarId, cid: string, purpose: SuspicionNoticePurpose, now: Date, cutoff: Date): Promise<void> {
     await pool.query(
-      `INSERT INTO claim_suspicion_notices (pariwar_id, claim_case_id, purpose, outcome, claimed_at, claimed_by_job, created_at)
-       VALUES ($1, $2, $3, 'attempting', $4, 'crashed', $5)`,
+      `INSERT INTO claim_suspicion_notices (pariwar_id, claim_case_id, purpose, outcome, claimed_at, claimed_by_job, created_at, aging_since)
+       VALUES ($1, $2, $3, 'attempting', $4, 'crashed', $5, $5)`,
       [pid, cid, purpose, new Date(now.getTime() - CORRECTION_SEND_LEASE_MS - 1), new Date(cutoff.getTime() - 1)],
     );
+  }
+
+  async function holderOf(cid: string) {
+    const { rows } = await pool.query<{ claimed_by_job: string; attempt_count: number; parked_at: Date | null }>(
+      `SELECT claimed_by_job, attempt_count, parked_at FROM claim_suspicion_notices WHERE claim_case_id = $1 AND purpose = 'suspicion_refusal'`,
+      [cid],
+    );
+    return rows;
   }
 
   /**
@@ -302,7 +314,9 @@ describe.skipIf(!hasDatabase)('Story 6.24b — the suspicion notices\' claiming 
     await reviseOff(pid, s); // the child's re-check will FAIL ⇒ it goes for the `error` UPDATE
 
     const g = await openTx(null);
-    expect(await expireExhaustedSuspicionNotices(g.client, { cutoff, now, allow: [pid] })).toEqual([{ claimCaseId: s, purpose: 'suspicion_refusal' }]);
+    expect(await expireExhaustedSuspicionNotices(g.client, { cutoff, now, allow: [pid], scopes: [{ purpose: 'suspicion_refusal', pariwarId: pid }] })).toEqual([
+      { claimCaseId: s, purpose: 'suspicion_refusal' },
+    ]);
     const child = await openTx(pid);
     const fromChild = track(begin(child.client, pid, s, 'job-1', now));
     // ⭐ It waits on the NOTICE row, in the `-297` §2 `error` UPDATE — ⛔ earlier (the claim row is ⛔ the give-up's).
@@ -323,7 +337,9 @@ describe.skipIf(!hasDatabase)('Story 6.24b — the suspicion notices\' claiming 
     await crashLeftRow(pid, r, 'closed_after_appeal', now, cutoff);
 
     const g = await openTx(null);
-    expect(await expireExhaustedSuspicionNotices(g.client, { cutoff, now, allow: [pid] })).toEqual([{ claimCaseId: r, purpose: 'closed_after_appeal' }]);
+    expect(await expireExhaustedSuspicionNotices(g.client, { cutoff, now, allow: [pid], scopes: [{ purpose: 'closed_after_appeal', pariwarId: pid }] })).toEqual([
+      { claimCaseId: r, purpose: 'closed_after_appeal' },
+    ]);
     const child = await openTx(pid);
     const fromChild = track(begin(child.client, pid, r, 'job-1', now, 'closed_after_appeal'));
     expect(await waitingOn(child.backendPid)).toMatch(/^UPDATE claim_suspicion_notices SET outcome = 'no_target'/);
@@ -333,5 +349,75 @@ describe.skipIf(!hasDatabase)('Story 6.24b — the suspicion notices\' claiming 
     await child.commit();
     expect(out).toEqual({ ok: true, value: { kind: 'already_final' } });
     expect(await rowsOf(r, 'closed_after_appeal')).toMatchObject([{ outcome: 'error', detail: 'exhausted:attempting_three_days' }]);
+  });
+
+  // ── Story 6.29 (`2026-10-10-302` RN7 / RN2; AC5) ─────────────────────────────────────────────────────────────────
+  it('⭐ RN7 — a PLANTED `claimed_at` refresh commits WHILE a taker waits in its re-claim UPDATE ⇒ the taker reports `held_by_other`, the row untouched', { timeout: TIMEOUT }, async () => {
+    const pid = freshPariwar();
+    const s = await onOwnTx(pid, (c) => refusedClaim(c, pid, randomUUID()));
+    const now = new Date();
+    await pool.query(
+      `INSERT INTO claim_suspicion_notices (pariwar_id, claim_case_id, purpose, outcome, claimed_at, claimed_by_job)
+       VALUES ($1, $2, 'suspicion_refusal', 'attempting', $3, 'job-old')`,
+      [pid, s, new Date(now.getTime() - CORRECTION_SEND_LEASE_MS - 1)],
+    );
+    // The planted refresher (⛔ 6.24b writer does this today) — holds the notice row, uncommitted.
+    const refresher = await openTx(null);
+    await refresher.client.query(`UPDATE claim_suspicion_notices SET claimed_at = $2 WHERE claim_case_id = $1`, [s, now]);
+    const taker = await openTx(pid);
+    const fromTaker = track(begin(taker.client, pid, s, 'job-taker', now));
+    // ⭐ It waits in the RE-CLAIM UPDATE (its SELECT saw the old `claimed_at` — past the lease).
+    expect(await waitingOn(taker.backendPid)).toMatch(/^UPDATE claim_suspicion_notices SET claimed_at = \$2, claimed_by_job = \$3/);
+    expect(fromTaker.state.settled).toBe(false);
+    await refresher.commit();
+    const out = await fromTaker.settled;
+    await taker.commit();
+    expect(out).toEqual({ ok: true, value: { kind: 'held_by_other' } });
+    expect(await holderOf(s)).toMatchObject([{ claimed_by_job: 'job-old', attempt_count: 1 }]);
+  });
+
+  it('⭐ RN2 — a child RE-CLAIMS first, the PARK waits on the row ⇒ the park re-evaluates (now inside the lease) and parks ⛔ — ONE holder: the child', { timeout: TIMEOUT }, async () => {
+    const pid = freshPariwar();
+    const s = await onOwnTx(pid, (c) => refusedClaim(c, pid, randomUUID()));
+    const now = new Date();
+    await pool.query(
+      `INSERT INTO claim_suspicion_notices (pariwar_id, claim_case_id, purpose, outcome, claimed_at, claimed_by_job)
+       VALUES ($1, $2, 'suspicion_refusal', 'attempting', $3, 'crashed')`,
+      [pid, s, new Date(now.getTime() - CORRECTION_SEND_LEASE_MS - 1)],
+    );
+    const child = await openTx(pid);
+    expect(await begin(child.client, pid, s, 'job-child', now)).toMatchObject({ kind: 'begun', attemptCount: 2 });
+    const sweep = await openTx(null);
+    const fromPark = track(parkHeldSuspicionNotices(sweep.client, { now, allow: [pid], held: [{ purpose: 'suspicion_refusal', pariwarId: pid }] }));
+    expect(await waitingOn(sweep.backendPid)).toMatch(/^UPDATE claim_suspicion_notices SET claimed_by_job = \$3, parked_at/);
+    await child.commit();
+    const out = await fromPark.settled;
+    await sweep.commit();
+    expect(out).toEqual({ ok: true, value: [] });
+    expect(await holderOf(s)).toMatchObject([{ claimed_by_job: 'job-child', attempt_count: 2, parked_at: null }]);
+  });
+
+  it('⭐ RN2 / RN7 — the PARK first, a child\'s re-claim waits on the row ⇒ the re-claim admits the parked marker — ONE holder: the child (credit ~0)', { timeout: TIMEOUT }, async () => {
+    const pid = freshPariwar();
+    const s = await onOwnTx(pid, (c) => refusedClaim(c, pid, randomUUID()));
+    const now = new Date();
+    await pool.query(
+      `INSERT INTO claim_suspicion_notices (pariwar_id, claim_case_id, purpose, outcome, claimed_at, claimed_by_job)
+       VALUES ($1, $2, 'suspicion_refusal', 'attempting', $3, 'crashed')`,
+      [pid, s, new Date(now.getTime() - CORRECTION_SEND_LEASE_MS - 1)],
+    );
+    const { rows: before } = await pool.query<{ aging_since: Date }>(`SELECT aging_since FROM claim_suspicion_notices WHERE claim_case_id = $1`, [s]);
+    const sweep = await openTx(null);
+    expect(await parkHeldSuspicionNotices(sweep.client, { now, allow: [pid], held: [{ purpose: 'suspicion_refusal', pariwarId: pid }] })).toHaveLength(1);
+    const child = await openTx(pid);
+    const fromChild = track(begin(child.client, pid, s, 'job-child', now));
+    expect(await waitingOn(child.backendPid)).toMatch(/^UPDATE claim_suspicion_notices SET claimed_at = \$2, claimed_by_job = \$3/);
+    await sweep.commit();
+    const out = await fromChild.settled;
+    await child.commit();
+    expect(out).toMatchObject({ ok: true, value: { kind: 'begun', attemptCount: 2 } });
+    expect(await holderOf(s)).toMatchObject([{ claimed_by_job: 'job-child', parked_at: null }]);
+    const { rows: after } = await pool.query<{ aging_since: Date }>(`SELECT aging_since FROM claim_suspicion_notices WHERE claim_case_id = $1`, [s]);
+    expect(after[0]!.aging_since.getTime()).toBe(before[0]!.aging_since.getTime()); // parked and re-claimed at the same instant
   });
 });

@@ -9,7 +9,7 @@ live claims for one death; the money path from approval to payment) and re-verif
 design and its locks, the governance, the warning and member surfaces). ⚠ Before Task 1, run
 `git diff --name-only 34b9bab6..HEAD -- packages apps scripts`; any cited file in that list is re-read.
 
-STATUS: `ready-for-dev` — ⛔⛔ NO CODE until (1) the Panel has ruled Q1–Q3 (routing note
+STATUS: `ready-for-dev` — ⛔⛔ NO CODE until (1) the Panel has ruled Q1–Q4 (routing note
 `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-10-6-28-one-payment-per-death.md` — ⚠ written, ⛔ NOT YET SENT) and
 (2) the author-commit answering OP1–OP14 below is committed ALONE. `2026-10-08-294` §3 orders exactly this: *"BEFORE any code: (i) the
 Panel question … written from the routing-note template, with this entry's (a)–(c) and the pre-6.24a root as the deciding facts …
@@ -21,7 +21,7 @@ GLYPH REGISTER, ADDRESSING RULE: as 6.24a / 6.24b / 6.29 — `⛔` sits ONLY on 
 Sweep on every pass: `grep -oE "⛔ \**[A-Za-z]+"` — every head-word a negation. ⛔ No `file:NNN` into `.decision-log.md`,
 `deferred-work.md` or `sprint-status.yaml` (newest-first files — cite the entry id / item / row key). `file:NNN` is used ONLY for code.
 LETTERS: `OP1`…`OP14` = this story's build decisions (the author's; PROPOSED until Task 0.5). `F1`…`F15` = FOUND facts (⛔ not decided).
-`Q1`…`Q3` = the Panel's questions (⏳ awaiting). `RF` = 6.24a's (`-292`, `-294`). `H(i)`…`H(iv)` = OP4's closure sites. `R1`…`R2` =
+`Q1`…`Q4` = the Panel's questions (⏳ awaiting). `RF` = 6.24a's (`-292`, `-294`). `H(i)`…`H(iv)` = OP4's closure sites. `R1`…`R2` =
 recorded residuals (⛔ not addressed).
 -->
 
@@ -98,7 +98,7 @@ accused by the system, and every place the suspicion rule cannot hold is put to 
 |---|---|---|
 | `2026-10-08-294` §2 | Trap 9's *"unreachable"* CORRECTED — paths (a)–(c) + the pre-6.24a root reach two payments for one death | author-commit (FOUND) |
 | `2026-10-08-294` §3 | row `6-28-…`; *"BEFORE any code: (i) the Panel question — when two claims for one death both qualify for payment, which is paid, and what is the other family owed? — written from the routing-note template, with this entry's (a)–(c) and the pre-6.24a root as the deciding facts … (ii) then the engineering guard that ruling permits"* | author-commit — ⭐ this story's mandate; ⭐ the note puts (a)–(c) by name (Q1's paths; Q1 A / Q2 A costs) and WIDENS the framing to every second claim (F5–F7) — recorded in the author-commit as a widening, ⛔ not a re-reading |
-| `-262` FQ5 A | the true nominee's claim waits at final approval for the suspicion appeal; allowed ⇒ it is closed | ⭐ Trustee-ratified — OP2 / OP4 / OP6 leave its machinery exact; OP13 lets RF6 close a voted, UNPAID other claim, so path (a) before payment is decided by FQ5 A as ruled; ⚠ after payment, an allowed appeal pays nothing — Q2's case (Q1 / Q2 cost lines) |
+| `-262` FQ5 A | the true nominee's claim waits at final approval for the suspicion appeal; allowed ⇒ it is closed | ⭐ Trustee-ratified — OP2 / OP4 / OP6 leave its machinery exact; OP13 (⏳ the note's Q4 — recommended A) lets RF6 close a voted, UNPAID other claim, so path (a) before payment follows FQ5 A; ⚠ after payment, an allowed appeal pays nothing — Q2's case (Q1 / Q2 cost lines) |
 | `-292` RF4 | `closed`; a claim already finally approved (`state_trustee_approved`, `approved`), paid or closed is ⛔ never moved | author-commit — ⭐ OP13 SUPERSEDES it in part (6.28's author-commit): `state_trustee_approved` becomes closable; `approved` / `settled` / `closed` stay ⛔ not closable |
 | `-262` FQ5 B, C (⛔ not taken) | B: *"approving it ends the appeal"* (cost: *"Takes away the appeal the Panel granted (`-239` c)"*); C: *"Whichever claim is approved first is paid, and the other is closed"* — *"A race between staff"* | ⭐ the Panel's earlier rejections — disclosed in the note (Q1 A resembles C; path (a) carries B's cost) |
 | `-264` FQ12 | approving while ANY warning shows needs a reason and a note | ⭐ Trustee-ratified — OP5's new kind falls under it |
@@ -111,6 +111,7 @@ accused by the system, and every place the suspicion rule cannot hold is put to 
 | **Q1** (routing note `2026-10-10-6-28-one-payment-per-death`) | which claim is paid — A: the first to pass the final vote; the others closed when its payment is committed; a warning (and the wait) while another is open · B: staff close one first · C: both | ⏳ **AWAITING PANEL** — the note is ⛔ not yet sent |
 | **Q2** | what the other family is owed once the death is paid — A: nothing more from the members · B: a Panel-ordered second payment | ⏳ **AWAITING PANEL** |
 | **Q3** | is the family of a claim closed this way texted — A: ⛔ no · B: once, `-291` Q2's words | ⏳ **AWAITING PANEL** |
+| **Q4** | does the suspicion-appeal rule reach a claim that passed the final vote but is ⛔ not yet paid — A: yes, close it (OP13) · B: ⛔ no, it is paid and the appellant's claim is closed | ⏳ **AWAITING PANEL** |
 
 **⛔ Not covered by any ruling (stays open):** whether intake should stop minting a second claim at all (OP11 — the author's, TAKEN: the window
 removed; override-apart and after-terminal second claims remain); a Panel power to reopen a closed claim (Q2 B — a later row if ruled); the residuals R1–R2; the Hindi review of any
@@ -257,7 +258,7 @@ benefit-gating predicate. This story ADDS a conjunct to a benefit-gating predica
 
 ## ⚖️ Build decisions OP1–OP14 — ⚠ the author's; PROPOSED, ⛔ not committed until Task 0.5
 
-⭐ §0 (template `trustee-panel-routing-note-TEMPLATE.md`): every OP strips to *"the code should do X"* in service of Q1–Q3's answers.
+⭐ §0 (template `trustee-panel-routing-note-TEMPLATE.md`): every OP strips to *"the code should do X"* in service of Q1–Q4's answers.
 Each says what changes under a non-recommended answer.
 
 - **OP1 — ONE DEFINITION, ONE MODULE.** New `packages/domain/src/claim/one-payment-per-death.ts` (a LEAF: ⛔ no import of `read.ts`,
@@ -412,7 +413,10 @@ Each says what changes under a non-recommended answer.
   The override (`overrideIntakeAttempt`) and D4 B are ⛔ not changed. Author's decision (intake mechanics — ⛔ nothing anyone is owed); the
   author-commit records it, and the note lists it among *"deliberately ⛔ not asked"*.
 - **OP12 — GO-LIVE.** ⛔ No roster row: ⛔ no external dependency (Q3 A). Under Q3 B — the FQ7 counsel row gains this text.
-- **OP13 — AN ALLOWED SUSPICION APPEAL CLOSES A VOTED, UNPAID OTHER CLAIM (supersedes `-292` RF4 in part).** `CLAIM_NOT_CLOSABLE_STATES`
+- **OP13 — AN ALLOWED SUSPICION APPEAL CLOSES A VOTED, UNPAID OTHER CLAIM (supersedes `-292` RF4 in part).** ⚠ **PUT TO THE PANEL FOR
+  CONFIRMATION** (the note's **Q4** — A: close the voted claim, B: let it be paid): it applies FQ5 A to a claim that has ALREADY passed the final vote — later than the point
+  FQ5 ruled on — closes it and texts its family; if the Panel rules Q4 B, OP13 is ⛔ not built and Invariant 3's residual widens back to
+  path (a) before payment. Built under A, B and C alike. `CLAIM_NOT_CLOSABLE_STATES`
   (`state.ts:359`) becomes `['settled', 'approved', 'closed']` — `state_trustee_approved` (*"approved-in-principle, reversible"*, Fact 4)
   is CLOSABLE; its doc-block and the reducer comment are re-worded (the sites listed below). ⭐ Effect at RF6: when a `-239` appeal
   is allowed, another claim of the death that passed the final vote but is ⛔ not yet committed is closed with `suspicion_appeal_allowed`
@@ -510,7 +514,7 @@ Each says what changes under a non-recommended answer.
 ## Acceptance Criteria
 
 ### AC0 — Governance before code (Task 0)
-The Panel's ruling on Q1–Q3 is transcribed into the routing note's ⏳ block and `.decision-log.md` (a new Trustee-ratified id, committed
+The Panel's ruling on Q1–Q4 is transcribed into the routing note's ⏳ block and `.decision-log.md` (a new Trustee-ratified id, committed
 ALONE); then the author-commit answering OP1–OP14 for that ruling — naming `-279` A6 as discharged and recording that the note widened
 `-294` §3's framing — is committed ALONE; then a second governance commit updates this file's rulings table, Policy meaning and OPs
 (`✅ committed by -NNN`), and the `deferred-work.md` items of Task 0.6 gain their pointers, each with its own status. ⛔ No code before
@@ -829,6 +833,8 @@ Domain in `packages/domain/src/claim/` (⛔ no new package — [[feedback_no_pre
 - 2026-10-10 — v1.5: round 4 on v1.4's additions — 1 HIGH (OP14 disabled the only trigger R2 relied on ⇒ a paid-stage "Close this claim" action), 5 MEDIUM, ~10 LOW — all applied.
 - 2026-10-10 — v1.6: round 5 — 1 HIGH (the close action reached ⛔ no AC / Task / UPDATE entry) + 4 MEDIUM + 6 LOW applied; OP14 (d) the ground inspector sees the other claims, the questionnaire question routed to 6.32 (BigDev: *"yes, fold it"*).
 - 2026-10-11 — v1.7: round 6 — **0 BLOCKER / 0 HIGH**; 4 MEDIUM + 6 LOW applied.
+- 2026-10-11 — v1.8: the routing note's pre-send fresh-context check (2 HIGH, 8 MEDIUM, 8 LOW — all applied to the note); OP13 now PUT TO THE PANEL for confirmation.
+- 2026-10-11 — v1.9: the note's second check (1 HIGH, 5 MEDIUM, 8 LOW — applied): the confirmation becomes its own **Q4** with options and costs.
 
 ### File List
 
@@ -844,3 +850,5 @@ Domain in `packages/domain/src/claim/` (⛔ no new package — [[feedback_no_pre
 | 1.5 | 2026-10-10 | Round 4 (one fresh-context verifier on OP11 / OP13 / OP14): 1 HIGH — OP14 disabled final approve at the PAID stage, removing H(iv)'s only trigger for R2's stranded claims ⇒ the paid banner carries a staff **"Close this claim"** (one endpoint, the surface's own final-approve key, ⛔ no step-up, H(iv)'s helper). 5 MEDIUM — OP13's test rewrites completed (`:772-812` rewritten, ⛔ not flipped; RF7's inspection arm loses its driver — recorded; `suspicion-refusal.test.ts:140`; the API route leg `suspicion-refusal-routes.spec.ts:394-429`); AC4 H(ii) vs OP11 (a plain filing for a paid death CONVERGES; H(ii) only once the paid claim is overridden apart); OP14's surface list made exact (P1 banner-only; `ClosureColumn` untouched; only the FINAL approve controls); the note's OP13 moved out of *"not asked"* into Q1 with its `-291` text; stale OP1–OP12 / R1–R4 / OP11-not-taken / RF6-unchanged / AC7 (b). ~10 LOW — OP11's missed comment + caller sites, OP13 comment sites, the mirror's multi-candidate difference, RF10's `available` shape, the `cur` CTE cite + *"date not comparable"*, "may be closed", OP13's disclosure, the note's same-channel join, the epics wording, OP14's fixtures. |
 | 1.6 | 2026-10-10 | Round 5 (one fresh-context verifier): 1 HIGH — round 4's "Close this claim" lived only in OP14 (b) / R2 ⇒ now in AC11, Task 5c, the UPDATE list and AC4 (route `…/cycle-freeze/claims/:claimCaseId/close-for-paid-death` — the adjudication gate's `cycle-freeze` substring scans it; `cycle.freeze` at pariwar; own `openScopeTx` + `lock_timeout`; human actor; audit; `{ closed: [] }` no-op + its result line). 4 MEDIUM — one permission key (⛔ never "the surface's own"); the console read ceiling 21 → 22 with its four pins; the note's Q1 A and P4 say the approver is STOPPED (⛔ not "refused"); R1's voted card carries the banner + action. 6 LOW — OP13's further comment sites + an `approved` route-leg variant; `icp.ts:186`; H(iv)'s `lock_timeout`; the no-op result line; the Policy-meaning lead; P / OP ordering + epics. ⭐ Folded (BigDev: *"yes, fold it"*): OP14 (d) — the ground inspector sees the other claims of the death and an already-visited line (information only); the questionnaire question routed to row `6-32-…`. |
 | 1.7 | 2026-10-11 | Round 6 (one fresh-context verifier): **0 BLOCKER / 0 HIGH**. 4 MEDIUM — the adjudication gate's `expectedMethods` grows with the new route (an EXACT multiset — else `ci:local` is red); OP14 (d)'s other-claims field only for a caller holding an in-scope assignment of THIS claim (a `block_admin` could name any claim id); `alreadyVisited` defined (a FULL visit's `death_date_index` vs this claim's `accepted_date_index`; NULL ⇒ false) + `visitedElsewhere`; the admin client's non-strict schema STRIPS unlisted keys — named, camelCase. 6 LOW — the close response carries ⛔ no other claim's id (`this_claim_closed`, `closed_count`); a lock timeout is a 503 with its own line; params schema / audit type / `'trustee'` actor / 404 named; stale ceiling test titles; Completion Notes order; the sprint row's stale comment; UI copy without the glyph. |
+| 1.8 | 2026-10-11 | The routing note's pre-send check (one fresh-context reviewer as the Panel's advocate): 2 HIGH — OP13 extends FQ5 A to a claim that already passed the final vote ⇒ now an explicit proposal the Panel CONFIRMS (and C is ⛔ not "no change"); A's wait for the District Admin's reason has ⛔ no time limit — disclosed in A's cost and the reading. 8 MEDIUM + 8 LOW applied to the note (closure "automatically, or by Close this claim"; Q2 A's appeal stops paying once another claim passed the final vote; closed is ⛔ never appealable — in A's and B's costs; the helpline's words; a filing for a paid death joins it; Q3's fact marked as an unmeasured expectation and B's recipient named; "meant to pay"; jargon defined; Claims 1 / 2 named; `-291` quoted verbatim; separability lines; `assign.ts:137-187`). Story: OP13 and the rulings table say it is ⏳ for the Panel. |
+| 1.9 | 2026-10-11 | The note's second fresh-context check: 1 HIGH — a confirm-by-silence bullet could be recorded from a ruling that never answered it ⇒ **Q4** (A: close the voted, unpaid claim — OP13; B: it is paid, the appellant's claim closed), with its own fact, costs, reading; Q1 A's cell cut to its rule + a *How A works* list ("final vote" defined as the LAST approval before payment, incl. the special panel and correction-case decisions); the wait's wording (a second claim that APPEARS — kept apart or reopened — ⛔ no time limit, lifts if it is refused / closed); Q2 A and Q1 A's appeal timing; Q2 B can ⛔ not reopen a joined filing; separability lines; E1/E2/E4 additions. Story: Q1–Q4 throughout, the rulings table's Q4 row, OP13 keyed on Q4. |

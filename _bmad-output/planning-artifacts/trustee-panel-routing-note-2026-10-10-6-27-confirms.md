@@ -1,4 +1,4 @@
-# Trustee Panel routing note — three confirms and two corrections on the neighbours' questions
+# Trustee Panel routing note — three confirms and three corrections on the neighbours' questions
 
 > **§0 gate — passed (2026-10-10).** **CF1** narrows, for a time, a rider you ratified (`-303`: *"Send Text in Hindi to those whose
 > preferred langauge is Hindi and in English to those whose preferred language in English"*). **CF2** corrects who you were told sees

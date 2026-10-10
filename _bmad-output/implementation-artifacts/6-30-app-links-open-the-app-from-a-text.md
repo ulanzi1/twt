@@ -17,7 +17,7 @@ STATUS: `ready-for-dev`. ⛔ NO CODE until Task 0.3's author-commit (AL1–AL16,
 link opens the app, where two public files live, what a fallback page says (it names ⛔ no one and shows ⛔ nothing about anyone). What
 the TEXT says and whether members are texted at all is RULED — `2026-10-10-303` Q1 A (the five are texted, naming the member, with the
 link and the helpline, plus one WhatsApp reminder at 48 h, in each member's preferred language — the `-303` rider — ⚠ narrowed for a
-time by `2026-10-10-305` §2 item 2 to the Pariwar's default language until row 6-35's switch exists; the Panel confirm CF1 is owed) and
+time by `2026-10-10-305` §2 item 2 to the Pariwar's default language until row 6-35's switch exists; the Panel CONFIRMED it — `2026-10-10-310` CF1 A) and
 `2026-10-10-304` (the questions; *"a few short questions"*). ⚠ It BECOMES the Panel's if the fallback page shows ANYTHING about a
 member, a death or a claim (Trap 1), or a link is used to reach anyone the Panel has ⛔ not ruled may be texted.
 ⚠ Two calls here are BigDev's / the Trust's, ⛔ not the Panel's and ⛔ not the author's: the production app IDENTITY (name, bundle id,
@@ -91,7 +91,7 @@ so that **I can do what the message asks in a minute, and ⛔ no web page ever a
 | `2026-10-10-303` Q1 A | each of the five is texted, naming the member, with **the link** and the helpline, plus one WhatsApp reminder at 48 h (row 6-31 — the SAME link); Hindi / English by the Panel's rider | ⭐ Trustee-ratified — the link's substance is ruled |
 | `2026-10-10-304` Q6 A | the text says *"a few short questions"* | ⭐ Trustee-ratified — ⛔ no change to this story's fallback copy |
 | BigDev 2026-10-10 | the plumbing is a *"separate story"* (this one) | BigDev's call (recorded in the sprint-status row `6-30` comment, 2026-10-10 — ⛔ not in `-305`'s occasion) |
-| **`2026-10-10-305`** | §2 item 1 — 6.27 SPLITS into four (6.27a answering, 6.27b warnings, 6.27c sending, 6.27d inspector); §2 item 2 — texts in the Pariwar's default language until row 6-35 (⚠ a temporary narrowing of `-303`'s rider ⇒ CF1 owed); §2 item 5 — rows 6-34 (typed templates) and 6-35, ⛔ no production-identity row (the identity stays BigDev's decision, carried on Row 29 (a)); §4 — roster Rows 27 / 28 / 29 RESERVED | author-commit (BigDev) — CF1–CF3 in the confirm note (⛔ not yet sent) |
+| **`2026-10-10-305`** | §2 item 1 — 6.27 SPLITS into four (6.27a answering, 6.27b warnings, 6.27c sending, 6.27d inspector); §2 item 2 — texts in the Pariwar's default language until row 6-35 (⚠ a temporary narrowing of `-303`'s rider ⇒ CF1 — ✅ confirmed by `2026-10-10-310`); §2 item 5 — rows 6-34 (typed templates) and 6-35, ⛔ no production-identity row (the identity stays BigDev's decision, carried on Row 29 (a)); §4 — roster Rows 27 / 28 / 29 RESERVED | author-commit (BigDev) — CF1–CF3 in the confirm note (⛔ not yet sent) |
 | 6.27a v2.5 PM11 / PM21 | the link's code (6.27a's column), the resolver and the `?c=` wiring (6.27c), the shell's content (6.27a) | author (proposed) |
 | Architecture §4.7 | deep-link landing: (1) re-auth preserves the target; (2) scope match; (3) revoked ⇒ *"this is no longer available to you"* + helpline, *"Never hard 404"* | architecture (binding) |
 | Architecture §3.4 + `-255` F7 | members got ⛔ no ordinary SMS before `-303` — `-303` Q1 A is the widening for the five | ruled (`-303`) |

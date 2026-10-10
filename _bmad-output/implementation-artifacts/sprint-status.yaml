@@ -1,3 +1,13 @@
+# last_updated: 2026-10-10l (⭐ **TWO ROWS ADDED (`backlog`) — BigDev, in session: an inspector questionnaire, *"significantly longer than
+# neighbours"*, authored by Pariwar Admin / State Trustee / Super Admin — *"Yes, do it"*.** ⛔ No story existed (the inspection form is fixed
+# code — 6.7 / 6.26a; 10.15 Polls forbids conditions and locks at publish by design). `6-32-inspector-questionnaire-at-the-ground-inspection`
+# = the inspection screen driven by an approved version beside 6.26a's FIXED checks, the family's comparable answers (cause / illness —
+# only if the Panel approves Q3 / Q4) under shared question keys, OFFLINE saving at the visit. `6-33-questionnaire-editor-versions-and-approval`
+# = staff write versions, a DIFFERENT person approves, every version kept — for both questionnaires. 6.27 → v1.8: the engine is SHARED
+# (contracts `questionnaires/`, kinds `peer_mesh` / `ground_inspection`, `COMPARABLE_QUESTION_KEYS`); 6.27 compares only not-died and
+# the date until 6-32 lands. The unsent follow-up note gains **Q8** (may those roles write the inspector's questionnaire — our reading A:
+# yes, a second approver, sensitive topics still to the Panel, the ruled fixed checks never editable). ⛔ No story file for either row; ⛔ no
+# epics.md entry yet.)
 # last_updated: 2026-10-10k (⭐ **6.27 → v1.7 — THE INSPECTOR SEES ONLY DIFFERENCES (BigDev: *"only discrepancy should be shared with field
 # inspectore if there were any, to cross examine the family. Otherwise, It should say Thank you, your response has been recorded. No
 # further action needed"*).** PM25 (a) rewritten: ⛔ nothing shown before completing (⛔ no "hidden" line); the inspection records the
@@ -19609,6 +19619,12 @@ development_status:
   # ⭐ 2026-10-10 ADDED (BigDev, in session: *"48 hours, separate story 6-31"*): ONE WhatsApp reminder at 48 h to the five who have ⛔ not
   # answered and opted in to WhatsApp — after 6.27's sending half; Panel-routed inside 6.27's Q1. ⛔ No story file; ⛔ no epics.md entry yet.
   6-31-peer-mesh-whatsapp-reminder-at-48-hours: backlog
+  # ⭐ 2026-10-10 ADDED (BigDev, in session: *"Yes, do it"*): the inspector's questionnaire for the family at the ground inspection (a
+  # versioned, conditional form beside 6.26a's fixed checks; the family's comparable answers under shared keys; offline saving), and the
+  # staff editor for questionnaire versions with a second approver (both questionnaires). Panel Q8 (unsent note) governs who may author.
+  # 6.27's engine is shared (v1.8). ⛔ No story files; ⛔ no epics.md entries yet.
+  6-32-inspector-questionnaire-at-the-ground-inspection: backlog
+  6-33-questionnaire-editor-versions-and-approval: backlog
   epic-6-retrospective: done
 
   # ==========================================================================

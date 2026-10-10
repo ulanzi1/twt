@@ -1,10 +1,11 @@
-# Trustee Panel routing note — the questions the five neighbours are asked: the full list, how the member died, which illness, alcohol, and who approves changes
+# Trustee Panel routing note — the questions the five neighbours are asked: the full list, how the member died, which illness, alcohol, who approves changes, and the inspector's questionnaire for the family
 
 > **§0 gate — passed (2026-10-10), for each question.** You asked to see *"which all questions will be asked from member"* (`2026-10-10-303`).
 > The list below is the answer — and it now asks for more than whether the member died. **Q3–Q5** ask neighbours about **how a member
 > died, their illnesses and their habits**: what the Trust **collects about a person from others**, and — because the cause of death
 > decides who is paid (Niyamavali §5.1, §5.5, §5.6) — what such an answer may **do to a family's claim**. **Q6** changes words you
-> ratified in `-303` (*"two short questions"*). **Q7** decides who may change the questions later. ⛔ No engineering choice decides any.
+> ratified in `-303` (*"two short questions"*). **Q7** decides who may change the questions later. **Q8** asks whether staff may write
+> the much longer questionnaire the INSPECTOR uses with the family, and with what limits. ⛔ No engineering choice decides any.
 > ⭐ **Asked from Story 6.27** (2026-10-10), after BigDev proposed the fuller questionnaire. ⭐ **Nothing is blocked meanwhile**: the
 > screens, saving and the first two questions are built now; a question is shown to members only once you approve it.
 > ⚠ **Deliberately ⛔ not asked**, because they are ours:
@@ -155,6 +156,34 @@ the three new questions on pages 2 and 4 (how they know of the death, how they k
 
 ---
 
+# Q8 — may staff write the inspector's questionnaire for the family, and with what limits?
+
+**In one sentence:** BigDev plans a questionnaire the ground inspector goes through with the family at the visit — longer than the
+neighbours', and changing over time — and proposes that a **Pariwar Admin, a State Trustee or the Super Admin** may write and change it;
+may they, and with what limits?
+
+**Why it cannot be decided without you:** it decides **what the Trust asks a grieving family and records about them and the member** —
+today that is yours (you ruled the date and time of death, FQ8 C, and the original certificate, FQ11). Handing the pen to staff is a
+**delegation** of that.
+
+## The one fact that decides it
+
+⭐ **Every version is kept and every answer stays tied to the version it was given under** — so a delegation can be bounded and checked
+after the fact; what it cannot do by itself is stop a sensitive question being asked before anyone outside the author has seen it.
+
+| | Option | What changes for a person | Cost |
+|---|---|---|---|
+| **A** | **Those roles may write and change it; a DIFFERENT person must approve each version before it is used; any question about health, the cause of death, habits, or other people still comes to you; counsel confirms the basis for anything sensitive before go-live** (our reading). | Inspectors get questions that fit what the Pariwar sees on the ground, without waiting for a meeting for every wording change. | Two people (⛔ never one) decide routine questions about a family; you see only the sensitive ones. |
+| **B** | **Every version comes to you.** | Nothing is asked of a family that you have ⛔ not approved. | Slow; small fixes wait for a meeting. |
+| **C** | **Those roles decide alone, ⛔ no second approver, ⛔ no limits.** | The fastest. | What the Trust asks a family could change on one person's word — including about illness or a death's cause. |
+
+**Our reading: A** — **because** it keeps the people who know the ground in charge of routine questions, needs two people for any change,
+and leaves every sensitive question with you — the same line as Q7.
+⭐ The fixed checks you ruled (the original certificate seen and photographed; the date and time of death) stay **fixed** — ⛔ never
+editable by staff.
+
+---
+
 # What is at stake right now
 
 - **Live today:** ⛔ nothing — ⛔ no neighbour has been asked anything yet.
@@ -181,7 +210,9 @@ ask, how the member died and what illness they had, is exactly what decides whet
 hearsay. We suggest: ask how they know and how well they knew the member (that tells staff how much an answer is worth); ask how the
 member died and which illness, but only as something staff see — never as a warning, a flag or a delay; do ⛔ not ask about alcohol,
 because no rule of the Trust uses it; let the text say *"a few short questions"*; and let BigDev make small changes to the questions while
-anything new or sensitive still comes to you. ⇒ ⭐ **We suggest Q3 A, Q4 A, Q5 A, Q6 A, Q7 B.** If this section and the evidence below
+anything new or sensitive still comes to you. For the inspector's longer questionnaire with the family, we suggest the same line: the
+Pariwar Admin, a State Trustee or the Super Admin may write it, a second person approves each version, and anything sensitive still comes
+to you. ⇒ ⭐ **We suggest Q3 A, Q4 A, Q5 A, Q6 A, Q7 B, Q8 A.** If this section and the evidence below
 ever disagree, the **evidence** is the record.
 
 ---

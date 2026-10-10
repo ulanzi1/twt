@@ -9,11 +9,10 @@ commit). Every `file:NNN` below is AS OF `5946e411`, derived by four read-only r
 governance trail `-255` … `-302`) and the load-bearing ones re-read by the author. ⚠ Before Task 1, run
 `git diff --name-only 5946e411..HEAD -- packages apps scripts` — any cited file in that list is re-read.
 
-STATUS: `ready-for-dev` — ⛔⛔ NO CODE until Task 0 is done: (i) the Panel has ruled Q1 and Q2 of
-`_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-10-6-27-asking-the-neighbours.md` and the ruling is transcribed;
-(ii) BigDev has answered PM1–PM21 (below); (iii) ONE author-commit recording them is committed ALONE
-([[feedback_governance_commits_precede_implementation]]). ⚠ PM2, PM3, PM5, PM8 and PM9 are written for the RECOMMENDED answers (Q1 A,
-Q2 A); each carries the re-plan its alternative forces.
+STATUS: `ready-for-dev` — ⛔⛔ NO CODE until Task 0 is done: (i) ✅ DONE 2026-10-10 — the Panel ruled Q1 A (with a language rider)
+and Q2 A, transcribed as `2026-10-10-303` and into the routing note; (ii) BigDev has answered PM1–PM22 (below); (iii) ONE author-commit
+recording them is committed ALONE ([[feedback_governance_commits_precede_implementation]]). ⭐ The RECOMMENDED answers were taken, so
+⛔ no "Re-plan by answer" branch applies; the rider adds PM22 and amends PM3 / PM7 (v1.4).
 
 ⭐ §0 gate (template `trustee-panel-routing-note-TEMPLATE.md`): TWO questions are the Panel's and are routed (Q1: texting five members,
 naming the member — what the Trust DISCLOSES, to whom, by what means; Q2: `-263` FQ10 A *"can ⛔ never block a claim on their own"* vs
@@ -116,8 +115,9 @@ ever refused because of a neighbour's answer.**
 | `-261` C3 | the true nominee's refile inherits the ground inspection — *"and nothing else carries over (… the checks with neighbours …)"* | ⭐ Trustee-ratified ⇒ ⛔ no inherited neighbour key (Trap 7) |
 | `-279` A6 + Consequence 2 | *"a new warning kind enters the wait only by a decision (6-26 / 6-27) … row 6-27's neighbour replies (FQ10 A, 'can ⛔ never block a claim on their own') can arrive after approval … its producer row decides or routes that before extending this list"* | author-commit ⇒ **ROUTED** as Q2 |
 | `-255` F7 · architecture §3.4 | SMS widened to a claim's family only; members get ⛔ no ordinary text | Trustee-ratified / plan ⇒ **ROUTED** as Q1 |
-| **Q1** (routing note 2026-10-10) | may the Trust text the five, naming the member? Our reading **A** | ⏳ **AWAITING PANEL RULING** |
-| **Q2** (routing note 2026-10-10) | a neighbour's answer after the District Admin approved — does the final approval wait? Our reading **A** | ⏳ **AWAITING PANEL RULING** |
+| **Q1** (routing note 2026-10-10) → **`2026-10-10-303`** | the five are texted, naming the member, with the link and the helpline, plus one WhatsApp reminder at 48 h (option A as put); ⭐ **rider:** *"Send Text in Hindi to those whose preferred langauge is Hindi and in English to those whose preferred language in English"* | ⭐ Trustee-ratified (A + rider) |
+| **Q2** (routing note 2026-10-10) → **`2026-10-10-303`** | a neighbour's late warning makes the final approval wait for the District Admin's reason and note — ⛔ never a refusal | ⭐ Trustee-ratified (A) — discharges `-279` A6 for this row |
+| `-303` reading | "preferred language" = the language the member chose in the app, recorded on the server; ⛔ none recorded ⇒ the Pariwar's default; the app screen asks exactly TWO questions | ⚠ OUR reading — PM22 / PM7 |
 | `-282` GI7 · `-281` Q1 B | the two precedents for a kind entering the wait (author call where ⛔ no carve-out; Panel where there is one) | precedent |
 | `-295` RB4 / RB5 / RB11 / RB12 / RB16 · `-302` RN2–RN8 | one send core, ⛔ never copied; the mode-resolved name or `no_target`; go-live rows; a held config never uses up the slot; the deadline-word deny-list; 0155's backstops | author-commit — the TEMPLATE |
 | `-292` Consequence 4 · `-282` Consequence 4 | rows 6-24 / 6-25 / 6-27 share the gate and writers — *"whichever lands second rebases; ⛔ none drops another's check"* | ⭐ every sibling is `done` ⇒ 6.27 rebases onto all of them (Trap 5) |
@@ -127,7 +127,7 @@ ever refused because of a neighbour's answer.**
 to block admin"* (⛔ not built, ⛔ not superseded — PM19); what an approver must weigh under a neighbour's warning; counsel's basis for the text
 (go-live row, PM16); whose data an answer is for erasure on the RESPONDER's side (PM17).
 
-## ⏳ THE TWO PANEL QUESTIONS (Task 0.1 puts them; ⛔ no code before the ruling is transcribed)
+## ✅ THE TWO PANEL QUESTIONS — RULED 2026-10-10 (`2026-10-10-303`: Q1 A + the language rider, Q2 A). Kept below as planned.
 
 The note: `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-10-6-27-asking-the-neighbours.md` (written 2026-10-10,
 from the template; its E4 commands were RUN at `5946e411` and hold).
@@ -170,8 +170,7 @@ a family's claim must take, and whether the final approval waits). In the member
 - **P1 (PM9 `peer_says_not_died`):** *"If one of the members the Trust asked about a death answers that the member has not died, anyone
   approving the family's claim must choose a reason and write a note; and if that answer arrives after the District Admin approved, the
   claim waits until the District Admin has done so — a neighbour's answer never refuses the claim."* — `-263` FQ10 A + `-264` FQ12 +
-  Q2 A: consistent **on Q2 A** (⚠ the wait clause is exactly what Q2 asks; on Q2 B the sentence loses *"waits …"*; on Q2 C it reads
-  *"if that answer arrives before the District Admin decides"*).
+  Q2 A: ✅ consistent — Q2 A ratified the wait clause (`-303`).
 - **P2 (PM9 `peer_death_date_differs`):** *"If one of the members the Trust asked gives a date of death two or more days away from the
   date on the certificate the Trust accepted, anyone approving the family's claim must choose a reason and write a note, with the same
   wait — never a refusal."* — `-262` FQ8 E (*"more than a day"*) + FQ12: consistent; ⚠ *"two or more days"* is OUR reading of *"more
@@ -291,7 +290,7 @@ a family's claim must take, and whether the final approval waits). In the member
   holds ⛔ no privileges on claim tables ⇒ any new jobs sweep fails 42501 in production until it closes); the DLT sheet
   (`docs/launch-gate-inventory/dlt-template-requests-6-19.md`) carries templates 1–12 ⇒ PM16.
 
-## ⚖️ Build decisions PM1–PM21 (PROPOSED — answered by BigDev at Task 0.3, committed by ONE author-commit at Task 0.4)
+## ⚖️ Build decisions PM1–PM22 (PROPOSED — answered by BigDev at Task 0.3, committed by ONE author-commit at Task 0.4)
 
 - **PM1 — who is texted: the five 6.6 chose, minus those the Trust must ⛔ not text — ⛔ never replaced.** At send time (the child's locked
   re-check, PM5) a ping is finished `no_target` with a fixed detail when its member: is ⛔ not `members.state = 'active'`
@@ -316,7 +315,9 @@ a family's claim must take, and whether the final approval waits). In the member
   as `{#alphanumeric#}` (≤ 40 chars — ⚠ whether it accepts Devanagari with spaces is UNCONFIRMED: ask the provider at registration; a
   name that cannot fit ⇒ `no_target:name_too_long`, ⛔ never a truncated name), `{link}` as `{#url#}`, `{helpline}` as `{#cbn#}` (both
   checked against the operator's whitelist). hi: agent-authored,
-  human review = Row 28. Sent in **`hi`** (F26 — RF11's reason); `en` registered for parity (templates 13 hi / 14 en). `{member}` =
+  human review = Row 28. ⚠ **v1.4 — `-303`'s rider:** sent in the member's PREFERRED language (PM22) — `hi` (template 13) or `en`
+  (template 14), both registered AND both sent; the sweep's config check needs BOTH locales' ids (the `appeal_notice` precedent); the
+  locale is read once per child OUTSIDE the claiming transaction, with the name. `{member}` =
   the Pariwar's mode-resolved name (`-181`; `notifications.resolveMemberFacingDeceasedName`), read once per child OUTSIDE the claiming
   transaction; erased / unresolvable / ⛔ no KYC name ⇒ `no_target:name_<reason>` (RB5) — ⛔ never a blank. ⛔ No claim, money, family,
   nominee, claimant or reporter; ⛔ no deadline word (6.19's S4 / T6 deny-list holds in full — RB16). ⭐ D33 carve-out recorded: 6.19's
@@ -341,17 +342,20 @@ a family's claim must take, and whether the final approval waits). In the member
 - **PM6 — the 72 hours are ⛔ not changed** (FQ10 A *"as built"*): still from selection; the outcome label still `sufficient` /
   `insufficient_responses_fallback`, monotonic. ⚠ RECORDED: a held send shortens the time a neighbour had before the label resolves —
   harmless, because the label gates ⛔ nothing (FQ9 requires the inspection anyway) and PM8 keeps answers open past it.
-- **PM7 — the answer: three questions, a reply row, the event kept.** (a) *"Do you know {member}?"* yes / no; (b) if yes, *"Do you believe
-  they have died?"* — *yes* / *no, they have not died* / *not sure*; (c) if (b) = yes, *"If you know, on what date did they die?"* — a date
-  or *"I don't know"*. Stored on a NEW table `claim_peer_mesh_replies` (migration `0157_claim-peer-mesh-replies.sql`): `reply_id` PK
-  (the warning SUBJECT), `pariwar_id`, `claim_case_id`, `selection_id`, `ping_id` UNIQUE (FK), `responder_member_id`, `knows_member bool`,
-  `belief text NULL CHECK IN ('died','not_died','not_sure')` (NULL ⇔ ⛔ not `knows_member`), `death_date_ciphertext` (Tier-1 `piiColumn`, field
+- **PM7 — the answer: TWO questions, a reply row, the event kept** (⚠ v1.4 — the ratified text promises *"two short questions"*, and the
+  Panel asked to see them; the answer relayed is recorded in the routing note's ruling block). ① *"Has {member} died?"* — *Yes, they have
+  died* (`died`) · *No, they have not died* (`not_died`) · *I am not sure* (`not_sure`) · *I did not know them* (`did_not_know`); ② ONLY
+  after `died`: *"If you know, on what date did they die?"* — a date or *"I don't know the date"*. Then *"Thank you. Your answer has been
+  sent to the Trust."* The helpline operator asks the same two (PM12). Words en + hi exactly as in the routing note's ruling block
+  (copy keys under `peer_request.*`; the Hindi agent-written — Row 28). Stored on a NEW table `claim_peer_mesh_replies` (migration `0157_claim-peer-mesh-replies.sql`): `reply_id` PK
+  (the warning SUBJECT), `pariwar_id`, `claim_case_id`, `selection_id`, `ping_id` UNIQUE (FK), `responder_member_id`,
+  `answer text NOT NULL CHECK IN ('died','not_died','not_sure','did_not_know')`, `death_date_ciphertext` (Tier-1 `piiColumn`, field
   class `DEATH_DATE_INDEX_FIELD_CLASS`'s sibling as 6.26a's), `death_date_window_indexes bytea[]` (exactly 3, NULL ⇔ ⛔ no date; CHECK both
-  NULL or both set, and ⛔ no date unless `belief = 'died'`), `recorded_via text CHECK IN ('member_app','helpline')`, `recorded_by_actor_id`,
+  NULL or both set, and ⛔ no date unless `answer = 'died'`), `recorded_via text CHECK IN ('member_app','helpline')`, `recorded_by_actor_id`,
   `recorded_at timestamptz DEFAULT clock_timestamp()` (RD1 / K3's clock — PM10 orders on it). RLS ENABLE + FORCE, four tenant policies;
   `GRANT SELECT, INSERT` only (an answer is final — ⛔ no UPDATE, ⛔ no DELETE). The date: ⛔ never in the future (IST today), ⛔ never before 1900-01-01.
-  The event `claim.peer_mesh_responded` keeps its payload ⛔ not changed — `response` mapped: ⛔ not `knows_member` ⇒ `unknown`; `died` ⇒ `confirmed`;
-  `not_died` ⇒ `denied`; `not_sure` ⇒ `unknown` (⭐ `denied` ⇔ *"has not died"* ONLY — F5 of the FIVE FACTS). The date ⛔ never rides the
+  The event `claim.peer_mesh_responded` keeps its payload ⛔ not changed — `response` mapped: `died` ⇒ `confirmed`;
+  `not_died` ⇒ `denied`; `not_sure` and `did_not_know` ⇒ `unknown` (⭐ `denied` ⇔ *"has not died"* ONLY — F5 of the FIVE FACTS). The date ⛔ never rides the
   event (Invariant 6).
 - **PM8 — when an answer is taken: while an approval is still to come.** `recordPeerMeshResponse` drops its `verification_in_progress` and
   `pending`-window guards and accepts an answer while the claim is in `CLAIM_REVIEW_WINDOW_STATES` (`claim/review-window.ts:15` —
@@ -363,7 +367,7 @@ a family's claim must take, and whether the final approval waits). In the member
   approval in flight is BENIGN by construction: its key misses the approval's `covered_keys` ⇒ late ⇒ the wait and the queue catch it
   (F15) — prove it with an own-committing ordering test (Task 11.3), ⛔ never add a lock.
 - **PM9 — the two kinds** (appended to `APPROVAL_WARNING_KINDS` after `register_check_mismatch`; ⛔ not in `NOMINEE_VERSION_WARNING_KINDS`):
-  - **`peer_says_not_died:<reply_id>`** — present ⇔ a reply of THIS claim has `belief = 'not_died'`. It needs ⛔ no certificate.
+  - **`peer_says_not_died:<reply_id>`** — present ⇔ a reply of THIS claim has `answer = 'not_died'`. It needs ⛔ no certificate.
   - **`peer_death_date_differs:<reply_id>`** — present ⇔ the reply's `death_date_window_indexes` is non-null AND the current accepted review's
     `accepted_date_index` is non-null AND is ⛔ none of the three. ⛔ No accepted certificate, or a pre-6.26b review (`accepted_date_index`
     NULL) ⇒ ⛔ no key (6.26b L4 / `not_indexed`). *"More than a day"* = **two or more calendar days apart** (the window = the neighbour's
@@ -381,14 +385,14 @@ a family's claim must take, and whether the final approval waits). In the member
   takes ⛔ no answer in `state_trustee_approved`). F21's re-review path rides arm (1) already — proven, ⛔ not re-built.
 - **PM11 — the member's answer screen (pull).** Contracts `packages/contracts/src/claims/peer-request.ts`; routes (`apps/api/src/modules/claims/`,
   the Polls shape, F27): `GET /api/v1/p/:pariwarId/member/peer-requests` → the session member's OPEN requests `{ pingId, memberName
-  (mode-resolved), askedOn (IST date) }`; `POST /api/v1/p/:pariwarId/member/peer-requests/:pingId/reply` body `{ knowsMember, belief?,
+  (mode-resolved), askedOn (IST date) }`; `POST /api/v1/p/:pariwarId/member/peer-requests/:pingId/reply` body `{ answer,
   deathDate? }` → 201; Turnstile + `Idempotency-Key` + `perMemberKey` budget; 404 (⛔ never 403) when the ping is ⛔ not the session member's or ⛔
   open; 409 `peer_request.no_longer_open` / `peer_request.already_answered`. **Open** = ⛔ no reply AND the claim is in PM8's window AND
   `send_outcome IS DISTINCT FROM 'no_target'` (a peer PM1 decided ⛔ not to ask is ⛔ never shown the request). api-client factory
   (`createMemberPeerRequestClient`); mobile: a card on `app/(tabs)/index.tsx` while ≥ 1 request is open (*"The Trust has asked you about
   a member"*), ONE route file `app/(peer-request)/peer-request.tsx` (URL `/peer-request` — ⚠ v1.3: a group-only `index.tsx` or
   `[code].tsx` would collide with the TEN existing `/` files and the two root-level catch-alls, 6.30 F5 / AL16) that shows the list, or —
-  with `?c=` — resolves the code (PM21 (d)) and opens the three-step screen, en + hi in the mobile claim namespace (`lib/claim-i18n.ts`;
+  with `?c=` — resolves the code (PM21 (d)) and opens the two-question screen, en + hi in the mobile claim namespace (`lib/claim-i18n.ts`;
   `$comment` marker; Row 28). The screen shows ⛔ no claim, ⛔ no family, ⛔ no amount — the name only. The empty / loading / error states
   render OUTSIDE any list ([[project_fabric_flatlist_empty_populated_crash]]); depend on `locale`, ⛔ never `t`
   ([[project_uset_fresh_closure_memo_trap]]). ⭐ The same screen is also reached from the text's link (PM21).
@@ -404,7 +408,7 @@ a family's claim must take, and whether the final approval waits). In the member
   the 72-hour line (*"Fewer than 3 answers in 72 hours — the ground inspection is the main check"* / *"3 or more answers"* / *"Still
   open until {date}"* / *"⛔ No neighbour could be chosen"*); per ping: the neighbour's NAME (staff form, decrypted in the HANDLER — ⛔ never the
   warning module), the send status (*"text sent"* / *"⛔ not texted — {reason}"* / *"text failed"* / *"not sent yet"*), and the answer
-  (knows / belief / *"answered in the app"* or *"recorded by the helpline"* / the IST time), the date given (decrypted in the handler —
+  (the answer / *"answered in the app"* or *"recorded by the helpline"* / the IST time), the date given (decrypted in the handler —
   FQ8 E: *"the District Admin is shown answers"*) with *"more than a day from the certificate"* from the WARNINGS read (Invariant 8);
   the two `kindLine`s (⛔ no date in them — `verifier-console.test.tsx:396`). `VERIFIER_CONSOLE_MAX_READS` bumped to the exact new ceiling
   with a ledger line and a `toBe`. `verifierAnnotations` STAYS `not_available_yet` — staff NOTE capture on an answer is ⛔ not built (the
@@ -451,7 +455,7 @@ a family's claim must take, and whether the final approval waits). In the member
   open the app and serves a plain fallback page for any of them.
   (c) **The app route** `app/(peer-request)/peer-request.tsx` serves `/peer-request` and reads `c` with `useLocalSearchParams()`
   (route GROUPS ⛔ never appear in a URL) → logged out ⇒ log in, then back to it (6.30 AL6 builds the return — ⛔ never worked around
-  here) → the resolver → the three-step screen of PM11.
+  here) → the resolver → the two-question screen of PM11.
   (d) **The resolver** `GET /api/v1/p/:pariwarId/member/peer-requests/by-link/:code` → `{ pingId }` ONLY when the code's ping belongs
   to the SESSION member in that Pariwar; else **404** (unknown, someone else's, other Pariwar — one indistinguishable answer, ⛔ never an
   oracle); a closed request resolves and the screen says *"Thank you — this request is no longer open"*. `perMemberKey` read budget.
@@ -462,15 +466,27 @@ a family's claim must take, and whether the final approval waits). In the member
   expected Row 29) carries the detail; Row 27 (e) points at it.
   ⚠ Re-plan: Q1 B ⇒ the name-free text keeps `{link}`; Q1 C / D ⇒ ⛔ no text ⇒ PM21 (a) / (b) / (f) drop; (c) / (d) stay only if row 6-30
   is wanted for other texts.
+- **PM22 — the member's preferred language (`-303`'s rider; our reading, ⛔ not ratified).** The system stores ⛔ no preferred language
+  today (FOUND 2026-10-10: the app's language choice lives only on the phone; `member_addresses.locale` / `consent_records.locale` record
+  the language a FORM was shown in — ⛔ not a preference; `pariwar_passport.locale_default`, `schema/pariwar_passport.ts:86`, is the
+  Pariwar's). ⇒ (a) NEW table `member_language_preferences` (migration 0158): `(pariwar_id, member_id)` PK, `locale` CHECK `IN ('hi','en')`,
+  `updated_at`; RLS ENABLE + FORCE; ⛔ no PII. (b) The app writes it when the member CHANGES the language in the app, and once on the first
+  signed-in launch when the server holds none (the language the app is showing then) — `PUT /api/v1/p/:pariwarId/member/preferences/language`
+  `{ locale }`, `requireMemberSession`, 404-⛔-403, `perMemberKey` budget; ⛔ never written by staff, ⛔ never inferred from a form. (c) The sender reads
+  it; ⛔ no row ⇒ the Pariwar's `locale_default` (Hindi for Bihar); ⛔ neither ⇒ `hi` (RF11's reason) — and the choice is logged as a CODE
+  (`locale_source: preference | pariwar_default | fallback`), ⛔ never the language itself in any alarm. (d) Row `6-31`'s WhatsApp reminder
+  reads the SAME preference (*"the same words"*). ⚠ A member who changed the language on the phone BEFORE this story shipped is recorded at
+  their next signed-in launch — RECORDED. ⚠ A split is possible (the preference is app-wide and will serve every later member text) —
+  BigDev's call at Task 0.3, ⛔ not made here.
 
 ## Acceptance Criteria
 
 1. **AC1 — Task 0 first.** ⛔ No code is committed before (i) the Panel's Q1 / Q2 ruling is transcribed into the routing note's ⏳
-   block and `.decision-log.md` (a new id), and (ii) ONE author-commit recording PM1–PM21 as answered (and re-planned per the ruling) is
+   block and `.decision-log.md` (a new id), and (ii) ONE author-commit recording PM1–PM22 as answered (and re-planned per the ruling) is
    committed ALONE; the epics.md `### Story 6.27` entry, the two roster rows and the DLT sheet rows follow it, before Task 1.
 2. **AC2 — each of the five is texted once (Q1 A).** Given a claim whose selection has pings, when the SELECT worker commits, then one
    child per ping is enqueued; each child, under the claim lock, re-checks PM5 (iv) and PM1, then (after COMMIT) decrypts, normalises,
-   hashes and sends through `sendClaimDltSms` with template `peer_mesh.request.hi`, rendering exactly the registered text with the
+   hashes and sends through `sendClaimDltSms` with the template of the member's PREFERRED language (PM22 — `peer_mesh.request.hi` or `.en`), rendering exactly the registered text with the
    mode-resolved name, the ping's link (PM21 — its code written once at begin) and the Pariwar's helpline; ⛔ no valid `APP_LINKS_BASE_URL` ⇒
    held like a missing template id (AC3); the ping row records `accepted` / a rejection / `no_target` / `error` per 0155's
    vocabulary; a second child or a sweep re-run ⛔ never sends again (once ever); a send outside 09:00–20:00 IST is deferred to 09:00 IST.
@@ -481,7 +497,7 @@ a family's claim must take, and whether the final approval waits). In the member
    `verification_in_progress` / `verifier_review` ⇒ `skipped_superseded`; a peer ⛔ not active, reported deceased, or with ⛔ no sendable
    number ⇒ `no_target` with its fixed detail; ⛔ no replacement peer; the selection rows unchanged.
 5. **AC5 — the member answers in the app.** Given a member with an open request, the home screen shows the card; the screen asks the
-   three questions (the date only after *"yes, they have died"*); submitting records ONE reply row (`member_app`) and ONE
+   TWO questions (the date only after *"Yes, they have died"*; the words as in the routing note's ruling block); submitting records ONE reply row (`member_app`) and ONE
    `claim.peer_mesh_responded` event with PM7's mapping; a second submit is `already_answered` (or the idempotent replay of the first);
    a request that is ⛔ not the member's is 404; a closed claim is *"no longer open"*; ⛔ no claim, family or amount appears on any screen.
    ⭐ Opening the text's link (PM21) on a phone with the app lands on the same screen (after a login if needed); the resolver answers
@@ -518,14 +534,14 @@ a family's claim must take, and whether the final approval waits). In the member
   - [ ] 0.1 Put the routing note to the Panel (BigDev relays). ⛔ Never edit the note's question sections after sending.
   - [ ] 0.2 Transcribe the ruling into the note's ⏳ block AND `.decision-log.md` (next id after `-302`; *"what this ruling does ⛔ NOT
         cover"* included). If the answer is ⛔ not Q1 A / Q2 A, re-plan this file per *"Re-plan by answer"* BEFORE 0.3, and re-check P1 / P2.
-  - [ ] 0.3 Put PM1–PM21 to BigDev (short option summaries — the 6.24b / 6.29 form); record each answer here.
-  - [ ] 0.4 ONE author-commit (decision entry) recording PM1–PM21 as answered — committed ALONE; stage it in the scratchpad and try the
+  - [ ] 0.3 Put PM1–PM22 to BigDev (short option summaries — the 6.24b / 6.29 form); record each answer here.
+  - [ ] 0.4 ONE author-commit (decision entry) recording PM1–PM22 as answered — committed ALONE; stage it in the scratchpad and try the
         insert first ([[project_decision_log_writes_user_inserted]]).
   - [ ] 0.5 epics.md `### Story 6.27` entry (after 6.26b; a dated "Added … Task 0.5" source line, ⛔ never a merge fence); annotate Story 6.6's
         AC (*"pinged via Story 5.1 dispatcher"* → the routed channel) and Story 6.10's AC2(c) — ⛔ never rewrites.
   - [ ] 0.6 Roster Rows 27 / 28 (PM16); DLT sheet templates 13–14 (text from Task 2.1, filled after it is fixed); a line on Row 26.
   - [ ] 0.7 Sprint ledger: a reverse-chron `last_updated` comment line ([[project_sprint_status_ledger]], [[project_sprint_status_safe_prepend]]).
-- [ ] **Task 1 — migrations 0156 / 0157 (AC2, AC3, AC5, AC12, AC13).** Hand-authored, journal entries, applied to :5432 AND :5433 and proven
+- [ ] **Task 1 — migrations 0156 / 0157 / 0158 (AC2, AC3, AC5, AC12, AC13; 0158 = PM22's `member_language_preferences`).** Hand-authored, journal entries, applied to :5432 AND :5433 and proven
       from zero; Drizzle schema files updated (`schema/claim_peer_mesh_pings.ts` incl. PM21's `link_code`, NEW
       `schema/claim_peer_mesh_replies.ts`); RLS policy
       files + policy-regression specs; ⛔ never regenerate an applied migration.
@@ -547,9 +563,10 @@ a family's claim must take, and whether the final approval waits). In the member
       operator, PM12); unit + integration tests for every state in and out of the window and the 72-hour label ⛔ not recounted.
 - [ ] **Task 5 — the member API + contracts + api-client (AC5).** PM11's routes / handlers / contracts; the date-window indexes computed
       in the handler (`deathDateBlindIndex` ×3, PM9) and the ciphertext written; 404-⛔-403; Turnstile / Idempotency-Key / per-member
-      budget; PM21 (d)'s by-link resolver; route tests incl. the cross-Pariwar 404, the not-selected 404, and the resolver's three
+      budget; PM21 (d)'s by-link resolver; PM22's `PUT …/member/preferences/language`; route tests incl. the cross-Pariwar 404, the not-selected 404, and the resolver's three
       indistinguishable 404s.
-- [ ] **Task 6 — the mobile screens (AC5).** The home card, the list, the three-step screen, and PM21 (c)'s ONE route file
+- [ ] **Task 6 — the mobile screens (AC5).** PM22's write (on a language change, and once on the first signed-in launch when the
+      server holds none); the home card, the list, the two-question screen, and PM21 (c)'s ONE route file
       `app/(peer-request)/peer-request.tsx` (`/peer-request`, `?c=`; 6.30's AL16 route-map test must pass); en + hi; component tests with a REAL `t()` leg; the FlatList rule. ⚠ Proving a REAL `https://` link opens it
       on a device is row 6-30's acceptance, ⛔ not this story's — here, test the route by navigating to the path.
 - [ ] **Task 7 — the helpline recording (AC6).** PM12's two routes on 6.3's chain; the admin panel on the member-lookup screen; tests incl.
@@ -691,7 +708,7 @@ route and resolver are built and tested here against a config base URL; only the
 ### Completion Notes List
 - 2026-10-10 — created by `bmad-create-story 6.27` (Opus 5.5): ultimate context engine analysis completed — comprehensive developer guide
   created. Four read-only research passes at `5946e411`; the Panel note written from the template (Q1, Q2) with its E4 commands run;
-  PM1–PM21 PROPOSED. ⛔ No code; ⛔ no decision entry yet (Task 0).
+  PM1–PM22 PROPOSED. ⛔ No code; ⛔ no decision entry yet (Task 0).
 
 ### File List
 
@@ -699,6 +716,7 @@ route and resolver are built and tested here against a config base URL; only the
 | Date | Version | Change |
 |---|---|---|
 | 2026-10-10 | 1.0 | Created (`bmad-create-story 6.27`); pinned `5946e411`; routing note Q1 / Q2 written; PM1–PM20 proposed. |
+| 2026-10-10 | 1.4 | ⭐ The Panel RULED (`2026-10-10-303`): Q1 A (with the WhatsApp reminder) + a language rider (Hindi / English by preferred language), Q2 A. STATUS (i) done; rulings table, the Panel-questions heading and P1 updated; PM3 sends both locales; PM7 asks exactly TWO questions (`answer` = `died` / `not_died` / `not_sure` / `did_not_know`; the words in the routing note's ruling block, as relayed to the Panel); NEW PM22 (the preferred language — our reading); `-279` A6 discharged for this row. |
 | 2026-10-10 | 1.3 | Aligned with Story 6.30 (created the same day): the link is `<origin>/peer-request?c=<code>` (a query string — operators refuse dynamic paths), built by 6.30's contracts `app-links` builder; the base is the env var `APP_LINKS_BASE_URL` (⛔ not Secret Manager — the dotted-id defect); ONE route file `app/(peer-request)/peer-request.tsx` (the old group-only files would collide); typed DLT variables (`{#alphanumeric#}` / `{#url#}` / `{#cbn#}`); Row 27 (e) → 6.30's roster row. ⛔ No PM added; PM3, PM11, PM21 amended (⛔ not yet committed — ⛔ no decision superseded). |
 | 2026-10-10 | 1.2 | BigDev: a WhatsApp reminder at 48 hours to opted-in members who have ⛔ not answered — *"48 hours, separate story 6-31"*. FIVE FACTS #1 note + Trap 17 (leave room, ⛔ not built here); the routing note's Q1 option A gains the reminder BEFORE sending (disclosed there). ⛔ No PM, AC or task of 6.27 changes. |
 | 2026-10-10 | 1.1 | BigDev: the text should open the questions directly — *"separate story"*. PM21 added (the link's code, path, route, resolver, config hold, go-live condition); PM3's text gains `{link}`; FIVE FACTS #1, AC2, AC5, Tasks 1 / 2.1 / 5 / 6 and the split note updated; the plumbing = new row `6-30-app-links-open-the-app-from-a-text` (domain expected week of 2026-10-12, ONE config value). The routing note's quoted texts updated BEFORE sending (disclosed there). |

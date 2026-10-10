@@ -343,8 +343,9 @@ member's terms:
 
 ## ⚖️ Build decisions PM1–PM25 (shared record; PROPOSED — answered by BigDev at Task 0.3, committed by ONE author-commit at Task 0.4)
 
-- **PM1 [c] — who is texted: the five chosen by row 6-36's SCHOOL metric (`2026-10-10-306` — the deceased member's school, and the
-  previous school after a transfer within 90 days; ⛔ never the district; possibly fewer than five, CF4 owed) through 6.6's engine, minus those the Trust must ⛔ not text — ⛔ never replaced.** At the child's locked
+- **PM1 [c] — who is texted: the five chosen by row 6-36's rule (`2026-10-10-306`, `-307` — colleagues at the deceased member's WORKPLACE,
+  school or office, and the previous one after a transfer within 90 days; otherwise the up-to-3 "people who know me" the member named and who
+  accepted; otherwise ⛔ no one; ⛔ never the district; possibly fewer than five, CF4 owed) through 6.6's engine, minus those the Trust must ⛔ not text — ⛔ never replaced.** At the child's locked
   re-check (PM5 (iv)) a ping is finished `no_target` with a fixed detail when its member: is ⛔ not `members.state = 'active'`
   (`no_target:peer_not_active`); has ANY claim filed naming them as the deceased (`no_target:peer_reported_deceased` — ⚠ includes a claim
   wrongly filed against a living member, who is locked by 6.20 until row 6-22's release (`-238`); the exclusion STAYS even after such a
@@ -926,6 +927,7 @@ on the story branch ([[feedback_commit_on_story_branch]]).
 ## Change Log
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-10 | 2.7 | `2026-10-10-307`: PM1 reads row 6-36's full order — workplace colleagues → people the member named and who accepted → ⛔ no one. |
 | 2026-10-10 | 2.6 | `2026-10-10-306` (BigDev): the five are chosen by school (row 6-36), ⛔ never the district; 6.27c also waits for row 6-36; PM1 updated; CF4 owed. |
 | 2026-10-10 | 2.5 | Round 6 (0 BLOCKER / 0 HIGH — validate ends): Row 27 (f) and PM23's basis id cite counsel's recorded basis (⛔ no longer circular); AC2 names the sweep AND the child; 6.27b's queue needs ⛔ no window term (PM8 corrected); build floor v2.5. |
 | 2026-10-10 | 2.4 | Round 5 (0 BLOCKER / 1 HIGH): the `'pending'`-question hold is a config gap checked by BOTH the sweep and the child's begin path (6.27c AC2b); the "no ruled question is ever skipped" passages reworded to "no TEXTED neighbour sees one skipped"; a later chain-added health question HOLDS that Pariwar's texts (a cost row 6-33 must state; CF3 (d) says so); the basis edit cites counsel's recorded basis, Row 27 (f) closes on it; `answerWindowSql` + parity leg in Task 1; build floor v2.4. |

@@ -461,8 +461,8 @@
 > (closure (g) / (h) corrected by [`-315`](../../.decision-log.md#decision-2026-10-10-315) C6; (a)'s project-id value per
 > [`-316`](../../.decision-log.md#decision-2026-10-10-316) E1). ⚠ **Rows 27 and 28 are RESERVED for Story 6.27**
 > ([`-305`](../../.decision-log.md#decision-2026-10-10-305) §4) and are ⛔ not yet written — the gap in this roster is expected: whichever
-> story's Task 0 lands first writes its OWN row at its reserved number. Like Rows 17–26 the row has ⛔ architecture source line; it cites
-> the decision that created it. ⛔ It blocks ⛔ build or merge — nothing is in production ([[project_not_in_production_merge_is_not_golive]]).
+> story's Task 0 lands first writes its OWN row at its reserved number. Like Rows 17–26 the row has ⛔ no architecture source line; it cites
+> the decision that created it. It blocks ⛔ no build and ⛔ no merge — nothing is in production ([[project_not_in_production_merge_is_not_golive]]).
 
 ### Row 29 — `app-links-live`
 

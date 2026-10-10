@@ -94,6 +94,11 @@ export function buildAppLinkUrl(baseUrl: string, key: AppLinkKey, code: string):
   if (!APP_LINK_CODE_PATTERN.test(code)) {
     throw new Error('[app-links] buildAppLinkUrl: the code is malformed');
   }
+  // A JS caller (or an `as AppLinkKey` cast) can pass a key the list does not hold — refused loudly, ⛔ never
+  // `https://host/undefined?c=…` in a text (code review 2026-10-10).
+  if (!(DECLARED_KEYS as readonly string[]).includes(key)) {
+    throw new Error(`[app-links] buildAppLinkUrl: unknown app-link key "${String(key)}"`);
+  }
   return `${baseUrl}${APP_LINK_PATHS[key]}?${APP_LINK_CODE_PARAM}=${code}`;
 }
 

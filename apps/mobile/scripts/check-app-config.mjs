@@ -39,24 +39,36 @@ function cleanEnv(extra) {
   for (const key of Object.keys(env)) {
     if (key === 'APP_VARIANT' || key.startsWith('APP_IDENTITY_') || key === 'APP_LINKS_HOST') delete env[key];
   }
-  return { ...env, ...extra };
+  // Expo CLI loads `apps/mobile/.env*` on top of the process env — a local dotenv file could re-inject the very
+  // variables stripped above (code review 2026-10-10). The check states its own env, so dotenv is OFF.
+  return { ...env, EXPO_NO_DOTENV: '1', ...extra };
 }
 
+const EXPO_CONFIG = ['--no-install', 'expo', 'config', '--type', 'public'];
+
 function expoConfig(extraEnv) {
-  const result = spawnSync('npx', ['--no-install', 'expo', 'config', '--type', 'public', '--json'], {
-    cwd: MOBILE,
-    env: cleanEnv(extraEnv),
-    encoding: 'utf8',
-  });
-  let config = null;
+  const env = cleanEnv(extraEnv);
+  const result = spawnSync('npx', [...EXPO_CONFIG, '--json'], { cwd: MOBILE, env, encoding: 'utf8' });
+  // A spawn FAILURE (no `npx`, a signal) leaves `status` null and the streams null — ⛔ never let that read as a
+  // "correctly refused" non-zero exit (code review 2026-10-10): it is a check failure with its own message.
+  if (result.error) {
+    return { status: 1, config: null, output: `spawn failed: ${result.error.message}`, spawnFailed: true };
+  }
   if (result.status === 0) {
+    let config = null;
     try {
       config = JSON.parse(result.stdout);
     } catch {
       config = null;
     }
+    return { status: 0, config, output: result.stderr ?? '', spawnFailed: false };
   }
-  return { status: result.status, config, stderr: result.stderr };
+  // ⚠ `expo config --json` SWALLOWS the config's thrown message — exit 1 with BOTH streams empty (verified, Expo
+  // SDK 55). The negative checks must NAME the refusal, so a failed `--json` run is re-run WITHOUT `--json`, which
+  // prints `Error reading Expo config … [app.config] …` (code review 2026-10-10).
+  const plain = spawnSync('npx', EXPO_CONFIG, { cwd: MOBILE, env, encoding: 'utf8' });
+  const output = [result.stdout, result.stderr, plain.stdout, plain.stderr].map((part) => part ?? '').join('\n');
+  return { status: result.status ?? 1, config: null, output, spawnFailed: false };
 }
 
 /** The config minus what AC3 excludes from the fixture comparison. */
@@ -83,20 +95,24 @@ function check(label, ok, detail = '') {
 for (const variant of [undefined, 'development', 'preview']) {
   const label = `APP_VARIANT=${variant ?? '(unset)'}`;
   const run = expoConfig(variant === undefined ? {} : { APP_VARIANT: variant });
-  check(`${label} resolves`, run.status === 0 && run.config !== null, run.stderr.trim().split('\n')[0]);
+  check(`${label} resolves`, run.status === 0 && run.config !== null, run.output.trim().split('\n')[0]);
   if (run.config === null) continue;
   check(`${label} equals the prototype fixture`, isDeepStrictEqual(comparable(run.config), FIXTURE));
   projectIds.set(label, run.config.extra?.eas?.projectId);
 }
 
+// The two NEGATIVE checks must see the config's OWN refusal, not any non-zero exit (a syntax error, a missing
+// binary or a crash would otherwise log `ok` — code review 2026-10-10).
 const bare = expoConfig({ APP_VARIANT: 'production' });
-check('APP_VARIANT=production without APP_IDENTITY_* exits non-zero', bare.status !== 0);
+check('APP_VARIANT=production without APP_IDENTITY_* exits non-zero, naming the missing variables',
+  !bare.spawnFailed && bare.status !== 0 && /APP_IDENTITY_NAME/.test(bare.output), bare.output.trim().split('\n')[0]);
 
 const unknown = expoConfig({ APP_VARIANT: 'prod' });
-check('an unknown APP_VARIANT exits non-zero', unknown.status !== 0);
+check('an unknown APP_VARIANT exits non-zero, naming the value',
+  !unknown.spawnFailed && unknown.status !== 0 && /APP_VARIANT="prod"/.test(unknown.output), unknown.output.trim().split('\n')[0]);
 
 const noHost = expoConfig({ APP_VARIANT: 'production', ...FIXTURE_IDENTITY });
-check('production with the fixture identity resolves', noHost.status === 0 && noHost.config !== null);
+check('production with the fixture identity resolves', noHost.status === 0 && noHost.config !== null, noHost.output.trim().split('\n')[0]);
 if (noHost.config !== null) {
   check('production takes its identity from APP_IDENTITY_*',
     noHost.config.name === 'Fixture App' && noHost.config.scheme === 'fixtureapp' &&
@@ -107,7 +123,7 @@ if (noHost.config !== null) {
 }
 
 const withHost = expoConfig({ APP_VARIANT: 'production', ...FIXTURE_IDENTITY, APP_LINKS_HOST: FIXTURE_HOST });
-check('production with APP_LINKS_HOST resolves', withHost.status === 0 && withHost.config !== null);
+check('production with APP_LINKS_HOST resolves', withHost.status === 0 && withHost.config !== null, withHost.output.trim().split('\n')[0]);
 if (withHost.config !== null) {
   const filters = withHost.config.android?.intentFilters ?? [];
   const expectedData = Object.values(APP_LINK_PATHS).map((path) => ({ scheme: 'https', host: FIXTURE_HOST, path }));

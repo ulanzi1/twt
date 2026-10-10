@@ -125,7 +125,7 @@ only an UNSET provider (deliberately off) is silent at boot.
 | --- | --- |
 | `STAFF_EMAIL_PROVIDER` | `ses` or `zeptomail`; unset ⇒ held (`config:provider_unset`), any other value ⇒ held (`config:provider_unknown`) |
 | `STAFF_EMAIL_FROM` | the sender address (ASCII) — a MONITORED mailbox (bounces are ⛔ ingested) |
-| `ADMIN_APP_ORIGIN` | the list link's base — an `https://` origin with ⛔ path (else held: `config:admin_app_origin_invalid`) |
+| `ADMIN_APP_ORIGIN` | the list link's base — an `https://` origin with ⛔ no path (else held: `config:admin_app_origin_invalid`) |
 | `STAFF_EMAIL_SES_ACCESS_KEY_ID_SECRET_NAME` | Secret Manager name of the SES access key id (local fallback env: `STAFF_EMAIL_SES_ACCESS_KEY_ID_ENV_FALLBACK`, default `STAFF_EMAIL_SES_ACCESS_KEY_ID`) |
 | `STAFF_EMAIL_SES_SECRET_ACCESS_KEY_SECRET_NAME` | Secret Manager name of the SES secret key (fallback `STAFF_EMAIL_SES_SECRET_ACCESS_KEY_ENV_FALLBACK`, default `STAFF_EMAIL_SES_SECRET_ACCESS_KEY`) |
 | `STAFF_EMAIL_SES_REGION` | default `ap-south-1` |
@@ -144,10 +144,10 @@ a hold never burns a row it parked, and repeated short holds credit only their o
 
 | Variable | Meaning |
 | --- | --- |
-| `APP_LINKS_BASE_URL` | the base of every app link a text carries (`<base>/peer-request?c=<code>`) — the Trust's domain as an `https://` ORIGIN with ⛔ path, query, credentials or fragment (a trailing `/` is accepted and stripped). Validated EVERY run by the shared `resolveHttpsOrigin` (`src/scheduler/staff-email-config.ts` — the same validator as `ADMIN_APP_ORIGIN`, ⛔ never a copy); invalid / unset ⇒ `null`. ⛔ No code default. |
+| `APP_LINKS_BASE_URL` | the base of every app link a text carries (`<base>/peer-request?c=<code>`) — the Trust's domain as an `https://` ORIGIN with ⛔ no path, query, credentials or fragment (a trailing `/` is accepted and stripped). Validated EVERY run by the shared `resolveHttpsOrigin` (`src/scheduler/staff-email-config.ts` — the same validator as `ADMIN_APP_ORIGIN`, ⛔ never a copy); invalid / unset ⇒ `null`. ⛔ No code default. |
 
 ⭐ Ownership (`2026-10-10-312` AL5): Story 6.30 owns the validator, this row and the `compose.yaml` jobs-block line; **Story 6.27c**
 owns the boot read (the `boot.ts` `ADMIN_APP_ORIGIN` shape), the dep, and its sweep's hold `config:app_links_base_url_invalid` — ⛔
-nothing reads the variable before 6.27c lands. An env var, ⛔ a Secret Manager key: a dotted secret id (`app_links.base_url`) is
+nothing reads the variable before 6.27c lands. An env var, ⛔ not a Secret Manager key: a dotted secret id (`app_links.base_url`) is
 the recorded unverified-defect shape. The domain is roster Row 29 (b) — ONE fact in four settings (`APP_LINKS_BASE_URL`,
 `APP_LINKS_HOST`, `PUBLIC_SITE_ORIGIN`, `EXPO_PUBLIC_PUBLIC_SITE_ORIGIN`).

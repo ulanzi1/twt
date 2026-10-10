@@ -31,7 +31,7 @@ corrections; `E1`–`E3` = `-316`'s; `R1`–`R3` = `-317`'s; `N1`–`N20` = buil
 
 # Story 6.30: A Link in a Text Opens the App at the Right Screen — App Links, Universal Links, Two Public Files, a Plain Fallback Page, and the Login That Keeps Its Place `[PRIMITIVE]`
 
-Status: review
+Status: done
 
 > ⭐⭐ **WHAT THIS STORY IS, IN ONE PARAGRAPH.** Story 6.27's text to the five neighbours carries a link that should open the question
 > screen in the TWT app (BigDev, 2026-10-10: *"separate story"*; ratified with the text in `-303` Q1 A). Today ⛔ no link can open the
@@ -513,6 +513,36 @@ applicable (the Niyamavali does not speak to app links) — and it is ⛔ not ra
       the shell placeholder — else a note in `6-27-peer-mesh-sending-replies-and-date-of-death.md`; a note to 6.27c that it consumes
       `APP_LINK_CODE_PATTERN`; this file's Change Log + File List; `pnpm ci:local` green — run it, paste the summary.
 
+### Review Findings
+
+> `bmad-code-review` 2026-10-10 on `story/6-30-app-links-open-the-app-from-a-text` (branch diff vs `main` `34b9bab6`; three layers — Blind Hunter,
+> Edge Case Hunter, Acceptance Auditor — run read-only, in parallel on BigDev's instruction). Independently re-run before triage: the story's
+> 263 new unit tests (contracts 112, mobile 72, public 55, jobs 24) and `app-config:check` (15/15) — all green in the worktree. Checklist
+> (AI-6-5) verdicts: families 3 / 6 covered-by-test, 9 / 10 / 13 covered-by-construction, ⛔ no REAL GAP; families 1, 2, 4, 5, 7, 8, 11, 12
+> untouched. 1 decision-needed / 12 patch / 2 defer / 20 dismissed (the dismissals with their traced reason are in the review's summary, ⛔ not here).
+> ⭐ **All 12 patches APPLIED in the review session** (BigDev: *"Apply every patch"*) and re-verified: mobile 76 / public 742 / contracts 57 tests,
+> `app-config:check` 15/15, typecheck (contracts, mobile, public), lint on every touched file, and a turbo dry-run showing `compose.yaml` hashed
+> for `@twt/public#test`. ⚠ One patch grew while being applied: `expo config --json` SWALLOWS the config's thrown message (exit 1, both streams
+> EMPTY — verified on SDK 55), so the two negative checks could ⛔ never have named the refusal; the script now re-runs a failed `--json` run
+> without `--json` and asserts on THAT output. ⚠ Row 29's roster note held the glyph breach; the identical wording at `inventory-roster.md:441`
+> is an earlier row's and was left as is.
+
+- [x] [Review][Decision] ✅ RESOLVED (BigDev: *"Run integration-tests now"*) — the live-DB job run in the review session against `twt-test-pg` (:5433, ⛔ no other connection at the time; `db:migrate` skipped — 6.30 ships ⛔ no migration): `turbo run test --force --concurrency=1` over the eight DB-gated packages → **23 tasks successful, 0 failed** (api 154 files / 1595 passed, 1 skipped), 7m48s. AC10 is now fully attested. The finding as put: AC10's `pnpm ci:local` "green" was static-only — the live-DB `integration-tests` job was ⛔ not run (the `:5433` container is shared with a peer session; 6.30 has ⛔ no migration and ⛔ no DB code). Either accept the static-only reading for a zero-DB story and record it here, or run the job once the container is free.
+- [x] [Review][Patch] The AC4 (iii)/(iv) source-scan pins pass vacuously on a miss — `indexOf` returning `-1` satisfies `toBeLessThan`, and `slice(0, -1)` keeps nearly the whole file for `toContain` [`apps/mobile/tests/unit/link-target.test.ts:1446-1464`] — guard every `indexOf` with `toBeGreaterThan(-1)` as the (i) block does.
+- [x] [Review][Patch] `check-app-config.mjs`: (a) a spawn failure leaves `result.error` set, `status` null and `stderr` null — `stderr.trim()` throws and the two "exits non-zero" checks pass on ANY non-zero exit; assert the stderr names `APP_IDENTITY_` / `APP_VARIANT`; (b) Expo CLI loads `apps/mobile/.env*` — `cleanEnv` strips the shell vars but dotenv re-injects them; set `EXPO_NO_DOTENV=1` [`apps/mobile/scripts/check-app-config.mjs:37-60,93-96`].
+- [x] [Review][Patch] AC3 says `extra.eas.projectId` is EXCLUDED from the fixture comparison, but only the `.mjs` script excludes it — `'every static field equals the fixture'` compares the whole resolved config and fails the day Row 29 (a) writes the literal [`apps/mobile/tests/unit/app-config.test.ts:46-51`]; mirror the script's exclusion (the `'carries no extra.eas.projectId until…'` pin is deliberate and flips at Row 29 (a) — say so).
+- [x] [Review][Patch] The router lockstep reads `infra/dokploy/compose.yaml` from inside `apps/public`, which turbo does ⛔ not hash for `@twt/public#test` (no `inputs`, no `globalDependencies`) — a changed `Path(...)` label is a cache hit and a green "lockstep" [`turbo.json`; `apps/public/tests/app-link-pages-lockstep.test.ts:30`]; declare the file as a `$TURBO_ROOT$` input of that task.
+- [x] [Review][Patch] `peer-request-page.test.ts`: (a) `'never contains the link code — whatever the env'` is a tautology — the model has ⛔ no code input, so `DISTINCTIVE_CODE` can never appear; restate it as the construction proof it is (merge with the arity / source-scan test) rather than an assertion that cannot fail; (b) the real-`t()` legs check Devanagari only on the joined Hindi block — a Hindi key holding English hides behind the others; check per key as `not-found-copy.test.ts` does [`apps/public/tests/peer-request-page.test.ts:89-96,105-112`].
+- [x] [Review][Patch] `buildAppLinkUrl` has ⛔ no runtime guard on an unknown key (a JS caller or an `as AppLinkKey` cast) — `${APP_LINK_PATHS[key]}` interpolates `undefined` and `https://host/undefined?c=…` is texted; the file's own rule is "a bad input is a loud configuration error" [`packages/contracts/src/app-links/paths.ts:90-98`].
+- [x] [Review][Patch] `await clearSession()` rejecting (a SecureStore delete failure) skips BOTH refresh handlers — the in-app session stays stale and the member never reaches login, the exact AL6 (i) failure [`apps/mobile/lib/session.ts:177-190`]; run the handlers in a `finally`.
+- [x] [Review][Patch] `(peer-request)/_layout.tsx`'s comment says the inner Stack "owns its own header" while its only screen hides it (`PeerRequestSlot` → `headerShown: false`) — a cold-start link has ⛔ no header and ⛔ no visible back affordance; fix the comment to say the slot decides the header (6.27a's call) [`apps/mobile/app/(peer-request)/_layout.tsx:3-5`].
+- [x] [Review][Patch] The store-button label is ONE bilingual string inside an `<a>` with ⛔ no `lang` on either half, while the paragraphs get `<section lang>` — a screen reader voices the English half as Hindi [`apps/public/src/lib/peer-request-render.ts:102`; `apps/public/src/pages/peer-request.astro:28`]; expose both halves and wrap each in `<span lang>`.
+- [x] [Review][Patch] Glyph-register breaches in the NEW prose (`⛔` on a non-negation reads as the opposite): `dlt-template-requests-6-19.md:138` "is ⛔ covered by", `:139` "⛔ yet confirmed", `:143` "⛔ this section"; `apps/jobs/README.md:128,147` "with ⛔ path", `:151` "An env var, ⛔ a Secret Manager key"; `inventory-roster.md:441,464-465` "has ⛔ architecture source line", "It blocks ⛔ build or merge" — add the negation word.
+- [x] [Review][Patch] Story record: the File List omits `packages/contracts/tests/public-pages.test.ts` (modified, `a117ebb9`) and `.decision-log.md` (the pre-code `-315` / `-316` / `-317` commits); the AC6 note says 35 tests (34 + 4 = 38); the skip rule's `logging { enabled = true }` block (not in AL10's shape) belongs in the "choices made INSIDE the ALs" list [this file — Dev Agent Record].
+- [x] [Review][Patch] The committed fixture pins `sdkVersion: "55.0.0"` and the `expo-config` job compares the whole resolved config — an Expo SDK bump fails the job for a reason unrelated to identity, and the README documents the job but ⛔ not how to re-capture the fixture [`apps/mobile/README.md`; `apps/mobile/tests/fixtures/app-config-prototype.json`]; add the one-line re-capture procedure.
+- [x] [Review][Defer] Typed routes are ⛔ not checked in CI — `.expo/types` is uncommitted, so the `typecheck` job never verifies the `Href` built in `otp.tsx` / `+not-found.tsx` [`apps/mobile/app/(auth)/otp.tsx:42`] — deferred, pre-existing ([[project_mobile_typed_routes_worktree]]).
+- [x] [Review][Defer] `/peer-request/` (a trailing slash) matches ⛔ no Traefik router and gets a bare 404 — neither the dignified fallback nor Astro's 404 page [`infra/dokploy/compose.yaml:79`] — deferred, pre-existing: the root-level Traefik mismatch is the recorded F5 class; a texted link never carries the slash.
+
 ## Dev Notes
 
 ### ⚠ TRAPS
@@ -748,7 +778,7 @@ Claude Opus 5.5 (1M context) — `bmad-dev-story 6.30`, 2026-10-10, in the workt
     the source-scan pins); F7's pins stay green.
   - **AC5** — the two `.well-known` endpoints (env read inside `GET`); 17 tests; the gate-scope gap is a deferred-work item.
   - **AC6** — `peer-request-render.ts` + `peer-request.astro` + `PublicShell`'s `hideLanguageToggle`; the `app-links` namespace (catalog +
-    `copy_globs`); the matrix entry; 35 tests incl. real-`t()` legs + the page/matrix/router lockstep.
+    `copy_globs`); the matrix entry; 38 tests (34 + the 4-case page/matrix/router lockstep) incl. real-`t()` legs.
   - **AC7** — the `(peer-request)` group + shell + `PeerRequestSlot` placeholder; the root `Stack.Screen`; a bilingual `+not-found`; the
     strict route-map test; `not-found-copy` with real `t()`.
   - **AC8** — the Traefik router + app-link env + `APP_LINKS_BASE_URL`; `waf_custom` unconditional, the skip first, Rules 1–3 dynamic;
@@ -758,7 +788,8 @@ Claude Opus 5.5 (1M context) — `bmad-dev-story 6.30`, 2026-10-10, in the workt
     Rows 27 / 28 note in 6.27 (⛔ not yet written there), the 6.27c note, the friction disposition (gate ✓), `pnpm ci:local` (below).
   ⚠ Choices made INSIDE the ALs (recorded, ⛔ not new decisions): an unknown `APP_VARIANT` throws; `APP_LINKS_HOST` must be a bare lower-case
   host (else the config throws); store buttons only for `play.google.com` / `apps.apple.com` https URLs; duplicate app ids / packages
-  ⇒ 404; the group `_layout.tsx`; a router-lockstep test in `apps/public`. ⛔ Not done here (by design): the production identity, the
+  ⇒ 404; the group `_layout.tsx`; a router-lockstep test in `apps/public`; the skip rule carries a `logging { enabled = true }` block (the
+  provider's companion to a `skip` action — ⛔ not in AL10's stated shape). ⛔ Not done here (by design): the production identity, the
   domain, any `terraform apply` / deploy, the device proof — all Row 29.
 - 2026-10-10 — **`pnpm ci:local` (static jobs, `DATABASE_URL` unset)** at `47bfc93a`+records: 32 of 33 jobs ✓ (lint, typecheck, build, db-check,
   contracts-determinism, crypto-check, tokens-theme-check, i18n-parity, **expo-config** (new), pii-scrape, friction-budget, schema-diff,
@@ -777,7 +808,9 @@ NEW — `packages/contracts/src/app-links/{app-link-paths.json,paths.ts,verifica
 `apps/public/src/lib/{peer-request-render,well-known.server}.ts`, `apps/public/tests/{well-known-endpoints,peer-request-page,app-link-pages-lockstep}.test.ts`;
 `packages/i18n/locales/{en,hi}/app-links.json`; `apps/jobs/tests/https-origin.test.ts`.
 DELETED — `apps/mobile/app.json`.
-MODIFIED — `packages/contracts/src/index.ts`, `packages/contracts/src/deep-links/README.md`, `packages/contracts/public-pages/public-vs-private-matrix.yaml`;
+GOVERNANCE (pre-code, Tasks 0.3b–0.3d) — `.decision-log.md` (`-315` / `-316` / `-317`).
+MODIFIED — `packages/contracts/src/index.ts`, `packages/contracts/src/deep-links/README.md`, `packages/contracts/public-pages/public-vs-private-matrix.yaml`,
+`packages/contracts/tests/public-pages.test.ts` (the committed-matrix route pin, `a117ebb9`); `turbo.json` (the `@twt/public#test` input — review fix);
 `apps/mobile/{app/_layout.tsx,app/(auth)/otp.tsx,app/+not-found.tsx,lib/session.ts,lib/session-context.tsx,eas.json,package.json,README.md}`;
 `apps/public/src/layouts/PublicShell.astro`; `packages/i18n/locales/{en,hi}/common.json`, `packages/i18n/src/catalog.ts`, `microcopy.yaml`;
 `apps/jobs/src/scheduler/staff-email-config.ts`, `apps/jobs/README.md`; `infra/dokploy/{compose.yaml,README.md}`;
@@ -789,6 +822,7 @@ this file.
 ## Change Log
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-10 | 2.1 | **Code review** (`bmad-code-review`, three layers in parallel on BigDev's instruction; 1 decision / 12 patch / 2 defer / 20 dismissed — `### Review Findings`). **Applied:** the AC4 pins fail on a miss (`at()`); `check-app-config.mjs` handles a spawn failure, sets `EXPO_NO_DOTENV`, and NAMES the refusal (a failed `--json` run re-run without `--json` — `--json` swallows the message); the vitest fixture comparison excludes `extra.eas.projectId` as AC3 says; `turbo.json` hashes `infra/dokploy/compose.yaml` for `@twt/public#test`; the tautological no-echo test restated as the construction proof + per-key Devanagari; `buildAppLinkUrl` refuses an unknown key; `clearSession()` in a `finally` so a SecureStore rejection skips neither refresh handler; the `(peer-request)` layout comment; store-button halves under their own `lang`; glyph fixes (DLT sheet, jobs README, Row 29); the File List / count / `logging`-block records; the fixture re-capture procedure in the README. **Deferred:** typed routes in CI (pre-existing); `/peer-request/` → Traefik 404 (the F5 class). **Decision:** the live-DB `integration-tests` job RUN in session (23/23, api 1595 passed) — AC10 fully attested. `review → done`. |
 | 2026-10-10 | 2.0 | ⭐ **DEV — `bmad-dev-story 6.30`.** Tasks 0–9 built (Task 0 records committed first); AC2–AC10 met — see Completion Notes. `ready-for-dev → in-progress → review`. The production identity, the domain, the apply / deploy and the device proof remain Row 29's. |
 | 2026-10-10 | 1.9 | Round-9 re-validate (0 BLOCKER / 0 HIGH — the rounds END) + `2026-10-10-317` (R1–R3). **Medium:** AL1's projectId reason corrected (R1 — every `eas build` carries its OWN profile env; `eas submit` / `eas env:*` the shell env); the three residuals RECORDED, accepted in AL6 / AL11 (R2) and N6 / N7 / N14 point there; Task 0.3c says what BigDev was shown (a short form) and 0.3d records `-317`. **Low:** `-312` clauses restored to the AL block (AL1 `eas update`; C1's Expo account; AL2 Node pin + `resolveJsonModule`; AL5's sweep / `twt.org` / PM21 (b) note; AL6 consumed once; AL9 exact page paths); AL12 (a) — Consequence 2's `APP_EAS_PROJECT_ID` replaced by E1's literal; F3 `:138-238`; `-316` / `-317` in AC1, References, Git intelligence, the shared-checkout note; Tasks tagged N2 / N3 / N4 / N9 / N10 / N16 / N18; N11 — `terraform fmt` after the edits, the `moved` block optional; Task 8 + Project structure gain `.terraform-plan-expectations.md` and the README's `waf_custom` text; N3 upper-cases fingerprints; N5 — the 429-on-refresh note (deferred-work, Row 29); N19 — "beside" = decided together; N9 — two apps on one host refused; AC6 / AC7 — a REAL-`t()` leg for the new keys. |
 | 2026-10-10 | 1.8 | Round-8 re-validate (the round-7 pass's own defects) + `2026-10-10-316` (E1–E3). ⚠ This row's stated REASON for E1 was partly WRONG (corrected by `-317` R1 in 1.9) — kept as the record. **High:** `extra.eas.projectId` is one literal for every variant, ⛔ never production-only (E1 — `eas submit` / `eas env` / every `eas build` read the config without the profile env), excluded from AC3's comparison; the `PeerRequestSlot` file is a 6.30 implementation detail 6.27a may replace — ⛔ never an attribution to 6.27a's PM11 (⛔ no seam moves). **Medium:** the AL block cut back to the committed text (`-312` + C1–C8 + E1–E3) — the build detail moved to Dev Notes → Build notes N1–N20 (incl. `-312`'s *"any build-time variable declared in `turbo.json` `globalEnv`"* restored to AL8); `terraform validate` FAILS at HEAD (`waf.tf:18` `account_id`) — F13 + N11 + AC8 (validate once; a plan per setting is the operator's); Row 29 (a)'s homes per value (N19). **Low:** cites (F13 Rules 1–3 `:41-66`; `session.ts:150-176`; `gate.ts:203-216`; `catalog.ts:29-77`; the root Stack declares MOST groups); the `:47` pin; AL6's one-consumer reason + the `signIn`-throws residual (N6); the dead-refresh call order (N5); the `?mode=developer` caveat (N9); `title` = `trustName` (N13); AC10 and Project structure gain the 6.27 / 6.27c notes and the lockstep file; the third branch SHA; the edge-skip scope (E2); *"in that session"*. |

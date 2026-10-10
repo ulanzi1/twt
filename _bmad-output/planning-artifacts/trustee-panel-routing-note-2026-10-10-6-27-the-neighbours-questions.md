@@ -18,10 +18,28 @@
 
 ---
 
-> ## ⏳ AWAITING PANEL RULING
+> ## ✅ PANEL RULED — 2026-10-10 — recorded as `2026-10-10-304`
 >
-> ⛔ **Nothing is recorded here yet.** When the Panel rules, transcribe it into this block **and** into `.decision-log.md` as a new
-> decision id. ⭐ Everything below is then kept **unedited** as the question **as it was put** ([[feedback_supersede_never_reinterpret]]).
+> **Ruled by Dhiraj Rahul + Kalpana Bharti, relayed by BigDev — verbatim:**
+> *"by DR and KB"* · *"Q3 - A"* · *"Q4 - A"* · *"Q5 - A"* · *"Q6 - A"*
+> *"Q7 - Pariwar Admin proposes, State Trustee proposes/approves  with/without modification. Super Admin make it live for one
+> pariwar/all pariwar with/without modification. Superadmin can add question directly and make it live.No additional Permission required
+> for Superadmin."*
+> *"Q8 - Pariwar Admin proposes, State Trustee proposes/approves  with/without modification. Super Admin make it live for one
+> pariwar/all pariwar with/without modification. Superadmin can add question directly and make it live. No additional Permission required
+> for Superadmin."*
+>
+> ⭐ **Q3 A, Q4 A** — the neighbours are asked how the member died and which illness, as **context for staff only** (⛔ never a warning or
+> a flag; the illness ⛔ never compared automatically; counsel before go-live); the inspector asks the family the same. **Q5 A** — ⛔ no
+> alcohol question. **Q6 A** — *"a few short questions"* and the three added questions.
+> ⚠ **Q7 and Q8 — the Panel's own chain, ⛔ not our reading:** the Pariwar Admin proposes; a State Trustee proposes or approves, with or
+> without changes; the Super Admin makes a version live for one Pariwar or all, with or without changes, and may add a question directly.
+> Our proposed limit (*"anything about health, cause of death or habits comes to you"*) was ⛔ not taken.
+> ⚠ **Our reading, ⛔ not ratified (`-304`):** a staff-added question is ⛔ never a warning or a flag; an alcohol question later would need
+> the Panel to supersede Q5 first; every health question needs counsel's basis before it is shown; the ruled fixed checks and the ruled
+> questions are in every version.
+>
+> ⭐ Everything **below this block is kept UNEDITED** — it is the question as it was put.
 
 ---
 

@@ -18,5 +18,7 @@ resource "cloudflare_logpush_job" "edge_logs" {
 
   # The fields that make the edge observable: bot classification, WAF/challenge
   # outcomes, and the request/response basics for rate + error analysis.
+  # ⛔ Never add ClientRequestURI (Story 6.30 AL4): it carries the query string, and an app link's
+  # code rides in the query (`/peer-request?c=<code>`). ClientRequestPath excludes it.
   logpull_options = "fields=RayID,EdgeStartTimestamp,ClientIP,ClientRequestHost,ClientRequestPath,ClientRequestMethod,EdgeResponseStatus,BotScore,BotScoreSrc,SecurityLevel,WAFAction,EdgeColoCode&timestamps=rfc3339"
 }

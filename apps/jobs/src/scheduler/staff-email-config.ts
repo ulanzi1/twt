@@ -100,10 +100,16 @@ export async function buildStaffEmailClient(env: Env = process.env, resolve: Res
 }
 
 /**
- * ⭐ RE7 — the list link's base: an `https://` ORIGIN (⛔ path, ⛔ query, ⛔ fragment, ⛔ credentials) — else `null` (treated as
- * unset, alarmed) — ⛔ never a link to an attacker-shaped URL. Returned WITHOUT a trailing slash.
+ * ⭐ RE7 — a configured link base: an `https://` ORIGIN (⛔ path, ⛔ query, ⛔ fragment, ⛔ credentials) — else `null` (treated as
+ * unset, alarmed / held by the caller) — ⛔ never a link to an attacker-shaped URL. Returned WITHOUT a trailing slash; case and
+ * an explicit `:443` normalised; a non-default port kept.
+ *
+ * ⭐ ONE validator, SHARED (Story 6.30, `2026-10-10-312` AL5): generalised from 6.25's `resolveAdminAppOrigin` so
+ * `ADMIN_APP_ORIGIN` (the staff email's list link) and `APP_LINKS_BASE_URL` (the app-link base — read and held by Story 6.27c's
+ * sweep, `config:app_links_base_url_invalid`) are validated by the SAME code — ⛔ never a copy. Its result is the bare origin
+ * `buildAppLinkUrl` (`@twt/contracts`) requires.
  */
-export function resolveAdminAppOrigin(raw: string | undefined | null): string | null {
+export function resolveHttpsOrigin(raw: string | undefined | null): string | null {
   if (raw === undefined || raw === null || raw.trim() === '') return null;
   let url: URL;
   try {
@@ -119,3 +125,6 @@ export function resolveAdminAppOrigin(raw: string | undefined | null): string | 
   if (normalizedRaw !== url.origin && normalizedRaw !== `${url.origin}:443`) return null;
   return url.origin;
 }
+
+/** 6.25's name for {@link resolveHttpsOrigin} — kept so its callers and tests read unchanged (Story 6.30 AL5, N18). */
+export const resolveAdminAppOrigin = resolveHttpsOrigin;

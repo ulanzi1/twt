@@ -45,12 +45,35 @@ services:
       NODE_ENV: production
       DATABASE_URL: ${DATABASE_URL}
       SERVICE_DATABASE_URL: ${SERVICE_DATABASE_URL}
+      # Story 6.30 (`2026-10-10-312` AL5) — the base of every app link a text carries: the Trust's domain as an
+      # https ORIGIN (roster Row 29 (b)). Validated by `resolveHttpsOrigin`; READ by Story 6.27c's sweep (until
+      # then nothing reads it). ⛔ No code default.
+      APP_LINKS_BASE_URL: ${APP_LINKS_BASE_URL}
 
   public:
     image: ${AR_BASE}/public:${IMAGE_TAG}
     restart: unless-stopped
+    # Story 6.30 (`2026-10-10-312` AL9) — ONLY the app-link variables; every value is PUBLIC and unset is safe
+    # (the two verification files answer 404, the fallback page says "the app" and shows ⛔ no store button).
+    # ⚠ This service's own DATABASE_URL / PUBLIC_API_ORIGIN are still ⛔ not wired here — a deferred-work item,
+    # outside 6.30. Values: roster Row 29 (a) / (c).
+    environment:
+      APP_LINKS_IOS_APP_IDS: ${APP_LINKS_IOS_APP_IDS}
+      APP_LINKS_ANDROID_APPS: ${APP_LINKS_ANDROID_APPS}
+      APP_STORE_URL_ANDROID: ${APP_STORE_URL_ANDROID}
+      APP_STORE_URL_IOS: ${APP_STORE_URL_IOS}
+      APP_DISPLAY_NAME: ${APP_DISPLAY_NAME}
     labels:
       # Per-Pariwar path-scope (architecture §2.5 + AR-25): every Pariwar served
       # under /p/<pariwar_id>/ on this single multi-tenant deployment. Branding is
       # resolved at request time from the Pariwar-Passport (no per-Pariwar rebuild).
       - "traefik.http.routers.twt-public.rule=PathPrefix(`/p/`)"
+      # Story 6.30 (`2026-10-10-312` AL9, `-315` C4) — the app-link surfaces, scoped to EXACT paths: the two
+      # verification files, one Path(...) per APP_LINK_PATHS entry (`packages/contracts/src/app-links/
+      # app-link-paths.json` — a new path needs a new Path(...) here), and the site's hashed static assets
+      # (PathPrefix(`/_astro/`) — public, data-free, ⛔ never a page; without it the fallback page is unstyled).
+      # ⛔ Never PathPrefix(`/.well-known/`) (ACME and future well-known paths would reach Astro); ⛔ never
+      # PathPrefix(`/peer-request`) (a plain string prefix — `/peer-requests` would match). Traefik Path()
+      # matches the path only, ⛔ not the query. ⚠ The as-built `/p/` rule vs the root-level Astro pages mismatch is
+      # RECORDED (6.30 F5), ⛔ not re-architected here. Dev wires, operator applies (ADR-0011 §5; Row 29 (g)).
+      - "traefik.http.routers.twt-public-app-links.rule=Path(`/.well-known/apple-app-site-association`) || Path(`/.well-known/assetlinks.json`) || Path(`/peer-request`) || PathPrefix(`/_astro/`)"

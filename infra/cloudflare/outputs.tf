@@ -28,8 +28,8 @@ output "turnstile_member_secret_key" {
 }
 
 output "waf_custom_ruleset_id" {
-  description = "ID of the per-surface WAF custom ruleset (bot-score sensitivity). null when enable_bot_management = false."
-  value       = var.enable_bot_management ? cloudflare_ruleset.waf_custom[0].id : null
+  description = "ID of the zone's custom-rules entry-point ruleset — always present (Story 6.30): the app-link verification-file skip, plus the per-surface bot-score rules when enable_bot_management = true."
+  value       = cloudflare_ruleset.waf_custom.id
 }
 
 output "edge_only_ingress_mechanism" {

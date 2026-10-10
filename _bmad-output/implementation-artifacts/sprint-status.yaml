@@ -77,6 +77,9 @@
 # ⚠ The working tree is SHARED with the 6.34 session: after this session's branch switch, two 6.34 commits landed on `story/6-28-…`
 # (`82cde9a3`, and `6dff53f5` — which also swallowed this entry); `story/6-34-…` carries `82cde9a3` and `6dff53f5`'s clean twin `e67c069f`
 # ⇒ `story/6-28-…` was REBUILT from `34b9bab6` (BigDev: *"yes"*). Suffix `aa` follows 6.34's `w`–`z` on its branch. ⛔ No other row moves.)
+# last_updated: 2026-10-10y (⭐ **6.34's TV1–TV12 COMMITTED — `2026-10-10-313` (`97e2c3bb`, alone)**, all as recommended (BigDev: the mechanical
+# ones *"All as written"*; TV5 *"Hold like unset"*; TV6 *"Switch off, keep listed"*; TV9 *"Fix handover, record export"*). Records the
+# STPL / SmartPing fact and the `-311` PM3 / `-312` AL15 notation correction (⛔ edited). ⇒ 6.34 is buildable. ⛔ No row moves.)
 # last_updated: 2026-10-10x (⭐ **6.34 → v1.1 — THE PE REGISTERS ON STPL (BigDev, in session: *"We will use STPL, and [STPL] uses {#var#} for
 # variable"*).** STPL = Satzilio Telecom (the SmartPing DLT portal): the template TEXT keeps `{#var#}` and each variable's TYPE is picked in
 # a separate tagging section. ⇒ ⛔ text is retagged; every `{#var#}` gets a DECLARED type (TV1–TV4), the gate forbids a typed tag IN the

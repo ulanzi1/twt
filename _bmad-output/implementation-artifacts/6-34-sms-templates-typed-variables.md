@@ -12,8 +12,8 @@ by hand (F14 / F15 / F17 / F18 re-read directly).
 `{#var#}` and each variable's TYPE is chosen in a separate tagging section (MSG91's carrier guide; F3). ⇒ the texts in code and in the
 sheet are ⛔ retagged; each `{#var#}` gains a DECLARED TYPE. TV1–TV4, TV7, TV8, TV10 (a), TV11 rewritten; the rest stands.
 
-STATUS: `ready-for-dev`. ⛔ NO CODE until Task 0.3's author-commit is committed ALONE (TV1–TV12 below, answered by BigDev at Task 0.2)
-([[feedback_governance_commits_precede_implementation]]).
+STATUS: `ready-for-dev` — ✅ BUILDABLE: TV1–TV12 answered by BigDev (all as recommended) and committed ALONE as `2026-10-10-313`
+(`97e2c3bb`) ([[feedback_governance_commits_precede_implementation]]). Build from Task 0.1 / 0.4 on.
 ⭐ §0 gate (template `trustee-panel-routing-note-TEMPLATE.md`): every TV strips to "the code / the registration sheet should do X". ⛔ No
 word of any Panel-ratified text changes — a variable's TYPE is registration metadata the member ⛔ never sees, and every rendered body stays
 byte-identical (Invariant 1). TV5 HOLDS a text while a helpline number is malformed — it reuses 6.29's hold (`-302` RN2), so ⛔ no text is
@@ -201,7 +201,7 @@ because the operator accepts them."* Niyamavali check: ⛔ not applicable (the N
   (`{expected_return_date_short}` style, ⛔ wired, a *"registration candidate"*); WhatsApp (`{{1}}`, per-Pariwar) and Telegram templates
   are ⛔ DLT. ⇒ TV12.
 
-## ⚖️ Build decisions TV1–TV12 (PROPOSED — answered by BigDev at Task 0.2, committed by ONE author-commit at Task 0.3)
+## ⚖️ Build decisions TV1–TV12 (✅ COMMITTED — `2026-10-10-313`, all as recommended)
 
 - **TV1 — ONE vocabulary in `@twt/channels`; the text keeps `{#var#}` (STPL / SmartPing — BigDev, v1.1).** New
   `packages/channels/src/dlt-variables.ts` (barrel-exported): `DLT_VAR = '{#var#}'` (the ONE marker — SmartPing's, F3);
@@ -351,8 +351,9 @@ TV4); 6.27a / 6.27c / 6.30 annotations (TV11); this file's Change Log + File Lis
         that moved. Re-fetch F1–F6 (the Direction PDF; Vi's `Entity_Content_template_registration.pdf` and `CTA_Whitelisting.pdf`; Jio's
         TrueConnect guide) and the SmartPing / STPL tagging guidance (MSG91's carrier guide; any STPL help page) — record the fetch
         date. The portal is ANSWERED (STPL / SmartPing — BigDev, 2026-10-10); ask which SMS GATEWAY will send (TV10 (a)) — ⛔ guess.
-  - [ ] 0.2 Put TV1–TV12 to BigDev (short option summaries; recommendations stated).
-  - [ ] 0.3 ONE author-commit (the next free decision id — expected `2026-10-1x-313`) recording the answers AND BigDev's portal fact
+  - [x] 0.2 Put TV1–TV12 to BigDev — ✅ answered in session 2026-10-10: the mechanical ones (TV1–TV4, TV7, TV8, TV10–TV12) *"All as
+        written"*; TV5 *"Hold like unset"*; TV6 *"Switch off, keep listed"*; TV9 *"Fix handover, record export"* — all as recommended.
+  - [x] 0.3 ✅ `2026-10-10-313` (`97e2c3bb`), committed ALONE. ONE author-commit recording the answers AND BigDev's portal fact
         (STPL / SmartPing; the text keeps `{#var#}`) with the FOUND notation correction to `-311` PM3 / `-312` AL15 (F13 — ⛔ editing
         either), committed ALONE ([[project_decision_log_writes_user_inserted]] — stage in the scratchpad, try the insert first).
   - [ ] 0.4 `epics.md` `### Story 6.34` after the last Epic 6 entry (6.29's format — *"⚠ Added … (Story 6.34, Task 0.4)"*, ⛔ a merge
@@ -476,3 +477,4 @@ decision entry → records → build → review; REBASE-merge ([[project_story_a
 |---|---|---|
 | 2026-10-10 | 1.0 | Created via `bmad-create-story 6.34` (pinned `34b9bab6`): three research passes (code inventory; TRAI / operator rules; governance). FOUND F1–F20 — incl. 19 untyped templates; per-portal tag spelling; whole-body alert templates unregistrable; the helpline's `+` invalid as `#cbn#` with TWO readers; the handover OTP's *"Valid 5 min"* for a 3-minute code; ⛔ DLT row or runbook. TV1–TV12 PROPOSED (author-commit owed at Task 0.3); ⛔ no Panel question (§0). Status `ready-for-dev`. |
 | 2026-10-10 | 1.1 | BigDev, in session: *"We will use STPL, and [STPL] uses {#var#} for variable"* — the PE registers on STPL's SmartPing portal, where the text KEEPS `{#var#}` and each variable's type is picked in a separate tagging section (confirmed against MSG91's carrier guide). ⇒ ⛔ text is retagged: TV1 (one `DLT_VAR` + the six types as slot metadata), TV2 (slots declared; single-token lockstep kept), TV3 (OTP text and `version` unchanged), TV4 (types, ⛔ tags), TV7 (gate: ⛔ typed tag in text; `{#var#}` only in shape-tested registry files), TV8 (sheet: the type to select per `{#var#}`; a where-and-how section), TV10 (a) (portal answered; the gateway still owed), TV11 (6.27c writes `{#var#}` + slots; annotations on 6.27a / 6.27c / 6.30); Invariants 2 / 4, F3 / F8 / F9 / F13, AC1–AC3 / AC6 / AC7 / AC9, Tasks 0.1 / 0.3 / 0.4 / 2 / 3, Traps 2 / 5 aligned. TV5 / TV6 / TV9 / TV10 (b)–(e) / TV12 unchanged. |
+| 2026-10-10 | 1.2 | `-313` applied — TV1–TV12 committed as recommended (`97e2c3bb`, alone); Tasks 0.2 / 0.3 done; buildable. |

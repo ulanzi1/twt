@@ -1,11 +1,12 @@
-# Trustee Panel routing note — four confirms and three corrections on the neighbours' questions
+# Trustee Panel routing note — five confirms and three corrections on the neighbours' questions
 
 > **§0 gate — passed (2026-10-10).** **CF1** narrows, for a time, a rider you ratified (`-303`: *"Send Text in Hindi to those whose
 > preferred langauge is Hindi and in English to those whose preferred language in English"*). **CF2** corrects who you were told sees
 > the neighbours' answers. **CF3** asks you to confirm four limits we read into your `-304` chain, where your rulings meet. **CF4** asks you
-> to confirm WHO the five are: colleagues at the member's own workplace, otherwise people the member named — ⛔ never the district (`-306`, `-307`). ⛔ None is
+> to confirm WHO the five are: colleagues at the member's own workplace, otherwise people the member named — ⛔ never the district (`-306`, `-307`). **CF5** asks whether the app may check a
+> member's phone contacts against the member list, with their permission, keeping ⛔ no non-member's number (`-309`). ⛔ None is
 > blocking: work continues; each is needed before the texts go live.
-> ⭐ **From the fresh check of Stories 6.27 and 6.30** (2026-10-10), recorded as `2026-10-10-305`, `-306` and `-307`.
+> ⭐ **From the fresh check of Stories 6.27 and 6.30** (2026-10-10), recorded as `2026-10-10-305`, `-306`, `-307` and `-309`.
 
 ---
 
@@ -91,12 +92,27 @@ who, in a district of thousands of teachers, mostly never met the member. ⭐ Th
 | **B** | **The district, as built.** | The five are mostly strangers; their answers say little. |
 | **C** | **The workplace first, then fill up to five from the same block or district.** | The fill-up people are again mostly strangers, and their answers would sit beside the colleagues' as if equal. |
 
+# CF5 — may the app check a member's phone contacts to find colleagues who are members?
+
+**In one sentence:** to help a member name the people who know them, may the app — only if the member allows it — compare the phone
+numbers in their phonebook with members' numbers, show them which of their contacts are already members, and keep ⛔ no number of anyone
+who is ⛔ not a member?
+
+**The one fact that decides it:** ⭐ for a moment, the Trust receives the phone numbers of people who never joined — that is handling their
+personal data, which needs a legal basis (counsel must confirm it too).
+
+| | Option | Cost |
+|---|---|---|
+| **A** | **Yes, with the member's permission** (our suggestion): the member sees which contacts are members (under the names they saved themselves), with a search box; ⛔ no non-member's number is kept or logged; limits stop anyone using it to test numbers in bulk. | Non-members' numbers pass through the Trust's system for a moment; the privacy notice must say so, and counsel must confirm the basis. |
+| **B** | **No — the member picks people one at a time** from the phone's own contact list; only those numbers are sent. | Clumsy: the member does ⛔ not know who is a member and must guess. Fewer people named. |
+
 # In plain English
 
 We found three mistakes in what we told you and are correcting them openly. The app cannot yet tell which language a member prefers,
 so we suggest texting in the Pariwar's language until members can choose (CF1). The people who approve claims at the later steps are,
 in the system, Pariwar Admins acting as trustees — the rule that every approver sees the answers is unchanged (CF2). And we ask you to
-confirm four limits on the chain you ruled (CF3) — the last means the texts wait for counsel on the health questions. And we ask you to confirm that the five are the member's own workplace colleagues — otherwise the people the member named (CF4). ⇒ ⭐ **We suggest: CF1 A, CF2 yes, CF3 (a)–(d) yes, CF4 A.**
+confirm four limits on the chain you ruled (CF3) — the last means the texts wait for counsel on the health questions. And we ask you to confirm that the five are the member's own workplace colleagues — otherwise the people the member named (CF4), and whether the app may check a member's contacts to find colleagues, with their permission (CF5). ⇒ ⭐ **We suggest: CF1 A, CF2 yes,
+CF3 (a)–(d) yes, CF4 A, CF5 A.**
 
 ---
 ---

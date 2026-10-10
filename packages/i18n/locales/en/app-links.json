@@ -1,0 +1,10 @@
+{
+  "$comment": "Story 6.30 (2026-10-10-312 AL11) — the plain fallback page at /peer-request, shown on a phone WITHOUT the app. Static words only: it never reads the link's code and shows nothing about any member, any death or any claim. The app is never named by a hard-coded brand — the name, when shown, comes from the APP_DISPLAY_NAME env value (body.open_named_app); otherwise the words say 'the app'. 'your message', never 'your text' (the WhatsApp reminder carries the same link). No helpline number here — the message carries it.",
+  "page_title": "Open the app",
+  "body.open_app": "Please open the app to answer.",
+  "body.open_named_app": "Please open the {app_name} app to answer.",
+  "body.home_screen": "The request is also on your app's home screen.",
+  "body.no_app": "Don't have the app? Install it, then open the link in your message again — or call the helpline number in your message.",
+  "store.android": "Install from Google Play",
+  "store.ios": "Install from the App Store"
+}

@@ -1,0 +1,30 @@
+---
+// /peer-request — the plain fallback page for an app link (Story 6.30, `2026-10-10-312` AL11, `-315` C7).
+//
+// A phone WITHOUT the TWT app opens `https://<domain>/peer-request?c=<code>` here. ⛔ THIS PAGE NEVER READS,
+// ECHOES OR RESOLVES THE CODE (Invariant 3): ⛔ no `Astro.url`, ⛔ no request, ⛔ no API call, ⛔ no database —
+// every word comes from `buildPeerRequestPageModel` (fixed copy + three public env values), so the body is the
+// same for every visitor and every code. ⛔ No login, ⛔ no form, ⛔ nothing about any member, death or claim.
+// Both languages on ONE page, Hindi first; `PublicShell` with `hideLanguageToggle` (its toggle would copy
+// `?c=` into its links) and `branding={null}` (⛔ no Pariwar branding). `noindex`; cacheable (the body ⛔
+// never varies ⇒ ⛔ no Vary); `no-referrer` so a store-link click ⛔ never carries the code to the store.
+// Declared in the PII matrix (`/peer-request`, `fields: []`). Its Hindi is reviewed via roster Row 28.
+import PublicShell from '../layouts/PublicShell.astro';
+import { buildPeerRequestPageModel } from '../lib/peer-request-render.js';
+
+const model = buildPeerRequestPageModel(process.env);
+
+Astro.response.headers.set('Cache-Control', 'public, max-age=300');
+Astro.response.headers.set('Referrer-Policy', 'no-referrer');
+---
+
+<PublicShell locale="hi" title={model.title} trustName={model.title} branding={null} noindex hideLanguageToggle>
+  {model.blocks.map((block) => (
+    <section lang={block.lang}>
+      {block.paragraphs.map((paragraph) => <p>{paragraph}</p>)}
+    </section>
+  ))}
+  {model.storeButtons.map((button) => (
+    <p><a href={button.href} rel="noopener noreferrer">{button.label}</a></p>
+  ))}
+</PublicShell>

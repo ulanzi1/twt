@@ -1,0 +1,10 @@
+{
+  "$comment": "Story 6.30 (2026-10-10-312 AL11) — the fallback page's Hindi is AGENT-AUTHORED; a person reviews it before go-live (roster Row 28, via Row 29 (h)). Hindi comes first on the page.",
+  "page_title": "ऐप खोलें",
+  "body.open_app": "जवाब देने के लिए कृपया ऐप खोलें।",
+  "body.open_named_app": "जवाब देने के लिए कृपया {app_name} ऐप खोलें।",
+  "body.home_screen": "यह अनुरोध आपके ऐप की होम स्क्रीन पर भी है।",
+  "body.no_app": "ऐप नहीं है? उसे इंस्टॉल करें, फिर अपने संदेश वाला लिंक दोबारा खोलें — या अपने संदेश में दिए गए हेल्पलाइन नंबर पर कॉल करें।",
+  "store.android": "Google Play से इंस्टॉल करें",
+  "store.ios": "App Store से इंस्टॉल करें"
+}

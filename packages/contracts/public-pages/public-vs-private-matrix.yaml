@@ -308,6 +308,21 @@ surfaces:
     cache_policy: edge_cacheable   # public, max-age=60 — a static 404 body
     fields: []
 
+  # ── Story 6.30 — the app-link fallback page (`2026-10-10-312` AL11) ─────────
+  - id: app-link-peer-request
+    route: /peer-request
+    description: >-
+      The plain page a phone WITHOUT the app sees for an app link
+      (`/peer-request?c=<code>`). Fixed bilingual words (Hindi first) and, when
+      configured, store buttons — NO data at all: it never reads, echoes or
+      resolves the code (no Astro.url read, no API call, no database), shows
+      nothing about any member, death or claim, and hides PublicShell's
+      language toggle (which would copy `?c=` into its links). Referrer-Policy
+      no-referrer. One page per APP_LINK_PATHS entry (the page/matrix lockstep).
+    search_indexing_policy: noindex
+    cache_policy: edge_cacheable   # public, max-age=300 — the body never varies
+    fields: []
+
   - id: server-error
     route: /500
     description: >-

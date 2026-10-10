@@ -515,6 +515,11 @@ scope:
     # ([[feedback_gate_scope_semantic_coverage]]: a green scan over newly-scanned files proves nothing).
     - packages/i18n/locales/hi/member-drive-detail.json
     - packages/i18n/locales/en/member-drive-detail.json
+    # Story 6.30 — the `app-links` namespace: the plain fallback page at /peer-request a member without
+    # the app sees (static words + store buttons). The member vocabulary + tone rules bite it like every
+    # other member surface; ⛔ no number, ⛔ no urgency.
+    - packages/i18n/locales/hi/app-links.json
+    - packages/i18n/locales/en/app-links.json
 
 # Allow-list — a finding is suppressed when an entry's `pattern` (regex, case-insensitive)
 # matches the finding's line AND (if `file` is set) the file path ends with it. GENUINE

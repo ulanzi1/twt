@@ -494,7 +494,7 @@ applicable (the Niyamavali does not speak to app links) — and it is ⛔ not ra
       `tests/unit/{app-link-route-map,not-found-copy}.test.ts`.
 - [x] **Task 5 — the two endpoints (AC5).** `apps/public/src/pages/.well-known/{apple-app-site-association,assetlinks.json}.ts` (env inside
       `GET`, AL2's schemas — N3, N4); `apps/public/tests/well-known-endpoints.test.ts`.
-- [ ] **Task 6 — the fallback page (AC6).** `apps/public/src/lib/peer-request-render.ts`; `apps/public/src/pages/peer-request.astro`;
+- [x] **Task 6 — the fallback page (AC6).** `apps/public/src/lib/peer-request-render.ts`; `apps/public/src/pages/peer-request.astro`;
       `PublicShell.astro`'s `hideLanguageToggle` prop; the `app-links` namespace (`packages/i18n/locales/{en,hi}/app-links.json`,
       `catalog.ts`, `microcopy.yaml` `copy_globs`); the matrix entry; the page/matrix lockstep (`apps/public/tests/app-link-pages-lockstep.test.ts`); `apps/public/tests/peer-request-page.test.ts`
       (N12, N13);

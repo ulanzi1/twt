@@ -3,6 +3,56 @@ baseline_commit: fa2687ce
 ---
 
 <!--
+⭐⭐ MERGED 2026-10-10 as PR #268 (REBASE-merge, branch `governance/6-27-6-30-stories` → `main` at `9990cffa`) — THE SHA MAP for every commit
+of Stories 6.27 (a–d) and 6.30's governance and story work. The 39 branch commits (from `5946e411`) were rewritten by the rebase; every
+citation in this file, the other 6.27 files, 6.30's file, `.decision-log.md` and `sprint-status.yaml` is kept AS WRITTEN (the record) and
+this maps it to its `main` twin, PROVED ⛔ never assumed: each pair has an IDENTICAL `git patch-id --stable` and an identical subject, and
+the merged tree is byte-identical to the branch head (`df48e750`) — tree `43eb31f9` both. Negative control: a WRONG pair (the 1st branch
+commit vs the 2nd main commit) DIFFERS.
+  · `a05ce150` → `1cce7e5a`  story(6.27): created for dev (v1.2) — the five neighbours 
+  · `61fb4744` → `b72677ff`  story(6.30): created for dev — a link in a text opens the 
+  · `d62932a5` → `a4381ef5`  governance(6.27): routing note — option A's cost states th
+  · `21715fcb` → `1d7d048d`  governance(6.27): 2026-10-10-303 — TRUSTEE-RATIFIED: the f
+  · `d5789ffc` → `2c18d180`  story(6.27): v1.4 — the Panel's ruling (-303) applied: bot
+  · `3c424bb0` → `27609982`  story(6.27): v1.5 — the neighbours' questionnaire (version
+  · `f75adfae` → `5b5f2c41`  story(6.27): v1.6 — who sees the neighbours' answers: ever
+  · `9905a1d0` → `e3553d7c`  story(6.27): v1.7 — the inspector is shown only discrepanc
+  · `75453eeb` → `b2433ace`  story(6.27): v1.8 — the questionnaire engine is shared; ro
+  · `7f5603ff` → `bc1ec53c`  governance(6.27): 2026-10-10-304 — TRUSTEE-RATIFIED: cause
+  · `877e5864` → `cf5adf67`  story(6.27): v1.9 — the Panel's -304 applied: v2 of the ne
+  · `fa2687ce` → `0281d449`  governance(6.27): 2026-10-10-305 — author-commit after the
+  · `7987b0a9` → `220c6bfb`  sprint-status: 6.27 split rows (6-27b / 6-27d / 6-27c) and
+  · `f5539827` → `f1855296`  story(6.30): v1.1 — the validate's findings applied: the p
+  · `59e8d9e0` → `45d01fff`  story(6.27): v2.0 — split into 6.27a / 6.27b / 6.27d / 6.2
+  · `5e664108` → `eeed1782`  story(6.27 v2.1, 6.30 v1.2): round-2 validate findings app
+  · `af97dfd5` → `606694f7`  sprint-status: ledger 2026-10-10o — validate rounds 1–2 ap
+  · `5bc4f97d` → `a51892c3`  story(6.27 v2.2, 6.30 v1.3): round-3 validate findings app
+  · `dc89794c` → `a5864df6`  story(6.27 v2.3, 6.30 v1.4): round-4 validate findings app
+  · `4eec8043` → `898d47a1`  story(6.27 v2.4): round-5 validate findings applied — 0 BL
+  · `b1136116` → `f322ae6f`  story(6.27 v2.5): round-6 validate (0 BLOCKER / 0 HIGH — v
+  · `9b35d3a2` → `01ee335f`  sprint-status: ledger 2026-10-10p — validate ends (round 6
+  · `cb2dde39` → `632d7a82`  governance(6.27): 2026-10-10-306 — author-commit: the five
+  · `c6c75e3b` → `f90ea219`  story(6.27 v2.6): the five are chosen by school (row 6-36,
+  · `ce6a3e27` → `5c677398`  story(6.27): glyph-register fix in the v2.5 change-log row
+  · `0a038a47` → `0f281ebc`  governance(6.27): 2026-10-10-307 — author-commit: workplac
+  · `4c9fea19` → `b1c0b6c9`  sprint-status: ledger 2026-10-10r — 2026-10-10-307 (workpl
+  · `a238f407` → `7cdacb54`  story(6.27 v2.7): PM1 and 6.27c's predecessor note read 20
+  · `0627e581` → `a81f92fd`  governance(6.27): 2026-10-10-308 — author-commit: every ne
+  · `513c84b9` → `46bed1fd`  governance(6.27): 2026-10-10-309 — author-commit: 'people 
+  · `88749b6b` → `adf379ac`  sprint-status: ledger 2026-10-10s — -308 (answer source sh
+  · `118f6913` → `add34fcd`  governance(6.27): 2026-10-10-310 — TRUSTEE-RATIFIED: CF1 A
+  · `058fb7b1` → `b513e97b`  story(6.27 v2.8, 6.30 v1.5): the confirm statuses updated 
+  · `b2e70128` → `d9c6feb4`  sprint-status: ledger 2026-10-10t — 2026-10-10-310 (the Pa
+  · `b3ae7627` → `693e8761`  story(6.30): CF1 shown as confirmed by 2026-10-10-310 in t
+  · `082ab743` → `3df45a54`  governance(6.27): 2026-10-10-311 — author-commit of 6.27's
+  · `b3970886` → `56fcd235`  story(6.27 v2.9): -311 applied — PM1 replacement, PM2 in-a
+  · `21e89ed6` → `b3a9476b`  governance(6.30): 2026-10-10-312 — author-commit of 6.30's
+  · `df48e750` → `9990cffa`  story(6.30 v1.6): -312 applied — Tasks 0.2 / 0.3 done, bui
+Re-verify (bash): for each pair, `diff <(git show <branch> | git patch-id --stable | cut -d' ' -f1) <(git show <main> | git patch-id --stable | cut -d' ' -f1)`
+— ⚠ needs the branch SHAs, which survive only while `origin/governance/6-27-6-30-stories` (or a local copy) does.
+-->
+
+<!--
 ⭐ RE-PINNED 2026-10-10 (v2.0, after the fresh-context validate) to `fa2687ce` on `story/6-30-app-links-open-the-app-from-a-text`
 (= `main` `5946e411` + the 6.27 / 6.30 story and governance commits, incl. `2026-10-10-303`, `-304`, `-305`). The CODE is identical to
 `5946e411` (`git diff --stat 5946e411 fa2687ce -- packages apps scripts infra` is empty). Every `file:NNN` is AS OF that code, verified by

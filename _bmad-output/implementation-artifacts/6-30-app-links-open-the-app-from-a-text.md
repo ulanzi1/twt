@@ -506,7 +506,7 @@ is STACKED on 6.27's (the row lives there) and now also carries 6.27's v1.3–v2
 ### References
 - Architecture §4.7 (routing; deep-link landing checks), §3.4; ADR-0010, -0011, -0013, -0020 cl.4, -0022; PRD OQ-1, FR-60, FR-61.
 - `2026-10-10-303` (Q1 A + the language rider), `2026-10-10-304` (Q6 A), `2026-10-10-305` (§1 corrections; §2 items 1, 2, 5; §4 the
-  reserved rows); the confirm note `trustee-panel-routing-note-2026-10-10-6-27-confirms.md` (CF1–CF3, ⛔ not yet sent).
+  reserved rows); the confirm note `trustee-panel-routing-note-2026-10-10-6-27-confirms.md` (CF1–CF5 — ✅ ruled by `2026-10-10-310`).
 - Story 6.27a v2.5 (PM11, PM16, PM21 — the record for 6.27a–d) and the cut files 6.27b / 6.27c / 6.27d; Story 6.25 (RE7); deferred-work D-13, D8, the dotted-secret-id item;
   row 6-34 (typed templates).
 - `docs/launch-gate-inventory/inventory-roster.md`, `dlt-template-requests-6-19.md`; `packages/contracts/src/deep-links/`;
@@ -529,6 +529,7 @@ is STACKED on 6.27's (the row lives there) and now also carries 6.27's v1.3–v2
 ## Change Log
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-10 | 1.5 | `2026-10-10-310`: the confirm note is ruled (CF1–CF5) — the language narrowing is Panel-confirmed (CF1 A). |
 | 2026-10-10 | 1.4 | Round 4: version pointers to 6.27a v2.5 (⛔ no change to PM11 / PM21). |
 | 2026-10-10 | 1.3 | Round-3 validate: the *"separate story"* quote re-cited to the sprint-status row `6-30` comment (⛔ never `-305`'s occasion); two glyph-register breaches (the symbol glued to "echo" and to "oracle") rewritten as *"the no-echo test"* and *"⛔ never an oracle"*. |
 | 2026-10-10 | 1.2 | Round-2 validate: the §0 language line now reads `-303`'s rider NARROWED by `2026-10-10-305` §2 item 2 (CF1 owed) — ⛔ never "ruled by `-303`"; a `-305` row in the rulings table (§2 items 1 / 2 / 5, §4) and the BigDev calls / AL12's reservation re-attributed to it; `-305` and the confirm note in References; the `?c=` split stated ONCE (6.30 parses `c`; 6.27a fills the slot + the not-openable copy; 6.27c wires the resolver) — AL16, Sequencing, Previous story intelligence; "Task 6" → 6.27a's Task 5 (the shell MERGED first); Row 28 covers the route-shell placeholder; stale 6.27 refs (v1.9 → 6.27a v2.5; FIVE → SEVEN FACTS). |

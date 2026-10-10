@@ -23,7 +23,7 @@ Status: backlog
 > ⚠ **PREDECESSORS (`2026-10-10-306`):** 6.27b, 6.27d, row `6-30` AND row `6-36-peer-mesh-school-wise-selection` all `done` — the five
 > are chosen from the deceased member's WORKPLACE (school or office; and the previous one after a transfer within 90 days), otherwise the
 > people the member named and who accepted (`-307`), ⛔ never the district; fewer than five means fewer texts, and none means ⛔ no text
-> (the inspection carries the claim; the inspector collects the head's letter). CF4 owed.
+> (the inspection carries the claim; the inspector collects the head's letter). ✅ `-310` CF4 A.
 
 > ⭐⭐ **WHAT THIS STORY IS.** The Panel ruled that each of the five neighbours is texted (`-303` Q1 A): *"We have been told that [member]
 > has died. If you knew them, please answer a few short questions: [link] — or call the helpline [number]."* (`-304` Q6 A). This story
@@ -41,7 +41,7 @@ after the claim can no longer take an answer.**
 
 ## The rulings this part builds (from 6.27a's table)
 `-303` Q1 A (the text, the five; the 48-hour WhatsApp reminder is row 6-31 — ⛔ not built here) · `-303`'s language rider, narrowed for a time by
-`-305` §2 item 2 (⚠ CF1) · `-304` Q6 A (*"a few short questions"*) · `-305` §2 item 4 (the text while an answer can still be taken) · `-295`
+`-305` §2 item 2 (✅ `-310` CF1 A) · `-304` Q6 A (*"a few short questions"*) · `-305` §2 item 4 (the text while an answer can still be taken) · `-295`
 RB4 / RB5 / RB11 / RB12 / RB16 · `-302` RN2–RN8 · `-255` F7 (the cost line). **Policy meaning:** ⛔ no predicate (6.27a's section).
 
 ## The decisions this part builds (6.27a is the record)
@@ -140,6 +140,7 @@ RB4 / RB5 / RB11 / RB12 / RB16 · `-302` RN2–RN8 · `-255` F7 (the cost line).
 ## Change Log
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-10 | 2.7 | `2026-10-10-310`: CF1 and CF4 now ratified. |
 | 2026-10-10 | 2.6 | `2026-10-10-306`: predecessor row 6-36 (school-wise selection) added. |
 | 2026-10-10 | 2.5 | Round 6: header qualifier ("no texted neighbour"); AC2b's alarm wording (one per sweep run + the child's held return). |
 | 2026-10-10 | 2.4 | Round 5: AC2b's pending-question gap is checked by BOTH the sweep and the child's begin path (the RB12 race guard — the hook-enqueued child is the main send path); AC4 lists it among held configs (parked as any held scope); Task 3 names `answerWindowSql` for the sweep. |

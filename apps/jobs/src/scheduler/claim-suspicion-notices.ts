@@ -1,5 +1,5 @@
 // The SUSPICION NOTICES — the daily SWEEP and the SMS CHILD — Story 6.24b (Task 5; AC7b, AC9b; `2026-10-07-292` RF11 /
-// RF12, `2026-10-07-293` item 1 B, `2026-10-08-295` RB3, RB5, RB12, RB15, RB18).
+// RF12, `2026-10-07-293` item 1 B, `2026-10-08-295` RB3, RB5, RB12, RB15, RB18; Story 6.29 — `2026-10-10-302` RN2, RN3, RN5, RN10).
 //
 // The three once-ever texts of a `-239` suspicion refusal (each ONCE per claim, EVER — 0151's UNIQUE):
 //   · `suspicion_refusal`     — FQ7 B: to the nominee the District Admin found in place at the death;
@@ -8,16 +8,19 @@
 // ⛔ Never `dispatch()` — a DIRECT DLT SMS through the shared core (`sendClaimDltSms`, RB4), the sibling registry's words.
 //
 // ── The sweep, daily 10:00 IST ─────────────────────────────────────────────────────────────────────────────────
-//   (1) RB3's give-up — rows CREATED before 00:00 IST of (today − 2), still `attempting` and ⛔ claimed within the send
-//       lease ⇒ `error` + an alarm (claim ids);
-//   (2) RB12's CONFIG CHECK, BEFORE anything is enqueued: the gateway and each needed template id once per run (both
-//       locales for `appeal_notice` — its locale is known only under the lock), the per-Pariwar helpline LAZILY,
-//       memoised, as the pages reveal Pariwars. A gap — null / blank / unconfigured, or ANY Secret Manager fault — HOLDS
-//       that purpose's / Pariwar's claims: ⛔ enqueued, ⛔ written. The next run re-selects them (⛔ finished row) ⇒ once
-//       go-live sets the ids, every notice still due is sent;
-//   (3) per purpose, page the domain's selector (keyset, the Pariwar allowlist) and enqueue ONE child per (claim,
+//   (1) RB12's CONFIG CHECK, FIRST (`-302` RN2 — before the give-up): the gateway and each needed template id once per run
+//       (both locales for `appeal_notice` — its locale is known only under the lock); the per-Pariwar helpline memoised —
+//       for the Pariwars of STALLED rows now, then LAZILY as the pages reveal Pariwars. A gap — null / blank /
+//       unconfigured, or ANY Secret Manager fault — HOLDS that (purpose, Pariwar): ⛔ enqueued, ⛔ NEW row written. The next
+//       run re-selects it (⛔ finished row) ⇒ once go-live sets the ids, every notice still due is sent;
+//   (2) `-302` RN2 — THE PARK: every `attempting` row past the send lease whose (purpose, Pariwar) is HELD is parked
+//       (`'sweep:held'`) — ⛔ given up while held — + ONE alarm (claim ids);
+//   (3) RB3's give-up (AS AMENDED BY `-302` RN3), over the UN-held scopes only — rows whose `aging_since` (a parked row's
+//       credited by the time it has sat parked) is before 00:00 IST of (today − 2), still `attempting` and ⛔ claimed
+//       within the send lease ⇒ `error` + an alarm (claim ids);
+//   (4) per purpose, page the domain's selector (keyset, the Pariwar allowlist) and enqueue ONE child per (claim,
 //       purpose) — the payload is ids only;
-//   (4) ONE end-of-run alarm for the held claims — per purpose, the count and the claim ids.
+//   (5) ONE end-of-run alarm for the held claims — per purpose, the count and the claim ids.
 // ── The child ───────────────────────────────────────────────────────────────────────────────────────────────────
 //   RB12's race guard (the same checks — a gap ⇒ `held_config`, ⛔ row, ⛔ decrypt, an alarm) → the Pariwar's name mode,
 //   read ONCE in its OWN scope tx (RB5) → the CLAIMING transaction (`beginSuspicionNotice` — the claim-row lock, the
@@ -140,8 +143,10 @@ async function helplineGap(deps: ClaimSuspicionNoticeDeps, pariwarId: string): P
 export interface SuspicionNoticeSweepResult {
   readonly scannedClaims: number;
   readonly enqueued: number;
-  /** Claims held by a config gap (RB12) — ⛔ enqueued, ⛔ written. */
+  /** Claims held by a config gap (RB12) — ⛔ enqueued, ⛔ NEW row written. */
   readonly heldForConfig: number;
+  /** In-flight rows newly parked by a hold (`-302` RN2) — ⛔ given up while held. */
+  readonly parkedForConfig: number;
   readonly finalisedStuck: number;
   readonly budgetExhausted: boolean;
 }
@@ -161,7 +166,7 @@ export async function runSuspicionNoticeSweep(deps: ClaimSuspicionNoticeDeps, bo
   const startedMs = clockMs();
   const budgetMs = Math.max(0, deps.sweepBudgetMs ?? DEFAULT_CORRECTION_SWEEP_BUDGET_MS);
   const allow: string[] | null = deps.pariwarAllowlist ? [...deps.pariwarAllowlist] : null;
-  const empty: SuspicionNoticeSweepResult = { scannedClaims: 0, enqueued: 0, heldForConfig: 0, finalisedStuck: 0, budgetExhausted: false };
+  const empty: SuspicionNoticeSweepResult = { scannedClaims: 0, enqueued: 0, heldForConfig: 0, parkedForConfig: 0, finalisedStuck: 0, budgetExhausted: false };
   if (allow !== null && process.env['NODE_ENV'] === 'production') {
     alarm('[jobs] claim-suspicion-notice-sweep: REFUSED — `pariwarAllowlist` is set while NODE_ENV is production (it is test-only); nothing was swept');
     return empty;
@@ -171,13 +176,42 @@ export async function runSuspicionNoticeSweep(deps: ClaimSuspicionNoticeDeps, bo
     return empty;
   }
 
-  // (1) RB3 — THE GIVE-UP. ⚠ A CROSS-TENANT WRITE on the BYPASSRLS pool, DELIBERATELY — the reasoning, the lease guard
-  // and the RE-EXAMINE triggers are at `expireExhaustedSuspicionNotices`' DELIBERATE block. The cross-tenant READ that
-  // follows (the selectors) carries its own block at `selectDueSuspicionNotices`.
+  // (1) RB12 — the gateway + each purpose's template ids, ONCE per run; the helpline per Pariwar, memoised (the SAME memo the
+  // main loop reads — one run never both parks and enqueues a Pariwar).
+  const purposeGaps = new Map<Purpose, string | null>();
+  for (const purpose of SUSPICION_NOTICE_SWEEP_PURPOSES) purposeGaps.set(purpose, await purposeConfigGap(deps, purpose));
+  const helplineByPariwar = new Map<string, string | null>();
+  const gapOf = async (purpose: Purpose, pariwarId: string): Promise<string | null> => {
+    const purposeGap = purposeGaps.get(purpose) ?? null;
+    if (purposeGap !== null) return purposeGap;
+    if (!helplineByPariwar.has(pariwarId)) helplineByPariwar.set(pariwarId, await helplineGap(deps, pariwarId));
+    return helplineByPariwar.get(pariwarId) ?? null;
+  };
+
+  // (2) `-302` RN2 — THE PARK, BEFORE the give-up. ⚠ A cross-tenant READ (the stalled scopes) and WRITE (the park) on the BYPASSRLS
+  // pool, DELIBERATELY — the reasoning is at `listStalledSuspicionNoticeScopes`' / `parkHeldSuspicionNotices`' DELIBERATE blocks.
+  const held: claimDomain.SuspicionNoticeScope[] = [];
+  const unheld: claimDomain.SuspicionNoticeScope[] = [];
+  for (const scope of await claimDomain.listStalledSuspicionNoticeScopes(deps.pool, { now, allow })) {
+    ((await gapOf(scope.purpose, scope.pariwarId)) === null ? unheld : held).push(scope);
+  }
+  const parked = await claimDomain.parkHeldSuspicionNotices(deps.pool, { now, allow, held });
+  if (parked.length > 0) {
+    alarm(
+      `[jobs] claim-suspicion-notice-sweep: ${String(parked.length)} in-flight notice(s) newly PARKED — their purpose / Pariwar is ` +
+        `held by a config gap; ⛔ given up while held, re-tried once it is fixed ` +
+        `(claims: ${sampleIds([...new Set(parked.map((x) => x.claimCaseId as string))])})`,
+    );
+  }
+
+  // (3) RB3 (AS AMENDED BY `-302` RN3) — THE GIVE-UP, over the UN-held scopes only. ⚠ A CROSS-TENANT WRITE on the BYPASSRLS
+  // pool, DELIBERATELY — the reasoning, the lease guard and the RE-EXAMINE triggers are at `expireExhaustedSuspicionNotices`'
+  // DELIBERATE block. The cross-tenant READ that follows (the selectors) carries its own block at `selectDueSuspicionNotices`.
   const stuck = await claimDomain.expireExhaustedSuspicionNotices(deps.pool, {
     cutoff: claimDomain.suspicionNoticeReclaimCutoff(now),
     now,
     allow,
+    scopes: unheld,
   });
   if (stuck.length > 0) {
     alarm(
@@ -191,12 +225,9 @@ export async function runSuspicionNoticeSweep(deps: ClaimSuspicionNoticeDeps, bo
   let enqueued = 0;
   let budgetExhausted = false;
   let bounded = false;
-  const held = new Map<Purpose, string[]>();
-  const helplineByPariwar = new Map<string, string | null>();
+  const heldClaims = new Map<Purpose, string[]>();
 
   sweep: for (const purpose of SUSPICION_NOTICE_SWEEP_PURPOSES) {
-    // (2) RB12 — the gateway + this purpose's template ids, once per run.
-    const purposeGap = await purposeConfigGap(deps, purpose);
     let after: string | null = null;
     for (;;) {
       const page = await claimDomain.selectDueSuspicionNotices(deps.pool, { purpose, after, limit, allow });
@@ -210,16 +241,11 @@ export async function runSuspicionNoticeSweep(deps: ClaimSuspicionNoticeDeps, bo
           break sweep;
         }
         scannedClaims += 1;
-        let gap = purposeGap;
-        if (gap === null) {
-          if (!helplineByPariwar.has(due.pariwarId)) helplineByPariwar.set(due.pariwarId, await helplineGap(deps, due.pariwarId));
-          gap = helplineByPariwar.get(due.pariwarId) ?? null;
-        }
-        if (gap !== null) {
-          held.set(purpose, [...(held.get(purpose) ?? []), due.claimCaseId]);
+        if ((await gapOf(purpose, due.pariwarId)) !== null) {
+          heldClaims.set(purpose, [...(heldClaims.get(purpose) ?? []), due.claimCaseId]);
           continue;
         }
-        // (3) ONE child per (claim, purpose).
+        // (4) ONE child per (claim, purpose).
         try {
           await boss.send(
             QUEUE_NAMES.CLAIM_SUSPICION_NOTICE_SMS,
@@ -248,13 +274,13 @@ export async function runSuspicionNoticeSweep(deps: ClaimSuspicionNoticeDeps, bo
     }
   }
 
-  // (4) ONE end-of-run alarm for every claim a config gap held (RB12) — per purpose, the count and the ids.
-  const heldForConfig = [...held.values()].reduce((n, l) => n + l.length, 0);
+  // (5) ONE end-of-run alarm for every claim a config gap held (RB12) — per purpose, the count and the ids.
+  const heldForConfig = [...heldClaims.values()].reduce((n, l) => n + l.length, 0);
   if (heldForConfig > 0) {
-    const parts = [...held.entries()].map(([purpose, list]) => `${purpose}: ${String(list.length)} (claims: ${sampleIds(list)})`);
+    const parts = [...heldClaims.entries()].map(([purpose, list]) => `${purpose}: ${String(list.length)} (claims: ${sampleIds(list)})`);
     alarm(
       `[jobs] claim-suspicion-notice-sweep: ${String(heldForConfig)} notice(s) HELD — the DLT template id, the helpline number ` +
-        `or the SMS gateway is not configured; ⛔ nothing was enqueued or written for them, and they will be sent once it is — ${parts.join('; ')}`,
+        `or the SMS gateway is not configured; ⛔ nothing was enqueued for them (an in-flight one is parked, ⛔ given up), and they will be sent once it is — ${parts.join('; ')}`,
     );
   }
   if (budgetExhausted) {
@@ -262,7 +288,7 @@ export async function runSuspicionNoticeSweep(deps: ClaimSuspicionNoticeDeps, bo
   } else if (bounded) {
     alarm(`[jobs] claim-suspicion-notice-sweep: hit the hard bound of ${String(maxClaims)} claims — the rest were ⛔ NOT swept today`);
   }
-  return { scannedClaims, enqueued, heldForConfig, finalisedStuck: stuck.length, budgetExhausted };
+  return { scannedClaims, enqueued, heldForConfig, parkedForConfig: parked.length, finalisedStuck: stuck.length, budgetExhausted };
 }
 
 // ── The CHILD — one notice ─────────────────────────────────────────────────────────────────────────────────────
@@ -337,6 +363,7 @@ export async function runSuspicionNoticeChild(
     )) as boolean;
     if (!moved) alarm(`[jobs] claim-suspicion-notice: the row of the ${tag} moved on before its finalise (the outcome was ${input.outcome})`);
   };
+  // ⭐ `-302` RN5 — every `detail` the child writes, alarms or throws is BUILT (`suspicionNoticeDetail`), ⛔ the core's raw text.
   const transient = async (detail: string): Promise<never> => {
     const noted = (await db((d) =>
       claimDomain.noteSuspicionNoticeTransient(d, { pariwarId, noticeId: begun.noticeId, jobId, detail }),
@@ -354,36 +381,38 @@ export async function runSuspicionNoticeChild(
     return { status: 'no_target', reason: detail };
   };
 
-  if (begun.recipient.unresolved !== null) return noTarget(`no_target:${begun.recipient.unresolved}`);
+  if (begun.recipient.unresolved !== null) {
+    return noTarget(claimDomain.suspicionNoticeDetail({ kind: 'no_target', reason: begun.recipient.unresolved }));
+  }
 
   // RB5 — `{member}`: the deceased's KYC name, MODE-RESOLVED (`-181`); erased / unresolvable / none ⇒ `no_target`.
   const profile = (await db((d) => kycDomain.getMemberKycProfile(d, pariwarId, begun.deceasedMemberId))) as
     | Awaited<ReturnType<typeof kycDomain.getMemberKycProfile>>
     | undefined;
-  if (!profile || profile.nameCiphertext === null) return noTarget('name:none');
+  if (!profile || profile.nameCiphertext === null) return noTarget(claimDomain.suspicionNoticeDetail({ kind: 'name', reason: 'none' }));
   let storedName: string;
   try {
     storedName = await encryption.decryptKycField(profile.nameCiphertext, pariwarId, deps.encryption);
   } catch {
-    return transient('decrypt_failed:kyc');
+    return transient(claimDomain.suspicionNoticeDetail({ kind: 'pre_send', fault: 'decrypt_failed:kyc' }));
   }
-  if (storedName === memberDomain.ANONYMIZED_SENTINEL) return noTarget('name:erased');
+  if (storedName === memberDomain.ANONYMIZED_SENTINEL) return noTarget(claimDomain.suspicionNoticeDetail({ kind: 'name', reason: 'erased' }));
   const member = notifications.resolveMemberFacingDeceasedName(mode, storedName);
-  if (member === '') return noTarget('name:unresolvable');
+  if (member === '') return noTarget(claimDomain.suspicionNoticeDetail({ kind: 'name', reason: 'unresolvable' }));
 
   // The recipient's number (null / the erasure sentinel / ⛔ a valid Indian mobile ⇒ `no_target`).
   let e164: string | null;
   try {
     e164 = await claimDomain.resolveCorrectionMobile(begun.recipient.mobileCiphertext, begun.recipient.source, pariwarId, deps.encryption);
   } catch {
-    return transient('decrypt_failed:tier1');
+    return transient(claimDomain.suspicionNoticeDetail({ kind: 'pre_send', fault: 'decrypt_failed:tier1' }));
   }
-  if (e164 === null) return noTarget('no_target:no_sendable_number');
+  if (e164 === null) return noTarget(claimDomain.suspicionNoticeDetail({ kind: 'no_target', reason: 'no_sendable_number' }));
   let hash: string;
   try {
     hash = await claimDomain.correctionNumberHash(e164, pariwarId, deps.encryption);
   } catch {
-    return transient('hash_failed:tier1');
+    return transient(claimDomain.suspicionNoticeDetail({ kind: 'pre_send', fault: 'hash_failed:tier1' }));
   }
 
   // ── The send ──
@@ -396,14 +425,16 @@ export async function runSuspicionNoticeChild(
     e164,
     render: (helpline) => renderSuspicionNoticeSms(message, locale, { member, helpline, ...(date !== undefined ? { date } : {}) }),
   });
-  if (result.kind === 'transient') return transient(result.detail);
+  // The core's detail is RAW (a gateway `<code>` can be any string — a phone number included): ⛔ stored, alarmed or thrown as is.
+  const detail = result.detail === null ? null : claimDomain.suspicionNoticeDetail({ kind: 'send', detail: result.detail });
+  if (result.kind === 'transient') return transient(detail!);
   if (result.outcome !== 'accepted' && result.alarm) {
-    alarm(`[jobs] claim-suspicion-notice: ${result.detail} for the ${tag} — recorded error (fail-closed)`);
+    alarm(`[jobs] claim-suspicion-notice: ${detail!} for the ${tag} — recorded error (fail-closed)`);
   }
   await finalise({
     outcome: result.outcome,
     providerMessageId: result.providerMessageId,
-    detail: result.detail,
+    detail,
     recipientVersionId: begun.recipient.versionId,
     recipientNumberHash: hash,
   });

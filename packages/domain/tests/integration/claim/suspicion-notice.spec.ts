@@ -9,7 +9,10 @@
 //     `suspicion-notice-concurrency.spec.ts`;
 //   · the recipients — (a) RF9's rank 1; (b) RB15's as-of read (the half-open boundary, a later re-determination of S, a
 //     corrected entry's chain head, ⛔ effective ⇒ a finished `no_target` row) and RB18's exclusion under the lock; (c)
-//     RB7's refused filer on both claimant sides, a corrected head and a FORKED chain, ⛔ contact ⇒ unresolved.
+//     RB7's refused filer on both claimant sides, a corrected head and a FORKED chain, ⛔ contact ⇒ unresolved;
+//   · ⭐ Story 6.29 (`2026-10-10-302`): the `detail` builder / grammar and the writers' assert (RN5); the stalled scopes, the
+//     scoped PARK and the give-up over UN-held scopes judged by the CREDITED anchor (RN2 / RN3 — flapping, alternating, the
+//     DEFAULT); the parked re-claim's credit; the take-over's lease re-check (RN7 — its race is in the concurrency spec).
 // Every refusal / appeal stage through 6.24a's fixtures (the REAL writers — Trap 19).
 
 import { randomUUID } from 'node:crypto';
@@ -19,10 +22,22 @@ import { describe, expect, it } from 'vitest';
 
 import {
   CORRECTION_SEND_LEASE_MS,
+  SUSPICION_NOTICE_NAME_DETAILS,
+  SUSPICION_NOTICE_NO_TARGET_DETAILS,
   SUSPICION_NOTICE_PAGE_CAP,
+  SUSPICION_NOTICE_PARKED_BY,
+  SUSPICION_NOTICE_PRE_SEND_FAULTS,
+  SUSPICION_NOTICE_RECHECK_REASONS,
+  SUSPICION_NOTICE_SEND_CONFIG_DETAILS,
+  SUSPICION_NOTICE_SMS_ERROR_CLASSES,
   beginSuspicionNotice,
   expireExhaustedSuspicionNotices,
   finaliseSuspicionNotice,
+  isSuspicionNoticeDetail,
+  listStalledSuspicionNoticeScopes,
+  parkHeldSuspicionNotices,
+  sanitizeSmsGatewayCode,
+  suspicionNoticeDetail,
   getEffectiveNomineeDeclarationAsOf,
   noteSuspicionNoticeTransient,
   projectClaimState,
@@ -91,13 +106,33 @@ async function noticeOf(client: Client, cid: string, purpose: SuspicionNoticePur
   return rows;
 }
 
-async function attemptingRow(client: Client, cid: string, purpose: SuspicionNoticePurpose, opts: { job?: string; claimedAt?: Date; detail?: string | null; createdAt?: Date } = {}) {
+/** A seeded `attempting` row. ⚠ 0155: `aging_since` defaults to `createdAt` (Trap 10), and a PARKED seed needs `parkedAt`. */
+async function attemptingRow(
+  client: Client,
+  cid: string,
+  purpose: SuspicionNoticePurpose,
+  opts: { job?: string; claimedAt?: Date; detail?: string | null; createdAt?: Date; agingSince?: Date; parkedAt?: Date | null; pariwarId?: string } = {},
+) {
+  const createdAt = opts.createdAt ?? new Date();
   await client.query(
-    `INSERT INTO claim_suspicion_notices (pariwar_id, claim_case_id, purpose, outcome, claimed_at, claimed_by_job, detail, created_at)
-     VALUES ($1, $2, $3, 'attempting', $4, $5, $6, $7)`,
-    [PARIWAR_A, cid, purpose, opts.claimedAt ?? new Date(), opts.job ?? 'job-1', opts.detail ?? null, opts.createdAt ?? new Date()],
+    `INSERT INTO claim_suspicion_notices (pariwar_id, claim_case_id, purpose, outcome, claimed_at, claimed_by_job, detail, created_at, aging_since, parked_at)
+     VALUES ($1, $2, $3, 'attempting', $4, $5, $6, $7, $8, $9)`,
+    [opts.pariwarId ?? PARIWAR_A, cid, purpose, opts.claimedAt ?? new Date(), opts.job ?? 'job-1', opts.detail ?? null, createdAt, opts.agingSince ?? createdAt, opts.parkedAt ?? null],
   );
 }
+
+/** The row's give-up anchor and park instant (ms). */
+async function agingOf(client: Client, cid: string, purpose: SuspicionNoticePurpose): Promise<{ aging: number; parked: number | null }> {
+  const { rows } = await client.query<{ aging_since: Date; parked_at: Date | null }>(
+    `SELECT aging_since, parked_at FROM claim_suspicion_notices WHERE claim_case_id = $1 AND purpose = $2`,
+    [cid, purpose],
+  );
+  return { aging: rows[0]!.aging_since.getTime(), parked: rows[0]!.parked_at?.getTime() ?? null };
+}
+
+/** The (purpose, Pariwar A) scope — the give-up's / the park's unit (`-302` RN2). */
+const scope = (purpose: SuspicionNoticePurpose = 'suspicion_refusal') => ({ purpose, pariwarId: pid });
+const ALL_A = (['suspicion_refusal', 'closed_after_appeal', 'refusal_appeal_notice'] as const).map((p) => scope(p));
 
 /** Revise S's live decision OFF `-239` (supersede + a new live row with another reason). */
 async function reviseOff(client: Client, cid: string): Promise<void> {
@@ -431,7 +466,7 @@ describe.skipIf(!hasDatabase)('Story 6.24b — the suspicion notices, domain (:5
       const s = await refusedClaim(client, PARIWAR_A, randomUUID(), { ground: true });
       const begun = (await begin(client, s, 'suspicion_refusal')) as { noticeId: string };
       const db = bindScopedDb(client);
-      await noteSuspicionNoticeTransient(db, { pariwarId: pid, noticeId: begun.noticeId, jobId: 'job-9', detail: 'x' });
+      await noteSuspicionNoticeTransient(db, { pariwarId: pid, noticeId: begun.noticeId, jobId: 'job-9', detail: 'rate_limited:E004' });
       expect((await noticeOf(client, s, 'suspicion_refusal'))[0]!.detail).toBeNull();
       await noteSuspicionNoticeTransient(db, { pariwarId: pid, noticeId: begun.noticeId, jobId: 'job-1', detail: 'api_unavailable:timeout' });
       expect(await noticeOf(client, s, 'suspicion_refusal')).toMatchObject([{ outcome: 'attempting', detail: 'api_unavailable:timeout' }]);
@@ -449,7 +484,7 @@ describe.skipIf(!hasDatabase)('Story 6.24b — the suspicion notices, domain (:5
       await attemptingRow(client, young, 'suspicion_refusal', { createdAt: cutoff, claimedAt: stale });
       // ⭐ Old enough, but RE-CLAIMED within the send lease (a live child may be sending it) ⇒ left to that child.
       await attemptingRow(client, leased, 'suspicion_refusal', { createdAt: new Date(cutoff.getTime() - 1), claimedAt: new Date(now.getTime() - CORRECTION_SEND_LEASE_MS + 1000) });
-      const done = await expireExhaustedSuspicionNotices(client, { cutoff, now, allow: ALLOW });
+      const done = await expireExhaustedSuspicionNotices(client, { cutoff, now, allow: ALLOW, scopes: ALL_A });
       expect(done).toContainEqual({ claimCaseId: old, purpose: 'suspicion_refusal' });
       expect(done.map((d) => d.claimCaseId)).not.toContain(young);
       expect(done.map((d) => d.claimCaseId)).not.toContain(leased);
@@ -640,6 +675,262 @@ describe.skipIf(!hasDatabase)('Story 6.24b — the suspicion notices, domain (:5
       expect((await dueIds(client, 'refusal_appeal_notice')).has(s)).toBe(false); // … but (c) is ⛔ selected
       expect(await begin(client, s, 'refusal_appeal_notice')).toEqual({ kind: 'not_due' });
       expect(await noticeOf(client, s, 'refusal_appeal_notice')).toEqual([]);
+    });
+  });
+
+  // ── Story 6.29 (`2026-10-10-302`) ────────────────────────────────────────────────────────────────────────────────
+  describe('⭐ 6.29 RN5 — the `detail` grammar: ONE builder, a sanitised gateway code, the writers assert', () => {
+    it('every builder output (iterated from the EXPORTED arrays) matches the grammar 0155 CHECKs', () => {
+      const built = [
+        suspicionNoticeDetail({ kind: 'exhausted_three_days' }),
+        suspicionNoticeDetail({ kind: 'excluded_claimant' }),
+        ...SUSPICION_NOTICE_RECHECK_REASONS.map((reason) => suspicionNoticeDetail({ kind: 'recheck', reason })),
+        ...SUSPICION_NOTICE_NO_TARGET_DETAILS.map((reason) => suspicionNoticeDetail({ kind: 'no_target', reason })),
+        ...SUSPICION_NOTICE_NAME_DETAILS.map((reason) => suspicionNoticeDetail({ kind: 'name', reason })),
+        ...SUSPICION_NOTICE_PRE_SEND_FAULTS.map((fault) => suspicionNoticeDetail({ kind: 'pre_send', fault })),
+        ...SUSPICION_NOTICE_SEND_CONFIG_DETAILS.map((detail) => suspicionNoticeDetail({ kind: 'send', detail })),
+        ...SUSPICION_NOTICE_SMS_ERROR_CLASSES.flatMap((c) =>
+          [`${c}:E001`, `${c}:http_503`, `${c}:9876543210`, `${c}: E001`, `${c}:+91`, `${c}:${'x'.repeat(65)}`, c].map((detail) =>
+            suspicionNoticeDetail({ kind: 'send', detail }),
+          ),
+        ),
+        ...['PERMISSION_DENIED', 'grpc_99', 'a b', '9876543210'].map((n) => suspicionNoticeDetail({ kind: 'send', detail: `config:secret_manager_${n}` })),
+        suspicionNoticeDetail({ kind: 'send', detail: 'api_unavailable:timeout' }),
+        suspicionNoticeDetail({ kind: 'send', detail: 'unknown:NO_DETAIL' }),
+        suspicionNoticeDetail({ kind: 'send', detail: 'Something the gateway said about +919876543210' }),
+      ];
+      for (const d of built) expect(isSuspicionNoticeDetail(d), d).toBe(true);
+      // Every F7 / F12 literal of 6.24b, as written before 6.29, is IN the grammar (⛔ a stored detail changes meaning).
+      for (const literal of ['exhausted:recheck_appeal_open', 'no_target:closed_no_determination', 'excluded:claimant_discarded_version', 'name:unresolvable', 'config:dlt_template_id_missing', 'config:secret_manager_FAILED_PRECONDITION', 'api_unavailable:timeout', 'unknown:NO_DETAIL']) {
+        expect(isSuspicionNoticeDetail(literal), literal).toBe(true);
+      }
+    });
+
+    it('⭐ a raw gateway code with a space, a `+`, `+91…`, a BARE 10-digit number or > 64 chars is stored as `unknown`; an unknown class ⇒ `unknown:unknown`', () => {
+      for (const leak of [' E001', 'E 001', '+', '+919876543210', '9876543210', 'x'.repeat(65), '', 'a@b.in']) {
+        expect(sanitizeSmsGatewayCode(leak), leak).toBe('unknown');
+      }
+      for (const ok of ['E001', 'INVALID_NUMBER', 'http_503', '123456', 'v1.2-x']) expect(sanitizeSmsGatewayCode(ok)).toBe(ok);
+      expect(suspicionNoticeDetail({ kind: 'send', detail: 'invalid_number:9876543210' })).toBe('invalid_number:unknown');
+      expect(suspicionNoticeDetail({ kind: 'send', detail: 'carrier_reject:+919876543210' })).toBe('carrier_reject:unknown');
+      expect(suspicionNoticeDetail({ kind: 'send', detail: 'rate_limited:E004' })).toBe('rate_limited:E004');
+      expect(suspicionNoticeDetail({ kind: 'send', detail: 'teleported:E1' })).toBe('unknown:unknown');
+      expect(suspicionNoticeDetail({ kind: 'send', detail: 'auth' })).toBe('auth:unknown');
+      for (const bad of ['x', 'invalid_number:9876543210', 'carrier_reject:+91', 'rate_limited:a b', 'held:x', 'unknown:', '']) {
+        expect(isSuspicionNoticeDetail(bad), bad).toBe(false);
+      }
+    });
+
+    it('⭐ a writer given a non-grammar detail throws BEFORE its UPDATE (⛔ value echoed) — the row is untouched', async () => {
+      const { client } = getTx();
+      const s = await refusedClaim(client, PARIWAR_A, randomUUID(), { ground: true });
+      const begun = (await begin(client, s, 'suspicion_refusal')) as { noticeId: string };
+      const db = bindScopedDb(client);
+      const leak = 'invalid_number:9876543210';
+      const thrown = finaliseSuspicionNotice(db, { pariwarId: pid, noticeId: begun.noticeId, jobId: 'job-1', outcome: 'error', detail: leak });
+      await expect(thrown).rejects.toThrow(/outside the fixed grammar/);
+      await expect(thrown).rejects.not.toThrow(/9876543210/);
+      await expect(noteSuspicionNoticeTransient(db, { pariwarId: pid, noticeId: begun.noticeId, jobId: 'job-1', detail: 'free text' })).rejects.toThrow(
+        /outside the fixed grammar/,
+      );
+      expect(await noticeOf(client, s, 'suspicion_refusal')).toMatchObject([{ outcome: 'attempting', detail: null }]);
+    });
+  });
+
+  describe('⭐ 6.29 RN2 / RN3 — the stalled scopes, the scoped PARK, the give-up by the CREDITED anchor', () => {
+    const MIN = 60_000;
+
+    it('the stalled scopes: the distinct (purpose, Pariwar) of `attempting` rows past the lease — ⛔ inside it, ⛔ finished', async () => {
+      const { client } = getTx();
+      const now = new Date();
+      const stale = new Date(now.getTime() - CORRECTION_SEND_LEASE_MS - 1);
+      const [a1, a2, live] = [
+        await refusedClaim(client, PARIWAR_A, randomUUID(), { ground: true }),
+        await refusedClaim(client, PARIWAR_A, randomUUID(), { ground: true }),
+        await refusedClaim(client, PARIWAR_A, randomUUID(), { ground: true }),
+      ];
+      const b1 = await refusedClaim(client, PARIWAR_B, randomUUID(), { ground: true });
+      await attemptingRow(client, a1, 'suspicion_refusal', { claimedAt: stale });
+      await attemptingRow(client, a2, 'suspicion_refusal', { claimedAt: stale });
+      await attemptingRow(client, a2, 'refusal_appeal_notice', { claimedAt: stale, job: SUSPICION_NOTICE_PARKED_BY, parkedAt: stale });
+      await attemptingRow(client, live, 'closed_after_appeal', { claimedAt: now });
+      await attemptingRow(client, b1, 'suspicion_refusal', { claimedAt: stale, pariwarId: PARIWAR_B });
+      expect(await listStalledSuspicionNoticeScopes(client, { now, allow: [PARIWAR_A, PARIWAR_B] })).toEqual(
+        [
+          { purpose: 'refusal_appeal_notice', pariwarId: PARIWAR_A },
+          { purpose: 'suspicion_refusal', pariwarId: PARIWAR_A < PARIWAR_B ? PARIWAR_A : PARIWAR_B },
+          { purpose: 'suspicion_refusal', pariwarId: PARIWAR_A < PARIWAR_B ? PARIWAR_B : PARIWAR_A },
+        ],
+      );
+      expect(await listStalledSuspicionNoticeScopes(client, { now, allow: [PARIWAR_B] })).toEqual([{ purpose: 'suspicion_refusal', pariwarId: PARIWAR_B }]);
+    });
+
+    it('⭐ park: EVERY past-lease row of a HELD scope (⛔ only give-up candidates) — `claimed_at` / `detail` kept; ⛔ another purpose / Pariwar, ⛔ inside the lease, ⛔ re-parked', async () => {
+      const { client } = getTx();
+      const now = new Date();
+      const staleAt = new Date(now.getTime() - CORRECTION_SEND_LEASE_MS - 1);
+      const [young, old, live, otherPurpose] = [
+        await refusedClaim(client, PARIWAR_A, randomUUID(), { ground: true }),
+        await refusedClaim(client, PARIWAR_A, randomUUID(), { ground: true }),
+        await refusedClaim(client, PARIWAR_A, randomUUID(), { ground: true }),
+        await refusedClaim(client, PARIWAR_A, randomUUID(), { ground: true }),
+      ];
+      const otherPariwar = await refusedClaim(client, PARIWAR_B, randomUUID(), { ground: true });
+      await attemptingRow(client, young, 'suspicion_refusal', { claimedAt: staleAt, detail: 'api_unavailable:timeout' });
+      await attemptingRow(client, old, 'suspicion_refusal', { claimedAt: staleAt, createdAt: new Date(now.getTime() - 9 * DAY) });
+      await attemptingRow(client, live, 'suspicion_refusal', { claimedAt: new Date(now.getTime() - CORRECTION_SEND_LEASE_MS + MIN), job: 'job-live' });
+      await attemptingRow(client, otherPurpose, 'refusal_appeal_notice', { claimedAt: staleAt });
+      await attemptingRow(client, otherPariwar, 'suspicion_refusal', { claimedAt: staleAt, pariwarId: PARIWAR_B });
+      const allow = [PARIWAR_A, PARIWAR_B];
+      const parked = await parkHeldSuspicionNotices(client, { now, allow, held: [scope('suspicion_refusal')] });
+      expect(parked.map((x) => x.claimCaseId).sort()).toEqual([young, old].sort());
+      const { rows } = await client.query<{ claim_case_id: string; claimed_by_job: string; claimed_at: Date; detail: string | null; parked_at: Date | null }>(
+        `SELECT claim_case_id, claimed_by_job, claimed_at, detail, parked_at FROM claim_suspicion_notices WHERE claim_case_id = ANY($1::uuid[])`,
+        [[young, old, live, otherPurpose, otherPariwar]],
+      );
+      const of = (cid: string) => rows.find((r) => r.claim_case_id === cid)!;
+      expect(of(young)).toMatchObject({ claimed_by_job: SUSPICION_NOTICE_PARKED_BY, detail: 'api_unavailable:timeout' });
+      expect(of(young).claimed_at.getTime()).toBe(staleAt.getTime());
+      expect(of(young).parked_at!.getTime()).toBe(now.getTime());
+      for (const cid of [live, otherPurpose, otherPariwar]) expect(of(cid).parked_at, cid).toBeNull();
+      // A second held run a day on: ⛔ re-parked — the first park's instant (its credit) is kept; only the once-live row, now past
+      // its lease, is newly parked.
+      expect(await parkHeldSuspicionNotices(client, { now: new Date(now.getTime() + DAY), allow, held: [scope('suspicion_refusal')] })).toEqual([
+        { claimCaseId: live, purpose: 'suspicion_refusal' },
+      ]);
+      expect((await agingOf(client, young, 'suspicion_refusal')).parked).toBe(now.getTime());
+      // ⛔ held scope ⇒ ⛔ statement at all.
+      expect(await parkHeldSuspicionNotices(client, { now, allow, held: [] })).toEqual([]);
+    });
+
+    it('⭐ the give-up runs over the UN-held scopes ONLY — an old row of a held scope (⛔ listed) is ⛔ given up', async () => {
+      const { client } = getTx();
+      const now = new Date();
+      const cutoff = suspicionNoticeReclaimCutoff(now);
+      const stale = new Date(now.getTime() - CORRECTION_SEND_LEASE_MS - 1);
+      const [heldRow, unheldRow] = [
+        await refusedClaim(client, PARIWAR_A, randomUUID(), { ground: true }),
+        await refusedClaim(client, PARIWAR_A, randomUUID(), { ground: true }),
+      ];
+      await attemptingRow(client, heldRow, 'refusal_appeal_notice', { createdAt: new Date(cutoff.getTime() - DAY), claimedAt: stale });
+      await attemptingRow(client, unheldRow, 'suspicion_refusal', { createdAt: new Date(cutoff.getTime() - DAY), claimedAt: stale });
+      const done = await expireExhaustedSuspicionNotices(client, { cutoff, now, allow: ALLOW, scopes: [scope('suspicion_refusal')] });
+      expect(done).toEqual([{ claimCaseId: unheldRow, purpose: 'suspicion_refusal' }]);
+      expect(await noticeOf(client, heldRow, 'refusal_appeal_notice')).toMatchObject([{ outcome: 'attempting' }]);
+      expect(await expireExhaustedSuspicionNotices(client, { cutoff, now, allow: ALLOW, scopes: [] })).toEqual([]);
+    });
+
+    it('⭐ a PARKED row in an un-held scope is judged by `aging_since + (now − parked_at)` — BEFORE any re-claim', async () => {
+      const { client } = getTx();
+      const now = new Date();
+      const cutoff = suspicionNoticeReclaimCutoff(now);
+      const stale = new Date(now.getTime() - CORRECTION_SEND_LEASE_MS - 1);
+      const [longParked, justParked] = [
+        await refusedClaim(client, PARIWAR_A, randomUUID(), { ground: true }),
+        await refusedClaim(client, PARIWAR_A, randomUUID(), { ground: true }),
+      ];
+      // Anchor a day before the cutoff; parked two days ago ⇒ credited a day AFTER it ⇒ ⛔ given up.
+      await attemptingRow(client, longParked, 'suspicion_refusal', { agingSince: new Date(cutoff.getTime() - DAY), claimedAt: stale, job: SUSPICION_NOTICE_PARKED_BY, parkedAt: new Date(now.getTime() - 2 * DAY) });
+      // Anchor a day before the cutoff; parked just now ⇒ credited ~0 ⇒ given up.
+      await attemptingRow(client, justParked, 'suspicion_refusal', { agingSince: new Date(cutoff.getTime() - DAY), claimedAt: stale, job: SUSPICION_NOTICE_PARKED_BY, parkedAt: now });
+      const done = await expireExhaustedSuspicionNotices(client, { cutoff, now, allow: ALLOW, scopes: [scope()] });
+      expect(done).toEqual([{ claimCaseId: justParked, purpose: 'suspicion_refusal' }]);
+      expect(await noticeOf(client, longParked, 'suspicion_refusal')).toMatchObject([{ outcome: 'attempting', claimed_by_job: SUSPICION_NOTICE_PARKED_BY }]);
+    });
+
+    it('⭐ the re-claim of a PARKED row credits EXACTLY (now − parked_at) and clears `parked_at`; another job\'s take-over keeps the anchor', async () => {
+      const { client } = getTx();
+      const now = new Date();
+      const old = new Date(now.getTime() - 4 * DAY);
+      const stale = new Date(now.getTime() - 2 * CORRECTION_SEND_LEASE_MS);
+      const [parked, crashed] = [
+        await refusedClaim(client, PARIWAR_A, randomUUID(), { ground: true }),
+        await refusedClaim(client, PARIWAR_A, randomUUID(), { ground: true }),
+      ];
+      await attemptingRow(client, parked, 'suspicion_refusal', { createdAt: old, claimedAt: stale, job: SUSPICION_NOTICE_PARKED_BY, parkedAt: new Date(now.getTime() - 37 * MIN) });
+      await attemptingRow(client, crashed, 'suspicion_refusal', { createdAt: old, claimedAt: stale, job: 'job-crashed' });
+      expect(await begin(client, parked, 'suspicion_refusal', { jobId: 'job-p', now })).toMatchObject({ kind: 'begun', attemptCount: 2 });
+      expect(await begin(client, crashed, 'suspicion_refusal', { jobId: 'job-c', now })).toMatchObject({ kind: 'begun', attemptCount: 2 });
+      expect(await agingOf(client, parked, 'suspicion_refusal')).toEqual({ aging: old.getTime() + 37 * MIN, parked: null });
+      expect(await agingOf(client, crashed, 'suspicion_refusal')).toEqual({ aging: old.getTime(), parked: null });
+      expect(await noticeOf(client, parked, 'suspicion_refusal')).toMatchObject([{ claimed_by_job: 'job-p' }]);
+    });
+
+    it('a parked row INSIDE the lease (clock skew) is still re-claimed — the parked arm admits it', async () => {
+      const { client } = getTx();
+      const now = new Date();
+      const s = await refusedClaim(client, PARIWAR_A, randomUUID(), { ground: true });
+      await attemptingRow(client, s, 'suspicion_refusal', { claimedAt: now, job: SUSPICION_NOTICE_PARKED_BY, parkedAt: now });
+      expect(await begin(client, s, 'suspicion_refusal', { jobId: 'job-other', now })).toMatchObject({ kind: 'begun', attemptCount: 2 });
+    });
+
+    it('⭐ FLAPPING holds — three one-day parks credit three days, and the row IS given up once its non-parked time passes three', async () => {
+      const { client } = getTx();
+      const s = await refusedClaim(client, PARIWAR_A, randomUUID(), { ground: true });
+      let t = new Date(Date.now() - 20 * DAY);
+      await attemptingRow(client, s, 'suspicion_refusal', { createdAt: t, claimedAt: t });
+      const start = (await agingOf(client, s, 'suspicion_refusal')).aging;
+      const db = bindScopedDb(client);
+      for (let i = 0; i < 3; i += 1) {
+        t = new Date(t.getTime() + DAY);
+        expect(await parkHeldSuspicionNotices(client, { now: t, allow: ALLOW, held: [scope()] })).toHaveLength(1);
+        t = new Date(t.getTime() + DAY);
+        const b = (await begin(client, s, 'suspicion_refusal', { jobId: `job-${String(i)}`, now: t })) as { kind: string; noticeId: string };
+        expect(b.kind).toBe('begun');
+        await noteSuspicionNoticeTransient(db, { pariwarId: pid, noticeId: b.noticeId, jobId: `job-${String(i)}`, detail: 'api_unavailable:timeout' });
+      }
+      const credited = (await agingOf(client, s, 'suspicion_refusal')).aging;
+      expect(credited).toBe(start + 3 * DAY);
+      const after = new Date(t.getTime() + CORRECTION_SEND_LEASE_MS + MIN);
+      expect(await expireExhaustedSuspicionNotices(client, { cutoff: new Date(credited), now: after, allow: ALLOW, scopes: [scope()] })).toEqual([]);
+      expect(await expireExhaustedSuspicionNotices(client, { cutoff: new Date(credited + 1), now: after, allow: ALLOW, scopes: [scope()] })).toEqual([
+        { claimCaseId: s, purpose: 'suspicion_refusal' },
+      ]);
+    });
+
+    it('⭐ ALTERNATING held / un-held DAILY runs (a failing child on each un-held day) ⇒ the row IS given up once its un-held days pass three', async () => {
+      const { client } = getTx();
+      const s = await refusedClaim(client, PARIWAR_A, randomUUID(), { ground: true });
+      const base = new Date(Date.now() - 30 * DAY);
+      await attemptingRow(client, s, 'suspicion_refusal', { createdAt: base, claimedAt: base });
+      const db = bindScopedDb(client);
+      let givenUpOn: number | null = null;
+      for (let day = 1; day <= 12 && givenUpOn === null; day += 1) {
+        const now = new Date(base.getTime() + day * DAY);
+        if (day % 2 === 1) {
+          // HELD — the sweep parks; ⛔ give-up for this scope.
+          await parkHeldSuspicionNotices(client, { now, allow: ALLOW, held: [scope()] });
+          continue;
+        }
+        // UN-held — the give-up FIRST (judging the parked row by its credited anchor), then a child that fails.
+        const done = await expireExhaustedSuspicionNotices(client, { cutoff: suspicionNoticeReclaimCutoff(now), now, allow: ALLOW, scopes: [scope()] });
+        if (done.some((d) => d.claimCaseId === s)) {
+          givenUpOn = day;
+          break;
+        }
+        const b = (await begin(client, s, 'suspicion_refusal', { jobId: `job-${String(day)}`, now })) as { kind: string; noticeId: string };
+        expect(b.kind).toBe('begun');
+        await noteSuspicionNoticeTransient(db, { pariwarId: pid, noticeId: b.noticeId, jobId: `job-${String(day)}`, detail: 'rate_limited:E004' });
+      }
+      // Half the days were parked: un-held time passes three IST days by day 6–8 (a skip-the-parked-row give-up never fires).
+      expect(givenUpOn).not.toBeNull();
+      expect(givenUpOn!).toBeGreaterThanOrEqual(6);
+      expect(givenUpOn!).toBeLessThanOrEqual(8);
+      expect(await noticeOf(client, s, 'suspicion_refusal')).toMatchObject([{ outcome: 'error', detail: 'exhausted:attempting_three_days', first_detail: 'rate_limited:E004' }]);
+    });
+
+    it('⭐ a child-INSERTed row takes the `aging_since` DEFAULT (the DB clock) and is given up by it', async () => {
+      const { client } = getTx();
+      const s = await refusedClaim(client, PARIWAR_A, randomUUID(), { ground: true });
+      expect(await begin(client, s, 'suspicion_refusal', { jobId: 'job-crash' })).toMatchObject({ kind: 'begun', attemptCount: 1 });
+      const { aging, parked } = await agingOf(client, s, 'suspicion_refusal');
+      expect(parked).toBeNull();
+      expect(Math.abs(aging - Date.now())).toBeLessThan(60 * MIN);
+      const later = new Date(Date.now() + CORRECTION_SEND_LEASE_MS + MIN);
+      expect(await expireExhaustedSuspicionNotices(client, { cutoff: new Date(aging), now: later, allow: ALLOW, scopes: [scope()] })).toEqual([]);
+      expect(await expireExhaustedSuspicionNotices(client, { cutoff: new Date(aging + 1), now: later, allow: ALLOW, scopes: [scope()] })).toEqual([
+        { claimCaseId: s, purpose: 'suspicion_refusal' },
+      ]);
     });
   });
 });

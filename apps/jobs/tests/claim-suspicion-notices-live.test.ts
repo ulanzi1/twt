@@ -6,6 +6,9 @@
 // Pariwar, and the alarm samples only five ids. ⭐ REAL envelopes: the nominee / claimant mobiles
 // and the deceased's KYC name are encrypted under the SAME fake-KMS deps the child decrypts with. Assertions key on OUR
 // claim ids (membership, ⛔ never counts of the shared tables).
+// ⭐ Story 6.29 (`2026-10-10-302` RN2–RN5, RN10): each hold kind PARKS a crash-left row of its (purpose, Pariwar) — ⛔ given up
+// however old — while an UN-held scope's row is given up in the SAME runs; once the hold clears the child re-claims and sends; every
+// gateway class finalises with a BUILT detail (⛔ a raw code — a phone number — in the row, an alarm or a thrown error).
 //
 // The world of one death: v1 — nominee A (…1111), declared BEFORE the death; v2 — nominee B (…2222), declared AFTER it.
 // A refused claim's determination (a raw row — a NULL `death_certificate_review_id` is trusted as effective, RF9) marks
@@ -759,5 +762,181 @@ describe.skipIf(!hasDatabase)('Story 6.24b — the suspicion notices (live DB, o
     await runSuspicionNoticeSweep(h.deps, boss(h));
     expect((await rowsOf(s2)).find((r) => r.purpose === 'suspicion_refusal')).toMatchObject({ outcome: 'error', detail: 'exhausted:attempting_three_days' });
     expect(h.alarms.some((a) => a.includes('gave up') && a.includes(s2))).toBe(true);
+  });
+
+  // ── Story 6.29 (`2026-10-10-302`) — the hold park, the post-hold send, the built detail ─────────────────────────
+
+  /** A crash: the claiming transaction commits at `at`, the child dies before sending (`attempting`, `detail` NULL). */
+  async function crash(pariwarId: string, cid: string, purpose: Purpose, at: Date): Promise<void> {
+    const out = await onOwnTx(pool, pariwarId, (client) =>
+      claim.beginSuspicionNotice(client, { pariwarId: ids.pariwarId(pariwarId), claimCaseId: ids.claimId(cid), purpose, jobId: 'crashed', now: at }),
+    );
+    expect(out).toMatchObject({ kind: 'begun' });
+  }
+  async function parkedOf(cid: string, purpose: Purpose) {
+    const { rows } = await pool.query<{ outcome: string; claimed_by_job: string; parked_at: Date | null; attempt_count: number; detail: string | null }>(
+      `SELECT outcome, claimed_by_job, parked_at, attempt_count, detail FROM claim_suspicion_notices WHERE claim_case_id = $1 AND purpose = $2`,
+      [cid, purpose],
+    );
+    return rows[0]!;
+  }
+
+  type HoldCase = {
+    readonly label: string;
+    /** The purpose the hold covers (the held crash-left row's). */
+    readonly held: Purpose;
+    /** The un-held scope sharing the run — ⛔ for the gateway (it holds every purpose). */
+    readonly unheld: 'other_purpose' | 'other_pariwar' | null;
+    readonly hold: (h: Harness, own: string) => void;
+    readonly clear: (h: Harness, own: string) => void;
+  };
+  const templateKey = 'sms.dlt.template_id.suspicion_notice.refusal_notice.hi';
+  let failTemplate = false;
+  let failHelplineOf: string | null = null;
+  const HOLD_CASES: readonly HoldCase[] = [
+    { label: 'the gateway unconfigured', held: 'suspicion_refusal', unheld: null, hold: (h) => (h.configured.value = false), clear: (h) => (h.configured.value = true) },
+    { label: "the purpose's template-id read FAILING in Secret Manager", held: 'suspicion_refusal', unheld: 'other_purpose', hold: () => (failTemplate = true), clear: () => (failTemplate = false) },
+    {
+      label: "the purpose's template id MISSING in ONE locale (`appeal_notice` en)",
+      held: 'refusal_appeal_notice',
+      unheld: 'other_purpose',
+      hold: (h) => (h.config['sms.dlt.template_id.suspicion_notice.appeal_notice.en'] = null),
+      clear: (h) => delete h.config['sms.dlt.template_id.suspicion_notice.appeal_notice.en'],
+    },
+    {
+      label: "the Pariwar's helpline MISSING",
+      held: 'suspicion_refusal',
+      unheld: 'other_pariwar',
+      hold: (h, own) => (h.config[`sms.claim_correction.helpline_number.${own}`] = null),
+      clear: (h, own) => delete h.config[`sms.claim_correction.helpline_number.${own}`],
+    },
+    { label: "the Pariwar's helpline lookup FAILING", held: 'suspicion_refusal', unheld: 'other_pariwar', hold: (_h, own) => (failHelplineOf = own), clear: () => (failHelplineOf = null) },
+  ];
+
+  it.each(HOLD_CASES)('⭐ RN2 — $label ⇒ the crash-left row is PARKED (⛔ given up past three days), the un-held scope\'s row IS given up; the hold clears ⇒ re-claimed and SENT', async (c) => {
+    const own = isolated();
+    const other = isolated();
+    const h = harness({
+      allow: [own, other],
+      resolveConfig: async (key) => {
+        if (failTemplate && key === templateKey) throw Object.assign(new Error('unavailable'), { code: 14 });
+        if (failHelplineOf !== null && key === `sms.claim_correction.helpline_number.${failHelplineOf}`) throw Object.assign(new Error('denied'), { code: 7 });
+        if (key in h.config) return h.config[key]!;
+        if (key.startsWith('sms.dlt.template_id.suspicion_notice.')) return 'TPL-SUSPICION';
+        if (key.startsWith('sms.claim_correction.helpline_number.')) return HELPLINE;
+        return null;
+      },
+    });
+    const t0 = new Date();
+    const d = await seedDeath({ pariwarId: own });
+    const heldClaim = await refusedS(d);
+    if (c.held === 'refusal_appeal_notice') await contact(d, heldClaim, { linked: null });
+    await crash(own, heldClaim, c.held, t0);
+    // ⭐ A held-scope row ALREADY past three days when the hold's first sweep runs (sweeps were missed) — parked, ⛔ given up.
+    const od = await seedDeath({ pariwarId: own });
+    const oldHeld = await refusedS(od);
+    if (c.held === 'refusal_appeal_notice') await contact(od, oldHeld, { linked: null });
+    const fourDaysAgo = new Date(t0.getTime() - 4 * DAY);
+    await pool.query(
+      `INSERT INTO claim_suspicion_notices (pariwar_id, claim_case_id, purpose, outcome, claimed_at, claimed_by_job, created_at, aging_since)
+       VALUES ($1, $2, $3, 'attempting', $4, 'crashed', $4, $4)`,
+      [own, oldHeld, c.held, fourDaysAgo],
+    );
+    let unheld: { cid: string; purpose: Purpose } | null = null;
+    if (c.unheld === 'other_purpose') {
+      const purpose: Purpose = c.held === 'suspicion_refusal' ? 'refusal_appeal_notice' : 'suspicion_refusal';
+      const ud = await seedDeath({ pariwarId: own });
+      const cid = await refusedS(ud);
+      if (purpose === 'refusal_appeal_notice') await contact(ud, cid, { linked: null });
+      await crash(own, cid, purpose, t0);
+      unheld = { cid, purpose };
+    } else if (c.unheld === 'other_pariwar') {
+      const ud = await seedDeath({ pariwarId: other });
+      const cid = await refusedS(ud);
+      await crash(other, cid, 'suspicion_refusal', t0);
+      unheld = { cid, purpose: 'suspicion_refusal' };
+    }
+    try {
+      c.hold(h, own);
+      // Four HELD daily sweeps (⛔ children — the un-held row's would send): day 1 parks; ⛔ give-up of the held row by day 4.
+      for (let day = 1; day <= 4; day += 1) {
+        h.setNow(new Date(t0.getTime() + day * DAY));
+        await runSuspicionNoticeSweep(h.deps, boss(h));
+      }
+      expect(await parkedOf(heldClaim, c.held)).toMatchObject({ outcome: 'attempting', claimed_by_job: claim.SUSPICION_NOTICE_PARKED_BY, detail: null });
+      expect((await parkedOf(heldClaim, c.held)).parked_at!.getTime()).toBe(t0.getTime() + DAY); // day 1's park, ⛔ re-parked
+      expect(h.alarms.filter((a) => a.includes('newly PARKED') && a.includes(heldClaim))).toHaveLength(1);
+      expect(h.alarms.some((a) => a.includes('gave up') && a.includes(heldClaim))).toBe(false);
+      expect(await parkedOf(oldHeld, c.held)).toMatchObject({ outcome: 'attempting', claimed_by_job: claim.SUSPICION_NOTICE_PARKED_BY });
+      if (unheld !== null) {
+        expect(await parkedOf(unheld.cid, unheld.purpose)).toMatchObject({ outcome: 'error', detail: 'exhausted:attempting_three_days' });
+        expect(h.alarms.some((a) => a.includes('gave up') && a.includes(unheld!.cid))).toBe(true);
+      }
+      expect(h.sent).toEqual([]);
+    } finally {
+      c.clear(h, own);
+    }
+    // ⭐ The hold clears: the next run's child re-claims the parked row at once — the locked re-check still holds — and SENDS.
+    h.setNow(new Date(t0.getTime() + 5 * DAY));
+    await tick(h, [heldClaim]);
+    expect(await parkedOf(heldClaim, c.held)).toMatchObject({ outcome: 'accepted', claimed_by_job: expect.not.stringMatching(/sweep:held/), attempt_count: 2 });
+    // ONE text for the held purpose (its recipient — A for (a), the claimant for (c)); the claim's OTHER purpose, never held, may
+    // be due in its own right.
+    expect(textsTo(h, c.held === 'refusal_appeal_notice' ? CLAIMANT : A)).toHaveLength(1);
+  });
+
+  it.each([
+    ['INVALID_NUMBER', 400, 'rejected_invalid_number', 'invalid_number:INVALID_NUMBER', false],
+    ['CARRIER_REJECT', 400, 'rejected_unreachable', 'carrier_reject:CARRIER_REJECT', false],
+    ['E002', 400, 'error', 'dlt_template_not_approved:E002', true],
+    ['AUTH_FAILED', 401, 'error', 'auth:AUTH_FAILED', true],
+    ['9876543210', 400, 'error', 'unknown:unknown', true],
+    [' +91 98765 43210', 418, 'error', 'unknown:unknown', true],
+    ['E999', 400, 'error', 'unknown:E999', true],
+  ] as const)('⭐ RN4 / RN5 — gateway %s (%i) ⇒ %s with the BUILT detail %s — the finalise lands (⛔ a CHECK failure after a send)', async (code, status, outcome, detail, alarmed) => {
+    const d = await seedDeath();
+    const s = await refusedS(d);
+    const h = harness({ gateway: () => Promise.reject(new SmsSendError('x', code, status)) });
+    await tick(h, [s]);
+    expect((await rowsOf(s)).find((r) => r.purpose === 'suspicion_refusal')).toMatchObject({ outcome, detail });
+    const mine = h.alarms.filter((a) => a.includes(s));
+    expect(mine.some((a) => a.includes(`${detail} for the`))).toBe(alarmed);
+    expect(JSON.stringify(h.alarms)).not.toMatch(/9876543210|98765 43210/);
+  });
+
+  it('⭐ RN5 — a NON-gateway throw ⇒ `error` / `unknown:unknown` + alarm; a send TIMEOUT ⇒ transient `api_unavailable:timeout`', async () => {
+    const d = await seedDeath();
+    const s = await refusedS(d);
+    const h = harness({ gateway: () => Promise.reject(new Error('socket hang up 9876543210')) });
+    await tick(h, [s]);
+    expect((await rowsOf(s)).find((r) => r.purpose === 'suspicion_refusal')).toMatchObject({ outcome: 'error', detail: 'unknown:unknown' });
+    const d2 = await seedDeath();
+    const s2 = await refusedS(d2);
+    const h2 = harness({ gateway: () => new Promise<string>(() => undefined) });
+    (h2.deps as { sendTimeoutMs?: number }).sendTimeoutMs = 50;
+    await runSuspicionNoticeSweep(h2.deps, boss(h2));
+    const [child] = childrenFor(h2, s2, 'suspicion_refusal');
+    await expect(runSuspicionNoticeChild(h2.deps, child!.data, 'job-timeout')).rejects.toBeInstanceOf(ClaimCorrectionTransientError);
+    expect((await rowsOf(s2)).find((r) => r.purpose === 'suspicion_refusal')).toMatchObject({ outcome: 'attempting', detail: 'api_unavailable:timeout' });
+  });
+
+  it.each([
+    ['RATE_LIMIT', 429, 'rate_limited:RATE_LIMIT'],
+    ['9876543210', 429, 'rate_limited:unknown'],
+    ['+91 98765 43210', 503, 'api_unavailable:unknown'],
+  ] as const)('⭐ RN5 — a TRANSIENT %s (%i) ⇒ the note stores %s; the thrown error and the alarms carry the BUILT detail', async (code, status, detail) => {
+    const d = await seedDeath();
+    const s = await refusedS(d);
+    const h = harness({ gateway: () => Promise.reject(new SmsSendError('x', code, status)) });
+    await runSuspicionNoticeSweep(h.deps, boss(h));
+    const [child] = childrenFor(h, s, 'suspicion_refusal');
+    const err = await runSuspicionNoticeChild(h.deps, child!.data, 'job-t').then(
+      () => null,
+      (e: unknown) => e as Error,
+    );
+    expect(err).toBeInstanceOf(ClaimCorrectionTransientError);
+    expect(err!.message).toContain(detail);
+    expect(err!.message).not.toMatch(/9876543210|98765 43210/);
+    expect((await rowsOf(s)).find((r) => r.purpose === 'suspicion_refusal')).toMatchObject({ outcome: 'attempting', detail });
   });
 });

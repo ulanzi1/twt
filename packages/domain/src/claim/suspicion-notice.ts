@@ -25,8 +25,12 @@
 // failures — the predicate HELD; they FINISH the slot here (a `no_target` row) and the caller alarms once.
 // ⭐ Every selector also returns a claim with an `attempting` row of that purpose (a crash left it) — bypassing the
 // predicate — so its locked re-check runs and finishes it (⛔ stranded once its predicate turns false). A row still
-// `attempting` three IST days after it was created is given up (`expireExhaustedSuspicionNotices`, RB3) — unless it was
-// re-claimed within the send lease (a live child may be sending it; the next sweep takes it).
+// `attempting` three IST days after its `aging_since` is given up (`expireExhaustedSuspicionNotices`, RB3 AS AMENDED BY
+// `2026-10-10-302` RN3) — unless it was re-claimed within the send lease (a live child may be sending it; the next sweep takes
+// it). ⭐ `-302` RN2: a row whose (purpose, Pariwar) a config gap HOLDS is PARKED (`parkHeldSuspicionNotices`) and ⛔ given up
+// while held; the give-up judges a parked row by `aging_since` + the time it has sat parked, and re-claiming it moves
+// `aging_since` forward by that time — the bound is three IST days of NON-parked time. `detail` is built ONLY by
+// `suspicionNoticeDetail` (`-302` RN5); 0155 CHECKs its grammar and freezes a FINISHED row (`-302` RN6).
 // ⚠ AT-LEAST-ONCE (6.19b's): a timeout or a crash after a gateway accept may produce a second text; `attempt_count` and
 // `first_detail` record it. "Once ever" holds for FINISHED rows.
 // ⭐ LOCKS (`-294` §1): ONLY the claim row (`FOR UPDATE`, `SET LOCAL lock_timeout`) — ⛔ no advisory key, ⛔ never a second
@@ -45,7 +49,7 @@ import { bindScopedDb, type Db } from '../db.js';
 import type { ClaimId, MemberId, PariwarId } from '../ids/index.js';
 import { listNomineeDeclarationVersions } from '../nominee/declaration-history.js';
 import { clampLimit } from '../pagination.js';
-import type { SuspicionNoticePurpose } from '../schema/claim_suspicion_notices.js';
+import { SUSPICION_NOTICE_DETAIL_PATTERN, type SuspicionNoticePurpose } from '../schema/claim_suspicion_notices.js';
 import { type ChainVersion, chainHeadOf } from './certificate-reminder.js';
 import { correctionChainOf, readClaimContact } from './claim-contact-check.js';
 import { CORRECTION_SEND_LEASE_MS } from './correction-reminder-record.js';
@@ -71,6 +75,13 @@ export const SUSPICION_NOTICE_PAGE_CAP = 1000;
 export const SUSPICION_NOTICE_RECLAIM_DAYS = 3;
 /** The claiming transaction's wait on the claim-row lock (`SET LOCAL`). */
 export const SUSPICION_NOTICE_LOCK_TIMEOUT = '30s';
+/**
+ * ⭐ THE PARKED MARKER (`2026-10-10-302` RN2) — `claimed_by_job` of an `attempting` row a HELD sweep parked: it was past the lease
+ * when its (purpose, Pariwar) was held by a config gap. The give-up judges it by its CREDITED anchor (`aging_since` + the time it
+ * has sat parked); the next child RE-CLAIMS it and moves `aging_since` forward by that time (0155's trigger lets it move only so).
+ * ⛔ A pg-boss job id (a UUID). ⚠ Its value equals 6.25's `SUSPICION_STAFF_EMAIL_PARKED_BY` — two tables, two names.
+ */
+export const SUSPICION_NOTICE_PARKED_BY = 'sweep:held';
 
 type Queryable = Pick<pg.Pool, 'query'> | Pick<pg.PoolClient, 'query'>;
 
@@ -84,6 +95,111 @@ async function run<T extends pg.QueryResultRow>(q: Queryable, statement: SQL): P
 
 function toDate(v: Date | string): Date {
   return v instanceof Date ? v : new Date(v);
+}
+
+// ── The `detail` grammar (`-302` RN5) — ONE builder; ⛔ free text, ⛔ a raw gateway code, ⛔ a phone number ───────────────
+
+/** Why a locked re-check failed (RB10) — `appeal_<position>` for (c). ⚠ LOCKSTEP with 0155's grammar (a leg iterates this). */
+export const SUSPICION_NOTICE_RECHECK_REASONS = [
+  'not_standing',
+  'not_closed_by_appeal',
+  'appeal_time_limit_passed',
+  'appeal_open',
+  'appeal_upheld_final',
+] as const;
+export type SuspicionNoticeRecheckReason = (typeof SUSPICION_NOTICE_RECHECK_REASONS)[number];
+/** Why a slot finished with ⛔ text (RB15 in the claiming tx; the child's ⛔-recipient / ⛔-number). ⚠ LOCKSTEP, as above. */
+export const SUSPICION_NOTICE_NO_TARGET_DETAILS = ['not_effective', 'no_contact_record', 'no_sendable_number', 'closed_no_determination'] as const;
+/** RB5 — the deceased's name could ⛔ be used. ⚠ LOCKSTEP, as above. */
+export const SUSPICION_NOTICE_NAME_DETAILS = ['none', 'erased', 'unresolvable'] as const;
+/** The child's transient faults BEFORE the send (KMS / the keyed hash). ⚠ LOCKSTEP, as above. */
+export const SUSPICION_NOTICE_PRE_SEND_FAULTS = ['decrypt_failed:kyc', 'decrypt_failed:tier1', 'hash_failed:tier1'] as const;
+/** The shared send core's fixed config details (`claim-dlt-sms-send.ts` — RB4). ⚠ LOCKSTEP, as above. */
+export const SUSPICION_NOTICE_SEND_CONFIG_DETAILS = [
+  'config_unavailable:secret_manager',
+  'config:dlt_template_id_missing',
+  'config:helpline_number_missing',
+  'config:sms_gateway_unconfigured',
+  'config:sms_messaging_unavailable',
+] as const;
+/** The SMS gateway's failure classes (`@twt/channels` `SmsErrorClass` — the send core's `<class>:<code>`). ⚠ LOCKSTEP, as above. */
+export const SUSPICION_NOTICE_SMS_ERROR_CLASSES = [
+  'invalid_number',
+  'carrier_reject',
+  'rate_limited',
+  'api_unavailable',
+  'dlt_template_not_approved',
+  'auth',
+  'unknown',
+] as const;
+
+/** What a `detail` can say. `send` = the shared core's RAW `result.detail` — parsed and its gateway code sanitised here. */
+export type SuspicionNoticeDetailInput =
+  | { readonly kind: 'exhausted_three_days' }
+  | { readonly kind: 'recheck'; readonly reason: SuspicionNoticeRecheckReason }
+  | { readonly kind: 'no_target'; readonly reason: (typeof SUSPICION_NOTICE_NO_TARGET_DETAILS)[number] }
+  | { readonly kind: 'excluded_claimant' }
+  | { readonly kind: 'name'; readonly reason: (typeof SUSPICION_NOTICE_NAME_DETAILS)[number] }
+  | { readonly kind: 'pre_send'; readonly fault: (typeof SUSPICION_NOTICE_PRE_SEND_FAULTS)[number] }
+  | { readonly kind: 'send'; readonly detail: string };
+
+const GATEWAY_CODE = /^[A-Za-z0-9_.-]{1,64}$/;
+const DIGIT_RUN = /[0-9]{7}/;
+const SECRET_MANAGER_PREFIX = 'config:secret_manager_';
+
+/**
+ * A gateway `<code>` as stored (`-302` RN5): kept only if it is `[A-Za-z0-9_.-]{1,64}` with ⛔ run of 7+ digits, else `unknown`.
+ * `extractGatewayCode` passes ANY non-blank string, untrimmed, and stringifies a numeric code — a bare phone number would survive.
+ */
+export function sanitizeSmsGatewayCode(code: string): string {
+  return GATEWAY_CODE.test(code) && !DIGIT_RUN.test(code) ? code : 'unknown';
+}
+
+/** The shared core's raw detail (`<class>:<code>`, a fixed config literal, or `config:secret_manager_<NAME>`) in the grammar. */
+function sendDetail(raw: string): string {
+  if ((SUSPICION_NOTICE_SEND_CONFIG_DETAILS as readonly string[]).includes(raw)) return raw;
+  if (raw.startsWith(SECRET_MANAGER_PREFIX)) {
+    const name = raw.slice(SECRET_MANAGER_PREFIX.length);
+    return `${SECRET_MANAGER_PREFIX}${/^[A-Za-z0-9_]{1,64}$/.test(name) && !DIGIT_RUN.test(name) ? name : 'unknown'}`;
+  }
+  const colon = raw.indexOf(':');
+  const errorClass = colon < 0 ? raw : raw.slice(0, colon);
+  if (!(SUSPICION_NOTICE_SMS_ERROR_CLASSES as readonly string[]).includes(errorClass)) return 'unknown:unknown';
+  return `${errorClass}:${sanitizeSmsGatewayCode(colon < 0 ? '' : raw.slice(colon + 1))}`;
+}
+
+/** ⭐ `-302` RN5 — THE ONLY way a 0151 `detail` / `first_detail` is built (0155 CHECKs the SAME grammar). */
+export function suspicionNoticeDetail(d: SuspicionNoticeDetailInput): string {
+  switch (d.kind) {
+    case 'exhausted_three_days':
+      return 'exhausted:attempting_three_days';
+    case 'recheck':
+      return `exhausted:recheck_${d.reason}`;
+    case 'no_target':
+      return `no_target:${d.reason}`;
+    case 'excluded_claimant':
+      return 'excluded:claimant_discarded_version';
+    case 'name':
+      return `name:${d.reason}`;
+    case 'pre_send':
+      return d.fault;
+    case 'send':
+      return sendDetail(d.detail);
+  }
+}
+
+const DETAIL_PATTERN = new RegExp(SUSPICION_NOTICE_DETAIL_PATTERN);
+
+/** Does `detail` match the grammar (0155's CHECK — the SAME pattern)? */
+export function isSuspicionNoticeDetail(detail: string): boolean {
+  return DETAIL_PATTERN.test(detail);
+}
+
+/** ⛔ A writer stores a `detail` outside the grammar (0155 would refuse it too — this fails BEFORE the statement, ⛔ value echoed). */
+function assertDetail(detail: string | null): void {
+  if (detail !== null && !isSuspicionNoticeDetail(detail)) {
+    throw new Error('[suspicion-notice] a detail outside the fixed grammar — build it with suspicionNoticeDetail');
+  }
 }
 
 // ── The selectors (RB10) — cross-tenant, BYPASSRLS pool, keyset-paged on `claim_case_id`, clamped ──────────────────
@@ -204,46 +320,143 @@ export async function selectDueSuspicionNotices(
   return { due, lastClaimCaseId: last ? (last.claim_case_id as ClaimId) : null, scanned: rows.length };
 }
 
-// ── The give-up (RB3) ────────────────────────────────────────────────────────────────────────────────────────────
+// ── The hold and the give-up (RB3 AS AMENDED BY `-302` RN2 / RN3) ─────────────────────────────────────────────────
 
-/** RB3 — rows created before this instant and still `attempting` are given up: 00:00 IST of (today − 2). */
+/** One (purpose, Pariwar) — the unit a config gap HOLDS (`-302` RN2): a purpose's gap, or its Pariwar's helpline gap. */
+export interface SuspicionNoticeScope {
+  readonly purpose: SuspicionNoticePurpose;
+  readonly pariwarId: PariwarId;
+}
+
+/** The `(purpose, pariwar_id) IN (…)` operands — two parallel arrays (`unnest`). */
+function scopeArrays(scopes: readonly SuspicionNoticeScope[]): [string[], string[]] {
+  return [scopes.map((x) => x.purpose), scopes.map((x) => String(x.pariwarId).toLowerCase())];
+}
+
+/** RB3 — rows whose (credited) `aging_since` is before this instant and still `attempting` are given up: 00:00 IST of (today − 2). */
 export function suspicionNoticeReclaimCutoff(now: Date): Date {
   return istMidnightAt(addCalendarDays(istDateOf(now), -(SUSPICION_NOTICE_RECLAIM_DAYS - 1)));
 }
 
 /**
- * ⭐ RB3 — THE EXHAUSTED-ROW FINALISER: every row still `attempting` that was created before `cutoff` — and whose LAST claim
- * is older than the send lease — becomes `error` / `exhausted:attempting_three_days` (the transient detail kept in
+ * ⭐ `-302` RN2 — THE STALLED SCOPES: the distinct (purpose, Pariwar) of every `attempting` row past the send lease (crash-left rows
+ * — and parked ones — a small set), so the sweep can decide which are HELD before it parks or gives up anything.
+ *
+ * ── DELIBERATE: a CROSS-TENANT READ on the BYPASSRLS pool (family 9) ──
+ * The give-up's and the park's twin: they span every tenant, and so must the scopes they act on. It RETURNS ids only (a purpose
+ * and a Pariwar id) — ⛔ PII, ⛔ value from one tenant reaches another; `allow` (tests) narrows it. RE-EXAMINE when: the result
+ * ever carries more than those ids, the pool loses BYPASSRLS, or a per-tenant scheduler exists.
+ */
+export async function listStalledSuspicionNoticeScopes(
+  q: Queryable,
+  input: { readonly now: Date; readonly allow: readonly string[] | null },
+): Promise<SuspicionNoticeScope[]> {
+  const { rows } = await q.query<{ purpose: SuspicionNoticePurpose; pariwar_id: string }>(
+    `SELECT DISTINCT purpose, pariwar_id FROM claim_suspicion_notices
+      WHERE outcome = 'attempting' AND claimed_at < $1
+        AND ($2::uuid[] IS NULL OR pariwar_id = ANY($2::uuid[]))
+      ORDER BY purpose, pariwar_id`,
+    [new Date(input.now.getTime() - CORRECTION_SEND_LEASE_MS), input.allow === null ? null : [...input.allow]],
+  );
+  return rows.map((r) => ({ purpose: r.purpose, pariwarId: r.pariwar_id as PariwarId }));
+}
+
+/**
+ * ⭐ `-302` RN2 — THE HOLD PARK: every `attempting` row of a HELD scope past the send lease, ⛔ already parked, is marked
+ * `claimed_by_job` = `SUSPICION_NOTICE_PARKED_BY` with `parked_at` = the run's instant — EVERY such row, ⛔ only give-up candidates
+ * (a row parked only once it is a candidate would keep ⛔ budget after the hold). ⛔ `detail`, ⛔ `claimed_at` touched; a row already
+ * parked keeps its `parked_at` (its credit). Returns the rows parked, for the caller's ONE alarm (ids only).
+ * ⚠ A LIVE child between pg-boss backoffs (up to ~16 min — past the 10-minute lease) CAN be parked: benign — its next `begin`
+ * re-claims the row (the re-claim admits the parked marker), crediting ~0.
+ *
+ * ── DELIBERATE: a CROSS-TENANT WRITE on the BYPASSRLS pool (family 9) ──
+ * The give-up's twin (6.25's `parkHeldSuspicionStaffEmails`, adapted to per-scope holds): its predicate (`attempting`, claimed before
+ * the lease, ⛔ parked, in a listed scope) and its effect (one marker value and the run's instant) read and write ⛔ nothing
+ * tenant-derived — ⛔ PII, ⛔ cross-row join; `allow` (tests) narrows it. It takes ⛔ claim-row lock: a child re-claiming the row
+ * concurrently is re-evaluated by its own UPDATE's lease predicate (`-302` RN7), and this UPDATE's own predicate re-evaluates a row a
+ * child just re-claimed (`claimed_at` inside the lease ⇒ ⛔ parked). RE-EXAMINE when: the statement ever writes a value derived from
+ * another row or tenant, the pool loses BYPASSRLS, a per-tenant scheduler exists, or the lease stops bounding a live child's silence.
+ */
+export async function parkHeldSuspicionNotices(
+  q: Queryable,
+  input: { readonly now: Date; readonly allow: readonly string[] | null; readonly held: readonly SuspicionNoticeScope[] },
+): Promise<{ readonly claimCaseId: ClaimId; readonly purpose: SuspicionNoticePurpose }[]> {
+  if (input.held.length === 0) return [];
+  const [purposes, pariwars] = scopeArrays(input.held);
+  const { rows } = await q.query<{ claim_case_id: string; purpose: SuspicionNoticePurpose }>(
+    `UPDATE claim_suspicion_notices
+        SET claimed_by_job = $3, parked_at = $4::timestamptz, updated_at = clock_timestamp()
+      WHERE outcome = 'attempting' AND claimed_at < $1 AND claimed_by_job <> $3
+        AND ($2::uuid[] IS NULL OR pariwar_id = ANY($2::uuid[]))
+        AND (purpose, pariwar_id) IN (SELECT * FROM unnest($5::text[], $6::uuid[]))
+      RETURNING claim_case_id, purpose`,
+    [
+      new Date(input.now.getTime() - CORRECTION_SEND_LEASE_MS),
+      input.allow === null ? null : [...input.allow],
+      SUSPICION_NOTICE_PARKED_BY,
+      input.now,
+      purposes,
+      pariwars,
+    ],
+  );
+  return rows.map((r) => ({ claimCaseId: r.claim_case_id as ClaimId, purpose: r.purpose }));
+}
+
+/**
+ * ⭐ RB3 AS AMENDED BY `-302` RN3 — THE EXHAUSTED-ROW FINALISER, over the UN-HELD `scopes` ONLY (the caller passes them; a held
+ * scope's rows are parked instead): every row still `attempting` whose anchor is before `cutoff` — `aging_since`, or for a PARKED
+ * row `aging_since + (now − parked_at)` (the time it has sat parked is ⛔ counted, so alternating held / un-held days converge) — and
+ * whose LAST claim is older than the send lease becomes `error` / `exhausted:attempting_three_days` (the transient detail kept in
  * `first_detail`). Returns the claims finalised, for the caller's alarm (ids only).
  *
  * ── DELIBERATE: a CROSS-TENANT WRITE on the BYPASSRLS pool (family 9) ──
- * 6.19b's reasoning (`claim-correction-reminders.ts`): a time bound over EVERY tenant's rows; its predicate (`attempting`,
- * created before the cutoff, claimed before the lease) and its effect (→ `error`, the detail moved to `first_detail`) read
- * and write ⛔ nothing tenant-derived — ⛔ no PII, ⛔ no cross-row join; `allow` (tests) narrows it. ⚠ Unlike 6.19b's
- * one-day bound, a three-day-old row can be RE-CLAIMED today (every selector returns an `attempting` row), so a live child
- * may hold it ⇒ the lease guard (`claimed_at < now − CORRECTION_SEND_LEASE_MS`) leaves a row claimed within the lease to
- * that child's own compare-and-set. ⚠ The lease is 6.19b's constant (`correction-reminder-record.ts`) — a change THERE
- * moves this guard. It takes ⛔ no claim-row lock, so a child can lose to it two ways: a child past its claim loses
- * `finaliseSuspicionNotice`'s compare-and-set and ALARMS (*"moved on before its finalise"*); a child still in
- * `beginSuspicionNotice` loses its UPDATE (`rowCount` 0) and returns `already_final` SILENTLY — this statement's own
- * alarm (the caller's, ids) covers the row. RE-EXAMINE when: the statement ever writes a value derived from another row
- * or tenant, the pool loses BYPASSRLS, a per-tenant scheduler exists, or `CORRECTION_SEND_LEASE_MS` approaches the
- * reclaim horizon (or moves at all).
+ * 6.19b's reasoning (`claim-correction-reminders.ts`): a time bound over EVERY tenant's rows; its predicate (`attempting`, the
+ * anchor before the cutoff, claimed before the lease, in a listed scope) and its effect (→ `error`, the detail moved to
+ * `first_detail`) read and write ⛔ nothing tenant-derived — ⛔ no PII, ⛔ no cross-row join; `allow` (tests) narrows it. ⚠ Unlike
+ * 6.19b's one-day bound, an old row can be RE-CLAIMED today (every selector returns an `attempting` row), so a live child may hold
+ * it ⇒ the lease guard (`claimed_at < now − CORRECTION_SEND_LEASE_MS`) leaves a row claimed within the lease to that child's own
+ * compare-and-set. ⚠ The lease is 6.19b's constant (`correction-reminder-record.ts`) — a change THERE moves this guard. It takes
+ * ⛔ no claim-row lock, so a child can lose to it two ways: a child past its claim loses `finaliseSuspicionNotice`'s
+ * compare-and-set and ALARMS (*"moved on before its finalise"*); a child still in `beginSuspicionNotice` loses its UPDATE
+ * (`rowCount` 0) and returns `already_final` SILENTLY — this statement's own alarm (the caller's, ids) covers the row. RE-EXAMINE
+ * when: the statement ever writes a value derived from another row or tenant, the pool loses BYPASSRLS, a per-tenant scheduler
+ * exists, or `CORRECTION_SEND_LEASE_MS` approaches the reclaim horizon (or moves at all).
  */
 export async function expireExhaustedSuspicionNotices(
   q: Queryable,
-  input: { readonly cutoff: Date; readonly now: Date; readonly allow: readonly string[] | null },
+  input: {
+    readonly cutoff: Date;
+    readonly now: Date;
+    readonly allow: readonly string[] | null;
+    /** The UN-held scopes (`-302` RN2) — a row of any other scope is ⛔ given up. */
+    readonly scopes: readonly SuspicionNoticeScope[];
+  },
 ): Promise<{ readonly claimCaseId: ClaimId; readonly purpose: SuspicionNoticePurpose }[]> {
+  if (input.scopes.length === 0) return [];
+  const [purposes, pariwars] = scopeArrays(input.scopes);
   const { rows } = await q.query<{ claim_case_id: string; purpose: SuspicionNoticePurpose }>(
     `UPDATE claim_suspicion_notices
         SET outcome = 'error',
             first_detail = COALESCE(first_detail, detail),
-            detail = 'exhausted:attempting_three_days',
+            detail = $5,
             updated_at = clock_timestamp()
-      WHERE outcome = 'attempting' AND created_at < $1 AND claimed_at < $3
+      WHERE outcome = 'attempting' AND claimed_at < $3
+        AND (CASE WHEN claimed_by_job = $6
+                  THEN aging_since + GREATEST($4::timestamptz - parked_at, interval '0')
+                  ELSE aging_since END) < $1
         AND ($2::uuid[] IS NULL OR pariwar_id = ANY($2::uuid[]))
+        AND (purpose, pariwar_id) IN (SELECT * FROM unnest($7::text[], $8::uuid[]))
       RETURNING claim_case_id, purpose`,
-    [input.cutoff, input.allow === null ? null : [...input.allow], new Date(input.now.getTime() - CORRECTION_SEND_LEASE_MS)],
+    [
+      input.cutoff,
+      input.allow === null ? null : [...input.allow],
+      new Date(input.now.getTime() - CORRECTION_SEND_LEASE_MS),
+      input.now,
+      suspicionNoticeDetail({ kind: 'exhausted_three_days' }),
+      SUSPICION_NOTICE_PARKED_BY,
+      purposes,
+      pariwars,
+    ],
   );
   return rows.map((r) => ({ claimCaseId: r.claim_case_id as ClaimId, purpose: r.purpose }));
 }
@@ -428,8 +641,8 @@ async function resolveRefusalRecipient(db: Db, pariwarId: PariwarId, claimCaseId
 export type SuspicionNoticeNoTargetReason = 'closed_no_determination' | 'excluded_claimant';
 
 const NO_TARGET_DETAIL: Record<SuspicionNoticeNoTargetReason, string> = {
-  closed_no_determination: 'no_target:closed_no_determination',
-  excluded_claimant: 'excluded:claimant_discarded_version',
+  closed_no_determination: suspicionNoticeDetail({ kind: 'no_target', reason: 'closed_no_determination' }),
+  excluded_claimant: suspicionNoticeDetail({ kind: 'excluded_claimant' }),
 };
 
 export type BeginSuspicionNoticeResult =
@@ -461,7 +674,7 @@ interface NoticeRow {
 
 type Recheck =
   | { readonly ok: true; readonly appealUntil: CalendarDateString | null }
-  | { readonly ok: false; readonly reason: string };
+  | { readonly ok: false; readonly reason: SuspicionNoticeRecheckReason };
 
 /** Re-check the purpose's predicate ON the locked transaction's client (the statement clock is AFTER the lock). */
 async function recheck(
@@ -484,7 +697,7 @@ async function recheck(
   // Both ids are lower-case (Postgres prints them so; the caller normalises its own — `beginSuspicionNotice`).
   const own = (await readStandingSuspicionRefusals(db, pariwarId, claim.deceasedMemberId)).find((r) => r.claimCaseId === claimCaseId);
   if (!own) return { ok: false, reason: 'not_standing' };
-  if (own.appeal !== 'not_filed') return { ok: false, reason: `appeal_${own.appeal}` };
+  if (own.appeal !== 'not_filed') return { ok: false, reason: `appeal_${own.appeal}` as const };
   return { ok: true, appealUntil: own.appealUntil };
 }
 
@@ -528,9 +741,11 @@ export async function beginSuspicionNotice(
   if (existing && existing.outcome !== 'attempting') return { kind: 'already_final' };
   if (existing) {
     const ownRetry = existing.claimed_by_job === jobId;
+    // `-302` RN2 — a PARKED row is taken at once (defensive: it was past the lease when parked, barring clock skew).
+    const parked = existing.claimed_by_job === SUSPICION_NOTICE_PARKED_BY;
     const leaseExpired =
       existing.claimed_at !== null && toDate(existing.claimed_at).getTime() < now.getTime() - CORRECTION_SEND_LEASE_MS;
-    if (!ownRetry && !leaseExpired) return { kind: 'held_by_other' };
+    if (!ownRetry && !parked && !leaseExpired) return { kind: 'held_by_other' };
   }
 
   const check = await recheck(db, pariwarId, claimCaseId, claim, purpose);
@@ -539,7 +754,7 @@ export async function beginSuspicionNotice(
     // RB10 as amended by `-297` §2 — an existing `attempting` row means a claiming commit happened, so a send MAY have:
     // ALWAYS `error`, ⛔ never `skipped_superseded` (a NULL `detail` does ⛔ not prove nothing went — a crash between the
     // gateway's accept and the finalise leaves it NULL).
-    const detail = `exhausted:recheck_${check.reason}`;
+    const detail = suspicionNoticeDetail({ kind: 'recheck', reason: check.reason });
     const expired = await client.query(
       `UPDATE claim_suspicion_notices
           SET outcome = 'error', first_detail = COALESCE(first_detail, detail), detail = $2,
@@ -596,12 +811,28 @@ export async function beginSuspicionNotice(
       await client.query<{ notice_id: string; attempt_count: number }>(
         `UPDATE claim_suspicion_notices
             SET claimed_at = $2, claimed_by_job = $3, attempt_count = attempt_count + 1,
+                -- decision -302 RN3: a PARKED row is credited ONLY the time it sat parked (SET reads the OLD holder / parked_at);
+                -- never backward (0155's trigger arm), so a clock-skewed negative span credits nothing.
+                aging_since = CASE WHEN claimed_by_job = $4
+                                   THEN aging_since + GREATEST($2::timestamptz - parked_at, interval '0')
+                                   ELSE aging_since END,
+                parked_at = NULL,
                 first_detail = COALESCE(first_detail, detail), updated_at = clock_timestamp()
           WHERE notice_id = $1 AND outcome = 'attempting'
+            AND (claimed_by_job = $3 OR claimed_by_job = $4 OR claimed_at < $5)
           RETURNING notice_id, attempt_count`,
-        [existing.notice_id, now, jobId],
+        [existing.notice_id, now, jobId, SUSPICION_NOTICE_PARKED_BY, new Date(now.getTime() - CORRECTION_SEND_LEASE_MS)],
       )
     ).rows[0];
+    if (!claimed) {
+      // ⭐ `-302` RN7 (DEFENSIVE) — the lease is RE-CHECKED by the UPDATE itself (the SELECT above took ⛔ row lock): a holder that
+      // refreshed the lease meanwhile keeps its row (⛔ 6.24b writer refreshes it today — the transient note does ⛔); a row
+      // finished meanwhile (the give-up — ⛔ claim-row lock there) is final.
+      const current = (
+        await client.query<{ outcome: string }>(`SELECT outcome FROM claim_suspicion_notices WHERE notice_id = $1`, [existing.notice_id])
+      ).rows[0];
+      return current?.outcome === 'attempting' ? { kind: 'held_by_other' } : { kind: 'already_final' };
+    }
   } else {
     claimed = (
       await client.query<{ notice_id: string; attempt_count: number }>(
@@ -639,11 +870,13 @@ export async function finaliseSuspicionNotice(
     readonly jobId: string;
     readonly outcome: 'accepted' | 'rejected_invalid_number' | 'rejected_unreachable' | 'no_target' | 'error';
     readonly providerMessageId?: string | null;
+    /** ⭐ Built by `suspicionNoticeDetail` (`-302` RN5) — asserted here, BEFORE the statement. */
     readonly detail?: string | null;
     readonly recipientVersionId?: string | null;
     readonly recipientNumberHash?: string | null;
   },
 ): Promise<boolean> {
+  assertDetail(input.detail ?? null);
   const result = await db.execute<{ notice_id: string }>(sql`
     UPDATE claim_suspicion_notices
        SET outcome = ${input.outcome},
@@ -670,6 +903,7 @@ export async function noteSuspicionNoticeTransient(
   db: Db,
   input: { readonly pariwarId: PariwarId; readonly noticeId: string; readonly jobId: string; readonly detail: string },
 ): Promise<boolean> {
+  assertDetail(input.detail);
   const result = await db.execute<{ notice_id: string }>(sql`
     UPDATE claim_suspicion_notices
        SET detail = ${input.detail}, updated_at = clock_timestamp()

@@ -26,7 +26,7 @@ LETTERS: `RN` = this story's build decisions (the author's); `F` = FOUND facts; 
 
 # Story 6.29: A Config Hold Never Burns a Suspicion Text — 0151 Gains 6.25's Hold, Give-Up Anchor and DB Backstops, Adapted to SMS `[PRIMITIVE]`
 
-Status: ready-for-dev
+Status: review
 
 > ⭐⭐ **WHAT THIS STORY IS, IN ONE PARAGRAPH.** Story 6.24b's three SMS texts (the filing code / "could not go ahead" to the nominee in
 > place at the death; the closure text after an allowed appeal; the appeal-date text to the refused person) are recorded in 0151
@@ -149,6 +149,11 @@ it is never FALSE — but it may arrive with less of the 90 days left (RN10, rec
   `suspicion-notice.ts:135-136`; 0097 `:37-38`; 0109 `:27-34`, `:44`; `apps/jobs/src/data-export.ts:48`, `:243` ⇒ RN9.
 
 ## ⚖️ Build decisions RN1–RN10 — ⚠ the author's; PROPOSED, ⛔ not committed until Task 0.3
+
+> ✅ **COMMITTED by [`-302`](../../.decision-log.md#decision-2026-10-10-302) (2026-10-10, `208772d9`)** — BigDev at Task 0.2: *"Accept all
+> recommended"* (RN1 as stated, RN2 A, RN3 as stated, RN4 A, RN5 (b), RN6 A, RN7 A, RN8–RN10 as stated). The RN text below is kept as
+> written. ⚠ **2026-10-10 (`-302` §2 RN3):** RN3's *"the give-up … SKIPS a parked row"* is ⛔ taken — RN2's / RN3's bound sentence's /
+> AC2's credited-anchor judgement governs (a skip never fires under alternating held / un-held daily runs).
 
 **RN1 — Scope: 0151 parity, by ONE new migration 0155; the jobs DB role is OUT.** ⛔ Change to 0152–0154, to 6.25's code, to who / what /
 when any text is owed, to any copy key or DLT template, or to `CORRECTION_SEND_LEASE_MS` (shared with 6.19b / 6.19d). The jobs DB role
@@ -292,49 +297,49 @@ scratch database migrated from zero; `pnpm ci:local` green.
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0 — Governance (AC0).**
-  - [ ] 0.1 `git fetch origin`; confirm `main` = `9f4d684a` (or re-pin); grep `.decision-log.md` for entries after `-301` touching
+- [x] **Task 0 — Governance (AC0).**
+  - [x] 0.1 `git fetch origin`; confirm `main` = `9f4d684a` (or re-pin); grep `.decision-log.md` for entries after `-301` touching
         `-295` RB2 / RB3 / RB10 / RB12; re-locate every `file:NNN` above that moved.
-  - [ ] 0.2 Put RN1–RN10 to BigDev as short option summaries with the recommendations; quote each answer AS GIVEN in the Debug Log.
-  - [ ] 0.3 Draft the author-commit (header shape of `-300` / `-301`: type, status, §0 gate, Occasion, §1 FOUND, §2 DECIDED, Cost,
+  - [x] 0.2 Put RN1–RN10 to BigDev as short option summaries with the recommendations; quote each answer AS GIVEN in the Debug Log.
+  - [x] 0.3 Draft the author-commit (header shape of `-300` / `-301`: type, status, §0 gate, Occasion, §1 FOUND, §2 DECIDED, Cost,
         Consequences, References) in the scratchpad; one fresh-context check until ⛔ BLOCKER / HIGH; insert above the newest
         `### Decision` (if refused, ask once — [[project_decision_log_writes_user_inserted]]); commit ALONE:
         `governance(6.29): <date>-302 — …` (the id's date is the day it is committed).
-  - [ ] 0.4 Second governance commit: `epics.md` `### Story 6.29` after 6.25 (6.25's entry shape — a dated "Added … (Story 6.29, Task
+  - [x] 0.4 Second governance commit: `epics.md` `### Story 6.29` after 6.25 (6.25's entry shape — a dated "Added … (Story 6.29, Task
         0.4)" source line, ⛔ a merge fence); roster Row 26 (RN9 — if answered); dated `⚠ AMENDED by -302` lines on the 6.24b story's RB3 /
         RB12 (their text kept; RB3's line BESIDE 6.24b's existing "AS BUILT, 2026-10-09" narrowing line); on the 6.24b story's ROUND 3
         defers (they have ⛔ `deferred-work.md` entry) — "TO BE closed by 6.29 (0155, `-302` RN8)"; `deferred-work.md` — the 2026-10-09
         jobs-DB-role item pointed at Row 26. Task 6 flips "TO BE closed" to "Closed by 6.29 / 0155 (<sha>)".
-  - [ ] 0.5 Record the answers in this file's RN block (`✅ committed by -302`); never edit RN text after commit.
-- [ ] **Task 1 — Migration 0155 + schema (AC1–AC4, AC6; RN3, RN5, RN6, RN8).**
-  - [ ] 1.1 BEFORE writing the CHECKs, on :5432 AND :5433: every distinct `detail` / `first_detail` against the grammar (+ the
+  - [x] 0.5 Record the answers in this file's RN block (`✅ committed by -302`); never edit RN text after commit.
+- [x] **Task 1 — Migration 0155 + schema (AC1–AC4, AC6; RN3, RN5, RN6, RN8).**
+  - [x] 1.1 BEFORE writing the CHECKs, on :5432 AND :5433: every distinct `detail` / `first_detail` against the grammar (+ the
         7-digit rule), AND every `outcome='attempting' AND claimed_by_job IS NULL` row (RN8 (a)); any hit ⇒ STOP and report.
-  - [ ] 1.2 Hand-author `packages/domain/migrations/0155_claim-suspicion-notice-backstops.sql` + journal idx 155 (`when` > 0154's):
+  - [x] 1.2 Hand-author `packages/domain/migrations/0155_claim-suspicion-notice-backstops.sql` + journal idx 155 (`when` > 0154's):
         `aging_since` (ADD, backfill = `created_at`, DEFAULT, NOT NULL) and `parked_at` + the parked ⟺ `parked_at` CHECK, BEFORE the
         trigger; the `detail` / `first_detail` length + grammar CHECKs (length named BEFORE grammar — PG checks in name order);
         `attempting_claimed_check` replaced to require `claimed_by_job` (RN8 a); the INSERT grant REVOKEd and re-granted column-narrowed
         (RN8 b); UPDATE grants on `aging_since`, `parked_at`; the partial index moved to `(aging_since, claimed_at)`; the trigger (0153 +
         0154's arms, adapted: ⛔ `may_have_sent` arm). ⛔ `db:generate`.
-  - [ ] 1.3 `src/schema/claim_suspicion_notices.ts`: the two columns, the checks, the index, `SUSPICION_NOTICE_DETAIL_PATTERN`.
-  - [ ] 1.4 Apply with the migrator to :5433 AND :5432; migrate a SCRATCH database from zero and drop it.
-- [ ] **Task 2 — The `detail` builder (AC3; RN5).** `suspicionNoticeDetail()` + `isSuspicionNoticeDetail()` + the exported reason arrays in
+  - [x] 1.3 `src/schema/claim_suspicion_notices.ts`: the two columns, the checks, the index, `SUSPICION_NOTICE_DETAIL_PATTERN`.
+  - [x] 1.4 Apply with the migrator to :5433 AND :5432; migrate a SCRATCH database from zero and drop it.
+- [x] **Task 2 — The `detail` builder (AC3; RN5).** `suspicionNoticeDetail()` + `isSuspicionNoticeDetail()` + the exported reason arrays in
       `suspicion-notice.ts`; the gateway-code sanitiser where RN5 is answered ((b): the child maps `result.detail` through the builder;
       ⛔ in `sms-app.ts` — the gateway client stays raw); every domain literal (F7) and every child literal (F12) routed through the builder;
       both writers assert. ⚠ `claim/index.ts:104,107` re-exports BOTH `suspicion-notice.ts` and `suspicion-staff-email.ts` — every new name
       must differ from 6.25's (⛔ `sanitizeProviderErrorName`, ⛔ `SUSPICION_STAFF_EMAIL_PARKED_BY`; e.g. `SUSPICION_NOTICE_PARKED_BY`).
-- [ ] **Task 3 — The domain half (AC1, AC2, AC5; RN2, RN3, RN7).** `listStalledSuspicionNoticeScopes(q, { now, allow })` (distinct
+- [x] **Task 3 — The domain half (AC1, AC2, AC5; RN2, RN3, RN7).** `listStalledSuspicionNoticeScopes(q, { now, allow })` (distinct
       `(purpose, pariwar_id)` of past-lease `attempting` rows; DELIBERATE block); `parkHeldSuspicionNotices(q, { now, allow, held })` (held =
       a SET of (purpose, Pariwar); DELIBERATE block — `parkHeldSuspicionStaffEmails`'s, adapted); the give-up over UN-held scopes only,
       keyed on `aging_since` and judging a parked row by `aging_since + (now − parked_at)`; the re-claim credit + `parked_at = NULL` + the
       lease predicate (`$2::timestamptz` — Trap 6).
-- [ ] **Task 4 — The sweep (AC1; RN2, RN10).** Purpose gaps, then `listStalledSuspicionNoticeScopes`, then the helpline gap for those
+- [x] **Task 4 — The sweep (AC1; RN2, RN10).** Purpose gaps, then `listStalledSuspicionNoticeScopes`, then the helpline gap for those
       Pariwars (the main loop's memo), BEFORE the give-up; park; give up the rest; the end-of-run alarm (reword its "⛔ nothing was enqueued
       or written" — `:256-257` — a held run now parks) + the park count; update the header comments (`claim-suspicion-notices.ts:11-17`,
       `suspicion-notice.ts:26-29`). ⛔ Touch the child's race guard or any RB18 alarm; ⛔ add an RB13 alarm.
-- [ ] **Task 5 — Tests (AC1–AC7).** Update the tests F-listed in Dev Notes; add: the policy legs (CHECKs by name, trigger, parked CHECK,
+- [x] **Task 5 — Tests (AC1–AC7).** Update the tests F-listed in Dev Notes; add: the policy legs (CHECKs by name, trigger, parked CHECK,
       grants exact, index); the domain legs (park scope, give-up skip, credit, flapping, DEFAULT); a two-connection lease race; the jobs
       live legs (each hold kind × a crash-left row; an un-held purpose in the same run; the post-hold re-claim; every F12 class finalising).
-- [ ] **Task 6 — Proof (AC7, AC8).** Red-checks logged; `git diff --stat` against AC7's list; `pnpm ci:local` green; story records.
+- [x] **Task 6 — Proof (AC7, AC8).** Red-checks logged; `git diff --stat` against AC7's list; `pnpm ci:local` green; story records.
 
 ## Dev Notes
 
@@ -395,19 +400,99 @@ sanitising is the send core's job (it owns the `detail` mapping).
 
 ### Agent Model Used
 
+Claude Opus 5.5 (1M context) — `bmad-dev-story 6.29`, 2026-10-10.
+
 ### Debug Log References
+
+- **Task 0.1** — `git fetch origin`: `origin/main` = `9f4d684a` (the pin holds); ⛔ decision after `-301` (none touching `-295` RB2 /
+  RB3 / RB10 / RB12); the branch's two commits above `main` are docs only ⇒ every `file:NNN` in this file still holds.
+- **Task 0.2 — BigDev's answer, AS GIVEN:** *"Accept all recommended"* (one option covering RN1 as stated, RN2 A, RN3 as stated, RN4 A,
+  RN5 (b), RN6 A, RN7 A, RN8–RN10 as stated).
+- **Task 0.3** — `-302` drafted in the scratchpad; ONE fresh-context check: 0 BLOCKER / 0 HIGH / 4 MEDIUM / 5 LOW — all applied (RN3's
+  *"SKIPS a parked row"* text recorded as ⛔ taken; RB12's *"⛔ no row is written"* superseded for held scopes; RN5 (b)'s built-detail
+  alarms; the §0 basis — ⛔ delivery deadline in the three rulings + RB12's answered policy; RB2 extension incl. RN3; `-295` §1 RB2;
+  "every writer through the builder"; the parked CHECK named; Consequence 3 vs RN10). Inserted above the newest `### Decision` (passed
+  first try), additive 39 / 0 = the draft's 39 lines; committed ALONE `208772d9`. Task 0.4 committed `0a3b643d`.
+- **Task 1.1** — :5432 AND :5433: `claim_suspicion_notices` holds **0 rows** on both ⇒ ⛔ `detail` / `first_detail` to check, ⛔
+  `attempting` row without `claimed_by_job`. The grammar was checked to read the same in PG (ARE, the `(?!.*[0-9]{7})` lookahead) and
+  in a JS `RegExp` before it was written into 0155.
+- **Task 1.4** — the migrator applied 0155 to :5433 and :5432 (PG 16.14 / 18.3; PG 18 lists NOT NULLs as `n` constraints — the `c` /
+  `f` / `p` sets equal); a scratch database `twt_scratch_629` migrated from ZERO (155 migrations, the nine CHECKs by name) and dropped.
+  After the DB-level red-checks, :5432 and :5433 hash-equal on every constraint definition and grant (`md5` of the catalog dump).
+- **Red-checks (AC8 — plant, red, revert; code plants restored from a scratchpad copy, ⛔ `git checkout`):**
+  #1 the sanitiser returns the raw code ⇒ 4 jobs legs + 1 domain leg RED (Trap 4: the finalise hits the CHECK after a send) ·
+  #2 `finaliseSuspicionNotice` without its assert ⇒ the writer leg RED · #3 the re-claim's RN7 lease predicate dropped ⇒ the PLANTED
+  refresh race RED · #4 the give-up SKIPS a parked row (RN3's text) ⇒ the ALTERNATING leg RED (never given up) · #5 the give-up ignores
+  the parked credit ⇒ the credited-anchor leg RED · #6 the re-claim credit removed ⇒ the credit + FLAPPING legs RED · #7 the park
+  re-parks a parked row ⇒ the park leg RED · #8 the sweep gives up HELD scopes too ⇒ ⚠ first GREEN (a freshly crashed row is
+  protected by the park itself) ⇒ a leg added (a held-scope row ALREADY past three days when the hold's first sweep runs) ⇒ 5 RED ·
+  #9 the sweep never parks ⇒ 5 RED · #10 the child stores the core's RAW detail ⇒ 4 RED · DB (:5433, restored after each):
+  #11 the trigger DISABLED ⇒ the frozen + arm legs RED · #12 the detail vocabulary CHECK dropped ⇒ 3 RED · #13
+  `attempting_claimed_check` back to 0151's ⇒ the RN8 (a) leg RED · #14 the INSERT grant table-wide again ⇒ both RN8 (b) legs RED.
+- **`ci:local` run 1 — RED (2 jobs: `test (unit)`, `integration-tests`), ONE test:** `nominee-name-no-comparison-fence.test.ts` (6.24b
+  RB8) asserted the bare word `decrypt` ⛔ in `suspicion-notice.ts` — the module now OWNS the `detail` vocabulary, which names the
+  child's `decrypt_failed:*` step (RN5 / Task 2 place the builder there). ⛔ Decrypt call exists. The fence was narrowed to 6.25's
+  sibling form (RE8): a decrypt CALL `/decrypt\w*\s*\(/i`, ⛔ KMS, ⛔ `encryption`, ⛔ `getMemberNominees`, ⛔ `nameCiphertext` — ⛔
+  weaker than the sibling's. Red-check #15: a planted `decryptKycField(x)` export ⇒ RED; restored.
+- Test-expectation fixes during the build (⛔ code changes): the park leg's second run a day on DOES park the once-live row (now past
+  its lease); the hold leg for `appeal_notice` sees the claim's OTHER purpose sent too (never held) ⇒ count the held purpose's texts.
 
 ### Completion Notes List
 
 - Ultimate context engine analysis completed — comprehensive developer guide created (2026-10-09, `bmad-create-story 6.29`). Three
   read-only research passes (6.24b notice substrate; jobs-login privileges model, catalog-checked; governance trail). BigDev's scope call
   (*"1"*): 0151 parity only; the systemic jobs-login gap recorded (deferred-work 2026-10-09) and proposed as roster Row 26 (RN9).
+- ⭐ **Built (2026-10-10, `bmad-dev-story 6.29`):** governance FIRST — `-302` (RN1–RN10, BigDev *"Accept all recommended"*) committed
+  alone, then epics `### Story 6.29`, roster Row 26 `jobs-db-role` (`open`), `⚠ AMENDED by -302` lines on 6.24b's RB3 / RB12 and the
+  "TO BE closed" marks. **Migration 0155** (hand-authored; :5432 + :5433 + a scratch DB from zero): `aging_since` (backfilled, DEFAULT,
+  NOT NULL) + `parked_at` + the parked CHECK; `detail` / `first_detail` length + grammar CHECKs (`SUSPICION_NOTICE_DETAIL_PATTERN`, a
+  7-digit lookahead — ⛔ a phone number); `attempting_claimed_check` requires `claimed_by_job`; the INSERT grant column-narrowed to the
+  writers' union; UPDATE on the two new columns; the partial index on `(aging_since, claimed_at)` (same name); the trigger
+  `claim_suspicion_notices_guard_update` (a finished row frozen; `aging_since` only forward, only on a parked re-claim; ⛔
+  `may_have_sent` — RN6 A). **Domain** (`suspicion-notice.ts`): `suspicionNoticeDetail` / `isSuspicionNoticeDetail` /
+  `sanitizeSmsGatewayCode` + the six exported vocabularies; every domain detail built; `finalise` / `note` assert;
+  `listStalledSuspicionNoticeScopes`, `parkHeldSuspicionNotices` (DELIBERATE blocks); the give-up takes the UN-held `scopes` and judges
+  a parked row by its credited anchor; the re-claim credits (now − `parked_at`), clears it, and re-checks its lease (RN7 — 0 rows ⇒
+  re-read ⇒ `held_by_other` / `already_final`); the parked arm in the pre-check. **Jobs** (`claim-suspicion-notices.ts`): the purpose
+  gaps and the stalled Pariwars' helplines FIRST (one memo shared with the main loop), the park + ONE "newly PARKED" alarm, then the
+  give-up over un-held scopes; the held alarm reworded; `parkedForConfig` on the result; every child detail built — the core's raw
+  `result.detail` ⛔ stored, alarmed or thrown (RN5 (b)). ⛔ Touched (AC7): 0152–0154, 6.25's code, `claim-dlt-sms-send.ts`, the
+  gateway client, any copy key / DLT id, `CORRECTION_SEND_LEASE_MS`, the cron, any RB13 / RB18 alarm call.
+- **Tests:** policy spec 24 (EXACT grants, every constraint + the index by name, the grammar incl. `+91…` / a bare 10-digit number,
+  the pattern lockstep, the trigger + cascade, the DEFAULT, the parked CHECK both ways, the arm); domain spec +11 (the builder over the
+  exported arrays, sanitising, the writers' assert, stalled scopes, the scoped park, the give-up over un-held scopes and by the credited
+  anchor, the re-claim credit, the skewed parked row, FLAPPING, ALTERNATING, the DEFAULT); concurrency spec +3 (the PLANTED refresh,
+  the park racing a re-claim in both orders — ONE holder); jobs live +15 (five hold kinds × a fresh + an already-aged crash row, an
+  un-held scope given up in the same runs, the post-hold send; seven gateway classes finalising with the built detail + RN4's alarms;
+  a non-gateway throw; a timeout; three transient classes — the thrown error carries the built detail, ⛔ a number).
+- ⚠ **Known differences from 6.25, recorded (`-302`):** ⛔ `may_have_sent` (RN6 A); provider-side faults stay FINAL (RN4 A); holds are
+  per (purpose, Pariwar), ⛔ channel-wide; the lease is 10 min (shared) — a live child between pg-boss backoffs CAN be parked (benign).
+  ⚠ The single-column `recipient_version_id` FK stays deferred (RN8 (d)). ⚠ Roster Row 22 (d) must route the new park alarm (RN10).
 
 ### File List
+
+- `.decision-log.md` — `2026-10-10-302` (governance commit `208772d9`)
+- `_bmad-output/planning-artifacts/epics.md` — `### Story 6.29` (governance commit `0a3b643d`)
+- `docs/launch-gate-inventory/inventory-roster.md` — Row 26 `jobs-db-role` (`0a3b643d`)
+- `_bmad-output/implementation-artifacts/6-24b-filing-code-and-texts-to-the-nominee-in-place-at-the-death.md` — `⚠ AMENDED by -302` on RB3 / RB12; ROUND 3 defer marks (`0a3b643d`; flipped to "Closed" in Task 6)
+- `_bmad-output/implementation-artifacts/deferred-work.md` — the 2026-10-09 jobs-login item → Row 26 (`0a3b643d`)
+- `packages/domain/migrations/0155_claim-suspicion-notice-backstops.sql` — NEW
+- `packages/domain/migrations/meta/_journal.json` — idx 155
+- `packages/domain/src/schema/claim_suspicion_notices.ts`
+- `packages/domain/src/claim/suspicion-notice.ts`
+- `apps/jobs/src/scheduler/claim-suspicion-notices.ts`
+- `packages/domain/tests/integration/rls/claim-suspicion-notice-policy-regression.spec.ts`
+- `packages/domain/tests/integration/claim/suspicion-notice.spec.ts`
+- `packages/domain/tests/integration/claim/suspicion-notice-concurrency.spec.ts`
+- `apps/jobs/tests/claim-suspicion-notices-live.test.ts`
+- `packages/domain/tests/claim/nominee-name-no-comparison-fence.test.ts` — RB8's no-decrypt arm narrowed to a decrypt CALL (6.25's form)
+- `_bmad-output/implementation-artifacts/6-29-suspicion-notice-parity-and-jobs-login-grants.md` — this file
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — row 6-29 + ledger
 
 ## Change Log
 
 | Version | Date | Change |
 |---|---|---|
+| 1.2 | 2026-10-10 | ⭐ **Developed (`bmad-dev-story 6.29`) ⇒ `review`.** Governance FIRST: `-302` (RN1–RN10, *"Accept all recommended"*; one fresh-context check 0 / 0 / 4 M / 5 L, all applied) committed alone `208772d9`; records `0a3b643d` (epics, roster Row 26, AMENDED lines on 6.24b RB3 / RB12, defer marks, deferred-work → Row 26). Migration 0155 (:5432 + :5433 + scratch-from-zero); the builder + grammar; the stalled scopes, the scoped park, the give-up over un-held scopes by the credited anchor, the re-claim credit + RN7 lease re-check; the sweep reordered (holds → park → give-up) + the park alarm; every child detail built. Tests: policy 24, domain +11, concurrency +3, jobs live +15. Red-checks #1–#15 (all RED once planted; #8 first GREEN ⇒ a leg added). `ci:local` run 1 RED on ONE fence (RB8's bare-word `decrypt` vs the new `decrypt_failed:*` vocabulary) ⇒ narrowed to a decrypt CALL (6.25's form) ⇒ run 2 GREEN (34 jobs). |
 | 1.1 | 2026-10-09 | Validated (one fresh-context read-only verifier against the checklist): 0 BLOCKER, 3 HIGH, 8 MEDIUM, 8 LOW — all applied. HIGH: RN2 now parks EVERY past-lease row of a held scope and the give-up judges a parked row by its CREDITED anchor (a daily sweep with alternating holds was otherwise unbounded, and candidate-only parking left ⛔ budget after a hold); RN5 makes the sanitiser's placement an explicit choice ((a) the shared RB4 core — would change 6.19b/c/d; (b) the suspicion child only — recommended); the sanitiser also refuses a 7+-digit run (a bare phone number passed). Also: "held" defined as the code's per-purpose / per-Pariwar derivation (⛔ global Secret Manager hold); `listStalledSuspicionNoticeScopes` named; RN7 marked DEFENSIVE (AC5 plants the refresh); policy-spec breakages listed; Task 1.1 also checks `attempting` rows with ⛔ `claimed_by_job`; closure marks written as "TO BE closed" at Task 0.4 and flipped in Task 6 (the 0151 defers have ⛔ `deferred-work.md` entry); RN8 (b) binds `twt_app` only; the INSERT column set listed; RB13's skip is SILENT (⛔ alarm to keep — ⛔ add one); name collisions; `<date>-302`; RN4 leg in AC7; Row 22 (d) routes the park alarm. |
 | 1.0 | 2026-10-09 | Created (`bmad-create-story 6.29`) on `story/6-29-…` (first commit: the 6.25 SHA map, `6a223e7a`). Pinned `9f4d684a`. F1–F18 found; RN1–RN10 PROPOSED (author-commit owed at Task 0.3). Scope narrowed by BigDev to 0151 parity; the jobs DB role (F15–F18, systemic) recorded, ⛔ fixed. |

@@ -409,5 +409,10 @@
   "memberStatus.moderationReason.trustee-discretion": "a trustee decision",
   "memberStatus.moderationReason.moderation-error": "a correction to an earlier decision",
   "memberStatus.moderationReason.unspecified": "a recorded decision",
-  "memberStatus.rule.rule.no_exemption": "You have recorded that a personal event affected your ability to contribute. The Niyamavali sets the same expectation for everyone, so this does not change your standing either way — and it is held on your record as something you told us."
+  "memberStatus.rule.rule.no_exemption": "You have recorded that a personal event affected your ability to contribute. The Niyamavali sets the same expectation for everyone, so this does not change your standing either way — and it is held on your record as something you told us.",
+  "$comment.app_links": "Story 6.30 (2026-10-10-312 AL14 / AL16): not_found.* is the app's dignified page for a link it cannot place; peer_request.placeholder is the /peer-request route shell's line until Story 6.27a fills it. Neither shows anything about any member.",
+  "not_found.title": "This page could not be opened",
+  "not_found.body": "The link may be old or incomplete. You can go to the home screen, or call us for help.",
+  "not_found.go_home": "Go to home",
+  "peer_request.placeholder": "Your requests appear on your home screen."
 }

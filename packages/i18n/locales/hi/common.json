@@ -409,5 +409,10 @@
   "memberStatus.moderationReason.trustee-discretion": "ट्रस्टी का निर्णय",
   "memberStatus.moderationReason.moderation-error": "पूर्व निर्णय में सुधार",
   "memberStatus.moderationReason.unspecified": "एक दर्ज निर्णय",
-  "memberStatus.rule.rule.no_exemption": "आपने दर्ज किया है कि एक निजी घटना ने आपके योगदान की क्षमता को प्रभावित किया। नियमावली सभी से एक ही अपेक्षा रखती है, इसलिए इससे आपकी स्थिति में कोई अंतर नहीं आता — और यह आपके रिकॉर्ड में आपकी बात के रूप में सुरक्षित है।"
+  "memberStatus.rule.rule.no_exemption": "आपने दर्ज किया है कि एक निजी घटना ने आपके योगदान की क्षमता को प्रभावित किया। नियमावली सभी से एक ही अपेक्षा रखती है, इसलिए इससे आपकी स्थिति में कोई अंतर नहीं आता — और यह आपके रिकॉर्ड में आपकी बात के रूप में सुरक्षित है।",
+  "$comment.app_links": "Story 6.30 (2026-10-10-312 AL14 / AL16): the Hindi of not_found.* and peer_request.placeholder is AGENT-AUTHORED — a person reviews it before go-live (roster Row 28, via Row 29 (h)).",
+  "not_found.title": "यह पेज नहीं खुल सका",
+  "not_found.body": "लिंक पुराना या अधूरा हो सकता है। आप होम स्क्रीन पर जा सकते हैं, या मदद के लिए हमें कॉल करें।",
+  "not_found.go_home": "होम पर जाएँ",
+  "peer_request.placeholder": "आपके अनुरोध आपकी होम स्क्रीन पर दिखते हैं।"
 }

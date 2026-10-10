@@ -484,15 +484,15 @@ applicable (the Niyamavali does not speak to app links) — and it is ⛔ not ra
       `eas.json` `env` per profile (`APP_VARIANT` only today — N1; N9); `apps/mobile/tests/unit/app-config.test.ts` (variants, the `eas.json` lockstep) and
       `app-links-lockstep.test.ts`; the `expo-config` job in `ci.yml` AND `scripts/ci-local.sh`; a note in `apps/mobile/README.md` on
       `APP_VARIANT`, `eas submit` with `APP_VARIANT=production` + `APP_IDENTITY_*` exported (`-316` E1) and `expo prebuild --clean`; ⛔ no native dirs committed.
-- [ ] **Task 3 — the login keeps its place (AC4).** `lib/link-target.ts`; `lib/session.ts` (the dead-refresh handler slot) +
+- [x] **Task 3 — the login keeps its place (AC4).** `lib/link-target.ts`; `lib/session.ts` (the dead-refresh handler slot) +
       `lib/session-context.tsx` (register `setSession(null)`; clear on `signOut()` and termination); `app/_layout.tsx` (capture via
       `usePathname` + `useGlobalSearchParams`); `app/(auth)/otp.tsx` (take before `signIn`, the ONE consumer; the signup clear before
       `signIn`; the terminated-branch clear at `:89-113`) — typed as `Href`; N5–N8; `tests/unit/link-target.test.ts` + the pins.
-- [ ] **Task 4 — the route shell, not found + the route-map test (AC7).** `app/(peer-request)/peer-request.tsx` +
+- [x] **Task 4 — the route shell, not found + the route-map test (AC7).** `app/(peer-request)/peer-request.tsx` +
       `components/peer-request/PeerRequestSlot.tsx` (placeholder — N17); the root `Stack.Screen`; `+not-found.tsx`; en + hi keys in
       `packages/i18n/locales/{en,hi}/common.json` (`$comment`; avoid the microcopy-banned words, even in comments);
       `tests/unit/{app-link-route-map,not-found-copy}.test.ts`.
-- [ ] **Task 5 — the two endpoints (AC5).** `apps/public/src/pages/.well-known/{apple-app-site-association,assetlinks.json}.ts` (env inside
+- [x] **Task 5 — the two endpoints (AC5).** `apps/public/src/pages/.well-known/{apple-app-site-association,assetlinks.json}.ts` (env inside
       `GET`, AL2's schemas — N3, N4); `apps/public/tests/well-known-endpoints.test.ts`.
 - [ ] **Task 6 — the fallback page (AC6).** `apps/public/src/lib/peer-request-render.ts`; `apps/public/src/pages/peer-request.astro`;
       `PublicShell.astro`'s `hideLanguageToggle` prop; the `app-links` namespace (`packages/i18n/locales/{en,hi}/app-links.json`,

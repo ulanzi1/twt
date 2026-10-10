@@ -312,7 +312,10 @@ a family's claim must take, and whether the final approval waits). In the member
   {helpline}."* (the routing note's wording minus its *"TWT:"* prefix — the DLT header names the sender; `{link}` per PM21; the slots in
   order: member, link, helpline). ⚠ Hindi is Unicode — 70 characters per segment (67 when concatenated) — so the Hindi text with a name,
   a link and a number is likely THREE segments: the DLT sheet's cost section records the per-text segment count (`-255` consequence 2's
-  cost-per-message line). hi: agent-authored,
+  cost-per-message line). ⚠ **v1.3 (6.30 SIX FACTS #3):** TRAI's 18 Nov 2025 Direction requires TYPED variables — `{member}` registers
+  as `{#alphanumeric#}` (≤ 40 chars — ⚠ whether it accepts Devanagari with spaces is UNCONFIRMED: ask the provider at registration; a
+  name that cannot fit ⇒ `no_target:name_too_long`, ⛔ never a truncated name), `{link}` as `{#url#}`, `{helpline}` as `{#cbn#}` (both
+  checked against the operator's whitelist). hi: agent-authored,
   human review = Row 28. Sent in **`hi`** (F26 — RF11's reason); `en` registered for parity (templates 13 hi / 14 en). `{member}` =
   the Pariwar's mode-resolved name (`-181`; `notifications.resolveMemberFacingDeceasedName`), read once per child OUTSIDE the claiming
   transaction; erased / unresolvable / ⛔ no KYC name ⇒ `no_target:name_<reason>` (RB5) — ⛔ never a blank. ⛔ No claim, money, family,
@@ -383,7 +386,9 @@ a family's claim must take, and whether the final approval waits). In the member
   open; 409 `peer_request.no_longer_open` / `peer_request.already_answered`. **Open** = ⛔ no reply AND the claim is in PM8's window AND
   `send_outcome IS DISTINCT FROM 'no_target'` (a peer PM1 decided ⛔ not to ask is ⛔ never shown the request). api-client factory
   (`createMemberPeerRequestClient`); mobile: a card on `app/(tabs)/index.tsx` while ≥ 1 request is open (*"The Trust has asked you about
-  a member"*), a list + a three-step screen under `app/(peer-request)/`, en + hi in the mobile claim namespace (`lib/claim-i18n.ts`;
+  a member"*), ONE route file `app/(peer-request)/peer-request.tsx` (URL `/peer-request` — ⚠ v1.3: a group-only `index.tsx` or
+  `[code].tsx` would collide with the TEN existing `/` files and the two root-level catch-alls, 6.30 F5 / AL16) that shows the list, or —
+  with `?c=` — resolves the code (PM21 (d)) and opens the three-step screen, en + hi in the mobile claim namespace (`lib/claim-i18n.ts`;
   `$comment` marker; Row 28). The screen shows ⛔ no claim, ⛔ no family, ⛔ no amount — the name only. The empty / loading / error states
   render OUTSIDE any list ([[project_fabric_flatlist_empty_populated_crash]]); depend on `locale`, ⛔ never `t`
   ([[project_uset_fresh_closure_memo_trap]]). ⭐ The same screen is also reached from the text's link (PM21).
@@ -413,7 +418,7 @@ a family's claim must take, and whether the final approval waits). In the member
 - **PM16 — the go-live records.** NEW roster rows (decision-authored, appended after Row 26): **Row 27 `peer-mesh-request-counsel-basis`**
   — closes on ALL of (a) counsel's basis for telling five members of a reported death, (b) a privacy-policy revision naming the purpose,
   (c) the Panel's Q1, (d) the alarms reaching a named owner through a real transport (Row 22 (d)'s bar), (e) the link works —
-  row 6-30 `done`, the domain set as `app_links.base_url` and whitelisted with the operator (PM21 (f)); **Row 28
+  row 6-30 `done`, the domain set as `APP_LINKS_BASE_URL` and whitelisted with the operator (PM21 (f)); **Row 28
   `peer-mesh-request-hindi-human-review`** — the SMS and the app screen's Hindi. DLT templates **13 (hi) / 14 (en)** in the sheet, *"⛔ never
   provision the ids until Row 27 closes"*; unset ids ⇒ the sweep HOLDS and alarms (RB12), ⛔ never uses up a slot. ⚠ Row 26 (`jobs-db-role`)
   applies to the new sweep — RECORDED on Row 26, ⛔ not fixed (6.29's scope call). ⭐ Go-live gates ⛔ never block a merge
@@ -437,20 +442,24 @@ a family's claim must take, and whether the final approval waits). In the member
   (a) **The code.** A `link_code` column on `claim_peer_mesh_pings` (migration 0156): 12 characters base62 from a CSPRNG (~71 bits),
   `UNIQUE`, written ONCE by the child's begin UPDATE (in the narrowed UPDATE grant) and ⛔ never rewritten (the finished-row trigger
   also refuses a change once set). It carries ⛔ no name, ⛔ no Pariwar, ⛔ no claim id and ⛔ no login: it is ⛔ not a credential.
-  (b) **The URL** `{link}` = `<app_links.base_url>/peer-request/<link_code>` — `app_links.base_url` is ONE config value read like the
-  template ids (Secret Manager); ⛔ not set ⇒ the sweep HOLDS the Pariwar scope and alarms (RB12 — a missing config ⛔ never uses up a
+  (b) **The URL** `{link}` = `buildAppLinkUrl(APP_LINKS_BASE_URL, 'peerRequest', link_code)` = `<origin>/peer-request?c=<link_code>`
+  (⚠ **v1.3 — 6.30 AL2 / AL3 / AL5:** the code is a QUERY STRING, ⛔ never a path segment — India's operators whitelist the FIXED part
+  and refuse dynamic paths; the builder and the path list are 6.30's `packages/contracts/src/app-links/` — ⛔ never re-created here; the
+  base is the ENV VAR `APP_LINKS_BASE_URL`, validated every run by 6.30's `resolveAppLinksBaseUrl` — ⛔ not Secret Manager, whose dotted
+  id `app_links.base_url` would hit the recorded INVALID_ARGUMENT defect); ⛔ not set or invalid ⇒ the sweep HOLDS (`config:app_links_base_url_invalid`) and alarms (RB12 — a missing config ⛔ never uses up a
   slot), so ⛔ no text is ever sent with a broken or placeholder link. The path is this story's; row `6-30` makes the domain's paths
   open the app and serves a plain fallback page for any of them.
-  (c) **The app route** that serves `/peer-request/<code>` (expo-router — the file path must produce that URL path; route GROUPS do ⛔
-  not appear in a URL) → logged out ⇒ log in, then return to it (⚠ check the auth redirect preserves the target; if it does ⛔ not,
-  that is row 6-30's, recorded there, ⛔ never worked around here) → the resolver → the three-step screen of PM11.
+  (c) **The app route** `app/(peer-request)/peer-request.tsx` serves `/peer-request` and reads `c` with `useLocalSearchParams()`
+  (route GROUPS ⛔ never appear in a URL) → logged out ⇒ log in, then back to it (6.30 AL6 builds the return — ⛔ never worked around
+  here) → the resolver → the three-step screen of PM11.
   (d) **The resolver** `GET /api/v1/p/:pariwarId/member/peer-requests/by-link/:code` → `{ pingId }` ONLY when the code's ping belongs
   to the SESSION member in that Pariwar; else **404** (unknown, someone else's, other Pariwar — one indistinguishable answer, ⛔ never an
   oracle); a closed request resolves and the screen says *"Thank you — this request is no longer open"*. `perMemberKey` read budget.
   ⇒ a forwarded link is useless to anyone but the person it was sent to.
   (e) The code is ⛔ never in a log, an alarm, an audit row or a `detail` (treated like a number even though it is not secret).
   (f) **Go-live:** a text carries a link ⇒ Row 27 gains closure condition (e) *"row 6-30 is `done`, the Trust's domain is set as
-  `app_links.base_url`, and the domain's URL is whitelisted with the SMS operator"*.
+  `APP_LINKS_BASE_URL`, and the domain's URL is whitelisted with the SMS operator"* — ⚠ v1.3: 6.30 AL12's roster row (`app-links-live`,
+  expected Row 29) carries the detail; Row 27 (e) points at it.
   ⚠ Re-plan: Q1 B ⇒ the name-free text keeps `{link}`; Q1 C / D ⇒ ⛔ no text ⇒ PM21 (a) / (b) / (f) drop; (c) / (d) stay only if row 6-30
   is wanted for other texts.
 
@@ -462,7 +471,7 @@ a family's claim must take, and whether the final approval waits). In the member
 2. **AC2 — each of the five is texted once (Q1 A).** Given a claim whose selection has pings, when the SELECT worker commits, then one
    child per ping is enqueued; each child, under the claim lock, re-checks PM5 (iv) and PM1, then (after COMMIT) decrypts, normalises,
    hashes and sends through `sendClaimDltSms` with template `peer_mesh.request.hi`, rendering exactly the registered text with the
-   mode-resolved name, the ping's link (PM21 — its code written once at begin) and the Pariwar's helpline; ⛔ no `app_links.base_url` ⇒
+   mode-resolved name, the ping's link (PM21 — its code written once at begin) and the Pariwar's helpline; ⛔ no valid `APP_LINKS_BASE_URL` ⇒
    held like a missing template id (AC3); the ping row records `accepted` / a rejection / `no_target` / `error` per 0155's
    vocabulary; a second child or a sweep re-run ⛔ never sends again (once ever); a send outside 09:00–20:00 IST is deferred to 09:00 IST.
 3. **AC3 — a held config uses up ⛔ nothing.** Given a missing template id, helpline or gateway, then ⛔ no ping is begun, one ids-only
@@ -522,7 +531,7 @@ a family's claim must take, and whether the final approval waits). In the member
       files + policy-regression specs; ⛔ never regenerate an applied migration.
 - [ ] **Task 2 — the request SMS: copy, registry, domain record (AC2–AC4, AC12).**
   - [ ] 2.1 `peer_mesh_sms.request` en + hi + `$comment` in `claim.json` (slots member, link, helpline); `peer-mesh-sms-templates.ts`;
-        the `app_links.base_url` config read + its hold (PM21 (b)); lockstep test proving the real `t()`
+        the `APP_LINKS_BASE_URL` dep + its hold (PM21 (b) — 6.30's validator); typed DLT variables (PM3 v1.3); lockstep test proving the real `t()`
         renders exactly `registeredText` and that the DLT sheet carries it ([[feedback_stub_must_call_not_transcribe]]).
   - [ ] 2.2 NEW `packages/domain/src/claim/peer-mesh-request.ts` (cloned in SHAPE from `suspicion-notice.ts`, ⛔ never copied blindly): begin
         under the claim lock with PM5 (iv) + PM1's state / death-claim checks; the CAS finalise; the transient note; `peerMeshRequestDetail`
@@ -540,8 +549,8 @@ a family's claim must take, and whether the final approval waits). In the member
       in the handler (`deathDateBlindIndex` ×3, PM9) and the ciphertext written; 404-⛔-403; Turnstile / Idempotency-Key / per-member
       budget; PM21 (d)'s by-link resolver; route tests incl. the cross-Pariwar 404, the not-selected 404, and the resolver's three
       indistinguishable 404s.
-- [ ] **Task 6 — the mobile screens (AC5).** The home card, the list, the three-step screen, and PM21 (c)'s route for
-      `/peer-request/<code>`; en + hi; component tests with a REAL `t()` leg; the FlatList rule. ⚠ Proving a REAL `https://` link opens it
+- [ ] **Task 6 — the mobile screens (AC5).** The home card, the list, the three-step screen, and PM21 (c)'s ONE route file
+      `app/(peer-request)/peer-request.tsx` (`/peer-request`, `?c=`; 6.30's AL16 route-map test must pass); en + hi; component tests with a REAL `t()` leg; the FlatList rule. ⚠ Proving a REAL `https://` link opens it
       on a device is row 6-30's acceptance, ⛔ not this story's — here, test the route by navigating to the path.
 - [ ] **Task 7 — the helpline recording (AC6).** PM12's two routes on 6.3's chain; the admin panel on the member-lookup screen; tests incl.
       ⛔ no step-up ⇒ refused.
@@ -690,5 +699,6 @@ route and resolver are built and tested here against a config base URL; only the
 | Date | Version | Change |
 |---|---|---|
 | 2026-10-10 | 1.0 | Created (`bmad-create-story 6.27`); pinned `5946e411`; routing note Q1 / Q2 written; PM1–PM20 proposed. |
+| 2026-10-10 | 1.3 | Aligned with Story 6.30 (created the same day): the link is `<origin>/peer-request?c=<code>` (a query string — operators refuse dynamic paths), built by 6.30's contracts `app-links` builder; the base is the env var `APP_LINKS_BASE_URL` (⛔ not Secret Manager — the dotted-id defect); ONE route file `app/(peer-request)/peer-request.tsx` (the old group-only files would collide); typed DLT variables (`{#alphanumeric#}` / `{#url#}` / `{#cbn#}`); Row 27 (e) → 6.30's roster row. ⛔ No PM added; PM3, PM11, PM21 amended (⛔ not yet committed — ⛔ no decision superseded). |
 | 2026-10-10 | 1.2 | BigDev: a WhatsApp reminder at 48 hours to opted-in members who have ⛔ not answered — *"48 hours, separate story 6-31"*. FIVE FACTS #1 note + Trap 17 (leave room, ⛔ not built here); the routing note's Q1 option A gains the reminder BEFORE sending (disclosed there). ⛔ No PM, AC or task of 6.27 changes. |
 | 2026-10-10 | 1.1 | BigDev: the text should open the questions directly — *"separate story"*. PM21 added (the link's code, path, route, resolver, config hold, go-live condition); PM3's text gains `{link}`; FIVE FACTS #1, AC2, AC5, Tasks 1 / 2.1 / 5 / 6 and the split note updated; the plumbing = new row `6-30-app-links-open-the-app-from-a-text` (domain expected week of 2026-10-12, ONE config value). The routing note's quoted texts updated BEFORE sending (disclosed there). |

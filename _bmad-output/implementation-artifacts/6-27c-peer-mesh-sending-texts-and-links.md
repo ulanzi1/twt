@@ -64,6 +64,10 @@ RB4 / RB5 / RB11 / RB12 / RB16 · `-302` RN2–RN8 · `-255` F7 (the cost line).
    (after COMMIT) decrypts, normalises, hashes and sends through `sendClaimDltSms` with the template of the Pariwar's `locale_default`,
    rendering EXACTLY the registered text (the mode-resolved name, the link, the helpline); `link_code` is written once at begin; the ping row
    records 0155's vocabulary; a re-run ⛔ never sends again; outside 09:00–20:00 IST ⇒ deferred to 09:00 IST.
+2b. **AC2b — ⛔ no text while a question of the live version is `'pending'`** (6.27a PM23 (a), round 4): the sweep checks
+   `resolveLiveVersion('peer_mesh', pariwarId)` once per Pariwar per run; any question whose `counselBasis` is `'pending'` ⇒ the Pariwar scope
+   is HELD (the RB12 shape — ⛔ no ping begun, ⛔ no slot used up, ONE ids-only alarm `config:counsel_basis_pending`); once v2's basis is
+   recorded (Row 27 (f)), every request still due is sent. ⇒ a neighbour is ⛔ never texted into a questionnaire with a ruled question hidden.
 3. **AC3 — ⛔ no text once the claim can no longer take an answer:** a claim in `state_trustee_approved` WITHOUT a live R9 routing, or
    refused / closed ⇒ `skipped_superseded`; a claim in `verifier_approved` / `reversed` / `state_trustee_freeze`, or in
    `state_trustee_approved` WITH a live R9 routing, IS texted (PM8's answer window — `-305` §2 item 4; the `-283` A1 precedent).
@@ -95,7 +99,7 @@ RB4 / RB5 / RB11 / RB12 / RB16 · `-302` RN2–RN8 · `-255` F7 (the cost line).
       `suspicion-notice.ts`): begin = the CAS from `send_outcome IS NULL` under claim → ping locks with the answer-window and PM1 checks; the
       CAS finalise; the transient note; the ONE `detail` builder (built HERE, pure, mirroring the CHECK) asserted by every writer; `listStalledPeerMeshRequestScopes`, `parkHeldPeerMeshRequests`, the give-up by `aging_since`;
       returns ciphertext as stored, ⛔ never decrypts; the decrypt-fence arm in the SAME commit.
-- [ ] **Task 3 — the jobs child + sweep (AC2–AC4).** NEW `apps/jobs/src/scheduler/claim-peer-mesh-requests.ts` (child per claim + fan-out +
+- [ ] **Task 3 — the jobs child + sweep (AC2–AC4, AC2b — the `'pending'`-question hold).** NEW `apps/jobs/src/scheduler/claim-peer-mesh-requests.ts` (child per claim + fan-out +
       daily sweep + registration; queue names in `packages/queue/src/index.ts`); the injected `enqueuePeerMeshRequestSend` in
       `claim-peer-mesh.ts` (also on the no-op branch) + boot wiring beside the shepherd hook (`boot.ts:483-505`); `APP_LINKS_BASE_URL` read at
       boot, passed as a dep, validated each run (6.30's `resolveHttpsOrigin`); the locale read (Pariwar `locale_default`) and the name read
@@ -128,6 +132,7 @@ RB4 / RB5 / RB11 / RB12 / RB16 · `-302` RN2–RN8 · `-255` F7 (the cost line).
 ## Change Log
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-10 | 2.3 | Round 4: AC2b — the sweep HOLDS while any question of the live questionnaire version is `'pending'` (6.27a PM23 (a)), so the ruled health questions are ⛔ never hidden from a texted neighbour; Task 3 carries it. |
 | 2026-10-10 | 2.2 | Round-3 validate: the answer window is 6.27a's ONE extracted predicate `isClaimInAnswerWindow` (⛔ never re-composed); a skip at the locked re-check is the begin CAS from `send_outcome IS NULL` writing that outcome with `attempt_count = 1` (6.27a PM4). |
 | 2026-10-10 | 2.1 | Round-2 validate: 6.27c now HAS a small migration — the ENUMERATED `detail` grammar CHECK and the ONE builder moved here from 6.27a (the vocabulary lives with its only writer); PM4's summary aligned with 6.27a's record (CAS begin / finalise, transient note); the answer window incl. `state_trustee_approved` under a live R9 routing (AC3); `name_too_long` / Devanagari recorded (AC5); AC5b for PM14 / PM15; the untexted-ping 404 on the resolver; the `?c=` split (6.30 parses, 6.27c wires); the 6.6 annotation and row-6-22 pointer OWNED by 6.27a (checked here); typed templates verified by 6-34; `locale_source`; the screen-vs-text language note; 6-31 within the window. |
 | 2026-10-10 | 1.0 | Cut from Story 6.27 v2.0 (`2026-10-10-305` §2 items 1, 2, 4): PM1–PM5, PM14–PM16 (templates), PM21 (b)–(f), PM22, PM11's `?c=` half. |

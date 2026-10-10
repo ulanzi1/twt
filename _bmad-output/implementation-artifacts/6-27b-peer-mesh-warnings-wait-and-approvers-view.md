@@ -123,6 +123,7 @@ Consequence 1) · `-261` C3 (⛔ never inherited) · `-282` GI7 / `-281` Q1 B (p
 ## Change Log
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-10 | 2.3 | Round 4: change-log row only (6.27a's set-based `answerWindowSql` is what 6.27b's queue reads for the window). |
 | 2026-10-10 | 2.2 | Round-3 validate: no change to this part's scope; the shared record (6.27a v2.2) scopes the seven-key rule to `peer_mesh` from v2, extracts the answer window, and records `has_died` as neighbour-only in `COMPARABLE_QUESTION_KEYS`. |
 | 2026-10-10 | 2.1 | Round-2 validate: PM13's per-answer warning flags (and their `null` failure leg) are OWNED here — AC8 + Task 3b (they were handed to b by 6.27a but had ⛔ no AC / Task); *"no FULL visit"* for the blind-first filter; ANY current key makes the District Admin's approval unrevisable (F20); PM24's audit via `emitAuthAudit`, the escalation named, the state-gating coarseness recorded; ACs renumbered (AC9 = gates). |
 | 2026-10-10 | 1.0 | Cut from Story 6.27 v2.0 (`2026-10-10-305` §2 item 1): PM9, PM10, PM24, PM25 (c)'s kinds half. |

@@ -55,7 +55,7 @@ Status: ready-for-dev
 > 2. ⚠⚠ **The link's code must be a QUERY STRING, ⛔ not a path segment.** India's operators whitelist a URL's FIXED part; a dynamic URL is
 >    registered ending in `?`, and *"dynamic paths before the query string are currently not supported"* (Tanla; MSG91, Fast2SMS say the
 >    same; TRAI's whitelisting Direction in force since 1 Oct 2024 — a text with a non-whitelisted URL is REJECTED). ⇒ the link is
->    `https://<domain>/peer-request?c=<code>`, whitelisted as `https://<domain>/peer-request?` (AL3) — 6.27a (v2.1) PM21 carries this form.
+>    `https://<domain>/peer-request?c=<code>`, whitelisted as `https://<domain>/peer-request?` (AL3) — 6.27a (v2.3) PM21 carries this form.
 > 3. ⚠ **TRAI's 18 Nov 2025 Direction requires TYPED template variables** (`{#numeric#}`, `{#alphanumeric#}` ≤ 40 chars, `{#url#}`,
 >    `{#urlott#}`, `{#cbn#}`, `{#email#}`); `{#url#}` and `{#cbn#}` are checked against the whitelist; an untyped template is rejected.
 >    ⇒ 6.27c's link is `{#url#}` and its helpline `{#cbn#}`. ⚠ The untyped `{#var#}` is ALSO in the login / step-up OTP template
@@ -92,7 +92,7 @@ so that **I can do what the message asks in a minute, and ⛔ no web page ever a
 | `2026-10-10-304` Q6 A | the text says *"a few short questions"* | ⭐ Trustee-ratified — ⛔ no change to this story's fallback copy |
 | BigDev 2026-10-10 | the plumbing is a *"separate story"* (this one) | BigDev's call (recorded in the sprint-status row `6-30` comment, 2026-10-10 — ⛔ not in `-305`'s occasion) |
 | **`2026-10-10-305`** | §2 item 1 — 6.27 SPLITS into four (6.27a answering, 6.27b warnings, 6.27c sending, 6.27d inspector); §2 item 2 — texts in the Pariwar's default language until row 6-35 (⚠ a temporary narrowing of `-303`'s rider ⇒ CF1 owed); §2 item 5 — rows 6-34 (typed templates) and 6-35, ⛔ no production-identity row (the identity stays BigDev's decision, carried on Row 29 (a)); §4 — roster Rows 27 / 28 / 29 RESERVED | author-commit (BigDev) — CF1–CF3 in the confirm note (⛔ not yet sent) |
-| 6.27a v2.1 PM11 / PM21 | the link's code (6.27a's column), the resolver and the `?c=` wiring (6.27c), the shell's content (6.27a) | author (proposed) |
+| 6.27a v2.3 PM11 / PM21 | the link's code (6.27a's column), the resolver and the `?c=` wiring (6.27c), the shell's content (6.27a) | author (proposed) |
 | Architecture §4.7 | deep-link landing: (1) re-auth preserves the target; (2) scope match; (3) revoked ⇒ *"this is no longer available to you"* + helpline, *"Never hard 404"* | architecture (binding) |
 | Architecture §3.4 + `-255` F7 | members got ⛔ no ordinary SMS before `-303` — `-303` Q1 A is the widening for the five | ruled (`-303`) |
 | ADR-0022 | the public Astro shell: server-rendered, ⛔ no session, ⛔ no per-user branching | ratified |
@@ -473,7 +473,7 @@ leg waits for its OTP retag (AL15).
 
 ### Previous story intelligence
 - **6.25**: `ADMIN_APP_ORIGIN` — the env + per-run validator + hold pattern; its validator is now SHARED (AL5).
-- **6.27a** (v2.1, the record for 6.27a–d): the consumer; its Trap 1–3 fences hold for anything a link opens; 6.27a owns the
+- **6.27a** (v2.3, the record for 6.27a–d): the consumer; its Trap 1–3 fences hold for anything a link opens; 6.27a owns the
   not-openable copy and the rule "⛔ no API call without a session" (the route renders once while the session is loading — V-M6); 6.27c
   owns the resolver call and reuses that copy for its 404. 6.27c wires the PARSED `c` to the resolver.
 - **11b.3 / 11b.1**: the public-pages two-route rule and the PII-scrape matrix — every public page is declared.
@@ -481,7 +481,7 @@ leg waits for its OTP retag (AL15).
 ### Git intelligence
 `a05ce150` 6.27 created (branch `story/6-27-…`) · `5946e411` 6.29 code review · `36eb7b46` 6.29 build — house order: decision entry →
 records → build → review; REBASE-merge ([[project_story_automator_ops]]). This story's branch `story/6-30-app-links-open-the-app-from-a-text`
-is STACKED on 6.27's (the row lives there) and now also carries 6.27's v1.3–v2.1 (6.27a–d) and the `-303` / `-304` / `-305` governance commits — rebase onto
+is STACKED on 6.27's (the row lives there) and now also carries 6.27's v1.3–v2.3 (6.27a–d) and the `-303` / `-304` / `-305` governance commits — rebase onto
 `main` once those merge.
 
 ### Latest tech information (fetched 2026-10-10 — re-check at Task 0.1)
@@ -507,7 +507,7 @@ is STACKED on 6.27's (the row lives there) and now also carries 6.27's v1.3–v2
 - Architecture §4.7 (routing; deep-link landing checks), §3.4; ADR-0010, -0011, -0013, -0020 cl.4, -0022; PRD OQ-1, FR-60, FR-61.
 - `2026-10-10-303` (Q1 A + the language rider), `2026-10-10-304` (Q6 A), `2026-10-10-305` (§1 corrections; §2 items 1, 2, 5; §4 the
   reserved rows); the confirm note `trustee-panel-routing-note-2026-10-10-6-27-confirms.md` (CF1–CF3, ⛔ not yet sent).
-- Story 6.27a v2.1 (PM11, PM16, PM21 — the record for 6.27a–d) and the cut files 6.27b / 6.27c / 6.27d; Story 6.25 (RE7); deferred-work D-13, D8, the dotted-secret-id item;
+- Story 6.27a v2.3 (PM11, PM16, PM21 — the record for 6.27a–d) and the cut files 6.27b / 6.27c / 6.27d; Story 6.25 (RE7); deferred-work D-13, D8, the dotted-secret-id item;
   row 6-34 (typed templates).
 - `docs/launch-gate-inventory/inventory-roster.md`, `dlt-template-requests-6-19.md`; `packages/contracts/src/deep-links/`;
   `packages/channels/src/otp-sms-template.ts`, `sms-dlt-registry.ts`.
@@ -529,7 +529,8 @@ is STACKED on 6.27's (the row lives there) and now also carries 6.27's v1.3–v2
 ## Change Log
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-10 | 1.4 | Round 4: version pointers to 6.27a v2.3 (⛔ no change to PM11 / PM21). |
 | 2026-10-10 | 1.3 | Round-3 validate: the *"separate story"* quote re-cited to the sprint-status row `6-30` comment (⛔ never `-305`'s occasion); two glyph-register breaches (the symbol glued to "echo" and to "oracle") rewritten as *"the no-echo test"* and *"⛔ never an oracle"*. |
-| 2026-10-10 | 1.2 | Round-2 validate: the §0 language line now reads `-303`'s rider NARROWED by `2026-10-10-305` §2 item 2 (CF1 owed) — ⛔ never "ruled by `-303`"; a `-305` row in the rulings table (§2 items 1 / 2 / 5, §4) and the BigDev calls / AL12's reservation re-attributed to it; `-305` and the confirm note in References; the `?c=` split stated ONCE (6.30 parses `c`; 6.27a fills the slot + the not-openable copy; 6.27c wires the resolver) — AL16, Sequencing, Previous story intelligence; "Task 6" → 6.27a's Task 5 (the shell MERGED first); Row 28 covers the route-shell placeholder; stale 6.27 refs (v1.9 → 6.27a v2.1; FIVE → SEVEN FACTS). |
+| 2026-10-10 | 1.2 | Round-2 validate: the §0 language line now reads `-303`'s rider NARROWED by `2026-10-10-305` §2 item 2 (CF1 owed) — ⛔ never "ruled by `-303`"; a `-305` row in the rulings table (§2 items 1 / 2 / 5, §4) and the BigDev calls / AL12's reservation re-attributed to it; `-305` and the confirm note in References; the `?c=` split stated ONCE (6.30 parses `c`; 6.27a fills the slot + the not-openable copy; 6.27c wires the resolver) — AL16, Sequencing, Previous story intelligence; "Task 6" → 6.27a's Task 5 (the shell MERGED first); Row 28 covers the route-shell placeholder; stale 6.27 refs (v1.9 → 6.27a v2.3; FIVE → SEVEN FACTS). |
 | 2026-10-10 | 1.1 | Validate applied (V-B1, V-H1–H3, V-M1–M9, V-L1–L8) + BigDev's answers. **B1:** the path list is a JSON data file loaded by `app.config.ts` via `require()` (the config cannot import the contracts TS barrel); AC3 runs `expo config` per profile in `ci:local`. **H1:** the fallback page shows both languages with ⛔ no toggle (the shell's toggle echoed `?c=`); a no-echo test; ⛔ no `Vary`. **H2:** 6.30 OWNS a thin route shell for `/peer-request` that 6.27a fills; AL16 strict + pins the two root catch-alls. **H3:** the untyped OTP and registry templates added; AL15 becomes a pointer to row `6-34-sms-templates-typed-variables`. **M1:** Android exact `path`. **M2:** one shared `resolveHttpsOrigin`; 6.27c owns the boot read; trailing `/` accepted. **M3:** an unconditional first-ordered edge skip (bic + securityLevel), exact paths; SBFM caveat. **M4:** F13 / AL4 corrected (`ClientRequestPath` has ⛔ no query). **M5:** `EAS_BUILD_PROFILE`; local / web / update behaviour; `projectId` by hand; production-signed device proof. **M6:** 6.27a owns the resolver-404 copy and "⛔ no call without a session". **M7:** Rows 27 / 28 (6.27) and 29 (6.30) reserved; Row 29 (h) Hindi via Row 28. **M8:** governance current (`-303` / `-304`; 6.27's four-part split; 6.30 before 6.27c). **M9:** ⛔ no hard-coded brand; "your message"; the home-screen line. **L1–L8:** one app per host per path; the `public` env narrowed; `process.env` at request time; `terraform validate` recorded; the link-target holder cleared and `c`-only; typed-route types; platform claims re-checked at Task 0.1. |
 | 2026-10-10 | 1.0 | Created (`bmad-create-story 6.30`); pinned `a05ce150`; AL1–AL16 proposed. |

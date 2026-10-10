@@ -15,7 +15,8 @@ STATUS: `ready-for-dev` — ⛔⛔ NO CODE until (1) the Panel has ruled Q1–Q4
 Panel question … written from the routing-note template, with this entry's (a)–(c) and the pre-6.24a root as the deciding facts …
 (ii) then the engineering guard that ruling permits."* ([[feedback_governance_commits_precede_implementation]]).
 ⭐ The OPs are written for the note's RECOMMENDED answers (Q1 A, Q2 A, Q3 A); `## ⚖️ Build decisions` states, per OP, what changes under
-each other answer. If the Panel rules Q1 C, this story builds OP11 (BigDev's window removal — unconditional), OP14 (a) (the console list) and OP13 (if Q4 A) — ⛔ nothing else.
+each other answer. If the Panel rules Q1 C, this story builds OP11 (BigDev's window removal — unconditional), OP14 (a) (the console list), OP10's neutral staff label (*"Closed —
+another claim for this death goes ahead"* — true for both triggers) and OP13 (if Q4 A) — ⛔ nothing else.
 
 GLYPH REGISTER, ADDRESSING RULE: as 6.24a / 6.24b / 6.29 — `⛔` sits ONLY on a negation word · `⭐` = key fact or action · `⚠` = hazard.
 Sweep on every pass: `grep -oE "⛔ \**[A-Za-z]+"` — every head-word a negation. ⛔ No `file:NNN` into `.decision-log.md`,
@@ -518,7 +519,8 @@ The Panel's ruling on Q1–Q4 is transcribed into the routing note's ⏳ block a
 ALONE); then the author-commit answering OP1–OP14 for that ruling — naming `-279` A6 as discharged and recording that the note widened
 `-294` §3's framing — is committed ALONE; then a second governance commit updates this file's rulings table, Policy meaning and OPs
 (`✅ committed by -NNN`), and the `deferred-work.md` items of Task 0.6 gain their pointers, each with its own status. ⛔ No code before
-both commits. If Q1 C: only OP11 (Task 5b, AC10), OP14 (a) (the console section — Task 5c's part, AC11's console legs) and, if Q4 A, OP13 (Task 4's
+both commits. If Q1 C: only OP11 (Task 5b, AC10), OP14 (a) (the console section — Task 5c's part, AC11's console legs), OP10's staff label (Task 6's
+part) and, if Q4 A, OP13 (Task 4's
 OP13 part, AC9) are built; every other Task is left unchecked with a banner ([[project_story_automator_ops]]).
 
 ### AC1 — One definition (OP1)
@@ -838,6 +840,7 @@ Domain in `packages/domain/src/claim/` (⛔ no new package — [[feedback_no_pre
 - 2026-10-11 — v1.9: the note's second check (1 HIGH, 5 MEDIUM, 8 LOW — applied): the confirmation becomes its own **Q4** with options and costs.
 - 2026-10-11 — v1.10: the note's third check (1 HIGH, 7 MEDIUM, 6 LOW — applied).
 - 2026-10-11 — v1.11: the note's fourth check (2 HIGH, 4 MEDIUM, 3 LOW — applied); under Q1 C, OP11 + OP14 (a) + OP13 (if Q4 A) are built.
+- 2026-10-11 — v1.12: the note's fifth check (1 HIGH, 7 MEDIUM, 8 LOW — applied); OP10's staff label also built under Q1 C.
 
 ### File List
 
@@ -857,3 +860,4 @@ Domain in `packages/domain/src/claim/` (⛔ no new package — [[feedback_no_pre
 | 1.9 | 2026-10-11 | The note's second fresh-context check: 1 HIGH — a confirm-by-silence bullet could be recorded from a ruling that never answered it ⇒ **Q4** (A: close the voted, unpaid claim — OP13; B: it is paid, the appellant's claim closed), with its own fact, costs, reading; Q1 A's cell cut to its rule + a *How A works* list ("final vote" defined as the LAST approval before payment, incl. the special panel and correction-case decisions); the wait's wording (a second claim that APPEARS — kept apart or reopened — ⛔ no time limit, lifts if it is refused / closed); Q2 A and Q1 A's appeal timing; Q2 B can ⛔ not reopen a joined filing; separability lines; E1/E2/E4 additions. Story: Q1–Q4 throughout, the rulings table's Q4 row, OP13 keyed on Q4. |
 | 1.10 | 2026-10-11 | The note's third fresh-context check: 1 HIGH — Q1 A's cost said an appeal won after the other claim's final vote pays nothing, contradicting Q4 A for the suspicion appeal ⇒ "an ORDINARY refusal (⛔ not the suspicion one, which is Q4)". 7 MEDIUM — Q4 B under Q1 C; the Q1 → Q4 pointer narrowed to after the vote / before payment; §0 hands the closure's appeal and the helpline's words back to the Panel's questions; "final vote" no longer "the last approval" (R9 can still refuse it); Q2 B for a same-channel join; the plain-English Q1's ordinary-appeal cost; story header / AC0: under Q1 C, OP13 is still built on Q4 A. 6 LOW — the wait starts when a family APPEALS; Q4's hold covers the 90 days before an appeal; the plain-English Q4 and its cost; E4's `unique(` grep; Q1 A's five costs numbered. |
 | 1.11 | 2026-10-11 | The note's fourth check (every Q1–Q4 combination walked): 2 HIGH — under Q1 C the note promised OP11 / OP14 while the story built only OP13 ⇒ the story now builds OP11 (BigDev's unconditional window removal), OP14 (a) and OP13 (if Q4 A) under C, and the note limits the warning / banner / close button to Q1 A or B; three "paid nothing" / "one corner" sentences were false under Q1 C or Q4 B ⇒ each qualified. 4 MEDIUM — the corner / Q4 line is the PAYMENT BEGINNING (⛔ not "paid"); Q2 A, plain English and E2 name Q4 B's case. 3 LOW — a settled paid claim (H(ii)); Q4 A's text goes to Claim 2's nominee; Q3 B's helpline words. Task 0.4 names Q4 B. |
+| 1.12 | 2026-10-11 | The note's fifth check (all 24 ruling combinations tabled): 1 HIGH — §0's "a filing for a paid death joins it / is closed at once" was false under Q1 C (OP4 / OP2 unbuilt ⇒ a settled death's new filing, or one kept apart, may be paid) ⇒ qualified for A / B and C stated; "settled" replaced by "payment complete". 7 MEDIUM — the helpline label built under Q1 C too (story); cost (4)'s trigger is the payment BEGINNING; How A works' Q4 exception only under Q4 B; the Q1 reading's "never leaves a death unpaid" scoped (Q4 A's own cost); "paid once" and the plain-English ordinary-appeal line hedged for Q2 B; Q2 B is a later piece of work. 8 LOW — capitalisation; "may be paid twice"; "goes live as it is today (C, and the 30-day limit stays)"; Q1 B's release by refusal; "closed this way"; Q2 / Q3 "payment has begun"; "before its payment began"; the How-much-to-trust sentence split. |

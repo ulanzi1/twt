@@ -14,7 +14,9 @@
 >   app; helpline staff see *"Closed — another claim for this death goes ahead"* (what they may tell the caller is part of Q3);
 > · that a new filing for a death now joins the claim already open for it however old that claim is (today only within 30 days — the first
 >   way below stops); a filing through another channel waits for staff to merge it or keep it apart, one through the same channel simply joins.
->   ⚠ This includes a filing for a death already paid: it joins the paid claim (or, once that claim is settled, is closed at once) and is ⛔ never considered on its own (Q2 is that family's route);
+>   ⚠ If you choose A or B in Q1, this includes a filing for a death already paid: it joins the paid claim (or, once that claim's payment
+>   is complete, is closed at once) and is ⛔ never considered on its own (Q2 is that family's route). Under C, such a filing also joins
+>   the paid claim; but once that payment is complete, or if staff keep it apart, it becomes a new claim and may be paid;
 > · what staff see: the District Admin sees every other claim for the death, its stage, and whether it records the same date of death
 >   (⛔ never a name); if you choose A or B in Q1, every later approver also sees the warning, and a "Close this claim" button once the
 >   death's payment has begun.
@@ -68,8 +70,8 @@ duplicate. They are meant to pay two **different** families only if they recorde
 
 | | Option | What changes for a person | Cost |
 |---|---|---|---|
-| **A** | **One payment per death: the first claim to pass the final vote is paid.** ⛔ No other claim for that death can then pass it, and when that claim's payment begins every other open claim for the death is **closed** (⛔ not refused). How A works is listed under the table. | A death is paid once. A family whose other claim is closed sees *"This claim has been closed. Please call the helpline."* | (1) Where two **different** families filed with different dates of death and ⛔ neither is the suspicion case, the claim approved first is paid — the approver chooses, with a reason and a note, but it is still the *"race between staff"* you turned down before. (2) A second claim that appears after the District Admin approved — one staff kept apart, or a refused claim whose family appeals (a plain new filing now joins the first claim) — holds the first claim's final approval until the District Admin gives a reason and a note, or the second claim is refused or closed; there is ⛔ no time limit, and if neither happens the first claim is ⛔ never paid, and the death is paid only if the second claim passes the final vote instead. (3) The family whose claim is closed cannot appeal the closure; its only route is the helpline (Q2). (4) In the rare corner above (the refusal changed only after the other claim was **paid**), a family that **wins** its suspicion appeal is paid nothing unless you order otherwise (Q2) — the cost you turned down before when you refused to let an approval end the appeal. (5) An ordinary refusal (⛔ not the suspicion one, which is Q4) overturned on appeal **after** another claim has passed the final vote pays ⛔ nothing, unless the special panel then refuses that claim (Q2). |
-| **B** | **One payment per death, and staff choose first.** While two claims for one death are both open, ⛔ neither can pass the final vote until the District Admin closes one of them, with a reason and a note. After that, as A. | A death is paid once, and ⛔ never by whichever claim moved faster. | Every duplicate — usually the **same** family filing twice — needs an extra staff step before anyone is paid, and if the District Admin never takes it, ⛔ neither claim is ever paid. A new staff action to build. The District Admin's choice closes the other family's claim, and that cannot be appealed. The suspicion corner and Q4 are the same as in A. So is an appeal won after the other claim passed the final vote (Q2). |
+| **A** | **One payment per death: the first claim to pass the final vote is paid.** ⛔ No other claim for that death can then pass it, and when that claim's payment begins every other open claim for the death is **closed** (⛔ not refused). How A works is listed under the table. | A death is paid once (unless you order a second payment — Q2 B). A family whose claim is closed this way sees *"This claim has been closed. Please call the helpline."* | (1) Where two **different** families filed with different dates of death and ⛔ neither is the suspicion case, the claim approved first is paid — the approver chooses, with a reason and a note, but it is still the *"race between staff"* you turned down before. (2) A second claim that appears after the District Admin approved — one staff kept apart, or a refused claim whose family appeals (a plain new filing now joins the first claim) — holds the first claim's final approval until the District Admin gives a reason and a note, or the second claim is refused or closed; there is ⛔ no time limit, and if neither happens the first claim is ⛔ never paid, and the death is paid only if the second claim passes the final vote instead. (3) The family whose claim is closed cannot appeal the closure; its only route is the helpline (Q2). (4) In the rare corner above (the refusal changed only after the other claim's payment had **begun**), a family that **wins** its suspicion appeal is paid nothing unless you order otherwise (Q2) — the cost you turned down before when you refused to let an approval end the appeal. (5) An ordinary refusal (⛔ not the suspicion one, which is Q4) overturned on appeal **after** another claim has passed the final vote pays ⛔ nothing, unless the special panel then refuses that claim (Q2). |
+| **B** | **One payment per death, and staff choose first.** While two claims for one death are both open, ⛔ neither can pass the final vote until one of them is refused or the District Admin closes it, with a reason and a note. After that, as A. | A death is paid once (unless you order a second payment — Q2 B), and ⛔ never by whichever claim moved faster. | Every duplicate — usually the **same** family filing twice — needs an extra staff step before anyone is paid, and if the District Admin never takes it, ⛔ neither claim is ever paid. A new staff action to build. The District Admin's choice closes the other family's claim, and that cannot be appealed. The suspicion corner and Q4 are the same as in A. So is an appeal won after the other claim passed the final vote (Q2). |
 | **C** | **Leave it as it is: both claims may be paid.** | ⛔ No change to who is paid (a late filing now joins the open claim — see the top; Q4 is asked on its own). | The members pay twice for one death, out of what other families receive, with ⛔ no way back. |
 
 **How A works:**
@@ -87,24 +89,24 @@ duplicate. They are meant to pay two **different** families only if they recorde
   death is closed — automatically, or in a few rare cases when the next approver who opens it presses "Close this claim".
 - A claim already refused keeps its appeal, and is closed only if that appeal succeeds.
 - If the first claim is refused after its final vote (the special panel can still refuse it), the others carry on as normal.
-- The suspicion case keeps your rule, except the rare corner above (and Q4).
+- The suspicion case keeps your rule, except the rare corner above (and, if you choose B in Q4, Q4's case).
 
 **Our reading:** **A** — **because** it guarantees one payment per death without making every duplicate wait for a staff step (B's
 risk — the same trap the suspicion case had before your 90-day ruling); A adds that wait only when a second claim appears after the
 District Admin's approval, and even then the death can still be paid on the other claim; and the warning puts the choice in front of
 the person approving, with a reason and a note on the record. Closing the other claims only when the payment begins — ⛔ not at the vote —
-means a claim refused after its vote never leaves a death unpaid. In the common case — the same family filing twice — A simply closes
+means the special panel refusing a claim after its vote never, through this rule, leaves a death unpaid (Q4 A carries its own such cost). In the common case — the same family filing twice — A simply closes
 the duplicate.
 
 ⚠ The Panel can reject this reading and still use the table — each option is built differently but ⛔ none needs another question.
 
 ---
 
-# Q2 — What is the other family owed, once the death has been paid on another claim?
+# Q2 — What is the other family owed, once the death's payment has begun on another claim?
 
 *This applies only if you choose A or B in Q1.*
 
-**In one sentence:** If the death has already been paid on one claim, and another family then shows — by an allowed appeal, or by a
+**In one sentence:** If the death's payment has already begun on one claim, and another family then shows — by an allowed appeal, or by a
 different date of death — that it should have been paid instead, may the Trust ask the members to pay again?
 
 **The one fact that decides it:** ⭐ the money went straight from the members to the first claim's bank accounts; the Trust has ⛔ nothing
@@ -112,8 +114,8 @@ it can pay from except a **second collection from the members**.
 
 | | Option | What changes for a person | Cost |
 |---|---|---|---|
-| **A** | **Nothing more from the members.** The other claim is closed and the family is pointed to the helpline. If they say the wrong family was paid, the Trust takes it up outside the system; the members are ⛔ never asked to pay twice for one death. | The members pay once per death, always. | A family that was truly owed (for example, the first claim used a false date) gets ⛔ nothing from the members. The right to appeal a refusal at any time — which you confirmed when you set the 90-day limit for the suspicion refusal only — still runs, but an ordinary appeal **won** after another claim for the death has passed the final vote pays ⛔ nothing (unless the special panel then refuses that other claim), and so does a suspicion appeal won after the other claim's payment began (Q1's corner) — and, if you choose B in Q4, one won after the other claim's final vote but before its payment. Its only remedy is whatever the Trust can recover from the person paid. |
-| **B** | **The Panel may order a second payment, case by case.** A claim closed this way can be reopened only by a recorded Panel decision, and then goes ahead as a normal claim. | A family wrongly passed over can still be paid — by your decision only. | The members pay twice for that death, out of what other families receive. A new power, and a new screen to build. The Panel must judge a dispute between two families. A later filing that joined the paid claim has ⛔ no claim of its own to reopen: one through another channel must first be kept apart by staff; one through the same channel leaves ⛔ no record, so that family can be found only through the helpline. |
+| **A** | **Nothing more from the members.** The other claim is closed and the family is pointed to the helpline. If they say the wrong family was paid, the Trust takes it up outside the system; the members are ⛔ never asked to pay twice for one death. | The members pay once per death, always. | A family that was truly owed (for example, the first claim used a false date) gets ⛔ nothing from the members. The right to appeal a refusal at any time — which you confirmed when you set the 90-day limit for the suspicion refusal only — still runs, but an ordinary appeal **won** after another claim for the death has passed the final vote pays ⛔ nothing (unless the special panel then refuses that other claim), and so does a suspicion appeal won after the other claim's payment began (Q1's corner) — and, if you choose B in Q4, one won after the other claim's final vote but before its payment began. Its only remedy is whatever the Trust can recover from the person paid. |
+| **B** | **The Panel may order a second payment, case by case.** A claim closed this way can be reopened only by a recorded Panel decision, and then goes ahead as a normal claim. | A family wrongly passed over can still be paid — by your decision only. | The members pay twice for that death, out of what other families receive. A new power, and a new screen to build (built as its own piece of work after this one; until then a closed claim cannot be reopened). The Panel must judge a dispute between two families. A later filing that joined the paid claim has ⛔ no claim of its own to reopen: one through another channel must first be kept apart by staff; one through the same channel leaves ⛔ no record, so that family can be found only through the helpline. |
 
 **Our reading:** **A** — **because** preventing a second collection for one death is the reason this question exists, and a payment
 made to the wrong family through a false date is a fraud for the Trust to pursue against the person paid, ⛔ not a debt for the
@@ -127,7 +129,7 @@ members. ⭐ A does ⛔ not shut B out: if a real case arises, B can be added as
 
 *This applies only if you choose A or B in Q1.*
 
-**In one sentence:** When a claim is closed because the death was paid on another claim, should the Trust **text** that family, or is it
+**In one sentence:** When a claim is closed because the death's payment has begun on another claim, should the Trust **text** that family, or is it
 enough that the app and the helpline say *"This claim has been closed. Please call the helpline."*?
 
 **The one fact that decides it:** ⭐ we expect — without data — that most claims closed this way come from the family **being paid**
@@ -157,8 +159,8 @@ ruling closed the other claim only before its final approval.
 
 | | Option | What changes for a person | Cost |
 |---|---|---|---|
-| **A** | Apply your earlier ruling here too: Claim 2 is closed and Claim 1 goes ahead. | Claim 1's family, which won its appeal, is paid. the nominee on Claim 2 is sent your closed-claim text, as for every claim your rule closes. | It reaches a claim later than the point you ruled on. If Claim 1 then fails a later check, the death is paid by ⛔ no claim. |
-| **B** | Claim 2 goes ahead and is paid; under Q1 A or B, Claim 1 is then closed (under Q1 C it goes on and may be paid too). | Claim 2's family is paid as it expected. | Under Q1 A or B, a family that **wins** its suspicion appeal is paid ⛔ nothing unless you order otherwise (Q2) — the cost you turned down when you refused to let an approval end the appeal; under Q1 C the death is paid twice. |
+| **A** | Apply your earlier ruling here too: Claim 2 is closed and Claim 1 goes ahead. | Claim 1's family, which won its appeal, is paid. The nominee on Claim 2 is sent your closed-claim text, as for every claim your rule closes. | It reaches a claim later than the point you ruled on. If Claim 1 then fails a later check, the death is paid by ⛔ no claim. |
+| **B** | Claim 2 goes ahead and is paid; under Q1 A or B, Claim 1 is then closed (under Q1 C it goes on and may be paid too). | Claim 2's family is paid as it expected. | Under Q1 A or B, a family that **wins** its suspicion appeal is paid ⛔ nothing unless you order otherwise (Q2) — the cost you turned down when you refused to let an approval end the appeal; under Q1 C the death may be paid twice. |
 
 **Our reading:** **A** — **because** the money has ⛔ not moved, so your rule can still hold as you made it. A applies whatever you
 choose in Q1.
@@ -171,7 +173,7 @@ choose in Q1.
 
 - **Live today:** ⛔ nothing. The system is ⛔ not in production; ⛔ no claim has been paid.
 - **Blocked:** Story 6.28's own build only — an earlier engineering record puts this question before its code. ⛔ Nothing else waits on it.
-- **If nothing is decided:** the system goes live on **C** — a death can be paid twice, and the second payment comes out of what other
+- **If nothing is decided:** the system goes live as it is today (C, and the 30-day limit stays) — a death can be paid twice, and the second payment comes out of what other
   families receive.
 
 ---
@@ -182,8 +184,8 @@ choose in Q1.
   the suspicion case**; you chose A (the new claim waits for the appeal) over C (*"whichever claim is approved first is paid"* — *"a race
   between staff"*). ⚠ Q1 A here **resembles that C**, for the cases FQ5 does ⛔ not cover; the difference is the warning, the reason and the
   note — and that FQ5's own rule still governs the suspicion case except in one rare corner (`-294` §2 (a), and only once the other
-  claim's payment has BEGUN) — and, if you choose B in Q4, also when the refusal comes after the other claim's final vote but before its
-  payment — where an allowed suspicion appeal pays nothing — the cost of FQ5 **B** (*"Takes away the appeal the Panel granted (`-239` c)"*), which you also turned down.
+  claim's payment has BEGUN), where an allowed suspicion appeal pays nothing. If you choose B in Q4, the same is true when the refusal
+  comes after the other claim's final vote but before its payment. That is the cost of FQ5 **B** (*"Takes away the appeal the Panel granted (`-239` c)"*), which you also turned down.
   ⭐ Weigh both resemblances yourselves.
 - **Corrected in this note (before it was put):** the gap was first recorded (`2026-10-08-294` §2) as three narrow paths around the
   suspicion case plus one older root; `-294` §3 asked for those paths as the deciding facts — they are Q1's bullets (a refusal overturned
@@ -209,7 +211,7 @@ refused claim later won on appeal while another claim was paid — the system ca
 straight to that claim's bank account, so a second payment for one death takes money from what other families receive, and cannot be
 taken back. We suggest: one payment per death. Once one claim passes the final vote, no other claim for that death can; when its payment
 begins, any other open claim for that death is closed (a refused one keeps its appeal, but an ordinary appeal won after the other claim's
-final vote pays nothing); and until one claim passes the final vote, anyone approving while another claim for
+final vote pays nothing unless you order otherwise (Q2)); and until one claim passes the final vote, anyone approving while another claim for
 the same death is open is warned and must give a reason and a note — and if a second claim appears after the District Admin's approval,
 the first claim waits for that reason (with ⛔ no time limit), unless the other claim is refused or closed.
 The suspicion case keeps the rule you already made, except one rare corner (and, if you choose B in Q4, Q4's case): a family whose

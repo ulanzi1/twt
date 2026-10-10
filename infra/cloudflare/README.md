@@ -83,12 +83,36 @@ terraform output -raw turnstile_auth_secret_key | \
 Full **Bot Management** (`cf.bot_management.score`, verified-bot list) is a Cloudflare
 **Enterprise** add-on; **Super Bot Fight Mode** is the Pro/Business equivalent. The
 architecture commits the *capability* ("bot management + challenge"), not the SKU.
-`var.enable_bot_management` defaults **false** (no paid plan at dev); the WAF custom
-rules still express per-surface sensitivity. Enabling the score-based rules requires a
-plan that populates `cf.bot_management.score`. Recorded in ADR-0010 so the capability
-bar is not quietly assumed at a tier the trust has not bought.
+`var.enable_bot_management` defaults **false** (no paid plan at dev). The custom-rules
+ruleset `cloudflare_ruleset.waf_custom` is nonetheless ALWAYS present (Story 6.30,
+`2026-10-10-312` AL10): it is the zone's ONE entry point for `http_request_firewall_custom`,
+and its FIRST rule skips the edge challenges for the two app-link verification files (below).
+The per-surface bot-score rules (Rules 1–3) are added to it only when
+`enable_bot_management = true` — they need a plan that populates `cf.bot_management.score`.
+Recorded in ADR-0010 so the capability bar is not quietly assumed at a tier the trust has
+not bought.
 
 See `.terraform-plan-expectations.md` for the expected `terraform plan` shape.
+
+### App-link verification files skip the edge challenges (Story 6.30)
+
+`/.well-known/apple-app-site-association` and `/.well-known/assetlinks.json` are fetched by
+Apple's CDN and Android's verifier — bots by design. A challenge is not a clean 200, and
+verification then fails SILENTLY. `waf_custom`'s first rule skips, for EXACTLY those two
+paths: the rest of the ruleset, Browser Integrity Check and the zone security level (both
+always on — `zone.tf`), and Super Bot Fight Mode (`phases = ["http_request_sbfm"]`). ⛔ Never
+`/peer-request` (a human page — normal edge rules apply). ⚠ Free-plan **Bot Fight Mode**
+cannot be skipped by a rule: the operator records whether it is on (roster Row 29). The
+DPDPA reading (the skip is ⛔ not a material change to the cleared edge design) is the
+author's, recorded with its ground on Row 29; if questioned it goes to Row 3's owners. Prove
+it on a real request at the device proof (`curl -A` a non-browser user agent).
+
+### Logpush fields — ⛔ never `ClientRequestURI`
+
+`observability.tf` logs `ClientRequestPath`, which EXCLUDES the query string. An app link
+carries its code in the query (`/peer-request?c=<code>`, Story 6.30 AL4), so the code is ⛔ not
+in the edge logs as configured. ⛔ Never add `ClientRequestURI` to `logpull_options` — it
+carries the query.
 
 ## Landing-story map (provisional)
 

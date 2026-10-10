@@ -15,54 +15,87 @@
 resource "cloudflare_bot_management" "twt" {
   count = var.enable_bot_management ? 1 : 0
 
-  account_id = var.account_id
-  zone_id    = var.zone_id
+  # Story 6.30 (N11): ⛔ no `account_id` — it is ⛔ not an argument of `cloudflare_bot_management` in provider
+  # 4.52.x (`terraform validate` failed on it); the resource is zone-scoped.
+  zone_id = var.zone_id
 
   # Super Bot Fight Mode knobs (Pro/Business). On Enterprise Bot Management these are
   # superseded by the score-based custom rules below. enable_js powers the score.
-  enable_js                = true
+  enable_js                 = true
   sbfm_definitely_automated = "block"
   sbfm_likely_automated     = "managed_challenge"
   sbfm_verified_bots        = "allow" # search engines, uptime monitors, etc.
 }
 
 resource "cloudflare_ruleset" "waf_custom" {
-  # cf.bot_management.score is only populated when Bot Management is enabled. Without it
-  # the score field evaluates to 1 for all traffic, which would challenge or block every
-  # request to the sensitive paths at apply time. Guard to match cloudflare_bot_management.
-  count = var.enable_bot_management ? 1 : 0
-
+  # ⭐ UNCONDITIONAL (Story 6.30, `2026-10-10-312` AL10, corrected by `-315` C5 and `-316` E2). This is the zone's
+  # ENTRY-POINT ruleset for `http_request_firewall_custom`, and Cloudflare allows ONE per phase per zone — so the
+  # app-link skip lives INSIDE it (a second ruleset in this phase would fail at APPLY; `terraform validate`
+  # cannot see that). Its FIRST rule is the skip; the bot-score Rules 1–3 follow ONLY when bot management is on
+  # (`cf.bot_management.score` is only populated then — without it the score evaluates to 1 for all traffic,
+  # which would challenge or block every request to the sensitive paths).
   zone_id     = var.zone_id
   name        = "${local.name_prefix}-waf-custom"
-  description = "Per-surface bot sensitivity (Story 1.13, §5.8a). FR-88 surfaces stricter than read surfaces."
+  description = "App-link verification files skip the edge challenges (Story 6.30); per-surface bot sensitivity (Story 1.13, §5.8a) when bot management is on."
   kind        = "zone"
   phase       = "http_request_firewall_custom"
 
+  # Rule 0 (FIRST) — Story 6.30: the two app-link verification files. Apple's CDN and Android's verifier are
+  # bots by design; a challenge is ⛔ not a clean 200, and verification then fails SILENTLY. Skips the rest of
+  # THIS ruleset (Rules 1–3), Browser Integrity Check and the zone security level (both ALWAYS on — zone.tf)
+  # and Super Bot Fight Mode, for EXACTLY these two public, data-free paths — ⛔ never `/peer-request` (a human
+  # page: normal edge rules apply). Free-plan Bot Fight Mode cannot be skipped — the operator records whether
+  # it is on (roster Row 29). ADR-0010's DPDPA clearance covers the edge design "as recorded": the author's
+  # reading that this skip is ⛔ not material is recorded with its ground on Row 29; if questioned it goes to
+  # Row 3's owners (Trustee Panel; support Legal Counsel) — ⛔ never settled by the operator.
+  rules {
+    ref         = "app_link_verification_files_skip"
+    description = "Skip BIC, security level, SBFM and the custom rules for the two app-link verification files (Story 6.30)"
+    expression  = "http.request.uri.path in {\"/.well-known/apple-app-site-association\" \"/.well-known/assetlinks.json\"}"
+    action      = "skip"
+    action_parameters {
+      ruleset  = "current"
+      products = ["bic", "securityLevel"]
+      phases   = ["http_request_sbfm"]
+    }
+    logging {
+      enabled = true
+    }
+    enabled = true
+  }
+
+  # Rules 1–3 — only when bot management is on (a `for` filter, so the list type never changes with the flag).
   # Rule 1 — FR-88 high-sensitivity surfaces: challenge below the STRICTER score.
-  rules {
-    ref         = "fr88_sensitive_surfaces"
-    description = "Managed-challenge bots on signup / claim filing / helpdesk / auth (stricter threshold)"
-    expression  = "(${local.sensitive_paths_expression}) and (cf.bot_management.score lt ${var.bot_score_sensitive_threshold})"
-    action      = "managed_challenge"
-    enabled     = true
-  }
-
   # Rule 2 — everything else: challenge only clearly-automated traffic.
-  rules {
-    ref         = "standard_surfaces"
-    description = "Managed-challenge clearly-automated traffic on standard surfaces"
-    expression  = "not (${local.sensitive_paths_expression}) and (cf.bot_management.score lt ${var.bot_score_challenge_threshold})"
-    action      = "managed_challenge"
-    enabled     = true
-  }
-
   # Rule 3 — block definitely-automated traffic outright (score = 1..2).
-  rules {
-    ref         = "block_definite_bots"
-    description = "Block definitely-automated traffic (lowest bot scores)"
-    expression  = "cf.bot_management.score lt 2 and not cf.bot_management.verified_bot"
-    action      = "block"
-    enabled     = true
+  dynamic "rules" {
+    for_each = [for rule in [
+      {
+        ref         = "fr88_sensitive_surfaces"
+        description = "Managed-challenge bots on signup / claim filing / helpdesk / auth (stricter threshold)"
+        expression  = "(${local.sensitive_paths_expression}) and (cf.bot_management.score lt ${var.bot_score_sensitive_threshold})"
+        action      = "managed_challenge"
+      },
+      {
+        ref         = "standard_surfaces"
+        description = "Managed-challenge clearly-automated traffic on standard surfaces"
+        expression  = "not (${local.sensitive_paths_expression}) and (cf.bot_management.score lt ${var.bot_score_challenge_threshold})"
+        action      = "managed_challenge"
+      },
+      {
+        ref         = "block_definite_bots"
+        description = "Block definitely-automated traffic (lowest bot scores)"
+        expression  = "cf.bot_management.score lt 2 and not cf.bot_management.verified_bot"
+        action      = "block"
+      },
+    ] : rule if var.enable_bot_management]
+    content {
+      ref         = rules.value.ref
+      description = rules.value.description
+      expression  = rules.value.expression
+      action      = rules.value.action
+      enabled     = true
+    }
   }
 
   lifecycle {

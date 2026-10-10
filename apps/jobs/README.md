@@ -139,3 +139,15 @@ ZeptoMail has none). Provider errors are classified by their error NAME — an a
 ⭐ A HELD run (a config gap or a failing pre-flight) PARKS every in-flight row past its lease (⛔ live child holds one) and skips the
 three-day give-up; the next child re-claims a parked row and credits its give-up anchor (`aging_since`) the time it sat parked, so
 a hold never burns a row it parked, and repeated short holds credit only their own length (`2026-10-09-300` / `-301`). ⚠ A pre-flight hold does ⛔ stop children already queued or retrying.
+
+## Story 6.30 — the app-link base URL (`APP_LINKS_BASE_URL`)
+
+| Variable | Meaning |
+| --- | --- |
+| `APP_LINKS_BASE_URL` | the base of every app link a text carries (`<base>/peer-request?c=<code>`) — the Trust's domain as an `https://` ORIGIN with ⛔ path, query, credentials or fragment (a trailing `/` is accepted and stripped). Validated EVERY run by the shared `resolveHttpsOrigin` (`src/scheduler/staff-email-config.ts` — the same validator as `ADMIN_APP_ORIGIN`, ⛔ never a copy); invalid / unset ⇒ `null`. ⛔ No code default. |
+
+⭐ Ownership (`2026-10-10-312` AL5): Story 6.30 owns the validator, this row and the `compose.yaml` jobs-block line; **Story 6.27c**
+owns the boot read (the `boot.ts` `ADMIN_APP_ORIGIN` shape), the dep, and its sweep's hold `config:app_links_base_url_invalid` — ⛔
+nothing reads the variable before 6.27c lands. An env var, ⛔ a Secret Manager key: a dotted secret id (`app_links.base_url`) is
+the recorded unverified-defect shape. The domain is roster Row 29 (b) — ONE fact in four settings (`APP_LINKS_BASE_URL`,
+`APP_LINKS_HOST`, `PUBLIC_SITE_ORIGIN`, `EXPO_PUBLIC_PUBLIC_SITE_ORIGIN`).

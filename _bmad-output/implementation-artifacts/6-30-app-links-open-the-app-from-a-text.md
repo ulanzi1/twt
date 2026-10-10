@@ -499,9 +499,9 @@ applicable (the Niyamavali does not speak to app links) — and it is ⛔ not ra
       `catalog.ts`, `microcopy.yaml` `copy_globs`); the matrix entry; the page/matrix lockstep (`apps/public/tests/app-link-pages-lockstep.test.ts`); `apps/public/tests/peer-request-page.test.ts`
       (N12, N13);
       the PII-scrape gate run.
-- [ ] **Task 7 — the shared validator (AC9).** `resolveHttpsOrigin` + the `resolveAdminAppOrigin` alias in `staff-email-config.ts`;
+- [x] **Task 7 — the shared validator (AC9).** `resolveHttpsOrigin` + the `resolveAdminAppOrigin` alias in `staff-email-config.ts`;
       `apps/jobs/tests/https-origin.test.ts`; README row; ⛔ no boot wiring (6.27c); N18.
-- [ ] **Task 8 — infra (AC8).** `infra/dokploy/compose.yaml` (the router incl. `/_astro/` — N10, the app-link variables, the jobs-block line) +
+- [x] **Task 8 — infra (AC8).** `infra/dokploy/compose.yaml` (the router incl. `/_astro/` — N10, the app-link variables, the jobs-block line) +
       `infra/dokploy/README.md`; `infra/cloudflare/waf.tf` (unconditional, the skip first, Rules 1–3 dynamic; N11) + `outputs.tf` +
       `infra/cloudflare/README.md` (the `ClientRequestURI` line; its `waf_custom` description `:83-91`) + `.terraform-plan-expectations.md`
       (the default plan's `waf_custom` now holds only the skip); `terraform fmt -check -recursive`; `terraform validate` run

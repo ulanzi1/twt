@@ -44,6 +44,38 @@ emits the `{ pariwarId, pathScope: "/p/<id>/", branding }` descriptor the live
 DPDPA legal review (D1-1.13, ADR-0010 OPEN) — route straight to Dokploy for now and
 **do NOT assert DPDPA compliance**.
 
+## App links (Story 6.30, `2026-10-10-312` AL9) — exact paths on the `public` service
+
+A second Traefik router on `public`, `twt-public-app-links`, serves the app-link surfaces at the ROOT (they cannot live under
+`/p/<id>/`: Apple and Android fetch `/.well-known/…` at the host root, and the link in a text is `https://<domain>/peer-request?c=…`):
+
+| Path | What | Matcher |
+| --- | --- | --- |
+| `/.well-known/apple-app-site-association` | iOS Universal Links file (server endpoint, `application/json`) | `Path(...)` — exact |
+| `/.well-known/assetlinks.json` | Android App Links file | `Path(...)` — exact |
+| `/peer-request` | the plain fallback page (one `Path(...)` per entry of `packages/contracts/src/app-links/app-link-paths.json`) | `Path(...)` — exact |
+| `/_astro/*` | the site's hashed static CSS (public, data-free — ⛔ never a page); without it the fallback page is unstyled | `PathPrefix(...)` |
+
+⛔ Never `PathPrefix(`/.well-known/`)` (ACME and any future well-known path would reach Astro); ⛔ never `PathPrefix(`/peer-request`)`
+(a plain string prefix — `/peer-requests` would match). Traefik's `Path()` ignores the query. A new app-link path needs a new
+`Path(...)` here — `apps/public/tests/app-link-pages-lockstep.test.ts` fails otherwise.
+
+The `public` service's environment carries ONLY the app-link variables (every value public; unset is safe — the files answer 404,
+the page says "the app" and shows ⛔ no store button). Values are owed at roster Row 29 (a) / (c):
+
+| Variable | Holds |
+| --- | --- |
+| `APP_LINKS_IOS_APP_IDS` | comma list of `<TEAMID>.<bundleId>` (the production app) |
+| `APP_LINKS_ANDROID_APPS` | JSON list `[{ "package": "…", "sha256": ["AA:BB:…"] }]` — the Play App Signing key's fingerprint (+ the upload key's) |
+| `APP_STORE_URL_ANDROID` / `APP_STORE_URL_IOS` | the store listing (`https://play.google.com/…` / `https://apps.apple.com/…` only); unset ⇒ ⛔ no button |
+| `APP_DISPLAY_NAME` | the app's display name on the fallback page — decided WITH the production identity; unset ⇒ "the app" |
+
+The `jobs` service gains `APP_LINKS_BASE_URL` (the Trust's domain as an https origin — read by Story 6.27c). ⚠ The `public`
+service's own `DATABASE_URL` / `PUBLIC_API_ORIGIN` are still ⛔ not wired in this file (a deferred-work item, outside 6.30), and the
+as-built `/p/` rule vs the root-level Astro pages mismatch is recorded, ⛔ not re-architected. The edge rule that keeps Cloudflare's
+challenges off the two files is `infra/cloudflare/waf.tf` (the `waf_custom` skip). Dev wires, operator applies (ADR-0011 §5) —
+roster Row 29 (g).
+
 ## Migration trigger (§5.3 — recorded, not executed)
 
 The Dokploy→Cloud Run/GKE migration trigger (2nd Pariwar **with a bespoke build** OR

@@ -129,6 +129,12 @@ RB4 / RB5 / RB11 / RB12 / RB16 · `-302` RN2–RN8 · `-255` F7 (the cost line).
 - ⚠ **Row 6-31's reminder** goes ONLY within PM8's answer window too (`-305` §2 item 4) — leave the predicate readable (6.27a Trap 17).
 - ⚠ **Row 26 (`jobs-db-role`)** — the production jobs login holds ⛔ no privileges on claim tables; the new sweep inherits it (recorded).
 - **Previous story:** 6.24b (the send core, the sibling registry), 6.29 (the parity bar — hold / park / give-up, the CHECKs, the trigger).
+- ⭐ **From 6.30 (dev, 2026-10-10):** the link code's shape is `APP_LINK_CODE_PATTERN` (`@twt/contracts` — `packages/contracts/src/app-links/`,
+  `/^[A-Za-z0-9]{12}$/`) — the generator, the `link_code` CHECK / test and the resolver route consume it, ⛔ never a second pattern. The URL
+  is `buildAppLinkUrl(origin, 'peerRequest', code)` where `origin = resolveHttpsOrigin(APP_LINKS_BASE_URL)` (`apps/jobs/src/scheduler/
+  staff-email-config.ts`; `null` ⇒ hold `config:app_links_base_url_invalid`); `buildAppLinkUrl` THROWS on a non-bare origin or a malformed
+  code. The shell's parsed code arrives as `PeerRequestSlot`'s `code` prop (`apps/mobile/components/peer-request/PeerRequestSlot.tsx` — a
+  6.30 placeholder 6.27a may replace).
 - **References:** 6.27a's file (PM1–PM5, PM14–PM16, PM21, PM22, F23–F29, F36); 6.30's file (AL2, AL5, AL6, AL16); `-303`, `-304`, `-305`.
 
 ## Dev Agent Record

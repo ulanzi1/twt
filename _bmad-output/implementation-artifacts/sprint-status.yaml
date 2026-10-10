@@ -19718,6 +19718,8 @@ development_status:
   # (`packages/channels/src/otp-sms-template.ts`), the alert registry (`sms-dlt-registry.ts`), 6.19's + 6.24b's twelve drafted, 6.27c's two;
   # ⚠ an untyped OTP template blocks every login. 6-35 = an in-app language switch, saved on the phone and recorded on the server on a
   # change (⛔ never on first launch); from then the member's choice is their preferred language (`-303` rider; CF1 confirm owed).
+  # ⭐ 2026-10-10 ANNOTATION (Story 6.30, `2026-10-10-312` AL15 — a POINTER, 6.30 retags ⛔ nothing): roster Row 29 (e)'s logged-out legs
+  # ⛔ cannot pass until THIS row's OTP-template retag is approved by the operator (a rejected OTP template blocks every login).
   6-34-sms-templates-typed-variables: backlog
   6-35-in-app-language-switch: backlog
   # ⭐ 2026-10-10 ADDED by `2026-10-10-306` (BigDev: "Selection must be school wise …"): each member's SCHOOL (a stable school code + name)

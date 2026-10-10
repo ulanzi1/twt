@@ -78,6 +78,12 @@ export * from './alerts/index.js';
 // story. Internal render seam — NO `.openapi()` path, openapi/v1.yaml stays byte-identical.
 export * from './deep-links/index.js';
 
+// Story 6.30 — the app-link grammar (`https://<domain>/peer-request?c=<code>`): ONE path list as DATA
+// (`app-links/app-link-paths.json`), the URL builder / code parser, and the two verification-file bodies +
+// their env schemas. A separate grammar from `deep-links/` (the `twt://` push grammar is untouched). Internal
+// seam — NO `.openapi()` path, openapi/v1.yaml stays byte-identical.
+export * from './app-links/index.js';
+
 // Story 5.2 — push device-token registration DTOs (member + admin endpoints). HTTP endpoints → these DO
 // register in openapi/v1.yaml (the two new routes are the EXPECTED diff for this story).
 export * from './device-tokens/index.js';

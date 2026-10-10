@@ -15,7 +15,8 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:web": "true"
+    "test:web": "true",
+    "app-config:check": "node scripts/check-app-config.mjs"
   },
   "dependencies": {
     "@expo-google-fonts/ibm-plex-sans-devanagari": "^0.4.1",

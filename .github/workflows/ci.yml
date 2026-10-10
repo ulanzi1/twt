@@ -247,6 +247,30 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm turbo run i18n:check-parity
 
+  expo-config:
+    name: expo-config (the app config resolves per variant — Story 6.30 AC3)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: install
+    # Story 6.30 AC3 (`2026-10-10-312` AL1 / AL7): runs the REAL Expo config loader for APP_VARIANT
+    # unset / development / preview / production. Expo loads apps/mobile/app.config.ts with plain Node
+    # resolution — a TypeScript import from @twt/contracts that vitest would resolve fails HERE, which is
+    # why this is a job and not only a unit test. unset / development / preview must equal the committed
+    # prototype fixture; production without APP_IDENTITY_* must FAIL; production with APP_LINKS_HOST must
+    # carry one exact-path autoVerify intent filter per app-link path. Mirrored in scripts/ci-local.sh.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.30.3
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.12.0
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @twt/mobile app-config:check
+
   pii-scrape:
     name: pii-scrape (FR-74 Public-vs-Private matrix gate)
     runs-on: ubuntu-latest

@@ -475,11 +475,11 @@ applicable (the Niyamavali does not speak to app links) — and it is ⛔ not ra
         to be confirmed with the provider); a DATED annotation under the sprint-status row `6-30` (⛔ never a rewrite: the base URL is env
         `APP_LINKS_BASE_URL`, ⛔ not `app_links.base_url`; 6.30 owns the path list and the route shell; the story file exists); a sprint ledger
         line ([[project_sprint_status_safe_prepend]]).
-- [ ] **Task 1 — contracts `app-links` (AC2).** `packages/contracts/src/app-links/{app-link-paths.json,index.ts,paths.ts,verification.ts,
+- [x] **Task 1 — contracts `app-links` (AC2).** `packages/contracts/src/app-links/{app-link-paths.json,index.ts,paths.ts,verification.ts,
       README.md}`; barrel export in `packages/contracts/src/index.ts`; `packages/contracts/tests/app-links.test.ts`; ⛔ no import of
       `@twt/domain` ([[project_contracts_domain_bundle_boundary]]); run vitest — contracts tests are outside tsc
       ([[project_contracts_tests_outside_tsc]]); `deep-links/README.md` gains the separate-grammar line (AL13); N2, N3, N16.
-- [ ] **Task 2 — mobile config (AC3).** FIRST capture the prototype fixture; `app.json` → `app.config.ts` (`APP_VARIANT`; `require()` of the
+- [x] **Task 2 — mobile config (AC3).** FIRST capture the prototype fixture; `app.json` → `app.config.ts` (`APP_VARIANT`; `require()` of the
       JSON by package name; production-only `APP_IDENTITY_*` throw and link settings; ⛔ no `extra.eas.projectId` until the EAS project exists — `-316` E1);
       `eas.json` `env` per profile (`APP_VARIANT` only today — N1; N9); `apps/mobile/tests/unit/app-config.test.ts` (variants, the `eas.json` lockstep) and
       `app-links-lockstep.test.ts`; the `expo-config` job in `ci.yml` AND `scripts/ci-local.sh`; a note in `apps/mobile/README.md` on

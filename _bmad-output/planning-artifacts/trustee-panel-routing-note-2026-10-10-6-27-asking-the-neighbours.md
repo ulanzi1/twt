@@ -38,7 +38,8 @@
 > ⚠ **CORRECTION, 2026-10-10 (recorded, the question below ⛔ not edited):** the line under *"Deliberately ⛔ not asked"* — *"the answers
 > are shown to the District Admin and the later approvers only"* — was wider than the system as then designed (later approvers saw only
 > the warning line) and silent on the inspector and the helpline. Story 6.27 v1.6 (PM24, PM25) now makes it exact: every approver sees
-> the answers for the claim at their step; the inspector sees ⛔ nothing until their own inspection is completed; the helpline operator
+> the answers for the claim at their step; the inspector sees ⛔ nothing before completing their own record, and then only where
+> the family's and the neighbours' answers differ (v1.7); the helpline operator
 > sees only the caller's own answers. The exact list goes to the Panel in the follow-up note.
 >
 > ⚠ **2026-10-10, later the same day — this two-question answer was ⛔ not sent.** BigDev asked for a fuller, optional questionnaire;

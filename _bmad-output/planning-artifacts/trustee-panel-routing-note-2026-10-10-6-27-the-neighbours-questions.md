@@ -47,12 +47,13 @@ helpline [number]."* (Q6). The screen shows ⛔ nothing about a claim, the famil
 |---|---|
 | **The District Admin** (and the district's verifiers) | Every answer, who gave it, when — for claims in their district. |
 | **Every later approver** — the State Trustees at the final vote, the R9 panel, the Super Admin, the Pariwar Admin | Every answer for the claim **they are approving, at that step only** — so a reason and a note are never written about answers they cannot see. |
-| **The inspector who visits the family** | ⛔ **Nothing until they have completed their own inspection record** — then every answer at once, so they can question the family while still there. What they learn goes in a separate follow-up note; their own record is never changed, and the moment they first saw the answers is recorded. |
+| **The inspector who visits the family** | ⛔ **Nothing before they complete their own record** — ⛔ not even that answers exist (a hint invites guessing). On completing, **only where the family's answers and the neighbours' DIFFER** — e.g. *"The family said: heart attack. One neighbour said: accident."* — ⛔ never who said it, ⛔ never an exact count, with a box to note the family's response to each, and *"Please ask without saying who said this."* If nothing differs: *"Thank you, your response has been recorded. No further action needed."* Their own record is never changed. Answers that arrive after the visit go to the District Admin, ⛔ not the inspector. |
 | **The helpline operator** | Only the answers of the neighbour on the phone, while recording them — ⛔ never anyone else's: they speak with the family, and questioning the family is not their role. |
 | **The neighbour** | Their own answers, until they press Submit. |
 | ⛔ **Never** | The family, the claimant, the nominee, the other four neighbours, any other member, the public. |
 
-⭐ The inspector and the helpline rule are BigDev's (2026-10-10): the people who meet the family should form their own view first.
+⭐ The inspector and the helpline rule are BigDev's (2026-10-10): the people who meet the family should form their own view first, and
+the inspector is shown only a difference worth asking about.
 
 ⭐ Only the first two questions can raise a **warning** (your FQ10 / FQ8 E rulings). Everything else is shown to staff as **context**,
 unless you rule otherwise in Q3–Q5.
@@ -69,8 +70,13 @@ excluded (§5.5); the actual cause governs (§5.1). A neighbour's answer is **he
 
 ## The one fact that decides it
 
-⭐ **The ground inspection already establishes the cause of death** (the inspector visits, sees the original certificate and records the
-facts). A neighbour's answer can only **point staff at a question to ask** — it cannot establish anything on its own.
+⭐ **The ground inspection is where the facts are checked on the spot** — the inspector visits the family, sees the original
+certificate and records the family's account (today: the date and time of death). A neighbour's answer can only **point staff at a
+question to ask** — it cannot establish anything on its own.
+
+⭐ **If you approve asking the neighbours, we also suggest the inspector asks the FAMILY the same question** (*"How did they die?"*, from
+the same list) and records their answer — so that the inspector is shown only where the family and the neighbours DIFFER (see *"Who sees
+the answers"*). That is the Trust asking the family about the cause of death at the visit — it is part of this question.
 
 | | Option | What changes for a person | Cost |
 |---|---|---|---|
@@ -104,7 +110,8 @@ the certificate and the inspection) with it — ⛔ not a neighbour's opinion.
 | **C** | **Do ⛔ not ask.** | Nothing about illness is collected from neighbours. | Staff lose a pointer to an undeclared illness. |
 
 **Our reading: A**, with the counsel check before go-live — **because** the comparison belongs to the actual cause, and the pointer is
-still useful.
+still useful. ⭐ As in Q3, the inspector would also ask the family *"Which illness?"* from the same list, so only a difference is shown
+to the inspector.
 
 ---
 
@@ -158,7 +165,9 @@ the three new questions on pages 2 and 4 (how they know of the death, how they k
 
 - **Earlier versions:** `-303`'s note asked only how the five are reached and what a late answer does; your question there (*"which
   questions"*) was answered first with two questions — BigDev then asked for more, so this note replaces that answer before it was sent.
-- **Corrected in this note:** before sending, *"who sees the answers"* was made exact — our first wording (*"the District Admin and
+- **Corrected in this note:** before sending — (i) Q3's deciding fact first said the inspection *"already establishes the cause of
+  death"*; it records the date and time and checks the certificate, ⛔ not the cause — now worded as it is, with the family's question
+  added; (ii) the inspector's view narrowed to differences only (BigDev); (iii) *"who sees the answers"* was made exact — our first wording (*"the District Admin and
   later approvers"*) was wider than the system as designed (later approvers could see only the warning line) and silent on the inspector
   and the helpline. The first draft of the cause question asked *"Was the death natural? — if No: prolonged illness, heart
   attack …"*, which put natural causes under *"not natural"*; it is now one list.

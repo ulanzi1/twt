@@ -430,7 +430,7 @@ a family's claim must take, and whether the final approval waits). In the member
   *"answered in the app"* or *"recorded by the helpline"*, the last-saved IST time and *"changed N times"*, the date given (decrypted in the handler —
   FQ8 E: *"the District Admin is shown answers"*) with *"more than a day from the certificate"* from the WARNINGS read (Invariant 8);
   the two `kindLine`s (⛔ no date in them — `verifier-console.test.tsx:396`). ⚠ v1.6: built through PM24's shared assembler, which
-  also applies PM25's hiding for an actor who is an un-completed inspector on the claim. `VERIFIER_CONSOLE_MAX_READS` bumped to the exact new ceiling
+  also applies PM25's rule for an actor who is an un-completed inspector on the claim (the section is absent — ⛔ never a "hidden" line). `VERIFIER_CONSOLE_MAX_READS` bumped to the exact new ceiling
   with a ledger line and a `toBe`. `verifierAnnotations` STAYS `not_available_yet` — staff NOTE capture on an answer is ⛔ not built (the
   reason + note under the rule is the staff's written response); the deferred item is updated, ⛔ not closed. The family's app, the claim
   status page and every public page show ⛔ nothing new (Invariant 7).
@@ -528,15 +528,34 @@ a family's claim must take, and whether the final approval waits). In the member
 - **PM25 — the people who meet the family see the answers only after recording their own** (BigDev 2026-10-10: *"I don't want Helpline
   Operator and Field Inspector to see neighbours answer, atleast until they have recorded their own version … showing it immediately
   afterward, help them corss examine family"*).
-  (a) **The inspector** (the actor named on an assignment — a District Admin or a Block Admin; `field_worker` holds ⛔ no key today):
-  while they hold an UN-completed assignment on this claim and have completed ⛔ none, every surface — the console included, for a District
-  Admin who inspects — shows *"Hidden until you complete your inspection"* in place of the answers (and the counts). ⭐ The moment their
-  assignment is COMPLETED (`completeGroundInspection`), the answers appear on the inspection screen, so they can question the family while
-  still there. The completed record is ⛔ never changed afterwards (6.26a); what they learn goes in a NEW **follow-up note** on the
-  assignment (`follow_up_note_ciphertext`, Tier-1, with its own `follow_up_noted_at`; written once, while the claim is in PM8's window),
-  shown to staff as *"after seeing the neighbours' answers"*. Each FIRST reveal to a person is recorded (actor, claim, assignment, time)
-  ⇒ the record's `completed_at` before the reveal proves it was independent. ⚠ Approval is never blocked by this: FQ9 already needs a
-  completed inspection, so an inspecting District Admin always sees the answers before approving.
+  (a) **The inspector** (the actor named on an assignment — a District Admin or a Block Admin; `field_worker` holds ⛔ no key today)
+  — ⚠ **v1.7 (BigDev 2026-10-10: *"only discrepancy should be shared with field inspectore if there were any, to cross examine the
+  family. Otherwise, It should say Thank you, your response has been recorded. No further action needed"*):**
+  · **Before completing:** the inspector is shown ⛔ nothing about the neighbours — ⛔ no answers, ⛔ no counts, ⛔ no *"hidden"* line
+  (a hint invites guessing and pressure). For a District Admin who inspects, the console's peer-mesh section is ABSENT for them while
+  they hold an un-completed assignment on this claim (the same server-side rule — (c)).
+  · **The family's version:** the inspection records the family's answers to the COMPARABLE questions — the date of death (6.26a,
+  already), and, ONLY if the Panel approves Q3 / Q4 of the follow-up note, *"How did they die?"* and *"Which illness?"* from the SAME
+  answer lists (`family_cause_code`, `family_illness_codes` — Tier-1, `sensitive`, on `claim_ground_inspections`; migration with 0157).
+  · **At completion** (`completeGroundInspection`), the server compares, against the neighbours' answers SAVED by then, by fixed rules:
+  ① any neighbour `not_died`; ② a neighbour's date two or more calendar days from the FAMILY's date (the *"more than a day"* rule —
+  FQ8 E's reading, the PM9 window over the family's date); ③ the cause category, and ④ the illness codes — ONLY when both sides gave a
+  category and neither is *"I don't know"*, and they differ. ⛔ Never compared: *"how do you know"*, *"how do you know them"*, the
+  call-back consent.
+  · **⛔ No discrepancy (or ⛔ no answer yet)** ⇒ *"Thank you, your response has been recorded. No further action needed."*
+  · **A discrepancy** ⇒ *"Thank you, your response has been recorded. We found the family's answers don't match the neighbours'
+  observations. Please cross-question the family and record their response in the note next to each question."* — each discrepant
+  question is listed as *"The family said: [X]. One neighbour said / Some neighbours said: [Y]."* — ⛔ never a name, ⛔ never an exact
+  count, ⛔ never the other answers — plus *"Please ask without saying who said this."*, and ONE note box per discrepant question.
+  · **The notes** are a NEW table `claim_ground_inspection_discrepancy_notes` (Tier-1 note, the question key, the assignment, `noted_at`
+  `clock_timestamp()`; written once per question, while the claim is in PM8's window); staff see them marked *"after the discrepancy was
+  shown"*. The completed record is ⛔ never changed (6.26a). The discrepancy check's RESULT (question keys only, ⛔ no values) and the moment it
+  was shown are recorded ⇒ the record's `completed_at` precedes any showing — its independence is provable.
+  · **Answers arriving after completion** are ⛔ never pushed to the inspector: they reach the District Admin (the console; a warning if
+  PM9 applies), who may phone the family or send the inspector back. The inspector's screen is ⛔ never reopened.
+  · ⚠ **A District Admin who inspects** sees the discrepancy screen at completion and, as an approver, the full answers in the console
+  afterwards; approval is ⛔ never blocked by any of this (FQ9 already needs a completed inspection).
+  · **The inspector ⛔ never learns who answered** — they sit with the family; a name or a count could start a quarrel or a reprisal.
   (b) **The helpline operator** sees ONLY the answers of the neighbour they are recording, while recording (PM12) — ⛔ never another
   neighbour's answers, ⛔ never the warning lines, ⛔ never the counts. ⇒ ⛔ no reveal point: the helpline records ⛔ no family version of
   the death, and questioning the family is the inspector's and the District Admin's role.
@@ -574,8 +593,9 @@ a family's claim must take, and whether the final approval waits). In the member
    after the 72 hours resolved and after the District Admin approved; refused in `state_trustee_approved` and every closed / refused
    state; the 72-hour label ⛔ not recounted.
 8. **AC8 — staff see the answers** (PM13; ⭐ v1.6 PM24 / PM25: every approver at the claim's current step sees them through the shared
-   read, every other actor gets 404; an un-completed inspector sees *"Hidden until you complete your inspection"* everywhere, the
-   answers appear the moment their assignment is completed and the reveal is recorded; a follow-up note can be added once; the helpline
+   read, every other actor gets 404; an un-completed inspector is shown ⛔ nothing about the neighbours (⛔ no "hidden" line); at
+   completion they see either *"No further action needed"* or ONLY the discrepant questions (⛔ no name, ⛔ no exact count) with a note box
+   each, and the showing is recorded after `completed_at`; the helpline
    operator sees only the caller's own answers): the 72-hour line, each neighbour's name, the send status, each answer, its time and how it was
    recorded, the date given and whether it is more than a day from the accepted certificate; a failed decrypt or warnings read shows
    *"could not be shown / checked just now"*, ⛔ never blank or "no warning"; the read ceiling is the exact bumped number.
@@ -646,9 +666,12 @@ a family's claim must take, and whether the final approval waits). In the member
 - [ ] **Task 7 — the helpline recording (AC6).** PM12's two routes on 6.3's chain; the admin panel on the member-lookup screen; tests incl.
       ⛔ no step-up ⇒ refused.
 - [ ] **Task 8 — what staff see (AC8).** ⭐ v1.6: `assemblePeerAnswers` (shared; actor-aware — PM25 (c)); PM24's read + its
-      approver-at-current-step check + the panel on the later-approval surfaces; PM25 (a)'s hiding, the reveal record and the follow-up
-      note (a migration column on `claim_ground_inspections` + its erasure arm); tests for each role × step, the un-completed inspector,
-      the reveal ordering (`completed_at` < the reveal) and the operator's narrow view. Contracts (`PeerMeshTranscript` gains `outcome`, `windowExpiresAt`, per-ping `sendStatus`,
+      approver-at-current-step check + the panel on the later-approval surfaces; PM25 (a): the absent section for an un-completed
+      inspector; the family's comparable answers on the inspection (cause / illness ONLY if Q3 / Q4 are approved); the discrepancy rules
+      ①–④ at completion; the two completion screens; `claim_ground_inspection_discrepancy_notes` + the showing record + erasure arms;
+      tests for each role × step, each rule (incl. the date window across month / year boundaries and *"I don't know"* never counting), ⛔
+      name or count in the response, the showing after `completed_at`, a late answer ⛔ never reaching the inspector, and the operator's
+      narrow view. Contracts (`PeerMeshTranscript` gains `outcome`, `windowExpiresAt`, per-ping `sendStatus`,
       `responderName`, `reply`); `assemblePeerMesh` (the decrypts in the handler, fail-closed); `PeerMeshView`; the read-ceiling bump with an
       exact `toBe`; `claims-verifier-console.test.ts:247` stays (annotations still `not_available_yet`).
 - [ ] **Task 9 — the two kinds (AC9–AC11).** 9.1 `APPROVAL_WARNING_KINDS` + contracts mirror + `kindLine` (⛔ no date); 9.2
@@ -794,6 +817,7 @@ route and resolver are built and tested here against a config base URL; only the
 | Date | Version | Change |
 |---|---|---|
 | 2026-10-10 | 1.0 | Created (`bmad-create-story 6.27`); pinned `5946e411`; routing note Q1 / Q2 written; PM1–PM20 proposed. |
+| 2026-10-10 | 1.7 | BigDev: the inspector is shown ⛔ nothing before completing (⛔ no "hidden" line), and at completion only DISCREPANCIES between the family's and the neighbours' answers (⛔ never who said it, ⛔ no exact count), with a note box each — else *"No further action needed"*. PM25 (a) rewritten: the family's comparable answers recorded at inspection (cause / illness only if the Panel approves Q3 / Q4), four fixed discrepancy rules, a discrepancy-notes table, late answers to the District Admin only. AC8, Task 8 follow; the follow-up note gains the family's question and a corrected "one fact". |
 | 2026-10-10 | 1.6 | BigDev: who sees the answers. FOUND: the console key `claim.verify` is held only by District Admins, verifiers and the Super Admin — State Trustees, R9 voters and Pariwar Admins would approve over a warning they cannot see. NEW PM24 (every approver sees the answers for the claim at its current step — one shared assembler, one read, ⛔ no new key); NEW PM25 (the inspector sees ⛔ nothing until their inspection is completed, then at once — a follow-up note, the reveal recorded; the helpline operator sees only the caller's own answers). PM13, AC8, Task 8 follow. |
 | 2026-10-10 | 1.5 | BigDev: a fuller, optional, evolving questionnaire — 2–3 questions per page, auto-save, a note before Submit, Submit → *"Thank you"*. PM7 rewritten (a reply + append-only answers, live when saved, locked at Submit, the event at the first `has_died` save); PM9 / PM10 read the LIVE answers; PM11 / PM12 / PM13 / PM17 follow; NEW PM23 (the questionnaire as versioned DATA, `approvedBy` per question, v1 = page 1). The questions beyond page 1 go to the Panel in a follow-up note (Q3–Q7, ⏳). |
 | 2026-10-10 | 1.4 | ⭐ The Panel RULED (`2026-10-10-303`): Q1 A (with the WhatsApp reminder) + a language rider (Hindi / English by preferred language), Q2 A. STATUS (i) done; rulings table, the Panel-questions heading and P1 updated; PM3 sends both locales; PM7 asks exactly TWO questions (`answer` = `died` / `not_died` / `not_sure` / `did_not_know`; the words in the routing note's ruling block, as relayed to the Panel); NEW PM22 (the preferred language — our reading); `-279` A6 discharged for this row. |

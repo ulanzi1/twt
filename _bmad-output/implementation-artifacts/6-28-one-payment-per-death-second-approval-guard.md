@@ -11,7 +11,7 @@ design and its locks, the governance, the warning and member surfaces). ⚠ Befo
 
 STATUS: `ready-for-dev` — ⛔⛔ NO CODE until (1) the Panel has ruled Q1–Q3 (routing note
 `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-10-6-28-one-payment-per-death.md` — ⚠ written, ⛔ NOT YET SENT) and
-(2) the author-commit answering OP1–OP12 below is committed ALONE. `2026-10-08-294` §3 orders exactly this: *"BEFORE any code: (i) the
+(2) the author-commit answering OP1–OP14 below is committed ALONE. `2026-10-08-294` §3 orders exactly this: *"BEFORE any code: (i) the
 Panel question … written from the routing-note template, with this entry's (a)–(c) and the pre-6.24a root as the deciding facts …
 (ii) then the engineering guard that ruling permits."* ([[feedback_governance_commits_precede_implementation]]).
 ⭐ The OPs are written for the note's RECOMMENDED answers (Q1 A, Q2 A, Q3 A); `## ⚖️ Build decisions` states, per OP, what changes under
@@ -20,8 +20,8 @@ each other answer. If the Panel rules Q1 C, this story builds ⛔ nothing and en
 GLYPH REGISTER, ADDRESSING RULE: as 6.24a / 6.24b / 6.29 — `⛔` sits ONLY on a negation word · `⭐` = key fact or action · `⚠` = hazard.
 Sweep on every pass: `grep -oE "⛔ \**[A-Za-z]+"` — every head-word a negation. ⛔ No `file:NNN` into `.decision-log.md`,
 `deferred-work.md` or `sprint-status.yaml` (newest-first files — cite the entry id / item / row key). `file:NNN` is used ONLY for code.
-LETTERS: `OP1`…`OP12` = this story's build decisions (the author's; PROPOSED until Task 0.5). `F1`…`F15` = FOUND facts (⛔ not decided).
-`Q1`…`Q3` = the Panel's questions (⏳ awaiting). `RF` = 6.24a's (`-292`, `-294`). `H(i)`…`H(iv)` = OP4's closure sites. `R1`…`R4` =
+LETTERS: `OP1`…`OP14` = this story's build decisions (the author's; PROPOSED until Task 0.5). `F1`…`F15` = FOUND facts (⛔ not decided).
+`Q1`…`Q3` = the Panel's questions (⏳ awaiting). `RF` = 6.24a's (`-292`, `-294`). `H(i)`…`H(iv)` = OP4's closure sites. `R1`…`R2` =
 recorded residuals (⛔ not addressed).
 -->
 
@@ -39,9 +39,10 @@ Status: ready-for-dev
 > another claim for the same death has passed it (one conjunct in the one approval gate, serialised by the per-death key the gate
 > already takes); the cycle commit re-checks it; when one claim's payment is COMMITTED (the cycle commit — ⛔ not the final vote, which
 > R9 can still overturn, F15), every other open claim for that death is closed; and every approver is warned while another claim for
-> the death is open. ⭐ **The system still refuses nothing**: a closed claim is ⛔ never a refusal and ⛔ never appealable. ⚠ One
-> suspicion corner (`-294` §2 (a)) is ⛔ not left as FQ5 rules it — a suspicion appeal won after the other claim's final vote pays
-> nothing; the note puts that to the Panel by name (Invariant 3).
+> the death is open. ⭐ **The system still refuses nothing**: a closed claim is ⛔ never a refusal and ⛔ never appealable. ⭐ The suspicion
+> corner (`-294` §2 (a)) is closed while the money has ⛔ not moved: an allowed suspicion appeal now closes another claim that has passed
+> the final vote but is ⛔ not yet paid (OP13), so FQ5 holds. What remains — the refusal changed to the suspicion reason only after the
+> death was PAID — is Q2's case, put to the Panel by name (Invariant 3).
 
 > ⭐ **What already exists — rebuild ⛔ none of it:** the one approval gate `assertClaimApprovable` and its five `final` call sites
 > (6.20 / 6.23a / 6.26a / 6.24a); RF15's per-death advisory key, taken UNCONDITIONALLY at `step === 'final'`
@@ -59,7 +60,8 @@ Status: ready-for-dev
 >    claim reaches `state_trustee_approved` — ⛔ never a clean-up after.
 > 2. ⚠⚠ **The simplest path has ⛔ no refusal.** `getConvergenceCandidate` (`claim/icp.ts:109-139`) looks back only
 >    `CONVERGENCE_WINDOW_DAYS = 30` (`:66`) from the OLD claim's `created_at`; ⛔ no intake handler checks for a live claim first ⇒ a
->    second filing 31+ days after a still-open claim mints a second live claim. Both pass every gate conjunct (F9).
+>    second filing 31+ days after a still-open claim mints a second live claim. Both pass every gate conjunct (F9). ⭐ OP11 REMOVES the
+>    window (the key is the exact deceased member — a person dies once), so this path closes at intake; the guard still covers F6–F8.
 > 3. ⚠⚠ **RF15's per-death key is ALREADY taken by every final approval** — `assertSuspicionAppealDecidedForFinalApproval` takes it
 >    (`pg_advisory_xact_lock`, hashed from `suspicion-appeal:${pariwarId}:${deceasedMemberId}`) unconditionally, FIRST, before reading
 >    anything (`suspicion-refusal.ts:350-352,372-381`); every final writer runs at READ COMMITTED (`openScopeTx` is a plain `BEGIN`,
@@ -96,7 +98,8 @@ accused by the system, and every place the suspicion rule cannot hold is put to 
 |---|---|---|
 | `2026-10-08-294` §2 | Trap 9's *"unreachable"* CORRECTED — paths (a)–(c) + the pre-6.24a root reach two payments for one death | author-commit (FOUND) |
 | `2026-10-08-294` §3 | row `6-28-…`; *"BEFORE any code: (i) the Panel question — when two claims for one death both qualify for payment, which is paid, and what is the other family owed? — written from the routing-note template, with this entry's (a)–(c) and the pre-6.24a root as the deciding facts … (ii) then the engineering guard that ruling permits"* | author-commit — ⭐ this story's mandate; ⭐ the note puts (a)–(c) by name (Q1's paths; Q1 A / Q2 A costs) and WIDENS the framing to every second claim (F5–F7) — recorded in the author-commit as a widening, ⛔ not a re-reading |
-| `-262` FQ5 A | the true nominee's claim waits at final approval for the suspicion appeal; allowed ⇒ it is closed | ⭐ Trustee-ratified — OP2 / OP4 / OP6 leave its machinery exact; ⚠ path (a) is the one corner where an allowed appeal pays nothing — put to the Panel (Q1 A / Q2 A cost lines) |
+| `-262` FQ5 A | the true nominee's claim waits at final approval for the suspicion appeal; allowed ⇒ it is closed | ⭐ Trustee-ratified — OP2 / OP4 / OP6 leave its machinery exact; OP13 lets RF6 close a voted, UNPAID other claim, so path (a) before payment is decided by FQ5 A as ruled; ⚠ after payment, an allowed appeal pays nothing — Q2's case (Q1 / Q2 cost lines) |
+| `-292` RF4 | `closed`; a claim already finally approved (`state_trustee_approved`, `approved`), paid or closed is ⛔ never moved | author-commit — ⭐ OP13 SUPERSEDES it in part (6.28's author-commit): `state_trustee_approved` becomes closable; `approved` / `settled` / `closed` stay ⛔ not closable |
 | `-262` FQ5 B, C (⛔ not taken) | B: *"approving it ends the appeal"* (cost: *"Takes away the appeal the Panel granted (`-239` c)"*); C: *"Whichever claim is approved first is paid, and the other is closed"* — *"A race between staff"* | ⭐ the Panel's earlier rejections — disclosed in the note (Q1 A resembles C; path (a) carries B's cost) |
 | `-264` FQ12 | approving while ANY warning shows needs a reason and a note | ⭐ Trustee-ratified — OP5's new kind falls under it |
 | `-277` Q3 B | a warning that appears after the District Admin approved needs their reason and note too (6.23b's wait) | ⭐ Trustee-ratified — OP5's kind enters the wait ONLY if Q1 rules it (`-279` A6) |
@@ -109,8 +112,8 @@ accused by the system, and every place the suspicion rule cannot hold is put to 
 | **Q2** | what the other family is owed once the death is paid — A: nothing more from the members · B: a Panel-ordered second payment | ⏳ **AWAITING PANEL** |
 | **Q3** | is the family of a claim closed this way texted — A: ⛔ no · B: once, `-291` Q2's words | ⏳ **AWAITING PANEL** |
 
-**⛔ Not covered by any ruling (stays open):** whether intake should stop minting a second claim at all (OP11 — the author's, recorded as
-⛔ not taken); a Panel power to reopen a closed claim (Q2 B — a later row if ruled); the residuals R1–R4; the Hindi review of any
+**⛔ Not covered by any ruling (stays open):** whether intake should stop minting a second claim at all (OP11 — the author's, TAKEN: the window
+removed; override-apart and after-terminal second claims remain); a Panel power to reopen a closed claim (Q2 B — a later row if ruled); the residuals R1–R2; the Hindi review of any
 changed copy.
 
 ## ⭐ THE INVARIANTS
@@ -119,12 +122,14 @@ changed copy.
    all live in ONE Pariwar — the helpline checks `memberExists` in the Pariwar, member intake uses the session's own id.)
 2. **The system refuses nothing.** The guard is a 409 at FINAL approval; the other claim is **closed** (`closed`, `claim.closed`) — ⛔ never
    `denied`, ⛔ never appealable, ⛔ never a 6.19c closures row, ⛔ never `denied_no_appeal`.
-3. **FQ5's machinery is untouched — and its one gap is disclosed, ⛔ never papered over.** A claim on which a suspicion refusal stands (RF1)
-   and its held refile keep RF5 / RF6 / RF7 exactly; OP5's warning does ⛔ not count a claim on which RF1 stands and ⛔ none is derived on
-   it; OP4 ⛔ never closes a claim RF6 would have to decide. ⚠ Path (a) (`-294` §2): X passes the final vote; S (refused for another
-   reason) is revised ONTO the suspicion reason, appealed and ALLOWED; RF6 cannot move X (⛔ not closable) ⇒ S is blocked by OP2 and
-   closed once X's payment commits — the family that WON its suspicion appeal is paid nothing (FQ5 B's rejected cost). That outcome is
-   the Panel's to accept (Q1 A / Q2 A cost lines); ⛔ never call FQ5 "exact".
+3. **FQ5 holds while the money has ⛔ not moved — and its one remaining gap is disclosed, ⛔ never papered over.** A claim on which a
+   suspicion refusal stands (RF1) and its held refile keep RF5 / RF6 / RF7; OP5's warning does ⛔ not count a claim on which RF1 stands and
+   ⛔ none is derived on it; OP4 ⛔ never closes a claim RF6 would have to decide. Path (a) (`-294` §2): X passes the final vote; S (refused
+   for another reason) is revised ONTO the suspicion reason. ⭐ **Before X's payment is committed** — RF7 already holds X's commit while S's
+   refusal stands (`state-trustee-decision-persist.ts:1322-1336`); if S's appeal is ALLOWED, RF6 now closes X (OP13) and S goes on: FQ5 A as
+   ruled. ⚠ **After X's payment is committed** — the money cannot come back; RF6 reports X `notClosed`, OP2 blocks S, and H(iii) closes S:
+   the family that WON its suspicion appeal is paid nothing. That residual is Q2's case (A: pursued outside the system; B: a Panel-ordered
+   second payment) — the Panel's to accept; ⛔ never call it "FQ5 exact".
 4. **ONE definition** of "finally approved", "payment committed" and "another open claim for the death" (OP1) — the gate, the commit, the
    closure, the warning, the queue and the console all read it; ⛔ none re-derives it. The terminal-state list is copied BY VALUE into
    OP1's module (NW1's leaf fence — Trap 12) with a unit test pinning it equal to `CLAIM_TERMINAL_STATES`.
@@ -132,7 +137,8 @@ changed copy.
    already holds it (H(ii), H(iii)) or in its OWN transaction (H(i), H(iv)) (Fact 5).
 
 ## 📜 Policy meaning (AI-10-1)
-⭐ This story ADDS a conjunct to a benefit-gating predicate (the final approval gate) and a new reason for an existing terminal outcome
+⭐ OP11 (intake joins every later filing to the open claim) and OP14 (what staff see, and a staff trigger for P2's closure) add ⛔ no
+benefit-gating predicate. This story ADDS a conjunct to a benefit-gating predicate (the final approval gate) and a new reason for an existing terminal outcome
 (`closed`). In the member's terms — ⚠ WRITTEN FOR Q1 A / Q2 A; re-written at Task 0.4 for whatever the Panel rules:
 - **P1 (OP2 — the guard):** *"Once one claim for a member's death has passed the final vote, no other claim for the same death can pass
   it — unless the first claim is then refused."*
@@ -142,8 +148,11 @@ changed copy.
   suspicion appeal included — does not lead to a second payment for the same death."*
 - **P4 (OP5 — the warning):** *"Until one claim for a death passes the final vote, anyone approving another claim for the same death is
   warned and must give a reason and a note — and a claim filed after the District Admin approved makes the final approval wait for the
-  District Admin's reason. Once one claim has passed the final vote, the others cannot pass it, and are refused at the final vote with their
-  own message."*
+  District Admin's reason. Once one claim has passed the final vote, no other claim can pass it — the approver is stopped with its own message (the
+  claim is not refused)."*
+- **P5 (OP13 — the suspicion appeal):** *"If a family wins a suspicion appeal while another claim for the same death has passed the final
+  vote but has not yet been paid, that other claim is closed and the family's claim goes ahead."* (Niyamavali: ⛔ no clause engaged beyond
+  §5.3's discretion — consistent.)
 - **Niyamavali** (the local checkout of the private corpus, `docs/legal/niyamavali.md` — gitignored, `docs/legal-corpus-location.md`;
   ⛔ not ratified — [[feedback_niyamavali_rulebook_not_spec]]): checked 2026-10-10 — ⛔ no clause on a second claim for one death or on
   paying a death once; R9(A) (*"multiple deaths fall on the same date"*, §5.4) concerns DIFFERENT deaths ⇒ ⛔ not engaged; Part 9 (the
@@ -174,7 +183,10 @@ changed copy.
 - **F5** — **>30 days:** `getConvergenceCandidate` window (`icp.ts:122`); `tryConverge` mints when there is ⛔ no candidate (`:300-374`); the member
   and helpline handlers call `initiateIntake` directly (`claims.handlers.ts:127-146`, `claims.helpline.handlers.ts:70-100`);
   `getClaimByDeceasedMember` runs only in the `ClaimStreamConcurrencyError` backstop (`claims.service.ts:356-367`). ⚠ `state_trustee_approved`
-  and `approved` are ⛔ not terminal ⇒ a filing WITHIN 30 days of a paid claim CONVERGES into it (benign — ⛔ no second claim).
+  and `approved` are ⛔ not terminal ⇒ a filing WITHIN 30 days of a paid claim CONVERGES into it (benign — ⛔ no second claim). ⭐ The
+  window's ORIGIN: Story 6.4's planning AC (AR-62) — *"narrow time window e.g., ±30 days"* — an example, ⛔ never a Panel ruling or a reasoned
+  choice; the code calls it *"a policy knob"* (`icp.ts:61-66`). Before 6.4, `initiateIntake` joined a filing to ANY non-terminal claim of the
+  death with ⛔ no time limit (6.4's story, Dev Notes item 2). ⇒ OP11.
 - **F6** — **override apart:** `overrideIntakeAttempt` (`icp.ts:569-661`) — any admin with `claim.file` + a fresh `claim_file` step-up
   (`claims.convergence.routes.ts:35-39,80-91`); ⛔ no check of the against-claim's state; the against-claim is excluded from convergence
   for ever (`icp.ts:125-131`).
@@ -243,7 +255,7 @@ changed copy.
   6.19c closure (`assertDecidable` `correction-closure.ts:484-487` requires `TRUSTEE_VOTABLE_STATES`) acts on it. ⇒ closing the other claims at the
   vote, then R9-denying X, leaves the death paid by ⛔ no claim — OP4 closes at the commit.
 
-## ⚖️ Build decisions OP1–OP12 — ⚠ the author's; PROPOSED, ⛔ not committed until Task 0.5
+## ⚖️ Build decisions OP1–OP14 — ⚠ the author's; PROPOSED, ⛔ not committed until Task 0.5
 
 ⭐ §0 (template `trustee-panel-routing-note-TEMPLATE.md`): every OP strips to *"the code should do X"* in service of Q1–Q3's answers.
 Each says what changes under a non-recommended answer.
@@ -252,8 +264,9 @@ Each says what changes under a non-recommended answer.
   `state.ts`, `events.ts`, `nominee-name-check.ts`, `nominee-lock.ts` — it joins NW1's entry list, `approval-warnings.test.ts:338-376`):
   · `FINALLY_APPROVED_CLAIM_STATES = ['state_trustee_approved', 'approved', 'settled']` and `PAYMENT_COMMITTED_CLAIM_STATES = ['approved',
     'settled']` and `OPEN_EXCLUDED_TERMINAL_STATES = ['settled', 'denied', 'closed']` — literals BY VALUE (precedent
-    `death-certificate-approval.ts:330-335`); a unit test (outside the module) pins them against `CLAIM_NOT_CLOSABLE_STATES` minus
-    `closed` and `CLAIM_TERMINAL_STATES` for EVERY state.
+    `death-certificate-approval.ts:330-335`); a unit test (outside the module) pins, for EVERY state, `FINALLY_APPROVED_CLAIM_STATES` =
+    `PAYMENT_COMMITTED_CLAIM_STATES` ∪ {`state_trustee_approved`}, `CLAIM_NOT_CLOSABLE_STATES` = `PAYMENT_COMMITTED_CLAIM_STATES` ∪ {`closed`}
+    (after OP13), and the terminal list = `CLAIM_TERMINAL_STATES`.
   · SQL fragments (raw SQL, explicit aliases — ⛔ never a Drizzle correlated subquery, [[project_epic6_drizzle_correlated_subquery_bug]]):
     `otherClaimInStatesSql(alias, states)` → the lowest `claim_case_id` of ANOTHER claim of the same `(pariwar_id, deceased_member_id)` in
     those states, or NULL; `otherOpenClaimsForDeathSql(alias)` → `json_agg` of the ids of the other claims that are ⛔ not terminal, ⛔ not
@@ -275,8 +288,9 @@ Each says what changes under a non-recommended answer.
   in-run set: `current_state` is projected in the same transaction, so a claim committed earlier in THIS run is already `approved` to the
   next read. Two `state_trustee_approved` claims of one death can ⛔ not arise once OP2 ships — this catches legacy dev rows and any future
   writer that bypasses the gate. The result shape is ⛔ not changed (F11). ⚠ It does ⛔ not take RF15's key (Trap 3). ⚠ **R1 (recorded,
-  ⛔ not addressed):** a skipped candidate stays `state_trustee_approved` for good — ⛔ not closable (`state.ts:359`), ⛔ not returnable — and is
-  re-selected by every run inside the 500 cap; reachable only from a legacy pair or a bypass. Likewise legacy-only: two concurrent commits
+  narrowed by OP13):** a skipped candidate whose death was committed in the SAME run is closed by H(i) (OP13 made `state_trustee_approved`
+  closable); one whose death was paid in an EARLIER run stays `state_trustee_approved` (⛔ not returnable) and is re-selected by every run
+  inside the 500 cap until an approver closes it from its voted card (OP14 (b)) or an R9 finalize (H(iv)) — ⛔ not addressed; reachable only from a legacy pair or a bypass. Likewise legacy-only: two concurrent commits
   under different `commit_id`s can each commit one claim of a legacy two-voted pair (READ COMMITTED; ⛔ nothing serialises them across
   commits).
 - **OP4 — THE OTHER OPEN CLAIMS ARE CLOSED WHEN A PAYMENT IS COMMITTED (Q1 A).** Generalise RF6's helper: extract its per-claim core (the
@@ -285,7 +299,7 @@ Each says what changes under a non-recommended answer.
   selects `current_state <> 'closed'` BEFORE its cap (today RF6 selects ALL other claims, `suspicion-refusal-persist.ts:160-171`, `LIMIT 50`,
   so piled-up closed claims could push an open one out) and logs at error level when the cap is reached;
   `closeClaimsHeldBySuspicionAppeal` keeps its signature, its `-239` early return, its `notClosed` report and its behaviour (its specs
-  green) and calls the core with `trigger: 'suspicion_appeal_allowed'`. A claim is closed with `trigger: 'death_already_finally_approved'`,
+  green — EXCEPT the legs OP13 flips by design) and calls the core with `trigger: 'suspicion_appeal_allowed'`. A claim is closed with `trigger: 'death_already_finally_approved'`,
   `held_by_claim_case_id` = the payment-committed claim, ONLY when another claim of the death is in `PAYMENT_COMMITTED_CLAIM_STATES` and the
   claim is (a) CLOSABLE (`isClaimClosable`), (b) ⛔ neither `denied` nor in `appeal_stage_1..3` — a refusal KEEPS its appeal (P3; Q2 A) and is
   closed only once an appeal reverses it, (c) ⛔ not one on which RF1 stands, (d) ⛔ not held by RF5's wait (`suspicionAppealWaitState(rows,
@@ -298,7 +312,7 @@ Each says what changes under a non-recommended answer.
   | **H(i)** | a payment is committed | `claims.cycle-freeze.handlers.ts` `postCommit`, AFTER the pool-spawn trigger block (outside it and its session lock — that block runs only `if (!triggerDelivered)`), on EVERY response, fresh or replay (`committedClaimIds` is populated on a replay, `state-trustee-decision-persist.ts:1266,1414`); once per distinct `deceasedMemberId` in `frozenRefs` (up to 500, sequential) | OWN (`openScopeTx`) per death, with `SET LOCAL lock_timeout`; a timeout is logged and falls to R2 — entry `closeClaimsOfPaidDeath(client, { pariwarId, deceasedMemberId, actor: 'system', actorId })` (`actorId` = the committing trustee; H(iv): the refused actor) | intake key FIRST, then per other claim in `claim_case_id` order: `appeal:` → `r9:` → `state_trustee_decision:` → row |
   | **H(ii)** | a new claim is minted for a paid death (⛔ not when RF5's wait holds it — OP4 (d)) | INSIDE `tryConverge`'s mint arm (`icp.ts:300-374`) and `overrideIntakeAttempt` (`:569-661`), after the mint | the MINT's (intake key already held — `icp.ts:287`); ⚠ helpline + override = the REQUEST tx (Fact 5) — ⛔ never a second tx | SELF-MODE (Trap 13) |
   | **H(iii)** | a refusal of a paid death is REVERSED on appeal | INSIDE `reviewAppealStage1` / `decideAppealStage3` (`reversed` arm) and `finalizeAppealOutcome` (a reversing tally), after the RF6 call | the WRITER's (intake key already held — `appeal-persist.ts:375,468`, `appeal-panel-persist.ts:514`) | SELF-MODE for the reversed claim |
-  | **H(iv)** | a final writer is refused with `DeathAlreadyFinallyApprovedError` | the four final-writer handlers (F10), through ONE shared helper | OWN — AFTER the refused tx is closed (Trap 14); the helper takes `claimCaseId` and reads `deceased_member_id` UNLOCKED in its own transaction before the intake key (the `acquireSuspicionReversalLockForClaim` shape — the error carries ⛔ no `deceasedMemberId`) | as H(i) — a no-op unless a payment is committed |
+  | **H(iv)** | a final writer is refused with `DeathAlreadyFinallyApprovedError` | the four final-writer handlers (F10), through ONE shared helper | OWN — AFTER the refused tx is closed (Trap 14), with `SET LOCAL lock_timeout` as H(i); the helper takes `claimCaseId` and reads `deceased_member_id` UNLOCKED in its own transaction before the intake key (the `acquireSuspicionReversalLockForClaim` shape — the error carries ⛔ no `deceasedMemberId`) | as H(i) — a no-op unless a payment is committed |
 
   Each site is idempotent; H(i) / H(iv) failures are logged at error level with ids only and ⛔ never fail the request (the guard is the
   control — Invariant 1); H(ii) / H(iii) are part of their writer's transaction (a failure rolls the mint / reversal back — as RF6 does).
@@ -306,7 +320,7 @@ Each says what changes under a non-recommended answer.
   `icp.ts:370,660`); H(iii) — the three reversal writers return `claimState: 'closed'` (today `projected.state` = `reversed`,
   `appeal-persist.ts:445,552`, `appeal-panel-persist.ts:678`) so the appeal responses' `claim_state` reads `closed`
   (`claims.appeal.handlers.ts:428,557,629`). ⚠ **R2 (recorded, ⛔ not addressed):** an open claim of a paid death that ⛔ no
-  site reaches stays open, blocked by OP2, until its next final-approval attempt (H(iv)) — an UPHOLD that releases a held refile (the
+  site reaches stays open, blocked by OP2, until its next final-approval attempt (H(iv)) or an approver's "Close this claim" (OP14 (b)) — an UPHOLD that releases a held refile (the
   uphold arm takes ⛔ no intake key), RF5's 90-day lapse (⛔ no event), a crash between commit and H(i) on a commit never replayed, an H(i) lock timeout. Its
   correction / certificate chases keep running until it is closed. Q1 B: H(i)–(iv) unchanged, PLUS a District Admin action *"close this
   claim — another claim for this death goes ahead"* (reason + note; `trigger: 'closed_by_district_admin'`; `claim.verify`-gated) — sized
@@ -325,7 +339,8 @@ Each says what changes under a non-recommended answer.
   names `-279` A6 as discharged by that ruling; if the Panel strikes the wait, the kind is warning-only (excluded from EA2's key set).
   Recorded effects: any current key blocks a same-outcome revise of the District Admin's approval (F13); R9 votes cast before the other
   claim was filed must be re-cast (`-279` A2). ⚠ Coordinate with 6.27b (Trap 9). Q1 B: the same warning; Q1 C: ⛔ not built.
-- **OP6 — FQ5'S MACHINERY STAYS EXACT.** ⛔ No change to RF1–RF16's code paths beyond OP4's extraction and H(iii)'s call after RF6; a test per
+- **OP6 — FQ5'S MACHINERY STAYS EXACT.** ⛔ No change to RF1–RF16's code paths beyond OP4's extraction, H(iii)'s call after RF6 and
+  OP13's closable widening; a test per
   FQ5 leg (held refile waits; appeal allowed ⇒ refile closed by RF6 with `suspicion_appeal_allowed`; appeal refused ⇒ refile approved) still
   passes, and ⛔ no OP5 key appears on EITHER claim of a standing-refusal pair. Path (a)'s outcome is pinned by its own leg (AC7) — the
   Panel's to accept (Invariant 3). ⚠ In a paid death RF6 still runs FIRST at an allowed suspicion appeal: it closes any held THIRD claim
@@ -374,17 +389,129 @@ Each says what changes under a non-recommended answer.
     `suspicion-refusal-persist.ts:60`.
   · Q3 B: the `-291` Q2 B text for the new trigger too — the 0151 closure purpose's selector widened, DLT template reused (⚠ rebases on
     6.34 TV2's `suspicion-notice-sms-templates.ts`) — then ⚠ go-live with FQ7's counsel row; Q3 A: ⛔ no text (AC6 pins it).
-- **OP11 — ⛔ NO INTAKE REFUSAL (recorded, ⛔ not taken).** Removing the 30-day window or the override was considered and ⛔ not taken: the
-  override is an intake capability built to Story 6.4's AC (AR-62 — planning, ⛔ not a Panel ruling; its window reads *"e.g., ±30 days"*), D4 B
-  REQUIRES a separate claim for the suspicion case, and the guard at the payout point covers every creation path including future ones.
-  H(ii) closes a new claim for a paid death at its mint.
+- **OP11 — THE 30-DAY CONVERGENCE WINDOW IS REMOVED (BigDev, 2026-10-10: *"Remove it in 6.28"*).** A new filing for a death converges onto
+  ANY open claim of that death, however old. ⭐ Why: the dedup key is the EXACT `deceased_member_id` — a time window suits a FUZZY key (an old
+  match is probably another event), ⛔ never an exact one; every case that MUST stay separate is already excluded WITHOUT the window — a
+  terminal claim (`settled` / `denied` / `closed`) is ⛔ never a candidate, an overridden-apart claim (AC4) is ⛔ never one, a claim on which a
+  suspicion refusal stands (`-261` D4 B / RF2) is ⛔ never one. ⭐ A later match is ⛔ never auto-merged: a cross-channel filing is a `pending`
+  attempt on the convergence strip (`icp.ts:387-430`) for staff to merge or keep apart; a same-channel filing returns the existing claim
+  (`:376-384`, idempotent) — exactly what happens within 30 days today. ⇒ F5 and `-294` §2 (b) become unreachable at intake (a filing JOINS
+  an older reversed claim); the payout guard still covers F6 (override), F7 (after a terminal claim) and F8 (an appeal reversal).
+  **The change (one predicate, mirrored EXACTLY at three sites):** `getConvergenceCandidate` (`icp.ts:109-139`) drops its `windowStartAt`
+  parameter and the `gte(claims.createdAt, windowStartAt)` term (`:122`) — still `ORDER BY created_at DESC LIMIT 1`; `tryConverge` drops
+  `:290`; `getPendingIntakeAttempts` (`:167-200`) drops the `windowInterval` term (`:171`, `:186`); `confirmMerge`'s candidate cross-check
+  (`claims.convergence.handlers.ts:115-132`) drops its anchored window. `CONVERGENCE_WINDOW_DAYS` and its export (`icp.ts:61-66`,
+  the comment at `claim/index.ts:12` — the export is `export * from './icp.js'`) are DELETED (`git grep` — ⛔ no other reader). Comments / copy that state the window are re-worded: `icp.ts:98`,
+  `suspicion-refusal-persist.ts:99-102` (`-294` §2 (b)'s "an older reversed claim is ⛔ not a candidate"), the strip note
+  `ConvergenceDecisionStrip.tsx:226-231` (*"… joins the overturned claim as before — but only while that claim is less than 30 days old; a later
+  filing becomes a separate claim"* → *"… joins the overturned claim as before."*). ⚠ **Costs (recorded):** a filing for a PAID death now
+  converges into the paid claim (it is ⛔ not terminal) — H(ii) fires only when every non-terminal claim of the death is excluded from convergence (the paid claim overridden apart, AC4) or the
+  paid claim is `settled`; a later
+  same-channel filing by ANOTHER family member lands in the existing claim (as within 30 days today — the nominee is decided by the certificate
+  date, ⛔ never by the filer); a stalled claim now collects every later filing as a `pending` attempt for staff — ⛔ never a silent second claim.
+  The override (`overrideIntakeAttempt`) and D4 B are ⛔ not changed. Author's decision (intake mechanics — ⛔ nothing anyone is owed); the
+  author-commit records it, and the note lists it among *"deliberately ⛔ not asked"*.
 - **OP12 — GO-LIVE.** ⛔ No roster row: ⛔ no external dependency (Q3 A). Under Q3 B — the FQ7 counsel row gains this text.
+- **OP13 — AN ALLOWED SUSPICION APPEAL CLOSES A VOTED, UNPAID OTHER CLAIM (supersedes `-292` RF4 in part).** `CLAIM_NOT_CLOSABLE_STATES`
+  (`state.ts:359`) becomes `['settled', 'approved', 'closed']` — `state_trustee_approved` (*"approved-in-principle, reversible"*, Fact 4)
+  is CLOSABLE; its doc-block and the reducer comment are re-worded (the sites listed below). ⭐ Effect at RF6: when a `-239` appeal
+  is allowed, another claim of the death that passed the final vote but is ⛔ not yet committed is closed with `suspicion_appeal_allowed`
+  (FQ5 A: *"appeal allowed → the new claim is **closed**"*) — through RF6's existing order (`appeal:` → `r9:` → `state_trustee_decision:` →
+  row), the same `state_trustee_decision:` key `commitCycleFreeze` takes per candidate ⇒ the two serialise: a commit that got there first
+  leaves X `approved` (⛔ not closable — Invariant 3's after-payment residual); otherwise X is `closed` and drops out of the commit's
+  candidates (it selects `state_trustee_approved` only). Its live routing / R9 session ends by `endLiveProcesses`; ⛔ no pool exists to
+  undo. ⚠ X's family receives the `-291` Q2 B text (the ruled trigger) — as ruled for every FQ5 closure. Effect at OP4: H(i) / H(iv) can
+  now close a legacy voted other claim of a paid death (R1 narrowed). ⚠ Two 6.24a legs FLIP by design — `suspicion-refusal.spec.ts:386`
+  (`notClosed: [{ … state: 'state_trustee_approved' }]` → `closed: [r]`) and `:772-812` — REWRITTEN, ⛔ not merely flipped: R joins
+  `closed` at `:798` and the commit / own-visit tail (`:800-812`) is deleted; RF7's inspection arm (`state-trustee-decision-persist.ts:1337-1339`)
+  is then recorded as defence-in-depth with ⛔ no reachable driver (its source must be a STANDING `-239` refusal — revising it away is RF13-locked,
+  reversing or closing it now closes the voted claim too). Also: `suspicion-refusal.test.ts:134-136` (the closable count) and `:140` (the
+  identity loop — `state_trustee_approved` leaves it), and `apps/api/tests/integration/claims/suspicion-refusal-routes.spec.ts:394-429` (the
+  RF6 route leg asserting `held_claims_not_closed: [{ … 'state_trustee_approved' }]` → H closed); each rewrite cites 6.28's author-commit
+  (superseded, ⛔ never re-read). Comment sites: `state.ts:338-341,352-358`, `claim/events.ts:649`, `packages/events/src/registry.ts:393`,
+  `suspicion-refusal-persist.ts:17,88`, `claims.appeal.handlers.ts:199` and its error-log string `:211` (*"(state_trustee_approved / approved /
+  settled) — NOT closed"* → *"(approved / settled)"*). The route leg's rewrite removes the only API coverage of `held_claims_not_closed` — add
+  an `approved` variant that keeps it.
+  ⚠ **Disclosed:** closing a voted X at the appeal (⛔ not at a commit) can leave the death paid by ⛔ no claim if S then fails a later check — the
+  same trade FQ5 A already accepted for an unvoted claim (Trap 7's argument does ⛔ not apply: the closure here is FQ5's ruled outcome). Q1 B / Q1 C:
+  unchanged (it serves FQ5, ⛔ not Q1); Q2: ⛔ not affected.
+- **OP14 — THE APPROVER SEES THE OTHER CLAIMS (BigDev, 2026-10-10: *"Add OP14 now"*).** Staff-only; the other claim by its REFERENCE only —
+  ⛔ no name, ⛔ no note (6.24a RF10's convention, `i18n-en.ts:676-716`); ⛔ never on a member surface; ⛔ never a decrypt.
+  · **(a) The verifier console** — a new packet section `otherClaimsForDeath` beside `suspicionRefusal`
+    (`packages/contracts/src/claims/verifier-console.ts:487`; filled beside `assembleSuspicionRefusal`,
+    `claims.verifier-console.handlers.ts:341,368`; rendered in `SignalsPanel.tsx` beside `SuspicionRefusalNotice`, `:345-348`): every OTHER
+    claim of the death (cap 20, then *"and N more"*), each with its reference, its stage in staff words (open / passed the final vote / paid /
+    refused / under appeal / closed), when and through which channel it was filed (`claims.created_at`, `intake_channels`), and its date of
+    death against THIS claim's — *"same date of death"* / *"a different date of death"* / *"date not yet accepted"* (⛔ no accepted review) /
+    *"date not comparable"* (an accepted review with a NULL index — pre-6.26b) — by EQUALITY of the live accepted reviews'
+    `claim_death_certificate_reviews.accepted_date_index` (keyed hash, `DEATH_DATE_INDEX_FIELD_CLASS`, `field-classes.ts:84-91`; the live
+    review is selected as the `cur` CTE does, `approval-warnings.ts:441-496`; the comparison precedent `:206-222`) — the date itself is ⛔ never
+    shown. A computed
+    line: same date ⇒ *"Likely the same family filing twice"*; different ⇒ *"Two different dates of death are claimed for this death"* (red).
+    Shape as RF10's section: `available: boolean` (`verifier-console.ts:445-447`) + the list — `false` renders "could not be checked just
+    now", ⛔ never silence. ⚠ ONE new bounded read under `underSavepoint`, BEFORE the warnings (LAST): `VERIFIER_CONSOLE_MAX_READS`
+    (`claims.verifier-console.handlers.ts:187`) gains its ledger line *"+ Story 6.28 (OP14): the other claims of this death +1 → 22"*, and the
+    four `toBe(21)` pins are bumped with that reason — `suspicion-refusal-routes.spec.ts:477`,
+    `verifier-console-ground-inspection.spec.ts:219,349`, `verifier-console.spec.ts:1129`.
+  · **(b) A blocking banner on EVERY approval surface** while another claim of the death is FINALLY APPROVED (OP1): *"Another claim for this
+    death (claim <reference>) has passed the final vote. This claim cannot be finally approved, and may be closed when that payment is
+    made."*, and the FINAL approve action disabled — ONLY where it is final: the freeze approve vote (`cycle-freeze/PendingCaseCard.tsx`); the
+    R9 panel's APPROVE vote choice, and its finalize only when the computed outcome is `approved` (a DENIED finalize is ⛔ never gated — F15)
+    (`r9-voting/R9CasePanel.tsx`); the no-correction-needed approve (`useApproveNoCorrectionNeeded`, `PariwarClosureStrip.tsx:179` — ⛔ not its
+    closure-request approvals); the escalation `'approve'` decision (`EscalationPanel.tsx:197,213`). The verifier console's decision strip is
+    P1 — banner only, ⛔ never disabled; `ClosureColumn.tsx` makes ⛔ no decision — ⛔ not touched. ⭐ **Once the other claim is PAID** the banner
+    reads *"Another claim for this death (claim <reference>) has been paid. This claim should be closed."* and carries a staff action
+    **"Close this claim"** — one new endpoint `POST /api/v1/p/:pariwarId/admin/cycle-freeze/claims/:claimCaseId/close-for-paid-death` in
+    `claims.cycle-freeze.routes.ts` (its path matches the adjudication gate's `cycle-freeze` substring, so the gate scans it —
+    `scripts/claim-adjudication-human-actor-invariant/check.ts:86`; ⭐ its `expectedMethods` (`:88`) becomes `['get', 'post', 'post', 'post']`
+    in the same commit, with a Story 6.28 comment — the gate compares the scanned methods as an EXACT multiset, `:379-389`); permission `cycle.freeze` at `dimension: 'pariwar'` via
+    `requirePermissionHook` (ONE key — every final-approval actor holds it: `pariwar_admin`, `super_admin`, `roles.ts:386`; ⛔ never "the
+    surface's own key" — a route's preHandler is static); ⛔ no step-up (the outcome is ⛔ not discretionary; the freeze vote and the 6.19c
+    closure decision carry none either). The handler opens its OWN `openScopeTx` with `SET LOCAL lock_timeout` and reads ⛔ nothing of the
+    claim in `request.scopeTx` (Fact 5), runs H(iv)'s shared helper with the HUMAN actor (`actor: 'trustee'` — the freeze vote's literal, `claimActorSchema`
+    `events.ts:61`; `actorId` = `ctx.actorId`), and audits `admin_cycle_freeze.closed_for_paid_death` (added to `AuthAuditEventType`,
+    `apps/api/src/audit/audit-sink.ts:15`, beside its `admin_cycle_freeze.*` siblings) with the closed count. Response
+    `{ this_claim_closed: boolean, closed_count: number }` (⛔ never another claim's id — OP2's rule); `this_claim_closed: false`, ⛔ no change,
+    when ⛔ no payment is committed or the claim is held by OP4 (b)–(d) — the button then shows *"Not closed — it waits on another claim's
+    appeal or refusal."* (copy WITHOUT the glyph); a `lock_timeout` answers a retryable 503 with its own line (*"Busy — try again in a
+    moment."*), ⛔ never the not-closed reason; an unknown or other-Pariwar `claimCaseId` answers 404. A new params schema (the file has only
+    `PariwarParam`, `:41`).
+    The paid banner and its action also show on `voted_pending_commit` freeze cards (R1 — `PendingCaseCard.tsx:7,102` offers Route only
+    today). The District Admin's P1 console shows the banner WITHOUT the action. ⇒ R2's stranded claims (an uphold, the 90-day lapse, a missed
+    H(i)) are closed by the first final approver who opens them — the approve button is ⛔ no longer the only trigger. Fed by ONE additive field on each
+    surface's read row, `finally_approved_elsewhere: { claim_reference, stage } | null`, computed with OP1's `otherClaimInStatesSql` inside
+    the existing reads (⛔ never a per-claim query — the bulk-read rule of OP5). ⚠ Disabling is decision support — OP2 is the control (a
+    forced request still gets the 409).
+  · **(c) The 409's words at every surface** — each surface's error mapper gains a `.death_already_finally_approved` arm beside
+    `.suspicion_appeal_pending` (`CycleFreezePage.tsx:69-72`, `R9CasePanel.tsx:46-49`, the verifier strip, the correction-closure surfaces) —
+    ⛔ never a raw code.
+  · The District Admin (P1) is ⛔ not blocked (FQ5's "goes through every check") but sees (a) and the banner as information.
+  · **(d) The ground inspector sees them too** (BigDev, 2026-10-10: *"yes, fold it"*). The inspection checks that a death is real and the
+    certificate genuine — a duplicate is a real death with a real certificate, so it PASSES; the inspector's page is keyed by one claim and
+    says ⛔ nothing of another. ⇒ the ground-inspection read (`GET …/admin/claims/:claimCaseId/ground-inspection`, `h.read`
+    `claims.ground-inspection.handlers.ts:822`) gains `otherClaimsForDeath` (the read's camelCase wire): count + each by reference and stage
+    (⛔ no name, ⛔ no note, ⛔ no date) — ⭐ ONLY when `inScope` is non-empty (the caller holds an in-scope assignment of THIS claim,
+    `:841-853`); otherwise `null`, ⛔ never derived from the query locator alone (a `block_admin` can name any claim id — the
+    "absence widens" shape `:806-815` forbids). `alreadyVisited`: another claim has a FULL visit — `status = 'completed'` ∧
+    `inspection_stage <> 'certificate_check'` (6.26a VISITED's own-row arm; ⛔ not inheritance) — whose `death_date_index` equals THIS claim's
+    live accepted review's `accepted_date_index` (one field class; NULL on either side ⇒ `false`); `visitedElsewhere: true` the same without
+    the date clause (a visit scheduled before this claim's certificate is accepted still shows). The other claims' rows may lie outside the
+    caller's scope — booleans and references only, accepted and recorded. `GroundInspectionPage.tsx` shows *"Other claims for this death: N"*,
+    *"Another claim for this death has already had a visit."* when `visitedElsewhere`, and, when `alreadyVisited`, *"This family was already visited for
+    another claim with the same date of death — check before sending a second visit."* Information only — ⛔ no gate, ⛔ no new inspection
+    rule (6.26a's VISITED / ORIGINAL_SEEN stand). ⭐ Routed, ⛔ not built here: the inspector questionnaire (row
+    `6-32-inspector-questionnaire-at-the-ground-inspection` — ⛔ no story file yet) asks the family *"Has the family filed any other claim for
+    this death?"* — recorded on that row's comment (2026-10-10).
+  · ⚠ Fixtures: a new packet / row field breaks `packages/contracts/tests/claims-verifier-console.test.ts` and the admin fixtures
+    (`verifier-console*.test.tsx`, `cycle-freeze-page`, `pending-case-card-return`, `r9-case-panel`, `correction-closure`,
+    `escalation-detail-claim-switch`, `later-approval-warnings`) — contracts tests are outside tsc ([[project_contracts_tests_outside_tsc]]).
+  Q1 B: (a)–(c) unchanged + the close action of OP4 B on the same block; Q1 C: (a) only.
 
 ## Acceptance Criteria
 
 ### AC0 — Governance before code (Task 0)
 The Panel's ruling on Q1–Q3 is transcribed into the routing note's ⏳ block and `.decision-log.md` (a new Trustee-ratified id, committed
-ALONE); then the author-commit answering OP1–OP12 for that ruling — naming `-279` A6 as discharged and recording that the note widened
+ALONE); then the author-commit answering OP1–OP14 for that ruling — naming `-279` A6 as discharged and recording that the note widened
 `-294` §3's framing — is committed ALONE; then a second governance commit updates this file's rulings table, Policy meaning and OPs
 (`✅ committed by -NNN`), and the `deferred-work.md` items of Task 0.6 gain their pointers, each with its own status. ⛔ No code before
 both commits. If Q1 C: the story ends here (zero-code; Tasks 1–6 left unchecked with a banner — [[project_story_automator_ops]]).
@@ -415,7 +542,8 @@ result shape is unchanged.
   = the committed claim; its live returns, correction runs, R9 / appeal-panel sessions, routing and open appeal rows end (RF6's teardown —
   a test pins ⛔ no correction-chase text after `closed`); a replayed commit re-runs it idempotently; a claim that only passed the VOTE closes
   ⛔ nothing; an H(i) lock timeout is logged and leaves the claim to H(iv) (R2).
-- **H(ii):** a new filing for a paid death (member, helpline, override) is `closed` in the mint's transaction — ⛔ not when RF5's wait holds
+- **H(ii):** a plain filing for a paid death CONVERGES into the paid claim (OP11 — it is ⛔ not terminal; a leg pins it). With the paid claim
+  overridden apart (the fixture for the rest of this leg), a new filing (member, helpline, override) is `closed` in the mint's transaction — ⛔ not when RF5's wait holds
   it (OP4 (d)) — and the response `state` is `closed`; the member app lands on the closed screen, and RE-ENTERING the claim tab afterwards
   mints ⛔ no claim (the entry gate routes to the closed screen); the helpline console shows `helpline.result.closed` and ⛔ no bank slot; an override that mints a closed claim shows the strip's new
   closed line; a two-connection leg — H(i) and a mint for the same death in flight together ⇒
@@ -424,7 +552,7 @@ result shape is unchanged.
   the appeal response's `claim_state` is `closed`.
 - **H(iv):** a final-writer attempt refused with the 409 on a still-open claim of a paid death closes it; a failure there leaves the 409
   intact and logs at error level.
-- RF6's own behaviour and specs are unchanged; R2's cases (an uphold, the 90-day lapse) are pinned as reaching H(iv) only.
+- RF6's own behaviour and specs are unchanged except OP13's closable widening and its rewritten legs (AC9); R2's cases (an uphold, the 90-day lapse) reach H(iv) on a forced final request, or the approver's "Close this claim" (AC11).
 
 ### AC5 — The warning (OP5)
 With two open claims of one death (⛔ not a suspicion pair), BOTH show `other_claim_for_death:<other id>`; approving needs FQ12's reason and
@@ -441,14 +569,46 @@ the staff label reads the neutral copy for both triggers; in a paid death an all
 through RF6 with `suspicion_appeal_allowed` (and its `-291` text) BEFORE H(iii) runs.
 
 ### AC7 — The paths (OP7, OP8)
-F5 (>30 days), F6 (override), F7 (after `denied` / `closed`), F8 (ordinary refusal reversed; `-239` revised off; 6.19c D17), `-294` §2
-(a), (b), (c) — each: a DOMAIN leg blocked at the second final approval, and an API leg showing the closure at its site; path (a)'s leg
-pins that the allowed suspicion appeal ends `closed` — AFTER X's commit, by H(i) (X's commit itself waits on RF7 until the appeal is decided,
-`state-trustee-decision-persist.ts:1329-1336`; at the reversal X is usually ⛔ not yet paid, so H(iii) does ⛔ not fire) (Invariant 3); the two-connection race of OP8.
+F5 (>30 days — after OP11, a DOMAIN leg on a seeded legacy pair only; its API leg shows the later filing CONVERGING), F6 (override), F7 (after `denied` / `closed`), F8 (ordinary refusal reversed; `-239` revised off; 6.19c D17), `-294` §2
+(a), (b), (c) — each: a DOMAIN leg blocked at the second final approval, and an API leg showing the closure at its site (⚠ (b) — like F5 — after
+OP11 the later filing CONVERGES into the older reversed claim; its API leg shows that); path (a)'s legs
+pin BOTH timings — revised before X's commit ⇒ the allowed appeal closes X (OP13) and S goes on; revised after X's commit ⇒ S ends `closed`
+by H(iii) (Invariant 3's residual); the two-connection race of OP8.
 
 ### AC8 — The proof
 Every load-bearing leg red-checked (Debug Log: plant, red, revert); live DB :5433; `pnpm ci:local` green
 ([[project_ci_local_concurrency_oversubscription]]).
+
+### AC9 — The suspicion appeal closes a voted, unpaid claim (OP13)
+X `state_trustee_approved`, S refused for another reason, revised ONTO `-239`, appealed and ALLOWED ⇒ X ends `closed`
+(`suspicion_appeal_allowed`, `held_by_claim_case_id` = S), its routing / R9 session ends, the cycle commit ⛔ never commits it, and S can be
+finally approved (OP2 passes); the same with X already `approved` ⇒ X reported `notClosed`, S closed by H(iii); a two-connection leg — the
+allowed appeal and `commitCycleFreeze` on X in flight together ⇒ exactly one of {X `closed`, X `approved`}, ⛔ never both, ⛔ never neither
+(waits on `pg_stat_activity`); the two flipped 6.24a legs pass in their new form.
+
+### AC10 — The window is gone (OP11)
+A claim 40 days old and open ⇒ a new same-channel filing returns it (⛔ no mint); a cross-channel filing becomes a `pending` attempt against it
+and is listed on the strip; `confirmMerge` accepts it; a terminal / overridden-apart / suspicion-standing claim is still ⛔ never a candidate
+at ANY age; `getConvergenceCandidate`, `getPendingIntakeAttempts` and `confirmMerge` agree on a SINGLE-candidate fixture (the "EXACTLY" mirror — ⚠ with
+several open candidates the strip lists all while `confirmMerge` accepts only the newest, `LIMIT 1`: a merge into an older one is a 409 —
+recorded, as today);
+`git grep CONVERGENCE_WINDOW_DAYS` is empty; `icp.spec.ts:185`'s "WINDOW BOUNDARY" leg is rewritten to the new rule (its title says so) and
+`ConvergenceDecisionStrip.test.tsx:75-76` pins the new note.
+
+### AC11 — The approver sees the other claims (OP14)
+The console section lists every other claim of the death with reference, stage, filed date / channel and the date-of-death comparison (same /
+different / not accepted) — computed by index equality, ⛔ no decrypt (a test asserts the read touches ⛔ no ciphertext column); the red
+line shows for different dates; `unavailable` renders on a failed read; ⛔ no name, ⛔ no note, ⛔ no date value on the wire. With another claim
+finally approved, every listed surface shows the banner and disables final approve, and a forced request still gets the 409 in words; the
+bulk reads stay one statement per slice; P1 is ⛔ not blocked. `POST …/cycle-freeze/claims/:claimCaseId/close-for-paid-death` with a death
+paid on another claim closes this claim and every other closable open claim of the death (`trigger: 'death_already_finally_approved'`);
+with the other claim only voted, or the claim held by OP4 (b)–(d), it answers 200 `{ this_claim_closed: false, closed_count: 0 }` and changes
+nothing (⛔ no other claim's id in any body); a lock timeout answers 503; an unknown claim 404; a caller without `cycle.freeze` gets 403; the
+adjudication gate scans the route with `expectedMethods` updated; the action shows on `voted_pending_commit` cards and ⛔ not on P1's console.
+The console's read count is 22 (the ledger line present). The ground-inspection page shows the other claims (count, references, stages), the
+visited-elsewhere line, and the already-visited line on a same-date FULL visit (⛔ not a `certificate_check`; ⛔ not with this claim's
+certificate unaccepted) — ⛔ no name, ⛔ no date on the wire; a caller with ⛔ no in-scope assignment of the claim gets `otherClaimsForDeath:
+null`; the admin client's schema carries the fields (a test against the REAL client parse, ⛔ never a mock alone).
 
 ## Tasks / Subtasks
 
@@ -463,11 +623,11 @@ Every load-bearing leg red-checked (Debug Log: plant, red, revert); live DB :543
         ([[feedback_shown_to_panel_means_sent]]).
   - [ ] 0.3 When the Panel rules: transcribe verbatim into the note's ⏳ block (body ⛔ not edited) and a new Trustee-ratified decision
         (what it does ⛔ not cover listed); commit ALONE: `governance(6.28): <date>-NNN — Trustee-ratified …`.
-  - [ ] 0.4 Re-write OP1–OP12 for the ruling (Q1 B ⇒ size the District Admin close action; Q1 A without the wait ⇒ OP5 (c) warning-only;
+  - [ ] 0.4 Re-write OP1–OP14 for the ruling (Q1 B ⇒ size the District Admin close action; Q1 A without the wait ⇒ OP5 (c) warning-only;
         Q2 B ⇒ a new row for the Panel's reopen power; Q3 B ⇒ OP10's text + the counsel row; OP9 backstop yes / no); put them to BigDev as
         short option summaries with recommendations; quote each answer AS GIVEN in the Debug Log.
   - [ ] 0.5 Draft the author-commit (header shape of `-302` / `-312`: type, status, §0 gate, Occasion, FOUND, DECIDED, Cost,
-        Consequences, References — naming `-279` A6 discharged, the §3 widening, R1–R2 as residuals) in the scratchpad; one fresh-context
+        Consequences, References — naming `-279` A6 discharged, the §3 widening, `-292` RF4 SUPERSEDED in part (OP13), R1–R2 as residuals) in the scratchpad; one fresh-context
         check; insert above the newest `### Decision` (if refused, ask once — [[project_decision_log_writes_user_inserted]]); commit ALONE.
   - [ ] 0.6 Second governance commit: this file (rulings table, Policy meaning re-checked, OPs `✅ committed by -NNN`); `epics.md`'s
         `### Story 6.28` brief ACs updated to the ruling; a dated
@@ -489,13 +649,26 @@ Every load-bearing leg red-checked (Debug Log: plant, red, revert); live DB :543
       one), the console copy; the gate-order spec gains the new position; the R9-deny leg; the OP8 two-connection race, red-checked.
 - [ ] **Task 3 — OP3 (AC3).** The commit re-check after `:1339`; legs incl. the legacy two-`state_trustee_approved` seed and an earlier
       cycle's `approved` claim.
-- [ ] **Task 4 — OP4 (AC4).** Extract RF6's core (three keys → row; RF6's specs green, unchanged); the payload enum;
+- [ ] **Task 4 — OP4 + OP13 (AC4, AC9).** OP13 FIRST: `CLAIM_NOT_CLOSABLE_STATES` + its comments, the two flipped 6.24a legs (with the
+      author-commit cited), the closable-count pin, AC9's legs incl. the two-connection leg. Then extract RF6's core (three keys → row; RF6's
+      specs green except OP13's flips); the payload enum;
       `closeClaimsOfPaidDeath`; H(i) in `postCommit` (fresh + replay); H(ii) inside `tryConverge` / `overrideIntakeAttempt` (self-mode) +
       the `closed` return; H(iii)'s `closed` return; the core's `<> 'closed'` prefilter + cap log; H(iii) inside the three reversal arms (self-mode); H(iv) — ONE shared helper in the four final-writer handlers
       (Trap 14); the two-connection mint leg; the no-hang legs.
 - [ ] **Task 5 — OP5 (AC5).** The kind (+ contracts mirror — run its vitest, [[project_contracts_tests_outside_tsc]]), the embedded fragment in
       both readers + the single = bulk test, the `lateArm` fourth disjunct (+ the fault-path leg), the label, the pinned test bumped with a
       reason, the late-wait leg, the vanish / reappear legs.
+- [ ] **Task 5b — OP11 (AC10).** Drop the window at the three mirrored sites + delete the constant; re-word the comments and the strip note;
+      rewrite `icp.spec.ts:185` and the strip test; the AC10 legs (live DB, separate COMMITTED transactions for the aged claim).
+- [ ] **Task 5c — OP14 (AC11).** The console section (contract + handler + `SignalsPanel`), the `finally_approved_elsewhere` field on the
+      freeze / R9 / closure reads + banners + disabled final approve, the 409 arms; staff copy in `apps/admin` i18n; the no-ciphertext and
+      one-statement legs; the read-ceiling bump (21 → 22, the ledger line, four pins). ⭐ The close action — contract (request / response),
+      handler (its own `openScopeTx`, `SET LOCAL lock_timeout`, ⛔ no read of the claim in `request.scopeTx`), the route in
+      `claims.cycle-freeze.routes.ts` + its params schema + `requirePermissionHook(cycle.freeze)`, the gate's `expectedMethods`
+      (`check.ts:88`), audit `admin_cycle_freeze.closed_for_paid_death` in `AuthAuditEventType`, the 404 / 503 arms, the button + its result
+      lines on the banner and the `voted_pending_commit` card. Rename the stale ceiling test titles (`verifier-console.spec.ts:1122`,
+      `verifier-console-ground-inspection.spec.ts:348`). (d) the ground-inspection read's `otherClaimsForDeath` / `alreadyVisited` /
+      `visitedElsewhere` (in-scope only) + the admin client schema + the page lines.
 - [ ] **Task 6 — OP10 + paths + proof (AC6–AC8).** The `state === 'closed'` routing (`relationship.tsx` + the filed-claim pointer;
       `HelplineConsoleShell.tsx` + the convergence strip — ⛔ no contract change); the staff label + `helpline.result.closed`;
       `$comment.closed` (en) + every comment the grep finds; OP7's two-layer specs; the FQ5 regression
@@ -547,8 +720,16 @@ Every load-bearing leg red-checked (Debug Log: plant, red, revert); live DB :543
     request.
 15. **The single-read statement pin** (`verifier-console.spec.ts:1122`) and the bulk slices — OP5 embeds a fragment; ⛔ never a per-claim
     query in either reader.
+16. **OP13 widens ONE state, ⛔ never two.** `approved` and `settled` stay ⛔ not closable — closing a committed claim would strand a spawned
+    pool. ⛔ Never edit the two 6.24a legs silently: each flip cites 6.28's author-commit ([[feedback_supersede_never_reinterpret]]).
+17. **OP11's three sites move TOGETHER.** `getConvergenceCandidate`, `getPendingIntakeAttempts` and `confirmMerge` are an "EXACTLY" mirror
+    (6.24a RF2's comment) — dropping the window at one leaves the strip listing what the candidate refuses (or the reverse). ⛔ Never touch
+    the override or the RF2 suspicion conjunct.
+18. **OP14 never decrypts and never names.** The date comparison is `accepted_date_index` equality under ONE field class (6.26a Trap 2 — a
+    second class makes every pair "differs"); the wire carries the comparison word, ⛔ never the date; the other claim by reference only.
 
 ### The existing code each change touches (UPDATE files)
+- `packages/domain/src/claim/state.ts` (`:338-343` the `claim.closed` reducer comment; `:352-363` `CLAIM_NOT_CLOSABLE_STATES` + doc) — OP13.
 - `packages/domain/src/claim/nominee-name-check.ts` (`:403-435` the gate; `:443-458` the options) — ONE new call after RF5's. Preserve
   the order and EA2 LAST; `-251`'s early return stays inside `assertNomineeNameCheckForApproval` (⛔ never OP2 there).
 - `packages/domain/src/claim/suspicion-refusal-persist.ts` (`:61` the trigger constant; `:99-127` the lock rule + helper; `:149-212` the
@@ -559,6 +740,22 @@ Every load-bearing leg red-checked (Debug Log: plant, red, revert); live DB :543
 - `packages/domain/src/claim/icp.ts` (`:287` intake key; `:300-374` the mint arm, return `:370`; `:569-661` the override, return `:660`) — H(ii)
   + the `closed` return.
 - `apps/mobile/lib/filed-claim.ts` (`:35` `setFiledClaimCaseId`).
+- OP11: `packages/domain/src/claim/icp.ts` (`:61-66`, `:98`, `:109-139`, `:167-200`, `:290`), `claim/index.ts:12`,
+  `apps/api/src/modules/claims/claims.convergence.handlers.ts` (`:115-132`), `suspicion-refusal-persist.ts` (`:99-102`),
+  `apps/admin/src/modules/helpline-claims/ConvergenceDecisionStrip.tsx` (`:226-231`); tests `packages/domain/tests/integration/claim/icp.spec.ts`
+  (`:28`, `:35`, `:185-200`, `:298`), `apps/admin/tests/ConvergenceDecisionStrip.test.tsx` (`:75-76`); the 4-argument callers
+  `nominee-refusal-inheritance.spec.ts:165`, `suspicion-refusal.spec.ts:174,234,240`; comments stating the 30-day look-back — `icp.ts:158`,
+  `:163-166`, `:275`, `claims.convergence.handlers.ts:117-120`, `apps/mobile/app/(claim)/closed-helpline.tsx:6`,
+  `apps/mobile/lib/claim-entry-gate.ts:35`, `packages/contracts/src/claims/death-certificate.ts:182` (grep `30-day\|30 days\|look-back`).
+- OP14: `packages/contracts/src/claims/verifier-console.ts` (`:487`), `claims.verifier-console.handlers.ts` (`:341`, `:368`),
+  `apps/admin/src/modules/claim-verification/SignalsPanel.tsx` (`:345-348`) + `i18n-en.ts`; the freeze / R9 / closure reads and
+  `PendingCaseCard.tsx`, `CycleFreezePage.tsx` (`:69-72`), `R9CasePanel.tsx` (`:46-49`), `correction-closure/{ClosureColumn,EscalationPanel,
+  PariwarClosureStrip}.tsx` + their contracts; the close action — `apps/api/src/modules/claims/claims.cycle-freeze.routes.ts` +
+  `claims.cycle-freeze.handlers.ts` + its contract, `PendingCaseCard.tsx` (`:7`, `:102`); (d) `claims.ground-inspection.handlers.ts`
+  (`:822`) + the admin client's `GroundInspectionReadResponse` (`apps/admin/src/api/client.ts:1232` — non-strict, it STRIPS an unlisted key; the
+  GET route declares ⛔ no response schema, routes `:280`), `apps/admin/src/modules/ground-inspection/GroundInspectionPage.tsx` + `i18n-en.ts`,
+  `apps/admin/tests/ground-inspection-page.test.tsx`; the gate `scripts/claim-adjudication-human-actor-invariant/check.ts` (`:88`);
+  `apps/api/src/audit/audit-sink.ts` (`:15`).
 - `packages/domain/src/claim/events.ts` (`:657-665`) — the `trigger` enum. Preserve `held_by_claim_case_id`, `deceased_member_id`.
 - `packages/domain/src/claim/state-trustee-decision-persist.ts` (`:1244-1430`) — OP3 after `:1339`. Preserve the idempotent replay, the
   23505 swallow, `getFrozenClaimRefs` (`:1462-1473`).
@@ -628,6 +825,10 @@ Domain in `packages/domain/src/claim/` (⛔ no new package — [[feedback_no_pre
   moved from the final vote to the cycle commit (the recommended option). The routing note re-worded to match (still ⛔ NOT sent).
 - 2026-10-10 — v1.2: a fresh-context re-validate of v1.1's own design (2 HIGH, 4 MEDIUM, 8 LOW — all applied).
 - 2026-10-10 — v1.3: round 3 (one fresh-context verifier): **0 BLOCKER / 0 HIGH**; 2 MEDIUM + 9 LOW applied.
+- 2026-10-10 — v1.4: OP13 (BigDev: *"yes, do it"*) — an allowed suspicion appeal closes a voted, unpaid other claim; the corner narrowed to after payment (Q2). OP11 rewritten — the 30-day window REMOVED (BigDev: *"Remove it in 6.28"*); OP14 — the approver sees the other claims (BigDev: *"Add OP14 now"*).
+- 2026-10-10 — v1.5: round 4 on v1.4's additions — 1 HIGH (OP14 disabled the only trigger R2 relied on ⇒ a paid-stage "Close this claim" action), 5 MEDIUM, ~10 LOW — all applied.
+- 2026-10-10 — v1.6: round 5 — 1 HIGH (the close action reached ⛔ no AC / Task / UPDATE entry) + 4 MEDIUM + 6 LOW applied; OP14 (d) the ground inspector sees the other claims, the questionnaire question routed to 6.32 (BigDev: *"yes, fold it"*).
+- 2026-10-11 — v1.7: round 6 — **0 BLOCKER / 0 HIGH**; 4 MEDIUM + 6 LOW applied.
 
 ### File List
 
@@ -639,3 +840,7 @@ Domain in `packages/domain/src/claim/` (⛔ no new package — [[feedback_no_pre
 | 1.1 | 2026-10-10 | Validate (four fresh-context verifiers: cites, design + locks, governance + siblings, warning + member surfaces; findings re-checked by hand; BigDev: *"all"*). ⭐ OP4 closes at the CYCLE COMMIT, ⛔ not the final vote (F15 — R9 can still deny a voted claim); its four sites tabled (H(i) post-commit; H(ii) INSIDE the mint — the helpline / override request transaction would have hung a handler-side closure; H(iii) INSIDE the reversal; H(iv) after the refused tx) with self-mode keys and R1 / R2 residuals; F12's three-key order. OP1 a leaf with by-value lists (NW1) and SQL fragments; OP5 embedded in both readers (the one-statement pin), a fourth correction-queue `lateArm` disjunct (`-279` A4), the wait put to the Panel (`-279` A6), finally approved claims ⛔ not "open", ⛔ no key on an RF1 claim itself. Invariant 3: path (a) disclosed (FQ5 B's cost), ⛔ never "exact". OP10: the intake `claim_closed` flag + closed-screen routing, the neutral staff label, the five comments. OP7 two layers (domain 409 / API closure). Cites corrected (F9's `voteOnFrozenClaim` file, `commitCycleFreeze` to `:1430`, OP3 after `:1339`, `pool/` read models, the hook handlers incl. `correction-escalation`). Rulings `-279` A4/A6, `-291` Q1 A, `-293`; Niyamavali §5.3 / §6.4 engaged; OP11 ⛔ not "ratified"; Task 0.1 open-branch id grep (`-313`–`-316` taken); Task 0.6's four deferred-work items with their own statuses; 6.27b coordination. |
 | 1.2 | 2026-10-10 | Re-validate of v1.1's own design (one fresh-context verifier): ⭐ the intake signal is `state === 'closed'` — ⛔ no new field on the two `.strict()` responses — and the member app sets the filed-claim pointer so re-entry ⛔ never mints another closed claim; the helpline wiring is `HelplineConsoleShell` + a staff line `helpline.result.closed`; H(iii)'s writers return `closed`; RF6-first in a paid death (a held third claim's `-291` text) recorded + pinned; the closure core skips `closed` before its cap; H(i) runs after the trigger block on every response with a `lock_timeout` and an actor; H(ii) ⛔ not when RF5 holds; OP5 (b)'s boolean sibling fragment; Trap 14 split by handler shape; comments found by grep; R1 gains the concurrent-commit legacy case; Task 0.6's backwards epics clause removed; seven cites corrected. |
 | 1.3 | 2026-10-10 | Round 3 (one fresh-context verifier): **0 BLOCKER / 0 HIGH**. Applied 2 MEDIUM — AC2's "Y unchanged" scoped to the domain leg (through the API, H(iv) closes Y when X is paid); P4 and the note's Q1 A say the warning runs only UNTIL one claim passes the final vote (after it, the others are refused at the vote) — and 9 LOW: the filed-claim pointer ⛔ never overwrites a live / paid claim's; Trap 14's R9 cite; seven cites (`icp.ts:370`, `appeal-persist.ts:445,552`, `appeal-panel-persist.ts:678`, `:1266,1414`, F12 `:175-182`, H(i) after `:671`); the UPDATE list's comment grep; two glyphs; ids from `-318`; AC7 path (a)'s timing (closed by H(i) after X's commit); the convergence strip's NEW result line + its AC leg; H(iv)'s helper reads `deceased_member_id` itself; Niyamavali §2.4 engaged; an AC leg for H(i)'s lock timeout. |
+| 1.4 | 2026-10-10 | OP13 (BigDev: *"yes, do it"*): `state_trustee_approved` becomes closable (supersedes `-292` RF4 in part) ⇒ an allowed suspicion appeal closes another claim that passed the final vote but is ⛔ not yet paid (RF7 already holds its commit) — FQ5 A as ruled; the corner narrows to a refusal changed to the suspicion reason only AFTER payment (Q2's case). Invariant 3, P5, the rulings table (`-292` RF4 row), OP1's pin, OP3's R1 (narrowed), OP4 / OP6 (two 6.24a legs flip by design), AC9 (incl. an appeal-vs-commit race), AC7 path (a)'s two timings, Task 4, Trap 16, `state.ts` in the UPDATE list. The routing note's corner text re-worded. OP11 REWRITTEN — the 30-day convergence window removed (its origin: an *"e.g., ±30 days"* in Story 6.4's planning AC; the key is exact) at three mirrored sites, F5 / `-294` §2 (b) closed at intake; OP14 NEW — the console's *other claims for this death* section (reference, stage, filed, same / different date of death by keyed-hash equality — ⛔ no decrypt), a blocking banner + disabled final approve on every approval surface, the 409's words at each; AC10, AC11; Tasks 5b, 5c; Traps 17, 18. |
+| 1.5 | 2026-10-10 | Round 4 (one fresh-context verifier on OP11 / OP13 / OP14): 1 HIGH — OP14 disabled final approve at the PAID stage, removing H(iv)'s only trigger for R2's stranded claims ⇒ the paid banner carries a staff **"Close this claim"** (one endpoint, the surface's own final-approve key, ⛔ no step-up, H(iv)'s helper). 5 MEDIUM — OP13's test rewrites completed (`:772-812` rewritten, ⛔ not flipped; RF7's inspection arm loses its driver — recorded; `suspicion-refusal.test.ts:140`; the API route leg `suspicion-refusal-routes.spec.ts:394-429`); AC4 H(ii) vs OP11 (a plain filing for a paid death CONVERGES; H(ii) only once the paid claim is overridden apart); OP14's surface list made exact (P1 banner-only; `ClosureColumn` untouched; only the FINAL approve controls); the note's OP13 moved out of *"not asked"* into Q1 with its `-291` text; stale OP1–OP12 / R1–R4 / OP11-not-taken / RF6-unchanged / AC7 (b). ~10 LOW — OP11's missed comment + caller sites, OP13 comment sites, the mirror's multi-candidate difference, RF10's `available` shape, the `cur` CTE cite + *"date not comparable"*, "may be closed", OP13's disclosure, the note's same-channel join, the epics wording, OP14's fixtures. |
+| 1.6 | 2026-10-10 | Round 5 (one fresh-context verifier): 1 HIGH — round 4's "Close this claim" lived only in OP14 (b) / R2 ⇒ now in AC11, Task 5c, the UPDATE list and AC4 (route `…/cycle-freeze/claims/:claimCaseId/close-for-paid-death` — the adjudication gate's `cycle-freeze` substring scans it; `cycle.freeze` at pariwar; own `openScopeTx` + `lock_timeout`; human actor; audit; `{ closed: [] }` no-op + its result line). 4 MEDIUM — one permission key (⛔ never "the surface's own"); the console read ceiling 21 → 22 with its four pins; the note's Q1 A and P4 say the approver is STOPPED (⛔ not "refused"); R1's voted card carries the banner + action. 6 LOW — OP13's further comment sites + an `approved` route-leg variant; `icp.ts:186`; H(iv)'s `lock_timeout`; the no-op result line; the Policy-meaning lead; P / OP ordering + epics. ⭐ Folded (BigDev: *"yes, fold it"*): OP14 (d) — the ground inspector sees the other claims of the death and an already-visited line (information only); the questionnaire question routed to row `6-32-…`. |
+| 1.7 | 2026-10-11 | Round 6 (one fresh-context verifier): **0 BLOCKER / 0 HIGH**. 4 MEDIUM — the adjudication gate's `expectedMethods` grows with the new route (an EXACT multiset — else `ci:local` is red); OP14 (d)'s other-claims field only for a caller holding an in-scope assignment of THIS claim (a `block_admin` could name any claim id); `alreadyVisited` defined (a FULL visit's `death_date_index` vs this claim's `accepted_date_index`; NULL ⇒ false) + `visitedElsewhere`; the admin client's non-strict schema STRIPS unlisted keys — named, camelCase. 6 LOW — the close response carries ⛔ no other claim's id (`this_claim_closed`, `closed_count`); a lock timeout is a 503 with its own line; params schema / audit type / `'trustee'` actor / 404 named; stale ceiling test titles; Completion Notes order; the sprint row's stale comment; UI copy without the glyph. |

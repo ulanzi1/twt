@@ -706,6 +706,12 @@ describe.skipIf(!hasDatabase)('Story 6.24b — the suspicion notices, domain (:5
       }
     });
 
+    it('⭐ PINNED (⛔ cross-package lockstep — `@twt/channels` depends on `@twt/domain`, so this side cannot import and verify THEIRS) — `SUSPICION_NOTICE_SMS_ERROR_CLASSES` matches this exact snapshot of `@twt/channels`\' `SmsErrorClass` (packages/channels/src/providers/sms-errors.ts) as of 2026-10-10; this test fails if OUR array drifts, ⛔ if THEIRS does — re-check BY HAND on either side changing', () => {
+      expect([...SUSPICION_NOTICE_SMS_ERROR_CLASSES].sort()).toEqual(
+        ['api_unavailable', 'auth', 'carrier_reject', 'dlt_template_not_approved', 'invalid_number', 'rate_limited', 'unknown'].sort(),
+      );
+    });
+
     it('⭐ a raw gateway code with a space, a `+`, `+91…`, a BARE 10-digit number or > 64 chars is stored as `unknown`; an unknown class ⇒ `unknown:unknown`', () => {
       for (const leak of [' E001', 'E 001', '+', '+919876543210', '9876543210', 'x'.repeat(65), '', 'a@b.in']) {
         expect(sanitizeSmsGatewayCode(leak), leak).toBe('unknown');

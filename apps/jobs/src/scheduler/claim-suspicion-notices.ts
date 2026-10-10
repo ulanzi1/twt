@@ -190,17 +190,28 @@ export async function runSuspicionNoticeSweep(deps: ClaimSuspicionNoticeDeps, bo
 
   // (2) `-302` RN2 — THE PARK, BEFORE the give-up. ⚠ A cross-tenant READ (the stalled scopes) and WRITE (the park) on the BYPASSRLS
   // pool, DELIBERATELY — the reasoning is at `listStalledSuspicionNoticeScopes`' / `parkHeldSuspicionNotices`' DELIBERATE blocks.
+  // ⚠ A budget guard, as the main loop's: the stalled set is normally small (crash-left rows only), but an unbounded run of
+  // Secret Manager reads here (one per distinct stalled Pariwar) would otherwise never be caught by the main loop's own check.
+  let budgetExhausted = false;
+  let budgetExhaustedDuringScopeScan = false;
   const held: claimDomain.SuspicionNoticeScope[] = [];
   const unheld: claimDomain.SuspicionNoticeScope[] = [];
   for (const scope of await claimDomain.listStalledSuspicionNoticeScopes(deps.pool, { now, allow })) {
+    if (clockMs() - startedMs > budgetMs) {
+      budgetExhausted = true;
+      budgetExhaustedDuringScopeScan = true;
+      break;
+    }
     ((await gapOf(scope.purpose, scope.pariwarId)) === null ? unheld : held).push(scope);
   }
   const parked = await claimDomain.parkHeldSuspicionNotices(deps.pool, { now, allow, held });
   if (parked.length > 0) {
+    const parkedByPurpose = new Map<Purpose, string[]>();
+    for (const p of parked) parkedByPurpose.set(p.purpose, [...(parkedByPurpose.get(p.purpose) ?? []), p.claimCaseId as string]);
+    const parts = [...parkedByPurpose.entries()].map(([purpose, list]) => `${purpose}: ${String(list.length)} (claims: ${sampleIds(list)})`);
     alarm(
       `[jobs] claim-suspicion-notice-sweep: ${String(parked.length)} in-flight notice(s) newly PARKED — their purpose / Pariwar is ` +
-        `held by a config gap; ⛔ given up while held, re-tried once it is fixed ` +
-        `(claims: ${sampleIds([...new Set(parked.map((x) => x.claimCaseId as string))])})`,
+        `held by a config gap; ⛔ given up while held, re-tried once it is fixed — ${parts.join('; ')}`,
     );
   }
 
@@ -223,11 +234,11 @@ export async function runSuspicionNoticeSweep(deps: ClaimSuspicionNoticeDeps, bo
 
   let scannedClaims = 0;
   let enqueued = 0;
-  let budgetExhausted = false;
   let bounded = false;
   const heldClaims = new Map<Purpose, string[]>();
 
   sweep: for (const purpose of SUSPICION_NOTICE_SWEEP_PURPOSES) {
+    if (budgetExhausted) break sweep;
     let after: string | null = null;
     for (;;) {
       const page = await claimDomain.selectDueSuspicionNotices(deps.pool, { purpose, after, limit, allow });
@@ -283,7 +294,11 @@ export async function runSuspicionNoticeSweep(deps: ClaimSuspicionNoticeDeps, bo
         `or the SMS gateway is not configured; ⛔ nothing was enqueued for them (an in-flight one is parked, ⛔ given up), and they will be sent once it is — ${parts.join('; ')}`,
     );
   }
-  if (budgetExhausted) {
+  if (budgetExhausted && budgetExhaustedDuringScopeScan && scannedClaims === 0) {
+    // ⚠ Distinguished from the branch below (review round 2): "0 claim(s)" there would misleadingly read as "nothing was due" —
+    // the budget was actually spent classifying stalled (purpose, Pariwar) scopes, BEFORE the enqueue scan ever started.
+    alarm(`[jobs] claim-suspicion-notice-sweep: ran out of its ${String(Math.round(budgetMs / 60_000))}-minute budget scanning stalled scopes (park phase) — the enqueue scan did ⛔ run today`);
+  } else if (budgetExhausted) {
     alarm(`[jobs] claim-suspicion-notice-sweep: ran out of its ${String(Math.round(budgetMs / 60_000))}-minute budget after ${String(scannedClaims)} claim(s) — the rest were ⛔ NOT swept today`);
   } else if (bounded) {
     alarm(`[jobs] claim-suspicion-notice-sweep: hit the hard bound of ${String(maxClaims)} claims — the rest were ⛔ NOT swept today`);

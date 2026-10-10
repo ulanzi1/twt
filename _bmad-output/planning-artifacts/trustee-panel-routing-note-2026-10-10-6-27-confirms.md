@@ -10,10 +10,15 @@
 
 ---
 
-> ## ⏳ AWAITING PANEL RULING
+> ## ✅ PANEL RULED — 2026-10-10 — recorded as `2026-10-10-310`
 >
-> ⛔ **Nothing is recorded here yet.** When the Panel rules, transcribe it into this block **and** into `.decision-log.md` as a new
-> decision id. ⭐ Everything below is then kept **unedited** as the question **as it was put** ([[feedback_supersede_never_reinterpret]]).
+> **Ruled by Dhiraj Rahul + Kalpana Bharti, relayed by BigDev — verbatim:**
+> *"by DR and KB - CF1 A, CF2 yes, CF3 (a)–(d) yes, CF4 A, CF5 A. App is not live, so CF1 may not be relevant."*
+>
+> ⭐ Our suggestion **taken on all five.** ⚠ Our reading of the remark (⛔ not ratified): CF1 governs only the time between go-live and an
+> in-app language switch (row 6-35); if that switch lands before go-live, CF1's interim ⛔ never applies.
+>
+> ⭐ Everything **below this block is kept UNEDITED** — it is the question as it was put.
 
 ---
 

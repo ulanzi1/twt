@@ -314,6 +314,10 @@ RB11), ⛔ not a clause conflict. ⛔ No clause on refusal
   now − CORRECTION_SEND_LEASE_MS`, so a row re-claimed within the lease (a live child may be sending it) is left to that child and
   taken by the next sweep. `-295` RB3's *"given up only after THREE IST calendar days from `created_at`"* still holds — a row is
   given up ⛔ earlier, only (at most a day) later. ⛔ No entry: ⛔ committed clause moves.
+  ⚠ **AMENDED by [`-302`](../../.decision-log.md#decision-2026-10-10-302) RN3 (2026-10-10, Story 6.29):** the three IST days count
+  from a new anchor `aging_since` (0155 — existing rows: their `created_at`), ⛔ from `created_at`; a row PARKED by a held sweep
+  (RB12 below) is judged by `aging_since + (now − parked_at)` and, when re-claimed, its `aging_since` moves forward by the time it sat
+  parked — the bound is three IST days of NON-parked time. The text above is kept as written.
 - **RB4 — the extraction (F19).** New `apps/jobs/src/scheduler/claim-dlt-sms-send.ts` exports `sendClaimDltSms(deps, { dltTemplateIdConfigKey,
   pariwarId, e164, render: (helpline: string) => string })` (sufficient: the body uses only `deps.{smsAppClient, resolveConfig,
   sendTimeoutMs}`, the two config keys and the render; it never alarms or logs — callers add ids). The core keeps
@@ -434,6 +438,10 @@ follows is now an ALARMED `error`, and its *"nothing was sent"* was false (a cra
   final `error` too ⇒ the DLT sheet's 7–12 section says *"set the ids only after the operator confirms each template's approval"*;
   (iii) a crash-left `attempting` row whose claim meets a config gap OUTLASTING three IST days is ⛔ re-checked and reaches RB3's
   finaliser (`error`, even with `detail` NULL) — one slot used, alarmed by the finaliser's claim-id alarm. Each costs one notice and is alarmed; ⛔ none is silent.
+  ⚠ **AMENDED by [`-302`](../../.decision-log.md#decision-2026-10-10-302) RN2 (2026-10-10, Story 6.29):** for a HELD (purpose,
+  Pariwar), a held run still writes ⛔ NEW row, but every `attempting` row of that scope past the lease is PARKED (`claimed_by_job =
+  'sweep:held'`, `parked_at`; ⛔ `detail` written) and ⛔ given up while held; the give-up runs over UN-held scopes only. Edge (iii)
+  above is SUPERSEDED for held scopes; edges (i) and (ii) stand (`-302` RN4 A). The text above is kept as written.
 - **RB13 — the refused-person text only while ⛔ no appeal is filed (F32).** ✅ **BigDev 2026-10-08.** Selector (c) and its locked
   re-check require the claim's appeal position `not_filed`. An appeal filed (`open`) or upheld (`upheld_final`) before the sweep ⇒ ⛔ no
   text, ⛔ no row (a row left `attempting` by a crash ⇒ RB10's K4). Amends `-293`'s reading *"while the refusal stands and its 90 days have ⛔ not
@@ -1010,11 +1018,13 @@ verified BY NAME on each ([[project_live_db_test_gotchas]]).
   column-narrowed the way `GRANT UPDATE` is** — deferred, pre-existing: also copied verbatim from 0138/RB2 (confirmed identical GRANT
   shape in `0138_claim-certificate-reminder.sql:59`).
   [packages/domain/migrations/0151_claim-suspicion-notices.sql:42]
+  ⚠ **TO BE closed by Story 6.29 (0155, [`-302`](../../.decision-log.md#decision-2026-10-10-302) RN8) — 2026-10-10.**
 - [x] [Review][Defer] **The partial index `claim_suspicion_notices_attempting_idx` covers `claimed_at` only (not `created_at`), and its
   existence is never asserted in the regression spec** — deferred, pre-existing: also RB2's copied-verbatim 0138 shape (confirmed
   identical in `0138_claim-certificate-reminder.sql:72`); a dedicated index-existence assertion would be a cheap addition but isn't
   this story's gap to fix.
   [packages/domain/migrations/0151_claim-suspicion-notices.sql:55]
+  ⚠ **TO BE closed by Story 6.29 (0155, [`-302`](../../.decision-log.md#decision-2026-10-10-302) RN8) — 2026-10-10.**
 
 ## Dev Notes
 

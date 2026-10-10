@@ -3247,6 +3247,24 @@ logged, and the address is decrypted only after the claiming commit; a missing c
 lost send); a signed-out admin who follows the link reaches the list after signing in. The system still refuses ⛔ nothing — the email
 is a notification, ⛔ never an approval step.
 
+### Story 6.29: A Config Hold Never Burns a Suspicion Text — 0151 Gains 6.25's Hold, Give-Up Anchor and DB Backstops, Adapted to SMS `[PRIMITIVE]`
+
+> ⚠ **Added 2026-10-10 (Story 6.29, Task 0.4)** — the row `6-29-suspicion-notice-parity-and-jobs-login-grants` was created by
+> `bmad-create-story 6.29` (2026-10-09) from [`-300`](../../.decision-log.md#decision-2026-10-09-300) Consequence 3 (*"0151 … has the
+> same two backstop gaps and the same give-up shape"*), with ⛔ no `epics.md` entry. The author's build decisions are
+> [`-302`](../../.decision-log.md#decision-2026-10-10-302) RN1–RN10. Full ACs:
+> `_bmad-output/implementation-artifacts/6-29-suspicion-notice-parity-and-jobs-login-grants.md`. ⚠ The key says "jobs-login grants": BigDev's
+> scope call made 6.29 0151 parity ONLY — the jobs-login gap is recorded as roster Row 26 (`-302` RN9), ⛔ fixed here. ⛔ Never a merge fence.
+
+As the Trust, I want a suspicion text that a configuration fault paused to be kept and sent once the fault is fixed — and the record of
+every such text to be protected by the database itself — so that a nominee or a refused person is ⛔ silently denied a text the Trust
+owes them, and ⛔ provider message text can ever be stored.
+
+**Acceptance Criteria (in brief):** a crash-left row of a HELD (purpose, Pariwar) is PARKED, ⛔ given up, and sent after the hold under
+the SAME locked re-check; the three-IST-day give-up counts non-parked time only; `detail` is a fixed grammar (a gateway code sanitised,
+⛔ a phone number) CHECKed by the database; a finished row is frozen by a trigger; three 6.24b defers on 0151 closed. ⛔ Who is texted,
+what a text says or when it is due changes; every RB18 skip alarm stays, RB13's skip stays silent.
+
 ---
 
 ## Epic 7: Pool Engine & Cycle Spawn

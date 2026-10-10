@@ -474,7 +474,7 @@ Claude Opus 5.5 (1M context) — `bmad-dev-story 6.29`, 2026-10-10.
 - `.decision-log.md` — `2026-10-10-302` (governance commit `208772d9`)
 - `_bmad-output/planning-artifacts/epics.md` — `### Story 6.29` (governance commit `0a3b643d`)
 - `docs/launch-gate-inventory/inventory-roster.md` — Row 26 `jobs-db-role` (`0a3b643d`)
-- `_bmad-output/implementation-artifacts/6-24b-filing-code-and-texts-to-the-nominee-in-place-at-the-death.md` — `⚠ AMENDED by -302` on RB3 / RB12; ROUND 3 defer marks (`0a3b643d`; flipped to "Closed" in Task 6)
+- `_bmad-output/implementation-artifacts/6-24b-filing-code-and-texts-to-the-nominee-in-place-at-the-death.md` — `⚠ AMENDED by -302` on RB3 / RB12; ROUND 3 defer marks (`0a3b643d`), flipped to "Closed by 6.29 / 0155 (`d61af613`)" in Task 6
 - `_bmad-output/implementation-artifacts/deferred-work.md` — the 2026-10-09 jobs-login item → Row 26 (`0a3b643d`)
 - `packages/domain/migrations/0155_claim-suspicion-notice-backstops.sql` — NEW
 - `packages/domain/migrations/meta/_journal.json` — idx 155

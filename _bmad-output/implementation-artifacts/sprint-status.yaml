@@ -1,3 +1,14 @@
+# last_updated: 2026-10-10n (⭐ **FRESH-CONTEXT VALIDATE OF 6.27 (v1.9) AND 6.30 (v1.0) — four read-only reviewers ⇒ 6.27: 4 BLOCKER / 7+5 HIGH;
+# 6.30: 1 BLOCKER / 3 HIGH. `2026-10-10-305` COMMITTED (`fa2687ce`, alone) + the non-blocking Panel confirm note CF1–CF3
+# (`trustee-panel-routing-note-2026-10-10-6-27-confirms.md`, ⛔ not yet sent).** Three corrections to what the Panel was told (the language
+# reading was ⛔ never shown; the app has ⛔ no language choice; the final vote / R9 are cast by Pariwar Admins as Trustee-Lite). BigDev's
+# calls: 6.27 SPLITS INTO FOUR (a keeps the key; b warnings + wait + approvers' view; d the inspector's discrepancy; c sending — LAST);
+# texts in the Pariwar's default language until an in-app switch (row 6-35); the inspector asks the family OPEN-ENDED; the text goes while
+# an answer can still be taken; rows 6-34 (typed SMS templates incl. the LOGIN OTP — urgent) and 6-35 ADDED. Roster Rows 27 / 28 / 29
+# RESERVED (−305 §4). 6.27 v2.0 + the b/c/d files and 6.30 v1.1 are being rewritten from the findings. ⚠ ANNOTATIONS to earlier comments on
+# rows 6-30 / 6-32 / 6-33 (kept as written): 6-30's base URL is the ENV VAR `APP_LINKS_BASE_URL` (⛔ not `app_links.base_url`) and its
+# story file EXISTS; 6-32 / 6-33's governance is `-304` (Q8 / Q7 — the Panel's chain: the Super Admin may add a question ALONE, so
+# "a second approver" is ⛔ not universal) and Q3 / Q4 were RULED A.)
 # last_updated: 2026-10-10m (⭐⭐ **THE PANEL RULED THE FOLLOW-UP NOTE — `2026-10-10-304` (Dhiraj Rahul + Kalpana Bharti, relayed by BigDev):
 # *"Q3 - A · Q4 - A · Q5 - A · Q6 - A"*; Q7 and Q8 the Panel's OWN chain — *"Pariwar Admin proposes, State Trustee proposes/approves
 # with/without modification. Super Admin make it live for one pariwar/all pariwar with/without modification. Superadmin can add question
@@ -19613,6 +19624,12 @@ development_status:
   # from the story files' `⚠ AMENDED by -283` / `-284` lines. Validate rounds STOPPED at round 3 (⛔ no BLOCKER / HIGH).
   6-26b-death-facts-warnings-and-register-check: done
   6-27-peer-mesh-sending-replies-and-date-of-death: ready-for-dev
+  # ⭐ 2026-10-10 SPLIT (`2026-10-10-305` §2 item 1; BigDev: "Four parts (Recommended)"): the row above is STORY 6.27a (keeps its key — the
+  # rulings cite it) and holds the ONE shared PM1–PM25 block. b / d stay `backlog` until 6.27a is `done`; c (sending) stays `backlog`
+  # until 6.27b, 6.27d AND row 6-30 are `done` — so every safety piece exists before a real answer arrives.
+  6-27b-peer-mesh-warnings-wait-and-approvers-view: backlog
+  6-27d-inspector-discrepancy-at-completion: backlog
+  6-27c-peer-mesh-sending-texts-and-links: backlog
   # ⭐ 2026-10-08 ADDED by `2026-10-08-294` §3 (6.24a code review round 2): ⛔ nothing per-death stops a second approval (`-292` FOUND it);
   # 6.24a's RF6 closure is the only control and three paths pass it (`-294` §2 (a)–(c)). ⭐ BEFORE any code: the Panel question — which
   # family is paid when two claims for one death both qualify, and what the other is owed — then the guard. ⛔ No story file yet.
@@ -19634,6 +19651,13 @@ development_status:
   # 6.27's engine is shared (v1.8). ⛔ No story files; ⛔ no epics.md entries yet.
   6-32-inspector-questionnaire-at-the-ground-inspection: backlog
   6-33-questionnaire-editor-versions-and-approval: backlog
+  # ⭐ 2026-10-10 ADDED by `2026-10-10-305` §2 item 5 (BigDev: "Typed SMS templates (incl. login OTP), In-app language switch"):
+  # 6-34 retags EVERY SMS template with TRAI's typed variables (18 Nov 2025 Direction) BEFORE any is submitted — the login / step-up OTP
+  # (`packages/channels/src/otp-sms-template.ts`), the alert registry (`sms-dlt-registry.ts`), 6.19's + 6.24b's twelve drafted, 6.27c's two;
+  # ⚠ an untyped OTP template blocks every login. 6-35 = an in-app language switch, saved on the phone and recorded on the server on a
+  # change (⛔ never on first launch); from then the member's choice is their preferred language (`-303` rider; CF1 confirm owed).
+  6-34-sms-templates-typed-variables: backlog
+  6-35-in-app-language-switch: backlog
   epic-6-retrospective: done
 
   # ==========================================================================

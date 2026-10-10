@@ -1,3 +1,11 @@
+# last_updated: 2026-10-10ae (⭐ **6.30 DEV DONE — `in-progress → review` via `bmad-dev-story`** on `story/6-30-app-links-open-the-app-from-a-text`
+# (worktree `TWT-6-30`). Built: ONE app-link path list as JSON in `@twt/contracts` (`/peer-request`; `buildAppLinkUrl`, `parseAppLinkCode`,
+# the AASA / assetlinks builders + env schemas); `app.json` → `app.config.ts` on `APP_VARIANT` (non-production = the prototype
+# byte-for-byte; production throws without `APP_IDENTITY_*`) + the `expo-config` CI job; the login that returns to the link's screen
+# (in-memory target, one consumer, every 4xx refresh resets the session); the `/peer-request` route shell + a bilingual "not found";
+# the two `/.well-known` endpoints and the plain fallback page (never reads the code); one shared `resolveHttpsOrigin`; the Traefik
+# exact-path router + `waf_custom` skip (wired, ⛔ not applied). Records: Row 29, the DLT URL section, six deferred-work items, the
+# friction disposition. ⛔ Owed at Row 29: the production identity, the domain, the apply, the device proof.)
 # last_updated: 2026-10-10ad (⭐ **6.30 DEV STARTED — `ready-for-dev → in-progress` via `bmad-dev-story`** in its worktree on
 # `story/6-30-app-links-open-the-app-from-a-text`. Task 0.1: `git diff --name-only 1cce7e5a..HEAD -- packages apps infra scripts .github
 # turbo.json` EMPTY. Task 0.4's records, committed BEFORE any code: epics.md `### Story 6.30` (after 6.29); roster **Row 29**
@@ -19701,7 +19709,7 @@ development_status:
   # ⭐ 2026-10-10 ANNOTATION (Story 6.30, Task 0.4 — the comment above is kept as written, ⛔ never rewritten): the base URL is the ENV VAR
   # `APP_LINKS_BASE_URL` (jobs — `-312` AL5), ⛔ not `app_links.base_url`; 6.30 owns the app-link PATH LIST and the `/peer-request` ROUTE
   # SHELL (AL2 / AL16 — 6.27a fills it, 6.27c wires the code); the story file and the epics.md entry exist; the go-live record is Row 29.
-  6-30-app-links-open-the-app-from-a-text: in-progress
+  6-30-app-links-open-the-app-from-a-text: review
   # ⭐ 2026-10-10 ADDED (BigDev, in session: *"48 hours, separate story 6-31"*): ONE WhatsApp reminder at 48 h to the five who have ⛔ not
   # answered and opted in to WhatsApp — after 6.27's sending half; Panel-routed inside 6.27's Q1. ⛔ No story file; ⛔ no epics.md entry yet.
   6-31-peer-mesh-whatsapp-reminder-at-48-hours: backlog

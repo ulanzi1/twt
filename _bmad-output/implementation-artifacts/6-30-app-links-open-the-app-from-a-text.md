@@ -31,7 +31,7 @@ corrections; `E1`–`E3` = `-316`'s; `R1`–`R3` = `-317`'s; `N1`–`N20` = buil
 
 # Story 6.30: A Link in a Text Opens the App at the Right Screen — App Links, Universal Links, Two Public Files, a Plain Fallback Page, and the Login That Keeps Its Place `[PRIMITIVE]`
 
-Status: in-progress
+Status: review
 
 > ⭐⭐ **WHAT THIS STORY IS, IN ONE PARAGRAPH.** Story 6.27's text to the five neighbours carries a link that should open the question
 > screen in the TWT app (BigDev, 2026-10-10: *"separate story"*; ratified with the text in `-303` Q1 A). Today ⛔ no link can open the
@@ -506,7 +506,7 @@ applicable (the Niyamavali does not speak to app links) — and it is ⛔ not ra
       `infra/cloudflare/README.md` (the `ClientRequestURI` line; its `waf_custom` description `:83-91`) + `.terraform-plan-expectations.md`
       (the default plan's `waf_custom` now holds only the skip); `terraform fmt -check -recursive`; `terraform validate` run
       once, output recorded.
-- [ ] **Task 9 — records and close (AC10).** Deferred-work items (AL8's gate scope; AL9's env; AL13 incl. the `parseDeepLink` item staying
+- [x] **Task 9 — records and close (AC10).** Deferred-work items (AL8's gate scope; AL9's env; AL13 incl. the `parseDeepLink` item staying
       with push; the 429-on-refresh note — N5; D-13 → Row 29); the AL15 pointers (Row 29's notes + an annotation under the sprint row `6-34`); the `friction-budget.md`
       disposition block (both apps; is *"install the app, then open the link again"* a declared `forced` cost? — decide and declare);
       Rows 27 / 28: if 6.27a's Task 0.6 has landed, CHECK that Row 27 (e) names Row 29 and Row 28 names the fallback page, `+not-found` and
@@ -705,6 +705,26 @@ Claude Opus 5.5 (1M context) — `bmad-dev-story 6.30`, 2026-10-10, in the workt
   clearly indicate the sender's identity"* (AL3's ⛔ no shortener is unaffected); Android 15+ periodic re-verification, up to seven days —
   CONFIRMED (Android 14 and lower: only at install / update); F2c — CONFIRMED (Expo docs: the built-in variables *"are not available when
   evaluating app.config.js locally"*; eas-cli `evaluateConfigWithEnvVarsAsync` passes `{ ...serverEnvVars, ...buildProfile.env }`).
+- **Task 2 — AC3:** the fixture captured from `npx expo config --type public --json` BEFORE `app.json` was removed; afterwards unset /
+  `development` / `preview` resolve EQUAL to it (`scripts/check-app-config.mjs` — 15 checks, all ok). ⭐ Negative control: a TypeScript
+  import from `@twt/contracts` added to `app.config.ts` makes the REAL `expo config` exit 1 (F2b confirmed) — vitest would have passed it.
+  An unknown `APP_VARIANT` (e.g. `prod`) THROWS (a choice inside AL1: a typo must ⛔ never fall back to the prototype).
+- **Task 3 / 4 — typed routes:** `.expo/types` is ⛔ not committed, so the worktree's first `tsc` ran WITHOUT typed routes; `expo start` was run
+  once to generate them, and `tsc --noEmit` then passed with `router.replace({ pathname: '/peer-request', params: { c } })` checked.
+  The group `(peer-request)` gets a `_layout.tsx` (a plain `<Stack />`, the `(data-export)` house pattern) — without one the root
+  `<Stack.Screen name="(peer-request)">` names no route. Route-map negative controls: a `(peer-request)/[x].tsx` fails (iii); removing
+  the shell fails (i).
+- **Task 6 — live check on the BUILT site** (`pnpm build`, then `node dist/server/entry.mjs` with fixture env): AASA and assetlinks
+  `200`, `content-type: application/json`, `cache-control: public, max-age=3600`; `/peer-request?c=Zq7Xw3Kp9Lm2&lang=en` → `200`,
+  `cache-control: public, max-age=300`, `referrer-policy: no-referrer`, ⛔ no `vary`, `<html lang="hi">` + one `lang="en"` block, ⛔ no
+  toggle link, the code ⛔ absent from the body; `/peer-requests` → 404. A `withLang` call planted in `PublicShell`'s frontmatter fails the
+  scan (negative control). PII-scrape gate: `/peer-request noindex / edge_cacheable` ✓.
+- **Task 8 — terraform (AC8), run once 2026-10-10, Terraform v1.15.6:** `terraform init -backend=false` (TF_DATA_DIR in the scratchpad)
+  resolved `cloudflare/cloudflare v4.52.9`; `terraform fmt -check -recursive infra/cloudflare` → clean; `terraform validate` → *"Success!
+  The configuration is valid."* For the record, a pristine copy of the PRE-CHANGE module (git archive) fails both: `fmt -check` exit 3
+  (`waf.tf`), and `validate` → *"Error: Unsupported argument — on waf.tf line 18 … An argument named "account_id" is not expected here."*
+  The generated `.terraform.lock.hcl` was ⛔ not committed (a deferred-work item). ⚠ `validate` does ⛔ not evaluate `count` / `dynamic`
+  values, nor Cloudflare's one-entry-point-per-phase rule — a `terraform plan` per bot-management setting is the operator's (Row 29 (g)).
 
 ### Completion Notes List
 - 2026-10-10 — created by `bmad-create-story 6.30` (Opus 5.5): ultimate context engine analysis completed — comprehensive developer guide
@@ -717,12 +737,59 @@ Claude Opus 5.5 (1M context) — `bmad-dev-story 6.30`, 2026-10-10, in the workt
   2 HIGH, 3 MEDIUM, 15 LOW — every one the round-7 pass's own; all applied; `-315`'s errors corrected first as `-316` (`a2b994b7`).
 - 2026-10-10 — v1.9 after the round-9 fresh-context re-validate (one read-only reviewer at `1f78762e`): 0 BLOCKER, 0 HIGH — the
   re-validate rule is discharged; its 3 MEDIUM / 12 LOW applied, the three needing a record committed first as `-317` (`44830033`).
+- 2026-10-10 — ⭐ **DEV (`bmad-dev-story 6.30`, Opus 5.5) — Tasks 0–9 done**, in the worktree `TWT-6-30` on the story branch; the Task 0
+  records committed FIRST (`9dbc6ee3`), before any code. What was built, AC by AC:
+  - **AC2** — `packages/contracts/src/app-links/` (`app-link-paths.json`; `APP_LINK_PATHS` checked at module load; `APP_LINK_CODE_*`;
+    `buildAppLinkUrl` — a bare https origin only; `parseAppLinkCode`; the env parsers with fingerprints upper-cased; the AASA / assetlinks
+    builders from a LIST). 56 tests.
+  - **AC3** — `app.json` → `app.config.ts` keyed on `APP_VARIANT` (`eas.json` env per profile); the prototype fixture; the
+    `expo-config` job in `ci.yml` + `ci-local.sh` (the real loader); `app-config` (24) + `app-links-lockstep` (4) tests.
+  - **AC4** — `lib/link-target.ts` + the guard / `otp.tsx` / session wiring; the dead-refresh handler; `link-target` (24 tests incl.
+    the source-scan pins); F7's pins stay green.
+  - **AC5** — the two `.well-known` endpoints (env read inside `GET`); 17 tests; the gate-scope gap is a deferred-work item.
+  - **AC6** — `peer-request-render.ts` + `peer-request.astro` + `PublicShell`'s `hideLanguageToggle`; the `app-links` namespace (catalog +
+    `copy_globs`); the matrix entry; 35 tests incl. real-`t()` legs + the page/matrix/router lockstep.
+  - **AC7** — the `(peer-request)` group + shell + `PeerRequestSlot` placeholder; the root `Stack.Screen`; a bilingual `+not-found`; the
+    strict route-map test; `not-found-copy` with real `t()`.
+  - **AC8** — the Traefik router + app-link env + `APP_LINKS_BASE_URL`; `waf_custom` unconditional, the skip first, Rules 1–3 dynamic;
+    `outputs.tf`; `waf.tf:18` and the fmt drift fixed; READMEs; fmt + validate recorded (Debug Log). ⛔ Not applied.
+  - **AC9** — `resolveHttpsOrigin` + the `resolveAdminAppOrigin` alias; `https-origin` (24-case table + the fit with `buildAppLinkUrl`).
+  - **AC10** — Row 29, the DLT URL section, the sprint-row annotations (`6-30`, `6-34`), six deferred-work items + the D-13 pointer, the
+    Rows 27 / 28 note in 6.27 (⛔ not yet written there), the 6.27c note, the friction disposition (gate ✓), `pnpm ci:local` (below).
+  ⚠ Choices made INSIDE the ALs (recorded, ⛔ not new decisions): an unknown `APP_VARIANT` throws; `APP_LINKS_HOST` must be a bare lower-case
+  host (else the config throws); store buttons only for `play.google.com` / `apps.apple.com` https URLs; duplicate app ids / packages
+  ⇒ 404; the group `_layout.tsx`; a router-lockstep test in `apps/public`. ⛔ Not done here (by design): the production identity, the
+  domain, any `terraform apply` / deploy, the device proof — all Row 29.
+- 2026-10-10 — **`pnpm ci:local` (static jobs, `DATABASE_URL` unset)** at `47bfc93a`+records: 32 of 33 jobs ✓ (lint, typecheck, build, db-check,
+  contracts-determinism, crypto-check, tokens-theme-check, i18n-parity, **expo-config** (new), pii-scrape, friction-budget, schema-diff,
+  benefit-mechanism, microcopy, every invariant gate, determinism-replay, channels-determinism); ✗ `test (unit)` — ONE failure:
+  `packages/contracts/tests/public-pages.test.ts` pins the committed matrix's route list, and `/peer-request` was ⛔ not in it (a pin this
+  story's file did ⛔ not name). Fixed (`a117ebb9`); `test (unit)` re-run → `Tasks: 37 successful, 37 total`. ⚠ The live-DB
+  `integration-tests` job was ⛔ not run (`DATABASE_URL` unset — the :5433 container is shared with a peer session; 6.30 has ⛔ no
+  migration and ⛔ no DB code). Totals seen in this story's own runs: contracts 1333, mobile 749, public 740.
 
 ### File List
+NEW — `packages/contracts/src/app-links/{app-link-paths.json,paths.ts,verification.ts,index.ts,README.md}`, `packages/contracts/tests/app-links.test.ts`;
+`apps/mobile/app.config.ts`, `apps/mobile/scripts/check-app-config.mjs`, `apps/mobile/tests/fixtures/app-config-prototype.json`,
+`apps/mobile/lib/link-target.ts`, `apps/mobile/app/(peer-request)/{_layout,peer-request}.tsx`, `apps/mobile/components/peer-request/PeerRequestSlot.tsx`,
+`apps/mobile/tests/unit/{app-config,app-links-lockstep,link-target,app-link-route-map,not-found-copy}.test.ts`;
+`apps/public/src/pages/.well-known/{apple-app-site-association,assetlinks.json}.ts`, `apps/public/src/pages/peer-request.astro`,
+`apps/public/src/lib/{peer-request-render,well-known.server}.ts`, `apps/public/tests/{well-known-endpoints,peer-request-page,app-link-pages-lockstep}.test.ts`;
+`packages/i18n/locales/{en,hi}/app-links.json`; `apps/jobs/tests/https-origin.test.ts`.
+DELETED — `apps/mobile/app.json`.
+MODIFIED — `packages/contracts/src/index.ts`, `packages/contracts/src/deep-links/README.md`, `packages/contracts/public-pages/public-vs-private-matrix.yaml`;
+`apps/mobile/{app/_layout.tsx,app/(auth)/otp.tsx,app/+not-found.tsx,lib/session.ts,lib/session-context.tsx,eas.json,package.json,README.md}`;
+`apps/public/src/layouts/PublicShell.astro`; `packages/i18n/locales/{en,hi}/common.json`, `packages/i18n/src/catalog.ts`, `microcopy.yaml`;
+`apps/jobs/src/scheduler/staff-email-config.ts`, `apps/jobs/README.md`; `infra/dokploy/{compose.yaml,README.md}`;
+`infra/cloudflare/{waf.tf,outputs.tf,observability.tf,README.md,.terraform-plan-expectations.md}`; `.github/workflows/ci.yml`, `scripts/ci-local.sh`;
+`friction-budget.md`; `docs/launch-gate-inventory/{inventory-roster,dlt-template-requests-6-19}.md`; `_bmad-output/planning-artifacts/epics.md`;
+`_bmad-output/implementation-artifacts/{deferred-work.md,sprint-status.yaml,6-27-peer-mesh-sending-replies-and-date-of-death.md,6-27c-peer-mesh-sending-texts-and-links.md}`;
+this file.
 
 ## Change Log
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-10 | 2.0 | ⭐ **DEV — `bmad-dev-story 6.30`.** Tasks 0–9 built (Task 0 records committed first); AC2–AC10 met — see Completion Notes. `ready-for-dev → in-progress → review`. The production identity, the domain, the apply / deploy and the device proof remain Row 29's. |
 | 2026-10-10 | 1.9 | Round-9 re-validate (0 BLOCKER / 0 HIGH — the rounds END) + `2026-10-10-317` (R1–R3). **Medium:** AL1's projectId reason corrected (R1 — every `eas build` carries its OWN profile env; `eas submit` / `eas env:*` the shell env); the three residuals RECORDED, accepted in AL6 / AL11 (R2) and N6 / N7 / N14 point there; Task 0.3c says what BigDev was shown (a short form) and 0.3d records `-317`. **Low:** `-312` clauses restored to the AL block (AL1 `eas update`; C1's Expo account; AL2 Node pin + `resolveJsonModule`; AL5's sweep / `twt.org` / PM21 (b) note; AL6 consumed once; AL9 exact page paths); AL12 (a) — Consequence 2's `APP_EAS_PROJECT_ID` replaced by E1's literal; F3 `:138-238`; `-316` / `-317` in AC1, References, Git intelligence, the shared-checkout note; Tasks tagged N2 / N3 / N4 / N9 / N10 / N16 / N18; N11 — `terraform fmt` after the edits, the `moved` block optional; Task 8 + Project structure gain `.terraform-plan-expectations.md` and the README's `waf_custom` text; N3 upper-cases fingerprints; N5 — the 429-on-refresh note (deferred-work, Row 29); N19 — "beside" = decided together; N9 — two apps on one host refused; AC6 / AC7 — a REAL-`t()` leg for the new keys. |
 | 2026-10-10 | 1.8 | Round-8 re-validate (the round-7 pass's own defects) + `2026-10-10-316` (E1–E3). ⚠ This row's stated REASON for E1 was partly WRONG (corrected by `-317` R1 in 1.9) — kept as the record. **High:** `extra.eas.projectId` is one literal for every variant, ⛔ never production-only (E1 — `eas submit` / `eas env` / every `eas build` read the config without the profile env), excluded from AC3's comparison; the `PeerRequestSlot` file is a 6.30 implementation detail 6.27a may replace — ⛔ never an attribution to 6.27a's PM11 (⛔ no seam moves). **Medium:** the AL block cut back to the committed text (`-312` + C1–C8 + E1–E3) — the build detail moved to Dev Notes → Build notes N1–N20 (incl. `-312`'s *"any build-time variable declared in `turbo.json` `globalEnv`"* restored to AL8); `terraform validate` FAILS at HEAD (`waf.tf:18` `account_id`) — F13 + N11 + AC8 (validate once; a plan per setting is the operator's); Row 29 (a)'s homes per value (N19). **Low:** cites (F13 Rules 1–3 `:41-66`; `session.ts:150-176`; `gate.ts:203-216`; `catalog.ts:29-77`; the root Stack declares MOST groups); the `:47` pin; AL6's one-consumer reason + the `signIn`-throws residual (N6); the dead-refresh call order (N5); the `?mode=developer` caveat (N9); `title` = `trustName` (N13); AC10 and Project structure gain the 6.27 / 6.27c notes and the lockstep file; the third branch SHA; the edge-skip scope (E2); *"in that session"*. |
 | 2026-10-10 | 1.7 | ⭐ Round-7 validate + `2026-10-10-315` (C1–C8). ⚠ Two items in this row were WRONG and are kept as the record — *"`extra.eas.projectId` production-only from env"* (withdrawn by `-316` E1) and the slot file attributed to 6.27a (corrected in 1.8). **Blockers:** AL1 keys the variant on `APP_VARIANT` from `eas.json` `env` (⛔ never `EAS_BUILD_PROFILE`, which is unset when EAS CLI evaluates the config locally — F2c), `APP_IDENTITY_*` in the production profile's `eas.json` `env`, `slug` constant, `extra.eas.projectId` production-only from env; AL10 = ONE always-present `waf_custom` with the skip first (+ `http_request_sbfm`), Rules 1–3 dynamic, `outputs.tf`, the `waf.tf:23` fmt fix. **High:** AL6 — every refused refresh resets the in-app session; capture via `usePathname` + `useGlobalSearchParams`; ONE consumer (`otp.tsx`, before `signIn`); clears on signup / sign-out / termination; the cases ruled. AL9 routes `/_astro/`; AL11 renders `PublicShell` + `hideLanguageToggle` (the gate needs it), neutral `trustName`, `lang` blocks, `edge_cacheable`; AC6 = a pure render module + source scans (⛔ no `.astro` harness exists). **Medium / Low:** ci.yml + ci-local.sh; AL16 (ii) scoped to app-link paths + the `Stack.Screen`; i18n homes (`common.json`; a new `app-links` namespace); the friction-budget disposition (both apps) in AC10; the validator alias; Row 3's owners (C6); AASA without a `"?"` component; `APP_LINK_CODE_PATTERN`; the env schemas in contracts with format checks; `buildAppLinkUrl` takes a bare origin; `EXPO_PUBLIC_HELPLINE_TEL`; Row 29's notes, the DLT section, the sprint-row annotation, the Rows 27 / 28 check; the AL15 test paths; the `parseDeepLink` item; cite fixes (F8b, F13, F14, the Reuse map); test and file paths; the pin re-expressed (`1cce7e5a`); stale statuses (the rulings table, "PROPOSED", the stacked branch, 6.27a v2.9); the SHA map moved to git history and the `V-` ids dropped. |

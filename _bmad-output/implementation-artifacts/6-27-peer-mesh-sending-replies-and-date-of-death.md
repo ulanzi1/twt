@@ -31,11 +31,10 @@ THIS file is the record (the 6.26a / 6.26b precedent).
 STATUS: `ready-for-dev` — ⛔⛔ NO CODE (in ANY part) until Task 0 is done: the Panel's rulings are transcribed ✅ (`-303`, `-304`), the
 validate's corrections and BigDev's calls are recorded ✅ (`-305`, `fa2687ce`); OWED: BigDev's answers to PM1–PM25 (Task 0.3) and ONE
 author-commit recording them, committed ALONE (Task 0.4 — the next id after `-305`) ([[feedback_governance_commits_precede_implementation]]).
-The Panel confirm note (`…-6-27-confirms.md`, CF1–CF3) is ⛔ not blocking: it is owed before Row 27 closes.
+The Panel confirm note (`…-6-27-confirms.md`, CF1–CF5) is ✅ RULED — `2026-10-10-310` (all five as suggested).
 
 ⭐ §0 gate (template `trustee-panel-routing-note-TEMPLATE.md`): the Panel's questions are RULED — Q1 / Q2 (`-303`), Q3–Q8 (`-304`); the
-corrections and the CF1 narrowing are recorded (`-305`) and put to the Panel for confirmation (CF1–CF3 — ⛔ not yet sent; owed before Row
-27 closes). Every PM strips to "the code should do X". ⚠ A PM BECOMES
+corrections and the CF1 narrowing are recorded (`-305`) and CONFIRMED by the Panel (`-310`: CF1 A, CF2, CF3 (a)–(d), CF4 A, CF5 A). Every PM strips to "the code should do X". ⚠ A PM BECOMES
 the Panel's if the build (i) shows a neighbour's answer — or who answered — to the FAMILY or the PUBLIC, directly OR BY PARAPHRASE (the
 inspector asks the family open-ended, ⛔ never *"a neighbour said …"* — `-305` §2 item 3; FR-39's *"verifier names are published"* stays
 unruled, 11b.3b `verifierName`), (ii) says MORE in the text than the ruled wording (a claim, money, the family, the nominee, who reported
@@ -141,7 +140,7 @@ so that **I can weigh them beside the ground inspection — ⛔ never as a reaso
 | **`2026-10-10-304`** Q7 / Q8 | *"Pariwar Admin proposes, State Trustee proposes/approves with/without modification. Super Admin make it live for one pariwar/all pariwar with/without modification. Superadmin can add question directly and make it live. No additional Permission required for Superadmin."* — for the neighbours' AND the inspector's questions | ⭐ Trustee-ratified (the Panel's own chain — ⛔ not our reading) — row 6-33 builds it |
 | `-303` reading (*"preferred language = the language chosen in the app … shown to the Panel"*) | — | ⚠ OVERTAKEN: never shown; the app has ⛔ no language choice (`-305` §1 (a), (b)); the "TWO questions" part overtaken by `-304` Q6 A |
 | **`2026-10-10-305`** | corrections §1 (a)–(c); calls: the four-part split; texts in the Pariwar's default language until row 6-35 (⚠ a temporary narrowing ⇒ CF1); the inspector asks the family open-ended; the text goes while an answer can still be taken; rows 6-34 / 6-35; roster Rows 27 / 28 / 29 reserved | author-commit (BigDev) |
-| `-304` readings (CF3) | EVERY ruled question (the seven v2 keys) is in every `peer_mesh` version from v2 onward (v1 exempt); a chain-added question is ⛔ never a warning or a flag; an alcohol question needs Q5 superseded first; every health question needs counsel's basis before it is shown — ⇒ the TEXTS themselves wait for Row 27 (f); a health question added LATER through the chain HOLDS that Pariwar's texts until its `counselBasis` is recorded (6.27c AC2b; ⚠ a cost row 6-33 must state) | ⚠ OUR readings — the confirm note asks the Panel (⛔ not yet sent); the VALIDATOR enforces them meanwhile (PM23) |
+| `-304` readings (CF3) | EVERY ruled question (the seven v2 keys) is in every `peer_mesh` version from v2 onward (v1 exempt); a chain-added question is ⛔ never a warning or a flag; an alcohol question needs Q5 superseded first; every health question needs counsel's basis before it is shown — ⇒ the TEXTS themselves wait for Row 27 (f); a health question added LATER through the chain HOLDS that Pariwar's texts until its `counselBasis` is recorded (6.27c AC2b; ⚠ a cost row 6-33 must state) | ⭐ Trustee-ratified — `2026-10-10-310` CF3 (a)–(d); the VALIDATOR enforces them (PM23) |
 | `-282` GI7 · `-281` Q1 B | the two precedents for a kind entering the wait | precedent |
 | `-295` RB4 / RB5 / RB11 / RB12 / RB16 · `-302` RN2–RN8 | one send core, ⛔ never copied; the mode-resolved name or `no_target`; go-live rows; a held config never uses up the slot; the deadline-word deny-list; 0155's backstops | author-commit — the TEMPLATE (6.27c) |
 | `-292` Consequence 4 · `-282` Consequence 4 | rows 6-24 / 6-25 / 6-27 share the gate and writers — *"whichever lands second rebases; ⛔ none drops another's check"* | ⭐ every sibling is `done` ⇒ 6.27 rebases onto all; row 6-28 (one payment per death) joins the list (Trap 5) |
@@ -345,7 +344,7 @@ member's terms:
 
 - **PM1 [c] — who is texted: the five chosen by row 6-36's rule (`2026-10-10-306`, `-307` — colleagues at the deceased member's WORKPLACE,
   school or office, and the previous one after a transfer within 90 days; otherwise the up-to-3 "people who know me" the member named and who
-  accepted; otherwise ⛔ no one; ⛔ never the district; possibly fewer than five, CF4 owed) through 6.6's engine, minus those the Trust must ⛔ not text — ⛔ never replaced.** At the child's locked
+  accepted; otherwise ⛔ no one; ⛔ never the district; possibly fewer than five — `-310` CF4 A) through 6.6's engine, minus those the Trust must ⛔ not text — ⛔ never replaced.** At the child's locked
   re-check (PM5 (iv)) a ping is finished `no_target` with a fixed detail when its member: is ⛔ not `members.state = 'active'`
   (`no_target:peer_not_active`); has ANY claim filed naming them as the deceased (`no_target:peer_reported_deceased` — ⚠ includes a claim
   wrongly filed against a living member, who is locked by 6.20 until row 6-22's release (`-238`); the exclusion STAYS even after such a
@@ -549,7 +548,7 @@ member's terms:
   closed; (f) counsel's basis for HEALTH information from neighbours — `death_cause` and `death_illness` (`-304` Q4 A), closed only when v2's
   `counselBasis` for both is RECORDED in code (a reviewed edit citing counsel's recorded basis — a decision id — + its test); (f) closes on that edit —
   ⭐ ⇒ the TEXTS themselves wait for it (Row 27 stays ONE conjunction; ⛔ no "skip the health questions" interim — it would show the
-  neighbours a list the Panel never ruled); (g) the confirm note CF1–CF3 answered. Evidence lines: the provider confirms that
+  neighbours a list the Panel never ruled); (g) **Closed by `2026-10-10-310`** (the confirm note CF1–CF5 answered). Evidence lines: the provider confirms that
   `{#alphanumeric#}` carries Devanagari with spaces (PM3); the dotted-key defect (below). Note: row 6-31 built, or its absence at go-live
   recorded as a decision. ⭐ Rows 6-31 and 6-34 cite `-305` §4 for the reserved numbers, so ⛔ no third story takes Row 27 / 28 / 29. **Row 28 `peer-mesh-request-hindi-human-review`**
   — the Hindi of the texts, the questionnaire's question words, the screens, AND 6.30's fallback page, not-found screen and route-shell
@@ -582,7 +581,7 @@ member's terms:
   **404** (one indistinguishable answer, reusing 6.27a's not-openable state); a
   closed request resolves and the screen says it is no longer open. (e) The code is ⛔ never in a log, an alarm, an audit row or a `detail`.
   (f) Go-live: Row 27 (e).
-- **PM22 [c] — the language** (`-305` §2 item 2; ⚠ CF1 owed): each text goes in the Pariwar's `pariwar_passport.locale_default`
+- **PM22 [c] — the language** (`-305` §2 item 2; ✅ `-310` CF1 A — the interim ⛔ never applies if row 6-35 lands before go-live): each text goes in the Pariwar's `pariwar_passport.locale_default`
   (`schema/pariwar_passport.ts:86`, `NOT NULL` ⇒ always present; Hindi for Bihar) — the template of that locale, both registered; the
   sweep's config check needs that locale's id for each Pariwar it texts; the choice is recorded as a CODE (`locale_source: pariwar_default`).
   ⭐ **Boundary:** row `6-35-in-app-language-switch` adds the member's own choice (saved on the phone, recorded on the server on an explicit
@@ -927,6 +926,7 @@ on the story branch ([[feedback_commit_on_story_branch]]).
 ## Change Log
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-10 | 2.8 | `2026-10-10-310` (the Panel: CF1 A, CF2, CF3 (a)–(d), CF4 A, CF5 A): the confirm statuses updated to RULED; Row 27 (g) closed by it; the CF3 readings now ratified. |
 | 2026-10-10 | 2.7 | `2026-10-10-307`: PM1 reads row 6-36's full order — workplace colleagues → people the member named and who accepted → ⛔ no one. |
 | 2026-10-10 | 2.6 | `2026-10-10-306` (BigDev): the five are chosen by school (row 6-36), ⛔ never the district; 6.27c also waits for row 6-36; PM1 updated; CF4 owed. |
 | 2026-10-10 | 2.5 | Round 6 (0 BLOCKER / 0 HIGH — validate ends): Row 27 (f) and PM23's basis id cite counsel's recorded basis (⛔ no longer circular); AC2 names the sweep AND the child; 6.27b's queue needs ⛔ no window term (PM8 corrected); build floor v2.5. |

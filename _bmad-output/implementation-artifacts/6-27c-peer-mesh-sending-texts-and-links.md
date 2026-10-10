@@ -59,7 +59,8 @@ RB4 / RB5 / RB11 / RB12 / RB16 · `-302` RN2–RN8 · `-255` F7 (the cost line).
 1b. **AC1b — 6.27c's migration:** the `detail` / `first_detail` grammar CHECK (enumerated) applied on :5432 AND :5433, proven from zero;
    every builder output passes it and a RAW gateway code is refused (a test) — 6.29 Trap 4.
 2. **AC2 — each of the five is texted once:** when the SELECT worker commits (or on its no-op branch), ONE child per claim is enqueued and
-   fans out per ping; each send, under the claim → ping locks, re-checks that the claim is in PM8's answer window (incl. a live R9 routing) and PM1, then
+   fans out per ping; each send, under the claim → ping locks, re-checks that the claim is in PM8's answer window — the ONE predicate `isClaimInAnswerWindow`
+   (6.27a Task 1; incl. a live R9 routing; ⛔ never re-composed) — and PM1, then
    (after COMMIT) decrypts, normalises, hashes and sends through `sendClaimDltSms` with the template of the Pariwar's `locale_default`,
    rendering EXACTLY the registered text (the mode-resolved name, the link, the helpline); `link_code` is written once at begin; the ping row
    records 0155's vocabulary; a re-run ⛔ never sends again; outside 09:00–20:00 IST ⇒ deferred to 09:00 IST.
@@ -127,5 +128,6 @@ RB4 / RB5 / RB11 / RB12 / RB16 · `-302` RN2–RN8 · `-255` F7 (the cost line).
 ## Change Log
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-10 | 2.2 | Round-3 validate: the answer window is 6.27a's ONE extracted predicate `isClaimInAnswerWindow` (⛔ never re-composed); a skip at the locked re-check is the begin CAS from `send_outcome IS NULL` writing that outcome with `attempt_count = 1` (6.27a PM4). |
 | 2026-10-10 | 2.1 | Round-2 validate: 6.27c now HAS a small migration — the ENUMERATED `detail` grammar CHECK and the ONE builder moved here from 6.27a (the vocabulary lives with its only writer); PM4's summary aligned with 6.27a's record (CAS begin / finalise, transient note); the answer window incl. `state_trustee_approved` under a live R9 routing (AC3); `name_too_long` / Devanagari recorded (AC5); AC5b for PM14 / PM15; the untexted-ping 404 on the resolver; the `?c=` split (6.30 parses, 6.27c wires); the 6.6 annotation and row-6-22 pointer OWNED by 6.27a (checked here); typed templates verified by 6-34; `locale_source`; the screen-vs-text language note; 6-31 within the window. |
 | 2026-10-10 | 1.0 | Cut from Story 6.27 v2.0 (`2026-10-10-305` §2 items 1, 2, 4): PM1–PM5, PM14–PM16 (templates), PM21 (b)–(f), PM22, PM11's `?c=` half. |

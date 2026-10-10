@@ -15,12 +15,13 @@
 
 ---
 
-# Two corrections first — what we told you that was wrong
+# Three corrections first — what we told you that was wrong
 
-1. **On language.** We wrote that our reading of *"preferred language"* (the language the member chose in the app) had been shown to
-   you. It had ⛔ not — that answer was never sent. And checking the app showed something more: **the app has ⛔ no language setting at
-   all** — it always shows Hindi. So there is ⛔ nothing yet to tell us a member prefers English. (CF1 below.)
-2. **On who sees the answers.** We told you the answers are shown to *"the State Trustees at the final vote, the R9 panel"*. In the
+1. **On our reading of "preferred language".** We wrote that our reading (the language the member chose in the app) had been shown to
+   you. It had ⛔ not — that answer was never sent. (CF1 below.)
+2. **On the app's language.** That reading assumed the app lets a member choose a language. Checking showed **the app has ⛔ no language
+   setting at all** — it always shows Hindi. So there is ⛔ nothing yet to tell us a member prefers English. (CF1 below.)
+3. **On who sees the answers.** We told you the answers are shown to *"the State Trustees at the final vote, the R9 panel"*. In the
    system as built, the final vote and the R9 votes are cast by **Pariwar Admins acting as trustees** — ⛔ not by the State Trustee role.
    The rule is unchanged: **whoever approves the claim at that step sees the answers**. (CF2 below.)
 
@@ -66,7 +67,7 @@ read these limits — please confirm or change each:
 
 | | Our reading | Why |
 |---|---|---|
-| **(a)** | **Every question you ruled** — *"Has [member] died?"*, the date, how they know of the death, how they know the member, how the member died, which illness, and the permission to phone — is in **every** version; a Pariwar's version cannot drop any of them. | You ruled that the neighbours *"are also asked"* the date (FQ8 E), and you ruled the other questions in Q3, Q4 and Q6. |
+| **(a)** | **Every question you ruled** — *"Has [member] died?"*, the date, how they know of the death, how they know the member, how the member died, which illness, and the permission to phone — is in **every version from now on**; a Pariwar's version cannot drop any of them. (The very first draft — the first two questions only — is kept on record but is ⛔ never used.) | You ruled that the neighbours *"are also asked"* the date (FQ8 E), and you ruled the other questions in Q3, Q4 and Q6. |
 | **(b)** | A question added through the chain is **⛔ never a warning or a flag** on a family's claim. | Only you decide what holds up or flags a claim (FQ10, FQ12). |
 | **(c)** | An **alcohol** question cannot be added through the chain unless you first change Q5. | You ruled ⛔ not to ask it (Q5 A). |
 | **(d)** | **Every health question** — including the illness answers to *"How did they die?"* — is asked only once **counsel** has confirmed the legal basis. ⚠ **Cost:** the texts to the neighbours themselves wait for that confirmation — we will ⛔ not send the questions with some of them hidden, because that would show the neighbours a list you never approved. A health question added later through the chain stays hidden until counsel covers it. | Q4 A required counsel before go-live. |

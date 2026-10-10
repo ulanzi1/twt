@@ -1018,13 +1018,13 @@ verified BY NAME on each ([[project_live_db_test_gotchas]]).
   column-narrowed the way `GRANT UPDATE` is** — deferred, pre-existing: also copied verbatim from 0138/RB2 (confirmed identical GRANT
   shape in `0138_claim-certificate-reminder.sql:59`).
   [packages/domain/migrations/0151_claim-suspicion-notices.sql:42]
-  ⚠ **TO BE closed by Story 6.29 (0155, [`-302`](../../.decision-log.md#decision-2026-10-10-302) RN8) — 2026-10-10.**
+  ✅ **Closed by Story 6.29 / 0155 (`d61af613`, [`-302`](../../.decision-log.md#decision-2026-10-10-302) RN8) — 2026-10-10** (was "TO BE closed", `0a3b643d`).
 - [x] [Review][Defer] **The partial index `claim_suspicion_notices_attempting_idx` covers `claimed_at` only (not `created_at`), and its
   existence is never asserted in the regression spec** — deferred, pre-existing: also RB2's copied-verbatim 0138 shape (confirmed
   identical in `0138_claim-certificate-reminder.sql:72`); a dedicated index-existence assertion would be a cheap addition but isn't
   this story's gap to fix.
   [packages/domain/migrations/0151_claim-suspicion-notices.sql:55]
-  ⚠ **TO BE closed by Story 6.29 (0155, [`-302`](../../.decision-log.md#decision-2026-10-10-302) RN8) — 2026-10-10.**
+  ✅ **Closed by Story 6.29 / 0155 (`d61af613`, [`-302`](../../.decision-log.md#decision-2026-10-10-302) RN8) — 2026-10-10** (was "TO BE closed", `0a3b643d`).
 
 ## Dev Notes
 

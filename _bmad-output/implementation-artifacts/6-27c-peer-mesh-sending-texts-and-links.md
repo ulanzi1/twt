@@ -21,8 +21,9 @@ GLYPH REGISTER, ADDRESSING RULE: as 6.27a.
 Status: backlog
 
 > ⚠ **PREDECESSORS (`2026-10-10-306`):** 6.27b, 6.27d, row `6-30` AND row `6-36-peer-mesh-school-wise-selection` all `done` — the five
-> are chosen from the deceased member's own school (and the previous school after a transfer within 90 days), ⛔ never the district; a
-> school with fewer than five members means fewer texts, and none means ⛔ no text (the inspection carries the claim). CF4 owed.
+> are chosen from the deceased member's WORKPLACE (school or office; and the previous one after a transfer within 90 days), otherwise the
+> people the member named and who accepted (`-307`), ⛔ never the district; fewer than five means fewer texts, and none means ⛔ no text
+> (the inspection carries the claim; the inspector collects the head's letter). CF4 owed.
 
 > ⭐⭐ **WHAT THIS STORY IS.** The Panel ruled that each of the five neighbours is texted (`-303` Q1 A): *"We have been told that [member]
 > has died. If you knew them, please answer a few short questions: [link] — or call the helpline [number]."* (`-304` Q6 A). This story

@@ -16,7 +16,8 @@ STATUS: `ready-for-dev`. ⛔ NO CODE until Task 0.3's author-commit (AL1–AL16,
 ⭐ §0 gate (template `trustee-panel-routing-note-TEMPLATE.md`): ⛔ no Panel question. Every AL strips to "the code should do X" — how a
 link opens the app, where two public files live, what a fallback page says (it names ⛔ no one and shows ⛔ nothing about anyone). What
 the TEXT says and whether members are texted at all is RULED — `2026-10-10-303` Q1 A (the five are texted, naming the member, with the
-link and the helpline, plus one WhatsApp reminder at 48 h, in the Pariwar's language until a member language switch exists) and
+link and the helpline, plus one WhatsApp reminder at 48 h, in each member's preferred language — the `-303` rider — ⚠ narrowed for a
+time by `2026-10-10-305` §2 item 2 to the Pariwar's default language until row 6-35's switch exists; the Panel confirm CF1 is owed) and
 `2026-10-10-304` (the questions; *"a few short questions"*). ⚠ It BECOMES the Panel's if the fallback page shows ANYTHING about a
 member, a death or a claim (Trap 1), or a link is used to reach anyone the Panel has ⛔ not ruled may be texted.
 ⚠ Two calls here are BigDev's / the Trust's, ⛔ not the Panel's and ⛔ not the author's: the production app IDENTITY (name, bundle id,
@@ -54,7 +55,7 @@ Status: ready-for-dev
 > 2. ⚠⚠ **The link's code must be a QUERY STRING, ⛔ not a path segment.** India's operators whitelist a URL's FIXED part; a dynamic URL is
 >    registered ending in `?`, and *"dynamic paths before the query string are currently not supported"* (Tanla; MSG91, Fast2SMS say the
 >    same; TRAI's whitelisting Direction in force since 1 Oct 2024 — a text with a non-whitelisted URL is REJECTED). ⇒ the link is
->    `https://<domain>/peer-request?c=<code>`, whitelisted as `https://<domain>/peer-request?` (AL3) — 6.27 v1.3+ carries this form.
+>    `https://<domain>/peer-request?c=<code>`, whitelisted as `https://<domain>/peer-request?` (AL3) — 6.27a (v2.1) PM21 carries this form.
 > 3. ⚠ **TRAI's 18 Nov 2025 Direction requires TYPED template variables** (`{#numeric#}`, `{#alphanumeric#}` ≤ 40 chars, `{#url#}`,
 >    `{#urlott#}`, `{#cbn#}`, `{#email#}`); `{#url#}` and `{#cbn#}` are checked against the whitelist; an untyped template is rejected.
 >    ⇒ 6.27c's link is `{#url#}` and its helpline `{#cbn#}`. ⚠ The untyped `{#var#}` is ALSO in the login / step-up OTP template
@@ -89,8 +90,9 @@ so that **I can do what the message asks in a minute, and ⛔ no web page ever a
 |---|---|---|
 | `2026-10-10-303` Q1 A | each of the five is texted, naming the member, with **the link** and the helpline, plus one WhatsApp reminder at 48 h (row 6-31 — the SAME link); Hindi / English by the Panel's rider | ⭐ Trustee-ratified — the link's substance is ruled |
 | `2026-10-10-304` Q6 A | the text says *"a few short questions"* | ⭐ Trustee-ratified — ⛔ no change to this story's fallback copy |
-| BigDev 2026-10-10 | the plumbing is a *"separate story"* (this one); texts go in the Pariwar's default language until a separate in-app language-switch row; the typed-template work is its own row `6-34`; the identity stays a BigDev decision (⛔ no sprint row) | BigDev's calls |
-| 6.27 v1.9 PM21 | the link's code, path, resolver; 6.27 now SPLITS into four (6.27a answering, 6.27b warnings, 6.27c sending, 6.27d inspector) | author (proposed) |
+| BigDev 2026-10-10 | the plumbing is a *"separate story"* (this one) | BigDev's call (recorded in `-305`'s occasion) |
+| **`2026-10-10-305`** | §2 item 1 — 6.27 SPLITS into four (6.27a answering, 6.27b warnings, 6.27c sending, 6.27d inspector); §2 item 2 — texts in the Pariwar's default language until row 6-35 (⚠ a temporary narrowing of `-303`'s rider ⇒ CF1 owed); §2 item 5 — rows 6-34 (typed templates) and 6-35, ⛔ no production-identity row (the identity stays BigDev's decision, carried on Row 29 (a)); §4 — roster Rows 27 / 28 / 29 RESERVED | author-commit (BigDev) — CF1–CF3 in the confirm note (⛔ not yet sent) |
+| 6.27a v2.1 PM11 / PM21 | the link's code (6.27a's column), the resolver and the `?c=` wiring (6.27c), the shell's content (6.27a) | author (proposed) |
 | Architecture §4.7 | deep-link landing: (1) re-auth preserves the target; (2) scope match; (3) revoked ⇒ *"this is no longer available to you"* + helpline, *"Never hard 404"* | architecture (binding) |
 | Architecture §3.4 + `-255` F7 | members got ⛔ no ordinary SMS before `-303` — `-303` Q1 A is the widening for the five | ruled (`-303`) |
 | ADR-0022 | the public Astro shell: server-rendered, ⛔ no session, ⛔ no per-user branching | ratified |
@@ -296,8 +298,8 @@ web page."* Niyamavali check: ⛔ not applicable (the Niyamavali does not speak 
   ⛔ No helpline number on the page (apps/public has ⛔ no helpline source; the message carries it — ⛔ never a second source). A handler
   test asserts the response body ⛔ never contains the `c` value (Invariant 3). Matrix entry: `route: /peer-request`, `fields: []`,
   `noindex`, its cache policy. Friction budget: a page with ⛔ no scoped style adds ~0.
-- **AL12 — the go-live record** (V-M7 — roster numbers RESERVED now): **Row 27** and **Row 28** belong to 6.27 (Row 28's Hindi review
-  explicitly INCLUDES 6.30's fallback page and `+not-found`); **Row 29** = 6.30 `app-links-live`; whichever story's Task 0 lands first
+- **AL12 — the go-live record** (roster numbers RESERVED by `2026-10-10-305` §4; V-M7): **Row 27** and **Row 28** belong to 6.27 (Row 28's
+  Hindi review explicitly INCLUDES 6.30's fallback page, `+not-found` AND AL16's route-shell placeholder); **Row 29** = 6.30 `app-links-live`; whichever story's Task 0 lands first
   writes its OWN row at its reserved number (a gap in the roster is expected and noted). Row 29 closes on ALL of: (a) the production app
   identity decided by BigDev and in `APP_IDENTITY_*` + `APP_DISPLAY_NAME` (D-13 / OQ-1 — ⛔ no sprint row); (b) the Trust's domain set in
   `APP_LINKS_BASE_URL`, `APP_LINKS_HOST`, `PUBLIC_SITE_ORIGIN`, `EXPO_PUBLIC_PUBLIC_SITE_ORIGIN` (ONE fact, four settings — documented,
@@ -308,7 +310,7 @@ web page."* Niyamavali check: ⛔ not applicable (the Niyamavali does not speak 
   the files have been live a day, recorded with dates (Trap 8); (f) the URL's fixed part whitelisted with the SMS operator(s) (one DLT-sheet
   line); (g) the Traefik and Cloudflare changes applied (AL9 / AL10 — incl. the SBFM answer and the operator's confirmation on Row 3);
   (h) the Hindi of the fallback page and `+not-found` reviewed by a person (via Row 28). 6.27's Row 27 (e) points at this row.
-- **AL13 — the `twt://` push grammar is ⛔ not touched** — push stays inert (⛔ no device token is registered — 6.27 FIVE FACTS #1); the
+- **AL13 — the `twt://` push grammar is ⛔ not touched** — push stays inert (⛔ no device token is registered — 6.27a SEVEN FACTS #1); the
   scheme mismatch (`twtp05` vs `twt`) and D8 stay open; AL1's `scheme` reads config so a later push story can set `twt` — RECORDED.
 - **AL14 — a dignified "not found"**: `app/+not-found.tsx` becomes bilingual (en + hi), says the page could not be opened, offers *"Go to
   home"* and the shared `CallHelplineCTA` (§4.7 *"Never hard 404"*); ⛔ no crash on an unknown multi-segment path (Invariant 6 states the
@@ -318,9 +320,12 @@ web page."* Niyamavali check: ⛔ not applicable (the Niyamavali does not speak 
   two claim-template lockstep tests. 6.30 retags ⛔ nothing; it records the dependency: a rejected OTP template blocks every login, so
   Row 29 (e)'s logged-out leg ⛔ cannot pass until row 6-34's OTP retag is approved by the operator.
 - **AL16 — the route shell and the STRICT route-map test** (V-H2, V-M1). ⭐ **6.30 OWNS** `apps/mobile/app/(peer-request)/peer-request.tsx`
-  — a THIN shell that reads `c` (`useLocalSearchParams`, through `parseAppLinkCode`) and renders a CONSUMER SLOT; until 6.27a fills it the
-  slot shows a bilingual placeholder (*"Your requests appear on your home screen."* + `CallHelplineCTA`), ⛔ no API call, ⛔ no data.
-  **6.27a fills the slot** (its questionnaire, the resolver call, the resolver-404 copy) — ⛔ never a second route file. ⭐ The test,
+  — a THIN shell that PARSES `c` (`useLocalSearchParams`, through `parseAppLinkCode`) and renders a CONSUMER SLOT; until 6.27a fills it the
+  slot shows a bilingual placeholder (*"Your requests appear on your home screen."* + `CallHelplineCTA`), ⛔ no API call, ⛔ no data (its Hindi
+  is reviewed under Row 28). ⭐ **The split, stated ONCE (and the same in 6.27a PM11 / PM21):** 6.30 parses `c` in the shell and owns the
+  login-return (AL6); **6.27a fills the slot** — the list, the questionnaire, the not-openable copy (*"This request could not be opened"*
+  + `CallHelplineCTA`) and *"⛔ no API call before the session has loaded"*; **6.27c wires the parsed `c` to the by-link resolver** (route
+  + call), its 404 reusing 6.27a's not-openable state — ⛔ never a second route file. ⭐ The test,
   over `apps/mobile/app/`: (i) FAILS when an `APP_LINK_PATHS` entry has ⛔ no route (it accepts `peer-request.tsx` or
   `peer-request/index.tsx`, group segments stripped, `_layout` ignored); (ii) FAILS when two files claim the same path; (iii) PINS the set
   of ROOT-LEVEL dynamic routes to exactly the two that exist today (`(helpdesk)/[ticketId]`, `(polls)/[surveyId]`) — so ⛔ no story adds a
@@ -452,29 +457,31 @@ NEW: `packages/contracts/src/app-links/` (incl. `app-link-paths.json`); `apps/mo
 UPDATE: `apps/mobile/app/_layout.tsx`, `app/(auth)/otp.tsx`, `app/+not-found.tsx`, `eas.json`; `apps/public/src/layouts/PublicShell.astro`
 (the toggle-off prop); `apps/jobs/src/scheduler/staff-email-config.ts` (the rename), `apps/jobs/README.md`; `infra/dokploy/compose.yaml` +
 README; `infra/cloudflare/` + README; the PII matrix.
-⭐ 6.27a FILLS `app/(peer-request)/peer-request.tsx`'s consumer slot (its PM11 / PM21 (c)) — ⛔ never a second route file.
+⭐ 6.27a FILLS `app/(peer-request)/peer-request.tsx`'s consumer slot (its PM11); 6.27c wires the parsed `c` (PM21 (c), (d)) — ⛔ never a
+second route file.
 
 ### Sequencing with 6.27 (a / b / c / d), 6.31 and 6.34
 ⭐ 6.30 is ⛔ not blocked by any Panel question, and since `-303` / `-304` 6.27 is ⛔ not either — it is blocked only on BigDev's Task 0,
 and it SPLITS into four parts (BigDev, 2026-10-10): **6.27a** (the neighbours answer + the District Admin sees — fills AL16's slot),
 **6.27b** (the two warnings, the wait, approvers see answers), **6.27d** (the inspector's discrepancy check), **6.27c** (sending — LAST).
 ⇒ ⭐ **6.30 lands before 6.27c** — 6.27c is the ONLY part that consumes `buildAppLinkUrl` / `resolveHttpsOrigin` / the `APP_LINKS_BASE_URL`
-read; 6.27a consumes only the route shell (AL16) and `parseAppLinkCode`, so 6.27a and 6.30 may proceed in either order as long as the
-shell exists before 6.27a's Task 6. ⚠ If a 6.27 part reaches a task that needs a 6.30 artefact before 6.30 is `done`, that part STOPS and
+read and the ONLY part that wires the parsed `c` to the resolver; 6.27a consumes only the route shell (AL16), so 6.27a and 6.30 may proceed
+in either order as long as the shell is MERGED before 6.27a's Task 5 (its mobile screens). ⚠ If a 6.27 part reaches a task that needs a 6.30 artefact before 6.30 is `done`, that part STOPS and
 asks — ⛔ never re-creates it ([[feedback_circular_deferral_between_sibling_stories]]: siblings must ⛔ never defer to each other). 6.31 (the
 WhatsApp reminder, `-303` Q1 A) reuses the same link — ⛔ no new path. Row 6-34 (typed templates) is independent, but Row 29 (e)'s logged-out
 leg waits for its OTP retag (AL15).
 
 ### Previous story intelligence
 - **6.25**: `ADMIN_APP_ORIGIN` — the env + per-run validator + hold pattern; its validator is now SHARED (AL5).
-- **6.27** (v1.9): the consumer; its Trap 1–3 fences hold for anything a link opens; it owns the resolver-404 copy and the rule "⛔ no
-  resolver call without a session" (the route renders once while the session is loading — V-M6).
+- **6.27a** (v2.1, the record for 6.27a–d): the consumer; its Trap 1–3 fences hold for anything a link opens; 6.27a owns the
+  not-openable copy and the rule "⛔ no API call without a session" (the route renders once while the session is loading — V-M6); 6.27c
+  owns the resolver call and reuses that copy for its 404. 6.27c wires the PARSED `c` to the resolver.
 - **11b.3 / 11b.1**: the public-pages two-route rule and the PII-scrape matrix — every public page is declared.
 
 ### Git intelligence
 `a05ce150` 6.27 created (branch `story/6-27-…`) · `5946e411` 6.29 code review · `36eb7b46` 6.29 build — house order: decision entry →
 records → build → review; REBASE-merge ([[project_story_automator_ops]]). This story's branch `story/6-30-app-links-open-the-app-from-a-text`
-is STACKED on 6.27's (the row lives there) and now also carries 6.27's v1.3–v1.9 and the `-303` / `-304` governance commits — rebase onto
+is STACKED on 6.27's (the row lives there) and now also carries 6.27's v1.3–v2.1 (6.27a–d) and the `-303` / `-304` / `-305` governance commits — rebase onto
 `main` once those merge.
 
 ### Latest tech information (fetched 2026-10-10 — re-check at Task 0.1)
@@ -498,8 +505,9 @@ is STACKED on 6.27's (the row lives there) and now also carries 6.27's v1.3–v1
 
 ### References
 - Architecture §4.7 (routing; deep-link landing checks), §3.4; ADR-0010, -0011, -0013, -0020 cl.4, -0022; PRD OQ-1, FR-60, FR-61.
-- `2026-10-10-303` (Q1 A + the language rider), `2026-10-10-304` (Q6 A).
-- Story 6.27 v1.9 (PM11, PM16, PM21 — and its four-part split); Story 6.25 (RE7); deferred-work D-13, D8, the dotted-secret-id item;
+- `2026-10-10-303` (Q1 A + the language rider), `2026-10-10-304` (Q6 A), `2026-10-10-305` (§1 corrections; §2 items 1, 2, 5; §4 the
+  reserved rows); the confirm note `trustee-panel-routing-note-2026-10-10-6-27-confirms.md` (CF1–CF3, ⛔ not yet sent).
+- Story 6.27a v2.1 (PM11, PM16, PM21 — the record for 6.27a–d) and the cut files 6.27b / 6.27c / 6.27d; Story 6.25 (RE7); deferred-work D-13, D8, the dotted-secret-id item;
   row 6-34 (typed templates).
 - `docs/launch-gate-inventory/inventory-roster.md`, `dlt-template-requests-6-19.md`; `packages/contracts/src/deep-links/`;
   `packages/channels/src/otp-sms-template.ts`, `sms-dlt-registry.ts`.
@@ -521,5 +529,6 @@ is STACKED on 6.27's (the row lives there) and now also carries 6.27's v1.3–v1
 ## Change Log
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-10 | 1.2 | Round-2 validate: the §0 language line now reads `-303`'s rider NARROWED by `2026-10-10-305` §2 item 2 (CF1 owed) — ⛔ never "ruled by `-303`"; a `-305` row in the rulings table (§2 items 1 / 2 / 5, §4) and the BigDev calls / AL12's reservation re-attributed to it; `-305` and the confirm note in References; the `?c=` split stated ONCE (6.30 parses `c`; 6.27a fills the slot + the not-openable copy; 6.27c wires the resolver) — AL16, Sequencing, Previous story intelligence; "Task 6" → 6.27a's Task 5 (the shell MERGED first); Row 28 covers the route-shell placeholder; stale 6.27 refs (v1.9 → 6.27a v2.1; FIVE → SEVEN FACTS). |
 | 2026-10-10 | 1.1 | Validate applied (V-B1, V-H1–H3, V-M1–M9, V-L1–L8) + BigDev's answers. **B1:** the path list is a JSON data file loaded by `app.config.ts` via `require()` (the config cannot import the contracts TS barrel); AC3 runs `expo config` per profile in `ci:local`. **H1:** the fallback page shows both languages with ⛔ no toggle (the shell's toggle echoed `?c=`); a ⛔-echo test; ⛔ no `Vary`. **H2:** 6.30 OWNS a thin route shell for `/peer-request` that 6.27a fills; AL16 strict + pins the two root catch-alls. **H3:** the untyped OTP and registry templates added; AL15 becomes a pointer to row `6-34-sms-templates-typed-variables`. **M1:** Android exact `path`. **M2:** one shared `resolveHttpsOrigin`; 6.27c owns the boot read; trailing `/` accepted. **M3:** an unconditional first-ordered edge skip (bic + securityLevel), exact paths; SBFM caveat. **M4:** F13 / AL4 corrected (`ClientRequestPath` has ⛔ no query). **M5:** `EAS_BUILD_PROFILE`; local / web / update behaviour; `projectId` by hand; production-signed device proof. **M6:** 6.27a owns the resolver-404 copy and "⛔ no call without a session". **M7:** Rows 27 / 28 (6.27) and 29 (6.30) reserved; Row 29 (h) Hindi via Row 28. **M8:** governance current (`-303` / `-304`; 6.27's four-part split; 6.30 before 6.27c). **M9:** ⛔ no hard-coded brand; "your message"; the home-screen line. **L1–L8:** one app per host per path; the `public` env narrowed; `process.env` at request time; `terraform validate` recorded; the link-target holder cleared and `c`-only; typed-route types; platform claims re-checked at Task 0.1. |
 | 2026-10-10 | 1.0 | Created (`bmad-create-story 6.30`); pinned `a05ce150`; AL1–AL16 proposed. |

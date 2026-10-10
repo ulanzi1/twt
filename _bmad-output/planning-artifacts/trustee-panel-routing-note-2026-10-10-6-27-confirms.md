@@ -24,9 +24,14 @@
    system as built, the final vote and the R9 votes are cast by **Pariwar Admins acting as trustees** — ⛔ not by the State Trustee role.
    The rule is unchanged: **whoever approves the claim at that step sees the answers**. (CF2 below.)
 
-⭐ Also, for your information (⛔ not a question): when the inspector is shown a difference between the family's answers and a neighbour's,
-the inspector will ask the family **again, in open terms** (*"please tell me again how they died"*) — ⛔ never *"a neighbour said …"*.
-So ⛔ no neighbour's answer ever reaches the family, as the closing note promises.
+⭐ Also, for your information (⛔ not questions):
+- **The inspector sees less than we showed you.** In the table under your last ruling we showed the inspector seeing *"The family said:
+  heart attack. One neighbour said: accident."* Now the inspector sees only that a neighbour's answer **differs** — ⛔ never the neighbour's
+  answer itself, ⛔ never who — and asks the family **again, in open terms** (*"please tell me again how they died"*), ⛔ never *"a neighbour
+  said …"*. So ⛔ no neighbour's answer ever reaches the family, as the closing note promises.
+- **A name the text cannot carry.** The text template has a limit for the member's name (and we have ⛔ not yet confirmed with the SMS
+  provider that it accepts a Hindi name with spaces). If a name cannot fit, that claim's five neighbours are ⛔ not texted — ⛔ never a
+  shortened name. We will confirm with the provider before go-live; if it refuses Hindi names, we will come back to you.
 
 # CF1 — until members can choose their language, may texts go in the Pariwar's own language?
 
@@ -38,7 +43,7 @@ fact we have.
 
 | | Option | Cost |
 |---|---|---|
-| **A** | **Yes — the Pariwar's language until the setting exists; then each member's choice** (our suggestion). | Until then, a member who would prefer English gets the text in Hindi. |
+| **A** | **Yes — the Pariwar's language until the setting exists; then each member's choice** (our suggestion). The WhatsApp reminder at 48 hours follows the same rule. | Until then, a member who would prefer English gets the text (and the reminder) in Hindi — and the setting is ⛔ not yet scheduled, so "until then" has ⛔ no date yet. |
 | **B** | **Send both languages in every text until then.** | Each text is about twice as long (in Hindi, already about three SMS parts) — roughly double the cost. |
 | **C** | **Hold the texts until the setting exists.** | The check with neighbours waits for that work. |
 
@@ -48,7 +53,7 @@ fact we have.
 |---|---|
 | **The District Admin** (and the district's verifiers) | Every answer, for claims in their district. |
 | **Whoever approves the claim at a later step** — in practice the **Pariwar Admin** at the final vote or an R9 vote, or the **Super Admin** | Every answer for the claim they are approving, at that step only. |
-| **The inspector** | ⛔ Nothing before completing their own record; then only where the family and the neighbours differ — ⛔ never who said it; they ask the family again, open-ended. |
+| **The inspector** | ⛔ Nothing before completing their own record; then only THAT the family and a neighbour differ, question by question — ⛔ never the neighbour's answer itself, ⛔ never who; they ask the family again, open-ended. |
 | **The helpline operator** | Only the answers of the neighbour on the phone, while recording them. |
 | ⛔ **Never** | The family, the claimant, the nominee, the other neighbours, any other member, the public. |
 
@@ -61,10 +66,10 @@ read these limits — please confirm or change each:
 
 | | Our reading | Why |
 |---|---|---|
-| **(a)** | The questions you ruled — *"Has [member] died?"* and the date — are in **every** version; a Pariwar's version cannot drop them. | You ruled that the neighbours *"are asked"* these (FQ8 E, FQ10). |
+| **(a)** | **Every question you ruled** — *"Has [member] died?"*, the date, how they know of the death, how they know the member, how the member died, which illness, and the permission to phone — is in **every** version; a Pariwar's version cannot drop any of them. | You ruled that the neighbours *"are also asked"* the date (FQ8 E), and you ruled the other questions in Q3, Q4 and Q6. |
 | **(b)** | A question added through the chain is **⛔ never a warning or a flag** on a family's claim. | Only you decide what holds up or flags a claim (FQ10, FQ12). |
 | **(c)** | An **alcohol** question cannot be added through the chain unless you first change Q5. | You ruled ⛔ not to ask it (Q5 A). |
-| **(d)** | **Every health question** — including the illness answers to *"How did they die?"* — is shown only once **counsel** has confirmed the legal basis. | Q4 A required counsel before go-live. |
+| **(d)** | **Every health question** — including the illness answers to *"How did they die?"* — is asked only once **counsel** has confirmed the legal basis. ⚠ **Cost:** the texts to the neighbours themselves wait for that confirmation — we will ⛔ not send the questions with some of them hidden, because that would show the neighbours a list you never approved. A health question added later through the chain stays hidden until counsel covers it. | Q4 A required counsel before go-live. |
 
 ---
 
@@ -73,7 +78,7 @@ read these limits — please confirm or change each:
 We found three mistakes in what we told you and are correcting them openly. The app cannot yet tell which language a member prefers,
 so we suggest texting in the Pariwar's language until members can choose (CF1). The people who approve claims at the later steps are,
 in the system, Pariwar Admins acting as trustees — the rule that every approver sees the answers is unchanged (CF2). And we ask you to
-confirm four limits on the chain you ruled (CF3). ⇒ ⭐ **We suggest: CF1 A, CF2 yes, CF3 (a)–(d) yes.**
+confirm four limits on the chain you ruled (CF3) — the last means the texts wait for counsel on the health questions. ⇒ ⭐ **We suggest: CF1 A, CF2 yes, CF3 (a)–(d) yes.**
 
 ---
 ---

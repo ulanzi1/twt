@@ -8,9 +8,9 @@ to `main` `5946e411`). ⚠ Before Task 1: `git diff --name-only fa2687ce..HEAD -
 
 STATUS: `backlog` — the row flips to `ready-for-dev` when 6.27a (row `6-27-peer-mesh-sending-replies-and-date-of-death`) is `done` (the
 6.21b / 6.23b / 6.24b / 6.26b precedent). Runs in PARALLEL with 6.27d; 6.27c (sending) waits for BOTH.
-⭐ THE RECORD is 6.27a's file: its rulings table, invariants, FOUND facts F1–F38 and the ONE decision block PM1–PM25 (Task 0 there is
-shared — ⛔ no code here before its author-commit). This file BUILDS the PMs tagged **[b]**: **PM9**, **PM10**, **PM24**, and PM25 (c)'s
-kinds half. Where a summary below and 6.27a's text disagree, 6.27a's text is the record.
+⭐ THE RECORD is 6.27a's file: its rulings table, invariants, FOUND facts F1–F41 and the ONE decision block PM1–PM25 (Task 0 there is
+shared — ⛔ no code here before its author-commit). This file BUILDS the PMs tagged **[b]**: **PM9**, **PM10**, **PM24**, PM25 (c)'s
+kinds half, and PM13's per-answer warning FLAGS (the console's and PM24's panel's — from the warnings read). Where a summary below and 6.27a's text disagree, 6.27a's text is the record.
 GLYPH REGISTER, ADDRESSING RULE: as 6.27a.
 -->
 
@@ -46,8 +46,16 @@ Consequence 1) · `-261` C3 (⛔ never inherited) · `-282` GI7 / `-281` Q1 B (p
   codes and `text` indexes ONLY; ONE exported pure helper; they enter the wait; the pin test's generic message gains the discharge.
 - **PM10** — the correction queue's fourth source (`pariwar_id`-joined, live warning-key rows, `saved_at > v.decided_at`).
 - **PM24** — `GET /api/v1/p/:pariwarId/admin/claims/:claimCaseId/peer-answers` through 6.27a's `assemblePeerAnswers`; first hook
-  `cycle.freeze` (pariwar), then the in-handler step disjunction (F33); 404 outside a pending later step; audited; the panel on the four hosts.
-- **PM25 (c), the kinds half** — for an actor holding an UN-completed assignment on the claim (and ⛔ no completed one), the two peer kinds
+  `cycle.freeze` (pariwar), then the in-handler step disjunction (F33) — an open CORRECTION escalation means the Super Admin's G1 case
+  (`claim.decide_escalated_closure`); the cycle-freeze escalation resolution is `cycle.freeze`'s; 404 outside a pending later step; audited
+  through `emitAuthAudit` (a new `AuthAuditEventType` member — F40); the panel on the four hosts. ⚠ RECORDED (6.27a PM24): in v1 the
+  disjunction reduces to STATE gating.
+- **PM13's per-answer warning flags** — on the District Admin's console (`assemblePeerAnswers` / `PeerMeshView`) and on PM24's panel, each
+  live answer carries *"says the member has ⛔ not died"* / *"more than a day from the certificate"* from the WARNINGS read (the same keys
+  the rule uses — ⛔ never a second computation); a failed warnings read ⇒ each flag `null` and *"could not be checked just now"*, ⛔ never
+  `false` (Invariant 8).
+- **PM25 (c), the kinds half** — for an actor holding an UN-completed assignment on the claim (and ⛔ no completed FULL visit — a
+  `certificate_check` alone does ⛔ not count), the two peer kinds
   are FILTERED out of that actor's warnings summary (the console's decision strip) and correction-queue row — so the blind-first rule
   (6.27d) is ⛔ never undone by a warning line. Approval is impossible before completion anyway (GI1).
 
@@ -65,7 +73,7 @@ Consequence 1) · `-261` C3 (⛔ never inherited) · `-282` GI7 / `-281` Q1 B (p
    neighbour key by default.
 4. **AC4 — a late neighbour answer waits for the District Admin** (`-303` Q2 A): an answer saved after the District Admin's approval makes
    the final vote and the other gated approvals refuse with `LateWarningReasonRequiredError` until the District Admin records a late
-   reason; the District Admin's approval becomes unrevisable (F20 — recorded).
+   reason; ANY current neighbour key makes the District Admin's approval unrevisable (F20 — recorded).
 5. **AC5 — the queue lists it** (PM10): own-committing ordering legs in SEPARATE committed transactions (an answer saved before vs after
    the approval's `decided_at`; an edit after approval); a certificate re-review that moves the date from equal to differing is listed via
    arm (1); the fault path asserts "⛔ not a candidate", ⛔ never a count.
@@ -73,9 +81,12 @@ Consequence 1) · `-261` C3 (⛔ never inherited) · `-282` GI7 / `-281` Q1 B (p
    `state_trustee_freeze` (`cycle.freeze`), an R9 voter on a live routing (`claim.r9_vote`), the Super Admin on an open escalation
    (`claim.decide_escalated_closure`) get the answers; every other actor and every other state ⇒ 404; the read is audited (⛔ no content);
    the panel renders on the four hosts.
-7. **AC7 — the blind-first rule holds in the warnings** (PM25 (c)): an actor with an un-completed assignment sees ⛔ neither peer kind in
-   the decision strip nor the queue row; once they complete, both appear.
-8. **AC8 — gates and records:** the new route file classified `COVERAGE_SET` in the human-actor invariant; the import-discipline entries;
+7. **AC7 — the blind-first rule holds in the warnings** (PM25 (c)): an actor with an un-completed assignment and ⛔ no completed FULL visit
+   sees ⛔ neither peer kind in the decision strip nor the queue row (nor the per-answer flags); once they complete a full visit, all appear.
+8. **AC8 — the per-answer flags** (PM13's flags): each live answer on the console and on PM24's panel shows the flag of its key from the
+   warnings read; a failed warnings read shows *"could not be checked just now"* (`null`), ⛔ never *"no warning"* (`false`) — a test that
+   forces the read to fail.
+9. **AC9 — gates and records:** the new route file classified `COVERAGE_SET` in the human-actor invariant; the import-discipline entries;
    `kindLine` words (⛔ no date — `verifier-console.test.tsx:396`); contracts mirror + lockstep; `pnpm ci:local` green.
 
 ## Tasks / Subtasks
@@ -88,9 +99,11 @@ Consequence 1) · `-261` C3 (⛔ never inherited) · `-282` GI7 / `-281` Q1 B (p
       spec `correction-queue-late-peer-reply.spec.ts`.
 - [ ] **Task 3 — the approvers' read (AC6).** `claims.peer-answers.routes.ts` + handler (the step disjunction); the panel component used by
       `PendingCaseCard`, `EscalationPanel`, `PariwarClosureStrip`, `R9CasePanel`; api-client; tests.
+- [ ] **Task 3b — the per-answer flags (AC8).** Join the warnings read's keys onto `assemblePeerAnswers`' answers (by `answer_id`); the
+      `null` path when the read fails; `PeerMeshView` and PM24's panel render the flag line; tests incl. the forced read failure.
 - [ ] **Task 4 — the blind-first filter (AC7).** The actor-aware filter on the warnings summary returned by the console handler and on the
       queue row; tests with an un-completed / completed assignee.
-- [ ] **Task 5 — gates and close (AC8).** Classification, fences, `pnpm ci:local`; Change Log + File List.
+- [ ] **Task 5 — gates and close (AC9).** Classification, fences, `pnpm ci:local`; Change Log + File List.
 
 ## Dev Notes
 - **Traps** (6.27a's list applies): 3 (⛔ no conjunct), 4 (⛔ never edit the assertion — re-judge every reader), 5 (rebase incl. row 6-28), 6 (both
@@ -110,4 +123,5 @@ Consequence 1) · `-261` C3 (⛔ never inherited) · `-282` GI7 / `-281` Q1 B (p
 ## Change Log
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-10 | 2.1 | Round-2 validate: PM13's per-answer warning flags (and their `null` failure leg) are OWNED here — AC8 + Task 3b (they were handed to b by 6.27a but had ⛔ no AC / Task); *"no FULL visit"* for the blind-first filter; ANY current key makes the District Admin's approval unrevisable (F20); PM24's audit via `emitAuthAudit`, the escalation named, the state-gating coarseness recorded; ACs renumbered (AC9 = gates). |
 | 2026-10-10 | 1.0 | Cut from Story 6.27 v2.0 (`2026-10-10-305` §2 item 1): PM9, PM10, PM24, PM25 (c)'s kinds half. |

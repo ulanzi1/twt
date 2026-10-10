@@ -19,8 +19,9 @@ four read-only validators (consistency + split; code claims; governance trace; 6
     approver at their step sees the answers.
   · **6.27d** — `6-27d-inspector-discrepancy-at-completion.md`: the inspector is shown only differences, after completing their own record.
   · **6.27c** — `6-27c-peer-mesh-sending-texts-and-links.md`: SENDING — the texts, the link, the language. LAST.
-  ORDER: a → (b ∥ d) → c; c also needs row `6-30` `done`. b, c, d stay `backlog` until their predecessors are `done` (the 6.21b / 6.23b /
-  6.24b / 6.26b precedent). ⭐ Sending last turns every go-live coupling into merge order: by the time a real text goes out, the warnings
+  ORDER: a → (b ∥ d) → c; c also needs row `6-30` `done`; ⚠ 6.27a's Task 5 (the mobile screens) ALSO needs 6.30's route shell
+  (`apps/mobile/app/(peer-request)/peer-request.tsx`, 6.30 AL16) MERGED — the rest of 6.27a does ⛔ not. b, c, d stay `backlog` until their
+  predecessors are `done` (the 6.21b / 6.23b / 6.24b / 6.26b precedent). ⭐ Sending last turns every go-live coupling into merge order: by the time a real text goes out, the warnings
   and the wait (b), the approvers' view (b) and the inspector's independence (d) already exist.
 ⭐ THE RECORD: this file holds the ONE shared decision block PM1–PM25, the rulings, the invariants, the FOUND facts and Task 0 (shared by all
 four). Each PM is tagged **[a]**, **[b]**, **[c]**, **[d]** for the part that builds it. Where a summary in b / c / d and THIS file disagree,
@@ -32,7 +33,8 @@ author-commit recording them, committed ALONE (Task 0.4 — the next id after `-
 The Panel confirm note (`…-6-27-confirms.md`, CF1–CF3) is ⛔ not blocking: it is owed before Row 27 closes.
 
 ⭐ §0 gate (template `trustee-panel-routing-note-TEMPLATE.md`): the Panel's questions are RULED — Q1 / Q2 (`-303`), Q3–Q8 (`-304`); the
-corrections and the CF1 narrowing are recorded (`-305`) and confirmed in CF1–CF3. Every PM strips to "the code should do X". ⚠ A PM BECOMES
+corrections and the CF1 narrowing are recorded (`-305`) and put to the Panel for confirmation (CF1–CF3 — ⛔ not yet sent; owed before Row
+27 closes). Every PM strips to "the code should do X". ⚠ A PM BECOMES
 the Panel's if the build (i) shows a neighbour's answer — or who answered — to the FAMILY or the PUBLIC, directly OR BY PARAPHRASE (the
 inspector asks the family open-ended, ⛔ never *"a neighbour said …"* — `-305` §2 item 3; FR-39's *"verifier names are published"* stays
 unruled, 11b.3b `verifierName`), (ii) says MORE in the text than the ruled wording (a claim, money, the family, the nominee, who reported
@@ -138,7 +140,7 @@ so that **I can weigh them beside the ground inspection — ⛔ never as a reaso
 | **`2026-10-10-304`** Q7 / Q8 | *"Pariwar Admin proposes, State Trustee proposes/approves with/without modification. Super Admin make it live for one pariwar/all pariwar with/without modification. Superadmin can add question directly and make it live. No additional Permission required for Superadmin."* — for the neighbours' AND the inspector's questions | ⭐ Trustee-ratified (the Panel's own chain — ⛔ not our reading) — row 6-33 builds it |
 | `-303` reading (*"preferred language = the language chosen in the app … shown to the Panel"*) | — | ⚠ OVERTAKEN: never shown; the app has ⛔ no language choice (`-305` §1 (a), (b)); the "TWO questions" part overtaken by `-304` Q6 A |
 | **`2026-10-10-305`** | corrections §1 (a)–(c); calls: the four-part split; texts in the Pariwar's default language until row 6-35 (⚠ a temporary narrowing ⇒ CF1); the inspector asks the family open-ended; the text goes while an answer can still be taken; rows 6-34 / 6-35; roster Rows 27 / 28 / 29 reserved | author-commit (BigDev) |
-| `-304` readings (CF3) | the ruled questions are in every version; a chain-added question is ⛔ never a warning or a flag; an alcohol question needs Q5 superseded first; every health question needs counsel's basis before it is shown | ⚠ OUR readings — the confirm note asks the Panel; the VALIDATOR enforces them meanwhile (PM23) |
+| `-304` readings (CF3) | EVERY ruled question (the seven v2 keys) is in every version; a chain-added question is ⛔ never a warning or a flag; an alcohol question needs Q5 superseded first; every health question needs counsel's basis before it is shown — ⇒ the TEXTS themselves wait for Row 27 (f); a health question added LATER through the chain stays hidden until its own counsel flag flips (row 6-33) | ⚠ OUR readings — the confirm note asks the Panel (⛔ not yet sent); the VALIDATOR enforces them meanwhile (PM23) |
 | `-282` GI7 · `-281` Q1 B | the two precedents for a kind entering the wait | precedent |
 | `-295` RB4 / RB5 / RB11 / RB12 / RB16 · `-302` RN2–RN8 | one send core, ⛔ never copied; the mode-resolved name or `no_target`; go-live rows; a held config never uses up the slot; the deadline-word deny-list; 0155's backstops | author-commit — the TEMPLATE (6.27c) |
 | `-292` Consequence 4 · `-282` Consequence 4 | rows 6-24 / 6-25 / 6-27 share the gate and writers — *"whichever lands second rebases; ⛔ none drops another's check"* | ⭐ every sibling is `done` ⇒ 6.27 rebases onto all; row 6-28 (one payment per death) joins the list (Trap 5) |
@@ -168,17 +170,21 @@ They are kept only in the git history of this file.
 7. **Who sees the answers** (PM13, PM24, PM25; corrected by `-305` §1 (c), confirmed in CF2): the District Admin (and the district's
    verifiers) — every answer for their district; whoever approves the claim at a later step — in v1 a **Pariwar Admin acting as
    Trustee-Lite** (the final vote, an R9 vote, the escalation, the no-correction approval) or the **Super Admin** (G1) — every answer, for
-   that claim at that step only; the INSPECTOR — ⛔ nothing before completing their own record, then only DIFFERENCES, ⛔ never who; the
+   that claim at that step only; the INSPECTOR — ⛔ nothing before completing their own FULL visit's record, then only THAT the family and a neighbour differ, per question —
+⛔ never the neighbour's answer itself, ⛔ never who (6.27d); the
    HELPLINE OPERATOR — only the answers of the neighbour on the phone, while recording. ⛔ NEVER the family (directly or by paraphrase),
    the claimant, the nominee, the other neighbours, any other member, or a public page (Trap 1).
 8. **An unknown is ⛔ never shown as "no warning"** (6.18's fail-closed rule): a failed warnings read makes each answer's warning flag
    `null` (*"could not be checked just now"*), ⛔ never `false`; a failed decrypt shows *"could not be shown just now"*, ⛔ never a blank.
 9. **Every lock is taken in ONE order: the claim row, then the ping row, then the reply row** (PM7 (b)) — the order 6.26a's writers use
-   (assignment → claim → …) never meets it in reverse.
+   (assignment → claim → …) never meets it in reverse. ⭐ `recordPeerMeshResponse` takes the claim lock ITSELF (`lockClaimCase`) before its
+   ping lock — STRUCTURAL, ⛔ never a caller convention. ⛔ No KMS inside any of these locks: every encrypt and keyed index is computed in
+   the HANDLER first, and the domain writer receives ciphertext and indexes (Trap 9).
 
 ## 📜 Policy meaning (AI-10-1)
 
-⭐ **Story 6.27 ADDS two conjuncts to an existing benefit-gating predicate** (the approval-warning rule — built by **6.27b**). In the
+⭐ **Story 6.27 ADDS two conjuncts to an existing benefit-gating predicate** (the approval-warning rule — built by **6.27b**) — conjuncts
+on the FORM an approval must take (a reason + a note) or a WAIT, ⛔ never a conjunct of the approval GATE (Invariant 1, Trap 3). In the
 member's terms:
 - **P1 (`peer_says_not_died`):** *"If one of the members the Trust asked about a death answers that the member has not died, anyone
   approving the family's claim must choose a reason and write a note; and if that answer arrives after the District Admin approved, the
@@ -191,8 +197,9 @@ member's terms:
 - **6.27a adds ⛔ no predicate:** it lets neighbours answer and lets the District Admin SEE; PM8 changes WHEN a neighbour may answer, ⛔ not
   who may be paid. **6.27c adds ⛔ no predicate** (who is texted changes ⛔ nothing about who may be paid). **6.27d adds ⛔ no predicate**
   (the inspector's discrepancy screen asks a question; it gates ⛔ nothing).
-- **Q3 / Q4 (the cause of death, the illness) add ⛔ no predicate** — ✅ ruled A (`-304`): context staff SEE, ⛔ never a warning, a flag or a
-  wait; and a question added later through the chain is ⛔ never a warning or a flag either — the VALIDATOR refuses it (PM23 (a)), so the
+- **Q3 / Q4 (the cause of death, the illness) add ⛔ no predicate** — ✅ ruled A (`-304`), verbatim: Q3 *"shown to staff as context only —
+  ⛔ never a warning, ⛔ never a flag on its own"*; Q4 *"context only, ⛔ never compared automatically with the member's medical declaration;
+  counsel confirms the legal basis before go-live"* — ⚠ OUR reading adds that neither creates a WAIT; and a question added later through the chain is ⛔ never a warning or a flag either — the VALIDATOR refuses it (PM23 (a)), so the
   chain can ⛔ never create a benefit-gating predicate (CF3 (b)).
 - **Niyamavali check:** §6.2 (*"The Trust verifies the qualifying event …"*) — consistent; ⛔ no clause mentions neighbours or the peer
   mesh (grepped `docs/legal/niyamavali.md` 2026-10-10); §5.1 / §5.5 / §5.6 (cause of death, suicide / murder, concealment) are ⛔ never read
@@ -202,8 +209,8 @@ member's terms:
 
 **6.6's substrate:**
 - **F1 — the five are opaque member ids.** `selected_member_ids uuid[]` (CHECK `cardinality <= 5`); one `claim_peer_mesh_pings` row per
-  (selection, member) — `ping_id`, `selection_id`, `pariwar_id`, `member_id`, `message_key` (default `'peer_mesh_verification_request_v1'`,
-  `schema/claim_peer_mesh_pings.ts:32`), `constructed_at`; `UNIQUE (selection_id, member_id)`; ⛔ no dispatch columns (0054 `:64-72`) ⇒ PM4.
+  (selection, member) — `ping_id`, `selection_id`, `pariwar_id`, `member_id`, `message_key` (default `'peer_mesh_verification_request_v1'` —
+  the constant `schema/claim_peer_mesh_pings.ts:31`, the column default `:56`), `constructed_at`; `UNIQUE (selection_id, member_id)`; ⛔ no dispatch columns (0054 `:64-72`) ⇒ PM4.
 - **F2 — the delivery columns are PRE-AUTHORISED here** (`schema/claim_peer_mesh_pings.ts:8-13`, D1); its *"There is still NO live
   `dispatch()` caller anywhere"* (`:9-10`) is STALE (`contribution-notify.ts:246`, `claim-correction-reminders.ts:597`) ⇒ PM4, PM18.
 - **F3 — "nearest" = same latest posting district, then nearest `created_at`, then `member_id`** (`peer-mesh-metric-registry.ts:65,113`);
@@ -250,8 +257,9 @@ member's terms:
 - **F18 — the gate order** (`nominee-name-check.ts:403-435`, the wait at `:434`) ⇒ ⛔ no new conjunct.
 - **F19 — the cycle-freeze commit ⛔ never re-reads warnings** (`commitCycleFreeze`, `state-trustee-decision-persist.ts:1244`, comment
   `:1325`) ⇒ PM8 closes acceptance at the final vote (`state_trustee_freeze → state_trustee_approved`, `:584,643`).
-- **F20 — the revise lock** (`verifier-decision-persist.ts:670-673`) ⇒ a late neighbour key also makes the District Admin's approval
-  unrevisable — RECORDED, ⛔ not changed.
+- **F20 — the revise lock** (`verifier-decision-persist.ts:668-673` — a revise is refused when `warnings.coverage.records.length > 0 ||
+  warnings.kinds.length > 0`) ⇒ ANY current neighbour key (⛔ not only a late one) makes the District Admin's approval unrevisable —
+  RECORDED, ⛔ not changed.
 - **F21 — a late DATE key is reachable through a certificate re-review** (`-289` L5(f)); the queue's determination arm already fires (GI7).
 - **F22 — the console's kind words are typed** (`apps/admin/src/modules/claim-verification/i18n-en.ts:138-150`; renderers
   `VerificationDecisionStrip.tsx:342,427`, `LaterApprovalWarnings.tsx:89`; `apps/admin/tests/verifier-console.test.tsx:396` forbids a date);
@@ -303,11 +311,33 @@ member's terms:
   NINETEEN member-PII tables"*) ⇒ Tasks.
 - **F36 — 0054 grants `SELECT, INSERT, UPDATE` on `claim_peer_mesh_pings` table-wide** — a column-level GRANT cannot narrow it; nothing
   UPDATEs pings today (`persistPeerMeshPingIntents` uses `onConflictDoNothing`, `peer-mesh-persist.ts:117`) ⇒ PM4.
-- **F37 — the erasure precedent** for a locked, Tier-1 claim column: GI13 (`member/anonymize.ts:255-292` — a column UPDATE grant, a
-  per-command UPDATE policy, a trigger arm that admits ONLY the sentinel / NULL; `-279` A12: *"without the policy the scrub matches 0 rows
-  under FORCE"*) ⇒ PM7 (a), PM17.
+- **F37 — the erasure precedent** for a locked, Tier-1 claim column is **0143 + 0149** (6.23a NW13 / 6.26b): a column-level UPDATE grant,
+  per-command policies (`0143:73-76`; `-279` A12: *"without the policy the scrub matches 0 rows under FORCE"*), and a mutation trigger in
+  0143's form — `IF (to_jsonb(NEW) - '<the scrubbable column>') IS DISTINCT FROM (to_jsonb(OLD) - '<…>')` — that freezes every OTHER column;
+  0149's own header records *"The trigger cannot tell the RTBF scrub from any other writer"* (the sentinel is a FRESH Tier-1 envelope each
+  time — `encSentinel` → `encryptTier1`, `member/anonymize.ts:120-131` — so ⛔ no trigger can recognise it). ⚠ `member/anonymize.ts:255-292`
+  (the `claim_ground_inspections` scrub, GI13) is the SCRUB statement's shape (`WHERE … IS NOT NULL`), ⛔ not a grant / policy / trigger
+  triple — it rides 0055's table-wide grant and a `FOR ALL` policy ⇒ PM7 (a), PM17.
 - **F38 — reuse, ⛔ never hand-roll:** `addCalendarDays` (`packages/domain/src/cycle-calendar/holiday-resolver.ts:187`) and
-  `isRealCalendarDate` (`packages/domain/src/claim/nominee-determination-persist.ts:71`) ⇒ PM7 (b).
+  `isRealCalendarDate` (`packages/domain/src/claim/nominee-determination-persist.ts:71`). ⚠⚠ The latter lives in a pg / event module
+  (imports `drizzle-orm`, `../db.js`, `./events.js`, `./nominee-name-check.js`, `./project.js`) ⇒ importing it from the pure questionnaire
+  module would break the NW1 transitive import test (`approval-warnings.test.ts:338-368` forbids reaching `claim/events.ts`,
+  `claim/nominee-name-check.ts`, `claim/nominee-lock.ts`) and close a runtime cycle approval-warnings → questionnaires →
+  nominee-determination-persist → nominee-name-check → approval-warnings ([[project_type_only_import_cycle_trap]]) ⇒ Task 1 EXTRACTS it into
+  the import-free leaf `cycle-calendar/holiday-resolver.ts` (already on approval-warnings' safe-leaf list, beside `addCalendarDays` and
+  `istDateOf`), re-exported from `nominee-determination-persist.ts` with the same identity ⇒ PM7 (b), PM23.
+- **F39 — tests and callers PM7 / PM8 change:** `apps/jobs/tests/claim-peer-mesh.test.ts:586-620` asserts
+  `rejects.toBeInstanceOf(claim.PeerMeshWindowResolvedError)` after the window resolves (and the `verification_in_progress` guard's error is
+  asserted too) — PM8 INVERTS them; `recordPeerMeshResponse` is called without an `actor` by the jobs test (`:373+`) and by
+  `apps/api/tests/integration/claims/verifier-console.spec.ts:194`, `verifier-console-shape.spec.ts:198` ⇒ `actor` DEFAULTS to `'member'`.
+- **F40 — audit and list gates:** a staff READ is audited through `emitAuthAudit(deps, request, '<event>', …)` (the console's precedent,
+  `claims.verifier-console.handlers.ts:1081`), and a new event must join the closed `AuthAuditEventType` union (`apps/api/src/audit/audit-sink.ts`);
+  a direct `audit.writeAuditEntry` under `apps/api/src/modules/claims/` trips access-wrapper-invariants (3)
+  (`scripts/access-wrapper-invariants/check.ts`, CLAIM_ROOTS); every new DOMAIN list read takes `clampLimit` (the domain-accessor-invariants
+  gate — [[project_domain_limit_clamp_and_savepoint_retry]]) ⇒ PM11, PM12, PM13, PM24.
+- **F41 — the optional console field breaks typed consumers:** `apps/admin/src/modules/claim-verification/SignalsPanel.tsx:269`
+  (`packet.peerMesh.status`) and typed specs (`apps/api/tests/integration/claims/verifier-console-shape.spec.ts:425,488`) fail tsc once
+  `peerMesh` is optional; the contracts tests (`claims-verifier-console.test.ts:143,236,242`) are outside tsc ⇒ PM25 (c), Task 7.
 
 ## ⚖️ Build decisions PM1–PM25 (shared record; PROPOSED — answered by BigDev at Task 0.3, committed by ONE author-commit at Task 0.4)
 
@@ -331,28 +361,35 @@ member's terms:
   (its *"दो छोटे प्रश्नों"* says "two"); human review = Row 28. Typed DLT variables (row 6-34 retags every template; these two are
   registered typed from the start): `{member}` = `{#alphanumeric#}` (≤ 40 characters — ⚠ whether it accepts Devanagari with spaces is
   UNCONFIRMED: ask the provider at registration; a name that cannot fit ⇒ `no_target:name_too_long`, ⛔ never a truncated name — with a
-  test), `{link}` = `{#url#}`, `{helpline}` = `{#cbn#}`. ⚠ Hindi is Unicode — likely THREE segments per text (the cost the Panel saw).
+  test; ⚠ an AUTHOR reading recorded at Task 0.4: it narrows `-303` Q1 A at the edge — a name the template cannot carry means that claim's
+  five are ⛔ not texted — told to the Panel as an FYI in the confirm note; the provider's answer on Devanagari is a Row 27 evidence line), `{link}` = `{#url#}`, `{helpline}` = `{#cbn#}`. ⚠ Hindi is Unicode — likely THREE segments per text (the cost the Panel saw).
   `{member}` = the Pariwar's mode-resolved name (`-181`; `notifications.resolveMemberFacingDeceasedName`, `notifications/pool-identity.ts:141`),
   read once per child OUTSIDE the claiming transaction; erased / unresolvable / ⛔ no KYC name ⇒ `no_target:name_<reason>` (RB5). ⛔ No claim,
   money, family, nominee, claimant or reporter; ⛔ no deadline word (S4 / T6 — RB16). D33 carve-out recorded (this registry names the member
   because the ruled text does). The LANGUAGE: PM22.
-- **PM4 [a: schema · c: writers] — the delivery record on `claim_peer_mesh_pings` (F2), with 0151 / 0155 parity.** 6.27a's migration adds
-  `send_outcome text NULL` (`NULL` = ⛔ not yet begun; else 0138's eight values — invent ⛔ none), `attempt_count`, `claimed_at`,
+- **PM4 [a: columns + structural CHECKs · c: the grammar CHECK, the builder and the writers] — the delivery record on
+  `claim_peer_mesh_pings` (F2), adapted from 0151 / 0155** (⛔ never mirrored literally: 0151 INSERTs a row at begin; here the record lives on an
+  EXISTING ping row whose `send_outcome IS NULL` means "⛔ not yet begun"). **6.27a's migration** adds `send_outcome text NULL` (else one of
+  0138's values EXCEPT `recorded` — meaningless for a text; CHECK), `attempt_count` (NULL or 0 until begin; ≥ 1 after), `claimed_at`,
   `claimed_by_job`, `aging_since`, `parked_at`, `detail`, `first_detail`, `provider_message_id`, `recipient_number_hash`, `send_updated_at`,
-  `link_code` (PM21 (a)); CHECKs mirroring 0155 (`attempting` ⇒ `claimed_at` and `claimed_by_job`; `claimed_by_job = 'sweep:held'` ⇔
-  `parked_at`; `detail` / `first_detail` ≤ 200 + a grammar CHECK mirroring `PEER_MESH_REQUEST_DETAIL_PATTERN` with the `(?!.*[0-9]{7})`
-  lookahead); a finished-row trigger (a finished `send_outcome` is ⛔ never rewritten; `aging_since` forward-only; `link_code` written once);
-  ⭐ **`REVOKE UPDATE ON claim_peer_mesh_pings FROM twt_app`, then `GRANT UPDATE (<exactly these columns>)`** (F36 — a column GRANT cannot
-  narrow a table-wide one) with a policy-regression leg proving `UPDATE … SET message_key` is refused; the partial index `(aging_since,
-  claimed_at) WHERE send_outcome = 'attempting'`. The ONE `detail` builder (pure, domain) is built in 6.27a with the CHECK; 6.27c's writers
-  assert it (RN5 — a RAW gateway code is SANITISED before it is stored).
+  `locale_source` (PM22 — `'pariwar_default'` today; CHECK), `link_code` (PM21 (a)); the STRUCTURAL CHECKs only — `detail` /
+  `first_detail` ≤ 200; `attempting` ⇒ `claimed_at` and `claimed_by_job`; `claimed_by_job = 'sweep:held'` ⇔ `parked_at`; a finished-row
+  trigger (a finished `send_outcome` is ⛔ never rewritten; `aging_since` forward-only; `link_code` written once); ⭐ **`REVOKE UPDATE ON
+  claim_peer_mesh_pings FROM twt_app`, then `GRANT UPDATE (<exactly these columns>)`** (F36) with a policy-regression leg proving `UPDATE …
+  SET message_key` is refused; the partial index `(aging_since, claimed_at) WHERE send_outcome = 'attempting'`. ⭐ **Once-ever is a CAS:**
+  begin = `UPDATE … SET send_outcome = 'attempting', … WHERE ping_id = $1 AND send_outcome IS NULL` (or a re-claim of a stale
+  `attempting` row under RN7's lease rule); **the CAS finalise** = `UPDATE … WHERE send_outcome = 'attempting' AND claimed_by_job = $job`;
+  **the transient note** = `detail` + `send_updated_at` only (6.29's `noteSuspicionNoticeTransient` shape). **6.27c's migration** adds the
+  `detail` / `first_detail` GRAMMAR CHECK mirroring `PEER_MESH_REQUEST_DETAIL_PATTERN` (an ENUMERATED alternation, 0155's form, with the
+  `(?!.*[0-9]{7})` lookahead) and 6.27c builds the ONE `detail` builder (pure, domain) that its writers assert (RN5 — a RAW gateway code is
+  SANITISED before it is stored) — the vocabulary lives with its only writer, so a merged 6.27a can ⛔ never refuse a 6.27c detail.
 - **PM5 [c] — when it is sent** (`-305` §2 item 4). (i) The SELECT worker, after its commit, enqueues ONE child per CLAIM through an
   INJECTED `enqueuePeerMeshRequestSend` dep (F6 — the select result carries ⛔ no ping ids; the child reads the pings and fans out); the hook
   fires on the idempotent no-op branch too, like the shepherd hook; ⛔ never a second `claim.peer_mesh_pinged`. (ii) A daily sweep
   (`'30 10 * * *'` IST) is the backstop, with 6.29's hold / park / give-up (RN2 / RN3 / RN7). (iii) **Quiet hours:** outside 09:00–20:00
   IST ⇒ re-enqueued with `startAfter` = the next 09:00 IST. (iv) **The locked re-check** (CLAIM row, then the ping — Invariant 9; then
-  COMMIT; then decrypt — ⛔ no KMS under a lock): the claim is in `CLAIM_REVIEW_WINDOW_STATES` — a text goes WHILE AN ANSWER CAN STILL BE
-  TAKEN (PM8), and ⛔ never once a final approval is given or the claim is refused / closed ⇒ else `skipped_superseded` /
+  COMMIT; then decrypt — ⛔ no KMS under a lock): the claim is in PM8's ANSWER WINDOW — a text goes WHILE AN ANSWER CAN STILL BE TAKEN, and
+  ⛔ never once a final approval is given or the claim is refused / closed ⇒ else `skipped_superseded` /
   `superseded:claim_decided`; then PM1's exclusions. (The proposal *"no text once the District Admin has decided"* is WITHDRAWN — it narrowed
   `-303` Q1 A; `-305` §2 item 4.)
 - **PM6 [a] — the 72 hours are ⛔ not changed** (FQ10 A *"as built"*): still from selection; the label still `sufficient` /
@@ -363,45 +400,57 @@ member's terms:
   Submit button just redirect user to Thank You page, because answers were already saved"*; the questions ruled by `-304`).
   (a) **Storage** (6.27a's migration — next free number at build): `claim_peer_mesh_replies` — ONE per ping: `reply_id` PK, `pariwar_id`,
   `claim_case_id`, `selection_id`, `ping_id` UNIQUE (FK), `responder_member_id`, `questionnaire_version_id` (pinned at the first save),
-  `started_at`, `submitted_at NULL`; and `claim_peer_mesh_reply_answers` — APPEND-ONLY rows: `answer_id` PK (the 6.27b warning SUBJECT),
+  `started_at`, `submitted_at NULL` (forward-only — a replies trigger refuses clearing it), `UNIQUE (pariwar_id, reply_id)` (the composite FK's
+  target); and `claim_peer_mesh_reply_answers` — APPEND-ONLY rows: `answer_id` PK (the 6.27b warning SUBJECT),
   `pariwar_id`, `claim_case_id`, `reply_id` (composite FK `(pariwar_id, reply_id)`), `question_key`, `value_codes text[]` (plaintext codes
-  for NON-sensitive questions), `value_ciphertext` (Tier-1 `piiColumn` for a question the definition marks `sensitive` — the date, the
-  cause, the illness), `death_date_window_indexes text[]` (only the date question; CHECK `IS NULL OR cardinality(…) = 3`), `saved_via text
+  for NON-sensitive questions), `value_ciphertext` (Tier-1 `piiColumn` under a NEW field class `PEER_MESH_ANSWER_FIELD_CLASS` — wired in
+  `member/anonymize.ts`'s literal and `apps/api/src/context.ts` — for a question the definition marks `sensitive`: the date, the cause, the
+  illness), `death_date_window_indexes text[]` (only the date question; CHECK `IS NULL OR cardinality(…) = 3`), `saved_via text
   CHECK IN ('member_app','helpline')`, `saved_by_actor_id`, `saved_at timestamptz DEFAULT clock_timestamp()`, `superseded_at NULL` (the
   LIVE answer = `superseded_at IS NULL`; partial UNIQUE `(pariwar_id, reply_id, question_key) WHERE superseded_at IS NULL`). CHECKs:
-  exactly one of `value_codes` / `value_ciphertext`, except an erased row (below); the indexes only with the date. Indexes: replies
+  exactly one of `value_codes` / `value_ciphertext` (an erased row keeps a ciphertext — the sentinel); the indexes only with the date; ⭐ *"I
+  don't know the date"* is stored as `value_codes = ['unknown']` (a plaintext code, ⛔ no ciphertext, ⛔ no indexes). Indexes: replies
   `(pariwar_id, claim_case_id)`; answers `(pariwar_id, reply_id) WHERE superseded_at IS NULL` (both warning readers run in the cycle-freeze
   bulk path). A trigger refuses any INSERT / UPDATE once the reply's `submitted_at` is set or the claim has left PM8's window — ⭐ EXCEPT an
-  **erasure arm** (0149's form, F37): `value_ciphertext` may change ONLY to the encrypted sentinel and `death_date_window_indexes` ONLY to
-  NULL, ⛔ nothing else. Its SQL list of window states is parity-tested against `claim/review-window.ts:15`. RLS ENABLE + FORCE, four tenant
+  **erasure arm in 0143's form** (F37): an UPDATE is admitted only when `(to_jsonb(NEW) - 'value_ciphertext' - 'death_date_window_indexes')
+  IS NOT DISTINCT FROM (to_jsonb(OLD) - …)` AND `value_ciphertext` changes only where OLD is non-NULL and NEW is non-NULL AND
+  `death_date_window_indexes` changes only to NULL — every other column frozen. ⚠ RECORDED, as 0149 does: the trigger cannot tell the RTBF
+  scrub from any other writer of those two columns (the sentinel is a fresh envelope). Its SQL list of window states is parity-tested against `claim/review-window.ts:15`. RLS ENABLE + FORCE, four tenant
   policies on `pariwar_id` (plus the per-command UPDATE policy the scrub needs); grants `SELECT, INSERT` + `UPDATE (superseded_at)`,
   `UPDATE (submitted_at)` on replies, `UPDATE (value_ciphertext, death_date_window_indexes)` for erasure.
-  (b) **Saving:** each answer is saved the moment it is chosen — under the lock order CLAIM row `FOR UPDATE`, then the PING row, then the
-  REPLY row (Invariant 9; F31) — validated against the PINNED version by the domain validator (PM23 (a)): a known key, allowed codes, its
-  `showIf` met, a date that is a real calendar date (`isRealCalendarDate`), ⛔ never in the future (IST today), ⛔ never before 1900-01-01;
+  (b) **Saving:** each answer is saved the moment it is chosen. ⭐ The HANDLER first encrypts the sensitive value and computes the date's three
+  keyed indexes (⛔ no KMS under a lock — Trap 9); the domain writer receives ciphertext + indexes and then takes the lock order CLAIM row
+  `FOR UPDATE`, then the PING row, then the REPLY row (Invariant 9; F31) — validated against the PINNED version by the domain validator (PM23 (a)): a known key, allowed codes, its
+  `showIf` met, a date that is a real calendar date (`isRealCalendarDate`, from the import-free leaf after Task 1's extraction — F38), ⛔ never in the future (IST today), ⛔ never before 1900-01-01;
   the date's three window indexes computed by ONE shared helper (D, `addCalendarDays(D, ±1)`, each keyed by `deathDateBlindIndex` under
   `DEATH_DATE_INDEX_FIELD_CLASS`, `apps/api/src/modules/claims/ground-inspection-crypto.ts:63-65`) used by BOTH the member and the helpline
   handlers; an answer whose condition stops holding (e.g. *"died"* changed to *"not sure"*) has its dependants superseded in the same
-  transaction; an edit writes a NEW row and stamps the old one.
+  transaction; an edit stamps the old row's `superseded_at` FIRST, then inserts the NEW live row (the partial UNIQUE cannot be deferred).
   (c) **Counts when saved:** a saved answer is live; staff see *"⛔ not submitted yet"* until Submit.
   (d) **Submit** stamps `submitted_at` (locks the reply); the app shows the Thank-you page; ⛔ nothing else happens at Submit; a second
   Submit ⇒ 409 `peer_request.submitted`.
   (e) **The event** `claim.peer_mesh_responded` (payload shape ⛔ not changed) is written ONCE, at the FIRST save of `has_died` —
-  `recordPeerMeshResponse` is called ONLY when ⛔ no prior `has_died` answer row exists (checked under the ping lock), so 6.6's throwing
+  `recordPeerMeshResponse` is called ONLY when ⛔ no prior `has_died` answer row exists (checked under the locks; the function takes the
+  CLAIM lock itself — `lockClaimCase` — before its ping lock, Invariant 9), so 6.6's throwing
   already-answered guard is ⛔ never hit on an edit; mapped `died` ⇒ `confirmed`, `not_died` ⇒ `denied`, `not_sure` / `did_not_know` ⇒
-  `unknown`; its `from_state` / `to_state` = the claim's CURRENT state and `actor` a parameter (`'member'` | `'operator'`; `actorId` = the
+  `unknown`; its `from_state` / `to_state` = the claim's CURRENT state and `actor` a parameter DEFAULTING to `'member'` (so the existing callers —
+  F39 — keep working) (`'member'` | `'operator'`; `actorId` = the
   operator for a helpline save, `responder_member_id` = the neighbour). ⚠ RECORDED: the event carries the FIRST answer; the live answer is
   the table's.
   (f) **Mixed app + helpline:** ONE reply per ping; each answer row carries its own `saved_via` / `saved_by_actor_id`; either side may
   Submit; after Submit both are locked.
   (g) **For row 6-31:** ONE exported read `peerMeshReplyState(pingId) → 'none' | 'started' | 'submitted'` — the WhatsApp reminder's *"has
-  ⛔ not answered"* reads it (⛔ never its own copy).
+  ⛔ not answered"* reads it (⛔ never its own copy); and the reminder, like the text, goes ONLY while the claim is in PM8's answer window
+  (`-305` §2 item 4).
 - **PM8 [a] — when an answer is taken: while an approval is still to come.** `recordPeerMeshResponse` (and the save path) drop the
-  `verification_in_progress` and `pending`-window guards and accept while the claim is in `CLAIM_REVIEW_WINDOW_STATES`
-  (`verification_in_progress`, `verifier_review`, `verifier_approved`, `reversed`, `state_trustee_freeze`); keep the not-selected guard;
-  ⛔ never accept in `state_trustee_approved` or any closed / refused state (F19). A refused save answers 409 `peer_request.no_longer_open`
-  and the screen says *"Thank you — this request is no longer open."* (⛔ not why). The 72-hour label is ⛔ not recounted. ⚠ RECORDED: an
-  R9-routed claim in `state_trustee_approved` takes ⛔ no answers. ⭐ **Trap 13 (rewritten):** a save racing an approval is made SAFE by
+  `verification_in_progress` and `pending`-window guards and accept while the claim is in the ANSWER WINDOW =
+  `CLAIM_REVIEW_WINDOW_STATES` (`verification_in_progress`, `verifier_review`, `verifier_approved`, `reversed`, `state_trustee_freeze`), OR
+  `state_trustee_approved` WHILE the claim carries a live R9 routing (`liveRoutedToR9Exists()`, `claim/r9-routing.ts` — the `-283` A1
+  precedent: R9 finalize still runs the gate there, so a final approval is still to come; 6.27b's queue already scans that case); keep the
+  not-selected guard; ⛔ never accept in `state_trustee_approved` without a live R9 routing, or in any closed / refused state (F19). A refused save answers 409 `peer_request.no_longer_open`
+  and the screen says *"Thank you — this request is no longer open."* (⛔ not why). The 72-hour label is ⛔ not recounted. ⭐ The existing jobs test that asserts `PeerMeshWindowResolvedError` after the window resolves (F39)
+  is REWRITTEN as *"accepted after resolution, the label ⛔ not recounted"*; the two error classes stay exported only if another caller uses
+  them (grep at build). ⭐ **Trap 13 (rewritten):** a save racing an approval is made SAFE by
   the lock order (claim first — Invariant 9): the save and the approval serialize on the claim row, so ⛔ no `eventVersion` collision, ⛔ no
   deadlock, and a save after the approval's warnings read commits with `saved_at > v.decided_at` (6.27b's queue arm sees it) — proven by a
   two-connection ordering test.
@@ -429,9 +478,11 @@ member's terms:
   → `{ memberName, questionnaire: <the PINNED version's definition WITH the question words resolved in en and hi on the server>, answers:
   <live>, submitted }`; `PUT …/member/peer-requests/:pingId/answers/:questionKey` `{ value }` → 200 (the auto-save; idempotent by value);
   `POST …/member/peer-requests/:pingId/submit` → 200. `requireMemberSession` + `perMemberKey` budget + `Idempotency-Key` on writes; ⛔ NO
-  Turnstile (F34 — the session and the budget are the control; a neighbour is a selected, authenticated member). **404** ONLY for "⛔ not
-  yours / unknown / another Pariwar" (one indistinguishable answer); **409** `peer_request.no_longer_open` / `peer_request.submitted` for
-  "yours but closed or submitted". **Open** = ⛔ not submitted AND the claim is in PM8's window AND **`send_outcome = 'accepted'`** (the member
+  Turnstile (F34 — the session and the budget are the control; a neighbour is a selected, authenticated member). **404** for "⛔ not
+  yours / unknown / another Pariwar" AND for a ping of yours that was ⛔ never texted (`send_outcome IS DISTINCT FROM 'accepted'`) — one
+  indistinguishable answer on EVERY member route (the list omits it; detail, PUT, submit and 6.27c's by-link answer 404), so ⛔ no named
+  death reaches a member the Trust has ⛔ not texted; **409** `peer_request.no_longer_open` / `peer_request.submitted` for "yours, texted, but
+  closed or submitted". Every new domain list read takes `clampLimit` (F40). **Open** = ⛔ not submitted AND the claim is in PM8's window AND **`send_outcome = 'accepted'`** (the member
   WAS texted) ⇒ ⭐ the card and list are DARK until 6.27c texts anyone — ⛔ no named death is shown to a member the Trust has ⛔ not texted
   (and so ⛔ never before Row 27's counsel basis). Mobile (`apps/mobile`): a card on `app/(tabs)/index.tsx` while ≥ 1 request is open (*"The
   Trust has asked you about a member"*); 6.30's route shell `app/(peer-request)/peer-request.tsx` FILLED with the list (no `c`) and the
@@ -444,23 +495,31 @@ member's terms:
   request that cannot be opened (404) shows a dignified *"This request could not be opened"* + the shared `CallHelplineCTA` — ⛔ never a
   hard error; ⛔ no API call before the session has loaded. The screens show ⛔ no claim, ⛔ no family, ⛔ no amount — the name only. Empty /
   loading / error states OUTSIDE any list ([[project_fabric_flatlist_empty_populated_crash]]); depend on `locale`, ⛔ never `t`
-  ([[project_uset_fresh_closure_memo_trap]]). **[c]:** the shell's `?c=` reading and the by-link resolver (PM21 (d)).
-- **PM12 [a] — the helpline records the answers of a neighbour who phones.** A NEW `claims.peer-request.helpline.routes.ts` (classified
-  beside `claims.helpline.routes.ts` in `ENROLMENT_OWED`, or enrolled — F35) on 6.3's chain (`claim.file` + step-up; ⛔ no new key — a reuse,
+  ([[project_uset_fresh_closure_memo_trap]]). **The `?c=` split (stated ONCE, here and in 6.30):** 6.30's shell PARSES `c` (`parseAppLinkCode`) and owns the
+  login-return (AL6); **6.27a** fills the slot — the list, the questionnaire, the not-openable state and *"⛔ no call before the session"*;
+  **[c]** wires the parsed `c` to the by-link resolver (route + call, PM21 (d)), and its 404 reuses 6.27a's not-openable state.
+- **PM12 [a] — the helpline records the answers of a neighbour who phones.** A NEW `claims.peer-request.helpline.routes.ts` (ENROLLED in
+  the human-actor invariant's `COVERAGE_SET` — it composes the full chain; ⛔ never a new `ENROLMENT_OWED` entry, which `check.ts:402-404`
+  prints as debt — F35) on 6.3's chain (`claim.file` + step-up; ⛔ no new key — a reuse,
   6.21b D5's precedent): `GET /api/v1/p/:pariwarId/admin/claims/helpline/members/:memberId/peer-requests?limit=` (the caller's requests —
-  ⛔ never gated on `send_outcome`: the neighbour called), and the SAME save / submit shape as PM11 (`PUT …/admin/claims/helpline/peer-requests/:pingId/answers/:questionKey`,
+  gated like the member list: ONLY pings with `send_outcome = 'accepted'` — before 6.27c texts anyone the panel is EMPTY, so the helpline
+  can ⛔ never name a reported death to a member the Trust has ⛔ not texted; `clampLimit`), and the SAME save / submit shape as PM11 (`PUT …/admin/claims/helpline/peer-requests/:pingId/answers/:questionKey`,
   `POST …/submit`); `saved_via = 'helpline'`, `saved_by_actor_id` = the operator; the event (first `has_died` save) `actor: 'operator'`;
   the shared date-window helper. Admin UI: a *"Requests to confirm a death"* panel on the helpline member-lookup screen, rendering the same
   definition (English). ⭐ The operator sees ONLY that neighbour's answers (PM25 (b)).
 - **PM13 [a] — what the District Admin sees** (the verifier console's peer-mesh section through ONE actor-aware assembler
   `assemblePeerAnswers` — reused by 6.27b's PM24 read; English only, F22): the 72-hour line (*"Fewer than 3 answers in 72 hours — the
   ground inspection is the main check"* / *"3 or more answers"* / *"Still open until {date}"* / *"⛔ No neighbour could be chosen"*); per ping:
-  the neighbour's NAME (decrypted in the HANDLER — ⛔ never the warning module), the send status (*"text sent"* / *"⛔ not texted — {reason}"*
-  / *"text failed"* / *"⛔ not sent yet"* — 6.27c's column), EVERY live answer with its question's English words (the sensitive ones
+  the neighbour's NAME (decrypted in the HANDLER — ⛔ never the warning module), the send status for EVERY value of the column (6.27c writes it): `NULL` *"⛔ not
+  sent yet"* · `attempting` *"sending"* · `accepted` *"text sent"* · `rejected_invalid_number` / `rejected_unreachable` *"text could ⛔ not be
+  delivered"* · `no_target` *"⛔ not texted — {reason code}"* · `error` *"text failed"* · `skipped_superseded` *"⛔ not texted — the claim had
+  moved on"* (`recorded` is excluded by the CHECK — PM4), EVERY live answer with its question's English words (the sensitive ones
   decrypted in the handler), *"submitted"* / *"⛔ not submitted yet"*, *"answered in the app"* / *"recorded by the helpline"* per answer, the
   last-saved IST time and *"changed N times"*; when `callback_consent = yes`, the neighbour's mobile (decrypted in the handler, normalised,
-  each showing audited — actor, claim, ping; ⛔ never the number in the audit row). ⚠ The *"more than a day from the certificate"* flags
-  arrive with 6.27b (from the warnings read, Invariant 8). `VERIFIER_CONSOLE_MAX_READS` bumped to the exact new ceiling with a ledger line
+  each showing audited through `emitAuthAudit` with a new `AuthAuditEventType` member — actor, claim, ping; ⛔ never the number in the audit
+  row; ⛔ never a direct `writeAuditEntry` — F40). ⚠ The per-answer warning flags (*"says the member has ⛔ not
+  died"*, *"more than a day from the certificate"*) arrive with 6.27b — its AC and Task (from the warnings read; a failed read ⇒ `null`,
+  Invariant 8). `VERIFIER_CONSOLE_MAX_READS` bumped to the exact new ceiling with a ledger line
   and a `toBe`. `verifierAnnotations` STAYS `not_available_yet` (staff NOTE capture is ⛔ not built). The family's app, the claim status page
   and every public page show ⛔ nothing new.
 - **PM14 [c] — ⛔ no new events beyond the existing one.** Sending writes the ping row only; `claim.peer_mesh_pinged` stays the selection's.
@@ -470,18 +529,23 @@ member's terms:
   story lands first writes its own row at its number). **Row 27 `peer-mesh-request-counsel-basis`** — closes on ALL of: (a) counsel's basis
   for telling five members of a reported death; (b) a privacy-policy revision naming the purpose; (c) **Closed by `2026-10-10-303`** (the
   Panel's Q1 A); (d) the alarms reaching a named owner through a real transport (Row 22 (d)'s bar); (e) Row 29 (`app-links-live`, 6.30)
-  closed; (f) counsel's basis for HEALTH information from neighbours — `death_cause`'s illness answers, `death_illness`, and any health
-  question added through the chain (`-304` Q4 A; PM23 (a)'s counsel flags flip only on this closure's evidence); (g) the confirm note
-  CF1–CF3 answered. Note: row 6-31 built, or its absence at go-live recorded as a decision. **Row 28 `peer-mesh-request-hindi-human-review`**
-  — the Hindi of the texts, the questionnaire's question words, the screens, AND 6.30's fallback page and not-found screen. **[c]:** DLT
-  templates 13 (hi) / 14 (en) in the sheet (typed variables), *"⛔ never provision the ids until Row 27 closes"*; unset ids ⇒ the sweep HOLDS
+  closed; (f) counsel's basis for HEALTH information from neighbours — `death_cause`'s illness answers and `death_illness` (`-304` Q4 A) —
+  ⭐ ⇒ the TEXTS themselves wait for it (Row 27 stays ONE conjunction; ⛔ no "skip the health questions" interim — it would show the
+  neighbours a list the Panel never ruled); (g) the confirm note CF1–CF3 answered. Evidence lines: the provider confirms that
+  `{#alphanumeric#}` carries Devanagari with spaces (PM3); the dotted-key defect (below). Note: row 6-31 built, or its absence at go-live
+  recorded as a decision. ⭐ Rows 6-31 and 6-34 cite `-305` §4 for the reserved numbers, so ⛔ no third story takes Row 27 / 28 / 29. **Row 28 `peer-mesh-request-hindi-human-review`**
+  — the Hindi of the texts, the questionnaire's question words, the screens, AND 6.30's fallback page, not-found screen and route-shell
+  placeholder. **[c]:** DLT
+  templates 13 (hi) / 14 (en) in the sheet (typed variables — 6.27c TYPES its two templates; row 6-34 VERIFIES them with every other), *"⛔ never provision the ids until Row 27 closes"*; unset ids ⇒ the sweep HOLDS
   (RB12). ⚠ The dotted Secret Manager names (`sms.dlt.template_id.peer_mesh.…`) inherit the recorded UNVERIFIED dotted-secret-id defect
   (deferred-work *"Dotted Secret Manager names"*) — since 6.29 an `INVALID_ARGUMENT` is a final `error` + alarm that uses up the slot (F23) —
   recorded on Row 27, ⛔ not fixed here. ⚠ Row 26 (`jobs-db-role`) applies to 6.27c's sweep. ⭐ Go-live gates ⛔ never block a merge.
 - **PM17 [a; d's arm in d] — erasure.** On erasure of the DECEASED member (`member/anonymize.ts`, the GI13 shape — F37): EVERY answer row of
-  their claims' replies — live AND superseded — has `value_ciphertext` set to the encrypted sentinel (sensitive rows) and
-  `death_date_window_indexes` set to NULL; the trigger's erasure arm admits exactly that; the rtbf completeness pin rises (NINETEEN → twenty
-  tables with 6.27a; d raises it again for its notes). On erasure of the RESPONDER: the reply holds ⛔ no identity beyond an id; the answers
+  their claims' replies — live AND superseded — is scrubbed by ONE statement `UPDATE … SET value_ciphertext = <sentinel>,
+  death_date_window_indexes = NULL WHERE value_ciphertext IS NOT NULL AND …` (GI13's `IS NOT NULL` form — a non-sensitive row keeps its codes
+  and the exactly-one CHECK holds); the trigger's 0143-form arm admits it. ⭐ The rtbf completeness pin counts the ANSWERS table (the replies
+  table holds ⛔ no PII): NINETEEN → TWENTY (`rtbf-anonymize.test.ts:121`); the rtbf unit test's statement count `toHaveLength(22)` → 23
+  (`:191`); the no-claims leg stays 21 (`:256`); 6.27d raises them again for its notes. On erasure of the RESPONDER: the reply holds ⛔ no identity beyond an id; the answers
   stay as claim evidence — ⚠ whose data an answer is stays OPEN (GI13's deferred item gains these tables).
 - **PM18 [a] — stale text corrected in the files this story touches** (⛔ no standalone edits): `schema/claim_peer_mesh_pings.ts:9-10`;
   `apps/jobs/src/claim-peer-mesh.ts:22-23` and `packages/queue/src/index.ts:138`; `packages/contracts/src/claims/verifier-console.ts:160-162`;
@@ -494,9 +558,10 @@ member's terms:
   credential. (b) `{link}` = 6.30's `buildAppLinkUrl(<base>, 'peerRequest', link_code)` = `<origin>/peer-request?c=<code>` (a QUERY string —
   operators refuse dynamic paths); the base is the env var `APP_LINKS_BASE_URL`, READ AT BOOT by 6.27c and validated every run by 6.30's
   `resolveHttpsOrigin` (⛔ not Secret Manager); invalid / unset ⇒ the sweep HOLDS (`config:app_links_base_url_invalid`) and alarms — ⛔ never a
-  broken link. (c) 6.30's route shell reads `c` (`useLocalSearchParams()`), waits for the session (logged out ⇒ 6.30 AL6's login-return),
-  then calls the resolver and opens 6.27a's questionnaire. (d) The resolver `GET /api/v1/p/:pariwarId/member/peer-requests/by-link/:code` →
-  `{ pingId }` ONLY when the code's ping belongs to the SESSION member in that Pariwar; else **404** (one indistinguishable answer); a
+  broken link. (c) 6.30's route shell PARSES `c` (`parseAppLinkCode`, from `useLocalSearchParams()`) and owns the login-return (AL6); 6.27c wires the
+  parsed `c` to the resolver once the session has loaded, and opens 6.27a's questionnaire (PM11's `?c=` split). (d) The resolver `GET /api/v1/p/:pariwarId/member/peer-requests/by-link/:code` →
+  `{ pingId }` ONLY when the code's ping belongs to the SESSION member in that Pariwar AND was texted (`send_outcome = 'accepted'`); else
+  **404** (one indistinguishable answer, reusing 6.27a's not-openable state); a
   closed request resolves and the screen says it is no longer open. (e) The code is ⛔ never in a log, an alarm, an audit row or a `detail`.
   (f) Go-live: Row 27 (e).
 - **PM22 [c] — the language** (`-305` §2 item 2; ⚠ CF1 owed): each text goes in the Pariwar's `pariwar_passport.locale_default`
@@ -504,30 +569,36 @@ member's terms:
   sweep's config check needs that locale's id for each Pariwar it texts; the choice is recorded as a CODE (`locale_source: pariwar_default`).
   ⭐ **Boundary:** row `6-35-in-app-language-switch` adds the member's own choice (saved on the phone, recorded on the server on an explicit
   change — ⛔ never on first launch) and changes this ONE read to *member's choice, else the Pariwar's default*. Row 6-31's reminder reads the
-  same. ⛔ No `member_language_preferences` table in 6.27.
+  same. ⛔ No `member_language_preferences` table in 6.27. ⚠ RECORDED: the app always renders `hi` (F32) — a Pariwar whose default is `en`
+  would send English texts that open Hindi screens; moot for Bihar (Hindi) in v1; row 6-35 fixes both halves.
 - **PM23 [a] — the questionnaire is DATA, versioned, in a pure domain module** (BigDev: *"these questions are of evolving nature"*; F30).
   (a) **The engine:** `packages/domain/src/questionnaires/` — pg-free, ⛔ no `db` import: the definition shape (pages of 2–3 questions; a
   question = `key` stable across versions, `kind` `single` / `multi` / `date` / `yes_no`, option CODES, `optional` (all but `has_died`),
-  `showIf`, `sensitive`, `warning`, copy keys (en + hi), `approvedBy`, per-QUESTION and per-OPTION `requiresCounselBasis`); the VALIDATOR
-  (a definition is refused unless): the RULED questions `has_died` and `death_date` are present (CF3 (a)); `warning` is set ONLY on those two
-  (CF3 (b)); every question has `approvedBy` = a Trustee-ratified decision id — or, once row 6-33 lands, a chain record — ⛔ no v3 before
-  6-33 except from a Panel decision id; ⛔ no alcohol question key or option (CF3 (c) — Q5 A); every health question / option carries
-  `requiresCounselBasis` (CF3 (d)); `showIf` refers only to an earlier key; codes unique. The VERSION REGISTRY
+  `showIf`, `sensitive`, `warning`, copy keys (en + hi), `approvedBy`, a per-QUESTION `requiresCounselBasis` — ONLY for a health question ADDED LATER through the chain;
+  row 6-33 flips it on counsel's evidence); the VALIDATOR (a definition is refused unless): EVERY question the Panel ruled is present — the
+  seven v2 keys `has_died`, `death_date`, `how_known`, `relationship`, `death_cause`, `death_illness`, `callback_consent` (CF3 (a));
+  `warning` is set ONLY on `has_died` and `death_date` (CF3 (b)); every question has `approvedBy` = a Trustee-ratified decision id — or, once row 6-33 lands, a chain record — ⛔ no v3 before
+  6-33 except from a Panel decision id; ⛔ no alcohol question key or option (CF3 (c) — Q5 A); a NEW health question (⛔ not one of the seven ruled) carries `requiresCounselBasis`
+  (CF3 (d) — the ruled ones are covered by the texts waiting for Row 27 (f)); `showIf` refers only to an earlier key; codes unique. The VERSION REGISTRY
   (`QUESTIONNAIRE_KINDS = ['peer_mesh', 'ground_inspection']`), `resolveLiveVersion(kind, pariwarId)` (a Pariwar's own live version, else
   the all-Pariwar one), `COMPARABLE_QUESTION_KEYS` (`has_died`, `death_date`, `death_cause`, `death_illness` — the SAME keys and codes for
   the neighbours and the family), and the warning-key list (read by 6.27b's SQL). Because the rules live in the VALIDATOR, row 6-33's
-  database-backed versions inherit them. Contracts mirrors ONLY the zod wire shape the app renders, with a test-only lockstep.
+  database-backed versions inherit them. Contracts mirrors ONLY the zod wire shape the app renders, with a test-only lockstep. ⭐ The module imports ONLY import-free leaves (⛔ never
+  `isRealCalendarDate` from `nominee-determination-persist.ts` — F38); the event-response MAPPING lives in `claim/peer-mesh-reply.ts`,
+  ⛔ never in `questionnaires/` (a type import from `claim/events.ts` alone trips NW1); `questionnaires/index.ts` is ADDED as an NW1 entry
+  (`approval-warnings.test.ts:351-357`) and a reachability test proves the module reaches ⛔ no `db.ts`, `pg` or `drizzle-orm` (AC2's
+  "pg-free" made a check).
   (b) **Versions:** v1 = page 1 only (`has_died`; `death_date` after *"Yes"*) + the closing note, `approvedBy` `-262` FQ8 E / `-263` FQ10 /
   `-303`. **v2 = `2026-10-10-304`, exactly as ruled — CURRENT (all-Pariwar):** page 1 (`has_died` — *Yes, they have died · No, they have
   not died · I am not sure · I did not know them*; `death_date` after *"Yes"* — a date · *I don't know the date*); page 2 (`how_known` —
   *"How do you know they died?"*: I attended the last rites or visited the family · The family told me · I heard it from others · Other;
   `relationship` — *"How do you know [member]?"*: A relative · A neighbour · A colleague at the same school · Other); page 3 (`death_cause`
   after *"Yes"* — Q3's list: Illness over a long time · Sudden illness (heart attack, stroke) · Old age · Accident (road, drowning, electric
-  shock, snake bite, fire, other) · Suicide · Killed by someone · Other · I don't know — its two ILLNESS options carry
-  `requiresCounselBasis`; `death_illness` after an illness cause, multi — Q4's list — `requiresCounselBasis`); page 4 (`callback_consent`
+  shock, snake bite, fire, other) · Suicide · Killed by someone · Other · I don't know; `death_illness` after an illness cause, multi — Q4's
+  list); page 4 (`callback_consent`
   — *"May the District Admin phone you about this?"*); the closing note. ⛔ No alcohol question (Q5 A). `death_date`, `death_cause` and
-  `death_illness` are `sensitive`. ⭐ **Until Row 27 (f) closes**, a question or option with `requiresCounselBasis` is SKIPPED (shown to
-  ⛔ nobody) — the flag flips by a reviewed change that cites the roster closure, ⛔ never by config.
+  `death_illness` are `sensitive`. ⭐ ⛔ No ruled question is ever skipped: the TEXTS wait for Row 27 (f) instead (PM16) — so the full ruled
+  list is the only list a neighbour ever sees.
   (c) **Pinning:** a reply pins `resolveLiveVersion('peer_mesh', pariwarId)` at its first save; answers are validated against it; a newer
   version applies to new replies only.
   (d) **Who approves a version** (`-304` Q7): the Pariwar Admin proposes; a State Trustee proposes or approves, with or without changes; the
@@ -538,8 +609,12 @@ member's terms:
   in a NEW `claims.peer-answers.routes.ts` (classified `COVERAGE_SET` with its `expectedMethods`), first hook `requirePermissionHook('cycle.freeze',
   pariwar)` (the coarse key every v1 later approver holds — `pariwar_admin` and `super_admin`), then an IN-HANDLER `rbac.hasPermission`
   disjunction keyed by the claim's PENDING step: `verifier_approved` / `reversed` / `state_trustee_freeze` → `cycle.freeze`; a live R9 routing
-  row → `claim.r9_vote`; an open escalation → `claim.decide_escalated_closure`; any other claim state ⇒ 404. Built through PM13's
-  `assemblePeerAnswers`; audited (actor, claim, time — ⛔ no answer content). A *"Neighbours' answers"* panel beside the warning lines on
+  row → `claim.r9_vote`; an open CORRECTION escalation awaiting the Super Admin's G1 decision → `claim.decide_escalated_closure` (the
+  cycle-freeze escalation RESOLUTION is `cycle.freeze`'s — the first arm); any other claim state ⇒ 404. ⚠ RECORDED: in v1 everyone who passes
+  the first hook also holds `claim.r9_vote` (`pariwar_admin`) or every key (`super_admin`), so the disjunction reduces to STATE gating; and in
+  `state_trustee_freeze` with an open correction escalation, a Pariwar Admin may read at what is the Super Admin's step — accepted (both
+  are approvers of that claim; Invariant 7's "at that step" is enforced per state, ⛔ not per actor). Built through PM13's
+  `assemblePeerAnswers`; audited through `emitAuthAudit` with a new `AuthAuditEventType` member (actor, claim, time — ⛔ no answer content; F40). A *"Neighbours' answers"* panel beside the warning lines on
   `LaterApprovalWarnings.tsx`'s four hosts — `apps/admin/src/modules/cycle-freeze/PendingCaseCard.tsx`,
   `apps/admin/src/modules/correction-closure/EscalationPanel.tsx`, `apps/admin/src/modules/correction-closure/PariwarClosureStrip.tsx`,
   `apps/admin/src/modules/r9-voting/R9CasePanel.tsx`. ⛔ No new permission key.
@@ -547,67 +622,88 @@ member's terms:
   (a) **[d] The inspector** (the actor named on an assignment — a District Admin or a Block Admin; `field_worker` holds ⛔ no key):
   · **Before completing:** shown ⛔ nothing about the neighbours — ⛔ no answers, ⛔ no counts, ⛔ no "hidden" line.
   · **At completion** (`completeGroundInspection`), the server compares against the neighbours' answers SAVED by then: ① any neighbour's
-  live `has_died` = `not_died`; ② a neighbour's live `death_date` two or more calendar days from the FAMILY's date — ONLY on a
-  `family_statement` completion (a `certificate_check` completion's date is the original's, ⛔ not the family's), by index membership (the
-  family's `death_date_index` against the neighbour's three window indexes — ⛔ no decrypt). ⭐ ③ (cause) and ④ (illness) are ⛔ NOT built:
+  live `has_died` = `not_died`; ② a neighbour's live `death_date` two or more calendar days from the FAMILY's date — ONLY when the
+  completed row's `death_date_source = 'family_statement'` (a SOURCE value — `claim_ground_inspections.ts:116`, ⛔ not a completion kind; a
+  `certificate_check` STAGE records the original's date), by index membership (the family's `death_date_index` against the neighbour's
+  three window indexes — ⛔ no decrypt). ⭐ ③ (cause) and ④ (illness) are ⛔ NOT built:
   the family's answers come from row 6-32, and comparing ENCRYPTED codes needs a comparable form (a keyed blind index per option code) —
   a design OWED by row 6-32, recorded. ⛔ Never compared: *"how do you know"*, *"how do you know them"*, the call-back consent; ⛔ never
   `member_medical_disclosures` (a fence test — `-304` Q4 A).
   · **⛔ No difference (or ⛔ no answer yet)** ⇒ *"Thank you, your response has been recorded. No further action needed."*
   · **A difference** ⇒ *"Thank you, your response has been recorded. We found the family's answers don't match the neighbours'
   observations. Please ask the family again, in your own words, without mentioning anyone else's answer, and record their response in the
-  note next to each question."* — each differing question shown to the INSPECTOR as *"The family said: [X]. A neighbour's answer differs."*
+  note next to each question."* — each differing question shown to the INSPECTOR as — for ① *"The family reported that the member has died. A neighbour's answer
+  differs."*; for ② *"The family said: [their date, as the inspector entered it — decrypted in the HANDLER after the completion commit, for
+  display only]. A neighbour's answer differs."*
   (⭐ the inspector SEES the difference — `-304` Q3 / Q4 as put — but asks the family OPEN-ENDED, ⛔ never stating what any neighbour said
   and ⛔ never who: `-305` §2 item 3), ⛔ never a name, ⛔ never a count, and ONE note box per differing question.
   · **The notes and the showing** — 6.27d's migration: `claim_ground_inspection_discrepancy_notes` (Tier-1 note, `pariwar_id`,
-  `ground_inspection_id`, `question_key`, `noted_at clock_timestamp()`; once per question; while the claim is in PM8's window) and a
-  showing record (the result's question KEYS only, ⛔ no values, and `shown_at`) ⇒ `completed_at` precedes any showing — provable. A read
+  `ground_inspection_id`, `question_key`, `noted_at clock_timestamp()`; once per question; while the claim is in PM8's window; its own
+  erasure arm in 0143's form) and a SEPARATE table `claim_ground_inspection_discrepancy_showings` (the result's question KEYS only, ⛔ no
+  values, and `shown_at clock_timestamp()`), written in ITS OWN transaction AFTER the completion commits — ⛔ never columns on the assignment
+  (whose row is frozen after completion) ⇒ `completed_at` < `shown_at`, provable by an ordering test. A read
   of the recorded showing for the inspector's OWN completed assignment (a lost completion response is ⛔ never lost for good).
   · **Answers arriving after completion** reach the District Admin, ⛔ never the inspector.
   (b) **[a] The helpline operator** sees ONLY the answers of the neighbour they are recording — ⛔ never another neighbour's, ⛔ never the
   warning lines, ⛔ never the counts.
   (c) **[a; the kinds half b] Enforced in the SERVER read** (`assemblePeerAnswers` takes the actor): for an actor who holds an
-  UN-completed assignment on the claim and has completed ⛔ none, the console's `peerMesh` is ABSENT — the contract field becomes OPTIONAL
-  (⛔ never a new variant, which would itself be a "hidden" signal); **[b]** and 6.27b filters the two peer kinds out of that actor's
+  UN-completed assignment on the claim and has completed ⛔ no FULL visit on it (a `certificate_check` alone does ⛔ not count — it records
+  ⛔ no family account), the console's `peerMesh` is ABSENT — the contract field becomes OPTIONAL
+  (⛔ never a new variant, which would itself be a "hidden" signal) and `SignalsPanel` renders ⛔ no peer-mesh section at all (⛔ never
+  a title with nothing under it — F41); **[b]** and 6.27b filters the two peer kinds out of that actor's
   warnings summary and correction-queue row (approval is impossible before completion anyway — GI1).
 
 ## Acceptance Criteria (6.27a)
 
 1. **AC1 — governance first (shared).** ⛔ No code in any part before Task 0.4's author-commit (PM1–PM25 as answered, incl. the author
    readings Task 0.4 lists) lands ALONE; the epics.md entries for 6.27a–d, Rows 27 / 28 and the deferred-work items follow it.
-2. **AC2 — the engine** (PM23): the domain module exists pg-free; the validator refuses a definition missing a ruled question, a `warning`
-   on any other key, a question without a valid `approvedBy`, an alcohol key, a health question / option without `requiresCounselBasis`,
-   a forward `showIf`, a duplicate code; v1 and v2 are registered and v2 is CURRENT; `resolveLiveVersion` prefers a Pariwar version over the
-   all-Pariwar one; a counsel-flagged question / option is skipped in the served definition; the contracts wire shape is in lockstep with the
-   domain shape (test-only).
+2. **AC2 — the engine** (PM23): the domain module exists and a REACHABILITY test proves it reaches ⛔ no `db.ts`, `pg` or `drizzle-orm`;
+   `questionnaires/index.ts` is an NW1 entry and the NW1 test stays green; `isRealCalendarDate` is served from the import-free leaf (same
+   identity re-exported); the validator refuses a definition missing ANY of the seven ruled keys, a `warning` on any other key, a question
+   without a valid `approvedBy` (⛔ no v3 before 6-33 except a Panel decision id), an alcohol key, a NEW health question without
+   `requiresCounselBasis`, a forward `showIf`, a duplicate code; v1 and v2 are registered and v2 is CURRENT with ⛔ no question skipped;
+   `resolveLiveVersion` prefers a Pariwar version over the all-Pariwar one; the contracts wire shape is in lockstep with the domain shape
+   (test-only).
 3. **AC3 — the schema** (PM4 schema, PM7 (a), PM21 (a)): the migration applies from zero on :5432 AND :5433; the ping columns, `link_code`,
-   the REVOKE + column GRANT (a leg proves `UPDATE … SET message_key` refused), both new tables with `pariwar_id`, the composite FK, the
-   CHECKs, the indexes, RLS + policies; the lock trigger refuses a write after Submit and outside the window, and admits the erasure arm
-   ONLY (sentinel / NULL); its state list matches `review-window.ts:15` (parity test).
+   the REVOKE + column GRANT (a leg proves `UPDATE … SET message_key` refused), both new tables with `pariwar_id`, the composite FK,
+   `UNIQUE (pariwar_id, reply_id)`, the structural CHECKs (incl. `recorded` refused, `attempt_count` NULL / 0 before begin, `locale_source`),
+   the ping finished-row trigger (a finished `send_outcome` refused a rewrite; `aging_since` forward-only; `link_code` written once — each a
+   direct-SQL policy-spec leg), the indexes, RLS + policies; the answers' lock trigger refuses a write after Submit and outside the window;
+   its 0143-form erasure arm refuses ANY other column change and refuses `death_date_window_indexes` to non-NULL (⛔ never a "sentinel
+   only" claim — F37); `submitted_at` cannot be cleared; the state list matches `review-window.ts:15` + the live-R9 case (parity test).
 4. **AC4 — the writer** (PM7 (b)–(g), PM8): a save takes claim → ping → reply locks; validates against the pinned version; appends and
    supersedes (dependants too); the event is written exactly once at the first `has_died` save, with the CURRENT state and the right actor;
-   a later edit writes ⛔ no event and ⛔ never throws the already-answered error; accepted in each of the five window states incl. after the
-   72 hours and after the District Admin approved; refused (409) in `state_trustee_approved` and every closed / refused state; Submit locks;
+   a later edit writes ⛔ no event and ⛔ never throws the already-answered error; the handler encrypts and indexes BEFORE the locks (⛔ no KMS under a lock — a test asserts the writer receives ciphertext);
+   `recordPeerMeshResponse` takes the claim lock itself and `actor` defaults to `'member'` (the existing callers unchanged); accepted in each of
+   the five window states incl. after the 72 hours and after the District Admin approved, AND in `state_trustee_approved` with a live R9
+   routing; refused (409) in `state_trustee_approved` without one and every closed / refused state; the inverted jobs test (F39) passes; Submit locks;
    a second Submit is 409; `peerMeshReplyState` answers `none` / `started` / `submitted`; a two-connection save-vs-approval ordering test
    shows ⛔ no collision, ⛔ no deadlock.
-5. **AC5 — the member surface** (PM11): the list is bounded and returns ONLY requests whose ping `send_outcome = 'accepted'` (a fixture sets
-   it — ⛔ none exists before 6.27c); the routes answer 404 for not-yours / unknown / another Pariwar alike and 409 for closed / submitted;
+5. **AC5 — the member surface** (PM11; ⚠ Task 5 needs 6.30's route shell MERGED): the list is bounded (`clampLimit`) and returns ONLY
+   requests whose ping `send_outcome = 'accepted'` (a fixture sets it — ⛔ none exists before 6.27c); detail, PUT and submit answer 404 for a
+   ping that was ⛔ never texted exactly as for not-yours / unknown / another Pariwar (one indistinguishable answer — a test per route), and 409
+   for closed / submitted;
    ⛔ no Turnstile; the definition carries resolved en + hi words; the screen fills 6.30's shell with the list and the in-screen pages,
    saves each answer with a saved / not-saved line (a failed save retries, ⛔ never lost silently), shows the closing note and the Thank-you
    VERBATIM, shows the dignified not-openable state with the helpline on a 404, makes ⛔ no API call before the session loads, and shows
    ⛔ no claim, family or amount.
-6. **AC6 — the helpline** (PM12, PM25 (b)): on 6.3's chain with step-up (⛔ no step-up ⇒ refused); the same save / submit shape; `saved_via
+6. **AC6 — the helpline** (PM12, PM25 (b)): on 6.3's chain with step-up (⛔ no step-up ⇒ refused); enrolled in `COVERAGE_SET`; the list
+   returns ONLY `send_outcome = 'accepted'` pings (a test: a ping with `send_outcome` NULL is absent); the same save / submit shape; `saved_via
    = 'helpline'` per answer; a mixed app + helpline reply works and locks for both at Submit; the operator's view carries only that
    neighbour's answers.
 7. **AC7 — the District Admin sees** (PM13, PM25 (c)): the 72-hour line, each neighbour's name, the send status, every live answer with its
    words, submitted or not, how and when it was saved, *"changed N times"*, the call-back mobile when consented (audited, ⛔ no number in the
-   audit); a failed decrypt shows *"could not be shown just now"*; the read ceiling is the exact bumped `toBe`; for an actor holding an
-   un-completed assignment the `peerMesh` field is ABSENT (⛔ no variant).
-8. **AC8 — erasure** (PM17): erasing the deceased scrubs every answer row of their claims (live and superseded) to the sentinel / NULL —
-   after Submit and after the claim closed; the rtbf pin is the new count.
+   audit); a failed decrypt shows *"could not be shown just now"*; the read ceiling is the exact bumped `toBe`; every `send_outcome` value has its
+   words; the call-back reveal is audited via `emitAuthAudit`; for an actor holding an un-completed assignment with ⛔ no completed FULL visit,
+   the `peerMesh` field is ABSENT (⛔ no variant) and `SignalsPanel` renders ⛔ no peer-mesh section; `SignalsPanel.tsx:269` and the typed specs
+   compile with the optional field.
+8. **AC8 — erasure** (PM17): erasing the deceased scrubs every SENSITIVE answer row of their claims (live and superseded; `WHERE
+   value_ciphertext IS NOT NULL`) to the sentinel and NULLs the date indexes — after Submit and after the claim closed; a non-sensitive row
+   keeps its codes; the rtbf completeness pin is TWENTY (the answers table) and the unit statement count 23.
 9. **AC9 — ⛔ no PII escapes, and the gates hold:** ⛔ no date, cause, illness or code in an event, log, alarm, audit row or `detail`; the
    decrypt fence covers each new domain module (`FENCED_FILES` bumped); the new route files are classified in the human-actor invariant;
-   the list GETs pass forced pagination; the friction-budget declaration and the microcopy scope cover the new mobile files.
+   the list GETs pass forced pagination; the friction-budget declaration and the microcopy scope cover the new mobile files; ⛔ no direct `writeAuditEntry` under
+   `apps/api/src/modules/claims/` (access-wrapper-invariants (3)); every new domain list read takes `clampLimit`.
 10. **AC10 — the records** (PM16 Rows, PM18, PM19, PM20): Rows 27 / 28 written at their reserved numbers with their conditions; the
     stale comments corrected; the deferred-work items; `pnpm ci:local` green.
 
@@ -620,45 +716,59 @@ member's terms:
   - [ ] 0.0 Branch: rebase / fast-forward the build branch onto the governance tip (or `main` once merged); verify this file reads v2.0.
   - [ ] 0.3 Put PM1–PM25 to BigDev (short option summaries — the 6.24b / 6.29 form); record each answer here.
   - [ ] 0.4 ONE author-commit (the next id after `-305`) recording PM1–PM25 as answered AND these author readings: the *"TWT:"* prefix
-        dropped (PM3); *"two or more calendar days"* (PM9); the exclusions of PM1; the open-ended inspector wording (PM25); the counsel flags
-        on `death_cause`'s illness options (PM23) — committed ALONE; stage in the scratchpad, try the insert first
+        dropped (PM3); `no_target:name_too_long` and the unconfirmed Devanagari `{#alphanumeric#}` question — a narrowing of `-303` Q1 A at
+        the edge (PM3; FYI in the confirm note; a Row 27 evidence line); *"two or more calendar days"* (PM9); the exclusions of PM1; the
+        ANSWER WINDOW incl. `state_trustee_approved` under a live R9 routing (PM8, PM5 (iv)); the texts WAIT for Row 27 (f) — ⛔ no ruled
+        question skipped (PM16, PM23); every ruled question in every version (PM23 — CF3 (a)); the untexted-ping 404 and the helpline gate
+        (PM11, PM12); the open-ended inspector wording and *"no FULL visit"* (PM25); PM24's state-gating coarseness; the `detail` grammar
+        living in 6.27c (PM4) — committed ALONE; stage in the scratchpad, try the insert first
         ([[project_decision_log_writes_user_inserted]]).
   - [ ] 0.5 epics.md entries `### Story 6.27a` … `6.27d` (after 6.26b; a dated source line, ⛔ never a merge fence); annotate Story 6.6's AC
-        (*"pinged via Story 5.1 dispatcher"* → the ruled text) and Story 6.10's AC2(c) — ⛔ never rewrites.
+        (*"pinged via Story 5.1 dispatcher"* → the ruled text) and Story 6.10's AC2(c) — ⛔ never rewrites. ⭐ 6.27a OWNS these annotations
+        (6.27c only checks them).
   - [ ] 0.6 Roster Rows 27 / 28 at their reserved numbers (PM16); a line on Row 26 (jobs-db-role) and Row 22's precedent.
   - [ ] 0.7 Sprint ledger line ([[project_sprint_status_ledger]], [[project_sprint_status_safe_prepend]]).
-- [ ] **Task 1 — the questionnaire engine (AC2).** `packages/domain/src/questionnaires/` (shape, validator, registry, `resolveLiveVersion`,
-      `COMPARABLE_QUESTION_KEYS`, the warning-key list, v1, v2) — pg-free; the copy keys en + hi in `packages/i18n` (server-resolved);
+- [ ] **Task 1 — the questionnaire engine (AC2).** FIRST extract `isRealCalendarDate` into `cycle-calendar/holiday-resolver.ts` (re-exported
+      from `nominee-determination-persist.ts`, the same identity — F38). Then `packages/domain/src/questionnaires/` (shape, validator,
+      registry, `resolveLiveVersion`, `COMPARABLE_QUESTION_KEYS`, the warning-key list, v1, v2) — pg-free, importing only import-free leaves;
+      `questionnaires/index.ts` added as an NW1 entry; the reachability test; the copy keys en + hi in `packages/i18n` (server-resolved);
       the contracts wire mirror + lockstep test; unit tests for every validator rule. ⛔ Never in `packages/contracts` (F30).
 - [ ] **Task 2 — the migration (AC3).** Next free number at build (`ls packages/domain/migrations | tail`); hand-authored; journal; applied to
       :5432 AND :5433 and proven from zero; Drizzle schema files (`schema/claim_peer_mesh_pings.ts`, NEW `schema/claim_peer_mesh_replies.ts`
-      incl. the answers table); RLS policy files + policy-regression specs (incl. the REVOKE leg and the erasure arm); ⛔ never regenerate an
+      incl. the answers table); RLS policy files + policy-regression specs (incl. the REVOKE leg, the ping finished-row trigger legs, the
+      0143-form erasure arm, `submitted_at` forward-only, `UNIQUE (pariwar_id, reply_id)`); the new field class
+      `PEER_MESH_ANSWER_FIELD_CLASS` (anonymize literal, `apps/api/src/context.ts`); ⛔ no `detail` grammar here (6.27c); ⛔ never regenerate an
       applied migration ([[project_live_db_test_gotchas]]).
-- [ ] **Task 3 — the writer (AC4).** A NEW domain module (`packages/domain/src/claim/peer-mesh-reply.ts`) with the save and submit paths
-      and `peerMeshReplyState`; `recordPeerMeshResponse` widened (window, CURRENT state, `actor` parameter) and called only on the first
-      `has_died` save; the lock order; the shared date-window helper (`addCalendarDays`, `isRealCalendarDate`); unit + integration tests
+- [ ] **Task 3 — the writer (AC4).** A NEW domain module (`packages/domain/src/claim/peer-mesh-reply.ts`) with the save and submit paths,
+      `peerMeshReplyState` and the event-response MAPPING (⛔ never in `questionnaires/`); the handler-side encrypt + index helper (⛔ no KMS
+      under a lock); `recordPeerMeshResponse` widened (the answer window incl. live R9, CURRENT state, `actor` defaulting to `'member'`, the
+      claim lock taken inside) and called only on the first `has_died` save; the inverted jobs test (F39); the supersede write order; the lock order; the shared date-window helper (`addCalendarDays`, `isRealCalendarDate`); unit + integration tests
       incl. every state in / out of the window and the two-connection ordering test (separate committed transactions —
       [[project_db_clock_ordering_tests_tie]]).
 - [ ] **Task 4 — the member API (AC5).** `claims.peer-request.member.routes.ts` + handlers + contracts + api-client factory
-      (`createMemberPeerRequestClient`); 404 / 409 rules; bounded `limit`; `perMemberKey`; ⛔ no Turnstile; the human-actor classification;
+      (`createMemberPeerRequestClient`); 404 / 409 rules incl. the untexted-ping 404 on every route; `clampLimit`; bounded `limit`; `perMemberKey`; ⛔ no Turnstile; the human-actor classification;
       route tests incl. the three indistinguishable 404s.
 - [ ] **Task 5 — the mobile screens (AC5).** Fill 6.30's shell `app/(peer-request)/peer-request.tsx`: the list, the generic renderer, the
       in-screen pages, the saved line, the closing note and the Thank-you, the not-openable state with `CallHelplineCTA`, ⛔ no call before
       the session; the home card on `app/(tabs)/index.tsx`; chrome strings in `lib/claim-i18n.ts` (en + hi, `$comment` marker); source-scan
       and pure-logic tests (the mobile harness renders ⛔ no screen); the friction-budget declaration; the microcopy scope.
-      ⚠ If 6.30's shell has ⛔ not landed, STOP and ask — ⛔ never create a second route file
+      ⚠ Needs 6.30's route shell MERGED (header ORDER). If it has ⛔ not landed, STOP and ask — ⛔ never create a second route file
       ([[feedback_circular_deferral_between_sibling_stories]]).
-- [ ] **Task 6 — the helpline (AC6).** `claims.peer-request.helpline.routes.ts` + handlers on 6.3's chain; the admin panel on the member-lookup
-      screen; tests incl. ⛔ no step-up ⇒ refused and the mixed reply.
+- [ ] **Task 6 — the helpline (AC6).** `claims.peer-request.helpline.routes.ts` + handlers on 6.3's chain, enrolled in `COVERAGE_SET`; the
+      list gated on `send_outcome = 'accepted'`; the admin panel on the member-lookup screen; tests incl. ⛔ no step-up ⇒ refused, the mixed
+      reply, and a NULL-outcome ping absent.
 - [ ] **Task 7 — the District Admin's view (AC7).** `assemblePeerAnswers` (actor-aware); the console contract (`PeerMeshTranscript` gains
       `outcome`, `windowExpiresAt`, per-ping `sendStatus`, `responderName`, the answers, the call-back mobile; `peerMesh` OPTIONAL);
-      `PeerMeshView`; the read-ceiling bump with an exact `toBe`; `claims-verifier-console.test.ts:247` stays; contracts vitest
+      `PeerMeshView` (⛔ no section rendered when `peerMesh` is absent); `SignalsPanel.tsx:269` and the typed specs
+      (`verifier-console-shape.spec.ts:425,488`) updated for the optional field (F41); the call-back reveal audited via `emitAuthAudit` (a new
+      `AuthAuditEventType` member); the read-ceiling bump with an exact `toBe`; `claims-verifier-console.test.ts:247` stays; contracts vitest
       ([[project_contracts_tests_outside_tsc]]).
-- [ ] **Task 8 — erasure, fences, gates (AC8, AC9).** `member/anonymize.ts` + the rtbf pin; `FENCED_FILES` bumps + the decrypt-fence arm for
+- [ ] **Task 8 — erasure, fences, gates (AC8, AC9).** `member/anonymize.ts` (the scrub `WHERE value_ciphertext IS NOT NULL`) + the rtbf pin
+      (TWENTY; the unit count 23; the no-claims leg 21); `FENCED_FILES` bumps + the decrypt-fence arm for
       `peer-mesh-reply.ts`; the human-actor classifications; forced pagination; ⛔ no PII in events / logs / audit (assertions).
 - [ ] **Task 9 — records and close (AC10).** 9.1 the stale comments (PM18); 9.2 deferred-work: 6.10's item updated, GI13's erasure item gains
       the two tables, PM19's item, PM20 on the zero-candidate item, the family-member item (PM1); 9.3 Rows 27 / 28 (if Task 0.6 did ⛔ not);
-      9.4 a pointer on row 6-22 for PM1's residual (for 6.27c); 9.5 this file's Change Log + File List; 9.6 `pnpm ci:local` green — run it,
+      9.4 a pointer on row 6-22 for PM1's residual (6.27a OWNS it; 6.27c only checks it); 9.5 this file's Change Log + File List; 9.6 `pnpm ci:local` green — run it,
       paste the summary, ⛔ never claim it.
 
 ## Dev Notes (shared traps; each part adds its own)
@@ -678,20 +788,24 @@ member's terms:
 6. **Both warning readers or neither** (6.27b) — the bulk reader is a separate statement; the parity test is the guard.
 7. **⛔ Never inherit a neighbour key** (`-261` C3).
 8. **⛔ Never touch the selection** (`peer-mesh-read.ts`; `member/moderation/index.ts:22`).
-9. **⛔ No KMS under a lock; ⛔ no number in a log** (6.27c).
+9. **⛔ No KMS under a lock — anywhere in 6.27** (the save path too: the handler encrypts and indexes FIRST, the writer takes the locks);
+   ⛔ no number in a log.
 10. **The erased sentinel is a "mobile"** — ALWAYS `normalizeMobile`; ⛔ never `resolveSmsTarget`.
 11. **A RAW gateway code in `detail` breaks the CHECK after a successful send** (6.29 Trap 4) — sanitise through the ONE builder.
 12. **`clock_timestamp()` for `saved_at` / `noted_at`**, ⛔ never `now()` ([[project_db_clock_ordering_tests_tie]]).
-13. **Locks in ONE order — claim, then ping, then reply** (Invariant 9; F31). A ping-first lock under PM8's window collides on
-    `eventVersion`, deadlocks, or hides a late key from the queue.
+13. **Locks in ONE order — claim, then ping, then reply** (Invariant 9; F31) — `recordPeerMeshResponse` takes the claim lock ITSELF. A
+    ping-first lock under PM8's window collides on `eventVersion`, deadlocks, or hides a late key from the queue.
 14. **Markdown emphasis closes a JSDoc** — grep `\*\*/` after every doc-block edit ([[project_markdown_emphasis_closes_jsdoc]]).
 15. **Contracts tests are outside tsc** — run vitest ([[project_contracts_tests_outside_tsc]]).
 16. **Prettier is ⛔ not enforced** — hand-format ([[project_prettier_not_enforced]]).
 17. **Leave room for row 6-31's reminder — ⛔ never build it here.** It reads `peerMeshReplyState` and the ping's send record; ⛔ never give
     the text's finished-row trigger a rule that would refuse a SEPARATE reminder record; it needs its own send path (the WA registry is
-    keyed by `AlertCategory`, and `dispatch()`'s WA-undelivered SMS fallback would send a SECOND text).
+    keyed by `AlertCategory`, and `dispatch()`'s WA-undelivered SMS fallback would send a SECOND text); and it goes ONLY within PM8's answer
+    window (`-305` §2 item 4).
 18. **⛔ Never put the engine in `@twt/contracts`** (F30) — a domain → contracts import is a workspace cycle.
 19. **⛔ Never copy the `-303` routing block's Hindi** — it says "two" (`दो`); the text says "a few" (`-304` Q6 A).
+20. **⛔ Never import a pg / event module into `questionnaires/`** (F38) — `isRealCalendarDate` from `nominee-determination-persist.ts`
+    alone breaks NW1 and closes a runtime cycle the typecheck cannot see.
 
 ### Reuse map (⛔ never reinvent)
 | Need | Reuse |
@@ -699,8 +813,9 @@ member's terms:
 | member route shape | `helpdesk/member-routes.ts:50` (`perMemberKey`), `member-handlers.ts:261-273` (404 rule), `scope-tx.ts:34` |
 | helpline write | `claims.helpline.routes.ts:88-91,103` chain |
 | date index | `deathDateBlindIndex` (`ground-inspection-crypto.ts:63-65`), `DEATH_DATE_INDEX_FIELD_CLASS` |
-| calendar arithmetic | `addCalendarDays` (`cycle-calendar/holiday-resolver.ts:187`), `isRealCalendarDate` (`nominee-determination-persist.ts:71`) |
-| erasure arm | GI13 (`member/anonymize.ts:255-292`) |
+| calendar arithmetic | `addCalendarDays` (`cycle-calendar/holiday-resolver.ts:187`), `isRealCalendarDate` (moved there by Task 1 — today `nominee-determination-persist.ts:71`) |
+| erasure arm | 0143's trigger form + 0149's header (F37); the scrub statement's shape: GI13 (`member/anonymize.ts:255-292`, `WHERE … IS NOT NULL`) |
+| staff read audit | `emitAuthAudit` (`claims.verifier-console.handlers.ts:1081`) + the `AuthAuditEventType` union |
 | member's name | `notifications.resolveMemberFacingDeceasedName` (`notifications/pool-identity.ts:141`) |
 | member's mobile | `waOptIn.getMemberMobileCiphertext` → `decryptMobile` → `normalizeMobile` |
 | warning kind threading (6.27b) | 6.26b's commit `bdb01014` (63 files) |
@@ -708,7 +823,8 @@ member's terms:
 | injected post-commit enqueue (6.27c) | `claim-peer-mesh.ts:346-356` + `boot.ts:483-505` |
 
 ### Testing standards
-- Unit (vitest): every validator rule; v1 / v2 registration; `resolveLiveVersion`; the counsel skip; the window helper across month / year /
+- Unit (vitest): every validator rule (the seven ruled keys; `warning` on two; `approvedBy`; ⛔ no alcohol; a new health question's flag); the
+  reachability test; v1 / v2 registration; `resolveLiveVersion`; the window helper across month / year /
   leap boundaries (±1 inside, ±2 outside); the response mapping; the contracts lockstep.
 - Integration (live DB, :5433): the migration from zero; RLS policy regressions incl. the REVOKE leg and the erasure arm; the writer in every
   state; the two-connection ordering test; erasure after Submit and after closure.
@@ -771,6 +887,7 @@ on the story branch ([[feedback_commit_on_story_branch]]).
 ## Change Log
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-10 | 2.1 | Round-2 validate (three reviewers; ⛔ no BLOCKER): the `detail` grammar + builder MOVED to 6.27c (6.27a ships the columns + structural CHECKs, the CAS finalise and transient note now recorded in PM4); the texts WAIT for Row 27 (f) — ⛔ no ruled question skipped; the validator requires EVERY ruled key; the answer window adds `state_trustee_approved` under a live R9 routing (`-283` A1 precedent); `name_too_long` / Devanagari recorded as an author reading + Row 27 evidence + an FYI; every member route 404s an untexted ping and the helpline list is gated; Task 5 needs 6.30's shell merged; the `?c=` split stated once; `isRealCalendarDate` extracted into the import-free leaf, the mapping in `peer-mesh-reply.ts`, an NW1 entry and a reachability test; F37 corrected (0143 + 0149; the 0143-form arm; `WHERE value_ciphertext IS NOT NULL`); encrypt / index in the handler (⛔ no KMS under a lock — story-wide); the inverted jobs test, `actor` default, `emitAuthAudit`, `clampLimit`, the optional field's tsc fallout; ① / ② wording and source; a SEPARATE showings table; *"no FULL visit"*; PM24's coarseness and escalation named; F20, F1 lines; rtbf counts; `locale_source`; send-status words; `submitted_at` forward-only; `UNIQUE (pariwar_id, reply_id)`; *"I don't know the date"* storage; a new field class; F39–F41; Trap 20. |
 | 2026-10-10 | 2.0 | ⭐ After the fresh-context validate (four read-only reviewers) and `2026-10-10-305`: SPLIT into 6.27a (this file, the shared record) / 6.27b / 6.27c / 6.27d. The engine moves to a pure DOMAIN module (contracts cannot be imported by domain); the validator (⛔ not only a test) enforces the ruled questions, warning keys, `approvedBy`, ⛔ no alcohol, the counsel flags (per question / option; Row 27 (f)); v2 CURRENT; locks claim → ping → reply (the race was ⛔ not benign); warning keys per LIVE `answer_id`; `pariwar_id` on the answers table; indexes `text[]`; the erasure arm; the REVOKE before the column GRANT; texts while an answer can still be taken (PM5 (iv) — `-305` §2 item 4); the Pariwar's default language (PM22 — the preference table moved to row 6-35); the member surface DARK until a text is accepted, ⛔ no Turnstile, 404 / 409 split, server-resolved words, in-screen pages in 6.30's shell; the helpline's same save / submit shape; F33's real approver keys (Pariwar Admins as Trustee-Lite, ⛔ not State Trustees); PM25: the inspector asks the family OPEN-ENDED (`-305` §2 item 3), ① / ② only (③ / ④ owed by 6-32), the console field OPTIONAL, the kinds filtered (6.27b); Rows 27 / 28 reserved, Row 27 (c) Closed by `-303`, (f) health counsel, (g) CF1–CF3; stale text from v1.0–v1.9 removed (Invariants 5 / 7, AC1, Task 0, "Re-plan by answer" marked historical). |
 | 2026-10-10 | 1.9 | The Panel RULED the follow-up note (`-304`): Q3–Q6 A; Q7 / Q8 the Panel's own chain. v2 as ruled; versions per Pariwar / all. |
 | 2026-10-10 | 1.8 | The engine shared with the inspector's questionnaire; rows 6-32 / 6-33; Panel Q8. |

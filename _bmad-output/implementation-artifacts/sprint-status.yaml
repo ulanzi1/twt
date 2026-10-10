@@ -27,6 +27,18 @@
 # own ⇒ `2026-10-10-316` erratum (E1 — the EAS project id one literal for every variant). Round 9: 0 BLOCKER / 0 HIGH — the rounds END ⇒
 # `2026-10-10-317` reading (E1's reason; three residuals accepted). Decision numbers: `-313` / `-314` are 6.34's (unmerged) — they interleave
 # on merge. ⛔ No row moves — `6-30` stays `ready-for-dev`.)
+# last_updated: 2026-10-10aa (⭐ **STORY 6.28 — CREATED via `bmad-create-story 6.28` ⇒ `backlog → ready-for-dev`; ⛔ NO CODE until the Panel rules
+# and the author-commit lands (`-294` §3).** Pinned `34b9bab6`. Three read-only research passes (the six approval writers + their locks;
+# the reachability of two live claims for one death; the money path). FOUND: ⛔ nothing per death in the gate, the DB, the commit or the
+# pool spawn — one pool per committed claim, members pay the claim's accounts directly ⇒ a second approval takes a share from the OTHER
+# families with ⛔ no way back; the SIMPLEST path needs ⛔ no refusal (a filing 31+ days after a still-open claim, or "treat as separate");
+# RF15's per-death key is already taken by every final approval ⇒ the guard needs ⛔ no new lock. Panel routing note
+# `trustee-panel-routing-note-2026-10-10-6-28-one-payment-per-death.md` WRITTEN, ⛔ NOT SENT — Q1 which claim is paid (A: the first finally
+# approved; others closed; a warning while another is open), Q2 what the other family is owed (A: ⛔ no second collection), Q3 a text
+# (A: ⛔ none). OP1–OP12 PROPOSED for A / A / A with each alternative's delta. `epics.md` gains `### Story 6.28` (`-294` Consequence 3).
+# ⚠ The working tree is SHARED with the 6.34 session: after this session's branch switch, two 6.34 commits landed on `story/6-28-…`
+# (`82cde9a3`, and `6dff53f5` — which also swallowed this entry); `story/6-34-…` carries `82cde9a3` and `6dff53f5`'s clean twin `e67c069f`
+# ⇒ `story/6-28-…` was REBUILT from `34b9bab6` (BigDev: *"yes"*). Suffix `aa` follows 6.34's `w`–`z` on its branch. ⛔ No other row moves.)
 # last_updated: 2026-10-10v (⭐ **6.30's AL1–AL16 COMMITTED — `2026-10-10-312` (`21e89ed6`, alone)**, all as written (BigDev: *"… - OK"*; AL13 — the
 # inert `twt://` push links left untouched — explained, then *"ok"*). ⇒ BOTH 6.30 and 6.27a are now buildable: 6.30 first (its route shell
 # precedes 6.27a's Task 5; 6.30 precedes 6.27c). The production app identity stays BigDev's decision (Row 29 (a)). ⛔ No row moves.)
@@ -19706,7 +19718,10 @@ development_status:
   # ⭐ 2026-10-08 ADDED by `2026-10-08-294` §3 (6.24a code review round 2): ⛔ nothing per-death stops a second approval (`-292` FOUND it);
   # 6.24a's RF6 closure is the only control and three paths pass it (`-294` §2 (a)–(c)). ⭐ BEFORE any code: the Panel question — which
   # family is paid when two claims for one death both qualify, and what the other is owed — then the guard. ⛔ No story file yet.
-  6-28-one-payment-per-death-second-approval-guard: backlog
+  # ⭐ 2026-10-10 STORY FILE WRITTEN (`bmad-create-story 6.28`): the Panel note `2026-10-10-6-28-one-payment-per-death` is WRITTEN, ⛔ not
+  # sent; ⛔ no code until the Panel rules Q1–Q3 and the author-commit (OP1–OP12) is committed alone. ⚠ The simplest two-payment path
+  # needs ⛔ no refusal (a filing 31+ days after a still-open claim, or "treat as separate") — the question covers every second claim.
+  6-28-one-payment-per-death-second-approval-guard: ready-for-dev
   # ⭐ 2026-10-09 ADDED by `bmad-create-story 6.29` (BigDev): 0151 PARITY with 6.25's hold / give-up anchor / DB backstops (`-300` /
   # `-301` Consequence 3), adapted to SMS — RN1–RN10 PROPOSED, author-commit owed at Task 0.3. The jobs-login gap the key names is SYSTEMIC
   # and scoped OUT (deferred-work 2026-10-09; RN9 proposes roster Row 26). ⛔ No epics.md entry yet (owed at Task 0.4).

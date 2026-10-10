@@ -3247,6 +3247,27 @@ logged, and the address is decrypted only after the claiming commit; a missing c
 lost send); a signed-out admin who follows the link reaches the list after signing in. The system still refuses ⛔ nothing — the email
 is a notification, ⛔ never an approval step.
 
+### Story 6.28: One Payment per Death — Once a Claim for a Death Is Finally Approved, ⛔ No Other Claim for That Death Can Be, and Every Other Is Closed `[SURFACE]`
+
+> ⚠ **Added 2026-10-10 (`bmad-create-story 6.28`)** — the row `6-28-one-payment-per-death-second-approval-guard` was created by
+> [`-294`](../../.decision-log.md#decision-2026-10-08-294) §3 (6.24a code review round 2), whose Consequence 3 places this entry here
+> *"when `bmad-create-story` runs"*. ⏳ **Awaiting the Panel:** Q1–Q3 of the routing note
+> `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-10-6-28-one-payment-per-death.md` (⛔ not yet sent) — the ACs below
+> are written for its RECOMMENDED answers and are re-written at the story's Task 0.6 for the ruling. Full ACs:
+> `_bmad-output/implementation-artifacts/6-28-one-payment-per-death-second-approval-guard.md`. ⛔ No code before the ruling and the
+> author-commit (`-294` §3). ⛔ Never a merge fence.
+
+As the Trust and its members, I want a member's death to be paid once — a second claim for the same death never finally approved once
+one is, and closed rather than left open — so that the members never pay twice for one death out of what other bereaved families
+receive, while ⛔ no family is refused or accused by the system.
+
+**Acceptance Criteria (in brief):** at every final approval, a claim is ⛔ never approved while another claim of the same death is
+finally approved (409 `<prefix>.death_already_finally_approved`; two final approvals of one death serialise on the per-death key the gate
+already takes); the cycle commit re-checks it; every other open claim of a paid death is `closed` (⛔ never refused, ⛔ never appealable)
+— a refused claim keeps its appeal and is closed only if the appeal reverses it; every approver sees an `other_claim_for_death` warning
+while another claim of the death is open (FQ12's reason and note; 6.23b's wait). `-262` FQ5 is ⛔ not changed; ⛔ no text is added
+unless the Panel rules Q3 B.
+
 ### Story 6.29: A Config Hold Never Burns a Suspicion Text — 0151 Gains 6.25's Hold, Give-Up Anchor and DB Backstops, Adapted to SMS `[PRIMITIVE]`
 
 > ⚠ **Added 2026-10-10 (Story 6.29, Task 0.4)** — the row `6-29-suspicion-notice-parity-and-jobs-login-grants` was created by

@@ -21,10 +21,42 @@
 
 ---
 
-> ## ⏳ AWAITING PANEL RULING
+> ## ✅ PANEL RULED — 2026-10-10 — recorded as `2026-10-10-303`
 >
-> ⛔ **Nothing is recorded here yet.** When the Panel rules, transcribe it into this block **and** into `.decision-log.md` as a new
-> decision id. ⭐ Everything below is then kept **unedited** as the question **as it was put** ([[feedback_supersede_never_reinterpret]]).
+> **Ruled by Dhiraj Rahul + Kalpana Bharti, relayed by BigDev — verbatim:**
+> *"by DR and KB"* · *"Q1. A - Send Text in Hindi to those whose preferred langauge is Hindi and in English to those whose preferred
+> language in English."* · *"Q2. A"* · *"We want to to which all questions will be asked from member"*
+>
+> ⭐ Our suggestion **taken on both**, Q1 with a rider. **Q1 A:** each of the five is texted, naming the member, with the link and the
+> helpline, plus one WhatsApp reminder at 48 hours to those who have ⛔ not answered and chose WhatsApp (option A as put). **Rider:** the
+> text is in **Hindi** for a member whose preferred language is Hindi and in **English** for one whose preferred language is English.
+> **Q2 A:** a neighbour's late warning makes the final approval wait for the District Admin's reason and note — ⛔ never a refusal.
+> ⚠ **Our reading of the rider, ⛔ not ratified** (`-303`): the system stores ⛔ no preferred language today, so a member's preferred
+> language is the language they chose in the TWT app (recorded when they choose it); for a member who never used the app, the Pariwar's
+> default language (Hindi for Bihar). If the Panel means something else, it says so.
+>
+> **The Panel's question — "which questions will be asked" — the answer, prepared 2026-10-10 for BigDev to relay:**
+>
+> **The text** (and the WhatsApp reminder, the same words), in the member's preferred language:
+> · en — *"We have been told that [member] has died. If you knew them, please answer two short questions: [link] — or call the helpline [number]."*
+> · hi — *"हमें बताया गया है कि [सदस्य] का निधन हो गया है। यदि आप उन्हें जानते थे, तो कृपया दो छोटे प्रश्नों के उत्तर दें: [लिंक] — या हेल्पलाइन [नंबर] पर कॉल करें।"*
+>
+> **The app screen — exactly two questions** (in the language the app is set to; the screen shows ⛔ nothing else — ⛔ no claim, ⛔ no
+> family, ⛔ no amount):
+> 1. en *"Has [member] died?"* — *Yes, they have died* · *No, they have not died* · *I am not sure* · *I did not know them*
+>    hi *"क्या [सदस्य] का निधन हो गया है?"* — *हाँ, उनका निधन हो गया है* · *नहीं, उनका निधन नहीं हुआ है* · *मुझे पक्का नहीं पता* · *मैं उन्हें नहीं जानता/जानती था*
+> 2. (only after *"Yes, they have died"*) en *"If you know, on what date did they die?"* — a date · *I don't know the date*
+>    hi *"यदि आपको पता है, तो उनका निधन किस तारीख को हुआ?"* — तारीख · *मुझे तारीख नहीं पता*
+>
+> Then: *"Thank you. Your answer has been sent to the Trust."* / *"धन्यवाद। आपका उत्तर ट्रस्ट को भेज दिया गया है।"* An answer is final.
+> The helpline operator asks the same two questions when a neighbour calls. ⚠ *"They have not died"* and a date more than a day from
+> the certificate's are the two warnings (FQ10); *"not sure"* and *"I did not know them"* are ⛔ not warnings. ⚠ The Hindi is agent-written
+> and is reviewed by a person before go-live.
+>
+> **What this ruling does NOT cover** (full list in `-303`): counsel's basis; Meta's approval of the WhatsApp wording; the reviewed Hindi;
+> the DLT templates and URL whitelisting; what an approver must weigh.
+>
+> ⭐ Everything **below this block is kept UNEDITED** — it is the question as it was put.
 
 ---
 

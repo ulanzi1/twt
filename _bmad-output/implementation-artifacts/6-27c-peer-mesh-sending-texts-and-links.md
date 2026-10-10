@@ -140,6 +140,7 @@ RB4 / RB5 / RB11 / RB12 / RB16 · `-302` RN2–RN8 · `-255` F7 (the cost line).
 ## Change Log
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-10 | 2.8 | `2026-10-10-311`: PM1 — a skipped neighbour is REPLACED at send time from the same group (6.27c builds the send-time replacement; row 6-36 the filter and ranking); PM2's in-app alert is 6.27a's. |
 | 2026-10-10 | 2.7 | `2026-10-10-310`: CF1 and CF4 now ratified. |
 | 2026-10-10 | 2.6 | `2026-10-10-306`: predecessor row 6-36 (school-wise selection) added. |
 | 2026-10-10 | 2.5 | Round 6: header qualifier ("no texted neighbour"); AC2b's alarm wording (one per sweep run + the child's held return). |

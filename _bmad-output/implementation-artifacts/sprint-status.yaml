@@ -1,3 +1,8 @@
+# last_updated: 2026-10-10u (⭐ **6.27's PM1–PM25 COMMITTED — `2026-10-10-311` (`082ab743`, alone).** BigDev answered PM by PM: all as written except PM1 —
+# *"you should replace"* (a skipped neighbour is replaced by the next eligible person in the SAME group, deterministically; ineligible members
+# filtered at selection by row 6-36) — and PM2 — *"send through alert as well"* → *"In-app alert only"* (the home card + the notice strip; ⛔ no
+# push, ⛔ no day-one WhatsApp, ⛔ no second SMS); PM16 / PM25 accepted as recommended. ⇒ 6.27a may now be built (its Task 5 still needs 6.30's
+# shell merged). 6.30's AL1–AL16 — BigDev answers separately. ⛔ No row moves.)
 # last_updated: 2026-10-10t (⭐⭐ **THE PANEL CONFIRMED ALL FIVE — `2026-10-10-310` (`118f6913`):** *"by DR and KB - CF1 A, CF2 yes, CF3 (a)–(d) yes, CF4 A,
 # CF5 A. App is not live, so CF1 may not be relevant."* ⇒ texts in the Pariwar's language until the in-app switch (row 6-35 — if it lands before
 # go-live the interim ⛔ never applies); the corrected who-sees list; the four chain limits; workplace colleagues → people the member named →
@@ -19703,6 +19708,8 @@ development_status:
   # ⭐ 2026-10-10 WIDENED by `2026-10-10-307` (key kept): the WORKPLACE (school or office) from a UDISE+-imported dropdown + a staff office
   # list + a "not listed" review; the order WORKPLACE colleagues → "people who know me" (contact picker, workplace suggestions, acceptance,
   # prompts, Pariwar Admin campaign) → ⛔ no one. ⚠ Large — its own create-story decides any split.
+  # ⭐ 2026-10-10 (`2026-10-10-311` PM1): 6-36 also FILTERS ineligible members (⛔ not active; a claim filed for their own death; ⛔ no sendable
+  # mobile) when the people are chosen, and records each group's RANKING so 6.27c can replace a send-time skip from the same group.
   6-36-peer-mesh-school-wise-selection: backlog
   epic-6-retrospective: done
 

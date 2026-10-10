@@ -25,7 +25,7 @@ Status: backlog
 > sends that text — once ever per neighbour, through 6.24b's shared DLT send core, with 6.29's hold / park / give-up; ⛔ never at night;
 > while the claim can still take an answer (`-305` §2 item 4); in the Pariwar's default language until row 6-35 lets members choose
 > (`-305` §2 item 2 — CF1). The link opens 6.27a's questionnaire through row 6-30's plumbing. ⚠ Go-live waits on Row 27 (counsel, the
-> privacy policy, the link live, the health-question basis — the TEXTS themselves wait for it, ⛔ no ruled question is skipped — CF1–CF3).
+> privacy policy, the link live, the health-question basis — the TEXTS themselves wait for it, ⛔ no texted neighbour sees a ruled question skipped — CF1–CF3).
 
 ## Story
 
@@ -67,7 +67,7 @@ RB4 / RB5 / RB11 / RB12 / RB16 · `-302` RN2–RN8 · `-255` F7 (the cost line).
 2b. **AC2b — ⛔ no text while a question of the live version is `'pending'`** (6.27a PM23 (a), rounds 4–5): a `'pending'` question in
    `resolveLiveVersion('peer_mesh', pariwarId)` is a config GAP checked by BOTH halves of the RB12 shape — the SWEEP (once per Pariwar per
    run ⇒ the scope HELD) AND the CHILD's begin path (the race guard — a hook-enqueued child ⇒ `held_config`, ⛔ no ping begun); ⛔ no slot
-   used up; ONE ids-only alarm `config:counsel_basis_pending`; a stalled `attempting` row in that scope is PARKED as any held scope (AC4);
+   used up; ONE ids-only alarm `config:counsel_basis_pending` per sweep run, and the child's held return alarms ids-only (as the suspicion-notice child does); a stalled `attempting` row in that scope is PARKED as any held scope (AC4);
    tests: a hook-enqueued child for a pending Pariwar begins ⛔ no ping; the sweep holds the scope; once v2's basis is
    recorded (Row 27 (f)), every request still due is sent. ⇒ a neighbour is ⛔ never texted into a questionnaire with a ruled question hidden.
 3. **AC3 — ⛔ no text once the claim can no longer take an answer:** a claim in `state_trustee_approved` WITHOUT a live R9 routing, or
@@ -135,6 +135,7 @@ RB4 / RB5 / RB11 / RB12 / RB16 · `-302` RN2–RN8 · `-255` F7 (the cost line).
 ## Change Log
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-10 | 2.5 | Round 6: header qualifier ("no texted neighbour"); AC2b's alarm wording (one per sweep run + the child's held return). |
 | 2026-10-10 | 2.4 | Round 5: AC2b's pending-question gap is checked by BOTH the sweep and the child's begin path (the RB12 race guard — the hook-enqueued child is the main send path); AC4 lists it among held configs (parked as any held scope); Task 3 names `answerWindowSql` for the sweep. |
 | 2026-10-10 | 2.3 | Round 4: AC2b — the sweep HOLDS while any question of the live questionnaire version is `'pending'` (6.27a PM23 (a)), so the ruled health questions are ⛔ never hidden from a texted neighbour; Task 3 carries it. |
 | 2026-10-10 | 2.2 | Round-3 validate: the answer window is 6.27a's ONE extracted predicate `isClaimInAnswerWindow` (⛔ never re-composed); a skip at the locked re-check is the begin CAS from `send_outcome IS NULL` writing that outcome with `attempt_count = 1` (6.27a PM4). |

@@ -52,7 +52,8 @@ closing note (*"never the family"*). **Policy meaning:** ⛔ no predicate (6.27a
 
 1. **AC1 — ⛔ no code before 6.27a's shared Task 0.4 author-commit** and 6.27a `done`.
 2. **AC2 — nothing before completing:** an inspector holding an un-completed assignment, with ⛔ no completed FULL visit on the claim (a
-   `certificate_check` alone does ⛔ not count), sees ⛔ no answers, ⛔ no counts and ⛔ no "hidden" line on the inspection screen (6.27a's console rule and 6.27b's kinds filter cover the console).
+   `certificate_check` alone does ⛔ not count), sees ⛔ no answers, ⛔ no counts and ⛔ no "hidden" line on the inspection screen (6.27a's console rule covers the console; once 6.27b lands, its kinds filter covers the warning lines too — this AC is
+   ⛔ never judged on 6.27b's code).
 3. **AC3 — the comparison at completion** (① and ② only): `completeGroundInspection`'s result carries the differing question KEYS (⛔ no
    values) computed against the answers saved by then; ② runs ONLY when `death_date_source = 'family_statement'`; ±1 day is ⛔ not a difference, ±2 is
    (month / year / leap boundaries); ⛔ no decrypt in the comparison (fence); the comparison ⛔ never reads `member_medical_disclosures`
@@ -65,8 +66,10 @@ closing note (*"never the family"*). **Policy meaning:** ⛔ no predicate (6.27a
    neighbour's answer differs."* — ⛔ no name, ⛔ no count, ⛔ no neighbour's value in the response (a test), and one note box per question.
 5. **AC5 — the notes and the showing:** a note is written once per question while the claim is in the answer window; staff see it marked
    *"after the discrepancy was shown"*; the showing record holds keys and `shown_at` only and `completed_at` < `shown_at` (an ordering test
-   in separate committed transactions); the completed inspection record is ⛔ never changed; the inspector can re-read their OWN completed
-   assignment's recorded showing (a lost completion response).
+   in separate committed transactions); the completed inspection record is ⛔ never changed; the showing write is IDEMPOTENT (`UNIQUE` per
+   assignment); the inspector can re-read their OWN completed assignment's showing, and if the row is ABSENT (the post-commit write failed)
+   the re-read RECOMPUTES it against the answers live AS OF `completed_at` (`saved_at ≤ completed_at AND (superseded_at IS NULL OR
+   superseded_at > completed_at)`) and writes it — a test for each (a lost completion response; a failed showing write).
 6. **AC6 — late answers:** an answer saved after completion ⛔ never reaches the inspector's screen; it reaches the District Admin's console.
 7. **AC7 — erasure and gates:** the notes table's erasure arm and the rtbf pin; RLS + policy spec; the handler contract's new field
    (`claims.ground-inspection.handlers.ts:640-681` returns `{groundInspectionId, status, photoCount}` today — it gains the result); `pnpm
@@ -75,7 +78,7 @@ closing note (*"never the family"*). **Policy meaning:** ⛔ no predicate (6.27a
 ## Tasks / Subtasks
 
 - [ ] **Task 1 — the migration (AC5, AC7).** Next free number at build: `claim_ground_inspection_discrepancy_notes` (Tier-1 note under a
-      field class of its own) and `claim_ground_inspection_discrepancy_showings` (a SEPARATE table — keys + `shown_at clock_timestamp()`);
+      field class of its own) and `claim_ground_inspection_discrepancy_showings` (a SEPARATE table — keys + `shown_at clock_timestamp()`, `UNIQUE` per assignment);
       RLS + per-command policies, column-level grants, the notes table's erasure arm in 0143's form (F37 — 0143 + 0149; the scrub statement's
       shape is GI13's `WHERE … IS NOT NULL`); a policy spec; applied to :5432 AND :5433.
 - [ ] **Task 2 — the comparison (AC3).** A pure comparator over 6.27a's `COMPARABLE_QUESTION_KEYS` (⛔ never a second list) invoked inside
@@ -84,7 +87,7 @@ closing note (*"never the family"*). **Policy meaning:** ⛔ no predicate (6.27a
       the handler's decrypt of the family's date for display; ① and ② only;
       a unit test proving ③ / ④ are skipped (⛔ never a difference) while the family has ⛔ no comparable answer.
 - [ ] **Task 3 — the screens (AC4, AC5).** `apps/admin/src/modules/ground-inspection/GroundInspectionPage.tsx`: the two completion screens,
-      the note boxes, the re-read of the own assignment's showing; English (the admin console); copy in the module's `i18n-en.ts`.
+      the note boxes, the re-read of the own assignment's showing (with the as-of-`completed_at` recompute when it is absent); English (the admin console); copy in the module's `i18n-en.ts`.
 - [ ] **Task 4 — the routes and contract (AC5, AC7).** The completion handler's result; the notes write route (on the inspection module's
       existing chain); the human-actor classification; tests.
 - [ ] **Task 5 — close.** Fences, rtbf, `pnpm ci:local`; Change Log + File List; a deferred-work item for ③ / ④'s comparable-code design
@@ -109,5 +112,6 @@ closing note (*"never the family"*). **Policy meaning:** ⛔ no predicate (6.27a
 ## Change Log
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-10 | 2.2 | Round-3 validate: AC2 ⛔ never judged on 6.27b's code (its kinds filter applies once b lands); the showing write IDEMPOTENT (`UNIQUE` per assignment) with an as-of-`completed_at` RECOMPUTE when absent — "never lost for good" now holds. |
 | 2026-10-10 | 2.1 | Round-2 validate: ①'s wording (*"The family reported that the member has died …"* — the family has ⛔ no `has_died` field); ② gated on `death_date_source = 'family_statement'` (a source value); the family's date shown is the inspector's own entry, decrypted in the handler after commit; the showing record is a SEPARATE table written in its own transaction after the completion commit (the ordering test is buildable); the erasure arm in 0143's form (F37 corrected); *"no FULL visit"* for the blind-first rule. |
 | 2026-10-10 | 1.0 | Cut from Story 6.27 v2.0 (`2026-10-10-305` §2 items 1 and 3): PM25 (a) — ① / ② only, open-ended re-asking, the notes and showing record. |

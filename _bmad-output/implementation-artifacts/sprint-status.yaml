@@ -1,3 +1,28 @@
+# last_updated: 2026-10-10f (⭐ **ROW `6-31-peer-mesh-whatsapp-reminder-at-48-hours` ADDED (`backlog`) — BigDev, in session: *"48 hours,
+# separate story 6-31, go ahead"*.** ONE WhatsApp reminder, same words as 6.27's text, 48 h after selection, to those of the five who
+# have ⛔ not answered AND have opted in to WhatsApp (Story 5.4; the Pariwar's WA switch on) — 48 h so an answer still counts in FQ10's
+# 72-hour tally; ⛔ no reminder once the District Admin has decided (6.27 PM5 (iv)). ⚠ Its own record + direct WA send — ⛔ never
+# `dispatch()` (keyed by the frozen `AlertCategory`; its WA-undelivered SMS fallback would send a SECOND text); Meta must approve the
+# template (a new go-live row; Meta may refuse it as "utility"). Put to the Panel INSIDE 6.27's Q1 (option A *"with the reminder"*;
+# the note updated BEFORE sending, disclosed in it). 6.27 → v1.2 (FIVE FACTS #1 note + Trap 17 — leave room, ⛔ never build). ⛔ No
+# story file for 6-31 yet; ⛔ no epics.md entry yet. ⛔ No other row moves.)
+# last_updated: 2026-10-10e (⭐ **ROW `6-30-app-links-open-the-app-from-a-text` ADDED (`backlog`) — BigDev, in session: the neighbours' text
+# should open the questions directly — *"separate story, update 6.27 and the panel note"*.** Today ⛔ no link can open the app (the
+# app still carries the P0 prototype identity `twtp05` / `org.teacherswelfaretrust.p0prototype`, reads ⛔ no incoming URL, ⛔ no
+# App Links / Universal Links, ⛔ no verification file). 6-30 = the plumbing: the app's real identity, Android App Links + iOS
+# Universal Links, the two hosted verification files, a plain fallback page, the operator's URL whitelisting, `app_links.base_url`.
+# The Trust's domain is expected the week of 2026-10-12 — ONE config value, so ⛔ nothing waits on it but the hosted files and the
+# whitelisting. Story 6.27 → v1.1: PM21 (the link's code / path / route / resolver; an unset base URL HOLDS the sweep, ⛔ never a
+# broken link) and Row 27 (e). The routing note's quoted texts updated BEFORE sending (disclosed in it). ⛔ No story file for 6-30
+# yet (`bmad-create-story 6.30`); ⛔ no epics.md entry yet. ⛔ No other row moves.)
+# last_updated: 2026-10-10d (⭐ **STORY 6.27 — CREATED via `bmad-create-story 6.27` ⇒ `backlog → ready-for-dev`.** Pinned `5946e411`;
+# four read-only research passes (6.6/6.10 peer-mesh substrate; 6.23a/b + 6.26b warnings; the SMS send core + member app + API;
+# the governance trail). FOUND: the app registers ⛔ no push token and has ⛔ no inbox ⇒ the five can be reached only by a TEXT, which
+# members ⛔ never get today (architecture §3.4; F7 covers a claim's family only). ⇒ A Panel routing note WRITTEN, ⛔ not yet put:
+# `trustee-panel-routing-note-2026-10-10-6-27-asking-the-neighbours.md` — Q1 (text the five, naming the member — our reading A) and
+# Q2 (`-279` A6: a late neighbour answer — does the final approval wait? our reading A). PM1–PM20 PROPOSED (author-commit owed at
+# Task 0.4). ⛔ NO CODE until the ruling is transcribed and the author-commit is committed alone. ⚠ A 6.27a / 6.27b split is
+# proposed (BigDev's call). ⛔ No other row moves.)
 # last_updated: 2026-10-10c (⭐ **STORY 6.29 — CODE REVIEW ROUND 2 (narrow — round 1's 5-file, 162-line fix diff; three layers in
 # PARALLEL, read-only) ⇒ stays `done`.** Triage: 0 decision-needed, 4 patch, 0 defer, 2 dismissed. Acceptance Auditor independently
 # re-verified all 5 round-1 fixes against both live DBs and the real write paths — all genuine. 4 patches: round 1's trigger fix was
@@ -19524,7 +19549,7 @@ development_status:
   # ⚠ 2026-10-06 (validate v2.3–v2.5): `2026-10-06-283` amends `-282` GI2/GI3/GI5/GI6/GI16 and `-284` amends `-283` (GI5, GI7, E5) — build
   # from the story files' `⚠ AMENDED by -283` / `-284` lines. Validate rounds STOPPED at round 3 (⛔ no BLOCKER / HIGH).
   6-26b-death-facts-warnings-and-register-check: done
-  6-27-peer-mesh-sending-replies-and-date-of-death: backlog
+  6-27-peer-mesh-sending-replies-and-date-of-death: ready-for-dev
   # ⭐ 2026-10-08 ADDED by `2026-10-08-294` §3 (6.24a code review round 2): ⛔ nothing per-death stops a second approval (`-292` FOUND it);
   # 6.24a's RF6 closure is the only control and three paths pass it (`-294` §2 (a)–(c)). ⭐ BEFORE any code: the Panel question — which
   # family is paid when two claims for one death both qualify, and what the other is owed — then the guard. ⛔ No story file yet.
@@ -19533,6 +19558,13 @@ development_status:
   # `-301` Consequence 3), adapted to SMS — RN1–RN10 PROPOSED, author-commit owed at Task 0.3. The jobs-login gap the key names is SYSTEMIC
   # and scoped OUT (deferred-work 2026-10-09; RN9 proposes roster Row 26). ⛔ No epics.md entry yet (owed at Task 0.4).
   6-29-suspicion-notice-parity-and-jobs-login-grants: done
+  # ⭐ 2026-10-10 ADDED (BigDev, in session: *"separate story"*): the plumbing that lets an `https://` link in a text open the app at a
+  # given screen — 6.27's neighbours' text is its first consumer (6.27 PM21 owns the code, path, route and resolver). ⛔ No story file
+  # yet; ⛔ no epics.md entry yet (owed at its create-story). The domain is ONE config value (`app_links.base_url`), expected week of 2026-10-12.
+  6-30-app-links-open-the-app-from-a-text: backlog
+  # ⭐ 2026-10-10 ADDED (BigDev, in session: *"48 hours, separate story 6-31"*): ONE WhatsApp reminder at 48 h to the five who have ⛔ not
+  # answered and opted in to WhatsApp — after 6.27's sending half; Panel-routed inside 6.27's Q1. ⛔ No story file; ⛔ no epics.md entry yet.
+  6-31-peer-mesh-whatsapp-reminder-at-48-hours: backlog
   epic-6-retrospective: done
 
   # ==========================================================================

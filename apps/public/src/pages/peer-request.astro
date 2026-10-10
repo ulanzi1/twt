@@ -25,6 +25,6 @@ Astro.response.headers.set('Referrer-Policy', 'no-referrer');
     </section>
   ))}
   {model.storeButtons.map((button) => (
-    <p><a href={button.href} rel="noopener noreferrer">{button.label}</a></p>
+    <p><a href={button.href} rel="noopener noreferrer"><span lang="hi">{button.labels.hi}</span> / <span lang="en">{button.labels.en}</span></a></p>
   ))}
 </PublicShell>

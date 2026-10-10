@@ -80,6 +80,17 @@ const read = (rel: string): string =>
     .replace(/\/\*[\s\S]*?\*\//g, '')
     .replace(/\/\/.*$/gm, '')
 
+/**
+ * `indexOf` that FAILS the test on a miss. A bare `indexOf` returns `-1` on a miss, which satisfies `toBeLessThan`,
+ * and `slice(0, -1)` keeps nearly the whole text for `toContain` — so a reformatted file could pass every pin below
+ * vacuously (code review 2026-10-10).
+ */
+const at = (haystack: string, needle: string): number => {
+  const index = haystack.indexOf(needle)
+  expect(index, `expected to find ${JSON.stringify(needle)}`).toBeGreaterThan(-1)
+  return index
+}
+
 const ROOT_LAYOUT = read('apps/mobile/app/_layout.tsx')
 const OTP = read('apps/mobile/app/(auth)/otp.tsx')
 const SESSION = read('apps/mobile/lib/session.ts')
@@ -109,10 +120,9 @@ describe('(ii) otp.tsx is the ONE consumer, and takes BEFORE signIn', () => {
   })
 
   it("the full-session branch takes the target BEFORE `await signIn(res)` and replaces to it, else /(tabs)", () => {
-    const branch = OTP.slice(OTP.indexOf("res.sessionType === 'full_session'"), OTP.indexOf("res.sessionType === 'signup_continuation'"))
-    const take = branch.indexOf('takeLinkTarget()')
-    const signIn = branch.indexOf('await signIn(res)')
-    expect(take).toBeGreaterThan(-1)
+    const branch = OTP.slice(at(OTP, "res.sessionType === 'full_session'"), at(OTP, "res.sessionType === 'signup_continuation'"))
+    const take = at(branch, 'takeLinkTarget()')
+    const signIn = at(branch, 'await signIn(res)')
     expect(signIn).toBeGreaterThan(take)
     expect(branch).toContain('router.replace({ pathname: target.pathname, params: { c: target.params.c } })')
     expect(branch).toContain("router.replace('/(tabs)')")
@@ -127,39 +137,42 @@ describe('(ii) otp.tsx is the ONE consumer, and takes BEFORE signIn', () => {
 
 describe('(iii) the clears', () => {
   it('the signup branch clears BEFORE signIn(full)', () => {
-    const branch = OTP.slice(OTP.indexOf("res.sessionType === 'signup_continuation'"))
-    const clear = branch.indexOf('clearLinkTarget()')
-    const signIn = branch.indexOf('await signIn(full)')
-    expect(clear).toBeGreaterThan(-1)
+    const branch = OTP.slice(at(OTP, "res.sessionType === 'signup_continuation'"))
+    const clear = at(branch, 'clearLinkTarget()')
+    const signIn = at(branch, 'await signIn(full)')
     expect(signIn).toBeGreaterThan(clear)
   })
 
   it("otp.tsx's terminated branch clears before routing to the termination surface", () => {
-    const branch = OTP.slice(OTP.indexOf("e.code === 'auth.member_terminated'"))
-    const clear = branch.indexOf('clearLinkTarget()')
-    const route = branch.indexOf("pathname: '/(auth)/terminated'")
-    expect(clear).toBeGreaterThan(-1)
+    const branch = OTP.slice(at(OTP, "e.code === 'auth.member_terminated'"))
+    const clear = at(branch, 'clearLinkTarget()')
+    const route = at(branch, "pathname: '/(auth)/terminated'")
     expect(route).toBeGreaterThan(clear)
   })
 
   it('signOut() and the refresh termination handler clear', () => {
-    const signOut = SESSION_CONTEXT.slice(SESSION_CONTEXT.indexOf('async function signOut()'))
-    expect(signOut.slice(0, signOut.indexOf('\n  }\n'))).toContain('clearLinkTarget()')
-    const handler = SESSION_CONTEXT.slice(SESSION_CONTEXT.indexOf('setTerminatedDuringRefreshHandler((notice) => {'))
-    expect(handler.slice(0, handler.indexOf('})'))).toContain('clearLinkTarget()')
+    const signOut = SESSION_CONTEXT.slice(at(SESSION_CONTEXT, 'async function signOut()'))
+    expect(signOut.slice(0, at(signOut, '\n  }\n'))).toContain('clearLinkTarget()')
+    const handler = SESSION_CONTEXT.slice(at(SESSION_CONTEXT, 'setTerminatedDuringRefreshHandler((notice) => {'))
+    expect(handler.slice(0, at(handler, '})'))).toContain('clearLinkTarget()')
   })
 })
 
 describe('(iv) every refused refresh resets the in-app session (N5)', () => {
   it('session.ts calls the dead-refresh handler for EVERY 4xx, AFTER the termination callback', () => {
-    const fourxx = SESSION.slice(SESSION.indexOf('res.status >= 400 && res.status < 500'))
-    const termination = fourxx.indexOf("code === 'auth.member_terminated' && onTerminatedDuringRefresh")
-    const deadRefresh = fourxx.indexOf('onRefreshRejected?.()')
-    expect(termination).toBeGreaterThan(-1)
+    const fourxx = SESSION.slice(at(SESSION, 'res.status >= 400 && res.status < 500'))
+    const termination = at(fourxx, "code === 'auth.member_terminated' && onTerminatedDuringRefresh")
+    const deadRefresh = at(fourxx, 'onRefreshRejected?.()')
     expect(deadRefresh).toBeGreaterThan(termination)
-    // Outside the termination `if` — so it runs for every 4xx, not only a termination.
+    // Outside the termination `if` — so it runs for every 4xx, not only a termination: the `if`'s closing brace
+    // (`})` of the callback's argument, then the brace of the `if` on its own line) comes BEFORE the call.
     const terminationIf = fourxx.slice(termination)
-    expect(terminationIf.indexOf('})\n      }')).toBeLessThan(terminationIf.indexOf('onRefreshRejected?.()'))
+    const endOfIf = terminationIf.search(/\}\)\n\s*\}\n/)
+    expect(endOfIf).toBeGreaterThan(-1)
+    expect(endOfIf).toBeLessThan(at(terminationIf, 'onRefreshRejected?.()'))
+    // And the clear's rejection cannot skip either handler (code review 2026-10-10): both sit in a `finally`.
+    expect(at(fourxx, 'await clearSession()')).toBeGreaterThan(at(fourxx, 'try {'))
+    expect(at(fourxx, '} finally {')).toBeLessThan(termination)
   })
 
   it('session-context registers setSession(null) for it and unregisters on cleanup', () => {

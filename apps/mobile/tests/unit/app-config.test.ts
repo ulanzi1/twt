@@ -53,8 +53,18 @@ describe('app.config — non-production variants keep the prototype', () => {
     expect(config.android?.intentFilters).toBeUndefined()
   })
 
-  it('every static field equals the fixture (the resolved-config fields Expo adds aside)', () => {
-    const config = JSON.parse(JSON.stringify(resolveAppConfig({}))) as Record<string, unknown>
+  it('every static field equals the fixture (the resolved-config fields Expo adds, and `extra.eas.projectId`, aside)', () => {
+    const config = JSON.parse(JSON.stringify(resolveAppConfig({}))) as Record<string, unknown> & {
+      extra?: { eas?: { projectId?: string } }
+    }
+    // AC3 / `-316` E1: the ONE projectId literal is EXCLUDED from the comparison — the same exclusion as
+    // scripts/check-app-config.mjs `comparable()` (code review 2026-10-10: this test did not exclude it, so it
+    // would have failed the day Row 29 (a) writes the literal).
+    if (config.extra?.eas !== undefined) {
+      delete config.extra.eas.projectId
+      if (Object.keys(config.extra.eas).length === 0) delete config.extra.eas
+      if (Object.keys(config.extra).length === 0) delete config.extra
+    }
     const fixtureStatic = { ...FIXTURE }
     for (const added of ['sdkVersion', 'platforms', 'extra']) delete fixtureStatic[added]
     expect(config).toEqual(fixtureStatic)
@@ -110,6 +120,8 @@ describe('app.config — production', () => {
     },
   )
 
+  // ⚠ A deliberate pin that FLIPS at Row 29 (a): once the literal is written, this becomes `toBe('<the id>')` —
+  // and `scripts/check-app-config.mjs` holds it to ONE value across every variant.
   it('carries no extra.eas.projectId until the EAS project exists (`-316` E1)', () => {
     expect(resolveAppConfig({ APP_VARIANT: 'production', ...IDENTITY }).extra?.eas).toBeUndefined()
   })

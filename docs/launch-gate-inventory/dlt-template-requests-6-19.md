@@ -135,12 +135,12 @@ a URL is whitelisted; a dynamic part is allowed only AFTER the `?` (*"dynamic pa
 |---|---|---|
 | `https://<domain>/peer-request?` (the Trust's domain, once registered — `inventory-roster.md` Row 29 (b)) | Story 6.27c's text to the five neighbours (`2026-10-10-303` Q1 A); row 6-31's WhatsApp reminder carries the same link | ⛔ **not submitted** — the domain is ⛔ not yet set |
 
-- **Subdomains are whitelisted separately** — `www.<domain>` is ⛔ covered by `<domain>`; whitelist exactly the host the link uses.
-- ⚠ **The DLT category** for a URL entry (and whether it rides the content template or a separate URL registration) is ⛔ yet confirmed
+- **Subdomains are whitelisted separately** — `www.<domain>` is ⛔ not covered by `<domain>`; whitelist exactly the host the link uses.
+- ⚠ **The DLT category** for a URL entry (and whether it rides the content template or a separate URL registration) is ⛔ not yet confirmed
   with the provider — confirm before submitting.
 - ⛔ No shortener (AL3) — the URL is whitelisted as the Trust's own domain; a redirect hop would also break the app link.
 - The template that carries the link uses a typed `{#url#}` or the fixed URL with a typed code variable — row
-  `6-34-sms-templates-typed-variables` (the 18 Nov 2025 Direction), ⛔ this section.
+  `6-34-sms-templates-typed-variables` (the 18 Nov 2025 Direction), ⛔ not this section.
 - Closing this is Row 29 (f).
 
 ## Record

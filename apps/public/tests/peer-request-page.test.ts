@@ -18,7 +18,6 @@ const PAGE = readFileSync(path.join(here, '../src/pages/peer-request.astro'), 'u
 const PAGE_CODE = strip(PAGE);
 const SHELL = readFileSync(path.join(here, '../src/layouts/PublicShell.astro'), 'utf8');
 
-const DISTINCTIVE_CODE = 'Zq7Xw3Kp9Lm2';
 const ANDROID_URL = 'https://play.google.com/store/apps/details?id=org.example.fixture';
 const IOS_URL = 'https://apps.apple.com/in/app/fixture/id1234567890';
 
@@ -73,7 +72,7 @@ describe('the render model', () => {
       ['android', ANDROID_URL],
       ['ios', IOS_URL],
     ]);
-    expect(model.storeButtons[0]!.label).toBe('Google Play से इंस्टॉल करें / Install from Google Play');
+    expect(model.storeButtons[0]!.labels).toEqual({ hi: 'Google Play से इंस्टॉल करें', en: 'Install from Google Play' });
   });
 
   it.each([
@@ -86,16 +85,11 @@ describe('the render model', () => {
     expect(buildPeerRequestPageModel({ APP_STORE_URL_ANDROID: url }).storeButtons).toEqual([]);
   });
 
-  it('⛔ never contains the link code — whatever the env (Invariant 3)', () => {
-    for (const env of [
-      {},
-      { APP_DISPLAY_NAME: 'X', APP_STORE_URL_ANDROID: ANDROID_URL, APP_STORE_URL_IOS: IOS_URL },
-    ]) {
-      expect(text(buildPeerRequestPageModel(env))).not.toContain(DISTINCTIVE_CODE);
-    }
-  });
-
-  it('takes ⛔ no URL / request input — its only parameter is the env', () => {
+  it('⛔ cannot echo the link code (Invariant 3) — BY CONSTRUCTION: its only parameter is the env, and the module reads no URL / request', () => {
+    // ⛔ Not an assertion that a distinctive code is absent from the output — the model has NO code input, so that
+    // assertion could never fail (code review 2026-10-10). The proof is structural: nothing but the env reaches the
+    // model, and the env is three public, operator-set values. The runtime leg is the live check on the BUILT site
+    // (`/peer-request?c=<code>` → the code absent from the body — Dev Agent Record, Task 6).
     expect(buildPeerRequestPageModel.length).toBe(1);
     const src = strip(readFileSync(path.join(here, '../src/lib/peer-request-render.ts'), 'utf8'));
     expect(src).not.toMatch(/Astro|searchParams|fetch\(|\brequest\b|process\.env/);
@@ -108,6 +102,8 @@ describe('every new app-links key resolves through the real t() (⛔ never a stu
     it.each(KEYS)(`[${locale}] %s`, (key) => {
       const value = t(key, key === 'body.open_named_app' ? { app_name: 'X' } : undefined, { locale, namespace: 'app-links' });
       expect(value.trim().length).toBeGreaterThan(0);
+      // Per KEY (code review 2026-10-10): the joined-block check above lets one Hindi key holding English hide behind the others.
+      if (locale === 'hi') expect(value).toMatch(/[ऀ-ॿ]/);
     });
   }
 });

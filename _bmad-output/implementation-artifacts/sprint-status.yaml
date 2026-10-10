@@ -1,3 +1,10 @@
+# last_updated: 2026-10-10af (⭐ **6.30 CODE REVIEW — `review → done`** (`bmad-code-review`, three layers read-only in parallel on BigDev's
+# instruction, on `story/6-30-app-links-open-the-app-from-a-text` in the `TWT-6-30` worktree). 1 decision / 12 patch / 2 defer / 20 dismissed;
+# ⛔ no AC or AL breach, ⛔ no checklist REAL GAP. All 12 patches applied in session (the AC4 pins fail on a miss; `check-app-config.mjs` names the
+# refusal — `expo config --json` swallows it; the vitest fixture comparison excludes `extra.eas.projectId`; `turbo.json` hashes `compose.yaml`
+# for `@twt/public#test`; `buildAppLinkUrl` refuses an unknown key; `clearSession()` in a `finally`; store-button `lang` spans; glyph + record
+# fixes). The live-DB `integration-tests` job RUN (23/23, api 1595 passed) — AC10 fully attested. Deferred: typed routes in CI; `/peer-request/`
+# → Traefik 404. Changes uncommitted in the worktree for BigDev's review.)
 # last_updated: 2026-10-10ae (⭐ **6.30 DEV DONE — `in-progress → review` via `bmad-dev-story`** on `story/6-30-app-links-open-the-app-from-a-text`
 # (worktree `TWT-6-30`). Built: ONE app-link path list as JSON in `@twt/contracts` (`/peer-request`; `buildAppLinkUrl`, `parseAppLinkCode`,
 # the AASA / assetlinks builders + env schemas); `app.json` → `app.config.ts` on `APP_VARIANT` (non-production = the prototype
@@ -19709,7 +19716,7 @@ development_status:
   # ⭐ 2026-10-10 ANNOTATION (Story 6.30, Task 0.4 — the comment above is kept as written, ⛔ never rewritten): the base URL is the ENV VAR
   # `APP_LINKS_BASE_URL` (jobs — `-312` AL5), ⛔ not `app_links.base_url`; 6.30 owns the app-link PATH LIST and the `/peer-request` ROUTE
   # SHELL (AL2 / AL16 — 6.27a fills it, 6.27c wires the code); the story file and the epics.md entry exist; the go-live record is Row 29.
-  6-30-app-links-open-the-app-from-a-text: review
+  6-30-app-links-open-the-app-from-a-text: done
   # ⭐ 2026-10-10 ADDED (BigDev, in session: *"48 hours, separate story 6-31"*): ONE WhatsApp reminder at 48 h to the five who have ⛔ not
   # answered and opted in to WhatsApp — after 6.27's sending half; Panel-routed inside 6.27's Q1. ⛔ No story file; ⛔ no epics.md entry yet.
   6-31-peer-mesh-whatsapp-reminder-at-48-hours: backlog

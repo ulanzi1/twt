@@ -15,6 +15,7 @@ import {
   parseAndroidAppsEnv,
   parseAppLinkCode,
   parseIosAppIdsEnv,
+  type AppLinkKey,
 } from '../src/index.js';
 
 const JSON_PATH = new URL('../src/app-links/app-link-paths.json', import.meta.url);
@@ -78,6 +79,10 @@ describe('buildAppLinkUrl', () => {
     ['empty', ''],
   ])('refuses a malformed code (%s)', (_label, code) => {
     expect(() => buildAppLinkUrl('https://example.org', 'peerRequest', code)).toThrow(/malformed/);
+  });
+
+  it('refuses an unknown key (a JS caller) — ⛔ never https://host/undefined?c=…', () => {
+    expect(() => buildAppLinkUrl('https://example.org', 'nope' as AppLinkKey, CODE)).toThrow(/unknown app-link key/);
   });
 });
 

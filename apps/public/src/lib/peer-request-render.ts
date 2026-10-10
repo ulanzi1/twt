@@ -32,8 +32,8 @@ export interface PeerRequestLanguageBlock {
 export interface PeerRequestStoreButton {
   readonly platform: 'android' | 'ios';
   readonly href: string;
-  /** Hindi first, then English — one bilingual label per button. */
-  readonly label: string;
+  /** Hindi first, then English — one bilingual button; each half rendered under its OWN `lang` (a screen reader voices each in its language). */
+  readonly labels: { readonly hi: string; readonly en: string };
 }
 
 export interface PeerRequestPageModel {
@@ -86,7 +86,7 @@ export function buildPeerRequestPageModel(env: PeerRequestPageEnv): PeerRequestP
   ] as const) {
     const href = storeUrl(raw, platform);
     if (href !== null) {
-      storeButtons.push({ platform, href, label: `${tr('hi', `store.${platform}`)} / ${tr('en', `store.${platform}`)}` });
+      storeButtons.push({ platform, href, labels: { hi: tr('hi', `store.${platform}`), en: tr('en', `store.${platform}`) } });
     }
   }
 

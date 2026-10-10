@@ -18,3 +18,7 @@ see when it evaluates the config locally before upload.
 - After changing the identity or the link settings, regenerate the native projects: `pnpm dlx expo prebuild --clean` (local, untracked
   `android/` / `ios/` dirs keep stale native config otherwise).
 - `pnpm --filter @twt/mobile app-config:check` (the `expo-config` CI job) runs the real Expo loader for every variant.
+- **Re-capturing the fixture.** `tests/fixtures/app-config-prototype.json` is the WHOLE resolved public config, so an Expo SDK bump
+  (`sdkVersion` / `platforms`) fails the `expo-config` job for a reason unrelated to the identity. Re-capture it IN the bump's own
+  change — with `APP_VARIANT` unset, from `apps/mobile`: `npx expo config --type public --json > tests/fixtures/app-config-prototype.json`,
+  then re-run the check. ⛔ Never re-capture alongside an identity or link-settings change (the fixture is the prototype's identity).

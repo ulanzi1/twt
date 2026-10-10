@@ -178,19 +178,24 @@ async function refreshAccessToken(): Promise<string | null> {
       } catch {
         // Not JSON, or no body — fall through with code/details left undefined.
       }
-      await clearSession()
-      if (code === 'auth.member_terminated' && onTerminatedDuringRefresh) {
-        onTerminatedDuringRefresh({
-          groundLabelKey: typeof details?.ground_label_key === 'string' ? details.ground_label_key : undefined,
-          effectiveAt: typeof details?.effective_at === 'string' ? details.effective_at : undefined,
-          hasFurtherCommunication:
-            details?.further_communication !== undefined &&
-            details?.further_communication !== null &&
-            typeof details.further_communication === 'object',
-        })
+      // Both handlers run even when a SecureStore delete rejects (code review 2026-10-10): the token IS dead
+      // either way, and an in-app session left stale here is the exact AL6 (i) failure (⛔ never reaches login).
+      try {
+        await clearSession()
+      } finally {
+        if (code === 'auth.member_terminated' && onTerminatedDuringRefresh) {
+          onTerminatedDuringRefresh({
+            groundLabelKey: typeof details?.ground_label_key === 'string' ? details.ground_label_key : undefined,
+            effectiveAt: typeof details?.effective_at === 'string' ? details.effective_at : undefined,
+            hasFurtherCommunication:
+              details?.further_communication !== undefined &&
+              details?.further_communication !== null &&
+              typeof details.further_communication === 'object',
+          })
+        }
+        // Story 6.30 AL6 (i) — every 4xx, after the termination callback (see `setRefreshRejectedHandler`).
+        onRefreshRejected?.()
       }
-      // Story 6.30 AL6 (i) — every 4xx, after the termination callback (see `setRefreshRejectedHandler`).
-      onRefreshRejected?.()
     }
     return null
   }

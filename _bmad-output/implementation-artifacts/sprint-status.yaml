@@ -77,6 +77,15 @@
 # ⚠ The working tree is SHARED with the 6.34 session: after this session's branch switch, two 6.34 commits landed on `story/6-28-…`
 # (`82cde9a3`, and `6dff53f5` — which also swallowed this entry); `story/6-34-…` carries `82cde9a3` and `6dff53f5`'s clean twin `e67c069f`
 # ⇒ `story/6-28-…` was REBUILT from `34b9bab6` (BigDev: *"yes"*). Suffix `aa` follows 6.34's `w`–`z` on its branch. ⛔ No other row moves.)
+# last_updated: 2026-10-10w (⭐ **STORY 6.34 — CREATED via `bmad-create-story 6.34` ⇒ `backlog → ready-for-dev`.** Pinned `34b9bab6`, branch
+# `story/6-34-sms-templates-typed-variables` (from `main`). Three read-only research passes (the code's SMS templates + send path; TRAI's
+# 18 Nov 2025 Direction, the Feb 2025 regulation and the Vi / Jio manuals, fetched 2026-10-10; the governance trail). FOUND: 19 untyped
+# `{#var#}` templates (2 OTP, 5 whole-body alert entries, 12 claim texts), ⛔ none submitted; the tag spelling DIFFERS per DLT portal
+# (Jio `{#number#}`, Vi `{#num#}`…); a whole-body variable is ⛔ registrable (≥ 30 % fixed) ⇒ the alert SMS fallback has ⛔ registrable
+# template; `{#cbn#}` is digits only (the sheet's `+911800…` example fails) and the helpline has TWO readers (the hold pre-check + the
+# send core); the claim HANDOVER OTP says "Valid 5 min" for a 3-minute code; ⛔ no roster row or runbook tracks DLT registration; Vi had
+# ⛔ not started logger mode (Sep 2026). TV1–TV12 PROPOSED (author-commit owed at Task 0.3); roster Row 30 proposed (27–29 reserved);
+# ⛔ no Panel question (§0). ⛔ No other row moves.)
 # last_updated: 2026-10-10v (⭐ **6.30's AL1–AL16 COMMITTED — `2026-10-10-312` (`21e89ed6`, alone)**, all as written (BigDev: *"… - OK"*; AL13 — the
 # inert `twt://` push links left untouched — explained, then *"ok"*). ⇒ BOTH 6.30 and 6.27a are now buildable: 6.30 first (its route shell
 # precedes 6.27a's Task 5; 6.30 precedes 6.27c). The production app identity stays BigDev's decision (Row 29 (a)). ⛔ No row moves.)
@@ -19796,7 +19805,7 @@ development_status:
   # change (⛔ never on first launch); from then the member's choice is their preferred language (`-303` rider; CF1 confirm owed).
   # ⭐ 2026-10-10 ANNOTATION (Story 6.30, `2026-10-10-312` AL15 — a POINTER, 6.30 retags ⛔ nothing): roster Row 29 (e)'s logged-out legs
   # ⛔ cannot pass until THIS row's OTP-template retag is approved by the operator (a rejected OTP template blocks every login).
-  6-34-sms-templates-typed-variables: backlog
+  6-34-sms-templates-typed-variables: ready-for-dev
   6-35-in-app-language-switch: backlog
   # ⭐ 2026-10-10 ADDED by `2026-10-10-306` (BigDev: "Selection must be school wise …"): each member's SCHOOL (a stable school code + name)
   # and posting start date captured at signup and on every transfer (a new posting — history kept); a NEW peer-mesh metric: members posted

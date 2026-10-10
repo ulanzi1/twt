@@ -1,3 +1,9 @@
+# last_updated: 2026-10-10q (⭐ **`2026-10-10-306` COMMITTED (`cb2dde39`) — THE FIVE ARE CHOSEN BY SCHOOL; ROW 6-36 ADDED (`backlog`).** BigDev: *"Selection must
+# be school wise, or in some cases where person has died in few days after transfer to new school. No one would know a person working in
+# different school let alone block"*; *"Within 90 days"*; *"The code is not in production"* (⇒ ⛔ no backfill — the school is captured at
+# signup and on every transfer); *"Yes, wait"*. 6.6 chose by district (`district_cohort_v1`) and ⛔ no member's school is recorded anywhere.
+# ⇒ 6.27c also waits for 6-36. It changes who is texted and may ask fewer than five ⇒ Panel confirm **CF4** added to the unsent confirm note.
+# 6.27a v2.6 / 6.27c v2.6. ⛔ No row moves.)
 # last_updated: 2026-10-10p (⭐ **VALIDATE ENDS — round 6 found 0 BLOCKER / 0 HIGH.** Rounds 3–6 (narrow, one reviewer each) found 1 / 2 / 1 / 0 HIGH,
 # each in text written by the previous round's fixes; all applied: 6.27 v2.2–v2.5 (`5bc4f97d`, `dc89794c`, `4eec8043`, `b1136116`), 6.30
 # v1.3–v1.4. Next: BigDev answers 6.27's PM1–PM25 and 6.30's AL1–AL16 (Task 0.3 / 0.2), then ONE author-commit each, committed alone; the
@@ -19669,6 +19675,11 @@ development_status:
   # change (⛔ never on first launch); from then the member's choice is their preferred language (`-303` rider; CF1 confirm owed).
   6-34-sms-templates-typed-variables: backlog
   6-35-in-app-language-switch: backlog
+  # ⭐ 2026-10-10 ADDED by `2026-10-10-306` (BigDev: "Selection must be school wise …"): each member's SCHOOL (a stable school code + name)
+  # and posting start date captured at signup and on every transfer (a new posting — history kept); a NEW peer-mesh metric: members posted
+  # at the deceased member's school, plus the previous school when the current posting began within 90 days; ⛔ never the district; fewer
+  # than five ⇒ those there; none ⇒ ⛔ no text. 6.27c waits for it. CF4 (Panel confirm) and a privacy-notice / counsel line owed.
+  6-36-peer-mesh-school-wise-selection: backlog
   epic-6-retrospective: done
 
   # ==========================================================================

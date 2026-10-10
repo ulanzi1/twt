@@ -20,6 +20,10 @@ GLYPH REGISTER, ADDRESSING RULE: as 6.27a.
 
 Status: backlog
 
+> ⚠ **PREDECESSORS (`2026-10-10-306`):** 6.27b, 6.27d, row `6-30` AND row `6-36-peer-mesh-school-wise-selection` all `done` — the five
+> are chosen from the deceased member's own school (and the previous school after a transfer within 90 days), ⛔ never the district; a
+> school with fewer than five members means fewer texts, and none means ⛔ no text (the inspection carries the claim). CF4 owed.
+
 > ⭐⭐ **WHAT THIS STORY IS.** The Panel ruled that each of the five neighbours is texted (`-303` Q1 A): *"We have been told that [member]
 > has died. If you knew them, please answer a few short questions: [link] — or call the helpline [number]."* (`-304` Q6 A). This story
 > sends that text — once ever per neighbour, through 6.24b's shared DLT send core, with 6.29's hold / park / give-up; ⛔ never at night;
@@ -135,6 +139,7 @@ RB4 / RB5 / RB11 / RB12 / RB16 · `-302` RN2–RN8 · `-255` F7 (the cost line).
 ## Change Log
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-10 | 2.6 | `2026-10-10-306`: predecessor row 6-36 (school-wise selection) added. |
 | 2026-10-10 | 2.5 | Round 6: header qualifier ("no texted neighbour"); AC2b's alarm wording (one per sweep run + the child's held return). |
 | 2026-10-10 | 2.4 | Round 5: AC2b's pending-question gap is checked by BOTH the sweep and the child's begin path (the RB12 race guard — the hook-enqueued child is the main send path); AC4 lists it among held configs (parked as any held scope); Task 3 names `answerWindowSql` for the sweep. |
 | 2026-10-10 | 2.3 | Round 4: AC2b — the sweep HOLDS while any question of the live questionnaire version is `'pending'` (6.27a PM23 (a)), so the ruled health questions are ⛔ never hidden from a texted neighbour; Task 3 carries it. |

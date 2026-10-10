@@ -3251,7 +3251,7 @@ is a notification, ⛔ never an approval step.
 
 > ⚠ **Added 2026-10-10 (`bmad-create-story 6.28`)** — the row `6-28-one-payment-per-death-second-approval-guard` was created by
 > [`-294`](../../.decision-log.md#decision-2026-10-08-294) §3 (6.24a code review round 2), whose Consequence 3 places this entry here
-> *"when `bmad-create-story` runs"*. ⏳ **Awaiting the Panel:** Q1–Q3 of the routing note
+> *"when `bmad-create-story` runs"*. ⏳ **Awaiting the Panel:** Q1–Q4 of the routing note
 > `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-10-6-28-one-payment-per-death.md` (⛔ not yet sent) — the ACs below
 > are written for its RECOMMENDED answers and are re-written at the story's Task 0.6 for the ruling. Full ACs:
 > `_bmad-output/implementation-artifacts/6-28-one-payment-per-death-second-approval-guard.md`. ⛔ No code before the ruling and the

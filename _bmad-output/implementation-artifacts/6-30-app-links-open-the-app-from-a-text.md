@@ -11,8 +11,8 @@ public site, hosting and config; the governance trail + current platform rules, 
 packages apps infra scripts` is EMPTY, so every cited line still holds) found 1 BLOCKER, 3 HIGH, 9 MEDIUM, 8 LOW; all applied below.
 ⚠ Before Task 1: `git diff --name-only a05ce150..HEAD -- packages apps infra scripts` — re-read any cited file in that list.
 
-STATUS: `ready-for-dev`. ⛔ NO CODE until Task 0.3's author-commit (AL1–AL16, answered by BigDev at Task 0.2) is committed ALONE
-([[feedback_governance_commits_precede_implementation]]).
+STATUS: `ready-for-dev`. ✅ AL1–AL16 COMMITTED ALONE as `2026-10-10-312` (`21e89ed6`) — all as written (BigDev, in session; AL13 explained and
+accepted). 6.30 may be built from Task 0.1 / 0.4 on ([[feedback_governance_commits_precede_implementation]]).
 ⭐ §0 gate (template `trustee-panel-routing-note-TEMPLATE.md`): ⛔ no Panel question. Every AL strips to "the code should do X" — how a
 link opens the app, where two public files live, what a fallback page says (it names ⛔ no one and shows ⛔ nothing about anyone). What
 the TEXT says and whether members are texted at all is RULED — `2026-10-10-303` Q1 A (the five are texted, naming the member, with the
@@ -378,8 +378,8 @@ web page."* Niyamavali check: ⛔ not applicable (the Niyamavali does not speak 
   - [ ] 0.1 Re-check `git diff --name-only a05ce150..HEAD -- packages apps infra scripts`; re-read any cited file that moved. Re-check the
         platform claims with the SMS provider / docs (V-L8): `{#alphanumeric#}` ≤ 40 chars, the 18 Nov 2025 Direction date, RBI's 2025
         circular on shorteners, Android 15+ re-verification timing.
-  - [ ] 0.2 Put AL1–AL16 to BigDev (short option summaries — the 6.24b / 6.29 form); record the answers here.
-  - [ ] 0.3 ONE author-commit recording them, committed ALONE ([[project_decision_log_writes_user_inserted]] — stage in the scratchpad,
+  - [x] 0.2 Put AL1–AL16 to BigDev — ✅ answered in session 2026-10-10: all OK (AL13 after a plain-language explanation).
+  - [x] 0.3 ✅ `2026-10-10-312` (`21e89ed6`), committed ALONE. ONE author-commit recording them, committed ALONE ([[project_decision_log_writes_user_inserted]] — stage in the scratchpad,
         try the insert first).
   - [ ] 0.4 epics.md `### Story 6.30` (after 6.29; a dated source line, ⛔ never a merge fence); Row 29 (AL12, at its RESERVED number);
         DLT-sheet line for the URL whitelisting; sprint ledger line ([[project_sprint_status_safe_prepend]]).
@@ -529,6 +529,7 @@ is STACKED on 6.27's (the row lives there) and now also carries 6.27's v1.3–v2
 ## Change Log
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-10 | 1.6 | ⭐ AL1–AL16 COMMITTED as `2026-10-10-312` (`21e89ed6`), all as written; Tasks 0.2 / 0.3 done; buildable. |
 | 2026-10-10 | 1.5 | `2026-10-10-310`: the confirm note is ruled (CF1–CF5) — the language narrowing is Panel-confirmed (CF1 A). |
 | 2026-10-10 | 1.4 | Round 4: version pointers to 6.27a v2.5 (⛔ no change to PM11 / PM21). |
 | 2026-10-10 | 1.3 | Round-3 validate: the *"separate story"* quote re-cited to the sprint-status row `6-30` comment (⛔ never `-305`'s occasion); two glyph-register breaches (the symbol glued to "echo" and to "oracle") rewritten as *"the no-echo test"* and *"⛔ never an oracle"*. |

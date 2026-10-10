@@ -1,3 +1,6 @@
+# last_updated: 2026-10-10v (⭐ **6.30's AL1–AL16 COMMITTED — `2026-10-10-312` (`21e89ed6`, alone)**, all as written (BigDev: *"… - OK"*; AL13 — the
+# inert `twt://` push links left untouched — explained, then *"ok"*). ⇒ BOTH 6.30 and 6.27a are now buildable: 6.30 first (its route shell
+# precedes 6.27a's Task 5; 6.30 precedes 6.27c). The production app identity stays BigDev's decision (Row 29 (a)). ⛔ No row moves.)
 # last_updated: 2026-10-10u (⭐ **6.27's PM1–PM25 COMMITTED — `2026-10-10-311` (`082ab743`, alone).** BigDev answered PM by PM: all as written except PM1 —
 # *"you should replace"* (a skipped neighbour is replaced by the next eligible person in the SAME group, deterministically; ineligible members
 # filtered at selection by row 6-36) — and PM2 — *"send through alert as well"* → *"In-app alert only"* (the home card + the notice strip; ⛔ no

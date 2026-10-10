@@ -35,6 +35,10 @@
 > language is the language they chose in the TWT app (recorded when they choose it); for a member who never used the app, the Pariwar's
 > default language (Hindi for Bihar). If the Panel means something else, it says so.
 >
+> ⚠ **2026-10-10, later the same day — this two-question answer was ⛔ not sent.** BigDev asked for a fuller, optional questionnaire;
+> the answer now goes to the Panel as the follow-up note `trustee-panel-routing-note-2026-10-10-6-27-the-neighbours-questions.md`
+> (Q3–Q7). The draft below is kept as written.
+>
 > **The Panel's question — "which questions will be asked" — the answer, prepared 2026-10-10 for BigDev to relay:**
 >
 > **The text** (and the WhatsApp reminder, the same words), in the member's preferred language:

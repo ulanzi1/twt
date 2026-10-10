@@ -3265,6 +3265,27 @@ the SAME locked re-check; the three-IST-day give-up counts non-parked time only;
 ⛔ a phone number) CHECKed by the database; a finished row is frozen by a trigger; three 6.24b defers on 0151 closed. ⛔ Who is texted,
 what a text says or when it is due changes; every RB18 skip alarm stays, RB13's skip stays silent.
 
+### Story 6.30: A Link in a Text Opens the App at the Right Screen — App Links, Universal Links, Two Public Files, a Plain Fallback Page, and the Login That Keeps Its Place `[PRIMITIVE]`
+
+> ⚠ **Added 2026-10-10 (Story 6.30, Task 0.4)** — the row `6-30-app-links-open-the-app-from-a-text` was added by BigDev in session on
+> 2026-10-10 (*"separate story"* — the sprint-status row `6-30` comment), with ⛔ no `epics.md` entry. The author's build decisions are
+> [`-312`](../../.decision-log.md#decision-2026-10-10-312) AL1–AL16, corrected by [`-315`](../../.decision-log.md#decision-2026-10-10-315)
+> C1–C8, [`-316`](../../.decision-log.md#decision-2026-10-10-316) E1–E3 and read by [`-317`](../../.decision-log.md#decision-2026-10-10-317)
+> R1–R3. Full ACs: `_bmad-output/implementation-artifacts/6-30-app-links-open-the-app-from-a-text.md`. Its go-live record is roster
+> Row 29 (`app-links-live`). ⛔ Never a merge fence.
+
+As a member who has been sent a text with a link, I want tapping the link to open the TWT app at the right screen — after logging in if I
+have to — or, without the app, a plain page that tells me how to answer, so that I can do what the message asks in a minute, and ⛔ no web
+page ever asks me to log in or shows me anything about anyone.
+
+**Acceptance Criteria (in brief):** ONE list of app-link paths as a JSON data file (`/peer-request` only), its URL builder
+(`https://<domain>/peer-request?c=<code>` — the code in the query) and parser; the app's identity and link settings from config
+(`APP_VARIANT`; ⛔ never an invented production identity — a production build without it fails); the two `/.well-known/` files served by
+the public site from env (404 when unset); a plain bilingual fallback page that ⛔ never reads or echoes the code; the login that returns
+to the requested screen (incl. after an expired login); a dignified bilingual "not found"; a thin `/peer-request` route shell 6.27a fills;
+the hosting and edge rules wired (⛔ not applied); ONE shared https-origin validator. ⛔ Nothing here sends a text; its first consumer is
+6.27's `/peer-request` (6.27c builds the link).
+
 ---
 
 ## Epic 7: Pool Engine & Cycle Spawn

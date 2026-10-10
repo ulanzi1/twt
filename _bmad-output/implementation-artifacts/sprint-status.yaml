@@ -1,3 +1,8 @@
+# last_updated: 2026-10-10ad (⭐ **6.30 DEV STARTED — `ready-for-dev → in-progress` via `bmad-dev-story`** in its worktree on
+# `story/6-30-app-links-open-the-app-from-a-text`. Task 0.1: `git diff --name-only 1cce7e5a..HEAD -- packages apps infra scripts .github
+# turbo.json` EMPTY. Task 0.4's records, committed BEFORE any code: epics.md `### Story 6.30` (after 6.29); roster **Row 29**
+# `app-links-live` (AL12 (a)–(h) + its notes; Rows 27 / 28 stay RESERVED for 6.27 — the gap expected); the DLT sheet's `## URL
+# whitelisting` section (`https://<domain>/peer-request?`, ⛔ not submitted); a dated annotation under the `6-30` row.)
 # last_updated: 2026-10-10ac (⭐ **6.30 RE-VALIDATED — rounds 7–9, v1.6 → v1.9, on `story/6-30-app-links-open-the-app-from-a-text`.** Round 7 (four
 # read-only reviewers): 2 BLOCKER / 4 HIGH / 13 MEDIUM / 15 LOW — AL1's `EAS_BUILD_PROFILE` is unset when EAS CLI evaluates the config locally
 # (⇒ `APP_VARIANT` from `eas.json` `env`); AL10's separate ruleset cannot coexist with `waf_custom` (⇒ one always-present ruleset, the skip
@@ -19693,7 +19698,10 @@ development_status:
   # ⭐ 2026-10-10 ADDED (BigDev, in session: *"separate story"*): the plumbing that lets an `https://` link in a text open the app at a
   # given screen — 6.27's neighbours' text is its first consumer (6.27 PM21 owns the code, path, route and resolver). ⛔ No story file
   # yet; ⛔ no epics.md entry yet (owed at its create-story). The domain is ONE config value (`app_links.base_url`), expected week of 2026-10-12.
-  6-30-app-links-open-the-app-from-a-text: ready-for-dev
+  # ⭐ 2026-10-10 ANNOTATION (Story 6.30, Task 0.4 — the comment above is kept as written, ⛔ never rewritten): the base URL is the ENV VAR
+  # `APP_LINKS_BASE_URL` (jobs — `-312` AL5), ⛔ not `app_links.base_url`; 6.30 owns the app-link PATH LIST and the `/peer-request` ROUTE
+  # SHELL (AL2 / AL16 — 6.27a fills it, 6.27c wires the code); the story file and the epics.md entry exist; the go-live record is Row 29.
+  6-30-app-links-open-the-app-from-a-text: in-progress
   # ⭐ 2026-10-10 ADDED (BigDev, in session: *"48 hours, separate story 6-31"*): ONE WhatsApp reminder at 48 h to the five who have ⛔ not
   # answered and opted in to WhatsApp — after 6.27's sending half; Panel-routed inside 6.27's Q1. ⛔ No story file; ⛔ no epics.md entry yet.
   6-31-peer-mesh-whatsapp-reminder-at-48-hours: backlog

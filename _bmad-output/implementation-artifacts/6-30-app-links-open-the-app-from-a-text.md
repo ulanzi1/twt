@@ -31,7 +31,7 @@ corrections; `E1`–`E3` = `-316`'s; `R1`–`R3` = `-317`'s; `N1`–`N20` = buil
 
 # Story 6.30: A Link in a Text Opens the App at the Right Screen — App Links, Universal Links, Two Public Files, a Plain Fallback Page, and the Login That Keeps Its Place `[PRIMITIVE]`
 
-Status: ready-for-dev
+Status: in-progress
 
 > ⭐⭐ **WHAT THIS STORY IS, IN ONE PARAGRAPH.** Story 6.27's text to the five neighbours carries a link that should open the question
 > screen in the TWT app (BigDev, 2026-10-10: *"separate story"*; ratified with the text in `-303` Q1 A). Today ⛔ no link can open the
@@ -457,8 +457,8 @@ applicable (the Niyamavali does not speak to app links) — and it is ⛔ not ra
 > (it exists, from `main` `34b9bab6` + `-315` / `-316` / `-317` and this file) in its own worktree; ⛔ never `git switch` the shared checkout
 > ([[feedback_shared_tree_branch_switch]]).
 
-- [ ] **Task 0 — governance FIRST (AC1).** ⛔ No code.
-  - [ ] 0.1 Re-check `git diff --name-only 1cce7e5a..HEAD -- packages apps infra scripts .github turbo.json`; re-read any cited file that
+- [x] **Task 0 — governance FIRST (AC1).** ⛔ No code.
+  - [x] 0.1 Re-check `git diff --name-only 1cce7e5a..HEAD -- packages apps infra scripts .github turbo.json`; re-read any cited file that
         moved. Re-check the platform claims with the SMS provider / docs: `{#alphanumeric#}` ≤ 40 chars, the 18 Nov 2025 Direction date,
         RBI's 2025 circular on shorteners, Android 15+ re-verification timing, F2c (eas-cli's local config evaluation).
   - [x] 0.2 Put AL1–AL16 to BigDev — ✅ answered in session 2026-10-10: all OK (AL13 after a plain-language explanation).
@@ -468,7 +468,7 @@ applicable (the Niyamavali does not speak to app links) — and it is ⛔ not ra
         the additions are named in `-316`'s Status: *"Yes, insert it"*).
   - [x] 0.3d ✅ `2026-10-10-317` (`44830033`) — R1–R3, a reading on `-316` (E1's reason; three residuals accepted; Consequence 2
         recognised and discharged), committed ALONE (BigDev, in session, its text shown first).
-  - [ ] 0.4 epics.md `### Story 6.30` (after 6.29; a dated source line, ⛔ never a merge fence); Row 29 in
+  - [x] 0.4 epics.md `### Story 6.30` (after 6.29; a dated source line, ⛔ never a merge fence); Row 29 in
         `docs/launch-gate-inventory/inventory-roster.md` (AL12 — closure (a)–(h) AND its notes (N15, N19), at its RESERVED number, a note that Rows
         27 / 28 belong to 6.27); a NEW `## URL whitelisting (Story 6.30, -312 AL3)` section in
         `docs/launch-gate-inventory/dlt-template-requests-6-19.md` (`https://<domain>/peer-request?`; subdomains separately; the DLT category
@@ -694,7 +694,17 @@ decision numbers will interleave on merge.
 
 ### Agent Model Used
 
+Claude Opus 5.5 (1M context) — `bmad-dev-story 6.30`, 2026-10-10, in the worktree `TWT-6-30` on the story branch.
+
 ### Debug Log References
+- **Task 0.1 (2026-10-10):** `git diff --name-only 1cce7e5a..HEAD -- packages apps infra scripts .github turbo.json` at `4dd469c2` — EMPTY
+  (every cite as of the pin holds). Platform claims re-checked (read-only web research): `{#alphanumeric#}` ≤ 40 chars — CONFIRMED
+  (secondary sources citing Annexure I); the 18 Nov 2025 typed-variable Direction — CONFIRMED (six tags; 10 days new / 60 days existing);
+  URL whitelisting in force 1 Oct 2024, a dynamic URL registered ending in `?` — CONFIRMED (MSG91 FAQ: *"Mandatory to end in question mark"*);
+  RBI/2024-25/105 (17 Jan 2025) — CONFIRMED and STRONGER than "discourages": *"Prohibit the use of URL shortening services that do not
+  clearly indicate the sender's identity"* (AL3's ⛔ no shortener is unaffected); Android 15+ periodic re-verification, up to seven days —
+  CONFIRMED (Android 14 and lower: only at install / update); F2c — CONFIRMED (Expo docs: the built-in variables *"are not available when
+  evaluating app.config.js locally"*; eas-cli `evaluateConfigWithEnvVarsAsync` passes `{ ...serverEnvVars, ...buildProfile.env }`).
 
 ### Completion Notes List
 - 2026-10-10 — created by `bmad-create-story 6.30` (Opus 5.5): ultimate context engine analysis completed — comprehensive developer guide

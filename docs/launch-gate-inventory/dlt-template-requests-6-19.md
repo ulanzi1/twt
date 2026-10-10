@@ -125,6 +125,24 @@ rare. ⚠ Delivery is at-least-once (a timeout or crash after a gateway accept m
 a 19-character name, a 13-character helpline number and a 10-character date: 8 and 10 are 91 characters (**1 GSM segment**), 12 is 130
 (**1**); 7 is 104 and 9 is 99 characters of Unicode (**2 segments** each), 11 is 148 (**3**). A longer name can add a segment.
 
+## URL whitelisting (Story 6.30, -312 AL3)
+
+⭐ Since 1 Oct 2024 (TRAI) an SMS carrying a URL that is ⛔ not whitelisted against the sender's header is REJECTED. Only the FIXED part of
+a URL is whitelisted; a dynamic part is allowed only AFTER the `?` (*"dynamic paths before the query string are currently not supported"*
+— the providers' docs) ⇒ Story 6.30's link is `https://<domain>/peer-request?c=<code>` (the code in the query, ⛔ never a path segment).
+
+| Whitelist entry | Used by | Status |
+|---|---|---|
+| `https://<domain>/peer-request?` (the Trust's domain, once registered — `inventory-roster.md` Row 29 (b)) | Story 6.27c's text to the five neighbours (`2026-10-10-303` Q1 A); row 6-31's WhatsApp reminder carries the same link | ⛔ **not submitted** — the domain is ⛔ not yet set |
+
+- **Subdomains are whitelisted separately** — `www.<domain>` is ⛔ covered by `<domain>`; whitelist exactly the host the link uses.
+- ⚠ **The DLT category** for a URL entry (and whether it rides the content template or a separate URL registration) is ⛔ yet confirmed
+  with the provider — confirm before submitting.
+- ⛔ No shortener (AL3) — the URL is whitelisted as the Trust's own domain; a redirect hop would also break the app link.
+- The template that carries the link uses a typed `{#url#}` or the fixed URL with a typed code variable — row
+  `6-34-sms-templates-typed-variables` (the 18 Nov 2025 Direction), ⛔ this section.
+- Closing this is Row 29 (f).
+
 ## Record
 
 | Date | Template(s) | Action | By | Reference |
@@ -133,3 +151,4 @@ a 19-character name, a 13-character helpline number and a 10-character date: 8 a
 | 2026-09-30 | 1–4 | ⭐ Wording and `{#var#}` slots written (Story 6.19b, D32); 3–4 now BUILT by 6.19b (6.19c sends); the per-Pariwar helpline keys added (`-269` §5). ⛔ Still not submitted | Story 6.19b | `claim-correction-sms-templates.ts` |
 | 2026-10-03 | 5–6 | ⭐ Wording, `{#var#}` slots and config keys written (Story 6.19d, `2026-10-03-276` CR7, CR13); its cost line added. ⛔ Still not submitted | Story 6.19d | `claim-correction-sms-templates.ts` |
 | 2026-10-08 | 7–12 | ⭐ Wording, `{#var#}` slots and config keys written (Story 6.24b, `2026-10-08-295` RB1, RB4, RB11); its cost line added. ⛔ Still not submitted. ⛔ **Do not provision the ids of 7–12 until Row 22 closes**; set each id only after the operator confirms that template's approval | Story 6.24b | `suspicion-notice-sms-templates.ts` |
+| 2026-10-10 | URL `https://<domain>/peer-request?` | ⭐ The URL-whitelisting section written (Story 6.30, `2026-10-10-312` AL3). ⛔ Not submitted — the domain is ⛔ not yet set (Row 29 (b)); the DLT category to be confirmed with the provider | Story 6.30 | § URL whitelisting |

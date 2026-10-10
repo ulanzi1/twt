@@ -1,3 +1,7 @@
+# last_updated: 2026-10-10p (⭐ **VALIDATE ENDS — round 6 found 0 BLOCKER / 0 HIGH.** Rounds 3–6 (narrow, one reviewer each) found 1 / 2 / 1 / 0 HIGH,
+# each in text written by the previous round's fixes; all applied: 6.27 v2.2–v2.5 (`5bc4f97d`, `dc89794c`, `4eec8043`, `b1136116`), 6.30
+# v1.3–v1.4. Next: BigDev answers 6.27's PM1–PM25 and 6.30's AL1–AL16 (Task 0.3 / 0.2), then ONE author-commit each, committed alone; the
+# CF1–CF3 confirm note to the Panel (⛔ not yet sent). ⛔ No row moves.)
 # last_updated: 2026-10-10o (⭐ **VALIDATE ROUNDS 1–2 APPLIED.** 6.27 v2.0 (`59e8d9e0`) split into 6.27a / b / d / c per `-305`; 6.30 v1.1
 # (`f5539827`); round 2 (three read-only reviewers): 0 BLOCKER / 8 HIGH — all text fixes, applied in 6.27 v2.1 + 6.30 v1.2 (`5e664108`):
 # the helpline and every member route dark for an untexted ping; the `detail` grammar moved to 6.27c; 6.27b owns the per-answer warning

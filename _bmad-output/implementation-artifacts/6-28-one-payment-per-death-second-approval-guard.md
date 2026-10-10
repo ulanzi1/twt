@@ -15,7 +15,7 @@ STATUS: `ready-for-dev` — ⛔⛔ NO CODE until (1) the Panel has ruled Q1–Q4
 Panel question … written from the routing-note template, with this entry's (a)–(c) and the pre-6.24a root as the deciding facts …
 (ii) then the engineering guard that ruling permits."* ([[feedback_governance_commits_precede_implementation]]).
 ⭐ The OPs are written for the note's RECOMMENDED answers (Q1 A, Q2 A, Q3 A); `## ⚖️ Build decisions` states, per OP, what changes under
-each other answer. If the Panel rules Q1 C, this story builds ⛔ nothing and ends as a zero-code story (Task 0 only).
+each other answer. If the Panel rules Q1 C, this story builds only OP13 (if Q4 A) — else ⛔ nothing, a zero-code story (Task 0 only).
 
 GLYPH REGISTER, ADDRESSING RULE: as 6.24a / 6.24b / 6.29 — `⛔` sits ONLY on a negation word · `⭐` = key fact or action · `⚠` = hazard.
 Sweep on every pass: `grep -oE "⛔ \**[A-Za-z]+"` — every head-word a negation. ⛔ No `file:NNN` into `.decision-log.md`,
@@ -518,7 +518,8 @@ The Panel's ruling on Q1–Q4 is transcribed into the routing note's ⏳ block a
 ALONE); then the author-commit answering OP1–OP14 for that ruling — naming `-279` A6 as discharged and recording that the note widened
 `-294` §3's framing — is committed ALONE; then a second governance commit updates this file's rulings table, Policy meaning and OPs
 (`✅ committed by -NNN`), and the `deferred-work.md` items of Task 0.6 gain their pointers, each with its own status. ⛔ No code before
-both commits. If Q1 C: the story ends here (zero-code; Tasks 1–6 left unchecked with a banner — [[project_story_automator_ops]]).
+both commits. If Q1 C: only OP13 is built (if Q4 A — Task 4's OP13 part and AC9); otherwise the story ends here (zero-code; Tasks 1–6 left unchecked with a
+banner — [[project_story_automator_ops]]).
 
 ### AC1 — One definition (OP1)
 The three state lists are pinned by value against `state.ts` / `read.ts` for EVERY state; `readOtherFinallyApprovedClaim` /
@@ -835,6 +836,7 @@ Domain in `packages/domain/src/claim/` (⛔ no new package — [[feedback_no_pre
 - 2026-10-11 — v1.7: round 6 — **0 BLOCKER / 0 HIGH**; 4 MEDIUM + 6 LOW applied.
 - 2026-10-11 — v1.8: the routing note's pre-send fresh-context check (2 HIGH, 8 MEDIUM, 8 LOW — all applied to the note); OP13 now PUT TO THE PANEL for confirmation.
 - 2026-10-11 — v1.9: the note's second check (1 HIGH, 5 MEDIUM, 8 LOW — applied): the confirmation becomes its own **Q4** with options and costs.
+- 2026-10-11 — v1.10: the note's third check (1 HIGH, 7 MEDIUM, 6 LOW — applied).
 
 ### File List
 
@@ -852,3 +854,4 @@ Domain in `packages/domain/src/claim/` (⛔ no new package — [[feedback_no_pre
 | 1.7 | 2026-10-11 | Round 6 (one fresh-context verifier): **0 BLOCKER / 0 HIGH**. 4 MEDIUM — the adjudication gate's `expectedMethods` grows with the new route (an EXACT multiset — else `ci:local` is red); OP14 (d)'s other-claims field only for a caller holding an in-scope assignment of THIS claim (a `block_admin` could name any claim id); `alreadyVisited` defined (a FULL visit's `death_date_index` vs this claim's `accepted_date_index`; NULL ⇒ false) + `visitedElsewhere`; the admin client's non-strict schema STRIPS unlisted keys — named, camelCase. 6 LOW — the close response carries ⛔ no other claim's id (`this_claim_closed`, `closed_count`); a lock timeout is a 503 with its own line; params schema / audit type / `'trustee'` actor / 404 named; stale ceiling test titles; Completion Notes order; the sprint row's stale comment; UI copy without the glyph. |
 | 1.8 | 2026-10-11 | The routing note's pre-send check (one fresh-context reviewer as the Panel's advocate): 2 HIGH — OP13 extends FQ5 A to a claim that already passed the final vote ⇒ now an explicit proposal the Panel CONFIRMS (and C is ⛔ not "no change"); A's wait for the District Admin's reason has ⛔ no time limit — disclosed in A's cost and the reading. 8 MEDIUM + 8 LOW applied to the note (closure "automatically, or by Close this claim"; Q2 A's appeal stops paying once another claim passed the final vote; closed is ⛔ never appealable — in A's and B's costs; the helpline's words; a filing for a paid death joins it; Q3's fact marked as an unmeasured expectation and B's recipient named; "meant to pay"; jargon defined; Claims 1 / 2 named; `-291` quoted verbatim; separability lines; `assign.ts:137-187`). Story: OP13 and the rulings table say it is ⏳ for the Panel. |
 | 1.9 | 2026-10-11 | The note's second fresh-context check: 1 HIGH — a confirm-by-silence bullet could be recorded from a ruling that never answered it ⇒ **Q4** (A: close the voted, unpaid claim — OP13; B: it is paid, the appellant's claim closed), with its own fact, costs, reading; Q1 A's cell cut to its rule + a *How A works* list ("final vote" defined as the LAST approval before payment, incl. the special panel and correction-case decisions); the wait's wording (a second claim that APPEARS — kept apart or reopened — ⛔ no time limit, lifts if it is refused / closed); Q2 A and Q1 A's appeal timing; Q2 B can ⛔ not reopen a joined filing; separability lines; E1/E2/E4 additions. Story: Q1–Q4 throughout, the rulings table's Q4 row, OP13 keyed on Q4. |
+| 1.10 | 2026-10-11 | The note's third fresh-context check: 1 HIGH — Q1 A's cost said an appeal won after the other claim's final vote pays nothing, contradicting Q4 A for the suspicion appeal ⇒ "an ORDINARY refusal (⛔ not the suspicion one, which is Q4)". 7 MEDIUM — Q4 B under Q1 C; the Q1 → Q4 pointer narrowed to after the vote / before payment; §0 hands the closure's appeal and the helpline's words back to the Panel's questions; "final vote" no longer "the last approval" (R9 can still refuse it); Q2 B for a same-channel join; the plain-English Q1's ordinary-appeal cost; story header / AC0: under Q1 C, OP13 is still built on Q4 A. 6 LOW — the wait starts when a family APPEALS; Q4's hold covers the 90 days before an appeal; the plain-English Q4 and its cost; E4's `unique(` grep; Q1 A's five costs numbered. |

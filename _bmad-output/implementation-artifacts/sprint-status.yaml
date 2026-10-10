@@ -1,3 +1,11 @@
+# last_updated: 2026-10-10r (⭐ **`2026-10-10-307` COMMITTED (`0a038a47`) — WHEN THE WORKPLACE GIVES ⛔ NO ONE.** BigDev: A + B + D — the member's WORKPLACE
+# (school or office) colleagues → the up-to-3 *"people who know me"* the member named and who ACCEPTED → ⛔ no one (the inspector collects the
+# head of school / office's letter — row 6-32). Workplace = a DROPDOWN (district → block → school, type-to-search) IMPORTED from UDISE+
+# (data.gov.in, GODL-India — columns / licence verified at the story); offices from a staff list; *"not listed"* ⇒ Pariwar Admin review.
+# "People who know me": the phone's CONTACT PICKER (⛔ never full contact access) + workplace SUGGESTIONS (names only, to members sharing
+# that workplace — membership is already public via the 11a.3 directory; a member's SCHOOL is ⛔ never public); the request *"[Name] has
+# named you as someone who knows them. Do you know him/her?"*; prompts at signup, a home card (*"No one from your workplace is a member yet.
+# Invite your colleagues."*), Pariwar Admin campaigns. CF4 WIDENED in the unsent confirm note. Row 6-36 WIDENED (key kept). ⛔ No row moves.)
 # last_updated: 2026-10-10q (⭐ **`2026-10-10-306` COMMITTED (`cb2dde39`) — THE FIVE ARE CHOSEN BY SCHOOL; ROW 6-36 ADDED (`backlog`).** BigDev: *"Selection must
 # be school wise, or in some cases where person has died in few days after transfer to new school. No one would know a person working in
 # different school let alone block"*; *"Within 90 days"*; *"The code is not in production"* (⇒ ⛔ no backfill — the school is captured at
@@ -19666,6 +19674,8 @@ development_status:
   # versioned, conditional form beside 6.26a's fixed checks; the family's comparable answers under shared keys; offline saving), and the
   # staff editor for questionnaire versions with a second approver (both questionnaires). Panel Q8 (unsent note) governs who may author.
   # 6.27's engine is shared (v1.8). ⛔ No story files; ⛔ no epics.md entries yet.
+  # ⭐ 2026-10-10 (`2026-10-10-307` §2 item 1 D): the inspector questionnaire also collects a letter from the head of the school / office when
+  # ⛔ no neighbour could be asked.
   6-32-inspector-questionnaire-at-the-ground-inspection: backlog
   6-33-questionnaire-editor-versions-and-approval: backlog
   # ⭐ 2026-10-10 ADDED by `2026-10-10-305` §2 item 5 (BigDev: "Typed SMS templates (incl. login OTP), In-app language switch"):
@@ -19679,6 +19689,9 @@ development_status:
   # and posting start date captured at signup and on every transfer (a new posting — history kept); a NEW peer-mesh metric: members posted
   # at the deceased member's school, plus the previous school when the current posting began within 90 days; ⛔ never the district; fewer
   # than five ⇒ those there; none ⇒ ⛔ no text. 6.27c waits for it. CF4 (Panel confirm) and a privacy-notice / counsel line owed.
+  # ⭐ 2026-10-10 WIDENED by `2026-10-10-307` (key kept): the WORKPLACE (school or office) from a UDISE+-imported dropdown + a staff office
+  # list + a "not listed" review; the order WORKPLACE colleagues → "people who know me" (contact picker, workplace suggestions, acceptance,
+  # prompts, Pariwar Admin campaign) → ⛔ no one. ⚠ Large — its own create-story decides any split.
   6-36-peer-mesh-school-wise-selection: backlog
   epic-6-retrospective: done
 

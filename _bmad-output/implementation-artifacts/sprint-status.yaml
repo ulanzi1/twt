@@ -1,3 +1,13 @@
+# last_updated: 2026-10-10g (⭐ **STORY 6.30 — CREATED via `bmad-create-story 6.30` ⇒ `backlog → ready-for-dev`; Story 6.27 → v1.3.**
+# Pinned `a05ce150` (branch `story/6-30-app-links-open-the-app-from-a-text`, STACKED on 6.27's — the row lives there). Three read-only
+# research passes + platform rules fetched 2026-10-10. FOUND: ⛔ no production app identity (prototype ids; D-13 / PRD OQ-1 — BigDev's /
+# the Trust's call; a Play package can ⛔ never change after the first upload); ⛔ no Apple Team ID / Play fingerprint recorded; the login
+# wall drops the target (architecture §4.7 item 1 unmet); the public site is routed only under `/p/`; India's operators refuse a DYNAMIC
+# PATH in a whitelisted URL ⇒ the link is `<origin>/peer-request?c=<code>`; TRAI's 18 Nov 2025 Direction requires TYPED template
+# variables ⇒ ⚠ ALL TWELVE drafted templates (6.19b / 6.19d / 6.24b, ⛔ none submitted) use the untyped `{#var#}` — recorded (AL15), a
+# backlog row PROPOSED to BigDev. AL1–AL16 PROPOSED (author-commit at Task 0.3); ⛔ no Panel question. 6.30 lands BEFORE 6.27's sender
+# (6.27 is Panel-gated). 6.27 v1.3: the query-string link, the env var `APP_LINKS_BASE_URL` (⛔ not Secret Manager — the dotted-id
+# defect), ONE route file `app/(peer-request)/peer-request.tsx`, typed DLT variables. ⛔ No other row moves.)
 # last_updated: 2026-10-10f (⭐ **ROW `6-31-peer-mesh-whatsapp-reminder-at-48-hours` ADDED (`backlog`) — BigDev, in session: *"48 hours,
 # separate story 6-31, go ahead"*.** ONE WhatsApp reminder, same words as 6.27's text, 48 h after selection, to those of the five who
 # have ⛔ not answered AND have opted in to WhatsApp (Story 5.4; the Pariwar's WA switch on) — 48 h so an answer still counts in FQ10's
@@ -19561,7 +19571,7 @@ development_status:
   # ⭐ 2026-10-10 ADDED (BigDev, in session: *"separate story"*): the plumbing that lets an `https://` link in a text open the app at a
   # given screen — 6.27's neighbours' text is its first consumer (6.27 PM21 owns the code, path, route and resolver). ⛔ No story file
   # yet; ⛔ no epics.md entry yet (owed at its create-story). The domain is ONE config value (`app_links.base_url`), expected week of 2026-10-12.
-  6-30-app-links-open-the-app-from-a-text: backlog
+  6-30-app-links-open-the-app-from-a-text: ready-for-dev
   # ⭐ 2026-10-10 ADDED (BigDev, in session: *"48 hours, separate story 6-31"*): ONE WhatsApp reminder at 48 h to the five who have ⛔ not
   # answered and opted in to WhatsApp — after 6.27's sending half; Panel-routed inside 6.27's Q1. ⛔ No story file; ⛔ no epics.md entry yet.
   6-31-peer-mesh-whatsapp-reminder-at-48-hours: backlog

@@ -3267,7 +3267,11 @@ already takes); the cycle commit re-checks it; once a claim's payment is committ
 can still overturn), every other open claim of that death is `closed` (⛔ never refused, ⛔ never appealable) — a refused claim keeps its
 appeal and is closed only if the appeal reverses it; every approver sees an `other_claim_for_death` warning while another claim of the
 death is open (FQ12's reason and note; 6.23b's wait and correction queue — the wait only as Q1 rules it, `-279` A6). `-262` FQ5's
-machinery is ⛔ not changed — its one uncovered corner (`-294` §2 (a)) is put to the Panel; ⛔ no text is added unless the Panel rules Q3 B.
+machinery is ⛔ not changed except that an allowed suspicion appeal now also closes a voted, unpaid other claim (OP13) — the corner left
+(a refusal changed to the suspicion reason only after payment) is put to the Panel; the 30-day convergence window is removed (OP11); the
+verification console lists the other claims of the death, and every final-approval surface shows a banner and blocks final approval while one
+has passed the vote — with a staff "Close this claim" once it is paid — and the ground inspector sees them too (OP14); ⛔ no text is added unless
+the Panel rules Q3 B.
 
 ### Story 6.29: A Config Hold Never Burns a Suspicion Text — 0151 Gains 6.25's Hold, Give-Up Anchor and DB Backstops, Adapted to SMS `[PRIMITIVE]`
 

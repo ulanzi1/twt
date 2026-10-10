@@ -10,7 +10,7 @@ governance trail `-255` … `-302`) and the load-bearing ones re-read by the aut
 `git diff --name-only 5946e411..HEAD -- packages apps scripts` — any cited file in that list is re-read.
 
 STATUS: `ready-for-dev` — ⛔⛔ NO CODE until Task 0 is done: (i) ✅ DONE 2026-10-10 — the Panel ruled Q1 A (with a language rider)
-and Q2 A, transcribed as `2026-10-10-303` and into the routing note; (ii) BigDev has answered PM1–PM23 (below); (iii) ONE author-commit
+and Q2 A, transcribed as `2026-10-10-303` and into the routing note; (ii) BigDev has answered PM1–PM25 (below); (iii) ONE author-commit
 recording them is committed ALONE ([[feedback_governance_commits_precede_implementation]]). ⭐ The RECOMMENDED answers were taken, so
 ⛔ no "Re-plan by answer" branch applies; the rider adds PM22 and amends PM3 / PM7 (v1.4).
 
@@ -295,7 +295,7 @@ a family's claim must take, and whether the final approval waits). In the member
   holds ⛔ no privileges on claim tables ⇒ any new jobs sweep fails 42501 in production until it closes); the DLT sheet
   (`docs/launch-gate-inventory/dlt-template-requests-6-19.md`) carries templates 1–12 ⇒ PM16.
 
-## ⚖️ Build decisions PM1–PM23 (PROPOSED — answered by BigDev at Task 0.3, committed by ONE author-commit at Task 0.4)
+## ⚖️ Build decisions PM1–PM25 (PROPOSED — answered by BigDev at Task 0.3, committed by ONE author-commit at Task 0.4)
 
 - **PM1 — who is texted: the five 6.6 chose, minus those the Trust must ⛔ not text — ⛔ never replaced.** At send time (the child's locked
   re-check, PM5) a ping is finished `no_target` with a fixed detail when its member: is ⛔ not `members.state = 'active'`
@@ -429,7 +429,8 @@ a family's claim must take, and whether the final approval waits). In the member
   answer with its question's English words (the sensitive ones decrypted in the HANDLER), *"submitted"* / *"⛔ not submitted yet"*,
   *"answered in the app"* or *"recorded by the helpline"*, the last-saved IST time and *"changed N times"*, the date given (decrypted in the handler —
   FQ8 E: *"the District Admin is shown answers"*) with *"more than a day from the certificate"* from the WARNINGS read (Invariant 8);
-  the two `kindLine`s (⛔ no date in them — `verifier-console.test.tsx:396`). `VERIFIER_CONSOLE_MAX_READS` bumped to the exact new ceiling
+  the two `kindLine`s (⛔ no date in them — `verifier-console.test.tsx:396`). ⚠ v1.6: built through PM24's shared assembler, which
+  also applies PM25's hiding for an actor who is an un-completed inspector on the claim. `VERIFIER_CONSOLE_MAX_READS` bumped to the exact new ceiling
   with a ledger line and a `toBe`. `verifierAnnotations` STAYS `not_available_yet` — staff NOTE capture on an answer is ⛔ not built (the
   reason + note under the rule is the staff's written response); the deferred item is updated, ⛔ not closed. The family's app, the claim
   status page and every public page show ⛔ nothing new (Invariant 7).
@@ -514,11 +515,37 @@ a family's claim must take, and whether the final approval waits). In the member
   (f) **The text's *"two"* / *"a few"*** follows Q6 — the copy is registered with the DLT only after that ruling.
   (g) ⚠ **Re-plan by the Panel's answer:** Q3 / Q4 B or C would turn an answer into a warning or a flag — ⛔ never built without a new
   author-commit and the Policy-meaning note re-checked; Q5 A (our reading) ⇒ ⛔ no alcohol question.
+- **PM24 — every approver sees the neighbours' answers for the claim in front of them** (BigDev 2026-10-10, *"yes, make those
+  changes"*). FOUND: the full answers (PM13) live in the verifier console, gated by `claim.verify` (`claims.verifier-console.handlers.ts:67`),
+  which only `district_admin`, `verifier` and `super_admin` hold (`packages/domain/src/rbac/roles.ts:496,649`; `super_admin` holds every
+  key) — ⛔ not `state_trustee` (`:477`), ⛔ not `pariwar_admin` — so a State Trustee, an R9 voter or a Pariwar Admin approving over a
+  neighbour's warning would write the required reason and note about answers they cannot see. ⇒ ONE shared assembler
+  (`assemblePeerAnswers`, used by the console AND this read) and ONE read `GET /api/v1/p/:pariwarId/admin/claims/:claimCaseId/peer-answers`,
+  allowed ONLY to the actor who may approve THIS claim at its CURRENT step (the same permission + scope check that approval runs — the
+  final vote, R9, the Super Admin's G1 decision, the Pariwar Admin's no-correction approval) — every other actor gets 404; audited (actor, claim,
+  time — ⛔ no answer content). The later-approval surfaces (`LaterApprovalWarnings.tsx` and its four hosts) show a *"Neighbours' answers"*
+  panel beside the warning lines. ⛔ No new permission key; ⛔ no wider read than the claim at hand.
+- **PM25 — the people who meet the family see the answers only after recording their own** (BigDev 2026-10-10: *"I don't want Helpline
+  Operator and Field Inspector to see neighbours answer, atleast until they have recorded their own version … showing it immediately
+  afterward, help them corss examine family"*).
+  (a) **The inspector** (the actor named on an assignment — a District Admin or a Block Admin; `field_worker` holds ⛔ no key today):
+  while they hold an UN-completed assignment on this claim and have completed ⛔ none, every surface — the console included, for a District
+  Admin who inspects — shows *"Hidden until you complete your inspection"* in place of the answers (and the counts). ⭐ The moment their
+  assignment is COMPLETED (`completeGroundInspection`), the answers appear on the inspection screen, so they can question the family while
+  still there. The completed record is ⛔ never changed afterwards (6.26a); what they learn goes in a NEW **follow-up note** on the
+  assignment (`follow_up_note_ciphertext`, Tier-1, with its own `follow_up_noted_at`; written once, while the claim is in PM8's window),
+  shown to staff as *"after seeing the neighbours' answers"*. Each FIRST reveal to a person is recorded (actor, claim, assignment, time)
+  ⇒ the record's `completed_at` before the reveal proves it was independent. ⚠ Approval is never blocked by this: FQ9 already needs a
+  completed inspection, so an inspecting District Admin always sees the answers before approving.
+  (b) **The helpline operator** sees ONLY the answers of the neighbour they are recording, while recording (PM12) — ⛔ never another
+  neighbour's answers, ⛔ never the warning lines, ⛔ never the counts. ⇒ ⛔ no reveal point: the helpline records ⛔ no family version of
+  the death, and questioning the family is the inspector's and the District Admin's role.
+  (c) Enforced in the SERVER read (the shared assembler takes the actor and returns the hidden shape) — ⛔ never only in the UI.
 
 ## Acceptance Criteria
 
 1. **AC1 — Task 0 first.** ⛔ No code is committed before (i) the Panel's Q1 / Q2 ruling is transcribed into the routing note's ⏳
-   block and `.decision-log.md` (a new id), and (ii) ONE author-commit recording PM1–PM23 as answered (and re-planned per the ruling) is
+   block and `.decision-log.md` (a new id), and (ii) ONE author-commit recording PM1–PM25 as answered (and re-planned per the ruling) is
    committed ALONE; the epics.md `### Story 6.27` entry, the two roster rows and the DLT sheet rows follow it, before Task 1.
 2. **AC2 — each of the five is texted once (Q1 A).** Given a claim whose selection has pings, when the SELECT worker commits, then one
    child per ping is enqueued; each child, under the claim lock, re-checks PM5 (iv) and PM1, then (after COMMIT) decrypts, normalises,
@@ -546,7 +573,10 @@ a family's claim must take, and whether the final approval waits). In the member
 7. **AC7 — answers are taken while an approval is still to come** (PM8): accepted in each of the five review-window states, including
    after the 72 hours resolved and after the District Admin approved; refused in `state_trustee_approved` and every closed / refused
    state; the 72-hour label ⛔ not recounted.
-8. **AC8 — staff see the answers** (PM13): the 72-hour line, each neighbour's name, the send status, each answer, its time and how it was
+8. **AC8 — staff see the answers** (PM13; ⭐ v1.6 PM24 / PM25: every approver at the claim's current step sees them through the shared
+   read, every other actor gets 404; an un-completed inspector sees *"Hidden until you complete your inspection"* everywhere, the
+   answers appear the moment their assignment is completed and the reveal is recorded; a follow-up note can be added once; the helpline
+   operator sees only the caller's own answers): the 72-hour line, each neighbour's name, the send status, each answer, its time and how it was
    recorded, the date given and whether it is more than a day from the accepted certificate; a failed decrypt or warnings read shows
    *"could not be shown / checked just now"*, ⛔ never blank or "no warning"; the read ceiling is the exact bumped number.
 9. **AC9 — the two warnings** (PM9): `peer_says_not_died:<reply_id>` for every *"has not died"*; `peer_death_date_differs:<reply_id>`
@@ -573,8 +603,8 @@ a family's claim must take, and whether the final approval waits). In the member
   - [ ] 0.1 Put the routing note to the Panel (BigDev relays). ⛔ Never edit the note's question sections after sending.
   - [ ] 0.2 Transcribe the ruling into the note's ⏳ block AND `.decision-log.md` (next id after `-302`; *"what this ruling does ⛔ NOT
         cover"* included). If the answer is ⛔ not Q1 A / Q2 A, re-plan this file per *"Re-plan by answer"* BEFORE 0.3, and re-check P1 / P2.
-  - [ ] 0.3 Put PM1–PM23 to BigDev (short option summaries — the 6.24b / 6.29 form); record each answer here.
-  - [ ] 0.4 ONE author-commit (decision entry) recording PM1–PM23 as answered — committed ALONE; stage it in the scratchpad and try the
+  - [ ] 0.3 Put PM1–PM25 to BigDev (short option summaries — the 6.24b / 6.29 form); record each answer here.
+  - [ ] 0.4 ONE author-commit (decision entry) recording PM1–PM25 as answered — committed ALONE; stage it in the scratchpad and try the
         insert first ([[project_decision_log_writes_user_inserted]]).
   - [ ] 0.5 epics.md `### Story 6.27` entry (after 6.26b; a dated "Added … Task 0.5" source line, ⛔ never a merge fence); annotate Story 6.6's
         AC (*"pinged via Story 5.1 dispatcher"* → the routed channel) and Story 6.10's AC2(c) — ⛔ never rewrites.
@@ -615,7 +645,10 @@ a family's claim must take, and whether the final approval waits). In the member
       on a device is row 6-30's acceptance, ⛔ not this story's — here, test the route by navigating to the path.
 - [ ] **Task 7 — the helpline recording (AC6).** PM12's two routes on 6.3's chain; the admin panel on the member-lookup screen; tests incl.
       ⛔ no step-up ⇒ refused.
-- [ ] **Task 8 — what staff see (AC8).** Contracts (`PeerMeshTranscript` gains `outcome`, `windowExpiresAt`, per-ping `sendStatus`,
+- [ ] **Task 8 — what staff see (AC8).** ⭐ v1.6: `assemblePeerAnswers` (shared; actor-aware — PM25 (c)); PM24's read + its
+      approver-at-current-step check + the panel on the later-approval surfaces; PM25 (a)'s hiding, the reveal record and the follow-up
+      note (a migration column on `claim_ground_inspections` + its erasure arm); tests for each role × step, the un-completed inspector,
+      the reveal ordering (`completed_at` < the reveal) and the operator's narrow view. Contracts (`PeerMeshTranscript` gains `outcome`, `windowExpiresAt`, per-ping `sendStatus`,
       `responderName`, `reply`); `assemblePeerMesh` (the decrypts in the handler, fail-closed); `PeerMeshView`; the read-ceiling bump with an
       exact `toBe`; `claims-verifier-console.test.ts:247` stays (annotations still `not_available_yet`).
 - [ ] **Task 9 — the two kinds (AC9–AC11).** 9.1 `APPROVAL_WARNING_KINDS` + contracts mirror + `kindLine` (⛔ no date); 9.2
@@ -753,7 +786,7 @@ route and resolver are built and tested here against a config base URL; only the
 ### Completion Notes List
 - 2026-10-10 — created by `bmad-create-story 6.27` (Opus 5.5): ultimate context engine analysis completed — comprehensive developer guide
   created. Four read-only research passes at `5946e411`; the Panel note written from the template (Q1, Q2) with its E4 commands run;
-  PM1–PM23 PROPOSED. ⛔ No code; ⛔ no decision entry yet (Task 0).
+  PM1–PM25 PROPOSED. ⛔ No code; ⛔ no decision entry yet (Task 0).
 
 ### File List
 
@@ -761,6 +794,7 @@ route and resolver are built and tested here against a config base URL; only the
 | Date | Version | Change |
 |---|---|---|
 | 2026-10-10 | 1.0 | Created (`bmad-create-story 6.27`); pinned `5946e411`; routing note Q1 / Q2 written; PM1–PM20 proposed. |
+| 2026-10-10 | 1.6 | BigDev: who sees the answers. FOUND: the console key `claim.verify` is held only by District Admins, verifiers and the Super Admin — State Trustees, R9 voters and Pariwar Admins would approve over a warning they cannot see. NEW PM24 (every approver sees the answers for the claim at its current step — one shared assembler, one read, ⛔ no new key); NEW PM25 (the inspector sees ⛔ nothing until their inspection is completed, then at once — a follow-up note, the reveal recorded; the helpline operator sees only the caller's own answers). PM13, AC8, Task 8 follow. |
 | 2026-10-10 | 1.5 | BigDev: a fuller, optional, evolving questionnaire — 2–3 questions per page, auto-save, a note before Submit, Submit → *"Thank you"*. PM7 rewritten (a reply + append-only answers, live when saved, locked at Submit, the event at the first `has_died` save); PM9 / PM10 read the LIVE answers; PM11 / PM12 / PM13 / PM17 follow; NEW PM23 (the questionnaire as versioned DATA, `approvedBy` per question, v1 = page 1). The questions beyond page 1 go to the Panel in a follow-up note (Q3–Q7, ⏳). |
 | 2026-10-10 | 1.4 | ⭐ The Panel RULED (`2026-10-10-303`): Q1 A (with the WhatsApp reminder) + a language rider (Hindi / English by preferred language), Q2 A. STATUS (i) done; rulings table, the Panel-questions heading and P1 updated; PM3 sends both locales; PM7 asks exactly TWO questions (`answer` = `died` / `not_died` / `not_sure` / `did_not_know`; the words in the routing note's ruling block, as relayed to the Panel); NEW PM22 (the preferred language — our reading); `-279` A6 discharged for this row. |
 | 2026-10-10 | 1.3 | Aligned with Story 6.30 (created the same day): the link is `<origin>/peer-request?c=<code>` (a query string — operators refuse dynamic paths), built by 6.30's contracts `app-links` builder; the base is the env var `APP_LINKS_BASE_URL` (⛔ not Secret Manager — the dotted-id defect); ONE route file `app/(peer-request)/peer-request.tsx` (the old group-only files would collide); typed DLT variables (`{#alphanumeric#}` / `{#url#}` / `{#cbn#}`); Row 27 (e) → 6.30's roster row. ⛔ No PM added; PM3, PM11, PM21 amended (⛔ not yet committed — ⛔ no decision superseded). |

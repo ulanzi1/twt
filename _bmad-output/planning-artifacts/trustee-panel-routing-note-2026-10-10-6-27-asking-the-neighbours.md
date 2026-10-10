@@ -35,6 +35,12 @@
 > language is the language they chose in the TWT app (recorded when they choose it); for a member who never used the app, the Pariwar's
 > default language (Hindi for Bihar). If the Panel means something else, it says so.
 >
+> ⚠ **CORRECTION, 2026-10-10 (recorded, the question below ⛔ not edited):** the line under *"Deliberately ⛔ not asked"* — *"the answers
+> are shown to the District Admin and the later approvers only"* — was wider than the system as then designed (later approvers saw only
+> the warning line) and silent on the inspector and the helpline. Story 6.27 v1.6 (PM24, PM25) now makes it exact: every approver sees
+> the answers for the claim at their step; the inspector sees ⛔ nothing until their own inspection is completed; the helpline operator
+> sees only the caller's own answers. The exact list goes to the Panel in the follow-up note.
+>
 > ⚠ **2026-10-10, later the same day — this two-question answer was ⛔ not sent.** BigDev asked for a fuller, optional questionnaire;
 > the answer now goes to the Panel as the follow-up note `trustee-panel-routing-note-2026-10-10-6-27-the-neighbours-questions.md`
 > (Q3–Q7). The draft below is kept as written.

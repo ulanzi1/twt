@@ -1,3 +1,11 @@
+# last_updated: 2026-10-10j (⭐ **6.27 → v1.6 — WHO SEES THE NEIGHBOURS' ANSWERS (BigDev, in session).** FOUND: the full answers would live in
+# the verifier console (`claim.verify`), held only by District Admins, verifiers and the Super Admin — State Trustees, R9 voters and Pariwar
+# Admins would write a reason about answers they could ⛔ not see. NEW PM24 (every approver sees the answers for the claim at its current
+# step — one shared, actor-aware read; ⛔ no new key). NEW PM25 (BigDev: *"I don't want Helpline Operator and Field Inspector to see
+# neighbours answer, atleast until they have recorded their own version"*): the inspector sees ⛔ nothing until their inspection is
+# completed, then at once (a follow-up note; the reveal recorded); the helpline operator sees only the caller's own answers. The unsent
+# follow-up note gains an exact *"Who sees the answers"* table; the ratified first note gains a CORRECTION line in its ruling block (its
+# question ⛔ not edited). ⛔ No row moves.)
 # last_updated: 2026-10-10i (⭐ **6.27 → v1.5 — the neighbours' QUESTIONNAIRE (BigDev, in session): *"ask few more but keep optional, with
 # options. Ask 2 or 3 questions at a time on screen with auto save feature, A note at the end before Submit … Submit button just redirect
 # user to Thank You page"*, and *"these questions are of evolving nature"*** — PM7 rewritten (append-only answers, live when saved, locked

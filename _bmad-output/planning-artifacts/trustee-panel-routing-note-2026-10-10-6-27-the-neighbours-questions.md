@@ -11,8 +11,8 @@
 > · the screen: two or three questions per page, every question optional except the first, each answer **saved as soon as it is
 >   chosen**, a short note before **Submit**, and Submit simply showing *"Thank you"* (the answers are already saved);
 > · that an answer counts as soon as it is saved, can be changed until Submit, and is locked after it — every change is kept;
-> · that the answers about the cause of death and illness are stored encrypted and shown only to the District Admin and later approvers
->   — ⛔ never to the family, ⛔ never published (as for every neighbour's answer);
+> · who among the Trust's staff sees the answers, and when — set out in full under *"Who sees the answers"* below (the answers about
+>   the cause of death and illness are also stored encrypted); ⛔ never the family, ⛔ never published;
 > · the Hindi words (agent-written, reviewed by a person before go-live).
 
 ---
@@ -40,6 +40,19 @@ helpline [number]."* (Q6). The screen shows ⛔ nothing about a claim, the famil
 | 3 | **Did [member] drink alcohol regularly?** | Yes · No · I don't know | **Q5** — we suggest ⛔ not asking |
 | 4 | **May the District Admin phone you about this?** | Yes · No | Q6 — new |
 | end | *"Your answers are saved as you go. Only the Trust's staff who check this claim will see them — never the family. Please answer only what you know. Press Submit when you are done."* → **Submit** → *"Thank you. Your answers have been sent to the Trust."* | | Q6 |
+
+## Who sees the answers
+
+| Who | What they see |
+|---|---|
+| **The District Admin** (and the district's verifiers) | Every answer, who gave it, when — for claims in their district. |
+| **Every later approver** — the State Trustees at the final vote, the R9 panel, the Super Admin, the Pariwar Admin | Every answer for the claim **they are approving, at that step only** — so a reason and a note are never written about answers they cannot see. |
+| **The inspector who visits the family** | ⛔ **Nothing until they have completed their own inspection record** — then every answer at once, so they can question the family while still there. What they learn goes in a separate follow-up note; their own record is never changed, and the moment they first saw the answers is recorded. |
+| **The helpline operator** | Only the answers of the neighbour on the phone, while recording them — ⛔ never anyone else's: they speak with the family, and questioning the family is not their role. |
+| **The neighbour** | Their own answers, until they press Submit. |
+| ⛔ **Never** | The family, the claimant, the nominee, the other four neighbours, any other member, the public. |
+
+⭐ The inspector and the helpline rule are BigDev's (2026-10-10): the people who meet the family should form their own view first.
 
 ⭐ Only the first two questions can raise a **warning** (your FQ10 / FQ8 E rulings). Everything else is shown to staff as **context**,
 unless you rule otherwise in Q3–Q5.
@@ -145,7 +158,9 @@ the three new questions on pages 2 and 4 (how they know of the death, how they k
 
 - **Earlier versions:** `-303`'s note asked only how the five are reached and what a late answer does; your question there (*"which
   questions"*) was answered first with two questions — BigDev then asked for more, so this note replaces that answer before it was sent.
-- **Corrected in this note:** the first draft of the cause question asked *"Was the death natural? — if No: prolonged illness, heart
+- **Corrected in this note:** before sending, *"who sees the answers"* was made exact — our first wording (*"the District Admin and
+  later approvers"*) was wider than the system as designed (later approvers could see only the warning line) and silent on the inspector
+  and the helpline. The first draft of the cause question asked *"Was the death natural? — if No: prolonged illness, heart
   attack …"*, which put natural causes under *"not natural"*; it is now one list.
 - **Still uncertain:** counsel has ⛔ not yet seen any of this; whether the SMS operator accepts *"a few"* without re-registering is checked at
   registration (the text is ⛔ not registered yet, so ⛔ no cost).

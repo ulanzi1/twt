@@ -10,10 +10,10 @@ PERISHABLE fact: re-run it before Task 1). The 39-line PR #268 SHA map lives in 
 the three branch SHAs this file still cites map as `a05ce150` → `1cce7e5a`, `21e89ed6` (`-312`) → `b3a9476b` and `877e5864` → `cf5adf67`.
 
 STATUS: `ready-for-dev`. ✅ AL1–AL16 committed by `2026-10-10-312` (`b3a9476b`) and CORRECTED by `2026-10-10-315` (`a3253ec0`, C1–C8 —
-AL1, AL2, AL6, AL7, AL9, AL10, AL11, AL12, AL16) and its erratum `2026-10-10-316` (`a2b994b7`, E1–E3); the AL block below is that
-committed text ONLY — build detail is in Dev Notes → Build notes N1–N20. 6.30 may be built from Task 0.1 / 0.4 on
-([[feedback_governance_commits_precede_implementation]]). ⚠ A fresh-context re-validate round repeats until one finds ⛔ no BLOCKER /
-HIGH, before Task 1 (`-316` Consequence 2) — see the Change Log for the rounds run.
+AL1, AL2, AL6, AL7, AL9, AL10, AL11, AL12, AL16) its erratum `2026-10-10-316` (`a2b994b7`, E1–E3) and the reading `2026-10-10-317` (`44830033`, R1–R3); the AL block below
+is that committed text ONLY — build detail is in Dev Notes → Build notes N1–N20. 6.30 may be built from Task 0.1 / 0.4 on
+([[feedback_governance_commits_precede_implementation]]). The re-validate rule (`-316` Consequence 2 — rounds until one finds ⛔ no BLOCKER /
+HIGH) is DISCHARGED: round 9 found none (`-317` R3).
 ⭐ §0 gate (template `trustee-panel-routing-note-TEMPLATE.md`): ⛔ no Panel question. Every AL strips to "the code should do X". What the
 TEXT says and who is texted is RULED — `2026-10-10-303` Q1 A (the five are texted, naming the member, with the link and the helpline, plus
 one WhatsApp reminder at 48 h; Hindi / English by the Panel's rider, narrowed by `2026-10-10-305` §2 item 2 to the Pariwar's default
@@ -26,7 +26,7 @@ builds everything with them as CONFIG and records them on Row 29 (a); it ⛔ nev
 
 GLYPH REGISTER: `⛔` sits ONLY on a negation word · `⭐` = key fact / action · `⚠` = hazard. ⛔ No `file:NNN` into `.decision-log.md`,
 `deferred-work.md` or `sprint-status.yaml`. LETTERS: `AL` = this story's build decisions (COMMITTED, `-312` + `-315` + `-316`); `C1`–`C8` = `-315`'s
-corrections; `E1`–`E3` = `-316`'s; `N1`–`N20` = build notes (⛔ not decisions); `F` = FOUND facts; 6.27's `PM` cited as such.
+corrections; `E1`–`E3` = `-316`'s; `R1`–`R3` = `-317`'s; `N1`–`N20` = build notes (⛔ not decisions); `F` = FOUND facts; 6.27's `PM` cited as such.
 -->
 
 # Story 6.30: A Link in a Text Opens the App at the Right Screen — App Links, Universal Links, Two Public Files, a Plain Fallback Page, and the Login That Keeps Its Place `[PRIMITIVE]`
@@ -88,6 +88,7 @@ so that **I can do what the message asks in a minute, and ⛔ no web page ever a
 | `2026-10-10-312` | AL1–AL16 as written | author-commit |
 | **`2026-10-10-315`** | C1–C8 — corrections to AL1, AL2, AL6, AL7, AL9, AL10, AL11, AL12, AL16 (the round-7 validate) | author-commit — governs where it differs from `-312` |
 | **`2026-10-10-316`** | E1–E3 — erratum to `-315`: the EAS project id is one literal for every variant; the edge skip's scope worded in full; C1 also corrects AL7 (the round-8 re-validate) | author-commit — governs where it differs from `-315` |
+| **`2026-10-10-317`** | R1–R3 — a reading on `-316`: E1's reason corrected; three residuals RECORDED, accepted (AL6 / AL11); Consequence 2 recognised and discharged (the round-9 re-validate) | author-commit |
 | Architecture §4.7 | deep-link landing: (1) re-auth preserves the target; (2) scope match; (3) revoked ⇒ *"this is no longer available to you"* + helpline, *"Never hard 404"* | architecture (binding) |
 | Architecture §3.4 + `-255` F7 | members got ⛔ no ordinary SMS before `-303` — `-303` Q1 A is the widening for the five | ruled |
 | ADR-0022 | the public Astro shell: server-rendered, ⛔ no session, ⛔ no per-user branching | ratified |
@@ -151,7 +152,7 @@ applicable (the Niyamavali does not speak to app links) — and it is ⛔ not ra
   read with `usePathname()` + `useGlobalSearchParams()`. `otp.tsx:38-39` (`await signIn(res); router.replace('/(tabs)')`) and the guard's
   `:130-131` BOTH fire on one login; the signup branch is `otp.tsx:46-48`. ⛔ No `returnTo` / `next` anywhere. `unstable_settings.
   initialRouteName: '(tabs)'` (`:36-39`) gives a cold-start link a back stack. The root `<Stack>` declares most groups with `headerShown:
-  false` (`:138-232`; `(claim)`, `(membership)`, `(polls)`, `(signup)` are undeclared).
+  false` (`:138-238`; `(claim)`, `(membership)`, `(polls)`, `(signup)` are undeclared).
 - **F3b — sign-out and termination** (`lib/session-context.tsx`): `signOut()` `:80-90` (its only caller `app/(withdrawal)/index.tsx:99`);
   the termination handler `:58-66` (`setSession(null)` + notice); `signIn` `:68-78`. `lib/session.ts:92-98` holds the module-level
   termination-handler slot; `:150-176` the 4xx refresh branch (`clearSession()`, then the termination callback ONLY for
@@ -243,7 +244,7 @@ applicable (the Niyamavali does not speak to app links) — and it is ⛔ not ra
   in Astro's `ssr.noExternal`). A JSON import widens to `string` ⇒ the `'/peer-request'` literal type is declared by hand and held to the
   JSON by the lockstep test. `@twt/contracts` is already a dependency of `apps/public` and `apps/mobile`; contracts has `zod`.
 
-## ⚖️ Build decisions AL1–AL16 (COMMITTED — `2026-10-10-312`, corrected by `2026-10-10-315` C1–C8 and `2026-10-10-316` E1–E3)
+## ⚖️ Build decisions AL1–AL16 (COMMITTED — `2026-10-10-312`, corrected by `2026-10-10-315` C1–C8, `2026-10-10-316` E1–E3 and `2026-10-10-317` R1–R2)
 
 > ⭐ This block is the committed text ONLY — `-312`'s wording with `-315` / `-316`'s corrections folded in (each marked). How to build it —
 > file names, test shapes, formats — is in **Dev Notes → Build notes N1–N20** (implementation detail, ⛔ not decisions).
@@ -252,12 +253,13 @@ applicable (the Niyamavali does not speak to app links) — and it is ⛔ not ra
   base + a function of the build variant and env). ⭐ The variant is `APP_VARIANT`, set in each `eas.json` build profile's `env`
   (`development` / `preview` / `production`) — ⛔ never `EAS_BUILD_PROFILE` (F2c). `name`, `scheme`, `ios.bundleIdentifier`,
   `android.package` keep TODAY's prototype values for `development` / `preview` AND when `APP_VARIANT` is unset (local `expo start`, `expo
-  prebuild`, `expo export` / `build:web`) — so nothing local changes; ONLY `APP_VARIANT=production` reads `APP_IDENTITY_*` env and FAILS THE
+  prebuild`, `expo export --platform web` / `build:web`, `eas update` without a profile env) — so nothing local changes; ONLY `APP_VARIANT=production` reads `APP_IDENTITY_*` env and FAILS THE
   BUILD when unset (⛔ never a silent prototype production build). The `APP_IDENTITY_*` values sit in the production profile's `eas.json`
   `env` (public values — the CLI's first local evaluation sees ONLY `eas.json` `env`). `slug` is ONE value for every variant (eas-cli refuses
   a slug ≠ the EAS project's). ⭐ `extra.eas.projectId` is ONE public literal in the static base for EVERY variant, written when BigDev
-  creates the EAS project (Row 29 (a)), absent until then, and EXCLUDED from AC3's fixture comparison (`-316` E1 — `eas submit`, `eas env:*`
-  and every `eas build` read the config WITHOUT the profile's env). `eas submit` runs with `APP_VARIANT=production` and the `APP_IDENTITY_*`
+  creates the EAS project (Row 29 (a)), absent until then, and EXCLUDED from AC3's fixture comparison (`-316` E1; its reason per `-317` R1 —
+  every `eas build` evaluates the config with its OWN profile's env, so development / preview builds would lack a production-only id;
+  `eas submit` and `eas env:*` evaluate with the shell env alone); the Expo account it belongs to is BigDev's call (`-315` C1). `eas submit` runs with `APP_VARIANT=production` and the `APP_IDENTITY_*`
   values exported (a README line, a Row 29 note); `submit.production.ascAppId` is set at Row 29. This story ⛔ never chooses the production
   identity (D-13 / OQ-1 — BigDev / the Trust; an Android package can ⛔ never change after the first Play upload) — owed before the first
   production build, carried on Row 29 (a). ⚠ Changing the identity later orphans the Firebase app registered under `…p0prototype`
@@ -265,8 +267,9 @@ applicable (the Niyamavali does not speak to app links) — and it is ⛔ not ra
 - **AL2 — ONE app-link path list, as DATA** (detail corrected by `-315` C2). NEW `packages/contracts/src/app-links/app-link-paths.json` —
   `{ "peerRequest": "/peer-request" }` (closed; a new path = a deliberate grammar change, the `DeepLinkResource` discipline).
   `app.config.ts` loads it with `require('@twt/contracts/src/app-links/app-link-paths.json')` — by PACKAGE name, ⛔ never `../../packages/…`
-  (Node loads JSON natively — ⛔ never a `.ts` import from contracts in the app config, ⛔ never reliance on Node type-stripping). The
-  TypeScript module `packages/contracts/src/app-links/` (barrel-exported) imports the same JSON and exports `APP_LINK_PATHS` (typed `as const`
+  (Node loads JSON natively — ⛔ never a `.ts` import from contracts in the app config, ⛔ never reliance on Node type-stripping: the EAS image's Node version is ⛔ not
+  pinned). The TypeScript module `packages/contracts/src/app-links/` (barrel-exported) imports the same JSON via `resolveJsonModule` and
+  exports `APP_LINK_PATHS` (typed `as const`
   view), `APP_LINK_CODE_PARAM = 'c'`, `APP_LINK_CODE_PATTERN` (`[A-Za-z0-9]{12}` — for 6.27c's generator and route), `buildAppLinkUrl(baseUrl,
   key, code)` → `<base><path>?c=<code>` (the code asserted, URI-safe by construction), `parseAppLinkCode(params)`, and the pure builders of the
   two verification-file bodies from a LIST of app identities (`{ iosAppId: '<TEAMID>.<bundleId>' }`, `{ androidPackage, sha256Fingerprints[]
@@ -287,18 +290,22 @@ applicable (the Niyamavali does not speak to app links) — and it is ⛔ not ra
   callers and tests keep passing unchanged — a pure rename + re-export), used for both; `https:` only, an ORIGIN — ⛔ no path / query /
   credentials / fragment; ⭐ a trailing `/` is ACCEPTED and stripped (the precedent's behaviour, kept); invalid / unset ⇒ `null`. ⭐ OWNERSHIP:
   6.30 owns the validator, its table test, the `apps/jobs/README.md` row and the `compose.yaml` jobs-block line; **6.27c owns the boot read
-  and the dep** (in the `boot.ts:630` inline shape) and its sweep's hold `config:app_links_base_url_invalid`. ⛔ No code default.
+  and the dep** (in the `boot.ts:630` inline shape) and its sweep's hold `config:app_links_base_url_invalid` — that sweep does ⛔ not exist when 6.30 lands. ⛔ No code default (unlike the two
+  `twt.org` defaults, F8). (Supersedes 6.27 PM21 (b)'s first *"read like the template ids (Secret Manager)"* — 6.27 v1.3 carries it; PM21
+  was ⛔ not yet committed at `-312`, so ⛔ no decision was superseded; `-311` has since committed PM21 with the env var.)
 - **AL6 — the login keeps its place** (§4.7 item 1; corrected by `-315` C3). (i) EVERY refresh refused with a 4xx resets the in-app session
   the way the termination handler does, so the guard sends the member to login from the link's screen (F3b). (ii) The root guard
   (`_layout.tsx:127-129`), when it sends a member without a session to login, records the requested target in MEMORY (a module-level holder in
   `lib/link-target.ts`, ⛔ not MMKV / SecureStore — a link target ⛔ never outlives the app process), read from `usePathname()` +
   `useGlobalSearchParams()` (`useSegments()` carries ⛔ no query): ONLY an `APP_LINK_PATHS` path (an allowlist — ⛔ not an arbitrary path) and
   ONLY its `c`, after `parseAppLinkCode` (⛔ no other parameter is carried). (iii) ONE consumer: `otp.tsx`'s full-session branch takes the
-  target BEFORE `await signIn(…)` and replaces to it (an `Href` built from `APP_LINK_PATHS` + `c`), else `/(tabs)`; the guard's own
-  post-login branch (`:130-131`) stays `/(tabs)` and ⛔ never reads the holder. (iv) The holder is cleared on the signup branch BEFORE
+  target BEFORE `await signIn(…)` and replaces to it (an `Href` built from `APP_LINK_PATHS` + `c`), else `/(tabs)`; it is consumed once; the guard's
+  own post-login branch (`:130-131`) stays `/(tabs)` and ⛔ never reads the holder. (iv) The holder is cleared on the signup branch BEFORE
   `signIn`, on sign-out (`signOut()`), and on both termination paths. The termination branch (`:115-126`) WINS over any target. ⚠ RECORDED,
   accepted: if the process dies during the OTP step the target is lost — the member still finds the request on the home screen (6.27a's
-  card) and in the message. §4.7 item 2 (scope switch): ⛔ not reachable — one Pariwar per session (F6); the consumer's resolver 404s a
+  card) and in the message. ⚠ RECORDED, accepted (`-317` R2 (a) / (b)): if `signIn` throws after `otp.tsx` has taken the target, the target
+  is lost (the OTP error shows; the request is on the home screen); a link arriving while the member is on `/(auth)/otp` replaces the OTP
+  screen with login (a fresh OTP may hit the rate limit); a missing or malformed `c` gives ⛔ no target ⇒ `/(tabs)`. §4.7 item 2 (scope switch): ⛔ not reachable — one Pariwar per session (F6); the consumer's resolver 404s a
   foreign code (PM21 (d)) — RECORDED. §4.7 item 3: the consumer's screen (AL16).
 - **AL7 — the app's link settings** (in `app.config.ts`, `APP_VARIANT=production` only — `-315` C1 / `-316` E3 — from `APP_LINKS_HOST`):
   `android.intentFilters` = `[{ action: 'VIEW', autoVerify: true, data: <each path>.map(p => ({ scheme: 'https', host, path: p })),
@@ -317,7 +324,7 @@ applicable (the Niyamavali does not speak to app links) — and it is ⛔ not ra
   member data) AND the gap is recorded as a deferred-work item (gate scope) — ⛔ not widening the gate here (ADR-0013's gate is its own
   change).
 - **AL9 — hosting** (dev wires, operator applies — ADR-0011 §5; corrected by `-315` C4): `compose.yaml` gains ONE Traefik router for the
-  `public` service — ``Path(`/.well-known/apple-app-site-association`) || Path(`/.well-known/assetlinks.json`) || Path(`/peer-request`) ||
+  `public` service, scoped to EXACT page paths — ``Path(`/.well-known/apple-app-site-association`) || Path(`/.well-known/assetlinks.json`) || Path(`/peer-request`) ||
   PathPrefix(`/_astro/`)`` (one `Path(...)` per `APP_LINK_PATHS` entry; ``PathPrefix(`/_astro/`)`` = the site's hashed static assets — public,
   data-free, ⛔ never a page; ⛔ never ``PathPrefix(`/.well-known/`)`` — that would send ACME and future well-known paths to Astro; ⛔ never
   ``PathPrefix(`/peer-request`)`` — a plain string prefix); the `public` service gains ONLY the app-link variables (`APP_LINKS_IOS_APP_IDS`,
@@ -347,12 +354,13 @@ applicable (the Niyamavali does not speak to app links) — and it is ⛔ not ra
   Store buttons ONLY when env `APP_STORE_URL_ANDROID` / `APP_STORE_URL_IOS` are set (⛔ no dead link). ⛔ No helpline number on the page
   (apps/public has ⛔ no helpline source; the message carries it — ⛔ never a second source). A handler test asserts the response body ⛔ never
   contains the `c` value (Invariant 3 — realised as N12). Matrix entry: `route: /peer-request`, `fields: []`, `noindex`, `edge_cacheable`.
-  Friction budget: a page with ⛔ no scoped style adds ~0.
+  Friction budget: a page with ⛔ no scoped style adds ~0. ⚠ RECORDED, accepted (`-317` R2 (c)): the home-screen line is inaccurate after
+  the request has closed or for a forwarded recipient — it discloses ⛔ nothing.
 - **AL12 — the go-live record** (roster numbers RESERVED by `2026-10-10-305` §4; (g) / (h) corrected by `-315` C6): **Row 27** and **Row 28**
   belong to 6.27 (Row 28's Hindi review explicitly INCLUDES 6.30's fallback page, `+not-found` AND AL16's route-shell placeholder); **Row
   29** = 6.30 `app-links-live`; whichever story's Task 0 lands first writes its OWN row at its reserved number (a gap in the roster is
   expected and noted). Row 29 closes on ALL of: (a) the production app identity decided by BigDev and in `APP_IDENTITY_*` + `APP_DISPLAY_NAME`
-  (D-13 / OQ-1 — ⛔ no sprint row), with the values `-315` Consequence 2 / `-316` E1 owe (where each lives — N19); (b) the Trust's domain set
+  (D-13 / OQ-1 — ⛔ no sprint row), with the values `-315` Consequence 2 owes — its `APP_EAS_PROJECT_ID` REPLACED by the literal of `-316` E1 (where each lives — N19); (b) the Trust's domain set
   in `APP_LINKS_BASE_URL`, `APP_LINKS_HOST`, `PUBLIC_SITE_ORIGIN`, `EXPO_PUBLIC_PUBLIC_SITE_ORIGIN` (ONE fact, four settings — documented, ⛔ not
   extracted, [[feedback_no_premature_package]]); (c) Apple Team ID + the Play App Signing (and upload-key) fingerprints in the env; (d) both
   files verified (`adb shell pm get-app-links <pkg>` shows `verified`; Apple's CDN `https://app-site-association.cdn-apple.com/a/v1/<domain>`
@@ -387,7 +395,7 @@ applicable (the Niyamavali does not speak to app links) — and it is ⛔ not ra
 
 ## Acceptance Criteria
 
-1. **AC1 — governance first.** ⛔ No code before the AL author-commits (`-312`, `-315`) — both ✅ landed alone; Task 0.4's records (epics.md
+1. **AC1 — governance first.** ⛔ No code before the AL author-commits (`-312`, `-315`, `-316`, `-317`) — all ✅ landed alone; Task 0.4's records (epics.md
    `### Story 6.30`, Row 29, the DLT-sheet section, the sprint-row annotation) follow them.
 2. **AC2 — one path list, as data** (AL2): `app-link-paths.json`, `APP_LINK_PATHS`, `APP_LINK_CODE_PARAM`, `APP_LINK_CODE_PATTERN`,
    `buildAppLinkUrl`, `parseAppLinkCode`, the AL8 env schemas and the two body builders exist with unit tests in
@@ -420,11 +428,12 @@ applicable (the Niyamavali does not speak to app links) — and it is ⛔ not ra
    ⛔ no hard-coded brand (with and without `APP_DISPLAY_NAME`), ⛔ no store buttons unless configured, and ⛔ no `c` value in its output for a
    distinctive code; source scans prove `peer-request.astro` renders `<PublicShell` with `hideLanguageToggle`, `noindex`, `branding={null}`,
    sets `no-referrer` and its `Cache-Control` and ⛔ no `Vary`, and never reads `Astro.url` / `Astro.request` / `searchParams` / `fetch`; a
-   scan proves `PublicShell` ⛔ never calls `withLang` under `hideLanguageToggle`; declared in the matrix; the PII-scrape gate passes.
+   scan proves `PublicShell` ⛔ never calls `withLang` under `hideLanguageToggle`; declared in the matrix; the PII-scrape gate passes; a REAL-`t()` test resolves every new `app-links` key in en and hi (the
+   `catalog.ts:18-27` ask — ⛔ never a stub).
 7. **AC7 — the route exists, ⛔ no collision, ⛔ no crash** (AL14 / AL16): the strict route-map test
    (`apps/mobile/tests/unit/app-link-route-map.test.ts`) passes ((i)–(iii)); the `(peer-request)` `Stack.Screen` with `headerShown: false`
    exists; the shell renders its slot / placeholder for any `c` (source scan: ⛔ no API import); `+not-found` uses en + hi keys and
-   `CallHelplineCTA` (`not-found-copy.test.ts`); i18n parity + `microcopy:test` + `microcopy:check` green.
+   `CallHelplineCTA` (`not-found-copy.test.ts`); i18n parity + `microcopy:test` + `microcopy:check` green; a REAL-`t()` test resolves every new `common.json` key in en and hi.
 8. **AC8 — hosting and edge wired** (AL9 / AL10): the Traefik router (the exact paths + ``PathPrefix(`/_astro/`)``), the `public` service's
    app-link variables, `APP_LINKS_BASE_URL` in the jobs block, the unconditional `waf_custom` with the skip FIRST (bic + securityLevel +
    `http_request_sbfm`, exactly the two files) and Rules 1–3 dynamic, `outputs.tf` updated, and the "⛔ never `ClientRequestURI`" README line
@@ -437,15 +446,15 @@ applicable (the Niyamavali does not speak to app links) — and it is ⛔ not ra
    `apps/jobs/tests/https-origin.test.ts`); `resolveAdminAppOrigin` is an alias and every existing caller and test passes unchanged; the
    README row and compose line exist. ⛔ No boot wiring here (6.27c's).
 10. **AC10 — the records**: Row 29 (AL12, with its notes) at its reserved number; the DLT sheet's URL-whitelisting section; the deferred-work
-    items (AL8's gate scope, AL9's un-wired `public` env, AL13's scheme / D8 note and the `parseDeepLink` item staying with push, D-13 pointed
-    at Row 29); the AL15 pointers; the Rows 27 / 28 check (Task 9); the note to 6.27c (`APP_LINK_CODE_PATTERN`) and the `deep-links/README.md` line
+    items (AL8's gate scope, AL9's un-wired `public` env, AL13's scheme / D8 note and the `parseDeepLink` item staying with push, the 429-on-refresh
+    note (N5), D-13 pointed at Row 29); the AL15 pointers; the Rows 27 / 28 check (Task 9); the note to 6.27c (`APP_LINK_CODE_PATTERN`) and the `deep-links/README.md` line
     (N16); a `**Story 6.30 disposition (…):**` block in `friction-budget.md` (F18) —
     the friction-budget gate passes; `pnpm ci:local` green.
 
 ## Tasks / Subtasks
 
 > ⚠ **Shared checkout:** other sessions may work in the main TWT checkout — build on branch `story/6-30-app-links-open-the-app-from-a-text`
-> (it exists, from `main` `34b9bab6` + `-315`) in its own worktree; ⛔ never `git switch` the shared checkout
+> (it exists, from `main` `34b9bab6` + `-315` / `-316` / `-317` and this file) in its own worktree; ⛔ never `git switch` the shared checkout
 > ([[feedback_shared_tree_branch_switch]]).
 
 - [ ] **Task 0 — governance FIRST (AC1).** ⛔ No code.
@@ -455,8 +464,10 @@ applicable (the Niyamavali does not speak to app links) — and it is ⛔ not ra
   - [x] 0.2 Put AL1–AL16 to BigDev — ✅ answered in session 2026-10-10: all OK (AL13 after a plain-language explanation).
   - [x] 0.3 ✅ `2026-10-10-312` (`b3a9476b`; branch twin `21e89ed6`), committed ALONE.
   - [x] 0.3b ✅ `2026-10-10-315` (`a3253ec0`) — C1–C8, committed ALONE (BigDev, in session: *"All"*, *"Yes, record it"*).
-  - [x] 0.3c ✅ `2026-10-10-316` (`a2b994b7`) — E1–E3, the erratum to `-315`, committed ALONE (BigDev, in session, its text shown first:
-        *"Yes, insert it"*).
+  - [x] 0.3c ✅ `2026-10-10-316` (`a2b994b7`) — E1–E3, the erratum to `-315`, committed ALONE (BigDev, in session — a short form shown first;
+        the additions are named in `-316`'s Status: *"Yes, insert it"*).
+  - [x] 0.3d ✅ `2026-10-10-317` (`44830033`) — R1–R3, a reading on `-316` (E1's reason; three residuals accepted; Consequence 2
+        recognised and discharged), committed ALONE (BigDev, in session, its text shown first).
   - [ ] 0.4 epics.md `### Story 6.30` (after 6.29; a dated source line, ⛔ never a merge fence); Row 29 in
         `docs/launch-gate-inventory/inventory-roster.md` (AL12 — closure (a)–(h) AND its notes (N15, N19), at its RESERVED number, a note that Rows
         27 / 28 belong to 6.27); a NEW `## URL whitelisting (Story 6.30, -312 AL3)` section in
@@ -467,10 +478,10 @@ applicable (the Niyamavali does not speak to app links) — and it is ⛔ not ra
 - [ ] **Task 1 — contracts `app-links` (AC2).** `packages/contracts/src/app-links/{app-link-paths.json,index.ts,paths.ts,verification.ts,
       README.md}`; barrel export in `packages/contracts/src/index.ts`; `packages/contracts/tests/app-links.test.ts`; ⛔ no import of
       `@twt/domain` ([[project_contracts_domain_bundle_boundary]]); run vitest — contracts tests are outside tsc
-      ([[project_contracts_tests_outside_tsc]]); `deep-links/README.md` gains the separate-grammar line (AL13).
+      ([[project_contracts_tests_outside_tsc]]); `deep-links/README.md` gains the separate-grammar line (AL13); N2, N3, N16.
 - [ ] **Task 2 — mobile config (AC3).** FIRST capture the prototype fixture; `app.json` → `app.config.ts` (`APP_VARIANT`; `require()` of the
       JSON by package name; production-only `APP_IDENTITY_*` throw and link settings; ⛔ no `extra.eas.projectId` until the EAS project exists — `-316` E1);
-      `eas.json` `env` per profile (`APP_VARIANT` only today — N1); `apps/mobile/tests/unit/app-config.test.ts` (variants, the `eas.json` lockstep) and
+      `eas.json` `env` per profile (`APP_VARIANT` only today — N1; N9); `apps/mobile/tests/unit/app-config.test.ts` (variants, the `eas.json` lockstep) and
       `app-links-lockstep.test.ts`; the `expo-config` job in `ci.yml` AND `scripts/ci-local.sh`; a note in `apps/mobile/README.md` on
       `APP_VARIANT`, `eas submit` with `APP_VARIANT=production` + `APP_IDENTITY_*` exported (`-316` E1) and `expo prebuild --clean`; ⛔ no native dirs committed.
 - [ ] **Task 3 — the login keeps its place (AC4).** `lib/link-target.ts`; `lib/session.ts` (the dead-refresh handler slot) +
@@ -482,20 +493,21 @@ applicable (the Niyamavali does not speak to app links) — and it is ⛔ not ra
       `packages/i18n/locales/{en,hi}/common.json` (`$comment`; avoid the microcopy-banned words, even in comments);
       `tests/unit/{app-link-route-map,not-found-copy}.test.ts`.
 - [ ] **Task 5 — the two endpoints (AC5).** `apps/public/src/pages/.well-known/{apple-app-site-association,assetlinks.json}.ts` (env inside
-      `GET`, AL2's schemas); `apps/public/tests/well-known-endpoints.test.ts`.
+      `GET`, AL2's schemas — N3, N4); `apps/public/tests/well-known-endpoints.test.ts`.
 - [ ] **Task 6 — the fallback page (AC6).** `apps/public/src/lib/peer-request-render.ts`; `apps/public/src/pages/peer-request.astro`;
       `PublicShell.astro`'s `hideLanguageToggle` prop; the `app-links` namespace (`packages/i18n/locales/{en,hi}/app-links.json`,
       `catalog.ts`, `microcopy.yaml` `copy_globs`); the matrix entry; the page/matrix lockstep (`apps/public/tests/app-link-pages-lockstep.test.ts`); `apps/public/tests/peer-request-page.test.ts`
       (N12, N13);
       the PII-scrape gate run.
 - [ ] **Task 7 — the shared validator (AC9).** `resolveHttpsOrigin` + the `resolveAdminAppOrigin` alias in `staff-email-config.ts`;
-      `apps/jobs/tests/https-origin.test.ts`; README row; ⛔ no boot wiring (6.27c).
-- [ ] **Task 8 — infra (AC8).** `infra/dokploy/compose.yaml` (the router incl. `/_astro/`, the app-link variables, the jobs-block line) +
-      `infra/dokploy/README.md`; `infra/cloudflare/waf.tf` (unconditional, the skip first, Rules 1–3 dynamic; N11's `:18` and `:23` fixes) +
-      `outputs.tf` + `infra/cloudflare/README.md` (the `ClientRequestURI` line); `terraform fmt -check -recursive`; `terraform validate` run
+      `apps/jobs/tests/https-origin.test.ts`; README row; ⛔ no boot wiring (6.27c); N18.
+- [ ] **Task 8 — infra (AC8).** `infra/dokploy/compose.yaml` (the router incl. `/_astro/` — N10, the app-link variables, the jobs-block line) +
+      `infra/dokploy/README.md`; `infra/cloudflare/waf.tf` (unconditional, the skip first, Rules 1–3 dynamic; N11) + `outputs.tf` +
+      `infra/cloudflare/README.md` (the `ClientRequestURI` line; its `waf_custom` description `:83-91`) + `.terraform-plan-expectations.md`
+      (the default plan's `waf_custom` now holds only the skip); `terraform fmt -check -recursive`; `terraform validate` run
       once, output recorded.
 - [ ] **Task 9 — records and close (AC10).** Deferred-work items (AL8's gate scope; AL9's env; AL13 incl. the `parseDeepLink` item staying
-      with push; D-13 → Row 29); the AL15 pointers (Row 29's notes + an annotation under the sprint row `6-34`); the `friction-budget.md`
+      with push; the 429-on-refresh note — N5; D-13 → Row 29); the AL15 pointers (Row 29's notes + an annotation under the sprint row `6-34`); the `friction-budget.md`
       disposition block (both apps; is *"install the app, then open the link again"* a declared `forced` cost? — decide and declare);
       Rows 27 / 28: if 6.27a's Task 0.6 has landed, CHECK that Row 27 (e) names Row 29 and Row 28 names the fallback page, `+not-found` and
       the shell placeholder — else a note in `6-27-peer-mesh-sending-replies-and-date-of-death.md`; a note to 6.27c that it consumes
@@ -536,27 +548,29 @@ applicable (the Niyamavali does not speak to app links) — and it is ⛔ not ra
   malformed or repeated (`string[]`) `c`; a JSON import widens to `string`, so `APP_LINK_PATHS`' literal type is declared by hand and held to
   the JSON by the lockstep (F20).
 - **N3 (AL8)** — the env schemas live in contracts `app-links/verification.ts` (zod `.strict()`; `apps/public` has ⛔ no `zod` dependency):
-  TEAMID = 10 upper-case alphanumerics, `.`, a bundle id; each SHA-256 fingerprint = 32 colon-separated upper-case hex pairs; invalid ⇒ 404.
+  TEAMID = 10 upper-case alphanumerics, `.`, a bundle id; each SHA-256 fingerprint = 32 colon-separated upper-case hex pairs — the input is UPPER-CASED before validation (a lower-case paste from a
+  tool must ⛔ not become a silent 404); invalid ⇒ 404.
 - **N4 (AL8)** — env is read INSIDE `GET` (⛔ not at module load — `directory.server.ts:44` reads at load); in production a null-body 404 is
   served as the site's HTML 404 (F9) — still a 404; tests call `GET` directly.
 - **N5 (AL6 (i))** — a dead-refresh handler slot in `lib/session.ts` beside `setTerminatedDuringRefreshHandler`, called for EVERY 4xx AFTER
   the termination callback in the same synchronous run (React batches both `setSession(null)` calls; the termination notice wins);
   `session-context.tsx` registers `setSession(null)` for it. Keep F7's pins green, incl. `terminated-during-refresh.test.ts:47`
-  (`setSession(null)` within 120 characters of the termination handler's opening).
+  (`setSession(null)` within 120 characters of the termination handler's opening). ⚠ "Every 4xx" includes a 429 from the per-IP refresh
+  limit (`member-auth.routes.ts:52,87` — plausible behind carrier CGNAT), which ALREADY clears the tokens today (`session.ts:151`) — ⛔ not a
+  regression, but "a 4xx means the token is dead" is false for 429: recorded as a deferred-work item and a Row 29 note (Task 9, N15).
 - **N6 (AL6 (iii))** — why one consumer suffices: the guard's post-login branch can fire only while `segments[0] === '(auth)'`, i.e. before
-  `otp.tsx`'s replace commits ⇒ `otp.tsx`'s replace lands last. ⚠ RECORDED: if `signIn` throws after the target was taken, the target is lost
-  (the member sees the OTP error; the request is on the home screen).
+  `otp.tsx`'s replace commits ⇒ `otp.tsx`'s replace lands last. The `signIn`-throws residual is RECORDED, accepted in AL6 (`-317` R2 (a)).
 - **N7 (AL6 (ii))** — the cases: an allowlisted path with a valid single `c` (other parameters dropped) ⇒ `/peer-request?c=<code>`; a
-  missing, malformed or repeated `c`, or a non-allowlisted path ⇒ ⛔ no target ⇒ `/(tabs)`. ⚠ RECORDED: a link arriving while the member is on
-  `/(auth)/otp` replaces the OTP screen with login (a fresh OTP may hit the rate limit). The literal `router.replace('/(auth)/login')` stays.
+  missing, malformed or repeated `c`, or a non-allowlisted path ⇒ ⛔ no target ⇒ `/(tabs)`. (The OTP-screen and missing-`c` cases are RECORDED,
+  accepted in AL6 — `-317` R2 (b).) The literal `router.replace('/(auth)/login')` stays.
 - **N8 (AL6 (iv))** — the clear sites: `otp.tsx:46-48` (before `signIn(full)`), `session-context.tsx` `signOut()` `:80-90`, the termination
   handler `session-context.tsx:58-66`, `otp.tsx`'s terminated branch `:89-113`.
 - **N9 (AL7)** — `APP_LINKS_HOST` is a public value in the production profile's `eas.json` `env`. If `development` uses `?mode=developer`,
-  `APP_LINKS_IOS_APP_IDS` must also list the development (prototype) app id, or it cannot verify — default: leave it unset.
+  `APP_LINKS_IOS_APP_IDS` must also list the development (prototype) app id, or it cannot verify — and that would put TWO apps on one host and path in the production file (SIX FACTS #6) ⇒ leave it unset.
 - **N10 (AL9)** — the new router copies the existing routers' label shape (a `rule` label only).
-- **N11 (AL10)** — `waf.tf:30-32`'s comment updated; never applied ⇒ ⛔ no state move (⚠ if the operator HAS applied it with bot management on:
-  `moved { from = cloudflare_ruleset.waf_custom[0] to = cloudflare_ruleset.waf_custom }`); `waf.tf:18` — `account_id` removed from
-  `cloudflare_bot_management` (provider 4.52.9 rejects it: `terraform validate` FAILS at HEAD); `waf.tf:23` — the `fmt` alignment fix.
+- **N11 (AL10)** — `waf.tf:30-32`'s comment updated; never applied ⇒ ⛔ no state move (if the operator HAS applied it, Terraform moves `[0]` to the
+  no-key address on its own when `count` is removed — an explicit `moved` block is optional); `waf.tf:18` — `account_id` removed from
+  `cloudflare_bot_management` (provider 4.52.9 rejects it: `terraform validate` FAILS at HEAD); `waf.tf:23` — the `fmt` alignment fix; run `terraform fmt` AFTER the edits (removing `:18` misaligns `:19`).
 - **N12 (AL11)** — the "handler test" is realised the house way (⛔ no `.astro` harness exists — F11b): a pure
   `apps/public/src/lib/peer-request-render.ts` (the copy model + store buttons from env) with a test proving ⛔ no `c` in its output for a
   distinctive code, plus source scans of `peer-request.astro` (⛔ no `Astro.url` / `Astro.request` / `searchParams` / `fetch`) and of
@@ -565,9 +579,9 @@ applicable (the Niyamavali does not speak to app links) — and it is ⛔ not ra
   equal — `:50`); `Referrer-Policy` via `Astro.response.headers`; the copy lives in a NEW `packages/i18n` namespace `app-links` (en + hi;
   registered in `catalog.ts`, added to `copy_globs` — F19).
 - **N14 (AL11)** — the home-screen line is true once 6.27a's card ships (PM11 — before any text, since 6.27c sends last; `-311` PM2 adds
-  the notice strip); shown after the request has closed, or to a forwarded recipient, it is inaccurate but discloses ⛔ nothing.
+  the notice strip); the closed / forwarded inaccuracy is RECORDED, accepted in AL11 (`-317` R2 (c)).
 - **N15 (AL12)** — Row 29's NOTES: AL1's Firebase orphan and the `eas submit` export; AL10's Row 3 reading with its ground and Row 3's owners;
-  whether Free-plan Bot Fight Mode is on; AL15's dependency; the device proof (e) also covers an EXPIRED login → login → the screen (AL6 (i))
+  whether Free-plan Bot Fight Mode is on; AL15's dependency; the 429-on-refresh note (N5); the device proof (e) also covers an EXPIRED login → login → the screen (AL6 (i))
   and a STYLED fallback page (AL9).
 - **N16 (AL13)** — the deferred-work item on `parseDeepLink`'s resource / id pairings stays with the push story (6.30 wires https app links,
   ⛔ not the `twt://` parser); `deep-links/README.md` gains a line that `app-links/` is a separate grammar.
@@ -579,7 +593,8 @@ applicable (the Niyamavali does not speak to app links) — and it is ⛔ not ra
 - **N19 (AL12 (a))** — where each owed value lives: `APP_IDENTITY_*`, `APP_LINKS_HOST`, `EXPO_PUBLIC_HELPLINE_TEL` → `eas.json` production
   `env`; the EAS project id → a literal in `app.config.ts`'s static base; `ascAppId` → `eas.json` `submit.production`; `APP_DISPLAY_NAME`,
   `APP_LINKS_IOS_APP_IDS`, `APP_LINKS_ANDROID_APPS`, `APP_STORE_URL_*` → the `public` service's env (`compose.yaml` / Dokploy);
-  `APP_LINKS_BASE_URL` → the jobs block.
+  `APP_LINKS_BASE_URL` → the jobs block. (AL11's *"`APP_DISPLAY_NAME`, set beside `APP_IDENTITY_*`"* means DECIDED together —
+  the two live in different places.)
 - **N20 (AL15)** — the paths: `packages/channels/src/otp-sms-template.ts:47`, `sms-dlt-registry.ts:60-80`; tests
   `packages/channels/tests/otp-sms-template.test.ts`, `apps/jobs/tests/claim-correction-sms-templates.test.ts`,
   `apps/jobs/tests/suspicion-notice-sms-templates.test.ts`.
@@ -618,7 +633,7 @@ UPDATE: `packages/contracts/src/index.ts`, `packages/contracts/src/deep-links/RE
 `app/+not-found.tsx`, `lib/session.ts`, `lib/session-context.tsx`, `eas.json`, `apps/mobile/README.md`; `packages/i18n/locales/{en,hi}/
 common.json`, `packages/i18n/src/catalog.ts`, `microcopy.yaml`; `apps/public/src/layouts/PublicShell.astro`; the PII matrix;
 `apps/jobs/src/scheduler/staff-email-config.ts`, `apps/jobs/README.md`; `infra/dokploy/compose.yaml` + README; `infra/cloudflare/waf.tf`,
-`outputs.tf`, README; `.github/workflows/ci.yml`, `scripts/ci-local.sh`; `friction-budget.md`; `docs/launch-gate-inventory/
+`outputs.tf`, README, `.terraform-plan-expectations.md`; `.github/workflows/ci.yml`, `scripts/ci-local.sh`; `friction-budget.md`; `docs/launch-gate-inventory/
 {inventory-roster,dlt-template-requests-6-19}.md`; `_bmad-output/implementation-artifacts/deferred-work.md`, `sprint-status.yaml`;
 `_bmad-output/planning-artifacts/epics.md`; via Task 9, `6-27-peer-mesh-sending-replies-and-date-of-death.md` (if Rows 27 / 28 have ⛔ not
 landed) and `6-27c-peer-mesh-sending-texts-and-links.md` (the `APP_LINK_CODE_PATTERN` note).
@@ -644,7 +659,7 @@ independent, but Row 29 (e)'s logged-out legs wait for its OTP retag (AL15).
 
 ### Git intelligence
 PR #268 REBASE-merged the 6.27 / 6.30 governance branch (`9990cffa`); `34b9bab6` added the SHA map. This story's branch
-`story/6-30-app-links-open-the-app-from-a-text` starts at `34b9bab6` and carries `-315` (`a3253ec0`) and v1.7. House order: decision entry →
+`story/6-30-app-links-open-the-app-from-a-text` starts at `34b9bab6` and carries `-315` (`a3253ec0`), `-316` (`a2b994b7`), `-317` (`44830033`) and v1.7–v1.9. House order: decision entry →
 records → build → review; REBASE-merge ([[project_story_automator_ops]]). ⚠ `-313` / `-314` belong to 6.34 on its unmerged branch — the
 decision numbers will interleave on merge.
 
@@ -669,7 +684,7 @@ decision numbers will interleave on merge.
 ### References
 - Architecture §4.7, §3.4; ADR-0010, -0011, -0013, -0020 cl.4, -0022; PRD OQ-1, FR-60, FR-61.
 - `2026-10-10-303` (Q1 A), `-304` (Q6 A), `-305` (§2 items 1, 2, 5; §4), `-310` (CF1 A), `-311` (PM11 / PM16 / PM21; PM2), `-312` (AL1–AL16),
-  `-315` (C1–C8); the confirm note `trustee-panel-routing-note-2026-10-10-6-27-confirms.md` (ruled by `-310`).
+  `-315` (C1–C8), `-316` (E1–E3), `-317` (R1–R3); the confirm note `trustee-panel-routing-note-2026-10-10-6-27-confirms.md` (ruled by `-310`).
 - Story 6.27a v2.9 (PM11, PM16, PM21) and the cut files 6.27b / 6.27c / 6.27d; Story 6.25 (RE7); deferred-work D-13, D8, the dotted-secret-id
   item, the `parseDeepLink` item; row 6-34.
 - `docs/launch-gate-inventory/inventory-roster.md` (Row 3; Rows 22–26), `dlt-template-requests-6-19.md`; `packages/contracts/src/deep-links/`;
@@ -690,13 +705,16 @@ decision numbers will interleave on merge.
   2 BLOCKER, 4 HIGH, 13 MEDIUM, 15 LOW — all applied (BigDev: *"All"*); the AL-text corrections committed first as `-315` (`a3253ec0`).
 - 2026-10-10 — v1.8 after the round-8 fresh-context re-validate of v1.7 and `-315` (one read-only reviewer at `d2d6b9a0`): 0 BLOCKER,
   2 HIGH, 3 MEDIUM, 15 LOW — every one the round-7 pass's own; all applied; `-315`'s errors corrected first as `-316` (`a2b994b7`).
+- 2026-10-10 — v1.9 after the round-9 fresh-context re-validate (one read-only reviewer at `1f78762e`): 0 BLOCKER, 0 HIGH — the
+  re-validate rule is discharged; its 3 MEDIUM / 12 LOW applied, the three needing a record committed first as `-317` (`44830033`).
 
 ### File List
 
 ## Change Log
 | Date | Version | Change |
 |---|---|---|
-| 2026-10-10 | 1.8 | Round-8 re-validate (the round-7 pass's own defects) + `2026-10-10-316` (E1–E3). **High:** `extra.eas.projectId` is one literal for every variant, ⛔ never production-only (E1 — `eas submit` / `eas env` / every `eas build` read the config without the profile env), excluded from AC3's comparison; the `PeerRequestSlot` file is a 6.30 implementation detail 6.27a may replace — ⛔ never an attribution to 6.27a's PM11 (⛔ no seam moves). **Medium:** the AL block cut back to the committed text (`-312` + C1–C8 + E1–E3) — the build detail moved to Dev Notes → Build notes N1–N20 (incl. `-312`'s *"any build-time variable declared in `turbo.json` `globalEnv`"* restored to AL8); `terraform validate` FAILS at HEAD (`waf.tf:18` `account_id`) — F13 + N11 + AC8 (validate once; a plan per setting is the operator's); Row 29 (a)'s homes per value (N19). **Low:** cites (F13 Rules 1–3 `:41-66`; `session.ts:150-176`; `gate.ts:203-216`; `catalog.ts:29-77`; the root Stack declares MOST groups); the `:47` pin; AL6's one-consumer reason + the `signIn`-throws residual (N6); the dead-refresh call order (N5); the `?mode=developer` caveat (N9); `title` = `trustName` (N13); AC10 and Project structure gain the 6.27 / 6.27c notes and the lockstep file; the third branch SHA; the edge-skip scope (E2); *"in that session"*. |
+| 2026-10-10 | 1.9 | Round-9 re-validate (0 BLOCKER / 0 HIGH — the rounds END) + `2026-10-10-317` (R1–R3). **Medium:** AL1's projectId reason corrected (R1 — every `eas build` carries its OWN profile env; `eas submit` / `eas env:*` the shell env); the three residuals RECORDED, accepted in AL6 / AL11 (R2) and N6 / N7 / N14 point there; Task 0.3c says what BigDev was shown (a short form) and 0.3d records `-317`. **Low:** `-312` clauses restored to the AL block (AL1 `eas update`; C1's Expo account; AL2 Node pin + `resolveJsonModule`; AL5's sweep / `twt.org` / PM21 (b) note; AL6 consumed once; AL9 exact page paths); AL12 (a) — Consequence 2's `APP_EAS_PROJECT_ID` replaced by E1's literal; F3 `:138-238`; `-316` / `-317` in AC1, References, Git intelligence, the shared-checkout note; Tasks tagged N2 / N3 / N4 / N9 / N10 / N16 / N18; N11 — `terraform fmt` after the edits, the `moved` block optional; Task 8 + Project structure gain `.terraform-plan-expectations.md` and the README's `waf_custom` text; N3 upper-cases fingerprints; N5 — the 429-on-refresh note (deferred-work, Row 29); N19 — "beside" = decided together; N9 — two apps on one host refused; AC6 / AC7 — a REAL-`t()` leg for the new keys. |
+| 2026-10-10 | 1.8 | Round-8 re-validate (the round-7 pass's own defects) + `2026-10-10-316` (E1–E3). ⚠ This row's stated REASON for E1 was partly WRONG (corrected by `-317` R1 in 1.9) — kept as the record. **High:** `extra.eas.projectId` is one literal for every variant, ⛔ never production-only (E1 — `eas submit` / `eas env` / every `eas build` read the config without the profile env), excluded from AC3's comparison; the `PeerRequestSlot` file is a 6.30 implementation detail 6.27a may replace — ⛔ never an attribution to 6.27a's PM11 (⛔ no seam moves). **Medium:** the AL block cut back to the committed text (`-312` + C1–C8 + E1–E3) — the build detail moved to Dev Notes → Build notes N1–N20 (incl. `-312`'s *"any build-time variable declared in `turbo.json` `globalEnv`"* restored to AL8); `terraform validate` FAILS at HEAD (`waf.tf:18` `account_id`) — F13 + N11 + AC8 (validate once; a plan per setting is the operator's); Row 29 (a)'s homes per value (N19). **Low:** cites (F13 Rules 1–3 `:41-66`; `session.ts:150-176`; `gate.ts:203-216`; `catalog.ts:29-77`; the root Stack declares MOST groups); the `:47` pin; AL6's one-consumer reason + the `signIn`-throws residual (N6); the dead-refresh call order (N5); the `?mode=developer` caveat (N9); `title` = `trustName` (N13); AC10 and Project structure gain the 6.27 / 6.27c notes and the lockstep file; the third branch SHA; the edge-skip scope (E2); *"in that session"*. |
 | 2026-10-10 | 1.7 | ⭐ Round-7 validate + `2026-10-10-315` (C1–C8). ⚠ Two items in this row were WRONG and are kept as the record — *"`extra.eas.projectId` production-only from env"* (withdrawn by `-316` E1) and the slot file attributed to 6.27a (corrected in 1.8). **Blockers:** AL1 keys the variant on `APP_VARIANT` from `eas.json` `env` (⛔ never `EAS_BUILD_PROFILE`, which is unset when EAS CLI evaluates the config locally — F2c), `APP_IDENTITY_*` in the production profile's `eas.json` `env`, `slug` constant, `extra.eas.projectId` production-only from env; AL10 = ONE always-present `waf_custom` with the skip first (+ `http_request_sbfm`), Rules 1–3 dynamic, `outputs.tf`, the `waf.tf:23` fmt fix. **High:** AL6 — every refused refresh resets the in-app session; capture via `usePathname` + `useGlobalSearchParams`; ONE consumer (`otp.tsx`, before `signIn`); clears on signup / sign-out / termination; the cases ruled. AL9 routes `/_astro/`; AL11 renders `PublicShell` + `hideLanguageToggle` (the gate needs it), neutral `trustName`, `lang` blocks, `edge_cacheable`; AC6 = a pure render module + source scans (⛔ no `.astro` harness exists). **Medium / Low:** ci.yml + ci-local.sh; AL16 (ii) scoped to app-link paths + the `Stack.Screen`; i18n homes (`common.json`; a new `app-links` namespace); the friction-budget disposition (both apps) in AC10; the validator alias; Row 3's owners (C6); AASA without a `"?"` component; `APP_LINK_CODE_PATTERN`; the env schemas in contracts with format checks; `buildAppLinkUrl` takes a bare origin; `EXPO_PUBLIC_HELPLINE_TEL`; Row 29's notes, the DLT section, the sprint-row annotation, the Rows 27 / 28 check; the AL15 test paths; the `parseDeepLink` item; cite fixes (F8b, F13, F14, the Reuse map); test and file paths; the pin re-expressed (`1cce7e5a`); stale statuses (the rulings table, "PROPOSED", the stacked branch, 6.27a v2.9); the SHA map moved to git history and the `V-` ids dropped. |
 | 2026-10-10 | 1.6 | ⭐ AL1–AL16 COMMITTED as `2026-10-10-312` (`21e89ed6`), all as written; Tasks 0.2 / 0.3 done; buildable. |
 | 2026-10-10 | 1.5 | `2026-10-10-310`: the confirm note is ruled (CF1–CF5) — the language narrowing is Panel-confirmed (CF1 A). |

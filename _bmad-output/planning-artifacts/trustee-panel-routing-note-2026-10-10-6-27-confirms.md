@@ -1,10 +1,11 @@
-# Trustee Panel routing note — three confirms and three corrections on the neighbours' questions
+# Trustee Panel routing note — four confirms and three corrections on the neighbours' questions
 
 > **§0 gate — passed (2026-10-10).** **CF1** narrows, for a time, a rider you ratified (`-303`: *"Send Text in Hindi to those whose
 > preferred langauge is Hindi and in English to those whose preferred language in English"*). **CF2** corrects who you were told sees
-> the neighbours' answers. **CF3** asks you to confirm four limits we read into your `-304` chain, where your rulings meet. ⛔ None is
+> the neighbours' answers. **CF3** asks you to confirm four limits we read into your `-304` chain, where your rulings meet. **CF4** asks you
+> to confirm WHO the five are: colleagues at the member's own school, ⛔ not members of the same district (`-306`). ⛔ None is
 > blocking: work continues; each is needed before the texts go live.
-> ⭐ **From the fresh check of Stories 6.27 and 6.30** (2026-10-10), recorded as `2026-10-10-305`.
+> ⭐ **From the fresh check of Stories 6.27 and 6.30** (2026-10-10), recorded as `2026-10-10-305` and `2026-10-10-306`.
 
 ---
 
@@ -74,12 +75,27 @@ read these limits — please confirm or change each:
 
 ---
 
+# CF4 — the five are colleagues from the member's own school
+
+**In one sentence:** may the five people asked be the members posted at the same school as the member who died — and, if the member
+moved to that school less than 90 days before the death, also members at the school they came from — instead of the five nearest
+members of the same district?
+
+**The one fact that decides it:** ⭐ a teacher is known by the people at their own school. The district-based choice built so far picks
+members who, in a district of thousands of teachers, mostly never met the member.
+
+| | Option | Cost |
+|---|---|---|
+| **A** | **Yes — the member's own school (and the previous school after a transfer within 90 days)** (our suggestion). | At a small school there may be fewer than five members to ask — sometimes none; then the claim relies on the ground inspection alone (which every claim must have anyway). Each member's school and the date they joined it are collected at signup and when they are transferred — new information the privacy notice must name. |
+| **B** | **The district, as built.** | The five are mostly strangers; their answers say little. |
+| **C** | **The school first, then fill up to five from the same block or district.** | The fill-up people are again mostly strangers, and their answers would sit beside the colleagues' as if equal. |
+
 # In plain English
 
 We found three mistakes in what we told you and are correcting them openly. The app cannot yet tell which language a member prefers,
 so we suggest texting in the Pariwar's language until members can choose (CF1). The people who approve claims at the later steps are,
 in the system, Pariwar Admins acting as trustees — the rule that every approver sees the answers is unchanged (CF2). And we ask you to
-confirm four limits on the chain you ruled (CF3) — the last means the texts wait for counsel on the health questions. ⇒ ⭐ **We suggest: CF1 A, CF2 yes, CF3 (a)–(d) yes.**
+confirm four limits on the chain you ruled (CF3) — the last means the texts wait for counsel on the health questions. And we ask you to confirm that the five are the member's own school colleagues (CF4). ⇒ ⭐ **We suggest: CF1 A, CF2 yes, CF3 (a)–(d) yes, CF4 A.**
 
 ---
 ---

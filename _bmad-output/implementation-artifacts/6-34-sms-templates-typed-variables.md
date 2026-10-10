@@ -13,7 +13,8 @@ by hand (F14 / F15 / F17 / F18 re-read directly).
 sheet are ⛔ retagged; each `{#var#}` gains a DECLARED TYPE. TV1–TV4, TV7, TV8, TV10 (a), TV11 rewritten; the rest stands.
 
 STATUS: `ready-for-dev` — ✅ BUILDABLE: TV1–TV12 answered by BigDev (all as recommended) and committed ALONE as `2026-10-10-313`
-(`97e2c3bb`) ([[feedback_governance_commits_precede_implementation]]). Build from Task 0.1 / 0.4 on.
+(`97e2c3bb`) ([[feedback_governance_commits_precede_implementation]]); TV13 + the gateway (MSG91 "for now") committed as
+`2026-10-10-314` (`e2d57ed9`). Build from Task 0.1 / 0.4 on. ⭐ Row `6-37-msg91-sms-gateway-adapter` builds the MSG91 adapter AFTER this story.
 ⭐ §0 gate (template `trustee-panel-routing-note-TEMPLATE.md`): every TV strips to "the code / the registration sheet should do X". ⛔ No
 word of any Panel-ratified text changes — a variable's TYPE is registration metadata the member ⛔ never sees, and every rendered body stays
 byte-identical (Invariant 1). TV5 HOLDS a text while a helpline number is malformed — it reuses 6.29's hold (`-302` RN2), so ⛔ no text is
@@ -68,6 +69,7 @@ a template or a message the day the rule began to bite.**
 |---|---|---|
 | **`2026-10-10-305`** §2 item 5 | *"`6-34-sms-templates-typed-variables` — every SMS template (the login and step-up OTP …; the alert registry …; 6.19's and 6.24b's twelve drafted templates; 6.27c's two) retagged with TRAI's typed variables … BEFORE any is submitted — ⚠ an untyped login OTP template blocks every login"* | author-commit (BigDev) — THIS ROW |
 | `2026-10-10-305` §4 | roster Rows 27 / 28 / 29 RESERVED (6.27 / 6.27 / 6.30) | author-commit ⇒ this story's row is **30** |
+| **`2026-10-10-313`** · **`2026-10-10-314`** | TV1–TV12 as recommended; the SMS gateway is MSG91 *"for now"*; NEW row `6-37-msg91-sms-gateway-adapter`; TV13 (slot names) | author-commit (BigDev) — THIS STORY's |
 | BigDev 2026-10-10 (in session, on v1.0) | *"We will use STPL, and [STPL] uses {#var#} for variable"* — the PE's DLT portal is STPL's SmartPing | BigDev's fact — recorded in the Task 0.3 author-commit |
 | `2026-10-10-312` AL15 | the typed-variable rule is a POINTER to this row; Row 29 (e)'s logged-out leg waits for the OTP retag | author-commit (6.30) |
 | `2026-10-10-311` PM3 | 6.27c's two templates are registered TYPED from the start: `{member}` = `{#alphanumeric#}` (≤ 40), `{link}` = `{#url#}`, `{helpline}` = `{#cbn#}` | author-commit (6.27) |
@@ -200,14 +202,21 @@ because the operator accepts them."* Niyamavali check: ⛔ not applicable (the N
 - **F20 — out of scope, recorded:** `docs/degradation-policy/comms-templates/sms-channel.md:62-72` — a Hinglish degraded-mode SMS draft
   (`{expected_return_date_short}` style, ⛔ wired, a *"registration candidate"*); WhatsApp (`{{1}}`, per-Pariwar) and Telegram templates
   are ⛔ DLT. ⇒ TV12.
+- **F21 — the gateway is MSG91 "for now"** (BigDev, 2026-10-10; `-314`). Its recommended APIs — Flow v5 (`POST
+  https://control.msg91.com/api/v5/flow`) and SendOTP v5 (`…/api/v5/otp`) — take an `authkey` header, MSG91's OWN template id (the DLT
+  TE id and sender live on the template in MSG91's panel) and NAMED VARIABLE VALUES (`recipients: [{ mobiles: "91XXXXXXXXXX", <name>:
+  value }]`), ⛔ the finished text; the id comes back in `message` / `request_id`. MSG91 templates write variables as `##name##`
+  (case-sensitive) and must equal the DLT-approved content. ⇒ `sms-app.ts`'s contract (F7) matches ⛔ MSG91 API — row 6-37 builds the
+  adapter; THIS story gives every slot the NAME it will send (TV13). ⚠ MSG91 states `#alphanumeric#` as *"Letters & numbers only; no
+  special characters; max 40"* ⇒ the hyphenated date and spaced names are at risk — Row 30 (d). ⇒ TV10, TV13.
 
-## ⚖️ Build decisions TV1–TV12 (✅ COMMITTED — `2026-10-10-313`, all as recommended)
+## ⚖️ Build decisions TV1–TV13 (✅ COMMITTED — TV1–TV12 `2026-10-10-313`, TV13 `2026-10-10-314`, all as recommended)
 
 - **TV1 — ONE vocabulary in `@twt/channels`; the text keeps `{#var#}` (STPL / SmartPing — BigDev, v1.1).** New
   `packages/channels/src/dlt-variables.ts` (barrel-exported): `DLT_VAR = '{#var#}'` (the ONE marker — SmartPing's, F3);
   `DltVariableType = 'numeric' | 'alphanumeric' | 'url' | 'urlott' | 'cbn' | 'email'` (TRAI Annexure-I's six; the names are TRAI's, the
-  same words the sheet tells BigDev to select); `DltSlot = { type, maxLength, label }` (`label` = what the slot holds, for the sheet —
-  e.g. *"claim reference"*; `maxLength` ≤ the type's ceiling: numeric / alphanumeric / email 40, cbn 14, url / urlott 120);
+  same words the sheet tells BigDev to select); `DltSlot = { name, type, maxLength, label }` (`name` = TV13; `label` = what the slot holds, for the
+  sheet — e.g. *"claim reference"*; `maxLength` ≤ the type's ceiling: numeric / alphanumeric / email 40, cbn 14, url / urlott 120);
   `checkDltTemplateShape(text, slots)` → a list of problems (the count of `{#var#}` equals `slots.length`; ⛔ any other `{#…#}` tag; ≤ 3
   variables; ⛔ two adjacent `{#var#}` unless both slots are alphanumeric; fixed characters ≥ 30 % of (fixed + Σ `maxLength`) — the
   conservative reading of F4); `isDltNumeric` / `isDltCallbackNumber` (digits only, 3–14) value predicates. *Alternative:* typed tags in
@@ -258,7 +267,8 @@ because the operator accepts them."* Niyamavali check: ⛔ not applicable (the N
 - **TV8 — the sheet covers EVERY template.** Keep the path `docs/launch-gate-inventory/dlt-template-requests-6-19.md` (F19); retitle to
   *"DLT Template Registration Requests — every SMS template (first opened for Story 6.19)"*; replace the column *"Variable slots
   (`{#var#}`) — to confirm with the wording"* with *"Variable types — select in SmartPing's tagging section, in order"* (e.g. *"1
-  alphanumeric (claim reference, ≤ 8) · 2 cbn (helpline)"*); texts 1–12 ⛔ changed; ADD **15 (OTP login, en)** and **16 (OTP step-up,
+  alphanumeric (claim reference, ≤ 8) · 2 cbn (helpline)"*) and a column *"MSG91 template"* (the same text with `##<name>##` per
+  `{#var#}` — TV13); texts 1–12 ⛔ changed; ADD **15 (OTP login, en)** and **16 (OTP step-up,
   en)** with their config keys, Transactional category, TTL wording and `numeric` slot (13 / 14 stay 6.27c's — ⛔ written here); list the
   five alert categories as *"⛔ not registrable — whole-body (TV6)"*; NEW sections: *"Where and how we register"* (STPL / SmartPing; the
   text keeps `{#var#}`; the type is chosen per variable in the tagging section; ⛔ never type a tag like `{#numeric#}` into the text),
@@ -271,12 +281,13 @@ because the operator accepts them."* Niyamavali check: ⛔ not applicable (the N
   misleading a bereaved nominee into a refusal; (c) a third template now for data export. **Recommended: as written.**
 - **TV10 — roster Row 30 `sms-dlt-templates-typed-and-registered`** (owner BigDev — only BigDev submits; support: the SMS provider).
   Closure: (a) the PE's DLT portal — ✅ STPL / SmartPing (BigDev, 2026-10-10) — and the SMS GATEWAY that will send (the API behind
-  `sms-app.ts`'s `apiUrl`, F7) NAMED; a screenshot of SmartPing's tagging section recorded, and the sheet's type words matched to its
+  `sms-app.ts`'s `apiUrl`, F7) NAMED — ✅ MSG91 "for now" (`-314`); a screenshot of SmartPing's tagging section recorded, and the sheet's type words matched to its
   labels; (b) templates 15 / 16
   registered TYPED as Transactional and APPROVED, both ids set in the deployed environment, and a real login OTP AND a step-up OTP
-  received on a device (proves F16's key resolution; discharges 6.30 AL15's dependency for Row 29 (e)); (c) each Pariwar's helpline
+  received on a device — ⚠ ALSO waits for row 6-37's MSG91 adapter (F21) (proves F16's key resolution; discharges 6.30 AL15's dependency for Row 29 (e)); (c) each Pariwar's helpline
   whitelisted as a CBN CTA in the TV5 form; (d) the provider's written answers: Devanagari and spaces in `#alphanumeric#`, the hyphen in
-  a `DD-MM-YYYY` `#alphanumeric#`, the per-variable limit (40 vs 30), a leading-zero `#numeric#`; (e) the enforcement state recorded with
+  a `DD-MM-YYYY` `#alphanumeric#` (⚠ MSG91 says *"no special characters"* — F21), the per-variable limit (40 vs 30), a leading-zero
+  `#numeric#` — asked of STPL AND MSG91; (e) the enforcement state recorded with
   a date (logger mode started? rejection date?). Templates 1–14 keep their OWN provisioning gates (Rows 18–23, 27) — Row 30 ⛔ licenses
   their ids. ⭐ Row 30 is ⛔ a merge fence ([[project_not_in_production_merge_is_not_golive]]).
 - **TV11 — 6.27c, ⛔ a circular deferral; the notation corrected.** 6.34 does ⛔ hand-verify 6.27c's texts: 6.27c USES TV1's vocabulary,
@@ -289,6 +300,12 @@ because the operator accepts them."* Niyamavali check: ⛔ not applicable (the N
   added; row 6-35 is the language switch); the dotted key names (F16 — Row 30 (b) proves them); `sms-channel.md`'s degraded-mode draft
   (F20 — when registered it must be typed; a deferred-work line); the missing DLT runbook (F17 — the sheet + Row 30 are the record).
 
+- **TV13 — every slot carries a stable `name`** (`-314`): equal to the i18n param the render already uses (`reference`, `helpline`,
+  `member`, `date`; `otp` for templates 15 / 16); unique within a template; `^[a-z][a-z0-9_]*$` — both checked by
+  `checkDltTemplateShape`. The MSG91 template is the DLT text with `##<name>##` for each `{#var#}`, in order (F21); the sheet shows both
+  forms (TV8). Row 6-37's adapter sends `{ <name>: value }` from these slots — ⛔ re-deriving them. ⚠ The OTP's i18n param does ⛔ exist
+  (`renderOtpBody` takes a bare code) — `otp` is its name by this decision.
+
 ## Acceptance Criteria
 
 ### AC0 — Governance before code (Task 0)
@@ -299,7 +316,7 @@ ledger.
 **Given** `packages/channels/src/dlt-variables.ts` **then** it exports `DLT_VAR`, the six types and their ceilings, `DltSlot`,
 `checkDltTemplateShape` and the two value predicates, barrel-exported from `@twt/channels`; unit tests cover each shape rule with a
 passing and a failing case (incl. a whole-body template, a 4-variable template, two adjacent cbn slots, a 29 %-fixed template, a slot
-count ≠ the `{#var#}` count, a `{#numeric#}` tag in the text).
+count ≠ the `{#var#}` count, a `{#numeric#}` tag in the text, a duplicate slot name, a name with an upper-case letter).
 
 ### AC2 — The OTP is typed and still carries the code (TV3)
 **Given** either OTP template **then** its text is UNCHANGED (still `{#var#}`), it declares one `numeric` slot (≤ 6),
@@ -308,7 +325,8 @@ count ≠ the `{#var#}` count, a `{#numeric#}` tag in the text).
 
 ### AC3 — The twelve claim texts are typed, text unchanged (TV2, TV4)
 **Given** every claim-correction and suspicion entry **then** its `registeredText` is unchanged, it declares `slots` per TV4, passes
-`checkDltTemplateShape`, its rendered body (through the real `t()`) is byte-identical to today's, the lockstep reproduces
+`checkDltTemplateShape`, its slot names equal the `t()` params its renderer passes, its rendered body (through the real `t()`) is
+byte-identical to today's, the lockstep reproduces
 `registeredText`, and the sheet contains it with the same types in the same order; the local `DLT_VAR` / `OTP_VAR_SLOT` constants are
 imports of TV1's; `claim.json` is ⛔ in the diff.
 
@@ -327,7 +345,7 @@ mocked registrable entry.
 controls (a `{#numeric#}` tag; a `{#var#}` in an unlisted source file) fail in `lib.test.ts`; every `REGISTRY_FILES` path exists.
 
 ### AC7 — The sheet (TV8)
-Every template 1–12, 15, 16 appears with its config key and its variable types in order; the where-and-how (STPL / SmartPing),
+Every template 1–12, 15, 16 appears with its config key, its variable types in order and its MSG91 form (`##name##`); the where-and-how (STPL / SmartPing),
 variable-types, shape-rules and helpline sections exist; the five alert categories are listed as not registrable; a Record line dated at
 the change; ⛔ typed tag appears in any registered text (the gate proves it).
 
@@ -427,7 +445,8 @@ Vitest per package (`packages/channels`, `apps/jobs`, `apps/api`, `scripts/dlt-t
 
 ### Sequencing
 ⭐ 6.34 is ⛔ blocked by any Panel question or sibling. It UNBLOCKS 6.30's Row 29 (e) (only once Row 30 (b) closes — an operator step)
-and gives 6.27c its vocabulary (TV11). Rows 6-31 (WhatsApp — ⛔ DLT) and 6-35 (language switch) are independent.
+and gives 6.27c its vocabulary (TV11). ⭐ Row `6-37-msg91-sms-gateway-adapter` (`-314`) comes AFTER this story and consumes its named,
+typed slots — ⛔ the other way round; if 6-37 is started first it STOPS and asks. Rows 6-31 (WhatsApp — ⛔ DLT) and 6-35 (language switch) are independent.
 
 ### Previous story intelligence
 - **6.30** (AL15) recorded the typed-variable facts and handed them here; its Latest-tech section is the first fetch of F1–F6.
@@ -478,3 +497,4 @@ decision entry → records → build → review; REBASE-merge ([[project_story_a
 | 2026-10-10 | 1.0 | Created via `bmad-create-story 6.34` (pinned `34b9bab6`): three research passes (code inventory; TRAI / operator rules; governance). FOUND F1–F20 — incl. 19 untyped templates; per-portal tag spelling; whole-body alert templates unregistrable; the helpline's `+` invalid as `#cbn#` with TWO readers; the handover OTP's *"Valid 5 min"* for a 3-minute code; ⛔ DLT row or runbook. TV1–TV12 PROPOSED (author-commit owed at Task 0.3); ⛔ no Panel question (§0). Status `ready-for-dev`. |
 | 2026-10-10 | 1.1 | BigDev, in session: *"We will use STPL, and [STPL] uses {#var#} for variable"* — the PE registers on STPL's SmartPing portal, where the text KEEPS `{#var#}` and each variable's type is picked in a separate tagging section (confirmed against MSG91's carrier guide). ⇒ ⛔ text is retagged: TV1 (one `DLT_VAR` + the six types as slot metadata), TV2 (slots declared; single-token lockstep kept), TV3 (OTP text and `version` unchanged), TV4 (types, ⛔ tags), TV7 (gate: ⛔ typed tag in text; `{#var#}` only in shape-tested registry files), TV8 (sheet: the type to select per `{#var#}`; a where-and-how section), TV10 (a) (portal answered; the gateway still owed), TV11 (6.27c writes `{#var#}` + slots; annotations on 6.27a / 6.27c / 6.30); Invariants 2 / 4, F3 / F8 / F9 / F13, AC1–AC3 / AC6 / AC7 / AC9, Tasks 0.1 / 0.3 / 0.4 / 2 / 3, Traps 2 / 5 aligned. TV5 / TV6 / TV9 / TV10 (b)–(e) / TV12 unchanged. |
 | 2026-10-10 | 1.2 | `-313` applied — TV1–TV12 committed as recommended (`97e2c3bb`, alone); Tasks 0.2 / 0.3 done; buildable. |
+| 2026-10-10 | 1.3 | BigDev: the gateway is *"msg91 for now"*. MSG91's docs read (F21): Flow / OTP v5 take `authkey`, MSG91's own template id and NAMED variable values — ⛔ our client's contract ⇒ NEW row `6-37-msg91-sms-gateway-adapter` (after 6.34) and **TV13** (every slot carries a `name` = the i18n param; the MSG91 template uses `##name##`) — both `2026-10-10-314` (`e2d57ed9`, alone; `-313` ⛔ edited). TV1 / TV8 / TV10 (a) (b) (d), AC1 / AC3 / AC7 and the sequencing aligned. |

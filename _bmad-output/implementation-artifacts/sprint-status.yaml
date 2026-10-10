@@ -77,6 +77,11 @@
 # ⚠ The working tree is SHARED with the 6.34 session: after this session's branch switch, two 6.34 commits landed on `story/6-28-…`
 # (`82cde9a3`, and `6dff53f5` — which also swallowed this entry); `story/6-34-…` carries `82cde9a3` and `6dff53f5`'s clean twin `e67c069f`
 # ⇒ `story/6-28-…` was REBUILT from `34b9bab6` (BigDev: *"yes"*). Suffix `aa` follows 6.34's `w`–`z` on its branch. ⛔ No other row moves.)
+# last_updated: 2026-10-10z (⭐ **`2026-10-10-314` COMMITTED (`e2d57ed9`, alone) — THE SMS GATEWAY IS MSG91 "FOR NOW"; ROW `6-37-msg91-sms-gateway-adapter`
+# ADDED (`backlog`); 6.34 → v1.3 (TV13).** MSG91's Flow / OTP v5 take `authkey`, MSG91's own template id and NAMED variable values — ⛔ our
+# client's JSON + Bearer + finished-text contract ⇒ ⛔ SMS can reach MSG91 until 6-37 lands (after 6.34). TV13: every slot carries a name (the
+# i18n param); the MSG91 template = the DLT text with `##name##`. ⚠ MSG91: `#alphanumeric#` = no special characters ⇒ the hyphenated date /
+# spaced names are at risk (6.34 Row 30 (d)). ⛔ No other row moves.)
 # last_updated: 2026-10-10y (⭐ **6.34's TV1–TV12 COMMITTED — `2026-10-10-313` (`97e2c3bb`, alone)**, all as recommended (BigDev: the mechanical
 # ones *"All as written"*; TV5 *"Hold like unset"*; TV6 *"Switch off, keep listed"*; TV9 *"Fix handover, record export"*). Records the
 # STPL / SmartPing fact and the `-311` PM3 / `-312` AL15 notation correction (⛔ edited). ⇒ 6.34 is buildable. ⛔ No row moves.)
@@ -19825,6 +19830,11 @@ development_status:
   # ⭐ 2026-10-10 (`2026-10-10-311` PM1): 6-36 also FILTERS ineligible members (⛔ not active; a claim filed for their own death; ⛔ no sendable
   # mobile) when the people are chosen, and records each group's RANKING so 6.27c can replace a send-time skip from the same group.
   6-36-peer-mesh-school-wise-selection: backlog
+  # ⭐ 2026-10-10 ADDED by `2026-10-10-314` (BigDev: *"msg91 for now"* → *"New story row"*): the SMS gateway is MSG91, whose Flow / OTP v5
+  # APIs take an `authkey` header, MSG91's OWN template id and NAMED variable values — ⛔ the generic `sms-app.ts` contract. 6-37 builds the
+  # MSG91 adapter behind the SMS seam (texts + the two OTPs), a MSG91 template id per template, `91…` numbers, `type`-based errors, delivery
+  # reports, the prod boot check. ⭐ AFTER 6.34 (it consumes 6.34's named, typed slots — TV13). ⛔ No story file; ⛔ no epics.md entry yet.
+  6-37-msg91-sms-gateway-adapter: backlog
   epic-6-retrospective: done
 
   # ==========================================================================

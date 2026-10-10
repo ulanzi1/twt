@@ -28,9 +28,10 @@ four read-only validators (consistency + split; code claims; governance trace; 6
 four). Each PM is tagged **[a]**, **[b]**, **[c]**, **[d]** for the part that builds it. Where a summary in b / c / d and THIS file disagree,
 THIS file is the record (the 6.26a / 6.26b precedent).
 
-STATUS: `ready-for-dev` — ⛔⛔ NO CODE (in ANY part) until Task 0 is done: the Panel's rulings are transcribed ✅ (`-303`, `-304`), the
-validate's corrections and BigDev's calls are recorded ✅ (`-305`, `fa2687ce`); OWED: BigDev's answers to PM1–PM25 (Task 0.3) and ONE
-author-commit recording them, committed ALONE (Task 0.4 — the next id after `-305`) ([[feedback_governance_commits_precede_implementation]]).
+STATUS: `ready-for-dev` — ✅ Task 0's governance is DONE: the Panel's rulings (`-303`, `-304`, `-310`), the validate's corrections and
+BigDev's calls (`-305`–`-309`), and PM1–PM25 COMMITTED ALONE as `2026-10-10-311` (`082ab743`) — all as written EXCEPT PM1 (a skipped neighbour
+is REPLACED) and PM2 (also an IN-APP ALERT), applied below. 6.27a may be built (its Task 5 still needs 6.30's route shell merged)
+([[feedback_governance_commits_precede_implementation]]).
 The Panel confirm note (`…-6-27-confirms.md`, CF1–CF5) is ✅ RULED — `2026-10-10-310` (all five as suggested).
 
 ⭐ §0 gate (template `trustee-panel-routing-note-TEMPLATE.md`): the Panel's questions are RULED — Q1 / Q2 (`-303`), Q3–Q8 (`-304`); the
@@ -344,18 +345,26 @@ member's terms:
 
 - **PM1 [c] — who is texted: the five chosen by row 6-36's rule (`2026-10-10-306`, `-307` — colleagues at the deceased member's WORKPLACE,
   school or office, and the previous one after a transfer within 90 days; otherwise the up-to-3 "people who know me" the member named and who
-  accepted; otherwise ⛔ no one; ⛔ never the district; possibly fewer than five — `-310` CF4 A) through 6.6's engine, minus those the Trust must ⛔ not text — ⛔ never replaced.** At the child's locked
+  accepted; otherwise ⛔ no one; ⛔ never the district; possibly fewer than five — `-310` CF4 A) through 6.6's engine, minus those the Trust must ⛔ not text — ⭐ a skipped one is REPLACED (`-311` PM1).** At the child's locked
   re-check (PM5 (iv)) a ping is finished `no_target` with a fixed detail when its member: is ⛔ not `members.state = 'active'`
   (`no_target:peer_not_active`); has ANY claim filed naming them as the deceased (`no_target:peer_reported_deceased` — ⚠ includes a claim
   wrongly filed against a living member, who is locked by 6.20 until row 6-22's release (`-238`); the exclusion STAYS even after such a
   release — a known residual, with a pointer on row 6-22, Task 9.4); has an erased or unresolvable mobile after decrypt → `normalizeMobile`
-  (`no_target:no_sendable_number`). The selection, its ping rows and FQ10's 3-reply count are ⛔ not changed; ⛔ no sixth member is chosen.
+  (`no_target:no_sendable_number`). ⭐ **`-311` PM1 — REPLACED:** ineligible members are FILTERED when the people are first chosen (row 6-36), so a send-time skip is rare; when
+  one still happens, the NEXT ELIGIBLE person in the SAME group (the next workplace colleague; otherwise the next named person who accepted)
+  replaces them — deterministically from the selection's recorded ranking (replayable) — as a NEW ping row naming the one it replaces
+  (`replaces_ping_id`), at most five live; ⛔ never from another group, ⛔ never the district; ⛔ none left ⇒ fewer are asked (`-310` CF4).
+  FQ10's 3-reply count counts responders as before.
   ⚠ RECORDED: the deceased's family who are themselves members (other than the claimant) are ⛔ not excluded — the Trust has ⛔ no
   family-link data. ⚠ A refile texts the same five again for the same death (F10) — expected.
-- **PM2 [c] — one DLT text per ping, through `sendClaimDltSms` UNCHANGED** (RB4), with a sibling registry
+- **PM2 [c; the in-app alert a] — one DLT text per ping, through `sendClaimDltSms` UNCHANGED** (RB4), with a sibling registry
   `apps/jobs/src/scheduler/peer-mesh-sms-templates.ts` (the `suspicion-notice-sms-templates.ts` shape); ⛔ not `SMS_DLT_TEMPLATE_REGISTRY`,
   ⛔ not `dispatch()`, ⛔ no `AlertCategory`. Config keys `sms.dlt.template_id.peer_mesh.request.<locale>` (⚠ dotted — PM16); the helpline
-  slot is the per-Pariwar key the core already resolves (F23).
+  slot is the per-Pariwar key the core already resolves (F23). ⭐ **`-311` PM2 — ALSO an IN-APP ALERT:** once the text is accepted (the
+  request is OPEN — PM11), the member sees it inside the app — the home-screen card AND an item in the app's notice strip (Story 11a.5's
+  `NoticeboardStrip`, `packages/ui/src/noticeboard/` — follow its one-source banner-lane rule); ⛔ no push (⛔ no device registration),
+  ⛔ no day-one WhatsApp (`-303` Q1 A — row 6-31's reminder at 48 h), ⛔ no second SMS (the alert system's WhatsApp → SMS fallback is ⛔ not
+  used). Built in 6.27a (PM11's surfaces), dark until texted.
 - **PM3 [c] — what the text says.** Copy key `peer_mesh_sms.request` in `packages/i18n/locales/{en,hi}/claim.json` (+ `$comment.peer_mesh_sms`
   in BOTH: NOT-YET-HUMAN-REVIEWED + *"must match the registered DLT content byte for byte"*, RB1's form). en, as ratified (`-303` Q1 A,
   amended by `-304` Q6 A): *"We have been told that {member} has died. If you knew them, please answer a few short questions: {link} — or
@@ -748,8 +757,9 @@ member's terms:
   - [x] 0.2 The validate's corrections and BigDev's calls recorded — `2026-10-10-305` (`fa2687ce`); the confirm note CF1–CF3 written
         (`trustee-panel-routing-note-2026-10-10-6-27-confirms.md` — owed before Row 27 closes, ⛔ not blocking).
   - [ ] 0.0 Branch: rebase / fast-forward the build branch onto the governance tip (or `main` once merged); verify this file reads v2.5 or later.
-  - [ ] 0.3 Put PM1–PM25 to BigDev (short option summaries — the 6.24b / 6.29 form); record each answer here.
-  - [ ] 0.4 ONE author-commit (the next id after `-305`) recording PM1–PM25 as answered AND these author readings: the *"TWT:"* prefix
+  - [x] 0.3 Put PM1–PM25 to BigDev — ✅ answered in session 2026-10-10: all as written except PM1 (*"you should replace"*) and PM2
+        (*"send through alert as well"* → *"In-app alert only"*); PM16 / PM25 *"Accept all as recommended"*.
+  - [x] 0.4 ✅ `2026-10-10-311` (`082ab743`), committed ALONE. ONE author-commit (the next id after `-305`) recording PM1–PM25 as answered AND these author readings: the *"TWT:"* prefix
         dropped (PM3); `no_target:name_too_long` and the unconfirmed Devanagari `{#alphanumeric#}` question — a narrowing of `-303` Q1 A at
         the edge (PM3; FYI in the confirm note; a Row 27 evidence line); *"two or more calendar days"* (PM9); the exclusions of PM1; the
         ANSWER WINDOW incl. `state_trustee_approved` under a live R9 routing (PM8, PM5 (iv)); ⛔ no texted neighbour ever sees a ruled
@@ -926,6 +936,7 @@ on the story branch ([[feedback_commit_on_story_branch]]).
 ## Change Log
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-10 | 2.9 | ⭐ PM1–PM25 COMMITTED as `2026-10-10-311` (`082ab743`): PM1 — a skipped neighbour is REPLACED from the same group (deterministic, `replaces_ping_id`); PM2 — also an IN-APP alert (the home card + the notice strip; ⛔ no push / day-one WhatsApp / second SMS); Tasks 0.3 / 0.4 done; STATUS updated. |
 | 2026-10-10 | 2.8 | `2026-10-10-310` (the Panel: CF1 A, CF2, CF3 (a)–(d), CF4 A, CF5 A): the confirm statuses updated to RULED; Row 27 (g) closed by it; the CF3 readings now ratified. |
 | 2026-10-10 | 2.7 | `2026-10-10-307`: PM1 reads row 6-36's full order — workplace colleagues → people the member named and who accepted → ⛔ no one. |
 | 2026-10-10 | 2.6 | `2026-10-10-306` (BigDev): the five are chosen by school (row 6-36), ⛔ never the district; 6.27c also waits for row 6-36; PM1 updated; CF4 owed. |

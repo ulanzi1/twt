@@ -499,7 +499,15 @@ a family's claim must take, and whether the final approval waits). In the member
   their next signed-in launch — RECORDED. ⚠ A split is possible (the preference is app-wide and will serve every later member text) —
   BigDev's call at Task 0.3, ⛔ not made here.
 - **PM23 — the questionnaire is DATA, versioned** (BigDev 2026-10-10: *"these questions are of evolving nature"*).
-  (a) **Definitions** in `packages/contracts/src/claims/peer-questionnaire/` — `PEER_QUESTIONNAIRE_VERSIONS` (append-only) and
+  ⭐ **v1.8 — the ENGINE is SHARED from the start** (BigDev 2026-10-10: *"Yes, do it"* — the inspector's questionnaire, row
+  `6-32-inspector-questionnaire-at-the-ground-inspection`, is its SECOND consumer, so ⛔ no premature package): the definition shape, the
+  pure validator (codes, `showIf`, dates, dependants), the version registry and the generic renderers are written for ANY questionnaire —
+  `packages/contracts/src/questionnaires/` (shape + validator + a `QUESTIONNAIRE_KINDS = ['peer_mesh', 'ground_inspection']` registry)
+  with the neighbours' definitions under `…/questionnaires/peer-mesh/`; STORAGE stays per consumer (this story's two tables). ⭐ **Shared
+  question KEYS** — a question asked of BOTH the neighbours and the family uses the SAME `key` and the SAME option codes (`has_died`,
+  `death_date`, `death_cause`, `death_illness`), held in ONE `COMPARABLE_QUESTION_KEYS` list that PM25's comparison reads — ⛔ never a
+  per-questionnaire copy. ⛔ Never 10.15's Polls engine (it forbids conditions and locks at publish by design — its LBD-4 / LBD-5).
+  (a) **Definitions** in `packages/contracts/src/questionnaires/peer-mesh/` — `PEER_QUESTIONNAIRE_VERSIONS` (append-only) and
   `CURRENT_PEER_QUESTIONNAIRE_VERSION`; a version = ordered PAGES of 2–3 questions; a question = `key` (stable across versions),
   `kind` (`single` / `multi` / `date` / `yes_no`), option CODES, `optional` (all but `has_died`), `showIf` (a condition on an earlier
   answer), `sensitive` (⇒ encrypted, PM7 (a)), `warning` (ONLY `has_died` and `death_date` — FQ10 / FQ8 E; a test refuses any other),
@@ -511,7 +519,9 @@ a family's claim must take, and whether the final approval waits). In the member
   (d) **The app renders the server's definition** (generic widgets per `kind`), so a new version needs ⛔ no app release.
   (e) **Who approves a version** follows the Panel's Q7 (⏳; our reading B: BigDev for wording and options within an approved question;
   the Panel for any NEW question or anything about health, cause of death or habits). ⛔ No admin editor in this story — a new version is a
-  reviewed code change (a deferred-work item for an editor).
+  reviewed code change until row `6-33-questionnaire-editor-versions-and-approval` lands (staff write versions, a DIFFERENT person
+  approves, every version kept; its own Panel question Q8). This story keeps the definitions loadable from a registry 6-33 can later back
+  with a table — ⛔ never hard-wired into the screens.
   (f) **The text's *"two"* / *"a few"*** follows Q6 — the copy is registered with the DLT only after that ruling.
   (g) ⚠ **Re-plan by the Panel's answer:** Q3 / Q4 B or C would turn an answer into a warning or a flag — ⛔ never built without a new
   author-commit and the Policy-meaning note re-checked; Q5 A (our reading) ⇒ ⛔ no alcohol question.
@@ -534,9 +544,11 @@ a family's claim must take, and whether the final approval waits). In the member
   · **Before completing:** the inspector is shown ⛔ nothing about the neighbours — ⛔ no answers, ⛔ no counts, ⛔ no *"hidden"* line
   (a hint invites guessing and pressure). For a District Admin who inspects, the console's peer-mesh section is ABSENT for them while
   they hold an un-completed assignment on this claim (the same server-side rule — (c)).
-  · **The family's version:** the inspection records the family's answers to the COMPARABLE questions — the date of death (6.26a,
-  already), and, ONLY if the Panel approves Q3 / Q4 of the follow-up note, *"How did they die?"* and *"Which illness?"* from the SAME
-  answer lists (`family_cause_code`, `family_illness_codes` — Tier-1, `sensitive`, on `claim_ground_inspections`; migration with 0157).
+  · **The family's version:** the date of death the family gives is already recorded (6.26a). ⭐ v1.8: the family's answers to
+  *"How did they die?"* and *"Which illness?"* are recorded by row `6-32`'s inspector questionnaire (ONLY if the Panel approves Q3 / Q4),
+  under the shared keys — ⛔ not by this story. ⇒ **this story compares ① and ② only**; ③ and ④ switch on, with ⛔ no change here, once
+  6-32 records the family's `death_cause` / `death_illness` (the comparison reads `COMPARABLE_QUESTION_KEYS`; a key the family has ⛔ no
+  answer for is skipped — ⛔ never a discrepancy).
   · **At completion** (`completeGroundInspection`), the server compares, against the neighbours' answers SAVED by then, by fixed rules:
   ① any neighbour `not_died`; ② a neighbour's date two or more calendar days from the FAMILY's date (the *"more than a day"* rule —
   FQ8 E's reading, the PM9 window over the family's date); ③ the cause category, and ④ the illness codes — ONLY when both sides gave a
@@ -630,7 +642,7 @@ a family's claim must take, and whether the final approval waits). In the member
         AC (*"pinged via Story 5.1 dispatcher"* → the routed channel) and Story 6.10's AC2(c) — ⛔ never rewrites.
   - [ ] 0.6 Roster Rows 27 / 28 (PM16); DLT sheet templates 13–14 (text from Task 2.1, filled after it is fixed); a line on Row 26.
   - [ ] 0.7 Sprint ledger: a reverse-chron `last_updated` comment line ([[project_sprint_status_ledger]], [[project_sprint_status_safe_prepend]]).
-- [ ] **Task 0b — the questionnaire definitions (PM23).** `packages/contracts/src/claims/peer-questionnaire/` — the version registry, v1
+- [ ] **Task 0b — the questionnaire definitions (PM23).** `packages/contracts/src/questionnaires/` (the shared shape, validator, kinds registry and `COMPARABLE_QUESTION_KEYS`) + `…/questionnaires/peer-mesh/` — the version registry, v1
       (page 1 + the closing note), the zod shape, the `approvedBy` / `warning` / `sensitive` tests; en + hi copy keys; contracts vitest
       ([[project_contracts_tests_outside_tsc]]). ⭐ v2 is added ONLY from the Panel's Q3–Q7 ruling.
 - [ ] **Task 1 — migrations 0156 / 0157 / 0158 (AC2, AC3, AC5, AC12, AC13; 0158 = PM22's `member_language_preferences`).** Hand-authored, journal entries, applied to :5432 AND :5433 and proven
@@ -817,6 +829,7 @@ route and resolver are built and tested here against a config base URL; only the
 | Date | Version | Change |
 |---|---|---|
 | 2026-10-10 | 1.0 | Created (`bmad-create-story 6.27`); pinned `5946e411`; routing note Q1 / Q2 written; PM1–PM20 proposed. |
+| 2026-10-10 | 1.8 | BigDev: an inspector questionnaire, possibly long, authored by Pariwar Admin / State Trustee / Super Admin — *"Yes, do it"*. ⛔ No story existed. PM23: the engine is SHARED (contracts `questionnaires/`, kinds `peer_mesh` / `ground_inspection`, shared question KEYS for comparable questions; ⛔ never Polls' engine); the editor is row `6-33`. PM25 (a): the family's cause / illness answers come from row `6-32`; this story compares ① and ② only until then. New rows 6-32 and 6-33 (`backlog`); Panel Q8 added to the unsent note. |
 | 2026-10-10 | 1.7 | BigDev: the inspector is shown ⛔ nothing before completing (⛔ no "hidden" line), and at completion only DISCREPANCIES between the family's and the neighbours' answers (⛔ never who said it, ⛔ no exact count), with a note box each — else *"No further action needed"*. PM25 (a) rewritten: the family's comparable answers recorded at inspection (cause / illness only if the Panel approves Q3 / Q4), four fixed discrepancy rules, a discrepancy-notes table, late answers to the District Admin only. AC8, Task 8 follow; the follow-up note gains the family's question and a corrected "one fact". |
 | 2026-10-10 | 1.6 | BigDev: who sees the answers. FOUND: the console key `claim.verify` is held only by District Admins, verifiers and the Super Admin — State Trustees, R9 voters and Pariwar Admins would approve over a warning they cannot see. NEW PM24 (every approver sees the answers for the claim at its current step — one shared assembler, one read, ⛔ no new key); NEW PM25 (the inspector sees ⛔ nothing until their inspection is completed, then at once — a follow-up note, the reveal recorded; the helpline operator sees only the caller's own answers). PM13, AC8, Task 8 follow. |
 | 2026-10-10 | 1.5 | BigDev: a fuller, optional, evolving questionnaire — 2–3 questions per page, auto-save, a note before Submit, Submit → *"Thank you"*. PM7 rewritten (a reply + append-only answers, live when saved, locked at Submit, the event at the first `has_died` save); PM9 / PM10 read the LIVE answers; PM11 / PM12 / PM13 / PM17 follow; NEW PM23 (the questionnaire as versioned DATA, `approvedBy` per question, v1 = page 1). The questions beyond page 1 go to the Panel in a follow-up note (Q3–Q7, ⏳). |

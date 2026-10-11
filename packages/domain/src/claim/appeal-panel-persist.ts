@@ -60,6 +60,7 @@ export { AppealPanelSessionAlreadySupersededError, readLiveAppealPanelSession, s
 import { type ClaimEventActor } from './events.js';
 import { projectClaimState } from './project.js';
 import {
+  type CloseClaimIfDeathPaidResult,
   type CloseClaimsHeldBySuspicionAppealResult,
   acquireSuspicionReversalLockForClaim,
   closeClaimIfDeathPaid,
@@ -618,7 +619,7 @@ export async function finalizeAppealOutcome(
   //     anchor stage.
   let reversedEventVersion: number | null = null;
   let heldClaims: CloseClaimsHeldBySuspicionAppealResult | undefined;
-  let closedByPaidDeath = false;
+  let closedByPaidDeath: CloseClaimIfDeathPaidResult = { closed: false };
   if (reverses) {
     const rev = await projectClaimState(client, {
       claimCaseId: input.claimCaseId,
@@ -688,8 +689,8 @@ export async function finalizeAppealOutcome(
   return {
     session: finalizedSession,
     decision: decisionRows[0]!,
-    claimState: closedByPaidDeath ? 'closed' : projected.state,
-    eventVersion: projected.eventVersion,
+    claimState: closedByPaidDeath.closed ? 'closed' : projected.state,
+    eventVersion: closedByPaidDeath.closed ? closedByPaidDeath.eventVersion : projected.eventVersion,
     reversedEventVersion,
     idempotentReplay: false,
     ...(heldClaims !== undefined ? { heldClaims } : {}),

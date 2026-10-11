@@ -16,7 +16,7 @@ import { useEffect } from 'react';
 import { ApiError } from '../api/client.js';
 import { useNomineeRefusals, useSession } from '../api/hooks.js';
 import { formatIst } from '../modules/claim-verification/NomineeDeclarationPanel.js';
-import { verifierConsoleEn } from '../modules/claim-verification/i18n-en.js';
+import { closedClaimStateLabel, verifierConsoleEn } from '../modules/claim-verification/i18n-en.js';
 import { nomineeRefusalsPath } from './login-next.js';
 
 const t = verifierConsoleEn.nomineeDeclaration.refusals;
@@ -72,8 +72,10 @@ function NomineeRefusalsView(): ReactElement {
                   <code className="font-mono">{item.claim_case_id}</code>
                 </dd>
                 <dt className="opacity-70">{t.state}</dt>
-                {/* ⛔ Never the raw state code (code review 2026-09-24b); an unknown state reads as a dash. */}
-                <dd>{t.claimStateLabels[item.claim_state] ?? '—'}</dd>
+                {/* ⛔ Never the raw state code (code review 2026-09-24b); an unknown state reads as a dash.
+                    Story 6.28 (OP10) — a `closed` row whose HOLDING claim was itself later refused/closed
+                    reads the neutral "may file again" copy, like the other OP10 helpline surfaces. */}
+                <dd>{closedClaimStateLabel(item.closed_holder_refused, item.claim_state)}</dd>
               </dl>
               <dl className="mt-2 grid grid-cols-[auto,1fr] gap-x-3 gap-y-0.5 text-xs">
                 <dt className="opacity-70">{t.refusedBy}</dt>

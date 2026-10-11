@@ -346,9 +346,7 @@ describe('NW1 — import discipline, TRANSITIVELY (`-279` A12)', () => {
       const file = queue.pop()!;
       if (seen.has(file)) continue;
       seen.add(file);
-      // Comments stripped first (Story 6.28): `src/rbac/index.ts`'s header quotes `export * as rbac from './rbac/index.js'`
-      // — reachable since H(ii) put `suspicion-refusal-persist.ts` under `icp.ts` — and a quoted import is ⛔ an import.
-      const code = readFileSync(file, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+      const code = readFileSync(file, 'utf8');
       for (const m of code.matchAll(/(?:import|export)[^'"]*?from\s+['"](\.{1,2}\/[^'"]+)['"]/g)) {
         const target = path.resolve(path.dirname(file), m[1]!.replace(/\.js$/, '.ts'));
         queue.push(target);

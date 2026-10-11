@@ -15,10 +15,8 @@ import { useEffect, useRef, useState, type ReactElement } from 'react';
 import { ApiError } from '../../api/client.js';
 import { useHelplineAppealClaims, useInitiateAppealOnBehalf } from '../../api/hooks.js';
 import { formatIst } from '../claim-verification/NomineeDeclarationPanel.js';
-import { verifierConsoleEn } from '../claim-verification/i18n-en.js';
+import { closedClaimStateLabel } from '../claim-verification/i18n-en.js';
 import { appealReadBack, certificateClaimOption, resolveEn } from './i18n-en.js';
-
-const claimStateLabels = verifierConsoleEn.nomineeDeclaration.refusals.claimStateLabels;
 
 /** A filing refusal in words — ⛔ never a raw code. */
 function filingRefusal(err: unknown): string {
@@ -108,7 +106,7 @@ export function HelplineAppeal({
             <li key={c.claim_case_id} className="flex flex-col gap-1 text-sm" data-testid={`helpline-appeal-claim-${c.claim_case_id}`}>
               <span className="font-medium">
                 {certificateClaimOption(
-                  c.closed_holder_refused ? verifierConsoleEn.nomineeDeclaration.refusals.closedHolderRefused : (claimStateLabels[c.claim_state] ?? '—'),
+                  closedClaimStateLabel(c.closed_holder_refused, c.claim_state),
                   formatIst(c.created_at),
                 )}
               </span>

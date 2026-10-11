@@ -930,14 +930,24 @@ export function createGroundInspectionHandlers(deps: AppDeps) {
       if (inScope.length > 0) {
         const pid = ids.pariwarId(ctx.pariwarId);
         const cid = ids.claimId(claimCaseId);
-        const others = await claim.readOtherClaimsForDeath(scopeTx.tx, pid, cid);
-        const visits = await claim.readOtherClaimVisits(scopeTx.tx, pid, cid);
-        otherClaimsForDeath = {
-          count: others.total,
-          claims: others.claims.map((c) => ({ reference: claim.claimShortReference(c.claimCaseId), stage: c.stage })),
-          visitedElsewhere: visits.visitedElsewhere,
-          alreadyVisited: visits.alreadyVisited,
-        };
+        // Information only (⛔ no gate) — a failed read degrades to `null` rather than 500ing the whole, already
+        // decrypted detail view; the two reads are independent, run concurrently.
+        const otherClaims = await Promise.all([
+          claim.readOtherClaimsForDeath(scopeTx.tx, pid, cid),
+          claim.readOtherClaimVisits(scopeTx.tx, pid, cid),
+        ]).catch((err: unknown) => {
+          request.log.warn({ err: err instanceof Error ? err.name : 'unknown' }, 'ground inspection: other-claims-for-death read unavailable');
+          return null;
+        });
+        if (otherClaims !== null) {
+          const [others, visits] = otherClaims;
+          otherClaimsForDeath = {
+            count: others.total,
+            claims: others.claims.map((c) => ({ reference: claim.claimShortReference(c.claimCaseId), stage: c.stage })),
+            visitedElsewhere: visits.visitedElsewhere,
+            alreadyVisited: visits.alreadyVisited,
+          };
+        }
       }
 
       void reply.status(200);

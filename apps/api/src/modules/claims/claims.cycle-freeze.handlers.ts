@@ -42,6 +42,7 @@ import type { FastifyReply, FastifyRequest } from 'fastify';
 import type { AppDeps } from '../../context.js';
 import {
   AdminDisplayNameMissingError,
+  ApiError,
   BadRequestError,
   ConflictError,
   NotFoundError,
@@ -444,7 +445,7 @@ export function createCycleFreezeHandlers(
 
       const scopeTx = await openScopeTx(deps, ctx.pariwarIdStr);
       let ok = false;
-      let result!: claim.TrusteeDecisionResult;
+      let result: claim.TrusteeDecisionResult | undefined;
       // ⭐ Story 6.28 H(iv) (Trap 14) — the refusal is CAPTURED, the refused transaction closes in `finally`, and only then
       // may the paid-death closure run (its own transaction) before the 409 is translated.
       let refused: { readonly err: unknown } | null = null;
@@ -565,6 +566,9 @@ export function createCycleFreezeHandlers(
         });
         return translateCycleFreezeError(refused.err);
       }
+      // Every `switch` case above either assigns `result` or throws before `ok = true` — guarded explicitly
+      // (not `!`-asserted) so a future reordering surfaces as a controlled 500, not an unhandled TypeError.
+      if (result === undefined) throw new Error('[cycle-freeze] vote/act completed without a result');
 
       audit(request, auditType, ctx, {
         claim_case_id: result.decision.claimCaseId,
@@ -588,12 +592,6 @@ export function createCycleFreezeHandlers(
     },
 
     /**
-     * POST …/admin/cycle-freeze/commit — the step-up-gated bulk commit (AC5) + the POST-COMMIT pool-spawn
-     * trigger (AC6). commitCycleFreeze owns the writer tx (DB work only); ONLY on a clean commit does the
-     * HANDLER fire the injected PoolSpawnTrigger (best-effort, outside the tx) then flip trigger_delivered.
-     * A trigger failure NEVER rolls back the committed freeze; a re-submitted commit_id is a no-op replay.
-     */
-    /**
      * ⭐ Story 6.28 (`2026-10-11-319` OP14 (b)) — POST …/admin/cycle-freeze/claims/:claimCaseId/close-for-paid-death —
      * "Close this claim": runs OP4's paid-death closure in its OWN transaction with `lock_timeout` (⛔ nothing of the claim
      * is read in `request.scopeTx` — Fact 5), the HUMAN actor (`trustee`). `this_claim_closed: false` + ⛔ no change when
@@ -612,9 +610,14 @@ export function createCycleFreezeHandlers(
       });
       if (outcome.kind === 'not_found') throw new NotFoundError('Claim not found', 'claim.not_found');
       if (outcome.kind === 'lock_timeout') {
-        throw new ServiceUnavailableError('Busy — try again in a moment.', 'cycle_freeze.close_busy');
+        throw new ServiceUnavailableError('This claim could not be closed just now — please try again shortly.', 'cycle_freeze.close_busy');
       }
-      if (outcome.kind === 'failed') throw new Error('[cycle-freeze] close-for-paid-death failed');
+      if (outcome.kind === 'failed') {
+        // A non-timeout failure inside `closeClaimsOfPaidDeathForClaim`'s own-tx (already logged there with full
+        // detail) — a typed 500 with a stable code, matching the sibling branches' contract, ⛔ never a bare `Error`
+        // that would fall through to the generic `internal.error` envelope.
+        throw new ApiError(500, 'cycle_freeze.close_for_paid_death_failed', 'This claim could not be closed just now.');
+      }
       const thisClaimClosed = outcome.result.closed.some((c) => c.toLowerCase() === claimCaseId.toLowerCase());
       audit(request, 'admin_cycle_freeze.closed_for_paid_death', ctx, {
         claim_case_id: claimCaseId,
@@ -625,6 +628,12 @@ export function createCycleFreezeHandlers(
       return { this_claim_closed: thisClaimClosed, closed_count: outcome.result.closed.length };
     },
 
+    /**
+     * POST …/admin/cycle-freeze/commit — the step-up-gated bulk commit (AC5) + the POST-COMMIT pool-spawn
+     * trigger (AC6). commitCycleFreeze owns the writer tx (DB work only); ONLY on a clean commit does the
+     * HANDLER fire the injected PoolSpawnTrigger (best-effort, outside the tx) then flip trigger_delivered.
+     * A trigger failure NEVER rolls back the committed freeze; a re-submitted commit_id is a no-op replay.
+     */
     async postCommit(request: FastifyRequest, reply: FastifyReply): Promise<CycleFreezeCommitResponse> {
       const ctx = await contextOf(request);
       const body = request.body as CycleFreezeCommitRequest;

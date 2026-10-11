@@ -35,6 +35,7 @@ import type {
   ApprovalWarningsStatus,
   NomineeNameCheckStatus,
   DocumentReviewSection,
+  FinallyApprovedElsewhere,
   GroundInspectionGateStatus,
   OtherClaimsForDeathSection,
   SuspicionRefusalSection,
@@ -353,6 +354,8 @@ export async function assembleVerifierConsole(
   // ── (l) the other claims for this death (Story 6.28, OP14 (a)) — STAFF-ONLY, NON-PII; ⛔ no decrypt; under a SAVEPOINT,
   //    BEFORE the warnings (which stay LAST). ─────────────────────────────────────────────────────────────────────────
   const otherClaimsForDeath = await assembleOtherClaimsForDeath(ctx, claimCaseId, reads);
+  // ── (l′) the AUTHORITATIVE finally-approved-elsewhere signal (Story 6.28, OP14 (b)) — code review chunk 3/4. ───────
+  const finallyApprovedElsewhere = await assembleFinallyApprovedElsewhere(ctx, claimCaseId, reads);
 
   // ── (i) the approval warnings (Story 6.23a, NW8; 6.26b's death-fact kinds) — NON-PII; ⛔ no decrypt. ⚠ LAST (⛔ no
   //    SAVEPOINT). The internal read also hands back the keys and the per-inspection comparisons (⛔ never on the wire). ─
@@ -381,6 +384,7 @@ export async function assembleVerifierConsole(
     groundInspectionGate,
     suspicionRefusal,
     otherClaimsForDeath,
+    finallyApprovedElsewhere,
     approvalWarnings,
   };
   return { packet, readCount: reads.count };
@@ -919,6 +923,34 @@ export async function assembleOtherClaimsForDeath(
       'verifier-console: other-claims-for-death section unavailable; saying "could not be checked"',
     );
     return { available: false, total: 0, claims: [] };
+  }
+}
+
+/**
+ * ⭐ Story 6.28 (OP14 (b), code review chunk 3/4) — the AUTHORITATIVE (uncapped) "another claim of this death is
+ * finally approved" signal, the SAME check every other approval surface's `finally_approved_elsewhere` field uses
+ * (`readFinallyApprovedElsewhereBulk`). `otherClaimsForDeath` above is informational-only and capped at 20 —
+ * deriving the finally-approved banner from it would miss a death with more than 20 other claims. Decision SUPPORT
+ * only — OP2's gate is the control — so a failed read degrades to `null`, never 500s the console.
+ */
+export async function assembleFinallyApprovedElsewhere(
+  ctx: VerifierConsoleContext,
+  claimCaseId: ids.ClaimId,
+  reads: { bump(): void },
+): Promise<FinallyApprovedElsewhere | null> {
+  try {
+    reads.bump();
+    const map = await underSavepoint(ctx.client, 'console_finally_approved_elsewhere', () =>
+      claim.readFinallyApprovedElsewhereBulk(ctx.db, ids.pariwarId(ctx.pariwarId), [claimCaseId]),
+    );
+    const hit = map.get(claimCaseId.toLowerCase()) ?? null;
+    return hit === null ? null : { claim_reference: claim.claimShortReference(hit.claimCaseId), stage: hit.stage };
+  } catch (err) {
+    ctx.log?.warn(
+      { err: err instanceof Error ? err.name : 'unknown', claimCaseId: ctx.claimCaseId },
+      'verifier-console: finally-approved-elsewhere unavailable; saying "none" (OP2 is the control)',
+    );
+    return null;
   }
 }
 

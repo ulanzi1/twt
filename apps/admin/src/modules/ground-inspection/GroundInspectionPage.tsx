@@ -162,6 +162,11 @@ export function GroundInspectionPage({ pariwarId }: GroundInspectionPageProps): 
               </li>
             ))}
           </ul>
+          {assignmentsQuery.data.otherClaimsForDeath.count > assignmentsQuery.data.otherClaimsForDeath.claims.length && (
+            <p data-testid="gi-other-claims-more">
+              {t('gi.otherClaims.more').replace('{n}', String(assignmentsQuery.data.otherClaimsForDeath.count - assignmentsQuery.data.otherClaimsForDeath.claims.length))}
+            </p>
+          )}
           {assignmentsQuery.data.otherClaimsForDeath.visitedElsewhere && (
             <p data-testid="gi-visited-elsewhere">{t('gi.otherClaims.visitedElsewhere')}</p>
           )}

@@ -137,6 +137,11 @@ export function createCorrectionEscalationHandlers(deps: AppDeps) {
       const row = detail.closure;
       const closureNote = note(request, ctx.pariwarIdStr, ctx.claimCaseIdStr, CLAIM_CORRECTION_CLOSURE_FIELD_CLASS, 'closure');
       const markNote = note(request, ctx.pariwarIdStr, ctx.claimCaseIdStr, CLAIM_CORRECTION_MARK_FIELD_CLASS, 'mark');
+      const scopeTx = request.scopeTx!;
+      // ⭐ Story 6.28 (OP14 (b)) — another claim of the death past its final vote / paid (ONE statement, SAVEPOINT-guarded).
+      const finallyApprovedElsewhere = (
+        await readFinallyApprovedElsewhereDtos(scopeTx.client, scopeTx.tx, request.log, ctx.pariwarId, [ctx.claimCaseIdStr])
+      )(ctx.claimCaseIdStr);
       const response: EscalatedClosureDetailResponse = {
         closure: toClosureDto(row, null),
         deceased_member_id: detail.deceasedMemberId,
@@ -164,14 +169,13 @@ export function createCorrectionEscalationHandlers(deps: AppDeps) {
         // `-273` §8 — the SAME rule the writer decides under its locks; shown so the Super Admin knows what an approve asks.
         approve_path: row.origin === 'declined_closure' && !detail.resubmitted ? 'name_waived_251' : 'full_gate',
         approval_warnings: UNAVAILABLE_APPROVAL_WARNINGS,
-        finally_approved_elsewhere: null,
+        finally_approved_elsewhere: finallyApprovedElsewhere,
         reason_options: [],
       };
       // ⭐ Story 6.23b (EA7; RD7, RD8; Trap 15) — the nominee-change warnings for this ONE claim, attached HERE (the domain
       // detail and its shape pin stay unchanged), LAST and under a raw SAVEPOINT: a throw fails CLOSED (`available: false`
       // — the approve control disabled in its own words; close and refuse untouched), ⛔ never "no warnings". The wait is
       // judged for the viewing Super Admin (`-279` A1). ⛔ Not the POST's pre-check read (`decideEscalation` — `-274` 1a).
-      const scopeTx = request.scopeTx!;
       const warned = await underSavepoint(scopeTx.client, 'escalation_approval_warnings', () =>
         claim.readClaimApprovalWarnings(scopeTx.tx, ctx.pariwarId, ctx.claimCaseId),
       ).catch((err: unknown) => {
@@ -185,10 +189,6 @@ export function createCorrectionEscalationHandlers(deps: AppDeps) {
         response.approval_warnings = toApprovalWarningsSummary(warned, [ctx.actorId]);
         response.reason_options = toReasonOptionsDto(warned.reasonOptions);
       }
-      // ⭐ Story 6.28 (OP14 (b)) — another claim of the death past its final vote / paid (ONE statement, SAVEPOINT-guarded).
-      response.finally_approved_elsewhere = (
-        await readFinallyApprovedElsewhereDtos(scopeTx.client, scopeTx.tx, request.log, ctx.pariwarId, [ctx.claimCaseIdStr])
-      )(ctx.claimCaseIdStr);
       auditClaim(deps, request, ctx, 'admin_claim_correction.escalation_read', { closure_id: row.closureId, origin: row.origin });
       return response;
     },

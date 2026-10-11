@@ -230,13 +230,13 @@ describe.skipIf(!hasDatabase)('Story 6.28 — one payment per death: OP1 + OP3 (
       const want: Record<string, string> = {};
       for (const [state, stage] of [
         ['verifier_review', 'open'], ['state_trustee_approved', 'passed_final_vote'], ['approved', 'paid'],
-        ['denied', 'refused'], ['appeal_stage_1', 'under_appeal'], ['closed', 'closed'],
+        ['denied', 'refused'], ['appeal_stage_1', 'under_appeal'], ['reversed', 'under_appeal'], ['closed', 'closed'],
       ] as const) {
         want[await claimAt(client, PARIWAR_A, mid, state)] = stage;
       }
       await claimAt(client, PARIWAR_A, toMemberId(randomUUID()), 'verifier_review');
       const out = await readOtherClaimsForDeath(tx, PARIWAR_A, self);
-      expect(out.total).toBe(6);
+      expect(out.total).toBe(7);
       expect(Object.fromEntries(out.claims.map((c) => [c.claimCaseId, c.stage]))).toEqual(want);
       expect(out.claims.every((c) => c.intakeChannels.includes('member_app'))).toBe(true);
       expect(await readOtherClaimsForDeath(tx, PARIWAR_A, await claimAt(client, PARIWAR_A, toMemberId(randomUUID()), 'verifier_review'))).toEqual({ total: 0, claims: [] });

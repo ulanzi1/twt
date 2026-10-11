@@ -2,7 +2,7 @@
 //
 // The SECOND guard on every privileged action (RLS is the first, Story 1.6).
 // Consumed via the top-level `rbac.*` namespace re-export in
-// packages/domain/src/index.ts (`export * as rbac from './rbac/index.js'`). One
+// packages/domain/src/index.ts — `export * as rbac`, sourced here. One
 // cohesive sub-module per architecture §2.6 — `permissions.ts` + `roles.ts` satisfy
 // the architecture's two-dir phrasing (`packages/domain/permissions|roles/`) as
 // files inside one `src/rbac/` directory; `packages/rbac` (the epic's shorthand,

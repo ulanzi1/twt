@@ -50,6 +50,7 @@ import { acquireSuspicionAppealLock, readSuspicionChainStart } from './suspicion
 import { type ClaimEventActor } from './events.js';
 import { projectClaimState } from './project.js';
 import {
+  type CloseClaimIfDeathPaidResult,
   type CloseClaimsHeldBySuspicionAppealResult,
   acquireSuspicionReversalLockForClaim,
   closeClaimIfDeathPaid,
@@ -412,7 +413,7 @@ export async function reviewAppealStage1(
 
   let reversedEventVersion: number | null = null;
   let heldClaims: CloseClaimsHeldBySuspicionAppealResult | undefined;
-  let closedByPaidDeath = false;
+  let closedByPaidDeath: CloseClaimIfDeathPaidResult = { closed: false };
   if (input.decision === 'reversed') {
     reversedEventVersion = await emitReversedHook(
       client,
@@ -455,8 +456,8 @@ export async function reviewAppealStage1(
   const decision = await insertDecisionRow(db, { ...input, stage: '1', decision: input.decision });
   return {
     decision,
-    claimState: closedByPaidDeath ? 'closed' : projected.state,
-    eventVersion: projected.eventVersion,
+    claimState: closedByPaidDeath.closed ? 'closed' : projected.state,
+    eventVersion: closedByPaidDeath.closed ? closedByPaidDeath.eventVersion : projected.eventVersion,
     reversedEventVersion,
     ...(heldClaims !== undefined ? { heldClaims } : {}),
   };
@@ -511,7 +512,7 @@ export async function decideAppealStage3(
 
   let reversedEventVersion: number | null = null;
   let heldClaims: CloseClaimsHeldBySuspicionAppealResult | undefined;
-  let closedByPaidDeath = false;
+  let closedByPaidDeath: CloseClaimIfDeathPaidResult = { closed: false };
   if (input.decision === 'reversed') {
     reversedEventVersion = await emitReversedHook(
       client,
@@ -574,8 +575,8 @@ export async function decideAppealStage3(
   const decision = await insertDecisionRow(db, { ...input, stage: '3', decision: input.decision });
   return {
     decision,
-    claimState: closedByPaidDeath ? 'closed' : projected.state,
-    eventVersion: projected.eventVersion,
+    claimState: closedByPaidDeath.closed ? 'closed' : projected.state,
+    eventVersion: closedByPaidDeath.closed ? closedByPaidDeath.eventVersion : projected.eventVersion,
     reversedEventVersion,
     ...(heldClaims !== undefined ? { heldClaims } : {}),
   };

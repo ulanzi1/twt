@@ -244,7 +244,16 @@ describe.skipIf(!hasDatabase)('Story 6.28 — one payment per death through HTTP
 
   /** `p` must settle within `ms` — a closure that waited on its own request's intake key would hang (Trap 2). */
   function withinMs<T>(p: Promise<T>, ms = 15_000): Promise<T> {
-    return Promise.race([p, new Promise<T>((_, rej) => setTimeout(() => rej(new Error(`no answer within ${ms} ms — a hang`)), ms))]);
+    let timer: ReturnType<typeof setTimeout>;
+    const timeout = new Promise<T>((_, rej) => {
+      timer = setTimeout(() => rej(new Error(`no answer within ${ms} ms — a hang`)), ms);
+    });
+    // Clear the timer once the race settles (else it fires after the test moved on) and swallow a late rejection
+    // of the LOSING promise (either `p`, after `timeout` won; or `timeout`, after `p` won) — both are unhandled
+    // otherwise.
+    void p.catch(() => undefined);
+    void timeout.catch(() => undefined);
+    return Promise.race([p, timeout]).finally(() => clearTimeout(timer));
   }
 
   const stateOf = async (cid: string) => (await td.pool.query<{ s: string }>('SELECT current_state::text AS s FROM claims WHERE claim_case_id = $1', [cid])).rows[0]!.s;
@@ -703,7 +712,7 @@ describe.skipIf(!hasDatabase)('Story 6.28 — one payment per death through HTTP
     try {
       const busy = await pa.client.inject({ method: 'POST', url: closeUrl(w.pariwarId, w.claimCaseId), payload: {} });
       expect(busy.statusCode, busy.body).toBe(503);
-      expect(errOf(busy.body)).toMatchObject({ code: 'cycle_freeze.close_busy', message: 'Busy — try again in a moment.' });
+      expect(errOf(busy.body)).toMatchObject({ code: 'cycle_freeze.close_busy', message: 'This claim could not be closed just now — please try again shortly.' });
     } finally {
       await release();
     }

@@ -127,6 +127,21 @@ describe.skipIf(!hasDatabase)('Story 6.28 — closed: the other claims of a paid
       expect((await paidClose(client, PARIWAR_A, mid)).closed).toEqual([]);
     });
 
+    it('a claim already `reversed` (an EARLIER transaction overturned its refusal/appeal, en route to a fresh vote) is closable too — ⛔ not held like `denied`/`appeal_stage_N`', async () => {
+      const { client } = getTx();
+      const mid = toMemberId(randomUUID());
+      const x = await claimAt(client, PARIWAR_A, mid, 'approved');
+      const reversed = await claimAt(client, PARIWAR_A, mid, 'reversed');
+      const res = await paidClose(client, PARIWAR_A, mid);
+      expect(res.paidClaimCaseId).toBe(x);
+      expect(res.closed).toEqual([reversed]);
+      expect(res.held).toEqual([]);
+      expect(await stateOf(client, reversed)).toBe('closed');
+      expect(await closedEventOf(client, reversed)).toMatchObject({
+        trigger: 'death_already_finally_approved', held_by_claim_case_id: x, deceased_member_id: mid, actor: 'system',
+      });
+    });
+
     it('a claim on which RF1 stands, and the refile RF5\'s wait holds, are ⛔ never closed (FQ5 decides that pair)', async () => {
       const { client } = getTx();
       const mid = toMemberId(randomUUID());

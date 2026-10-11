@@ -11,7 +11,9 @@
 //   · the client query key isolates by pariwarId + claimCaseId (no cross-scope cache bleed — D8/AC3).
 
 import type { VerifierConsolePacket } from '@twt/contracts';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import type { ReactElement } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { verifierConsoleKey } from '../src/api/hooks.js';
@@ -19,11 +21,25 @@ import { ApiError } from '../src/api/client.js';
 import {
   ScopeChrome,
   ScopeSwitcher,
-  SignalsPanel,
+  SignalsPanel as RawSignalsPanel,
+  type SignalsPanelProps,
   VerificationConsoleShell,
   verifierConsoleEn as t,
 } from '../src/modules/claim-verification/index.js';
 import { decisionErrorMessage, verifierConsoleSwitchTarget } from '../src/routes/VerifierConsoleRoute.js';
+
+// Story 6.28 (OP14 (b), code review chunk 3/4) — `<SignalsPanel>` now mounts `<FinallyApprovedElsewhereBanner>`
+// unconditionally (it calls `useMutation`/`useQueryClient` before its own `elsewhere === null` early return, as
+// every React hook must), so every render in this file needs a `QueryClientProvider` ancestor. Shadowing the
+// import under the SAME name means every existing `<SignalsPanel ... />` call site below picks this up for free.
+function SignalsPanel(props: SignalsPanelProps): ReactElement {
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+  return (
+    <QueryClientProvider client={qc}>
+      <RawSignalsPanel {...props} />
+    </QueryClientProvider>
+  );
+}
 
 const PRESENT_PACKET: VerifierConsolePacket = {
   claimCaseId: 'claim-1',
@@ -96,6 +112,7 @@ const PRESENT_PACKET: VerifierConsolePacket = {
   groundInspectionGate: { available: true, complete: true, waitReason: null },
   suspicionRefusal: { available: true, keptApartFrom: [], finalApprovalWaits: null },
   otherClaimsForDeath: { available: true, total: 0, claims: [] },
+  finallyApprovedElsewhere: null,
   approvalWarnings: {
     available: true,
     kinds: [],
@@ -743,9 +760,13 @@ describe('<SignalsPanel> — Story 6.28 (OP14 (a)), the other claims for this de
     expect(screen.getByTestId('other-claims-same-family')).toHaveTextContent(oc.likelySameFamily);
   });
 
-  it('OP14 (b) — a PAID other claim ⇒ the District Admin\'s console shows the BANNER, ⛔ the close action (P1 is ⛔ never blocked)', () => {
-    render(<SignalsPanel packet={{ ...PRESENT_PACKET, otherClaimsForDeath: { available: true, total: 1, claims: [row('A1B2C3D4', 'same', 'paid')] } }} />);
-    expect(screen.getByTestId('other-claims-finally-approved-banner')).toHaveTextContent(t.onePaymentPerDeath.bannerPaid('A1B2C3D4'));
+  it('OP14 (b) — `finallyApprovedElsewhere` (the AUTHORITATIVE, uncapped signal — ⛔ derived from this capped section) ⇒ the District Admin\'s console shows the shared BANNER, ⛔ the close action (P1 is ⛔ never blocked)', () => {
+    render(
+      <SignalsPanel
+        packet={{ ...PRESENT_PACKET, finallyApprovedElsewhere: { claim_reference: 'A1B2C3D4', stage: 'paid' } }}
+      />,
+    );
+    expect(screen.getByTestId(`finally-approved-elsewhere-${PRESENT_PACKET.claimCaseId}`)).toHaveTextContent(t.onePaymentPerDeath.bannerPaid('A1B2C3D4'));
     expect(screen.queryByRole('button', { name: t.onePaymentPerDeath.closeAction })).not.toBeInTheDocument();
   });
 

@@ -28,6 +28,7 @@ import { z } from 'zod';
 import { MemberValidityPayloadDto } from '../members/validity.js';
 import { DeathCertificateRegisterCheck } from './death-certificate.js';
 import { ClaimDocumentParityOutcome } from './documents.js';
+import { FinallyApprovedElsewhere } from './one-payment-per-death.js';
 // ⭐ The SINGLE clerical-reason tuple (a sibling contract, ⛔ not `@twt/domain` — the browser-bundle
 // rule is untouched). This file used to inline a fourth copy.
 import { NomineeNameClericalReason } from './nominee-name-check.js';
@@ -519,6 +520,12 @@ export const VerifierConsolePacket = z
     suspicionRefusal: SuspicionRefusalSection,
     // Story 6.28 (OP14 (a)) — STAFF-ONLY, NON-PII: the other claims for this death, by reference.
     otherClaimsForDeath: OtherClaimsForDeathSection,
+    // Story 6.28 (OP14 (b), code review chunk 3/4) — the AUTHORITATIVE (uncapped) "another claim of this
+    // death is finally approved" signal, the SAME field every other approval surface carries (bulk,
+    // SAVEPOINT-guarded). `otherClaimsForDeath` above is informational-only and explicitly capped at 20 —
+    // deriving the finally-approved banner from it (as this console briefly did) misses a death with more
+    // than 20 other claims. `null` when none.
+    finallyApprovedElsewhere: FinallyApprovedElsewhere.nullable(),
     // Story 6.23a (NW8) — NON-PII: which nominee-change warnings show, and the Pariwar's warning reasons.
     approvalWarnings: ApprovalWarningsStatus,
   })

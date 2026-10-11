@@ -29,10 +29,8 @@ import { useEffect, useRef, useState } from 'react';
 import { ApiError } from '../../api/client.js';
 import { useDeathCertificateClaimsForMember, useUploadHelplineDeathCertificate } from '../../api/hooks.js';
 import { formatIst } from '../claim-verification/NomineeDeclarationPanel.js';
-import { verifierConsoleEn } from '../claim-verification/i18n-en.js';
+import { closedClaimStateLabel } from '../claim-verification/i18n-en.js';
 import { resolveEn, certificateClaimOption } from './i18n-en.js';
-
-const claimStateLabels = verifierConsoleEn.nomineeDeclaration.refusals.claimStateLabels;
 
 /** Every upload refusal maps to its OWN line (C6) — never a raw code. */
 function certificateRefusalKey(err: unknown): string {
@@ -172,7 +170,7 @@ export function HelplineCertificateReplacement({
             />
             {/* An unknown state reads as a dash (the refusal list's posture) — ⛔ never guessed. */}
             {certificateClaimOption(
-                  c.closed_holder_refused ? verifierConsoleEn.nomineeDeclaration.refusals.closedHolderRefused : (claimStateLabels[c.claim_state] ?? '—'),
+                  closedClaimStateLabel(c.closed_holder_refused, c.claim_state),
                   formatIst(c.created_at),
                 )}
           </label>

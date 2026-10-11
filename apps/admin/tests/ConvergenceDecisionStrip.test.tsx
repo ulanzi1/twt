@@ -72,9 +72,10 @@ describe('<ConvergenceDecisionStrip>', () => {
     expect(note).toMatch(/While a claim stands refused/);
     expect(note).not.toMatch(/always kept/);
     expect(note).toMatch(/overturned on appeal, a new filing\s+joins the overturned claim/);
-    // Code review round 3: the join holds only inside the 30-day convergence window (`-294` §2 (b)) — ⛔ never promised beyond it.
-    expect(note).toMatch(/only while that claim is less than 30 days old/);
-    expect(note).toMatch(/a later filing\s+becomes a separate claim/);
+    // ⭐ Story 6.28 OP11 (`2026-10-11-319`): the 30-day convergence window is GONE — a later filing joins the overturned
+    // claim whatever its age; the note ⛔ no longer promises (or limits) anything by age.
+    expect(note).toMatch(/joins the overturned claim as before\./);
+    expect(note).not.toMatch(/30 days|separate claim/);
 
     // Confirm is disabled with an empty / too-short reason (mandatory-reason gate).
     const confirm = screen.getByTestId('convergence-override-confirm');

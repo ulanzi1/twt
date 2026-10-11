@@ -114,19 +114,11 @@ export function createConvergenceHandlers(deps: AppDeps) {
       }
 
       // Validate `claimCaseId` is an actual convergence candidate for THIS attempt's death —
-      // reuses `getConvergenceCandidate`'s non-terminal + ±30-day-window + AC4 override-apart
-      // filters (anchored to the attempt's own `createdAt`, not "now") so a mismatched or
-      // stale claimCaseId can never merge a channel into an unrelated death's claim (Review
-      // Finding — this cross-check was previously entirely absent, breaking AC5).
-      const windowStartAt = new Date(
-        attempt.createdAt.getTime() - claim.CONVERGENCE_WINDOW_DAYS * 24 * 60 * 60 * 1000,
-      );
-      const candidate = await claim.getConvergenceCandidate(
-        scopeTx.tx,
-        pariwarId,
-        attempt.deceasedMemberId,
-        windowStartAt,
-      );
+      // reuses `getConvergenceCandidate`'s non-terminal + AC4 override-apart + suspicion filters
+      // (⛔ no time window since Story 6.28 OP11 — the strip and the candidate mirror it) so a
+      // mismatched or stale claimCaseId can never merge a channel into an unrelated death's claim
+      // (Review Finding — this cross-check was previously entirely absent, breaking AC5).
+      const candidate = await claim.getConvergenceCandidate(scopeTx.tx, pariwarId, attempt.deceasedMemberId);
       if (!candidate || candidate.claimCaseId !== claimCaseId) {
         throw new ConflictError(
           'Target claim is not a valid convergence candidate for this attempt',

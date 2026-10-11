@@ -113,11 +113,9 @@ export interface CloseClaimsHeldBySuspicionAppealResult {
  * (⛔ no 40P01). ⛔ Never RF15's appeal key.
  * ⭐ `2026-10-08-294` §1 (supersedes `-292` RF6's "⛔ never the intake lock") — the death's INTAKE key is taken FIRST,
  * immediately before the reversal key: a mint racing the reversal then either committed first (the closure's list sees
- * it and CLOSES it) or waits behind the reversal and then runs the ordinary convergence — it JOINS the reversed claim
- * only while that claim is inside the 30-day convergence window (`CONVERGENCE_WINDOW_DAYS`); an older reversed claim is
- * ⛔ not a candidate, and the filing MINTS beside it, unheld — `-294` §2 (b), carried by row
- * `6-28-one-payment-per-death-second-approval-guard`. What §1 closes is the race: ⛔ never a claim minted UNSEEN by the
- * reversal's own closure.
+ * it and CLOSES it) or waits behind the reversal and then runs the ordinary convergence — it JOINS the reversed claim,
+ * whatever its age (⭐ Story 6.28 OP11 removed the 30-day window that let `-294` §2 (b)'s later filing MINT beside an
+ * older reversed claim). What §1 closes is the race: ⛔ never a claim minted UNSEEN by the reversal's own closure.
  * ⚠ WHY ⛔ NO CYCLE — the property is the REVERSE of "who waits after taking the intake key" (this writer does: on the
  * reversal key, `appeal:` keys and rows): ⛔ nobody holding a claim row, an `appeal:` / `r9:` / trustee key or a
  * `suspicion-*` key then asks for the INTAKE key. Every intake-key taker — `tryConverge`, `convergeIntakeAttempt`,

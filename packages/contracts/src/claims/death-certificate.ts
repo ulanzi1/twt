@@ -178,8 +178,8 @@ export const MemberDeathCertificateStatusResponse = z
     /**
      * ⭐ Story 6.24a (`2026-10-07-292` RF12 v1.3) — a ROUTING BIT: this claim is `closed` (another claim of the death won
      * its suspicion appeal). The claim-entry gate routes to the calm "this claim has been closed — please call the
-     * helpline" screen while it is true — ⛔ never the wizard (a filing would converge onto the reversed claim only inside
-     * the 30-day look-back, else mint a third claim for the death). ⛔ Never merged with `closed_no_response` (a closure
+     * helpline" screen while it is true — ⛔ never the wizard (a filing would join a live claim of the death, any age —
+     * Story 6.28 OP11 — or, the death paid, be closed at once). ⛔ Never merged with `closed_no_response` (a closure
      * for no response is a different thing). ⛔ Never shown as such.
      */
     claim_closed: z.boolean(),

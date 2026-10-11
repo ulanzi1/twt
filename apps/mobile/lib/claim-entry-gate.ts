@@ -32,8 +32,8 @@ export type ClaimEntryDecision =
   | { readonly kind: 'wizard' }
   | { readonly kind: 'refile_helpline' }
   /** ⭐ Story 6.24a (RF12 v1.3) — the calm "this claim has been closed — please call the helpline" screen. ⛔ Never the
-   *  wizard: a filing would converge onto the reversed claim only inside the 30-day look-back, else MINT a third claim
-   *  for the death — which the helpline should prevent, ⛔ not the app invite. */
+   *  wizard: a filing would join a live claim of the death (any age — Story 6.28 OP11) or, the death paid, be closed at
+   *  once — which the helpline should guide, ⛔ not the app invite. */
   | { readonly kind: 'closed_helpline' }
 
 /**

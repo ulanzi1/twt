@@ -14,6 +14,9 @@ import { buildAppleAppSiteAssociation, parseIosAppIdsEnv } from '@twt/contracts'
 import { wellKnownJson, wellKnownNotFound } from '../../lib/well-known.server.js';
 
 export const GET: APIRoute = () => {
-  const apps = parseIosAppIdsEnv(process.env.APP_LINKS_IOS_APP_IDS);
-  return apps === null ? wellKnownNotFound() : wellKnownJson(buildAppleAppSiteAssociation(apps));
+  const raw = process.env.APP_LINKS_IOS_APP_IDS;
+  const apps = parseIosAppIdsEnv(raw);
+  return apps === null
+    ? wellKnownNotFound('APP_LINKS_IOS_APP_IDS', raw, '/.well-known/apple-app-site-association')
+    : wellKnownJson(buildAppleAppSiteAssociation(apps));
 };

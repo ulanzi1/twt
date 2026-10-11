@@ -2,7 +2,7 @@
 // Pure-logic tests of `lib/link-target.ts`, then source-scan pins of its four wiring sites (the mobile
 // harness has no screen renderer — `terminated-during-refresh.test.ts` is the precedent).
 
-import { readFileSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -91,6 +91,14 @@ const at = (haystack: string, needle: string): number => {
   return index
 }
 
+/** Every `.ts` / `.tsx` file under `dirs`, repo-relative. */
+const sourceFiles = (dirs: readonly string[]): string[] =>
+  dirs.flatMap((dir) =>
+    readdirSync(path.join(repoRoot, dir), { recursive: true, encoding: 'utf8' })
+      .filter((entry) => /\.tsx?$/.test(entry))
+      .map((entry) => path.posix.join(dir, entry.split(path.sep).join('/'))),
+  )
+
 const ROOT_LAYOUT = read('apps/mobile/app/_layout.tsx')
 const OTP = read('apps/mobile/app/(auth)/otp.tsx')
 const SESSION = read('apps/mobile/lib/session.ts')
@@ -128,10 +136,25 @@ describe('(ii) otp.tsx is the ONE consumer, and takes BEFORE signIn', () => {
     expect(branch).toContain("router.replace('/(tabs)')")
   })
 
-  it('no other app file consumes the holder', () => {
-    for (const rel of ['apps/mobile/lib/session.ts', 'apps/mobile/lib/session-context.tsx']) {
-      expect(read(rel)).not.toContain('takeLinkTarget')
-    }
+  it('no other app file consumes the holder — the whole of app/, components/ and lib/ (code review 2026-10-11)', () => {
+    const consumers = sourceFiles(['apps/mobile/app', 'apps/mobile/components', 'apps/mobile/lib'])
+      .filter((rel) => rel !== 'apps/mobile/lib/link-target.ts')
+      .filter((rel) => read(rel).includes('takeLinkTarget('))
+    expect(consumers).toEqual(['apps/mobile/app/(auth)/otp.tsx'])
+  })
+
+  it('a signIn that throws puts the target back (⛔ consumed by a login that stored no session)', () => {
+    const branch = OTP.slice(at(OTP, "res.sessionType === 'full_session'"), at(OTP, "res.sessionType === 'signup_continuation'"))
+    const signIn = at(branch, 'await signIn(res)')
+    const restore = at(branch, 'if (target) recordLinkTarget(target.pathname, target.params)')
+    expect(restore).toBeGreaterThan(signIn)
+    expect(at(branch, 'throw signInErr')).toBeGreaterThan(restore)
+  })
+
+  it("the guard's post-login /(tabs) branch is skipped on (auth)/otp — otp.tsx's own replace must land last", () => {
+    const branch = ROOT_LAYOUT.slice(at(ROOT_LAYOUT, "} else if (session && inAuthGroup && segments[1] !== 'otp') {"))
+    expect(branch.slice(0, at(branch, '\n    }\n'))).toContain("router.replace('/(tabs)')")
+    expect(ROOT_LAYOUT.match(/router\.replace\('\/\(tabs\)'\)/g)).toHaveLength(1)
   })
 })
 

@@ -76,6 +76,11 @@ as-built `/p/` rule vs the root-level Astro pages mismatch is recorded, ⛔ not 
 challenges off the two files is `infra/cloudflare/waf.tf` (the `waf_custom` skip). Dev wires, operator applies (ADR-0011 §5) —
 roster Row 29 (g).
 
+⚠ **The origin's access log.** Traefik's access log (Dokploy's "Requests" monitoring) records `RequestPath` WITH the query string,
+so `/peer-request?c=<code>` would be written at the origin even though the edge logs exclude it (`infra/cloudflare/README.md`,
+Logpush fields). The operator keeps Traefik access logging OFF on this deployment, or drops the query from it — recorded at roster
+Row 29 note (7).
+
 ## Migration trigger (§5.3 — recorded, not executed)
 
 The Dokploy→Cloud Run/GKE migration trigger (2nd Pariwar **with a bespoke build** OR

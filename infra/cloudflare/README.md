@@ -112,7 +112,8 @@ it on a real request at the device proof (`curl -A` a non-browser user agent).
 `observability.tf` logs `ClientRequestPath`, which EXCLUDES the query string. An app link
 carries its code in the query (`/peer-request?c=<code>`, Story 6.30 AL4), so the code is ⛔ not
 in the edge logs as configured. ⛔ Never add `ClientRequestURI` to `logpull_options` — it
-carries the query.
+carries the query. ⚠ This covers the EDGE only: the origin's Traefik access log records the path
+WITH its query — see `infra/dokploy/README.md` (App links) and roster Row 29 note (7).
 
 ## Landing-story map (provisional)
 

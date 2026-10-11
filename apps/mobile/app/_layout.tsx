@@ -135,9 +135,12 @@ function RootLayoutNav() {
       // anything else records ⛔ no target) so `otp.tsx` can return to it after the login.
       recordLinkTarget(pathname, searchParams)
       router.replace('/(auth)/login')
-    } else if (session && inAuthGroup) {
-      // ⛔ Never reads the link-target holder — `otp.tsx` is its ONE consumer (AL6 (iii)); this branch can
-      // fire only before `otp.tsx`'s own replace commits, so that replace lands last.
+    } else if (session && inAuthGroup && segments[1] !== 'otp') {
+      // ⛔ Never reads the link-target holder — `otp.tsx` is its ONE consumer (AL6 (iii)). ⛔ Skipped on
+      // `(auth)/otp` (code review 2026-10-11): `otp.tsx` routes itself on EVERY success branch (the target,
+      // `/(tabs)`, `/(signup)/tc`), and its `signIn` → `router.replace(…)` commit in ONE render while
+      // `useSegments()` still says `(auth)` (the router store updates in the navigation container's effect,
+      // which runs AFTER this one) — so a replace from here would land LAST and send the member home.
       router.replace('/(tabs)')
     }
   }, [session, isLoading, segments, pathname, searchParams, router, terminationNotice, clearTerminationNotice])

@@ -59,6 +59,9 @@ describe('the render model', () => {
     expect(model.title).toBe(
       `${t('page_title', undefined, { locale: 'hi', namespace: 'app-links' })} / ${t('page_title', undefined, { locale: 'en', namespace: 'app-links' })}`,
     );
+    // Its two halves, for the shell's per-language spans (code review 2026-10-11).
+    expect(`${model.titleParts.hi} / ${model.titleParts.en}`).toBe(model.title);
+    expect(model.titleParts.en).toBe(t('page_title', undefined, { locale: 'en', namespace: 'app-links' }));
   });
 
   it('⛔ no store buttons unless configured', () => {
@@ -115,6 +118,7 @@ describe('peer-request.astro (source scan)', () => {
     expect(PAGE_CODE).toMatch(/<PublicShell[^>]*branding=\{null\}/);
     expect(PAGE_CODE).toMatch(/<PublicShell[^>]*locale="hi"/);
     expect(PAGE_CODE).toMatch(/<PublicShell[^>]*title=\{model\.title\}[^>]*trustName=\{model\.title\}/);
+    expect(PAGE_CODE).toMatch(/<PublicShell[^>]*trustNameParts=\{model\.titleParts\}/);
   });
 
   it('sets no-referrer and its Cache-Control, and ⛔ no Vary', () => {
@@ -130,6 +134,28 @@ describe('peer-request.astro (source scan)', () => {
   it('marks each block with its language and adds ⛔ no scoped style', () => {
     expect(PAGE_CODE).toContain('<section lang={block.lang}>');
     expect(PAGE_CODE).not.toMatch(/<style/);
+  });
+});
+
+describe('PublicShell.astro — the only request-URL read is inside withLang() (Invariant 3; code review 2026-10-11)', () => {
+  it('reads Astro.url exactly once, in the body of withLang(), and ⛔ never Astro.request / searchParams.get', () => {
+    // `hideLanguageToggle` suppresses only withLang()'s CALLS — any other URL-derived output (a canonical link,
+    // og:url, an analytics attribute) would echo `?c=<code>` into the fallback page with every page test green.
+    const code = strip(SHELL);
+    const reads = [...code.matchAll(/Astro\.url/g)].map((match) => match.index!);
+    expect(reads).toHaveLength(1);
+    const body = code.indexOf('function withLang(');
+    expect(body).toBeGreaterThan(-1);
+    expect(reads[0]!).toBeGreaterThan(body);
+    expect(reads[0]!).toBeLessThan(code.indexOf('\n}', body));
+    expect(code).not.toMatch(/Astro\.request|searchParams\.get|Astro\.params/);
+  });
+});
+
+describe('PublicShell.astro — a bilingual trustName (trustNameParts)', () => {
+  it('renders each half under its own lang in the header AND the footer', () => {
+    const spans = '<span lang="hi">{trustNameParts.hi}</span> / <span lang="en">{trustNameParts.en}</span>';
+    expect(SHELL.split(spans)).toHaveLength(3);
   });
 });
 

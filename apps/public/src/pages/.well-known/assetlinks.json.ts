@@ -13,6 +13,9 @@ import { buildAssetLinks, parseAndroidAppsEnv } from '@twt/contracts';
 import { wellKnownJson, wellKnownNotFound } from '../../lib/well-known.server.js';
 
 export const GET: APIRoute = () => {
-  const apps = parseAndroidAppsEnv(process.env.APP_LINKS_ANDROID_APPS);
-  return apps === null ? wellKnownNotFound() : wellKnownJson(buildAssetLinks(apps));
+  const raw = process.env.APP_LINKS_ANDROID_APPS;
+  const apps = parseAndroidAppsEnv(raw);
+  return apps === null
+    ? wellKnownNotFound('APP_LINKS_ANDROID_APPS', raw, '/.well-known/assetlinks.json')
+    : wellKnownJson(buildAssetLinks(apps));
 };

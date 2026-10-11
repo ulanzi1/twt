@@ -28,9 +28,15 @@ interface Props {
    * page shows both languages on one page, and under `/peer-request?c=<code>` a toggle would echo the code.
    */
   hideLanguageToggle?: boolean;
+  /**
+   * A BILINGUAL `trustName` as its two halves: the header and footer render each under its OWN `lang` (a screen
+   * reader voices each in its language); `<title>` keeps `trustName` (a `<title>` cannot mark its parts). Story
+   * 6.30's fallback page (code review 2026-10-11).
+   */
+  trustNameParts?: { hi: string; en: string };
 }
 
-const { locale, title, description, trustName, branding, noindex = false, hideLanguageToggle = false } = Astro.props;
+const { locale, title, description, trustName, branding, noindex = false, hideLanguageToggle = false, trustNameParts } = Astro.props;
 
 // Build the locale-toggle links from the current URL, preserving any selector params
 // (clause/from/to). Distinct URLs ⇒ distinct edge-cache entries (no Vary needed for
@@ -135,7 +141,7 @@ const pageTitle = title === trustName ? title : `${title} · ${trustName}`;
       <div class="shell-header__inner">
         <div class="shell-brand">
           {logoUrl && <img class="shell-brand__logo" src={logoUrl} alt={trustName} />}
-          <p class="shell-brand__name" style={`color:${brandPrimary}`}>{trustName}</p>
+          <p class="shell-brand__name" style={`color:${brandPrimary}`}>{trustNameParts ? (<><span lang="hi">{trustNameParts.hi}</span> / <span lang="en">{trustNameParts.en}</span></>) : trustName}</p>
         </div>
         {!hideLanguageToggle && (
           <nav class="lang-toggle" aria-label={t('language_label', undefined, { locale, namespace: 'niyamavali' })}>
@@ -153,7 +159,7 @@ const pageTitle = title === trustName ? title : `${title} · ${trustName}`;
       <slot />
     </main>
     <footer class="shell-footer">
-      <p style={`border-top-color:${brandAccent}`}>{trustName}</p>
+      <p style={`border-top-color:${brandAccent}`}>{trustNameParts ? (<><span lang="hi">{trustNameParts.hi}</span> / <span lang="en">{trustNameParts.en}</span></>) : trustName}</p>
     </footer>
   </body>
 </html>

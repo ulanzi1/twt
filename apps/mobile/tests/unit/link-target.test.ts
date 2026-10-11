@@ -152,7 +152,8 @@ describe('(ii) otp.tsx is the ONE consumer, and takes BEFORE signIn', () => {
   })
 
   it("the guard's post-login /(tabs) branch is skipped on (auth)/otp — otp.tsx's own replace must land last", () => {
-    const branch = ROOT_LAYOUT.slice(at(ROOT_LAYOUT, "} else if (session && inAuthGroup && segments[1] !== 'otp') {"))
+    expect(ROOT_LAYOUT).toContain("const onOtpScreen = inAuthGroup && (segments as readonly string[])[1] === 'otp'")
+    const branch = ROOT_LAYOUT.slice(at(ROOT_LAYOUT, '} else if (session && inAuthGroup && !onOtpScreen) {'))
     expect(branch.slice(0, at(branch, '\n    }\n'))).toContain("router.replace('/(tabs)')")
     expect(ROOT_LAYOUT.match(/router\.replace\('\/\(tabs\)'\)/g)).toHaveLength(1)
   })

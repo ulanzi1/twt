@@ -130,12 +130,14 @@ function RootLayoutNav() {
       return
     }
     const inAuthGroup = segments[0] === '(auth)'
+    // Read as a plain array: without generated typed routes (`.expo/types` — absent in CI) `useSegments()` is typed `[string]`.
+    const onOtpScreen = inAuthGroup && (segments as readonly string[])[1] === 'otp'
     if (!session && !inAuthGroup) {
       // Story 6.30 AL6 (ii) — record the requested screen IN MEMORY (an app-link path + its `c` only;
       // anything else records ⛔ no target) so `otp.tsx` can return to it after the login.
       recordLinkTarget(pathname, searchParams)
       router.replace('/(auth)/login')
-    } else if (session && inAuthGroup && segments[1] !== 'otp') {
+    } else if (session && inAuthGroup && !onOtpScreen) {
       // ⛔ Never reads the link-target holder — `otp.tsx` is its ONE consumer (AL6 (iii)). ⛔ Skipped on
       // `(auth)/otp` (code review 2026-10-11): `otp.tsx` routes itself on EVERY success branch (the target,
       // `/(tabs)`, `/(signup)/tc`), and its `signIn` → `router.replace(…)` commit in ONE render while

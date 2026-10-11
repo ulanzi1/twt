@@ -273,12 +273,18 @@ describe.skipIf(!hasDatabase)('Verifier-console compound shape (AI-6-3 class) �
   ): Promise<void> {
     const scopeTx = await openScopeTx(deps, pariwarId);
     try {
+      // ⚠ Story 6.28 (OP5): the decoys share ONE deceased, so an approval may show `other_claim_for_death` — answered with
+      // the generic reason only when a warning shows (a reason with ⛔ no warning is refused as ungrounded).
+      const shows = outcome === 'approved'
+        && (await claim.readClaimApprovalWarnings(scopeTx.tx, ids.pariwarId(pariwarId), ids.claimId(claimCaseId))).kinds.length > 0;
       await claim.adjudicateClaim(scopeTx.client, {
         claimCaseId: ids.claimId(claimCaseId),
         pariwarId: ids.pariwarId(pariwarId),
         outcome,
         reasonCode,
-        rationaleCiphertext: null,
+        // FQ12 — the reason AND a note (the rationale) when a warning shows.
+        rationaleCiphertext: shows ? 'enc:v1:warning-note' : null,
+        ...(shows ? { warningReasonCode: 'warnings_reviewed' } : {}),
         actorId: randomUUID(),
         actorDisplay,
         actor: 'operator',

@@ -54,17 +54,19 @@ const repoRoot = path.resolve(here, '../../../..');
 const ist = (date: string, hhmm: string) => new Date(`${date}T${hhmm}:00+05:30`);
 
 describe('the warning kinds (NW1)', () => {
-  it('⭐ APPROVAL_WARNING_KINDS is exactly the two 6.23a kinds and the three 6.26b death-fact kinds', () => {
+  it('⭐ APPROVAL_WARNING_KINDS is exactly the two 6.23a kinds, the three 6.26b death-fact kinds and 6.28\'s `other_claim_for_death`', () => {
     expect(
       [...APPROVAL_WARNING_KINDS],
       'a new kind enters 6.23b\'s wait (`-277` Q3 B) — its producer row decides or routes that before extending this list. ' +
-        'GI6 / GI7 (`-282`) and GI17 / GI18 (`-281` Q1 B) discharged it for the three death-fact kinds',
+        'GI6 / GI7 (`-282`) and GI17 / GI18 (`-281` Q1 B) discharged it for the three death-fact kinds; Story 6.28 OP5 — ' +
+        '`2026-10-11-318` Q1 A (the wait included, as ratified) and `-319` (`-279` A6 discharged) — for `other_claim_for_death`',
     ).toEqual([
       'post_death_version',
       'recent_nominee_change',
       'inspection_death_date_differs',
       'original_certificate_mismatch',
       'register_check_mismatch',
+      'other_claim_for_death',
     ]);
   });
 
@@ -344,7 +346,9 @@ describe('NW1 — import discipline, TRANSITIVELY (`-279` A12)', () => {
       const file = queue.pop()!;
       if (seen.has(file)) continue;
       seen.add(file);
-      const code = readFileSync(file, 'utf8');
+      // Comments stripped first (Story 6.28): `src/rbac/index.ts`'s header quotes `export * as rbac from './rbac/index.js'`
+      // — reachable since H(ii) put `suspicion-refusal-persist.ts` under `icp.ts` — and a quoted import is ⛔ an import.
+      const code = readFileSync(file, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
       for (const m of code.matchAll(/(?:import|export)[^'"]*?from\s+['"](\.{1,2}\/[^'"]+)['"]/g)) {
         const target = path.resolve(path.dirname(file), m[1]!.replace(/\.js$/, '.ts'));
         queue.push(target);

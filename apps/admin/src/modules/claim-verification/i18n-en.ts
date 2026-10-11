@@ -147,6 +147,9 @@ export const verifierConsoleEn = {
         'The inspector found that the original death certificate does not match the copy this claim relies on.',
       // `-289` L1 — the warning stands for THIS certificate even if a later check of it was recorded as matching.
       register_check_mismatch: 'The government death register was recorded as not matching this death certificate.',
+      // Story 6.28 (OP5, OP10) — ⛔ the other claim's id, filer, nominee or state here (the console's OP14 section shows it
+      // by reference).
+      other_claim_for_death: 'Another claim for this death has been filed and is not closed.',
     } satisfies Record<ApprovalWarningKind, string>,
     stripIntro:
       'You may still approve. Choose a warning reason and write a note saying why — the claim is not refused, and your approval reason above stays as it is.',

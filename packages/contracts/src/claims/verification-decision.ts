@@ -125,13 +125,14 @@ export const NOMINEE_VERSION_WARNING_KINDS = ['post_death_version', 'recent_nomi
 export const NomineeVersionWarningKind = z.enum(NOMINEE_VERSION_WARNING_KINDS);
 export type NomineeVersionWarningKind = z.output<typeof NomineeVersionWarningKind>;
 
-/** The warning kinds (NW1; Story 6.26b adds the three death-fact kinds). ⚠ LOCKSTEP with `@twt/domain`'s
- *  `APPROVAL_WARNING_KINDS`. */
+/** The warning kinds (NW1; Story 6.26b adds the three death-fact kinds; Story 6.28 OP5 adds `other_claim_for_death`).
+ *  ⚠ LOCKSTEP with `@twt/domain`'s `APPROVAL_WARNING_KINDS`. */
 export const APPROVAL_WARNING_KINDS = [
   ...NOMINEE_VERSION_WARNING_KINDS,
   'inspection_death_date_differs',
   'original_certificate_mismatch',
   'register_check_mismatch',
+  'other_claim_for_death',
 ] as const;
 export const ApprovalWarningKind = z.enum(APPROVAL_WARNING_KINDS);
 export type ApprovalWarningKind = z.output<typeof ApprovalWarningKind>;

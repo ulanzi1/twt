@@ -175,14 +175,16 @@ describe.skipIf(!hasDatabase)('Story 6.28 — one payment per death (two connect
       for (const voter of [V1, V2]) {
         await castR9Vote(c, {
           claimCaseId: y, pariwarId: pid, vote: 'approve', rationaleCiphertext: prepareR9VoteCiphertext(`enc:v1:vote-${voter.slice(-2)}`),
-          warningReasonCode: null, actorId: voter, actorDisplay: `Panelist ${voter.slice(-2)}`, actor: 'trustee',
+          // X is still OPEN here ⇒ Y shows `other_claim_for_death` (OP5) — an approve vote answers it (FQ12).
+          warningReasonCode: 'warnings_reviewed', actorId: voter, actorDisplay: `Panelist ${voter.slice(-2)}`, actor: 'trustee',
         });
       }
     });
 
     const a = await openTx(pid);
     const voted = await voteOnFrozenClaim(a.client, {
-      claimCaseId: x, pariwarId: pid, outcome: 'approved', reasonCode: null, rationaleCiphertext: 'enc:v1:why', actorId: PA, actorDisplay: 'Pariwar Admin', actor: 'trustee',
+      claimCaseId: x, pariwarId: pid, outcome: 'approved', reasonCode: null, rationaleCiphertext: 'enc:v1:why', warningReasonCode: 'warnings_reviewed',
+      actorId: PA, actorDisplay: 'Pariwar Admin', actor: 'trustee',
     });
     expect(voted.claimState).toBe('state_trustee_approved');
     const b = await openTx(pid);
@@ -242,7 +244,7 @@ describe.skipIf(!hasDatabase)('Story 6.28 — one payment per death (two connect
       if (first === 'commit') await commit(a.client, pid);
       else await reverse(a.client, pid, s);
       const b = await openTx(pid);
-      const second = settle(first === 'commit' ? reverse(b.client, pid, s) : commit(b.client, pid));
+      const second = settle<unknown>(first === 'commit' ? reverse(b.client, pid, s) : commit(b.client, pid));
       await waitUntilBlocked(b.backendPid); // ⭐ on X's trustee key, which A holds
       await a.commit();
       const out = await second;
@@ -282,7 +284,7 @@ describe.skipIf(!hasDatabase)('Story 6.28 — one payment per death (two connect
         ? await closeClaimsOfPaidDeath(a.client, { pariwarId: pid, deceasedMemberId: mid, actor: 'system', actorId: TRUSTEE })
         : await tryConverge(a.client, intake(pid, mid));
       const b = await openTx(pid);
-      const second = settle(
+      const second = settle<unknown>(
         first === 'closure'
           ? tryConverge(b.client, intake(pid, mid))
           : closeClaimsOfPaidDeath(b.client, { pariwarId: pid, deceasedMemberId: mid, actor: 'system', actorId: TRUSTEE }),
@@ -292,7 +294,7 @@ describe.skipIf(!hasDatabase)('Story 6.28 — one payment per death (two connect
       const out = await second;
       expect(out.ok, String((out as { error?: unknown }).error)).toBe(true);
       await b.commit();
-      const minted = first === 'closure' ? (out as { value: { claimCaseId: string } }).value.claimCaseId : (firstOut as { claimCaseId: string }).claimCaseId;
+      const minted = first === 'closure' ? (out as unknown as { value: { claimCaseId: string } }).value.claimCaseId : (firstOut as { claimCaseId: string }).claimCaseId;
       expect(minted).not.toBe(x);
       expect((await statesOf(pid, [minted]))[minted]).toBe('closed');
     });

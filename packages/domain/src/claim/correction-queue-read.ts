@@ -39,6 +39,7 @@ import { readClaimApprovalWarningsBulk, uncoveredKeys } from './approval-warning
 import { readNomineeNameCheckFlagsBulk } from './nominee-name-check-read.js';
 import { inheritedGroundInspectionSourceSql } from './nominee-refusal-read.js';
 import { liveRoutedToR9Exists } from './r9-routing.js';
+import { otherOpenClaimForDeathExistsSql } from './one-payment-per-death.js';
 
 /**
  * The states a claim can be UNDER CORRECTION in — the union of the states a return may be written
@@ -148,8 +149,13 @@ async function candidateBatch(
   //   (3) `-290` M2 — the claim has ⛔ no own completed full visit and relies on an INHERITED one: the source can gain a
   //       completed visit (reversed on appeal and re-inspected) or change, with ⛔ no row of THIS claim moving, so every
   //       such approved claim is a CANDIDATE (`qualifyingRows`' exact key check drops it when nothing is uncovered).
+  //   (4) ⭐ Story 6.28 OP5 (b) (`-279` A4 for the new kind) — ANOTHER OPEN claim of the death exists (OP1's boolean
+  //       `otherOpenClaimForDeathExistsSql` — the SAME predicate as the warning's keys): an `other_claim_for_death` key can
+  //       APPEAR (a new filing) or REAPPEAR (a `denied` other claim appealed or reversed) with ⛔ no own row moving. ⛔ No
+  //       time term: `qualifyingRows`' exact `uncoveredKeys` check drops a covered row.
   // ⛔ Still never "every approved claim" (the crowding the 2026-09-23b review removed) — only claims relying on an
-  // inherited visit, a rare refile path. The exact answer is computed per row below.
+  // inherited visit, a rare refile path, or with another open claim of their death. The exact answer is computed per row
+  // below.
   // ⚠ The determination arm compares two transaction-START `now()`s — a race recorded in `deferred-work.md`, ⛔ not
   // changed here.
   const lateArm = sql`EXISTS (
@@ -183,6 +189,7 @@ async function candidateBatch(
                  )
                  AND ${inheritedGroundInspectionSourceSql(sql`v.pariwar_id`, sql`v.claim_case_id`)} IS NOT NULL
                )
+               OR ${otherOpenClaimForDeathExistsSql('claims')}
              )
         )`;
   return (

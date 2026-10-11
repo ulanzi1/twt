@@ -90,6 +90,7 @@ import {
 import { currentDeathCertificateUploadIdSql } from './death-certificate-approval.js';
 import { versionStandsAt } from './nominee-effective.js';
 import { inheritedGroundInspectionSourceSql } from './nominee-refusal-read.js';
+import { otherOpenClaimsForDeathSql } from './one-payment-per-death.js';
 
 // ── Kinds, keys, the window ─────────────────────────────────────────────────────────────────────────────────────
 
@@ -103,12 +104,16 @@ export type NomineeVersionWarningKind = (typeof NOMINEE_VERSION_WARNING_KINDS)[n
 /**
  * The warning kinds (NW1). ⚠ A new kind enters 6.23b's WAIT (`-277` Q3 B) — its producer row decides that first.
  * Story 6.26b adds the three death-fact kinds (`-282` GI6 / GI7, GI17 / GI18; `-281` Q1 B decided they wait).
+ * ⭐ Story 6.28 (OP5; `2026-10-11-318` Q1 A — the wait included, which discharges `-279` A6) adds `other_claim_for_death`:
+ * ONE key per other OPEN claim of the same death (`other_claim_for_death:<otherClaimCaseId>`, OP1's open fragment — ⛔ a
+ * finally approved one: OP2's stop covers that; ⛔ any key on either claim of a standing suspicion-refusal pair).
  */
 export const APPROVAL_WARNING_KINDS = [
   ...NOMINEE_VERSION_WARNING_KINDS,
   'inspection_death_date_differs',
   'original_certificate_mismatch',
   'register_check_mismatch',
+  'other_claim_for_death',
 ] as const;
 export type ApprovalWarningKind = (typeof APPROVAL_WARNING_KINDS)[number];
 
@@ -357,6 +362,8 @@ type RawWarningsRow = {
   live_decision_outcome: string | null;
   records: { step: string; actor: string; keys: string[] }[] | null;
   reasons: RawActiveReason[] | null;
+  /** Story 6.28 (OP5) — the other OPEN claims of the death (OP1's `otherOpenClaimsForDeathSql`, embedded — ⛔ a query). */
+  other_open_claim_ids: string[] | null;
 };
 
 /**
@@ -495,6 +502,7 @@ export async function readClaimApprovalWarnings(
            (SELECT cur.accepted_date_index FROM cur ORDER BY cur.decided_at DESC, cur.review_id DESC LIMIT 1)
              AS current_accepted_date_index,
            ${deathFactColumnsSql()},
+           ${otherOpenClaimsForDeathSql('c')} AS other_open_claim_ids,
            det.determination_id,
            det.death_certificate_review_id AS determination_review_id,
            (SELECT json_agg(json_build_object('version_id', mv.version_id, 'effective_at', mv.effective_at)
@@ -602,6 +610,7 @@ async function readClaimApprovalWarningsSlice(
            cur.review_id AS current_review_id,
            cur.accepted_date_index AS current_accepted_date_index,
            ${deathFactColumnsSql()},
+           ${otherOpenClaimsForDeathSql('c')} AS other_open_claim_ids,
            det.determination_id,
            det.death_certificate_review_id AS determination_review_id,
            (SELECT json_agg(json_build_object('version_id', mv.version_id, 'effective_at', mv.effective_at)
@@ -774,6 +783,11 @@ function deriveClaimApprovalWarnings(claimCaseId: ClaimId, row: RawWarningsRow):
   });
   for (const k of deathFacts.keys) keys.add(k);
   for (const k of deathFacts.kinds) kinds.add(k);
+  // ⭐ Story 6.28 (OP5) — one key per other OPEN claim of the death (EMPTY on a claim on which RF1 stands — the fragment).
+  for (const other of row.other_open_claim_ids ?? []) {
+    keys.add(approvalWarningKey('other_claim_for_death', other));
+    kinds.add('other_claim_for_death');
+  }
 
   const liveDecision =
     row.live_decision_id !== null

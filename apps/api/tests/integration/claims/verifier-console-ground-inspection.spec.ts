@@ -216,7 +216,7 @@ describe.skipIf(!hasDatabase)('Story 6.26a — the console\'s ground-inspection 
   });
 
   it('⭐ AC9 — the section books EXACTLY one read and sends EXACTLY one read statement (+ its SAVEPOINT / RELEASE); the ceiling is 20', async () => {
-    expect(VERIFIER_CONSOLE_MAX_READS).toBe(21); // Story 6.24a (RF10) FROM 20 — +1: the suspicion-refusal section (kept apart + the final-approval wait)
+    expect(VERIFIER_CONSOLE_MAX_READS).toBe(22); // Story 6.28 (OP14) FROM 21 — +1: the other claims of this death; Story 6.24a (RF10) FROM 20 — +1: the suspicion-refusal section
     const pariwarId = randomUUID();
     const claimCaseId = await seedClaim(pariwarId, await seedDeceased(pariwarId));
     await inScope(pariwarId, async (s) => {
@@ -345,8 +345,8 @@ describe.skipIf(!hasDatabase)('Story 6.26a — the console\'s ground-inspection 
     expect(barePacket.groundInspection.assignments[0]).toMatchObject({ dateComparison: 'not_compared', dateDiffersWarning: false });
   });
 
-  it('⭐⭐ Story 6.26b (invariant 5; Trap 11) — a FAILED warnings read: `null` on every completed row\'s comparison and on every flag the section does ⛔ rule out; `false` where it does; MAX_READS stays 20', async () => {
-    expect(VERIFIER_CONSOLE_MAX_READS).toBe(21); // Story 6.24a (RF10) FROM 20 — +1: the suspicion-refusal section (kept apart + the final-approval wait)
+  it('⭐⭐ Story 6.26b (invariant 5; Trap 11) — a FAILED warnings read: `null` on every completed row\'s comparison and on every flag the section does ⛔ rule out; `false` where it does; MAX_READS is pinned (22 since Story 6.28)', async () => {
+    expect(VERIFIER_CONSOLE_MAX_READS).toBe(22); // Story 6.28 (OP14) FROM 21 — +1: the other claims of this death; Story 6.24a (RF10) FROM 20 — +1: the suspicion-refusal section
     const pariwarId = randomUUID();
     const deceased = await seedDeceased(pariwarId);
     await refusedSource(pariwarId, deceased, { deathDate: daysAgo(3) });

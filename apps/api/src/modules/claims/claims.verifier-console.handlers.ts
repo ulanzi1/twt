@@ -36,6 +36,7 @@ import type {
   NomineeNameCheckStatus,
   DocumentReviewSection,
   GroundInspectionGateStatus,
+  OtherClaimsForDeathSection,
   SuspicionRefusalSection,
   GroundInspectionSection,
   MemberValidityPayloadDto,
@@ -184,7 +185,16 @@ const SIGNED_URL_TTL_SECONDS = 300;
  * It decrypts ⛔ nothing. Under a raw SAVEPOINT (`underSavepoint`), BEFORE the warnings (which stay LAST). ⭐ Ledger line:
  *   + Story 6.24a (RF10): kept apart from a refused claim, and the final-approval wait      +1  → 21
  */
-export const VERIFIER_CONSOLE_MAX_READS = 21;
+/*
+ * ⭐ STORY 6.28's ONE READ (OP14 (a)) — the explanation this counter demands. `2026-10-11-318` Q1 A pays a death ONCE — the
+ * first claim to pass the final vote — so every approver must SEE the other claims of the death before approving one:
+ * their stage and whether they claim the same date of death. ⛔ It is the MINIMUM: `readOtherClaimsForDeath` answers every
+ * other claim (capped), its stage, its filing and its accepted review's keyed date index against this claim's in ONE
+ * statement. It decrypts ⛔ nothing. Under a raw SAVEPOINT (`underSavepoint`), BEFORE the warnings (which stay LAST).
+ * ⭐ Ledger line:
+ *   + Story 6.28 (OP14): the other claims of this death                                     +1  → 22
+ */
+export const VERIFIER_CONSOLE_MAX_READS = 22;
 
 /** Counts the assembler's top-level bounded source reads (the no-N+1 fan-out width). */
 class ReadCounter {
@@ -340,6 +350,10 @@ export async function assembleVerifierConsole(
   //    the warnings (which stay LAST). ──────────────────────────────────────────────────────────────────────────────
   const suspicionRefusal = await assembleSuspicionRefusal(ctx, claimCaseId, ids.memberId(deceasedMemberId), reads);
 
+  // ── (l) the other claims for this death (Story 6.28, OP14 (a)) — STAFF-ONLY, NON-PII; ⛔ no decrypt; under a SAVEPOINT,
+  //    BEFORE the warnings (which stay LAST). ─────────────────────────────────────────────────────────────────────────
+  const otherClaimsForDeath = await assembleOtherClaimsForDeath(ctx, claimCaseId, reads);
+
   // ── (i) the approval warnings (Story 6.23a, NW8; 6.26b's death-fact kinds) — NON-PII; ⛔ no decrypt. ⚠ LAST (⛔ no
   //    SAVEPOINT). The internal read also hands back the keys and the per-inspection comparisons (⛔ never on the wire). ─
   const warningsRead = await readApprovalWarningsSection(ctx, claimCaseId, core.claim.currentState as string, reads);
@@ -366,6 +380,7 @@ export async function assembleVerifierConsole(
     nomineeNameCheck,
     groundInspectionGate,
     suspicionRefusal,
+    otherClaimsForDeath,
     approvalWarnings,
   };
   return { packet, readCount: reads.count };
@@ -866,6 +881,44 @@ export async function assembleSuspicionRefusal(
       'verifier-console: suspicion-refusal section unavailable; saying "could not be checked"',
     );
     return { available: false, keptApartFrom: [], finalApprovalWaits: null };
+  }
+}
+
+/**
+ * (l) THE OTHER CLAIMS FOR THIS DEATH — Story 6.28 (OP14 (a)). ONE counted read (`readOtherClaimsForDeath`); each claim
+ * by its SHORT REFERENCE only (⛔ no name, ⛔ no note, ⛔ no date value). Under a raw SAVEPOINT: a SQL failure rolls back
+ * ONLY this read and says "could not be checked just now" (`available: false`) — ⛔ never silence. ⭐ EXPORTED for its
+ * exact tests; the route reaches it through `assembleVerifierConsole`.
+ */
+export async function assembleOtherClaimsForDeath(
+  ctx: VerifierConsoleContext,
+  claimCaseId: ids.ClaimId,
+  reads: { bump(): void },
+): Promise<OtherClaimsForDeathSection> {
+  try {
+    reads.bump();
+    const out = await underSavepoint(ctx.client, 'console_other_claims_for_death', () =>
+      claim.readOtherClaimsForDeath(ctx.db, ids.pariwarId(ctx.pariwarId), claimCaseId),
+    );
+    return {
+      available: true,
+      total: out.total,
+      claims: out.claims.map((c) => ({
+        reference: claim.claimShortReference(c.claimCaseId),
+        stage: c.stage,
+        filedAt: c.filedAt.toISOString(),
+        channels: c.intakeChannels.filter((ch): ch is 'member_app' | 'helpline' | 'trustee_initiated' =>
+          ch === 'member_app' || ch === 'helpline' || ch === 'trustee_initiated',
+        ),
+        deathDate: c.deathDate,
+      })),
+    };
+  } catch (err) {
+    ctx.log?.warn(
+      { err: err instanceof Error ? err.name : 'unknown', claimCaseId: ctx.claimCaseId },
+      'verifier-console: other-claims-for-death section unavailable; saying "could not be checked"',
+    );
+    return { available: false, total: 0, claims: [] };
   }
 }
 

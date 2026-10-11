@@ -9,6 +9,9 @@
 //         open claims of the committed death (fresh + replay, idempotent; a lock timeout is logged and a replay heals it);
 //         H(iii) the appeal response's `claim_state` reads `closed`; H(ii) the helpline intake and the override answer
 //         `state: 'closed'` — IN the request transaction, ⛔ never a hang.
+//   AC11 (a) — the verifier console's `otherClaimsForDeath` section: each other claim by REFERENCE, stage and date-of-death
+//         comparison (⛔ an id, a name or a date on the wire); ONE booked read, ONE statement (+ its SAVEPOINT); a failed
+//         read says "could not be checked" (`available: false`) and ⛔ never aborts the scope transaction.
 //   AC10 — the window is gone (OP11): a 40-day-old OPEN claim takes a cross-channel filing as a `pending` attempt and
 //         `confirmMerge` accepts the merge into it (the candidate, the strip and the merge agree on a single candidate).
 // A world per test in a FRESH Pariwar; X is seeded through the projector.
@@ -20,6 +23,11 @@ import { claim, cycleCalendar, ids, nominee } from '@twt/domain';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import type { AppDeps } from '../../../src/context.js';
+import {
+  assembleOtherClaimsForDeath,
+  assembleVerifierConsole,
+  type VerifierConsoleContext,
+} from '../../../src/modules/claims/claims.verifier-console.handlers.js';
 import * as service from '../../../src/modules/auth/admin/admin-auth.service.js';
 import { closeScopeTx, openScopeTx } from '../../../src/modules/multi-tenant/scope-tx.js';
 import { buildServer } from '../../../src/server.js';
@@ -572,5 +580,49 @@ describe.skipIf(!hasDatabase)('Story 6.28 — one payment per death through HTTP
     });
     expect(merge.statusCode, merge.body).toBe(200);
     expect(merge.json()).toMatchObject({ merged: true });
+  });
+
+  // ── AC11 (a) — the console section ─────────────────────────────────────────────────────────────────────────────
+  function ctxOf(sc: Awaited<ReturnType<typeof openScopeTx>>, pariwarId: string, claimCaseId: string): VerifierConsoleContext {
+    return {
+      db: sc.tx, client: sc.client, pariwarId, claimCaseId, district: DISTRICT, actorId: randomUUID(),
+      grants: [{ pariwarId, role: 'super_admin', scopeDimension: 'global', scopeValue: null }], traceId: null,
+    };
+  }
+
+  it('AC11 (a) — the console lists the other claims by REFERENCE and stage; ONE booked read, ONE statement; a failed read ⇒ `available: false`', async () => {
+    const w = await seedWorld();
+    const xid = await siblingAt(w, 'approved');
+    const { packet } = await inScope(w.pariwarId, (sc) => assembleVerifierConsole(deps, ctxOf(sc, w.pariwarId, w.claimCaseId)));
+    expect(packet.otherClaimsForDeath).toEqual({
+      available: true,
+      total: 1,
+      claims: [{ reference: claim.claimShortReference(xid), stage: 'paid', filedAt: expect.any(String), channels: ['helpline'], deathDate: 'not_accepted' }],
+    });
+    expect(JSON.stringify(packet.otherClaimsForDeath).toLowerCase()).not.toContain(xid.toLowerCase());
+    await inScope(w.pariwarId, async (sc) => {
+      const statements: string[] = [];
+      const client = sc.client as unknown as { query: (...a: unknown[]) => unknown };
+      const realQuery = client.query.bind(client);
+      client.query = (...args: unknown[]) => {
+        const first = args[0] as string | { text: string };
+        statements.push(typeof first === 'string' ? first : first.text);
+        return realQuery(...args);
+      };
+      try {
+        let booked = 0;
+        await assembleOtherClaimsForDeath(ctxOf(sc, w.pariwarId, w.claimCaseId), ids.claimId(w.claimCaseId), { bump: () => (booked += 1) });
+        expect(booked).toBe(1);
+        expect(statements.filter((t) => !/SAVEPOINT/.test(t))).toHaveLength(1);
+        expect(statements.filter((t) => /^SAVEPOINT console_other_claims_for_death$/.test(t))).toHaveLength(1);
+        expect(statements.join('\n')).not.toMatch(/ciphertext/i);
+      } finally {
+        client.query = realQuery as never;
+      }
+      // A FAILED read (a real SQL error inside the savepoint) ⇒ `available: false`; the scope tx survives.
+      const broken = { ...ctxOf(sc, w.pariwarId, w.claimCaseId), db: { execute: () => sc.client.query('SELECT 1/0') } as never };
+      expect(await assembleOtherClaimsForDeath(broken, ids.claimId(w.claimCaseId), { bump: () => undefined })).toEqual({ available: false, total: 0, claims: [] });
+      expect((await sc.client.query('SELECT 1 AS ok')).rows[0]).toEqual({ ok: 1 });
+    });
   });
 });

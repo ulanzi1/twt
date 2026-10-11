@@ -181,3 +181,129 @@ export async function assertNoOtherFinalApprovalForDeath(
   const other = await readOtherFinallyApprovedClaim(db, pariwarId, deceasedMemberId, claimCaseId);
   if (other !== null) throw new DeathAlreadyFinallyApprovedError(claimCaseId, other);
 }
+
+// ── OP14 (a) — the other claims of the death, for the approver (staff only) ─────────────────────────────────────────
+
+/** How the console names another claim's stage — staff words, from its state (⛔ a judgement). */
+export const OTHER_CLAIM_STAGES = ['open', 'passed_final_vote', 'paid', 'refused', 'under_appeal', 'closed'] as const;
+export type OtherClaimStage = (typeof OTHER_CLAIM_STAGES)[number];
+
+/** The other claim's date of death against THIS claim's, by EQUALITY of the live accepted reviews' keyed index. */
+export const OTHER_CLAIM_DEATH_DATE_COMPARISONS = ['same', 'different', 'not_accepted', 'not_comparable'] as const;
+export type OtherClaimDeathDate = (typeof OTHER_CLAIM_DEATH_DATE_COMPARISONS)[number];
+
+export interface OtherClaimForDeath {
+  readonly claimCaseId: ClaimId;
+  readonly stage: OtherClaimStage;
+  readonly filedAt: Date;
+  readonly intakeChannels: readonly string[];
+  readonly deathDate: OtherClaimDeathDate;
+}
+
+export interface OtherClaimsForDeath {
+  /** Every other claim of the death (the list may be shorter — capped). */
+  readonly total: number;
+  readonly claims: readonly OtherClaimForDeath[];
+}
+
+/** The console lists at most this many (then "and N more"). */
+export const OTHER_CLAIMS_FOR_DEATH_CAP = 20;
+
+/** A claim state in the console's staff words. Pure. */
+export function otherClaimStageOf(state: string): OtherClaimStage {
+  if (state === 'closed') return 'closed';
+  if (state === 'denied') return 'refused';
+  if (state === 'appeal_stage_1' || state === 'appeal_stage_2' || state === 'appeal_stage_3') return 'under_appeal';
+  if ((PAYMENT_COMMITTED_CLAIM_STATES as readonly string[]).includes(state)) return 'paid';
+  if (state === 'state_trustee_approved') return 'passed_final_vote';
+  return 'open';
+}
+
+/**
+ * The date-of-death comparison. ⚠ ONE field class on both sides (the reviews' `accepted_date_index` — 6.26a Trap 2: a
+ * second class would make every pair "differs"). ⛔ No accepted review on either side ⇒ `not_accepted`; an accepted review
+ * with a NULL index (pre-6.26b) ⇒ `not_comparable`. Pure.
+ */
+export function compareDeathDates(
+  self: { readonly accepted: boolean; readonly index: string | null },
+  other: { readonly accepted: boolean; readonly index: string | null },
+): OtherClaimDeathDate {
+  if (!self.accepted || !other.accepted) return 'not_accepted';
+  if (self.index === null || other.index === null) return 'not_comparable';
+  return self.index === other.index ? 'same' : 'different';
+}
+
+/**
+ * ⭐ OP14 (a) — every OTHER claim of `claimCaseId`'s death (cap `OTHER_CLAIMS_FOR_DEATH_CAP`, oldest filed first), in ONE
+ * statement: its state, filed instant and channels, and its live accepted review's keyed date index against THIS claim's
+ * (the live review selected as the warnings' `cur` chain does — the current upload's latest accepted review). ⛔ No
+ * ciphertext is selected; ⛔ no decrypt; ⛔ no name. Tenant-scoped (RLS + explicit `pariwar_id`).
+ */
+export async function readOtherClaimsForDeath(db: Db, pariwarId: PariwarId, claimCaseId: ClaimId): Promise<OtherClaimsForDeath> {
+  const cap = clampLimit(OTHER_CLAIMS_FOR_DEATH_CAP, { default: OTHER_CLAIMS_FOR_DEATH_CAP, cap: OTHER_CLAIMS_FOR_DEATH_CAP });
+  const result = await db.execute<{
+    claim_case_id: string;
+    current_state: string;
+    created_at: Date | string;
+    intake_channels: string[] | string;
+    accepted: boolean;
+    accepted_date_index: string | null;
+    self_accepted: boolean;
+    self_index: string | null;
+    total: number;
+  }>(sql`
+    WITH op_death AS (
+      SELECT cl.claim_case_id, cl.current_state::text AS current_state, cl.created_at, cl.intake_channels::text[] AS intake_channels,
+             op_rv.review_id IS NOT NULL AS accepted, op_rv.accepted_date_index
+        FROM claims op_self
+        JOIN claims cl
+          ON cl.pariwar_id = op_self.pariwar_id
+         AND cl.deceased_member_id = op_self.deceased_member_id
+        LEFT JOIN LATERAL (
+          SELECT r.review_id, r.accepted_date_index
+            FROM claim_documents cd
+            JOIN claim_death_certificate_uploads u
+              ON u.pariwar_id = cd.pariwar_id
+             AND u.claim_case_id = cd.claim_case_id
+             AND u.storage_object_key = cd.storage_object_key
+            JOIN claim_death_certificate_reviews r
+              ON r.pariwar_id = cd.pariwar_id
+             AND r.claim_case_id = cd.claim_case_id
+             AND r.superseded_at IS NULL
+             AND r.upload_id = u.upload_id
+             AND r.verdict = 'accepted'
+           WHERE cd.pariwar_id = cl.pariwar_id
+             AND cd.claim_case_id = cl.claim_case_id
+             AND cd.document_type = 'death_certificate'
+           ORDER BY r.decided_at DESC, r.review_id DESC
+           LIMIT 1
+        ) op_rv ON true
+       WHERE op_self.pariwar_id = ${pariwarId}
+         AND op_self.claim_case_id = ${claimCaseId}
+    )
+    SELECT o.claim_case_id::text AS claim_case_id, o.current_state, o.created_at, o.intake_channels, o.accepted, o.accepted_date_index,
+           s.accepted AS self_accepted, s.accepted_date_index AS self_index,
+           (SELECT count(*)::int FROM op_death t WHERE t.claim_case_id <> ${claimCaseId}) AS total
+      FROM op_death o
+      JOIN op_death s ON s.claim_case_id = ${claimCaseId}
+     WHERE o.claim_case_id <> ${claimCaseId}
+     ORDER BY o.created_at, o.claim_case_id
+     LIMIT ${cap}
+  `);
+  const rows = result.rows ?? [];
+  const channelsOf = (v: string[] | string): string[] =>
+    Array.isArray(v) ? v : v.replace(/^\{|\}$/g, '').split(',').filter((x) => x.length > 0);
+  return {
+    total: rows[0]?.total ?? 0,
+    claims: rows.map((r) => ({
+      claimCaseId: r.claim_case_id.toLowerCase() as ClaimId,
+      stage: otherClaimStageOf(r.current_state),
+      filedAt: r.created_at instanceof Date ? r.created_at : new Date(r.created_at),
+      intakeChannels: channelsOf(r.intake_channels),
+      deathDate: compareDeathDates(
+        { accepted: r.self_accepted, index: r.self_index },
+        { accepted: r.accepted, index: r.accepted_date_index },
+      ),
+    })),
+  };
+}

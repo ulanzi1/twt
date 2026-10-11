@@ -3,6 +3,9 @@
 //   AC1 — one definition (OP1): the two thin reads never return the claim itself, a claim of another death or another
 //         Pariwar, and return the LOWEST id when (legacy) two qualify; the open fragment excludes terminal claims, finally
 //         approved claims and every claim on which RF1 stands, and is EMPTY on a claim on which RF1 stands itself.
+//   AC11 (a) — `readOtherClaimsForDeath` (OP14 (a)): every other claim of the death with its stage in staff words, filed
+//         instant / channels and the date-of-death comparison by keyed-index EQUALITY (same / different / not accepted /
+//         not comparable); capped at 20 with the total; ⛔ no ciphertext column is ever read.
 //   AC3 — the commit (OP3): a `state_trustee_approved` candidate whose death already has an `approved` / `settled` claim (this
 //         run or an earlier cycle) is SKIPPED AND KEPT; a legacy two-voted pair ⇒ the lower id is committed, the other is
 //         then skipped and stays `state_trustee_approved`; distinct deaths are unaffected; the result shape is unchanged.
@@ -13,7 +16,9 @@ import { sql } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
 import {
+  OTHER_CLAIMS_FOR_DEATH_CAP,
   commitCycleFreeze,
+  readOtherClaimsForDeath,
   otherClaimInStatesSql,
   otherOpenClaimForDeathExistsSql,
   otherOpenClaimsForDeathSql,
@@ -24,7 +29,7 @@ import {
 import { memberId as toMemberId, pariwarId as toPariwarId } from '../../../src/ids/index.js';
 import type { ClaimId, CycleFreezeCommitId, PariwarId } from '../../../src/ids/index.js';
 import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
-import { PARIWAR_A, PARIWAR_B, enterAppScope } from '../_helpers.js';
+import { PARIWAR_A, PARIWAR_B, enterAppScope, seedAcceptedDeathCertificate, seedNomineeNameCheck } from '../_helpers.js';
 import { claimAt, type FixtureState } from './_one-payment-fixtures.js';
 import { refusedClaim } from './_suspicion-refusal-fixtures.js';
 
@@ -211,6 +216,70 @@ describe.skipIf(!hasDatabase)('Story 6.28 — one payment per death: OP1 + OP3 (
       // Both voted (legacy) — the FIRST in id order commits; nothing earlier blocks it.
       const low = await claimAt(client, pid, mid, 'state_trustee_approved', { claimCaseId: LOW });
       expect((await commit(client, pid)).committedClaimIds).toEqual([low]);
+    });
+  });
+
+  describe('AC11 (a) — the other claims of the death for the approver (OP14)', () => {
+    it('stages in staff words; ⛔ never itself, ⛔ never another death; oldest filed first', async () => {
+      const { client, tx } = getTx();
+      const mid = toMemberId(randomUUID());
+      const self = await claimAt(client, PARIWAR_A, mid, 'verifier_approved');
+      const want: Record<string, string> = {};
+      for (const [state, stage] of [
+        ['verifier_review', 'open'], ['state_trustee_approved', 'passed_final_vote'], ['approved', 'paid'],
+        ['denied', 'refused'], ['appeal_stage_1', 'under_appeal'], ['closed', 'closed'],
+      ] as const) {
+        want[await claimAt(client, PARIWAR_A, mid, state)] = stage;
+      }
+      await claimAt(client, PARIWAR_A, toMemberId(randomUUID()), 'verifier_review');
+      const out = await readOtherClaimsForDeath(tx, PARIWAR_A, self);
+      expect(out.total).toBe(6);
+      expect(Object.fromEntries(out.claims.map((c) => [c.claimCaseId, c.stage]))).toEqual(want);
+      expect(out.claims.every((c) => c.intakeChannels.includes('member_app'))).toBe(true);
+      expect(await readOtherClaimsForDeath(tx, PARIWAR_A, await claimAt(client, PARIWAR_A, toMemberId(randomUUID()), 'verifier_review'))).toEqual({ total: 0, claims: [] });
+    });
+
+    it('the date of death: same / different / not accepted / not comparable — by index equality, ⛔ no ciphertext read', async () => {
+      const { client, tx } = getTx();
+      const mid = toMemberId(randomUUID());
+      const self = await claimAt(client, PARIWAR_A, mid, 'verifier_review');
+      await seedNomineeNameCheck(client, PARIWAR_A, self);
+      await seedAcceptedDeathCertificate(client, { pariwarId: PARIWAR_A, claimCaseId: self, date: '2026-05-01' });
+      const same = await claimAt(client, PARIWAR_A, mid, 'verifier_review');
+      await seedAcceptedDeathCertificate(client, { pariwarId: PARIWAR_A, claimCaseId: same, date: '2026-05-01' });
+      const different = await claimAt(client, PARIWAR_A, mid, 'verifier_review');
+      await seedAcceptedDeathCertificate(client, { pariwarId: PARIWAR_A, claimCaseId: different, date: '2026-04-02' });
+      const unaccepted = await claimAt(client, PARIWAR_A, mid, 'verifier_review');
+      const legacy = await claimAt(client, PARIWAR_A, mid, 'verifier_review');
+      await seedAcceptedDeathCertificate(client, { pariwarId: PARIWAR_A, claimCaseId: legacy, date: '2026-05-01' });
+      await client.query('UPDATE claim_death_certificate_reviews SET accepted_date_index = NULL WHERE claim_case_id = $1', [legacy]);
+      const texts: string[] = [];
+      const real = client.query.bind(client) as (...a: unknown[]) => unknown;
+      client.query = ((...a: unknown[]) => {
+        texts.push(typeof a[0] === 'string' ? a[0] : ((a[0] as { text?: string })?.text ?? ''));
+        return real(...a);
+      }) as never;
+      let out;
+      try {
+        out = await readOtherClaimsForDeath(tx, PARIWAR_A, self);
+      } finally {
+        client.query = real as never;
+      }
+      expect(Object.fromEntries(out.claims.map((c) => [c.claimCaseId, c.deathDate]))).toEqual({
+        [same]: 'same', [different]: 'different', [unaccepted]: 'not_accepted', [legacy]: 'not_comparable',
+      });
+      expect(texts.length).toBe(1);
+      expect(texts.join('\n')).not.toMatch(/ciphertext/i);
+    });
+
+    it(`capped at ${OTHER_CLAIMS_FOR_DEATH_CAP}, with the total`, async () => {
+      const { client, tx } = getTx();
+      const mid = toMemberId(randomUUID());
+      const self = await claimAt(client, PARIWAR_A, mid, 'closed');
+      for (let i = 0; i < OTHER_CLAIMS_FOR_DEATH_CAP + 2; i += 1) await claimAt(client, PARIWAR_A, mid, 'closed');
+      const out = await readOtherClaimsForDeath(tx, PARIWAR_A, self);
+      expect(out.total).toBe(OTHER_CLAIMS_FOR_DEATH_CAP + 2);
+      expect(out.claims).toHaveLength(OTHER_CLAIMS_FOR_DEATH_CAP);
     });
   });
 });

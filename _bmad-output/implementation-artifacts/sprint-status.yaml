@@ -1,3 +1,18 @@
+# last_updated: 2026-10-11a (⭐ **STORY 6.28 — IMPLEMENTED via `bmad-dev-story 6.28`: ready-for-dev → in-progress → review.** Built AS RULED
+# (`2026-10-11-318` Q1 A / Q2 A / Q3 A / Q4 A; author-commit `-319`, OP9's DB backstop ⛔ not built), one commit per task on
+# `story/6-28-…`. OP1 a read-only leaf (`claim/one-payment-per-death.ts`, NW1-scanned); OP2 the final-only conjunct after RF5 on
+# RF15's key ⇒ 409 `<prefix>.death_already_finally_approved` `{}` at four translators (OP8's two-connection race red-checked);
+# OP3 the commit's skip-and-keep re-check; OP13 `state_trustee_approved` closable (two 6.24a legs REWRITTEN citing `-319`);
+# OP4 RF6's core extracted + H(i) commit / H(ii) mint + override / H(iii) the three reversals / H(iv) a stopped final writer
+# (own tx, `lock_timeout`, ⛔ never failing the request); OP5 `other_claim_for_death` (both readers + the queue's 4th `lateArm`
+# disjunct; enters 6.23b's wait as ruled); OP11 the 30-day window REMOVED (constant deleted); OP14 the console section
+# (ceiling 21 → 22), `finally_approved_elsewhere` banners + disabled FINAL approves + "Close this claim" (`cycle.freeze`, own tx,
+# 503 / 404, audited, gate methods → 4), the inspector's lines (in-scope only); OP10 the neutral closed label (+ holder-refused
+# variant), helpline / strip closed lines, the member app's closed routing + safe pointer, the comment sweep; OP7's path specs.
+# friction-budget: the 6.24a closed-claim row's cause AMENDED + a 6.28 disposition block. Every load-bearing leg red-checked
+# (the story's Debug Log); `pnpm ci:local` GREEN. ⚠ Recorded, ⛔ not papered over: one unexplained ~594 s hang in the FIRST
+# run of the route spec (⛔ not reproduced since); the mobile closed routing is ⛔ not demonstrated on a device (⛔ no screen
+# harness). ⛔ No other row moves.)
 # last_updated: 2026-10-11 (⭐ **6.30 CODE REVIEW ROUND 2 — stays `done`** (`bmad-code-review`, whole branch diff vs `main` `34b9bab6`, three layers read-only in parallel on BigDev's instruction): 1 decision / 9 patch / 5 defer / 11 dismissed. ⭐ The decision was REAL and is FIXED: the root guard's post-login `/(tabs)` replace landed AFTER `otp.tsx`'s replace to the link target (the router store updates in the navigation container's effect, after the guard's) — the guard now skips on `(auth)/otp`. Proven on the Android emulator with a negative control (without the fix: link → login → OTP lands on HOME; with it: `/peer-request`; a first signup reaches the wizard). All 10 patches applied; mobile 751 / public 748 unit tests green. ⚠ Corrects `2026-10-10af`: its "changes uncommitted in the worktree" was true when written — they were committed in `ab9631ea`. Committed with this entry on the story branch (`review(6.30 v2.2)`).)
 # last_updated: 2026-10-10af (⭐ **6.30 CODE REVIEW — `review → done`** (`bmad-code-review`, three layers read-only in parallel on BigDev's
 # instruction, on `story/6-30-app-links-open-the-app-from-a-text` in the `TWT-6-30` worktree). 1 decision / 12 patch / 2 defer / 20 dismissed;
@@ -19739,7 +19754,7 @@ development_status:
   # inspector the other claims. Still ⛔ no code; the note still ⛔ not sent.
   # ⭐ 2026-10-11 GOVERNANCE DONE: the Panel ruled Q1 A, Q2 A, Q3 A, Q4 A (`2026-10-11-318`, Trustee-ratified, DR + KB); the author-commit
   # answering OP1–OP14 for that ruling (OP9's DB backstop ⛔ NOT built) is `2026-10-11-319`. Task 0 complete; Task 1 (code) may now start.
-  6-28-one-payment-per-death-second-approval-guard: in-progress
+  6-28-one-payment-per-death-second-approval-guard: review
   # ⭐ 2026-10-09 ADDED by `bmad-create-story 6.29` (BigDev): 0151 PARITY with 6.25's hold / give-up anchor / DB backstops (`-300` /
   # `-301` Consequence 3), adapted to SMS — RN1–RN10 PROPOSED, author-commit owed at Task 0.3. The jobs-login gap the key names is SYSTEMIC
   # and scoped OUT (deferred-work 2026-10-09; RN9 proposes roster Row 26). ⛔ No epics.md entry yet (owed at Task 0.4).

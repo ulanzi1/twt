@@ -29,7 +29,7 @@ recorded residuals (⛔ not addressed).
 
 # Story 6.28: One Payment per Death — Once a Claim for a Death Is Finally Approved, ⛔ No Other Claim for That Death Can Be, and Every Other Is Closed `[SURFACE]`
 
-Status: in-progress
+Status: review
 
 > ⭐⭐ **WHAT THIS STORY IS, IN ONE PARAGRAPH.** Nothing today stops two claims for the same member's death from both being finally
 > approved — and each approved claim takes its own pool, so the members pay twice for one death, out of what the other bereaved
@@ -682,7 +682,7 @@ null`; the admin client's schema carries the fields (a test against the REAL cli
       lines on the banner and the `voted_pending_commit` card. Rename the stale ceiling test titles (`verifier-console.spec.ts:1122`,
       `verifier-console-ground-inspection.spec.ts:348`). (d) the ground-inspection read's `otherClaimsForDeath` / `alreadyVisited` /
       `visitedElsewhere` (in-scope only) + the admin client schema + the page lines.
-- [ ] **Task 6 — OP10 + paths + proof (AC6–AC8).** The `state === 'closed'` routing (`relationship.tsx` + the filed-claim pointer;
+- [x] **Task 6 — OP10 + paths + proof (AC6–AC8).** The `state === 'closed'` routing (`relationship.tsx` + the filed-claim pointer;
       `HelplineConsoleShell.tsx` + the convergence strip — ⛔ no contract change); the staff label + `helpline.result.closed`;
       `$comment.closed` (en) + every comment the grep finds; OP7's two-layer specs; the FQ5 regression
       legs; the 0151 negative leg; red-checks logged; `pnpm ci:local` green; story records; `sprint-status.yaml` row → `review` with ONE
@@ -833,6 +833,9 @@ Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 6.28`, 2026-10-11.
 ### Debug Log References
 
 Every load-bearing leg was red-checked (plant → red → revert → green), all on the live DB (:5433):
+- `pnpm ci:local` — FIRST run: 32 of 34 jobs green (incl. `integration-tests`), `lint` (an import the OP13 rewrite left unused) and
+  `friction-budget` (AC-4: the mobile files were committed without a declaration) RED; both fixed (b724aa12); the SECOND full run:
+  **`ci:local PASSED — 34 job(s) green`**.
 - Task 1 red-checks: (a) planted `WHERE TRUE` for the Pariwar filter in `otherClaimInStatesSql` ⇒ "⛔ never a claim … in ANOTHER Pariwar" RED (1 failed); reverted ⇒ green. (b) planted `AND TRUE` for the self-exclusion in the open predicate ⇒ every open-fragment leg RED; reverted ⇒ 21/21 green.
 - Task 2 red-checks: (a) OP8 — moved `assertNoOtherFinalApprovalForDeath` BEFORE RF5's call (before RF15's key) ⇒ the race leg RED ("the second final approval must be STOPPED: expected true to be false" — both writers committed `state_trustee_approved`); reverted ⇒ green. (b) removed the conjunct from the gate ⇒ the guard spec RED (9 failed | 4 passed); reverted ⇒ 13/13 green.
 - Task 2 admin red-check: CycleFreezePage's `.death_already_finally_approved` arm planted off ⇒ cycle-freeze-page RED (1 failed); reverted ⇒ green.
@@ -1050,6 +1053,7 @@ Every load-bearing leg was red-checked (plant → red → revert → green), all
 - `scripts/claim-adjudication-human-actor-invariant/check.ts`
 - `_bmad-output/implementation-artifacts/6-28-one-payment-per-death-second-approval-guard.md`
 - `_bmad-output/implementation-artifacts/sprint-status.yaml`
+- `friction-budget.md`
 
 ## Change Log
 

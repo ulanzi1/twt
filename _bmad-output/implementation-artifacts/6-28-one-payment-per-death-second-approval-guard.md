@@ -328,7 +328,8 @@ Each says what changes under a non-recommended answer.
   claim — another claim for this death goes ahead"* (reason + note; `trigger: 'closed_by_district_admin'`; `claim.verify`-gated) — sized
   at Task 0.4; the note puts this closure under Q2 (Q2 B's reopen covers it) and Q3 (Q3 B texts it); it is ⛔ never applied to a `denied` or under-appeal claim, nor one RF1 / RF5 holds (OP4 (b)–(d)); ⚠ recorded cost —
   if the claim the District Admin kept is later refused (the freeze, R9, an upheld refusal), the death is paid by ⛔ no claim and the closed
-  family cannot appeal: only Q2 B's reopening can pay it. Q1 C: ⛔ not built.
+  family cannot appeal the closure — the death goes unpaid unless the kept claim's refusal is overturned or the death is filed again (a
+  `claim.closed` closure trips ⛔ no refile guard, F7); only Q2 B's reopening can revive the closed claim. Q1 C: ⛔ not built.
 - **OP5 — THE WARNING (Q1 A as put — the wait included, `-279` A6).** New kind `other_claim_for_death` appended to `APPROVAL_WARNING_KINDS`
   (+ the contracts mirror + the console label + the pinned test, with a reason); one key per other OPEN claim (OP1's open fragment — ⛔ not
   a finally approved one: OP2's 409 copy covers that), `other_claim_for_death:<otherClaimCaseId>`. ⭐ (a) Produced by EMBEDDING
@@ -381,7 +382,9 @@ Each says what changes under a non-recommended answer.
   · Staff: the label `closed: 'Closed — another claim for this death won its appeal'` (`apps/admin/src/modules/claim-verification/i18n-en.ts:620`;
     shown by `HelplineAppeal.tsx:110`, `HelplineCertificateReplacement.tsx:174`, `HelplineClaimContact.tsx:250`,
     `HelplineNomineeCorrection.tsx:116`, `NomineeRefusalsRoute.tsx:76`) becomes `'Closed — another claim for this death goes ahead'` — TRUE
-    for both triggers. Console: OP2's 409 copy *"Another claim for this death has already passed the final vote. This claim cannot be
+    for both triggers while the holding claim (`held_by_claim_case_id`) is ⛔ not refused / closed; once it is, the label reads *"Closed —
+    the other claim for this death was later refused; the family may file again"* (the read joins the holding claim's state — a build item;
+    the note's Q3 A promises it). Console: OP2's 409 copy *"Another claim for this death has already passed the final vote. This claim cannot be
     finally approved."*; OP5's label *"Another claim for this death has been filed and is not closed."* The other claim's id, filer, nominee or
     state is ⛔ never shown on any member surface.
   · Comments: `$comment.closed` in `packages/i18n/locales/en/claim.json:157` is re-worded to cover BOTH closures (the `hi` `$comment` carries
@@ -846,6 +849,7 @@ Domain in `packages/domain/src/claim/` (⛔ no new package — [[feedback_no_pre
 - 2026-10-11 — v1.12: the note's fifth check (1 HIGH, 7 MEDIUM, 8 LOW — applied); OP10's staff label also built under Q1 C.
 - 2026-10-11 — v1.13: the note's sixth check (1 HIGH, 4 MEDIUM, 6 LOW — applied): Q2 / Q3 cover a District Admin closure under Q1 B.
 - 2026-10-11 — v1.14: the note's seventh check (1 HIGH, 2 MEDIUM, 3 LOW — applied): Q1 B's paid-by-no-claim cost disclosed.
+- 2026-10-11 — v1.15: the note's eighth check (1 HIGH, 3 MEDIUM, 3 LOW — applied): v1.14's "only a Panel reopening can pay" corrected — the family may file again.
 
 ### File List
 
@@ -868,3 +872,4 @@ Domain in `packages/domain/src/claim/` (⛔ no new package — [[feedback_no_pre
 | 1.12 | 2026-10-11 | The note's fifth check (all 24 ruling combinations tabled): 1 HIGH — §0's "a filing for a paid death joins it / is closed at once" was false under Q1 C (OP4 / OP2 unbuilt ⇒ a settled death's new filing, or one kept apart, may be paid) ⇒ qualified for A / B and C stated; "settled" replaced by "payment complete". 7 MEDIUM — the helpline label built under Q1 C too (story); cost (4)'s trigger is the payment BEGINNING; How A works' Q4 exception only under Q4 B; the Q1 reading's "never leaves a death unpaid" scoped (Q4 A's own cost); "paid once" and the plain-English ordinary-appeal line hedged for Q2 B; Q2 B is a later piece of work. 8 LOW — capitalisation; "may be paid twice"; "goes live as it is today (C, and the 30-day limit stays)"; Q1 B's release by refusal; "closed this way"; Q2 / Q3 "payment has begun"; "before its payment began"; the How-much-to-trust sentence split. |
 | 1.13 | 2026-10-11 | The note's sixth check: 1 HIGH — under Q1 B the District Admin's closure fell outside Q2 (reopen) and Q3 (text) ⇒ both now cover it (OP4 B, OP10's Q3 B selector). 4 MEDIUM — Q1 B "whichever of two open claims"; Q1 B's re-hold while a refused family appeals; plain-English Q4 "and its appeal is then allowed"; plain-English Q1 names the special panel. 6 LOW — an overridden-apart claim is ⛔ never joined; Q3's helpline wording matches §0; "may be paid too"; How-much-to-trust's Q2 pointer; Q1 C's "beyond the late-filing change"; §0's stop "under A or B in Q1". |
 | 1.14 | 2026-10-11 | The note's seventh check (every closure kind traced: RF6, OP13, H(i)–(iv), Close this claim, the District Admin's close): 1 HIGH — under Q1 B a District Admin closure followed by the kept claim's refusal leaves the death paid by ⛔ no claim, unappealable ⇒ disclosed in Q1 B's cost, Q2 A / B worded for it, OP4 B records it. 2 MEDIUM — Q1 B's appeal re-hold only before the other's final vote; OP4 B's close action ⛔ never on a denied / under-appeal / RF1 / RF5 claim. 3 LOW — §0's kept-apart filing closed at once; Q2 A "⛔ never pay twice"; Task 0.4's Q2 B row exempts a reopened claim from OP2 / H(iv) / Close. |
+| 1.15 | 2026-10-11 | The note's eighth check (outcomes enumerated per combination): 1 HIGH — v1.14 said under Q1 B only a Panel reopening could pay a District-Admin-closed family once the kept claim is refused; false — both claims are terminal, a `claim.closed` closure trips ⛔ no refile guard (F7) and nothing is paid, so the death may be filed again ⇒ Q1 B / Q2 A / Q2 B corrected, OP4 B too. 3 MEDIUM — the staff label goes stale when the holding claim is later refused ⇒ OP10 label keyed on the holding claim's state (a build item) and Q3 A's helpline words; Q4 A's closure ⛔ not appealable; Q2's question covers a pre-payment District Admin closure. 3 LOW — "unless it is filed again" (Q4 A, plain English); "being, or about to be, paid" (Q3); Q1 B's re-hold ends on a refused appeal or a District Admin close. |

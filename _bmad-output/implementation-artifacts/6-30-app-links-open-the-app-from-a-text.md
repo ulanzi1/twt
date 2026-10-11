@@ -3,6 +3,35 @@ baseline_commit: 1cce7e5a
 ---
 
 <!--
+⭐⭐ MERGED 2026-10-11 as PR #270 (REBASE-merge, branch `story/6-30-app-links-open-the-app-from-a-text` → `main` at `72f7b607`) — THE SHA MAP for
+every commit of Story 6.30's governance, dev and review work after PR #268. The 18 branch commits (from `34b9bab6`) were rewritten by the
+rebase; every citation in this file, `.decision-log.md` and `sprint-status.yaml` is kept AS WRITTEN (the record) and this maps it to its `main`
+twin, PROVED ⛔ never assumed: each pair has an IDENTICAL `git patch-id --stable` and an identical subject, and the merged tree is
+byte-identical to the branch head (`a5e2443b`) — tree `540a5802` both. Negative control: a WRONG pair (the 1st branch commit vs the 2nd main
+commit) DIFFERS.
+  · `a3253ec0` → `b6762bb5`  governance(6.30): 2026-10-10-315 — author-commit: correction
+  · `d2d6b9a0` → `dfd3e9d6`  story(6.30 v1.7): round-7 validate (2 BLOCKER / 4 HIGH / 13 
+  · `a2b994b7` → `3cd0083b`  governance(6.30): 2026-10-10-316 — author-commit: erratum to
+  · `1f78762e` → `285f42e6`  story(6.30 v1.8): round-8 re-validate (0 BLOCKER / 2 HIGH / 
+  · `44830033` → `160778d2`  governance(6.30): 2026-10-10-317 — author-commit: a reading 
+  · `b7e02b1c` → `9bc9df5f`  story(6.30 v1.9): round-9 re-validate (0 BLOCKER / 0 HIGH — 
+  · `4dd469c2` → `0a776909`  sprint-status: ledger 2026-10-10ac — 6.30 re-validated (roun
+  · `9dbc6ee3` → `d3ad02cb`  story(6.30): Task 0 — dev started; the records before any co
+  · `a5e2d7e4` → `12d0fbb4`  feat(6.30): Tasks 1–2 — the app-link grammar in contracts (o
+  · `ac0c7848` → `d9a0cb46`  feat(6.30): Tasks 3–5 — the login keeps its place, the /peer
+  · `029dbc2e` → `9c433b99`  feat(6.30): Task 6 — the plain fallback page at /peer-reques
+  · `47bfc93a` → `bdb248d2`  feat(6.30): Tasks 7–8 — one shared https-origin validator (r
+  · `8c335632` → `10992353`  story(6.30): Task 9 records — the friction-budget dispositio
+  · `a117ebb9` → `0afb8f63`  test(6.30): the committed-matrix route pin gains /peer-reque
+  · `5467db84` → `ad1052c5`  story(6.30 v2.0): dev done — in-progress → review; Dev Agent
+  · `ab9631ea` → `d3c9aa27`  review(6.30 v2.1): code review — 1 decision / 12 patch / 2 d
+  · `4047541f` → `b704db52`  review(6.30 v2.2): code review round 2 — 1 decision / 9 patc
+  · `a5e2443b` → `72f7b607`  fix(6.30): the guard's otp check typechecks without generate
+Re-verify (bash): for each pair, `diff <(git show <branch> | git patch-id --stable | cut -d' ' -f1) <(git show <main> | git patch-id --stable | cut -d' ' -f1)`
+— ⚠ needs the branch SHAs, which survive only while `origin/story/6-30-app-links-open-the-app-from-a-text` (or a local copy) does.
+-->
+
+<!--
 ⭐ PIN (v1.7–v1.8, 2026-10-10): `1cce7e5a` on `main` — the rebase twin of the original pin `a05ce150` (identical tree `0678c287`; PR #268
 REBASE-merged the 6.27 / 6.30 governance branch at `9990cffa`). Every `file:NNN` below is AS OF `1cce7e5a`; `git diff --name-only
 1cce7e5a..34b9bab6 -- packages apps infra scripts .github` is EMPTY (re-derived 2026-10-10 by the round-7 / round-8 validates at `34b9bab6` / `d2d6b9a0` — a

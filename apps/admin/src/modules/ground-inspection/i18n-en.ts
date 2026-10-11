@@ -34,6 +34,7 @@ const EN: Record<string, string> = {
   'gi.otherClaims.stage.paid': 'paid',
   'gi.otherClaims.stage.refused': 'refused',
   'gi.otherClaims.stage.under_appeal': 'under appeal',
+  'gi.otherClaims.stage.reversed': 'reversed — awaiting a new vote',
   'gi.otherClaims.stage.closed': 'closed',
   'gi.empty': 'No ground-inspection assignments for this claim under this jurisdiction yet — the absence of a completed inspection is itself a signal the verifier must acknowledge.',
   // Schedule form

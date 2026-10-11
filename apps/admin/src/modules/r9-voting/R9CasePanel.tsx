@@ -494,7 +494,15 @@ export function R9CasePanel({ pariwarId, claimCaseId }: R9CasePanelProps): React
                   // from before: the radio is already disabled + visually unchecked by then, but without this the
                   // Submit button stayed clickable, relying on `submitVote`'s own re-check to silently no-op it.
                   disabled={vote.isPending || rationale.trim() === '' || approveVoteUnavailable || (voteChoice === 'approve' && elsewhere !== null)}
-                  aria-describedby={approveVoteUnavailable ? `r9-${claimCaseId}-approval-blocked` : undefined}
+                  // Code review chunk 3/4 round 2 — a screen-reader user disabled by the elsewhere-conflict (not
+                  // warnings-unavailable) must ALSO get an explanation: the banner above already carries one.
+                  aria-describedby={
+                    approveVoteUnavailable
+                      ? `r9-${claimCaseId}-approval-blocked`
+                      : voteChoice === 'approve' && elsewhere !== null
+                        ? `finally-approved-elsewhere-${claimCaseId}`
+                        : undefined
+                  }
                   onClick={submitVote}
                 >
                   Submit vote

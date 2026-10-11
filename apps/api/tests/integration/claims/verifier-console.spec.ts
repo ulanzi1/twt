@@ -27,6 +27,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { AppDeps } from '../../../src/context.js';
 import {
   assembleApprovalWarnings,
+  assembleFinallyApprovedElsewhere,
   assembleVerifierConsole,
   VERIFIER_CONSOLE_MAX_READS,
 } from '../../../src/modules/claims/claims.verifier-console.handlers.js';
@@ -1121,7 +1122,7 @@ describe.skipIf(!hasDatabase)('Verifier-console read surface — E2E (:5433)', (
     expect(actual - baseline.actual, 'statements Postgres received for the inheritance vs reads booked').toBe(readCount - baseline.readCount);
   });
 
-  it('⭐⭐ Story 6.23a (Trap 10) — the ceiling is 22 (Story 6.26a: 19 → 20; Story 6.24a: 20 → 21; Story 6.28: 21 → 22), and the warnings section books EXACTLY one read and sends EXACTLY one statement', async () => {
+  it('⭐⭐ Story 6.23a (Trap 10) — the ceiling is 23 (Story 6.26a: 19 → 20; Story 6.24a: 20 → 21; Story 6.28 OP14 (a): 21 → 22; OP14 (b), code review chunk 3/4: 22 → 23), and the warnings section books EXACTLY one read and sends EXACTLY one statement', async () => {
     // The ledger above the constant says +1 → 19. ⚠ The shipped tests catch over-reporting only (`reported <=
     // actual`) and a ceiling breach (`readCount <= MAX`); a forgotten `reads.bump()` stays green there. ⇒ the
     // section is measured on its OWN: its booked reads AND the statements Postgres receives, each exactly 1 — the
@@ -1129,7 +1130,9 @@ describe.skipIf(!hasDatabase)('Verifier-console read surface — E2E (:5433)', (
     // Story 6.26a (GI9, AC9) — moved 19 → 20 by the ground-inspection gate section (its own exact test below).
     // Story 6.24a (RF10) — moved 20 → 21 by the suspicion-refusal section (its own exact test: `suspicion-refusal-routes.spec.ts`).
     // Story 6.28 (OP14 (a)) — moved 21 → 22 by the other-claims-for-death section (its own exact test: `one-payment-per-death-routes.spec.ts`).
-    expect(VERIFIER_CONSOLE_MAX_READS).toBe(22);
+    // Story 6.28 (OP14 (b), code review chunk 3/4) — moved 22 → 23 by the authoritative finally-approved-elsewhere
+    // section (its own exact test below: "the authoritative finally-approved-elsewhere section books EXACTLY one read").
+    expect(VERIFIER_CONSOLE_MAX_READS).toBe(23);
     const pariwarId = randomUUID();
     const deceased = await seedDeceasedMember(pariwarId, DISTRICT);
     const claimCaseId = await seedClaim(pariwarId, deceased);
@@ -1163,6 +1166,47 @@ describe.skipIf(!hasDatabase)('Verifier-console read surface — E2E (:5433)', (
       expect(section.reasonOptions[0]).toMatchObject({ code: 'warnings_reviewed', addedByDisplay: null });
       expect(booked, 'the section\'s booked reads').toBe(1);
       expect(actual, 'the statements Postgres received for the section').toBe(1);
+      await closeScopeTx(scopeTx, true);
+    } catch (err) {
+      await closeScopeTx(scopeTx, false);
+      throw err;
+    }
+  });
+
+  it('⭐⭐ Story 6.28 (OP14 (b), code review chunk 3/4) — the authoritative finally-approved-elsewhere section books EXACTLY one read and sends EXACTLY one non-SAVEPOINT statement', async () => {
+    const pariwarId = randomUUID();
+    const deceased = await seedDeceasedMember(pariwarId, DISTRICT);
+    const claimCaseId = await seedClaim(pariwarId, deceased);
+    const scopeTx = await openScopeTx(deps, pariwarId);
+    try {
+      const statements: string[] = [];
+      const client = scopeTx.client as unknown as { query: (...a: unknown[]) => unknown };
+      const realQuery = client.query.bind(client);
+      client.query = (...args: unknown[]) => {
+        const first = args[0] as string | { text: string };
+        statements.push(typeof first === 'string' ? first : first.text);
+        return realQuery(...args);
+      };
+      let booked = 0;
+      const finallyApprovedElsewhere = await assembleFinallyApprovedElsewhere(
+        {
+          db: scopeTx.tx,
+          client: scopeTx.client,
+          pariwarId,
+          claimCaseId,
+          district: DISTRICT,
+          actorId: randomUUID(),
+          grants: [{ pariwarId, role: 'super_admin', scopeDimension: 'global', scopeValue: null }],
+          traceId: null,
+        },
+        ids.claimId(claimCaseId),
+        { bump: () => (booked += 1) },
+      );
+      client.query = realQuery as never;
+      expect(finallyApprovedElsewhere).toBeNull();
+      expect(booked, "the section's booked reads").toBe(1);
+      expect(statements.filter((t) => !/SAVEPOINT/.test(t)), 'the non-SAVEPOINT statements Postgres received').toHaveLength(1);
+      expect(statements.filter((t) => /^SAVEPOINT console_finally_approved_elsewhere$/.test(t))).toHaveLength(1);
       await closeScopeTx(scopeTx, true);
     } catch (err) {
       await closeScopeTx(scopeTx, false);

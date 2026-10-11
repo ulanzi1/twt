@@ -828,7 +828,28 @@ Domain in `packages/domain/src/claim/` (⛔ no new package — [[feedback_no_pre
 
 ### Agent Model Used
 
+Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 6.28`, 2026-10-11.
+
 ### Debug Log References
+
+Every load-bearing leg was red-checked (plant → red → revert → green), all on the live DB (:5433):
+- Task 1 red-checks: (a) planted `WHERE TRUE` for the Pariwar filter in `otherClaimInStatesSql` ⇒ "⛔ never a claim … in ANOTHER Pariwar" RED (1 failed); reverted ⇒ green. (b) planted `AND TRUE` for the self-exclusion in the open predicate ⇒ every open-fragment leg RED; reverted ⇒ 21/21 green.
+- Task 2 red-checks: (a) OP8 — moved `assertNoOtherFinalApprovalForDeath` BEFORE RF5's call (before RF15's key) ⇒ the race leg RED ("the second final approval must be STOPPED: expected true to be false" — both writers committed `state_trustee_approved`); reverted ⇒ green. (b) removed the conjunct from the gate ⇒ the guard spec RED (9 failed | 4 passed); reverted ⇒ 13/13 green.
+- Task 2 admin red-check: CycleFreezePage's `.death_already_finally_approved` arm planted off ⇒ cycle-freeze-page RED (1 failed); reverted ⇒ green.
+- Task 3 red-check: OP3's re-check planted off (`false &&`) ⇒ 3 AC3 legs RED (the approved / settled earlier-cycle legs and the legacy pair); reverted ⇒ 26/26 green; state-trustee-cycle-freeze + suspicion-refusal specs green beside it (79).
+- Task 4 red-checks (closure spec, 16 legs): (a) the core's `current_state <> 'closed'` prefilter removed ⇒ the 50+-closed-claims leg RED (1 failed); (b) OP4 (b)–(d)'s `mayClose` removed ⇒ 2 RED (the refusal / under-appeal leg and the RF1 / RF5 leg); (c) H(ii)'s `closed` return planted off ⇒ 2 RED; (d) H(iii) disabled at all three reversal arms ⇒ RED (see next line); (e) OP13 reverted (`state_trustee_approved` back in `CLAIM_NOT_CLOSABLE_STATES`) ⇒ 2 RED (the AC4 legacy-voted leg and AC9 (a)). Each reverted ⇒ 16/16 green.
+  (d) result: H(iii) disabled ⇒ 4 RED (stage 1, stage 3 + panel, AC6, AC9 (b)); reverted ⇒ 16/16.
+- Task 4 race red-checks: H(ii) disabled ⇒ the CLOSURE-first race leg RED (1 failed; the mint-first order is healed by the closure itself, by design); OP13 reverted ⇒ both AC9 race orders RED (X left `state_trustee_approved`). Restored ⇒ 6/6.
+- Task 4 API red-checks (route spec, 15 legs): H(iv) helper planted off ⇒ 5 RED (the four X-`approved` route legs + the lock-timeout log leg); H(i) loop planted off ⇒ RED (both commit legs). Restored ⇒ 15/15.
+- ⚠ OBSERVED, ⛔ NOT REPRODUCED: the FIRST full run of the route spec hung ~594 s in "3/5 R9 finalize, X approved" (vitest's 30 s timeout fired; ⛔ no `lock_timeout` log, so the wait was ⛔ not inside H(iv)'s own transaction). In isolation it passed in 441 ms; the next four full runs passed 15/15 in ~14 s. Recorded honestly as an unexplained one-off — a candidate is a stray session from an earlier killed run holding a lock the finalize writer (⛔ no `lock_timeout`) waited on. Watch for it in ci:local.
+- Task 5 red-checks (warning spec, 4 legs): the queue's fourth `lateArm` disjunct off (`OR FALSE`) ⇒ 2 RED (the filed-after leg, normal + fault path, and the reappear leg); the key derivation off ⇒ 3 RED. Restored ⇒ 4/4.
+- OP8 re-red-checked after its fixture gained warning reasons (Task 5 made X/Y each carry `other_claim_for_death`): conjunct moved before RF15's key ⇒ RED; restored ⇒ green.
+- Task 5b red-check: a 30-day `created_at` term re-planted in `getConvergenceCandidate` ⇒ icp.spec's rewritten ⛔-NO-WINDOW leg RED and the API AC10 merge leg RED (domain 1 of 7, API 1); restored ⇒ green.
+- Task 5c admin red-checks: PendingCaseCard's `elsewhere !== null` Approve gate planted off ⇒ RED; R9CasePanel's banner words removed from `finalizeBlocked` ⇒ RED. Restored ⇒ green.
+- Task 5c (d) red-check: the admin client's `otherClaimsForDeath` schema line removed ⇒ the REAL-parse client test RED (the key is stripped); restored ⇒ green.
+- Task 5c (d) red-check: the in-scope gate (`inScope.length > 0`) planted to `true` ⇒ the out-of-district caller saw the section ⇒ RED; restored ⇒ green.
+- Task 6 red-check (AC6 Q3 A): the 0151 closure selector's trigger term widened to `TRUE` ⇒ the negative leg RED (OP4's closures selected); restored ⇒ green.
+- Task 6 OP7 red-check: OP2's conjunct removed ⇒ the path spec RED (5 of 7 — F5, F6, F7 and both F8 legs; the §2 (b) join leg is OP11's and §2 (c) asserts the conjunct directly); restored ⇒ 7/7.
 
 ### Completion Notes List
 
@@ -857,7 +878,178 @@ Domain in `packages/domain/src/claim/` (⛔ no new package — [[feedback_no_pre
   to the ratified reading; `epics.md`'s Story 6.28 brief, 6.24a's Trap 9 note + P9 sentence (dated lines, their text kept), and four
   `deferred-work.md` items (plus R1/R2 added as new items) updated with pointers. ⛔ No code before this entry; Task 1 may now start.
 
+- 2026-10-11 — **`bmad-dev-story 6.28` — IMPLEMENTED (Tasks 1–6), status → `review`.** Built AS WRITTEN for `-318` Q1 A / Q2 A /
+  Q3 A / Q4 A and `-319` (OP9's DB backstop ⛔ not built). One commit per task on `story/6-28-…`.
+  · **OP1** — `claim/one-payment-per-death.ts`, a READ-ONLY leaf (in NW1's entry list): the three state lists BY VALUE (pinned
+    for every state against `CLAIM_TERMINAL_STATES` and, after OP13, `CLAIM_NOT_CLOSABLE_STATES`), the fragments
+    (`otherClaimInStatesSql`, `otherOpenClaimsForDeathSql` + its boolean sibling) and the thin reads; later the OP14 reads
+    (`readOtherClaimsForDeath`, `readFinallyApprovedElsewhereBulk`, `readOtherClaimVisits`) and OP10's
+    `readClosedHolderRefusedBulk`.
+  · **OP2** — `assertNoOtherFinalApprovalForDeath` right after RF5's call (on RF15's key; ⛔ no lock of its own), EA2 still LAST;
+    `DeathAlreadyFinallyApprovedError` → 409 `<prefix>.death_already_finally_approved` `{}` at the four translators (one shared
+    message); the admin words at the freeze page, the R9 panel and the verifier strip (the closure surfaces show the server's
+    words already). OP8's two-connection race red-checked.
+  · **OP3** — the commit's skip-and-keep re-check after RF7's two; ⛔ no new lock.
+  · **OP13** — `CLAIM_NOT_CLOSABLE_STATES` = `settled`, `approved`, `closed`; the two 6.24a legs REWRITTEN (`:386` → closed + a new
+    `approved` notClosed leg; `:772-812`'s commit / own-visit tail deleted), the unit pins, the API route leg (both states,
+    keeping `held_claims_not_closed` coverage) — each citing `-319`.
+  · **OP4** — RF6's per-claim core extracted (`closeOtherClaimsOfDeath` + `closeLockedClaim`; the `<> 'closed'` prefilter
+    before the cap + an error log at the cap); `closeClaimsOfPaidDeath` (own tx, intake key first; OP4 (b)–(d) via
+    `mayClose`) and the SELF-MODE `closeClaimIfDeathPaid`; the payload's `trigger` enum (`CLAIM_CLOSED_TRIGGERS`; ⛔ not a
+    new event — still 36); H(i) in `postCommit` after the trigger block on every response; H(ii) inside both mints (the writers return
+    `closed`); H(iii) after RF6 in the three reversal arms (they return `closed`); H(iv) through ONE API helper
+    (`close-claims-of-paid-death.ts`, `lock_timeout` 3 s, ⛔ never failing the request) in the four final-writer handlers.
+  · **OP5** — `other_claim_for_death` (domain + contracts mirror + console label + the pinned list), embedded in BOTH warning
+    readers (⛔ never a per-claim query), the correction queue's fourth `lateArm` disjunct; it enters 6.23b's wait as ruled (every
+    current key counts — ⛔ no per-kind filter exists).
+  · **OP11** — the window removed at the candidate, the strip and `confirmMerge`; the constant deleted (`git grep
+    CONVERGENCE_WINDOW_DAYS` is empty over code — the historical records keep the name, ⛔ not rewritten); `icp.spec.ts`'s window
+    leg REWRITTEN to the new rule; the strip note + its test.
+  · **OP14** — (a) the console's `otherClaimsForDeath` section (one booked read under a SAVEPOINT; ceiling 21 → 22, ledger
+    line + four pins + the two stale titles); (b) `finally_approved_elsewhere` on the freeze / R9 / closure-queue /
+    escalation reads, ONE shared banner (`FinallyApprovedElsewhereBanner`) that disables only the FINAL approve, and "Close
+    this claim" (`POST …/cycle-freeze/claims/:claimCaseId/close-for-paid-death`, `cycle.freeze`, ⛔ no step-up, own tx, 503 on a
+    lock timeout, 404 unknown, audited; the adjudication gate's `expectedMethods` → 4); P1's console shows the banner only;
+    (d) the ground-inspection read's `otherClaimsForDeath` (+ `visitedElsewhere` / `alreadyVisited`), ONLY with an in-scope
+    assignment; the admin client schema lists it (a REAL-parse test).
+  · **OP10** — the staff `closed` label neutral for both closures + the "later refused; may file again" variant
+    (`closed_holder_refused` on the two helpline lists that show closed claims); `helpline.result.closed` in place of the
+    created / route / bank lines; the strip's closed override line; the member app routes a `closed` intake to the closed
+    screen and records the filed-claim pointer only when ⛔ none is on record or the recorded claim reads terminal; the
+    `$comment.closed` (en) and every grep-found comment re-worded.
+  · **OP7** — `one-payment-per-death-paths.spec.ts` (F5, F6, F7, F8 ×2, `-294` §2 (b), (c)); `-294` §2 (a) is AC9's pair
+    of legs; the API closure per site is the route spec.
+  · ⚠ **Deviations / limits, recorded (⛔ not papered over):**
+    1. OP14 (b)'s field is computed by ONE sibling bulk statement per surface (per ≤ 500 ids), ⛔ not a column inside the
+       existing read's SQL — the bulk-read rule (⛔ never a per-claim query) holds; the reads stay unchanged.
+    2. The freeze card disables its **Approve** vote only; **Resolve → Approve** on an escalated card is a District-Admin-level
+       step (⛔ not a final writer) and stays enabled.
+    3. NW1's scanner (`approval-warnings.test.ts`) now strips comments: H(ii) put `suspicion-refusal-persist.ts` under `icp.ts`,
+       which made `src/rbac/index.ts` reachable, whose header QUOTES an `export … from './rbac/index.js'`.
+    4. Fixtures that approved several claims of ONE death without a reason now answer OP5's key (the OP8 race, the 6.26a R9
+       refile leg's source — driven to `denied` as every real refusal is, the verifier-console precedents leg — separate
+       deaths, the shape spec's decoy — reason + note only when a warning shows). Each change is commented with its reason.
+    5. The member app has ⛔ no screen-render harness (node unit tests only): the closed routing in `relationship.tsx` is
+       covered by the pure `mayRecordClosedClaimPointer` test + `tsc`; re-entry routing is 6.24a's existing entry-gate test.
+       ⛔ Not demonstrated on a device.
+    6. F8's 6.19c D17 variant ("refusal for another reason" through a correction closure) is ⛔ not driven separately — its
+       claim is `denied` like the two F8 legs, whose mechanism (reversal ⇒ final vote stopped / H(iii)) it shares.
+    7. ⚠ ONE unexplained ~594 s hang in the FIRST full run of the route spec (see the Debug Log) — ⛔ not reproduced in four
+       later full runs.
+
 ### File List
+
+- `apps/admin/src/api/client.ts`
+- `apps/admin/src/modules/claim-verification/SignalsPanel.tsx`
+- `apps/admin/src/modules/claim-verification/i18n-en.ts`
+- `apps/admin/src/modules/claim-verification/nominee-errors.ts`
+- `apps/admin/src/modules/correction-closure/EscalationPanel.tsx`
+- `apps/admin/src/modules/correction-closure/PariwarClosureStrip.tsx`
+- `apps/admin/src/modules/cycle-freeze/CycleFreezePage.tsx`
+- (new) `apps/admin/src/modules/cycle-freeze/FinallyApprovedElsewhereBanner.tsx`
+- `apps/admin/src/modules/cycle-freeze/PendingCaseCard.tsx`
+- `apps/admin/src/modules/ground-inspection/GroundInspectionPage.tsx`
+- `apps/admin/src/modules/ground-inspection/i18n-en.ts`
+- `apps/admin/src/modules/helpline-claims/ConvergenceDecisionStrip.tsx`
+- `apps/admin/src/modules/helpline-claims/HelplineAppeal.tsx`
+- `apps/admin/src/modules/helpline-claims/HelplineCertificateReplacement.tsx`
+- `apps/admin/src/modules/helpline-claims/HelplineClaimContact.tsx`
+- `apps/admin/src/modules/helpline-claims/HelplineConsoleShell.tsx`
+- `apps/admin/src/modules/helpline-claims/i18n-en.ts`
+- `apps/admin/src/modules/r9-voting/R9CasePanel.tsx`
+- `apps/admin/src/routes/VerifierConsoleRoute.tsx`
+- `apps/admin/tests/ConvergenceDecisionStrip.test.tsx`
+- `apps/admin/tests/correction-closure.test.tsx`
+- `apps/admin/tests/cycle-freeze-page.test.tsx`
+- `apps/admin/tests/death-certificate-review.test.tsx`
+- `apps/admin/tests/escalation-detail-claim-switch.test.tsx`
+- (new) `apps/admin/tests/finally-approved-elsewhere.test.tsx`
+- (new) `apps/admin/tests/ground-inspection-other-claims-client.test.ts`
+- `apps/admin/tests/ground-inspection-page.test.tsx`
+- `apps/admin/tests/helpline-certificate-replacement.test.tsx`
+- `apps/admin/tests/helpline-claim-contact.test.tsx`
+- `apps/admin/tests/helpline-claim-page.test.tsx`
+- `apps/admin/tests/later-approval-warnings.test.tsx`
+- `apps/admin/tests/nominee-declaration-route.test.tsx`
+- `apps/admin/tests/pending-case-card-return.test.tsx`
+- `apps/admin/tests/r9-case-panel.test.tsx`
+- `apps/admin/tests/suspicion-refusal-helpline-appeal.test.tsx`
+- `apps/admin/tests/verifier-console-route-name-check.test.tsx`
+- `apps/admin/tests/verifier-console.test.tsx`
+- `apps/api/src/audit/audit-sink.ts`
+- `apps/api/src/modules/claims/claims.appeal.handlers.ts`
+- `apps/api/src/modules/claims/claims.convergence.handlers.ts`
+- `apps/api/src/modules/claims/claims.correction-closure.handlers.ts`
+- `apps/api/src/modules/claims/claims.correction-escalation.handlers.ts`
+- `apps/api/src/modules/claims/claims.cycle-freeze.handlers.ts`
+- `apps/api/src/modules/claims/claims.cycle-freeze.routes.ts`
+- `apps/api/src/modules/claims/claims.death-certificate-member.handlers.ts`
+- `apps/api/src/modules/claims/claims.death-certificate.handlers.ts`
+- `apps/api/src/modules/claims/claims.ground-inspection.handlers.ts`
+- `apps/api/src/modules/claims/claims.r9-voting.handlers.ts`
+- `apps/api/src/modules/claims/claims.verification-decision.handlers.ts`
+- `apps/api/src/modules/claims/claims.verifier-console.handlers.ts`
+- (new) `apps/api/src/modules/claims/close-claims-of-paid-death.ts`
+- (new) `apps/api/src/modules/claims/death-already-finally-approved-message.ts`
+- (new) `apps/api/tests/integration/claims/one-payment-per-death-routes.spec.ts`
+- `apps/api/tests/integration/claims/suspicion-refusal-routes.spec.ts`
+- `apps/api/tests/integration/claims/verifier-console-ground-inspection.spec.ts`
+- `apps/api/tests/integration/claims/verifier-console-shape.spec.ts`
+- `apps/api/tests/integration/claims/verifier-console.spec.ts`
+- `apps/mobile/app/(claim)/closed-helpline.tsx`
+- `apps/mobile/app/(claim)/relationship.tsx`
+- `apps/mobile/lib/claim-entry-gate.ts`
+- `apps/mobile/lib/closed-helpline-copy.ts`
+- `apps/mobile/lib/death-certificate-view.ts`
+- `apps/mobile/tests/unit/claim-entry-gate.test.ts`
+- `packages/contracts/src/claims/appeal.ts`
+- `packages/contracts/src/claims/correction-closure.ts`
+- `packages/contracts/src/claims/cycle-freeze.ts`
+- `packages/contracts/src/claims/death-certificate.ts`
+- `packages/contracts/src/claims/index.ts`
+- (new) `packages/contracts/src/claims/one-payment-per-death.ts`
+- `packages/contracts/src/claims/r9-voting.ts`
+- `packages/contracts/src/claims/verification-decision.ts`
+- `packages/contracts/src/claims/verifier-console.ts`
+- `packages/contracts/tests/approval-warnings-later-approvers.test.ts`
+- `packages/contracts/tests/claims-suspicion-refusal.test.ts`
+- `packages/contracts/tests/claims-verifier-console.test.ts`
+- `packages/contracts/tests/nominee-name-check-vocabulary-lockstep.test.ts`
+- `packages/domain/src/claim/appeal-panel-persist.ts`
+- `packages/domain/src/claim/appeal-persist.ts`
+- `packages/domain/src/claim/approval-warnings.ts`
+- `packages/domain/src/claim/correction-queue-read.ts`
+- `packages/domain/src/claim/death-certificate-approval.ts`
+- `packages/domain/src/claim/errors.ts`
+- `packages/domain/src/claim/events.ts`
+- `packages/domain/src/claim/icp.ts`
+- `packages/domain/src/claim/index.ts`
+- `packages/domain/src/claim/nominee-name-check.ts`
+- (new) `packages/domain/src/claim/one-payment-per-death.ts`
+- `packages/domain/src/claim/read.ts`
+- `packages/domain/src/claim/state-trustee-decision-persist.ts`
+- `packages/domain/src/claim/state.ts`
+- `packages/domain/src/claim/suspicion-refusal-persist.ts`
+- `packages/domain/tests/claim/approval-warnings.test.ts`
+- (new) `packages/domain/tests/claim/one-payment-per-death.test.ts`
+- `packages/domain/tests/claim/suspicion-refusal.test.ts`
+- (new) `packages/domain/tests/integration/claim/_one-payment-fixtures.ts`
+- `packages/domain/tests/integration/claim/ground-inspection-approval.spec.ts`
+- `packages/domain/tests/integration/claim/icp.spec.ts`
+- `packages/domain/tests/integration/claim/nominee-refusal-inheritance.spec.ts`
+- (new) `packages/domain/tests/integration/claim/one-payment-per-death-closure.spec.ts`
+- (new) `packages/domain/tests/integration/claim/one-payment-per-death-concurrency.spec.ts`
+- (new) `packages/domain/tests/integration/claim/one-payment-per-death-guard.spec.ts`
+- (new) `packages/domain/tests/integration/claim/one-payment-per-death-paths.spec.ts`
+- (new) `packages/domain/tests/integration/claim/one-payment-per-death-warning.spec.ts`
+- (new) `packages/domain/tests/integration/claim/one-payment-per-death.spec.ts`
+- `packages/domain/tests/integration/claim/suspicion-refusal-concurrency.spec.ts`
+- `packages/domain/tests/integration/claim/suspicion-refusal.spec.ts`
+- `packages/events/src/registry.ts`
+- `packages/i18n/locales/en/claim.json`
+- `scripts/claim-adjudication-human-actor-invariant/check.ts`
+- `_bmad-output/implementation-artifacts/6-28-one-payment-per-death-second-approval-guard.md`
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`
 
 ## Change Log
 
@@ -881,3 +1073,4 @@ Domain in `packages/domain/src/claim/` (⛔ no new package — [[feedback_no_pre
 | 1.15 | 2026-10-11 | The note's eighth check (outcomes enumerated per combination): 1 HIGH — v1.14 said under Q1 B only a Panel reopening could pay a District-Admin-closed family once the kept claim is refused; false — both claims are terminal, a `claim.closed` closure trips ⛔ no refile guard (F7) and nothing is paid, so the death may be filed again ⇒ Q1 B / Q2 A / Q2 B corrected, OP4 B too. 3 MEDIUM — the staff label goes stale when the holding claim is later refused ⇒ OP10 label keyed on the holding claim's state (a build item) and Q3 A's helpline words; Q4 A's closure ⛔ not appealable; Q2's question covers a pre-payment District Admin closure. 3 LOW — "unless it is filed again" (Q4 A, plain English); "being, or about to be, paid" (Q3); Q1 B's re-hold ends on a refused appeal or a District Admin close. |
 | 1.16 | 2026-10-11 | The note's ninth check: 1 HIGH — v1.15's own fix left Q2 A's cost cell self-contradicting: "...even if the kept claim is then refused (the family may file again). Its only remedy is whatever the Trust can recover from the person paid." — but the District-Admin-closed-then-refused case pays ⛔ no one, so ⛔ nothing exists to recover ⇒ the "recover from the person paid" remedy re-anchored to the cases it actually fits (the false-date family, the appeal winners who lost to another claim that WAS paid), and the District-Admin case given its own distinct close ("a fresh filing or a Panel reopening (Q2 B)"). |
 | 1.17 | 2026-10-11 | **Governance done.** The Panel ruled Q1 A, Q2 A, Q3 A, Q4 A (`2026-10-11-318`); the author-commit for OP1–OP14 is `2026-10-11-319` (OP9's DB backstop decided: ⛔ not built). Rulings table, Policy meaning, OP5 (c), OP9, OP13 and AC0 updated from "awaiting"/contingent language to the ratified reading; `epics.md`, 6.24a's Trap 9 + P9, and four `deferred-work.md` items (+ R1/R2 added) cross-referenced. Status stays `ready-for-dev`; Task 1 may now start. |
+| 1.18 | 2026-10-11 | `bmad-dev-story 6.28` — Tasks 1–6 built as ruled (`-318` A/A/A/A, `-319`): OP1 the leaf + reads; OP2 the guard (409 ×4, admin words; OP8 race); OP3 the commit re-check; OP13 + the rewritten 6.24a legs; OP4's core + H(i)–H(iv); OP5 the warning + the queue arm; OP11 the window removed; OP14 (a) console section (ceiling 22), (b) banners / disabled final approves / "Close this claim", (d) the inspector's lines; OP10 the staff / helpline / strip / member-app surfaces + the comment sweep; OP7's path specs. Every load-bearing leg red-checked (Debug Log); deviations recorded in the Completion Notes. ready-for-dev → in-progress → review. |

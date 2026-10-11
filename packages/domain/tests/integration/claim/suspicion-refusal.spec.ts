@@ -54,7 +54,6 @@ import * as schema from '../../../src/schema/index.js';
 import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
 import {
   PARIWAR_A,
-  currentUploadIdOf,
   driveClaimTo,
   enterAppScope,
   seedAcceptedDeathCertificate,

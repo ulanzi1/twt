@@ -23,10 +23,14 @@
 
 ---
 
-> ## ⏳ AWAITING PANEL RULING
+> ## ✅ PANEL RULED — 2026-10-11 — recorded as `2026-10-11-318`
 >
-> ⛔ **Nothing is recorded here yet.** When the Panel rules, transcribe it into this block **and**
-> into `.decision-log.md` as a new decision id. ⭐ Everything below is then kept **unedited** as the question **as it was put**.
+> **Ruled by Dhiraj Rahul + Kalpana Bharti, relayed by BigDev — verbatim:**
+> *"by DR and KB - Q1 A, Q2 A, Q3 A, Q4 A."*
+>
+> ⭐ Our suggestion **taken on all four.**
+>
+> ⭐ Everything **below this block is kept UNEDITED** — it is the question as it was put.
 
 ---
 

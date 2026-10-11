@@ -72,6 +72,49 @@ function SuspicionRefusalNotice({ section }: { section: VerifierConsolePacket['s
   );
 }
 
+/** Story 6.28 (OP14 (a)) — the other claims for this death, by REFERENCE only, from the server's section. */
+function OtherClaimsForDeathNotice({ section }: { section: VerifierConsolePacket['otherClaimsForDeath'] }): ReactElement | null {
+  const words = t.otherClaimsForDeath;
+  if (section.available && section.total === 0) return null;
+  const anyDifferent = section.claims.some((c) => c.deathDate === 'different');
+  const anySame = section.claims.some((c) => c.deathDate === 'same');
+  return (
+    <Section title={words.heading} testId="section-other-claims-for-death">
+      {!section.available ? (
+        <p className="text-sm font-medium text-amber-800" data-testid="other-claims-unavailable">
+          {words.unavailable}
+        </p>
+      ) : (
+        <>
+          <ul className="list-disc pl-5 text-sm">
+            {section.claims.map((c) => (
+              <li key={c.reference} data-testid={`other-claim-${c.reference}`}>
+                {words.claim} {c.reference} — {words.stage[c.stage]} — {words.filed} {c.filedAt.slice(0, 10)}
+                {c.channels.length > 0 ? ` ${words.via} ${c.channels.map((ch) => words.channel[ch]).join(', ')}` : ''} —{' '}
+                {words.deathDate[c.deathDate]}
+              </li>
+            ))}
+          </ul>
+          {section.total > section.claims.length ? (
+            <p className="text-sm" data-testid="other-claims-more">
+              {words.andMore(section.total - section.claims.length)}
+            </p>
+          ) : null}
+          {anyDifferent ? (
+            <p className="text-sm font-medium text-red-700" data-testid="other-claims-different-dates">
+              {words.differentDates}
+            </p>
+          ) : anySame ? (
+            <p className="text-sm" data-testid="other-claims-same-family">
+              {words.likelySameFamily}
+            </p>
+          ) : null}
+        </>
+      )}
+    </Section>
+  );
+}
+
 /** Render one of the three non-present states with its DISTINCT copy (never collapsed). */
 function NonPresent({ status }: { status: 'empty' | 'unavailable' | 'not_available_yet' }): ReactElement {
   const copy =
@@ -346,6 +389,10 @@ export function SignalsPanel({
           suspicion, and whether this claim's FINAL approval waits for its appeal. The other claim by its REFERENCE only
           (⛔ no name, ⛔ no note). Shown only when there IS such a claim — or when the read failed (⛔ never silence). */}
       <SuspicionRefusalNotice section={packet.suspicionRefusal} />
+
+      {/* ⭐ (l) Story 6.28 (OP14 (a)) — the other claims for this death (staff-only, by reference; ⛔ never silence on a
+          failed read). */}
+      <OtherClaimsForDeathNotice section={packet.otherClaimsForDeath} />
 
       {/* (e) prior verifier comments — the full transcript for this claim, semantic-verb entries (AC4).
           NOTE: `superseded`/`isRevision` linkage isn't rendered here — the wire model (PriorVerifierComment)

@@ -115,6 +115,7 @@ describe('VerifierConsolePacket — full round-trip + ordering', () => {
       waitReason: 'certificate_check_required' as 'no_completed_inspection' | 'certificate_check_required' | null,
     },
     suspicionRefusal: { available: true, keptApartFrom: [], finalApprovalWaits: null },
+    otherClaimsForDeath: { available: true, total: 0, claims: [] },
     // Story 6.23a (NW8) — the nominee-change warnings: NON-PII (kinds, counts, the reason list).
     approvalWarnings: {
       available: true,
@@ -170,6 +171,12 @@ describe('VerifierConsolePacket — full round-trip + ordering', () => {
     expect(
       VerifierConsolePacket.safeParse({ ...PACKET, groundInspectionGate: { available: false, complete: false, waitReason: null } }).success,
     ).toBe(true);
+  });
+
+  it('Story 6.28 (OP14 (a)) — `otherClaimsForDeath` is REQUIRED', () => {
+    const { otherClaimsForDeath, ...without } = PACKET;
+    expect(VerifierConsolePacket.safeParse(without).success).toBe(false);
+    expect(VerifierConsolePacket.safeParse({ ...PACKET, otherClaimsForDeath: { ...otherClaimsForDeath, total: -1 } }).success).toBe(false);
   });
 
   it('Story 6.24a (RF10) — `suspicionRefusal` is REQUIRED and STRICT: the other claim by REFERENCE (⛔ not an id field, ⛔ not a name), closed sets', () => {

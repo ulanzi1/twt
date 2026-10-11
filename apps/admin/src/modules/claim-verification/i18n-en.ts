@@ -719,6 +719,36 @@ export const verifierConsoleEn = {
     reasonLocked:
       'This refusal’s reason cannot be changed while {held} for this death has not been closed — its 90-day appeal limit stands.',
   },
+  // ⭐ Story 6.28 (OP14 (a)) — the other claims for this death. STAFF-ONLY: each by its REFERENCE only (⛔ no name, ⛔ no note,
+  // ⛔ no date value — the dates are compared by the server, never shown).
+  otherClaimsForDeath: {
+    heading: 'Other claims for this death',
+    unavailable: 'The other claims for this death could not be checked just now.',
+    claim: 'Claim',
+    filed: 'filed',
+    via: 'via',
+    andMore: (n: number) => `and ${n} more`,
+    stage: {
+      open: 'open',
+      passed_final_vote: 'passed the final vote',
+      paid: 'paid',
+      refused: 'refused',
+      under_appeal: 'under appeal',
+      closed: 'closed',
+    } satisfies Record<VerifierConsolePacket['otherClaimsForDeath']['claims'][number]['stage'], string>,
+    channel: { member_app: 'the member app', helpline: 'the helpline', trustee_initiated: 'a trustee' } satisfies Record<
+      VerifierConsolePacket['otherClaimsForDeath']['claims'][number]['channels'][number],
+      string
+    >,
+    deathDate: {
+      same: 'same date of death',
+      different: 'a different date of death',
+      not_accepted: 'date not yet accepted',
+      not_comparable: 'date not comparable',
+    } satisfies Record<VerifierConsolePacket['otherClaimsForDeath']['claims'][number]['deathDate'], string>,
+    likelySameFamily: 'Likely the same family filing twice.',
+    differentDates: 'Two different dates of death are claimed for this death.',
+  },
   // ⭐ Story 6.28 (`2026-10-11-319` OP2, OP14 (c)) — one payment per death. STAFF words: the claim is STOPPED, ⛔ never
   // "refused"; the other claim is ⛔ never named here (the 409 carries ⛔ no id — `details: {}`).
   onePaymentPerDeath: {

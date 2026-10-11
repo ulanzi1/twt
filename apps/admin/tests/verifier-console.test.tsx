@@ -95,6 +95,7 @@ const PRESENT_PACKET: VerifierConsolePacket = {
   // Story 6.26a (GI9) — the ground-inspection gate section (complete by default).
   groundInspectionGate: { available: true, complete: true, waitReason: null },
   suspicionRefusal: { available: true, keptApartFrom: [], finalApprovalWaits: null },
+  otherClaimsForDeath: { available: true, total: 0, claims: [] },
   approvalWarnings: {
     available: true,
     kinds: [],
@@ -242,6 +243,7 @@ describe('<SignalsPanel> — six sections, four-state vocabulary, tri-state conc
           ...PRESENT_PACKET,
           groundInspectionGate: { available: true, complete: true, waitReason: null },
           suspicionRefusal: { available: true, keptApartFrom: [], finalApprovalWaits: null },
+          otherClaimsForDeath: { available: true, total: 0, claims: [] },
           groundInspection: {
             status: 'present',
             assignments: [
@@ -648,6 +650,7 @@ describe('<SignalsPanel> — Story 6.24a (RF10), kept apart from a claim refused
         packet={{
           ...PRESENT_PACKET,
           suspicionRefusal: { available: true, keptApartFrom: [{ reference: 'REF-1', appeal: 'upheld_final', appealUntil: '2026-12-30' }], finalApprovalWaits: null },
+          otherClaimsForDeath: { available: true, total: 0, claims: [] },
         }}
       />,
     );
@@ -660,6 +663,7 @@ describe('<SignalsPanel> — Story 6.24a (RF10), kept apart from a claim refused
         packet={{
           ...PRESENT_PACKET,
           suspicionRefusal: { available: true, keptApartFrom: [{ reference: 'REF-1', appeal: 'time_limit_passed', appealUntil: '2026-09-01' }], finalApprovalWaits: null },
+          otherClaimsForDeath: { available: true, total: 0, claims: [] },
         }}
       />,
     );
@@ -703,5 +707,44 @@ describe('<SignalsPanel> — Story 6.24a (RF10), kept apart from a claim refused
       expect(msg).not.toBe(sr.approvalGate.appeal_open);
     }
     expect(decisionErrorMessage(new ApiError(409, 'verifier_decision.suspicion_appeal_pending', 'x', { reason: 'appeal_not_filed' }))).toBe(sr.approvalGate.appeal_not_filed);
+  });
+});
+
+describe('<SignalsPanel> — Story 6.28 (OP14 (a)), the other claims for this death', () => {
+  const oc = t.otherClaimsForDeath;
+  const row = (reference: string, deathDate: 'same' | 'different' | 'not_accepted' | 'not_comparable', stage: 'paid' | 'open' = 'open') => ({
+    reference, stage, filedAt: '2026-09-01T05:00:00.000Z', channels: ['helpline' as const], deathDate,
+  });
+
+  it('⛔ no other claim ⇒ ⛔ no section at all', () => {
+    render(<SignalsPanel packet={PRESENT_PACKET} />);
+    expect(screen.queryByTestId('section-other-claims-for-death')).not.toBeInTheDocument();
+  });
+
+  it('each other claim by REFERENCE with its stage, filing and date comparison; a DIFFERENT date ⇒ the red line; "and N more"', () => {
+    render(
+      <SignalsPanel
+        packet={{ ...PRESENT_PACKET, otherClaimsForDeath: { available: true, total: 3, claims: [row('A1B2C3D4', 'different', 'paid'), row('E5F6A7B8', 'same')] } }}
+      />,
+    );
+    const a = screen.getByTestId('other-claim-A1B2C3D4');
+    expect(a).toHaveTextContent('A1B2C3D4');
+    expect(a).toHaveTextContent(oc.stage.paid);
+    expect(a).toHaveTextContent('2026-09-01');
+    expect(a).toHaveTextContent(oc.channel.helpline);
+    expect(a).toHaveTextContent(oc.deathDate.different);
+    expect(screen.getByTestId('other-claims-different-dates')).toHaveTextContent(oc.differentDates);
+    expect(screen.queryByTestId('other-claims-same-family')).not.toBeInTheDocument();
+    expect(screen.getByTestId('other-claims-more')).toHaveTextContent(oc.andMore(1));
+  });
+
+  it('only SAME dates ⇒ "likely the same family filing twice"', () => {
+    render(<SignalsPanel packet={{ ...PRESENT_PACKET, otherClaimsForDeath: { available: true, total: 1, claims: [row('E5F6A7B8', 'same')] } }} />);
+    expect(screen.getByTestId('other-claims-same-family')).toHaveTextContent(oc.likelySameFamily);
+  });
+
+  it('a FAILED read ⇒ "could not be checked just now" — ⛔ never silence', () => {
+    render(<SignalsPanel packet={{ ...PRESENT_PACKET, otherClaimsForDeath: { available: false, total: 0, claims: [] } }} />);
+    expect(screen.getByTestId('other-claims-unavailable')).toHaveTextContent(oc.unavailable);
   });
 });

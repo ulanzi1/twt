@@ -326,7 +326,7 @@ Each says what changes under a non-recommended answer.
   uphold arm takes ⛔ no intake key), RF5's 90-day lapse (⛔ no event), a crash between commit and H(i) on a commit never replayed, an H(i) lock timeout. Its
   correction / certificate chases keep running until it is closed. Q1 B: H(i)–(iv) unchanged, PLUS a District Admin action *"close this
   claim — another claim for this death goes ahead"* (reason + note; `trigger: 'closed_by_district_admin'`; `claim.verify`-gated) — sized
-  at Task 0.4. Q1 C: ⛔ not built.
+  at Task 0.4; the note puts this closure under Q2 (Q2 B's reopen covers it) and Q3 (Q3 B texts it). Q1 C: ⛔ not built.
 - **OP5 — THE WARNING (Q1 A as put — the wait included, `-279` A6).** New kind `other_claim_for_death` appended to `APPROVAL_WARNING_KINDS`
   (+ the contracts mirror + the console label + the pinned test, with a reason); one key per other OPEN claim (OP1's open fragment — ⛔ not
   a finally approved one: OP2's 409 copy covers that), `other_claim_for_death:<otherClaimCaseId>`. ⭐ (a) Produced by EMBEDDING
@@ -389,7 +389,7 @@ Each says what changes under a non-recommended answer.
     `death-certificate-view.ts:172`, `packages/contracts/src/claims/appeal.ts:59`, `packages/contracts/src/claims/death-certificate.ts:178-183`,
     `claims.death-certificate-member.handlers.ts:81`, `claim/events.ts:647-655`, `packages/events/src/registry.ts:393`,
     `suspicion-refusal-persist.ts:60`.
-  · Q3 B: the `-291` Q2 B text for the new trigger too — the 0151 closure purpose's selector widened, DLT template reused (⚠ rebases on
+  · Q3 B: the `-291` Q2 B text for the new trigger too (and, under Q1 B, for `closed_by_district_admin`) — the 0151 closure purpose's selector widened, DLT template reused (⚠ rebases on
     6.34 TV2's `suspicion-notice-sms-templates.ts`) — then ⚠ go-live with FQ7's counsel row; Q3 A: ⛔ no text (AC6 pins it).
 - **OP11 — THE 30-DAY CONVERGENCE WINDOW IS REMOVED (BigDev, 2026-10-10: *"Remove it in 6.28"*).** A new filing for a death converges onto
   ANY open claim of that death, however old. ⭐ Why: the dedup key is the EXACT `deceased_member_id` — a time window suits a FUZZY key (an old
@@ -841,6 +841,7 @@ Domain in `packages/domain/src/claim/` (⛔ no new package — [[feedback_no_pre
 - 2026-10-11 — v1.10: the note's third check (1 HIGH, 7 MEDIUM, 6 LOW — applied).
 - 2026-10-11 — v1.11: the note's fourth check (2 HIGH, 4 MEDIUM, 3 LOW — applied); under Q1 C, OP11 + OP14 (a) + OP13 (if Q4 A) are built.
 - 2026-10-11 — v1.12: the note's fifth check (1 HIGH, 7 MEDIUM, 8 LOW — applied); OP10's staff label also built under Q1 C.
+- 2026-10-11 — v1.13: the note's sixth check (1 HIGH, 4 MEDIUM, 6 LOW — applied): Q2 / Q3 cover a District Admin closure under Q1 B.
 
 ### File List
 
@@ -861,3 +862,4 @@ Domain in `packages/domain/src/claim/` (⛔ no new package — [[feedback_no_pre
 | 1.10 | 2026-10-11 | The note's third fresh-context check: 1 HIGH — Q1 A's cost said an appeal won after the other claim's final vote pays nothing, contradicting Q4 A for the suspicion appeal ⇒ "an ORDINARY refusal (⛔ not the suspicion one, which is Q4)". 7 MEDIUM — Q4 B under Q1 C; the Q1 → Q4 pointer narrowed to after the vote / before payment; §0 hands the closure's appeal and the helpline's words back to the Panel's questions; "final vote" no longer "the last approval" (R9 can still refuse it); Q2 B for a same-channel join; the plain-English Q1's ordinary-appeal cost; story header / AC0: under Q1 C, OP13 is still built on Q4 A. 6 LOW — the wait starts when a family APPEALS; Q4's hold covers the 90 days before an appeal; the plain-English Q4 and its cost; E4's `unique(` grep; Q1 A's five costs numbered. |
 | 1.11 | 2026-10-11 | The note's fourth check (every Q1–Q4 combination walked): 2 HIGH — under Q1 C the note promised OP11 / OP14 while the story built only OP13 ⇒ the story now builds OP11 (BigDev's unconditional window removal), OP14 (a) and OP13 (if Q4 A) under C, and the note limits the warning / banner / close button to Q1 A or B; three "paid nothing" / "one corner" sentences were false under Q1 C or Q4 B ⇒ each qualified. 4 MEDIUM — the corner / Q4 line is the PAYMENT BEGINNING (⛔ not "paid"); Q2 A, plain English and E2 name Q4 B's case. 3 LOW — a settled paid claim (H(ii)); Q4 A's text goes to Claim 2's nominee; Q3 B's helpline words. Task 0.4 names Q4 B. |
 | 1.12 | 2026-10-11 | The note's fifth check (all 24 ruling combinations tabled): 1 HIGH — §0's "a filing for a paid death joins it / is closed at once" was false under Q1 C (OP4 / OP2 unbuilt ⇒ a settled death's new filing, or one kept apart, may be paid) ⇒ qualified for A / B and C stated; "settled" replaced by "payment complete". 7 MEDIUM — the helpline label built under Q1 C too (story); cost (4)'s trigger is the payment BEGINNING; How A works' Q4 exception only under Q4 B; the Q1 reading's "never leaves a death unpaid" scoped (Q4 A's own cost); "paid once" and the plain-English ordinary-appeal line hedged for Q2 B; Q2 B is a later piece of work. 8 LOW — capitalisation; "may be paid twice"; "goes live as it is today (C, and the 30-day limit stays)"; Q1 B's release by refusal; "closed this way"; Q2 / Q3 "payment has begun"; "before its payment began"; the How-much-to-trust sentence split. |
+| 1.13 | 2026-10-11 | The note's sixth check: 1 HIGH — under Q1 B the District Admin's closure fell outside Q2 (reopen) and Q3 (text) ⇒ both now cover it (OP4 B, OP10's Q3 B selector). 4 MEDIUM — Q1 B "whichever of two open claims"; Q1 B's re-hold while a refused family appeals; plain-English Q4 "and its appeal is then allowed"; plain-English Q1 names the special panel. 6 LOW — an overridden-apart claim is ⛔ never joined; Q3's helpline wording matches §0; "may be paid too"; How-much-to-trust's Q2 pointer; Q1 C's "beyond the late-filing change"; §0's stop "under A or B in Q1". |

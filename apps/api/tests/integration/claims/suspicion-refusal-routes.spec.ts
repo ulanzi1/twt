@@ -479,8 +479,8 @@ describe.skipIf(!hasDatabase)('Story 6.24a — the suspicion refusal through HTT
     };
   }
 
-  it('the console — R is KEPT APART (S by reference only) and its final approval waits `appeal_not_filed`; S itself shows nothing; the ceiling is 21', async () => {
-    expect(VERIFIER_CONSOLE_MAX_READS).toBe(21);
+  it('the console — R is KEPT APART (S by reference only) and its final approval waits `appeal_not_filed`; S itself shows nothing; the ceiling is 22 (Story 6.28 OP14: 21 → 22)', async () => {
+    expect(VERIFIER_CONSOLE_MAX_READS).toBe(22);
     const w = await seedWorld();
     const refusedAt = new Date(); // ONE instant for the seed and the expectation (code review round 2 — 00:00 IST)
     const s = await refuseSibling(w, { decidedAt: refusedAt });

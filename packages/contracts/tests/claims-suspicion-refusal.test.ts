@@ -16,6 +16,9 @@ import {
   SUSPICION_APPEAL_WAIT_REASONS,
   SUSPICION_REFUSAL_APPEAL_POSITIONS,
   SuspicionRefusalSection,
+  OTHER_CLAIM_DEATH_DATES,
+  OTHER_CLAIM_STAGES,
+  OtherClaimsForDeathSection,
 } from '../src/claims/index.js';
 
 describe('Story 6.24a — the wire changes', () => {
@@ -83,5 +86,19 @@ describe('Story 6.24a — the wire changes', () => {
     expect(AdminAppealCaseResponse.safeParse({ ...base, suspicion_appeal_limit: null }).success).toBe(true);
     expect(AdminAppealCaseResponse.safeParse({ ...base, suspicion_appeal_limit: { appeal_until: '2026-12-30', passed: false } }).success).toBe(true);
     expect(AdminAppealCaseResponse.safeParse(base).success).toBe(false);
+  });
+
+  // ── Story 6.28 (OP14 (a)) ─────────────────────────────────────────────────────────────────────────────────────────
+  it('6.28 LOCKSTEP — the other-claims section\'s stages and date comparisons === the domain tuples', () => {
+    expect([...OTHER_CLAIM_STAGES]).toEqual([...claim.OTHER_CLAIM_STAGES]);
+    expect([...OTHER_CLAIM_DEATH_DATES]).toEqual([...claim.OTHER_CLAIM_DEATH_DATE_COMPARISONS]);
+  });
+
+  it('6.28 — the other-claims section is strict: ⛔ a name, ⛔ a date of death on the wire', () => {
+    const row = { reference: 'A1B2C3D4', stage: 'paid', filedAt: '2026-10-01T00:00:00.000Z', channels: ['helpline'], deathDate: 'different' };
+    const ok = { available: true, total: 1, claims: [row] };
+    expect(OtherClaimsForDeathSection.safeParse(ok).success).toBe(true);
+    expect(OtherClaimsForDeathSection.safeParse({ ...ok, claims: [{ ...row, name: 'X' }] }).success).toBe(false);
+    expect(OtherClaimsForDeathSection.safeParse({ ...ok, claims: [{ ...row, dateOfDeath: '2026-05-01' }] }).success).toBe(false);
   });
 });

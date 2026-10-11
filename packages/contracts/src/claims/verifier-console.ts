@@ -462,6 +462,38 @@ export const SuspicionRefusalSection = z
   .strict();
 export type SuspicionRefusalSection = z.output<typeof SuspicionRefusalSection>;
 
+/** OP14 (a)'s stages — in LOCKSTEP with the domain's `OTHER_CLAIM_STAGES` (contracts test). */
+export const OTHER_CLAIM_STAGES = ['open', 'passed_final_vote', 'paid', 'refused', 'under_appeal', 'closed'] as const;
+/** OP14 (a)'s date-of-death comparisons — in LOCKSTEP with the domain's `OTHER_CLAIM_DEATH_DATE_COMPARISONS`. */
+export const OTHER_CLAIM_DEATH_DATES = ['same', 'different', 'not_accepted', 'not_comparable'] as const;
+
+/**
+ * (l) THE OTHER CLAIMS FOR THIS DEATH — Story 6.28 (`2026-10-11-319` OP14 (a)). STAFF-ONLY, NON-PII: every OTHER claim of
+ * this death (capped — `total` says how many there are), each by its SHORT REFERENCE only (⛔ no name, ⛔ no note, ⛔ no
+ * filer, ⛔ no nominee), its stage in staff words, when / through which channel it was filed, and its date of death
+ * against THIS claim's by EQUALITY of the two accepted reviews' keyed index — the date itself is ⛔ never on the wire.
+ */
+export const OtherClaimsForDeathSection = z
+  .object({
+    /** `false` ⇒ the section could ⛔ not be read — the console says "could not be checked just now" (⛔ never silence). */
+    available: z.boolean(),
+    total: z.number().int().nonnegative(),
+    claims: z.array(
+      z
+        .object({
+          reference: z.string(),
+          stage: z.enum(OTHER_CLAIM_STAGES),
+          /** ISO-8601 instant the claim was filed. */
+          filedAt: z.string(),
+          channels: z.array(z.enum(['member_app', 'helpline', 'trustee_initiated'])),
+          deathDate: z.enum(OTHER_CLAIM_DEATH_DATES),
+        })
+        .strict(),
+    ),
+  })
+  .strict();
+export type OtherClaimsForDeathSection = z.output<typeof OtherClaimsForDeathSection>;
+
 export const VerifierConsolePacket = z
   .object({
     claimCaseId: z.string(),
@@ -485,6 +517,8 @@ export const VerifierConsolePacket = z
     groundInspectionGate: GroundInspectionGateStatus,
     // Story 6.24a (RF10) — NON-PII: kept apart from a refused claim of this death, and does the FINAL approval wait.
     suspicionRefusal: SuspicionRefusalSection,
+    // Story 6.28 (OP14 (a)) — STAFF-ONLY, NON-PII: the other claims for this death, by reference.
+    otherClaimsForDeath: OtherClaimsForDeathSection,
     // Story 6.23a (NW8) — NON-PII: which nominee-change warnings show, and the Pariwar's warning reasons.
     approvalWarnings: ApprovalWarningsStatus,
   })

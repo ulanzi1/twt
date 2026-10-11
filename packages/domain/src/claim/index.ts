@@ -94,6 +94,9 @@ export * from './nominee-refusal-read.js';
 // Story 6.24a (`2026-10-07-292` RF1, RF5, RF14, RF15) — "a suspicion refusal STANDS", once: the fragment, the per-death
 // read, the FINAL-approval wait, the 90-day appeal limit and the per-death keys. Read-only (⛔ never reaches `events.ts`).
 export * from './suspicion-refusal.js';
+// Story 6.28 (`2026-10-11-319` OP1) — "one payment per death", once: the three state lists, the fragments (another finally
+// approved / payment-committed / open claim of the death) and the thin reads. Read-only (⛔ never reaches `events.ts`).
+export * from './one-payment-per-death.js';
 // Story 6.24a (RF6) — the CLOSURE writer (`closeClaimsHeldBySuspicionAppeal`, called by the three reversal writers) and the
 // per-death reversal key; and the two leaves it needs without an import cycle (`appeal-lock.ts` is re-exported through
 // `appeal-persist.ts`, `appeal-panel-session.ts` through `appeal-panel-persist.ts`).

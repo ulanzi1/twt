@@ -16,6 +16,8 @@
 //         "Close this claim" action: with the death PAID on another claim it closes this claim and every other closable
 //         open claim (`death_already_finally_approved`); with the other only voted, or the claim keeping its appeal, 200
 //         `{ this_claim_closed: false, closed_count: 0 }` and ⛔ no change; a lock timeout 503; unknown 404; ⛔ `cycle.freeze` 403.
+//   AC11 (d) — the ground-inspection read carries `otherClaimsForDeath` (count, references + stages, the visit booleans —
+//         ⛔ a name, ⛔ a date, ⛔ an id) ONLY for a caller holding an in-scope assignment of THIS claim; else `null`.
 //   AC10 — the window is gone (OP11): a 40-day-old OPEN claim takes a cross-channel filing as a `pending` attempt and
 //         `confirmMerge` accepts the merge into it (the candidate, the strip and the merge agree on a single candidate).
 // A world per test in a FRESH Pariwar; X is seeded through the projector.
@@ -711,5 +713,30 @@ describe.skipIf(!hasDatabase)('Story 6.28 — one payment per death through HTTP
     const da = await staff(w.pariwarId, 'district_admin');
     const forbidden = await da.client.inject({ method: 'POST', url: closeUrl(w.pariwarId, w.claimCaseId), payload: {} });
     expect(forbidden.statusCode, forbidden.body).toBe(403);
+  });
+
+  // ── AC11 (d) — the ground inspector ──────────────────────────────────────────────────────────────────────────
+  it('AC11 (d) — the inspector\'s read: the other claims by reference + stage with an in-scope assignment; `null` without one', async () => {
+    const w = await seedWorld();
+    const xid = await siblingAt(w, 'approved');
+    const da = await staff(w.pariwarId, 'district_admin');
+    const giUrl = `${claimBase(w.pariwarId, w.claimCaseId)}/ground-inspection?district=${DISTRICT}`;
+    // A District Admin of ANOTHER district: the read is allowed under ITS locator, but holds ⛔ no in-scope assignment of
+    // THIS claim ⇒ `null` (⛔ ever derived from the locator alone).
+    const gaya = await authenticate('Ganga (District Admin, Gaya)');
+    await td.pool.query(`INSERT INTO role_grants (user_id, pariwar_id, role, scope_dimension, scope_value) VALUES ($1, $2, 'district_admin', 'district', 'Gaya')`, [
+      gaya.userId, w.pariwarId,
+    ]);
+    await gaya.client.inject({ method: 'POST', url: '/api/v1/auth/scope', payload: { pariwarId: w.pariwarId } });
+    const outside = await gaya.client.inject({ method: 'GET', url: `${claimBase(w.pariwarId, w.claimCaseId)}/ground-inspection?district=Gaya` });
+    expect(outside.statusCode, outside.body).toBe(200);
+    expect(outside.json()).toMatchObject({ assignments: [], otherClaimsForDeath: null });
+    // The Patna District Admin holds the claim's (fixture) assignment in scope ⇒ the section.
+    const res = await da.client.inject({ method: 'GET', url: giUrl });
+    expect(res.statusCode, res.body).toBe(200);
+    expect((res.json() as { otherClaimsForDeath: unknown }).otherClaimsForDeath).toEqual({
+      count: 1, claims: [{ reference: claim.claimShortReference(xid), stage: 'paid' }], visitedElsewhere: false, alreadyVisited: false,
+    });
+    expect(res.body.toLowerCase()).not.toContain(xid.toLowerCase());
   });
 });

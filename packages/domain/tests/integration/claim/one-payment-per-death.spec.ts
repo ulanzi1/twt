@@ -19,6 +19,7 @@ import {
   OTHER_CLAIMS_FOR_DEATH_CAP,
   commitCycleFreeze,
   readFinallyApprovedElsewhereBulk,
+  readOtherClaimVisits,
   readOtherClaimsForDeath,
   otherClaimInStatesSql,
   otherOpenClaimForDeathExistsSql,
@@ -30,7 +31,7 @@ import {
 import { memberId as toMemberId, pariwarId as toPariwarId } from '../../../src/ids/index.js';
 import type { ClaimId, CycleFreezeCommitId, PariwarId } from '../../../src/ids/index.js';
 import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
-import { PARIWAR_A, PARIWAR_B, enterAppScope, seedAcceptedDeathCertificate, seedNomineeNameCheck } from '../_helpers.js';
+import { PARIWAR_A, PARIWAR_B, enterAppScope, seedAcceptedDeathCertificate, seedGroundInspection, seedNomineeNameCheck } from '../_helpers.js';
 import { claimAt, type FixtureState } from './_one-payment-fixtures.js';
 import { refusedClaim } from './_suspicion-refusal-fixtures.js';
 
@@ -300,6 +301,39 @@ describe.skipIf(!hasDatabase)('Story 6.28 — one payment per death: OP1 + OP3 (
       expect(out.get(lone)).toBeNull();
       expect(out.get(voted)).toBeNull();
       expect(out.size).toBe(4);
+    });
+  });
+
+  describe('AC11 (d) — the inspector\'s "already visited" (OP14)', () => {
+    async function withCert(client: ReturnType<typeof getTx>['client'], mid: ReturnType<typeof toMemberId>, date: string) {
+      const cid = await claimAt(client, PARIWAR_A, mid, 'verifier_review');
+      await seedAcceptedDeathCertificate(client, { pariwarId: PARIWAR_A, claimCaseId: cid, date });
+      return cid;
+    }
+
+    it('⛔ another visit ⇒ both false; a FULL visit on another claim ⇒ visitedElsewhere; with THIS claim\'s date ⇒ alreadyVisited', async () => {
+      const { client, tx } = getTx();
+      const mid = toMemberId(randomUUID());
+      const self = await withCert(client, mid, '2026-05-01');
+      expect(await readOtherClaimVisits(tx, PARIWAR_A, self)).toEqual({ visitedElsewhere: false, alreadyVisited: false });
+      const other = await withCert(client, mid, '2026-05-01');
+      await seedGroundInspection(client, PARIWAR_A, other, { force: true, deathDate: '2026-04-02' });
+      expect(await readOtherClaimVisits(tx, PARIWAR_A, self)).toEqual({ visitedElsewhere: true, alreadyVisited: false });
+      const third = await withCert(client, mid, '2026-05-01');
+      await seedGroundInspection(client, PARIWAR_A, third, { force: true, deathDate: '2026-05-01' });
+      expect(await readOtherClaimVisits(tx, PARIWAR_A, self)).toEqual({ visitedElsewhere: true, alreadyVisited: true });
+    });
+
+    it('a CERTIFICATE CHECK elsewhere is ⛔ a visit; THIS claim with ⛔ accepted certificate ⇒ ⛔ alreadyVisited', async () => {
+      const { client, tx } = getTx();
+      const mid = toMemberId(randomUUID());
+      const self = await claimAt(client, PARIWAR_A, mid, 'verifier_review');
+      const other = await withCert(client, mid, '2026-05-01');
+      await seedGroundInspection(client, PARIWAR_A, other, { force: true, stage: 'certificate_check', deathDate: '2026-05-01' });
+      expect(await readOtherClaimVisits(tx, PARIWAR_A, self)).toEqual({ visitedElsewhere: false, alreadyVisited: false });
+      const full = await withCert(client, mid, '2026-05-01');
+      await seedGroundInspection(client, PARIWAR_A, full, { force: true, deathDate: '2026-05-01' });
+      expect(await readOtherClaimVisits(tx, PARIWAR_A, self)).toEqual({ visitedElsewhere: true, alreadyVisited: false });
     });
   });
 });

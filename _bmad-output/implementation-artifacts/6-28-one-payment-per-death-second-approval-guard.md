@@ -671,7 +671,7 @@ null`; the admin client's schema carries the fields (a test against the REAL cli
 - [x] **Task 5 — OP5 (AC5).** The kind (+ contracts mirror — run its vitest, [[project_contracts_tests_outside_tsc]]), the embedded fragment in
       both readers + the single = bulk test, the `lateArm` fourth disjunct (+ the fault-path leg), the label, the pinned test bumped with a
       reason, the late-wait leg, the vanish / reappear legs.
-- [ ] **Task 5b — OP11 (AC10).** Drop the window at the three mirrored sites + delete the constant; re-word the comments and the strip note;
+- [x] **Task 5b — OP11 (AC10).** Drop the window at the three mirrored sites + delete the constant; re-word the comments and the strip note;
       rewrite `icp.spec.ts:185` and the strip test; the AC10 legs (live DB, separate COMMITTED transactions for the aged claim).
 - [ ] **Task 5c — OP14 (AC11).** The console section (contract + handler + `SignalsPanel`), the `finally_approved_elsewhere` field on the
       freeze / R9 / closure reads + banners + disabled final approve, the 409 arms; staff copy in `apps/admin` i18n; the no-ciphertext and

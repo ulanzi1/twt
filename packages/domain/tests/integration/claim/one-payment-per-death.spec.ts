@@ -3,6 +3,9 @@
 //   AC1 — one definition (OP1): the two thin reads never return the claim itself, a claim of another death or another
 //         Pariwar, and return the LOWEST id when (legacy) two qualify; the open fragment excludes terminal claims, finally
 //         approved claims and every claim on which RF1 stands, and is EMPTY on a claim on which RF1 stands itself.
+//   AC3 — the commit (OP3): a `state_trustee_approved` candidate whose death already has an `approved` / `settled` claim (this
+//         run or an earlier cycle) is SKIPPED AND KEPT; a legacy two-voted pair ⇒ the lower id is committed, the other is
+//         then skipped and stays `state_trustee_approved`; distinct deaths are unaffected; the result shape is unchanged.
 
 import { randomUUID } from 'node:crypto';
 
@@ -10,6 +13,7 @@ import { sql } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
 import {
+  commitCycleFreeze,
   otherClaimInStatesSql,
   otherOpenClaimForDeathExistsSql,
   otherOpenClaimsForDeathSql,
@@ -17,17 +21,17 @@ import {
   readPaymentCommittedClaim,
   FINALLY_APPROVED_CLAIM_STATES,
 } from '../../../src/claim/index.js';
-import { memberId as toMemberId } from '../../../src/ids/index.js';
-import type { ClaimId } from '../../../src/ids/index.js';
+import { memberId as toMemberId, pariwarId as toPariwarId } from '../../../src/ids/index.js';
+import type { ClaimId, CycleFreezeCommitId, PariwarId } from '../../../src/ids/index.js';
 import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
-import { PARIWAR_A, PARIWAR_B } from '../_helpers.js';
+import { PARIWAR_A, PARIWAR_B, enterAppScope } from '../_helpers.js';
 import { claimAt, type FixtureState } from './_one-payment-fixtures.js';
 import { refusedClaim } from './_suspicion-refusal-fixtures.js';
 
 const LOW = '00000000-0000-4000-8000-0000000000a1';
 const HIGH = 'ffffffff-ffff-4fff-8fff-0000000000a2';
 
-describe.skipIf(!hasDatabase)('Story 6.28 — one payment per death: OP1 (:5433)', { timeout: 20000 }, () => {
+describe.skipIf(!hasDatabase)('Story 6.28 — one payment per death: OP1 + OP3 (:5433)', { timeout: 20000 }, () => {
   setupLiveDb();
 
   async function openOf(cid: ClaimId): Promise<{ list: string[]; exists: boolean }> {
@@ -144,6 +148,69 @@ describe.skipIf(!hasDatabase)('Story 6.28 — one payment per death: OP1 (:5433)
       const open1 = await claimAt(client, PARIWAR_A, mid, 'verifier_review');
       expect(await openOf(s)).toEqual({ list: [open1], exists: true });
       expect(await openOf(open1)).toEqual({ list: [], exists: false });
+    });
+  });
+
+  describe('AC3 — the commit re-check (OP3)', () => {
+    const TRUSTEE = 'f8f8f8f8-0000-4000-8000-000000000003';
+    const commit = (client: ReturnType<typeof getTx>['client'], pid: PariwarId) =>
+      commitCycleFreeze(client, {
+        pariwarId: pid, commitId: randomUUID() as unknown as CycleFreezeCommitId, actorId: TRUSTEE, actorDisplay: 'Trustee One', actor: 'trustee',
+      });
+    const stateOf = async (cid: ClaimId) =>
+      (await getTx().client.query<{ s: string }>('SELECT current_state::text AS s FROM claims WHERE claim_case_id = $1', [cid])).rows[0]!.s;
+    /** A FRESH Pariwar — the commit's candidate set is Pariwar-wide. */
+    async function freshScope(): Promise<PariwarId> {
+      const pid = toPariwarId(randomUUID());
+      await enterAppScope(getTx().client, pid);
+      return pid;
+    }
+
+    for (const paid of ['approved', 'settled'] as const) {
+      it(`a candidate whose death already has an \`${paid}\` claim (an earlier cycle) is skipped AND KEPT; another death's candidate commits`, async () => {
+        const { client } = getTx();
+        const pid = await freshScope();
+        const mid = toMemberId(randomUUID());
+        await claimAt(client, pid, mid, paid);
+        const y = await claimAt(client, pid, mid, 'state_trustee_approved');
+        const other = await claimAt(client, pid, toMemberId(randomUUID()), 'state_trustee_approved');
+        const out = await commit(client, pid);
+        expect(Object.keys(out).sort()).toEqual(['commit', 'committedClaimIds', 'idempotentReplay']);
+        expect(out.committedClaimIds).toEqual([other]);
+        expect(await stateOf(y)).toBe('state_trustee_approved');
+        expect(await stateOf(other)).toBe('approved');
+      });
+    }
+
+    it('the legacy two-voted pair of ONE death ⇒ the LOWER id is committed IN THIS RUN, the other is then skipped and kept', async () => {
+      const { client } = getTx();
+      const pid = await freshScope();
+      const mid = toMemberId(randomUUID());
+      const high = await claimAt(client, pid, mid, 'state_trustee_approved', { claimCaseId: HIGH });
+      const low = await claimAt(client, pid, mid, 'state_trustee_approved', { claimCaseId: LOW });
+      const out = await commit(client, pid);
+      expect(out.committedClaimIds).toEqual([low]);
+      expect(await stateOf(low)).toBe('approved');
+      expect(await stateOf(high)).toBe('state_trustee_approved');
+      // A later run still skips it (R1 — recorded, ⛔ not addressed here).
+      expect((await commit(client, pid)).committedClaimIds).toEqual([]);
+    });
+
+    it('two voted claims of DISTINCT deaths both commit (⛔ no cross-death effect)', async () => {
+      const { client } = getTx();
+      const pid = await freshScope();
+      const a = await claimAt(client, pid, toMemberId(randomUUID()), 'state_trustee_approved');
+      const b = await claimAt(client, pid, toMemberId(randomUUID()), 'state_trustee_approved');
+      expect((await commit(client, pid)).committedClaimIds.sort()).toEqual([a, b].sort());
+    });
+
+    it('a death whose other claim only PASSED THE VOTE does ⛔ not hold the commit (payment-committed only)', async () => {
+      const { client } = getTx();
+      const pid = await freshScope();
+      const mid = toMemberId(randomUUID());
+      // Both voted (legacy) — the FIRST in id order commits; nothing earlier blocks it.
+      const low = await claimAt(client, pid, mid, 'state_trustee_approved', { claimCaseId: LOW });
+      expect((await commit(client, pid)).committedClaimIds).toEqual([low]);
     });
   });
 });

@@ -660,7 +660,7 @@ null`; the admin client's schema carries the fields (a test against the REAL cli
       live-DB legs.
 - [x] **Task 2 — OP2 (AC2, AC7 race).** The conjunct after RF5's, the typed error, the four translators (incl. the defensive verifier-decision
       one), the console copy; the gate-order spec gains the new position; the R9-deny leg; the OP8 two-connection race, red-checked.
-- [ ] **Task 3 — OP3 (AC3).** The commit re-check after `:1339`; legs incl. the legacy two-`state_trustee_approved` seed and an earlier
+- [x] **Task 3 — OP3 (AC3).** The commit re-check after `:1339`; legs incl. the legacy two-`state_trustee_approved` seed and an earlier
       cycle's `approved` claim.
 - [ ] **Task 4 — OP4 + OP13 (AC4, AC9).** OP13 FIRST: `CLAIM_NOT_CLOSABLE_STATES` + its comments, the two flipped 6.24a legs (with the
       author-commit cited), the closable-count pin, AC9's legs incl. the two-connection leg. Then extract RF6's core (three keys → row; RF6's

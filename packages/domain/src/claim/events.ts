@@ -644,12 +644,24 @@ export const ClaimDeniedNoAppealPayloadSchema = requireIdentityTransition({
 });
 
 /**
- * ⭐ Story 6.24a (`2026-10-07-292` RF4, `-262` FQ5 A — the 36th claim event): another claim of the same death was refused on
- * suspicion of a post-death nominee change and its appeal was ALLOWED ⇒ this claim is CLOSED. A TRANSITION (⛔ not an
- * annotation): every CLOSABLE state → `closed` (`isClaimClosable` — every state but `settled`, `approved`,
- * `state_trustee_approved` and `closed` itself). ⛔ Not a denial, ⛔ not appealable, ⛔ never a 6.19c closures row, ⛔ never
- * `denied_no_appeal`. Emitted ONLY by `closeClaimsHeldBySuspicionAppeal`, in the reversal's own transaction.
- * `held_by_claim_case_id` = the reversed claim. Non-PII.
+ * The two reasons a claim is CLOSED (`claim.closed`'s `trigger`):
+ *   · `suspicion_appeal_allowed` — Story 6.24a RF4 / RF6: another claim of the death won its suspicion appeal;
+ *   · `death_already_finally_approved` — Story 6.28 OP4 (`2026-10-11-318` Q1 A): another claim of the death's PAYMENT is
+ *     committed (`held_by_claim_case_id` = that claim). ⛔ NEVER texted (Q3 A) — the `-291` Q2 B closure text selects
+ *     `suspicion_appeal_allowed` ONLY (`suspicion-notice.ts`).
+ */
+export const CLAIM_CLOSED_TRIGGERS = ['suspicion_appeal_allowed', 'death_already_finally_approved'] as const;
+export type ClaimClosedTrigger = (typeof CLAIM_CLOSED_TRIGGERS)[number];
+
+/**
+ * ⭐ Story 6.24a (`2026-10-07-292` RF4, `-262` FQ5 A — the 36th claim event): this claim is CLOSED — another claim of the
+ * same death was refused on suspicion of a post-death nominee change and its appeal was ALLOWED, or (Story 6.28 OP4,
+ * `2026-10-11-319`) another claim of the death's payment is committed (`trigger`, `CLAIM_CLOSED_TRIGGERS`). A TRANSITION
+ * (⛔ not an annotation): every CLOSABLE state → `closed` (`isClaimClosable` — every state but `settled`, `approved` and
+ * `closed` itself; Story 6.28 OP13 made `state_trustee_approved` closable). ⛔ Not a denial, ⛔ not appealable, ⛔ never a
+ * 6.19c closures row, ⛔ never `denied_no_appeal`. Emitted ONLY through the closure core in `suspicion-refusal-persist.ts`
+ * (`closeClaimsHeldBySuspicionAppeal`, `closeClaimsOfPaidDeath`, `closeClaimIfDeathPaid`). `held_by_claim_case_id` = the
+ * reversed claim / the payment-committed claim. ⛔ Not a new event — `CLAIM_EVENT_TYPES` stays 36. Non-PII.
  * PINNED SEAM (the `claim.settled` precedent): it UNFREEZES this claim's stream in the account-frozen overlay
  * (`member/overlay.ts` ACCOUNT_UNFREEZE_EVENT_TYPES), whose query matches by `payload ->> 'deceased_member_id'` — so it
  * MUST carry `deceased_member_id` (an id, ⛔ no PII). The member stays frozen while the reversed claim is live.
@@ -658,7 +670,7 @@ export const ClaimClosedPayloadSchema = z
   .object({
     ...auditShape,
     to_state: z.literal('closed'),
-    trigger: z.literal('suspicion_appeal_allowed'),
+    trigger: z.enum(CLAIM_CLOSED_TRIGGERS),
     held_by_claim_case_id: z.string().uuid(),
     deceased_member_id: z.string().uuid(),
   })

@@ -56,6 +56,7 @@ import { projectClaimState } from './project.js';
 import { intakeAdvisoryLockKey } from './icp-lock.js';
 import { CLAIM_TERMINAL_STATES } from './read.js';
 import { assertRefileAllowed, consumeRefileConfirmation } from './refile-guard.js';
+import { closeClaimIfDeathPaid } from './suspicion-refusal-persist.js';
 import { standingSuspicionRefusalSql } from './suspicion-refusal.js';
 
 /**
@@ -364,10 +365,22 @@ export async function tryConverge(
       resolvedAt: new Date(),
     });
 
+    // ⭐ Story 6.28 OP4 H(ii) (`2026-10-11-319`) — a claim minted for a death whose payment is already committed is CLOSED
+    // here, IN the mint's transaction (SELF-MODE — this writer holds the intake key and the new claim; ⛔ never a second
+    // transaction: the helpline intake commits in `onSend`, Trap 2). ⛔ Not when RF5's wait holds it (OP4 (d)). The
+    // response then reads `closed` (⛔ no new response field — both intake responses are `.strict()`).
+    const closedAtMint = await closeClaimIfDeathPaid(client, {
+      pariwarId: input.pariwarId,
+      claimCaseId,
+      actor: input.actor,
+      actorId: input.actorId,
+      ...(input.auditId !== undefined ? { auditId: input.auditId } : {}),
+    });
+
     return {
       claimCaseId: String(claimCaseId),
       intakeAttemptId: attemptId,
-      state: converged.state,
+      state: closedAtMint ? 'closed' : converged.state,
       minted: true,
       convergencePending: false,
     };
@@ -657,5 +670,15 @@ export async function overrideIntakeAttempt(
     })
     .where(eq(intakeAttempts.intakeAttemptId, input.intakeAttemptId));
 
-  return { newClaimCaseId: String(newClaimCaseId), state: converged.state };
+  // ⭐ Story 6.28 OP4 H(ii) — as `tryConverge`'s mint: SELF-MODE close, IN this (request) transaction, when the death's
+  // payment is already committed (the paid claim was overridden apart, or is `settled`).
+  const closedAtMint = await closeClaimIfDeathPaid(client, {
+    pariwarId: input.pariwarId,
+    claimCaseId: newClaimCaseId,
+    actor: input.actor,
+    actorId: input.decidedByActor,
+    ...(input.auditId !== undefined ? { auditId: input.auditId } : {}),
+  });
+
+  return { newClaimCaseId: String(newClaimCaseId), state: closedAtMint ? 'closed' : converged.state };
 }

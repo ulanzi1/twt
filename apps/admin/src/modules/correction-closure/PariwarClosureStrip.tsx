@@ -25,6 +25,7 @@ import {
   resolvedWarningReasonCode,
 } from '../claim-verification/LaterApprovalWarnings.js';
 import { verifierConsoleEn } from '../claim-verification/i18n-en.js';
+import { FinallyApprovedElsewhereBanner } from '../cycle-freeze/FinallyApprovedElsewhereBanner.js';
 import { closureErrorText } from './errors.js';
 import { correctionClosureEn as t } from './i18n-en.js';
 
@@ -250,6 +251,13 @@ export function NoCorrectionStrip({
 
   return (
     <div className="mt-2 flex flex-col gap-1 border-t p-2" data-testid={`no-correction-strip-${item.claim_case_id}`}>
+      {/* ⭐ Story 6.28 (OP14 (b)) — another claim of this death passed the final vote / is paid ⇒ this approve is disabled. */}
+      <FinallyApprovedElsewhereBanner
+        elsewhere={item.finally_approved_elsewhere}
+        pariwarId={pariwarId}
+        claimCaseId={item.claim_case_id}
+        canClose
+      />
       <p className="text-xs">{item.checked_after_record === true ? n.checkedAfter : n.notChecked}</p>
       {summary !== null ? (
         <LaterApprovalWarnings
@@ -291,7 +299,7 @@ export function NoCorrectionStrip({
       <button
         type="button"
         className="self-start rounded border px-3 py-1"
-        disabled={approve.isPending || item.checked_after_record !== true || approveBlocked !== null}
+        disabled={approve.isPending || item.checked_after_record !== true || approveBlocked !== null || item.finally_approved_elsewhere !== null}
         // Code review 2026-10-06 (P33): both reasons can hold at once — join them rather than picking one.
         aria-describedby={
           [approveBlocked !== null ? `${pickerPrefix}-approval-blocked` : null, item.checked_after_record !== true ? `${noteId}-check` : null]

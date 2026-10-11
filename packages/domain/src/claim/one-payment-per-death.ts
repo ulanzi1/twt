@@ -307,3 +307,52 @@ export async function readOtherClaimsForDeath(db: Db, pariwarId: PariwarId, clai
     })),
   };
 }
+
+// ── OP14 (b) — "finally approved elsewhere", for the approval surfaces (bulk) ───────────────────────────────────────
+
+export interface FinallyApprovedElsewhere {
+  readonly claimCaseId: ClaimId;
+  /** `passed_final_vote` ⇒ this claim cannot be finally approved; `paid` ⇒ it should be closed ("Close this claim"). */
+  readonly stage: 'passed_final_vote' | 'paid';
+}
+
+const ELSEWHERE_SLICE = 500;
+
+/**
+ * ⭐ OP14 (b) — for MANY claims, the other claim of each one's death that is FINALLY approved (OP1's
+ * `otherClaimInStatesSql` — the lowest id), and its stage, in ONE statement per slice of ≤ 500 ids (⛔ never a per-claim
+ * query — the bulk-read rule of OP5). Keys are lower-case claim ids; a claim with ⛔ none maps to `null`; a claim ⛔ in
+ * this Pariwar is absent. Decision SUPPORT only — OP2's gate is the control (a forced request still meets the 409).
+ */
+export async function readFinallyApprovedElsewhereBulk(
+  db: Db,
+  pariwarId: PariwarId,
+  claimCaseIds: readonly string[],
+): Promise<Map<string, FinallyApprovedElsewhere | null>> {
+  const out = new Map<string, FinallyApprovedElsewhere | null>();
+  const unique = [...new Set(claimCaseIds.map((id) => id.toLowerCase()))];
+  for (let i = 0; i < unique.length; i += ELSEWHERE_SLICE) {
+    const slice = unique.slice(i, i + ELSEWHERE_SLICE);
+    const result = await db.execute<{ claim_case_id: string; other: string | null; other_state: string | null }>(sql`
+      SELECT op_c.claim_case_id::text AS claim_case_id, op_x.claim_case_id::text AS other, op_x.current_state::text AS other_state
+        FROM claims op_c
+        LEFT JOIN claims op_x
+          ON op_x.pariwar_id = op_c.pariwar_id
+         AND op_x.claim_case_id = (${otherClaimInStatesSql('op_c', FINALLY_APPROVED_CLAIM_STATES)})::uuid
+       WHERE op_c.pariwar_id = ${pariwarId}
+         AND op_c.claim_case_id IN (${sql.join(slice.map((id) => sql`${id}::uuid`), sql`, `)})
+    `);
+    for (const r of result.rows ?? []) {
+      out.set(
+        r.claim_case_id.toLowerCase(),
+        r.other === null
+          ? null
+          : {
+              claimCaseId: r.other.toLowerCase() as ClaimId,
+              stage: (PAYMENT_COMMITTED_CLAIM_STATES as readonly string[]).includes(r.other_state ?? '') ? 'paid' : 'passed_final_vote',
+            },
+      );
+    }
+  }
+  return out;
+}

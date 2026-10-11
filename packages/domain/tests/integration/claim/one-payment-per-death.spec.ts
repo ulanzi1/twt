@@ -18,6 +18,7 @@ import { describe, expect, it } from 'vitest';
 import {
   OTHER_CLAIMS_FOR_DEATH_CAP,
   commitCycleFreeze,
+  readFinallyApprovedElsewhereBulk,
   readOtherClaimsForDeath,
   otherClaimInStatesSql,
   otherOpenClaimForDeathExistsSql,
@@ -280,6 +281,25 @@ describe.skipIf(!hasDatabase)('Story 6.28 — one payment per death: OP1 + OP3 (
       const out = await readOtherClaimsForDeath(tx, PARIWAR_A, self);
       expect(out.total).toBe(OTHER_CLAIMS_FOR_DEATH_CAP + 2);
       expect(out.claims).toHaveLength(OTHER_CLAIMS_FOR_DEATH_CAP);
+    });
+  });
+
+  describe('AC11 (b) — "finally approved elsewhere", in bulk (OP14)', () => {
+    it('voted ⇒ `passed_final_vote`; paid ⇒ `paid`; ⛔ none ⇒ null; the claim itself ⛔ never; ⛔ another Pariwar absent', async () => {
+      const { client, tx } = getTx();
+      const m1 = toMemberId(randomUUID());
+      const voted = await claimAt(client, PARIWAR_A, m1, 'state_trustee_approved');
+      const y1 = await claimAt(client, PARIWAR_A, m1, 'verifier_approved');
+      const m2 = toMemberId(randomUUID());
+      const paid = await claimAt(client, PARIWAR_A, m2, 'approved');
+      const y2 = await claimAt(client, PARIWAR_A, m2, 'verifier_review');
+      const lone = await claimAt(client, PARIWAR_A, toMemberId(randomUUID()), 'verifier_approved');
+      const out = await readFinallyApprovedElsewhereBulk(tx, PARIWAR_A, [y1, y2.toUpperCase(), lone, voted, randomUUID()]);
+      expect(out.get(y1)).toEqual({ claimCaseId: voted, stage: 'passed_final_vote' });
+      expect(out.get(y2)).toEqual({ claimCaseId: paid, stage: 'paid' });
+      expect(out.get(lone)).toBeNull();
+      expect(out.get(voted)).toBeNull();
+      expect(out.size).toBe(4);
     });
   });
 });

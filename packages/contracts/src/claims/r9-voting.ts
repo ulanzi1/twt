@@ -23,6 +23,7 @@ import { z } from 'zod';
 import { NomineeNameClericalReason } from './nominee-name-check.js';
 // Story 6.23b — a zod-only leaf (⛔ no sibling import), so this cannot close a cycle.
 import { ApprovalWarningReasonOption, ApprovalWarningsSummary, WarningReasonCode } from './verification-decision.js';
+import { FinallyApprovedElsewhere } from './one-payment-per-death.js';
 
 // ── R9 vocabulary wire mirror (value-aligned with @twt/domain) ──────────────────────────────
 
@@ -194,6 +195,8 @@ export const R9PanelResponse = z
     name_difference_reasons: z.array(NomineeNameClericalReason),
     /** ⭐ Story 6.23b (EA7) — the warnings, the wait judged for the viewer AND every live approve voter. */
     approval_warnings: ApprovalWarningsSummary,
+    /** ⭐ Story 6.28 (OP14 (b)) — another claim of this death passed the final vote / is paid (by REFERENCE), or `null`. */
+    finally_approved_elsewhere: FinallyApprovedElsewhere.nullable(),
     /** ⭐ Story 6.23b (EA7) — the Pariwar's ACTIVE warning reasons (the generic first). */
     reason_options: z.array(ApprovalWarningReasonOption),
   })

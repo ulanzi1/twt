@@ -28,6 +28,7 @@
 
 import {
   type CycleFreezeCommitRequest,
+  type CloseForPaidDeathResponse,
   type CycleFreezeCommitResponse,
   type CycleFreezeDecisionRequest,
   type CycleFreezeDecisionResponse,
@@ -44,6 +45,7 @@ import {
   BadRequestError,
   ConflictError,
   NotFoundError,
+  ServiceUnavailableError,
   UnauthorizedError,
 } from '../../http-errors.js';
 import type { AuthAuditEventType } from '../../audit/audit-sink.js';
@@ -51,7 +53,12 @@ import { emitAuthAudit } from '../auth/shared/audit.js';
 import { getDisplayName } from '../auth/admin/admin-auth.repo.js';
 import { geoTreeResolverForRequest, loadActorGrants } from '../rbac/index.js';
 import { closeScopeTx, openScopeTx } from '../multi-tenant/scope-tx.js';
-import { closeClaimsAfterFinalStop, closeClaimsOfPaidDeathInOwnTx } from './close-claims-of-paid-death.js';
+import {
+  closeClaimsAfterFinalStop,
+  closeClaimsOfPaidDeathForClaim,
+  closeClaimsOfPaidDeathInOwnTx,
+  readFinallyApprovedElsewhereDtos,
+} from './close-claims-of-paid-death.js';
 import { encryptOptionalTrusteeRationale } from './state-trustee-decision-crypto.js';
 import { decryptVerifierRationale } from './verifier-decision-crypto.js';
 import {
@@ -341,6 +348,8 @@ export function createCycleFreezeHandlers(
           );
           return null;
         });
+        // ⭐ Story 6.28 (OP14 (b)) — another claim of the death past its final vote / paid: ONE bulk statement.
+        const elsewhereOf = await readFinallyApprovedElsewhereDtos(tx.client, tx.tx, request.log, ctx.pariwarId, allCases.map((c) => c.claimCaseId));
         const warningsOf = (claimCaseId: string) => {
           const w = warnings?.byClaim.get(claimCaseId.toLowerCase());
           return w === undefined ? UNAVAILABLE_APPROVAL_WARNINGS : toApprovalWarningsSummary(w, [ctx.actorId]);
@@ -374,6 +383,7 @@ export function createCycleFreezeHandlers(
     name_difference_reasons: c.nameDifferenceReasons as ('initial' | 'married_name' | 'bank_shortened_name')[],
             approval_name_highlight: highlights.get(c.claimCaseId) ?? null,
             approval_warnings: warningsOf(c.claimCaseId),
+            finally_approved_elsewhere: elsewhereOf(c.claimCaseId),
           };
         };
         const ready_to_freeze = await Promise.all(pending.readyToFreeze.map(mapCase));
@@ -583,6 +593,38 @@ export function createCycleFreezeHandlers(
      * HANDLER fire the injected PoolSpawnTrigger (best-effort, outside the tx) then flip trigger_delivered.
      * A trigger failure NEVER rolls back the committed freeze; a re-submitted commit_id is a no-op replay.
      */
+    /**
+     * ⭐ Story 6.28 (`2026-10-11-319` OP14 (b)) — POST …/admin/cycle-freeze/claims/:claimCaseId/close-for-paid-death —
+     * "Close this claim": runs OP4's paid-death closure in its OWN transaction with `lock_timeout` (⛔ nothing of the claim
+     * is read in `request.scopeTx` — Fact 5), the HUMAN actor (`trustee`). `this_claim_closed: false` + ⛔ no change when
+     * ⛔ no payment is committed or the claim keeps its appeal / FQ5 holds it. A lock timeout ⇒ a retryable 503; an
+     * unknown / other-Pariwar claim ⇒ 404. ⛔ Never another claim's id in the body.
+     */
+    async postCloseForPaidDeath(request: FastifyRequest, reply: FastifyReply): Promise<CloseForPaidDeathResponse> {
+      const ctx = await contextOf(request);
+      const claimCaseId = ids.claimId((request.params as { claimCaseId: string }).claimCaseId);
+      const outcome = await closeClaimsOfPaidDeathForClaim(deps, request.log, {
+        pariwarId: ctx.pariwarId,
+        claimCaseId,
+        actor: 'trustee',
+        actorId: ctx.actorId,
+        site: 'cycle_freeze.close_for_paid_death',
+      });
+      if (outcome.kind === 'not_found') throw new NotFoundError('Claim not found', 'claim.not_found');
+      if (outcome.kind === 'lock_timeout') {
+        throw new ServiceUnavailableError('Busy — try again in a moment.', 'cycle_freeze.close_busy');
+      }
+      if (outcome.kind === 'failed') throw new Error('[cycle-freeze] close-for-paid-death failed');
+      const thisClaimClosed = outcome.result.closed.some((c) => c.toLowerCase() === claimCaseId.toLowerCase());
+      audit(request, 'admin_cycle_freeze.closed_for_paid_death', ctx, {
+        claim_case_id: claimCaseId,
+        this_claim_closed: thisClaimClosed,
+        closed_count: outcome.result.closed.length,
+      }, claimCaseId);
+      void reply.status(200);
+      return { this_claim_closed: thisClaimClosed, closed_count: outcome.result.closed.length };
+    },
+
     async postCommit(request: FastifyRequest, reply: FastifyReply): Promise<CycleFreezeCommitResponse> {
       const ctx = await contextOf(request);
       const body = request.body as CycleFreezeCommitRequest;

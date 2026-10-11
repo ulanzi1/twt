@@ -754,6 +754,16 @@ export const verifierConsoleEn = {
   onePaymentPerDeath: {
     // The FINAL approvers' 409 (`cycle_freeze.` / `r9_voting.` / `closure.` / `verifier_decision.` `death_already_finally_approved`).
     approvalGate: 'Another claim for this death has already passed the final vote. This claim cannot be finally approved.',
+    // OP14 (b) — the banner on every approval surface (and, banner only, the District Admin's console). `{ref}` — the other
+    // claim's SHORT REFERENCE (⛔ a name, ⛔ an id).
+    bannerVoted: (ref: string) =>
+      `Another claim for this death (claim ${ref}) has passed the final vote. This claim cannot be finally approved, and may be closed when that payment is made.`,
+    bannerPaid: (ref: string) => `Another claim for this death (claim ${ref}) has been paid. This claim should be closed.`,
+    closeAction: 'Close this claim',
+    closed: 'Closed — another claim for this death goes ahead.',
+    notClosed: 'Not closed — it waits on another claim’s appeal or refusal.',
+    busy: 'Busy — try again in a moment.',
+    closeFailed: 'The claim could not be closed just now.',
   },
   groundInspectionGate: {
     complete: 'The ground inspection is complete for approval.',

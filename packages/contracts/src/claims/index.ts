@@ -90,3 +90,5 @@ export * from './concealment-assessment.js';
 // fields), and the member-facing appeal-status view. All enums re-declared value-aligned with the @twt/domain
 // appeal pgEnums (browser-bundle rule); a lockstep test pins them.
 export * from './appeal.js';
+// Story 6.28 (OP14 (b)) — one payment per death: the approval surfaces' `finally_approved_elsewhere` + the close action.
+export * from './one-payment-per-death.js';

@@ -12,6 +12,10 @@
 //   AC11 (a) — the verifier console's `otherClaimsForDeath` section: each other claim by REFERENCE, stage and date-of-death
 //         comparison (⛔ an id, a name or a date on the wire); ONE booked read, ONE statement (+ its SAVEPOINT); a failed
 //         read says "could not be checked" (`available: false`) and ⛔ never aborts the scope transaction.
+//   AC11 (b) — `finally_approved_elsewhere` on the freeze pending list and the R9 panel (by reference — ⛔ the id); the
+//         "Close this claim" action: with the death PAID on another claim it closes this claim and every other closable
+//         open claim (`death_already_finally_approved`); with the other only voted, or the claim keeping its appeal, 200
+//         `{ this_claim_closed: false, closed_count: 0 }` and ⛔ no change; a lock timeout 503; unknown 404; ⛔ `cycle.freeze` 403.
 //   AC10 — the window is gone (OP11): a 40-day-old OPEN claim takes a cross-channel filing as a `pending` attempt and
 //         `confirmMerge` accepts the merge into it (the candidate, the strip and the merge agree on a single candidate).
 // A world per test in a FRESH Pariwar; X is seeded through the projector.
@@ -314,6 +318,12 @@ describe.skipIf(!hasDatabase)('Story 6.28 — one payment per death through HTTP
     expect((await pa.client.inject({ method: 'POST', url: `${r9}/open`, payload: { clause_id: R9_CLAUSE, panel_actor_ids: [pa.userId] } })).statusCode).toBe(201);
     expect((await pa.client.inject({ method: 'POST', url: `${r9}/vote`, payload: { vote: 'approve', rationale: 'yes' } })).statusCode).toBe(201);
     const xid = await siblingAt(w, xState);
+    // OP14 (b) — the panel's read says so BEFORE the finalize (by reference — ⛔ the id).
+    const panel = await pa.client.inject({ method: 'GET', url: r9 });
+    expect(panel.statusCode, panel.body).toBe(200);
+    expect((panel.json() as { finally_approved_elsewhere: unknown }).finally_approved_elsewhere).toEqual({
+      claim_reference: claim.claimShortReference(xid), stage: paid ? 'paid' : 'passed_final_vote',
+    });
     await stepUp(pa, 'r9_finalize');
     expectStopped(await pa.client.inject({ method: 'POST', url: `${r9}/finalize`, payload: {} }), 'r9_voting', xid);
     await expectAfter(w.claimCaseId, xid, 'verification_in_progress');
@@ -624,5 +634,82 @@ describe.skipIf(!hasDatabase)('Story 6.28 — one payment per death through HTTP
       expect(await assembleOtherClaimsForDeath(broken, ids.claimId(w.claimCaseId), { bump: () => undefined })).toEqual({ available: false, total: 0, claims: [] });
       expect((await sc.client.query('SELECT 1 AS ok')).rows[0]).toEqual({ ok: 1 });
     });
+  });
+
+  // ── AC11 (b) — the field and "Close this claim" ────────────────────────────────────────────────────────────────
+  const closeUrl = (p: string, c: string) => `/api/v1/p/${p}/admin/cycle-freeze/claims/${c}/close-for-paid-death`;
+
+  it('AC11 (b) — the freeze pending list carries `finally_approved_elsewhere` by REFERENCE (voted ⇒ passed_final_vote)', async () => {
+    const w = await seedWorld();
+    const da = await staff(w.pariwarId, 'district_admin');
+    expect((await daApprove(da, w)).statusCode).toBe(201);
+    const xid = await siblingAt(w, 'state_trustee_approved');
+    const pa = await staff(w.pariwarId, 'pariwar_admin');
+    const res = await pa.client.inject({ method: 'GET', url: `/api/v1/p/${w.pariwarId}/admin/cycle-freeze/pending` });
+    expect(res.statusCode, res.body).toBe(200);
+    const body = res.json() as { ready_to_freeze: { claim_case_id: string; finally_approved_elsewhere: unknown }[]; voted_pending_commit: { claim_case_id: string; finally_approved_elsewhere: unknown }[] };
+    const y = body.ready_to_freeze.find((c) => c.claim_case_id === w.claimCaseId);
+    expect(y?.finally_approved_elsewhere).toEqual({ claim_reference: claim.claimShortReference(xid), stage: 'passed_final_vote' });
+    expect(body.voted_pending_commit.find((c) => c.claim_case_id === xid)?.finally_approved_elsewhere).toBeNull();
+    expect(res.body.toLowerCase().split(xid.toLowerCase()).length - 1, 'X\'s id appears only as its OWN row').toBe(1);
+  });
+
+  it('AC11 (b) — "Close this claim" with the death PAID closes this claim and every other closable open claim; audited', async () => {
+    const w = await seedWorld();
+    const xid = await siblingAt(w, 'approved');
+    const pa = await staff(w.pariwarId, 'pariwar_admin');
+    td.auditSink.events.length = 0;
+    const res = await pa.client.inject({ method: 'POST', url: closeUrl(w.pariwarId, w.claimCaseId), payload: {} });
+    expect(res.statusCode, res.body).toBe(200);
+    expect(res.json()).toEqual({ this_claim_closed: true, closed_count: 1 });
+    expect(res.body.toLowerCase()).not.toContain(xid.toLowerCase());
+    expect(await stateOf(w.claimCaseId)).toBe('closed');
+    expect(await closedTriggerOf(w.claimCaseId)).toEqual({ t: 'death_already_finally_approved', h: xid });
+    const line = td.auditSink.ofType('admin_cycle_freeze.closed_for_paid_death').at(-1);
+    expect(line?.context).toMatchObject({ this_claim_closed: true, closed_count: 1 });
+    // Idempotent — a second press changes ⛔ nothing.
+    const again = await pa.client.inject({ method: 'POST', url: closeUrl(w.pariwarId, w.claimCaseId), payload: {} });
+    expect(again.json()).toEqual({ this_claim_closed: false, closed_count: 0 });
+  });
+
+  it('AC11 (b) — the other claim only VOTED ⇒ 200 `{ false, 0 }`, ⛔ no change; a refused claim keeps its appeal ⇒ ⛔ closed', async () => {
+    const w = await seedWorld();
+    await siblingAt(w, 'state_trustee_approved');
+    const pa = await staff(w.pariwarId, 'pariwar_admin');
+    const res = await pa.client.inject({ method: 'POST', url: closeUrl(w.pariwarId, w.claimCaseId), payload: {} });
+    expect(res.statusCode, res.body).toBe(200);
+    expect(res.json()).toEqual({ this_claim_closed: false, closed_count: 0 });
+    expect(await stateOf(w.claimCaseId)).toBe('verification_in_progress');
+    const w2 = await seedWorld();
+    await inScope(w2.pariwarId, async (sc) => {
+      const emit = emitter(sc, w2.pariwarId, w2.memberId, w2.claimCaseId);
+      await emit('verification_in_progress', 'verifier_review', 'claim.verifier_reviewing');
+      await emit('verifier_review', 'denied', 'claim.verifier_denied');
+    });
+    await siblingAt(w2, 'approved');
+    const pa2 = await staff(w2.pariwarId, 'pariwar_admin');
+    const held = await pa2.client.inject({ method: 'POST', url: closeUrl(w2.pariwarId, w2.claimCaseId), payload: {} });
+    expect(held.json()).toEqual({ this_claim_closed: false, closed_count: 0 });
+    expect(await stateOf(w2.claimCaseId)).toBe('denied');
+  });
+
+  it('AC11 (b) — a lock timeout ⇒ 503 (retryable, its own words); unknown claim ⇒ 404; ⛔ `cycle.freeze` ⇒ 403', async () => {
+    const w = await seedWorld();
+    await siblingAt(w, 'approved');
+    const pa = await staff(w.pariwarId, 'pariwar_admin');
+    const release = await holdIntakeKey(w.pariwarId, w.memberId);
+    try {
+      const busy = await pa.client.inject({ method: 'POST', url: closeUrl(w.pariwarId, w.claimCaseId), payload: {} });
+      expect(busy.statusCode, busy.body).toBe(503);
+      expect(errOf(busy.body)).toMatchObject({ code: 'cycle_freeze.close_busy', message: 'Busy — try again in a moment.' });
+    } finally {
+      await release();
+    }
+    expect(await stateOf(w.claimCaseId)).toBe('verification_in_progress');
+    const missing = await pa.client.inject({ method: 'POST', url: closeUrl(w.pariwarId, randomUUID()), payload: {} });
+    expect(missing.statusCode, missing.body).toBe(404);
+    const da = await staff(w.pariwarId, 'district_admin');
+    const forbidden = await da.client.inject({ method: 'POST', url: closeUrl(w.pariwarId, w.claimCaseId), payload: {} });
+    expect(forbidden.statusCode, forbidden.body).toBe(403);
   });
 });

@@ -240,6 +240,7 @@ const closureQueueItem = (over: Partial<ClosureQueueItem> = {}): ClosureQueueIte
   family_run_day0: '2026-06-20',
   checked_after_record: null,
   held: false,
+  finally_approved_elsewhere: null,
   // Story 6.23b (RD20) — `null` EXACTLY on a closure request; a quiet block on a "no correction needed" item.
   approval_warnings:
     over.kind === 'no_correction_needed'
@@ -354,6 +355,7 @@ const detail = (over: Partial<EscalatedClosureDetailResponse> = {}): EscalatedCl
   family_part_done: false,
   name_check_state: 'does_not_match',
   approve_path: 'name_waived_251',
+  finally_approved_elsewhere: null,
   // Story 6.23b (EA7) — a quiet claim, and the Pariwar's list.
   approval_warnings: { available: true, kinds: [], post_death: 'evaluated', waiting_for_district_admin: false, own_reason_excluded: false },
   reason_options: [],

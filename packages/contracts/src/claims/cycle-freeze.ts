@@ -42,6 +42,7 @@ import { CorrectionMustAct } from './correction-chase.js';
 import { ApprovalNameHighlight } from './correction-closure.js';
 // Story 6.23b — `verification-decision.ts` imports ⛔ nothing but zod (a leaf), so this cannot close a cycle.
 import { ApprovalWarningReasonOption, ApprovalWarningsSummary, WarningReasonCode } from './verification-decision.js';
+import { FinallyApprovedElsewhere } from './one-payment-per-death.js';
 
 // ── Trustee decision vocabulary wire mirror (value-aligned with @twt/domain) ────────────────
 
@@ -154,6 +155,8 @@ export const CycleFreezePendingItem = z
     /** ⭐ Story 6.19c (`-273` §7) — a Super Admin approval made WITHOUT a current passing name check, or `null`. */
     approval_name_highlight: ApprovalNameHighlight.nullable(),
     /** ⭐ Story 6.23b (EA7) — the nominee-change warnings, as the viewing Pariwar Admin would approve over them. */
+    /** ⭐ Story 6.28 (OP14 (b)) — another claim of this death passed the final vote / is paid (by REFERENCE), or `null`. */
+    finally_approved_elsewhere: FinallyApprovedElsewhere.nullable(),
     approval_warnings: ApprovalWarningsSummary,
   })
   .strict();

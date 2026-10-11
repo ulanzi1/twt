@@ -743,6 +743,12 @@ describe('<SignalsPanel> — Story 6.28 (OP14 (a)), the other claims for this de
     expect(screen.getByTestId('other-claims-same-family')).toHaveTextContent(oc.likelySameFamily);
   });
 
+  it('OP14 (b) — a PAID other claim ⇒ the District Admin\'s console shows the BANNER, ⛔ the close action (P1 is ⛔ never blocked)', () => {
+    render(<SignalsPanel packet={{ ...PRESENT_PACKET, otherClaimsForDeath: { available: true, total: 1, claims: [row('A1B2C3D4', 'same', 'paid')] } }} />);
+    expect(screen.getByTestId('other-claims-finally-approved-banner')).toHaveTextContent(t.onePaymentPerDeath.bannerPaid('A1B2C3D4'));
+    expect(screen.queryByRole('button', { name: t.onePaymentPerDeath.closeAction })).not.toBeInTheDocument();
+  });
+
   it('a FAILED read ⇒ "could not be checked just now" — ⛔ never silence', () => {
     render(<SignalsPanel packet={{ ...PRESENT_PACKET, otherClaimsForDeath: { available: false, total: 0, claims: [] } }} />);
     expect(screen.getByTestId('other-claims-unavailable')).toHaveTextContent(oc.unavailable);

@@ -489,7 +489,11 @@ export function R9CasePanel({ pariwarId, claimCaseId }: R9CasePanelProps): React
                   className="rounded bg-black px-3 py-1 text-sm text-white disabled:opacity-50"
                   // Code review round 2 (Trap 15): an APPROVE vote is disabled while the warnings could ⛔ not be read,
                   // described by the block's unavailable words; a DENY vote stays open.
-                  disabled={vote.isPending || rationale.trim() === '' || approveVoteUnavailable}
+                  // Code review chunk 3/4 — an APPROVE vote is ALSO disabled once `elsewhere` arrives via a background
+                  // refetch (window refocus / another trustee's action) while `voteChoice` is still internally 'approve'
+                  // from before: the radio is already disabled + visually unchecked by then, but without this the
+                  // Submit button stayed clickable, relying on `submitVote`'s own re-check to silently no-op it.
+                  disabled={vote.isPending || rationale.trim() === '' || approveVoteUnavailable || (voteChoice === 'approve' && elsewhere !== null)}
                   aria-describedby={approveVoteUnavailable ? `r9-${claimCaseId}-approval-blocked` : undefined}
                   onClick={submitVote}
                 >

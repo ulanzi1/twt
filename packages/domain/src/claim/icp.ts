@@ -358,13 +358,15 @@ export async function tryConverge(
     // here, IN the mint's transaction (SELF-MODE — this writer holds the intake key and the new claim; ⛔ never a second
     // transaction: the helpline intake commits in `onSend`, Trap 2). ⛔ Not when RF5's wait holds it (OP4 (d)). The
     // response then reads `closed` (⛔ no new response field — both intake responses are `.strict()`).
-    const closedAtMint = await closeClaimIfDeathPaid(client, {
-      pariwarId: input.pariwarId,
-      claimCaseId,
-      actor: input.actor,
-      actorId: input.actorId,
-      ...(input.auditId !== undefined ? { auditId: input.auditId } : {}),
-    });
+    const closedAtMint = (
+      await closeClaimIfDeathPaid(client, {
+        pariwarId: input.pariwarId,
+        claimCaseId,
+        actor: input.actor,
+        actorId: input.actorId,
+        ...(input.auditId !== undefined ? { auditId: input.auditId } : {}),
+      })
+    ).closed;
 
     return {
       claimCaseId: String(claimCaseId),
@@ -661,13 +663,15 @@ export async function overrideIntakeAttempt(
 
   // ⭐ Story 6.28 OP4 H(ii) — as `tryConverge`'s mint: SELF-MODE close, IN this (request) transaction, when the death's
   // payment is already committed (the paid claim was overridden apart, or is `settled`).
-  const closedAtMint = await closeClaimIfDeathPaid(client, {
-    pariwarId: input.pariwarId,
-    claimCaseId: newClaimCaseId,
-    actor: input.actor,
-    actorId: input.decidedByActor,
-    ...(input.auditId !== undefined ? { auditId: input.auditId } : {}),
-  });
+  const closedAtMint = (
+    await closeClaimIfDeathPaid(client, {
+      pariwarId: input.pariwarId,
+      claimCaseId: newClaimCaseId,
+      actor: input.actor,
+      actorId: input.decidedByActor,
+      ...(input.auditId !== undefined ? { auditId: input.auditId } : {}),
+    })
+  ).closed;
 
   return { newClaimCaseId: String(newClaimCaseId), state: closedAtMint ? 'closed' : converged.state };
 }

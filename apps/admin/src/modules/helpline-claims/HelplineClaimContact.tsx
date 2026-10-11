@@ -27,10 +27,8 @@ import {
   useRecordHelplineClaimContact,
 } from '../../api/hooks.js';
 import { formatIst, nomineeRelationshipLabel } from '../claim-verification/NomineeDeclarationPanel.js';
-import { verifierConsoleEn } from '../claim-verification/i18n-en.js';
+import { closedClaimStateLabel, verifierConsoleEn } from '../claim-verification/i18n-en.js';
 import { certificateClaimOption, resolveEn } from './i18n-en.js';
-
-const claimStateLabels = verifierConsoleEn.nomineeDeclaration.refusals.claimStateLabels;
 
 /** Each refusal gets its OWN line — ⛔ never a raw code. */
 function refusalKey(err: unknown): string {
@@ -248,7 +246,7 @@ export function HelplineClaimContact({
               data-testid={`helpline-contact-claim-${c.claim_case_id}`}
             />
             {certificateClaimOption(
-                  c.closed_holder_refused ? verifierConsoleEn.nomineeDeclaration.refusals.closedHolderRefused : (claimStateLabels[c.claim_state] ?? '—'),
+                  closedClaimStateLabel(c.closed_holder_refused, c.claim_state),
                   formatIst(c.created_at),
                 )}
           </label>

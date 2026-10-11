@@ -44,7 +44,7 @@ export function FinallyApprovedElsewhereBanner({
       ? close.data.this_claim_closed
         ? t.closed
         : t.notClosed
-      : close.error !== null && close.error !== undefined
+      : close.error !== null
         ? close.error instanceof ApiError && close.error.status === 503
           ? t.busy
           : t.closeFailed

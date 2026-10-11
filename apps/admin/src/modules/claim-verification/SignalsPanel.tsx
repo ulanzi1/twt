@@ -23,6 +23,7 @@ import {
 } from './ConcealmentAssessmentControl.js';
 import { VerifierReviewPanel, type VerifierReviewData } from './VerifierReviewPanel.js';
 import { verifierConsoleEn as t } from './i18n-en.js';
+import { FinallyApprovedElsewhereBanner } from '../cycle-freeze/FinallyApprovedElsewhereBanner.js';
 
 /** A labeled section wrapper with an accessible heading + region landmark. */
 function Section({ title, testId, children }: { title: string; testId: string; children: ReactNode }): ReactElement {
@@ -78,17 +79,13 @@ function OtherClaimsForDeathNotice({ section }: { section: VerifierConsolePacket
   if (section.available && section.total === 0) return null;
   const anyDifferent = section.claims.some((c) => c.deathDate === 'different');
   const anySame = section.claims.some((c) => c.deathDate === 'same');
-  // OP14 (b) — the BANNER, ⛔ the action (P1 is ⛔ never blocked — FQ5's "goes through every check"): another claim of the
-  // death is paid (first) or past the final vote.
-  const finallyApproved = section.claims.find((c) => c.stage === 'paid') ?? section.claims.find((c) => c.stage === 'passed_final_vote');
-  const ofd = t.onePaymentPerDeath;
+  // OP14 (b)'s banner ("another claim of the death is paid / past the final vote") is ⛔ NOT derived here — this
+  // section is capped (OP14 (a)'s `OTHER_CLAIMS_FOR_DEATH_CAP`), so a death with more than the cap's other claims
+  // could hide the finally-approved one. It renders separately from `packet.finallyApprovedElsewhere` (the SAME
+  // authoritative, uncapped signal every other approval surface's `<FinallyApprovedElsewhereBanner>` uses — code
+  // review chunk 3/4, previously a hand-rolled, capped-list derivation here).
   return (
     <Section title={words.heading} testId="section-other-claims-for-death">
-      {finallyApproved !== undefined ? (
-        <p role="note" className="text-sm font-medium text-amber-800" data-testid="other-claims-finally-approved-banner">
-          {finallyApproved.stage === 'paid' ? ofd.bannerPaid(finallyApproved.reference) : ofd.bannerVoted(finallyApproved.reference)}
-        </p>
-      ) : null}
       {!section.available ? (
         <p className="text-sm font-medium text-amber-800" data-testid="other-claims-unavailable">
           {words.unavailable}
@@ -402,6 +399,16 @@ export function SignalsPanel({
       {/* ⭐ (l) Story 6.28 (OP14 (a)) — the other claims for this death (staff-only, by reference; ⛔ never silence on a
           failed read). */}
       <OtherClaimsForDeathNotice section={packet.otherClaimsForDeath} />
+
+      {/* ⭐ (l′) Story 6.28 (OP14 (b)) — the AUTHORITATIVE "another claim of this death is finally approved" banner
+          (code review chunk 3/4). `canClose={false}`: the verifier console is the District Admin's surface, which
+          does ⛔ not hold `cycle.freeze` — the banner informs, ⛔ never offers "Close this claim" here. */}
+      <FinallyApprovedElsewhereBanner
+        elsewhere={packet.finallyApprovedElsewhere}
+        pariwarId={packet.pariwarId}
+        claimCaseId={packet.claimCaseId}
+        canClose={false}
+      />
 
       {/* (e) prior verifier comments — the full transcript for this claim, semantic-verb entries (AC4).
           NOTE: `superseded`/`isRevision` linkage isn't rendered here — the wire model (PriorVerifierComment)

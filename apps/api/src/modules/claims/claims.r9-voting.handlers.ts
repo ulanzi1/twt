@@ -515,7 +515,7 @@ export function createR9VotingHandlers(deps: AppDeps) {
       const claimCaseId = ids.claimId((request.params as { claimCaseId: string }).claimCaseId);
       const scopeTx = await openScopeTx(deps, ctx.pariwarIdStr);
       let ok = false;
-      let result!: claim.R9FinalizeResult;
+      let result: claim.R9FinalizeResult | undefined;
       // ⭐ Story 6.28 H(iv) (Trap 14) — capture, let `finally` close the refused tx, THEN the paid-death closure, THEN translate.
       let refused: { readonly err: unknown } | null = null;
       try {
@@ -544,6 +544,10 @@ export function createR9VotingHandlers(deps: AppDeps) {
         });
         return translateR9Error(refused.err);
       }
+      // `result` is assigned whenever the try completes without throwing (⇒ `refused === null`) — guarded
+      // explicitly (not `!`-asserted) so a future reordering surfaces as a controlled 500, not an unhandled
+      // TypeError on this ₹50L-stakes path (the sibling guard below, for `s`'s fields, does the same).
+      if (result === undefined) throw new Error(`[r9-voting] finalize completed without a result for ${claimCaseId}`);
       const s = result.session;
       // A finalized session's outcome/counts/finalized_display/finalized_at are set TOGETHER (the AC11 DB
       // CHECK coupling) — a session reaching this point (finalizeR9Outcome always returns a FINALIZED

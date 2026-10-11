@@ -80,7 +80,7 @@ export function otherClaimInStatesSql(claimAlias: string, states: readonly strin
  * ⛔ not finally approved (OP2's 409 covers that one), and RF1 does ⛔ not stand on it (Invariant 3 — FQ5 decides that pair).
  */
 function otherOpenClaimPredicateSql(self: SQL, oc: string): SQL {
-  const o = sql.raw(oc);
+  const o = aliasOf(oc);
   return sql`${o}.pariwar_id = ${self}.pariwar_id
        AND ${o}.deceased_member_id = ${self}.deceased_member_id
        AND ${o}.claim_case_id <> ${self}.claim_case_id
@@ -89,16 +89,24 @@ function otherOpenClaimPredicateSql(self: SQL, oc: string): SQL {
        AND NOT ${standingSuspicionRefusalSql(oc)}`;
 }
 
+/** The row cap on `otherOpenClaimsForDeathSql`'s `json_agg` — matches the file's other "other claims of a death" ceilings. */
+const OTHER_OPEN_CLAIMS_FOR_DEATH_JSON_CAP = clampLimit(50, { default: 50, cap: 50 });
+
 /**
  * ⭐ The other OPEN claims of the death of the outer claim `claimAlias`, as a `json` array of `claim_case_id` text in
- * `claim_case_id` order — EMPTY whenever RF1 stands on the outer claim ITSELF (Invariant 3: ⛔ no OP5 key is derived on
- * either claim of a standing-refusal pair). Embedded in the warning readers' column lists (OP5 — ⛔ never a per-claim query).
+ * `claim_case_id` order (capped — a warning-key input, ⛔ never the console's own capped/paginated read) — EMPTY
+ * whenever RF1 stands on the outer claim ITSELF (Invariant 3: ⛔ no OP5 key is derived on either claim of a
+ * standing-refusal pair). Embedded in the warning readers' column lists (OP5 — ⛔ never a per-claim query).
  */
 export function otherOpenClaimsForDeathSql(claimAlias: string): SQL {
   const s = aliasOf(claimAlias);
   return sql`(CASE WHEN ${standingSuspicionRefusalSql(claimAlias)} THEN '[]'::json ELSE COALESCE((
-    SELECT json_agg(op_oc.claim_case_id::text ORDER BY op_oc.claim_case_id) FROM claims op_oc
-     WHERE ${otherOpenClaimPredicateSql(s, 'op_oc')}
+    SELECT json_agg(op_oc_capped.claim_case_id) FROM (
+      SELECT op_oc.claim_case_id::text AS claim_case_id FROM claims op_oc
+       WHERE ${otherOpenClaimPredicateSql(s, 'op_oc')}
+       ORDER BY op_oc.claim_case_id
+       LIMIT ${OTHER_OPEN_CLAIMS_FOR_DEATH_JSON_CAP}
+    ) op_oc_capped
   ), '[]'::json) END)`;
 }
 
@@ -144,7 +152,14 @@ export function readOtherFinallyApprovedClaim(
   return readOtherClaimInStates(db, pariwarId, deceasedMemberId, selfClaimCaseId, FINALLY_APPROVED_CLAIM_STATES);
 }
 
-/** The nil uuid — "no self": a death-level read, ⛔ never a real claim id. */
+/**
+ * The nil uuid — "no self": `readOtherClaimInStates`'s predicate excludes `claim_case_id = selfClaimCaseId`, so
+ * passing this value excludes NOTHING and the read becomes death-level (every claim of the death is "other").
+ * Safety assumption: `claim_case_id` is always a `randomUUID()`-generated v4 id (never hand-assigned), so no real
+ * row can ever collide with the all-zero sentinel. ⚠ A reader of OP1's spec text sees only `readOtherFinallyApprovedClaim`
+ * and `readPaymentCommittedClaim` (both taking a real `selfClaimCaseId`) — this is the THIRD reader on the same
+ * fragment, added for H(i)/H(iv)'s death-level check.
+ */
 const NO_SELF = '00000000-0000-0000-0000-000000000000' as ClaimId;
 
 /** ANY claim of the death whose PAYMENT is committed (the lowest id), or `null` — OP4's closure (H(i), H(iv)). */
@@ -213,7 +228,10 @@ export const OTHER_CLAIMS_FOR_DEATH_CAP = 20;
 export function otherClaimStageOf(state: string): OtherClaimStage {
   if (state === 'closed') return 'closed';
   if (state === 'denied') return 'refused';
-  if (state === 'appeal_stage_1' || state === 'appeal_stage_2' || state === 'appeal_stage_3') return 'under_appeal';
+  // `reversed` (a panel overturned a refusal/appeal decision) routes back through the freeze/R9 pipeline toward a
+  // fresh vote — it is ⛔ never a brand-new, never-touched claim, so it is grouped with `under_appeal` rather than
+  // falling through to the default `open` (which would mislabel it identically to a filed-and-untouched claim).
+  if (state === 'appeal_stage_1' || state === 'appeal_stage_2' || state === 'appeal_stage_3' || state === 'reversed') return 'under_appeal';
   if ((PAYMENT_COMMITTED_CLAIM_STATES as readonly string[]).includes(state)) return 'paid';
   if (state === 'state_trustee_approved') return 'passed_final_vote';
   return 'open';
@@ -231,6 +249,35 @@ export function compareDeathDates(
   if (!self.accepted || !other.accepted) return 'not_accepted';
   if (self.index === null || other.index === null) return 'not_comparable';
   return self.index === other.index ? 'same' : 'different';
+}
+
+/**
+ * The outer claim `outerAlias`'s live accepted death-certificate review — `review_id` (non-null ⇒ "accepted") and
+ * `accepted_date_index` — as a `LEFT JOIN LATERAL ... ON true` fragment (the current upload's latest accepted review;
+ * the warnings' `cur` chain's own selection, 6.26a). Shared by `readOtherClaimsForDeath` and `readOtherClaimVisits` so
+ * "what counts as the live accepted review" has ONE definition.
+ */
+function liveAcceptedDeathCertificateReviewLateralSql(outerAlias: string): SQL {
+  const o = aliasOf(outerAlias);
+  return sql`LEFT JOIN LATERAL (
+          SELECT r.review_id, r.accepted_date_index
+            FROM claim_documents cd
+            JOIN claim_death_certificate_uploads u
+              ON u.pariwar_id = cd.pariwar_id
+             AND u.claim_case_id = cd.claim_case_id
+             AND u.storage_object_key = cd.storage_object_key
+            JOIN claim_death_certificate_reviews r
+              ON r.pariwar_id = cd.pariwar_id
+             AND r.claim_case_id = cd.claim_case_id
+             AND r.superseded_at IS NULL
+             AND r.upload_id = u.upload_id
+             AND r.verdict = 'accepted'
+           WHERE cd.pariwar_id = ${o}.pariwar_id
+             AND cd.claim_case_id = ${o}.claim_case_id
+             AND cd.document_type = 'death_certificate'
+           ORDER BY r.decided_at DESC, r.review_id DESC
+           LIMIT 1
+        ) op_rv ON true`;
 }
 
 /**
@@ -259,33 +306,18 @@ export async function readOtherClaimsForDeath(db: Db, pariwarId: PariwarId, clai
         JOIN claims cl
           ON cl.pariwar_id = op_self.pariwar_id
          AND cl.deceased_member_id = op_self.deceased_member_id
-        LEFT JOIN LATERAL (
-          SELECT r.review_id, r.accepted_date_index
-            FROM claim_documents cd
-            JOIN claim_death_certificate_uploads u
-              ON u.pariwar_id = cd.pariwar_id
-             AND u.claim_case_id = cd.claim_case_id
-             AND u.storage_object_key = cd.storage_object_key
-            JOIN claim_death_certificate_reviews r
-              ON r.pariwar_id = cd.pariwar_id
-             AND r.claim_case_id = cd.claim_case_id
-             AND r.superseded_at IS NULL
-             AND r.upload_id = u.upload_id
-             AND r.verdict = 'accepted'
-           WHERE cd.pariwar_id = cl.pariwar_id
-             AND cd.claim_case_id = cl.claim_case_id
-             AND cd.document_type = 'death_certificate'
-           ORDER BY r.decided_at DESC, r.review_id DESC
-           LIMIT 1
-        ) op_rv ON true
+        ${liveAcceptedDeathCertificateReviewLateralSql('cl')}
        WHERE op_self.pariwar_id = ${pariwarId}
          AND op_self.claim_case_id = ${claimCaseId}
+    ),
+    op_total AS (
+      SELECT count(*)::int AS total FROM op_death t WHERE t.claim_case_id <> ${claimCaseId}
     )
     SELECT o.claim_case_id::text AS claim_case_id, o.current_state, o.created_at, o.intake_channels, o.accepted, o.accepted_date_index,
-           s.accepted AS self_accepted, s.accepted_date_index AS self_index,
-           (SELECT count(*)::int FROM op_death t WHERE t.claim_case_id <> ${claimCaseId}) AS total
+           s.accepted AS self_accepted, s.accepted_date_index AS self_index, op_total.total
       FROM op_death o
       JOIN op_death s ON s.claim_case_id = ${claimCaseId}
+      CROSS JOIN op_total
      WHERE o.claim_case_id <> ${claimCaseId}
      ORDER BY o.created_at, o.claim_case_id
      LIMIT ${cap}
@@ -375,25 +407,9 @@ export interface OtherClaimVisits {
 export async function readOtherClaimVisits(db: Db, pariwarId: PariwarId, claimCaseId: ClaimId): Promise<OtherClaimVisits> {
   const result = await db.execute<{ visited_elsewhere: boolean; already_visited: boolean }>(sql`
     WITH op_self AS (
-      SELECT c.pariwar_id, c.claim_case_id, c.deceased_member_id,
-             (SELECT r.accepted_date_index
-                FROM claim_documents cd
-                JOIN claim_death_certificate_uploads u
-                  ON u.pariwar_id = cd.pariwar_id
-                 AND u.claim_case_id = cd.claim_case_id
-                 AND u.storage_object_key = cd.storage_object_key
-                JOIN claim_death_certificate_reviews r
-                  ON r.pariwar_id = cd.pariwar_id
-                 AND r.claim_case_id = cd.claim_case_id
-                 AND r.superseded_at IS NULL
-                 AND r.upload_id = u.upload_id
-                 AND r.verdict = 'accepted'
-               WHERE cd.pariwar_id = c.pariwar_id
-                 AND cd.claim_case_id = c.claim_case_id
-                 AND cd.document_type = 'death_certificate'
-               ORDER BY r.decided_at DESC, r.review_id DESC
-               LIMIT 1) AS accepted_date_index
+      SELECT c.pariwar_id, c.claim_case_id, c.deceased_member_id, op_rv.accepted_date_index
         FROM claims c
+        ${liveAcceptedDeathCertificateReviewLateralSql('c')}
        WHERE c.pariwar_id = ${pariwarId}
          AND c.claim_case_id = ${claimCaseId}
     ),

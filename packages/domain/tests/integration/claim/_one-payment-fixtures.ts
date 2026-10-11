@@ -20,6 +20,7 @@ export type FixtureState =
   | 'settled'
   | 'denied'
   | 'appeal_stage_1'
+  | 'reversed'
   | 'closed';
 
 /** Append ONE raw lifecycle event through the projector. */
@@ -58,7 +59,13 @@ export async function claimAt(
   const cid = toClaimId(opts.claimCaseId ?? randomUUID());
   const e = (from: string, to: string, type: string, extra: Record<string, unknown> = {}) =>
     emitClaim(client, pariwarId, cid, mid, from, to, type, extra);
-  if (state === 'verifier_review' || state === 'denied' || state === 'appeal_stage_1' || state === 'closed') {
+  if (
+    state === 'verifier_review' ||
+    state === 'denied' ||
+    state === 'appeal_stage_1' ||
+    state === 'reversed' ||
+    state === 'closed'
+  ) {
     await driveClaimTo(client, pariwarId, cid, mid, 'verifier_review');
     if (state === 'verifier_review') return cid;
     if (state === 'closed') {
@@ -70,7 +77,17 @@ export async function claimAt(
       return cid;
     }
     await e('verifier_review', 'denied', 'claim.verifier_denied', { actor: 'operator' });
-    if (state === 'appeal_stage_1') await e('denied', 'appeal_stage_1', 'claim.appeal_stage1_initiated');
+    if (state === 'appeal_stage_1' || state === 'reversed') await e('denied', 'appeal_stage_1', 'claim.appeal_stage1_initiated');
+    if (state === 'appeal_stage_1') return cid;
+    if (state === 'reversed') {
+      // Mirrors `reviewAppealStage1`'s own reversal shape: `claim.appeal_stage1_reviewed` moves the state, then the
+      // `claim.reversed` publish-hook self-loop fires in the same transaction (appeal-persist.ts `emitReversedHook`).
+      await e('appeal_stage_1', 'reversed', 'claim.appeal_stage1_reviewed', { decision: 'reversed' });
+      await e('reversed', 'reversed', 'claim.reversed', {
+        reversed_at_stage: 1,
+        disposition_category: 'reconsideration_on_merits',
+      });
+    }
     return cid;
   }
   await driveClaimTo(client, pariwarId, cid, mid, 'verifier_approved');

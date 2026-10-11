@@ -116,6 +116,7 @@ describe('VerifierConsolePacket — full round-trip + ordering', () => {
     },
     suspicionRefusal: { available: true, keptApartFrom: [], finalApprovalWaits: null },
     otherClaimsForDeath: { available: true, total: 0, claims: [] },
+    finallyApprovedElsewhere: null,
     // Story 6.23a (NW8) — the nominee-change warnings: NON-PII (kinds, counts, the reason list).
     approvalWarnings: {
       available: true,

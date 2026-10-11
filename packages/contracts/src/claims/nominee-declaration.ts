@@ -357,6 +357,11 @@ export const NomineeRefusalItem = z
     refused_at: IsoInstant,
     refused_by_display: z.string().nullable(),
     rationale: ReadableName.nullable(),
+    // ⭐ Story 6.28 (OP10) — this list is UNFILTERED by claim state (`listNomineeRefusals` reads live
+    // `current_state`), so a refusal later reversed and then CLOSED by OP4 (H(iv), another claim of the
+    // death paid) can appear here as `closed` — the SAME "closed, holding claim later refused — the family
+    // may file again" variant the other OP10 helpline surfaces carry.
+    closed_holder_refused: z.boolean(),
   })
   .strict();
 export type NomineeRefusalItem = z.output<typeof NomineeRefusalItem>;

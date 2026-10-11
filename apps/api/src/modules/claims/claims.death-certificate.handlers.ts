@@ -376,8 +376,15 @@ export function createDeathCertificateHandlers(deps: AppDeps) {
       const liveClaims = await claimDomain.listLiveClaimsForDeceasedMember(scopeTx.tx, pariwarId, memberIdBrand, {
         includeClosed: true,
       });
-      // ⭐ Story 6.28 (OP10) — a closed claim's staff label follows its HOLDING claim (ONE statement).
-      const holderRefused = await claimDomain.readClosedHolderRefusedBulk(scopeTx.tx, pariwarId, liveClaims.map((c) => c.claimCaseId));
+      // ⭐ Story 6.28 (OP10) — a closed claim's staff label follows its HOLDING claim (ONE statement). Decision SUPPORT
+      // only (the staff label text) — a failed read degrades to "no holder-refused" rather than 500ing the whole
+      // member claims list, matching OP14 (b)'s `readFinallyApprovedElsewhereDtos`.
+      const holderRefused = await claimDomain
+        .readClosedHolderRefusedBulk(scopeTx.tx, pariwarId, liveClaims.map((c) => c.claimCaseId))
+        .catch((err: unknown) => {
+          request.log.warn({ err: err instanceof Error ? err.name : 'unknown' }, 'member claims list: closed-holder-refused read unavailable');
+          return new Set<string>();
+        });
       const claims = await Promise.all(
         liveClaims.map(async (c) => {
           const result = await claimDomain.readDeathCertificateFamilyStatus(

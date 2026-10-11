@@ -324,9 +324,14 @@ export function createAppealHandlers(deps: AppDeps) {
       let holderRefused = new Set<string>();
       try {
         rows = await claim.listHelplineAppealEligibility(tx.tx, ctx.pariwarId, memberIdBrand);
-        // ⭐ Story 6.28 (OP10) — a closed claim's label follows its HOLDING claim (ONE statement).
-        holderRefused = await claim.readClosedHolderRefusedBulk(tx.tx, ctx.pariwarId, rows.map((r) => r.claimCaseId));
         ok = true;
+        // ⭐ Story 6.28 (OP10) — a closed claim's label follows its HOLDING claim (ONE statement). Decision SUPPORT
+        // only (the staff label text) — a failed read degrades to "no holder-refused" rather than 500ing the
+        // whole helpline list, matching OP14 (b)'s `readFinallyApprovedElsewhereDtos`.
+        holderRefused = await claim.readClosedHolderRefusedBulk(tx.tx, ctx.pariwarId, rows.map((r) => r.claimCaseId)).catch((err: unknown) => {
+          request.log.warn({ err: err instanceof Error ? err.name : 'unknown' }, 'helpline appeal list: closed-holder-refused read unavailable');
+          return new Set<string>();
+        });
       } finally {
         await closeScopeTx(tx, ok);
       }

@@ -132,12 +132,17 @@ describe('RF4 — `claim.closed` (the 36th event)', () => {
   }
   it('moves EVERY closable state to `closed` — `denied`, the three appeal stages and `reversed` included', () => {
     const closable = CLAIM_LIFECYCLE_STATES.filter(isClaimClosable);
-    expect(closable).toEqual(expect.arrayContaining(['denied', 'appeal_stage_1', 'appeal_stage_2', 'appeal_stage_3', 'reversed', 'verifier_approved', 'state_trustee_freeze']));
+    // ⭐ Story 6.28 OP13 (`2026-10-11-319`, Q4 A — supersedes `-292` RF4 in part): `state_trustee_approved` (past the final
+    // vote, ⛔ not yet paid) is CLOSABLE; the count below follows from `CLAIM_NOT_CLOSABLE_STATES` (now 3).
+    expect(closable).toEqual(expect.arrayContaining(['denied', 'appeal_stage_1', 'appeal_stage_2', 'appeal_stage_3', 'reversed', 'verifier_approved', 'state_trustee_freeze', 'state_trustee_approved']));
     expect(closable).toHaveLength(CLAIM_LIFECYCLE_STATES.length - CLAIM_NOT_CLOSABLE_STATES.length);
     for (const from of closable) expect(closed(from), from).toBe('closed');
   });
-  it('⛔ never moves a claim already finally approved, paid or closed (identity)', () => {
-    for (const from of ['state_trustee_approved', 'approved', 'settled', 'closed']) expect(closed(from), from).toBe(from);
+  // ⭐ Story 6.28 OP13 (`2026-10-11-319`, Q4 A — supersedes `-292` RF4 in part, ⛔ never a re-reading): `state_trustee_approved`
+  // leaves this identity loop (it is closable now — the leg above); a claim whose PAYMENT is committed stays put.
+  it('⛔ never moves a claim whose payment is committed, paid or closed (identity)', () => {
+    for (const from of ['approved', 'settled', 'closed']) expect(closed(from), from).toBe(from);
+    expect(CLAIM_NOT_CLOSABLE_STATES).toEqual(['settled', 'approved', 'closed']);
   });
   it('⛔ nothing leaves `closed` — EVERY claim event, under every payload shape the reducer branches on (code review rounds 2–3)', () => {
     const payloads = [

@@ -144,6 +144,14 @@ export function readOtherFinallyApprovedClaim(
   return readOtherClaimInStates(db, pariwarId, deceasedMemberId, selfClaimCaseId, FINALLY_APPROVED_CLAIM_STATES);
 }
 
+/** The nil uuid — "no self": a death-level read, ⛔ never a real claim id. */
+const NO_SELF = '00000000-0000-0000-0000-000000000000' as ClaimId;
+
+/** ANY claim of the death whose PAYMENT is committed (the lowest id), or `null` — OP4's closure (H(i), H(iv)). */
+export function readPaymentCommittedClaimOfDeath(db: Db, pariwarId: PariwarId, deceasedMemberId: MemberId): Promise<ClaimId | null> {
+  return readOtherClaimInStates(db, pariwarId, deceasedMemberId, NO_SELF, PAYMENT_COMMITTED_CLAIM_STATES);
+}
+
 /** Another claim of the death whose PAYMENT is committed (`approved` / `settled`), or `null`. */
 export function readPaymentCommittedClaim(
   db: Db,

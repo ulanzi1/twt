@@ -85,3 +85,13 @@ export async function claimAt(
   await e('approved', 'settled', 'claim.settled', { deceased_member_id: mid });
   return cid;
 }
+
+/** Keep `against` APART from every later filing of the death (a raw `convergence_overrides` ledger row — the override's
+ *  candidate-suppression key; the override WRITER is the subject elsewhere). */
+export async function overriddenApart(client: pg.PoolClient, pariwarId: string, mid: string, against: string): Promise<void> {
+  await client.query(
+    `INSERT INTO convergence_overrides (pariwar_id, deceased_member_id, intake_attempt_id, against_claim_case_id, reason, decided_by_actor)
+     VALUES ($1, $2, $3, $4, 'fixture — kept apart', $5)`,
+    [pariwarId, mid, randomUUID(), against, randomUUID()],
+  );
+}

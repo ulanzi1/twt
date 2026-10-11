@@ -4,6 +4,11 @@
 //         different outer keys) in flight together ⇒ exactly one commits `state_trustee_approved`; the other is STOPPED
 //         (`DeathAlreadyFinallyApprovedError`). They serialise on RF15's per-death key, which the gate takes BEFORE OP2's
 //         read (Fact 3); the loser's backend is proven BLOCKED on a lock (`pg_stat_activity`, ⛔ never a sleep).
+//   AC9 — an ALLOWED suspicion appeal (S) and the cycle commit on a voted X of the same death, in flight together, in BOTH
+//         orders ⇒ X ends EXACTLY one of {`closed`, `approved`} — ⛔ never both, ⛔ never neither; ⛔ two payments never.
+//   AC4 H(ii) — the paid death's closure (H(i)'s entry) and a MINT for the same death in flight together, in both orders ⇒
+//         the minted claim ends `closed` (⛔ never left open beside the paid claim); and a mint that commits WHILE the
+//         commit is uncommitted (it takes ⛔ no intake key) is closed by H(i) afterwards.
 //
 // ⚠ WHY OWN-COMMITTING: a race needs REAL concurrent transactions on SEPARATE pool clients. A FRESH random Pariwar per
 // test; cleanup table by table in replica mode — fixture cleanup ONLY ([[project_live_db_test_gotchas]]).
@@ -17,6 +22,10 @@ import { bindScopedDb, setPariwarScope } from '../../../src/db.js';
 import {
   DeathAlreadyFinallyApprovedError,
   castR9Vote,
+  closeClaimsOfPaidDeath,
+  commitCycleFreeze,
+  reviewAppealStage1,
+  tryConverge,
   finalizeR9Outcome,
   openR9VotingSession,
   prepareR9VoteCiphertext,
@@ -24,9 +33,10 @@ import {
   voteOnFrozenClaim,
 } from '../../../src/claim/index.js';
 import { memberId as toMemberId, pariwarId as toPariwarId } from '../../../src/ids/index.js';
-import type { PariwarId } from '../../../src/ids/index.js';
+import type { ClaimId, CycleFreezeCommitId, MemberId, PariwarId } from '../../../src/ids/index.js';
 import { seedClauseVersion, seedRoleGrant } from '../_helpers.js';
-import { claimAt } from './_one-payment-fixtures.js';
+import { claimAt, overriddenApart } from './_one-payment-fixtures.js';
+import { CIPHER, REVIEWER, openAppeal, refusedClaim } from './_suspicion-refusal-fixtures.js';
 
 const DATABASE_URL = process.env['DATABASE_URL'];
 const hasDatabase = Boolean(DATABASE_URL);
@@ -192,5 +202,114 @@ describe.skipIf(!hasDatabase)('Story 6.28 — one payment per death (two connect
     // Exactly ONE of the death's claims is finally approved — X; Y is left where R9 parked it (⛔ never denied).
     expect(states[x]).toBe('state_trustee_approved');
     expect(states[y]).toBe('verifier_approved');
+  });
+
+  // ── AC9 — the allowed appeal × the cycle commit ─────────────────────────────────────────────────────────────────
+  const TRUSTEE = 'f9f9f9f9-0000-4000-8000-000000000003';
+  const commit = (client: pg.PoolClient, pid: PariwarId) =>
+    commitCycleFreeze(client, {
+      pariwarId: pid, commitId: randomUUID() as unknown as CycleFreezeCommitId, actorId: TRUSTEE, actorDisplay: 'Trustee One', actor: 'trustee',
+    });
+  const reverse = (client: pg.PoolClient, pid: PariwarId, s: ClaimId) =>
+    reviewAppealStage1(client, {
+      claimCaseId: s, pariwarId: pid, decision: 'reversed', dispositionCategory: 'reconsideration_on_merits',
+      reviewerActorId: REVIEWER, reviewerDisplay: 'Another District Admin', rationaleCiphertext: CIPHER, actor: 'operator',
+    });
+  const statesOf = (pid: PariwarId, cids: string[]) =>
+    onOwnTx(pid, async (c) =>
+      Object.fromEntries(
+        (await c.query<{ id: string; s: string }>('SELECT claim_case_id::text AS id, current_state::text AS s FROM claims WHERE claim_case_id = ANY($1)', [cids])).rows.map((r) => [r.id, r.s]),
+      ),
+    );
+
+  /** X voted; S refused on `-239` with its appeal OPEN (path (a)'s shape), all COMMITTED. */
+  async function votedAndAppealing(pid: PariwarId): Promise<{ x: ClaimId; s: ClaimId }> {
+    const mid = toMemberId(randomUUID());
+    const x = await onOwnTx(pid, (c) => claimAt(c, pid, mid, 'state_trustee_approved'));
+    const s = await onOwnTx(pid, async (c) => {
+      const id = await refusedClaim(c, pid, mid);
+      await openAppeal(c, pid, id);
+      return id;
+    });
+    return { x, s };
+  }
+
+  for (const first of ['commit', 'appeal'] as const) {
+    it(`AC9 — the ${first === 'commit' ? 'COMMIT' : 'allowed APPEAL'} holds X first, the other BLOCKS ⇒ X ends exactly one of {closed, approved}`, { timeout: TIMEOUT }, async () => {
+      const pid = freshPariwar();
+      const { x, s } = await votedAndAppealing(pid);
+      const a = await openTx(pid);
+      if (first === 'commit') await commit(a.client, pid);
+      else await reverse(a.client, pid, s);
+      const b = await openTx(pid);
+      const second = settle(first === 'commit' ? reverse(b.client, pid, s) : commit(b.client, pid));
+      await waitUntilBlocked(b.backendPid); // ⭐ on X's trustee key, which A holds
+      await a.commit();
+      const out = await second;
+      expect(out.ok, String((out as { error?: unknown }).error)).toBe(true);
+      await b.commit();
+      const states = await statesOf(pid, [x, s]);
+      expect(['closed', 'approved']).toContain(states[x]);
+      // ⛔ never two payments: if X were approved, S could ⛔ not be live beside it (H(iii) closes it).
+      if (states[x] === 'approved') expect(states[s]).toBe('closed');
+      else expect(states[s]).toBe('reversed');
+    });
+  }
+
+  // ── AC4 H(ii) — the paid death's closure × a mint ───────────────────────────────────────────────────────────────
+  const intake = (pid: PariwarId, mid: MemberId) => ({
+    pariwarId: pid, deceasedMemberId: mid, intakeChannel: 'member_app' as const, actor: 'member' as const, claimantActorId: null,
+    trigger: 'test_intake', actorId: null, auditId: randomUUID(),
+  });
+
+  /** X `state` (paid or voted), kept APART from later filings (so a new filing MINTS), COMMITTED. */
+  async function paidApart(pid: PariwarId, state: 'approved' | 'state_trustee_approved'): Promise<{ x: ClaimId; mid: MemberId }> {
+    const mid = toMemberId(randomUUID());
+    const x = await onOwnTx(pid, async (c) => {
+      const id = await claimAt(c, pid, mid, state);
+      await overriddenApart(c, pid, mid, id);
+      return id;
+    });
+    return { x, mid };
+  }
+
+  for (const first of ['closure', 'mint'] as const) {
+    it(`AC4 H(ii) — the ${first === 'closure' ? 'CLOSURE' : 'MINT'} holds the intake key first, the other BLOCKS ⇒ the minted claim ends \`closed\``, { timeout: TIMEOUT }, async () => {
+      const pid = freshPariwar();
+      const { x, mid } = await paidApart(pid, 'approved');
+      const a = await openTx(pid);
+      const firstOut = first === 'closure'
+        ? await closeClaimsOfPaidDeath(a.client, { pariwarId: pid, deceasedMemberId: mid, actor: 'system', actorId: TRUSTEE })
+        : await tryConverge(a.client, intake(pid, mid));
+      const b = await openTx(pid);
+      const second = settle(
+        first === 'closure'
+          ? tryConverge(b.client, intake(pid, mid))
+          : closeClaimsOfPaidDeath(b.client, { pariwarId: pid, deceasedMemberId: mid, actor: 'system', actorId: TRUSTEE }),
+      );
+      await waitUntilBlocked(b.backendPid); // ⭐ on the death's intake key
+      await a.commit();
+      const out = await second;
+      expect(out.ok, String((out as { error?: unknown }).error)).toBe(true);
+      await b.commit();
+      const minted = first === 'closure' ? (out as { value: { claimCaseId: string } }).value.claimCaseId : (firstOut as { claimCaseId: string }).claimCaseId;
+      expect(minted).not.toBe(x);
+      expect((await statesOf(pid, [minted]))[minted]).toBe('closed');
+    });
+  }
+
+  it('AC4 H(ii) × H(i) — a mint COMMITTED while the commit is uncommitted is OPEN; the commit\'s closure (H(i)) then closes it', { timeout: TIMEOUT }, async () => {
+    const pid = freshPariwar();
+    const { x, mid } = await paidApart(pid, 'state_trustee_approved');
+    const a = await openTx(pid);
+    expect((await commit(a.client, pid)).committedClaimIds).toEqual([x]);
+    // The mint does ⛔ not block on the commit (the commit takes ⛔ no intake key) and sees X still voted ⇒ OPEN.
+    const minted = await onOwnTx(pid, (c) => tryConverge(c, intake(pid, mid)));
+    expect(minted).toMatchObject({ minted: true, state: 'intake_converged' });
+    await a.commit();
+    // H(i) — after the commit, in its own transaction.
+    const closed = await onOwnTx(pid, (c) => closeClaimsOfPaidDeath(c, { pariwarId: pid, deceasedMemberId: mid, actor: 'system', actorId: TRUSTEE }));
+    expect(closed).toMatchObject({ paidClaimCaseId: x, closed: [minted.claimCaseId] });
+    expect((await statesOf(pid, [minted.claimCaseId]))[minted.claimCaseId]).toBe('closed');
   });
 });

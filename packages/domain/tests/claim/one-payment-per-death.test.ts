@@ -14,17 +14,19 @@ import {
   otherOpenClaimsForDeathSql,
 } from '../../src/claim/one-payment-per-death.js';
 import { CLAIM_TERMINAL_STATES } from '../../src/claim/read.js';
-import { CLAIM_LIFECYCLE_STATES } from '../../src/claim/state.js';
+import { CLAIM_LIFECYCLE_STATES, CLAIM_NOT_CLOSABLE_STATES } from '../../src/claim/state.js';
 
 const has = (list: readonly string[], s: string) => list.includes(s);
 
 describe('Story 6.28 OP1 — the state lists, pinned for EVERY state', () => {
   for (const state of CLAIM_LIFECYCLE_STATES) {
-    it(`${state}: finally approved ⇔ payment committed ∨ state_trustee_approved; terminal ⇔ CLAIM_TERMINAL_STATES`, () => {
+    it(`${state}: finally approved ⇔ payment committed ∨ state_trustee_approved; terminal ⇔ CLAIM_TERMINAL_STATES; not closable ⇔ payment committed ∨ closed`, () => {
       expect(has(FINALLY_APPROVED_CLAIM_STATES, state)).toBe(
         has(PAYMENT_COMMITTED_CLAIM_STATES, state) || state === 'state_trustee_approved',
       );
       expect(has(OPEN_EXCLUDED_TERMINAL_STATES, state)).toBe(has(CLAIM_TERMINAL_STATES, state));
+      // OP13 (`-319`) — not closable ⇔ payment committed ∨ closed (`state_trustee_approved` is closable).
+      expect(has(CLAIM_NOT_CLOSABLE_STATES, state)).toBe(has(PAYMENT_COMMITTED_CLAIM_STATES, state) || state === 'closed');
     });
   }
 

@@ -52,6 +52,7 @@ import { projectClaimState } from './project.js';
 import {
   type CloseClaimsHeldBySuspicionAppealResult,
   acquireSuspicionReversalLockForClaim,
+  closeClaimIfDeathPaid,
   closeClaimsHeldBySuspicionAppeal,
 } from './suspicion-refusal-persist.js';
 
@@ -411,6 +412,7 @@ export async function reviewAppealStage1(
 
   let reversedEventVersion: number | null = null;
   let heldClaims: CloseClaimsHeldBySuspicionAppealResult | undefined;
+  let closedByPaidDeath = false;
   if (input.decision === 'reversed') {
     reversedEventVersion = await emitReversedHook(
       client,
@@ -432,6 +434,17 @@ export async function reviewAppealStage1(
       actorId: input.reviewerActorId,
       ...(input.auditId !== undefined ? { auditId: input.auditId } : {}),
     });
+    // ⭐ Story 6.28 OP4 H(iii) (`2026-10-11-319`) — a reversal of a refusal of a death whose payment is already committed
+    // CLOSES the reversed claim itself, AFTER RF6 (so a held third claim still closes with `suspicion_appeal_allowed`), in
+    // THIS transaction (SELF-MODE — the writer holds the intake key and this claim; Trap 13). Q2 A: an appeal won after the
+    // death is paid pays nothing. ⛔ Not when RF5's wait holds it (OP4 (d)).
+    closedByPaidDeath = await closeClaimIfDeathPaid(client, {
+      pariwarId: input.pariwarId,
+      claimCaseId: input.claimCaseId,
+      actor: 'system',
+      actorId: input.reviewerActorId,
+      ...(input.auditId !== undefined ? { auditId: input.auditId } : {}),
+    });
   } else {
     await db
       .update(claimAppeals)
@@ -442,7 +455,7 @@ export async function reviewAppealStage1(
   const decision = await insertDecisionRow(db, { ...input, stage: '1', decision: input.decision });
   return {
     decision,
-    claimState: projected.state,
+    claimState: closedByPaidDeath ? 'closed' : projected.state,
     eventVersion: projected.eventVersion,
     reversedEventVersion,
     ...(heldClaims !== undefined ? { heldClaims } : {}),
@@ -498,6 +511,7 @@ export async function decideAppealStage3(
 
   let reversedEventVersion: number | null = null;
   let heldClaims: CloseClaimsHeldBySuspicionAppealResult | undefined;
+  let closedByPaidDeath = false;
   if (input.decision === 'reversed') {
     reversedEventVersion = await emitReversedHook(
       client,
@@ -515,6 +529,17 @@ export async function decideAppealStage3(
       pariwarId: input.pariwarId,
       deceasedMemberId: claimRow.deceasedMemberId,
       reversedClaimCaseId: input.claimCaseId,
+      actor: 'system',
+      actorId: input.reviewerActorId,
+      ...(input.auditId !== undefined ? { auditId: input.auditId } : {}),
+    });
+    // ⭐ Story 6.28 OP4 H(iii) (`2026-10-11-319`) — a reversal of a refusal of a death whose payment is already committed
+    // CLOSES the reversed claim itself, AFTER RF6 (so a held third claim still closes with `suspicion_appeal_allowed`), in
+    // THIS transaction (SELF-MODE — the writer holds the intake key and this claim; Trap 13). Q2 A: an appeal won after the
+    // death is paid pays nothing. ⛔ Not when RF5's wait holds it (OP4 (d)).
+    closedByPaidDeath = await closeClaimIfDeathPaid(client, {
+      pariwarId: input.pariwarId,
+      claimCaseId: input.claimCaseId,
       actor: 'system',
       actorId: input.reviewerActorId,
       ...(input.auditId !== undefined ? { auditId: input.auditId } : {}),
@@ -549,7 +574,7 @@ export async function decideAppealStage3(
   const decision = await insertDecisionRow(db, { ...input, stage: '3', decision: input.decision });
   return {
     decision,
-    claimState: projected.state,
+    claimState: closedByPaidDeath ? 'closed' : projected.state,
     eventVersion: projected.eventVersion,
     reversedEventVersion,
     ...(heldClaims !== undefined ? { heldClaims } : {}),

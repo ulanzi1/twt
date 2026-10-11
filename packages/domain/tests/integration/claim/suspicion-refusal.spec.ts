@@ -376,15 +376,29 @@ describe.skipIf(!hasDatabase)('Story 6.24a — the refile after a suspicion refu
       expect(await stateOf(client, r)).toBe('verifier_review');
     });
 
-    it('R already `state_trustee_approved` is ⛔ not moved — REPORTED for the caller\'s error log + audit (Trap 9)', async () => {
+    // ⭐ Story 6.28 OP13 (`2026-10-11-319`, Q4 A — supersedes `-292` RF4 in part, ⛔ never a re-reading): a claim past ONLY
+    // the final vote is CLOSED by the allowed appeal (FQ5 A before payment); one whose payment is committed is still REPORTED.
+    it('R already `state_trustee_approved` (voted, ⛔ not paid) is CLOSED by the allowed appeal (6.28 OP13)', async () => {
       const { client } = getTx();
       const mid = randomUUID();
       const s = await refusedClaim(client, PARIWAR_A, mid);
       await openAppeal(client, PARIWAR_A, s);
       const r = await votedHeldClaim(client, PARIWAR_A, mid);
       const res = await reverseAtStage1(client, PARIWAR_A, s);
-      expect(res.heldClaims).toEqual({ applied: true, closed: [], notClosed: [{ claimCaseId: r, state: 'state_trustee_approved' }] });
-      expect(await stateOf(client, r)).toBe('state_trustee_approved');
+      expect(res.heldClaims).toEqual({ applied: true, closed: [r], notClosed: [] });
+      expect(await stateOf(client, r)).toBe('closed');
+    });
+
+    it('R already `approved` (its payment committed) is ⛔ not moved — REPORTED for the caller\'s error log + audit (Trap 9; 6.28 Invariant 3)', async () => {
+      const { client } = getTx();
+      const mid = randomUUID();
+      const s = await refusedClaim(client, PARIWAR_A, mid);
+      await openAppeal(client, PARIWAR_A, s);
+      const r = await votedHeldClaim(client, PARIWAR_A, mid);
+      await emit(client, PARIWAR_A, r, mid, 'state_trustee_approved', 'approved', 'claim.approved');
+      const res = await reverseAtStage1(client, PARIWAR_A, s);
+      expect(res.heldClaims).toEqual({ applied: true, closed: [], notClosed: [{ claimCaseId: r, state: 'approved' }] });
+      expect(await stateOf(client, r)).toBe('approved');
     });
 
     it('⭐ two `-239` refusals of one death: S1\'s reversal CLOSES S2, which then ⛔ never stands — S1\'s own final approval is ⛔ not held by it', async () => {
@@ -768,9 +782,12 @@ describe.skipIf(!hasDatabase)('Story 6.24a — the refile after a suspicion refu
       expect(await stateOf(client, r)).toBe('approved');
     });
 
-    it('R voted relying on an INHERITED visit; the source is then CLOSED by a third claim\'s `-239` reversal (R ⛔ not closable — Trap 9) ⇒ the visit vanishes (RF8) ⇒ the commit SKIPS R; with its own visit, a later commit approves it', async () => {
-      // ⚠ AC4 names "the source's refusal revised away" — RF13 now REFUSES that while R lives (R is ⛔ not closed), so the
-      // reachable way an inherited visit vanishes after the vote is the source being CLOSED (it then ⛔ never stands — RF1).
+    // ⭐ Story 6.28 OP13 (`2026-10-11-319`, Q4 A — supersedes `-292` RF4 in part, ⛔ never a re-reading): REWRITTEN, ⛔ not
+    // merely flipped. T's allowed appeal now CLOSES R too (voted, ⛔ not paid — closable), so R drops out of the commit's
+    // candidates; the commit / own-visit tail of the 6.24a leg is gone. RF7's inspection arm is thereby defence in depth
+    // with ⛔ no reachable driver here (its source must be a STANDING `-239` refusal: revising it away is RF13-locked;
+    // reversing or closing it now closes the voted claim too) — recorded in the story.
+    it('R voted relying on an INHERITED visit; a third claim\'s `-239` reversal CLOSES the source AND R (6.28 OP13) ⇒ the commit ⛔ never commits R', async () => {
       const { client } = getTx();
       const pid = toPariwarId(randomUUID());
       await enterAppScope(client, pid);
@@ -791,25 +808,14 @@ describe.skipIf(!hasDatabase)('Story 6.24a — the refile after a suspicion refu
       expect(vote.claimState).toBe('state_trustee_approved');
       expect(await getInheritedGroundInspectionSource(getTx().tx, pid, r)).toBe(s);
       // T — a third claim of the death (created directly — its intake is ⛔ not the subject), refused on `-239` today,
-      // appealed and REVERSED: it closes S (`denied` ⇒ closable) and reports R (⛔ not closable).
+      // appealed and REVERSED: it closes S (`denied`) AND R (`state_trustee_approved` — closable since 6.28 OP13).
       const t = await refusedClaim(client, pid, mid);
       await openAppeal(client, pid, t);
       const reversal = await reverseAtStage1(client, pid, t);
-      expect(reversal.heldClaims).toEqual({ applied: true, closed: [s].filter(Boolean).sort(), notClosed: [{ claimCaseId: r, state: 'state_trustee_approved' }] });
-      expect(await getInheritedGroundInspectionSource(getTx().tx, pid, r)).toBeNull();
+      expect(reversal.heldClaims).toEqual({ applied: true, closed: [s, r].sort(), notClosed: [] });
+      expect(await stateOf(client, r)).toBe('closed');
       expect((await commit(client, pid)).committedClaimIds).not.toContain(r);
-      expect(await stateOf(client, r)).toBe('state_trustee_approved');
       expect(await eventTypesOf(client, r)).not.toContain('claim.approved');
-      // The condition clears: R's OWN full visit, against its current certificate (a raw completed row — at
-      // `state_trustee_approved` R is ⛔ not in the inspection window unless routed).
-      const upload = await currentUploadIdOf(client, pid, r);
-      await getTx().tx.insert(schema.claimGroundInspections).values({
-        claimCaseId: r, pariwarId: pid, district: 'Patna', inspectionStage: 'initial', inspectionSiteType: 'family_residence', inspectorActorId: randomUUID(),
-        scheduledAt: new Date(), status: 'completed', completedAt: new Date(), originalCertificateVerdict: 'matches', comparedCertificateUploadId: upload as never,
-        deathDateCiphertext: 'enc:v1:death-date', deathDateSource: 'family_statement', deathDateIndex: 'fixture-death-date-index:2026-05-01',
-      });
-      expect((await commit(client, pid)).committedClaimIds).toContain(r);
-      expect(await stateOf(client, r)).toBe('approved');
     });
 
     it('a normal claim commits exactly as today', async () => {

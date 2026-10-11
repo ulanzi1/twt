@@ -46,6 +46,7 @@ import type { AuthAuditEventType } from '../../audit/audit-sink.js';
 import { emitAuthAudit } from '../auth/shared/audit.js';
 import { getDisplayName } from '../auth/admin/admin-auth.repo.js';
 import { closeScopeTx, openScopeTx } from '../multi-tenant/scope-tx.js';
+import { closeClaimsAfterFinalStop } from './close-claims-of-paid-death.js';
 import { decryptR9VoteRationale, encryptR9VoteRationale } from './r9-vote-crypto.js';
 import {
   UNAVAILABLE_APPROVAL_WARNINGS,
@@ -511,7 +512,9 @@ export function createR9VotingHandlers(deps: AppDeps) {
       const claimCaseId = ids.claimId((request.params as { claimCaseId: string }).claimCaseId);
       const scopeTx = await openScopeTx(deps, ctx.pariwarIdStr);
       let ok = false;
-      let result: claim.R9FinalizeResult;
+      let result!: claim.R9FinalizeResult;
+      // ⭐ Story 6.28 H(iv) (Trap 14) — capture, let `finally` close the refused tx, THEN the paid-death closure, THEN translate.
+      let refused: { readonly err: unknown } | null = null;
       try {
         result = await claim.finalizeR9Outcome(scopeTx.client, {
           claimCaseId,
@@ -528,9 +531,15 @@ export function createR9VotingHandlers(deps: AppDeps) {
           reason: r9RejectionReason(err),
           ...(refusedApprovalWarningAudit(err, null) ?? {}),
         });
-        return translateR9Error(err);
+        refused = { err };
       } finally {
         await closeScopeTx(scopeTx, ok);
+      }
+      if (refused !== null) {
+        await closeClaimsAfterFinalStop(deps, request.log, refused.err, {
+          pariwarId: ctx.pariwarId, claimCaseId, actorId: ctx.actorId, site: 'r9_voting.finalize',
+        });
+        return translateR9Error(refused.err);
       }
       const s = result.session;
       // A finalized session's outcome/counts/finalized_display/finalized_at are set TOGETHER (the AC11 DB

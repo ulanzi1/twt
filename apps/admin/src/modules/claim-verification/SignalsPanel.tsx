@@ -78,8 +78,17 @@ function OtherClaimsForDeathNotice({ section }: { section: VerifierConsolePacket
   if (section.available && section.total === 0) return null;
   const anyDifferent = section.claims.some((c) => c.deathDate === 'different');
   const anySame = section.claims.some((c) => c.deathDate === 'same');
+  // OP14 (b) — the BANNER, ⛔ the action (P1 is ⛔ never blocked — FQ5's "goes through every check"): another claim of the
+  // death is paid (first) or past the final vote.
+  const finallyApproved = section.claims.find((c) => c.stage === 'paid') ?? section.claims.find((c) => c.stage === 'passed_final_vote');
+  const ofd = t.onePaymentPerDeath;
   return (
     <Section title={words.heading} testId="section-other-claims-for-death">
+      {finallyApproved !== undefined ? (
+        <p role="note" className="text-sm font-medium text-amber-800" data-testid="other-claims-finally-approved-banner">
+          {finallyApproved.stage === 'paid' ? ofd.bannerPaid(finallyApproved.reference) : ofd.bannerVoted(finallyApproved.reference)}
+        </p>
+      ) : null}
       {!section.available ? (
         <p className="text-sm font-medium text-amber-800" data-testid="other-claims-unavailable">
           {words.unavailable}

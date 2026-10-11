@@ -29,6 +29,7 @@ import {
 import { verifierConsoleEn } from '../claim-verification/i18n-en.js';
 import { correctionChaseEn } from '../correction-chase/i18n-en.js';
 import { ApprovalNameHighlightBadge } from './ApprovalNameHighlightBadge.js';
+import { FinallyApprovedElsewhereBanner } from '../cycle-freeze/FinallyApprovedElsewhereBanner.js';
 import { closureErrorText } from './errors.js';
 import { correctionClosureEn as t } from './i18n-en.js';
 
@@ -262,6 +263,14 @@ function DecisionForm({
   return (
     <fieldset className="mt-3 flex flex-col gap-1" data-testid="escalation-decision-form">
       <legend className="font-semibold">{x.heading}</legend>
+      {/* ⭐ Story 6.28 (OP14 (b)) — another claim of this death passed the final vote / is paid ⇒ an APPROVE is disabled
+          (close and refuse untouched). */}
+      <FinallyApprovedElsewhereBanner
+        elsewhere={detail.finally_approved_elsewhere}
+        pariwarId={pariwarId}
+        claimCaseId={detail.closure.claim_case_id}
+        canClose
+      />
       {staffCase ? <p className="text-xs">{x.staffCaseNoClose}</p> : null}
       <label>
         {x.decision}{' '}
@@ -326,7 +335,7 @@ function DecisionForm({
       <button
         type="button"
         className="self-start rounded border px-3 py-1"
-        disabled={decide.isPending || approveBlocked !== null}
+        disabled={decide.isPending || approveBlocked !== null || (decision === 'approve' && detail.finally_approved_elsewhere !== null)}
         // Code review 2026-10-06 (P34): derived from `pickerPrefix` (the SAME value passed to the picker's
         // `idPrefix` above) rather than a hardcoded literal duplicating it.
         aria-describedby={approveBlocked !== null ? `${pickerPrefix}-approval-blocked` : undefined}

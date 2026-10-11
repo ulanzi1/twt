@@ -58,7 +58,7 @@ import {
   toReasonOptionsDto,
   underSavepoint,
 } from './later-approval-warnings.js';
-import { closeClaimsAfterFinalStop } from './close-claims-of-paid-death.js';
+import { closeClaimsAfterFinalStop, readFinallyApprovedElsewhereDtos } from './close-claims-of-paid-death.js';
 
 export const ESCALATION_DECIDE_KEY = 'claim.decide_escalated_closure';
 export const ESCALATION_REVIEW_KEY = 'claim.review_escalated_closure';
@@ -164,6 +164,7 @@ export function createCorrectionEscalationHandlers(deps: AppDeps) {
         // `-273` §8 — the SAME rule the writer decides under its locks; shown so the Super Admin knows what an approve asks.
         approve_path: row.origin === 'declined_closure' && !detail.resubmitted ? 'name_waived_251' : 'full_gate',
         approval_warnings: UNAVAILABLE_APPROVAL_WARNINGS,
+        finally_approved_elsewhere: null,
         reason_options: [],
       };
       // ⭐ Story 6.23b (EA7; RD7, RD8; Trap 15) — the nominee-change warnings for this ONE claim, attached HERE (the domain
@@ -184,6 +185,10 @@ export function createCorrectionEscalationHandlers(deps: AppDeps) {
         response.approval_warnings = toApprovalWarningsSummary(warned, [ctx.actorId]);
         response.reason_options = toReasonOptionsDto(warned.reasonOptions);
       }
+      // ⭐ Story 6.28 (OP14 (b)) — another claim of the death past its final vote / paid (ONE statement, SAVEPOINT-guarded).
+      response.finally_approved_elsewhere = (
+        await readFinallyApprovedElsewhereDtos(scopeTx.client, scopeTx.tx, request.log, ctx.pariwarId, [ctx.claimCaseIdStr])
+      )(ctx.claimCaseIdStr);
       auditClaim(deps, request, ctx, 'admin_claim_correction.escalation_read', { closure_id: row.closureId, origin: row.origin });
       return response;
     },

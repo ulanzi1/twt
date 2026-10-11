@@ -18,7 +18,15 @@
 // verbatim 6.11 revise pattern). The per-claim votes + freeze-open are NOT independently step-up-gated;
 // the COMMIT is the single trustee-attestable action.
 
-import { CycleFreezeCommitRequest, CycleFreezeCommitResponse, CycleFreezeDecisionRequest, CycleFreezeDecisionResponse, CycleFreezePendingResponse } from '@twt/contracts';
+import {
+  CloseForPaidDeathParams,
+  CloseForPaidDeathResponse,
+  CycleFreezeCommitRequest,
+  CycleFreezeCommitResponse,
+  CycleFreezeDecisionRequest,
+  CycleFreezeDecisionResponse,
+  CycleFreezePendingResponse,
+} from '@twt/contracts';
 import type { FastifyInstance } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import { z } from 'zod';
@@ -93,5 +101,18 @@ export function registerCycleFreezeRoutes(app: FastifyInstance, deps: AppDeps): 
       preHandler: [adminSession, scope, requireCycleFreeze, requireStepUp(deps, COMMIT_STEP_UP_CONTEXT)],
     },
     h.postCommit,
+  );
+
+  // ⭐ Story 6.28 (`2026-10-11-319` OP14 (b)) — "Close this claim": another claim of this death is PAID, so this one is
+  // closed (OP4's own-transaction closure, the HUMAN actor). `cycle.freeze` @ pariwar — the ONE key every final-approval
+  // actor holds (`pariwar_admin`, `super_admin`). ⛔ No step-up: the outcome is ⛔ not discretionary (the freeze vote and
+  // the 6.19c closure decision carry none either). The adjudication gate scans this path (`cycle-freeze`).
+  r.post(
+    '/api/v1/p/:pariwarId/admin/cycle-freeze/claims/:claimCaseId/close-for-paid-death',
+    {
+      schema: { params: CloseForPaidDeathParams, response: { 200: CloseForPaidDeathResponse }, tags: [TAG] },
+      preHandler: [adminSession, scope, requireCycleFreeze],
+    },
+    h.postCloseForPaidDeath,
   );
 }

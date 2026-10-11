@@ -553,6 +553,8 @@ export type AuthAuditEventType =
   | 'admin_cycle_freeze.returned'
   | 'admin_cycle_freeze.committed'
   | 'admin_cycle_freeze.rejected'
+  // Story 6.28 (OP14 (b)) — "Close this claim" (another claim of the death is paid); the closed count, ⛔ no other claim's id.
+  | 'admin_cycle_freeze.closed_for_paid_death'
   // Story 6.14 — the R9 special-case voting panel surface. Post-action SINK lines (the durable records are
   // the claim_r9_voting_sessions / claim_r9_votes rows + the finalize's claim.r9_outcome event + trustee
   // decision row). Context is NON-PII: claim_case_id + clause_id/outcome/counts + reason_code — NEVER the

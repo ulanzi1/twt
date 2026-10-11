@@ -45,9 +45,11 @@ import {
   type ConcealmentAssessmentResponse as ConcealmentAssessment,
   type ConcealmentAssessmentRequest as ConcealmentAssessmentPayload,
   // Story 6.13 — the State-Trustee cycle-freeze surface (pending list + decision + commit).
+  CloseForPaidDeathResponse,
   CycleFreezePendingResponse,
   CycleFreezeDecisionResponse,
   CycleFreezeCommitResponse,
+  type CloseForPaidDeathResponse as CloseForPaidDeathResult,
   type CycleFreezePendingResponse as CycleFreezePending,
   type CycleFreezeDecisionResponse as CycleFreezeDecision,
   type CycleFreezeCommitResponse as CycleFreezeCommit,
@@ -1988,6 +1990,18 @@ const cycleFreezeBase = (pariwarId: string): string =>
 /** GET the two-bucket pending list (ready-to-freeze + escalated). */
 export function getCycleFreezePending(pariwarId: string): Promise<CycleFreezePending> {
   return apiFetch(`${cycleFreezeBase(pariwarId)}/pending`, CycleFreezePendingResponse);
+}
+
+/**
+ * ⭐ Story 6.28 (OP14 (b)) — "Close this claim": another claim of this death is PAID. `cycle.freeze` server-side; ⛔ no
+ * step-up. 200 `{ this_claim_closed, closed_count }` (⛔ never another claim's id); a lock timeout answers a retryable 503.
+ */
+export function postCloseForPaidDeath(pariwarId: string, claimCaseId: string): Promise<CloseForPaidDeathResult> {
+  return apiFetch(
+    `${cycleFreezeBase(pariwarId)}/claims/${encodeURIComponent(claimCaseId)}/close-for-paid-death`,
+    CloseForPaidDeathResponse,
+    { method: 'POST', body: '{}' },
+  );
 }
 
 /** POST a per-claim decision (approve | deny | route_to_r9 | resolve_escalation; claim_case_id in body). */

@@ -63,6 +63,7 @@ function errorMessage(error: unknown): string | undefined {
 }
 import { NomineeNameCheckDisclosure } from '../claim-verification/NomineeNameCheckDisclosure.js';
 import { nameDifferenceReasonLabel, verifierConsoleEn as t } from '../claim-verification/i18n-en.js';
+import { FinallyApprovedElsewhereBanner } from '../cycle-freeze/FinallyApprovedElsewhereBanner.js';
 import {
   useCancelR9Session,
   useCastR9Vote,
@@ -135,6 +136,13 @@ export function R9CasePanel({ pariwarId, claimCaseId }: R9CasePanelProps): React
   const caseHeader = (
     <>
       {refetchFailedBanner}
+      {/* ⭐ Story 6.28 (OP14 (b)) — another claim of this death passed the final vote / is paid. */}
+      <FinallyApprovedElsewhereBanner
+        elsewhere={model.finally_approved_elsewhere}
+        pariwarId={pariwarId}
+        claimCaseId={claimCaseId}
+        canClose
+      />
       <p className="text-xs opacity-60">
         Claim <code>{model.claim_case_id}</code> · deceased member <code>{model.deceased_member_id}</code> ·
         state <strong>{model.current_state}</strong>
@@ -291,15 +299,28 @@ export function R9CasePanel({ pariwarId, claimCaseId }: R9CasePanelProps): React
   // Code review 2026-10-06 (P42): both blockers can hold at once (waiting for the District Admin AND carrying
   // unrevised votes) — join them rather than showing only the first, which would otherwise leave the second
   // discovered only after the user clears the one they were told about.
+  // ⭐ Story 6.28 (OP14 (b)) — another claim of this death passed the final vote / is paid ⇒ an APPROVING finalize and the
+  // Approve vote choice are held (a DENIED finalize is ⛔ never gated — F15). Decision support; OP2's 409 is the control.
+  const elsewhere = model.finally_approved_elsewhere;
+  const elsewhereWords =
+    elsewhere === null
+      ? null
+      : elsewhere.stage === 'paid'
+        ? t.onePaymentPerDeath.bannerPaid(elsewhere.claim_reference)
+        : t.onePaymentPerDeath.bannerVoted(elsewhere.claim_reference);
   const finalizeBlocked =
     tally.provisional_outcome !== 'approved'
       ? null
-      : [approvalBlockedReason(warnings, 'r9'), votesToRevise > 0 ? t.approvalWarnings.errors.approveVotesNeedWarningReason(votesToRevise) : null]
+      : [elsewhereWords, approvalBlockedReason(warnings, 'r9'), votesToRevise > 0 ? t.approvalWarnings.errors.approveVotesNeedWarningReason(votesToRevise) : null]
           .filter((m): m is string => m !== null)
           .join(' ') || null;
   const approveVoteUnavailable = voteChoice === 'approve' && !warnings.available;
   const submitVote = (): void => {
     setVoteValidation(null);
+    if (voteChoice === 'approve' && elsewhereWords !== null) {
+      setVoteValidation(elsewhereWords);
+      return;
+    }
     if (voteChoice === 'approve' && !warnings.available) {
       setVoteValidation(t.approvalWarnings.unavailable);
       return;
@@ -408,7 +429,9 @@ export function R9CasePanel({ pariwarId, claimCaseId }: R9CasePanelProps): React
                     <input
                       type="radio"
                       name="vote"
-                      checked={voteChoice === 'approve'}
+                      data-testid="r9-vote-approve"
+                      disabled={elsewhere !== null}
+                      checked={voteChoice === 'approve' && elsewhere === null}
                       onChange={() => {
                         setVoteChoice('approve');
                         setVoteValidation(null);

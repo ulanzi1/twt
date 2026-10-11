@@ -10,11 +10,13 @@
 // H(i) / H(iv) failures are logged at error level with ids only and ⛔ never fail the request — the guard (OP2) is the
 // control; a missed closure is R2 (recorded, ⛔ not addressed).
 
+import type { FinallyApprovedElsewhere } from '@twt/contracts';
 import { claim, ids } from '@twt/domain';
 import type { FastifyBaseLogger } from 'fastify';
 
 import type { AppDeps } from '../../context.js';
 import { closeScopeTx, openScopeTx } from '../multi-tenant/scope-tx.js';
+import { underSavepoint } from './later-approval-warnings.js';
 
 /** How long a closure waits on a lock before giving up (a timeout answers R2 / a retryable 503 — ⛔ never a hang). */
 export const PAID_DEATH_CLOSURE_LOCK_TIMEOUT = '3s';
@@ -129,4 +131,28 @@ export async function closeClaimsAfterFinalStop(
 ): Promise<void> {
   if (!(err instanceof claim.DeathAlreadyFinallyApprovedError)) return;
   await closeClaimsOfPaidDeathForClaim(deps, log, { ...input, actor: 'system' });
+}
+
+/**
+ * ⭐ OP14 (b) — `finally_approved_elsewhere` for MANY claims of one surface's read: ONE bulk statement (per 500 ids,
+ * `claim.readFinallyApprovedElsewhereBulk`), under a raw SAVEPOINT. Decision SUPPORT only — OP2's gate is the control —
+ * so a failed read degrades to "unknown" (every claim `null`, logged) and ⛔ never 500s the surface.
+ */
+export async function readFinallyApprovedElsewhereDtos(
+  client: { query(text: string): Promise<unknown> },
+  db: Parameters<typeof claim.readFinallyApprovedElsewhereBulk>[0],
+  log: FastifyBaseLogger,
+  pariwarId: ids.PariwarId,
+  claimCaseIds: readonly string[],
+): Promise<(claimCaseId: string) => FinallyApprovedElsewhere | null> {
+  const map = await underSavepoint(client, 'finally_approved_elsewhere', () => claim.readFinallyApprovedElsewhereBulk(db, pariwarId, claimCaseIds)).catch(
+    (err: unknown) => {
+      log.warn({ err: err instanceof Error ? err.name : 'unknown' }, 'one payment per death: finally-approved-elsewhere read unavailable');
+      return null;
+    },
+  );
+  return (claimCaseId) => {
+    const hit = map?.get(claimCaseId.toLowerCase()) ?? null;
+    return hit === null ? null : { claim_reference: claim.claimShortReference(hit.claimCaseId), stage: hit.stage };
+  };
 }

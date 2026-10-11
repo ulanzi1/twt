@@ -35,6 +35,7 @@ import { isBlank } from '../_common/primitives.js';
 import { CorrectionMustAct, CorrectionPersonKey, isRealCalendarDate } from './correction-chase.js';
 // Story 6.23b — a zod-only leaf (⛔ no sibling import), so this cannot close a cycle.
 import { ApprovalWarningReasonOption, ApprovalWarningsSummary, WarningReasonCode } from './verification-decision.js';
+import { FinallyApprovedElsewhere } from './one-payment-per-death.js';
 
 const IsoDate = z
   .string()
@@ -274,6 +275,8 @@ export const PariwarClosureQueueItemDto = z
      * ⭐ Story 6.23b (EA7; RD20) — the warnings on a `no_correction_needed` item (its approve is an APPROVAL of the
      * claim); ⛔ `null` EXACTLY on a `closure_request` — deciding a closure request is a refusal path (Trap 12).
      */
+    /** ⭐ Story 6.28 (OP14 (b)) — another claim of this death passed the final vote / is paid (by REFERENCE), or `null`. */
+    finally_approved_elsewhere: FinallyApprovedElsewhere.nullable(),
     approval_warnings: ApprovalWarningsSummary.nullable(),
   })
   .strict()
@@ -363,6 +366,8 @@ export const EscalatedClosureDetailResponse = z
     name_check_state: z.enum(['passing', 'never_checked', 'stale', 'does_not_match', 'accounts_missing', 'undetermined']),
     /** Which writer an APPROVE would run (`-273` §8): the `-251` waiver, or the full gate. */
     approve_path: z.enum(['name_waived_251', 'full_gate']),
+    /** ⭐ Story 6.28 (OP14 (b)) — another claim of this death passed the final vote / is paid (by REFERENCE), or `null`. */
+    finally_approved_elsewhere: FinallyApprovedElsewhere.nullable(),
     /** ⭐ Story 6.23b (EA7) — the warnings, as the viewing Super Admin would approve over them. */
     approval_warnings: ApprovalWarningsSummary,
     /** ⭐ Story 6.23b (EA7) — the Pariwar's ACTIVE warning reasons. */

@@ -321,8 +321,11 @@ export function createAppealHandlers(deps: AppDeps) {
       const tx = await openScopeTx(deps, ctx.pariwarIdStr);
       let ok = false;
       let rows: claim.HelplineAppealEligibilityRow[];
+      let holderRefused = new Set<string>();
       try {
         rows = await claim.listHelplineAppealEligibility(tx.tx, ctx.pariwarId, memberIdBrand);
+        // ⭐ Story 6.28 (OP10) — a closed claim's label follows its HOLDING claim (ONE statement).
+        holderRefused = await claim.readClosedHolderRefusedBulk(tx.tx, ctx.pariwarId, rows.map((r) => r.claimCaseId));
         ok = true;
       } finally {
         await closeScopeTx(tx, ok);
@@ -341,6 +344,7 @@ export function createAppealHandlers(deps: AppDeps) {
           created_at: r.createdAt.toISOString(),
           eligibility: r.eligibility,
           appeal_until: r.appealUntil,
+          closed_holder_refused: holderRefused.has(r.claimCaseId.toLowerCase()),
         })),
       };
     },

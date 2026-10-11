@@ -18,6 +18,7 @@ import type { ReactElement } from 'react';
 import { useState } from 'react';
 
 import { ApiError } from '../../api/client.js';
+import { resolveEn } from './i18n-en.js';
 import {
   useConfirmConvergenceMerge,
   useConvergencePending,
@@ -42,6 +43,9 @@ export interface ConvergenceDecisionStripProps {
   /** The IN-FLIGHT override target, if any — same per-row scoping as `mergingTarget`. */
   overridingTarget?: { intakeAttemptId: string; againstClaimCaseId: string } | null;
   actionError?: string;
+  /** ⭐ Story 6.28 (OP10) — the last override MINTED A CLOSED claim (the death is already paid on another claim — H(ii)):
+   * the strip says so in its own line (staff-only words). */
+  overrideClosed?: boolean;
   /** Called when an attempt's sole candidate turned terminal mid-resolution (`candidates` is
    * empty) and the operator chooses to escalate rather than wait (Review Finding — the row
    * previously had no path forward at all). Omit to hide the escalation action entirely. */
@@ -59,6 +63,7 @@ export function ConvergenceDecisionStrip(props: ConvergenceDecisionStripProps): 
     mergingTarget = null,
     overridingTarget = null,
     actionError,
+    overrideClosed = false,
     onEscalateNoCandidate,
   } = props;
 
@@ -204,6 +209,11 @@ export function ConvergenceDecisionStrip(props: ConvergenceDecisionStripProps): 
           {actionError}
         </p>
       )}
+      {overrideClosed && (
+        <p role="status" className="text-sm text-status-warn-fg" data-testid="convergence-override-closed">
+          {resolveEn('helpline.result.closed')}
+        </p>
+      )}
 
       {/* Override confirmation modal — mandatory reason, since it mints a SECOND claim. */}
       {overrideTarget && (
@@ -291,6 +301,7 @@ export function ConvergenceDecisionStripContainer({
       mergingTarget={merge.isPending ? (merge.variables ?? null) : null}
       overridingTarget={override.isPending ? (override.variables ?? null) : null}
       actionError={messageOf(merge.error) ?? messageOf(override.error)}
+      overrideClosed={override.data?.state === 'closed'}
     />
   );
 }

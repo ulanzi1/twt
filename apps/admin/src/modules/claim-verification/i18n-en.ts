@@ -619,9 +619,14 @@ export const verifierConsoleEn = {
         appeal_stage_3: 'Under appeal (stage 3)',
         reversed: 'Refusal reversed on appeal',
         settled: 'Settled',
-        // Story 6.24a (`2026-10-07-292` RF4) — staff words for the new terminal state.
-        closed: 'Closed — another claim for this death won its appeal',
+        // Story 6.24a (`2026-10-07-292` RF4) — staff words for the new terminal state. ⭐ Story 6.28 (OP10) — NEUTRAL: TRUE
+        // for both closures (another claim won its suspicion appeal, or another claim of the death is paid) while the
+        // holding claim stands; `closedHolderRefused` below once it was refused / closed.
+        closed: 'Closed — another claim for this death goes ahead',
       } as Record<string, string>,
+      // ⭐ Story 6.28 (OP10; Q3 A's promise) — a closed claim whose HOLDING claim was since refused / closed (the read's
+      // `closed_holder_refused`): the family may file again.
+      closedHolderRefused: 'Closed — the other claim for this death was later refused; the family may file again',
     },
     // The same 409 met on a TRUSTEE surface (the cycle freeze, R9 voting) — the State Trustee cannot
     // determine; they need to know the District Admin must (e.g. after a correction superseded it).

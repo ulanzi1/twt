@@ -152,6 +152,7 @@ describe('the read DTOs carry the block (EA7, RD11, RD20) — every field REQUIR
     under_correction: false,
     name_difference_reasons: [],
     approval_name_highlight: null,
+    finally_approved_elsewhere: null, // Story 6.28 (OP14 (b))
   };
   it('CycleFreezePendingItem requires `approval_warnings`; the response carries `reason_options` ONCE', () => {
     expect(CycleFreezePendingItem.safeParse(pending).success).toBe(false);
@@ -185,6 +186,7 @@ describe('the read DTOs carry the block (EA7, RD11, RD20) — every field REQUIR
       family_run_day0: null,
       checked_after_record: null,
       held: false,
+      finally_approved_elsewhere: null, // Story 6.28 (OP14 (b))
     };
     expect(PariwarClosureQueueItemDto.safeParse(item).success).toBe(false);
     ok(PariwarClosureQueueItemDto.safeParse({ ...item, approval_warnings: null }));
@@ -286,6 +288,7 @@ describe('the read DTOs carry the block (EA7, RD11, RD20) — every field REQUIR
       votes: [],
       tally: null,
       name_difference_reasons: [],
+      finally_approved_elsewhere: null, // Story 6.28 (OP14 (b))
     };
     expect(R9PanelResponse.safeParse(base).success).toBe(false);
     ok(R9PanelResponse.safeParse({ ...base, approval_warnings: SUMMARY, reason_options: [] }));
@@ -297,5 +300,16 @@ describe('the read DTOs carry the block (EA7, RD11, RD20) — every field REQUIR
     expect(shape.approval_warnings.safeParse(undefined).success).toBe(false);
     expect(shape.reason_options.safeParse([]).success).toBe(true);
     expect(shape.reason_options.safeParse(undefined).success).toBe(false);
+  });
+});
+
+describe('Story 6.28 (OP14 (b)) — `finally_approved_elsewhere` is REQUIRED on every approval read, by reference only', () => {
+  it('a missing field fails; a reference + stage parses; ⛔ an id / name field', () => {
+    const shape = (CycleFreezePendingItem as unknown as { shape: Record<string, { safeParse: (v: unknown) => { success: boolean } }> }).shape;
+    expect(shape.finally_approved_elsewhere!.safeParse(undefined).success).toBe(false);
+    expect(shape.finally_approved_elsewhere!.safeParse(null).success).toBe(true);
+    expect(shape.finally_approved_elsewhere!.safeParse({ claim_reference: 'A1B2C3D4', stage: 'paid' }).success).toBe(true);
+    expect(shape.finally_approved_elsewhere!.safeParse({ claim_reference: 'A1B2C3D4', stage: 'paid', claim_case_id: CLAIM }).success).toBe(false);
+    expect(shape.finally_approved_elsewhere!.safeParse({ claim_reference: 'A1B2C3D4', stage: 'approved' }).success).toBe(false);
   });
 });

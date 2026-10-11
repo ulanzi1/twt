@@ -79,6 +79,7 @@ describe('EVERY clerical reason parses through EVERY schema that carries one', (
         under_correction: false,
         name_difference_reasons: [reason],
         approval_name_highlight: null,
+        finally_approved_elsewhere: null, // Story 6.28 (OP14 (b))
         // Story 6.23b (EA7, RD21(b)) — the warnings block every pending case now carries.
         approval_warnings: {
           available: true,

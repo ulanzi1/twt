@@ -177,7 +177,7 @@ export const MemberDeathCertificateStatusResponse = z
     refile_requires_confirmation: z.boolean(),
     /**
      * ⭐ Story 6.24a (`2026-10-07-292` RF12 v1.3) — a ROUTING BIT: this claim is `closed` (another claim of the death won
-     * its suspicion appeal). The claim-entry gate routes to the calm "this claim has been closed — please call the
+     * its suspicion appeal, or — Story 6.28 OP4 — is being paid). The claim-entry gate routes to the calm "this claim has been closed — please call the
      * helpline" screen while it is true — ⛔ never the wizard (a filing would join a live claim of the death, any age —
      * Story 6.28 OP11 — or, the death paid, be closed at once). ⛔ Never merged with `closed_no_response` (a closure
      * for no response is a different thing). ⛔ Never shown as such.
@@ -207,6 +207,8 @@ export const DeathCertificateHelplineClaimStatus = z
     upload_allowed: z.boolean(),
     reassurance: DeathCertificateReassurance.nullable(),
     /** ⛔ No `certificate_token` here — the in-flight marker is a member-app-only concept (D5). */
+    /** ⭐ Story 6.28 (OP10) — a `closed` claim whose HOLDING claim was since refused / closed (the family may file again). */
+    closed_holder_refused: z.boolean(),
   })
   .strict();
 export type DeathCertificateHelplineClaimStatus = z.output<typeof DeathCertificateHelplineClaimStatus>;

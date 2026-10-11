@@ -235,7 +235,22 @@ export function HelplineConsoleShell(props: HelplineConsoleShellProps): ReactEle
               )}
 
               {/* Post-intake outcome — created vs a cross-channel convergence hit (AC3). */}
-              {result !== null && (
+              {/* ⭐ Story 6.28 (OP10) — the filing for a death whose payment is already committed was CLOSED in the
+                  intake's own transaction (H(ii)): ONE staff line IN PLACE OF created / exists, route-for-verification,
+                  "bank details needed" and the bank-details slot (⛔ a bank step on a closed claim). Staff-only words. */}
+              {result !== null && result.state === 'closed' && (
+                <div
+                  role="status"
+                  data-testid="helpline-intake-result-closed"
+                  className="flex flex-col gap-2 rounded border border-status-warn-fg bg-status-warn-bg p-3 text-sm text-status-warn-fg"
+                >
+                  <p>{resolveEn('helpline.result.closed')}</p>
+                  <p className="text-xs opacity-70">
+                    <code>{result.claimCaseId}</code>
+                  </p>
+                </div>
+              )}
+              {result !== null && result.state !== 'closed' && (
                 <div
                   role="status"
                   data-testid="helpline-intake-result"
@@ -265,7 +280,7 @@ export function HelplineConsoleShell(props: HelplineConsoleShellProps): ReactEle
               )}
 
               {/* Story 6.18 (AC7) — the bank-details step + the two-names view (cl.1's duty). */}
-              {result !== null ? bankSlot : null}
+              {result !== null && result.state !== 'closed' ? bankSlot : null}
             </>
           )}
 

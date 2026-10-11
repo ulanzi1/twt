@@ -19,7 +19,7 @@ export type ClaimEntryReadOutcome =
    *  latest claim was CLOSED for no response and ⛔ no re-file confirmation waits. ⛔ Never shown as such. */
   | { readonly kind: 'refile_needs_confirmation' }
   /** ⭐ Story 6.24a (`2026-10-07-292` RF12 v1.3) — the server's `claim_closed` routing bit: the filed claim was CLOSED
-   *  because another claim for the same death won its appeal. ⛔ Never shown as such. */
+   *  because another claim for the same death won its appeal, or (Story 6.28 OP4) is being paid. ⛔ Never shown as such. */
   | { readonly kind: 'closed' }
   | { readonly kind: 'offline' }
   | { readonly kind: 'error' }
@@ -73,4 +73,17 @@ export function boundClaimEntryRead(
     timer = setTimeout(() => resolve({ kind: 'offline' }), ms)
   })
   return Promise.race([read, timeout]).finally(() => clearTimeout(timer))
+}
+
+/**
+ * ⭐ Story 6.28 (`2026-10-11-319` OP10) — an intake answered `state: 'closed'` (the death is already paid on another claim —
+ * H(ii)): may the CLOSED claim become the filed-claim pointer? ONLY when ⛔ no pointer is on record, or the recorded claim
+ * reads TERMINAL (`terminal` / `closed`) — ⛔ never overwriting the pointer to a live or paid claim, and ⛔ never on an
+ * offline / failed / timed-out read (it might be live). Re-entry then goes through the entry gate's `claim_closed` bit —
+ * ⛔ never a fresh wizard minting another closed claim. Pure.
+ */
+export function mayRecordClosedClaimPointer(hasFiledClaimPointer: boolean, recorded: ClaimEntryReadOutcome | null): boolean {
+  if (!hasFiledClaimPointer) return true
+  if (recorded === null) return false
+  return recorded.kind === 'terminal' || recorded.kind === 'closed'
 }

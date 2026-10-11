@@ -87,6 +87,23 @@ describe('<HelplineClaimPage> — selection-reset safety gate (Review Finding)',
     expect(screen.getByTestId('helpline-submit-intake')).toBeDisabled();
   });
 
+  it('Story 6.28 (OP10) — a filing CLOSED at once (the death is paid on another claim) shows ONE staff line — ⛔ created / route / bank step', async () => {
+    vi.mocked(api.initiateHelplineClaim).mockResolvedValueOnce({
+      claimCaseId: '55555555-5555-5555-5555-555555555555', state: 'closed', created: true,
+    } as never);
+    const user = userEvent.setup();
+    renderWithClient(<HelplineClaimPage pariwarId="99999999-9999-9999-9999-999999999999" />);
+    await searchAndGetBothResults(user);
+    await user.click(screen.getByTestId(`member-row-${MEMBER_A.memberId}`));
+    await user.click(screen.getByTestId('readback-confirm-identity'));
+    await user.selectOptions(screen.getByTestId('helpline-relationship'), 'spouse');
+    await user.click(screen.getByTestId('helpline-submit-intake'));
+    expect(await screen.findByTestId('helpline-intake-result-closed')).toHaveTextContent('Closed — another claim for this death goes ahead.');
+    expect(screen.queryByTestId('helpline-intake-result')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('helpline-route-for-verification')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('helpline-bank-required')).not.toBeInTheDocument();
+  });
+
   it('resets a pending step-up panel and the result banner when switching members', async () => {
     const user = userEvent.setup();
     renderWithClient(<HelplineClaimPage pariwarId="99999999-9999-9999-9999-999999999999" />);

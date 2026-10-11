@@ -20,6 +20,7 @@ import { type SQL, sql } from 'drizzle-orm';
 import type { Db } from '../db.js';
 import type { ClaimId, MemberId, PariwarId } from '../ids/index.js';
 import { clampLimit } from '../pagination.js';
+import { DeathAlreadyFinallyApprovedError } from './errors.js';
 import { standingSuspicionRefusalSql } from './suspicion-refusal.js';
 
 /**
@@ -151,4 +152,24 @@ export function readPaymentCommittedClaim(
   selfClaimCaseId: ClaimId,
 ): Promise<ClaimId | null> {
   return readOtherClaimInStates(db, pariwarId, deceasedMemberId, selfClaimCaseId, PAYMENT_COMMITTED_CLAIM_STATES);
+}
+
+// ── OP2 — the guard ──────────────────────────────────────────────────────────────────────────────────
+
+/**
+ * ⭐ OP2 — THE GUARD, the approval gate's second FINAL-only conjunct (`assertClaimApprovable` with `step: 'final'`),
+ * IMMEDIATELY AFTER RF5's `assertSuspicionAppealDecidedForFinalApproval` — which has taken RF15's per-death key — and
+ * BEFORE the late-warning wait (EA2 stays LAST). ⚠ It takes ⛔ no lock of its own: every final writer of the death already
+ * serialises on RF15's key, and every writer runs at READ COMMITTED with `current_state` projected in its own transaction,
+ * so this FRESH statement sees the other writer's commit (Fact 3). ⛔ Never move it before RF5's call (Trap 1 — two
+ * concurrent final writers would both pass).
+ */
+export async function assertNoOtherFinalApprovalForDeath(
+  db: Db,
+  pariwarId: PariwarId,
+  claimCaseId: ClaimId,
+  deceasedMemberId: MemberId,
+): Promise<void> {
+  const other = await readOtherFinallyApprovedClaim(db, pariwarId, deceasedMemberId, claimCaseId);
+  if (other !== null) throw new DeathAlreadyFinallyApprovedError(claimCaseId, other);
 }

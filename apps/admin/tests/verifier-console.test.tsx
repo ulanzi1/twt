@@ -690,6 +690,12 @@ describe('<SignalsPanel> — Story 6.24a (RF10), kept apart from a claim refused
     expect(fallback).toBe(sr.reasonLocked.replace('{held}', sr.anotherClaim));
   });
 
+  it('Story 6.28 (OP2) — the strip\'s defensive stop words (P1 is ⛔ never stopped; ⛔ never a raw code)', () => {
+    expect(decisionErrorMessage(new ApiError(409, 'verifier_decision.death_already_finally_approved', 'x', {}))).toBe(
+      t.onePaymentPerDeath.approvalGate,
+    );
+  });
+
   it('the wait 409 with ⛔ no / an unknown reason ⇒ neutral words — ⛔ never asserts an appeal is being decided (code review round 2)', () => {
     for (const details of [undefined, {}, { reason: 'something_new' }]) {
       const msg = decisionErrorMessage(new ApiError(409, 'verifier_decision.suspicion_appeal_pending', 'x', details));

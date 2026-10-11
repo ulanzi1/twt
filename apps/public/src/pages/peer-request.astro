@@ -18,7 +18,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300');
 Astro.response.headers.set('Referrer-Policy', 'no-referrer');
 ---
 
-<PublicShell locale="hi" title={model.title} trustName={model.title} branding={null} noindex hideLanguageToggle>
+<PublicShell locale="hi" title={model.title} trustName={model.title} trustNameParts={model.titleParts} branding={null} noindex hideLanguageToggle>
   {model.blocks.map((block) => (
     <section lang={block.lang}>
       {block.paragraphs.map((paragraph) => <p>{paragraph}</p>)}

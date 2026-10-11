@@ -14,7 +14,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router'
 import { Button, H2, Input, Paragraph, Spinner, Text, YStack } from 'tamagui'
 
 import { memberAuth } from '../../lib/member-api'
-import { clearLinkTarget, takeLinkTarget } from '../../lib/link-target'
+import { clearLinkTarget, recordLinkTarget, takeLinkTarget } from '../../lib/link-target'
 import { getDeviceId } from '../../lib/session'
 import { useSession } from '../../lib/session-context'
 
@@ -37,9 +37,15 @@ export default function OtpScreen() {
       const res = await memberAuth.verifyOtp({ mobile, otp, deviceId })
       if (res.sessionType === 'full_session') {
         // Story 6.30 AL6 (iii) — the ONE consumer of the link target: taken BEFORE `signIn` (its state
-        // change re-runs the root guard), consumed once; ⛔ no target ⇒ home.
+        // change re-runs the root guard), consumed once; ⛔ no target ⇒ home. A `signIn` that throws (a
+        // SecureStore write failure) stored ⛔ no session — the target goes back so the retry keeps its place.
         const target = takeLinkTarget()
-        await signIn(res)
+        try {
+          await signIn(res)
+        } catch (signInErr) {
+          if (target) recordLinkTarget(target.pathname, target.params)
+          throw signInErr
+        }
         if (target) {
           router.replace({ pathname: target.pathname, params: { c: target.params.c } })
         } else {

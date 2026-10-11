@@ -9,7 +9,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import type { APIContext } from 'astro';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { buildAppleAppSiteAssociation, buildAssetLinks } from '@twt/contracts';
 
@@ -89,6 +89,41 @@ describe('assetlinks.json', () => {
     process.env.APP_LINKS_ANDROID_APPS = JSON.stringify(ANDROID);
     expect((await call(assetLinksGet)).status).toBe(200);
   });
+});
+
+describe('a SET-but-invalid identity variable warns the operator (code review 2026-10-11)', () => {
+  const cases = [
+    ['APP_LINKS_IOS_APP_IDS', aasaGet, `${IOS_ID},`],
+    ['APP_LINKS_ANDROID_APPS', assetLinksGet, JSON.stringify([{ package: 'org.example.fixture', sha256: [FP], name: 'x' }])],
+  ] as const;
+
+  for (const [variable, get, invalid] of cases) {
+    it(`${variable}: invalid ⇒ 404 + ONE warning naming the variable, ⛔ never the value`, async () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      try {
+        process.env[variable] = invalid;
+        expect((await call(get)).status).toBe(404);
+        expect(warn).toHaveBeenCalledTimes(1);
+        const message = String(warn.mock.calls[0]![0]);
+        expect(message).toContain(variable);
+        expect(message).not.toContain(invalid);
+      } finally {
+        warn.mockRestore();
+      }
+    });
+
+    it(`${variable}: unset or blank ⇒ 404 and ⛔ no warning`, async () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      try {
+        expect((await call(get)).status).toBe(404);
+        process.env[variable] = '  ';
+        expect((await call(get)).status).toBe(404);
+        expect(warn).not.toHaveBeenCalled();
+      } finally {
+        warn.mockRestore();
+      }
+    });
+  }
 });
 
 describe('⛔ no member data — the bodies carry ONLY the identity values and the app-link paths', () => {

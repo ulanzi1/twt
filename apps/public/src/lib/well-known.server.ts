@@ -19,6 +19,14 @@ export function wellKnownJson(body: unknown): Response {
   });
 }
 
-export function wellKnownNotFound(): Response {
+/**
+ * The 404. When the variable is SET but does ⛔ not parse, a one-line warning names the variable and the file
+ * (⛔ never the value): set-but-invalid otherwise looks exactly like unset, and Apple's CDN caches the 404 —
+ * the operator's only signal (code review 2026-10-11).
+ */
+export function wellKnownNotFound(variable: string, raw: string | undefined, file: string): Response {
+  if (raw !== undefined && raw.trim() !== '') {
+    console.warn(`[app-links] ${variable} is set but does not parse — ${file} answers 404 until it is fixed`);
+  }
   return new Response(null, { status: 404 });
 }

@@ -99,8 +99,10 @@ resource "cloudflare_ruleset" "waf_custom" {
   }
 
   lifecycle {
+    # Only when bot management is on — the ruleset is ALWAYS present now (Story 6.30), and with the flag off no
+    # rule reads either threshold, so an inverted pair must ⛔ not refuse the apply (code review 2026-10-11).
     precondition {
-      condition     = var.bot_score_sensitive_threshold >= var.bot_score_challenge_threshold
+      condition     = !var.enable_bot_management || var.bot_score_sensitive_threshold >= var.bot_score_challenge_threshold
       error_message = "bot_score_sensitive_threshold (${var.bot_score_sensitive_threshold}) must be >= bot_score_challenge_threshold (${var.bot_score_challenge_threshold}). A lower sensitive threshold would challenge LESS aggressively on high-sensitivity surfaces, inverting the intended security posture."
     }
   }

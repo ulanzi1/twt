@@ -39,6 +39,8 @@ export interface PeerRequestStoreButton {
 export interface PeerRequestPageModel {
   /** The page title AND `PublicShell`'s `trustName` (the same value, so the shell dedupes — ⛔ never a Trust name). */
   readonly title: string;
+  /** The title's two halves — `PublicShell` renders each under its OWN `lang` in the header and footer (code review 2026-10-11). */
+  readonly titleParts: { readonly hi: string; readonly en: string };
   readonly blocks: readonly PeerRequestLanguageBlock[];
   readonly storeButtons: readonly PeerRequestStoreButton[];
 }
@@ -90,8 +92,10 @@ export function buildPeerRequestPageModel(env: PeerRequestPageEnv): PeerRequestP
     }
   }
 
+  const titleParts = { hi: tr('hi', 'page_title'), en: tr('en', 'page_title') };
   return {
-    title: `${tr('hi', 'page_title')} / ${tr('en', 'page_title')}`,
+    title: `${titleParts.hi} / ${titleParts.en}`,
+    titleParts,
     blocks: [block('hi'), block('en')],
     storeButtons,
   };

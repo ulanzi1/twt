@@ -195,7 +195,16 @@ const SIGNED_URL_TTL_SECONDS = 300;
  * ⭐ Ledger line:
  *   + Story 6.28 (OP14): the other claims of this death                                     +1  → 22
  */
-export const VERIFIER_CONSOLE_MAX_READS = 22;
+/*
+ * ⭐ STORY 6.28's SECOND READ (OP14 (b), code review chunk 3/4) — the explanation this counter demands. The verifier
+ * console's finally-approved banner was derived from the OP14 (a) section above (capped at 20) until this review —
+ * a death with more than 20 other claims could hide the one that matters most. ⛔ It is the MINIMUM:
+ * `readFinallyApprovedElsewhereBulk` answers the SAME authoritative, uncapped check every other approval surface's
+ * `finally_approved_elsewhere` field already uses, in ONE statement for this one claim. It decrypts ⛔ nothing. Under
+ * a raw SAVEPOINT (`underSavepoint`), BEFORE the warnings (which stay LAST). ⭐ Ledger line:
+ *   + Story 6.28 (OP14 (b)): the authoritative finally-approved-elsewhere signal          +1  → 23
+ */
+export const VERIFIER_CONSOLE_MAX_READS = 23;
 
 /** Counts the assembler's top-level bounded source reads (the no-N+1 fan-out width). */
 class ReadCounter {

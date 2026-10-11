@@ -80,6 +80,9 @@ export function otherClaimInStatesSql(claimAlias: string, states: readonly strin
  * ⛔ not finally approved (OP2's 409 covers that one), and RF1 does ⛔ not stand on it (Invariant 3 — FQ5 decides that pair).
  */
 function otherOpenClaimPredicateSql(self: SQL, oc: string): SQL {
+  // Code review chunk 1 patch — `aliasOf`'s validation, ⛔ a bare `sql.raw(oc)`: this helper is module-private and
+  // today only ever called with the file's own two hardcoded literal aliases (`'op_oc'`, `'op_oe'`), but it still
+  // deserves the SAME discipline every exported fragment in this file already applies to its alias parameter.
   const o = aliasOf(oc);
   return sql`${o}.pariwar_id = ${self}.pariwar_id
        AND ${o}.deceased_member_id = ${self}.deceased_member_id
@@ -89,7 +92,12 @@ function otherOpenClaimPredicateSql(self: SQL, oc: string): SQL {
        AND NOT ${standingSuspicionRefusalSql(oc)}`;
 }
 
-/** The row cap on `otherOpenClaimsForDeathSql`'s `json_agg` — matches the file's other "other claims of a death" ceilings. */
+/**
+ * The row cap on `otherOpenClaimsForDeathSql`'s `json_agg` — the SAME 50 as `suspicion-refusal-persist.ts`'s
+ * `HELD_CLAIMS_CAP` (the closure walk's own ceiling for "other claims of a death"), ⛔ a shared import: that file
+ * already imports FROM this one (`readPaymentCommittedClaim`/`readPaymentCommittedClaimOfDeath`), so importing
+ * `HELD_CLAIMS_CAP` back here would be circular. Kept as its own named constant with the matching value instead.
+ */
 const OTHER_OPEN_CLAIMS_FOR_DEATH_JSON_CAP = clampLimit(50, { default: 50, cap: 50 });
 
 /**
@@ -200,7 +208,7 @@ export async function assertNoOtherFinalApprovalForDeath(
 // ── OP14 (a) — the other claims of the death, for the approver (staff only) ─────────────────────────────────────────
 
 /** How the console names another claim's stage — staff words, from its state (⛔ a judgement). */
-export const OTHER_CLAIM_STAGES = ['open', 'passed_final_vote', 'paid', 'refused', 'under_appeal', 'closed'] as const;
+export const OTHER_CLAIM_STAGES = ['open', 'passed_final_vote', 'paid', 'refused', 'under_appeal', 'reversed', 'closed'] as const;
 export type OtherClaimStage = (typeof OTHER_CLAIM_STAGES)[number];
 
 /** The other claim's date of death against THIS claim's, by EQUALITY of the live accepted reviews' keyed index. */
@@ -229,9 +237,13 @@ export function otherClaimStageOf(state: string): OtherClaimStage {
   if (state === 'closed') return 'closed';
   if (state === 'denied') return 'refused';
   // `reversed` (a panel overturned a refusal/appeal decision) routes back through the freeze/R9 pipeline toward a
-  // fresh vote — it is ⛔ never a brand-new, never-touched claim, so it is grouped with `under_appeal` rather than
-  // falling through to the default `open` (which would mislabel it identically to a filed-and-untouched claim).
-  if (state === 'appeal_stage_1' || state === 'appeal_stage_2' || state === 'appeal_stage_3' || state === 'reversed') return 'under_appeal';
+  // fresh vote — it is ⛔ never a brand-new, never-touched claim. ⚠ ITS OWN stage (code review chunk 3/4 round 2),
+  // ⛔ grouped under `under_appeal`: that label would read to staff as "protected, an appeal is pending" — but
+  // `mayCloseForPaidDeath`'s `KEEPS_ITS_APPEAL_STATES` deliberately excludes `reversed` (it is closable the instant
+  // another claim of the death is paid), so a staff member reading "under_appeal" would form the WRONG mental
+  // model about a claim one step from being closed.
+  if (state === 'reversed') return 'reversed';
+  if (state === 'appeal_stage_1' || state === 'appeal_stage_2' || state === 'appeal_stage_3') return 'under_appeal';
   if ((PAYMENT_COMMITTED_CLAIM_STATES as readonly string[]).includes(state)) return 'paid';
   if (state === 'state_trustee_approved') return 'passed_final_vote';
   return 'open';

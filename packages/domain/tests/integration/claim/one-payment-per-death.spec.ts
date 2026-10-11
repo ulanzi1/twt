@@ -230,7 +230,7 @@ describe.skipIf(!hasDatabase)('Story 6.28 — one payment per death: OP1 + OP3 (
       const want: Record<string, string> = {};
       for (const [state, stage] of [
         ['verifier_review', 'open'], ['state_trustee_approved', 'passed_final_vote'], ['approved', 'paid'],
-        ['denied', 'refused'], ['appeal_stage_1', 'under_appeal'], ['reversed', 'under_appeal'], ['closed', 'closed'],
+        ['denied', 'refused'], ['appeal_stage_1', 'under_appeal'], ['reversed', 'reversed'], ['closed', 'closed'],
       ] as const) {
         want[await claimAt(client, PARIWAR_A, mid, state)] = stage;
       }

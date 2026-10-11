@@ -739,6 +739,10 @@ export const verifierConsoleEn = {
       paid: 'paid',
       refused: 'refused',
       under_appeal: 'under appeal',
+      // ⭐ Code review chunk 3/4 round 2 — ITS OWN label, ⛔ "under appeal": a reversed claim's appeal is OVER
+      // (won) — it is routed back toward a fresh vote and can be closed the instant another claim of the death
+      // is paid, which "under appeal" would wrongly suggest is still pending/protected.
+      reversed: 'reversed — awaiting a new vote',
       closed: 'closed',
     } satisfies Record<VerifierConsolePacket['otherClaimsForDeath']['claims'][number]['stage'], string>,
     channel: { member_app: 'the member app', helpline: 'the helpline', trustee_initiated: 'a trustee' } satisfies Record<

@@ -275,7 +275,7 @@ export type DeathCertificateFamilyStatus =
   | 'awaiting_review'
   | 'accepted'
   | 'replacement_requested'
-  // ⭐ Story 6.24a (`2026-10-07-292` RF12) — the claim is `closed` (another claim of the death won its suspicion appeal).
+  // ⭐ Story 6.24a (`2026-10-07-292` RF12) — the claim is `closed` (another claim of the death won its suspicion appeal, or — Story 6.28 OP4 — is paid).
   // The family is told only *"This claim has been closed. Please call the helpline."* — ⛔ no reason, ⛔ no other claim.
   | 'closed';
 

@@ -74,7 +74,7 @@ import {
   suspicionAppealWaitState,
 } from './suspicion-refusal.js';
 
-/** The `claim.closed` trigger (the ONE value its payload schema accepts). */
+/** RF6's `claim.closed` trigger (one of `CLAIM_CLOSED_TRIGGERS` — Story 6.28 added `death_already_finally_approved`). */
 export const SUSPICION_APPEAL_ALLOWED_TRIGGER = 'suspicion_appeal_allowed' as const;
 
 /** The bounded number of other claims of one death the closure walks (a death has a handful). */

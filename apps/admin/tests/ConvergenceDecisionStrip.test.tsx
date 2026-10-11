@@ -142,4 +142,9 @@ describe('<ConvergenceDecisionStrip>', () => {
     fireEvent.click(screen.getByTestId(`convergence-escalate-${ATTEMPT_ID}`));
     expect(onEscalateNoCandidate).toHaveBeenCalledWith({ intakeAttemptId: ATTEMPT_ID });
   });
+
+  it('Story 6.28 (OP10) — an override that minted a CLOSED claim says so in its own staff line', () => {
+    render(<ConvergenceDecisionStrip pending={[]} onMerge={vi.fn()} onOverride={vi.fn()} overrideClosed />);
+    expect(screen.getByTestId('convergence-override-closed')).toHaveTextContent('Closed — another claim for this death goes ahead.');
+  });
 });

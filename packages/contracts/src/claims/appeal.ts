@@ -56,7 +56,7 @@ export const AppealDispositionCategory = z.enum([
 export type AppealDispositionCategory = z.output<typeof AppealDispositionCategory>;
 
 /** The journey terminal status (value-aligned with the domain `appeal_journey_status`). */
-// Story 6.24a (`2026-10-07-292` RF4) — `closed`: the claim was closed mid-appeal (another claim of the death won its appeal).
+// Story 6.24a (`2026-10-07-292` RF4) — `closed`: the claim was closed mid-appeal (another claim of the death won its appeal, or — Story 6.28 OP4 — is paid).
 export const AppealJourneyStatus = z.enum(['open', 'reversed', 'upheld_final', 'closed']);
 export type AppealJourneyStatus = z.output<typeof AppealJourneyStatus>;
 
@@ -462,6 +462,8 @@ export const HelplineAppealClaimsResponse = z
           created_at: z.string().datetime(),
           eligibility: HelplineAppealEligibility,
           appeal_until: CalendarDate.nullable(),
+          /** ⭐ Story 6.28 (OP10) — a `closed` claim whose HOLDING claim was since refused / closed. */
+          closed_holder_refused: z.boolean(),
         })
         .strict(),
     ),

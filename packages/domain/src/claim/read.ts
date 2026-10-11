@@ -30,7 +30,7 @@ import { standingSuspicionRefusalSql } from './suspicion-refusal.js';
  * Lifecycle states from which a claim never re-opens (Story 6.1 state.ts:
  * `settled` and `denied` are both annotated terminal; `reversed` re-enters
  * `approved` via an appeal, so it is NOT terminal). Story 6.24a (`2026-10-07-292` RF4) adds `closed` — another claim of
- * the death won its suspicion appeal; ⛔ nothing leaves `closed`.
+ * the death won its suspicion appeal, or (Story 6.28 OP4) another claim of the death is paid; ⛔ nothing leaves `closed`.
  */
 export const CLAIM_TERMINAL_STATES: readonly ClaimLifecycleState[] = ['settled', 'denied', 'closed'] as const;
 

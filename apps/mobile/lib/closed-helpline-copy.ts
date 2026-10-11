@@ -2,7 +2,8 @@
 // the real-`t()` test resolves every key in BOTH locales in node ([[feedback_stub_must_call_not_transcribe]]).
 //
 // Reached from the claim-entry gate when the filed claim's fresh read carries `claim_closed` — the claim was closed
-// because another claim for the same death won its appeal. The words say ONLY that the claim is closed and to call the
+// because another claim for the same death won its appeal, or (Story 6.28 OP4) is being paid. The words say ONLY that the
+// claim is closed and to call the
 // helpline: ⛔ no reason, ⛔ no mention of the other claim, ⛔ no name, ⛔ "suspicion" or "changed after the death".
 
 export const CLOSED_HELPLINE_COPY = {

@@ -13,6 +13,8 @@
 //         `closed` in the reversal's transaction and the writer returns `closed`.
 //   AC6 — in a paid death an allowed SUSPICION appeal still closes a held third claim through RF6 (`suspicion_appeal_allowed`)
 //         BEFORE H(iii) closes the reversed claim.
+//   AC6 (Q3 A) — the `-291` Q2 B closure text (0151's `closed_after_appeal` purpose) selects ⛔ no claim closed by OP4 — and
+//         still selects RF6's (`suspicion_appeal_allowed`) in the same death; ⛔ no notice row is written for OP4's closure.
 //   AC9 — path (a): X voted, S refused for another reason, revised ONTO `-239`, appealed, ALLOWED ⇒ X `closed`
 //         (`suspicion_appeal_allowed`, held by S), its routing / R9 session ended, the commit ⛔ never commits it, S passes
 //         OP2; with X already `approved` ⇒ X reported `notClosed`, S closed by H(iii) (Invariant 3's residual).
@@ -32,6 +34,7 @@ import {
   overrideIntakeAttempt,
   readOpenCorrectionRun,
   reviseDecision,
+  selectDueSuspicionNotices,
   routeToR9,
   tryConverge,
   voteOnFrozenClaim,
@@ -340,6 +343,28 @@ describe.skipIf(!hasDatabase)('Story 6.28 — closed: the other claims of a paid
       expect(out.claimState).toBe('closed');
       expect(await closedEventOf(client, s)).toMatchObject({ trigger: 'death_already_finally_approved', held_by_claim_case_id: x });
       void emitClaim;
+    });
+  });
+
+  describe('AC6 (Q3 A) — ⛔ texted: the closure notice selects ⛔ no OP4 closure', () => {
+    it('in a paid death: RF6\'s closure IS selected; the OP4 closures are ⛔ not; ⛔ notice row', async () => {
+      const { client } = getTx();
+      const mid = toMemberId(randomUUID());
+      const x = await claimAt(client, PARIWAR_A, mid, 'approved');
+      const s = await refusedClaim(client, PARIWAR_A, mid);
+      await openAppeal(client, PARIWAR_A, s);
+      const r = await claimAt(client, PARIWAR_A, mid, 'verifier_review'); // held ⇒ RF6 closes it (`suspicion_appeal_allowed`)
+      await reverseAtStage1(client, PARIWAR_A, s); // ⇒ S closed by H(iii) (`death_already_finally_approved`)
+      const y = await claimAt(client, PARIWAR_A, mid, 'verifier_approved');
+      expect((await paidClose(client, PARIWAR_A, mid)).closed).toEqual([y]); // OP4 (H(i)'s entry)
+      const page = await selectDueSuspicionNotices(client, { purpose: 'closed_after_appeal', after: null, limit: 500, allow: [PARIWAR_A] });
+      const due = page.due.map((c) => c.claimCaseId);
+      expect(due).toContain(r);
+      expect(due).not.toContain(s);
+      expect(due).not.toContain(y);
+      const rows = await client.query('SELECT 1 FROM claim_suspicion_notices WHERE claim_case_id = ANY($1)', [[s, y]]);
+      expect(rows.rowCount).toBe(0);
+      void x;
     });
   });
 });

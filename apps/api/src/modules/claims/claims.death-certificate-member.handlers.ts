@@ -78,7 +78,8 @@ export function createDeathCertificateMemberHandlers(deps: AppDeps) {
           reassurance: result.reassurance,
           closed_no_response: closedNoResponse,
           refile_requires_confirmation: refileRequiresConfirmation,
-          // ⭐ Story 6.24a (RF12 v1.3) — the closed claim's routing bit (the calm helpline screen, ⛔ not the wizard).
+          // ⭐ Story 6.24a (RF12 v1.3) — the closed claim's routing bit (the calm helpline screen, ⛔ not the wizard) — for
+          // both closures (Story 6.28 OP4: another claim of the death is paid).
           claim_closed: claimRow.currentState === 'closed',
         };
       } finally {

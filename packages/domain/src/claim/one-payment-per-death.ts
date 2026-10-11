@@ -421,3 +421,41 @@ export async function readOtherClaimVisits(db: Db, pariwarId: PariwarId, claimCa
   const row = result.rows?.[0];
   return { visitedElsewhere: row?.visited_elsewhere === true, alreadyVisited: row?.already_visited === true };
 }
+
+// ── OP10 — the staff label of a CLOSED claim follows its HOLDING claim ──────────────────────────────────────────────
+
+const HOLDER_REFUSED_SLICE = 500;
+
+/**
+ * ⭐ OP10 (`2026-10-11-318` Q3 A's promise) — of MANY claims, the `closed` ones whose HOLDING claim (`claim.closed`'s
+ * `held_by_claim_case_id` — the claim that went ahead) has since been REFUSED or CLOSED, so the staff label reads "the
+ * other claim … was later refused; the family may file again" instead of "… goes ahead". ONE statement per ≤ 500 ids;
+ * lower-case ids. ⛔ No PII.
+ */
+export async function readClosedHolderRefusedBulk(db: Db, pariwarId: PariwarId, claimCaseIds: readonly string[]): Promise<Set<string>> {
+  const out = new Set<string>();
+  const unique = [...new Set(claimCaseIds.map((id) => id.toLowerCase()))];
+  for (let i = 0; i < unique.length; i += HOLDER_REFUSED_SLICE) {
+    const slice = unique.slice(i, i + HOLDER_REFUSED_SLICE);
+    const result = await db.execute<{ claim_case_id: string }>(sql`
+      SELECT op_c.claim_case_id::text AS claim_case_id
+        FROM claims op_c
+       WHERE op_c.pariwar_id = ${pariwarId}
+         AND op_c.claim_case_id IN (${sql.join(slice.map((id) => sql`${id}::uuid`), sql`, `)})
+         AND op_c.current_state = 'closed'
+         AND EXISTS (
+           SELECT 1
+             FROM events_log op_e
+             JOIN claims op_h
+               ON op_h.pariwar_id = op_e.pariwar_id
+              AND op_h.claim_case_id = (op_e.payload ->> 'held_by_claim_case_id')::uuid
+            WHERE op_e.pariwar_id = op_c.pariwar_id
+              AND op_e.stream_id = op_c.claim_case_id
+              AND op_e.event_type = 'claim.closed'
+              AND op_h.current_state IN ('denied', 'closed')
+         )
+    `);
+    for (const r of result.rows ?? []) out.add(r.claim_case_id.toLowerCase());
+  }
+  return out;
+}

@@ -4,7 +4,12 @@
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { boundClaimEntryRead, resolveClaimEntryDecision, type ClaimEntryReadOutcome } from '../../lib/claim-entry-gate'
+import {
+  boundClaimEntryRead,
+  mayRecordClosedClaimPointer,
+  resolveClaimEntryDecision,
+  type ClaimEntryReadOutcome,
+} from '../../lib/claim-entry-gate'
 
 describe('resolveClaimEntryDecision', () => {
   it('no filed-claim pointer ⇒ wizard, regardless of outcome', () => {
@@ -70,5 +75,21 @@ describe('boundClaimEntryRead — a stalled read never holds the claim entry (co
 
   it('a read that settles in time wins (positive control)', async () => {
     await expect(boundClaimEntryRead(Promise.resolve({ kind: 'live' }), 5000)).resolves.toEqual({ kind: 'live' })
+  })
+})
+
+describe('Story 6.28 (OP10) — mayRecordClosedClaimPointer', () => {
+  it('⛔ no pointer on record ⇒ record the closed claim', () => {
+    expect(mayRecordClosedClaimPointer(false, null)).toBe(true)
+  })
+  it('the recorded claim reads TERMINAL or CLOSED ⇒ record', () => {
+    expect(mayRecordClosedClaimPointer(true, { kind: 'terminal' })).toBe(true)
+    expect(mayRecordClosedClaimPointer(true, { kind: 'closed' })).toBe(true)
+  })
+  it('⛔ never over a LIVE claim, and ⛔ never on an offline / failed / missing read', () => {
+    for (const kind of ['live', 'offline', 'error', 'not_found', 'refile_needs_confirmation'] as const) {
+      expect(mayRecordClosedClaimPointer(true, { kind }), kind).toBe(false)
+    }
+    expect(mayRecordClosedClaimPointer(true, null)).toBe(false)
   })
 })

@@ -376,6 +376,8 @@ export function createDeathCertificateHandlers(deps: AppDeps) {
       const liveClaims = await claimDomain.listLiveClaimsForDeceasedMember(scopeTx.tx, pariwarId, memberIdBrand, {
         includeClosed: true,
       });
+      // ⭐ Story 6.28 (OP10) — a closed claim's staff label follows its HOLDING claim (ONE statement).
+      const holderRefused = await claimDomain.readClosedHolderRefusedBulk(scopeTx.tx, pariwarId, liveClaims.map((c) => c.claimCaseId));
       const claims = await Promise.all(
         liveClaims.map(async (c) => {
           const result = await claimDomain.readDeathCertificateFamilyStatus(
@@ -392,6 +394,7 @@ export function createDeathCertificateHandlers(deps: AppDeps) {
             replacement_reason: result.replacementReason,
             upload_allowed: result.uploadAllowed,
             reassurance: result.reassurance,
+            closed_holder_refused: holderRefused.has(c.claimCaseId.toLowerCase()),
           };
         }),
       );

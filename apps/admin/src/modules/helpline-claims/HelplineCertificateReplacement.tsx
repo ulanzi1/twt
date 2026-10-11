@@ -171,7 +171,10 @@ export function HelplineCertificateReplacement({
               data-testid={`helpline-certificate-claim-${c.claim_case_id}`}
             />
             {/* An unknown state reads as a dash (the refusal list's posture) — ⛔ never guessed. */}
-            {certificateClaimOption(claimStateLabels[c.claim_state] ?? '—', formatIst(c.created_at))}
+            {certificateClaimOption(
+                  c.closed_holder_refused ? verifierConsoleEn.nomineeDeclaration.refusals.closedHolderRefused : (claimStateLabels[c.claim_state] ?? '—'),
+                  formatIst(c.created_at),
+                )}
           </label>
         ))}
       </fieldset>

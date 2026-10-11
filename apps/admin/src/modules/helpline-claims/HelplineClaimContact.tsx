@@ -247,7 +247,10 @@ export function HelplineClaimContact({
               onChange={() => setPicked(c.claim_case_id)}
               data-testid={`helpline-contact-claim-${c.claim_case_id}`}
             />
-            {certificateClaimOption(claimStateLabels[c.claim_state] ?? '—', formatIst(c.created_at))}
+            {certificateClaimOption(
+                  c.closed_holder_refused ? verifierConsoleEn.nomineeDeclaration.refusals.closedHolderRefused : (claimStateLabels[c.claim_state] ?? '—'),
+                  formatIst(c.created_at),
+                )}
           </label>
         ))}
       </fieldset>

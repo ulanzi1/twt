@@ -434,7 +434,9 @@ describe.skipIf(!hasDatabase)('Verifier-console read surface — E2E (:5433)', (
     // Resolve 5 OTHER claims in this Pariwar so there are more candidates than the recency cap.
     const resolvedClaimIds: string[] = [];
     for (let i = 0; i < 5; i++) {
-      const c = await seedClaim(pariwarId, deceased);
+      // ⚠ Story 6.28 (OP5): each precedent is its OWN death — five open claims of ONE death would each show
+      // `other_claim_for_death` and need a warning reason; the precedents read is Pariwar-wide, so nothing it tests moves.
+      const c = await seedClaim(pariwarId, await seedDeceasedMember(pariwarId, DISTRICT));
       const scopeTx = await openScopeTx(deps, pariwarId);
       try {
         await claim.adjudicateClaim(scopeTx.client, {

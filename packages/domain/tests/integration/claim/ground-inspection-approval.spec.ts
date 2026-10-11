@@ -407,10 +407,14 @@ describe.skipIf(!hasDatabase)('Story 6.26a — the ground-inspection approval ga
       // now HOLDS the refile's final approval (`-292` RF5) — so the refusal is dated 100 days back: its appeal time has
       // PASSED (⛔ no wait), it still STANDS and is still the inheritance source, and this leg keeps its purpose (the
       // inheritance vanishing makes the finalize wait for an inspection).
+      // ⚠ AMENDED by Story 6.28 (OP5, ⛔ not weakened): the source is DRIVEN to `denied`, as every real refusal is — left in
+      // `verification_in_progress` with only a raw decision row, it read as an OPEN claim once its reason was revised off
+      // `-239` below, and 6.28's `other_claim_for_death` key then (rightly) asked the R9 approve votes for a reason.
       const source = toClaimId(randomUUID());
-      await driveClaimTo(client, pid, source, mid, 'verification_in_progress');
+      await driveClaimTo(client, pid, source, mid, 'verifier_review');
       await seedDeathCertificate(client, { pariwarId: pid, claimCaseId: source });
       await seedGroundInspection(client, pid, source);
+      await emit({ client, tx, pid, cid: source, mid }, 'verifier_review', 'denied', 'claim.verifier_denied', { actor: 'operator' });
       await client.query(
         `INSERT INTO claim_verifier_decisions (claim_case_id, pariwar_id, outcome, reason_code, rationale_ciphertext, actor_id, actor_display, decided_at)
          VALUES ($1, $2, 'denied', 'post_death_nominee_change', 'enc:v1:r', $3, 'Anita (District Admin)', now() - interval '100 days')`,

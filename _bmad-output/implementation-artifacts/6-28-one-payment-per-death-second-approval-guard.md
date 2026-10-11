@@ -668,7 +668,7 @@ null`; the admin client's schema carries the fields (a test against the REAL cli
       `closeClaimsOfPaidDeath`; H(i) in `postCommit` (fresh + replay); H(ii) inside `tryConverge` / `overrideIntakeAttempt` (self-mode) +
       the `closed` return; H(iii)'s `closed` return; the core's `<> 'closed'` prefilter + cap log; H(iii) inside the three reversal arms (self-mode); H(iv) — ONE shared helper in the four final-writer handlers
       (Trap 14); the two-connection mint leg; the no-hang legs.
-- [ ] **Task 5 — OP5 (AC5).** The kind (+ contracts mirror — run its vitest, [[project_contracts_tests_outside_tsc]]), the embedded fragment in
+- [x] **Task 5 — OP5 (AC5).** The kind (+ contracts mirror — run its vitest, [[project_contracts_tests_outside_tsc]]), the embedded fragment in
       both readers + the single = bulk test, the `lateArm` fourth disjunct (+ the fault-path leg), the label, the pinned test bumped with a
       reason, the late-wait leg, the vanish / reappear legs.
 - [ ] **Task 5b — OP11 (AC10).** Drop the window at the three mirrored sites + delete the constant; re-word the comments and the strip note;

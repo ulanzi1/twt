@@ -85,7 +85,6 @@ type Client = ReturnType<typeof getTx>['client'];
 const DAY = 86_400_000;
 const PA = 'a2a2a2a2-0000-4000-8000-000000000004';
 const R9_CLAUSE = 'niy.special-death.r9';
-const windowStart = () => new Date(Date.now() - 30 * DAY);
 
 const intake = (mid: MemberId, channel: schema.ClaimIntakeChannel) => ({
   pariwarId: PARIWAR_A,
@@ -171,7 +170,7 @@ describe.skipIf(!hasDatabase)('Story 6.24a — the refile after a suspicion refu
           expect(refile.claimCaseId).not.toBe(s);
           expect(refile.convergencePending).toBe(false);
           // S is ⛔ not a candidate (the refile is, now); the strip parks ⛔ nothing on S; the backstop never returns S.
-          expect((await getConvergenceCandidate(tx, PARIWAR_A, mid, windowStart()))?.claimCaseId).toBe(refile.claimCaseId);
+          expect((await getConvergenceCandidate(tx, PARIWAR_A, mid))?.claimCaseId).toBe(refile.claimCaseId);
           const strip = await getPendingIntakeAttempts(tx, PARIWAR_A);
           expect(strip.flatMap((v) => v.candidates.map((c) => c.claimCaseId))).not.toContain(s);
           expect((await getClaimByDeceasedMember(tx, PARIWAR_A, mid))?.claimCaseId).toBe(refile.claimCaseId);
@@ -231,13 +230,13 @@ describe.skipIf(!hasDatabase)('Story 6.24a — the refile after a suspicion refu
       const sOff = await refusedClaim(client, PARIWAR_A, off, { ground: true });
       await reviseDecision(client, revise(sOff, 'other'));
       await openAppeal(client, PARIWAR_A, sOff);
-      expect((await getConvergenceCandidate(tx, PARIWAR_A, off, windowStart()))?.claimCaseId).toBe(sOff);
+      expect((await getConvergenceCandidate(tx, PARIWAR_A, off))?.claimCaseId).toBe(sOff);
 
       const onto = toMemberId(randomUUID());
       const sOnto = await refusedClaim(client, PARIWAR_A, onto, { reason: 'other', ground: true });
       await reviseDecision(client, revise(sOnto, 'post_death_nominee_change'));
       await openAppeal(client, PARIWAR_A, sOnto);
-      expect(await getConvergenceCandidate(tx, PARIWAR_A, onto, windowStart())).toBeUndefined();
+      expect(await getConvergenceCandidate(tx, PARIWAR_A, onto)).toBeUndefined();
       expect((await tryConverge(client, intake(onto, 'member_app'))).minted).toBe(true);
     });
   });

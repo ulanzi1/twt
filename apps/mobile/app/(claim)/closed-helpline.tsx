@@ -3,8 +3,8 @@
 // The family's filed claim was CLOSED because another claim for the same death won its appeal (`-262` FQ5 A). This screen
 // says only that, calmly, with the helpline ONE tap away (<CallHelplineCTA>, the prominent rendering) — ⛔ no reason,
 // ⛔ no other claim, ⛔ no name. Reached from the claim-entry gate (`index.tsx`) — ⛔ never the wizard (a new filing would
-// converge onto the reversed claim only inside the 30-day look-back, else mint a third claim for the death; the helpline
-// guides the family instead). The `refile-helpline.tsx` precedent: a plain `YStack`, ⛔ `<ClaimProxyFlowShell>`, ⛔ not in
+// join a live claim of the death, whatever its age — Story 6.28 OP11 removed the 30-day look-back — or, the death paid,
+// be closed at once; the helpline guides the family instead). The `refile-helpline.tsx` precedent: a plain `YStack`, ⛔ `<ClaimProxyFlowShell>`, ⛔ not in
 // `CLAIM_STEPS`. Accessibility: ONE labelled container, ANNOUNCED on arrival; both buttons have real handlers.
 
 import { useEffect } from 'react'

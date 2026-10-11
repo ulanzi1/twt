@@ -9,6 +9,8 @@
 //         open claims of the committed death (fresh + replay, idempotent; a lock timeout is logged and a replay heals it);
 //         H(iii) the appeal response's `claim_state` reads `closed`; H(ii) the helpline intake and the override answer
 //         `state: 'closed'` — IN the request transaction, ⛔ never a hang.
+//   AC10 — the window is gone (OP11): a 40-day-old OPEN claim takes a cross-channel filing as a `pending` attempt and
+//         `confirmMerge` accepts the merge into it (the candidate, the strip and the merge agree on a single candidate).
 // A world per test in a FRESH Pariwar; X is seeded through the projector.
 
 import { randomUUID } from 'node:crypto';
@@ -536,5 +538,39 @@ describe.skipIf(!hasDatabase)('Story 6.28 — one payment per death through HTTP
     const body = res.json() as { newClaimCaseId: string; state: string };
     expect(body.state).toBe('closed');
     expect(await stateOf(body.newClaimCaseId)).toBe('closed');
+  });
+
+  it('AC10 — a 40-day-old OPEN claim: a cross-channel filing parks `pending` against it and `confirmMerge` MERGES into it (⛔ no window)', async () => {
+    const w = await seedWorld();
+    const xid = await siblingAt(w, 'state_trustee_approved', { channel: 'member_app' }); // ⛔ the subject — just another claim
+    void xid;
+    // The subject: an OPEN claim on `member_app`, aged 40 days. (The world's own claim is refused out of the way.)
+    await inScope(w.pariwarId, async (sc) => {
+      const emit = emitter(sc, w.pariwarId, w.memberId, w.claimCaseId);
+      await emit('verification_in_progress', 'verifier_review', 'claim.verifier_reviewing');
+      await emit('verifier_review', 'denied', 'claim.verifier_denied');
+    });
+    await td.pool.query(`UPDATE claims SET created_at = now() - interval '40 days' WHERE claim_case_id = $1`, [xid]);
+    const op = await staff(w.pariwarId, 'helpline_operator');
+    await stepUp(op, 'claim_file');
+    const parked = await op.client.inject({
+      method: 'POST', url: `/api/v1/p/${w.pariwarId}/admin/claims/intake`,
+      payload: { deceasedMemberId: w.memberId, relationship: 'spouse', identityReadBackConfirmed: true, lookupMethod: 'mobile' },
+    });
+    expect(parked.statusCode, parked.body).toBe(200);
+    expect(parked.json()).toMatchObject({ claimCaseId: xid, created: false });
+    const attempt = await td.pool.query<{ id: string }>(
+      `SELECT intake_attempt_id AS id FROM intake_attempts WHERE pariwar_id = $1 AND deceased_member_id = $2 AND attempt_status = 'pending'`,
+      [w.pariwarId, w.memberId],
+    );
+    const strip = await op.client.inject({ method: 'GET', url: `/api/v1/p/${w.pariwarId}/admin/claims/convergence/pending` });
+    expect(strip.statusCode, strip.body).toBe(200);
+    expect(strip.body).toContain(xid);
+    const merge = await op.client.inject({
+      method: 'POST', url: `/api/v1/p/${w.pariwarId}/admin/claims/convergence/merge`,
+      payload: { intakeAttemptId: attempt.rows[0]!.id, claimCaseId: xid },
+    });
+    expect(merge.statusCode, merge.body).toBe(200);
+    expect(merge.json()).toMatchObject({ merged: true });
   });
 });

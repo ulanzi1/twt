@@ -195,7 +195,7 @@ describe.skipIf(!hasDatabase)('Story 6.28 — closed: the other claims of a paid
       expect(await stateOf(client, over.newClaimCaseId)).toBe('closed');
       expect(await closedEventOf(client, toClaimId(over.newClaimCaseId))).toMatchObject({ trigger: 'death_already_finally_approved', held_by_claim_case_id: x });
       // X is excluded from convergence for ever ⇒ a later filing MINTS — and is closed at once.
-      expect(await getConvergenceCandidate(tx, PARIWAR_A, mid, new Date(0))).toBeUndefined();
+      expect(await getConvergenceCandidate(tx, PARIWAR_A, mid)).toBeUndefined();
       const later = await tryConverge(client, intake(PARIWAR_A, mid, 'member_app'));
       expect(later).toMatchObject({ minted: true, state: 'closed' });
       expect(await stateOf(client, later.claimCaseId)).toBe('closed');

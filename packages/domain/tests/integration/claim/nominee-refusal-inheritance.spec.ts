@@ -162,7 +162,7 @@ describe.skipIf(!hasDatabase)('Story 6.20 — the `-239` refusal: inheritance + 
       await openAppeal(client, PARIWAR_A, refusedId);
 
       // The refused claim is ⛔ not a candidate (D4 B) …
-      expect(await getConvergenceCandidate(tx, PARIWAR_A, mid, new Date(Date.now() - 30 * 86_400_000))).toBeUndefined();
+      expect(await getConvergenceCandidate(tx, PARIWAR_A, mid)).toBeUndefined();
       // … so the refile — on the refused claim's OWN channel (`member_app`) or another — MINTS, with ⛔ no pending attempt.
       const refile = await tryConverge(client, intake(mid, channel, `d2-${channel}`));
       expect(refile).toMatchObject({ minted: true, convergencePending: false });

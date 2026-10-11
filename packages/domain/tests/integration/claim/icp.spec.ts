@@ -25,14 +25,11 @@ import {
   getPendingIntakeAttempts,
   overrideIntakeAttempt,
   tryConverge,
-  CONVERGENCE_WINDOW_DAYS,
 } from '../../../src/claim/index.js';
 import { getMemberAccountOverlay } from '../../../src/member/index.js';
 import * as schema from '../../../src/schema/index.js';
 import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
 import { PARIWAR_A, enterAppScope, seedClaim } from '../_helpers.js';
-
-const windowStart = (): Date => new Date(Date.now() - CONVERGENCE_WINDOW_DAYS * 24 * 60 * 60 * 1000);
 
 /** Count events on a claim's stream (tenant-scoped). */
 async function streamLen(tx: ReturnType<typeof getTx>['tx'], streamId: string): Promise<number> {
@@ -182,10 +179,13 @@ describe.skipIf(!hasDatabase)('ICP tryConverge resolution matrix (PARIWAR_A scop
     expect(helplineAttempts).toHaveLength(1);
   });
 
-  it('WINDOW BOUNDARY → a candidate older than 30 days is NOT converged onto (a fresh claim mints)', async () => {
+  // ⭐ Story 6.28 OP11 (`2026-10-11-319`) — REWRITTEN: the 30-day window is GONE. The former leg ("a candidate older than
+  // 30 days is NOT converged onto — a fresh claim mints") pinned exactly the path that minted a second live claim for one
+  // death (F5); the new rule is the opposite, so the leg's title says so.
+  it('⛔ NO WINDOW (6.28 OP11) → a 40-day-old OPEN claim IS a candidate: a same-channel filing returns it; a cross-channel filing parks pending against it', async () => {
     const { client, tx } = getTx();
     const mid = toMemberId(randomUUID());
-    // Seed an old non-terminal claim (as superuser) then age it past the window.
+    // Seed an old non-terminal claim (as superuser) on `member_app`, then age it 40 days back.
     const oldCid = await seedClaim(tx, PARIWAR_A, {
       deceasedMemberId: String(mid),
       currentState: 'documents_pending',
@@ -197,12 +197,45 @@ describe.skipIf(!hasDatabase)('ICP tryConverge resolution matrix (PARIWAR_A scop
     );
     await enterAppScope(client, PARIWAR_A);
 
-    const cand = await getConvergenceCandidate(tx, PARIWAR_A, mid, windowStart());
-    expect(cand).toBeUndefined(); // aged out of the window
+    expect((await getConvergenceCandidate(tx, PARIWAR_A, mid))?.claimCaseId).toBe(oldCid);
 
-    const r = await tryConverge(client, base(mid, 'helpline', 'a1'));
-    expect(r.minted).toBe(true); // no in-window candidate → mints a fresh claim
-    expect(r.claimCaseId).not.toBe(oldCid);
+    const same = await tryConverge(client, base(mid, 'member_app', 'a1'));
+    expect(same).toMatchObject({ claimCaseId: oldCid, minted: false, convergencePending: false });
+    const cross = await tryConverge(client, base(mid, 'helpline', 'a2'));
+    expect(cross).toMatchObject({ claimCaseId: oldCid, minted: false, convergencePending: true });
+    const strip = await getPendingIntakeAttempts(tx, PARIWAR_A);
+    const row = strip.find((v) => v.attempt.intakeAttemptId === cross.intakeAttemptId);
+    expect(row?.candidates.map((c) => c.claimCaseId)).toEqual([oldCid]);
+  });
+
+  it('⛔ NO WINDOW (6.28 OP11) — a terminal, an overridden-apart and a suspicion-standing claim are still ⛔ never a candidate, at ANY age', async () => {
+    const { client, tx } = getTx();
+    const age = (cid: string) => client.query("UPDATE claims SET created_at = now() - interval '400 days' WHERE claim_case_id = $1", [cid]);
+    // (1) terminal — `denied`, 400 days old.
+    const m1 = toMemberId(randomUUID());
+    await age(await seedClaim(tx, PARIWAR_A, { deceasedMemberId: String(m1), currentState: 'denied' }));
+    // (2) overridden apart — open, 400 days old, with an override-ledger row against it.
+    const m2 = toMemberId(randomUUID());
+    const apart = await seedClaim(tx, PARIWAR_A, { deceasedMemberId: String(m2), currentState: 'documents_pending' });
+    await age(apart);
+    await client.query(
+      `INSERT INTO convergence_overrides (pariwar_id, deceased_member_id, intake_attempt_id, against_claim_case_id, reason, decided_by_actor)
+       VALUES ($1, $2, $3, $4, 'kept apart', $5)`,
+      [PARIWAR_A, m2, randomUUID(), apart, randomUUID()],
+    );
+    // (3) a suspicion refusal stands — `denied` on `-239` (terminal AND RF1), 400 days old.
+    const m3 = toMemberId(randomUUID());
+    const refused = await seedClaim(tx, PARIWAR_A, { deceasedMemberId: String(m3), currentState: 'denied' });
+    await age(refused);
+    await tx.insert(schema.claimVerifierDecisions).values({
+      claimCaseId: refused as never, pariwarId: PARIWAR_A, outcome: 'denied', reasonCode: 'post_death_nominee_change',
+      rationaleCiphertext: 'enc:v1:r', actorId: randomUUID(), actorDisplay: 'Anita (District Admin)',
+    });
+    await enterAppScope(client, PARIWAR_A);
+    for (const mid of [m1, m2, m3]) {
+      expect(await getConvergenceCandidate(tx, PARIWAR_A, mid)).toBeUndefined();
+      expect((await tryConverge(client, base(mid, 'member_app', 'a1'))).minted).toBe(true);
+    }
   });
 
   it('MERGE → union the channel + flip attempt `converged`; NO new lifecycle event; idempotent', async () => {
@@ -295,7 +328,7 @@ describe.skipIf(!hasDatabase)('ICP tryConverge resolution matrix (PARIWAR_A scop
     expect(claims).toHaveLength(2);
 
     // AC4: a fresh candidate lookup SKIPS the overridden-apart claim (r1) — it resolves to the new one.
-    const cand = await getConvergenceCandidate(tx, PARIWAR_A, mid, windowStart());
+    const cand = await getConvergenceCandidate(tx, PARIWAR_A, mid);
     expect(cand?.claimCaseId).toBe(ov.newClaimCaseId);
 
     // ⚠ NORMATIVE: the aggregate overlay stays frozen while ANY claim is non-terminal.

@@ -10,8 +10,8 @@
 //          for it, then sees the minted claim and is refused (`SuspicionReasonLockedError`).
 //   RF6 × MINT (`2026-10-08-294` §1) — the reversal writers take the death's INTAKE key first: a reversal and a new
 //          filing for the death in flight together ⇒ the filing is either CLOSED by the reversal (it committed first) or
-//          JOINS the reversed claim (it waited; inside the 30-day convergence window only — `-294` §2 (b)) — ⛔ never a
-//          claim minted UNSEEN by the reversal's closure (code review round 2, D1).
+//          JOINS the reversed claim (it waited; whatever the claim's age since Story 6.28 OP11 removed the 30-day window
+//          that `-294` §2 (b) named) — ⛔ never a claim minted UNSEEN by the reversal's closure (code review round 2, D1).
 //
 // ⚠ WHY OWN-COMMITTING: a race needs REAL concurrent transactions on SEPARATE pool clients (the per-test BEGIN/ROLLBACK
 // envelope would serialise everything). Each test proves the BLOCKING itself — B is still pending while A holds its key —

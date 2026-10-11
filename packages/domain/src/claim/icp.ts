@@ -36,7 +36,7 @@
 
 import { randomUUID } from 'node:crypto';
 
-import { and, asc, desc, eq, gte, notInArray, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, notInArray, sql } from 'drizzle-orm';
 import type pg from 'pg';
 
 import { bindScopedDb, type Db } from '../db.js';
@@ -59,12 +59,12 @@ import { assertRefileAllowed, consumeRefileConfirmation } from './refile-guard.j
 import { closeClaimIfDeathPaid } from './suspicion-refusal-persist.js';
 import { standingSuspicionRefusalSql } from './suspicion-refusal.js';
 
-/**
- * The dedup-window HALF-WIDTH in days (AC1). A policy knob (architecture-vs-PRD boundary):
- * a single named constant so a later policy change is one edit, not scattered magic numbers.
- * Two intakes for one death within this window are convergence candidates.
- */
-export const CONVERGENCE_WINDOW_DAYS = 30;
+// ⭐ Story 6.28 OP11 (`2026-10-11-319`; BigDev 2026-10-10: *"Remove it in 6.28"*) — ⛔ NO convergence time window. The
+// former 30-day look-back constant (Story 6.4's planning AC: *"narrow time window e.g., ±30 days"* — an example, ⛔ never
+// a ruling) let a filing 31+ days after a still-open claim mint a SECOND live claim for the same death (F5, `-294` §2 (b)).
+// The dedup key is the EXACT `deceased_member_id` — a person dies once; every case that must stay separate is excluded
+// WITHOUT a window (a terminal claim, an overridden-apart claim, a claim on which a suspicion refusal stands). A later
+// match is ⛔ never auto-merged: a cross-channel filing parks `pending` for staff; a same-channel one returns the claim.
 
 /** The freeform `trigger` audit note stamped on the `claim.intake_converged` payload of a
  * lone-intake auto-converge (distinct from the intake_initiated trigger the caller passes). */
@@ -94,10 +94,10 @@ async function acquireIntakeLock(
 // ── Read accessors (Task 4) ────────────────────────────────────────────────────
 
 /**
- * The live canonical claim (if any) this death should converge onto — the windowed,
- * override-aware candidate for `tryConverge`. Reuses `getClaimByDeceasedMember`'s predicate
- * (non-terminal, most-recent) + the ±30-day window (`created_at >= windowStartAt`, AC1) +
- * the override-apart guard (AC4: a claim explicitly overridden apart for this death is NOT a
+ * The live canonical claim (if any) this death should converge onto — the override-aware
+ * candidate for `tryConverge`. Reuses `getClaimByDeceasedMember`'s predicate (non-terminal,
+ * most-recent; ⛔ no time window since Story 6.28 OP11 — any age) + the override-apart guard
+ * (AC4: a claim explicitly overridden apart for this death is NOT a
  * candidate — future intakes never re-attempt convergence with it). Tenant-scoped by RLS +
  * the explicit `pariwar_id` predicate.
  *
@@ -111,7 +111,6 @@ export async function getConvergenceCandidate(
   db: Db,
   pariwarId: PariwarId,
   deceasedMemberId: MemberId,
-  windowStartAt: Date,
 ): Promise<typeof claims.$inferSelect | undefined> {
   const rows = await db
     .select()
@@ -120,7 +119,6 @@ export async function getConvergenceCandidate(
       and(
         eq(claims.pariwarId, pariwarId),
         eq(claims.deceasedMemberId, deceasedMemberId),
-        gte(claims.createdAt, windowStartAt),
         // non-terminal (a settled/denied/closed claim must not capture a fresh intake)
         notInArray(claims.currentState, [...CLAIM_TERMINAL_STATES]),
         // AC4 override-apart guard: skip any claim explicitly kept separate for this death.
@@ -156,12 +154,11 @@ export interface PendingIntakeAttemptView {
  * All `pending` intake attempts in the Pariwar + their candidate canonical claims (AC2/AC3).
  * Feeds the <ConvergenceDecisionStrip>. Tenant-scoped by RLS + the explicit predicate.
  *
- * Candidate filters mirror `getConvergenceCandidate` EXACTLY (non-terminal, ±30-day window,
- * AC4 override-apart guard, and Story 6.24a RF2's suspicion-refusal conjunct) — Edge Case Hunter: these had drifted apart, letting the strip
- * show (and `confirmMerge` merge into) out-of-window or explicitly-overridden-apart claims.
- * The window is anchored to EACH attempt's own `created_at`, not to "now" at query time, so
- * re-querying the strip later never silently shrinks a pending attempt's candidate set
- * (Review: a rolling now-relative window would drift).
+ * Candidate filters mirror `getConvergenceCandidate` EXACTLY (non-terminal, AC4 override-apart guard, and Story
+ * 6.24a RF2's suspicion-refusal conjunct; ⛔ no time window since Story 6.28 OP11) — Edge Case Hunter: these had drifted
+ * apart, letting the strip show (and `confirmMerge` merge into) explicitly-overridden-apart claims. ⚠ With several open
+ * candidates the strip lists ALL while `confirmMerge` accepts only the NEWEST (`getConvergenceCandidate`'s `LIMIT 1`) —
+ * a merge into an older one is a 409 (recorded, as before).
  *
  * Single LEFT JOIN (not a per-attempt loop) — avoids the N+1 the prior loop-based read had.
  */
@@ -169,7 +166,6 @@ export async function getPendingIntakeAttempts(
   db: Db,
   pariwarId: PariwarId,
 ): Promise<PendingIntakeAttemptView[]> {
-  const windowInterval = sql.raw(`interval '${CONVERGENCE_WINDOW_DAYS} days'`);
   const rows = await db
     .select({
       attempt: intakeAttempts,
@@ -184,7 +180,6 @@ export async function getPendingIntakeAttempts(
       and(
         eq(claims.pariwarId, intakeAttempts.pariwarId),
         eq(claims.deceasedMemberId, intakeAttempts.deceasedMemberId),
-        gte(claims.createdAt, sql`${intakeAttempts.createdAt} - ${windowInterval}`),
         notInArray(claims.currentState, [...CLAIM_TERMINAL_STATES]),
         sql`NOT EXISTS (
           SELECT 1 FROM ${convergenceOverrides} o
@@ -273,7 +268,7 @@ export interface TryConvergeResult {
 
 /**
  * The ICP entry point (AC1/AC3/AC5/AC7/AC9). Deduplicates an intake attempt against the live
- * canonical claim for the death within the ±30-day window and resolves it per the single
+ * canonical claim for the death (any age — ⛔ no window since Story 6.28 OP11) and resolves it per the single
  * convergence model above. MUST run inside the caller's scope tx (pariwar scope already set).
  *
  * @throws ZodError / ClaimStreamConcurrencyError propagated from `projectClaimState`.
@@ -287,14 +282,8 @@ export async function tryConverge(
   // (1) Serialize concurrent intakes for THIS death so the candidate read is race-safe.
   await acquireIntakeLock(client, input.pariwarId, input.deceasedMemberId);
 
-  // (2) Windowed, override-aware candidate lookup.
-  const windowStartAt = new Date(Date.now() - CONVERGENCE_WINDOW_DAYS * 24 * 60 * 60 * 1000);
-  const candidate = await getConvergenceCandidate(
-    db,
-    input.pariwarId,
-    input.deceasedMemberId,
-    windowStartAt,
-  );
+  // (2) Override-aware candidate lookup (⛔ no time window — Story 6.28 OP11).
+  const candidate = await getConvergenceCandidate(db, input.pariwarId, input.deceasedMemberId);
 
   // (3a) NO CANDIDATE → this attempt IS the canonical claim. Mint + intake_initiated (freeze)
   //      + immediately intake_converged. The attempt row is `converged` from birth.

@@ -9,14 +9,15 @@ live claims for one death; the money path from approval to payment) and re-verif
 design and its locks, the governance, the warning and member surfaces). ⚠ Before Task 1, run
 `git diff --name-only 34b9bab6..HEAD -- packages apps scripts`; any cited file in that list is re-read.
 
-STATUS: `ready-for-dev` — ⛔⛔ NO CODE until (1) the Panel has ruled Q1–Q4 (routing note
-`_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-10-6-28-one-payment-per-death.md` — ⚠ written, ⛔ NOT YET SENT) and
-(2) the author-commit answering OP1–OP14 below is committed ALONE. `2026-10-08-294` §3 orders exactly this: *"BEFORE any code: (i) the
+STATUS: `ready-for-dev` — ✅ GOVERNANCE DONE, ⛔⛔ CODE NOT YET STARTED. The Panel ruled Q1–Q4 A/A/A/A
+(`2026-10-11-318`, Trustee-ratified, routing note
+`_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-10-6-28-one-payment-per-death.md` — sent and ruled); the author-commit
+answering OP1–OP14 for that ruling (`2026-10-11-319`) is committed. `2026-10-08-294` §3 ordered exactly this: *"BEFORE any code: (i) the
 Panel question … written from the routing-note template, with this entry's (a)–(c) and the pre-6.24a root as the deciding facts …
-(ii) then the engineering guard that ruling permits."* ([[feedback_governance_commits_precede_implementation]]).
-⭐ The OPs are written for the note's RECOMMENDED answers (Q1 A, Q2 A, Q3 A); `## ⚖️ Build decisions` states, per OP, what changes under
-each other answer. If the Panel rules Q1 C, this story builds OP11 (BigDev's window removal — unconditional), OP14 (a) (the console list), OP10's neutral staff label (*"Closed —
-another claim for this death goes ahead"* — true for both triggers) and OP13 (if Q4 A) — ⛔ nothing else.
+(ii) then the engineering guard that ruling permits."* ([[feedback_governance_commits_precede_implementation]]) — both now DISCHARGED.
+⭐ The OPs were written for the note's RECOMMENDED answers (Q1 A, Q2 A, Q3 A, Q4 A); the Panel ruled exactly this reading on all four, so
+every OP1–OP14 below is built AS WRITTEN — including OP13 (Q4 A ratifies it) and OP5 (c)'s wait (Q1 A, as ruled, carries it; `-279` A6
+discharged). OP9's DB backstop is ⛔ NOT built (BigDev, `-319`): OP2 + OP3 are the sole control. Task 1 may now start.
 
 GLYPH REGISTER, ADDRESSING RULE: as 6.24a / 6.24b / 6.29 — `⛔` sits ONLY on a negation word · `⭐` = key fact or action · `⚠` = hazard.
 Sweep on every pass: `grep -oE "⛔ \**[A-Za-z]+"` — every head-word a negation. ⛔ No `file:NNN` into `.decision-log.md`,
@@ -109,10 +110,10 @@ accused by the system, and every place the suspicion rule cannot hold is put to 
 | `-291` Q1 A | the 90-day limit for the suspicion refusal only; *"Every other refusal keeps ⛔ no time limit"* | ⭐ Trustee-ratified — Q2 A narrows its EFFECT (an appeal won after payment pays nothing); put to the Panel in Q2 A's cost |
 | `-291` Q2 B | the closure text after an allowed suspicion appeal | ⭐ Trustee-ratified — ⛔ not extended to OP4's closure unless Q3 B |
 | `-293` item 2 A | while any other claim for the death is not closed, a refusal's reason can ⛔ not be changed AWAY from the suspicion reason | ⭐ Trustee-ratified — ⛔ not changed; changing ONTO it stays open (path (a)) |
-| **Q1** (routing note `2026-10-10-6-28-one-payment-per-death`) | which claim is paid — A: the first to pass the final vote; the others closed when its payment is committed; a warning (and the wait) while another is open · B: staff close one first · C: both | ⏳ **AWAITING PANEL** — the note is ⛔ not yet sent |
-| **Q2** | what the other family is owed once the death is paid — A: nothing more from the members · B: a Panel-ordered second payment | ⏳ **AWAITING PANEL** |
-| **Q3** | is the family of a claim closed this way texted — A: ⛔ no · B: once, `-291` Q2's words | ⏳ **AWAITING PANEL** |
-| **Q4** | does the suspicion-appeal rule reach a claim that passed the final vote but is ⛔ not yet paid — A: yes, close it (OP13) · B: ⛔ no, it is paid and the appellant's claim is closed | ⏳ **AWAITING PANEL** |
+| **Q1** (routing note `2026-10-10-6-28-one-payment-per-death`) | which claim is paid — A: the first to pass the final vote; the others closed when its payment is committed; a warning (and the wait) while another is open · B: staff close one first · C: both | ✅ **Trustee-ratified `-318` — A** ✅ committed by `-319` |
+| **Q2** | what the other family is owed once the death is paid — A: nothing more from the members · B: a Panel-ordered second payment | ✅ **Trustee-ratified `-318` — A** ✅ committed by `-319` |
+| **Q3** | is the family of a claim closed this way texted — A: ⛔ no · B: once, `-291` Q2's words | ✅ **Trustee-ratified `-318` — A** ✅ committed by `-319` |
+| **Q4** | does the suspicion-appeal rule reach a claim that passed the final vote but is ⛔ not yet paid — A: yes, close it (OP13) · B: ⛔ no, it is paid and the appellant's claim is closed | ✅ **Trustee-ratified `-318` — A** ✅ committed by `-319` |
 
 **⛔ Not covered by any ruling (stays open):** whether intake should stop minting a second claim at all (OP11 — the author's, TAKEN: the window
 removed; override-apart and after-terminal second claims remain); a Panel power to reopen a closed claim (Q2 B — a later row if ruled); the residuals R1–R2; the Hindi review of any
@@ -340,8 +341,8 @@ Each says what changes under a non-recommended answer.
   the queue's alias is the quoted `"claims"`) — another open claim of the death exists — with ⛔ no time term (`qualifyingRows`'
   exact `uncoveredKeys` check drops covered rows) ⇒ `-279` A4 holds for the new kind (a key can appear by a new filing, or REAPPEAR when a
   `denied` other claim is appealed or `reversed` — ⛔ no own row of the claim moves). Through `lateArm` it also reaches the R9
-  `state_trustee_approved` arm (`:245`). ⭐ (c) It enters 6.23b's wait (`-277` Q3 B) ONLY because Q1 A, as put, says so — the author-commit
-  names `-279` A6 as discharged by that ruling; if the Panel strikes the wait, the kind is warning-only (excluded from EA2's key set).
+  `state_trustee_approved` arm (`:245`). ⭐ (c) It enters 6.23b's wait (`-277` Q3 B) because Q1 A, as RATIFIED (`-318`), says so — the wait is ⛔ not struck ⇒ built AS WRITTEN; the
+  author-commit (`-319`) names `-279` A6 as discharged by that ruling.
   Recorded effects: any current key blocks a same-outcome revise of the District Admin's approval (F13); R9 votes cast before the other
   claim was filed must be re-cast (`-279` A2). ⚠ Coordinate with 6.27b (Trap 9). Q1 B: the same warning; Q1 C: ⛔ not built.
 - **OP6 — FQ5'S MACHINERY STAYS EXACT.** ⛔ No change to RF1–RF16's code paths beyond OP4's extraction, H(iii)'s call after RF6 and
@@ -362,7 +363,7 @@ Each says what changes under a non-recommended answer.
   IN ('state_trustee_approved','approved','settled')` is expressible (F14); ⛔ not built because `claims.current_state` is written only by the
   projector (`claims_state_write_guard`) ⇒ a 23505 would surface inside every final writer (a 500 unless mapped four times) and the
   migration fails on any legacy pair ⇒ the gate (OP2) + the commit (OP3) are the control; [[feedback_mechanization_split_commitment]] — both
-  operands are mechanised. BigDev may instead choose it as a backstop (Task 0.4).
+  operands are mechanised. **BigDev confirmed (`-319`, 2026-10-11): ⛔ NOT built** — OP2 + OP3 stay the sole control.
 - **OP10 — WHAT PEOPLE SEE.**
   · Member app: the existing `closed.*` copy and screen — ⛔ no new member string. ⭐ ⛔ No new response field: both intake responses are
     `.strict()` (`ClaimIntakeInitiateResponse` `packages/contracts/src/claims/filing.ts:137-143`, `HelplineClaimIntakeResponse`
@@ -419,10 +420,10 @@ Each says what changes under a non-recommended answer.
   The override (`overrideIntakeAttempt`) and D4 B are ⛔ not changed. Author's decision (intake mechanics — ⛔ nothing anyone is owed); the
   author-commit records it, and the note lists it among *"deliberately ⛔ not asked"*.
 - **OP12 — GO-LIVE.** ⛔ No roster row: ⛔ no external dependency (Q3 A). Under Q3 B — the FQ7 counsel row gains this text.
-- **OP13 — AN ALLOWED SUSPICION APPEAL CLOSES A VOTED, UNPAID OTHER CLAIM (supersedes `-292` RF4 in part).** ⚠ **PUT TO THE PANEL FOR
-  CONFIRMATION** (the note's **Q4** — A: close the voted claim, B: let it be paid): it applies FQ5 A to a claim that has ALREADY passed the final vote — later than the point
-  FQ5 ruled on — closes it and texts its family; if the Panel rules Q4 B, OP13 is ⛔ not built and Invariant 3's residual widens back to
-  path (a) before payment. Built under A, B and C alike. `CLAIM_NOT_CLOSABLE_STATES`
+- **OP13 — AN ALLOWED SUSPICION APPEAL CLOSES A VOTED, UNPAID OTHER CLAIM (supersedes `-292` RF4 in part).** ⭐ **CONFIRMED BY THE PANEL**
+  (**Q4 A**, `-318`; built by the author-commit `-319`): it applies FQ5 A to a claim that has ALREADY passed the final vote — later than the point
+  FQ5 ruled on — closes it and texts its family; Invariant 3's residual (the corner left after this) stays the refusal-changed-to-suspicion-reason
+  case put to the Panel by Q2, resolved A — nothing more from the members. `CLAIM_NOT_CLOSABLE_STATES`
   (`state.ts:359`) becomes `['settled', 'approved', 'closed']` — `state_trustee_approved` (*"approved-in-principle, reversible"*, Fact 4)
   is CLOSABLE; its doc-block and the reducer comment are re-worded (the sites listed below). ⭐ Effect at RF6: when a `-239` appeal
   is allowed, another claim of the death that passed the final vote but is ⛔ not yet committed is closed with `suspicion_appeal_allowed`
@@ -519,14 +520,13 @@ Each says what changes under a non-recommended answer.
 
 ## Acceptance Criteria
 
-### AC0 — Governance before code (Task 0)
-The Panel's ruling on Q1–Q4 is transcribed into the routing note's ⏳ block and `.decision-log.md` (a new Trustee-ratified id, committed
-ALONE); then the author-commit answering OP1–OP14 for that ruling — naming `-279` A6 as discharged and recording that the note widened
-`-294` §3's framing — is committed ALONE; then a second governance commit updates this file's rulings table, Policy meaning and OPs
-(`✅ committed by -NNN`), and the `deferred-work.md` items of Task 0.6 gain their pointers, each with its own status. ⛔ No code before
-both commits. If Q1 C: only OP11 (Task 5b, AC10), OP14 (a) (the console section — Task 5c's part, AC11's console legs), OP10's staff label (Task 6's
-part) and, if Q4 A, OP13 (Task 4's
-OP13 part, AC9) are built; every other Task is left unchecked with a banner ([[project_story_automator_ops]]).
+### AC0 — Governance before code (Task 0) — ✅ DONE
+The Panel's ruling on Q1–Q4 (A/A/A/A) was transcribed into the routing note's block and `.decision-log.md` as `2026-10-11-318`
+(Trustee-ratified, committed alone); the author-commit answering OP1–OP14 for that ruling — naming `-279` A6 as discharged, recording that
+the note widened `-294` §3's framing, and that OP9's DB backstop is ⛔ not built — was committed alone as `2026-10-11-319`; this second
+governance commit updates this file's rulings table, Policy meaning and OPs (`✅ committed by -319`), and the `deferred-work.md` items of
+Task 0.6 gain their pointers, each with its own status. Ruled **Q1 A** (⛔ not C) and **Q4 A** ⇒ every Task below is built — ⛔ none
+left unchecked.
 
 ### AC1 — One definition (OP1)
 The three state lists are pinned by value against `state.ts` / `read.ts` for EVERY state; `readOtherFinallyApprovedClaim` /
@@ -851,6 +851,11 @@ Domain in `packages/domain/src/claim/` (⛔ no new package — [[feedback_no_pre
 - 2026-10-11 — v1.14: the note's seventh check (1 HIGH, 2 MEDIUM, 3 LOW — applied): Q1 B's paid-by-no-claim cost disclosed.
 - 2026-10-11 — v1.15: the note's eighth check (1 HIGH, 3 MEDIUM, 3 LOW — applied): v1.14's "only a Panel reopening can pay" corrected — the family may file again.
 - 2026-10-11 — v1.16: the note's ninth check (1 HIGH — applied): v1.15's own "the family may file again" addition left the very next sentence ("its only remedy is whatever the Trust can recover from the person paid") attached to that case — but nobody is ever paid there, so there is no payment to recover from; the remedy sentence re-anchored to the families it actually describes (the false-date family, the appeal winners), and the District-Admin-closed case closed on its own terms (a fresh filing or Q2 B).
+- 2026-10-11 — **GOVERNANCE DONE.** The Panel ruled Q1 A, Q2 A, Q3 A, Q4 A (`2026-10-11-318`, Trustee-ratified, Dhiraj Rahul + Kalpana
+  Bharti, relayed by BigDev); the author-commit answering OP1–OP14 for that ruling is `2026-10-11-319` (BigDev's one open item, OP9's DB
+  backstop: **not built** — OP2 + OP3 are the sole control). This file's rulings table, Policy meaning, OP5 (c), OP9, OP13 and AC0 updated
+  to the ratified reading; `epics.md`'s Story 6.28 brief, 6.24a's Trap 9 note + P9 sentence (dated lines, their text kept), and four
+  `deferred-work.md` items (plus R1/R2 added as new items) updated with pointers. ⛔ No code before this entry; Task 1 may now start.
 
 ### File List
 
@@ -875,3 +880,4 @@ Domain in `packages/domain/src/claim/` (⛔ no new package — [[feedback_no_pre
 | 1.14 | 2026-10-11 | The note's seventh check (every closure kind traced: RF6, OP13, H(i)–(iv), Close this claim, the District Admin's close): 1 HIGH — under Q1 B a District Admin closure followed by the kept claim's refusal leaves the death paid by ⛔ no claim, unappealable ⇒ disclosed in Q1 B's cost, Q2 A / B worded for it, OP4 B records it. 2 MEDIUM — Q1 B's appeal re-hold only before the other's final vote; OP4 B's close action ⛔ never on a denied / under-appeal / RF1 / RF5 claim. 3 LOW — §0's kept-apart filing closed at once; Q2 A "⛔ never pay twice"; Task 0.4's Q2 B row exempts a reopened claim from OP2 / H(iv) / Close. |
 | 1.15 | 2026-10-11 | The note's eighth check (outcomes enumerated per combination): 1 HIGH — v1.14 said under Q1 B only a Panel reopening could pay a District-Admin-closed family once the kept claim is refused; false — both claims are terminal, a `claim.closed` closure trips ⛔ no refile guard (F7) and nothing is paid, so the death may be filed again ⇒ Q1 B / Q2 A / Q2 B corrected, OP4 B too. 3 MEDIUM — the staff label goes stale when the holding claim is later refused ⇒ OP10 label keyed on the holding claim's state (a build item) and Q3 A's helpline words; Q4 A's closure ⛔ not appealable; Q2's question covers a pre-payment District Admin closure. 3 LOW — "unless it is filed again" (Q4 A, plain English); "being, or about to be, paid" (Q3); Q1 B's re-hold ends on a refused appeal or a District Admin close. |
 | 1.16 | 2026-10-11 | The note's ninth check: 1 HIGH — v1.15's own fix left Q2 A's cost cell self-contradicting: "...even if the kept claim is then refused (the family may file again). Its only remedy is whatever the Trust can recover from the person paid." — but the District-Admin-closed-then-refused case pays ⛔ no one, so ⛔ nothing exists to recover ⇒ the "recover from the person paid" remedy re-anchored to the cases it actually fits (the false-date family, the appeal winners who lost to another claim that WAS paid), and the District-Admin case given its own distinct close ("a fresh filing or a Panel reopening (Q2 B)"). |
+| 1.17 | 2026-10-11 | **Governance done.** The Panel ruled Q1 A, Q2 A, Q3 A, Q4 A (`2026-10-11-318`); the author-commit for OP1–OP14 is `2026-10-11-319` (OP9's DB backstop decided: ⛔ not built). Rulings table, Policy meaning, OP5 (c), OP9, OP13 and AC0 updated from "awaiting"/contingent language to the ratified reading; `epics.md`, 6.24a's Trap 9 + P9, and four `deferred-work.md` items (+ R1/R2 added) cross-referenced. Status stays `ready-for-dev`; Task 1 may now start. |

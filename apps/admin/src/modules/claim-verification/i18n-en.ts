@@ -970,3 +970,15 @@ export function verifierReasonCodeLabel(code: string): string {
   const codes: Record<string, string> = verifierConsoleEn.reasonCodes;
   return Object.hasOwn(codes, code) ? codes[code]! : code;
 }
+
+/**
+ * ⭐ Story 6.28 (OP10, code review chunk 3/4) — a claim's staff-facing state label, following its HOLDING claim
+ * when it is `closed` AND that holder was itself later refused/closed (the neutral "may file again" copy) —
+ * else the plain state label, or a dash for an unknown state. Factored out of the identical copy-pasted ternary
+ * at four render sites (`HelplineAppeal`, `HelplineCertificateReplacement`, `HelplineClaimContact`,
+ * `NomineeRefusalsRoute`).
+ */
+export function closedClaimStateLabel(closedHolderRefused: boolean, claimState: string): string {
+  const labels: Record<string, string> = verifierConsoleEn.nomineeDeclaration.refusals.claimStateLabels;
+  return closedHolderRefused ? verifierConsoleEn.nomineeDeclaration.refusals.closedHolderRefused : labels[claimState] ?? '—';
+}

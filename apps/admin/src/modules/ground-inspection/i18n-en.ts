@@ -23,6 +23,9 @@ const EN: Record<string, string> = {
   // Story 6.28 (OP14 (d)) — the other claims of this death, for the inspector. Information only — ⛔ a gate.
   'gi.otherClaims.count': 'Other claims for this death: {n}',
   'gi.otherClaims.claim': 'Claim {ref} — {stage}',
+  // ⭐ Code review chunk 3/4 — `count` above is the TOTAL; `claims` is capped (OP14 (a)'s `OTHER_CLAIMS_FOR_DEATH_CAP`,
+  // reused here). Without this, an inspector could see "Other claims: 25" above a list of only 20 with no explanation.
+  'gi.otherClaims.more': 'and {n} more',
   'gi.otherClaims.visitedElsewhere': 'Another claim for this death has already had a visit.',
   'gi.otherClaims.alreadyVisited':
     'This family was already visited for another claim with the same date of death — check before sending a second visit.',

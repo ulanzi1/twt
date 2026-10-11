@@ -51,11 +51,19 @@ export default function RelationshipScreen(): React.ReactElement {
       // becomes the filed-claim pointer ONLY when ⛔ none is on record or the recorded one reads terminal — so re-entry
       // goes through the entry gate's `claim_closed` bit, ⛔ never a fresh wizard minting another closed claim.
       if (res.state === 'closed') {
+        // ⭐ Code review chunk 3/4 — the server-side closure already SUCCEEDED (that's what `res.state === 'closed'`
+        // means); the pointer below is a local bookkeeping optimization, ⛔ never the gate (OP2 is). A failure
+        // recording it must ⛔ never surface as the generic error screen for what is, to the member, a successful
+        // outcome — so it is isolated in its own try/catch rather than the outer one.
         const memberId = session?.memberId
         if (memberId) {
-          const recorded = getFiledClaimCaseId(memberId)
-          const outcome = recorded === null ? null : await boundClaimEntryRead(fetchClaimEntryReadOutcome(recorded))
-          if (mayRecordClosedClaimPointer(recorded !== null, outcome)) setFiledClaimCaseId(memberId, res.claimCaseId)
+          try {
+            const recorded = getFiledClaimCaseId(memberId)
+            const outcome = recorded === null ? null : await boundClaimEntryRead(fetchClaimEntryReadOutcome(recorded))
+            if (mayRecordClosedClaimPointer(recorded !== null, outcome)) setFiledClaimCaseId(memberId, res.claimCaseId)
+          } catch {
+            // Best-effort — the closed-helpline screen below is still correct either way.
+          }
         }
         router.replace('/(claim)/closed-helpline')
         return

@@ -719,6 +719,16 @@ export function createNomineeDeclarationHandlers(deps: AppDeps) {
       const { limit } = (request.query ?? {}) as { limit?: number };
       const rows = await claimDomain.listNomineeRefusals(scopeTx.tx, pariwarId, limit !== undefined ? { limit } : {});
       const p = scopeTx.pariwarId;
+      // ⭐ Story 6.28 (OP10) — this list is unfiltered by claim state, so a refusal later CLOSED by OP4 needs
+      // the SAME "holding claim later refused — the family may file again" variant the other helpline
+      // surfaces carry. Decision SUPPORT only (the staff label text) — a failed read degrades to "no
+      // holder-refused" rather than 500ing the list, matching OP14 (b)'s `readFinallyApprovedElsewhereDtos`.
+      const holderRefused = await claimDomain
+        .readClosedHolderRefusedBulk(scopeTx.tx, pariwarId, rows.map((r) => r.claimCaseId))
+        .catch((err: unknown) => {
+          request.log.warn({ err: err instanceof Error ? err.name : 'unknown' }, 'nominee refusals: closed-holder-refused read unavailable');
+          return new Set<string>();
+        });
       const items = [];
       for (const r of rows) {
         items.push({
@@ -731,6 +741,7 @@ export function createNomineeDeclarationHandlers(deps: AppDeps) {
             r.rationaleCiphertext === null
               ? null
               : await readable(() => decryptVerifierRationale(r.rationaleCiphertext!, p, enc), request.log, 'refusal_rationale', r.claimCaseId),
+          closed_holder_refused: holderRefused.has(r.claimCaseId.toLowerCase()),
         });
       }
       emitAuthAudit(deps, request, 'admin_nominee_refusal.list_read', {

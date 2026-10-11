@@ -88,6 +88,7 @@ const packet = (claimCaseId: string): VerifierConsolePacket =>
     groundInspectionGate: { available: true, complete: true, waitReason: null },
     suspicionRefusal: { available: true, keptApartFrom: [], finalApprovalWaits: null },
     otherClaimsForDeath: { available: true, total: 0, claims: [] },
+    finallyApprovedElsewhere: null,
     approvalWarnings: {
       available: true,
       kinds: [],

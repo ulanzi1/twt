@@ -85,7 +85,8 @@ const COVERAGE_SET: readonly CoverageEntry[] = [
     file: 'apps/api/src/modules/claims/claims.cycle-freeze.routes.ts',
     pathSubstrings: ['cycle-freeze'],
     owner: 'Story 6.13',
-    expectedMethods: ['get', 'post', 'post'],
+    // Story 6.28 (OP14 (b)) — + POST …/cycle-freeze/claims/:claimCaseId/close-for-paid-death ("Close this claim").
+    expectedMethods: ['get', 'post', 'post', 'post'],
   },
   {
     // Story 6.14 — the R9 special-case voting panel surface: the queue + per-claim panel + open/vote/finalize/

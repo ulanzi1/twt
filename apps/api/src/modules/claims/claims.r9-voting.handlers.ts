@@ -46,7 +46,7 @@ import type { AuthAuditEventType } from '../../audit/audit-sink.js';
 import { emitAuthAudit } from '../auth/shared/audit.js';
 import { getDisplayName } from '../auth/admin/admin-auth.repo.js';
 import { closeScopeTx, openScopeTx } from '../multi-tenant/scope-tx.js';
-import { closeClaimsAfterFinalStop } from './close-claims-of-paid-death.js';
+import { closeClaimsAfterFinalStop, readFinallyApprovedElsewhereDtos } from './close-claims-of-paid-death.js';
 import { decryptR9VoteRationale, encryptR9VoteRationale } from './r9-vote-crypto.js';
 import {
   UNAVAILABLE_APPROVAL_WARNINGS,
@@ -340,6 +340,8 @@ export function createR9VotingHandlers(deps: AppDeps) {
         const coversCurrentWarnings = (voteId: string, vote: string): boolean | null =>
           warned === null || vote !== 'approve' || warned.w.keys.length === 0 ? null : !warned.shortVoteIds.has(voteId.toLowerCase());
 
+        // ⭐ Story 6.28 (OP14 (b)) — another claim of the death past its final vote / paid (ONE statement).
+        const elsewhere = (await readFinallyApprovedElsewhereDtos(tx.client, tx.tx, request.log, ctx.pariwarId, [claimCaseId]))(claimCaseId);
         let session: R9PanelResponse['session'] = null;
         let tally: R9PanelResponse['tally'] = null;
         const votes: R9PanelResponse['votes'] = [];
@@ -401,6 +403,7 @@ export function createR9VotingHandlers(deps: AppDeps) {
           approval_warnings:
             warned === null ? UNAVAILABLE_APPROVAL_WARNINGS : toApprovalWarningsSummary(warned.w, [ctx.actorId, ...approveVoterIds]),
           reason_options: warned === null ? [] : toReasonOptionsDto(warned.w.reasonOptions),
+          finally_approved_elsewhere: elsewhere,
         };
       } finally {
         await closeScopeTx(tx, ok);

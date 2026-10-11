@@ -106,6 +106,7 @@ const CASE: PendingCase = {
   under_correction: false,
   name_difference_reasons: [],
   approval_name_highlight: null,
+  finally_approved_elsewhere: null,
   approval_warnings: summary(),
 };
 
@@ -348,6 +349,7 @@ const r9Panel = (over: Partial<R9PanelResponse> = {}): R9PanelResponse => ({
   votes: [],
   tally: { approve_count: 0, deny_count: 0, cast_votes: 0, panel_size: 1, quorum_required: 1, provisional_outcome: 'denied', quorum_met: false },
   name_difference_reasons: [],
+  finally_approved_elsewhere: null,
   approval_warnings: summary(),
   reason_options: OPTIONS,
   ...over,
@@ -654,6 +656,7 @@ const detail = (over: Partial<EscalatedClosureDetailResponse> = {}): EscalatedCl
   family_part_done: false,
   name_check_state: 'passing',
   approve_path: 'full_gate',
+  finally_approved_elsewhere: null,
   approval_warnings: summary(),
   reason_options: OPTIONS,
   ...over,
@@ -744,6 +747,7 @@ const item = (over: Partial<QueueItem> = {}): QueueItem => ({
   family_run_day0: null,
   checked_after_record: true,
   held: false,
+  finally_approved_elsewhere: null,
   approval_warnings: summary(),
   ...over,
 });
@@ -812,5 +816,45 @@ describe('<PariwarClosureList> — D27\'s approve carries the picker and its OWN
     fireEvent.click(screen.getByTestId('no-correction-approve'));
     const words = await screen.findByText('That reason was replaced — choose again.');
     expect(words.closest('[role="alert"]')).not.toBeNull();
+  });
+});
+
+// ── Story 6.28 (OP14 (b)) — another claim of this death finally approved: the FINAL approve disabled on each surface ──
+describe('Story 6.28 OP14 (b) — the R9 panel, the escalation and "no correction needed" stop at the banner', () => {
+  const ofd = verifierConsoleEn.onePaymentPerDeath;
+  const voted = { claim_reference: 'A1B2C3D4', stage: 'passed_final_vote' as const };
+
+  it('<R9CasePanel> — the banner; the Approve vote choice disabled; an APPROVING finalize held with the banner\'s words', async () => {
+    getR9Panel.mockResolvedValue(r9Panel({ votes: [approveVote(true)], tally: approvedTally, finally_approved_elsewhere: voted }));
+    wrap(<R9CasePanel pariwarId={PARIWAR} claimCaseId={CLAIM} />);
+    expect(await screen.findByTestId(`finally-approved-elsewhere-${CLAIM}`)).toHaveTextContent(ofd.bannerVoted('A1B2C3D4'));
+    expect(screen.getByTestId('r9-vote-approve')).toBeDisabled();
+    expect(screen.getByTestId('r9-finalize-blocked')).toHaveTextContent(ofd.bannerVoted('A1B2C3D4'));
+    expect(screen.getByTestId('r9-finalize')).toBeDisabled();
+  });
+
+  it('<R9CasePanel> — a DENYING finalize is ⛔ never held (F15)', async () => {
+    getR9Panel.mockResolvedValue(
+      r9Panel({ votes: [approveVote(true)], tally: { ...approvedTally, provisional_outcome: 'denied' }, finally_approved_elsewhere: voted }),
+    );
+    wrap(<R9CasePanel pariwarId={PARIWAR} claimCaseId={CLAIM} />);
+    await screen.findByTestId('r9-finalize');
+    expect(screen.queryByTestId('r9-finalize-blocked')).toBeNull();
+  });
+
+  it('<EscalationDetail> — an APPROVE decision disabled; a refusal untouched', async () => {
+    getEscalatedClosure.mockResolvedValue(detail({ approval_warnings: QUIET, finally_approved_elsewhere: voted }));
+    wrap(<EscalationDetail pariwarId={PARIWAR} claimCaseId={CLAIM} />);
+    expect(await screen.findByTestId(`finally-approved-elsewhere-${CLAIM}`)).toHaveTextContent(ofd.bannerVoted('A1B2C3D4'));
+    fireEvent.change(screen.getByTestId('decision-kind'), { target: { value: 'approve' } });
+    expect(screen.getByTestId('decision-submit')).toBeDisabled();
+    fireEvent.change(screen.getByTestId('decision-kind'), { target: { value: 'refuse' } });
+    expect(screen.getByTestId('decision-submit')).toBeEnabled();
+  });
+
+  it('<PariwarClosureList> — "no correction needed" approve disabled under the banner', () => {
+    wrap(<PariwarClosureList pariwarId={PARIWAR} reasonOptions={OPTIONS} items={[item({ approval_warnings: QUIET, finally_approved_elsewhere: voted })]} />);
+    expect(screen.getByTestId(`finally-approved-elsewhere-${CLAIM}`)).toHaveTextContent(ofd.bannerVoted('A1B2C3D4'));
+    expect(screen.getByTestId('no-correction-approve')).toBeDisabled();
   });
 });

@@ -46,6 +46,7 @@ const CASE: PendingCase = {
   under_correction: false,
   name_difference_reasons: [],
   approval_name_highlight: null,
+  finally_approved_elsewhere: null,
   // Story 6.23b (EA7) — a quiet claim: the block every pending case now carries.
   approval_warnings: {
     available: true,

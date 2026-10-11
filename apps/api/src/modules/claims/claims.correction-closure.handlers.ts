@@ -54,7 +54,7 @@ import {
 import { getDisplayName } from '../auth/admin/admin-auth.repo.js';
 import { emitAuthAudit } from '../auth/shared/audit.js';
 import { closeScopeTx, openScopeTx } from '../multi-tenant/scope-tx.js';
-import { closeClaimsAfterFinalStop } from './close-claims-of-paid-death.js';
+import { closeClaimsAfterFinalStop, readFinallyApprovedElsewhereDtos } from './close-claims-of-paid-death.js';
 import { geoTreeResolverForRequest, loadActorGrants } from '../rbac/index.js';
 import { decryptClaimContactField } from './claim-contact-crypto.js';
 import {
@@ -504,6 +504,8 @@ export function createCorrectionClosureHandlers(deps: AppDeps) {
         const w = warnings?.byClaim.get(r.claimCaseId.toLowerCase());
         return w === undefined ? UNAVAILABLE_APPROVAL_WARNINGS : toApprovalWarningsSummary(w, [actorId]);
       };
+      // ⭐ Story 6.28 (OP14 (b)) — another claim of the death past its final vote / paid (ONE statement).
+      const elsewhereOf = await readFinallyApprovedElsewhereDtos(scopeTx.client, scopeTx.tx, request.log, pariwarId, rows.map((r) => r.claimCaseId));
       const items = await Promise.all(
         rows.map(async (r) => ({
           kind: r.kind,
@@ -523,6 +525,7 @@ export function createCorrectionClosureHandlers(deps: AppDeps) {
           checked_after_record: r.checkedAfterRecord,
           held: r.held,
           approval_warnings: warningsOf(r),
+          finally_approved_elsewhere: elsewhereOf(r.claimCaseId),
         })),
       );
       emitAuthAudit(deps, request, 'admin_claim_correction.closure_queue_read', {

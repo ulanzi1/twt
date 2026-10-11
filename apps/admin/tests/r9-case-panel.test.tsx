@@ -53,6 +53,7 @@ const PANEL_NO_SESSION: R9PanelResponse = {
   votes: [],
   tally: null,
   name_difference_reasons: [],
+  finally_approved_elsewhere: null,
   // Story 6.23b (EA7) — a quiet claim, and the Pariwar's list (read once per panel).
   approval_warnings: {
     available: true,

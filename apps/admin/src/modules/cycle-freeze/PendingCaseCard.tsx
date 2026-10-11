@@ -32,6 +32,7 @@ import {
 } from '../claim-verification/LaterApprovalWarnings.js';
 import { nameDifferenceReasonLabel, verifierConsoleEn, verifierReasonCodeLabel } from '../claim-verification/i18n-en.js';
 import { ApprovalNameHighlightBadge } from '../correction-closure/ApprovalNameHighlightBadge.js';
+import { FinallyApprovedElsewhereBanner } from './FinallyApprovedElsewhereBanner.js';
 
 type PendingCase = CycleFreezePendingResponse['ready_to_freeze'][number];
 type Bucket = 'ready_to_freeze' | 'escalated' | 'voted_pending_commit';
@@ -103,6 +104,9 @@ export function PendingCaseCard({
   const warned = approvalNeedsWarningReason(warnings);
   // The WAIT or a failed read — Approve / Resolve → Approve disabled WITH these words; every other action untouched.
   const approveBlocked = approvalBlockedReason(warnings);
+  // ⭐ Story 6.28 (OP14 (b)) — another claim of this death passed the final vote / is paid ⇒ the FINAL approve (this
+  // card's Approve vote) is disabled with the banner's words. Decision support — OP2's 409 is the control.
+  const elsewhere = case_.finally_approved_elsewhere;
   const pickerPrefix = `cf-${case_.claim_case_id}`;
   // ⭐ Story 6.19b (AC16; `2026-09-27-258`, D25) — WHO MUST ACT on a return. ⛔ No default: the Pariwar Admin
   // chooses, because the choice decides whether the FAMILY is reminded (and can later be closed "for no
@@ -208,6 +212,7 @@ export function PendingCaseCard({
 
   return (
     <li className="rounded border p-3 flex flex-col gap-2">
+      <FinallyApprovedElsewhereBanner elsewhere={elsewhere} pariwarId={pariwarId} claimCaseId={case_.claim_case_id} canClose />
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-sm">
         <code className="font-mono text-xs opacity-80">{case_.claim_case_id}</code>
         <span className="rounded bg-black/5 px-1.5 py-0.5 text-xs">{case_.current_state}</span>
@@ -330,7 +335,7 @@ export function PendingCaseCard({
               type="button"
               data-testid="cycle-freeze-approve"
               className="rounded bg-status-ok-bg px-3 py-1 text-sm text-status-ok-fg disabled:opacity-50"
-              disabled={pending || approveBlocked !== null}
+              disabled={pending || approveBlocked !== null || elsewhere !== null}
               aria-describedby={approveBlocked !== null ? `${pickerPrefix}-approval-blocked` : undefined}
               onClick={() => submit({ action: 'approve' }, 'approved')}
             >

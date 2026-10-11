@@ -85,6 +85,7 @@ import {
 import { hasLiveRoutedRow } from './r9-routing.js';
 import { groundInspectionApprovalState, readGroundInspectionApprovalFacts } from './ground-inspection-approval.js';
 import { readStandingSuspicionRefusals, suspicionAppealWaitState } from './suspicion-refusal.js';
+import { readPaymentCommittedClaim } from './one-payment-per-death.js';
 
 // ── State windows (the write-path allowlists) ─────────────────────────────────
 
@@ -1335,6 +1336,15 @@ export async function commitCycleFreeze(
       continue;
     }
     if (!groundInspectionApprovalState(await readGroundInspectionApprovalFacts(db, input.pariwarId, candidate.claimCaseId)).complete) {
+      continue;
+    }
+    // ⭐ Story 6.28 OP3 (`2026-10-11-319`) — one payment per death, re-checked at the payout milestone (defence in depth —
+    // OP2's gate is the control): SKIP-AND-KEEP a candidate whose death already has a PAYMENT-COMMITTED claim (`approved` /
+    // `settled`). ⛔ No in-run set: `current_state` is projected in THIS transaction, so a claim committed earlier in this
+    // run already reads `approved`. ⚠ ⛔ No RF15 key here (Trap 3 — this loop holds rows across deaths). Reachable only
+    // from a legacy pair or a writer that bypasses the gate; R1 (a candidate of a death paid in an EARLIER run stays
+    // `state_trustee_approved`, re-selected each run) is recorded, ⛔ not addressed.
+    if ((await readPaymentCommittedClaim(db, input.pariwarId, locked.deceasedMemberId, candidate.claimCaseId)) !== null) {
       continue;
     }
 

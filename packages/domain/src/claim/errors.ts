@@ -830,6 +830,25 @@ export class SuspicionAppealPendingError extends Error {
   }
 }
 
+// ── Story 6.28 — one payment per death (`2026-10-11-318` Q1 A, `2026-10-11-319` OP2) ────────────────────────────────
+
+/**
+ * Story 6.28 OP2 — the FINAL approval is STOPPED: another claim of the same death has already passed the final vote
+ * (`state_trustee_approved`), or its payment is committed (`approved` / `settled`). ⛔ NOT a refusal and ⛔ NOT a denial —
+ * the claim stays as it is (and is closed once that payment is committed, OP4). Every final-approval handler maps it to
+ * 409 `<prefix>.death_already_finally_approved` with `details: {}` — ⛔ `approvedClaimCaseId` never leaves the server.
+ * The District Admin's approval (P1) is ⛔ never stopped by it.
+ */
+export class DeathAlreadyFinallyApprovedError extends Error {
+  public readonly name = 'DeathAlreadyFinallyApprovedError';
+  public constructor(
+    public readonly claimCaseId: string,
+    public readonly approvedClaimCaseId: string,
+  ) {
+    super(`[one-payment-per-death] claim ${claimCaseId} cannot be finally approved — another claim for this death already has been`);
+  }
+}
+
 /**
  * Story 6.24a RF13 (`2026-10-07-293` item 2 A) — `reviseDecision` refuses to move a live decision's reason OFF
  * `post_death_nominee_change` while ANY other claim of the same death is in any state but `closed` (else one death could be

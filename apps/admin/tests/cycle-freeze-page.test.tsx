@@ -137,6 +137,25 @@ describe('<CycleFreezePage> — Story 6.26a (GI11), the ground-inspection WAIT i
   }
 });
 
+describe('<CycleFreezePage> — Story 6.28 (OP2), the one-payment-per-death STOP in words', () => {
+  it('⭐ `cycle_freeze.death_already_finally_approved` ⇒ the staff words — ⛔ not a raw code, ⛔ never the server text', async () => {
+    postCycleFreezeDecision.mockRejectedValue(new ApiError(409, 'cycle_freeze.death_already_finally_approved', 'server words', {}));
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+    render(
+      <QueryClientProvider client={qc}>
+        <CycleFreezePage pariwarId={PARIWAR} />
+      </QueryClientProvider>,
+    );
+    const section = await screen.findByRole('region', { name: 'Ready to freeze' });
+    fireEvent.click(within(section).getByRole('button', { name: 'Approve' }));
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent(verifierConsoleEn.onePaymentPerDeath.approvalGate);
+    expect(alert.textContent).not.toContain('cycle_freeze.');
+    expect(alert.textContent).not.toContain('server words');
+    expect(alert.textContent).not.toMatch(/refused|denied/i);
+  });
+});
+
 describe('<CycleFreezePage> — Story 6.24a (RF5), the suspicion-appeal WAIT in words', () => {
   for (const reason of ['appeal_not_filed', 'appeal_open'] as const) {
     it(`⭐ \`cycle_freeze.suspicion_appeal_pending\` (${reason}) ⇒ the words, "It is not refused." — ⛔ not a raw code`, async () => {

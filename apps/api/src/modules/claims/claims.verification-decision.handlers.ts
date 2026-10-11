@@ -48,6 +48,7 @@ import { closeScopeTx, openScopeTx } from '../multi-tenant/scope-tx.js';
 import { encryptOptionalVerifierRationale } from './verifier-decision-crypto.js';
 import { encryptLateWarningReasonNote } from './approval-warning-crypto.js';
 import { groundInspectionRequiredMessage } from './ground-inspection-required-message.js';
+import { DEATH_ALREADY_FINALLY_APPROVED_MESSAGE } from './death-already-finally-approved-message.js';
 import { suspicionAppealPendingMessage } from './suspicion-appeal-pending-message.js';
 
 /** Why a revise was refused, in words (`details.reason` carries the code). Exhaustive — a new reason must say why. */
@@ -111,6 +112,11 @@ function translateDecisionError(err: unknown): never {
     throw new ConflictError(suspicionAppealPendingMessage(err.reason), 'verifier_decision.suspicion_appeal_pending', {
       reason: err.reason,
     });
+  }
+  // ⭐ Story 6.28 OP2 — another claim of the death already passed the final vote: STOPPED (⛔ not a denial, ⛔ not a 500,
+  // ⛔ never the other claim's id on the wire).
+  if (err instanceof claim.DeathAlreadyFinallyApprovedError) {
+    throw new ConflictError(DEATH_ALREADY_FINALLY_APPROVED_MESSAGE, 'verifier_decision.death_already_finally_approved', {});
   }
   if (err instanceof claim.NomineeDeterminationRequiredError) {
     throw new ConflictError(

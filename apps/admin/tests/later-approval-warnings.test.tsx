@@ -494,6 +494,17 @@ describe('<R9CasePanel> — the approve vote and finalize (EA5; RD11)', () => {
     });
   }
 
+  // ⭐ Story 6.28 (OP2) — THROUGH the panel: removing the panel's `.death_already_finally_approved` branch turns this red.
+  it('6.28 — finalize\'s `death_already_finally_approved` 409 reads as the stop words, ⛔ never the server text', async () => {
+    getR9Panel.mockResolvedValue(r9Panel({ votes: [approveVote(true)], tally: approvedTally }));
+    finalizeR9.mockRejectedValue(new ApiError(409, 'r9_voting.death_already_finally_approved', 'server words', {}));
+    wrap(<R9CasePanel pariwarId={PARIWAR} claimCaseId={CLAIM} />);
+    fireEvent.click(await screen.findByTestId('r9-finalize'));
+    const words = verifierConsoleEn.onePaymentPerDeath.approvalGate;
+    const alert = await screen.findByText((_, el) => el?.getAttribute('role') === 'alert' && (el.textContent ?? '').includes(words));
+    expect(alert).not.toHaveTextContent('server words');
+  });
+
   it('finalize\'s `approve_votes_need_warning_reason` with `vote_ids` reads as the COUNTED words', async () => {
     getR9Panel.mockResolvedValue(r9Panel({ votes: [approveVote(true)], tally: approvedTally }));
     finalizeR9.mockRejectedValue(

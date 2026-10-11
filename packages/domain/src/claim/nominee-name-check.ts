@@ -32,6 +32,7 @@ import {
 import { assertLateWarningsCovered } from './approval-warnings.js';
 import { assertDeathCertificateAcceptedForApproval } from './death-certificate-approval.js';
 import { assertGroundInspectionCompleteForApproval } from './ground-inspection-approval.js';
+import { assertNoOtherFinalApprovalForDeath } from './one-payment-per-death.js';
 import { assertSuspicionAppealDecidedForFinalApproval } from './suspicion-refusal.js';
 import { getEffectiveNomineeDeclaration } from './nominee-effective.js';
 import { CLAIM_REVIEW_WINDOW_STATES } from './review-window.js';
@@ -399,6 +400,10 @@ export async function readNomineeNameCheckSnapshot(
  *                                            WAITS (→ 409) — ⛔ NOT a denial. After the ground inspection, BEFORE the
  *                                            late-warning wait (which stays LAST). The District Admin (P1) is ⛔ never
  *                                            held by it.
+ * @throws DeathAlreadyFinallyApprovedError   ⭐ Story 6.28 OP2 (`-318` Q1 A) — FINAL approvals ONLY: another claim of the
+ *                                            death has passed the final vote or its payment is committed. STOPPED
+ *                                            (→ 409) — ⛔ NOT a denial. Right after RF5 (on RF15's key), BEFORE the
+ *                                            late-warning wait. The District Admin (P1) is ⛔ never stopped by it.
  */
 export async function assertClaimApprovable(
   db: Db,
@@ -429,6 +434,9 @@ export async function assertClaimApprovable(
   // reason. It takes RF15's per-death key FIRST inside itself and ⛔ never waits on another claim's lock (Trap 8).
   if (opts.step === 'final') {
     await assertSuspicionAppealDecidedForFinalApproval(db, pariwarId, claimCaseId, deceasedMemberId);
+    // ⭐ Story 6.28 OP2 — one payment per death: AFTER RF5's call (which took RF15's per-death key — the conjunct rides it,
+    // ⛔ no lock of its own; before it, two final writers of one death would both pass — Trap 1).
+    await assertNoOtherFinalApprovalForDeath(db, pariwarId, claimCaseId, deceasedMemberId);
   }
   // ⭐ Story 6.23b EA2 — THE WAIT, LAST (after the `-251` waiver's early return INSIDE the inner helper — Trap 17).
   await assertLateWarningsCovered(db, pariwarId, claimCaseId, opts.approvingActorIds);

@@ -17,6 +17,7 @@ import {
   trusteeDeathCertificateAcceptanceRequiredMessage,
   trusteeDeterminationRequiredMessage,
   trusteeGroundInspectionRequiredMessage,
+  deathAlreadyFinallyApprovedMessage,
   suspicionAppealPendingMessage,
 } from '../claim-verification/nominee-errors.js';
 import {
@@ -46,6 +47,10 @@ function errorMessage(error: unknown): string | undefined {
   // ⭐ Story 6.24a (RF5) — the FINAL approval waits for another claim's suspicion appeal (⛔ never a refusal).
   if (error instanceof ApiError && error.code.endsWith('.suspicion_appeal_pending')) {
     return suspicionAppealPendingMessage(error);
+  }
+  // ⭐ Story 6.28 (OP2) — another claim for this death already passed the final vote: STOPPED (⛔ never a refusal).
+  if (error instanceof ApiError && error.code.endsWith('.death_already_finally_approved')) {
+    return deathAlreadyFinallyApprovedMessage();
   }
   // Story 6.19a (D14) — the claim waits for the family's contact details; the helpline can add them.
   if (error instanceof ApiError && error.code.endsWith('.claim_contact_required')) {

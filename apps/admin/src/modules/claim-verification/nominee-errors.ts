@@ -64,6 +64,14 @@ export function suspicionAppealPendingMessage(err: ApiError): string {
 }
 
 /**
+ * ⭐ Story 6.28 (OP2, OP14 (c)) — a FINAL approval's `…death_already_finally_approved` 409 (`cycle_freeze.` / `r9_voting.` /
+ * `verifier_decision.` — defensive, P1 is ⛔ never stopped). ⛔ Never a denial: the claim is stopped, ⛔ never refused.
+ */
+export function deathAlreadyFinallyApprovedMessage(): string {
+  return t.onePaymentPerDeath.approvalGate;
+}
+
+/**
  * ⭐ Story 6.24a (RF13) — `reviseDecision`'s `…suspicion_reason_locked` 409. Names the HELD claim by its reference
  * only (RF10's convention — ⛔ no name, ⛔ no note), read from the server's `details.held_claim_reference`. Missing
  * ⇒ "another claim" (a complete, grammatical phrase — ⛔ never a bare empty splice).

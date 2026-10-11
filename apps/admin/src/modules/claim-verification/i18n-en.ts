@@ -716,6 +716,12 @@ export const verifierConsoleEn = {
     reasonLocked:
       'This refusal’s reason cannot be changed while {held} for this death has not been closed — its 90-day appeal limit stands.',
   },
+  // ⭐ Story 6.28 (`2026-10-11-319` OP2, OP14 (c)) — one payment per death. STAFF words: the claim is STOPPED, ⛔ never
+  // "refused"; the other claim is ⛔ never named here (the 409 carries ⛔ no id — `details: {}`).
+  onePaymentPerDeath: {
+    // The FINAL approvers' 409 (`cycle_freeze.` / `r9_voting.` / `closure.` / `verifier_decision.` `death_already_finally_approved`).
+    approvalGate: 'Another claim for this death has already passed the final vote. This claim cannot be finally approved.',
+  },
   groundInspectionGate: {
     complete: 'The ground inspection is complete for approval.',
     approveBlocked: {

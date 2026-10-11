@@ -61,8 +61,10 @@ export default function RelationshipScreen(): React.ReactElement {
             const recorded = getFiledClaimCaseId(memberId)
             const outcome = recorded === null ? null : await boundClaimEntryRead(fetchClaimEntryReadOutcome(recorded))
             if (mayRecordClosedClaimPointer(recorded !== null, outcome)) setFiledClaimCaseId(memberId, res.claimCaseId)
-          } catch {
-            // Best-effort — the closed-helpline screen below is still correct either way.
+          } catch (e) {
+            // Best-effort — the closed-helpline screen below is still correct either way. Logged (code review
+            // chunk 3/4 round 2) so a recurring failure here is visible instead of silent.
+            console.error('[relationship] filed-claim pointer recording failed', e)
           }
         }
         router.replace('/(claim)/closed-helpline')

@@ -1236,12 +1236,14 @@ export const GroundInspectionAssignment = z.object({
 // STRIPPED, so the field must be listed here or the page never sees it.
 // Story 6.28 (OP1) — the stage literals `otherClaimStageOf` can return (no @twt/contracts mirror here by this
 // file's own design — see the header note above — so listed inline rather than importing the sibling
-// verifier-console contract's `OTHER_CLAIM_STAGES`). An unrecognized value fails parsing rather than rendering
-// as the literal string "undefined" against the `gi.otherClaims.stage.*` i18n table (code review chunk 3/4).
-const GROUND_INSPECTION_OTHER_CLAIM_STAGES = ['open', 'passed_final_vote', 'paid', 'refused', 'under_appeal', 'closed'] as const;
+// verifier-console contract's `OTHER_CLAIM_STAGES`). ⚠ `.catch('open')`, ⛔ a bare `z.enum(...)` (code review
+// chunk 3/4 round 2): this whole section is non-strict and OPTIONAL — a SINGLE claim's unrecognized stage must
+// degrade that one row, ⛔ never fail parsing of the WHOLE response (which would also lose the primary
+// `assignments` list this page exists to show, a worse outcome than the row it was guarding against).
+const GROUND_INSPECTION_OTHER_CLAIM_STAGES = ['open', 'passed_final_vote', 'paid', 'refused', 'under_appeal', 'reversed', 'closed'] as const;
 const GroundInspectionOtherClaims = z.object({
   count: z.number().int().nonnegative(),
-  claims: z.array(z.object({ reference: z.string(), stage: z.enum(GROUND_INSPECTION_OTHER_CLAIM_STAGES) })),
+  claims: z.array(z.object({ reference: z.string(), stage: z.enum(GROUND_INSPECTION_OTHER_CLAIM_STAGES).catch('open') })),
   visitedElsewhere: z.boolean(),
   alreadyVisited: z.boolean(),
 });
@@ -1250,6 +1252,8 @@ const GroundInspectionReadResponse = z.object({
   otherClaimsForDeath: GroundInspectionOtherClaims.nullable().optional(),
 });
 export type GroundInspectionOtherClaimsT = z.infer<typeof GroundInspectionOtherClaims>;
+/** Exported ONLY for the lockstep test against `@twt/contracts`' `OTHER_CLAIM_STAGES` (code review chunk 3/4 round 2). */
+export { GROUND_INSPECTION_OTHER_CLAIM_STAGES };
 const GroundInspectionWriteResponse = z.object({
   groundInspectionId: z.string(),
   status: z.string(),

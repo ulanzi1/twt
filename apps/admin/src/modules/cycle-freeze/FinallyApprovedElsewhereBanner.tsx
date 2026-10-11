@@ -52,6 +52,7 @@ export function FinallyApprovedElsewhereBanner({
   return (
     <div
       role="note"
+      id={`finally-approved-elsewhere-${claimCaseId}`}
       data-testid={`finally-approved-elsewhere-${claimCaseId}`}
       className="flex flex-col gap-2 rounded border border-status-warn-fg bg-status-warn-bg p-2 text-sm text-status-warn-fg"
     >

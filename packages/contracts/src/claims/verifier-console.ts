@@ -464,7 +464,7 @@ export const SuspicionRefusalSection = z
 export type SuspicionRefusalSection = z.output<typeof SuspicionRefusalSection>;
 
 /** OP14 (a)'s stages — in LOCKSTEP with the domain's `OTHER_CLAIM_STAGES` (contracts test). */
-export const OTHER_CLAIM_STAGES = ['open', 'passed_final_vote', 'paid', 'refused', 'under_appeal', 'closed'] as const;
+export const OTHER_CLAIM_STAGES = ['open', 'passed_final_vote', 'paid', 'refused', 'under_appeal', 'reversed', 'closed'] as const;
 /** OP14 (a)'s date-of-death comparisons — in LOCKSTEP with the domain's `OTHER_CLAIM_DEATH_DATE_COMPARISONS`. */
 export const OTHER_CLAIM_DEATH_DATES = ['same', 'different', 'not_accepted', 'not_comparable'] as const;
 

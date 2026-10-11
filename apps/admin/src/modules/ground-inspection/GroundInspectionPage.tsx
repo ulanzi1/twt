@@ -151,6 +151,27 @@ export function GroundInspectionPage({ pariwarId }: GroundInspectionPageProps): 
       )}
 
       {assignmentsQuery.isLoading && <p role="status">Loading…</p>}
+      {/* ⭐ Story 6.28 (OP14 (d)) — the other claims of this death (by reference; ⛔ name, ⛔ date). Information only. */}
+      {assignmentsQuery.data?.otherClaimsForDeath && assignmentsQuery.data.otherClaimsForDeath.count > 0 && (
+        <section aria-label="Other claims for this death" data-testid="gi-other-claims" className="flex flex-col gap-1 rounded border p-3 text-sm">
+          <p>{t('gi.otherClaims.count').replace('{n}', String(assignmentsQuery.data.otherClaimsForDeath.count))}</p>
+          <ul className="list-disc pl-5">
+            {assignmentsQuery.data.otherClaimsForDeath.claims.map((c) => (
+              <li key={c.reference} data-testid={`gi-other-claim-${c.reference}`}>
+                {t('gi.otherClaims.claim').replace('{ref}', c.reference).replace('{stage}', t(`gi.otherClaims.stage.${c.stage}`))}
+              </li>
+            ))}
+          </ul>
+          {assignmentsQuery.data.otherClaimsForDeath.visitedElsewhere && (
+            <p data-testid="gi-visited-elsewhere">{t('gi.otherClaims.visitedElsewhere')}</p>
+          )}
+          {assignmentsQuery.data.otherClaimsForDeath.alreadyVisited && (
+            <p className="font-medium text-amber-800" data-testid="gi-already-visited">
+              {t('gi.otherClaims.alreadyVisited')}
+            </p>
+          )}
+        </section>
+      )}
       {assignmentsQuery.data && assignmentsQuery.data.assignments.length === 0 && (
         <p role="status" className="text-sm text-amber-700">
           {t('gi.empty')}

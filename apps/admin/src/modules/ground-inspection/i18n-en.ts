@@ -20,6 +20,18 @@ const EN: Record<string, string> = {
   'gi.block.hint': 'Leave blank to work at district level. Naming a block authorizes the assignment at the block level instead — a block admin reaches it directly. A district admin can only reach a block-tagged assignment once their Pariwar publishes a geo tree placing that block under their district; no Pariwar can do that yet.',
   'gi.locator.exactlyOne': 'Load by district OR by block — fill in exactly one.',
   'gi.load': 'Load assignments',
+  // Story 6.28 (OP14 (d)) — the other claims of this death, for the inspector. Information only — ⛔ a gate.
+  'gi.otherClaims.count': 'Other claims for this death: {n}',
+  'gi.otherClaims.claim': 'Claim {ref} — {stage}',
+  'gi.otherClaims.visitedElsewhere': 'Another claim for this death has already had a visit.',
+  'gi.otherClaims.alreadyVisited':
+    'This family was already visited for another claim with the same date of death — check before sending a second visit.',
+  'gi.otherClaims.stage.open': 'open',
+  'gi.otherClaims.stage.passed_final_vote': 'passed the final vote',
+  'gi.otherClaims.stage.paid': 'paid',
+  'gi.otherClaims.stage.refused': 'refused',
+  'gi.otherClaims.stage.under_appeal': 'under appeal',
+  'gi.otherClaims.stage.closed': 'closed',
   'gi.empty': 'No ground-inspection assignments for this claim under this jurisdiction yet — the absence of a completed inspection is itself a signal the verifier must acknowledge.',
   // Schedule form
   'gi.schedule.heading': 'Schedule a new assignment',

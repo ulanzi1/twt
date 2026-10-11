@@ -89,6 +89,27 @@ describe('<GroundInspectionPage>', () => {
     expect(api.listGroundInspection).toHaveBeenCalledWith(PARIWAR, CLAIM, { district: 'Patna' });
   });
 
+  it('Story 6.28 (OP14 (d)) — the other claims of this death: count, references + stages, the visited lines (⛔ a name, ⛔ a date)', async () => {
+    vi.mocked(api.listGroundInspection).mockResolvedValue({
+      assignments: [makeAssignment()],
+      otherClaimsForDeath: { count: 2, claims: [{ reference: 'A1B2C3D4', stage: 'paid' }, { reference: 'E5F6A7B8', stage: 'open' }], visitedElsewhere: true, alreadyVisited: true },
+    });
+    renderWithClient(<GroundInspectionPage pariwarId={PARIWAR} />);
+    await loadScope();
+    expect(await screen.findByTestId('gi-other-claims')).toHaveTextContent('Other claims for this death: 2');
+    expect(screen.getByTestId('gi-other-claim-A1B2C3D4')).toHaveTextContent('Claim A1B2C3D4 — paid');
+    expect(screen.getByTestId('gi-visited-elsewhere')).toBeInTheDocument();
+    expect(screen.getByTestId('gi-already-visited')).toHaveTextContent(/already visited for another claim with the same date of death/);
+  });
+
+  it('Story 6.28 (OP14 (d)) — `null` (⛔ an in-scope assignment) or ⛔ other claims ⇒ ⛔ the section', async () => {
+    vi.mocked(api.listGroundInspection).mockResolvedValue({ assignments: [makeAssignment()], otherClaimsForDeath: null });
+    renderWithClient(<GroundInspectionPage pariwarId={PARIWAR} />);
+    await loadScope();
+    await waitFor(() => expect(api.listGroundInspection).toHaveBeenCalled());
+    expect(screen.queryByTestId('gi-other-claims')).not.toBeInTheDocument();
+  });
+
   it('lists an assignment and DISABLES Complete when it has zero photos (AC4 mandatory-photo)', async () => {
     vi.mocked(api.listGroundInspection).mockResolvedValue({ assignments: [makeAssignment({ photos: [] })] });
     renderWithClient(<GroundInspectionPage pariwarId={PARIWAR} />);

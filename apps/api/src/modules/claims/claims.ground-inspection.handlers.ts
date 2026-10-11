@@ -916,8 +916,32 @@ export function createGroundInspectionHandlers(deps: AppDeps) {
         }),
       );
 
+      // ⭐ Story 6.28 (`2026-10-11-319` OP14 (d)) — the OTHER claims of this death (count + each by REFERENCE and stage —
+      // ⛔ no name, ⛔ no note, ⛔ no date) and whether one was already VISITED (with this claim's date of death). ONLY
+      // when the caller holds an in-scope assignment of THIS claim — ⛔ never derived from the query locator alone (a
+      // `block_admin` can name any claim id: the "absence widens" shape above forbids it). Information only — ⛔ no gate.
+      // The other claims' rows may lie outside the caller's scope: booleans and references only (accepted, recorded).
+      let otherClaimsForDeath: {
+        count: number;
+        claims: { reference: string; stage: string }[];
+        visitedElsewhere: boolean;
+        alreadyVisited: boolean;
+      } | null = null;
+      if (inScope.length > 0) {
+        const pid = ids.pariwarId(ctx.pariwarId);
+        const cid = ids.claimId(claimCaseId);
+        const others = await claim.readOtherClaimsForDeath(scopeTx.tx, pid, cid);
+        const visits = await claim.readOtherClaimVisits(scopeTx.tx, pid, cid);
+        otherClaimsForDeath = {
+          count: others.total,
+          claims: others.claims.map((c) => ({ reference: claim.claimShortReference(c.claimCaseId), stage: c.stage })),
+          visitedElsewhere: visits.visitedElsewhere,
+          alreadyVisited: visits.alreadyVisited,
+        };
+      }
+
       void reply.status(200);
-      return { assignments };
+      return { assignments, otherClaimsForDeath };
     },
   };
 }

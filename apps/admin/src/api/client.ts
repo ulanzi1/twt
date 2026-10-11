@@ -1231,7 +1231,20 @@ export const GroundInspectionAssignment = z.object({
   deathDate: z.string().nullable(),
   deathTime: z.string().nullable(),
 });
-const GroundInspectionReadResponse = z.object({ assignments: z.array(GroundInspectionAssignment) });
+// ⭐ Story 6.28 (OP14 (d)) — the other claims of this death for the inspector (by reference + stage, ⛔ no name / date);
+// `null` when the caller holds ⛔ no in-scope assignment of the claim. ⚠ This schema is NON-STRICT — an unlisted key is
+// STRIPPED, so the field must be listed here or the page never sees it.
+const GroundInspectionOtherClaims = z.object({
+  count: z.number(),
+  claims: z.array(z.object({ reference: z.string(), stage: z.string() })),
+  visitedElsewhere: z.boolean(),
+  alreadyVisited: z.boolean(),
+});
+const GroundInspectionReadResponse = z.object({
+  assignments: z.array(GroundInspectionAssignment),
+  otherClaimsForDeath: GroundInspectionOtherClaims.nullable().optional(),
+});
+export type GroundInspectionOtherClaimsT = z.infer<typeof GroundInspectionOtherClaims>;
 const GroundInspectionWriteResponse = z.object({
   groundInspectionId: z.string(),
   status: z.string(),
@@ -1266,7 +1279,7 @@ export function listGroundInspection(
   pariwarId: string,
   claimCaseId: string,
   locator: { district: string; block?: undefined } | { block: string; district?: undefined },
-): Promise<{ assignments: GroundInspectionAssignmentT[] }> {
+): Promise<{ assignments: GroundInspectionAssignmentT[]; otherClaimsForDeath?: GroundInspectionOtherClaimsT | null | undefined }> {
   const query =
     locator.block !== undefined
       ? `block=${encodeURIComponent(locator.block)}`

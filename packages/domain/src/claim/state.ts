@@ -337,8 +337,10 @@ function reduce(state: ClaimLifecycleState, event: ClaimEventInput): ClaimLifecy
       return state;
 
     // ⭐ Story 6.24a (`2026-10-07-292` RF4) — another claim of the death won its suspicion appeal ⇒ CLOSED, from every
-    // CLOSABLE state (incl. `denied`, `appeal_stage_1..3` and `reversed`); a claim already finally approved (or paid,
-    // or closed) is ⛔ never moved — identity. ⛔ Nothing leaves `closed`.
+    // CLOSABLE state (incl. `denied`, `appeal_stage_1..3` and `reversed`); ⭐ Story 6.28 (`2026-10-11-319` OP13, Q4 A —
+    // supersedes RF4 in part) — a claim past the final vote but ⛔ not yet paid (`state_trustee_approved`) is closable
+    // too, and Story 6.28 OP4 closes the other open claims of a death whose payment is committed. A claim whose payment
+    // is committed (`approved`), paid (`settled`) or closed is ⛔ never moved — identity. ⛔ Nothing leaves `closed`.
     case 'claim.closed':
       if (isClaimClosable(state)) return 'closed';
       return state;
@@ -350,13 +352,14 @@ function reduce(state: ClaimLifecycleState, event: ClaimEventInput): ClaimLifecy
 }
 
 /**
- * ⭐ Story 6.24a (`2026-10-07-292` RF4, v1.1) — the states `claim.closed` does ⛔ NOT move: a claim already FINALLY
- * approved (`state_trustee_approved`, `approved`), paid (`settled`), or closed. Every other state is CLOSABLE — `denied`,
- * the three appeal stages and `reversed` included (FQ5: *"the new claim is closed"* whatever its state short of final
- * approval — else a held claim refused for another reason could later be appealed, reversed and approved beside the
- * reversed claim: two payments for one death).
+ * ⭐ Story 6.24a (`2026-10-07-292` RF4, v1.1) — the states `claim.closed` does ⛔ NOT move. ⭐ Story 6.28 (`2026-10-11-319`
+ * OP13, Q4 A — supersedes RF4 in part, ⛔ never a re-reading): a claim whose PAYMENT is committed (`approved`), paid
+ * (`settled`), or closed. `state_trustee_approved` — *"approved-in-principle, reversible"* — is now CLOSABLE: an allowed
+ * suspicion appeal closes another claim of the death that passed the final vote but is ⛔ not yet paid (FQ5 A). Every
+ * other state is CLOSABLE — `denied`, the three appeal stages and `reversed` included (FQ5: *"the new claim is closed"*).
+ * ⛔ Never widen it to `approved` / `settled` (Trap 16 — closing a committed claim would strand a spawned pool).
  */
-export const CLAIM_NOT_CLOSABLE_STATES = ['settled', 'approved', 'state_trustee_approved', 'closed'] as const satisfies readonly ClaimLifecycleState[];
+export const CLAIM_NOT_CLOSABLE_STATES = ['settled', 'approved', 'closed'] as const satisfies readonly ClaimLifecycleState[];
 
 /** True iff `claim.closed` moves a claim in `state` (RF4). */
 export function isClaimClosable(state: ClaimLifecycleState | string): boolean {

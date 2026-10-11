@@ -51,6 +51,7 @@ import { emitAuthAudit } from '../auth/shared/audit.js';
 import { getDisplayName } from '../auth/admin/admin-auth.repo.js';
 import { geoTreeResolverForRequest, loadActorGrants } from '../rbac/index.js';
 import { closeScopeTx, openScopeTx } from '../multi-tenant/scope-tx.js';
+import { closeClaimsAfterFinalStop, closeClaimsOfPaidDeathInOwnTx } from './close-claims-of-paid-death.js';
 import { encryptOptionalTrusteeRationale } from './state-trustee-decision-crypto.js';
 import { decryptVerifierRationale } from './verifier-decision-crypto.js';
 import {
@@ -433,7 +434,10 @@ export function createCycleFreezeHandlers(
 
       const scopeTx = await openScopeTx(deps, ctx.pariwarIdStr);
       let ok = false;
-      let result: claim.TrusteeDecisionResult;
+      let result!: claim.TrusteeDecisionResult;
+      // ⭐ Story 6.28 H(iv) (Trap 14) — the refusal is CAPTURED, the refused transaction closes in `finally`, and only then
+      // may the paid-death closure run (its own transaction) before the 409 is translated.
+      let refused: { readonly err: unknown } | null = null;
       try {
         // ⭐ Story 6.19c (`-273` §4, `-274` 1d) — while the claim is HELD (a closures row of its live return escalated or
         // under review), ONLY the Super Admin decides it: the vote (approve AND deny) and a new return are refused 409
@@ -541,9 +545,15 @@ export function createCycleFreezeHandlers(
           },
           body.claim_case_id,
         );
-        return translateCycleFreezeError(err);
+        refused = { err };
       } finally {
         await closeScopeTx(scopeTx, ok);
+      }
+      if (refused !== null) {
+        await closeClaimsAfterFinalStop(deps, request.log, refused.err, {
+          pariwarId: ctx.pariwarId, claimCaseId, actorId: ctx.actorId, site: 'cycle_freeze.vote',
+        });
+        return translateCycleFreezeError(refused.err);
       }
 
       audit(request, auditType, ctx, {
@@ -675,6 +685,21 @@ export function createCycleFreezeHandlers(
         } finally {
           lockClient.release();
         }
+      }
+
+      // ⭐ Story 6.28 OP4 H(i) (`2026-10-11-319`) — a payment is COMMITTED: close every other open claim of each committed
+      // death, once per distinct death, each in its OWN transaction (the intake key first), AFTER the trigger block and
+      // outside its session lock, on EVERY response — a fresh commit OR a replay (`committedClaimIds` is populated on a
+      // replay), so a crash before this point heals on the retry. Idempotent; a failure is logged and ⛔ never fails the
+      // committed freeze (R2 — the guard, OP2, is the control).
+      for (const deceasedMemberId of [...new Set(frozenRefs.map((r) => r.deceasedMemberId))]) {
+        await closeClaimsOfPaidDeathInOwnTx(deps, request.log, {
+          pariwarId: ctx.pariwarId,
+          deceasedMemberId: ids.memberId(deceasedMemberId),
+          actor: 'system',
+          actorId: ctx.actorId,
+          site: 'cycle_freeze.commit',
+        });
       }
 
       void reply.status(200);

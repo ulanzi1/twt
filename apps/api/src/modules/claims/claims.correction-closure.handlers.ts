@@ -54,6 +54,7 @@ import {
 import { getDisplayName } from '../auth/admin/admin-auth.repo.js';
 import { emitAuthAudit } from '../auth/shared/audit.js';
 import { closeScopeTx, openScopeTx } from '../multi-tenant/scope-tx.js';
+import { closeClaimsAfterFinalStop } from './close-claims-of-paid-death.js';
 import { geoTreeResolverForRequest, loadActorGrants } from '../rbac/index.js';
 import { decryptClaimContactField } from './claim-contact-crypto.js';
 import {
@@ -607,6 +608,10 @@ export function createCorrectionClosureHandlers(deps: AppDeps) {
           }),
         );
       } catch (err) {
+        // ⭐ Story 6.28 H(iv) — `inWriteTx` has already closed the refused tx (Trap 14).
+        await closeClaimsAfterFinalStop(deps, request.log, err, {
+          pariwarId: ctx.pariwarId, claimCaseId: ctx.claimCaseId, actorId: ctx.actorId, site: 'closure.no_correction_approve',
+        });
         translateClosureError(err);
       }
       auditClaim(deps, request, ctx, 'admin_claim_correction.no_correction_approved', {

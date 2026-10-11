@@ -391,42 +391,48 @@ describe.skipIf(!hasDatabase)('Story 6.24a — the suspicion refusal through HTT
     expect((await td.pool.query(`SELECT 1 FROM claim_appeals WHERE claim_case_id = $1`, [s])).rowCount).toBe(0);
   });
 
-  it('RF6 — a held claim the reversal can ⛔ not close (already `state_trustee_approved` — `-294` §2 (a)) is RECORDED in the stage-1 audit line, ⛔ never silently (family 8)', async () => {
-    const w = await seedWorld();
-    // H — past its final vote BEFORE S stands (the `-294` §2 (a) shape), through events.
-    await inScope(w.pariwarId, async (sc) => {
-      const emit = emitter(sc, w.pariwarId, w.memberId, w.claimCaseId);
-      await emit('verification_in_progress', 'verifier_review', 'claim.verifier_reviewing');
-      await emit('verifier_review', 'verifier_approved', 'claim.verifier_approved');
-      await emit('verifier_approved', 'state_trustee_freeze', 'claim.state_trustee_frozen');
-      await emit('state_trustee_freeze', 'state_trustee_approved', 'claim.state_trustee_approved');
+  // ⭐ Story 6.28 OP13 (`2026-10-11-319`, Q4 A — supersedes `-292` RF4 in part, ⛔ never a re-reading): a held claim past
+  // ONLY its final vote is now CLOSED by the allowed appeal; one whose PAYMENT is committed is still RECORDED (the leg below
+  // keeps the only API coverage of `held_claims_not_closed`).
+  for (const h of ['state_trustee_approved', 'approved'] as const) {
+    it(`RF6 — a held claim already \`${h}\` (\`-294\` §2 (a)) is ${h === 'approved' ? 'RECORDED in the stage-1 audit line, ⛔ never silently (family 8)' : 'CLOSED by the allowed appeal (6.28 OP13)'}`, async () => {
+      const w = await seedWorld();
+      // H — past its final vote BEFORE S stands (the `-294` §2 (a) shape), through events.
+      await inScope(w.pariwarId, async (sc) => {
+        const emit = emitter(sc, w.pariwarId, w.memberId, w.claimCaseId);
+        await emit('verification_in_progress', 'verifier_review', 'claim.verifier_reviewing');
+        await emit('verifier_review', 'verifier_approved', 'claim.verifier_approved');
+        await emit('verifier_approved', 'state_trustee_freeze', 'claim.state_trustee_frozen');
+        await emit('state_trustee_freeze', 'state_trustee_approved', 'claim.state_trustee_approved');
+        if (h === 'approved') await emit('state_trustee_approved', 'approved', 'claim.approved');
+      });
+      const s = await refuseSibling(w);
+      await td.pool.query(
+        `INSERT INTO pariwar_appeal_config (pariwar_id, legal_review_status) VALUES ($1, 'cleared')
+           ON CONFLICT (pariwar_id) DO UPDATE SET legal_review_status = 'cleared'`,
+        [w.pariwarId],
+      );
+      const op = await staff(w.pariwarId, 'helpline_operator');
+      const filed = await op.client.inject({ method: 'POST', url: `${claimBase(w.pariwarId, s)}/appeal`, payload: {} });
+      expect(filed.statusCode, filed.body).toBe(201);
+      const reviewer = await staff(w.pariwarId, 'district_admin');
+      td.auditSink.events.length = 0;
+      const reversed = await reviewer.client.inject({
+        method: 'POST', url: `${claimBase(w.pariwarId, s)}/appeal/stage1`,
+        payload: { decision: 'reversed', rationale: 'Reconsidered on the merits.', disposition_category: 'reconsideration_on_merits' },
+      });
+      expect(reversed.statusCode, reversed.body).toBe(201);
+      const line = td.auditSink.ofType('admin_appeal.stage1').at(-1);
+      expect(line?.context).toMatchObject(
+        h === 'approved'
+          ? { claim_case_id: s, reversed: true, held_claims_closed: [], held_claims_not_closed: [{ claim_case_id: w.claimCaseId, state: 'approved' }] }
+          : { claim_case_id: s, reversed: true, held_claims_closed: [w.claimCaseId], held_claims_not_closed: [] },
+      );
+      expect((await td.pool.query(`SELECT current_state FROM claims WHERE claim_case_id = $1`, [w.claimCaseId])).rows[0]).toEqual({
+        current_state: h === 'approved' ? 'approved' : 'closed',
+      });
     });
-    const s = await refuseSibling(w);
-    await td.pool.query(
-      `INSERT INTO pariwar_appeal_config (pariwar_id, legal_review_status) VALUES ($1, 'cleared')
-         ON CONFLICT (pariwar_id) DO UPDATE SET legal_review_status = 'cleared'`,
-      [w.pariwarId],
-    );
-    const op = await staff(w.pariwarId, 'helpline_operator');
-    const filed = await op.client.inject({ method: 'POST', url: `${claimBase(w.pariwarId, s)}/appeal`, payload: {} });
-    expect(filed.statusCode, filed.body).toBe(201);
-    const reviewer = await staff(w.pariwarId, 'district_admin');
-    td.auditSink.events.length = 0;
-    const reversed = await reviewer.client.inject({
-      method: 'POST', url: `${claimBase(w.pariwarId, s)}/appeal/stage1`,
-      payload: { decision: 'reversed', rationale: 'Reconsidered on the merits.', disposition_category: 'reconsideration_on_merits' },
-    });
-    expect(reversed.statusCode, reversed.body).toBe(201);
-    const line = td.auditSink.ofType('admin_appeal.stage1').at(-1);
-    expect(line?.context).toMatchObject({
-      claim_case_id: s,
-      reversed: true,
-      held_claims_closed: [],
-      held_claims_not_closed: [{ claim_case_id: w.claimCaseId, state: 'state_trustee_approved' }],
-    });
-    // H is ⛔ not moved.
-    expect((await td.pool.query(`SELECT current_state FROM claims WHERE claim_case_id = $1`, [w.claimCaseId])).rows[0]).toEqual({ current_state: 'state_trustee_approved' });
-  });
+  }
 
   it('RF13 — the District Admin\'s revision of S OFF `-239` while R is open → 409 `verifier_decision.suspicion_reason_locked`', async () => {
     const w = await seedWorld();

@@ -14,10 +14,19 @@
 //     running on it (v1.1 / Trap 15): an open appeal journey's anchor → `closed`; an un-finalized appeal panel and R9
 //     session → superseded through the actor-free cores; its `routed_to_r9` row → superseded; a live correction return →
 //     superseded and its open run ended `decided` — the supersession the 6.19 terminal writers use;
-//   · a claim already `state_trustee_approved` / `approved` / `settled` is ⛔ NOT moved — it is REPORTED in the result
+//   · a claim whose payment is committed (`approved`) or paid (`settled`) is ⛔ NOT moved — it is REPORTED in the result
 //     (the caller logs it at error level with ids only and writes an audit line). ⚠ REACHABLE — `2026-10-08-294` §2
-//     corrects Trap 9's "unreachable under RF5 + RF7" (a claim voted BEFORE the other became a `-239` refusal); the
-//     per-death second-approval guard is row `6-28-one-payment-per-death-second-approval-guard`.
+//     (path (a) after payment — Invariant 3's residual, Q2 A). ⭐ Story 6.28 OP13 (`2026-10-11-319`, Q4 A — supersedes
+//     RF4 in part): a claim past ONLY the final vote (`state_trustee_approved`) IS closed (FQ5 A before payment).
+//
+// ⭐ Story 6.28 OP4 (`2026-10-11-318` Q1 A) — the SAME per-claim core closes the death's other OPEN claims once one claim's
+// PAYMENT is committed (`trigger: 'death_already_finally_approved'`, ⛔ never texted — Q3 A), at four sites:
+//   · H(i) the cycle commit and H(iv) a final writer stopped by OP2 / "Close this claim" — `closeClaimsOfPaidDeath`, each in
+//     its OWN transaction (the intake key FIRST, then each other claim's keys and row — the RF6 order);
+//   · H(ii) a mint and H(iii) a reversal — `closeClaimIfDeathPaid`, SELF-MODE inside the writer's transaction (which already
+//     holds the intake key and the claim): ⛔ no key is taken for the claim itself (Trap 13), ⛔ no other claim is touched.
+// A `denied` or under-appeal claim KEEPS its appeal (Q2 A — it is closed only once a reversal makes it `reversed`, H(iii));
+// a claim on which RF1 stands, or which RF5's wait holds, is ⛔ never closed here — FQ5 decides that pair (Invariant 3).
 //
 // ⚠ DELIBERATE (checklist family 9) — the closure ends another claim's panel and R9 session through the ACTOR-FREE cores
 // (`supersedeAppealPanelSession`, `supersedeR9VotingSession`) and emits `claim.closed` as `actor: 'system'`: it is the
@@ -45,7 +54,7 @@ import { appealAdvisoryLockKey } from './appeal-lock.js';
 import { readLiveAppealPanelSession, supersedeAppealPanelSession } from './appeal-panel-session.js';
 import { endCorrectionRun, readOpenCorrectionRun } from './correction-chase.js';
 import { intakeAdvisoryLockKey } from './icp-lock.js';
-import type { ClaimEventActor } from './events.js';
+import type { ClaimClosedTrigger, ClaimEventActor } from './events.js';
 import { projectClaimState } from './project.js';
 import {
   r9VotingAdvisoryLockKey,
@@ -55,7 +64,15 @@ import {
 } from './r9-voting-persist.js';
 import { isClaimClosable } from './state.js';
 import { getLiveCorrectionReturn, stateTrusteeDecisionAdvisoryLockKey } from './state-trustee-decision-persist.js';
-import { POST_DEATH_NOMINEE_CHANGE_REASON_CODE, acquireSuspicionReversalLock } from './suspicion-refusal.js';
+import { readPaymentCommittedClaim, readPaymentCommittedClaimOfDeath } from './one-payment-per-death.js';
+import {
+  POST_DEATH_NOMINEE_CHANGE_REASON_CODE,
+  type StandingSuspicionRefusal,
+  acquireSuspicionReversalLock,
+  isSuspicionRefusalStanding,
+  readStandingSuspicionRefusals,
+  suspicionAppealWaitState,
+} from './suspicion-refusal.js';
 
 /** The `claim.closed` trigger (the ONE value its payload schema accepts). */
 export const SUSPICION_APPEAL_ALLOWED_TRIGGER = 'suspicion_appeal_allowed' as const;
@@ -85,7 +102,7 @@ export interface CloseClaimsHeldBySuspicionAppealResult {
   readonly applied: boolean;
   /** The claims CLOSED, in `claim_case_id` order. */
   readonly closed: readonly ClaimId[];
-  /** Claims already finally approved / paid — ⛔ not moved; the caller logs (error, ids only) and audits each. */
+  /** Claims whose payment is committed / paid — ⛔ not moved; the caller logs (error, ids only) and audits each. */
   readonly notClosed: readonly HeldClaimNotClosed[];
 }
 
@@ -154,7 +171,48 @@ export async function closeClaimsHeldBySuspicionAppeal(
   if ((await liveDecisionReasonOf(db, input.pariwarId, input.reversedClaimCaseId)) !== POST_DEATH_NOMINEE_CHANGE_REASON_CODE) {
     return { applied: false, closed: [], notClosed: [] };
   }
+  const walked = await closeOtherClaimsOfDeath(client, {
+    pariwarId: input.pariwarId,
+    deceasedMemberId: input.deceasedMemberId,
+    causeClaimCaseId: input.reversedClaimCaseId,
+    trigger: SUSPICION_APPEAL_ALLOWED_TRIGGER,
+    actor: input.actor,
+    actorId: input.actorId,
+    ...(input.auditId !== undefined ? { auditId: input.auditId } : {}),
+  });
+  return { applied: true, closed: walked.closed, notClosed: walked.notClosed };
+}
 
+// ── the closure core (Story 6.28 OP4 — extracted from RF6) ───────────────────────────────────────────
+
+interface CloseOtherClaimsOfDeathInput {
+  readonly pariwarId: PariwarId;
+  readonly deceasedMemberId: MemberId;
+  /** The claim the closure is ABOUT (`held_by_claim_case_id`) — ⛔ never walked itself. */
+  readonly causeClaimCaseId: ClaimId;
+  readonly trigger: ClaimClosedTrigger;
+  readonly actor: ClaimEventActor;
+  readonly actorId: string | null;
+  readonly auditId?: string;
+  /** OP4 (b)–(d) — `false` ⇒ the claim is HELD (⛔ closed, ⛔ reported not-closable). Read under the claim's row lock. */
+  readonly mayClose?: (held: ClaimRow) => Promise<boolean>;
+}
+
+interface CloseOtherClaimsOfDeathResult {
+  readonly closed: readonly ClaimId[];
+  readonly notClosed: readonly HeldClaimNotClosed[];
+  /** Closable, but kept open by `mayClose` (OP4 (b)–(d)). */
+  readonly held: readonly ClaimId[];
+}
+
+/**
+ * The per-death walk: every OTHER claim of the death that is ⛔ not already `closed` (filtered BEFORE the cap — piled-up
+ * closed claims can ⛔ never push an open one out), in `claim_case_id` order: its `appeal:` → `r9:` → trustee key, THEN its
+ * row (the order every writer of those keys uses — Trap 8 / 40P01); a CLOSABLE claim `mayClose` admits is closed with its
+ * live processes ended. ⚠ The caller holds the death's INTAKE key (so the list is complete — ⛔ no mint can race it).
+ */
+async function closeOtherClaimsOfDeath(client: pg.PoolClient, input: CloseOtherClaimsOfDeathInput): Promise<CloseOtherClaimsOfDeathResult> {
+  const db = bindScopedDb(client);
   // The other claims of the death — ids only, UNLOCKED (each is re-read under its own row lock below).
   const others = await db
     .select({ claimCaseId: claims.claimCaseId })
@@ -163,52 +221,178 @@ export async function closeClaimsHeldBySuspicionAppeal(
       and(
         eq(claims.pariwarId, input.pariwarId),
         eq(claims.deceasedMemberId, input.deceasedMemberId),
-        ne(claims.claimCaseId, input.reversedClaimCaseId),
+        ne(claims.claimCaseId, input.causeClaimCaseId),
+        ne(claims.currentState, 'closed'),
       ),
     )
     .orderBy(asc(claims.claimCaseId))
     .limit(clampLimit(HELD_CLAIMS_CAP, { default: HELD_CLAIMS_CAP, cap: HELD_CLAIMS_CAP }));
+  if (others.length >= HELD_CLAIMS_CAP) {
+    console.error(
+      `[suspicion-refusal-persist] closure walk reached its cap (${HELD_CLAIMS_CAP}) — pariwar ${input.pariwarId}, cause claim ${input.causeClaimCaseId}`,
+    );
+  }
 
   const closed: ClaimId[] = [];
   const notClosed: HeldClaimNotClosed[] = [];
+  const held: ClaimId[] = [];
   for (const { claimCaseId } of others) {
     // Key-then-row, in the order every writer of these keys uses (Trap 8 / 40P01).
     await takeKey(client, appealAdvisoryLockKey(input.pariwarId, claimCaseId));
     await takeKey(client, r9VotingAdvisoryLockKey(input.pariwarId, claimCaseId));
     await takeKey(client, stateTrusteeDecisionAdvisoryLockKey(input.pariwarId, claimCaseId));
-    const [held] = await db
+    const [row] = await db
       .select()
       .from(claims)
       .where(and(eq(claims.pariwarId, input.pariwarId), eq(claims.claimCaseId, claimCaseId)))
       .for('update');
-    if (!held) continue;
-    if (held.currentState === 'closed') continue;
-    if (!isClaimClosable(held.currentState)) {
-      notClosed.push({ claimCaseId, state: held.currentState });
+    if (!row) continue;
+    if (row.currentState === 'closed') continue;
+    if (!isClaimClosable(row.currentState)) {
+      notClosed.push({ claimCaseId, state: row.currentState });
       continue;
     }
-    await endLiveProcesses(client, db, input.pariwarId, held);
-    await projectClaimState(client, {
-      claimCaseId,
-      pariwarId: input.pariwarId,
-      deceasedMemberId: held.deceasedMemberId,
-      intakeChannels: held.intakeChannels,
-      claimantActorId: held.claimantActorId,
-      eventType: 'claim.closed',
-      payload: {
-        from_state: held.currentState,
-        to_state: 'closed',
-        trigger: SUSPICION_APPEAL_ALLOWED_TRIGGER,
-        actor: input.actor,
-        held_by_claim_case_id: input.reversedClaimCaseId,
-        deceased_member_id: held.deceasedMemberId,
-      },
-      actorId: input.actorId,
-      ...(input.auditId !== undefined ? { auditId: input.auditId } : {}),
-    });
+    if (input.mayClose && !(await input.mayClose(row))) {
+      held.push(claimCaseId);
+      continue;
+    }
+    await closeLockedClaim(client, db, input, row);
     closed.push(claimCaseId);
   }
-  return { applied: true, closed, notClosed };
+  return { closed, notClosed, held };
+}
+
+/** End the claim's live processes and emit `claim.closed`. The caller holds the claim's row (and, ⛔ in self-mode, its keys). */
+async function closeLockedClaim(
+  client: pg.PoolClient,
+  db: Db,
+  input: Pick<CloseOtherClaimsOfDeathInput, 'pariwarId' | 'causeClaimCaseId' | 'trigger' | 'actor' | 'actorId' | 'auditId'>,
+  row: ClaimRow,
+): Promise<void> {
+  await endLiveProcesses(client, db, input.pariwarId, row);
+  await projectClaimState(client, {
+    claimCaseId: row.claimCaseId,
+    pariwarId: input.pariwarId,
+    deceasedMemberId: row.deceasedMemberId,
+    intakeChannels: row.intakeChannels,
+    claimantActorId: row.claimantActorId,
+    eventType: 'claim.closed',
+    payload: {
+      from_state: row.currentState,
+      to_state: 'closed',
+      trigger: input.trigger,
+      actor: input.actor,
+      held_by_claim_case_id: input.causeClaimCaseId,
+      deceased_member_id: row.deceasedMemberId,
+    },
+    actorId: input.actorId,
+    ...(input.auditId !== undefined ? { auditId: input.auditId } : {}),
+  });
+}
+
+// ── Story 6.28 OP4 — the other open claims of a PAID death ───────────────────────────────────────────
+
+/** `claim.closed`'s trigger for OP4's closure (⛔ never texted — Q3 A). */
+export const DEATH_ALREADY_FINALLY_APPROVED_TRIGGER = 'death_already_finally_approved' as const;
+
+/** The states that KEEP their appeal (OP4 (b); Q2 A) — closed only once a reversal makes them `reversed` (H(iii)). */
+const KEEPS_ITS_APPEAL_STATES: readonly string[] = ['denied', 'appeal_stage_1', 'appeal_stage_2', 'appeal_stage_3'];
+
+/**
+ * OP4 (b)–(d) for ONE claim of a paid death: ⛔ never a `denied` / under-appeal claim, ⛔ never one on which RF1 stands,
+ * ⛔ never one RF5's wait holds. `standing` = the death's standing suspicion refusals (read ONCE per death).
+ */
+async function mayCloseForPaidDeath(db: Db, pariwarId: PariwarId, row: ClaimRow, standing: readonly StandingSuspicionRefusal[]): Promise<boolean> {
+  if (KEEPS_ITS_APPEAL_STATES.includes(row.currentState)) return false;
+  if (await isSuspicionRefusalStanding(db, pariwarId, row.claimCaseId)) return false;
+  return !suspicionAppealWaitState(standing, row.claimCaseId).waits;
+}
+
+export interface CloseClaimsOfPaidDeathInput {
+  readonly pariwarId: PariwarId;
+  readonly deceasedMemberId: MemberId;
+  /** `'system'` at the commit (H(i)) and a stopped final writer (H(iv)); `'trustee'` for "Close this claim" (OP14 (b)). */
+  readonly actor: ClaimEventActor;
+  /** The committing trustee (H(i)), the stopped actor (H(iv)), the human (OP14 (b)). */
+  readonly actorId: string;
+  readonly auditId?: string;
+}
+
+export interface CloseClaimsOfPaidDeathResult {
+  /** The death's payment-committed claim, or `null` — ⇒ nothing was closed (a vote alone closes ⛔ nothing — F15). */
+  readonly paidClaimCaseId: ClaimId | null;
+  readonly closed: readonly ClaimId[];
+  /** Kept open by OP4 (b)–(d) — a refusal keeps its appeal; FQ5 decides a suspicion pair. */
+  readonly held: readonly ClaimId[];
+  /** Another claim whose payment is committed too (legacy only) — ⛔ never moved. */
+  readonly notClosed: readonly HeldClaimNotClosed[];
+}
+
+/**
+ * ⭐ Story 6.28 OP4 H(i) / H(iv) — close every other OPEN claim of a death whose payment is committed. MUST run in its OWN
+ * transaction (⛔ never inside a request transaction that holds the intake key — Fact 5, Trap 2; ⛔ never from inside a
+ * domain final writer, which holds a claim row): it takes the death's INTAKE key FIRST, then each other claim's keys and
+ * row (RF6's order). Idempotent — a second run finds ⛔ nothing open. A no-op while ⛔ no claim's payment is committed.
+ */
+export async function closeClaimsOfPaidDeath(client: pg.PoolClient, input: CloseClaimsOfPaidDeathInput): Promise<CloseClaimsOfPaidDeathResult> {
+  const db = bindScopedDb(client);
+  await takeKey(client, intakeAdvisoryLockKey(input.pariwarId, input.deceasedMemberId));
+  const paid = await readPaymentCommittedClaimOfDeath(db, input.pariwarId, input.deceasedMemberId);
+  if (paid === null) return { paidClaimCaseId: null, closed: [], held: [], notClosed: [] };
+  const standing = await readStandingSuspicionRefusals(db, input.pariwarId, input.deceasedMemberId);
+  const walked = await closeOtherClaimsOfDeath(client, {
+    pariwarId: input.pariwarId,
+    deceasedMemberId: input.deceasedMemberId,
+    causeClaimCaseId: paid,
+    trigger: DEATH_ALREADY_FINALLY_APPROVED_TRIGGER,
+    actor: input.actor,
+    actorId: input.actorId,
+    ...(input.auditId !== undefined ? { auditId: input.auditId } : {}),
+    mayClose: (row) => mayCloseForPaidDeath(db, input.pariwarId, row, standing),
+  });
+  return { paidClaimCaseId: paid, closed: walked.closed, held: walked.held, notClosed: walked.notClosed };
+}
+
+export interface CloseClaimIfDeathPaidInput {
+  readonly pariwarId: PariwarId;
+  readonly claimCaseId: ClaimId;
+  readonly actor: ClaimEventActor;
+  readonly actorId: string | null;
+  readonly auditId?: string;
+}
+
+/**
+ * ⭐ Story 6.28 OP4 H(ii) / H(iii) — SELF-MODE: close THIS claim if another claim of its death has its payment committed.
+ * MUST run inside the minting / reversing writer's transaction, which already holds the death's intake key and this claim
+ * (Trap 13): ⛔ no key is taken here (taking `appeal:` / `r9:` / trustee keys AFTER the claim's row would invert the
+ * order), ⛔ no other claim is touched. OP4 (b)–(d) still apply. Returns `true` iff the claim was closed.
+ */
+export async function closeClaimIfDeathPaid(client: pg.PoolClient, input: CloseClaimIfDeathPaidInput): Promise<boolean> {
+  const db = bindScopedDb(client);
+  const [row] = await db
+    .select()
+    .from(claims)
+    .where(and(eq(claims.pariwarId, input.pariwarId), eq(claims.claimCaseId, input.claimCaseId)))
+    .limit(1);
+  if (!row || !isClaimClosable(row.currentState)) return false;
+  const paid = await readPaymentCommittedClaim(db, input.pariwarId, row.deceasedMemberId, input.claimCaseId);
+  if (paid === null) return false;
+  const standing = await readStandingSuspicionRefusals(db, input.pariwarId, row.deceasedMemberId);
+  if (!(await mayCloseForPaidDeath(db, input.pariwarId, row, standing))) return false;
+  await closeLockedClaim(
+    client,
+    db,
+    {
+      pariwarId: input.pariwarId,
+      causeClaimCaseId: paid,
+      trigger: DEATH_ALREADY_FINALLY_APPROVED_TRIGGER,
+      actor: input.actor,
+      actorId: input.actorId,
+      ...(input.auditId !== undefined ? { auditId: input.auditId } : {}),
+    },
+    row,
+  );
+  return true;
 }
 
 /** End everything still running on a claim about to be closed (Task 3.0's enumeration — the rows a writer must END). */

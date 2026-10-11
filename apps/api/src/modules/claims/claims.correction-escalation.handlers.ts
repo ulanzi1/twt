@@ -58,6 +58,7 @@ import {
   toReasonOptionsDto,
   underSavepoint,
 } from './later-approval-warnings.js';
+import { closeClaimsAfterFinalStop } from './close-claims-of-paid-death.js';
 
 export const ESCALATION_DECIDE_KEY = 'claim.decide_escalated_closure';
 export const ESCALATION_REVIEW_KEY = 'claim.review_escalated_closure';
@@ -289,6 +290,10 @@ export function createCorrectionEscalationHandlers(deps: AppDeps) {
       try {
         result = await inWriteTx(deps, ctx.pariwarIdStr, (client) => claim.decideEscalatedClosure(client, input));
       } catch (err) {
+        // ⭐ Story 6.28 H(iv) — `inWriteTx` has already closed the refused tx (Trap 14).
+        await closeClaimsAfterFinalStop(deps, request.log, err, {
+          pariwarId: ctx.pariwarId, claimCaseId: ctx.claimCaseId, actorId: ctx.actorId, site: 'closure.escalation_decision',
+        });
         translateClosureError(err);
       }
       auditClaim(deps, request, ctx, 'admin_claim_correction.super_admin_decided', {

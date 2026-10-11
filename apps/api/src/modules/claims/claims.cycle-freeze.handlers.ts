@@ -63,6 +63,7 @@ import {
   underSavepoint,
 } from './later-approval-warnings.js';
 import { groundInspectionRequiredMessage } from './ground-inspection-required-message.js';
+import { DEATH_ALREADY_FINALLY_APPROVED_MESSAGE } from './death-already-finally-approved-message.js';
 import { suspicionAppealPendingMessage } from './suspicion-appeal-pending-message.js';
 
 /** Map a cycle-freeze domain error to its stable HTTP shape. Rethrows ApiErrors + anything unknown as-is. */
@@ -168,6 +169,11 @@ function translateCycleFreezeError(err: unknown): never {
     throw new ConflictError(suspicionAppealPendingMessage(err.reason), 'cycle_freeze.suspicion_appeal_pending', {
       reason: err.reason,
     });
+  }
+  // ⭐ Story 6.28 OP2 — another claim of the death already passed the final vote: STOPPED (⛔ not a denial, ⛔ not a 500,
+  // ⛔ never the other claim's id on the wire).
+  if (err instanceof claim.DeathAlreadyFinallyApprovedError) {
+    throw new ConflictError(DEATH_ALREADY_FINALLY_APPROVED_MESSAGE, 'cycle_freeze.death_already_finally_approved', {});
   }
   if (err instanceof claim.NomineeDeterminationRequiredError) {
     throw new ConflictError(

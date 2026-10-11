@@ -658,7 +658,7 @@ null`; the admin client's schema carries the fields (a test against the REAL cli
            *"addressed by 6.28 / -NNN"*. Add R1 and R2 as new items.
 - [x] **Task 1 — OP1 (AC1).** The leaf module, the three by-value lists + their pin, the fragments, the thin reads, NW1's entry list; unit +
       live-DB legs.
-- [ ] **Task 2 — OP2 (AC2, AC7 race).** The conjunct after RF5's, the typed error, the four translators (incl. the defensive verifier-decision
+- [x] **Task 2 — OP2 (AC2, AC7 race).** The conjunct after RF5's, the typed error, the four translators (incl. the defensive verifier-decision
       one), the console copy; the gate-order spec gains the new position; the R9-deny leg; the OP8 two-connection race, red-checked.
 - [ ] **Task 3 — OP3 (AC3).** The commit re-check after `:1339`; legs incl. the legacy two-`state_trustee_approved` seed and an earlier
       cycle's `approved` claim.

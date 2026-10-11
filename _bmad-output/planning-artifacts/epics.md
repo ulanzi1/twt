@@ -3249,13 +3249,13 @@ is a notification, ⛔ never an approval step.
 
 ### Story 6.28: One Payment per Death — Once a Claim for a Death Is Finally Approved, ⛔ No Other Claim for That Death Can Be, and Every Other Is Closed `[SURFACE]`
 
-> ⚠ **Added 2026-10-10 (`bmad-create-story 6.28`)** — the row `6-28-one-payment-per-death-second-approval-guard` was created by
-> [`-294`](../../.decision-log.md#decision-2026-10-08-294) §3 (6.24a code review round 2), whose Consequence 3 places this entry here
-> *"when `bmad-create-story` runs"*. ⏳ **Awaiting the Panel:** Q1–Q4 of the routing note
-> `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-10-6-28-one-payment-per-death.md` (⛔ not yet sent) — the ACs below
-> are written for its RECOMMENDED answers and are re-written at the story's Task 0.6 for the ruling. Full ACs:
-> `_bmad-output/implementation-artifacts/6-28-one-payment-per-death-second-approval-guard.md`. ⛔ No code before the ruling and the
-> author-commit (`-294` §3). ⛔ Never a merge fence.
+> ✅ **Governance done, 2026-10-11.** The row `6-28-one-payment-per-death-second-approval-guard` was created 2026-10-10 by
+> [`-294`](../../.decision-log.md#decision-2026-10-08-294) §3 (6.24a code review round 2), whose Consequence 3 placed this entry here
+> *"when `bmad-create-story` runs"*. The Panel ruled Q1 A / Q2 A / Q3 A / Q4 A on the routing note
+> `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-10-6-28-one-payment-per-death.md`
+> ([`-318`](../../.decision-log.md#decision-2026-10-11-318), Trustee-ratified); the author-commit answering OP1–OP14 for that ruling is
+> [`-319`](../../.decision-log.md#decision-2026-10-11-319) (OP9's DB backstop ⛔ not built). The ACs below are the RATIFIED reading — ⛔ no
+> re-write owed. Full ACs: `_bmad-output/implementation-artifacts/6-28-one-payment-per-death-second-approval-guard.md`. ⛔ Never a merge fence.
 
 As the Trust and its members, I want a member's death to be paid once — a second claim for the same death never finally approved once
 one is, and closed once the first one's payment is committed — so that the members never pay twice for one death out of what other bereaved families
@@ -3266,12 +3266,13 @@ finally approved (409 `<prefix>.death_already_finally_approved`; two final appro
 already takes); the cycle commit re-checks it; once a claim's payment is committed (the cycle commit — ⛔ not the final vote, which R9
 can still overturn), every other open claim of that death is `closed` (⛔ never refused, ⛔ never appealable) — a refused claim keeps its
 appeal and is closed only if the appeal reverses it; every approver sees an `other_claim_for_death` warning while another claim of the
-death is open (FQ12's reason and note; 6.23b's wait and correction queue — the wait only as Q1 rules it, `-279` A6). `-262` FQ5's
-machinery is ⛔ not changed except that an allowed suspicion appeal now also closes a voted, unpaid other claim (OP13) — the corner left
-(a refusal changed to the suspicion reason only after payment) is put to the Panel; the 30-day convergence window is removed (OP11); the
+death is open (FQ12's reason and note; 6.23b's wait and correction queue, ratified by Q1 A as put — `-279` A6 discharged). `-262` FQ5's
+machinery is ⛔ not changed except that an allowed suspicion appeal now also closes a voted, unpaid other claim (OP13, ratified by Q4 A) —
+the corner left (a refusal changed to the suspicion reason only after payment) is Q2's case, ratified A: nothing more from the members,
+pursued outside the system; the 30-day convergence window is removed (OP11); the
 verification console lists the other claims of the death, and every final-approval surface shows a banner and blocks final approval while one
-has passed the vote — with a staff "Close this claim" once it is paid — and the ground inspector sees them too (OP14); ⛔ no text is added unless
-the Panel rules Q3 B.
+has passed the vote — with a staff "Close this claim" once it is paid — and the ground inspector sees them too (OP14); ⛔ no text is added
+(Q3 A, ratified).
 
 ### Story 6.29: A Config Hold Never Burns a Suspicion Text — 0151 Gains 6.25's Hold, Give-Up Anchor and DB Backstops, Adapted to SMS `[PRIMITIVE]`
 

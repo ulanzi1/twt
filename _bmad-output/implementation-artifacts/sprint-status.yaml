@@ -19708,6 +19708,8 @@ development_status:
   # ⭐ 2026-10-11 v1.7 (validate, six fresh-context rounds, 0 HIGH): the author-commit now answers OP1–OP14; OP11 REMOVES the 30-day window
   # (the 31+-day path closes at intake); OP13 lets an allowed suspicion appeal close a voted, unpaid claim; OP14 shows approvers and the
   # inspector the other claims. Still ⛔ no code; the note still ⛔ not sent.
+  # ⭐ 2026-10-11 GOVERNANCE DONE: the Panel ruled Q1 A, Q2 A, Q3 A, Q4 A (`2026-10-11-318`, Trustee-ratified, DR + KB); the author-commit
+  # answering OP1–OP14 for that ruling (OP9's DB backstop ⛔ NOT built) is `2026-10-11-319`. Task 0 complete; Task 1 (code) may now start.
   6-28-one-payment-per-death-second-approval-guard: ready-for-dev
   # ⭐ 2026-10-09 ADDED by `bmad-create-story 6.29` (BigDev): 0151 PARITY with 6.25's hold / give-up anchor / DB backstops (`-300` /
   # `-301` Consequence 3), adapted to SMS — RN1–RN10 PROPOSED, author-commit owed at Task 0.3. The jobs-login gap the key names is SYSTEMIC

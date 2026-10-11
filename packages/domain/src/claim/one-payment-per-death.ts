@@ -356,3 +356,68 @@ export async function readFinallyApprovedElsewhereBulk(
   }
   return out;
 }
+
+// ── OP14 (d) — the ground inspector sees the other claims ───────────────────────────────────────────────────────────
+
+export interface OtherClaimVisits {
+  /** Another claim of the death has a completed FULL visit (`inspection_stage <> 'certificate_check'` — 6.26a VISITED's
+   *  own-row arm, ⛔ inheritance). */
+  readonly visitedElsewhere: boolean;
+  /** The same, AND that visit's `death_date_index` EQUALS this claim's live accepted review's `accepted_date_index` (one
+   *  field class; NULL on either side ⇒ `false`). */
+  readonly alreadyVisited: boolean;
+}
+
+/**
+ * ⭐ OP14 (d) — whether another claim of `claimCaseId`'s death was already VISITED (and with this claim's date of death),
+ * in ONE statement. Booleans only — ⛔ no date, ⛔ no ciphertext. Information for the inspector, ⛔ never a gate.
+ */
+export async function readOtherClaimVisits(db: Db, pariwarId: PariwarId, claimCaseId: ClaimId): Promise<OtherClaimVisits> {
+  const result = await db.execute<{ visited_elsewhere: boolean; already_visited: boolean }>(sql`
+    WITH op_self AS (
+      SELECT c.pariwar_id, c.claim_case_id, c.deceased_member_id,
+             (SELECT r.accepted_date_index
+                FROM claim_documents cd
+                JOIN claim_death_certificate_uploads u
+                  ON u.pariwar_id = cd.pariwar_id
+                 AND u.claim_case_id = cd.claim_case_id
+                 AND u.storage_object_key = cd.storage_object_key
+                JOIN claim_death_certificate_reviews r
+                  ON r.pariwar_id = cd.pariwar_id
+                 AND r.claim_case_id = cd.claim_case_id
+                 AND r.superseded_at IS NULL
+                 AND r.upload_id = u.upload_id
+                 AND r.verdict = 'accepted'
+               WHERE cd.pariwar_id = c.pariwar_id
+                 AND cd.claim_case_id = c.claim_case_id
+                 AND cd.document_type = 'death_certificate'
+               ORDER BY r.decided_at DESC, r.review_id DESC
+               LIMIT 1) AS accepted_date_index
+        FROM claims c
+       WHERE c.pariwar_id = ${pariwarId}
+         AND c.claim_case_id = ${claimCaseId}
+    ),
+    op_visits AS (
+      SELECT gi.death_date_index
+        FROM op_self
+        JOIN claims o
+          ON o.pariwar_id = op_self.pariwar_id
+         AND o.deceased_member_id = op_self.deceased_member_id
+         AND o.claim_case_id <> op_self.claim_case_id
+        JOIN claim_ground_inspections gi
+          ON gi.pariwar_id = o.pariwar_id
+         AND gi.claim_case_id = o.claim_case_id
+         AND gi.status = 'completed'
+         AND gi.inspection_stage <> 'certificate_check'
+    )
+    SELECT EXISTS (SELECT 1 FROM op_visits) AS visited_elsewhere,
+           EXISTS (
+             SELECT 1 FROM op_visits v, op_self s
+              WHERE v.death_date_index IS NOT NULL
+                AND s.accepted_date_index IS NOT NULL
+                AND v.death_date_index = s.accepted_date_index
+           ) AS already_visited
+  `);
+  const row = result.rows?.[0];
+  return { visitedElsewhere: row?.visited_elsewhere === true, alreadyVisited: row?.already_visited === true };
+}

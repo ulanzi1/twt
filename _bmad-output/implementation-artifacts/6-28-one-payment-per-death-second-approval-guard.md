@@ -673,7 +673,7 @@ null`; the admin client's schema carries the fields (a test against the REAL cli
       reason, the late-wait leg, the vanish / reappear legs.
 - [x] **Task 5b — OP11 (AC10).** Drop the window at the three mirrored sites + delete the constant; re-word the comments and the strip note;
       rewrite `icp.spec.ts:185` and the strip test; the AC10 legs (live DB, separate COMMITTED transactions for the aged claim).
-- [ ] **Task 5c — OP14 (AC11).** The console section (contract + handler + `SignalsPanel`), the `finally_approved_elsewhere` field on the
+- [x] **Task 5c — OP14 (AC11).** The console section (contract + handler + `SignalsPanel`), the `finally_approved_elsewhere` field on the
       freeze / R9 / closure reads + banners + disabled final approve, the 409 arms; staff copy in `apps/admin` i18n; the no-ciphertext and
       one-statement legs; the read-ceiling bump (21 → 22, the ledger line, four pins). ⭐ The close action — contract (request / response),
       handler (its own `openScopeTx`, `SET LOCAL lock_timeout`, ⛔ no read of the claim in `request.scopeTx`), the route in

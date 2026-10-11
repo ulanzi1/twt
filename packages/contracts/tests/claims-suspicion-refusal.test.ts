@@ -59,6 +59,7 @@ describe('Story 6.24a — the wire changes', () => {
       created_at: '2026-10-01T00:00:00.000Z',
       eligibility: 'can_appeal',
       appeal_until: '2026-12-30',
+      closed_holder_refused: false, // Story 6.28 (OP10)
     };
     const ok = { member_id: '22222222-2222-4222-8222-222222222222', claims: [row, { ...row, appeal_until: null }] };
     expect(HelplineAppealClaimsResponse.safeParse(ok).success).toBe(true);
@@ -75,7 +76,7 @@ describe('Story 6.24a — the wire changes', () => {
     const section = { available: true, keptApartFrom: [{ reference: 'C-1', appeal: 'not_filed', appealUntil: '2026-12-30' }], finalApprovalWaits: 'appeal_not_filed' };
     expect(SuspicionRefusalSection.safeParse(section).success).toBe(true);
     expect(SuspicionRefusalSection.safeParse({ ...section, keptApartFrom: [{ ...section.keptApartFrom[0], appealUntil: '30/12/2026' }] }).success).toBe(false);
-    const row = { claim_case_id: '11111111-1111-4111-8111-111111111111', claim_state: 'denied', created_at: '2026-10-01T00:00:00.000Z', eligibility: 'can_appeal', appeal_until: null };
+    const row = { claim_case_id: '11111111-1111-4111-8111-111111111111', claim_state: 'denied', created_at: '2026-10-01T00:00:00.000Z', eligibility: 'can_appeal', appeal_until: null, closed_holder_refused: false };
     const res = { member_id: '22222222-2222-4222-8222-222222222222', claims: [row] };
     expect(HelplineAppealClaimsResponse.safeParse(res).success).toBe(true);
     expect(HelplineAppealClaimsResponse.safeParse({ ...res, claims: [{ ...row, claim_state: 'refused' }] }).success).toBe(false);

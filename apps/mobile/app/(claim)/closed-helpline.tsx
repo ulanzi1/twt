@@ -1,6 +1,7 @@
 // The CLOSED claim — "please call the helpline" — Story 6.24a (`2026-10-07-292` RF12 v1.3).
 //
-// The family's filed claim was CLOSED because another claim for the same death won its appeal (`-262` FQ5 A). This screen
+// The family's filed claim was CLOSED because another claim for the same death won its appeal (`-262` FQ5 A), or — Story
+// 6.28 (`2026-10-11-319` OP4) — because another claim for the same death is being paid (the same words). This screen
 // says only that, calmly, with the helpline ONE tap away (<CallHelplineCTA>, the prominent rendering) — ⛔ no reason,
 // ⛔ no other claim, ⛔ no name. Reached from the claim-entry gate (`index.tsx`) — ⛔ never the wizard (a new filing would
 // join a live claim of the death, whatever its age — Story 6.28 OP11 removed the 30-day look-back — or, the death paid,

@@ -13,6 +13,7 @@ import { createQueryClient } from '../src/api/hooks.js';
 import { ApiError } from '../src/api/client.js';
 import { AppealStageControls } from '../src/modules/claim-appeal/index.js';
 import { HelplineAppeal } from '../src/modules/helpline-claims/HelplineAppeal.js';
+import { verifierConsoleEn } from '../src/modules/claim-verification/i18n-en.js';
 import { resolveEn } from '../src/modules/helpline-claims/i18n-en.js';
 import { renderWithClient } from './_helpers.js';
 
@@ -40,7 +41,7 @@ async function settleQueuedWork(): Promise<void> {
 }
 
 function row(id: string, over: Partial<HelplineAppealClaimsResponse['claims'][number]> = {}): HelplineAppealClaimsResponse['claims'][number] {
-  return { claim_case_id: id, claim_state: 'denied', created_at: '2026-09-01T00:00:00.000Z', eligibility: 'can_appeal', appeal_until: null, ...over };
+  return { claim_case_id: id, claim_state: 'denied', created_at: '2026-09-01T00:00:00.000Z', eligibility: 'can_appeal', appeal_until: null, closed_holder_refused: false, ...over };
 }
 
 describe('<HelplineAppeal>', () => {
@@ -246,5 +247,21 @@ describe('<AppealStageControls> — Story 6.24a, the 90-day date on a `-239` ref
     expect(screen.getByTestId('suspicion-appeal-limit')).toHaveTextContent('The time to appeal ended on 2026-09-01.');
     rerender(<AppealStageControls claimState="denied" {...base} suspicionAppealLimit={null} />);
     expect(screen.queryByTestId('suspicion-appeal-limit')).not.toBeInTheDocument();
+  });
+
+  it('Story 6.28 (OP10) — a CLOSED claim reads "goes ahead" while its holding claim stands; "later refused; may file again" once it does not', async () => {
+    mocked.getHelplineAppealClaims.mockResolvedValue({
+      member_id: MEMBER_ID,
+      claims: [
+        row(CAN, { claim_state: 'closed', eligibility: 'not_appealable' }),
+        row(ENDED, { claim_state: 'closed', eligibility: 'not_appealable', closed_holder_refused: true }),
+      ],
+    });
+    renderWithClient(<HelplineAppeal pariwarId="p1" memberId={MEMBER_ID} identityConfirmed={true} />);
+    await waitFor(() => expect(screen.getByTestId(`helpline-appeal-claim-${CAN}`)).toBeInTheDocument());
+    const labels = verifierConsoleEn.nomineeDeclaration.refusals;
+    expect(screen.getByTestId(`helpline-appeal-claim-${CAN}`)).toHaveTextContent(labels.claimStateLabels['closed']!);
+    expect(screen.getByTestId(`helpline-appeal-claim-${ENDED}`)).toHaveTextContent(labels.closedHolderRefused);
+    expect(labels.claimStateLabels['closed']).not.toMatch(/won its appeal/);
   });
 });

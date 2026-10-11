@@ -169,7 +169,8 @@ function certificateNoticeFlags(notice: CertificateNoticeView): NoticeFlags {
         showUpload: notice.uploadAllowed,
         showHelpline: notice.uploadAllowed,
       }
-    // ⭐ Story 6.24a (`2026-10-07-292` RF12) — the claim is CLOSED (another claim for the death won its appeal): only that,
+    // ⭐ Story 6.24a (`2026-10-07-292` RF12) — the claim is CLOSED (another claim for the death won its appeal, or — Story
+    // 6.28 OP4 — is being paid): only that,
     // and the helpline (⛔ no reason, ⛔ no other claim, ⛔ no upload). Code review round 2 (2026-10-08): ⛔ no title — the
     // body's first sentence IS the title, so it read twice — and the CTA says "Call the helpline", ⛔ never BigDev's
     // "If you can't upload it…" line (there is nothing to upload).

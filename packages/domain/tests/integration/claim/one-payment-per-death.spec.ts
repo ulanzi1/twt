@@ -18,6 +18,7 @@ import { describe, expect, it } from 'vitest';
 import {
   OTHER_CLAIMS_FOR_DEATH_CAP,
   commitCycleFreeze,
+  readClosedHolderRefusedBulk,
   readFinallyApprovedElsewhereBulk,
   readOtherClaimVisits,
   readOtherClaimsForDeath,
@@ -32,7 +33,7 @@ import { memberId as toMemberId, pariwarId as toPariwarId } from '../../../src/i
 import type { ClaimId, CycleFreezeCommitId, PariwarId } from '../../../src/ids/index.js';
 import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
 import { PARIWAR_A, PARIWAR_B, enterAppScope, seedAcceptedDeathCertificate, seedGroundInspection, seedNomineeNameCheck } from '../_helpers.js';
-import { claimAt, type FixtureState } from './_one-payment-fixtures.js';
+import { claimAt, emitClaim, type FixtureState } from './_one-payment-fixtures.js';
 import { refusedClaim } from './_suspicion-refusal-fixtures.js';
 
 const LOW = '00000000-0000-4000-8000-0000000000a1';
@@ -334,6 +335,26 @@ describe.skipIf(!hasDatabase)('Story 6.28 — one payment per death: OP1 + OP3 (
       const full = await withCert(client, mid, '2026-05-01');
       await seedGroundInspection(client, PARIWAR_A, full, { force: true, deathDate: '2026-05-01' });
       expect(await readOtherClaimVisits(tx, PARIWAR_A, self)).toEqual({ visitedElsewhere: true, alreadyVisited: false });
+    });
+  });
+
+  describe('OP10 — a closed claim whose HOLDING claim was later refused / closed', () => {
+    it('held by a live claim ⇒ ⛔ listed; the holder refused or closed ⇒ listed; an open claim ⛔ ever', async () => {
+      const { client, tx } = getTx();
+      const mid = toMemberId(randomUUID());
+      const holder = await claimAt(client, PARIWAR_A, mid, 'approved');
+      const closed = await claimAt(client, PARIWAR_A, mid, 'verifier_review');
+      await emitClaim(client, PARIWAR_A, closed, mid, 'verifier_review', 'closed', 'claim.closed', {
+        trigger: 'death_already_finally_approved', held_by_claim_case_id: holder, deceased_member_id: mid,
+      });
+      const open = await claimAt(client, PARIWAR_A, mid, 'verifier_review');
+      expect([...(await readClosedHolderRefusedBulk(tx, PARIWAR_A, [closed, open, holder]))]).toEqual([]);
+      const holder2 = await claimAt(client, PARIWAR_A, mid, 'denied');
+      const closed2 = await claimAt(client, PARIWAR_A, mid, 'verifier_review');
+      await emitClaim(client, PARIWAR_A, closed2, mid, 'verifier_review', 'closed', 'claim.closed', {
+        trigger: 'suspicion_appeal_allowed', held_by_claim_case_id: holder2, deceased_member_id: mid,
+      });
+      expect([...(await readClosedHolderRefusedBulk(tx, PARIWAR_A, [closed, closed2.toUpperCase(), open]))]).toEqual([closed2]);
     });
   });
 });

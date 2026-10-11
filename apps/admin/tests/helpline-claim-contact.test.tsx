@@ -78,6 +78,7 @@ describe('<HelplineClaimContact>', () => {
           replacement_reason: null,
           upload_allowed: false,
           reassurance: null,
+          closed_holder_refused: false,
         },
       ],
     });
@@ -96,8 +97,8 @@ describe('<HelplineClaimContact>', () => {
     mocked.getDeathCertificateClaimsForMember.mockResolvedValue({
       member_id: MEMBER_ID,
       claims: [
-        { claim_case_id: CLAIM_A, claim_state: 'verification_in_progress', created_at: '2026-09-01T00:00:00.000Z', status: 'awaiting_review', replacement_reason: null, upload_allowed: false, reassurance: null },
-        { claim_case_id: '33333333-3333-3333-3333-333333333333', claim_state: 'closed', created_at: '2026-08-01T00:00:00.000Z', status: 'closed', replacement_reason: null, upload_allowed: false, reassurance: null },
+        { claim_case_id: CLAIM_A, claim_state: 'verification_in_progress', created_at: '2026-09-01T00:00:00.000Z', status: 'awaiting_review', replacement_reason: null, upload_allowed: false, reassurance: null, closed_holder_refused: false },
+        { claim_case_id: '33333333-3333-3333-3333-333333333333', claim_state: 'closed', created_at: '2026-08-01T00:00:00.000Z', status: 'closed', replacement_reason: null, upload_allowed: false, reassurance: null, closed_holder_refused: false },
       ],
     });
     renderCard();

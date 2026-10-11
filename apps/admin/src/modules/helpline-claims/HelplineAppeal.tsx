@@ -107,7 +107,10 @@ export function HelplineAppeal({
           return (
             <li key={c.claim_case_id} className="flex flex-col gap-1 text-sm" data-testid={`helpline-appeal-claim-${c.claim_case_id}`}>
               <span className="font-medium">
-                {certificateClaimOption(claimStateLabels[c.claim_state] ?? '—', formatIst(c.created_at))}
+                {certificateClaimOption(
+                  c.closed_holder_refused ? verifierConsoleEn.nomineeDeclaration.refusals.closedHolderRefused : (claimStateLabels[c.claim_state] ?? '—'),
+                  formatIst(c.created_at),
+                )}
               </span>
               <span data-testid={`helpline-appeal-state-${c.claim_case_id}`}>{resolveEn(`helpline.appeal.state.${c.eligibility}`)}</span>
               {readBack ? (

@@ -3,7 +3,8 @@
 // THE node that emits `claim.intake_initiated` (→ freezes the deceased's account). Ravi picks his
 // relationship to the deceased and confirms; the screen calls `claimApi.initiateIntake`, which
 // mints the claim_case_id server-side. Idempotent server-side: a re-tap returns the same claim. On
-// success it persists the claimCaseId to the draft and advances to the document step.
+// success it persists the claimCaseId to the draft and advances to the document step — unless the claim came back CLOSED
+// (Story 6.28 OP10: the death is already paid on another claim), which routes to the calm closed screen instead.
 //
 // If the handover-trust elevation has lapsed the server returns 403 `auth.step_up_required` (keyed
 // on error.code, NOT bare 403 — the 3.9/3.10 step-up lesson) → route back to the handover-OTP step.
@@ -16,6 +17,9 @@ import { Button, Paragraph, Spinner, Text, ToggleGroup, YStack } from 'tamagui'
 
 import { ClaimProxyFlowShell } from '../../components/claim/ClaimProxyFlowShell'
 import { claimApi } from '../../lib/claim-api'
+import { boundClaimEntryRead, mayRecordClosedClaimPointer } from '../../lib/claim-entry-gate'
+import { fetchClaimEntryReadOutcome } from '../../lib/fetch-claim-entry-outcome'
+import { getFiledClaimCaseId, setFiledClaimCaseId } from '../../lib/filed-claim'
 import { useClaimT } from '../../lib/claim-i18n'
 import { loadClaimDraft, saveClaimDraft } from '../../lib/claim-draft'
 import { REFILE_REQUIRES_CONFIRMATION_CODE } from '../../lib/refile-helpline-copy'
@@ -42,6 +46,20 @@ export default function RelationshipScreen(): React.ReactElement {
     setError(null)
     try {
       const res = await claimApi.initiateIntake({ relationship })
+      // ⭐ Story 6.28 (OP10) — the death is already paid on another claim, so the filing was CLOSED at once (H(ii)): the calm
+      // closed screen, ⛔ never the wizard (uploads are refused on a closed claim), ⛔ no draft `lastStep`. The closed claim
+      // becomes the filed-claim pointer ONLY when ⛔ none is on record or the recorded one reads terminal — so re-entry
+      // goes through the entry gate's `claim_closed` bit, ⛔ never a fresh wizard minting another closed claim.
+      if (res.state === 'closed') {
+        const memberId = session?.memberId
+        if (memberId) {
+          const recorded = getFiledClaimCaseId(memberId)
+          const outcome = recorded === null ? null : await boundClaimEntryRead(fetchClaimEntryReadOutcome(recorded))
+          if (mayRecordClosedClaimPointer(recorded !== null, outcome)) setFiledClaimCaseId(memberId, res.claimCaseId)
+        }
+        router.replace('/(claim)/closed-helpline')
+        return
+      }
       if (session?.memberId) {
         saveClaimDraft(session.memberId, { relationship, claimCaseId: res.claimCaseId, lastStep: 'relationship' })
       }

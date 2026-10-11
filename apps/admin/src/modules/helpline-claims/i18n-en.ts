@@ -33,6 +33,8 @@ const EN: Record<string, string> = {
   'helpline.result.created': 'Claim filed. The member’s account is now in memorial/frozen state.',
   'helpline.result.exists':
     'A claim already exists for this member — the existing claim was returned (no second claim was created).',
+  // Story 6.28 (OP10) — a filing for a death already paid on another claim is closed at once (H(ii)). Staff-only words.
+  'helpline.result.closed': 'Closed — another claim for this death goes ahead.',
   'helpline.result.routeForVerification':
     'Next: route the case for verification. The claim is at intake_pending.',
   // Escalation (AR-61)

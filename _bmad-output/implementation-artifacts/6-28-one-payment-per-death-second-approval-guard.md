@@ -29,7 +29,7 @@ recorded residuals (⛔ not addressed).
 
 # Story 6.28: One Payment per Death — Once a Claim for a Death Is Finally Approved, ⛔ No Other Claim for That Death Can Be, and Every Other Is Closed `[SURFACE]`
 
-Status: ready-for-dev
+Status: in-progress
 
 > ⭐⭐ **WHAT THIS STORY IS, IN ONE PARAGRAPH.** Nothing today stops two claims for the same member's death from both being finally
 > approved — and each approved claim takes its own pool, so the members pay twice for one death, out of what the other bereaved
@@ -624,25 +624,25 @@ null`; the admin client's schema carries the fields (a test against the REAL cli
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0 — Governance (AC0).** ⛔ No code until 0.5 is committed.
-  - [ ] 0.1 `git fetch origin`; confirm `main` = `34b9bab6` (or re-pin and re-read every cited file that moved); grep `.decision-log.md`
+- [x] **Task 0 — Governance (AC0).** ⛔ No code until 0.5 is committed.
+  - [x] 0.1 `git fetch origin`; confirm `main` = `34b9bab6` (or re-pin and re-read every cited file that moved); grep `.decision-log.md`
         on `main` AND on every open story branch (`for b in $(git for-each-ref --format='%(refname:short)' refs/heads); do git show
         $b:.decision-log.md | grep -oE '^### Decision [0-9-]+'; done | sort -u`) — ⚠ at 2026-10-10, `-313` / `-314` (`story/6-34-…`) and
         `-315` / `-316` (`story/6-30-…`) are TAKEN ⇒ this story's ids start at `-318` or later (`-317` is now also taken on `story/6-30-…`); when the branches merge, the log top conflicts —
         keep every entry, newest-first by id. Read any entry touching `-294`, RF5, RF6 or `-262` FQ5.
-  - [ ] 0.2 BigDev reviews the routing note `trustee-panel-routing-note-2026-10-10-6-28-one-payment-per-death.md` (one fresh-context
+  - [x] 0.2 BigDev reviews the routing note `trustee-panel-routing-note-2026-10-10-6-28-one-payment-per-death.md` (one fresh-context
         check of it until ⛔ no BLOCKER / HIGH, the 6.24 / 6.27 precedent), then SENDS it. ⛔ Never record it as shown or sent before it went out
         ([[feedback_shown_to_panel_means_sent]]).
-  - [ ] 0.3 When the Panel rules: transcribe verbatim into the note's ⏳ block (body ⛔ not edited) and a new Trustee-ratified decision
+  - [x] 0.3 When the Panel rules: transcribe verbatim into the note's ⏳ block (body ⛔ not edited) and a new Trustee-ratified decision
         (what it does ⛔ not cover listed); commit ALONE: `governance(6.28): <date>-NNN — Trustee-ratified …`.
-  - [ ] 0.4 Re-write OP1–OP14 for the ruling (Q1 B ⇒ size the District Admin close action; Q1 A without the wait ⇒ OP5 (c) warning-only;
+  - [x] 0.4 Re-write OP1–OP14 for the ruling (Q1 B ⇒ size the District Admin close action; Q1 A without the wait ⇒ OP5 (c) warning-only;
         Q4 B ⇒ OP13 ⛔ not built, Invariant 3's residual widens to path (a) before payment; Q2 B ⇒ a new row for the Panel's reopen
         (it must exempt a Panel-reopened claim from OP2, H(iv) and "Close this claim", or they block / re-close it) power; Q3 B ⇒ OP10's text + the counsel row; OP9 backstop yes / no); put them to BigDev as
         short option summaries with recommendations; quote each answer AS GIVEN in the Debug Log.
-  - [ ] 0.5 Draft the author-commit (header shape of `-302` / `-312`: type, status, §0 gate, Occasion, FOUND, DECIDED, Cost,
+  - [x] 0.5 Draft the author-commit (header shape of `-302` / `-312`: type, status, §0 gate, Occasion, FOUND, DECIDED, Cost,
         Consequences, References — naming `-279` A6 discharged, the §3 widening, `-292` RF4 SUPERSEDED in part (OP13), R1–R2 as residuals) in the scratchpad; one fresh-context
         check; insert above the newest `### Decision` (if refused, ask once — [[project_decision_log_writes_user_inserted]]); commit ALONE.
-  - [ ] 0.6 Second governance commit: this file (rulings table, Policy meaning re-checked, OPs `✅ committed by -NNN`); `epics.md`'s
+  - [x] 0.6 Second governance commit: this file (rulings table, Policy meaning re-checked, OPs `✅ committed by -NNN`); `epics.md`'s
         `### Story 6.28` brief ACs updated to the ruling; a dated
         `⚠ ADDRESSED by 6.28 / -NNN` line under 6.24a's Trap 9 note and its P9 sentence (their text kept); `deferred-work.md`, each with
         its OWN status ([[feedback_closure_language_precision]]):
@@ -656,7 +656,7 @@ null`; the admin client's schema carries the fields (a test against the REAL cli
            death (D17)…"* — *"⛔ not addressed"*.
         4. `## Deferred from: code review of story-6.24a, ROUND 2 …` → its preamble's *"D2 — ⛔ no per-death second-approval guard"* —
            *"addressed by 6.28 / -NNN"*. Add R1 and R2 as new items.
-- [ ] **Task 1 — OP1 (AC1).** The leaf module, the three by-value lists + their pin, the fragments, the thin reads, NW1's entry list; unit +
+- [x] **Task 1 — OP1 (AC1).** The leaf module, the three by-value lists + their pin, the fragments, the thin reads, NW1's entry list; unit +
       live-DB legs.
 - [ ] **Task 2 — OP2 (AC2, AC7 race).** The conjunct after RF5's, the typed error, the four translators (incl. the defensive verifier-decision
       one), the console copy; the gate-order spec gains the new position; the R9-deny leg; the OP8 two-connection race, red-checked.

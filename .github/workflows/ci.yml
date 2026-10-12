@@ -1,14 +1,39 @@
 name: CI
 
+# DOCS-ONLY changes skip CI (BigDev 2026-10-12) — the same rule as `.githooks/pre-push`: CI is skipped when EVERY changed
+# file is documentation (any `*.md`, anything under `_bmad-output/` or `docs/`), EXCEPT the files a gate READS —
+# `.decision-log.md` (pii-scrape), `friction-budget.md` (friction-budget) and `docs/launch-gate-inventory/`
+# (dlt-typed-variables), which re-include the run. Order matters: a later pattern overrides an earlier one.
+# ⚠ Keep this list and the hook's GATE_INPUTS / DOCS in lockstep — when a new gate starts reading a doc, add it to BOTH.
 on:
   pull_request:
     branches:
       - main
       - 'release/*'
+    paths:
+      - '**'
+      - '.github/**' # explicit, in case '**' skips dot-directories
+      - '!*.md'
+      - '!**/*.md'
+      - '!_bmad-output/**'
+      - '!docs/**'
+      - '.decision-log.md'
+      - 'friction-budget.md'
+      - 'docs/launch-gate-inventory/**'
   push:
     branches:
       - main
       - 'release/*'
+    paths: # the same list as pull_request's — keep the two identical
+      - '**'
+      - '.github/**' # explicit, in case '**' skips dot-directories
+      - '!*.md'
+      - '!**/*.md'
+      - '!_bmad-output/**'
+      - '!docs/**'
+      - '.decision-log.md'
+      - 'friction-budget.md'
+      - 'docs/launch-gate-inventory/**'
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}

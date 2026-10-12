@@ -14,8 +14,9 @@
 #     (friction-budget) and `docs/launch-gate-inventory/` (dlt-typed-variables — the DLT registration sheet). A push
 #     touching any of them still runs ci:local.
 # Every other gate excludes these paths by design (microcopy, schema-diff, benefit-mechanism: "never the repo root /
-# _bmad-output / docs / *.md / sprint-status.yaml"). GitHub CI still runs the FULL suite on the PR, so the skip only
-# saves the local run. ⚠ When a new gate starts reading a doc, add that file to GATE_INPUTS below.
+# _bmad-output / docs / *.md / sprint-status.yaml"). GitHub CI applies the SAME rule (`.github/workflows/ci.yml`'s `paths`
+# filter, 2026-10-12), so a docs-only change runs ⛔ no CI anywhere. ⚠ When a new gate starts reading a doc, add that file to
+# GATE_INPUTS below AND to ci.yml's `paths` (re-include it after the docs exclusions).
 # Fail-safe: anything the hook cannot determine (an unknown remote tip, a failed diff, nothing changed) runs ci:local.
 #
 if [ "${SKIP_CI_LOCAL:-}" = "1" ]; then
@@ -60,7 +61,7 @@ changed=$(printf '%s\n' "$changed" | sed '/^$/d' | sort -u)
 if [ "$undetermined" -eq 0 ] && [ -n "$changed" ] \
   && ! printf '%s\n' "$changed" | grep -Eq "$GATE_INPUTS" \
   && ! printf '%s\n' "$changed" | grep -Evq "$DOCS"; then
-  echo "[pre-push] docs-only push ($(printf '%s\n' "$changed" | wc -l | tr -d ' ') file(s)) — skipping ci:local (GitHub CI still runs on the PR)"
+  echo "[pre-push] docs-only push ($(printf '%s\n' "$changed" | wc -l | tr -d ' ') file(s)) — skipping ci:local (GitHub CI skips it too — ci.yml paths)"
   exit 0
 fi
 

@@ -95,7 +95,11 @@ describe('the suspicion notice SMS templates (RB1 — three messages × both loc
   });
 
   it.each(CASES)('⭐ $message / $locale — the request sheet carries the SAME registered text', ({ message, locale }) => {
-    expect(SHEET).toContain(SUSPICION_NOTICE_SMS_TEMPLATES[message][locale].registeredText);
+    const template = SUSPICION_NOTICE_SMS_TEMPLATES[message][locale];
+    // The WHOLE "Registered text" row, numbered as the main table numbers this config key (Story 6.34 second review) —
+    // ⛔ a substring: extra words around the text in the row BigDev copies into SmartPing would never match a send.
+    const { number } = sheetRowByConfigKey(template.dltTemplateIdConfigKey);
+    expect(SHEET).toContain(`| ${number} | ${template.registeredText} |`);
   });
 
   it.each(CASES)('$message / $locale — the config key is the sheet\'s (RB4)', ({ message, locale }) => {

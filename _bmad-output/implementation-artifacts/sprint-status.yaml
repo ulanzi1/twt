@@ -1,3 +1,14 @@
+# last_updated: 2026-10-12g (⭐ **STORY 6.34 — SECOND CODE REVIEW: `done` stays `done`.** Branch vs `main` `09321738` incl. the
+# first pass's uncommitted patches; three layers; 0 decision-needed / 10 patches fixed / 0 defer / 18 dismissed; ⛔ HIGH / MEDIUM, ⛔ Panel
+# question. Fixed: the first pass's edit of the frozen `last_updated:` key reverted; STATUS header + Change Log order; the sheet's
+# "above" → the table below; pre-push comment's gate inputs; the family-2 verdict corrected; TV5 records the all-transient
+# exhausted-row residual; the Policy meaning names TV6; sheet rows 1–12 pinned exactly; gate rule (i) reads GFM look-alike rows and
+# markdown escapes. Red-before / green-after proven; full `ci:local` WITH :5433 — 36/36 green. Row 30 remains open for external evidence.)
+# last_updated: 2026-10-12f (⭐ **STORY 6.34 — CODE REVIEW COMPLETE: review → done.** Three layers; 0 decision-needed / 3 patches
+# fixed / 0 defer / 8 dismissed. Whitespace-bearing foreign tags rejected by the shape helper and gate; callback-slot maximum
+# respects the shared three-digit minimum; Row 30's pre-submission preparation separated from completion before production OTP
+# go-live. Nine regression cases red before / green after; 289 post-patch tests, DLT tree gate, channels typecheck and touched-file
+# ESLint green. Four live claim SMS suites passed 108 tests during review. Row 30 remains open for external evidence.)
 # last_updated: 2026-10-12e (⭐ **STORY 6.34 — BUILT via `bmad-dev-story`: in-progress → review.** Task 0 records committed FIRST
 # (`25e7bba5`). ONE typed-variable vocabulary `packages/channels/src/dlt-variables.ts` (TRAI Annexure-I's six types, `DltSlot`,
 # `checkDltTemplateShape`, `isDltCallbackNumber`); the two OTPs typed numeric `otp`; the twelve claim texts typed per TV4 — ⛔ a character
@@ -19852,7 +19863,7 @@ development_status:
   # ⛔ cannot pass until THIS row's OTP-template retag is approved by the operator (a rejected OTP template blocks every login).
   # ⭐ 2026-10-12 ANNOTATION (Story 6.34 Task 0.4, `2026-10-12-322` C6): + row 6-37's MSG91 adapter (`-314` Consequence 2); and *"retags …
   # with typed variables"* reads *"declares a TRAI type for every `{#var#}` (SmartPing)"* — the text keeps `{#var#}`; approval = roster Row 30 (b).
-  6-34-sms-templates-typed-variables: review
+  6-34-sms-templates-typed-variables: done
   6-35-in-app-language-switch: backlog
   # ⭐ 2026-10-10 ADDED by `2026-10-10-306` (BigDev: "Selection must be school wise …"): each member's SCHOOL (a stable school code + name)
   # and posting start date captured at signup and on every transfer (a new posting — history kept); a NEW peer-mesh metric: members posted

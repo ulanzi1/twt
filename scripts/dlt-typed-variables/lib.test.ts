@@ -27,6 +27,32 @@ describe('rule (i) — ⛔ a braced typed tag in REGISTERED text', () => {
 
   it('the untyped marker in a sheet template row passes', () => {
     expect(rulesOf(SHEET, `| 2 | Claim ${MARKER}: the bank details … helpline on ${MARKER}. |`)).toEqual([]);
+    expect(rulesOf(REGISTRY, `registeredText: '${MARKER} is your code',`)).toEqual([]);
+  });
+
+  it.each([
+    ['indented one space', ` | 13 | ${TYPED} is your code. |`],
+    ['indented three spaces', `   | 13 | ${TYPED} is your code. |`],
+    ['no leading pipe', `13 | ${TYPED} is your code. |`],
+    ['an ordinal with a letter', `| 13a | ${TYPED} is your code. |`],
+    ['a markdown-escaped tag', `| 13 | \\{#numeric#\\} is your code. |`],
+    ['an escaped hash', `| 13 | {\\#numeric\\#} is your code. |`],
+  ])('a typed tag in a sheet row GFM still renders as a template row fails — %s (second code review)', (_label, line) => {
+    expect(rulesOf(SHEET, line)).toEqual(['i']);
+  });
+
+  it('the widened row shape keeps its look-alikes clean', () => {
+    expect(rulesOf(SHEET, `    | 13 | ${TYPED} is your code. |`)).toEqual([]); // four spaces: a code block, ⛔ a table
+    expect(rulesOf(SHEET, `1. never type \`${TYPED}\` | into the text`)).toEqual([]); // a numbered list item
+    expect(rulesOf(SHEET, ` | 13 | \\{#var#\\} is your code. |`)).toEqual([]); // the escaped marker is the marker
+  });
+
+  it.each(['numeric ', ' numeric', 'numeric\t', 'var '])('rejects whitespace-bearing foreign tags in registered text: %j', (tagName) => {
+    const tag = '{#' + tagName + '#}';
+    expect(rulesOf(SHEET, `| 15 | ${tag} is your code. |`)).toEqual(['i']);
+    expect(rulesOf(REGISTRY, `registeredText: '${tag} is your code',`)).toEqual(['i']);
+    expect(rulesOf(SHEET, `- never type \`${tag}\` into the text`)).toEqual([]);
+    expect(rulesOf(REGISTRY, `// never type ${tag} into the text`)).toEqual([]);
   });
 
   it('a typed tag on a CODE line of a registry file fails; on its comment lines it passes', () => {

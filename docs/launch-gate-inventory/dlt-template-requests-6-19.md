@@ -26,13 +26,13 @@ shorter per-segment length.
   BigDev, 2026-10-10). **The gateway** that sends: **MSG91**, *"for now"* (`2026-10-10-314`).
 - **The text keeps its untyped variable marker**, exactly as each template's *Registered text* below shows it. On SmartPing a variable's
   TYPE is ⛔ written into the text: after entering the text, click *Add variable* and, for each variable IN ORDER, pick its type from the
-  portal's options and enter a sample value (STPL's own manual). The column *"Variable types"* above is what to pick, in order.
+  portal's options and enter a sample value (STPL's own manual). The column *"Variable types"* in *The templates owed* below is what to pick, in order.
 - ⛔ **Never type a typed tag into the text** — e.g. the numeric tag with braces around it (the Jio / Vi in-text form). On SmartPing it
   would be registered as literal text, and ⛔ a single send would ever match it. (This sheet spells every type WITHOUT braces, by house
   rule — copy the text cells, never this prose.)
 - ⚠ The exact LABELS in SmartPing's tagging section are only in the manual's images (and STPL's manual predates the 18 Nov 2025 list) —
   record a screenshot and match this sheet's type words to them before the first submission (`inventory-roster.md` Row 30 (a)).
-- **The MSG91 template** is the same text with `##<name>##` in place of each variable, in order (the column above); MSG91's template must
+- **The MSG91 template** is the same text with `##<name>##` in place of each variable, in order (the *"MSG91 template"* column in *The templates owed* below); MSG91's template must
   equal the DLT-approved content, and row 6-37's adapter sends `{ <name>: value }` from these names.
 
 ## The variable types (TRAI Direction of 18 Nov 2025, Annexure-I)

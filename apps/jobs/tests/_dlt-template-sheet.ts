@@ -47,11 +47,25 @@ export interface SheetTemplateRow {
   readonly msg91: string;
 }
 
+/**
+ * Asserts the sheet's "Registered text" tables carry ordinal `number` on exactly ONE line, and that line IS
+ * `| <number> | <registeredText> |` — the row BigDev copies into SmartPing (third code review: ⛔ a substring, so a
+ * stale second row with the same ordinal, a mid-line occurrence or an extra cell fails). Main-table rows — the ones
+ * carrying a config key — are excluded; they share the ordinals.
+ */
+export function expectRegisteredTextRow(number: number, registeredText: string): void {
+  const ordinal = new RegExp(`^ {0,3}\\|[ \\t]*${String(number)}[ \\t]*\\|`);
+  const lines = SHEET.split('\n').filter((line) => ordinal.test(line) && !line.includes('`sms.dlt.template_id.'));
+  expect(lines, `the sheet's "Registered text" row ${String(number)}`).toHaveLength(1);
+  expect((lines[0] as string).trim()).toBe(`| ${String(number)} | ${registeredText} |`);
+}
+
 /** The ONE main-table row carrying `configKey` (in backticks) — fails the test if there is none or more than one. */
 export function sheetRowByConfigKey(configKey: string): SheetTemplateRow {
-  // Up to three leading spaces, as GFM renders (the gate's SHEET_TEMPLATE_ROW, which also scans pipe-less look-alikes).
+  // Up to three leading spaces, as GFM renders. ⛔ The gate's SHEET_TEMPLATE_ROW: a main-table ordinal is a whole
+  // number (it is returned as one), so a lettered ordinal is ⛔ selected here (third code review).
   const rows = SHEET.split('\n').filter(
-    (line) => /^ {0,3}\|\s*\d+[A-Za-z]?\s*\|/.test(line) && line.includes(`\`${configKey}\``),
+    (line) => /^ {0,3}\|[ \t]*\d+[ \t]*\|/.test(line) && line.includes(`\`${configKey}\``),
   );
   expect(rows, `the sheet's main-table row for ${configKey}`).toHaveLength(1);
   const cells = (rows[0] as string).split('|').map((c) => c.trim());

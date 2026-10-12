@@ -20,7 +20,7 @@ import {
   renderClaimCorrectionSms,
 } from '../src/scheduler/claim-correction-sms-templates.js';
 
-import { CLAIM_CATALOG, SHEET, i18nParamNames, msg91Form, sheetRowByConfigKey } from './_dlt-template-sheet.js';
+import { CLAIM_CATALOG, SHEET, expectRegisteredTextRow, i18nParamNames, msg91Form, sheetRowByConfigKey } from './_dlt-template-sheet.js';
 
 /** Deadline-threat terms in Hindi (S4 / T6) — "day(s)", "within", "last date / chance", "urgent", "immediately",
  * "deadline", "otherwise". Substrings, ⛔ never `\b`-anchored (see the test). */
@@ -75,10 +75,10 @@ describe('the claim-correction SMS templates (D32 — all three messages × both
 
   it.each(CASES)('⭐ $message / $locale — the request sheet carries the SAME registered text', ({ message, locale }) => {
     const template = CLAIM_CORRECTION_SMS_TEMPLATES[message][locale];
-    // The WHOLE "Registered text" row, numbered as the main table numbers this config key (Story 6.34 second review) —
-    // ⛔ a substring: extra words around the text in the row BigDev copies into SmartPing would never match a send.
+    // The WHOLE "Registered text" row, numbered as the main table numbers this config key (Story 6.34 code reviews
+    // 2 / 3) — ⛔ a substring: extra words around the text in the row BigDev copies into SmartPing would never match a send.
     const { number } = sheetRowByConfigKey(template.dltTemplateIdConfigKey);
-    expect(SHEET).toContain(`| ${number} | ${template.registeredText} |`);
+    expectRegisteredTextRow(number, template.registeredText);
   });
 
   it.each(CASES)('$message / $locale — the config key is the sheet\'s (D7)', ({ message, locale }) => {

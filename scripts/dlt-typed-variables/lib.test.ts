@@ -33,7 +33,6 @@ describe('rule (i) — ⛔ a braced typed tag in REGISTERED text', () => {
   it.each([
     ['indented one space', ` | 13 | ${TYPED} is your code. |`],
     ['indented three spaces', `   | 13 | ${TYPED} is your code. |`],
-    ['no leading pipe', `13 | ${TYPED} is your code. |`],
     ['an ordinal with a letter', `| 13a | ${TYPED} is your code. |`],
     ['a markdown-escaped tag', `| 13 | \\{#numeric#\\} is your code. |`],
     ['an escaped hash', `| 13 | {\\#numeric\\#} is your code. |`],
@@ -44,6 +43,12 @@ describe('rule (i) — ⛔ a braced typed tag in REGISTERED text', () => {
   it('the widened row shape keeps its look-alikes clean', () => {
     expect(rulesOf(SHEET, `    | 13 | ${TYPED} is your code. |`)).toEqual([]); // four spaces: a code block, ⛔ a table
     expect(rulesOf(SHEET, `1. never type \`${TYPED}\` | into the text`)).toEqual([]); // a numbered list item
+    // The leading pipe is required (third code review): a pipe-less line is prose, at any indentation.
+    expect(rulesOf(SHEET, `13 | ${TYPED} is your code. |`)).toEqual([]);
+    expect(rulesOf(SHEET, `        13 | ${TYPED} is your code. |`)).toEqual([]);
+    expect(rulesOf(SHEET, `\t13 | ${TYPED} is your code. |`)).toEqual([]);
+    expect(rulesOf(SHEET, `2024 | ${TYPED} in a prose line |`)).toEqual([]);
+    expect(rulesOf(SHEET, `\t| 13 | ${TYPED} is your code. |`)).toEqual([]); // a tab: a code block
     expect(rulesOf(SHEET, ` | 13 | \\{#var#\\} is your code. |`)).toEqual([]); // the escaped marker is the marker
   });
 

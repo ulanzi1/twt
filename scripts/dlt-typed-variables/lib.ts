@@ -8,7 +8,7 @@
 // handful of shape-tested REGISTRY files; this gate keeps it that way:
 //
 //   (i)   ⛔ braced tag other than `{#var#}` inside REGISTERED TEXT — the registration sheet's template table rows
-//         (`docs/launch-gate-inventory/*.md`, lines `| <n> | …` and their GFM look-alikes, read with markdown escapes
+//         (`docs/launch-gate-inventory/*.md`, lines `| <n> | …` — see SHEET_TEMPLATE_ROW — read with markdown escapes
 //         undone) and the CODE lines of the registry files. A typed
 //         tag written into the text (the Jio / Vi in-text form) would be registered on SmartPing as literal text
 //         and never match a send. Prose, headings, bullets and comment lines are ⛔ scanned — by house rule they
@@ -37,10 +37,13 @@ const MARKER_IDENTIFIER = /\bDLT_VAR\b/;
 const TEMPLATE_ID_PREFIX = 'sms.dlt.template_id.';
 
 /**
- * A registration-sheet template table row: `| <number> | …` — and every look-alike GFM still renders as one (second code
- * review): up to three leading spaces, the leading pipe omitted, an ordinal with a letter (`| 13a |`).
+ * A registration-sheet template table row: `| <number> | …` (`2026-10-12-322` C2's pattern), widened only within "a
+ * template table row" (code reviews 2 / 3): up to three leading spaces (four is a code block) and an ordinal with a
+ * letter (`| 13a |`). The leading pipe is REQUIRED — the sheet's convention; a pipe-less line is read as prose. ⛔ Read:
+ * a blockquoted, list-nested or bold-ordinal row, or HTML-entity braces — the jobs lockstep tests, which pin every
+ * row's text exactly, are the second control for those.
  */
-const SHEET_TEMPLATE_ROW = /^ {0,3}\|?\s*\d+[A-Za-z]?\s*\|/;
+const SHEET_TEMPLATE_ROW = /^ {0,3}\|[ \t]*\d+[A-Za-z]?[ \t]*\|/;
 
 /** A markdown backslash escape of a brace or hash — `\{#…#\}` RENDERS as a braced tag, so the sheet scan reads it unescaped. */
 const MD_ESCAPE = /\\([{}#])/g;

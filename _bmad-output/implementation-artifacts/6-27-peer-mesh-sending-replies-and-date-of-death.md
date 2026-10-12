@@ -58,9 +58,8 @@ Re-verify (bash): for each pair, `diff <(git show <branch> | git patch-id --stab
 `0281d449` (the SHA map above; identical code). Every `file:NNN` into code is now AS OF `51b9000a`, re-read by five read-only checkers
 (domain; api + contracts; admin; jobs + mobile + channels; cross-cutting) and the author. ⛔ No PM, ruling or AC intent moved — the semantic
 changes are dated annotations (*"re-pin 2026-10-12"*) at F12, F13, F17, F18, F29, PM8, PM9, PM10, PM11, PM13, AC4, AC5, Tasks 5 / 7,
-Trap 5 and the new Trap 21. ⚠ ROUTED TO THE PANEL (PM8; BigDev 2026-10-12): `-318`'s *"passed the final vote"* vs `-303` Q2 A on
-`state_trustee_approved` under a live R9 routing — `trustee-panel-routing-note-2026-10-12-6-27a-answers-while-the-special-panel-decides.md`,
-WRITTEN, ⛔ not yet sent; ⛔ not re-ruled here. ⚠ 6.27b / 6.27c / 6.27d were ⛔ not re-pinned (6.27b's PM10 summary still says "fourth
+Trap 5 and the new Trap 21. ✅ RULED (PM8): `2026-10-12-324` (Trustee-ratified, option A) — answers are taken
+while the special panel decides a claim that passed the month's vote; PM8's R9 arm stands as `-311` committed it (v2.11). ⚠ 6.27b / 6.27c / 6.27d were ⛔ not re-pinned (6.27b's PM10 summary still says "fourth
 source") — THIS file is the record.
 -->
 
@@ -96,7 +95,7 @@ is REPLACED) and PM2 (also an IN-APP ALERT), applied below. 6.27a may be built (
 ([[feedback_governance_commits_precede_implementation]]).
 The Panel confirm note (`…-6-27-confirms.md`, CF1–CF5) is ✅ RULED — `2026-10-10-310` (all five as suggested).
 
-⭐ §0 gate (template `trustee-panel-routing-note-TEMPLATE.md`): the Panel's questions are RULED — Q1 / Q2 (`-303`), Q3–Q8 (`-304`); the
+⭐ §0 gate (template `trustee-panel-routing-note-TEMPLATE.md`): the Panel's questions are RULED — Q1 / Q2 (`-303`), Q3–Q8 (`-304`), PM8's R9 arm (`-324` A, 2026-10-12); the
 corrections and the CF1 narrowing are recorded (`-305`) and CONFIRMED by the Panel (`-310`: CF1 A, CF2, CF3 (a)–(d), CF4 A, CF5 A). Every PM strips to "the code should do X". ⚠ A PM BECOMES
 the Panel's if the build (i) shows a neighbour's answer — or who answered — to the FAMILY or the PUBLIC, directly OR BY PARAPHRASE (the
 inspector asks the family open-ended, ⛔ never *"a neighbour said …"* — `-305` §2 item 3; FR-39's *"verifier names are published"* stays
@@ -534,8 +533,8 @@ member's terms:
   PM5 (iv) and row 6-31's reminder; per-claim reads use `hasLiveRoutedRow`; ⭐ 6.27b's queue needs ⛔ no window term (its scan states + R9 arm already equal the window, and answers exist only in-window — PM10); ⭐ the module ALSO exports `answerWindowSql(claimRef)` (built from `CLAIM_REVIEW_WINDOW_STATES` +
   `liveRoutedToR9Exists`) — EVERY set-based reader (the member list's **Open**, the helpline list, the sweep) uses it, with a parity leg
   against `isClaimInAnswerWindow` over every state × routed / not routed (⛔ never a hand-composed SQL copy); keep the
-  not-selected guard; ⛔ never accept in `state_trustee_approved` without a live R9 routing, or in any closed / refused state (F19). ⚠ (re-pin 2026-10-12 — ROUTED TO THE PANEL by BigDev: `trustee-panel-routing-note-2026-10-12-6-27a-answers-while-the-special-panel-decides.md`,
-  WRITTEN, ⛔ not yet sent; options A (as `-311` — our reading) / B (answers stop at the month's vote) / C (shown, ⛔ no wait). `-318` Q1 A / Q4 A speak of a claim that *"has passed the final
+  not-selected guard; ⛔ never accept in `state_trustee_approved` without a live R9 routing, or in any closed / refused state (F19). ✅ (v2.11 — RULED: `2026-10-12-324`, Trustee-ratified, option A — this arm is RATIFIED as committed; ⛔ no code change; one payment
+  per death (`-318`) is ⛔ not moved by it. The question as put, kept for the record: `-318` Q1 A / Q4 A speak of a claim that *"has passed the final
   vote"*, and 6.28 counts `state_trustee_approved` among `FINALLY_APPROVED_CLAIM_STATES` (`one-payment-per-death.ts:31`); read in that
   vocabulary, taking an answer in `state_trustee_approved` under a live R9 routing may WIDEN `-303` Q2 A — *"⛔ no answer is taken once the
   final approval has been given"*. `-311` committed this arm as an author reading on the `-283` A1 precedent (R9 finalize still runs the
@@ -1046,6 +1045,7 @@ Re-pin base `51b9000a` (2026-10-12): 6.30 (`12d0fbb4` … `72f7b607`), 6.28 (`01
 ## Change Log
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-12 | 2.11 | ⭐ `2026-10-12-324` (Trustee-ratified, DR + KB — option A): PM8's R9 arm — answers taken while the special panel decides a claim that passed the month's vote — RATIFIED as `-311` committed it; the PM8 annotation and the header read RULED; ⛔ no PM, AC or Task text changes; ⛔ no code change. |
 | 2026-10-12 | 2.10 | ⭐ RE-PINNED to `51b9000a` (after 6.30, 6.28, 6.34; BigDev chose *"Re-pin to main"* at `bmad-create-story 6.27a`): every moved code cite updated (five read-only checkers + the author); F12 — ceiling 23 and two required packet fields; F13 — six kinds; F17 — four queue sources; F18 — OP2 in the gate; F29 — Rows 29 / 30 written; F41 — the missed `verifier-console.spec.ts` consumers; F7's `:262-263` → `:269-270` (wrong since v2.0); dated annotations: PM8 (an OPEN `-318` / `-303` reading for BigDev; 6.28's mid-window closures), PM9 (END position), PM10 (the FIFTH source), PM11 (AL16 narrowing; the chrome strings' home corrected to `claim.json`), PM13 (from 23); AC4 closure legs; AC5 / Task 5 — 6.30 merged, its tests amended ⛔ never deleted, the session gate, the header, the placeholder; Task 7 — 6.28's fixtures; Trap 5 lists 6.28's changes; Trap 21 (6.34's DLT gate); ⛔ no PM, ruling or AC intent moved. |
 | 2026-10-12 | 2.9a | ⭐ ANNOTATIONS by Story 6.34 Task 0.4 (TV11 / `2026-10-12-322` C6, C7 — ⛔ a PM moved, ⛔ a word above changed): on STPL / SmartPing the text keeps `{#var#}` and the tag names in PM3, Row 27 and Task 0.4 are the slot TYPES; 6.34 does ⛔ hand-verify 6.27c's texts (6.27c uses its vocabulary); the provider's answer on Devanagari / spaces in names is recorded ONCE at Row 30 (d) and Row 27's evidence line POINTS to it (a refusal goes back to the Panel — `-322` C7). |
 | 2026-10-10 | 2.9 | ⭐ PM1–PM25 COMMITTED as `2026-10-10-311` (`082ab743`): PM1 — a skipped neighbour is REPLACED from the same group (deterministic, `replaces_ping_id`); PM2 — also an IN-APP alert (the home card + the notice strip; ⛔ no push / day-one WhatsApp / second SMS); Tasks 0.3 / 0.4 done; STATUS updated. |

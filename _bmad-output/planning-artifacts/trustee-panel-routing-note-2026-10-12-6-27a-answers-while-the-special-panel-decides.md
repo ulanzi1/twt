@@ -1,6 +1,6 @@
 # Trustee Panel routing note — 2026-10-12 — Story 6.27a: may a neighbour still answer while the special panel decides a claim that has passed the month's vote?
 
-> **Status: WRITTEN, ⛔ not yet sent.** Raised by Story 6.27a's re-pin to `main` `51b9000a` (v2.10, PM8's OPEN annotation). It asks how
+> **Status: SENT and RULED — `2026-10-12-324` (Trustee-ratified, DR + KB): option A.** Raised by Story 6.27a's re-pin to `main` `51b9000a` (v2.10, PM8's OPEN annotation). It asks how
 > two of your rulings meet — `2026-10-10-303` Q2 A and `2026-10-11-318` Q1 A / Q4 A. ⛔ No engineering choice is bundled into it.
 
 ---
@@ -13,10 +13,19 @@ rulings use *"final"* differently for this one case, so one reading must give. �
 
 ---
 
-> ## ⏳ AWAITING PANEL RULING
+> ## ✅ PANEL RULING — `2026-10-12-324` (Trustee-ratified, 2026-10-12)
 >
-> ⛔ **Nothing is recorded here yet.** When the Panel rules, transcribe it into this block **and** into `.decision-log.md` as a new
-> decision id. ⭐ Everything below is then kept **unedited** as the question **as it was put** ([[feedback_supersede_never_reinterpret]]).
+> *"by DR and KB
+> option A"* — relayed by BigDev in session.
+>
+> ⭐ **A:** answers are taken until the special panel decides. For a claim a Pariwar Admin sends to the special panel after the month's
+> vote, *"the final approval"* in `-303` Q2 A is the special panel's: a neighbour can still answer (and a neighbour not yet texted may
+> still be texted), and a late *"they have not died"* or a differing date makes the special panel's approval wait for the District
+> Admin's reason and note — ⛔ never a refusal. The cost is accepted as put (answers open for as long as the special panel takes —
+> BigDev's estimate, a month or two). `-311`'s PM8 reading is now ratified; ⛔ no code changes.
+> ⛔ **Not covered:** one payment per death (`-318` — the month's vote stays *"the final vote"* for THAT rule); a time limit for the
+> special panel; a claim sent to the special panel before the month's vote (already inside the window); what an approver must weigh.
+> ⭐ Everything below is kept **unedited** as the question **as it was put** ([[feedback_supersede_never_reinterpret]]).
 
 ---
 

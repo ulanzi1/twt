@@ -180,6 +180,20 @@ export function istDateOf(instant: Date): CalendarDateString {
 }
 
 /**
+ * A real `YYYY-MM-DD` calendar date (⛔ `2026-02-30` rolls over in `Date.parse`, so round-trip it).
+ *
+ * ⭐ MOVED HERE by Story 6.27a (Task 1, F38) from `claim/nominee-determination-persist.ts`, which re-exports THIS
+ * function (same identity). That module imports `drizzle-orm`, `db.ts` and the claim event graph; the pure
+ * questionnaire engine (`questionnaires/`) needs this check and must reach ⛔ none of them (6.23a NW1's transitive
+ * import scan; an import cycle the typecheck cannot see — [[project_type_only_import_cycle_trap]]).
+ */
+export function isRealCalendarDate(value: string): boolean {
+  if (!CALENDAR_DATE_RE.test(value)) return false;
+  const ms = Date.parse(`${value}T00:00:00Z`);
+  return Number.isFinite(ms) && new Date(ms).toISOString().slice(0, 10) === value;
+}
+
+/**
  * `date` advanced by `days` whole calendar days. UTC-anchored fixed-ms arithmetic, so it is leap-year
  * and month-length correct and carries no DST hazard (the same discipline as the contribution window's
  * `committedAt + N * MS_PER_DAY` — never `setDate`).

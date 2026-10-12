@@ -259,6 +259,10 @@ export * as closeOfCycle from './close-of-cycle/index.js';
 // live caller: Epic 9's matcher-tail scheduler + Epic 11b Story 11b.3's Sahyog Vivran
 // publish gate are the first consumers.
 export * as cycleCalendar from './cycle-calendar/index.js';
+// Story 6.27a (PM23) — the versioned QUESTIONNAIRE engine: the definition shape, the validator (the Panel's rules —
+// CF3 (a)–(d)), the version registry (`resolveLiveVersion`), the served definition (a `'pending'` health question
+// skipped), the answer check and the dependants. PURE and pg-free (a reachability test). Contracts mirrors only the wire.
+export * as questionnaires from './questionnaires/index.js';
 // Story 4.8 — the FR-12A per-cohort validity cache substrate: cheap key resolution + low-level
 // member_validity_cache access + the cohort_invalidation_epochs bump/read + the GC sweep. The
 // cache-aside orchestration (getValidityCached) lives in @twt/validity-service.

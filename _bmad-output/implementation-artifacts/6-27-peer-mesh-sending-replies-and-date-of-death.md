@@ -866,7 +866,7 @@ member's terms:
         (6.27c only checks them).
   - [x] 0.6 Roster Rows 27 / 28 at their reserved numbers (PM16); a line on Row 26 (jobs-db-role) and Row 22's precedent.
   - [x] 0.7 Sprint ledger line ([[project_sprint_status_ledger]], [[project_sprint_status_safe_prepend]]).
-- [ ] **Task 1 — the questionnaire engine (AC2).** FIRST extract `isRealCalendarDate` into `cycle-calendar/holiday-resolver.ts` (re-exported
+- [x] **Task 1 — the questionnaire engine (AC2).** FIRST extract `isRealCalendarDate` into `cycle-calendar/holiday-resolver.ts` (re-exported
       from `nominee-determination-persist.ts`, the same identity — F38), and extract the ANSWER WINDOW predicate into `claim/answer-window.ts`
       (`isClaimInAnswerWindow`; `ground-inspection-persist.ts` re-exports it as `isClaimInGroundInspectionWindow` — same identity; PM8) AND its
       set-based twin `answerWindowSql(claimRef)` (built from `CLAIM_REVIEW_WINDOW_STATES` + `liveRoutedToR9Exists`) with a parity leg over

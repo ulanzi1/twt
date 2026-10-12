@@ -92,3 +92,6 @@ export * from './concealment-assessment.js';
 export * from './appeal.js';
 // Story 6.28 (OP14 (b)) — one payment per death: the approval surfaces' `finally_approved_elsewhere` + the close action.
 export * from './one-payment-per-death.js';
+// Story 6.27a (PM11, PM12) — the neighbours' answer screens: the member's and the helpline's list / detail / save / submit
+// shapes, mirroring the domain questionnaire's WIRE shape (a test-only lockstep — ⛔ never a domain import here).
+export * from './peer-request.js';

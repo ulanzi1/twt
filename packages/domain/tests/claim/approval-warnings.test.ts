@@ -366,6 +366,9 @@ describe('NW1 — import discipline, TRANSITIVELY (`-279` A12)', () => {
     'claim/suspicion-refusal.ts',
     // ⭐ Story 6.28 (OP1) — "one payment per death", once: the gate's conjunct (OP2), the warning (OP5) and the queue read it.
     'claim/one-payment-per-death.ts',
+    // ⭐ Story 6.27a (PM23 (a)) — the questionnaire engine: 6.27b's warning SQL reads its key list, so it is fenced like
+    // the gate's own modules (the event-response mapping lives in `claim/peer-mesh-reply.ts`, ⛔ never here).
+    'questionnaires/index.ts',
   ]) {
     it(`${entry} reaches ⛔ none of ${forbidden.join(', ')}`, () => {
       const files = [...reachable(path.join(srcRoot, entry))].map((f) => path.relative(srcRoot, f));

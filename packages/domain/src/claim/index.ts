@@ -32,6 +32,9 @@ export * from './ground-inspection-read.js';
 export * from './ground-inspection-approval.js';
 // Story 6.26a (Task 2.1, `-283` A1) — the R9 queue predicate, once (a SQL fragment + the per-claim read).
 export * from './r9-routing.js';
+// Story 6.27a (PM8, Task 1) — the ANSWER WINDOW, once (the pure decision, the per-claim read, the SQL twin); 6.26a's
+// `isClaimInGroundInspectionWindow` is a re-export of it.
+export * from './answer-window.js';
 // Story 6.8 — claim-time nominee bank: the latest-wins dual-account writer
 // (recordClaimNomineeBankAccounts — claim row-lock + D3 collectable-window guard + delete-then-
 // insert both rows + the claim.nominee_bank_recorded identity annotation) + the read accessor

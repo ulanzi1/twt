@@ -52,6 +52,7 @@ import {
   getMemberNomineeProjectionRanks,
   listNomineeDeclarationVersions,
 } from '../nominee/declaration-history.js';
+import { isRealCalendarDate } from '../cycle-calendar/holiday-resolver.js';
 import { claims } from '../schema/claims.js';
 import {
   type NomineeDeterminationMark,
@@ -65,14 +66,8 @@ import { NOMINEE_NAME_CHECK_RECORDABLE_STATES } from './nominee-name-check.js';
 import { getEffectiveNomineeDeclaration, versionStandsAt, type EffectiveNomineeDeclarationStatus } from './nominee-effective.js';
 import { projectClaimState } from './project.js';
 
-const CALENDAR_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-
-/** A real `YYYY-MM-DD` calendar date (⛔ `2026-02-30` rolls over in `Date.parse`, so round-trip it). */
-export function isRealCalendarDate(value: string): boolean {
-  if (!CALENDAR_DATE_RE.test(value)) return false;
-  const ms = Date.parse(`${value}T00:00:00Z`);
-  return Number.isFinite(ms) && new Date(ms).toISOString().slice(0, 10) === value;
-}
+/** A real `YYYY-MM-DD` calendar date — ⭐ re-exported from the import-free leaf (Story 6.27a F38; same identity). */
+export { isRealCalendarDate };
 
 /**
  * The states in which a determination may be recorded — ⭐ the SAME window as the 6.18 name check

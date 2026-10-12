@@ -92,8 +92,7 @@ import {
 import { isRealCalendarDate } from './nominee-determination-persist.js';
 import { getClaimCase, lockClaimCase } from './read.js';
 import { projectClaimState } from './project.js';
-import { hasLiveRoutedRow } from './r9-routing.js';
-import { CLAIM_REVIEW_WINDOW_STATES } from './review-window.js';
+import { isClaimInAnswerWindow } from './answer-window.js';
 
 /** Max photos per assignment (AC3) — a LOCKED named const, NOT a configurable registry. A byte
  *  cap bounds total payload independently; 20 is a generous storage-abuse boundary. ⭐ `2026-10-07-286` H2:
@@ -263,17 +262,11 @@ async function lockActiveAssignment(
  * claim carries a live `routed_to_r9` routing row (R9 finalize runs the approval gate there — invariant 3: "waits"
  * always has a way out). `denied`, the appeal stages, `state_trustee_approved` outside R9, `approved` and `settled`
  * stay refused. Read in the caller's tx; the event-emitting writers pass a state read from the LOCKED claim row.
+ *
+ * ⭐ Story 6.27a (PM8, Task 1): MOVED to `claim/answer-window.ts` as `isClaimInAnswerWindow` — this name is a
+ * re-export of THAT function (the same identity; ⛔ never a copy).
  */
-export async function isClaimInGroundInspectionWindow(
-  db: Db,
-  pariwarId: PariwarId,
-  claimCaseId: ClaimId,
-  currentState: string,
-): Promise<boolean> {
-  if ((CLAIM_REVIEW_WINDOW_STATES as readonly string[]).includes(currentState)) return true;
-  if (currentState === 'state_trustee_approved') return hasLiveRoutedRow(db, pariwarId, claimCaseId);
-  return false;
-}
+export const isClaimInGroundInspectionWindow = isClaimInAnswerWindow;
 
 /** Assert the window on a claim row the caller already holds (locked or not). */
 async function assertClaimRowInWindow(db: Db, pariwarId: PariwarId, claimRow: ClaimRow): Promise<ClaimRow> {

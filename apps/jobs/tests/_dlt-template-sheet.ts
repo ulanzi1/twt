@@ -49,7 +49,10 @@ export interface SheetTemplateRow {
 
 /** The ONE main-table row carrying `configKey` (in backticks) — fails the test if there is none or more than one. */
 export function sheetRowByConfigKey(configKey: string): SheetTemplateRow {
-  const rows = SHEET.split('\n').filter((line) => /^\|\s*\d+\s*\|/.test(line) && line.includes(`\`${configKey}\``));
+  // Up to three leading spaces, as GFM renders (the gate's SHEET_TEMPLATE_ROW, which also scans pipe-less look-alikes).
+  const rows = SHEET.split('\n').filter(
+    (line) => /^ {0,3}\|\s*\d+[A-Za-z]?\s*\|/.test(line) && line.includes(`\`${configKey}\``),
+  );
   expect(rows, `the sheet's main-table row for ${configKey}`).toHaveLength(1);
   const cells = (rows[0] as string).split('|').map((c) => c.trim());
   // | # | Message | Locale | Owning story | Config key | Variable types | MSG91 template |

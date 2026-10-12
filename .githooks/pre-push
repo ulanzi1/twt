@@ -10,8 +10,9 @@
 # DOCS-ONLY pushes skip ci:local automatically (BigDev 2026-10-12). A push is docs-only when EVERY file changed by
 # the commits it sends is documentation:
 #   · any `*.md`, or anything under `_bmad-output/` or `docs/`
-#   · EXCEPT the two files a ci:local gate READS — `.decision-log.md` (pii-scrape) and `friction-budget.md`
-#     (friction-budget). A push touching either still runs ci:local.
+#   · EXCEPT the files a ci:local gate READS — `.decision-log.md` (pii-scrape), `friction-budget.md`
+#     (friction-budget) and `docs/launch-gate-inventory/` (dlt-typed-variables — the DLT registration sheet). A push
+#     touching any of them still runs ci:local.
 # Every other gate excludes these paths by design (microcopy, schema-diff, benefit-mechanism: "never the repo root /
 # _bmad-output / docs / *.md / sprint-status.yaml"). GitHub CI still runs the FULL suite on the PR, so the skip only
 # saves the local run. ⚠ When a new gate starts reading a doc, add that file to GATE_INPUTS below.

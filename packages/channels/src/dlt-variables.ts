@@ -63,7 +63,7 @@ const SLOT_NAME = /^[a-z][a-z0-9_]*$/;
 const NON_SEPARATING = /^[\s\p{P}\p{S}]*$/u;
 
 /** Any braced hash tag. The closing brace is escaped (`#\}`) so the CI gate's own detector never matches this line. */
-const BRACED_TAG = /\{#[^#{}\s]*#\}/g;
+const BRACED_TAG = /\{#[^#{}]*#\}/g;
 
 /** One declared variable of a registered template, in text order. */
 export interface DltSlot {
@@ -160,10 +160,11 @@ export function checkDltTemplateShape(text: string, slots: readonly DltSlot[]): 
     }
     seen.add(slot.name);
     const ceiling = DLT_TYPE_MAX_LENGTH[slot.type];
-    if (!Number.isInteger(slot.maxLength) || slot.maxLength < 1 || slot.maxLength > ceiling) {
+    const minimum = slot.type === 'cbn' ? DLT_CBN_MIN_LENGTH : 1;
+    if (!Number.isInteger(slot.maxLength) || slot.maxLength < minimum || slot.maxLength > ceiling) {
       problems.push({
         rule: 'slot_max_length',
-        message: `slot "${slot.name}" declares maxLength ${slot.maxLength} — a ${slot.type} variable holds 1 to ${ceiling}`,
+        message: `slot "${slot.name}" declares maxLength ${slot.maxLength} — a ${slot.type} variable holds ${minimum} to ${ceiling}`,
       });
     }
   }

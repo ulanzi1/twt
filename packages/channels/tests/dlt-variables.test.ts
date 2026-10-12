@@ -80,6 +80,11 @@ describe('checkDltTemplateShape (TV1)', () => {
     expect(found).toContain('foreign_tag');
   });
 
+  it.each(['numeric ', ' numeric', 'numeric\t', 'var '])('fails a foreign braced tag containing whitespace: %j', (tagName) => {
+    const tag = '{#' + tagName + '#}';
+    expect(rules(`${tag} is your TWT login code. Valid 5 min. Do not share.`, [])).toEqual(['foreign_tag']);
+  });
+
   it('fails a duplicate slot name and a name with an upper-case letter', () => {
     const text = `Call ${V} or ${V} for anything about this message from the Trust today.`;
     expect(rules(text, [cbn('helpline'), cbn('helpline')])).toEqual(['duplicate_slot_name']);
@@ -92,6 +97,18 @@ describe('checkDltTemplateShape (TV1)', () => {
     expect(rules(text, [{ ...cbn('h'), maxLength: 15 }])).toEqual(['slot_max_length']);
     expect(rules(text, [{ ...cbn('h'), maxLength: 0 }])).toEqual(['slot_max_length']);
     expect(rules(text, [{ ...cbn('h'), maxLength: 2.5 }])).toEqual(['slot_max_length']);
+  });
+
+  it('requires callback slots to hold at least three digits while allowing shorter non-callback slots', () => {
+    const text = `Call ${V} for anything about this message from the Trust today, thank you.`;
+    for (const maxLength of [1, 2]) {
+      expect(checkDltTemplateShape(text, [{ ...cbn('h'), maxLength }])).toEqual([
+        { rule: 'slot_max_length', message: `slot "h" declares maxLength ${maxLength} — a cbn variable holds 3 to 14` },
+      ]);
+    }
+    expect(checkDltTemplateShape(text, [{ ...cbn('h'), maxLength: 3 }])).toEqual([]);
+    expect(checkDltTemplateShape(text, [alnum('h', 1)])).toEqual([]);
+    expect(checkDltTemplateShape(text, [{ name: 'h', type: 'numeric', maxLength: 1, label: 'code' }])).toEqual([]);
   });
 });
 

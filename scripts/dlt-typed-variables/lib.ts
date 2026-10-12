@@ -8,7 +8,8 @@
 // handful of shape-tested REGISTRY files; this gate keeps it that way:
 //
 //   (i)   ⛔ braced tag other than `{#var#}` inside REGISTERED TEXT — the registration sheet's template table rows
-//         (`docs/launch-gate-inventory/*.md`, lines `| <n> | …`) and the CODE lines of the registry files. A typed
+//         (`docs/launch-gate-inventory/*.md`, lines `| <n> | …` and their GFM look-alikes, read with markdown escapes
+//         undone) and the CODE lines of the registry files. A typed
 //         tag written into the text (the Jio / Vi in-text form) would be registered on SmartPing as literal text
 //         and never match a send. Prose, headings, bullets and comment lines are ⛔ scanned — by house rule they
 //         spell a type WITHOUT braces (the TYPE SPELLING RULE).
@@ -27,7 +28,7 @@
 export const DLT_MARKER = '{#var#}';
 
 /** Any braced hash tag. The closing brace is escaped (`#\}`) so a source line holding this regex never matches it. */
-const BRACED_TAG = /\{#[^#{}\s]*#\}/g;
+const BRACED_TAG = /\{#[^#{}]*#\}/g;
 
 /** The identifier of the marker constant — whole word. */
 const MARKER_IDENTIFIER = /\bDLT_VAR\b/;
@@ -35,8 +36,14 @@ const MARKER_IDENTIFIER = /\bDLT_VAR\b/;
 /** The config-key prefix of every DLT template id. */
 const TEMPLATE_ID_PREFIX = 'sms.dlt.template_id.';
 
-/** A registration-sheet template table row: `| <number> | …`. */
-const SHEET_TEMPLATE_ROW = /^\|\s*\d+\s*\|/;
+/**
+ * A registration-sheet template table row: `| <number> | …` — and every look-alike GFM still renders as one (second code
+ * review): up to three leading spaces, the leading pipe omitted, an ordinal with a letter (`| 13a |`).
+ */
+const SHEET_TEMPLATE_ROW = /^ {0,3}\|?\s*\d+[A-Za-z]?\s*\|/;
+
+/** A markdown backslash escape of a brace or hash — `\{#…#\}` RENDERS as a braced tag, so the sheet scan reads it unescaped. */
+const MD_ESCAPE = /\\([{}#])/g;
 
 /**
  * The registry modules whose unit tests run `checkDltTemplateShape` over every entry (the alert registry's test,
@@ -84,7 +91,7 @@ export function scanDltText(file: string, text: string): DltFinding[] {
   if (file.endsWith('.md')) {
     lines.forEach((line, i) => {
       if (!SHEET_TEMPLATE_ROW.test(line)) return;
-      for (const tag of foreignTags(line)) {
+      for (const tag of foreignTags(line.replace(MD_ESCAPE, '$1'))) {
         findings.push({
           file,
           line: i + 1,

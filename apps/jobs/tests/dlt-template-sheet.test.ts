@@ -7,7 +7,7 @@
 import { OTP_DLT_TEMPLATE_REGISTRY, type OtpIntent } from '@twt/channels';
 import { describe, expect, it } from 'vitest';
 
-import { SHEET, msg91Form, sheetRowByConfigKey } from './_dlt-template-sheet.js';
+import { expectRegisteredTextRow, msg91Form, sheetRowByConfigKey } from './_dlt-template-sheet.js';
 
 const OTP_ROWS: ReadonlyArray<{ intent: OtpIntent; number: number }> = [
   { intent: 'login', number: 15 },
@@ -25,6 +25,6 @@ describe('the registration sheet — the OTP templates 15 / 16 (Story 6.34 AC7)'
   });
 
   it.each(OTP_ROWS)('⭐ $intent — the sheet carries the registered text byte for byte', ({ intent, number }) => {
-    expect(SHEET).toContain(`| ${number} | ${OTP_DLT_TEMPLATE_REGISTRY[intent].contentTemplate} |`);
+    expectRegisteredTextRow(number, OTP_DLT_TEMPLATE_REGISTRY[intent].contentTemplate);
   });
 });

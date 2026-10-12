@@ -3,6 +3,40 @@ baseline_commit: 34b9bab6
 ---
 
 <!--
+⭐⭐ MERGED 2026-10-12 as PR #275 (REBASE-merge, branch `story/6-34-sms-templates-typed-variables` → `main` at `64fdb74b`) — THE SHA MAP
+for every commit of Story 6.34. GitHub's rebase-merge rewrote the 17 branch commits (on `main` `09321738`; PR head = branch tip
+`6aeca43b`) ONCE. The citations — in THIS file (the header's `-313` / `-314` / `-322` / `-323` SHAs, the Change Log's re-validate SHAs, the File
+List's `25e7bba5`, the review records' `548c5a1d` / `ba08558f`), in `sprint-status.yaml`'s ledger (`25e7bba5`) and in `.decision-log.md`'s `-323` Occasion (`79d9d440`)
+(grepped on `main` 2026-10-12; ⛔ other file cites one) — each cites the ORIGINAL branch SHA and is kept AS WRITTEN (the record); this maps
+every commit to its `main` twin, PROVED ⛔ never assumed:
+  · every pair has an identical subject AND an identical `git patch-id --stable` (17 / 17 — ⛔ ledger conflict: ⛔ re-application stopped);
+  · the merged tree is byte-identical to the PR head — tree `e36cd413` both — which passed `ci:local` 36/36 and CI 36/36 (the `test` job
+    re-run once after a 10-minute `timeout-minutes` cancel, ⛔ a failure).
+Negative control: a WRONG pair (the 1st branch commit vs the 2nd `main` commit) DIFFERS on the patch-id.
+  · `6cd40412` → `35c5a39d`  story(6.34): created for dev — every SMS template carries TRAI's typed
+  · `07be6307` → `9031689a`  story(6.34 v1.1): the PE registers on STPL (SmartPing) — the text keep
+  · `9b22e69d` → `d290cadf`  governance(6.34): 2026-10-10-313 — author-commit of 6.34's TV1–TV12, a
+  · `5c2fca05` → `326a3756`  story(6.34 v1.2): -313 applied — Tasks 0.2 / 0.3 done, buildable; spri
+  · `b7ebf48f` → `835280a5`  governance(6.34): 2026-10-10-314 — author-commit: the SMS gateway is M
+  · `ad057f50` → `1d1ccdab`  story(6.34 v1.3): -314 applied — the gateway is MSG91 "for now"; TV13
+  · `31fe84d8` → `5cd611ba`  governance(6.34): 2026-10-12-322 — author-commit after the first valid
+  · `79d9d440` → `4be543d7`  story(6.34 v1.4): first validate — rebased onto main 09321738; -322 ap
+  · `2b938bc6` → `1f4de077`  governance(6.34): 2026-10-12-323 — author-commit: a reading on -322 af
+  · `df5bcce9` → `7c2c0edb`  story(6.34 v1.5): round-1 re-validate applied with -323 — barrel expor
+  · `f28061e0` → `c74a3962`  story(6.34 v1.6): round-2 re-validate applied — the Policy meaning and
+  · `4b847818` → `1b30867e`  story(6.34 v1.7): round-3 re-validate — 0 BLOCKER / 0 HIGH, the rounds
+  · `25e7bba5` → `119d7d46`  governance(6.34): Task 0.4 records — epics.md Story 6.34; roster Row 3
+  · `548c5a1d` → `97808e99`  story(6.34): build — one typed-variable vocabulary (dlt-variables.ts);
+  · `ba08558f` → `7a488a12`  story(6.34): code review, two passes — review → done. Pass 1 (3 patche
+  · `cccd469f` → `914a6252`  story(6.34): code review, third pass (the review-fix commit ba08558f)
+  · `6aeca43b` → `64fdb74b`  chore: keep the decision-flow presentation artefacts local — ignore .c
+Re-verify (bash): `diff <(git show <orig> | git patch-id --stable | cut -d' ' -f1) <(git show <main> | git patch-id --stable | cut -d' ' -f1)`.
+⚠ The ORIGINAL SHAs survive only while `origin/story/6-34-sms-templates-typed-variables` does (head `6aeca43b`). The PRE-REBASE SHAs this
+file and the sprint ledger cite (`97e2c3bb`, `e2d57ed9` — v1.4's rebase onto `09321738`) survive only while `origin/backup/6-34-pre-rebase` does (pushed
+2026-10-12 from the local tag of that name, head `d6e8d622`).
+-->
+
+<!--
 ⭐ PINNED 2026-10-10 (`bmad-create-story 6.34`) to `main` at `34b9bab6` (the PR #268 SHA-map commit). Every `file:NNN` below is AS OF
 `34b9bab6`, derived by three read-only research passes (the code inventory of every SMS template and its send path; TRAI's typed-variable
 rule — the Direction, the regulations and the operators' manuals, fetched 2026-10-10; the governance and planning trail) and spot-checked

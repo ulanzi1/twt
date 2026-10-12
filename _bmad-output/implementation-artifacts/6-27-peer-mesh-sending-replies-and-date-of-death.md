@@ -57,9 +57,9 @@ Re-verify (bash): for each pair, `diff <(git show <branch> | git patch-id --stab
 (`origin/main` after 6.30, 6.28 and 6.34 merged; ⛔ no 6.27 code exists yet). `fa2687ce` is ⛔ not an ancestor of `main` — its twin is
 `0281d449` (the SHA map above; identical code). Every `file:NNN` into code is now AS OF `51b9000a`, re-read by five read-only checkers
 (domain; api + contracts; admin; jobs + mobile + channels; cross-cutting) and the author. ⛔ No PM, ruling or AC intent moved — the semantic
-changes are dated annotations (*"re-pin 2026-10-12"*) at F12, F13, F17, F18, F29, PM8, PM9, PM10, PM11, PM13, AC4, AC5, Tasks 5 / 7,
+changes are dated annotations (*"re-pin 2026-10-12"*) at F12, F13, F17, F18, F29, F35, F41, PM8, PM23, PM9, PM10, PM11, PM13, AC4, AC5, Tasks 5 / 7,
 Trap 5 and the new Trap 21. ✅ RULED (PM8): `2026-10-12-324` (Trustee-ratified, option A) — answers are taken
-while the special panel decides a claim that passed the month's vote; PM8's R9 arm stands as `-311` committed it (v2.11). ⚠ 6.27b / 6.27c / 6.27d were ⛔ not re-pinned (6.27b's PM10 summary still says "fourth
+— and PM5 (iv) may still text a neighbour — while the special panel decides a claim that passed the month's vote; PM8's R9 arm stands as `-311` committed it (v2.11). ⚠ 6.27b / 6.27c / 6.27d were ⛔ not re-pinned (6.27b's PM10 summary still says "fourth
 source") — THIS file is the record.
 -->
 
@@ -370,7 +370,7 @@ member's terms:
   pagination (`apps/api/tests/integration/forced-pagination.spec.ts` — every collection GET declares a bounded `limit`); the friction budget
   (`scripts/friction-budget/lib.ts:453`, `MEMBER_FACING_PREFIXES` incl. `apps/mobile/`); the microcopy scan scope (`microcopy.yaml`); the
   decrypt fence's `FENCED_FILES` pin `toBe(41)` (`nominee-name-no-comparison-fence.test.ts:174`) and the import-discipline entries
-  (`approval-warnings.test.ts:360-369` — SIX entries since 6.28 added `claim/one-payment-per-death.ts`); the rtbf completeness pin (`packages/domain/tests/member/rtbf-anonymize.test.ts:121` — *"exactly the
+  (`approval-warnings.test.ts:360-369` — FIVE entries since 6.28 added `claim/one-payment-per-death.ts`); the rtbf completeness pin (`packages/domain/tests/member/rtbf-anonymize.test.ts:121` — *"exactly the
   NINETEEN member-PII tables"*) ⇒ Tasks.
 - **F36 — 0054 grants `SELECT, INSERT, UPDATE` on `claim_peer_mesh_pings` table-wide** — a column-level GRANT cannot narrow it; nothing
   UPDATEs pings today (`persistPeerMeshPingIntents` uses `onConflictDoNothing`, `peer-mesh-persist.ts:117`) ⇒ PM4.
@@ -538,8 +538,10 @@ member's terms:
   vote"*, and 6.28 counts `state_trustee_approved` among `FINALLY_APPROVED_CLAIM_STATES` (`one-payment-per-death.ts:31`); read in that
   vocabulary, taking an answer in `state_trustee_approved` under a live R9 routing may WIDEN `-303` Q2 A — *"⛔ no answer is taken once the
   final approval has been given"*. `-311` committed this arm as an author reading on the `-283` A1 precedent (R9 finalize still runs the
-  gate); ⛔ not re-ruled here. Since 6.28, `closed` also arrives MID-WINDOW — OP4 at payment commit, OP13's `state_trustee_approved` →
-  `closed` (trigger `death_already_finally_approved`) — outside the window, so a 409 (AC4).) A refused save answers 409 `peer_request.no_longer_open`
+  gate); ratified by `-324` (Consequence 2). Since 6.28, `closed` also arrives MID-WINDOW — OP4 at payment commit (trigger
+  `death_already_finally_approved`, `closeClaimsOfPaidDeath`), and OP13: an allowed suspicion appeal now also closes a
+  `state_trustee_approved` claim of the death (trigger `suspicion_appeal_allowed`, `closeClaimsHeldBySuspicionAppeal`) — outside the
+  window, so a 409 (AC4).) A refused save answers 409 `peer_request.no_longer_open`
   and the screen says *"Thank you — this request is no longer open."* (⛔ not why). The 72-hour label is ⛔ not recounted. ⭐ The existing jobs test that asserts `PeerMeshWindowResolvedError` after the window resolves (F39)
   is REWRITTEN as *"accepted after resolution, the label ⛔ not recounted"*; the two error classes stay exported only if another caller uses
   them (grep at build). ⭐ **Trap 13 (rewritten):** a save racing an approval is made SAFE by
@@ -689,7 +691,7 @@ member's terms:
   database-backed versions inherit them. Contracts mirrors ONLY the zod wire shape the app renders, with a test-only lockstep. ⭐ The module imports ONLY import-free leaves (⛔ never
   `isRealCalendarDate` from `nominee-determination-persist.ts` — F38); the event-response MAPPING lives in `claim/peer-mesh-reply.ts`,
   ⛔ never in `questionnaires/` (a type import from `claim/events.ts` alone trips NW1); `questionnaires/index.ts` is ADDED as an NW1 entry
-  (`approval-warnings.test.ts:360-369` — the SEVENTH entry, after `claim/one-payment-per-death.ts`) and a reachability test proves the module reaches ⛔ no `db.ts`, `pg` or `drizzle-orm` (AC2's
+  (`approval-warnings.test.ts:360-369` — the SIXTH entry, after `claim/one-payment-per-death.ts`) and a reachability test proves the module reaches ⛔ no `db.ts`, `pg` or `drizzle-orm` (AC2's
   "pg-free" made a check).
   (b) **Versions:** v1 = page 1 only (`has_died`; `death_date` after *"Yes"*) + the closing note, `approvedBy` `-262` FQ8 E / `-263` FQ10 /
   `-303`. **v2 = `2026-10-10-304`, exactly as ruled — CURRENT (all-Pariwar):** page 1 (`has_died` — *Yes, they have died · No, they have
@@ -786,7 +788,7 @@ member's terms:
    a later edit writes ⛔ no event and ⛔ never throws the already-answered error; the handler encrypts and indexes BEFORE the locks (⛔ no KMS under a lock — a test asserts the writer receives ciphertext);
    `recordPeerMeshResponse` takes the claim lock itself and `actor` defaults to `'member'` (the existing callers unchanged); accepted in each of
    the five window states incl. after the 72 hours and after the District Admin approved, AND in `state_trustee_approved` with a live R9
-   routing; refused (409) in `state_trustee_approved` without one and every closed / refused state (⭐ re-pin 2026-10-12: a leg each for a claim `closed` by 6.28 — OP4's closure at payment commit and OP13's `state_trustee_approved` → `closed`); the inverted jobs test (F39) passes; Submit locks;
+   routing; refused (409) in `state_trustee_approved` without one and every closed / refused state (⭐ re-pin 2026-10-12: a leg each for a claim `closed` by 6.28 — OP4's closure at payment commit and OP13's `state_trustee_approved` (live R9 routing) → `closed` by an allowed suspicion appeal (`suspicion_appeal_allowed`)); the inverted jobs test (F39) passes; Submit locks;
    a second Submit is 409; `peerMeshReplyState` answers `none` / `started` / `submitted`; a two-connection save-vs-approval ordering test
    shows ⛔ no collision, ⛔ no deadlock — plus a save-vs-6.28-closure leg (the closure takes the death's intake key, then claim rows; the save ⛔ never takes the intake key).
 5. **AC5 — the member surface** (PM11; 6.30's route shell ✅ MERGED): the list is bounded (`clampLimit`) and returns ONLY
@@ -797,7 +799,9 @@ member's terms:
    saves each answer with a saved / not-saved line (a failed save retries, ⛔ never lost silently), shows the closing note and the Thank-you
    VERBATIM, shows the dignified not-openable state with the helpline on a 404, makes ⛔ no API call before the session loads, and shows
    ⛔ no claim, family or amount. ⭐ (re-pin 2026-10-12) 6.30's mobile tests are AMENDED in the same change, ⛔ never deleted: the shell stays
-   API-free; the slot's no-API leg becomes a no-call-before-the-session leg (Task 5).
+   API-free; the slot's no-API leg becomes a no-call-before-the-session leg (Task 5). The screen's header is decided as Task 5 says (a source-scan
+   leg). The home card on `app/(tabs)/index.tsx` shows while ≥ 1 request is open and ⛔ never for a ping that is ⛔ not `accepted` (PM2,
+   PM11); PM2's notice-strip item follows `NoticeboardStrip`'s one-source banner-lane rule.
 6. **AC6 — the helpline** (PM12, PM25 (b)): on 6.3's chain with step-up (⛔ no step-up ⇒ refused); enrolled in `COVERAGE_SET`; the list
    returns ONLY `send_outcome = 'accepted'` pings (a test: a ping with `send_outcome` NULL is absent); the same save / submit shape, and the helpline PUT and submit answer 404
    for a ping whose `send_outcome IS DISTINCT FROM 'accepted'` (a leg each); `saved_via = 'helpline'` per answer; a mixed app + helpline reply works and locks for both at Submit; the operator's view carries only that
@@ -860,27 +864,32 @@ member's terms:
       `peerMeshReplyState` and the event-response MAPPING (⛔ never in `questionnaires/`); the handler-side encrypt + index helper (⛔ no KMS
       under a lock); `recordPeerMeshResponse` widened (the answer window incl. live R9, CURRENT state, `actor` defaulting to `'member'`, the
       claim lock taken inside) and called only on the first `has_died` save; the inverted jobs test (F39); the supersede write order; the lock order; the shared date-window helper (`addCalendarDays`, `isRealCalendarDate`); unit + integration tests
-      incl. every state in / out of the window and the two-connection ordering test (separate committed transactions —
+      incl. every state in / out of the window; a 409 leg each for a claim closed by 6.28 (OP4 at payment commit; OP13's allowed suspicion
+      appeal on a `state_trustee_approved` + live-R9 claim); the two-connection save-vs-approval ordering test AND the save-vs-closure leg
+      (`closeClaimsOfPaidDeath` takes the death's intake key, then claim rows; the save ⛔ never takes it) (separate committed transactions —
       [[project_db_clock_ordering_tests_tie]]).
 - [ ] **Task 4 — the member API (AC5).** `claims.peer-request.member.routes.ts` + handlers + contracts + api-client factory
       (`createMemberPeerRequestClient`); 404 / 409 rules incl. the untexted-ping 404 on every route; `clampLimit`; bounded `limit`; `perMemberKey`; ⛔ no Turnstile; the human-actor classification;
       route tests incl. the three indistinguishable 404s.
 - [ ] **Task 5 — the mobile screens (AC5).** Fill 6.30's shell `app/(peer-request)/peer-request.tsx`: the list, the generic renderer, the
       in-screen pages, the saved line, the closing note and the Thank-you, the not-openable state with `CallHelplineCTA`, ⛔ no call before
-      the session; the home card on `app/(tabs)/index.tsx`; chrome strings in `packages/i18n/locales/{en,hi}/claim.json` (a `$comment.peer_request` marker; read through `useClaimT()` — depend on `locale`, never `t`); source-scan
+      the session; the home card on `app/(tabs)/index.tsx` and PM2's notice-strip item (11a.5's `NoticeboardStrip`); chrome strings in `packages/i18n/locales/{en,hi}/claim.json` (a `$comment.peer_request` marker; read through `useClaimT()` — depend on `locale`, never `t`); source-scan
       and pure-logic tests (the mobile harness renders ⛔ no screen); the friction-budget declaration; the microcopy scope.
       ✅ 6.30's route shell is MERGED (row `6-30` `done`) — ⛔ never create a second route file ([[feedback_circular_deferral_between_sibling_stories]]).
       ⭐ Re-pin 2026-10-12 — what 6.30 actually shipped, and what Task 5 owes it:
       - The shell (`app/(peer-request)/peer-request.tsx:20-23`) renders `<PeerRequestSlot code={code} />`; the placeholder
         `components/peer-request/PeerRequestSlot.tsx` (*"6.27a may replace or remove it"*) renders `peer_request.placeholder` and
         `CallHelplineCTA` and makes ⛔ no call. Fill or replace the slot; a present `c` renders the list (6.27c wires the resolver to `code`).
-      - AMEND `apps/mobile/tests/unit/app-link-route-map.test.ts` in the same change: `:83-86` (the shell's slot line) to the new shape;
-        `:88-92` RE-SCOPED — the shell stays API-free, the slot gains a "⛔ no call before the session has loaded" leg; KEEP `:49-53`,
-        `:60-71`, `:94-96`.
+      - AMEND `apps/mobile/tests/unit/app-link-route-map.test.ts` in the same change: `:78-80` (reads `PeerRequestSlot.tsx` by
+        path when the describe is defined — re-point it if the slot is renamed or removed, or the whole describe fails); `:83-86` (the
+        shell's slot line) to the new shape; `:88-92` RE-SCOPED — the shell stays API-free, the slot gains a "⛔ no call before the session
+        has loaded" leg; KEEP `:44-47`, `:49-53`, `:56-60`, `:62-73`, `:94-96`.
       - The session gate: the root guard returns early while `isLoading` (`app/_layout.tsx:116`) but the `<Stack>` still renders (`:153`) ⇒
         the screen gates on `useSession()` itself (`lib/session-context.tsx`).
-      - The header: the group is `headerShown: false` (`-315` C8; `(peer-request)/_layout.tsx:3-7` leaves the decision to 6.27a) ⇒ the
-        in-screen pages carry their own back affordance — decide it, with a source-scan leg.
+      - The header: the root Stack hides only the group's OUTER header (`-315` C8; `app-link-route-map.test.ts:94-96`); the group's inner
+        `<Stack />` (`(peer-request)/_layout.tsx:8-10`) shows a default header unless the screen hides it — today the placeholder does
+        (`PeerRequestSlot.tsx:24`), so replacing the slot without that line shows a header titled with the raw route name. Decide it (keep it
+        hidden and give the in-screen pages their own back affordance, or show it with a translated title), with a source-scan leg.
       - `peer_request.placeholder`: keep it, or retire it AND update `not-found-copy.test.ts:13`, `common.json` `$comment.app_links` (en / hi
         `:413`) and Row 28's scope (Task 0.6; 6.30's Row 29 (h) points there). 6.30's copy already promises the home card (`app-links.json`
         `body.home_screen`; `common.json` `peer_request.placeholder`) — the card is load-bearing.
@@ -920,7 +929,7 @@ member's terms:
 5. **Rebase onto every sibling** (`-292` / `-282` Consequence 4): the gate order (F18), RF5's required `step`, RF15, the NW1 transitive
    import scan, `FENCED_FILES`, the console read ceiling, 6.25's `standingSuspicionRefusalSql`; ⭐ AND row 6-28 (one payment per death —
    the same approval path; two claims for one death both produce neighbour keys). ⭐ (re-pin 2026-10-12 — 6.28 is `done`; what it changed: OP2's
-   `assertNoOtherFinalApprovalForDeath` in the gate between RF5 and the wait (F18); NW1 six entries (`questionnaires/index.ts` the seventh);
+   `assertNoOtherFinalApprovalForDeath` in the gate between RF5 and the wait (F18); NW1 five entries (`questionnaires/index.ts` the sixth);
    SIX kinds (PM9); the queue's source (4) (PM10); console reads 23 and two REQUIRED packet fields (F12); OP13 — `state_trustee_approved`
    closable (`state.ts:362`); OP4 — the death's other open claims `closed` at payment commit, taking the death's intake key FIRST
    (`apps/api/src/modules/claims/close-claims-of-paid-death.ts`) ⇒ the reply writer ⛔ never takes the intake key (claim → ping → reply stays
@@ -1045,6 +1054,7 @@ Re-pin base `51b9000a` (2026-10-12): 6.30 (`12d0fbb4` … `72f7b607`), 6.28 (`01
 ## Change Log
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-12 | 2.12 | The v2.10 / v2.11 validate (one fresh-context reviewer; 0 BLOCKER / 0 HIGH / 6 MEDIUM / 3 LOW — all applied): NW1 has FIVE entries (`questionnaires/index.ts` the sixth); OP13's closure is the allowed suspicion appeal (`suspicion_appeal_allowed`), ⛔ not `death_already_finally_approved` (OP4's); AC4's closure legs reach Task 3; Task 5 amends `app-link-route-map.test.ts:78-80` and keeps the right ranges; the header — the inner `<Stack />` shows one unless the screen hides it — with an AC5 leg; the home card and PM2's notice-strip item gain an AC5 leg and a Task 5 item; PM8 reads *ratified by `-324`*; the header records PM5 (iv)'s texts and F35 / F41 / PM23. |
 | 2026-10-12 | 2.11 | ⭐ `2026-10-12-324` (Trustee-ratified, DR + KB — option A): PM8's R9 arm — answers taken while the special panel decides a claim that passed the month's vote — RATIFIED as `-311` committed it; the PM8 annotation and the header read RULED; ⛔ no PM, AC or Task text changes; ⛔ no code change. |
 | 2026-10-12 | 2.10 | ⭐ RE-PINNED to `51b9000a` (after 6.30, 6.28, 6.34; BigDev chose *"Re-pin to main"* at `bmad-create-story 6.27a`): every moved code cite updated (five read-only checkers + the author); F12 — ceiling 23 and two required packet fields; F13 — six kinds; F17 — four queue sources; F18 — OP2 in the gate; F29 — Rows 29 / 30 written; F41 — the missed `verifier-console.spec.ts` consumers; F7's `:262-263` → `:269-270` (wrong since v2.0); dated annotations: PM8 (an OPEN `-318` / `-303` reading for BigDev; 6.28's mid-window closures), PM9 (END position), PM10 (the FIFTH source), PM11 (AL16 narrowing; the chrome strings' home corrected to `claim.json`), PM13 (from 23); AC4 closure legs; AC5 / Task 5 — 6.30 merged, its tests amended ⛔ never deleted, the session gate, the header, the placeholder; Task 7 — 6.28's fixtures; Trap 5 lists 6.28's changes; Trap 21 (6.34's DLT gate); ⛔ no PM, ruling or AC intent moved. |
 | 2026-10-12 | 2.9a | ⭐ ANNOTATIONS by Story 6.34 Task 0.4 (TV11 / `2026-10-12-322` C6, C7 — ⛔ a PM moved, ⛔ a word above changed): on STPL / SmartPing the text keeps `{#var#}` and the tag names in PM3, Row 27 and Task 0.4 are the slot TYPES; 6.34 does ⛔ hand-verify 6.27c's texts (6.27c uses its vocabulary); the provider's answer on Devanagari / spaces in names is recorded ONCE at Row 30 (d) and Row 27's evidence line POINTS to it (a refusal goes back to the Panel — `-322` C7). |

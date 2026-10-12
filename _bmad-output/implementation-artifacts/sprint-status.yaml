@@ -1,3 +1,9 @@
+# last_updated: 2026-10-12d (⭐ **STORY 6.34 — DEV STARTED (`bmad-dev-story 6.34`): ready-for-dev → in-progress; Task 0 records FIRST.**
+# Task 0.1: ⛔ code moved since `09321738` (`origin/main` = `09321738`); F1–F6 + STPL / MSG91 sources re-fetched 2026-10-12 — all hold
+# (STPL's own manual shows a pre-Nov-2025 tag list ⇒ Row 30 (a)'s label match stands). Task 0.4: `epics.md` `### Story 6.34`; roster
+# Row 30 `sms-dlt-templates-typed-and-registered` (Rows 27 / 28 still RESERVED for 6.27); annotations (TV11 / `-322` C6, C7 / `-323` R1)
+# on 6.27a, 6.27c (incl. its STATUS line: *"AND row 6-34 is done"*), 6.30 SIX FACTS #3 / AL15, Row 29 note (4), the `6-27c` and
+# `6-34` sprint rows — ⛔ a PM or AL moved.)
 # last_updated: 2026-10-12c (⭐ **STORY 6.34 — RE-VALIDATED, rounds 1–3 (v1.4 → v1.7); the rounds END at 0 BLOCKER / 0 HIGH.** Round 1:
 # 1 HIGH / 7 MEDIUM, all the v1.4 pass's own (a named barrel re-export would trip the gate's rule (iii); the flag only on final sends;
 # TV9's union) ⇒ BigDev: `2026-10-12-323` (alone) — R1 the core flags / the caller logs; R2 the delivery-report residual (pre-existing
@@ -19790,6 +19796,8 @@ development_status:
   # until 6.27b, 6.27d AND row 6-30 are `done` — so every safety piece exists before a real answer arrives.
   6-27b-peer-mesh-warnings-wait-and-approvers-view: backlog
   6-27d-inspector-discrepancy-at-completion: backlog
+  # ⭐ 2026-10-12 ANNOTATION (Story 6.34 Task 0.4, `2026-10-12-322` C6 — the comments above kept as written): 6.27c's start condition
+  # gains *"AND row 6-34 is done"* — it uses 6.34's typed-variable vocabulary (`{#var#}` + `slots`) and joins its gate's `REGISTRY_FILES`.
   6-27c-peer-mesh-sending-texts-and-links: backlog
   # ⭐ 2026-10-08 ADDED by `2026-10-08-294` §3 (6.24a code review round 2): ⛔ nothing per-death stops a second approval (`-292` FOUND it);
   # 6.24a's RF6 closure is the only control and three paths pass it (`-294` §2 (a)–(c)). ⭐ BEFORE any code: the Panel question — which
@@ -19834,7 +19842,9 @@ development_status:
   # change (⛔ never on first launch); from then the member's choice is their preferred language (`-303` rider; CF1 confirm owed).
   # ⭐ 2026-10-10 ANNOTATION (Story 6.30, `2026-10-10-312` AL15 — a POINTER, 6.30 retags ⛔ nothing): roster Row 29 (e)'s logged-out legs
   # ⛔ cannot pass until THIS row's OTP-template retag is approved by the operator (a rejected OTP template blocks every login).
-  6-34-sms-templates-typed-variables: ready-for-dev
+  # ⭐ 2026-10-12 ANNOTATION (Story 6.34 Task 0.4, `2026-10-12-322` C6): + row 6-37's MSG91 adapter (`-314` Consequence 2); and *"retags …
+  # with typed variables"* reads *"declares a TRAI type for every `{#var#}` (SmartPing)"* — the text keeps `{#var#}`; approval = roster Row 30 (b).
+  6-34-sms-templates-typed-variables: in-progress
   6-35-in-app-language-switch: backlog
   # ⭐ 2026-10-10 ADDED by `2026-10-10-306` (BigDev: "Selection must be school wise …"): each member's SCHOOL (a stable school code + name)
   # and posting start date captured at signup and on every transfer (a new posting — history kept); a NEW peer-mesh metric: members posted

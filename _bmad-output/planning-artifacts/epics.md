@@ -3313,6 +3313,31 @@ to the requested screen (incl. after an expired login); a dignified bilingual "n
 the hosting and edge rules wired (⛔ not applied); ONE shared https-origin validator. ⛔ Nothing here sends a text; its first consumer is
 6.27's `/peer-request` (6.27c builds the link).
 
+### Story 6.34: Every SMS Template's Variables Are Typed for TRAI — One Vocabulary, a Gate, the Login OTP First `[GOVERNANCE]`
+
+> ⚠ **Added 2026-10-12 (Story 6.34, Task 0.4)** — the row `6-34-sms-templates-typed-variables` was added by
+> [`-305`](../../.decision-log.md#decision-2026-10-10-305) §2 item 5 (BigDev), with ⛔ no `epics.md` entry. The author's build decisions
+> are [`-313`](../../.decision-log.md#decision-2026-10-10-313) TV1–TV12 and [`-314`](../../.decision-log.md#decision-2026-10-10-314) TV13
+> (+ the gateway: MSG91 *"for now"*), corrected by [`-322`](../../.decision-log.md#decision-2026-10-12-322) C1–C9 (TV5 SUPERSEDED: a
+> helpline that is not a callback number is SENT and WARNED about — ⛔ held, ⛔ refused) and read by
+> [`-323`](../../.decision-log.md#decision-2026-10-12-323) R1–R2 (R2's residual RECORDED and accepted: once operators enforce tags, a
+> tag rejection seen only in a delivery report is recorded `accepted`, and on the correction chase D22 counts the family reached — a
+> pre-existing gap for every DLT rejection; Row 30 (c) is the control, Row 30 (d) asks). Full ACs:
+> `_bmad-output/implementation-artifacts/6-34-sms-templates-typed-variables.md`. Its go-live record is roster Row 30
+> (`sms-dlt-templates-typed-and-registered`). ⛔ Never a merge fence.
+
+As the Trust, I want every SMS template we will register with the telecom operators to carry TRAI's typed variables — the login code
+first — and a check that keeps it that way, so that ⛔ no member is locked out of the app, and ⛔ no notice the Trust owes a family is
+silently dropped, because an operator refused a template or a message the day the rule began to bite.
+
+**Acceptance Criteria (in brief):** ONE typed-variable vocabulary in `@twt/channels` (`{#var#}` stays the text's marker — the PE registers
+on STPL's SmartPing portal, where each variable's TYPE is picked in a tagging section; the six TRAI Annexure-I types; a shape check: slot
+count, ≤ 3 variables, adjacency, ≥ 30 % fixed); every template declares a typed, named slot per `{#var#}` (the two OTPs `numeric` `otp`;
+the twelve claim texts per TV4) with ⛔ a word of any text changed; the five whole-body alert entries go DARK truthfully (⛔ registrable);
+a malformed helpline is sent and warned about on all four claim send paths; the claim-handover OTP is sent with the step-up wording
+(*"Valid 3 min"* — the code's real life); a CI gate (`dlt-typed-variables`) so ⛔ a variable ships untyped; the registration sheet covers
+every template (types to select, the MSG91 `##name##` form); roster Row 30.
+
 ---
 
 ## Epic 7: Pool Engine & Cycle Spawn

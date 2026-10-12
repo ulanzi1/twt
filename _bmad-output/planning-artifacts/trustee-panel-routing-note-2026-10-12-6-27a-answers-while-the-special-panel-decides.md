@@ -63,8 +63,8 @@ has looked. ⚠ If you read *"the final approval"* as the month's vote in every 
 - **Blocked:** ⛔ nothing except this one condition. Everything else in Story 6.27a can be built; the condition is one shared rule in the
   system, so either answer is cheap to apply.
 - **If nothing is decided:** the system is built as **A** (our 2026-10-10 reading), recorded as ⛔ not ratified, and this note stays open.
-- **How late such an answer would be:** the five neighbours are texted as soon as the claim's documents pass their first check, usually
-  within a day of filing, and are asked to answer within 72 hours (one WhatsApp reminder at 48 hours). By the month's vote the claim has
+- **How late such an answer would be:** the five neighbours are texted as soon as the death certificate passes its first automatic check —
+  soon after filing, once the certificate is uploaded — and are asked to answer within 72 hours (one WhatsApp reminder at 48 hours). By the month's vote the claim has
   already passed the District Admin's approval and the ground inspection, so an answer arriving while the special panel decides would be
   **weeks** after the text — rare.
 - **How long it would stay open under A:** the special panel has ⛔ no time limit in the system — it decides when enough of its members

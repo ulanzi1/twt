@@ -3,6 +3,62 @@ baseline_commit: 34b9bab6
 ---
 
 <!--
+⭐⭐ MERGED 2026-10-12 as PR #272 (REBASE-merge, branch `story/6-28-one-payment-per-death-second-approval-guard` → `main` at `a6b03d78`) —
+THE SHA MAP for every commit of Story 6.28. The 33 branch commits (from `34b9bab6`) were rewritten TWICE: first by the rebase onto `main`
+`a494e311` (after 6.30), force-pushed as PR #272's head `3cf1cb05`; then by GitHub's rebase-merge. The citations are in THIS file only —
+`b724aa12`, `31895b10`, `a429e122`, `ebe52190` (grepped 2026-10-12: `.decision-log.md`, `sprint-status.yaml`, `deferred-work.md`,
+`friction-budget.md` and the 2026-10-10 routing note cite ⛔ none of the 33) — each cites the ORIGINAL branch SHA and is kept AS WRITTEN (the
+record); this maps every commit to its `main` twin, PROVED ⛔ never assumed:
+  · every pair has an identical subject;
+  · 27 of 33 have an IDENTICAL `git patch-id --stable` (original ↔ main), and all 33 have an identical patch-id PR head ↔ main;
+  · ² the 6 the rebase stopped on (ledger conflicts in `sprint-status.yaml`, `.decision-log.md`, `friction-budget.md`,
+    `deferred-work.md` — pure insertions, both sides kept) have a DIFFERENT whole-commit patch-id ⇒ proved instead by: an identical
+    patch-id with the four ledgers EXCLUDED, AND an identical sorted set of added/removed ledger lines (only the diff CONTEXT moved);
+  · the merged tree is byte-identical to PR #272's head (`3cf1cb05`) — tree `3d68a92b` both — which passed `ci:local` 35/35 and CI 35/35.
+Negative controls: a WRONG pair (the 1st original commit vs the 2nd main commit) DIFFERS on the whole-commit patch-id AND on the
+ledger-line set.
+  · `176be89b` → `986f33e0` ²  (PR head `ff5d1e5c`)  story(6.28): created for dev — one payment per death; the Pane
+  · `82b943b7` → `6aa0de21` ²  (PR head `69493579`)  story(6.28 v1.3): validate — three fresh-context rounds, 0 BLO
+  · `38875315` → `04b44db2`  (PR head `6454f483`)  story(6.28 v1.7): OP13 closes the suspicion corner before paym
+  · `9c51de0b` → `198861f1`  (PR head `d8fe2f8d`)  story(6.28 v1.9): the Panel note's pre-send checks — OP13 beco
+  · `8437af20` → `d8787c7a`  (PR head `a0abfd62`)  story(6.28 v1.10): the note's third pre-send check — Q1 A's ap
+  · `fd39ef6a` → `e5bb1145`  (PR head `c10ae46f`)  story(6.28 v1.11): the note's fourth pre-send check — every Q1
+  · `3fb84213` → `0ada33f8`  (PR head `f253693c`)  story(6.28 v1.12): the note's fifth pre-send check — all 24 ru
+  · `bf179e11` → `300da474`  (PR head `5abc7b62`)  story(6.28 v1.13): the note's sixth pre-send check — Q2 and Q3
+  · `3fc054be` → `50c837d4`  (PR head `e918b9b5`)  story(6.28 v1.14): the note's seventh pre-send check — every c
+  · `861d1ba2` → `2ea4a834`  (PR head `2deecdb7`)  story(6.28 v1.15): the note's eighth pre-send check — a Distri
+  · `149971ac` → `ba674a1a`  (PR head `5a1f85df`)  story(6.28 v1.16): the note's ninth pre-send check — v1.15's o
+  · `96f5bbdc` → `087ea08f` ²  (PR head `c7b80eeb`)  governance(6.28): 2026-10-11-318 — Trustee-ratified — Q1 A, Q2
+  · `be5ea1bf` → `ac6b5717`  (PR head `7bd689ca`)  governance(6.28): 2026-10-11-319 — author-commit — OP1-OP14 as
+  · `509926b8` → `9699f505`  (PR head `b76d86cf`)  story(6.28): Task 0.6 — second governance commit — rulings tab
+  · `1e8db74b` → `01bc04c2`  (PR head `32fabf93`)  story(6.28): Task 1 — OP1 the one-definition leaf (state lists
+  · `148ed18c` → `d3c32eda`  (PR head `cee9799c`)  story(6.28): Task 2 — OP2 the guard: one final-only conjunct a
+  · `18e9f811` → `304cc908`  (PR head `5d79a340`)  story(6.28): Task 3 — OP3 the cycle commit skips-and-keeps a c
+  · `037ddabf` → `cab16c2e`  (PR head `3e22d980`)  story(6.28): Task 4 — OP13 (state_trustee_approved closable; t
+  · `e53134bd` → `7c6986e5`  (PR head `8572f2f9`)  story(6.28): Task 5 — OP5 the other_claim_for_death warning: e
+  · `e5593fc3` → `9d70d04f`  (PR head `b2dc1528`)  story(6.28): Task 5b — OP11 the 30-day convergence window remo
+  · `e2d701b0` → `105ccd2d`  (PR head `bdc022ed`)  story(6.28): Task 5c (a) — OP14 the verifier console's other-c
+  · `691eb8bf` → `30f87eac`  (PR head `4ae1075b`)  story(6.28): Task 5c (b) — OP14 finally_approved_elsewhere on 
+  · `06bb4a45` → `f38d9ae2`  (PR head `77cf5086`)  story(6.28): Task 5c (d) — OP14 the ground inspector sees the 
+  · `7a03f8ee` → `008eaa30`  (PR head `17a2c939`)  story(6.28): Task 6 (part) — OP10 staff surfaces (neutral clos
+  · `b724aa12` → `f7e82500` ²  (PR head `41a03374`)  story(6.28): Task 6 — friction-budget declaration (the 6.24a c
+  · `31895b10` → `69335a19` ²  (PR head `b1f802a0`)  story(6.28): → review — all tasks done; ci:local PASSED (34 jo
+  · `a429e122` → `5e8276a1` ²  (PR head `5e622abd`)  story(6.28): bmad-code-review chunks 1-4/4 — all patches appli
+  · `ebe52190` → `f3c53363`  (PR head `ae9778ca`)  story(6.28): round 2 — adversarial review of the code-review's
+  · `2214dafe` → `1c06eb92`  (PR head `1be1eb92`)  governance(6.28): 2026-10-12-320 — author-commit — OP10's "may
+  · `00d38f8c` → `b5285004`  (PR head `7cf356ed`)  story(6.28): code review round 3 — whole-story pass; D1/D2 per
+  · `72a62efd` → `7286cb82`  (PR head `98170195`)  story(6.28): the Panel note for -320's open follow-up — when s
+  · `be58ce0a` → `19f5d8fd`  (PR head `9edd909d`)  governance(6.28): 2026-10-12-321 — Trustee-ratified (DR + KB) 
+  · `00214c1c` → `a6b03d78`  (PR head `3cf1cb05`)  story(6.28): -321 recorded — the may-file-again note RULED (op
+Re-verify (bash): `diff <(git show <orig> | git patch-id --stable | cut -d' ' -f1) <(git show <main> | git patch-id --stable | cut -d' ' -f1)`;
+for a ² pair, compare `git show <sha> -- . ':(exclude).decision-log.md' ':(exclude)friction-budget.md'
+':(exclude)_bmad-output/implementation-artifacts/sprint-status.yaml' ':(exclude)_bmad-output/implementation-artifacts/deferred-work.md' | git patch-id --stable`
+on both, and the sorted `^[+-]` lines of `git show --format= <sha> -- <the four ledgers>` on both.
+⚠ The ORIGINAL SHAs survive only while the ref `backup/6-28-pre-rebase` does (the PR-head SHAs only while
+`origin/story/6-28-one-payment-per-death-second-approval-guard` does).
+-->
+
+<!--
 ⭐ PINNED 2026-10-10 (`bmad-create-story 6.28`) to `main` at `34b9bab6` (the 6.27 / 6.30 SHA-map commit after PR #268). Every `file:NNN`
 below is AS OF `34b9bab6`, derived by three read-only research passes (the approval writers and their locks; the reachability of two
 live claims for one death; the money path from approval to payment) and re-verified by four fresh-context passes (v1.1: every cite, the

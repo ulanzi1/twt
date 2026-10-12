@@ -117,6 +117,38 @@ describe('createSmsDltStepUpDelivery (Story 5.9)', () => {
     });
   });
 
+  // ⭐ Story 6.34 TV9 (`2026-10-12-322` C4; AC8): the claim handover's code lives 3 minutes (the `step_up` pool) but
+  // goes to a caller-supplied number (the `login` path) — `template: 'step_up'` selects the TEXT only.
+  describe("login intent with template 'step_up' — the claim handover (Story 6.34 TV9)", () => {
+    it('sends the STEP-UP text ("Valid 3 min") to the SAME caller-supplied E.164 — ⛔ decrypt', async () => {
+      const gw = fakeMessaging();
+      const result = await makeAdapter(gw.messaging).deliver(loginPayload({ template: 'step_up' } as Partial<StepUpOtpDelivery>));
+      expect(result).toEqual({ channel: 'sms', status: 'accepted', gatewayMessageId: 'gw-msg-abc-123' });
+      expect(gw.sent).toHaveLength(1);
+      expect(gw.sent[0]?.to).toBe(LOGIN_MOBILE);
+      expect(gw.sent[0]?.body).toBe(`${CODE} is your TWT verification code. Valid 3 min. Do not share.`);
+      expect(gw.sent[0]?.dltTemplateId).toBe('TRAI::sms.dlt.template_id.otp_step_up');
+      expect(getMemberMobileCiphertext).not.toHaveBeenCalled();
+    });
+
+    it.each([['login'], ['otp_step_up'], [null]])("⛔ template %s on a login payload ⇒ invalid_payload (only 'step_up'), ⛔ send", async (template) => {
+      const gw = fakeMessaging();
+      await expect(
+        makeAdapter(gw.messaging).deliver(loginPayload({ template } as unknown as Partial<StepUpOtpDelivery>)),
+      ).rejects.toMatchObject({ errorClass: 'invalid_payload' });
+      expect(gw.sent).toHaveLength(0);
+    });
+
+    it.each(['step_up', 'login'])("⛔ any template on a step_up payload (%s) ⇒ invalid_payload — one-way, ⛔ send", async (template) => {
+      getMemberMobileCiphertext.mockResolvedValue(await encryptMobile(STEP_UP_MOBILE, enc));
+      const gw = fakeMessaging();
+      await expect(
+        makeAdapter(gw.messaging).deliver(stepUpPayload({ template } as unknown as Partial<StepUpOtpDelivery>)),
+      ).rejects.toMatchObject({ errorClass: 'invalid_payload' });
+      expect(gw.sent).toHaveLength(0);
+    });
+  });
+
   describe('step_up intent (decrypt the member Tier-1 mobile)', () => {
     it('decrypts the member mobile + posts the step-up OTP template', async () => {
       const ciphertext = await encryptMobile(STEP_UP_MOBILE, enc);

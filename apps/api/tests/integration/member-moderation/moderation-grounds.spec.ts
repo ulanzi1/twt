@@ -116,6 +116,8 @@ describe.skipIf(!hasDatabase)('moderation grounds — append-only (:5433)', () =
   async function elevate(client: Client, actionContext: string): Promise<void> {
     const req = await client.inject({ method: 'POST', url: '/api/v1/auth/step-up/request', payload: { actionContext } });
     expect(req.statusCode).toBe(200);
+    // Story 6.34 TV9 (AC8): the admin step-up OTP selects today's template — ⛔ template override.
+    expect(adminStepUp.last).not.toHaveProperty('template');
     const ver = await client.inject({ method: 'POST', url: '/api/v1/auth/step-up/verify', payload: { otp: adminStepUp.last?.code as string } });
     expect(ver.statusCode).toBe(200);
   }

@@ -23,7 +23,7 @@ if [ "${SKIP_CI_LOCAL:-}" = "1" ]; then
 fi
 
 ZERO=0000000000000000000000000000000000000000
-GATE_INPUTS='^(\.decision-log\.md|friction-budget\.md)$'
+GATE_INPUTS='^(\.decision-log\.md|friction-budget\.md|docs/launch-gate-inventory/.*)$'
 DOCS='(\.md$|^_bmad-output/|^docs/)'
 
 changed=""

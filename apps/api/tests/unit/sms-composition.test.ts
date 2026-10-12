@@ -22,6 +22,24 @@ vi.mock('@twt/domain', async (importActual) => {
   };
 });
 
+// ⭐ Story 6.34 (TV6 / AC5): the five real alert-registry entries are DARK (⛔ registrable — whole-body), so the REAL
+// sms-dlt path is driven against a mocked registry with ONE registrable fake entry for `deadline_reminder`. The mock
+// targets the registry FILE: `provider-composition.ts` imports it RELATIVELY, so a `vi.mock('@twt/channels')` here
+// would ⛔ intercept it.
+const { REGISTRABLE } = vi.hoisted(() => ({
+  REGISTRABLE: {
+    dltTemplateIdConfigKey: 'sms.dlt.template_id.test_registrable',
+    contentTemplate: 'Your contribution of Rs {#var#} is due this cycle. Please pay in the TWT app.',
+    slots: [{ name: 'amount', type: 'numeric', maxLength: 6, label: 'amount' }],
+    version: 1,
+  },
+}));
+vi.mock('../../../../packages/channels/src/sms-dlt-registry.js', async (importActual) => {
+  // ⚠ ⛔ `typeof import(<that path>)` — it would pull a channels source file into apps/api's tsc program (rootDir).
+  const actual = await importActual<Record<string, unknown>>();
+  return { ...actual, resolveDltTemplate: (category: string) => (category === 'deadline_reminder' ? REGISTRABLE : null) };
+});
+
 const { resolveSmsTarget, resolveSmsProvider, resolveSmsProviderDeps } = await import(
   '../../src/modules/channel-config/composition.js'
 );
@@ -71,15 +89,22 @@ describe('resolveSmsProvider — real-vs-fixture selection (AC1, AC2)', () => {
     const resolveConfig = vi.fn().mockResolvedValue('DLT_REAL_ID');
     const deps = { appClient: fakeAppClient, resolveConfig };
 
-    const providerDeps = await resolveSmsProviderDeps(deps, 'claim_status_change');
+    const providerDeps = await resolveSmsProviderDeps(deps, 'deadline_reminder');
     expect(providerDeps).not.toBeNull();
     expect(providerDeps!.dltTemplateId).toBe('DLT_REAL_ID');
-    expect(resolveConfig).toHaveBeenCalledWith('sms.dlt.template_id.claim_status_change');
+    expect(resolveConfig).toHaveBeenCalledWith(REGISTRABLE.dltTemplateIdConfigKey);
 
-    const provider = await resolveSmsProvider(deps, 'claim_status_change');
+    const provider = await resolveSmsProvider(deps, 'deadline_reminder');
     expect(provider.id).toBe('sms-dlt');
     expect(provider.scope).toBe('global');
+    // ⚠ The fixture ALSO has `id: 'sms-dlt'` — prove the REAL provider by what it sends (⛔ 'fixture-sms').
+    const result = await provider.send({ channel: 'sms', title: null, body: 'x', deepLink: null }, {
+      channel: 'sms',
+      address: '+910000000000',
+    });
+    expect(result.providerMessageId).toBe('gw-id');
   });
+
 
   it('a NON-eligible category (broadcast) → null deps → the fixture (resolveConfig never consulted)', async () => {
     const resolveConfig = vi.fn();
@@ -98,8 +123,11 @@ describe('resolveSmsProvider — real-vs-fixture selection (AC1, AC2)', () => {
 
   it('eligible category but template id NOT provisioned (null/blank) → the fixture', async () => {
     for (const value of [null, '', '   ']) {
-      const deps = { appClient: fakeAppClient, resolveConfig: vi.fn().mockResolvedValue(value) };
-      expect(await resolveSmsProviderDeps(deps, 'helpdesk_reply')).toBeNull();
+      const resolveConfig = vi.fn().mockResolvedValue(value);
+      const deps = { appClient: fakeAppClient, resolveConfig };
+      expect(await resolveSmsProviderDeps(deps, 'deadline_reminder')).toBeNull();
+      // ⛔ vacuous: the registry DID resolve a template — the null is the unprovisioned id's.
+      expect(resolveConfig).toHaveBeenCalledWith(REGISTRABLE.dltTemplateIdConfigKey);
     }
   });
 

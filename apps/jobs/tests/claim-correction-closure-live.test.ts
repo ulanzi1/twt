@@ -28,7 +28,7 @@ import { cleanupClaims, encryptField, onOwnTx, seedReturnedClaim, type SeedRetur
 const DATABASE_URL = process.env['DATABASE_URL'];
 const hasDatabase = Boolean(DATABASE_URL);
 const PARIWAR = randomUUID();
-const HELPLINE = '+911800123456';
+const HELPLINE = '1800123456'; // Story 6.34 — a digits-only callback number (`-322` C1); `+91…` is the warning leg's
 const enc = buildJobsEncryptionDeps('claim-correction-closure-live-pepper');
 const tenAmIst = (date: string) => new Date(Date.parse(`${date}T10:00:00+05:30`));
 const day = (day0: string, n: number) => cycleCalendar.addCalendarDays(day0, n);
@@ -58,7 +58,7 @@ describe.skipIf(!hasDatabase)('Story 6.19c — the claim-correction closure swee
     alarms: string[];
     setNow: (d: Date) => void;
   }
-  function harness(): Harness {
+  function harness(helpline: string = HELPLINE): Harness {
     const enqueued: Harness['enqueued'] = [];
     const sent: SmsGatewayMessage[] = [];
     const alarms: string[] = [];
@@ -78,7 +78,7 @@ describe.skipIf(!hasDatabase)('Story 6.19c — the claim-correction closure swee
       smsAppClient,
       resolveConfig: (key) =>
         Promise.resolve(
-          key.startsWith('sms.dlt.template_id.claim_correction.') ? 'TPL-1' : key === `sms.claim_correction.helpline_number.${PARIWAR}` ? HELPLINE : null,
+          key.startsWith('sms.dlt.template_id.claim_correction.') ? 'TPL-1' : key === `sms.claim_correction.helpline_number.${PARIWAR}` ? helpline : null,
         ),
       push: { audit: () => Promise.resolve(), hashRendered: () => Promise.resolve('a'.repeat(64)) },
       now: () => now,
@@ -273,6 +273,27 @@ describe.skipIf(!hasDatabase)('Story 6.19c — the claim-correction closure swee
     expect(directee.filter((x) => x.sent_on === day(s.day0, 107))).toHaveLength(2);
     expect(directee.filter((x) => x.sent_on === day(s.day0, 114))).toHaveLength(3);
     expect(new Set(directee.map((x) => x.subject_key)).size).toBe(3);
+  });
+
+  it('⭐ Story 6.34 (`-322` C1) — a helpline that is ⛔ a callback number: the closure notice is SENT exactly as today, ONE warning', async () => {
+    const s = await seed({ contactLocale: 'en' });
+    await reach(s);
+    await request(s);
+    await approve(s);
+    const h = harness('+911800123456');
+    await sweepOn(h, day(s.day0, 97));
+    const notices = h.enqueued.filter((e) => e.queue === 'claim.correction.closure_notice');
+    expect(notices).toHaveLength(1);
+    const out = await runClosureNoticeChild(h.deps, notices[0]!.data as JobEnvelope<ClosureNoticePayload>, 'job-w1');
+    expect(out).toEqual({ status: 'sent', outcome: 'accepted' });
+    expect(h.sent).toHaveLength(1);
+    expect(h.sent[0]!.body).toContain('+911800123456'); // ⛔ normalised
+    const warnings = h.alarms.filter((a) => a.includes('not a callback number'));
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]).toContain(PARIWAR);
+    expect(warnings[0]).toContain('closure notice');
+    expect(warnings[0]).not.toContain('+911800123456'); // ⛔ the number itself
+    expect(await rowsOf(s.claimCaseId, ['closure_notice'])).toEqual([expect.objectContaining({ outcome: 'accepted' })]);
   });
 
   it('⭐ the closure notice: recorded DUE at the closure, ONE child per recipient, sent ONCE (⛔ again on a later day), the outbox DONE', async () => {

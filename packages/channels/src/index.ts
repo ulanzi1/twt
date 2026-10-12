@@ -101,6 +101,9 @@ export {
   resolveDltTemplate,
   SMS_DLT_TEMPLATE_REGISTRY,
   type DltTemplate,
+  type DltUnregistrableReason,
+  type RegistrableDltTemplate,
+  type UnregistrableDltTemplate,
 } from './sms-dlt-registry.js';
 // Story 5.9 — the dedicated OTP DLT template registry (AR-56): TWO separately-TRAI-registered templates
 // keyed by intent (login / step_up), DISTINCT from 5.6's per-category transactional registry (which
@@ -112,6 +115,10 @@ export {
   type OtpIntent,
   type OtpDltTemplate,
 } from './otp-sms-template.js';
+// Story 6.34 — the ONE typed-variable vocabulary for every DLT-registered SMS template (TRAI Annexure-I's six
+// types, the slot shape and its check, the two value predicates). A star export on purpose: the CI gate
+// `scripts/dlt-typed-variables` keeps the marker's identifier out of every file but the shape-tested registries.
+export * from './dlt-variables.js';
 // Story 5.6 — the retry / backoff / cascade primitive the dispatch.ts seam reserves for 5.6: a reusable,
 // deterministically-testable in-process primitive (injectable clock) the future live fan-out drives. NO live
 // dispatch call site; does NOT change the frozen dispatch / ChannelProvider / CANONICAL_CHANNEL_LADDER shapes.

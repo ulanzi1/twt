@@ -37,7 +37,7 @@ const hasDatabase = Boolean(DATABASE_URL);
 const PARIWAR = randomUUID();
 /** A second Pariwar whose name mode is `shielded_name` (`-181`). */
 const SHIELDED = randomUUID();
-const HELPLINE = '+911800123456';
+const HELPLINE = '1800123456'; // Story 6.34 — a digits-only callback number (`-322` C1); `+91…` is the warning leg's
 const NAME = 'Ramesh Kumar Sharma';
 const A = '9876501111';
 const B = '9876502222';
@@ -326,6 +326,24 @@ describe.skipIf(!hasDatabase)('Story 6.24b — the suspicion notices (live DB, o
   const textsTo = (h: Harness, mobile: string) => h.sent.filter((m) => m.to.endsWith(mobile));
 
   // ── (a) FQ7 B — the nominee in place at the death ────────────────────────────────────────────────────────────
+
+  it('⭐ Story 6.34 (`-322` C1) — a helpline that is ⛔ a callback number: every notice is SENT exactly as today, ONE warning per send, ⛔ held', async () => {
+    const d = await seedDeath();
+    const s = await refusedS(d);
+    const h = harness({ config: { [`sms.claim_correction.helpline_number.${PARIWAR}`]: '+911800123456' } });
+    await tick(h, [s]);
+    const a = h.sent.filter((m) => m.body.includes('दावा आगे नहीं बढ़ सका') && m.to.endsWith(A));
+    expect(a).toHaveLength(1);
+    expect(a[0]!.body).toBe(`${NAME} के लिए किया गया एक दावा आगे नहीं बढ़ सका। कृपया हेल्पलाइन +911800123456 पर कॉल करें।`); // ⛔ normalised
+    const warnings = h.alarms.filter((x) => x.includes('not a callback number'));
+    expect(warnings).toHaveLength(h.sent.length); // one per send — ⛔ more, ⛔ fewer
+    expect(warnings.filter((x) => x.includes('suspicion notice (suspicion_refusal)'))).toHaveLength(1);
+    for (const w of warnings) {
+      expect(w).toContain(PARIWAR);
+      expect(w).not.toContain('+911800123456'); // ⛔ the number itself
+    }
+    expect((await rowsOf(s)).find((r) => r.purpose === 'suspicion_refusal')).toMatchObject({ outcome: 'accepted', detail: null, attempt_count: 1 });
+  });
 
   it('⭐ (a) ONE row + ONE text to A (…1111), Hindi, the FULL name, the helpline; a second run sends ⛔ nothing; ⛔ plaintext anywhere', async () => {
     const d = await seedDeath();

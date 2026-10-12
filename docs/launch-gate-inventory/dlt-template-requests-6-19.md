@@ -1,4 +1,4 @@
-# DLT Template Registration Requests — the Story 6.19 set
+# DLT Template Registration Requests — every SMS template (first opened for Story 6.19)
 
 **Status:** ⛔ **NOT STARTED** (recorded 2026-09-28, [Decision 2026-09-28-265](../../.decision-log.md#decision-2026-09-28-265) §4). BigDev in session:
 *"Record as not started."* ⛔ Only BigDev can submit these on the TRAI DLT portal.
@@ -12,25 +12,81 @@ privacy-policy purpose, the Panel's answer to `2026-10-08-295` §8 Confirm 2 and
 named owner; and the Hindi human review) — ⛔ **not** on rows 18 / 19,
 whose closure must ⛔ never be read as clearing 7–12. ⛔ **Do not provision the ids of 7–12 until Row 22 closes.**
 
+⭐ **Templates 15–16** (the login and step-up OTP — Story 5.9's, typed by Story 6.34) gate EVERY login: an OTP template the operator
+refuses means ⛔ nobody can log in. They are tracked by **`inventory-roster.md` Row 30** (`sms-dlt-templates-typed-and-registered`),
+which also waits for row `6-37-msg91-sms-gateway-adapter` (`2026-10-10-314`). **Templates 13–14** are reserved for Story 6.27c's text to
+the five neighbours (6.27c writes its own rows here — ⛔ not this sheet's author).
+
 **Why it is started early:** DLT content-template registration has an external lead time, per template, per locale. Hindi is Unicode — a
 shorter per-segment length.
 
-## The templates owed (1–6: Story 6.19; 7–12: Story 6.24b)
+## Where and how we register (Story 6.34, `2026-10-10-313` TV1 / TV8)
 
-| # | Message | Locale | Owning story | Config key (D7) | Variable slots (`{#var#}`) — to confirm with the wording |
-|---|---|---|---|---|---|
-| 1 | Correction-return reminder | hi | 6.19b | `sms.dlt.template_id.claim_correction.reminder.hi` | a **non-name** claim reference; the helpline number |
-| 2 | Correction-return reminder | en | 6.19b | `sms.dlt.template_id.claim_correction.reminder.en` | as #1 |
-| 3 | Closure notice | hi | 6.19b builds (D32, `2026-09-29-266` §5); 6.19c sends | `sms.dlt.template_id.claim_correction.closure_notice.hi` | a non-name claim reference; the helpline number |
-| 4 | Closure notice | en | 6.19b builds (D32); 6.19c sends | `sms.dlt.template_id.claim_correction.closure_notice.en` | as #3 |
-| 5 | Replacement-certificate reminder | hi | 6.19d | `sms.dlt.template_id.claim_correction.certificate_reminder.hi` | a non-name claim reference; the helpline number |
-| 6 | Replacement-certificate reminder | en | 6.19d | `sms.dlt.template_id.claim_correction.certificate_reminder.en` | as #5 |
-| 7 | Suspicion refusal notice (`-262` FQ7 B) | hi | 6.24b | `sms.dlt.template_id.suspicion_notice.refusal_notice.hi` | the member's name (mode-resolved, `-181`); the helpline number |
-| 8 | Suspicion refusal notice (`-262` FQ7 B) | en | 6.24b | `sms.dlt.template_id.suspicion_notice.refusal_notice.en` | as #7 |
-| 9 | Closure after an allowed appeal (`-291` Q2 B) | hi | 6.24b | `sms.dlt.template_id.suspicion_notice.closed_notice.hi` | the member's name; the helpline number |
-| 10 | Closure after an allowed appeal (`-291` Q2 B) | en | 6.24b | `sms.dlt.template_id.suspicion_notice.closed_notice.en` | as #9 |
-| 11 | The refused person's appeal date (`-293` item 1 B) | hi | 6.24b | `sms.dlt.template_id.suspicion_notice.appeal_notice.hi` | the member's name; the last date to appeal (`DD-MM-YYYY`); the helpline number |
-| 12 | The refused person's appeal date (`-293` item 1 B) | en | 6.24b | `sms.dlt.template_id.suspicion_notice.appeal_notice.en` | as #11 |
+- **The portal:** the PE registers on **STPL's SmartPing** DLT portal (`smartping.live` — Satzilio Telecom Pvt Ltd, ex-V-Con / Videocon;
+  BigDev, 2026-10-10). **The gateway** that sends: **MSG91**, *"for now"* (`2026-10-10-314`).
+- **The text keeps its untyped variable marker**, exactly as each template's *Registered text* below shows it. On SmartPing a variable's
+  TYPE is ⛔ written into the text: after entering the text, click *Add variable* and, for each variable IN ORDER, pick its type from the
+  portal's options and enter a sample value (STPL's own manual). The column *"Variable types"* above is what to pick, in order.
+- ⛔ **Never type a typed tag into the text** — e.g. the numeric tag with braces around it (the Jio / Vi in-text form). On SmartPing it
+  would be registered as literal text, and ⛔ a single send would ever match it. (This sheet spells every type WITHOUT braces, by house
+  rule — copy the text cells, never this prose.)
+- ⚠ The exact LABELS in SmartPing's tagging section are only in the manual's images (and STPL's manual predates the 18 Nov 2025 list) —
+  record a screenshot and match this sheet's type words to them before the first submission (`inventory-roster.md` Row 30 (a)).
+- **The MSG91 template** is the same text with `##<name>##` in place of each variable, in order (the column above); MSG91's template must
+  equal the DLT-approved content, and row 6-37's adapter sends `{ <name>: value }` from these names.
+
+## The variable types (TRAI Direction of 18 Nov 2025, Annexure-I)
+
+| Type | Holds | Ceiling | Source of the ceiling |
+|---|---|---|---|
+| numeric | digits only (a leading zero — e.g. an OTP `048213` — is ⛔ addressed by any primary source; Row 30 (d) asks) | 40 | Vi's manual |
+| alphanumeric | letters and digits; special characters *"allowed in scrubbing"* (TRAI; Jio permits; Vi's example value has spaces; only MSG91's paraphrase says *"no special characters"*); ⛔ source addresses Devanagari | 40 | TRAI (regulation (k) says 30 — a conflict, Row 30 (d)) |
+| url | a URL validated against a whitelisted CTA | 120 | Vi's manual |
+| urlott | an OTT / app URL validated against a whitelisted CTA | 120 | Vi's manual |
+| cbn | a callback number validated against a whitelisted CTA — digits only, ⛔ `+`, ⛔ spaces | 3–14 | Vi's manual (Jio: *"Not Applicable"*) |
+| email | an email address (regex) | 40 | Vi's manual |
+
+⛔ There is no date type: a date is alphanumeric (numeric refuses the hyphen). Every ceiling lives as ONE constant in
+`packages/channels/src/dlt-variables.ts` — a portal answer moves one number.
+
+## Shape rules (TCCCPR 2nd Amendment, 12 Feb 2025; the Feb 2023 and Nov 2025 Directions)
+
+- **At most three variables**; a third only *"in case of exigency"* — with a justification line. **Templates 11–12** carry three: *"the
+  last date to appeal is the substance of the notice — `2026-10-08-293` item 1 B"*. (6.27c's templates 13–14 carry their OWN line.)
+- **⛔ Two variables side by side** — separated only by a space, a comma or other punctuation — unless both are alphanumeric.
+- **≥ 30 % of the template fixed**, counted against every variable at its ceiling — formally a condition of the more-than-three-variables
+  clause, applied here to EVERY template (the conservative reading). Every template 1–12, 15, 16 passes (lowest: 7–12 at 52–62 %).
+- **⛔ Another type for `{member}` / `{date}`** — the claim texts' words are ratified; a type that needs a different text (a date type, a
+  shorter name) is a text change and goes back through the §0 gate.
+- ⚠ *"A variable cannot be the last word"* (MSG91's FAQ — secondary, undated): templates 8, 10 and 12 end `… helpline <variable>.` (a
+  final full stop) — asked at Row 30 (d).
+- Each registry's unit test runs `checkDltTemplateShape` over every entry; the CI gate `dlt-typed-variables` keeps every variable typed.
+
+## ⛔ Not registrable — the five alert categories (Story 6.34 TV6)
+
+`deadline_reminder`, `contribution_confirmed`, `contribution_mismatch`, `claim_status_change`, `helpdesk_reply`
+(`packages/channels/src/sms-dlt-registry.ts`): each was ONE whole-body variable — 0 % fixed and unbounded, ⛔ registrable. They are kept
+listed and DARK. ⚠ **Provisioning their ids (`sms.dlt.template_id.<category>`) does NOTHING** — the per-member SMS fallback stays off until
+a later story writes fixed wording (en + hi) for each, with its own §0.
+
+## The templates owed (1–6: Story 6.19; 7–12: Story 6.24b; 15–16: the OTP, Story 5.9 — typed by Story 6.34; 13–14 reserved for Story 6.27c)
+
+| # | Message | Locale | Owning story | Config key (D7) | Variable types — select in SmartPing's tagging section, in order | MSG91 template (`##name##` per variable — TV13) |
+|---|---|---|---|---|---|---|
+| 1 | Correction-return reminder | hi | 6.19b | `sms.dlt.template_id.claim_correction.reminder.hi` | 1 alphanumeric (claim reference, ≤ 8) · 2 cbn (helpline number, ≤ 14) | दावा ##reference##: आपके परिवार के दावे के बैंक विवरण ठीक किए जाने हैं। कृपया हेल्पलाइन ##helpline## पर कॉल करें, या ज़िला प्रशासक आपसे संपर्क करेंगे। आपका दावा अब भी खुला है। |
+| 2 | Correction-return reminder | en | 6.19b | `sms.dlt.template_id.claim_correction.reminder.en` | 1 alphanumeric (claim reference, ≤ 8) · 2 cbn (helpline number, ≤ 14) | Claim ##reference##: the bank details on your family's claim need correcting. Please call the helpline on ##helpline##, or the District Admin will contact you. Your claim is still open. |
+| 3 | Closure notice | hi | 6.19b builds (D32, `2026-09-29-266` §5); 6.19c sends | `sms.dlt.template_id.claim_correction.closure_notice.hi` | 1 alphanumeric (claim reference, ≤ 8) · 2 cbn (helpline number, ≤ 14) | दावा ##reference##: बैंक विवरण में सुधार प्राप्त न होने के कारण यह दावा बंद कर दिया गया है। इस बंद किए जाने के विरुद्ध अपील नहीं की जा सकती। नया दावा हेल्पलाइन ##helpline## या ज़िला प्रशासक के माध्यम से दर्ज किया जा सकता है। |
+| 4 | Closure notice | en | 6.19b builds (D32); 6.19c sends | `sms.dlt.template_id.claim_correction.closure_notice.en` | 1 alphanumeric (claim reference, ≤ 8) · 2 cbn (helpline number, ≤ 14) | Claim ##reference##: this claim was closed because no correction of the bank details was received. This closure cannot be appealed. A new claim may be filed through the helpline on ##helpline## or the District Admin. |
+| 5 | Replacement-certificate reminder | hi | 6.19d | `sms.dlt.template_id.claim_correction.certificate_reminder.hi` | 1 alphanumeric (claim reference, ≤ 8) · 2 cbn (helpline number, ≤ 14) | दावा ##reference##: आपके परिवार के दावे के लिए ऐसा मृत्यु प्रमाणपत्र चाहिए जिसमें मृत्यु की तिथि स्पष्ट हो। कृपया ऐप से भेजें या हेल्पलाइन ##helpline## पर कॉल करें। आपका दावा अब भी खुला है। |
+| 6 | Replacement-certificate reminder | en | 6.19d | `sms.dlt.template_id.claim_correction.certificate_reminder.en` | 1 alphanumeric (claim reference, ≤ 8) · 2 cbn (helpline number, ≤ 14) | Claim ##reference##: your family's claim still needs a death certificate that clearly shows the date of death. Please send it in the app, or call the helpline on ##helpline##. Your claim is still open. |
+| 7 | Suspicion refusal notice (`-262` FQ7 B) | hi | 6.24b | `sms.dlt.template_id.suspicion_notice.refusal_notice.hi` | 1 alphanumeric (deceased member name, ≤ 40) · 2 cbn (helpline number, ≤ 14) | ##member## के लिए किया गया एक दावा आगे नहीं बढ़ सका। कृपया हेल्पलाइन ##helpline## पर कॉल करें। |
+| 8 | Suspicion refusal notice (`-262` FQ7 B) | en | 6.24b | `sms.dlt.template_id.suspicion_notice.refusal_notice.en` | 1 alphanumeric (deceased member name, ≤ 40) · 2 cbn (helpline number, ≤ 14) | A claim for ##member## could not go ahead. Please call the helpline ##helpline##. |
+| 9 | Closure after an allowed appeal (`-291` Q2 B) | hi | 6.24b | `sms.dlt.template_id.suspicion_notice.closed_notice.hi` | 1 alphanumeric (deceased member name, ≤ 40) · 2 cbn (helpline number, ≤ 14) | ##member## के लिए आपका दावा बंद कर दिया गया है। कृपया हेल्पलाइन ##helpline## पर कॉल करें। |
+| 10 | Closure after an allowed appeal (`-291` Q2 B) | en | 6.24b | `sms.dlt.template_id.suspicion_notice.closed_notice.en` | 1 alphanumeric (deceased member name, ≤ 40) · 2 cbn (helpline number, ≤ 14) | Your claim for ##member## has been closed. Please call the helpline ##helpline##. |
+| 11 | The refused person's appeal date (`-293` item 1 B) | hi | 6.24b | `sms.dlt.template_id.suspicion_notice.appeal_notice.hi` | 1 alphanumeric (deceased member name, ≤ 40) · 2 alphanumeric (last date to appeal, `DD-MM-YYYY`, ≤ 10) · 3 cbn (helpline number, ≤ 14) | ##member## के लिए किया गया दावा आगे नहीं बढ़ सका। इसके विरुद्ध ##date## तक अपील की जा सकती है। कृपया हेल्पलाइन ##helpline## पर कॉल करें। |
+| 12 | The refused person's appeal date (`-293` item 1 B) | en | 6.24b | `sms.dlt.template_id.suspicion_notice.appeal_notice.en` | 1 alphanumeric (deceased member name, ≤ 40) · 2 alphanumeric (last date to appeal, `DD-MM-YYYY`, ≤ 10) · 3 cbn (helpline number, ≤ 14) | The claim for ##member## could not go ahead. It can be appealed until ##date##. Please call the helpline ##helpline##. |
+| 15 | OTP — login (5 min) | en | 5.9; typed by 6.34 | `sms.dlt.template_id.otp_login` | 1 numeric (OTP code, ≤ 6) | ##otp## is your TWT login code. Valid 5 min. Do not share. |
+| 16 | OTP — step-up (3 min) | en | 5.9; typed by 6.34 | `sms.dlt.template_id.otp_step_up` | 1 numeric (OTP code, ≤ 6) | ##otp## is your TWT verification code. Valid 3 min. Do not share. |
 
 ⚠ A template registered before the wording is final must be re-registered if a word changes: the send must match the registered text
 exactly. ⭐ **Templates 1–4's wording is now written (Story 6.19b, 2026-09-30)** — below; ⭐ **5–6's too (Story 6.19d, 2026-10-03)** — below them;
@@ -95,11 +151,31 @@ reviewed change means re-registering.
 | 11 | {#var#} के लिए किया गया दावा आगे नहीं बढ़ सका। इसके विरुद्ध {#var#} तक अपील की जा सकती है। कृपया हेल्पलाइन {#var#} पर कॉल करें। |
 | 12 | The claim for {#var#} could not go ahead. It can be appealed until {#var#}. Please call the helpline {#var#}. |
 
+## The wording of templates 15–16 (Story 5.9 — the OTP; typed by Story 6.34)
+
+Category **Transactional** (the 2025 regulation: *"OTP from … apps login"*). ONE variable: the 6-digit code, typed numeric, named `otp`.
+The TTL wording is the code's real life (login 5 min, step-up 3 min); since Story 6.34 the claim-handover code (a 3-minute step-up code)
+is sent with template 16. ⚠ The brand *"TWT"* is the working title and the texts are English-only — a re-registration when the Trust's
+name is fixed or a Hindi OTP is added. The registry is `packages/channels/src/otp-sms-template.ts`; prod refuses to start with either id
+blank.
+
+| # | Registered text |
+|---|---|
+| 15 | {#var#} is your TWT login code. Valid 5 min. Do not share. |
+| 16 | {#var#} is your TWT verification code. Valid 3 min. Do not share. |
+
 ## The per-Pariwar helpline number (D33(b), `-269` §5)
 
 | Config key | Holds | Unset ⇒ |
 |---|---|---|
 | `sms.claim_correction.helpline_number.<pariwarId>` (the Pariwar's id, lower-case) | that Pariwar's helpline number, as printed in the SMS | **that Pariwar's** sends fail closed (`error` + alarm) — ⛔ never another Pariwar's number, ⛔ never a default |
+
+⭐ **The helpline is a callback-number variable (cbn) — write it DIGITS ONLY** (Story 6.34, `2026-10-12-322` C1): toll-free `1800` /
+`1860` + digits (8–13 in all); a landline `0` + STD code + number; a mobile `91` + 10 digits — ⛔ `+`, ⛔ spaces, ⛔ dashes (a country code
+belongs in fixed text, and these texts' words are ratified). The SAME number must be whitelisted as a CBN CTA with the operator.
+⚠ A value that is set but ⛔ in that form is still SENT exactly as written — ⛔ held, ⛔ refused — and the job logs a warning naming the
+Pariwar and the purpose; once operators enforce tags, the operator rejects those texts until staff fix the number. ⇒ the control is
+provisioning: `inventory-roster.md` Row 30 (c) — every Pariwar's number checked and whitelisted before any template id is set.
 
 ⛔ No server-side helpline number exists today (`deferred-work.md`, the 8.11 helpline-number item) — each Pariwar's key must be provisioned
 before its first real send. Status: ⛔ **none provisioned** (2026-09-30).
@@ -108,22 +184,23 @@ before its first real send. Status: ⛔ **none provisioned** (2026-09-30).
 
 Each reminder is ONE transactional DLT SMS per person per slot — at most **22** slots per 90-day run (the Panel's days, `-250` #5), per
 person reached (each effective nominee, plus the claimant when they are none of them); a mark switch back to the family opens a new run.
-Rendered with an 8-character reference and a 13-character helpline number: the English reminder is 181 characters (**2 GSM segments**),
-the Hindi reminder 171 characters of Unicode (**3 segments** at 67 per concatenated part); the closure notice is 212 (en, 2 segments) and
-220 (hi, 4 segments), sent at most once per person. ⇒ a Hindi reminder costs about **1.5×** an English one (3 segments against 2). ⚠ The per-segment price is the
+Rendered with an 8-character reference and a 10-digit helpline number (re-derived 2026-10-12 for a digits-only number — Story 6.34; a
+13-character `+91…` number added 3 characters and ⛔ no segment): the English reminder is 178 characters (**2 GSM segments**),
+the Hindi reminder 168 characters of Unicode (**3 segments** at 67 per concatenated part); the closure notice is 209 (en, 2 segments) and
+217 (hi, 4 segments), sent at most once per person. ⇒ a Hindi reminder costs about **1.5×** an English one (3 segments against 2). ⚠ The per-segment price is the
 gateway's and is ⛔ not recorded here (⛔ no contract exists yet).
 
 ⭐ **The certificate reminder (templates 5–6, Story 6.19d):** ONE transactional DLT SMS per **contact-record person** per slot (CR6 — each
 nominee person on the contact record, plus the claimant block; one text per NUMBER per slot) — at most **25** slots per rejected
 certificate (the 22 correction days to day 84, then days 120, 150 and 180 — `-259` cl.1, `-260` G6); a second rejected certificate
-(`-260` G5) starts a new 25. Rendered with an 8-character reference and a 13-character helpline number: the English reminder is 197
-characters (**2 GSM segments**), the Hindi 185 characters of Unicode (**3 segments**).
+(`-260` G5) starts a new 25. Rendered with an 8-character reference and a 10-digit helpline number: the English reminder is 194
+characters (**2 GSM segments**), the Hindi 182 characters of Unicode (**3 segments**).
 
 ⭐ **The suspicion notices (templates 7–12, Story 6.24b):** ONE transactional DLT SMS per claim per purpose, **EVER** (the notice table's
 UNIQUE) — a refused claim's notice (7–8) and its refused person's appeal date (11–12), and a closed claim's notice (9–10); refusals are
 rare. ⚠ Delivery is at-least-once (a timeout or crash after a gateway accept may send a second — recorded, ⛔ never hidden). Rendered with
-a 19-character name, a 13-character helpline number and a 10-character date: 8 and 10 are 91 characters (**1 GSM segment**), 12 is 130
-(**1**); 7 is 104 and 9 is 99 characters of Unicode (**2 segments** each), 11 is 148 (**3**). A longer name can add a segment.
+a 19-character name, a 10-digit helpline number and a 10-character date: 8 and 10 are 88 characters (**1 GSM segment**), 12 is 127
+(**1**); 7 is 101 and 9 is 96 characters of Unicode (**2 segments** each), 11 is 145 (**3**). A longer name can add a segment.
 
 ## URL whitelisting (Story 6.30, -312 AL3)
 
@@ -139,8 +216,9 @@ a URL is whitelisted; a dynamic part is allowed only AFTER the `?` (*"dynamic pa
 - ⚠ **The DLT category** for a URL entry (and whether it rides the content template or a separate URL registration) is ⛔ not yet confirmed
   with the provider — confirm before submitting.
 - ⛔ No shortener (AL3) — the URL is whitelisted as the Trust's own domain; a redirect hop would also break the app link.
-- The template that carries the link uses a typed `{#url#}` or the fixed URL with a typed code variable — row
-  `6-34-sms-templates-typed-variables` (the 18 Nov 2025 Direction), ⛔ not this section.
+- The template that carries the link has a `{#var#}` slot typed url (`2026-10-10-311` PM3), validated against the whitelisted
+  `https://<domain>/peer-request?` — row 6-34 (`2026-10-12-322` C3). (A fixed URL with a code variable would change PM3's slots — its own
+  author-commit.)
 - Closing this is Row 29 (f).
 
 ## Record
@@ -152,3 +230,4 @@ a URL is whitelisted; a dynamic part is allowed only AFTER the `?` (*"dynamic pa
 | 2026-10-03 | 5–6 | ⭐ Wording, `{#var#}` slots and config keys written (Story 6.19d, `2026-10-03-276` CR7, CR13); its cost line added. ⛔ Still not submitted | Story 6.19d | `claim-correction-sms-templates.ts` |
 | 2026-10-08 | 7–12 | ⭐ Wording, `{#var#}` slots and config keys written (Story 6.24b, `2026-10-08-295` RB1, RB4, RB11); its cost line added. ⛔ Still not submitted. ⛔ **Do not provision the ids of 7–12 until Row 22 closes**; set each id only after the operator confirms that template's approval | Story 6.24b | `suspicion-notice-sms-templates.ts` |
 | 2026-10-10 | URL `https://<domain>/peer-request?` | ⭐ The URL-whitelisting section written (Story 6.30, `2026-10-10-312` AL3). ⛔ Not submitted — the domain is ⛔ not yet set (Row 29 (b)); the DLT category to be confirmed with the provider | Story 6.30 | § URL whitelisting |
+| 2026-10-12 | 1–12, 15, 16 | ⭐ Variable TYPES declared for every template (the column to select in SmartPing's tagging section) and the MSG91 `##name##` form (Story 6.34, `2026-10-10-313` TV8, `-314` TV13, `-322` C1 / C3); OTP templates 15–16 added (Transactional, numeric `otp`); where-and-how, types, shape-rules and helpline sections; the five alert categories listed as ⛔ registrable; the cost lines re-derived for a digits-only helpline; the URL bullet answered. ⛔ Still not submitted — Row 30 | Story 6.34 | `dlt-variables.ts`; the three registries |

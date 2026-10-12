@@ -25,7 +25,7 @@ import { cleanupClaims, encryptField, onOwnTx, seedReturnedClaim } from './_clai
 const DATABASE_URL = process.env['DATABASE_URL'];
 const hasDatabase = Boolean(DATABASE_URL);
 const PARIWAR = randomUUID();
-const HELPLINE = '+911800123456';
+const HELPLINE = '1800123456'; // Story 6.34 — a digits-only callback number (`-322` C1); `+91…` is the warning leg's
 const enc = buildJobsEncryptionDeps('claim-certificate-live-pepper');
 /** The SAME deps with the HMAC failing (a KMS blip on every number hash). */
 const hmacDown: encryption.FieldCryptoDeps = {
@@ -275,6 +275,25 @@ describe.skipIf(!hasDatabase)('Story 6.19d — the certificate reminder (live DB
     return rows;
   }
   const todayIst = () => cycleCalendar.istDateOf(new Date());
+
+  it('⭐ Story 6.34 (`-322` C1) — a helpline that is ⛔ a callback number: the certificate reminder is SENT exactly as today, ONE warning', async () => {
+    const s = await seedWait({ mobiles: ['9812345678'], locale: 'en' });
+    const d0 = todayIst();
+    const h = harness({ config: { [`sms.claim_correction.helpline_number.${PARIWAR}`]: '+911800123456' } });
+    h.setNow(tenAmIst(day(d0, 1)));
+    await runCertificateReminderSweep(h.deps, boss(h));
+    const jobs = smsFor(h, s.cid);
+    expect(jobs).toHaveLength(1);
+    expect(await child(h, jobs[0]!)).toEqual({ status: 'sent', outcome: 'accepted' });
+    expect(h.sent).toHaveLength(1);
+    expect(h.sent[0]!.body).toContain('call the helpline on +911800123456.'); // ⛔ normalised
+    const warnings = h.alarms.filter((a) => a.includes('not a callback number'));
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]).toContain(PARIWAR);
+    expect(warnings[0]).toContain('certificate reminder');
+    expect(warnings[0]).not.toContain('+911800123456'); // ⛔ the number itself
+    expect((await rowsOf(s.cid)).filter((r) => r.purpose === 'family_sms').map((r) => [r.outcome, r.detail])).toEqual([['accepted', null]]);
+  });
 
   it('⭐ a rejected certificate: the sweep OPENS the run and enqueues day 1 the NEXT MORNING to each person on the contact record; the child sends the certificate text (ids-only payload, ⛔ no name)', async () => {
     const s = await seedWait({ mobiles: ['9812345678', '9898989898'], locale: 'en' });

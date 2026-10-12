@@ -18,7 +18,14 @@
 // ⛔ no bank detail, ⛔ no reason (T6); ⛔ no deadline threat (S4).
 // ⚠ A missing template id or helpline number fails CLOSED (the row is `error`, an alarm fires) — ⛔ never a
 // placeholder number, ⛔ never a fixture that reports `accepted` (T13).
+// ⭐ Story 6.34 (TV2 / TV4 / TV13; `-313`, `-314`): each entry DECLARES its two variables' TRAI types in `slots`, in text
+// order — the reference alphanumeric (exactly 8 upper-case hex, ≤ 8), the helpline cbn (≤ 14). On STPL's SmartPing
+// portal the text keeps the untyped marker and the type is selected beside it ⇒ ⛔ a character of any text changed.
+// The marker is the ONE vocabulary's (`@twt/channels` `dlt-variables.ts`), re-exported here for the lockstep test; each
+// slot's `name` is the `t()` param it fills (the MSG91 `##name##` variable — TV13). The registry test runs the shape
+// check over every entry; the CI gate `scripts/dlt-typed-variables` lists this file in its `REGISTRY_FILES`.
 
+import { DLT_VAR, type DltSlot } from '@twt/channels';
 import { t, type Locale } from '@twt/i18n';
 
 export type ClaimCorrectionSmsMessage = 'reminder' | 'closure_notice' | 'certificate_reminder';
@@ -31,10 +38,18 @@ export interface ClaimCorrectionSmsTemplate {
   readonly dltTemplateIdConfigKey: string;
   /** The content registered with TRAI, the two variables written `{#var#}` (reference first, helpline second). */
   readonly registeredText: string;
+  /** The declared variables, in text order (Story 6.34 TV4) — the type BigDev selects for each `{#var#}`. */
+  readonly slots: readonly DltSlot[];
 }
 
-/** The DLT variable token — the form the registered text carries in each slot. */
-export const DLT_VAR = '{#var#}';
+/** The DLT variable token — the form the registered text carries in each slot (the ONE vocabulary's, re-exported). */
+export { DLT_VAR };
+
+/** TV4 — every claim-correction text: the claim reference, then the Pariwar's helpline. */
+const REFERENCE_HELPLINE_SLOTS: readonly DltSlot[] = [
+  { name: 'reference', type: 'alphanumeric', maxLength: 8, label: 'claim reference' },
+  { name: 'helpline', type: 'cbn', maxLength: 14, label: 'helpline number' },
+];
 
 export const CLAIM_CORRECTION_SMS_TEMPLATES: Readonly<
   Record<ClaimCorrectionSmsMessage, Readonly<Record<ClaimCorrectionSmsLocale, ClaimCorrectionSmsTemplate>>>
@@ -45,12 +60,14 @@ export const CLAIM_CORRECTION_SMS_TEMPLATES: Readonly<
       dltTemplateIdConfigKey: 'sms.dlt.template_id.claim_correction.reminder.hi',
       registeredText:
         'दावा {#var#}: आपके परिवार के दावे के बैंक विवरण ठीक किए जाने हैं। कृपया हेल्पलाइन {#var#} पर कॉल करें, या ज़िला प्रशासक आपसे संपर्क करेंगे। आपका दावा अब भी खुला है।',
+      slots: REFERENCE_HELPLINE_SLOTS,
     },
     en: {
       copyKey: 'correction_sms.reminder',
       dltTemplateIdConfigKey: 'sms.dlt.template_id.claim_correction.reminder.en',
       registeredText:
         "Claim {#var#}: the bank details on your family's claim need correcting. Please call the helpline on {#var#}, or the District Admin will contact you. Your claim is still open.",
+      slots: REFERENCE_HELPLINE_SLOTS,
     },
   },
   closure_notice: {
@@ -59,12 +76,14 @@ export const CLAIM_CORRECTION_SMS_TEMPLATES: Readonly<
       dltTemplateIdConfigKey: 'sms.dlt.template_id.claim_correction.closure_notice.hi',
       registeredText:
         'दावा {#var#}: बैंक विवरण में सुधार प्राप्त न होने के कारण यह दावा बंद कर दिया गया है। इस बंद किए जाने के विरुद्ध अपील नहीं की जा सकती। नया दावा हेल्पलाइन {#var#} या ज़िला प्रशासक के माध्यम से दर्ज किया जा सकता है।',
+      slots: REFERENCE_HELPLINE_SLOTS,
     },
     en: {
       copyKey: 'correction_sms.closure_notice',
       dltTemplateIdConfigKey: 'sms.dlt.template_id.claim_correction.closure_notice.en',
       registeredText:
         'Claim {#var#}: this claim was closed because no correction of the bank details was received. This closure cannot be appealed. A new claim may be filed through the helpline on {#var#} or the District Admin.',
+      slots: REFERENCE_HELPLINE_SLOTS,
     },
   },
   // Story 6.19d (CR7) — ⚠ the Hindi is agent-authored, ⛔ not yet human-reviewed (go-live gate Row 21).
@@ -74,12 +93,14 @@ export const CLAIM_CORRECTION_SMS_TEMPLATES: Readonly<
       dltTemplateIdConfigKey: 'sms.dlt.template_id.claim_correction.certificate_reminder.hi',
       registeredText:
         'दावा {#var#}: आपके परिवार के दावे के लिए ऐसा मृत्यु प्रमाणपत्र चाहिए जिसमें मृत्यु की तिथि स्पष्ट हो। कृपया ऐप से भेजें या हेल्पलाइन {#var#} पर कॉल करें। आपका दावा अब भी खुला है।',
+      slots: REFERENCE_HELPLINE_SLOTS,
     },
     en: {
       copyKey: 'certificate_sms.reminder',
       dltTemplateIdConfigKey: 'sms.dlt.template_id.claim_correction.certificate_reminder.en',
       registeredText:
         "Claim {#var#}: your family's claim still needs a death certificate that clearly shows the date of death. Please send it in the app, or call the helpline on {#var#}. Your claim is still open.",
+      slots: REFERENCE_HELPLINE_SLOTS,
     },
   },
 };

@@ -120,6 +120,9 @@ describe.skipIf(!hasDatabase)('Member-app claim filing — E2E (:5433)', () => {
       expect(send.body.nomineeMobileMasked).toBe('+91·····3210');
       // The delivery targeted the nominee's E.164 via the `login` variant (resolved mobile).
       expect(t.stepUpDelivery.last?.intent).toBe('login');
+      // ⭐ Story 6.34 TV9 (AC8): the handover code lives 3 minutes (the step_up pool) ⇒ the step-up TEXT ("Valid 3 min");
+      // `intent` stays 'login' so the recipient is still the nominee's resolved mobile.
+      expect(t.stepUpDelivery.last?.template).toBe('step_up');
       const code = t.stepUpDelivery.last?.code as string;
 
       const verify = await inject(t, 'POST', '/api/v1/member/claims/handover-otp/verify', {

@@ -5,9 +5,12 @@
 // the body is name-free, carries the reference and the helpline number, and ⛔ no deadline. ⭐ Each variable renders
 // with its OWN marker (a swap fails), and the Hindi deny-list is matched as substrings (`\b` is ASCII-only).
 
-import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
+// ⭐ Story 6.34 (AC3; TV2 / TV4 / TV13): every entry DECLARES its slots' TRAI types — the shape check passes, the slot
+// names are the i18n `{param}`s in order (both locales), a render through the real `t()` keyed by slot NAME places each
+// marker in slot order, and the sheet's row (found by config key) lists the same types and the MSG91 `##name##` form.
 
+import { checkDltTemplateShape } from '@twt/channels';
+import { t } from '@twt/i18n';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -17,10 +20,7 @@ import {
   renderClaimCorrectionSms,
 } from '../src/scheduler/claim-correction-sms-templates.js';
 
-const SHEET = readFileSync(
-  fileURLToPath(new URL('../../../docs/launch-gate-inventory/dlt-template-requests-6-19.md', import.meta.url)),
-  'utf-8',
-);
+import { CLAIM_CATALOG, SHEET, i18nParamNames, msg91Form, sheetRowByConfigKey } from './_dlt-template-sheet.js';
 
 /** Deadline-threat terms in Hindi (S4 / T6) — "day(s)", "within", "last date / chance", "urgent", "immediately",
  * "deadline", "otherwise". Substrings, ⛔ never `\b`-anchored (see the test). */
@@ -140,6 +140,38 @@ describe('the claim-correction SMS templates (D32 — all three messages × both
     expect(CLAIM_CORRECTION_SMS_TEMPLATES.closure_notice.en.registeredText).toBe(
       'Claim {#var#}: this claim was closed because no correction of the bank details was received. This closure cannot be appealed. A new claim may be filed through the helpline on {#var#} or the District Admin.',
     );
+  });
+
+  it.each(CASES)('⭐ Story 6.34 — $message / $locale declares typed slots (TV4) and passes the shape check', ({ message, locale }) => {
+    const template = CLAIM_CORRECTION_SMS_TEMPLATES[message][locale];
+    expect(template.slots).toEqual([
+      { name: 'reference', type: 'alphanumeric', maxLength: 8, label: 'claim reference' },
+      { name: 'helpline', type: 'cbn', maxLength: 14, label: 'helpline number' },
+    ]);
+    expect(checkDltTemplateShape(template.registeredText, template.slots)).toEqual([]);
+  });
+
+  it.each(CASES)('⭐ Story 6.34 — $message / $locale: the slot names ARE the i18n params, in order (TV13)', ({ message, locale }) => {
+    const template = CLAIM_CORRECTION_SMS_TEMPLATES[message][locale];
+    const value = CLAIM_CATALOG[locale][template.copyKey];
+    expect(value, `${locale}/claim.json ${template.copyKey}`).toBeTypeOf('string');
+    expect(i18nParamNames(value as string)).toEqual(template.slots.map((s) => s.name));
+    // The real t(), params keyed by SLOT NAME — a wrong name throws (a missing param); the markers land in slot order.
+    const marker = (name: string): string => `\u0001${name}\u0001`;
+    const params = Object.fromEntries(template.slots.map((s) => [s.name, marker(s.name)]));
+    const rendered = t(template.copyKey, params, { locale, namespace: 'claim' });
+    const positions = template.slots.map((s) => rendered.indexOf(marker(s.name)));
+    expect(positions.every((p) => p >= 0)).toBe(true);
+    expect([...positions].sort((a, b) => a - b)).toEqual(positions);
+    const back = template.slots.reduce((out, s) => out.replace(marker(s.name), DLT_VAR), rendered);
+    expect(back).toBe(template.registeredText);
+  });
+
+  it.each(CASES)('⭐ Story 6.34 — $message / $locale: the sheet row lists the same types in order and the MSG91 form (TV8)', ({ message, locale }) => {
+    const template = CLAIM_CORRECTION_SMS_TEMPLATES[message][locale];
+    const row = sheetRowByConfigKey(template.dltTemplateIdConfigKey);
+    expect(row.types).toEqual(template.slots.map((s) => s.type));
+    expect(row.msg91).toBe(msg91Form(template.registeredText, template.slots));
   });
 
   it('`-269` §5 — ONE helpline key PER PARIWAR, lower-case id', () => {

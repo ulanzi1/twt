@@ -6,7 +6,7 @@ baseline_commit: fa2687ce
 ⭐ CUT 2026-10-10 from Story 6.27 v2.0 (`2026-10-10-305` §2 item 1). Pinned `fa2687ce` (code identical to `main` `5946e411`).
 ⚠ Before Task 1: `git diff --name-only fa2687ce..HEAD -- packages apps scripts infra`.
 
-STATUS: `backlog` — flips to `ready-for-dev` when 6.27b AND 6.27d are `done` AND row `6-30-app-links-open-the-app-from-a-text` is `done`.
+STATUS: `backlog` — flips to `ready-for-dev` when 6.27b AND 6.27d are `done` AND row `6-30-app-links-open-the-app-from-a-text` is `done`. ⭐ (2026-10-12 annotation — Story 6.34 Task 0.4, `-322` C6) AND row 6-34 is done.
 ⭐ SENDING IS LAST on purpose: once a real text goes out, real answers arrive — the warnings and the wait (6.27b), the approvers' view (6.27b)
 and the inspector's independence (6.27d) must already exist.
 ⭐ THE RECORD is 6.27a's file (rulings, invariants, F1–F41, PM1–PM25; Task 0 shared). This file BUILDS the PMs tagged **[c]**: **PM1–PM5**
@@ -82,8 +82,8 @@ RB4 / RB5 / RB11 / RB12 / RB16 · `-302` RN2–RN8 · `-255` F7 (the cost line).
    `APP_LINKS_BASE_URL`, or a `'pending'` question — AC2b): ⛔ no ping is begun; one ids-only alarm per run; a stalled `attempting` row in a held scope is PARKED and given up
    only after three IST days of UN-parked time (RN2 / RN3); once set, every request still due is sent.
 5. **AC5 — the exclusions:** a peer ⛔ not active, reported deceased, or with ⛔ no sendable number ⇒ `no_target` with its fixed detail and
-   ⛔ no alarm; ⛔ no replacement; the selection unchanged; a name over the `{#alphanumeric#}` limit ⇒ `no_target:name_too_long` (a test; an author reading recorded at Task 0.4 — it narrows `-303`
-   Q1 A at the edge; FYI in the confirm note; the provider's Devanagari answer is a Row 27 evidence line).
+   ⛔ no alarm; ⛔ no replacement; the selection unchanged; a name over the `{#alphanumeric#}` limit (⭐ (2026-10-12 annotation — Story 6.34 Task 0.4, TV11: ⚠ on STPL / SmartPing the text keeps `{#var#}`; the tag names here are the slot TYPES — 6.34 TV1 / TV11) ⇒ `no_target:name_too_long` (a test; an author reading recorded at Task 0.4 — it narrows `-303`
+   Q1 A at the edge; FYI in the confirm note; the provider's Devanagari answer is a Row 27 evidence line ⭐ (2026-10-12 annotation — Story 6.34 Task 0.4, `-322` C7: the answer is recorded ONCE at Row 30 (d) (`-322` C7); Row 27's evidence line POINTS to it (a refusal goes back to the Panel))).
 5b. **AC5b — PM14 / PM15:** ⛔ no new event is emitted by any send path (a test counts `claim.peer_mesh_*` events before / after); a
    re-claimed `attempting` row that fails its re-check finishes `error` with an ids-only alarm (`-297` §2), and a `no_target` on a re-claimed
    row alarms *"may have sent"* (`-298`) — each a test.
@@ -93,13 +93,13 @@ RB4 / RB5 / RB11 / RB12 / RB16 · `-302` RN2–RN8 · `-255` F7 (the cost line).
    never in a log, alarm, audit row or `detail`. ⚠ A REAL `https://` link opening the app on a device is Row 29 (e) (6.30) — ⛔ not this story's.
 7. **AC7 — the member surface lights up:** a ping with `send_outcome = 'accepted'` makes 6.27a's card and list show that request.
 8. **AC8 — the records:** DLT templates 13 / 14 in the sheet with the exact typed registered text (proved by the lockstep test with the real
-   `t()`; 6.27c types them, row 6-34 verifies them); Row 27's evidence lines (incl. the provider's Devanagari answer); a CHECK that 6.27a's
+   `t()`; 6.27c types them, row 6-34 verifies them ⭐ (2026-10-12 annotation — Story 6.34 Task 0.4, TV11: ⚠ on STPL / SmartPing the text keeps `{#var#}`; the tag names here are the slot TYPES — 6.34 TV1 / TV11; 6.34 does ⛔ hand-verify them — 6.27c runs the shape check in its own registry test)); Row 27's evidence lines (incl. the provider's Devanagari answer ⭐ (2026-10-12 annotation — Story 6.34 Task 0.4, `-322` C7: the answer is recorded ONCE at Row 30 (d) (`-322` C7); Row 27's evidence line POINTS to it (a refusal goes back to the Panel))); a CHECK that 6.27a's
    epics.md annotation of Story 6.6 and its row-6-22 pointer exist (6.27a OWNS both — ⛔ never written twice); `pnpm ci:local` green.
 
 ## Tasks / Subtasks
 
 - [ ] **Task 1 — copy and registry (AC2, AC8).** `peer_mesh_sms.request` en + hi + `$comment` in `claim.json`; `peer-mesh-sms-templates.ts`
-      (typed variables); the lockstep test ([[feedback_stub_must_call_not_transcribe]]); DLT sheet templates 13 / 14.
+      (typed variables); the lockstep test ([[feedback_stub_must_call_not_transcribe]]); DLT sheet templates 13 / 14. ⭐ (2026-10-12 annotation — Story 6.34 Task 0.4, TV11 / `-322` C1 / `-323` R1: ⚠ on STPL / SmartPing the text keeps `{#var#}`; the tag names here are the slot TYPES — 6.34 TV1 / TV11) `{#var#}` + `slots` from `@twt/channels` `dlt-variables.ts`; add the file to `REGISTRY_FILES`; raise the `helplineNotCallbackNumber` warning like the four callers (`-322` C1 / `-323` R1); the sheet rows 13 / 14 carry their OWN three-variable justification line.
 - [ ] **Task 1b — 6.27c's migration (AC1b).** Next free number at build: the `detail` / `first_detail` grammar CHECK on
       `claim_peer_mesh_pings` (the ENUMERATED `PEER_MESH_REQUEST_DETAIL_PATTERN`); applied to :5432 AND :5433; a policy-spec leg per family.
 - [ ] **Task 2 — the domain send record (AC2–AC5b).** NEW `packages/domain/src/claim/peer-mesh-request.ts` (cloned in SHAPE from
@@ -117,7 +117,7 @@ RB4 / RB5 / RB11 / RB12 / RB16 · `-302` RN2–RN8 · `-255` F7 (the cost line).
       untexted-ping 404); 6.30's shell's PARSED `c` (`parseAppLinkCode`) wired to the resolver call once the session has loaded, opening
       6.27a's questionnaire, its 404 reusing 6.27a's not-openable state; route tests (404 ×4 indistinguishable); the `link_code` written once
       (a test) and absent from logs.
-- [ ] **Task 5 — records and close (AC8).** Row 27 evidence (the provider's Devanagari answer); CHECK (⛔ never write) 6.27a's row-6-22
+- [ ] **Task 5 — records and close (AC8).** Row 27 evidence (the provider's Devanagari answer ⭐ (2026-10-12 annotation — Story 6.34 Task 0.4, `-322` C7: the answer is recorded ONCE at Row 30 (d) (`-322` C7); Row 27's evidence line POINTS to it (a refusal goes back to the Panel)); CHECK (⛔ never write) 6.27a's row-6-22
       pointer and Story 6.6 annotation; Change Log + File List; `pnpm ci:local` green.
 
 ## Dev Notes
@@ -125,7 +125,7 @@ RB4 / RB5 / RB11 / RB12 / RB16 · `-302` RN2–RN8 · `-255` F7 (the cost line).
   gateway codes), 13 (claim → ping), 17 (leave room for row 6-31), 19 (⛔ never the `-303` block's Hindi).
 - ⚠ **Row 6-35** will change ONE read (the locale) to *member's choice, else the Pariwar's default* — keep it a single function.
 - ⚠ **Row 6-34** retags every SMS template with typed variables; these two are registered typed from the start by 6.27c and VERIFIED by
-  6-34 with every other — keep them consistent with it.
+  6-34 with every other — keep them consistent with it. ⭐ (2026-10-12 annotation — Story 6.34 Task 0.4, TV11 / `-322` C6: ⚠ on STPL / SmartPing the text keeps `{#var#}`; the tag names here are the slot TYPES — 6.34 TV1 / TV11; 6.27c WAITS for 6.34 — if it lands first anyway it STOPS and asks rather than re-creating 6.34's vocabulary.)
 - ⚠ **Row 6-31's reminder** goes ONLY within PM8's answer window too (`-305` §2 item 4) — leave the predicate readable (6.27a Trap 17).
 - ⚠ **Row 26 (`jobs-db-role`)** — the production jobs login holds ⛔ no privileges on claim tables; the new sweep inherits it (recorded).
 - **Previous story:** 6.24b (the send core, the sibling registry), 6.29 (the parity bar — hold / park / give-up, the CHECKs, the trigger).
@@ -146,6 +146,7 @@ RB4 / RB5 / RB11 / RB12 / RB16 · `-302` RN2–RN8 · `-255` F7 (the cost line).
 ## Change Log
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-12 | — | ⭐ ANNOTATIONS by Story 6.34 Task 0.4 (TV11 / `2026-10-12-322` C6, C7 / `-323` R1 — ⛔ a PM moved, ⛔ a word above changed): the STATUS line gains *"AND row 6-34 is done"*; on STPL / SmartPing the text keeps `{#var#}` and the tag names are the slot TYPES; Task 1 uses 6.34's vocabulary, joins `REGISTRY_FILES` and raises the helpline warning; the Devanagari answer is recorded ONCE at Row 30 (d) and Row 27 POINTS to it (AC5, AC8, Task 5). |
 | 2026-10-10 | 2.8 | `2026-10-10-311`: PM1 — a skipped neighbour is REPLACED at send time from the same group (6.27c builds the send-time replacement; row 6-36 the filter and ranking); PM2's in-app alert is 6.27a's. |
 | 2026-10-10 | 2.7 | `2026-10-10-310`: CF1 and CF4 now ratified. |
 | 2026-10-10 | 2.6 | `2026-10-10-306`: predecessor row 6-36 (school-wise selection) added. |

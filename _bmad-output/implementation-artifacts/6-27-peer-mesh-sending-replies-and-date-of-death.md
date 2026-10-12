@@ -424,7 +424,7 @@ member's terms:
   registered typed from the start): `{member}` = `{#alphanumeric#}` (≤ 40 characters — ⚠ whether it accepts Devanagari with spaces is
   UNCONFIRMED: ask the provider at registration; a name that cannot fit ⇒ `no_target:name_too_long`, ⛔ never a truncated name — with a
   test; ⚠ an AUTHOR reading recorded at Task 0.4: it narrows `-303` Q1 A at the edge — a name the template cannot carry means that claim's
-  five are ⛔ not texted — told to the Panel as an FYI in the confirm note; the provider's answer on Devanagari is a Row 27 evidence line), `{link}` = `{#url#}`, `{helpline}` = `{#cbn#}`. ⚠ Hindi is Unicode — likely THREE segments per text (the cost the Panel saw).
+  five are ⛔ not texted — told to the Panel as an FYI in the confirm note; the provider's answer on Devanagari is a Row 27 evidence line), `{link}` = `{#url#}`, `{helpline}` = `{#cbn#}`. ⭐ (2026-10-12 annotation — Story 6.34 Task 0.4, TV1 / TV11) ⚠ on STPL / SmartPing the text keeps `{#var#}`; the tag names here are the slot TYPES — 6.34 TV1 / TV11. ⭐ (2026-10-12 annotation — Story 6.34 Task 0.4, `-322` C7) the answer is recorded ONCE at Row 30 (d) (`-322` C7); Row 27's evidence line POINTS to it. ⚠ Hindi is Unicode — likely THREE segments per text (the cost the Panel saw).
   `{member}` = the Pariwar's mode-resolved name (`-181`; `notifications.resolveMemberFacingDeceasedName`, `notifications/pool-identity.ts:141`),
   read once per child OUTSIDE the claiming transaction; erased / unresolvable / ⛔ no KYC name ⇒ `no_target:name_<reason>` (RB5). ⛔ No claim,
   money, family, nominee, claimant or reporter; ⛔ no deadline word (S4 / T6 — RB16). D33 carve-out recorded (this registry names the member
@@ -608,11 +608,11 @@ member's terms:
   `counselBasis` for both is RECORDED in code (a reviewed edit citing counsel's recorded basis — a decision id — + its test); (f) closes on that edit —
   ⭐ ⇒ the TEXTS themselves wait for it (Row 27 stays ONE conjunction; ⛔ no "skip the health questions" interim — it would show the
   neighbours a list the Panel never ruled); (g) **Closed by `2026-10-10-310`** (the confirm note CF1–CF5 answered). Evidence lines: the provider confirms that
-  `{#alphanumeric#}` carries Devanagari with spaces (PM3); the dotted-key defect (below). Note: row 6-31 built, or its absence at go-live
+  `{#alphanumeric#}` carries Devanagari with spaces (PM3); the dotted-key defect (below). ⭐ (2026-10-12 annotation — Story 6.34 Task 0.4, TV1 / TV11) ⚠ on STPL / SmartPing the text keeps `{#var#}`; the tag names here are the slot TYPES — 6.34 TV1 / TV11. ⭐ (2026-10-12 annotation — Story 6.34 Task 0.4, `-322` C7) the answer is recorded ONCE at Row 30 (d) (`-322` C7); Row 27's evidence line POINTS to it. Note: row 6-31 built, or its absence at go-live
   recorded as a decision. ⭐ Rows 6-31 and 6-34 cite `-305` §4 for the reserved numbers, so ⛔ no third story takes Row 27 / 28 / 29. **Row 28 `peer-mesh-request-hindi-human-review`**
   — the Hindi of the texts, the questionnaire's question words, the screens, AND 6.30's fallback page, not-found screen and route-shell
   placeholder. **[c]:** DLT
-  templates 13 (hi) / 14 (en) in the sheet (typed variables — 6.27c TYPES its two templates; row 6-34 VERIFIES them with every other), *"⛔ never provision the ids until Row 27 closes"*; unset ids ⇒ the sweep HOLDS
+  templates 13 (hi) / 14 (en) in the sheet (typed variables — 6.27c TYPES its two templates; row 6-34 VERIFIES them with every other) ⭐ (2026-10-12 annotation — Story 6.34 Task 0.4, TV11) 6.34 does ⛔ hand-verify them: 6.27c USES 6.34's vocabulary (`{#var#}` + `slots` from `@twt/channels` `dlt-variables.ts`), runs the shape check in its own registry test and adds its file to the gate's `REGISTRY_FILES`., *"⛔ never provision the ids until Row 27 closes"*; unset ids ⇒ the sweep HOLDS
   (RB12). ⚠ The dotted Secret Manager names (`sms.dlt.template_id.peer_mesh.…`) inherit the recorded UNVERIFIED dotted-secret-id defect
   (deferred-work *"Dotted Secret Manager names"*) — since 6.29 an `INVALID_ARGUMENT` is a final `error` + alarm that uses up the slot (F23) —
   recorded on Row 27, ⛔ not fixed here. ⚠ Row 26 (`jobs-db-role`) applies to 6.27c's sweep. ⭐ Go-live gates ⛔ never block a merge.
@@ -811,7 +811,7 @@ member's terms:
         (*"send through alert as well"* → *"In-app alert only"*); PM16 / PM25 *"Accept all as recommended"*.
   - [x] 0.4 ✅ `2026-10-10-311` (`082ab743`), committed ALONE. ONE author-commit (the next id after `-305`) recording PM1–PM25 as answered AND these author readings: the *"TWT:"* prefix
         dropped (PM3); `no_target:name_too_long` and the unconfirmed Devanagari `{#alphanumeric#}` question — a narrowing of `-303` Q1 A at
-        the edge (PM3; FYI in the confirm note; a Row 27 evidence line); *"two or more calendar days"* (PM9); the exclusions of PM1; the
+        the edge (PM3; FYI in the confirm note; a Row 27 evidence line ⭐ (2026-10-12 annotation — Story 6.34 Task 0.4, TV11 / `-322` C7: ⚠ on STPL / SmartPing the text keeps `{#var#}`; the tag names here are the slot TYPES — 6.34 TV1 / TV11; the answer is recorded ONCE at Row 30 (d) (`-322` C7); Row 27's evidence line POINTS to it)); *"two or more calendar days"* (PM9); the exclusions of PM1; the
         ANSWER WINDOW incl. `state_trustee_approved` under a live R9 routing (PM8, PM5 (iv)); ⛔ no texted neighbour ever sees a ruled
         question skipped — the sweep and the child hold while any is `'pending'` (PM16, PM23, 6.27c AC2b); every ruled question in every `peer_mesh` version from v2 onward, v1 exempt (PM23 — CF3 (a)); the hold on a `'pending'` question in BOTH the sweep and the child (PM23, 6.27c AC2b); the untexted-ping 404 and the helpline gate
         (PM11, PM12); the open-ended inspector wording and *"no FULL visit"* (PM25); PM24's state-gating coarseness; the `detail` grammar
@@ -991,6 +991,7 @@ on the story branch ([[feedback_commit_on_story_branch]]).
 ## Change Log
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-12 | 2.9a | ⭐ ANNOTATIONS by Story 6.34 Task 0.4 (TV11 / `2026-10-12-322` C6, C7 — ⛔ a PM moved, ⛔ a word above changed): on STPL / SmartPing the text keeps `{#var#}` and the tag names in PM3, Row 27 and Task 0.4 are the slot TYPES; 6.34 does ⛔ hand-verify 6.27c's texts (6.27c uses its vocabulary); the provider's answer on Devanagari / spaces in names is recorded ONCE at Row 30 (d) and Row 27's evidence line POINTS to it (a refusal goes back to the Panel — `-322` C7). |
 | 2026-10-10 | 2.9 | ⭐ PM1–PM25 COMMITTED as `2026-10-10-311` (`082ab743`): PM1 — a skipped neighbour is REPLACED from the same group (deterministic, `replaces_ping_id`); PM2 — also an IN-APP alert (the home card + the notice strip; ⛔ no push / day-one WhatsApp / second SMS); Tasks 0.3 / 0.4 done; STATUS updated. |
 | 2026-10-10 | 2.8 | `2026-10-10-310` (the Panel: CF1 A, CF2, CF3 (a)–(d), CF4 A, CF5 A): the confirm statuses updated to RULED; Row 27 (g) closed by it; the CF3 readings now ratified. |
 | 2026-10-10 | 2.7 | `2026-10-10-307`: PM1 reads row 6-36's full order — workplace colleagues → people the member named and who accepted → ⛔ no one. |

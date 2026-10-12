@@ -54,8 +54,8 @@ Re-verify (bash): `diff <(git show <orig> | git patch-id --stable | cut -d' ' -f
 for a ² pair, compare `git show <sha> -- . ':(exclude).decision-log.md' ':(exclude)friction-budget.md'
 ':(exclude)_bmad-output/implementation-artifacts/sprint-status.yaml' ':(exclude)_bmad-output/implementation-artifacts/deferred-work.md' | git patch-id --stable`
 on both, and the sorted `^[+-]` lines of `git show --format= <sha> -- <the four ledgers>` on both.
-⚠ The ORIGINAL SHAs survive only while the ref `backup/6-28-pre-rebase` does (the PR-head SHAs only while
-`origin/story/6-28-one-payment-per-death-second-approval-guard` does).
+⚠ The ORIGINAL SHAs survive only while `origin/backup/6-28-pre-rebase` does (pushed 2026-10-12, head `00214c1c`); the PR-head SHAs only
+while `origin/story/6-28-one-payment-per-death-second-approval-guard` does.
 -->
 
 <!--

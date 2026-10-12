@@ -74,3 +74,8 @@ _bmad-output/story-automator/
 # The corpus IS version-controlled: canonical home is the PRIVATE repo ulanzi1/twt-legal
 # (Decision 2026-08-28-167, satisfying 2026-08-21-144 cl.7(a)). See docs/legal-corpus-location.md.
 docs/legal/
+
+# Decision-flow presentation artefacts (derived from .decision-log.md; kept local, not committed — BigDev 2026-10-10)
+.claude/skills/decision-flow-sync/
+docs/governance/
+scripts/decision-flow/

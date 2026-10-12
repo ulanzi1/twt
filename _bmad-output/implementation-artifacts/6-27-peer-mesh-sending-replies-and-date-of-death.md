@@ -3,6 +3,27 @@ baseline_commit: 51b9000a
 ---
 
 <!--
+⭐⭐ MERGED 2026-10-12 as PR #277 (REBASE-merge, branch `story/6-27a-repin` → `main` at `9f63c537`) — THE SHA MAP for the v2.10–v2.12
+re-pin, the `2026-10-12-324` routing note and ruling. GitHub's rebase-merge rewrote the 8 branch commits (on `main` `51b9000a`; PR head =
+branch tip `cbe755be`) ONCE, although the branch already sat on `main`. The one citation of a branch SHA — `sprint-status.yaml`'s ledger
+`2026-10-12i` (`3e1463a8`; grepped on `main` 2026-10-12, ⛔ no other file cites one) — is kept AS WRITTEN (the record); this maps every
+commit to its `main` twin, PROVED ⛔ never assumed:
+  · every pair has an identical subject AND an identical `git patch-id --stable` (8 / 8);
+  · the merged tree is byte-identical to the PR head — tree `42129be0` both — which passed `ci:local` 36/36 (pre-push).
+Negative control: a WRONG pair (the 1st branch commit vs the 2nd `main` commit) DIFFERS on the patch-id.
+  · `3e1463a8` → `addb0adc`  story(6.27a v2.10): re-pinned to main 51b9000a after 6.30, 6.28 and 6.34
+  · `b41c468f` → `13c0359a`  sprint-status: ledger 2026-10-12i — 6.27a re-pinned to main 51b9000a (v2.10)
+  · `4bd23d9d` → `e12525dc`  governance(6.27a): routing note — answers while the special panel decides
+  · `eed2e580` → `ea48e88f`  governance(6.27a): routing note — before sending, two facts added at BigDev's request
+  · `645a25a4` → `451f6e5e`  governance(6.27a): routing note — 'usually within a day of filing' (unverified) replaced
+  · `7128bdd0` → `fafec432`  governance(6.27a): 2026-10-12-324 — TRUSTEE-RATIFIED (DR + KB): option A
+  · `80a271ba` → `8b9cf99f`  governance(6.27a): -324 applied — the routing note's ruling block (option A); story v2.11
+  · `cbe755be` → `9f63c537`  story(6.27a v2.12): the v2.10 / v2.11 validate applied
+Re-verify (bash): `diff <(git show <branch> | git patch-id --stable | cut -d' ' -f1) <(git show <main> | git patch-id --stable | cut -d' ' -f1)`
+— ⚠ needs the branch SHAs, which survive only while `origin/story/6-27a-repin` (or a local copy) does.
+-->
+
+<!--
 ⭐⭐ MERGED 2026-10-10 as PR #268 (REBASE-merge, branch `governance/6-27-6-30-stories` → `main` at `9990cffa`) — THE SHA MAP for every commit
 of Stories 6.27 (a–d) and 6.30's governance and story work. The 39 branch commits (from `5946e411`) were rewritten by the rebase; every
 citation in this file, the other 6.27 files, 6.30's file, `.decision-log.md` and `sprint-status.yaml` is kept AS WRITTEN (the record) and

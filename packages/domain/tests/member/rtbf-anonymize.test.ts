@@ -38,6 +38,7 @@ import {
   claimDeathCertificateReviews,
   claimWarningApprovals,
   claimGroundInspections,
+  claimPeerMeshReplyAnswers,
   claims,
   nomineeDeterminations,
 } from '../../src/schema/index.js';
@@ -118,7 +119,7 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
     return found.set;
   }
 
-  it('updates exactly the NINETEEN member-PII tables (twenty-two statements), once each except the three documented doubles', async () => {
+  it('updates exactly the TWENTY member-PII tables (twenty-three statements), once each except the three documented doubles', async () => {
     // Seven since Story 10.10's review pass added `member_moderation_actions`; EIGHT since Story
     // 10.20 added `member_moderation_grounds`. This count is the completeness check for the RTBF
     // surface — a new Tier-1 column landing in a table absent from this list is exactly how the
@@ -187,8 +188,14 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
     // holds the inspector's record of the DATE and TIME of death (Tier-1) and its blind index, on the DECEASED
     // member's claims (read first — the table has ⛔ no `deceased_member_id`), and takes ONE statement, restricted to
     // rows whose date is present (a pre-6.26 completed row fails 0147's NOT VALID CHECK on any rewrite).
+    //
+    // ⭐ MOVED AGAIN by Story 6.27a (PM17, AC8): TWENTY tables, TWENTY-THREE statements. `claim_peer_mesh_reply_answers`
+    // holds the neighbours' SENSITIVE answers about the death (the date, the cause, the illness — Tier-1) and the date's
+    // three keyed indexes, on the DECEASED member's claims (the claim ids read once for the inspection scrub above), and
+    // takes ONE statement, restricted to rows WITH a ciphertext (a non-sensitive row keeps its codes). The replies table
+    // holds ⛔ PII. Raised, never weakened.
     const { captured } = await run();
-    expect(captured).toHaveLength(22);
+    expect(captured).toHaveLength(23);
     const tables = captured.map((c) => c.table);
     for (const t of [
       memberIdentities,
@@ -210,6 +217,7 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
       claimDeathCertificateReviews,
       claimWarningApprovals,
       claimGroundInspections,
+      claimPeerMeshReplyAnswers,
     ]) {
       expect(tables).toContain(t);
     }
@@ -222,7 +230,7 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
     expect(tables.filter((t) => t === dataExports)).toHaveLength(2);
     expect(tables.filter((t) => t === dataExportDeliveryGrants)).toHaveLength(2);
     expect(tables.filter((t) => t === memberModerationAppeals)).toHaveLength(2);
-    expect(new Set(tables).size).toBe(19);
+    expect(new Set(tables).size).toBe(20); // Story 6.27a (PM17) — 19 → 20: `claim_peer_mesh_reply_answers`
   });
 
   it('⭐ Story 6.26a (GI13): the inspection\'s date and time of death → sentinel, the date\'s blind index → NULL', async () => {
@@ -253,6 +261,7 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
   it('⭐ Story 6.26a (GI13): a member with ⛔ no claims writes ⛔ no inspection statement', async () => {
     const { captured } = await run([]);
     expect(captured.map((c) => c.table)).not.toContain(claimGroundInspections);
+    expect(captured.map((c) => c.table)).not.toContain(claimPeerMeshReplyAnswers); // Story 6.27a — ⛔ claims, ⛔ answers
     expect(captured).toHaveLength(21);
   });
 
@@ -455,5 +464,20 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
 
   it('sentinel is a fixed non-PII marker (safe past the PII-scrape gate)', () => {
     expect(ANONYMIZED_SENTINEL).toBe('[anonymized]');
+  });
+
+  it('⭐ Story 6.27a (PM17, AC8): the neighbours\' SENSITIVE answers → sentinel, the date\'s window indexes → NULL — ONLY rows with a ciphertext, on the deceased\'s claims', async () => {
+    const claimIds = [randomUUID(), randomUUID()];
+    const { captured, pariwar } = await run(claimIds);
+    const found = captured.find((c) => c.table === claimPeerMeshReplyAnswers)!;
+    expect(await dec(found.set.valueCiphertext, pariwar, 'peer_mesh_answer')).toBe(ANONYMIZED_SENTINEL);
+    expect(found.set.deathDateWindowIndexes).toBeNull();
+    // ⛔ The codes, the question, the provenance and the supersession are kept.
+    expect(found.set).not.toHaveProperty('valueCodes');
+    expect(found.set).not.toHaveProperty('supersededAt');
+    const { sql: text, params } = new PgDialect().sqlToQuery(found.where as SQL);
+    expect(text).toMatch(/"claim_peer_mesh_reply_answers"\."value_ciphertext" is not null/);
+    expect(text).toMatch(/"claim_peer_mesh_reply_answers"\."claim_case_id" in \(/);
+    for (const id of claimIds) expect(params).toContain(id);
   });
 });

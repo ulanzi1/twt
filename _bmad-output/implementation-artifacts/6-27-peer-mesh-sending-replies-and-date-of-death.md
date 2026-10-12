@@ -928,7 +928,7 @@ member's terms:
       and `:177` asserts the section PRESENT — the absent-field leg is NEW; the view stays in section (c) (`SignalsPanel.tsx:316-323`), above
       6.28's `OtherClaimsForDeathNotice` (`:401`) and banner (`:406-411`) — ⛔ never touch those; a test seeding two OPEN claims of one
       deceased now raises `other_claim_for_death` (an approval then needs a reason code and a note — `verifier-console-shape.spec.ts:276-287`).
-- [ ] **Task 8 — erasure, fences, gates (AC8, AC9).** `member/anonymize.ts` (the scrub `WHERE value_ciphertext IS NOT NULL`) + the rtbf pin
+- [x] **Task 8 — erasure, fences, gates (AC8, AC9).** `member/anonymize.ts` (the scrub `WHERE value_ciphertext IS NOT NULL`) + the rtbf pin
       (TWENTY; the unit count 23; the no-claims leg 21); `FENCED_FILES` bumps + the decrypt-fence arm for
       `peer-mesh-reply.ts`; the human-actor classifications; forced pagination; ⛔ no PII in events / logs / audit (assertions).
 - [ ] **Task 9 — records and close (AC10).** 9.1 the stale comments (PM18); 9.2 deferred-work: 6.10's item updated, GI13's erasure item gains

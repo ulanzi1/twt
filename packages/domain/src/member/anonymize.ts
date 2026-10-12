@@ -54,6 +54,7 @@ import { nomineeDeterminations } from '../schema/nominee_determinations.js';
 import { claimDeathCertificateReviews } from '../schema/claim_death_certificate_reviews.js';
 import { claimWarningApprovals } from '../schema/claim_warning_approvals.js';
 import { claimGroundInspections } from '../schema/claim_ground_inspections.js';
+import { claimPeerMeshReplyAnswers } from '../schema/claim_peer_mesh_replies.js';
 import { claims } from '../schema/claims.js';
 import { memberWithdrawals } from '../schema/member_withdrawals.js';
 
@@ -94,6 +95,9 @@ const FIELD_CLASS_CLAIM_WARNING_APPROVAL = 'claim_warning_approval';
 // Story 6.26a (GI13) — the ground-inspection Tier-1 class (by-value twin of apps/api context.ts's
 // `CLAIM_GROUND_INSPECTION_FIELD_CLASS`; matches `piiColumn(1, 'ground_inspection')`).
 const FIELD_CLASS_GROUND_INSPECTION = 'ground_inspection';
+// ⭐ Story 6.27a (PM7 (a), PM17) — the neighbours' SENSITIVE answers (the date, the cause, the illness); by-value twin of
+// `apps/api/src/context.ts` `PEER_MESH_ANSWER_FIELD_CLASS` / `schema/claim_peer_mesh_replies.ts` (`piiColumn(1, 'peer_mesh_answer')`).
+const FIELD_CLASS_PEER_MESH_ANSWER = 'peer_mesh_answer';
 const FIELD_CLASS_ADDRESS = 'member_address';
 const FIELD_CLASS_MOBILE = 'member_mobile';
 // Story 10.10 — mirrors `piiColumn(1, 'member_moderation')` on member_moderation_actions.
@@ -290,6 +294,26 @@ export async function anonymizeMember(
         and(
           inArray(claimGroundInspections.claimCaseId, deceasedClaimIds),
           isNotNull(claimGroundInspections.deathDateCiphertext),
+        ),
+      );
+
+    // ── ⭐ Story 6.27a (PM17, GI13's shape) — the NEIGHBOURS' answers about the DECEASED member's death, on their claims:
+    // EVERY answer row — live AND superseded, submitted or not, the claim open or closed — whose value is a Tier-1
+    // ciphertext (the date, the cause, the illness) → sentinel, and the date's three keyed window indexes → NULL (a keyed
+    // hash of a date of death must ⛔ not outlive the erasure). ⚠ ONLY rows with a ciphertext (a `WHERE`): a non-sensitive
+    // row keeps its plaintext CODES, and 0156's exactly-one-value CHECK holds. 0156's answers trigger ADMITS this through
+    // its 0143-form erasure arm (⚠ RECORDED: it cannot tell this scrub from another writer of those two columns). The
+    // replies table holds ⛔ PII (ids only). ⚠ On erasure of a RESPONDER: whose data an answer is stays OPEN (deferred-work).
+    await client
+      .update(claimPeerMeshReplyAnswers)
+      .set({
+        valueCiphertext: await encSentinel(pariwarId, FIELD_CLASS_PEER_MESH_ANSWER, enc),
+        deathDateWindowIndexes: null,
+      })
+      .where(
+        and(
+          inArray(claimPeerMeshReplyAnswers.claimCaseId, deceasedClaimIds),
+          isNotNull(claimPeerMeshReplyAnswers.valueCiphertext),
         ),
       );
   }

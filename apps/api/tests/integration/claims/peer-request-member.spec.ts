@@ -205,6 +205,14 @@ describe.skipIf(!hasDatabase)('Story 6.27a — the neighbours\' member routes (:
     const detail = await call('GET', `${base(p)}/${r.pingId}`, tok);
     const answers = detail.body['answers'] as { questionKey: string; value: Json }[];
     expect(answers.find((a) => a.questionKey === 'death_date')!.value).toEqual({ date: '2026-10-01' });
+    // ⛔ PII escapes (AC9): the audit rows carry the claim and a HASH only; the ONE event carries the 6.6 payload only.
+    const audits = await t.pool.query(`SELECT action, resource_locator, request_payload_hash FROM audit_log_entries WHERE resource_locator = $1`, [`claim:${String(r.cid).toLowerCase()}`]);
+    expect(audits.rows.map((a) => a.action)).toContain('claim.peer_answer_saved');
+    expect(JSON.stringify(audits.rows)).not.toContain('2026-10-01');
+    const events = await t.pool.query(`SELECT event_type, payload FROM events_log WHERE stream_id = $1 AND event_type = 'claim.peer_mesh_responded'`, [r.cid]);
+    expect(events.rows).toHaveLength(1);
+    expect(Object.keys(events.rows[0]!.payload as object).sort()).toEqual(['actor', 'from_state', 'responder_member_id', 'response', 'to_state', 'trigger']);
+    expect(JSON.stringify(events.rows)).not.toContain('2026-10-01');
     const bad = await put(p, tok, r.pingId, 'death_cause', { codes: ['old_age'] });
     expect(bad.status).toBe(422);
     expect((bad.body['error'] as Json)['code']).toBe('peer_request.invalid_answer');

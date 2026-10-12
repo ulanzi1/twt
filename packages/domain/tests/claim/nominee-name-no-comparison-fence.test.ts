@@ -122,6 +122,19 @@ const FENCED_FILES = [
   // handling (blank / validity checks) stays in `apps/jobs`, so ⛔ a `toLowerCase() ===` can ever appear here.
   'packages/domain/src/claim/suspicion-staff-email.ts',
   'packages/domain/src/claim/staff-email-identity-read.ts',
+  // ⭐ STORY 6.27a (AC9; `2026-10-10-311` PM7, PM8, PM23) — the neighbours' answers: the reply WRITER and its reads (it
+  // carries ciphertext AS STORED and values the HANDLER decrypted — ⛔ it decrypts nothing: ⛔ KMS under a lock, Trap 9),
+  // the answer window (ONE predicate), and the pure questionnaire engine (6.27b's warning SQL reads its key list; ⛔ a
+  // comparison of names anywhere — a neighbour's NAME is shown to staff, ⛔ never compared).
+  'packages/domain/src/claim/peer-mesh-reply.ts',
+  'packages/domain/src/claim/answer-window.ts',
+  'packages/domain/src/questionnaires/index.ts',
+  'packages/domain/src/questionnaires/types.ts',
+  'packages/domain/src/questionnaires/keys.ts',
+  'packages/domain/src/questionnaires/validator.ts',
+  'packages/domain/src/questionnaires/peer-mesh.ts',
+  'packages/domain/src/questionnaires/registry.ts',
+  'packages/domain/src/questionnaires/answers.ts',
 ] as const;
 
 /**
@@ -171,7 +184,7 @@ describe('⛔ the no-comparison fence (Trap 1, `-226` cl.5)', () => {
     // Code review patch (2026-10-02, corrected 2026-10-03): exact count, ⛔ a floor — AND every entry unique. The
     // count alone can't catch a duplicate standing in for a dropped file (one of each keeps the length at 34).
     expect(new Set(FENCED_FILES).size, 'a FENCED_FILES entry is duplicated').toBe(FENCED_FILES.length);
-    expect(FENCED_FILES.length).toBe(41); // Story 6.25 FROM 39 (+2 — the staff email's domain module and its identity-read sibling, RE11 / ADR-0040); Story 6.24b FROM 38 (+1 — the suspicion notices' domain module, RB8); Story 6.24a FROM 36 (+2 — the suspicion refusal's read and its closure writer); Story 6.23a FROM 34 (+2 — the warnings module and the late-reason writer); Story 6.19c raised it FROM 26 (+1 domain module), then 27 → 32 (the highlight's read + its four wire / route surfaces), then 32 → 34 (its two admin render sites); Story 6.21a FROM 23 (+3 modules); Story 6.20 FROM 16 (+7)
+    expect(FENCED_FILES.length).toBe(50); // Story 6.27a FROM 41 (+9 — the reply writer, the answer window and the seven questionnaire-engine files); Story 6.25 FROM 39 (+2 — the staff email's domain module and its identity-read sibling, RE11 / ADR-0040); Story 6.24b FROM 38 (+1 — the suspicion notices' domain module, RB8); Story 6.24a FROM 36 (+2 — the suspicion refusal's read and its closure writer); Story 6.23a FROM 34 (+2 — the warnings module and the late-reason writer); Story 6.19c raised it FROM 26 (+1 domain module), then 27 → 32 (the highlight's read + its four wire / route surfaces), then 32 → 34 (its two admin render sites); Story 6.21a FROM 23 (+3 modules); Story 6.20 FROM 16 (+7)
   });
 
   it('⭐⭐ POSITIVE CONTROL — the scanner actually FIRES on a planted violation of every pattern', () => {
@@ -352,6 +365,24 @@ describe('⛔ the no-comparison fence (Trap 1, `-226` cl.5)', () => {
         expect(code.includes(forbidden), `${f} reached for '${forbidden}'`).toBe(false);
       }
     }
+  });
+
+  it('⛔⛔ Story 6.27a (Trap 9, AC9) — the reply writer, the answer window and the questionnaire engine ⛔ never decrypt (the HANDLER does, before the locks)', () => {
+    for (const f of [
+      'packages/domain/src/claim/peer-mesh-reply.ts',
+      'packages/domain/src/claim/answer-window.ts',
+      'packages/domain/src/questionnaires/answers.ts',
+      'packages/domain/src/questionnaires/registry.ts',
+      'packages/domain/src/questionnaires/validator.ts',
+    ]) {
+      const code = stripComments(read(f));
+      // `decryptedLive` (values the handler decrypted) is the one legitimate `decrypt…` token — every DECRYPT CALL is refused.
+      for (const forbidden of [/decryptTier1|decryptKycField|decryptMobile|decryptGroundInspection|decryptPeerAnswer/, /from '\.\.\/encryption/, /\bkms\b/i]) {
+        expect(forbidden.test(code), `${f} reached for ${String(forbidden)}`).toBe(false);
+      }
+    }
+    // ⭐ TEETH — the same scan FIRES on the handler-side core, which decrypts by design (before the locks).
+    expect(/decryptTier1|decryptKycField|decryptMobile|decryptGroundInspection|decryptPeerAnswer/.test(stripComments(read('apps/api/src/modules/claims/peer-request-core.ts')))).toBe(true);
   });
 
   it('⛔ the APPROVAL GATES decide on recorded verdicts and timestamps — never on names', () => {

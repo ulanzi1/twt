@@ -1,15 +1,20 @@
 # Trustee Panel routing note — 2026-10-12 — Story 6.28: when helpline staff say "the family may file again"
 
-> **Status: WRITTEN, ⛔ NOT SENT.** Owed by `2026-10-12-320` (open follow-up 1). A confirm of one sentence in your
-> `2026-10-11-318` ruling (Q3 A), ⛔ not a new policy question. ⛔ Nothing is blocked while it is open.
+> **Status: SENT and RULED — `2026-10-12-321` (Trustee-ratified, DR + KB): option A.** Owed by `2026-10-12-320` (open follow-up 1,
+> now DISCHARGED). A confirm of one sentence in your `2026-10-11-318` ruling (Q3 A), ⛔ not a new policy question.
 
 ---
 
-> ## ⏳ AWAITING PANEL RULING
+> ## ✅ PANEL RULING — `2026-10-12-321` (Trustee-ratified, 2026-10-12)
 >
-> ⛔ **Nothing is recorded here yet.** When the Panel rules, transcribe it into this block **and** into
-> `.decision-log.md` as a new decision id. ⭐ Everything below is then kept **unedited** as the question
-> **as it was put** ([[feedback_supersede_never_reinterpret]]).
+> *"by DR and KB
+> option A"* — relayed by BigDev in session.
+>
+> ⭐ **A, as built:** staff see *"Closed — another claim for this death goes ahead"* while any other claim for the death is still in
+> progress; *"… the family may file again"* only once every other claim for the death is refused or closed. ⛔ No code is owed.
+> ⛔ **Not covered:** the "holding claim CLOSED, nothing in progress" case (E2 — ⛔ not asked; stays the author's reading); the
+> convergence rule; Q3 A's other halves. ⭐ Everything below is kept **unedited** as the question **as it was put**
+> ([[feedback_supersede_never_reinterpret]]).
 
 ---
 

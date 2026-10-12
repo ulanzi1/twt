@@ -46,7 +46,7 @@ holds after the month's vote for an ordinary claim, but ⛔ not for a claim the 
 
 | | Option | What changes for a person | Cost |
 |---|---|---|---|
-| **A** | **Answers are taken until the special panel decides** (what we committed on 2026-10-10). | A neighbour who opens the link while the special panel has the claim can still answer, and a neighbour not yet texted may still be texted. A *"they have not died"* or a differing date then makes the special panel's approval wait until the District Admin records a reason and a note. | A family whose claim already passed the month's vote can wait a little longer — only when a Pariwar Admin has sent it to the special panel AND a neighbour answers in that time. It reads *"the final approval"* in your 2026-10-10 ruling as the special panel's, for these claims. |
+| **A** | **Answers are taken until the special panel decides** (what we committed on 2026-10-10). | A neighbour who opens the link while the special panel has the claim — perhaps a month or two — can still answer, and a neighbour not yet texted may still be texted. A *"they have not died"* or a differing date then makes the special panel's approval wait until the District Admin records a reason and a note. | A family whose claim already passed the month's vote can wait a little longer — only when a Pariwar Admin has sent it to the special panel AND a neighbour answers in that time. It reads *"the final approval"* in your 2026-10-10 ruling as the special panel's, for these claims. |
 | **B** | **Answers stop at the month's vote**, special panel or not. | Once the month's vote passes, a neighbour who opens the link is thanked and told the request is no longer open; ⛔ no new texts. | The special panel — sent the claim because someone had a doubt — never sees an answer that arrives then, even a true *"they have not died"*. And it differs from the ground inspection, which may still be done while the special panel has a claim. |
 | **C** | **Answers are taken and shown to the special panel, but nothing waits.** | The special panel sees the answer; the family's claim never waits on it. | A second rule for one kind of warning — the cost you turned down on 2026-10-10 (*"one rule for every warning"*). The District Admin, who knows the area and can phone the neighbour, may never see it. |
 
@@ -63,6 +63,14 @@ has looked. ⚠ If you read *"the final approval"* as the month's vote in every 
 - **Blocked:** ⛔ nothing except this one condition. Everything else in Story 6.27a can be built; the condition is one shared rule in the
   system, so either answer is cheap to apply.
 - **If nothing is decided:** the system is built as **A** (our 2026-10-10 reading), recorded as ⛔ not ratified, and this note stays open.
+- **How late such an answer would be:** the five neighbours are texted as soon as the claim's documents pass their first check, usually
+  within a day of filing, and are asked to answer within 72 hours (one WhatsApp reminder at 48 hours). By the month's vote the claim has
+  already passed the District Admin's approval and the ground inspection, so an answer arriving while the special panel decides would be
+  **weeks** after the text — rare.
+- **How long it would stay open under A:** the special panel has ⛔ no time limit in the system — it decides when enough of its members
+  have voted. BigDev's estimate is **a month or two** (an estimate, ⛔ not measured — the Trust is ⛔ not yet live). Under **A**, answers
+  stay open for that whole time, and a late *"they have not died"* can make the family wait a little longer still, until the District
+  Admin writes a reason and a note.
 
 ---
 
@@ -72,9 +80,11 @@ has looked. ⚠ If you read *"the final approval"* as the month's vote in every 
   (*"⛔ no answer is taken once the final approval has been given (after that, nothing would read it)"*) and did ⛔ not ask about the
   special panel. That note also named *"the State Trustee, R9 panel"* as the later approvers; we corrected that on 2026-10-10 — both
   votes are cast by Pariwar Admins acting as Trustee-Lite (`-305` §2 (c)).
-- **Corrected in this note:** ⛔ nothing yet. The question was found on 2026-10-12 by a read-only check of Story 6.27a against the code
+- **Corrected in this note:** before sending, two facts were added to *"What is at stake"* at BigDev's request (2026-10-12): how late
+  such an answer would be, and how long the special panel takes (BigDev's estimate, a month or two). The question was found on 2026-10-12 by a read-only check of Story 6.27a against the code
   after Story 6.28 shipped, and confirmed by the author against your rulings' exact words (E1).
-- **Still uncertain:** how often a Pariwar Admin sends a claim to the special panel AFTER the month's vote — ⛔ no live data exists. And
+- **Still uncertain:** how often a Pariwar Admin sends a claim to the special panel AFTER the month's vote, and how long the special panel
+  really takes — ⛔ no live data exists for either (the *"month or two"* is BigDev's estimate). And
   whether, when you ruled on 2026-10-10, you meant *"final approval"* to be the special panel's for a claim it has; ⛔ nothing on the
   record says either way.
 
@@ -149,6 +159,10 @@ A **matches** it. Option B **matches** `-318`'s reading and narrows nothing rati
   `packages/domain/src/claim/one-payment-per-death.ts:31`).
 - The ground inspection's window already includes this case (`isClaimInGroundInspectionWindow`,
   `packages/domain/src/claim/ground-inspection-persist.ts:267-276`). 6.27a PM8 plans to reuse that ONE predicate as the answer window.
+- The special panel has ⛔ no deadline: a session is opened, members vote, and it finalizes once the quorum is met — ⛔ no timeout or
+  reminder (`packages/domain/src/claim/r9-voting-persist.ts:649-650`, `R9QuorumNotMetError`). The neighbours are selected when the claim
+  leaves the first document check (`apps/jobs/src/claim-peer-mesh.ts`, header) with a 72-hour window (`apps/jobs/src/boot.ts:172-176`; PRD
+  FR-39).
 - ⛔ No 6.27 code exists; ⛔ nothing is in production ([[project_not_in_production_merge_is_not_golive]]).
 
 ## E4 — Commands to re-verify every claim

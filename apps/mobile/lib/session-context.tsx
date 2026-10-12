@@ -22,6 +22,8 @@ import {
   type TerminationDuringRefresh,
 } from './session'
 import { clearAllMemberDrafts } from '../components/life-events/draft-store'
+import { clearPeerRequestsCache } from '../components/peer-request/peer-request-cache'
+import { queryClient } from './query-client'
 
 interface SessionContextValue {
   session: StoredSession | null
@@ -59,6 +61,7 @@ export function SessionProvider({ children }: { children: ReactNode }): ReactNod
 
   useEffect(() => {
     setTerminatedDuringRefreshHandler((notice) => {
+      clearPeerRequestsCache(queryClient)
       // The SecureStore side is already cleared by `refreshAccessToken`; this is what makes that
       // clear REACTIVE — without it `session` stays stale in context and the root guard never fires.
       setSession(null)
@@ -68,7 +71,10 @@ export function SessionProvider({ children }: { children: ReactNode }): ReactNod
     })
     // Story 6.30 AL6 (i) — every refresh refused with a 4xx makes the SecureStore clear reactive too, so the
     // guard sends the member to login FROM the link's screen (and records it as the target).
-    setRefreshRejectedHandler(() => setSession(null))
+    setRefreshRejectedHandler(() => {
+      clearPeerRequestsCache(queryClient)
+      setSession(null)
+    })
     return () => {
       setTerminatedDuringRefreshHandler(null)
       setRefreshRejectedHandler(null)
@@ -76,6 +82,7 @@ export function SessionProvider({ children }: { children: ReactNode }): ReactNod
   }, [])
 
   async function signIn(full: MemberFullSession): Promise<void> {
+    clearPeerRequestsCache(queryClient)
     const s: StoredSession = {
       accessToken: full.accessToken,
       accessTokenExpiresAt: full.accessTokenExpiresAt,
@@ -88,6 +95,7 @@ export function SessionProvider({ children }: { children: ReactNode }): ReactNod
   }
 
   async function signOut(): Promise<void> {
+    clearPeerRequestsCache(queryClient)
     // Purge member-scoped drafts before clearing the session so the memberId is still available.
     if (session?.memberId) clearAllMemberDrafts(session.memberId)
     try {

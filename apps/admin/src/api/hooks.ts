@@ -2329,13 +2329,20 @@ export function useHelplinePeerRequests(pariwarId: string, memberId: string | nu
   });
 }
 
-/** Record ONE answer; the list is re-read on every settle (a changed condition drops dependants). */
+/** Re-read acknowledged saves. Keep rejected drafts mounted for retry / step-up recovery. */
 export function useHelplineSavePeerAnswer(pariwarId: string, memberId: string | null) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (input: { pingId: string; questionKey: string; value: import('@twt/contracts').PeerRequestAnswerValue }) =>
       api.saveHelplinePeerAnswer(pariwarId, input.pingId, input.questionKey, input.value),
-    onSettled: () => void qc.invalidateQueries({ queryKey: helplinePeerRequestsKey(pariwarId, memberId ?? '') }),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: helplinePeerRequestsKey(pariwarId, memberId ?? '') }),
+    onError: (error) => {
+      // Terminal window/ownership/access changes must refresh and hide the obsolete request.
+      if (error instanceof api.ApiError && (
+        error.status === 404 || error.status === 409 || error.status === 401 ||
+        (error.status === 403 && error.code !== 'auth.step_up_required')
+      )) void qc.invalidateQueries({ queryKey: helplinePeerRequestsKey(pariwarId, memberId ?? '') });
+    },
   });
 }
 

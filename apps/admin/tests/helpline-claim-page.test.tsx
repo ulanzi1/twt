@@ -60,6 +60,8 @@ vi.mock('../src/api/client.js', async () => {
     // The step-up round trip — only the lock/unlock tests (code review 2026-09-23) drive it.
     requestStepUp: vi.fn(async () => ({})),
     verifyStepUp: vi.fn(async () => ({})),
+    getHelplinePeerRequests: vi.fn(async () => ({ items: [] })),
+    saveHelplinePeerAnswer: vi.fn(async () => ({ answers: [] })),
   };
 });
 
@@ -71,6 +73,32 @@ async function searchAndGetBothResults(user: ReturnType<typeof userEvent.setup>)
 }
 
 describe('<HelplineClaimPage> — selection-reset safety gate (Review Finding)', () => {
+  it('keeps the caller and identity confirmation while peer answers are queued', async () => {
+    const answers = [{ questionKey: 'has_died', value: { codes: ['died'] }, savedAt: 'now' }];
+    const request = { pingId: '44444444-4444-4444-4444-444444444444', memberName: 'A member', answers, submitted: false, questionnaire: {
+      versionId: 'v2', pages: [{ questions: [{ key: 'has_died', kind: 'single' as const, words: { en: 'Has the member died?', hi: '' }, options: ['died', 'not_died'].map(code => ({ code, words: { en: code, hi: '' }, exclusive: false })), optional: false, showIf: null }] }], closingNote: { en: 'Note', hi: '' }, thankYou: { en: 'Thanks', hi: '' },
+    } };
+    vi.mocked(api.getHelplinePeerRequests).mockResolvedValue({ items: [request] });
+    let finish!: (value: { answers: typeof answers }) => void;
+    vi.mocked(api.saveHelplinePeerAnswer).mockReturnValueOnce(new Promise(resolve => { finish = resolve; }));
+    const user = userEvent.setup();
+    try {
+      renderWithClient(<HelplineClaimPage pariwarId="99999999-9999-9999-9999-999999999999" />);
+      await searchAndGetBothResults(user);
+      await user.click(screen.getByTestId(`member-row-${MEMBER_A.memberId}`));
+      await user.click(screen.getByTestId('readback-confirm-identity'));
+      await user.click(await screen.findByRole('button', { name: 'not_died' }));
+      await user.click(screen.getByTestId(`member-row-${MEMBER_B.memberId}`));
+      expect(screen.getByText(/Please finish saving this caller/)).toHaveAttribute('role', 'alert');
+      expect(screen.getByTestId('readback-confirm-identity')).toBeChecked();
+      await user.click(screen.getByTestId('readback-confirm-identity'));
+      expect(screen.getByTestId('readback-confirm-identity')).toBeChecked();
+      await act(async () => finish({ answers: [{ ...answers[0]!, value: { codes: ['not_died'] } }] }));
+      await waitFor(() => expect(screen.queryByText(/Please finish saving this caller/)).not.toBeInTheDocument());
+      await user.click(screen.getByTestId(`member-row-${MEMBER_B.memberId}`));
+      expect(screen.getByTestId('readback-confirm-identity')).not.toBeChecked();
+    } finally { vi.mocked(api.getHelplinePeerRequests).mockResolvedValue({ items: [] }); }
+  });
   it('does NOT carry an identity confirmation over when the operator switches to a different member', async () => {
     const user = userEvent.setup();
     renderWithClient(<HelplineClaimPage pariwarId="99999999-9999-9999-9999-999999999999" />);

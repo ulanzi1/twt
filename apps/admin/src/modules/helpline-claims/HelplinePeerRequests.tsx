@@ -11,14 +11,16 @@
 // ⚠ Per-row state comes from each call's OWN promise (`mutateAsync`) — TanStack's per-`mutate` callbacks fire for the LATEST
 // call only ([[project_tanstack_mutate_callbacks_latest_only]]).
 
-import type { PeerRequestAnswerValue, PeerRequestDetailResponse, PeerRequestQuestion } from '@twt/contracts';
-import { useState, type ReactElement } from 'react';
+import type { PeerRequestAnswerValue, PeerRequestDetailResponse, PeerRequestLiveAnswer, PeerRequestQuestion } from '@twt/contracts';
+import { PeerAnswerEditor } from '@twt/api-client';
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type ReactElement } from 'react';
+import { useRouter } from '@tanstack/react-router';
 
 import { ApiError } from '../../api/client.js';
 import { useHelplinePeerRequests, useHelplineSavePeerAnswer, useHelplineSubmitPeerReply } from '../../api/hooks.js';
 
 /** Is `q` shown, given the caller's live answers? (The server re-checks every save.) */
-export function isShownFor(q: PeerRequestQuestion, answers: ReadonlyMap<string, PeerRequestAnswerValue>): boolean {
+export function isShownFor(q: PeerRequestQuestion, answers: ReadonlyMap<string, PeerRequestLiveAnswer['value']>): boolean {
   if (q.showIf === null) return true;
   const parent = answers.get(q.showIf.key);
   return parent !== undefined && 'codes' in parent && parent.codes.some((c) => q.showIf!.anyOf.includes(c));
@@ -39,17 +41,31 @@ export function HelplinePeerRequests({
   memberId,
   identityConfirmed,
   onStepUpRequired,
+  onBusyChange,
 }: {
   pariwarId: string;
   /** The CALLER the operator selected on this page (a neighbour), or `null`. */
   memberId: string | null;
   identityConfirmed: boolean;
   onStepUpRequired: () => void;
+  onBusyChange?: (busy: boolean) => void;
 }): ReactElement | null {
   const ready = memberId !== null && identityConfirmed;
   const listQ = useHelplinePeerRequests(pariwarId, memberId, ready);
+  const dirtyReplies = useRef(new Set<string>());
+  const busyCallback = useRef(onBusyChange);
+  busyCallback.current = onBusyChange;
+  const reportBusy = useCallback((pingId: string, busy: boolean) => {
+    if (busy) dirtyReplies.current.add(pingId);
+    else dirtyReplies.current.delete(pingId);
+    busyCallback.current?.(dirtyReplies.current.size > 0);
+  }, []);
   if (!ready) return null;
-  if (listQ.isError) {
+  // A failed background refresh must not dispose already loaded editors and their queued choices.
+  // Authentication / permission refusals still replace the sensitive surface.
+  const retainLoaded = listQ.data !== undefined && (!(listQ.error instanceof ApiError) ||
+    listQ.error.status >= 500 || listQ.error.status === 429 || listQ.error.code === 'auth.step_up_required');
+  if (listQ.isError && !retainLoaded) {
     if (listQ.error instanceof ApiError && listQ.error.code === 'auth.step_up_required') {
       return (
         <section aria-label="Requests to confirm a death" className="rounded border p-4">
@@ -75,12 +91,16 @@ export function HelplinePeerRequests({
   return (
     <section aria-label="Requests to confirm a death" className="flex flex-col gap-4 rounded border p-4">
       <h2 className="text-sm font-semibold">Requests to confirm a death</h2>
+      {listQ.isError && <p role="alert" className="text-sm">The requests could not be loaded just now.</p>}
+      {listQ.isError && listQ.error instanceof ApiError && listQ.error.code === 'auth.step_up_required' && (
+        <button type="button" className="rounded border px-3 py-1 text-sm" onClick={onStepUpRequired}>Confirm with a code</button>
+      )}
       <p className="text-xs opacity-70">
         Read each question to the caller and record their answer. Every answer is saved as you go. Only staff who check the
         claim see these answers — never the family.
       </p>
       {items.map((item) => (
-        <PeerRequestCard key={item.pingId} pariwarId={pariwarId} memberId={memberId} item={item} onStepUpRequired={onStepUpRequired} />
+        <PeerRequestCard key={item.pingId} pariwarId={pariwarId} memberId={memberId} item={item} onStepUpRequired={onStepUpRequired} onBusyChange={reportBusy} />
       ))}
     </section>
   );
@@ -91,27 +111,79 @@ function PeerRequestCard({
   memberId,
   item,
   onStepUpRequired,
+  onBusyChange,
 }: {
   pariwarId: string;
   memberId: string | null;
   item: PeerRequestDetailResponse;
   onStepUpRequired: () => void;
+  onBusyChange: (pingId: string, busy: boolean) => void;
 }): ReactElement {
   const save = useHelplineSavePeerAnswer(pariwarId, memberId);
   const submit = useHelplineSubmitPeerReply(pariwarId, memberId);
   const [status, setStatus] = useState<string | null>(null);
+  const [locked, setLocked] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const submitting = useRef(false);
+  const router = useRouter({ warn: false });
   const [dates, setDates] = useState<Record<string, string>>({});
-  const answers = new Map(item.answers.map((a) => [a.questionKey, a.value] as const));
+  const saveRef = useRef(save.mutateAsync);
+  saveRef.current = save.mutateAsync;
+  const stepUpRef = useRef(onStepUpRequired);
+  stepUpRef.current = onStepUpRequired;
+  const initialAnswers = useRef(item.answers);
+  const [editor] = useState(() => new PeerAnswerEditor(item.answers, {
+    save: (task) => saveRef.current({ pingId: item.pingId, questionKey: task.questionKey, value: task.value }),
+    newKey: () => crypto.randomUUID(),
+    shouldRetry: () => false,
+    wait: () => Promise.resolve(),
+    questions: item.questionnaire.pages.flatMap((p) => p.questions),
+  }));
+  const state = useSyncExternalStore(editor.subscribe, editor.getSnapshot);
+  const answers = state.answers;
+  useEffect(() => {
+    editor.activate(initialAnswers.current);
+    return () => editor.dispose();
+  }, [editor]);
+  useEffect(() => editor.replaceFromServer(item.answers), [editor, item.answers]);
+  useEffect(() => {
+    const notify = () => {
+      const current = editor.getSnapshot();
+      onBusyChange(item.pingId, submitting.current || current.pending > 0 || current.failed.size > 0);
+    };
+    notify();
+    const unsubscribe = editor.subscribe(notify);
+    return () => { unsubscribe(); onBusyChange(item.pingId, false); };
+  }, [editor, item.pingId, onBusyChange]);
+  useEffect(() => {
+    if (!router) return;
+    const busy = () => {
+      const current = editor.getSnapshot();
+      return submitting.current || current.pending > 0 || current.failed.size > 0;
+    };
+    return router.history.block({
+      blockerFn: ({ nextLocation }) => {
+        // Authentication redirects must clear the sensitive screen even if a save is unresolved.
+        if (nextLocation.pathname === '/login' || !busy()) return false;
+        setStatus('Please finish saving these answers before leaving.');
+        return true;
+      },
+      enableBeforeUnload: busy,
+    });
+  }, [editor, router]);
+  useEffect(() => {
+    if (state.error === null) {
+      if (!locked) setStatus(null);
+      return;
+    }
+    if (state.error instanceof ApiError && state.error.code === 'auth.step_up_required') stepUpRef.current();
+    setStatus(failureText(state.error));
+  }, [state.error, state.pending, locked]);
 
   const record = (questionKey: string, value: PeerRequestAnswerValue): void => {
-    setStatus('Saving…');
-    void save
-      .mutateAsync({ pingId: item.pingId, questionKey, value })
-      .then(() => setStatus('Saved'))
-      .catch((err: unknown) => {
-        if (err instanceof ApiError && err.code === 'auth.step_up_required') onStepUpRequired();
-        setStatus(failureText(err));
-      });
+    if (locked || submitting.current) return;
+    setStatus(null);
+    editor.save(questionKey, value);
   };
 
   const questions = item.questionnaire.pages.flatMap((p) => p.questions).filter((q) => isShownFor(q, answers));
@@ -125,9 +197,11 @@ function PeerRequestCard({
           return (
             <fieldset key={q.key} className="flex flex-col gap-1">
               <legend className="text-sm font-medium">{q.words.en}</legend>
+              {current !== undefined && 'unavailable' in current && <p role="alert">Could not be shown just now.</p>}
               {q.kind === 'date' && (
                 <div className="flex gap-2">
                   <input
+                    disabled={locked || isSubmitting}
                     type="date"
                     aria-label={q.words.en}
                     className="rounded border px-2 py-1 text-sm"
@@ -137,8 +211,11 @@ function PeerRequestCard({
                   <button
                     type="button"
                     className="rounded border px-2 py-1 text-sm"
-                    disabled={!dates[q.key]}
-                    onClick={() => record(q.key, { date: dates[q.key]! })}
+                    disabled={locked || isSubmitting || !dates[q.key]}
+                    onClick={() => {
+                      record(q.key, { date: dates[q.key]! });
+                      setDates(d => { const next = { ...d }; delete next[q.key]; return next; });
+                    }}
                   >
                     Save the date
                   </button>
@@ -151,15 +228,18 @@ function PeerRequestCard({
                     <button
                       key={o.code}
                       type="button"
+                      disabled={locked || isSubmitting}
                       aria-pressed={selected}
                       className={`rounded border px-2 py-1 text-sm ${selected ? 'font-semibold' : ''}`}
                       onClick={() => {
                         if (q.kind !== 'multi') return record(q.key, { codes: [o.code] });
+                        const latest = editor.getSnapshot().answers.get(q.key);
+                        const liveCodes = latest !== undefined && 'codes' in latest ? latest.codes : [];
                         const next = o.exclusive
                           ? [o.code]
-                          : selected
-                            ? codes.filter((c) => c !== o.code)
-                            : [...codes.filter((c) => !q.options.find((x) => x.code === c)?.exclusive), o.code];
+                          : liveCodes.includes(o.code)
+                            ? liveCodes.filter((c) => c !== o.code)
+                            : [...liveCodes.filter((c) => !q.options.find((x) => x.code === c)?.exclusive), o.code];
                         if (next.length > 0) record(q.key, { codes: next });
                       }}
                     >
@@ -177,24 +257,34 @@ function PeerRequestCard({
         <button
           type="button"
           className="rounded border px-3 py-1 text-sm"
-          disabled={!answers.has('has_died') || submit.isPending}
-          onClick={() =>
+          disabled={locked || !answers.has('has_died') || state.pending > 0 || state.failed.size > 0 || isSubmitting}
+          onClick={() => {
+            const current = editor.getSnapshot();
+            if (current.pending > 0 || current.failed.size > 0 || locked || submitting.current) return;
+            submitting.current = true;
+            setIsSubmitting(true);
+            onBusyChange(item.pingId, true);
             void submit
               .mutateAsync(item.pingId)
-              .then(() => setStatus('Sent — the answers are locked.'))
+              .then(() => { setLocked(true); setStatus('Sent — the answers are locked.'); })
               .catch((err: unknown) => {
                 if (err instanceof ApiError && err.code === 'auth.step_up_required') onStepUpRequired();
                 setStatus(failureText(err));
               })
-          }
+              .finally(() => {
+                submitting.current = false;
+                setIsSubmitting(false);
+                const current = editor.getSnapshot();
+                onBusyChange(item.pingId, current.pending > 0 || current.failed.size > 0);
+              });
+          }}
         >
           Submit
         </button>
-        {status !== null && (
-          <span role="status" className="text-sm">
-            {status}
-          </span>
-        )}
+        <span role="status" className="text-sm">
+          {status ?? (state.pending > 0 ? 'Saving…' : state.saveLine === 'saved' ? 'Saved' : state.saveLine === 'failed' ? 'Not saved — please try again.' : '')}
+        </span>
+        {state.failed.size > 0 && <button type="button" onClick={() => { setStatus(null); editor.retryFailed(); }}>Retry saving</button>}
       </div>
     </article>
   );

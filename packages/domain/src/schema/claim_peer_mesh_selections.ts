@@ -123,6 +123,8 @@ export const claimPeerMeshSelections = pgTable(
   (t) => [
     // One selection per claim — the idempotency anchor (a re-run finds the existing row).
     unique('claim_peer_mesh_selections_claim_case_id_uq').on(t.claimCaseId),
+    unique('claim_peer_mesh_selections_tenant_selection_uq').on(t.pariwarId, t.selectionId),
+    unique('claim_peer_mesh_selections_tenant_selection_claim_uq').on(t.pariwarId, t.selectionId, t.claimCaseId),
     // Per-tenant scans / RLS-aware planner hint.
     index('claim_peer_mesh_selections_pariwar_id_idx').on(t.pariwarId),
     // "5 nearest" is a hard invariant (AC1/AC3) — bound it at the schema layer, not just in

@@ -6,6 +6,7 @@ import { CurrentToast } from './CurrentToast'
 import { config } from '../tamagui.config'
 import { persister, queryClient } from '../lib/query-client'
 import { removeRetiredPoolContributorsCache } from './contributor-list/pool-contributors-cache'
+import { PEER_REQUEST_DEHYDRATE_OPTIONS, restorePeerRequestCache } from './peer-request/peer-request-cache'
 
 export function Provider({
   children,
@@ -21,7 +22,10 @@ export function Provider({
       // erased). A new query key alone only HIDES it: every save re-persists the whole client, so on an
       // active device it would stay in MMKV indefinitely. ⚠ `onSuccess` runs BEFORE the save subscription
       // starts, so this removes it in memory and the NEXT whole-client save writes MMKV without it.
-      onSuccess={() => removeRetiredPoolContributorsCache(queryClient)}
+      onSuccess={async () => {
+        removeRetiredPoolContributorsCache(queryClient)
+        await restorePeerRequestCache(queryClient, persister)
+      }}
       persistOptions={{
         persister,
         maxAge: 1000 * 60 * 60 * 24 * 7,
@@ -38,10 +42,7 @@ export function Provider({
         // persisted-query-cache item (member keys are ⛔ not scoped by `memberId`/`pariwarId` and ⛔ no
         // sign-out path purges the cache) — ⛔ do ⛔ not read it as doing so
         // ([[feedback_closure_language_precision]]).
-        dehydrateOptions: {
-          shouldDehydrateQuery: (query) =>
-            query.state.status === 'success' && query.options.gcTime !== 0,
-        },
+        dehydrateOptions: PEER_REQUEST_DEHYDRATE_OPTIONS,
       }}
     >
       <TamaguiProvider

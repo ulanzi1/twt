@@ -17,7 +17,7 @@ export type AnswerMap = ReadonlyMap<string, PeerRequestAnswerValue>
 
 /** The live answers as a map by question key. */
 export function answersToMap(answers: PeerRequestDetailResponse['answers']): Map<string, PeerRequestAnswerValue> {
-  return new Map(answers.map((a) => [a.questionKey, a.value]))
+  return new Map(answers.flatMap((a) => 'unavailable' in a.value ? [] : [[a.questionKey, a.value] as const]))
 }
 
 /** Is `q` shown, given the answers on screen? (The server re-checks every save.) */
@@ -86,7 +86,7 @@ export function todayInIst(now: Date): string {
 
 // ── the save line ──────────────────────────────────────────────────────────────────────────────────────────────────
 
-export type SaveLine = 'idle' | 'saving' | 'saved' | 'retrying'
+export type SaveLine = 'idle' | 'saving' | 'saved' | 'retrying' | 'failed'
 
 /** What a failed call means for the screen. `retry` keeps the answer on screen and retries ("Not saved — retrying"). */
 export type PeerRequestFailure = 'not_openable' | 'no_longer_open' | 'submitted' | 'invalid' | 'retry'

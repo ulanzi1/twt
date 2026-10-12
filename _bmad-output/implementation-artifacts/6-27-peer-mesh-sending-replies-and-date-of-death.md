@@ -135,7 +135,7 @@ used by ⛔ no earlier story (grepped 2026-10-10).
 
 # Story 6.27a: The Five Neighbours Can Answer — a Versioned Questionnaire in the App and by the Helpline, Saved as They Go, and the District Admin Sees Every Answer `[SURFACE]`
 
-Status: review
+Status: done
 
 > ⭐⭐ **WHAT STORY 6.27 IS, IN ONE PARAGRAPH.** Story 6.6 (`done`) chooses the five members nearest a member who has died and writes a
 > request for each — and ⛔ nothing ever sends it, ⛔ nothing can answer it, so **every claim ends its 72 hours with zero answers**
@@ -936,6 +936,70 @@ member's terms:
       9.4 a pointer on row 6-22 for PM1's residual (6.27a OWNS it; 6.27c only checks it); 9.5 this file's Change Log + File List; 9.6 `pnpm ci:local` green — run it,
       paste the summary, ⛔ never claim it.
 
+### Review Findings
+
+Code review 2026-10-12, against `51b9000a..3f9e7c42`, story v2.13. Full review: Blind Hunter, Edge Case Hunter and Acceptance Auditor, followed by parent verification. **0 decision-needed, 12 patch, 0 defer; 3 candidates dismissed.** BigDev selected option 1, apply every patch. The descriptions and verdict table below preserve the original review evidence; the fix record follows them. All items are engineering against the stated behavior; no Panel ruling is needed. Sending, warnings, later-approver views and inspector discrepancies remain the explicitly deferred 6.27c / b / d scope.
+
+- [x] [Review][Patch] **R1 — HIGH: isolate the member's request cache and exclude decrypted answers from persistence** [`apps/mobile/components/peer-request/usePeerRequestQueries.ts:16`]. Both list and detail keys omit the member identity, and inherit the singleton client's one-hour freshness / seven-day retention. `SessionProvider.signOut` does not clear that client. Member B signing into the same Pariwar on the same handset therefore receives member A's cached list and can open A's cached detail without an authorization request. The detail also omits `gcTime: 0`, the Provider's explicit exclusion from MMKV persistence, so decrypted dates / health answers are persisted. Violates Invariant 7, AC5's owner-only surface, and checklist families 3 / 6 / 12. **Runtime verified** with the actual hook options and real QueryClient: B received A's answers; API fetch count remained one; the plaintext date appeared in dehydrated state. Scope keys to the authenticated member, opt these sensitive reads out of persistence, and remove obsolete peer-request cache entries on restoration / account change.
+
+- [x] [Review][Patch] **R2 — HIGH: order autosaves and prevent obsolete retries / responses from replacing newer choices** [`apps/mobile/components/peer-request/PeerQuestionnaire.tsx:108`]. Every tap starts an independent loop and fresh key. If A fails before reaching the server, B succeeds, then A retries, A becomes the final stored answer. A delayed response also replaces the entire answer map at line 120, reverting newer choices even when database order was correct. Optimistic parent answers expose dependent questions before their prerequisites commit, so a date save can be rejected with `condition_not_met`. Violates AC5 / PM7(b) / PM11 and family 2. **Runtime verified** for the obsolete retry: `not_died` became `died` after the earlier failed request retried. Serialize saves for the reply, preserve newer optimistic intent while acknowledging responses, and order conditional answers after their parents.
+
+- [x] [Review][Patch] **R3 — HIGH: wait for all helpline saves before Submit locks the reply** [`apps/admin/src/modules/helpline-claims/HelplinePeerRequests.tsx:180`]. Submit is disabled only for a missing previously saved `has_died` or its own pending request. An operator can edit an answer and immediately submit while that PUT is still pending; Submit can acquire the claim lock first, making the correction fail with `peer_request.submitted` and permanently excluding it. Violates AC6 / PM7(b), (d) / PM12. **Runtime verified** from the actual card source: Submit remained enabled and ran while a correction was unresolved. Track every pending save, block Submit until all succeed, and retain failed corrections for recovery.
+
+- [x] [Review][Patch] **R4 — MEDIUM: recover from a transient Submit failure** [`apps/mobile/components/peer-request/PeerQuestionnaire.tsx:182`]. Network errors, 5xx, rate limits and in-progress conflicts set `saveLine = 'retrying'`; `busy` then permanently disables Submit. No submit retry is scheduled and no enabled retry control is shown. Violates AC5 / PM7(d) / PM11. **Runtime verified**: after a network failure, Submit was disabled, call count was one and retry-timer count was zero. Separate submit error state from answer-save state and retry with the same submit key, automatically or through an enabled control.
+
+- [x] [Review][Patch] **R5 — MEDIUM: keep detail cache consistent with saves and submission** [`apps/mobile/components/peer-request/usePeerRequestQueries.ts:31`]. Saves neither update nor invalidate the detail query; Submit invalidates only the list. Reopening a request within the inherited one-hour freshness window initializes the component from old GET answers, with no new request. Even a later detail refresh does not rerun the `useState` initializer at `PeerQuestionnaire.tsx:89`. Saved answers appear absent or outdated, and cached submitted details can appear editable. Violates AC5 / PM11. Update the owner-scoped detail cache from save results, invalidate it on submission, and reconcile authoritative refreshes without discarding pending local choices. This consistency issue is distinct from R1's access / persistence boundary.
+
+- [x] [Review][Patch] **R6 — MEDIUM: a rejected answer must remain visibly unsaved** [`apps/mobile/components/peer-request/PeerQuestionnaire.tsx:131`]. A 422 retains the optimistic answer and then unconditionally changes the line to `saved` when pending reaches zero. The closing page does not render the validation notice. A member can proceed believing an absent answer was saved. Violates AC5's saved / not-saved behavior and PM7(b). **Runtime verified**: a rejected `not_died` remained selected while the line became `saved`. Roll back or explicitly retain an unsaved edit, expose its error on the closing page, and block submission until its disposition is clear.
+
+- [x] [Review][Patch] **R7 — MEDIUM: Back must not abandon a failed answer's retry** [`apps/mobile/components/peer-request/PeerQuestionnaire.tsx:212`]. Page-one Back calls `onBack()` during saving / retrying. Unmount sets `mounted.current = false`, stopping the loop; nothing retains the pending answer or key. A failed save is lost on this ordinary navigation path. Violates AC5's “a failed save retries, never lost silently” requirement. Prevent leaving with unresolved saves or retain the pending work across the in-screen navigation; do not place decrypted sensitive values in the general persisted query cache.
+
+- [x] [Review][Patch] **R8 — MEDIUM: bind each answer's claim to its reply's claim in the database** [`packages/domain/migrations/0156_claim-peer-mesh-replies.sql:167`]. The answer's reply and claim FKs validate independently. The trigger reads submission status from the reply, but checks `NEW.claim_case_id` for the answer window. Under `twt_app`, an unsubmitted reply belonging to a closed claim accepts an answer naming another open claim in the same tenant. It also misattributes claim-based erasure and subsequent reads. Violates AC3 / PM7(a) / PM8 and families 1 / 5 / 12. **Live PostgreSQL verified**, with rollback. Add a composite ownership FK or equivalent trigger assertion. The current domain writer supplies consistent IDs; this finding concerns the promised database backstop, not a demonstrated HTTP exploit.
+
+- [x] [Review][Patch] **R9 — MEDIUM: bind reply selection and ping ownership across tenant / claim / responder** [`packages/domain/migrations/0156_claim-peer-mesh-replies.sql:118`]. The selection and ping FKs use their single-column IDs. Tenant RLS on the new reply does not establish that those referenced resources belong to its tenant or claim. **Live PostgreSQL verified**: `twt_app` scoped to Pariwar A inserted a reply using A's claim and B's selection / ping; B's legitimate reply then failed with `23505` because the ping was reserved. All writes were rolled back. Violates AC3's tenant backstops and families 3 / 5 / 12. Bind the reply to the ping's tenant, selection and responder, and the selection to the claim. Current HTTP writers construct matching IDs; no HTTP exploit is claimed.
+
+- [x] [Review][Patch] **R10 — MEDIUM: preserve an unavailable saved answer in the owner / operator wire view** [`apps/api/src/modules/claims/peer-request-core.ts:155`]. A failed decrypt leaves no map entry; `toWireAnswers` silently skips that stored answer. Both member detail and helpline list therefore present a saved sensitive answer as unanswered. Violates shared Invariant 8 (“could not be shown just now”, never blank). The staff assembler correctly represents `unavailable`; the owner/operator contract needs an equivalent state and explicit rendering. This differs from the disclosed fail-closed save refusal when a live answer is undecryptable, which remains a recorded limitation.
+
+- [x] [Review][Patch] **R11 — MEDIUM: preserve ping correlation in the durable callback-disclosure audit** [`apps/api/src/modules/claims/claims.verifier-console.handlers.ts:1210`]. `ping_id` appears only in `context`; the resource locator names only the claim. The production sink hashes context into `request_payload_hash` and stores no context fields (`audit-log-sink.ts:119`). The durable row cannot name which neighbour's mobile was shown, contrary to PM13's actor / claim / ping requirement and family 8. Include the ping in an accepted, non-PII resource locator and assert the persisted audit row. The current console test captures the showing callback, not this durable correlation.
+
+- [x] [Review][Patch] **R12 — MEDIUM: preserve consecutive helpline multi-select choices before refetch** [`apps/admin/src/modules/helpline-claims/HelplinePeerRequests.tsx:156`]. Each tap derives its value from `item.answers`, which changes only after save / refetch. Tapping options A and B before that round trip sends `[A]` and `[B]`, rather than `[A, B]`; the later save drops A. Violates the generic questionnaire renderer / same save shape in AC6 / PM12. **Latent while the health questions have pending counsel basis**; once the existing illness question is served, it is reachable without an app release. Maintain local selections and serialize acknowledgements, including exclusive options; test rapid consecutive taps with delayed saves.
+
+Verification: **187 existing focused tests passed across 13 files** — mobile (28), pure domain (42), admin (53), domain PostgreSQL (51), API PostgreSQL (13). The domain DB tests first failed because the sandbox denied the socket (`EPERM`); the authorized rerun passed. No full `ci:local` rerun or device / native screen-reader validation was performed for this review.
+
+Additional evidence: `/private/tmp/twt-6-27a-ui-repro.cjs` executes transpiled current component / hook source with stubbed platform hooks and the real QueryClient. It verifies R1, R2, R3, R4 and R6; it is not a device-render test. `/private/tmp/twt-6-27a-db-repro.cjs` verifies R8 / R9 against :5433 as `twt_app` in a single rollback-only transaction. Its first fixture run failed on an uncast enum array; the corrected run produced both admissions and B's `23505`. These temporary probes are session artifacts, not committed regression tests.
+
+Checklist verdicts for touched families:
+
+| Family | Verdict / evidence |
+|---|---|
+| 1 — state guards | **REAL GAP R8**; matching-ID window / R9 / OP4 / OP13 cases covered by `peer-mesh-reply.spec.ts`. |
+| 2 — concurrency / idempotency | **REAL GAP R2 / R3**; domain lock ordering covered by the four two-connection `peer-mesh-reply-concurrency.spec.ts` tests. |
+| 3 — tenant / actor boundaries | **REAL GAP R1 / R9**; member indistinguishable-404 and helpline permission / step-up legs pass in the API suites. |
+| 4 — event completeness | **Covered-by-test:** first-answer event tests in `peer-mesh-reply.spec.ts` assert current state, responder and actor; the existing projector supplies deceased correlation by construction. |
+| 5 — DB backstops | **REAL GAP R8 / R9**; the other grants, CHECKs, uniqueness, RLS, triggers and parity are covered by the 19 migration policy-regression tests. |
+| 6 — projections / privacy | **REAL GAP R1 / R5 / R10**; wire fields are otherwise explicitly picked and reply versions pinned by construction. |
+| 7 — aggregates | **Covered-by-test:** open-list filtering in `peer-mesh-reply.spec.ts`, change counts in `peer-answers-console.spec.ts`, dependant superseding in the domain suite. |
+| 8 — audit / attribution | **REAL GAP R11**; server actor attribution and compensating-audit wrappers are used by construction. |
+| 9 — deliberate bypasses | **Covered-by-construction:** the helpline's documented `memberId = null` matches the specified tenant-scoped, ping-only routes. Extra caller binding is not constructible from that API shape and is not asserted as delivered. |
+| 10 — closure honesty | **Covered-by-construction:** pending counsel, erasure-arm admissions, responder-erasure uncertainty, deferred sibling work and absent device proof are disclosed. |
+| 12 — ownership | **REAL GAP R1 / R8 / R9**; member HTTP writes otherwise validate owner / tenant / resolved state before mutation. |
+| 13 — accessibility | **Covered-by-construction for inspected controls:** real handlers, alert notices and a polite save live region. Actual native announcements are **not constructible in the checked-in harness**; no claim of device coverage. |
+
+Family 11 is untouched. Dismissed candidates: a legacy event-only UI fallback without a demonstrated reachable historical response in this rollout; pagination beyond the explicitly specified cap of five; and an unverified shell failure-path candidate in CI changes that predate the 6.27a implementation (`7120ac20` / `7ce9154a`). Duplicate retry / stale-response / prerequisite findings were consolidated into R2; cache persistence and account-isolation findings into R1. No review layer failed.
+
+#### Review fix record — 2026-10-12
+
+- **R1 / R5:** request query keys now include both Pariwar and member, with zero freshness / retention; sensitive queries and mutation variables are excluded from persistence. Restoration removes legacy entries and immediately rewrites storage. Sign-in, sign-out and session termination clear peer data. Save responses update only existing detail entries; Submit updates submitted state and invalidates detail / list; the editor reconciles settled refetches, including date text and newly hidden failed dependent drafts.
+- **R2 / R6 / R12:** mobile and helpline share an in-memory FIFO editor. Each retry preserves its idempotency key; acknowledgements retain newer drafts; prerequisites save before dependent answers. Rejected edits stay visibly unsaved and prevent Submit; hidden dependent failures are discarded when their parent changes. Helpline multi-select reads current local choices, including rapid consecutive taps.
+- **R3 / R4 / R7:** Submit waits for every save to succeed; controls are also locked throughout Submit so a later edit cannot race it. A failed Submit remains retryable with the original key. Unresolved edits guard mobile Back / route departure and helpline navigation / caller changes; helpline failed saves have an enabled retry control. A transient background refresh preserves the loaded editor and its queue, with a helpline refresh / step-up notice. Authentication redirects and permission refusals remain available.
+- **R8 / R9:** additive migration **0157** binds answer → reply → claim and reply → selection / ping / responder / tenant, with a ping → selection ownership backstop. Schema definitions match. Applied to both :5432 and :5433; every migration was then applied from zero in a temporary database on each instance and the four ownership constraints verified. Migration 0156 was not rewritten.
+- **R10:** the response contract preserves `{ unavailable: true }` for an unreadable stored answer; member and helpline render its notice. The write contract still rejects that output-only marker. The existing fail-closed save refusal remains documented.
+- **R11:** callback-disclosure audit locators name both claim and ping. A real route event is passed through the production sink and the persisted row checked for actor / claim / ping correlation without the phone.
+
+**40 new regression tests** cover the shared editor (10), mobile cache (6), rendered mobile questionnaire (9), response/write contract distinction (1), live database ownership (3), live member / helpline unavailable answers (2), durable audit sink (1), helpline card (7) and caller-change guard (1). Follow-up review also exercised the reverse Submit race, stale errors, date refetch, background refresh failures and editor Strict Mode lifecycle. Mobile rendering uses real React DOM with native primitives stubbed; no device, native screen-reader announcement or FR95 timing measurement is claimed. The four new English / Hindi recovery strings remain within Row 28's human-review hold; friction-budget.md records the changed departure / retry behavior.
+
+**Verification complete:** `pnpm ci:local` with `DATABASE_URL` pointing to :5433 passed **36/36 jobs**, including live domain (354 files / 5047 passed, 1 skipped), API (158 / 1644 passed, 1 skipped), jobs (57 / 797) and the other integration packages. The final three editor / refresh recovery fixes landed after that run's static stage; their targeted tests and lint / typechecks passed, then `env -u DATABASE_URL pnpm ci:local` passed **34/34 static jobs** on the final code. The latter run intentionally skipped the already-passed live leg; those last changes affect only the UI / client editor. Logs: `/private/tmp/twt-6-27a-ci-local-green.log` and `/private/tmp/twt-6-27a-ci-local-static-final.log`. `git diff --check` passed. All twelve original patches are resolved, with no remaining HIGH / MEDIUM review item; story and sprint row → `done`. These review fixes are uncommitted. Rows 27 / 28 and the device go-live proof remain open; b / c / d remain backlog.
+
 ## Dev Notes (shared traps; each part adds its own)
 
 ### ⚠ TRAPS (each has bitten an earlier story)
@@ -1066,6 +1130,8 @@ Re-pin base `51b9000a` (2026-10-12): 6.30 (`12d0fbb4` … `72f7b607`), 6.28 (`01
 
 Claude Opus 5.5 (`claude-opus-5-5`) — `bmad-dev-story 6.27a`, 2026-10-12, branch `story/6-27a` from `main` `7120ac20`.
 
+Codex (GPT-6) — `bmad-code-review 6.27a` and the user-authorized apply-all pass, 2026-10-12, same branch at `3f9e7c42` plus uncommitted review fixes.
+
 ### Debug Log References
 
 - Migration 0156 iterated on a THROWAWAY database (`twt_scratch_627a`) first, so the in-place edits never touched an applied migration
@@ -1078,8 +1144,20 @@ Claude Opus 5.5 (`claude-opus-5-5`) — `bmad-dev-story 6.27a`, 2026-10-12, bran
   `tsc` is clean ([[project_mobile_typed_routes_worktree]]).
 - The human-actor gate reads each route's `preHandler` ARRAY LITERALLY — a shared `chain` const was reported as "no preHandler chain";
   inlined per route.
+- Review fixes: regenerated the stale, ignored mobile typed-route declarations with the installed Expo router generator. The rendered
+  questionnaire tests were moved into the mobile package after an initial cross-package placement failed TypeScript's rootDir check.
+  Offline lockfile-only installation records the already-installed React DOM test tools and the admin's workspace API-client dependency.
+- Review verification: the first full CI rerun had two failures (a brittle session-handler source assertion and the microcopy scanner
+  matching a local identifier); both were corrected. The second rerun passed all integration suites but caught an unused test-fixture
+  parameter in lint; its correction passed mobile lint, typecheck and the six cache tests before the final full rerun. No overlapping
+  full CI database runs were started. Migration 0157 also passed fresh-database installation on both PostgreSQL instances.
 
 ### Completion Notes List
+- 2026-10-12 — **code review and apply-all (v2.14):** 12 patches fixed, 0 decision-needed / 0 deferred, 3 candidates dismissed.
+  Member cache isolation / persistence scrub, shared ordered in-memory saves, submission / departure recovery, database ownership
+  backstops (additive 0157), explicit unavailable wire answers and durable ping audit correlation. 40 new regression tests; full live CI
+  36/36, followed by final static CI 34/34 after the last UI / editor recovery changes. Status → `done`; native / device validation and
+  the human-review / counsel go-live holds remain explicitly unclaimed. See the Review fix record for evidence and exact scope.
 - 2026-10-10 — created by `bmad-create-story 6.27` (Opus 5.5); v2.0 after a four-reviewer fresh-context validate and `-305`: cut into
   6.27a (this file — the shared record) and 6.27b / c / d. ⛔ No code; Task 0.3 / 0.4 owed.
 - 2026-10-12 — **dev (`bmad-dev-story 6.27a`)**. Task 0.0 / 0.5 / 0.6 / 0.7 (epics.md entries 6.27a–d + the 6.6 / 6.10 annotations; roster
@@ -1224,9 +1302,29 @@ Claude Opus 5.5 (`claude-opus-5-5`) — `bmad-dev-story 6.27a`, 2026-10-12, bran
 - MOD `packages/queue/src/index.ts`
 - MOD `scripts/claim-adjudication-human-actor-invariant/check.ts`
 
+Review-fix additions to this file list (paths already listed above also changed):
+
+- MOD `apps/admin/package.json`
+- MOD `apps/admin/tests/helpline-claim-page.test.tsx`
+- MOD `apps/mobile/components/Provider.tsx`
+- MOD `apps/mobile/lib/session-context.tsx`
+- MOD `apps/mobile/package.json`
+- MOD `apps/mobile/tests/unit/contributor-list-render.test.ts`
+- MOD `apps/mobile/tests/unit/link-target.test.ts`
+- MOD `apps/mobile/vitest.config.ts`
+- MOD `packages/domain/src/schema/claim_peer_mesh_selections.ts`
+- MOD `pnpm-lock.yaml`
+- NEW `apps/mobile/components/peer-request/peer-request-cache.ts`
+- NEW `apps/mobile/tests/unit/peer-questionnaire-render.test.ts`
+- NEW `apps/mobile/tests/unit/peer-request-cache.test.ts`
+- NEW `packages/api-client/src/peer-answer-editor.ts`
+- NEW `packages/api-client/tests/peer-answer-editor.test.ts`
+- NEW `packages/domain/migrations/0157_claim-peer-mesh-reply-ownership.sql`
+
 ## Change Log
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-12 | 2.14 | **CODE REVIEW + APPLY ALL** — all 12 findings fixed; cache owner / persistence boundaries, FIFO autosaves / recovery / Submit guards, additive migration 0157 ownership constraints, unavailable-answer wire state and durable claim / ping audit attribution. Follow-up review closed reverse Submit, refresh-error unmount, hidden failed draft, date refresh and Strict Mode gaps. 40 new regression tests; live CI 36/36, then final static CI 34/34. Status → `done`; sprint synced. Native / device proof and Rows 27 / 28 remain open; sibling implementation stays separate. |
 | 2026-10-12 | 2.13 | ⭐ **DEV (`bmad-dev-story 6.27a`)** — Tasks 0.0 / 0.5–0.7 and 1–9 built on `story/6-27a`: the questionnaire engine (v1 historical / v2 live; the CF3 validator; the `'pending'` skip), migration 0156 (the ping's delivery columns; replies + append-only answers; the all-times trigger and its RECORDED erasure arm), the reply writer (claim → ping → reply; ⛔ KMS under a lock; the ONE event), the member + helpline routes (texted-only; one 404), the mobile screens (6.30's slot filled; the home card + notice-strip item, dark until texted), the District Admin's view (ceiling 23 → 26; `peerMesh` optional for an inspector before a full visit), erasure (20 tables / 23 statements), the fences, the records (Rows 27 / 28, the epics entries, deferred-work, the row 6-22 pointer). Status → `review`. |
 | 2026-10-12 | 2.12 | The v2.10 / v2.11 validate (one fresh-context reviewer; 0 BLOCKER / 0 HIGH / 6 MEDIUM / 3 LOW — all applied): NW1 has FIVE entries (`questionnaires/index.ts` the sixth); OP13's closure is the allowed suspicion appeal (`suspicion_appeal_allowed`), ⛔ not `death_already_finally_approved` (OP4's); AC4's closure legs reach Task 3; Task 5 amends `app-link-route-map.test.ts:78-80` and keeps the right ranges; the header — the inner `<Stack />` shows one unless the screen hides it — with an AC5 leg; the home card and PM2's notice-strip item gain an AC5 leg and a Task 5 item; PM8 reads *ratified by `-324`*; the header records PM5 (iv)'s texts and F35 / F41 / PM23. |
 | 2026-10-12 | 2.11 | ⭐ `2026-10-12-324` (Trustee-ratified, DR + KB — option A): PM8's R9 arm — answers taken while the special panel decides a claim that passed the month's vote — RATIFIED as `-311` committed it; the PM8 annotation and the header read RULED; ⛔ no PM, AC or Task text changes; ⛔ no code change. |

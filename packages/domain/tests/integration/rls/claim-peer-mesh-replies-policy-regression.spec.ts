@@ -107,6 +107,43 @@ async function routeToR9(client: Client, pariwarId: string, claimCaseId: string)
 describe.skipIf(!hasDatabase)('0156 — the ping delivery record, the replies, the answers', { timeout: 20000 }, () => {
   setupLiveDb();
 
+  describe('0157 — reply and answer ownership backstops (review R8/R9)', () => {
+    it('an answer cannot borrow another claim\'s open window, even in the same tenant', async () => {
+      const { client } = getTx();
+      const closed = await seedReply(client, PARIWAR_A, 'closed');
+      const open = await seedPing(client, PARIWAR_A);
+      await enterAppScope(client, PARIWAR_A);
+      expect((await attempt(client, INSERT_ANSWER, [randomUUID(), PARIWAR_A, open.claimCaseId, closed.replyId, 'has_died', ['died'], null, null])).code).toBe('23503');
+    });
+
+    it('a reply cannot reserve another tenant\'s ping or mix selection / claim / responder identities', async () => {
+      const { client } = getTx();
+      const own = await seedPing(client, PARIWAR_A);
+      const other = await seedPing(client, PARIWAR_A);
+      const foreign = await seedPing(client, PARIWAR_B);
+      const insert = `INSERT INTO claim_peer_mesh_replies(reply_id, pariwar_id, claim_case_id, selection_id, ping_id, responder_member_id, questionnaire_version_id)
+        VALUES ($1, $2, $3, $4, $5, $6, 'peer_mesh.v2')`;
+      await enterAppScope(client, PARIWAR_A);
+      for (const p of [
+        [randomUUID(), PARIWAR_A, own.claimCaseId, foreign.selectionId, foreign.pingId, foreign.memberId],
+        [randomUUID(), PARIWAR_A, own.claimCaseId, other.selectionId, other.pingId, other.memberId],
+        [randomUUID(), PARIWAR_A, own.claimCaseId, own.selectionId, other.pingId, other.memberId],
+        [randomUUID(), PARIWAR_A, own.claimCaseId, own.selectionId, own.pingId, other.memberId],
+      ]) expect((await attempt(client, insert, p)).code).toBe('23503');
+      // Failed reservations leave the foreign ping available to its rightful tenant.
+      await client.query('RESET ROLE');
+      await enterAppScope(client, PARIWAR_B);
+      expect((await attempt(client, insert, [randomUUID(), PARIWAR_B, foreign.claimCaseId, foreign.selectionId, foreign.pingId, foreign.memberId])).code).toBeNull();
+    });
+
+    it('a ping cannot itself claim another tenant\'s selection', async () => {
+      const { client } = getTx();
+      const foreign = await seedPing(client, PARIWAR_B);
+      await enterAppScope(client, PARIWAR_A);
+      expect((await attempt(client, 'INSERT INTO claim_peer_mesh_pings(ping_id, pariwar_id, selection_id, member_id) VALUES($1,$2,$3,$4)', [randomUUID(), PARIWAR_A, foreign.selectionId, randomUUID()])).code).toBe('23503');
+    });
+  });
+
   describe('the ping', () => {
     it('the structural CHECKs: `recorded` refused; attempt_count 0 ⇔ not begun; attempting names its holder; parked; locale; link code', async () => {
       const { client } = getTx();

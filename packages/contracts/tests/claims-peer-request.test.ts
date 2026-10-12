@@ -8,6 +8,7 @@ import {
   PEER_REQUEST_QUESTION_KINDS,
   PeerRequestAnswerValue,
   PeerRequestListQuery,
+  PeerRequestLiveAnswer,
   PeerRequestQuestionnaire,
   PeerRequestSaveAnswerRequest,
 } from '../src/index.js';
@@ -45,6 +46,11 @@ describe('Story 6.27a — contracts ↔ domain lockstep (the questionnaire wire 
 });
 
 describe('the wire shapes', () => {
+  it('an unavailable saved answer is a response state, never an accepted write value', () => {
+    const value = { unavailable: true };
+    expect(PeerRequestLiveAnswer.safeParse({ questionKey: 'death_date', value, savedAt: 'now' }).success).toBe(true);
+    expect(PeerRequestSaveAnswerRequest.safeParse({ value }).success).toBe(false);
+  });
   it('an answer value is codes OR a date — never both, never extra fields', () => {
     expect(PeerRequestAnswerValue.safeParse({ codes: ['died'] }).success).toBe(true);
     expect(PeerRequestAnswerValue.safeParse({ date: '2026-10-01' }).success).toBe(true);

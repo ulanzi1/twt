@@ -20,11 +20,12 @@
 
 import { randomUUID } from 'node:crypto';
 
-import { claim, ids, nominee } from '@twt/domain';
+import { claim, encryption, ids, nominee } from '@twt/domain';
 import type { VerifierConsolePacket } from '@twt/contracts';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import type { AppDeps } from '../../../src/context.js';
+import { createAuditLogSink } from '../../../src/audit/audit-log-sink.js';
 import {
   assembleApprovalWarnings,
   assembleFinallyApprovedElsewhere,
@@ -285,6 +286,34 @@ describe.skipIf(!hasDatabase)('Verifier-console read surface — E2E (:5433)', (
     const anon = makeClient(app);
     const res = await anon.inject({ method: 'GET', url: url(pariwarId, randomUUID()) });
     expect(res.statusCode).toBe(401);
+  });
+
+  it('callback disclosure names actor, claim and ping in the persisted audit row (review R11)', async () => {
+    const p = randomUUID();
+    const deceased = await seedDeceasedMember(p, DISTRICT);
+    const cid = await seedClaim(p, deceased);
+    const { selectionId, candidateIds } = await seedPeerMeshSelection(p, cid, deceased, 1);
+    const neighbour = candidateIds[0]!;
+    await td.pool.query("INSERT INTO members(member_id, pariwar_id, state, state_event_version) VALUES($1,$2,'active',1)", [neighbour, p]);
+    await td.pool.query('INSERT INTO member_identities(member_id, pariwar_id, mobile_ciphertext, mobile_blind_index) VALUES($1,$2,$3,$4)', [neighbour, p, await encryption.encryptMobile('+919876543210', deps.encryption), `bi-${randomUUID()}`]);
+    const ping = (await td.pool.query('SELECT ping_id FROM claim_peer_mesh_pings WHERE selection_id = $1', [selectionId])).rows[0]!.ping_id as string;
+    const replyId = randomUUID();
+    await td.pool.query("INSERT INTO claim_peer_mesh_replies(reply_id, pariwar_id, claim_case_id, selection_id, ping_id, responder_member_id, questionnaire_version_id) VALUES($1,$2,$3,$4,$5,$6,'peer_mesh.v2')", [replyId, p, cid, selectionId, ping, neighbour]);
+    await td.pool.query("INSERT INTO claim_peer_mesh_reply_answers(pariwar_id, claim_case_id, reply_id, question_key, value_codes, saved_via, saved_by_actor_id) VALUES($1,$2,$3,'callback_consent',ARRAY['yes'],'member_app',$4)", [p, cid, replyId, neighbour]);
+    const { client, userId } = await authenticate();
+    await grant(userId, p, 'district_admin', 'district', DISTRICT);
+    expect((await client.inject({ method: 'GET', url: url(p, cid) })).statusCode).toBe(200);
+    const event = td.auditSink.events.find(e => e.type === 'admin_verifier_console.peer_callback_mobile_shown' && e.context?.['ping_id'] === ping);
+    expect(event).toBeDefined();
+    // Persist the real route's captured event through the production sink, not a transcribed fixture.
+    createAuditLogSink(td.pool).emit(event!);
+    const locator = `claim:${cid}:ping:${ping}`;
+    await vi.waitFor(async () => {
+      const { rows } = await td.pool.query("SELECT actor_id, action, resource_locator, request_payload_hash FROM audit_log_entries WHERE resource_locator=$1 AND action='admin_verifier_console.peer_callback_mobile_shown'", [locator]);
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toMatchObject({ actor_id: userId, resource_locator: locator });
+      expect(JSON.stringify(rows)).not.toContain('9876543210');
+    }, { timeout: 5000 });
   });
 
   it('authorization matrix (Task 3): district-scoped, server-derived, fail-closed', async () => {

@@ -2675,3 +2675,12 @@ amended, ⛔ deleted).
 
 ⛔ No measured delta is claimed for the mobile files ([[feedback_record_unattested_no_backfill]]); ⛔ not demonstrated on a device
 (the mobile app has ⛔ no screen-render harness).
+
+**2026-10-12 review follow-up (6.27a, working tree):** the same row also covers the member-scoped cache policy in
+`components/peer-request/peer-request-cache.ts` and the shared in-memory save editor in
+`packages/api-client/src/peer-answer-editor.ts`. Saves are ordered; no extra normal-flow question or confirmation is added.
+Leaving with unsaved answers and editing during Submit are blocked so a chosen answer is not lost. A failed Submit offers
+Retry with the same key; invalid answers remain visibly unsaved. The helpline similarly waits for its saves and protects a
+caller change / route departure while answers remain unresolved. Four new en/hi chrome strings stay under Row 28's existing
+human-review hold. The new mobile `peer-questionnaire-render.test.ts` mounts real React with native primitives mocked in
+jsdom; this is **not native/device validation or an FR-95 measurement**. No measured delta or device sign-off is claimed.

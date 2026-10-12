@@ -27,7 +27,7 @@
 //
 // Naming discipline per architecture L3663-3677: DB columns snake_case, TS camelCase.
 
-import { index, integer, pgTable, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core';
+import { foreignKey, index, integer, pgTable, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core';
 
 import type { MemberId, PariwarId, PeerMeshPingId, PeerMeshSelectionId } from '../ids/index.js';
 import { claimPeerMeshSelections } from './claim_peer_mesh_selections.js';
@@ -108,6 +108,8 @@ export const claimPeerMeshPings = pgTable(
     // One intent per member per selection — the idempotency anchor (a re-run of the select
     // job inserts nothing new; still exactly 5 rows, never 10).
     unique('claim_peer_mesh_pings_selection_member_uq').on(t.selectionId, t.memberId),
+    unique('claim_peer_mesh_pings_owner_uq').on(t.pariwarId, t.pingId, t.selectionId, t.memberId),
+    foreignKey({ name: 'claim_peer_mesh_pings_selection_owner_fk', columns: [t.pariwarId, t.selectionId], foreignColumns: [claimPeerMeshSelections.pariwarId, claimPeerMeshSelections.selectionId] }).onDelete('cascade'),
     // Per-tenant scans / RLS-aware planner hint.
     index('claim_peer_mesh_pings_pariwar_id_idx').on(t.pariwarId),
   ],

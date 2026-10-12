@@ -823,11 +823,12 @@ describe('Story 11b.21 — D6: the contributor list is ⛔ never persisted, and 
     expect(POOL_CONTRIBUTORS_QUERY_KEY).toEqual(['member', 'pool-contributors', 'v2'])
     expect(hook).toMatch(/queryKey:\s*POOL_CONTRIBUTORS_QUERY_KEY/)
     expect(hook).toMatch(/gcTime:\s*0\b/)
-    expect(provider).toMatch(/query\.options\.gcTime\s*!==\s*0/)
+    expect(provider).toContain('dehydrateOptions: PEER_REQUEST_DEHYDRATE_OPTIONS')
+    expect(stripComments(read('apps/mobile/components/peer-request/peer-request-cache.ts'))).toMatch(/query\.options\.gcTime\s*!==\s*0/)
   })
 
   it('Provider.tsx removes the retired key once, after restore (onSuccess)', () => {
-    expect(provider).toMatch(/onSuccess=\{\s*\(\)\s*=>\s*removeRetiredPoolContributorsCache\(queryClient\)\s*\}/)
+    expect(provider).toMatch(/onSuccess=\{\s*async\s*\(\)\s*=>\s*\{\s*removeRetiredPoolContributorsCache\(queryClient\)/)
   })
 
   it('actually invoked: removes EXACTLY the retired key and keeps the current one', () => {

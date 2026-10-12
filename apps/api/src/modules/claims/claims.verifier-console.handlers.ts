@@ -1208,7 +1208,7 @@ export function createVerifierConsoleHandlers(deps: AppDeps) {
             actorId,
             pariwarId: scopeTx.pariwarId,
             context: { claim_case_id: claimCaseId, ping_id: pingId },
-            resourceLocator: `claim:${String(claimCaseId).toLowerCase()}`,
+            resourceLocator: `claim:${String(claimCaseId).toLowerCase()}:ping:${String(pingId).toLowerCase()}`,
           }),
       });
 

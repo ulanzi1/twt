@@ -10,9 +10,11 @@
 // Q6 A). ⛔ No claim, ⛔ no family, ⛔ no amount — the member's name only. Pure decisions live in `lib/peer-request.ts`.
 // ⚠ Memos depend on `locale`, ⛔ never on `t` (`useT()` is a fresh closure every render — [[project_uset_fresh_closure_memo_trap]]).
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { ScrollView } from 'react-native'
 import { useRouter } from 'expo-router'
+import { usePreventRemove } from '@react-navigation/native'
+import { PeerAnswerEditor } from '@twt/api-client'
 import { Button, Input, Paragraph, Text, XStack, YStack } from 'tamagui'
 import { useLocale } from '@twt/i18n/react'
 
@@ -20,7 +22,6 @@ import type { PeerRequestAnswerValue, PeerRequestDetailResponse, PeerRequestQues
 
 import { useClaimT } from '../../lib/claim-i18n'
 import {
-  answersToMap,
   canLeavePage,
   classifyFailure,
   newIdempotencyKey,
@@ -52,7 +53,10 @@ export function PeerQuestionnaire({
   const { data, isLoading, error, refetch } = usePeerRequestQuery(pariwarId, pingId)
 
   if (isLoading) return <Paragraph p="$4">{t('peer_request.loading')}</Paragraph>
-  if (error || !data) {
+  const status = (error as { status?: number } | null)?.status
+  // Keep the existing editor through a transient background GET failure; its saves still settle.
+  const retainLoaded = data !== undefined && classifyFailure(error) === 'retry' && status !== 401 && status !== 403
+  if ((error && !retainLoaded) || !data) {
     const failure = classifyFailure(error)
     if (failure === 'not_openable') return <PeerRequestNotOpenable messageKey="peer_request.not_openable" />
     if (failure === 'no_longer_open' || failure === 'submitted') return <PeerRequestNotOpenable messageKey="peer_request.no_longer_open" />
@@ -86,57 +90,64 @@ function Questionnaire({
   const save = useSavePeerAnswer(pariwarId, pingId)
   const submit = useSubmitPeerReply(pariwarId, pingId)
 
-  const [answers, setAnswers] = useState<Map<string, PeerRequestAnswerValue>>(() => answersToMap(detail.answers))
   const [pageIndex, setPageIndex] = useState(0)
-  const [phase, setPhase] = useState<Phase>('pages')
-  const [saveLine, setSaveLine] = useState<SaveLine>('idle')
+  const [phase, setPhase] = useState<Phase>(() => detail.submitted ? 'no_longer_open' : 'pages')
   const [notice, setNotice] = useState<string | null>(null)
-  const pending = useRef(0)
+  const [submitFailed, setSubmitFailed] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const submitting = useRef(false)
+  const saveRef = useRef(save.mutateAsync)
+  saveRef.current = save.mutateAsync
+  const initialAnswers = useRef(detail.answers)
+  const [editor] = useState(() => new PeerAnswerEditor(detail.answers, {
+    save: (task) => saveRef.current(task),
+    newKey: newIdempotencyKey,
+    shouldRetry: (err) => classifyFailure(err) === 'retry',
+    wait: (attempt) => new Promise((resolve) => setTimeout(resolve, retryDelayMs(attempt))),
+    questions: detail.questionnaire.pages.flatMap((p) => p.questions),
+  }))
+  const state = useSyncExternalStore(editor.subscribe, editor.getSnapshot)
+  const answers = useMemo(() => new Map([...state.answers].flatMap(([key, value]) =>
+    'unavailable' in value ? [] : [[key, value] as const],
+  )), [state.answers])
+  const saveLine: SaveLine = state.saveLine
   const mounted = useRef(true)
   const submitKey = useRef(newIdempotencyKey())
   useEffect(() => {
     mounted.current = true
+    editor.activate(initialAnswers.current)
     return () => {
       mounted.current = false
+      editor.dispose()
     }
-  }, [])
+  }, [editor])
+  useEffect(() => editor.replaceFromServer(detail.answers), [editor, detail.answers])
+  useEffect(() => {
+    if (state.error === null) {
+      if (state.failed.size === 0) setNotice(null)
+      return
+    }
+    const failure = classifyFailure(state.error)
+    if (failure === 'not_openable') setPhase('not_openable')
+    else if (failure === 'no_longer_open' || failure === 'submitted') setPhase('no_longer_open')
+    else setNotice(t('peer_request.invalid'))
+  }, [state.error, state.failed.size, locale])
+  const busy = state.pending > 0 || state.failed.size > 0
+  usePreventRemove((phase === 'pages' || phase === 'closing') && (busy || isSubmitting), () =>
+    setNotice(t('peer_request.unsaved')),
+  )
 
   const pages = useMemo(() => visiblePages(detail, answers), [detail, answers])
   const page = pages[Math.min(pageIndex, Math.max(0, pages.length - 1))] ?? []
 
-  /** Save ONE answer; retry with the SAME key until it lands or the request turns out closed. */
+  /** Queue each choice; the editor retries with its original key and preserves later choices. */
   const saveAnswer = useCallback(
-    async (questionKey: string, value: PeerRequestAnswerValue) => {
-      setAnswers((prev) => new Map(prev).set(questionKey, value))
+    (questionKey: string, value: PeerRequestAnswerValue) => {
+      if (submitting.current) return
       setNotice(null)
-      pending.current += 1
-      setSaveLine('saving')
-      const idempotencyKey = newIdempotencyKey()
-      for (let attempt = 1; mounted.current; attempt += 1) {
-        try {
-          const res = await save.mutateAsync({ questionKey, value, idempotencyKey })
-          if (!mounted.current) return
-          // The server's live answers are authoritative (a changed condition drops its dependants).
-          setAnswers(answersToMap(res.answers))
-          break
-        } catch (err) {
-          const failure = classifyFailure(err)
-          if (failure === 'retry') {
-            setSaveLine('retrying')
-            await new Promise((r) => setTimeout(r, retryDelayMs(attempt)))
-            continue
-          }
-          if (failure === 'not_openable') setPhase('not_openable')
-          else if (failure === 'no_longer_open' || failure === 'submitted') setPhase('no_longer_open')
-          else setNotice(t('peer_request.invalid'))
-          break
-        }
-      }
-      pending.current -= 1
-      if (mounted.current) setSaveLine(pending.current > 0 ? 'saving' : 'saved')
+      editor.save(questionKey, value)
     },
-    // `t` is deliberately absent — it is a fresh closure each render; `locale` drives re-resolution.
-    [save.mutateAsync, locale],
+    [editor],
   )
 
   if (phase === 'not_openable') return <PeerRequestNotOpenable messageKey="peer_request.not_openable" />
@@ -155,35 +166,45 @@ function Questionnaire({
     )
   }
 
-  const busy = saveLine === 'saving' || saveLine === 'retrying'
-
   if (phase === 'closing') {
     return (
       <ScrollView contentContainerStyle={{ padding: 16, gap: 16 }}>
         <Paragraph size="$5">{wordsIn(detail.questionnaire.closingNote, locale)}</Paragraph>
         <SaveLineText line={saveLine} />
+        {notice !== null && <Text accessibilityRole="alert">{notice}</Text>}
+        {submitFailed && <Text accessibilityRole="alert">{t('peer_request.submit_error')}</Text>}
         <XStack gap="$3">
-          <Button onPress={() => setPhase('pages')} accessibilityRole="button">
+          <Button disabled={isSubmitting} onPress={() => { if (!submitting.current) setPhase('pages') }} accessibilityRole="button">
             {t('peer_request.back')}
           </Button>
           <Button
             theme="accent"
-            disabled={busy || submit.isPending}
+            disabled={busy || isSubmitting}
             accessibilityRole="button"
-            onPress={() =>
+            onPress={() => {
+              const current = editor.getSnapshot()
+              if (current.pending > 0 || current.failed.size > 0 || submitting.current) return
+              submitting.current = true
+              setIsSubmitting(true)
+              setSubmitFailed(false)
               void submit
                 .mutateAsync(submitKey.current)
                 .then(() => mounted.current && setPhase('thanks'))
                 .catch((err: unknown) => {
+                  if (!mounted.current) return
                   const failure = classifyFailure(err)
                   if (failure === 'submitted') setPhase('thanks')
                   else if (failure === 'no_longer_open') setPhase('no_longer_open')
                   else if (failure === 'not_openable') setPhase('not_openable')
-                  else setSaveLine('retrying')
+                  else setSubmitFailed(true)
                 })
-            }
+                .finally(() => {
+                  submitting.current = false
+                  if (mounted.current) setIsSubmitting(false)
+                })
+            }}
           >
-            {t('peer_request.submit')}
+            {t(submitFailed ? 'peer_request.try_again' : 'peer_request.submit')}
           </Button>
         </XStack>
       </ScrollView>
@@ -200,7 +221,7 @@ function Questionnaire({
         {t('peer_request.page_of', { page: String(Math.min(pageIndex, pages.length - 1) + 1), pages: String(pages.length) })}
       </Text>
       {page.map((q) => (
-        <QuestionField key={q.key} question={q} value={answers.get(q.key)} locale={locale} onAnswer={(v) => void saveAnswer(q.key, v)} />
+        <QuestionField key={q.key} question={q} value={answers.get(q.key)} unavailable={state.answers.get(q.key) !== undefined && 'unavailable' in state.answers.get(q.key)!} disabled={isSubmitting} locale={locale} onAnswer={(v) => saveAnswer(q.key, v)} />
       ))}
       {notice !== null && (
         <Text fontSize="$2" color="$red10" accessibilityRole="alert">
@@ -209,7 +230,7 @@ function Questionnaire({
       )}
       <SaveLineText line={saveLine} />
       <XStack gap="$3">
-        <Button onPress={() => (pageIndex === 0 ? onBack() : setPageIndex(pageIndex - 1))} accessibilityRole="button">
+        <Button disabled={pageIndex === 0 && busy} onPress={() => (pageIndex === 0 ? onBack() : setPageIndex(pageIndex - 1))} accessibilityRole="button">
           {t('peer_request.back')}
         </Button>
         <Button
@@ -220,7 +241,7 @@ function Questionnaire({
               setNotice(t('peer_request.required'))
               return
             }
-            setNotice(null)
+            setNotice(state.failed.size > 0 ? t('peer_request.invalid') : null)
             if (isLast) setPhase('closing')
             else setPageIndex(pageIndex + 1)
           }}
@@ -236,7 +257,7 @@ function Questionnaire({
 function SaveLineText({ line }: { readonly line: SaveLine }): React.ReactElement | null {
   const t = useClaimT()
   if (line === 'idle') return null
-  const key = line === 'saved' ? 'peer_request.saved' : line === 'saving' ? 'peer_request.saving' : 'peer_request.not_saved_retrying'
+  const key = line === 'saved' ? 'peer_request.saved' : line === 'saving' ? 'peer_request.saving' : line === 'failed' ? 'peer_request.not_saved' : 'peer_request.not_saved_retrying'
   return (
     <Text fontSize="$2" color={line === 'retrying' ? '$red10' : '$colorPress'} accessibilityRole="text" accessibilityLiveRegion="polite">
       {t(key)}
@@ -248,11 +269,15 @@ function SaveLineText({ line }: { readonly line: SaveLine }): React.ReactElement
 function QuestionField({
   question,
   value,
+  unavailable,
+  disabled,
   locale,
   onAnswer,
 }: {
   readonly question: PeerRequestQuestion
   readonly value: PeerRequestAnswerValue | undefined
+  readonly unavailable: boolean
+  readonly disabled: boolean
   readonly locale: string
   readonly onAnswer: (v: PeerRequestAnswerValue) => void
 }): React.ReactElement {
@@ -261,15 +286,22 @@ function QuestionField({
   const selectedCodes = value !== undefined && 'codes' in value ? value.codes : []
   const [dateText, setDateText] = useState(value !== undefined && 'date' in value ? toDisplayDate(value.date) : '')
   const [dateError, setDateError] = useState(false)
+  const savedDate = value !== undefined && 'date' in value ? value.date : null
+  useEffect(() => {
+    setDateText(savedDate === null ? '' : toDisplayDate(savedDate))
+    setDateError(false)
+  }, [savedDate])
 
   return (
     <YStack gap="$2">
       <Text fontSize="$4" fontWeight="500" color="$color">
         {label}
       </Text>
+      {unavailable && <Text accessibilityRole="alert">{t('peer_request.unavailable')}</Text>}
       {question.kind === 'date' && (
         <YStack gap="$2">
           <Input
+            disabled={disabled}
             value={dateText}
             onChangeText={setDateText}
             placeholder={t('peer_request.date_hint')}
@@ -282,6 +314,7 @@ function QuestionField({
             </Text>
           )}
           <Button
+            disabled={disabled}
             accessibilityRole="button"
             onPress={() => {
               const iso = parseDisplayDate(dateText, todayInIst(new Date()))
@@ -298,13 +331,15 @@ function QuestionField({
         return (
           <Button
             key={o.code}
+            disabled={disabled}
             theme={selected ? 'accent' : undefined}
             accessibilityRole={question.kind === 'multi' ? 'checkbox' : 'radio'}
-            accessibilityState={{ selected }}
+            accessibilityState={question.kind === 'multi' ? { checked: selected } : { selected }}
             accessibilityLabel={wordsIn(o.words, locale)}
             height="auto"
             py="$2"
             onPress={() => {
+              if (question.kind === 'date') { setDateText(''); setDateError(false) }
               const next = toggleOption(question, value, o.code)
               if (next !== null) onAnswer(next)
             }}

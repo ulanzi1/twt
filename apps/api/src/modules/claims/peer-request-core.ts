@@ -144,7 +144,7 @@ export async function decryptLiveSensitive(
   return out;
 }
 
-/** The live answers on the wire, for their OWNER. An answer that cannot be shown is left out (⛔ never a blank). */
+/** Preserve a saved answer's existence even when its sensitive value cannot be shown. */
 export function toWireAnswers(
   rows: readonly { answerId: string; questionKey: string; valueCodes: string[] | null; savedAt: Date }[],
   decrypted: ReadonlyMap<string, questionnaires.QuestionnaireAnswerValue>,
@@ -152,7 +152,10 @@ export function toWireAnswers(
   const out: PeerRequestLiveAnswer[] = [];
   for (const row of rows) {
     const value = row.valueCodes !== null ? { codes: row.valueCodes } : decrypted.get(row.answerId);
-    if (value === undefined) continue;
+    if (value === undefined) {
+      out.push({ questionKey: row.questionKey, value: { unavailable: true }, savedAt: row.savedAt.toISOString() });
+      continue;
+    }
     out.push({ questionKey: row.questionKey, value: 'date' in value ? { date: value.date } : { codes: [...value.codes] }, savedAt: row.savedAt.toISOString() });
   }
   return out;

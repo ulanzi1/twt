@@ -220,6 +220,19 @@ describe.skipIf(!hasDatabase)('Story 6.27a — the neighbours\' member routes (:
     expect(JSON.stringify(bad.body)).not.toContain('old_age');
   });
 
+  it('an undecryptable saved date remains explicitly unavailable to its owner (review R10)', async () => {
+    const p = randomUUID();
+    const m = await seedMember(p);
+    const r = await seedRequest(p, m);
+    const tok = token(m, p);
+    expect((await put(p, tok, r.pingId, 'has_died', { codes: ['died'] })).status).toBe(200);
+    expect((await put(p, tok, r.pingId, 'death_date', { date: '2026-10-01' })).status).toBe(200);
+    await t.pool.query("UPDATE claim_peer_mesh_reply_answers SET value_ciphertext = 'broken-envelope' WHERE claim_case_id = $1 AND question_key = 'death_date'", [r.cid]);
+    const detail = await call('GET', `${base(p)}/${r.pingId}`, tok);
+    expect(detail.status).toBe(200);
+    expect(detail.body['answers']).toContainEqual(expect.objectContaining({ questionKey: 'death_date', value: { unavailable: true } }));
+  });
+
   it('Submit: 200, then 409 submitted (a second Submit, a save, the detail); a closed claim is 409 no_longer_open', async () => {
     const p = randomUUID();
     const m = await seedMember(p);

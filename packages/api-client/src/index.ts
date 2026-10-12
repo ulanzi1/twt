@@ -1558,3 +1558,4 @@ export function createMemberPeerRequestClient(opts: MemberAuthClientOptions) {
 }
 
 export type MemberPeerRequestClient = ReturnType<typeof createMemberPeerRequestClient>;
+export { PeerAnswerEditor, type PeerAnswerEditorSnapshot } from './peer-answer-editor';

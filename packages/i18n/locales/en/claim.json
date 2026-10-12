@@ -236,5 +236,9 @@
   "peer_request.date_hint": "Day-Month-Year, for example 05-10-2026",
   "peer_request.date_invalid": "Please enter a real date that is not in the future.",
   "peer_request.date_save": "Save the date",
-  "peer_request.invalid": "This answer could not be saved. Please choose again."
+  "peer_request.invalid": "This answer could not be saved. Please choose again.",
+  "peer_request.not_saved": "Not saved — please choose again",
+  "peer_request.unsaved": "Please wait until your answers are saved before leaving.",
+  "peer_request.submit_error": "Your answers could not be sent just now. Please try again.",
+  "peer_request.unavailable": "Could not be shown just now."
 }

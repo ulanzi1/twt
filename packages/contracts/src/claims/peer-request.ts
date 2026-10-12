@@ -70,7 +70,7 @@ export type PeerRequestAnswerValue = z.infer<typeof PeerRequestAnswerValue>;
 /** One LIVE answer, as its owner (the neighbour, or the operator recording them) sees it. */
 export const PeerRequestLiveAnswer = z.object({
   questionKey: z.string(),
-  value: PeerRequestAnswerValue,
+  value: z.union([PeerRequestAnswerValue, z.object({ unavailable: z.literal(true) }).strict()]),
   savedAt: z.string(),
 });
 export type PeerRequestLiveAnswer = z.infer<typeof PeerRequestLiveAnswer>;

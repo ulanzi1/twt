@@ -19,7 +19,7 @@ import type {
   MemberSearchResultItem,
 } from '@twt/contracts';
 import type { ReactElement } from 'react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { ApiError } from '../../api/client.js';
 import {
@@ -70,6 +70,17 @@ export function HelplineClaimPage({ pariwarId }: HelplineClaimPageProps): ReactE
   const [lookupMethod, setLookupMethod] = useState<HelplineLookupMethod>('mobile');
   const [relationship, setRelationship] = useState<ClaimantRelationship | null>(null);
   const [identityConfirmed, setIdentityConfirmed] = useState(false);
+  const peerRequestsBusy = useRef(false);
+  const [peerRequestWarning, setPeerRequestWarning] = useState(false);
+  const reportPeerRequestsBusy = useCallback((busy: boolean) => {
+    peerRequestsBusy.current = busy;
+    if (!busy) setPeerRequestWarning(false);
+  }, []);
+  const canChangeCaller = (): boolean => {
+    if (!peerRequestsBusy.current) return true;
+    setPeerRequestWarning(true);
+    return false;
+  };
   const [nomineeConfirmed, setNomineeConfirmed] = useState(false);
   const [identityCorrections, setIdentityCorrections] = useState<readonly string[]>([]);
   const [nomineeCorrections, setNomineeCorrections] = useState<readonly string[]>([]);
@@ -106,6 +117,7 @@ export function HelplineClaimPage({ pariwarId }: HelplineClaimPageProps): ReactE
   };
 
   const selectMember = (id: string | null): void => {
+    if (!canChangeCaller()) return;
     setSelectedId(id);
     resetDownstreamState();
   };
@@ -118,6 +130,7 @@ export function HelplineClaimPage({ pariwarId }: HelplineClaimPageProps): ReactE
   }, [results, selectedId]);
 
   const onSearch = (payload: MemberSearchRequest): void => {
+    if (!canChangeCaller()) return;
     // Reset the downstream read-back/intake state on a fresh search.
     setSelectedId(null);
     resetDownstreamState();
@@ -126,6 +139,7 @@ export function HelplineClaimPage({ pariwarId }: HelplineClaimPageProps): ReactE
   };
 
   const confirmIdentity = (confirmed: boolean): void => {
+    if (!confirmed && !canChangeCaller()) return;
     setIdentityConfirmed(confirmed);
     // Best-effort, non-blocking audit line (Review Finding — AC4's literal "read-back-confirm"
     // requirement). Only fired on the false→true transition, and only once a member is
@@ -462,7 +476,9 @@ export function HelplineClaimPage({ pariwarId }: HelplineClaimPageProps): ReactE
         memberId={selected?.memberId ?? null}
         identityConfirmed={identityConfirmed}
         onStepUpRequired={() => setStepUpRequired(true)}
+        onBusyChange={reportPeerRequestsBusy}
       />
+      {peerRequestWarning && <p role="alert">Please finish saving this caller&apos;s answers before changing callers.</p>}
     </>
   );
 }

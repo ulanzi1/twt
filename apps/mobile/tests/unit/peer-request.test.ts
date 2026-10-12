@@ -129,7 +129,7 @@ describe('the chrome — the REAL t() in en AND hi', () => {
   const KEYS = [
     'card_title', 'card_body', 'title', 'list_empty', 'list_item_unnamed', 'loading', 'load_error', 'try_again', 'not_openable',
     'no_longer_open', 'saving', 'saved', 'not_saved_retrying', 'next', 'back', 'submit', 'done', 'required', 'date_hint',
-    'date_invalid', 'date_save', 'invalid',
+    'date_invalid', 'date_save', 'invalid', 'not_saved', 'unsaved', 'submit_error', 'unavailable',
   ]
   for (const locale of ['en', 'hi'] as const) {
     it(locale, () => {
@@ -174,14 +174,13 @@ describe('source scans', () => {
   it('memos and callbacks depend on `locale`, ⛔ on `t`', () => {
     const s = src['components/peer-request/PeerQuestionnaire.tsx']!
     for (const deps of s.matchAll(/\n {4}\[([^\]]*)\],\n {2}\)/g)) expect(`${deps[1]}`).not.toMatch(/\bt\b/)
-    expect(s).toContain('[save.mutateAsync, locale]')
+    expect(s).toContain('[editor]')
   })
   it('a retried save reuses ITS key (the key is minted once per save, outside the retry loop)', () => {
     const s = src['components/peer-request/PeerQuestionnaire.tsx']!
-    const keyAt = s.indexOf('const idempotencyKey = newIdempotencyKey()')
-    const loopAt = s.indexOf('for (let attempt = 1;')
-    expect(keyAt).toBeGreaterThan(0)
-    expect(keyAt).toBeLessThan(loopAt)
+    expect(s).toContain('newKey: newIdempotencyKey')
+    expect(s).toContain('new PeerAnswerEditor')
+    // Delayed-promise tests in api-client exercise ordering and retry-key identity.
   })
   it('the closing note and the Thank-you are the SERVER\'s words (⛔ app copy)', () => {
     const s = src['components/peer-request/PeerQuestionnaire.tsx']!

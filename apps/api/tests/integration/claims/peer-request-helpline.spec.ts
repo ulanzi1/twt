@@ -185,6 +185,19 @@ describe.skipIf(!hasDatabase)('Story 6.27a — the helpline records a neighbour\
     expect(sub.json<{ error: { code: string } }>().error.code).toBe('peer_request.not_found');
   });
 
+  it('an undecryptable saved date remains explicitly unavailable to the operator (review R10)', async () => {
+    const p = randomUUID();
+    const m = randomUUID();
+    const r = await seedRequest(p, m);
+    const op = await operator(p);
+    expect((await op.client.inject({ method: 'PUT', url: putUrl(p, r.pingId, 'has_died'), payload: { value: { codes: ['died'] } } })).statusCode).toBe(200);
+    expect((await op.client.inject({ method: 'PUT', url: putUrl(p, r.pingId, 'death_date'), payload: { value: { date: '2026-10-01' } } })).statusCode).toBe(200);
+    await td.pool.query("UPDATE claim_peer_mesh_reply_answers SET value_ciphertext = 'broken-envelope' WHERE claim_case_id = $1 AND question_key = 'death_date'", [r.cid]);
+    const list = await op.client.inject({ method: 'GET', url: `/api/v1/p/${p}/admin/claims/helpline/members/${m}/peer-requests` });
+    expect(list.statusCode).toBe(200);
+    expect(list.json<{ items: { answers: unknown[] }[] }>().items[0]!.answers).toContainEqual(expect.objectContaining({ questionKey: 'death_date', value: { unavailable: true } }));
+  });
+
   it('saved_via helpline + the operator as saver; a MIXED app + helpline reply locks for BOTH at Submit', async () => {
     const p = randomUUID();
     const m = randomUUID();

@@ -12,10 +12,12 @@
 // RLS in `policies/claim-peer-mesh-replies-rls.ts`.
 
 import { sql } from 'drizzle-orm';
-import { index, pgTable, text, timestamp, unique, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { foreignKey, index, pgTable, text, timestamp, unique, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 
 import { piiColumn } from '../encryption/column.js';
 import type { ClaimId, MemberId, PariwarId, PeerMeshAnswerId, PeerMeshPingId, PeerMeshReplyId, PeerMeshSelectionId } from '../ids/index.js';
+import { claimPeerMeshSelections } from './claim_peer_mesh_selections.js';
+import { claimPeerMeshPings } from './claim_peer_mesh_pings.js';
 
 /** Story 6.27a — the answers' Tier-1 field class. ⚠ By-value twins: `member/anonymize.ts`, `apps/api/src/context.ts`. */
 export const PEER_MESH_ANSWER_FIELD_CLASS = 'peer_mesh_answer';
@@ -43,6 +45,9 @@ export const claimPeerMeshReplies = pgTable(
   (t) => [
     unique('claim_peer_mesh_replies_ping_uq').on(t.pingId),
     unique('claim_peer_mesh_replies_pariwar_reply_uq').on(t.pariwarId, t.replyId),
+    unique('claim_peer_mesh_replies_owner_uq').on(t.pariwarId, t.replyId, t.claimCaseId),
+    foreignKey({ name: 'claim_peer_mesh_replies_selection_owner_fk', columns: [t.pariwarId, t.selectionId, t.claimCaseId], foreignColumns: [claimPeerMeshSelections.pariwarId, claimPeerMeshSelections.selectionId, claimPeerMeshSelections.claimCaseId] }).onDelete('cascade'),
+    foreignKey({ name: 'claim_peer_mesh_replies_ping_owner_fk', columns: [t.pariwarId, t.pingId, t.selectionId, t.responderMemberId], foreignColumns: [claimPeerMeshPings.pariwarId, claimPeerMeshPings.pingId, claimPeerMeshPings.selectionId, claimPeerMeshPings.memberId] }).onDelete('cascade'),
     index('claim_peer_mesh_replies_claim_idx').on(t.pariwarId, t.claimCaseId),
   ],
 );
@@ -68,6 +73,7 @@ export const claimPeerMeshReplyAnswers = pgTable(
     supersededAt: timestamp('superseded_at', { withTimezone: true, mode: 'date' }),
   },
   (t) => [
+    foreignKey({ name: 'claim_peer_mesh_reply_answers_owner_fk', columns: [t.pariwarId, t.replyId, t.claimCaseId], foreignColumns: [claimPeerMeshReplies.pariwarId, claimPeerMeshReplies.replyId, claimPeerMeshReplies.claimCaseId] }).onDelete('cascade'),
     uniqueIndex('claim_peer_mesh_reply_answers_live_uq').on(t.pariwarId, t.replyId, t.questionKey).where(sql`superseded_at IS NULL`),
     index('claim_peer_mesh_reply_answers_live_reply_idx').on(t.pariwarId, t.replyId).where(sql`superseded_at IS NULL`),
     index('claim_peer_mesh_reply_answers_claim_idx').on(t.pariwarId, t.claimCaseId),

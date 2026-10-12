@@ -135,7 +135,7 @@ used by ⛔ no earlier story (grepped 2026-10-10).
 
 # Story 6.27a: The Five Neighbours Can Answer — a Versioned Questionnaire in the App and by the Helpline, Saved as They Go, and the District Admin Sees Every Answer `[SURFACE]`
 
-Status: ready-for-dev
+Status: review
 
 > ⭐⭐ **WHAT STORY 6.27 IS, IN ONE PARAGRAPH.** Story 6.6 (`done`) chooses the five members nearest a member who has died and writes a
 > request for each — and ⛔ nothing ever sends it, ⛔ nothing can answer it, so **every claim ends its 72 hours with zero answers**
@@ -931,7 +931,7 @@ member's terms:
 - [x] **Task 8 — erasure, fences, gates (AC8, AC9).** `member/anonymize.ts` (the scrub `WHERE value_ciphertext IS NOT NULL`) + the rtbf pin
       (TWENTY; the unit count 23; the no-claims leg 21); `FENCED_FILES` bumps + the decrypt-fence arm for
       `peer-mesh-reply.ts`; the human-actor classifications; forced pagination; ⛔ no PII in events / logs / audit (assertions).
-- [ ] **Task 9 — records and close (AC10).** 9.1 the stale comments (PM18); 9.2 deferred-work: 6.10's item updated, GI13's erasure item gains
+- [x] **Task 9 — records and close (AC10).** 9.1 the stale comments (PM18); 9.2 deferred-work: 6.10's item updated, GI13's erasure item gains
       the two tables, PM19's item, PM20 on the zero-candidate item, the family-member item (PM1); 9.3 Rows 27 / 28 (if Task 0.6 did ⛔ not);
       9.4 a pointer on row 6-22 for PM1's residual (6.27a OWNS it; 6.27c only checks it); 9.5 this file's Change Log + File List; 9.6 `pnpm ci:local` green — run it,
       paste the summary, ⛔ never claim it.
@@ -1064,17 +1064,170 @@ Re-pin base `51b9000a` (2026-10-12): 6.30 (`12d0fbb4` … `72f7b607`), 6.28 (`01
 
 ### Agent Model Used
 
+Claude Opus 5.5 (`claude-opus-5-5`) — `bmad-dev-story 6.27a`, 2026-10-12, branch `story/6-27a` from `main` `7120ac20`.
+
 ### Debug Log References
+
+- Migration 0156 iterated on a THROWAWAY database (`twt_scratch_627a`) first, so the in-place edits never touched an applied migration
+  ([[project_live_db_test_gotchas]]); applied to `:5432` / `:5433` `twt_dev` only after the writer, race and policy specs were green on it;
+  then proven FROM ZERO on both instances (scratch DBs, dropped after).
+- The answers trigger's first draft raised *"the reply is submitted"* when the reply was merely OUT OF SCOPE (a cross-tenant insert) —
+  split into two messages (*"not in scope"* / *"submitted"*) before 0156 was applied anywhere.
+- `apps/mobile` `tsc` with the checked-out `.expo/types/router.d.ts` reports ONE error in `app/(auth)/otp.tsx:50` (`"/peer-request"` is ⛔ in
+  the stale, gitignored typed-routes file generated before 6.30) — PRE-EXISTING on `main` (stash-verified); with the file moved aside
+  `tsc` is clean ([[project_mobile_typed_routes_worktree]]).
+- The human-actor gate reads each route's `preHandler` ARRAY LITERALLY — a shared `chain` const was reported as "no preHandler chain";
+  inlined per route.
 
 ### Completion Notes List
 - 2026-10-10 — created by `bmad-create-story 6.27` (Opus 5.5); v2.0 after a four-reviewer fresh-context validate and `-305`: cut into
   6.27a (this file — the shared record) and 6.27b / c / d. ⛔ No code; Task 0.3 / 0.4 owed.
+- 2026-10-12 — **dev (`bmad-dev-story 6.27a`)**. Task 0.0 / 0.5 / 0.6 / 0.7 (epics.md entries 6.27a–d + the 6.6 / 6.10 annotations; roster
+  Rows 27 / 28; the ledger line) committed FIRST, then Tasks 1–9:
+  - **Task 1 (AC2):** `isRealCalendarDate` moved to the import-free leaf (same identity re-exported); the answer window extracted ONCE
+    (`claim/answer-window.ts` — the pure decision, `isClaimInAnswerWindow`, `answerWindowSql`; 6.26a's name a re-export); the pure
+    questionnaire engine `packages/domain/src/questionnaires/` (shape, validator — every CF3 rule, v1 historical + EXEMPT, v2 LIVE as ruled,
+    the served definition skipping a `'pending'` health question, `resolveLiveVersion`, the answer check, the dependants, the date window);
+    an NW1 entry + a pg-free reachability test with teeth; the question words en + hi (Row 28 marker); the contracts wire mirror + lockstep.
+  - **Task 2 (AC3):** 0156 — the ping's delivery columns + structural CHECKs, `REVOKE UPDATE` + a column GRANT (⛔ `message_key`), the
+    finished-row trigger; `claim_peer_mesh_replies` (one per ping, `submitted_at` forward-only) and APPEND-ONLY
+    `claim_peer_mesh_reply_answers` with the all-times trigger (insert / supersede only while open AND in the window; the 0143-form erasure
+    arm, its admissions RECORDED, ⛔ claimed refused); a plpgsql window parity-tested against `answer-window.ts` over every state ×
+    routed / not routed; RLS per-command.
+  - **Task 3 (AC4):** `claim/peer-mesh-reply.ts` — save as they go (claim → ping → reply locks; ⛔ KMS under a lock — the handler encrypts and
+    indexes first; dependants superseded; idempotent by value; the ONE event at the first `has_died` save with the CURRENT state and the
+    right actor), Submit, `peerMeshReplyState`, the open list; `recordPeerMeshResponse` widened (the window, the claim lock taken INSIDE,
+    `actor` defaulting to `'member'`); `PeerMeshWindowResolvedError` removed (⛔ other caller); the jobs test inverted (F39); the
+    two-connection races (save ↔ approval and save ↔ 6.28's OP4 closure, both orders — ⛔ collision, ⛔ deadlock); 409 legs for OP4 (the real
+    `closeClaimsOfPaidDeath`) and OP13 (`suspicion_appeal_allowed` on a `state_trustee_approved` + live-R9 claim).
+  - **Task 4 (AC5 API):** the member routes (one indistinguishable 404 incl. the untexted ping; 409 no-longer-open / submitted; 422 with
+    ⛔ the value echoed; ⛔ Turnstile; Idempotency-Key; `withCompensatingAudit` with codes only); `NON_ADJUDICATION_ROUTES`;
+    `createMemberPeerRequestClient`.
+  - **Task 5 (AC5 mobile):** 6.30's slot FILLED (the list, the in-screen questionnaire with a generic renderer, the save line that retries
+    with the SAME key, the server's closing note and Thank-you, the not-openable state with the helpline, ⛔ a call before the session; the
+    inner header hidden — in-screen Back); the home card and a notice-strip item beside `<PollsEntry />` (the banner lane stays one source)
+    — both DARK until a request is texted; 6.30's tests amended (⛔ deleted); `peer_request.placeholder` RETIRED; the friction row +
+    disposition; the microcopy scope.
+  - **Task 6 (AC6):** the helpline routes on 6.3's chain + step-up, ENROLLED in `COVERAGE_SET`; texted-only list / PUT / submit; ONLY that
+    neighbour's answers; the mixed app + helpline reply; the admin "Requests to confirm a death" panel.
+  - **Task 7 (AC7):** `assemblePeerAnswers` (actor-aware; 6.27b's PM24 reuses it) — names, send status for every value, every live answer
+    in English with provenance and "changed N times", the call-back mobile on a "yes" (each showing audited, ⛔ the number), "could not be
+    shown just now"; `peerMesh` OPTIONAL — ABSENT for an inspector before a full visit (⛔ a variant); the ceiling 23 → 26 (all four pins);
+    the F41 typed specs; the section's exact-read spy.
+  - **Task 8 (AC8 / AC9):** the erasure scrub (19 → 20 tables, 22 → 23 statements; the no-claims leg 21) + a live leg after Submit and
+    closure; `FENCED_FILES` 41 → 50 with a ⛔-decrypt arm (+ teeth); a no-PII leg on the audit rows and the event payload.
+  - **Task 9 (AC10):** PM18's stale comments annotated; the deferred-work items (PM19, PM1's family residual, the undecryptable-answer
+    refusal; the 6.10 / GI13 / zero-candidate items annotated); the row 6-22 pointer. Rows 27 / 28 were written at Task 0.6.
+  - ⭐ **`pnpm ci:local` (with `DATABASE_URL` → `:5433`), 2026-10-12, at `ffa85b61` + this record: `ci:local PASSED — 36 job(s) green`**
+    (domain 354 files / 5044 tests + 1 skipped; api 158 / 1641 + 1 skipped; jobs 57 / 797; mobile 51 / 772; admin 65 / 1022; contracts
+    77 / 1344). ⚠ Two EARLIER runs failed and are RECORDED: (1) `typecheck` — the stale, gitignored `apps/mobile/.expo/types/router.d.ts`
+    (generated before 6.30; fails on `main` too) — moved aside to the session scratchpad (⛔ deleted; `expo start` regenerates it), which
+    matches GitHub CI (⛔ `.expo/types` there); (2) `integration-tests` — `member-renewal-lifecycle.test.ts` timed out at 20 s because run
+    (1) was STILL running against the same database (its typecheck failure did not stop its other turbo tasks); alone the file passes on
+    this branch (4.9 s / 8.7 s) and on `main` (17.9 s / 14.1 s). The third run, with nothing else running, is the one above.
+  - ⚠ **RECORDED, ⛔ demonstrated:** the mobile screens are proven by source-scan + pure-logic + real-`t()` tests only (the harness renders
+    ⛔ no screen) — ⛔ run on a device. ⚠ An authoring choice inside PM11's latitude: invalid input is a **422** (`peer_request.invalid_answer`)
+    — PM11 names only the 404 / 409 codes.
 
 ### File List
+
+- MOD `_bmad-output/implementation-artifacts/6-27-peer-mesh-sending-replies-and-date-of-death.md`
+- MOD `_bmad-output/implementation-artifacts/deferred-work.md`
+- MOD `_bmad-output/implementation-artifacts/sprint-status.yaml`
+- MOD `_bmad-output/planning-artifacts/epics.md`
+- MOD `apps/admin/src/api/client.ts`
+- MOD `apps/admin/src/api/hooks.ts`
+- MOD `apps/admin/src/modules/claim-verification/SignalsPanel.tsx`
+- MOD `apps/admin/src/modules/claim-verification/i18n-en.ts`
+- MOD `apps/admin/src/modules/helpline-claims/HelplineClaimPage.tsx`
+- NEW `apps/admin/src/modules/helpline-claims/HelplinePeerRequests.tsx`
+- NEW `apps/admin/tests/helpline-peer-requests.test.tsx`
+- MOD `apps/admin/tests/verifier-console.test.tsx`
+- MOD `apps/api/src/audit/audit-sink.ts`
+- MOD `apps/api/src/context.ts`
+- NEW `apps/api/src/modules/claims/claims.peer-request.handlers.ts`
+- NEW `apps/api/src/modules/claims/claims.peer-request.helpline.routes.ts`
+- NEW `apps/api/src/modules/claims/claims.peer-request.member.routes.ts`
+- MOD `apps/api/src/modules/claims/claims.verifier-console.handlers.ts`
+- MOD `apps/api/src/modules/claims/index.ts`
+- NEW `apps/api/src/modules/claims/peer-answers-assembler.ts`
+- NEW `apps/api/src/modules/claims/peer-request-core.ts`
+- NEW `apps/api/tests/integration/claims/peer-answers-console.spec.ts`
+- NEW `apps/api/tests/integration/claims/peer-request-helpline.spec.ts`
+- NEW `apps/api/tests/integration/claims/peer-request-member.spec.ts`
+- MOD `apps/api/tests/integration/claims/suspicion-refusal-routes.spec.ts`
+- MOD `apps/api/tests/integration/claims/verifier-console-ground-inspection.spec.ts`
+- MOD `apps/api/tests/integration/claims/verifier-console-shape.spec.ts`
+- MOD `apps/api/tests/integration/claims/verifier-console.spec.ts`
+- MOD `apps/jobs/src/claim-peer-mesh.ts`
+- MOD `apps/jobs/tests/claim-peer-mesh.test.ts`
+- MOD `apps/mobile/app/(tabs)/index.tsx`
+- MOD `apps/mobile/components/panchayat/PanchayatNoticeboard.tsx`
+- NEW `apps/mobile/components/peer-request/PeerQuestionnaire.tsx`
+- NEW `apps/mobile/components/peer-request/PeerRequestEntry.tsx`
+- NEW `apps/mobile/components/peer-request/PeerRequestList.tsx`
+- NEW `apps/mobile/components/peer-request/PeerRequestNotOpenable.tsx`
+- MOD `apps/mobile/components/peer-request/PeerRequestSlot.tsx`
+- NEW `apps/mobile/components/peer-request/usePeerRequestQueries.ts`
+- NEW `apps/mobile/lib/peer-request-api.ts`
+- NEW `apps/mobile/lib/peer-request.ts`
+- MOD `apps/mobile/tests/unit/app-link-route-map.test.ts`
+- MOD `apps/mobile/tests/unit/not-found-copy.test.ts`
+- NEW `apps/mobile/tests/unit/peer-request.test.ts`
+- MOD `docs/launch-gate-inventory/inventory-roster.md`
+- MOD `friction-budget.md`
+- MOD `microcopy.yaml`
+- MOD `packages/api-client/src/index.ts`
+- NEW `packages/api-client/tests/peer-request-client.test.ts`
+- MOD `packages/contracts/src/claims/index.ts`
+- NEW `packages/contracts/src/claims/peer-request.ts`
+- MOD `packages/contracts/src/claims/verifier-console.ts`
+- NEW `packages/contracts/tests/claims-peer-request.test.ts`
+- MOD `packages/contracts/tests/claims-verifier-console.test.ts`
+- NEW `packages/domain/migrations/0156_claim-peer-mesh-replies.sql`
+- MOD `packages/domain/migrations/meta/_journal.json`
+- NEW `packages/domain/src/claim/answer-window.ts`
+- MOD `packages/domain/src/claim/ground-inspection-persist.ts`
+- MOD `packages/domain/src/claim/index.ts`
+- MOD `packages/domain/src/claim/nominee-determination-persist.ts`
+- MOD `packages/domain/src/claim/peer-mesh-persist.ts`
+- NEW `packages/domain/src/claim/peer-mesh-reply.ts`
+- MOD `packages/domain/src/cycle-calendar/holiday-resolver.ts`
+- MOD `packages/domain/src/ids/index.ts`
+- MOD `packages/domain/src/index.ts`
+- MOD `packages/domain/src/member/anonymize.ts`
+- NEW `packages/domain/src/policies/claim-peer-mesh-replies-rls.ts`
+- MOD `packages/domain/src/policies/index.ts`
+- NEW `packages/domain/src/questionnaires/answers.ts`
+- NEW `packages/domain/src/questionnaires/index.ts`
+- NEW `packages/domain/src/questionnaires/keys.ts`
+- NEW `packages/domain/src/questionnaires/peer-mesh.ts`
+- NEW `packages/domain/src/questionnaires/registry.ts`
+- NEW `packages/domain/src/questionnaires/types.ts`
+- NEW `packages/domain/src/questionnaires/validator.ts`
+- MOD `packages/domain/src/schema/claim_peer_mesh_pings.ts`
+- NEW `packages/domain/src/schema/claim_peer_mesh_replies.ts`
+- MOD `packages/domain/src/schema/index.ts`
+- NEW `packages/domain/tests/claim/answer-window.test.ts`
+- MOD `packages/domain/tests/claim/approval-warnings.test.ts`
+- MOD `packages/domain/tests/claim/nominee-name-no-comparison-fence.test.ts`
+- NEW `packages/domain/tests/integration/claim/peer-mesh-reply-concurrency.spec.ts`
+- NEW `packages/domain/tests/integration/claim/peer-mesh-reply-rtbf.spec.ts`
+- NEW `packages/domain/tests/integration/claim/peer-mesh-reply.spec.ts`
+- NEW `packages/domain/tests/integration/rls/claim-peer-mesh-replies-policy-regression.spec.ts`
+- MOD `packages/domain/tests/member/rtbf-anonymize.test.ts`
+- NEW `packages/domain/tests/questionnaires/questionnaires.test.ts`
+- MOD `packages/i18n/locales/en/claim.json`
+- MOD `packages/i18n/locales/en/common.json`
+- MOD `packages/i18n/locales/hi/claim.json`
+- MOD `packages/i18n/locales/hi/common.json`
+- MOD `packages/queue/src/index.ts`
+- MOD `scripts/claim-adjudication-human-actor-invariant/check.ts`
 
 ## Change Log
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-12 | 2.13 | ⭐ **DEV (`bmad-dev-story 6.27a`)** — Tasks 0.0 / 0.5–0.7 and 1–9 built on `story/6-27a`: the questionnaire engine (v1 historical / v2 live; the CF3 validator; the `'pending'` skip), migration 0156 (the ping's delivery columns; replies + append-only answers; the all-times trigger and its RECORDED erasure arm), the reply writer (claim → ping → reply; ⛔ KMS under a lock; the ONE event), the member + helpline routes (texted-only; one 404), the mobile screens (6.30's slot filled; the home card + notice-strip item, dark until texted), the District Admin's view (ceiling 23 → 26; `peerMesh` optional for an inspector before a full visit), erasure (20 tables / 23 statements), the fences, the records (Rows 27 / 28, the epics entries, deferred-work, the row 6-22 pointer). Status → `review`. |
 | 2026-10-12 | 2.12 | The v2.10 / v2.11 validate (one fresh-context reviewer; 0 BLOCKER / 0 HIGH / 6 MEDIUM / 3 LOW — all applied): NW1 has FIVE entries (`questionnaires/index.ts` the sixth); OP13's closure is the allowed suspicion appeal (`suspicion_appeal_allowed`), ⛔ not `death_already_finally_approved` (OP4's); AC4's closure legs reach Task 3; Task 5 amends `app-link-route-map.test.ts:78-80` and keeps the right ranges; the header — the inner `<Stack />` shows one unless the screen hides it — with an AC5 leg; the home card and PM2's notice-strip item gain an AC5 leg and a Task 5 item; PM8 reads *ratified by `-324`*; the header records PM5 (iv)'s texts and F35 / F41 / PM23. |
 | 2026-10-12 | 2.11 | ⭐ `2026-10-12-324` (Trustee-ratified, DR + KB — option A): PM8's R9 arm — answers taken while the special panel decides a claim that passed the month's vote — RATIFIED as `-311` committed it; the PM8 annotation and the header read RULED; ⛔ no PM, AC or Task text changes; ⛔ no code change. |
 | 2026-10-12 | 2.10 | ⭐ RE-PINNED to `51b9000a` (after 6.30, 6.28, 6.34; BigDev chose *"Re-pin to main"* at `bmad-create-story 6.27a`): every moved code cite updated (five read-only checkers + the author); F12 — ceiling 23 and two required packet fields; F13 — six kinds; F17 — four queue sources; F18 — OP2 in the gate; F29 — Rows 29 / 30 written; F41 — the missed `verifier-console.spec.ts` consumers; F7's `:262-263` → `:269-270` (wrong since v2.0); dated annotations: PM8 (an OPEN `-318` / `-303` reading for BigDev; 6.28's mid-window closures), PM9 (END position), PM10 (the FIFTH source), PM11 (AL16 narrowing; the chrome strings' home corrected to `claim.json`), PM13 (from 23); AC4 closure legs; AC5 / Task 5 — 6.30 merged, its tests amended ⛔ never deleted, the session gate, the header, the placeholder; Task 7 — 6.28's fixtures; Trap 5 lists 6.28's changes; Trap 21 (6.34's DLT gate); ⛔ no PM, ruling or AC intent moved. |

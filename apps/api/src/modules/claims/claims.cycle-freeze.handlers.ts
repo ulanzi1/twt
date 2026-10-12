@@ -595,8 +595,10 @@ export function createCycleFreezeHandlers(
      * ⭐ Story 6.28 (`2026-10-11-319` OP14 (b)) — POST …/admin/cycle-freeze/claims/:claimCaseId/close-for-paid-death —
      * "Close this claim": runs OP4's paid-death closure in its OWN transaction with `lock_timeout` (⛔ nothing of the claim
      * is read in `request.scopeTx` — Fact 5), the HUMAN actor (`trustee`). `this_claim_closed: false` + ⛔ no change when
-     * ⛔ no payment is committed or the claim keeps its appeal / FQ5 holds it. A lock timeout ⇒ a retryable 503; an
-     * unknown / other-Pariwar claim ⇒ 404. ⛔ Never another claim's id in the body.
+     * ⛔ no payment is committed. When the claim keeps its appeal / FQ5 holds it, `this_claim_closed: false` — but the walk
+     * still closes the death's OTHER closable claims (the ruled outcome, Q1 A), counted in `closed_count` (code review
+     * round 3, `2026-10-12-320` D2 A — AC11 amended). A lock timeout ⇒ a retryable 503; an unknown / other-Pariwar
+     * claim ⇒ 404. ⛔ Never another claim's id in the body.
      */
     async postCloseForPaidDeath(request: FastifyRequest, reply: FastifyReply): Promise<CloseForPaidDeathResponse> {
       const ctx = await contextOf(request);

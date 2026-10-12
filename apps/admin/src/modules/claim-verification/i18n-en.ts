@@ -770,7 +770,11 @@ export const verifierConsoleEn = {
     bannerPaid: (ref: string) => `Another claim for this death (claim ${ref}) has been paid. This claim should be closed.`,
     closeAction: 'Close this claim',
     closed: 'Closed — another claim for this death goes ahead.',
-    notClosed: 'Not closed — it waits on another claim’s appeal or refusal.',
+    // Code review round 3 (`2026-10-12-320` D2 A) — neutral: a claim may wait on its OWN appeal (OP4 (b)) as well as on
+    // another claim's appeal or refusal (OP4 (c)–(d)).
+    notClosed: 'Not closed — it waits on an appeal or a refusal.',
+    // The action also closes the death's OTHER closable claims (Q1 A) — said, with the count (⛔ never their ids).
+    othersClosed: (n: number) => (n === 1 ? '1 other claim for this death was closed.' : `${n} other claims for this death were closed.`),
     busy: 'Busy — try again in a moment.',
     closeFailed: 'The claim could not be closed just now.',
   },

@@ -299,7 +299,8 @@ export const DEATH_ALREADY_FINALLY_APPROVED_TRIGGER = 'death_already_finally_app
  * `reversed` itself is ⛔ deliberately NOT in this list: a claim already in `reversed` (routed back through the
  * freeze/R9 pipeline toward a fresh vote by an EARLIER transaction) is closable like any other open claim here — if
  * left alone it would only be blocked again by OP2's gate at its next vote, so closing it now is conservative, not
- * surprising. The other-claims console (`otherClaimStageOf`) still displays it distinctly (`under_appeal`).
+ * surprising. The other-claims console (`otherClaimStageOf`) displays it distinctly, as its OWN stage (`reversed` —
+ * code review round 2), ⛔ never `under_appeal`, so staff never read a closable claim as appeal-protected.
  */
 const KEEPS_ITS_APPEAL_STATES: readonly string[] = ['denied', 'appeal_stage_1', 'appeal_stage_2', 'appeal_stage_3'];
 

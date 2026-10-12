@@ -431,6 +431,8 @@ export function R9CasePanel({ pariwarId, claimCaseId }: R9CasePanelProps): React
                       name="vote"
                       data-testid="r9-vote-approve"
                       disabled={elsewhere !== null}
+                      // Code review round 3 (checklist 13(d)) — disabled by the banner ⇒ described by it.
+                      aria-describedby={elsewhere !== null ? `finally-approved-elsewhere-${claimCaseId}` : undefined}
                       checked={voteChoice === 'approve' && elsewhere === null}
                       onChange={() => {
                         setVoteChoice('approve');

@@ -1,3 +1,13 @@
+# last_updated: 2026-10-12a (⭐ **STORY 6.28 — CODE REVIEW COMPLETE: review → done.** Three `bmad-code-review` passes on `story/6-28-…`:
+# chunks 1–4 (domain / API / admin / mobile+contracts+i18n), round 2 (the review's own patches — found the verifier console's read
+# ceiling silently broken, 22 → 23), and round 3 (the WHOLE story in ONE pass, 113 files — 0 BLOCKER / 0 HIGH). Round 3: two BigDev
+# decisions — D1 A (the staff "the family may file again" label only while ⛔ no other claim of the death is live — a holder closed
+# because the death is PAID made it false) and D2 A ("Close this claim" keeps closing the death's other closable claims, now COUNTED,
+# neutral not-closed copy; AC11 / OP10 / OP14 (b) annotated AMENDED) — and 13 patches: fail-soft reads under SAVEPOINTs (an aborted
+# request tx 500'd the member claims list), Resolve → Approve disabled under the banner, checklist 13(d) describedby, a second PAID
+# claim logged at H(i)/H(iv), the paid claim preferred on the banner, H(ii) closures `actor: 'system'`, a cross-Pariwar leg, a
+# member-app H(ii) HTTP leg, AC10's RF2 leg isolated. 3 deferred (`deferred-work.md`). Every new leg red-checked; `pnpm ci:local`
+# PASSED 34/34 on the round-3 tree. ⛔ No other row moves.)
 # last_updated: 2026-10-11a (⭐ **STORY 6.28 — IMPLEMENTED via `bmad-dev-story 6.28`: ready-for-dev → in-progress → review.** Built AS RULED
 # (`2026-10-11-318` Q1 A / Q2 A / Q3 A / Q4 A; author-commit `-319`, OP9's DB backstop ⛔ not built), one commit per task on
 # `story/6-28-…`. OP1 a read-only leaf (`claim/one-payment-per-death.ts`, NW1-scanned); OP2 the final-only conjunct after RF5 on
@@ -19725,7 +19735,7 @@ development_status:
   # inspector the other claims. Still ⛔ no code; the note still ⛔ not sent.
   # ⭐ 2026-10-11 GOVERNANCE DONE: the Panel ruled Q1 A, Q2 A, Q3 A, Q4 A (`2026-10-11-318`, Trustee-ratified, DR + KB); the author-commit
   # answering OP1–OP14 for that ruling (OP9's DB backstop ⛔ NOT built) is `2026-10-11-319`. Task 0 complete; Task 1 (code) may now start.
-  6-28-one-payment-per-death-second-approval-guard: review
+  6-28-one-payment-per-death-second-approval-guard: done
   # ⭐ 2026-10-09 ADDED by `bmad-create-story 6.29` (BigDev): 0151 PARITY with 6.25's hold / give-up anchor / DB backstops (`-300` /
   # `-301` Consequence 3), adapted to SMS — RN1–RN10 PROPOSED, author-commit owed at Task 0.3. The jobs-login gap the key names is SYSTEMIC
   # and scoped OUT (deferred-work 2026-10-09; RN9 proposes roster Row 26). ⛔ No epics.md entry yet (owed at Task 0.4).

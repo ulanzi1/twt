@@ -14,8 +14,10 @@
 //         read says "could not be checked" (`available: false`) and ⛔ never aborts the scope transaction.
 //   AC11 (b) — `finally_approved_elsewhere` on the freeze pending list and the R9 panel (by reference — ⛔ the id); the
 //         "Close this claim" action: with the death PAID on another claim it closes this claim and every other closable
-//         open claim (`death_already_finally_approved`); with the other only voted, or the claim keeping its appeal, 200
-//         `{ this_claim_closed: false, closed_count: 0 }` and ⛔ no change; a lock timeout 503; unknown 404; ⛔ `cycle.freeze` 403.
+//         open claim (`death_already_finally_approved`); with the other only voted, 200 `{ this_claim_closed: false,
+//         closed_count: 0 }` and ⛔ no change; the claim keeping its appeal ⇒ `this_claim_closed: false` — and the death's
+//         OTHER closable claims are still closed, counted in `closed_count` (code review round 3, BigDev D2 A); a lock
+//         timeout 503; unknown 404; another Pariwar's REAL claim id 404 (⛔ nothing closed); ⛔ `cycle.freeze` 403.
 //   AC11 (d) — the ground-inspection read carries `otherClaimsForDeath` (count, references + stages, the visit booleans —
 //         ⛔ a name, ⛔ a date, ⛔ an id) ONLY for a caller holding an in-scope assignment of THIS claim; else `null`.
 //   AC10 — the window is gone (OP11): a 40-day-old OPEN claim takes a cross-channel filing as a `pending` attempt and
@@ -702,6 +704,45 @@ describe.skipIf(!hasDatabase)('Story 6.28 — one payment per death through HTTP
     const held = await pa2.client.inject({ method: 'POST', url: closeUrl(w2.pariwarId, w2.claimCaseId), payload: {} });
     expect(held.json()).toEqual({ this_claim_closed: false, closed_count: 0 });
     expect(await stateOf(w2.claimCaseId)).toBe('denied');
+  });
+
+  // Code review round 3 (`2026-10-12-320` D2 A) — pressed on a claim that KEEPS its appeal, the action still closes the
+  // death's OTHER closable claims (the ruled outcome — Q1 A) and COUNTS them; this claim is untouched.
+  it('AC11 (b) — pressed on a HELD claim: this claim ⛔ closed, the death\'s other closable claim closed and counted', async () => {
+    const w = await seedWorld();
+    await inScope(w.pariwarId, async (sc) => {
+      const emit = emitter(sc, w.pariwarId, w.memberId, w.claimCaseId);
+      await emit('verification_in_progress', 'verifier_review', 'claim.verifier_reviewing');
+      await emit('verifier_review', 'denied', 'claim.verifier_denied');
+    });
+    const third = randomUUID();
+    await inScope(w.pariwarId, async (sc) => {
+      const emit = emitter(sc, w.pariwarId, w.memberId, third);
+      await emit(null, 'intake_pending', 'claim.intake_initiated', { deceased_member_id: w.memberId, intake_channel: 'helpline', claimant_actor_id: null });
+      await emit('intake_pending', 'intake_converged', 'claim.intake_converged');
+    });
+    const xid = await siblingAt(w, 'approved');
+    const pa = await staff(w.pariwarId, 'pariwar_admin');
+    const res = await pa.client.inject({ method: 'POST', url: closeUrl(w.pariwarId, w.claimCaseId), payload: {} });
+    expect(res.statusCode, res.body).toBe(200);
+    expect(res.json()).toEqual({ this_claim_closed: false, closed_count: 1 });
+    expect(await stateOf(w.claimCaseId)).toBe('denied');
+    expect(await stateOf(third)).toBe('closed');
+    expect(await closedTriggerOf(third)).toEqual({ t: 'death_already_finally_approved', h: xid });
+    expect(res.body.toLowerCase()).not.toContain(third.toLowerCase());
+  });
+
+  // Code review round 3 — checklist family 3: another Pariwar's REAL claim id (⛔ a random uuid) ⇒ 404, ⛔ nothing closed.
+  it('AC11 (b) — another Pariwar\'s REAL claim id ⇒ 404 and that claim is ⛔ touched', async () => {
+    const mine = await seedWorld();
+    const theirs = await seedWorld();
+    await siblingAt(theirs, 'approved');
+    const pa = await staff(mine.pariwarId, 'pariwar_admin');
+    const res = await pa.client.inject({ method: 'POST', url: closeUrl(mine.pariwarId, theirs.claimCaseId), payload: {} });
+    expect(res.statusCode, res.body).toBe(404);
+    expect(await stateOf(theirs.claimCaseId)).toBe('verification_in_progress');
+    const events = await td.pool.query(`SELECT 1 FROM events_log WHERE stream_id = $1 AND event_type = 'claim.closed'`, [theirs.claimCaseId]);
+    expect(events.rowCount).toBe(0);
   });
 
   it('AC11 (b) — a lock timeout ⇒ 503 (retryable, its own words); unknown claim ⇒ 404; ⛔ `cycle.freeze` ⇒ 403', async () => {

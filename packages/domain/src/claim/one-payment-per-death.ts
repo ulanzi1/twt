@@ -367,6 +367,8 @@ const ELSEWHERE_SLICE = 500;
  * `otherClaimInStatesSql` — the lowest id), and its stage, in ONE statement per slice of ≤ 500 ids (⛔ never a per-claim
  * query — the bulk-read rule of OP5). Keys are lower-case claim ids; a claim with ⛔ none maps to `null`; a claim ⛔ in
  * this Pariwar is absent. Decision SUPPORT only — OP2's gate is the control (a forced request still meets the 409).
+ * Code review round 3 — a PAYMENT-COMMITTED claim is preferred over a merely voted one (a legacy pair whose lower id is
+ * only voted would otherwise show "passed the final vote" and hide "Close this claim" on a death already paid).
  */
 export async function readFinallyApprovedElsewhereBulk(
   db: Db,
@@ -382,7 +384,10 @@ export async function readFinallyApprovedElsewhereBulk(
         FROM claims op_c
         LEFT JOIN claims op_x
           ON op_x.pariwar_id = op_c.pariwar_id
-         AND op_x.claim_case_id = (${otherClaimInStatesSql('op_c', FINALLY_APPROVED_CLAIM_STATES)})::uuid
+         AND op_x.claim_case_id = COALESCE(
+               ${otherClaimInStatesSql('op_c', PAYMENT_COMMITTED_CLAIM_STATES)},
+               ${otherClaimInStatesSql('op_c', FINALLY_APPROVED_CLAIM_STATES)}
+             )::uuid
        WHERE op_c.pariwar_id = ${pariwarId}
          AND op_c.claim_case_id IN (${sql.join(slice.map((id) => sql`${id}::uuid`), sql`, `)})
     `);
@@ -459,6 +464,10 @@ const HOLDER_REFUSED_SLICE = 500;
  * `held_by_claim_case_id` — the claim that went ahead) has since been REFUSED or CLOSED, so the staff label reads "the
  * other claim … was later refused; the family may file again" instead of "… goes ahead". ONE statement per ≤ 500 ids;
  * lower-case ids. ⛔ No PII.
+ * ⭐ Code review round 3 (`2026-10-12-320` D1 A) — AND ⛔ no OTHER claim of the death is still live (every other claim
+ * `denied` or `closed`): a holder CLOSED because the death is already paid (H(iii) right after RF6) or because a third
+ * claim went ahead leaves a claim that DOES go ahead, so "the family may file again" would be false (a new filing for a
+ * paid death is closed at mint, H(ii)).
  */
 export async function readClosedHolderRefusedBulk(db: Db, pariwarId: PariwarId, claimCaseIds: readonly string[]): Promise<Set<string>> {
   const out = new Set<string>();
@@ -481,6 +490,14 @@ export async function readClosedHolderRefusedBulk(db: Db, pariwarId: PariwarId, 
               AND op_e.stream_id = op_c.claim_case_id
               AND op_e.event_type = 'claim.closed'
               AND op_h.current_state IN ('denied', 'closed')
+         )
+         AND NOT EXISTS (
+           SELECT 1
+             FROM claims op_l
+            WHERE op_l.pariwar_id = op_c.pariwar_id
+              AND op_l.deceased_member_id = op_c.deceased_member_id
+              AND op_l.claim_case_id <> op_c.claim_case_id
+              AND op_l.current_state NOT IN ('denied', 'closed')
          )
     `);
     for (const r of result.rows ?? []) out.add(r.claim_case_id.toLowerCase());

@@ -37,6 +37,7 @@ import {
 import { emitAuthAudit } from '../auth/shared/audit.js';
 import { auditAuthorizationDenied, geoTreeResolverForRequest } from '../rbac/index.js';
 import { closeScopeTx, openScopeTx } from '../multi-tenant/scope-tx.js';
+import { underSavepoint } from './later-approval-warnings.js';
 import {
   deathDateBlindIndex,
   decryptGroundInspectionField,
@@ -931,11 +932,11 @@ export function createGroundInspectionHandlers(deps: AppDeps) {
         const pid = ids.pariwarId(ctx.pariwarId);
         const cid = ids.claimId(claimCaseId);
         // Information only (⛔ no gate) — a failed read degrades to `null` rather than 500ing the whole, already
-        // decrypted detail view; the two reads are independent, run concurrently.
-        const otherClaims = await Promise.all([
-          claim.readOtherClaimsForDeath(scopeTx.tx, pid, cid),
-          claim.readOtherClaimVisits(scopeTx.tx, pid, cid),
-        ]).catch((err: unknown) => {
+        // decrypted detail view; the two reads are independent, run concurrently — under ONE SAVEPOINT (code review
+        // round 3), so a swallowed SQL error ⛔ never leaves the request tx aborted.
+        const otherClaims = await underSavepoint(scopeTx.client, 'ground_inspection_other_claims', () =>
+          Promise.all([claim.readOtherClaimsForDeath(scopeTx.tx, pid, cid), claim.readOtherClaimVisits(scopeTx.tx, pid, cid)]),
+        ).catch((err: unknown) => {
           request.log.warn({ err: err instanceof Error ? err.name : 'unknown' }, 'ground inspection: other-claims-for-death read unavailable');
           return null;
         });

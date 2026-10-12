@@ -105,9 +105,16 @@ export function PendingCaseCard({
   // The WAIT or a failed read — Approve / Resolve → Approve disabled WITH these words; every other action untouched.
   const approveBlocked = approvalBlockedReason(warnings);
   // ⭐ Story 6.28 (OP14 (b)) — another claim of this death passed the final vote / is paid ⇒ the FINAL approve (this
-  // card's Approve vote) is disabled with the banner's words. Decision support — OP2's 409 is the control.
+  // card's Approve vote and the escalated bucket's Resolve → Approve) is disabled with the banner's words. Decision
+  // support — OP2's 409 is the control.
   const elsewhere = case_.finally_approved_elsewhere;
   const pickerPrefix = `cf-${case_.claim_case_id}`;
+  // Code review round 3 (checklist 13(d)) — a final approve disabled by ANY reason says why to a screen reader: the
+  // approval-blocked text and/or the finally-approved banner (both can hold at once — joined).
+  const approveDescribedBy =
+    [approveBlocked !== null ? `${pickerPrefix}-approval-blocked` : null, elsewhere !== null ? `finally-approved-elsewhere-${case_.claim_case_id}` : null]
+      .filter((id): id is string => id !== null)
+      .join(' ') || undefined;
   // ⭐ Story 6.19b (AC16; `2026-09-27-258`, D25) — WHO MUST ACT on a return. ⛔ No default: the Pariwar Admin
   // chooses, because the choice decides whether the FAMILY is reminded (and can later be closed "for no
   // response") or STAFF are chased — a pre-selected value would be the system deciding for them.
@@ -336,7 +343,7 @@ export function PendingCaseCard({
               data-testid="cycle-freeze-approve"
               className="rounded bg-status-ok-bg px-3 py-1 text-sm text-status-ok-fg disabled:opacity-50"
               disabled={pending || approveBlocked !== null || elsewhere !== null}
-              aria-describedby={approveBlocked !== null ? `${pickerPrefix}-approval-blocked` : undefined}
+              aria-describedby={approveDescribedBy}
               onClick={() => submit({ action: 'approve' }, 'approved')}
             >
               Approve
@@ -365,8 +372,9 @@ export function PendingCaseCard({
               type="button"
               data-testid="cycle-freeze-resolve-approve"
               className="rounded bg-status-ok-bg px-3 py-1 text-sm text-status-ok-fg disabled:opacity-50"
-              disabled={pending || approveBlocked !== null}
-              aria-describedby={approveBlocked !== null ? `${pickerPrefix}-approval-blocked` : undefined}
+              // Code review round 3 — "Resolve → Approve" is a FINAL approval too: disabled under the banner like Approve.
+              disabled={pending || approveBlocked !== null || elsewhere !== null}
+              aria-describedby={approveDescribedBy}
               onClick={() => submit({ action: 'resolve_escalation', escalation_outcome: 'approved' }, 'approved')}
             >
               Resolve → Approve

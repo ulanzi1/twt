@@ -53,6 +53,25 @@ function isLockTimeout(err: unknown): boolean {
 }
 
 /**
+ * Code review round 3 — a SECOND payment-committed claim of the death (`notClosed`, legacy only — OP2 prevents a new one)
+ * is RECORDED, ⛔ never silently: an error-level log with ids only, as RF6's `heldClaimsAuditContext` does. The site that
+ * runs the closure is the one that detects it.
+ */
+function logPaymentCommittedNotClosed(
+  log: FastifyBaseLogger,
+  site: string,
+  pariwarId: string,
+  result: claim.CloseClaimsOfPaidDeathResult,
+): void {
+  for (const n of result.notClosed) {
+    log.error(
+      { pariwar_id: pariwarId, site, paid_claim_case_id: result.paidClaimCaseId, other_claim_case_id: n.claimCaseId, other_claim_state: n.state },
+      'one payment per death: another claim of a paid death has its payment committed too (approved / settled) — NOT closed',
+    );
+  }
+}
+
+/**
  * Close the other open claims of `deceasedMemberId`'s death if its payment is committed — in its OWN transaction. H(i).
  * Never throws: a failure is logged (error, ids only) and answered `lock_timeout` / `failed`.
  */
@@ -70,6 +89,7 @@ export async function closeClaimsOfPaidDeathInOwnTx(
         actorId: input.actorId,
       }),
     );
+    logPaymentCommittedNotClosed(log, input.site, input.pariwarId, result);
     return { kind: 'done', result, deceasedMemberId: input.deceasedMemberId };
   } catch (err) {
     const timeout = isLockTimeout(err);
@@ -93,7 +113,7 @@ export async function closeClaimsOfPaidDeathForClaim(
   input: ClosureActor & { readonly pariwarId: ids.PariwarId; readonly claimCaseId: ids.ClaimId; readonly site: string },
 ): Promise<PaidDeathClosureOutcome> {
   try {
-    return await inOwnTx(deps, input.pariwarId, async (scope) => {
+    const outcome = await inOwnTx(deps, input.pariwarId, async (scope) => {
       const { rows } = await scope.client.query<{ deceased_member_id: string }>(
         'SELECT deceased_member_id FROM claims WHERE pariwar_id = $1 AND claim_case_id = $2 LIMIT 1',
         [input.pariwarId, input.claimCaseId],
@@ -108,6 +128,8 @@ export async function closeClaimsOfPaidDeathForClaim(
       });
       return { kind: 'done', result, deceasedMemberId: row.deceased_member_id } as const;
     });
+    if (outcome.kind === 'done') logPaymentCommittedNotClosed(log, input.site, input.pariwarId, outcome.result);
+    return outcome;
   } catch (err) {
     const timeout = isLockTimeout(err);
     log.error(

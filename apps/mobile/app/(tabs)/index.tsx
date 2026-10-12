@@ -18,6 +18,7 @@ import { LockInClockWidget } from 'components/lock-in/LockInClockWidget'
 import { RenewalStatusWidget } from 'components/renewal/RenewalStatusWidget'
 import { WithdrawalEntry } from 'components/withdrawal/WithdrawalEntry'
 import { YogdaanBahiEntry } from 'components/yogdaan-bahi/YogdaanBahiEntry'
+import { PeerRequestEntry } from 'components/peer-request/PeerRequestEntry'
 
 // Tab 1 — home. The My Pool card (Story 8.2 — the first Epic-8 SURFACE) is now the TOPMOST element:
 // for an `active` member assigned to a pool whose cycle alert is `live` it renders the contribution
@@ -49,6 +50,10 @@ export default function YogdaanTab() {
       <YStack flex={1}>
         {/* Story 8.2 — the My Pool card, TOPMOST. Self-suppresses unless the member is active + assigned
             to a pool whose cycle alert is live. The Epic-8 home anchor of the 90-second contribution loop. */}
+        {/* Story 6.27a (PM2 / PM11) — "The Trust has asked you about a member": renders NOTHING unless a request the
+            Trust has TEXTED is open (DARK until 6.27c texts anyone). 6.30's copy promises it here (`app-links.json`
+            `body.home_screen`) — a bare `/peer-request` after login lands here. */}
+        <PeerRequestEntry />
         <ActiveContributionCard />
         {/* Story 8.3 — the "View contributors" affordance (just below the card, NOT inside it — D8). Navigates
             to the Live Contributor List view; self-suppresses in lock-step with the card. */}

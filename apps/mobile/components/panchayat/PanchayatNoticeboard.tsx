@@ -9,6 +9,7 @@ import { useNoticeboardT } from '../../lib/noticeboard-i18n'
 import { useSession } from '../../lib/session-context'
 import { bannerDismissalKey } from '../banners/copy'
 import { useDismissBannerMutation, useMemberBannersQuery } from '../banners/useMemberBannersQuery'
+import { PeerRequestEntry } from '../peer-request/PeerRequestEntry'
 import { PollsEntry } from '../polls/PollsEntry'
 import { PinnedItem } from './PinnedItem'
 import { toNoticeboardBannerNotice } from './banner-notice'
@@ -205,7 +206,14 @@ function Section({
       // ⛔ Story 10.15 owns `<PollsEntry>`'s content AND its own render-nothing-when-empty behaviour.
       // This screen owns only its POSITION, which the presenter dictates — an ADDITION to the
       // noticeboard, never a restructuring of it.
-      return <PollsEntry />
+      // ⭐ Story 6.27a (PM2) — the neighbours' request item: a SIBLING delegated addition beside `<PollsEntry>` (⛔ a banner
+      // row — the banner lane stays ONE source), rendering nothing unless a texted request is open.
+      return (
+        <>
+          <PeerRequestEntry />
+          <PollsEntry />
+        </>
+      )
 
     case 'pinned':
       return (

@@ -1,4 +1,4 @@
-// Story 6.30 AC7 — the dignified "not found" and the route-shell placeholder (`2026-10-10-312` AL14 /
+// Story 6.30 AC7 — the dignified "not found" (and, until Story 6.27a retired it, the route-shell placeholder) (`2026-10-10-312` AL14 /
 // AL16). Every new `common.json` key resolves through the REAL `t()` in en AND hi (⛔ never a stub — the
 // `catalog.ts` ask); the screen uses those keys and the shared `CallHelplineCTA`, and the template's
 // English "Oops!" is gone.
@@ -10,7 +10,8 @@ import { fileURLToPath } from 'node:url'
 import { t } from '@twt/i18n'
 import { describe, expect, it } from 'vitest'
 
-const NEW_KEYS = ['not_found.title', 'not_found.body', 'not_found.go_home', 'peer_request.placeholder'] as const
+// ⭐ Story 6.27a (Task 5) — `peer_request.placeholder` RETIRED: the filled slot renders `claim.json`'s `peer_request.*` chrome.
+const NEW_KEYS = ['not_found.title', 'not_found.body', 'not_found.go_home'] as const
 
 describe('the new common keys resolve through the real t()', () => {
   for (const locale of ['en', 'hi'] as const) {

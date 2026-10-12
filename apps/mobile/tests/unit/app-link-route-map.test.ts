@@ -85,10 +85,25 @@ describe('the shell is thin and the root Stack declares its group', () => {
     expect(shell).toContain('<PeerRequestSlot code={code} />')
   })
 
-  it('⛔ no API import, ⛔ no fetch, ⛔ no query in the shell or the placeholder', () => {
-    for (const src of [shell, slot]) {
-      expect(src).not.toMatch(/member-api|api-client|useQuery|useMutation|fetch\(|console\./)
-    }
+  // ⭐ RE-SCOPED by Story 6.27a (Task 5, re-pin 2026-10-12) — ⛔ deleted: 6.27a FILLED the slot, so the slot now reaches the
+  // API (through its children); the SHELL stays API-free, and the slot makes ⛔ no call before the session has loaded.
+  it('⛔ no API import, ⛔ no fetch, ⛔ no query in the shell', () => {
+    expect(shell).not.toMatch(/member-api|api-client|useQuery|useMutation|fetch\(|console\./)
+  })
+
+  it('Story 6.27a — the slot makes ⛔ no call before the session has loaded (it gates on useSession itself)', () => {
+    expect(slot).toContain('const { session, isLoading } = useSession()')
+    expect(slot).toContain('const pariwarId = isLoading ? undefined : session?.pariwarId')
+    expect(slot).toMatch(/pariwarId === undefined \?/)
+    // the slot itself calls nothing — its children's queries are `enabled` only once a pariwarId is a string
+    expect(slot).not.toMatch(/member-api|api-client|useQuery|useMutation|fetch\(|console\./)
+    const queries = strip(readFileSync(path.join(APP, '../components/peer-request/usePeerRequestQueries.ts'), 'utf8'))
+    expect(queries.match(/useQuery\(/g)).toHaveLength(2)
+    expect(queries.match(/enabled: typeof pariwarId === 'string'/g)).toHaveLength(2)
+  })
+
+  it('Story 6.27a — the header: the slot HIDES the inner Stack\'s header (the in-screen pages carry their own Back)', () => {
+    expect(slot).toMatch(/<Stack\.Screen options=\{\{ headerShown: false \}\} \/>/)
   })
 
   it('the root Stack declares (peer-request) with headerShown: false', () => {

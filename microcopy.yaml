@@ -329,6 +329,13 @@ scope:
     - apps/mobile/app/(claim)/relationship.tsx
     - apps/mobile/lib/refile-helpline-copy.ts
     - apps/mobile/lib/appeal-status.ts
+    # ⭐ Story 6.27a (PM11, Task 5) — every new or edited mobile file of the neighbours' answer screens (the slot 6.30 left, the
+    # questionnaire, the list, the home card / notice-strip entry, the not-openable state, the pure logic). The chrome strings
+    # (`peer_request.*`) and the question words (`peer_request_questions.*`) are in `claim.json`, already in copy_globs.
+    - apps/mobile/components/peer-request/*.tsx
+    - apps/mobile/components/peer-request/*.ts
+    - apps/mobile/lib/peer-request.ts
+    - apps/mobile/lib/peer-request-api.ts
   # Member-visible copy (locale strings) — POPULATED at Story 2.5 (AC6c) for the first
   # member surface: the public Niyamavali (apps/public). These globs scan the PURE
   # member copy (the `niyamavali` i18n namespace strings), so the member-register

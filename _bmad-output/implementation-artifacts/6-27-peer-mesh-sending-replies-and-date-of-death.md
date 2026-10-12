@@ -892,7 +892,7 @@ member's terms:
 - [x] **Task 4 — the member API (AC5).** `claims.peer-request.member.routes.ts` + handlers + contracts + api-client factory
       (`createMemberPeerRequestClient`); 404 / 409 rules incl. the untexted-ping 404 on every route; `clampLimit`; bounded `limit`; `perMemberKey`; ⛔ no Turnstile; the human-actor classification;
       route tests incl. the three indistinguishable 404s.
-- [ ] **Task 5 — the mobile screens (AC5).** Fill 6.30's shell `app/(peer-request)/peer-request.tsx`: the list, the generic renderer, the
+- [x] **Task 5 — the mobile screens (AC5).** Fill 6.30's shell `app/(peer-request)/peer-request.tsx`: the list, the generic renderer, the
       in-screen pages, the saved line, the closing note and the Thank-you, the not-openable state with `CallHelplineCTA`, ⛔ no call before
       the session; the home card on `app/(tabs)/index.tsx` and PM2's notice-strip item (11a.5's `NoticeboardStrip`); chrome strings in `packages/i18n/locales/{en,hi}/claim.json` (a `$comment.peer_request` marker; read through `useClaimT()` — depend on `locale`, never `t`); source-scan
       and pure-logic tests (the mobile harness renders ⛔ no screen); the friction-budget declaration; the microcopy scope.

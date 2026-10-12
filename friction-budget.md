@@ -51,6 +51,7 @@ deliberately accepted.
 | family whose last claim was CLOSED for no response (the bank details were never corrected after every person was reached) and who want to file again (the app shows a calm "this claim was closed — please call the helpline" state instead of the filing wizard, and a new claim is minted only after a District Admin or the helpline RECORDS a confirmation with a note) | A claim closed for silence is the second refusal (`2026-09-20-231` A, `-254`, D19): a re-file is a person's recorded decision, ⛔ an automatic re-entry that would put the same unreachable family back into the same 90-day loop. ⭐ It never traps the family: once a confirmation is recorded the wizard is open again, and once a new claim is live the old claim no longer routes anywhere (`-273` §9). An ordinary refusal and a stage-3-upheld appeal re-file exactly as today (Story 6.19c) | forced |
 | family whose filed claim was CLOSED because ANOTHER claim for the same death won its appeal against a refusal on suspicion of a post-death nominee change — or (Story 6.28 OP4 / OP10, `2026-10-11-319`; AMENDED, ⛔ not a new row) because another claim for the same death is already being paid, incl. a filing closed at the moment it is made (the app shows a calm "this claim has been closed — please call the helpline" screen instead of the filing wizard; ⛔ no reason and ⛔ no mention of the other claim) | Story 6.24a RF12 v1.3 (`2026-10-07-292`; `-262` FQ5 A): a filing after such a closure would join a live claim of the death (any age since Story 6.28 OP11 removed the 30-day window) or, the death paid, be closed at once (Story 6.28 H(ii)) — the helpline guides the family instead of the app inviting it. ⚠ Device-scoped: an offline / failed read still falls through to the wizard (`-249` §2), and a device with ⛔ no pointer to the closed claim is ⛔ not routed | forced |
 | family of a member whose claim was refused on suspicion of a post-death nominee change (the app's filing code now goes ONLY to the nominee the District Admin found in place at the death — ⛔ to the latest nominee — so the person who made the change files through the helpline; and every step behind that code — filing, a document, the bank details, a bank statement — needs it while the refusal stands) | ⭐ `-262` FQ6 B (Trustee-ratified; `2026-10-07-292` RF9, Story 6.24b): the person who changed the nominee after the death can ⛔ no longer file again in the app on the latest nominee's code. ⚠ The code is requested from the member's OWN account (Ravi mode), so the true nominee files in the app only if she has access to that account — otherwise through the helpline (F14; a non-blocking confirm owed to the Panel, `-295` RB17). A standing refusal whose determination is ⛔ effective, or whose rank-1 number is unusable, sends ⛔ code at all — the family is sent to the helpline (existence-defended, ⛔ never the latest nominee) | forced |
+| member chosen as one of the five the Trust asks about a reported death (answering a few short questions — "has the member died?", then, only if they know, the date, how they know, how they knew the member, the cause and illness (once counsel's basis is recorded) and whether the District Admin may phone them — in the app, saved as they go, or by phoning the helpline; then Submit, after which the answers are locked) | The check with neighbours the Panel made a SIGNAL, ⛔ a gate (`2026-09-28-263` FQ10 A; `-262` FQ8 E; `2026-10-10-304` Q3–Q6 A): it lets the Trust hear from people who knew the member before it pays a family. ⭐ Every question but the first is OPTIONAL, every answer is saved the moment it is chosen (a lost connection loses nothing), and the closing note says who sees the answers ("never the family") BEFORE Submit — so the member is ⛔ never surprised by the lock. ⛔ Never a step for anyone the Trust has ⛔ not texted: the screens and the home card are DARK until 6.27c sends a text (Story 6.27a) | optional |
 
 
 **Story 11b.3b disposition (SECOND review — declaration affirmed, ⛔ no new row):** the Sahyog Vivran
@@ -2652,3 +2653,25 @@ Everything else 6.28 builds (the guard, the commit re-check, the closures, the w
 ⭐ **Written AFTER the changes were committed**, when the story's own `ci:local` run reported the AC-4 failure this block
 answers ([[project_friction_budget_baseline_ratchet]]). ⛔ No measured delta is claimed for the mobile files
 ([[feedback_record_unattested_no_backfill]]); ⛔ not demonstrated on a device (the mobile app has ⛔ no screen-render harness).
+
+---
+
+**Story 6.27a disposition (ONE new row — the neighbour's few short questions; ⛔ no row retired):** the story's member-facing
+changes are `apps/mobile/components/peer-request/` (the slot 6.30 left — FILLED — plus `PeerQuestionnaire.tsx`,
+`PeerRequestList.tsx`, `PeerRequestEntry.tsx`, `PeerRequestNotOpenable.tsx`, `usePeerRequestQueries.ts`), `lib/peer-request.ts`,
+`lib/peer-request-api.ts`, `app/(tabs)/index.tsx` (the home card), `components/panchayat/PanchayatNoticeboard.tsx` (the
+notice-strip item beside `<PollsEntry />`) and their tests (`tests/unit/peer-request.test.ts`; `app-link-route-map.test.ts`
+amended, ⛔ deleted).
+
+1. ⭐ **The new row (above).** Payer: a member the Trust chose and TEXTED about a reported death. Protects: the Panel's
+   check with neighbours (FQ10 A — a signal, ⛔ a gate). Optional: ⛔ nothing forces a neighbour to answer, and only the first
+   question is required once they start. ⭐ The design pays the LEAST friction the rulings allow: two or three questions a page,
+   saved as they go, a closing note BEFORE Submit (`-304` Q6 A), Submit only locks what is already saved (BigDev 2026-10-10),
+   and the helpline is on every page for a neighbour who would rather speak.
+2. ⛔ **Not friction:** the home card and the notice-strip item (they appear ONLY when a texted request is open, and say so —
+   ⛔ a step); the not-openable state (a calm line + the helpline instead of an error — the friction goes DOWN).
+3. ⚠ **DARK until 6.27c:** a member sees ⛔ any of it until the Trust texts them (`send_outcome = 'accepted'` — the server answers
+   one 404 otherwise), and 6.27c waits for roster Row 27 — so ⛔ no member pays this row before go-live.
+
+⛔ No measured delta is claimed for the mobile files ([[feedback_record_unattested_no_backfill]]); ⛔ not demonstrated on a device
+(the mobile app has ⛔ no screen-render harness).

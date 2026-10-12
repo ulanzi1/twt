@@ -302,7 +302,12 @@ export function NoCorrectionStrip({
         disabled={approve.isPending || item.checked_after_record !== true || approveBlocked !== null || item.finally_approved_elsewhere !== null}
         // Code review 2026-10-06 (P33): both reasons can hold at once — join them rather than picking one.
         aria-describedby={
-          [approveBlocked !== null ? `${pickerPrefix}-approval-blocked` : null, item.checked_after_record !== true ? `${noteId}-check` : null]
+          [
+            approveBlocked !== null ? `${pickerPrefix}-approval-blocked` : null,
+            item.checked_after_record !== true ? `${noteId}-check` : null,
+            // Code review round 3 (checklist 13(d)) — disabled by the finally-approved banner ⇒ described by it too.
+            item.finally_approved_elsewhere !== null ? `finally-approved-elsewhere-${item.claim_case_id}` : null,
+          ]
             .filter((id): id is string => id !== null)
             .join(' ') || undefined
         }

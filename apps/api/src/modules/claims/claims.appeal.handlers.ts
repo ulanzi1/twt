@@ -56,6 +56,7 @@ import type { AuthAuditEventType } from '../../audit/audit-sink.js';
 import { emitAuthAudit } from '../auth/shared/audit.js';
 import { getDisplayName } from '../auth/admin/admin-auth.repo.js';
 import { closeScopeTx, openScopeTx } from '../multi-tenant/scope-tx.js';
+import { underSavepoint } from './later-approval-warnings.js';
 import {
   decryptAppealRationale,
   encryptAppealDecisionRationale,
@@ -327,8 +328,11 @@ export function createAppealHandlers(deps: AppDeps) {
         ok = true;
         // ⭐ Story 6.28 (OP10) — a closed claim's label follows its HOLDING claim (ONE statement). Decision SUPPORT
         // only (the staff label text) — a failed read degrades to "no holder-refused" rather than 500ing the
-        // whole helpline list, matching OP14 (b)'s `readFinallyApprovedElsewhereDtos`.
-        holderRefused = await claim.readClosedHolderRefusedBulk(tx.tx, ctx.pariwarId, rows.map((r) => r.claimCaseId)).catch((err: unknown) => {
+        // whole helpline list, matching OP14 (b)'s `readFinallyApprovedElsewhereDtos` — under a SAVEPOINT (code review
+        // round 3): ⛔ never COMMIT an aborted transaction with `ok = true`.
+        holderRefused = await underSavepoint(tx.client, 'helpline_appeal_closed_holder_refused', () =>
+          claim.readClosedHolderRefusedBulk(tx.tx, ctx.pariwarId, rows.map((r) => r.claimCaseId)),
+        ).catch((err: unknown) => {
           request.log.warn({ err: err instanceof Error ? err.name : 'unknown' }, 'helpline appeal list: closed-holder-refused read unavailable');
           return new Set<string>();
         });

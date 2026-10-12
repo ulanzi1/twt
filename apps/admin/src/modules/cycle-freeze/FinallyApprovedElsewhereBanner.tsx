@@ -39,11 +39,14 @@ export function FinallyApprovedElsewhereBanner({
   });
   if (elsewhere === null) return null;
   const paid = elsewhere.stage === 'paid';
+  // Code review round 3 (D2 A) — `closed_count` counts THIS claim too when it closed; the rest are the death's OTHER claims
+  // the action closed, said with the count.
+  const othersClosed = close.data !== undefined ? close.data.closed_count - (close.data.this_claim_closed ? 1 : 0) : 0;
   const result =
     close.data !== undefined
-      ? close.data.this_claim_closed
-        ? t.closed
-        : t.notClosed
+      ? [close.data.this_claim_closed ? t.closed : t.notClosed, othersClosed > 0 ? t.othersClosed(othersClosed) : null]
+          .filter((line): line is string => line !== null)
+          .join(' ')
       : close.error !== null
         ? close.error instanceof ApiError && close.error.status === 503
           ? t.busy

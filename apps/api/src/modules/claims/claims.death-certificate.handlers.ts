@@ -34,6 +34,7 @@ import {
 import { getDisplayName } from '../auth/admin/admin-auth.repo.js';
 import { emitAuthAudit } from '../auth/shared/audit.js';
 import { closeScopeTx, openScopeTx } from '../multi-tenant/scope-tx.js';
+import { underSavepoint } from './later-approval-warnings.js';
 import {
   decryptDeathCertificateReviewField,
   encryptDeathCertificateReviewField,
@@ -378,13 +379,15 @@ export function createDeathCertificateHandlers(deps: AppDeps) {
       });
       // ⭐ Story 6.28 (OP10) — a closed claim's staff label follows its HOLDING claim (ONE statement). Decision SUPPORT
       // only (the staff label text) — a failed read degrades to "no holder-refused" rather than 500ing the whole
-      // member claims list, matching OP14 (b)'s `readFinallyApprovedElsewhereDtos`.
-      const holderRefused = await claimDomain
-        .readClosedHolderRefusedBulk(scopeTx.tx, pariwarId, liveClaims.map((c) => c.claimCaseId))
-        .catch((err: unknown) => {
-          request.log.warn({ err: err instanceof Error ? err.name : 'unknown' }, 'member claims list: closed-holder-refused read unavailable');
-          return new Set<string>();
-        });
+      // member claims list, matching OP14 (b)'s `readFinallyApprovedElsewhereDtos` — under a SAVEPOINT (code review
+      // round 3): a swallowed SQL error would otherwise leave the request tx aborted, and the per-claim status reads
+      // below would then fail with 25P02.
+      const holderRefused = await underSavepoint(scopeTx.client, 'member_claims_closed_holder_refused', () =>
+        claimDomain.readClosedHolderRefusedBulk(scopeTx.tx, pariwarId, liveClaims.map((c) => c.claimCaseId)),
+      ).catch((err: unknown) => {
+        request.log.warn({ err: err instanceof Error ? err.name : 'unknown' }, 'member claims list: closed-holder-refused read unavailable');
+        return new Set<string>();
+      });
       const claims = await Promise.all(
         liveClaims.map(async (c) => {
           const result = await claimDomain.readDeathCertificateFamilyStatus(

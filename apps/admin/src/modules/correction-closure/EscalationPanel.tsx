@@ -338,7 +338,15 @@ function DecisionForm({
         disabled={decide.isPending || approveBlocked !== null || (decision === 'approve' && detail.finally_approved_elsewhere !== null)}
         // Code review 2026-10-06 (P34): derived from `pickerPrefix` (the SAME value passed to the picker's
         // `idPrefix` above) rather than a hardcoded literal duplicating it.
-        aria-describedby={approveBlocked !== null ? `${pickerPrefix}-approval-blocked` : undefined}
+        // Code review round 3 (checklist 13(d)) — an APPROVE disabled by the finally-approved banner is described by it.
+        aria-describedby={
+          [
+            approveBlocked !== null ? `${pickerPrefix}-approval-blocked` : null,
+            decision === 'approve' && detail.finally_approved_elsewhere !== null ? `finally-approved-elsewhere-${detail.closure.claim_case_id}` : null,
+          ]
+            .filter((id): id is string => id !== null)
+            .join(' ') || undefined
+        }
         data-testid="decision-submit"
         onClick={() => {
           const noteMissing = note.trim() === '';

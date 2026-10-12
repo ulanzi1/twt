@@ -223,9 +223,11 @@ describe.skipIf(!hasDatabase)('ICP tryConverge resolution matrix (PARIWAR_A scop
        VALUES ($1, $2, $3, $4, 'kept apart', $5)`,
       [PARIWAR_A, m2, randomUUID(), apart, randomUUID()],
     );
-    // (3) a suspicion refusal stands — `denied` on `-239` (terminal AND RF1), 400 days old.
+    // (3) a suspicion refusal stands — a `-239` refusal UNDER APPEAL (`appeal_stage_1` — ⛔ not terminal, so ONLY the RF2
+    // standing-refusal conjunct can exclude it; code review round 3: a `denied` seed was already excluded by (1)'s terminal
+    // filter and never isolated RF2), 400 days old.
     const m3 = toMemberId(randomUUID());
-    const refused = await seedClaim(tx, PARIWAR_A, { deceasedMemberId: String(m3), currentState: 'denied' });
+    const refused = await seedClaim(tx, PARIWAR_A, { deceasedMemberId: String(m3), currentState: 'appeal_stage_1' });
     await age(refused);
     await tx.insert(schema.claimVerifierDecisions).values({
       claimCaseId: refused as never, pariwarId: PARIWAR_A, outcome: 'denied', reasonCode: 'post_death_nominee_change',

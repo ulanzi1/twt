@@ -273,6 +273,14 @@ export const DEATH_CERTIFICATE_REVIEW_FIELD_CLASS = 'death_certificate_review';
 export const CLAIM_WARNING_APPROVAL_FIELD_CLASS = 'claim_warning_approval';
 
 /**
+ * Story 6.27a (PM7 (a)) — the neighbours' SENSITIVE answers' Tier-1 field class: the date of death, the cause and the
+ * illness (`claim_peer_mesh_reply_answers.value_ciphertext`) are encrypted under this in the HANDLER, before the domain
+ * writer takes its locks (⛔ no KMS under a lock — Trap 9). Matches `piiColumn(1, 'peer_mesh_answer')`. ⛔ NEVER in an
+ * event / audit line / log / `detail`. By-value twins: `schema/claim_peer_mesh_replies.ts`, `member/anonymize.ts`.
+ */
+export const PEER_MESH_ANSWER_FIELD_CLASS = 'peer_mesh_answer';
+
+/**
  * The appeal Tier-1 field classes (Story 6.16, D-A/AC2/AC3). The appeal routes encrypt the mandatory reviewer
  * rationale (Stage 1/3 decisions + the Stage-2 finalize audit row) under `CLAIM_APPEAL_DECISION_FIELD_CLASS`
  * and each panel vote's rationale under `CLAIM_APPEAL_VOTE_FIELD_CLASS`, before the domain writer; authorized

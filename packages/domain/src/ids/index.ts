@@ -410,6 +410,15 @@ export type PeerMeshPingId = Brand<'PeerMeshPingId'>;
 /** Smart constructor: validates UUID shape, returns a branded `PeerMeshPingId`. */
 export const peerMeshPingId = uuidBrand('PeerMeshPingId');
 
+// Story 6.27a (PM7 (a)) — the neighbours' reply (ONE per ping) and its append-only answer rows; an `answer_id` is 6.27b's
+// warning SUBJECT (a changed answer is a NEW row ⇒ a NEW key).
+/** Per-row address of a neighbour's reply (`claim_peer_mesh_replies.reply_id`). */
+export type PeerMeshReplyId = Brand<'PeerMeshReplyId'>;
+export const peerMeshReplyId = uuidBrand('PeerMeshReplyId');
+/** Per-row address of one saved answer (`claim_peer_mesh_reply_answers.answer_id`). */
+export type PeerMeshAnswerId = Brand<'PeerMeshAnswerId'>;
+export const peerMeshAnswerId = uuidBrand('PeerMeshAnswerId');
+
 // ── Ground-inspection assignment + photo ids (Story 6.7, Task 3) ──────────────
 // Two NEW branded ids per the §Naming "branding mandatory on a new ID's first PR"
 // discipline (L3700-3708). `GroundInspectionId` is the per-row address of a ground-inspection

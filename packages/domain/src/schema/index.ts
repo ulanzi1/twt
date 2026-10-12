@@ -214,6 +214,8 @@ export * from './claim_suspicion_staff_emails.js';
 // dispatched). Both tenant-isolated (mirror claims); no state trigger (outcome is a plain column).
 export * from './claim_peer_mesh_selections.js';
 export * from './claim_peer_mesh_pings.js';
+// Story 6.27a — the neighbours' replies (one per ping) + append-only answers (0156).
+export * from './claim_peer_mesh_replies.js';
 // Story 6.7 — ground inspection: `claim_ground_inspections` (ONE row per ASSIGNMENT — the
 // scheduling + structured findings (non-PII jsonb) + Tier-1 ciphertext for location/family
 // contact/notes; separate per-assignment status machine, NO active-uniqueness — D5) + the child

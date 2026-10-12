@@ -583,7 +583,9 @@ describe.skipIf(!hasDatabase)('claim peer-mesh — live DB (:5433)', () => {
     }
   });
 
-  it('response guards: rejects a response once the AR-61 outcome has already resolved', async () => {
+  // ⭐ Story 6.27a (PM8, F39) — INVERTED: a neighbour's answer is taken while an approval is still to come (the answer
+  // window), ⛔ no longer refused once the 72-hour label resolves; the label is ⛔ not recounted (monotonic).
+  it('response after the AR-61 outcome resolved: ACCEPTED, and the label is NOT recounted (Story 6.27a PM8)', async () => {
     const seed = await seedClaim(sevenCandidates());
     const { boss } = fakeBoss();
     try {
@@ -603,17 +605,19 @@ describe.skipIf(!hasDatabase)('claim peer-mesh — live DB (:5433)', () => {
         claim.getPeerMeshSelectionByClaim(db, ids.pariwarId(seed.pariwarId), ids.claimId(seed.claimCaseId)),
       );
       const member = selection!.selectedMemberIds[0]!;
-      await expect(
-        withPariwarScope(pool, seed.pariwarId, (_db, client) =>
-          claim.recordPeerMeshResponse(client, {
-            claimCaseId: ids.claimId(seed.claimCaseId),
-            pariwarId: ids.pariwarId(seed.pariwarId),
-            responderMemberId: member,
-            response: 'confirmed',
-          }),
-        ),
-      ).rejects.toBeInstanceOf(claim.PeerMeshWindowResolvedError);
-      expect(await eventCount(seed.claimCaseId, 'claim.peer_mesh_responded')).toBe(0);
+      await withPariwarScope(pool, seed.pariwarId, (_db, client) =>
+        claim.recordPeerMeshResponse(client, {
+          claimCaseId: ids.claimId(seed.claimCaseId),
+          pariwarId: ids.pariwarId(seed.pariwarId),
+          responderMemberId: member,
+          response: 'confirmed',
+        }),
+      );
+      expect(await eventCount(seed.claimCaseId, 'claim.peer_mesh_responded')).toBe(1);
+      const after = await withPariwarScope(pool, seed.pariwarId, (db) =>
+        claim.getPeerMeshSelectionByClaim(db, ids.pariwarId(seed.pariwarId), ids.claimId(seed.claimCaseId)),
+      );
+      expect(after!.outcome).toBe('insufficient_responses_fallback'); // ⛔ recounted
     } finally {
       await cleanup(seed);
     }

@@ -22,6 +22,9 @@ export * from './peer-mesh.js';
 export * from './peer-mesh-metric-registry.js';
 export * from './peer-mesh-read.js';
 export * from './peer-mesh-persist.js';
+// Story 6.27a (PM7, PM8, PM11, PM12) — the neighbours' reply: save (as they go) / submit, `peerMeshReplyState` (row 6-31),
+// the has_died → event mapping, and the member's / helpline's reads. ⛔ No decrypt (the handler's).
+export * from './peer-mesh-reply.js';
 // Story 6.7 — ground inspection: the assignment/photo persistence writers (schedule/reschedule/
 // findings/photo/complete/refusal — row-lock + idempotency + write-path guards) + the read
 // accessor (getClaimGroundInspection — ciphertext AS STORED; the AC5 absence-is-a-signal read).

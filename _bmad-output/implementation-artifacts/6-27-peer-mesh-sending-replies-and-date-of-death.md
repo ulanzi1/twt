@@ -874,14 +874,14 @@ member's terms:
       registry, `resolveLiveVersion`, `COMPARABLE_QUESTION_KEYS`, the warning-key list, v1, v2) — pg-free, importing only import-free leaves;
       `questionnaires/index.ts` added as an NW1 entry; the reachability test; the copy keys en + hi in `packages/i18n` (server-resolved);
       the contracts wire mirror + lockstep test; unit tests for every validator rule (incl. v1 registered AND exempt; `health` + `counselBasis`; the served-definition skip). ⛔ Never in `packages/contracts` (F30).
-- [ ] **Task 2 — the migration (AC3).** Next free number at build (`ls packages/domain/migrations | tail`); hand-authored; journal; applied to
+- [x] **Task 2 — the migration (AC3).** Next free number at build (`ls packages/domain/migrations | tail`); hand-authored; journal; applied to
       :5432 AND :5433 and proven from zero; Drizzle schema files (`schema/claim_peer_mesh_pings.ts`, NEW `schema/claim_peer_mesh_replies.ts`
       incl. the answers table); RLS policy files + policy-regression specs (incl. the REVOKE leg, the ping finished-row trigger legs, the
       0143-form erasure arm and its RECORDED admissions, the answers trigger's all-times legs, the plpgsql window parity test against
       `isClaimInAnswerWindow`, `submitted_at` forward-only, `UNIQUE (pariwar_id, reply_id)`); the new field class
       `PEER_MESH_ANSWER_FIELD_CLASS` (anonymize literal, `apps/api/src/context.ts`); ⛔ no `detail` grammar here (6.27c); ⛔ never regenerate an
       applied migration ([[project_live_db_test_gotchas]]).
-- [ ] **Task 3 — the writer (AC4).** A NEW domain module (`packages/domain/src/claim/peer-mesh-reply.ts`) with the save and submit paths,
+- [x] **Task 3 — the writer (AC4).** A NEW domain module (`packages/domain/src/claim/peer-mesh-reply.ts`) with the save and submit paths,
       `peerMeshReplyState` and the event-response MAPPING (⛔ never in `questionnaires/`); the handler-side encrypt + index helper (⛔ no KMS
       under a lock); `recordPeerMeshResponse` widened (the answer window incl. live R9, CURRENT state, `actor` defaulting to `'member'`, the
       claim lock taken inside) and called only on the first `has_died` save; the inverted jobs test (F39); the supersede write order; the lock order; the shared date-window helper (`addCalendarDays`, `isRealCalendarDate`); unit + integration tests

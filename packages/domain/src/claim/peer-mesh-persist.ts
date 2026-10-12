@@ -22,7 +22,8 @@ import {
 } from '../schema/claim_peer_mesh_selections.js';
 import { claimPeerMeshPings } from '../schema/claim_peer_mesh_pings.js';
 import type { PeerMeshCandidate, PeerMeshDeceased } from './peer-mesh-metric-registry.js';
-import { getClaimCase } from './read.js';
+import { isClaimInAnswerWindow } from './answer-window.js';
+import { lockClaimCase } from './read.js';
 import { getPeerMeshResponses, getPeerMeshSelectionByClaim } from './peer-mesh-read.js';
 import { projectClaimState } from './project.js';
 
@@ -156,29 +157,21 @@ export class PeerMeshResponderAlreadyRespondedError extends Error {
   }
 }
 
-/** Thrown when a response is filed for a claim that has left `verification_in_progress`
- *  (review fix — prevents a false `from_state`/`to_state` audit trail on a resolved claim). */
+/**
+ * Thrown when a reply arrives for a claim OUTSIDE the ANSWER WINDOW. ⭐ Story 6.27a (PM8) WIDENED it: 6.6 refused once the claim
+ * left `verification_in_progress`; a neighbour's answer is now taken while an approval is still to come — the review states,
+ * or `state_trustee_approved` under a live R9 routing (`claim/answer-window.ts`; `-311` item 3, ratified by `-324` A). The
+ * class name is KEPT (the 6.26 GI3 precedent — `GroundInspectionClaimNotInVerificationError`). ⭐ 6.6's
+ * `PeerMeshWindowResolvedError` is GONE: the 72-hour label no longer closes answering (it is ⛔ not recounted — the WINDOW
+ * worker is monotonic), and ⛔ no other caller threw or caught it.
+ */
 export class PeerMeshClaimNotInVerificationError extends Error {
   constructor(
     public readonly claimCaseId: string,
     public readonly currentState: string,
   ) {
-    super(
-      `[peer-mesh] claim ${claimCaseId} is '${currentState}', not 'verification_in_progress' — response rejected`,
-    );
+    super(`[peer-mesh] claim ${claimCaseId} is '${currentState}', outside the answer window — response rejected`);
     this.name = 'PeerMeshClaimNotInVerificationError';
-  }
-}
-
-/** Thrown when a response is filed after the selection's AR-61 disposition already
- *  resolved (review fix — a resolved outcome must not silently flip on a late response). */
-export class PeerMeshWindowResolvedError extends Error {
-  constructor(
-    public readonly claimCaseId: string,
-    public readonly outcome: PeerMeshOutcome,
-  ) {
-    super(`[peer-mesh] claim ${claimCaseId}'s peer-mesh window already resolved to '${outcome}'`);
-    this.name = 'PeerMeshWindowResolvedError';
   }
 }
 
@@ -198,26 +191,31 @@ export interface RecordPeerMeshResponseInput {
   response: 'confirmed' | 'denied' | 'unknown';
   /** Optional caller-supplied audit id, threaded through the projector unchanged. */
   auditId?: string;
+  /**
+   * ⭐ Story 6.27a (PM7 (e)) — who recorded it: `'member'` (the neighbour, in the app — the DEFAULT, so 6.6's callers are
+   * unchanged) or `'operator'` (the helpline, for a neighbour who phoned).
+   */
+  actor?: 'member' | 'operator';
+  /** The event's `actor_id` — the operator for a helpline save; DEFAULTS to the responder. */
+  actorId?: string;
 }
 
 /**
- * Record a peer's response as a `claim.peer_mesh_responded` ANNOTATION event (AC4) — an
- * identity transition (`from_state === to_state === 'verification_in_progress'`) that does
- * NOT advance the primary state. Rejects a responder not in `selected_member_ids` (a
- * non-selected member cannot vote — non-manipulability), a claim no longer
- * `verification_in_progress` (review fix — no false audit trail on a resolved claim), an
- * already-resolved AR-61 disposition (review fix — no silent outcome flip), and a SECOND
- * response from an already-responded member (review fix — decided: reject, not append).
+ * Record a peer's response as a `claim.peer_mesh_responded` ANNOTATION event (6.6 AC4) — an identity transition that does
+ * NOT advance the primary state. Rejects a responder not in `selected_member_ids` (non-manipulability) and a SECOND
+ * response from an already-responded member (one per selected member).
  *
- * The duplicate-response check is enforced TRANSACTIONALLY: it `SELECT ... FOR UPDATE`s
- * the member's own ping-intent row first (the natural one-row-per-selected-member lock
- * anchor — mirrors `niyamavali/drafts.ts`'s `getDraftForUpdateOrThrow` pattern), so two
- * concurrent responses from the same member serialize — the second waits, then re-reads
- * post-commit state and sees the first's event, guaranteeing exactly one committed
- * `claim.peer_mesh_responded` event per (claim, responder) even under a genuine race.
- *
- * Takes a raw `pg.PoolClient` (projectClaimState needs `SET LOCAL`); the caller owns the
- * scope-tx.
+ * ⭐ Story 6.27a (PM8, PM7 (e)) WIDENED it:
+ *   · it is taken while the claim is in the ANSWER WINDOW (`isClaimInAnswerWindow` — an approval is still to come), ⛔ no
+ *     longer only in `verification_in_progress`, and ⛔ no longer refused once the 72-hour label resolved (the label is
+ *     ⛔ not recounted); `from_state` / `to_state` = the claim's CURRENT state;
+ *   · ⭐ LOCK ORDER (Invariant 9 — STRUCTURAL, ⛔ never a caller convention): it takes the CLAIM row lock ITSELF
+ *     (`lockClaimCase`) BEFORE the ping lock, the order every approval writer uses — so a reply racing an approval
+ *     serializes on the claim row (⛔ no `eventVersion` collision, ⛔ no deadlock). Re-entrant when the caller (6.27a's
+ *     reply writer) already holds both;
+ *   · `actor` / `actorId` are parameters, defaulting to `'member'` / the responder.
+ * The duplicate check re-reads the response events UNDER the ping lock. Takes a raw `pg.PoolClient` (projectClaimState
+ * needs `SET LOCAL`); the caller owns the scope-tx.
  */
 export async function recordPeerMeshResponse(
   client: pg.PoolClient,
@@ -225,22 +223,20 @@ export async function recordPeerMeshResponse(
 ): Promise<void> {
   const db = bindScopedDb(client);
 
+  // (1) The CLAIM row first (Invariant 9).
+  const claimRow = await lockClaimCase(db, input.pariwarId, input.claimCaseId);
+  if (!claimRow) throw new Error(`[recordPeerMeshResponse] claim ${input.claimCaseId} not found in scope`);
+  if (!(await isClaimInAnswerWindow(db, input.pariwarId, input.claimCaseId, claimRow.currentState))) {
+    throw new PeerMeshClaimNotInVerificationError(input.claimCaseId, claimRow.currentState);
+  }
+
   const selection = await getPeerMeshSelectionByClaim(db, input.pariwarId, input.claimCaseId);
   if (!selection) throw new PeerMeshSelectionNotFoundError(input.claimCaseId);
   if (!selection.selectedMemberIds.includes(input.responderMemberId)) {
     throw new PeerMeshResponderNotSelectedError(input.claimCaseId, input.responderMemberId);
   }
-  if (selection.outcome !== 'pending') {
-    throw new PeerMeshWindowResolvedError(input.claimCaseId, selection.outcome);
-  }
 
-  const claimRow = await getClaimCase(db, input.pariwarId, input.claimCaseId);
-  if (!claimRow) throw new Error(`[recordPeerMeshResponse] claim ${input.claimCaseId} not found in scope`);
-  if (claimRow.currentState !== 'verification_in_progress') {
-    throw new PeerMeshClaimNotInVerificationError(input.claimCaseId, claimRow.currentState);
-  }
-
-  // Lock this member's ping-intent row — serializes concurrent duplicate submissions.
+  // (2) Then this member's ping row — serializes concurrent duplicate submissions.
   await db
     .select()
     .from(claimPeerMeshPings)
@@ -266,14 +262,14 @@ export async function recordPeerMeshResponse(
     claimantActorId: claimRow.claimantActorId,
     eventType: 'claim.peer_mesh_responded',
     payload: {
-      from_state: 'verification_in_progress',
-      to_state: 'verification_in_progress',
+      from_state: claimRow.currentState,
+      to_state: claimRow.currentState,
       trigger: 'peer_mesh_response',
-      actor: 'member',
+      actor: input.actor ?? 'member',
       responder_member_id: input.responderMemberId,
       response: input.response,
     },
-    actorId: input.responderMemberId,
+    actorId: input.actorId ?? input.responderMemberId,
     ...(input.auditId !== undefined ? { auditId: input.auditId } : {}),
   });
 }

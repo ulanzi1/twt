@@ -1,3 +1,13 @@
+# last_updated: 2026-10-12b (⭐ **STORY 6.34 — VALIDATED (v1.3 → v1.4), its FIRST validate; ⛔ no row moves — `6-34` stays `ready-for-dev`.**
+# The branch `story/6-34-sms-templates-typed-variables` was REBASED onto `main` `09321738` (6.30 + 6.28 had shipped; the six story
+# commits' +/- lines byte-identical; `-313` / `-314` now sit between `-315` and `-312`; old tip tag `backup/6-34-pre-rebase`). Four
+# fresh-context read-only verifiers. ⭐ HIGH, BigDev's: `-313` TV5's premise was FALSE (6.29's hold covers only the suspicion path; on
+# the correction / closure / certificate paths "treat a malformed helpline as unset" would drop the notice and move D22's
+# `reachedBySms`) ⇒ BigDev: *"(b) Alarm only, never refuse"* ⇒ `2026-10-12-322` C1–C9 (author-commit, alone). Also: the gate (TV7) was
+# RED at birth on 6.30's sheet line and evadable via `${DLT_VAR}` (rules (i)/(iii) fixed); six more composition tests; the jobs helpline
+# fixtures; TV9 one-way; 6.27c now waits for 6.34; the `-310` promise on Hindi names carried into Row 30 (d); sourcing corrected
+# (TRAI allows special characters in alphanumeric). Every real template passes the story's shape rule; the 19-template count holds.
+# Fresh-context re-validate rounds to follow before any code. ⛔ No other row moves.)
 # last_updated: 2026-10-12a (⭐ **STORY 6.28 — CODE REVIEW COMPLETE: review → done.** Three `bmad-code-review` passes on `story/6-28-…`:
 # chunks 1–4 (domain / API / admin / mobile+contracts+i18n), round 2 (the review's own patches — found the verifier console's read
 # ceiling silently broken, 22 → 23), and round 3 (the WHOLE story in ONE pass, 113 files — 0 BLOCKER / 0 HIGH). Round 3: two BigDev

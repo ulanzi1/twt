@@ -9,7 +9,8 @@
 //     roster (excluding the claimant), deterministically selects the 5 nearest, PERSISTS the
 //     immutable selection (snapshot + deceased reference point + ordered ids + metric), emits
 //     `claim.peer_mesh_pinged` (→ verification_in_progress) via the projector, and records ONE
-//     delivery-neutral ping intent per selected member (Decision D1 — no live fan-out). After
+//     delivery-neutral ping intent per selected member (Decision D1 — no live fan-out here; ⭐ Story 6.27c texts each
+//     ping ONCE through the claim send core, recorded on the ping row — 6.27a's 0156 columns). After
 //     commit it enqueues the window job DELAYED (startAfter = the response window).
 //
 //   · CLAIM_PEER_MESH_WINDOW (runClaimPeerMeshWindow) — enqueued delayed by the select worker
@@ -22,6 +23,9 @@
 //     ≥3 → `sufficient`; <3 → `insufficient_responses_fallback` (ground-inspection-primary; the
 //     operator signal the verifier console reads). NEVER auto-denies, NEVER advances state past
 //     `verification_in_progress` (peer-mesh + ground-inspection are BOTH, not either — PRD §4.6).
+//     ⭐ Story 6.27a (PM8, PM6; re-pin 2026-10-12): the label RESOLVING no longer closes answering — a neighbour's answer is
+//     taken while an approval is still to come (`claim/answer-window.ts`), so one can arrive AFTER this worker resolved;
+//     the label is ⛔ NOT recounted (monotonic), and it gates ⛔ nothing (FQ9 needs the inspection anyway).
 //
 // DETERMINISM (AC1/AC5): selection runs against the SNAPSHOT captured + persisted in the same
 // tx (candidates AND the deceased's own district/createdAt reference point — review fix: the

@@ -4,6 +4,24 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: dev-story 6.27a (2026-10-12)
+
+- **FR-39's "non-response after 72 hours → escalate to block admin" and 6.6 AC6's operator extend / skip are ⛔ NOT BUILT (PM19)**
+  [`apps/jobs/src/claim-peer-mesh.ts` — `extendPeerMeshWindow` / `skipPeerMesh` exist only as functions; `packages/domain/src/claim/peer-mesh-persist.ts`].
+  The District Admin's 72-hour line (*"Fewer than 3 answers in 72 hours — the ground inspection is the main check"*) is the signal; ⛔ no
+  escalation fires, ⛔ no operator route extends or skips a window. ⛔ Not superseded — FR-39 still says it. ⭐ Trigger: a story (or a decision)
+  that takes the escalation, or retires it with a ruling ([[feedback_supersede_never_reinterpret]]).
+- **The deceased's FAMILY who are themselves members are ⛔ not excluded from the five (PM1, RECORDED)**
+  [`packages/domain/src/claim/peer-mesh-read.ts`; row 6-36]. The Trust holds ⛔ family-link data, so a relative of the deceased can be one of
+  the neighbours asked (6.27c texts them) — and their answer is shown to staff like any other. ⭐ Trigger: a family-link substrate (⛔ owned
+  by any story), or row 6-36's selection rule if it gains one.
+- **A live SENSITIVE answer that cannot be DECRYPTED blocks further saves on that reply** [`apps/api/src/modules/claims/peer-request-core.ts`
+  `decryptLiveSensitive` → `claim.savePeerAnswer` `PeerRequestStaleError`]. The handler leaves an undecryptable live answer OUT of the map it
+  hands the writer, and the writer refuses the save as STALE (409 `peer_request.stale`) rather than act on an unknown (fail-closed — ⛔ a
+  dependant superseded on a guess). After the DECEASED's erasure a sensitive answer decrypts to the sentinel (⛔ a value) and the same refusal
+  applies — but the claim is then normally closed anyway. ⭐ Trigger: a KMS key rotation / envelope incident, or a report of a neighbour unable
+  to change an answer.
+
 ## Deferred from: bmad-create-story 6.29 — FOUND, scoped OUT by BigDev (2026-10-09)
 
 - **⚠ The production jobs login cannot read or write most of what the jobs sweeps touch — SYSTEMIC, ⛔ specific to 0151 / 0152**
@@ -504,6 +522,12 @@ Recorded under `2026-10-06-282` (GI1–GI18), as amended by `-283` (A1–A8) and
   - *Appended 2026-10-07 (Story 6.26b, RD28):* ⚠ **Trigger FIRED** — Story 6.26b touched `anonymize.ts` for GI13 [b] ONLY (the review's
     `accepted_date_index` → NULL in the existing review scrub). ⛔ **NOT ADDRESSED**: whose data the 6.7 columns are is still counsel's
     (the `-243` posture); ⛔ no widening.
+  - *Appended 2026-10-12 (Story 6.27a, PM17):* ⚠ **Trigger FIRED again** — 6.27a touched `anonymize.ts` for its OWN table only: on
+    erasure of the DECEASED member, every SENSITIVE answer of the neighbours about the death (`claim_peer_mesh_reply_answers.value_ciphertext`
+    — the date, the cause, the illness — live AND superseded) → sentinel, and the date's three window indexes → NULL. ⛔ **NOT ADDRESSED**:
+    the 6.7 columns above (still counsel's); and ⭐ a NEW open question joins this item — **whose data a neighbour's answer is on the
+    RESPONDER's side**: on erasure of the RESPONDER, the reply holds ⛔ no identity beyond an id (`claim_peer_mesh_replies`) and the answers
+    stay as CLAIM evidence (⛔ scrubbed). ⭐ Trigger: counsel's read (the `-243` posture), alongside Row 27 (a) / (f).
 - **The R9 routing predicate's BULK inline twins were ⛔ not folded into `claim/r9-routing.ts`** [`claim/cycle-freeze-read.ts` (the pending
   page's routed set), `claim/r9-voting-read.ts` (the R9 queue read), `claim/state-trustee-decision-persist.ts` (`commitCycleFreeze`'s exclusion,
   which also covers `correction_return`)]. Task 2.1 moved the THREE private per-claim copies onto ONE leaf (`hasLiveRoutedRow` +
@@ -649,6 +673,9 @@ Recorded under `2026-10-03-276` (CR1–CR15). ⛔ Q1–Q4 are ⛔ not here — `
 
 - **A stuck OCR-parity job keeps a family chased for a certificate they already sent (Trap 3).** The current certificate moves ONLY when `apps/jobs/src/claim-ocr-parity.ts` runs (it is the uploads table's only writer); until then the sweep reads the old pointer, so a `rejected` / `missing` run keeps reminding. ⛔ No upload-handler side-channel was added to "see it sooner" (CR14). ⭐ Cross-reference, ⛔ not a duplicate: the OCR-parity job's *"Decrypt/DB failure … retries indefinitely"* item (6.21 review) and **D4-1.12** (the dead-letter drain procedure) — their triggers are this item's.
 - **A claim whose peer mesh finds ZERO candidates never leaves `documents_pending` — and so is ⛔ never chased for a missing certificate (Trap 6).** `apps/jobs/src/claim-peer-mesh.ts` emits ⛔ no `claim.peer_mesh_pinged` when there is nobody to ping, so the claim never enters checking; under `-259` detail 3 (⛔ no chase while filing) the family is ⛔ not reminded. That is our reading of `-259`; the STALL itself is a system defect. ⭐ Trigger: the story that gives the peer mesh a zero-candidate fallback.
+  - *Appended 2026-10-12 (Story 6.27a, PM20):* ⛔ **NOT TAKEN** by 6.27a — the stall stays. The console now SAYS it: a `skipped` selection
+    reads *"No neighbour could be chosen"* on the District Admin's 72-hour line (`SignalsPanel.tsx`, `t.peerMesh.window.skipped`). ⭐ Trigger
+    unchanged (the story that gives the peer mesh a zero-candidate fallback; row 6-36 changes WHO is chosen, ⛔ this stall).
 - **A T12 legacy certificate row (sent before 6.21a, ⛔ no upload row) reads as `missing`, and the OCR job's tolerance path could make a claim `missing` AGAIN (Trap 6).** A legacy row is chased as `missing`; a second `missing` wait on one claim is impossible (UNIQUE — the planner reads the existing run as "exists", the opener's 23505 is "exists", ⛔ never a crash), so a claim that became `missing` again after a certificate is ⛔ not re-chased. ⛔ Neither is reachable in production (⛔ no production data exists); ⚠ a dev/staging DB may hold a legacy row. ⭐ Trigger: any migration of pre-6.21a certificates into production.
 - **⛔ No staff push in 6.19d — so the found-dead + 13 escalation reaches ⛔ no Pariwar Admin (CR10, a departure from shared-spec D11).** The escalation is a RECORD on the District Admin's list (*"the Pariwar Admin is not notified in this version"*); ⛔ no Pariwar-Admin surface shows it. ⭐ Trigger: an admin client that registers a device token, or a Pariwar-Admin view of the certificate reminders.
 - **⛔ No staff prompt to CALL a dead-phone family whose second certificate is rejected after their one letter (CR10; `-275` "does NOT cover").** Such a person gets ⛔ no SMS (the delivered-letter stop), ⛔ no second letter (`-275` Q1) and ⛔ no chase; the list shows *"Letter delivered — no further texts"*. ⭐ Trigger: a staff call-task seam.
@@ -4837,6 +4864,11 @@ _Not code-review findings — forward seams Story 9.7 deliberately RESERVES for 
 - **`VERIFIER_CONSOLE_MAX_READS` doesn't account for the preHandler's own 2 DB round-trips** (`getClaimCase` + `getMemberPostingLatest` in `resolveVerifierConsoleDistrict`) before the assembler runs — understates true per-request DB cost, though the documented counter scope (D9/R4) already states what's counted (assembler-only). No runtime regression guard exists if the ceiling is silently exceeded later. **Re-trigger:** if a future change adds reads to either the preHandler or the assembler, re-measure and consider a runtime assertion, not just the live-DB test's implicit check.
 - **No verifier-annotation capture exists for peer-mesh responses.** Story 6.10's AC2(c) requires "peer-mesh responses with verifier annotations." Story 6.6's `ClaimPeerMeshRespondedPayloadSchema` (`packages/domain/src/claim/events.ts:125-134`) only ever captured `responder_member_id` + `response` — no verifier-added note/annotation field. **Decision (2026-07-11, user direction):** peer responses ship as specified; verifier annotations are modeled as an explicit `not_available_yet` (`PeerMeshVerifierAnnotations` in `packages/contracts/src/claims/verifier-console.ts`, wired through the assembler + rendered in `SignalsPanel`) rather than silently dropped. **Re-trigger:** when a story lands verifier-annotation capture on peer-mesh responses (a Story 6.6-substrate change — new event/field), it plugs into the existing `not_available_yet` slot by adding a `present` variant to `PeerMeshVerifierAnnotations` — no other contract shape changes needed.
   - ⭐ **2026-09-28 — NOW SCHEDULED, ⛔ not closed:** row `6-27-peer-mesh-sending-replies-and-date-of-death` (`2026-09-28-263` consequence 2) owns showing peer replies to staff — ⚠ and the larger gap found the same day: ⛔ nothing sends the five requests and ⛔ nothing can reply (`recordPeerMeshResponse` has no production caller), so there are no responses to annotate yet.
+  - ⭐ **2026-10-12 — Story 6.27a (PM13, PM18):** the neighbours' ANSWERS now reach staff (the console's peer-mesh section: each live answer
+    with its words, how and when saved, "changed N times", the send status, the 72-hour line) and a neighbour CAN reply (the app and the
+    helpline; `recordPeerMeshResponse` is called at the first `has_died` save). ⛔ **The verifier ANNOTATIONS are still ⛔ built** —
+    `PeerMeshVerifierAnnotations` stays `not_available_yet` (staff note capture). ⚠ The cite above is STALE: the payload schema is
+    `packages/domain/src/claim/events.ts:157-161` (as of 6.27a), ⛔ `:125-134` — kept as written (the record). Sending is 6.27c's.
 - **No RBAC path exists today for a global/higher-scope actor to open a claim whose deceased member has no resolvable posting district.** `hasPermission`/`scopeContains` (`packages/domain/src/rbac/check.ts`, `packages/domain/src/rbac/scope.ts`) fail closed on any unresolved (`null`-value, non-`global`-dimension) target locator before any grant — including `global` — is ever examined; this is a deliberate, doubly-enforced, system-wide invariant, not specific to this route. **Decision (2026-07-11, user direction):** this is the correct, shipped behavior — all actors fail closed when the posting district is unresolved. Whether a `global` grant should ever bypass an unresolved-target-locator denial is deferred to **RBAC architecture work** (not a 6.10/6.12/6.13 story-level concern). **Re-trigger:** if/when RBAC architecture work revisits the unresolved-target-locator invariant (e.g. as part of the Epic-3 geo-tree resolver), decide there whether `global` grants should get an explicit carve-out, and update `check.ts`/`scope.ts` + this route's authorization matrix together.
   
   ⚠ **Re-pointed by Story 10.18 (2026-08-10): successor is `Story 1.18 — Geo-Tree Scope Resolver`**, not "Epic 3". ⛔ Note the DISTINCT rank-order case, which Story 1.18 does NOT own: a `state`-ceiling actor failing a `pariwar` check is blocked by the ordering itself and no resolver lifts it (`scope.ts` §RANK-ORDER).

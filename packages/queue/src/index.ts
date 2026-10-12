@@ -138,6 +138,8 @@ export const QUEUE_NAMES = {
    * <3 → `insufficient_responses_fallback` (ground-inspection-primary; operator signal). NEVER
    * auto-denies, NEVER advances state past `verification_in_progress`. Idempotent (re-fire
    * recomputes the same outcome from the same event count). Job class C (scheduled/delayed).
+   * ⭐ Story 6.27a (PM8; re-pin 2026-10-12): the outcome no longer closes answering — an answer is taken while an approval
+   * is still to come (the answer window), and one arriving after the outcome resolved does ⛔ not recount it (monotonic).
    */
   CLAIM_PEER_MESH_WINDOW: 'claim.peer_mesh_window',
   /**

@@ -98,7 +98,9 @@ jobs:
   test:
     name: test
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    # 20 (was 10, BigDev 2026-10-12): the suite runs 6.5–10 min and was cancelled at the limit on main and on PRs
+    # #275 / #278 with every task green — the integration-tests job's 20 is the precedent.
+    timeout-minutes: 20
     needs: [install, build]
     steps:
       - uses: actions/checkout@v4

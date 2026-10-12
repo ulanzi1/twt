@@ -21,8 +21,8 @@ premise + the shape rule over every real text; design). FOUND: TV5's premise fal
 
 STATUS: `ready-for-dev` — ✅ BUILDABLE: TV1–TV12 answered by BigDev (all as recommended) and committed ALONE as `2026-10-10-313`
 ([[feedback_governance_commits_precede_implementation]]); TV13 + the gateway (MSG91 "for now") committed as `2026-10-10-314`;
-corrections C1–C9 (TV5 SUPERSEDED) committed as `2026-10-12-322`. (Rebased SHAs: `-313` `9b22e69d`, `-314` `b7ebf48f`, `-322`
-`31fe84d8`; the pre-rebase `97e2c3bb` / `e2d57ed9` survive only under the backup tag — cite the decision ids.) Build from Task 0.1 / 0.4
+corrections C1–C9 (TV5 SUPERSEDED) committed as `2026-10-12-322`; its reading R1–R2 as `2026-10-12-323`. (Rebased SHAs: `-313`
+`9b22e69d`, `-314` `b7ebf48f`, `-322` `31fe84d8`, `-323` `2b938bc6`; the pre-rebase `97e2c3bb` / `e2d57ed9` survive only under the backup tag — cite the decision ids.) Build from Task 0.1 / 0.4
 on. ⭐ Row `6-37-msg91-sms-gateway-adapter` builds the MSG91 adapter AFTER this story.
 ⭐ §0 gate (template `trustee-panel-routing-note-TEMPLATE.md`): every TV strips to "the code / the registration sheet should do X". ⛔ No
 word of any Panel-ratified text changes — a variable's TYPE is registration metadata the member ⛔ never sees, and every rendered body stays
@@ -86,7 +86,8 @@ a template or a message the day the rule began to bite.**
 | `2026-10-10-305` §4 | roster Rows 27 / 28 / 29 RESERVED (6.27 / 6.27 / 6.30) — Row 29 since WRITTEN by 6.30 (`app-links-live`); 27 / 28 still reserved | author-commit ⇒ this story's row is **30** |
 | **`2026-10-10-313`** · **`2026-10-10-314`** | TV1–TV12 as recommended; the SMS gateway is MSG91 *"for now"*; NEW row `6-37-msg91-sms-gateway-adapter`; TV13 (slot names) | author-commit (BigDev) — THIS STORY's |
 | **`2026-10-12-322`** | C1 TV5 SUPERSEDED (sent + alarmed, ⛔ held / refused); C2 the gate's rules (i)–(iii); C3 6.30's sheet bullet answered; C4 TV9 one-way; C5 `otp`; C6 6.27c waits for 6.34; C7 the `-310` promise; C8 TV6's proof; C9 facts re-read | author-commit (BigDev) — THIS STORY's |
-| `2026-10-10-310` (+ `trustee-panel-routing-note-2026-10-10-6-27-confirms.md`) | the note told the Panel: *"We will confirm with the provider before go-live; if it refuses Hindi names, we will come back to you"* | ⭐ Trustee-ratified — a PROMISE this story carries (TV10 (d), `-322` C7) |
+| **`2026-10-12-323`** | R1 C1's warning: the core FLAGS, each caller LOGS; R2 C1's cost widened — a delivery-report-only tag rejection is recorded `accepted` (D22 counts the family reached) — a pre-existing gap for every DLT rejection, RECORDED, accepted | author-commit (BigDev) — THIS STORY's |
+| `2026-10-10-310` (+ `trustee-panel-routing-note-2026-10-10-6-27-confirms.md`) | the note told the Panel: *"We will confirm with the provider before go-live; if it refuses Hindi names, we will come back to you"* | a promise made to the Panel in that note's FYI section (⛔ itself what `-310` ratified — `-310` ruled CF1–CF5); this story carries it (TV10 (d), `-322` C7) |
 | `2026-09-27-252` · 6.19c D22 | before a claim is closed for silence, "reached" means the network ACCEPTED a reminder (`reachedBySms`) | ⭐ Trustee-ratified — ⛔ moved (why `-322` C1 never holds or refuses) |
 | BigDev 2026-10-10 (in session, on v1.0) | *"We will use STPL, and [STPL] uses {#var#} for variable"* — the PE's DLT portal is STPL's SmartPing | BigDev's fact — recorded in the Task 0.3 author-commit |
 | `2026-10-10-312` AL15 | the typed-variable rule is a POINTER to this row; Row 29 (e)'s logged-out leg waits for the OTP retag | author-commit (6.30) |
@@ -315,17 +316,27 @@ templates) — and it is ⛔ not ratified ([[feedback_niyamavali_rulebook_not_sp
   place: the shared send core `sendClaimDltSms` (`claim-dlt-sms-send.ts`), to the trimmed, non-blank helpline it has just resolved —
   so it covers all FOUR callers (F12). The core *"never alarms and ⛔ never logs — callers add the ids"* (`claim-dlt-sms-send.ts:9`) ⇒
   on a failure it SENDS exactly as today (same body, same outcome) and returns the result with ONE added optional flag
-  (`helplineNotCallbackNumber: true`, on the results that follow a resolved helpline); each of the four callers, on that flag, raises
-  ONE warning through its EXISTING `alarm` sink (the one its config faults already use) — naming the Pariwar, the purpose and the rule
+  (`helplineNotCallbackNumber: true`) — set ONLY on a `kind: 'final'` result whose body was handed to the provider (`accepted`,
+  `rejected_*`, or a provider-classified `error`); ⛔ on `transient` (a pg-boss retry would warn on every attempt), ⛔ on the config
+  finals that send nothing (`config:sms_gateway_unconfigured`, `config:sms_messaging_unavailable`). Each of the four callers, AFTER its
+  transient branch, on that flag raises ONE warning through its EXISTING `alarm` sink (`alarmOf(deps)` — reminders `:260`, closure
+  `:300`, certificate `:531`, suspicion child `:327`) — naming the Pariwar, the purpose and the rule
   (*"helpline set, but not a callback number: digits only, 3–14 — no '+' or spaces"*; ⛔ the number itself is needed). The warning
-  changes ⛔ outcome, row or `detail`. `helplineGap`, `configSet`, every outcome, `detail` code,
+  changes ⛔ outcome, row or `detail`. (`-323` R1: this is how `-322` C1's *"the core … logs one warning"* is realised — the core
+  FLAGS, the caller LOGS; the core never logs and does ⛔ know the purpose.) ⚠ Jobs boot wires ⛔ `onAlarm` today
+  (`apps/jobs/src/boot.ts:626` — deferred-work's 8.14 item) ⇒ the warning reaches `console.warn` / the logs only. `helplineGap`,
+  `configSet`, every outcome, `detail` code,
   hold and alarm that exists today are UNCHANGED (Invariant 5). The CONTROL is provisioning: Row 30 (c) closes only when every Pariwar's
   number passes the predicate and is whitelisted as a CBN CTA (toll-free `1800` / `1860`, 8–13 digits; landline `0` + STD; mobile
   `91` + 10 digits — ⛔ `+`; ⛔ "+91 in the fixed text" — templates 1–12's words are ratified, Invariant 2). ⚠ Cost, accepted by BigDev:
-  once operators enforce tags, a malformed number's texts are REJECTED by the operator (a provider-driven final `error`, like any
-  rejection today) until staff fix the number; the warning says why. *Record of the superseded text* (`-313`): *"a value that fails it is
+  once operators enforce tags, a malformed number's texts are REJECTED by the operator until staff fix the number. ⚠ (`-323` R2 —
+  RECORDED, accepted) HOW the rejection comes back is UNVERIFIED: a synchronous provider error ⇒ a final `error` (the case C1
+  assumed); a delivery report only ⇒ the send is recorded `accepted` (this repo consumes ⛔ delivery report) and D22's `reachedBySms`
+  counts the family REACHED; a carrier block ⇒ `rejected_unreachable` (`sms-errors.ts`), which feeds D22's dead-number arm. That gap is
+  PRE-EXISTING for every DLT rejection cause, ⛔ created here; Row 30 (d) asks; until answered Row 30 (c) is the only control. *Record of the superseded text* (`-313`): *"a value that fails it is
   treated EXACTLY as unset: `helplineGap` … HOLDS … and the send core returns its existing `config:helpline_number_missing`"* — FALSE in
-  effect on three of four paths (F12), where "unset" is a FINAL `error` that drops the text and moves D22's `reachedBySms`. *Rejected
+  effect on three of four paths (F12), where "unset" is a FINAL `error` that drops the text; on the correction chase (templates 1–2) it
+  also moves D22's `reachedBySms` (D22 reads only `claim_correction_reminders`). *Rejected
   (`-322`):* (a) fail closed like unset (drops the closure notice for good — §0 (ii)); (c) a hold on all four paths (three sweeps; the
   held reminder still moves D22 — likely the Panel's).
 - **TV6 — the five whole-body alert entries go DARK, truthfully.** Each keeps its key and config-key name (the 5.6 set stays visible) but
@@ -345,8 +356,9 @@ templates) — and it is ⛔ not ratified ([[feedback_niyamavali_rulebook_not_sp
 - **TV7 — the gate `scripts/dlt-typed-variables/`** (mirror `kyc-provider-boundary`, F18; rules per `-322` C2): `lib.ts` —
   `scanDltText(path, text)` → findings for:
   (i) a braced `{#…#}` tag other than `{#var#}` INSIDE REGISTERED TEXT — in `docs/launch-gate-inventory/*.md`, the template table rows
-  (lines matching `^\|\s*\d+\s*\|`, which include the MSG91 column); in source, every CODE line of every scanned file (a line whose
-  first non-blank characters are ⛔ `//`, `/*` or `*` — a cheap stand-in for "string literals", ⛔ a TS parse). ⛔ Prose, headings,
+  (lines matching `^\|\s*\d+\s*\|`, which include the MSG91 column); in source, the CODE lines of the `REGISTRY_FILES` only (`-322`
+  C2's "string literals of the registry files" — a code line = first non-blank characters ⛔ `//`, `/*` or `*`; a cheap stand-in, ⛔ a
+  TS parse; write any detector regex with an escaped `#\}` so it does ⛔ match itself). ⛔ Prose, headings,
   bullets or comment lines — those spell types WITHOUT braces by convention (TYPE SPELLING RULE, header; Trap 10), unscanned;
   (ii) a source file holding the literal `{#var#}` that is ⛔ on `REGISTRY_FILES`;
   (iii) a source file using the identifier `DLT_VAR` or the literal `sms.dlt.template_id.` that is ⛔ on `REGISTRY_FILES` (allowlist:
@@ -361,8 +373,11 @@ templates) — and it is ⛔ not ratified ([[feedback_niyamavali_rulebook_not_sp
   docs table row FAILS, the same tag in backticked prose PASSES; a `{#var#}` in an unlisted file FAILS; an unlisted file using
   `` `${DLT_VAR}` `` FAILS; an unlisted file holding `'sms.dlt.template_id.x'` FAILS; a listed file passes. `README.md`; `package.json`
   `dlt-typed-variables:check` / `:test`; `scripts/ci-local.sh` + `.github/workflows/ci.yml` (BOTH — F18); and
-  `docs/launch-gate-inventory/` joins `.githooks/pre-push`'s `GATE_INPUTS` (F18). ⭐ At `09321738` rule (i) is RED on the sheet's line
-  `:142` (6.30's *"a typed `{#url#}`"*) — Task 8 rewrites it BEFORE the gate lands (Task order). SHAPE (30 %, ≤ 3, adjacency, slot
+  `docs/launch-gate-inventory/` joins `.githooks/pre-push`'s `GATE_INPUTS` (F18). The sheet's `:142` (6.30's *"a typed `{#url#}`"*) is
+  a BULLET ⇒ unscanned by rule (i) (v1.4 wrongly called it RED); Task 8 still rewrites it (`-322` C3). "Tracked" ⇒ a NEW registry
+  file must be `git add`-ed before `check.ts` sees it (else the in-scanned-set check fails) — the README says so. ⚠ `index.ts`: the
+  barrel exports `dlt-variables.ts` with `export * from './dlt-variables.js'` (Task 1) so the identifier `DLT_VAR` never appears in it —
+  a named re-export would trip rule (iii). SHAPE (30 %, ≤ 3, adjacency, slot
   count) is checked by each registry's unit test (TV2), ⛔ from the sheet; the sheet is parsed only for each row's TYPES (TV2 / AC3).
 - **TV8 — the sheet covers EVERY template.** Keep the path `docs/launch-gate-inventory/dlt-template-requests-6-19.md` (F19); retitle to
   *"DLT Template Registration Requests — every SMS template (first opened for Story 6.19)"*; replace the column *"Variable slots
@@ -398,13 +413,16 @@ templates) — and it is ⛔ not ratified ([[feedback_niyamavali_rulebook_not_sp
   registered TYPED as Transactional and APPROVED, both ids set in the deployed environment, and a real login OTP AND a step-up OTP
   received on a device — ⚠ ALSO waits for row 6-37's MSG91 adapter (F21) (proves F16's key resolution; discharges 6.30 AL15's dependency for Row 29 (e)); (c) EVERY Pariwar's
   helpline passes `isDltCallbackNumber` (digits only per kind — TV5) AND is whitelisted as a CBN CTA — ⭐ this is the control `-322` C1
-  rests on (the code only warns); (d) the providers' written answers, asked of STPL AND MSG91: Devanagari and spaces in
+  rests on (the code only warns, to the logs only — ⛔ `onAlarm` wired); (d) the providers' written answers, asked of STPL AND MSG91:
+  whether a TAG rejection is synchronous (a send error), delivery-report-only, or a carrier block (`-323` R2); Devanagari and spaces in
   `#alphanumeric#`, the hyphen in a `DD-MM-YYYY` `#alphanumeric#` (TRAI allows special characters; ⚠ MSG91 says *"no special characters"*
   — F2, F21), the per-variable limit (40 vs 30) AND the unit it counts (UTF-16 / code points vs graphemes — decides 6.27c's
   `name_too_long`), a leading-zero `#numeric#`, a variable as the LAST word before the final full stop (F4); ⭐⭐ (`-322` C7) a refusal
   of Devanagari or spaces in names goes BACK to the Panel — the 6.27 confirms note behind `-310` promised *"if it refuses Hindi names, we
-  will come back to you"* — and Row 30 (d) does ⛔ close on a refusal; the answer is recorded ONCE, here, and Row 27's evidence line
-  points to it; (e) the enforcement state recorded with a date (logger mode started? rejection date?). Notes: the five dark alert
+  will come back to you"* (a promise in the note's FYI section, ⛔ itself ratified by `-310`; C7 applies it to EVERY name slot,
+  templates 7–12 as well as 6.27c's — widened, conservatively) — and Row 30 (d) does ⛔ close on a refusal; the answer is recorded
+  ONCE, here, and Row 27's evidence line points to it (6.27a / 6.27c, which say the answer IS a Row 27 line, get that annotation —
+  Task 0.4); (e) the enforcement state recorded with a date (logger mode started? rejection date?). Notes: the five dark alert
   categories — provisioning their ids does nothing (TV6); 6-37's create-story owes an SMS-provider ADR (`-322`). Templates 1–14 keep
   their OWN provisioning gates (Rows 18–23, 27) — Row 30 ⛔ licenses their ids. ⭐ Row 30 is ⛔ a merge fence
   ([[project_not_in_production_merge_is_not_golive]]).
@@ -415,7 +433,9 @@ templates) — and it is ⛔ not ratified ([[feedback_niyamavali_rulebook_not_sp
   helpline is the Panel's alternative"* — 6.27c words it). The pointer lines in 6.27a (`…:423-427`, `…:615`) and 6.27c (`…:85`, Task 1
   at `…:101-102`, `…:96`, `…:127-128`) and 6.30's SIX FACTS #3 / AL15 get an annotation at Task 0.4 (*"⚠ on STPL / SmartPing the text
   keeps `{#var#}`; the tag names here are the slot TYPES — 6.34 TV1 / TV11"*; 6.27c's Task 1 annotation adds *"`{#var#}` + `slots` from
-  `@twt/channels` `dlt-variables.ts`; add the file to `REGISTRY_FILES`"*; a Change-Log line in each; ⛔ a PM or AL moved). ⭐ (`-322`
+  `@twt/channels` `dlt-variables.ts`; add the file to `REGISTRY_FILES`; raise the `helplineNotCallbackNumber` warning like the four
+  callers (`-322` C1 / `-323` R1)"*; 6.27a `…:423-427` and 6.27c `…:96` add *"the provider's Devanagari answer is recorded ONCE at
+  Row 30 (d) (`-322` C7); Row 27's evidence line POINTS to it"*; a Change-Log line in each; ⛔ a PM or AL moved). ⭐ (`-322`
   C6) the deferral is made MECHANICAL: 6.27c's STATUS line and its sprint-row comment gain *"AND row 6-34 is done"*; 6.30 AL15, roster
   Row 29 note (4) and the AL15 annotation under the `6-34` sprint row gain *"+ row 6-37's MSG91 adapter (`-314` Consequence 2)"*.
   ⚠ If 6.27c lands FIRST anyway, it STOPS and asks rather than re-creating TV1.
@@ -459,14 +479,16 @@ wrong name makes `t()` throw); its rendered body (through the real `t()`) is byt
 ### AC4 — A malformed helpline is SENT and WARNED about, ⛔ held, ⛔ refused (TV5 as `-322` C1)
 **Given** a Pariwar's helpline set to `+911800123456` (or `1800 123456`) **when** ANY of the four send paths sends (correction reminder,
 closure notice, certificate reminder, suspicion notice) **then** the text is sent exactly as today (same body, same outcome, same row
-state) **and** the core's result carries `helplineNotCallbackNumber: true` **and** that path's caller raises exactly ONE warning naming
+state) **and** the core's FINAL result carries `helplineNotCallbackNumber: true` **and** that path's caller raises exactly ONE warning naming
 the Pariwar, the purpose and the callback-number rule through its existing `alarm` sink; **and** with `1800123456` ⛔ flag and ⛔
 warning; **and** an UNSET helpline behaves exactly as today on every path (the existing fail-closed and hold legs unchanged and green).
 Proven by a send-core unit leg (`claim-correction-send.test.ts` — flag set / unset, body and outcome unchanged), ONE warning leg per
 caller with a `+911800123456` helpline (the four live suites' harnesses already capture `alarms`), and the existing legs staying green
 after the suites' DEFAULT `HELPLINE` fixtures (F12's list) move to digits-only `1800123456` / `1800999999` — the body pins interpolate
-`${HELPLINE}`, `claim-correction-send.test.ts:150`'s `toContain` moves with it, and `claim-correction-reminders-live.test.ts`'s
-empty-`alarms` assertion stays true.
+`${HELPLINE}`, `claim-correction-send.test.ts:150`'s `toContain` moves with it, and the per-claim empty-alarm assertions stay true
+(reminders-live `:807`, `:1039`, `:1057`, `:1096`; suspicion-live `:527`, `:738`); `claim-correction-send.test.ts`'s whole-result
+`toEqual`s (`:134` transient, `:143` accepted) stay exact for a digits-only helpline (the flag is absent). A TRANSIENT send with a
+malformed helpline carries ⛔ flag (TV5).
 
 ### AC5 — The alert entries are dark and say why (TV6)
 **Given** each of the five categories **then** `resolveDltTemplate` returns `null` and its entry carries `contentTemplate: null` +
@@ -499,8 +521,11 @@ the handover's captured payload carries `template: 'step_up'` with `intent` stil
 Roster Row 30 written at its number (the Row 29 block format; the 27–28 gap noted as 6.27's); deferred-work items (TV6 §3.4 (iii) +
 "provisioning the five ids does nothing"; TV9 data export; TV12 lines; the `{member}` item updated — TV4; the item *"DLT registration
 untracked with no ledger row"* annotated *"⭐ ADDRESSED IN PART by 6.34 Row 30 — registration tracked, each helpline checked and
-whitelisted at (c); per-Pariwar posture gating ⛔ addressed"*, ⛔ "closed"); the annotations of TV11 / `-322` C6 (6.27a, 6.27c incl. its
-STATUS line and sprint row, 6.30 AL15, Row 29 note (4), the `6-34` sprint annotation); this file's Change Log + File List.
+whitelisted at (c); per-Pariwar posture gating ⛔ addressed"*, ⛔ "closed"); a NEW item (`-323` Consequence 2): *"⛔ DLT send consumes
+a delivery report — a rejection seen only there is recorded `accepted`, and D22 counts the family reached"* (trigger: before any
+claim-text template id is provisioned); the annotations of TV11 / `-322` C6 / C7 (6.27a, 6.27c incl. its STATUS line, Task 1 and
+sprint row, the Row 27 → Row 30 (d) pointer, 6.30 AL15, Row 29 note (4), the `6-34` sprint annotation); this file's Change Log + File
+List.
 
 ### AC10 — Nothing else moves; the proof
 ⛔ Migration, ⛔ `detail` code, ⛔ outcome change, ⛔ i18n change, ⛔ template id / secret / helpline set; `pnpm ci:local` green WITH
@@ -532,7 +557,9 @@ live-DB job's line.
         and *"retags … with typed variables"* → *"declares a TRAI type for every `{#var#}` (SmartPing)"*). A dated Change-Log / annotation
         line in each; ⛔ a PM or AL moved. Sprint ledger line ([[project_sprint_status_safe_prepend]]).
 - [ ] **Task 1 — the vocabulary (AC1).** `packages/channels/src/dlt-variables.ts` + barrel export in `packages/channels/src/index.ts`
-      (beside `resolveOtpTemplate` / `resolveDltTemplate`, `:101-110`); `packages/channels/tests/dlt-variables.test.ts`. Doc comments
+      as `export * from './dlt-variables.js'` (near `resolveOtpTemplate` / `resolveDltTemplate`, `:101-110`; ⛔ a named re-export — it
+      would put `DLT_VAR` in `index.ts` and trip TV7 rule (iii); `export *` is house-legal — `packages/contracts/src/index.ts`,
+      `packages/ui/src/index.ts`); `packages/channels/tests/dlt-variables.test.ts`. Doc comments
       spell types WITHOUT braces (Trap 10).
 - [ ] **Task 2 — the OTP (AC2).** `otp-sms-template.ts` (TV3: `OTP_VAR_SLOT` = TV1's `DLT_VAR`, `slots` with `name: 'otp'`, `version`
       unchanged, the header comment's *"single variable slot"* paragraph names the `numeric` type); `otp-sms-template.test.ts` (shape,
@@ -542,10 +569,12 @@ live-DB job's line.
       jobs tests (shape over every entry; slot names = the i18n `{param}`s in order, both locales; the marker-order render leg; the sheet
       row, found by config key, carries the same types in order; the `PANEL_EN` literals ⛔ changed — they are the Panel's EN wording).
 - [ ] **Task 4 — the helpline warning (AC4; TV5 as `-322` C1).** `claim-dlt-sms-send.ts`: after the existing blank check, apply
-      `isDltCallbackNumber` to the trimmed helpline; on a failure set `helplineNotCallbackNumber: true` on the returned result — ⛔ change
-      to any outcome, `detail`, return path or the body. The four callers (`claim-correction-reminders.ts` incl. the `sendClaimCorrectionSms`
-      wrapper's result type, `claim-correction-closure.ts`, `claim-certificate-reminders.ts`, `claim-suspicion-notices.ts`) raise ONE
-      warning on the flag through their existing `alarm` sink. ⛔ Touch `helplineGap`, `configSet` or `purposeConfigGap`. Tests: the
+      `isDltCallbackNumber` to the trimmed helpline; on a failure set `helplineNotCallbackNumber: true` on the FINAL results that follow a
+      provider send (TV5 — ⛔ transient, ⛔ the no-send config finals) — ⛔ change to any outcome, `detail`, return path or the body (the
+      result type gains the optional field; the wrapper re-exports it, `claim-correction-reminders.ts:110,219`). The four callers
+      (`claim-correction-reminders.ts`, `claim-correction-closure.ts`, `claim-certificate-reminders.ts`, `claim-suspicion-notices.ts`)
+      raise ONE warning on the flag, AFTER their transient branch, through their existing `alarmOf(deps)` sink. Update the wrapper's doc
+      comment (`claim-correction-reminders.ts:205-206` says `claim-correction-send.test.ts` is *"UNEDITED"* — it is edited now). ⛔ Touch `helplineGap`, `configSet` or `purposeConfigGap`. Tests: the
       send-core leg; one `+911800123456` warning leg per caller; move the default `HELPLINE` fixtures (F12's list) to `1800123456` /
       `1800999999` — run the live suites against :5433 per the house live-DB gotchas.
 - [ ] **Task 5 — the alert registry (AC5).** `sms-dlt-registry.ts` (TV6 shape; `DltTemplate.contentTemplate: string | null`,
@@ -553,8 +582,9 @@ live-DB job's line.
       (`:194-204`, `:221-226`, `:228-232`), `contribution-provider-resolver.test.ts` (`:35`, `:114-115`, `:183-194`, `:250`),
       `apps/api/tests/unit/sms-composition.test.ts` (`:70-80`, `:99-104`, `:106-111`) — against a mocked registrable entry (the FILE-path
       mock in `apps/api`, or an injectable registry — say which); `sms.test.ts` (`:252-276`); AC5's observable dark proof.
-- [ ] **Task 6 — the handover OTP (AC8).** `step-up-delivery.ts` (`template?: 'step_up'` on the `login` arm only — use the file's own
-      `StepUpOtpIntent` member); `sms-step-up-delivery.ts:150` (`resolveOtpTemplate(payload.template ?? payload.intent)`);
+- [ ] **Task 6 — the handover OTP (AC8).** `step-up-delivery.ts` (`readonly template?: 'step_up'` on the `login` arm; the `step_up` arm
+      gains `readonly template?: never` — the file's own FORBIDDEN pattern, `:49` / `:60` — so `payload.template` type-checks on the
+      union; use the file's own `StepUpOtpIntent` member); `assertPayloadShape` reads `template` through its untyped `bag`; `sms-step-up-delivery.ts:150` (`resolveOtpTemplate(payload.template ?? payload.intent)`);
       `assertPayloadShape` (`:99-115` — it checks only `resolvedMobile` / `pariwarId` today) rejects `template` on a `step_up` payload and
       any value other than `'step_up'` as `invalid_payload`; `claims.service.ts:178` passes `template: 'step_up'`; `createLogStepUpDelivery`
       (`step-up-delivery.ts:110`) and the test fake `CapturingStepUpDelivery` (`apps/api/tests/integration/_setup.ts:162`) accept it (the
@@ -562,7 +592,7 @@ live-DB job's line.
       rejections); `claims-intake.spec.ts` (beside `:122` — `template: 'step_up'`, `intent` still `'login'`); the four other callers
       unchanged (member login `member-auth.handlers.ts:236/244`, member step-up `:524/533`, data export
       `member-data-rights/handlers.ts:659`, admin step-up `step-up/step-up.handlers.ts:43/50`).
-- [ ] **Task 7 — the gate (AC6).** Lands AFTER Task 8 (the sheet's `:142` is RED under rule (i) until rewritten).
+- [ ] **Task 7 — the gate (AC6).** (⛔ ordered after Task 8 — `:142` is prose, unscanned; v1.4 said otherwise.)
       `scripts/dlt-typed-variables/{lib.ts,check.ts,lib.test.ts,README.md}` per TV7 (rules i–iii; the zero-scan and in-scanned-set
       checks; the negative controls); `package.json` scripts; `scripts/ci-local.sh` (after `kyc-provider-boundary`, `:78`);
       `.github/workflows/ci.yml` (a job mirroring `:852-875`); `.githooks/pre-push` — `docs/launch-gate-inventory/` into `GATE_INPUTS`.
@@ -608,7 +638,7 @@ live-DB job's line.
     member-facing wording ⇒ §0).
 ### Reuse map
 - Gate skeleton → `scripts/kyc-provider-boundary/`. Registry style → `otp-sms-template.ts` (TOTAL map) / `sms-dlt-registry.ts` (partial).
-- Helpline warning → the send core's existing result shape + each caller's existing `alarm` sink — ⛔ a new sink; 6.29's
+- Helpline warning → the send core's result type + ONE optional field, and each caller's existing `alarmOf(deps)` sink — ⛔ a new sink; 6.29's
   `helplineGap` / `configSet` (`claim-suspicion-notices.ts:111-139`) are ⛔ touched (`-322` C1).
 - Real `t()` render → the existing `renderClaimCorrectionSms` / `renderSuspicionNoticeSms` — ⛔ edited beyond comments.
 
@@ -697,3 +727,4 @@ REBASED onto `09321738` on 2026-10-12 (old tip: tag `backup/6-34-pre-rebase`).
 | 2026-10-10 | 1.2 | `-313` applied — TV1–TV12 committed as recommended (`97e2c3bb`, alone); Tasks 0.2 / 0.3 done; buildable. |
 | 2026-10-10 | 1.3 | BigDev: the gateway is *"msg91 for now"*. MSG91's docs read (F21): Flow / OTP v5 take `authkey`, MSG91's own template id and NAMED variable values — ⛔ our client's contract ⇒ NEW row `6-37-msg91-sms-gateway-adapter` (after 6.34) and **TV13** (every slot carries a `name` = the i18n param; the MSG91 template uses `##name##`) — both `2026-10-10-314` (`e2d57ed9`, alone; `-313` ⛔ edited). TV1 / TV8 / TV10 (a) (b) (d), AC1 / AC3 / AC7 and the sequencing aligned. |
 | 2026-10-12 | 1.4 | `bmad-create-story validate 6.34` — the story's FIRST validate. Branch REBASED onto `main` `09321738` (55 commits: 6.30 and 6.28 shipped; +/- lines byte-identical; `-313` / `-314` interleaved between `-315` and `-312`; old tip tag `backup/6-34-pre-rebase`). Four fresh-context read-only verifiers (code claims · governance staleness · TRAI / MSG91 premise + the shape rule over every real text · design). ⭐ HIGH, needed BigDev: `-313` TV5's premise was FALSE — 6.29's hold covers only the suspicion path; on the correction / closure / certificate paths "treat as unset" is a FINAL error that drops the notice and moves D22's `reachedBySms` (`-252`). BigDev: *"(b) Alarm only, never refuse"* ⇒ `2026-10-12-322` (alone, text shown first) C1–C9. Author fixes applied: the gate's rule (i) was RED at birth on 6.30's sheet line and on TV8's own sentence ⇒ rule (i) reads only registered text + the TYPE SPELLING RULE; rule (ii) was evadable via `${DLT_VAR}` ⇒ rule (iii) + a non-empty-scan check; six more composition test sites (three RED, two vacuous) + the file-path mock; the jobs `HELPLINE` fixtures; TV9's switch made one-way (`'step_up'` on the login arm only); TV3's `otp` name; the 6.27c start condition and the 6-37 clause on AL15 / Row 29 / the sprint row; the `-310` promise on Hindi names carried into Row 30 (d); 6.30's sheet bullet answered (C3); F1 / F2 / F3 / F4 / TV1 sourcing corrected (TRAI ALLOWS special characters in alphanumeric; 30 % is formally a > 3-variable condition; ceilings attributed; STPL's manual cited); F12's "sheet example" was a test fixture; moved anchors (`ci-local.sh:78`, `ci.yml:852-875`, `sms-app.ts:136-144`, `apps/jobs/src/boot.ts`); Row 29 written ⇒ the 27–28 gap; the `detail` CHECK is 0155; Task 0.1's stale gateway question; deferred-work at the END of the file; AC4 rewritten (sent + warned); AC10 needs `DATABASE_URL`. ✅ Held: Row 30 free; claim.json's SMS bodies unchanged by 6.28; the 19-template count complete; every real text passes TV1's shape rule; F12's two-reader claim; the code cites the code verifier listed as holding (⛔ a blanket "all pointers verified" claim). |
+| 2026-10-12 | 1.5 | Round-1 fresh-context re-validate of v1.4 + `-322` (at `79d9d440`): 0 BLOCKER / 1 HIGH / 7 MEDIUM / 8 LOW — all but one LOW the v1.4 pass's OWN. BigDev: *"Yes: -323 reading, accept"* ⇒ `2026-10-12-323` (alone): R1 the core flags, the caller logs; R2 the delivery-report residual (pre-existing for every DLT rejection) recorded and accepted, asked at Row 30 (d). Story fixes: Task 1's barrel is `export *` (a named re-export would put `DLT_VAR` in `index.ts` and turn rule (iii) RED — the HIGH); the flag only on final sends, the warning after the transient branch; TV7 rule (i)'s source half narrowed back to `-322` C2 (registry files); `:142` is prose, ⛔ RED (v1.4's claim and Task 7's ordering withdrawn); TV9's `step_up` arm gets `template?: never` so the union compiles; the 6.27a / 6.27c Row 27 → Row 30 (d) pointer and 6.27c's warning; the `-310` promise described as the note's FYI, widened to every name slot; D22 only on the correction chase; the real empty-alarm assertions cited; the wrapper's "UNEDITED" doc comment; `onAlarm` unwired (logs only); new-file `git add` note. |

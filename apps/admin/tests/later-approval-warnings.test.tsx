@@ -829,6 +829,8 @@ describe('Story 6.28 OP14 (b) — the R9 panel, the escalation and "no correctio
     wrap(<R9CasePanel pariwarId={PARIWAR} claimCaseId={CLAIM} />);
     expect(await screen.findByTestId(`finally-approved-elsewhere-${CLAIM}`)).toHaveTextContent(ofd.bannerVoted('A1B2C3D4'));
     expect(screen.getByTestId('r9-vote-approve')).toBeDisabled();
+    // Code review round 3 (checklist 13(d)) — the disabled choice is DESCRIBED by the banner.
+    expect(document.getElementById(screen.getByTestId('r9-vote-approve').getAttribute('aria-describedby') ?? '')).toHaveTextContent(ofd.bannerVoted('A1B2C3D4'));
     expect(screen.getByTestId('r9-finalize-blocked')).toHaveTextContent(ofd.bannerVoted('A1B2C3D4'));
     expect(screen.getByTestId('r9-finalize')).toBeDisabled();
   });
@@ -848,13 +850,16 @@ describe('Story 6.28 OP14 (b) — the R9 panel, the escalation and "no correctio
     expect(await screen.findByTestId(`finally-approved-elsewhere-${CLAIM}`)).toHaveTextContent(ofd.bannerVoted('A1B2C3D4'));
     fireEvent.change(screen.getByTestId('decision-kind'), { target: { value: 'approve' } });
     expect(screen.getByTestId('decision-submit')).toBeDisabled();
+    expect(screen.getByTestId('decision-submit').getAttribute('aria-describedby')?.split(' ')).toContain(`finally-approved-elsewhere-${CLAIM}`);
     fireEvent.change(screen.getByTestId('decision-kind'), { target: { value: 'refuse' } });
     expect(screen.getByTestId('decision-submit')).toBeEnabled();
+    expect(screen.getByTestId('decision-submit').getAttribute('aria-describedby') ?? '').not.toContain('finally-approved-elsewhere');
   });
 
   it('<PariwarClosureList> — "no correction needed" approve disabled under the banner', () => {
     wrap(<PariwarClosureList pariwarId={PARIWAR} reasonOptions={OPTIONS} items={[item({ approval_warnings: QUIET, finally_approved_elsewhere: voted })]} />);
     expect(screen.getByTestId(`finally-approved-elsewhere-${CLAIM}`)).toHaveTextContent(ofd.bannerVoted('A1B2C3D4'));
     expect(screen.getByTestId('no-correction-approve')).toBeDisabled();
+    expect(screen.getByTestId('no-correction-approve').getAttribute('aria-describedby')?.split(' ')).toContain(`finally-approved-elsewhere-${CLAIM}`);
   });
 });

@@ -53,6 +53,7 @@ import {
 import { getDisplayName } from '../auth/admin/admin-auth.repo.js';
 import { emitAuthAudit } from '../auth/shared/audit.js';
 import { closeScopeTx, openScopeTx } from '../multi-tenant/scope-tx.js';
+import { underSavepoint } from './later-approval-warnings.js';
 import { geoTreeResolverForRequest, loadActorGrants } from '../rbac/index.js';
 import { decryptNomineeField, encryptNomineeField } from '../nominee/nominee-crypto.js';
 import {
@@ -722,13 +723,14 @@ export function createNomineeDeclarationHandlers(deps: AppDeps) {
       // ⭐ Story 6.28 (OP10) — this list is unfiltered by claim state, so a refusal later CLOSED by OP4 needs
       // the SAME "holding claim later refused — the family may file again" variant the other helpline
       // surfaces carry. Decision SUPPORT only (the staff label text) — a failed read degrades to "no
-      // holder-refused" rather than 500ing the list, matching OP14 (b)'s `readFinallyApprovedElsewhereDtos`.
-      const holderRefused = await claimDomain
-        .readClosedHolderRefusedBulk(scopeTx.tx, pariwarId, rows.map((r) => r.claimCaseId))
-        .catch((err: unknown) => {
-          request.log.warn({ err: err instanceof Error ? err.name : 'unknown' }, 'nominee refusals: closed-holder-refused read unavailable');
-          return new Set<string>();
-        });
+      // holder-refused" rather than 500ing the list, matching OP14 (b)'s `readFinallyApprovedElsewhereDtos` — under a
+      // SAVEPOINT (code review round 3), so a swallowed SQL error ⛔ never leaves the request tx aborted.
+      const holderRefused = await underSavepoint(scopeTx.client, 'nominee_refusals_closed_holder_refused', () =>
+        claimDomain.readClosedHolderRefusedBulk(scopeTx.tx, pariwarId, rows.map((r) => r.claimCaseId)),
+      ).catch((err: unknown) => {
+        request.log.warn({ err: err instanceof Error ? err.name : 'unknown' }, 'nominee refusals: closed-holder-refused read unavailable');
+        return new Set<string>();
+      });
       const items = [];
       for (const r of rows) {
         items.push({

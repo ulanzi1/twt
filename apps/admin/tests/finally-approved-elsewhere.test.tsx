@@ -48,7 +48,7 @@ const CASE: PendingCase = {
   },
 };
 
-const setup = (over: Partial<PendingCase>, bucket: 'ready_to_freeze' | 'voted_pending_commit' = 'ready_to_freeze') => {
+const setup = (over: Partial<PendingCase>, bucket: 'ready_to_freeze' | 'escalated' | 'voted_pending_commit' = 'ready_to_freeze') => {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
   render(
     <QueryClientProvider client={qc}>
@@ -72,8 +72,18 @@ describe('<PendingCaseCard> — Story 6.28 OP14 (b)', () => {
     setup({ finally_approved_elsewhere: { claim_reference: 'A1B2C3D4', stage: 'passed_final_vote' } });
     expect(screen.getByTestId(`finally-approved-elsewhere-${CLAIM}`)).toHaveTextContent(t.bannerVoted('A1B2C3D4'));
     expect(screen.getByTestId('cycle-freeze-approve')).toBeDisabled();
+    // Code review round 3 (checklist 13(d)) — DESCRIBED by the banner.
+    expect(screen.getByTestId('cycle-freeze-approve').getAttribute('aria-describedby')).toBe(`finally-approved-elsewhere-${CLAIM}`);
     expect(screen.getByRole('button', { name: 'Deny' })).not.toBeDisabled();
     expect(screen.queryByTestId(`close-for-paid-death-${CLAIM}`)).not.toBeInTheDocument();
+  });
+
+  // Code review round 3 — "Resolve → Approve" (the escalated bucket) is a FINAL approval too.
+  it('the ESCALATED bucket: "Resolve → Approve" DISABLED under the banner and described by it; Resolve → Deny untouched', () => {
+    setup({ finally_approved_elsewhere: { claim_reference: 'A1B2C3D4', stage: 'passed_final_vote' } }, 'escalated');
+    expect(screen.getByTestId('cycle-freeze-resolve-approve')).toBeDisabled();
+    expect(screen.getByTestId('cycle-freeze-resolve-approve').getAttribute('aria-describedby')).toBe(`finally-approved-elsewhere-${CLAIM}`);
+    expect(screen.getByRole('button', { name: 'Resolve → Deny' })).not.toBeDisabled();
   });
 
   it('another claim PAID ⇒ "Close this claim"; closed ⇒ its line; the button then stays disabled', async () => {
@@ -96,5 +106,18 @@ describe('<PendingCaseCard> — Story 6.28 OP14 (b)', () => {
     postCloseForPaidDeath.mockRejectedValueOnce(new ApiError(503, 'cycle_freeze.close_busy', 'Busy', {}));
     fireEvent.click(screen.getByTestId(`close-for-paid-death-${CLAIM}`));
     expect(await screen.findByText(t.busy)).toBeInTheDocument();
+  });
+
+  // Code review round 3 (`2026-10-12-320` D2 A) — the action also closes the death's OTHER closable claims; the line
+  // says how many (`closed_count` minus this claim), ⛔ never silently.
+  it('the OTHER claims the action closed are counted — beside "not closed" and beside "closed"', async () => {
+    postCloseForPaidDeath.mockResolvedValueOnce({ this_claim_closed: false, closed_count: 2 });
+    setup({ finally_approved_elsewhere: { claim_reference: 'A1B2C3D4', stage: 'paid' } });
+    fireEvent.click(screen.getByTestId(`close-for-paid-death-${CLAIM}`));
+    expect(await screen.findByTestId(`close-for-paid-death-result-${CLAIM}`)).toHaveTextContent(`${t.notClosed} ${t.othersClosed(2)}`);
+    postCloseForPaidDeath.mockResolvedValueOnce({ this_claim_closed: true, closed_count: 2 });
+    fireEvent.click(screen.getByTestId(`close-for-paid-death-${CLAIM}`));
+    expect(await screen.findByText(`${t.closed} ${t.othersClosed(1)}`)).toBeInTheDocument();
+    expect(t.othersClosed(1)).toBe('1 other claim for this death was closed.');
   });
 });

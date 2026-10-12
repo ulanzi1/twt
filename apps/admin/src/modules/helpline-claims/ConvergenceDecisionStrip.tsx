@@ -296,7 +296,12 @@ export function ConvergenceDecisionStripContainer({
       pending={pendingQ.data?.pending ?? []}
       loading={pendingQ.isLoading}
       errorMessage={messageOf(pendingQ.error)}
-      onMerge={(input) => merge.mutate(input)}
+      // Code review round 3 — the override's "Closed — another claim … goes ahead" line belongs to THAT override only: a
+      // later merge clears it (a new override already replaces it), so it ⛔ never sits beside an unrelated attempt.
+      onMerge={(input) => {
+        override.reset();
+        merge.mutate(input);
+      }}
       onOverride={(input) => override.mutate(input)}
       mergingTarget={merge.isPending ? (merge.variables ?? null) : null}
       overridingTarget={override.isPending ? (override.variables ?? null) : null}

@@ -303,6 +303,17 @@ describe.skipIf(!hasDatabase)('Story 6.28 — one payment per death: OP1 + OP3 (
       expect(out.get(voted)).toBeNull();
       expect(out.size).toBe(4);
     });
+
+    // Code review round 3 — a legacy pair: the LOWER id only voted, the HIGHER id paid ⇒ the PAID one is named.
+    it('a voted lower id beside a PAID higher id ⇒ the paid claim, stage `paid`', async () => {
+      const { client, tx } = getTx();
+      const mid = toMemberId(randomUUID());
+      await claimAt(client, PARIWAR_A, mid, 'state_trustee_approved', { claimCaseId: LOW });
+      await claimAt(client, PARIWAR_A, mid, 'approved', { claimCaseId: HIGH });
+      const y = await claimAt(client, PARIWAR_A, mid, 'verifier_review');
+      const out = await readFinallyApprovedElsewhereBulk(tx, PARIWAR_A, [y]);
+      expect(out.get(y)).toEqual({ claimCaseId: HIGH, stage: 'paid' });
+    });
   });
 
   describe('AC11 (d) — the inspector\'s "already visited" (OP14)', () => {
@@ -339,22 +350,56 @@ describe.skipIf(!hasDatabase)('Story 6.28 — one payment per death: OP1 + OP3 (
   });
 
   describe('OP10 — a closed claim whose HOLDING claim was later refused / closed', () => {
-    it('held by a live claim ⇒ ⛔ listed; the holder refused or closed ⇒ listed; an open claim ⛔ ever', async () => {
+    async function closedHeldBy(
+      client: ReturnType<typeof getTx>['client'],
+      mid: ReturnType<typeof toMemberId>,
+      holder: ClaimId,
+      trigger: 'death_already_finally_approved' | 'suspicion_appeal_allowed',
+    ): Promise<ClaimId> {
+      const cid = await claimAt(client, PARIWAR_A, mid, 'verifier_review');
+      await emitClaim(client, PARIWAR_A, cid, mid, 'verifier_review', 'closed', 'claim.closed', {
+        trigger, held_by_claim_case_id: holder, deceased_member_id: mid,
+      });
+      return cid;
+    }
+
+    it('held by a live claim ⇒ ⛔ listed; the holder refused ⇒ listed; an open claim ⛔ ever', async () => {
       const { client, tx } = getTx();
       const mid = toMemberId(randomUUID());
       const holder = await claimAt(client, PARIWAR_A, mid, 'approved');
-      const closed = await claimAt(client, PARIWAR_A, mid, 'verifier_review');
-      await emitClaim(client, PARIWAR_A, closed, mid, 'verifier_review', 'closed', 'claim.closed', {
-        trigger: 'death_already_finally_approved', held_by_claim_case_id: holder, deceased_member_id: mid,
-      });
+      const closed = await closedHeldBy(client, mid, holder, 'death_already_finally_approved');
       const open = await claimAt(client, PARIWAR_A, mid, 'verifier_review');
       expect([...(await readClosedHolderRefusedBulk(tx, PARIWAR_A, [closed, open, holder]))]).toEqual([]);
-      const holder2 = await claimAt(client, PARIWAR_A, mid, 'denied');
-      const closed2 = await claimAt(client, PARIWAR_A, mid, 'verifier_review');
-      await emitClaim(client, PARIWAR_A, closed2, mid, 'verifier_review', 'closed', 'claim.closed', {
-        trigger: 'suspicion_appeal_allowed', held_by_claim_case_id: holder2, deceased_member_id: mid,
-      });
+      const mid2 = toMemberId(randomUUID());
+      const holder2 = await claimAt(client, PARIWAR_A, mid2, 'denied');
+      const closed2 = await closedHeldBy(client, mid2, holder2, 'suspicion_appeal_allowed');
       expect([...(await readClosedHolderRefusedBulk(tx, PARIWAR_A, [closed, closed2.toUpperCase(), open]))]).toEqual([closed2]);
+    });
+
+    // Code review round 3 (D1 A) — the reachable chain: C paid; S's `-239` refusal reversed ⇒ RF6 closes B (held by S),
+    // then H(iii) closes S itself (held by C). S is `closed`, but C goes ahead ⇒ B is ⛔ "may file again".
+    it('the holder CLOSED while another claim of the death goes ahead (paid, or a third claim) ⇒ ⛔ listed', async () => {
+      const { client, tx } = getTx();
+      const mid = toMemberId(randomUUID());
+      const paid = await claimAt(client, PARIWAR_A, mid, 'approved');
+      const s = await closedHeldBy(client, mid, paid, 'death_already_finally_approved');
+      const b = await closedHeldBy(client, mid, s, 'suspicion_appeal_allowed');
+      expect([...(await readClosedHolderRefusedBulk(tx, PARIWAR_A, [b, s]))]).toEqual([]);
+      // A refused holder beside a still-OPEN third claim ⇒ that claim goes ahead ⇒ ⛔ listed.
+      const mid2 = toMemberId(randomUUID());
+      const refused = await claimAt(client, PARIWAR_A, mid2, 'denied');
+      const b2 = await closedHeldBy(client, mid2, refused, 'suspicion_appeal_allowed');
+      await claimAt(client, PARIWAR_A, mid2, 'verifier_review');
+      expect([...(await readClosedHolderRefusedBulk(tx, PARIWAR_A, [b2]))]).toEqual([]);
+    });
+
+    it('a chain that ENDS in a refusal (the holder closed, its own holder refused, nothing live) ⇒ listed', async () => {
+      const { client, tx } = getTx();
+      const mid = toMemberId(randomUUID());
+      const t = await claimAt(client, PARIWAR_A, mid, 'denied');
+      const s = await closedHeldBy(client, mid, t, 'suspicion_appeal_allowed');
+      const b = await closedHeldBy(client, mid, s, 'suspicion_appeal_allowed');
+      expect([...(await readClosedHolderRefusedBulk(tx, PARIWAR_A, [b, s]))].sort()).toEqual([b, s].sort());
     });
   });
 });

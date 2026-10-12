@@ -17,7 +17,7 @@
 
 import { randomUUID } from 'node:crypto';
 
-import { ids, member as memberDomain } from '@twt/domain';
+import { claim as claimDomain, ids, member as memberDomain } from '@twt/domain';
 import { describe, expect, it } from 'vitest';
 
 import { signAccessToken } from '../../../src/modules/auth/member/tokens.js';
@@ -388,6 +388,65 @@ describe.skipIf(!hasDatabase)('Member-app claim filing — E2E (:5433)', () => {
       // Exactly one freeze — the deceased's account overlay must not be affected by the race.
       const overlay = await memberDomain.getMemberAccountOverlay(t.deps.db, ids.memberId(memberId), new Date());
       expect(overlay.accountFrozen).toBe(true);
+    } finally {
+      await teardown(t);
+    }
+  });
+
+  // Story 6.28 AC4 H(ii) (code review round 3 — the MEMBER-app leg; helpline + override are in
+  // `one-payment-per-death-routes.spec.ts`): a paid claim for this death, kept apart by an override, ⇒ the member's
+  // filing MINTS and is closed IN the request — the response's `state` is `closed`, the closure the SYSTEM's.
+  it('6.28 H(ii): the member-app intake for a PAID death kept apart answers `state: closed`', async () => {
+    const t = await createTestApp();
+    try {
+      const { memberId, pariwarId } = await seedMember(t);
+      await declareNominee(t, memberId, pariwarId, '9876543210');
+      await establishHandoverTrust(t, memberId, pariwarId);
+      const paid = randomUUID();
+      const scopeTx = await openScopeTx(t.deps, pariwarId);
+      try {
+        const emit = (from: string | null, to: string, eventType: string, extra: Json = {}) =>
+          claimDomain.projectClaimState(scopeTx.client, {
+            claimCaseId: ids.claimId(paid), pariwarId: ids.pariwarId(pariwarId), deceasedMemberId: ids.memberId(memberId),
+            intakeChannels: ['helpline'], claimantActorId: null, eventType: eventType as never,
+            payload: { from_state: from, to_state: to, trigger: 'seed', actor: 'system', ...extra } as never, actorId: null,
+          });
+        await emit(null, 'intake_pending', 'claim.intake_initiated', { deceased_member_id: memberId, intake_channel: 'helpline', claimant_actor_id: null });
+        await emit('intake_pending', 'intake_converged', 'claim.intake_converged');
+        await emit('intake_converged', 'documents_pending', 'claim.documents_received');
+        await emit('documents_pending', 'verification_in_progress', 'claim.peer_mesh_pinged', {
+          selected_member_ids: [randomUUID()], metric_id: 'district_cohort_v1', metric_version: 1,
+        });
+        await emit('verification_in_progress', 'verifier_review', 'claim.verifier_reviewing');
+        await emit('verifier_review', 'verifier_approved', 'claim.verifier_approved');
+        await emit('verifier_approved', 'state_trustee_freeze', 'claim.state_trustee_frozen');
+        await emit('state_trustee_freeze', 'state_trustee_approved', 'claim.state_trustee_approved');
+        await emit('state_trustee_approved', 'approved', 'claim.approved');
+        await scopeTx.client.query(
+          `INSERT INTO convergence_overrides (pariwar_id, deceased_member_id, intake_attempt_id, against_claim_case_id, reason, decided_by_actor)
+           VALUES ($1, $2, $3, $4, 'fixture — kept apart', $5)`,
+          [pariwarId, memberId, randomUUID(), paid, randomUUID()],
+        );
+        await closeScopeTx(scopeTx, true);
+      } catch (err) {
+        await closeScopeTx(scopeTx, false);
+        throw err;
+      }
+
+      const intake = await inject(t, 'POST', '/api/v1/member/claims/intake', {
+        payload: { relationship: 'spouse' }, token: token(t, memberId, pariwarId),
+      });
+      expect(intake.status, JSON.stringify(intake.body)).toBe(200);
+      expect(intake.body.state).toBe('closed');
+      const claimCaseId = intake.body.claimCaseId as string;
+      expect(claimCaseId).not.toBe(paid);
+      const closed = await t.pool.query<{ t: string; h: string; a: string }>(
+        `SELECT payload ->> 'trigger' AS t, payload ->> 'held_by_claim_case_id' AS h, payload ->> 'actor' AS a
+           FROM events_log WHERE stream_id = $1 AND event_type = 'claim.closed'`,
+        [claimCaseId],
+      );
+      expect(closed.rows).toEqual([{ t: 'death_already_finally_approved', h: paid, a: 'system' }]);
+      expect(JSON.stringify(intake.body)).not.toContain(paid);
     } finally {
       await teardown(t);
     }

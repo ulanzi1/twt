@@ -90,6 +90,15 @@ async function closedEventOf(client: Client, cid: ClaimId): Promise<Record<strin
   return rows[0]?.payload;
 }
 
+/** The `claim.closed` event's envelope actor (`payload.actor`) and `events_log.actor_id`. */
+async function closedActorOf(client: Client, cid: ClaimId): Promise<{ actor: unknown; actor_id: string | null } | undefined> {
+  const { rows } = await client.query<{ actor: unknown; actor_id: string | null }>(
+    `SELECT payload ->> 'actor' AS actor, actor_id::text AS actor_id FROM events_log WHERE stream_id = $1 AND event_type = 'claim.closed'`,
+    [cid],
+  );
+  return rows[0];
+}
+
 /** A FRESH Pariwar (the commit's candidate set is Pariwar-wide). */
 async function freshScope(client: Client): Promise<PariwarId> {
   const pid = toPariwarId(randomUUID());
@@ -212,11 +221,14 @@ describe.skipIf(!hasDatabase)('Story 6.28 — closed: the other claims of a paid
       expect(over.state).toBe('closed');
       expect(await stateOf(client, over.newClaimCaseId)).toBe('closed');
       expect(await closedEventOf(client, toClaimId(over.newClaimCaseId))).toMatchObject({ trigger: 'death_already_finally_approved', held_by_claim_case_id: x });
+      // Code review round 3 — the closure is the SYSTEM's (the deciding operator's id kept), ⛔ never the filer's own act.
+      expect(await closedActorOf(client, toClaimId(over.newClaimCaseId))).toEqual({ actor: 'system', actor_id: DA });
       // X is excluded from convergence for ever ⇒ a later filing MINTS — and is closed at once.
       expect(await getConvergenceCandidate(tx, PARIWAR_A, mid)).toBeUndefined();
       const later = await tryConverge(client, intake(PARIWAR_A, mid, 'member_app'));
       expect(later).toMatchObject({ minted: true, state: 'closed' });
       expect(await stateOf(client, later.claimCaseId)).toBe('closed');
+      expect((await closedActorOf(client, toClaimId(later.claimCaseId)))?.actor).toBe('system');
     });
 
     it('a `settled` death (terminal — never a candidate): a filing mints and is closed', async () => {

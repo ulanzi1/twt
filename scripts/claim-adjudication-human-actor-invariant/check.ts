@@ -252,6 +252,10 @@ const NON_ADJUDICATION_ROUTES: readonly { file: string; why: string }[] = [
     file: 'apps/api/src/modules/claims/claims.routes.ts',
     why: 'MEMBER-app routes (memberSession, no :pariwarId): there is no admin human-actor chain to assert. Member authorisation is claim-ownership, enforced in the handlers and covered by the member E2E specs.',
   },
+  {
+    file: 'apps/api/src/modules/claims/claims.peer-request.member.routes.ts',
+    why: "Story 6.27a (PM11) — a chosen NEIGHBOUR answers questions about a reported death (memberSession, the member's own TEXTED ping): ⛔ an adjudication — the only event is an identity annotation that moves ⛔ no claim. Authorisation is the ping's member + `send_outcome = 'accepted'`, enforced in the domain read (one indistinguishable 404) and covered by the route spec.",
+  },
 ];
 
 /**

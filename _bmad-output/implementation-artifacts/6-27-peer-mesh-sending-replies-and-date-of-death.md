@@ -889,7 +889,7 @@ member's terms:
       appeal on a `state_trustee_approved` + live-R9 claim); the two-connection save-vs-approval ordering test AND the save-vs-closure leg
       (`closeClaimsOfPaidDeath` takes the death's intake key, then claim rows; the save ⛔ never takes it) (separate committed transactions —
       [[project_db_clock_ordering_tests_tie]]).
-- [ ] **Task 4 — the member API (AC5).** `claims.peer-request.member.routes.ts` + handlers + contracts + api-client factory
+- [x] **Task 4 — the member API (AC5).** `claims.peer-request.member.routes.ts` + handlers + contracts + api-client factory
       (`createMemberPeerRequestClient`); 404 / 409 rules incl. the untexted-ping 404 on every route; `clampLimit`; bounded `limit`; `perMemberKey`; ⛔ no Turnstile; the human-actor classification;
       route tests incl. the three indistinguishable 404s.
 - [ ] **Task 5 — the mobile screens (AC5).** Fill 6.30's shell `app/(peer-request)/peer-request.tsx`: the list, the generic renderer, the

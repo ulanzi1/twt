@@ -164,6 +164,11 @@ import {
   MemberDeathCertificateStatusResponse,
   type MemberDeathCertificateStatusResponse as MemberDeathCertificateStatusResult,
   type OcrDocumentType,
+  PeerRequestDetailResponse,
+  PeerRequestListResponse,
+  PeerRequestSaveAnswerResponse,
+  PeerRequestSubmitResponse,
+  type PeerRequestAnswerValue,
 } from '@twt/contracts';
 import type { z } from 'zod';
 
@@ -233,7 +238,7 @@ function createApiCallers(opts: MemberAuthClientOptions) {
     schema: z.ZodType<T, z.ZodTypeDef, unknown>,
     body: unknown,
     auth = false,
-    method: 'GET' | 'POST' | 'DELETE' = 'POST',
+    method: 'GET' | 'POST' | 'PUT' | 'DELETE' = 'POST',
     bearerOverride?: string,
     /** Extra request headers (Story 10.26 — `Idempotency-Key` rides a HEADER, never the body).
      *  Applied BEFORE `authorization`/`content-type`, so it can never override either. */
@@ -1507,3 +1512,49 @@ export function createMemberSurveyClient(opts: MemberAuthClientOptions) {
 }
 
 export type MemberSurveyClient = ReturnType<typeof createMemberSurveyClient>;
+
+/**
+ * Story 6.27a (PM11) — the neighbours' answer screens: the session member's OPEN requests (DARK until 6.27c texts anyone),
+ * one request (the pinned questionnaire, words resolved in en AND hi on the server), the auto-save of ONE answer and
+ * Submit. ⛔ No Turnstile (the session and the per-member budget are the control). `idempotencyKey` rides a HEADER —
+ * reuse the SAME key when RETRYING the same save (a replay returns the current answers), a NEW key for a new save.
+ * A request that cannot be opened is an `ApiError` 404 (`peer_request.not_found` — ONE answer for every cause); a closed
+ * or submitted one is a 409 (`peer_request.no_longer_open` / `peer_request.submitted`).
+ */
+export function createMemberPeerRequestClient(opts: MemberAuthClientOptions) {
+  const { call } = createApiCallers(opts);
+  const base = (pariwarId: string): string => `/api/v1/p/${encodeURIComponent(pariwarId)}/member/peer-requests`;
+
+  return {
+    list(pariwarId: string, limit = 5): Promise<PeerRequestListResponse> {
+      return call(`${base(pariwarId)}?limit=${limit}`, PeerRequestListResponse, undefined, true, 'GET');
+    },
+    get(pariwarId: string, pingId: string): Promise<PeerRequestDetailResponse> {
+      return call(`${base(pariwarId)}/${encodeURIComponent(pingId)}`, PeerRequestDetailResponse, undefined, true, 'GET');
+    },
+    saveAnswer(
+      pariwarId: string,
+      pingId: string,
+      questionKey: string,
+      value: PeerRequestAnswerValue,
+      idempotencyKey: string,
+    ): Promise<PeerRequestSaveAnswerResponse> {
+      return call(
+        `${base(pariwarId)}/${encodeURIComponent(pingId)}/answers/${encodeURIComponent(questionKey)}`,
+        PeerRequestSaveAnswerResponse,
+        { value },
+        true,
+        'PUT',
+        undefined,
+        { 'idempotency-key': idempotencyKey },
+      );
+    },
+    submit(pariwarId: string, pingId: string, idempotencyKey: string): Promise<PeerRequestSubmitResponse> {
+      return call(`${base(pariwarId)}/${encodeURIComponent(pingId)}/submit`, PeerRequestSubmitResponse, {}, true, 'POST', undefined, {
+        'idempotency-key': idempotencyKey,
+      });
+    },
+  };
+}
+
+export type MemberPeerRequestClient = ReturnType<typeof createMemberPeerRequestClient>;

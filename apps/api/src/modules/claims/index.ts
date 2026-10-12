@@ -33,6 +33,7 @@ import { registerCycleFreezeRoutes } from './claims.cycle-freeze.routes.js';
 import { registerR9VotingRoutes } from './claims.r9-voting.routes.js';
 import { registerConcealmentAssessmentRoutes } from './claims.concealment-assessment.routes.js';
 import { registerAppealRoutes } from './claims.appeal.routes.js';
+import { registerPeerRequestMemberRoutes } from './claims.peer-request.member.routes.js';
 
 export function registerClaimsModule(app: FastifyInstance, deps: AppDeps): void {
   registerClaimsRoutes(app, deps);
@@ -87,4 +88,7 @@ export function registerClaimsModule(app: FastifyInstance, deps: AppDeps): void 
   // stage route is covered by the claim-adjudication human-actor CI gate. Gated per-Pariwar by the D-G
   // legal-review go-live config until counsel clears it.
   registerAppealRoutes(app, deps);
+  // Story 6.27a (PM11) — the neighbours' answer screens, the MEMBER side: the open list, one request, the auto-save and
+  // Submit (member-session-gated; ⛔ Turnstile; DARK until 6.27c texts anyone — an untexted ping is a 404).
+  registerPeerRequestMemberRoutes(app, deps);
 }

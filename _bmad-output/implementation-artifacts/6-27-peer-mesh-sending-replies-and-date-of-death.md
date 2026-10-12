@@ -914,7 +914,7 @@ member's terms:
       - `peer_request.placeholder`: keep it, or retire it AND update `not-found-copy.test.ts:13`, `common.json` `$comment.app_links` (en / hi
         `:413`) and Row 28's scope (Task 0.6; 6.30's Row 29 (h) points there). 6.30's copy already promises the home card (`app-links.json`
         `body.home_screen`; `common.json` `peer_request.placeholder`) — the card is load-bearing.
-- [ ] **Task 6 — the helpline (AC6).** `claims.peer-request.helpline.routes.ts` + handlers on 6.3's chain, enrolled in `COVERAGE_SET`; the
+- [x] **Task 6 — the helpline (AC6).** `claims.peer-request.helpline.routes.ts` + handlers on 6.3's chain, enrolled in `COVERAGE_SET`; the
       list gated on `send_outcome = 'accepted'`; the PUT and submit 404 for an untexted ping; the admin panel on the member-lookup screen;
       tests incl. ⛔ no step-up ⇒ refused, the mixed reply, a NULL-outcome ping absent, and the PUT / submit 404 legs.
 - [ ] **Task 7 — the District Admin's view (AC7).** `assemblePeerAnswers` (actor-aware); the console contract (`PeerMeshTranscript` gains

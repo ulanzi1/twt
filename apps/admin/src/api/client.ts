@@ -318,6 +318,10 @@ import {
   ClaimContactPresenceResponse,
   RecordHelplineClaimContactResponse,
   type RecordHelplineClaimContactRequest,
+  HelplinePeerRequestListResponse,
+  PeerRequestSaveAnswerResponse,
+  PeerRequestSubmitResponse,
+  type PeerRequestAnswerValue,
 } from '@twt/contracts';
 import { z } from 'zod';
 
@@ -2929,5 +2933,31 @@ export function replaceApprovalWarningReason(pariwarId: string, reasonId: string
   return apiFetch(`${reasonsBase(pariwarId)}/${encodeURIComponent(reasonId)}/replace`, ApprovalWarningReasonWriteResponse, {
     method: 'POST',
     body: JSON.stringify(body),
+  });
+}
+
+// ── Story 6.27a (PM12) — the helpline records the answers of a neighbour who phones ───────────────────────────────────
+
+const helplinePeerBase = (pariwarId: string) => `/api/v1/p/${encodeURIComponent(pariwarId)}/admin/claims/helpline`;
+
+/** The caller's OPEN, TEXTED requests — each with ONLY that neighbour's answers (6.3's chain + step-up). */
+export function getHelplinePeerRequests(pariwarId: string, memberId: string) {
+  return apiFetch(`${helplinePeerBase(pariwarId)}/members/${encodeURIComponent(memberId)}/peer-requests?limit=5`, HelplinePeerRequestListResponse);
+}
+
+/** Record ONE answer the neighbour gives on the phone. */
+export function saveHelplinePeerAnswer(pariwarId: string, pingId: string, questionKey: string, value: PeerRequestAnswerValue) {
+  return apiFetch(
+    `${helplinePeerBase(pariwarId)}/peer-requests/${encodeURIComponent(pingId)}/answers/${encodeURIComponent(questionKey)}`,
+    PeerRequestSaveAnswerResponse,
+    { method: 'PUT', body: JSON.stringify({ value }) },
+  );
+}
+
+/** Submit — locks the reply for the app too. */
+export function submitHelplinePeerReply(pariwarId: string, pingId: string) {
+  return apiFetch(`${helplinePeerBase(pariwarId)}/peer-requests/${encodeURIComponent(pingId)}/submit`, PeerRequestSubmitResponse, {
+    method: 'POST',
+    body: JSON.stringify({}),
   });
 }

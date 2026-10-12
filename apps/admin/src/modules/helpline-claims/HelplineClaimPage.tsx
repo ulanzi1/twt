@@ -40,6 +40,7 @@ import { HelplineAppeal } from './HelplineAppeal.js';
 import { HelplineClaimContact } from './HelplineClaimContact.js';
 import { HelplineConsoleShell, type HelplineIntakeResult } from './HelplineConsoleShell.js';
 import { HelplineNomineeCorrection } from './HelplineNomineeCorrection.js';
+import { HelplinePeerRequests } from './HelplinePeerRequests.js';
 import { readBackScript, resolveEn } from './i18n-en.js';
 import { RefileConfirmationCard } from '../correction-closure/RefileConfirmationCard.js';
 
@@ -453,6 +454,14 @@ export function HelplineClaimPage({ pariwarId }: HelplineClaimPageProps): ReactE
         identityConfirmed={identityConfirmed}
         onStepUpRequired={() => setStepUpRequired(true)}
         stepUpRequired={stepUpRequired}
+      />
+      {/* ⭐ Story 6.27a (PM12) — "Requests to confirm a death": when the CALLER is one of the members the Trust asked about
+          a reported death, the operator records their answers (ONLY theirs). EMPTY until 6.27c texts anyone. */}
+      <HelplinePeerRequests
+        pariwarId={pariwarId}
+        memberId={selected?.memberId ?? null}
+        identityConfirmed={identityConfirmed}
+        onStepUpRequired={() => setStepUpRequired(true)}
       />
     </>
   );

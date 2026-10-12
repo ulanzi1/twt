@@ -2313,3 +2313,37 @@ export function useReplaceApprovalWarningReason(pariwarId: string) {
     },
   });
 }
+
+// ── Story 6.27a (PM12) — the helpline's "Requests to confirm a death" panel ──────────────────────────────────────────
+
+export const helplinePeerRequestsKey = (pariwarId: string, memberId: string) => ['helpline-peer-requests', pariwarId, memberId] as const;
+
+/** The caller's open, TEXTED requests (EMPTY until 6.27c texts anyone). ⛔ A window-focus refetch (a gated read). */
+export function useHelplinePeerRequests(pariwarId: string, memberId: string | null, enabled: boolean) {
+  return useQuery({
+    queryKey: helplinePeerRequestsKey(pariwarId, memberId ?? ''),
+    queryFn: () => api.getHelplinePeerRequests(pariwarId, memberId as string),
+    enabled: Boolean(memberId) && enabled,
+    refetchOnWindowFocus: false,
+    retry: false,
+  });
+}
+
+/** Record ONE answer; the list is re-read on every settle (a changed condition drops dependants). */
+export function useHelplineSavePeerAnswer(pariwarId: string, memberId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { pingId: string; questionKey: string; value: import('@twt/contracts').PeerRequestAnswerValue }) =>
+      api.saveHelplinePeerAnswer(pariwarId, input.pingId, input.questionKey, input.value),
+    onSettled: () => void qc.invalidateQueries({ queryKey: helplinePeerRequestsKey(pariwarId, memberId ?? '') }),
+  });
+}
+
+/** Submit the neighbour's reply (locks it for the app too). */
+export function useHelplineSubmitPeerReply(pariwarId: string, memberId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (pingId: string) => api.submitHelplinePeerReply(pariwarId, pingId),
+    onSettled: () => void qc.invalidateQueries({ queryKey: helplinePeerRequestsKey(pariwarId, memberId ?? '') }),
+  });
+}

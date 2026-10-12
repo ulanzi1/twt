@@ -45,6 +45,15 @@ interface CoverageEntry {
 
 const COVERAGE_SET: readonly CoverageEntry[] = [
   {
+    // Story 6.27a (PM12) — the helpline records the answers of a neighbour who phones. ENROLLED (⛔ never owed): every
+    // route composes 6.3's full chain [requireAdminSession, scopeResolutionHook, requirePermissionHook(claim.file),
+    // requireStepUp(claim_file)] — the operator is the human actor on the record (`saved_by_actor_id`, the event's actor).
+    file: 'apps/api/src/modules/claims/claims.peer-request.helpline.routes.ts',
+    pathSubstrings: ['helpline/members', 'helpline/peer-requests'],
+    owner: 'Story 6.27a',
+    expectedMethods: ['get', 'put', 'post'],
+  },
+  {
     // Story 6.10 — the READ-ONLY verifier console (one GET). A ₹50L-stakes decision-support read that
     // MUST require an authenticated human actor + district scope (the runtime is the real control; this
     // gate is the structural defense-in-depth).

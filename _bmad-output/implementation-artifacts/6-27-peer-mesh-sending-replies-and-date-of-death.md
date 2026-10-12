@@ -58,8 +58,9 @@ Re-verify (bash): for each pair, `diff <(git show <branch> | git patch-id --stab
 `0281d449` (the SHA map above; identical code). Every `file:NNN` into code is now AS OF `51b9000a`, re-read by five read-only checkers
 (domain; api + contracts; admin; jobs + mobile + channels; cross-cutting) and the author. ⛔ No PM, ruling or AC intent moved — the semantic
 changes are dated annotations (*"re-pin 2026-10-12"*) at F12, F13, F17, F18, F29, PM8, PM9, PM10, PM11, PM13, AC4, AC5, Tasks 5 / 7,
-Trap 5 and the new Trap 21. ⚠ OPEN for BigDev (PM8): `-318`'s *"passed the final vote"* vs `-303` Q2 A on `state_trustee_approved` under a
-live R9 routing — recorded, ⛔ not re-ruled. ⚠ 6.27b / 6.27c / 6.27d were ⛔ not re-pinned (6.27b's PM10 summary still says "fourth
+Trap 5 and the new Trap 21. ⚠ ROUTED TO THE PANEL (PM8; BigDev 2026-10-12): `-318`'s *"passed the final vote"* vs `-303` Q2 A on
+`state_trustee_approved` under a live R9 routing — `trustee-panel-routing-note-2026-10-12-6-27a-answers-while-the-special-panel-decides.md`,
+WRITTEN, ⛔ not yet sent; ⛔ not re-ruled here. ⚠ 6.27b / 6.27c / 6.27d were ⛔ not re-pinned (6.27b's PM10 summary still says "fourth
 source") — THIS file is the record.
 -->
 
@@ -533,7 +534,8 @@ member's terms:
   PM5 (iv) and row 6-31's reminder; per-claim reads use `hasLiveRoutedRow`; ⭐ 6.27b's queue needs ⛔ no window term (its scan states + R9 arm already equal the window, and answers exist only in-window — PM10); ⭐ the module ALSO exports `answerWindowSql(claimRef)` (built from `CLAIM_REVIEW_WINDOW_STATES` +
   `liveRoutedToR9Exists`) — EVERY set-based reader (the member list's **Open**, the helpline list, the sweep) uses it, with a parity leg
   against `isClaimInAnswerWindow` over every state × routed / not routed (⛔ never a hand-composed SQL copy); keep the
-  not-selected guard; ⛔ never accept in `state_trustee_approved` without a live R9 routing, or in any closed / refused state (F19). ⚠ (re-pin 2026-10-12 — OPEN, for BigDev: `-318` Q1 A / Q4 A speak of a claim that *"has passed the final
+  not-selected guard; ⛔ never accept in `state_trustee_approved` without a live R9 routing, or in any closed / refused state (F19). ⚠ (re-pin 2026-10-12 — ROUTED TO THE PANEL by BigDev: `trustee-panel-routing-note-2026-10-12-6-27a-answers-while-the-special-panel-decides.md`,
+  WRITTEN, ⛔ not yet sent; options A (as `-311` — our reading) / B (answers stop at the month's vote) / C (shown, ⛔ no wait). `-318` Q1 A / Q4 A speak of a claim that *"has passed the final
   vote"*, and 6.28 counts `state_trustee_approved` among `FINALLY_APPROVED_CLAIM_STATES` (`one-payment-per-death.ts:31`); read in that
   vocabulary, taking an answer in `state_trustee_approved` under a live R9 routing may WIDEN `-303` Q2 A — *"⛔ no answer is taken once the
   final approval has been given"*. `-311` committed this arm as an author reading on the `-283` A1 precedent (R9 finalize still runs the

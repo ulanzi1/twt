@@ -94,6 +94,27 @@ const PRESENT_PACKET: VerifierConsolePacket = {
       pingedMemberIds: ['x', 'y'],
       responses: [{ responderMemberId: 'x', response: 'confirmed' }],
       verifierAnnotations: { status: 'not_available_yet' },
+      // Story 6.27a (PM13) — the 72-hour line and each neighbour.
+      outcome: 'insufficient_responses_fallback',
+      windowExpiresAt: '2026-10-15T00:00:00.000Z',
+      pings: [
+        {
+          pingId: 'px',
+          memberId: 'x',
+          responderName: { status: 'shown', text: 'Asha Devi' },
+          sendStatus: 'accepted',
+          noTargetReason: null,
+          reply: {
+            submitted: true,
+            answers: [
+              { questionKey: 'has_died', question: 'Has Suresh Patel died?', value: { kind: 'codes', codes: ['not_died'], labels: ['No, they have not died'] }, savedVia: 'helpline', savedAt: '2026-10-12T05:00:00.000Z', changeCount: 2 },
+              { questionKey: 'death_date', question: 'If you know, on what date did they die?', value: { kind: 'unavailable' }, savedVia: 'member_app', savedAt: '2026-10-12T05:00:00.000Z', changeCount: 0 },
+            ],
+          },
+          callbackMobile: { status: 'shown', text: '+919876543210' },
+        },
+        { pingId: 'py', memberId: 'y', responderName: { status: 'unavailable' }, sendStatus: 'no_target', noTargetReason: 'no_target:peer_not_active', reply: null, callbackMobile: { status: 'none' } },
+      ],
     },
   },
   groundInspection: { status: 'empty' },
@@ -422,6 +443,40 @@ describe('<SignalsPanel> — six sections, four-state vocabulary, tri-state conc
     render(<SignalsPanel packet={{ ...PRESENT_PACKET, shepherd: { status: 'empty' } }} />);
     const section = screen.getByTestId('section-shepherd');
     expect(within(section).getByTestId('section-state-empty')).toBeInTheDocument();
+  });
+
+  // ── Story 6.27a (PM13, PM25 (c)) ──────────────────────────────────────────────────────────────────────────────────
+  it('6.27a — the 72-hour line, each neighbour (name, send status, answers with provenance + "changed N times", the call-back mobile), and "could not be shown" — ⛔ a blank', () => {
+    render(<SignalsPanel packet={PRESENT_PACKET} />);
+    expect(screen.getByTestId('peer-mesh-window')).toHaveTextContent('Fewer than 3 answers in 72 hours — the ground inspection is the main check');
+    const pings = screen.getAllByTestId('peer-mesh-ping');
+    expect(pings[0]).toHaveTextContent('Asha Devi');
+    expect(pings[0]).toHaveTextContent('Text sent');
+    expect(pings[0]).toHaveTextContent('Submitted');
+    expect(pings[0]).toHaveTextContent('No, they have not died');
+    expect(pings[0]).toHaveTextContent('recorded by the helpline');
+    expect(pings[0]).toHaveTextContent('changed 2 times');
+    expect(pings[0]).toHaveTextContent('Could not be shown just now'); // the date that failed to decrypt
+    expect(within(pings[0]!).getByTestId('peer-mesh-callback')).toHaveTextContent('+919876543210');
+    expect(pings[1]).toHaveTextContent('Could not be shown just now'); // the name that failed to decrypt
+    expect(pings[1]).toHaveTextContent('Not texted — no_target:peer_not_active');
+    expect(pings[1]).toHaveTextContent('No answer yet');
+    expect(within(pings[1]!).queryByTestId('peer-mesh-callback')).toBeNull();
+  });
+
+  it('6.27a — every send status has words', async () => {
+    const { verifierConsoleEn } = await import('../src/modules/claim-verification/i18n-en.js');
+    const { PEER_MESH_SEND_STATUSES } = await import('@twt/contracts');
+    for (const s of PEER_MESH_SEND_STATUSES) expect(verifierConsoleEn.peerMesh.sendStatus[s].length, s).toBeGreaterThan(0);
+  });
+
+  it('6.27a (PM25 (c)) — `peerMesh` ABSENT ⇒ ⛔ section at all (⛔ a title with nothing under it)', () => {
+    const withoutPeerMesh = { ...PRESENT_PACKET };
+    delete withoutPeerMesh.peerMesh;
+    render(<SignalsPanel packet={withoutPeerMesh} />);
+    expect(screen.queryByTestId('section-peer-mesh')).toBeNull();
+    expect(screen.queryByText('Peer-mesh responses')).toBeNull();
+    expect(screen.getByTestId('section-ground-inspection')).toBeInTheDocument();
   });
 
   it('renders AC2c verifier annotations as explicitly not_available_yet (2026-07-11 decision — no owning producer yet)', () => {

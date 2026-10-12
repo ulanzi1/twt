@@ -410,7 +410,7 @@ describe.skipIf(!hasDatabase)('Verifier-console read surface — E2E (:5433)', (
 
     // A minimal claim: producers exist but genuinely have no records → `empty` (NOT unavailable, NOT NAY).
     expect(packet.documentReview.status).toBe('empty');
-    expect(packet.peerMesh.status).toBe('empty');
+    expect(packet.peerMesh?.status).toBe('empty');
     expect(packet.groundInspection.status).toBe('empty');
     // Sections (e)/(f) — Story 6.11 SHIPPED the producer + flipped VERIFIER_DECISION_READ_MODEL_AVAILABLE,
     // so a minimal claim with no decisions now returns `empty` (genuine no-records), NOT `not_available_yet`
@@ -915,8 +915,8 @@ describe.skipIf(!hasDatabase)('Verifier-console read surface — E2E (:5433)', (
         traceId: null,
       });
       await closeScopeTx(scopeTx, true);
-      expect(packet.peerMesh.status).toBe('present');
-      if (packet.peerMesh.status === 'present') {
+      expect(packet.peerMesh?.status).toBe('present');
+      if (packet.peerMesh?.status === 'present') {
         expect(packet.peerMesh.transcript.responses).toHaveLength(3);
       }
       expect(packet.groundInspection.status).toBe('present');
@@ -1122,7 +1122,7 @@ describe.skipIf(!hasDatabase)('Verifier-console read surface — E2E (:5433)', (
     expect(actual - baseline.actual, 'statements Postgres received for the inheritance vs reads booked').toBe(readCount - baseline.readCount);
   });
 
-  it('⭐⭐ Story 6.23a (Trap 10) — the ceiling is 23 (Story 6.26a: 19 → 20; Story 6.24a: 20 → 21; Story 6.28 OP14 (a): 21 → 22; OP14 (b), code review chunk 3/4: 22 → 23), and the warnings section books EXACTLY one read and sends EXACTLY one statement', async () => {
+  it('⭐⭐ Story 6.23a (Trap 10) — the ceiling is 26 (Story 6.26a: 19 → 20; Story 6.24a: 20 → 21; Story 6.28 OP14 (a): 21 → 22; OP14 (b), code review chunk 3/4: 22 → 23; Story 6.27a: 23 → 26), and the warnings section books EXACTLY one read and sends EXACTLY one statement', async () => {
     // The ledger above the constant says +1 → 19. ⚠ The shipped tests catch over-reporting only (`reported <=
     // actual`) and a ceiling breach (`readCount <= MAX`); a forgotten `reads.bump()` stays green there. ⇒ the
     // section is measured on its OWN: its booked reads AND the statements Postgres receives, each exactly 1 — the
@@ -1132,7 +1132,9 @@ describe.skipIf(!hasDatabase)('Verifier-console read surface — E2E (:5433)', (
     // Story 6.28 (OP14 (a)) — moved 21 → 22 by the other-claims-for-death section (its own exact test: `one-payment-per-death-routes.spec.ts`).
     // Story 6.28 (OP14 (b), code review chunk 3/4) — moved 22 → 23 by the authoritative finally-approved-elsewhere
     // section (its own exact test below: "the authoritative finally-approved-elsewhere section books EXACTLY one read").
-    expect(VERIFIER_CONSOLE_MAX_READS).toBe(23);
+    // Story 6.27a (PM13, PM25 (c)) — moved 23 → 26 by the peer-mesh section's three new reads (its own exact test:
+    // `peer-answers-console.spec.ts`).
+    expect(VERIFIER_CONSOLE_MAX_READS).toBe(26); // Story 6.27a (PM13, PM25 (c)) FROM 23 — +3
     const pariwarId = randomUUID();
     const deceased = await seedDeceasedMember(pariwarId, DISTRICT);
     const claimCaseId = await seedClaim(pariwarId, deceased);

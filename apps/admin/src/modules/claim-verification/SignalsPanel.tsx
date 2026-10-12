@@ -22,6 +22,7 @@ import {
   type ConcealmentAssessmentSubmit,
 } from './ConcealmentAssessmentControl.js';
 import { VerifierReviewPanel, type VerifierReviewData } from './VerifierReviewPanel.js';
+import { formatIst } from './NomineeDeclarationPanel.js';
 import { verifierConsoleEn as t } from './i18n-en.js';
 import { FinallyApprovedElsewhereBanner } from '../cycle-freeze/FinallyApprovedElsewhereBanner.js';
 
@@ -205,28 +206,57 @@ function ValidityView({ validity }: { validity: VerifierConsolePacket['validity'
 }
 
 function PeerMeshView({ transcript }: { transcript: PeerMeshTranscript }): ReactElement {
+  const windowLine =
+    transcript.outcome === 'pending' ? t.peerMesh.window.pending(formatIst(transcript.windowExpiresAt)) : t.peerMesh.window[transcript.outcome];
   return (
     <div className="flex flex-col gap-2 text-sm" data-testid="peer-mesh-transcript">
+      {/* ⭐ Story 6.27a (PM13) — the 72-hour line */}
+      <p className="font-medium" data-testid="peer-mesh-window">
+        {windowLine}
+      </p>
       <p>
         {t.peerMesh.responders}: <strong>{transcript.distinctResponderCount}</strong> · {t.peerMesh.pinged}:{' '}
         <strong>{transcript.pingedMemberIds.length}</strong>
       </p>
-      {transcript.responses.length > 0 ? (
-        <ul className="flex flex-col gap-1">
-          {transcript.responses.map((r, i) => (
-            <li key={`${r.responderMemberId}-${i}`} className="flex items-center justify-between gap-2">
-              <span className="font-mono text-xs opacity-70">{r.responderMemberId}</span>
-              <span className="text-xs">
-                {r.response === 'confirmed'
-                  ? t.peerMesh.confirmed
-                  : r.response === 'denied'
-                    ? t.peerMesh.denied
-                    : t.peerMesh.unknown}
+      {/* ⭐ Story 6.27a (PM13) — per neighbour: the name, the send status, every live answer, the call-back mobile. */}
+      <ul className="flex flex-col gap-3" data-testid="peer-mesh-pings">
+        {transcript.pings.map((ping) => (
+          <li key={ping.pingId} className="rounded border p-2" data-testid="peer-mesh-ping">
+            <div className="flex items-center justify-between gap-2">
+              <strong>
+                {ping.responderName.status === 'shown'
+                  ? ping.responderName.text
+                  : ping.responderName.status === 'unavailable'
+                    ? t.peerMesh.couldNotShow
+                    : t.peerMesh.noName}
+              </strong>
+              <span className="text-xs" data-testid="peer-mesh-send-status">
+                {t.peerMesh.sendStatus[ping.sendStatus]}
+                {ping.sendStatus === 'no_target' && ping.noTargetReason !== null ? ` — ${ping.noTargetReason}` : ''}
               </span>
-            </li>
-          ))}
-        </ul>
-      ) : null}
+            </div>
+            {ping.reply === null ? (
+              <p className="text-xs opacity-70">{t.peerMesh.noAnswerYet}</p>
+            ) : (
+              <>
+                <p className="text-xs">{ping.reply.submitted ? t.peerMesh.submitted : t.peerMesh.notSubmitted}</p>
+                <dl className="mt-1 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
+                  {ping.reply.answers.map((a) => (
+                    <PeerAnswerRow key={a.questionKey} answer={a} />
+                  ))}
+                </dl>
+              </>
+            )}
+            {ping.callbackMobile.status !== 'none' && (
+              <p className="mt-1 text-xs" data-testid="peer-mesh-callback">
+                {t.peerMesh.callbackMobile}:{' '}
+                {ping.callbackMobile.status === 'shown' ? <span className="font-mono">{ping.callbackMobile.text}</span> : t.peerMesh.couldNotShow}
+              </p>
+            )}
+          </li>
+        ))}
+      </ul>
+      <p className="text-xs opacity-60">{t.peerMesh.signalNote}</p>
       <p className="text-xs opacity-60">{t.peerMesh.noResponseNote}</p>
       {/* AC2c — verifier annotations: no owning producer story yet, ALWAYS not_available_yet (never fabricated). */}
       <p
@@ -237,6 +267,27 @@ function PeerMeshView({ transcript }: { transcript: PeerMeshTranscript }): React
         {t.peerMesh.annotationsNotAvailableYet}
       </p>
     </div>
+  );
+}
+
+function PeerAnswerRow({ answer }: { answer: PeerMeshTranscript['pings'][number]['reply'] extends infer R ? (R extends { answers: (infer A)[] } ? A : never) : never }): ReactElement {
+  const value =
+    answer.value.kind === 'codes'
+      ? answer.value.labels.join(', ')
+      : answer.value.kind === 'date'
+        ? answer.value.date.split('-').reverse().join('-')
+        : t.peerMesh.couldNotShow;
+  return (
+    <>
+      <dt className="opacity-80">{answer.question}</dt>
+      <dd>
+        <span className="font-medium">{value}</span>{' '}
+        <span className="opacity-60">
+          ({answer.savedVia === 'helpline' ? t.peerMesh.savedHelpline : t.peerMesh.savedApp}, {formatIst(answer.savedAt)}
+          {answer.changeCount > 0 ? `, ${t.peerMesh.changed(answer.changeCount)}` : ''})
+        </span>
+      </dd>
+    </>
   );
 }
 
@@ -314,13 +365,17 @@ export function SignalsPanel({
       </Section>
 
       {/* (c) peer-mesh transcripts */}
-      <Section title={t.sections.peerMesh} testId="section-peer-mesh">
-        {packet.peerMesh.status === 'present' ? (
-          <PeerMeshView transcript={packet.peerMesh.transcript} />
-        ) : (
-          <NonPresent status={packet.peerMesh.status} />
-        )}
-      </Section>
+      {/* ⭐ Story 6.27a (PM25 (c)) — ABSENT for an inspector before their full visit: ⛔ no section at all, ⛔ never a
+          title with nothing under it. */}
+      {packet.peerMesh !== undefined && (
+        <Section title={t.sections.peerMesh} testId="section-peer-mesh">
+          {packet.peerMesh.status === 'present' ? (
+            <PeerMeshView transcript={packet.peerMesh.transcript} />
+          ) : (
+            <NonPresent status={packet.peerMesh.status} />
+          )}
+        </Section>
+      )}
 
       {/* (d) ground inspection notes + photos */}
       <Section title={t.sections.groundInspection} testId="section-ground-inspection">

@@ -57,6 +57,7 @@ import type { FastifyRequest } from 'fastify';
 import type { AppDeps } from '../../context.js';
 import { ForbiddenError, NotFoundError, UnauthorizedError } from '../../http-errors.js';
 import { emitAuthAudit } from '../auth/shared/audit.js';
+import { assemblePeerAnswers } from './peer-answers-assembler.js';
 import { decryptKycField } from '../kyc/kyc-crypto.js';
 import { geoTreeResolverForRequest } from '../rbac/index.js';
 import { DEATH_CERTIFICATE_REVIEW_KEY } from './claims.death-certificate.handlers.js';
@@ -204,7 +205,17 @@ const SIGNED_URL_TTL_SECONDS = 300;
  * a raw SAVEPOINT (`underSavepoint`), BEFORE the warnings (which stay LAST). ⭐ Ledger line:
  *   + Story 6.28 (OP14 (b)): the authoritative finally-approved-elsewhere signal          +1  → 23
  */
-export const VERIFIER_CONSOLE_MAX_READS = 23;
+/*
+ * ⭐ STORY 6.27a's THREE READS (PM13, PM25 (c)) — the explanation this counter demands. The peer-mesh section (c) now
+ * shows the District Admin each neighbour's NAME, send status and LIVE answers: ⛔ the minimum is (1) the inspector check
+ * FIRST (`isPeerSectionHiddenFromActor` — an actor holding an un-completed assignment with ⛔ no completed FULL visit gets
+ * ⛔ no section at all), (2) the claim's replies + live answers with their change counts in ONE bounded statement
+ * (`readPeerAnswersForClaim`), (3) the neighbours' name and mobile ciphertexts in ONE statement
+ * (`readPeerNeighbourContacts`). ⛔ Never per neighbour (≤ 5 pings, ⛔ an N+1). They sit in section (c), BEFORE the
+ * warnings (which stay LAST). ⭐ Ledger line:
+ *   + Story 6.27a (PM13, PM25 (c)): the inspector check, the answers, the neighbours' contacts  +3  → 26
+ */
+export const VERIFIER_CONSOLE_MAX_READS = 26;
 
 /** Counts the assembler's top-level bounded source reads (the no-N+1 fan-out width). */
 class ReadCounter {
@@ -235,6 +246,8 @@ export interface VerifierConsoleContext {
   traceId: string | null;
   /** Optional structured logger for fail-soft decrypt/section warnings (the route passes request.log). */
   log?: { warn: (obj: unknown, msg: string) => void };
+  /** ⭐ Story 6.27a (PM13) — called once for EVERY neighbour call-back mobile shown; the route audits it (⛔ the number). */
+  onCallbackMobileShown?: (pingId: string) => void;
 }
 
 /** Fail-soft decrypt: a single corrupt/rotated envelope yields `null` for THAT field, never a throw. */
@@ -329,7 +342,8 @@ export async function assembleVerifierConsole(
   const documentReview = await assembleDocumentReview(deps, ctx, core, memberRecord, reads);
 
   // ── (c) peer-mesh transcripts (Story 6.6) — transcripts NOT counts; absence ≠ denied ─────────────
-  const peerMesh = await assemblePeerMesh(ctx, claimCaseId, reads);
+  // ⭐ Story 6.27a (PM25 (c)) — `undefined` (the field ABSENT) for an inspector before their full visit.
+  const peerMesh = await assemblePeerMesh(deps, ctx, claimCaseId, reads, identity.deceasedName ?? 'the member');
 
   // ── (d) ground-inspection notes + photos (Story 6.7) — `[]` = a first-class absence signal ───────
   // Story 6.26a (GI10) — "compared with the CURRENT certificate?" needs the current upload: the document-review section
@@ -384,7 +398,7 @@ export async function assembleVerifierConsole(
     validity,
     concealment,
     documentReview,
-    peerMesh,
+    ...(peerMesh !== undefined ? { peerMesh } : {}),
     groundInspection: groundInspectionWithFlags,
     priorVerifierComments,
     recentPrecedents,
@@ -797,13 +811,21 @@ async function assembleDocumentReview(
   }
 }
 
-async function assemblePeerMesh(
+/** (c) the peer-mesh section — ⭐ EXPORTED for Story 6.27a's exact-read and inspector tests (the 6.28 precedent). */
+export async function assemblePeerMesh(
+  deps: AppDeps,
   ctx: VerifierConsoleContext,
   claimCaseId: ids.ClaimId,
-  reads: ReadCounter,
-): Promise<PeerMeshSection> {
+  reads: { bump(): void },
+  memberName: string,
+): Promise<PeerMeshSection | undefined> {
   try {
     const pariwarId = ids.pariwarId(ctx.pariwarId);
+    // ⭐ Story 6.27a (PM25 (c)) — FIRST: the people who meet the family form their own view first. An actor holding an
+    // UN-completed assignment with ⛔ no completed FULL visit gets ⛔ no section — ⛔ no title, ⛔ no counts, ⛔ no "hidden".
+    reads.bump();
+    if (await claim.isPeerSectionHiddenFromActor(ctx.db, pariwarId, claimCaseId, ctx.actorId)) return undefined;
+
     reads.bump();
     const selection = await claim.getPeerMeshSelectionByClaim(ctx.db, pariwarId, claimCaseId);
     if (!selection) return { status: 'empty' };
@@ -812,6 +834,14 @@ async function assemblePeerMesh(
     const pings = await claim.getPeerMeshPingIntentsBySelection(ctx.db, pariwarId, selection.selectionId);
     reads.bump();
     const responses = await claim.getPeerMeshResponses(ctx.db, claimCaseId);
+    // ⭐ Story 6.27a (PM13) — per neighbour: the name, the send status, the answers, the call-back mobile.
+    const pingViews = await assemblePeerAnswers(
+      deps.encryption,
+      { db: ctx.db, pariwarId: ctx.pariwarId, claimCaseId: ctx.claimCaseId, ...(ctx.log ? { log: ctx.log } : {}), ...(ctx.onCallbackMobileShown ? { onCallbackMobileShown: ctx.onCallbackMobileShown } : {}) },
+      pings.map((p) => ({ pingId: p.pingId, memberId: p.memberId, sendOutcome: p.sendOutcome ?? null, detail: p.detail ?? null })),
+      () => reads.bump(),
+      memberName,
+    );
 
     return {
       status: 'present',
@@ -823,6 +853,9 @@ async function assemblePeerMesh(
         responses: responses.map((r) => ({ responderMemberId: r.responderMemberId, response: r.response })),
         // AC2c's verifier annotations have no owning producer yet — explicit not_available_yet, never fabricated.
         verifierAnnotations: { status: 'not_available_yet' },
+        outcome: selection.outcome,
+        windowExpiresAt: selection.responseWindowExpiresAt.toISOString(),
+        pings: pingViews,
       },
     };
   } catch (err) {
@@ -1169,6 +1202,14 @@ export function createVerifierConsoleHandlers(deps: AppDeps) {
         geoResolver: geoTreeResolverForRequest(request),
         traceId: request.requestContext.traceId ?? null,
         log: request.log,
+        // ⭐ Story 6.27a (PM13) — EACH call-back mobile shown is audited: actor, claim, ping — ⛔ never the number.
+        onCallbackMobileShown: (pingId) =>
+          emitAuthAudit(deps, request, 'admin_verifier_console.peer_callback_mobile_shown', {
+            actorId,
+            pariwarId: scopeTx.pariwarId,
+            context: { claim_case_id: claimCaseId, ping_id: pingId },
+            resourceLocator: `claim:${String(claimCaseId).toLowerCase()}`,
+          }),
       });
 
       // AUDITED read (the adminValidityRead precedent) — NON-PII context only.

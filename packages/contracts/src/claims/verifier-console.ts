@@ -158,13 +158,72 @@ export const PeerMeshResponseItem = z
   .strict();
 export type PeerMeshResponseItem = z.output<typeof PeerMeshResponseItem>;
 
-/** Verifier-added annotations on peer-mesh responses (AC2c). No owning producer story exists yet —
+/** Verifier-added annotations on peer-mesh responses (AC2c). No owning producer story exists yet (Story 6.27a, PM13:
+ *  STAFF note capture is ⛔ still not built — this stays `not_available_yet`) —
  *  ALWAYS `not_available_yet` today, never inferred/fabricated. A future story that lands the capture
  *  capability adds a `present` variant here (the D6/D10 not_available_yet precedent). */
 export const PeerMeshVerifierAnnotations = z.discriminatedUnion('status', [
   z.object({ status: z.literal('not_available_yet') }).strict(),
 ]);
 export type PeerMeshVerifierAnnotations = z.output<typeof PeerMeshVerifierAnnotations>;
+
+// ── Story 6.27a (PM13) — what the District Admin sees: the 72-hour line, and per neighbour the name, the send status,
+// every LIVE answer (with its words, how and when saved, and "changed N times"), submitted or not, and — only when the
+// neighbour said yes — the call-back mobile (each showing audited). ⛔ The per-answer warning flags arrive with 6.27b.
+// A failed decrypt is `unavailable` ("could not be shown just now") — ⛔ never a blank (Invariant 8).
+
+/** The window label (6.6 AR-61) — `skipped` = ⛔ no neighbour could be chosen (PM20). */
+export const PEER_MESH_WINDOW_OUTCOMES = ['pending', 'sufficient', 'insufficient_responses_fallback', 'skipped'] as const;
+/** A ping's send status — `not_sent` (⛔ begun) or one of the ping's `send_outcome` values (6.27c writes them). */
+export const PEER_MESH_SEND_STATUSES = [
+  'not_sent',
+  'attempting',
+  'accepted',
+  'rejected_invalid_number',
+  'rejected_unreachable',
+  'no_target',
+  'error',
+  'skipped_superseded',
+] as const;
+
+const DecryptedText = z.discriminatedUnion('status', [
+  z.object({ status: z.literal('shown'), text: z.string() }).strict(),
+  z.object({ status: z.literal('none') }).strict(),
+  z.object({ status: z.literal('unavailable') }).strict(),
+]);
+
+export const PeerMeshAnswerView = z
+  .object({
+    questionKey: z.string(),
+    /** The question's English words (the admin console is English-only). */
+    question: z.string(),
+    value: z.discriminatedUnion('kind', [
+      z.object({ kind: z.literal('codes'), codes: z.array(z.string()), labels: z.array(z.string()) }).strict(),
+      z.object({ kind: z.literal('date'), date: z.string() }).strict(),
+      z.object({ kind: z.literal('unavailable') }).strict(),
+    ]),
+    savedVia: z.enum(['member_app', 'helpline']),
+    savedAt: z.string(),
+    /** How many times the answer was changed before this one (0 = never). */
+    changeCount: z.number(),
+  })
+  .strict();
+export type PeerMeshAnswerView = z.output<typeof PeerMeshAnswerView>;
+
+export const PeerMeshPingView = z
+  .object({
+    pingId: z.string(),
+    memberId: z.string(),
+    responderName: DecryptedText,
+    sendStatus: z.enum(PEER_MESH_SEND_STATUSES),
+    /** Why a ping was ⛔ texted — the `no_target:<reason>` code (⛔ PII by its grammar); `null` otherwise. */
+    noTargetReason: z.string().nullable(),
+    reply: z.object({ submitted: z.boolean(), answers: z.array(PeerMeshAnswerView) }).strict().nullable(),
+    /** ⛔ asked / "no" ⇒ `none`; "yes" ⇒ the normalised mobile (`shown`), or `unavailable` (a decrypt failed). */
+    callbackMobile: DecryptedText,
+  })
+  .strict();
+export type PeerMeshPingView = z.output<typeof PeerMeshPingView>;
 
 export const PeerMeshTranscript = z
   .object({
@@ -176,6 +235,11 @@ export const PeerMeshTranscript = z
     responses: z.array(PeerMeshResponseItem),
     /** AC2c's "verifier annotations" — explicitly not_available_yet until an owning producer story ships. */
     verifierAnnotations: PeerMeshVerifierAnnotations,
+    /** Story 6.27a — the 72-hour label and when the window closes (ISO). */
+    outcome: z.enum(PEER_MESH_WINDOW_OUTCOMES),
+    windowExpiresAt: z.string(),
+    /** Story 6.27a — per neighbour: the name, the send status, the answers, the call-back mobile. */
+    pings: z.array(PeerMeshPingView),
   })
   .strict();
 export type PeerMeshTranscript = z.output<typeof PeerMeshTranscript>;
@@ -505,7 +569,10 @@ export const VerifierConsolePacket = z
     validity: ValiditySection,
     concealment: ConcealmentSignal,
     documentReview: DocumentReviewSection,
-    peerMesh: PeerMeshSection,
+    // ⭐ Story 6.27a (PM25 (c)) — OPTIONAL: ABSENT for an actor who holds an un-completed ground-inspection assignment on
+    // the claim and has completed ⛔ no FULL visit (the inspector forms their own view first). ⛔ Never a new variant —
+    // a "hidden" variant would itself be a signal.
+    peerMesh: PeerMeshSection.optional(),
     groundInspection: GroundInspectionSection,
     priorVerifierComments: PriorVerifierCommentsSection,
     recentPrecedents: RecentPrecedentsSection,

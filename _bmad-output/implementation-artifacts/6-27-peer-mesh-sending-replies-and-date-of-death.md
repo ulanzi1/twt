@@ -917,7 +917,7 @@ member's terms:
 - [x] **Task 6 — the helpline (AC6).** `claims.peer-request.helpline.routes.ts` + handlers on 6.3's chain, enrolled in `COVERAGE_SET`; the
       list gated on `send_outcome = 'accepted'`; the PUT and submit 404 for an untexted ping; the admin panel on the member-lookup screen;
       tests incl. ⛔ no step-up ⇒ refused, the mixed reply, a NULL-outcome ping absent, and the PUT / submit 404 legs.
-- [ ] **Task 7 — the District Admin's view (AC7).** `assemblePeerAnswers` (actor-aware); the console contract (`PeerMeshTranscript` gains
+- [x] **Task 7 — the District Admin's view (AC7).** `assemblePeerAnswers` (actor-aware); the console contract (`PeerMeshTranscript` gains
       `outcome`, `windowExpiresAt`, per-ping `sendStatus`, `responderName`, the answers, the call-back mobile; `peerMesh` OPTIONAL);
       `PeerMeshView` (⛔ no section rendered when `peerMesh` is absent); `SignalsPanel.tsx:318` and the typed specs
       (`verifier-console-shape.spec.ts:431,494`, `verifier-console.spec.ts:413,918-920`) updated for the optional field (F41); the call-back reveal audited via `emitAuthAudit` (a new

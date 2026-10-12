@@ -15,6 +15,9 @@ import {
   GroundInspectionSection,
   PeerMeshSection,
   PeerMeshVerifierAnnotations,
+  PeerMeshAnswerView,
+  PeerMeshPingView,
+  PEER_MESH_SEND_STATUSES,
   PriorVerifierCommentsSection,
   RecentPrecedentsSection,
   ValiditySection,
@@ -90,6 +93,25 @@ describe('VerifierConsolePacket — full round-trip + ordering', () => {
           { responderMemberId: 'b', response: 'unknown' as const },
         ],
         verifierAnnotations: { status: 'not_available_yet' as const },
+        // Story 6.27a (PM13) — the 72-hour line and the per-neighbour views.
+        outcome: 'pending' as const,
+        windowExpiresAt: '2026-10-15T00:00:00.000Z',
+        pings: [
+          {
+            pingId: 'p-a',
+            memberId: 'a',
+            responderName: { status: 'shown' as const, text: 'Asha' },
+            sendStatus: 'accepted' as const,
+            noTargetReason: null,
+            reply: {
+              submitted: false,
+              answers: [
+                { questionKey: 'has_died', question: 'Has Suresh died?', value: { kind: 'codes' as const, codes: ['died'], labels: ['Yes, they have died'] }, savedVia: 'member_app' as const, savedAt: '2026-10-12T00:00:00.000Z', changeCount: 0 },
+              ],
+            },
+            callbackMobile: { status: 'none' as const },
+          },
+        ],
       },
     },
     groundInspection: { status: 'empty' as const },
@@ -142,8 +164,8 @@ describe('VerifierConsolePacket — full round-trip + ordering', () => {
 
   it('parses a full packet and preserves array order', () => {
     const parsed = VerifierConsolePacket.parse(PACKET);
-    expect(parsed.peerMesh.status).toBe('present');
-    if (parsed.peerMesh.status === 'present') {
+    expect(parsed.peerMesh?.status).toBe('present');
+    if (parsed.peerMesh?.status === 'present') {
       expect(parsed.peerMesh.transcript.pingedMemberIds).toEqual(['a', 'b', 'c']);
       expect(parsed.peerMesh.transcript.responses.map((r) => r.responderMemberId)).toEqual(['a', 'b']);
     }
@@ -241,17 +263,34 @@ describe('VerifierConsolePacket — full round-trip + ordering', () => {
   it('a non-response is never representable as a denial by absence (responses are explicit)', () => {
     // The transcript only carries explicit responses; an absent responder simply is not in the array.
     const parsed = VerifierConsolePacket.parse(PACKET);
-    if (parsed.peerMesh.status === 'present') {
+    if (parsed.peerMesh?.status === 'present') {
       expect(parsed.peerMesh.transcript.responses.find((r) => r.responderMemberId === 'c')).toBeUndefined();
     }
   });
 
   it("AC2c verifier annotations are explicitly not_available_yet — no owning producer story exists (2026-07-11 decision)", () => {
     const parsed = VerifierConsolePacket.parse(PACKET);
-    if (parsed.peerMesh.status === 'present') {
+    if (parsed.peerMesh?.status === 'present') {
       expect(parsed.peerMesh.transcript.verifierAnnotations).toEqual({ status: 'not_available_yet' });
     }
     // The schema only admits `not_available_yet` today — a fabricated `present` variant must be rejected.
     expect(PeerMeshVerifierAnnotations.safeParse({ status: 'present' }).success).toBe(false);
+  });
+
+  // ── Story 6.27a (PM13, PM25 (c)) ──────────────────────────────────────────────────────────────────────────────────
+  it('6.27a — `peerMesh` is OPTIONAL (absent for an inspector before their full visit) — ⛔ a new "hidden" variant', () => {
+    const withoutPeerMesh: Record<string, unknown> = { ...PACKET };
+    delete withoutPeerMesh['peerMesh'];
+    expect(VerifierConsolePacket.safeParse(withoutPeerMesh).success).toBe(true);
+    expect(VerifierConsolePacket.safeParse({ ...PACKET, peerMesh: { status: 'hidden' } }).success).toBe(false);
+  });
+
+  it('6.27a — every send status has a value; a decrypt failure is `unavailable`, ⛔ a blank', () => {
+    expect([...PEER_MESH_SEND_STATUSES]).toEqual(['not_sent', 'attempting', 'accepted', 'rejected_invalid_number', 'rejected_unreachable', 'no_target', 'error', 'skipped_superseded']);
+    expect(PEER_MESH_SEND_STATUSES).not.toContain('recorded');
+    const ping = (PACKET.peerMesh.transcript.pings[0]!);
+    expect(PeerMeshPingView.safeParse({ ...ping, responderName: { status: 'unavailable' } }).success).toBe(true);
+    expect(PeerMeshPingView.safeParse({ ...ping, responderName: { status: 'shown', text: '' }, sendStatus: 'recorded' }).success).toBe(false);
+    expect(PeerMeshAnswerView.safeParse({ ...ping.reply!.answers[0]!, value: { kind: 'unavailable' } }).success).toBe(true);
   });
 });

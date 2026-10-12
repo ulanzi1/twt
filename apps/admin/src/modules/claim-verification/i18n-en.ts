@@ -98,6 +98,34 @@ export const verifierConsoleEn = {
     denied: 'Denied',
     unknown: 'Unknown',
     annotationsNotAvailableYet: 'Verifier annotations — not available yet; this signal is provided by a later release.',
+    // ⭐ Story 6.27a (PM13) — the 72-hour line, each neighbour's send status (EVERY value of the ping's column), and the
+    // answers' provenance. English only (F22). ⛔ A neighbour's answer never refuses a claim — the line says so.
+    window: {
+      pending: (until: string) => `Still open until ${until}`,
+      sufficient: '3 or more answers',
+      insufficient_responses_fallback: 'Fewer than 3 answers in 72 hours — the ground inspection is the main check',
+      skipped: 'No neighbour could be chosen',
+    },
+    sendStatus: {
+      not_sent: 'Not sent yet',
+      attempting: 'Sending',
+      accepted: 'Text sent',
+      rejected_invalid_number: 'Text could not be delivered',
+      rejected_unreachable: 'Text could not be delivered',
+      no_target: 'Not texted',
+      error: 'Text failed',
+      skipped_superseded: 'Not texted — the claim had moved on',
+    },
+    submitted: 'Submitted',
+    notSubmitted: 'Not submitted yet',
+    noAnswerYet: 'No answer yet',
+    savedApp: 'answered in the app',
+    savedHelpline: 'recorded by the helpline',
+    changed: (n: number) => (n === 1 ? 'changed 1 time' : `changed ${n} times`),
+    couldNotShow: 'Could not be shown just now',
+    noName: 'No name on record',
+    callbackMobile: 'May be phoned on',
+    signalNote: "A neighbour's answer is a signal to weigh beside the ground inspection — it never refuses a claim on its own.",
   },
   // Story 6.11 — the decision strip (approve/deny/escalate + reason-code + rationale + audit trail).
   decision: {

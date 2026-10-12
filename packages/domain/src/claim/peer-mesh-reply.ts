@@ -492,3 +492,130 @@ export async function submitPeerReply(
   if (rows.length === 0) throw new PeerRequestSubmittedError();
   return { replyId: reply.replyId, submittedAt: rows[0]!.submittedAt! };
 }
+
+// ── the District Admin's view (PM13, PM25 (c)) — the console's reads; ciphertext AS STORED (the handler decrypts) ───────
+
+/** One LIVE answer of the claim, with how many rows its question has had (`versions − 1` = "changed N times"). */
+export interface PeerConsoleAnswerRow {
+  readonly replyId: PeerMeshReplyId;
+  readonly pingId: PeerMeshPingId;
+  readonly submittedAt: Date | null;
+  readonly answerId: string;
+  readonly questionKey: string;
+  readonly valueCodes: string[] | null;
+  readonly valueCiphertext: string | null;
+  readonly savedVia: PeerMeshAnswerSavedVia;
+  readonly savedAt: Date;
+  readonly versions: number;
+}
+
+export interface PeerConsoleReplyRow {
+  readonly replyId: PeerMeshReplyId;
+  readonly pingId: PeerMeshPingId;
+  readonly questionnaireVersionId: string;
+  readonly submittedAt: Date | null;
+}
+
+/** The cap of the console's answers read (≤ 5 replies × ≤ 7 questions today) — forced pagination, `clampLimit`. */
+export const PEER_CONSOLE_ANSWERS_CAP = 100;
+
+/**
+ * ONE statement: every reply of the claim and each one's LIVE answers, each with its question's row count. Bounded
+ * (`clampLimit`). ⛔ No decrypt.
+ */
+export async function readPeerAnswersForClaim(
+  db: Db,
+  pariwarId: PariwarId,
+  claimCaseId: ClaimId,
+  limit?: number,
+): Promise<{ readonly replies: PeerConsoleReplyRow[]; readonly answers: PeerConsoleAnswerRow[] }> {
+  const n = clampLimit(limit, { default: PEER_CONSOLE_ANSWERS_CAP, cap: PEER_CONSOLE_ANSWERS_CAP });
+  const { rows } = await db.execute<{
+    reply_id: string;
+    ping_id: string;
+    questionnaire_version_id: string;
+    submitted_at: Date | null;
+    answer_id: string | null;
+    question_key: string | null;
+    value_codes: string[] | null;
+    value_ciphertext: string | null;
+    saved_via: PeerMeshAnswerSavedVia | null;
+    saved_at: Date | null;
+    versions: number | null;
+  }>(sql`
+    SELECT r.reply_id, r.ping_id, r.questionnaire_version_id, r.submitted_at,
+           a.answer_id, a.question_key, a.value_codes, a.value_ciphertext, a.saved_via, a.saved_at,
+           (SELECT count(*)::int FROM claim_peer_mesh_reply_answers pa_v
+             WHERE pa_v.pariwar_id = a.pariwar_id AND pa_v.reply_id = a.reply_id AND pa_v.question_key = a.question_key) AS versions
+      FROM claim_peer_mesh_replies r
+      LEFT JOIN claim_peer_mesh_reply_answers a
+        ON a.pariwar_id = r.pariwar_id AND a.reply_id = r.reply_id AND a.superseded_at IS NULL
+     WHERE r.pariwar_id = ${pariwarId}::uuid AND r.claim_case_id = ${claimCaseId}::uuid
+     ORDER BY r.ping_id, a.saved_at NULLS FIRST
+     LIMIT ${n}`);
+  const replies = new Map<string, PeerConsoleReplyRow>();
+  const answers: PeerConsoleAnswerRow[] = [];
+  for (const r of rows) {
+    const submittedAt = r.submitted_at === null ? null : new Date(r.submitted_at);
+    if (!replies.has(r.reply_id)) {
+      replies.set(r.reply_id, {
+        replyId: r.reply_id as PeerMeshReplyId,
+        pingId: r.ping_id as PeerMeshPingId,
+        questionnaireVersionId: r.questionnaire_version_id,
+        submittedAt,
+      });
+    }
+    if (r.answer_id === null) continue;
+    answers.push({
+      replyId: r.reply_id as PeerMeshReplyId,
+      pingId: r.ping_id as PeerMeshPingId,
+      submittedAt,
+      answerId: r.answer_id,
+      questionKey: r.question_key!,
+      valueCodes: r.value_codes,
+      valueCiphertext: r.value_ciphertext,
+      savedVia: r.saved_via!,
+      savedAt: new Date(r.saved_at!),
+      versions: r.versions ?? 1,
+    });
+  }
+  return { replies: [...replies.values()], answers };
+}
+
+/** The neighbours' KYC name and mobile CIPHERTEXTS (the handler decrypts — the console's names and the call-back mobile). */
+export async function readPeerNeighbourContacts(
+  db: Db,
+  pariwarId: PariwarId,
+  memberIds: readonly MemberId[],
+): Promise<Map<string, { readonly nameCiphertext: string | null; readonly mobileCiphertext: string | null }>> {
+  const out = new Map<string, { nameCiphertext: string | null; mobileCiphertext: string | null }>();
+  if (memberIds.length === 0) return out;
+  const n = clampLimit(memberIds.length, { default: PEER_REQUEST_LIST_CAP, cap: 2 * PEER_REQUEST_LIST_CAP });
+  const { rows } = await db.execute<{ member_id: string; name_ciphertext: string | null; mobile_ciphertext: string | null }>(sql`
+    SELECT m.member_id, k.name_ciphertext, i.mobile_ciphertext
+      FROM unnest(ARRAY[${sql.join(memberIds.map((id) => sql`${id}::uuid`), sql`, `)}]) AS m(member_id)
+      LEFT JOIN member_kyc_profiles k ON k.pariwar_id = ${pariwarId}::uuid AND k.member_id = m.member_id
+      LEFT JOIN member_identities i ON i.pariwar_id = ${pariwarId}::uuid AND i.member_id = m.member_id
+     LIMIT ${n}`);
+  for (const r of rows) out.set(r.member_id, { nameCiphertext: r.name_ciphertext, mobileCiphertext: r.mobile_ciphertext });
+  return out;
+}
+
+/**
+ * PM25 (c) — is the neighbours' section HIDDEN from this actor? True iff the actor holds an UN-completed ground-inspection
+ * assignment on the claim AND has completed ⛔ no FULL visit on it (a `certificate_check` alone does ⛔ not count — it records
+ * ⛔ no family account). The inspector forms their own view first (6.27d shows them only differences, after completing).
+ */
+export async function isPeerSectionHiddenFromActor(db: Db, pariwarId: PariwarId, claimCaseId: ClaimId, actorId: string): Promise<boolean> {
+  const { rows } = await db.execute<{ hidden: boolean }>(sql`
+    SELECT EXISTS (
+             SELECT 1 FROM claim_ground_inspections gi
+              WHERE gi.pariwar_id = ${pariwarId}::uuid AND gi.claim_case_id = ${claimCaseId}::uuid
+                AND gi.inspector_actor_id = ${actorId} AND gi.status = 'scheduled')
+       AND NOT EXISTS (
+             SELECT 1 FROM claim_ground_inspections gi
+              WHERE gi.pariwar_id = ${pariwarId}::uuid AND gi.claim_case_id = ${claimCaseId}::uuid
+                AND gi.inspector_actor_id = ${actorId} AND gi.status = 'completed'
+                AND gi.inspection_stage <> 'certificate_check') AS hidden`);
+  return rows[0]?.hidden === true;
+}

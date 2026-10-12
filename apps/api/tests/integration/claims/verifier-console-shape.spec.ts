@@ -428,8 +428,9 @@ describe.skipIf(!hasDatabase)('Verifier-console compound shape (AI-6-3 class) �
     // ── (c) peer mesh: EXACTLY A's pinged candidates, in member_id asc order (the read's documented
     // ordering — the seed inserted them out of that order), and EXACTLY A's responders. B's selection
     // is for the SAME deceased — a deceased-keyed selection lookup would surface candB1/candB2 here.
-    expect(packet.peerMesh.status).toBe('present');
-    const transcript = packet.peerMesh.status === 'present' ? packet.peerMesh.transcript : undefined;
+    // Story 6.27a (PM25 (c)) — `peerMesh` is OPTIONAL (absent for an inspector before their full visit); present here.
+    expect(packet.peerMesh?.status).toBe('present');
+    const transcript = packet.peerMesh?.status === 'present' ? packet.peerMesh.transcript : undefined;
     expect(transcript?.pingedMemberIds).toEqual([candA1, candA2, candA3]);
     expect(
       transcript?.responses.map((r) => ({ responderMemberId: r.responderMemberId, response: r.response }))
@@ -491,8 +492,8 @@ describe.skipIf(!hasDatabase)('Verifier-console compound shape (AI-6-3 class) �
     expect(packetB.documentReview.status).toBe('present');
     const reviewsB = packetB.documentReview.status === 'present' ? packetB.documentReview.reviews : [];
     expect(reviewsB.map((r) => r.preview.signedUrl)).toEqual([memoryUrl(docKeyB)]);
-    expect(packetB.peerMesh.status).toBe('present');
-    const transcriptB = packetB.peerMesh.status === 'present' ? packetB.peerMesh.transcript : undefined;
+    expect(packetB.peerMesh?.status).toBe('present');
+    const transcriptB = packetB.peerMesh?.status === 'present' ? packetB.peerMesh.transcript : undefined;
     expect(transcriptB?.pingedMemberIds).toEqual([candB1, candB2]);
     expect(transcriptB?.responses.map((r) => r.responderMemberId)).toEqual([candB1]);
     expect(packetB.groundInspection.status).toBe('present');

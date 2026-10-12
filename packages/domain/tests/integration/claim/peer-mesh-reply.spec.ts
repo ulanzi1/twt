@@ -49,7 +49,9 @@ import {
   type QuestionnaireAnswerValue,
 } from '../../../src/questionnaires/index.js';
 import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
-import { driveClaimTo, enterAppScope, PARIWAR_A, PARIWAR_B } from '../_helpers.js';
+import { driveClaimTo, enterAppScope, PARIWAR_A, PARIWAR_B, seedAcceptedDeathCertificate, seedGroundInspection } from '../_helpers.js';
+import { isPeerSectionHiddenFromActor } from '../../../src/claim/index.js';
+import { scheduleGroundInspection } from '../../../src/claim/ground-inspection-persist.js';
 import { claimAt, emitClaim, type FixtureState } from './_one-payment-fixtures.js';
 
 type Client = pg.PoolClient;
@@ -411,6 +413,36 @@ describe.skipIf(!hasDatabase)('Story 6.27a — the neighbours\' reply writer', {
       expect(list.map((x) => x.pingId)).not.toContain(untexted.pingId);
       expect(list.map((x) => x.pingId)).not.toContain(closed.pingId);
       expect(await listOpenPeerRequestsForMember(bindScopedDb(client), toPariwarId(PARIWAR_A), toMemberId(neighbour), 0)).toHaveLength(1);
+    });
+  });
+
+  describe('PM25 (c) — the inspector forms their own view first (the console hides the section)', () => {
+    it('hidden while the actor holds an UN-completed assignment and ⛔ completed FULL visit; a certificate_check alone does ⛔ not lift it; a completed initial visit does', async () => {
+      const { client } = getTx();
+      const r = await requestAt(client, 'verification_in_progress');
+      await seedAcceptedDeathCertificate(client, { pariwarId: r.pid, claimCaseId: r.cid });
+      const inspector = randomUUID();
+      const db = bindScopedDb(client);
+      expect(await isPeerSectionHiddenFromActor(db, r.pid, r.cid, inspector)).toBe(false); // ⛔ assignment at all
+      await scheduleGroundInspection(client, {
+        claimCaseId: r.cid,
+        pariwarId: r.pid,
+        district: 'Patna',
+        inspectionStage: 'initial',
+        inspectionSiteType: 'family_residence',
+        inspectorActorId: inspector,
+        scheduledAt: new Date(),
+        scheduledByActor: inspector,
+        idempotencyKey: randomUUID(),
+      });
+      expect(await isPeerSectionHiddenFromActor(db, r.pid, r.cid, inspector)).toBe(true);
+      expect(await isPeerSectionHiddenFromActor(db, r.pid, r.cid, randomUUID())).toBe(false); // another actor
+      // a COMPLETED certificate_check alone — still hidden (it records ⛔ no family account)
+      await seedGroundInspection(client, r.pid, r.cid, { stage: 'certificate_check', inspectorActorId: inspector, force: true });
+      expect(await isPeerSectionHiddenFromActor(db, r.pid, r.cid, inspector)).toBe(true);
+      // a COMPLETED full visit — shown (even with an un-completed assignment still open)
+      await seedGroundInspection(client, r.pid, r.cid, { stage: 'initial', inspectorActorId: inspector, force: true });
+      expect(await isPeerSectionHiddenFromActor(db, r.pid, r.cid, inspector)).toBe(false);
     });
   });
 });

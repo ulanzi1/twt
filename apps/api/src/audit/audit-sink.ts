@@ -425,6 +425,9 @@ export type AuthAuditEventType =
   // read which claim's signals). Context is NON-PII: claim_case_id + district + deceased_member_id —
   // NEVER a decrypted identity/extracted field, note, caption, or any signal payload.
   | 'admin_verifier_console.read'
+  // ── Story 6.27a (PM13) — the neighbours' call-back mobile was SHOWN on the console (one line per mobile shown).
+  // Context: claim_case_id + ping_id ONLY — ⛔ never the number, ⛔ never a name, ⛔ never an answer.
+  | 'admin_verifier_console.peer_callback_mobile_shown'
   // ── Verifier adjudication surface (Story 6.11, FR-42 / UX-DR40 / Epic 6) ──────
   // The FIRST verifier WRITE — approve/deny/escalate/revise on the decision strip. Post-commit SINK
   // lines (the durable records are the claim.verifier_* event + the claim_verifier_decisions row).

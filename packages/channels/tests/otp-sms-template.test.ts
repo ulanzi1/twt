@@ -4,6 +4,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  checkDltTemplateShape,
   OTP_DLT_TEMPLATE_REGISTRY,
   renderOtpBody,
   resolveDltTemplate,
@@ -52,4 +53,29 @@ describe('OTP DLT template registry (Story 5.9)', () => {
     // 5.6 deliberately excluded step_up_otp from the transactional path; 5.9 must NOT re-add it there.
     expect(resolveDltTemplate('step_up_otp')).toBeNull();
   });
+});
+
+describe('the OTP templates are typed (Story 6.34 — AC2; TV3)', () => {
+  // The registered texts as of Story 5.9 — 6.34 changes ⛔ a character of them (SmartPing keeps the marker).
+  const REGISTERED = {
+    login: '{#var#} is your TWT login code. Valid 5 min. Do not share.',
+    step_up: '{#var#} is your TWT verification code. Valid 3 min. Do not share.',
+  } as const;
+
+  for (const intent of ['login', 'step_up'] as const) {
+    it(`${intent}: the text is unchanged, one numeric slot named otp (≤ 6), shape clean, version 1`, () => {
+      const t = resolveOtpTemplate(intent);
+      expect(t.contentTemplate).toBe(REGISTERED[intent]);
+      expect(t.slots).toEqual([{ name: 'otp', type: 'numeric', maxLength: 6, label: 'OTP code' }]);
+      expect(checkDltTemplateShape(t.contentTemplate, t.slots)).toEqual([]);
+      expect(t.version).toBe(1);
+    });
+
+    it(`${intent}: the rendered body carries the code (leading zero kept) and ⛔ marker residue`, () => {
+      const body = renderOtpBody(resolveOtpTemplate(intent), '048213');
+      expect(body).toContain('048213');
+      expect(body).not.toContain('{#');
+      expect(body).toBe(REGISTERED[intent].replace('{#var#}', '048213'));
+    });
+  }
 });

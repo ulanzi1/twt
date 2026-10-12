@@ -93,6 +93,9 @@ async function requestAndGetCode(t: TestApp, mobile: string): Promise<string> {
   expect(r.body.sent).toBe(true);
   const code = t.stepUpDelivery.last?.code;
   expect(code).toBeDefined();
+  // Story 6.34 TV9 (AC8): the member login OTP selects the login text, as today — ⛔ template override.
+  expect(t.stepUpDelivery.last).toMatchObject({ intent: 'login' });
+  expect(t.stepUpDelivery.last).not.toHaveProperty('template');
   return code as string;
 }
 
@@ -244,6 +247,9 @@ describe.skipIf(!hasDatabase)('member mobile+OTP auth (AC-1/AC-2, DB)', () => {
       // Request + verify step-up for the probe's action_context ('member.demo').
       const sreq = await post(t.app, `${BASE}/step-up/request`, { actionContext: 'member.demo' }, access);
       expect(sreq.status).toBe(200);
+      // Story 6.34 TV9 (AC8): the member step-up OTP selects the step-up text, as today — ⛔ template override.
+      expect(t.stepUpDelivery.last).toMatchObject({ intent: 'step_up' });
+      expect(t.stepUpDelivery.last).not.toHaveProperty('template');
       const stepCode = t.stepUpDelivery.last?.code as string;
       const sver = await post(t.app, `${BASE}/step-up/verify`, { otp: stepCode }, access);
       expect(sver.status).toBe(200);

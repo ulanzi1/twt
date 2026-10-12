@@ -41,6 +41,7 @@ import {
   type ClaimCorrectionReminderDeps,
   type CorrectionStaffPushPayload,
 } from './claim-correction-reminders.js';
+import { helplineNotCallbackNumberWarning } from './claim-dlt-sms-send.js';
 
 /** Each scan's bound — hitting it is ALARMED (the next tick starts again from the oldest). */
 export const DEFAULT_CLOSURE_SWEEP_LIMIT = 2000;
@@ -374,6 +375,8 @@ export async function runClosureNoticeChild(
     e164,
   });
   if (result.kind === 'transient') return transient(result.detail);
+  // Story 6.34 (`-322` C1): sent as today; ONE warning, ⛔ an outcome change.
+  if (result.helplineNotCallbackNumber === true) alarm(helplineNotCallbackNumberWarning(pid, 'closure notice'));
   if (result.outcome !== 'accepted' && result.alarm) {
     alarm(`[jobs] claim-correction-closure-notice: ${result.detail} for claim ${p.claimCaseId} closure ${p.closureId} — recorded error (fail-closed)`);
   }

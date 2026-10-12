@@ -175,8 +175,11 @@ async function deliverHandoverOtp(
   // the chosen nominee's decrypted mobile). The `step_up` variant would decrypt the SESSION
   // member's mobile — the wrong target for Ravi-mode. The plaintext mobile + code appear
   // ONLY in the outbound SMS; never logged/audited/persisted (only the hash is).
+  // Story 6.34 TV9 (`-322` C4): the code is minted in the 3-minute `step_up` pool, so the text is the step-up one
+  // ("Valid 3 min") — `template` selects the TEXT only; the recipient is still the resolved mobile above.
   await deps.stepUpDelivery.deliver({
     intent: 'login',
+    template: 'step_up',
     code: otp.code,
     actorId: poolKey,
     actionContext: CLAIM_HANDOVER_ACTION_CONTEXT,

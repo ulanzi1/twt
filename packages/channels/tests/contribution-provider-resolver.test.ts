@@ -21,6 +21,22 @@ vi.mock('@twt/domain', async (importActual) => {
   };
 });
 
+// ⭐ Story 6.34 (TV6 / AC5): the five real alert-registry entries are DARK (⛔ registrable — whole-body), so the REAL
+// sms-dlt path is driven against a mocked registry with ONE registrable fake entry for `deadline_reminder` (CATEGORY)
+// under its own config key. The mock targets the registry FILE, which `provider-composition.ts` imports relatively.
+const { REGISTRABLE } = vi.hoisted(() => ({
+  REGISTRABLE: {
+    dltTemplateIdConfigKey: 'sms.dlt.template_id.test_registrable',
+    contentTemplate: 'Your contribution of Rs {#var#} is due this cycle. Please pay in the TWT app.',
+    slots: [{ name: 'amount', type: 'numeric', maxLength: 6, label: 'amount' }],
+    version: 1,
+  },
+}));
+vi.mock('../src/sms-dlt-registry.js', async (importActual) => {
+  const actual = await importActual<typeof import('../src/sms-dlt-registry.js')>();
+  return { ...actual, resolveDltTemplate: (category: string) => (category === 'deadline_reminder' ? REGISTRABLE : null) };
+});
+
 const { createContributionProviderResolver } = await import('../src/composition/provider-composition.js');
 const { ids } = await import('@twt/domain');
 import type { Db } from '@twt/domain';
@@ -111,7 +127,7 @@ describe('createContributionProviderResolver — the four-channel assembly (AI-8
     expect(registry.whatsapp[0]!.scope).toBe('per-pariwar'); // real Meta
     expect(registry.telegram[0]!.scope).toBe('per-pariwar'); // real bot
     // SMS real vs fixture share scope/id — the tell is that resolveConfig was consulted (real path).
-    expect(d.resolveConfig).toHaveBeenCalledWith('sms.dlt.template_id.deadline_reminder');
+    expect(d.resolveConfig).toHaveBeenCalledWith(REGISTRABLE.dltTemplateIdConfigKey);
     expect(registry.sms[0]!.id).toBe('sms-dlt');
   });
 

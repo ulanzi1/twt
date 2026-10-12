@@ -51,6 +51,7 @@ import {
   type ClaimCorrectionReminderDeps,
   type CorrectionChildAttempt,
 } from './claim-correction-reminders.js';
+import { helplineNotCallbackNumberWarning } from './claim-dlt-sms-send.js';
 
 /** The certificate machine's deps — 6.19b's, minus the staff push (CR10: ⛔ no staff push in 6.19d). */
 export type ClaimCertificateReminderDeps = Omit<ClaimCorrectionReminderDeps, 'push'>;
@@ -666,6 +667,8 @@ export async function runCertificateFamilySmsChild(
     );
     throw new ClaimCorrectionTransientError(`[jobs] claim-certificate-sms: transient ${result.detail} for run ${p.runId}`);
   }
+  // Story 6.34 (`-322` C1): sent as today; ONE warning, ⛔ an outcome change.
+  if (result.helplineNotCallbackNumber === true) alarm(helplineNotCallbackNumberWarning(pid, 'certificate reminder'));
   if (result.outcome !== 'accepted' && result.alarm) {
     alarm(`[jobs] claim-certificate-sms: ${result.detail} for claim ${p.claimCaseId} run ${p.runId} — recorded error (fail-closed)`);
   }

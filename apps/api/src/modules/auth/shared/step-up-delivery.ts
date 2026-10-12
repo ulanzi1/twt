@@ -47,6 +47,13 @@ export type StepUpOtpDelivery =
       readonly resolvedMobile: string;
       /** FORBIDDEN for `login` (no member/tenant resolved at OTP-request time). */
       readonly pariwarId?: never;
+      /**
+       * Story 6.34 TV9 (`2026-10-12-322` C4) — selects the step-up OTP TEXT for a code minted in the 3-minute
+       * `step_up` pool but delivered to a caller-supplied number (the claim handover): the text then says
+       * "Valid 3 min", as the code lives. It selects the TEMPLATE only — the recipient path still follows
+       * `intent`. One-way: only `'step_up'`, only on `login` ⇒ a 3-minute code can never carry the 5-minute text.
+       */
+      readonly template?: Extract<StepUpOtpIntent, 'step_up'>;
     })
   | (StepUpOtpDeliveryCommon & {
       readonly intent: 'step_up';
@@ -58,6 +65,8 @@ export type StepUpOtpDelivery =
       readonly pariwarId: string | null;
       /** FORBIDDEN for `step_up` (the adapter decrypts the mobile itself). */
       readonly resolvedMobile?: never;
+      /** FORBIDDEN for `step_up` (Story 6.34 TV9 — a step_up code is never switched to another text). */
+      readonly template?: never;
     });
 
 /**
@@ -116,6 +125,7 @@ export function createLogStepUpDelivery(opts: { revealForDev: boolean }): StepUp
           actorId: delivery.actorId,
           actionContext: delivery.actionContext,
           intent: delivery.intent,
+          ...(delivery.template !== undefined ? { template: delivery.template } : {}),
           note: 'real SMS-DLT delivery is Story 5.9 — this is a dev/admin stub',
           ...(opts.revealForDev ? { devCode: delivery.code } : {}),
         }),

@@ -20,6 +20,14 @@
 // ⚠ A missing template id or helpline number fails CLOSED in the shared core (`claim-dlt-sms-send.ts`) — ⛔ never a
 // placeholder, ⛔ never a fixture `accepted`. The sweep checks the config FIRST so a gap never uses up a once-ever slot (RB12).
 
+// ⭐ Story 6.34 (TV2 / TV4 / TV13; `-313`, `-314`): each entry DECLARES its variables' TRAI types in `slots`, in text
+// order — `{member}` alphanumeric (≤ 40 — ⚠ a longer or Devanagari name is the open deferred `{member}` item and Row 30
+// (d)'s question), `{date}` alphanumeric (`DD-MM-YYYY`, 10 — ⛔ date type exists; numeric refuses the hyphen), the
+// helpline cbn (≤ 14). `appeal_notice` carries THREE variables — the sheet records the justification (the last date to
+// appeal is the substance of the notice, `-293` item 1 B). ⛔ A character of any text changed (SmartPing keeps the
+// untyped marker); the marker is the ONE vocabulary's (`@twt/channels`), re-exported for the lockstep test.
+
+import { DLT_VAR, type DltSlot } from '@twt/channels';
 import type { cycleCalendar } from '@twt/domain';
 import { t, type Locale } from '@twt/i18n';
 
@@ -36,6 +44,8 @@ export interface SuspicionNoticeSmsTemplate {
   readonly dltTemplateIdConfigKey: string;
   /** The content registered with TRAI, each variable written `{#var#}`, in the order of the Panel's words. */
   readonly registeredText: string;
+  /** The declared variables, in text order (Story 6.34 TV4) — the type BigDev selects for each `{#var#}`. */
+  readonly slots: readonly DltSlot[];
 }
 
 /** The variables of each message — `appeal_notice` alone carries the date. */
@@ -45,8 +55,19 @@ export interface SuspicionNoticeSmsVars {
   readonly date?: string;
 }
 
-/** The DLT variable token — the form the registered text carries in each slot. */
-export const DLT_VAR = '{#var#}';
+/** The DLT variable token — the form the registered text carries in each slot (the ONE vocabulary's, re-exported). */
+export { DLT_VAR };
+
+const MEMBER: DltSlot = { name: 'member', type: 'alphanumeric', maxLength: 40, label: 'deceased member name' };
+const APPEAL_DATE: DltSlot = { name: 'date', type: 'alphanumeric', maxLength: 10, label: 'last date to appeal (DD-MM-YYYY)' };
+const HELPLINE: DltSlot = { name: 'helpline', type: 'cbn', maxLength: 14, label: 'helpline number' };
+
+/** TV4 — the declared variables of each message, in the order of the Panel's words (both locales). */
+const SLOTS: Readonly<Record<SuspicionNoticeSmsMessage, readonly DltSlot[]>> = {
+  refusal_notice: [MEMBER, HELPLINE],
+  closed_notice: [MEMBER, HELPLINE],
+  appeal_notice: [MEMBER, APPEAL_DATE, HELPLINE],
+};
 
 /** The Secret Manager name of a message's DLT template id (RB4). */
 export function suspicionNoticeDltConfigKey(message: SuspicionNoticeSmsMessage, locale: SuspicionNoticeSmsLocale): string {
@@ -57,6 +78,7 @@ const entry = (message: SuspicionNoticeSmsMessage, locale: SuspicionNoticeSmsLoc
   copyKey: `suspicion_sms.${message}`,
   dltTemplateIdConfigKey: suspicionNoticeDltConfigKey(message, locale),
   registeredText,
+  slots: SLOTS[message],
 });
 
 // ⚠ The Hindi is agent-authored, ⛔ not yet human-reviewed (go-live gate Row 23).

@@ -1,3 +1,11 @@
+# last_updated: 2026-10-12e (⭐ **STORY 6.34 — BUILT via `bmad-dev-story`: in-progress → review.** Task 0 records committed FIRST
+# (`25e7bba5`). ONE typed-variable vocabulary `packages/channels/src/dlt-variables.ts` (TRAI Annexure-I's six types, `DltSlot`,
+# `checkDltTemplateShape`, `isDltCallbackNumber`); the two OTPs typed numeric `otp`; the twelve claim texts typed per TV4 — ⛔ a character
+# of any text or `claim.json` changed; a helpline that is ⛔ a callback number is SENT and WARNED on all four send paths (⛔ held,
+# ⛔ refused — `-322` C1 / `-323` R1); the five alert-registry entries DARK (whole-body ⇒ ⛔ registrable); the claim-handover OTP sends the
+# step-up text ("Valid 3 min"); the `dlt-typed-variables` gate in ci-local + ci.yml + pre-push GATE_INPUTS; the sheet covers 1–12, 15, 16
+# (types + MSG91 forms); deferred-work. `pnpm ci:local` WITH the :5433 DB — 36 / 36 green. ⛔ No id, helpline or secret set — Row 30 is
+# BigDev's.)
 # last_updated: 2026-10-12d (⭐ **STORY 6.34 — DEV STARTED (`bmad-dev-story 6.34`): ready-for-dev → in-progress; Task 0 records FIRST.**
 # Task 0.1: ⛔ code moved since `09321738` (`origin/main` = `09321738`); F1–F6 + STPL / MSG91 sources re-fetched 2026-10-12 — all hold
 # (STPL's own manual shows a pre-Nov-2025 tag list ⇒ Row 30 (a)'s label match stands). Task 0.4: `epics.md` `### Story 6.34`; roster
@@ -19844,7 +19852,7 @@ development_status:
   # ⛔ cannot pass until THIS row's OTP-template retag is approved by the operator (a rejected OTP template blocks every login).
   # ⭐ 2026-10-12 ANNOTATION (Story 6.34 Task 0.4, `2026-10-12-322` C6): + row 6-37's MSG91 adapter (`-314` Consequence 2); and *"retags …
   # with typed variables"* reads *"declares a TRAI type for every `{#var#}` (SmartPing)"* — the text keeps `{#var#}`; approval = roster Row 30 (b).
-  6-34-sms-templates-typed-variables: in-progress
+  6-34-sms-templates-typed-variables: review
   6-35-in-app-language-switch: backlog
   # ⭐ 2026-10-10 ADDED by `2026-10-10-306` (BigDev: "Selection must be school wise …"): each member's SCHOOL (a stable school code + name)
   # and posting start date captured at signup and on every transfer (a new posting — history kept); a NEW peer-mesh metric: members posted

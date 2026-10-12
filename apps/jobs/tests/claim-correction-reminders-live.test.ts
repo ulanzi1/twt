@@ -43,7 +43,7 @@ const PARIWAR = randomUUID();
 const OTHER_PARIWAR = randomUUID();
 /** The staff fixtures' Pariwar — its Pariwar Admins must ⛔ not change the escalation recipients of PARIWAR's tests. */
 const STAFF_PARIWAR = randomUUID();
-const HELPLINE = '+911800123456';
+const HELPLINE = '1800123456'; // Story 6.34 — a digits-only callback number (`-322` C1); `+91…` is the warning leg's
 const enc = buildJobsEncryptionDeps('claim-correction-live-pepper');
 /** The SAME deps with the HMAC failing (a KMS blip on the number hash) — the decrypt still works. */
 const hmacDown: encryption.FieldCryptoDeps = {
@@ -267,6 +267,26 @@ describe.skipIf(!hasDatabase)('Story 6.19b — the claim-correction reminders (l
   }
 
   // ── The schedule and the send ───────────────────────────────────────────────────────────────────────────────
+
+  it('⭐ Story 6.34 (`-322` C1) — a helpline that is ⛔ a callback number: the reminder is SENT exactly as today, ONE warning, the row `accepted`', async () => {
+    const s = await seed({ nomineeMobiles: ['9812345678'] });
+    const { day0 } = await runOf(s.runId!);
+    const h = harness({ config: { [`sms.claim_correction.helpline_number.${PARIWAR}`]: '+911800123456' } });
+    h.setNow(tenAmIst(cycleCalendar.addCalendarDays(day0, 1)));
+    await runCorrectionReminderSweep(h.deps, boss(h));
+    const jobs = smsFor(h, s.claimCaseId);
+    expect(jobs).toHaveLength(1);
+    expect(await child(h, jobs[0]!)).toEqual({ status: 'sent', outcome: 'accepted' });
+    expect(h.sent).toHaveLength(1);
+    expect(h.sent[0]!.body).toContain('+911800123456'); // ⛔ normalised
+    const warnings = h.alarms.filter((a) => a.includes('not a callback number'));
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]).toContain(PARIWAR);
+    expect(warnings[0]).toContain('correction reminder');
+    expect(warnings[0]).not.toContain('+911800123456'); // ⛔ the number itself
+    const family = (await rowsOf(s.claimCaseId)).filter((r) => r.purpose === 'family_sms');
+    expect(family.map((r) => [r.outcome, r.detail])).toEqual([['accepted', null]]);
+  });
 
   it('⭐ G4 — ⛔ no send on day 0; day 1 sends each person ONCE (hi, name-free, reference + helpline), recorded `accepted`, ⛔ never delivered', async () => {
     const s = await seed({ nomineeMobiles: ['9812345678', '9812345679'] });

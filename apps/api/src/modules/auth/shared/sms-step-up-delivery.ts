@@ -97,10 +97,14 @@ function withSendTimeout<T>(pending: Promise<T>, timeoutMs: number): Promise<T> 
 }
 
 function assertPayloadShape(payload: StepUpOtpDelivery): void {
-  const bag = payload as { resolvedMobile?: unknown; pariwarId?: unknown };
+  const bag = payload as { resolvedMobile?: unknown; pariwarId?: unknown; template?: unknown };
   if (payload.intent === 'login') {
     if (bag.pariwarId != null) {
       throw new StepUpDeliveryError('invalid_payload', 'login intent must not carry pariwarId');
+    }
+    // Story 6.34 TV9 (`-322` C4): the only template override is `'step_up'` — ⛔ any other value.
+    if (bag.template !== undefined && bag.template !== 'step_up') {
+      throw new StepUpDeliveryError('invalid_payload', "login intent's template may only be 'step_up'");
     }
     if (typeof bag.resolvedMobile !== 'string' || bag.resolvedMobile.trim() === '') {
       throw new StepUpDeliveryError('no_delivery_target', 'login intent requires a resolvedMobile');
@@ -108,6 +112,10 @@ function assertPayloadShape(payload: StepUpOtpDelivery): void {
   } else if (payload.intent === 'step_up') {
     if (bag.resolvedMobile != null) {
       throw new StepUpDeliveryError('invalid_payload', 'step_up intent must not carry resolvedMobile');
+    }
+    // Story 6.34 TV9 (`-322` C4): one-way — a step_up code is ⛔ ever switched to another text.
+    if (bag.template !== undefined) {
+      throw new StepUpDeliveryError('invalid_payload', 'step_up intent must not carry a template');
     }
   } else {
     throw new StepUpDeliveryError('invalid_payload', 'unknown delivery intent');
@@ -147,7 +155,9 @@ export function createSmsDltStepUpDelivery(deps: SmsDltStepUpDeliveryDeps): Step
         const to = await resolveRecipient(payload);
 
         // Select the per-intent OTP DLT template + resolve its TRAI id from the global NAME pointer at send time.
-        const template = resolveOtpTemplate(payload.intent);
+        // Story 6.34 TV9: a `login` payload may select the step-up TEXT (the claim handover's 3-minute code); the
+        // recipient above still followed `intent`.
+        const template = resolveOtpTemplate(payload.template ?? payload.intent);
         const dltTemplateId = await deps.resolveConfig(template.dltTemplateIdConfigKey);
         if (!dltTemplateId || dltTemplateId.trim() === '') {
           throw new StepUpDeliveryError('no_delivery_target', 'OTP DLT template id NAME resolved to blank');

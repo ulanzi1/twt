@@ -9,11 +9,16 @@
 //   · `invalid_number` → `rejected_invalid_number`; `carrier_reject` → `rejected_unreachable` (letter-eligible, ⛔ no
 //     alarm); `dlt_template_not_approved` / `auth` / `unknown` → `error` + alarm, FINAL; `rate_limited` /
 //     `api_unavailable` → transient.
+//   · ⭐ Story 6.34 (`2026-10-12-322` C1 / `-323` R1): a helpline set but ⛔ a callback number (`+91…`, a space) is SENT
+//     exactly as today — same body, same outcome — and the FINAL result of a provider-handed send carries
+//     `helplineNotCallbackNumber: true`; ⛔ on transient, ⛔ on the config finals that send nothing. The default
+//     fixture is digits-only (`1800123456`), so every whole-result `toEqual` below stays exact (the flag is absent).
 
 import { SmsSendError, type SmsAppClient, type SmsMessagingHandle } from '@twt/channels';
 import { describe, expect, it } from 'vitest';
 
 import { correctionStaffPushAlert, sendClaimCorrectionSms } from '../src/scheduler/claim-correction-reminders.js';
+import { renderClaimCorrectionSms } from '../src/scheduler/claim-correction-sms-templates.js';
 import { classifySecretManagerFault } from '../src/scheduler/contribution-providers.js';
 
 const PARIWAR = '11111111-1111-1111-1111-111111111111';
@@ -36,7 +41,7 @@ function client(send: SmsMessagingHandle['send'], configured = true): SmsAppClie
 const config = (overrides: Record<string, string | null> = {}) => async (key: string): Promise<string | null> => {
   if (key in overrides) return overrides[key]!;
   if (key.startsWith('sms.dlt.template_id.')) return 'TPL-123';
-  if (key === `sms.claim_correction.helpline_number.${PARIWAR}`) return '+911800123456';
+  if (key === `sms.claim_correction.helpline_number.${PARIWAR}`) return '1800123456';
   return null;
 };
 
@@ -64,7 +69,7 @@ describe('sendClaimCorrectionSms — fail CLOSED (T13)', () => {
     // Another Pariwar with its own number sends.
     const other = '22222222-2222-2222-2222-222222222222';
     const ok = await sendClaimCorrectionSms(
-      { smsAppClient: c, resolveConfig: config({ [`sms.claim_correction.helpline_number.${other}`]: '+911800999999' }) },
+      { smsAppClient: c, resolveConfig: config({ [`sms.claim_correction.helpline_number.${other}`]: '1800999999' }) },
       { ...input, pariwarId: other },
     );
     expect(ok).toMatchObject({ outcome: 'accepted' });
@@ -147,7 +152,7 @@ describe('sendClaimCorrectionSms — the provider result mapping (AC3)', () => {
       detail: null,
     });
     expect(c.sent[0]).toContain('Claim 3F2A9C1E:');
-    expect(c.sent[0]).toContain('+911800123456');
+    expect(c.sent[0]).toContain('1800123456');
   });
 
   it.each([
@@ -172,6 +177,83 @@ describe('sendClaimCorrectionSms — the provider result mapping (AC3)', () => {
     expect(await sendClaimCorrectionSms({ smsAppClient: rejecting(code, status), resolveConfig: config() }, input)).toMatchObject({
       kind: 'transient',
     });
+  });
+});
+
+describe('⭐ Story 6.34 — a helpline that is ⛔ a callback number is SENT and FLAGGED, ⛔ held, ⛔ refused (AC4; `-322` C1)', () => {
+  const HELPLINE_KEY = `sms.claim_correction.helpline_number.${PARIWAR}`;
+  const rejecting = (code: string, status = 400) => client(() => Promise.reject(new SmsSendError('x', code, status)));
+  const malformed = (helpline = '+911800123456') => config({ [HELPLINE_KEY]: helpline });
+
+  it.each(['+911800123456', '1800 123456'])('`%s` ⇒ accepted, the SAME body, flag set', async (helpline) => {
+    const c = client(() => Promise.resolve('gw-7'));
+    expect(await sendClaimCorrectionSms({ smsAppClient: c, resolveConfig: malformed(helpline) }, input)).toEqual({
+      kind: 'final',
+      outcome: 'accepted',
+      providerMessageId: 'gw-7',
+      detail: null,
+      helplineNotCallbackNumber: true,
+    });
+    // ⛔ normalised — the body is exactly today's, with the number as written.
+    expect(c.sent).toEqual([renderClaimCorrectionSms('reminder', 'en', { reference: '3F2A9C1E', helpline })]);
+  });
+
+  it.each([
+    ['INVALID_NUMBER', 'rejected_invalid_number', false],
+    ['CARRIER_REJECT', 'rejected_unreachable', false],
+    ['DLT_TEMPLATE_NOT_APPROVED', 'error', true],
+  ])('a provider reject %s ⇒ %s, unchanged, flag set', async (code, outcome, alarm) => {
+    const r = await sendClaimCorrectionSms({ smsAppClient: rejecting(code), resolveConfig: malformed() }, input);
+    expect(r).toMatchObject({ kind: 'final', outcome, alarm, helplineNotCallbackNumber: true });
+  });
+
+  it('a TIMEOUT ⇒ exactly the transient — ⛔ flag (a pg-boss retry would warn on every attempt)', async () => {
+    const c = client(() => new Promise(() => undefined));
+    const r = await sendClaimCorrectionSms({ smsAppClient: c, resolveConfig: malformed(), sendTimeoutMs: 20 }, input);
+    expect(r).toEqual({ kind: 'transient', detail: 'api_unavailable:timeout' });
+  });
+
+  it('a rate limit ⇒ transient, ⛔ flag', async () => {
+    const r = await sendClaimCorrectionSms({ smsAppClient: rejecting('RATE_LIMIT'), resolveConfig: malformed() }, input);
+    expect(r.kind).toBe('transient');
+    expect(r).not.toHaveProperty('helplineNotCallbackNumber');
+  });
+
+  it('an unconfigured gateway ⇒ `config:sms_gateway_unconfigured`, ⛔ flag (⛔ send)', async () => {
+    const c = client(() => Promise.resolve('gw'), false);
+    expect(await sendClaimCorrectionSms({ smsAppClient: c, resolveConfig: malformed() }, input)).toEqual({
+      kind: 'final',
+      outcome: 'error',
+      providerMessageId: null,
+      detail: 'config:sms_gateway_unconfigured',
+      alarm: true,
+    });
+  });
+
+  it('a half-configured client (messaging() throws) ⇒ `config:sms_messaging_unavailable`, ⛔ flag', async () => {
+    const c: SmsAppClient = {
+      isConfigured: () => true,
+      messaging: () => {
+        throw new Error('no handle');
+      },
+    };
+    expect(await sendClaimCorrectionSms({ smsAppClient: c, resolveConfig: malformed() }, input)).toEqual({
+      kind: 'final',
+      outcome: 'error',
+      providerMessageId: null,
+      detail: 'config:sms_messaging_unavailable',
+      alarm: true,
+    });
+  });
+
+  it('a digits-only number (`1800123456`) ⇒ ⛔ flag; an UNSET one fails closed exactly as before', async () => {
+    const c = client(() => Promise.resolve('gw'));
+    expect(await sendClaimCorrectionSms({ smsAppClient: c, resolveConfig: config() }, input)).not.toHaveProperty(
+      'helplineNotCallbackNumber',
+    );
+    expect(
+      await sendClaimCorrectionSms({ smsAppClient: c, resolveConfig: config({ [HELPLINE_KEY]: '  ' }) }, input),
+    ).toEqual({ kind: 'final', outcome: 'error', providerMessageId: null, detail: 'config:helpline_number_missing', alarm: true });
   });
 });
 

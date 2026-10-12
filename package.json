@@ -45,6 +45,8 @@
     "claim-adjudication-human-actor:test": "vitest run scripts/claim-adjudication-human-actor-invariant",
     "kyc-provider:check": "tsx scripts/kyc-provider-boundary/check.ts",
     "kyc-provider:test": "vitest run scripts/kyc-provider-boundary",
+    "dlt-typed-variables:check": "tsx scripts/dlt-typed-variables/check.ts",
+    "dlt-typed-variables:test": "vitest run scripts/dlt-typed-variables",
     "access-wrapper:check": "tsx scripts/access-wrapper-invariants/check.ts",
     "access-wrapper:test": "vitest run scripts/access-wrapper-invariants",
     "pool-state:check": "tsx scripts/pool-state-invariant/check.ts",

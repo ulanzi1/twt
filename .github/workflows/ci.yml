@@ -874,6 +874,30 @@ jobs:
       - run: pnpm kyc-provider:test
       - run: pnpm kyc-provider:check
 
+  dlt-typed-variables:
+    name: dlt-typed-variables (every SMS template variable is typed for TRAI)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: install
+    # Story 6.34 AC6 (TV7; `2026-10-12-322` C2): ⛔ a braced typed tag in registered text (the sheets' template rows,
+    # the registry files' code lines); the marker, its identifier DLT_VAR and the template-id key prefix only in the
+    # shape-tested registries (scripts/dlt-typed-variables/lib.ts REGISTRY_FILES). Line scan of the TRACKED
+    # apps/*/src + packages/*/src + docs/launch-gate-inventory/*.md. No DB / network. INVARIANT SCAN → NO
+    # fetch-depth: 0 (mirror kyc-provider-boundary). See scripts/dlt-typed-variables/.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.30.3
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.12.0
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm dlt-typed-variables:test
+      - run: pnpm dlt-typed-variables:check
+
   access-wrapper-invariants:
     name: access-wrapper-invariants (validity fail-closed + constant-time secret compare + compensating-audit mechanization; channel + claim surface)
     runs-on: ubuntu-latest

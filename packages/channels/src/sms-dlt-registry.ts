@@ -29,25 +29,65 @@
 // Manager at send time (mirror pariwar_wa_config.access_token_secret_name discipline). The registered
 // content template TEXT + version live in code (code-reviewed, matches the TRAI registration per the Story
 // 0.1 runbook / AR-56) so a content drift is a reviewable one-line edit.
+//
+// ── ⭐ Story 6.34 (TV6; `2026-10-10-313`, `-322` C8): the five v1 entries are DARK — truthfully ─────────────
+// Each was ONE whole-body variable (the body is `${heading}: ${line}`, `render.ts` — unbounded, mixed-script):
+// 0 % fixed text and no TRAI type fits it, so ⛔ none is registrable (TRAI's 18 Nov 2025 Direction; the 30 %
+// fixed rule). Each entry KEEPS its category and config-key name (the 5.6 set stays visible) but carries
+// `contentTemplate: null` + `unregistrableReason`, and `resolveDltTemplate` returns `null` for it ⇒ composition
+// falls to the log fixture — TODAY's behaviour, since ⛔ id was ever provisioned. ⚠ Provisioning
+// `dltTemplateIdConfigKey` for any of the five does NOTHING (roster Row 30, deferred-work). Turning the
+// per-member SMS fallback ON needs fixed wording per category (en + hi) — new member-facing copy, a later
+// story with its own §0 — ⛔ "fixed" here by registering text.
 
 import type { AlertCategory } from '@twt/contracts';
 
-/** One registered DLT-transactional template (per SMS-eligible category). */
-export interface DltTemplate {
+import type { DltSlot } from './dlt-variables.js';
+
+/** Why a listed category has ⛔ registrable template. */
+export type DltUnregistrableReason = 'whole_body_variable';
+
+/** One registrable DLT-transactional template (per SMS-eligible category) — what `resolveDltTemplate` returns. */
+export interface RegistrableDltTemplate {
   /**
    * The global config / Secret-Manager NAME pointer the composition layer resolves → the TRAI-assigned DLT
    * template id at send time. NEVER the id itself (never hardcoded/logged/audited — AI-4-3(c)).
    */
   readonly dltTemplateIdConfigKey: string;
   /**
-   * The registered content-template TEXT (the TRAI-approved scaffolding). `{#var#}` marks the single
-   * variable slot the rendered SMS body fills. Lives in code so a drift from the TRAI registration is a
-   * reviewable edit; the gateway byte-matches against its OWN registered copy of this text.
+   * The registered content-template TEXT (the TRAI-approved scaffolding). `{#var#}` marks each variable the
+   * rendered SMS body fills. Lives in code so a drift from the TRAI registration is a reviewable edit; the
+   * gateway byte-matches against its OWN registered copy of this text.
    */
   readonly contentTemplate: string;
-  /** The template version (bumped when the registered content text changes; a later multi-var shape = Epic 10). */
+  readonly unregistrableReason?: never;
+  /** The declared variables, in text order (Story 6.34 TV2) — the registry test runs the shape check over them. */
+  readonly slots: readonly DltSlot[];
+  /** The template version (bumped when the registered content text changes). */
   readonly version: number;
 }
+
+/** A listed category whose template is ⛔ registrable (Story 6.34 TV6) — kept visible, resolved to `null`. */
+export interface UnregistrableDltTemplate {
+  /** The config-key NAME — provisioning it does NOTHING (the category resolves to `null`). */
+  readonly dltTemplateIdConfigKey: string;
+  readonly contentTemplate: null;
+  readonly unregistrableReason: DltUnregistrableReason;
+  readonly slots: readonly [];
+  readonly version: number;
+}
+
+/** One entry of the per-category registry — registrable, or listed-but-dark. */
+export type DltTemplate = RegistrableDltTemplate | UnregistrableDltTemplate;
+
+/** TV6 — a v1 entry: its whole body was one variable ⇒ ⛔ registrable. */
+const dark = (category: AlertCategory): UnregistrableDltTemplate => ({
+  dltTemplateIdConfigKey: `sms.dlt.template_id.${category}`,
+  contentTemplate: null,
+  unregistrableReason: 'whole_body_variable',
+  slots: [],
+  version: 1,
+});
 
 /**
  * The v1 SMS DLT template registry — ONLY the per-member transactional categories (BigDev 2026-07-06). A
@@ -55,31 +95,11 @@ export interface DltTemplate {
  * the absence of the other 4 categories (step_up_otp + the 3 broadcasts) is STATICALLY visible.
  */
 export const SMS_DLT_TEMPLATE_REGISTRY: Readonly<Partial<Record<AlertCategory, DltTemplate>>> = {
-  deadline_reminder: {
-    dltTemplateIdConfigKey: 'sms.dlt.template_id.deadline_reminder',
-    contentTemplate: '{#var#}',
-    version: 1,
-  },
-  contribution_confirmed: {
-    dltTemplateIdConfigKey: 'sms.dlt.template_id.contribution_confirmed',
-    contentTemplate: '{#var#}',
-    version: 1,
-  },
-  contribution_mismatch: {
-    dltTemplateIdConfigKey: 'sms.dlt.template_id.contribution_mismatch',
-    contentTemplate: '{#var#}',
-    version: 1,
-  },
-  claim_status_change: {
-    dltTemplateIdConfigKey: 'sms.dlt.template_id.claim_status_change',
-    contentTemplate: '{#var#}',
-    version: 1,
-  },
-  helpdesk_reply: {
-    dltTemplateIdConfigKey: 'sms.dlt.template_id.helpdesk_reply',
-    contentTemplate: '{#var#}',
-    version: 1,
-  },
+  deadline_reminder: dark('deadline_reminder'),
+  contribution_confirmed: dark('contribution_confirmed'),
+  contribution_mismatch: dark('contribution_mismatch'),
+  claim_status_change: dark('claim_status_change'),
+  helpdesk_reply: dark('helpdesk_reply'),
 };
 
 /**
@@ -87,8 +107,11 @@ export const SMS_DLT_TEMPLATE_REGISTRY: Readonly<Partial<Record<AlertCategory, D
  * (mirrors the CONCEPT of resolveApprovedTemplate, but GLOBAL — no DB, no per-Pariwar dimension). The
  * composition seam uses this to decide SMS-eligibility: `null` ⇒ the fixture (no real SMS send). Accepts a
  * plain `string` (the alert's category as it arrives at the composition layer, mirroring
- * resolveApprovedTemplate's `string` param) — any value outside the registry keys resolves to `null`.
+ * resolveApprovedTemplate's `string` param) — any value outside the registry keys resolves to `null`, and so
+ * does a listed entry with ⛔ registrable text (Story 6.34 TV6 — all five v1 entries today).
  */
-export function resolveDltTemplate(category: string): DltTemplate | null {
-  return SMS_DLT_TEMPLATE_REGISTRY[category as AlertCategory] ?? null;
+export function resolveDltTemplate(category: string): RegistrableDltTemplate | null {
+  const entry = SMS_DLT_TEMPLATE_REGISTRY[category as AlertCategory];
+  if (entry === undefined || entry.contentTemplate === null) return null;
+  return entry;
 }

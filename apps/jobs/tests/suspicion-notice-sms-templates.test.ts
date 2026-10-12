@@ -5,10 +5,16 @@
 // once, in the order of the Panel's words; the request sheet carries the same text and key; the en words are the Panel's,
 // byte for byte (+ `{helpline}`); ⛔ no deadline threat (RB16 — `appeal_notice`'s `{date}` slot alone exempt, asserted with
 // a NON-digit marker); and `$comment.suspicion_sms` carries the NOT-YET-HUMAN-REVIEWED marker in BOTH locales.
+// ⭐ Story 6.34 (AC3; TV2 / TV4 / TV13): every entry DECLARES its slots' TRAI types — the shape check passes (incl.
+// `appeal_notice`'s three variables), the slot names are the i18n `{param}`s in order (both locales), a render through
+// the real `t()` keyed by slot NAME places each marker in slot order, and the sheet's row (found by config key) lists the
+// same types and the MSG91 `##name##` form.
 
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
+import { checkDltTemplateShape } from '@twt/channels';
+import { t } from '@twt/i18n';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -20,6 +26,8 @@ import {
   suspicionNoticeDltConfigKey,
   type SuspicionNoticeSmsMessage,
 } from '../src/scheduler/suspicion-notice-sms-templates.js';
+
+import { i18nParamNames, msg91Form, sheetRowByConfigKey } from './_dlt-template-sheet.js';
 
 const read = (rel: string) => readFileSync(fileURLToPath(new URL(rel, import.meta.url)), 'utf-8');
 const SHEET = read('../../../docs/launch-gate-inventory/dlt-template-requests-6-19.md');
@@ -126,6 +134,38 @@ describe('the suspicion notice SMS templates (RB1 — three messages × both loc
 
   it('`appeal_notice` without a date THROWS (⛔ a text with a blank date)', () => {
     expect(() => renderSuspicionNoticeSms('appeal_notice', 'en', { member: 'X', helpline: 'Y' })).toThrow();
+  });
+
+  it.each(CASES)('⭐ Story 6.34 — $message / $locale declares typed slots (TV4) and passes the shape check', ({ message, locale }) => {
+    const template = SUSPICION_NOTICE_SMS_TEMPLATES[message][locale];
+    const member = { name: 'member', type: 'alphanumeric', maxLength: 40, label: 'deceased member name' };
+    const date = { name: 'date', type: 'alphanumeric', maxLength: 10, label: 'last date to appeal (DD-MM-YYYY)' };
+    const helpline = { name: 'helpline', type: 'cbn', maxLength: 14, label: 'helpline number' };
+    expect(template.slots).toEqual(message === 'appeal_notice' ? [member, date, helpline] : [member, helpline]);
+    expect(checkDltTemplateShape(template.registeredText, template.slots)).toEqual([]);
+  });
+
+  it.each(CASES)('⭐ Story 6.34 — $message / $locale: the slot names ARE the i18n params, in order (TV13)', ({ message, locale }) => {
+    const template = SUSPICION_NOTICE_SMS_TEMPLATES[message][locale];
+    const value = CLAIM_JSON[locale][template.copyKey];
+    expect(value, `${locale}/claim.json ${template.copyKey}`).toBeTypeOf('string');
+    expect(i18nParamNames(value as string)).toEqual(template.slots.map((s) => s.name));
+    // The real t(), params keyed by SLOT NAME — a wrong name throws (a missing param); the markers land in slot order.
+    const marker = (name: string): string => `\u0001${name}\u0001`;
+    const params = Object.fromEntries(template.slots.map((s) => [s.name, marker(s.name)]));
+    const rendered = t(template.copyKey, params, { locale, namespace: 'claim' });
+    const positions = template.slots.map((s) => rendered.indexOf(marker(s.name)));
+    expect(positions.every((p) => p >= 0)).toBe(true);
+    expect([...positions].sort((a, b) => a - b)).toEqual(positions);
+    const back = template.slots.reduce((out, s) => out.replace(marker(s.name), DLT_VAR), rendered);
+    expect(back).toBe(template.registeredText);
+  });
+
+  it.each(CASES)('⭐ Story 6.34 — $message / $locale: the sheet row lists the same types in order and the MSG91 form (TV8)', ({ message, locale }) => {
+    const template = SUSPICION_NOTICE_SMS_TEMPLATES[message][locale];
+    const row = sheetRowByConfigKey(template.dltTemplateIdConfigKey);
+    expect(row.types).toEqual(template.slots.map((s) => s.type));
+    expect(row.msg91).toBe(msg91Form(template.registeredText, template.slots));
   });
 
   it.each(['en', 'hi'] as const)('⭐ `$comment.suspicion_sms` carries the NOT-YET-HUMAN-REVIEWED marker — %s (F27: ⛔ no other gate reads it)', (locale) => {

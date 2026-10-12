@@ -58,7 +58,7 @@ import {
   type ClaimCorrectionReminderDeps,
 } from './claim-correction-reminders.js';
 import { claimCorrectionHelplineConfigKey } from './claim-correction-sms-templates.js';
-import { sendClaimDltSms } from './claim-dlt-sms-send.js';
+import { helplineNotCallbackNumberWarning, sendClaimDltSms } from './claim-dlt-sms-send.js';
 import {
   SUSPICION_NOTICE_SMS_TEMPLATES,
   formatAppealUntil,
@@ -443,6 +443,8 @@ export async function runSuspicionNoticeChild(
   // The core's detail is RAW (a gateway `<code>` can be any string — a phone number included): ⛔ stored, alarmed or thrown as is.
   const detail = result.detail === null ? null : claimDomain.suspicionNoticeDetail({ kind: 'send', detail: result.detail });
   if (result.kind === 'transient') return transient(detail!);
+  // Story 6.34 (`-322` C1): sent as today; ONE warning, ⛔ an outcome change (⛔ `helplineGap` — it checks presence only).
+  if (result.helplineNotCallbackNumber === true) alarm(helplineNotCallbackNumberWarning(pid, `suspicion notice (${p.purpose})`));
   if (result.outcome !== 'accepted' && result.alarm) {
     alarm(`[jobs] claim-suspicion-notice: ${detail!} for the ${tag} — recorded error (fail-closed)`);
   }

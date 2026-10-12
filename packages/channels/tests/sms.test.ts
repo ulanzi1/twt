@@ -19,6 +19,7 @@ import {
   type SmsMessagingHandle,
   type SendTarget,
 } from '../src/index.js';
+import { resolveSmsProviderDeps } from '../src/composition/provider-composition.js';
 import { announcement, claimStatusChange } from './fixtures.js';
 
 const TARGET: SendTarget = { channel: 'sms', address: '+919999999999' };
@@ -240,22 +241,44 @@ describe('createSmsAppClient — thin fetch gateway client (AC1, AC2)', () => {
   });
 });
 
+const V1_CATEGORIES = [
+  'deadline_reminder',
+  'contribution_confirmed',
+  'contribution_mismatch',
+  'claim_status_change',
+  'helpdesk_reply',
+] as const;
+
 describe('DLT template registry — SMS-eligibility (AC2)', () => {
-  it('resolves a template for exactly the 5 confirmed per-member transactional categories', () => {
-    for (const category of [
-      'deadline_reminder',
-      'contribution_confirmed',
-      'contribution_mismatch',
-      'claim_status_change',
-      'helpdesk_reply',
-    ] as const) {
-      const template = resolveDltTemplate(category);
-      expect(template, category).not.toBeNull();
-      expect(template!.dltTemplateIdConfigKey).toContain(category);
-      expect(template!.version).toBeGreaterThanOrEqual(1);
+  // ⭐ Story 6.34 (TV6 / AC5): the 5.6 set stays LISTED (size 5, each key) but every entry is DARK — its whole body was
+  // one variable (⛔ registrable under TRAI's 18 Nov 2025 Direction) ⇒ `resolveDltTemplate` ⇒ `null` ⇒ the fixture.
+  it('lists exactly the 5 confirmed per-member transactional categories — each DARK: null text, a reason, ⛔ slots, resolved to null', () => {
+    for (const category of V1_CATEGORIES) {
+      const entry = SMS_DLT_TEMPLATE_REGISTRY[category];
+      expect(entry, category).toEqual({
+        dltTemplateIdConfigKey: `sms.dlt.template_id.${category}`,
+        contentTemplate: null,
+        unregistrableReason: 'whole_body_variable',
+        slots: [],
+        version: 1,
+      });
+      expect(resolveDltTemplate(category), category).toBeNull();
     }
     expect(Object.keys(SMS_DLT_TEMPLATE_REGISTRY)).toHaveLength(5);
   });
+
+  it.each(V1_CATEGORIES)(
+    '⭐ AC5 — %s with its id PROVISIONED still composes ⛔ real provider: null deps AND resolveConfig ⛔ called (`-322` C8)',
+    async (category) => {
+      // ⚠ The fixture and the real provider share `id: 'sms-dlt'` — the observable proof is that the template id was
+      // never even read, and the deps are null.
+      const resolveConfig = vi.fn().mockResolvedValue('DLT_PROVISIONED_ID');
+      const appClient = { isConfigured: () => true, messaging: vi.fn() };
+      expect(await resolveSmsProviderDeps({ appClient, resolveConfig }, category)).toBeNull();
+      expect(resolveConfig).not.toHaveBeenCalled();
+      expect(appClient.messaging).not.toHaveBeenCalled();
+    },
+  );
 
   it('returns null for NON-eligible categories (OTP + the 3 broadcasts) ⇒ not SMS-eligible', () => {
     for (const category of ['step_up_otp', 'alert_published', 'module_new', 'niyamavali_amended'] as const) {

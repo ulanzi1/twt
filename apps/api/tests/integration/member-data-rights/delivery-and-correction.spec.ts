@@ -854,6 +854,10 @@ describe.skipIf(!hasDatabase)('Story 10.21 AC-R1/AC-R2 — delivery + correction
     // `deps.adminStepUpDelivery` the operator's OWN elevation OTP rides (see `elevate()` above).
     const code = td.stepUpDelivery.last?.code as string;
     expect(code).toBeTruthy();
+    // Story 6.34 TV9 (AC8): the data-export OTP keeps today's step-up text (its "3 min" understatement is RECORDED in
+    // deferred-work — a third template would be a third registration) — ⛔ template override.
+    expect(td.stepUpDelivery.last).toMatchObject({ intent: 'step_up' });
+    expect(td.stepUpDelivery.last).not.toHaveProperty('template');
 
     // ⚠ Raw `app.inject` here, not the `makeClient` cookie-jar wrapper (used elsewhere in this file)
     // — the wrapper's `InjectResult` exposes `statusCode`/`json()`/`body`/`headers` but ⛔ no raw bytes, and this

@@ -22,6 +22,13 @@
 // ── The single variable slot = the 6-digit OTP code (mirror 5.6's single-`{{1}}` DLT shape) ─────────────
 // `{#var#}` marks the ONE variable slot the rendered SMS body fills with the code. The OTP code is a SECRET:
 // it appears ONLY in the outbound SMS body, NEVER in a log / audit / render-hash / the `step_up_otps` row.
+// Story 6.34 (TV3; `-313`, `-322` C5): the slot is TYPED numeric (TRAI Annexure-I) and NAMED `otp` (TV13) —
+// declared in `slots`, ⛔ in the text: on STPL's SmartPing portal the text keeps the untyped marker and the type
+// is selected beside it (registration sheet templates 15 / 16, category Transactional). The marker is the ONE
+// vocabulary's (`dlt-variables.ts`) — ⚠ never "tidy" it into a typed tag: `renderOtpBody` would stop inserting
+// the code and the SMS would go out with ⛔ code. `version` stays 1 — the registered text is unchanged.
+
+import { DLT_VAR, type DltSlot } from './dlt-variables.js';
 
 /** The OTP delivery intent — selects one of the two separately-registered OTP DLT templates. */
 export type OtpIntent = 'login' | 'step_up';
@@ -41,10 +48,15 @@ export interface OtpDltTemplate {
   readonly contentTemplate: string;
   /** The template version (bumped when the registered content text changes). */
   readonly version: number;
+  /** The declared variables, in text order (Story 6.34 TV3) — ONE numeric slot named `otp`. */
+  readonly slots: readonly DltSlot[];
 }
 
-/** The variable-slot marker the rendered body substitutes the code into (mirror the registry's `{#var#}`). */
-const OTP_VAR_SLOT = '{#var#}';
+/** The variable-slot marker the rendered body substitutes the code into — the ONE vocabulary's marker. */
+const OTP_VAR_SLOT = DLT_VAR;
+
+/** The OTP's one variable: the 6-digit code, typed numeric (`-322` C5). */
+const OTP_SLOTS: readonly DltSlot[] = [{ name: 'otp', type: 'numeric', maxLength: 6, label: 'OTP code' }];
 
 /**
  * The v1 OTP DLT template registry — TWO separately-registered templates keyed by intent (BigDev
@@ -56,11 +68,13 @@ export const OTP_DLT_TEMPLATE_REGISTRY: Readonly<Record<OtpIntent, OtpDltTemplat
     dltTemplateIdConfigKey: 'sms.dlt.template_id.otp_login',
     contentTemplate: `${OTP_VAR_SLOT} is your TWT login code. Valid 5 min. Do not share.`,
     version: 1,
+    slots: OTP_SLOTS,
   },
   step_up: {
     dltTemplateIdConfigKey: 'sms.dlt.template_id.otp_step_up',
     contentTemplate: `${OTP_VAR_SLOT} is your TWT verification code. Valid 3 min. Do not share.`,
     version: 1,
+    slots: OTP_SLOTS,
   },
 };
 

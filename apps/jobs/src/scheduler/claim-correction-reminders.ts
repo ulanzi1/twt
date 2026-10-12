@@ -77,7 +77,7 @@ import {
   type ClaimCorrectionSmsLocale,
   type ClaimCorrectionSmsMessage,
 } from './claim-correction-sms-templates.js';
-import { sendClaimDltSms, type ClaimCorrectionSmsResult } from './claim-dlt-sms-send.js';
+import { helplineNotCallbackNumberWarning, sendClaimDltSms, type ClaimCorrectionSmsResult } from './claim-dlt-sms-send.js';
 
 // ── Operational knobs ────────────────────────────────────────────────────────────────────────────────────────
 
@@ -203,8 +203,9 @@ function alarmOf(deps: ClaimCorrectionReminderDeps): (m: string) => void {
  * ⭐ SEND ONE CLAIM-CORRECTION SMS (D7 — a DIRECT DLT SMS to an explicit E.164 number; ⛔ not `dispatch()`, ⛔ not an
  * Alert). Since Story 6.24b (RB4) a WRAPPER over the shared core `sendClaimDltSms` (`claim-dlt-sms-send.ts`), which holds
  * the fail-closed rules and the provider-result classification ONCE — behaviour byte-identical (proved by
- * `claim-correction-send.test.ts`, UNEDITED). This wrapper keeps the 6.19 registry lookup and the `{ reference, helpline }`
- * render.
+ * `claim-correction-send.test.ts`, UNEDITED by 6.24b). ⭐ Story 6.34 (`-322` C1) EDITED that test: its default helpline
+ * fixture is digits-only, and new legs prove a malformed helpline is sent unchanged with `helplineNotCallbackNumber` on the
+ * result (each caller warns). This wrapper keeps the 6.19 registry lookup and the `{ reference, helpline }` render.
  */
 export async function sendClaimCorrectionSms(
   deps: Pick<ClaimCorrectionReminderDeps, 'smsAppClient' | 'resolveConfig' | 'sendTimeoutMs'>,
@@ -420,6 +421,8 @@ export async function runCorrectionFamilySmsChild(
     e164,
   });
   if (result.kind === 'transient') return transient(result.detail);
+  // Story 6.34 (`-322` C1): sent as today; ONE warning, ⛔ an outcome change.
+  if (result.helplineNotCallbackNumber === true) alarm(helplineNotCallbackNumberWarning(pid, 'correction reminder'));
   if (result.outcome !== 'accepted' && result.alarm) {
     alarm(`[jobs] claim-correction-sms: ${result.detail} for claim ${p.claimCaseId} run ${p.runId} — recorded error (fail-closed)`);
   }

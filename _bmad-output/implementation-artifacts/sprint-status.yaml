@@ -1,3 +1,9 @@
+# last_updated: 2026-10-12m (⭐ **STORY 6.27a — DEV STARTED (`bmad-dev-story 6.27a`, branch `story/6-27a` from `main` `7120ac20`);
+# `6-27-peer-mesh-sending-replies-and-date-of-death` `ready-for-dev` → `in-progress`.** Task 0.0 (⛔ no code moved since the re-pin base
+# `51b9000a`), Task 0.5 (`epics.md` — `### Story 6.27a` / `6.27b` / `6.27d` / `6.27c` after 6.26b, a dated source line each; Story 6.6's
+# and Story 6.10's AC2 (c) ANNOTATED, ⛔ never rewritten), Task 0.6 (roster Rows 27 `peer-mesh-request-counsel-basis` and 28
+# `peer-mesh-request-hindi-human-review` written at their `-305` §4 numbers — (c) / (g) Closed by `-303` / `-310`; a line on Row 26),
+# Task 0.7 (this line). b / c / d stay `backlog`.)
 # last_updated: 2026-10-12l (⭐ **STORY 6.27a — THE v2.10 / v2.11 VALIDATE (one fresh-context reviewer): 0 BLOCKER / 0 HIGH / 6 MEDIUM /
 # 3 LOW, ALL APPLIED (v2.12); ⛔ no row moves.** NW1 has five entries (⛔ not six); OP13's mid-window closure is the allowed suspicion
 # appeal (`suspicion_appeal_allowed`); AC4's closure legs reach Task 3; Task 5's route-map amend list and header bullet corrected; the home
@@ -19836,7 +19842,7 @@ development_status:
   # ⚠ 2026-10-06 (validate v2.3–v2.5): `2026-10-06-283` amends `-282` GI2/GI3/GI5/GI6/GI16 and `-284` amends `-283` (GI5, GI7, E5) — build
   # from the story files' `⚠ AMENDED by -283` / `-284` lines. Validate rounds STOPPED at round 3 (⛔ no BLOCKER / HIGH).
   6-26b-death-facts-warnings-and-register-check: done
-  6-27-peer-mesh-sending-replies-and-date-of-death: ready-for-dev
+  6-27-peer-mesh-sending-replies-and-date-of-death: in-progress
   # ⭐ 2026-10-10 SPLIT (`2026-10-10-305` §2 item 1; BigDev: "Four parts (Recommended)"): the row above is STORY 6.27a (keeps its key — the
   # rulings cite it) and holds the ONE shared PM1–PM25 block. b / d stay `backlog` until 6.27a is `done`; c (sending) stays `backlog`
   # until 6.27b, 6.27d AND row 6-30 are `done` — so every safety piece exists before a real answer arrives.

@@ -845,11 +845,11 @@ member's terms:
 
 ## Tasks / Subtasks (6.27a — Task 0 is shared by 6.27a–d)
 
-- [ ] **Task 0 — governance FIRST (AC1).** ⛔ No code in any part.
+- [x] **Task 0 — governance FIRST (AC1).** ⛔ No code in any part.
   - [x] 0.1 The Panel's rulings put and transcribed — `2026-10-10-303` (Q1, Q2), `2026-10-10-304` (Q3–Q8).
   - [x] 0.2 The validate's corrections and BigDev's calls recorded — `2026-10-10-305` (`fa2687ce`); the confirm note CF1–CF3 written
         (`trustee-panel-routing-note-2026-10-10-6-27-confirms.md` — owed before Row 27 closes, ⛔ not blocking).
-  - [ ] 0.0 Branch: rebase / fast-forward the build branch onto the governance tip (or `main` once merged); verify this file reads v2.5 or later.
+  - [x] 0.0 Branch: rebase / fast-forward the build branch onto the governance tip (or `main` once merged); verify this file reads v2.5 or later.
   - [x] 0.3 Put PM1–PM25 to BigDev — ✅ answered in session 2026-10-10: all as written except PM1 (*"you should replace"*) and PM2
         (*"send through alert as well"* → *"In-app alert only"*); PM16 / PM25 *"Accept all as recommended"*.
   - [x] 0.4 ✅ `2026-10-10-311` (`082ab743`), committed ALONE. ONE author-commit (the next id after `-305`) recording PM1–PM25 as answered AND these author readings: the *"TWT:"* prefix
@@ -861,11 +861,11 @@ member's terms:
         living in 6.27c (PM4); ⭐ v1 EXEMPT from the seven-key rule and the `ground_inspection` kind's rule left to 6-32 (PM23 (a)); the
         answer window extracted as ONE predicate (PM8); `counselBasis` as a state with the served-definition skip (PM23 (a)) — committed ALONE; stage in the scratchpad, try the insert first
         ([[project_decision_log_writes_user_inserted]]).
-  - [ ] 0.5 epics.md entries `### Story 6.27a` … `6.27d` (after 6.26b; a dated source line, ⛔ never a merge fence); annotate Story 6.6's AC
+  - [x] 0.5 epics.md entries `### Story 6.27a` … `6.27d` (after 6.26b; a dated source line, ⛔ never a merge fence); annotate Story 6.6's AC
         (*"pinged via Story 5.1 dispatcher"* → the ruled text) and Story 6.10's AC2(c) — ⛔ never rewrites. ⭐ 6.27a OWNS these annotations
         (6.27c only checks them).
-  - [ ] 0.6 Roster Rows 27 / 28 at their reserved numbers (PM16); a line on Row 26 (jobs-db-role) and Row 22's precedent.
-  - [ ] 0.7 Sprint ledger line ([[project_sprint_status_ledger]], [[project_sprint_status_safe_prepend]]).
+  - [x] 0.6 Roster Rows 27 / 28 at their reserved numbers (PM16); a line on Row 26 (jobs-db-role) and Row 22's precedent.
+  - [x] 0.7 Sprint ledger line ([[project_sprint_status_ledger]], [[project_sprint_status_safe_prepend]]).
 - [ ] **Task 1 — the questionnaire engine (AC2).** FIRST extract `isRealCalendarDate` into `cycle-calendar/holiday-resolver.ts` (re-exported
       from `nominee-determination-persist.ts`, the same identity — F38), and extract the ANSWER WINDOW predicate into `claim/answer-window.ts`
       (`isClaimInAnswerWindow`; `ground-inspection-persist.ts` re-exports it as `isClaimInGroundInspectionWindow` — same identity; PM8) AND its

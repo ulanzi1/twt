@@ -2543,6 +2543,12 @@ So that mismatches are flagged for human review before verification proceeds and
 > **warning** to the District Admin — the peer mesh is a **signal, ⛔ not a gate**. ⚠ **Found 2026-09-28:** this story shipped the
 > selection and the recorded requests only — ⛔ nothing sends them, ⛔ nothing can reply, ⛔ staff cannot see replies. Owned by row
 > `6-27-peer-mesh-sending-replies-and-date-of-death`.
+>
+> ⚠ **ANNOTATION 2026-10-12 (Story 6.27a Task 0.5; [`-303`](../../.decision-log.md#decision-2026-10-10-303) Q1 A, [`-304`](../../.decision-log.md#decision-2026-10-10-304)
+> Q6 A) — ⛔ not rewritten.** *"pinged via Story 5.1 dispatcher"* below is superseded in fact by the ruled text: each of the five is sent
+> ONE DLT text naming the member, with a link and the helpline (*"… please answer a few short questions …"*), through the claim SMS send
+> core — ⛔ never `dispatch()` (Story 6.27c); the question asked is the versioned questionnaire of Story 6.27a (`-304`), ⛔ not the single
+> question below.
 
 As the verification engine processing a claim,
 I want a peer mesh that deterministically selects the 5 nearest members and pings them for verification,
@@ -2625,6 +2631,12 @@ So that public-transparency surfaces (Epic 11b) can publish lawfully and consent
 **And** revocation of any of these (Story 2.7 `revokeConsent`) is honored — e.g., if a family later revokes Sahyog Vivran publication, the page is taken down (Epic 11b consumer)
 
 ### Story 6.10: Verifier Console Signals Panel ~5s Load + Cross-Pariwar Scope Handling (UX-DR39 — ₹50L Design Budget) `[SURFACE]`
+
+> ⚠ **ANNOTATION 2026-10-12 (Story 6.27a Task 0.5; [`-311`](../../.decision-log.md#decision-2026-10-10-311) PM13, PM25 (c)) — ⛔ not
+> rewritten.** AC2's section (c) *"peer mesh responses with verifier annotations (transcripts, not just counts)"*: Story 6.27a shows the
+> neighbours' answers (each live answer, how and when saved, the send status, the 72-hour line); the verifier ANNOTATIONS stay
+> `not_available_yet` (staff note capture is ⛔ not built). For an actor holding an un-completed ground-inspection assignment with ⛔ no
+> completed full visit, section (c) is ABSENT.
 
 As Anita (a verifier at the District Admin level) reviewing a claim case,
 I want a signals panel that loads in ~5 seconds and surfaces every relevant signal — peer mesh responses, ground inspection notes/photos, OCR parity, Validity Service payload, concealment flags, prior case precedents — all on one screen with cross-Pariwar scope unmistakable,
@@ -3176,6 +3188,77 @@ could ⛔ not be checked online; three new warnings under the one rule (a differ
 match the current copy; the register does ⛔ not match) — approving while one shows needs a reason and a note from every approver, and one
 that appears after the District Admin approved waits for their reason and is listed in their correction queue; "could ⛔ not be checked" is
 ⛔ never a warning. The system still refuses ⛔ nothing.
+
+### Story 6.27a: The Five Neighbours Can Answer — a Versioned Questionnaire in the App and by the Helpline, Saved as They Go, and the District Admin Sees Every Answer `[SURFACE]`
+
+> ⚠ **Minted by Trustee ruling, ⛔ not by the original epic plan** (source line dated 2026-10-12, Story 6.27a Task 0.5 — ⛔ never a merge
+> fence) — [`-263`](../../.decision-log.md#decision-2026-09-28-263) FINDING + FQ10 A, [`-262`](../../.decision-log.md#decision-2026-09-28-262)
+> FQ8 E, [`-264`](../../.decision-log.md#decision-2026-09-28-264) FQ12, [`-303`](../../.decision-log.md#decision-2026-10-10-303) Q1 A / Q2 A,
+> [`-304`](../../.decision-log.md#decision-2026-10-10-304) Q3–Q8 and [`-310`](../../.decision-log.md#decision-2026-10-10-310) CF1–CF5; the
+> author's decisions are [`-305`](../../.decision-log.md#decision-2026-10-10-305) and [`-311`](../../.decision-log.md#decision-2026-10-10-311)
+> (PM1–PM25, the [a] ones built here); PM8's R9 arm ratified by [`-324`](../../.decision-log.md#decision-2026-10-12-324) A. Row
+> `6-27-peer-mesh-sending-replies-and-date-of-death` (the row keeps its key — the rulings cite it). Split four ways by `-305` §2 item 1:
+> a → (b ∥ d) → c. Full ACs and the ONE shared PM record: `_bmad-output/implementation-artifacts/6-27-peer-mesh-sending-replies-and-date-of-death.md`.
+> Its go-live records are roster Rows 27 (`peer-mesh-request-counsel-basis`) and 28 (`peer-mesh-request-hindi-human-review`).
+
+As one of the five members the Trust asks about a reported death, I want to answer a few short questions in a minute, in the app or by
+phoning the helpline, with every answer saved as I go, so that the Trust hears from people who knew the member before it pays a family —
+and as the District Admin, I want to see each neighbour's answers on the claim, so that I can weigh them beside the ground inspection,
+⛔ never as a reason to refuse a family on a neighbour's word alone.
+
+**Acceptance Criteria (in brief):** the questionnaire is versioned DATA in a pure domain module (v1 and the ruled v2; a validator that
+refuses a version missing a ruled question, a warning on any question but *"has died"* and the date, an alcohol question, or a health
+question without counsel's basis; a health question whose basis is pending is ⛔ never served); replies and append-only answers stored
+per request, the sensitive ones encrypted, saved as the member goes and locked at Submit; answers are taken while an approval is still
+to come (the answer window), never after the final approval; the member's screens and the helpline's recording show a request ONLY once
+it was texted (DARK until 6.27c); the District Admin's console shows every answer, its send status and the 72-hour line; erasure scrubs
+the answers. ⛔ No text is sent, ⛔ no warning is raised, ⛔ no inspector screen changes in this part.
+
+### Story 6.27b: A Neighbour's "Has Not Died" or a Differing Date Becomes a Warning — the Late Wait, the Correction Queue, and Every Approver Sees the Answers `[SURFACE]`
+
+> ⚠ **Minted by Trustee ruling** (source line dated 2026-10-12, Story 6.27a Task 0.5) — `-263` FQ10 A, `-262` FQ8 E, `-264` FQ12,
+> [`-303`](../../.decision-log.md#decision-2026-10-10-303) Q2 A; author decisions `-311` PM9, PM10, PM24, PM25 (the kinds filter). Row
+> `6-27b-peer-mesh-warnings-wait-and-approvers-view`; it starts only when 6.27a is `done`. Full ACs:
+> `_bmad-output/implementation-artifacts/6-27b-peer-mesh-warnings-wait-and-approvers-view.md` (the 6.27a file is the record).
+
+As the District Admin — and every approver after me — I want a neighbour's *"they have not died"*, or a date of death two or more days
+from the accepted certificate's, to be a warning that needs my reason and note, and one that arrives after the District Admin approved to
+make the final approval wait for them, so that ⛔ no neighbour's doubt is approved past unseen — while ⛔ no family is ever refused on it.
+
+**Acceptance Criteria (in brief):** two new warning kinds under the ONE rule (keyed by the live answer); both warning readers share one
+derivation; a late key enters the wait and the correction queue's late arm; every approver at their step reads the answers through one
+audited read; the inspector who has ⛔ not completed a full visit sees ⛔ neither kind. The system still refuses ⛔ nothing.
+
+### Story 6.27d: The Inspector Is Shown Only Where the Family and the Neighbours Differ — After Completing Their Own Record `[SURFACE]`
+
+> ⚠ **Minted by Trustee ruling** (source line dated 2026-10-12, Story 6.27a Task 0.5) — [`-304`](../../.decision-log.md#decision-2026-10-10-304)
+> Q3 / Q4 (the inspector asks the family the same question), `-305` §2 item 3 (asked open-ended); author decision `-311` PM25 (a). Row
+> `6-27d-inspector-discrepancy-at-completion`; it starts only when 6.27a is `done`. Full ACs:
+> `_bmad-output/implementation-artifacts/6-27d-inspector-discrepancy-at-completion.md` (the 6.27a file is the record).
+
+As the inspector who meets the family, I want to form my own view first, and only after I complete my record be shown THAT the family
+and a neighbour differ — ⛔ never what the neighbour said or who — so that I can ask the family again, in my own words.
+
+**Acceptance Criteria (in brief):** ⛔ nothing about the neighbours before completion; at completion, ① *"has not died"* and ② a date two
+or more days from the family's are compared by index (⛔ no decrypt); a difference shows the open-ended prompt and one note box per
+question; the showing is recorded after the completion commits and recomputed if lost; cause and illness are ⛔ not compared (owed by
+row 6-32); ⛔ never the medical declaration.
+
+### Story 6.27c: The Five Are Texted — One DLT Text With a Link and the Helpline, in the Pariwar's Language, While an Answer Can Still Be Taken `[SURFACE]`
+
+> ⚠ **Minted by Trustee ruling** (source line dated 2026-10-12, Story 6.27a Task 0.5) — [`-303`](../../.decision-log.md#decision-2026-10-10-303)
+> Q1 A and its language rider (narrowed for a time by `-305` §2 item 2; `-310` CF1 A), `-304` Q6 A (*"a few short questions"*); author
+> decisions `-311` PM1–PM5, PM14–PM16, PM21, PM22; `-322` C6 (it uses 6.34's typed-variable vocabulary). Row
+> `6-27c-peer-mesh-sending-texts-and-links`; LAST — it starts only when 6.27b, 6.27d, rows 6-30, 6-34 and 6-36 are `done`. Full ACs:
+> `_bmad-output/implementation-artifacts/6-27c-peer-mesh-sending-texts-and-links.md` (the 6.27a file is the record).
+
+As the Trust, I want each of the five chosen neighbours texted once — naming the member, with a link to the questions and the helpline —
+so that the check with neighbours actually reaches people, and ⛔ no text says more than the Panel ruled.
+
+**Acceptance Criteria (in brief):** one DLT text per request through the existing send core, once ever (a CAS), within quiet hours, only
+while the claim's answer window is open; a skipped neighbour is replaced from the same group; the link is the app link with a random code;
+the sweep HOLDS on any config gap — incl. a health question whose counsel basis is pending — ⛔ never a broken text; ids only in alarms.
+⭐ Its texts wait for roster Row 27; go-live gates ⛔ never block a merge.
 
 ### Story 6.24a: The True Nominee's Refile After a Suspicion Refusal — Kept Apart, Waiting at Final Approval for the Appeal, Closed if the Appeal Is Allowed, and the 90-Day Appeal Limit `[SURFACE]`
 

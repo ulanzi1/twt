@@ -1,3 +1,8 @@
+# last_updated: 2026-10-13g (STORY 6.27b — v3.4: a ROUND-4 fresh-context re-validate found ⛔ no BLOCKER / HIGH; 2 MEDIUM + 5 LOW fixed in
+# the story (the R11 console spec seeds an untexted ping ⇒ red by design under the never-texted rule — amend the fixture, ⛔ never the rule;
+# AC1 names `-329`). ⚠ Correction to 2026-10-13f: its quoted words paraphrased 2026-10-13e, which actually reads "the number is seen on a
+# 'Yes' by the District Admin, the district's verifiers and the Pariwar Admin, and by the Super Admin on ANY answer" — read with `-329`.
+# Row `6-27b-peer-mesh-warnings-wait-and-approvers-view` STAYS `ready-for-dev`. ⛔ No other row moves.)
 # last_updated: 2026-10-13f (STORY 6.27b — v3.3: ERRATUM `2026-10-13-329` (`4251d8ca`, author-commit, committed ALONE) to the Panel's
 # `-328`, after a fresh-context re-validate found `-328` had recorded Q1 C WITHOUT its condition. Q1 C in full: the Pariwar Admin sees a
 # neighbour's number ONLY for a "Yes" to the NEW words; a "Yes" to the old words stays with the District Admin, the district's verifiers

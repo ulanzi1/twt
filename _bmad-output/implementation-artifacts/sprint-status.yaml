@@ -1,3 +1,12 @@
+# last_updated: 2026-10-13f (STORY 6.27b — v3.3: ERRATUM `2026-10-13-329` (`4251d8ca`, author-commit, committed ALONE) to the Panel's
+# `-328`, after a fresh-context re-validate found `-328` had recorded Q1 C WITHOUT its condition. Q1 C in full: the Pariwar Admin sees a
+# neighbour's number ONLY for a "Yes" to the NEW words; a "Yes" to the old words stays with the District Admin, the district's verifiers
+# and the Super Admin. BigDev: the new words ship as questionnaire `peer_mesh.v3` (v2 historical, like v1); the Super Admin sees the
+# number only for a neighbour actually TEXTED, whatever the answer (BigDev's reading, ⛔ not Panel words). ⚠ 2026-10-13e's "shown on a
+# 'Yes' to the District Admin, the district's verifiers and the Pariwar Admin, and to the Super Admin on ANY answer" is read with `-329`
+# (`-327` decision 1 itself was superseded by `-328`). Story Task 3c rewritten as the v3 mint. A second fresh-context re-validate ran
+# BEFORE the commit and its findings were applied. Row `6-27b-peer-mesh-warnings-wait-and-approvers-view` STAYS `ready-for-dev`.
+# ⛔ No other row moves.)
 # last_updated: 2026-10-13e (STORY 6.27b — THE PANEL RULED the 2026-10-13 call-back-number note: `2026-10-13-328` (`c1900b89`,
 # Trustee-ratified, DR + KB). The neighbours' question becomes "May the Admin phone you about this?" (the District Admin and the Pariwar
 # Admin — amends `-304` Q6 A); the number is seen on a "Yes" by the District Admin, the district's verifiers and the Pariwar Admin, and by

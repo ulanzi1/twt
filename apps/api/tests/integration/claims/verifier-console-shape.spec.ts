@@ -322,6 +322,7 @@ describe.skipIf(!hasDatabase)('Verifier-console compound shape (AI-6-3 class) â€
         actorId: randomUUID(),
         grants: [{ pariwarId, role: 'super_admin', scopeDimension: 'global', scopeValue: null }],
         traceId: null,
+        onCallbackMobileShown: () => {},
       });
       await closeScopeTx(scopeTx, true);
       return packet;

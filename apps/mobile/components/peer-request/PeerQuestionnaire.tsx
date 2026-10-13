@@ -19,7 +19,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { BackHandler, ScrollView } from 'react-native'
 import { useRouter } from 'expo-router'
-import { useNavigation, usePreventRemove } from '@react-navigation/native'
+import { useIsFocused, useNavigation, usePreventRemove } from '@react-navigation/native'
 import { PeerAnswerEditor } from '@twt/api-client'
 import { Button, Input, Paragraph, Text, XStack, YStack } from 'tamagui'
 import { useLocale } from '@twt/i18n/react'
@@ -58,12 +58,18 @@ export function PeerQuestionnaire({
 }): React.ReactElement {
   const t = useClaimT()
   const { data, isLoading, error, refetch } = usePeerRequestQuery(pariwarId, pingId)
+  // Did a "Loading…" (or an error) line precede the questionnaire in this screen? (W3)
+  const sawPlaceholder = useRef(false)
 
-  if (isLoading) return <Paragraph p="$4">{t('peer_request.loading')}</Paragraph>
+  if (isLoading) {
+    sawPlaceholder.current = true
+    return <Paragraph p="$4">{t('peer_request.loading')}</Paragraph>
+  }
   const status = (error as { status?: number } | null)?.status
   // Keep the existing editor through a transient background GET failure; its saves still settle.
   const retainLoaded = data !== undefined && classifyFailure(error) === 'retry' && status !== 401 && status !== 403
   if ((error && !retainLoaded) || !data) {
+    sawPlaceholder.current = true
     const failure = classifyFailure(error)
     if (failure === 'not_openable') return <PeerRequestNotOpenable messageKey="peer_request.not_openable" />
     if (failure === 'no_longer_open' || failure === 'submitted') return <PeerRequestNotOpenable messageKey="peer_request.no_longer_open" />
@@ -77,7 +83,7 @@ export function PeerQuestionnaire({
       </YStack>
     )
   }
-  return <Questionnaire pariwarId={pariwarId} pingId={pingId} detail={data} onBack={onBack} />
+  return <Questionnaire pariwarId={pariwarId} pingId={pingId} detail={data} onBack={onBack} openedWithoutLoading={!sawPlaceholder.current} />
 }
 
 function Questionnaire({
@@ -85,22 +91,31 @@ function Questionnaire({
   pingId,
   detail,
   onBack,
+  openedWithoutLoading,
 }: {
   readonly pariwarId: string
   readonly pingId: string
   readonly detail: PeerRequestDetailResponse
   readonly onBack: () => void
+  /** The questionnaire IS the screen's first render (no "Loading…" before it) — W3. */
+  readonly openedWithoutLoading: boolean
 }): React.ReactElement {
   const t = useClaimT()
   const router = useRouter()
   const navigation = useNavigation()
+  const isFocused = useIsFocused()
   const { locale } = useLocale()
   const save = useSavePeerAnswer(pariwarId, pingId)
   const submit = useSubmitPeerReply(pariwarId, pingId)
 
   const [pageIndex, setPageIndex] = useState(0)
   const [phase, setPhase] = useState<Phase>(() => detail.submitted ? 'no_longer_open' : 'pages')
-  const [notice, setNotice] = useState<string | null>(null)
+  // ⭐ Fifth-pass review W2 — THREE separate lines, ⛔ one overloaded notice whose effects kept overwriting each other:
+  //   · the FAILURE line is DERIVED from the editor (⛔ state, ⛔ effect) — it exists exactly while a refused answer does;
+  //   · the ACTION line ("please answer this", "you typed a date…") is a copy KEY, set by the member's own presses;
+  //   · the UNSAVED warning ("please wait…") is a flag beside the leave offer, cleared once nothing is unresolved.
+  const [actionNotice, setActionNotice] = useState<'peer_request.required' | 'peer_request.date_unsaved' | null>(null)
+  const [unsavedWarning, setUnsavedWarning] = useState(false)
   const [submitFailed, setSubmitFailed] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   // A date TYPED but ⛔ saved — an unresolved edit, ⛔ silently dropped (review S35).
@@ -142,24 +157,36 @@ function Questionnaire({
   useEffect(() => {
     editor.replaceFromServer(detail.answers)
   }, [editor, detail.answers])
+  // The newest refused answer, NAMED — it may be on an earlier page (review S32). The editor keeps the newest failure
+  // LAST and `state.error` is its error (V5). Derived, so ⛔ effect can overwrite or wipe it (W2).
+  const newestFailedKey = [...state.failed].at(-1) ?? null
+  const failure = state.error === null ? null : classifyFailure(state.error)
+  const failedQuestion = allQuestions.find((x) => x.key === newestFailedKey)
+  const failureNotice =
+    failure === null || failure === 'not_openable' || failure === 'no_longer_open' || failure === 'submitted'
+      ? null
+      : failedQuestion
+        ? t('peer_request.invalid_named', { question: wordsIn(failedQuestion.words, locale) })
+        : t('peer_request.invalid')
+  // A failure that CLOSES the request switches the phase — the only thing this effect does.
   useEffect(() => {
-    if (state.error === null) {
-      if (state.failed.size === 0 && leaveTo === null) setNotice(null)
-      return
-    }
-    const failure = classifyFailure(state.error)
     if (failure === 'not_openable') setPhase('not_openable')
     else if (failure === 'no_longer_open' || failure === 'submitted') setPhase('no_longer_open')
-    else {
-      // NAME the refused question — it may be on an earlier page (review S32).
-      const failedKey = [...state.failed][0]
-      const q = allQuestions.find((x) => x.key === failedKey)
-      setNotice(q ? t('peer_request.invalid_named', { question: wordsIn(q.words, locale) }) : t('peer_request.invalid'))
-    }
-  }, [state.error, state.failed, locale])
+  }, [failure])
   const busy = state.pending > 0 || state.failed.size > 0 || dirtyDates.size > 0
+  // "You typed a date but did not save it" goes as soon as NO date is unsaved — cleared, saved, or retyped as the saved
+  // day (fifth-pass follow-up X4: it outlived the date it was about).
+  useEffect(() => {
+    if (dirtyDates.size === 0) setActionNotice((n) => (n === 'peer_request.date_unsaved' ? null : n))
+  }, [dirtyDates.size])
+  // Once NOTHING is unresolved (and ⛔ Submit is running), the leave offer and its "please wait" go (U5 (b), W2).
+  useEffect(() => {
+    if (busy || isSubmitting) return
+    setLeaveTo(null)
+    setUnsavedWarning(false)
+  }, [busy, isSubmitting])
   usePreventRemove((phase === 'pages' || phase === 'closing') && (busy || isSubmitting) && !allowLeave, ({ data }) => {
-    setNotice(t('peer_request.unsaved'))
+    setUnsavedWarning(true)
     if (!isSubmitting) setLeaveTo(() => () => navigation.dispatch(data.action))
   })
   useEffect(() => {
@@ -167,6 +194,8 @@ function Questionnaire({
     const go = pendingLeave.current
     pendingLeave.current = null
     go()
+    // ⭐ Third-pass review U7: the guard comes BACK — should the leave ⛔ unmount this screen, it is ⛔ left unguarded.
+    setAllowLeave(false)
   }, [allowLeave])
 
   const pages = useMemo(() => visiblePages(detail, answers), [detail, answers])
@@ -182,7 +211,10 @@ function Questionnaire({
         : phase === 'thanks'
           ? wordsIn(detail.questionnaire.thankYou, locale)
           : null
-  useAnnounceOnChange(changeAnnouncement)
+  // A CHANGE is what goes unannounced. The FIRST page is announced too when the questionnaire replaced a "Loading…" line
+  // inside the open screen (fifth-pass review W3 — V9 had silenced it on both platforms); only a questionnaire that was
+  // the screen's own first render (cached data) is left to the screen reader's read of the screen.
+  useAnnounceOnChange(changeAnnouncement, { skipInitial: openedWithoutLoading })
   useEffect(() => {
     scrollRef.current?.scrollTo({ y: 0, animated: false })
   }, [pageIndex, phase])
@@ -191,8 +223,9 @@ function Questionnaire({
   const saveAnswer = useCallback(
     (questionKey: string, value: PeerRequestAnswerValue) => {
       if (submitting.current) return
-      setNotice(null)
+      setActionNotice(null)
       setLeaveTo(null)
+      setUnsavedWarning(false)
       editor.save(questionKey, value)
     },
     [editor],
@@ -211,21 +244,23 @@ function Questionnaire({
   const leaveQuestions = useCallback(() => {
     if (submitting.current) return
     if (state.pending > 0 || state.failed.size > 0 || dirtyDates.size > 0) {
-      setNotice(t('peer_request.unsaved'))
+      setUnsavedWarning(true)
       setLeaveTo(() => onBack)
       return
     }
     onBack()
-  }, [state.pending, state.failed.size, dirtyDates.size, onBack, locale])
+  }, [state.pending, state.failed.size, dirtyDates.size, onBack])
   const pageBack = useCallback(() => {
-    if (dirtyDates.size > 0) return setNotice(t('peer_request.date_unsaved'))
+    if (dirtyDates.size > 0) return setActionNotice('peer_request.date_unsaved')
     if (pageIndex === 0) return leaveQuestions()
-    setNotice(null)
+    setActionNotice(null)
     setPageIndex(pageIndex - 1)
-  }, [dirtyDates.size, pageIndex, leaveQuestions, locale])
+  }, [dirtyDates.size, pageIndex, leaveQuestions])
 
-  // ⭐ Android's back steps back through the in-screen pages, ⛔ pops the whole request (review S33).
+  // ⭐ Android's back steps back through the in-screen pages, ⛔ pops the whole request (review S33) — ONLY while this
+  // screen is FOCUSED (third-pass review U8: ⛔ a back press meant for a screen pushed on top).
   useEffect(() => {
+    if (!isFocused) return
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
       if (phase === 'closing') {
         if (!submitting.current) setPhase('pages')
@@ -238,7 +273,7 @@ function Questionnaire({
       return false
     })
     return () => sub.remove()
-  }, [phase, pageBack])
+  }, [phase, pageBack, isFocused])
 
   if (phase === 'not_openable') return <PeerRequestNotOpenable messageKey="peer_request.not_openable" />
   if (phase === 'no_longer_open') return <PeerRequestNotOpenable messageKey="peer_request.no_longer_open" />
@@ -248,9 +283,13 @@ function Questionnaire({
       accessibilityRole="button"
       onPress={() => {
         // The member CHOSE to give up what is unsaved — ⛔ silent: the notice above said so.
+        // ⛔ dispose here (third-pass review U7): one render would show every answer blank, and a leave that does ⛔ unmount
+        // would leave a dead editor — unmounting disposes it.
+        // What is ⛔ yet sent is dropped NOW, ⛔ left draining until the screen unmounts (fifth-pass review W8).
+        editor.abandonQueued()
         const go = leaveTo
         setLeaveTo(null)
-        editor.dispose()
+        setUnsavedWarning(false)
         pendingLeave.current = go
         setAllowLeave(true)
       }}
@@ -258,8 +297,15 @@ function Questionnaire({
       {t('peer_request.leave_anyway')}
     </Button>
   )
+  const notices = (
+    <>
+      {failureNotice !== null && <AnnouncedText text={failureNotice} kind="error" />}
+      {actionNotice !== null && <AnnouncedText text={t(actionNotice)} kind="error" />}
+      {unsavedWarning && <AnnouncedText text={t('peer_request.unsaved')} kind="error" />}
+    </>
+  )
   const keepSaved = state.failed.size > 0 && (
-    <Button accessibilityRole="button" onPress={() => { setNotice(null); editor.discardFailed() }}>
+    <Button accessibilityRole="button" onPress={() => editor.discardFailed()}>
       {t('peer_request.keep_saved')}
     </Button>
   )
@@ -282,7 +328,7 @@ function Questionnaire({
       <ScrollView ref={scrollRef} contentContainerStyle={{ padding: 16, gap: 16 }}>
         <Paragraph size="$5">{wordsIn(detail.questionnaire.closingNote, locale)}</Paragraph>
         <SaveLineText line={saveLine} />
-        {notice !== null && <AnnouncedText text={notice} kind="error" />}
+        {notices}
         {submitFailed && <AnnouncedText text={t('peer_request.submit_error')} kind="error" />}
         {keepSaved}
         {leaveControls}
@@ -351,7 +397,7 @@ function Questionnaire({
           onDateDirty={(dirty) => setDateDirty(q.key, dirty)}
         />
       ))}
-      {notice !== null && <AnnouncedText text={notice} kind="error" />}
+      {notices}
       {keepSaved}
       {leaveControls}
       <SaveLineText line={saveLine} />
@@ -364,15 +410,15 @@ function Questionnaire({
           accessibilityRole="button"
           onPress={() => {
             if (page.some((q) => dirtyDates.has(q.key))) {
-              setNotice(t('peer_request.date_unsaved'))
+              setActionNotice('peer_request.date_unsaved')
               return
             }
             // A saved answer that could ⛔ not be shown IS answered (review S38) — the map WITH those entries.
             if (!canLeavePage(page, state.answers)) {
-              setNotice(t('peer_request.required'))
+              setActionNotice('peer_request.required')
               return
             }
-            setNotice(state.failed.size > 0 ? notice : null)
+            setActionNotice(null)
             if (isLast) setPhase('closing')
             else setPageIndex(pageIndex + 1)
           }}
@@ -425,7 +471,12 @@ function QuestionField({
     setDateText(savedText)
     setDateError(false)
   }, [savedText])
-  const dirty = question.kind === 'date' && dateText.trim() !== '' && dateText !== savedText
+  // ⭐ Third-pass review U6: dirty = the typed text does ⛔ NOT mean the saved date — ⛔ a raw text compare (`1-10-2026`,
+  // Devanagari digits or `/` for the SAVED day stayed "unsaved" forever, blocking Next and Submit).
+  // Fourth-pass review V2: text that does ⛔ parse is ALWAYS dirty — with ⛔ saved date, `null !== null` made an invalid
+  // date "saved" and Next / Submit dropped it (S35 back).
+  const typedIso = parseDisplayDate(dateText, todayInIst(new Date()))
+  const dirty = question.kind === 'date' && dateText.trim() !== '' && dateText !== savedText && (typedIso === null || typedIso !== savedDate)
   useEffect(() => {
     onDateDirty(dirty)
   }, [dirty])
@@ -455,7 +506,9 @@ function QuestionField({
             onPress={() => {
               const iso = parseDisplayDate(dateText, todayInIst(new Date()))
               setDateError(iso === null)
-              if (iso !== null) onAnswer({ date: iso })
+              if (iso === null) return // keep what was typed, under "date invalid" (V2 — ⛔ erase it)
+              if (iso === savedDate) setDateText(savedText) // the SAVED date, typed another way — show it as saved
+              else onAnswer({ date: iso })
             }}
           >
             {t('peer_request.date_save')}
@@ -467,7 +520,9 @@ function QuestionField({
           )}
         </YStack>
       )}
-      {/* A single choice is a radio GROUP named by its question (review S30 — the repo's `contact.tsx` pattern). */}
+      {/* A single choice is a radio GROUP named by its question (review S30 — the repo's `contact.tsx` pattern). ⚠ DELIBERATE
+          departure from checklist 13 (a): ⛔ `accessible={true}` here — it would make the group ONE element and hide its
+          radios from VoiceOver (third-pass review U16 (c)). */}
       <YStack gap="$2" {...(single ? { accessibilityRole: 'radiogroup' as const, accessibilityLabel: label } : {})}>
         {question.options.map((o) => {
           const selected = selectedCodes.includes(o.code)

@@ -5,7 +5,10 @@
 //
 // ⭐ FIRST, the hide: an actor holding an UN-completed ground-inspection assignment with ⛔ no completed FULL visit gets
 // `hidden` — ⛔ no title, ⛔ no counts, ⛔ no "hidden" line. A hide check that cannot RUN is `hidden` too (fail CLOSED —
-// review S14: an `unavailable` section would itself show the inspector a title).
+// review S14: an `unavailable` section would itself show the inspector a title). ⚠ ACCEPTED TRADE-OFF (fourth-pass
+// review V11, closing U16 (d)): the reader is unknown when the check fails, so EVERY reader — the District Admin included
+// — gets ⛔ section on that transient fault, with only a log line (⛔ Invariant 8's "could not be shown"). The inspector's
+// independence is the ratified rule (PM25 (c)); a District Admin's next read shows the section again.
 //
 // Per neighbour: the NAME (the KYC name, decrypted HERE in the handler — ⛔ never the warning module), the send status for
 // EVERY value of the ping's column (6.27c writes it), and — once they answered — EVERY live answer with its question's
@@ -40,10 +43,11 @@ export interface PeerAnswersContext {
    */
   readonly onCallbackMobileShown: (pingId: string) => void;
   /**
-   * Runs ONE counted read. The console passes its SAVEPOINT wrapper (`underSavepoint`), so a failed read ⛔ never aborts
-   * the scope tx under the later sections. Absent ⇒ the read runs bare.
+   * Runs ONE counted read — REQUIRED (third-pass review U11): the console passes its SAVEPOINT wrapper (`underSavepoint`),
+   * so a failed read ⛔ never aborts the scope tx under the later sections. A bare read would leave a swallowed hide-check
+   * failure inside an ABORTED tx (25P02) — so 6.27b's reuse must pass one too.
    */
-  readonly run?: <T>(label: string, read: () => Promise<T>) => Promise<T>;
+  readonly run: <T>(label: string, read: () => Promise<T>) => Promise<T>;
 }
 
 export type PeerSection =
@@ -71,7 +75,7 @@ export async function assemblePeerSection(
 ): Promise<PeerSection> {
   const pariwarId = ids.pariwarId(ctx.pariwarId);
   const claimCaseId = ids.claimId(ctx.claimCaseId);
-  const run = ctx.run ?? (<T>(_label: string, read: () => Promise<T>) => read());
+  const run = ctx.run;
   const warn = (what: string, err: unknown) =>
     ctx.log?.warn({ errName: (err as Error | null)?.name, what, claimCaseId: ctx.claimCaseId }, 'peer-answers: a field could not be shown');
 

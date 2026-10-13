@@ -127,7 +127,7 @@ describe.skipIf(!hasDatabase)('Story 6.27a — the District Admin sees the neigh
           actorId,
           grants: [],
           traceId: null,
-          ...(onShown ? { onCallbackMobileShown: onShown } : {}),
+          onCallbackMobileShown: onShown ?? (() => {}),
         },
         ids.claimId(cid),
         { bump: () => (booked += 1) },

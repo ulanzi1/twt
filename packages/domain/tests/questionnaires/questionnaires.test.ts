@@ -134,7 +134,14 @@ describe('the validator refuses (PM23 (a); CF3 (a)–(d))', () => {
     for (const key of PEER_MESH_WARNING_QUESTION_KEYS) {
       expect(problems(withQuestion(PEER_MESH_QUESTIONNAIRE_V2, key, (q) => ({ ...q, warning: false }))), key).toContain(`the ruled question '${key}' carries its warning`);
     }
-    // v1 stays EXEMPT (historical); the sensitive set is the date + the health questions
+    // an OMITTED flag is refused too (U12 — a JSON-backed version may simply leave it out)
+    const omitted = withQuestion(PEER_MESH_QUESTIONNAIRE_V2, 'death_cause', (q) => { const rest = { ...q } as Record<string, unknown>; delete rest['health']; return rest as unknown as QuestionDefinition; });
+    expect(problems(omitted)).toContain(`the ruled health question 'death_cause' is health: true`);
+    // a Tier-1 question made non-sensitive is refused in EVERY version, v1 included (U12)
+    expect(problems(withQuestion(PEER_MESH_QUESTIONNAIRE_V1, 'death_date', (q) => ({ ...q, sensitive: false })))).toContain(`the Tier-1 question 'death_date' is sensitive`);
+    // v1 stays EXEMPT from the v2-onward rules (the seven keys, the health / warning classification) — but ⛔ from the
+    // Tier-1 SENSITIVE rule, which holds in EVERY version (U12; v1's date is sensitive, so v1 is valid); the sensitive
+    // set is the date + the health questions
     expect(problems(PEER_MESH_QUESTIONNAIRE_V1)).toBe('');
     expect([...PEER_MESH_SENSITIVE_QUESTION_KEYS]).toEqual(['death_date', 'death_cause', 'death_illness']);
     for (const key of PEER_MESH_SENSITIVE_QUESTION_KEYS) {

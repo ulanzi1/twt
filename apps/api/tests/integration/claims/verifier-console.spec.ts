@@ -645,6 +645,7 @@ describe.skipIf(!hasDatabase)('Verifier-console read surface — E2E (:5433)', (
         actorId: randomUUID(),
         grants: [{ pariwarId, role: 'super_admin', scopeDimension: 'global', scopeValue: null }],
         traceId: null,
+        onCallbackMobileShown: () => {},
       });
       await closeScopeTx(scopeTx, true);
       expect(packet.documentReview.status).toBe('present');
@@ -698,6 +699,7 @@ describe.skipIf(!hasDatabase)('Verifier-console read surface — E2E (:5433)', (
         actorId: randomUUID(),
         grants: [{ pariwarId, role: 'super_admin', scopeDimension: 'global', scopeValue: null }],
         traceId: null,
+        onCallbackMobileShown: () => {},
       });
       await closeScopeTx(scopeTx, true);
       expect(packet.documentReview.status).toBe('unavailable'); // NOT empty — a failure ≠ "no records"
@@ -759,6 +761,7 @@ describe.skipIf(!hasDatabase)('Verifier-console read surface — E2E (:5433)', (
           actorId: randomUUID(),
           grants: [{ pariwarId, role: 'super_admin', scopeDimension: 'global', scopeValue: null }],
           traceId: null,
+          onCallbackMobileShown: () => {},
         });
         client.query = realQuery as never;
         await closeScopeTx(scopeTx, true);
@@ -837,6 +840,7 @@ describe.skipIf(!hasDatabase)('Verifier-console read surface — E2E (:5433)', (
           actorId: randomUUID(),
           grants: [{ pariwarId, role: 'super_admin', scopeDimension: 'global', scopeValue: null }],
           traceId: null,
+          onCallbackMobileShown: () => {},
         });
         await closeScopeTx(scopeTx, true);
         return readCount;
@@ -901,6 +905,7 @@ describe.skipIf(!hasDatabase)('Verifier-console read surface — E2E (:5433)', (
           actorId: randomUUID(),
           grants: [{ pariwarId, role: 'super_admin', scopeDimension: 'global', scopeValue: null }],
           traceId: null,
+          onCallbackMobileShown: () => {},
         });
         await closeScopeTx(scopeTx, true);
         return readCount;
@@ -942,6 +947,7 @@ describe.skipIf(!hasDatabase)('Verifier-console read surface — E2E (:5433)', (
         actorId: randomUUID(),
         grants: [{ pariwarId, role: 'super_admin', scopeDimension: 'global', scopeValue: null }],
         traceId: null,
+        onCallbackMobileShown: () => {},
       });
       await closeScopeTx(scopeTx, true);
       expect(packet.peerMesh?.status).toBe('present');
@@ -976,6 +982,7 @@ describe.skipIf(!hasDatabase)('Verifier-console read surface — E2E (:5433)', (
         actorId: randomUUID(),
         grants: [{ pariwarId, role: 'super_admin', scopeDimension: 'global', scopeValue: null }],
         traceId: null,
+        onCallbackMobileShown: () => {},
       });
       await closeScopeTx(scopeTx, true);
       return packet.packet.nomineeNameCheck;
@@ -1082,6 +1089,7 @@ describe.skipIf(!hasDatabase)('Verifier-console read surface — E2E (:5433)', (
         actorId: randomUUID(),
         grants: [{ pariwarId, role: 'super_admin', scopeDimension: 'global', scopeValue: null }],
         traceId: null,
+        onCallbackMobileShown: () => {},
       });
       client.query = realQuery as never;
       await closeScopeTx(scopeTx, true);
@@ -1187,6 +1195,7 @@ describe.skipIf(!hasDatabase)('Verifier-console read surface — E2E (:5433)', (
           actorId: randomUUID(),
           grants: [{ pariwarId, role: 'super_admin', scopeDimension: 'global', scopeValue: null }],
           traceId: null,
+          onCallbackMobileShown: () => {},
         },
         ids.claimId(claimCaseId),
         'verifier_review',
@@ -1229,6 +1238,7 @@ describe.skipIf(!hasDatabase)('Verifier-console read surface — E2E (:5433)', (
           actorId: randomUUID(),
           grants: [{ pariwarId, role: 'super_admin', scopeDimension: 'global', scopeValue: null }],
           traceId: null,
+          onCallbackMobileShown: () => {},
         },
         ids.claimId(claimCaseId),
         { bump: () => (booked += 1) },
@@ -1266,6 +1276,7 @@ describe.skipIf(!hasDatabase)('Verifier-console read surface — E2E (:5433)', (
           // A viewer who COULD approve and record — so every `false` below is the fail-closed path, ⛔ not a missing key.
           grants: [{ pariwarId, role: 'super_admin', scopeDimension: 'global', scopeValue: null }],
           traceId: null,
+          onCallbackMobileShown: () => {},
         },
         ids.claimId(claimCaseId),
         'verifier_approved',

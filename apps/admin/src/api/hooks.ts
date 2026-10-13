@@ -2338,8 +2338,11 @@ export function useHelplineSavePeerAnswer(pariwarId: string, memberId: string | 
   const qc = useQueryClient();
   const key = helplinePeerRequestsKey(pariwarId, memberId ?? '');
   return useMutation({
-    mutationFn: (input: { pingId: string; questionKey: string; value: import('@twt/contracts').PeerRequestAnswerValue; idempotencyKey: string }) =>
-      api.saveHelplinePeerAnswer(pariwarId, memberId as string, input.pingId, input.questionKey, input.value, input.idempotencyKey),
+    mutationFn: (input: { pingId: string; questionKey: string; value: import('@twt/contracts').PeerRequestAnswerValue; idempotencyKey: string }) => {
+      // ⛔ `/members/null/…` (third-pass review U13 (d)) — a save needs the caller it is bound to.
+      if (memberId === null) throw new Error('[helpline] a peer answer is saved for a selected caller only');
+      return api.saveHelplinePeerAnswer(pariwarId, memberId, input.pingId, input.questionKey, input.value, input.idempotencyKey);
+    },
     onSuccess: (result, input) =>
       qc.setQueryData<import('@twt/contracts').HelplinePeerRequestListResponse>(key, (old) =>
         old === undefined ? old : { items: old.items.map((i) => (i.pingId === input.pingId ? { ...i, answers: result.answers } : i)) },
@@ -2358,8 +2361,10 @@ export function useHelplineSavePeerAnswer(pariwarId: string, memberId: string | 
 export function useHelplineSubmitPeerReply(pariwarId: string, memberId: string | null) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (input: { pingId: string; idempotencyKey: string }) =>
-      api.submitHelplinePeerReply(pariwarId, memberId as string, input.pingId, input.idempotencyKey),
+    mutationFn: (input: { pingId: string; idempotencyKey: string }) => {
+      if (memberId === null) throw new Error('[helpline] a reply is submitted for a selected caller only');
+      return api.submitHelplinePeerReply(pariwarId, memberId, input.pingId, input.idempotencyKey);
+    },
     onSettled: () => void qc.invalidateQueries({ queryKey: helplinePeerRequestsKey(pariwarId, memberId ?? '') }),
   });
 }

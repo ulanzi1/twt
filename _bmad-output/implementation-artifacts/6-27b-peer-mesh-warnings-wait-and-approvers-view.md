@@ -45,12 +45,12 @@ Consequence 1) · `-261` C3 (⛔ never inherited) · `-282` GI7 / `-281` Q1 B (p
   changed answer is a NEW key); derived outside the `postDeath` block; ONE SQL fragment `peerReplyColumnsSql()` in BOTH readers selecting
   codes and `text` indexes ONLY; ONE exported pure helper; they enter the wait; the pin test's generic message gains the discharge.
 - **PM10** — the correction queue's fourth source (`pariwar_id`-joined, live warning-key rows, `saved_at > v.decided_at`).
-- **PM24** — `GET /api/v1/p/:pariwarId/admin/claims/:claimCaseId/peer-answers` through 6.27a's `assemblePeerAnswers`; first hook
+- **PM24** — `GET /api/v1/p/:pariwarId/admin/claims/:claimCaseId/peer-answers` through 6.27a's `assemblePeerAnswers` (⭐ 6.27a's 2026-10-13 review renamed it `assemblePeerSection` — it returns `PeerSection` (`hidden` / `no_selection` / `present`), runs the PM25 (c) hide FIRST, and REQUIRES a SAVEPOINT `run` and an `onCallbackMobileShown` audit callback; S13 / U11 / U16 (a)); first hook
   `cycle.freeze` (pariwar), then the in-handler step disjunction (F33) — an open CORRECTION escalation means the Super Admin's G1 case
   (`claim.decide_escalated_closure`); the cycle-freeze escalation resolution is `cycle.freeze`'s; 404 outside a pending later step; audited
   through `emitAuthAudit` (a new `AuthAuditEventType` member — F40); the panel on the four hosts. ⚠ RECORDED (6.27a PM24): in v1 the
   disjunction reduces to STATE gating.
-- **PM13's per-answer warning flags** — on the District Admin's console (`assemblePeerAnswers` / `PeerMeshView`) and on PM24's panel, each
+- **PM13's per-answer warning flags** — on the District Admin's console (`assemblePeerAnswers` (⭐ now `assemblePeerSection` — 6.27a review S13 / U16 (a)) / `PeerMeshView`) and on PM24's panel, each
   live answer carries *"says the member has ⛔ not died"* / *"more than a day from the certificate"* from the WARNINGS read (the same keys
   the rule uses — ⛔ never a second computation); a failed warnings read ⇒ each flag `null` and *"could not be checked just now"*, ⛔ never
   `false` (Invariant 8).
@@ -100,7 +100,7 @@ Consequence 1) · `-261` C3 (⛔ never inherited) · `-282` GI7 / `-281` Q1 B (p
       spec `correction-queue-late-peer-reply.spec.ts`.
 - [ ] **Task 3 — the approvers' read (AC6).** `claims.peer-answers.routes.ts` + handler (the step disjunction); the panel component used by
       `PendingCaseCard`, `EscalationPanel`, `PariwarClosureStrip`, `R9CasePanel`; api-client; tests.
-- [ ] **Task 3b — the per-answer flags (AC8).** Join the warnings read's keys onto `assemblePeerAnswers`' answers (by `answer_id`); the
+- [ ] **Task 3b — the per-answer flags (AC8).** Join the warnings read's keys onto `assemblePeerAnswers` (⭐ now `assemblePeerSection` — 6.27a review S13 / U16 (a))' answers (by `answer_id`); the
       `null` path when the read fails; `PeerMeshView` and PM24's panel render the flag line; tests incl. the forced read failure.
 - [ ] **Task 4 — the blind-first filter (AC7).** The actor-aware filter on the warnings summary returned by the console handler and on the
       queue row; tests with an un-completed / completed assignee.

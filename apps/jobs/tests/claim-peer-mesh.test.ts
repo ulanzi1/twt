@@ -617,12 +617,19 @@ describe.skipIf(!hasDatabase)('claim peer-mesh — live DB (:5433)', () => {
         );
       }
       expect(await eventCount(seed.claimCaseId, 'claim.peer_mesh_responded')).toBe(3);
+      // EVERY event on the claim's stream, before the re-fire — the delta below proves the re-fire wrote ⛔ event at all
+      // (fourth-pass review V10 (b): a fixed total of the responded events could ⛔ move — the worker writes none).
+      const streamEvents = async () =>
+        (await pool.query(`SELECT count(*)::int AS n FROM events_log WHERE stream_id = $1`, [seed.claimCaseId])).rows[0].n as number;
+      const beforeRefire = await streamEvents();
       // A redelivered / re-fired WINDOW job after the late answers: the label stays (MONOTONIC — ⛔ recounted).
       await runClaimPeerMeshWindow(boss, windowDeps(), { ...windowEnv, requestId: randomUUID() });
       const after = await withPariwarScope(pool, seed.pariwarId, (db) =>
         claim.getPeerMeshSelectionByClaim(db, ids.pariwarId(seed.pariwarId), ids.claimId(seed.claimCaseId)),
       );
       expect(after!.outcome).toBe('insufficient_responses_fallback'); // ⛔ recounted
+      // …and the re-fire wrote ⛔ event of its own (U15 (c), as a DELTA — V10 (b)).
+      expect(await streamEvents()).toBe(beforeRefire);
     } finally {
       await cleanup(seed);
     }

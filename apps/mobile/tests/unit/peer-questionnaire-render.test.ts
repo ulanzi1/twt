@@ -13,14 +13,18 @@ import { PeerQuestionnaire } from '../../components/peer-request/PeerQuestionnai
 
 const mock = vi.hoisted(() => ({
   detail: null as PeerRequestDetailResponse | null, error: null as unknown, save: vi.fn(), submit: vi.fn(),
-  announce: vi.fn(), dispatch: vi.fn(), backHandlers: [] as (() => boolean)[],
+  announce: vi.fn(), dispatch: vi.fn(), backHandlers: [] as (() => boolean)[], os: 'ios' as string, focused: true, loading: false,
 }));
 vi.mock('../../components/peer-request/usePeerRequestQueries', () => ({
-  usePeerRequestQuery: () => ({ data: mock.detail, error: mock.error, isLoading: false }),
+  usePeerRequestQuery: () => ({ data: mock.loading ? undefined : mock.detail, error: mock.error, isLoading: mock.loading }),
   useSavePeerAnswer: () => ({ mutateAsync: mock.save }),
   useSubmitPeerReply: () => ({ mutateAsync: mock.submit, isPending: false }),
 }));
-vi.mock('@react-navigation/native', () => ({ usePreventRemove: vi.fn(), useNavigation: () => ({ dispatch: mock.dispatch }) }));
+vi.mock('@react-navigation/native', () => ({
+  usePreventRemove: vi.fn(),
+  useNavigation: () => ({ dispatch: mock.dispatch }),
+  useIsFocused: () => mock.focused,
+}));
 vi.mock('expo-router', () => ({ useRouter: () => ({ replace: vi.fn() }) }));
 vi.mock('@twt/i18n/react', () => ({ useLocale: () => ({ locale: 'en' }) }));
 vi.mock('../../lib/claim-i18n', () => ({ useClaimT: () => (key: string) => key }));
@@ -33,7 +37,7 @@ vi.mock('react-native', async () => {
   return {
     ScrollView: ({ children }: { children: React.ReactNode }) => createElement('div', null, children),
     // iOS: the plan speaks through `announceForAccessibility` (review S28 — the call is asserted, ⛔ a DOM role).
-    Platform: { OS: 'ios' },
+    Platform: { get OS() { return mock.os; } },
     AccessibilityInfo: { announceForAccessibility: mock.announce },
     BackHandler: {
       addEventListener: (_event: string, handler: () => boolean) => {
@@ -84,6 +88,9 @@ describe('mobile questionnaire interaction regressions', () => {
     mock.announce.mockClear();
     mock.dispatch.mockClear();
     mock.backHandlers = [];
+    mock.os = 'ios';
+    mock.focused = true;
+    mock.loading = false;
   });
 
   it('a failed Submit exposes an enabled retry and reaches Thank-you without an unrelated save (R4)', async () => {
@@ -124,6 +131,9 @@ describe('mobile questionnaire interaction regressions', () => {
     expect(screen.getByRole('button', { name: 'peer_request.leave_anyway' })).toBeEnabled();
     await act(async () => finish({ answers: saved('not_died') }));
     await waitFor(() => expect(vi.mocked(usePreventRemove).mock.lastCall?.[0]).toBe(false));
+    // ⭐ Third-pass U5 (b): once everything saved, the offer to leave without saving — and its "please wait" — GO.
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'peer_request.leave_anyway' })).not.toBeInTheDocument());
+    expect(screen.queryByText('peer_request.unsaved')).not.toBeInTheDocument();
   });
 
   it('offline: "Leave without saving" lifts the guard and leaves — ⛔ trapped behind an endless retry (review S32)', async () => {
@@ -135,9 +145,19 @@ describe('mobile questionnaire interaction regressions', () => {
     expect(back).not.toHaveBeenCalled();
     await userEvent.click(screen.getByRole('button', { name: 'peer_request.leave_anyway' }));
     await waitFor(() => expect(back).toHaveBeenCalledOnce());
-    // a navigation-away the guard caught is dispatched once the member chose to leave
-    const onPrevented = vi.mocked(usePreventRemove).mock.lastCall?.[1] as ((e: { data: { action: unknown } }) => void) | undefined;
-    expect(onPrevented).toBeTypeOf('function');
+  });
+
+  it('a navigation-away the guard CAUGHT is dispatched once the member chooses to leave (third-pass U15 (b))', async () => {
+    mock.save.mockRejectedValue(new TypeError('offline'));
+    render(createElement(PeerQuestionnaire, { pariwarId: 'p', pingId: 'ping', onBack: () => {} }));
+    await userEvent.click(screen.getByRole('radio', { name: 'not_died' }));
+    const onPrevented = vi.mocked(usePreventRemove).mock.lastCall?.[1] as (e: { data: { action: unknown } }) => void;
+    act(() => onPrevented({ data: { action: { type: 'GO_BACK' } } }));
+    const before = vi.mocked(usePreventRemove).mock.calls.length;
+    await userEvent.click(screen.getByRole('button', { name: 'peer_request.leave_anyway' }));
+    await waitFor(() => expect(mock.dispatch).toHaveBeenCalledWith({ type: 'GO_BACK' }));
+    // the guard was LIFTED for that dispatch — a render AFTER the press with it OFF (X3: counted only after the press)
+    expect(vi.mocked(usePreventRemove).mock.calls.slice(before).some((c) => c[0] === false)).toBe(true);
   });
 
   it('a REFUSED answer names its question and can be given up for the saved one (review S32)', async () => {
@@ -160,7 +180,8 @@ describe('mobile questionnaire interaction regressions', () => {
 
   it('the save line, the notices and a page change are SPOKEN (iOS announce) — and the chosen radio is CHECKED, in a named group (review S28 / S29 / S30)', async () => {
     render(createElement(PeerQuestionnaire, { pariwarId: 'p', pingId: 'ping', onBack: () => {} }));
-    expect(mock.announce).toHaveBeenCalledWith('peer_request.title — peer_request.page_of');
+    // the FIRST render is read by the screen reader itself — ⛔ announced again (fourth-pass V9)
+    expect(mock.announce).not.toHaveBeenCalledWith('peer_request.title — peer_request.page_of');
     expect(screen.getByRole('radiogroup', { name: 'Has A died?' })).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: 'died' })).toHaveAttribute('aria-checked', 'true');
     expect(screen.getByRole('radio', { name: 'not_died' })).toHaveAttribute('aria-checked', 'false');
@@ -272,5 +293,134 @@ describe('mobile questionnaire interaction regressions', () => {
     await act(async () => finish({ answers: [...saved('died'), { questionKey: 'illness', value: { codes: ['a'] }, savedAt: 'x' }] }))
     await waitFor(() => expect(mock.save).toHaveBeenCalledTimes(2))
     expect(mock.save.mock.calls[1]![0]).toMatchObject({ questionKey: 'illness', value: { codes: ['a', 'b'] } })
+  });
+  it('on ANDROID a page / phase change is spoken too (third-pass U4) — and back is ⛔ captured while UNFOCUSED (U8)', async () => {
+    mock.os = 'android';
+    const view = render(createElement(PeerQuestionnaire, { pariwarId: 'p', pingId: 'ping', onBack: () => {} }));
+    await userEvent.click(screen.getByRole('button', { name: 'peer_request.next' }));
+    await waitFor(() => expect(mock.announce).toHaveBeenCalledWith('Closing note'));
+    act(() => { hardwareBack(); }); // back to the questions — a CHANGE, spoken on Android too
+    await waitFor(() => expect(mock.announce).toHaveBeenCalledWith('peer_request.title — peer_request.page_of'));
+    // a MOUNTED screen that LOSES focus (another pushed on top) gives back its handler (fourth-pass V10 (c))
+    expect(mock.backHandlers.length).toBeGreaterThan(0);
+    mock.focused = false;
+    view.rerender(createElement(PeerQuestionnaire, { pariwarId: 'p', pingId: 'ping', onBack: () => {} }));
+    expect(mock.backHandlers).toHaveLength(0);
+  });
+
+  it("the member's own notice is ⛔ wiped by an unrelated acknowledgement (third-pass U5 (a))", async () => {
+    let finish!: (value: unknown) => void;
+    const d = detail([]);
+    d.questionnaire.pages[0]!.questions.push({ key: 'how_known', kind: 'single', words: words('How?'), options: ['saw', 'told'].map((code) => ({ code, words: words(code), exclusive: false })), optional: true, showIf: null });
+    mock.detail = d;
+    mock.save.mockReturnValueOnce(new Promise((resolve) => { finish = resolve; }));
+    render(createElement(PeerQuestionnaire, { pariwarId: 'p', pingId: 'ping', onBack: () => {} }));
+    await userEvent.click(screen.getByRole('radio', { name: 'saw' })); // an unrelated save, in flight
+    await userEvent.click(screen.getByRole('button', { name: 'peer_request.next' })); // has_died unanswered
+    expect(screen.getByRole('alert')).toHaveTextContent('peer_request.required');
+    await act(async () => finish({ answers: [{ questionKey: 'how_known', value: { codes: ['saw'] }, savedAt: 'x' }] }));
+    expect(await screen.findByText('peer_request.saved')).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent('peer_request.required'); // ⛔ wiped by the ack
+  });
+
+  it('the SAVED date typed another way (single digits, "/", Devanagari) is ⛔ "unsaved" (third-pass U6)', async () => {
+    mock.detail = detail([...saved('died'), { questionKey: 'death_date', value: { date: '2026-10-01' }, savedAt: 'x' }]);
+    render(createElement(PeerQuestionnaire, { pariwarId: 'p', pingId: 'ping', onBack: () => {} }));
+    const input = screen.getByLabelText('When?', { selector: 'input' });
+    await userEvent.clear(input);
+    await userEvent.type(input, '१/१०/२०२६');
+    await userEvent.click(screen.getByRole('button', { name: 'peer_request.next' }));
+    expect(await screen.findByText('Closing note')).toBeInTheDocument();
+    expect(mock.save).not.toHaveBeenCalled();
+  });
+  it('with ⛔ saved date, INVALID typed text is "unsaved" — Next is held and Save KEEPS the text (fourth-pass V2)', async () => {
+    render(createElement(PeerQuestionnaire, { pariwarId: 'p', pingId: 'ping', onBack: () => {} }));
+    const input = screen.getByLabelText('When?', { selector: 'input' });
+    await userEvent.type(input, '31-02-2026');
+    await userEvent.click(screen.getByRole('button', { name: 'peer_request.next' }));
+    expect(screen.getByRole('alert')).toHaveTextContent('peer_request.date_unsaved');
+    await userEvent.click(screen.getByRole('button', { name: 'peer_request.date_save' }));
+    expect(input).toHaveValue('31-02-2026');
+    expect(screen.getByText('peer_request.date_invalid')).toBeInTheDocument();
+    expect(mock.save).not.toHaveBeenCalled();
+  });
+
+  it('the "unsaved" warning beside "Leave without saving" SURVIVES a present failure (fourth-pass V3 (a))', async () => {
+    mock.save.mockRejectedValue({ status: 422 });
+    render(createElement(PeerQuestionnaire, { pariwarId: 'p', pingId: 'ping', onBack: () => {} }));
+    await userEvent.click(screen.getByRole('radio', { name: 'not_died' }));
+    expect(await screen.findByText('peer_request.invalid_named')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'peer_request.back' }));
+    // BOTH lines stand, each its own (fifth-pass W2 — ⛔ one overwriting the other)
+    expect(screen.getByText('peer_request.unsaved')).toBeInTheDocument();
+    expect(screen.getByText('peer_request.invalid_named')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'peer_request.leave_anyway' })).toBeInTheDocument();
+  });
+
+  it('once saves settle, ONLY the "please wait" warning goes — "please answer this" stays (fourth-pass V3 (b))', async () => {
+    let finish!: (value: unknown) => void;
+    const d = detail([]);
+    d.questionnaire.pages[0]!.questions.push({ key: 'how_known', kind: 'single', words: words('How?'), options: ['saw', 'told'].map((code) => ({ code, words: words(code), exclusive: false })), optional: true, showIf: null });
+    mock.detail = d;
+    mock.save.mockReturnValueOnce(new Promise((resolve) => { finish = resolve; }));
+    render(createElement(PeerQuestionnaire, { pariwarId: 'p', pingId: 'ping', onBack: () => {} }));
+    await userEvent.click(screen.getByRole('radio', { name: 'saw' })); // in flight
+    await userEvent.click(screen.getByRole('button', { name: 'peer_request.back' })); // ⇒ "unsaved" + leave offer
+    await userEvent.click(screen.getByRole('button', { name: 'peer_request.next' })); // ⇒ "please answer" (has_died)
+    expect(screen.getByText('peer_request.required')).toBeInTheDocument();
+    await act(async () => finish({ answers: [{ questionKey: 'how_known', value: { codes: ['saw'] }, savedAt: 'x' }] }));
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'peer_request.leave_anyway' })).not.toBeInTheDocument());
+    expect(screen.queryByText('peer_request.unsaved')).not.toBeInTheDocument();
+    expect(screen.getByText('peer_request.required')).toBeInTheDocument();
+  });
+  it('the FIRST page is announced when it replaced a "Loading…" line in the open screen (fifth-pass W3)', async () => {
+    mock.loading = true;
+    const view = render(createElement(PeerQuestionnaire, { pariwarId: 'p', pingId: 'ping', onBack: () => {} }));
+    expect(screen.getByText('peer_request.loading')).toBeInTheDocument();
+    mock.loading = false;
+    view.rerender(createElement(PeerQuestionnaire, { pariwarId: 'p', pingId: 'ping', onBack: () => {} }));
+    await waitFor(() => expect(mock.announce).toHaveBeenCalledWith('peer_request.title — peer_request.page_of'));
+  });
+
+  it('a Submit that fails while back was pressed leaves ⛔ stale "please wait" (fifth-pass W2)', async () => {
+    let fail!: (e: unknown) => void;
+    mock.submit.mockReturnValueOnce(new Promise((_resolve, reject) => { fail = reject; }));
+    render(createElement(PeerQuestionnaire, { pariwarId: 'p', pingId: 'ping', onBack: () => {} }));
+    await userEvent.click(screen.getByRole('button', { name: 'peer_request.next' }));
+    await userEvent.click(screen.getByRole('button', { name: 'peer_request.submit' }));
+    const onPrevented = vi.mocked(usePreventRemove).mock.lastCall?.[1] as (e: { data: { action: unknown } }) => void;
+    act(() => onPrevented({ data: { action: { type: 'GO_BACK' } } }));
+    expect(screen.getByText('peer_request.unsaved')).toBeInTheDocument();
+    await act(async () => fail(new TypeError('offline')));
+    expect(await screen.findByText('peer_request.submit_error')).toBeInTheDocument();
+    expect(screen.queryByText('peer_request.unsaved')).not.toBeInTheDocument();
+  });
+
+  it('"Leave without saving" drops the queued edits NOW (fifth-pass W8)', async () => {
+    mock.save.mockRejectedValue(new TypeError('offline'));
+    const back = vi.fn();
+    render(createElement(PeerQuestionnaire, { pariwarId: 'p', pingId: 'ping', onBack: back }));
+    await userEvent.click(screen.getByRole('radio', { name: 'not_died' }));
+    await userEvent.click(screen.getByRole('button', { name: 'peer_request.back' }));
+    await userEvent.click(screen.getByRole('button', { name: 'peer_request.leave_anyway' }));
+    await waitFor(() => expect(back).toHaveBeenCalledOnce());
+    const calls = mock.save.mock.calls.length;
+    await new Promise((r) => setTimeout(r, 1100)); // past the first retry backoff
+    expect(mock.save.mock.calls.length).toBe(calls); // ⛔ further sends of the abandoned answer
+  });
+  it('on ANDROID the "could not be opened" swap is spoken too (U4 / fifth-pass W11)', async () => {
+    mock.os = 'android';
+    mock.save.mockRejectedValue({ status: 404 });
+    render(createElement(PeerQuestionnaire, { pariwarId: 'p', pingId: 'ping', onBack: () => {} }));
+    await userEvent.click(screen.getByRole('radio', { name: 'not_died' }));
+    await waitFor(() => expect(mock.announce).toHaveBeenCalledWith('peer_request.not_openable'));
+  });
+  it('"you typed a date…" goes as soon as the date is CLEARED — ⛔ outliving it (fifth-pass follow-up X4)', async () => {
+    render(createElement(PeerQuestionnaire, { pariwarId: 'p', pingId: 'ping', onBack: () => {} }));
+    await userEvent.type(screen.getByLabelText('When?', { selector: 'input' }), '01-10-2026');
+    await userEvent.click(screen.getByRole('button', { name: 'peer_request.next' }));
+    expect(screen.getByText('peer_request.date_unsaved')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'peer_request.date_clear' }));
+    await waitFor(() => expect(screen.queryByText('peer_request.date_unsaved')).not.toBeInTheDocument());
   });
 });

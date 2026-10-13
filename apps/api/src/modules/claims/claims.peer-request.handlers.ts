@@ -17,8 +17,11 @@
 // `:memberId`, and the save / submit pass it to the domain's `visible()` — a ping of ANOTHER neighbour is the SAME 404 as
 // an untexted one (⛔ the old `memberId: null` "any texted ping" form is gone). The list's decrypted read is AUDITED
 // (`helpline_claim.peer_requests_read`, `member:<id>`). The writes take an `Idempotency-Key` exactly like the member
-// routes (PM12: "the SAME save / submit shape as PM11" — review S18) and run on their OWN scope tx, so the key's result is
-// recorded only AFTER the commit (the scope-resolution hook's tx carries ⛔ no write). The list, the save and the submit
+// routes (PM12: "the SAME save / submit shape as PM11" — review S18). ⭐ Fourth-pass review V1: a write first COMMITS and
+// RELEASES the scope-resolution hook's tx (it carried only the preHandlers' READS), then writes on its OWN tx — so ONE
+// connection is held (third-pass U2: two were), and the key's result is recorded only AFTER that COMMIT (U2's "on the
+// hook's tx" recorded it before the COMMIT: a retry in between replayed answers without the save). ⚠ `closeScopeTx`
+// swallows a failed COMMIT (deferred-work), as on every `onMemberTx` route. The list, the save and the submit
 // are gated on a TEXTED ping exactly as the member routes are (PM12) — before 6.27c texts anyone the panel is EMPTY.
 // ── Audit ──────────────────────────────────────────────────────────────────────────────────────────────────────────
 // ONE `withCompensatingAudit` intent line per write (`claim.peer_answer_saved` / `claim.peer_reply_submitted`,
@@ -55,12 +58,14 @@ import {
 } from './peer-request-core.js';
 
 /**
- * How long a write's Idempotency-Key is held. A retried auto-save arrives within seconds; the claim is ALSO the "in
- * progress" lease, so a process that dies mid-request must ⛔ not lock the answer for a day (second-pass review S19 —
- * it was 24 h, and the editor retries with the SAME key). A replay after expiry re-runs the save, which is idempotent by
- * value (⛔ no second row, ⛔ no audit — S20).
+ * How long a write's Idempotency-Key — and its recorded RESULT — is held: 24 h, because the mobile editor retries a
+ * lost-response save with the SAME key for as long as the phone is offline, and the shared keyed store treats a
+ * COMPLETED key past its TTL as claimed while hiding its result (⇒ 409 "in progress" until the vacuum). ⚠ Third-pass
+ * review U1: the 15-min lease the second pass tried (S19) broke exactly that replay and is REVERTED; the cost it aimed
+ * at — a process death leaving the key `pending` for the whole TTL — is deferred (deferred-work: the store needs a
+ * pending lease separate from the retention).
  */
-const PEER_REQUEST_IDEMPOTENCY_TTL_SECONDS = 15 * 60;
+const PEER_REQUEST_IDEMPOTENCY_TTL_SECONDS = 24 * 60 * 60;
 
 type Ctx = { readonly actorId: string; readonly pariwarId: string; readonly memberId: string; readonly via: 'member_app' | 'helpline' };
 
@@ -94,8 +99,10 @@ export function createPeerRequestHandlers(deps: AppDeps) {
   }
 
   /**
-   * Run `fn` on the route's OWN scope tx (commit on success; a mapped 4xx rolls back — nothing was written). Every WRITE
-   * (member AND helpline) runs here, so `withIdempotency` records a key's result only once the write has COMMITTED.
+   * Run `fn` on the route's OWN scope tx — every member route (it has ⛔ no scope-resolution hook — F27) and every helpline
+   * WRITE once its hook tx is released (V1). Commit on success;
+   * a mapped 4xx rolls back — nothing was written. ⚠ `closeScopeTx` swallows a failed COMMIT (deferred-work), so
+   * "recorded after the commit" holds only for a COMMIT that did not fail.
    */
   async function onMemberTx<T>(ctx: Ctx, fn: (client: pg.PoolClient, tx: Db) => Promise<T>): Promise<T> {
     const scopeTx = await openScopeTx(deps, ctx.pariwarId);
@@ -111,7 +118,21 @@ export function createPeerRequestHandlers(deps: AppDeps) {
     }
   }
 
-  /** Run `fn` on the helpline route's hook-owned scope tx (the lifecycle hook commits / rolls back). */
+  /**
+   * Fourth-pass review V1 — a helpline WRITE ends the scope-resolution hook's tx BEFORE it writes: that tx carried only
+   * the preHandlers' reads (session, scope, permission, step-up), so it COMMITS and its connection goes back to the pool.
+   * `scopeSet = false` first, so the lifecycle hooks (`onSend` / `onResponse`) do ⛔ not close it again.
+   */
+  async function releaseHookTx(request: FastifyRequest): Promise<void> {
+    const hookTx = request.scopeTx;
+    if (!hookTx?.scopeSet) return;
+    hookTx.scopeSet = false;
+    await closeScopeTx(hookTx, true);
+    // Detached, so nothing later in this request can reach a client that is back in the pool (fifth-pass review W9).
+    request.scopeTx = undefined;
+  }
+
+  /** Run `fn` on the helpline route's hook-owned scope tx (the lifecycle hook commits / rolls back) — the READ only. */
   async function onHelplineTx<T>(request: FastifyRequest, fn: (client: pg.PoolClient, tx: Db) => Promise<T>): Promise<T> {
     const scopeTx = request.scopeTx!;
     try {
@@ -176,6 +197,10 @@ export function createPeerRequestHandlers(deps: AppDeps) {
   /**
    * A save's REPLAY: the reply's live answers as they stand — ⛔ without the open / submitted checks, so a save that DID
    * commit is ⛔ never reported as a 409 because the reply was submitted (or the window closed) since (review S19).
+   * ⚠ DELIBERATE (third-pass review U16 (b)): the guards are skipped ONLY here, ONLY for the caller holding a key whose
+   * save COMMITTED (its key is recorded after the COMMIT on every path — V1), and the read is still `visible()`-bound (the same member, a texted ping). For the helpline it returns
+   * that neighbour's answers with ⛔ a read-audit line — the operator recorded them under this very key. ⭐ Re-examine if a
+   * replay may ever serve a key it did ⛔ not write, or if the key's retention (24 h) grows.
    */
   async function liveAnswersOn(tx: Db, ctx: Ctx, pingId: string, request: FastifyRequest): Promise<PeerRequestSaveAnswerResponse> {
     const pid = ids.pariwarId(ctx.pariwarId);
@@ -227,7 +252,14 @@ export function createPeerRequestHandlers(deps: AppDeps) {
         requestPayloadHash: peerRequestPayloadHash({ ping_id: pingId, question_key: questionKey, via: ctx.via }),
         traceId: request.requestContext.traceId ?? null,
       },
-      mutate: write,
+      // ⭐ Third-pass review U10 — the OPPOSITE race: the value differed before the lock and is equal under it, so this
+      // audited save wrote NOTHING. It is refused as stale (the helper writes its compensating "rolled back" line and the
+      // tx rolls back); the client's retry then takes the un-audited no-op path above — ⛔ a "saved" line for a no-op.
+      mutate: async () => {
+        const r = await write();
+        if (!r.written) throw new claim.PeerRequestStaleError();
+        return r;
+      },
     });
     return { answers: toWireAnswers(result.live, withSaved(decryptedLive, result.live, questionKey, stored)) };
   }
@@ -342,6 +374,7 @@ export function createPeerRequestHandlers(deps: AppDeps) {
       const ctx = helplineCtx(request);
       const { pingId, questionKey } = request.params as { pingId: string; questionKey: string };
       const key = requireIdempotencyKey(request);
+      await releaseHookTx(request);
       const out = await withIdempotency(
         `peer_request.helpline.save:${ctx.pariwarId}:${ctx.actorId}:${ctx.memberId}:${pingId}:${questionKey}:${key}`,
         () => onMemberTx(ctx, (_c, tx) => liveAnswersOn(tx, ctx, pingId, request)),
@@ -356,6 +389,7 @@ export function createPeerRequestHandlers(deps: AppDeps) {
       const ctx = helplineCtx(request);
       const { pingId } = request.params as { pingId: string };
       const key = requireIdempotencyKey(request);
+      await releaseHookTx(request);
       const out = await withIdempotency(
         `peer_request.helpline.submit:${ctx.pariwarId}:${ctx.actorId}:${ctx.memberId}:${pingId}:${key}`,
         async () => ({ submitted: true as const }),

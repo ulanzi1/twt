@@ -1,3 +1,7 @@
+# last_updated: 2026-10-13b (STORY 6.27a — THIRD–FIFTH REVIEW PASSES + FIXES; uncommitted on story/6-27a at 7eaf50c4. The second-pass
+# fix commit had NOT been adversarially reviewed; it was (third pass) and had regressions. U1–U16, V1–V11, W1–W11, X1–X5 applied, each
+# round reviewed BEFORE commit (V8 superseded by W1; V9 partly by W3; U2's mechanism by V1); D1–D6 deferred. Final ci:local on a fresh
+# scratch DB: 35/36 — the 36th is Story 10.23's database-NAME gate (3/3 with its override). Row stays done.)
 # last_updated: 2026-10-13 (STORY 6.27a — SECOND-PASS CODE REVIEW in 3 chunks + APPLY ALL; branch story/6-27a at 618566d3 plus
 # uncommitted fixes. Row 6-27-peer-mesh-sending-replies-and-date-of-death stays done. Decisions (BigDev): S1 — -308's answer SOURCE
 # handed off to row 6-36 (its comment below carries it); S12 — helpline writes BOUND to the caller (members/:memberId/…) + the

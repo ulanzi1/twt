@@ -5,7 +5,7 @@
 //   · the served questions in English, ONLY the shown ones (the date after "died"), the caller's own answers selected;
 //   · a tap records ONE answer for THAT ping; Submit needs `has_died`; a step-up 403 opens the page's panel.
 
-import { act, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryHistory, createRootRoute, createRoute, createRouter, Outlet, RouterProvider } from '@tanstack/react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -304,5 +304,126 @@ describe('<HelplinePeerRequests>', () => {
     expect(screen.getByRole('radiogroup', { name: 'How do you know?' })).toBeInTheDocument();
     await userEvent.click(screen.getByRole('radio', { name: 'saw' }));
     await waitFor(() => expect(screen.getByRole('button', { name: 'Submit' })).toBeEnabled());
+  });
+  it('emptying a typed date is ⛔ a phantom "unsaved" date — Submit is free again (third-pass U13 (a))', async () => {
+    mocked.getHelplinePeerRequests.mockResolvedValue({ items: [item([{ questionKey: 'has_died', value: { codes: ['died'] }, savedAt: 'x' }])] });
+    renderWithClient(<HelplinePeerRequests pariwarId="p1" memberId={MEMBER} identityConfirmed onStepUpRequired={() => {}} />);
+    const input = await screen.findByLabelText('If you know, on what date did they die?', { selector: 'input' });
+    await userEvent.type(input, '2026-10-01');
+    expect(screen.getByRole('button', { name: 'Submit' })).toBeDisabled();
+    await userEvent.clear(input);
+    expect(screen.queryByText(/A date was typed but not saved/)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Submit' })).toBeEnabled();
+  });
+
+  it('the OUTCOME line survives a post-Submit re-read REFUSED outright — the early-return panel keeps it (U13 (b), fourth-pass V10 (a))', async () => {
+    mocked.getHelplinePeerRequests
+      .mockResolvedValueOnce({ items: [item([{ questionKey: 'has_died', value: { codes: ['died'] }, savedAt: 'x' }])] })
+      .mockRejectedValue(new ApiError(403, 'auth.forbidden', 'no longer permitted')); // ⛔ retained: the early-return branch
+    renderWithClient(<HelplinePeerRequests pariwarId="p1" memberId={MEMBER} identityConfirmed onStepUpRequired={() => {}} />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Submit' }));
+    // the refusal panel replaced the cards …
+    expect(await screen.findByRole('button', { name: 'Try again' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Submit' })).not.toBeInTheDocument();
+    // … and the outcome line is still there
+    expect(screen.getByText('Request about Ram K.: Sent — the answers are locked.')).toBeInTheDocument();
+  });
+
+  it('a FAILED background re-read keeps the loaded editor and its choices, with the alert beside it (third-pass U15 (a))', async () => {
+    mocked.getHelplinePeerRequests
+      .mockResolvedValueOnce({ items: [item([{ questionKey: 'has_died', value: { codes: ['died'] }, savedAt: 'x' }])] })
+      .mockRejectedValue(new ApiError(503, 'temporarily_unavailable', 'offline'));
+    // a 401 on a save re-reads the list (the hook's terminal-refusal path) — that re-read then FAILS transiently
+    mocked.saveHelplinePeerAnswer.mockRejectedValueOnce(new ApiError(401, 'auth.session_required', 'expired'));
+    renderWithClient(<HelplinePeerRequests pariwarId="p1" memberId={MEMBER} identityConfirmed onStepUpRequired={() => {}} />);
+    await userEvent.click(await screen.findByRole('radio', { name: 'No, they have not died' }));
+    expect(await screen.findByText('The requests could not be loaded just now.')).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: 'No, they have not died' })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByRole('button', { name: 'Retry saving' })).toBeInTheDocument();
+  });
+  it('a 409 STALE retries itself (bounded) — the operator ⛔ sees "Not saved" for a value that went through (fourth-pass V7)', async () => {
+    mocked.getHelplinePeerRequests.mockResolvedValue({ items: [item([{ questionKey: 'has_died', value: { codes: ['died'] }, savedAt: 'x' }])] });
+    mocked.saveHelplinePeerAnswer
+      .mockRejectedValueOnce(new ApiError(409, 'peer_request.stale', 'try again'))
+      .mockResolvedValueOnce({ answers: [{ questionKey: 'has_died', value: { codes: ['not_died'] }, savedAt: 'y' }] });
+    renderWithClient(<HelplinePeerRequests pariwarId="p1" memberId={MEMBER} identityConfirmed onStepUpRequired={() => {}} />);
+    await userEvent.click(await screen.findByRole('radio', { name: 'No, they have not died' }));
+    await waitFor(() => expect(mocked.saveHelplinePeerAnswer).toHaveBeenCalledTimes(2));
+    const keys = mocked.saveHelplinePeerAnswer.mock.calls.map((c) => c[5]);
+    expect(keys[1]).toBe(keys[0]); // the SAME key on the retry
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Saved'));
+    expect(screen.queryByRole('button', { name: 'Retry saving' })).not.toBeInTheDocument();
+  });
+
+  it('…and a stale that keeps coming back stops after 3 retries, with Retry offered (V7 is BOUNDED)', async () => {
+    mocked.getHelplinePeerRequests.mockResolvedValue({ items: [item([{ questionKey: 'has_died', value: { codes: ['died'] }, savedAt: 'x' }])] });
+    mocked.saveHelplinePeerAnswer.mockRejectedValue(new ApiError(409, 'peer_request.stale', 'try again'));
+    renderWithClient(<HelplinePeerRequests pariwarId="p1" memberId={MEMBER} identityConfirmed onStepUpRequired={() => {}} />);
+    await userEvent.click(await screen.findByRole('radio', { name: 'No, they have not died' }));
+    expect(await screen.findByRole('button', { name: 'Retry saving' }, { timeout: 4000 })).toBeInTheDocument();
+    expect(mocked.saveHelplinePeerAnswer).toHaveBeenCalledTimes(4); // the first + 3 retries
+  });
+
+  it('a PARTIAL date (the native input reads "" with badInput) stays an unsaved edit — ⛔ dropped (fourth-pass V6)', async () => {
+    mocked.getHelplinePeerRequests.mockResolvedValue({ items: [item([{ questionKey: 'has_died', value: { codes: ['died'] }, savedAt: 'x' }])] });
+    renderWithClient(<HelplinePeerRequests pariwarId="p1" memberId={MEMBER} identityConfirmed onStepUpRequired={() => {}} />);
+    const input = (await screen.findByLabelText('If you know, on what date did they die?', { selector: 'input' })) as HTMLInputElement;
+    fireEvent.change(input, { target: { value: '2026-10-01' } }); // a complete date …
+    Object.defineProperty(input, 'validity', { value: { badInput: true }, configurable: true });
+    fireEvent.change(input, { target: { value: '' } }); // … a segment deleted: the input reports '' with badInput
+    expect(screen.getByText(/A date was typed but not saved/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Submit' })).toBeDisabled();
+  });
+  it("the stale budget is PER TASK — after it runs out, the operator's Retry gets a FRESH one (fifth-pass W4)", async () => {
+    mocked.getHelplinePeerRequests.mockResolvedValue({ items: [item([{ questionKey: 'has_died', value: { codes: ['died'] }, savedAt: 'x' }])] });
+    mocked.saveHelplinePeerAnswer.mockRejectedValue(new ApiError(409, 'peer_request.stale', 'try again'));
+    renderWithClient(<HelplinePeerRequests pariwarId="p1" memberId={MEMBER} identityConfirmed onStepUpRequired={() => {}} />);
+    await userEvent.click(await screen.findByRole('radio', { name: 'No, they have not died' }));
+    const retry = await screen.findByRole('button', { name: 'Retry saving' }, { timeout: 4000 });
+    expect(mocked.saveHelplinePeerAnswer).toHaveBeenCalledTimes(4);
+    await userEvent.click(retry);
+    await screen.findByRole('button', { name: 'Retry saving' }, { timeout: 4000 });
+    expect(mocked.saveHelplinePeerAnswer).toHaveBeenCalledTimes(8); // a fresh first + 3 retries, ⛔ an exhausted budget
+    const keys = mocked.saveHelplinePeerAnswer.mock.calls.map((c) => c[5]);
+    expect(keys[4]).not.toBe(keys[0]); // the operator's Retry carries a FRESH key (W6)
+  });
+
+  it('a PARTIAL date typed into an EMPTY field is caught on BLUR and holds Submit; Clear empties the field (fifth-pass W5)', async () => {
+    mocked.getHelplinePeerRequests.mockResolvedValue({ items: [item([{ questionKey: 'has_died', value: { codes: ['died'] }, savedAt: 'x' }])] });
+    renderWithClient(<HelplinePeerRequests pariwarId="p1" memberId={MEMBER} identityConfirmed onStepUpRequired={() => {}} />);
+    const input = (await screen.findByLabelText('If you know, on what date did they die?', { selector: 'input' })) as HTMLInputElement;
+    // empty → half-typed: the value stays '' — ⛔ change event fires; the browser flags badInput
+    Object.defineProperty(input, 'validity', { value: { badInput: true }, configurable: true });
+    fireEvent.blur(input);
+    expect(screen.getByText(/A date was typed but not saved/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Submit' })).toBeDisabled();
+    input.value = '2026-1'; // what a half-typed segment leaves in a real browser's DOM (jsdom keeps it as set)
+    await userEvent.click(screen.getByRole('button', { name: 'Clear the date' }));
+    expect(input.value).toBe(''); // Clear reset the FIELD itself (W5) — ⛔ only the state
+    Object.defineProperty(input, 'validity', { value: { badInput: false }, configurable: true });
+    expect(screen.queryByText(/A date was typed but not saved/)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Submit' })).toBeEnabled();
+  });
+
+  it('Submit itself refuses a partial date no event reported (fifth-pass W5)', async () => {
+    mocked.getHelplinePeerRequests.mockResolvedValue({ items: [item([{ questionKey: 'has_died', value: { codes: ['died'] }, savedAt: 'x' }])] });
+    renderWithClient(<HelplinePeerRequests pariwarId="p1" memberId={MEMBER} identityConfirmed onStepUpRequired={() => {}} />);
+    const input = (await screen.findByLabelText('If you know, on what date did they die?', { selector: 'input' })) as HTMLInputElement;
+    Object.defineProperty(input, 'validity', { value: { badInput: true }, configurable: true });
+    fireEvent.click(screen.getByRole('button', { name: 'Submit' })); // ⛔ blur happened (e.g. keyboard Enter)
+    expect(mocked.submitHelplinePeerReply).not.toHaveBeenCalled();
+    expect(await screen.findByText(/A date was typed but not saved/)).toBeInTheDocument();
+  });
+  it('tabbing THROUGH a field that shows the SAVED date is ⛔ an edit — Submit stays free (fifth-pass follow-up X1)', async () => {
+    mocked.getHelplinePeerRequests.mockResolvedValue({
+      items: [item([{ questionKey: 'has_died', value: { codes: ['died'] }, savedAt: 'x' }, { questionKey: 'death_date', value: { date: '2026-10-01' }, savedAt: 'y' }])],
+    });
+    renderWithClient(<HelplinePeerRequests pariwarId="p1" memberId={MEMBER} identityConfirmed onStepUpRequired={() => {}} />);
+    const input = (await screen.findByLabelText('If you know, on what date did they die?', { selector: 'input' })) as HTMLInputElement;
+    expect(input.value).toBe('2026-10-01');
+    fireEvent.focus(input);
+    fireEvent.blur(input);
+    expect(screen.queryByText(/A date was typed but not saved/)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Submit' })).toBeEnabled();
   });
 });

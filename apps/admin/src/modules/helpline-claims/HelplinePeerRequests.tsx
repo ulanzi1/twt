@@ -18,6 +18,7 @@
 // call only ([[project_tanstack_mutate_callbacks_latest_only]]).
 
 import type { PeerRequestAnswerValue, PeerRequestDetailResponse, PeerRequestLiveAnswer, PeerRequestQuestion } from '@twt/contracts';
+import { PEER_REQUEST_STALE_CODE } from '@twt/contracts';
 import { PeerAnswerEditor } from '@twt/api-client';
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type ReactElement } from 'react';
 import { useRouter } from '@tanstack/react-router';
@@ -106,6 +107,7 @@ export function HelplinePeerRequests({
       return (
         <section aria-label={title} className="rounded border p-4">
           <h2 className="text-sm font-semibold">{title}</h2>
+          {outcomeLines /* ⛔ lost when the post-Submit re-read asks for a step-up (third-pass review U13 (b)) */}
           <p className="mt-2 text-sm">{resolveEn('helpline.peer.stepup.prompt')}</p>
           <button type="button" className="mt-2 rounded border px-3 py-1 text-sm" onClick={onStepUpRequired}>
             {resolveEn('helpline.peer.stepup.button')}
@@ -116,6 +118,7 @@ export function HelplinePeerRequests({
     return (
       <section aria-label={title} className="rounded border p-4">
         <h2 className="text-sm font-semibold">{title}</h2>
+        {outcomeLines}
         <p role="alert" className="mt-2 text-sm">{resolveEn('helpline.peer.load.failed')}</p>
         <button type="button" className="mt-2 rounded border px-3 py-1 text-sm" onClick={() => void listQ.refetch()}>
           {resolveEn('helpline.peer.load.retry')}
@@ -184,11 +187,24 @@ function PeerRequestCard({
   finishedRef.current = onFinished;
   const initialAnswers = useRef(item.answers);
   const allQuestions = item.questionnaire.pages.flatMap((p) => p.questions);
+  // A 409 STALE (the save raced a change, or a parent could ⛔ be read just now) retries ITSELF, up to 3 times with a short
+  // backoff — the value is usually already live (fourth-pass review V7). Anything else waits for the operator's Retry.
+  // The budget is PER TASK (fifth-pass review W4 — one card-wide counter, reset only on a success, let one exhausted
+  // stale disable every later retry): an automatic retry reuses its task's key, so a NEW key (a new edit, or the
+  // operator's Retry, which mints one — W6) starts a fresh budget.
+  const staleRetries = useRef(0);
+  const staleFor = useRef<string | null>(null);
   const [editor] = useState(() => new PeerAnswerEditor(item.answers, {
-    save: (task) => saveRef.current({ pingId: item.pingId, questionKey: task.questionKey, value: task.value, idempotencyKey: task.idempotencyKey }),
+    save: async (task) => {
+      if (task.idempotencyKey !== staleFor.current) {
+        staleFor.current = task.idempotencyKey;
+        staleRetries.current = 0;
+      }
+      return saveRef.current({ pingId: item.pingId, questionKey: task.questionKey, value: task.value, idempotencyKey: task.idempotencyKey });
+    },
     newKey: () => crypto.randomUUID(),
-    shouldRetry: () => false,
-    wait: () => Promise.resolve(),
+    shouldRetry: (err) => err instanceof ApiError && err.code === PEER_REQUEST_STALE_CODE && (staleRetries.current += 1) <= 3,
+    wait: (attempt) => new Promise((resolve) => setTimeout(resolve, 300 * attempt)),
     questions: allQuestions,
   }));
   const state = useSyncExternalStore(editor.subscribe, editor.getSnapshot);
@@ -210,7 +226,12 @@ function PeerRequestCard({
     notify();
     const unsubscribe = editor.subscribe(notify);
     return () => { unsubscribe(); onBusyChange(item.pingId, false); };
-  }, [editor, item.pingId, onBusyChange, isBusy, dates]);
+  }, [editor, item.pingId, onBusyChange, isBusy]);
+  // A typed date changes "busy" too — reported WITHOUT the unmount cleanup above (third-pass review U13 (c): with `dates`
+  // in that effect's deps every keystroke reported "not busy" for a moment).
+  useEffect(() => {
+    onBusyChange(item.pingId, isBusy());
+  }, [dates, item.pingId, onBusyChange, isBusy]);
   useEffect(() => {
     if (!router) return;
     return router.history.block({
@@ -238,7 +259,29 @@ function PeerRequestCard({
     setStatus(null);
     editor.save(questionKey, value);
   };
-  const clearDate = (key: string) => setDates((d) => { const next = { ...d }; delete next[key]; return next; });
+  // The date inputs themselves (fifth-pass review W5): a native date input reads '' for a PARTIAL date AND fires ⛔ change
+  // event while its value stays '' (empty → half-typed, or deleting a segment at a time) — so the field is also read on
+  // BLUR and at Submit, and Clear resets the field itself (React rewrites ⛔ a DOM value it already thinks is '').
+  const dateInputs = useRef(new Map<string, HTMLInputElement>());
+  const clearDate = (key: string) => {
+    const el = dateInputs.current.get(key);
+    if (el && el.validity?.badInput) el.value = '';
+    setDates((d) => { const next = { ...d }; delete next[key]; return next; });
+  };
+  /** Read ONE date input as it stands: partial ⇒ an unsaved '' edit; truly empty, or still the SAVED date ⇒ ⛔ edit
+   *  (X1 — tabbing through a field that shows the saved date made a phantom "unsaved" date and blocked Submit). */
+  const syncDate = (key: string, el: HTMLInputElement) => {
+    const saved = editor.getSnapshot().answers.get(key);
+    const savedDate = saved !== undefined && 'date' in saved ? saved.date : null;
+    if (el.validity?.badInput) setDates((d) => ({ ...d, [key]: '' }));
+    else if (el.value === '' || el.value === savedDate) clearDate(key);
+    else setDates((d) => ({ ...d, [key]: el.value }));
+  };
+  /** A partial date sitting in an input the change events never reported (W5). */
+  const partialDateKey = (): string | null => {
+    for (const [key, el] of dateInputs.current) if (el.validity?.badInput) return key;
+    return null;
+  };
 
   const questions = allQuestions.filter((q) => isShownFor(q, answers));
   // Submit waits for EVERY required question the caller is shown — ⛔ a hard-coded key (review S36).
@@ -269,7 +312,14 @@ function PeerRequestCard({
                     aria-label={q.words.en}
                     className="rounded border px-2 py-1 text-sm"
                     value={dates[q.key] ?? (current !== undefined && 'date' in current ? current.date : '')}
-                    onChange={(e) => setDates((d) => ({ ...d, [q.key]: e.target.value }))}
+                    // A TRULY emptied field is ⛔ an unsaved date (U13 (a)); a PARTIAL date also reads '' but flags
+                    // `badInput` — it stays an unsaved edit (V6), and BLUR catches what change events miss (W5).
+                    ref={(el) => {
+                      if (el) dateInputs.current.set(q.key, el);
+                      else dateInputs.current.delete(q.key);
+                    }}
+                    onChange={(e) => syncDate(q.key, e.target)}
+                    onBlur={(e) => syncDate(q.key, e.target)}
                   />
                   <button
                     type="button"
@@ -333,6 +383,12 @@ function PeerRequestCard({
           onClick={() => {
             const current = editor.getSnapshot();
             if (current.pending > 0 || current.failed.size > 0 || locked || submitting.current || Object.keys(datesRef.current).length > 0) return;
+            // A partial date the events never reported holds Submit too (W5).
+            const partial = partialDateKey();
+            if (partial !== null) {
+              setDates((d) => ({ ...d, [partial]: '' }));
+              return;
+            }
             submitting.current = true;
             setIsSubmitting(true);
             onBusyChange(item.pingId, true);

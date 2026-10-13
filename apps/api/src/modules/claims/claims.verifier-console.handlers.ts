@@ -246,8 +246,9 @@ export interface VerifierConsoleContext {
   traceId: string | null;
   /** Optional structured logger for fail-soft decrypt/section warnings (the route passes request.log). */
   log?: { warn: (obj: unknown, msg: string) => void };
-  /** ⭐ Story 6.27a (PM13) — called once for EVERY neighbour call-back mobile shown; the route audits it (⛔ the number). */
-  onCallbackMobileShown?: (pingId: string) => void;
+  /** ⭐ Story 6.27a (PM13) — called once for EVERY neighbour call-back mobile shown; the route audits it (⛔ the number).
+   *  REQUIRED (third-pass review U11 — an optional one, defaulted to a no-op, let a context show mobiles unaudited). */
+  onCallbackMobileShown: (pingId: string) => void;
 }
 
 /** Fail-soft decrypt: a single corrupt/rotated envelope yields `null` for THAT field, never a throw. */
@@ -832,8 +833,8 @@ export async function assemblePeerMesh(
         claimCaseId: ctx.claimCaseId,
         actorId: ctx.actorId,
         ...(ctx.log ? { log: ctx.log } : {}),
-        // The route ALWAYS supplies it (and emits the audit lines only once its packet is built — review S17).
-        onCallbackMobileShown: ctx.onCallbackMobileShown ?? (() => undefined),
+        // REQUIRED on the context; the route emits the audit lines only once its packet is built (review S17).
+        onCallbackMobileShown: ctx.onCallbackMobileShown,
         run: (label, read) => underSavepoint(ctx.client, `console_${label}`, read),
       },
       () => reads.bump(),

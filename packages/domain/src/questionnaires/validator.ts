@@ -19,6 +19,7 @@ import {
   PANEL_RATIFIED_QUESTIONNAIRE_DECISIONS,
   PEER_MESH_HEALTH_QUESTION_KEYS,
   PEER_MESH_RULED_QUESTION_KEYS,
+  PEER_MESH_SENSITIVE_QUESTION_KEYS,
   PEER_MESH_WARNING_QUESTION_KEYS,
 } from './keys.js';
 import {
@@ -155,12 +156,18 @@ export function questionnaireDefinitionProblems(def: QuestionnaireDefinition): s
       }
       // ⭐ Second-pass review S2 — the ruled CLASSIFICATION, ⛔ not only the presence: a ruled health question stays a
       // health question (⇒ sensitive, ⇒ counsel's basis), and both warning questions keep their warning (`-308` item 2).
+      // Third-pass review U12: `!== true`, ⛔ `=== false` — an OMITTED flag (row 6-33's JSON-backed versions) is refused too.
       for (const key of PEER_MESH_HEALTH_QUESTION_KEYS) {
-        if (earlier.get(key)?.health === false) problems.push(`the ruled health question '${key}' is health: true`);
+        if (earlier.has(key) && earlier.get(key)?.health !== true) problems.push(`the ruled health question '${key}' is health: true`);
       }
       for (const key of PEER_MESH_WARNING_QUESTION_KEYS) {
-        if (earlier.get(key)?.warning === false) problems.push(`the ruled question '${key}' carries its warning`);
+        if (earlier.has(key) && earlier.get(key)?.warning !== true) problems.push(`the ruled question '${key}' carries its warning`);
       }
+    }
+    // U12 — EVERY version (v1 included): the Tier-1 questions are `sensitive`, so the writer encrypts them — in lockstep
+    // with migration 0158's CHECK (a codes form there would be a 23514, a 500, instead of a validator refusal here).
+    for (const key of PEER_MESH_SENSITIVE_QUESTION_KEYS) {
+      if (earlier.has(key) && earlier.get(key)?.sensitive !== true) problems.push(`the Tier-1 question '${key}' is sensitive`);
     }
   }
   return problems;

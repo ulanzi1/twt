@@ -234,10 +234,17 @@ export async function prepareSave(
   }
   const check = questionnaires.checkAnswer(questionnaires.servedDefinition(def), input.questionKey, input.value, live, input.todayIst);
   if (!check.ok) {
-    // ⭐ Review S22 — a condition we could ⛔ not evaluate (a sensitive PARENT that would not decrypt just now) is a
-    // transient STALE (409, retried), ⛔ never a permanent 422 "condition not met" for a fault that is ours.
-    const unreadable = rows.some((r) => r.valueCiphertext !== null && !decryptedLive.has(r.answerId));
-    if (check.reason === 'condition_not_met' && unreadable) throw new claim.PeerRequestStaleError();
+    // ⭐ Review S22 — a condition we could ⛔ not evaluate (THIS question's sensitive `showIf` PARENT would not decrypt just
+    // now) is a transient STALE (409, retried), ⛔ never a permanent 422 "condition not met" for a fault that is ours.
+    // Third-pass review U9: ONLY the parent counts — an unrelated unreadable answer leaves a genuine 422 a 422.
+    // Fifth-pass review W1 — the DIRECT parent of the SERVED definition (the one `checkAnswer` used) and ONLY it:
+    // `isShowIfMet` reads the direct parent alone, so an unreadable GRANDPARENT can never be why a condition failed
+    // (the fourth pass's V8 chain walk turned genuine 422s into retry loops and is reverted).
+    const served = questionnaires.questionsOf(questionnaires.servedDefinition(def));
+    const parentKey = served.find((q) => q.key === input.questionKey)?.showIf?.key ?? null;
+    const parentRow = parentKey === null ? undefined : rows.find((r) => r.questionKey === parentKey);
+    const parentUnreadable = parentRow !== undefined && parentRow.valueCiphertext !== null && !decryptedLive.has(parentRow.answerId);
+    if (check.reason === 'condition_not_met' && parentUnreadable) throw new claim.PeerRequestStaleError();
     throw new claim.PeerRequestInvalidAnswerError(check.reason);
   }
   const s = check.storage;

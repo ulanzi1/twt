@@ -47,6 +47,7 @@ import { claims } from '../schema/claims.js';
 import { type ClaimR9VoteRow, claimR9Votes } from '../schema/claim_r9_votes.js';
 import { type ClaimR9VotingSessionRow, claimR9VotingSessions } from '../schema/claim_r9_voting_sessions.js';
 import { claimStateTrusteeDecisions } from '../schema/claim_state_trustee_decisions.js';
+import { assertActorMayApprove } from './approver-own-visit.js';
 import {
   type ApprovalWarningKind,
   checkLaterApprovalWarningReason,
@@ -521,6 +522,8 @@ export async function castR9Vote(client: pg.PoolClient, input: CastR9VoteInput):
   // reader's warnings as they stand (inexact like an escalation's — ⛔ no gate runs here, and ⛔ no claim-row lock, so a
   // certificate re-review can commit between this read and the vote); the BINDING check is at `finalizeR9Outcome`.
   // A deny vote is ⛔ never gated.
+  // ⭐ Story 6.27b BD4 (`-327` decision 2) — FIRST, before the gate and any warnings read: an approver whose OWN ground visit on the claim is pending is refused, unconditionally (⛔ kind on the refusal). An approve VOTE only — a deny vote is ⛔ touched.
+  if (input.vote === 'approve') await assertActorMayApprove(db, input.pariwarId, input.claimCaseId, input.actorId);
   const warningRule =
     input.vote === 'approve'
       ? await checkLaterApprovalWarningReason(db, input.pariwarId, input.claimCaseId, warningReasonCode, input.rationaleCiphertext)
@@ -663,6 +666,8 @@ export async function finalizeR9Outcome(client: pg.PoolClient, input: R9WriteBas
   // refusal aborts cleanly with no orphaned session outcome, no event and no metadata row.
   // ⭐ Story 6.21a (D7) — through the OUTER helper: a current, ACCEPTED death certificate first.
   if (outcome === 'approved') {
+    // ⭐ Story 6.27b BD4 (`-327` decision 2) — FIRST, before the gate and any warnings read: an approver whose OWN ground visit on the claim is pending is refused, unconditionally (⛔ kind on the refusal). The FINALIZER's — a finalize that computes "denied" is ⛔ touched.
+    await assertActorMayApprove(db, input.pariwarId, input.claimCaseId, input.actorId);
     // ⭐ Story 6.23b EA2 — the approving actors: the finalizer AND every live approve voter (`-279` A1).
     const approvingActorIds = [input.actorId, ...liveVotes.filter((v) => v.vote === 'approve').map((v) => v.voterActorId)];
     await assertClaimApprovable(

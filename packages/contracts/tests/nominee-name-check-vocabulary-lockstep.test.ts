@@ -87,6 +87,7 @@ describe('EVERY clerical reason parses through EVERY schema that carries one', (
           post_death: 'evaluated',
           waiting_for_district_admin: false,
           own_reason_excluded: false,
+          own_visit_pending: false,
         },
       });
       expect(r.success, JSON.stringify(r.error?.issues)).toBe(true);

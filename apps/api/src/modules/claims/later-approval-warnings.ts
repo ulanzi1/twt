@@ -13,6 +13,10 @@ import { ConflictError } from '../../http-errors.js';
 /** Each route's own code prefix (Trap 7) — R9's is `r9_voting.` (RD5), ⛔ never `r9.`. */
 export type LaterApprovalRoutePrefix = 'verifier_decision' | 'cycle_freeze' | 'r9_voting' | 'closure';
 
+/** Story 6.27b BD4 — the ONE neutral refusal's words (the admin's `ownVisitPending`, verbatim). */
+export const OWN_GROUND_VISIT_PENDING_MESSAGE =
+  'A ground visit on this claim is assigned to you and is not finished. It must be completed, or given to someone else, before you can approve.';
+
 /** The WAIT's words (EA2 — `-277` Q3 B, `-279` A1). */
 export function lateWarningWaitMessage(ownReasonExcluded: boolean, prefix: LaterApprovalRoutePrefix): string {
   const base =
@@ -33,6 +37,12 @@ export function lateWarningWaitMessage(ownReasonExcluded: boolean, prefix: Later
  * late-reason route's own, one word apart from `LateWarningReasonRequiredError` (the WAIT).
  */
 export function translateLaterApprovalWarningError(err: unknown, prefix: LaterApprovalRoutePrefix): void {
+  // ⭐ Story 6.27b BD4 (`-327` decision 2) — ONE neutral refusal for an approver whose own ground visit on the claim is
+  // pending: ⛔ `details`, ⛔ a kind, ⛔ a key, ⛔ a word about neighbours (any of them would tell an inspector a neighbour's
+  // answer warns). Every approving route shares it (the verifier decision, its revise and the late reason too).
+  if (err instanceof claim.OwnGroundVisitPendingError) {
+    throw new ConflictError(OWN_GROUND_VISIT_PENDING_MESSAGE, `${prefix}.own_ground_visit_pending`);
+  }
   if (err instanceof claim.LateWarningReasonRequiredError) {
     throw new ConflictError(lateWarningWaitMessage(err.ownReasonExcluded, prefix), `${prefix}.late_warning_reason_required`, {
       kinds: [...err.kinds],
@@ -115,20 +125,30 @@ export const UNAVAILABLE_APPROVAL_WARNINGS: ApprovalWarningsSummary = {
   post_death: 'awaiting_determination',
   waiting_for_district_admin: false,
   own_reason_excluded: false,
+  own_visit_pending: false,
 };
 
-/** One claim's block, the WAIT judged for `approvingActorIds` (the viewer; on the R9 panel also every live approve voter). */
+/**
+ * One claim's block, the WAIT judged for `approvingActorIds` (the viewer; on the R9 panel also every live approve voter).
+ * ⭐ Story 6.27b (PM25 (c) verbatim: *"that actor's warnings summary"*; BF21 — any actor can be a scheduled inspector) —
+ * `ownVisitPending`: the VIEWER's own ground visit on the claim is pending ⇒ the two neighbour kinds are filtered out
+ * BEFORE the summary (a DISPLAY filter; the gate and finalize's binding check read every key) and the block carries
+ * `own_visit_pending: true`, so the host's approve control shows BD4's neutral words. REQUIRED — ⛔ never defaulted.
+ */
 export function toApprovalWarningsSummary(
   warnings: Pick<claim.ClaimApprovalWarnings, 'keys' | 'kinds' | 'postDeath' | 'coverage'>,
   approvingActorIds: readonly string[],
+  opts: { readonly ownVisitPending: boolean },
 ): ApprovalWarningsSummary {
-  const s = claim.summarizeApprovalWarningsFor(warnings, approvingActorIds);
+  const shown = opts.ownVisitPending ? claim.withoutPeerWarnings(warnings) : warnings;
+  const s = claim.summarizeApprovalWarningsFor(shown, approvingActorIds);
   return {
     available: true,
     kinds: s.kinds,
     post_death: s.postDeath,
     waiting_for_district_admin: s.waitingForDistrictAdmin,
     own_reason_excluded: s.ownReasonExcluded,
+    own_visit_pending: opts.ownVisitPending,
   };
 }
 

@@ -13,7 +13,8 @@
 // ⭐ IT IS A READ OF THE SAME DERIVED CONDITION, ⛔ NOT A NEW STORE. A claim is listed for one of THREE reasons. Two are
 // "under correction" — `resolveClaimCorrectionState`'s answer (AC5): a live `correction_return` row that has not been
 // resubmitted, OR a CURRENT check carrying a `does_not_match`. ⭐ The THIRD (Story 6.23b EA10; `-279` A4) is ⛔ not a
-// correction: the District Admin APPROVED and a CURRENT nominee-change warning key has ⛔ no District Admin reason — the
+// correction: the District Admin APPROVED and a CURRENT warning key (AMENDED by Story 6.27b PM10 — first a nominee-change
+// key, now ANY of `APPROVAL_WARNING_KINDS`, the neighbours' included) has ⛔ no District Admin reason — the
 // final approval WAITS for theirs (6.23a's late reason), and without this row nobody would tell them (the failure this
 // header describes, again). There is ⛔ no new table, ⛔ no new
 // event and ⛔ no new state; a claim enters and leaves this list purely by the facts already
@@ -35,11 +36,13 @@ import { clampLimit } from '../pagination.js';
 import { claims } from '../schema/claims.js';
 import { claimStateTrusteeDecisions } from '../schema/claim_state_trustee_decisions.js';
 import { memberPostings } from '../schema/member_postings.js';
-import { readClaimApprovalWarningsBulk, uncoveredKeys } from './approval-warnings.js';
+import { readClaimApprovalWarningsBulk, uncoveredKeys, withoutPeerWarnings } from './approval-warnings.js';
+import { readOwnVisitPendingClaimIds } from './approver-own-visit.js';
 import { readNomineeNameCheckFlagsBulk } from './nominee-name-check-read.js';
 import { inheritedGroundInspectionSourceSql } from './nominee-refusal-read.js';
 import { liveRoutedToR9Exists } from './r9-routing.js';
 import { otherOpenClaimForDeathExistsSql } from './one-payment-per-death.js';
+import { PEER_MESH_WARNING_QUESTION_KEYS } from '../questionnaires/keys.js';
 
 /**
  * The states a claim can be UNDER CORRECTION in — the union of the states a return may be written
@@ -89,7 +92,9 @@ export interface ClaimUnderCorrectionRow {
    * (code review round 1, decision #1) — ⛔ never dropped as "none waiting". ⚠ AMENDED by Story 6.26b (GI7, `-290` M2):
    * the candidate test has THREE sources — a determination decided after the live approval, an OWN inspection completed
    * after it, and reliance on an inherited visit (whose SOURCE can change after it) — and (`-284` E1) also admits an
-   * R9-routed claim in `state_trustee_approved`.
+   * R9-routed claim in `state_trustee_approved`. ⚠ AMENDED again: FIVE sources now — Story 6.28 OP5 (b) added (4) another
+   * OPEN claim of the death, and Story 6.27b PM10 (5) a live answer to a neighbour warning question saved after the
+   * approval (the `lateArm` comment lists all five).
    */
   readonly lateWarningAwaitingReason: boolean;
   /**
@@ -116,6 +121,13 @@ export interface ListClaimsUnderCorrectionOptions {
    * read as "none waiting".
    */
   readonly onLateWarningsUnavailable?: () => void;
+  /**
+   * ⭐ Story 6.27b (PM25 (c), Task 4.2) — the READER's actor id: for a claim whose neighbours' section is HIDDEN from them
+   * (their own ground visit pending — 6.27a's ONE predicate), the two neighbour kinds are left OUT of the late-warning
+   * count, so a row late ONLY by a neighbour key is ⛔ listed for them (⛔ emitted with count 0). DISPLAY only — the gate,
+   * the wait and the ONE rule still read every key. Omitted ⇒ ⛔ filter.
+   */
+  readonly hidePeerKindsForActor?: string;
 }
 
 /**
@@ -141,8 +153,8 @@ async function candidateBatch(
 ) {
   // ⭐ Story 6.23b (EA10) — the TIGHT late-warning arm, ONE fragment for the column AND the WHERE (Story 6.26b RD2 (a);
   // Trap 3): a live APPROVED verifier decision AND something after it that can bring a key its approval row did ⛔ not
-  // cover. ⚠ AMENDED by Story 6.26b — THREE sources now (6.23a's "TODAY a late key can arise ONLY that way" stopped
-  // holding when 6.26b shipped):
+  // cover. ⚠ AMENDED by Story 6.26b — THREE sources (6.23a's "TODAY a late key can arise ONLY that way" stopped
+  // holding when 6.26b shipped); ⚠ AMENDED by 6.28 (4) and 6.27b (5) — FIVE sources now:
   //   (1) a live determination decided after the approval (6.23b — a `post_death_version` key);
   //   (2) an OWN inspection COMPLETED after the approval (GI7 — a date or `does_not_match` key; `completed_at` is the
   //       DB clock read at the completion's UPDATE, `-288` K3);
@@ -153,8 +165,15 @@ async function candidateBatch(
   //       `otherOpenClaimForDeathExistsSql` — the SAME predicate as the warning's keys): an `other_claim_for_death` key can
   //       APPEAR (a new filing) or REAPPEAR (a `denied` other claim appealed or reversed) with ⛔ no own row moving. ⛔ No
   //       time term: `qualifyingRows`' exact `uncoveredKeys` check drops a covered row.
+  //   (5) ⭐ Story 6.27b PM10 (`-303` Q2 A) — a LIVE answer to a warning question saved after the approval: a `peer_*`
+  //       key can APPEAR (a new or edited answer) with ⛔ no other row moving; ⛔ no time term beyond it — `qualifyingRows`'
+  //       exact check drops a covered or non-warning answer ('died', 'unknown', an equal date). The listing is `-279`
+  //       A4's. ⛔ No window term (6.27a PM8 / PM10 — the scan states and the R9 arm already equal the answer window, and
+  //       answers exist only in-window). ⚠ `saved_at` is `clock_timestamp()` and the save takes the CLAIM lock first
+  //       (6.27a Invariant 9) ⇒ a save racing an approval commits AFTER it with `saved_at > v.decided_at` (Trap 13).
   // ⛔ Still never "every approved claim" (the crowding the 2026-09-23b review removed) — only claims relying on an
-  // inherited visit, a rare refile path, or with another open claim of their death. The exact answer is computed per row
+  // inherited visit, a rare refile path, with another open claim of their death, or with a neighbour answer saved after
+  // the approval. The exact answer is computed per row
   // below.
   // ⚠ The determination arm compares two transaction-START `now()`s — a race recorded in `deferred-work.md`, ⛔ not
   // changed here.
@@ -190,6 +209,17 @@ async function candidateBatch(
                  AND ${inheritedGroundInspectionSourceSql(sql`v.pariwar_id`, sql`v.claim_case_id`)} IS NOT NULL
                )
                OR ${otherOpenClaimForDeathExistsSql('claims')}
+               OR EXISTS (
+                 SELECT 1 FROM claim_peer_mesh_reply_answers pa
+                  WHERE pa.pariwar_id = v.pariwar_id
+                    AND pa.claim_case_id = v.claim_case_id
+                    AND pa.question_key IN (${sql.join(
+                      PEER_MESH_WARNING_QUESTION_KEYS.map((k) => sql`${k}`),
+                      sql`, `,
+                    )})
+                    AND pa.superseded_at IS NULL
+                    AND pa.saved_at > v.decided_at
+               )
              )
         )`;
   return (
@@ -311,7 +341,7 @@ export async function listClaimsUnderCorrection(
       ? candidates.filter((c) => opts.isVisible!({ district: c.district }))
       : candidates;
     if (visibleCandidates.length > 0) {
-      out.push(...(await qualifyingRows(db, pariwarId, visibleCandidates, opts.onLateWarningsUnavailable)));
+      out.push(...(await qualifyingRows(db, pariwarId, visibleCandidates, opts.onLateWarningsUnavailable, opts.hidePeerKindsForActor)));
     }
     if (out.length >= pageSize || candidates.length < scanBatch) break;
   }
@@ -334,6 +364,7 @@ async function qualifyingRows(
   pariwarId: PariwarId,
   candidates: readonly Candidate[],
   onLateWarningsUnavailable: (() => void) | undefined,
+  hidePeerKindsForActor: string | undefined,
 ): Promise<ClaimUnderCorrectionRow[]> {
   const claimCaseIds = candidates.map((c) => c.claimCaseId);
   const returnRows = await db
@@ -368,8 +399,9 @@ async function qualifyingRows(
   // SAVEPOINT (the in-package shape of `contribution/write.ts`'s): a SQL error rolls back ONLY this read, the two
   // correction arms still list, and the caller is told. Coverage is the District Admin's own — ⛔ no actor exclusion:
   // the queue asks whether ANY District Admin answer exists.
-  const lateWarnings = await readLateWarningArm(db, pariwarId, claimCaseIds);
-  if (lateWarnings === null) onLateWarningsUnavailable?.();
+  const lateArm = await readLateWarningArm(db, pariwarId, claimCaseIds, hidePeerKindsForActor);
+  const lateWarnings = lateArm?.byClaim ?? null;
+  if (lateArm === null) onLateWarningsUnavailable?.();
 
   const out: ClaimUnderCorrectionRow[] = [];
   for (const c of candidates) {
@@ -394,7 +426,11 @@ async function qualifyingRows(
     // same statement as every other candidate arm) instead of silently defaulting to "no warning".
     // Round 2 (BigDev "1"): on that fault path the count is UNKNOWN — `null`, ⛔ never `0` (the row said "0 warnings appeared").
     const faultCandidate = lateWarnings === null && c.lateWarningCandidate;
-    const w = lateWarnings === null ? undefined : lateWarnings.get(c.claimCaseId.toLowerCase());
+    const read = lateWarnings === null ? undefined : lateWarnings.get(c.claimCaseId.toLowerCase());
+    // ⭐ Story 6.27b (PM25 (c)) — the reader's own ground visit is pending on this claim ⇒ the neighbour kinds are ⛔ shown
+    // to them (a DISPLAY filter; ⚠ RECORDED: on the FAULT path a candidate raised only by the neighbour arm is still kept
+    // as "may wait", `null` — ⛔ kind is named).
+    const w = read !== undefined && lateArm?.hidden.has(c.claimCaseId.toLowerCase()) === true ? withoutPeerWarnings(read) : read;
     const lateWarningUncoveredCount = faultCandidate ? null : w === undefined ? 0 : uncoveredKeys(w).length;
     const lateWarningAwaitingReason = faultCandidate || (lateWarningUncoveredCount ?? 0) > 0;
     if (!hasLiveUnresubmittedReturn && !sentBackByCheck && !lateWarningAwaitingReason) continue;
@@ -417,13 +453,22 @@ async function qualifyingRows(
   return out;
 }
 
-/** EA10's late arm under a raw SAVEPOINT — `null` when it could ⛔ not be read (the transaction stays usable). */
-async function readLateWarningArm(db: Db, pariwarId: PariwarId, claimCaseIds: readonly string[]) {
+/**
+ * EA10's late arm under a raw SAVEPOINT — `null` when it could ⛔ not be read (the transaction stays usable). ⭐ Story
+ * 6.27b (Task 4.2): with `hidePeerKindsForActor`, ONE more statement INSIDE the same SAVEPOINT returns the claims whose
+ * neighbours' section is hidden from that actor (the SHARED fragment) — a failure takes the existing fault path (⛔ kind
+ * revealed, ⛔ row dropped).
+ */
+async function readLateWarningArm(db: Db, pariwarId: PariwarId, claimCaseIds: readonly string[], hidePeerKindsForActor: string | undefined) {
   await db.execute(sql`SAVEPOINT late_warning_arm`);
   try {
     const byClaim = await readClaimApprovalWarningsBulk(db, pariwarId, claimCaseIds as readonly ClaimId[]);
+    const hidden =
+      hidePeerKindsForActor === undefined
+        ? new Set<string>()
+        : await readOwnVisitPendingClaimIds(db, pariwarId, claimCaseIds, hidePeerKindsForActor);
     await db.execute(sql`RELEASE SAVEPOINT late_warning_arm`);
-    return byClaim;
+    return { byClaim, hidden };
   } catch (err) {
     // Code review 2026-10-06: this `catch` is the ONLY signal a real bug (vs. a genuine, expected unavailability)
     // ever gets — the caller only sees `onLateWarningsUnavailable`'s zero-argument callback. Log before swallowing.

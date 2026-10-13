@@ -244,7 +244,7 @@ const closureQueueItem = (over: Partial<ClosureQueueItem> = {}): ClosureQueueIte
   // Story 6.23b (RD20) — `null` EXACTLY on a closure request; a quiet block on a "no correction needed" item.
   approval_warnings:
     over.kind === 'no_correction_needed'
-      ? { available: true, kinds: [], post_death: 'evaluated', waiting_for_district_admin: false, own_reason_excluded: false }
+      ? { available: true, kinds: [], post_death: 'evaluated', waiting_for_district_admin: false, own_reason_excluded: false , own_visit_pending: false}
       : null,
   ...over,
 });
@@ -324,6 +324,12 @@ describe('<PariwarClosureList> — the Pariwar Admin (UX-DR54, UX-DR44)', () => 
     expect(screen.getByTestId('no-correction-approve')).toBeDisabled();
     expect(screen.getAllByText(/still needed before you can approve/).length).toBeGreaterThan(0);
   });
+
+  // Story 6.27b (PM24; AC6) — the neighbours' answers on the no-correction strip, ON DEMAND (⛔ fetched on render).
+  it('Story 6.27b — the "no correction needed" strip carries the neighbours\' answers disclosure, closed', () => {
+    wrap(<PariwarClosureList pariwarId={PARIWAR} reasonOptions={[]} items={[closureQueueItem({ kind: 'no_correction_needed', checked_after_record: true, family_run_day0: null })]} />);
+    expect(screen.getByTestId(`no-correction-neighbours-${CLAIM}`)).toHaveAttribute('aria-expanded', 'false');
+  });
 });
 
 const detail = (over: Partial<EscalatedClosureDetailResponse> = {}): EscalatedClosureDetailResponse => ({
@@ -357,12 +363,19 @@ const detail = (over: Partial<EscalatedClosureDetailResponse> = {}): EscalatedCl
   approve_path: 'name_waived_251',
   finally_approved_elsewhere: null,
   // Story 6.23b (EA7) — a quiet claim, and the Pariwar's list.
-  approval_warnings: { available: true, kinds: [], post_death: 'evaluated', waiting_for_district_admin: false, own_reason_excluded: false },
+  approval_warnings: { available: true, kinds: [], post_death: 'evaluated', waiting_for_district_admin: false, own_reason_excluded: false , own_visit_pending: false},
   reason_options: [],
   ...over,
 });
 
 describe('<EscalationDetail> — the Super Admin (AC14, AC17)', () => {
+  // Story 6.27b (PM24; AC6) — the neighbours' answers BEFORE the decision, ON DEMAND.
+  it('Story 6.27b — the Super Admin\'s detail carries the neighbours\' answers disclosure, closed, outside the approve branch', async () => {
+    getEscalatedClosure.mockResolvedValue(detail());
+    wrap(<EscalationDetail pariwarId={PARIWAR} claimCaseId={CLAIM} />);
+    expect(await screen.findByTestId(`escalation-neighbours-${CLAIM}`)).toHaveAttribute('aria-expanded', 'false');
+  });
+
   it('shows both admins\' notes, the name check\'s RECORDED state, and what an approve would waive', async () => {
     getEscalatedClosure.mockResolvedValue(detail());
     wrap(<EscalationDetail pariwarId={PARIWAR} claimCaseId={CLAIM} />);

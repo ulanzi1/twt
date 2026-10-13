@@ -24,9 +24,10 @@ import {
   projectClaimState,
   savePeerAnswer,
 } from '../../../src/claim/index.js';
-import { claimId as toClaimId, memberId as toMemberId, pariwarId as toPariwarId, peerMeshPingId as toPingId } from '../../../src/ids/index.js';
+import { claimId as toClaimId, memberId as toMemberId, pariwarId as toPariwarId } from '../../../src/ids/index.js';
 import type { ClaimId, MemberId, PariwarId, PeerMeshPingId } from '../../../src/ids/index.js';
 import { driveClaimTo } from '../_helpers.js';
+import { attachTextedPings, type TextedPing } from './_peer-reply-fixtures.js';
 import { claimAt } from './_one-payment-fixtures.js';
 
 const DATABASE_URL = process.env['DATABASE_URL'];
@@ -122,26 +123,14 @@ describe.skipIf(!hasDatabase)('Story 6.27a — a save racing an approval or a cl
     );
   }
 
-  /** A claim of a fresh death in `verifier_approved` (or `verification_in_progress`), a selection and ONE texted ping. */
+  /** A claim of a fresh death in `verifier_approved` (or `verification_in_progress`), a selection and ONE texted ping
+   *  (Story 6.27b — the selection + ping half LIFTED into the shared `_peer-reply-fixtures.ts`). */
   async function seedRequest(pid: PariwarId, state: 'verifier_approved' | 'verification_in_progress') {
     return asSuperuser(async (c) => {
       const mid = toMemberId(randomUUID());
       const cid = toClaimId(randomUUID());
       await driveClaimTo(c, pid, cid, mid, state);
-      const neighbour = toMemberId(randomUUID());
-      const selectionId = randomUUID();
-      await c.query(
-        `INSERT INTO claim_peer_mesh_selections (selection_id, claim_case_id, pariwar_id, deceased_member_id, deceased_created_at, metric_id,
-           metric_version, selected_member_ids, candidate_snapshot, response_window_expires_at)
-         VALUES ($1, $2, $3, $4, now(), 'm', 1, ARRAY[$5]::uuid[], '[]'::jsonb, now() + interval '72 hours')`,
-        [selectionId, cid, pid, mid, neighbour],
-      );
-      const pingId = toPingId(randomUUID());
-      await c.query(
-        `INSERT INTO claim_peer_mesh_pings (ping_id, selection_id, pariwar_id, member_id, send_outcome, attempt_count, send_updated_at)
-         VALUES ($1, $2, $3, $4, 'accepted', 1, clock_timestamp())`,
-        [pingId, selectionId, pid, neighbour],
-      );
+      const [{ pingId, neighbour }] = (await attachTextedPings(c, pid, cid, mid, 1)) as [TextedPing];
       return { cid, mid, neighbour, pingId };
     });
   }

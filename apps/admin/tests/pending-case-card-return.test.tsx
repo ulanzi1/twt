@@ -48,6 +48,7 @@ const CASE: PendingCase = {
     post_death: 'evaluated',
     waiting_for_district_admin: false,
     own_reason_excluded: false,
+    own_visit_pending: false,
   },
 };
 
@@ -98,6 +99,16 @@ const renderCard = (overrides: Partial<PendingCase> = {}) => {
 };
 
 describe('<PendingCaseCard> — AC11, the return to the District Admin', () => {
+  // Story 6.27b (PM24; AC6) — the neighbours' answers, ON DEMAND; ⛔ on the voted bucket (it always 404s there).
+  it('Story 6.27b — the card carries the neighbours\' answers disclosure (closed); the `voted_pending_commit` card does ⛔ not', () => {
+    setup({}, 'ready_to_freeze');
+    expect(screen.getByTestId(`pending-case-neighbours-${CASE.claim_case_id}`)).toHaveAttribute('aria-expanded', 'false');
+  });
+  it('Story 6.27b — ⛔ neighbours\' answers disclosure on a `voted_pending_commit` card', () => {
+    setup({}, 'voted_pending_commit');
+    expect(screen.queryByTestId(`pending-case-neighbours-${CASE.claim_case_id}`)).toBeNull();
+  });
+
   it('offers a RETURN action, and its label says "return" — never "reject" or "deny"', () => {
     setup();
     const btn = screen.getByTestId('return-to-district-admin');

@@ -50,6 +50,7 @@ import {
 import { claimPeerMeshSelections } from '../schema/claim_peer_mesh_selections.js';
 import { claims } from '../schema/claims.js';
 import { answerWindowSql, isClaimInAnswerWindow } from './answer-window.js';
+import { isActorOwnVisitPending } from './approver-own-visit.js';
 import { getPeerMeshResponses } from './peer-mesh-read.js';
 import { recordPeerMeshResponse } from './peer-mesh-persist.js';
 import { lockClaimCase } from './read.js';
@@ -620,15 +621,6 @@ export async function readPeerNeighbourContacts(
  * ⛔ no family account). The inspector forms their own view first (6.27d shows them only differences, after completing).
  */
 export async function isPeerSectionHiddenFromActor(db: Db, pariwarId: PariwarId, claimCaseId: ClaimId, actorId: string): Promise<boolean> {
-  const { rows } = await db.execute<{ hidden: boolean }>(sql`
-    SELECT EXISTS (
-             SELECT 1 FROM claim_ground_inspections gi
-              WHERE gi.pariwar_id = ${pariwarId}::uuid AND gi.claim_case_id = ${claimCaseId}::uuid
-                AND gi.inspector_actor_id = ${actorId} AND gi.status = 'scheduled')
-       AND NOT EXISTS (
-             SELECT 1 FROM claim_ground_inspections gi
-              WHERE gi.pariwar_id = ${pariwarId}::uuid AND gi.claim_case_id = ${claimCaseId}::uuid
-                AND gi.inspector_actor_id = ${actorId} AND gi.status = 'completed'
-                AND gi.inspection_stage <> 'certificate_check') AS hidden`);
-  return rows[0]?.hidden === true;
+  // Story 6.27b (Task 4.2) — the ONE predicate, now a shared fragment (the queue, the four hosts and BD4's guard use it).
+  return isActorOwnVisitPending(db, pariwarId, claimCaseId, actorId);
 }

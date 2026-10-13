@@ -51,7 +51,7 @@ LETTERS: `PM` / `F` = 6.27a's; **`BF`** = FOUND against 6.27a's build (this file
 
 # Story 6.27b: A Neighbour's "Has Not Died" or Differing Date Is a Warning — Every Approver Gives a Reason, a Late One Waits for the District Admin, and Every Approver Sees the Answers `[SURFACE]`
 
-Status: ready-for-dev
+Status: review
 
 > ⭐⭐ **WHAT THIS STORY IS.** 6.27a lets the five neighbours answer and lets the District Admin see the answers. This story makes two of
 > those answers **ask something of an approver**, under the ONE rule 6.23a built (`-264` FQ12): a neighbour saying the member **has not
@@ -470,8 +470,8 @@ basis ([[feedback_record_unattested_no_backfill]]).
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0 — governance and re-pin (AC1).**
-  - [ ] 0.0 `git fetch origin` ([[feedback_git_fetch_before_remote_reasoning]]); `git diff --name-only 560369a7..HEAD -- packages apps
+- [x] **Task 0 — governance and re-pin (AC1).**
+  - [x] 0.0 `git fetch origin` ([[feedback_git_fetch_before_remote_reasoning]]); `git diff --name-only 560369a7..HEAD -- packages apps
     scripts infra` — re-read every cited file in that list; if 6.27d merged first, rebase and re-read `correction-queue-read.ts`,
     `approval-warnings.ts`, `peer-answers-assembler.ts` and the console handler (6.27d touches the inspection's completion, ⛔ not the warnings —
     but confirm). Work on `story/6-27b` ONLY ([[feedback_commit_on_story_branch]]); check the branch before every commit
@@ -491,17 +491,17 @@ basis ([[feedback_record_unattested_no_backfill]]).
     is BigDev's. ⭐ v3.2: SENT and RULED (`-328`) — the withhold is superseded.
   - [x] 0.4 ✅ `2026-10-13-328` (Trustee-ratified), committed ALONE with the note's ruling block (`c1900b89`, 2026-10-13).
   - [x] 0.5 ✅ `2026-10-13-329` (author-commit erratum), committed ALONE with the note's pointer line (`4251d8ca`, 2026-10-13).
-- [ ] **Task 1 — the kinds (AC2, AC3, AC4; PM9).** `packages/domain/src/claim/approval-warnings.ts`
-  - [ ] 1.1 Append `'peer_says_not_died'`, `'peer_death_date_differs'` to `APPROVAL_WARNING_KINDS` (`:111-117`, at the END); export
+- [x] **Task 1 — the kinds (AC2, AC3, AC4; PM9).** `packages/domain/src/claim/approval-warnings.ts`
+  - [x] 1.1 Append `'peer_says_not_died'`, `'peer_death_date_differs'` to `APPROVAL_WARNING_KINDS` (`:111-117`, at the END); export
     `PEER_WARNING_KINDS = ['peer_says_not_died', 'peer_death_date_differs'] as const`; the doc-block above the list gains the 6.27b line
     (`-303` Q2 A, its Consequence 1 discharging `-279` A6; `-324` A for the special panel). The pin (`approval-warnings.test.ts:63-70`) gets the
     eight kinds; its GENERIC message (`:60-62`) KEEPS 6.28's sentence and ADDS *"Story 6.27b — `2026-10-10-303` Q2 A (its Consequence 1) for
     `peer_says_not_died` / `peer_death_date_differs`"*. Contracts mirror (`verification-decision.ts:130-136`) + its lockstep; then
     `pnpm --filter @twt/contracts test` ([[project_contracts_tests_outside_tsc]]).
-  - [ ] 1.2 Import `PEER_MESH_WARNING_QUESTION_KEYS` and the `HasDiedCode` type from `../questionnaires/keys.js` (BF2 — ⛔ never the barrel);
+  - [x] 1.2 Import `PEER_MESH_WARNING_QUESTION_KEYS` and the `HasDiedCode` type from `../questionnaires/keys.js` (BF2 — ⛔ never the barrel);
     add `questionnaires/keys.ts` to the safe-leaves comment (`:46-50` — ⚠ already stale: it omits `one-payment-per-death.ts`, imported
     at `:93`; add both).
-  - [ ] 1.3 `peerReplyColumnsSql()` — ONE fragment, beside `deathFactColumnsSql()`, aliasing the outer claim `c` (both readers already do):
+  - [x] 1.3 `peerReplyColumnsSql()` — ONE fragment, beside `deathFactColumnsSql()`, aliasing the outer claim `c` (both readers already do):
     ```sql
     (SELECT json_agg(json_build_object('id', pa.answer_id, 'key', pa.question_key,
                                        'codes', pa.value_codes, 'window', pa.death_date_window_indexes)
@@ -516,7 +516,7 @@ basis ([[feedback_record_unattested_no_backfill]]).
     own-claim filter IS the `-261` C3 rule (a refile's answers live on the refile's claim id). Selected by `readClaimApprovalWarnings`
     (after `deathFactColumnsSql()`, `:504`) AND `readClaimApprovalWarningsSlice` (`:612`). `RawWarningsRow` (`:334-367`) gains
     `peer_answers: { id: string; key: string; codes: string[] | null; window: string[] | null }[] | null`.
-  - [ ] 1.4 The pure helper — exported, the `deriveDeathFactWarningKeys` pattern:
+  - [x] 1.4 The pure helper — exported, the `deriveDeathFactWarningKeys` pattern:
     `derivePeerReplyWarningKeys({ answers, currentAcceptedDateIndex })` → `{ keys, kinds, flags: ReadonlyMap<answerId (lower-case), boolean> }`.
     `has_died`: key ⇔ `codes` equals `['not_died']` (typed `'not_died' satisfies HasDiedCode`). `death_date`: key ⇔ `window` is 3 indexes
     AND `currentAcceptedDateIndex !== null` AND `!window.includes(currentAcceptedDateIndex)`. `flags` has ONE entry per selected answer
@@ -525,7 +525,7 @@ basis ([[feedback_record_unattested_no_backfill]]).
     row.current_accepted_date_index : null` (the SAME `cur` the death facts use — ⛔ never a second certificate read). `ClaimApprovalWarnings`
     gains `peerAnswerFlags: ReadonlyMap<string, boolean>` (doc: ⛔ never a key, ⛔ never a date; the console's stitch reads it — the
     `inspectionComparisons` precedent, `:318-323`).
-  - [ ] 1.5 `withoutPeerWarnings(w)` — exported, pure: `{ ...w, keys: w.keys minus the two peer prefixes, kinds: w.kinds minus
+  - [x] 1.5 `withoutPeerWarnings(w)` — exported, pure: `{ ...w, keys: w.keys minus the two peer prefixes, kinds: w.kinds minus
     PEER_WARNING_KINDS }` (coverage ⛔ not touched — `uncoveredKeys` / `lateWarningKeys` / `lateKeysUncoveredFor` /
     `lateWarningNothingUncoveredFor` all iterate `w.keys`, `:830-972`). For DISPLAY only (Task 4) — ⛔ never called by the assertion, the
     wait or any writer. Source-scan leg, an ALLOWLIST (⛔ never "no file but its definition" — Task 4.2's `qualifyingRows` must call it):
@@ -533,16 +533,16 @@ basis ([[feedback_record_unattested_no_backfill]]).
     `correction-queue-read.ts` (the display read), and inside `approval-warnings.ts` ⛔ never within the bodies of
     `assertLateWarningsCovered`, `checkLaterApprovalWarningReason` or `insertClaimWarningApprovalRecord`; and in ⛔ no `*-persist.ts`.
     (`claim/index.ts` re-exports by `export *`, so it does ⛔ not trip the scan.)
-  - [ ] 1.6 Fence (BF3): `'value_ciphertext'` AND `'valueCiphertext'` (a Drizzle-built fragment evades the snake_case string) join the
+  - [x] 1.6 Fence (BF3): `'value_ciphertext'` AND `'valueCiphertext'` (a Drizzle-built fragment evades the snake_case string) join the
     deny-list array at `nominee-name-no-comparison-fence.test.ts:364`; `FENCED_FILES` stays `toBe(50)`. Add a teeth line: the same scan of
     `peer-mesh-reply.ts` DOES find `value_ciphertext` (it has 3). ⚠ `stripComments` (`:173-175`) strips only `/* */` blocks and full-line
     `//` ⇒ write the *"⛔ never `value_ciphertext`"* warning as a JSDoc above `peerReplyColumnsSql()` ONLY — ⛔ never as an SQL `--` comment
     inside the `sql` template or a trailing `//`, which turn the fence red. ⚠ Both `approval-warnings.ts` and `correction-queue-read.ts` are
     in `FENCED_FILES` (`:42`, `:108`), whose `FORBIDDEN_PATTERNS` include `toLowerCase\(\)\s*===` (`:164`) ⇒ the helper, the flags map and
     the queue filter use `Map`/`Set` `.get` / `.has(id.toLowerCase())`, ⛔ never `x.toLowerCase() === y`.
-  - [ ] 1.7 ⚠ The bulk reader runs in the cycle-freeze page path (≤ 1,500 ids in 500-id slices): `EXPLAIN` one slice on `:5432` with seeded
+  - [x] 1.7 ⚠ The bulk reader runs in the cycle-freeze page path (≤ 1,500 ids in 500-id slices): `EXPLAIN` one slice on `:5432` with seeded
     answers — the fragment must use `claim_peer_mesh_reply_answers_claim_idx` (BF4); record the plan's node in the Debug Log.
-  - [ ] 1.8 Tests — unit (`approval-warnings.test.ts`): a table over `derivePeerReplyWarningKeys` — `not_died` / `died` / `not_sure` /
+  - [x] 1.8 Tests — unit (`approval-warnings.test.ts`): a table over `derivePeerReplyWarningKeys` — `not_died` / `died` / `not_sure` /
     `did_not_know`; a date equal, −1, +1, −2, +2 (window indexes built by a TEST index fn — ⛔ never real dates compared); `['unknown']`; ⛔ no
     current review; a pre-6.26b review (`null` index); two answers ⇒ two keys; flags. `withoutPeerWarnings` (keys, kinds, every other kind
     kept). Live (`packages/domain/tests/integration/claim/approval-warnings-peer-reply.spec.ts`, NEW): the parity of the two readers over
@@ -555,7 +555,7 @@ basis ([[feedback_record_unattested_no_backfill]]).
     (`packages/domain/src/questionnaires/answers.ts:38-40`, the helper production maps through `deathDateBlindIndex` at
     `apps/api/src/modules/claims/peer-request-core.ts:258-261`) — ⛔ never a re-derived `[−1, 0, +1]` offset list ([[feedback_stub_must_call_not_transcribe]]); 6.27a's `prep` helper uses `idx:${d}`
     (`peer-mesh-reply.spec.ts:110-121`), which compares `differs` against EVERY certificate.
-- [ ] **Task 1b — the rule at every approver (AC3, AC4).** ⛔ No writer changes (F16 — the wait has ⛔ no per-kind filter). Live API legs in
+- [x] **Task 1b — the rule at every approver (AC3, AC4).** ⛔ No writer changes (F16 — the wait has ⛔ no per-kind filter). Live API legs in
   `apps/api/tests/integration/claims/approval-warnings-every-approver.spec.ts` (the 6.26b block `:915-1010` is the model: a per-kind loop at
   the District Admin, then the late legs), one `peer_says_not_died` and one `peer_death_date_differs` world each: the District Admin refused
   without a reason, accepted with one; the cycle-freeze vote (`:363`, `:407`), escalation resolution (`:479` — ONE-rule leg only, ⛔ no late
@@ -572,19 +572,19 @@ basis ([[feedback_record_unattested_no_backfill]]).
   composed form so the real index helper (`deathDateBlindIndex`,
   `ground-inspection-crypto.ts:63`) builds BOTH sides. ⚠ The certificate's accepted date and the neighbour's date must be built by the SAME
   index helper with the SAME Pariwar key.
-- [ ] **Task 2 — the queue (AC5; PM10).** `packages/domain/src/claim/correction-queue-read.ts`
-  - [ ] 2.1 ONE hoisted disjunct inside `lateArm`'s `OR` list (`:161-194`), after `otherOpenClaimForDeathExistsSql`:
+- [x] **Task 2 — the queue (AC5; PM10).** `packages/domain/src/claim/correction-queue-read.ts`
+  - [x] 2.1 ONE hoisted disjunct inside `lateArm`'s `OR` list (`:161-194`), after `otherOpenClaimForDeathExistsSql`:
     `OR EXISTS (SELECT 1 FROM claim_peer_mesh_reply_answers pa WHERE pa.pariwar_id = v.pariwar_id AND pa.claim_case_id = v.claim_case_id
     AND pa.question_key IN (<the domain list>) AND pa.superseded_at IS NULL AND pa.saved_at > v.decided_at)` — used by the column AND the
     WHERE through `lateArm` (⛔ never two copies); ⛔ no window term (6.27a PM8 / PM10 — the scan states + the R9 arm already equal the
     window, and answers exist only in-window); ⛔ no change to the scan states. ⚠ `saved_at` is `clock_timestamp()` (PM7 (a)) and the save
     takes the CLAIM lock first (6.27a Invariant 9) ⇒ a save racing an approval commits AFTER it with `saved_at > v.decided_at` (Trap 13).
-  - [ ] 2.2 Comments amended, ⛔ never deleted (BF12): the `lateArm` list gains *"(5) ⭐ Story 6.27b PM10 (`-303` Q2 A) — a LIVE answer to
+  - [x] 2.2 Comments amended, ⛔ never deleted (BF12): the `lateArm` list gains *"(5) ⭐ Story 6.27b PM10 (`-303` Q2 A) — a LIVE answer to
     a warning question saved after the approval: a `peer_*` key can APPEAR (a new or edited answer) with ⛔ no other row moving; ⛔ no time
     term beyond it — `qualifyingRows`' exact check drops a covered or non-warning answer (*'died'*, *'unknown'*, an equal date). The
     listing is `-279` A4's."*; the
     `lateWarningAwaitingReason` doc-block's *"THREE sources"* → FIVE (listing them); the header's third reason → *"a CURRENT warning key"*.
-  - [ ] 2.3 NEW own-committing spec `packages/domain/tests/integration/claim/correction-queue-late-peer-reply.spec.ts` — the
+  - [x] 2.3 NEW own-committing spec `packages/domain/tests/integration/claim/correction-queue-late-peer-reply.spec.ts` — the
     `correction-queue-late-inspection.spec.ts` construction (`onOwnTx(pid, fn, asSuperuser)` `:125-142` — the superuser path is its third
     argument, used at `:259`, `:287`; `freshPariwar()` `:118`; the `afterAll` replica-mode cleanup `:90-116` by PARIWAR; `finalVoteWaits`
     `:197`): AC5's legs (a)–(e′), each step its OWN committed transaction. The save goes through `savePeerAnswer` (domain,
@@ -597,15 +597,15 @@ basis ([[feedback_record_unattested_no_backfill]]).
     `prep` builds `idx:${date}` — the index trap). `rereviewAndRedetermine` (`approval-warnings-death-facts.spec.ts:123`) is module-local and
     ⛔ not exported — lift it beside them, or compose its three exported `_helpers` calls. ⛔ Never inside one `setupLiveDb`
     BEGIN/ROLLBACK envelope (there every `now()` ties — [[project_db_clock_ordering_tests_tie]]).
-  - [ ] 2.4 Red-checks (revert the line, watch it fail, restore — record each in the Debug Log): (b) red when the disjunct is deleted; (a)
+  - [x] 2.4 Red-checks (revert the line, watch it fail, restore — record each in the Debug Log): (b) red when the disjunct is deleted; (a)
     red when the comparator is reversed (`<`); (e) red when the WHOLE R9 OR-arm (`correction-queue-read.ts:252`) is deleted, and (e′) red
     when `liveRoutedToR9Exists()` is dropped from it (deleting that conjunct only WIDENS the arm, so a positive leg cannot see it — the 6.26b
     RD26 lesson, `correction-queue-late-inspection.spec.ts:250,280-286`); (c′) red when the FRAGMENT's `superseded_at IS NULL` is dropped
     (the old uncovered `not_died` key returns); (d) red when the date arm of `derivePeerReplyWarningKeys` is deleted. ⚠ The queue
     disjunct's own `superseded_at IS NULL` is ⛔ not observable (any warning row superseded after approval implies a live successor saved
     after it) — RECORDED as an unobservable narrowing term, ⛔ no red-check. ⚠ A leg that survives its red-check is hollow.
-- [ ] **Task 3 — the approvers' read (AC6, AC11; PM24, BD1, the call-back number per `-328`).**
-  - [ ] 3.1 Assembler (`peer-answers-assembler.ts`) — two changes, ⛔ no other behaviour change:
+- [x] **Task 3 — the approvers' read (AC6, AC11; PM24, BD1, the call-back number per `-328`).**
+  - [x] 3.1 Assembler (`peer-answers-assembler.ts`) — two changes, ⛔ no other behaviour change:
     (a) ⭐ `-328` read with `-329` (supersedes v3.1's `'show' | 'withhold'`): a NEW REQUIRED context option `callbackViewer:
     'district' | 'pariwar_admin' | 'super_admin'`, and ONE rule per ping, in this order:
     1. the ping was ⛔ never texted (`sendOutcome !== 'accepted'` — the `visible()` test, `peer-mesh-reply.ts:177-179`) ⇒ `{ status:
@@ -638,7 +638,7 @@ basis ([[feedback_record_unattested_no_backfill]]).
     Doc-block: the header's *"the console route emits the audit lines"* gains *"and 6.27b's approvers' read (PM24) — each with its OWN event;
     the call-back number per `-328` read with `-329`: ⛔ never for a never-texted ping; on a *"Yes"* for the District Admin's side; on a
     *"Yes"* to an `'admin'`-audience question for the Pariwar Admin; any answer for the Super Admin"*; BD3's recorded meaning of "changed N times" beside `changeCount` (`:165`).
-  - [ ] 3.2 Domain predicate for the step disjunction — ⛔ no new state list. The handler reads the claim's `current_state` and
+  - [x] 3.2 Domain predicate for the step disjunction — ⛔ no new state list. The handler reads the claim's `current_state` and
     `deceasedMemberId` (`claim.getClaimCase`, `packages/domain/src/claim/read.ts:73`), then admits on ANY of FOUR arms (each with
     `rbac.hasPermission(request.scopeGrants, key, { dimension: 'pariwar', value: pariwarId, pariwarId })` — BF14):
     1. state ∈ `claim.TRUSTEE_VOTABLE_STATES` AND `cycle.freeze` — the final vote and the no-correction approval;
@@ -652,7 +652,7 @@ basis ([[feedback_record_unattested_no_backfill]]).
     `step` (`final_vote` | `escalation_resolution` | `r9_vote` | `super_admin_approval`). ⚠ RECORDED (PM24, `-310` CF2 *"for that claim at
     that step only"* — read per STATE, a match for every v1 actor since each holds all keys past the first hook ⇒ the disjunction reduces
     to STATE gating): a Pariwar Admin may read in `state_trustee_freeze` while the Super Admin's G1 step is open — accepted.
-  - [ ] 3.3 Route file `apps/api/src/modules/claims/claims.peer-answers.routes.ts` + `claims.peer-answers.handlers.ts`: `GET
+  - [x] 3.3 Route file `apps/api/src/modules/claims/claims.peer-answers.routes.ts` + `claims.peer-answers.handlers.ts`: `GET
     /api/v1/p/:pariwarId/admin/claims/:claimCaseId/peer-answers`, chain `[requireAdminSession, scopeResolutionHook,
     requirePermissionHook(deps, 'cycle.freeze', { dimension: 'pariwar' })]` (the cycle-freeze route's hook shape,
     `claims.cycle-freeze.routes.ts:44,63`); register it in `apps/api/src/modules/claims/index.ts` beside `registerVerifierConsoleRoutes` (`:47`).
@@ -672,7 +672,7 @@ basis ([[feedback_record_unattested_no_backfill]]).
     contract precedent), `{ status: 'empty' }` for ⛔ no selection, `present` otherwise, `{ status: 'unavailable' }` when the section throws.
     OpenAPI: the route's `schema.response` IS the registration (swagger reads it at runtime; the console and cycle-freeze routes are ⛔ not
     in `openapi/v1.yaml`); a single-object GET — `apps/api/tests/integration/forced-pagination.spec.ts` exempts it by shape (`isCollectionResponse`, `:56-62`).
-  - [ ] 3.4 Audit: TWO new `AuthAuditEventType` members — `'admin_claim.peer_answers_read'` (`apps/api/src/audit/audit-sink.ts:15-643`, with
+  - [x] 3.4 Audit: TWO new `AuthAuditEventType` members — `'admin_claim.peer_answers_read'` (`apps/api/src/audit/audit-sink.ts:15-643`, with
     a doc comment) and `'admin_claim.peer_callback_mobile_shown'` (`-328` Consequence 1; supersedes `-327` Consequence 1, `-329` decision 5 (c)). The read event is emitted through `emitAuthAudit(deps, request, type, fields)` (`apps/api/src/modules/auth/shared/audit.ts:14`) once per successful read (incl.
     `hidden` / `empty`); resource locator `claim:<id>`, LOWER-CASED (an upper-case locator is discarded); context = the admitting `step`
     (Task 3.2), the section status and counts (pings, answers) — ⛔ never a name, an answer, a code, a date or a number. ⚠ `context` is only
@@ -683,7 +683,7 @@ basis ([[feedback_record_unattested_no_backfill]]).
     `admin_verifier_console.peer_callback_mobile_shown` precedent, `claims.verifier-console.handlers.ts:1212-1218`), locator
     `claim:<id>:ping:<id>` LOWER-CASED (6.27a review R11 — the ping is durable only in the locator), context `{ basis: 'consented' |
     'super_admin', step }` — ⛔ never the number. The console's existing event gains the same `basis` in its context.
-  - [ ] 3.5 Admin: extract `PeerMeshView` (`SignalsPanel.tsx:208`) AND the private `NonPresent` (defined `:126-133`, used `:382`; the console's `empty` /
+  - [x] 3.5 Admin: extract `PeerMeshView` (`SignalsPanel.tsx:208`) AND the private `NonPresent` (defined `:126-133`, used `:382`; the console's `empty` /
     `unavailable` words, `i18n-en.ts:39-40`) to `apps/admin/src/modules/claim-verification/PeerMeshView.tsx`, exported from
     `claim-verification/index.ts`; `SignalsPanel` imports them (⛔ no behaviour change — its tests stay green unchanged). NEW
     `NeighboursAnswersPanel.tsx` (same module), on the `NomineeNameCheckDisclosure.tsx` model (BF7): a collapsed disclosure *"Neighbours'
@@ -701,10 +701,10 @@ basis ([[feedback_record_unattested_no_backfill]]).
     their approve-only branches (the approver reads before choosing). English only (F22). ⛔ No fetch on render; ⛔ no fetch per card. ⭐ `-329`: the extracted `PeerMeshView` labels a shown number by
     `callbackBasis` — `consented` ⇒ *"May be phoned on"* (`i18n-en.ts:129`, unchanged), `super_admin` ⇒ a NEW *"Mobile"* line (⛔ never
     "may be phoned" beside a neighbour's *"No"*); the console and the panel share it.
-  - [ ] 3.6 Human-actor invariant: `COVERAGE_SET` entry (`scripts/claim-adjudication-human-actor-invariant/check.ts:46-246`, shape `:31-44`)
+  - [x] 3.6 Human-actor invariant: `COVERAGE_SET` entry (`scripts/claim-adjudication-human-actor-invariant/check.ts:46-246`, shape `:31-44`)
     `{ file: 'apps/api/src/modules/claims/claims.peer-answers.routes.ts', pathSubstrings: ['peer-answers'], owner: 'Story 6.27b',
     expectedMethods: ['get'] }` (an unclassified route file fails the gate — enrolment satisfies it).
-  - [ ] 3.7 Tests — API (`apps/api/tests/integration/claims/peer-answers-approvers.spec.ts`, NEW): AC6's matrix — each of the FOUR arms
+  - [x] 3.7 Tests — API (`apps/api/tests/integration/claims/peer-answers-approvers.spec.ts`, NEW): AC6's matrix — each of the FOUR arms
     allowed (incl. the escalated `verifier_review` claim through arm 2, and a live-routed `verifier_review` claim through arm 3); the 403;
     every 404 state incl. a DENIED claim with a live routing (BF18) and `state_trustee_approved` with ⛔ no live routing; the audit line's
     context keys (in-memory sink) and the persisted locator (production sink), ⛔ no content (`JSON.stringify` of the line contains ⛔
@@ -725,13 +725,13 @@ basis ([[feedback_record_unattested_no_backfill]]).
     (`apps/admin/tests/neighbours-answers-panel.test.tsx`, NEW): ⛔ no request before open; ONE request per open; ⛔ no request on window
     focus; the query removed on close; the four hosts mount it (one leg each) and `PendingCaseCard`'s voted bucket does ⛔ not; the hidden
     case renders nothing; the 404 line; the `NonPresent` lines. Contracts: the response schema (strict; absent `peerMesh` valid).
-- [ ] **Task 3c — the new words ship as questionnaire v3 (AC11; `-328` decision 2 read with `-329` decisions 1–3).**
-  - [ ] 3c.1 Copy, under a NEW copy key (⛔ never an in-place edit of v2's words — `-329` decision 3): add
+- [x] **Task 3c — the new words ship as questionnaire v3 (AC11; `-328` decision 2 read with `-329` decisions 1–3).**
+  - [x] 3c.1 Copy, under a NEW copy key (⛔ never an in-place edit of v2's words — `-329` decision 3): add
     `peer_request_questions.callback_consent.question_admin` (name it so; any clear name) to `packages/i18n/locales/en/claim.json` —
     *"May the Admin phone you about this?"* — and `hi/claim.json` — *"क्या एडमिन इस बारे में आपको फ़ोन कर सकते हैं?"* (v2's line with
     *"ज़िला"* removed — `-328` R2, OUR translation: this is the consent text a Hindi-reading neighbour sees, `apps/mobile/lib/peer-request.ts:52`;
     ✅ CONFIRMED by BigDev 2026-10-13: *"Hindi is fine"* — an author confirmation, ⛔ not Panel-ratified). v2's `callback_consent.question` key and words stay EXACTLY as they are.
-  - [ ] 3c.2 The version: `PEER_MESH_QUESTIONNAIRE_V3` in `packages/domain/src/questionnaires/peer-mesh.ts` — v2's pages with ONE change,
+  - [x] 3c.2 The version: `PEER_MESH_QUESTIONNAIRE_V3` in `packages/domain/src/questionnaires/peer-mesh.ts` — v2's pages with ONE change,
     the `callback_consent` question's `copyKey` → the new key and `approvedBy: [R304, R328]` (a `R328 = '2026-10-13-328'` const beside `R304`,
     `:30`); `versionId: 'peer_mesh.v3'`, `version: 3`, `scope: { kind: 'all' }`, `status: 'live'`; every other question keeps v2's
     provenance and `counselBasis` (so 6.27c AC2b's health hold applies to v3 unchanged). v2 → `status` historical, exactly as v1 (`:5-7`
@@ -744,11 +744,11 @@ basis ([[feedback_record_unattested_no_backfill]]).
     from a Panel decision id"* is now spent — amend it to name v3 (`-328`) and keep the rule for v4. ⚠ RECORDED: a reply pins whatever is
     LIVE at its first save (`pinnedVersionFor(null)`); a client that loaded before a version flip shows the old words but pins the new —
     unreachable at 6.27b's deploy (no production reply exists — only 6.27c writes `send_outcome`), accepted for later flips.
-  - [ ] 3c.3 The audience: the `callback_consent` question definition gains a REQUIRED-on-`callback_consent` property naming who its words
+  - [x] 3c.3 The audience: the `callback_consent` question definition gains a REQUIRED-on-`callback_consent` property naming who its words
     ask about — e.g. `callbackAudience: 'district_admin'` (v2) | `'admin'` (v3) (`packages/domain/src/questionnaires/types.ts`; the validator
     requires it on that key and refuses it elsewhere). The assembler reads it from the REPLY's version (`questionnaire_version_id`,
     `claim_peer_mesh_replies.ts:40`) — ⛔ never a list of version ids — and Task 3.1 (a) uses it.
-  - [ ] 3c.4 RED BY DESIGN: ~60 test references to `PEER_MESH_QUESTIONNAIRE_V2` / `'peer_mesh.v2'` (`git grep -n "PEER_MESH_QUESTIONNAIRE_V2\|peer_mesh.v2" -- '*tests*'`).
+  - [x] 3c.4 RED BY DESIGN: ~60 test references to `PEER_MESH_QUESTIONNAIRE_V2` / `'peer_mesh.v2'` (`git grep -n "PEER_MESH_QUESTIONNAIRE_V2\|peer_mesh.v2" -- '*tests*'`).
     BEFORE the change, list every one that asserts the LIVE version or a new reply's version (exactly 60 references; those that assert the LIVE or a new reply's version:
     `questionnaires.test.ts:78` (the registry's exact ids), `:82` (`resolveLiveVersion(…)).toBe(V2)`), `:105-106`, `peer-mesh-reply.spec.ts:178`
     (*"the FIRST has_died save pins v2"*), `peer-request-member.spec.ts:149`); each is amended by NAMING v3 (6.26b RD19's shape) — ⛔ never
@@ -757,37 +757,37 @@ basis ([[feedback_record_unattested_no_backfill]]).
     `:105` return `null` and `:106` stops throwing "more than one live" ⇒ rebuild them from V3 with a non-colliding id that still
     satisfies `versionId === <kind>.v<version>` (`validator.ts:121`) if the fixture is ever validated. `peer-mesh-reply.spec.ts:59/:111`
     (`SERVED = servedDefinition(V2)`) stays green only because v3 has the same keys ⇒ name V3.
-  - [ ] 3c.5 Sweep: `git grep -n "District Admin phone you\|ज़िला एडमिन इस बारे में आपको"` — after the change it still hits v2's locale
+  - [x] 3c.5 Sweep: `git grep -n "District Admin phone you\|ज़िला एडमिन इस बारे में आपको"` — after the change it still hits v2's locale
     keys (KEPT, historical) and RECORDS (never edited); any hit in code, tests or UX docs that describes the LIVE question is updated.
-  - [ ] 3c.6 Tests: a NEW reply pins `peer_mesh.v3` and the member questionnaire GET returns the new words (en + hi —
+  - [x] 3c.6 Tests: a NEW reply pins `peer_mesh.v3` and the member questionnaire GET returns the new words (en + hi —
     `peer-request-member.spec.ts`'s shape); a reply STARTED on v2 keeps v2 and its old words; the console's question words
     (`enWords(q.copyKey, …)`, `peer-answers-assembler.ts:161`) follow each reply's own version; the validator accepts v3 and refuses an
     `approvedBy` id outside the list; microcopy scan clean.
-- [ ] **Task 3b — the per-answer flags (AC8; PM13's flags).**
-  - [ ] 3b.1 Contract: `PeerMeshAnswerView` (`verifier-console.ts:195-211`) gains REQUIRED `warningFlag: z.boolean().nullable()` with a
+- [x] **Task 3b — the per-answer flags (AC8; PM13's flags).**
+  - [x] 3b.1 Contract: `PeerMeshAnswerView` (`verifier-console.ts:195-211`) gains REQUIRED `warningFlag: z.boolean().nullable()` with a
     doc-comment (*"`true` — this answer carries a current warning; `false` — checked, ⛔ none (and always for a question that can ⛔ never
     warn); `null` — could ⛔ not be checked just now (the warnings read failed, or the answer is newer than it)"*). Every contracts / admin /
     API fixture that builds the view gains the field (BF6 — parsed responses): `packages/contracts/tests/claims-verifier-console.test.ts:109`
     (a strict parse — RED without it), `apps/admin/tests/verifier-console.test.tsx:110-111` (two answers);
     `apps/api/tests/integration/claims/peer-answers-console.spec.ts:173-174` uses `toMatchObject` (safe), but `:119` calls
     `assemblePeerMesh` directly — where the stitch runs decides whether that leg sees the field (state it in the leg).
-  - [ ] 3b.2 Assembler: the internal answer view keeps `answerId` (an UNSTITCHED type — the 6.26b `UnstitchedGroundInspectionItem` pattern,
+  - [x] 3b.2 Assembler: the internal answer view keeps `answerId` (an UNSTITCHED type — the 6.26b `UnstitchedGroundInspectionItem` pattern,
     `claims.verifier-console.handlers.ts:617-626`); `answerId` is ⛔ never on the wire.
-  - [ ] 3b.3 `stitchPeerAnswerFlags(section, read: { peerAnswerFlags: ReadonlyMap<string, boolean> | null })` — exported, pure, beside
+  - [x] 3b.3 `stitchPeerAnswerFlags(section, read: { peerAnswerFlags: ReadonlyMap<string, boolean> | null })` — exported, pure, beside
     `stitchDeathFactFlags`: for each answer — question key ∉ `PEER_MESH_WARNING_QUESTION_KEYS` ⇒ `false`; `read.peerAnswerFlags === null`
     (failed read) ⇒ `null`; the id in the map ⇒ its value; ⛔ not in the map ⇒ `null` (BF9's two READ COMMITTED statements). Called by the
     console after the warnings read (`:386-392` neighbourhood — ⛔ no new read; `readApprovalWarningsSection` returns `peerAnswerFlags` like
     it returns `inspectionComparisons`) and by PM24's handler (Task 3.3).
-  - [ ] 3b.4 Admin: `PeerMeshView` renders, per answer, *"⚠ Says the member has not died"* (`has_died`, `true`), *"⚠ More than a day from
+  - [x] 3b.4 Admin: `PeerMeshView` renders, per answer, *"⚠ Says the member has not died"* (`has_died`, `true`), *"⚠ More than a day from
     the date on the accepted certificate"* (`death_date`, `true`), *"Warning could not be checked just now"* (`null`), nothing for `false`;
     words in `i18n-en.ts`'s `peerMesh` block (`:93-130`) — ⛔ no date in any (extend the `verifier-console.test.tsx:422-436` no-date leg to
     them); microcopy scan clean.
-  - [ ] 3b.5 Tests: the stitch as a pure table (all four branches × both questions × a non-warning question); console API leg — a
+  - [x] 3b.5 Tests: the stitch as a pure table (all four branches × both questions × a non-warning question); console API leg — a
     `not_died` answer ⇒ `true`, `died` ⇒ `false`, the warnings read forced to fail (the 6.26b fault seam,
     `apps/api/tests/integration/claims/approval-warnings-every-approver.spec.ts:54-55` ALREADY wraps both the single and the bulk reader
     — a file-local `vi.mock`, so the console leg lives in that spec) ⇒ `null`; admin render legs.
-- [ ] **Task 4 — the blind-first filter (AC7; PM25 (c)).**
-  - [ ] 4.1 Console: thread `{ peerHidden }` through the exported `assembleApprovalWarnings(ctx, claimCaseId, claimState, reads, opts)`
+- [x] **Task 4 — the blind-first filter (AC7; PM25 (c)).**
+  - [x] 4.1 Console: thread `{ peerHidden }` through the exported `assembleApprovalWarnings(ctx, claimCaseId, claimState, reads, opts)`
     (`claims.verifier-console.handlers.ts:527-534` — tests call it directly, `verifier-console.spec.ts:1188`, `:1268`; default `{ peerHidden:
     false }`) into `readApprovalWarningsSection` — `peerHidden = peerMesh === undefined` (BF9: `assemblePeerMesh` returns `undefined` ONLY for
     `hidden`, built at `:347` before the warnings read at `:386`; ⛔ no new read). When true: `kinds`, `uncoveredSinceApproval`,
@@ -803,7 +803,7 @@ basis ([[feedback_record_unattested_no_backfill]]).
     block and omits a peer kind; the server (Task 4b's guard and the ONE rule) is the authority and the next read is right — ⛔ never an
     un-reasoned approval. The same trade-off on PM24's panel: a failed hide check makes `peerMesh` absent, so the disclosure vanishes for a
     non-hidden approver with ⛔ no "could not be shown" words — RECORDED, ⛔ not changed (the fail-closed rule wins).
-  - [ ] 4.2 Queue: `ListClaimsUnderCorrectionOptions` gains `hidePeerKindsForActor?: string`, threaded from `listClaimsUnderCorrection`
+  - [x] 4.2 Queue: `ListClaimsUnderCorrectionOptions` gains `hidePeerKindsForActor?: string`, threaded from `listClaimsUnderCorrection`
     (`:314`) into `qualifyingRows(db, pariwarId, candidates, onLateWarningsUnavailable)` (`:332-337`) and `readLateWarningArm(db, pariwarId,
     claimCaseIds)` (`:421`), which take ⛔ no options today. Inside `readLateWarningArm`'s SAVEPOINT (a failure takes the existing fault path:
     ⛔ no kind revealed, ⛔ nothing dropped), ONE statement returns the claim ids whose peer section is hidden from that actor, returned
@@ -814,7 +814,7 @@ basis ([[feedback_record_unattested_no_backfill]]).
     count 0 / awaiting `false` and is DROPPED for that actor (BF11's refinement holds; ⛔ never emitted with count 0). ⚠ RECORDED: on the
     FAULT path a candidate raised only by the peer arm is still kept as *"may wait"* (`null` count) — ⛔ no kind is named. The handler
     (`claims.nominee-name-check.handlers.ts:465`) passes `hidePeerKindsForActor: <session actor id>`.
-  - [ ] 4.3 The four later-approver surfaces ARE filtered (PM25 (c) verbatim: *"that actor's warnings summary"*; BF21 — a Pariwar Admin or
+  - [x] 4.3 The four later-approver surfaces ARE filtered (PM25 (c) verbatim: *"that actor's warnings summary"*; BF21 — a Pariwar Admin or
     the Super Admin can be a scheduled inspector): each host handler (`getPending` / `getEscalation` / `getClosureQueue` / `getPanel`, BF7)
     resolves the actor's hidden claim ids with the Task 4.2 fragment — ONE set-based statement per page, ⛔ never per card, INSIDE the
     host's existing warnings SAVEPOINT (a failure falls back to `UNAVAILABLE_APPROVAL_WARNINGS`: ⛔ no kind revealed) — and for those claims
@@ -823,7 +823,7 @@ basis ([[feedback_record_unattested_no_backfill]]).
     finalize's binding check `r9-voting-persist.ts:692-704` is unchanged); and sets a per-claim `ownVisitPending: true` on the host DTO, so
     the host's approve control shows BD4's neutral block (AC7). The other three hosts derive nothing else from `w` (cycle-freeze `:353-356`,
     closure `:502-505`, escalation `:188-190`). PM24's panel is hidden by the assembler itself.
-  - [ ] 4.4 Tests: domain unit — Task 1.5's allowlist scan; live — an inspector with a `scheduled` assignment: console strip `kinds` /
+  - [x] 4.4 Tests: domain unit — Task 1.5's allowlist scan; live — an inspector with a `scheduled` assignment: console strip `kinds` /
     counts / `viewerCanRecordLateReason` / `lateKeysUncoveredForViewer` carry ⛔ no peer trace and `ownVisitPending: true`, while another
     District Admin's read of the SAME claim shows them and `ownVisitPending: false`; `reviseBlocked` UNCHANGED by the filter (an approved
     claim with only a peer key ⇒ still `warning_approval_final`); a `certificate_check`-only completion ⇒ still hidden; a completed FULL
@@ -833,12 +833,12 @@ basis ([[feedback_record_unattested_no_backfill]]).
     and one per host): Approve and Revise-of-approval disabled with the neutral words (⛔ no kind, ⛔ no count), Deny / Escalate enabled, the
     late-reason panel absent; the GATE still reads every key (another DA's approval over
     the key is refused without a reason).
-- [ ] **Task 4b — a hidden actor cannot approve (AC10; BD4, `-327` decision 2).**
-  - [ ] 4b.1 Domain: ONE guard `assertActorMayApprove(db, pariwarId, claimCaseId, actorId)` (e.g. in `peer-mesh-reply.ts` beside the
+- [x] **Task 4b — a hidden actor cannot approve (AC10; BD4, `-327` decision 2).**
+  - [x] 4b.1 Domain: ONE guard `assertActorMayApprove(db, pariwarId, claimCaseId, actorId)` (e.g. in `peer-mesh-reply.ts` beside the
     predicate, or a new leaf `claim/approver-own-visit.ts`) that throws a typed `OwnGroundVisitPendingError` when
     `isPeerSectionHiddenFromActor(…)` is true. ⛔ Never a conjunct of `assertClaimApprovable`'s warning rule, the wait or the coverage; it
     reads ⛔ no neighbour answer.
-  - [ ] 4b.2 Call it FIRST — before `assertClaimApprovable` and before any warnings read (several writers run the gate first:
+  - [x] 4b.2 Call it FIRST — before `assertClaimApprovable` and before any warnings read (several writers run the gate first:
     `voteOnFrozenClaim` `:585`→`:606`, `decideEscalatedClosure` `:1347`/`:1359`→`:1368`, `approveNoCorrectionNeeded` `:1558`→`:1566`, and its
     wait's `LateWarningReasonRequiredError` carries `details.kinds`, `later-approval-warnings.ts:36-41`), on the APPROVE outcome only — in
     `finalizeR9Outcome` right after `computeR9Outcome` (`r9-voting-persist.ts:654`), inside `if (outcome === 'approved')`, before the gate
@@ -848,19 +848,19 @@ basis ([[feedback_record_unattested_no_backfill]]).
     `finalizeR9Outcome` (`r9-voting-persist.ts:504`, `:611`), `decideEscalatedClosure` (`correction-closure.ts:1259`, approve) and
     `approveNoCorrectionNeeded` (`:1525`). ⛔ Never on a denial / refusal / return / escalation / R9 deny vote / a finalize that computes "denied" / an appeal reversal. This supersedes v3.0
     Trap 1's *"⛔ never edit … a writer"* IN PART, for this guard only (`-327`).
-  - [ ] 4b.3 API: map `OwnGroundVisitPendingError` to ONE 409 code `<prefix>.own_ground_visit_pending` with BD4's neutral words and ⛔ no
+  - [x] 4b.3 API: map `OwnGroundVisitPendingError` to ONE 409 code `<prefix>.own_ground_visit_pending` with BD4's neutral words and ⛔ no
     `details` — in `translateLaterApprovalWarningError` (`later-approval-warnings.ts:41-60`, so every later-approver route shares it) AND in
     every route that maps `ApprovalWarningReasonRequiredError` itself (`git grep -n ApprovalWarningReasonRequiredError apps/api/src` — the
     verifier decision route, `claims.verification-decision.handlers.ts:341`, is the only other). The admin client words for the code in each host's error map (English, F22).
-  - [ ] 4b.4 Red-by-design sweep BEFORE the change: `git grep -n "inspectorActorId\|inspector_actor_id" -- '*tests*'` and list every spec
+  - [x] 4b.4 Red-by-design sweep BEFORE the change: `git grep -n "inspectorActorId\|inspector_actor_id" -- '*tests*'` and list every spec
     whose APPROVING actor also holds a `scheduled` inspection on that claim; each goes red by design and is amended by NAMING the new
     refusal (6.26b RD19's shape) — ⛔ never by weakening the guard.
-  - [ ] 4b.5 Tests (AC10): for EACH approving act — the hidden actor refused with the neutral code, WITH and WITHOUT a peer key current,
+  - [x] 4b.5 Tests (AC10): for EACH approving act — the hidden actor refused with the neutral code, WITH and WITHOUT a peer key current,
     ⛔ no `details`, ⛔ no row or event written; their denial (and its revise) / return / escalation / R9 deny vote / a "denied"
     finalize succeeds; the refusal lifts on a completed FULL visit and on `superseded`; a `certificate_check` completion does ⛔ not lift it
     while another of their assignments stays `scheduled`; one admin leg per host renders the error code's neutral words. Red-check: remove the guard from ONE
     writer ⇒ that writer's leg goes red.
-- [ ] **Task 5 — gates and close (AC9).** `pnpm --filter @twt/contracts test`; the human-actor invariant; `access-wrapper-invariants`;
+- [x] **Task 5 — gates and close (AC9).** `pnpm --filter @twt/contracts test`; the human-actor invariant; `access-wrapper-invariants`;
   forced pagination; microcopy; friction budget (admin-only ⇒ ⛔ not member-facing — confirm `MEMBER_FACING_PREFIXES` excludes `apps/admin/`);
   `grep -rn '\*\*/' ` over every edited doc-block ([[project_markdown_emphasis_closes_jsdoc]]); `pnpm ci:local` with `DATABASE_URL` on
   `:5433` ([[project_ci_local_double_run_pollution]]); a red that is a known flake per [[project_known_livedb_test_failures]] is re-run and
@@ -992,7 +992,27 @@ re-entries"* and *"An ERASED (sentinel) neighbour answer reads 'could not be sho
 
 ### Agent Model Used
 
+Claude Opus 5.5 (1M context) — `bmad-dev-story 6.27b`, 2026-10-13.
+
 ### Debug Log References
+
+- Task 0.0: `git fetch origin`; origin/main = 560369a7; `git diff --name-only 560369a7..HEAD -- packages apps scripts infra` empty ⇒ no cited file moved; 6.27d not merged.
+- Task 1.6 red-check: adding `pa.value_ciphertext` to `peerReplyColumnsSql()` ⇒ fence red ("approval-warnings.ts reached for 'value_ciphertext'"); restored ⇒ green.
+- Task 1.8 red-check: bulk reader's `peerReplyColumnsSql()` replaced by `NULL::json` ⇒ parity legs red (see count); restored ⇒ 13/13 green.
+- Task 1.7 EXPLAIN (:5432, 114 answer rows / 38,910 claims): at that size the planner seq-scans the tiny answers table; with `enable_seqscan = off` the fragment's SubPlan is `Index Scan using claim_peer_mesh_reply_answers_claim_idx` — Index Cond `(pariwar_id = c.pariwar_id) AND (claim_case_id = c.claim_case_id)`, Filter `superseded_at IS NULL AND question_key = ANY(...)`. ⇒ the CLAIM index serves both readers (and the queue's disjunct, Task 2). RECORDED (BF4, ⛔ not a supersession): `claim_peer_mesh_reply_answers_live_reply_idx`'s stated purpose in 0156 and 6.27a review S6 — "load-bearing for 6.27b's bulk warning readers" — is UNSERVED by 6.27b; ⛔ not dropped (it still serves the writer's per-reply live read).
+- Task 1b FOUND (⛔ a code change): at G1 (`decideEscalatedClosure`) a reason-LESS approve on a claim with a LATE key reports `closure.late_warning_reason_required` (the wait), ⛔ `warning_reason_required` — the gate runs before the reason check there. The G1 ONE-rule leg therefore uses an answer the District Admin's approval covered; the late leg is separate. (Same order matters for BD4 — the guard goes before both.)
+- Task 1b: the R9 clause is seeded once per Pariwar (`clause_versions_pariwar_clause_version_uq`) ⇒ each R9 world in the 6.27b block uses a FRESH Pariwar.
+- Task 2.4 red-checks (`correction-queue-late-peer-reply.spec.ts`, :5433; each mutation reverted after): (b) the fifth disjunct disabled ⇒ 5 red (a, b, c, c′, e); (a) `saved_at < v.decided_at` ⇒ 4 red incl. (a); (e) the whole `state_trustee_approved` R9 OR-arm replaced by `false` ⇒ (e) red; (e′) `liveRoutedToR9Exists()` dropped from that arm ⇒ (e)/(e′) red (listed after the routing is superseded); (c′) the FRAGMENT's `pa.superseded_at IS NULL` dropped ⇒ (c′) red; (d) the date arm of `derivePeerReplyWarningKeys` nulled ⇒ (b), (c), (d) red. Restored ⇒ 6/6 green. RECORDED (unobservable, ⛔ no red-check): the queue disjunct's own `pa.superseded_at IS NULL` — any warning row superseded after the approval implies a live successor saved after it.
+- Task 3c.4/3c.5: `git grep -n "PEER_MESH_QUESTIONNAIRE_V2\|peer_mesh.v2" -- '*tests*'` = 60 refs before the change. Live/new-reply assertions amended by NAMING v3: `questionnaires.test.ts` registry ids + `resolveLiveVersion` (and the `:102-106` spread fixtures rebuilt from V3 as `peer_mesh.v4`), `peer-mesh-reply.spec.ts` SERVED + 'the FIRST has_died save pins v3', `peer-request-member.spec.ts` the detail's versionId. Every other ref reads v2 as a valid/historical definition or raw data — kept. Old-words sweep: only v2's locale keys (kept), records, and history comments.
+- Task 3.7 red-checks (`peer-answers-approvers.spec.ts`): `callbackBasisFor` rule (4) made to ignore the audience ⇒ the v2-"Yes" leg red; rule (1) disabled ⇒ the PM24 "No / unanswered / no reply / never-texted" leg and the CONSOLE leg red. Restored ⇒ 19/19 green. Task 3.3 FOUND: the 404 bodies carry a per-request `request_id` ⇒ the 'ONE 404' leg compares `code` + `message`.
+- Task 3b.3 placement: `stitchPeerAnswerFlags` (and the BF20 mapping `assemblePeerMeshSection`, plus the pure `callbackBasisFor`) live in `peer-answers-assembler.ts` BESIDE the assembler, ⛔ beside `stitchDeathFactFlags` in the console handler — so PM24's handler imports them from the shared module instead of from the console's handler file. Same purity, same "⛔ a second computation".
+- Task 3.5: `useClaimPeerAnswers` sets `retry: false` (⛔ the `useNomineeNameCheck` default) — each automatic retry would be another AUDITED read nobody asked for; a failure shows the `unavailable` words and the approver re-opens. Admin test pins ONE request on a 5xx.
+- Task 3.7 fixture shapes: arm 2 uses a raw `escalated` `claim_verifier_decisions` row; arm 4 a raw `correction_return` decision + `staff_case` closure `escalated` on a `verifier_review` claim (the only way to see arm 4 ALONE — at a votable state arm 1 admits the Super Admin first). Claims are driven through the projector (raw lifecycle events).
+- Task 4b.4 sweep (BEFORE the guard): `git grep -n "inspectorActorId\|inspector_actor_id" -- '*tests*'` = 22 files; of those that ALSO approve (`ground-inspection-approval.spec.ts`, `correction-queue-late-inspection.spec.ts`) the approving actor (DA / PA / the R9 panel) is ⛔ the inspector (`INSPECTOR` or a random id) ⇒ ⛔ spec expected red by design; the full suite run after the guard confirms.
+- Full domain suite (:5433): 5078 passed, 7 failed — ALL in `reconciliation/review-queue-read.spec.ts` (Story 9.8/9.11), also red in isolation AND on :5432. Root cause: the spec seeds under the FIXED `PARIWAR_A` and `listOpenReconciliationCases` reads `.limit(500)`; :5432 / :5433 already hold 531 / 504 committed LIVE alerts under `PARIWAR_A` (the [[project_known_livedb_test_failures]] #9/#10 accumulation class). ⛔ caused by 6.27b (⛔ file of this story is reached by `reconciliation/`); RECORDED, ⛔ hidden; the remedy (recreate `twt-test-pg`) is a shared-DB action left to BigDev.
+- Task 4b.5 red-check: the BD4 guard removed from `voteOnFrozenClaim` ⇒ the AC10 'final vote …' leg red in BOTH variants (201 instead of 409); restored ⇒ green.
+- Task 5 — `pnpm ci:local` (DATABASE_URL :5433): 34/36 jobs green; `lint` red on ONE unused import (`PeerMeshSection` in the console handler, left by the BF20 extraction) — fixed, `turbo run lint` for api/admin/domain/contracts 18/18 green. `integration-tests` red in `@twt/domain` only: 7 × `reconciliation/review-queue-read.spec.ts` (the fixed-`PARIWAR_A` accumulation above) + 1 × `multi-tenant/cross-pariwar-leak.spec.ts` "runAsCrossTenant" 5000 ms timeout (19/19 in isolation — the known under-load timeout class). turbo stopped there ⇒ the rest re-run with `--continue`: events / jobs / queue / niyamavali-engine / validity-service / channels all green; `@twt/api` 1706 passed + 1 red-by-design — `verifier-console.spec.ts` "a FAILED warnings read fails CLOSED" pins the failed-read section with an exact `toEqual` ⇒ amended by NAMING `ownVisitPending: false` (⛔ loosened); 26/26 green.
+- Innocence (non-destructive, [[project_ci_local_double_run_pollution]]): a SCRATCH database `twt_scratch_627b` on :5433, freshly migrated — the two red domain specs 29/29 green, then the WHOLE domain suite single-pass 5085/5085 green (1 skipped); scratch DB dropped. The shared `twt-test-pg` was ⛔ recreated (BigDev's call).
 
 ### Completion Notes List
 
@@ -1021,12 +1041,32 @@ re-entries"* and *"An ERASED (sentinel) neighbour answer reads 'could not be sho
 - 2026-10-13 — BigDev confirmed the Hindi call-back words (*"Hindi is fine"* — an author confirmation of `-328` R2, ⛔ not Panel-ratified).
   Sibling 6.27c annotated with v3's consequences (header, AC2b, AC7). ⛔ No code.
 
+- 2026-10-13 — ⭐ DEV COMPLETE (`bmad-dev-story 6.27b`, branch `story/6-27b`, baseline `560369a7`; ⛔ no code had moved since it). Tasks 0–5 done; status `in-progress` → `review`.
+  - **PM9 (AC2–AC4):** `peer_says_not_died` / `peer_death_date_differs` appended to `APPROVAL_WARNING_KINDS` (+ `PEER_WARNING_KINDS`; contracts mirror + lockstep; `kindLine` words, ⛔ no date); ONE fragment `peerReplyColumnsSql()` in BOTH readers (codes + window indexes ONLY — the decrypt fence now denies `value_ciphertext` / `valueCiphertext`, with a teeth line); ONE pure `derivePeerReplyWarningKeys` (+ `peerAnswerFlags`); `withoutPeerWarnings` (a DISPLAY filter, allowlist source scan). ⛔ No writer changed for the kinds — they reach every approver and the wait by construction (Task 1b: 16 HTTP legs, both kinds × DA / final vote / escalation resolution / R9 vote + short finalize / `-324` A R9 finalize on `state_trustee_approved` / D27 / G1 / F20).
+  - **PM10 (AC5):** the queue's FIFTH `lateArm` disjunct (live warning-question answer, `saved_at > v.decided_at`, ⛔ window term); three stale comments amended. Own-committing spec, legs (a)–(e′), every red-check recorded above.
+  - **PM24 (AC6, AC11):** `GET …/admin/claims/:claimCaseId/peer-answers` (`cycle.freeze` hook; four arms — final vote, escalation resolution (BF17), R9 on a live routing in `R9_OUTCOME_FROM_STATES` (BF18), the Super Admin on a held closure; ONE 404 otherwise); `admin_claim.peer_answers_read` + `admin_claim.peer_callback_mobile_shown` (after the response is built; lower-cased locators). The assembler takes a REQUIRED `callbackViewer` (four ordered rules, `-328` read with `-329`) and reports the `basis`; `PeerMeshPingView.callbackBasis`; the console's event carries `basis`; BF20's wire mapping extracted (`assemblePeerMeshSection`), ⛔ a second copy. Admin: `PeerMeshView` / `NonPresent` extracted; `<NeighboursAnswersPanel>` (on demand, ⛔ focus refetch, ⛔ retry, forgotten on close, hidden ⇒ nothing, 404 ⇒ "Nothing to show at this step") mounted on the four hosts (⛔ the voted bucket); "May be phoned on" vs "Mobile".
+  - **Questionnaire v3 (AC11, Task 3c):** `peer_mesh.v3` live (v2 historical), the new copy key `…callback_consent.question_admin` (en + hi — BigDev-confirmed Hindi), `callbackAudience` (`district_admin` v2 / `admin` v3; validator: required on `callback_consent`, refused elsewhere), `2026-10-13-328` added to the ratified list. 60 v2 test refs swept; the live-version pins named v3; the `:102-106` spread trap rebuilt from V3.
+  - **PM13's flags (AC8):** `PeerMeshAnswerView.warningFlag` (`true` / `false` / `null`), stitched from the warnings read (`stitchPeerAnswerFlags`, ⛔ a second computation) on the console AND the panel; a forced warnings-read failure ⇒ `null`.
+  - **PM25 (c) (AC7):** the console strip (filtered `kinds` / counts / late-reason offer; `reviseBlocked` UNFILTERED; REQUIRED `ownVisitPending`), the queue (`hidePeerKindsForActor`, inside the late-arm SAVEPOINT), the four hosts (REQUIRED `own_visit_pending` on `ApprovalWarningsSummary`; R9 `short` / `covers_current_warnings` from the filtered keys); ONE shared hide fragment `peerSectionHiddenFromActorSql` in the NEW leaf `claim/approver-own-visit.ts`.
+  - **BD4 (AC10):** `assertActorMayApprove` called FIRST in the nine approving writers (approve outcome only) ⇒ ONE neutral 409 `<prefix>.own_ground_visit_pending`, ⛔ `details`, ⛔ row; WITH and WITHOUT a neighbour key; denials / escalations / R9 deny votes / a "denied" finalize untouched; lifts on a completed FULL visit and on `superseded`, ⛔ on a `certificate_check`. Admin: the strip's neutral block (Approve and Revise-of-approval), every host via `approvalBlockedReason`, the 409 words mapped.
+  - **Records (Task 5):** the THREE `-326` Consequence lines appended verbatim (row 6-36's sprint comment; the deferred-work `-308` hand-off item; the S10 item "decided — kept as built"); BF22's re-deferral line on the erased-sentinel item.
+  - **Recorded, ⛔ changed:** G1 runs the wait before the reason check; the live-reply index's stated 6.27b purpose is unserved (the claim index serves both readers); `stitchPeerAnswerFlags` lives beside the assembler (shared by PM24); the two pre-existing shared-DB domain reds (Debug Log) — innocence shown on a scratch DB.
+
 ### File List
+
+NEW — `apps/admin/src/modules/claim-verification/NeighboursAnswersPanel.tsx`, `apps/admin/src/modules/claim-verification/PeerMeshView.tsx`, `apps/admin/tests/neighbours-answers-panel.test.tsx`, `apps/admin/tests/own-visit-pending.test.tsx`, `apps/api/src/modules/claims/claims.peer-answers.handlers.ts`, `apps/api/src/modules/claims/claims.peer-answers.routes.ts`, `apps/api/tests/integration/_peer-reply-fixture.ts`, `apps/api/tests/integration/claims/peer-answers-approvers.spec.ts`, `apps/api/tests/unit/peer-answers-stitch.test.ts`, `packages/contracts/src/claims/peer-answers.ts`, `packages/contracts/tests/claims-peer-answers.test.ts`, `packages/domain/src/claim/approver-own-visit.ts`, `packages/domain/tests/integration/claim/_peer-reply-fixtures.ts`, `packages/domain/tests/integration/claim/approval-warnings-peer-reply.spec.ts`, `packages/domain/tests/integration/claim/correction-queue-late-peer-reply.spec.ts`
+
+MODIFIED — source: `apps/admin/src/api/client.ts`, `apps/admin/src/api/hooks.ts`, `apps/admin/src/modules/claim-verification/{LaterApprovalWarnings.tsx, SignalsPanel.tsx, VerificationDecisionStrip.tsx, i18n-en.ts, index.ts, nominee-errors.ts}`, `apps/admin/src/modules/correction-closure/{EscalationPanel.tsx, PariwarClosureStrip.tsx}`, `apps/admin/src/modules/cycle-freeze/PendingCaseCard.tsx`, `apps/admin/src/modules/r9-voting/R9CasePanel.tsx`, `apps/admin/src/routes/VerifierConsoleRoute.tsx`, `apps/api/src/audit/audit-sink.ts`, `apps/api/src/modules/claims/{claims.correction-closure.handlers.ts, claims.correction-escalation.handlers.ts, claims.cycle-freeze.handlers.ts, claims.nominee-name-check.handlers.ts, claims.r9-voting.handlers.ts, claims.verifier-console.handlers.ts, index.ts, later-approval-warnings.ts, peer-answers-assembler.ts}`, `packages/contracts/src/claims/{index.ts, verification-decision.ts, verifier-console.ts}`, `packages/domain/src/claim/{approval-warnings-persist.ts, approval-warnings.ts, correction-closure.ts, correction-queue-read.ts, errors.ts, index.ts, peer-mesh-reply.ts, r9-voting-persist.ts, state-trustee-decision-persist.ts, verifier-decision-persist.ts}`, `packages/domain/src/questionnaires/{keys.ts, peer-mesh.ts, registry.ts, types.ts, validator.ts}`, `packages/i18n/locales/{en,hi}/claim.json`, `scripts/claim-adjudication-human-actor-invariant/check.ts`
+
+MODIFIED — tests: `apps/admin/tests/{correction-closure, cycle-freeze-page, death-certificate-review, escalation-detail-claim-switch, finally-approved-elsewhere, later-approval-warnings, nominee-declaration-route, pending-case-card-return, r9-case-panel, verifier-console-route-name-check, verifier-console}.test.tsx`, `apps/api/tests/integration/_nominee-name-check-fixture.ts`, `apps/api/tests/integration/claims/{approval-warnings-every-approver, one-payment-per-death-routes, peer-answers-console, peer-request-member, suspicion-refusal-routes, verifier-console-ground-inspection, verifier-console-shape, verifier-console}.spec.ts`, `packages/contracts/tests/{approval-warnings-later-approvers, claims-verifier-console, nominee-name-check-vocabulary-lockstep}.test.ts`, `packages/domain/tests/claim/{approval-warnings, nominee-name-no-comparison-fence}.test.ts`, `packages/domain/tests/integration/claim/{peer-mesh-reply-concurrency, peer-mesh-reply}.spec.ts`, `packages/domain/tests/questionnaires/questionnaires.test.ts`
+
+MODIFIED — records: `_bmad-output/implementation-artifacts/6-27b-peer-mesh-warnings-wait-and-approvers-view.md`, `_bmad-output/implementation-artifacts/deferred-work.md`, `_bmad-output/implementation-artifacts/sprint-status.yaml`
 
 ## Change Log
 
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-13 | 4.0 | ⭐ DEV COMPLETE (`bmad-dev-story 6.27b`): PM9 (two neighbour kinds, both readers, the wait), PM10 (the queue's fifth source), PM24 (the approvers' read on four hosts + the call-back rules of `-328` / `-329`), questionnaire `peer_mesh.v3`, PM13's per-answer flags, PM25 (c)'s display filter and BD4's guard at nine approving writers; the `-326` / BF22 record lines appended. Status `ready-for-dev` → `in-progress` → `review`. |
 | 2026-10-13 | 3.5 | BigDev confirmed the Hindi words (Task 3c.1, AC11 — author confirmation, ⛔ not Panel-ratified); sibling 6.27c annotated (v3 is the live questionnaire its link opens; AC2b's *"v2's basis"* = the live version's; AC7 — a send writes exactly `'accepted'`). |
 | 2026-10-13 | 3.4 | Round-4 fresh-context re-validate: ⛔ no BLOCKER / HIGH. Fixed 2 MEDIUM (the R11 console spec seeds an untexted ping ⇒ red by design under rule 1 — amend the fixture, ⛔ never the rule; AC1 now names `-329`) and 5 LOW (`verifier-console.ts:225`; the `:102-106` spread trap; BD2 (A)'s record label; the v2-population note; ledger `2026-10-13f` paraphrased `2026-10-13e` in quote marks — corrected in `2026-10-13g`). |
 | 2026-10-13 | 3.3 | ⭐ ERRATUM `2026-10-13-329` (author-commit) after a fresh-context re-validate of v3.2: `-328` recorded Q1 C WITHOUT its condition ⇒ the Pariwar Admin sees the number only for a *"Yes"* to the NEW words, a v2 *"Yes"* stays with today's set; the new words ship as questionnaire `peer_mesh.v3` (v2 historical; a NEW copy key — ⛔ never an in-place edit) with a `callbackAudience` property; `-328` R1 withdrawn; the Super Admin sees the number for TEXTED neighbours only, whatever the answer (BigDev's reading, ⛔ not Panel words); `callbackMobile: 'on_yes' \| 'always'` → `callbackViewer` with four ordered rules; `callbackBasis` on the wire and a basis-aware admin label; `matchingGrantRole`'s real signature; Task 3c rewritten (v3 mint, red-by-design sweep of ~60 v2 test refs); STATUS / BD heading / Task 0.3–0.5 / Task 3.4 / Trap 7 made current. ⚠ v3.2's row says *"(BigDev's reading confirmed)"* — that is BigDev's reading of *"no explicit permission is required"*, ⛔ not Panel words (`-329` decision 4). A second re-validate (before commit) fixed: Task 3.3's stale option; `-329` decision 5 (d) (the four `-328` Consequence 1 bullets) and its Status / labels; the note's ruling block pointer; the v3 test traps (`questionnaires.test.ts:105-106`); 6.27c's forward line; fail-closed edges; the fixture list. |

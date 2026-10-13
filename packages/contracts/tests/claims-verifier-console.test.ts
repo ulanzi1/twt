@@ -106,10 +106,11 @@ describe('VerifierConsolePacket — full round-trip + ordering', () => {
             reply: {
               submitted: false,
               answers: [
-                { questionKey: 'has_died', question: 'Has Suresh died?', value: { kind: 'codes' as const, codes: ['died'], labels: ['Yes, they have died'] }, savedVia: 'member_app' as const, savedAt: '2026-10-12T00:00:00.000Z', changeCount: 0 },
+                { questionKey: 'has_died', question: 'Has Suresh died?', value: { kind: 'codes' as const, codes: ['died'], labels: ['Yes, they have died'] }, savedVia: 'member_app' as const, savedAt: '2026-10-12T00:00:00.000Z', changeCount: 0, warningFlag: false },
               ],
             },
             callbackMobile: { status: 'none' as const },
+            callbackBasis: null,
           },
         ],
       },
@@ -148,6 +149,7 @@ describe('VerifierConsolePacket — full round-trip + ordering', () => {
       reviseBlocked: null as 'warning_approval_final' | 'warnings_not_current' | null,
       viewerCanRecordLateReason: false,
       lateKeysUncoveredForViewer: 0,
+      ownVisitPending: false,
       reasonOptions: [
         {
           code: 'warnings_reviewed',

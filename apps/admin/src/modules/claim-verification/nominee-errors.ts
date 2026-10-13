@@ -194,6 +194,8 @@ export function approveVotesNeedWarningReasonMessage(err: ApiError): string {
  */
 export function laterApprovalWarningErrorMessage(err: unknown, surface: 'trustee' | 'r9' = 'trustee'): string | undefined {
   if (!(err instanceof ApiError)) return undefined;
+  // Story 6.27b (BD4) — the ONE neutral refusal (⛔ a kind, ⛔ a count).
+  if (err.code.endsWith('.own_ground_visit_pending')) return t.ownVisitPending;
   if (err.code.endsWith('.warning_reason_required')) return warningReasonRequiredMessage(err);
   if (err.code.endsWith('.warning_reason_ungrounded')) return warningReasonUngroundedMessage();
   if (err.code.endsWith('.warning_reason_unavailable')) return warningReasonUnavailableMessage();

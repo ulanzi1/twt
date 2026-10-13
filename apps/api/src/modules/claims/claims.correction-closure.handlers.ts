@@ -491,6 +491,8 @@ export function createCorrectionClosureHandlers(deps: AppDeps) {
         return {
           byClaim: await claim.readClaimApprovalWarningsBulk(scopeTx.tx, pariwarId, noCorrectionIds),
           options: (await claim.listApprovalWarningReasons(scopeTx.tx, pariwarId)).active,
+          // ⭐ Story 6.27b (PM25 (c), BD4; Task 4.3) — ONE set-based statement for the page, inside this SAVEPOINT.
+          ownVisitPending: await claim.readOwnVisitPendingClaimIds(scopeTx.tx, pariwarId, noCorrectionIds, actorId),
         };
       }).catch((err: unknown) => {
         request.log.warn(
@@ -502,7 +504,9 @@ export function createCorrectionClosureHandlers(deps: AppDeps) {
       const warningsOf = (r: (typeof rows)[number]) => {
         if (r.kind !== 'no_correction_needed') return null;
         const w = warnings?.byClaim.get(r.claimCaseId.toLowerCase());
-        return w === undefined ? UNAVAILABLE_APPROVAL_WARNINGS : toApprovalWarningsSummary(w, [actorId]);
+        return w === undefined
+          ? UNAVAILABLE_APPROVAL_WARNINGS
+          : toApprovalWarningsSummary(w, [actorId], { ownVisitPending: warnings!.ownVisitPending.has(r.claimCaseId.toLowerCase()) });
       };
       // ⭐ Story 6.28 (OP14 (b)) — another claim of the death past its final vote / paid (ONE statement).
       const elsewhereOf = await readFinallyApprovedElsewhereDtos(scopeTx.client, scopeTx.tx, request.log, pariwarId, rows.map((r) => r.claimCaseId));

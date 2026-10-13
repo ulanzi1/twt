@@ -56,6 +56,7 @@ import {
 } from '../schema/claim_correction_closure.js';
 import { claimStateTrusteeDecisions } from '../schema/claim_state_trustee_decisions.js';
 import { claims } from '../schema/claims.js';
+import { assertActorMayApprove } from './approver-own-visit.js';
 import {
   type ApprovalWarningKind,
   checkLaterApprovalWarningReason,
@@ -1332,6 +1333,8 @@ export async function decideEscalatedClosure(
   }
 
   // APPROVE — which writer runs is decided here, under the locks (`-273` §8).
+  // ⭐ Story 6.27b BD4 (`-327` decision 2) — FIRST, before the gate and any warnings read: an approver whose OWN ground visit on the claim is pending is refused, unconditionally (⛔ kind on the refusal). (A close or a refusal is ⛔ touched.)
+  await assertActorMayApprove(db, input.pariwarId, input.claimCaseId, input.actorId);
   const correction = await resolveClaimCorrectionState(
     db,
     input.pariwarId,
@@ -1554,6 +1557,8 @@ export async function approveNoCorrectionNeeded(
   if (await hasLiveRoutedRow(db, input.pariwarId, input.claimCaseId)) {
     throw new CorrectionClosureRefusedError(input.claimCaseId, 'claim_routed_to_r9');
   }
+  // ⭐ Story 6.27b BD4 (`-327` decision 2) — FIRST, before the gate and any warnings read: an approver whose OWN ground visit on the claim is pending is refused, unconditionally (⛔ kind on the refusal).
+  await assertActorMayApprove(db, input.pariwarId, input.claimCaseId, input.actorId);
   // ⭐ Story 6.23b EA2 — the WAIT (the gate's last conjunct); the Pariwar Admin's own late reason does ⛔ not count.
   await assertClaimApprovable(db, input.pariwarId, input.claimCaseId, claimRow.deceasedMemberId, {
     approvingActorIds: [input.actorId],

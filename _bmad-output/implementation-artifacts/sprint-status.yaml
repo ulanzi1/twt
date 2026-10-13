@@ -1,3 +1,15 @@
+# last_updated: 2026-10-13i (STORY 6.27b — DEV COMPLETE (`bmad-dev-story 6.27b`, branch `story/6-27b`, baseline `560369a7`): row
+# `6-27b-peer-mesh-warnings-wait-and-approvers-view` `ready-for-dev` → `in-progress` → `review`. Built: PM9 — `peer_says_not_died` /
+# `peer_death_date_differs` in both readers (ONE fragment, codes + window indexes only; the decrypt fence denies `value_ciphertext`) and
+# the wait, reaching every approver by construction; PM10 — the correction queue's fifth late source; PM24 — `GET …/peer-answers` for
+# later approvers (four step arms, audited) on the four hosts as an on-demand panel; the call-back number per `-328` read with `-329`
+# (`callbackViewer`, four rules, `callbackBasis`); questionnaire `peer_mesh.v3` live (v2 historical, "May the Admin phone you about
+# this?" en + hi); PM13's per-answer flags; PM25 (c)'s display filter (console, queue, hosts — `ownVisitPending` / `own_visit_pending`);
+# BD4 — `assertActorMayApprove` FIRST in nine approving writers ⇒ ONE neutral 409 `<prefix>.own_ground_visit_pending`. Records: the
+# three `-326` Consequence lines (row 6-36's comment below; two deferred-work items) and BF22's re-deferral line appended. Gates:
+# ci:local 34/36 — lint fixed (one unused import); integration: api 1706 + 1 red-by-design pin amended (26/26), every other non-domain
+# package green; domain's 8 reds are the shared-:5433 accumulation class (`reconciliation/review-queue-read` under fixed `PARIWAR_A`
+# past a 500-row read; one load timeout) — a SCRATCH DB single pass is 5085/5085 green. ⛔ No other row moves.)
 # last_updated: 2026-10-13h (STORY 6.27b v3.5 + SIBLING 6.27c ANNOTATED. BigDev confirmed the Hindi call-back words "क्या एडमिन इस बारे में
 # आपको फ़ोन कर सकते हैं?" ("Hindi is fine" — an author confirmation of `-328` R2, ⛔ not Panel-ratified). 6.27c (`backlog`) annotated, ⛔ no
 # word or PM changed: its link opens questionnaire `peer_mesh.v3` (so ⛔ no production reply pins v2); AC2b's "v2's basis" reads as the
@@ -19924,7 +19936,7 @@ development_status:
   # ⭐ 2026-10-10 SPLIT (`2026-10-10-305` §2 item 1; BigDev: "Four parts (Recommended)"): the row above is STORY 6.27a (keeps its key — the
   # rulings cite it) and holds the ONE shared PM1–PM25 block. b / d stay `backlog` until 6.27a is `done`; c (sending) stays `backlog`
   # until 6.27b, 6.27d AND row 6-30 are `done` — so every safety piece exists before a real answer arrives.
-  6-27b-peer-mesh-warnings-wait-and-approvers-view: ready-for-dev
+  6-27b-peer-mesh-warnings-wait-and-approvers-view: review
   6-27d-inspector-discrepancy-at-completion: backlog
   # ⭐ 2026-10-12 ANNOTATION (Story 6.34 Task 0.4, `2026-10-12-322` C6 — the comments above kept as written): 6.27c's start condition
   # gains *"AND row 6-34 is done"* — it uses 6.34's typed-variable vocabulary (`{#var#}` + `slots`) and joins its gate's `REGISTRY_FILES`.
@@ -19988,6 +20000,7 @@ development_status:
   # ⭐ 2026-10-13 (`2026-10-13-325` S1 A — 6.27a second-pass review S1, BigDev option 1): `-308`'s 6.27a share HANDED OFF here — 6-36 stores each selected person's
   # SOURCE (`workplace` / `named_by_member`) AND carries it onto the reply (6.27a PM7) AND shows it on the District Admin's console
   # (6.27a PM13: "chosen from the workplace" / "named by the member"); 6.27b PM24 shows it too. 6.27a built ⛔ neither (deferred-work).
+  # ⭐ 2026-10-13 (`2026-10-13-326` Consequence 1, appended in 6.27b's code commit): 6-36 also renders the source on 6.27b's later-approver panel (the shared `PeerMeshView`); a test on both surfaces.
   6-36-peer-mesh-school-wise-selection: backlog
   # ⭐ 2026-10-10 ADDED by `2026-10-10-314` (BigDev: *"msg91 for now"* → *"New story row"*): the SMS gateway is MSG91, whose Flow / OTP v5
   # APIs take an `authkey` header, MSG91's OWN template id and NAMED variable values — ⛔ the generic `sms-app.ts` contract. 6-37 builds the

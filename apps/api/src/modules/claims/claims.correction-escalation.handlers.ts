@@ -176,9 +176,12 @@ export function createCorrectionEscalationHandlers(deps: AppDeps) {
       // detail and its shape pin stay unchanged), LAST and under a raw SAVEPOINT: a throw fails CLOSED (`available: false`
       // — the approve control disabled in its own words; close and refuse untouched), ⛔ never "no warnings". The wait is
       // judged for the viewing Super Admin (`-279` A1). ⛔ Not the POST's pre-check read (`decideEscalation` — `-274` 1a).
-      const warned = await underSavepoint(scopeTx.client, 'escalation_approval_warnings', () =>
-        claim.readClaimApprovalWarnings(scopeTx.tx, ctx.pariwarId, ctx.claimCaseId),
-      ).catch((err: unknown) => {
+      // ⭐ Story 6.27b (PM25 (c), BD4; Task 4.3) — and whether the neighbours' section is hidden from THIS viewer (their own
+      // ground visit pending), in the SAME SAVEPOINT (a failure ⇒ `UNAVAILABLE_APPROVAL_WARNINGS`, ⛔ kind revealed).
+      const warned = await underSavepoint(scopeTx.client, 'escalation_approval_warnings', async () => ({
+        w: await claim.readClaimApprovalWarnings(scopeTx.tx, ctx.pariwarId, ctx.claimCaseId),
+        ownVisitPending: await claim.isActorOwnVisitPending(scopeTx.tx, ctx.pariwarId, ctx.claimCaseId, ctx.actorId),
+      })).catch((err: unknown) => {
         request.log.warn(
           { err: err instanceof Error ? err.name : 'unknown', claimCaseId: ctx.claimCaseIdStr },
           'escalation detail: nominee-change warnings unavailable; failing closed to cannot-approve',
@@ -186,8 +189,8 @@ export function createCorrectionEscalationHandlers(deps: AppDeps) {
         return null;
       });
       if (warned !== null) {
-        response.approval_warnings = toApprovalWarningsSummary(warned, [ctx.actorId]);
-        response.reason_options = toReasonOptionsDto(warned.reasonOptions);
+        response.approval_warnings = toApprovalWarningsSummary(warned.w, [ctx.actorId], { ownVisitPending: warned.ownVisitPending });
+        response.reason_options = toReasonOptionsDto(warned.w.reasonOptions);
       }
       auditClaim(deps, request, ctx, 'admin_claim_correction.escalation_read', { closure_id: row.closureId, origin: row.origin });
       return response;

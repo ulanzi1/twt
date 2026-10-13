@@ -3,7 +3,8 @@
 //     texted, another member's ping, another Pariwar (a path that is ⛔ the session's), an unknown ping;
 //   · 409 `peer_request.no_longer_open` (a closed claim) / `peer_request.submitted` (after Submit, a second Submit);
 //   · the list returns ONLY texted, open requests and its `limit` is bounded (forced pagination);
-//   · the detail carries the PINNED v2's SERVED questions with words in en AND hi (⛔ the 'pending' health questions);
+//   · the detail carries the PINNED version's SERVED questions with words in en AND hi (⛔ the 'pending' health questions)
+//     — v3 for a NEW reply; a reply STARTED on v2 keeps v2 and its words (Story 6.27b, `-329`);
 //   · the auto-save needs an Idempotency-Key, replays it, stores a date ENCRYPTED with its three indexes and reads it back
 //     to its owner; a bad value is 422; ⛔ no Turnstile header is ever needed; ⛔ no session ⇒ 401.
 
@@ -146,12 +147,54 @@ describe.skipIf(!hasDatabase)('Story 6.27a — the neighbours\' member routes (:
     expect(res.status).toBe(200);
     expect(Object.keys(res.body).sort()).toEqual(['answers', 'memberName', 'pingId', 'questionnaire', 'submitted']);
     const q = res.body['questionnaire'] as { versionId: string; pages: { questions: { key: string; words: { en: string; hi: string } }[] }[]; closingNote: { en: string } };
-    expect(q.versionId).toBe('peer_mesh.v2');
+    // Story 6.27b (`-329`) — v3 is LIVE (RED BY DESIGN: this leg named v2 — amended by NAMING v3).
+    expect(q.versionId).toBe('peer_mesh.v3');
     expect(q.pages.flatMap((pg) => pg.questions.map((x) => x.key))).toEqual(['has_died', 'death_date', 'how_known', 'relationship', 'callback_consent']);
     expect(q.pages[0]!.questions[0]!.words.en).toMatch(/died\?$/);
     expect(q.pages[0]!.questions[0]!.words.hi).toMatch(/निधन/);
     expect(q.closingNote.en).toMatch(/^Your answers are saved as you go\./);
     expect(res.body['submitted']).toBe(false);
+  });
+
+  // ⭐ Story 6.27b (Task 3c.6; AC11; `-328` read with `-329`) — the call-back question's words follow the reply's PINNED version.
+  it('v3 — a NEW reply pins `peer_mesh.v3` and asks "May the Admin phone you about this?" in en AND hi', async () => {
+    const p = randomUUID();
+    const m = await seedMember(p);
+    const r = await seedRequest(p, m);
+    const tok = token(m, p);
+    const before = await call('GET', `${base(p)}/${r.pingId}`, tok);
+    const words = (body: Json) =>
+      (body['questionnaire'] as { pages: { questions: { key: string; words: { en: string; hi: string } }[] }[] }).pages
+        .flatMap((pg) => pg.questions)
+        .find((x) => x.key === 'callback_consent')!.words;
+    expect(words(before.body)).toEqual({ en: 'May the Admin phone you about this?', hi: 'क्या एडमिन इस बारे में आपको फ़ोन कर सकते हैं?' });
+    expect((await put(p, tok, r.pingId, 'has_died', { codes: ['died'] })).status).toBe(200);
+    const { rows } = await t.pool.query(`SELECT questionnaire_version_id FROM claim_peer_mesh_replies WHERE ping_id = $1`, [r.pingId]);
+    expect(rows).toEqual([{ questionnaire_version_id: 'peer_mesh.v3' }]);
+  });
+
+  it('v2 is HISTORICAL — a reply STARTED on v2 keeps v2 and its old words ("May the District Admin …"); a save keeps the pin', async () => {
+    const p = randomUUID();
+    const m = await seedMember(p);
+    const r = await seedRequest(p, m);
+    const tok = token(m, p);
+    const { rows: [sel] } = await t.pool.query<{ selection_id: string }>(`SELECT selection_id FROM claim_peer_mesh_pings WHERE ping_id = $1`, [r.pingId]);
+    await t.pool.query(
+      `INSERT INTO claim_peer_mesh_replies (reply_id, pariwar_id, claim_case_id, selection_id, ping_id, responder_member_id, questionnaire_version_id)
+       VALUES ($1, $2, $3, $4, $5, $6, 'peer_mesh.v2')`,
+      [randomUUID(), p, r.cid, sel!.selection_id, r.pingId, m],
+    );
+    const res = await call('GET', `${base(p)}/${r.pingId}`, tok);
+    expect(res.status).toBe(200);
+    const q = res.body['questionnaire'] as { versionId: string; pages: { questions: { key: string; words: { en: string; hi: string } }[] }[] };
+    expect(q.versionId).toBe('peer_mesh.v2');
+    expect(q.pages.flatMap((pg) => pg.questions).find((x) => x.key === 'callback_consent')!.words).toEqual({
+      en: 'May the District Admin phone you about this?',
+      hi: 'क्या ज़िला एडमिन इस बारे में आपको फ़ोन कर सकते हैं?',
+    });
+    expect((await put(p, tok, r.pingId, 'has_died', { codes: ['died'] })).status).toBe(200);
+    const { rows } = await t.pool.query(`SELECT questionnaire_version_id FROM claim_peer_mesh_replies WHERE ping_id = $1`, [r.pingId]);
+    expect(rows).toEqual([{ questionnaire_version_id: 'peer_mesh.v2' }]);
   });
 
   it('ONE indistinguishable 404 on EVERY route: ⛔ texted, another member\'s, another Pariwar\'s path, unknown', async () => {

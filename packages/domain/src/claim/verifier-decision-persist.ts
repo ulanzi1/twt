@@ -32,6 +32,7 @@ import {
   type ClaimVerifierDecisionRow,
   claimVerifierDecisions,
 } from '../schema/claim_verifier_decisions.js';
+import { assertActorMayApprove } from './approver-own-visit.js';
 import { type ClaimEventActor } from './events.js';
 import { lockActiveApprovalWarningReason } from './approval-warning-reasons.js';
 import {
@@ -406,6 +407,8 @@ export async function adjudicateClaim(
   //      ⭐ Story 6.21a (D7) — through the OUTER helper, which first requires a CURRENT, ACCEPTED death
   //      certificate (a rejected one makes the claim WAIT, ⛔ never a denial — `-236` BB).
   if (input.outcome === 'approved') {
+    // ⭐ Story 6.27b BD4 (`-327` decision 2) — FIRST, before the gate and any warnings read: an approver whose OWN ground visit on the claim is pending is refused, unconditionally (⛔ kind on the refusal).
+    await assertActorMayApprove(db, input.pariwarId, input.claimCaseId, input.actorId);
     // 6.23b EA2 — the wait is VACUOUS here (⛔ no live approval exists while the District Admin approves).
     await assertClaimApprovable(
       db,
@@ -666,6 +669,8 @@ export async function reviseDecision(
   //    same-outcome guards (a revise that cannot happen is refused for its real reason). Something new about a warned
   //    claim is ADDED (NW14's late reason), ⛔ never written over. ⛔ A denied decision's revise is unchanged.
   if (input.outcome === 'approved') {
+    // ⭐ Story 6.27b BD4 (`-327` decision 2) — FIRST, before the gate and any warnings read: an approver whose OWN ground visit on the claim is pending is refused, unconditionally (⛔ kind on the refusal). A denial's revise is ⛔ touched.
+    await assertActorMayApprove(db, input.pariwarId, input.claimCaseId, input.actorId);
     const warnings = await readClaimApprovalWarnings(db, input.pariwarId, input.claimCaseId);
     if (warnings.coverage.records.length > 0 || warnings.kinds.length > 0) {
       throw new ClaimDecisionNotRevisableError(

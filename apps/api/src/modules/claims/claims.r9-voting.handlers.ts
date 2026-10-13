@@ -328,8 +328,13 @@ export function createR9VotingHandlers(deps: AppDeps) {
         const warned = await underSavepoint(tx.client, 'r9_panel_approval_warnings', async () => {
           const w = await claim.readClaimApprovalWarnings(tx.tx, ctx.pariwarId, claimCaseId);
           const coverage = await claim.readR9VoteWarningCoverage(tx.tx, ctx.pariwarId, approveVoteIds);
-          const short = claim.r9ApproveVotesMissingKeys(w.keys, approveVoteIds, coverage);
-          return { w, shortVoteIds: new Set(short.map((v) => v.voteId.toLowerCase())) };
+          // ⭐ Story 6.27b (PM25 (c), BD4; BF21; Task 4.3) — a viewer whose own ground visit is pending sees ⛔ neighbour kind:
+          // `short` and each vote's `covers_current_warnings` are computed from the FILTERED keys (DISPLAY only —
+          // finalize's binding check reads every key).
+          const ownVisitPending = await claim.isActorOwnVisitPending(tx.tx, ctx.pariwarId, claimCaseId, ctx.actorId);
+          const shownKeys = ownVisitPending ? claim.withoutPeerWarnings(w).keys : w.keys;
+          const short = claim.r9ApproveVotesMissingKeys(shownKeys, approveVoteIds, coverage);
+          return { w, ownVisitPending, shownKeys, shortVoteIds: new Set(short.map((v) => v.voteId.toLowerCase())) };
         }).catch((err: unknown) => {
           request.log.warn(
             { err: err instanceof Error ? err.name : 'unknown', claimCaseId },
@@ -338,7 +343,7 @@ export function createR9VotingHandlers(deps: AppDeps) {
           return null;
         });
         const coversCurrentWarnings = (voteId: string, vote: string): boolean | null =>
-          warned === null || vote !== 'approve' || warned.w.keys.length === 0 ? null : !warned.shortVoteIds.has(voteId.toLowerCase());
+          warned === null || vote !== 'approve' || warned.shownKeys.length === 0 ? null : !warned.shortVoteIds.has(voteId.toLowerCase());
 
         // ⭐ Story 6.28 (OP14 (b)) — another claim of the death past its final vote / paid (ONE statement).
         const elsewhere = (await readFinallyApprovedElsewhereDtos(tx.client, tx.tx, request.log, ctx.pariwarId, [claimCaseId]))(claimCaseId);
@@ -401,7 +406,9 @@ export function createR9VotingHandlers(deps: AppDeps) {
           tally,
           name_difference_reasons: nameDifferenceReasons,
           approval_warnings:
-            warned === null ? UNAVAILABLE_APPROVAL_WARNINGS : toApprovalWarningsSummary(warned.w, [ctx.actorId, ...approveVoterIds]),
+            warned === null
+              ? UNAVAILABLE_APPROVAL_WARNINGS
+              : toApprovalWarningsSummary(warned.w, [ctx.actorId, ...approveVoterIds], { ownVisitPending: warned.ownVisitPending }),
           reason_options: warned === null ? [] : toReasonOptionsDto(warned.w.reasonOptions),
           finally_approved_elsewhere: elsewhere,
         };

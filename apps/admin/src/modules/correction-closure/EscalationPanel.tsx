@@ -26,6 +26,7 @@ import {
   approvalNeedsWarningReason,
   resolvedWarningReasonCode,
 } from '../claim-verification/LaterApprovalWarnings.js';
+import { NeighboursAnswersPanel } from '../claim-verification/NeighboursAnswersPanel.js';
 import { verifierConsoleEn } from '../claim-verification/i18n-en.js';
 import { correctionChaseEn } from '../correction-chase/i18n-en.js';
 import { ApprovalNameHighlightBadge } from './ApprovalNameHighlightBadge.js';
@@ -429,6 +430,13 @@ export function EscalationDetail({ pariwarId, claimCaseId }: { pariwarId: string
           </li>
         ))}
       </ul>
+      {/* ⭐ Story 6.27b (PM24) — the neighbours' answers, ON DEMAND, BEFORE the decision (⛔ inside its approve branch). */}
+      <NeighboursAnswersPanel
+        key={claimCaseId}
+        pariwarId={pariwarId}
+        claimCaseId={claimCaseId}
+        testId={`escalation-neighbours-${claimCaseId}`}
+      />
       <ReviewForm pariwarId={pariwarId} detail={d} />
       <DirectionForm pariwarId={pariwarId} claimCaseId={claimCaseId} />
       <DecisionForm pariwarId={pariwarId} detail={d} onConflict={() => void q.refetch()} />

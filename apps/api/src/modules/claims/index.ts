@@ -35,6 +35,7 @@ import { registerConcealmentAssessmentRoutes } from './claims.concealment-assess
 import { registerAppealRoutes } from './claims.appeal.routes.js';
 import { registerPeerRequestHelplineRoutes } from './claims.peer-request.helpline.routes.js';
 import { registerPeerRequestMemberRoutes } from './claims.peer-request.member.routes.js';
+import { registerPeerAnswersRoutes } from './claims.peer-answers.routes.js';
 
 export function registerClaimsModule(app: FastifyInstance, deps: AppDeps): void {
   registerClaimsRoutes(app, deps);
@@ -45,6 +46,8 @@ export function registerClaimsModule(app: FastifyInstance, deps: AppDeps): void 
   registerGroundInspectionRoutes(app, deps);
   // Story 6.10 — the READ-ONLY verifier-console bounded compound signals view (one district-gated GET).
   registerVerifierConsoleRoutes(app, deps);
+  // Story 6.27b (PM24) — the approvers' read of the neighbours' answers (one `cycle.freeze`-gated GET, at a later step only).
+  registerPeerAnswersRoutes(app, deps);
   // Story 6.18 — the nominee NAME CHECK: the district-gated read that shows each account's holder
   // name beside the declared nominees, and the District Admin's recorded verdict (`-226` cl.3/cl.5).
   registerNomineeNameCheckRoutes(app, deps);

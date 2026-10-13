@@ -47,6 +47,8 @@ export * from './nominee-bank-read.js';
 export * from './nominee-name-check.js';
 export * from './nominee-name-check-read.js';
 export * from './correction-queue-read.js';
+// Story 6.27b (BD4, `-327` decision 2) — a hidden actor cannot approve; the ONE hide predicate as a shared fragment.
+export * from './approver-own-visit.js';
 export * from './nominee-name-check-persist.js';
 // Story 6.20 — the nominee declaration in force AT THE DEATH: the claim-filed LOCK + the Story-6-22
 // findings it consumes (D3, AC2, D17(c)), the EFFECTIVE declaration accessor + its bulk form + the pure

@@ -322,6 +322,7 @@ import {
   PeerRequestSaveAnswerResponse,
   PeerRequestSubmitResponse,
   type PeerRequestAnswerValue,
+  ClaimPeerAnswersResponse,
 } from '@twt/contracts';
 import { z } from 'zod';
 
@@ -1773,6 +1774,18 @@ export function recordRefileConfirmation(pariwarId: string, closedClaimCaseId: s
     `/api/v1/p/${encodeURIComponent(pariwarId)}/admin/claims/${encodeURIComponent(closedClaimCaseId)}/refile-confirmation`,
     RefileConfirmationResponse,
     post({ note }),
+  );
+}
+
+/**
+ * Story 6.27b (PM24) — the APPROVERS' read of the neighbours' answers. ⛔ Ever on render: every call is an AUDITED read
+ * (and may decrypt a call-back number) — `<NeighboursAnswersPanel>` fetches it ONLY when opened. A 404 ⇔ ⛔ at an
+ * approving step; `peerMesh` absent ⇔ hidden from this reader.
+ */
+export function getClaimPeerAnswers(pariwarId: string, claimCaseId: string): Promise<ClaimPeerAnswersResponse> {
+  return apiFetch(
+    `/api/v1/p/${encodeURIComponent(pariwarId)}/admin/claims/${encodeURIComponent(claimCaseId)}/peer-answers`,
+    ClaimPeerAnswersResponse,
   );
 }
 

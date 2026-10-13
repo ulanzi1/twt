@@ -207,6 +207,7 @@
   "peer_request_questions.death_illness.other": "Other",
   "peer_request_questions.death_illness.dont_know": "I don't know",
   "peer_request_questions.callback_consent.question": "May the District Admin phone you about this?",
+  "peer_request_questions.callback_consent.question_admin": "May the Admin phone you about this?",
   "peer_request_questions.callback_consent.yes": "Yes",
   "peer_request_questions.callback_consent.no": "No",
   "peer_request_questions.closing_note": "Your answers are saved as you go. Only the Trust's staff who check this claim will see them — never the family. Please answer only what you know. Press Submit when you are done.",

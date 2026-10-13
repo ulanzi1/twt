@@ -160,6 +160,8 @@ export async function ensureGroundInspection(
     readonly verdict?: 'matches' | 'does_not_match';
     /** Story 6.26b (RD21) — the family's (or the printed) date; default the accepted date (⛔ no warning). */
     readonly deathDate?: string;
+    /** Story 6.27b (BD4) — WHO the visit is assigned to and completed by (default a fresh id). */
+    readonly inspectorActorId?: string;
   } = {},
 ): Promise<string | null> {
   const pid = ids.pariwarId(pariwarId);
@@ -173,7 +175,7 @@ export async function ensureGroundInspection(
     (accepted ? await decryptDeathCertificateReviewField(accepted.acceptedDateCiphertext, pariwarId, deps.encryption) : null) ??
     certificateDateAfterEverything();
   const stage = opts.stage ?? 'initial';
-  const inspector = randomUUID();
+  const inspector = opts.inspectorActorId ?? randomUUID();
   const { groundInspection } = await claim.scheduleGroundInspection(scopeTx.client, {
     claimCaseId: cid,
     pariwarId: pid,

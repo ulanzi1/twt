@@ -54,14 +54,17 @@ export const DATE_UNKNOWN_CODE = 'unknown' as const;
 export const EARLIEST_ANSWER_DATE = '1900-01-01' as const;
 
 /**
- * The Trustee-ratified decisions a question may cite as `approvedBy` (PM23 (a)): ⛔ no v3 before row 6-33 except from a
- * Panel decision id — adding one here is a reviewed code edit that cites it.
+ * The Trustee-ratified decisions a question may cite as `approvedBy` (PM23 (a)). ⭐ Story 6.27b: v3 came from a Panel
+ * decision id — `2026-10-13-328` (the call-back question's new words), read with its erratum `-329` (⛔ itself not
+ * Panel-ratified, so ⛔ listed). ⛔ No v4 before row 6-33 except from a Panel decision id — adding one here is a reviewed
+ * code edit that cites it.
  */
 export const PANEL_RATIFIED_QUESTIONNAIRE_DECISIONS = [
   '2026-09-28-262',
   '2026-09-28-263',
   '2026-10-10-303',
   '2026-10-10-304',
+  '2026-10-13-328',
 ] as const;
 
 /** A decision id (`YYYY-MM-DD-NNN`) — the form of a recorded counsel basis. */

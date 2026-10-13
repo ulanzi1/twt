@@ -128,7 +128,7 @@ describe.skipIf(!hasDatabase)('Story 6.26a — the console\'s ground-inspection 
   function ctxOf(s: Awaited<ReturnType<typeof openScopeTx>>, pariwarId: string, claimCaseId: string): VerifierConsoleContext {
     return {
       db: s.tx, client: s.client, pariwarId, claimCaseId, district: DISTRICT, actorId: randomUUID(),
-      grants: [{ pariwarId, role: 'super_admin', scopeDimension: 'global', scopeValue: null }], traceId: null, onCallbackMobileShown: () => {},
+      grants: [{ pariwarId, role: 'super_admin', scopeDimension: 'global', scopeValue: null }], traceId: null, onCallbackMobileShown: () => {}, callbackViewer: 'district',
     };
   }
 

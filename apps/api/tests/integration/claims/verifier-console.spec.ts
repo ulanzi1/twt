@@ -297,6 +297,12 @@ describe.skipIf(!hasDatabase)('Verifier-console read surface — E2E (:5433)', (
     await td.pool.query("INSERT INTO members(member_id, pariwar_id, state, state_event_version) VALUES($1,$2,'active',1)", [neighbour, p]);
     await td.pool.query('INSERT INTO member_identities(member_id, pariwar_id, mobile_ciphertext, mobile_blind_index) VALUES($1,$2,$3,$4)', [neighbour, p, await encryption.encryptMobile('+919876543210', deps.encryption), `bi-${randomUUID()}`]);
     const ping = (await td.pool.query('SELECT ping_id FROM claim_peer_mesh_pings WHERE selection_id = $1', [selectionId])).rows[0]!.ping_id as string;
+    // ⚠ Story 6.27b (RED BY DESIGN under rule 1 — ⛔ never a number for a neighbour who was never texted, `-329` decision 4):
+    // the fixture's ping is now TEXTED (the CHECK pairs `send_outcome` with `attempt_count`) — the FIXTURE amended, ⛔ the rule.
+    await td.pool.query(
+      "UPDATE claim_peer_mesh_pings SET send_outcome = 'accepted', attempt_count = 1, send_updated_at = clock_timestamp() WHERE ping_id = $1",
+      [ping],
+    );
     const replyId = randomUUID();
     await td.pool.query("INSERT INTO claim_peer_mesh_replies(reply_id, pariwar_id, claim_case_id, selection_id, ping_id, responder_member_id, questionnaire_version_id) VALUES($1,$2,$3,$4,$5,$6,'peer_mesh.v2')", [replyId, p, cid, selectionId, ping, neighbour]);
     await td.pool.query("INSERT INTO claim_peer_mesh_reply_answers(pariwar_id, claim_case_id, reply_id, question_key, value_codes, saved_via, saved_by_actor_id) VALUES($1,$2,$3,'callback_consent',ARRAY['yes'],'member_app',$4)", [p, cid, replyId, neighbour]);
@@ -305,6 +311,7 @@ describe.skipIf(!hasDatabase)('Verifier-console read surface — E2E (:5433)', (
     expect((await client.inject({ method: 'GET', url: url(p, cid) })).statusCode).toBe(200);
     const event = td.auditSink.events.find(e => e.type === 'admin_verifier_console.peer_callback_mobile_shown' && e.context?.['ping_id'] === ping);
     expect(event).toBeDefined();
+    expect(event!.context).toMatchObject({ basis: 'consented' }); // Story 6.27b — the basis, ⛔ never the number
     // Persist the real route's captured event through the production sink, not a transcribed fixture.
     createAuditLogSink(td.pool).emit(event!);
     const locator = `claim:${cid}:ping:${ping}`;
@@ -646,6 +653,7 @@ describe.skipIf(!hasDatabase)('Verifier-console read surface — E2E (:5433)', (
         grants: [{ pariwarId, role: 'super_admin', scopeDimension: 'global', scopeValue: null }],
         traceId: null,
         onCallbackMobileShown: () => {},
+        callbackViewer: 'district',
       });
       await closeScopeTx(scopeTx, true);
       expect(packet.documentReview.status).toBe('present');
@@ -700,6 +708,7 @@ describe.skipIf(!hasDatabase)('Verifier-console read surface — E2E (:5433)', (
         grants: [{ pariwarId, role: 'super_admin', scopeDimension: 'global', scopeValue: null }],
         traceId: null,
         onCallbackMobileShown: () => {},
+        callbackViewer: 'district',
       });
       await closeScopeTx(scopeTx, true);
       expect(packet.documentReview.status).toBe('unavailable'); // NOT empty — a failure ≠ "no records"
@@ -762,6 +771,7 @@ describe.skipIf(!hasDatabase)('Verifier-console read surface — E2E (:5433)', (
           grants: [{ pariwarId, role: 'super_admin', scopeDimension: 'global', scopeValue: null }],
           traceId: null,
           onCallbackMobileShown: () => {},
+          callbackViewer: 'district',
         });
         client.query = realQuery as never;
         await closeScopeTx(scopeTx, true);
@@ -841,6 +851,7 @@ describe.skipIf(!hasDatabase)('Verifier-console read surface — E2E (:5433)', (
           grants: [{ pariwarId, role: 'super_admin', scopeDimension: 'global', scopeValue: null }],
           traceId: null,
           onCallbackMobileShown: () => {},
+          callbackViewer: 'district',
         });
         await closeScopeTx(scopeTx, true);
         return readCount;
@@ -906,6 +917,7 @@ describe.skipIf(!hasDatabase)('Verifier-console read surface — E2E (:5433)', (
           grants: [{ pariwarId, role: 'super_admin', scopeDimension: 'global', scopeValue: null }],
           traceId: null,
           onCallbackMobileShown: () => {},
+          callbackViewer: 'district',
         });
         await closeScopeTx(scopeTx, true);
         return readCount;
@@ -948,6 +960,7 @@ describe.skipIf(!hasDatabase)('Verifier-console read surface — E2E (:5433)', (
         grants: [{ pariwarId, role: 'super_admin', scopeDimension: 'global', scopeValue: null }],
         traceId: null,
         onCallbackMobileShown: () => {},
+        callbackViewer: 'district',
       });
       await closeScopeTx(scopeTx, true);
       expect(packet.peerMesh?.status).toBe('present');
@@ -983,6 +996,7 @@ describe.skipIf(!hasDatabase)('Verifier-console read surface — E2E (:5433)', (
         grants: [{ pariwarId, role: 'super_admin', scopeDimension: 'global', scopeValue: null }],
         traceId: null,
         onCallbackMobileShown: () => {},
+        callbackViewer: 'district',
       });
       await closeScopeTx(scopeTx, true);
       return packet.packet.nomineeNameCheck;
@@ -1090,6 +1104,7 @@ describe.skipIf(!hasDatabase)('Verifier-console read surface — E2E (:5433)', (
         grants: [{ pariwarId, role: 'super_admin', scopeDimension: 'global', scopeValue: null }],
         traceId: null,
         onCallbackMobileShown: () => {},
+        callbackViewer: 'district',
       });
       client.query = realQuery as never;
       await closeScopeTx(scopeTx, true);
@@ -1196,6 +1211,7 @@ describe.skipIf(!hasDatabase)('Verifier-console read surface — E2E (:5433)', (
           grants: [{ pariwarId, role: 'super_admin', scopeDimension: 'global', scopeValue: null }],
           traceId: null,
           onCallbackMobileShown: () => {},
+          callbackViewer: 'district',
         },
         ids.claimId(claimCaseId),
         'verifier_review',
@@ -1239,6 +1255,7 @@ describe.skipIf(!hasDatabase)('Verifier-console read surface — E2E (:5433)', (
           grants: [{ pariwarId, role: 'super_admin', scopeDimension: 'global', scopeValue: null }],
           traceId: null,
           onCallbackMobileShown: () => {},
+          callbackViewer: 'district',
         },
         ids.claimId(claimCaseId),
         { bump: () => (booked += 1) },
@@ -1277,6 +1294,7 @@ describe.skipIf(!hasDatabase)('Verifier-console read surface — E2E (:5433)', (
           grants: [{ pariwarId, role: 'super_admin', scopeDimension: 'global', scopeValue: null }],
           traceId: null,
           onCallbackMobileShown: () => {},
+          callbackViewer: 'district',
         },
         ids.claimId(claimCaseId),
         'verifier_approved',
@@ -1291,6 +1309,8 @@ describe.skipIf(!hasDatabase)('Verifier-console read surface — E2E (:5433)', (
         viewerCanRecordLateReason: false,
         lateKeysUncoveredForViewer: 0,
         reasonOptions: [],
+        // Story 6.27b (BD4) — RED BY DESIGN: the failed-read path carries the reader's own-visit state too (named, ⛔ loosened).
+        ownVisitPending: false,
       });
     } finally {
       client.query = realQuery as never;

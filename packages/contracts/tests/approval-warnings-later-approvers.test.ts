@@ -37,6 +37,7 @@ const SUMMARY = {
   post_death: 'evaluated',
   waiting_for_district_admin: false,
   own_reason_excluded: false,
+  own_visit_pending: false,
 } as const;
 
 describe('ApprovalWarningsSummary (EA7) — snake_case, `.strict()`', () => {

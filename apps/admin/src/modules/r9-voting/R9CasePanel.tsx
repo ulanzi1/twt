@@ -62,6 +62,7 @@ function errorMessage(error: unknown): string | undefined {
   return apiErrorMessage(error);
 }
 import { NomineeNameCheckDisclosure } from '../claim-verification/NomineeNameCheckDisclosure.js';
+import { NeighboursAnswersPanel } from '../claim-verification/NeighboursAnswersPanel.js';
 import { nameDifferenceReasonLabel, verifierConsoleEn as t } from '../claim-verification/i18n-en.js';
 import { FinallyApprovedElsewhereBanner } from '../cycle-freeze/FinallyApprovedElsewhereBanner.js';
 import {
@@ -188,6 +189,8 @@ export function R9CasePanel({ pariwarId, claimCaseId }: R9CasePanelProps): React
         claimCaseId={claimCaseId}
         testId="r9-name-check-disclosure"
       />
+      {/* ⭐ Story 6.27b (PM24) — the neighbours' answers, ON DEMAND; ⛔ inside the not-finalized / on-panel / warnings gates. */}
+      <NeighboursAnswersPanel key={claimCaseId} pariwarId={pariwarId} claimCaseId={claimCaseId} testId="r9-neighbours-answers" />
     </>
   );
 
@@ -314,7 +317,8 @@ export function R9CasePanel({ pariwarId, claimCaseId }: R9CasePanelProps): React
       : [elsewhereWords, approvalBlockedReason(warnings, 'r9'), votesToRevise > 0 ? t.approvalWarnings.errors.approveVotesNeedWarningReason(votesToRevise) : null]
           .filter((m): m is string => m !== null)
           .join(' ') || null;
-  const approveVoteUnavailable = voteChoice === 'approve' && !warnings.available;
+  // Story 6.27b (BD4) — an approve vote is ALSO held while THIS voter's own ground visit on the claim is pending.
+  const approveVoteUnavailable = voteChoice === 'approve' && (!warnings.available || warnings.own_visit_pending);
   const submitVote = (): void => {
     setVoteValidation(null);
     if (voteChoice === 'approve' && elsewhereWords !== null) {
@@ -323,6 +327,10 @@ export function R9CasePanel({ pariwarId, claimCaseId }: R9CasePanelProps): React
     }
     if (voteChoice === 'approve' && !warnings.available) {
       setVoteValidation(t.approvalWarnings.unavailable);
+      return;
+    }
+    if (voteChoice === 'approve' && warnings.own_visit_pending) {
+      setVoteValidation(t.ownVisitPending);
       return;
     }
     if (voteChoice === 'approve' && approveVoteWarned && warningReasonCode === '') {
@@ -458,7 +466,7 @@ export function R9CasePanel({ pariwarId, claimCaseId }: R9CasePanelProps): React
                     Finalize an approved outcome — invariant 5); 6.23a's picker only for an APPROVE vote; a deny vote is
                     ⛔ never gated. The WAIT holds Finalize, ⛔ not the vote — said beside Finalize. */}
                 {/* Code review round 3: ⛔ no empty spacing wrapper on an un-warned panel (the block itself returns `null`). */}
-                {warnings.kinds.length > 0 || !warnings.available ? (
+                {warnings.kinds.length > 0 || !warnings.available || warnings.own_visit_pending ? (
                   <div className="mb-2">
                     <LaterApprovalWarnings
                       showPicker={voteChoice === 'approve'}

@@ -52,6 +52,7 @@ import {
   claimStateTrusteeDecisions,
 } from '../schema/claim_state_trustee_decisions.js';
 import { type CycleFreezeCommitRow, cycleFreezeCommits } from '../schema/cycle_freeze_commits.js';
+import { assertActorMayApprove } from './approver-own-visit.js';
 import {
   type ApprovalWarningKind,
   checkLaterApprovalWarningReason,
@@ -580,6 +581,8 @@ export async function voteOnFrozenClaim(
   // ⭐ Story 6.21a (D7) — through the OUTER helper: a current, ACCEPTED death certificate first.
   // ⛔ `isReturnedClaimResubmitted` below stays on the INNER helper (T4).
   if (input.outcome === 'approved') {
+    // ⭐ Story 6.27b BD4 (`-327` decision 2) — FIRST, before the gate and any warnings read: an approver whose OWN ground visit on the claim is pending is refused, unconditionally (⛔ kind on the refusal).
+    await assertActorMayApprove(db, input.pariwarId, input.claimCaseId, input.actorId);
     // ⭐ Story 6.23b EA2 — the gate's LAST conjunct is the WAIT; the final voter's own late reason does ⛔ not count
     // for their own approval (`-279` A1).
     await assertClaimApprovable(
@@ -1109,6 +1112,8 @@ export async function resolveEscalation(
   // (⛔ nothing written before a refusal). ⛔ No approval gate runs here (`-226` cl.7 — the gate's own doc-block), so
   // the warnings are the reader's as they stand: `post_death_version` only from a CURRENT determination, else just the
   // 90-day keys. Safe — the claim still reaches the final vote, where the gate runs and EA4 asks again, exactly.
+  // ⭐ Story 6.27b BD4 (`-327` decision 2) — FIRST, before the gate and any warnings read: an approver whose OWN ground visit on the claim is pending is refused, unconditionally (⛔ kind on the refusal).
+  if (input.outcome === 'approved') await assertActorMayApprove(db, input.pariwarId, input.claimCaseId, input.actorId);
   const warningRule =
     input.outcome === 'approved'
       ? await checkLaterApprovalWarningReason(db, input.pariwarId, input.claimCaseId, warningReasonCode, input.rationaleCiphertext)

@@ -41,7 +41,6 @@ import type {
   SuspicionRefusalSection,
   GroundInspectionSection,
   MemberValidityPayloadDto,
-  PeerMeshSection,
   PriorVerifierCommentsSection,
   RecentPrecedentsSection,
   ConcealmentSignal,
@@ -57,7 +56,14 @@ import type { FastifyRequest } from 'fastify';
 import type { AppDeps } from '../../context.js';
 import { ForbiddenError, NotFoundError, UnauthorizedError } from '../../http-errors.js';
 import { emitAuthAudit } from '../auth/shared/audit.js';
-import { assemblePeerSection } from './peer-answers-assembler.js';
+import {
+  assemblePeerMeshSection,
+  assemblePeerSection,
+  stitchPeerAnswerFlags,
+  type PeerCallbackBasis,
+  type PeerCallbackViewer,
+  type UnstitchedPeerMeshSection,
+} from './peer-answers-assembler.js';
 import { decryptKycField } from '../kyc/kyc-crypto.js';
 import { geoTreeResolverForRequest } from '../rbac/index.js';
 import { DEATH_CERTIFICATE_REVIEW_KEY } from './claims.death-certificate.handlers.js';
@@ -247,8 +253,12 @@ export interface VerifierConsoleContext {
   /** Optional structured logger for fail-soft decrypt/section warnings (the route passes request.log). */
   log?: { warn: (obj: unknown, msg: string) => void };
   /** ⭐ Story 6.27a (PM13) — called once for EVERY neighbour call-back mobile shown; the route audits it (⛔ the number).
-   *  REQUIRED (third-pass review U11 — an optional one, defaulted to a no-op, let a context show mobiles unaudited). */
-  onCallbackMobileShown: (pingId: string) => void;
+   *  REQUIRED (third-pass review U11 — an optional one, defaulted to a no-op, let a context show mobiles unaudited).
+   *  ⭐ Story 6.27b — with WHY it was shown (`consented` / `super_admin`), for the audit context. */
+  onCallbackMobileShown: (pingId: string, basis: PeerCallbackBasis) => void;
+  /** ⭐ Story 6.27b (`-328` read with `-329`) — REQUIRED, ⛔ never defaulted: `'super_admin'` ONLY when the console's
+   *  `claim.verify` gate matched a `super_admin` grant (`rbac.matchingGrantRole`), else `'district'`. */
+  callbackViewer: Extract<PeerCallbackViewer, 'district' | 'super_admin'>;
 }
 
 /** Fail-soft decrypt: a single corrupt/rotated envelope yields `null` for THAT field, never a throw. */
@@ -383,12 +393,18 @@ export async function assembleVerifierConsole(
 
   // ── (i) the approval warnings (Story 6.23a, NW8; 6.26b's death-fact kinds) — NON-PII; ⛔ no decrypt. ⚠ LAST (⛔ no
   //    SAVEPOINT). The internal read also hands back the keys and the per-inspection comparisons (⛔ never on the wire). ─
-  const warningsRead = await readApprovalWarningsSection(ctx, claimCaseId, core.claim.currentState as string, reads);
+  // ⭐ Story 6.27b (PM25 (c), BD4; BF9) — the section ALREADY knows whether it is hidden from this reader (`undefined` ⇔
+  // `hidden`, incl. a hide check that FAILED — the V11 fail-closed trade-off): ⛔ a new read.
+  const warningsRead = await readApprovalWarningsSection(ctx, claimCaseId, core.claim.currentState as string, reads, {
+    peerHidden: peerMesh === undefined,
+  });
   const approvalWarnings = warningsRead.section;
 
   // ── Story 6.26b (GI10 [b]; `-288` K2; RD18) — each assignment's date comparison and its two warning flags, STITCHED
   //    from the warnings read after both sections exist (⛔ no new read; ⛔ no date, ⛔ no index on the wire). ─────────
   const groundInspectionWithFlags = stitchDeathFactFlags(groundInspection, warningsRead);
+  // ── Story 6.27b (PM13's flags; AC8) — each neighbour answer's warning flag, STITCHED the same way (⛔ no new read). ──
+  const peerMeshWithFlags = peerMesh === undefined ? undefined : stitchPeerAnswerFlags(peerMesh, warningsRead);
 
   const packet: VerifierConsolePacket = {
     claimCaseId: ctx.claimCaseId,
@@ -399,7 +415,7 @@ export async function assembleVerifierConsole(
     validity,
     concealment,
     documentReview,
-    ...(peerMesh !== undefined ? { peerMesh } : {}),
+    ...(peerMeshWithFlags !== undefined ? { peerMesh: peerMeshWithFlags } : {}),
     groundInspection: groundInspectionWithFlags,
     priorVerifierComments,
     recentPrecedents,
@@ -529,8 +545,10 @@ export async function assembleApprovalWarnings(
   claimCaseId: ids.ClaimId,
   claimState: string,
   reads: { bump(): void },
+  /** Story 6.27b — `peerHidden`: the neighbours' section is hidden from this reader (their own ground visit pending). */
+  opts: { readonly peerHidden: boolean } = { peerHidden: false },
 ): Promise<ApprovalWarningsStatus> {
-  return (await readApprovalWarningsSection(ctx, claimCaseId, claimState, reads)).section;
+  return (await readApprovalWarningsSection(ctx, claimCaseId, claimState, reads, opts)).section;
 }
 
 /** Story 6.26b (RD18) — the warnings section AND what the console's per-assignment flags are stitched from: the keys and
@@ -540,6 +558,8 @@ interface ApprovalWarningsRead {
   readonly section: ApprovalWarningsStatus;
   readonly keys: readonly string[] | null;
   readonly inspectionComparisons: ReadonlyMap<string, claim.DeathDateComparison> | null;
+  /** Story 6.27b — each LIVE warning-question answer the read saw (lower-case `answer_id` → carries a key). */
+  readonly peerAnswerFlags: ReadonlyMap<string, boolean> | null;
 }
 
 /** The ONE counted read behind `assembleApprovalWarnings` (its signature, read count and failure shape unchanged). */
@@ -548,16 +568,24 @@ async function readApprovalWarningsSection(
   claimCaseId: ids.ClaimId,
   claimState: string,
   reads: { bump(): void },
+  opts: { readonly peerHidden: boolean },
 ): Promise<ApprovalWarningsRead> {
+  // ⭐ Story 6.27b (BD4) — the hidden reader's own visit is pending: the strip shows ONE neutral block (both paths).
+  const ownVisitPending = opts.peerHidden;
   try {
     reads.bump();
-    const w = await claim.readClaimApprovalWarnings(ctx.db, ids.pariwarId(ctx.pariwarId), claimCaseId);
-    const approved = w.liveDecision?.outcome === 'approved';
+    const full = await claim.readClaimApprovalWarnings(ctx.db, ids.pariwarId(ctx.pariwarId), claimCaseId);
+    // ⭐ Story 6.27b (PM25 (c); BF10) — for a HIDDEN reader the two neighbour kinds are filtered out of EVERY displayed
+    // field computed from the keys (`kinds`, the counts, `viewerCanRecordLateReason`) — a count of 1 with ⛔ kind line would
+    // itself say "a neighbour said something". ⭐ `reviseBlocked` stays on the UNFILTERED read (BF19 (b) — the console
+    // ⛔ never offers a revise the server refuses).
+    const w = ownVisitPending ? claim.withoutPeerWarnings(full) : full;
+    const approved = full.liveDecision?.outcome === 'approved';
     const reviseBlocked: ApprovalWarningsStatus['reviseBlocked'] = !approved
       ? null
-      : w.coverage.records.length > 0 || w.kinds.length > 0
+      : full.coverage.records.length > 0 || full.kinds.length > 0
         ? 'warning_approval_final'
-        : w.postDeath === 'awaiting_determination'
+        : full.postDeath === 'awaiting_determination'
           ? 'warnings_not_current'
           : null;
     const canApprove = rbac.hasPermission(
@@ -567,6 +595,7 @@ async function readApprovalWarningsSection(
       ctx.geoResolver ? { resolver: ctx.geoResolver } : undefined,
     );
     const viewerCanRecordLateReason =
+      !ownVisitPending && // BD4 refuses a hidden actor's late reason — ⛔ offer the panel
       canApprove &&
       approved &&
       (claim.LATE_WARNING_REASON_RECORDABLE_STATES as readonly string[]).includes(claimState) &&
@@ -589,8 +618,11 @@ async function readApprovalWarningsSection(
         addedAt: o.addedAt?.toISOString() ?? null,
         replacesLabel: o.replacesLabel,
       })),
+      ownVisitPending,
     };
-    return { section, keys: w.keys, inspectionComparisons: w.inspectionComparisons };
+    // The stitches read the UNFILTERED read: a hidden reader gets ⛔ peer section to stitch, and the inspection flags
+    // carry ⛔ neighbour key.
+    return { section, keys: full.keys, inspectionComparisons: full.inspectionComparisons, peerAnswerFlags: full.peerAnswerFlags };
   } catch (err) {
     ctx.log?.warn(
       { err: err instanceof Error ? err.name : 'unknown', claimCaseId: ctx.claimCaseId },
@@ -608,8 +640,9 @@ async function readApprovalWarningsSection(
       viewerCanRecordLateReason: false,
       lateKeysUncoveredForViewer: 0,
       reasonOptions: [],
+      ownVisitPending,
     };
-    return { section, keys: null, inspectionComparisons: null };
+    return { section, keys: null, inspectionComparisons: null, peerAnswerFlags: null };
   }
 }
 
@@ -812,56 +845,41 @@ async function assembleDocumentReview(
   }
 }
 
-/** (c) the peer-mesh section — ⭐ EXPORTED for Story 6.27a's exact-read and inspector tests (the 6.28 precedent). */
+/** (c) the peer-mesh section — ⭐ EXPORTED for Story 6.27a's exact-read and inspector tests (the 6.28 precedent).
+ *  ⭐ Story 6.27b (BF20) — the wire mapping and the `unavailable` catch live in ONE shared function beside the assembler
+ *  (`assemblePeerMeshSection`), which PM24's approvers' read calls too; the section is returned UNSTITCHED (the console
+ *  stitches the warning flags after its warnings read). */
 export async function assemblePeerMesh(
   deps: AppDeps,
   ctx: VerifierConsoleContext,
   claimCaseId: ids.ClaimId,
   reads: { bump(): void },
   memberName: string,
-): Promise<PeerMeshSection | undefined> {
-  try {
-    // ⭐ Story 6.27a — ONE actor-aware builder (`assemblePeerSection`, second-pass review S13): the PM25 (c) hide FIRST and
-    // fail CLOSED, then the selection / pings / responses / answers / contacts. EVERY read runs under its own raw SAVEPOINT
-    // (review S14 — the `client` rule above), so a failed read degrades THIS section and ⛔ never aborts the scope tx under
-    // the later sections; a hide check that cannot run is `hidden` (an `unavailable` section would show the inspector a title).
-    const section = await assemblePeerSection(
-      deps.encryption,
-      {
-        db: ctx.db,
-        pariwarId: ctx.pariwarId,
-        claimCaseId: ctx.claimCaseId,
-        actorId: ctx.actorId,
-        ...(ctx.log ? { log: ctx.log } : {}),
-        // REQUIRED on the context; the route emits the audit lines only once its packet is built (review S17).
-        onCallbackMobileShown: ctx.onCallbackMobileShown,
-        run: (label, read) => underSavepoint(ctx.client, `console_${label}`, read),
-      },
-      () => reads.bump(),
-      memberName,
-    );
-    if (section.kind === 'hidden') return undefined;
-    if (section.kind === 'no_selection') return { status: 'empty' };
-    const { selection, responses } = section;
-    return {
-      status: 'present',
-      transcript: {
-        selectionId: selection.selectionId,
-        distinctResponderCount: claim.distinctPeerMeshResponderCount(responses),
-        pingedMemberIds: [...section.pingMemberIds],
-        // Append-order responses; a non-response is simply ABSENT and is NEVER inferred as `denied` (AC2c).
-        responses: responses.map((r) => ({ responderMemberId: r.responderMemberId, response: r.response })),
-        // AC2c's verifier annotations have no owning producer yet — explicit not_available_yet, never fabricated.
-        verifierAnnotations: { status: 'not_available_yet' },
-        outcome: selection.outcome,
-        windowExpiresAt: selection.responseWindowExpiresAt.toISOString(),
-        pings: section.pings,
-      },
-    };
-  } catch (err) {
-    ctx.log?.warn({ err, claimCaseId: ctx.claimCaseId }, 'verifier-console: peer-mesh section unavailable');
-    return { status: 'unavailable' };
-  }
+): Promise<UnstitchedPeerMeshSection | undefined> {
+  // ⭐ Story 6.27a — ONE actor-aware builder (`assemblePeerSection`, second-pass review S13): the PM25 (c) hide FIRST and
+  // fail CLOSED, then the selection / pings / responses / answers / contacts. EVERY read runs under its own raw SAVEPOINT
+  // (review S14 — the `client` rule above), so a failed read degrades THIS section and ⛔ never aborts the scope tx under
+  // the later sections; a hide check that cannot run is `hidden` (an `unavailable` section would show the inspector a title).
+  return assemblePeerMeshSection(
+    () =>
+      assemblePeerSection(
+        deps.encryption,
+        {
+          db: ctx.db,
+          pariwarId: ctx.pariwarId,
+          claimCaseId: ctx.claimCaseId,
+          actorId: ctx.actorId,
+          callbackViewer: ctx.callbackViewer,
+          ...(ctx.log ? { log: ctx.log } : {}),
+          // REQUIRED on the context; the route emits the audit lines only once its packet is built (review S17).
+          onCallbackMobileShown: ctx.onCallbackMobileShown,
+          run: (label, read) => underSavepoint(ctx.client, `console_${label}`, read),
+        },
+        () => reads.bump(),
+        memberName,
+      ),
+    { claimCaseId: String(claimCaseId), ...(ctx.log ? { log: ctx.log } : {}) },
+  );
 }
 
 /**
@@ -1193,7 +1211,20 @@ export function createVerifierConsoleHandlers(deps: AppDeps) {
 
       // ⭐ Review S17 — the call-back mobiles SHOWN are buffered and audited only once the packet is built (⛔ a line for a
       // number a failed section never delivered).
-      const shownPings: string[] = [];
+      const shownPings: { pingId: string; basis: PeerCallbackBasis }[] = [];
+      const grants = request.scopeGrants ?? [];
+      const geoResolver = geoTreeResolverForRequest(request);
+      // ⭐ Story 6.27b (`-328` read with `-329`) — the Super Admin's rule ONLY on a `super_admin` MATCH of THIS route's own
+      // gate (`claim.verify` at the claim's district, the SAME resolver); every other result is the District Admin's side.
+      const callbackViewer =
+        rbac.matchingGrantRole(
+          grants,
+          VERIFIER_CONSOLE_KEY,
+          { dimension: 'district', value: district, pariwarId: scopeTx.pariwarId },
+          { resolver: geoResolver },
+        ) === 'super_admin'
+          ? 'super_admin'
+          : 'district';
       const { packet } = await assembleVerifierConsole(deps, {
         db: scopeTx.tx,
         client: scopeTx.client,
@@ -1201,18 +1232,20 @@ export function createVerifierConsoleHandlers(deps: AppDeps) {
         claimCaseId,
         district,
         actorId,
-        grants: request.scopeGrants ?? [],
-        geoResolver: geoTreeResolverForRequest(request),
+        grants,
+        geoResolver,
         traceId: request.requestContext.traceId ?? null,
         log: request.log,
         // ⭐ Story 6.27a (PM13) — EACH call-back mobile shown is audited: actor, claim, ping — ⛔ never the number.
-        onCallbackMobileShown: (pingId) => shownPings.push(pingId),
+        onCallbackMobileShown: (pingId, basis) => shownPings.push({ pingId, basis }),
+        callbackViewer,
       });
-      for (const pingId of shownPings) {
+      for (const { pingId, basis } of shownPings) {
         emitAuthAudit(deps, request, 'admin_verifier_console.peer_callback_mobile_shown', {
           actorId,
           pariwarId: scopeTx.pariwarId,
-          context: { claim_case_id: claimCaseId, ping_id: pingId },
+          // ⭐ Story 6.27b — the basis (`consented` / `super_admin`) — ⛔ never the number.
+          context: { claim_case_id: claimCaseId, ping_id: pingId, basis },
           resourceLocator: `claim:${String(claimCaseId).toLowerCase()}:ping:${String(pingId).toLowerCase()}`,
         });
       }

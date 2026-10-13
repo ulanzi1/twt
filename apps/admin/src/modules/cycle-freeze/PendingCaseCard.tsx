@@ -24,6 +24,7 @@ import type { ReactElement } from 'react';
 import { useState } from 'react';
 
 import { NomineeNameCheckDisclosure } from '../claim-verification/NomineeNameCheckDisclosure.js';
+import { NeighboursAnswersPanel } from '../claim-verification/NeighboursAnswersPanel.js';
 import {
   LaterApprovalWarnings,
   approvalBlockedReason,
@@ -482,6 +483,17 @@ export function PendingCaseCard({
         claimCaseId={case_.claim_case_id}
         testId={`pending-case-name-check-${case_.claim_case_id}`}
       />
+      {/* ⭐ Story 6.27b (PM24) — the neighbours' answers, ON DEMAND (each open is ONE audited read — ⛔ a fetch per card
+          on render). ⛔ On the `voted_pending_commit` bucket: an un-routed claim there always 404s, and an R9-routed one is
+          read on `R9CasePanel`. Keyed by claim id (the 6.23b `EscalationDetail` keying lesson). */}
+      {bucket !== 'voted_pending_commit' && (
+        <NeighboursAnswersPanel
+          key={case_.claim_case_id}
+          pariwarId={pariwarId}
+          claimCaseId={case_.claim_case_id}
+          testId={`pending-case-neighbours-${case_.claim_case_id}`}
+        />
+      )}
 
       {/* The picker carries its own "choose a reason" alert — ⛔ said twice. */}
       {validationError && validationError !== tw.reasonRequiredError && (

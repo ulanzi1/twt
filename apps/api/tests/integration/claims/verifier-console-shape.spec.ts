@@ -323,6 +323,7 @@ describe.skipIf(!hasDatabase)('Verifier-console compound shape (AI-6-3 class) �
         grants: [{ pariwarId, role: 'super_admin', scopeDimension: 'global', scopeValue: null }],
         traceId: null,
         onCallbackMobileShown: () => {},
+        callbackViewer: 'district',
       });
       await closeScopeTx(scopeTx, true);
       return packet;
@@ -542,7 +543,8 @@ describe.skipIf(!hasDatabase)('Verifier-console compound shape (AI-6-3 class) �
     expect(packetB.approvalWarnings.reviseBlocked).toBe('warning_approval_final');
     // ⛔ No date, ⛔ no name on the section (the contract is strict; the keys are the contract's).
     expect(Object.keys(packetA.approvalWarnings).sort()).toEqual(
-      ['available', 'kinds', 'lateKeysUncoveredForViewer', 'postDeath', 'reasonOptions', 'reviseBlocked', 'uncoveredSinceApproval', 'viewerCanRecordLateReason'].sort(),
+      // Story 6.27b (BD4) — `ownVisitPending` NAMED (⛔ a loosened pin).
+      ['available', 'kinds', 'lateKeysUncoveredForViewer', 'ownVisitPending', 'postDeath', 'reasonOptions', 'reviseBlocked', 'uncoveredSinceApproval', 'viewerCanRecordLateReason'].sort(),
     );
   });
 }, { timeout: 20000 });

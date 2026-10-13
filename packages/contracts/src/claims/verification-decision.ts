@@ -125,7 +125,8 @@ export const NOMINEE_VERSION_WARNING_KINDS = ['post_death_version', 'recent_nomi
 export const NomineeVersionWarningKind = z.enum(NOMINEE_VERSION_WARNING_KINDS);
 export type NomineeVersionWarningKind = z.output<typeof NomineeVersionWarningKind>;
 
-/** The warning kinds (NW1; Story 6.26b adds the three death-fact kinds; Story 6.28 OP5 adds `other_claim_for_death`).
+/** The warning kinds (NW1; Story 6.26b adds the three death-fact kinds; Story 6.28 OP5 adds `other_claim_for_death`;
+ *  Story 6.27b PM9 adds the two neighbour kinds — `-303` Q2 A).
  *  ⚠ LOCKSTEP with `@twt/domain`'s `APPROVAL_WARNING_KINDS`. */
 export const APPROVAL_WARNING_KINDS = [
   ...NOMINEE_VERSION_WARNING_KINDS,
@@ -133,6 +134,8 @@ export const APPROVAL_WARNING_KINDS = [
   'original_certificate_mismatch',
   'register_check_mismatch',
   'other_claim_for_death',
+  'peer_says_not_died',
+  'peer_death_date_differs',
 ] as const;
 export const ApprovalWarningKind = z.enum(APPROVAL_WARNING_KINDS);
 export type ApprovalWarningKind = z.output<typeof ApprovalWarningKind>;
@@ -193,12 +196,18 @@ export const ApprovalWarningsSummary = z
     post_death: z.enum(['evaluated', 'awaiting_determination']),
     waiting_for_district_admin: z.boolean(),
     own_reason_excluded: z.boolean(),
+    /**
+     * ⭐ Story 6.27b (BD4, `2026-10-13-327` decision 2; PM25 (c)) — a ground visit on this claim is assigned to the VIEWER
+     * and is ⛔ finished: the neighbours' two warning kinds are left OUT of `kinds` and the wait above (a DISPLAY filter —
+     * the gate reads every key), and every approving control shows ONE neutral block (the server refuses it).
+     */
+    own_visit_pending: z.boolean(),
   })
   .strict()
   // Code review 2026-10-06: `available: false` means the warnings could ⛔ not be read (Trap 15) — it must carry no
   // signal of its own, so a degraded read can never masquerade as a specific, known warning state.
   .superRefine((v, ctx) => {
-    if (!v.available && (v.kinds.length > 0 || v.waiting_for_district_admin || v.own_reason_excluded)) {
+    if (!v.available && (v.kinds.length > 0 || v.waiting_for_district_admin || v.own_reason_excluded || v.own_visit_pending)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['available'],

@@ -74,6 +74,7 @@ const UNAVAILABLE = {
   post_death: 'awaiting_determination',
   waiting_for_district_admin: false,
   own_reason_excluded: false,
+  own_visit_pending: false,
 };
 
 import type { AppDeps } from '../../../src/context.js';
@@ -83,6 +84,7 @@ import { closeScopeTx, openScopeTx } from '../../../src/modules/multi-tenant/sco
 import { buildServer } from '../../../src/server.js';
 import { buildTestDeps, hasDatabase, makeClient, type CapturingStepUpDelivery, type TestDeps } from '../_setup.js';
 import { ensureAcceptedDeathCertificate, ensureClaimContact, ensureGroundInspection, seedNomineeNameCheck } from '../_nominee-name-check-fixture.js';
+import * as peerFx from '../_peer-reply-fixture.js';
 import { FakeWebAuthnProvider } from '../_webauthn-fake.js';
 
 type Client = ReturnType<typeof makeClient>;
@@ -372,6 +374,7 @@ describe.skipIf(!hasDatabase)('Story 6.23b — every approver, through HTTP (:54
         post_death: 'evaluated',
         waiting_for_district_admin: false,
         own_reason_excluded: false,
+        own_visit_pending: false,
       });
       expect(body.reason_options[0]).toMatchObject({ code: GENERIC, reasonId: null, addedByDisplay: null, addedAt: null });
 
@@ -411,6 +414,7 @@ describe.skipIf(!hasDatabase)('Story 6.23b — every approver, through HTTP (:54
         kinds: ['post_death_version', 'inspection_death_date_differs'],
         waiting_for_district_admin: true,
         own_reason_excluded: false,
+        own_visit_pending: false,
       });
       const payload = { claim_case_id: w.claimCaseId, action: 'approve', warning_reason_code: GENERIC, rationale: 'why' };
       const waits = await pa.client.inject({ method: 'POST', url: cycleDecisionUrl(w.pariwarId), payload });
@@ -436,6 +440,7 @@ describe.skipIf(!hasDatabase)('Story 6.23b — every approver, through HTTP (:54
       expect((await pendingOf(pa.client, w.pariwarId)).all.find((i) => i.claim_case_id === w.claimCaseId)?.approval_warnings).toMatchObject({
         waiting_for_district_admin: true,
         own_reason_excluded: true,
+        own_visit_pending: false,
       });
       const own = await pa.client.inject({ method: 'POST', url: cycleDecisionUrl(w.pariwarId), payload });
       expect(errOf(own.body)).toMatchObject({ code: 'cycle_freeze.late_warning_reason_required', details: { own_reason_excluded: true } });
@@ -575,40 +580,69 @@ describe.skipIf(!hasDatabase)('Story 6.23b — every approver, through HTTP (:54
     });
   });
 
+  /** Route `w` to R9 (the clause + the routing row) and open a one-member panel; returns that Pariwar Admin. */
+  async function routeToR9(w: { pariwarId: string; claimCaseId: string }) {
+    await td.pool.query(
+      `INSERT INTO clause_versions (clause_version_id, clause_id, pariwar_id, version, effective_date, payload, benefit_mechanism)
+       VALUES (gen_random_uuid(), $1, $2, 1, now(), $3, 'pool')`,
+      [R9_CLAUSE, w.pariwarId, JSON.stringify({ rule_code: 'R9', voting_required: true, majority_required: true, on_pass: 'route_r9_voting' })],
+    );
+    await td.pool.query(
+      `INSERT INTO claim_state_trustee_decisions (claim_case_id, pariwar_id, phase, outcome, reason_code, actor_id, actor_display)
+       VALUES ($1, $2, 'routing', 'routed_to_r9', 'r9_special_case', $3, 'Router')`,
+      [w.claimCaseId, w.pariwarId, randomUUID()],
+    );
+    const pa = await staff(w.pariwarId, 'pariwar_admin');
+    const open = await pa.client.inject({ method: 'POST', url: `${r9Url(w.pariwarId, w.claimCaseId)}/open`, payload: { clause_id: R9_CLAUSE, panel_actor_ids: [pa.userId] } });
+    expect(open.statusCode, open.body).toBe(201);
+    return pa;
+  }
+  async function elevate(client: Client, actionContext = 'r9_finalize'): Promise<void> {
+    const req = await client.inject({ method: 'POST', url: '/api/v1/auth/step-up/request', payload: { actionContext } });
+    expect(req.statusCode).toBe(200);
+    const ver = await client.inject({ method: 'POST', url: '/api/v1/auth/step-up/verify', payload: { otp: adminStepUp.last?.code as string } });
+    expect(ver.statusCode).toBe(200);
+  }
+  /** The Pariwar Admin returns `w` to the District Admin and marks it `mustAct` (opening the correction run). */
+  async function returnAndMark(w: { pariwarId: string; claimCaseId: string }, mustAct: 'family' | 'staff') {
+    const pa = await staff(w.pariwarId, 'pariwar_admin');
+    const run = await inScope(w.pariwarId, async (s) => {
+      await claim.returnToDistrictAdmin(s.client, {
+        claimCaseId: ids.claimId(w.claimCaseId),
+        pariwarId: ids.pariwarId(w.pariwarId),
+        reasonCode: 'other',
+        rationaleCiphertext: 'enc:v1:return-note',
+        actorId: pa.userId,
+        actorDisplay: 'Prakash (Pariwar Admin)',
+        actor: 'trustee',
+      });
+      const mark = await claim.writeCorrectionMark(s.client, {
+        pariwarId: ids.pariwarId(w.pariwarId),
+        claimCaseId: ids.claimId(w.claimCaseId),
+        mustAct,
+        actorId: pa.userId,
+        actorDisplay: 'Prakash (Pariwar Admin)',
+        setByRole: 'pariwar_admin',
+        noteCiphertext: null,
+        isReturnMark: true,
+        hold: claim.noCorrectionHold,
+      });
+      return mark.openedRun!;
+    });
+    return { pa, day0: run.day0 };
+  }
+
   // ── R9 (EA5) ────────────────────────────────────────────────────────────────────────────────────────────────────
   describe('the R9 vote, panel and finalize', () => {
     async function r9World() {
       const w = await seedWorld([daysAgo(300), daysAgo(30)]);
       return { ...w, pa: await routeToR9(w) };
     }
-    /** Route `w` to R9 (the clause + the routing row) and open a one-member panel; returns that Pariwar Admin. */
-    async function routeToR9(w: { pariwarId: string; claimCaseId: string }) {
-      await td.pool.query(
-        `INSERT INTO clause_versions (clause_version_id, clause_id, pariwar_id, version, effective_date, payload, benefit_mechanism)
-         VALUES (gen_random_uuid(), $1, $2, 1, now(), $3, 'pool')`,
-        [R9_CLAUSE, w.pariwarId, JSON.stringify({ rule_code: 'R9', voting_required: true, majority_required: true, on_pass: 'route_r9_voting' })],
-      );
-      await td.pool.query(
-        `INSERT INTO claim_state_trustee_decisions (claim_case_id, pariwar_id, phase, outcome, reason_code, actor_id, actor_display)
-         VALUES ($1, $2, 'routing', 'routed_to_r9', 'r9_special_case', $3, 'Router')`,
-        [w.claimCaseId, w.pariwarId, randomUUID()],
-      );
-      const pa = await staff(w.pariwarId, 'pariwar_admin');
-      const open = await pa.client.inject({ method: 'POST', url: `${r9Url(w.pariwarId, w.claimCaseId)}/open`, payload: { clause_id: R9_CLAUSE, panel_actor_ids: [pa.userId] } });
-      expect(open.statusCode, open.body).toBe(201);
-      return pa;
-    }
     const panelOf = async (client: Client, p: string, c: string) => {
       const res = await client.inject({ method: 'GET', url: r9Url(p, c) });
       expect(res.statusCode, res.body).toBe(200);
       return res.json() as { approval_warnings: Json; reason_options: Json[]; votes: { vote_id: string; covers_current_warnings: boolean | null }[] };
     };
-    async function elevate(client: Client): Promise<void> {
-      const req = await client.inject({ method: 'POST', url: '/api/v1/auth/step-up/request', payload: { actionContext: 'r9_finalize' } });
-      expect(req.statusCode).toBe(200);
-      const ver = await client.inject({ method: 'POST', url: '/api/v1/auth/step-up/verify', payload: { otp: adminStepUp.last?.code as string } });
-      expect(ver.statusCode).toBe(200);
-    }
 
     it('⭐ AC5 — a vote needs its reason; the panel shows the block + `covers_current_warnings`; a post-death key later ⇒ the panel says `false` and finalize 409s naming the vote; revised ⇒ finalized', async () => {
       const w = await r9World();
@@ -718,31 +752,7 @@ describe.skipIf(!hasDatabase)('Story 6.23b — every approver, through HTTP (:54
       const w = await seedWorld(declaredAt);
       const da = await staff(w.pariwarId, 'district_admin');
       await daApprove(da, w, true);
-      const pa = await staff(w.pariwarId, 'pariwar_admin');
-      const run = await inScope(w.pariwarId, async (s) => {
-        await claim.returnToDistrictAdmin(s.client, {
-          claimCaseId: ids.claimId(w.claimCaseId),
-          pariwarId: ids.pariwarId(w.pariwarId),
-          reasonCode: 'other',
-          rationaleCiphertext: 'enc:v1:return-note',
-          actorId: pa.userId,
-          actorDisplay: 'Prakash (Pariwar Admin)',
-          actor: 'trustee',
-        });
-        const mark = await claim.writeCorrectionMark(s.client, {
-          pariwarId: ids.pariwarId(w.pariwarId),
-          claimCaseId: ids.claimId(w.claimCaseId),
-          mustAct,
-          actorId: pa.userId,
-          actorDisplay: 'Prakash (Pariwar Admin)',
-          setByRole: 'pariwar_admin',
-          noteCiphertext: null,
-          isReturnMark: true,
-          hold: claim.noCorrectionHold,
-        });
-        return mark.openedRun!;
-      });
-      return { ...w, da, pa, day0: run.day0 };
+      return { ...w, da, ...(await returnAndMark(w, mustAct)) };
     }
 
     it('⭐ AC6(b) — D27: the queue item SHOWS the warnings (a closure request ⛔ would carry `null`); `{}` ⇒ 409; an unpaired field ⇒ 400; the pair ⇒ 201 and THAT note is the decision rationale (decrypted — ⛔ the constant)', async () => {
@@ -1006,5 +1016,663 @@ describe.skipIf(!hasDatabase)('Story 6.23b — every approver, through HTTP (:54
       );
       expect((await queueOf(da.client, w.pariwarId)).items).toEqual([]);
     });
+  });
+  // ── Story 6.27b — the two NEIGHBOUR kinds at every approver (Task 1b; AC3, AC4; PM9; `-303` Q2 A, `-324` A) ──────
+  // ⛔ No writer changed (F16): the ONE rule and the wait iterate `w.keys`, so the kinds reach every approver by
+  // construction. The answers are saved through the REAL member route (`_peer-reply-fixture.ts`), so the date's indexes
+  // and the certificate's (`ensureAcceptedDeathCertificate`) come from the SAME helper and Pariwar key.
+  describe('Story 6.27b — the neighbour kinds at every approver', () => {
+    type PeerKind = 'peer_says_not_died' | 'peer_death_date_differs';
+    const KINDS: PeerKind[] = ['peer_says_not_died', 'peer_death_date_differs'];
+    const env = () => ({ pool: td.pool, deps, app });
+    type W = { pariwarId: string; claimCaseId: string; member: string; ping: string };
+
+    /** A QUIET world (a 400-day-old nomination ⇒ ⛔ nominee warning; the fixture inspection's date equals the
+     *  certificate's ⇒ ⛔ death-fact warning) with ONE texted neighbour. */
+    async function peerWorld(pariwarId?: string): Promise<W> {
+      const w = await seedWorld([daysAgo(400)], pariwarId);
+      const member = await peerFx.seedNeighbour(env(), w.pariwarId, 'Asha Devi', '+919876543210');
+      const deceased = (await td.pool.query<{ d: string }>('SELECT deceased_member_id AS d FROM claims WHERE claim_case_id = $1', [w.claimCaseId])).rows[0]!.d;
+      const [ping] = await peerFx.attachPings(env(), w.pariwarId, w.claimCaseId, deceased, [member], [true]);
+      return { ...w, member, ping: ping! };
+    }
+    /** The neighbour's answer that raises `kind`: `not_died`, or a date FOUR days from the certificate's (tomorrow). */
+    async function answer(w: W, kind: PeerKind): Promise<void> {
+      if (kind === 'peer_says_not_died') return peerFx.put(env(), w.pariwarId, w.member, w.ping, 'has_died', { codes: ['not_died'] });
+      await peerFx.put(env(), w.pariwarId, w.member, w.ping, 'has_died', { codes: ['died'] });
+      await peerFx.put(env(), w.pariwarId, w.member, w.ping, 'death_date', { date: istDaysAgo(3) });
+    }
+    const daLate = (w: W, da: { userId: string }) =>
+      inScope(w.pariwarId, (s) =>
+        claim.recordLateWarningReason(s.client, {
+          claimCaseId: ids.claimId(w.claimCaseId),
+          pariwarId: ids.pariwarId(w.pariwarId),
+          warningReasonCode: GENERIC,
+          noteCiphertext: 'enc:v1:late-da',
+          actorId: da.userId,
+          actorDisplay: 'Anita (District Admin)',
+        }),
+      );
+    const finalVote = (pa: { client: Client }, w: W, warned: boolean) =>
+      pa.client.inject({
+        method: 'POST',
+        url: cycleDecisionUrl(w.pariwarId),
+        payload: warned
+          ? { claim_case_id: w.claimCaseId, action: 'approve', warning_reason_code: GENERIC, rationale: 'Read the neighbour\'s answer.' }
+          : { claim_case_id: w.claimCaseId, action: 'approve' },
+      });
+    const r9Vote = (pa: { client: Client }, w: W, warned: boolean) =>
+      pa.client.inject({
+        method: 'POST',
+        url: `${r9Url(w.pariwarId, w.claimCaseId)}/vote`,
+        payload: warned ? { vote: 'approve', rationale: 'yes', warning_reason_code: GENERIC } : { vote: 'approve', rationale: 'yes' },
+      });
+    const r9Finalize = async (pa: { client: Client }, w: W) => {
+      await elevate(pa.client);
+      return pa.client.inject({ method: 'POST', url: `${r9Url(w.pariwarId, w.claimCaseId)}/finalize`, payload: {} });
+    };
+    /** D27's world: the District Admin approved, returned (family), "no correction needed" recorded. */
+    async function noCorrectionReady(w: W, da: { userId: string }) {
+      const { pa } = await returnAndMark(w, 'family');
+      await inScope(w.pariwarId, (s) =>
+        claim.recordNoCorrectionNeeded(s.client, {
+          pariwarId: ids.pariwarId(w.pariwarId),
+          claimCaseId: ids.claimId(w.claimCaseId),
+          actorId: da.userId,
+          actorDisplay: 'Anita (District Admin)',
+          now: new Date(),
+          markNoteCiphertext: 'enc:v1:m',
+          noteCiphertext: 'enc:v1:n',
+          setByRole: 'district_admin',
+          hold: claim.isCorrectionClaimHeld,
+        }),
+      );
+      await td.pool.query(
+        `UPDATE claim_correction_no_correction_records SET recorded_at = recorded_at - interval '1 minute' WHERE claim_case_id = $1`,
+        [w.claimCaseId],
+      );
+      await seedNomineeNameCheck(deps, w.pariwarId, w.claimCaseId);
+      return pa;
+    }
+    const noCorrectionUrl = (w: W) => `${claimBase(w.pariwarId, w.claimCaseId)}/correction/no-correction-needed/approve`;
+    /** G1's world: approved, returned (staff), escalated past day 90; returns the Super Admin. */
+    async function escalatedReady(w: W) {
+      const { day0 } = await returnAndMark(w, 'staff');
+      await inScope(w.pariwarId, (s) =>
+        claim.escalateStaffCase(s.client, {
+          pariwarId: ids.pariwarId(w.pariwarId),
+          claimCaseId: ids.claimId(w.claimCaseId),
+          now: new Date(`${cycleCalendar.addCalendarDays(day0, 90)}T04:30:00.000Z`),
+        }),
+      );
+      return staff(w.pariwarId, 'super_admin');
+    }
+    const g1Url = (w: W) => `${claimBase(w.pariwarId, w.claimCaseId)}/correction/escalation/decision`;
+    const g1 = (sa: { client: Client }, w: W, warned: boolean) =>
+      sa.client.inject({
+        method: 'POST',
+        url: g1Url(w),
+        payload: { decision: 'approve', reason: 'details_verified', note: 'Checked.', ...(warned ? { warning_reason_code: GENERIC } : {}) },
+      });
+    const reasonRequired = (code: string, kind: PeerKind) => ({ code, details: { kinds: [kind], missing: 'reason' } });
+    const waits = (code: string, kind: PeerKind) => ({ code, details: { kinds: [kind], uncovered_count: 1, own_reason_excluded: false } });
+
+    // Task 3b.5 (AC8) — the CONSOLE's per-answer flags, stitched from its warnings read (⛔ a new read); the read FORCED to
+    // fail (this spec's fault seam wraps the single reader) ⇒ `null` ("could not be checked just now"), ⛔ never `false`.
+    it('AC8 — the console\'s flags: `not_died` ⇒ `true`, `died` ⇒ `false`, a non-warning question ⇒ `false`; the warnings read failed ⇒ `null`', async () => {
+      const base = await seedWorld([daysAgo(400)]);
+      const deceased = (await td.pool.query<{ d: string }>('SELECT deceased_member_id AS d FROM claims WHERE claim_case_id = $1', [base.claimCaseId])).rows[0]!.d;
+      const asha = await peerFx.seedNeighbour(env(), base.pariwarId, 'Asha Devi', '+919876543210');
+      const bina = await peerFx.seedNeighbour(env(), base.pariwarId, 'Bina Kumari', '+919812345678');
+      const [pingA, pingB] = await peerFx.attachPings(env(), base.pariwarId, base.claimCaseId, deceased, [asha, bina], [true, true]);
+      const w = { ...base, member: asha, ping: pingA! };
+      await answer(w, 'peer_says_not_died');
+      await peerFx.put(env(), w.pariwarId, bina, pingB!, 'has_died', { codes: ['died'] });
+      await peerFx.put(env(), w.pariwarId, bina, pingB!, 'how_known', { codes: ['family_told'] });
+      const da = await staff(w.pariwarId, 'district_admin');
+      type Pings = { pingId: string; reply: { answers: { questionKey: string; warningFlag: boolean | null }[] } | null }[];
+      const flagsOf = async () => {
+        const res = await da.client.inject({ method: 'GET', url: `${claimBase(w.pariwarId, w.claimCaseId)}/verifier-console` });
+        expect(res.statusCode, res.body).toBe(200);
+        const pings = (res.json() as { packet: { peerMesh: { transcript: { pings: Pings } } } }).packet.peerMesh.transcript.pings;
+        return Object.fromEntries(
+          pings.flatMap((p) => (p.reply?.answers ?? []).map((a) => [`${p.pingId === w.ping ? 'a' : 'b'}.${a.questionKey}`, a.warningFlag])),
+        );
+      };
+      expect(await flagsOf()).toEqual({ 'a.has_died': true, 'b.has_died': false, 'b.how_known': false });
+      expect(await withFault(flagsOf)).toEqual({ 'a.has_died': null, 'b.has_died': null, 'b.how_known': false });
+    });
+
+    // ── AC10 (BD4, `2026-10-13-327` decision 2) — a HIDDEN actor (their own ground visit on the claim is pending) cannot
+    //    APPROVE at any step — WITH and WITHOUT a neighbour key (the unconditional leg proves ⛔ disclosure): ONE neutral
+    //    409, ⛔ `details`, ⛔ row; every non-approving act still succeeds; the refusal lifts on a completed FULL visit and
+    //    on the assignment leaving `scheduled`; a `certificate_check` completion does ⛔ not lift it.
+    // ── AC7 (PM25 (c); BF10, BF19 (b), BF21) — the blind-first rule in the WARNINGS: a reader whose own ground visit is
+    //    pending sees ⛔ neighbour kind on the console strip (kinds, counts, the late-reason offer), the four hosts' summary,
+    //    the R9 panel's per-vote coverage and the correction queue — and every approving control shows the neutral
+    //    block; another District Admin sees them throughout; `reviseBlocked` and the GATE read every key.
+    describe('AC7 — the blind-first rule holds in the warnings', () => {
+      const scheduleFor = (w: { pariwarId: string; claimCaseId: string }, actorId: string, stage: 'initial' | 'certificate_check' = 'initial') =>
+        inScope(w.pariwarId, (s) =>
+          claim.scheduleGroundInspection(s.client, {
+            claimCaseId: ids.claimId(w.claimCaseId),
+            pariwarId: ids.pariwarId(w.pariwarId),
+            district: DISTRICT,
+            inspectionStage: stage,
+            inspectionSiteType: 'family_residence',
+            inspectorActorId: actorId,
+            scheduledAt: new Date(),
+            scheduledByActor: randomUUID(),
+            idempotencyKey: randomUUID(),
+          }),
+        );
+      type Strip = { kinds: string[]; uncoveredSinceApproval: number; viewerCanRecordLateReason: boolean; lateKeysUncoveredForViewer: number; reviseBlocked: string | null; ownVisitPending: boolean };
+      const stripOf = async (who: { client: Client }, w: { pariwarId: string; claimCaseId: string }) => {
+        const res = await who.client.inject({ method: 'GET', url: `${claimBase(w.pariwarId, w.claimCaseId)}/verifier-console` });
+        expect(res.statusCode, res.body).toBe(200);
+        return (res.json() as { packet: { approvalWarnings: Strip } }).packet.approvalWarnings;
+      };
+      const queueIds = async (who: { client: Client }, p: string) => {
+        const res = await who.client.inject({ method: 'GET', url: `/api/v1/p/${p}/admin/claims/under-correction` });
+        expect(res.statusCode, res.body).toBe(200);
+        return (res.json() as { items: { claim_case_id: string }[] }).items.map((i) => i.claim_case_id);
+      };
+
+      it('the CONSOLE strip and the QUEUE: ⛔ peer trace for the inspector (`ownVisitPending: true`), shown to another District Admin; `reviseBlocked` unfiltered; a `certificate_check` completion keeps it hidden; a FULL visit shows all', async () => {
+        const w = await peerWorld();
+        const da = await staff(w.pariwarId, 'district_admin');
+        await daApprove(da, w, false);
+        await answer(w, 'peer_says_not_died'); // LATE — the claim's ONLY key
+        const inspector = await staff(w.pariwarId, 'district_admin');
+        await scheduleFor(w, inspector.userId);
+
+        const hidden = await stripOf(inspector, w);
+        expect(hidden).toMatchObject({ kinds: [], uncoveredSinceApproval: 0, viewerCanRecordLateReason: false, lateKeysUncoveredForViewer: 0, ownVisitPending: true });
+        // BF19 (b) — computed from the UNFILTERED keys: the approval is final (a revise would 409).
+        expect(hidden.reviseBlocked).toBe('warning_approval_final');
+        const other = await stripOf(da, w);
+        expect(other).toMatchObject({ kinds: ['peer_says_not_died'], uncoveredSinceApproval: 1, ownVisitPending: false, reviseBlocked: 'warning_approval_final' });
+        expect(other.lateKeysUncoveredForViewer).toBe(1);
+
+        expect(await queueIds(inspector, w.pariwarId)).not.toContain(w.claimCaseId);
+        expect(await queueIds(da, w.pariwarId)).toContain(w.claimCaseId);
+
+        // A `certificate_check` completed by the inspector — their FULL visit still scheduled ⇒ still hidden.
+        await inScope(w.pariwarId, (s) => ensureGroundInspection(deps, s, w.pariwarId, w.claimCaseId, { force: true, stage: 'certificate_check', inspectorActorId: inspector.userId }));
+        expect((await stripOf(inspector, w)).ownVisitPending).toBe(true);
+        // A completed FULL visit ⇒ every kind shown.
+        await inScope(w.pariwarId, (s) => ensureGroundInspection(deps, s, w.pariwarId, w.claimCaseId, { force: true, inspectorActorId: inspector.userId }));
+        expect(await stripOf(inspector, w)).toMatchObject({ kinds: ['peer_says_not_died'], uncoveredSinceApproval: 1, ownVisitPending: false });
+        expect(await queueIds(inspector, w.pariwarId)).toContain(w.claimCaseId);
+      });
+
+      it('the GATE still reads every key: another District Admin\'s approval over a key hidden from an inspector is refused without a reason', async () => {
+        const w = await peerWorld();
+        await answer(w, 'peer_says_not_died');
+        const inspector = await staff(w.pariwarId, 'district_admin');
+        await scheduleFor(w, inspector.userId);
+        const da = await staff(w.pariwarId, 'district_admin');
+        const bare = await da.client.inject({ method: 'POST', url: `${claimBase(w.pariwarId, w.claimCaseId)}/verifier-decision`, payload: daApproveBody });
+        expect(bare.statusCode).toBe(409);
+        expect(errOf(bare.body).code).toBe('verifier_decision.warning_reason_required');
+      });
+
+      it('the four HOSTS\' summary for a Pariwar Admin / the Super Admin who is the scheduled inspector — filtered, `own_visit_pending: true`; another approver\'s is not', async () => {
+        type Summary = { kinds: string[]; own_visit_pending: boolean; waiting_for_district_admin: boolean };
+        // The cycle-freeze pending list.
+        const f = await peerWorld();
+        await answer(f, 'peer_says_not_died');
+        const da = await staff(f.pariwarId, 'district_admin');
+        await daApprove(da, f, true);
+        const pa = await staff(f.pariwarId, 'pariwar_admin');
+        const otherPa = await staff(f.pariwarId, 'pariwar_admin');
+        await scheduleFor(f, pa.userId);
+        const cardOf = async (who: { client: Client }) =>
+          (await pendingOf(who.client, f.pariwarId)).all.find((i) => i.claim_case_id === f.claimCaseId)!.approval_warnings as unknown as Summary;
+        expect(await cardOf(pa)).toMatchObject({ kinds: [], own_visit_pending: true });
+        expect(await cardOf(otherPa)).toMatchObject({ kinds: ['peer_says_not_died'], own_visit_pending: false });
+
+        // The R9 panel — the summary AND each approve vote's coverage, filtered vs unfiltered.
+        const r = await peerWorld();
+        const voter = await routeToR9(r);
+        expect((await r9Vote(voter, r, false)).statusCode).toBe(201); // a vote cast with ⛔ key
+        await answer(r, 'peer_says_not_died'); // the vote now misses the key
+        await scheduleFor(r, voter.userId);
+        const panelOf = async (who: { client: Client }) => {
+          const res = await who.client.inject({ method: 'GET', url: r9Url(r.pariwarId, r.claimCaseId) });
+          expect(res.statusCode, res.body).toBe(200);
+          return res.json() as { approval_warnings: Summary; votes: { covers_current_warnings: boolean | null }[] };
+        };
+        const hiddenPanel = await panelOf(voter);
+        expect(hiddenPanel.approval_warnings).toMatchObject({ kinds: [], own_visit_pending: true });
+        expect(hiddenPanel.votes.map((v) => v.covers_current_warnings)).toEqual([null]); // ⛔ key shown ⇒ ⛔ judged
+        const sa = await staff(r.pariwarId, 'super_admin');
+        const openPanel = await panelOf(sa);
+        expect(openPanel.approval_warnings).toMatchObject({ kinds: ['peer_says_not_died'], own_visit_pending: false });
+        expect(openPanel.votes.map((v) => v.covers_current_warnings)).toEqual([false]);
+
+        // The no-correction strip (the closure queue) and the Super Admin's escalation detail.
+        const d = await peerWorld();
+        await answer(d, 'peer_says_not_died');
+        const dda = await staff(d.pariwarId, 'district_admin');
+        await daApprove(dda, d, true);
+        const dpa = await noCorrectionReady(d, dda);
+        await scheduleFor(d, dpa.userId);
+        const closureOf = async (who: { client: Client }) => {
+          const res = await who.client.inject({ method: 'GET', url: `/api/v1/p/${d.pariwarId}/admin/correction/closure-queue?limit=50` });
+          expect(res.statusCode, res.body).toBe(200);
+          return (res.json() as { items: { claim_case_id: string; approval_warnings: Summary | null }[] }).items.find((i) => i.claim_case_id === d.claimCaseId)!.approval_warnings;
+        };
+        expect(await closureOf(dpa)).toMatchObject({ kinds: [], own_visit_pending: true });
+        expect(await closureOf(await staff(d.pariwarId, 'pariwar_admin'))).toMatchObject({ kinds: ['peer_says_not_died'], own_visit_pending: false });
+
+        const g = await peerWorld();
+        await answer(g, 'peer_says_not_died');
+        const gda = await staff(g.pariwarId, 'district_admin');
+        await daApprove(gda, g, true);
+        const gsa = await escalatedReady(g);
+        await scheduleFor(g, gsa.userId);
+        const detailOf = async (who: { client: Client }) => {
+          const res = await who.client.inject({ method: 'GET', url: `${claimBase(g.pariwarId, g.claimCaseId)}/correction/escalation` });
+          expect(res.statusCode, res.body).toBe(200);
+          return (res.json() as { approval_warnings: Summary }).approval_warnings;
+        };
+        expect(await detailOf(gsa)).toMatchObject({ kinds: [], own_visit_pending: true });
+        expect(await detailOf(await staff(g.pariwarId, 'super_admin'))).toMatchObject({ kinds: ['peer_says_not_died'], own_visit_pending: false });
+      });
+    });
+
+    describe('AC10 — a hidden actor cannot approve (BD4)', () => {
+      const NEUTRAL = /A ground visit on this claim is assigned to you and is not finished\. It must be completed, or given to someone else, before you can approve\./;
+      /** A `scheduled` FULL visit on `w`, assigned to `actorId` (the REAL writer). */
+      const assign = (w: { pariwarId: string; claimCaseId: string }, actorId: string, stage: 'initial' | 'certificate_check' = 'initial') =>
+        inScope(w.pariwarId, async (s) =>
+          (
+            await claim.scheduleGroundInspection(s.client, {
+              claimCaseId: ids.claimId(w.claimCaseId),
+              pariwarId: ids.pariwarId(w.pariwarId),
+              district: DISTRICT,
+              inspectionStage: stage,
+              inspectionSiteType: 'family_residence',
+              inspectorActorId: actorId,
+              scheduledAt: new Date(),
+              scheduledByActor: randomUUID(),
+              idempotencyKey: randomUUID(),
+            })
+          ).groundInspection.groundInspectionId,
+        );
+      const refusedNeutrally = (res: { statusCode: number; body: string }, prefix: string) => {
+        expect(res.statusCode, res.body).toBe(409);
+        const err = errOf(res.body);
+        expect(err.code).toBe(`${prefix}.own_ground_visit_pending`);
+        expect(err.message).toMatch(NEUTRAL);
+        expect(err.details).toBeUndefined();
+        expect(res.body).not.toMatch(/peer_|neighbour|kinds/);
+      };
+      const stateOf = async (claimCaseId: string) =>
+        (await td.pool.query<{ s: string }>('SELECT current_state AS s FROM claims WHERE claim_case_id = $1', [claimCaseId])).rows[0]!.s;
+      const approveWith = (da: { client: Client }, w: W, warned: boolean) =>
+        da.client.inject({
+          method: 'POST',
+          url: `${claimBase(w.pariwarId, w.claimCaseId)}/verifier-decision`,
+          payload: warned ? { ...daApproveBody, warning_reason_code: GENERIC } : daApproveBody,
+        });
+
+      for (const withKey of [false, true]) {
+        const label = withKey ? 'WITH a neighbour key current' : 'with ⛔ neighbour key';
+        it(`the District Admin's approval and its revise; the late reason — ${label}`, async () => {
+          const w = await peerWorld();
+          if (withKey) await answer(w, 'peer_says_not_died');
+          const da = await staff(w.pariwarId, 'district_admin');
+          await assign(w, da.userId);
+          refusedNeutrally(await approveWith(da, w, withKey), 'verifier_decision');
+          expect(await records(w.claimCaseId)).toEqual([]);
+          expect(await stateOf(w.claimCaseId)).toBe('verification_in_progress'); // ⛔ even the review-entry event
+
+          // The revise of an approval (approved BEFORE the visit was assigned — that approval STANDS).
+          const r = await peerWorld();
+          const rda = await staff(r.pariwarId, 'district_admin');
+          await daApprove(rda, r, false);
+          if (withKey) await answer(r, 'peer_says_not_died'); // late — also what makes the late reason meaningful
+          await assign(r, rda.userId);
+          await elevate(rda.client, 'claim_decision_revise');
+          refusedNeutrally(
+            await rda.client.inject({
+              method: 'POST',
+              url: `${claimBase(r.pariwarId, r.claimCaseId)}/verifier-decision/revise`,
+              payload: { outcome: 'approved', reason_code: 'r8_90pct_met', rationale: 'new words' },
+            }),
+            'verifier_decision',
+          );
+          // The late reason (an approving act — it covers a key for good).
+          refusedNeutrally(
+            await rda.client.inject({
+              method: 'POST',
+              url: `${claimBase(r.pariwarId, r.claimCaseId)}/verifier-decision/late-warning-reason`,
+              payload: { warning_reason_code: GENERIC, note: 'Read it.' },
+            }),
+            'verifier_decision',
+          );
+          expect((await records(r.claimCaseId)).map((x) => x.step)).toEqual(withKey ? [] : []);
+        });
+
+        it(`the final vote, the escalation resolution, R9 vote and finalize, D27 and G1 — ${label}`, async () => {
+          // Final vote.
+          const f = await peerWorld();
+          if (withKey) await answer(f, 'peer_says_not_died');
+          const fda = await staff(f.pariwarId, 'district_admin');
+          await daApprove(fda, f, withKey);
+          const pa = await staff(f.pariwarId, 'pariwar_admin');
+          await assign(f, pa.userId);
+          refusedNeutrally(await finalVote(pa, f, withKey), 'cycle_freeze');
+          expect(await stateOf(f.claimCaseId)).toBe('verifier_approved');
+
+          // Escalation resolution.
+          const e = await peerWorld(f.pariwarId);
+          if (withKey) await answer(e, 'peer_says_not_died');
+          const esc = await fda.client.inject({
+            method: 'POST',
+            url: `${claimBase(e.pariwarId, e.claimCaseId)}/verifier-decision`,
+            payload: { outcome: 'escalated', reason_code: 'r9_routed_to_voting', rationale: 'For the trustee.' },
+          });
+          expect(esc.statusCode, esc.body).toBe(201); // an escalation by a hidden-or-not DA is ⛔ gated
+          await assign(e, pa.userId);
+          refusedNeutrally(
+            await pa.client.inject({
+              method: 'POST',
+              url: cycleDecisionUrl(e.pariwarId),
+              payload: {
+                claim_case_id: e.claimCaseId,
+                action: 'resolve_escalation',
+                escalation_outcome: 'approved',
+                ...(withKey ? { warning_reason_code: GENERIC, rationale: 'why' } : {}),
+              },
+            }),
+            'cycle_freeze',
+          );
+
+          // R9 — an approve vote refused, a deny vote accepted; a finalize computing "approved" refused.
+          const r9 = await peerWorld();
+          if (withKey) await answer(r9, 'peer_says_not_died');
+          const voter = await routeToR9(r9);
+          await assign(r9, voter.userId);
+          refusedNeutrally(await r9Vote(voter, r9, withKey), 'r9_voting');
+          const r9b = await peerWorld();
+          if (withKey) await answer(r9b, 'peer_says_not_died');
+          const voterB = await routeToR9(r9b);
+          expect((await r9Vote(voterB, r9b, withKey)).statusCode).toBe(201); // cast BEFORE the visit — it STANDS
+          await assign(r9b, voterB.userId);
+          refusedNeutrally(await r9Finalize(voterB, r9b), 'r9_voting');
+
+          // D27 — the "no correction needed" approval.
+          const d = await peerWorld();
+          if (withKey) await answer(d, 'peer_says_not_died');
+          const dda = await staff(d.pariwarId, 'district_admin');
+          await daApprove(dda, d, withKey);
+          const dpa = await noCorrectionReady(d, dda);
+          await assign(d, dpa.userId);
+          refusedNeutrally(
+            await dpa.client.inject({ method: 'POST', url: noCorrectionUrl(d), payload: withKey ? { warning_reason_code: GENERIC, note: 'Read it.' } : {} }),
+            'closure',
+          );
+
+          // G1 — the Super Admin.
+          const g = await peerWorld();
+          if (withKey) await answer(g, 'peer_says_not_died');
+          const gda = await staff(g.pariwarId, 'district_admin');
+          await daApprove(gda, g, withKey);
+          const sa = await escalatedReady(g);
+          await assign(g, sa.userId);
+          refusedNeutrally(await g1(sa, g, withKey), 'closure');
+          expect(await records(g.claimCaseId)).toEqual(withKey ? [expect.objectContaining({ step: 'district_admin_approval' })] : []);
+        });
+      }
+
+      it('⛔ never refused: a hidden actor\'s denial and escalation, an R9 deny vote and a finalize that computes "denied"', async () => {
+        const w = await peerWorld();
+        await answer(w, 'peer_says_not_died');
+        const da = await staff(w.pariwarId, 'district_admin');
+        await assign(w, da.userId);
+        const deny = await da.client.inject({
+          method: 'POST',
+          url: `${claimBase(w.pariwarId, w.claimCaseId)}/verifier-decision`,
+          payload: { outcome: 'denied', reason_code: 'other', rationale: 'Not this one.' },
+        });
+        expect(deny.statusCode, deny.body).toBe(201);
+        const x = await peerWorld(w.pariwarId);
+        await assign(x, da.userId);
+        const esc = await da.client.inject({
+          method: 'POST',
+          url: `${claimBase(x.pariwarId, x.claimCaseId)}/verifier-decision`,
+          payload: { outcome: 'escalated', reason_code: 'r9_routed_to_voting', rationale: 'For the trustee.' },
+        });
+        expect(esc.statusCode, esc.body).toBe(201);
+        const r = await peerWorld();
+        const voter = await routeToR9(r);
+        await assign(r, voter.userId);
+        const denyVote = await voter.client.inject({ method: 'POST', url: `${r9Url(r.pariwarId, r.claimCaseId)}/vote`, payload: { vote: 'deny', rationale: 'no' } });
+        expect(denyVote.statusCode, denyVote.body).toBe(201);
+        const fin = await r9Finalize(voter, r);
+        expect(fin.statusCode, fin.body).toBe(200);
+        expect(await stateOf(r.claimCaseId)).toBe('denied');
+      });
+
+      it('the refusal LIFTS on a completed FULL visit and on the assignment being superseded; a `certificate_check` completion does ⛔ not lift it', async () => {
+        // A certificate check completed by the same actor while their FULL visit stays scheduled ⇒ still refused.
+        const c = await peerWorld();
+        const cda = await staff(c.pariwarId, 'district_admin');
+        await assign(c, cda.userId);
+        await inScope(c.pariwarId, (s) => ensureGroundInspection(deps, s, c.pariwarId, c.claimCaseId, { force: true, stage: 'certificate_check', inspectorActorId: cda.userId }));
+        refusedNeutrally(await approveWith(cda, c, false), 'verifier_decision');
+        // …then a completed FULL visit by them ⇒ lifted.
+        await inScope(c.pariwarId, (s) => ensureGroundInspection(deps, s, c.pariwarId, c.claimCaseId, { force: true, inspectorActorId: cda.userId }));
+        const ok = await approveWith(cda, c, false);
+        expect(ok.statusCode, ok.body).toBe(201);
+
+        // Superseded (given to someone else) ⇒ lifted.
+        const s2 = await peerWorld(c.pariwarId);
+        const gid = await assign(s2, cda.userId);
+        refusedNeutrally(await approveWith(cda, s2, false), 'verifier_decision');
+        await inScope(s2.pariwarId, (s) =>
+          claim.rescheduleGroundInspection(s.client, {
+            pariwarId: ids.pariwarId(s2.pariwarId),
+            groundInspectionId: gid,
+            idempotencyKey: randomUUID(),
+            district: DISTRICT,
+            inspectionStage: 'initial',
+            inspectionSiteType: 'family_residence',
+            inspectorActorId: randomUUID(),
+            scheduledAt: new Date(),
+            scheduledByActor: randomUUID(),
+          }),
+        );
+        const lifted = await approveWith(cda, s2, false);
+        expect(lifted.statusCode, lifted.body).toBe(201);
+      });
+    });
+
+    for (const kind of KINDS) {
+      describe(`\`${kind}\``, () => {
+        it('the District Admin: ⛔ reason ⇒ 409 naming it, ⛔ refused; with one ⇒ 201 and the record covers the key; a refusal and an escalation are ⛔ gated', async () => {
+          const w = await peerWorld();
+          await answer(w, kind);
+          const da = await staff(w.pariwarId, 'district_admin');
+          const bare = await da.client.inject({ method: 'POST', url: `${claimBase(w.pariwarId, w.claimCaseId)}/verifier-decision`, payload: daApproveBody });
+          expect(bare.statusCode, bare.body).toBe(409);
+          expect(errOf(bare.body)).toMatchObject(reasonRequired('verifier_decision.warning_reason_required', kind));
+          await daApprove(da, w, true);
+          const rec = (await records(w.claimCaseId)).find((r) => r.step === 'district_admin_approval')!;
+          expect((rec.covered_keys as string[]).filter((k) => k.startsWith(`${kind}:`))).toHaveLength(1);
+
+          // ⛔ never gated: a denial and an escalation with the same key showing.
+          for (const outcome of [
+            { outcome: 'denied', reason_code: 'other', rationale: 'Not this one.' },
+            { outcome: 'escalated', reason_code: 'r9_routed_to_voting', rationale: 'For the trustee.' },
+          ]) {
+            const other = await peerWorld(w.pariwarId);
+            await answer(other, kind);
+            const res = await da.client.inject({ method: 'POST', url: `${claimBase(other.pariwarId, other.claimCaseId)}/verifier-decision`, payload: outcome });
+            expect(res.statusCode, `${outcome.outcome}: ${res.body}`).toBe(201);
+          }
+        });
+
+        it('F20 — a neighbour key that appears after the approval makes it UNREVISABLE (`warning_approval_final`, recorded ⛔ changed)', async () => {
+          const w = await peerWorld();
+          const da = await staff(w.pariwarId, 'district_admin');
+          await daApprove(da, w, false);
+          await answer(w, kind);
+          await elevate(da.client, 'claim_decision_revise');
+          const res = await da.client.inject({
+            method: 'POST',
+            url: `${claimBase(w.pariwarId, w.claimCaseId)}/verifier-decision/revise`,
+            payload: { outcome: 'approved', reason_code: 'r8_90pct_met', rationale: 'new words' },
+          });
+          expect(res.statusCode, res.body).toBe(409);
+          expect(errOf(res.body)).toMatchObject({ code: 'verifier_decision.not_revisable', details: { reason: 'warning_approval_final' } });
+        });
+
+        it('the final vote — the ONE rule (answered BEFORE the approval); the LATE wait (answered AFTER) until the District Admin\'s late reason', async () => {
+          const w = await peerWorld();
+          await answer(w, kind);
+          const da = await staff(w.pariwarId, 'district_admin');
+          await daApprove(da, w, true);
+          const pa = await staff(w.pariwarId, 'pariwar_admin');
+          const bare = await finalVote(pa, w, false);
+          expect(bare.statusCode, bare.body).toBe(409);
+          expect(errOf(bare.body)).toMatchObject(reasonRequired('cycle_freeze.warning_reason_required', kind));
+          expect((await finalVote(pa, w, true)).statusCode).toBe(201);
+
+          const late = await peerWorld(w.pariwarId);
+          await daApprove(da, late, false);
+          await answer(late, kind);
+          const held = await finalVote(pa, late, true);
+          expect(held.statusCode, held.body).toBe(409);
+          expect(errOf(held.body)).toMatchObject(waits('cycle_freeze.late_warning_reason_required', kind));
+          expect(errOf(held.body).message).toMatch(/It is not refused/);
+          await daLate(late, da);
+          const ok = await finalVote(pa, late, true);
+          expect(ok.statusCode, ok.body).toBe(201);
+        });
+
+        it('the cycle-freeze escalation resolution — the ONE rule only (⛔ late leg: ⛔ District Admin approval to wait for)', async () => {
+          const w = await peerWorld();
+          await answer(w, kind);
+          const da = await staff(w.pariwarId, 'district_admin');
+          const esc = await da.client.inject({
+            method: 'POST',
+            url: `${claimBase(w.pariwarId, w.claimCaseId)}/verifier-decision`,
+            payload: { outcome: 'escalated', reason_code: 'r9_routed_to_voting', rationale: 'For the trustee.' },
+          });
+          expect(esc.statusCode, esc.body).toBe(201);
+          const pa = await staff(w.pariwarId, 'pariwar_admin');
+          const resolve = (extra: Json) =>
+            pa.client.inject({
+              method: 'POST',
+              url: cycleDecisionUrl(w.pariwarId),
+              payload: { claim_case_id: w.claimCaseId, action: 'resolve_escalation', escalation_outcome: 'approved', ...extra },
+            });
+          const bare = await resolve({});
+          expect(bare.statusCode, bare.body).toBe(409);
+          expect(errOf(bare.body)).toMatchObject(reasonRequired('cycle_freeze.warning_reason_required', kind));
+          const ok = await resolve({ warning_reason_code: GENERIC, rationale: 'Read the neighbour\'s answer.' });
+          expect(ok.statusCode, ok.body).toBe(201);
+        });
+
+        it('R9 — a vote needs its reason; a vote cast BEFORE the answer is SHORT at finalize until revised', async () => {
+          const w = await peerWorld();
+          await answer(w, kind);
+          const pa = await routeToR9(w);
+          const bare = await r9Vote(pa, w, false);
+          expect(bare.statusCode, bare.body).toBe(409);
+          expect(errOf(bare.body)).toMatchObject(reasonRequired('r9_voting.warning_reason_required', kind));
+          expect((await r9Vote(pa, w, true)).statusCode).toBe(201);
+          expect((await r9Finalize(pa, w)).statusCode).toBe(200);
+
+          const short = await peerWorld(); // a FRESH Pariwar — the R9 clause is seeded once per Pariwar
+          const spa = await routeToR9(short);
+          const cast = await r9Vote(spa, short, false);
+          expect(cast.statusCode, cast.body).toBe(201);
+          await answer(short, kind);
+          const fin = await r9Finalize(spa, short);
+          expect(fin.statusCode, fin.body).toBe(409);
+          expect(errOf(fin.body)).toMatchObject({ code: 'r9_voting.approve_votes_need_warning_reason', details: { uncovered_count: 1 } });
+          expect((await r9Vote(spa, short, true)).statusCode).toBe(201);
+          expect((await r9Finalize(spa, short)).statusCode).toBe(200);
+        });
+
+        it('`-324` A — R9 finalize on an R9-routed `state_trustee_approved` claim WAITS for the District Admin, then each approve voter whose row misses the late key revises', async () => {
+          const w = await peerWorld();
+          const da = await staff(w.pariwarId, 'district_admin');
+          await daApprove(da, w, false);
+          const fpa = await staff(w.pariwarId, 'pariwar_admin');
+          const voted = await finalVote(fpa, w, false);
+          expect(voted.statusCode, voted.body).toBe(201);
+          const pa = await routeToR9(w);
+          const cast = await r9Vote(pa, w, false);
+          expect(cast.statusCode, cast.body).toBe(201);
+          await answer(w, kind); // in the window: `state_trustee_approved` under a live routing
+          const held = await r9Finalize(pa, w);
+          expect(held.statusCode, held.body).toBe(409);
+          expect(errOf(held.body)).toMatchObject(waits('r9_voting.late_warning_reason_required', kind));
+          await daLate(w, da);
+          const short = await r9Finalize(pa, w);
+          expect(short.statusCode, short.body).toBe(409);
+          expect(errOf(short.body).code).toBe('r9_voting.approve_votes_need_warning_reason');
+          expect((await r9Vote(pa, w, true)).statusCode).toBe(201);
+          const fin = await r9Finalize(pa, w);
+          expect(fin.statusCode, fin.body).toBe(200);
+        });
+
+        it('D27 — the "no correction needed" approval: the ONE rule; and the LATE wait until the District Admin\'s late reason', async () => {
+          const w = await peerWorld();
+          await answer(w, kind);
+          const da = await staff(w.pariwarId, 'district_admin');
+          await daApprove(da, w, true);
+          const pa = await noCorrectionReady(w, da);
+          const bare = await pa.client.inject({ method: 'POST', url: noCorrectionUrl(w), payload: {} });
+          expect(bare.statusCode, bare.body).toBe(409);
+          expect(errOf(bare.body)).toMatchObject(reasonRequired('closure.warning_reason_required', kind));
+          const ok = await pa.client.inject({ method: 'POST', url: noCorrectionUrl(w), payload: { warning_reason_code: GENERIC, note: 'Read it.' } });
+          expect(ok.statusCode, ok.body).toBe(201);
+
+          const late = await peerWorld(w.pariwarId);
+          await daApprove(da, late, false);
+          await answer(late, kind); // after the approval, before the return
+          const lpa = await noCorrectionReady(late, da);
+          const held = await lpa.client.inject({ method: 'POST', url: noCorrectionUrl(late), payload: { warning_reason_code: GENERIC, note: 'Read it.' } });
+          expect(held.statusCode, held.body).toBe(409);
+          expect(errOf(held.body)).toMatchObject(waits('closure.late_warning_reason_required', kind));
+          await daLate(late, da);
+          const lok = await lpa.client.inject({ method: 'POST', url: noCorrectionUrl(late), payload: { warning_reason_code: GENERIC, note: 'Read it.' } });
+          expect(lok.statusCode, lok.body).toBe(201);
+        });
+
+        it('G1 — the Super Admin\'s approval: the ONE rule (an answer the District Admin covered); the LATE wait until the District Admin\'s late reason', async () => {
+          const w = await peerWorld();
+          await answer(w, kind);
+          const da = await staff(w.pariwarId, 'district_admin');
+          await daApprove(da, w, true);
+          const sa = await escalatedReady(w);
+          const bare = await g1(sa, w, false);
+          expect(bare.statusCode, bare.body).toBe(409);
+          expect(errOf(bare.body)).toMatchObject(reasonRequired('closure.warning_reason_required', kind));
+          const ok = await g1(sa, w, true);
+          expect(ok.statusCode, ok.body).toBe(201);
+
+          const late = await peerWorld(w.pariwarId);
+          await daApprove(da, late, false);
+          await answer(late, kind);
+          const lsa = await escalatedReady(late);
+          // ⚠ G1 runs the gate (the WAIT) before the reason check — so even a reason-less approve reports the wait.
+          const held = await g1(lsa, late, true);
+          expect(held.statusCode, held.body).toBe(409);
+          expect(errOf(held.body)).toMatchObject(waits('closure.late_warning_reason_required', kind));
+          await daLate(late, da);
+          const lok = await g1(lsa, late, true);
+          expect(lok.statusCode, lok.body).toBe(201);
+          expect((await records(late.claimCaseId)).map((r) => r.step)).toEqual(['district_admin_late_reason', 'super_admin_approval']);
+        });
+      });
+    }
   });
 });

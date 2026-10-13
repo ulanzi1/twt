@@ -15,6 +15,16 @@ export type QuestionnaireKind = (typeof QUESTIONNAIRE_KINDS)[number];
 export const QUESTION_KINDS = ['single', 'multi', 'date', 'yes_no'] as const;
 export type QuestionKind = (typeof QUESTION_KINDS)[number];
 
+/**
+ * Story 6.27b (`-328` read with `-329` decisions 1–3) — WHO a `callback_consent` question's words ask about: v2 asks
+ * *"May the District Admin phone you …?"* (`district_admin`), v3 *"May the Admin phone you …?"* (`admin` — the District
+ * Admin AND the Pariwar Admin). The approvers' read shows a Pariwar Admin the number ONLY for a *"Yes"* to an `admin`
+ * question; a *"Yes"* to v2's words stays with the District Admin's side (Q1 C in full). Read from the REPLY's version —
+ * ⛔ never a list of version ids.
+ */
+export const CALLBACK_AUDIENCES = ['district_admin', 'admin'] as const;
+export type CallbackAudience = (typeof CALLBACK_AUDIENCES)[number];
+
 /** `counselBasis` — a STATE, ⛔ never a boolean: `'pending'`, or counsel's recorded basis as a decision id. */
 export type CounselBasis = 'pending' | string;
 
@@ -51,6 +61,8 @@ export interface QuestionDefinition {
   readonly health: boolean;
   /** `null` unless `health`; `'pending'` ⇒ the SERVED definition skips the question. */
   readonly counselBasis: CounselBasis | null;
+  /** Story 6.27b — REQUIRED on `callback_consent` (whom its words name), refused on every other key (the validator). */
+  readonly callbackAudience?: CallbackAudience;
 }
 
 export interface QuestionnairePage {

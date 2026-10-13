@@ -151,6 +151,9 @@ export function approvalWarningErrorMessage(err: ApiError): string | null {
   switch (err.code) {
     case 'verifier_decision.warning_reason_required':
       return e.warningReasonRequired;
+    // Story 6.27b (BD4) — the ONE neutral refusal (the approval, its revise and the late reason share it).
+    case 'verifier_decision.own_ground_visit_pending':
+      return t.ownVisitPending;
     case 'verifier_decision.warning_reason_ungrounded':
       return e.warningReasonUngrounded;
     case 'verifier_decision.warning_reason_unavailable':
@@ -494,18 +497,24 @@ export function VerifierConsoleRoute(): ReactElement {
                 // Story 6.26a (GI9) — approve waits for a COMPLETE ground inspection; ⛔ never on an unknown.
                 packet.groundInspectionGate.available &&
                 packet.groundInspectionGate.complete &&
-                packet.approvalWarnings.available
+                packet.approvalWarnings.available &&
+                // Story 6.27b (BD4) — ⛔ while THIS viewer's own ground visit on the claim is pending (the server refuses).
+                !packet.approvalWarnings.ownVisitPending
               }
               // Story 6.23a (NW9) — the warnings + the reason list; (NW7) the revise control's words when blocked.
               approvalWarnings={{ kinds: packet.approvalWarnings.kinds, reasonOptions: packet.approvalWarnings.reasonOptions }}
               reviseBlocked={packet.approvalWarnings.reviseBlocked}
+              ownVisitPending={packet.approvalWarnings.ownVisitPending}
               // ⚠⚠ NAME THE ACTUAL BLOCKER (code review 2026-09-20). This fell through to
               // *"Record the nominee name check before approving"* for EVERY non-passing case —
               // including the one where the District Admin had just recorded `does_not_match`
               // themselves. Telling somebody to do a thing they have visibly already done reads as
               // the console not having noticed, and hides the real instruction: get it corrected.
               approveBlockedReason={
-                certificateBlockedReason !== null
+                // Story 6.27b (BD4) — FIRST: the ONE neutral block (⛔ a kind, ⛔ a count).
+                packet.approvalWarnings.ownVisitPending
+                  ? t.ownVisitPending
+                  : certificateBlockedReason !== null
                   ? certificateBlockedReason
                   : !packet.approvalWarnings.available
                   ? // Story 6.23a — ⛔ never "no warnings" on an unknown: Approve waits until the section loads.

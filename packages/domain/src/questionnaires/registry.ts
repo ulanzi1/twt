@@ -7,12 +7,16 @@
 //   `pendingCounselBasisKeys(live)` is non-empty, so the skip ⛔ never reaches a texted neighbour.
 // Every registered definition is VALIDATED at module load — a broken version fails the boot, ⛔ never a member.
 
-import { PEER_MESH_QUESTIONNAIRE_V1, PEER_MESH_QUESTIONNAIRE_V2 } from './peer-mesh.js';
+import { PEER_MESH_QUESTIONNAIRE_V1, PEER_MESH_QUESTIONNAIRE_V2, PEER_MESH_QUESTIONNAIRE_V3 } from './peer-mesh.js';
 import type { QuestionDefinition, QuestionnaireDefinition, QuestionnaireKind } from './types.js';
 import { assertValidQuestionnaireDefinition } from './validator.js';
 
 /** Every registered version (historical ones included — an old reply stays tied to its version). */
-export const QUESTIONNAIRE_REGISTRY: readonly QuestionnaireDefinition[] = [PEER_MESH_QUESTIONNAIRE_V1, PEER_MESH_QUESTIONNAIRE_V2];
+export const QUESTIONNAIRE_REGISTRY: readonly QuestionnaireDefinition[] = [
+  PEER_MESH_QUESTIONNAIRE_V1,
+  PEER_MESH_QUESTIONNAIRE_V2,
+  PEER_MESH_QUESTIONNAIRE_V3,
+];
 
 for (const def of QUESTIONNAIRE_REGISTRY) assertValidQuestionnaireDefinition(def);
 {

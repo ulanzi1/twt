@@ -25,6 +25,7 @@ import type pg from 'pg';
 
 import { bindScopedDb } from '../db.js';
 import type { ClaimId, PariwarId } from '../ids/index.js';
+import { assertActorMayApprove } from './approver-own-visit.js';
 import { lockActiveApprovalWarningReason } from './approval-warning-reasons.js';
 import {
   type ApprovalWarningKind,
@@ -105,6 +106,8 @@ export async function recordLateWarningReason(
       `a late reason is recorded in ${LATE_WARNING_REASON_RECORDABLE_STATES.join(', ')} — the claim is '${claimRow.currentState}'`,
     );
   }
+  // ⭐ Story 6.27b BD4 (`-327` decision 2) — FIRST, before the gate and any warnings read: an approver whose OWN ground visit on the claim is pending is refused, unconditionally (⛔ kind on the refusal). A late reason is an approving act (it covers a key for good).
+  await assertActorMayApprove(db, input.pariwarId, input.claimCaseId, input.actorId);
   await assertDeathCertificateAcceptedForApproval(db, input.pariwarId, input.claimCaseId);
   const warnings = await readClaimApprovalWarnings(db, input.pariwarId, input.claimCaseId);
   if (warnings.postDeath === 'awaiting_determination') {

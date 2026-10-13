@@ -342,6 +342,10 @@ export function createCycleFreezeHandlers(
         const warnings = await underSavepoint(tx.client, 'cycle_freeze_approval_warnings', async () => ({
           byClaim: await claim.readClaimApprovalWarningsBulk(tx.tx, ctx.pariwarId, allCases.map((c) => ids.claimId(c.claimCaseId))),
           options: (await claim.listApprovalWarningReasons(tx.tx, ctx.pariwarId)).active,
+          // ⭐ Story 6.27b (PM25 (c), BD4; Task 4.3) — the claims whose neighbours' section is hidden from THIS viewer (their
+          // own ground visit pending): ONE set-based statement for the page, ⛔ per card, INSIDE this SAVEPOINT (a failure
+          // falls back to `UNAVAILABLE_APPROVAL_WARNINGS` — ⛔ kind revealed).
+          ownVisitPending: await claim.readOwnVisitPendingClaimIds(tx.tx, ctx.pariwarId, allCases.map((c) => c.claimCaseId), ctx.actorId),
         })).catch((err: unknown) => {
           request.log.warn(
             { err: err instanceof Error ? err.name : 'unknown' },
@@ -353,7 +357,9 @@ export function createCycleFreezeHandlers(
         const elsewhereOf = await readFinallyApprovedElsewhereDtos(tx.client, tx.tx, request.log, ctx.pariwarId, allCases.map((c) => c.claimCaseId));
         const warningsOf = (claimCaseId: string) => {
           const w = warnings?.byClaim.get(claimCaseId.toLowerCase());
-          return w === undefined ? UNAVAILABLE_APPROVAL_WARNINGS : toApprovalWarningsSummary(w, [ctx.actorId]);
+          return w === undefined
+            ? UNAVAILABLE_APPROVAL_WARNINGS
+            : toApprovalWarningsSummary(w, [ctx.actorId], { ownVisitPending: warnings!.ownVisitPending.has(claimCaseId.toLowerCase()) });
         };
         const mapCase = async (c: claim.CycleFreezePendingCase) => {
           let verifierRationale: string | null = null;

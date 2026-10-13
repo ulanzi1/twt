@@ -72,7 +72,7 @@ const detail = (claimCaseId: string): EscalatedClosureDetailResponse => ({
   name_check_state: 'passing',
   approve_path: 'full_gate',
   finally_approved_elsewhere: null,
-  approval_warnings: { available: true, kinds: ['post_death_version'], post_death: 'evaluated', waiting_for_district_admin: false, own_reason_excluded: false },
+  approval_warnings: { available: true, kinds: ['post_death_version'], post_death: 'evaluated', waiting_for_district_admin: false, own_reason_excluded: false , own_visit_pending: false},
   reason_options: OPTIONS,
 });
 

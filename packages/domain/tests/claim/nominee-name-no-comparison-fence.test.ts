@@ -361,10 +361,15 @@ describe('⛔ the no-comparison fence (Trap 1, `-226` cl.5)', () => {
     // Tier-1 read into the approval path.
     for (const f of ['packages/domain/src/claim/approval-warnings.ts', 'packages/domain/src/claim/approval-warnings-persist.ts']) {
       const code = stripComments(read(f));
-      for (const forbidden of ['decrypt', 'nameCiphertext', 'mobileCiphertext', 'getMemberNominees', 'certificate_date_ciphertext', 'accepted_date_ciphertext']) {
+      // Story 6.27b (BF3, AC2) — the neighbour-answer fragment selects codes and window indexes ONLY: ⛔ never the answer's
+      // ciphertext, in raw SQL (`value_ciphertext`) OR through a Drizzle column (`valueCiphertext`).
+      for (const forbidden of ['decrypt', 'nameCiphertext', 'mobileCiphertext', 'getMemberNominees', 'certificate_date_ciphertext', 'accepted_date_ciphertext', 'value_ciphertext', 'valueCiphertext']) {
         expect(code.includes(forbidden), `${f} reached for '${forbidden}'`).toBe(false);
       }
     }
+    // ⭐ Teeth (Story 6.27b): the SAME scan of the reply writer DOES find the answer's ciphertext column — so a green above
+    // is ⛔ not a vacuous string match.
+    expect(stripComments(read('packages/domain/src/claim/peer-mesh-reply.ts')).includes('value_ciphertext')).toBe(true);
   });
 
   it('⛔⛔ Story 6.27a (Trap 9, AC9) — the reply writer, the answer window and the questionnaire engine ⛔ never decrypt (the HANDLER does, before the locks)', () => {

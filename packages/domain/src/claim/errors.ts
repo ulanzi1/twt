@@ -736,6 +736,20 @@ export class LateWarningReasonRequiredError extends Error {
 }
 
 /**
+ * ⭐ Story 6.27b BD4 (`2026-10-13-327` decision 2; unconditional) — an actor the neighbours' section is HIDDEN from (an
+ * UN-completed ground visit assigned to them and ⛔ no completed FULL visit — 6.27a's ONE predicate) cannot APPROVE the
+ * claim at any step, WHATEVER the neighbours said. Checked BEFORE the approval gate and before any warnings read ⇒ it
+ * carries ⛔ no kind and ⛔ no key (a hidden actor must ⛔ never learn a neighbour's answer warns). ⛔ NOT a refusal of the
+ * claim: anyone else entitled to approve still can. → ONE 409 `<prefix>.own_ground_visit_pending`, ⛔ `details`.
+ */
+export class OwnGroundVisitPendingError extends Error {
+  public readonly name = 'OwnGroundVisitPendingError';
+  public constructor(public readonly claimCaseId: string) {
+    super(`[approver-own-visit] claim ${claimCaseId}: the acting approver's own ground visit is not finished`);
+  }
+}
+
+/**
  * Story 6.23b EA5 (`-279` A2) — an R9 finalize to `approved` is held: ⛔ every LIVE approve vote's own `r9_vote` record
  * row covers EVERY current warning key (a vote cast before a warning appeared, or before a determination added a
  * post-death key). The voters revise. ⛔ NOT a refusal. → 409 `r9_voting.approve_votes_need_warning_reason`.

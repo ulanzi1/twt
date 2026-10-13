@@ -61,6 +61,7 @@ const PANEL_NO_SESSION: R9PanelResponse = {
     post_death: 'evaluated',
     waiting_for_district_admin: false,
     own_reason_excluded: false,
+    own_visit_pending: false,
   },
   reason_options: [],
 };
@@ -164,6 +165,13 @@ beforeEach(() => {
 });
 
 describe('<R9CasePanel> — AC8, the highlight rides the R9 panel’s OWN read', () => {
+  // Story 6.27b (PM24; AC6) — the neighbours' answers beside the names disclosure, ⛔ inside the voting gates.
+  it('Story 6.27b — the R9 panel carries the neighbours\' answers disclosure, closed', async () => {
+    getR9Panel.mockResolvedValue(PANEL_OPEN);
+    renderIt(<R9CasePanel pariwarId={PARIWAR} claimCaseId={CLAIM} />);
+    expect(await screen.findByTestId('r9-neighbours-answers')).toHaveAttribute('aria-expanded', 'false');
+  });
+
   it('⭐⭐ shows "Approved with a name difference" + the reason LABEL — WITHOUT opening the names', async () => {
     getR9Panel.mockResolvedValue({ ...PANEL_OPEN, name_difference_reasons: ['married_name'] });
     renderIt(<R9CasePanel pariwarId={PARIWAR} claimCaseId={CLAIM} />);

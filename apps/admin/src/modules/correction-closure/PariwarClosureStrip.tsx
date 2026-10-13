@@ -24,6 +24,7 @@ import {
   approvalNeedsWarningReason,
   resolvedWarningReasonCode,
 } from '../claim-verification/LaterApprovalWarnings.js';
+import { NeighboursAnswersPanel } from '../claim-verification/NeighboursAnswersPanel.js';
 import { verifierConsoleEn } from '../claim-verification/i18n-en.js';
 import { FinallyApprovedElsewhereBanner } from '../cycle-freeze/FinallyApprovedElsewhereBanner.js';
 import { closureErrorText } from './errors.js';
@@ -259,6 +260,13 @@ export function NoCorrectionStrip({
         canClose
       />
       <p className="text-xs">{item.checked_after_record === true ? n.checkedAfter : n.notChecked}</p>
+      {/* ⭐ Story 6.27b (PM24) — the neighbours' answers, ON DEMAND, BEFORE the approve (⛔ inside a warnings-only branch). */}
+      <NeighboursAnswersPanel
+        key={item.claim_case_id}
+        pariwarId={pariwarId}
+        claimCaseId={item.claim_case_id}
+        testId={`no-correction-neighbours-${item.claim_case_id}`}
+      />
       {summary !== null ? (
         <LaterApprovalWarnings
           summary={summary}

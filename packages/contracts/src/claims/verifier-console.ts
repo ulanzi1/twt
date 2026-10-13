@@ -169,7 +169,8 @@ export type PeerMeshVerifierAnnotations = z.output<typeof PeerMeshVerifierAnnota
 
 // ── Story 6.27a (PM13) — what the District Admin sees: the 72-hour line, and per neighbour the name, the send status,
 // every LIVE answer (with its words, how and when saved, and "changed N times"), submitted or not, and — only when the
-// neighbour said yes — the call-back mobile (each showing audited). ⛔ The per-answer warning flags arrive with 6.27b.
+// neighbour said yes — the call-back mobile (each showing audited). ⭐ Story 6.27b adds each answer's warning flag and
+// the call-back number's basis (`-328` read with `-329`), and the SAME section is the approvers' read (PM24).
 // A failed decrypt is `unavailable` ("could not be shown just now") — ⛔ never a blank (Invariant 8).
 
 /** The window label (6.6 AR-61) — `skipped` = ⛔ no neighbour could be chosen (PM20). */
@@ -204,11 +205,21 @@ export const PeerMeshAnswerView = z
     ]),
     savedVia: z.enum(['member_app', 'helpline']),
     savedAt: z.string(),
-    /** How many times the answer was changed before this one (0 = never). */
+    /** How many times the answer was changed before this one (0 = never) — every earlier saved version, INCLUDING one
+     *  removed when an earlier answer changed and a re-entry of the same value (Story 6.27b BD3 A, `-326`). */
     changeCount: z.number(),
+    /**
+     * Story 6.27b (PM13's flags; AC8) — `true` — this answer carries a current warning; `false` — checked, ⛔ none (and
+     * always for a question that can ⛔ never warn); `null` — could ⛔ not be checked just now (the warnings read failed,
+     * or the answer is newer than it). ⛔ Never `false` for an unknown.
+     */
+    warningFlag: z.boolean().nullable(),
   })
   .strict();
 export type PeerMeshAnswerView = z.output<typeof PeerMeshAnswerView>;
+
+/** Story 6.27b (`-328` read with `-329`) — why a call-back number is shown: the neighbour's "Yes", or the Super Admin. */
+export const PEER_CALLBACK_BASES = ['consented', 'super_admin'] as const;
 
 export const PeerMeshPingView = z
   .object({
@@ -219,8 +230,15 @@ export const PeerMeshPingView = z
     /** Why a ping was ⛔ texted — the `no_target:<reason>` code (⛔ PII by its grammar); `null` otherwise. */
     noTargetReason: z.string().nullable(),
     reply: z.object({ submitted: z.boolean(), answers: z.array(PeerMeshAnswerView) }).strict().nullable(),
-    /** ⛔ asked / "no" ⇒ `none`; "yes" ⇒ the normalised mobile (`shown`), or `unavailable` (a decrypt failed). */
+    /**
+     * The call-back number — Story 6.27b's FOUR rules (`-328` read with `-329`), in order: (1) a ping ⛔ never texted ⇒
+     * `none` for every viewer; (2) the Super Admin ⇒ the normalised mobile whatever the answer; (3) the District Admin's
+     * side (the console) ⇒ only on a "Yes" (either version); (4) the Pariwar Admin (the approvers' read) ⇒ only on a
+     * "Yes" to v3's words ("May the Admin phone you …?"). ⛔ Shown ⇒ `none`; a decrypt that failed ⇒ `unavailable`.
+     */
     callbackMobile: DecryptedText,
+    /** Why the number is shown (`consented` / `super_admin`) — `null` unless `callbackMobile` is `shown`. */
+    callbackBasis: z.enum(PEER_CALLBACK_BASES).nullable(),
   })
   .strict();
 export type PeerMeshPingView = z.output<typeof PeerMeshPingView>;
@@ -474,6 +492,13 @@ export const ApprovalWarningsStatus = z
     lateKeysUncoveredForViewer: z.number().int().nonnegative(),
     /** The Pariwar's ACTIVE reasons — the built-in generic first. */
     reasonOptions: z.array(ApprovalWarningReasonOption),
+    /**
+     * ⭐ Story 6.27b (BD4, `2026-10-13-327` decision 2; PM25 (c)) — a ground visit on this claim is assigned to THIS viewer
+     * and is ⛔ finished (6.27a's ONE predicate). `true` ⇒ the neighbours' two warning kinds are left OUT of `kinds` and the
+     * counts above (a DISPLAY filter — the gate reads every key), `viewerCanRecordLateReason` is `false`, and the strip
+     * shows ONE neutral block on Approve and on the revise of an APPROVAL (⛔ kind, ⛔ count) — the server refuses both.
+     */
+    ownVisitPending: z.boolean(),
   })
   .strict();
 export type ApprovalWarningsStatus = z.output<typeof ApprovalWarningsStatus>;

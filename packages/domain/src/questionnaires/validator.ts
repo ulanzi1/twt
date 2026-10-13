@@ -8,7 +8,8 @@
 //   · every question, and the version, carries `approvedBy` = Trustee-ratified decision ids;
 //   · ⛔ no alcohol question key, option or copy key (`-304` Q5 A);
 //   · a `health: true` question carries a `counselBasis` (`'pending'` or a decision id); a non-health one carries none;
-//   · `showIf` refers only to an EARLIER key and to its real codes; keys and codes unique; pages of 1–3 questions.
+//   · `showIf` refers only to an EARLIER key and to its real codes; keys and codes unique; pages of 1–3 questions;
+//   · Story 6.27b (`-329`) — `callbackAudience` on `callback_consent` (one of `CALLBACK_AUDIENCES`), and ONLY there.
 // ⛔ PURE.
 
 import {
@@ -23,6 +24,7 @@ import {
   PEER_MESH_WARNING_QUESTION_KEYS,
 } from './keys.js';
 import {
+  CALLBACK_AUDIENCES,
   QUESTION_KINDS,
   QUESTIONNAIRE_KINDS,
   type QuestionDefinition,
@@ -100,6 +102,16 @@ function checkQuestion(def: QuestionnaireDefinition, q: QuestionDefinition, earl
     problems.push(`${where}: counselBasis only on a health question`);
   }
   if (q.kind === 'date' && !q.sensitive) problems.push(`${where}: a date question is sensitive`);
+
+  // Story 6.27b (`-329` decisions 1–3) — whom the call-back question's words name, read by the approvers' read.
+  if (q.key === 'callback_consent') {
+    if (q.callbackAudience === undefined) problems.push(`${where}: callbackAudience is required`);
+    else if (!(CALLBACK_AUDIENCES as readonly string[]).includes(q.callbackAudience)) {
+      problems.push(`${where}: callbackAudience is one of ${CALLBACK_AUDIENCES.join(', ')}`);
+    }
+  } else if (q.callbackAudience !== undefined) {
+    problems.push(`${where}: callbackAudience only on 'callback_consent'`);
+  }
 
   if (q.showIf !== null) {
     const target = earlier.get(q.showIf.key);

@@ -10,7 +10,6 @@
 import type {
   ConcealmentSignal,
   GroundInspectionItem,
-  PeerMeshTranscript,
   VerifierConsolePacket,
   VerifierReviewItem,
 } from '@twt/contracts';
@@ -22,7 +21,9 @@ import {
   type ConcealmentAssessmentSubmit,
 } from './ConcealmentAssessmentControl.js';
 import { VerifierReviewPanel, type VerifierReviewData } from './VerifierReviewPanel.js';
-import { formatIst } from './NomineeDeclarationPanel.js';
+// Story 6.27b (BF8) — the neighbours' section and the non-present states live in `PeerMeshView.tsx`, shared with the
+// later approvers' `<NeighboursAnswersPanel>` (so the two can ⛔ never drift).
+import { NonPresent, PeerMeshView } from './PeerMeshView.js';
 import { verifierConsoleEn as t } from './i18n-en.js';
 import { FinallyApprovedElsewhereBanner } from '../cycle-freeze/FinallyApprovedElsewhereBanner.js';
 
@@ -122,17 +123,6 @@ function OtherClaimsForDeathNotice({ section }: { section: VerifierConsolePacket
   );
 }
 
-/** Render one of the three non-present states with its DISTINCT copy (never collapsed). */
-function NonPresent({ status }: { status: 'empty' | 'unavailable' | 'not_available_yet' }): ReactElement {
-  const copy =
-    status === 'empty' ? t.states.empty : status === 'unavailable' ? t.states.unavailable : t.states.notAvailableYet;
-  return (
-    <p className="text-sm opacity-70" data-testid={`section-state-${status}`} data-section-state={status}>
-      {copy}
-    </p>
-  );
-}
-
 function ConcealmentIndicator({ signal }: { signal: ConcealmentSignal }): ReactElement {
   // NEVER render `not_evaluated` (or a redacted absence) as a green/clear (D10). Only an explicit
   // `not_flagged` from the real producer is a "clear"; an absent/indeterminate assessment is `not_evaluated`.
@@ -205,98 +195,6 @@ function ValidityView({ validity }: { validity: VerifierConsolePacket['validity'
   );
 }
 
-function PeerMeshView({ transcript, now = Date.now() }: { transcript: PeerMeshTranscript; now?: number }): ReactElement {
-  // ⭐ Review S39 — a `pending` label whose 72 hours have PASSED is being counted (the worker relabels it); ⛔ "open until"
-  // a time already gone.
-  const expired = Date.parse(transcript.windowExpiresAt) <= now;
-  const windowLine =
-    transcript.outcome === 'pending'
-      ? expired
-        ? t.peerMesh.window.counting
-        : t.peerMesh.window.pending(formatIst(transcript.windowExpiresAt))
-      : t.peerMesh.window[transcript.outcome];
-  return (
-    <div className="flex flex-col gap-2 text-sm" data-testid="peer-mesh-transcript">
-      {/* ⭐ Story 6.27a (PM13) — the 72-hour line */}
-      <p className="font-medium" data-testid="peer-mesh-window">
-        {windowLine}
-      </p>
-      <p>
-        {t.peerMesh.responders}: <strong>{transcript.distinctResponderCount}</strong> · {t.peerMesh.pinged}:{' '}
-        <strong>{transcript.pingedMemberIds.length}</strong>
-      </p>
-      {/* ⭐ Story 6.27a (PM13) — per neighbour: the name, the send status, every live answer, the call-back mobile. */}
-      <ul className="flex flex-col gap-3" data-testid="peer-mesh-pings">
-        {transcript.pings.map((ping) => (
-          <li key={ping.pingId} className="rounded border p-2" data-testid="peer-mesh-ping">
-            <div className="flex items-center justify-between gap-2">
-              <strong>
-                {ping.responderName.status === 'shown'
-                  ? ping.responderName.text
-                  : ping.responderName.status === 'unavailable'
-                    ? t.peerMesh.couldNotShow
-                    : t.peerMesh.noName}
-              </strong>
-              <span className="text-xs" data-testid="peer-mesh-send-status">
-                {t.peerMesh.sendStatus[ping.sendStatus]}
-                {ping.sendStatus === 'no_target' && ping.noTargetReason !== null ? ` — ${ping.noTargetReason}` : ''}
-              </span>
-            </div>
-            {ping.reply === null ? (
-              <p className="text-xs opacity-70">{t.peerMesh.noAnswerYet}</p>
-            ) : (
-              <>
-                <p className="text-xs">{ping.reply.submitted ? t.peerMesh.submitted : t.peerMesh.notSubmitted}</p>
-                <dl className="mt-1 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
-                  {ping.reply.answers.map((a) => (
-                    <PeerAnswerRow key={a.questionKey} answer={a} />
-                  ))}
-                </dl>
-              </>
-            )}
-            {ping.callbackMobile.status !== 'none' && (
-              <p className="mt-1 text-xs" data-testid="peer-mesh-callback">
-                {t.peerMesh.callbackMobile}:{' '}
-                {ping.callbackMobile.status === 'shown' ? <span className="font-mono">{ping.callbackMobile.text}</span> : t.peerMesh.couldNotShow}
-              </p>
-            )}
-          </li>
-        ))}
-      </ul>
-      <p className="text-xs opacity-60">{t.peerMesh.signalNote}</p>
-      <p className="text-xs opacity-60">{t.peerMesh.noResponseNote}</p>
-      {/* AC2c — verifier annotations: no owning producer story yet, ALWAYS not_available_yet (never fabricated). */}
-      <p
-        className="text-xs opacity-70"
-        data-testid="peer-mesh-annotations-state"
-        data-section-state={transcript.verifierAnnotations.status}
-      >
-        {t.peerMesh.annotationsNotAvailableYet}
-      </p>
-    </div>
-  );
-}
-
-function PeerAnswerRow({ answer }: { answer: PeerMeshTranscript['pings'][number]['reply'] extends infer R ? (R extends { answers: (infer A)[] } ? A : never) : never }): ReactElement {
-  const value =
-    answer.value.kind === 'codes'
-      ? answer.value.labels.join(', ')
-      : answer.value.kind === 'date'
-        ? answer.value.date.split('-').reverse().join('-')
-        : t.peerMesh.couldNotShow;
-  return (
-    <>
-      <dt className="opacity-80">{answer.question}</dt>
-      <dd>
-        <span className="font-medium">{value}</span>{' '}
-        <span className="opacity-60">
-          ({answer.savedVia === 'helpline' ? t.peerMesh.savedHelpline : t.peerMesh.savedApp}, {formatIst(answer.savedAt)}
-          {answer.changeCount > 0 ? `, ${t.peerMesh.changed(answer.changeCount)}` : ''})
-        </span>
-      </dd>
-    </>
-  );
-}
 
 function toReviewData(item: VerifierReviewItem): VerifierReviewData {
   // VerifierReviewItem is structurally the 6.5 <VerifierReviewPanel> data — pass through.

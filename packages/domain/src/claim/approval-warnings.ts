@@ -47,7 +47,17 @@
 // `project.ts`, or anything that reaches them — TRANSITIVELY (a source-scan test follows relative imports to a
 // fixpoint). Safe leaves: `death-certificate-approval.ts`, `nominee-effective.ts`, `review-window.ts`, `errors.ts`,
 // `approval-warning-reasons.ts`, `cycle-calendar/holiday-resolver.ts`, `nominee-refusal-read.ts` (Story 6.26b — its
-// `inheritedGroundInspectionSourceSql`; it imports only drizzle, `db` types, ids and `pagination.ts`).
+// `inheritedGroundInspectionSourceSql`; it imports only drizzle, `db` types, ids and `pagination.ts`),
+// `one-payment-per-death.ts` (Story 6.28 — `otherOpenClaimsForDeathSql`), `questionnaires/keys.ts` (Story 6.27b — the
+// warning question keys; a TRUE leaf with ⛔ no imports — ⛔ never the `questionnaires/index.ts` barrel).
+//
+// ── Story 6.27b — the NEIGHBOUR kinds (PM9; `-263` FQ10 A, `-262` FQ8 E, `-264` FQ12, `-303` Q2 A, `-324` A) ──────────
+// Two kinds keyed by the LIVE answer row (`claim_peer_mesh_reply_answers.answer_id` — an edit supersedes the row and
+// inserts a NEW id ⇒ a changed answer is a NEW key): `peer_says_not_died` (a `has_died` answer `not_died`; ⛔ no
+// certificate needed) and `peer_death_date_differs` (a `death_date` answer whose ±1-day keyed window does ⛔ not contain
+// the CURRENT accepted review's `accepted_date_index`). Derived OUTSIDE the post-death block, in ONE exported pure helper
+// both readers call (`derivePeerReplyWarningKeys`), over ONE fragment (`peerReplyColumnsSql`) that selects codes and
+// window indexes ONLY. Both ENTER the wait (`-303` Q2 A). ⭐ A neighbour's answer ⛔ never refuses the claim.
 //
 // ── Story 6.26b — the DEATH-FACT kinds (`-262` FQ8 B/C, `-264` FQ12, `-281` Q1 B; `-282` GI6, GI17, GI18 as amended by
 // `-283` A3, `-288` K1/K2, `-289` L1/L3/L4) ──────────────────────────────────────────────────────────────────────────
@@ -91,6 +101,7 @@ import { currentDeathCertificateUploadIdSql } from './death-certificate-approval
 import { versionStandsAt } from './nominee-effective.js';
 import { inheritedGroundInspectionSourceSql } from './nominee-refusal-read.js';
 import { otherOpenClaimsForDeathSql } from './one-payment-per-death.js';
+import { type HasDiedCode, PEER_MESH_WARNING_QUESTION_KEYS } from '../questionnaires/keys.js';
 
 // ── Kinds, keys, the window ─────────────────────────────────────────────────────────────────────────────────────
 
@@ -107,13 +118,20 @@ export type NomineeVersionWarningKind = (typeof NOMINEE_VERSION_WARNING_KINDS)[n
  * ⭐ Story 6.28 (OP5; `2026-10-11-318` Q1 A — the wait included, which discharges `-279` A6) adds `other_claim_for_death`:
  * ONE key per other OPEN claim of the same death (`other_claim_for_death:<otherClaimCaseId>`, OP1's open fragment — ⛔ a
  * finally approved one: OP2's stop covers that; ⛔ any key on either claim of a standing suspicion-refusal pair).
+ * ⭐ Story 6.27b (PM9; `2026-10-10-303` Q2 A — the wait included, its Consequence 1 discharging `-279` A6 for row 6-27;
+ * `-324` A — for a claim the special panel has after the month's vote, the final approval that waits is the special
+ * panel's) adds the two NEIGHBOUR kinds, `PEER_WARNING_KINDS`, at the END.
  */
+export const PEER_WARNING_KINDS = ['peer_says_not_died', 'peer_death_date_differs'] as const;
+export type PeerWarningKind = (typeof PEER_WARNING_KINDS)[number];
+
 export const APPROVAL_WARNING_KINDS = [
   ...NOMINEE_VERSION_WARNING_KINDS,
   'inspection_death_date_differs',
   'original_certificate_mismatch',
   'register_check_mismatch',
   'other_claim_for_death',
+  ...PEER_WARNING_KINDS,
 ] as const;
 export type ApprovalWarningKind = (typeof APPROVAL_WARNING_KINDS)[number];
 
@@ -282,6 +300,85 @@ export function deriveDeathFactWarningKeys(input: DeathFactWarningInputs): {
   return { keys: [...keys].sort(), kinds: APPROVAL_WARNING_KINDS.filter((k) => kinds.has(k)), comparisons };
 }
 
+/** One LIVE answer to a warning question, as both readers select it (codes and window indexes ONLY — ⛔ no ciphertext). */
+export interface PeerReplyWarningAnswer {
+  readonly id: string;
+  readonly key: string;
+  /** `has_died`: ONE plaintext code; `death_date`: `['unknown']` for *"I don't know the date"*, else `null`. */
+  readonly codes: readonly string[] | null;
+  /** `death_date`: exactly three keyed indexes (D − 1, D, D + 1), or `null` (unknown, or scrubbed on erasure). */
+  readonly window: readonly string[] | null;
+}
+
+const NOT_DIED: HasDiedCode = 'not_died';
+
+/**
+ * ⭐ THE TWO NEIGHBOUR KINDS (Story 6.27b PM9) — pure, called by `deriveClaimApprovalWarnings` (so the single and the bulk
+ * readers agree by construction) OUTSIDE its post-death block:
+ *   · `peer_says_not_died:<answer_id>` — a live `has_died` answer whose codes are exactly `not_died` (`-263` FQ10 A);
+ *   · `peer_death_date_differs:<answer_id>` — a live `death_date` answer with its three window indexes AND a current
+ *     accepted review WITH an index ⛔ in that window (`-262` FQ8 E — *"more than a day"*, read as two or more calendar
+ *     days). ⛔ No index on either side (unknown date, ⛔ no current review, a pre-6.26b review) ⇒ ⛔ no key.
+ * `flags` has ONE entry per selected answer, keyed by the LOWER-CASE id: `true` ⇔ it produced a key (PM13's flags).
+ */
+export function derivePeerReplyWarningKeys(input: {
+  readonly answers: readonly PeerReplyWarningAnswer[];
+  readonly currentAcceptedDateIndex: string | null;
+}): {
+  readonly keys: readonly string[];
+  readonly kinds: readonly ApprovalWarningKind[];
+  readonly flags: ReadonlyMap<string, boolean>;
+} {
+  const keys = new Set<string>();
+  const kinds = new Set<ApprovalWarningKind>();
+  const flags = new Map<string, boolean>();
+  for (const a of input.answers) {
+    let kind: PeerWarningKind | null = null;
+    if (a.key === 'has_died' && a.codes !== null && a.codes.length === 1 && a.codes[0] === NOT_DIED) {
+      kind = 'peer_says_not_died';
+    } else if (
+      a.key === 'death_date' &&
+      a.window !== null &&
+      a.window.length === 3 &&
+      input.currentAcceptedDateIndex !== null &&
+      !a.window.includes(input.currentAcceptedDateIndex)
+    ) {
+      kind = 'peer_death_date_differs';
+    }
+    flags.set(a.id.toLowerCase(), kind !== null);
+    if (kind !== null) {
+      keys.add(approvalWarningKey(kind, a.id));
+      kinds.add(kind);
+    }
+  }
+  return { keys: [...keys].sort(), kinds: APPROVAL_WARNING_KINDS.filter((k) => kinds.has(k)), flags };
+}
+
+const PEER_KIND_SET: ReadonlySet<string> = new Set<string>(PEER_WARNING_KINDS);
+
+/** Is `key` a neighbour key (`peer_says_not_died:…` / `peer_death_date_differs:…`)? */
+function isPeerWarningKey(key: string): boolean {
+  const i = key.indexOf(':');
+  return PEER_KIND_SET.has(i === -1 ? key : key.slice(0, i));
+}
+
+/**
+ * Story 6.27b PM25 (c) — `w` with the two neighbour kinds and their keys removed, for an actor the neighbours' section
+ * is HIDDEN from (an un-completed assignment, ⛔ no completed FULL visit). ⭐ A DISPLAY filter ONLY: the coverage is ⛔ not
+ * touched, and ⛔ never called by the assertion, the wait, `checkLaterApprovalWarningReason`,
+ * `insertClaimWarningApprovalRecord` or R9's coverage — a filtered key still has to be covered by SOMEONE's reason, and
+ * BD4 (`-327` decision 2) guarantees that someone is ⛔ never the actor it was hidden from.
+ */
+export function withoutPeerWarnings<W extends { readonly keys: readonly string[]; readonly kinds: readonly ApprovalWarningKind[] }>(
+  w: W,
+): W {
+  return {
+    ...w,
+    keys: w.keys.filter((k) => !isPeerWarningKey(k)),
+    kinds: w.kinds.filter((k) => !PEER_KIND_SET.has(k)),
+  };
+}
+
 // ── The claim-level read (ONE statement) ────────────────────────────────────────────────────────────────────────
 
 /** One row of the claim's approval-over-warning record, as the coverage needs it (⛔ no note). */
@@ -321,6 +418,12 @@ export interface ClaimApprovalWarnings {
    * ⛔ never a key, ⛔ never a date.
    */
   readonly inspectionComparisons: ReadonlyMap<string, DeathDateComparison>;
+  /**
+   * Story 6.27b (PM13's flags) — every LIVE answer to a warning question this read saw, keyed by lower-case `answer_id`:
+   * `true` ⇔ it carries a current key. The console's and PM24's stitch reads it (the `inspectionComparisons`
+   * precedent); an answer ABSENT from it was saved after this read. ⛔ Never a key, ⛔ never a date.
+   */
+  readonly peerAnswerFlags: ReadonlyMap<string, boolean>;
 }
 
 /** The claim was not found in this Pariwar. */
@@ -364,6 +467,8 @@ type RawWarningsRow = {
   reasons: RawActiveReason[] | null;
   /** Story 6.28 (OP5) — the other OPEN claims of the death (OP1's `otherOpenClaimsForDeathSql`, embedded — ⛔ a query). */
   other_open_claim_ids: string[] | null;
+  /** Story 6.27b (PM9) — the LIVE answers to the warning questions (`peerReplyColumnsSql` — codes and indexes ONLY). */
+  peer_answers: { id: string; key: string; codes: string[] | null; window: string[] | null }[] | null;
 };
 
 /**
@@ -422,6 +527,28 @@ function deathFactColumnsSql(): SQL {
                    )
                    AND wgi_inh.claim_case_id = ${inheritedGroundInspectionSourceSql(p, cc)}
               ) wgi) AS inspections`;
+}
+
+/**
+ * Story 6.27b (PM9) — the LIVE answers to the warning questions (`PEER_MESH_WARNING_QUESTION_KEYS`), ONE fragment for
+ * BOTH readers (each aliases its claim row `c`). The own-claim filter IS `-261` C3: a refile's answers live on the
+ * refile's claim id — ⛔ never joined through the deceased or the selection. Served by
+ * `claim_peer_mesh_reply_answers_claim_idx (pariwar_id, claim_case_id)`.
+ * ⛔ It selects the answer id, the question key, the plaintext codes and the window indexes ONLY — ⛔ never
+ * `value_ciphertext` (the decrypt fence pins it; ⛔ no SQL comment inside the template).
+ */
+function peerReplyColumnsSql(): SQL {
+  return sql`(SELECT json_agg(json_build_object('id', pa.answer_id, 'key', pa.question_key,
+                                                'codes', pa.value_codes, 'window', pa.death_date_window_indexes)
+                              ORDER BY pa.answer_id)
+                FROM claim_peer_mesh_reply_answers pa
+               WHERE pa.pariwar_id = c.pariwar_id
+                 AND pa.claim_case_id = c.claim_case_id
+                 AND pa.superseded_at IS NULL
+                 AND pa.question_key IN (${sql.join(
+                   PEER_MESH_WARNING_QUESTION_KEYS.map((k) => sql`${k}`),
+                   sql`, `,
+                 )})) AS peer_answers`;
 }
 
 /**
@@ -502,6 +629,7 @@ export async function readClaimApprovalWarnings(
            (SELECT cur.accepted_date_index FROM cur ORDER BY cur.decided_at DESC, cur.review_id DESC LIMIT 1)
              AS current_accepted_date_index,
            ${deathFactColumnsSql()},
+           ${peerReplyColumnsSql()},
            ${otherOpenClaimsForDeathSql('c')} AS other_open_claim_ids,
            det.determination_id,
            det.death_certificate_review_id AS determination_review_id,
@@ -610,6 +738,7 @@ async function readClaimApprovalWarningsSlice(
            cur.review_id AS current_review_id,
            cur.accepted_date_index AS current_accepted_date_index,
            ${deathFactColumnsSql()},
+           ${peerReplyColumnsSql()},
            ${otherOpenClaimsForDeathSql('c')} AS other_open_claim_ids,
            det.determination_id,
            det.death_certificate_review_id AS determination_review_id,
@@ -788,6 +917,14 @@ function deriveClaimApprovalWarnings(claimCaseId: ClaimId, row: RawWarningsRow):
     keys.add(approvalWarningKey('other_claim_for_death', other));
     kinds.add('other_claim_for_death');
   }
+  // ⭐ Story 6.27b (PM9) — OUTSIDE the post-death block; the SAME current review the death facts use (⛔ never a second
+  // certificate read).
+  const peer = derivePeerReplyWarningKeys({
+    answers: row.peer_answers ?? [],
+    currentAcceptedDateIndex: currentReview !== null ? row.current_accepted_date_index : null,
+  });
+  for (const k of peer.keys) keys.add(k);
+  for (const k of peer.kinds) kinds.add(k);
 
   const liveDecision =
     row.live_decision_id !== null
@@ -816,6 +953,7 @@ function deriveClaimApprovalWarnings(claimCaseId: ClaimId, row: RawWarningsRow):
     coverage: { districtAdminApproved, coveredKeys, approvalKeys, records },
     reasonOptions: activeReasonOptions(row.reasons ?? []),
     inspectionComparisons: deathFacts.comparisons,
+    peerAnswerFlags: peer.flags,
   };
 }
 

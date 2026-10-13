@@ -110,6 +110,7 @@ const packet = (items: VerifierReviewItem[] | null): VerifierConsolePacket =>
       reviseBlocked: null,
       viewerCanRecordLateReason: false,
       lateKeysUncoveredForViewer: 0,
+      ownVisitPending: false,
       reasonOptions: [
         {
           code: 'warnings_reviewed',

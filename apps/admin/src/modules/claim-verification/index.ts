@@ -43,6 +43,9 @@ export {
   approvalNeedsWarningReason,
   type LaterApprovalWarningsProps,
 } from './LaterApprovalWarnings.js';
+// Story 6.27b (BF8, PM24) — the neighbours' section, shared by the console and the later approvers' on-demand panel.
+export { NonPresent, PeerMeshView } from './PeerMeshView.js';
+export { NeighboursAnswersPanel, type NeighboursAnswersPanelProps } from './NeighboursAnswersPanel.js';
 // Story 6.15 — the verifier concealment-linkage assessment capture control (tri-state + optional note).
 export {
   ConcealmentAssessmentControl,

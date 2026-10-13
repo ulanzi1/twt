@@ -107,13 +107,14 @@ const PRESENT_PACKET: VerifierConsolePacket = {
           reply: {
             submitted: true,
             answers: [
-              { questionKey: 'has_died', question: 'Has Suresh Patel died?', value: { kind: 'codes', codes: ['not_died'], labels: ['No, they have not died'] }, savedVia: 'helpline', savedAt: '2026-10-12T05:00:00.000Z', changeCount: 2 },
-              { questionKey: 'death_date', question: 'If you know, on what date did they die?', value: { kind: 'unavailable' }, savedVia: 'member_app', savedAt: '2026-10-12T05:00:00.000Z', changeCount: 0 },
+              { questionKey: 'has_died', question: 'Has Suresh Patel died?', value: { kind: 'codes', codes: ['not_died'], labels: ['No, they have not died'] }, savedVia: 'helpline', savedAt: '2026-10-12T05:00:00.000Z', changeCount: 2, warningFlag: true },
+              { questionKey: 'death_date', question: 'If you know, on what date did they die?', value: { kind: 'unavailable' }, savedVia: 'member_app', savedAt: '2026-10-12T05:00:00.000Z', changeCount: 0, warningFlag: null },
             ],
           },
           callbackMobile: { status: 'shown', text: '+919876543210' },
+          callbackBasis: 'consented',
         },
-        { pingId: 'py', memberId: 'y', responderName: { status: 'unavailable' }, sendStatus: 'no_target', noTargetReason: 'no_target:peer_not_active', reply: null, callbackMobile: { status: 'none' } },
+        { pingId: 'py', memberId: 'y', responderName: { status: 'unavailable' }, sendStatus: 'no_target', noTargetReason: 'no_target:peer_not_active', reply: null, callbackMobile: { status: 'none' }, callbackBasis: null },
       ],
     },
   },
@@ -142,6 +143,7 @@ const PRESENT_PACKET: VerifierConsolePacket = {
     reviseBlocked: null,
     viewerCanRecordLateReason: false,
     lateKeysUncoveredForViewer: 0,
+    ownVisitPending: false,
     reasonOptions: [
       {
         code: 'warnings_reviewed',
@@ -434,6 +436,8 @@ describe('<SignalsPanel> — six sections, four-state vocabulary, tri-state conc
       expect(lines.length).toBe(6);
       for (const l of lines) expect(l.textContent).not.toMatch(DATE);
       for (const words of Object.values(t.approvalWarnings.kindLine)) expect(words).not.toMatch(DATE);
+      // Story 6.27b (AC8; Task 3b.4) — the neighbours' per-answer warning lines carry ⛔ a date either.
+      for (const words of Object.values(t.peerMesh.warningFlag)) expect(words).not.toMatch(DATE);
       // The date line itself DOES show the date, by design (6.26a's GI10 [a]).
       expect(rows[0]).toHaveTextContent('2026-04-28');
     });

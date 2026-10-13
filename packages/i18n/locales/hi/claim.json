@@ -207,6 +207,7 @@
   "peer_request_questions.death_illness.other": "अन्य",
   "peer_request_questions.death_illness.dont_know": "मुझे नहीं पता",
   "peer_request_questions.callback_consent.question": "क्या ज़िला एडमिन इस बारे में आपको फ़ोन कर सकते हैं?",
+  "peer_request_questions.callback_consent.question_admin": "क्या एडमिन इस बारे में आपको फ़ोन कर सकते हैं?",
   "peer_request_questions.callback_consent.yes": "हाँ",
   "peer_request_questions.callback_consent.no": "नहीं",
   "peer_request_questions.closing_note": "आपके उत्तर साथ-साथ सहेजे जाते हैं। इन्हें केवल ट्रस्ट के वे कर्मचारी देखेंगे जो इस दावे की जाँच करते हैं — परिवार कभी नहीं। कृपया केवल वही बताएँ जो आप जानते हैं। पूरा होने पर सबमिट दबाएँ।",

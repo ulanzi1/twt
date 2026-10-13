@@ -54,6 +54,7 @@ const CASE: PendingCase = {
     post_death: 'evaluated',
     waiting_for_district_admin: false,
     own_reason_excluded: false,
+    own_visit_pending: false,
   },
 };
 

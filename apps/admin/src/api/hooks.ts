@@ -702,6 +702,35 @@ export function useRecordHelplineNomineeBank(pariwarId: string, claimCaseId: str
   });
 }
 
+// ── The neighbours' answers for a LATER approver (Story 6.27b, PM24) ────────────────────────────────────
+export const claimPeerAnswersKey = (pariwarId: string, claimCaseId: string) => ['claim-peer-answers', pariwarId, claimCaseId] as const;
+
+/**
+ * The neighbours' answers, ON DEMAND — the `useNomineeNameCheck` shape and posture: `enabled` is the disclosure's OPEN
+ * state, so ⛔ request fires as a side effect of rendering a card (up to 1,500 on the cycle-freeze list). Each fetch is an
+ * AUDITED read that may decrypt a call-back number ⇒ ⛔ refetch on window focus or reconnect (an audit line for a read
+ * nobody performed) and ⛔ automatic retry (each open is ONE read; a failure shows "could not be shown" and the approver
+ * re-opens — a 404 is ⛔ at an approving step, a settled answer).
+ */
+export function useClaimPeerAnswers(pariwarId: string, claimCaseId: string, enabled = true) {
+  return useQuery({
+    queryKey: claimPeerAnswersKey(pariwarId, claimCaseId),
+    queryFn: () => api.getClaimPeerAnswers(pariwarId, claimCaseId),
+    enabled,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    retry: false,
+  });
+}
+
+/** ⭐ FORGET the answers (names, a number) when the disclosure CLOSES — a reopen is a fresh, audited read. */
+export function useForgetClaimPeerAnswers(pariwarId: string, claimCaseId: string) {
+  const qc = useQueryClient();
+  return () => {
+    qc.removeQueries({ queryKey: claimPeerAnswersKey(pariwarId, claimCaseId), exact: true });
+  };
+}
+
 // ── Nominee NAME CHECK (Story 6.18) ──────────────────────────────────────────
 export const nomineeNameCheckKey = (pariwarId: string, claimCaseId: string) =>
   ['nominee-name-check', pariwarId, claimCaseId] as const;

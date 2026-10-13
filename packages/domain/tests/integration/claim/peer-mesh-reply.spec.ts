@@ -44,7 +44,7 @@ import {
 } from '../../../src/ids/index.js';
 import {
   checkAnswer,
-  PEER_MESH_QUESTIONNAIRE_V2,
+  PEER_MESH_QUESTIONNAIRE_V3,
   servedDefinition,
   type QuestionnaireAnswerValue,
 } from '../../../src/questionnaires/index.js';
@@ -56,7 +56,8 @@ import { claimAt, emitClaim, type FixtureState } from './_one-payment-fixtures.j
 
 type Client = pg.PoolClient;
 const TODAY = '2026-10-12';
-const SERVED = servedDefinition(PEER_MESH_QUESTIONNAIRE_V2);
+// Story 6.27b — v3 is LIVE (`-329`); a new reply's answers are checked against v3 (the same keys as v2).
+const SERVED = servedDefinition(PEER_MESH_QUESTIONNAIRE_V3);
 const OPERATOR = 'a0a0a0a0-0000-4000-8000-0000000000aa';
 
 /** As the superuser: a claim of a fresh death in `state` (events through the projector), its selection, and TWO pings —
@@ -168,14 +169,14 @@ describe.skipIf(!hasDatabase)('Story 6.27a — the neighbours\' reply writer', {
   setupLiveDb();
 
   describe('saved as they go (PM7 (b), (e))', () => {
-    it('the FIRST has_died save pins v2, writes the ONE event (CURRENT state, actor member); an edit writes ⛔ no event and supersedes', async () => {
+    it('the FIRST has_died save pins v3 (Story 6.27b — the LIVE version), writes the ONE event (CURRENT state, actor member); an edit writes ⛔ no event and supersedes', async () => {
       const { client } = getTx();
       const r = await requestAt(client, 'verification_in_progress');
       await enterAppScope(client, r.pid);
       const first = await save(client, r, 'has_died', { codes: ['died'] });
       expect(first).toMatchObject({ written: true, eventWritten: true });
       const { rows: reply } = await client.query(`SELECT questionnaire_version_id, submitted_at FROM claim_peer_mesh_replies WHERE ping_id = $1`, [r.pingId]);
-      expect(reply[0]).toEqual({ questionnaire_version_id: 'peer_mesh.v2', submitted_at: null });
+      expect(reply[0]).toEqual({ questionnaire_version_id: 'peer_mesh.v3', submitted_at: null });
       let events = await responseEvents(client, r.cid);
       expect(events).toHaveLength(1);
       expect(events[0]!.payload).toMatchObject({ from_state: 'verification_in_progress', to_state: 'verification_in_progress', actor: 'member', response: 'confirmed', responder_member_id: r.neighbour });

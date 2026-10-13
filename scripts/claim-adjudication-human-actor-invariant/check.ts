@@ -45,6 +45,15 @@ interface CoverageEntry {
 
 const COVERAGE_SET: readonly CoverageEntry[] = [
   {
+    // Story 6.27b (PM24; `2026-10-10-310` CF2) — the APPROVERS' read of the neighbours' answers (one GET). The SAME
+    // decision-support section the verifier console shows, for a later approver: [requireAdminSession,
+    // scopeResolutionHook, requirePermissionHook(cycle.freeze, pariwar)] — an authenticated human actor on every read.
+    file: 'apps/api/src/modules/claims/claims.peer-answers.routes.ts',
+    pathSubstrings: ['peer-answers'],
+    owner: 'Story 6.27b',
+    expectedMethods: ['get'],
+  },
+  {
     // Story 6.27a (PM12) — the helpline records the answers of a neighbour who phones. ENROLLED (⛔ never owed): every
     // route composes 6.3's full chain [requireAdminSession, scopeResolutionHook, requirePermissionHook(claim.file),
     // requireStepUp(claim_file)] — the operator is the human actor on the record (`saved_by_actor_id`, the event's actor).

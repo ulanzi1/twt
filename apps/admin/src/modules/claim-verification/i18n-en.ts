@@ -127,7 +127,26 @@ export const verifierConsoleEn = {
     couldNotShow: 'Could not be shown just now',
     noName: 'No name on record',
     callbackMobile: 'May be phoned on',
+    // Story 6.27b (`-328` read with `-329`) — the Super Admin sees a texted neighbour's number whatever they answered:
+    // ⛔ "may be phoned" beside a "No".
+    callbackMobileSuperAdmin: 'Mobile',
     signalNote: "A neighbour's answer is a signal to weigh beside the ground inspection — it never refuses a claim on its own.",
+    // Story 6.27b (PM13's flags; AC8) — ⛔ a date in any of these words (the answer above shows it).
+    warningFlag: {
+      has_died: '⚠ Says the member has not died',
+      death_date: '⚠ More than a day from the date on the accepted death certificate',
+      unknown: 'Warning could not be checked just now',
+    },
+  },
+  // ⭐ Story 6.27b (BD4, `2026-10-13-327` decision 2) — ONE neutral block for an approver whose own ground visit on the claim
+  // is pending: ⛔ a kind, ⛔ a count, ⛔ a word about neighbours (any of those would tell an inspector a neighbour answered).
+  ownVisitPending:
+    'A ground visit on this claim is assigned to you and is not finished. It must be completed, or given to someone else, before you can approve.',
+  // Story 6.27b (PM24) — the later approvers' on-demand disclosure of the neighbours' answers. English only (F22).
+  neighboursPanel: {
+    toggle: "Neighbours' answers",
+    loading: 'Loading the neighbours’ answers…',
+    notAtStep: 'Nothing to show at this step',
   },
   // Story 6.11 — the decision strip (approve/deny/escalate + reason-code + rationale + audit trail).
   decision: {
@@ -180,6 +199,10 @@ export const verifierConsoleEn = {
       // Story 6.28 (OP5, OP10) — ⛔ the other claim's id, filer, nominee or state here (the console's OP14 section shows it
       // by reference).
       other_claim_for_death: 'Another claim for this death has been filed and is not closed.',
+      // Story 6.27b (PM9) — ⛔ no date, ⛔ no neighbour's name: the neighbours' answers section shows which answer.
+      peer_says_not_died: 'A member the Trust asked about this death answered that the member has not died.',
+      peer_death_date_differs:
+        'A member the Trust asked about this death gave a date of death more than a day from the date on the accepted death certificate.',
     } satisfies Record<ApprovalWarningKind, string>,
     stripIntro:
       'You may still approve. Choose a warning reason and write a note saying why — the claim is not refused, and your approval reason above stays as it is.',

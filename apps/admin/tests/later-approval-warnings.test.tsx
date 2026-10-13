@@ -81,6 +81,7 @@ const summary = (over: Partial<ApprovalWarningsSummary> = {}): ApprovalWarningsS
   post_death: 'evaluated',
   waiting_for_district_admin: false,
   own_reason_excluded: false,
+  own_visit_pending: false,
   ...over,
 });
 const QUIET = summary({ kinds: [] });
@@ -179,7 +180,7 @@ describe('<PendingCaseCard> — the final vote and the escalation (EA3, EA4, EA7
   });
 
   it('⭐ the WAIT disables Approve WITH its words (and the own-reason words); Deny and Route stay as they were', () => {
-    card({ approval_warnings: summary({ waiting_for_district_admin: true, own_reason_excluded: true }) });
+    card({ approval_warnings: summary({ waiting_for_district_admin: true, own_reason_excluded: true , own_visit_pending: false}) });
     const blocked = screen.getByTestId(`${prefix}-approval-blocked`);
     expect(blocked).toHaveTextContent(tw.later.waits);
     expect(blocked).toHaveTextContent(tw.later.ownReasonExcluded);
@@ -233,7 +234,7 @@ describe('<CycleFreezePage> — the 409s in words, and a 409 refetches (a REAL u
       .mockResolvedValueOnce({ pariwar_id: PARIWAR, ready_to_freeze: [CASE], escalated: [], voted_pending_commit: [], reason_options: OPTIONS })
       .mockResolvedValue({
         pariwar_id: PARIWAR,
-        ready_to_freeze: [{ ...CASE, approval_warnings: summary({ waiting_for_district_admin: true, own_reason_excluded: true }) }],
+        ready_to_freeze: [{ ...CASE, approval_warnings: summary({ waiting_for_district_admin: true, own_reason_excluded: true , own_visit_pending: false}) }],
         escalated: [],
         voted_pending_commit: [],
         reason_options: OPTIONS,
@@ -410,7 +411,7 @@ describe('<R9CasePanel> — the approve vote and finalize (EA5; RD11)', () => {
 
   it('the WAIT holds Finalize (the R9 own-reason words) but ⛔ not the vote', async () => {
     getR9Panel.mockResolvedValue(
-      r9Panel({ votes: [approveVote(true)], tally: approvedTally, approval_warnings: summary({ waiting_for_district_admin: true, own_reason_excluded: true }) }),
+      r9Panel({ votes: [approveVote(true)], tally: approvedTally, approval_warnings: summary({ waiting_for_district_admin: true, own_reason_excluded: true , own_visit_pending: false}) }),
     );
     wrap(<R9CasePanel pariwarId={PARIWAR} claimCaseId={CLAIM} />);
     const held = await screen.findByTestId('r9-finalize-blocked');
@@ -725,7 +726,7 @@ describe('<EscalationDetail> — the Super Admin\'s approve (EA6a)', () => {
   });
 
   it('the WAIT with `own_reason_excluded` says the own-reason words (⛔ not the R9 variant) and disables the approve submit', async () => {
-    getEscalatedClosure.mockResolvedValue(detail({ approval_warnings: summary({ waiting_for_district_admin: true, own_reason_excluded: true }) }));
+    getEscalatedClosure.mockResolvedValue(detail({ approval_warnings: summary({ waiting_for_district_admin: true, own_reason_excluded: true , own_visit_pending: false}) }));
     wrap(<EscalationDetail pariwarId={PARIWAR} claimCaseId={CLAIM} />);
     const held = await screen.findByTestId('escalation-decision-approval-blocked');
     expect(held).toHaveTextContent(tw.later.ownReasonExcluded);
@@ -804,7 +805,7 @@ describe('<PariwarClosureList> — D27\'s approve carries the picker and its OWN
     expect(screen.getByTestId('no-correction-approve')).toBeDisabled();
     expect(screen.getByTestId('no-correction-keep')).toBeEnabled();
     second.unmount();
-    wrap(<PariwarClosureList pariwarId={PARIWAR} reasonOptions={OPTIONS} items={[item({ approval_warnings: summary({ waiting_for_district_admin: true, own_reason_excluded: true }) })]} />);
+    wrap(<PariwarClosureList pariwarId={PARIWAR} reasonOptions={OPTIONS} items={[item({ approval_warnings: summary({ waiting_for_district_admin: true, own_reason_excluded: true , own_visit_pending: false}) })]} />);
     expect(screen.getByTestId(`${p}-approval-blocked`)).toHaveTextContent(tw.later.ownReasonExcluded);
   });
 

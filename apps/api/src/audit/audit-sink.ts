@@ -431,8 +431,20 @@ export type AuthAuditEventType =
   // NEVER a decrypted identity/extracted field, note, caption, or any signal payload.
   | 'admin_verifier_console.read'
   // ── Story 6.27a (PM13) — the neighbours' call-back mobile was SHOWN on the console (one line per mobile shown).
-  // Context: claim_case_id + ping_id ONLY — ⛔ never the number, ⛔ never a name, ⛔ never an answer.
+  // Context: claim_case_id + ping_id (+ Story 6.27b: `basis` — `consented` / `super_admin`) — ⛔ never the number,
+  // ⛔ never a name, ⛔ never an answer.
   | 'admin_verifier_console.peer_callback_mobile_shown'
+  // ── Story 6.27b (PM24; `2026-10-10-310` CF2) — the APPROVERS' read of the neighbours' answers
+  // (`GET …/admin/claims/:claimCaseId/peer-answers`): ONE line per successful read (a `hidden` or `empty` section too; ⛔ a
+  // 404). Locator `claim:<id>` (lower-case); context = the admitting `step` (`final_vote` | `escalation_resolution` |
+  // `r9_vote` | `super_admin_approval`), the section status and its counts — ⛔ never a name, an answer, a code, a date or
+  // a number.
+  | 'admin_claim.peer_answers_read'
+  // ── Story 6.27b (`-328` Consequence 1, read with `-329` decision 5 (c); supersedes `-327` Consequence 1) — a neighbour's
+  // call-back number was SHOWN on the approvers' read: ONE line per number shown, emitted only AFTER the response is built
+  // (6.27a review S17). Locator `claim:<id>:ping:<id>` (lower-case — the ping is durable only there, review R11); context
+  // `{ basis: 'consented' | 'super_admin', step }` — ⛔ never the number.
+  | 'admin_claim.peer_callback_mobile_shown'
   // ── Verifier adjudication surface (Story 6.11, FR-42 / UX-DR40 / Epic 6) ──────
   // The FIRST verifier WRITE — approve/deny/escalate/revise on the decision strip. Post-commit SINK
   // lines (the durable records are the claim.verifier_* event + the claim_verifier_decisions row).

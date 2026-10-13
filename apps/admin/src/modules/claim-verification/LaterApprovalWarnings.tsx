@@ -22,6 +22,8 @@ const t = verifierConsoleEn.approvalWarnings;
  */
 export function approvalBlockedReason(summary: ApprovalWarningsSummary, surface: 'trustee' | 'r9' = 'trustee'): string | null {
   if (!summary.available) return t.unavailable;
+  // ⭐ Story 6.27b (BD4) — the viewer's own ground visit is pending: ONE neutral block, BEFORE the wait (⛔ a kind, ⛔ a count).
+  if (summary.own_visit_pending) return verifierConsoleEn.ownVisitPending;
   if (summary.waiting_for_district_admin) {
     return summary.own_reason_excluded
       ? `${t.later.waits} ${surface === 'r9' ? t.later.ownReasonExcludedR9 : t.later.ownReasonExcluded}`
@@ -76,7 +78,15 @@ export function LaterApprovalWarnings({
   surface = 'trustee',
   waitBlocksHere = true,
 }: LaterApprovalWarningsProps): ReactElement | null {
-  const blocked = waitBlocksHere ? approvalBlockedReason(summary, surface) : summary.available ? null : t.unavailable;
+  // `waitBlocksHere: false` — the R9 panel (the WAIT holds Finalize, ⛔ the vote) and a voted cycle-freeze card (⛔ approve
+  // control at all). Story 6.27b (BD4) holds an approve VOTE too — said only where an approve is in play (`showPicker`).
+  const blocked = waitBlocksHere
+    ? approvalBlockedReason(summary, surface)
+    : !summary.available
+      ? t.unavailable
+      : summary.own_visit_pending && showPicker
+        ? verifierConsoleEn.ownVisitPending
+        : null;
   if (blocked === null && summary.kinds.length === 0) return null;
   return (
     <div className="flex flex-col gap-2 rounded border border-status-warn-fg p-2" data-testid={`${idPrefix}-approval-warnings`}>

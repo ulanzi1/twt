@@ -76,6 +76,12 @@ export interface VerificationDecisionStripProps {
   approvalWarnings?: { kinds: readonly ApprovalWarningKind[]; reasonOptions: readonly ApprovalWarningReasonOption[] };
   /** Story 6.23a (NW7) — when non-null the revise control is REPLACED by its words (⛔ never a dead control). */
   reviseBlocked?: 'warning_approval_final' | 'warnings_not_current' | 'unavailable' | null;
+  /**
+   * ⭐ Story 6.27b (BD4) — THIS viewer's own ground visit on the claim is pending: the revise of an APPROVAL is REPLACED by
+   * the ONE neutral block (the server refuses it — ⛔ offer it). A denial's revise is ⛔ touched. (Approve itself is
+   * disabled by the caller through `canApprove` + `approveBlockedReason`, with the same words.)
+   */
+  ownVisitPending?: boolean;
 }
 
 type PendingAction = { outcome: VerifierDecisionOutcome; label: string } | null;
@@ -91,6 +97,7 @@ export function VerificationDecisionStrip({
   approveBlockedReason,
   approvalWarnings,
   reviseBlocked: reviseBlockedProp = null,
+  ownVisitPending = false,
 }: VerificationDecisionStripProps): ReactElement {
   const isActive = ACTIVE_STATES.has(claimState);
   const isRevisable = REVISABLE_STATES.has(claimState);
@@ -118,6 +125,8 @@ export function VerificationDecisionStrip({
   // cannot tell the outcomes apart (the read that would is the one that failed), so the strip, which knows the revise
   // window's outcome from the state, applies a block to an approval only (code review round 3).
   const reviseBlocked = revisionOutcome === 'approved' ? reviseBlockedProp : null;
+  // Story 6.27b (BD4) — ⛔ a revise of an APPROVAL while this viewer's own ground visit is pending (⛔ a denial's).
+  const ownVisitBlocksRevise = ownVisitPending && revisionOutcome === 'approved';
 
   /**
    * ⭐⭐ THE APPROVE FORM CLOSES WHEN APPROVAL STOPS BEING AVAILABLE (code review 2026-09-20).
@@ -308,6 +317,11 @@ export function VerificationDecisionStrip({
             {t.decision.escalateShortcut}. {t.decision.escalate}
           </button>
         </div>
+      ) : ownVisitBlocksRevise ? (
+        // Story 6.27b (BD4) — the ONE neutral block (⛔ kind, ⛔ count).
+        <p className="text-xs" role="status" data-testid="revise-blocked-own-visit">
+          {t.ownVisitPending}
+        </p>
       ) : reviseBlocked !== null ? (
         // Story 6.23a (NW7) — the revise control is REPLACED by its words, one per reason (⛔ never a dead control).
         <p className="text-xs" role="status" data-testid={`revise-blocked-${reviseBlocked}`}>
@@ -319,7 +333,7 @@ export function VerificationDecisionStrip({
         </p>
       )}
 
-      {outcome && !(isRevisable && reviseBlocked !== null) ? (
+      {outcome && !(isRevisable && (reviseBlocked !== null || ownVisitBlocksRevise)) ? (
         <div className="flex flex-col gap-2" data-testid="decision-form">
           <ReasonCodeDropdown
             outcome={outcome}

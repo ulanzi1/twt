@@ -465,6 +465,9 @@ export function createNomineeNameCheckHandlers(deps: AppDeps) {
       const visible = await claimDomain.listClaimsUnderCorrection(scopeTx.tx, pariwarId, {
         limit: escalatedOnly ? claimDomain.CORRECTION_QUEUE_MAX_LIMIT : limit,
         isVisible,
+        // ⭐ Story 6.27b (PM25 (c), Task 4.2) — a claim whose neighbours' section is hidden from THIS reader (their own
+        // ground visit pending) ⛔ lists them a neighbour-only late warning (a DISPLAY filter; the gate reads every key).
+        hidePeerKindsForActor: actorId,
         onLateWarningsUnavailable: () => {
           if (!lateWarningsUnavailable) {
             request.log.warn({ pariwarId: scopeTx.pariwarId }, 'correction-queue: the late-warning arm could not be read; returned claims still list');

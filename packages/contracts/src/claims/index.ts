@@ -29,6 +29,8 @@ export * from './dpdpa-consent.js';
 // signal sections over the four-state vocabulary (present|empty|unavailable|not_available_yet), the
 // D10 concealment tri-state, and the response envelope. NO adjudication controls (Story 6.11).
 export * from './verifier-console.js';
+// Story 6.27b (PM24) — the approvers' read of the neighbours' answers (the console's peer-mesh section, reused).
+export * from './peer-answers.js';
 // Story 6.11 — the verifier adjudication (approve/deny/escalate/revise) DTOs (the FIRST verifier WRITE):
 // the request DTOs (outcome + reason_code + rationale?, .strict() — server-derived actor identity, R5),
 // the outcome↔reason-code compat superRefine (AC8), and the NON-PII decision response.

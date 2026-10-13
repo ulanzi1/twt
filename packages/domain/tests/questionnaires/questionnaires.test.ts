@@ -15,6 +15,7 @@ import {
   COMPARABLE_QUESTION_KEYS,
   PEER_MESH_QUESTIONNAIRE_V1,
   PEER_MESH_QUESTIONNAIRE_V2,
+  PEER_MESH_QUESTIONNAIRE_V3,
   PEER_MESH_HEALTH_QUESTION_KEYS,
   PEER_MESH_RULED_QUESTION_KEYS,
   PEER_MESH_SENSITIVE_QUESTION_KEYS,
@@ -74,12 +75,17 @@ describe('the registry (PM23 (a) / (b))', () => {
   it('QUESTIONNAIRE_KINDS is peer_mesh + ground_inspection', () => {
     expect([...QUESTIONNAIRE_KINDS]).toEqual(['peer_mesh', 'ground_inspection']);
   });
-  it('v1 and v2 are registered and valid; v2 is LIVE; v1 is historical and ⛔ never returned by resolveLiveVersion', () => {
-    expect(QUESTIONNAIRE_REGISTRY.map((d) => d.versionId)).toEqual(['peer_mesh.v1', 'peer_mesh.v2']);
+  // ⭐ Story 6.27b (Task 3c; `-328` read with `-329`) — v3 is LIVE; v2 is historical, exactly as v1 (RED BY DESIGN: this
+  // leg named v2 as live — amended by NAMING v3, ⛔ loosened).
+  it('v1, v2 and v3 are registered and valid; v3 is LIVE; v1 and v2 are historical and ⛔ never returned by resolveLiveVersion', () => {
+    expect(QUESTIONNAIRE_REGISTRY.map((d) => d.versionId)).toEqual(['peer_mesh.v1', 'peer_mesh.v2', 'peer_mesh.v3']);
     for (const d of QUESTIONNAIRE_REGISTRY) expect(questionnaireDefinitionProblems(d)).toEqual([]);
     expect(getQuestionnaireVersion('peer_mesh.v1')).toBe(PEER_MESH_QUESTIONNAIRE_V1);
+    expect(getQuestionnaireVersion('peer_mesh.v2')).toBe(PEER_MESH_QUESTIONNAIRE_V2);
     expect(PEER_MESH_QUESTIONNAIRE_V1.status).toBe('historical');
-    expect(resolveLiveVersion('peer_mesh', PARIWAR)).toBe(PEER_MESH_QUESTIONNAIRE_V2);
+    expect(PEER_MESH_QUESTIONNAIRE_V2.status).toBe('historical');
+    expect(PEER_MESH_QUESTIONNAIRE_V3.status).toBe('live');
+    expect(resolveLiveVersion('peer_mesh', PARIWAR)).toBe(PEER_MESH_QUESTIONNAIRE_V3);
     expect(getQuestionnaireVersion('peer_mesh.v9')).toBeNull();
     expect(resolveLiveVersion('ground_inspection', PARIWAR)).toBeNull();
   });
@@ -98,12 +104,58 @@ describe('the registry (PM23 (a) / (b))', () => {
     expect(questionsOf(PEER_MESH_QUESTIONNAIRE_V2).filter((q) => q.warning).map((q) => q.key)).toEqual([...PEER_MESH_WARNING_QUESTION_KEYS]);
     expect(questionsOf(PEER_MESH_QUESTIONNAIRE_V2).filter((q) => q.sensitive).map((q) => q.key)).toEqual(['death_date', 'death_cause', 'death_illness']);
   });
+  // ⚠ Story 6.27b (Task 3c.4 trap): rebuilt from the LIVE v3 — a spread of the now-historical v2 inherits
+  // `status: 'historical'` and every leg below would go vacuous. A non-colliding `peer_mesh.v4` keeps `<kind>.v<version>`.
   it('resolveLiveVersion prefers a Pariwar version over the all-Pariwar one', () => {
-    const own: QuestionnaireDefinition = { ...PEER_MESH_QUESTIONNAIRE_V2, version: 3, versionId: 'peer_mesh.v3', scope: { kind: 'pariwar', pariwarId: PARIWAR } };
-    const registry = [PEER_MESH_QUESTIONNAIRE_V1, PEER_MESH_QUESTIONNAIRE_V2, own];
+    const own: QuestionnaireDefinition = { ...PEER_MESH_QUESTIONNAIRE_V3, version: 4, versionId: 'peer_mesh.v4', scope: { kind: 'pariwar', pariwarId: PARIWAR } };
+    const registry = [PEER_MESH_QUESTIONNAIRE_V1, PEER_MESH_QUESTIONNAIRE_V2, PEER_MESH_QUESTIONNAIRE_V3, own];
     expect(resolveLiveVersion('peer_mesh', PARIWAR, registry)).toBe(own);
-    expect(resolveLiveVersion('peer_mesh', '22222222-2222-4222-8222-222222222222', registry)).toBe(PEER_MESH_QUESTIONNAIRE_V2);
-    expect(() => resolveLiveVersion('peer_mesh', 'x', [PEER_MESH_QUESTIONNAIRE_V2, { ...PEER_MESH_QUESTIONNAIRE_V2, versionId: 'peer_mesh.v3', version: 3 }])).toThrow(/more than one live/);
+    expect(resolveLiveVersion('peer_mesh', '22222222-2222-4222-8222-222222222222', registry)).toBe(PEER_MESH_QUESTIONNAIRE_V3);
+    expect(() => resolveLiveVersion('peer_mesh', 'x', [PEER_MESH_QUESTIONNAIRE_V3, { ...PEER_MESH_QUESTIONNAIRE_V3, versionId: 'peer_mesh.v4', version: 4 }])).toThrow(/more than one live/);
+  });
+
+  // ⭐ Story 6.27b (Task 3c; `-328` decision 2 read with `-329` decisions 1–3).
+  it('v3 is v2 with ONE change — `callback_consent` asks about "the Admin" under a NEW copy key, approved by `-328`', () => {
+    const v2 = questionsOf(PEER_MESH_QUESTIONNAIRE_V2);
+    const v3 = questionsOf(PEER_MESH_QUESTIONNAIRE_V3);
+    expect(PEER_MESH_QUESTIONNAIRE_V3).toMatchObject({ kind: 'peer_mesh', versionId: 'peer_mesh.v3', version: 3, scope: { kind: 'all' } });
+    expect(PEER_MESH_QUESTIONNAIRE_V3.approvedBy).toEqual(['2026-09-28-262', '2026-09-28-263', '2026-10-10-304', '2026-10-13-328']);
+    expect(PEER_MESH_QUESTIONNAIRE_V3.pages.map((p) => p.questions.map((q) => q.key))).toEqual(
+      PEER_MESH_QUESTIONNAIRE_V2.pages.map((p) => p.questions.map((q) => q.key)),
+    );
+    for (const [i, q] of v3.entries()) {
+      if (q.key === 'callback_consent') continue;
+      expect(q, q.key).toEqual(v2[i]); // every other question keeps v2's words, provenance and counsel basis
+    }
+    const c2 = v2.find((q) => q.key === 'callback_consent')!;
+    const c3 = v3.find((q) => q.key === 'callback_consent')!;
+    expect(c2.copyKey).toBe('peer_request_questions.callback_consent.question'); // v2's words stay EXACTLY as they are
+    expect(c3.copyKey).toBe('peer_request_questions.callback_consent.question_admin');
+    expect(c3.approvedBy).toEqual(['2026-10-10-304', '2026-10-13-328']);
+    expect(c2.callbackAudience).toBe('district_admin');
+    expect(c3.callbackAudience).toBe('admin');
+    expect({ ...c3, copyKey: c2.copyKey, approvedBy: c2.approvedBy, callbackAudience: c2.callbackAudience }).toEqual(c2);
+    expect(pendingCounselBasisKeys(PEER_MESH_QUESTIONNAIRE_V3)).toEqual(['death_cause', 'death_illness']); // 6.27c AC2b holds for v3
+  });
+
+  it('`callbackAudience` is REQUIRED on `callback_consent` and refused on every other question', () => {
+    expect(problems(withQuestion(PEER_MESH_QUESTIONNAIRE_V3, 'callback_consent', (q) => {
+      const rest = { ...q } as Record<string, unknown>;
+      delete rest['callbackAudience'];
+      return rest as unknown as QuestionDefinition;
+    }))).toContain(`question 'callback_consent': callbackAudience is required`);
+    expect(problems(withQuestion(PEER_MESH_QUESTIONNAIRE_V3, 'callback_consent', (q) => ({ ...q, callbackAudience: 'everyone' as never })))).toContain(
+      `question 'callback_consent': callbackAudience is one of district_admin, admin`,
+    );
+    expect(problems(withQuestion(PEER_MESH_QUESTIONNAIRE_V3, 'how_known', (q) => ({ ...q, callbackAudience: 'admin' })))).toContain(
+      `question 'how_known': callbackAudience only on 'callback_consent'`,
+    );
+  });
+
+  it('`2026-10-13-328` is a Panel-ratified questionnaire decision (⛔ any other new id is)', () => {
+    expect(problems(withQuestion(PEER_MESH_QUESTIONNAIRE_V3, 'callback_consent', (q) => ({ ...q, approvedBy: ['2026-10-13-329'] })))).toContain(
+      `approvedBy '2026-10-13-329' is not a Trustee-ratified questionnaire decision`,
+    );
   });
   it('COMPARABLE_QUESTION_KEYS', () => {
     expect([...COMPARABLE_QUESTION_KEYS]).toEqual(['has_died', 'death_date', 'death_cause', 'death_illness']);

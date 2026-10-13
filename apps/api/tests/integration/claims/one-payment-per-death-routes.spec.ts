@@ -609,7 +609,7 @@ describe.skipIf(!hasDatabase)('Story 6.28 — one payment per death through HTTP
   function ctxOf(sc: Awaited<ReturnType<typeof openScopeTx>>, pariwarId: string, claimCaseId: string): VerifierConsoleContext {
     return {
       db: sc.tx, client: sc.client, pariwarId, claimCaseId, district: DISTRICT, actorId: randomUUID(),
-      grants: [{ pariwarId, role: 'super_admin', scopeDimension: 'global', scopeValue: null }], traceId: null, onCallbackMobileShown: () => {},
+      grants: [{ pariwarId, role: 'super_admin', scopeDimension: 'global', scopeValue: null }], traceId: null, onCallbackMobileShown: () => {}, callbackViewer: 'district',
     };
   }
 

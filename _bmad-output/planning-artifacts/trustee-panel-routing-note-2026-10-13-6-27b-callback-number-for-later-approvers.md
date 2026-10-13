@@ -28,6 +28,9 @@ words of that question yourselves.
 > confirmation of *"no explicit permission is required"*). Every showing is audited. Built in Story 6.27b.
 > ⛔ **Not covered:** who may phone a member for any other purpose; the neighbours' other answers (`-310` CF2 stands); the closing
 > note's words; Row 27 (a)'s counsel question. ⚠ The Hindi words are our translation (`-328` R2).
+> ⚠ **Read with `2026-10-13-329`** (erratum): Q1 C in full — the Pariwar Admin sees the number only for a *"Yes"* to the NEW
+> words (a *"Yes"* to the old words stays with today's set; the new words ship as questionnaire v3); the Super Admin only for a neighbour
+> who was actually texted.
 > ⭐ Everything below is kept **unedited** as the question **as it was put** ([[feedback_supersede_never_reinterpret]]).
 
 ---

@@ -1,3 +1,15 @@
+# last_updated: 2026-10-13d (STORY 6.27b — VALIDATED (`bmad-create-story validate 6.27b`, v3.0 → v3.1; four read-only fresh-context
+# verifiers + two re-validators; ⛔ no code moved since `560369a7`). Row `6-27b-peer-mesh-warnings-wait-and-approvers-view` STAYS
+# `ready-for-dev`. ⚠ 2026-10-13c's "BD2 B (the call-back number SHOWN on PM24's panel)" is SUPERSEDED by `2026-10-13-327` decision 1
+# (`f65fe069`, author-commit, committed ALONE): the number is WITHHELD on PM24's panel, and who may see it — incl. the verifier console's
+# EXISTING showing to the District Admin, the district's verifiers and the Super Admin — is ROUTED to the Panel (note
+# `trustee-panel-routing-note-2026-10-13-6-27b-callback-number-for-later-approvers.md`, WRITTEN, ⛔ not sent; 6.27b is ⛔ not blocked by
+# it). NEW BD4 (`-327` decision 2, unconditional): an approver holding an unfinished ground visit on a claim cannot approve it at any of
+# nine approving writers until that visit is completed, ends or is reassigned — ONE neutral refusal, checked before the warnings gate.
+# Found BF17–BF22 (PM24's missing escalation-resolution arm; a routing outlives a denial; the display filter vs the writers' all-keys
+# snapshot; the assembler's internal shape; any actor can be an inspector; an erased-answer deferred item's trigger fires) and fixed ~40
+# cites / tests (incl. a source scan red on the story's own Task 4.2, three red-checks that could never go red, AC5 (d) green without the
+# peer kind). ⛔ No other row moves.)
 # last_updated: 2026-10-13c (STORY 6.27b — CREATED FOR DEV (`bmad-create-story 6.27b`, branch `story/6-27b` from `main` `560369a7`);
 # `6-27b-peer-mesh-warnings-wait-and-approvers-view` `backlog` → `ready-for-dev` (6.27a is `done` and merged — the 6.21b / 6.23b / 6.24b /
 # 6.26b precedent). The 2026-10-10 cut (v2.5) RE-DERIVED against 6.27a's shipped build as v3.0: FOUND BF1–BF16 (incl. ⛔ no ciphertext

@@ -1,8 +1,7 @@
 # Trustee Panel routing note — 2026-10-13 — Story 6.27b: who may see a neighbour's phone number?
 
-> **Status: WRITTEN, ⛔ NOT YET SENT.** Raised by the validate pass on Story 6.27b (`2026-10-13-327`). While you decide, the new
-> later-approvers' panel WITHHOLDS the number, and the District Admin's screen stays as it is today. That build half was split off and
-> decided by BigDev (`-327` decision 1). ⛔ No engineering choice is bundled into this note.
+> **Status: SENT and RULED — `2026-10-13-328` (Trustee-ratified, DR + KB): Q1 C, Q2 as listed below.** Raised by the validate pass on
+> Story 6.27b (`2026-10-13-327`). ⛔ No engineering choice was bundled into this note.
 
 ---
 
@@ -14,11 +13,22 @@ words of that question yourselves.
 
 ---
 
-> ## ⏳ AWAITING PANEL RULING
+> ## ✅ PANEL RULING — `2026-10-13-328` (Trustee-ratified, 2026-10-13)
 >
-> ⛔ **Nothing is recorded here yet.** When the Panel rules, transcribe it into this block **and** into
-> `.decision-log.md` as a new decision id. ⭐ Everything below is then kept **unedited** as the question **as it was put**
-> ([[feedback_supersede_never_reinterpret]]).
+> *"by DR and KB
+> Bigdev is right, although Trust can contact any member anytime for any reason, but not all staff should have right to contact any
+> member anytime.
+> Superadmin - all rights
+> Q1 - C , May the Admin phone you about this? This will include District Admin and Pariwar Admin. Superadmin has all the rights, no
+> explicit permission is required.
+> Q2 - the District Admin, the district's verifiers, the Pariwar Admin and the Super Admin"* — relayed by BigDev in session.
+>
+> ⭐ The question becomes *"May the Admin phone you about this?"* (the District Admin and the Pariwar Admin). The number is seen by the
+> District Admin, the district's verifiers and the Pariwar Admin on a *"Yes"*, and by the Super Admin on ANY answer (BigDev's
+> confirmation of *"no explicit permission is required"*). Every showing is audited. Built in Story 6.27b.
+> ⛔ **Not covered:** who may phone a member for any other purpose; the neighbours' other answers (`-310` CF2 stands); the closing
+> note's words; Row 27 (a)'s counsel question. ⚠ The Hindi words are our translation (`-328` R2).
+> ⭐ Everything below is kept **unedited** as the question **as it was put** ([[feedback_supersede_never_reinterpret]]).
 
 ---
 

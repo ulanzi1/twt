@@ -16,6 +16,12 @@ code baseline still `560369a7`, ⛔ no code moved). Found BF17–BF22 and two ca
 (note written, ⛔ not yet sent); and NEW **BD4** — an actor the neighbours' section is hidden from cannot APPROVE the claim at any step
 (unconditional). ⚠ v3.0's BD2 (B) text is KEPT below, marked superseded — ⛔ never deleted.
 
+⭐⭐ v3.2 (2026-10-13) — THE PANEL RULED: `2026-10-13-328` (`c1900b89`, Trustee-ratified, DR + KB) supersedes `-327` decision 1 (the
+withhold). The call-back question becomes *"May the Admin phone you about this?"* (the District Admin and the Pariwar Admin); the number is
+SHOWN on a *"Yes"* to the District Admin, the district's verifiers and the Pariwar Admin, and to the Super Admin on ANY answer; every
+showing audited. 6.27b builds it (BigDev: *"Fold into 6.27b"*) — AC6 / AC11, Tasks 3.1 (a), 3.3, 3.4, 3.7 and NEW Task 3c. BD4 is
+untouched. ⚠ The v3.1 withhold text is KEPT where it records history, marked superseded.
+
 STATUS: `ready-for-dev` — 6.27a (row `6-27-peer-mesh-sending-replies-and-date-of-death`) is `done` and MERGED (the 6.21b / 6.23b / 6.24b /
 6.26b precedent); 6.27a's shared Task 0.4 author-commit is `2026-10-10-311`. ✅ Task 0 is DONE: BD1–BD3 answered by BigDev and committed
 ALONE as `2026-10-13-326` (`7867314b`); v3.1's BD2 supersession + BD4 committed ALONE as `2026-10-13-327` (`f65fe069`) — 6.27b may be built from the
@@ -85,7 +91,8 @@ Super Admin — for that claim at that step only; the inspector ⛔ nothing befo
 ratified basis) · **`-324` A** (for a claim the special panel has after the month's vote, *"the final approval"* is the special panel's — R9
 finalize waits) · `-261` C3 (⛔ never inherited) · `-282` GI7 / `-281` Q1 B (precedents) · `-305` §1 (c) (the real later approvers) ·
 `-308` (each answer's source — see BD1) · `-325` S1 A (`-308`'s 6.27a half handed to row 6-36; *"6.27b PM24's share of `-308` is
-unchanged"*) · `-326` (BD1–BD3, author-commit) · **`-327`** (author-commit — BD2 (B) superseded, `-326` in part: number WITHHELD + routed, incl. the console's existing showing; BD4).
+unchanged"*) · `-326` (BD1–BD3, author-commit) · **`-327`** (author-commit — BD2 (B) superseded, `-326` in part: number WITHHELD + routed, incl. the console's existing showing; BD4) ·
+**`-328`** (Trustee-ratified — the question's new words; who sees the number; the Super Admin on any answer; supersedes `-327` decision 1).
 
 ## 📜 Policy meaning (AI-10-1)
 
@@ -123,7 +130,8 @@ words them:
   warning-question rows, `saved_at > v.decided_at` — ⛔ no window term, ⛔ no change to the scan states.
 - **PM24** — `GET /api/v1/p/:pariwarId/admin/claims/:claimCaseId/peer-answers` through 6.27a's `assemblePeerSection`, the step
   disjunction, audited, the panel on the four hosts (Task 3). Ratified basis `-310` CF2 (*"for that claim at that step only"*); ⭐ the
-  call-back number WITHHELD (`-327` decision 1).
+  call-back number SHOWN per `-328` (on a *"Yes"* to the Pariwar Admin; on any answer to the Super Admin) — `-327` decision 1's withhold
+  is superseded.
 - **PM13's per-answer warning flags** — on the console and on PM24's panel, from the WARNINGS read (the same keys the rule uses — ⛔ never a
   second computation); a failed read ⇒ `null` (*"could not be checked just now"*), ⛔ never `false` (6.27a Invariant 8).
 - **PM25 (c), the kinds half** — for an actor the section is hidden from (an UN-completed assignment and ⛔ no completed FULL visit). 6.27a's
@@ -241,7 +249,7 @@ words them:
   this?"* (`packages/i18n/locales/en/claim.json:209`; `-304` Q6 A's list). `assemblePeerSection` DECRYPTS and SHOWS the number on a "yes"
   (`peer-answers-assembler.ts:171-194`) and calls `onCallbackMobileShown` ⇒ reusing it UNCHANGED for PM24 would show a neighbour's mobile to
   a Pariwar Admin or the Super Admin — wider than the words the neighbour agreed to ⇒ **BD2** (v3.0: answered (B) — shown; ⭐ v3.1:
-  SUPERSEDED by `-327` decision 1 — WITHHELD, and the question routed to the Panel; see BD2).
+  SUPERSEDED by `-327` decision 1 — WITHHELD, and the question routed to the Panel; ⭐ v3.2: RULED by `-328` — SHOWN; see BD2).
 
 **Found at the v3.1 validate (BF17–BF22; verified at `560369a7`):**
 - **BF17 — PM24's first arm misses the Pariwar Admin's cycle-freeze ESCALATION RESOLUTION.** 6.27a PM24 says *"the cycle-freeze escalation
@@ -298,7 +306,12 @@ basis ([[feedback_record_unattested_no_backfill]]).
   - (B) 6.27b waits for row 6-36. Cost: the warnings, the wait and the approvers' view — the safety pieces 6.27c is ordered after — wait
     for a school-selection story that has ⛔ no story file yet.
   - (C) a nullable source column now. Cost: refused by `-325` S1 A in so many words.
-- **BD2 — the call-back number on PM24's panel (BF16).** ⭐⭐ **v3.1: SUPERSEDED by `2026-10-13-327` decision 1 (`-326` superseded in part) — the number is
+- **BD2 — the call-back number on PM24's panel (BF16).** ⭐⭐ **v3.2: RULED by the Panel — `2026-10-13-328` (Trustee-ratified, DR + KB):**
+  *"Q1 - C , May the Admin phone you about this? This will include District Admin and Pariwar Admin. Superadmin has all the rights, no
+  explicit permission is required. Q2 - the District Admin, the district's verifiers, the Pariwar Admin and the Super Admin"* ⇒ PM24's
+  panel SHOWS the number to the Pariwar Admin on a *"Yes"* and to the Super Admin on ANY answer (BigDev's confirmed reading), each showing
+  audited; the console shows it to the Super Admin on any answer too; the question's words change (Task 3c). The v3.1 and v3.0 text
+  below is KEPT as the record. ⭐⭐ **v3.1: SUPERSEDED by `2026-10-13-327` decision 1 (`-326` superseded in part) — the number is
   WITHHELD on PM24's panel (option (A)'s mechanism below), and the question is ROUTED to the Panel**
   (`_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-13-6-27b-callback-number-for-later-approvers.md` — written,
   ⛔ not yet sent). The note also asks (its Q2) whether the console's EXISTING showing — to the District Admin, the district's verifiers and
@@ -365,7 +378,8 @@ basis ([[feedback_record_unattested_no_backfill]]).
 ## Acceptance Criteria
 
 1. **AC1 — governance first.** ⛔ No 6.27b code before Task 0's author-commits are COMMITTED ALONE — ✅ `2026-10-13-326` (`7867314b`,
-   BD1–BD3) and ✅ `2026-10-13-327` (`f65fe069`; BD2 (B) superseded, BD4; with the BD2 routing note); 6.27a `done` ✅.
+   BD1–BD3) and ✅ `2026-10-13-327` (`f65fe069`; BD2 (B) superseded, BD4; with the BD2 routing note) and ✅ `2026-10-13-328` (`c1900b89`,
+   Trustee-ratified — the Panel's ruling on that note); 6.27a `done` ✅.
 2. **AC2 — the two kinds** (PM9): `peer_says_not_died:<answer_id>` for every LIVE `has_died` answer whose code is `not_died` (submitted or
    not; ⛔ no certificate needed); `peer_death_date_differs:<answer_id>` exactly when the live `death_date` answer has its three window
    indexes AND the claim has a current accepted review WITH an `accepted_date_index` AND that index is ⛔ none of the three — a ±1-day
@@ -403,9 +417,10 @@ basis ([[feedback_record_unattested_no_backfill]]).
    answers; a District Admin / verifier (⛔ no `cycle.freeze`) ⇒ 403 at the hook; every other state ⇒ 404 (incl. `verification_in_progress` /
    `verifier_review` with ⛔ no routing and ⛔ no live `escalated` decision, `state_trustee_approved` with ⛔ no live routing, a DENIED claim
    that still carries a live routing (BF18), every closed / refused / appeal state, an unknown claim, another Pariwar's claim); the read is
-   audited once (⛔ no answer, ⛔ no name, ⛔ no number in the line); ⭐ the call-back number is WITHHELD (`-327` decision 1): on a *"Yes"*
-   the answer still reads *"Yes"*, `callbackMobile` is `{ status: 'none' }`, ⛔ no mobile ciphertext is decrypted and ⛔ no showing event
-   exists; the panel renders on the four hosts as a disclosure that fetches only when opened, and a 404 renders *"Nothing to show at this
+   audited once (⛔ no answer, ⛔ no name, ⛔ no number in the line); ⭐ the call-back number per `-328`: shown to a Pariwar Admin ONLY on a *"Yes"*
+   (`callbackMobile: { status: 'shown' }`; *"No"* / unanswered ⇒ `{ status: 'none' }`, ⛔ no decrypt), and to the Super Admin on ANY answer
+   or none; each number shown emits ONE `admin_claim.peer_callback_mobile_shown` line (⛔ never the number in it), and ⛔ no such line when
+   the section fails; the panel renders on the four hosts as a disclosure that fetches only when opened, and a 404 renders *"Nothing to show at this
    step"* — ⛔ never the transient-fault words.
 7. **AC7 — the blind-first rule holds in the warnings** (PM25 (c)): an actor holding an un-completed assignment with ⛔ no completed FULL
    visit sees ⛔ neither peer kind on the console's decision strip — ⛔ nor in its counts, `viewerCanRecordLateReason` or
@@ -421,8 +436,8 @@ basis ([[feedback_record_unattested_no_backfill]]).
    just now"*) when the warnings read FAILED or did ⛔ not see that answer (it was saved between the two reads); every other question's
    answer is `false` (it can ⛔ never warn — CF3 (b)); ⛔ never `false` for an unknown — a test FORCES the read to fail.
 9. **AC9 — gates and records:** the new route file classified in `COVERAGE_SET` with `expectedMethods: ['get']` and registered in
-   `apps/api/src/modules/claims/index.ts`; the ONE new `AuthAuditEventType` member (`admin_claim.peer_answers_read` — ⛔ no showing event
-   under BD2's withhold); the import-discipline scan green with `questionnaires/keys.ts` as a safe leaf; `kindLine` words with ⛔ no
+   `apps/api/src/modules/claims/index.ts`; the TWO new `AuthAuditEventType` members (`admin_claim.peer_answers_read`,
+   `admin_claim.peer_callback_mobile_shown`); the import-discipline scan green with `questionnaires/keys.ts` as a safe leaf; `kindLine` words with ⛔ no
    date (`apps/admin/tests/verifier-console.test.tsx:422-436`); contracts mirror + lockstep + contracts vitest; microcopy scan;
    `pnpm ci:local` green (with `:5433`).
 10. **AC10 — a hidden actor cannot approve** (BD4, `-327` decision 2): for each approving act listed in BD4, an actor the section is hidden
@@ -431,6 +446,12 @@ basis ([[feedback_record_unattested_no_backfill]]).
     revise) / refusal / return / escalation / R9 deny vote / an R9 finalize that computes "denied" succeeds; the refusal lifts on a completed
     FULL visit and on the assignment leaving `scheduled` (`superseded`); a `certificate_check` completion does ⛔ not lift it while another of
     the actor's assignments stays `scheduled` (seed both — 6.27a's `peer-mesh-reply.spec.ts:464` shape).
+
+11. **AC11 — the question's new words and the Super Admin** (`-328`): the neighbours' questionnaire asks *"May the Admin phone you about
+    this?"* (en) / *"क्या एडमिन इस बारे में आपको फ़ोन कर सकते हैं?"* (hi — our translation, `-328` R2) on the member app and on the console's
+    question words; the question's `approvedBy` cites `2026-10-13-328` and the questionnaire validator accepts it; ⛔ no copy of the old words
+    remains outside the records; on the console, the District Admin and a verifier see the number on a *"Yes"* only (unchanged) and the Super
+    Admin on any answer or none, each showing audited with `basis`.
 
 ## Tasks / Subtasks
 
@@ -452,7 +473,8 @@ basis ([[feedback_record_unattested_no_backfill]]).
   - [x] 0.3 ✅ `2026-10-13-327`, committed ALONE with its routing note (`f65fe069`, 2026-10-13)
     (`_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-13-6-27b-callback-number-for-later-approvers.md`): BD2 superseded
     in part (WITHHELD + routed), BD4 (unconditional). ⚠ The note is WRITTEN, ⛔ not SENT ([[feedback_shown_to_panel_means_sent]]) — sending it
-    is BigDev's; 6.27b is ⛔ not blocked by it (it builds the withhold either way).
+    is BigDev's; 6.27b is ⛔ not blocked by it (it builds the withhold either way). ⭐ v3.2: SENT and RULED.
+  - [x] 0.4 ✅ `2026-10-13-328` (Trustee-ratified), committed ALONE with the note's ruling block (`c1900b89`, 2026-10-13).
 - [ ] **Task 1 — the kinds (AC2, AC3, AC4; PM9).** `packages/domain/src/claim/approval-warnings.ts`
   - [ ] 1.1 Append `'peer_says_not_died'`, `'peer_death_date_differs'` to `APPROVAL_WARNING_KINDS` (`:111-117`, at the END); export
     `PEER_WARNING_KINDS = ['peer_says_not_died', 'peer_death_date_differs'] as const`; the doc-block above the list gains the 6.27b line
@@ -566,20 +588,24 @@ basis ([[feedback_record_unattested_no_backfill]]).
     (the old uncovered `not_died` key returns); (d) red when the date arm of `derivePeerReplyWarningKeys` is deleted. ⚠ The queue
     disjunct's own `superseded_at IS NULL` is ⛔ not observable (any warning row superseded after approval implies a live successor saved
     after it) — RECORDED as an unobservable narrowing term, ⛔ no red-check. ⚠ A leg that survives its red-check is hollow.
-- [ ] **Task 3 — the approvers' read (AC6; PM24, BD1, BD2 as superseded by `-327`).**
+- [ ] **Task 3 — the approvers' read (AC6, AC11; PM24, BD1, the call-back number per `-328`).**
   - [ ] 3.1 Assembler (`peer-answers-assembler.ts`) — two changes, ⛔ no other behaviour change:
-    (a) ⭐ BD2 (`-327` decision 1): a NEW REQUIRED context option `callbackMobile: 'show' | 'withhold'`. The console passes `'show'` (its
-    behaviour is unchanged, its tests green unchanged); under `'withhold'` the call-back branch (`:171-191`) decrypts ⛔ no mobile
-    ciphertext, calls ⛔ no `onCallbackMobileShown`, and sets `callbackMobile: { status: 'none' }`. Required, ⛔ never defaulted — a caller
-    that forgets it fails to compile, ⛔ never shows by accident.
+    (a) ⭐ `-328` (supersedes v3.1's `'show' | 'withhold'`): a NEW REQUIRED context option `callbackMobile: 'on_yes' | 'always'`.
+    `'on_yes'` is today's branch exactly (`:171-191` — decrypt and show only when `consented`). `'always'` decrypts and shows the
+    pinged member's mobile whatever the `callback_consent` answer, and for a ping with ⛔ no reply at all; the erased-sentinel →
+    `{ status: 'none' }` and normalise-fail → `'unavailable'` arms are unchanged. Each caller passes `'always'` ONLY when the actor's
+    matching role for the route's OWN key is `super_admin` (`rbac.matchingGrantRole(grants, key, ctx) === 'super_admin'` — the
+    `claims.cycle-freeze.handlers.ts:494` pattern; the console: its `claim.verify` district key; PM24: the admitting arm's key), else
+    `'on_yes'`. ⭐ This CHANGES the console for the Super Admin only (`-328` decision 4) — every other console actor is unchanged. Each
+    `onCallbackMobileShown` call carries the basis (`'consented' | 'super_admin'`) for the audit context. Required, ⛔ never defaulted.
     (b) BF20: the wire mapping and the `catch → { status: 'unavailable' }` of the console's `assemblePeerMesh`
     (`claims.verifier-console.handlers.ts:832-857`) move into ONE exported function beside the assembler that TAKES THE ASSEMBLER CALL (a
     thunk — the throw happens inside `assemblePeerSection`'s selection / pings / answers reads, before any section exists), e.g.
     `assemblePeerMeshSection(() => assemblePeerSection(…), { claimCaseId, log })`; the mapping needs only the section,
     `claim.distinctPeerMeshResponderCount`, a log and the claim id — ⛔ never `VerifierConsoleContext`. `assemblePeerMesh` calls it, with
     ⛔ no console behaviour change, and so does PM24's handler. ⛔ Never a second copy of the transcript mapping.
-    Doc-block: the header's *"the console route emits the audit lines"* gains *"and 6.27b's approvers' read (PM24), which WITHHOLDS the
-    call-back number (`-327`)"*; BD3's recorded meaning of "changed N times" beside `changeCount` (`:165`).
+    Doc-block: the header's *"the console route emits the audit lines"* gains *"and 6.27b's approvers' read (PM24) — each with its OWN event;
+    the call-back number per `-328` (a *"Yes"*, or any answer for the Super Admin)"*; BD3's recorded meaning of "changed N times" beside `changeCount` (`:165`).
   - [ ] 3.2 Domain predicate for the step disjunction — ⛔ no new state list. The handler reads the claim's `current_state` and
     `deceasedMemberId` (`claim.getClaimCase`, `packages/domain/src/claim/read.ts:73`), then admits on ANY of FOUR arms (each with
     `rbac.hasPermission(request.scopeGrants, key, { dimension: 'pariwar', value: pariwarId, pariwarId })` — BF14):
@@ -599,8 +625,8 @@ basis ([[feedback_record_unattested_no_backfill]]).
     requirePermissionHook(deps, 'cycle.freeze', { dimension: 'pariwar' })]` (the cycle-freeze route's hook shape,
     `claims.cycle-freeze.routes.ts:44,63`); register it in `apps/api/src/modules/claims/index.ts` beside `registerVerifierConsoleRoutes` (`:47`).
     The handler reads in `request.scopeTx` (the console's shape; its client is `request.scopeTx.client` for `underSavepoint`) — ⛔ never
-    its own `openScopeTx` (`getPending` / `getPanel` do open one; PM24 follows the console, the surface it shares a section with). It calls `assemblePeerSection(enc, { db, pariwarId, claimCaseId, actorId, callbackMobile: 'withhold',
-    onCallbackMobileShown: () => {}, run: (label, read) => underSavepoint(client, `peer_answers_${label}`, read) }, () => {}, memberName)`
+    its own `openScopeTx` (`getPending` / `getPanel` do open one; PM24 follows the console, the surface it shares a section with). It calls `assemblePeerSection(enc, { db, pariwarId, claimCaseId, actorId, callbackMobile: <'always' for a super_admin match, else
+    'on_yes'>, onCallbackMobileShown: (pingId, basis) => shown.push({ pingId, basis }), run: (label, read) => underSavepoint(client, `peer_answers_${label}`, read) }, () => {}, memberName)`
     (signature `peer-answers-assembler.ts:70-75`: `(enc, ctx, bump, memberName)`; `run` REQUIRED — 6.27a U11: a bare read leaves an aborted
     tx), then Task 3.1 (b)'s mapping. `memberName`: `kyc.getMemberKycProfile(tx, pariwarId, deceasedMemberId)`
     (`packages/domain/src/kyc/profile-read.ts:24`) → `decryptKycField(nameCiphertext, pariwarId, deps.encryption)` (`../kyc/kyc-crypto.js`)
@@ -615,12 +641,16 @@ basis ([[feedback_record_unattested_no_backfill]]).
     OpenAPI: the route's `schema.response` IS the registration (swagger reads it at runtime; the console and cycle-freeze routes are ⛔ not
     in `openapi/v1.yaml`); a single-object GET — `apps/api/tests/integration/forced-pagination.spec.ts` exempts it by shape (`isCollectionResponse`, `:56-62`).
   - [ ] 3.4 Audit: ONE new `AuthAuditEventType` member `'admin_claim.peer_answers_read'` (`apps/api/src/audit/audit-sink.ts:15-643`, with
-    a doc comment), emitted through `emitAuthAudit(deps, request, type, fields)` (`apps/api/src/modules/auth/shared/audit.ts:14`) once per successful read (incl.
+    a doc comment) AND a second, `'admin_claim.peer_callback_mobile_shown'` (`-328`), emitted through `emitAuthAudit(deps, request, type, fields)` (`apps/api/src/modules/auth/shared/audit.ts:14`) once per successful read (incl.
     `hidden` / `empty`); resource locator `claim:<id>`, LOWER-CASED (an upper-case locator is discarded); context = the admitting `step`
     (Task 3.2), the section status and counts (pings, answers) — ⛔ never a name, an answer, a code, a date or a number. ⚠ `context` is only
     SHA-256 HASHED (`apps/api/src/modules/auth/shared/audit.ts:25-31` — `audit_log_entries` has ⛔ no context column) ⇒ assert context keys on the in-memory sink
     only, and the persisted row's locator through the production sink. ⛔ Never a direct `writeAuditEntry` (access-wrapper invariant (3),
-    F40). A 404 is ⛔ not audited as a read. ⭐ ⛔ No `admin_claim.peer_callback_mobile_shown` member (BD2 withhold, `-327` Consequence 1).
+    F40). A 404 is ⛔ not audited as a read. ⭐ The showing event: ONCE PER number shown, emitted only AFTER the response is built (6.27a
+    review S17 — ⛔ never a line for a number the response then failed to deliver; the console's
+    `admin_verifier_console.peer_callback_mobile_shown` precedent, `claims.verifier-console.handlers.ts:1212-1218`), locator
+    `claim:<id>:ping:<id>` LOWER-CASED (6.27a review R11 — the ping is durable only in the locator), context `{ basis: 'consented' |
+    'super_admin', step }` — ⛔ never the number. The console's existing event gains the same `basis` in its context.
   - [ ] 3.5 Admin: extract `PeerMeshView` (`SignalsPanel.tsx:208`) AND the private `NonPresent` (defined `:126-133`, used `:382`; the console's `empty` /
     `unavailable` words, `i18n-en.ts:39-40`) to `apps/admin/src/modules/claim-verification/PeerMeshView.tsx`, exported from
     `claim-verification/index.ts`; `SignalsPanel` imports them (⛔ no behaviour change — its tests stay green unchanged). NEW
@@ -644,13 +674,30 @@ basis ([[feedback_record_unattested_no_backfill]]).
     allowed (incl. the escalated `verifier_review` claim through arm 2, and a live-routed `verifier_review` claim through arm 3); the 403;
     every 404 state incl. a DENIED claim with a live routing (BF18) and `state_trustee_approved` with ⛔ no live routing; the audit line's
     context keys (in-memory sink) and the persisted locator (production sink), ⛔ no content (`JSON.stringify` of the line contains ⛔
-    neither the neighbour's name, the date, nor the mobile); ⭐ BD2 withhold — a neighbour who answered *"yes"* ⇒ the answer reads *"Yes"*,
-    `callbackMobile: { status: 'none' }` for a Pariwar Admin, ⛔ no mobile decrypt (an encryption spy) and ⛔ no showing line — while the
-    CONSOLE, on the same claim, still shows it to the District Admin (`'show'` unchanged); the hidden actor ⇒ `peerMesh` ABSENT and audited;
+    neither the neighbour's name, the date, nor the mobile); ⭐ `-328` — a neighbour who answered *"yes"* ⇒ `callbackMobile: { status: 'shown' }` for a
+    Pariwar Admin AND ONE `admin_claim.peer_callback_mobile_shown` line (persisted locator `claim:<id>:ping:<id>`, basis `consented`, ⛔ never
+    the number); *"no"* / unanswered / ⛔ no reply ⇒ `{ status: 'none' }`, ⛔ no decrypt (an encryption spy) and ⛔ no line for a Pariwar
+    Admin — but `{ status: 'shown' }` and a `super_admin`-basis line for the Super Admin; a failed section ⇒ ⛔ no line; the CONSOLE: the
+    District Admin and a verifier unchanged (*"Yes"* only), the Super Admin shown on *"No"* (basis `super_admin`); the hidden actor ⇒ `peerMesh` ABSENT and audited;
     a broken answer ciphertext ⇒ that answer `unavailable`, the rest shown; the warnings read forced to fail ⇒ flags `null`. Admin
     (`apps/admin/tests/neighbours-answers-panel.test.tsx`, NEW): ⛔ no request before open; ONE request per open; ⛔ no request on window
     focus; the query removed on close; the four hosts mount it (one leg each) and `PendingCaseCard`'s voted bucket does ⛔ not; the hidden
     case renders nothing; the 404 line; the `NonPresent` lines. Contracts: the response schema (strict; absent `peerMesh` valid).
+- [ ] **Task 3c — the question's new words (AC11; `-328` decisions 2 and 4).**
+  - [ ] 3c.1 Copy: `packages/i18n/locales/en/claim.json` `peer_request_questions.callback_consent.question` → *"May the Admin phone you about
+    this?"*; `hi/claim.json` → *"क्या एडमिन इस बारे में आपको फ़ोन कर सकते हैं?"* (the existing line with *"ज़िला"* removed — `-328` R2, our
+    translation; flag it in Completion Notes for BigDev). The words come from the question's `copyKey` (`peer-mesh.ts:161`), so ⛔ no new
+    questionnaire version: the app is ⛔ not live and ⛔ no answer exists under the old words (`-328` R1) — ⚠ RECORDED: any test-database
+    answer given earlier now renders with the new words on the console.
+  - [ ] 3c.2 Provenance: add `'2026-10-13-328'` to `PANEL_RATIFIED_QUESTIONNAIRE_DECISIONS` (`packages/domain/src/questionnaires/keys.ts:60` —
+    *"adding one here is a reviewed code edit that cites it"*; else the validator refuses it, `validator.ts:55-56`), a `R328` const beside
+    `R304` (`peer-mesh.ts:30`), the `callback_consent` question's `approvedBy: [R304, R328]` (`:167`), and one line in the file header's v2
+    note (`:8`) naming the word change. `questionnaires.test.ts` (`:67`, `:152-154`) stays green — re-run it.
+  - [ ] 3c.3 Sweep: `git grep -n "District Admin phone you\|ज़िला एडमिन इस बारे में आपको"` — today it hits only the two locale files and
+    RECORDS (`.decision-log.md`, story files, routing notes), which are ⛔ never edited. A hit in code, tests or UX docs is updated.
+  - [ ] 3c.4 Tests: the member questionnaire GET returns the new words (en + hi — `peer-request-member.spec.ts`'s shape); the console's
+    question words (`enWords(q.copyKey, …)`, `peer-answers-assembler.ts:161`) read the new English; the Super Admin console leg (AC11);
+    microcopy scan clean.
 - [ ] **Task 3b — the per-answer flags (AC8; PM13's flags).**
   - [ ] 3b.1 Contract: `PeerMeshAnswerView` (`verifier-console.ts:195-211`) gains REQUIRED `warningFlag: z.boolean().nullable()` with a
     doc-comment (*"`true` — this answer carries a current warning; `false` — checked, ⛔ none (and always for a question that can ⛔ never
@@ -773,9 +820,10 @@ basis ([[feedback_record_unattested_no_backfill]]).
    `insertClaimWarningApprovalRecord` or R9's coverage — and ⛔ never on `reviseBlocked`. A filtered key still has to be covered by
    SOMEONE's reason, and BD4 guarantees that someone is ⛔ never the actor it was hidden from.
 6. **The panel must ⛔ not fetch per card** (BF7) — 1,500 cards ⇒ 1,500 decrypting, audited reads.
-7. **The call-back number is WITHHELD on PM24's panel** (`-327` decision 1; the question is with the Panel) — `callbackMobile: 'withhold'`
-   is a REQUIRED option, ⛔ never defaulted; ⛔ no decrypt, ⛔ no showing event. The console keeps `'show'`. ⛔ Never turn it on from
-   `-326`'s superseded text.
+7. **The call-back number follows `-328` EXACTLY** — on a *"Yes"* for the District Admin, the district's verifiers and the Pariwar Admin;
+   on ANY answer only for a `super_admin` MATCH (⛔ never "holds every key" by guessing; `matchingGrantRole`). `callbackMobile` is
+   REQUIRED, ⛔ never defaulted. ⛔ Never widen `'always'` to another role; every showing audited with ITS OWN event. ⚠ v3.1's withhold
+   (`-327` decision 1) is superseded — ⛔ never build it.
 8. **Ordering tests in SEPARATE COMMITTED transactions** ([[project_db_clock_ordering_tests_tie]]); `saved_at` is `clock_timestamp()`.
 9. **Contracts tests are outside tsc** — a new REQUIRED field (`warningFlag`) breaks fixtures silently; run vitest
    ([[project_contracts_tests_outside_tsc]]).
@@ -823,11 +871,13 @@ in `packages/domain/tests` and `apps/*/tests` before and after; today only the 6
 
 ### Project structure notes
 
+- UPDATE (`-328`): `packages/i18n/locales/{en,hi}/claim.json` (one key each), `packages/domain/src/questionnaires/keys.ts`
+  (the ratified-decision list), `peer-mesh.ts` (`approvedBy`).
 - NEW: `apps/api/src/modules/claims/claims.peer-answers.routes.ts`, `claims.peer-answers.handlers.ts`;
   `packages/contracts/src/claims/peer-answers.ts`; `apps/admin/src/modules/claim-verification/PeerMeshView.tsx`,
   `NeighboursAnswersPanel.tsx`; specs named in the Tasks; `apps/api/tests/integration/_peer-reply-fixture.ts`.
 - UPDATE: `approval-warnings.ts`, `correction-queue-read.ts`, `peer-mesh-reply.ts` (the hide fragment + BD4's guard), `peer-answers-assembler.ts`
-  (the `callbackMobile` option + the extracted mapping), `claims.verifier-console.handlers.ts`, `claims.nominee-name-check.handlers.ts`, the
+  (the `callbackMobile: 'on_yes' | 'always'` option + the extracted mapping), `claims.verifier-console.handlers.ts`, `claims.nominee-name-check.handlers.ts`, the
   four host handlers (`claims.cycle-freeze` / `claims.correction-escalation` / `claims.correction-closure` / `claims.r9-voting`),
   `later-approval-warnings.ts` (the BD4 409), `apps/api/src/modules/claims/index.ts` (route registration), `audit-sink.ts`,
   `verification-decision.ts`, `verifier-console.ts`, the contracts index, the nine approving writers (BD4's guard call only — Task 4b.2),
@@ -864,7 +914,7 @@ fragments, TanStack Query in the admin (an `enabled` query for the disclosure), 
 
 6.27a's file (PM9, PM10, PM13, PM24, PM25; F13–F22, F33, F40; Invariants 1, 2, 3, 7, 8, 9; Traps); `.decision-log.md` entries
 `2026-10-10-303` (Q2 A), `-304` (Q6 A), `-305` (§1 (c)), `-308`, `-310` (CF2), `-311`, `-324`, `-325`, **`-326`** (BD1–BD3), **`-327`** (BD2
-superseded in part, BD4); the routing note `trustee-panel-routing-note-2026-10-13-6-27b-callback-number-for-later-approvers.md`;
+superseded in part, BD4), **`-328`** (Trustee-ratified — the number and the question's words); the routing note `trustee-panel-routing-note-2026-10-13-6-27b-callback-number-for-later-approvers.md`;
 `deferred-work.md` items *"`-308`'s 6.27a share … HANDED OFF to row 6-36"*, *"'Changed N times' counts dependant removals and same-value
 re-entries"* and *"An ERASED (sentinel) neighbour answer reads 'could not be shown just now' on the console"*; `sprint-status.yaml` row
 `6-36-peer-mesh-school-wise-selection` comment.
@@ -887,12 +937,17 @@ re-entries"* and *"An ERASED (sentinel) neighbour answer reads 'could not be sho
   `-327` claimed committed before it was — fixed before the governance commit). BF17–BF22 found; BigDev answered BD2 (withhold + route) and BD4 (unconditional) in session, committed
   ALONE as `2026-10-13-327` (`f65fe069`) with the BD2 routing note (written, ⛔ not sent). ⛔ No code.
 
+- 2026-10-13 — v3.2: the Panel RULED the routed question — `2026-10-13-328` (`c1900b89`, Trustee-ratified, DR + KB); BigDev confirmed the
+  Super Admin reading (*"Shown on any answer"*) and the home (*"Fold into 6.27b"*). AC11 + Task 3c added; the withhold reversed to `-328`'s
+  showing. ⚠ The Hindi words are our translation (`-328` R2). ⛔ No code.
+
 ### File List
 
 ## Change Log
 
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-13 | 3.2 | ⭐ The Panel RULED (`2026-10-13-328`, `c1900b89`, Trustee-ratified): the question becomes *"May the Admin phone you about this?"*; the number is shown on a *"Yes"* to the District Admin, the district's verifiers and the Pariwar Admin, and to the Super Admin on any answer (BigDev's reading confirmed); built here (BigDev: fold into 6.27b). `-327` decision 1's withhold superseded: `callbackMobile: 'on_yes' \| 'always'` (`'always'` only on a `super_admin` match — the console changes for the Super Admin only); `admin_claim.peer_callback_mobile_shown` reinstated (locator `claim:<id>:ping:<id>`, context `basis`); NEW AC11 + Task 3c (the en / hi words, `PANEL_RATIFIED_QUESTIONNAIRE_DECISIONS` + `approvedBy`, the sweep). BD4 untouched. |
 | 2026-10-13 | 3.1 | ⭐ VALIDATED (four fresh-context verifiers, ⛔ no code moved since `560369a7`). Governance: BD2 (B) SUPERSEDED by `-327` (`f65fe069`; `-326` in part) — the call-back number WITHHELD on PM24's panel (a required `callbackMobile: 'withhold'` assembler option; ⛔ no showing event) and the consent question ROUTED to the Panel (note written, ⛔ not sent) — v3.0's §0 line for BD2 marked wrong, ⛔ not deleted; NEW BD4 (unconditional: a hidden actor cannot approve at any of nine approving writers; ONE neutral 409 checked before the warnings read) + AC10 + Task 4b + Policy meaning P3. Found: BF17 (PM24's fourth arm — the cycle-freeze escalation resolution), BF18 (a routing outlives a denial ⇒ the R9 arm needs `R9_OUTCOME_FROM_STATES`), BF19 (display filter vs the writers' all-keys snapshot), BF20 (the assembler returns the internal section ⇒ extract the console's wire mapping), BF21 (any actor can be an inspector ⇒ PM25 (c) quoted verbatim; the four hosts' summary filtered), BF22 (the erased-sentinel deferred item's trigger fires — re-deferred). Fixed: Task 1.5's source scan was red on Task 4.2's own call ⇒ an allowlist; AC4 drops the unreachable escalation-resolution late leg and adds the R9 voters' revise; AC5 (d) rebuilt without the default inspection, (c′)/(e′) added, red-checks (c)/(e) that could never go red replaced and one term recorded unobservable; `reviseBlocked` ⛔ never from filtered keys; `ownVisitPending` on the console section; the disclosure on the `NomineeNameCheckDisclosure` model (no focus refetch, forget on close, `NonPresent` words, a 404 line, R9 mount outside its three gates, ⛔ not on the voted bucket); the shipped constants / `isCorrectionClaimHeld` / real `hasPermission` + `requirePermissionHook(deps, …)` signatures; `memberName`'s read named; `request.scopeTx`; route registration; the audit locator lower-cased and context hashed; Task 0.2's THREE appended lines verbatim from `-326`; `-310` CF2 and `-279` A4 cited; the fence (JSDoc only, `valueCiphertext`, a teeth line, the `toLowerCase() ===` pattern); `deathDateWindow` for the index fixture; `savePeerAnswer`'s prerequisites and the concurrency-spec precedent; the fixture split; the `warningFlag` fixtures named; cite drift (`:364`, `:340-384`, `:142-160`, `:165`, `:85-88`, `PENDING_SCAN_CAP`'s home, forced-pagination's path, the console's `:326`). |
 | 2026-10-13 | 3.0 | ⭐ RE-DERIVED for dev against `main` `560369a7` (6.27a `done`, merged): every code cite re-read; FOUND BF1–BF16 (the vocabulary leaf, ⛔ no ciphertext fence yet, the claim index, erasure's effect on a date key, the view carries ⛔ no `answer_id`, the four hosts and the 1,500-card page, `PeerMeshView` private, the strip's five leaking fields, the queue's consumer and refinement, the stale comments, a re-review keeps a key's subject, the keys re-verified, ONE escalation definition, the call-back consent names the District Admin); BD1–BD3 ANSWERED by BigDev in session — BD1 A (`-308`'s source line handed off to row 6-36 through the shared view), BD2 B (the call-back number SHOWN on PM24's panel on a *"Yes"*, audited — on BigDev's signup-consent reading, recorded with its gap), BD3 A ("changed N times" kept and recorded) — committed as `2026-10-13-326` (`7867314b`); Task 0 (governance first); ACs sharpened (AC4 names `-324` A; AC5 legs (a)–(e); AC6's 403 vs 404; AC7's five fields; AC8's `null` for an answer newer than the read); Tasks 1–5 expanded with file:line, red-checks and the index-fixture trap; Policy meaning; Dev Notes. ⛔ No PM, ruling or AC intent moved. Status `backlog` → `ready-for-dev`. |
 | 2026-10-10 | 2.5 | Round 6: Task 2's queue disjunct needs ⛔ no window term (its scan states + R9 arm already equal the window) — the v2.4 wording withdrawn. |

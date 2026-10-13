@@ -1,3 +1,11 @@
+# last_updated: 2026-10-13e (STORY 6.27b — THE PANEL RULED the 2026-10-13 call-back-number note: `2026-10-13-328` (`c1900b89`,
+# Trustee-ratified, DR + KB). The neighbours' question becomes "May the Admin phone you about this?" (the District Admin and the Pariwar
+# Admin — amends `-304` Q6 A); the number is seen on a "Yes" by the District Admin, the district's verifiers and the Pariwar Admin, and by
+# the Super Admin on ANY answer (BigDev's reading of "no explicit permission is required", confirmed in session); every showing audited.
+# ⚠ 2026-10-13d's "the number is WITHHELD on PM24's panel" is SUPERSEDED (`-327` decision 1). Built in 6.27b (BigDev: fold in — ⛔ no new
+# row): story v3.2 adds AC11 + Task 3c (en / hi words — the Hindi is OUR translation; `PANEL_RATIFIED_QUESTIONNAIRE_DECISIONS` +
+# `approvedBy`) and reverses the withhold. BD4 untouched. Row `6-27b-peer-mesh-warnings-wait-and-approvers-view` STAYS `ready-for-dev`.
+# ⛔ No other row moves.)
 # last_updated: 2026-10-13d (STORY 6.27b — VALIDATED (`bmad-create-story validate 6.27b`, v3.0 → v3.1; four read-only fresh-context
 # verifiers + two re-validators; ⛔ no code moved since `560369a7`). Row `6-27b-peer-mesh-warnings-wait-and-approvers-view` STAYS
 # `ready-for-dev`. ⚠ 2026-10-13c's "BD2 B (the call-back number SHOWN on PM24's panel)" is SUPERSEDED by `2026-10-13-327` decision 1

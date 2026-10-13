@@ -240,5 +240,10 @@
   "peer_request.not_saved": "Not saved — please choose again",
   "peer_request.unsaved": "Please wait until your answers are saved before leaving.",
   "peer_request.submit_error": "Your answers could not be sent just now. Please try again.",
-  "peer_request.unavailable": "Could not be shown just now."
+  "peer_request.unavailable": "Could not be shown just now.",
+  "peer_request.invalid_named": "Your answer to “{question}” could not be saved. Please choose again, or keep your earlier answer.",
+  "peer_request.keep_saved": "Keep my earlier answer",
+  "peer_request.leave_anyway": "Leave without saving",
+  "peer_request.date_unsaved": "You typed a date but did not save it. Press “Save the date”, or clear it.",
+  "peer_request.date_clear": "Clear the date"
 }

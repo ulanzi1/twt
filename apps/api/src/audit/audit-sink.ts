@@ -312,6 +312,11 @@ export type AuthAuditEventType =
   | 'claim_contact.agreement_recorded'
   | 'admin_claim.contact_presence_read'
   | 'admin_claim.contact_details_read'
+  // ── Story 6.27a second-pass review S12 — the HELPLINE's read of one neighbour's open peer requests (the deceased's name
+  // and that neighbour's answers, Tier-1 among them, DECRYPTED for the operator). One line per read; `resourceLocator`
+  // `member:<lower-case uuid>` (the neighbour); context = member_id + how many requests / answers — ⛔ never a name, an
+  // answer, a code or a date.
+  | 'helpline_claim.peer_requests_read'
   // ── The correction-return CHASE (Story 6.19b, AC9b) ────────────────────────────────────────────────────
   // Every line carries `resourceLocator: 'claim:<lower-case uuid>'` (anything else is silently replaced). Context is
   // NON-PII: ids, dates, the person's ROLE KEY (`nominee:<version root>` / `claimant`), sizes and content types —

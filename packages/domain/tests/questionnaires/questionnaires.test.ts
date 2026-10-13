@@ -15,7 +15,9 @@ import {
   COMPARABLE_QUESTION_KEYS,
   PEER_MESH_QUESTIONNAIRE_V1,
   PEER_MESH_QUESTIONNAIRE_V2,
+  PEER_MESH_HEALTH_QUESTION_KEYS,
   PEER_MESH_RULED_QUESTION_KEYS,
+  PEER_MESH_SENSITIVE_QUESTION_KEYS,
   PEER_MESH_WARNING_QUESTION_KEYS,
   QUESTIONNAIRE_KINDS,
   QUESTIONNAIRE_REGISTRY,
@@ -124,6 +126,21 @@ describe('the validator refuses (PM23 (a); CF3 (a)–(d))', () => {
     const gi: QuestionnaireDefinition = { ...PEER_MESH_QUESTIONNAIRE_V1, kind: 'ground_inspection', versionId: 'ground_inspection.v1', status: 'historical' };
     expect(problems(gi)).toContain(`'warning' is refused`);
   });
+  it('a v2+ version that RECLASSIFIES a ruled question: a health question made non-health, a warning dropped (review S2)', () => {
+    for (const key of PEER_MESH_HEALTH_QUESTION_KEYS) {
+      const d = withQuestion(PEER_MESH_QUESTIONNAIRE_V2, key, (q) => ({ ...q, health: false, sensitive: false, counselBasis: null }));
+      expect(problems(d), key).toContain(`the ruled health question '${key}' is health: true`);
+    }
+    for (const key of PEER_MESH_WARNING_QUESTION_KEYS) {
+      expect(problems(withQuestion(PEER_MESH_QUESTIONNAIRE_V2, key, (q) => ({ ...q, warning: false }))), key).toContain(`the ruled question '${key}' carries its warning`);
+    }
+    // v1 stays EXEMPT (historical); the sensitive set is the date + the health questions
+    expect(problems(PEER_MESH_QUESTIONNAIRE_V1)).toBe('');
+    expect([...PEER_MESH_SENSITIVE_QUESTION_KEYS]).toEqual(['death_date', 'death_cause', 'death_illness']);
+    for (const key of PEER_MESH_SENSITIVE_QUESTION_KEYS) {
+      expect(questionsOf(PEER_MESH_QUESTIONNAIRE_V2).find((q) => q.key === key)?.sensitive, key).toBe(true);
+    }
+  });
   it('a question (or a version) without a valid approvedBy — ⛔ no v3 before 6-33 except a Panel decision id', () => {
     expect(problems(withExtra(PEER_MESH_QUESTIONNAIRE_V2, { ...extra, approvedBy: [] }))).toContain(`question 'extra': approvedBy is empty`);
     expect(problems(withExtra(PEER_MESH_QUESTIONNAIRE_V2, { ...extra, approvedBy: ['2026-10-12-999'] }))).toContain('not a Trustee-ratified questionnaire decision');
@@ -200,6 +217,17 @@ describe('the answer check (PM7 (b))', () => {
     expect(checkAnswer(served, 'death_date', { date: '2026-10-13' }, died, today)).toEqual({ ok: false, reason: 'date_in_future' });
     expect(checkAnswer(served, 'death_date', { date: '1899-12-31' }, died, today)).toEqual({ ok: false, reason: 'date_too_early' });
     expect(checkAnswer(served, 'death_date', { date: today }, died, today)).toMatchObject({ ok: true, codes: null, storage: { form: 'encrypted', plaintext: today, dateWindow: ['2026-10-11', today, '2026-10-13'] } });
+  });
+  it('a date question on any OTHER key is encrypted with ⛔ no window — the indexes are death_date\'s alone (review S2)', () => {
+    const otherDate: QuestionDefinition = {
+      ...extra,
+      key: 'funeral_date',
+      kind: 'date',
+      options: [{ code: 'unknown', copyKey: 'peer_request_questions.extra.unknown' }],
+      sensitive: true,
+    };
+    const d = servedDefinition(withExtra(PEER_MESH_QUESTIONNAIRE_V2, otherDate));
+    expect(checkAnswer(d, 'funeral_date', { date: '2026-10-01' }, died, today)).toMatchObject({ ok: true, storage: { form: 'encrypted', plaintext: '2026-10-01', dateWindow: null } });
   });
   it('death_date: "I don\'t know the date" is a plaintext code — ⛔ no ciphertext, ⛔ no window', () => {
     expect(checkAnswer(served, 'death_date', { codes: ['unknown'] }, died, today)).toMatchObject({ ok: true, storage: { form: 'codes', codes: ['unknown'] } });

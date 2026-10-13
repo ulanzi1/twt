@@ -1,6 +1,7 @@
 // Story 6.27a (PM8, Task 1) — the ANSWER WINDOW, once: the pure decision for EVERY claim state × routed / not routed, the
 // same identity behind 6.26a's old name, and the SQL twin's shape. (The SQL twin's parity against the per-claim read on a
-// live database — every state × routed / not routed — is in tests/integration/claim-peer-mesh-replies.spec.ts.)
+// live database — every state × routed / not routed — is in tests/integration/rls/claim-peer-mesh-replies-policy-regression.spec.ts,
+// "the plpgsql answer window ⇔ claim/answer-window.ts (parity)", which runs BOTH the plpgsql function and `answerWindowSql`.)
 
 import { describe, expect, it } from 'vitest';
 import { sql } from 'drizzle-orm';

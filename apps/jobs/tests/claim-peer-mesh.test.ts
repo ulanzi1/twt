@@ -604,16 +604,21 @@ describe.skipIf(!hasDatabase)('claim peer-mesh — live DB (:5433)', () => {
       const selection = await withPariwarScope(pool, seed.pariwarId, (db) =>
         claim.getPeerMeshSelectionByClaim(db, ids.pariwarId(seed.pariwarId), ids.claimId(seed.claimCaseId)),
       );
-      const member = selection!.selectedMemberIds[0]!;
-      await withPariwarScope(pool, seed.pariwarId, (_db, client) =>
-        claim.recordPeerMeshResponse(client, {
-          claimCaseId: ids.claimId(seed.claimCaseId),
-          pariwarId: ids.pariwarId(seed.pariwarId),
-          responderMemberId: member,
-          response: 'confirmed',
-        }),
-      );
-      expect(await eventCount(seed.claimCaseId, 'claim.peer_mesh_responded')).toBe(1);
+      // THREE late answers — enough that a RECOUNT would flip the label (≥ 3), so the re-fire below has teeth
+      // (second-pass review S8 (a): the old leg never re-ran the worker, so the assertion could not fail).
+      for (const member of selection!.selectedMemberIds.slice(0, 3)) {
+        await withPariwarScope(pool, seed.pariwarId, (_db, client) =>
+          claim.recordPeerMeshResponse(client, {
+            claimCaseId: ids.claimId(seed.claimCaseId),
+            pariwarId: ids.pariwarId(seed.pariwarId),
+            responderMemberId: member,
+            response: 'confirmed',
+          }),
+        );
+      }
+      expect(await eventCount(seed.claimCaseId, 'claim.peer_mesh_responded')).toBe(3);
+      // A redelivered / re-fired WINDOW job after the late answers: the label stays (MONOTONIC — ⛔ recounted).
+      await runClaimPeerMeshWindow(boss, windowDeps(), { ...windowEnv, requestId: randomUUID() });
       const after = await withPariwarScope(pool, seed.pariwarId, (db) =>
         claim.getPeerMeshSelectionByClaim(db, ids.pariwarId(seed.pariwarId), ids.claimId(seed.claimCaseId)),
       );

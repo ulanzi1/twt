@@ -111,9 +111,15 @@ describe.skipIf(!hasDatabase)('Story 6.27a — the neighbours\' member routes (:
     call('PUT', `${base(p)}/${ping}/answers/${key}`, tok, { value }, { 'idempotency-key': idem });
   const submit = (p: string, tok: string, ping: string, idem = randomUUID()) => call('POST', `${base(p)}/${ping}/submit`, tok, undefined, { 'idempotency-key': idem });
 
-  it('⛔ session ⇒ 401', async () => {
+  it('⛔ session ⇒ 401 — on EVERY route (review S26: the detail, the PUT and the submit, ⛔ only the list)', async () => {
     const p = randomUUID();
+    const ping = randomUUID();
     expect((await call('GET', base(p), null)).status).toBe(401);
+    expect((await call('GET', `${base(p)}/${ping}`, null)).status).toBe(401);
+    expect((await call('PUT', `${base(p)}/${ping}/answers/has_died`, null, { value: { codes: ['died'] } }, { 'idempotency-key': randomUUID() })).status).toBe(401);
+    expect((await call('POST', `${base(p)}/${ping}/submit`, null, undefined, { 'idempotency-key': randomUUID() })).status).toBe(401);
+    // a token that is ⛔ a member ACCESS token (garbage) is refused the same way
+    expect((await call('PUT', `${base(p)}/${ping}/answers/has_died`, 'not-a-token', { value: { codes: ['died'] } }, { 'idempotency-key': randomUUID() })).status).toBe(401);
   });
 
   it('the list: ONLY texted, open requests; the limit is bounded', async () => {
@@ -192,9 +198,19 @@ describe.skipIf(!hasDatabase)('Story 6.27a — the neighbours\' member routes (:
     const key = randomUUID();
     const first = await put(p, tok, r.pingId, 'has_died', { codes: ['died'] }, key);
     expect(first.status).toBe(200);
+    const auditCount = async () =>
+      (await t.pool.query(`SELECT count(*)::int AS n FROM audit_log_entries WHERE resource_locator = $1 AND action = 'claim.peer_answer_saved'`, [`claim:${String(r.cid).toLowerCase()}`])).rows[0]!.n as number;
+    const rowCount = async () => (await t.pool.query(`SELECT count(*)::int AS n FROM claim_peer_mesh_reply_answers WHERE claim_case_id = $1`, [r.cid])).rows[0]!.n as number;
+    const [auditsBefore, rowsBefore] = [await auditCount(), await rowCount()];
     const replay = await put(p, tok, r.pingId, 'has_died', { codes: ['died'] }, key);
     expect(replay.status).toBe(200);
     expect(replay.body['answers']).toEqual(first.body['answers']);
+    // ⭐ Review S27 (a) — a REPLAY, ⛔ a silent second write: ⛔ a new row, ⛔ a new audit line.
+    expect([await auditCount(), await rowCount()]).toEqual([auditsBefore, rowsBefore]);
+    // ⭐ Review S20 — a re-save of the SAME value under a NEW key is a no-op: ⛔ a row, ⛔ a "saved" audit line.
+    const same = await put(p, tok, r.pingId, 'has_died', { codes: ['died'] });
+    expect(same.status).toBe(200);
+    expect([await auditCount(), await rowCount()]).toEqual([auditsBefore, rowsBefore]);
     const date = await put(p, tok, r.pingId, 'death_date', { date: '2026-10-01' });
     expect(date.status).toBe(200);
     const { rows } = await t.pool.query(`SELECT value_codes, value_ciphertext, death_date_window_indexes FROM claim_peer_mesh_reply_answers WHERE claim_case_id = $1 AND question_key = 'death_date'`, [r.cid]);
@@ -242,6 +258,14 @@ describe.skipIf(!hasDatabase)('Story 6.27a — the neighbours\' member routes (:
     const key = randomUUID();
     expect((await submit(p, tok, r.pingId, key)).status).toBe(200);
     expect((await submit(p, tok, r.pingId, key)).status).toBe(200); // the replay
+    // ⭐ Review S19 — a SAVE that committed, replayed after the Submit, still answers 200 with the answers (⛔ a 409).
+    const saveKey = randomUUID();
+    const late = await seedRequest(p, m);
+    expect((await put(p, tok, late.pingId, 'has_died', { codes: ['died'] }, saveKey)).status).toBe(200);
+    expect((await submit(p, tok, late.pingId)).status).toBe(200);
+    const replayed = await put(p, tok, late.pingId, 'has_died', { codes: ['died'] }, saveKey);
+    expect(replayed.status).toBe(200);
+    expect(replayed.body['answers']).toEqual([expect.objectContaining({ questionKey: 'has_died', value: { codes: ['died'] } })]);
     for (const res of [await submit(p, tok, r.pingId), await put(p, tok, r.pingId, 'how_known', { codes: ['other'] }), await call('GET', `${base(p)}/${r.pingId}`, tok)]) {
       expect(res.status).toBe(409);
       expect((res.body['error'] as Json)['code']).toBe('peer_request.submitted');

@@ -87,7 +87,7 @@ describe('<HelplineClaimPage> — selection-reset safety gate (Review Finding)',
       await searchAndGetBothResults(user);
       await user.click(screen.getByTestId(`member-row-${MEMBER_A.memberId}`));
       await user.click(screen.getByTestId('readback-confirm-identity'));
-      await user.click(await screen.findByRole('button', { name: 'not_died' }));
+      await user.click(await screen.findByRole('radio', { name: 'not_died' }));
       await user.click(screen.getByTestId(`member-row-${MEMBER_B.memberId}`));
       expect(screen.getByText(/Please finish saving this caller/)).toHaveAttribute('role', 'alert');
       expect(screen.getByTestId('readback-confirm-identity')).toBeChecked();
@@ -98,7 +98,10 @@ describe('<HelplineClaimPage> — selection-reset safety gate (Review Finding)',
       await user.click(screen.getByTestId(`member-row-${MEMBER_B.memberId}`));
       expect(screen.getByTestId('readback-confirm-identity')).not.toBeChecked();
     } finally { vi.mocked(api.getHelplinePeerRequests).mockResolvedValue({ items: [] }); }
-  });
+    // ~1 s alone; ~5.6 s under `ci:local`'s `test (unit)` concurrency (the admin userEvent-driven RTL class
+    // `scripts/ci-local.sh` already names) — the file's heaviest flow (search, select, confirm, a queued answer, two caller
+    // changes). An explicit budget for THIS test only, ⛔ a global testTimeout (6.27a second-pass review, CI run 2026-10-13).
+  }, 15_000);
   it('does NOT carry an identity confirmation over when the operator switches to a different member', async () => {
     const user = userEvent.setup();
     renderWithClient(<HelplineClaimPage pariwarId="99999999-9999-9999-9999-999999999999" />);

@@ -11,17 +11,21 @@
 //     cleared or moved refused; the 0143-form erasure arm ADMITS a ciphertext-only rewrite or an indexes → NULL write of ANY
 //     row — an open one included (RECORDED — 0149's limit, ⛔ never claimed refused) and refuses any other column change;
 //     the exactly-one-value, the indexes and the saved_via CHECKs; the partial UNIQUE;
-//   · the plpgsql answer window is parity-tested against `isClaimInAnswerWindow` / `isStateInAnswerWindow` over EVERY
-//     claim state × routed / not routed;
+//   · the plpgsql answer window AND the set-based `answerWindowSql` are parity-tested against `isClaimInAnswerWindow` /
+//     `isStateInAnswerWindow` over EVERY claim state × routed / not routed (second-pass review S3);
+//   · 0158: the three ruled Tier-1 questions are stored ENCRYPTED (lockstep with `PEER_MESH_SENSITIVE_QUESTION_KEYS`) —
+//     review S4; the new tables' indexes asserted by definition — review S6;
 //   · RLS: per-command policies, FORCE, a cross-tenant reader sees nothing, the fail-closed probe, ⛔ no DELETE.
 
 import { randomUUID } from 'node:crypto';
 
+import { sql } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
-import { isClaimInAnswerWindow, isStateInAnswerWindow } from '../../../src/claim/answer-window.js';
+import { answerWindowSql, isClaimInAnswerWindow, isStateInAnswerWindow } from '../../../src/claim/answer-window.js';
 import { bindScopedDb } from '../../../src/db.js';
 import { claimId as toClaimId, pariwarId as toPariwarId } from '../../../src/ids/index.js';
+import { PEER_MESH_SENSITIVE_QUESTION_KEYS } from '../../../src/questionnaires/keys.js';
 import { CLAIM_LIFECYCLE_STATES } from '../../../src/schema/claims.js';
 import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
 import { enterAppRoleNoScope, enterAppScope, PARIWAR_A, PARIWAR_B, seedClaim } from '../_helpers.js';
@@ -329,6 +333,26 @@ describe.skipIf(!hasDatabase)('0156 — the ping delivery record, the replies, t
       );
       expect(via.code).toBe('23514');
     });
+
+    it('0158 — the ruled Tier-1 questions are stored ENCRYPTED; death_date keeps ONLY "I don\'t know" as a code (review S4)', async () => {
+      const { client } = getTx();
+      const r = await seedReply(client, PARIWAR_A);
+      const ins = (key: string, codes: string[] | null, cipher: string | null) =>
+        attempt(client, INSERT_ANSWER, [randomUUID(), r.pariwarId, r.claimCaseId, r.replyId, key, codes, cipher, null]);
+      expect((await ins('death_cause', ['illness_long'], null)).message).toMatch(/sensitive_encrypted_check/);
+      expect((await ins('death_illness', ['heart'], null)).message).toMatch(/sensitive_encrypted_check/);
+      expect((await ins('death_date', ['2026-09-30'], null)).message).toMatch(/sensitive_encrypted_check/);
+      expect((await ins('death_date', ['unknown', 'x'], null)).message).toMatch(/sensitive_encrypted_check/);
+      expect((await ins('death_date', ['unknown'], null)).code).toBeNull();
+      expect((await ins('death_cause', null, 'enc:v1:x')).code).toBeNull();
+      expect((await ins('how_known', ['other'], null)).code).toBeNull(); // a non-sensitive question keeps its codes
+      // ⭐ LOCKSTEP: the CHECK names exactly the keys the domain encrypts.
+      const { rows } = await client.query<{ def: string }>(
+        `SELECT pg_get_constraintdef(oid) AS def FROM pg_constraint WHERE conname = 'claim_peer_mesh_reply_answers_sensitive_encrypted_check'`,
+      );
+      const named = [...rows[0]!.def.matchAll(/'([a-z_]+)'::text/g)].map((m) => m[1]).filter((k) => k !== 'unknown');
+      expect(new Set(named)).toEqual(new Set(PEER_MESH_SENSITIVE_QUESTION_KEYS));
+    });
   });
 
   describe('the plpgsql answer window ⇔ claim/answer-window.ts (parity)', () => {
@@ -344,8 +368,28 @@ describe.skipIf(!hasDatabase)('0156 — the ping delivery record, the replies, t
           const ts = await isClaimInAnswerWindow(db, toPariwarId(PARIWAR_A), toClaimId(cid), state);
           expect(rows[0]!.open, `${state} / routed=${routed}`).toBe(ts);
           expect(ts, `${state} / routed=${routed}`).toBe(isStateInAnswerWindow(state, routed));
+          // ⭐ Review S3 — the SET-BASED twin (`listOpenPeerRequestsForMember`'s filter) agrees on the same row.
+          const twin = await db.execute<{ open: boolean }>(
+            sql`SELECT ${answerWindowSql('c')} AS open FROM claims c WHERE c.pariwar_id = ${PARIWAR_A}::uuid AND c.claim_case_id = ${cid}::uuid`,
+          );
+          expect(twin.rows[0]!.open, `answerWindowSql ${state} / routed=${routed}`).toBe(ts);
         }
       }
+    });
+  });
+
+  describe('the indexes (review S6 — asserted by definition, ⛔ only by behaviour)', () => {
+    it('the claim index, the live-reply partial index (6.27b\'s bulk readers) and the live partial UNIQUE', async () => {
+      const { client } = getTx();
+      const { rows } = await client.query<{ indexname: string; indexdef: string }>(
+        `SELECT indexname, indexdef FROM pg_indexes
+          WHERE tablename IN ('claim_peer_mesh_replies', 'claim_peer_mesh_reply_answers') ORDER BY indexname`,
+      );
+      const def = (name: string) => rows.find((r) => r.indexname === name)?.indexdef ?? `<missing ${name}>`;
+      expect(def('claim_peer_mesh_replies_claim_idx')).toMatch(/ON public\.claim_peer_mesh_replies USING btree \(pariwar_id, claim_case_id\)$/);
+      expect(def('claim_peer_mesh_reply_answers_claim_idx')).toMatch(/USING btree \(pariwar_id, claim_case_id\)$/);
+      expect(def('claim_peer_mesh_reply_answers_live_reply_idx')).toMatch(/USING btree \(pariwar_id, reply_id\) WHERE \(superseded_at IS NULL\)$/);
+      expect(def('claim_peer_mesh_reply_answers_live_uq')).toMatch(/^CREATE UNIQUE INDEX .* USING btree \(pariwar_id, reply_id, question_key\) WHERE \(superseded_at IS NULL\)$/);
     });
   });
 

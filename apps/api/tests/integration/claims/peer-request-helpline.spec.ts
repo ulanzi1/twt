@@ -135,8 +135,10 @@ describe.skipIf(!hasDatabase)('Story 6.27a — the helpline records a neighbour\
   }
 
   const listUrl = (p: string, m: string) => `/api/v1/p/${p}/admin/claims/helpline/members/${m}/peer-requests?limit=5`;
-  const putUrl = (p: string, ping: string, key: string) => `/api/v1/p/${p}/admin/claims/helpline/peer-requests/${ping}/answers/${key}`;
-  const submitUrl = (p: string, ping: string) => `/api/v1/p/${p}/admin/claims/helpline/peer-requests/${ping}/submit`;
+  // ⭐ Second-pass review S12 — the writes sit under the CALLER (`members/:memberId/…`) and take an Idempotency-Key (S18).
+  const putUrl = (p: string, m: string, ping: string, key: string) => `/api/v1/p/${p}/admin/claims/helpline/members/${m}/peer-requests/${ping}/answers/${key}`;
+  const submitUrl = (p: string, m: string, ping: string) => `/api/v1/p/${p}/admin/claims/helpline/members/${m}/peer-requests/${ping}/submit`;
+  const idem = () => ({ 'idempotency-key': randomUUID() });
 
   it('6.3\'s chain: ⛔ a fresh claim_file step-up ⇒ 403 auth.step_up_required; ⛔ claim.file ⇒ 403', async () => {
     const p = randomUUID();
@@ -145,8 +147,8 @@ describe.skipIf(!hasDatabase)('Story 6.27a — the helpline records a neighbour\
     const noStepUp = await operator(p, { elevate: false });
     for (const res of [
       await noStepUp.client.inject({ method: 'GET', url: listUrl(p, m) }),
-      await noStepUp.client.inject({ method: 'PUT', url: putUrl(p, r.pingId, 'has_died'), payload: { value: { codes: ['died'] } } }),
-      await noStepUp.client.inject({ method: 'POST', url: submitUrl(p, r.pingId) }),
+      await noStepUp.client.inject({ method: 'PUT', headers: idem(), url: putUrl(p, m, r.pingId, 'has_died'), payload: { value: { codes: ['died'] } } }),
+      await noStepUp.client.inject({ method: 'POST', headers: idem(), url: submitUrl(p, m, r.pingId) }),
     ]) {
       expect(res.statusCode).toBe(403);
       expect(res.json<{ error: { code: string } }>().error.code).toBe('auth.step_up_required');
@@ -161,15 +163,70 @@ describe.skipIf(!hasDatabase)('Story 6.27a — the helpline records a neighbour\
     const texted = await seedRequest(p, m);
     await seedRequest(p, m, { texted: false });
     const op = await operator(p);
-    // the OTHER neighbour of the texted request answers first — the operator must ⛔ see it
-    expect((await op.client.inject({ method: 'PUT', url: putUrl(p, texted.otherPingId, 'has_died'), payload: { value: { codes: ['not_died'] } } })).statusCode).toBe(200);
-    expect((await op.client.inject({ method: 'PUT', url: putUrl(p, texted.pingId, 'has_died'), payload: { value: { codes: ['died'] } } })).statusCode).toBe(200);
+    // the OTHER neighbour of the texted request answers first (recorded under THEIR caller) — the operator must ⛔ see it
+    expect((await op.client.inject({ method: 'PUT', headers: idem(), url: putUrl(p, texted.other, texted.otherPingId, 'has_died'), payload: { value: { codes: ['not_died'] } } })).statusCode).toBe(200);
+    expect((await op.client.inject({ method: 'PUT', headers: idem(), url: putUrl(p, m, texted.pingId, 'has_died'), payload: { value: { codes: ['died'] } } })).statusCode).toBe(200);
     const res = await op.client.inject({ method: 'GET', url: listUrl(p, m) });
     expect(res.statusCode).toBe(200);
     const items = res.json<{ items: { pingId: string; answers: { questionKey: string; value: Json }[] }[] }>().items;
     expect(items.map((i) => i.pingId)).toEqual([texted.pingId]);
     expect(items[0]!.answers).toEqual([{ questionKey: 'has_died', value: { codes: ['died'] }, savedAt: expect.any(String) }]);
     expect(JSON.stringify(items.map((i) => i.answers))).not.toContain('not_died'); // ⛔ the other neighbour's answer
+    // ⭐ Review S12 — the list is an AUDITED read naming the neighbour (⛔ a name, ⛔ an answer).
+    const read = td.auditSink.events.filter((e) => e.type === 'helpline_claim.peer_requests_read');
+    expect(read.at(-1)).toMatchObject({ resourceLocator: `member:${m}`, context: { member_id: m, requests: 1, answers: 1 } });
+    expect(Object.keys(read.at(-1)!.context ?? {}).sort()).toEqual(['answers', 'member_id', 'requests']); // ⛔ a name / an answer
+    expect(JSON.stringify(read.at(-1)!.context)).not.toContain('died');
+  });
+
+  it('BOUND to the caller (review S12): recording neighbour M, the OTHER neighbour\'s ping is the SAME 404 on the PUT and the submit', async () => {
+    const p = randomUUID();
+    const m = randomUUID();
+    const r = await seedRequest(p, m);
+    const op = await operator(p);
+    for (const res of [
+      await op.client.inject({ method: 'PUT', headers: idem(), url: putUrl(p, m, r.otherPingId, 'has_died'), payload: { value: { codes: ['died'] } } }),
+      await op.client.inject({ method: 'POST', headers: idem(), url: submitUrl(p, m, r.otherPingId) }),
+    ]) {
+      expect(res.statusCode).toBe(404);
+      expect(res.json<{ error: { code: string } }>().error.code).toBe('peer_request.not_found');
+    }
+    const { rows } = await td.pool.query(`SELECT 1 FROM claim_peer_mesh_reply_answers WHERE claim_case_id = $1`, [r.cid]);
+    expect(rows).toHaveLength(0);
+  });
+
+  it('the writes take an Idempotency-Key (review S18): missing ⇒ 400; a replayed Submit ⇒ 200, ⛔ a 409', async () => {
+    const p = randomUUID();
+    const m = randomUUID();
+    const r = await seedRequest(p, m);
+    const op = await operator(p);
+    const bare = await op.client.inject({ method: 'PUT', url: putUrl(p, m, r.pingId, 'has_died'), payload: { value: { codes: ['died'] } } });
+    expect(bare.statusCode).toBe(400);
+    expect(bare.json<{ error: { code: string } }>().error.code).toBe('peer_request.idempotency_key_required');
+    expect((await op.client.inject({ method: 'PUT', headers: idem(), url: putUrl(p, m, r.pingId, 'has_died'), payload: { value: { codes: ['died'] } } })).statusCode).toBe(200);
+    const key = idem();
+    expect((await op.client.inject({ method: 'POST', headers: key, url: submitUrl(p, m, r.pingId) })).statusCode).toBe(200);
+    const replay = await op.client.inject({ method: 'POST', headers: key, url: submitUrl(p, m, r.pingId) });
+    expect(replay.statusCode).toBe(200); // the lost-response retry — ⛔ "already sent"
+  });
+
+  it('per-route actor denial on the WRITES (review S26): ⛔ a session ⇒ 401; ⛔ claim.file ⇒ 403', async () => {
+    const p = randomUUID();
+    const m = randomUUID();
+    const r = await seedRequest(p, m);
+    for (const res of [
+      await app.inject({ method: 'PUT', headers: idem(), url: putUrl(p, m, r.pingId, 'has_died'), payload: { value: { codes: ['died'] } } }),
+      await app.inject({ method: 'POST', headers: idem(), url: submitUrl(p, m, r.pingId) }),
+    ]) {
+      expect(res.statusCode).toBe(401);
+    }
+    const verifier = await operator(p, { role: 'district_verifier' });
+    for (const res of [
+      await verifier.client.inject({ method: 'PUT', headers: idem(), url: putUrl(p, m, r.pingId, 'has_died'), payload: { value: { codes: ['died'] } } }),
+      await verifier.client.inject({ method: 'POST', headers: idem(), url: submitUrl(p, m, r.pingId) }),
+    ]) {
+      expect(res.statusCode).toBe(403);
+    }
   });
 
   it('the PUT and the submit answer 404 for an untexted ping (a leg each)', async () => {
@@ -177,10 +234,10 @@ describe.skipIf(!hasDatabase)('Story 6.27a — the helpline records a neighbour\
     const m = randomUUID();
     const untexted = await seedRequest(p, m, { texted: false });
     const op = await operator(p);
-    const put = await op.client.inject({ method: 'PUT', url: putUrl(p, untexted.pingId, 'has_died'), payload: { value: { codes: ['died'] } } });
+    const put = await op.client.inject({ method: 'PUT', headers: idem(), url: putUrl(p, m, untexted.pingId, 'has_died'), payload: { value: { codes: ['died'] } } });
     expect(put.statusCode).toBe(404);
     expect(put.json<{ error: { code: string } }>().error.code).toBe('peer_request.not_found');
-    const sub = await op.client.inject({ method: 'POST', url: submitUrl(p, untexted.pingId) });
+    const sub = await op.client.inject({ method: 'POST', headers: idem(), url: submitUrl(p, m, untexted.pingId) });
     expect(sub.statusCode).toBe(404);
     expect(sub.json<{ error: { code: string } }>().error.code).toBe('peer_request.not_found');
   });
@@ -190,8 +247,8 @@ describe.skipIf(!hasDatabase)('Story 6.27a — the helpline records a neighbour\
     const m = randomUUID();
     const r = await seedRequest(p, m);
     const op = await operator(p);
-    expect((await op.client.inject({ method: 'PUT', url: putUrl(p, r.pingId, 'has_died'), payload: { value: { codes: ['died'] } } })).statusCode).toBe(200);
-    expect((await op.client.inject({ method: 'PUT', url: putUrl(p, r.pingId, 'death_date'), payload: { value: { date: '2026-10-01' } } })).statusCode).toBe(200);
+    expect((await op.client.inject({ method: 'PUT', headers: idem(), url: putUrl(p, m, r.pingId, 'has_died'), payload: { value: { codes: ['died'] } } })).statusCode).toBe(200);
+    expect((await op.client.inject({ method: 'PUT', headers: idem(), url: putUrl(p, m, r.pingId, 'death_date'), payload: { value: { date: '2026-10-01' } } })).statusCode).toBe(200);
     await td.pool.query("UPDATE claim_peer_mesh_reply_answers SET value_ciphertext = 'broken-envelope' WHERE claim_case_id = $1 AND question_key = 'death_date'", [r.cid]);
     const list = await op.client.inject({ method: 'GET', url: `/api/v1/p/${p}/admin/claims/helpline/members/${m}/peer-requests` });
     expect(list.statusCode).toBe(200);
@@ -204,7 +261,7 @@ describe.skipIf(!hasDatabase)('Story 6.27a — the helpline records a neighbour\
     await td.pool.query(`INSERT INTO members (member_id, pariwar_id, state, state_event_version) VALUES ($1, $2, 'active', 1)`, [m, p]);
     const r = await seedRequest(p, m);
     const op = await operator(p);
-    expect((await op.client.inject({ method: 'PUT', url: putUrl(p, r.pingId, 'has_died'), payload: { value: { codes: ['died'] } } })).statusCode).toBe(200);
+    expect((await op.client.inject({ method: 'PUT', headers: idem(), url: putUrl(p, m, r.pingId, 'has_died'), payload: { value: { codes: ['died'] } } })).statusCode).toBe(200);
     // the member, in the app, answers the next question on the SAME reply
     const tok = signAccessToken(app, { memberId: m, pariwarId: p, deviceId: 'd' }, 15 * 60 * 1000);
     const memberPut = await app.inject({
@@ -223,7 +280,7 @@ describe.skipIf(!hasDatabase)('Story 6.27a — the helpline records a neighbour\
     expect(ev.rows[0]!.payload).toMatchObject({ actor: 'operator', response: 'confirmed', responder_member_id: m });
     expect(ev.rows[0]!.actor_id).toBe(op.userId);
     // the operator submits — the app is locked too
-    expect((await op.client.inject({ method: 'POST', url: submitUrl(p, r.pingId) })).statusCode).toBe(200);
+    expect((await op.client.inject({ method: 'POST', headers: idem(), url: submitUrl(p, m, r.pingId) })).statusCode).toBe(200);
     const after = await app.inject({
       method: 'PUT',
       url: `/api/v1/p/${p}/member/peer-requests/${r.pingId}/answers/how_known`,
@@ -232,7 +289,7 @@ describe.skipIf(!hasDatabase)('Story 6.27a — the helpline records a neighbour\
     });
     expect(after.statusCode).toBe(409);
     expect(after.json<{ error: { code: string } }>().error.code).toBe('peer_request.submitted');
-    const again = await op.client.inject({ method: 'PUT', url: putUrl(p, r.pingId, 'how_known'), payload: { value: { codes: ['other'] } } });
+    const again = await op.client.inject({ method: 'PUT', headers: idem(), url: putUrl(p, m, r.pingId, 'how_known'), payload: { value: { codes: ['other'] } } });
     expect(again.statusCode).toBe(409);
   });
 });

@@ -29,6 +29,7 @@ import {
   useRecordHelplineNomineeBank,
   useHelplineOperatorEvent,
   useMemberSearch,
+  useRefreshHelplinePeerRequests,
   useRequestStepUp,
   useVerifyStepUp,
 } from '../../api/hooks.js';
@@ -64,6 +65,7 @@ export function HelplineClaimPage({ pariwarId }: HelplineClaimPageProps): ReactE
   const intake = useHelplineClaimIntake(pariwarId);
   const requestStepUp = useRequestStepUp();
   const verifyStepUp = useVerifyStepUp();
+  const refreshPeerRequests = useRefreshHelplinePeerRequests();
   const operatorEvent = useHelplineOperatorEvent(pariwarId);
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -201,6 +203,9 @@ export function HelplineClaimPage({ pariwarId }: HelplineClaimPageProps): ReactE
         setStepUpRequired(false);
         setOtp('');
         requestStepUp.reset();
+        // ⭐ Story 6.27a second-pass review S34 — a "Requests to confirm a death" panel refused for want of a step-up
+        // re-reads now (its query never retries on its own), ⛔ looping on "Confirm with a code".
+        refreshPeerRequests();
       },
     });
   };
@@ -478,7 +483,7 @@ export function HelplineClaimPage({ pariwarId }: HelplineClaimPageProps): ReactE
         onStepUpRequired={() => setStepUpRequired(true)}
         onBusyChange={reportPeerRequestsBusy}
       />
-      {peerRequestWarning && <p role="alert">Please finish saving this caller&apos;s answers before changing callers.</p>}
+      {peerRequestWarning && <p role="alert">{resolveEn('helpline.peer.caller.blocked')}</p>}
     </>
   );
 }

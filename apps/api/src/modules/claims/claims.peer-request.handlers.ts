@@ -11,10 +11,15 @@
 // texted (and so ⛔ never before Row 27). 409 `peer_request.no_longer_open` / `peer_request.submitted` for "yours,
 // texted, but closed / submitted" (⛔ never why). The list shows OPEN requests only.
 // ── The helpline routes ────────────────────────────────────────────────────────────────────────────────────────────
-// 6.3's chain (`claim.file` + step-up; ⛔ no new key — a reuse, 6.21b D5's precedent), through the scope-resolution
-// hook's tx. The operator sees ONLY the answers of the neighbour on the phone (PM25 (b)) — ⛔ never another neighbour's,
-// ⛔ never the warning lines, ⛔ never the counts. The list, the save and the submit are gated on a TEXTED ping exactly as
-// the member routes are (PM12) — before 6.27c texts anyone the panel is EMPTY.
+// 6.3's chain (`claim.file` + step-up; ⛔ no new key — a reuse, 6.21b D5's precedent). The operator sees ONLY the answers
+// of the neighbour on the phone (PM25 (b)) — ⛔ never another neighbour's, ⛔ never the warning lines, ⛔ never the counts.
+// ⭐ BOUND (second-pass review S12 — BigDev 2026-10-13, "bind and audit"): every helpline route carries the caller's
+// `:memberId`, and the save / submit pass it to the domain's `visible()` — a ping of ANOTHER neighbour is the SAME 404 as
+// an untexted one (⛔ the old `memberId: null` "any texted ping" form is gone). The list's decrypted read is AUDITED
+// (`helpline_claim.peer_requests_read`, `member:<id>`). The writes take an `Idempotency-Key` exactly like the member
+// routes (PM12: "the SAME save / submit shape as PM11" — review S18) and run on their OWN scope tx, so the key's result is
+// recorded only AFTER the commit (the scope-resolution hook's tx carries ⛔ no write). The list, the save and the submit
+// are gated on a TEXTED ping exactly as the member routes are (PM12) — before 6.27c texts anyone the panel is EMPTY.
 // ── Audit ──────────────────────────────────────────────────────────────────────────────────────────────────────────
 // ONE `withCompensatingAudit` intent line per write (`claim.peer_answer_saved` / `claim.peer_reply_submitted`,
 // `claim:<id>`); the payload hash covers the ping and the question KEY only. ⛔ Never an answer, a name or a code in an
@@ -29,15 +34,17 @@ import type {
   PeerRequestSubmitResponse,
 } from '@twt/contracts';
 import { PEER_REQUEST_NO_LONGER_OPEN_CODE, PEER_REQUEST_SUBMITTED_CODE } from '@twt/contracts';
-import { audit, claim, cycleCalendar, idempotency, ids, type Db } from '@twt/domain';
+import { audit, claim, cycleCalendar, idempotency, ids, questionnaires, type Db } from '@twt/domain';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import type pg from 'pg';
 
 import type { AppDeps } from '../../context.js';
 import { BadRequestError, ConflictError, NotFoundError, UnauthorizedError } from '../../http-errors.js';
+import { emitAuthAudit } from '../auth/shared/audit.js';
 import { closeScopeTx, openScopeTx } from '../multi-tenant/scope-tx.js';
 import {
   buildPeerRequestDetail,
+  decryptLiveSensitive,
   mapPeerRequestError,
   PEER_REQUEST_NOT_FOUND_CODE,
   peerRequestPayloadHash,
@@ -47,10 +54,15 @@ import {
   toWireAnswers,
 } from './peer-request-core.js';
 
-/** How long a write's Idempotency-Key is held (a retried auto-save arrives within seconds). */
-const PEER_REQUEST_IDEMPOTENCY_TTL_SECONDS = 24 * 60 * 60;
+/**
+ * How long a write's Idempotency-Key is held. A retried auto-save arrives within seconds; the claim is ALSO the "in
+ * progress" lease, so a process that dies mid-request must ⛔ not lock the answer for a day (second-pass review S19 —
+ * it was 24 h, and the editor retries with the SAME key). A replay after expiry re-runs the save, which is idempotent by
+ * value (⛔ no second row, ⛔ no audit — S20).
+ */
+const PEER_REQUEST_IDEMPOTENCY_TTL_SECONDS = 15 * 60;
 
-type Ctx = { readonly actorId: string; readonly pariwarId: string; readonly memberId: string | null; readonly via: 'member_app' | 'helpline' };
+type Ctx = { readonly actorId: string; readonly pariwarId: string; readonly memberId: string; readonly via: 'member_app' | 'helpline' };
 
 export function createPeerRequestHandlers(deps: AppDeps) {
   const idempotencyStore = idempotency.createKeyedStore(deps.pool);
@@ -65,12 +77,13 @@ export function createPeerRequestHandlers(deps: AppDeps) {
     return { actorId: memberIdStr, pariwarId: pariwarIdStr, memberId: memberIdStr, via: 'member_app' };
   }
 
-  /** The operator on 6.3's chain — the scope tx is the scope-resolution hook's. */
+  /** The operator on 6.3's chain, recording the neighbour named by the path's `:memberId` (review S12 — ⛔ never "any"). */
   function helplineCtx(request: FastifyRequest): Ctx {
     const scopeTx = request.scopeTx;
     const actorId = request.requestContext.actorId;
     if (!scopeTx || !actorId) throw new UnauthorizedError('Authentication required', 'auth.session_required');
-    return { actorId, pariwarId: scopeTx.pariwarId, memberId: null, via: 'helpline' };
+    const { memberId } = request.params as { memberId: string };
+    return { actorId, pariwarId: scopeTx.pariwarId, memberId: memberId.toLowerCase(), via: 'helpline' };
   }
 
   function requireIdempotencyKey(request: FastifyRequest): string {
@@ -80,7 +93,10 @@ export function createPeerRequestHandlers(deps: AppDeps) {
     return key.trim();
   }
 
-  /** Run `fn` on a member route's OWN scope tx (commit on success; a mapped 4xx rolls back — nothing was written). */
+  /**
+   * Run `fn` on the route's OWN scope tx (commit on success; a mapped 4xx rolls back — nothing was written). Every WRITE
+   * (member AND helpline) runs here, so `withIdempotency` records a key's result only once the write has COMMITTED.
+   */
   async function onMemberTx<T>(ctx: Ctx, fn: (client: pg.PoolClient, tx: Db) => Promise<T>): Promise<T> {
     const scopeTx = await openScopeTx(deps, ctx.pariwarId);
     let ok = false;
@@ -132,11 +148,40 @@ export function createPeerRequestHandlers(deps: AppDeps) {
 
   // ── the shared bodies ────────────────────────────────────────────────────────────────────────────────────────────
 
+  /**
+   * The reply's live answers for their OWNER — decrypted from what this request already holds (⛔ no KMS now: the
+   * writer's locks are held until COMMIT): the pre-lock decrypts, plus the value just saved AS STORED (normalised —
+   * review S21, ⛔ the request's raw value).
+   */
+  function withSaved(
+    decryptedLive: ReadonlyMap<string, questionnaires.QuestionnaireAnswerValue>,
+    live: readonly { answerId: string; questionKey: string; valueCiphertext: string | null }[],
+    questionKey: string,
+    stored: questionnaires.QuestionnaireAnswerValue,
+  ): Map<string, questionnaires.QuestionnaireAnswerValue> {
+    const known = new Map(decryptedLive);
+    for (const row of live) {
+      if (row.valueCiphertext !== null && !known.has(row.answerId) && row.questionKey === questionKey) known.set(row.answerId, stored);
+    }
+    return known;
+  }
+
   async function detailOn(tx: Db, ctx: Ctx, pingId: string, request: FastifyRequest): Promise<PeerRequestDetailResponse> {
-    const view = await claim.readPeerRequest(tx, ids.pariwarId(ctx.pariwarId), ids.peerMeshPingId(pingId), ctx.memberId === null ? null : ids.memberId(ctx.memberId));
+    const view = await claim.readPeerRequest(tx, ids.pariwarId(ctx.pariwarId), ids.peerMeshPingId(pingId), ids.memberId(ctx.memberId));
     if (view.reply?.submittedAt != null) throw new ConflictError('These answers were already sent', PEER_REQUEST_SUBMITTED_CODE);
     if (!view.inWindow) throw new ConflictError('This request is no longer open', PEER_REQUEST_NO_LONGER_OPEN_CODE);
     return buildPeerRequestDetail(tx, view, ctx.pariwarId, deps.encryption, request.log);
+  }
+
+  /**
+   * A save's REPLAY: the reply's live answers as they stand — ⛔ without the open / submitted checks, so a save that DID
+   * commit is ⛔ never reported as a 409 because the reply was submitted (or the window closed) since (review S19).
+   */
+  async function liveAnswersOn(tx: Db, ctx: Ctx, pingId: string, request: FastifyRequest): Promise<PeerRequestSaveAnswerResponse> {
+    const pid = ids.pariwarId(ctx.pariwarId);
+    const view = await claim.readPeerRequest(tx, pid, ids.peerMeshPingId(pingId), ids.memberId(ctx.memberId));
+    const rows = view.reply ? await claim.readLivePeerAnswers(tx, pid, view.reply.replyId) : [];
+    return { answers: toWireAnswers(rows, await decryptLiveSensitive(rows, ctx.pariwarId, deps.encryption, request.log)) };
   }
 
   async function saveOn(client: pg.PoolClient, tx: Db, ctx: Ctx, request: FastifyRequest): Promise<PeerRequestSaveAnswerResponse> {
@@ -144,13 +189,34 @@ export function createPeerRequestHandlers(deps: AppDeps) {
     const { value } = request.body as PeerRequestSaveAnswerRequest;
     const today = todayIst(deps.clock());
     // ⭐ PRE-LOCK: read, decrypt, check, encrypt, index (⛔ no KMS under a lock — Trap 9).
-    const { prepared, decryptedLive } = await prepareSave(
+    const { prepared, decryptedLive, stored, unchanged } = await prepareSave(
       tx,
       { pariwarId: ctx.pariwarId, pingId, memberId: ctx.memberId, questionKey, value, todayIst: today },
       deps.encryption,
       request.log,
     );
-    const view = await claim.readPeerRequest(tx, ids.pariwarId(ctx.pariwarId), ids.peerMeshPingId(pingId), ctx.memberId === null ? null : ids.memberId(ctx.memberId));
+    const view = await claim.readPeerRequest(tx, ids.pariwarId(ctx.pariwarId), ids.peerMeshPingId(pingId), ids.memberId(ctx.memberId));
+    const write = () =>
+      claim.savePeerAnswer(client, {
+        pariwarId: ids.pariwarId(ctx.pariwarId),
+        pingId: ids.peerMeshPingId(pingId),
+        memberId: ids.memberId(ctx.memberId),
+        questionKey,
+        value,
+        prepared,
+        decryptedLive,
+        savedVia: ctx.via,
+        savedByActorId: ctx.actorId,
+        todayIst: today,
+      });
+    // ⭐ ADR-0030's protocol — the NO-OP pre-check runs BEFORE the audit helper (review S20): re-saving the live value
+    // writes ⛔ nothing, so it writes ⛔ no "saved" line. Should the value have changed in between (a race the writer's
+    // locks resolve), the save is refused as stale and rolled back — the client's retry then takes the audited path.
+    if (unchanged) {
+      const noop = await write();
+      if (noop.written) throw new claim.PeerRequestStaleError();
+      return { answers: toWireAnswers(noop.live, withSaved(decryptedLive, noop.live, questionKey, stored)) };
+    }
     const result = await audit.withCompensatingAudit(deps.servicePool, {
       auditIntent: {
         pariwarId: ctx.pariwarId,
@@ -161,32 +227,14 @@ export function createPeerRequestHandlers(deps: AppDeps) {
         requestPayloadHash: peerRequestPayloadHash({ ping_id: pingId, question_key: questionKey, via: ctx.via }),
         traceId: request.requestContext.traceId ?? null,
       },
-      mutate: () =>
-        claim.savePeerAnswer(client, {
-          pariwarId: ids.pariwarId(ctx.pariwarId),
-          pingId: ids.peerMeshPingId(pingId),
-          memberId: ctx.memberId === null ? null : ids.memberId(ctx.memberId),
-          questionKey,
-          value,
-          prepared,
-          decryptedLive,
-          savedVia: ctx.via,
-          savedByActorId: ctx.actorId,
-          todayIst: today,
-        }),
+      mutate: write,
     });
-    // The reply's live answers for their OWNER — decrypted from what this request already holds (⛔ no KMS now: the
-    // writer's locks are held until COMMIT): the pre-lock decrypts, plus the value just saved.
-    const known = new Map(decryptedLive);
-    for (const row of result.live) {
-      if (row.valueCiphertext !== null && !known.has(row.answerId) && row.questionKey === questionKey) known.set(row.answerId, value);
-    }
-    return { answers: toWireAnswers(result.live, known) };
+    return { answers: toWireAnswers(result.live, withSaved(decryptedLive, result.live, questionKey, stored)) };
   }
 
   async function submitOn(client: pg.PoolClient, tx: Db, ctx: Ctx, request: FastifyRequest): Promise<PeerRequestSubmitResponse> {
     const { pingId } = request.params as { pingId: string };
-    const view = await claim.readPeerRequest(tx, ids.pariwarId(ctx.pariwarId), ids.peerMeshPingId(pingId), ctx.memberId === null ? null : ids.memberId(ctx.memberId));
+    const view = await claim.readPeerRequest(tx, ids.pariwarId(ctx.pariwarId), ids.peerMeshPingId(pingId), ids.memberId(ctx.memberId));
     await audit.withCompensatingAudit(deps.servicePool, {
       auditIntent: {
         pariwarId: ctx.pariwarId,
@@ -201,7 +249,7 @@ export function createPeerRequestHandlers(deps: AppDeps) {
         claim.submitPeerReply(client, {
           pariwarId: ids.pariwarId(ctx.pariwarId),
           pingId: ids.peerMeshPingId(pingId),
-          memberId: ctx.memberId === null ? null : ids.memberId(ctx.memberId),
+          memberId: ids.memberId(ctx.memberId),
         }),
     });
     return { submitted: true };
@@ -241,7 +289,7 @@ export function createPeerRequestHandlers(deps: AppDeps) {
       const key = requireIdempotencyKey(request);
       const out = await withIdempotency(
         `peer_request.save:${ctx.pariwarId}:${ctx.actorId}:${pingId}:${questionKey}:${key}`,
-        () => onMemberTx(ctx, async (_c, tx) => ({ answers: (await detailOn(tx, ctx, pingId, request)).answers })),
+        () => onMemberTx(ctx, (_c, tx) => liveAnswersOn(tx, ctx, pingId, request)),
         () => onMemberTx(ctx, (client, tx) => saveOn(client, tx, ctx, request)),
       );
       void reply.status(200);
@@ -264,32 +312,57 @@ export function createPeerRequestHandlers(deps: AppDeps) {
 
     // ── helpline ─────────────────────────────────────────────────────────────────────────────────────────────────
     /** GET …/admin/claims/helpline/members/:memberId/peer-requests?limit= — the caller's OPEN, TEXTED requests, each with
-     *  ONLY that neighbour's answers (PM25 (b)). */
+     *  ONLY that neighbour's answers (PM25 (b)). Audited (review S12). */
     async helplineList(request: FastifyRequest): Promise<HelplinePeerRequestListResponse> {
       const ctx = helplineCtx(request);
-      const { memberId } = request.params as { memberId: string };
       const { limit } = request.query as { limit?: number };
-      return onHelplineTx(request, async (_client, tx) => {
-        const rows = await claim.listOpenPeerRequestsForMember(tx, ids.pariwarId(ctx.pariwarId), ids.memberId(memberId), limit);
+      const out = await onHelplineTx(request, async (_client, tx) => {
+        const rows = await claim.listOpenPeerRequestsForMember(tx, ids.pariwarId(ctx.pariwarId), ids.memberId(ctx.memberId), limit);
         const items = [];
         for (const row of rows) {
-          const view = await claim.readPeerRequest(tx, ids.pariwarId(ctx.pariwarId), row.pingId, ids.memberId(memberId));
+          const view = await claim.readPeerRequest(tx, ids.pariwarId(ctx.pariwarId), row.pingId, ids.memberId(ctx.memberId));
           items.push(await buildPeerRequestDetail(tx, view, ctx.pariwarId, deps.encryption, request.log));
         }
         return { items };
       });
+      // ⭐ Review S12 — an AUDITED read: the operator saw the deceased's name and this neighbour's answers (Tier-1 among
+      // them). ONE line per read, naming the neighbour (`member:<id>`) and HOW MANY — ⛔ never a name, an answer or a code.
+      emitAuthAudit(deps, request, 'helpline_claim.peer_requests_read', {
+        actorId: ctx.actorId,
+        pariwarId: ctx.pariwarId,
+        context: { member_id: ctx.memberId, requests: out.items.length, answers: out.items.reduce((n, i) => n + i.answers.length, 0) },
+        resourceLocator: `member:${ctx.memberId}`,
+      });
+      return out;
     },
 
-    /** PUT …/admin/claims/helpline/peer-requests/:pingId/answers/:questionKey — the operator records one answer. */
-    async helplineSave(request: FastifyRequest): Promise<PeerRequestSaveAnswerResponse> {
+    /** PUT …/admin/claims/helpline/members/:memberId/peer-requests/:pingId/answers/:questionKey — the operator records ONE
+     *  answer for the neighbour on the phone (bound — review S12; an Idempotency-Key — review S18). */
+    async helplineSave(request: FastifyRequest, reply: FastifyReply): Promise<PeerRequestSaveAnswerResponse> {
       const ctx = helplineCtx(request);
-      return onHelplineTx(request, (client, tx) => saveOn(client, tx, ctx, request));
+      const { pingId, questionKey } = request.params as { pingId: string; questionKey: string };
+      const key = requireIdempotencyKey(request);
+      const out = await withIdempotency(
+        `peer_request.helpline.save:${ctx.pariwarId}:${ctx.actorId}:${ctx.memberId}:${pingId}:${questionKey}:${key}`,
+        () => onMemberTx(ctx, (_c, tx) => liveAnswersOn(tx, ctx, pingId, request)),
+        () => onMemberTx(ctx, (client, tx) => saveOn(client, tx, ctx, request)),
+      );
+      void reply.status(200);
+      return out;
     },
 
-    /** POST …/admin/claims/helpline/peer-requests/:pingId/submit — locks the reply (for the app too). */
-    async helplineSubmit(request: FastifyRequest): Promise<PeerRequestSubmitResponse> {
+    /** POST …/admin/claims/helpline/members/:memberId/peer-requests/:pingId/submit — locks the reply (for the app too). */
+    async helplineSubmit(request: FastifyRequest, reply: FastifyReply): Promise<PeerRequestSubmitResponse> {
       const ctx = helplineCtx(request);
-      return onHelplineTx(request, (client, tx) => submitOn(client, tx, ctx, request));
+      const { pingId } = request.params as { pingId: string };
+      const key = requireIdempotencyKey(request);
+      const out = await withIdempotency(
+        `peer_request.helpline.submit:${ctx.pariwarId}:${ctx.actorId}:${ctx.memberId}:${pingId}:${key}`,
+        async () => ({ submitted: true as const }),
+        () => onMemberTx(ctx, (client, tx) => submitOn(client, tx, ctx, request)),
+      );
+      void reply.status(200);
+      return out;
     },
   };
 }

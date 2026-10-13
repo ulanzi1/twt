@@ -10,6 +10,36 @@
 import { t } from '@twt/i18n';
 
 const EN: Record<string, string> = {
+  // ── Story 6.27a (PM12) — "Requests to confirm a death" (second-pass review S41: the panel's copy lives HERE, with the
+  // module's, ⛔ inline). The QUESTION words are the server's (the served definition, English).
+  'helpline.peer.title': 'Requests to confirm a death',
+  'helpline.peer.intro':
+    'Read each question to the caller and record their answer. Every answer is saved as you go. Only staff who check the claim see these answers — never the family.',
+  'helpline.peer.stepup.prompt': "Confirm with your step-up code to see this caller's requests.",
+  'helpline.peer.stepup.button': 'Confirm with a code',
+  'helpline.peer.load.failed': 'The requests could not be loaded just now.',
+  'helpline.peer.load.retry': 'Try again',
+  'helpline.peer.about': 'About {member}',
+  'helpline.peer.about.fallback': 'a member',
+  'helpline.peer.unavailable': 'Could not be shown just now.',
+  'helpline.peer.date.save': 'Save the date',
+  'helpline.peer.date.unsaved': 'A date was typed but not saved — press "Save the date", or clear it.',
+  'helpline.peer.date.clear': 'Clear the date',
+  'helpline.peer.submit': 'Submit',
+  'helpline.peer.submitted': 'Sent — the answers are locked.',
+  'helpline.peer.saving': 'Saving…',
+  'helpline.peer.saved': 'Saved',
+  'helpline.peer.notSaved': 'Not saved — please try again.',
+  'helpline.peer.retry': 'Retry saving',
+  'helpline.peer.discard': 'Discard the unsaved answer',
+  'helpline.peer.leave.blocked': 'Please finish saving these answers before leaving.',
+  'helpline.peer.caller.blocked':
+    "Please finish saving this caller's answers before changing callers — or discard the unsaved answer.",
+  'helpline.peer.failure.noLongerOpen': 'This request is no longer open.',
+  'helpline.peer.failure.submitted': 'These answers were already sent.',
+  'helpline.peer.failure.notFound': 'This request could not be opened.',
+  'helpline.peer.failure.invalid': 'That answer could not be saved — please choose again.',
+  'helpline.peer.outcome': 'Request about {member}: {outcome}',
   // Console chrome
   'helpline.title': 'Helpline Operator Console',
   'helpline.subtitle':
@@ -252,8 +282,9 @@ const EN: Record<string, string> = {
 };
 
 /** Resolve a console-chrome key to English (loud-ish fallback: return the key if unmapped). */
-export function resolveEn(key: string): string {
-  return EN[key] ?? key;
+export function resolveEn(key: string, params?: Record<string, string>): string {
+  const text = EN[key] ?? key;
+  return params ? text.replace(/\{(\w+)\}/g, (m, k: string) => params[k] ?? m) : text;
 }
 
 /**

@@ -445,6 +445,17 @@ describe('<SignalsPanel> — six sections, four-state vocabulary, tri-state conc
     expect(within(section).getByTestId('section-state-empty')).toBeInTheDocument();
   });
 
+  it('6.27a review S39 — a PENDING window whose 72 hours have passed reads "being counted", ⛔ "open until" a past time', () => {
+    const transcript = (PRESENT_PACKET.peerMesh as { transcript: Record<string, unknown> }).transcript;
+    const at = (outcome: string, windowExpiresAt: string) =>
+      ({ ...PRESENT_PACKET, peerMesh: { status: 'present', transcript: { ...transcript, outcome, windowExpiresAt } } }) as typeof PRESENT_PACKET;
+    const { unmount } = render(<SignalsPanel packet={at('pending', '2000-01-01T00:00:00.000Z')} />);
+    expect(screen.getByTestId('peer-mesh-window')).toHaveTextContent('The 72 hours have passed — the answers are being counted');
+    unmount();
+    render(<SignalsPanel packet={at('pending', '2999-01-01T00:00:00.000Z')} />);
+    expect(screen.getByTestId('peer-mesh-window')).toHaveTextContent(/^Still open until /);
+  });
+
   // ── Story 6.27a (PM13, PM25 (c)) ──────────────────────────────────────────────────────────────────────────────────
   it('6.27a — the 72-hour line, each neighbour (name, send status, answers with provenance + "changed N times", the call-back mobile), and "could not be shown" — ⛔ a blank', () => {
     render(<SignalsPanel packet={PRESENT_PACKET} />);

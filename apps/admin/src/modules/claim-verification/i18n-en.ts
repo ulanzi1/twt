@@ -102,6 +102,8 @@ export const verifierConsoleEn = {
     // answers' provenance. English only (F22). ⛔ A neighbour's answer never refuses a claim — the line says so.
     window: {
       pending: (until: string) => `Still open until ${until}`,
+      // Second-pass review S39 — between the 72-hour expiry and the window worker's count (⛔ "open until" a past time).
+      counting: 'The 72 hours have passed — the answers are being counted',
       sufficient: '3 or more answers',
       insufficient_responses_fallback: 'Fewer than 3 answers in 72 hours — the ground inspection is the main check',
       skipped: 'No neighbour could be chosen',

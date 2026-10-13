@@ -23,6 +23,20 @@ export type PeerMeshRuledQuestionKey = (typeof PEER_MESH_RULED_QUESTION_KEYS)[nu
 export const PEER_MESH_WARNING_QUESTION_KEYS = ['has_died', 'death_date'] as const;
 
 /**
+ * The ruled HEALTH questions (`-304` Q4 A): from v2 onward the validator holds them `health: true` — so each is
+ * `sensitive` (stored ENCRYPTED, scrubbed on erasure) and waits for counsel's basis (6.27c AC2b). A later version can
+ * ⛔ never reclassify one (second-pass review S2).
+ */
+export const PEER_MESH_HEALTH_QUESTION_KEYS = ['death_cause', 'death_illness'] as const;
+
+/**
+ * The questions whose answer is a Tier-1 value — ⚠ LOCKSTEP with migration 0158's
+ * `claim_peer_mesh_reply_answers_sensitive_encrypted_check` (a policy-spec leg pins the two equal). `death_date` stores
+ * a plaintext code ONLY for *"I don't know the date"*.
+ */
+export const PEER_MESH_SENSITIVE_QUESTION_KEYS = ['death_date', ...PEER_MESH_HEALTH_QUESTION_KEYS] as const;
+
+/**
  * The keys compared wherever BOTH the family and a neighbour answer — the SAME keys and codes on both sides (PM23 (a),
  * PM25). ⚠ `has_died` is NEIGHBOUR-ONLY (the family has ⛔ no `has_died` answer — 6.27d's rule ① compares it against
  * the inspection having happened).

@@ -48,8 +48,9 @@ const COVERAGE_SET: readonly CoverageEntry[] = [
     // Story 6.27a (PM12) — the helpline records the answers of a neighbour who phones. ENROLLED (⛔ never owed): every
     // route composes 6.3's full chain [requireAdminSession, scopeResolutionHook, requirePermissionHook(claim.file),
     // requireStepUp(claim_file)] — the operator is the human actor on the record (`saved_by_actor_id`, the event's actor).
+    // Second-pass review S12: every route now sits under the caller (`helpline/members/:memberId/peer-requests…`).
     file: 'apps/api/src/modules/claims/claims.peer-request.helpline.routes.ts',
-    pathSubstrings: ['helpline/members', 'helpline/peer-requests'],
+    pathSubstrings: ['helpline/members'],
     owner: 'Story 6.27a',
     expectedMethods: ['get', 'put', 'post'],
   },

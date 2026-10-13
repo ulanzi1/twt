@@ -1100,6 +1100,13 @@
       "when": 1794195600001,
       "tag": "0157_claim-peer-mesh-reply-ownership",
       "breakpoints": true
+    },
+    {
+      "idx": 158,
+      "version": "7",
+      "when": 1794195600002,
+      "tag": "0158_claim-peer-mesh-reply-sensitive-encrypted",
+      "breakpoints": true
     }
   ]
 }

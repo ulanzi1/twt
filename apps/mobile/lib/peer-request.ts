@@ -1,5 +1,5 @@
-// The neighbours' answer screens — PURE logic (Story 6.27a PM11, Task 5). Node-testable (the mobile harness renders
-// ⛔ no screen), so every decision the screen makes lives here and the components stay thin:
+// The neighbours' answer screens — PURE logic (Story 6.27a PM11, Task 5). Node-testable, so every decision the screen
+// makes lives here and the components stay thin (the jsdom render test exercises the screen itself):
 //   · which questions of a page are shown (the server's `showIf`, against the member's CURRENT answers);
 //   · the words in the app's locale (the server resolved both — a new version needs ⛔ no app release);
 //   · the save line's state machine (Saved / Saving / "Not saved — retrying") and which failures retry;
@@ -38,8 +38,12 @@ export function visiblePages(detail: Pick<PeerRequestDetailResponse, 'questionna
   return detail.questionnaire.pages.map((p) => visibleQuestions(p.questions, answers)).filter((qs) => qs.length > 0)
 }
 
-/** May the member move past this page? Only an unanswered REQUIRED question holds them. */
-export function canLeavePage(questions: readonly PeerRequestQuestion[], answers: AnswerMap): boolean {
+/**
+ * May the member move past this page? Only an unanswered REQUIRED question holds them. ⭐ A saved answer that could ⛔ not
+ * be shown (`{ unavailable: true }`) IS answered — pass the map WITH those entries (second-pass review S38: "please answer
+ * this first" beside "could not be shown" told the member to answer a question they had answered).
+ */
+export function canLeavePage(questions: readonly PeerRequestQuestion[], answers: ReadonlyMap<string, unknown>): boolean {
   return questions.every((q) => q.optional || answers.has(q.key))
 }
 
@@ -61,10 +65,16 @@ export function toggleOption(q: PeerRequestQuestion, current: PeerRequestAnswerV
 
 // ── the date ───────────────────────────────────────────────────────────────────────────────────────────────────────
 
-/** `DD-MM-YYYY` (what the member types) → `YYYY-MM-DD`, or `null` when it is not a real date / is in the future /
- *  is before 1900. `todayIst` is `YYYY-MM-DD`. */
+/** Devanagari digits (U+0966–U+096F, what a Hindi keyboard types) → ASCII (second-pass review S37 — JavaScript's `\d` is
+ *  ASCII-only). The screen SHOWS Latin numerals (amendment A2); this only ACCEPTS what was typed. */
+export function asciiDigits(input: string): string {
+  return input.replace(/[\u0966-\u096F]/g, (d) => String(d.charCodeAt(0) - 0x0966))
+}
+
+/** `DD-MM-YYYY` (what the member types — ASCII or Devanagari digits) → `YYYY-MM-DD`, or `null` when it is not a real date /
+ *  is in the future / is before 1900. `todayIst` is `YYYY-MM-DD`. */
 export function parseDisplayDate(input: string, todayIst: string): string | null {
-  const m = /^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})$/.exec(input.trim())
+  const m = /^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})$/.exec(asciiDigits(input.trim()))
   if (!m) return null
   const iso = `${m[3]}-${m[2]!.padStart(2, '0')}-${m[1]!.padStart(2, '0')}`
   const ms = Date.parse(`${iso}T00:00:00Z`)
@@ -98,7 +108,11 @@ export function classifyFailure(err: unknown): PeerRequestFailure {
   if (e?.status === 409 && e.code === 'peer_request.no_longer_open') return 'no_longer_open'
   if (e?.status === 409 && e.code === 'peer_request.submitted') return 'submitted'
   if (e?.status === 422) return 'invalid'
-  // a network failure, a 5xx, a 429, the stale-read 409, an in-flight idempotency 409 — all retry
+  // ⭐ Second-pass review S32 — a 403 (e.g. the member was suspended mid-session) ⛔ never retries every 30 s behind a
+  // blocked Back: the screen closes like the load path's. (A 401 still retries: the token refresh makes it transient, and
+  // a dead session signs the member out, which unmounts the screen.)
+  if (e?.status === 403) return 'not_openable'
+  // a network failure, a 5xx, a 429, a 401, the stale-read 409, an in-flight idempotency 409 — all retry
   return 'retry'
 }
 
@@ -107,10 +121,17 @@ export function retryDelayMs(attempt: number): number {
   return Math.min(30_000, 1_000 * 2 ** Math.max(0, attempt - 1))
 }
 
-/** A fresh Idempotency-Key per NEW save (a retry of the same save reuses its key). */
+/**
+ * A fresh Idempotency-Key per NEW save (a retry of the same save reuses its key). A CSPRNG first (`crypto.randomUUID`,
+ * Hermes via expo-crypto's polyfill — the repo's `usePersonalEventAssertion` pattern), then `getRandomValues`;
+ * `Math.random` only where neither exists (second-pass review S37).
+ */
 export function newIdempotencyKey(): string {
+  const c = (globalThis as { crypto?: { randomUUID?: () => string; getRandomValues?: (a: Uint8Array) => Uint8Array } }).crypto
+  if (typeof c?.randomUUID === 'function') return c.randomUUID()
   const bytes = new Uint8Array(16)
-  for (let i = 0; i < bytes.length; i += 1) bytes[i] = Math.floor(Math.random() * 256)
+  if (typeof c?.getRandomValues === 'function') c.getRandomValues(bytes)
+  else for (let i = 0; i < bytes.length; i += 1) bytes[i] = Math.floor(Math.random() * 256)
   bytes[6] = (bytes[6]! & 0x0f) | 0x40
   bytes[8] = (bytes[8]! & 0x3f) | 0x80
   const hex = [...bytes].map((b) => b.toString(16).padStart(2, '0')).join('')

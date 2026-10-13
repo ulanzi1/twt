@@ -8,10 +8,13 @@ import { Button, Paragraph, YStack } from 'tamagui'
 
 import { useClaimT } from '../../lib/claim-i18n'
 import { CallHelplineCTA } from '../common/CallHelplineCTA'
+import { useAnnounceOnChange } from './announce'
 
 export function PeerRequestNotOpenable({ messageKey }: { readonly messageKey: 'peer_request.not_openable' | 'peer_request.no_longer_open' }): React.ReactElement {
   const t = useClaimT()
   const router = useRouter()
+  // SPOKEN when it replaces the questions mid-flow (a refused save) — ⛔ a silent swap (second-pass review S29).
+  useAnnounceOnChange(t(messageKey))
   return (
     <YStack flex={1} p="$4" gap="$4" justify="center">
       <Paragraph size="$5" accessibilityRole="text">

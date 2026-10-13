@@ -3,7 +3,8 @@
 //
 // The rules (CF3 (a)–(d), `2026-10-10-310`):
 //   · `peer_mesh`, v2 onward — all seven ruled keys present (v1 is EXEMPT: registered and historical, ⛔ never live);
-//   · `warning` ONLY on `has_died` and `death_date` (a chain-added question is ⛔ never a warning or a flag);
+//   · `warning` ONLY on `has_died` and `death_date` (a chain-added question is ⛔ never a warning or a flag) — and, v2
+//     onward, ALWAYS on both; the ruled health questions stay `health: true` (⛔ never reclassified — review S2);
 //   · every question, and the version, carries `approvedBy` = Trustee-ratified decision ids;
 //   · ⛔ no alcohol question key, option or copy key (`-304` Q5 A);
 //   · a `health: true` question carries a `counselBasis` (`'pending'` or a decision id); a non-health one carries none;
@@ -16,6 +17,7 @@ import {
   FORBIDDEN_TOPIC_RE,
   HAS_DIED_CODES,
   PANEL_RATIFIED_QUESTIONNAIRE_DECISIONS,
+  PEER_MESH_HEALTH_QUESTION_KEYS,
   PEER_MESH_RULED_QUESTION_KEYS,
   PEER_MESH_WARNING_QUESTION_KEYS,
 } from './keys.js';
@@ -150,6 +152,14 @@ export function questionnaireDefinitionProblems(def: QuestionnaireDefinition): s
     if (def.version >= 2) {
       for (const key of PEER_MESH_RULED_QUESTION_KEYS) {
         if (!earlier.has(key)) problems.push(`the ruled question '${key}' is missing (CF3 (a))`);
+      }
+      // ⭐ Second-pass review S2 — the ruled CLASSIFICATION, ⛔ not only the presence: a ruled health question stays a
+      // health question (⇒ sensitive, ⇒ counsel's basis), and both warning questions keep their warning (`-308` item 2).
+      for (const key of PEER_MESH_HEALTH_QUESTION_KEYS) {
+        if (earlier.get(key)?.health === false) problems.push(`the ruled health question '${key}' is health: true`);
+      }
+      for (const key of PEER_MESH_WARNING_QUESTION_KEYS) {
+        if (earlier.get(key)?.warning === false) problems.push(`the ruled question '${key}' carries its warning`);
       }
     }
   }

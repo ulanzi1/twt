@@ -167,9 +167,15 @@ async function readPeerRequestRow(db: Db, pariwarId: PariwarId, pingId: PeerMesh
   };
 }
 
-/** Visibility: a ping exists in scope, was TEXTED, and (for the member route) is the member's own. */
-function visible(row: PeerRequestRow | null, memberId: MemberId | null): row is PeerRequestRow {
-  return row !== null && row.sendOutcome === 'accepted' && (memberId === null || row.memberId === memberId);
+/**
+ * Visibility: a ping exists in scope, was TEXTED, and is `memberId`'s own — on EVERY path. The member routes pass the
+ * session member; the helpline passes the neighbour the operator is recording (the path's `:memberId`, PM25 (b)). ⛔ There
+ * is ⛔ no "any ping" form: second-pass review S12 (BigDev, 2026-10-13: bind and audit) REMOVED the helpline's
+ * `memberId: null` bypass, so a ping of another neighbour is the SAME not-found (review S5's DELIBERATE block is moot —
+ * ⛔ no bypass remains).
+ */
+function visible(row: PeerRequestRow | null, memberId: MemberId): row is PeerRequestRow {
+  return row !== null && row.sendOutcome === 'accepted' && row.memberId === memberId;
 }
 
 export interface PeerRequestView extends PeerRequestRow {
@@ -180,13 +186,13 @@ export interface PeerRequestView extends PeerRequestRow {
 
 /**
  * One request as its owner sees it — or `PeerRequestNotFoundError` (⛔ yours / unknown / another Pariwar / ⛔ texted).
- * `memberId` = the session member (the member routes) or `null` (the helpline — any TEXTED ping in scope).
+ * `memberId` = the session member (the member routes) or the neighbour on the phone (the helpline's path `:memberId`).
  */
 export async function readPeerRequest(
   db: Db,
   pariwarId: PariwarId,
   pingId: PeerMeshPingId,
-  memberId: MemberId | null,
+  memberId: MemberId,
 ): Promise<PeerRequestView> {
   const row = await readPeerRequestRow(db, pariwarId, pingId);
   if (!visible(row, memberId)) throw new PeerRequestNotFoundError();
@@ -234,6 +240,12 @@ export async function listOpenPeerRequestsForMember(
   }));
 }
 
+/**
+ * The cap of one reply's LIVE answers — bounded by construction (one live row per question; v2 has seven), clamped all
+ * the same (AC9: every new domain list read takes `clampLimit` — second-pass review S7).
+ */
+export const PEER_LIVE_ANSWERS_CAP = 50;
+
 /** The reply's LIVE answer rows (ciphertext AS STORED — the handler decrypts). */
 export async function readLivePeerAnswers(db: Db, pariwarId: PariwarId, replyId: PeerMeshReplyId): Promise<ClaimPeerMeshReplyAnswerRow[]> {
   return db
@@ -246,7 +258,8 @@ export async function readLivePeerAnswers(db: Db, pariwarId: PariwarId, replyId:
         isNull(claimPeerMeshReplyAnswers.supersededAt),
       ),
     )
-    .orderBy(asc(claimPeerMeshReplyAnswers.savedAt));
+    .orderBy(asc(claimPeerMeshReplyAnswers.savedAt))
+    .limit(clampLimit(PEER_LIVE_ANSWERS_CAP, { default: PEER_LIVE_ANSWERS_CAP, cap: PEER_LIVE_ANSWERS_CAP }));
 }
 
 /** `'none' | 'started' | 'submitted'` — row 6-31's *"has ⛔ not answered"* reads THIS (PM7 (g)), ⛔ never its own copy. */
@@ -278,8 +291,8 @@ export type PreparedPeerAnswer =
 export interface SavePeerAnswerInput {
   readonly pariwarId: PariwarId;
   readonly pingId: PeerMeshPingId;
-  /** The session member (the member routes) — or `null` for the helpline. */
-  readonly memberId: MemberId | null;
+  /** The session member (the member routes) or the neighbour on the phone (the helpline's path `:memberId`). */
+  readonly memberId: MemberId;
   readonly questionKey: string;
   /** The PLAINTEXT value — validation only; ⛔ never stored for a sensitive question. */
   readonly value: QuestionnaireAnswerValue;
@@ -319,7 +332,7 @@ function sameValue(a: QuestionnaireAnswerValue, b: QuestionnaireAnswerValue): bo
  * Lock claim → ping → reply, check visibility, the window and Submit, then re-validate against the PINNED version and
  * the live answers read UNDER the locks. Returns what the caller needs; throws the mapped errors.
  */
-async function lockForWrite(db: Db, pariwarId: PariwarId, pingId: PeerMeshPingId, memberId: MemberId | null) {
+async function lockForWrite(db: Db, pariwarId: PariwarId, pingId: PeerMeshPingId, memberId: MemberId) {
   const pre = await readPeerRequestRow(db, pariwarId, pingId);
   if (!visible(pre, memberId)) throw new PeerRequestNotFoundError();
 
@@ -477,7 +490,7 @@ export async function savePeerAnswer(client: pg.PoolClient, input: SavePeerAnswe
  */
 export async function submitPeerReply(
   client: pg.PoolClient,
-  input: { readonly pariwarId: PariwarId; readonly pingId: PeerMeshPingId; readonly memberId: MemberId | null },
+  input: { readonly pariwarId: PariwarId; readonly pingId: PeerMeshPingId; readonly memberId: MemberId },
 ): Promise<{ readonly replyId: PeerMeshReplyId; readonly submittedAt: Date }> {
   const db = bindScopedDb(client);
   const { reply } = await lockForWrite(db, input.pariwarId, input.pingId, input.memberId);

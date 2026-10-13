@@ -1,5 +1,6 @@
-// Story 6.27a (Task 5; AC5's mobile half) — the neighbours' answer screens. DB-free and RN-render-free (the harness
-// renders ⛔ no screen — `vitest.config.ts`), so this proves what a pure test CAN:
+// Story 6.27a (Task 5; AC5's mobile half) — the neighbours' answer screens. DB-free and RN-render-free: THIS file proves
+// what a pure test can (the screen itself renders under jsdom with stubbed native primitives in
+// `peer-questionnaire-render.test.ts` — second-pass review S42: this header used to say the harness renders ⛔ no screen):
 //   1. the PURE logic (`lib/peer-request.ts`): showIf against the current answers, page skipping, the required
 //      question, the option toggle (multi + exclusive), the date field (real, ⛔ future, ⛔ before 1900), the failure map
 //      (404 not-openable; 409 no-longer-open / submitted; 422 invalid; anything else RETRIES), the backoff;
@@ -188,7 +189,11 @@ describe('source scans', () => {
     expect(s).toContain('wordsIn(detail.questionnaire.thankYou, locale)')
   })
   it('the home card and the notice-strip item are mounted (PM2) — beside, ⛔ inside, <PollsEntry />', () => {
-    expect(read('app/(tabs)/index.tsx')).toContain('<PeerRequestEntry />')
+    const home = read('app/(tabs)/index.tsx')
+    expect(home).toContain('<PeerRequestEntry />')
+    // ⭐ Review S31 — BELOW Story 8.2's My Pool card (its AC: the TOPMOST home element) and its lock-step siblings.
+    expect(home.indexOf('<ActiveContributionCard />')).toBeLessThan(home.indexOf('<PeerRequestEntry />'))
+    expect(home.indexOf('<SahyogVivranEntry />')).toBeLessThan(home.indexOf('<PeerRequestEntry />'))
     const nb = read('components/panchayat/PanchayatNoticeboard.tsx')
     expect(nb).toMatch(/<PeerRequestEntry \/>\s*<PollsEntry \/>/)
     // the banner lane is untouched — ONE source
@@ -198,5 +203,32 @@ describe('source scans', () => {
     const s = src['components/peer-request/PeerRequestEntry.tsx']!
     expect(s).toContain('if (!data || data.items.length === 0) return null')
     expect(s).toContain('usePeerRequestsQuery(isLoading ? undefined : session?.pariwarId)')
+  })
+})
+
+describe('Story 6.27a second-pass review — input edges (S32 / S37)', () => {
+  it('a Devanagari-digit date (a Hindi keyboard) parses like ASCII', () => {
+    expect(parseDisplayDate('०५-१०-२०२६', '2026-10-12')).toBe('2026-10-05')
+    expect(parseDisplayDate('३१-०२-२०२६', '2026-10-12')).toBeNull()
+  })
+  it('the Idempotency-Key comes from the CSPRNG when there is one (⛔ Math.random)', () => {
+    const real = globalThis.crypto
+    const fixed = '0f8e1c2a-3b4d-4e5f-8a6b-7c8d9e0f1a2b'
+    Object.defineProperty(globalThis, 'crypto', { value: { randomUUID: () => fixed }, configurable: true })
+    try {
+      expect(newIdempotencyKey()).toBe(fixed)
+    } finally {
+      Object.defineProperty(globalThis, 'crypto', { value: real, configurable: true })
+    }
+    expect(newIdempotencyKey()).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/)
+  })
+  it('a 403 on a save is NOT retried (the screen closes); a 401 still retries (the refresh makes it transient)', () => {
+    expect(classifyFailure({ status: 403 })).toBe('not_openable')
+    expect(classifyFailure({ status: 401 })).toBe('retry')
+  })
+  it('a saved answer that could ⛔ not be shown counts as answered (S38)', () => {
+    const q = { key: 'has_died', optional: false } as PeerRequestQuestion
+    expect(canLeavePage([q], new Map([['has_died', { unavailable: true }]]))).toBe(true)
+    expect(canLeavePage([q], new Map())).toBe(false)
   })
 })

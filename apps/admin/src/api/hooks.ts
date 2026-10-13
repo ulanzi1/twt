@@ -2329,19 +2329,27 @@ export function useHelplinePeerRequests(pariwarId: string, memberId: string | nu
   });
 }
 
-/** Re-read acknowledged saves. Keep rejected drafts mounted for retry / step-up recovery. */
+/**
+ * Save ONE answer. An acknowledged save PATCHES that request's answers in the cache from the save's own response
+ * (second-pass review S36 — ⛔ a full re-read of the gated, decrypting list on every tap). Keep rejected drafts mounted
+ * for retry / step-up recovery; a terminal refusal re-reads the list so the obsolete request leaves it.
+ */
 export function useHelplineSavePeerAnswer(pariwarId: string, memberId: string | null) {
   const qc = useQueryClient();
+  const key = helplinePeerRequestsKey(pariwarId, memberId ?? '');
   return useMutation({
-    mutationFn: (input: { pingId: string; questionKey: string; value: import('@twt/contracts').PeerRequestAnswerValue }) =>
-      api.saveHelplinePeerAnswer(pariwarId, input.pingId, input.questionKey, input.value),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: helplinePeerRequestsKey(pariwarId, memberId ?? '') }),
+    mutationFn: (input: { pingId: string; questionKey: string; value: import('@twt/contracts').PeerRequestAnswerValue; idempotencyKey: string }) =>
+      api.saveHelplinePeerAnswer(pariwarId, memberId as string, input.pingId, input.questionKey, input.value, input.idempotencyKey),
+    onSuccess: (result, input) =>
+      qc.setQueryData<import('@twt/contracts').HelplinePeerRequestListResponse>(key, (old) =>
+        old === undefined ? old : { items: old.items.map((i) => (i.pingId === input.pingId ? { ...i, answers: result.answers } : i)) },
+      ),
     onError: (error) => {
       // Terminal window/ownership/access changes must refresh and hide the obsolete request.
       if (error instanceof api.ApiError && (
         error.status === 404 || error.status === 409 || error.status === 401 ||
         (error.status === 403 && error.code !== 'auth.step_up_required')
-      )) void qc.invalidateQueries({ queryKey: helplinePeerRequestsKey(pariwarId, memberId ?? '') });
+      )) void qc.invalidateQueries({ queryKey: key });
     },
   });
 }
@@ -2350,7 +2358,14 @@ export function useHelplineSavePeerAnswer(pariwarId: string, memberId: string | 
 export function useHelplineSubmitPeerReply(pariwarId: string, memberId: string | null) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (pingId: string) => api.submitHelplinePeerReply(pariwarId, pingId),
+    mutationFn: (input: { pingId: string; idempotencyKey: string }) =>
+      api.submitHelplinePeerReply(pariwarId, memberId as string, input.pingId, input.idempotencyKey),
     onSettled: () => void qc.invalidateQueries({ queryKey: helplinePeerRequestsKey(pariwarId, memberId ?? '') }),
   });
+}
+
+/** Re-read EVERY caller's requests — after a step-up succeeds, so a panel refused for want of one recovers (review S34). */
+export function useRefreshHelplinePeerRequests() {
+  const qc = useQueryClient();
+  return () => void qc.invalidateQueries({ queryKey: ['helpline-peer-requests'] });
 }

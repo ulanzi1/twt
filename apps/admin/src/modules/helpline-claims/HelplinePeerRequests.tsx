@@ -6,8 +6,14 @@
 // ⛔ never name a reported death to a member the Trust has ⛔ not texted), renders the SAME served questionnaire the app does
 // (English words — the admin console is English-only), and records each answer as the caller gives it (`saved_via =
 // 'helpline'`; the operator is the saver). ⭐ The operator sees ONLY that neighbour's answers — ⛔ another neighbour's,
-// ⛔ the warning lines, ⛔ the counts. Submit locks the reply for the app too.
-// 6.3's chain: every call needs the operator's fresh `claim_file` step-up — a 403 opens the page's step-up panel.
+// ⛔ the warning lines, ⛔ the counts — and every write is BOUND to the caller (the server 404s another neighbour's ping —
+// second-pass review S12). Submit locks the reply for the app too.
+// 6.3's chain: every call needs the operator's fresh `claim_file` step-up — a 403 opens the page's step-up panel, and a
+// successful step-up re-reads the list (review S34).
+// ⭐ Second-pass review: the operator is ⛔ never stuck — a failed load can be retried, a refused answer DISCARDED (S34);
+// a request that finishes (sent / no longer open) leaves its OUTCOME line behind when it leaves the list (S34); a typed but
+// unsaved date is an unresolved edit, ⛔ silently dropped (S35); Submit waits for the version's REQUIRED questions (S36);
+// single choices are a labelled radio group, multi choices checkboxes (S30); the copy is the module catalog's (S41).
 // ⚠ Per-row state comes from each call's OWN promise (`mutateAsync`) — TanStack's per-`mutate` callbacks fire for the LATEST
 // call only ([[project_tanstack_mutate_callbacks_latest_only]]).
 
@@ -18,6 +24,15 @@ import { useRouter } from '@tanstack/react-router';
 
 import { ApiError } from '../../api/client.js';
 import { useHelplinePeerRequests, useHelplineSavePeerAnswer, useHelplineSubmitPeerReply } from '../../api/hooks.js';
+import { resolveEn } from './i18n-en.js';
+
+/** The earliest date a neighbour may give (the server's `EARLIEST_ANSWER_DATE`). */
+const EARLIEST_DATE = '1900-01-01';
+
+/** Today in IST — a date answer is ⛔ never in the future (the server re-checks). */
+function todayIst(): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date());
+}
 
 /** Is `q` shown, given the caller's live answers? (The server re-checks every save.) */
 export function isShownFor(q: PeerRequestQuestion, answers: ReadonlyMap<string, PeerRequestLiveAnswer['value']>): boolean {
@@ -26,15 +41,22 @@ export function isShownFor(q: PeerRequestQuestion, answers: ReadonlyMap<string, 
   return parent !== undefined && 'codes' in parent && parent.codes.some((c) => q.showIf!.anyOf.includes(c));
 }
 
+/** A refusal that ENDS the request for this caller (it leaves the list). */
+function isTerminal(err: unknown): boolean {
+  return err instanceof ApiError && ['peer_request.no_longer_open', 'peer_request.submitted', 'peer_request.not_found'].includes(err.code ?? '');
+}
+
 function failureText(err: unknown): string {
   if (err instanceof ApiError) {
-    if (err.code === 'peer_request.no_longer_open') return 'This request is no longer open.';
-    if (err.code === 'peer_request.submitted') return 'These answers were already sent.';
-    if (err.code === 'peer_request.not_found') return 'This request could not be opened.';
-    if (err.code === 'peer_request.invalid_answer') return 'That answer could not be saved — please choose again.';
+    if (err.code === 'peer_request.no_longer_open') return resolveEn('helpline.peer.failure.noLongerOpen');
+    if (err.code === 'peer_request.submitted') return resolveEn('helpline.peer.failure.submitted');
+    if (err.code === 'peer_request.not_found') return resolveEn('helpline.peer.failure.notFound');
+    if (err.code === 'peer_request.invalid_answer') return resolveEn('helpline.peer.failure.invalid');
   }
-  return 'Not saved — please try again.';
+  return resolveEn('helpline.peer.notSaved');
 }
+
+type Outcome = { readonly memberId: string; readonly pingId: string; readonly text: string };
 
 export function HelplinePeerRequests({
   pariwarId,
@@ -60,7 +82,21 @@ export function HelplinePeerRequests({
     else dirtyReplies.current.delete(pingId);
     busyCallback.current?.(dirtyReplies.current.size > 0);
   }, []);
+  // The OUTCOME of a request that finished on this call — kept after the request leaves the list (review S34).
+  const [outcomes, setOutcomes] = useState<readonly Outcome[]>([]);
+  const onFinished = useCallback((pingId: string, memberName: string, text: string) => {
+    if (memberId === null) return;
+    const line = resolveEn('helpline.peer.outcome', { member: memberName || resolveEn('helpline.peer.about.fallback'), outcome: text });
+    setOutcomes((prev) => [...prev.filter((o) => o.pingId !== pingId), { memberId, pingId, text: line }]);
+  }, [memberId]);
   if (!ready) return null;
+  const title = resolveEn('helpline.peer.title');
+  const finished = outcomes.filter((o) => o.memberId === memberId);
+  const outcomeLines = finished.length > 0 && (
+    <ul role="status" className="text-sm">
+      {finished.map((o) => <li key={o.pingId}>{o.text}</li>)}
+    </ul>
+  );
   // A failed background refresh must not dispose already loaded editors and their queued choices.
   // Authentication / permission refusals still replace the sensitive surface.
   const retainLoaded = listQ.data !== undefined && (!(listQ.error instanceof ApiError) ||
@@ -68,39 +104,46 @@ export function HelplinePeerRequests({
   if (listQ.isError && !retainLoaded) {
     if (listQ.error instanceof ApiError && listQ.error.code === 'auth.step_up_required') {
       return (
-        <section aria-label="Requests to confirm a death" className="rounded border p-4">
-          <h2 className="text-sm font-semibold">Requests to confirm a death</h2>
-          <p className="mt-2 text-sm">Confirm with your step-up code to see this caller&apos;s requests.</p>
+        <section aria-label={title} className="rounded border p-4">
+          <h2 className="text-sm font-semibold">{title}</h2>
+          <p className="mt-2 text-sm">{resolveEn('helpline.peer.stepup.prompt')}</p>
           <button type="button" className="mt-2 rounded border px-3 py-1 text-sm" onClick={onStepUpRequired}>
-            Confirm with a code
+            {resolveEn('helpline.peer.stepup.button')}
           </button>
         </section>
       );
     }
     return (
-      <section aria-label="Requests to confirm a death" className="rounded border p-4">
-        <h2 className="text-sm font-semibold">Requests to confirm a death</h2>
-        <p role="alert" className="mt-2 text-sm">
-          The requests could not be loaded just now.
-        </p>
+      <section aria-label={title} className="rounded border p-4">
+        <h2 className="text-sm font-semibold">{title}</h2>
+        <p role="alert" className="mt-2 text-sm">{resolveEn('helpline.peer.load.failed')}</p>
+        <button type="button" className="mt-2 rounded border px-3 py-1 text-sm" onClick={() => void listQ.refetch()}>
+          {resolveEn('helpline.peer.load.retry')}
+        </button>
       </section>
     );
   }
   const items = listQ.data?.items ?? [];
-  if (items.length === 0) return null;
+  if (items.length === 0 && !outcomeLines) return null;
   return (
-    <section aria-label="Requests to confirm a death" className="flex flex-col gap-4 rounded border p-4">
-      <h2 className="text-sm font-semibold">Requests to confirm a death</h2>
-      {listQ.isError && <p role="alert" className="text-sm">The requests could not be loaded just now.</p>}
+    <section aria-label={title} className="flex flex-col gap-4 rounded border p-4">
+      <h2 className="text-sm font-semibold">{title}</h2>
+      {outcomeLines}
+      {listQ.isError && <p role="alert" className="text-sm">{resolveEn('helpline.peer.load.failed')}</p>}
       {listQ.isError && listQ.error instanceof ApiError && listQ.error.code === 'auth.step_up_required' && (
-        <button type="button" className="rounded border px-3 py-1 text-sm" onClick={onStepUpRequired}>Confirm with a code</button>
+        <button type="button" className="rounded border px-3 py-1 text-sm" onClick={onStepUpRequired}>{resolveEn('helpline.peer.stepup.button')}</button>
       )}
-      <p className="text-xs opacity-70">
-        Read each question to the caller and record their answer. Every answer is saved as you go. Only staff who check the
-        claim see these answers — never the family.
-      </p>
+      {items.length > 0 && <p className="text-xs opacity-70">{resolveEn('helpline.peer.intro')}</p>}
       {items.map((item) => (
-        <PeerRequestCard key={item.pingId} pariwarId={pariwarId} memberId={memberId} item={item} onStepUpRequired={onStepUpRequired} onBusyChange={reportBusy} />
+        <PeerRequestCard
+          key={item.pingId}
+          pariwarId={pariwarId}
+          memberId={memberId}
+          item={item}
+          onStepUpRequired={onStepUpRequired}
+          onBusyChange={reportBusy}
+          onFinished={onFinished}
+        />
       ))}
     </section>
   );
@@ -112,12 +155,14 @@ function PeerRequestCard({
   item,
   onStepUpRequired,
   onBusyChange,
+  onFinished,
 }: {
   pariwarId: string;
   memberId: string | null;
   item: PeerRequestDetailResponse;
   onStepUpRequired: () => void;
   onBusyChange: (pingId: string, busy: boolean) => void;
+  onFinished: (pingId: string, memberName: string, text: string) => void;
 }): ReactElement {
   const save = useHelplineSavePeerAnswer(pariwarId, memberId);
   const submit = useHelplineSubmitPeerReply(pariwarId, memberId);
@@ -125,84 +170,102 @@ function PeerRequestCard({
   const [locked, setLocked] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const submitting = useRef(false);
+  // ONE key for this reply's Submit: a retry after a lost response is a replay (200), ⛔ "already sent" (review S18).
+  const submitKey = useRef<string | null>(null);
   const router = useRouter({ warn: false });
   const [dates, setDates] = useState<Record<string, string>>({});
+  const datesRef = useRef(dates);
+  datesRef.current = dates;
   const saveRef = useRef(save.mutateAsync);
   saveRef.current = save.mutateAsync;
   const stepUpRef = useRef(onStepUpRequired);
   stepUpRef.current = onStepUpRequired;
+  const finishedRef = useRef(onFinished);
+  finishedRef.current = onFinished;
   const initialAnswers = useRef(item.answers);
+  const allQuestions = item.questionnaire.pages.flatMap((p) => p.questions);
   const [editor] = useState(() => new PeerAnswerEditor(item.answers, {
-    save: (task) => saveRef.current({ pingId: item.pingId, questionKey: task.questionKey, value: task.value }),
+    save: (task) => saveRef.current({ pingId: item.pingId, questionKey: task.questionKey, value: task.value, idempotencyKey: task.idempotencyKey }),
     newKey: () => crypto.randomUUID(),
     shouldRetry: () => false,
     wait: () => Promise.resolve(),
-    questions: item.questionnaire.pages.flatMap((p) => p.questions),
+    questions: allQuestions,
   }));
   const state = useSyncExternalStore(editor.subscribe, editor.getSnapshot);
   const answers = state.answers;
+  // Busy = a save in flight / failed, a Submit running, or a date TYPED but ⛔ saved (review S35).
+  const isBusy = useCallback(() => {
+    const current = editor.getSnapshot();
+    return submitting.current || current.pending > 0 || current.failed.size > 0 || Object.keys(datesRef.current).length > 0;
+  }, [editor]);
   useEffect(() => {
     editor.activate(initialAnswers.current);
     return () => editor.dispose();
   }, [editor]);
-  useEffect(() => editor.replaceFromServer(item.answers), [editor, item.answers]);
   useEffect(() => {
-    const notify = () => {
-      const current = editor.getSnapshot();
-      onBusyChange(item.pingId, submitting.current || current.pending > 0 || current.failed.size > 0);
-    };
+    editor.replaceFromServer(item.answers);
+  }, [editor, item.answers]);
+  useEffect(() => {
+    const notify = () => onBusyChange(item.pingId, isBusy());
     notify();
     const unsubscribe = editor.subscribe(notify);
     return () => { unsubscribe(); onBusyChange(item.pingId, false); };
-  }, [editor, item.pingId, onBusyChange]);
+  }, [editor, item.pingId, onBusyChange, isBusy, dates]);
   useEffect(() => {
     if (!router) return;
-    const busy = () => {
-      const current = editor.getSnapshot();
-      return submitting.current || current.pending > 0 || current.failed.size > 0;
-    };
     return router.history.block({
       blockerFn: ({ nextLocation }) => {
         // Authentication redirects must clear the sensitive screen even if a save is unresolved.
-        if (nextLocation.pathname === '/login' || !busy()) return false;
-        setStatus('Please finish saving these answers before leaving.');
+        if (nextLocation.pathname === '/login' || !isBusy()) return false;
+        setStatus(resolveEn('helpline.peer.leave.blocked'));
         return true;
       },
-      enableBeforeUnload: busy,
+      enableBeforeUnload: isBusy,
     });
-  }, [editor, router]);
+  }, [isBusy, router]);
   useEffect(() => {
     if (state.error === null) {
       if (!locked) setStatus(null);
       return;
     }
     if (state.error instanceof ApiError && state.error.code === 'auth.step_up_required') stepUpRef.current();
+    if (isTerminal(state.error)) finishedRef.current(item.pingId, item.memberName, failureText(state.error));
     setStatus(failureText(state.error));
-  }, [state.error, state.pending, locked]);
+  }, [state.error, state.pending, locked, item.pingId, item.memberName]);
 
   const record = (questionKey: string, value: PeerRequestAnswerValue): void => {
     if (locked || submitting.current) return;
     setStatus(null);
     editor.save(questionKey, value);
   };
+  const clearDate = (key: string) => setDates((d) => { const next = { ...d }; delete next[key]; return next; });
 
-  const questions = item.questionnaire.pages.flatMap((p) => p.questions).filter((q) => isShownFor(q, answers));
+  const questions = allQuestions.filter((q) => isShownFor(q, answers));
+  // Submit waits for EVERY required question the caller is shown — ⛔ a hard-coded key (review S36).
+  const requiredAnswered = questions.filter((q) => !q.optional).every((q) => answers.has(q.key));
+  const dirtyDates = Object.keys(dates).length > 0;
+  const about = item.memberName || resolveEn('helpline.peer.about.fallback');
+  const today = todayIst();
   return (
-    <article aria-label={`Request about ${item.memberName || 'a member'}`} className="rounded border p-3">
-      <h3 className="font-semibold">About {item.memberName || 'a member'}</h3>
+    <article aria-label={resolveEn('helpline.peer.about', { member: about })} className="rounded border p-3">
+      <h3 className="font-semibold">{resolveEn('helpline.peer.about', { member: about })}</h3>
       <div className="mt-2 flex flex-col gap-3">
         {questions.map((q) => {
           const current = answers.get(q.key);
           const codes = current !== undefined && 'codes' in current ? current.codes : [];
+          const legendId = `peer-q-${item.pingId}-${q.key}`;
+          const single = q.kind !== 'multi';
           return (
             <fieldset key={q.key} className="flex flex-col gap-1">
-              <legend className="text-sm font-medium">{q.words.en}</legend>
-              {current !== undefined && 'unavailable' in current && <p role="alert">Could not be shown just now.</p>}
+              <legend id={legendId} className="text-sm font-medium">{q.words.en}</legend>
+              {current !== undefined && 'unavailable' in current && <p role="alert">{resolveEn('helpline.peer.unavailable')}</p>}
               {q.kind === 'date' && (
                 <div className="flex gap-2">
                   <input
                     disabled={locked || isSubmitting}
                     type="date"
+                    min={EARLIEST_DATE}
+                    max={today}
                     aria-label={q.words.en}
                     className="rounded border px-2 py-1 text-sm"
                     value={dates[q.key] ?? (current !== undefined && 'date' in current ? current.date : '')}
@@ -211,28 +274,36 @@ function PeerRequestCard({
                   <button
                     type="button"
                     className="rounded border px-2 py-1 text-sm"
-                    disabled={locked || isSubmitting || !dates[q.key]}
+                    disabled={locked || isSubmitting || !dates[q.key] || dates[q.key]! < EARLIEST_DATE || dates[q.key]! > today}
                     onClick={() => {
                       record(q.key, { date: dates[q.key]! });
-                      setDates(d => { const next = { ...d }; delete next[q.key]; return next; });
+                      clearDate(q.key);
                     }}
                   >
-                    Save the date
+                    {resolveEn('helpline.peer.date.save')}
                   </button>
+                  {dates[q.key] !== undefined && (
+                    <button type="button" className="rounded border px-2 py-1 text-sm" onClick={() => clearDate(q.key)}>
+                      {resolveEn('helpline.peer.date.clear')}
+                    </button>
+                  )}
                 </div>
               )}
-              <div className="flex flex-wrap gap-2">
+              <div role={single ? 'radiogroup' : 'group'} aria-labelledby={legendId} className="flex flex-wrap gap-2">
                 {q.options.map((o) => {
                   const selected = codes.includes(o.code);
                   return (
                     <button
                       key={o.code}
                       type="button"
+                      role={single ? 'radio' : 'checkbox'}
+                      aria-checked={selected}
                       disabled={locked || isSubmitting}
-                      aria-pressed={selected}
                       className={`rounded border px-2 py-1 text-sm ${selected ? 'font-semibold' : ''}`}
                       onClick={() => {
-                        if (q.kind !== 'multi') return record(q.key, { codes: [o.code] });
+                        // "I don't know the date" replaces a typed date (review S36).
+                        if (q.kind === 'date') clearDate(q.key);
+                        if (single) return record(q.key, { codes: [o.code] });
                         const latest = editor.getSnapshot().answers.get(q.key);
                         const liveCodes = latest !== undefined && 'codes' in latest ? latest.codes : [];
                         const next = o.exclusive
@@ -253,38 +324,56 @@ function PeerRequestCard({
         })}
       </div>
       <p className="mt-3 text-xs opacity-80">{item.questionnaire.closingNote.en}</p>
+      {dirtyDates && <p role="alert" className="mt-2 text-sm">{resolveEn('helpline.peer.date.unsaved')}</p>}
       <div className="mt-2 flex items-center gap-3">
         <button
           type="button"
           className="rounded border px-3 py-1 text-sm"
-          disabled={locked || !answers.has('has_died') || state.pending > 0 || state.failed.size > 0 || isSubmitting}
+          disabled={locked || !requiredAnswered || dirtyDates || state.pending > 0 || state.failed.size > 0 || isSubmitting}
           onClick={() => {
             const current = editor.getSnapshot();
-            if (current.pending > 0 || current.failed.size > 0 || locked || submitting.current) return;
+            if (current.pending > 0 || current.failed.size > 0 || locked || submitting.current || Object.keys(datesRef.current).length > 0) return;
             submitting.current = true;
             setIsSubmitting(true);
             onBusyChange(item.pingId, true);
+            submitKey.current ??= crypto.randomUUID();
             void submit
-              .mutateAsync(item.pingId)
-              .then(() => { setLocked(true); setStatus('Sent — the answers are locked.'); })
+              .mutateAsync({ pingId: item.pingId, idempotencyKey: submitKey.current })
+              .then(() => {
+                setLocked(true);
+                setStatus(resolveEn('helpline.peer.submitted'));
+                finishedRef.current(item.pingId, item.memberName, resolveEn('helpline.peer.submitted'));
+              })
               .catch((err: unknown) => {
                 if (err instanceof ApiError && err.code === 'auth.step_up_required') onStepUpRequired();
+                if (isTerminal(err)) finishedRef.current(item.pingId, item.memberName, failureText(err));
                 setStatus(failureText(err));
               })
               .finally(() => {
                 submitting.current = false;
                 setIsSubmitting(false);
-                const current = editor.getSnapshot();
-                onBusyChange(item.pingId, current.pending > 0 || current.failed.size > 0);
+                onBusyChange(item.pingId, isBusy());
               });
           }}
         >
-          Submit
+          {resolveEn('helpline.peer.submit')}
         </button>
         <span role="status" className="text-sm">
-          {status ?? (state.pending > 0 ? 'Saving…' : state.saveLine === 'saved' ? 'Saved' : state.saveLine === 'failed' ? 'Not saved — please try again.' : '')}
+          {status ??
+            (state.pending > 0
+              ? resolveEn('helpline.peer.saving')
+              : state.saveLine === 'saved'
+                ? resolveEn('helpline.peer.saved')
+                : state.saveLine === 'failed'
+                  ? resolveEn('helpline.peer.notSaved')
+                  : '')}
         </span>
-        {state.failed.size > 0 && <button type="button" onClick={() => { setStatus(null); editor.retryFailed(); }}>Retry saving</button>}
+        {state.failed.size > 0 && (
+          <>
+            <button type="button" onClick={() => { setStatus(null); editor.retryFailed(); }}>{resolveEn('helpline.peer.retry')}</button>
+            <button type="button" onClick={() => { setStatus(null); editor.discardFailed(); }}>{resolveEn('helpline.peer.discard')}</button>
+          </>
+        )}
       </div>
     </article>
   );

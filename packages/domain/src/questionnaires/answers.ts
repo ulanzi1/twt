@@ -71,7 +71,10 @@ export function checkAnswer(
     if (!isRealCalendarDate(value.date)) return { ok: false, reason: 'date_not_real' };
     if (value.date > todayIst) return { ok: false, reason: 'date_in_future' };
     if (value.date < EARLIEST_ANSWER_DATE) return { ok: false, reason: 'date_too_early' };
-    return { ok: true, question: q, codes: null, storage: { form: 'encrypted', plaintext: value.date, dateWindow: deathDateWindow(value.date) } };
+    // The keyed ±1-day window is `death_date`'s ALONE (0156's indexes CHECK; 6.27b's date warning) — any other date
+    // question is stored encrypted with ⛔ no indexes (second-pass review S2).
+    const dateWindow = q.key === 'death_date' ? deathDateWindow(value.date) : null;
+    return { ok: true, question: q, codes: null, storage: { form: 'encrypted', plaintext: value.date, dateWindow } };
   }
 
   const codes = value.codes;

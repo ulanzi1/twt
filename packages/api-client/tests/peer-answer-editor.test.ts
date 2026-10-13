@@ -16,7 +16,7 @@ const options = (save: (args: { questionKey: string; value: unknown; idempotency
 });
 
 describe('PeerAnswerEditor — ordered saves and honest acknowledgements (6.27a R2/R3/R6/R7/R12)', () => {
-  it('an old failed save retries with its original key BEFORE the newer choice; the newer choice stays visible', async () => {
+  it('an old failed save SUPERSEDED by a newer choice of the same question is ⛔ re-sent; the newer choice is (review S16, reversing R2\'s retry-first)', async () => {
     const first = deferred<PeerRequestSaveAnswerResponse>();
     const wait = deferred<void>();
     const calls: string[] = [];
@@ -34,11 +34,108 @@ describe('PeerAnswerEditor — ordered saves and honest acknowledgements (6.27a 
     expect(editor.getSnapshot().answers.get('has_died')).toEqual({ codes: ['not_died'] });
     wait.resolve();
     await flush();
-    expect(calls).toHaveLength(3);
-    expect(calls[1]).toBe(calls[0]);
-    expect(calls[2]).not.toBe(calls[0]);
+    // the stale "died" — which would have become the ONE permanent has_died event — is ⛔ re-sent; "not_died" is.
+    expect(calls).toHaveLength(2);
+    expect(calls[1]).not.toBe(calls[0]);
+    expect((save.mock.calls[1]![0] as { value: unknown }).value).toEqual({ codes: ['not_died'] });
     expect(editor.getSnapshot()).toMatchObject({ pending: 0, saveLine: 'saved' });
     expect(editor.getSnapshot().answers.get('has_died')).toEqual({ codes: ['not_died'] });
+  });
+
+  it('a failed save NOT superseded still retries with its ORIGINAL key (R2 holds where nothing newer exists)', async () => {
+    const first = deferred<PeerRequestSaveAnswerResponse>();
+    const calls: string[] = [];
+    const save = vi.fn(async (task: { idempotencyKey: string }) => {
+      calls.push(task.idempotencyKey);
+      if (calls.length === 1) return first.promise;
+      return { answers: [answer('has_died', 'died')] };
+    });
+    const editor = new PeerAnswerEditor([], options(save));
+    editor.save('has_died', { codes: ['died'] });
+    first.reject(new TypeError('offline'));
+    await flush();
+    expect(calls).toHaveLength(2);
+    expect(calls[1]).toBe(calls[0]);
+  });
+
+  it('a prerequisite edited BETWEEN two edits of one question still saves first — only ADJACENT edits coalesce (S16)', async () => {
+    const gate = deferred<PeerRequestSaveAnswerResponse>();
+    const sent: string[] = [];
+    const save = vi.fn(async (task: { questionKey: string; value: unknown }) => {
+      sent.push(`${task.questionKey}=${JSON.stringify(task.value)}`);
+      if (sent.length === 1) return gate.promise;
+      return { answers: [] };
+    });
+    const editor = new PeerAnswerEditor([], options(save));
+    editor.save('how_known', { codes: ['saw_them'] }); // in flight
+    editor.save('has_died', { codes: ['died'] });
+    editor.save('relationship', { codes: ['colleague'] });
+    editor.save('has_died', { codes: ['died'] });
+    editor.save('relationship', { codes: ['neighbour'] });
+    editor.save('relationship', { codes: ['friend'] }); // coalesces with the one before it
+    gate.resolve({ answers: [] });
+    await flush();
+    expect(sent).toEqual([
+      'how_known={"codes":["saw_them"]}',
+      'has_died={"codes":["died"]}',
+      'relationship={"codes":["colleague"]}',
+      'has_died={"codes":["died"]}',
+      'relationship={"codes":["friend"]}',
+    ]);
+  });
+
+  it('dispose() then activate() while a save is IN FLIGHT: the next edit is SENT, ⛔ shifted off unsent (review S15)', async () => {
+    const first = deferred<PeerRequestSaveAnswerResponse>();
+    const sent: string[] = [];
+    const save = vi.fn(async (task: { questionKey: string }) => {
+      sent.push(task.questionKey);
+      if (sent.length === 1) return first.promise;
+      return { answers: [answer(task.questionKey, 'yes')] };
+    });
+    const editor = new PeerAnswerEditor([], options(save));
+    editor.save('has_died', { codes: ['died'] }); // in flight
+    editor.dispose(); // Strict Mode cleanup …
+    editor.activate([]); // … and setup
+    editor.save('callback_consent', { codes: ['yes'] });
+    first.resolve({ answers: [answer('has_died', 'died')] }); // the OLD loop wakes — it must touch nothing
+    await flush();
+    expect(sent).toEqual(['has_died', 'callback_consent']);
+    expect(editor.getSnapshot()).toMatchObject({ pending: 0, saveLine: 'saved' });
+    expect(editor.getSnapshot().answers.get('callback_consent')).toEqual({ codes: ['yes'] });
+  });
+
+  it("a parent whose saved value is `unavailable` is UNKNOWN — the child's draft is ⛔ discarded (review S22)", async () => {
+    const save = vi.fn(async () => new Promise<PeerRequestSaveAnswerResponse>(() => {}));
+    const questions = [
+      { key: 'death_cause', kind: 'single', optional: true, showIf: null, words: { en: 'c', hi: 'c' }, options: [] },
+      { key: 'death_illness', kind: 'multi', optional: true, showIf: { key: 'death_cause', anyOf: ['illness_long'] }, words: { en: 'i', hi: 'i' }, options: [] },
+    ] as unknown as PeerRequestQuestion[];
+    const editor = new PeerAnswerEditor([{ questionKey: 'death_cause', value: { unavailable: true }, savedAt: 'now' }], { ...options(save), questions });
+    editor.save('death_illness', { codes: ['heart'] });
+    expect(editor.getSnapshot().answers.get('death_illness')).toEqual({ codes: ['heart'] });
+    expect(save).toHaveBeenCalledTimes(1);
+  });
+
+  it('discardFailed() gives up a refused edit: the SAVED value returns, nothing is pending or failed (review S32 / S34)', async () => {
+    const save = vi.fn().mockRejectedValueOnce(new Error('invalid'));
+    const editor = new PeerAnswerEditor([answer('has_died', 'died')], { ...options(save), shouldRetry: () => false });
+    editor.save('has_died', { codes: ['not_died'] });
+    await flush();
+    expect(editor.getSnapshot()).toMatchObject({ pending: 0, saveLine: 'failed' });
+    editor.discardFailed();
+    expect(editor.getSnapshot()).toMatchObject({ pending: 0, error: null });
+    expect(editor.getSnapshot().failed.size).toBe(0);
+    expect(editor.getSnapshot().answers.get('has_died')).toEqual({ codes: ['died'] });
+  });
+
+  it("one question's new save keeps ANOTHER question's failure reason (review S15)", async () => {
+    const save = vi.fn().mockRejectedValueOnce(new Error('invalid')).mockReturnValue(new Promise(() => {}));
+    const editor = new PeerAnswerEditor([], { ...options(save), shouldRetry: () => false });
+    editor.save('has_died', { codes: ['died'] });
+    await flush();
+    expect(editor.getSnapshot().error).toBeInstanceOf(Error);
+    editor.save('how_known', { codes: ['other'] });
+    expect(editor.getSnapshot().error).toBeInstanceOf(Error);
   });
 
   it('a delayed parent acknowledgement cannot drop another queued answer; the child is sent after the parent', async () => {

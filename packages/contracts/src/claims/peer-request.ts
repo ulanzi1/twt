@@ -111,6 +111,13 @@ export type PeerRequestSubmitResponse = z.infer<typeof PeerRequestSubmitResponse
 export const PeerRequestPathParams = z.object({ pariwarId: z.string().uuid(), pingId: z.string().uuid() });
 export const PeerRequestAnswerPathParams = PeerRequestPathParams.extend({ questionKey: z.string().regex(KEY).max(64) });
 
+/**
+ * The HELPLINE's write paths carry the caller (second-pass review S12 — "bind and audit"): the operator records ONLY the
+ * neighbour on the phone, so a ping of another neighbour is the same 404 (PM25 (b)).
+ */
+export const HelplinePeerRequestPathParams = PeerRequestPathParams.extend({ memberId: z.string().uuid() });
+export const HelplinePeerRequestAnswerPathParams = PeerRequestAnswerPathParams.extend({ memberId: z.string().uuid() });
+
 /** The helpline's list (PM12) — the caller's requests, each with its own detail (ONLY that neighbour's answers — PM25 (b)). */
 export const HelplinePeerRequestListResponse = z.object({ items: z.array(PeerRequestDetailResponse) });
 export type HelplinePeerRequestListResponse = z.infer<typeof HelplinePeerRequestListResponse>;

@@ -57,7 +57,7 @@ import type { FastifyRequest } from 'fastify';
 import type { AppDeps } from '../../context.js';
 import { ForbiddenError, NotFoundError, UnauthorizedError } from '../../http-errors.js';
 import { emitAuthAudit } from '../auth/shared/audit.js';
-import { assemblePeerAnswers } from './peer-answers-assembler.js';
+import { assemblePeerSection } from './peer-answers-assembler.js';
 import { decryptKycField } from '../kyc/kyc-crypto.js';
 import { geoTreeResolverForRequest } from '../rbac/index.js';
 import { DEATH_CERTIFICATE_REVIEW_KEY } from './claims.death-certificate.handlers.js';
@@ -820,42 +820,41 @@ export async function assemblePeerMesh(
   memberName: string,
 ): Promise<PeerMeshSection | undefined> {
   try {
-    const pariwarId = ids.pariwarId(ctx.pariwarId);
-    // ⭐ Story 6.27a (PM25 (c)) — FIRST: the people who meet the family form their own view first. An actor holding an
-    // UN-completed assignment with ⛔ no completed FULL visit gets ⛔ no section — ⛔ no title, ⛔ no counts, ⛔ no "hidden".
-    reads.bump();
-    if (await claim.isPeerSectionHiddenFromActor(ctx.db, pariwarId, claimCaseId, ctx.actorId)) return undefined;
-
-    reads.bump();
-    const selection = await claim.getPeerMeshSelectionByClaim(ctx.db, pariwarId, claimCaseId);
-    if (!selection) return { status: 'empty' };
-
-    reads.bump();
-    const pings = await claim.getPeerMeshPingIntentsBySelection(ctx.db, pariwarId, selection.selectionId);
-    reads.bump();
-    const responses = await claim.getPeerMeshResponses(ctx.db, claimCaseId);
-    // ⭐ Story 6.27a (PM13) — per neighbour: the name, the send status, the answers, the call-back mobile.
-    const pingViews = await assemblePeerAnswers(
+    // ⭐ Story 6.27a — ONE actor-aware builder (`assemblePeerSection`, second-pass review S13): the PM25 (c) hide FIRST and
+    // fail CLOSED, then the selection / pings / responses / answers / contacts. EVERY read runs under its own raw SAVEPOINT
+    // (review S14 — the `client` rule above), so a failed read degrades THIS section and ⛔ never aborts the scope tx under
+    // the later sections; a hide check that cannot run is `hidden` (an `unavailable` section would show the inspector a title).
+    const section = await assemblePeerSection(
       deps.encryption,
-      { db: ctx.db, pariwarId: ctx.pariwarId, claimCaseId: ctx.claimCaseId, ...(ctx.log ? { log: ctx.log } : {}), ...(ctx.onCallbackMobileShown ? { onCallbackMobileShown: ctx.onCallbackMobileShown } : {}) },
-      pings.map((p) => ({ pingId: p.pingId, memberId: p.memberId, sendOutcome: p.sendOutcome ?? null, detail: p.detail ?? null })),
+      {
+        db: ctx.db,
+        pariwarId: ctx.pariwarId,
+        claimCaseId: ctx.claimCaseId,
+        actorId: ctx.actorId,
+        ...(ctx.log ? { log: ctx.log } : {}),
+        // The route ALWAYS supplies it (and emits the audit lines only once its packet is built — review S17).
+        onCallbackMobileShown: ctx.onCallbackMobileShown ?? (() => undefined),
+        run: (label, read) => underSavepoint(ctx.client, `console_${label}`, read),
+      },
       () => reads.bump(),
       memberName,
     );
-
+    if (section.kind === 'hidden') return undefined;
+    if (section.kind === 'no_selection') return { status: 'empty' };
+    const { selection, responses } = section;
     return {
       status: 'present',
       transcript: {
         selectionId: selection.selectionId,
         distinctResponderCount: claim.distinctPeerMeshResponderCount(responses),
-        pingedMemberIds: pings.map((p) => p.memberId),
+        pingedMemberIds: [...section.pingMemberIds],
         // Append-order responses; a non-response is simply ABSENT and is NEVER inferred as `denied` (AC2c).
         responses: responses.map((r) => ({ responderMemberId: r.responderMemberId, response: r.response })),
         // AC2c's verifier annotations have no owning producer yet — explicit not_available_yet, never fabricated.
         verifierAnnotations: { status: 'not_available_yet' },
         outcome: selection.outcome,
         windowExpiresAt: selection.responseWindowExpiresAt.toISOString(),
-        pings: pingViews,
+        pings: section.pings,
       },
     };
   } catch (err) {
@@ -1191,6 +1190,9 @@ export function createVerifierConsoleHandlers(deps: AppDeps) {
       }
       const { claimCaseId } = request.params as { claimCaseId: string };
 
+      // ⭐ Review S17 — the call-back mobiles SHOWN are buffered and audited only once the packet is built (⛔ a line for a
+      // number a failed section never delivered).
+      const shownPings: string[] = [];
       const { packet } = await assembleVerifierConsole(deps, {
         db: scopeTx.tx,
         client: scopeTx.client,
@@ -1203,14 +1205,16 @@ export function createVerifierConsoleHandlers(deps: AppDeps) {
         traceId: request.requestContext.traceId ?? null,
         log: request.log,
         // ⭐ Story 6.27a (PM13) — EACH call-back mobile shown is audited: actor, claim, ping — ⛔ never the number.
-        onCallbackMobileShown: (pingId) =>
-          emitAuthAudit(deps, request, 'admin_verifier_console.peer_callback_mobile_shown', {
-            actorId,
-            pariwarId: scopeTx.pariwarId,
-            context: { claim_case_id: claimCaseId, ping_id: pingId },
-            resourceLocator: `claim:${String(claimCaseId).toLowerCase()}:ping:${String(pingId).toLowerCase()}`,
-          }),
+        onCallbackMobileShown: (pingId) => shownPings.push(pingId),
       });
+      for (const pingId of shownPings) {
+        emitAuthAudit(deps, request, 'admin_verifier_console.peer_callback_mobile_shown', {
+          actorId,
+          pariwarId: scopeTx.pariwarId,
+          context: { claim_case_id: claimCaseId, ping_id: pingId },
+          resourceLocator: `claim:${String(claimCaseId).toLowerCase()}:ping:${String(pingId).toLowerCase()}`,
+        });
+      }
 
       // AUDITED read (the adminValidityRead precedent) — NON-PII context only.
       emitAuthAudit(deps, request, 'admin_verifier_console.read', {

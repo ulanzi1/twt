@@ -240,5 +240,10 @@
   "peer_request.not_saved": "सहेजा नहीं गया — कृपया फिर से चुनें",
   "peer_request.unsaved": "बाहर जाने से पहले कृपया अपने उत्तर सहेजे जाने तक रुकें।",
   "peer_request.submit_error": "आपके उत्तर अभी भेजे नहीं जा सके। कृपया फिर से कोशिश करें।",
-  "peer_request.unavailable": "अभी दिखाया नहीं जा सका।"
+  "peer_request.unavailable": "अभी दिखाया नहीं जा सका।",
+  "peer_request.invalid_named": "“{question}” का आपका उत्तर सहेजा नहीं जा सका। कृपया फिर से चुनें, या अपना पिछला उत्तर रखें।",
+  "peer_request.keep_saved": "मेरा पिछला उत्तर रखें",
+  "peer_request.leave_anyway": "बिना सहेजे बाहर जाएँ",
+  "peer_request.date_unsaved": "आपने तारीख लिखी पर सहेजी नहीं। “तारीख सहेजें” दबाएँ, या उसे मिटा दें।",
+  "peer_request.date_clear": "तारीख मिटाएँ"
 }

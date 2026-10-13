@@ -2945,19 +2945,30 @@ export function getHelplinePeerRequests(pariwarId: string, memberId: string) {
   return apiFetch(`${helplinePeerBase(pariwarId)}/members/${encodeURIComponent(memberId)}/peer-requests?limit=5`, HelplinePeerRequestListResponse);
 }
 
-/** Record ONE answer the neighbour gives on the phone. */
-export function saveHelplinePeerAnswer(pariwarId: string, pingId: string, questionKey: string, value: PeerRequestAnswerValue) {
+/**
+ * Record ONE answer the neighbour gives on the phone — under the CALLER's path (second-pass review S12: bound, a ping of
+ * another neighbour is a 404) with the editor's Idempotency-Key (S18 — a retry reuses it).
+ */
+export function saveHelplinePeerAnswer(
+  pariwarId: string,
+  memberId: string,
+  pingId: string,
+  questionKey: string,
+  value: PeerRequestAnswerValue,
+  idempotencyKey: string,
+) {
   return apiFetch(
-    `${helplinePeerBase(pariwarId)}/peer-requests/${encodeURIComponent(pingId)}/answers/${encodeURIComponent(questionKey)}`,
+    `${helplinePeerBase(pariwarId)}/members/${encodeURIComponent(memberId)}/peer-requests/${encodeURIComponent(pingId)}/answers/${encodeURIComponent(questionKey)}`,
     PeerRequestSaveAnswerResponse,
-    { method: 'PUT', body: JSON.stringify({ value }) },
+    { method: 'PUT', body: JSON.stringify({ value }), headers: { 'Idempotency-Key': idempotencyKey } },
   );
 }
 
-/** Submit — locks the reply for the app too. */
-export function submitHelplinePeerReply(pariwarId: string, pingId: string) {
-  return apiFetch(`${helplinePeerBase(pariwarId)}/peer-requests/${encodeURIComponent(pingId)}/submit`, PeerRequestSubmitResponse, {
-    method: 'POST',
-    body: JSON.stringify({}),
-  });
+/** Submit — locks the reply for the app too. A retry reuses its Idempotency-Key (a lost response ⇒ 200, ⛔ "already sent"). */
+export function submitHelplinePeerReply(pariwarId: string, memberId: string, pingId: string, idempotencyKey: string) {
+  return apiFetch(
+    `${helplinePeerBase(pariwarId)}/members/${encodeURIComponent(memberId)}/peer-requests/${encodeURIComponent(pingId)}/submit`,
+    PeerRequestSubmitResponse,
+    { method: 'POST', body: JSON.stringify({}), headers: { 'Idempotency-Key': idempotencyKey } },
+  );
 }

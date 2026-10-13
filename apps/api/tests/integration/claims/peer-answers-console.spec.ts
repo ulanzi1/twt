@@ -11,7 +11,7 @@
 
 import { randomUUID } from 'node:crypto';
 
-import { claim, encryption, ids } from '@twt/domain';
+import { claim, encryption, ids, member } from '@twt/domain';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { signAccessToken } from '../../../src/modules/auth/member/tokens.js';
@@ -101,14 +101,17 @@ describe.skipIf(!hasDatabase)('Story 6.27a — the District Admin sees the neigh
   }
 
   /** The section on its own, counting booked reads and the statements Postgres receives. */
-  async function section(p: string, cid: string, actorId: string, onShown?: (pingId: string) => void) {
+  async function section(p: string, cid: string, actorId: string, onShown?: (pingId: string) => void, opts: { breakOn?: RegExp } = {}) {
     const scopeTx = await openScopeTx(t.deps, p);
     const statements: string[] = [];
     const client = scopeTx.client as unknown as { query: (...a: unknown[]) => unknown };
     const realQuery = client.query.bind(client);
     client.query = (...args: unknown[]) => {
       const first = args[0] as string | { text: string };
-      statements.push(typeof first === 'string' ? first : first.text);
+      const text = typeof first === 'string' ? first : first.text;
+      statements.push(text);
+      // a REAL Postgres error for the matching read (division by zero) — it would abort a scope tx with ⛔ a SAVEPOINT
+      if (opts.breakOn?.test(text)) return realQuery('SELECT 1 / 0');
       return realQuery(...args);
     };
     let booked = 0;
@@ -131,8 +134,10 @@ describe.skipIf(!hasDatabase)('Story 6.27a — the District Admin sees the neigh
         'Ram K.',
       );
       client.query = realQuery as never;
+      // the scope tx is still HEALTHY for the sections after this one (review S14 — ⛔ 25P02)
+      const healthy = await scopeTx.client.query('SELECT 1 AS ok').then(() => true, () => false);
       await closeScopeTx(scopeTx, true);
-      return { out, booked, statements: statements.filter((s) => !/SAVEPOINT/.test(s)) };
+      return { out, booked, healthy, statements: statements.filter((s) => !/SAVEPOINT/.test(s)) };
     } catch (err) {
       client.query = realQuery as never;
       await closeScopeTx(scopeTx, false);
@@ -205,5 +210,43 @@ describe.skipIf(!hasDatabase)('Story 6.27a — the District Admin sees the neigh
     expect(hidden.booked).toBe(1); // ⛔ further read — ⛔ a count, ⛔ a name reaches the inspector
     expect((await section(p, cid, randomUUID())).out?.status).toBe('present');
     // (a completed `certificate_check` alone vs a completed full visit — `peer-mesh-reply.spec.ts`, the domain predicate)
+  });
+  it('a hide check that cannot RUN fails CLOSED (⛔ section, ⛔ an "unavailable" title); a failed answers read is `unavailable` — the scope tx stays healthy either way (review S14)', async () => {
+    const p = randomUUID();
+    const asha = await seedNeighbour(p, 'Asha Devi', '+919876543210');
+    const { cid } = await seedClaimWithPings(p, [asha], [true]);
+    const brokenHide = await section(p, cid, randomUUID(), undefined, { breakOn: /claim_ground_inspections/ });
+    expect(brokenHide.out).toBeUndefined();
+    expect(brokenHide.healthy).toBe(true);
+    const brokenAnswers = await section(p, cid, randomUUID(), undefined, { breakOn: /pa_v\.question_key/ });
+    expect(brokenAnswers.out).toEqual({ status: 'unavailable' });
+    expect(brokenAnswers.healthy).toBe(true);
+  });
+
+  it('an ERASED neighbour\'s call-back mobile is `none` (⛔ "could not be shown just now"), and nothing is reported shown (review S23)', async () => {
+    const p = randomUUID();
+    const asha = await seedNeighbour(p, 'Asha Devi', '+919876543210');
+    const { cid, pingIds } = await seedClaimWithPings(p, [asha], [true]);
+    await put(p, asha, pingIds[0]!, 'has_died', { codes: ['died'] });
+    await put(p, asha, pingIds[0]!, 'callback_consent', { codes: ['yes'] });
+    await t.pool.query(`UPDATE member_identities SET mobile_ciphertext = $2 WHERE member_id = $1`, [
+      asha,
+      await encryption.encryptMobile(member.ANONYMIZED_SENTINEL, t.deps.encryption),
+    ]);
+    const shown: string[] = [];
+    const { out } = await section(p, cid, randomUUID(), (pingId) => shown.push(pingId));
+    const ping = out?.status === 'present' ? out.transcript.pings[0]! : null;
+    expect(ping?.callbackMobile).toEqual({ status: 'none' });
+    expect(shown).toEqual([]);
+  });
+
+  it('a selection with ZERO pings books EXACTLY the statements it runs — ⛔ a contacts read (review S25)', async () => {
+    const p = randomUUID();
+    const { cid, pingIds } = await seedClaimWithPings(p, [randomUUID()], [false]);
+    await t.pool.query(`DELETE FROM claim_peer_mesh_pings WHERE ping_id = $1`, [pingIds[0]]); // a selection whose pings never began
+    const { out, booked, statements } = await section(p, cid, randomUUID());
+    expect(out?.status).toBe('present');
+    expect(booked).toBe(5);
+    expect(statements).toHaveLength(5);
   });
 });

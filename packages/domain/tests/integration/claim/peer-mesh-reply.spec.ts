@@ -122,7 +122,7 @@ function prep(key: string, value: QuestionnaireAnswerValue, live: Map<string, re
 /** The handler's pre-lock decrypt of the reply's live sensitive answers, faked from the test ciphertext. */
 async function decryptedLiveOf(client: Client, r: Req): Promise<Map<string, QuestionnaireAnswerValue>> {
   const out = new Map<string, QuestionnaireAnswerValue>();
-  const view = await readPeerRequest(bindScopedDb(client), r.pid, r.pingId, null).catch(() => null);
+  const view = await readPeerRequest(bindScopedDb(client), r.pid, r.pingId, r.neighbour).catch(() => null);
   if (!view?.reply) return out;
   for (const row of await readLivePeerAnswers(bindScopedDb(client), r.pid, view.reply.replyId)) {
     if (row.valueCiphertext === null) continue;
@@ -132,12 +132,12 @@ async function decryptedLiveOf(client: Client, r: Req): Promise<Map<string, Ques
   return out;
 }
 
-async function save(client: Client, r: Req, key: string, value: QuestionnaireAnswerValue, opts: { via?: 'member_app' | 'helpline'; memberId?: MemberId | null; pingId?: PeerMeshPingId } = {}) {
+async function save(client: Client, r: Req, key: string, value: QuestionnaireAnswerValue, opts: { via?: 'member_app' | 'helpline'; memberId?: MemberId; pingId?: PeerMeshPingId } = {}) {
   const via = opts.via ?? 'member_app';
   return savePeerAnswer(client, {
     pariwarId: r.pid,
     pingId: opts.pingId ?? r.pingId,
-    memberId: opts.memberId === undefined ? (via === 'helpline' ? null : r.neighbour) : opts.memberId,
+    memberId: opts.memberId ?? r.neighbour,
     questionKey: key,
     value,
     prepared: prep(key, value),
@@ -248,6 +248,21 @@ describe.skipIf(!hasDatabase)('Story 6.27a — the neighbours\' reply writer', {
       await expect(save(client, r, 'death_cause', { codes: ['old_age'] })).rejects.toMatchObject({ reason: 'unknown_question' });
     });
 
+    it('a reply PINNED to peer_mesh.v1 is validated against v1 — a v2-only question is unknown (review S8 (c))', async () => {
+      const { client } = getTx();
+      const r = await requestAt(client, 'verification_in_progress');
+      await client.query(
+        `INSERT INTO claim_peer_mesh_replies (pariwar_id, claim_case_id, selection_id, ping_id, responder_member_id, questionnaire_version_id)
+         SELECT pariwar_id, $2, selection_id, ping_id, member_id, 'peer_mesh.v1' FROM claim_peer_mesh_pings WHERE ping_id = $1`,
+        [r.pingId, r.cid],
+      );
+      await enterAppScope(client, r.pid);
+      await save(client, r, 'has_died', { codes: ['died'] });
+      await expect(save(client, r, 'how_known', { codes: ['other'] })).rejects.toMatchObject({ reason: 'unknown_question' });
+      const { rows } = await client.query(`SELECT questionnaire_version_id FROM claim_peer_mesh_replies WHERE ping_id = $1`, [r.pingId]);
+      expect(rows).toEqual([{ questionnaire_version_id: 'peer_mesh.v1' }]); // the pin is never re-resolved to the live v2
+    });
+
     it('a helpline save: saved_via helpline, the operator as saver, and the event actor operator', async () => {
       const { client } = getTx();
       const r = await requestAt(client, 'verification_in_progress');
@@ -285,11 +300,14 @@ describe.skipIf(!hasDatabase)('Story 6.27a — the neighbours\' reply writer', {
       // another member's ping
       await expect(save(client, r, 'has_died', { codes: ['died'] }, { memberId: r.other })).rejects.toBeInstanceOf(PeerRequestNotFoundError);
       await expect(readPeerRequest(db, r.pid, r.pingId, r.other)).rejects.toBeInstanceOf(PeerRequestNotFoundError);
+      // ⭐ Review S12 — the HELPLINE is bound too: recording neighbour X, a ping of neighbour Y is the SAME not-found.
+      await expect(save(client, r, 'has_died', { codes: ['died'] }, { via: 'helpline', memberId: r.other })).rejects.toBeInstanceOf(PeerRequestNotFoundError);
+      await expect(submitPeerReply(client, { pariwarId: r.pid, pingId: r.pingId, memberId: r.other })).rejects.toBeInstanceOf(PeerRequestNotFoundError);
       // another Pariwar's ping (scope A)
       await expect(readPeerRequest(db, PARIWAR_A, inB.pingId, inB.neighbour)).rejects.toBeInstanceOf(PeerRequestNotFoundError);
       await expect(save(client, { ...inB, pid: toPariwarId(PARIWAR_A) }, 'has_died', { codes: ['died'] })).rejects.toBeInstanceOf(PeerRequestNotFoundError);
       // an unknown ping
-      await expect(readPeerRequest(db, PARIWAR_A, toPingId(randomUUID()), null)).rejects.toBeInstanceOf(PeerRequestNotFoundError);
+      await expect(readPeerRequest(db, PARIWAR_A, toPingId(randomUUID()), r.neighbour)).rejects.toBeInstanceOf(PeerRequestNotFoundError);
     });
   });
 
@@ -372,7 +390,7 @@ describe.skipIf(!hasDatabase)('Story 6.27a — the neighbours\' reply writer', {
       const { rows } = await client.query(`SELECT saved_via FROM claim_peer_mesh_reply_answers WHERE claim_case_id = $1 ORDER BY saved_at`, [r.cid]);
       expect(rows.map((x) => x.saved_via)).toEqual(['helpline', 'member_app']);
       await submitPeerReply(client, { pariwarId: r.pid, pingId: r.pingId, memberId: r.neighbour });
-      await expect(submitPeerReply(client, { pariwarId: r.pid, pingId: r.pingId, memberId: null })).rejects.toBeInstanceOf(PeerRequestSubmittedError);
+      await expect(submitPeerReply(client, { pariwarId: r.pid, pingId: r.pingId, memberId: r.neighbour })).rejects.toBeInstanceOf(PeerRequestSubmittedError);
       await expect(save(client, r, 'how_known', { codes: ['other'] })).rejects.toBeInstanceOf(PeerRequestSubmittedError);
       await expect(save(client, r, 'how_known', { codes: ['other'] }, { via: 'helpline' })).rejects.toBeInstanceOf(PeerRequestSubmittedError);
     });
@@ -413,6 +431,12 @@ describe.skipIf(!hasDatabase)('Story 6.27a — the neighbours\' reply writer', {
       expect(list.map((x) => x.pingId)).not.toContain(untexted.pingId);
       expect(list.map((x) => x.pingId)).not.toContain(closed.pingId);
       expect(await listOpenPeerRequestsForMember(bindScopedDb(client), toPariwarId(PARIWAR_A), toMemberId(neighbour), 0)).toHaveLength(1);
+      // ⭐ Review S8 (b) — the cap has teeth: SIX open requests ⇒ FIVE listed (PEER_REQUEST_LIST_CAP), even when 50 are asked.
+      await client.query('RESET ROLE'); // the fixtures are the superuser's
+      for (let i = 0; i < 5; i += 1) await make('verification_in_progress');
+      await enterAppScope(client, PARIWAR_A);
+      expect(await listOpenPeerRequestsForMember(bindScopedDb(client), toPariwarId(PARIWAR_A), toMemberId(neighbour), 50)).toHaveLength(5);
+      expect(await listOpenPeerRequestsForMember(bindScopedDb(client), toPariwarId(PARIWAR_A), toMemberId(neighbour))).toHaveLength(5);
     });
   });
 

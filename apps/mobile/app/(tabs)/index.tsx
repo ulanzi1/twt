@@ -50,10 +50,6 @@ export default function YogdaanTab() {
       <YStack flex={1}>
         {/* Story 8.2 — the My Pool card, TOPMOST. Self-suppresses unless the member is active + assigned
             to a pool whose cycle alert is live. The Epic-8 home anchor of the 90-second contribution loop. */}
-        {/* Story 6.27a (PM2 / PM11) — "The Trust has asked you about a member": renders NOTHING unless a request the
-            Trust has TEXTED is open (DARK until 6.27c texts anyone). 6.30's copy promises it here (`app-links.json`
-            `body.home_screen`) — a bare `/peer-request` after login lands here. */}
-        <PeerRequestEntry />
         <ActiveContributionCard />
         {/* Story 8.3 — the "View contributors" affordance (just below the card, NOT inside it — D8). Navigates
             to the Live Contributor List view; self-suppresses in lock-step with the card. */}
@@ -65,6 +61,11 @@ export default function YogdaanTab() {
             self-suppresses in LOCK-STEP with the card, because an entry that outlived it would be a
             dead link. ⛔ NOT on the Shradhanjali tab, which is a sample-data prototype (D4). */}
         <SahyogVivranEntry />
+        {/* Story 6.27a (PM2 / PM11) — "The Trust has asked you about a member": renders NOTHING unless a request the
+            Trust has TEXTED is open (DARK until 6.27c texts anyone). 6.30's copy promises it here (`app-links.json`
+            `body.home_screen`) — a bare `/peer-request` after login lands here. ⭐ BELOW the My Pool card and its
+            lock-step siblings (second-pass review S31): Story 8.2's AC keeps that card the TOPMOST element. */}
+        <PeerRequestEntry />
         <LockInClockWidget />
         <RenewalStatusWidget />
         <LifeEventsEntry />

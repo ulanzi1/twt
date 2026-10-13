@@ -1,17 +1,25 @@
-// `assemblePeerAnswers` — the neighbours' answers as STAFF see them (Story 6.27a PM13, PM25 (c); `2026-10-10-311`). ONE
-// actor-aware assembler: the verifier console's peer-mesh section uses it here, and 6.27b's every-approver read (PM24)
-// reuses it. English only (the admin console is English-only — F22).
+// `assemblePeerSection` — the neighbours' answers as STAFF see them (Story 6.27a PM13, PM25 (c); `2026-10-10-311`). ONE
+// ACTOR-AWARE assembler: the verifier console's peer-mesh section uses it, and 6.27b's every-approver read (PM24) reuses
+// it — so the inspector's "form your own view first" hide (PM25 (c)) and the call-back disclosure audit travel WITH it,
+// ⛔ never with one caller (second-pass review S13: they lived only in the console wrapper). English only (F22).
+//
+// ⭐ FIRST, the hide: an actor holding an UN-completed ground-inspection assignment with ⛔ no completed FULL visit gets
+// `hidden` — ⛔ no title, ⛔ no counts, ⛔ no "hidden" line. A hide check that cannot RUN is `hidden` too (fail CLOSED —
+// review S14: an `unavailable` section would itself show the inspector a title).
 //
 // Per neighbour: the NAME (the KYC name, decrypted HERE in the handler — ⛔ never the warning module), the send status for
 // EVERY value of the ping's column (6.27c writes it), and — once they answered — EVERY live answer with its question's
 // English words (the sensitive ones decrypted here), submitted or not, how it was saved (app / helpline), when, and
-// "changed N times"; when the neighbour said YES to a call back, their mobile (decrypted, normalised; EACH showing reported
-// through `onCallbackMobileShown` so the route audits it — ⛔ never the number in the audit).
-// ⭐ A failed decrypt is `unavailable` ("could not be shown just now") — ⛔ never a blank (Invariant 8).
+// "changed N times"; when the neighbour said YES to a call back, their mobile (decrypted, normalised).
+// ⭐ The disclosure callback is REQUIRED and fires only once the WHOLE section has assembled (review S17 — ⛔ an audit
+// line for a number the section then failed to deliver); the console route emits the audit lines after its packet is built.
+// ⭐ A failed decrypt is `unavailable` ("could not be shown just now") — ⛔ never a blank (Invariant 8); an ERASED
+// neighbour (the sentinel) is `none`, for the name AND the mobile (review S23).
 // ⛔ The per-answer warning flags arrive with 6.27b (from the warnings read; a failed read ⇒ `null`).
-// Reads: the answers (one bounded statement) + the neighbours' contacts (one statement) — each counted by the caller.
+// Reads (each counted by `bump`, each run through `ctx.run` — the console's SAVEPOINT): the hide check, the selection, the
+// pings, the responses, the answers (one bounded statement), and — ONLY when there is a ping — the contacts (review S25).
 
-import type { PeerMeshAnswerView, PeerMeshPingView } from '@twt/contracts';
+import { PEER_MESH_SEND_STATUSES, type PeerMeshAnswerView, type PeerMeshPingView } from '@twt/contracts';
 import { claim, encryption, ids, member as memberDomain, questionnaires, type Db } from '@twt/domain';
 import { t } from '@twt/i18n';
 
@@ -23,41 +31,87 @@ export interface PeerAnswersContext {
   readonly db: Db;
   readonly pariwarId: string;
   readonly claimCaseId: string;
+  /** The READER — PM25 (c)'s hide is judged for THIS actor. */
+  readonly actorId: string;
   readonly log?: { warn: (obj: unknown, msg: string) => void };
-  /** Called once for EVERY call-back mobile shown (the route audits it — `admin_verifier_console.peer_callback_mobile_shown`). */
-  readonly onCallbackMobileShown?: (pingId: string) => void;
+  /**
+   * REQUIRED — called once per call-back mobile SHOWN, after the whole section assembled; the caller audits each
+   * (`admin_verifier_console.peer_callback_mobile_shown` — actor, claim, ping; ⛔ never the number).
+   */
+  readonly onCallbackMobileShown: (pingId: string) => void;
+  /**
+   * Runs ONE counted read. The console passes its SAVEPOINT wrapper (`underSavepoint`), so a failed read ⛔ never aborts
+   * the scope tx under the later sections. Absent ⇒ the read runs bare.
+   */
+  readonly run?: <T>(label: string, read: () => Promise<T>) => Promise<T>;
 }
 
-type PingRow = {
-  readonly pingId: string;
-  readonly memberId: string;
-  readonly sendOutcome: string | null;
-  readonly detail: string | null;
-};
+export type PeerSection =
+  | { readonly kind: 'hidden' }
+  | { readonly kind: 'no_selection' }
+  | {
+      readonly kind: 'present';
+      readonly selection: NonNullable<Awaited<ReturnType<typeof claim.getPeerMeshSelectionByClaim>>>;
+      readonly pingMemberIds: readonly string[];
+      readonly responses: Awaited<ReturnType<typeof claim.getPeerMeshResponses>>;
+      readonly pings: PeerMeshPingView[];
+    };
 
 const enWords = (key: string, member: string): string => t(key, { member }, { locale: 'en', namespace: 'claim' });
 
 /**
- * Build every ping's staff view. `bump` is called once per counted source read (the console's read ceiling).
- * `memberName` interpolates the question words (`{member}`).
+ * Build the peer-mesh section for `ctx.actorId`. `bump` is called once per counted source read (the console's read
+ * ceiling). `memberName` interpolates the question words (`{member}`).
  */
-export async function assemblePeerAnswers(
+export async function assemblePeerSection(
   enc: EncryptionDeps,
   ctx: PeerAnswersContext,
-  pings: readonly PingRow[],
   bump: () => void,
   memberName: string,
-): Promise<PeerMeshPingView[]> {
+): Promise<PeerSection> {
   const pariwarId = ids.pariwarId(ctx.pariwarId);
-  bump();
-  const { replies, answers } = await claim.readPeerAnswersForClaim(ctx.db, pariwarId, ids.claimId(ctx.claimCaseId));
-  bump();
-  const contacts = await claim.readPeerNeighbourContacts(ctx.db, pariwarId, pings.map((p) => ids.memberId(p.memberId)));
+  const claimCaseId = ids.claimId(ctx.claimCaseId);
+  const run = ctx.run ?? (<T>(_label: string, read: () => Promise<T>) => read());
+  const warn = (what: string, err: unknown) =>
+    ctx.log?.warn({ errName: (err as Error | null)?.name, what, claimCaseId: ctx.claimCaseId }, 'peer-answers: a field could not be shown');
 
-  const warn = (what: string, err: unknown) => ctx.log?.warn({ errName: (err as Error | null)?.name, what, claimCaseId: ctx.claimCaseId }, 'peer-answers: a field could not be shown');
+  // ── PM25 (c) — FIRST, and fail CLOSED ──
+  bump();
+  try {
+    if (await run('peer_section_visibility', () => claim.isPeerSectionHiddenFromActor(ctx.db, pariwarId, claimCaseId, ctx.actorId))) {
+      return { kind: 'hidden' };
+    }
+  } catch (err) {
+    warn('visibility', err);
+    return { kind: 'hidden' };
+  }
 
-  const views: PeerMeshPingView[] = [];
-  for (const ping of pings) {
+  bump();
+  const selection = await run('peer_section_selection', () => claim.getPeerMeshSelectionByClaim(ctx.db, pariwarId, claimCaseId));
+  if (!selection) return { kind: 'no_selection' };
+  bump();
+  const pingRows = await run('peer_section_pings', () => claim.getPeerMeshPingIntentsBySelection(ctx.db, pariwarId, selection.selectionId));
+  bump();
+  const responses = await run('peer_section_responses', () => claim.getPeerMeshResponses(ctx.db, claimCaseId));
+  bump();
+  const { replies, answers } = await run('peer_section_answers', () => claim.readPeerAnswersForClaim(ctx.db, pariwarId, claimCaseId));
+  let contacts = new Map<string, { readonly nameCiphertext: string | null; readonly mobileCiphertext: string | null }>();
+  if (pingRows.length > 0) {
+    bump();
+    contacts = await run('peer_section_contacts', () =>
+      claim.readPeerNeighbourContacts(ctx.db, pariwarId, pingRows.map((p) => ids.memberId(p.memberId))),
+    );
+  }
+
+  const shown: string[] = [];
+  const pings: PeerMeshPingView[] = [];
+  for (const ping of pingRows) {
+    // ── the send status — a value the contract does ⛔ not know degrades THIS section, ⛔ the whole packet (review S24) ──
+    const sendStatus = ping.sendOutcome ?? 'not_sent';
+    if (!(PEER_MESH_SEND_STATUSES as readonly string[]).includes(sendStatus)) {
+      throw new Error(`[peer-answers] send status '${sendStatus}' is not in the console contract`);
+    }
+
     // ── the neighbour's name ──
     const contact = contacts.get(ping.memberId);
     let responderName: PeerMeshPingView['responderName'] = { status: 'none' };
@@ -78,7 +132,7 @@ export async function assemblePeerAnswers(
     if (reply) {
       const def = questionnaires.getQuestionnaireVersion(reply.questionnaireVersionId);
       const questions = def ? questionnaires.questionsOf(def) : [];
-      const views_: PeerMeshAnswerView[] = [];
+      const views: PeerMeshAnswerView[] = [];
       for (const a of answers.filter((x) => x.replyId === reply.replyId)) {
         const q = questions.find((x) => x.key === a.questionKey);
         const label = (code: string) => {
@@ -98,7 +152,7 @@ export async function assemblePeerAnswers(
           }
         }
         if (a.questionKey === 'callback_consent' && value.kind === 'codes' && value.codes.length === 1 && value.codes[0] === 'yes') consented = true;
-        views_.push({
+        views.push({
           questionKey: a.questionKey,
           question: q ? enWords(q.copyKey, memberName) : a.questionKey,
           value,
@@ -107,34 +161,43 @@ export async function assemblePeerAnswers(
           changeCount: Math.max(0, a.versions - 1),
         });
       }
-      replyView = { submitted: reply.submittedAt !== null, answers: views_ };
+      replyView = { submitted: reply.submittedAt !== null, answers: views };
     }
 
     // ── the call-back mobile (only on a "yes") ──
     let callbackMobile: PeerMeshPingView['callbackMobile'] = { status: 'none' };
-    if (consented) {
+    if (consented && contact?.mobileCiphertext) {
       try {
-        const canonical = contact?.mobileCiphertext ? encryption.normalizeMobile(await encryption.decryptMobile(contact.mobileCiphertext, enc)) : null;
-        if (canonical === null) callbackMobile = { status: 'unavailable' };
+        const plain = await encryption.decryptMobile(contact.mobileCiphertext, enc);
+        if (plain === memberDomain.ANONYMIZED_SENTINEL) callbackMobile = { status: 'none' }; // erased — ⛔ "just now"
         else {
-          callbackMobile = { status: 'shown', text: canonical };
-          ctx.onCallbackMobileShown?.(ping.pingId);
+          const canonical = encryption.normalizeMobile(plain);
+          if (canonical === null) callbackMobile = { status: 'unavailable' };
+          else {
+            callbackMobile = { status: 'shown', text: canonical };
+            shown.push(ping.pingId);
+          }
         }
       } catch (err) {
         warn('mobile', err);
         callbackMobile = { status: 'unavailable' };
       }
+    } else if (consented) {
+      callbackMobile = { status: 'unavailable' };
     }
 
-    views.push({
+    pings.push({
       pingId: ping.pingId,
       memberId: ping.memberId,
       responderName,
-      sendStatus: (ping.sendOutcome ?? 'not_sent') as PeerMeshPingView['sendStatus'],
-      noTargetReason: ping.sendOutcome === 'no_target' ? ping.detail : null,
+      sendStatus: sendStatus as PeerMeshPingView['sendStatus'],
+      noTargetReason: ping.sendOutcome === 'no_target' ? (ping.detail ?? null) : null,
       reply: replyView,
       callbackMobile,
     });
   }
-  return views;
+
+  // The section is whole — only NOW is each shown mobile reported (review S17).
+  for (const pingId of shown) ctx.onCallbackMobileShown(pingId);
+  return { kind: 'present', selection, pingMemberIds: pingRows.map((p) => p.memberId), responses, pings };
 }

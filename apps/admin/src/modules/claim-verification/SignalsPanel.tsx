@@ -205,9 +205,16 @@ function ValidityView({ validity }: { validity: VerifierConsolePacket['validity'
   );
 }
 
-function PeerMeshView({ transcript }: { transcript: PeerMeshTranscript }): ReactElement {
+function PeerMeshView({ transcript, now = Date.now() }: { transcript: PeerMeshTranscript; now?: number }): ReactElement {
+  // ⭐ Review S39 — a `pending` label whose 72 hours have PASSED is being counted (the worker relabels it); ⛔ "open until"
+  // a time already gone.
+  const expired = Date.parse(transcript.windowExpiresAt) <= now;
   const windowLine =
-    transcript.outcome === 'pending' ? t.peerMesh.window.pending(formatIst(transcript.windowExpiresAt)) : t.peerMesh.window[transcript.outcome];
+    transcript.outcome === 'pending'
+      ? expired
+        ? t.peerMesh.window.counting
+        : t.peerMesh.window.pending(formatIst(transcript.windowExpiresAt))
+      : t.peerMesh.window[transcript.outcome];
   return (
     <div className="flex flex-col gap-2 text-sm" data-testid="peer-mesh-transcript">
       {/* ⭐ Story 6.27a (PM13) — the 72-hour line */}

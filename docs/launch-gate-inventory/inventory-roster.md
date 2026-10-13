@@ -481,10 +481,10 @@
 
 ### Row 28 — `peer-mesh-request-hindi-human-review`
 
-- **gate_name:** A human review of the Hindi a neighbour sees — the text, the questionnaire's question words, the answer screens, and 6.30's fallback page, not-found screen and route-shell placeholder
+- **gate_name:** A human review of the Hindi a neighbour sees — the text, the questionnaire's question words, the answer screens, and 6.30's fallback page and not-found screen (the route-shell placeholder `peer_request.placeholder` was RETIRED by 6.27a Task 5 — second-pass review S42)
 - **architecture_source_line:** N/A — **decision-authored**: [`-311`](../../.decision-log.md#decision-2026-10-10-311) PM16 (Rows 20 / 21 / 23's precedent); `-303` and `-304` list the Hindi wording under *"does NOT cover"*.
 - **owner:** BigDev (gate); a Hindi-first reviewer named by BigDev — the review
-- **support:** Stories 6.27a (the questionnaire words and the screens), 6.27c (the text), 6.30 (the fallback page, the not-found screen, the placeholder)
+- **support:** Stories 6.27a (the questionnaire words and the screens — the placeholder it retired included), 6.27c (the text), 6.30 (the fallback page, the not-found screen)
 - **closure_criteria:** A recorded human review — agreed or corrected — of the Hindi values of: `peer_mesh_sms.request` (6.27c, `packages/i18n/locales/hi/claim.json`); the questionnaire's question / option / closing-note words (`peer_request_questions.*`, `hi/claim.json`); the screens' chrome (`peer_request.*`, `hi/claim.json`); 6.30's fallback page (`packages/i18n/locales/hi/app-links.json`, rendered by `apps/public/src/pages/peer-request.astro`), its not-found screen (`hi/common.json` `not_found.*`, `apps/mobile/app/+not-found.tsx`) (the route-shell placeholder `peer_request.placeholder` was RETIRED by Story 6.27a — ⛔ in scope) — and each `$comment` NOT-YET-HUMAN-REVIEWED marker replaced in the same commit. ⚠ A corrected TEXT must be re-registered on the DLT portal (templates 13 / 14) — the send must byte-match the registered text. ⛔ Never copied from the `-303` routing block's Hindi draft (it says *"two"*). Testable signal: the markers are gone and `closure_evidence_link` names the review.
 - **target_date:** before the first text to a neighbour goes live (relative-to-fact: the gate IS that go-live).
 - **current_status:** `open`

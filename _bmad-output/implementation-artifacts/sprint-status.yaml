@@ -1,3 +1,9 @@
+# last_updated: 2026-10-13 (STORY 6.27a — SECOND-PASS CODE REVIEW in 3 chunks + APPLY ALL; branch story/6-27a at 618566d3 plus
+# uncommitted fixes. Row 6-27-peer-mesh-sending-replies-and-date-of-death stays done. Decisions (BigDev): S1 — -308's answer SOURCE
+# handed off to row 6-36 (its comment below carries it); S12 — helpline writes BOUND to the caller (members/:memberId/…) + the
+# list's Tier-1 read AUDITED (PM12 amended in place). 38 patches applied incl. additive migration 0158 (sensitive keys stored
+# encrypted; applied to :5432 / :5433); S9–S11 + S37 (c) deferred; 42 dismissed. ci:local run 2 35/36 (live integration green),
+# then test (unit) 37/37 at CI concurrency after a test-only timeout on one admin RTL test. Rows 27 / 28 + device proof open.)
 # last_updated: 2026-10-12o (STORY 6.27a — CODE REVIEW + APPLY ALL; branch story/6-27a at 3f9e7c42 plus uncommitted fixes.
 # 6-27-peer-mesh-sending-replies-and-date-of-death review → done. All 12 patches fixed; 0 decisions / 0 deferred, 3 dismissed.
 # Owner-scoped non-persisted cache, FIFO autosaves / recovery / Submit and departure guards, additive migration 0157 ownership
@@ -19927,6 +19933,9 @@ development_status:
   # prompts, Pariwar Admin campaign) → ⛔ no one. ⚠ Large — its own create-story decides any split.
   # ⭐ 2026-10-10 (`2026-10-10-311` PM1): 6-36 also FILTERS ineligible members (⛔ not active; a claim filed for their own death; ⛔ no sendable
   # mobile) when the people are chosen, and records each group's RANKING so 6.27c can replace a send-time skip from the same group.
+  # ⭐ 2026-10-13 (`2026-10-13-325` S1 A — 6.27a second-pass review S1, BigDev option 1): `-308`'s 6.27a share HANDED OFF here — 6-36 stores each selected person's
+  # SOURCE (`workplace` / `named_by_member`) AND carries it onto the reply (6.27a PM7) AND shows it on the District Admin's console
+  # (6.27a PM13: "chosen from the workplace" / "named by the member"); 6.27b PM24 shows it too. 6.27a built ⛔ neither (deferred-work).
   6-36-peer-mesh-school-wise-selection: backlog
   # ⭐ 2026-10-10 ADDED by `2026-10-10-314` (BigDev: *"msg91 for now"* → *"New story row"*): the SMS gateway is MSG91, whose Flow / OTP v5
   # APIs take an `authkey` header, MSG91's OWN template id and NAMED variable values — ⛔ the generic `sms-app.ts` contract. 6-37 builds the

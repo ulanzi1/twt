@@ -13,7 +13,11 @@ import {
   PeerRequestSaveAnswerRequest,
 } from '../src/index.js';
 
-/** The domain's served definition rendered onto the wire with dummy words — what the API handler does. */
+/**
+ * The domain's served definition rendered onto the wire with dummy words — the SHAPE the API handler produces. ⚠ A copy:
+ * the REAL mapper (`toWireQuestionnaire`) is held to the contract in `apps/api/tests/unit/peer-request-wire-lockstep.test.ts`
+ * (second-pass review S27 (b) — a copy alone would drift with the handler unnoticed).
+ */
 function toWire(def: questionnaires.QuestionnaireDefinition) {
   const words = (k: string) => ({ en: `en:${k}`, hi: `hi:${k}` });
   return {

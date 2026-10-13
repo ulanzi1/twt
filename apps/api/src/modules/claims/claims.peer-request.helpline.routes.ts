@@ -1,9 +1,11 @@
 // The neighbours' answer screens — the HELPLINE routes (Story 6.27a PM12; `2026-10-10-311`). Handlers:
 // `claims.peer-request.handlers.ts` (shared with the member routes).
 //
-//   · GET  /api/v1/p/:pariwarId/admin/claims/helpline/members/:memberId/peer-requests?limit=  — the caller's OPEN requests
-//   · PUT  /api/v1/p/:pariwarId/admin/claims/helpline/peer-requests/:pingId/answers/:questionKey — record ONE answer
-//   · POST /api/v1/p/:pariwarId/admin/claims/helpline/peer-requests/:pingId/submit             — lock the reply
+//   · GET  /api/v1/p/:pariwarId/admin/claims/helpline/members/:memberId/peer-requests?limit=                     — the caller's OPEN requests (AUDITED)
+//   · PUT  /api/v1/p/:pariwarId/admin/claims/helpline/members/:memberId/peer-requests/:pingId/answers/:questionKey — record ONE answer
+//   · POST /api/v1/p/:pariwarId/admin/claims/helpline/members/:memberId/peer-requests/:pingId/submit             — lock the reply
+// ⭐ Second-pass review S12 (BigDev 2026-10-13, "bind and audit"): the writes carry the caller's `:memberId` — PM12's
+// original ping-only paths let an operator write ANY texted ping in the Pariwar. The writes take an Idempotency-Key (S18).
 //
 // ⭐ 6.3's chain on EVERY route: [requireAdminSession, scopeResolutionHook, requirePermissionHook('claim.file'),
 // requireStepUp('claim_file')] — ⛔ no new key (a reuse, 6.21b D5's precedent); ⛔ no step-up ⇒ refused. ENROLLED in the
@@ -14,10 +16,10 @@
 // neighbour on the phone (PM25 (b)) — ⛔ another neighbour's, ⛔ the warning lines, ⛔ the counts.
 
 import {
+  HelplinePeerRequestAnswerPathParams,
   HelplinePeerRequestListResponse,
-  PeerRequestAnswerPathParams,
+  HelplinePeerRequestPathParams,
   PeerRequestListQuery,
-  PeerRequestPathParams,
   PeerRequestSaveAnswerRequest,
   PeerRequestSaveAnswerResponse,
   PeerRequestSubmitResponse,
@@ -59,10 +61,10 @@ export function registerPeerRequestHelplineRoutes(app: FastifyInstance, deps: Ap
   );
 
   r.put(
-    '/api/v1/p/:pariwarId/admin/claims/helpline/peer-requests/:pingId/answers/:questionKey',
+    '/api/v1/p/:pariwarId/admin/claims/helpline/members/:memberId/peer-requests/:pingId/answers/:questionKey',
     {
       schema: {
-        params: PeerRequestAnswerPathParams,
+        params: HelplinePeerRequestAnswerPathParams,
         body: PeerRequestSaveAnswerRequest,
         response: { 200: PeerRequestSaveAnswerResponse },
         tags: [TAG],
@@ -73,9 +75,9 @@ export function registerPeerRequestHelplineRoutes(app: FastifyInstance, deps: Ap
   );
 
   r.post(
-    '/api/v1/p/:pariwarId/admin/claims/helpline/peer-requests/:pingId/submit',
+    '/api/v1/p/:pariwarId/admin/claims/helpline/members/:memberId/peer-requests/:pingId/submit',
     {
-      schema: { params: PeerRequestPathParams, response: { 200: PeerRequestSubmitResponse }, tags: [TAG] },
+      schema: { params: HelplinePeerRequestPathParams, response: { 200: PeerRequestSubmitResponse }, tags: [TAG] },
       preHandler: [adminSession, scope, canFileClaim, stepUp],
     },
     h.helplineSubmit,

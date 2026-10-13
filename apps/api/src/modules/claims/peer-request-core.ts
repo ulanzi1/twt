@@ -190,6 +190,16 @@ export function todayIst(now: Date): string {
 export interface PreparedSave {
   readonly prepared: claim.PreparedPeerAnswer;
   readonly decryptedLive: Map<string, questionnaires.QuestionnaireAnswerValue>;
+  /** The value AS STORED (codes in option order) — what the save response echoes (review S21). */
+  readonly stored: questionnaires.QuestionnaireAnswerValue;
+  /** The question's live answer already holds `stored` — the save is a no-op and writes ⛔ no audit line (review S20). */
+  readonly unchanged: boolean;
+}
+
+function sameAnswer(a: questionnaires.QuestionnaireAnswerValue | undefined, b: questionnaires.QuestionnaireAnswerValue): boolean {
+  if (a === undefined) return false;
+  if ('date' in a || 'date' in b) return 'date' in a && 'date' in b && a.date === b.date;
+  return a.codes.length === b.codes.length && a.codes.every((c, i) => c === b.codes[i]);
 }
 
 /**
@@ -202,7 +212,7 @@ export async function prepareSave(
   input: {
     readonly pariwarId: string;
     readonly pingId: string;
-    readonly memberId: string | null;
+    readonly memberId: string;
     readonly questionKey: string;
     readonly value: questionnaires.QuestionnaireAnswerValue;
     readonly todayIst: string;
@@ -211,7 +221,7 @@ export async function prepareSave(
   log: FastifyBaseLogger,
 ): Promise<PreparedSave> {
   const pid = ids.pariwarId(input.pariwarId);
-  const view = await claim.readPeerRequest(tx, pid, ids.peerMeshPingId(input.pingId), input.memberId === null ? null : ids.memberId(input.memberId));
+  const view = await claim.readPeerRequest(tx, pid, ids.peerMeshPingId(input.pingId), ids.memberId(input.memberId));
   if (!view.inWindow) throw new claim.PeerRequestNoLongerOpenError();
   if (view.reply?.submittedAt != null) throw new claim.PeerRequestSubmittedError();
   const def = claim.pinnedVersionFor(view.reply, pid);
@@ -223,15 +233,26 @@ export async function prepareSave(
     if (v !== undefined) live.set(row.questionKey, 'codes' in v ? v.codes : null);
   }
   const check = questionnaires.checkAnswer(questionnaires.servedDefinition(def), input.questionKey, input.value, live, input.todayIst);
-  if (!check.ok) throw new claim.PeerRequestInvalidAnswerError(check.reason);
+  if (!check.ok) {
+    // ⭐ Review S22 — a condition we could ⛔ not evaluate (a sensitive PARENT that would not decrypt just now) is a
+    // transient STALE (409, retried), ⛔ never a permanent 422 "condition not met" for a fault that is ours.
+    const unreadable = rows.some((r) => r.valueCiphertext !== null && !decryptedLive.has(r.answerId));
+    if (check.reason === 'condition_not_met' && unreadable) throw new claim.PeerRequestStaleError();
+    throw new claim.PeerRequestInvalidAnswerError(check.reason);
+  }
   const s = check.storage;
-  if (s.form === 'codes') return { prepared: { form: 'codes', codes: s.codes }, decryptedLive };
+  const stored: questionnaires.QuestionnaireAnswerValue =
+    s.form === 'codes' ? { codes: [...s.codes] } : check.codes === null ? { date: s.plaintext } : { codes: [...check.codes] };
+  const liveRow = rows.find((r) => r.questionKey === input.questionKey);
+  const current = liveRow === undefined ? undefined : liveRow.valueCodes !== null ? { codes: liveRow.valueCodes } : decryptedLive.get(liveRow.answerId);
+  const unchanged = sameAnswer(current, stored);
+  if (s.form === 'codes') return { prepared: { form: 'codes', codes: s.codes }, decryptedLive, stored, unchanged };
   const ciphertext = await encryptPeerAnswer(s.plaintext, input.pariwarId, enc);
   const dateWindowIndexes =
     s.dateWindow === null
       ? null
       : ((await Promise.all(s.dateWindow.map((d) => deathDateBlindIndex(d, input.pariwarId, enc)))) as [string, string, string]);
-  return { prepared: { form: 'encrypted', ciphertext, dateWindowIndexes }, decryptedLive };
+  return { prepared: { form: 'encrypted', ciphertext, dateWindowIndexes }, decryptedLive, stored, unchanged };
 }
 
 /** The audit intent's payload hash — the ping and the question KEY only (⛔ never the value). */

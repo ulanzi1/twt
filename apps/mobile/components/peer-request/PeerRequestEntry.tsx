@@ -27,7 +27,8 @@ export function PeerRequestEntry(): React.ReactElement | null {
       unstyled
       onPress={() => router.push('/peer-request')}
       accessibilityRole="button"
-      accessibilityLabel={t('peer_request.card_title')}
+      // The title AND the body (second-pass review S30 — the label alone dropped "Please answer a few short questions.").
+      accessibilityLabel={`${t('peer_request.card_title')}. ${t('peer_request.card_body')}`}
       px={16}
       py={12}
     >

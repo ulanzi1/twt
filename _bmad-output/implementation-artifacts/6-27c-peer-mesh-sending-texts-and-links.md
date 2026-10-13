@@ -29,7 +29,9 @@ Status: backlog
 > has died. If you knew them, please answer a few short questions: [link] — or call the helpline [number]."* (`-304` Q6 A). This story
 > sends that text — once ever per neighbour, through 6.24b's shared DLT send core, with 6.29's hold / park / give-up; ⛔ never at night;
 > while the claim can still take an answer (`-305` §2 item 4); in the Pariwar's default language until row 6-35 lets members choose
-> (`-305` §2 item 2 — CF1). The link opens 6.27a's questionnaire through row 6-30's plumbing. ⚠ Go-live waits on Row 27 (counsel, the
+> (`-305` §2 item 2 — CF1). The link opens 6.27a's questionnaire through row 6-30's plumbing. ⭐ (2026-10-13 annotation — Story 6.27b validate, `2026-10-13-329` decision 3: the LIVE questionnaire
+> is then `peer_mesh.v3` — v2 with the call-back question reworded *"May the Admin phone you about this?"* (`-328` Q1 C) under a new copy key;
+> so the FIRST real reply pins v3 — ⛔ no production reply can ever pin v2. ⛔ No change to the TEXT this story sends.) ⚠ Go-live waits on Row 27 (counsel, the
 > privacy policy, the link live, the health-question basis — the TEXTS themselves wait for it, ⛔ no texted neighbour sees a ruled question skipped — CF1–CF3).
 
 ## Story
@@ -74,7 +76,9 @@ RB4 / RB5 / RB11 / RB12 / RB16 · `-302` RN2–RN8 · `-255` F7 (the cost line).
    run ⇒ the scope HELD) AND the CHILD's begin path (the race guard — a hook-enqueued child ⇒ `held_config`, ⛔ no ping begun); ⛔ no slot
    used up; ONE ids-only alarm `config:counsel_basis_pending` per sweep run, and the child's held return alarms ids-only (as the suspicion-notice child does); a stalled `attempting` row in that scope is PARKED as any held scope (AC4);
    tests: a hook-enqueued child for a pending Pariwar begins ⛔ no ping; the sweep holds the scope; once v2's basis is
-   recorded (Row 27 (f)), every request still due is sent. ⇒ a neighbour is ⛔ never texted into a questionnaire with a ruled question hidden.
+   recorded (Row 27 (f)), every request still due is sent. ⭐ (2026-10-13 annotation — Story 6.27b validate, `2026-10-13-329` Consequence 4: *"v2's basis"* means the LIVE version's — `peer_mesh.v3`
+   once 6.27b ships (v2 becomes historical; v3 keeps v2's two `'pending'` health questions and their `counselBasis` unchanged, so this hold
+   applies to v3 as written; the check reads `resolveLiveVersion`, ⛔ never a version name)). ⇒ a neighbour is ⛔ never texted into a questionnaire with a ruled question hidden.
 3. **AC3 — ⛔ no text once the claim can no longer take an answer:** a claim in `state_trustee_approved` WITHOUT a live R9 routing, or
    refused / closed ⇒ `skipped_superseded`; a claim in `verifier_approved` / `reversed` / `state_trustee_freeze`, or in
    `state_trustee_approved` WITH a live R9 routing, IS texted (PM8's answer window — `-305` §2 item 4; the `-283` A1 precedent).
@@ -92,6 +96,8 @@ RB4 / RB5 / RB11 / RB12 / RB16 · `-302` RN2–RN8 · `-255` F7 (the cost line).
    for an unknown code, another member's code, another Pariwar's code and an UNTEXTED ping alike (6.27a's not-openable state); a closed request shows *"no longer open"*; the code is ⛔
    never in a log, alarm, audit row or `detail`. ⚠ A REAL `https://` link opening the app on a device is Row 29 (e) (6.30) — ⛔ not this story's.
 7. **AC7 — the member surface lights up:** a ping with `send_outcome = 'accepted'` makes 6.27a's card and list show that request.
+   ⭐ (2026-10-13 annotation — Story 6.27b validate, `2026-10-13-329` decision 4 / 6.27b Task 3.1 (a) rule 1: the staff call-back number is shown ⛔ only for a ping whose `send_outcome = 'accepted'` —
+   a successful send MUST write exactly `'accepted'` (⛔ never a new "sent" value), or the Super Admin's view and every *"Yes"* go dark.)
 8. **AC8 — the records:** DLT templates 13 / 14 in the sheet with the exact typed registered text (proved by the lockstep test with the real
    `t()`; 6.27c types them, row 6-34 verifies them ⭐ (2026-10-12 annotation — Story 6.34 Task 0.4, TV11: ⚠ on STPL / SmartPing the text keeps `{#var#}`; the tag names here are the slot TYPES — 6.34 TV1 / TV11; 6.34 does ⛔ hand-verify them — 6.27c runs the shape check in its own registry test)); Row 27's evidence lines (incl. the provider's Devanagari answer ⭐ (2026-10-12 annotation — Story 6.34 Task 0.4, `-322` C7: the answer is recorded ONCE at Row 30 (d) (`-322` C7); Row 27's evidence line POINTS to it (a refusal goes back to the Panel))); a CHECK that 6.27a's
    epics.md annotation of Story 6.6 and its row-6-22 pointer exist (6.27a OWNS both — ⛔ never written twice); `pnpm ci:local` green.
@@ -146,6 +152,7 @@ RB4 / RB5 / RB11 / RB12 / RB16 · `-302` RN2–RN8 · `-255` F7 (the cost line).
 ## Change Log
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-13 | — | ⭐ ANNOTATIONS by Story 6.27b's validate (`2026-10-13-328` Trustee-ratified; `2026-10-13-329` erratum — ⛔ no PM moved, ⛔ no word above changed): the header — the link opens questionnaire `peer_mesh.v3` (the call-back question reworded), so ⛔ no production reply pins v2; AC2b — *"v2's basis"* reads as the LIVE version's (v3 keeps the two pending health questions; the hold is unchanged); AC7 — a successful send writes exactly `'accepted'`, the value the staff call-back rules key on. ⛔ No change to the text sent, the window, the exclusions or the predecessors. |
 | 2026-10-12 | — | ⭐ ANNOTATIONS by Story 6.34 Task 0.4 (TV11 / `2026-10-12-322` C6, C7 / `-323` R1 — ⛔ a PM moved, ⛔ a word above changed): the STATUS line gains *"AND row 6-34 is done"*; on STPL / SmartPing the text keeps `{#var#}` and the tag names are the slot TYPES; Task 1 uses 6.34's vocabulary, joins `REGISTRY_FILES` and raises the helpline warning; the Devanagari answer is recorded ONCE at Row 30 (d) and Row 27 POINTS to it (AC5, AC8, Task 5). |
 | 2026-10-10 | 2.8 | `2026-10-10-311`: PM1 — a skipped neighbour is REPLACED at send time from the same group (6.27c builds the send-time replacement; row 6-36 the filter and ranking); PM2's in-app alert is 6.27a's. |
 | 2026-10-10 | 2.7 | `2026-10-10-310`: CF1 and CF4 now ratified. |

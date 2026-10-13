@@ -461,7 +461,7 @@ basis ([[feedback_record_unattested_no_backfill]]).
     the actor's assignments stays `scheduled` (seed both — 6.27a's `peer-mesh-reply.spec.ts:464` shape).
 
 11. **AC11 — questionnaire v3 and the Super Admin** (`-328` read with `-329`): a NEW reply pins `peer_mesh.v3`, which asks *"May the Admin
-    phone you about this?"* (en) / *"क्या एडमिन इस बारे में आपको फ़ोन कर सकते हैं?"* (hi — our translation, `-328` R2) under a NEW copy key;
+    phone you about this?"* (en) / *"क्या एडमिन इस बारे में आपको फ़ोन कर सकते हैं?"* (hi — our translation, `-328` R2; ✅ confirmed by BigDev) under a NEW copy key;
     its `callback_consent` cites `2026-10-13-328` and the validator accepts it; v2 is historical — a reply started on v2 keeps v2 and its
     old words, and v2's *"Yes"* never shows the number to a Pariwar Admin; on the console the District Admin and a verifier see it on a
     *"Yes"* of either version (unchanged), and the Super Admin for every TEXTED neighbour whatever the answer (BigDev's reading, ⛔ not Panel
@@ -730,7 +730,7 @@ basis ([[feedback_record_unattested_no_backfill]]).
     `peer_request_questions.callback_consent.question_admin` (name it so; any clear name) to `packages/i18n/locales/en/claim.json` —
     *"May the Admin phone you about this?"* — and `hi/claim.json` — *"क्या एडमिन इस बारे में आपको फ़ोन कर सकते हैं?"* (v2's line with
     *"ज़िला"* removed — `-328` R2, OUR translation: this is the consent text a Hindi-reading neighbour sees, `apps/mobile/lib/peer-request.ts:52`;
-    flag it in Completion Notes for BigDev). v2's `callback_consent.question` key and words stay EXACTLY as they are.
+    ✅ CONFIRMED by BigDev 2026-10-13: *"Hindi is fine"* — an author confirmation, ⛔ not Panel-ratified). v2's `callback_consent.question` key and words stay EXACTLY as they are.
   - [ ] 3c.2 The version: `PEER_MESH_QUESTIONNAIRE_V3` in `packages/domain/src/questionnaires/peer-mesh.ts` — v2's pages with ONE change,
     the `callback_consent` question's `copyKey` → the new key and `approvedBy: [R304, R328]` (a `R328 = '2026-10-13-328'` const beside `R304`,
     `:30`); `versionId: 'peer_mesh.v3'`, `version: 3`, `scope: { kind: 'all' }`, `status: 'live'`; every other question keeps v2's
@@ -1018,12 +1018,16 @@ re-entries"* and *"An ERASED (sentinel) neighbour answer reads 'could not be sho
   the *"v2 Yes"* arm is reachable only by a seeded row (recorded, ⛔ not a defect — footgun 30(b)). Forward line for 6.27c (`-329` Consequence 4): its AC2b's *"once v2's basis is
   recorded"* means the LIVE version's — v3's.
 
+- 2026-10-13 — BigDev confirmed the Hindi call-back words (*"Hindi is fine"* — an author confirmation of `-328` R2, ⛔ not Panel-ratified).
+  Sibling 6.27c annotated with v3's consequences (header, AC2b, AC7). ⛔ No code.
+
 ### File List
 
 ## Change Log
 
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-13 | 3.5 | BigDev confirmed the Hindi words (Task 3c.1, AC11 — author confirmation, ⛔ not Panel-ratified); sibling 6.27c annotated (v3 is the live questionnaire its link opens; AC2b's *"v2's basis"* = the live version's; AC7 — a send writes exactly `'accepted'`). |
 | 2026-10-13 | 3.4 | Round-4 fresh-context re-validate: ⛔ no BLOCKER / HIGH. Fixed 2 MEDIUM (the R11 console spec seeds an untexted ping ⇒ red by design under rule 1 — amend the fixture, ⛔ never the rule; AC1 now names `-329`) and 5 LOW (`verifier-console.ts:225`; the `:102-106` spread trap; BD2 (A)'s record label; the v2-population note; ledger `2026-10-13f` paraphrased `2026-10-13e` in quote marks — corrected in `2026-10-13g`). |
 | 2026-10-13 | 3.3 | ⭐ ERRATUM `2026-10-13-329` (author-commit) after a fresh-context re-validate of v3.2: `-328` recorded Q1 C WITHOUT its condition ⇒ the Pariwar Admin sees the number only for a *"Yes"* to the NEW words, a v2 *"Yes"* stays with today's set; the new words ship as questionnaire `peer_mesh.v3` (v2 historical; a NEW copy key — ⛔ never an in-place edit) with a `callbackAudience` property; `-328` R1 withdrawn; the Super Admin sees the number for TEXTED neighbours only, whatever the answer (BigDev's reading, ⛔ not Panel words); `callbackMobile: 'on_yes' \| 'always'` → `callbackViewer` with four ordered rules; `callbackBasis` on the wire and a basis-aware admin label; `matchingGrantRole`'s real signature; Task 3c rewritten (v3 mint, red-by-design sweep of ~60 v2 test refs); STATUS / BD heading / Task 0.3–0.5 / Task 3.4 / Trap 7 made current. ⚠ v3.2's row says *"(BigDev's reading confirmed)"* — that is BigDev's reading of *"no explicit permission is required"*, ⛔ not Panel words (`-329` decision 4). A second re-validate (before commit) fixed: Task 3.3's stale option; `-329` decision 5 (d) (the four `-328` Consequence 1 bullets) and its Status / labels; the note's ruling block pointer; the v3 test traps (`questionnaires.test.ts:105-106`); 6.27c's forward line; fail-closed edges; the fixture list. |
 | 2026-10-13 | 3.2 | ⭐ The Panel RULED (`2026-10-13-328`, `c1900b89`, Trustee-ratified): the question becomes *"May the Admin phone you about this?"*; the number is shown on a *"Yes"* to the District Admin, the district's verifiers and the Pariwar Admin, and to the Super Admin on any answer (BigDev's reading confirmed); built here (BigDev: fold into 6.27b). `-327` decision 1's withhold superseded: `callbackMobile: 'on_yes' \| 'always'` (`'always'` only on a `super_admin` match — the console changes for the Super Admin only); `admin_claim.peer_callback_mobile_shown` reinstated (locator `claim:<id>:ping:<id>`, context `basis`); NEW AC11 + Task 3c (the en / hi words, `PANEL_RATIFIED_QUESTIONNAIRE_DECISIONS` + `approvedBy`, the sweep). BD4 untouched. |

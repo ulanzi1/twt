@@ -102,7 +102,11 @@ describe('Story 6.27d — `deriveInspectionDiscrepancy` (AC3)', () => {
 
   it('⛔ a `death_cause` / `death_illness` answer is ⛔ never a key — nor any other question, however shaped', () => {
     const familyDateIndex = ix('2026-06-15');
-    for (const key of PEER_MESH_RULED_QUESTION_KEYS.filter((k) => INSPECTION_DISCREPANCY_RULES[k as keyof typeof INSPECTION_DISCREPANCY_RULES] !== 'compare')) {
+    const others = PEER_MESH_RULED_QUESTION_KEYS.filter((k) => INSPECTION_DISCREPANCY_RULES[k as keyof typeof INSPECTION_DISCREPANCY_RULES] !== 'compare');
+    // ⭐ Code review round 2 (R2-18) — the loop must run: the two not-comparable keys are IN it, and so is a key no
+    // questionnaire knows.
+    expect(others).toEqual(expect.arrayContaining(['death_cause', 'death_illness']));
+    for (const key of [...others, 'not_a_question']) {
       const shapes: PeerAnswerForComparison[] = [
         { key, codes: ['not_died'], window: null },
         { key, codes: null, window: deathDateWindow('2020-01-01').map(ix) },

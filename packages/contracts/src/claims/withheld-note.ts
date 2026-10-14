@@ -12,7 +12,12 @@
 //   · `own_visit`    — the reader's own ground visit on this claim is pending (UNIFORM for that reader on that claim — ⛔
 //                      a per-note signal: every staff note there is withheld, whatever it says);
 //   · `check_failed` — the hide check itself FAILED (UNIFORM across the surface, for EVERY reader — render the existing
-//                      "could not be shown just now" words, ⛔ "hidden").
+//                      "could not be shown just now" words, ⛔ "hidden"). ⭐ Story 6.27d also answers it when the inspector's
+//                      discrepancy could ⛔ be confirmed as delivered — the completion ⛔ known to be saved, or the showing
+//                      write raised (Task 4.1; code review round 2, R2-20) — the same words, ⛔ "hidden". (⚠ Round 3, R3-15:
+//                      on a completion whose COMMIT was swallowed, the ASSIGNED inspector is answered `own_visit` FIRST —
+//                      their own visit is still `scheduled`, so the ONE hide predicate hides them; only an override
+//                      completer reaches the `check_failed` arm.)
 // ⛔ Never a placeholder that names the neighbours, and ⛔ never the note.
 
 import { z } from 'zod';

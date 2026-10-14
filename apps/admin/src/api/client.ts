@@ -1277,7 +1277,9 @@ const GroundInspectionWriteResponse = z.object({
  * SHOWN — the keys of the questions that differ (possibly none) and the family's date ONLY when the date differs. ⛔ No
  * neighbour's value, name or count. There is ⛔ no ground-inspection contracts module — this schema IS the contract.
  */
-const INSPECTION_DISCREPANCY_KEYS = ['has_died', 'death_date'] as const;
+// Story 6.27d code review round 3 (R3-12) — exported for the lockstep test against `@twt/contracts` (the
+// `GROUND_INSPECTION_OTHER_CLAIM_STAGES` precedent): a key the server adds must ⛔ break this parse after a committed completion.
+export const INSPECTION_DISCREPANCY_KEYS = ['has_died', 'death_date'] as const;
 const InspectionDiscrepancyKey = z.enum(INSPECTION_DISCREPANCY_KEYS);
 const InspectionDiscrepancy = z.discriminatedUnion('state', [
   z.object({ state: z.literal('withheld'), reason: NoteWithheldReason }),

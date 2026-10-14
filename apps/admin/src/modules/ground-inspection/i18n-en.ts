@@ -131,6 +131,8 @@ const EN: Record<string, string> = {
   'gi.discrepancy.region': 'Result of your visit',
   'gi.discrepancy.show': 'Show the result',
   'gi.discrepancy.loading': 'Loading the result…',
+  'gi.discrepancy.retry': 'Try again',
+  'gi.discrepancy.refreshFailed': 'The result could not be refreshed. The last recorded information is still shown.',
   'gi.discrepancy.noteLabel': "The family's answer, in their words",
   'gi.discrepancy.save': 'Save note',
   'gi.discrepancy.saving': 'Saving…',
@@ -138,11 +140,16 @@ const EN: Record<string, string> = {
   'gi.discrepancy.recorded': 'Recorded',
   'gi.discrepancy.recordedBy': 'Recorded by {author}',
   'gi.discrepancy.noteUnavailable': 'This note could not be shown',
-  // Story 6.27d (AC6) — the note write's 409s, in words (story-minted).
-  'gi.error.not_allowed': 'This claim is no longer open for notes on the visit.',
-  'gi.error.own_ground_visit_pending': 'Your own ground visit on this claim is not finished yet — finish it before recording a note.',
-  'gi.error.discrepancy_note_exists': 'A note on this question is already recorded.',
-  // Result / errors (Story 6.27d removed the unused `gi.result.completed` — the discrepancy screen is the completion's words)
+  // ⭐ Story 6.27d code review round 3 (story-minted) — R3-3: a 201 the re-read did not confirm; R3-13: the viewer unknown
+  // because the session could not be fetched.
+  'gi.discrepancy.notConfirmed': 'The note could not be confirmed as recorded. It is back in the box — please save it again.',
+  // Story 6.27d (AC6) — the note write's 409s, in words (story-minted). Used ONLY by the note box (code review round 2,
+  // R2-2): `not_allowed` is the module-wide window code, so these are ⛔ on the page-wide error list.
+  'gi.discrepancy.error.not_allowed': 'This claim is no longer open for notes on the visit.',
+  'gi.discrepancy.error.own_ground_visit_pending': 'Your own ground visit on this claim is not finished yet — finish it before recording a note.',
+  'gi.discrepancy.error.discrepancy_note_exists': 'A note on this question is already recorded.',
+  // Result / errors (Story 6.27d removed `gi.result.completed` — it was never rendered; a completed FULL visit's
+  // discrepancy screen carries the completion's words, and a certificate check shows its recorded card as before)
   'gi.result.scheduled': 'Assignment scheduled.',
   'gi.result.refused': 'Refusal recorded — the claim is escalated to the verifier.',
   'gi.result.photoUploaded': 'Photo uploaded.',

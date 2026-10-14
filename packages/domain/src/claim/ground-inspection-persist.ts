@@ -1156,6 +1156,11 @@ export async function readInspectionDiscrepancyTarget(
  * (`closeScopeTx`) yields `persisted = false` and ⛔ no row — the caller then answers `withheld`, ⛔ never `shown`.
  * `ON CONFLICT DO NOTHING` — a concurrent un-hidden re-read may have recorded it first (same keys, by R2). Run in the
  * caller's OWN transaction, AFTER the completion's committed — ⛔ never the completion's own.
+ * ⭐ LOCK ORDER (code review round 2, R2-1): the parent read takes the CLAIM row `FOR KEY SHARE` BEFORE the INSERT can
+ * produce its row — the claim, THEN the showing, on every path. The note writer holds the claim `FOR UPDATE` and then
+ * records an absent showing; without this lock a re-read or a delivery would insert its showing FIRST and then wait on that
+ * claim row in its own FK check while the note writer waited on its uncommitted showing — a 40P01. `KEY SHARE` never
+ * conflicts with another `KEY SHARE`, so two re-reads still race only on the showing's `ON CONFLICT`.
  */
 export async function recordInspectionDiscrepancyShowing(
   db: Db,
@@ -1169,10 +1174,12 @@ export async function recordInspectionDiscrepancyShowing(
     WITH parent AS (
       SELECT gi.pariwar_id, gi.claim_case_id, gi.ground_inspection_id
         FROM claim_ground_inspections gi
+        JOIN claims c ON c.pariwar_id = gi.pariwar_id AND c.claim_case_id = gi.claim_case_id
        WHERE gi.pariwar_id = ${input.pariwarId}::uuid
          AND gi.ground_inspection_id = ${input.groundInspectionId}::uuid
          AND gi.status = 'completed'
          AND gi.death_date_source = 'family_statement'
+         FOR KEY SHARE OF c
     ), ins AS (
       INSERT INTO claim_ground_inspection_discrepancy_showings (pariwar_id, claim_case_id, ground_inspection_id, question_keys)
       SELECT parent.pariwar_id, parent.claim_case_id, parent.ground_inspection_id, ${input.questionKeys.length === 0 ? sql`'{}'::text[]` : keys}
@@ -1302,7 +1309,9 @@ export async function readClaimInspectionDiscrepancyShowings(
       ),
     )
     .orderBy(claimGroundInspectionDiscrepancyShowings.shownAt, claimGroundInspectionDiscrepancyShowings.groundInspectionId);
-  // `completed_at` is NOT NULL on a completed row (the showing's parent guard requires one).
+  // `completed_at` is set on every completed row: the ONE completion writer stamps it (`clock_timestamp()`) in the same
+  // UPDATE that sets `status = 'completed'` (code review round 2, R2-20 — ⛔ a guard or constraint enforces it; the
+  // showing's parent guard checks only the status and the source).
   return rows.map((r) => ({ ...r, completedAt: r.completedAt as Date }));
 }
 

@@ -21,7 +21,7 @@ import { INSPECTION_DISCREPANCY_COMPARED_KEYS } from '../../../src/claim/inspect
 import { INSPECTION_DISCREPANCY_QUESTION_KEYS } from '../../../src/schema/claim_ground_inspection_discrepancies.js';
 import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
 import { enterAppRoleNoScope, enterAppScope, PARIWAR_A, PARIWAR_B, seedClaim, seedDeathCertificate } from '../_helpers.js';
-import { forceLegacyCompletedNullSource } from '../claim/_inspection-discrepancy-fixtures.js';
+import { forceLegacyCompletedNullSource, shadowAsCompletedFullVisit } from '../claim/_inspection-discrepancy-fixtures.js';
 
 type Client = ReturnType<typeof getTx>['client'];
 
@@ -155,6 +155,13 @@ describe.skipIf(!hasDatabase)('0160 — the discrepancy showings and notes', { t
       for (const c of ['question_key', 'author_actor_id', 'author_display', 'noted_at', 'ground_inspection_id']) {
         expect(await colPriv(NOTES, c), c).toBe(false);
       }
+      // ⭐ R2-19 — the WHOLE column-UPDATE set, ⛔ a column list: exactly the scrub's one column on either table.
+      const { rows } = await client.query<{ table_name: string; column_name: string }>(
+        `SELECT table_name, column_name FROM information_schema.column_privileges
+          WHERE grantee = 'twt_app' AND privilege_type = 'UPDATE' AND table_name IN ($1, $2) ORDER BY table_name, column_name`,
+        [SHOWINGS, NOTES],
+      );
+      expect(rows).toEqual([{ table_name: NOTES, column_name: 'note_ciphertext' }]);
     });
   });
 
@@ -195,7 +202,7 @@ describe.skipIf(!hasDatabase)('0160 — the discrepancy showings and notes', { t
       }
     });
 
-    it('refuses a showing whose inspection is a pre-0147 completed FULL row with a NULL source (R1 — keyed on the source, ⛔ the stage)', async () => {
+    it('refuses a showing AND a note whose inspection is a pre-0147 completed FULL row with a NULL source (R1 — keyed on the source, ⛔ the stage)', async () => {
       const { client } = getTx();
       const s = await seedInspection(client, PARIWAR_A, { status: 'scheduled' });
       await forceLegacyCompletedNullSource(client, s.pariwarId, s.groundInspectionId);
@@ -204,9 +211,19 @@ describe.skipIf(!hasDatabase)('0160 — the discrepancy showings and notes', { t
       ]);
       expect(rows).toEqual([{ status: 'completed', inspection_stage: 'initial', death_date_source: null }]);
       await enterAppScope(client, PARIWAR_A);
-      const r = await attempt(client, INSERT_SHOWING, showingParams(s, []));
+      const r = await attempt(client, INSERT_SHOWING, showingParams(s, ['has_died']));
       expect(r.code).toBe('23000');
       expect(r.message).toMatch(NOT_A_FULL_VISIT);
+      const n = await attempt(client, INSERT_NOTE, noteParams(s, 'has_died'));
+      expect(n.code).toBe('23000');
+      expect(n.message).toMatch(NOT_A_FULL_VISIT);
+      // ⭐ R2-5 positive control — the SAME shadow row, its source now `family_statement`: BOTH guards admit it, so the two
+      // refusals above came from the NULL source, ⛔ from the public row (still `scheduled`).
+      await client.query('RESET ROLE');
+      await shadowAsCompletedFullVisit(client, s.pariwarId, s.groundInspectionId);
+      await enterAppScope(client, PARIWAR_A);
+      expect((await attempt(client, INSERT_SHOWING, showingParams(s, ['has_died']))).code).toBeNull();
+      expect((await attempt(client, INSERT_NOTE, noteParams(s, 'has_died'))).code).toBeNull();
     });
 
     it('refuses a showing that names ANOTHER claim than its inspection\'s (same tenant)', async () => {
@@ -307,20 +324,22 @@ describe.skipIf(!hasDatabase)('0160 — the discrepancy showings and notes', { t
 
     it('the parent guard is bound BEFORE INSERT on both tables; the mutation guards BEFORE UPDATE / DELETE', async () => {
       const { client } = getTx();
-      const { rows } = await client.query<{ tgname: string; fn: string }>(
-        `SELECT t.tgname, p.proname AS fn FROM pg_trigger t JOIN pg_proc p ON p.oid = t.tgfoid JOIN pg_class c ON c.oid = t.tgrelid
+      const { rows } = await client.query<{ tgname: string; fn: string; tgtype: number; tgenabled: string }>(
+        `SELECT t.tgname, p.proname AS fn, t.tgtype, t.tgenabled FROM pg_trigger t JOIN pg_proc p ON p.oid = t.tgfoid JOIN pg_class c ON c.oid = t.tgrelid
           WHERE c.relname IN ($1, $2) AND NOT t.tgisinternal ORDER BY t.tgname`,
         [SHOWINGS, NOTES],
       );
-      expect(rows.map((r) => `${r.tgname}→${r.fn}`)).toEqual([
-        `${NP}_no_delete→${NP}_reject_mutation`,
-        `${NP}_no_truncate→${NP}_reject_mutation`,
-        `${NP}_no_update→${NP}_reject_mutation`,
-        `${NP}_parent_guard→${NP}_guard`,
-        `${SP}_no_delete→${SP}_reject_mutation`,
-        `${SP}_no_truncate→${SP}_reject_mutation`,
-        `${SP}_no_update→${SP}_reject_mutation`,
-        `${SP}_parent_guard→${SP}_guard`,
+      // ⭐ R2-19 — the timing and the event, ⛔ the name alone: `tgtype` = ROW 1 | BEFORE 2 | INSERT 4 | DELETE 8 | UPDATE 16 |
+      // TRUNCATE 32 ⇒ BEFORE INSERT ROW 7, BEFORE DELETE ROW 11, BEFORE UPDATE ROW 19, BEFORE TRUNCATE (statement) 34.
+      expect(rows.map((r) => `${r.tgname}→${r.fn}:${r.tgtype}:${r.tgenabled}`)).toEqual([
+        `${NP}_no_delete→${NP}_reject_mutation:11:O`,
+        `${NP}_no_truncate→${NP}_reject_mutation:34:O`,
+        `${NP}_no_update→${NP}_reject_mutation:19:O`,
+        `${NP}_parent_guard→${NP}_guard:7:O`,
+        `${SP}_no_delete→${SP}_reject_mutation:11:O`,
+        `${SP}_no_truncate→${SP}_reject_mutation:34:O`,
+        `${SP}_no_update→${SP}_reject_mutation:19:O`,
+        `${SP}_parent_guard→${SP}_guard:7:O`,
       ]);
     });
   });
@@ -377,6 +396,49 @@ describe.skipIf(!hasDatabase)('0160 — the discrepancy showings and notes', { t
           cmds.map((c) => `${prefix}_tenant_isolation_${c.split(':')[0]}:${c.split(':')[1]}`),
         );
       }
+    });
+
+    it('every policy is PERMISSIVE, TO twt_app only, and carries the ONE house scope expression (USING / WITH CHECK)', async () => {
+      const { client } = getTx();
+      const { rows } = await client.query<{ tablename: string; cmd: string; permissive: string; roles: string; qual: string | null; with_check: string | null }>(
+        `SELECT tablename, cmd, permissive, array_to_string(roles, ',') AS roles, qual, with_check
+           FROM pg_policies WHERE tablename IN ($1, $2) ORDER BY tablename, cmd`,
+        [SHOWINGS, NOTES],
+      );
+      expect(rows.map((r) => `${r.tablename}:${r.cmd}:${r.permissive}:${r.roles}`)).toEqual([
+        `${NOTES}:INSERT:PERMISSIVE:twt_app`,
+        `${NOTES}:SELECT:PERMISSIVE:twt_app`,
+        `${NOTES}:UPDATE:PERMISSIVE:twt_app`,
+        `${SHOWINGS}:INSERT:PERMISSIVE:twt_app`,
+        `${SHOWINGS}:SELECT:PERMISSIVE:twt_app`,
+      ]);
+      // ⭐ R2-19 — ONE expression everywhere it applies: SELECT / UPDATE USING and INSERT / UPDATE WITH CHECK; ⛔ a missing
+      // clause (an INSERT policy loosened to `WITH CHECK (true)` would differ from the SELECT policy's USING).
+      const scope = rows.find((r) => r.tablename === SHOWINGS && r.cmd === 'SELECT')!.qual;
+      expect(scope).toMatch(/pariwar_id = \(?NULLIF\(current_setting\('app\.pariwar_id'::text, true\), ''::text\)\)?::uuid/);
+      for (const r of rows) {
+        const clauses = { SELECT: [r.qual], INSERT: [r.with_check], UPDATE: [r.qual, r.with_check] }[r.cmd as 'SELECT' | 'INSERT' | 'UPDATE'];
+        for (const c of clauses) expect(c, `${r.tablename}:${r.cmd}`).toBe(scope);
+        if (r.cmd === 'SELECT') expect(r.with_check).toBeNull();
+        if (r.cmd === 'INSERT') expect(r.qual).toBeNull();
+      }
+    });
+
+    it('the INSERT policy\'s WITH CHECK is LIVE: a parent the guard CAN see in another tenant is refused by RLS (42501)', async () => {
+      const { client } = getTx();
+      // The guard reads the parent by name; a connection-local shadow of Pariwar B's row (⛔ RLS on a temp table) lets the
+      // guard PASS from Pariwar A's scope — so only the INSERT policy's WITH CHECK can refuse the row.
+      const b = await seedInspection(client, PARIWAR_B, { status: 'scheduled' });
+      await forceLegacyCompletedNullSource(client, b.pariwarId, b.groundInspectionId);
+      await shadowAsCompletedFullVisit(client, b.pariwarId, b.groundInspectionId);
+      await enterAppScope(client, PARIWAR_A);
+      const r = await attempt(client, INSERT_SHOWING, showingParams(b, ['has_died']));
+      expect(r.code).toBe('42501');
+      expect(r.message).toMatch(/row-level security/);
+      // The positive control — the SAME row from Pariwar B's own scope is admitted (the guard saw the shadow both times).
+      await client.query('RESET ROLE');
+      await enterAppScope(client, PARIWAR_B);
+      expect((await attempt(client, INSERT_SHOWING, showingParams(b, ['has_died']))).code).toBeNull();
     });
 
     it('a cross-tenant reader sees nothing; a cross-tenant insert is refused by the TRIGGER; the unscoped probe sees nothing', async () => {

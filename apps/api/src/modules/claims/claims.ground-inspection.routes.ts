@@ -112,12 +112,18 @@ const CompleteBody = z
 
 /**
  * ⭐ Story 6.27d (AC6) — the family's re-told answer to ONE differing question. `note` is `.min(1)` with ⛔ no `.max` —
- * exactly as `CompleteBody.notes` (there is ⛔ no visit-notes limit to copy).
+ * exactly as `CompleteBody.notes` (there is ⛔ no visit-notes limit to copy). ⭐ Code review round 2 (R2-15): ⛔ a blank
+ * note either — a note is ONE per (assignment, question) and append-only, so whitespace would fill the slot for good and the
+ * family's real answer could ⛔ be recorded. The text is stored AS TYPED (⛔ trimmed); only the refusal looks past spaces.
+ * ⭐ Round 3 (R3-10): "blank" = ⛔ VISIBLE character — `trim()` keeps the default-ignorable code points (U+200B, U+2060,
+ * U+FEFF, the variation selectors, the Hangul fillers …) and the Braille blank, which fill the slot just as invisibly
+ * (`\p{Cf}` missed some and refused a few visible signs — the fix-diff review). The admin's Save uses the SAME predicate.
  */
+const HAS_VISIBLE_CHAR = /[^\p{White_Space}\p{Default_Ignorable_Code_Point}\u2800]/u;
 const DiscrepancyNoteBody = z
   .object({
     questionKey: z.enum(domainSchema.INSPECTION_DISCREPANCY_QUESTION_KEYS),
-    note: z.string().min(1),
+    note: z.string().min(1).refine((s) => HAS_VISIBLE_CHAR.test(s), { message: 'note must not be blank' }),
   })
   .strict();
 

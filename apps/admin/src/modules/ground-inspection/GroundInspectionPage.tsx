@@ -8,8 +8,8 @@
 // operator affordances + the read that surfaces the signal (present, refused, unavailable, absent).
 
 import type { ReactElement } from 'react';
-import { useEffect, useRef, useState } from 'react';
-import { type UseMutationResult, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useId, useRef, useState } from 'react';
+import { type QueryObserverResult, type UseMutationResult, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { ApiError } from '../../api/client.js';
 import * as api from '../../api/client.js';
@@ -49,21 +49,26 @@ const WORDED_ERROR_CODES = [
   'death_date_required',
   'death_date_in_future',
   'invalid_death_facts',
-  // Story 6.27d (AC6) — the note write's refusals.
-  'not_allowed',
-  'own_ground_visit_pending',
-  'discrepancy_note_exists',
 ] as const;
-
 /**
- * ⭐ Story 6.27d — the inspector's discrepancy result, cached per assignment in the SAME `{ discrepancy, notes }` shape the
- * re-read returns. The completion SEEDS it (the action unmounts once the list refetch shows the card `completed`, losing
- * `mutation.data`); the defaults keep a seed (⛔ garbage-collected, ⛔ refetched on mount — the app-wide defaults are
- * `gcTime: 0` / `refetchOnMount: 'always'`), so a seeded result is served WITHOUT a fetch.
+ * ⭐ Story 6.27d (AC6) — the note write's refusals, worded ONLY inside the note box (code review round 2, R2-2):
+ * `ground_inspection.not_allowed` is the MODULE-WIDE window code (schedule, compare, photo, complete, refuse), so a
+ * note-specific sentence on the page-wide list would mis-word every other action's refusal.
  */
+const NOTE_WORDED_ERROR_CODES = ['not_allowed', 'own_ground_visit_pending', 'discrepancy_note_exists'] as const;
+/**
+ * ⭐ Story 6.27d code review round 3 (R3-10) — a note must carry a VISIBLE character (the server's rule, the same
+ * predicate): whitespace, the default-ignorable code points (U+200B, U+2060, U+FEFF, the variation selectors, the Hangul
+ * fillers …) and the Braille blank would fill the once-only slot with nothing. (Fix-diff review: `\p{Cf}` missed the
+ * variation selectors and the grapheme joiner, and refused a few visible signs — Unicode's own ignorable set replaces it.)
+ */
+const HAS_VISIBLE_CHAR = /[^\p{White_Space}\p{Default_Ignorable_Code_Point}\u2800]/u;
+
+/** Each opening belongs to one viewer; the card alone bridges its completion response into the panel. */
 const DISCREPANCY_ROOT = 'ground-inspection-discrepancy';
-const discrepancyKey = (pariwarId: string, groundInspectionId: string) => [DISCREPANCY_ROOT, pariwarId, groundInspectionId] as const;
-const DISCREPANCY_QUERY_DEFAULTS = { staleTime: Infinity, gcTime: Infinity, refetchOnMount: false, refetchOnWindowFocus: false } as const;
+const DISCREPANCY_QUERY_DEFAULTS = {
+  staleTime: Infinity, gcTime: 0, refetchOnMount: false, refetchOnWindowFocus: false, refetchOnReconnect: false, retry: false,
+} as const;
 
 /**
  * The domain's `normalizeActorId` rule (trim the six ASCII whitespace characters, then lower-case), as a LOCAL helper —
@@ -79,6 +84,24 @@ export interface GroundInspectionPageProps {
 
 export function GroundInspectionPage({ pariwarId }: GroundInspectionPageProps): ReactElement {
   const qc = useQueryClient();
+  const session = useSession();
+  // ⭐ Story 6.27d code review round 2 (R2-13) — the viewer is known only once the session was fetched SUCCESSFULLY after
+  // this page mounted: a sign-out only INVALIDATES the session, so the cache can still name the PREVIOUS actor while the
+  // refetch runs (or after it FAILS — `isFetchedAfterMount` counts an error too), and that actor's own card would fetch the
+  // discrepancy on their behalf. LATCHED: a later background refetch that fails keeps the known viewer; a successful one
+  // naming ANOTHER actor replaces it. (`useSession` refetches on every mount — the client's `refetchOnMount: 'always'`.)
+  const fetchedViewer = session.isFetchedAfterMount && session.isSuccess && session.data?.userId ? normalizeActorId(session.data.userId) : null;
+  // `epoch` changes ONLY when one KNOWN viewer gives way to another — the cards are re-keyed on it (CR1: an actor change
+  // forgets every card's state), ⛔ on the first moment the viewer becomes known (that would remount every card once per
+  // page mount, dropping an in-progress completion and a just-seeded result).
+  const [viewer, setViewer] = useState<{ readonly id: string | null; readonly epoch: number }>({ id: null, epoch: 0 });
+  useEffect(() => {
+    if (fetchedViewer === null) return;
+    setViewer((v) => (v.id === fetchedViewer ? v : { id: fetchedViewer, epoch: v.id === null ? v.epoch : v.epoch + 1 }));
+  }, [fetchedViewer]);
+  const viewerId = viewer.id;
+  // (Round 3, R3-13 — a FAILED session fetch never renders this page: `GroundInspectionRoute` sends it to sign-in. The
+  // viewer is unknown here only while the mount's session fetch is in flight.)
   const [claimCaseId, setClaimCaseId] = useState('');
   const [district, setDistrict] = useState('');
   const [block, setBlock] = useState('');
@@ -210,7 +233,8 @@ export function GroundInspectionPage({ pariwarId }: GroundInspectionPageProps): 
         <ul className="flex flex-col gap-4">
           {assignmentsQuery.data.assignments.map((a) => (
             <AssignmentCard
-              key={a.groundInspectionId}
+              key={`${viewer.epoch}:${pariwarId}:${scope!.claimCaseId}:${scope!.district}:${scope!.block}:${a.groundInspectionId}`}
+              viewerId={viewerId}
               pariwarId={pariwarId}
               claimCaseId={scope!.claimCaseId}
               assignment={a}
@@ -358,12 +382,15 @@ function isStaleCompare(err: unknown): boolean {
 }
 
 function AssignmentCard(props: {
+  viewerId: string | null;
   pariwarId: string;
   claimCaseId: string;
   assignment: api.GroundInspectionAssignmentT;
   onMutated: () => void;
 }): ReactElement {
   const { assignment: a } = props;
+  // This card survives scheduled → completed, but is replaced on viewer/tenant/claim/locator changes.
+  const [seed, setSeed] = useState<api.InspectionDiscrepancyReadT>();
   const isActive = a.status === 'scheduled';
   const certificate: CertificateCompare = useMutation({
     mutationFn: () => api.getGroundInspectionCertificate(props.pariwarId, props.claimCaseId, a.groundInspectionId),
@@ -427,12 +454,20 @@ function AssignmentCard(props: {
       {a.status === 'completed' && a.originalCertificateVerdict !== null && <InspectorRecord assignment={a} />}
       {/* ⭐ Story 6.27d — ONLY a completed FULL visit (keyed on the family's account, ⛔ the stage — R1); ⛔ a scheduled card. */}
       {a.status === 'completed' && a.deathDateSource === 'family_statement' && (
-        <DiscrepancyPanel pariwarId={props.pariwarId} claimCaseId={props.claimCaseId} assignment={a} />
+        <DiscrepancyPanel
+          viewerId={props.viewerId}
+          seed={seed}
+          pariwarId={props.pariwarId}
+          claimCaseId={props.claimCaseId}
+          assignment={a}
+        />
       )}
       {isActive && (
         <div className="flex flex-wrap items-start gap-4">
           <PhotoUpload {...props} certificate={certificate} />
-          <CompleteAction {...props} certificate={certificate} photoCount={a.photos.length} />
+          {/* The seed is THIS card's own completion response, so it is kept even before the viewer is known (R2-11) —
+              the card is replaced, and the seed forgotten, when the viewer changes. */}
+          <CompleteAction {...props} certificate={certificate} photoCount={a.photos.length} onCompleted={(discrepancy) => setSeed({ discrepancy, notes: [] })} />
           <RefuseAction {...props} />
         </div>
       )}
@@ -551,6 +586,7 @@ function CompleteAction(props: {
   assignment: api.GroundInspectionAssignmentT;
   certificate: CertificateCompare;
   photoCount: number;
+  onCompleted: (discrepancy: api.InspectionDiscrepancyReadT['discrepancy']) => void;
   onMutated: () => void;
 }): ReactElement {
   const isCheck = props.assignment.inspectionStage === 'certificate_check';
@@ -583,7 +619,6 @@ function CompleteAction(props: {
   const originalPhotos = originals.length;
   const originalPhotosForCompared =
     comparedToken === undefined ? originalPhotos : originals.filter((p) => p.certificateToken?.toLowerCase() === comparedToken).length;
-  const qc = useQueryClient();
   const mutation = useMutation({
     mutationFn: () =>
       api.completeGroundInspection(props.pariwarId, props.claimCaseId, props.assignment.groundInspectionId, {
@@ -592,15 +627,14 @@ function CompleteAction(props: {
         deathDate,
         ...(!isCheck && deathTime !== '' ? { deathTime } : {}),
       }),
+    // Story 6.27d code review round 2 (R2-13) — the response carries the discrepancy result: ⛔ kept in the
+    // MutationCache once this action unmounts (the card holds the seed it needs). ⭐ Round 3 (R3-6): a SHORT positive
+    // `gcTime`, ⛔ 0 — query-core re-arms an unobserved PENDING mutation's GC timer each time it fires, so 0 spins a 0 ms
+    // timer until the request settles; 1 s still drops the entry about a second after it settles.
+    gcTime: 1000,
     onSuccess: (data) => {
-      // ⭐ Story 6.27d — SEED the result BEFORE the list refetch unmounts this action (`mutation.data` is lost with it).
-      if (data.discrepancy !== null) {
-        qc.setQueryDefaults([DISCREPANCY_ROOT], DISCREPANCY_QUERY_DEFAULTS);
-        qc.setQueryData<api.InspectionDiscrepancyReadT>(discrepancyKey(props.pariwarId, props.assignment.groundInspectionId), {
-          discrepancy: data.discrepancy,
-          notes: [],
-        });
-      }
+      // The card retains this actor's seed before the refetched list unmounts this action.
+      if (data.discrepancy !== null) props.onCompleted(data.discrepancy);
       props.onMutated();
     },
     onError: (err) => {
@@ -673,42 +707,114 @@ function CompleteAction(props: {
 /**
  * ⭐ Story 6.27d (AC2, AC4 – AC6; R3, R4, R4a) — the result of a completed FULL visit, as the inspector sees it: the
  * withheld shape (`<WithheldNote>`), "no difference" (ruled copy), or the differences — ONE line per question (ruled
- * copy; ⛔ a neighbour's value, ⛔ who, ⛔ how many) with ONE note box each. It FETCHES on its own only for a seeded result
- * (served from the cache) or when the session IS the assigned inspector; every other viewer gets an on-demand "Show the
- * result" (the page ⛔ cannot tell an override holder — a non-holder's click is the server's 403, one audited denial per
- * click, ⛔ an automatic fetch per card). ⛔ Never inside the "Other claims for this death" section (6.27a Trap 5).
+ * copy; ⛔ a neighbour's value, ⛔ who, ⛔ how many) with ONE note box each. A result SEEDED by this card's own completion
+ * is served from the cache without a fetch; it FETCHES on its own only when the session IS the assigned inspector; every
+ * other viewer gets an on-demand "Show the result" (the page ⛔ cannot tell an override holder — a non-holder's click is
+ * the server's 403, one audited denial per click, ⛔ an automatic fetch per card), disabled until the viewer is known
+ * (R2-11). ⛔ Never inside the "Other claims for this death" section (6.27a Trap 5).
  */
-function DiscrepancyPanel(props: { pariwarId: string; claimCaseId: string; assignment: api.GroundInspectionAssignmentT }): ReactElement {
+function DiscrepancyPanel(props: {
+  pariwarId: string;
+  claimCaseId: string;
+  assignment: api.GroundInspectionAssignmentT;
+  viewerId: string | null;
+  seed: api.InspectionDiscrepancyReadT | undefined;
+}): ReactElement {
   const qc = useQueryClient();
-  const session = useSession();
+  const { pariwarId, claimCaseId, viewerId } = props;
   const gid = props.assignment.groundInspectionId;
-  const key = discrepancyKey(props.pariwarId, gid);
+  // Story 6.27d code review round 2 (R2-3) — one id per opening (a remount gets a new one); ⛔ `crypto.randomUUID`,
+  // which is secure-context-gated (`api/hooks.ts` `newIdempotencyKey`) and would throw in render over plain HTTP.
+  const readId = useId();
+  // ⭐ Round 3 (R3-2) — ⛔ `viewerId` in the key: the opening's `readId` and the cards' re-key on a viewer CHANGE
+  // (`viewer.epoch`) isolate actors; the viewer becoming KNOWN must ⛔ move this opening to a fresh key (that dropped a
+  // retried result or a saved note and fell back to the seed, with ⛔ fetch).
+  const key = [DISCREPANCY_ROOT, pariwarId, claimCaseId, gid, readId] as const;
   const [requested, setRequested] = useState(false);
-  const viewerId = session.data?.userId ?? null;
-  const isInspector = viewerId !== null && normalizeActorId(viewerId) === normalizeActorId(props.assignment.inspectorActorId);
-  const seeded = qc.getQueryData(key) !== undefined;
-  const enabled = seeded || isInspector || requested;
+  const isInspector = viewerId !== null && viewerId === normalizeActorId(props.assignment.inspectorActorId);
+  const enabled = props.seed !== undefined || (viewerId !== null && (isInspector || requested));
   const query = useQuery({
     queryKey: key,
-    queryFn: () => api.getInspectionDiscrepancy(props.pariwarId, props.claimCaseId, gid),
+    queryFn: () => api.getInspectionDiscrepancy(pariwarId, claimCaseId, gid),
     enabled,
+    initialData: props.seed,
     ...DISCREPANCY_QUERY_DEFAULTS,
   });
+  useEffect(() => () => {
+    qc.removeQueries({ queryKey: [DISCREPANCY_ROOT, pariwarId, claimCaseId, gid, readId], exact: true });
+  }, [qc, pariwarId, claimCaseId, gid, readId]);
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+
+  const result = query.data?.discrepancy;
+  const words = !enabled ? '' : result === undefined
+    ? (query.isError ? '' : t('gi.discrepancy.loading'))
+    : result.state === 'withheld' ? withheldNoteWords(result.reason)
+    : t(result.questionKeys.length === 0 ? 'gi.discrepancy.none' : 'gi.discrepancy.found');
+  // ⭐ Story 6.27d code review round 2 (R2-4, family 13(d)) — a "Try again" announces its loading and then its result
+  // AGAIN, even when the result is unchanged (an unchanged region says nothing); a failure re-inserts its alert (keyed
+  // on the failure). A note save's refresh is ⛔ a retry — the box announces its own result.
+  const [retrying, setRetrying] = useState(false);
+  // ⭐ Round 3 (R3-9) — a retry that FAILS says ⛔ the old result again as if fresh (the alert says it failed); the result
+  // is announced again only after a SUCCESSFUL read.
+  const [retryFailed, setRetryFailed] = useState(false);
+  // Reset when the RESULT changes (⛔ on every cache write — a note save's install would re-announce the whole screen).
+  useEffect(() => setRetryFailed(false), [words]);
+  // ⭐ Round 3 fix-diff review (R3-3) — a counter of SUCCESSFUL re-reads of this opening (a cache write is ⛔ a read): a note
+  // box keeps its confirmed note until a re-read that landed AFTER its save succeeds without it.
+  const [reads, setReads] = useState(0);
+  const reread = (): Promise<QueryObserverResult<api.InspectionDiscrepancyReadT>> =>
+    query.refetch().then((r) => {
+      if (mounted.current && !r.isError) setReads((n) => n + 1);
+      return r;
+    });
+  const retry = (): void => {
+    setRetrying(true);
+    void reread().then((r) => {
+      if (!mounted.current) return;
+      setRetrying(false);
+      setRetryFailed(r.isError);
+    });
+  };
+  const announced = retrying ? t('gi.discrepancy.loading') : retryFailed ? '' : words;
+  const [announcement, setAnnouncement] = useState('');
+  useEffect(() => setAnnouncement(announced), [announced]);
+  const saved = (note: api.InspectionDiscrepancyNoteT): void => {
+    qc.setQueryData<api.InspectionDiscrepancyReadT>(key, (old) => old?.discrepancy.state === 'shown'
+      ? { ...old, notes: [...old.notes.filter((n) => n.questionKey !== note.questionKey), note] }
+      : old);
+  };
+  // ⭐ Round 3 (R3-4) — the server said this reader is HIDDEN: the withheld shape replaces the cached result AT ONCE
+  // (uniform withholding), and only then the re-read — so a failed re-read never leaves the result on screen.
+  const hidden = (): void => {
+    qc.setQueryData<api.InspectionDiscrepancyReadT>(key, { discrepancy: { state: 'withheld', reason: 'own_visit' }, notes: [] });
+    void reread();
+  };
 
   let body: ReactElement;
   if (!enabled) {
     body = (
-      <button className="self-start rounded border px-2 py-1 text-sm" type="button" onClick={() => setRequested(true)}>
+      <button
+        className="self-start rounded border px-2 py-1 text-sm disabled:opacity-50"
+        type="button"
+        disabled={viewerId === null}
+        onClick={() => setRequested(true)}
+      >
         {t('gi.discrepancy.show')}
       </button>
     );
   } else if (query.data === undefined) {
     body = query.isError ? (
-      <p role="alert" className="text-sm text-red-600">
+      <p key={query.errorUpdateCount} role="alert" className="text-sm text-red-600">
         {errorText(query.error)}
       </p>
     ) : (
-      <p role="status" className="text-sm">
+      <p className="text-sm">
         {t('gi.discrepancy.loading')}
       </p>
     );
@@ -740,7 +846,10 @@ function DiscrepancyPanel(props: { pariwarId: string; claimCaseId: string; assig
                 questionKey={k}
                 existing={notes.find((n) => n.questionKey === k) ?? null}
                 viewerId={viewerId}
-                onChanged={() => void query.refetch()}
+                onSaved={saved}
+                onChanged={reread}
+                onHidden={hidden}
+                reads={reads}
               />
             </li>
           ))}
@@ -750,7 +859,16 @@ function DiscrepancyPanel(props: { pariwarId: string; claimCaseId: string; assig
   }
   return (
     <section aria-label={t('gi.discrepancy.region')} className="flex flex-col gap-2 rounded border p-3 text-sm" data-testid="gi-discrepancy">
+      <p role="status" aria-live="polite" className="sr-only" data-testid="gi-discrepancy-announcement">{announcement}</p>
+      {query.isError && query.data !== undefined && (
+        <p key={query.errorUpdateCount} role="alert">{t('gi.discrepancy.refreshFailed')}</p>
+      )}
       {body}
+      {enabled && (query.isError || result?.state === 'withheld') && (
+        <button type="button" className="self-start rounded border px-2 py-1" disabled={query.isFetching} onClick={retry}>
+          {t('gi.discrepancy.retry')}
+        </button>
+      )}
     </section>
   );
 }
@@ -763,73 +881,154 @@ function DiscrepancyNoteBox(props: {
   questionKey: api.InspectionDiscrepancyKeyT;
   existing: api.InspectionDiscrepancyNoteT | null;
   viewerId: string | null;
-  onChanged: () => void;
+  onSaved: (note: api.InspectionDiscrepancyNoteT) => void;
+  /** Re-reads the panel's opening; resolves with the read's outcome (R3-3). */
+  onChanged: () => Promise<QueryObserverResult<api.InspectionDiscrepancyReadT>>;
+  /** R3-4 — the server said this reader is hidden: the panel withholds at once, then re-reads. */
+  onHidden: () => void;
+  /** R3-3 — how many re-reads of the opening have SUCCEEDED (the panel's counter). */
+  reads: number;
 }): ReactElement {
   const [text, setText] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const [announcement, setAnnouncement] = useState('');
+  // ⭐ Story 6.27d code review round 2 (R2-4) — the note THIS box just recorded, rendered read-only at once (⛔ an empty
+  // editable box between the save and the panel's cache notification); the panel's own copy wins once it arrives.
+  const [confirmed, setConfirmed] = useState<api.InspectionDiscrepancyNoteT | null>(null);
+  // R2-4 — set by a 409 `discrepancy_note_exists`: the re-read's note is announced WITH its author when it arrives.
+  const awaitingExisting = useRef(false);
+  // ⭐ Round 3 (R3-5) — the LATEST `existing` (a save's callbacks close over the render that started it).
+  const existingRef = useRef(props.existing);
+  existingRef.current = props.existing;
+  // ⭐ Round 3 (R3-3) — a 201 that a re-read landing AFTER it does ⛔ confirm (it succeeded without this note): the note was ⛔
+  // recorded after all (the deferred CR7 — a swallowed COMMIT answered 201); the box returns to editable and says so.
+  // Checked on EVERY successful re-read after the save (⛔ only the first — it may have failed and kept the note, CR3);
+  // the reason is cleared once a note for this key arrives.
+  const [unconfirmed, setUnconfirmed] = useState(false);
+  const [pending, setPending] = useState<{ readonly submitted: string; readonly after: number } | null>(null);
+  const readsRef = useRef(props.reads);
+  readsRef.current = props.reads;
+  useEffect(() => {
+    if (props.existing !== null) setUnconfirmed(false);
+    if (pending === null || props.reads <= pending.after) return;
+    if (props.existing === null) {
+      setConfirmed(null);
+      setText(pending.submitted);
+      setUnconfirmed(true);
+    }
+    setPending(null);
+  }, [props.reads, props.existing, pending]);
+  // R2-12 — a save that settles after the box is gone (sign-out, scope change, re-key) touches ⛔ nothing.
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
   // Per-call `mutateAsync().then` — a mutation's own callbacks fire for the LATEST call only, and each box saves its own.
   const mutation = useMutation({
     mutationFn: (note: string) =>
       api.recordInspectionDiscrepancyNote(props.pariwarId, props.claimCaseId, props.groundInspectionId, { questionKey: props.questionKey, note }),
+    // R2-13 — the variables are the family's re-told account (Tier-1): ⛔ kept in the MutationCache after unmount.
+    // ⭐ Round 3 (R3-6) — 1 s, ⛔ 0 (a pending, unobserved mutation re-arms its GC timer each time it fires).
+    gcTime: 1000,
   });
+  // R4a — "Recorded" ONLY for the viewer's OWN note; every other note — and every note while the viewer is unknown — names
+  // its author (round 3 fix-diff review: a neutral "Recorded" passed a supervisor's note off as the viewer's). Read through a
+  // ref: a 409's announcement runs in the callback of the render that STARTED the save.
+  const viewerRef = useRef(props.viewerId);
+  viewerRef.current = props.viewerId;
+  const authorWords = (n: api.InspectionDiscrepancyNoteT): string => {
+    const viewer = viewerRef.current;
+    const own = viewer !== null && normalizeActorId(viewer) === normalizeActorId(n.authorActorId);
+    return own ? t('gi.discrepancy.recorded') : t('gi.discrepancy.recordedBy').replace('{author}', n.authorDisplay);
+  };
+  useEffect(() => {
+    if (!awaitingExisting.current || props.existing === null) return;
+    awaitingExisting.current = false;
+    setAnnouncement(authorWords(props.existing)); // announce once per arriving note (`authorWords` reads the viewer by ref)
+  }, [props.existing]);
   const save = (): void => {
     setSaving(true);
     setError(null);
-    mutation.mutateAsync(text).then(
-      () => {
+    setUnconfirmed(false);
+    const submitted = text;
+    mutation.mutateAsync(submitted).then(
+      (written) => {
+        if (!mounted.current) return;
+        const note = { ...written, note: submitted };
+        setConfirmed(note);
+        props.onSaved(note);
         setSaving(false);
         setText('');
         setAnnouncement(t('gi.discrepancy.saved'));
-        props.onChanged();
+        // R3-3 — confirmed only by a SUCCESSFUL re-read after this point (a failed one keeps the note — CR3).
+        setPending({ submitted, after: readsRef.current });
+        void props.onChanged();
       },
       (err: unknown) => {
+        if (!mounted.current) return;
         setSaving(false);
         setError(err);
-        // The box was filled meanwhile (by an override holder, or another tab) — re-read, and SHOW whose it is.
-        if (err instanceof ApiError && err.code === 'ground_inspection.discrepancy_note_exists') props.onChanged();
+        if (err instanceof ApiError && err.code === 'ground_inspection.discrepancy_note_exists') {
+          // The box was filled meanwhile (by an override holder, or another tab) — SHOW whose it is: at once when that
+          // note is already on screen (R3-5 — an unchanged `existing` re-renders nothing), else after the re-read.
+          if (existingRef.current !== null) {
+            setAnnouncement(authorWords(existingRef.current));
+          } else {
+            awaitingExisting.current = true;
+            void props.onChanged();
+          }
+        } else if (err instanceof ApiError && err.code === 'ground_inspection.own_ground_visit_pending') {
+          // R2-12 / R3-4 — the reader has become HIDDEN: the panel withholds at once, then re-reads.
+          props.onHidden();
+        }
       },
     );
   };
-  const live = (
-    <p role="status" aria-live="polite" className="sr-only">
-      {announcement}
-    </p>
-  );
-  if (props.existing !== null) {
-    const n = props.existing;
-    const own = props.viewerId !== null && normalizeActorId(props.viewerId) === normalizeActorId(n.authorActorId);
-    return (
-      <div className="flex flex-col gap-1 rounded bg-gray-50 p-2" data-testid={`gi-discrepancy-note-${props.questionKey}`}>
-        <span className="text-xs font-medium text-gray-700">
-          {own ? t('gi.discrepancy.recorded') : t('gi.discrepancy.recordedBy').replace('{author}', n.authorDisplay)}
-        </span>
-        <span>{typeof n.note === 'string' ? n.note : t('gi.discrepancy.noteUnavailable')}</span>
-        {live}
-      </div>
-    );
-  }
+  const shown = props.existing ?? confirmed;
   return (
     <div className="flex flex-col gap-1">
-      <label className="flex flex-col text-sm">
-        {t('gi.discrepancy.noteLabel')}
-        <textarea className="rounded border px-2 py-1" value={text} onChange={(e) => setText(e.target.value)} rows={2} />
-      </label>
-      <button
-        className="self-start rounded bg-blue-600 px-2 py-1 text-sm text-white disabled:opacity-50"
-        type="button"
-        disabled={saving || text.trim() === ''}
-        onClick={save}
-      >
-        {saving ? t('gi.discrepancy.saving') : t('gi.discrepancy.save')}
-      </button>
-      {error !== null && (
+      {/* R2-4 — ONE polite region at a fixed position, ⛔ inside the editable / read-only switch (a region inserted
+          with its words already in it is not announced). */}
+      <p role="status" aria-live="polite" className="sr-only" data-testid={`gi-discrepancy-note-status-${props.questionKey}`}>
+        {announcement}
+      </p>
+      {shown !== null ? (
+        <div className="flex flex-col gap-1 rounded bg-gray-50 p-2" data-testid={`gi-discrepancy-note-${props.questionKey}`}>
+          <span className="text-xs font-medium text-gray-700">{authorWords(shown)}</span>
+          <span>{typeof shown.note === 'string' ? shown.note : t('gi.discrepancy.noteUnavailable')}</span>
+        </div>
+      ) : (
+        <>
+          <label className="flex flex-col text-sm">
+            {t('gi.discrepancy.noteLabel')}
+            <textarea className="rounded border px-2 py-1" value={text} onChange={(e) => setText(e.target.value)} rows={2} />
+          </label>
+          <button
+            className="self-start rounded bg-blue-600 px-2 py-1 text-sm text-white disabled:opacity-50"
+            type="button"
+            disabled={saving || !HAS_VISIBLE_CHAR.test(text)}
+            onClick={save}
+          >
+            {saving ? t('gi.discrepancy.saving') : t('gi.discrepancy.save')}
+          </button>
+        </>
+      )}
+      {/* R3-3 — a 201 the re-read did ⛔ confirm: the text is back in the box, to record again. */}
+      {unconfirmed && (
         <p role="alert" className="text-xs text-red-600">
-          {errorText(error)}
+          {t('gi.discrepancy.notConfirmed')}
         </p>
       )}
-      {live}
+      {/* Outside the switch too: a 409 `discrepancy_note_exists` keeps saying why the box became read-only. */}
+      {error !== null && (
+        <p role="alert" className="text-xs text-red-600">
+          {noteErrorText(error)}
+        </p>
+      )}
     </div>
   );
 }
@@ -877,6 +1076,15 @@ function RefuseAction(props: {
       {mutation.isError && <p role="alert" className="text-xs text-red-600">{errorText(mutation.error)}</p>}
     </div>
   );
+}
+
+/** Story 6.27d (R2-2) — the note box's words: its three refusals, else the page's. */
+function noteErrorText(err: unknown): string {
+  if (err instanceof ApiError) {
+    const code = err.code.replace(/^ground_inspection\./, '');
+    if ((NOTE_WORDED_ERROR_CODES as readonly string[]).includes(code)) return t(`gi.discrepancy.error.${code}`);
+  }
+  return errorText(err);
 }
 
 function errorText(err: unknown): string {

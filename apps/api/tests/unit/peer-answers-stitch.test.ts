@@ -4,6 +4,8 @@
 //     see; else the read's own flag — and `answerId` ⛔ on the wire;
 //   · `callbackBasisFor` (`-328` read with `-329`) — the call-back number's FOUR rules, in order.
 
+import { INSPECTION_DISCREPANCY_QUESTION_KEYS } from '@twt/contracts';
+import { claim, schema as domainSchema } from '@twt/domain';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -106,5 +108,16 @@ describe('callbackBasisFor — the four rules, in order (`-328` read with `-329`
     expect(callbackBasisFor('pariwar_admin', ping(true, true, 'district_admin'))).toBeNull();
     expect(callbackBasisFor('pariwar_admin', ping(true, true, null))).toBeNull();
     expect(callbackBasisFor('pariwar_admin', ping(true, false, 'admin'))).toBeNull();
+  });
+});
+
+// ⭐ Story 6.27d code review round 2 (R2-16) — the contracts mirror ONLY the wire shape (they cannot import the domain —
+// the bundle boundary), so their discrepancy key list is a FOURTH hand list. Pinned here, where both are visible, to the
+// domain's DERIVED compared keys and the schema constant: when row 6-32 makes a key comparable, this goes red BEFORE the
+// `.strict()` console / `…/peer-answers` response parse would 500 on the new key.
+describe('Story 6.27d — the contracts\' discrepancy keys are LOCKSTEP with the domain', () => {
+  it('contracts = the compared keys = the schema constant, in order', () => {
+    expect([...INSPECTION_DISCREPANCY_QUESTION_KEYS]).toEqual([...claim.INSPECTION_DISCREPANCY_COMPARED_KEYS]);
+    expect([...INSPECTION_DISCREPANCY_QUESTION_KEYS]).toEqual([...domainSchema.INSPECTION_DISCREPANCY_QUESTION_KEYS]);
   });
 });

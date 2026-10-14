@@ -6,25 +6,31 @@
 //     showing is written; a fault in the hidden check ⇒ `withheld/check_failed`; a swallowed completion COMMIT ⇒ `withheld`
 //     (`own_visit` for the assigned inspector, `check_failed` for an override completer), ⛔ never `shown`, ⛔ no row;
 //   · R4 — a non-assigned Block Admin ⇒ 403 on all three routes;
-//   · AC5 — the re-read after a lost response; a failed showing write that ⛔ fails the response and ⛔ changes the
-//     re-read's keys after a later answer; a withheld completion then an un-hidden re-read records the same keys; an EMPTY
+//   · AC5 — the re-read after a lost response; a showing write LOST without an error and a delivery whose own COMMIT
+//     FAILS (code review round 2, R2-10) — neither ⛔ fails the response nor changes the re-read's keys after a later
+//     answer; a withheld completion then an un-hidden re-read records the same keys; an EMPTY
 //     showing; the re-read's 404 for every non-completed status, a `certificate_check`, and a pre-0147 NULL-source row; a
 //     hidden caller's re-read ⇒ withheld with `notes: []`; a fault in the re-read's hidden check ⇒ withheld;
 //   · AC6 — the note rules (once, key-not-shown, the window, a missing showing recomputed), the HIDDEN probe (identical
 //     status, code, message, ⛔ details), the display name (409 `admin.display_name_missing`; a non-holder still 403), an
 //     override holder's note read back by the assigned inspector WITH its author, the audit line (codes only);
 //   · R5 / AC7 — the console's neighbours' section carries the block for the District Admin and is ABSENT for a hidden
-//     reader; a later answer is on the console, ⛔ on the re-read.
+//     reader; a later answer is on the console, ⛔ on the re-read;
+//   · ⭐ code review round 2 — R2-7: an ERASED or undecryptable family date and note are `unavailable` on the re-read and in
+//     the staff block (⛔ the sentinel text, ⛔ a 500), and the block parses under the STRICT console contract; R2-15: a
+//     blank note is refused (400) and fills ⛔ the once-only slot.
 
 import { randomUUID } from 'node:crypto';
 
-import { claim, ids } from '@twt/domain';
+import { InspectionDiscrepancyStaffView } from '@twt/contracts';
+import { claim, ids, member } from '@twt/domain';
 import type pg from 'pg';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
 // ⭐ Fault injection on the request's own handles (the 6.27b X6 pattern): the hide check fails with a REAL SQL error; a
-// completion / showing COMMIT is "swallowed" by rolling the work back and opening an empty transaction for the COMMIT.
-const fault = vi.hoisted(() => ({ hideCheck: false, swallowCompletion: false, showingCommit: false }));
+// completion / showing write is LOST without an error by rolling the work back and opening an empty transaction for the
+// COMMIT; ⭐ R2-10 — `deliveryCommit`: the delivery's OWN COMMIT throws (after its showing write answered `persisted`).
+const fault = vi.hoisted(() => ({ hideCheck: false, swallowCompletion: false, showingCommit: false, deliveryCommit: false }));
 vi.mock('@twt/domain', async (importActual) => {
   const actual = await importActual<typeof import('@twt/domain')>();
   const { sql } = await import('drizzle-orm');
@@ -51,10 +57,40 @@ vi.mock('@twt/domain', async (importActual) => {
   };
   return { ...actual, claim: { ...actual.claim, isActorOwnVisitPending, completeGroundInspection, recordInspectionDiscrepancyShowing } };
 });
+// ⭐ R2-10 — a scope transaction that WROTE a showing gets a client whose COMMIT rolls the work back and THROWS: the handler's
+// own `client.query('COMMIT')` after `persisted = true` — the one failure it answers `shown` for. Every other transaction
+// (the completion's own, the request's) passes through untouched.
+vi.mock('../../../src/modules/multi-tenant/scope-tx.js', async (importActual) => {
+  const actual = await importActual<typeof import('../../../src/modules/multi-tenant/scope-tx.js')>();
+  const { bindScopedDb } = await vi.importActual<typeof import('@twt/domain')>('@twt/domain');
+  const openScopeTx: typeof actual.openScopeTx = async (deps, pariwarId) => {
+    const scopeTx = await actual.openScopeTx(deps, pariwarId);
+    if (!fault.deliveryCommit) return scopeTx;
+    let wroteShowing = false;
+    const client = new Proxy(scopeTx.client, {
+      get(target, prop, receiver) {
+        if (prop !== 'query') return Reflect.get(target, prop, receiver);
+        return (q: unknown, ...rest: unknown[]) => {
+          const text = typeof q === 'string' ? q : ((q as { text?: string } | null)?.text ?? '');
+          if (/insert into claim_ground_inspection_discrepancy_showings/i.test(text)) wroteShowing = true;
+          if (wroteShowing && /^\s*commit\s*$/i.test(text)) {
+            return target.query('ROLLBACK').then(() => {
+              throw new Error('simulated: the delivery COMMIT failed');
+            });
+          }
+          return (target.query as (...a: unknown[]) => unknown).call(target, q, ...rest);
+        };
+      },
+    });
+    return { ...scopeTx, client, tx: bindScopedDb(client) };
+  };
+  return { ...actual, openScopeTx };
+});
 
 import type { AppDeps } from '../../../src/context.js';
 import * as service from '../../../src/modules/auth/admin/admin-auth.service.js';
 import { assemblePeerMesh } from '../../../src/modules/claims/claims.verifier-console.handlers.js';
+import { encryptGroundInspectionField } from '../../../src/modules/claims/ground-inspection-crypto.js';
 import { closeScopeTx, openScopeTx } from '../../../src/modules/multi-tenant/scope-tx.js';
 import { buildServer } from '../../../src/server.js';
 import * as fx from '../_peer-reply-fixture.js';
@@ -88,7 +124,7 @@ describe.skipIf(!hasDatabase)('Story 6.27d — the inspector\'s discrepancy thro
   });
 
   afterAll(async () => {
-    Object.assign(fault, { hideCheck: false, swallowCompletion: false, showingCommit: false });
+    Object.assign(fault, { hideCheck: false, swallowCompletion: false, showingCommit: false, deliveryCommit: false });
     await app.close();
     const c = await td.pool.connect();
     try {
@@ -355,19 +391,75 @@ describe.skipIf(!hasDatabase)('Story 6.27d — the inspector\'s discrepancy thro
     expect((await reread(blockInspector.client, w, done)).statusCode).toBe(200);
   });
 
+  it('CR5 — the new read and note routes deny cross-Pariwar ids with own-tenant positive controls', async () => {
+    const own = await world();
+    const other = await world();
+    await say(own, 'has_died', { codes: ['not_died'] });
+    const gid = await assign(own);
+    expect((await complete(own.inspector.client, own, gid)).statusCode).toBe(200);
+    expect((await reread(own.inspector.client, own, gid)).statusCode).toBe(200);
+    expect((await note(own.inspector.client, own, gid, 'has_died')).statusCode).toBe(201);
+    // The actor holds the same conduct permission in both tenants; denial must be resource ownership.
+    await grant(own.inspector.userId, other.p, 'district_admin', 'district', DISTRICT);
+    // ⭐ R2-18 — the grant in `other` is LIVE (a positive control there), so the 404s below are the assignment's — ⛔ the
+    // scope hook's `pariwar.not_found` for a grant that never took effect.
+    await say(other, 'has_died', { codes: ['not_died'] });
+    const theirs = await assign(other, { inspector: own.inspector.userId });
+    expect((await complete(own.inspector.client, other, theirs)).statusCode).toBe(200);
+    for (const res of [await reread(own.inspector.client, other, gid), await note(own.inspector.client, other, gid, 'has_died')]) {
+      expect([res.statusCode, errOf(res).code]).toEqual([404, 'ground_inspection.not_found']);
+    }
+    const notes = await td.pool.query('SELECT pariwar_id FROM claim_ground_inspection_discrepancy_notes WHERE ground_inspection_id = $1', [gid]);
+    expect(notes.rows).toEqual([{ pariwar_id: own.p }]);
+  });
+
+  it('CR5 — no-session system callers are denied by both new routes', async () => {
+    const w = await world();
+    await say(w, 'has_died', { codes: ['not_died'] });
+    const gid = await assign(w);
+    await complete(w.inspector.client, w, gid);
+    expect((await reread(w.inspector.client, w, gid)).statusCode).toBe(200);
+    const system = makeClient(app);
+    expect((await reread(system, w, gid)).statusCode).toBe(401);
+    expect((await note(system, w, gid, 'has_died')).statusCode).toBe(401);
+    expect((await td.pool.query('SELECT note_id FROM claim_ground_inspection_discrepancy_notes WHERE ground_inspection_id = $1', [gid])).rows).toEqual([]);
+  });
+
+  it('CR5 — a tampered session naming a nonexistent system/service actor is denied, never attributed as the inspector', async () => {
+    const w = await world();
+    await say(w, 'has_died', { codes: ['not_died'] });
+    const gid = await assign(w);
+    await complete(w.inspector.client, w, gid);
+    expect((await reread(w.inspector.client, w, gid)).statusCode).toBe(200);
+    expect((await note(w.inspector.client, w, gid, 'has_died')).statusCode).toBe(201);
+    // House runtime adversary: the cookie stays valid, but its persisted principal has no human account/grants.
+    await td.pool.query(`UPDATE admin_sessions SET sess = jsonb_set(sess, '{userId}', to_jsonb($1::text)) WHERE user_id = $2`, [randomUUID(), w.inspector.userId]);
+    try {
+      expect((await reread(w.inspector.client, w, gid)).statusCode).toBe(404);
+      expect((await note(w.inspector.client, w, gid, 'death_date')).statusCode).toBe(404);
+      const notes = await td.pool.query('SELECT author_actor_id FROM claim_ground_inspection_discrepancy_notes WHERE ground_inspection_id = $1', [gid]);
+      expect(notes.rows).toEqual([{ author_actor_id: w.inspector.userId }]);
+    } finally {
+      await td.pool.query(`UPDATE admin_sessions SET sess = jsonb_set(sess, '{userId}', to_jsonb($1::text)) WHERE user_id = $2`, [w.inspector.userId, w.inspector.userId]);
+    }
+  });
+
   // ── AC5 — the showing and the re-read ──────────────────────────────────────────────────────────────────────────────────
 
   it('a lost completion response — the re-read returns the SAME keys (the recorded row), with the family date shown', async () => {
     const w = await world();
-    await say(w, 'has_died', { codes: ['not_died'] });
+    await say(w, 'has_died', { codes: ['died'] });
+    await say(w, 'death_date', { date: '2026-06-01' });
     const gid = await assign(w);
     const first = (await complete(w.inspector.client, w, gid)).json<Json>()['discrepancy'];
+    // ⭐ R2-18 — the date is IN the result, so the re-read's decrypted family date is compared with the completion's echo.
+    expect(first).toEqual({ state: 'shown', questionKeys: ['death_date'], familyDeathDate: { status: 'shown', date: FAMILY_DATE } });
     const rr = await reread(w.inspector.client, w, gid);
     expect(rr.statusCode, rr.body).toBe(200);
     expect(rr.json<{ discrepancy: Json }>().discrepancy).toEqual(first);
   });
 
-  it('a FAILED showing write ⛔ fails the response; after a LATER answer the re-read still recomputes the completion\'s keys (as of `completed_at`) — AC7', async () => {
+  it('a showing write LOST without an error ⛔ fails the response; after a LATER answer the re-read still recomputes the completion\'s keys (as of `completed_at`) — AC7', async () => {
     const w = await world();
     await say(w, 'has_died', { codes: ['died'] });
     await say(w, 'death_date', { date: '2026-06-01' });
@@ -394,6 +486,28 @@ describe.skipIf(!hasDatabase)('Story 6.27d — the inspector\'s discrepancy thro
     const section = await console_(w, da.userId);
     const live = section?.status === 'present' ? section.transcript.pings[0]!.reply!.answers.find((a) => a.questionKey === 'has_died') : null;
     expect(live?.value).toMatchObject({ kind: 'codes', codes: ['not_died'] });
+  });
+
+  it('R2-10 — the delivery\'s OWN COMMIT fails after the showing write answered `persisted` ⇒ still `shown` with the in-tx keys; the re-read recomputes them', async () => {
+    const w = await world();
+    await say(w, 'has_died', { codes: ['not_died'] });
+    const gid = await assign(w);
+    fault.deliveryCommit = true;
+    let r: Res;
+    try {
+      r = await complete(w.inspector.client, w, gid);
+    } finally {
+      fault.deliveryCommit = false;
+    }
+    expect(r.statusCode, r.body).toBe(200);
+    expect(r.json<Json>()['discrepancy']).toEqual({ state: 'shown', questionKeys: ['has_died'], familyDeathDate: null });
+    // The completion's own transaction committed; the delivery's showing did ⛔ (its COMMIT failed).
+    const { rows } = await td.pool.query(`SELECT status FROM claim_ground_inspections WHERE ground_inspection_id = $1`, [gid]);
+    expect(rows[0]).toEqual({ status: 'completed' });
+    expect(await showingRow(gid)).toBeNull();
+    const rr = await reread(w.inspector.client, w, gid);
+    expect(rr.json<{ discrepancy: Json }>().discrepancy).toEqual({ state: 'shown', questionKeys: ['has_died'], familyDeathDate: null });
+    expect(await showingRow(gid)).toEqual({ question_keys: ['has_died'] });
   });
 
   it('the re-read\'s neutral 404 for every non-completed status, a `certificate_check` and a pre-0147 NULL-source row', async () => {
@@ -449,6 +563,13 @@ describe.skipIf(!hasDatabase)('Story 6.27d — the inspector\'s discrepancy thro
     await say(w, 'has_died', { codes: ['not_died'] });
     const gid = await assign(w);
     await complete(w.inspector.client, w, gid);
+    // ⭐ R2-15 / R3-10 — a BLANK note (whitespace, or ONLY zero-width / format characters and fillers) is refused before
+    // anything is written: the once-only slot stays open for the real answer.
+    for (const invisible of [' \t\n ', '\u200B\u2060\uFEFF', ' \u00A0\u3000\u3164\u2800 ', '\uFE0F\u034F\u180B']) {
+      const blank = await note(w.inspector.client, w, gid, 'has_died', invisible);
+      expect(blank.statusCode, `${JSON.stringify(invisible)} ${blank.body}`).toBe(400);
+    }
+    expect((await td.pool.query('SELECT 1 FROM claim_ground_inspection_discrepancy_notes WHERE ground_inspection_id = $1', [gid])).rows).toEqual([]);
     const ok = await note(w.inspector.client, w, gid, 'has_died');
     expect(ok.statusCode, ok.body).toBe(201);
     expect(ok.json()).toEqual({ questionKey: 'has_died', notedAt: expect.any(String), authorActorId: w.inspector.userId.toLowerCase(), authorDisplay: 'Inspector One' });
@@ -567,6 +688,41 @@ describe.skipIf(!hasDatabase)('Story 6.27d — the inspector\'s discrepancy thro
     expect(await console_(w, hidden.userId)).toBeUndefined();
   });
 
+  it('R2-7 (R3, Task 4.2 / 4.3) — an ERASED or undecryptable family date and note are `unavailable` on the re-read AND in the staff block — ⛔ the sentinel, ⛔ a 500 — and the block parses under the STRICT contract', async () => {
+    const w = await world();
+    await say(w, 'has_died', { codes: ['died'] });
+    await say(w, 'death_date', { date: '2026-06-01' });
+    const gid = await assign(w);
+    expect((await complete(w.inspector.client, w, gid)).json<Json>()['discrepancy']).toMatchObject({ questionKeys: ['death_date'] });
+    expect((await note(w.inspector.client, w, gid, 'death_date')).statusCode).toBe(201);
+    const da = await authenticate('District Admin');
+    await grant(da.userId, w.p, 'district_admin', 'district', DISTRICT);
+    const expectUnavailable = async () => {
+      const rr = await reread(w.inspector.client, w, gid);
+      expect(rr.statusCode, rr.body).toBe(200);
+      expect(rr.json()).toEqual({
+        discrepancy: { state: 'shown', questionKeys: ['death_date'], familyDeathDate: { status: 'unavailable' } },
+        notes: [{ questionKey: 'death_date', note: { status: 'unavailable' }, notedAt: expect.any(String), authorActorId: w.inspector.userId.toLowerCase(), authorDisplay: 'Inspector One' }],
+      });
+      expect(rr.body).not.toContain(member.ANONYMIZED_SENTINEL);
+      const section = await console_(w, da.userId);
+      const block = section?.status === 'present' ? section.transcript.inspectionDiscrepancies : null;
+      // The route's serializer parses the transcript under the STRICT contract; the block rides through the flag stitch by
+      // spread, unchanged — so the block itself must pass its strict element schema (an `unavailable` note included).
+      expect(() => InspectionDiscrepancyStaffView.array().parse(block)).not.toThrow();
+      expect(block?.[0]?.notes).toEqual([{ questionKey: 'death_date', note: { status: 'unavailable' }, notedAt: expect.any(String), authorDisplay: 'Inspector One' }]);
+    };
+    // ERASED — the GI13 scrub's form: the house sentinel, encrypted under the field class (the notes' erasure arm admits it).
+    const sentinel = await encryptGroundInspectionField(member.ANONYMIZED_SENTINEL, w.p, deps.encryption);
+    await td.pool.query('UPDATE claim_ground_inspections SET death_date_ciphertext = $2 WHERE ground_inspection_id = $1', [gid, sentinel]);
+    await td.pool.query('UPDATE claim_ground_inspection_discrepancy_notes SET note_ciphertext = $2 WHERE ground_inspection_id = $1', [gid, sentinel]);
+    await expectUnavailable();
+    // UNDECRYPTABLE.
+    await td.pool.query(`UPDATE claim_ground_inspections SET death_date_ciphertext = 'enc:v1:garbage' WHERE ground_inspection_id = $1`, [gid]);
+    await td.pool.query(`UPDATE claim_ground_inspection_discrepancy_notes SET note_ciphertext = 'enc:v1:garbage' WHERE ground_inspection_id = $1`, [gid]);
+    await expectUnavailable();
+  });
+
   /** The neighbours' section of the console as `actorId` reads it (the ONE assembler). */
   async function console_(w: World, actorId: string) {
     return inScope(w.p, (tx) =>
@@ -615,6 +771,12 @@ describe.skipIf(!hasDatabase)('Story 6.27d — the inspector\'s discrepancy thro
  * A PRE-0147 completed FULL row (R1): 0147's completed-row CHECK is `NOT VALID`, so such a row can carry a NULL source —
  * but every NEW write is checked. Reproduced as history made it, in ONE committed transaction: drop the CHECK, complete the
  * row with a NULL source, re-add the CHECK by its OWN catalog definition (`… NOT VALID`).
+ * ⭐ Code review round 2 (R2-17) — why this copy COMMITS shared DDL where the domain's shadows a temp table: the handler reads
+ * the row on ANOTHER pooled connection, which a connection-local shadow cannot reach. ⚠ It takes ACCESS EXCLUSIVE on the
+ * shared table at the DROP and holds it until its COMMIT (DROP → UPDATE → ADD → COMMIT, all short — round 3, R3-14), on a
+ * FRESH connection that holds ⛔ other lock first — so ⛔ lock upgrade and ⛔ deadlock (round 1's CR6 shape). Its own wait
+ * for that lock is bounded by `lock_timeout`; a parallel file touching the table queues behind it until the COMMIT. The
+ * committed row is history of the kind 0147 already forbids validating over (⛔ never `VALIDATE` it while such a row exists).
  */
 async function forceLegacyCompletedNullSource(pool: pg.Pool, pariwarId: string, groundInspectionId: string): Promise<void> {
   const name = 'claim_ground_inspections_completed_death_facts_check';
@@ -629,12 +791,14 @@ async function forceLegacyCompletedNullSource(pool: pg.Pool, pariwarId: string, 
     if (!def || !/NOT VALID$/.test(def)) throw new Error(`unexpected ${name}: ${def}`);
     await c.query(`SET LOCAL lock_timeout = '10s'`);
     await c.query(`ALTER TABLE claim_ground_inspections DROP CONSTRAINT ${name}`);
-    await c.query(
+    const updated = await c.query(
       `UPDATE claim_ground_inspections SET status = 'completed', completed_at = clock_timestamp(), death_date_source = NULL,
-              death_date_ciphertext = NULL, death_date_index = NULL, original_certificate_verdict = NULL, compared_certificate_upload_id = NULL
+              death_date_ciphertext = NULL, death_date_index = NULL, death_time_ciphertext = NULL, original_certificate_verdict = NULL,
+              compared_certificate_upload_id = NULL
         WHERE pariwar_id = $1 AND ground_inspection_id = $2`,
       [pariwarId, groundInspectionId],
     );
+    if (updated.rowCount !== 1) throw new Error(`[forceLegacyCompletedNullSource] updated ${updated.rowCount} rows, expected 1`);
     await c.query(`ALTER TABLE claim_ground_inspections ADD CONSTRAINT ${name} ${def}`);
     await c.query('COMMIT');
   } catch (err) {

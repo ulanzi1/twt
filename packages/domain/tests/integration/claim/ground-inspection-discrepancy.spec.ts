@@ -38,7 +38,7 @@ import { bindScopedDb } from '../../../src/db.js';
 import { claimId as toClaimId, pariwarId as toPariwarId, type ClaimId, type GroundInspectionId, type PariwarId } from '../../../src/ids/index.js';
 import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
 import { driveClaimTo, enterAppScope, seedDeathCertificate } from '../_helpers.js';
-import { completeWithDate, FAMILY_DATE, forceLegacyCompletedNullSource, scheduleWithOriginalPhoto } from './_inspection-discrepancy-fixtures.js';
+import { completeWithDate, FAMILY_DATE, forceLegacyCompletedNullSource, scheduleWithOriginalPhoto, shadowAsCompletedFullVisit } from './_inspection-discrepancy-fixtures.js';
 import { attachTextedPings, savePeerFixtureAnswer, type TextedPing } from './_peer-reply-fixtures.js';
 
 const INSPECTOR = 'a1a1a1a1-0000-4000-8000-000000000001';
@@ -199,6 +199,13 @@ describe.skipIf(!hasDatabase)('Story 6.27d — the inspector\'s discrepancy at t
         persisted: false,
       });
       await expect(underSavepoint(ctx.client, () => note(ctx, gid, 'has_died'))).rejects.toBeInstanceOf(GroundInspectionNotFoundError);
+      // ⭐ R2-5 positive control — the SAME shadow row as a `family_statement` completion IS a target: every refusal above
+      // came from the NULL source, ⛔ from the public row (still `scheduled`).
+      await ctx.client.query('RESET ROLE');
+      await shadowAsCompletedFullVisit(ctx.client, ctx.pid, gid);
+      await enterAppScope(ctx.client, ctx.pid);
+      expect((await readInspectionDiscrepancyTarget(db(ctx), ctx.pid, gid)).groundInspectionId).toBe(gid);
+      expect((await readOrRecomputeInspectionDiscrepancy(db(ctx), ctx.pid, gid)).questionKeys).toEqual(['has_died']);
     });
   });
 
@@ -237,19 +244,49 @@ describe.skipIf(!hasDatabase)('Story 6.27d — the inspector\'s discrepancy at t
     });
 
     it('AC7 — an answer saved AFTER completion is ⛔ never in the recompute (the live answers carry it)', async () => {
-      const ctx = await claim();
-      await saidDate(ctx, FAMILY_DATE);
+      const ctx = await claim(2);
+      await saidDate(ctx, FAMILY_DATE, 0);
+      await saidDate(ctx, FAMILY_DATE, 1);
       const { gid, discrepancy } = await completeOne(ctx);
       expect(discrepancy).toEqual({ questionKeys: [] });
-      // After completion: the neighbour changes their answer — a new LIVE `not_died` and a date far away.
-      await save(ctx, 'has_died', { codes: ['not_died'] });
-      await save(ctx, 'death_date', { date: addCalendarDays(FAMILY_DATE, -10) }).catch(() => undefined);
+      // After completion: one neighbour changes to `not_died` (which supersedes their own date — its condition stops
+      // holding), the other moves their date far away. ⭐ R2-18: both saves are awaited, ⛔ swallowed.
+      await save(ctx, 'has_died', { codes: ['not_died'] }, 0);
+      await save(ctx, 'death_date', { date: addCalendarDays(FAMILY_DATE, -10) }, 1);
       expect((await readOrRecomputeInspectionDiscrepancy(db(ctx), ctx.pid, gid)).questionKeys).toEqual([]);
-      const { rows } = await ctx.client.query<{ n: number }>(
-        `SELECT count(*)::int AS n FROM claim_peer_mesh_reply_answers WHERE pariwar_id = $1 AND claim_case_id = $2 AND superseded_at IS NULL AND value_codes = ARRAY['not_died']`,
-        [ctx.pid, ctx.cid],
+      const { rows } = await ctx.client.query<{ question_key: string; after: boolean }>(
+        `SELECT a.question_key, a.saved_at > gi.completed_at AS after
+           FROM claim_peer_mesh_reply_answers a JOIN claim_ground_inspections gi ON gi.ground_inspection_id = $3
+          WHERE a.pariwar_id = $1 AND a.claim_case_id = $2 AND a.superseded_at IS NULL
+            AND (a.value_codes = ARRAY['not_died'] OR a.question_key = 'death_date')
+          ORDER BY a.question_key`,
+        [ctx.pid, ctx.cid, gid],
       );
-      expect(rows[0]!.n).toBe(1);
+      // Both differing answers are LIVE and were saved after `completed_at` — so the empty recompute is the as-of rule.
+      expect(rows).toEqual([
+        { question_key: 'death_date', after: true },
+        { question_key: 'has_died', after: true },
+      ]);
+    });
+
+    it('AC5 / R2 — answers that DIFFERED at completion and changed AFTER it stay in the recompute (the supersession arm)', async () => {
+      // ⭐ Code review round 2 (R2-6): `superseded_at > completed_at` keeps an answer live AS OF the completion even though a
+      // later save superseded it — deleting that arm (or stamping `superseded_at` with `now()`) turns this red.
+      const ctx = await claim(2);
+      await save(ctx, 'has_died', { codes: ['not_died'] }, 0);
+      await saidDate(ctx, addCalendarDays(FAMILY_DATE, -10), 1);
+      const { gid, discrepancy } = await completeOne(ctx);
+      expect(discrepancy).toEqual({ questionKeys: ['has_died', 'death_date'] });
+      // After completion both neighbours come round to the family's account.
+      await save(ctx, 'has_died', { codes: ['died'] }, 0);
+      await save(ctx, 'death_date', { date: FAMILY_DATE }, 1);
+      const superseded = await ctx.client.query<{ n: number }>(
+        `SELECT count(*)::int AS n FROM claim_peer_mesh_reply_answers a JOIN claim_ground_inspections gi ON gi.ground_inspection_id = $3
+          WHERE a.pariwar_id = $1 AND a.claim_case_id = $2 AND a.superseded_at > gi.completed_at AND a.saved_at <= gi.completed_at`,
+        [ctx.pid, ctx.cid, gid],
+      );
+      expect(superseded.rows[0]!.n).toBe(2);
+      expect((await readOrRecomputeInspectionDiscrepancy(db(ctx), ctx.pid, gid)).questionKeys).toEqual(['has_died', 'death_date']);
     });
   });
 
@@ -277,14 +314,20 @@ describe.skipIf(!hasDatabase)('Story 6.27d — the inspector\'s discrepancy at t
       const { gid } = await completeOne(ctx);
       await note(ctx, gid, 'has_died');
       // A client whose pre-check read sees ⛔ no note (as a writer that raced past it would).
+      // ⭐ R2-18 — counted: the pre-check WAS blinded and the INSERT WAS issued, so the typed error below came from the
+      // 23505 mapping, ⛔ from the pre-check.
+      let blinded = 0;
+      let inserts = 0;
       const blind = new Proxy(ctx.client, {
         get(target, prop, receiver) {
           if (prop !== 'query') return Reflect.get(target, prop, receiver);
           return (q: unknown, ...rest: unknown[]) => {
             const text = typeof q === 'string' ? q : (q as { text?: string }).text ?? '';
             if (/^select/i.test(text) && text.includes('"claim_ground_inspection_discrepancy_notes"')) {
+              blinded += 1;
               return Promise.resolve({ rows: [], rowCount: 0, command: 'SELECT', fields: [] });
             }
+            if (/^insert into "claim_ground_inspection_discrepancy_notes"/i.test(text)) inserts += 1;
             return (target.query as (...a: unknown[]) => unknown).call(target, q, ...rest);
           };
         },
@@ -301,6 +344,8 @@ describe.skipIf(!hasDatabase)('Story 6.27d — the inspector\'s discrepancy at t
           }),
         ),
       ).rejects.toBeInstanceOf(InspectionDiscrepancyNoteExistsError);
+      expect(blinded).toBe(1);
+      expect(inserts).toBe(1);
     });
 
     it('step 1 — a non-completed or `certificate_check` assignment ⇒ 404; ⛔ the inspector and ⛔ an override ⇒ the identity refusal', async () => {
@@ -320,7 +365,9 @@ describe.skipIf(!hasDatabase)('Story 6.27d — the inspector\'s discrepancy at t
       await save(ctx, 'has_died', { codes: ['not_died'] });
       const { gid } = await completeOne(ctx);
       await setClaimState(ctx.client, ctx.pid, ctx.cid, 'approved');
-      await expect(underSavepoint(ctx.client, () => note(ctx, gid, 'has_died'))).rejects.toBeInstanceOf(GroundInspectionClaimNotInVerificationError);
+      // ⭐ R2-18 — ⛔ under a savepoint: the refusal is a typed throw (⛔ a statement error), so a showing written BEFORE it
+      // would SURVIVE here and fail the next line (a savepoint's rollback would erase it and prove nothing).
+      await expect(note(ctx, gid, 'has_died')).rejects.toBeInstanceOf(GroundInspectionClaimNotInVerificationError);
       expect(await showingOf(ctx, gid)).toBeNull();
     });
 
@@ -332,7 +379,8 @@ describe.skipIf(!hasDatabase)('Story 6.27d — the inspector\'s discrepancy at t
       await schedule(ctx, { inspector: SUPERVISOR });
       const refusals: string[] = [];
       for (const key of ['has_died', 'death_date'] as const) {
-        const err = await underSavepoint(ctx.client, () => note(ctx, gid, key, { actor: SUPERVISOR, override: true })).catch((e: unknown) => e);
+        // ⭐ R2-18 — ⛔ under a savepoint (as step 2): a showing recorded before the refusal would survive to the assertion below.
+        const err = await note(ctx, gid, key, { actor: SUPERVISOR, override: true }).catch((e: unknown) => e);
         expect(err, key).toBeInstanceOf(OwnGroundVisitPendingError);
         refusals.push(`${(err as Error).name}:${(err as Error).message}`);
       }

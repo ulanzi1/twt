@@ -3,9 +3,11 @@
 // themselves over a stubbed `fetch` — the completion KEEPS `discrepancy`, and schedule / findings / refusal still parse a
 // response WITHOUT it.
 
+import { INSPECTION_DISCREPANCY_QUESTION_KEYS } from '@twt/contracts';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  INSPECTION_DISCREPANCY_KEYS,
   completeGroundInspection,
   getInspectionDiscrepancy,
   recordGroundInspectionFindings,
@@ -62,5 +64,32 @@ describe('the admin client — Story 6.27d', () => {
     const written = { questionKey: 'has_died', notedAt: '2026-07-10T13:05:00.000Z', authorActorId: 'a', authorDisplay: 'A' };
     stubJson(written, 201);
     expect(await recordInspectionDiscrepancyNote(PARIWAR, CLAIM, GID, { questionKey: 'has_died', note: 'x' })).toEqual(written);
+  });
+
+  it('⭐ code review round 2 (R2-14) — a neighbour\'s name / value / count on the wire is STRIPPED by the parse (completion, re-read, note write)', async () => {
+    const neighbour = { neighbourName: 'Asha', valueCodes: ['not_died'], neighbourDate: '2026-06-01', count: 2 };
+    const shown = { state: 'shown', questionKeys: ['has_died'], familyDeathDate: null };
+    const note = { questionKey: 'has_died', note: 'At home.', notedAt: '2026-07-10T13:05:00.000Z', authorActorId: 'a', authorDisplay: 'A' };
+
+    stubJson({ groundInspectionId: GID, status: 'completed', ...neighbour, discrepancy: { ...shown, ...neighbour } });
+    const completion = await completeGroundInspection(PARIWAR, CLAIM, GID, {});
+    expect(completion).toEqual({ groundInspectionId: GID, status: 'completed', discrepancy: shown });
+
+    stubJson({ ...neighbour, discrepancy: { ...shown, ...neighbour }, notes: [{ ...note, ...neighbour }] });
+    const read = await getInspectionDiscrepancy(PARIWAR, CLAIM, GID);
+    expect(read).toEqual({ discrepancy: shown, notes: [note] });
+
+    const written = { questionKey: 'has_died', notedAt: '2026-07-10T13:05:00.000Z', authorActorId: 'a', authorDisplay: 'A' };
+    stubJson({ ...written, ...neighbour, note: 'echoed text' }, 201);
+    expect(await recordInspectionDiscrepancyNote(PARIWAR, CLAIM, GID, { questionKey: 'has_died', note: 'x' })).toEqual(written);
+  });
+});
+
+// ⭐ Story 6.27d code review round 3 (R3-12) — the admin client's OWN key list (its completion, re-read and note schemas
+// `z.enum` it) is LOCKSTEP with the contracts' (which round 2's R2-16 pins to the domain): when row 6-32 makes a key
+// comparable, this goes red BEFORE the completion's parse throws after a committed completion.
+describe('Story 6.27d — the admin client\'s discrepancy keys are LOCKSTEP with the contracts', () => {
+  it('client = contracts, in order', () => {
+    expect([...INSPECTION_DISCREPANCY_KEYS]).toEqual([...INSPECTION_DISCREPANCY_QUESTION_KEYS]);
   });
 });

@@ -1174,7 +1174,7 @@ describe.skipIf(!hasDatabase)('Verifier-console read surface — E2E (:5433)', (
     expect(actual - baseline.actual, 'statements Postgres received for the inheritance vs reads booked').toBe(readCount - baseline.readCount);
   });
 
-  it('⭐⭐ Story 6.23a (Trap 10) — the ceiling is 26 (Story 6.26a: 19 → 20; Story 6.24a: 20 → 21; Story 6.28 OP14 (a): 21 → 22; OP14 (b), code review chunk 3/4: 22 → 23; Story 6.27a: 23 → 26), and the warnings section books EXACTLY one read and sends EXACTLY one statement', async () => {
+  it('⭐⭐ Story 6.23a (Trap 10) — the ceiling is 29 (Story 6.26a: 19 → 20; Story 6.24a: 20 → 21; Story 6.28 OP14 (a): 21 → 22; OP14 (b), code review chunk 3/4: 22 → 23; Story 6.27a: 23 → 26; 6.27b: → 27; 6.27d: → 29), and the warnings section books EXACTLY one read and sends EXACTLY one statement', async () => {
     // The ledger above the constant says +1 → 19. ⚠ The shipped tests catch over-reporting only (`reported <=
     // actual`) and a ceiling breach (`readCount <= MAX`); a forgotten `reads.bump()` stays green there. ⇒ the
     // section is measured on its OWN: its booked reads AND the statements Postgres receives, each exactly 1 — the

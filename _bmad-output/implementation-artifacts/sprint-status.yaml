@@ -1,3 +1,12 @@
+# last_updated: 2026-10-14b (STORY 6.27d — STORY FILE RE-AUTHORED (`bmad-create-story 6.27d`, branch `story/6-27d`; BigDev chose 6.27d
+# because 6.27c is still gated on 6.27d and row 6-36): row `6-27d-inspector-discrepancy-at-completion` `backlog` → `ready-for-dev` (its one
+# condition, 6.27a `done`, is met). File v3.0: re-pinned `fa2687ce` (⛔ not an ancestor of main) → `8fcf7826`; every code cite re-read by four
+# read-only checkers; author readings R1–R6 (FULL visit only; compare inside the completion tx; the date the handler already holds; the
+# override completer receives it, a hidden one gets 6.27b's withheld shape; staff see it only inside the neighbours' section; the existing
+# `ground_inspection` field class); migration 0160 (showings + notes, trigger backstops, erasure arm), the shared per-answer predicate, a NEW
+# medical-disclosures fence. Recorded observation (⛔ not routed): CF2's table is by role — a District Admin who inspects sees every answer
+# after their full visit (6.27a as built). ⚠ 6.27c's own file still says "⛔ never replaced" (PM1 line, AC5) against `-311` PM1 — owed at its
+# next touch. ⛔ No other row moves.)
 # last_updated: 2026-10-14 (STORY 6.27b — CODE REVIEW CLOSED (`bmad-code-review 6.27b`, rounds 1–2, branch `story/6-27b`): row
 # `6-27b-peer-mesh-warnings-wait-and-approvers-view` `review` → `done`. Three parallel layers per pass over the dev build and then over
 # each patch diff before commit: R1–R6, S1–S19, V2–V6, X2–X6, Y3–Y8 applied, each with a red-on-revert test. BigDev's author-commits
@@ -19947,7 +19956,7 @@ development_status:
   # rulings cite it) and holds the ONE shared PM1–PM25 block. b / d stay `backlog` until 6.27a is `done`; c (sending) stays `backlog`
   # until 6.27b, 6.27d AND row 6-30 are `done` — so every safety piece exists before a real answer arrives.
   6-27b-peer-mesh-warnings-wait-and-approvers-view: done
-  6-27d-inspector-discrepancy-at-completion: backlog
+  6-27d-inspector-discrepancy-at-completion: ready-for-dev
   # ⭐ 2026-10-12 ANNOTATION (Story 6.34 Task 0.4, `2026-10-12-322` C6 — the comments above kept as written): 6.27c's start condition
   # gains *"AND row 6-34 is done"* — it uses 6.34's typed-variable vocabulary (`{#var#}` + `slots`) and joins its gate's `REGISTRY_FILES`.
   6-27c-peer-mesh-sending-texts-and-links: backlog

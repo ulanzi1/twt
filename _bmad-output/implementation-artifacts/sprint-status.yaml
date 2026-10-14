@@ -1,3 +1,14 @@
+# last_updated: 2026-10-14d (STORY 6.27d — DEV (`bmad-dev-story 6.27d`, branch `story/6-27d`): row `6-27d-inspector-discrepancy-at-completion`
+# `ready-for-dev` → `in-progress` → `review`. All eight tasks. Migration 0160 (the inspection's ownership UNIQUE; `…_discrepancy_showings`
+# and `…_discrepancy_notes` with composite cascading FKs, the parent guard, append-only / erasure-arm triggers (23000), per-command RLS;
+# derived identifiers prefixed `claim_gi_discrepancy_*` — Postgres's 63-byte limit). The comparison INSIDE the completion through ONE
+# per-answer predicate shared with 6.27b (`peerAnswerDiffers`); the guarded post-commit showing write reporting `persisted` (a swallowed
+# COMMIT ⇒ `withheld`, ⛔ `shown`); the re-read GET and the note POST (the hidden refusal BEFORE any showing check); the staff block inside
+# the neighbours' section (`MAX_READS` 27 → 29); the admin panel (seeded result, ruled copy verbatim, per-row notes with author) and
+# `PeerMeshView`'s block; the anonymizer scrub + rtbf pins; two fences; Row 27 evidence line (5); deferred ③ / ④ (row 6-32). Red-checks
+# recorded (shared predicate, `completed_at` → `now()`, ordering, scrub WHERE, AC2 order, INSERT guard, admin seed). `ci:local` on the
+# shared :5433 failed ONLY `review-queue-read.spec.ts` (539 live alerts under `PARIWAR_A` — known #15); on a scratch DB (BigDev's choice)
+# green but the 10.23 DB-name gate, which passed 3 / 3 with its override; API integration 108 / 108. ⛔ No ruling moved.)
 # last_updated: 2026-10-14c (STORY 6.27d — VALIDATE PASS (`bmad-create-story validate 6.27d`, branch `story/6-27d`): row
 # `6-27d-inspector-discrepancy-at-completion` STAYS `ready-for-dev`. File v3.0 → v3.1 against `8fcf7826` (= main; ⛔ no code moved;
 # ⛔ no decision above `-329` on any branch). Four read-only verifiers, then two fresh-context re-validate rounds (round 1: 1 HIGH, most
@@ -19966,7 +19977,7 @@ development_status:
   # rulings cite it) and holds the ONE shared PM1–PM25 block. b / d stay `backlog` until 6.27a is `done`; c (sending) stays `backlog`
   # until 6.27b, 6.27d AND row 6-30 are `done` — so every safety piece exists before a real answer arrives.
   6-27b-peer-mesh-warnings-wait-and-approvers-view: done
-  6-27d-inspector-discrepancy-at-completion: ready-for-dev
+  6-27d-inspector-discrepancy-at-completion: review
   # ⭐ 2026-10-12 ANNOTATION (Story 6.34 Task 0.4, `2026-10-12-322` C6 — the comments above kept as written): 6.27c's start condition
   # gains *"AND row 6-34 is done"* — it uses 6.34's typed-variable vocabulary (`{#var#}` + `slots`) and joins its gate's `REGISTRY_FILES`.
   6-27c-peer-mesh-sending-texts-and-links: backlog

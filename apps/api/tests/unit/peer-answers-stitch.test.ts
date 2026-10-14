@@ -45,6 +45,8 @@ const section = (...answers: UnstitchedPeerMeshAnswerView[]): UnstitchedPeerMesh
         callbackBasis: null,
       },
     ],
+    // Story 6.27d (R5) — REQUIRED, possibly empty; the stitch passes it through by spread.
+    inspectionDiscrepancies: [],
   },
 });
 const flags = (s: ReturnType<typeof stitchPeerAnswerFlags>) =>

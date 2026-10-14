@@ -121,9 +121,29 @@ const EN: Record<string, string> = {
   'gi.error.death_date_required': 'Record the date of death before completing.',
   'gi.error.death_date_in_future': 'The date of death cannot be after today.',
   'gi.error.invalid_death_facts': 'The date or time of death is not valid.',
-  // Result / errors
+  // ⭐ Story 6.27d (AC4) — the inspector's discrepancy screen. The two screens and the two per-question lines are RULED
+  // copy, VERBATIM from 6.27a PM25 (a) (⛔ edit them); the rest is story-minted English.
+  'gi.discrepancy.none': 'Thank you, your response has been recorded. No further action needed.',
+  'gi.discrepancy.found':
+    "Thank you, your response has been recorded. We found the family's answers don't match the neighbours' observations. Please ask the family again, in your own words, without mentioning anyone else's answer, and record their response in the note next to each question.",
+  'gi.discrepancy.has_died': "The family reported that the member has died. A neighbour's answer differs.",
+  'gi.discrepancy.death_date': "The family said: {familyDeathDate}. A neighbour's answer differs.",
+  'gi.discrepancy.region': 'Result of your visit',
+  'gi.discrepancy.show': 'Show the result',
+  'gi.discrepancy.loading': 'Loading the result…',
+  'gi.discrepancy.noteLabel': "The family's answer, in their words",
+  'gi.discrepancy.save': 'Save note',
+  'gi.discrepancy.saving': 'Saving…',
+  'gi.discrepancy.saved': 'Note recorded.',
+  'gi.discrepancy.recorded': 'Recorded',
+  'gi.discrepancy.recordedBy': 'Recorded by {author}',
+  'gi.discrepancy.noteUnavailable': 'This note could not be shown',
+  // Story 6.27d (AC6) — the note write's 409s, in words (story-minted).
+  'gi.error.not_allowed': 'This claim is no longer open for notes on the visit.',
+  'gi.error.own_ground_visit_pending': 'Your own ground visit on this claim is not finished yet — finish it before recording a note.',
+  'gi.error.discrepancy_note_exists': 'A note on this question is already recorded.',
+  // Result / errors (Story 6.27d removed the unused `gi.result.completed` — the discrepancy screen is the completion's words)
   'gi.result.scheduled': 'Assignment scheduled.',
-  'gi.result.completed': 'Inspection completed.',
   'gi.result.refused': 'Refusal recorded — the claim is escalated to the verifier.',
   'gi.result.photoUploaded': 'Photo uploaded.',
   'gi.error.generic': 'The action could not be completed.',

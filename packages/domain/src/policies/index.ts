@@ -74,6 +74,10 @@ export * from './claim-peer-mesh-replies-rls.js';
 // tenant-isolation policies (NOT cross-readable; mirror claims-rls). No write-rejection trigger —
 // status/structured_findings are plain columns; the claim's lifecycle stays on claims.current_state.
 export * from './claim-ground-inspections-rls.js';
+// Story 6.27d (0160) — the discrepancy showings (SELECT + INSERT only) and notes (+ an UPDATE leg narrowed by the column
+// grant to the RTBF scrub — load-bearing, `-279` A12). Per command; ⛔ no DELETE leg and ⛔ no `FOR ALL`.
+export * from './claim-ground-inspection-discrepancy-showings-rls.js';
+export * from './claim-ground-inspection-discrepancy-notes-rls.js';
 // Story 6.8 — claim_nominee_bank_accounts tenant-isolation policies (NOT cross-readable; mirror
 // claims-rls). No write-rejection trigger — bank collection is an annotation, not a state cache.
 export * from './claim-nominee-bank-rls.js';

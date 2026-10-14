@@ -135,6 +135,12 @@ const FENCED_FILES = [
   'packages/domain/src/questionnaires/peer-mesh.ts',
   'packages/domain/src/questionnaires/registry.ts',
   'packages/domain/src/questionnaires/answers.ts',
+  // ⭐ STORY 6.27d (AC3; `-304` Q3 / Q4 A) — the inspector's discrepancy: the pure comparison (the rule table, the ONE
+  // per-answer predicate, the answers fragment — codes and window indexes ONLY) and the module its writers live in (the
+  // showing, the re-read, the note writer — beside `lockClaimInWindow`). ⛔ A decrypt, ⛔ a name, ⛔ the member's medical
+  // declaration (asserted below).
+  'packages/domain/src/claim/inspection-discrepancy.ts',
+  'packages/domain/src/claim/ground-inspection-persist.ts',
 ] as const;
 
 /**
@@ -184,7 +190,7 @@ describe('⛔ the no-comparison fence (Trap 1, `-226` cl.5)', () => {
     // Code review patch (2026-10-02, corrected 2026-10-03): exact count, ⛔ a floor — AND every entry unique. The
     // count alone can't catch a duplicate standing in for a dropped file (one of each keeps the length at 34).
     expect(new Set(FENCED_FILES).size, 'a FENCED_FILES entry is duplicated').toBe(FENCED_FILES.length);
-    expect(FENCED_FILES.length).toBe(50); // Story 6.27a FROM 41 (+9 — the reply writer, the answer window and the seven questionnaire-engine files); Story 6.25 FROM 39 (+2 — the staff email's domain module and its identity-read sibling, RE11 / ADR-0040); Story 6.24b FROM 38 (+1 — the suspicion notices' domain module, RB8); Story 6.24a FROM 36 (+2 — the suspicion refusal's read and its closure writer); Story 6.23a FROM 34 (+2 — the warnings module and the late-reason writer); Story 6.19c raised it FROM 26 (+1 domain module), then 27 → 32 (the highlight's read + its four wire / route surfaces), then 32 → 34 (its two admin render sites); Story 6.21a FROM 23 (+3 modules); Story 6.20 FROM 16 (+7)
+    expect(FENCED_FILES.length).toBe(52); // Story 6.27d FROM 50 (+2 — the discrepancy comparison and the inspection writers' module); Story 6.27a FROM 41 (+9 — the reply writer, the answer window and the seven questionnaire-engine files); Story 6.25 FROM 39 (+2 — the staff email's domain module and its identity-read sibling, RE11 / ADR-0040); Story 6.24b FROM 38 (+1 — the suspicion notices' domain module, RB8); Story 6.24a FROM 36 (+2 — the suspicion refusal's read and its closure writer); Story 6.23a FROM 34 (+2 — the warnings module and the late-reason writer); Story 6.19c raised it FROM 26 (+1 domain module), then 27 → 32 (the highlight's read + its four wire / route surfaces), then 32 → 34 (its two admin render sites); Story 6.21a FROM 23 (+3 modules); Story 6.20 FROM 16 (+7)
   });
 
   it('⭐⭐ POSITIVE CONTROL — the scanner actually FIRES on a planted violation of every pattern', () => {
@@ -379,6 +385,10 @@ describe('⛔ the no-comparison fence (Trap 1, `-226` cl.5)', () => {
       'packages/domain/src/questionnaires/answers.ts',
       'packages/domain/src/questionnaires/registry.ts',
       'packages/domain/src/questionnaires/validator.ts',
+      // ⭐ Story 6.27d (AC3, Trap 9) — the comparison never decrypts (keyed indexes only) and the note writer stores the
+      // ciphertext the HANDLER encrypted before the transaction.
+      'packages/domain/src/claim/inspection-discrepancy.ts',
+      'packages/domain/src/claim/ground-inspection-persist.ts',
     ]) {
       const code = stripComments(read(f));
       // `decryptedLive` (values the handler decrypted) is the one legitimate `decrypt…` token — every DECRYPT CALL is refused.
@@ -388,6 +398,32 @@ describe('⛔ the no-comparison fence (Trap 1, `-226` cl.5)', () => {
     }
     // ⭐ TEETH — the same scan FIRES on the handler-side core, which decrypts by design (before the locks).
     expect(/decryptTier1|decryptKycField|decryptMobile|decryptGroundInspection|decryptPeerAnswer/.test(stripComments(read('apps/api/src/modules/claims/peer-request-core.ts')))).toBe(true);
+  });
+
+  it('⛔⛔ Story 6.27d (AC3) — the discrepancy comparison ⛔ never reads an answer\'s ciphertext (codes and window indexes only)', () => {
+    // ⚠ A SEPARATE assertion, scoped to the comparison only: the shared list above would turn the reply writer red (it
+    // writes and reads the ciphertext by design).
+    const code = stripComments(read('packages/domain/src/claim/inspection-discrepancy.ts'));
+    for (const forbidden of ['value_ciphertext', 'valueCiphertext', 'Ciphertext', 'ciphertext']) {
+      expect(code.includes(forbidden), `inspection-discrepancy.ts reached for '${forbidden}'`).toBe(false);
+    }
+    // ⭐ Teeth — the same scan of the reply writer finds it.
+    expect(stripComments(read('packages/domain/src/claim/peer-mesh-reply.ts')).includes('value_ciphertext')).toBe(true);
+  });
+
+  it('⛔⛔ Story 6.27d (`-304` Q4 A) — the discrepancy comparison and its writers ⛔ never touch the member\'s medical declaration', () => {
+    // *"context only, ⛔ never compared automatically with the member's medical declaration"* — ⛔ no table, ⛔ no column,
+    // ⛔ no import from the medical module.
+    const FORBIDDEN = [/member_medical_disclosures/, /memberMedicalDisclosures/, /medicalDisclosure/i, /from '\.\.\/medical/];
+    for (const f of ['packages/domain/src/claim/inspection-discrepancy.ts', 'packages/domain/src/claim/ground-inspection-persist.ts']) {
+      const code = stripComments(read(f));
+      for (const re of FORBIDDEN) expect(re.test(code), `${f} reached for ${String(re)}`).toBe(false);
+    }
+    // ⭐ TEETH — the scan FIRES on a module that reads the declaration by design.
+    const positive = stripComments(read('packages/domain/src/medical/disclosure-read.ts'));
+    expect(FORBIDDEN.some((re) => re.test(positive))).toBe(true);
+    // ⭐ And on an import specimen (the shape a "helpful" cross-check would take).
+    expect(FORBIDDEN.some((re) => re.test("import { readMemberMedicalDisclosure } from '../medical/disclosure-read.js';"))).toBe(true);
   });
 
   it('⛔ the APPROVAL GATES decide on recorded verdicts and timestamps — never on names', () => {

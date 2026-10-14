@@ -30,7 +30,7 @@
 //
 // Naming discipline per architecture L3663-3677: DB columns snake_case, TS camelCase.
 
-import { type AnyPgColumn, index, jsonb, pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import { type AnyPgColumn, index, jsonb, pgEnum, pgTable, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core';
 
 import { piiColumn } from '../encryption/column.js';
 import type { ClaimId, DeathCertificateUploadId, GroundInspectionId, PariwarId } from '../ids/index.js';
@@ -245,6 +245,9 @@ export const claimGroundInspections = pgTable(
     // holds many assignments (D5); NO active-uniqueness of any kind.
     index('claim_ground_inspections_claim_case_id_idx').on(t.claimCaseId),
     index('claim_ground_inspections_claim_case_id_status_idx').on(t.claimCaseId, t.status),
+    // ⭐ Story 6.27d (migration 0160) — the ownership backstop (0157's form): backs the discrepancy tables' composite FKs,
+    // so a showing or a note can ⛔ never name another Pariwar's or another claim's inspection. Redundant for uniqueness.
+    unique('claim_ground_inspections_owner_uq').on(t.pariwarId, t.groundInspectionId, t.claimCaseId),
   ],
 );
 

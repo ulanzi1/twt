@@ -39,6 +39,7 @@ import {
   claimWarningApprovals,
   claimGroundInspections,
   claimPeerMeshReplyAnswers,
+  claimGroundInspectionDiscrepancyNotes,
   claims,
   nomineeDeterminations,
 } from '../../src/schema/index.js';
@@ -119,7 +120,7 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
     return found.set;
   }
 
-  it('updates exactly the TWENTY member-PII tables (twenty-three statements), once each except the three documented doubles', async () => {
+  it('updates exactly the TWENTY-ONE member-PII tables (twenty-four statements), once each except the three documented doubles', async () => {
     // Seven since Story 10.10's review pass added `member_moderation_actions`; EIGHT since Story
     // 10.20 added `member_moderation_grounds`. This count is the completeness check for the RTBF
     // surface — a new Tier-1 column landing in a table absent from this list is exactly how the
@@ -194,8 +195,13 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
     // three keyed indexes, on the DECEASED member's claims (the claim ids read once for the inspection scrub above), and
     // takes ONE statement, restricted to rows WITH a ciphertext (a non-sensitive row keeps its codes). The replies table
     // holds ⛔ PII. Raised, never weakened.
+    //
+    // ⭐ MOVED AGAIN by Story 6.27d (PM17 d's half, AC8): TWENTY-ONE tables, TWENTY-FOUR statements.
+    // `claim_ground_inspection_discrepancy_notes` holds the inspector's re-ask notes — the family's re-told account of the
+    // death (Tier-1, `ground_inspection`) — on the DECEASED member's claims, ONE statement inside the same block. The
+    // showings table holds ⛔ PII (keys and a time). Raised, never weakened.
     const { captured } = await run();
-    expect(captured).toHaveLength(23);
+    expect(captured).toHaveLength(24);
     const tables = captured.map((c) => c.table);
     for (const t of [
       memberIdentities,
@@ -218,6 +224,7 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
       claimWarningApprovals,
       claimGroundInspections,
       claimPeerMeshReplyAnswers,
+      claimGroundInspectionDiscrepancyNotes,
     ]) {
       expect(tables).toContain(t);
     }
@@ -230,7 +237,7 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
     expect(tables.filter((t) => t === dataExports)).toHaveLength(2);
     expect(tables.filter((t) => t === dataExportDeliveryGrants)).toHaveLength(2);
     expect(tables.filter((t) => t === memberModerationAppeals)).toHaveLength(2);
-    expect(new Set(tables).size).toBe(20); // Story 6.27a (PM17) — 19 → 20: `claim_peer_mesh_reply_answers`
+    expect(new Set(tables).size).toBe(21); // Story 6.27d (PM17 d) — 20 → 21: `claim_ground_inspection_discrepancy_notes`; Story 6.27a (PM17) — 19 → 20: `claim_peer_mesh_reply_answers`
   });
 
   it('⭐ Story 6.26a (GI13): the inspection\'s date and time of death → sentinel, the date\'s blind index → NULL', async () => {
@@ -262,7 +269,22 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
     const { captured } = await run([]);
     expect(captured.map((c) => c.table)).not.toContain(claimGroundInspections);
     expect(captured.map((c) => c.table)).not.toContain(claimPeerMeshReplyAnswers); // Story 6.27a — ⛔ claims, ⛔ answers
+    expect(captured.map((c) => c.table)).not.toContain(claimGroundInspectionDiscrepancyNotes); // Story 6.27d — ⛔ claims, ⛔ notes
     expect(captured).toHaveLength(21);
+  });
+
+  it('⭐ Story 6.27d (PM17 d): the re-ask notes → the inspection block\'s sentinel, ONLY on the deceased\'s claims, ONLY rows with a note', async () => {
+    const claimIds = [randomUUID(), randomUUID()];
+    const { captured, pariwar } = await run(claimIds);
+    const found = captured.find((c) => c.table === claimGroundInspectionDiscrepancyNotes)!;
+    expect(Object.keys(found.set)).toEqual(['noteCiphertext']);
+    // The SAME field class as the inspection block's sentinel (R6 — ⛔ a new class).
+    expect(await dec(found.set.noteCiphertext, pariwar, 'ground_inspection')).toBe(ANONYMIZED_SENTINEL);
+    expect(found.set.noteCiphertext).toBe(setFor(captured, claimGroundInspections).deathDateCiphertext);
+    const { sql: text, params } = new PgDialect().sqlToQuery(found.where as SQL);
+    expect(text).toMatch(/"claim_ground_inspection_discrepancy_notes"\."claim_case_id" in \(/);
+    expect(text).toMatch(/"claim_ground_inspection_discrepancy_notes"\."note_ciphertext" is not null/);
+    for (const id of claimIds) expect(params).toContain(id);
   });
 
   it('⭐ Story 10.21 (AC-R1/AC-R2): the staff attestation and the correction record are SCRUBBED but RETAINED', async () => {

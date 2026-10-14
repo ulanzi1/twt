@@ -54,6 +54,7 @@ import { nomineeDeterminations } from '../schema/nominee_determinations.js';
 import { claimDeathCertificateReviews } from '../schema/claim_death_certificate_reviews.js';
 import { claimWarningApprovals } from '../schema/claim_warning_approvals.js';
 import { claimGroundInspections } from '../schema/claim_ground_inspections.js';
+import { claimGroundInspectionDiscrepancyNotes } from '../schema/claim_ground_inspection_discrepancies.js';
 import { claimPeerMeshReplyAnswers } from '../schema/claim_peer_mesh_replies.js';
 import { claims } from '../schema/claims.js';
 import { memberWithdrawals } from '../schema/member_withdrawals.js';
@@ -314,6 +315,20 @@ export async function anonymizeMember(
         and(
           inArray(claimPeerMeshReplyAnswers.claimCaseId, deceasedClaimIds),
           isNotNull(claimPeerMeshReplyAnswers.valueCiphertext),
+        ),
+      );
+
+    // ── ⭐ Story 6.27d (PM17 d's half, GI13's shape) — the inspector's re-ask notes about the DECEASED member's death, on
+    // their claims: the family's re-told account (Tier-1, `ground_inspection` — the SAME field class as the block's
+    // `inspectionSentinel`) → sentinel. 0160's notes trigger ADMITS this through its 0143-form erasure arm (⚠ RECORDED: it
+    // cannot tell this scrub from another writer of the ciphertext). The SHOWINGS hold ⛔ PII (keys and a time) ⇒ untouched.
+    await client
+      .update(claimGroundInspectionDiscrepancyNotes)
+      .set({ noteCiphertext: inspectionSentinel })
+      .where(
+        and(
+          inArray(claimGroundInspectionDiscrepancyNotes.claimCaseId, deceasedClaimIds),
+          isNotNull(claimGroundInspectionDiscrepancyNotes.noteCiphertext),
         ),
       );
   }

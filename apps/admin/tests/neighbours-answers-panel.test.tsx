@@ -48,6 +48,8 @@ const transcript = (pings: PeerMeshTranscript['pings']): PeerMeshTranscript => (
   outcome: 'sufficient',
   windowExpiresAt: '2026-10-15T00:00:00.000Z',
   pings,
+  // Story 6.27d (R5) — REQUIRED, possibly empty.
+  inspectionDiscrepancies: [],
 });
 const PRESENT: ClaimPeerAnswersResponse = {
   peerMesh: {

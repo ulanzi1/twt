@@ -1271,6 +1271,49 @@ const GroundInspectionWriteResponse = z.object({
   created: z.boolean().optional(),
 });
 
+/**
+ * ⭐ Story 6.27d (AC3 – AC6; R1, R3, R4, R4a) — the inspector's discrepancy result: ⛔ a family account (`null`, a
+ * certificate check), WITHHELD (6.27b's one shape — the reader's own visit is pending, or the check could not run), or
+ * SHOWN — the keys of the questions that differ (possibly none) and the family's date ONLY when the date differs. ⛔ No
+ * neighbour's value, name or count. There is ⛔ no ground-inspection contracts module — this schema IS the contract.
+ */
+const INSPECTION_DISCREPANCY_KEYS = ['has_died', 'death_date'] as const;
+const InspectionDiscrepancyKey = z.enum(INSPECTION_DISCREPANCY_KEYS);
+const InspectionDiscrepancy = z.discriminatedUnion('state', [
+  z.object({ state: z.literal('withheld'), reason: NoteWithheldReason }),
+  z.object({
+    state: z.literal('shown'),
+    questionKeys: z.array(InspectionDiscrepancyKey),
+    familyDeathDate: z
+      .discriminatedUnion('status', [
+        z.object({ status: z.literal('shown'), date: z.string() }),
+        z.object({ status: z.literal('unavailable') }),
+      ])
+      .nullable(),
+  }),
+]);
+/** ⚠ COMPLETE-ONLY: `GroundInspectionWriteResponse` is SHARED by schedule / findings / complete / refusal, so the new field
+ *  ⛔ joins it (a required field there would break the other three; a non-strict schema would DROP it here). */
+const GroundInspectionCompleteResponse = GroundInspectionWriteResponse.extend({ discrepancy: InspectionDiscrepancy.nullable() });
+const InspectionDiscrepancyNote = z.object({
+  questionKey: InspectionDiscrepancyKey,
+  note: z.union([z.string(), z.object({ status: z.literal('unavailable') })]),
+  notedAt: z.string(),
+  authorActorId: z.string(),
+  authorDisplay: z.string(),
+});
+const InspectionDiscrepancyRead = z.object({ discrepancy: InspectionDiscrepancy, notes: z.array(InspectionDiscrepancyNote) });
+const InspectionDiscrepancyNoteWritten = z.object({
+  questionKey: InspectionDiscrepancyKey,
+  notedAt: z.string(),
+  authorActorId: z.string(),
+  authorDisplay: z.string(),
+});
+export type InspectionDiscrepancyKeyT = z.infer<typeof InspectionDiscrepancyKey>;
+export type InspectionDiscrepancyT = z.infer<typeof InspectionDiscrepancy>;
+export type InspectionDiscrepancyNoteT = z.infer<typeof InspectionDiscrepancyNote>;
+export type InspectionDiscrepancyReadT = z.infer<typeof InspectionDiscrepancyRead>;
+
 export type GroundInspectionAssignmentT = z.infer<typeof GroundInspectionAssignment>;
 
 export interface ScheduleGroundInspectionBody {
@@ -1350,16 +1393,42 @@ export interface CompleteGroundInspectionBody {
   deathTime?: string | null;
 }
 
-/** POST completion (requires ≥1 photo — the server enforces it). */
+/** POST completion (requires ≥1 photo — the server enforces it). ⭐ Story 6.27d — the response carries the inspector's
+ *  discrepancy result (`discrepancy`), parsed by the COMPLETE-ONLY schema. */
 export function completeGroundInspection(
   pariwarId: string,
   claimCaseId: string,
   groundInspectionId: string,
   body: CompleteGroundInspectionBody = {},
-): Promise<{ groundInspectionId: string; status: string }> {
+): Promise<{ groundInspectionId: string; status: string; discrepancy: InspectionDiscrepancyT | null }> {
   return apiFetch(
     `${giBase(pariwarId, claimCaseId)}/${encodeURIComponent(groundInspectionId)}/complete`,
-    GroundInspectionWriteResponse,
+    GroundInspectionCompleteResponse,
+    { method: 'POST', body: JSON.stringify(body) },
+  );
+}
+
+/** ⭐ Story 6.27d (AC5) — GET the inspector's RE-READ of their discrepancy result + ALL the assignment's notes (with their
+ *  author). 404 for an assignment that is ⛔ a completed full visit; 403 for a viewer who is ⛔ the inspector or an override
+ *  holder. */
+export function getInspectionDiscrepancy(
+  pariwarId: string,
+  claimCaseId: string,
+  groundInspectionId: string,
+): Promise<InspectionDiscrepancyReadT> {
+  return apiFetch(`${giBase(pariwarId, claimCaseId)}/${encodeURIComponent(groundInspectionId)}/discrepancy`, InspectionDiscrepancyRead);
+}
+
+/** ⭐ Story 6.27d (AC6) — POST the family's re-told answer to ONE differing question (ONE per question). */
+export function recordInspectionDiscrepancyNote(
+  pariwarId: string,
+  claimCaseId: string,
+  groundInspectionId: string,
+  body: { questionKey: InspectionDiscrepancyKeyT; note: string },
+): Promise<z.infer<typeof InspectionDiscrepancyNoteWritten>> {
+  return apiFetch(
+    `${giBase(pariwarId, claimCaseId)}/${encodeURIComponent(groundInspectionId)}/discrepancy-notes`,
+    InspectionDiscrepancyNoteWritten,
     { method: 'POST', body: JSON.stringify(body) },
   );
 }

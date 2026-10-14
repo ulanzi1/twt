@@ -20,12 +20,13 @@
 
 import { randomUUID } from 'node:crypto';
 
-import { CLAIM_DOCUMENT_MAX_BYTES } from '@twt/contracts';
-import { claim, ids, rbac, schema } from '@twt/domain';
+import { CLAIM_DOCUMENT_MAX_BYTES, type NoteWithheldReason } from '@twt/contracts';
+import { claim, ids, member as memberDomain, rbac, schema } from '@twt/domain';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 
 import type { AppDeps } from '../../context.js';
 import {
+  AdminDisplayNameMissingError,
   BadRequestError,
   ConflictError,
   ForbiddenError,
@@ -34,6 +35,7 @@ import {
   UnauthorizedError,
   UnsupportedMediaTypeError,
 } from '../../http-errors.js';
+import { getDisplayName } from '../auth/admin/admin-auth.repo.js';
 import { emitAuthAudit } from '../auth/shared/audit.js';
 import { auditAuthorizationDenied, geoTreeResolverForRequest } from '../rbac/index.js';
 import { closeScopeTx, openScopeTx } from '../multi-tenant/scope-tx.js';
@@ -168,6 +170,21 @@ function translateGroundInspectionError(err: unknown): never {
       { problem: err.detail },
     );
   }
+  // ── Story 6.27d (AC6) — the inspector's re-ask notes. ──
+  if (err instanceof claim.OwnGroundVisitPendingError) {
+    // ⭐ AC2 — ONE neutral refusal, ⛔ `details`, raised BEFORE any showing / exists check: a hidden caller learns ⛔ nothing
+    // about what a neighbour said. Mapped HERE, ⛔ through 6.27b's approval mapper (its words say "approve").
+    throw new ConflictError(
+      'Your own ground visit on this claim is not finished yet — finish it before recording a note',
+      'ground_inspection.own_ground_visit_pending',
+    );
+  }
+  if (err instanceof claim.InspectionDiscrepancyNotShownError) {
+    throw new ConflictError('No difference was shown on this question', 'ground_inspection.discrepancy_not_shown');
+  }
+  if (err instanceof claim.InspectionDiscrepancyNoteExistsError) {
+    throw new ConflictError('A note on this question is already recorded', 'ground_inspection.discrepancy_note_exists');
+  }
   if (err instanceof claim.GroundInspectionInspectorMismatchError) {
     // Backstop for the inspector-identity guard (the route pre-checks the override for a clean 403;
     // this maps the writer's guard so a future divergence surfaces a 403, not an unclassified 500).
@@ -183,6 +200,39 @@ interface AdminCtx {
   actorId: string;
   pariwarId: string;
 }
+
+/** Story 6.27d — the family's date as the inspector's screen shows it (R3): the plaintext in hand, or `unavailable` (an
+ *  erased / undecryptable date on the re-read — ⛔ never the sentinel text, ⛔ never a 500). */
+type FamilyDeathDate = { readonly status: 'shown'; readonly date: string } | { readonly status: 'unavailable' };
+
+/**
+ * ⭐ Story 6.27d (AC3, AC4; R1, R4) — the ONE result union on the completion response AND the re-read:
+ *   · `null` — ⛔ a family account to compare (a `certificate_check`; the completion only — the re-read answers 404);
+ *   · `withheld` — the receiver is HIDDEN on the claim (`own_visit`) or the check / the delivery could ⛔ be confirmed
+ *     (`check_failed`) — 6.27b's ONE withheld shape, UNIFORM: it does ⛔ not depend on the result;
+ *   · `shown` — the keys that differ (possibly none), and the family's date ONLY when `death_date` is among them.
+ * ⛔ No value, ⛔ no name, ⛔ no count — the shape does ⛔ not vary with the number of neighbours or answers.
+ */
+type InspectionDiscrepancyDto =
+  | null
+  | { readonly state: 'withheld'; readonly reason: NoteWithheldReason }
+  | {
+      readonly state: 'shown';
+      readonly questionKeys: readonly claim.InspectionDiscrepancyKey[];
+      readonly familyDeathDate: FamilyDeathDate | null;
+    };
+
+/** A re-ask note on the re-read (R4a) — ALL of the assignment's notes, with their author. */
+interface InspectionDiscrepancyNoteDto {
+  readonly questionKey: claim.InspectionDiscrepancyKey;
+  readonly note: string | { readonly status: 'unavailable' };
+  readonly notedAt: string;
+  readonly authorActorId: string;
+  readonly authorDisplay: string;
+}
+
+/** The note POST's body (the route validates it `.strict()`). */
+export type DiscrepancyNoteBody = { questionKey: claim.InspectionDiscrepancyKey; note: string };
 
 export function createGroundInspectionHandlers(deps: AppDeps) {
   /** The acting admin id + active pariwar (both set by requireAdminSession + scope-resolution). */
@@ -235,6 +285,114 @@ export function createGroundInspectionHandlers(deps: AppDeps) {
       throw new Error('[ground-inspection] handler ran without resolveGroundInspectionAssignment preHandler');
     }
     return stashed;
+  }
+
+  /**
+   * ⭐ Story 6.27d (AC5, 4.1; R4) — deliver the completion's in-tx discrepancy, AFTER its transaction closed, in a NEW
+   * scope transaction (the request's second connection — the first is released): (i) the HIDDEN check (the ONE
+   * predicate) → `withheld/own_visit` and ⛔ no showing; (ii) ONLY when ⛔ hidden, the ONE guarded statement that records
+   * the showing AND reports whether the completion PERSISTED. FAIL CLOSED: ANY failure before (i) answered, a raise
+   * from (ii), or `persisted = false` (a swallowed completion COMMIT — `closeScopeTx`) ⇒ `withheld/check_failed`,
+   * ⛔ never `shown` for a record ⛔ known to be saved. ONLY a failure AFTER (ii) answered `persisted` (the closing COMMIT)
+   * is logged ids-only and still answers `shown` with the in-tx keys (the re-read recomputes the same keys by R2).
+   * Uses `assignment.claimCaseId` — ⛔ the path's claim id (the preHandler loads by (pariwar, id) only).
+   */
+  async function deliverInspectionDiscrepancy(
+    request: FastifyRequest,
+    ctx: AdminCtx,
+    assignment: schema.ClaimGroundInspectionRow,
+    questionKeys: readonly claim.InspectionDiscrepancyKey[],
+    familyDate: string | null,
+  ): Promise<InspectionDiscrepancyDto> {
+    const logFailure = (stage: string, err: unknown) =>
+      request.log.warn(
+        { err: err instanceof Error ? err.name : 'unknown', ground_inspection_id: assignment.groundInspectionId, stage },
+        'discrepancy delivery: withheld (check_failed)',
+      );
+    let scopeTx;
+    try {
+      scopeTx = await openScopeTx(deps, ctx.pariwarId);
+    } catch (err) {
+      logFailure('open', err);
+      return { state: 'withheld', reason: 'check_failed' };
+    }
+    let persisted = false;
+    try {
+      const pid = ids.pariwarId(ctx.pariwarId);
+      if (await claim.isActorOwnVisitPending(scopeTx.tx, pid, assignment.claimCaseId, ctx.actorId)) {
+        await closeScopeTx(scopeTx, false);
+        return { state: 'withheld', reason: 'own_visit' };
+      }
+      ({ persisted } = await claim.recordInspectionDiscrepancyShowing(scopeTx.tx, {
+        pariwarId: pid,
+        groundInspectionId: assignment.groundInspectionId,
+        questionKeys,
+      }));
+    } catch (err) {
+      logFailure('check_or_record', err);
+      await closeScopeTx(scopeTx, false);
+      return { state: 'withheld', reason: 'check_failed' };
+    }
+    if (!persisted) {
+      logFailure('not_persisted', null);
+      await closeScopeTx(scopeTx, false);
+      return { state: 'withheld', reason: 'check_failed' };
+    }
+    try {
+      await scopeTx.client.query('COMMIT');
+    } catch (err) {
+      // The showing is ⛔ recorded; the re-read records it later (as of `completed_at` — the same keys, R2).
+      request.log.warn(
+        { err: err instanceof Error ? err.name : 'unknown', ground_inspection_id: assignment.groundInspectionId },
+        'discrepancy delivery: the showing write failed to commit; answered from the in-tx result',
+      );
+    } finally {
+      scopeTx.scopeSet = false;
+      scopeTx.client.release();
+    }
+    return {
+      state: 'shown',
+      questionKeys: [...questionKeys],
+      familyDeathDate: questionKeys.includes('death_date') && familyDate !== null ? { status: 'shown', date: familyDate } : null,
+    };
+  }
+
+  /** R3 — the RE-READ's family date: decrypted AFTER the transaction; erased (the sentinel), absent, malformed or
+   *  undecryptable ⇒ `unavailable` (⛔ never the sentinel text, ⛔ never a 500). */
+  async function displayFamilyDeathDate(
+    request: FastifyRequest,
+    ctx: AdminCtx,
+    ciphertext: string | null,
+    groundInspectionId: string,
+  ): Promise<FamilyDeathDate> {
+    if (ciphertext === null) return { status: 'unavailable' };
+    try {
+      const date = await decryptGroundInspectionField(ciphertext, ctx.pariwarId, deps.encryption);
+      if (date === memberDomain.ANONYMIZED_SENTINEL || !claim.isRealCalendarDate(date)) return { status: 'unavailable' };
+      return { status: 'shown', date };
+    } catch (err) {
+      request.log.warn({ err: err instanceof Error ? err.name : 'unknown', ground_inspection_id: groundInspectionId }, 'discrepancy re-read: the family date could not be decrypted');
+      return { status: 'unavailable' };
+    }
+  }
+
+  /** A note for the re-read — decrypted outside any lock; a failure (or the erasure sentinel) ⇒ `unavailable`, ⛔ blank. */
+  async function noteDtoOf(request: FastifyRequest, ctx: AdminCtx, n: claim.InspectionDiscrepancyNoteRow): Promise<InspectionDiscrepancyNoteDto> {
+    let note: InspectionDiscrepancyNoteDto['note'];
+    try {
+      const text = await decryptGroundInspectionField(n.noteCiphertext, ctx.pariwarId, deps.encryption);
+      note = text === memberDomain.ANONYMIZED_SENTINEL ? { status: 'unavailable' } : text;
+    } catch (err) {
+      request.log.warn({ err: err instanceof Error ? err.name : 'unknown', ground_inspection_id: n.groundInspectionId }, 'discrepancy note could not be decrypted');
+      note = { status: 'unavailable' };
+    }
+    return {
+      questionKey: n.questionKey,
+      note,
+      notedAt: n.notedAt.toISOString(),
+      authorActorId: n.authorActorId,
+      authorDisplay: n.authorDisplay,
+    };
   }
 
   function requireIdempotencyKey(request: FastifyRequest): string {
@@ -680,8 +838,148 @@ export function createGroundInspectionHandlers(deps: AppDeps) {
           ...(override ? { override_actor_id: override.byActorId } : {}),
         },
       });
+      // ⭐ Story 6.27d (AC3 – AC5; R1, R4) — AFTER the completion's transaction closed: deliver the in-tx result, ⛔ on
+      // `request.scopeTx` (it commits in `onSend`). `null` ⇔ ⛔ a family account (R1).
+      const discrepancy: InspectionDiscrepancyDto =
+        result!.discrepancy === null
+          ? null
+          : await deliverInspectionDiscrepancy(request, ctx, assignment, result!.discrepancy.questionKeys, body.deathDate ?? null);
+
       void reply.status(200);
-      return { groundInspectionId: ground_inspection_id, status: result!.groundInspection.status, photoCount: result!.photoCount };
+      return {
+        groundInspectionId: ground_inspection_id,
+        status: result!.groundInspection.status,
+        photoCount: result!.photoCount,
+        discrepancy,
+      };
+    },
+
+    /**
+     * GET …/ground-inspection/:ground_inspection_id/discrepancy — ⭐ Story 6.27d (AC5; R3, R4, R4a) — the inspector's
+     * RE-READ (the recovery path: a retried completion is 409 `not_active`). Order: the identity guard (the assigned
+     * inspector, or an override holder — the route's conduct gate first) → 404 `ground_inspection.not_found` for ANY
+     * assignment that is ⛔ a completed FULL visit (`family_statement` — R1; ONE neutral code, ⛔ reaching the
+     * recompute) → the HIDDEN check (the ONE predicate; an error FAILS CLOSED) ⇒ the withheld shape with ⛔ notes → the
+     * RECORDED showing, else recomputed as of `completed_at` and recorded, + ALL the assignment's notes with their author.
+     * Its OWN transaction, closed BEFORE any decrypt (⛔ KMS while the showing's index entry is locked — Trap 9). ⛔ No
+     * audit line: the showing row is the record of when the result was first recorded.
+     */
+    async discrepancy(request: FastifyRequest, reply: FastifyReply): Promise<unknown> {
+      const ctx = adminCtx(request);
+      const { ground_inspection_id } = request.params as { ground_inspection_id: string };
+      const assignment = loadAssignment(request, ctx, ground_inspection_id);
+      resolveInspectorOverride(request, ctx, assignment);
+      const pid = ids.pariwarId(ctx.pariwarId);
+      const gid = ids.groundInspectionId(ground_inspection_id);
+
+      type Read =
+        | { readonly kind: 'withheld'; readonly reason: NoteWithheldReason }
+        | {
+            readonly kind: 'shown';
+            readonly showing: claim.InspectionDiscrepancyShowing;
+            readonly target: claim.InspectionDiscrepancyTarget;
+            readonly notes: claim.InspectionDiscrepancyNoteRow[];
+          };
+      const scopeTx = await openScopeTx(deps, ctx.pariwarId);
+      let ok = false;
+      let read: Read;
+      try {
+        const target = await claim.readInspectionDiscrepancyTarget(scopeTx.tx, pid, gid);
+        let hidden: boolean | null;
+        try {
+          hidden = await claim.isActorOwnVisitPending(scopeTx.tx, pid, target.claimCaseId, ctx.actorId);
+        } catch (err) {
+          request.log.warn({ err: err instanceof Error ? err.name : 'unknown', ground_inspection_id }, 'discrepancy re-read: the hide check failed; withheld');
+          hidden = null;
+        }
+        if (hidden !== false) {
+          read = { kind: 'withheld', reason: hidden === null ? 'check_failed' : 'own_visit' };
+        } else {
+          const showing = await claim.readOrRecomputeInspectionDiscrepancy(scopeTx.tx, pid, gid);
+          const notes = await claim.readInspectionDiscrepancyNotes(scopeTx.tx, pid, gid);
+          read = { kind: 'shown', showing, target, notes };
+          ok = true;
+        }
+      } catch (err) {
+        translateGroundInspectionError(err);
+      } finally {
+        await closeScopeTx(scopeTx, ok);
+      }
+
+      if (read!.kind === 'withheld') {
+        void reply.status(200);
+        return { discrepancy: { state: 'withheld', reason: read!.reason }, notes: [] };
+      }
+      const { showing, target, notes } = read!;
+      const familyDeathDate = showing.questionKeys.includes('death_date')
+        ? await displayFamilyDeathDate(request, ctx, target.deathDateCiphertext, ground_inspection_id)
+        : null;
+      const noteDtos: InspectionDiscrepancyNoteDto[] = [];
+      for (const n of notes) noteDtos.push(await noteDtoOf(request, ctx, n));
+      void reply.status(200);
+      return {
+        discrepancy: { state: 'shown', questionKeys: showing.questionKeys, familyDeathDate },
+        notes: noteDtos,
+      };
+    },
+
+    /**
+     * POST …/ground-inspection/:ground_inspection_id/discrepancy-notes — ⭐ Story 6.27d (AC6; R4, R4a, R6) — the family's
+     * re-told answer to ONE differing question. The identity guard → the author's stored display name (a missing one
+     * refuses: 409 `admin.display_name_missing`) → the note encrypted (Tier-1, `ground_inspection` — BEFORE the
+     * transaction, Trap 9) → the writer's six steps in ONE transaction (404 → the window `not_allowed` → the HIDDEN
+     * refusal `own_ground_visit_pending`, ⛔ `details`, BEFORE any showing check → `discrepancy_not_shown` →
+     * `discrepancy_note_exists`). 201 `{ questionKey, notedAt, authorActorId, authorDisplay }` (⛔ the note text). Audited
+     * post-commit with codes only.
+     */
+    async recordDiscrepancyNote(request: FastifyRequest, reply: FastifyReply): Promise<unknown> {
+      const ctx = adminCtx(request);
+      const { ground_inspection_id } = request.params as { ground_inspection_id: string };
+      const body = request.body as DiscrepancyNoteBody;
+      const assignment = loadAssignment(request, ctx, ground_inspection_id);
+      const override = resolveInspectorOverride(request, ctx, assignment);
+      const authorDisplay = await getDisplayName(deps.pool, ctx.actorId);
+      if (authorDisplay === null) throw new AdminDisplayNameMissingError(ctx.actorId);
+      const noteCiphertext = await encryptGroundInspectionField(body.note, ctx.pariwarId, deps.encryption);
+
+      const scopeTx = await openScopeTx(deps, ctx.pariwarId);
+      let ok = false;
+      let written: Awaited<ReturnType<typeof claim.recordInspectionDiscrepancyNote>>;
+      try {
+        written = await claim.recordInspectionDiscrepancyNote(scopeTx.client, {
+          pariwarId: ids.pariwarId(ctx.pariwarId),
+          groundInspectionId: ids.groundInspectionId(ground_inspection_id),
+          actingActorId: ctx.actorId,
+          ...(override ? { override } : {}),
+          questionKey: body.questionKey,
+          noteCiphertext,
+          authorDisplay,
+        });
+        ok = true;
+      } catch (err) {
+        translateGroundInspectionError(err);
+      } finally {
+        await closeScopeTx(scopeTx, ok);
+      }
+
+      emitAuthAudit(deps, request, 'admin_ground_inspection.discrepancy_note_recorded', {
+        actorId: ctx.actorId,
+        pariwarId: ctx.pariwarId,
+        context: {
+          claim_case_id: assignment.claimCaseId,
+          ground_inspection_id,
+          // Codes only — ⛔ never the note.
+          question_key: body.questionKey,
+          ...(override ? { override_actor_id: override.byActorId } : {}),
+        },
+      });
+      void reply.status(201);
+      return {
+        questionKey: written!.questionKey,
+        notedAt: written!.notedAt.toISOString(),
+        authorActorId: written!.authorActorId,
+        authorDisplay: written!.authorDisplay,
+      };
     },
 
     /**

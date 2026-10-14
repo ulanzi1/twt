@@ -256,6 +256,35 @@ export const PeerMeshPingView = z
   });
 export type PeerMeshPingView = z.output<typeof PeerMeshPingView>;
 
+/**
+ * ⭐ Story 6.27d (R5, R4a; AC6) — the inspector's discrepancy as STAFF see it, ONLY inside the neighbours' section (its
+ * audience is exactly the one entitled to every neighbour answer; a hidden reader sees the whole section absent). Per
+ * completed FULL visit whose result was RECORDED: when it completed, when the result was first recorded, WHICH questions
+ * differed (`has_died` / `death_date` — possibly none) and the family's re-told answers, each with its author's stored
+ * display name, labelled "Recorded after the difference was shown". A note that could ⛔ be decrypted (or was erased) is
+ * `{ status: 'unavailable' }`, ⛔ never blank.
+ */
+export const INSPECTION_DISCREPANCY_QUESTION_KEYS = ['has_died', 'death_date'] as const;
+export const InspectionDiscrepancyStaffNote = z
+  .object({
+    questionKey: z.enum(INSPECTION_DISCREPANCY_QUESTION_KEYS),
+    note: z.union([z.string(), z.object({ status: z.literal('unavailable') }).strict()]),
+    notedAt: z.string(),
+    authorDisplay: z.string(),
+  })
+  .strict();
+export type InspectionDiscrepancyStaffNote = z.output<typeof InspectionDiscrepancyStaffNote>;
+export const InspectionDiscrepancyStaffView = z
+  .object({
+    groundInspectionId: z.string(),
+    completedAt: z.string(),
+    shownAt: z.string(),
+    questionKeys: z.array(z.enum(INSPECTION_DISCREPANCY_QUESTION_KEYS)),
+    notes: z.array(InspectionDiscrepancyStaffNote),
+  })
+  .strict();
+export type InspectionDiscrepancyStaffView = z.output<typeof InspectionDiscrepancyStaffView>;
+
 export const PeerMeshTranscript = z
   .object({
     selectionId: z.string().nullable(),
@@ -271,6 +300,8 @@ export const PeerMeshTranscript = z
     windowExpiresAt: z.string(),
     /** Story 6.27a — per neighbour: the name, the send status, the answers, the call-back mobile. */
     pings: z.array(PeerMeshPingView),
+    /** ⭐ Story 6.27d (R5) — REQUIRED, possibly empty: the claim's recorded inspector discrepancies (see above). */
+    inspectionDiscrepancies: z.array(InspectionDiscrepancyStaffView),
   })
   .strict();
 export type PeerMeshTranscript = z.output<typeof PeerMeshTranscript>;

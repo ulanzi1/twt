@@ -21,7 +21,7 @@ GLYPH REGISTER, ADDRESSING RULE: as 6.27a.
 
 # Story 6.27d: The Inspector Forms Their Own View First — Shown Only Where the Family and a Neighbour Differ, After Completing Their Record, and Asked to Re-Ask the Family in Their Own Words `[SURFACE]`
 
-Status: ready-for-dev
+Status: review
 
 > ⭐⭐ **WHAT THIS STORY IS.** The ground inspector sits with the family. BigDev (2026-10-10): *"only discrepancy should be shared with
 > field inspectore if there were any, to cross examine the family. Otherwise, It should say Thank you, your response has been recorded. No
@@ -277,24 +277,24 @@ a section such a person already sees). ⭐ **BigDev (2026-10-14, this validate p
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0 — re-read before code.** `git diff --name-only 8fcf7826..HEAD -- packages apps scripts infra`; re-read every cited file that
+- [x] **Task 0 — re-read before code.** `git diff --name-only 8fcf7826..HEAD -- packages apps scripts infra`; re-read every cited file that
       moved. Grep the code for `6.27d` (two doc-block notes today: `packages/domain/src/questionnaires/keys.ts:41-43`,
       `packages/domain/src/claim/peer-mesh-reply.ts:618-622`). Re-check the role catalogue still grants `claim.override_ground_inspection`
       ONLY to `pariwar_admin` (+ `super_admin`) — R4's "no new viewer" rests on it. ⛔ No governance commit is owed (AC1).
 
-- [ ] **Task 1 — migration `0160` (AC5, AC6, AC8).** Next free number at HEAD is **0160** (journal ends at idx 159, `0159_ground-inspection-note-authors`);
+- [x] **Task 1 — migration `0160` (AC5, AC6, AC8).** Next free number at HEAD is **0160** (journal ends at idx 159, `0159_ground-inspection-note-authors`);
       re-check at build. Hand-authored SQL + a `meta/_journal.json` entry (⛔ never `db:generate`; ⛔ never edit an applied migration —
       [[project_live_db_test_gotchas]]). Order as 0119: CREATE → FKs → CHECKs → GRANT → ENABLE → FORCE → POLICY → indexes. Iterate on a throwaway
       database first (6.27a's `twt_scratch_627a` practice), then apply to **:5432 AND :5433**, then prove both from zero.
-  - [ ] 1.0 ⚠ `claim_ground_inspections` has ONLY its primary key (`0055:46`; its FKs are single-column, `0055:78-80`) ⇒ ADD
+  - [x] 1.0 ⚠ `claim_ground_inspections` has ONLY its primary key (`0055:46`; its FKs are single-column, `0055:78-80`) ⇒ ADD
         `claim_ground_inspections_owner_uq UNIQUE (pariwar_id, ground_inspection_id, claim_case_id)` (0157's ownership-backstop form,
         `0157:11,17`) — required, ⛔ not optional.
-  - [ ] 1.1 `claim_ground_inspection_discrepancy_showings`: `pariwar_id`, `claim_case_id`, `ground_inspection_id` (`UNIQUE (ground_inspection_id)`),
+  - [x] 1.1 `claim_ground_inspection_discrepancy_showings`: `pariwar_id`, `claim_case_id`, `ground_inspection_id` (`UNIQUE (ground_inspection_id)`),
         `question_keys text[] NOT NULL` with `CHECK (question_keys <@ ARRAY['has_died','death_date']::text[])`, `shown_at timestamptz NOT NULL DEFAULT clock_timestamp()`.
         FKs: `(pariwar_id, ground_inspection_id, claim_case_id)` → `claim_ground_inspections (pariwar_id, ground_inspection_id, claim_case_id)`
         `ON DELETE CASCADE` (so a child can ⛔ never name another claim than its parent) and `(pariwar_id, claim_case_id)` → `claims`
         (`claims_pariwar_claim_case_uq`, `0143:53`) `ON DELETE CASCADE` — "DELETE only by cascade" (1.3) needs both stated. `GRANT SELECT, INSERT` ONLY.
-  - [ ] 1.2 `claim_ground_inspection_discrepancy_notes`: `pariwar_id`, `claim_case_id`, `ground_inspection_id`, `question_key text NOT NULL
+  - [x] 1.2 `claim_ground_inspection_discrepancy_notes`: `pariwar_id`, `claim_case_id`, `ground_inspection_id`, `question_key text NOT NULL
         CHECK (question_key IN ('has_died','death_date'))`, `note_ciphertext text NOT NULL` (Tier-1, `piiColumn(1,'ground_inspection')` in
         the drizzle schema — R6), `author_actor_id text NOT NULL CHECK (length(btrim(author_actor_id)) > 0)` (0159's author CHECK, NOT NULL
         here), `author_display text NOT NULL CHECK (length(btrim(author_display)) > 0)` (the author's stored admin display name, captured at
@@ -303,7 +303,7 @@ a section such a person already sees). ⭐ **BigDev (2026-10-14, this validate p
         `GRANT SELECT, INSERT` + column-level `GRANT UPDATE ("note_ciphertext")` (the scrub — without the column grant the scrub FAILS with
         42501; without the UPDATE policy of 1.4 it would silently match 0 rows under FORCE RLS — `0143:75` is that policy's comment, `-279`
         A12). ⚠ #37(a): ⛔ no CHECK on `note_ciphertext` beyond NOT NULL (the scrub writes a non-NULL sentinel).
-  - [ ] 1.3 Triggers (invoker functions — the house form; a trigger reading the parent row under FORCE RLS works in scope — 0156's answer trigger reads its reply, `0156:238-240`):
+  - [x] 1.3 Triggers (invoker functions — the house form; a trigger reading the parent row under FORCE RLS works in scope — 0156's answer trigger reads its reply, `0156:238-240`):
         (a) on BOTH tables a BEFORE INSERT trigger refusing a row whose parent (`pariwar_id`, `ground_inspection_id`, `claim_case_id`) is
         ⛔ not, in the inserting transaction's view, `status = 'completed'` AND `death_date_source = 'family_statement'` (R1) — the backstop
         for an UNGUARDED writer (23000). ⚠ The handler's guarded `INSERT … SELECT` (Task 4.1) yields 0 rows in the swallowed-COMMIT case
@@ -318,11 +318,11 @@ a section such a person already sees). ⭐ **BigDev (2026-10-14, this validate p
         cascade set of `claim-death-certificate-policy-regression.spec.ts`'s live `TRUNCATE claim_death_certificate_uploads CASCADE`
         (`:439-460`, via 0147's `compared_certificate_upload_id` FK; `lockTruncateSetNowait` builds the set recursively), which expects 23000.
         ⚠ RECORD in the migration header, as 0149 does (`0149:24-25`), that *"the trigger cannot tell the RTBF scrub from any other writer"*.
-  - [ ] 1.4 RLS: `ENABLE` + `FORCE`; per-command policies (`for: 'select'`, `'insert'`, and on notes `'update'` — the scrub needs it, `-279`
+  - [x] 1.4 RLS: `ENABLE` + `FORCE`; per-command policies (`for: 'select'`, `'insert'`, and on notes `'update'` — the scrub needs it, `-279`
         A12) with the house `pariwar_id = nullif(current_setting('app.pariwar_id', true), '')::uuid` scope; ⛔ never `FOR ALL`; ⛔ no DELETE
         policy. Policy files `packages/domain/src/policies/claim-ground-inspection-discrepancy-{showings,notes}-rls.ts`, exported from
         `policies/index.ts` (pattern: `claim-peer-mesh-replies-rls.ts`). Drizzle schema files in `packages/domain/src/schema/` + the barrel.
-  - [ ] 1.5 Policy spec `packages/domain/tests/integration/rls/claim-ground-inspection-discrepancy-policy-regression.spec.ts` (pattern:
+  - [x] 1.5 Policy spec `packages/domain/tests/integration/rls/claim-ground-inspection-discrepancy-policy-regression.spec.ts` (pattern:
         `claim-peer-mesh-replies-policy-regression.spec.ts` — each refusal under a SAVEPOINT `attempt()` returning the SQLSTATE): grants,
         cross-tenant, FORCE, fail-closed scope, ⛔ no DELETE, the showings' UPDATE refused, the notes' non-erasure UPDATE refused and the
         sentinel UPDATE admitted, a NULL ciphertext refused, the Task 1.3 (a) refusals (scheduled / certificate_check / superseded parent;
@@ -334,21 +334,21 @@ a section such a person already sees). ⭐ **BigDev (2026-10-14, this validate p
         own-committing specs' `session_replication_role='replica'` DELETE, `peer-mesh-reply-concurrency.spec.ts:51-57`); the only live
         TRUNCATE reaching these tables is the death-certificate spec above — re-run it ([[project_fk_truncate_cascade_deadlock]]).
 
-- [ ] **Task 2 — the comparison and the domain writers (AC2, AC3, AC5, AC6, AC7; R1, R2).**
-  - [ ] 2.1 EXTRACT the per-answer rule from `derivePeerReplyWarningKeys` (`packages/domain/src/claim/approval-warnings.ts:324-355`, doc
+- [x] **Task 2 — the comparison and the domain writers (AC2, AC3, AC5, AC6, AC7; R1, R2).**
+  - [x] 2.1 EXTRACT the per-answer rule from `derivePeerReplyWarningKeys` (`packages/domain/src/claim/approval-warnings.ts:324-355`, doc
         `:315-323`; its input is `{ id, key, codes, window }` and it already compares against a reference index — 6.27b passes
         `currentAcceptedDateIndex`, 6.27d passes the FAMILY's `death_date_index`; the reference is a PARAMETER, so 6.27b is unchanged) into
         ONE exported pure predicate (e.g. `peerAnswerDiffers(answer, referenceDateIndex): 'has_died' | 'death_date' | null`) and make
         `derivePeerReplyWarningKeys` call it — ⛔ never a copy. 6.27b's tests stay green UNCHANGED (red-check: break the predicate, watch
         BOTH 6.27b's and 6.27d's tests go red). ⛔ Do ⛔ not call `derivePeerReplyWarningKeys` itself with the family's index — it mints
         `peer_*` WARNING keys (the wrong vocabulary, and `-304` Q3: *"⛔ never a warning"*).
-  - [ ] 2.2 A new pure module `packages/domain/src/claim/inspection-discrepancy.ts`: a rule table typed `Record<ComparableQuestionKey, 'compare' | 'not_comparable'>`
+  - [x] 2.2 A new pure module `packages/domain/src/claim/inspection-discrepancy.ts`: a rule table typed `Record<ComparableQuestionKey, 'compare' | 'not_comparable'>`
         over `COMPARABLE_QUESTION_KEYS` (`questionnaires/keys.ts:44` — ⛔ never a second hand-written list; ⚠ ⛔ no `ComparableQuestionKey`
         type exists — declare `type ComparableQuestionKey = (typeof COMPARABLE_QUESTION_KEYS)[number]`): `has_died` / `death_date` ⇒
         `'compare'`; `death_cause` / `death_illness` ⇒ `'not_comparable'` with a doc-line *"owed by row 6-32 — the family side and a keyed
         comparable form"*. The SQL reads ONLY the `'compare'` keys DERIVED from the table. A `deriveInspectionDiscrepancy({ answers, familyDateIndex })`
         returns the ordered key list. ⚠ JSDoc comments only and no `**/` inside them ([[project_markdown_emphasis_closes_jsdoc]]; 6.27b Trap 13).
-  - [ ] 2.3 The SQL fragment(s): live answers (`superseded_at IS NULL`) and as-of answers (`saved_at <= $asOf AND (superseded_at IS NULL OR superseded_at > $asOf)`),
+  - [x] 2.3 The SQL fragment(s): live answers (`superseded_at IS NULL`) and as-of answers (`saved_at <= $asOf AND (superseded_at IS NULL OR superseded_at > $asOf)`),
         selecting `question_key`, `value_codes`, `death_date_window_indexes` ONLY — ⛔ never `value_ciphertext` (the shape of
         `peerReplyColumnsSql`, `approval-warnings.ts:532-552`, which is private, correlated on alias `c`, and returns a `json_agg(...)`
         scalar subquery: export a parameterised sibling there or build the fragment in the new module — ONE fragment for both the in-tx and
@@ -356,13 +356,13 @@ a section such a person already sees). ⭐ **BigDev (2026-10-14, this validate p
         `PEER_MESH_WARNING_QUESTION_KEYS` (`keys.ts:23`, `['has_died','death_date']`) — a SECOND key list beside 2.2's derived one: a parity
         test asserts the `'compare'` keys equal it, or derive one from the other. `clampLimit` is N/A: the domain-limit gate flags only a
         dynamic `.limit()`, and this read has none.
-  - [ ] 2.4 Wire into `completeGroundInspection` (`packages/domain/src/claim/ground-inspection-persist.ts:933-1059`): after the UPDATE
+  - [x] 2.4 Wire into `completeGroundInspection` (`packages/domain/src/claim/ground-inspection-persist.ts:933-1059`): after the UPDATE
         (`:1007-1035`) and before / after `projectClaimState` (keep its event untouched), when `deathDateSource === 'family_statement'`,
         read the live answers (⛔ no lock — the claim lock is already held: lock order assignment → claim, 6.26a Trap 1; answer writers go
         claim → ping → reply) and add `discrepancy` to `CompleteGroundInspectionResult` (`:907-915`); `null` otherwise. ⛔ No KMS. A retried
         completion still throws `GroundInspectionNotActiveError` first (409) — the re-read is the recovery path. ⛔ Never touch the
         `completedAt: sql\`clock_timestamp()\`` line (`:1017`) — R2's clock basis rests on it.
-  - [ ] 2.5 Domain functions for Tasks 4–5, IN `ground-inspection-persist.ts` (⚠ `lockClaimInWindow` is a NON-exported function there,
+  - [x] 2.5 Domain functions for Tasks 4–5, IN `ground-inspection-persist.ts` (⚠ `lockClaimInWindow` is a NON-exported function there,
         `:292-296` — the note writer lives beside it; ⛔ never export-and-recompose it elsewhere; the module already passes every fence
         pattern): `recordInspectionDiscrepancyShowing` (the guarded INSERT … SELECT, own tx supplied by the caller),
         `readOrRecomputeInspectionDiscrepancy` (recorded row, else as-of recompute + insert + re-read), `recordInspectionDiscrepancyNote`
@@ -370,7 +370,7 @@ a section such a person already sees). ⭐ **BigDev (2026-10-14, this validate p
         `approver-own-visit.ts:105-107`, throwing `OwnGroundVisitPendingError`) → read-or-recompute the showing → exists pre-check → INSERT;
         23505 ⇒ the same typed error), `readInspectionDiscrepancyNotes` (ALL notes of an assignment, with `authorActorId` — R4a). Export
         through the claim barrel.
-  - [ ] 2.6 Tests (domain, live — `packages/domain/tests/integration/claim/ground-inspection-discrepancy.spec.ts`; fixtures
+  - [x] 2.6 Tests (domain, live — `packages/domain/tests/integration/claim/ground-inspection-discrepancy.spec.ts`; fixtures
         `_peer-reply-fixtures.ts`; dates via `fixtureDeathDateIndex` / `deathDateWindow(...).map(fixtureDeathDateIndex)` — 6.27b Trap 3;
         completion takes the fixture's `now` — 6.26a Trap 9): every AC3 leg; AC7's domain leg (an answer saved after `completed_at` is
         ⛔ not in the recompute); the note writer's six steps incl. a hidden caller refused identically whether or not the key is in the
@@ -379,11 +379,11 @@ a section such a person already sees). ⭐ **BigDev (2026-10-14, this validate p
         `ground-inspection-concurrency.spec.ts` header pattern; cleanup by the replica-mode DELETE), `{ timeout: 20000 }`; assert membership,
         ⛔ never counts of shared tables.
 
-- [ ] **Task 3 — the screens (AC2, AC4, AC5, AC6; admin).** `apps/admin/src/modules/ground-inspection/GroundInspectionPage.tsx` + `i18n-en.ts`
+- [x] **Task 3 — the screens (AC2, AC4, AC5, AC6; admin).** `apps/admin/src/modules/ground-inspection/GroundInspectionPage.tsx` + `i18n-en.ts`
       (plain English constants — ⛔ not `useT`; `gi.result.completed` at `i18n-en.ts:126` is unused — as are `gi.result.refused` and
       `gi.result.photoUploaded` — reuse it or remove it, ⛔ never leave it dangling twice; leave the other two alone). The module has ⛔ no
       hooks in `apps/admin/src/api/hooks.ts` — it calls `useQuery` / `useMutation` inline on `api.*`; follow that.
-  - [ ] 3.1 ⚠ `CompleteAction` (`:521-633`) renders only while the assignment is `scheduled` (`isActive = a.status === 'scheduled'`, `:344`;
+  - [x] 3.1 ⚠ `CompleteAction` (`:521-633`) renders only while the assignment is `scheduled` (`isActive = a.status === 'scheduled'`, `:344`;
         render `:405-411`); its `onSuccess` invalidates the list, the refetch shows `completed`, and it UNMOUNTS — `mutation.data` is lost
         ([[project_tanstack_onsettled_before_success]]). ⇒ on success, SEED a query keyed by the assignment id
         (`qc.setQueryData([...,'discrepancy', id], { discrepancy: response.discrepancy, notes: [] })` — the SAME `{ discrepancy, notes }` shape
@@ -400,7 +400,7 @@ a section such a person already sees). ⭐ **BigDev (2026-10-14, this validate p
         `nationalGrants`, `packages/contracts/src/auth/session.ts:32-44`; a Pariwar Admin's pariwar-scope override grant is ⛔ not in it); a
         non-holder's click gets the server's 403 (one audited denial per click, ⛔ never automatic). ⚠ Why:
         every 403 runs `auditAuthorizationDenied` (handlers `:216-219`) — an automatic fetch per card per viewer floods the audit log.
-  - [ ] 3.2 The panel: the two screens (AC4); one note box per differing key, saved per row with per-call `mutateAsync().then`
+  - [x] 3.2 The panel: the two screens (AC4); one note box per differing key, saved per row with per-call `mutateAsync().then`
         ([[project_tanstack_mutate_callbacks_latest_only]]; a test with two deferred promises); a saved note shows read-only (*"Recorded"*,
         story-minted) with its author's display name when ⛔ the viewer's own (R4a); a note returned as `{ status: 'unavailable' }` renders
         *"This note could not be shown"* (story-minted), ⛔ never blank; on a 201 `refetch()` the `[…,'discrepancy', id]` query (the seeded
@@ -410,14 +410,14 @@ a section such a person already sees). ⭐ **BigDev (2026-10-14, this validate p
         message would show under the box) ⇒ add `gi.error.not_allowed` / `gi.error.own_ground_visit_pending` (story-minted English) to that
         list; results announced in a polite live region (6.27a family 13). ⛔ Never inside OP14's *"Other claims for this death"* section
         (`:155-180` — 6.27a Trap 5).
-  - [ ] 3.3 Tests `apps/admin/tests/ground-inspection-discrepancy.test.tsx` with a REAL `useQuery` + the list refetch flipping to
+  - [x] 3.3 Tests `apps/admin/tests/ground-inspection-discrepancy.test.tsx` with a REAL `useQuery` + the list refetch flipping to
         `completed` in the same flush (the unmount case); the DOM never contains a neighbour name / value / count; the withheld shape renders
         `<WithheldNote>`; a `certificate_check` or NULL-source completion renders no panel; a `scheduled` card renders no panel (AC2); a completed card
         viewed by a non-inspector fires ⛔ no GET; a note written by another author renders read-only with that author; both screens' copy
         VERBATIM (AC4); ② renders the date as the page does and `'—'` when `unavailable`; an `unavailable` note renders its story-minted text.
 
-- [ ] **Task 4 — routes, contracts, client (AC2, AC4, AC5, AC6, AC7, AC8).**
-  - [ ] 4.1 Completion handler (`claims.ground-inspection.handlers.ts` `complete()` `:604-685`; it opens its OWN scope tx, `openScopeTx`
+- [x] **Task 4 — routes, contracts, client (AC2, AC4, AC5, AC6, AC7, AC8).**
+  - [x] 4.1 Completion handler (`claims.ground-inspection.handlers.ts` `complete()` `:604-685`; it opens its OWN scope tx, `openScopeTx`
         `:639`): after `closeScopeTx(scopeTx, ok)` (`:659`), when `result.discrepancy !== null`: open a NEW scope tx (`openScopeTx` — the
         first is released, so this is the request's second connection, ⛔ not a third; precedent for a best-effort post-commit tx that
         never fails the response: `claims.cycle-freeze.handlers.ts:663→713/737`), (i) evaluate
@@ -442,7 +442,7 @@ a section such a person already sees). ⭐ **BigDev (2026-10-14, this validate p
         `params.claimCaseId` — `resolveGroundInspectionAssignment` loads by (pariwar, id) only and never checks the path's claim id (routes
         `:150-163`). ⛔ Never the post-commit work on `request.scopeTx` (it commits in `onSend` — `multi-tenant/index.ts:21-27`; #42(b)).
         Keep `void reply.status(N); return body;` ([[project_fastify_onsend_doublesend]]).
-  - [ ] 4.2 `GET …/ground-inspection/:ground_inspection_id/discrepancy` and `POST …/ground-inspection/:ground_inspection_id/discrepancy-notes`
+  - [x] 4.2 `GET …/ground-inspection/:ground_inspection_id/discrepancy` and `POST …/ground-inspection/:ground_inspection_id/discrepancy-notes`
         in `claims.ground-inspection.routes.ts` with the SAME inline `preHandler: [adminSession, scope, resolveAssignment, conductFromRow]`
         as `complete` (`:245-252`) and `resolveInspectorOverride` in the handler (R4; it checks identity only — ⛔ no status, ⛔ no hide —
         so the hidden check of AC2 / AC6 is the handler's / writer's job). The file is in the human-actor gate's `ENROLMENT_OWED`
@@ -464,7 +464,7 @@ a section such a person already sees). ⭐ **BigDev (2026-10-14, this validate p
         { actorId, pariwarId, context })` (`apps/api/src/modules/auth/shared/audit.ts:14`) post-commit with codes only (`question_key`) — a new dotted member of the
         closed `AuthAuditEventType` union (`apps/api/src/audit/audit-sink.ts:15`; ground-inspection members `:399-409`; F40; no test pins the
         whole union); the GET emits ⛔ none (the showing row is the record of when the result was first recorded).
-  - [ ] 4.3 The staff view (R5): `assemblePeerSection` (`apps/api/src/modules/claims/peer-answers-assembler.ts:117`) — AFTER its hide
+  - [x] 4.3 The staff view (R5): `assemblePeerSection` (`apps/api/src/modules/claims/peer-answers-assembler.ts:117`) — AFTER its hide
         (`:129-138`) — reads the claim's showings + notes PER CLAIM (two reads, ⛔ never per assignment — `verifier-console.spec.ts:728`
         counts real SQL statements and fails if they grow with rows), each through `ctx.run` + `bump`; the notes are decrypted outside any
         lock, each failure → that note `{ status: 'unavailable' }`, ⛔ never blank. Carry the data through the `PeerSection` `present`
@@ -484,13 +484,13 @@ a section such a person already sees). ⭐ **BigDev (2026-10-14, this validate p
         `PeerMeshView` (`apps/admin/src/modules/claim-verification/PeerMeshView.tsx`; `NeighboursAnswersPanel` renders it, `:176` — so the
         block goes into `PeerMeshView` ONLY) renders the block (*"Recorded after the difference was shown"*, story-minted, with the author) —
         a `PeerMeshView` admin test renders it with its author and label, and an `unavailable` note's text.
-  - [ ] 4.4 Admin client (`apps/admin/src/api/client.ts`): `GroundInspectionWriteResponse` (`:1268-1272`, non-strict — it DROPS unknown
+  - [x] 4.4 Admin client (`apps/admin/src/api/client.ts`): `GroundInspectionWriteResponse` (`:1268-1272`, non-strict — it DROPS unknown
         keys today) is SHARED by schedule (`:1317`), findings (`:1333`), complete (`:1362`) and refusal (`:1376`) ⇒ ⛔ never add a required
         field to it; define a complete-only `GroundInspectionCompleteResponse = GroundInspectionWriteResponse.extend({ discrepancy })` and use
         it in `completeGroundInspection` (`:1354-1365`) ONLY; new client calls for the GET and the note POST (inline `useQuery` /
         `useMutation` on `api.*` in the page — Task 3). A test that the parsed completion response KEEPS `discrepancy`, and that the other
         three calls still parse a response without it.
-  - [ ] 4.5 API live specs (`apps/api/tests/integration/claims/ground-inspection-discrepancy.spec.ts`, one HTTP request per step): the three
+  - [x] 4.5 API live specs (`apps/api/tests/integration/claims/ground-inspection-discrepancy.spec.ts`, one HTTP request per step): the three
         response shapes; the override completer receives it; a hidden override completer gets `withheld` AND ⛔ no showing row is written;
         a fault before the hidden check ⇒ `withheld/check_failed`; a non-assigned Block Admin ⇒ 403 on all three routes (R4); the re-read
         after a lost response; the re-read's 404 for each non-`completed` status, for `certificate_check`, and for a pre-0147 completed row
@@ -506,7 +506,7 @@ a section such a person already sees). ⭐ **BigDev (2026-10-14, this validate p
         answer, a withheld completion followed by an un-hidden re-read writing the same keys, an empty showing (AC5); the console's `peerMesh` carries the block for the
         District Admin and is ABSENT for a hidden reader (AC2); a later answer is on the console, ⛔ not on the re-read (AC7).
 
-- [ ] **Task 5 — erasure (AC8; PM17 d's half).** In `packages/domain/src/member/anonymize.ts`, inside GI13's deceased-claims block
+- [x] **Task 5 — erasure (AC8; PM17 d's half).** In `packages/domain/src/member/anonymize.ts`, inside GI13's deceased-claims block
       (`if (deceasedClaimIds.length > 0)`, `:284`; block `:270-319`): `UPDATE claim_ground_inspection_discrepancy_notes SET note_ciphertext =
       inspectionSentinel WHERE claim_case_id IN (…) AND note_ciphertext IS NOT NULL` — REUSE the block's existing `inspectionSentinel`
       (`:285`, field class `ground_inspection` = R6's), GI13's shape. Raise the rtbf pins (`packages/domain/tests/member/rtbf-anonymize.test.ts`),
@@ -519,7 +519,7 @@ a section such a person already sees). ⭐ **BigDev (2026-10-14, this validate p
       the deferred item *"Erasure scrub not serialized with the peer-reply writer; saves after erasure not refused"* (it can store a fresh Tier-1
       note after the scrub) — append the notes table to THAT item too, ⛔ not fixed here.
 
-- [ ] **Task 6 — fences (AC3, AC8).** In `packages/domain/tests/claim/nominee-name-no-comparison-fence.test.ts`: add
+- [x] **Task 6 — fences (AC3, AC8).** In `packages/domain/tests/claim/nominee-name-no-comparison-fence.test.ts`: add
       `inspection-discrepancy.ts` and `ground-inspection-persist.ts` (the note writer lives there — Task 2.5; it passes every
       `FORBIDDEN_PATTERNS` and decrypt pattern at `8fcf7826`) to `FENCED_FILES` (`50` → `52` at `:187`, with the history comment extended)
       and to 6.27a's decrypt `it` block (`:375-391`). ⚠ That block's patterns do ⛔ not include `value_ciphertext` (`:385`), and adding it to
@@ -529,7 +529,7 @@ a section such a person already sees). ⭐ **BigDev (2026-10-14, this validate p
       an import from `../medical` in the two modules, with TEETH (the scan fires on a known positive,
       `packages/domain/src/medical/disclosure-read.ts`) — `-304` Q4 A; ⛔ no such fence exists today.
 
-- [ ] **Task 7 — close (AC8).** `pnpm ci:local` with `DATABASE_URL` on :5433; then the api integration suite on its own (`ci:local` stops at
+- [x] **Task 7 — close (AC8).** `pnpm ci:local` with `DATABASE_URL` on :5433; then the api integration suite on its own (`ci:local` stops at
       domain — 6.27b); record red-checks in the Debug Log (the shared predicate, the ordering comparator, the scrub's `WHERE`, the INSERT
       guard, `completed_at` → `now()` diverging the recompute (AC3), the medical fence's teeth (Task 6)). Change Log + File List. `deferred-work.md`: ONE item for ③ / ④ — *"the family's cause / illness answers (row 6-32) and a
       keyed blind index per option code are owed before the inspector can be shown a cause / illness difference"* — pointed at row 6-32.
@@ -603,7 +603,46 @@ a section such a person already sees). ⭐ **BigDev (2026-10-14, this validate p
 
 ### Agent Model Used
 
+Claude Opus 5.5 (`claude-opus-5-5[1m]`) — `bmad-dev-story 6.27d`, 2026-10-14.
+
 ### Debug Log References
+
+- **Task order:** Task 4 (API, client) ran before Task 3 (the page) — the page consumes 4.4's client calls and the wire shape;
+  ⛔ behaviour difference. Task 0: `git diff --name-only 8fcf7826..HEAD -- packages apps scripts infra` empty; the two `6.27d`
+  doc-block notes found; `claim.override_ground_inspection` still held only by `pariwar_admin` (`roles.ts:352`) + `super_admin`.
+- **Found while iterating on the scratch DB (`twt_scratch_627d`, :5433):** (1) Postgres TRUNCATES identifiers over 63 bytes —
+  `claim_ground_inspection_discrepancy_showings_tenant_isolation_insert` became `…_tenant_isolation_i`. ⇒ every DERIVED name
+  (constraints, policies, indexes, triggers, functions) uses the prefix `claim_gi_discrepancy_{showings,notes}_*`; the TABLE
+  names are the story's. (2) plpgsql resolves `NEW.question_key` at plan time even behind a `TG_TABLE_NAME` guard ⇒ the
+  parent guard is ONE function per table (`claim_gi_discrepancy_{showings,notes}_guard`).
+- **Red-checks (each restored and re-run green):**
+  - the SHARED predicate (`peerAnswerDiffers`: `!window.includes(ref)` → `includes`) ⇒ 7 tests red across BOTH
+    `approval-warnings.test.ts` (6.27b) and `inspection-discrepancy.test.ts` (6.27d);
+  - R2's clock basis (`completedAt: sql\`clock_timestamp()\`` → `now()`) ⇒ the own-committing leg *"a writer that committed
+    AFTER the completion's transaction began but BEFORE it took the lock: IN both"* red — the as-of recompute diverged;
+  - the ordering comparator (`completed_at < shown_at` → `>`) ⇒ the AC5 ordering leg red (the steps really are separate
+    committed transactions);
+  - the scrub's `WHERE` (`isNotNull(note_ciphertext)` removed) ⇒ the rtbf unit leg red;
+  - the AC2 order (the hidden check moved AFTER the showing check in `recordInspectionDiscrepancyNote`) ⇒ the API probe test
+    AND the domain step-3 leg red (the `death_date` probe answered `discrepancy_not_shown` — the leak AC2 forbids);
+  - the INSERT guard (`status = 'completed'` + `death_date_source = 'family_statement'` dropped from the showing write's
+    parent CTE) ⇒ 3 domain legs red (a `certificate_check`, a pre-0147 NULL-source parent and a scheduled parent all
+    reported `persisted` — the trigger backstop then raised);
+  - the medical fence's teeth are IN the test (a positive control on `medical/disclosure-read.ts` and an import specimen);
+  - the admin seed (`qc.setQueryDefaults(…)` removed) ⇒ the SEEDS test red: under the app's `gcTime: 0` /
+    `refetchOnMount: 'always'` defaults a seed without them is lost or refetched.
+- **`ci:local` on the SHARED :5433 `twt_dev`:** every job green but `integration-tests` — 7 failures, ALL in
+  `reconciliation/review-queue-read.spec.ts` (Story 9.8), domain 5138 passed / 7 failed; the run stopped before the API
+  integration suite. The known shared-`PARIWAR_A` accumulation class (known-failures #15): 539 live alerts under the fixed
+  tenant, past the read's 500-cycle bound; ⛔ 6.27d file touches reconciliation or alerts. Re-run on a scratch database
+  (`twt_ci_627d`, BigDev's choice) — below.
+- **`ci:local` on the scratch database `twt_ci_627d` (:5433, migrated from zero):** every job green but `integration-tests`,
+  whose ONE failure is the Story 10.23 gate refusing any database ⛔ named `twt_dev`
+  (`restoration-discipline-production-path-live.test.ts` — known-failures note; `TWT_ALLOW_DESTRUCTIVE_LIVE_TESTS` is ⛔ passed
+  through turbo). Domain 360 / 360 files (5145 passed, `review-queue-read.spec.ts` included); admin 1142; channels, events,
+  niyamavali-engine, queue, validity-service all green. Then, on the same scratch DB: the gated spec run directly with the
+  override — 3 / 3; the API integration suite on its own — 108 / 108 files, 1306 tests (the new spec 15 / 15). Both scratch
+  databases (`twt_ci_627d`, `twt_scratch_627d`) dropped afterwards.
 
 ### Completion Notes List
 - 2026-10-10 — cut from Story 6.27 v2.0 (`-305`). ⛔ No code.
@@ -612,12 +651,108 @@ a section such a person already sees). ⭐ **BigDev (2026-10-14, this validate p
   PM25 (a) ① (confirmed); R4a — the notes keep R4's writer and are returned WITH their author; the dual-role CF2 case (Recorded
   observation) — ⭐ PROPOSED to BigDev as a possible Panel question (two ratified CF2 rows meeting in one person); BigDev: recorded,
   ⛔ not routed now. If it is ever routed, it goes from the routing-note template, committed alone before any code.
+- 2026-10-14 — **`bmad-dev-story 6.27d` — implemented (all eight tasks).** ⛔ No ruling moved; ⛔ no decision-log entry (AC1).
+  - **Migration 0160** (hand-authored, journal idx 160): the inspection's ownership UNIQUE; `…_discrepancy_showings` (PK
+    `ground_inspection_id` — the story's `UNIQUE (ground_inspection_id)`; `question_keys` CHECKed `<@ {has_died, death_date}`;
+    `shown_at clock_timestamp()`; SELECT + INSERT only) and `…_discrepancy_notes` (Tier-1 `note_ciphertext`, `author_actor_id`
+    + `author_display` with the btrim CHECK, `UNIQUE (ground_inspection_id, question_key)`, a column UPDATE grant for the
+    scrub); both with composite FKs `ON DELETE CASCADE` to the inspection AND the claim; the parent guard (completed +
+    `family_statement`; a note's key IN the showing), the showings' no-update / cascade-only delete / no-truncate, the notes'
+    0143-form erasure arm — every refusal 23000; per-command RLS (⛔ DELETE, ⛔ `FOR ALL`). Applied to :5432 AND :5433;
+    proven from zero on a scratch DB.
+  - **Domain:** `claim/inspection-discrepancy.ts` (the rule table over `COMPARABLE_QUESTION_KEYS`, the DERIVED compared keys,
+    THE ONE per-answer predicate `peerAnswerDiffers` — now also behind 6.27b's `derivePeerReplyWarningKeys` — and ONE answers
+    fragment for the live and the as-of read; a leaf, ⛔ ciphertext). In `ground-inspection-persist.ts` (beside
+    `lockClaimInWindow`): the comparison INSIDE `completeGroundInspection` (`discrepancy: { questionKeys } | null` — `null`
+    unless `family_statement`), `readInspectionDiscrepancyTarget` (the neutral 404), `recordInspectionDiscrepancyShowing`
+    (ONE statement that also reports `persisted`), `readOrRecomputeInspectionDiscrepancy` (as of `completed_at` by an SQL
+    reference — ⛔ a JS Date, µs), `recordInspectionDiscrepancyNote` (AC6's six steps; the hidden refusal BEFORE the showing),
+    the note / claim-level reads. Two typed errors; `OwnGroundVisitPendingError`'s doc widened. The anonymizer scrubs the
+    notes inside GI13's block with the block's `inspectionSentinel`.
+  - **API:** the completion delivers the in-tx result in a SECOND scope transaction after its own closed — the hidden check,
+    then the guarded showing write; `persisted = false`, a raise, or any failure before the check ⇒ `withheld/check_failed`;
+    ONLY a failed closing COMMIT is logged ids-only and still answers `shown` (it commits itself to log that). `GET …/discrepancy`
+    (guard → 404 → hidden check (fail closed) → recorded-or-recomputed showing + ALL notes with their author; its own
+    transaction closed BEFORE any decrypt) and `POST …/discrepancy-notes` (guard → display name → encrypt → the writer →
+    audit `admin_ground_inspection.discrepancy_note_recorded`, codes only). The staff view: two per-claim reads inside
+    `assemblePeerSection` after its hide; `PeerMeshTranscript.inspectionDiscrepancies` REQUIRED; `VERIFIER_CONSOLE_MAX_READS`
+    27 → 29 (+ ledger, four pins); the section's exact-read pins in `peer-answers-console.spec.ts` 6 → 8 and 5 → 7.
+  - **Admin:** a complete-only response schema; the re-read and note calls; `<DiscrepancyPanel>` on a completed
+    `family_statement` card — SEEDED by the completion under per-key cache defaults (`staleTime` / `gcTime: Infinity`,
+    `refetchOnMount: false` — the app-wide defaults would lose the seed), fetched on its own only for the session's own
+    inspector (local `normalizeActorId`), "Show the result" for every other viewer; the ruled copy verbatim; per-row
+    `mutateAsync` note boxes; another author's note read-only WITH the author; the window / hidden refusals worded; the
+    unused `gi.result.completed` removed. `<PeerMeshView>` renders the staff block ("Recorded after the difference was
+    shown", the author and time; `unavailable` worded).
+  - **Fences / pins:** `FENCED_FILES` 50 → 52 (+ the 6.27a decrypt block); a SEPARATE ⛔-ciphertext assertion scoped to the
+    comparison; a NEW medical fence with teeth; rtbf pins 23 → 24 statements, 20 → 21 tables (the no-claims leg stays 21,
+    the notes table added to its `not.toContain`).
+  - **Docs:** `deferred-work.md` — ③ / ④ owed by row 6-32 (ONE item); the GI13 item and the *"Erasure scrub not serialized"*
+    item gain the notes table. Row 27 gains evidence line (5) — the notes table under counsel's `-304` Q4 A scope (a go-live
+    fence, ⛔ a merge blocker).
+  - **Recorded readings (implementation only, ⛔ a ruling):** the pre-0147 NULL-source leg is seeded by dropping 0147's
+    `NOT VALID` CHECK, completing the row, and re-adding the CHECK by its own catalog definition inside ONE transaction
+    (rolled back in the domain spec; committed in the API spec) — the only way to reproduce such a row; the staff block
+    says *"No difference from the neighbours was shown to the inspector."* for an EMPTY showing (story-minted).
 
 ### File List
+
+- `packages/domain/migrations/0160_ground-inspection-discrepancy.sql` (new)
+- `packages/domain/migrations/meta/_journal.json`
+- `packages/domain/src/schema/claim_ground_inspection_discrepancies.ts` (new)
+- `packages/domain/src/schema/claim_ground_inspections.ts`
+- `packages/domain/src/schema/index.ts`
+- `packages/domain/src/policies/claim-ground-inspection-discrepancy-showings-rls.ts` (new)
+- `packages/domain/src/policies/claim-ground-inspection-discrepancy-notes-rls.ts` (new)
+- `packages/domain/src/policies/index.ts`
+- `packages/domain/src/claim/inspection-discrepancy.ts` (new)
+- `packages/domain/src/claim/approval-warnings.ts`
+- `packages/domain/src/claim/ground-inspection-persist.ts`
+- `packages/domain/src/claim/errors.ts`
+- `packages/domain/src/claim/index.ts`
+- `packages/domain/src/member/anonymize.ts`
+- `packages/domain/tests/claim/inspection-discrepancy.test.ts` (new)
+- `packages/domain/tests/claim/nominee-name-no-comparison-fence.test.ts`
+- `packages/domain/tests/member/rtbf-anonymize.test.ts`
+- `packages/domain/tests/integration/claim/_inspection-discrepancy-fixtures.ts` (new)
+- `packages/domain/tests/integration/claim/ground-inspection-discrepancy.spec.ts` (new)
+- `packages/domain/tests/integration/claim/ground-inspection-discrepancy-concurrency.spec.ts` (new)
+- `packages/domain/tests/integration/claim/ground-inspection-rtbf.spec.ts`
+- `packages/domain/tests/integration/rls/claim-ground-inspection-discrepancy-policy-regression.spec.ts` (new)
+- `packages/contracts/src/claims/verifier-console.ts`
+- `packages/contracts/tests/claims-verifier-console.test.ts`
+- `packages/contracts/tests/claims-peer-answers.test.ts`
+- `apps/api/src/audit/audit-sink.ts`
+- `apps/api/src/modules/claims/claims.ground-inspection.handlers.ts`
+- `apps/api/src/modules/claims/claims.ground-inspection.routes.ts`
+- `apps/api/src/modules/claims/claims.verifier-console.handlers.ts`
+- `apps/api/src/modules/claims/peer-answers-assembler.ts`
+- `apps/api/tests/integration/claims/ground-inspection-discrepancy.spec.ts` (new)
+- `apps/api/tests/integration/claims/peer-answers-console.spec.ts`
+- `apps/api/tests/integration/claims/verifier-console.spec.ts`
+- `apps/api/tests/integration/claims/verifier-console-ground-inspection.spec.ts`
+- `apps/api/tests/integration/claims/suspicion-refusal-routes.spec.ts`
+- `apps/api/tests/unit/peer-answers-stitch.test.ts`
+- `apps/admin/src/api/client.ts`
+- `apps/admin/src/modules/ground-inspection/GroundInspectionPage.tsx`
+- `apps/admin/src/modules/ground-inspection/i18n-en.ts`
+- `apps/admin/src/modules/claim-verification/PeerMeshView.tsx`
+- `apps/admin/src/modules/claim-verification/i18n-en.ts`
+- `apps/admin/tests/ground-inspection-discrepancy.test.tsx` (new)
+- `apps/admin/tests/ground-inspection-discrepancy-client.test.ts` (new)
+- `apps/admin/tests/peer-mesh-inspection-discrepancy.test.tsx` (new)
+- `apps/admin/tests/ground-inspection-page.test.tsx`
+- `apps/admin/tests/verifier-console.test.tsx`
+- `apps/admin/tests/neighbours-answers-panel.test.tsx`
+- `docs/launch-gate-inventory/inventory-roster.md`
+- `_bmad-output/implementation-artifacts/deferred-work.md`
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`
+- `_bmad-output/implementation-artifacts/6-27d-inspector-discrepancy-at-completion.md`
 
 ## Change Log
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-14 | 4.0 | `bmad-dev-story 6.27d` — implemented: migration 0160 (the showings + notes tables, the inspection's ownership UNIQUE, the guard triggers, the erasure arm, per-command RLS); the comparison inside the completion through ONE per-answer predicate shared with 6.27b; the guarded post-commit showing write (`persisted`), the re-read GET and the note POST (the hidden refusal before any showing check); the staff block inside the neighbours' section (`MAX_READS` 27 → 29); the admin panel (seeded result, ruled copy verbatim, per-row notes with author) and `PeerMeshView`'s block; the anonymizer scrub + rtbf pins; two fences; Row 27 evidence line (5); deferred ③ / ④. Status → `review`. |
 | 2026-10-14 | 3.1 | ⭐ Round-2 fresh-context re-validate: ⛔ no BLOCKER / HIGH. 2 MEDIUM in round 1's own swallowed-COMMIT patch — the assigned inspector already gets `own_visit` there (only an override completer reaches the INSERT), and a guarded `INSERT … SELECT` yields 0 rows (⛔ a trigger raise) ⇒ Task 4.1's step (ii) is ONE statement reporting `persisted`, and Task 1.3 (a) is the backstop for UNGUARDED writers only. LOW: the note POST's 201 body + `refetch()`; `admin.display_name_missing` (already an `ApiError`); copy / PeerMeshView render tests homed; the probe's "no details" scoped to an in-window claim; `authorActorId` on the re-read only; round 1's `approver-own-visit.ts:104-106` "correction" REVERTED to `:105-107` (it was wrong — #24(e)); `:135-144`; AC5 names the withheld answer; Task 7's red-checks. |
 | 2026-10-14 | 3.1 | ⭐ Round-1 fresh-context re-validate of the v3.1 rewrite (1 HIGH, 7 MEDIUM, 8 LOW — most of them the pass's own): a swallowed completion COMMIT returned `shown` (Task 4.1 now `withheld/check_failed` when the guarded INSERT finds no completed parent); AC2's note-writer order aligned with AC6; `shown_at` = first RECORDED, ⛔ "first delivery"; the probe test compares status, code, message and the absence of `details`, ignoring `request_id`; the note writer maps `OwnGroundVisitPendingError` directly (6.27b's mapper's prefix union lacks `ground_inspection`, its words say approve); ONE `{ discrepancy, notes }` cache shape; the page ⛔ cannot see a pariwar-scope override grant ⇒ an on-demand button for every other viewer; Task 3.1 keyed on `deathDateSource`; notes carry a stored `author_display` (⛔ a raw id on screen) and an `unavailable` render; orphan tests homed + Task tags; four cites, two quotes, the window list, the rtbf `not.toContain`, the NULL-source 404 leg. |
 | 2026-10-14 | 3.1 | `bmad-create-story validate 6.27d` — four read-only verifiers (governance; domain/DB; API/admin/contracts; design adversary) against `8fcf7826` (= `main`, ⛔ no code moved). 2 HIGH: the note POST leaked the showing to a HIDDEN caller (201 vs 409 `discrepancy_not_shown`) — AC2 / AC6 now order ONE neutral `own_ground_visit_pending` refusal BEFORE any showing check, and a withheld re-read returns ⛔ no notes; the admin's "may complete" eligibility did ⛔ not exist — Task 3.1 fetches only on a seeded cache or the inspector's own id (local `normalizeActorId` rule; ⛔ no `@twt/domain` in the browser). MEDIUM: a withheld result writes ⛔ no showing (`shown_at` = first delivery); R4a (notes with author — BigDev); R1 relabelled NARROWS and keyed on `death_date_source = 'family_statement'` everywhere (pre-0147 NULL-source rows); R4 relabelled WIDENS-wording, ⛔ no new viewer (role catalogue); `-304` Q4's counsel clause carried (Task 7); the Recorded observation re-attributed to 6.27b P3 and completed (all surfaces, the concrete harm); the 3-column owner UNIQUE + `ON DELETE CASCADE` FKs; the column-grant rationale (42501); the TRUNCATE guidance (23000, temp twin, replica cleanup); `lockClaimInWindow` is private ⇒ the writer lives in the persist module, window code `not_allowed` named + page words; ⛔ no notes max to copy; a complete-only admin response schema; the GET's own tx before decrypts; the `value_ciphertext` assertion separate; R2's clock basis recorded with its race leg. LOW: the 404 set, the `unavailable` date / note arms, fail-closed before the hidden check, a note after a failed showing write, the staff-view build path + `MAX_READS` 27 → 29 with FOUR pins, five fixtures, the rtbf pins, `inspectionSentinel`, `ComparableQuestionKey`, the key-list parity, the author CHECK, the date format per surface, the human-actor gate is print-only for this file, `assignment.claimCaseId`, quotes (CF4, "FULL", `-305` label), story-minted labels, X1 A tied in, AC2 / AC7 tagged, cite ranges. ⛔ No ruling moved. |

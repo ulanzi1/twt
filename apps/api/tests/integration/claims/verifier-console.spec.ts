@@ -1186,7 +1186,7 @@ describe.skipIf(!hasDatabase)('Verifier-console read surface — E2E (:5433)', (
     // section (its own exact test below: "the authoritative finally-approved-elsewhere section books EXACTLY one read").
     // Story 6.27a (PM13, PM25 (c)) — moved 23 → 26 by the peer-mesh section's three new reads (its own exact test:
     // `peer-answers-console.spec.ts`).
-    expect(VERIFIER_CONSOLE_MAX_READS).toBe(27); // Story 6.27b (code review round 2, S18) FROM 26 — +1; Story 6.27a (PM13, PM25 (c)) FROM 23 — +3
+    expect(VERIFIER_CONSOLE_MAX_READS).toBe(29); // Story 6.27d (R5) FROM 27 — +2: the claim's discrepancy showings and notes; Story 6.27b (code review round 2, S18) FROM 26 — +1; Story 6.27a (PM13, PM25 (c)) FROM 23 — +3
     const pariwarId = randomUUID();
     const deceased = await seedDeceasedMember(pariwarId, DISTRICT);
     const claimCaseId = await seedClaim(pariwarId, deceased);

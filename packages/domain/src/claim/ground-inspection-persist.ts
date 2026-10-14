@@ -76,6 +76,10 @@ import {
   type GroundInspectionPhotoKind,
   claimGroundInspectionPhotos,
 } from '../schema/claim_ground_inspection_photos.js';
+import {
+  claimGroundInspectionDiscrepancyNotes,
+  claimGroundInspectionDiscrepancyShowings,
+} from '../schema/claim_ground_inspection_discrepancies.js';
 import type { DeathCertificateUploadId } from '../ids/index.js';
 import { currentDeathCertificateUploadIdSql, readDeathCertificateSnapshot } from './death-certificate-approval.js';
 import {
@@ -88,12 +92,21 @@ import {
   GroundInspectionNotActiveError,
   GroundInspectionOriginalCertificateRequiredError,
   GroundInspectionPhotoRequiredError,
+  InspectionDiscrepancyNoteExistsError,
+  InspectionDiscrepancyNotShownError,
+  OwnGroundVisitPendingError,
 } from './errors.js';
 import { isRealCalendarDate } from './nominee-determination-persist.js';
 import { getClaimCase, lockClaimCase } from './read.js';
 import { projectClaimState } from './project.js';
 import { isClaimInAnswerWindow } from './answer-window.js';
-import { isSameActorId, normalizeActorId } from './approver-own-visit.js';
+import { isActorOwnVisitPending, isSameActorId, normalizeActorId } from './approver-own-visit.js';
+import {
+  type InspectionDiscrepancyKey,
+  type PeerAnswerForComparison,
+  deriveInspectionDiscrepancy,
+  inspectionDiscrepancyAnswersSql,
+} from './inspection-discrepancy.js';
 
 /** Max photos per assignment (AC3) — a LOCKED named const, NOT a configurable registry. A byte
  *  cap bounds total payload independently; 20 is a generous storage-abuse boundary. ⭐ `2026-10-07-286` H2:
@@ -304,7 +317,7 @@ function noteAuthor(notesCiphertext: string | null, actingActorId: string): stri
 /** Authorize an evidence-authoring verb: acting actor === assigned inspector, OR an explicit
  *  supervisor override (D6). The route already verified the override permission key. */
 function authorizeInspector(
-  assignment: ClaimGroundInspectionRow,
+  assignment: Pick<ClaimGroundInspectionRow, 'groundInspectionId' | 'inspectorActorId'>,
   actingActorId: string,
   override?: GroundInspectionOverride,
 ): void {
@@ -912,6 +925,13 @@ export interface CompleteGroundInspectionResult {
   /** `2026-10-07-286` H1 / `-287` J1 — how many of those are stamped with the COMPARED upload (the ones GI4 (i) counts;
    *  the rest were taken for a certificate since replaced). Non-PII audit count. */
   originalCertificatePhotoForComparedCount: number;
+  /**
+   * ⭐ Story 6.27d (AC3; R1, R2) — the inspector's discrepancy: the keys on which the family's account and a neighbour's
+   * LIVE answer differ, computed INSIDE this transaction under its locks (⛔ no KMS, ⛔ no values). `null` unless the
+   * visit recorded the family's account (`death_date_source = 'family_statement'`). ⛔ Never a showing — the API records
+   * that after this commits (`recordInspectionDiscrepancyShowing`).
+   */
+  discrepancy: { readonly questionKeys: InspectionDiscrepancyKey[] } | null;
 }
 
 /**
@@ -1055,7 +1075,326 @@ export async function completeGroundInspection(
     ...(input.auditId !== undefined ? { auditId: input.auditId } : {}),
   });
 
-  return { groundInspection: completed, photoCount, originalCertificatePhotoCount, originalCertificatePhotoForComparedCount };
+  // ⭐ Story 6.27d (AC3; R1, R2) — the comparison, INSIDE this transaction after the UPDATE: the claim row lock is held, so
+  // every answer write is ordered against `completed_at` ("saved by then" is exact). ⛔ No lock on answers (lock order
+  // assignment → claim here; answer writers go claim → ping → reply), ⛔ no KMS.
+  const discrepancy =
+    deathDate.source === 'family_statement'
+      ? {
+          questionKeys: deriveInspectionDiscrepancy({
+            answers: await readLiveInspectionDiscrepancyAnswers(db, input.pariwarId, assignment.claimCaseId),
+            familyDateIndex: deathDate.index,
+          }),
+        }
+      : null;
+
+  return { groundInspection: completed, photoCount, originalCertificatePhotoCount, originalCertificatePhotoForComparedCount, discrepancy };
+}
+
+// ── Story 6.27d — the inspector's discrepancy: the showing record and the re-ask notes (PM25 (a); AC3, AC5, AC6) ──────
+
+/** The claim's LIVE answers to the compared keys (submitted or not) — codes and window indexes ONLY. */
+async function readLiveInspectionDiscrepancyAnswers(db: Db, pariwarId: PariwarId, claimCaseId: ClaimId): Promise<PeerAnswerForComparison[]> {
+  const { rows } = await db.execute<{ answers: PeerAnswerForComparison[] | null }>(
+    sql`SELECT ${inspectionDiscrepancyAnswersSql(sql`${pariwarId}::uuid`, sql`${claimCaseId}::uuid`, null)} AS answers`,
+  );
+  return rows[0]?.answers ?? [];
+}
+
+/** A completed FULL visit (`family_statement` — R1) the discrepancy is about: what its readers need, ⛔ a value. */
+export interface InspectionDiscrepancyTarget {
+  readonly groundInspectionId: GroundInspectionId;
+  readonly claimCaseId: ClaimId;
+  readonly inspectorActorId: string;
+  /** Tier-1 AS STORED — the family's date, for the handler's display decrypt AFTER its transaction (R3). */
+  readonly deathDateCiphertext: string | null;
+}
+
+/** A recorded (or just-recorded) showing. */
+export interface InspectionDiscrepancyShowing {
+  readonly questionKeys: InspectionDiscrepancyKey[];
+  readonly shownAt: Date;
+}
+
+/**
+ * The assignment, ONLY when it is `completed` with `death_date_source = 'family_statement'` (R1 — keyed on the SOURCE,
+ * ⛔ the stage: a pre-0147 completed row can carry a NULL source). Anything else — `scheduled`, `superseded`, a refusal,
+ * a `certificate_check`, a NULL source, ⛔ in scope — throws `GroundInspectionNotFoundError` (ONE neutral 404).
+ * ⛔ No neighbour-derived data is read.
+ */
+export async function readInspectionDiscrepancyTarget(
+  db: Db,
+  pariwarId: PariwarId,
+  groundInspectionId: GroundInspectionId,
+): Promise<InspectionDiscrepancyTarget> {
+  const rows = await db
+    .select({
+      groundInspectionId: claimGroundInspections.groundInspectionId,
+      claimCaseId: claimGroundInspections.claimCaseId,
+      inspectorActorId: claimGroundInspections.inspectorActorId,
+      deathDateCiphertext: claimGroundInspections.deathDateCiphertext,
+      status: claimGroundInspections.status,
+      deathDateSource: claimGroundInspections.deathDateSource,
+    })
+    .from(claimGroundInspections)
+    .where(and(eq(claimGroundInspections.pariwarId, pariwarId), eq(claimGroundInspections.groundInspectionId, groundInspectionId)));
+  const row = rows[0];
+  if (!row || row.status !== 'completed' || row.deathDateSource !== 'family_statement') {
+    throw new GroundInspectionNotFoundError(groundInspectionId);
+  }
+  return {
+    groundInspectionId: row.groundInspectionId,
+    claimCaseId: row.claimCaseId,
+    inspectorActorId: row.inspectorActorId,
+    deathDateCiphertext: row.deathDateCiphertext,
+  };
+}
+
+/**
+ * ⭐ AC5 — record the showing in ONE guarded statement that ALSO reports whether the completion PERSISTED: the INSERT reads
+ * its parent (`completed` + `family_statement`) in the SAME statement, so a completion whose COMMIT was swallowed
+ * (`closeScopeTx`) yields `persisted = false` and ⛔ no row — the caller then answers `withheld`, ⛔ never `shown`.
+ * `ON CONFLICT DO NOTHING` — a concurrent un-hidden re-read may have recorded it first (same keys, by R2). Run in the
+ * caller's OWN transaction, AFTER the completion's committed — ⛔ never the completion's own.
+ */
+export async function recordInspectionDiscrepancyShowing(
+  db: Db,
+  input: { readonly pariwarId: PariwarId; readonly groundInspectionId: GroundInspectionId; readonly questionKeys: readonly InspectionDiscrepancyKey[] },
+): Promise<{ readonly persisted: boolean }> {
+  const keys = sql`ARRAY[${sql.join(
+    input.questionKeys.map((k) => sql`${k}`),
+    sql`, `,
+  )}]::text[]`;
+  const { rows } = await db.execute<{ persisted: boolean }>(sql`
+    WITH parent AS (
+      SELECT gi.pariwar_id, gi.claim_case_id, gi.ground_inspection_id
+        FROM claim_ground_inspections gi
+       WHERE gi.pariwar_id = ${input.pariwarId}::uuid
+         AND gi.ground_inspection_id = ${input.groundInspectionId}::uuid
+         AND gi.status = 'completed'
+         AND gi.death_date_source = 'family_statement'
+    ), ins AS (
+      INSERT INTO claim_ground_inspection_discrepancy_showings (pariwar_id, claim_case_id, ground_inspection_id, question_keys)
+      SELECT parent.pariwar_id, parent.claim_case_id, parent.ground_inspection_id, ${input.questionKeys.length === 0 ? sql`'{}'::text[]` : keys}
+        FROM parent
+      ON CONFLICT (ground_inspection_id) DO NOTHING
+      RETURNING 1
+    )
+    SELECT EXISTS (SELECT 1 FROM parent) AS persisted`);
+  return { persisted: rows[0]?.persisted === true };
+}
+
+async function readRecordedShowing(db: Db, pariwarId: PariwarId, groundInspectionId: GroundInspectionId): Promise<InspectionDiscrepancyShowing | null> {
+  const rows = await db
+    .select({ questionKeys: claimGroundInspectionDiscrepancyShowings.questionKeys, shownAt: claimGroundInspectionDiscrepancyShowings.shownAt })
+    .from(claimGroundInspectionDiscrepancyShowings)
+    .where(
+      and(
+        eq(claimGroundInspectionDiscrepancyShowings.pariwarId, pariwarId),
+        eq(claimGroundInspectionDiscrepancyShowings.groundInspectionId, groundInspectionId),
+      ),
+    );
+  const row = rows[0];
+  return row ? { questionKeys: row.questionKeys, shownAt: row.shownAt } : null;
+}
+
+/**
+ * ⭐ AC5 — the RECORDED showing; if ABSENT (a lost or withheld delivery, a failed post-commit write), RECOMPUTE it against
+ * the answers live AS OF the row's `completed_at` (exact by R2's clock basis — so an answer saved AFTER completion is
+ * ⛔ never in it, AC7), record it (`ON CONFLICT DO NOTHING`) and return the WINNER. Throws `GroundInspectionNotFoundError`
+ * unless the assignment is a completed FULL visit (R1). The CALLER has already refused a hidden reader (AC2) — ⛔ never call
+ * it for one (it WRITES the showing: "shown").
+ */
+export async function readOrRecomputeInspectionDiscrepancy(
+  db: Db,
+  pariwarId: PariwarId,
+  groundInspectionId: GroundInspectionId,
+): Promise<InspectionDiscrepancyShowing> {
+  const recorded = await readRecordedShowing(db, pariwarId, groundInspectionId);
+  if (recorded) return recorded;
+  const { rows } = await db.execute<{ death_date_index: string | null; answers: PeerAnswerForComparison[] | null }>(sql`
+    SELECT gi.death_date_index,
+           ${inspectionDiscrepancyAnswersSql(sql`gi.pariwar_id`, sql`gi.claim_case_id`, sql`gi.completed_at`)} AS answers
+      FROM claim_ground_inspections gi
+     WHERE gi.pariwar_id = ${pariwarId}::uuid
+       AND gi.ground_inspection_id = ${groundInspectionId}::uuid
+       AND gi.status = 'completed'
+       AND gi.death_date_source = 'family_statement'`);
+  const row = rows[0];
+  if (!row) throw new GroundInspectionNotFoundError(groundInspectionId);
+  const questionKeys = deriveInspectionDiscrepancy({ answers: row.answers ?? [], familyDateIndex: row.death_date_index });
+  await recordInspectionDiscrepancyShowing(db, { pariwarId, groundInspectionId, questionKeys });
+  const winner = await readRecordedShowing(db, pariwarId, groundInspectionId);
+  if (!winner) throw new GroundInspectionNotFoundError(groundInspectionId);
+  return winner;
+}
+
+/** One re-ask note AS STORED (Tier-1 ciphertext — the handler decrypts, outside any lock). */
+export interface InspectionDiscrepancyNoteRow {
+  readonly groundInspectionId: GroundInspectionId;
+  readonly questionKey: InspectionDiscrepancyKey;
+  readonly noteCiphertext: string;
+  readonly authorActorId: string;
+  readonly authorDisplay: string;
+  readonly notedAt: Date;
+}
+
+const NOTE_COLUMNS = {
+  groundInspectionId: claimGroundInspectionDiscrepancyNotes.groundInspectionId,
+  questionKey: claimGroundInspectionDiscrepancyNotes.questionKey,
+  noteCiphertext: claimGroundInspectionDiscrepancyNotes.noteCiphertext,
+  authorActorId: claimGroundInspectionDiscrepancyNotes.authorActorId,
+  authorDisplay: claimGroundInspectionDiscrepancyNotes.authorDisplay,
+  notedAt: claimGroundInspectionDiscrepancyNotes.notedAt,
+} as const;
+
+/** ALL of an assignment's notes, WITH their author (R4a), oldest first. */
+export async function readInspectionDiscrepancyNotes(
+  db: Db,
+  pariwarId: PariwarId,
+  groundInspectionId: GroundInspectionId,
+): Promise<InspectionDiscrepancyNoteRow[]> {
+  return db
+    .select(NOTE_COLUMNS)
+    .from(claimGroundInspectionDiscrepancyNotes)
+    .where(
+      and(
+        eq(claimGroundInspectionDiscrepancyNotes.pariwarId, pariwarId),
+        eq(claimGroundInspectionDiscrepancyNotes.groundInspectionId, groundInspectionId),
+      ),
+    )
+    .orderBy(claimGroundInspectionDiscrepancyNotes.notedAt, claimGroundInspectionDiscrepancyNotes.questionKey);
+}
+
+/** A claim's recorded showing, for the staff view (R5) — WITH its inspection's `completed_at`. */
+export interface ClaimInspectionDiscrepancyShowingRow {
+  readonly groundInspectionId: GroundInspectionId;
+  readonly completedAt: Date;
+  readonly shownAt: Date;
+  readonly questionKeys: InspectionDiscrepancyKey[];
+}
+
+/** R5 — the claim's showings in ONE statement (per CLAIM, ⛔ per assignment), oldest first. */
+export async function readClaimInspectionDiscrepancyShowings(
+  db: Db,
+  pariwarId: PariwarId,
+  claimCaseId: ClaimId,
+): Promise<ClaimInspectionDiscrepancyShowingRow[]> {
+  const rows = await db
+    .select({
+      groundInspectionId: claimGroundInspectionDiscrepancyShowings.groundInspectionId,
+      completedAt: claimGroundInspections.completedAt,
+      shownAt: claimGroundInspectionDiscrepancyShowings.shownAt,
+      questionKeys: claimGroundInspectionDiscrepancyShowings.questionKeys,
+    })
+    .from(claimGroundInspectionDiscrepancyShowings)
+    .innerJoin(
+      claimGroundInspections,
+      and(
+        eq(claimGroundInspections.pariwarId, claimGroundInspectionDiscrepancyShowings.pariwarId),
+        eq(claimGroundInspections.groundInspectionId, claimGroundInspectionDiscrepancyShowings.groundInspectionId),
+      ),
+    )
+    .where(
+      and(
+        eq(claimGroundInspectionDiscrepancyShowings.pariwarId, pariwarId),
+        eq(claimGroundInspectionDiscrepancyShowings.claimCaseId, claimCaseId),
+      ),
+    )
+    .orderBy(claimGroundInspectionDiscrepancyShowings.shownAt, claimGroundInspectionDiscrepancyShowings.groundInspectionId);
+  // `completed_at` is NOT NULL on a completed row (the showing's parent guard requires one).
+  return rows.map((r) => ({ ...r, completedAt: r.completedAt as Date }));
+}
+
+/** R5 — the claim's notes in ONE statement (per CLAIM), oldest first. */
+export async function readClaimInspectionDiscrepancyNotes(
+  db: Db,
+  pariwarId: PariwarId,
+  claimCaseId: ClaimId,
+): Promise<InspectionDiscrepancyNoteRow[]> {
+  return db
+    .select(NOTE_COLUMNS)
+    .from(claimGroundInspectionDiscrepancyNotes)
+    .where(and(eq(claimGroundInspectionDiscrepancyNotes.pariwarId, pariwarId), eq(claimGroundInspectionDiscrepancyNotes.claimCaseId, claimCaseId)))
+    .orderBy(claimGroundInspectionDiscrepancyNotes.notedAt, claimGroundInspectionDiscrepancyNotes.questionKey);
+}
+
+export interface RecordInspectionDiscrepancyNoteInput {
+  pariwarId: PariwarId;
+  groundInspectionId: GroundInspectionId;
+  actingActorId: string;
+  override?: GroundInspectionOverride;
+  questionKey: InspectionDiscrepancyKey;
+  /** ALREADY encrypted by the handler (Tier-1, `ground_inspection` — R6), BEFORE this transaction (Trap 9). */
+  noteCiphertext: string;
+  /** The writer's stored admin display name, resolved by the handler (R4a). */
+  authorDisplay: string;
+}
+
+/**
+ * ⭐ AC6 — the family's re-told answer, ONE per (assignment, question). The order, all in the caller's ONE transaction:
+ *   1. the assignment read — ⛔ a completed FULL visit ⇒ `GroundInspectionNotFoundError` (404); the identity guard;
+ *   2. `lockClaimInWindow` — the ONE answer window (⛔ never re-composed) ⇒ `GroundInspectionClaimNotInVerificationError`;
+ *   3. the HIDDEN check — the ONE predicate ⇒ `OwnGroundVisitPendingError`, BEFORE 4–5, so the refusal never depends on
+ *      the showing (AC2 — otherwise 201 vs 409 `discrepancy_not_shown` would tell a hidden supervisor what a neighbour said);
+ *   4. the showing — recorded, else recomputed and recorded (a completion whose post-commit write failed still accepts the
+ *      note) ⇒ a key ⛔ in it: `InspectionDiscrepancyNotShownError`;
+ *   5. the exists pre-check under the claim lock (exact — every note writer on the claim takes it) ⇒
+ *      `InspectionDiscrepancyNoteExistsError` (the UNIQUE's 23505 is the backstop, mapped to the same error);
+ *   6. the INSERT (`noted_at clock_timestamp()`, the author through `normalizeActorId`).
+ * The completed inspection row is ⛔ never changed.
+ */
+export async function recordInspectionDiscrepancyNote(
+  client: pg.PoolClient,
+  input: RecordInspectionDiscrepancyNoteInput,
+): Promise<{ readonly questionKey: InspectionDiscrepancyKey; readonly notedAt: Date; readonly authorActorId: string; readonly authorDisplay: string }> {
+  const db = bindScopedDb(client);
+  const target = await readInspectionDiscrepancyTarget(db, input.pariwarId, input.groundInspectionId);
+  authorizeInspector(target, input.actingActorId, input.override);
+  await lockClaimInWindow(db, input.pariwarId, target.claimCaseId);
+  if (await isActorOwnVisitPending(db, input.pariwarId, target.claimCaseId, input.actingActorId)) {
+    throw new OwnGroundVisitPendingError(target.claimCaseId);
+  }
+  const showing = await readOrRecomputeInspectionDiscrepancy(db, input.pariwarId, input.groundInspectionId);
+  if (!showing.questionKeys.includes(input.questionKey)) {
+    throw new InspectionDiscrepancyNotShownError(input.groundInspectionId, input.questionKey);
+  }
+  const existing = await db
+    .select({ questionKey: claimGroundInspectionDiscrepancyNotes.questionKey })
+    .from(claimGroundInspectionDiscrepancyNotes)
+    .where(
+      and(
+        eq(claimGroundInspectionDiscrepancyNotes.pariwarId, input.pariwarId),
+        eq(claimGroundInspectionDiscrepancyNotes.groundInspectionId, input.groundInspectionId),
+        eq(claimGroundInspectionDiscrepancyNotes.questionKey, input.questionKey),
+      ),
+    );
+  if (existing.length > 0) throw new InspectionDiscrepancyNoteExistsError(input.groundInspectionId, input.questionKey);
+  const authorActorId = normalizeActorId(input.actingActorId);
+  try {
+    const rows = await db
+      .insert(claimGroundInspectionDiscrepancyNotes)
+      .values({
+        pariwarId: input.pariwarId,
+        claimCaseId: target.claimCaseId,
+        groundInspectionId: input.groundInspectionId,
+        questionKey: input.questionKey,
+        noteCiphertext: input.noteCiphertext,
+        authorActorId,
+        authorDisplay: input.authorDisplay,
+        notedAt: sql`clock_timestamp()`,
+      })
+      .returning({ notedAt: claimGroundInspectionDiscrepancyNotes.notedAt });
+    return { questionKey: input.questionKey, notedAt: rows[0]!.notedAt, authorActorId, authorDisplay: input.authorDisplay };
+  } catch (err) {
+    if (pgErrorCode(err) === '23505') throw new InspectionDiscrepancyNoteExistsError(input.groundInspectionId, input.questionKey);
+    throw err;
+  }
+}
+
+/** A pg error's SQLSTATE, whether surfaced at the top level or wrapped by drizzle under `.cause`. */
+function pgErrorCode(err: unknown): string | undefined {
+  return (err as { code?: string }).code ?? (err as { cause?: { code?: string } }).cause?.code;
 }
 
 export interface RecordGroundInspectionRefusalInput {

@@ -13,7 +13,8 @@ import { type UseMutationResult, useMutation, useQuery, useQueryClient } from '@
 
 import { ApiError } from '../../api/client.js';
 import * as api from '../../api/client.js';
-import { withheldNoteWords } from '../claim-verification/WithheldNote.js';
+import { useSession } from '../../api/hooks.js';
+import { WithheldNote, withheldNoteWords } from '../claim-verification/WithheldNote.js';
 import { resolveEn as t } from './i18n-en.js';
 
 // ⚠ The page's OWN copies of the domain tuples (it imports no domain package) — kept in step by hand.
@@ -48,7 +49,29 @@ const WORDED_ERROR_CODES = [
   'death_date_required',
   'death_date_in_future',
   'invalid_death_facts',
+  // Story 6.27d (AC6) — the note write's refusals.
+  'not_allowed',
+  'own_ground_visit_pending',
+  'discrepancy_note_exists',
 ] as const;
+
+/**
+ * ⭐ Story 6.27d — the inspector's discrepancy result, cached per assignment in the SAME `{ discrepancy, notes }` shape the
+ * re-read returns. The completion SEEDS it (the action unmounts once the list refetch shows the card `completed`, losing
+ * `mutation.data`); the defaults keep a seed (⛔ garbage-collected, ⛔ refetched on mount — the app-wide defaults are
+ * `gcTime: 0` / `refetchOnMount: 'always'`), so a seeded result is served WITHOUT a fetch.
+ */
+const DISCREPANCY_ROOT = 'ground-inspection-discrepancy';
+const discrepancyKey = (pariwarId: string, groundInspectionId: string) => [DISCREPANCY_ROOT, pariwarId, groundInspectionId] as const;
+const DISCREPANCY_QUERY_DEFAULTS = { staleTime: Infinity, gcTime: Infinity, refetchOnMount: false, refetchOnWindowFocus: false } as const;
+
+/**
+ * The domain's `normalizeActorId` rule (trim the six ASCII whitespace characters, then lower-case), as a LOCAL helper —
+ * the admin is a browser bundle and ⛔ imports `@twt/domain`. A convenience only (which cards fetch on their own): the
+ * server's identity guard is the boundary.
+ */
+const ACTOR_ID_TRIM = /^[ \t\n\v\f\r]+|[ \t\n\v\f\r]+$/g;
+const normalizeActorId = (id: string): string => id.replace(ACTOR_ID_TRIM, '').toLowerCase();
 
 export interface GroundInspectionPageProps {
   pariwarId: string;
@@ -402,6 +425,10 @@ function AssignmentCard(props: {
         );
       })}
       {a.status === 'completed' && a.originalCertificateVerdict !== null && <InspectorRecord assignment={a} />}
+      {/* ⭐ Story 6.27d — ONLY a completed FULL visit (keyed on the family's account, ⛔ the stage — R1); ⛔ a scheduled card. */}
+      {a.status === 'completed' && a.deathDateSource === 'family_statement' && (
+        <DiscrepancyPanel pariwarId={props.pariwarId} claimCaseId={props.claimCaseId} assignment={a} />
+      )}
       {isActive && (
         <div className="flex flex-wrap items-start gap-4">
           <PhotoUpload {...props} certificate={certificate} />
@@ -556,6 +583,7 @@ function CompleteAction(props: {
   const originalPhotos = originals.length;
   const originalPhotosForCompared =
     comparedToken === undefined ? originalPhotos : originals.filter((p) => p.certificateToken?.toLowerCase() === comparedToken).length;
+  const qc = useQueryClient();
   const mutation = useMutation({
     mutationFn: () =>
       api.completeGroundInspection(props.pariwarId, props.claimCaseId, props.assignment.groundInspectionId, {
@@ -564,7 +592,17 @@ function CompleteAction(props: {
         deathDate,
         ...(!isCheck && deathTime !== '' ? { deathTime } : {}),
       }),
-    onSuccess: () => props.onMutated(),
+    onSuccess: (data) => {
+      // ⭐ Story 6.27d — SEED the result BEFORE the list refetch unmounts this action (`mutation.data` is lost with it).
+      if (data.discrepancy !== null) {
+        qc.setQueryDefaults([DISCREPANCY_ROOT], DISCREPANCY_QUERY_DEFAULTS);
+        qc.setQueryData<api.InspectionDiscrepancyReadT>(discrepancyKey(props.pariwarId, props.assignment.groundInspectionId), {
+          discrepancy: data.discrepancy,
+          notes: [],
+        });
+      }
+      props.onMutated();
+    },
     onError: (err) => {
       // The stale compared-certificate token must ⛔ never be resubmitted as-is (review 2026-10-07) — clear it
       // so `ready` goes false, AND clear the verdict/date/time the inspector judged against the OLD certificate
@@ -628,6 +666,170 @@ function CompleteAction(props: {
         <p className="text-xs text-amber-700">{t('gi.action.completeNeedsComparedOriginalPhoto')}</p>
       )}
       {mutation.isError && <p role="alert" className="text-xs text-red-600">{errorText(mutation.error)}</p>}
+    </div>
+  );
+}
+
+/**
+ * ⭐ Story 6.27d (AC2, AC4 – AC6; R3, R4, R4a) — the result of a completed FULL visit, as the inspector sees it: the
+ * withheld shape (`<WithheldNote>`), "no difference" (ruled copy), or the differences — ONE line per question (ruled
+ * copy; ⛔ a neighbour's value, ⛔ who, ⛔ how many) with ONE note box each. It FETCHES on its own only for a seeded result
+ * (served from the cache) or when the session IS the assigned inspector; every other viewer gets an on-demand "Show the
+ * result" (the page ⛔ cannot tell an override holder — a non-holder's click is the server's 403, one audited denial per
+ * click, ⛔ an automatic fetch per card). ⛔ Never inside the "Other claims for this death" section (6.27a Trap 5).
+ */
+function DiscrepancyPanel(props: { pariwarId: string; claimCaseId: string; assignment: api.GroundInspectionAssignmentT }): ReactElement {
+  const qc = useQueryClient();
+  const session = useSession();
+  const gid = props.assignment.groundInspectionId;
+  const key = discrepancyKey(props.pariwarId, gid);
+  const [requested, setRequested] = useState(false);
+  const viewerId = session.data?.userId ?? null;
+  const isInspector = viewerId !== null && normalizeActorId(viewerId) === normalizeActorId(props.assignment.inspectorActorId);
+  const seeded = qc.getQueryData(key) !== undefined;
+  const enabled = seeded || isInspector || requested;
+  const query = useQuery({
+    queryKey: key,
+    queryFn: () => api.getInspectionDiscrepancy(props.pariwarId, props.claimCaseId, gid),
+    enabled,
+    ...DISCREPANCY_QUERY_DEFAULTS,
+  });
+
+  let body: ReactElement;
+  if (!enabled) {
+    body = (
+      <button className="self-start rounded border px-2 py-1 text-sm" type="button" onClick={() => setRequested(true)}>
+        {t('gi.discrepancy.show')}
+      </button>
+    );
+  } else if (query.data === undefined) {
+    body = query.isError ? (
+      <p role="alert" className="text-sm text-red-600">
+        {errorText(query.error)}
+      </p>
+    ) : (
+      <p role="status" className="text-sm">
+        {t('gi.discrepancy.loading')}
+      </p>
+    );
+  } else if (query.data.discrepancy.state === 'withheld') {
+    body = <WithheldNote reason={query.data.discrepancy.reason} testId="gi-discrepancy-withheld" />;
+  } else if (query.data.discrepancy.questionKeys.length === 0) {
+    body = <p data-testid="gi-discrepancy-none">{t('gi.discrepancy.none')}</p>;
+  } else {
+    const d = query.data.discrepancy;
+    const notes = query.data.notes;
+    body = (
+      <div className="flex flex-col gap-2" data-testid="gi-discrepancy-found">
+        <p>{t('gi.discrepancy.found')}</p>
+        <ul className="flex flex-col gap-3">
+          {d.questionKeys.map((k) => (
+            <li key={k} className="flex flex-col gap-1" data-testid={`gi-discrepancy-${k}`}>
+              <span>
+                {k === 'has_died'
+                  ? t('gi.discrepancy.has_died')
+                  : t('gi.discrepancy.death_date').replace(
+                      '{familyDeathDate}',
+                      d.familyDeathDate?.status === 'shown' ? d.familyDeathDate.date : '—',
+                    )}
+              </span>
+              <DiscrepancyNoteBox
+                pariwarId={props.pariwarId}
+                claimCaseId={props.claimCaseId}
+                groundInspectionId={gid}
+                questionKey={k}
+                existing={notes.find((n) => n.questionKey === k) ?? null}
+                viewerId={viewerId}
+                onChanged={() => void query.refetch()}
+              />
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
+  }
+  return (
+    <section aria-label={t('gi.discrepancy.region')} className="flex flex-col gap-2 rounded border p-3 text-sm" data-testid="gi-discrepancy">
+      {body}
+    </section>
+  );
+}
+
+/** ONE note box per differing question: read-only once recorded (with its author when ⛔ the viewer's own — R4a). */
+function DiscrepancyNoteBox(props: {
+  pariwarId: string;
+  claimCaseId: string;
+  groundInspectionId: string;
+  questionKey: api.InspectionDiscrepancyKeyT;
+  existing: api.InspectionDiscrepancyNoteT | null;
+  viewerId: string | null;
+  onChanged: () => void;
+}): ReactElement {
+  const [text, setText] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<unknown>(null);
+  const [announcement, setAnnouncement] = useState('');
+  // Per-call `mutateAsync().then` — a mutation's own callbacks fire for the LATEST call only, and each box saves its own.
+  const mutation = useMutation({
+    mutationFn: (note: string) =>
+      api.recordInspectionDiscrepancyNote(props.pariwarId, props.claimCaseId, props.groundInspectionId, { questionKey: props.questionKey, note }),
+  });
+  const save = (): void => {
+    setSaving(true);
+    setError(null);
+    mutation.mutateAsync(text).then(
+      () => {
+        setSaving(false);
+        setText('');
+        setAnnouncement(t('gi.discrepancy.saved'));
+        props.onChanged();
+      },
+      (err: unknown) => {
+        setSaving(false);
+        setError(err);
+        // The box was filled meanwhile (by an override holder, or another tab) — re-read, and SHOW whose it is.
+        if (err instanceof ApiError && err.code === 'ground_inspection.discrepancy_note_exists') props.onChanged();
+      },
+    );
+  };
+  const live = (
+    <p role="status" aria-live="polite" className="sr-only">
+      {announcement}
+    </p>
+  );
+  if (props.existing !== null) {
+    const n = props.existing;
+    const own = props.viewerId !== null && normalizeActorId(props.viewerId) === normalizeActorId(n.authorActorId);
+    return (
+      <div className="flex flex-col gap-1 rounded bg-gray-50 p-2" data-testid={`gi-discrepancy-note-${props.questionKey}`}>
+        <span className="text-xs font-medium text-gray-700">
+          {own ? t('gi.discrepancy.recorded') : t('gi.discrepancy.recordedBy').replace('{author}', n.authorDisplay)}
+        </span>
+        <span>{typeof n.note === 'string' ? n.note : t('gi.discrepancy.noteUnavailable')}</span>
+        {live}
+      </div>
+    );
+  }
+  return (
+    <div className="flex flex-col gap-1">
+      <label className="flex flex-col text-sm">
+        {t('gi.discrepancy.noteLabel')}
+        <textarea className="rounded border px-2 py-1" value={text} onChange={(e) => setText(e.target.value)} rows={2} />
+      </label>
+      <button
+        className="self-start rounded bg-blue-600 px-2 py-1 text-sm text-white disabled:opacity-50"
+        type="button"
+        disabled={saving || text.trim() === ''}
+        onClick={save}
+      >
+        {saving ? t('gi.discrepancy.saving') : t('gi.discrepancy.save')}
+      </button>
+      {error !== null && (
+        <p role="alert" className="text-xs text-red-600">
+          {errorText(error)}
+        </p>
+      )}
+      {live}
     </div>
   );
 }

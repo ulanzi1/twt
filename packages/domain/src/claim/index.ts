@@ -30,6 +30,9 @@ export * from './peer-mesh-reply.js';
 // accessor (getClaimGroundInspection — ciphertext AS STORED; the AC5 absence-is-a-signal read).
 export * from './ground-inspection-persist.js';
 export * from './ground-inspection-read.js';
+// Story 6.27d — the inspector's discrepancy comparison: the rule table, the ONE per-answer predicate (shared with 6.27b's
+// warnings) and the answers fragment. Its writers live in `ground-inspection-persist.ts` (beside `lockClaimInWindow`).
+export * from './inspection-discrepancy.js';
 // Story 6.26a (GI1 / GI2) — the ground-inspection approval conjunct: ONE pure predicate over ONE read, used by
 // the approval gate and the verifier console's "why it waits" section.
 export * from './ground-inspection-approval.js';

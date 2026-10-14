@@ -33,9 +33,11 @@
 // of this answer, INCLUDING one removed when an earlier answer changed (a date removed when `has_died` became "not sure")
 // and a re-entry of the same value.
 // Reads (each counted by `bump`, each run through `ctx.run` — the console's SAVEPOINT): the hide check, the selection, the
-// pings, the responses, the answers (one bounded statement), and — ONLY when there is a ping — the contacts (review S25).
+// pings, the responses, the answers (one bounded statement), the inspector's discrepancy showings and notes (Story 6.27d —
+// two, per claim), and — ONLY when there is a ping — the contacts (review S25).
 
 import {
+  type InspectionDiscrepancyStaffView,
   PEER_MESH_SEND_STATUSES,
   type PeerMeshAnswerView,
   type PeerMeshPingView,
@@ -47,6 +49,7 @@ import { t } from '@twt/i18n';
 import type { EncryptionDeps } from '../../context.js';
 import { decryptKycField } from '../kyc/kyc-crypto.js';
 import { decryptPeerAnswer, sensitivePlaintextToValue } from './peer-request-core.js';
+import { decryptGroundInspectionField } from './ground-inspection-crypto.js';
 
 /**
  * Story 6.27b (`-328` read with `-329`) — WHO is reading, for the call-back number's four rules (the header). Each caller
@@ -106,6 +109,8 @@ export type PeerSection =
       readonly pingMemberIds: readonly string[];
       readonly responses: Awaited<ReturnType<typeof claim.getPeerMeshResponses>>;
       readonly pings: UnstitchedPeerMeshPingView[];
+      /** ⭐ Story 6.27d (R5) — the claim's recorded inspector discrepancies, with their notes (decrypted here). */
+      readonly inspectionDiscrepancies: InspectionDiscrepancyStaffView[];
     };
 
 const enWords = (key: string, member: string): string => t(key, { member }, { locale: 'en', namespace: 'claim' });
@@ -146,6 +151,16 @@ export async function assemblePeerSection(
   const responses = await run('peer_section_responses', () => claim.getPeerMeshResponses(ctx.db, claimCaseId));
   bump();
   const { replies, answers } = await run('peer_section_answers', () => claim.readPeerAnswersForClaim(ctx.db, pariwarId, claimCaseId));
+  // ⭐ Story 6.27d (R5) — the inspector's discrepancy showings and re-ask notes, PER CLAIM (two reads, ⛔ per assignment),
+  // AFTER the hide above: the audience is exactly the one already entitled to every neighbour answer.
+  bump();
+  const discrepancyShowings = await run('peer_section_discrepancy_showings', () =>
+    claim.readClaimInspectionDiscrepancyShowings(ctx.db, pariwarId, claimCaseId),
+  );
+  bump();
+  const discrepancyNotes = await run('peer_section_discrepancy_notes', () =>
+    claim.readClaimInspectionDiscrepancyNotes(ctx.db, pariwarId, claimCaseId),
+  );
   let contacts = new Map<string, { readonly nameCiphertext: string | null; readonly mobileCiphertext: string | null }>();
   if (pingRows.length > 0) {
     bump();
@@ -256,9 +271,34 @@ export async function assemblePeerSection(
     });
   }
 
+  // ── Story 6.27d (R5, R4a) — each recorded showing with its notes; a note that cannot be decrypted (or was erased) is
+  // `unavailable`, ⛔ never blank, ⛔ never the sentinel text. ──
+  const inspectionDiscrepancies: InspectionDiscrepancyStaffView[] = [];
+  for (const sh of discrepancyShowings) {
+    const notes: InspectionDiscrepancyStaffView['notes'] = [];
+    for (const n of discrepancyNotes.filter((x) => x.groundInspectionId === sh.groundInspectionId)) {
+      let note: InspectionDiscrepancyStaffView['notes'][number]['note'];
+      try {
+        const text = await decryptGroundInspectionField(n.noteCiphertext, ctx.pariwarId, enc);
+        note = text === memberDomain.ANONYMIZED_SENTINEL ? { status: 'unavailable' } : text;
+      } catch (err) {
+        warn('discrepancy_note', err);
+        note = { status: 'unavailable' };
+      }
+      notes.push({ questionKey: n.questionKey, note, notedAt: n.notedAt.toISOString(), authorDisplay: n.authorDisplay });
+    }
+    inspectionDiscrepancies.push({
+      groundInspectionId: sh.groundInspectionId,
+      completedAt: sh.completedAt.toISOString(),
+      shownAt: sh.shownAt.toISOString(),
+      questionKeys: [...sh.questionKeys],
+      notes,
+    });
+  }
+
   // The section is whole — only NOW is each shown mobile reported (review S17).
   for (const { pingId, basis } of shown) ctx.onCallbackMobileShown(pingId, basis);
-  return { kind: 'present', selection, pingMemberIds: pingRows.map((p) => p.memberId), responses, pings };
+  return { kind: 'present', selection, pingMemberIds: pingRows.map((p) => p.memberId), responses, pings, inspectionDiscrepancies };
 }
 
 /**
@@ -305,6 +345,8 @@ export async function assemblePeerMeshSection(
         outcome: selection.outcome,
         windowExpiresAt: selection.responseWindowExpiresAt.toISOString(),
         pings: section.pings,
+        // Story 6.27d (R5) — REQUIRED, possibly empty.
+        inspectionDiscrepancies: section.inspectionDiscrepancies,
       },
     };
   } catch (err) {

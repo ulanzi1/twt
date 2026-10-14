@@ -37,6 +37,8 @@ const present = {
       outcome: 'sufficient',
       windowExpiresAt: '2026-10-15T00:00:00.000Z',
       pings: [ping],
+      // Story 6.27d (R5) — REQUIRED, possibly empty.
+      inspectionDiscrepancies: [],
     },
   },
 };
@@ -47,6 +49,31 @@ describe('ClaimPeerAnswersResponse (Story 6.27b, PM24)', () => {
     expect(ClaimPeerAnswersResponse.safeParse({ peerMesh: { status: 'empty' } }).success).toBe(true);
     expect(ClaimPeerAnswersResponse.safeParse({ peerMesh: { status: 'unavailable' } }).success).toBe(true);
     expect(ClaimPeerAnswersResponse.safeParse(present).success).toBe(true);
+  });
+
+  it('Story 6.27d (R5) — `inspectionDiscrepancies` is REQUIRED; ⛔ a value, ⛔ a name, ⛔ a count field; a note is text or `unavailable`', () => {
+    const withD = (d: unknown) => ({ peerMesh: { ...present.peerMesh, transcript: { ...present.peerMesh.transcript, inspectionDiscrepancies: d } } });
+    const item = {
+      groundInspectionId: 'gi',
+      completedAt: '2026-10-12T00:00:00.000Z',
+      shownAt: '2026-10-12T00:00:01.000Z',
+      questionKeys: ['has_died', 'death_date'],
+      notes: [
+        { questionKey: 'has_died', note: 'They said he died at home.', notedAt: '2026-10-12T00:05:00.000Z', authorDisplay: 'Anita Sharma' },
+        { questionKey: 'death_date', note: { status: 'unavailable' }, notedAt: '2026-10-12T00:06:00.000Z', authorDisplay: 'Anita Sharma' },
+      ],
+    };
+    expect(ClaimPeerAnswersResponse.safeParse(withD([item])).success).toBe(true);
+    expect(ClaimPeerAnswersResponse.safeParse(withD([{ ...item, questionKeys: [] }])).success).toBe(true);
+    const missing: Record<string, unknown> = { ...present.peerMesh.transcript };
+    delete missing['inspectionDiscrepancies'];
+    expect(ClaimPeerAnswersResponse.safeParse({ peerMesh: { ...present.peerMesh, transcript: missing } }).success).toBe(false);
+    for (const extra of [{ valueCodes: ['not_died'] }, { neighbourName: 'Asha' }, { neighbourCount: 2 }]) {
+      expect(ClaimPeerAnswersResponse.safeParse(withD([{ ...item, ...extra }])).success, JSON.stringify(extra)).toBe(false);
+    }
+    expect(ClaimPeerAnswersResponse.safeParse(withD([{ ...item, questionKeys: ['death_cause'] }])).success).toBe(false);
+    expect(ClaimPeerAnswersResponse.safeParse(withD([{ ...item, notes: [{ ...item.notes[0], note: null }] }])).success).toBe(false);
+    expect(ClaimPeerAnswersResponse.safeParse(withD([{ ...item, notes: [{ ...item.notes[0], authorActorId: 'x' }] }])).success).toBe(false);
   });
 
   it('STRICT — ⛔ a `hidden` variant, ⛔ an extra field', () => {

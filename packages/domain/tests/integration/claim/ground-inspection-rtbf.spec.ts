@@ -2,6 +2,8 @@
 // ciphertexts are overwritten with the sentinel and the date's blind index NULLed, AS `twt_app` under the scope, on the
 // DECEASED member's claims — and the erasure SUCCEEDS on a claim carrying a COMPLETED inspection (0147's NOT VALID
 // completed-row CHECK is re-checked on every row the UPDATE rewrites: it must ⛔ never require the NULLed index).
+// ⭐ Story 6.27d (PM17 d's half, AC8) — the inspector's re-ask NOTES are scrubbed in the same block (0160's erasure arm
+// admits exactly that), and the showing (⛔ PII) is untouched.
 
 import { randomUUID } from 'node:crypto';
 
@@ -12,7 +14,14 @@ import { decryptTier1, parseEnvelope } from '../../../src/encryption/envelope.js
 import { createFakeKmsProvider } from '../../../src/encryption/index.js';
 import { claimId as toClaimId, memberId as toMemberId } from '../../../src/ids/index.js';
 import { ANONYMIZED_SENTINEL, anonymizeMember } from '../../../src/member/anonymize.js';
-import { addGroundInspectionPhoto, completeGroundInspection, scheduleGroundInspection } from '../../../src/claim/index.js';
+import {
+  addGroundInspectionPhoto,
+  completeGroundInspection,
+  recordInspectionDiscrepancyNote,
+  recordInspectionDiscrepancyShowing,
+  scheduleGroundInspection,
+} from '../../../src/claim/index.js';
+import { bindScopedDb } from '../../../src/db.js';
 import * as schema from '../../../src/schema/index.js';
 import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
 import { PARIWAR_A, driveClaimTo, enterAppScope, seedDeathCertificate, seedMember } from '../_helpers.js';
@@ -74,5 +83,51 @@ describe.skipIf(!hasDatabase)('Story 6.26a — RTBF over the inspection\'s date 
     });
     // A still-scheduled assignment has ⛔ no date — the scrub's `WHERE` never touches it.
     expect(rows.find((r) => r.groundInspectionId === open)).toMatchObject({ status: 'scheduled', deathDateCiphertext: null, deathTimeCiphertext: null });
+  });
+
+  it('⭐ Story 6.27d (PM17 d): the re-ask note → sentinel (the 0160 erasure arm admits the scrub); the showing untouched', async () => {
+    const { client, tx } = getTx();
+    const mid = await seedMember(tx, PARIWAR_A, { state: 'active' });
+    await enterAppScope(client, PARIWAR_A);
+    const cid = toClaimId(randomUUID());
+    await driveClaimTo(client, PARIWAR_A, cid, mid, 'verification_in_progress');
+    const { uploadId } = await seedDeathCertificate(client, { pariwarId: PARIWAR_A, claimCaseId: cid });
+    const gid = (
+      await scheduleGroundInspection(client, {
+        claimCaseId: cid, pariwarId: PARIWAR_A, district: 'Patna', inspectionStage: 'initial', inspectionSiteType: 'family_residence',
+        inspectorActorId: INSPECTOR, scheduledAt: new Date(), scheduledByActor: INSPECTOR, idempotencyKey: randomUUID(),
+      })
+    ).groundInspection.groundInspectionId;
+    await addGroundInspectionPhoto(client, {
+      pariwarId: PARIWAR_A, groundInspectionId: gid, actingActorId: INSPECTOR,
+      storageObjectKey: `k-${randomUUID()}`, contentType: 'image/jpeg', byteSize: 1, photoKind: 'original_certificate',
+      comparedCertificateUploadId: uploadId,
+    });
+    await completeGroundInspection(client, {
+      pariwarId: PARIWAR_A, groundInspectionId: gid, actingActorId: INSPECTOR, originalCertificateVerdict: 'matches',
+      comparedCertificateUploadId: uploadId,
+      deathDate: { plaintext: '2026-06-01', ciphertext: 'enc:v1:ZZ-DEATH-DATE', index: 'ZZ-DATE-INDEX', source: 'family_statement' },
+    });
+    await recordInspectionDiscrepancyShowing(bindScopedDb(client), { pariwarId: PARIWAR_A, groundInspectionId: gid, questionKeys: ['has_died'] });
+    await recordInspectionDiscrepancyNote(client, {
+      pariwarId: PARIWAR_A, groundInspectionId: gid, actingActorId: INSPECTOR, questionKey: 'has_died',
+      noteCiphertext: 'enc:v1:ZZ-RETOLD-ACCOUNT', authorDisplay: 'Inspector One',
+    });
+    const showing = async () =>
+      (await client.query('SELECT question_keys, shown_at FROM claim_ground_inspection_discrepancy_showings WHERE ground_inspection_id = $1', [gid])).rows;
+    const before = await showing();
+
+    await anonymizeMember(tx, { kms, kekRef }, { memberId: toMemberId(mid), pariwarId: PARIWAR_A });
+
+    const notes = (await client.query<{ note_ciphertext: string; author_display: string; question_key: string }>(
+      'SELECT note_ciphertext, author_display, question_key FROM claim_ground_inspection_discrepancy_notes WHERE ground_inspection_id = $1',
+      [gid],
+    )).rows;
+    expect(notes).toHaveLength(1);
+    expect(notes[0]!.note_ciphertext.includes('ZZ-RETOLD-ACCOUNT')).toBe(false);
+    expect(await dec(notes[0]!.note_ciphertext)).toBe(ANONYMIZED_SENTINEL);
+    // The staff attribution and the key are kept (staff data / ⛔ PII); the showing is untouched.
+    expect(notes[0]).toMatchObject({ author_display: 'Inspector One', question_key: 'has_died' });
+    expect(await showing()).toEqual(before);
   });
 });

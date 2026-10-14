@@ -407,6 +407,10 @@ export type AuthAuditEventType =
   // The completion line also gains photo_kind_counts + original_certificate_verdict + death_date_source — codes and
   // counts, ⛔ never a date, a time, a note or a name.
   | 'admin_ground_inspection.certificate_viewed'
+  // ⭐ Story 6.27d (AC6) — the inspector (or an override holder) recorded the family's re-told answer to ONE question the
+  // discrepancy screen showed. Codes only: claim_case_id + ground_inspection_id + question_key (+ override actor) — ⛔ never
+  // the note. The re-read emits ⛔ none (the showing row records when the result was first recorded).
+  | 'admin_ground_inspection.discrepancy_note_recorded'
   // ── Claim-time nominee bank collection surface (Story 6.8, FR-37 / Epic 6) ────
   // The dual-account (#1/#2) disbursement-detail collection — member-app (Ravi-mode) + helpline
   // twin. Post-commit SINK lines (the durable record is the claim.nominee_bank_recorded event).

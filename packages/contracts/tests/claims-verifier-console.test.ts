@@ -113,6 +113,16 @@ describe('VerifierConsolePacket — full round-trip + ordering', () => {
             callbackBasis: null,
           },
         ],
+        // Story 6.27d (R5) — REQUIRED: the claim's recorded inspector discrepancies, with their notes.
+        inspectionDiscrepancies: [
+          {
+            groundInspectionId: 'gi-1',
+            completedAt: '2026-10-12T00:00:00.000Z',
+            shownAt: '2026-10-12T00:00:01.000Z',
+            questionKeys: ['has_died' as const],
+            notes: [{ questionKey: 'has_died' as const, note: 'They said he died at home.', notedAt: '2026-10-12T00:05:00.000Z', authorDisplay: 'Anita Sharma' }],
+          },
+        ],
       },
     },
     groundInspection: { status: 'empty' as const },

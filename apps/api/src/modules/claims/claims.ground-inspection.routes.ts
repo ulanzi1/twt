@@ -110,6 +110,17 @@ const CompleteBody = z
   })
   .strict();
 
+/**
+ * ⭐ Story 6.27d (AC6) — the family's re-told answer to ONE differing question. `note` is `.min(1)` with ⛔ no `.max` —
+ * exactly as `CompleteBody.notes` (there is ⛔ no visit-notes limit to copy).
+ */
+const DiscrepancyNoteBody = z
+  .object({
+    questionKey: z.enum(domainSchema.INSPECTION_DISCREPANCY_QUESTION_KEYS),
+    note: z.string().min(1),
+  })
+  .strict();
+
 const RefusalBody = z
   .object({
     disposition: z.enum(['photo_refused', 'evidence_unavailable']),
@@ -261,6 +272,29 @@ export function registerGroundInspectionRoutes(app: FastifyInstance, deps: AppDe
       preHandler: [adminSession, scope, resolveAssignment, conductFromRow],
     },
     h.certificate,
+  );
+
+  // ⭐ Story 6.27d (AC5) — the inspector's RE-READ of their discrepancy result (+ ALL the assignment's notes). Gated as
+  // `complete` (the row's dimension) PLUS the D6 identity guard in the handler (the assigned inspector, or an override
+  // holder); the hidden check is the handler's.
+  r.get(
+    '/api/v1/p/:pariwarId/admin/claims/:claimCaseId/ground-inspection/:ground_inspection_id/discrepancy',
+    {
+      schema: { params: InspectionParam, tags: [TAG] },
+      preHandler: [adminSession, scope, resolveAssignment, conductFromRow],
+    },
+    h.discrepancy,
+  );
+
+  // ⭐ Story 6.27d (AC6) — the family's re-told answer, ONE per differing question. Gated as `complete`; the identity guard,
+  // the window, the hidden refusal and the showing are the handler's / writer's.
+  r.post(
+    '/api/v1/p/:pariwarId/admin/claims/:claimCaseId/ground-inspection/:ground_inspection_id/discrepancy-notes',
+    {
+      schema: { params: InspectionParam, body: DiscrepancyNoteBody, tags: [TAG] },
+      preHandler: [adminSession, scope, resolveAssignment, conductFromRow],
+    },
+    h.recordDiscrepancyNote,
   );
 
   // AC4a — refusal disposition (district from row; + inspector guard in the handler).

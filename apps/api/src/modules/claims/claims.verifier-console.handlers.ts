@@ -235,7 +235,14 @@ const SIGNED_URL_TTL_SECONDS = 300;
  * warnings (which stay LAST); a failure withholds every precedent's note (fail CLOSED — the V11 trade-off). ⭐ Ledger line:
  *   + Story 6.27b (S18 / V6): the precedents' claims a hidden reader must ⛔ not read notes on      +1  → 27
  */
-export const VERIFIER_CONSOLE_MAX_READS = 27;
+/*
+ * ⭐ STORY 6.27d's TWO READS (R5) — the inspector's discrepancy as staff see it lives ONLY inside the neighbours' section
+ * (its audience is exactly the one entitled to every neighbour answer), so the assembler reads the claim's recorded
+ * showings and their re-ask notes — ONE statement each, PER CLAIM (⛔ per assignment), AFTER the section's own hide. The
+ * notes decrypt in the handler, outside any lock. ⭐ Ledger line:
+ *   + Story 6.27d (R5): the claim's discrepancy showings, the claim's discrepancy notes             +2  → 29
+ */
+export const VERIFIER_CONSOLE_MAX_READS = 29;
 
 /** Counts the assembler's top-level bounded source reads (the no-N+1 fan-out width). */
 class ReadCounter {

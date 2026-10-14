@@ -116,6 +116,8 @@ const PRESENT_PACKET: VerifierConsolePacket = {
         },
         { pingId: 'py', memberId: 'y', responderName: { status: 'unavailable' }, sendStatus: 'no_target', noTargetReason: 'no_target:peer_not_active', reply: null, callbackMobile: { status: 'none' }, callbackBasis: null },
       ],
+      // Story 6.27d (R5) — REQUIRED, possibly empty.
+      inspectionDiscrepancies: [],
     },
   },
   groundInspection: { status: 'empty' },

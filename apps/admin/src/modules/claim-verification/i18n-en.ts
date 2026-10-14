@@ -137,6 +137,18 @@ export const verifierConsoleEn = {
       death_date: '⚠ More than a day from the date on the accepted death certificate',
       unknown: 'Warning could not be checked just now',
     },
+    // ⭐ Story 6.27d (R5, R4a; AC6) — the inspector's discrepancy, story-minted English (⛔ ruled copy): which questions the
+    // inspector was shown as differing at completion, and the family's re-told answers, each with its author.
+    inspectionDiscrepancy: {
+      heading: "The ground inspector's re-check with the family",
+      shown: (completedAt: string, shownAt: string) => `Visit completed ${completedAt} · result recorded ${shownAt}`,
+      noDifference: 'No difference from the neighbours was shown to the inspector.',
+      question: { has_died: 'Whether the member has died', death_date: 'The date of death' },
+      label: 'Recorded after the difference was shown',
+      by: (author: string, at: string) => `${author}, ${at}`,
+      noNote: 'No note recorded',
+      noteUnavailable: 'This note could not be shown',
+    },
   },
   // ⭐ Story 6.27b (BD4, `2026-10-13-327` decision 2) — ONE neutral block for an approver whose own ground visit on the claim
   // is pending: ⛔ a kind, ⛔ a count, ⛔ a word about neighbours (any of those would tell an inspector a neighbour answered).

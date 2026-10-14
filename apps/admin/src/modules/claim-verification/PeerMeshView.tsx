@@ -6,7 +6,8 @@
 //     nothing for `false` — ⛔ a date in any of those words;
 //   · the call-back number labelled by WHY it is shown (`-328` read with `-329`): "May be phoned on" for a neighbour's
 //     "Yes" (`consented`), "Mobile" for the Super Admin's reading (`super_admin`) and for EVERY other case (an unavailable
-//     number, a `null` basis — review S9) — ⛔ never "may be phoned" beside a "No".
+//     number, a `null` basis — review S9) — ⛔ never "may be phoned" beside a "No";
+//   · ⭐ Story 6.27d (R5) — the inspector's discrepancy block (which questions differed, the re-ask notes with author).
 
 import type { PeerMeshTranscript } from '@twt/contracts';
 import type { ReactElement } from 'react';
@@ -89,6 +90,8 @@ export function PeerMeshView({ transcript, now = Date.now() }: { transcript: Pee
           </li>
         ))}
       </ul>
+      {/* ⭐ Story 6.27d (R5) — the inspector's discrepancy, ONLY here (inside the section a hidden reader never receives). */}
+      {transcript.inspectionDiscrepancies.length > 0 && <InspectionDiscrepancies items={transcript.inspectionDiscrepancies} />}
       <p className="text-xs opacity-60">{t.peerMesh.signalNote}</p>
       <p className="text-xs opacity-60">{t.peerMesh.noResponseNote}</p>
       {/* AC2c — verifier annotations: no owning producer story yet, ALWAYS not_available_yet (never fabricated). */}
@@ -104,6 +107,50 @@ export function PeerMeshView({ transcript, now = Date.now() }: { transcript: Pee
 }
 
 type PeerAnswer = NonNullable<PeerMeshTranscript['pings'][number]['reply']>['answers'][number];
+
+/**
+ * ⭐ Story 6.27d (R5, R4a; AC6) — per completed full visit whose result was recorded: which questions the inspector was
+ * shown as differing, and the family's re-told answer to each, labelled "Recorded after the difference was shown" with
+ * its author and time. A note that could ⛔ be decrypted says so — ⛔ never a blank.
+ */
+function InspectionDiscrepancies({ items }: { items: PeerMeshTranscript['inspectionDiscrepancies'] }): ReactElement {
+  const words = t.peerMesh.inspectionDiscrepancy;
+  return (
+    <section className="flex flex-col gap-2 rounded border p-2" data-testid="peer-mesh-inspection-discrepancies" aria-label={words.heading}>
+      <p className="font-medium">{words.heading}</p>
+      {items.map((item) => (
+        <div key={item.groundInspectionId} className="flex flex-col gap-1" data-testid="peer-mesh-inspection-discrepancy">
+          <p className="text-xs opacity-70">{words.shown(formatIst(item.completedAt), formatIst(item.shownAt))}</p>
+          {item.questionKeys.length === 0 ? (
+            <p className="text-xs">{words.noDifference}</p>
+          ) : (
+            <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
+              {item.questionKeys.map((k) => {
+                const n = item.notes.find((x) => x.questionKey === k) ?? null;
+                return (
+                  <div key={k} className="contents" data-testid={`peer-mesh-inspection-discrepancy-${k}`}>
+                    <dt className="opacity-80">{words.question[k]}</dt>
+                    <dd>
+                      {n === null ? (
+                        <span className="opacity-70">{words.noNote}</span>
+                      ) : (
+                        <>
+                          <span className="block text-[11px] font-medium opacity-80">{words.label}</span>
+                          <span className="block">{typeof n.note === 'string' ? n.note : words.noteUnavailable}</span>
+                          <span className="block opacity-60">{words.by(n.authorDisplay, formatIst(n.notedAt))}</span>
+                        </>
+                      )}
+                    </dd>
+                  </div>
+                );
+              })}
+            </dl>
+          )}
+        </div>
+      ))}
+    </section>
+  );
+}
 
 /** Story 6.27b (AC8) — the per-answer warning line: ⚠ for `true`, "could not be checked" for `null`, nothing for `false`. */
 function WarningFlagLine({ answer }: { answer: PeerAnswer }): ReactElement | null {

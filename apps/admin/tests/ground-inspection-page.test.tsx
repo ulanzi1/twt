@@ -264,7 +264,7 @@ describe('<GroundInspectionPage>', () => {
     it('⭐ a FULL visit: open the uploaded copy, record the verdict + the family\'s date and time ⇒ the completion carries them, with the copy\'s token', async () => {
       vi.mocked(api.listGroundInspection).mockResolvedValue({ assignments: [makeAssignment({ photos: [originalPhoto] })] });
       vi.mocked(api.getGroundInspectionCertificate).mockResolvedValue(CERT);
-      vi.mocked(api.completeGroundInspection).mockResolvedValue({ groundInspectionId: 'gi', status: 'completed' });
+      vi.mocked(api.completeGroundInspection).mockResolvedValue({ groundInspectionId: 'gi', status: 'completed', discrepancy: null });
       renderWithClient(<GroundInspectionPage pariwarId={PARIWAR} />);
       await loadScope();
       await screen.findByText('inspector-1');
@@ -334,7 +334,7 @@ describe('<GroundInspectionPage>', () => {
         assignments: [makeAssignment({ inspectionStage: 'certificate_check', photos: [originalPhoto] })],
       });
       vi.mocked(api.getGroundInspectionCertificate).mockResolvedValue(CERT);
-      vi.mocked(api.completeGroundInspection).mockResolvedValue({ groundInspectionId: 'gi', status: 'completed' });
+      vi.mocked(api.completeGroundInspection).mockResolvedValue({ groundInspectionId: 'gi', status: 'completed', discrepancy: null });
       renderWithClient(<GroundInspectionPage pariwarId={PARIWAR} />);
       await loadScope();
       await screen.findByText('inspector-1');

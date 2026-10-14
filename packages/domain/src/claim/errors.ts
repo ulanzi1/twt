@@ -248,6 +248,30 @@ export class GroundInspectionDeathFactsInvalidError extends Error {
   }
 }
 
+/** Story 6.27d (AC6 step 4) — a note on a question the inspector was ⛔ not shown as a difference (the showing does ⛔ not
+ *  carry the key). → 409 `ground_inspection.discrepancy_not_shown`. */
+export class InspectionDiscrepancyNotShownError extends Error {
+  public readonly name = 'InspectionDiscrepancyNotShownError';
+  public constructor(
+    public readonly groundInspectionId: string,
+    public readonly questionKey: string,
+  ) {
+    super(`[ground-inspection] assignment ${groundInspectionId}: no difference was shown on ${questionKey}`);
+  }
+}
+
+/** Story 6.27d (AC6 step 5) — ONE note per (assignment, question): the box is already filled (the pre-check under the
+ *  claim lock, or the UNIQUE 23505 backstop). → 409 `ground_inspection.discrepancy_note_exists`. */
+export class InspectionDiscrepancyNoteExistsError extends Error {
+  public readonly name = 'InspectionDiscrepancyNoteExistsError';
+  public constructor(
+    public readonly groundInspectionId: string,
+    public readonly questionKey: string,
+  ) {
+    super(`[ground-inspection] assignment ${groundInspectionId}: a note on ${questionKey} is already recorded`);
+  }
+}
+
 /** Story 6.26a GI1 (`-263` FQ9 A) — the approval WAITS: the claim's ground inspection is ⛔ not complete
  *  (`groundInspectionApprovalState`). ⛔ Never a refusal of the claim — every approval handler maps it to 409
  *  `<prefix>.ground_inspection_required` `{ reason }`. */
@@ -741,6 +765,9 @@ export class LateWarningReasonRequiredError extends Error {
  * claim at any step, WHATEVER the neighbours said. Checked BEFORE the approval gate and before any warnings read ⇒ it
  * carries ⛔ no kind and ⛔ no key (a hidden actor must ⛔ never learn a neighbour's answer warns). ⛔ NOT a refusal of the
  * claim: anyone else entitled to approve still can. → ONE 409 `<prefix>.own_ground_visit_pending`, ⛔ `details`.
+ * ⭐ Story 6.27d (AC2, AC6 step 3) — ALSO thrown by the inspector's discrepancy NOTE writer
+ * (`recordInspectionDiscrepancyNote`) for a writer the section is hidden from, BEFORE any showing / exists check, so the
+ * refusal never varies with what the neighbours said → 409 `ground_inspection.own_ground_visit_pending`, ⛔ `details`.
  */
 export class OwnGroundVisitPendingError extends Error {
   public readonly name = 'OwnGroundVisitPendingError';

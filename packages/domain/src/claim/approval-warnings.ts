@@ -49,7 +49,9 @@
 // `approval-warning-reasons.ts`, `cycle-calendar/holiday-resolver.ts`, `nominee-refusal-read.ts` (Story 6.26b — its
 // `inheritedGroundInspectionSourceSql`; it imports only drizzle, `db` types, ids and `pagination.ts`),
 // `one-payment-per-death.ts` (Story 6.28 — `otherOpenClaimsForDeathSql`), `questionnaires/keys.ts` (Story 6.27b — the
-// warning question keys; a TRUE leaf with ⛔ no imports — ⛔ never the `questionnaires/index.ts` barrel).
+// warning question keys; a TRUE leaf with ⛔ no imports — ⛔ never the `questionnaires/index.ts` barrel),
+// `inspection-discrepancy.ts` (Story 6.27d — `peerAnswerDiffers`, the ONE per-answer rule; it imports only drizzle and
+// `questionnaires/keys.ts`).
 //
 // ── Story 6.27b — the NEIGHBOUR kinds (PM9; `-263` FQ10 A, `-262` FQ8 E, `-264` FQ12, `-303` Q2 A, `-324` A) ──────────
 // Two kinds keyed by the LIVE answer row (`claim_peer_mesh_reply_answers.answer_id` — an edit supersedes the row and
@@ -98,10 +100,11 @@ import {
   WarningReasonUngroundedError,
 } from './errors.js';
 import { currentDeathCertificateUploadIdSql } from './death-certificate-approval.js';
+import { peerAnswerDiffers } from './inspection-discrepancy.js';
 import { versionStandsAt } from './nominee-effective.js';
 import { inheritedGroundInspectionSourceSql } from './nominee-refusal-read.js';
 import { otherOpenClaimsForDeathSql } from './one-payment-per-death.js';
-import { type HasDiedCode, PEER_MESH_WARNING_QUESTION_KEYS } from '../questionnaires/keys.js';
+import { PEER_MESH_WARNING_QUESTION_KEYS } from '../questionnaires/keys.js';
 
 // ── Kinds, keys, the window ─────────────────────────────────────────────────────────────────────────────────────
 
@@ -310,8 +313,6 @@ export interface PeerReplyWarningAnswer {
   readonly window: readonly string[] | null;
 }
 
-const NOT_DIED: HasDiedCode = 'not_died';
-
 /**
  * ⭐ THE TWO NEIGHBOUR KINDS (Story 6.27b PM9) — pure, called by `deriveClaimApprovalWarnings` (so the single and the bulk
  * readers agree by construction) OUTSIDE its post-death block:
@@ -333,18 +334,11 @@ export function derivePeerReplyWarningKeys(input: {
   const kinds = new Set<ApprovalWarningKind>();
   const flags = new Map<string, boolean>();
   for (const a of input.answers) {
-    let kind: PeerWarningKind | null = null;
-    if (a.key === 'has_died' && a.codes !== null && a.codes.length === 1 && a.codes[0] === NOT_DIED) {
-      kind = 'peer_says_not_died';
-    } else if (
-      a.key === 'death_date' &&
-      a.window !== null &&
-      a.window.length === 3 &&
-      input.currentAcceptedDateIndex !== null &&
-      !a.window.includes(input.currentAcceptedDateIndex)
-    ) {
-      kind = 'peer_death_date_differs';
-    }
+    // ⭐ Story 6.27d (Task 2.1) — THE ONE per-answer predicate, shared with the inspector's discrepancy comparison (the
+    // reference index is a parameter: here the current accepted review's).
+    const differs = peerAnswerDiffers(a, input.currentAcceptedDateIndex);
+    const kind: PeerWarningKind | null =
+      differs === 'has_died' ? 'peer_says_not_died' : differs === 'death_date' ? 'peer_death_date_differs' : null;
     flags.set(a.id.toLowerCase(), kind !== null);
     if (kind !== null) {
       keys.add(approvalWarningKey(kind, a.id));

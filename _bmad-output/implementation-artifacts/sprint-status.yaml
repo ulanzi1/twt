@@ -1,3 +1,24 @@
+# last_updated: 2026-10-14f (STORY 6.27d — CODE REVIEW ROUND 3 (`bmad-code-review 6.27d`, branch `story/6-27d`): row
+# `6-27d-inspector-discrepancy-at-completion` STAYS `done`. The round-2 patch alone (1665 lines) × Blind / Edge / Acceptance in
+# parallel, then a fresh review of the round-3 patch alone. 0 decision-needed, 18 patch (all applied — BigDev: "Apply every
+# patch"), 1 defer (R3-19 — trigger functions resolve their tables by search path; house-wide, ⛔ of 39 pins it), 10 dismissed;
+# ⛔ Panel question (the three round-2 amendments MATCH CF2 / `-305` §2 item 3). Notable: R3-1 Tasks 3.1 / 3.2 still ordered
+# the actor-blind seed CR1 had removed — amended; R3-7 the note-vs-note race leg now proves the CLAIM lock; R3-10 a note with ⛔
+# visible character refused (Default_Ignorable_Code_Point, server + page); R3-13 closed by REMOVAL (the route already sends a
+# failed session to sign-in). The fix-diff review caught the round-3 fork's neutral "Recorded" passing another author's note off
+# as the viewer's (R4a) — reverted. `ci:local` on the FINAL tree: 35 jobs green, integration red only on the 7 known #15
+# (`review-queue-read`); API integration 108 / 108 files, 1311 / 1311. ⛔ No migration, ⛔ ruling moved. ⛔ Not yet committed.)
+# last_updated: 2026-10-14e (STORY 6.27d — CODE REVIEW ROUND 2 (`bmad-code-review 6.27d`, branch `story/6-27d`): row
+# `6-27d-inspector-discrepancy-at-completion` `review` → `done`. The full branch `8fcf7826` → working tree (round 1's uncommitted
+# CR1–CR6 included) in three chunks reviewed in PARALLEL (server source, admin UI, server tests) × Blind / Edge / Acceptance, then a
+# fresh read-only review of the round-2 patch diff alone. 0 decision-needed, 20 patch (all applied — BigDev: "Apply every patch"),
+# 1 defer (R2-21, the path `:claimCaseId` — pre-existing, in deferred-work), 40 dismissed; ⛔ Panel question. Notable: R2-1 a 40P01
+# between the note writer (claim FOR UPDATE → showing) and a re-read / delivery (showing → FK KEY SHARE on claims) — the showing
+# writer now takes the claim `FOR KEY SHARE` first (red-check reproduced the deadlock); R2-5 round 1's CR6 temp-shadow legs could not
+# fail for the right reason — positive controls + `DISCARD PLANS`; R2-2 / R2-3 / R2-4 the admin's page-wide note words, a render-time
+# `crypto.randomUUID`, unannounced states; R2-9 round 1's promised `ci:local` result was never recorded (corrected in place).
+# `ci:local` (:5433): every job green but `integration-tests` — 7 known #15 (`review-queue-read`) + 1 load timeout
+# (`cross-pariwar-leak`, 19 / 19 alone); API integration 108 / 108 files, 1311 / 1311. ⛔ No migration, ⛔ ruling moved. ⛔ Not yet committed.)
 # last_updated: 2026-10-14d (STORY 6.27d — DEV (`bmad-dev-story 6.27d`, branch `story/6-27d`): row `6-27d-inspector-discrepancy-at-completion`
 # `ready-for-dev` → `in-progress` → `review`. All eight tasks. Migration 0160 (the inspection's ownership UNIQUE; `…_discrepancy_showings`
 # and `…_discrepancy_notes` with composite cascading FKs, the parent guard, append-only / erasure-arm triggers (23000), per-command RLS;
@@ -19977,7 +19998,7 @@ development_status:
   # rulings cite it) and holds the ONE shared PM1–PM25 block. b / d stay `backlog` until 6.27a is `done`; c (sending) stays `backlog`
   # until 6.27b, 6.27d AND row 6-30 are `done` — so every safety piece exists before a real answer arrives.
   6-27b-peer-mesh-warnings-wait-and-approvers-view: done
-  6-27d-inspector-discrepancy-at-completion: review
+  6-27d-inspector-discrepancy-at-completion: done
   # ⭐ 2026-10-12 ANNOTATION (Story 6.34 Task 0.4, `2026-10-12-322` C6 — the comments above kept as written): 6.27c's start condition
   # gains *"AND row 6-34 is done"* — it uses 6.34's typed-variable vocabulary (`{#var#}` + `slots`) and joins its gate's `REGISTRY_FILES`.
   6-27c-peer-mesh-sending-texts-and-links: backlog

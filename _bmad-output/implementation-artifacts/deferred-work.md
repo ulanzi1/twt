@@ -11136,3 +11136,38 @@ explicitly disclosed by the commit's own comments — ⛔ none blocks `11b-17`, 
 ## Deferred from: dev of 6-27d-inspector-discrepancy-at-completion (2026-10-14)
 
 - **The inspector is ⛔ shown a cause / illness difference (③ / ④)** [`packages/domain/src/claim/inspection-discrepancy.ts` `INSPECTION_DISCREPANCY_RULES` — `death_cause` / `death_illness` are `'not_comparable'`] — 6.27a PM25 (a) ③ / ④ are ⛔ built: the family's cause / illness answers (row 6-32) and a keyed blind index per option code are owed before the inspector can be shown a cause / illness difference (the neighbours' cause / illness answers are Tier-1 ciphertext with ⛔ index, and the comparison ⛔ never decrypts). ⭐ Trigger: row 6-32 (the family side), which must also add the keyed comparable form; then flip the two rules to `'compare'` and widen 0160's two CHECKs.
+
+
+## Deferred from: code review of 6-27d-inspector-discrepancy-at-completion (2026-10-14)
+
+- **CR7 — The new discrepancy-note POST inherits the existing swallowed-COMMIT false-success behavior**
+  [`apps/api/src/modules/claims/claims.ground-inspection.handlers.ts:962`;
+  `apps/api/src/modules/multi-tenant/scope-tx.ts:56-67`] — `closeScopeTx` swallows a failed COMMIT,
+  after which the handler emits `admin_ground_inspection.discrepancy_note_recorded` and returns 201 for a note
+  that may not exist. Deferred, pre-existing: the Story 1.9 helper defect is already recorded under the 6.23
+  round-3 review and earlier scope-tx/compensating-audit reviews. The completion/showing guard in 6.27d
+  does not confirm the note POST's commit. **Trigger:** the shared scope-tx commit-semantics hardening pass;
+  include this caller and its failed-COMMIT HTTP/audit regression leg in that work.
+
+
+## Deferred from: code review round 2 of 6-27d-inspector-discrepancy-at-completion (2026-10-14)
+
+- **R2-21 — The ground-inspection routes never check the path `:claimCaseId` against the loaded assignment**
+  [`apps/api/src/modules/claims/claims.ground-inspection.routes.ts:162-170` (`resolveGroundInspectionAssignment` loads by
+  (pariwar, id) only); 6.27d's two new routes `:281`, `:292`] — deferred, pre-existing module pattern. The path id is ⛔ never
+  trusted: every read, write, audit line and hide check uses `assignment.claimCaseId` (6.27d Task 4.1), so there is ⛔ no
+  cross-claim effect; only request / access logs keyed on the URL can name the wrong claim. ⭐ Trigger: anything that reads the
+  path's claim id, or a ground-inspection route hardening pass (refuse a mismatched path with the module's neutral 404).
+
+
+## Deferred from: code review round 3 of 6-27d-inspector-discrepancy-at-completion (2026-10-14)
+
+- **R3-19 — Trigger functions resolve the tables they read by SEARCH PATH** [`packages/domain/migrations/0160_ground-inspection-discrepancy.sql:94`,
+  `:113` (`claim_gi_discrepancy_{showings,notes}_guard`); house-wide — ⛔ of the 39 `RETURNS TRIGGER` functions in
+  `packages/domain/migrations/` pins `search_path` or schema-qualifies its reads] — `pg_temp` is searched first and `twt_app` holds
+  TEMP on the database, so a session able to run arbitrary SQL as `twt_app` could shadow a guard's parent table with a temp table
+  and pass a status / source guard (RLS still binds the tenant — 6.27d's policy spec proves the INSERT `WITH CHECK` refuses a
+  shadowed foreign-tenant parent, 42501). Deferred, pre-existing pattern; ⛔ reachable from the application's own statements.
+  ⭐ Trigger: a house-wide trigger-function hardening pass (`SET search_path = pg_catalog, public, pg_temp` — `pg_temp` LAST — or
+  schema-qualified reads, in a new migration); 6.27d's temp-shadow fixtures (`_inspection-discrepancy-fixtures.ts`) would then need
+  another way to seed a pre-0147 row.

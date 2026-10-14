@@ -21,7 +21,7 @@ GLYPH REGISTER, ADDRESSING RULE: as 6.27a.
 
 # Story 6.27d: The Inspector Forms Their Own View First — Shown Only Where the Family and a Neighbour Differ, After Completing Their Record, and Asked to Re-Ask the Family in Their Own Words `[SURFACE]`
 
-Status: review
+Status: done
 
 > ⭐⭐ **WHAT THIS STORY IS.** The ground inspector sits with the family. BigDev (2026-10-10): *"only discrepancy should be shared with
 > field inspectore if there were any, to cross examine the family. Otherwise, It should say Thank you, your response has been recorded. No
@@ -227,6 +227,9 @@ a section such a person already sees). ⭐ **BigDev (2026-10-14, this validate p
    - `completed_at` < `shown_at` (an ordering test in SEPARATE committed transactions — [[project_db_clock_ordering_tests_tie]]; red-check
      it by reversing the comparator);
    - a failed showing write ⛔ never fails the completion response (logged ids-only; the response still carries the in-tx result);
+     ⚠ AMENDED (code review round 2, R2-20, 2026-10-14 — this line contradicted Task 4.1, which the code follows): only a failure
+     AFTER the guarded statement answered `persisted = true` (the delivery's closing COMMIT) answers `shown` with the in-tx keys;
+     a RAISE from that statement, or `persisted = false`, answers `withheld/check_failed` — in every case a 200, ⛔ a failed response;
    - `GET …/ground-inspection/:ground_inspection_id/discrepancy` (the re-read; R4's guard) — order: guard → 404 → hidden check → read.
      404 `ground_inspection.not_found` (the module's existing code, handlers `:94-96`) for ANY assignment whose `status` is ⛔ not
      `completed` (`scheduled` / `superseded` / `photo_refused` / `evidence_unavailable`) or whose `death_date_source` is ⛔ not
@@ -260,7 +263,8 @@ a section such a person already sees). ⭐ **BigDev (2026-10-14, this validate p
       ⛔ no mapping; the column precedents: `claim_verifier_decisions.actor_display` (`0059:47`) and `claim_correction_marks.set_by_actor_display` with its btrim CHECK, `0126:40`).
    - 201 `{ questionKey, notedAt, authorActorId, authorDisplay }` (⛔ the note text — the caller has it).
    - The note body is `.strict()`, `note: z.string().min(1)` with ⛔ no `.max` — exactly as `CompleteBody.notes`
-     (`claims.ground-inspection.routes.ts:98`); there is ⛔ no visit-notes limit to copy.
+     (`claims.ground-inspection.routes.ts:98`); there is ⛔ no visit-notes limit to copy. ⚠ AMENDED (code review round 2,
+     R2-15): ⛔ a BLANK note either (refused 400 after trim; stored as typed) — the slot is once-only and append-only.
    - The completed inspection row is ⛔ never changed (a test compares its `to_jsonb` before / after the showing and note writes).
    - The note is shown to staff (R5) marked *"Recorded after the difference was shown"* (story-minted) with its `noted_at` and author, and
      on the re-read with its author (R4a).
@@ -400,15 +404,25 @@ a section such a person already sees). ⭐ **BigDev (2026-10-14, this validate p
         `nationalGrants`, `packages/contracts/src/auth/session.ts:32-44`; a Pariwar Admin's pariwar-scope override grant is ⛔ not in it); a
         non-holder's click gets the server's 403 (one audited denial per click, ⛔ never automatic). ⚠ Why:
         every 403 runs `auditAuthorizationDenied` (handlers `:216-219`) — an automatic fetch per card per viewer floods the audit log.
+        ⚠ AMENDED (code review round 3, R3-1 — the CR1 / R2-13 replacements had reached only the Completion Notes): ⛔ a seed in
+        the shared query cache keyed by the assignment id — that actor-blind, never-expiring entry is what round 1's CR1 (HIGH)
+        found showing one actor's result and notes to the next. The completion's result is held in the ASSIGNMENT CARD's own state
+        and served to the panel as `initialData` (no GET); the panel's query is keyed per OPENING (`useId`) with `gcTime: 0` and is
+        removed on unmount; the cards re-key when one known viewer gives way to another. And ⛔ `useSession().data?.userId` as it
+        stands: the viewer is known only after the session was fetched SUCCESSFULLY after the page mounted (R2-13 — a sign-out
+        only invalidates the session, so the cache can still name the previous actor), latched against a later failed refetch.
   - [x] 3.2 The panel: the two screens (AC4); one note box per differing key, saved per row with per-call `mutateAsync().then`
         ([[project_tanstack_mutate_callbacks_latest_only]]; a test with two deferred promises); a saved note shows read-only (*"Recorded"*,
         story-minted) with its author's display name when ⛔ the viewer's own (R4a); a note returned as `{ status: 'unavailable' }` renders
         *"This note could not be shown"* (story-minted), ⛔ never blank; on a 201 `refetch()` the `[…,'discrepancy', id]` query (the seeded
-        cache is `staleTime: Infinity` — nothing else updates it); a 409 `discrepancy_note_exists` re-reads (and then SHOWS the existing
+        cache is `staleTime: Infinity` — nothing else updates it; ⚠ AMENDED (round 3, R3-1): the opening's own query, per Task 3.1's
+        amendment — the 201 first installs the confirmed note in it, then re-reads); a 409 `discrepancy_note_exists` re-reads (and then SHOWS the existing
         note with its author — ⛔ never an empty box again); 409 `ground_inspection.not_allowed` (the window) and 409
         `ground_inspection.own_ground_visit_pending` have ⛔ no page words today (⛔ not in `WORDED_ERROR_CODES`, `:44-51` — the server's
         message would show under the box) ⇒ add `gi.error.not_allowed` / `gi.error.own_ground_visit_pending` (story-minted English) to that
-        list; results announced in a polite live region (6.27a family 13). ⛔ Never inside OP14's *"Other claims for this death"* section
+        list; results announced in a polite live region (6.27a family 13). ⚠ AMENDED (code review round 2, R2-2): ⛔ "that list" —
+        `not_allowed` is the MODULE-WIDE window code, so the note's refusals are worded in a NOTE-scoped list
+        (`NOTE_WORDED_ERROR_CODES`, keys `gi.discrepancy.error.*`) used only by the note box. ⛔ Never inside OP14's *"Other claims for this death"* section
         (`:155-180` — 6.27a Trap 5).
   - [x] 3.3 Tests `apps/admin/tests/ground-inspection-discrepancy.test.tsx` with a REAL `useQuery` + the list refetch flipping to
         `completed` in the same flush (the unmount case); the DOM never contains a neighbour name / value / count; the withheld shape renders
@@ -537,6 +551,455 @@ a section such a person already sees). ⭐ **BigDev (2026-10-14, this validate p
       — or a pointer on row 6-32's counsel line) naming `claim_ground_inspection_discrepancy_notes` as holding the family's free-text re-told
       account (possibly cause of death) — a go-live fence, ⛔ not a merge blocker. Sprint row → `review`.
 
+### Review Findings
+
+Code review 2026-10-14 — full diff `8fcf7826..15f87a15`; independent Blind Hunter, Edge Case Hunter and Acceptance Auditor,
+then parent verification. **6 patch, 1 defer, 1 dismissed; no decision needed.** Author readings R1–R6/R4a and the recorded
+dual-role observation are retained. The findings below describe the reviewed build; their dispositions and patch validation follow below.
+
+- [x] [Review][Patch][HIGH][CR1] Scope the discrepancy cache to its authorized actor and lifecycle
+  [apps/admin/src/modules/ground-inspection/GroundInspectionPage.tsx:65] — the key excludes the actor; infinite freshness
+  and retention plus `seeded = any cached data` bypass the current viewer's identity/hide check. Logout only invalidates
+  the session (`RootLayout.tsx:46`). Reproduced with one real QueryClient: actor A reads a difference and family note,
+  unmounts, then actor B loads the same completed assignment; B sees A's note and difference with **zero GETs**, even
+  though B's GET would return 403. Violates AC2/R4 and invariant families 3/6. Preserve the completion-to-card seed bridge
+  for the actor who received it, and clear/revalidate it across session and authorization lifecycle changes.
+- [x] [Review][Patch][MEDIUM][CR2] Allow a withheld result to recover
+  [apps/admin/src/modules/ground-inspection/GroundInspectionPage.tsx:715] — `withheld/check_failed` and `withheld/own_visit`
+  receive the same infinite cache defaults; the panel has no retry and no note box through which to trigger its only
+  refetch. A transient failure, or a hidden supervisor subsequently completing their own visit, remains withheld on
+  reopening. Reproduced: after unmount/remount, a now-successful GET is never called and the panel has no retry control.
+  Add a recoverable re-read while preserving uniform withholding and the completion seed (AC5 recovery).
+- [x] [Review][Patch][MEDIUM][CR3] Preserve a recorded note when its follow-up refresh fails
+  [apps/admin/src/modules/ground-inspection/GroundInspectionPage.tsx:783] — POST success clears the text and announces
+  success, but the discarded `query.refetch()` promise can fail; error rendering only runs when `query.data` is absent.
+  Reproduced: the old `notes: []` remains, the saved response disappears, an empty editable box is displayed, and there
+  is no error or refresh retry. Retain/display the confirmed submission and expose refresh failure/recovery rather
+  than relying solely on the GET to make the box read-only (AC6/R4a; Task 3.2).
+- [x] [Review][Patch][MEDIUM][CR4] Announce the discrepancy result transition
+  [apps/admin/src/modules/ground-inspection/GroundInspectionPage.tsx:752] — loading has `role="status"`, but the delivered
+  found/none/withheld result replaces it with ordinary content; the only polite region announces note saves. A
+  screen-reader user who requests the result receives no announcement of its outcome or required re-ask. Add a stable
+  polite result announcement and verify the reachable result arms (Task 3.2; invariant family 13(d), REAL GAP).
+- [x] [Review][Patch][MEDIUM][CR5] Add the new routes' runtime tenant/actor boundary regression legs
+  [apps/api/tests/integration/claims/ground-inspection-discrepancy.spec.ts:343] — the HTTP suite covers same-tenant
+  non-assigned actors and hidden supervisors, but no explicit cross-Pariwar request or tampered/non-human/system actor
+  denial for the new note mutation; DB policy tests do not exercise those route boundaries. Add explicit denial legs
+  for the POST and a cross-Pariwar GET probe, with valid own-tenant positive controls. This is a required missing test,
+  **not a demonstrated server authorization vulnerability** (invariant family 3, REAL GAP).
+- [x] [Review][Patch][MEDIUM][CR6] Prevent the legacy-row fixture's table-lock upgrade deadlock
+  [packages/domain/tests/integration/claim/_inspection-discrepancy-fixtures.ts:28] — both the domain and policy specs
+  call this helper after inserting an inspection in their transaction. Each can hold ROW EXCLUSIVE on the same table
+  and then request ACCESS EXCLUSIVE for `ALTER TABLE`; the default forks runner permits those files concurrently.
+  Reproduced using the actual helper on two connections holding the exact preceding table-lock mode: one returns
+  **40P01 deadlock detected**, the other succeeds after the first rolls back. All reproduction DDL was rolled back.
+  Serialize these fixtures before their conflicting table access, or isolate the legacy DDL setup, without disabling
+  the independent two-connection domain race proofs (AC8 reliable live validation).
+- [x] [Review][Defer][MEDIUM][CR7] The note POST inherits the shared swallowed-COMMIT false-success behavior
+  [apps/api/src/modules/claims/claims.ground-inspection.handlers.ts:962] — deferred, pre-existing. `closeScopeTx` never
+  throws on COMMIT failure, so an unpersisted note can be answered 201 and audited recorded. This is the existing
+  Story 1.9 helper defect already carried in deferred-work (6.23 round 3 and earlier scope-tx/compensating-audit
+  reviews); the story's special completion/showing protection does not repair the house-wide helper. Carry this
+  caller into that scope-tx hardening work; do not claim commit confirmation for this POST.
+
+**Verification:** focused existing suites passed **201 tests across 17 files**: admin 42, domain unit/fence/RTBF 46,
+contracts 23, live domain/policy/concurrency/RTBF/death-certificate 61, live API discrepancy/peer-console/inspection-console
+29. The sandbox initially refused local DB access; the authorized reruns above passed. Full `ci:local` was not rerun.
+Three additional UI diagnostics assert the observed CR1–CR3 failures (they are reproductions, not proof of corrected
+behavior); source retained at `/private/tmp/twt-627d-review-ui/review.test.tsx`. The temporary repository test file was
+removed. CR6 reproduction: `/private/tmp/twt-627d-lock-repro.ts`.
+
+**Invariant verdicts (only touched families):** 1 covered by the window guard/domain window tests; 2 covered by the live
+two-connection discrepancy concurrency spec and claim-lock note serialization, with CR6's test-fixture gap above
+(⚠ corrected by round 2, R2-8: ⛔ test exercised the note writer's claim-lock serialization until R2-8 added one);
+3 REAL GAP (CR1/CR5); 4 covered by construction (existing completion event/payload unchanged); 5 covered by the explicit
+0160 policy-regression spec; 6 REAL GAP (CR1), server fields otherwise picked and attribution stored; 8 author attribution
+and codes-only audit covered by the API note-rule/R4a tests, with CR7's inherited commit limitation disclosed; 9 deliberate
+exceptions recorded in R1–R6/R4a and migration header; 10 closure limits recorded honestly; 11 no member-benefit predicate
+introduced; 12 assignment-derived claim scope/composite ownership FKs and wrong-claim policy test cover ownership;
+13 REAL GAP (CR4), native labels/handlers and note-save announcement otherwise covered. Family 7 untouched.
+
+**Dismissed (1):** a completion response could differ from a concurrent winning showing after erasure. The report's
+only identified divergence depends on the erased-date recomputation exception explicitly accepted by R2/Dev Notes;
+no independent non-erasure divergence was established. This review does not reopen that accepted exception.
+
+### Review Patch Validation
+
+BigDev selected **Apply every patch** on 2026-10-14. CR1–CR6 are fixed; CR7 remains deferred.
+
+- **CR1:** completion seeds live in the assignment card, which is replaced on actor, Pariwar, claim or jurisdiction
+  changes. Query keys additionally include the actor and a unique opening id; `gcTime: 0` and explicit removal forget
+  the read on unmount. No global seed survives sign-out/reopen. Tests cover both sign-out/remount and an actor change
+  while mounted, plus the original completion-unmount bridge (still no GET on that transition).
+- **CR2:** a withheld or failed read has an explicit **Try again** control. Reopening obtains a fresh read; both
+  withholding reasons and recovery are tested without revealing result-dependent content while withheld.
+- **CR3:** POST success installs the confirmed submitted note in the current opening's cache before clearing the box.
+  A failed follow-up GET keeps that note read-only and displays a refresh failure with retry; the regression proves
+  the note remains visible and is not posted twice.
+- **CR4:** a stable polite live region announces loading and each found/none/withheld result. Tests verify both
+  withholding reasons and the recovered found/none outcomes. Ruled copy is unchanged.
+- **CR5:** live HTTP tests supply valid own-tenant positive controls, then deny a cross-Pariwar resource even when
+  the actor has conduct grants in both tenants; no-session calls and a tampered session naming a nonexistent
+  system/service principal are denied on both new routes. Stored notes/attribution are checked for unintended writes.
+- **CR6:** the domain legacy-row helper now shadows the public inspection table with a connection-local temporary
+  copy. Only that private copy's CHECK is dropped/re-added to model the historical NULL-source row; the shared table
+  and CHECK are untouched. The policy trigger is exercised against that connection's historical parent; the other
+  policy legs still use the real FORCE-RLS tables. A live two-connection regression starts with the exact preceding
+  ROW EXCLUSIVE lock mode, creates both historical fixtures concurrently, and verifies the private legacy rows plus
+  the unchanged public scheduled rows. Existing completion/answer/re-read race tests remain independent and pass.
+
+**Current patch checks:** admin discrepancy tests 17/17; live domain/policy/concurrency/RTBF/death-certificate 62/62;
+API discrepancy/peer-console/inspection-console 32/32. Admin, domain and API type checks and targeted lint passed.
+Full local CI is running; its result is recorded below when complete. No migration or ratified ruling changed.
+⚠ **Correction (code review round 2, R2-9, 2026-10-14):** ⛔ result was ever recorded for that run — the session ended first,
+and round 2 found no process still running. The CR1–CR6 tree was therefore never proven by a full `ci:local`; round 2's run
+on the final tree is recorded under *Review Patch Validation — Round 2*.
+
+The review's REAL GAP verdicts for families 3/6/13 are now **covered-by-test** by the named CR1, CR5 and CR4 regression
+legs above; CR6's concurrency-fixture gap is covered by its two-connection test. CR7's existing commit limitation is
+still disclosed, not claimed fixed.
+
+### Review Findings — Round 2 (2026-10-14)
+
+Code review round 2: the full branch `8fcf7826` → working tree (round 1's uncommitted CR1–CR6 fixes included), split into three
+chunks reviewed in parallel (server source, admin UI, server tests) by an independent Blind Hunter, Edge Case Hunter and
+Acceptance Auditor each, then parent verification. **0 decision-needed, 20 patch, 1 defer, 40 dismissed.** Nothing passes the
+Panel-routing gate's §0 (no disclosure, no duty owed, no basis, no conflict between ratified clauses). Round 1's claims
+re-checked: CR1–CR5 hold; CR6's deadlock fix holds but its "the trigger is exercised against that connection's historical
+parent" claim is NOT proven (R2-5); the promised `ci:local` result was never recorded (R2-9).
+
+- [x] [Review][Patch][MEDIUM][R2-1] Lock-order deadlock between the note POST and the showing writers that take no claim lock
+  [packages/domain/src/claim/ground-inspection-persist.ts:1160] — the note writer holds the claim row `FOR UPDATE`
+  (`lockClaimCase`, `read.ts:104`), then INSERTs the showing when absent; the re-read GET (`handlers.ts:898`) and the post-commit
+  delivery (`:326`) INSERT the showing first, and that statement's FK check (`claim_gi_discrepancy_showings_claim_case_fk`) takes
+  `FOR KEY SHARE` on the same claims row (conflicts with `FOR UPDATE`) while the note writer's `ON CONFLICT` waits on the
+  uncommitted showing tuple ⇒ 40P01, an unmapped 500 (GET / note POST) or a spurious `check_failed` (delivery). Reachable only
+  while the showing is absent (failed or withheld delivery) and a re-read or delivery races a note write on the same assignment.
+  Take the claim row `FOR KEY SHARE` before the showing INSERT so every path orders claim → showing; add a two-connection leg.
+- [x] [Review][Patch][MEDIUM][R2-2] The note refusals' words are page-wide [apps/admin/src/modules/ground-inspection/GroundInspectionPage.tsx:52]
+  — `not_allowed` is the module-wide window code (schedule, certificate, photo, complete, refuse); adding it to the shared
+  `WORDED_ERROR_CODES` makes every out-of-window action read *"This claim is no longer open for notes on the visit."* (false
+  for a claim not yet in the window; those actions showed the server's message before). Word `not_allowed` /
+  `own_ground_visit_pending` / `discrepancy_note_exists` only inside the note box; amend Task 3.2's "to that list".
+- [x] [Review][Patch][MEDIUM][R2-3] `crypto.randomUUID()` during render crashes the page outside a secure context
+  [apps/admin/src/modules/ground-inspection/GroundInspectionPage.tsx:689] — the documented trap at `apps/admin/src/api/hooks.ts:552-560`
+  (`newIdempotencyKey`); over plain HTTP every completed full-visit card throws. Use `useId()` (only per-mount uniqueness is needed).
+- [x] [Review][Patch][MEDIUM][R2-4] Reachable states not announced (invariant family 13(d), REAL GAP)
+  [apps/admin/src/modules/ground-inspection/GroundInspectionPage.tsx:706] — the box's `{live}` region sits at a different child
+  position in the editable and read-only branches, so "Note recorded." is announced only by TanStack's `setTimeout` notify order
+  (and an empty editable box can flash first); the 409 `discrepancy_note_exists` → "Recorded by {author}" flip is never announced;
+  a "Try again" that returns the same withheld result (or fails again) re-announces nothing; a retry after an error announces no
+  loading. One stable live region per box outside the branch; announce the author state; re-announce per read.
+- [x] [Review][Patch][MEDIUM][R2-5] CR6's temp-shadow legs cannot fail for the right reason (families 5 / 10)
+  [packages/domain/tests/integration/claim/_inspection-discrepancy-fixtures.ts:19] — the public row stays `scheduled`, so the
+  policy leg's 23000 `NOT_A_FULL_VISIT` (`claim-ground-inspection-discrepancy-policy-regression.spec.ts:198-210`) is the same error
+  the public row produces; whether the guard's unqualified lookup (`0160:94/113`) reads the shadow depends on search-path /
+  plpgsql plan-cache state. No positive control, no rowCount check on the copy or the UPDATE (an empty shadow hides every
+  inspection — vacuous NotFound legs), a second call 42P07s, and the notes guard has no NULL-source leg. Assert both rowCounts,
+  refuse a second shadow per transaction, add a same-transaction positive control (a completed + `family_statement` shadow is
+  admitted / found), add the notes-guard leg.
+- [x] [Review][Patch][MEDIUM][R2-6] The as-of recompute's supersession arm is untested
+  [packages/domain/src/claim/inspection-discrepancy.ts:117] — every leg changes `died` → `not_died` after completion; deleting
+  `OR superseded_at > asOf` keeps all green, and R2 names `superseded_at` as a clock basis. Add: `not_died` saved before completion,
+  changed to `died` after ⇒ the recompute still returns `['has_died']`; record the red-check.
+- [x] [Review][Patch][MEDIUM][R2-7] R3 / Task 4.2 / 4.3 `unavailable` mapping has no server test; the staff block never crosses the serializer
+  [apps/api/tests/integration/claims/ground-inspection-discrepancy.spec.ts:591] — nothing re-reads after the GI13 scrub or with an
+  undecryptable ciphertext (`displayFamilyDeathDate` / `noteDtoOf`, `handlers.ts:362-396`; the assembler's note decrypt); the R5
+  legs call `assemblePeerMesh` in-process, so a non-empty `inspectionDiscrepancies` never passes the `.strict()` response parse
+  (AC8's 500 risk). Add an erased / corrupt leg (date and note `unavailable`, never the sentinel, never 500) and one HTTP console request.
+- [x] [Review][Patch][MEDIUM][R2-8] Invariant family 2 REAL GAP — the note writer has no live two-connection race
+  [packages/domain/tests/integration/claim/ground-inspection-discrepancy-concurrency.spec.ts:227] — round 1's verdict credits
+  "claim-lock note serialization" but no test exercises it (the 23505 leg is single-connection behind a Proxy); the two-re-read
+  leg has no barrier (`Promise.all`, may serialize); the race legs open transactions without try/finally (a failure leaves the
+  claim lock held and hangs cleanup). Add a `waitUntilBlocked` note-vs-note leg (one 201, one `note_exists`), a barrier on the
+  re-read race, and rollback-on-failure cleanup.
+- [x] [Review][Patch][MEDIUM][R2-9] Closure honesty (family 10) — the patched tree's `ci:local` is promised, never recorded
+  [_bmad-output/implementation-artifacts/6-27d-inspector-discrepancy-at-completion.md:638] — and stale record text: the Completion
+  Notes still describe the CR1-replaced seed (`staleTime` / `gcTime: Infinity`), the Debug Log's seed and INSERT-guard red-checks
+  predate CR1 / CR6, "Recorded readings" still says the domain legacy leg drops 0147's CHECK on the real table, and round 1's
+  family-2 credit (R2-8) is overstated. Run `ci:local` (+ the API integration suite) on the final tree and record the result;
+  correct each line with a dated note (no silent rewrite).
+- [x] [Review][Patch][LOW][R2-10] The "failed showing write" fault never reaches the handler's COMMIT-failure branch
+  [apps/api/tests/integration/claims/ground-inspection-discrepancy.spec.ts:44] — the mock ROLLBACKs and re-BEGINs, so the handler's
+  own `COMMIT` (`handlers.ts:342`) succeeds on an empty transaction and the catch at `:343-348` is dead in every test. Make the
+  delivery's COMMIT itself fail; assert `shown` with the in-tx keys and the re-read's recompute.
+- [x] [Review][Patch][LOW][R2-11] "Show the result" is a no-op, and the completion's result is dropped, while the session has no user id
+  [apps/admin/src/modules/ground-inspection/GroundInspectionPage.tsx:693] — `enabled` needs `viewerId !== null`, so the click sets
+  `requested` and nothing happens (family 13(c)); `onCompleted` drops the seed (`:438`). Disable / hide the button until the
+  viewer is known.
+- [x] [Review][Patch][LOW][R2-12] Note-box continuations outlive the panel and ignore a newly hidden reader
+  [apps/admin/src/modules/ground-inspection/GroundInspectionPage.tsx:808] — a POST settling after unmount calls `saved` /
+  `onChanged` → `query.refetch()` on a detached observer (an unrequested GET; the removed key is re-created); a 409
+  `own_ground_visit_pending` (the reader became hidden) leaves the cached shown result and other authors' notes on screen.
+  Guard continuations with a mounted ref; re-read on that code as on `discrepancy_note_exists`.
+- [x] [Review][Patch][LOW][R2-13] Sign-out residue — the CR1 actor-switch test passes on timing; the MutationCache keeps the note text
+  [apps/admin/tests/ground-inspection-discrepancy.test.tsx:316] — the second render reuses a QueryClient whose `['session']` still
+  names INSPECTOR; `not.toHaveBeenCalled()` holds only because `loadScope()` lets the session refetch land first. The note
+  mutation's `variables` (Tier-1) and the completion's `data.discrepancy` stay in the MutationCache for the default 5 min across
+  sign-out (no reader found). Make the test deterministic; `gcTime: 0` on both mutations.
+- [x] [Review][Patch][LOW][R2-14] Admin assertions that cannot fail
+  [apps/admin/tests/ground-inspection-discrepancy.test.tsx:104] — `expectNoNeighbourContent` looks for strings no fixture supplies
+  (Task 3.3's "DOM never contains a neighbour name / value / count" is unproven); the CR3 POST mock returns `note` text the real
+  client schema strips. Add a client-parse leg injecting neighbour keys (stripped); mock the real 201 shape.
+- [x] [Review][Patch][LOW][R2-15] A whitespace-only note permanently fills the once-only slot
+  [apps/api/src/modules/claims/claims.ground-inspection.routes.ts:120] — `z.string().min(1)` admits `"   "`; notes are ONE per
+  (assignment, question) and append-only, so the real re-told answer can never be recorded (the page blocks it, a direct call
+  does not). Refuse a blank note after trim (⛔ still no `.max`); amend AC6's body line.
+- [x] [Review][Patch][LOW][R2-16] The contracts' question-key list has no lockstep test
+  [packages/contracts/src/claims/verifier-console.ts:267] — a fourth hand list; when row 6-32 makes a key comparable the
+  `.strict()` console / `…/peer-answers` parse 500s. Pin it equal to the domain's compared keys in a test that sees both (PM23's form).
+- [x] [Review][Patch][LOW][R2-17] The API spec's legacy helper still runs committed DDL on the shared table
+  [apps/api/tests/integration/claims/ground-inspection-discrepancy.spec.ts:666] — ACCESS EXCLUSIVE in a file-parallel suite
+  (`pool: 'forks'`; a fresh connection, so ⛔ a lock upgrade / deadlock — a stall and a 10 s `lock_timeout` flake risk), a
+  committed NULL-source row on :5433, no rowCount check. Assert the UPDATE's rowCount; record why it must commit (the handler
+  reads on another connection) and why it cannot deadlock.
+- [x] [Review][Patch][LOW][R2-18] Weak, vacuous or mislabelled server-test assertions
+  [packages/domain/tests/integration/claim/ground-inspection-discrepancy.spec.ts:324] — "no showing recorded" asserted after a
+  refusal under a rolled-back savepoint (`:324`, `:340`); the 23505 Proxy never counts an interception (`:280-297`); AC7's date
+  half swallowed by `.catch(() => undefined)` (`:246`); a rule-table loop with no non-empty guard (`inspection-discrepancy.test.ts:105`);
+  the CR5 cross-Pariwar leg checks status only (`api spec:368-369` — `pariwar.not_found` passes too); titles that contradict their
+  bodies (`suspicion-refusal-routes.spec.ts:482`, `verifier-console-ground-inspection.spec.ts:218`, `:348`, `api spec:407`).
+- [x] [Review][Patch][LOW][R2-19] The policy spec does not pin what it names
+  [packages/domain/tests/integration/rls/claim-ground-inspection-discrepancy-policy-regression.spec.ts:367] — the INSERT policies'
+  `WITH CHECK` and roles are never exercised or pinned (the trigger refuses first — a `WITH CHECK (true)` passes); the column
+  UPDATE grant is not pinned as EXACTLY `note_ciphertext` (`:153-157`); the trigger-binding leg compares names, not `tgtype`
+  (`:308-325`).
+- [x] [Review][Patch][LOW][R2-20] Comments and spec lines that contradict the code
+  [packages/domain/src/claim/ground-inspection-persist.ts:1305] — "the showing's parent guard requires" `completed_at` (it does
+  not; the only completion writer sets it); `claims.verifier-console.handlers.ts:242` "notes decrypt in the handler" (the
+  assembler); `withheld-note.ts:14` documents `check_failed` as the hide check failing only; AC5 "a failed showing write … the
+  response still carries the in-tx result" vs Task 4.1's ordered `check_failed` on a raise (the code follows 4.1 — amend AC5);
+  the admin test header's "REAL QueryClient defaults (`refetchOnMount: 'always'`)" and `DiscrepancyPanel`'s "FETCHES on its own
+  only for a seeded result".
+- [x] [Review][Defer][R2-21] The new routes' path `:claimCaseId` is never checked against the assignment
+  [apps/api/src/modules/claims/claims.ground-inspection.routes.ts:281] — deferred, pre-existing: `resolveGroundInspectionAssignment`
+  loads by (pariwar, id) for every ground-inspection route; the id is ⛔ never trusted (every read, write, audit and hide uses
+  `assignment.claimCaseId`, Task 4.1), so no cross-claim effect — only access logs keyed on the path can name the wrong claim.
+
+**Dismissed (40):** false positives (a double `closeScopeTx` — it never throws; a blank `author_display` — `getDisplayName`
+nulls whitespace; staff notes decrypted "under a lock" — the assembler already decrypts names / answers / mobiles there, no
+row lock; a tampered-session restore keyed wrong — `admin_sessions.user_id` is a plain column; a fail-closed fault aborting
+the completion — the hide check runs in the delivery's own second transaction); by design per the spec (the in-tx comparison
+inside the completion — R2; drafts compared — "submitted or not"; ① never reads the family's answer; a GET that writes — AC5;
+the GET unaudited — Task 4.2; encrypt before the writer — Trap 9; a required `discrepancy` in the complete-only schema —
+Task 4.4; R2's accepted erasure divergence); already recorded (CR7's note POST false success and the completion's own
+swallowed COMMIT — 6.27a D1 / scope-tx item; the erasure scrub race and family-member erasure scope — the two items Task 5
+appended to); unreachable or noise (another path throwing `OwnGroundVisitPendingError`; a NULL `completed_at`; trigger
+23000 / 23514 unmapped — guarded writers never reach them; duplicate showing keys from an unguarded writer; the drizzle
+schema lacking CHECKs; a dead rule-table check; fence-regex and contract-test nits; session-late card remount; mock-reset
+hygiene; `$`-patterns in a controlled staff display name; focus after button removal; a duplicate region label; "Try again"
+on a 403 / `own_visit`; the completion list-refresh recovery (pre-existing 6.26a behaviour); the non-assigned Block Admin
+control's status-only body; the HTTP probe pair; the RTBF negative leg; the API spec's retained rows; the API ordering
+`toBeLessThanOrEqual`; guard → 404 order (by construction — the identity guard runs before the transaction)).
+
+### Review Patch Validation — Round 2
+
+BigDev selected **Apply every patch** on 2026-10-14. **R2-1 – R2-20 are fixed; R2-21 is deferred** (pre-existing, recorded in
+`deferred-work.md`). ⛔ No migration, ⛔ ruling and ⛔ ratified text moved; the spec amendments below are author-side (R2-2, R2-15,
+R2-20 — each marked *AMENDED (code review round 2)* in place, the original words kept).
+⚠ **Correction (code review round 3, R3-16):** "fixed" is too strong for two of them. **R2-7** is closed with a DISCLOSED
+SUBSTITUTE — the in-process assembler plus the block's strict element parse, ⛔ the HTTP console request the finding asked for
+(the fixture seeds ⛔ deceased district, which the console route derives). **R2-9**'s own run of `ci:local` on the final tree
+was ⛔ green (8 integration failures, recorded below, and run BEFORE three later admin fixes); the final tree's run is round 3's
+R3-18. And **R2-15**'s blank refusal is ⛔ constructible as a DB backstop — `note_ciphertext` is Tier-1 ciphertext, so ⛔ CHECK
+can see the plaintext; the route's refusal is the only control.
+
+- **R2-1:** `recordInspectionDiscrepancyShowing`'s parent CTE JOINs `claims` and takes `FOR KEY SHARE OF c`, so every showing writer
+  (the delivery, the re-read's recompute, the note writer) locks the claim BEFORE inserting the showing. `persisted` is unchanged
+  (`EXISTS (parent)`). New own-committing leg *"R2-1 — a note writer holding the claim lock and a re-read recording the ABSENT
+  showing …"*; red-check (drop `FOR KEY SHARE OF c`) ⇒ `40P01 deadlock detected` in the showing's FK check on `claims` — the exact
+  cycle the reviewers predicted.
+- **R2-2:** the page-wide `WORDED_ERROR_CODES` is back to its six 6.26a codes; the three note refusals are worded by
+  `NOTE_WORDED_ERROR_CODES` / `noteErrorText` (keys `gi.discrepancy.error.*`) in the note box only. Test: a Refuse action's 409
+  `not_allowed` keeps the server's words. Red-checked.
+- **R2-3:** the per-opening id is `useId()` (⛔ `crypto.randomUUID`). Test with `randomUUID` stubbed to throw. Red-checked.
+- **R2-4:** one stable polite region per note box outside the editable / read-only switch; the confirmed note renders read-only at
+  once; the 409 author state is announced; a retry announces its loading and its result again (alerts keyed on `errorUpdateCount`).
+  Tests assert the SAME region node before / after. Red-checked (five reverts).
+- **R2-5:** the temp-shadow fixture asserts ONE row copied and ONE rewritten, refuses a second shadow per transaction, and runs
+  `DISCARD PLANS` (a plpgsql plan cached before the shadow would keep reading the public row). Every shadow leg now has a
+  same-transaction POSITIVE CONTROL (`shadowAsCompletedFullVisit` — the same guard ADMITS, the same domain read FINDS); the notes
+  guard gained its NULL-source leg.
+- **R2-6:** the as-of supersession arm has its leg (*"AC5 / R2 — answers that DIFFERED at completion and changed AFTER it …"*);
+  red-check (delete `OR superseded_at > asOf`) ⇒ that leg alone red — nothing caught it before.
+- **R2-7:** an ERASED (the house sentinel, encrypted as GI13 writes it) and an UNDECRYPTABLE family date and note read
+  `{ status: 'unavailable' }` on the re-read and in the staff block — ⛔ the sentinel text, ⛔ a 500 — and the block passes its strict
+  element schema. ⚠ Recorded: the console is reached through the in-process assembler, ⛔ HTTP (the fixture seeds ⛔ deceased
+  district, which the console route derives); the block's strict parse stands in for the serializer's. Red-checked (the note's
+  sentinel mapping removed).
+- **R2-8:** two new two-connection legs — note vs note on ONE question (the second waits on the claim row, then the pre-check
+  refuses it: ONE note) and the R2-1 leg; the two-re-reads leg now has a real barrier (B waits on A's uncommitted showing); every
+  opened transaction is rolled back after a failing test. ⚠ Round 1's family-2 credit is corrected in place (R2-9).
+- **R2-9:** the dated corrections in place (round 1's promised CI result, its family-2 verdict, the Debug Log's seed and
+  INSERT-guard red-checks, the Completion Notes' seed mechanism, the Recorded readings' legacy fixture). This round's CI below.
+- **R2-10:** a scope-tx fault makes the delivery's OWN COMMIT throw after `persisted = true`; the completion answers `shown` with
+  the in-tx keys, records ⛔ showing, and the re-read recomputes the same keys. Red-checked (that branch answering `check_failed`).
+  The older fault is retitled *"a showing write LOST without an error"* (what it simulates).
+- **R2-11 / R2-12 / R2-13:** "Show the result" is disabled until the viewer is known; note continuations are guarded by a mounted
+  ref; a 409 `own_ground_visit_pending` re-reads (the cached result gives way to the withheld shape); the viewer is LATCHED from
+  the first SUCCESSFUL session fetch after mount, and the cards re-key only when one known viewer gives way to another; `gcTime: 0`
+  on the completion and note mutations; the CR1 actor-switch test is deterministic (the new session's fetch held open).
+- **R2-14:** a client-parse leg proves neighbour keys injected into the completion, re-read and note-write responses are STRIPPED;
+  the CR3 mock returns the real 201 shape. ⚠ The page-level `expectNoNeighbourContent` was ⛔ red-checked (it would need code that
+  renders unknown keys); the client-parse leg is the proof.
+- **R2-15:** a blank note is refused (400, stored as typed otherwise); the leg proves ⛔ row is written. Red-checked.
+- **R2-16:** `peer-answers-stitch.test.ts` pins the contracts' key list to the domain's compared keys and schema constant.
+- **R2-17:** the API legacy helper asserts its one-row UPDATE and records why it must commit shared DDL (another connection reads
+  it) and why it cannot deadlock (a fresh connection — ⛔ lock upgrade).
+- **R2-18:** step 2 / step 3's "⛔ showing recorded" run WITHOUT a rolled-back savepoint — red-check (the hidden check moved after
+  the recompute, refusals still identical) ⇒ step 3 red; the 23505 leg counts ONE blinded pre-check and ONE insert; AC7's date half
+  is awaited (on a second neighbour — `not_died` supersedes the same neighbour's date); the rule-table loop must run; the CR5
+  cross-Pariwar leg asserts `ground_inspection.not_found` after a positive control proving the grant in the other tenant is live;
+  four titles corrected.
+- **R2-19:** the policy spec pins every policy's role, PERMISSIVE and ONE scope expression (USING / WITH CHECK); a leg proves the
+  INSERT `WITH CHECK` is LIVE (a shadow lets the guard see another tenant's parent ⇒ 42501, and the same row is admitted in its own
+  scope); the column-UPDATE grant set is EXACTLY `note_ciphertext`; the trigger bindings pin `tgtype` (7 / 11 / 19 / 34).
+- **R2-20:** the comments corrected (`completed_at`, "decrypt in the assembler", `check_failed`'s 6.27d use); AC5 amended to Task 4.1.
+
+**Fix-diff review** ([[feedback_review_the_fix_diff_before_commit]]): ONE fresh read-only reviewer over the round-2 patch diff
+alone (1604 lines): ⛔ high / medium. Three LOW, all applied: the viewer derived from `isFetchedAfterMount` alone also counted a
+FAILED refetch (stale actor) — now latched on a successful one; re-keying cards on `viewerId` remounted every card once per page
+mount (dropping an in-progress completion and a just-seeded result) — now an `epoch` that changes only between two KNOWN viewers;
+alerts keyed on `errorUpdatedAt` (ms) — now `errorUpdateCount`. Two new tests, each red-checked. The reviewer verified R2-1's lock
+order against every other `claims` writer, the scope-tx mock, the `.refine` and the fixture as sound.
+
+**Verification (final tree):** domain live — discrepancy 18/18, concurrency 8/8, policy 20/20, RTBF 2/2 (incl. the new legs); domain unit
+(discrepancy / fence / rtbf) 46/46; API discrepancy spec 20/20 + stitch 9/9; admin 1159/1159 (71 files), admin / API / domain
+typecheck and the changed files' eslint clean. **`pnpm ci:local` (shared :5433 `twt_dev`, run BEFORE the three fix-diff-review
+admin fixes, which were then re-proven by the admin suite, typecheck and lint):** every job green but `integration-tests` —
+domain 5143 passed / 8 failed: 7 in `reconciliation/review-queue-read.spec.ts` (the known shared-`PARIWAR_A` accumulation, #15 —
+the same 7 the dev run saw) and 1 in `multi-tenant/cross-pariwar-leak.spec.ts` (`runAsCrossTenant`, a 5000 ms timeout under the
+full suite's load — 19/19 when re-run alone; ⛔ 6.27d file touches either). **The API integration suite on its own:** 108 / 108
+files, 1311 / 1311 tests.
+
+The round-2 REAL GAP verdicts close: family 2 (R2-1, R2-8), family 5 (R2-5, R2-19), family 10 (R2-9), family 13(c)/(d) (R2-4,
+R2-11) — each now covered-by-test by the legs named above. ⚠ (Round 3, R3-16: family 10 — closure honesty — is a property of the
+RECORD, ⛔ of a test; round 3 found it still open (R3-1, R3-16). And R2-8's note-vs-note leg could ⛔ tell the claim lock from the
+other serializers until round 3's R3-7.)
+
+### Review Findings — Round 3 (2026-10-14)
+
+Code review round 3: the round-2 patch alone (the round-1 state → the working tree, 1665 lines, 17 files), an independent Blind
+Hunter, Edge Case Hunter and Acceptance Auditor in parallel, then parent verification. **0 decision-needed, 18 patch, 1 defer,
+10 dismissed.** ⛔ Panel question — the auditor checked the three round-2 amendments against the ratified text (CF2 as put,
+`-305` §2 item 3): each MATCHES; none widens a disclosure. R2-1's lock order re-verified against every other `claims` writer.
+
+- [x] [Review][Patch][MEDIUM][R3-1] Tasks 3.1 / 3.2 still order the seed design and the viewer source that CR1 and R2-13 replaced
+  [_bmad-output/implementation-artifacts/6-27d-inspector-discrepancy-at-completion.md:392] — Task 3.1 still prescribes the
+  actor-blind `qc.setQueryData([...,'discrepancy', id], …)` seed with `staleTime: Infinity` (the cache CR1 found leaking) and
+  `useSession().data?.userId` as the viewer; Task 3.2 still refetches `[…,'discrepancy', id]`. Only the Completion Notes carry the
+  correction ([[feedback_spec_edits_must_propagate_to_tasks]]). Mark both AMENDED in place.
+- [x] [Review][Patch][LOW][R3-2] The panel's query key carries `viewerId`: the viewer becoming known drops what the opening fetched
+  [apps/admin/src/modules/ground-inspection/GroundInspectionPage.tsx:712] — cards re-key on `viewer.epoch` (unknown → known keeps
+  the card), but the panel's key changes, so a retried result or a note saved while the viewer was unknown falls back to the seed
+  with ⛔ refetch. The opening's `useId` + the epoch re-key already isolate actors — drop `viewerId` from the key.
+- [x] [Review][Patch][LOW][R3-3] A confirmed note outlives a successful re-read that does not carry it
+  [apps/admin/src/modules/ground-inspection/GroundInspectionPage.tsx:908] — `props.existing ?? confirmed` keeps "Recorded" for the
+  opening's life when the re-read has ⛔ note for that key (CR7's swallowed COMMIT — a 201 for a note never stored); before R2-4 the
+  refetch restored the editable box. Keep `confirmed` only until a re-read SUCCEEDS after the save.
+- [x] [Review][Patch][LOW][R3-4] A reader newly hidden (409 `own_ground_visit_pending`) still sees the cached result if the re-read fails
+  [apps/admin/src/modules/ground-inspection/GroundInspectionPage.tsx:902] — install the withheld shape locally (uniform
+  withholding), then re-read.
+- [x] [Review][Patch][LOW][R3-5] A 409 `discrepancy_note_exists` whose note is ALREADY on screen is never announced
+  [apps/admin/src/modules/ground-inspection/GroundInspectionPage.tsx:873] — the effect keys on an unchanged `existing` (structural
+  sharing), so the author state is ⛔ announced and the flag stays set. Announce at once when the note is already there.
+- [x] [Review][Patch][LOW][R3-6] `gcTime: 0` on a mutation spins a 0 ms timer while it is pending and unobserved
+  [apps/admin/src/modules/ground-inspection/GroundInspectionPage.tsx:617] — query-core `Mutation.optionalRemove` re-arms
+  `scheduleGc` while `pending` (verified in `@tanstack/query-core` `build/modern/mutation.js:72-80`). A short positive `gcTime`.
+- [x] [Review][Patch][LOW][R3-7] The note-vs-note race leg cannot tell the claim lock from the other serializers
+  [packages/domain/tests/integration/claim/ground-inspection-discrepancy-concurrency.spec.ts:315] — with the claim `FOR UPDATE`
+  removed, the second writer still blocks (on the first's showing or note tuple) and the 23505 mapping yields the same error.
+  Pre-record the showing, assert the blocked statement IS the claim lock, and that the second writer issues ⛔ note INSERT.
+- [x] [Review][Patch][LOW][R3-8] The failed-session-fetch admin leg asserts before the session has failed
+  [apps/admin/tests/ground-inspection-discrepancy.test.tsx:586] — wait for the session query's `error` state first.
+- [x] [Review][Patch][LOW][R3-9] A "Try again" that FAILS re-announces the old result as if fresh
+  [apps/admin/src/modules/ground-inspection/GroundInspectionPage.tsx:743] — after a failed retry the polite region returns to the
+  unchanged words beside the failure alert. Announce the result again only after a SUCCESSFUL read.
+- [x] [Review][Patch][LOW][R3-10] An invisible note (zero-width / format characters only) passes the blank refusal
+  [apps/api/src/modules/claims/claims.ground-inspection.routes.ts:122] — `trim()` keeps U+200B / U+2060 / U+FEFF …; the
+  once-only slot is lost the same way. Refuse a note with ⛔ visible character (server + the page's Save).
+- [x] [Review][Patch][LOW][R3-11] The fourth `MAX_READS` pin's title still says 26
+  [apps/api/tests/integration/claims/verifier-console.spec.ts:1177] — R2-18 corrected three; Task 4.3 names four.
+- [x] [Review][Patch][LOW][R3-12] The admin client's own key list is not pinned
+  [apps/admin/src/api/client.ts:1280] — R2-16 pinned contracts ↔ domain; the admin's `INSPECTION_DISCREPANCY_KEYS` would fail
+  the completion parse after the completion committed. Pin it to the contracts (the `GROUND_INSPECTION_OTHER_CLAIM_STAGES` precedent).
+- [x] [Review][Patch][LOW][R3-13] A failed session fetch leaves the page silently degraded
+  [apps/admin/src/modules/ground-inspection/GroundInspectionPage.tsx:86] — every "Show the result" disabled with ⛔ reason, the
+  inspector's own card never fetches, and their own note reads "Recorded by {their name}". Say why, with a way to retry.
+- [x] [Review][Patch][LOW][R3-14] The API legacy helper's doc misstates its lock
+  [apps/api/tests/integration/claims/ground-inspection-discrepancy.spec.ts:771] — ACCESS EXCLUSIVE is held from the DROP to the
+  COMMIT (⛔ "one UPDATE"), and `lock_timeout` bounds only its own wait, ⛔ the files queued behind it.
+- [x] [Review][Patch][LOW][R3-15] `withheld-note.ts`'s `check_failed` line omits that the assigned inspector gets `own_visit` first
+  [packages/contracts/src/claims/withheld-note.ts:15] — on a swallowed completion COMMIT their own still-scheduled visit hides them.
+- [x] [Review][Patch][LOW][R3-16] Round 2's closure language overstates
+  [_bmad-output/implementation-artifacts/6-27d-inspector-discrepancy-at-completion.md:789] — "R2-1 – R2-20 are fixed" collapses
+  R2-7 (closed with a disclosed substitute — ⛔ HTTP) and R2-9 (the final tree's `ci:local` was ⛔ shown green); family 10 is a
+  record property, ⛔ "covered-by-test"; R2-15's blank rule is not constructible at the DB (Tier-1 ciphertext) and the record does
+  ⛔ say so ([[feedback_closure_language_precision]]).
+- [x] [Review][Patch][LOW][R3-17] A failing race leg's in-flight call outlives its rollback
+  [packages/domain/tests/integration/claim/ground-inspection-discrepancy-concurrency.spec.ts:92] — `afterEach` rolls back while a
+  blocked multi-statement domain call is still running; its later statements run after ROLLBACK on a released client. Track the
+  in-flight call; roll back the lock holders, settle the calls, then the rest.
+- [x] [Review][Patch][LOW][R3-18] Run `ci:local` on the FINAL tree and record it
+  [_bmad-output/implementation-artifacts/6-27d-inspector-discrepancy-at-completion.md:854] — round 2's run preceded three admin
+  fixes; this round's fixes need the same proof.
+- [x] [Review][Defer][R3-19] The parent-guard triggers resolve their parent table by SEARCH PATH
+  [packages/domain/migrations/0160_ground-inspection-discrepancy.sql:94] — deferred, pre-existing house pattern: ⛔ of the 39
+  trigger functions in the migrations pins `search_path` or schema-qualifies; `twt_app` holds TEMP, so a session able to run
+  arbitrary SQL could shadow the parent with a temp table (RLS still binds the tenant — the 42501 leg). A house-wide hardening
+  pass, and the 6.27d temp-shadow fixtures would then need another way to seed a legacy row.
+
+**Dismissed (10):** R2-10 answering `shown` on a failed delivery COMMIT (Task 4.1 orders exactly that — the completion is known
+saved; the re-read and the note writer recompute the same keys); the viewer latch "keeping the previous actor after sign-out"
+(sign-out navigates to `/login` — the page unmounts; a re-login mounts a fresh latch); the notes' erasure arm admitting any
+ciphertext (0149's recorded limit, in the migration header and the policy spec); `FOR KEY SHARE` on the read path (short waits;
+`claims`' policy is `FOR ALL` with the same scope — verified twice); the two-re-reads leg "unable to tell the winner" (it compares
+`shownAt` — the winner's row); the read-only-at-once test's scheduler timing (red-checked by the fork); the `completedAt` cast
+(the one writer sets it; recorded); a 409 hiding the typed text (Task 3.2's ruled behaviour — the slot is once-only); the
+lockstep test's file; a non-English catalogue (the module is English constants; i18n parity passed).
+
+### Review Patch Validation — Round 3
+
+BigDev selected **Apply every patch** on 2026-10-14. **R3-1 – R3-18 are applied** (R3-13 by REMOVAL — see below); R3-19 is
+deferred (pre-existing, in `deferred-work.md`). ⛔ No migration, ⛔ ruling and ⛔ ratified text moved; the only spec edits are the
+Task 3.1 / 3.2 AMENDED markers (R3-1) and the dated round-2 corrections (R3-16), each beside the words it corrects.
+
+- **Domain / API / contracts:** R3-7 — the note-vs-note leg records the showing first, asserts the second writer's BLOCKED
+  statement is the claim `FOR UPDATE`, and counts ⛔ note INSERT from it; red-check (drop `lockClaimCase`'s `FOR UPDATE`) ⇒ the
+  second writer blocks in its note INSERT instead — red. R3-17 — transactions track their in-flight call; `afterEach` rolls back
+  the lock holders, settles the calls, then the rest (exercised by that very red-check — ⛔ hang). R3-10 — the server refuses a
+  note with ⛔ visible character (`/[^\p{White_Space}\p{Default_Ignorable_Code_Point}\u2800]/u`, the page uses the same);
+  red-check (the old `trim()` rule, then the first-draft `\p{Cf}` rule) ⇒ a zero-width-only and a variation-selector-only note
+  were each answered 201. R3-11 / R3-14 / R3-15 — the title and the two comments.
+- **Admin** (a fork, then the fix-diff review's corrections): R3-2 the panel's key drops `viewerId` (the per-opening `useId` and
+  the cards' epoch re-key isolate actors); R3-3 a confirmed note gives way only when a SUCCESSFUL re-read AFTER the save lacks it —
+  on any such read, ⛔ only the first — and its reason clears once a note for that question arrives; R3-4 a newly hidden reader's
+  panel installs the withheld shape before re-reading; R3-5 a 409 whose note is already on screen announces its author at once;
+  R3-6 `gcTime: 1000` on the two mutations (⛔ a 0 ms re-arming timer); R3-8 the failed-session leg waits for the `error` state;
+  R3-9 a failed "Try again" says ⛔ the old result again, and the flag resets only when the RESULT changes (⛔ on a note save's cache
+  write); R3-12 the admin client's key list is exported and pinned to the contracts'. Every new leg red-checked.
+- **R3-13 — closed by REMOVAL (⚠ recorded honestly):** the round-3 fork added a page status line + session retry for a FAILED
+  session fetch; the fix-diff review showed `GroundInspectionRoute` already sends a failed session to sign-in, so that state never
+  renders the page — the line and its two story-minted keys are removed. The reachable residual is the mount's session fetch IN
+  FLIGHT (milliseconds): "Show the result" is disabled and the inspector's own card waits. ⚠ The fork's neutral "Recorded" while
+  the viewer is unknown is REVERTED: it passed another author's note off as the viewer's (R4a) — every note names its author unless
+  it is the KNOWN viewer's own, read through a ref so a 409's announcement sees the current viewer.
+
+**Fix-diff review** (one fresh read-only reviewer over the round-3 patch alone, 778 lines): ⛔ high; two MEDIUM (the neutral
+"Recorded" — R4a; the unreachable R3-13 status) and three LOW (R3-9's reset on any cache write; R3-3 checking only the first
+re-read and never clearing its reason; `\p{Cf}` missing default-ignorable code points and refusing a few visible signs) — all
+five applied above, each with a red-checked test (the R3-3 "reason clears" leg was first written so a new save cleared it on its
+own; rewritten to bring the note in through ANOTHER box's refresh, then red). It verified R3-2's actor isolation, R3-4, R3-5,
+R3-7's statement text and Proxy, R3-17 (⛔ deadlock or hang) and the two predicates' identity as sound.
+
+**Verification (final tree):** admin 1170 / 1170 (71 files); admin / API / domain typecheck and the changed files' eslint clean
+(eslint's own exit code); API discrepancy spec 20 / 20; domain concurrency 8 / 8. **`pnpm ci:local` on the FINAL tree (shared
+:5433 `twt_dev`): 35 jobs green; `integration-tests` red ONLY on the 7 known `reconciliation/review-queue-read.spec.ts` failures
+(#15 — the shared-`PARIWAR_A` accumulation, the same 7 the dev run saw); domain 5144 passed / 7 failed.** (`cross-pariwar-leak`
+passed this run; its two earlier timeouts were its full read of `events_log` — 579,720 rows / 320 MB on :5433, ⛔ row of it
+6.27d's — under load.) ⚠ Innocence of #15 is by identity with the dev run's failures, ⛔ by a scratch-DB run this round. **The API
+integration suite on its own: 108 / 108 files, 1311 / 1311.**
+
 ## Dev Notes
 
 - **Traps** (6.27a's list applies; re-read Traps 1, 5, 9, 12 there):
@@ -627,10 +1090,14 @@ Claude Opus 5.5 (`claude-opus-5-5[1m]`) — `bmad-dev-story 6.27d`, 2026-10-14.
     AND the domain step-3 leg red (the `death_date` probe answered `discrepancy_not_shown` — the leak AC2 forbids);
   - the INSERT guard (`status = 'completed'` + `death_date_source = 'family_statement'` dropped from the showing write's
     parent CTE) ⇒ 3 domain legs red (a `certificate_check`, a pre-0147 NULL-source parent and a scheduled parent all
-    reported `persisted` — the trigger backstop then raised);
+    reported `persisted` — the trigger backstop then raised); ⚠ (round 2, R2-9) recorded BEFORE round 1's CR6 moved the
+    NULL-source legs onto a connection-local temp shadow — round 2 (R2-5) added the positive controls that now prove those
+    legs read the shadow;
   - the medical fence's teeth are IN the test (a positive control on `medical/disclosure-read.ts` and an import specimen);
   - the admin seed (`qc.setQueryDefaults(…)` removed) ⇒ the SEEDS test red: under the app's `gcTime: 0` /
-    `refetchOnMount: 'always'` defaults a seed without them is lost or refetched.
+    `refetchOnMount: 'always'` defaults a seed without them is lost or refetched. ⚠ (round 2, R2-9) superseded: round 1's
+    CR1 replaced that mechanism (the seed is the card's state + `initialData`, `gcTime: 0`) — this red-check no longer
+    names live code.
 - **`ci:local` on the SHARED :5433 `twt_dev`:** every job green but `integration-tests` — 7 failures, ALL in
   `reconciliation/review-queue-read.spec.ts` (Story 9.8), domain 5138 passed / 7 failed; the run stopped before the API
   integration suite. The known shared-`PARIWAR_A` accumulation class (known-failures #15): 539 live alerts under the fixed
@@ -679,7 +1146,8 @@ Claude Opus 5.5 (`claude-opus-5-5[1m]`) — `bmad-dev-story 6.27d`, 2026-10-14.
     27 → 29 (+ ledger, four pins); the section's exact-read pins in `peer-answers-console.spec.ts` 6 → 8 and 5 → 7.
   - **Admin:** a complete-only response schema; the re-read and note calls; `<DiscrepancyPanel>` on a completed
     `family_statement` card — SEEDED by the completion under per-key cache defaults (`staleTime` / `gcTime: Infinity`,
-    `refetchOnMount: false` — the app-wide defaults would lose the seed), fetched on its own only for the session's own
+    `refetchOnMount: false` — the app-wide defaults would lose the seed; ⚠ round 2, R2-9: superseded by round 1's CR1 —
+    the seed now lives in the assignment card's state, per actor and opening, `gcTime: 0`), fetched on its own only for the session's own
     inspector (local `normalizeActorId`), "Show the result" for every other viewer; the ruled copy verbatim; per-row
     `mutateAsync` note boxes; another author's note read-only WITH the author; the window / hidden refusals worded; the
     unused `gi.result.completed` removed. `<PeerMeshView>` renders the staff block ("Recorded after the difference was
@@ -692,7 +1160,9 @@ Claude Opus 5.5 (`claude-opus-5-5[1m]`) — `bmad-dev-story 6.27d`, 2026-10-14.
     fence, ⛔ a merge blocker).
   - **Recorded readings (implementation only, ⛔ a ruling):** the pre-0147 NULL-source leg is seeded by dropping 0147's
     `NOT VALID` CHECK, completing the row, and re-adding the CHECK by its own catalog definition inside ONE transaction
-    (rolled back in the domain spec; committed in the API spec) — the only way to reproduce such a row; the staff block
+    (rolled back in the domain spec; committed in the API spec) — the only way to reproduce such a row (⚠ round 2, R2-9:
+    since round 1's CR6 the domain and policy legs do this on a connection-local TEMP SHADOW of the inspection table, ⛔ on
+    the shared table; only the API spec still commits it on the shared table — R2-17); the staff block
     says *"No difference from the neighbours was shown to the inspector."* for an EMPTY showing (story-minted).
 
 ### File List
@@ -720,6 +1190,7 @@ Claude Opus 5.5 (`claude-opus-5-5[1m]`) — `bmad-dev-story 6.27d`, 2026-10-14.
 - `packages/domain/tests/integration/claim/ground-inspection-rtbf.spec.ts`
 - `packages/domain/tests/integration/rls/claim-ground-inspection-discrepancy-policy-regression.spec.ts` (new)
 - `packages/contracts/src/claims/verifier-console.ts`
+- `packages/contracts/src/claims/withheld-note.ts` (code review round 2 — `check_failed`'s doc)
 - `packages/contracts/tests/claims-verifier-console.test.ts`
 - `packages/contracts/tests/claims-peer-answers.test.ts`
 - `apps/api/src/audit/audit-sink.ts`
@@ -752,6 +1223,9 @@ Claude Opus 5.5 (`claude-opus-5-5[1m]`) — `bmad-dev-story 6.27d`, 2026-10-14.
 ## Change Log
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-14 | 4.3 | Code review round 3 (`bmad-code-review 6.27d`, the round-2 patch alone + a fix-diff review): 18 patches applied (R3-1 Tasks 3.1 / 3.2 amended to the CR1 / R2-13 design; R3-2 – R3-6 / R3-9 / R3-12 admin edges; R3-7 / R3-17 the race legs; R3-10 a note with ⛔ visible character refused, server + page; R3-13 closed by removal — the route already sends a failed session to sign-in; record corrections), R3-19 deferred (trigger functions resolve by search path — house-wide), 10 dismissed; `ci:local` on the final tree green but the 7 known #15. Status stays `done`. ⛔ No migration, ⛔ ruling moved. |
+| 2026-10-14 | 4.2 | Code review round 2 (`bmad-code-review 6.27d`, the full branch in three parallel chunks + a fix-diff review): 20 patches applied (R2-1 the note writer / re-read 40P01 — the showing writer locks the claim `FOR KEY SHARE` first; R2-5 positive controls for round 1's temp-shadow legs; the admin's page-wide note words, render-time `crypto.randomUUID`, unannounced states, stale-session viewer; the as-of supersession, `unavailable`, note-writer race and delivery-COMMIT legs; policy pins; a blank note refused; record corrections), R2-21 deferred, 40 dismissed; AC5 / AC6 / Task 3.2 amended in place. Status → `done`. ⛔ No migration, ⛔ ruling moved. |
+| 2026-10-14 | 4.1 | Code review round 1: CR1–CR6 applied (uncommitted until round 2), CR7 deferred. |
 | 2026-10-14 | 4.0 | `bmad-dev-story 6.27d` — implemented: migration 0160 (the showings + notes tables, the inspection's ownership UNIQUE, the guard triggers, the erasure arm, per-command RLS); the comparison inside the completion through ONE per-answer predicate shared with 6.27b; the guarded post-commit showing write (`persisted`), the re-read GET and the note POST (the hidden refusal before any showing check); the staff block inside the neighbours' section (`MAX_READS` 27 → 29); the admin panel (seeded result, ruled copy verbatim, per-row notes with author) and `PeerMeshView`'s block; the anonymizer scrub + rtbf pins; two fences; Row 27 evidence line (5); deferred ③ / ④. Status → `review`. |
 | 2026-10-14 | 3.1 | ⭐ Round-2 fresh-context re-validate: ⛔ no BLOCKER / HIGH. 2 MEDIUM in round 1's own swallowed-COMMIT patch — the assigned inspector already gets `own_visit` there (only an override completer reaches the INSERT), and a guarded `INSERT … SELECT` yields 0 rows (⛔ a trigger raise) ⇒ Task 4.1's step (ii) is ONE statement reporting `persisted`, and Task 1.3 (a) is the backstop for UNGUARDED writers only. LOW: the note POST's 201 body + `refetch()`; `admin.display_name_missing` (already an `ApiError`); copy / PeerMeshView render tests homed; the probe's "no details" scoped to an in-window claim; `authorActorId` on the re-read only; round 1's `approver-own-visit.ts:104-106` "correction" REVERTED to `:105-107` (it was wrong — #24(e)); `:135-144`; AC5 names the withheld answer; Task 7's red-checks. |
 | 2026-10-14 | 3.1 | ⭐ Round-1 fresh-context re-validate of the v3.1 rewrite (1 HIGH, 7 MEDIUM, 8 LOW — most of them the pass's own): a swallowed completion COMMIT returned `shown` (Task 4.1 now `withheld/check_failed` when the guarded INSERT finds no completed parent); AC2's note-writer order aligned with AC6; `shown_at` = first RECORDED, ⛔ "first delivery"; the probe test compares status, code, message and the absence of `details`, ignoring `request_id`; the note writer maps `OwnGroundVisitPendingError` directly (6.27b's mapper's prefix union lacks `ground_inspection`, its words say approve); ONE `{ discrepancy, notes }` cache shape; the page ⛔ cannot see a pariwar-scope override grant ⇒ an on-demand button for every other viewer; Task 3.1 keyed on `deathDateSource`; notes carry a stored `author_display` (⛔ a raw id on screen) and an `unavailable` render; orphan tests homed + Task tags; four cites, two quotes, the window list, the rtbf `not.toContain`, the NULL-source 404 leg. |

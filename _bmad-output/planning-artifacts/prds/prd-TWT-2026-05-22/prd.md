@@ -694,6 +694,7 @@ Auto-ping the 5 nearest active members (by district + school proximity) to confi
 - Selection algorithm is deterministic: district match > block match > school match; ties broken by `member_id` order.
 - Each ping is logged. Each verifier's response is logged. Verifier names are published with profile links on the Sahyog Vivran page (FR-77).
 - Verifier non-response after 72 hours → escalate to block admin.
+- ⚠ **ANNOTATED 2026-10-14 (Decision `2026-10-14-330`, under the Trustee-ratified `2026-10-10-310` CF4 A) — not rewritten.** "district > block > school proximity" is superseded: the five are the members at the deceased member's workplace (school or office; and the previous one after a transfer less than 90 days before the claim was filed), otherwise up to three members the member named who accepted, otherwise nobody (the ground inspection carries the claim) — never the district, and never chosen by the family. Built by Story 6.36 (rows 6-36a / 6-36b / 6-36c / 6-36).
 
 #### FR-40: Ground inspection retained alongside peer mesh
 

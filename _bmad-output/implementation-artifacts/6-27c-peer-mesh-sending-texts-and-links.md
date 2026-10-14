@@ -7,6 +7,8 @@ baseline_commit: fa2687ce
 ⚠ Before Task 1: `git diff --name-only fa2687ce..HEAD -- packages apps scripts infra`.
 
 STATUS: `backlog` — flips to `ready-for-dev` when 6.27b AND 6.27d are `done` AND row `6-30-app-links-open-the-app-from-a-text` is `done`. ⭐ (2026-10-12 annotation — Story 6.34 Task 0.4, `-322` C6) AND row 6-34 is done.
+⭐ (2026-10-14 annotation — Story 6.36a Task 0.4, `-330` SW1) row `6-36-peer-mesh-school-wise-selection` is now the LAST of four parts (6-36a,
+6-36b, 6-36c, 6-36) — waiting for row 6-36 waits for all four.
 ⭐ SENDING IS LAST on purpose: once a real text goes out, real answers arrive — the warnings and the wait (6.27b), the approvers' view (6.27b)
 and the inspector's independence (6.27d) must already exist.
 ⭐ THE RECORD is 6.27a's file (rulings, invariants, F1–F41, PM1–PM25; Task 0 shared). This file BUILDS the PMs tagged **[c]**: **PM1–PM5**
@@ -88,6 +90,10 @@ RB4 / RB5 / RB11 / RB12 / RB16 · `-302` RN2–RN8 · `-255` F7 (the cost line).
 5. **AC5 — the exclusions:** a peer ⛔ not active, reported deceased, or with ⛔ no sendable number ⇒ `no_target` with its fixed detail and
    ⛔ no alarm; ⛔ no replacement; the selection unchanged; a name over the `{#alphanumeric#}` limit (⭐ (2026-10-12 annotation — Story 6.34 Task 0.4, TV11: ⚠ on STPL / SmartPing the text keeps `{#var#}`; the tag names here are the slot TYPES — 6.34 TV1 / TV11) ⇒ `no_target:name_too_long` (a test; an author reading recorded at Task 0.4 — it narrows `-303`
    Q1 A at the edge; FYI in the confirm note; the provider's Devanagari answer is a Row 27 evidence line ⭐ (2026-10-12 annotation — Story 6.34 Task 0.4, `-322` C7: the answer is recorded ONCE at Row 30 (d) (`-322` C7); Row 27's evidence line POINTS to it (a refusal goes back to the Panel))).
+   ⭐ (2026-10-14 annotation — Story 6.36a Task 0.4, `-330` SW23 / SW27 and `-311` PM1: *"⛔ no replacement; the selection unchanged"* is
+   STALE — a send-time skip IS replaced by the next person in the SAME group's `ranked_member_ids` (PM1 (ii)), the replacement ping
+   inheriting the selection's `source`; the re-check reuses row 6-36's ONE eligibility predicate PLUS PM1's decrypt-time
+   `no_sendable_number`.)
 5b. **AC5b — PM14 / PM15:** ⛔ no new event is emitted by any send path (a test counts `claim.peer_mesh_*` events before / after); a
    re-claimed `attempting` row that fails its re-check finishes `error` with an ids-only alarm (`-297` §2), and a `no_target` on a re-claimed
    row alarms *"may have sent"* (`-298`) — each a test.
@@ -133,6 +139,9 @@ RB4 / RB5 / RB11 / RB12 / RB16 · `-302` RN2–RN8 · `-255` F7 (the cost line).
 - ⚠ **Row 6-34** retags every SMS template with typed variables; these two are registered typed from the start by 6.27c and VERIFIED by
   6-34 with every other — keep them consistent with it. ⭐ (2026-10-12 annotation — Story 6.34 Task 0.4, TV11 / `-322` C6: ⚠ on STPL / SmartPing the text keeps `{#var#}`; the tag names here are the slot TYPES — 6.34 TV1 / TV11; 6.27c WAITS for 6.34 — if it lands first anyway it STOPS and asks rather than re-creating 6.34's vocabulary.)
 - ⚠ **Row 6-31's reminder** goes ONLY within PM8's answer window too (`-305` §2 item 4) — leave the predicate readable (6.27a Trap 17).
+- ⭐ (2026-10-14 annotation — `-330` SW27 / 6.36a SF11) `recordPeerMeshResponse` refuses a responder outside `selection.selectedMemberIds`
+  (`packages/domain/src/claim/peer-mesh-persist.ts:235-237`) — a replacement ping would be refused there; 6.27c moves that check to the
+  ping rows.
 - ⚠ **Row 26 (`jobs-db-role`)** — the production jobs login holds ⛔ no privileges on claim tables; the new sweep inherits it (recorded).
 - **Previous story:** 6.24b (the send core, the sibling registry), 6.29 (the parity bar — hold / park / give-up, the CHECKs, the trigger).
 - ⭐ **From 6.30 (dev, 2026-10-10):** the link code's shape is `APP_LINK_CODE_PATTERN` (`@twt/contracts` — `packages/contracts/src/app-links/`,

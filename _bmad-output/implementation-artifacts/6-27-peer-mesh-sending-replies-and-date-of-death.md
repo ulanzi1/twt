@@ -246,6 +246,9 @@ They are kept only in the git history of this file.
    SQL fragment that selects codes and indexes only.
 3. **⛔ No decrypt in the warning module** — keyed indexes and plaintext codes only.
 4. **The selection is ⛔ not changed.** A peer 6.27c will ⛔ not text is recorded as such on its ping, ⛔ never replaced.
+   ⭐ (2026-10-14 annotation — Story 6.36a Task 0.4, `-330` SW27 / `-311` PM1: *"⛔ never replaced"* is superseded by PM1 — a skipped
+   neighbour IS replaced at send time by 6.27c, from the next person in the SAME group's recorded ranking (`ranked_member_ids`, row 6-36);
+   the selection's own rows are still ⛔ never rewritten.)
 5. **Texted at most once; ONE reply per ping; answers editable until Submit, then locked; every change kept.** At-least-once delivery is
    RECORDED, ⛔ not hidden (RB3); an edit appends a row and stamps the old one superseded.
 6. **⛔ No PII in an event, a log, an alarm, an audit row or a `detail`** — the date, the cause and the illness are Tier-1; the link code is
@@ -1233,6 +1236,8 @@ Dismissed: `skipInitial` under React Strict Mode (dev builds only — production
 6. **Both warning readers or neither** (6.27b) — the bulk reader is a separate statement; the parity test is the guard.
 7. **⛔ Never inherit a neighbour key** (`-261` C3).
 8. **⛔ Never touch the selection** (`peer-mesh-read.ts`; `member/moderation/index.ts:22`).
+   ⭐ (2026-10-14 annotation — `-330` SW18: row 6-36 changes HOW new selections are made, by a NEW metric id; 6.27a / b / c / d still ⛔
+   never rewrite a selection.)
 9. **⛔ No KMS under a lock — anywhere in 6.27** (the save path too: the handler encrypts and indexes FIRST, the writer takes the locks);
    ⛔ no number in a log.
 10. **The erased sentinel is a "mobile"** — ALWAYS `normalizeMobile`; ⛔ never `resolveSmsTarget`.

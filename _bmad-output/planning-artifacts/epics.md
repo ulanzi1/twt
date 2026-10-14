@@ -91,6 +91,7 @@ Inputs reconciled per the 2026-05-27 Sprint Change Proposal: the Sprint Change P
   - ⚠ **RECONCILED 2026-08-19 (C8, AI-10-2) — `district_cohort_v1` is the CURRENTLY SUPPORTED posture, and that is a ratified position, ⛔ not debt.** Story 6.6 shipped selection narrowed to a single metric and recorded why: `members` has no district/block/geo columns, and the only usable signal is the plaintext posting district.
   - **Expansion to `block` or `school` proximity requires TWO things:** the governed substrate to exist, **and** an **R4 promotion decision** (`2026-08-19-132`). ⛔ A *collected* directory attribute is **display-only by default** — letting one steer claim verification would make a Pariwar Admin's data entry influence who verifies a death.
   - ⭐ **The extension path is already built:** the metric registry takes richer metrics as **new entries plus their substrate**, without touching the pure engine. A future `district_block_cohort_v2` is a registry entry and a ruling — ⛔ not a re-architecture.
+  - ⚠ **ANNOTATED 2026-10-14 ([`-330`](../../.decision-log.md#decision-2026-10-14-330) SW2 / SW18; [`-310`](../../.decision-log.md#decision-2026-10-10-310) CF4 A) — ⛔ not rewritten.** The Panel ruled the selection use itself in CF4 A (the five are the member's WORKPLACE colleagues — ⛔ never the district). `-330` records the workplace as a POSTING fact (⛔ never a directory attribute, ⛔ never an RBAC scope) that ⛔ no Pariwar Admin act can set, and puts that reading to the Panel as an FYI (`trustee-panel-routing-note-2026-10-14-6-36-confirms.md`). The new metric is `workplace_named_v1` (a NEW id, ⛔ not a version — and the engine gains a grouped form, superseding "without touching the pure engine"); row `6-36-peer-mesh-school-wise-selection`.
 - **FR-40: Ground inspection retained alongside peer mesh.** BOTH peer mesh AND ground inspection must pass to advance to State Trustee approval. Not either/or.
 - **FR-41: Human shepherd assigned per claim (WI-26) `[v1-M]`.** District Admin scope assigned to every claim entering `under_verification`. Shepherd contact (name + phone + WhatsApp) on claim status page and confirmation. Self-assignment prohibited. Reassignment audit-logged. Shepherd inbox/dashboard/load-balancing/handoff UI is `[v1-S]`.
 - **FR-42: Member status banner on claim review (WI-39).** Trustee-Lite signals panel loads in ~5s: KYC validity, Vyawastha Shulk status, contribution history + 90% rule, last login, attribution chain, claim history, lock-in status, special-rule flags. One indexed query; no N+1. Approve/Reject/Escalate actions require brief rationale text (audit-logged).
@@ -2549,6 +2550,13 @@ So that mismatches are flagged for human review before verification proceeds and
 > ONE DLT text naming the member, with a link and the helpline (*"… please answer a few short questions …"*), through the claim SMS send
 > core — ⛔ never `dispatch()` (Story 6.27c); the question asked is the versioned questionnaire of Story 6.27a (`-304`), ⛔ not the single
 > question below.
+>
+> ⚠ **ANNOTATION 2026-10-14 (Story 6.36a Task 0.4; [`-330`](../../.decision-log.md#decision-2026-10-14-330) SW18 / SW25 under [`-310`](../../.decision-log.md#decision-2026-10-10-310) CF4 A) — ⛔ not rewritten.** *"nearest" … "same
+> district + cohort …"* below is superseded for every NEW claim by `workplace_named_v1`: the member's workplace colleagues (and the previous
+> workplace after a transfer less than 90 days before the filing), otherwise up to three people the member named who accepted, otherwise
+> nobody — ⛔ never the district; `district_cohort_v1` stays for replay. The last AC's *"operator is alerted to extend the window or skip"*
+> does ⛔ not cover a claim with NOBODY to ask: it goes on to the ground inspection (`claim.peer_mesh_none_to_ask`). Owned by row
+> `6-36-peer-mesh-school-wise-selection`.
 
 As the verification engine processing a claim,
 I want a peer mesh that deterministically selects the 5 nearest members and pings them for verification,
@@ -3420,6 +3428,67 @@ the twelve claim texts per TV4) with ⛔ a word of any text changed; the five wh
 a malformed helpline is sent and warned about on all four claim send paths; the claim-handover OTP is sent with the step-up wording
 (*"Valid 3 min"* — the code's real life); a CI gate (`dlt-typed-variables`) so ⛔ a variable ships untyped; the registration sheet covers
 every template (types to select, the MSG91 `##name##` form); roster Row 30.
+
+### Story 6.36a: Where Each Member Works — a School or an Office Picked From a List at Signup and at Every Transfer, With the Date It Began `[SURFACE]`
+
+> ⚠ **Minted under a Trustee ruling by an author-commit** (source line dated 2026-10-14, Story 6.36a Task 0.4 — ⛔ never a merge fence) —
+> [`-310`](../../.decision-log.md#decision-2026-10-10-310) CF4 A; author decisions [`-306`](../../.decision-log.md#decision-2026-10-10-306), [`-307`](../../.decision-log.md#decision-2026-10-10-307)
+> and [`-330`](../../.decision-log.md#decision-2026-10-14-330) (SW1–SW9). Row `6-36a-member-workplace-and-posting-history`; the FIRST of four (a → b → c → 6.36). Full ACs and THE RECORD
+> (SF / SW / SC / I for all four parts): `_bmad-output/implementation-artifacts/6-36a-member-workplace-and-posting-history.md`. Its go-live
+> record is roster Row 31 (`peer-mesh-selection-data-basis`).
+
+As a member, I want to pick my school or office from a list when I join and whenever I am transferred, with the date I started there, so
+that if I die the Trust asks the colleagues who actually worked with me — ⛔ never strangers from my district.
+
+**Acceptance Criteria (in brief):** a per-Pariwar workplace list imported from a documented CSV with a required district-spelling map
+(⛔ never deleting; staff rows untouched); a REQUIRED signup step after KYC (a school, an office, "isn't listed", "retired" — a Pariwar
+with ⛔ no list keeps today's district box); a transfer is a NEW posting with its start date, the history kept; "isn't listed" is typed
+by the member and later suggested by a Pariwar Admin for the member to confirm; the workplace is ⛔ never public, ⛔ never an RBAC scope.
+
+### Story 6.36b: People Who Know Me — Up to Three Members a Member Names, Found From Their Phone's Contacts, Each of Whom Accepts `[SURFACE]`
+
+> ⚠ **Minted under a Trustee ruling** (source line dated 2026-10-14, Story 6.36a Task 0.4) — [`-310`](../../.decision-log.md#decision-2026-10-10-310) CF4 A (2) and CF5 A; author decisions
+> [`-309`](../../.decision-log.md#decision-2026-10-10-309) and [`-330`](../../.decision-log.md#decision-2026-10-14-330) (SW10–SW17). Row `6-36b-people-who-know-me`; it starts only when 6.36a is
+> `done`. Full ACs: `_bmad-output/implementation-artifacts/6-36b-people-who-know-me.md` (6.36a's file is the record).
+
+As an active member, I want to name up to three members who know me — found from my phone's contacts — and to answer when someone names
+me, so that if no colleague can be asked when I die, people who truly knew me are, and ⛔ no non-member's number is ever kept.
+
+**Acceptance Criteria (in brief):** contact matching inside the caller's Pariwar returns only which numbers matched (⛔ nothing stored or
+logged), with daily, monthly and Pariwar limits and ONE audit line per check; the iOS picker or a typed number as the fallback; the named
+member answers in the app (⛔ no SMS, push or WhatsApp), told first that the namer will see the answer; up to three, removable,
+withdrawable; erasure and export.
+
+### Story 6.36c: Keeping the Lists Full — the Super Admin's Office List, a Pariwar Admin Suggests a Workplace the Member Confirms, and the Prompts `[SURFACE]`
+
+> ⚠ **Minted under a Trustee ruling** (source line dated 2026-10-14, Story 6.36a Task 0.4) — [`-310`](../../.decision-log.md#decision-2026-10-10-310) CF4 A; author decisions `-307` §2 items
+> 2 / 4 as narrowed by [`-330`](../../.decision-log.md#decision-2026-10-14-330) (SW9, SW16). Row `6-36c-workplace-list-curation-and-prompts`; it starts only when 6.36b is `done`. Full ACs:
+> `_bmad-output/implementation-artifacts/6-36c-workplace-list-curation-and-prompts.md`.
+
+As the Super Admin I want to keep the office list and add missing schools; as a Pariwar Admin I want to suggest the right entry for a
+member's unlisted workplace and run a short campaign; as a member I want to confirm my workplace and be reminded to invite colleagues.
+
+**Acceptance Criteria (in brief):** the Super Admin adds, renames and delists (⛔ never deletes); a Pariwar Admin only SUGGESTS a listed
+entry in the request's district, and only the member's confirmation writes a posting; neutral home cards (⛔ none reveals whether other
+members work somewhere); a campaign of up to 30 days; ⛔ no message to any phone.
+
+### Story 6.36: The Five Are Chosen From the Member's Own Workplace — Otherwise the People They Named, Otherwise Nobody, and Then the Claim Goes On `[SURFACE]`
+
+> ⚠ **Minted by Trustee ruling** (source line dated 2026-10-14, Story 6.36a Task 0.4) — [`-310`](../../.decision-log.md#decision-2026-10-10-310) CF4 A and CF2; author decisions
+> [`-306`](../../.decision-log.md#decision-2026-10-10-306), [`-308`](../../.decision-log.md#decision-2026-10-10-308), `-311` PM1, `-325` S1 A,
+> `-326` BD1 A and [`-330`](../../.decision-log.md#decision-2026-10-14-330) (SW18–SW27). Row `6-36-peer-mesh-school-wise-selection` (the row keeps its key — the rulings cite it); LAST of
+> four — it starts only when 6.36a, 6.36b and 6.36c are `done`; 6.27c waits for it. Full ACs:
+> `_bmad-output/implementation-artifacts/6-36-peer-mesh-school-wise-selection.md`. ⚠ The Panel's confirms SC1 / SC4 are owed
+> (`trustee-panel-routing-note-2026-10-14-6-36-confirms.md`).
+
+As the Trust, I want the people asked about a member's death to be that member's own colleagues, otherwise the people the member named,
+chosen the same way every time and ⛔ never steered by anything changed after the claim is filed, so that the answers come from people who
+knew the member — and a claim with nobody to ask still reaches the inspection that carries it.
+
+**Acceptance Criteria (in brief):** a new metric `workplace_named_v1` in a grouped engine (colleagues up to 5, otherwise named people up
+to 3, otherwise nobody — ⛔ never the district, ⛔ never a fill-up); everything read as recorded before the filing day, long-standing
+colleagues first, ONE staff line about recent changes; ONE eligibility predicate shared with 6.27c; each person's source on every ping and
+shown to the District Admin and later approvers (⛔ never the inspector); a claim with nobody to ask goes on (`claim.peer_mesh_none_to_ask`).
 
 ---
 

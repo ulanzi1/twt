@@ -1548,6 +1548,11 @@ endpoint; role modification requires Super Admin scope; trustee discretion logge
     columns** — they are **Pariwar-selected directory attributes** (§2.13). ⛔ There is no
     canonical directory schema. `District` remains platform-common, derived from
     `member_postings`.
+  - ⚠ **ANNOTATED 2026-10-14 — Decision `2026-10-14-330` SW2 (under `2026-10-10-310` CF4 A).** A
+    member's **workplace** (a school or an office, picked from an imported list, with the date
+    the posting began) is a **posting fact** on `member_postings`, platform-common like
+    `District` — ⛔ not the Pariwar-selected `School` directory attribute; Tier 3; used to
+    choose who is asked about a death, ⛔ never an RBAC scope, ⛔ never public.
 
 **Baseline:** Managed Postgres TDE (DB-level encryption with KMS-managed keys) underlies
 all tiers — protects against disk theft. Application-layer encryption on Tier 1 + 2 is
@@ -1886,6 +1891,11 @@ containment, pool assignment, `is_valid`/`is_assignable`, or peer-mesh selection
 being defined or populated. Enforced **by signature**, following the advisory-`routed_to_role`
 precedent. ⚠ Publishing a hierarchy may support hierarchy-scoped RBAC **independently of
 directory adoption**; the two are separate questions.
+⚠ **ANNOTATED 2026-10-14 — Decision `2026-10-14-330` SW2.** Peer-mesh selection's use of a
+member's WORKPLACE is ⛔ not a directory attribute feeding selection: the workplace is a
+posting fact (§2.7), the use is the Panel's own ruling (`2026-10-10-310` CF4 A), and ⛔ no
+Pariwar Admin act sets or creates a member's workplace. Put to the Panel as an FYI
+(`trustee-panel-routing-note-2026-10-14-6-36-confirms.md`).
 
 **⭐ 2.13.3 A member's stored identity is separate from its public presentation.**
 *(Decision `2026-08-19-136` clauses 1–3; source name and tier posture `2026-08-19-135`.)*

@@ -1,3 +1,9 @@
+# last_updated: 2026-10-14h (STORY 6.36 — TASK 0 DONE: BigDev answered SW1–SW30 and SC1–SC4 *"all A, SC4 yes"*. `2026-10-14-330`
+# (author-commit, ⛔ not Trustee-ratified) committed ALONE (`d44708e8`) on `story/6-36-peer-mesh-school-wise-selection`; then (`35fe513f`)
+# the confirm note `trustee-panel-routing-note-2026-10-14-6-36-confirms.md` — SC1 (the date of death is ⛔ not known when the five are
+# chosen) + SC4 (*"school or office"*) + an FYI (the August directory rulings), ⛔ NOT YET SENT — and the dated annotations (epics.md's four
+# 6.36 entries + Story 6.6 + FR-39 C8; prd.md FR-39; architecture §2.7 / §2.13.2; 6.27a Invariant 4 / Trap 8; 6.27c STATUS / AC5 / Dev
+# Notes). ⛔ No AC or Task changed. Row `6-36a-member-workplace-and-posting-history` stays `ready-for-dev` — now buildable. ⛔ No other row moves.)
 # last_updated: 2026-10-14g (STORY 6.36 — CREATED AND SPLIT FOUR WAYS by `bmad-create-story 6.36` (branch
 # `story/6-36-peer-mesh-school-wise-selection`, a separate worktree from `origin/main` `2581c514`; five read-only research passes + the
 # author). `-307` Consequence 1 left the split to this story (SW1): 6.36a → 6.36b → 6.36c → 6.36. NEW rows

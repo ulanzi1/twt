@@ -253,6 +253,7 @@ CF2; `-308`; `-325` S1 A; `-326` BD1 A.
 ## Change Log
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-14 | — | `2026-10-14-330` committed (`d44708e8`) — BigDev: *"all A, SC4 yes"*; every AC and Task here was written to the recommended answers ⇒ ⛔ none changed. |
 | 2026-10-14 | 1.5 | Validate round 5: AC5 quotes SW21's run word for word, defines "unconfirmed" as of the cut, and its first test now has a previous workplace to miss. |
 | 2026-10-14 | 1.4 | Validate round 4: the Story's promise names I8's two exceptions; `settled` measured from the run's recorded start and false for named people; AC5's run definition and its three tests. |
 | 2026-10-14 | 1.3 | Validate round 3: the grouped snapshot row carries `settled` (replay); the Story's promise is "after the claim is filed"; AC5 reads a withdrawal per LINK, counts REMOVALS in the staff line, and measures the 90 days from the start of the CURRENT run; the negative schema-key tests cover `recentChangeBeforeFiling`. |

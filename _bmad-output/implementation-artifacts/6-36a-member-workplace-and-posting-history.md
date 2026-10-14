@@ -24,7 +24,8 @@ is cut into FOUR parts, built in this order — **6.36a → 6.36b → 6.36c → 
 committed ONCE at Task 0.2), the Panel confirms (SC1–SC4 + one FYI), the invariants (I1–I12) and the shared Task 0. The other three files
 BUILD the SW items tagged for them and point here. Where a summary in a part file and this file disagree, this file is the record.
 
-STATUS: `ready-for-dev` — ⛔ no code before Task 0.2's author-commit is in the tree (AC0).
+STATUS: `ready-for-dev` — ⭐ Task 0 DONE (2026-10-14): BigDev answered *"all A, SC4 yes"*; `2026-10-14-330` committed ALONE (`d44708e8`);
+the confirm note (SC1, SC4 + FYI — ⛔ not yet sent) and the annotations committed (`35fe513f`). AC0 is met — Task 1 may start.
 
 GLYPH REGISTER, ADDRESSING RULE: as 6.27a — `⛔` sits ONLY on a negation word · `⭐` = key fact / action · `⚠` = hazard · doubling is volume
 only. ⛔ No `file:NNN` into `.decision-log.md`, `deferred-work.md` or `sprint-status.yaml` (newest-first files — cite entry id + clause,
@@ -207,7 +208,7 @@ my family picks.**
   `packages/domain/tests/claim/dpdpa-consent-events.test.ts:59` (`toHaveLength(36)`) and the frozen-literal diff in
   `packages/domain/tests/claim/nominee-name-check-events.test.ts:79-135` ⇒ a new claim event updates all three (6.36 AC8).
 
-## The decisions (SW1–SW30) — PROPOSED, the author's (BigDev's), answered at Task 0.1, committed ONCE at Task 0.2
+## The decisions (SW1–SW30) — the author's (BigDev's), ✅ COMMITTED as `2026-10-14-330` (`d44708e8`) — BigDev: *"all A, SC4 yes"*
 
 > ⭐ Each is written as the recommended answer, with its alternatives and their honest costs. ⚠ Every AC and Task in the four files is
 > written to the RECOMMENDED answer — an answer that differs amends the files it names BEFORE their code (Task 0.5).
@@ -579,10 +580,10 @@ my family picks.**
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0 — SHARED, before ANY code of ANY part (AC0).**
-  - [ ] 0.1 Put SW1–SW30 to BigDev as plain-language summaries (one line each, the recommended answer first); record each answer word
+- [x] **Task 0 — SHARED, before ANY code of ANY part (AC0).** ✅ 2026-10-14.
+  - [x] 0.1 Put SW1–SW30 to BigDev as plain-language summaries (one line each, the recommended answer first); record each answer word
         for word in the Change Log below.
-  - [ ] 0.2 Stage ONE author-commit in the scratchpad (`decision-<id>.md`): Decision type *Author-commit (BigDev, Solo Builder)*; the
+  - [x] 0.2 Stage ONE author-commit in the scratchpad (`decision-<id>.md`): Decision type *Author-commit (BigDev, Solo Builder)*; the
         Occasion with BigDev's words; **§1 FOUND** = SF1–SF17 (SF1 as a correction to `-307` §1's FOUND line — `-307` is ⛔ not edited);
         **§2 THE CALLS** = SW1–SW30 as answered, each marked where it supersedes IN PART: `-307` §2 item 2 by SW4 and SW9; `-307` §2 item 3
         (ii) by SW15 (with the §0 re-read); `-307` §2 item 4 by SW16 (1), (2) and (5); `-306` §2 item 4 by SW18 (a new id, ⛔ not a version);
@@ -592,15 +593,15 @@ my family picks.**
         heading; verify `git diff --numstat` is additive-only and equals the draft; commit ALONE (`governance: record Story 6.36's build
         decisions SW1–SW30 (Decision <id>)`). ⚠ If the write is refused, ask BigDev once with the staged path (memory: *Decision-log
         writes: try first*). Write the SHA into the Change Log only AFTER `git commit`.
-  - [ ] 0.3 Write ONE note from `trustee-panel-routing-note-TEMPLATE.md` (its order: the question, the one fact, the options with a cost on
+  - [x] 0.3 Write ONE note from `trustee-panel-routing-note-TEMPLATE.md` (its order: the question, the one fact, the options with a cost on
         every one, then evidence) — `trustee-panel-routing-note-<date>-6-36-confirms.md` — carrying SC1, every other SC BigDev's answers
         leave open, and the FYI; committed with the governance commit or alone; ⛔ never recorded as "shown to the Panel" until BigDev says
         it was sent.
-  - [ ] 0.4 The annotations (dated, ⛔ not rewrites, each naming the decision id): `epics.md` — new entries for 6.36a / 6.36b / 6.36c / 6.36
+  - [x] 0.4 The annotations (dated, ⛔ not rewrites, each naming the decision id): `epics.md` — new entries for 6.36a / 6.36b / 6.36c / 6.36
         (the 6.27 entries' shape: *"Minted by …"*, row key, order, *"Full ACs: <file>"*) and annotations on Story 6.6 and FR-39's C8 line;
         `prd.md` FR-39; `architecture.md` §2.7 and §2.13.2 (SW2); 6.27a Invariant 4 and Trap 8; 6.27c AC5, its STATUS line and its Dev
         Notes (SW27). Commit with the governance commit.
-  - [ ] 0.5 Apply any answer that differs from a recommendation to EVERY file it touches (rebuild each file's AC ↔ Task map both ways),
+  - [x] 0.5 Apply any answer that differs from a recommendation to EVERY file it touches (rebuild each file's AC ↔ Task map both ways),
         before Task 1.
 - [ ] **Task 1 — the migration (AC1).**
   - [ ] 1.1 `workplaces`: `workplace_id uuid pk default gen_random_uuid()`, `pariwar_id uuid not null`, `kind text not null CHECK (kind IN
@@ -786,6 +787,7 @@ out of components. `pnpm ci:local` before push (memory: unit=4 tunable; integrat
 ## Change Log
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-14 | 1.7 | ⭐ Task 0 (shared) DONE. Task 0.1 — BigDev's answer, word for word: *"all A, SC4 yes"* (to SW1–SW30 and SC1–SC4 put as plain-language summaries). Task 0.2 — `2026-10-14-330` committed ALONE (`d44708e8`; inserted by this session, additive 45 / 0, byte-identical to the scratchpad draft). Task 0.3 — `trustee-panel-routing-note-2026-10-14-6-36-confirms.md` (SC1, SC4, the FYI; SC2 / SC3 ⛔ not owed) committed with the annotations (`35fe513f`); ⛔ not yet sent. Task 0.4 — the annotations in `epics.md` (four entries + Story 6.6 + FR-39 C8), `prd.md` FR-39, architecture §2.7 / §2.13.2, 6.27a Invariant 4 / Trap 8, 6.27c STATUS / AC5 / Dev Notes (`35fe513f`). Task 0.5 — ⛔ no answer differed from a recommendation ⇒ ⛔ no AC or Task changed. |
 | 2026-10-14 | 1.6 | Validate round 6 (one fresh-context verifier — 0 BLOCKER, 1 HIGH, 4 MEDIUM, 6 LOW, all applied): Task 1.1b's leftover "re-listed" sentence replaced by the stale-map refusal and `--relist-district` (the HIGH); SW14 lists FOUR things each side can tell and its §0 says WIDENS `-307` §2 item 3 (iii), with the two notices and the `member_status` ground; the rename retires `<old>` first, writers read the district FOR SHARE, it prints the postings left on `<old>`, closed / confirmed requests keep `<old>`, and its batch row carries ⛔ no source fields (a CHECK); AC1 tests the rename arm; SW21 defines "unconfirmed". |
 | 2026-10-14 | 1.5 | Validate round 5 (one fresh-context verifier — 0 BLOCKER, 1 HIGH, 8 MEDIUM, 6 LOW, all applied): the requests' `district` grant and a rename arm in their guard (the HIGH); staff rows and the stale-map refusal around `--rename-district`, its batch row and its grant consequence; SW14 states the two things a namer CAN tell (an immediate *"No"*; a vanished row = a withdrawal, ⛔ never a death), the named person is told *"[Name] will see your answer"*, and a §0 line; SW16 (4)'s card fires only for SW14's unnamed row (the word "erased" dropped); SW20 (i) points to SW22; duplicates removed. |
 | 2026-10-14 | 1.4 | Validate round 4 (one fresh-context verifier — 0 BLOCKER, 2 HIGH, 5 MEDIUM, 3 LOW, all applied): SW14 RECOMMENDS the honest rule — a *"No"* shows *"Not accepted"* at once, a lapse at day 30 — after round 4 showed the indistinguishable version leaking through slots, re-asks and removals (it stays as SW14's alternative); one re-ask rule (`ended_at` + 60 days); the *"Can no longer be asked"* row is unnamed for withdrawal and death alike; district spellings are retired ONLY by an explicit `--rename-district` that moves every workplace and open request (a one-district file retires nothing); every district check reads LISTED spellings; SW21's run skips an *"isn't listed"* row between two of the same workplace and covers a retirement or an unconfirmed *"isn't listed"*; `settled` measured from the run's recorded start and false for named people. |

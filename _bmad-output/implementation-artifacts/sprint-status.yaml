@@ -1,3 +1,20 @@
+# last_updated: 2026-10-14g (STORY 6.36 — CREATED AND SPLIT FOUR WAYS by `bmad-create-story 6.36` (branch
+# `story/6-36-peer-mesh-school-wise-selection`, a separate worktree from `origin/main` `2581c514`; five read-only research passes + the
+# author). `-307` Consequence 1 left the split to this story (SW1): 6.36a → 6.36b → 6.36c → 6.36. NEW rows
+# `6-36a-member-workplace-and-posting-history` `ready-for-dev` (THE RECORD — SF1–SF17, SW1–SW30 PROPOSED, SC1–SC4 + an FYI, I1–I12, the
+# shared Task 0), `6-36b-people-who-know-me` `backlog`, `6-36c-workplace-list-curation-and-prompts` `backlog`; row
+# `6-36-peer-mesh-school-wise-selection` KEEPS its key and stays `backlog` (the selection, the source line, the claim with nobody to ask)
+# until all three are `done` ⇒ 6.27c's predecessor stays literally true. ⛔ No decision written (SW1–SW30 are answered at 6.36a Task 0.1
+# and committed ONCE at Task 0.2); ⛔ no code. FOUND: ⛔ no school-level UDISE list was found on data.gov.in (`-307` §1's FOUND line did ⛔ not
+# hold) — the only bulk copy is the India Data Portal's ODC-BY 2022 file (84,352 Bihar schools vs 95,195 official; ⛔ no block names; UDISE+ requires the
+# Ministry's permission to reproduce); a claim with nobody to ask is stuck in `documents_pending` for ever (REACHABLE — CF4 A's "the
+# inspection carries the claim" cannot happen today); ⛔ no date of death is known at selection (in v1 the OCR'd date is ALWAYS empty —
+# the anchor is the filing date); the engine has ⛔ no groups;
+# on Android it is `expo-contacts`' picker (⛔ not the platform's) that needs the contacts permission; the directory-attribute model
+# (`-132` R2 / C8) meets CF4 A — read as MATCHED (the Panel ruled the use; ⛔ no Pariwar Admin act sets a workplace), an FYI to the Panel.
+# Validation: round 1 (three fresh-context verifiers: 2 BLOCKER, 11 HIGH) and round 2 (two: 1 BLOCKER, 10 HIGH) — all applied (v1.2). Panel confirms owed (ONE note,
+# non-blocking): SC1 always (the date of death is ⛔ not known at selection — the 90 days and the family's phone); SC2–SC4 per BigDev's
+# answers.)
 # last_updated: 2026-10-14f (STORY 6.27d — CODE REVIEW ROUND 3 (`bmad-code-review 6.27d`, branch `story/6-27d`): row
 # `6-27d-inspector-discrepancy-at-completion` STAYS `done`. The round-2 patch alone (1665 lines) × Blind / Edge / Acceptance in
 # parallel, then a fresh review of the round-3 patch alone. 0 decision-needed, 18 patch (all applied — BigDev: "Apply every
@@ -20049,6 +20066,15 @@ development_status:
   # with typed variables"* reads *"declares a TRAI type for every `{#var#}` (SmartPing)"* — the text keeps `{#var#}`; approval = roster Row 30 (b).
   6-34-sms-templates-typed-variables: done
   6-35-in-app-language-switch: backlog
+  # ⭐ 2026-10-14 ADDED by `bmad-create-story 6.36` (SW1 — the split `-307` Consequence 1 left to it): 6.36a is THE RECORD for the four
+  # parts (SF / SW / SC / I letters; the shared Task 0 — BigDev answers SW1–SW30, ONE author-commit before any code). 6.36a = the school
+  # list (imported — the production source + permission are go-live Row 31 (c)), the workplace and its start date at signup (a required
+  # step) and at every transfer, the history, "my workplace isn't listed". 6.36b = up to three "people who know me", found by contacts
+  # matching (CF5 A), each accepting. 6.36c = the Super Admin's office list, the Pariwar Admin's SUGGESTION the member confirms (⛔ never a
+  # staff add or set — SW9), the prompts, the campaign. Order a → b → c → row 6-36.
+  6-36a-member-workplace-and-posting-history: ready-for-dev
+  6-36b-people-who-know-me: backlog
+  6-36c-workplace-list-curation-and-prompts: backlog
   # ⭐ 2026-10-10 ADDED by `2026-10-10-306` (BigDev: "Selection must be school wise …"): each member's SCHOOL (a stable school code + name)
   # and posting start date captured at signup and on every transfer (a new posting — history kept); a NEW peer-mesh metric: members posted
   # at the deceased member's school, plus the previous school when the current posting began within 90 days; ⛔ never the district; fewer
@@ -20062,6 +20088,10 @@ development_status:
   # SOURCE (`workplace` / `named_by_member`) AND carries it onto the reply (6.27a PM7) AND shows it on the District Admin's console
   # (6.27a PM13: "chosen from the workplace" / "named by the member"); 6.27b PM24 shows it too. 6.27a built ⛔ neither (deferred-work).
   # ⭐ 2026-10-13 (`2026-10-13-326` Consequence 1, appended in 6.27b's code commit): 6-36 also renders the source on 6.27b's later-approver panel (the shared `PeerMeshView`); a test on both surfaces.
+  # ⭐ 2026-10-14 (`bmad-create-story 6.36`, SW1): SPLIT — this row KEEPS its key and builds the selection (`workplace_named_v1`, the
+  # filing-date cut with settled colleagues first, the ONE eligibility predicate, the recorded ranking, the source on every ping and on BOTH
+  # staff surfaces, `claim.peer_mesh_none_to_ask`); it stays `backlog` until 6-36a, 6-36b AND 6-36c are `done`. Story file
+  # `6-36-peer-mesh-school-wise-selection.md`; the record is 6.36a's.
   6-36-peer-mesh-school-wise-selection: backlog
   # ⭐ 2026-10-10 ADDED by `2026-10-10-314` (BigDev: *"msg91 for now"* → *"New story row"*): the SMS gateway is MSG91, whose Flow / OTP v5
   # APIs take an `authkey` header, MSG91's OWN template id and NAMED variable values — ⛔ the generic `sms-app.ts` contract. 6-37 builds the

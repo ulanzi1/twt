@@ -13,11 +13,12 @@
 // PURE presentational components — the route owns the queries, the forget-on-close and the claim keying.
 
 import { DeathCertificateRegisterCheck } from '@twt/contracts';
-import type { DeathCertificateHistoryResponse, VerifierReviewItem } from '@twt/contracts';
+import type { DeathCertificateHistoryResponse, VerifierReviewItem, WithheldNote as WithheldNoteDto } from '@twt/contracts';
 import type { ReactElement } from 'react';
 import { useEffect, useRef, useState } from 'react';
 
 import { verifierConsoleEn } from './i18n-en.js';
+import { WithheldNote } from './WithheldNote.js';
 
 const t = verifierConsoleEn.deathCertificate;
 
@@ -318,11 +319,14 @@ export function DeathCertificateReviewControl(props: DeathCertificateReviewContr
   );
 }
 
-type ReadableValue = { state: 'readable'; value: string } | { state: 'unreadable' } | { state: 'anonymized' } | null;
+// Story 6.27b code review round 2 (X2) — the review NOTE (`ReadableErasableNote`) may also be `withheld` from this reader.
+type ReadableValue = { state: 'readable'; value: string } | { state: 'unreadable' } | { state: 'anonymized' } | WithheldNoteDto | null;
 
-/** A decrypted value in WORDS: erased (RTBF — permanent) is ⛔ not "could not be read" (`2026-09-26-246` §2). */
+/** A decrypted value in WORDS: erased (RTBF — permanent) is ⛔ not "could not be read" (`2026-09-26-246` §2); withheld is
+ *  said in the shared words (⛔ never blank). */
 function Value({ v }: { v: ReadableValue }): ReactElement | null {
   if (!v) return null;
+  if (v.state === 'withheld') return <WithheldNote reason={v.reason} />;
   if (v.state === 'readable') return <span>{v.value}</span>;
   return <span className="italic">{v.state === 'anonymized' ? t.history.anonymized : t.history.unreadable}</span>;
 }

@@ -8,12 +8,15 @@ import type { ReactElement } from 'react';
 import { useId, useState } from 'react';
 
 import { useRespondToClosureDirection } from '../../api/hooks.js';
+import { WithheldNote } from '../claim-verification/WithheldNote.js';
 import { closureErrorText } from './errors.js';
 import { correctionClosureEn as t } from './i18n-en.js';
 
 const n = t.inbox;
 
 function Text({ note }: { note: StaffNoteDto }): ReactElement {
+  // Story 6.27b code review round 2 (X2) — a WITHHELD text is said in words (⛔ never the dash of "no note").
+  if (note.state === 'withheld') return <WithheldNote reason={note.reason} />;
   return <>{note.state === 'readable' ? note.value : '—'}</>;
 }
 

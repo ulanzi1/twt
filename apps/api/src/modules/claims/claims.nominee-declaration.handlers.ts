@@ -39,6 +39,7 @@ import type {
   ReadableErasable,
   ReadableName,
   ReadableNomineeName,
+  ReadableNote,
 } from '@twt/contracts';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 
@@ -64,6 +65,7 @@ import {
 } from './nominee-declaration-crypto.js';
 import { decryptDeathCertificateReviewField } from './death-certificate-crypto.js';
 import { decryptVerifierRationale } from './verifier-decision-crypto.js';
+import { readClaimsHiddenFromReader, withheldNote, withheldReasonOn, withheldUnlessAuthor } from './hidden-reader-notes.js';
 
 /** The timeline READ key — reused, ⛔ no fifth key (`-241` §2). */
 export const NOMINEE_DECLARATION_VIEW_KEY = 'claim.view_nominee_name_check';
@@ -386,6 +388,24 @@ export function createNomineeDeclarationHandlers(deps: AppDeps) {
         });
       }
       const live = await claimDomain.getLiveNomineeDetermination(scopeTx.tx, pariwarId, cid);
+      // ⭐ Story 6.27b code review round 2 (X6 — AC7's X1 A; X2) — the determination's NOTE is staff free text on this claim:
+      // WITHHELD (`{ state: 'withheld', reason }`, ⛔ never decrypted) from a reader whose own ground visit here is pending,
+      // unless they made the determination. The certificate DATE is operational and stays. ONE statement (only when a
+      // determination is live); a failed read withholds (`check_failed`).
+      const determinationNoteWithheld =
+        live === null
+          ? null
+          : withheldUnlessAuthor(
+              withheldReasonOn(
+                await readClaimsHiddenFromReader(scopeTx.client, scopeTx.tx, p, [claimCaseId], actorId, {
+                  label: 'nominee_snapshots_own_visit_pending',
+                  log,
+                }),
+                claimCaseId,
+              ),
+              live.row.decidedByActorId,
+              actorId,
+            );
 
       // ⭐ Records WHO opened a living person's details and ON WHICH CLAIM — ⛔ never the details.
       emitAuthAudit(deps, request, 'admin_nominee_declaration.snapshots_read', {
@@ -402,7 +422,10 @@ export function createNomineeDeclarationHandlers(deps: AppDeps) {
           ? {
               determination_id: live.row.determinationId,
               certificate_date: await readable(() => decryptDeterminationField(live.row.certificateDateCiphertext, p, enc), log, 'certificate_date', claimCaseId),
-              note: await readable(() => decryptDeterminationField(live.row.noteCiphertext, p, enc), log, 'determination_note', claimCaseId),
+              note:
+                determinationNoteWithheld !== null
+                  ? withheldNote(determinationNoteWithheld)
+                  : await readable(() => decryptDeterminationField(live.row.noteCiphertext, p, enc), log, 'determination_note', claimCaseId),
             }
           : null,
       };
@@ -533,8 +556,25 @@ export function createNomineeDeclarationHandlers(deps: AppDeps) {
 
       const rows = await claimDomain.listNomineeCorrections(scopeTx.tx, pariwarId, cid);
       const targets = await nomineeDomain.getNomineeVersionsByIds(scopeTx.tx, pariwarId, rows.map((r) => r.targetVersionId));
-      const note = (ct: string | null) =>
-        ct === null ? Promise.resolve(null) : readable(() => decryptCorrectionNote(ct, p, enc), log, 'correction_note', claimCaseId);
+      // ⭐ Story 6.27b code review round 2 (X6 — AC7's X1 A; X2) — a correction's staff NOTES (a helpline operator's raise
+      // note, the District Admin's and the Pariwar Admin's decision notes) are WITHHELD (`{ state: 'withheld', reason }`,
+      // ⛔ never decrypted) from a reader whose own ground visit on this claim is pending, unless they wrote that note. A
+      // family's own `member_app` raise note is ⛔ a staff note and stays. The proposed / target details are operational.
+      // ONE statement (only when a correction exists); a failed read withholds (`check_failed`).
+      const notesReason = withheldReasonOn(
+        await readClaimsHiddenFromReader(scopeTx.client, scopeTx.tx, p, rows.length > 0 ? [claimCaseId] : [], actorId, {
+          label: 'nominee_corrections_own_visit_pending',
+          log,
+        }),
+        claimCaseId,
+      );
+      /** `author: 'family'` — a family's own note (⛔ a staff note: never withheld). */
+      const note = async (ct: string | null, author: string | null | 'family'): Promise<ReadableNote | null> => {
+        // Y3 — withheld BEFORE the presence test, so a hidden reader's entry reads the same note or ⛔ note.
+        const reason = author === 'family' ? null : withheldUnlessAuthor(notesReason, author, actorId);
+        if (reason !== null) return withheldNote(reason);
+        return ct === null ? null : readable(() => decryptCorrectionNote(ct, p, enc), log, 'correction_note', claimCaseId);
+      };
 
       const corrections: NomineeCorrectionView[] = [];
       for (const r of rows) {
@@ -562,15 +602,15 @@ export function createNomineeDeclarationHandlers(deps: AppDeps) {
           },
           raised_via: r.raisedVia,
           raised_at: r.raisedAt.toISOString(),
-          raise_note: (await note(r.raiseNoteCiphertext))!,
+          raise_note: (await note(r.raiseNoteCiphertext, r.raisedVia === 'member_app' ? 'family' : r.raisedByActorId))!,
           step: r.step,
           district_admin:
             r.daDecidedAt && r.daDisplay
-              ? { actor_display: r.daDisplay, decided_at: r.daDecidedAt.toISOString(), note: await note(r.daNoteCiphertext) }
+              ? { actor_display: r.daDisplay, decided_at: r.daDecidedAt.toISOString(), note: await note(r.daNoteCiphertext, r.daActorId) }
               : null,
           pariwar_admin:
             r.paDecidedAt && r.paDisplay
-              ? { actor_display: r.paDisplay, decided_at: r.paDecidedAt.toISOString(), note: await note(r.paNoteCiphertext) }
+              ? { actor_display: r.paDisplay, decided_at: r.paDecidedAt.toISOString(), note: await note(r.paNoteCiphertext, r.paActorId) }
               : null,
           declined_at_step: r.declinedAtStep,
           applied_version_id: r.appliedVersionId,
@@ -731,6 +771,19 @@ export function createNomineeDeclarationHandlers(deps: AppDeps) {
         request.log.warn({ err: err instanceof Error ? err.name : 'unknown' }, 'nominee refusals: closed-holder-refused read unavailable');
         return new Set<string>();
       });
+      // ⭐ Story 6.27b code review round 2 (V6 — AC7's D1 B + V1 A) — a refusal's rationale (the District Admin's DENIAL
+      // note) is a staff note on its claim: WITHHELD (`null`, ⛔ never decrypted, ⛔ not a placeholder) on a claim whose
+      // neighbours' section is hidden from THIS reader. ONE set-based statement over the rows that carry a note
+      // (`hidden-reader-notes.ts`); a failed read withholds them all (fail CLOSED).
+      const hiddenClaims = await readClaimsHiddenFromReader(
+        scopeTx.client,
+        scopeTx.tx,
+        p,
+        rows.map((r) => r.claimCaseId), // Y3 — EVERY row: a hidden reader's carries `withheld`, rationale or ⛔ rationale
+        actorId,
+        { label: 'nominee_refusals_own_visit_pending', log: request.log },
+      );
+      const rationaleShown = (r: (typeof rows)[number]) => r.rationaleCiphertext !== null && withheldReasonOn(hiddenClaims, r.claimCaseId) === null;
       const items = [];
       for (const r of rows) {
         items.push({
@@ -739,8 +792,11 @@ export function createNomineeDeclarationHandlers(deps: AppDeps) {
           claim_state: r.claimState,
           refused_at: r.refusedAt.toISOString(),
           refused_by_display: r.refusedByDisplay,
+          // X2 / Y3 — withheld ⇒ `{ state: 'withheld', reason }` whatever the ciphertext (⛔ never decrypted); else ⛔ rationale ⇒ `null`.
           rationale:
-            r.rationaleCiphertext === null
+            withheldReasonOn(hiddenClaims, r.claimCaseId) !== null
+              ? withheldNote(withheldReasonOn(hiddenClaims, r.claimCaseId)!)
+              : !rationaleShown(r)
               ? null
               : await readable(() => decryptVerifierRationale(r.rationaleCiphertext!, p, enc), request.log, 'refusal_rationale', r.claimCaseId),
           closed_holder_refused: holderRefused.has(r.claimCaseId.toLowerCase()),
@@ -755,7 +811,7 @@ export function createNomineeDeclarationHandlers(deps: AppDeps) {
       // (`queue_note_read`, BigDev 2026-09-23b option 1): the list line alone records that the page was
       // opened, ⛔ not whose Tier-1 rationale was shown. ⛔ NON-PII: ids only, never the rationale.
       for (const r of rows) {
-        if (r.rationaleCiphertext === null) continue;
+        if (!rationaleShown(r)) continue; // ⛔ a line for a rationale never decrypted (⛔ ciphertext, or withheld — V6)
         emitAuthAudit(deps, request, 'admin_nominee_refusal.rationale_read', {
           actorId,
           pariwarId: p,

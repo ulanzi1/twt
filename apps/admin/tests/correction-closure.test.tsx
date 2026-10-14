@@ -493,6 +493,30 @@ describe('<EscalationDetail> — the Super Admin (AC14, AC17)', () => {
 });
 
 describe('the directee, the closure letter, the helpline, the highlight', () => {
+  // Story 6.27b code review round 2 (X2) — a WITHHELD direction text (`StaffNoteDto`) is SAID, ⛔ the dash of "no note".
+  it('the inbox: a WITHHELD direction text says so in the shared words (⛔ "—")', () => {
+    const item: DirectionInboxResponse['items'][number] = {
+      claim_case_id: CLAIM,
+      short_reference: '11111111',
+      still_held: true,
+      direction: {
+        direction_id: '66666666-6666-4666-8666-666666666666',
+        directed_to_actor: 'me',
+        directed_to_role: 'district_admin',
+        kind: 'other',
+        text: { state: 'withheld', reason: 'own_visit' },
+        created_by: 'Super Admin One',
+        created_at: '2026-09-28T10:00:00.000Z',
+        opened_run: false,
+        response: null,
+        responded_at: null,
+        responded_by: null,
+      },
+    };
+    wrap(<DirectionInboxList pariwarId={PARIWAR} items={[item]} />);
+    expect(screen.getByTestId('note-withheld')).toHaveTextContent('Not shown while a ground visit on this claim is assigned to you.');
+  });
+
   it('the inbox: a response is REQUIRED, then recorded', async () => {
     respondToClosureDirection.mockResolvedValue({});
     const item: DirectionInboxResponse['items'][number] = {

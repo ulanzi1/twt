@@ -46,6 +46,7 @@ export * from './approval-warning-reasons.js';
 // are DISCRIMINATED UNIONS, not nullable strings — responses are serializer-parsed, and `unreadable` vs
 // `anonymized` are different facts a District Admin must not be shown as one another.
 export * from './nominee-name-check.js';
+export * from './withheld-note.js';
 // Story 6.20 — the nominee declaration history on the console: timeline, snapshots, determination,
 // correction (raise + two approvals) and the Pariwar Admin's `-239` refusal read surface.
 export * from './nominee-declaration.js';

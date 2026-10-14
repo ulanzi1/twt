@@ -35,6 +35,7 @@ import { getDisplayName } from '../auth/admin/admin-auth.repo.js';
 import { emitAuthAudit } from '../auth/shared/audit.js';
 import { closeScopeTx, openScopeTx } from '../multi-tenant/scope-tx.js';
 import { underSavepoint } from './later-approval-warnings.js';
+import { readClaimsHiddenFromReader, withheldNote, withheldReasonOn, withheldUnlessAuthor } from './hidden-reader-notes.js';
 import {
   decryptDeathCertificateReviewField,
   encryptDeathCertificateReviewField,
@@ -272,6 +273,19 @@ export function createDeathCertificateHandlers(deps: AppDeps) {
       const log = request.log;
 
       const history = await claimDomain.listDeathCertificateHistory(scopeTx.tx, pariwarId, cid);
+      // ⭐ Story 6.27b code review round 2 (X6 — AC7's X1 A; X2) — a review's NOTE is staff free text on this claim (about
+      // the death date — the subject of `peer_death_date_differs`): WITHHELD (`{ state: 'withheld', reason }`, ⛔ never
+      // decrypted) from a reader whose own ground visit here is pending, unless they made that review themselves. The
+      // verdict and the accepted DATE are operational and stay. ONE statement (only when a review exists); a failed read
+      // withholds (`check_failed`).
+      const hasReview = history.uploads.some((u) => u.reviews.length > 0);
+      const notesReason = withheldReasonOn(
+        await readClaimsHiddenFromReader(scopeTx.client, scopeTx.tx, p, hasReview ? [claimCaseId] : [], actorId, {
+          label: 'death_certificate_history_own_visit_pending',
+          log,
+        }),
+        claimCaseId,
+      );
 
       // Batch every decrypt and every signed-URL lookup, BOUNDED to `HISTORY_READ_CONCURRENCY` uploads at a
       // time — a claim near the 100-upload cap must ⛔ not fire a hundred-wide burst of concurrent KMS/storage
@@ -313,12 +327,10 @@ export function createDeathCertificateHandlers(deps: AppDeps) {
                       'accepted_date',
                       claimCaseId,
                     ),
-              note: await readable(
-                () => decryptDeathCertificateReviewField(r.noteCiphertext, p, enc),
-                log,
-                'review_note',
-                claimCaseId,
-              ),
+              note:
+                withheldUnlessAuthor(notesReason, r.decidedByActorId, actorId) !== null
+                  ? withheldNote(withheldUnlessAuthor(notesReason, r.decidedByActorId, actorId)!)
+                  : await readable(() => decryptDeathCertificateReviewField(r.noteCiphertext, p, enc), log, 'review_note', claimCaseId),
               decided_by_display: r.decidedByDisplay,
               decided_at: r.decidedAt.toISOString(),
               superseded_at: r.supersededAt?.toISOString() ?? null,

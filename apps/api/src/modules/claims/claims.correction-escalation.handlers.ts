@@ -31,6 +31,8 @@ import type {
   EscalatedClosureDecisionRequest,
   EscalatedClosureDetailResponse,
   EscalatedClosuresResponse,
+  NoteWithheldReason,
+  StaffNoteDto,
 } from '@twt/contracts';
 import { claim, ids, schema } from '@twt/domain';
 import type { FastifyReply, FastifyRequest } from 'fastify';
@@ -49,6 +51,7 @@ import {
   encryptClosureField,
   type ClosureFieldClass,
 } from './correction-closure-crypto.js';
+import { type HiddenClaims, readClaimsHiddenFromReader, withheldNote, withheldReasonOn, withheldUnlessAuthor } from './hidden-reader-notes.js';
 import { toClosureDto } from './correction-closure-dto.js';
 import { encryptTrusteeRationale } from './state-trustee-decision-crypto.js';
 import {
@@ -78,6 +81,13 @@ export function createCorrectionEscalationHandlers(deps: AppDeps) {
     request: FastifyRequest,
     pariwarId: string,
     d: schema.ClaimCorrectionDirectionRow,
+    /**
+     * Story 6.27b code review round 2 (V6 / X6 / X2) — why the text / the response is withheld from this reader (`null` ⇔
+     * ⛔ withheld): on the escalation DETAIL both are (V6 — even the reader's own); in the directee's inbox and the
+     * response echo each is unless the reader wrote it (X6). A withheld one is `{ state: 'withheld', reason }`, ⛔ decrypted.
+     */
+    // Y5 (b) — REQUIRED, ⛔ defaulted (a default of "not withheld" would fail OPEN — the S13 class).
+    withheld: { readonly text: NoteWithheldReason | null; readonly response: NoteWithheldReason | null },
   ): Promise<ClosureDirectionDto> {
     const read = note(request, pariwarId, d.claimCaseId, CLAIM_CORRECTION_DIRECTION_FIELD_CLASS, 'direction');
     return {
@@ -85,11 +95,17 @@ export function createCorrectionEscalationHandlers(deps: AppDeps) {
       directed_to_actor: d.directedToActor,
       directed_to_role: d.directedToRole,
       kind: d.kind,
-      text: (await read(d.textCiphertext))!,
+      text: withheld.text !== null ? withheldNote(withheld.text) : (await read(d.textCiphertext))!,
       created_by: d.createdByDisplay,
       created_at: d.createdAt.toISOString(),
       opened_run: d.openedRunId !== null,
-      response: await read(d.responseCiphertext),
+      // Y3 — withheld BEFORE the presence test (an unanswered direction reads the same for a hidden reader).
+      response:
+        withheld.response !== null
+          ? withheldNote(withheld.response)
+          : d.responseCiphertext === null
+            ? null
+            : await read(d.responseCiphertext),
       responded_at: d.respondedAt?.toISOString() ?? null,
       responded_by: d.respondedByDisplay ?? null,
     };
@@ -135,9 +151,24 @@ export function createCorrectionEscalationHandlers(deps: AppDeps) {
       const detail = await claim.readEscalatedClosureDetail(request.scopeTx!.tx, ctx.pariwarId, ctx.claimCaseId);
       if (detail === null) throw closureRefusalError('not_escalated');
       const row = detail.closure;
-      const closureNote = note(request, ctx.pariwarIdStr, ctx.claimCaseIdStr, CLAIM_CORRECTION_CLOSURE_FIELD_CLASS, 'closure');
-      const markNote = note(request, ctx.pariwarIdStr, ctx.claimCaseIdStr, CLAIM_CORRECTION_MARK_FIELD_CLASS, 'mark');
       const scopeTx = request.scopeTx!;
+      // ⭐ Story 6.27b (PM25 (c), BD4; Task 4.3) — is the neighbours' section hidden from THIS viewer (their own ground visit
+      // pending)? Code review round 2 (V6 — AC7's D1 B + V1 A) — read FIRST and under its OWN SAVEPOINT (it used to sit in
+      // the warnings' below): every staff note on this detail — the request, the Pariwar Admin's decision, the review, each
+      // mark's and each direction's — is WITHHELD from a hidden reader (X2 — `{ state: 'withheld', reason }`, ⛔ never
+      // decrypted; a `null` field still means ⛔ no note). `null` ⇔ the read FAILED ⇒ withheld (`check_failed`), and the
+      // warnings stay unavailable (as before).
+      const hidden = await readClaimsHiddenFromReader(scopeTx.client, scopeTx.tx, ctx.pariwarIdStr, [ctx.claimCaseIdStr], ctx.actorId, {
+        label: 'escalation_own_visit_pending',
+        log: request.log,
+      });
+      const withheld = withheldReasonOn(hidden, ctx.claimCaseIdStr);
+      const orWithheld =
+        (read: (ct: string | null) => Promise<StaffNoteDto | null>) =>
+        async (ct: string | null): Promise<StaffNoteDto | null> =>
+          withheld !== null ? withheldNote(withheld) : ct === null ? null : read(ct); // Y3 — a hidden reader's optional note reads the same, present or ⛔
+      const closureNote = orWithheld(note(request, ctx.pariwarIdStr, ctx.claimCaseIdStr, CLAIM_CORRECTION_CLOSURE_FIELD_CLASS, 'closure'));
+      const markNote = orWithheld(note(request, ctx.pariwarIdStr, ctx.claimCaseIdStr, CLAIM_CORRECTION_MARK_FIELD_CLASS, 'mark'));
       // ⭐ Story 6.28 (OP14 (b)) — another claim of the death past its final vote / paid (ONE statement, SAVEPOINT-guarded).
       const finallyApprovedElsewhere = (
         await readFinallyApprovedElsewhereDtos(scopeTx.client, scopeTx.tx, request.log, ctx.pariwarId, [ctx.claimCaseIdStr])
@@ -162,7 +193,7 @@ export function createCorrectionEscalationHandlers(deps: AppDeps) {
             note: await markNote(m.noteCiphertext),
           })),
         ),
-        directions: await Promise.all(detail.directions.map((d) => directionDto(request, ctx.pariwarIdStr, d))),
+        directions: await Promise.all(detail.directions.map((d) => directionDto(request, ctx.pariwarIdStr, d, { text: withheld, response: withheld }))),
         resubmitted: detail.resubmitted,
         family_part_done: detail.familyPartDone,
         name_check_state: detail.nameCheckState,
@@ -176,18 +207,21 @@ export function createCorrectionEscalationHandlers(deps: AppDeps) {
       // detail and its shape pin stay unchanged), LAST and under a raw SAVEPOINT: a throw fails CLOSED (`available: false`
       // — the approve control disabled in its own words; close and refuse untouched), ⛔ never "no warnings". The wait is
       // judged for the viewing Super Admin (`-279` A1). ⛔ Not the POST's pre-check read (`decideEscalation` — `-274` 1a).
-      // ⭐ Story 6.27b (PM25 (c), BD4; Task 4.3) — and whether the neighbours' section is hidden from THIS viewer (their own
-      // ground visit pending), in the SAME SAVEPOINT (a failure ⇒ `UNAVAILABLE_APPROVAL_WARNINGS`, ⛔ kind revealed).
-      const warned = await underSavepoint(scopeTx.client, 'escalation_approval_warnings', async () => ({
-        w: await claim.readClaimApprovalWarnings(scopeTx.tx, ctx.pariwarId, ctx.claimCaseId),
-        ownVisitPending: await claim.isActorOwnVisitPending(scopeTx.tx, ctx.pariwarId, ctx.claimCaseId, ctx.actorId),
-      })).catch((err: unknown) => {
-        request.log.warn(
-          { err: err instanceof Error ? err.name : 'unknown', claimCaseId: ctx.claimCaseIdStr },
-          'escalation detail: nominee-change warnings unavailable; failing closed to cannot-approve',
-        );
-        return null;
-      });
+      // ⭐ Story 6.27b (PM25 (c), BD4; Task 4.3) — filtered by the hide read above (a FAILED hide read ⇒
+      // `UNAVAILABLE_APPROVAL_WARNINGS`, ⛔ no kind revealed — as before).
+      const warned =
+        hidden === null
+          ? null
+          : await underSavepoint(scopeTx.client, 'escalation_approval_warnings', async () => ({
+              w: await claim.readClaimApprovalWarnings(scopeTx.tx, ctx.pariwarId, ctx.claimCaseId),
+              ownVisitPending: hidden.has(ctx.claimCaseIdStr.toLowerCase()),
+            })).catch((err: unknown) => {
+              request.log.warn(
+                { err: err instanceof Error ? err.name : 'unknown', claimCaseId: ctx.claimCaseIdStr },
+                'escalation detail: nominee-change warnings unavailable; failing closed to cannot-approve',
+              );
+              return null;
+            });
       if (warned !== null) {
         response.approval_warnings = toApprovalWarningsSummary(warned.w, [ctx.actorId], { ownVisitPending: warned.ownVisitPending });
         response.reason_options = toReasonOptionsDto(warned.w.reasonOptions);
@@ -263,7 +297,15 @@ export function createCorrectionEscalationHandlers(deps: AppDeps) {
         opened_run_id: result!.openedRunId,
       });
       void reply.status(201);
-      return { claim_case_id: ctx.claimCaseIdStr, direction: await directionDto(request, ctx.pariwarIdStr, result!.direction) };
+      // Y5 (b) — the creation echo follows the inbox's rule too (the text is the creator's own ⇒ shown; ⛔ response yet).
+      const hidden = await readClaimsHiddenFromReader(request.scopeTx!.client, request.scopeTx!.tx, ctx.pariwarIdStr, [ctx.claimCaseIdStr], ctx.actorId, {
+        label: 'direction_created_own_visit_pending',
+        log: request.log,
+      });
+      return {
+        claim_case_id: ctx.claimCaseIdStr,
+        direction: await directionDto(request, ctx.pariwarIdStr, result!.direction, directionWithheld(hidden, result!.direction, ctx.actorId)),
+      };
     },
 
     /** POST …/correction/escalation/decision — key (4): close / refuse / approve. */
@@ -334,12 +376,20 @@ export function createCorrectionEscalationHandlers(deps: AppDeps) {
       const ctx = listContext(request);
       const limit = (request.query as { limit?: number } | undefined)?.limit;
       const rows = await claim.listOpenDirectionsFor(request.scopeTx!.tx, ctx.pariwarId, ctx.actorId, { limit });
+      // ⭐ Story 6.27b code review round 2 (X6 — AC7's X1 A) — a direction's text (and any response) is a staff note on its
+      // claim: WITHHELD from a directee whose own ground visit there is pending, unless they wrote it themselves. ONE
+      // set-based statement over the inbox's claims; a failed read withholds (`check_failed`).
+      const scopeTx = request.scopeTx!;
+      const hidden = await readClaimsHiddenFromReader(scopeTx.client, scopeTx.tx, ctx.pariwarIdStr, rows.map((r) => r.direction.claimCaseId), ctx.actorId, {
+        label: 'direction_inbox_own_visit_pending',
+        log: request.log,
+      });
       const items = await Promise.all(
         rows.map(async (r) => ({
           claim_case_id: r.direction.claimCaseId,
           short_reference: r.shortReference,
           still_held: r.stillHeld,
-          direction: await directionDto(request, ctx.pariwarIdStr, r.direction),
+          direction: await directionDto(request, ctx.pariwarIdStr, r.direction, directionWithheld(hidden, r.direction, ctx.actorId)),
         })),
       );
       emitAuthAudit(deps, request, 'admin_claim_correction.direction_inbox_read', {
@@ -383,7 +433,25 @@ export function createCorrectionEscalationHandlers(deps: AppDeps) {
       }
       auditClaim(deps, request, ctx, 'admin_claim_correction.direction_responded', { direction_id: directionId });
       void reply.status(201);
-      return { claim_case_id: ctx.claimCaseIdStr, direction: await directionDto(request, ctx.pariwarIdStr, row!) };
+      // X6 — the echo follows the inbox's rule (the response is theirs; the text is withheld unless they wrote it).
+      const hidden = await readClaimsHiddenFromReader(request.scopeTx!.client, request.scopeTx!.tx, ctx.pariwarIdStr, [ctx.claimCaseIdStr], ctx.actorId, {
+        label: 'direction_response_own_visit_pending',
+        log: request.log,
+      });
+      return { claim_case_id: ctx.claimCaseIdStr, direction: await directionDto(request, ctx.pariwarIdStr, row!, directionWithheld(hidden, row!, ctx.actorId)) };
     },
+  };
+}
+
+/** X6 — a direction's text / response withheld from `readerActorId` (hidden on its claim) unless they wrote it. */
+function directionWithheld(
+  hidden: HiddenClaims,
+  d: schema.ClaimCorrectionDirectionRow,
+  readerActorId: string,
+): { readonly text: NoteWithheldReason | null; readonly response: NoteWithheldReason | null } {
+  const reason = withheldReasonOn(hidden, d.claimCaseId);
+  return {
+    text: withheldUnlessAuthor(reason, d.createdByActor, readerActorId),
+    response: withheldUnlessAuthor(reason, d.respondedByActor ?? null, readerActorId),
   };
 }

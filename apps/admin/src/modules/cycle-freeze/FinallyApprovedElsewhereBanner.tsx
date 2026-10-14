@@ -8,6 +8,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { ReactElement } from 'react';
 
 import { ApiError, postCloseForPaidDeath } from '../../api/client.js';
+import { isNotAnAuditedOnDemandRead } from '../../api/hooks.js';
 import { verifierConsoleEn } from '../claim-verification/i18n-en.js';
 
 const t = verifierConsoleEn.onePaymentPerDeath;
@@ -18,7 +19,7 @@ export interface FinallyApprovedElsewhereBannerProps {
   readonly claimCaseId: string;
   /** Offer "Close this claim" on a PAID banner (`false` on the District Admin's console — banner only). */
   readonly canClose: boolean;
-  /** After the action answered — on top of the banner's own refetch of every active read. */
+  /** After the action answered — on top of the banner's own refetch of every active read (⛔ never an audited disclosure). */
   readonly onClosed?: () => void;
 }
 
@@ -33,7 +34,9 @@ export function FinallyApprovedElsewhereBanner({
   const close = useMutation({
     mutationFn: () => postCloseForPaidDeath(pariwarId, claimCaseId),
     onSuccess: () => {
-      void qc.invalidateQueries();
+      // Every active read EXCEPT an open on-demand, audited disclosure (the neighbours' answers, the name check) — a
+      // refetch there is an audited read nobody performed (Story 6.27b review S2; Trap 12 / BF7).
+      void qc.invalidateQueries({ predicate: isNotAnAuditedOnDemandRead });
       onClosed?.();
     },
   });

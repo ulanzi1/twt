@@ -5,7 +5,8 @@
 //   · per answer, the WARNING FLAG (PM13's flags; AC8): ⚠ a line for `true`, "could not be checked just now" for `null`,
 //     nothing for `false` — ⛔ a date in any of those words;
 //   · the call-back number labelled by WHY it is shown (`-328` read with `-329`): "May be phoned on" for a neighbour's
-//     "Yes" (`consented`), "Mobile" for the Super Admin's reading (`super_admin`) — ⛔ "may be phoned" beside a "No".
+//     "Yes" (`consented`), "Mobile" for the Super Admin's reading (`super_admin`) and for EVERY other case (an unavailable
+//     number, a `null` basis — review S9) — ⛔ never "may be phoned" beside a "No".
 
 import type { PeerMeshTranscript } from '@twt/contracts';
 import type { ReactElement } from 'react';
@@ -75,10 +76,12 @@ export function PeerMeshView({ transcript, now = Date.now() }: { transcript: Pee
             )}
             {ping.callbackMobile.status !== 'none' && (
               <p className="mt-1 text-xs" data-testid="peer-mesh-callback">
-                {/* Story 6.27b (`-329`) — the label says WHY the number is shown. */}
-                {ping.callbackMobile.status === 'shown' && ping.callbackBasis === 'super_admin'
-                  ? t.peerMesh.callbackMobileSuperAdmin
-                  : t.peerMesh.callbackMobile}
+                {/* Story 6.27b (`-329`) — the label says WHY the number is shown. The consent words ONLY for a number
+                    shown on a "Yes"; every other case (the Super Admin's basis, an unavailable number, a `null` basis)
+                    takes the neutral "Mobile" — fail CLOSED, ⛔ never "may be phoned" without a recorded consent (review S9). */}
+                {ping.callbackMobile.status === 'shown' && ping.callbackBasis === 'consented'
+                  ? t.peerMesh.callbackMobile
+                  : t.peerMesh.callbackMobileSuperAdmin}
                 :{' '}
                 {ping.callbackMobile.status === 'shown' ? <span className="font-mono">{ping.callbackMobile.text}</span> : t.peerMesh.couldNotShow}
               </p>

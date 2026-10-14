@@ -62,6 +62,7 @@ import {
 } from './close-claims-of-paid-death.js';
 import { encryptOptionalTrusteeRationale } from './state-trustee-decision-crypto.js';
 import { decryptVerifierRationale } from './verifier-decision-crypto.js';
+import { readClaimsHiddenFromReader, withheldReasonOn } from './hidden-reader-notes.js';
 import {
   UNAVAILABLE_APPROVAL_WARNINGS,
   approvedWarningAudit,
@@ -335,6 +336,15 @@ export function createCycleFreezeHandlers(
           ctx.pariwarId,
           allCases.map((c) => c.claimCaseId),
         );
+        // ⭐ Story 6.27b (PM25 (c), BD4; Task 4.3) — the claims whose neighbours' section is hidden from THIS viewer (their
+        // own ground visit pending): ONE set-based statement for the page, ⛔ not per card. Code review round 2 (D1 B + V1 A)
+        // — under its OWN SAVEPOINT (it used to sit inside the warnings'), because the staff NOTES below read it too: a
+        // failed warnings read must ⛔ never un-hide a note. `null` ⇔ the read FAILED ⇒ every summary falls back to
+        // `UNAVAILABLE_APPROVAL_WARNINGS` (as before — ⛔ no kind revealed) and every card's note is withheld (fail CLOSED).
+        const ownVisitPending = await readClaimsHiddenFromReader(tx.client, tx.tx, ctx.pariwarIdStr, allCases.map((c) => c.claimCaseId), ctx.actorId, {
+          label: 'cycle_freeze_own_visit_pending',
+          log: request.log,
+        });
         // ⭐ Story 6.23b (EA7; Traps 8, 15; RD7, RD12) — the nominee-change warnings, attached HERE (the domain reader
         // and its shape pins stay unchanged): ONE bulk statement for every bucket + the reason list ONCE, under a raw
         // SAVEPOINT. A throw fails CLOSED — every case `available: false` (Approve disabled in its own words; Deny,
@@ -342,10 +352,6 @@ export function createCycleFreezeHandlers(
         const warnings = await underSavepoint(tx.client, 'cycle_freeze_approval_warnings', async () => ({
           byClaim: await claim.readClaimApprovalWarningsBulk(tx.tx, ctx.pariwarId, allCases.map((c) => ids.claimId(c.claimCaseId))),
           options: (await claim.listApprovalWarningReasons(tx.tx, ctx.pariwarId)).active,
-          // ⭐ Story 6.27b (PM25 (c), BD4; Task 4.3) — the claims whose neighbours' section is hidden from THIS viewer (their
-          // own ground visit pending): ONE set-based statement for the page, ⛔ per card, INSIDE this SAVEPOINT (a failure
-          // falls back to `UNAVAILABLE_APPROVAL_WARNINGS` — ⛔ kind revealed).
-          ownVisitPending: await claim.readOwnVisitPendingClaimIds(tx.tx, ctx.pariwarId, allCases.map((c) => c.claimCaseId), ctx.actorId),
         })).catch((err: unknown) => {
           request.log.warn(
             { err: err instanceof Error ? err.name : 'unknown' },
@@ -357,13 +363,19 @@ export function createCycleFreezeHandlers(
         const elsewhereOf = await readFinallyApprovedElsewhereDtos(tx.client, tx.tx, request.log, ctx.pariwarId, allCases.map((c) => c.claimCaseId));
         const warningsOf = (claimCaseId: string) => {
           const w = warnings?.byClaim.get(claimCaseId.toLowerCase());
-          return w === undefined
+          return w === undefined || ownVisitPending === null
             ? UNAVAILABLE_APPROVAL_WARNINGS
-            : toApprovalWarningsSummary(w, [ctx.actorId], { ownVisitPending: warnings!.ownVisitPending.has(claimCaseId.toLowerCase()) });
+            : toApprovalWarningsSummary(w, [ctx.actorId], { ownVisitPending: ownVisitPending.has(claimCaseId.toLowerCase()) });
         };
         const mapCase = async (c: claim.CycleFreezePendingCase) => {
           let verifierRationale: string | null = null;
-          if (c.verifierRationaleCiphertext) {
+          // ⭐ Story 6.27b code review round 2 (D1 B + V1 A; AC7) — for a reader HIDDEN on this claim (their own ground visit
+          // pending, PM25 (c)), the card's verifier note is withheld in EVERY bucket — approval, denial (a reversed claim's
+          // live decision) and escalation alike (`hidden-reader-notes.ts`). X2 — `verifier_rationale` `null` AND
+          // `verifier_rationale_withheld` naming why (⛔ never decrypted, ⛔ never a silent "no rationale") — uniform, so it
+          // carries ⛔ no per-card signal.
+          const withheldReason = withheldReasonOn(ownVisitPending, c.claimCaseId);
+          if (c.verifierRationaleCiphertext && withheldReason === null) {
             try {
               verifierRationale = await decryptVerifierRationale(
                 c.verifierRationaleCiphertext,
@@ -383,6 +395,7 @@ export function createCycleFreezeHandlers(
             verifier_actor_display: c.verifierActorDisplay,
             verifier_reason_code: c.verifierReasonCode,
             verifier_rationale: verifierRationale,
+            verifier_rationale_withheld: withheldReason,
             signals_summary: c.signalsSummary,
             concealment_flags: c.concealmentFlags,
             routed_to_r9: c.routedToR9,

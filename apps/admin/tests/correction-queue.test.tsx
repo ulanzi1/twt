@@ -174,6 +174,14 @@ describe('<CorrectionQueueRoute> — AC11', () => {
     expect(screen.getByTestId('queue-return-note').textContent).not.toBe('—');
     expect(screen.getByTestId('queue-return-note').textContent).toContain('Could not be read');
   });
+
+  // Story 6.27b code review round 2 (X2) — a WITHHELD note (`ReadableNote`) is SAID, ⛔ never "they gave no reason".
+  it('surfaces a WITHHELD note in the shared words — ⛔ "—", ⛔ blank', async () => {
+    setup([{ ...ITEM, return_note: { state: 'withheld', reason: 'own_visit' } }]);
+    await screen.findByTestId(`correction-queue-item-${CLAIM}`);
+    // Review Y6 — the cell holds EXACTLY the words (⛔ a dash beside them, ⛔ anything else) — a check that can fail.
+    expect(screen.getByTestId('queue-return-note').textContent).toBe('Not shown while a ground visit on this claim is assigned to you.');
+  });
 });
 
 describe('<CorrectionQueueRoute> — the session gate (code review 2026-09-23b)', () => {

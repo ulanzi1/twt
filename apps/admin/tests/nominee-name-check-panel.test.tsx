@@ -245,6 +245,24 @@ describe('<NomineeNameCheckPanel> — AC11, the Pariwar Admin returned it', () =
     });
     expect(screen.getByTestId('name-check-return-note')).toHaveTextContent('Could not be read');
   });
+
+  // Story 6.27b code review round 2 (X2) — a WITHHELD note: the shared words (`own_visit`; `check_failed` ⇒ could-not-be-shown).
+  it('a WITHHELD note says so in the shared words — ⛔ a blank', () => {
+    const withheld = (reason: 'own_visit' | 'check_failed') => ({
+      ...READ,
+      correction_return: {
+        returned_at: '2026-09-20T12:00:00.000Z',
+        returned_by_actor_display: 'Dhiraj Rahul',
+        note: { state: 'withheld' as const, reason },
+        resubmitted: false,
+      },
+    });
+    setup(withheld('own_visit'));
+    expect(screen.getByTestId('name-check-return-note')).toHaveTextContent('Not shown while a ground visit on this claim is assigned to you.');
+    cleanup();
+    setup(withheld('check_failed'));
+    expect(screen.getByTestId('name-check-return-note')).toHaveTextContent('Could not be shown just now');
+  });
 });
 
 describe('<NomineeNameCheckPanel> — AC8, the highlight', () => {

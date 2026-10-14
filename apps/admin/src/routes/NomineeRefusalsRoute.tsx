@@ -17,6 +17,7 @@ import { ApiError } from '../api/client.js';
 import { useNomineeRefusals, useSession } from '../api/hooks.js';
 import { formatIst } from '../modules/claim-verification/NomineeDeclarationPanel.js';
 import { closedClaimStateLabel, verifierConsoleEn } from '../modules/claim-verification/i18n-en.js';
+import { WithheldNote } from '../modules/claim-verification/WithheldNote.js';
 import { nomineeRefusalsPath } from './login-next.js';
 
 const t = verifierConsoleEn.nomineeDeclaration.refusals;
@@ -86,11 +87,16 @@ function NomineeRefusalsView(): ReactElement {
                 </dd>
                 <dt className="opacity-70">{t.note}</dt>
                 <dd data-testid="nominee-refusal-note">
-                  {item.rationale === null
-                    ? '—'
-                    : item.rationale.state === 'readable'
-                      ? item.rationale.value
-                      : verifierConsoleEn.nomineeDeclaration.unreadable}
+                  {/* Story 6.27b code review round 2 (X2) — a WITHHELD note is said in words (⛔ never the dash of "none"). */}
+                  {item.rationale === null ? (
+                    '—'
+                  ) : item.rationale.state === 'withheld' ? (
+                    <WithheldNote reason={item.rationale.reason} />
+                  ) : item.rationale.state === 'readable' ? (
+                    item.rationale.value
+                  ) : (
+                    verifierConsoleEn.nomineeDeclaration.unreadable
+                  )}
                 </dd>
               </dl>
               {/* ⛔ No "open the claim" link (code review 2026-09-24): it pointed at the verifier console,

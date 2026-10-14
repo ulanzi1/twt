@@ -73,6 +73,7 @@ import {
   encryptClosureField,
 } from './correction-closure-crypto.js';
 import { toClosureDto } from './correction-closure-dto.js';
+import { readClaimsHiddenFromReader, withheldNote, withheldReasonOn } from './hidden-reader-notes.js';
 import { encryptTrusteeRationale } from './state-trustee-decision-crypto.js';
 import {
   UNAVAILABLE_APPROVAL_WARNINGS,
@@ -486,13 +487,20 @@ export function createCorrectionClosureHandlers(deps: AppDeps) {
       // throw fails CLOSED (`available: false`), ⛔ never "no warnings", ⛔ never a 500 of the queue.
       // Code review 2026-10-06 (P21): `ids.claimId()`'s brand validation moved INSIDE the guarded callback — it ran
       // before `underSavepoint` before, so a single malformed id would 500 the whole queue instead of degrading.
+      // ⭐ Story 6.27b (PM25 (c), BD4; Task 4.3) — the claims whose neighbours' section is hidden from THIS viewer: ONE
+      // set-based statement for the page. Code review round 2 (V6 — AC7's D1 B + V1 A) — over EVERY row (each row's note
+      // is a staff note on its claim, withheld from a hidden reader) and under its OWN SAVEPOINT (it used to sit inside
+      // the warnings', over the D27 rows only): a failed warnings read must ⛔ never un-hide a note. `null` ⇔ the read
+      // FAILED ⇒ the D27 summaries fall back to unavailable (as before) and every row's note is withheld (fail CLOSED).
+      const ownVisitPending = await readClaimsHiddenFromReader(scopeTx.client, scopeTx.tx, scopeTx.pariwarId, rows.map((r) => r.claimCaseId), actorId, {
+        label: 'closure_queue_own_visit_pending',
+        log: request.log,
+      });
       const warnings = await underSavepoint(scopeTx.client, 'closure_queue_approval_warnings', async () => {
         const noCorrectionIds = rows.filter((r) => r.kind === 'no_correction_needed').map((r) => ids.claimId(r.claimCaseId));
         return {
           byClaim: await claim.readClaimApprovalWarningsBulk(scopeTx.tx, pariwarId, noCorrectionIds),
           options: (await claim.listApprovalWarningReasons(scopeTx.tx, pariwarId)).active,
-          // ⭐ Story 6.27b (PM25 (c), BD4; Task 4.3) — ONE set-based statement for the page, inside this SAVEPOINT.
-          ownVisitPending: await claim.readOwnVisitPendingClaimIds(scopeTx.tx, pariwarId, noCorrectionIds, actorId),
         };
       }).catch((err: unknown) => {
         request.log.warn(
@@ -504,9 +512,9 @@ export function createCorrectionClosureHandlers(deps: AppDeps) {
       const warningsOf = (r: (typeof rows)[number]) => {
         if (r.kind !== 'no_correction_needed') return null;
         const w = warnings?.byClaim.get(r.claimCaseId.toLowerCase());
-        return w === undefined
+        return w === undefined || ownVisitPending === null
           ? UNAVAILABLE_APPROVAL_WARNINGS
-          : toApprovalWarningsSummary(w, [actorId], { ownVisitPending: warnings!.ownVisitPending.has(r.claimCaseId.toLowerCase()) });
+          : toApprovalWarningsSummary(w, [actorId], { ownVisitPending: ownVisitPending.has(r.claimCaseId.toLowerCase()) });
       };
       // ⭐ Story 6.28 (OP14 (b)) — another claim of the death past its final vote / paid (ONE statement).
       const elsewhereOf = await readFinallyApprovedElsewhereDtos(scopeTx.client, scopeTx.tx, request.log, pariwarId, rows.map((r) => r.claimCaseId));
@@ -518,13 +526,16 @@ export function createCorrectionClosureHandlers(deps: AppDeps) {
           short_reference: r.shortReference,
           at: r.at.toISOString(),
           by: r.byDisplay,
-          note: (await decryptStaffNote(
-            r.noteCiphertext,
-            scopeTx.pariwarId,
-            CLAIM_CORRECTION_CLOSURE_FIELD_CLASS,
-            deps.encryption,
-            logDecryptFault(request, r.claimCaseId, 'closure_queue_note'),
-          ))!,
+          // V6 / X2 — withheld from a reader hidden on this claim: `{ state: 'withheld', reason }` (⛔ never decrypted).
+          note: withheldReasonOn(ownVisitPending, r.claimCaseId) !== null
+            ? withheldNote(withheldReasonOn(ownVisitPending, r.claimCaseId)!)
+            : (await decryptStaffNote(
+                r.noteCiphertext,
+                scopeTx.pariwarId,
+                CLAIM_CORRECTION_CLOSURE_FIELD_CLASS,
+                deps.encryption,
+                logDecryptFault(request, r.claimCaseId, 'closure_queue_note'),
+              ))!,
           family_run_day0: r.familyRunDay0,
           checked_after_record: r.checkedAfterRecord,
           held: r.held,

@@ -426,9 +426,54 @@ describe('<NomineeDeclarationPanel> — D10, the audited reveal', () => {
     expect(details.textContent).toContain('2026-05-01');
     expect(details.textContent).toContain('Certificate checked');
   });
+
+  // Story 6.27b code review round 2 (X2) — a WITHHELD determination note (`ReadableNote`) is SAID, ⛔ never blank.
+  it('a WITHHELD determination note says so in the shared words (the date unchanged)', () => {
+    setup({
+      detailsRequested: true,
+      timeline: {
+        ...TIMELINE,
+        live_determination: { determination_id: D1, decided_at: '2026-06-20T06:00:00.000Z', decided_by_display: 'Anita', marks: [] },
+      },
+      snapshots: {
+        claim_case_id: TIMELINE.claim_case_id,
+        snapshots: [],
+        live_determination: {
+          determination_id: D1,
+          certificate_date: { state: 'readable', value: '2026-05-01' },
+          note: { state: 'withheld', reason: 'own_visit' },
+        },
+      },
+    });
+    const details = screen.getByTestId('nominee-declaration-last-details');
+    expect(details.textContent).toContain('2026-05-01');
+    expect(details.textContent).toContain('Not shown while a ground visit on this claim is assigned to you.');
+  });
 });
 
 describe('<NomineeDeclarationPanel> — nominee corrections', () => {
+  // Story 6.27b review Y6 — a WITHHELD raise note and a WITHHELD step note (`ReadableNote`) are SAID in the shared words.
+  it('a WITHHELD raise note and a WITHHELD District Admin step note say so in the shared words; the other card\'s notes unchanged', () => {
+    const [first, second] = CORRECTIONS.corrections;
+    setup({
+      detailsRequested: true,
+      corrections: {
+        ...CORRECTIONS,
+        corrections: [
+          { ...first!, raise_note: { state: 'withheld', reason: 'own_visit' } },
+          { ...second!, district_admin: { ...second!.district_admin!, note: { state: 'withheld', reason: 'check_failed' } } },
+        ],
+      },
+    });
+    const raised = screen.getByTestId(`nominee-correction-${CORRECTION_ID}`);
+    expect(raised.textContent).toContain('Not shown while a ground visit on this claim is assigned to you.');
+    expect(raised.textContent).not.toContain('Married name');
+    const stepped = screen.getByTestId(`nominee-correction-${PA_CORRECTION_ID}`);
+    expect(stepped.textContent).toContain('Could not be shown just now');
+    expect(stepped.textContent).not.toContain('Checked the school record');
+    expect(stepped.textContent).toContain('Surname missing'); // its raise note is readable — unchanged
+  });
+
   it('⭐ shows the TARGET beside the PROPOSAL with everything the approvers act on (⛔ no diff)', () => {
     setup({ detailsRequested: true });
     const card = screen.getByTestId(`nominee-correction-${CORRECTION_ID}`);

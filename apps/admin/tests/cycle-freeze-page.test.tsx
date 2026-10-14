@@ -40,6 +40,7 @@ const CASE: PendingCase = {
   verifier_actor_display: 'Anita Kumari',
   verifier_reason_code: 'r8_90pct_met',
   verifier_rationale: null,
+  verifier_rationale_withheld: null,
   signals_summary: 'state=verifier_approved; intake=app',
   concealment_flags: [],
   routed_to_r9: false,

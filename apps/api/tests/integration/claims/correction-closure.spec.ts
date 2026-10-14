@@ -12,11 +12,25 @@ import { randomUUID } from 'node:crypto';
 import { Writable } from 'node:stream';
 
 import { claim, cycleCalendar, encryption, ids } from '@twt/domain';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+
+// ⭐ Story 6.27b code review round 2 (X3) — the hide read behind the escalation detail's withheld notes, failing ON DEMAND
+// with a real SQL error (`SELECT 1/0`) on the request's own handle, so the fail-closed branch runs.
+const fault = vi.hoisted(() => ({ ownVisit: false }));
+vi.mock('@twt/domain', async (importActual) => {
+  const actual = await importActual<typeof import('@twt/domain')>();
+  const { sql } = await import('drizzle-orm');
+  const readOwnVisitPendingClaimIds: typeof actual.claim.readOwnVisitPendingClaimIds = async (db, ...rest) => {
+    if (fault.ownVisit) await (db as unknown as { execute: (q: unknown) => Promise<unknown> }).execute(sql`SELECT 1/0`);
+    return actual.claim.readOwnVisitPendingClaimIds(db, ...rest);
+  };
+  return { ...actual, claim: { ...actual.claim, readOwnVisitPendingClaimIds } };
+});
 
 import * as service from '../../../src/modules/auth/admin/admin-auth.service.js';
 import { MEMBER_NOMINEE_FIELD_CLASS } from '../../../src/context.js';
 import { encryptClaimContactField } from '../../../src/modules/claims/claim-contact-crypto.js';
+import { encryptCorrectionMarkNote } from '../../../src/modules/claims/correction-chase-crypto.js';
 import { closeScopeTx, openScopeTx } from '../../../src/modules/multi-tenant/scope-tx.js';
 import { seedNomineeNameCheck } from '../_nominee-name-check-fixture.js';
 import { createTestApp, hasDatabase, makeClient, teardown, type TestApp } from '../_setup.js';
@@ -64,6 +78,7 @@ describe.skipIf(!hasDatabase)('the correction closure — routes (Story 6.19c)',
     t = await createTestApp({ webauthn: fakeWebauthn, logStream });
   });
   afterAll(async () => {
+    fault.ownVisit = false;
     const c = await t.pool.connect();
     try {
       if (createdUserIds.length > 0) {
@@ -483,6 +498,129 @@ describe.skipIf(!hasDatabase)('the correction closure — routes (Story 6.19c)',
     );
     expect(stored.rows[0]!.request_note_ciphertext).not.toContain('zqxw');
     expect(await logsSince(logFrom)).not.toContain('zqxw');
+  });
+
+  // ⭐ Story 6.27b code review round 2 (X3 — V6 / X2; X6) — the escalation detail withholds EVERY note on it (the request,
+  // the Pariwar Admin's decision, the review, the mark's, each direction's text AND response) from a Super Admin whose own
+  // ground visit on the claim is pending — `{ state: 'withheld', reason: 'own_visit' }`; a FAILED hide read withholds from
+  // every reader (`check_failed`) and drops the warnings to unavailable; the directee's inbox (X6) withholds the text they
+  // did ⛔ not write while their own visit is pending, and their own response echoes back readable.
+  it('6.27b X3 / X6 — the escalation detail withholds every note from a hidden Super Admin (and on a failed hide read); the directee\'s inbox withholds the text, ⛔ their own response', async () => {
+    const pariwarId = randomUUID();
+    const { claimCaseId } = await returnedClaim(pariwarId);
+    const da = await staff(pariwarId, 'district_admin');
+    const pa = await staff(pariwarId, 'pariwar_admin');
+    const sa = await staff(pariwarId, 'super_admin');
+    const MARK_NOTE = 'Correct the account holder name.';
+    const markNote = await encryptCorrectionMarkNote(MARK_NOTE, pariwarId, t.deps.encryption);
+    await asReplica((c) => c.query('UPDATE claim_correction_marks SET note_ciphertext = $2 WHERE claim_case_id = $1', [claimCaseId, markNote]).then(() => undefined));
+    expect((await da.client.inject({ method: 'POST', url: `${claimBase(pariwarId, claimCaseId)}/closure/request`, payload: { note: 'request note' } })).statusCode).toBe(201);
+    const declined = await pa.client.inject({ method: 'POST', url: `${claimBase(pariwarId, claimCaseId)}/closure/decision`, payload: { decision: 'decline', note: 'decline note' } });
+    expect(declined.statusCode, declined.body).toBe(201);
+    expect((await sa.client.inject({ method: 'POST', url: `${claimBase(pariwarId, claimCaseId)}/escalation/review`, payload: { note: 'review note' } })).statusCode).toBe(201);
+    const directed = await sa.client.inject({
+      method: 'POST', url: `${claimBase(pariwarId, claimCaseId)}/escalation/directions`,
+      payload: { directed_to_actor: da.userId, directed_to_role: 'district_admin', kind: 'other', text: 'direction text' },
+    });
+    expect(directed.statusCode, directed.body).toBe(201);
+    const directionId = (directed.json() as { direction: { direction_id: string } }).direction.direction_id;
+    const responded = await da.client.inject({ method: 'POST', url: `${claimBase(pariwarId, claimCaseId)}/directions/${directionId}/response`, payload: { response: 'response text' } });
+    expect(responded.statusCode, responded.body).toBe(201);
+
+    // The second Super Admin's own visit on the claim is pending (seeded directly — the window is ⛔ under test here).
+    const hiddenSa = await staff(pariwarId, 'super_admin');
+    const assign = (actorId: string) =>
+      t.pool.query(
+        `INSERT INTO claim_ground_inspections (ground_inspection_id, claim_case_id, pariwar_id, district, inspection_stage, inspection_site_type,
+           inspector_actor_id, scheduled_at, status)
+         VALUES ($1, $2, $3, $4, 'initial', 'family_residence', $5, now(), 'scheduled')`,
+        [randomUUID(), claimCaseId, pariwarId, DISTRICT, actorId],
+      );
+    await assign(hiddenSa.userId);
+    type Note = { state: string; value?: string; reason?: string } | null;
+    type Detail = {
+      request_note: Note;
+      pariwar_decision_note: Note;
+      review_note: Note;
+      marks: { note: Note }[];
+      directions: { text: Note; response: Note }[];
+      approval_warnings: { available: boolean; own_visit_pending: boolean };
+    };
+    const detailOf = async (who: { client: Client }) => {
+      const res = await who.client.inject({ method: 'GET', url: `${claimBase(pariwarId, claimCaseId)}/escalation` });
+      expect(res.statusCode, res.body).toBe(200);
+      const d = res.json() as Detail;
+      return {
+        notes: [d.request_note, d.pariwar_decision_note, d.review_note, ...d.marks.map((m) => m.note), d.directions[0]!.text, d.directions[0]!.response],
+        warnings: { available: d.approval_warnings.available, own_visit_pending: d.approval_warnings.own_visit_pending },
+      };
+    };
+    const readable = (value: string) => ({ state: 'readable', value });
+    const withheld = (reason: string) => ({ state: 'withheld', reason });
+    expect(await detailOf(sa)).toEqual({
+      notes: [readable('request note'), readable('decline note'), readable('review note'), readable(MARK_NOTE), readable('direction text'), readable('response text')],
+      warnings: { available: true, own_visit_pending: false },
+    });
+    expect(await detailOf(hiddenSa)).toEqual({ notes: Array(6).fill(withheld('own_visit')), warnings: { available: true, own_visit_pending: true } });
+    fault.ownVisit = true;
+    try {
+      expect(await detailOf(sa)).toEqual({ notes: Array(6).fill(withheld('check_failed')), warnings: { available: false, own_visit_pending: false } });
+    } finally {
+      fault.ownVisit = false;
+    }
+
+    // X6 — the directee's OWN inbox / response echo: a second direction, the directee's visit then pending.
+    const second = await sa.client.inject({
+      method: 'POST', url: `${claimBase(pariwarId, claimCaseId)}/escalation/directions`,
+      payload: { directed_to_actor: da.userId, directed_to_role: 'district_admin', kind: 'other', text: 'second direction' },
+    });
+    expect(second.statusCode, second.body).toBe(201);
+    const secondId = (second.json() as { direction: { direction_id: string } }).direction.direction_id;
+    const inboxText = async () => {
+      const res = await da.client.inject({ method: 'GET', url: `/api/v1/p/${pariwarId}/admin/correction/directions/mine` });
+      expect(res.statusCode, res.body).toBe(200);
+      return (res.json() as { items: { direction: { direction_id: string; text: Note } }[] }).items.find((i) => i.direction.direction_id === secondId)?.direction.text;
+    };
+    expect(await inboxText()).toEqual(readable('second direction'));
+    await assign(da.userId);
+    expect(await inboxText()).toEqual(withheld('own_visit'));
+    const echo = await da.client.inject({ method: 'POST', url: `${claimBase(pariwarId, claimCaseId)}/directions/${secondId}/response`, payload: { response: 'my answer' } });
+    expect(echo.statusCode, echo.body).toBe(201);
+    expect((echo.json() as { direction: { text: Note; response: Note } }).direction).toMatchObject({ text: withheld('own_visit'), response: readable('my answer') });
+
+    // Y6 — the inbox / echo FAULT path: a failed hide read withholds the text (`check_failed`); their own response echoes
+    // back readable (they wrote it).
+    const direct = async (text: string) => {
+      const res = await sa.client.inject({
+        method: 'POST', url: `${claimBase(pariwarId, claimCaseId)}/escalation/directions`,
+        payload: { directed_to_actor: da.userId, directed_to_role: 'district_admin', kind: 'other', text },
+      });
+      expect(res.statusCode, res.body).toBe(201);
+      return (res.json() as { direction: { direction_id: string } }).direction.direction_id;
+    };
+    const third = await direct('third direction');
+    const inboxTextOf = async (id: string) => {
+      const res = await da.client.inject({ method: 'GET', url: `/api/v1/p/${pariwarId}/admin/correction/directions/mine` });
+      expect(res.statusCode, res.body).toBe(200);
+      return (res.json() as { items: { direction: { direction_id: string; text: Note } }[] }).items.find((i) => i.direction.direction_id === id)?.direction.text;
+    };
+    fault.ownVisit = true;
+    try {
+      expect(await inboxTextOf(third)).toEqual(withheld('check_failed'));
+      const faultEcho = await da.client.inject({ method: 'POST', url: `${claimBase(pariwarId, claimCaseId)}/directions/${third}/response`, payload: { response: 'answered on a fault' } });
+      expect(faultEcho.statusCode, faultEcho.body).toBe(201);
+      expect((faultEcho.json() as { direction: { text: Note; response: Note } }).direction).toMatchObject({
+        text: withheld('check_failed'),
+        response: readable('answered on a fault'),
+      });
+    } finally {
+      fault.ownVisit = false;
+    }
+    // Y6 — the TEXT's own-author branch: a direction the hidden directee CREATED themselves (recorded as a case variant)
+    // reads plainly in their inbox.
+    const fourth = await direct('fourth direction');
+    await t.pool.query('UPDATE claim_correction_directions SET created_by_actor = $2 WHERE direction_id = $1', [fourth, da.userId.toUpperCase()]);
+    expect(await inboxTextOf(fourth)).toEqual(readable('fourth direction'));
   });
 
   it('⭐ code review Decision 7 (2026-10-02) — `/escalation/decision` approve + refuse response shapes, and a STAFF-CASE origin refuses `close` with `closure.staff_case_origin`', async () => {

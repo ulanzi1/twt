@@ -73,6 +73,7 @@ describe('EVERY clerical reason parses through EVERY schema that carries one', (
         verifier_actor_display: null,
         verifier_reason_code: null,
         verifier_rationale: null,
+        verifier_rationale_withheld: null,
         signals_summary: '',
         concealment_flags: [],
         routed_to_r9: false,

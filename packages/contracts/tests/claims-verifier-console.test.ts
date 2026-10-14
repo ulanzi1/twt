@@ -228,8 +228,9 @@ describe('VerifierConsolePacket — full round-trip + ordering', () => {
       refusalReason: null,
       completedAt: '2026-05-02T06:00:00.000Z',
       notes: null,
+      notesWithheld: null,
       structuredFindings: null,
-      photos: [{ photoId: 'p1', contentType: 'image/jpeg', byteSize: 1, caption: null, signedUrl: 'u', photoKind: 'original_certificate' }],
+      photos: [{ photoId: 'p1', contentType: 'image/jpeg', byteSize: 1, caption: null, captionWithheld: null, signedUrl: 'u', photoKind: 'original_certificate' }],
       originalCertificateVerdict: 'does_not_match',
       comparedAgainst: 'current',
       deathDateSource: 'original_certificate',
@@ -294,5 +295,18 @@ describe('VerifierConsolePacket — full round-trip + ordering', () => {
     expect(PeerMeshPingView.safeParse({ ...ping, responderName: { status: 'unavailable' } }).success).toBe(true);
     expect(PeerMeshPingView.safeParse({ ...ping, responderName: { status: 'shown', text: '' }, sendStatus: 'recorded' }).success).toBe(false);
     expect(PeerMeshAnswerView.safeParse({ ...ping.reply!.answers[0]!, value: { kind: 'unavailable' } }).success).toBe(true);
+  });
+
+  // Code review round 2 (S9) — `shown` ⇔ a basis, on every status the producer emits.
+  it('6.27b — `callbackBasis` is PAIRED with `callbackMobile`: shown ⇔ a basis; `none` / `unavailable` carry `null`', () => {
+    const ping = PACKET.peerMesh.transcript.pings[0]!;
+    const parse = (callbackMobile: unknown, callbackBasis: unknown) => PeerMeshPingView.safeParse({ ...ping, callbackMobile, callbackBasis }).success;
+    expect(parse({ status: 'shown', text: '+919876543210' }, 'consented')).toBe(true);
+    expect(parse({ status: 'shown', text: '+919876543210' }, 'super_admin')).toBe(true);
+    expect(parse({ status: 'none' }, null)).toBe(true);
+    expect(parse({ status: 'unavailable' }, null)).toBe(true);
+    expect(parse({ status: 'shown', text: '+919876543210' }, null)).toBe(false);
+    expect(parse({ status: 'none' }, 'consented')).toBe(false);
+    expect(parse({ status: 'unavailable' }, 'super_admin')).toBe(false);
   });
 });

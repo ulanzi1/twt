@@ -38,6 +38,7 @@ import { emitAuthAudit } from '../auth/shared/audit.js';
 import { auditAuthorizationDenied, geoTreeResolverForRequest } from '../rbac/index.js';
 import { closeScopeTx, openScopeTx } from '../multi-tenant/scope-tx.js';
 import { underSavepoint } from './later-approval-warnings.js';
+import { readClaimsHiddenFromReader, withheldReasonOn, withheldUnlessAuthor } from './hidden-reader-notes.js';
 import {
   deathDateBlindIndex,
   decryptGroundInspectionField,
@@ -205,7 +206,8 @@ export function createGroundInspectionHandlers(deps: AppDeps) {
     ctx: AdminCtx,
     assignment: schema.ClaimGroundInspectionRow,
   ): claim.GroundInspectionOverride | undefined {
-    if (ctx.actorId === assignment.inspectorActorId) return undefined;
+    // ⭐ Story 6.27b code review round 2 (V2) — the ONE meaning of "is the assigned inspector" (`claim.isSameActorId`).
+    if (claim.isSameActorId(ctx.actorId, assignment.inspectorActorId)) return undefined;
     const grants = request.scopeGrants ?? [];
     const result = rbac.checkPermission(
       {
@@ -856,8 +858,23 @@ export function createGroundInspectionHandlers(deps: AppDeps) {
         ),
       );
 
+      // ⭐ Story 6.27b code review round 2 (X6 — AC7's X1 A; X2; Y8; Y3) — the visit NOTE and each photo CAPTION are staff
+      // free text on this claim: WITHHELD from a reader whose own ground visit here is pending unless they are its RECORDED
+      // author (migration 0159 — `notes_author_actor_id`, `uploaded_by_actor_id`; `isSameActorId`); a pre-0159 row (⛔
+      // author) stays withheld (fail CLOSED). The scheduler's BRIEFING is the scheduler's, so it stays withheld from the
+      // inspector (Y2 A, ⛔ built until the Panel rules). Y3 — the flag is set on EVERY row / photo of a hidden reader whose
+      // author they are ⛔, note or ⛔ note, so presence ⛔ signals. Location, family contact, dates and outcomes stay.
+      // ⛔ Never decrypted. ONE statement (only when a row is shown); a failed read withholds (`check_failed`).
+      const notesReason = withheldReasonOn(
+        await readClaimsHiddenFromReader(scopeTx.client, scopeTx.tx, ctx.pariwarId, inScope.length > 0 ? [claimCaseId] : [], ctx.actorId, {
+          label: 'ground_inspection_own_visit_pending',
+          log: request.log,
+        }),
+        claimCaseId,
+      );
       const assignments = await Promise.all(
         inScope.map(async (r) => {
+          const notesWithheld = withheldUnlessAuthor(notesReason, r.inspection.notesAuthorActorId, ctx.actorId);
           // (review #4) Per-field fail-soft: a single corrupt/rotated/wrong-context envelope must
           // yield `null` for THAT field, not reject the whole read (which would blind the verifier
           // to every healthy assignment in the district — the opposite of the absence-is-a-signal
@@ -885,7 +902,8 @@ export function createGroundInspectionHandlers(deps: AppDeps) {
               // returns), so the page can tell the inspector a photo of a REPLACED certificate's original ⛔ counts
               // for nothing. NULL on a site photo. Non-PII.
               certificateToken: p.certificateUploadId ?? null,
-              caption: await decrypt(p.captionCiphertext),
+              caption: withheldUnlessAuthor(notesReason, p.uploadedByActorId, ctx.actorId) !== null ? null : await decrypt(p.captionCiphertext),
+              captionWithheld: withheldUnlessAuthor(notesReason, p.uploadedByActorId, ctx.actorId),
               signedUrl: await deps.claimDocumentStorage.signedReadUrl(p.storageObjectKey, PHOTO_SIGNED_URL_TTL_SECONDS),
             })),
           );
@@ -904,7 +922,8 @@ export function createGroundInspectionHandlers(deps: AppDeps) {
             structuredFindings: r.inspection.structuredFindings,
             locationDetail: await decrypt(r.inspection.locationCiphertext),
             familyContact: await decrypt(r.inspection.familyContactCiphertext),
-            notes: await decrypt(r.inspection.notesCiphertext),
+            notes: notesWithheld !== null ? null : await decrypt(r.inspection.notesCiphertext),
+            notesWithheld,
             // ⭐ Story 6.26a (GI4 / GI5) — the inspector's record: the verdict, the upload it was compared with, and the
             // date (+ the family's time) of death, decrypted here exactly as the notes are.
             originalCertificateVerdict: r.inspection.originalCertificateVerdict,

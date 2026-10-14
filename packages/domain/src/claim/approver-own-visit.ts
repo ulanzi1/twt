@@ -22,18 +22,44 @@ import { OwnGroundVisitPendingError } from './errors.js';
 const SLICE = 500;
 
 /**
+ * ⭐ Story 6.27b code review round 2 (V2) — the ONE meaning of "this actor id" for "is the assigned inspector": ASCII
+ * whitespace trimmed (space, TAB, LF, VT, FF, CR) and lower-cased (actor ids are uuids; a branded id is lower-cased by
+ * `uuidBrand`). Applied ON WRITE by the schedule / reschedule writers and by EVERY comparison — the hide / BD4 predicate
+ * below (`normalizedActorIdSql`, the SAME trim set and case rule in SQL), `authorizeInspector`, the idempotent-replay
+ * check and the route's `resolveInspectorOverride` (`isSameActorId`). A legacy variant-stored row therefore hides,
+ * refuses an approval AND lets its inspector complete their own visit — ⛔ two meanings.
+ */
+const ACTOR_ID_TRIM = /^[ \t\n\v\f\r]+|[ \t\n\v\f\r]+$/g;
+export function normalizeActorId(id: string): string {
+  return id.replace(ACTOR_ID_TRIM, '').toLowerCase();
+}
+
+/** Do two actor ids name the same actor under `normalizeActorId`? */
+export function isSameActorId(a: string, b: string): boolean {
+  return normalizeActorId(a) === normalizeActorId(b);
+}
+
+/** `normalizeActorId` in SQL over a text expression — the SAME six trim characters, then `lower`. */
+export function normalizedActorIdSql(expr: SQL): SQL {
+  return sql`lower(btrim(${expr}, ' ' || chr(9) || chr(10) || chr(11) || chr(12) || chr(13)))`;
+}
+
+/**
  * THE predicate as a boolean SQL expression over `pariwarRef` / `claimRef` (raw SQL with its OWN aliases `ohv_s` /
  * `ohv_c` — ⛔ never a Drizzle correlated subquery, [[project_epic6_drizzle_correlated_subquery_bug]]).
+ * ⭐ Story 6.27b review S14 / V2 — BOTH sides are compared normalised (`normalizedActorIdSql` / `normalizeActorId`): a row
+ * written before V2's normalise-on-write with a case / whitespace variant of the actor's id still hides the section and
+ * still refuses the approval (fail CLOSED — an exact-text match would let the assigned person approve).
  */
 export function peerSectionHiddenFromActorSql(pariwarRef: SQL, claimRef: SQL, actorId: string): SQL {
   return sql`(EXISTS (
              SELECT 1 FROM claim_ground_inspections ohv_s
               WHERE ohv_s.pariwar_id = ${pariwarRef} AND ohv_s.claim_case_id = ${claimRef}
-                AND ohv_s.inspector_actor_id = ${actorId} AND ohv_s.status = 'scheduled')
+                AND ${normalizedActorIdSql(sql`ohv_s.inspector_actor_id`)} = ${normalizeActorId(actorId)} AND ohv_s.status = 'scheduled')
        AND NOT EXISTS (
              SELECT 1 FROM claim_ground_inspections ohv_c
               WHERE ohv_c.pariwar_id = ${pariwarRef} AND ohv_c.claim_case_id = ${claimRef}
-                AND ohv_c.inspector_actor_id = ${actorId} AND ohv_c.status = 'completed'
+                AND ${normalizedActorIdSql(sql`ohv_c.inspector_actor_id`)} = ${normalizeActorId(actorId)} AND ohv_c.status = 'completed'
                 AND ohv_c.inspection_stage <> 'certificate_check'))`;
 }
 

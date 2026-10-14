@@ -24,7 +24,20 @@
 import { randomUUID } from 'node:crypto';
 
 import { claim, ids } from '@twt/domain';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+
+// ⭐ Story 6.27b code review round 2 (X3) — the hide read behind the appeal panel's withheld vote notes, failing ON DEMAND
+// with a real SQL error (`SELECT 1/0`), so the fail-closed branch runs on the request's own handle.
+const fault = vi.hoisted(() => ({ ownVisit: false }));
+vi.mock('@twt/domain', async (importActual) => {
+  const actual = await importActual<typeof import('@twt/domain')>();
+  const { sql } = await import('drizzle-orm');
+  const readOwnVisitPendingClaimIds: typeof actual.claim.readOwnVisitPendingClaimIds = async (db, ...rest) => {
+    if (fault.ownVisit) await (db as unknown as { execute: (q: unknown) => Promise<unknown> }).execute(sql`SELECT 1/0`);
+    return actual.claim.readOwnVisitPendingClaimIds(db, ...rest);
+  };
+  return { ...actual, claim: { ...actual.claim, readOwnVisitPendingClaimIds } };
+});
 
 import type { AppDeps } from '../../../src/context.js';
 import * as service from '../../../src/modules/auth/admin/admin-auth.service.js';
@@ -55,6 +68,7 @@ describe.skipIf(!hasDatabase)('Internal 3-stage appeal — E2E (:5433)', () => {
   });
 
   afterAll(async () => {
+    fault.ownVisit = false;
     await app.close();
     const c = await td.pool.connect();
     try {
@@ -397,6 +411,51 @@ describe.skipIf(!hasDatabase)('Internal 3-stage appeal — E2E (:5433)', () => {
     const caseBody = caseRes.json() as { claim_state: string; journey: { status: string } | null };
     expect(caseBody.claim_state).toBe('reversed');
     expect(caseBody.journey?.status).toBe('reversed');
+  });
+
+  // ⭐ Story 6.27b code review round 2 (X3 — V6 / X2) — a Stage-2 panelist whose OWN ground visit on the claim is pending
+  // gets every vote's rationale WITHHELD (`rationale: null`, `rationale_withheld: 'own_visit'`) — their own vote's too
+  // (V6 is uniform); another panelist sees every rationale; a FAILED hide read withholds from every reader (`check_failed`).
+  it('6.27b X3 — a Stage-2 panelist with a pending ground visit gets every vote\'s rationale withheld; a failed hide read withholds for everyone', async () => {
+    const pariwarId = randomUUID();
+    const deceased = await seedDeceasedMember(pariwarId, DISTRICT);
+    const memberId = randomUUID();
+    const claimCaseId = await seedDeniedClaim(pariwarId, deceased, memberId);
+    await clearLegalReview(pariwarId);
+    await memberInject('POST', memberUrl(claimCaseId), memberToken(memberId, pariwarId), {});
+    const reviewer = await districtAdmin(pariwarId);
+    const advance = await reviewer.client.inject({ method: 'POST', url: stage1Url(pariwarId, claimCaseId), payload: { decision: 'advance', rationale: 'stands on the merits' } });
+    expect(advance.statusCode).toBe(201);
+    const panel = [await pariwarAdmin(pariwarId, 'Panelist One'), await pariwarAdmin(pariwarId, 'Panelist Two')];
+    const open = await panel[0]!.client.inject({ method: 'POST', url: stage2OpenUrl(pariwarId, claimCaseId), payload: { panel_actor_ids: [panel[0]!.userId, panel[1]!.userId] } });
+    expect(open.statusCode).toBe(201);
+    for (const [i, p] of panel.entries()) {
+      const vote = await p.client.inject({ method: 'POST', url: stage2VoteUrl(pariwarId, claimCaseId), payload: { vote: 'reverse', rationale: `rationale ${i}` } });
+      expect(vote.statusCode).toBe(201);
+    }
+    // A visit assigned to Panelist One and still `scheduled` (seeded directly — a denied claim is outside the window; an
+    // assignment made before the denial stays scheduled through the appeal).
+    await td.pool.query(
+      `INSERT INTO claim_ground_inspections (ground_inspection_id, claim_case_id, pariwar_id, district, inspection_stage, inspection_site_type,
+         inspector_actor_id, scheduled_at, status)
+       VALUES ($1, $2, $3, $4, 'initial', 'family_residence', $5, now(), 'scheduled')`,
+      [randomUUID(), claimCaseId, pariwarId, DISTRICT, panel[0]!.userId],
+    );
+    const votesOf = async (who: { client: Client }) => {
+      const res = await who.client.inject({ method: 'GET', url: caseUrl(pariwarId, claimCaseId) });
+      expect(res.statusCode, res.body).toBe(200);
+      return (res.json() as { votes: { rationale: string | null; rationale_withheld: string | null }[] }).votes
+        .map((v) => [v.rationale, v.rationale_withheld])
+        .sort();
+    };
+    expect(await votesOf(panel[0]!)).toEqual([[null, 'own_visit'], [null, 'own_visit']]);
+    expect(await votesOf(panel[1]!)).toEqual([['rationale 0', null], ['rationale 1', null]]);
+    fault.ownVisit = true;
+    try {
+      expect(await votesOf(panel[1]!)).toEqual([[null, 'check_failed'], [null, 'check_failed']]);
+    } finally {
+      fault.ownVisit = false;
+    }
   });
 
   it('Step-up gating — Stage-3 decide is 403 without a fresh elevation, 201 with one (uphold path)', async () => {

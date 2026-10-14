@@ -147,6 +147,7 @@ describe('the read DTOs carry the block (EA7, RD11, RD20) — every field REQUIR
     verifier_actor_display: null,
     verifier_reason_code: null,
     verifier_rationale: null,
+    verifier_rationale_withheld: null,
     signals_summary: '',
     concealment_flags: [],
     routed_to_r9: false,
@@ -169,8 +170,20 @@ describe('the read DTOs carry the block (EA7, RD11, RD20) — every field REQUIR
       }),
     );
   });
+  // ⭐ Story 6.27b code review round 2 (Y6 / Y5 (a)) — `verifier_rationale_withheld` is REQUIRED (a parse WITHOUT it fails —
+  // ⛔ merely "the key exists"), and a set flag needs an EMPTY (`null`) rationale beside it.
+  it('6.27b — CycleFreezePendingItem: `verifier_rationale_withheld` is REQUIRED; a set flag ⇒ `verifier_rationale` null', () => {
+    const full = { ...pending, approval_warnings: SUMMARY };
+    ok(CycleFreezePendingItem.safeParse(full));
+    const without: Record<string, unknown> = { ...full };
+    delete without['verifier_rationale_withheld'];
+    expect(CycleFreezePendingItem.safeParse(without).success).toBe(false);
+    ok(CycleFreezePendingItem.safeParse({ ...full, verifier_rationale_withheld: 'own_visit' }));
+    expect(CycleFreezePendingItem.safeParse({ ...full, verifier_rationale: 'words', verifier_rationale_withheld: 'own_visit' }).success).toBe(false);
+    expect(CycleFreezePendingItem.safeParse({ ...full, verifier_rationale: '', verifier_rationale_withheld: 'check_failed' }).success).toBe(false);
+  });
   it('R9PanelVote requires `covers_current_warnings` (boolean | null)', () => {
-    const vote = { vote_id: CLAIM, voter_actor_id: 'v', voter_display: 'V', vote: 'approve', cast_at: 'x', clause_version_id: MEMBER, rationale: 'r' };
+    const vote = { vote_id: CLAIM, voter_actor_id: 'v', voter_display: 'V', vote: 'approve', cast_at: 'x', clause_version_id: MEMBER, rationale: 'r', rationale_withheld: null };
     expect(R9PanelVote.safeParse(vote).success).toBe(false);
     ok(R9PanelVote.safeParse({ ...vote, covers_current_warnings: null }));
     ok(R9PanelVote.safeParse({ ...vote, covers_current_warnings: false }));
@@ -272,7 +285,7 @@ describe('the read DTOs carry the block (EA7, RD11, RD20) — every field REQUIR
   // Code review 2026-10-06 (P18): `true` — an approve vote whose rationale covers every current warning — is the
   // central reason this field exists, yet only `null`/`false` were previously parse-tested.
   it('P18 — R9PanelVote.covers_current_warnings: true parses (the central "it covers everything" case)', () => {
-    const vote = { vote_id: CLAIM, voter_actor_id: 'v', voter_display: 'V', vote: 'approve', cast_at: 'x', clause_version_id: MEMBER, rationale: 'r' };
+    const vote = { vote_id: CLAIM, voter_actor_id: 'v', voter_display: 'V', vote: 'approve', cast_at: 'x', clause_version_id: MEMBER, rationale: 'r', rationale_withheld: null };
     ok(R9PanelVote.safeParse({ ...vote, covers_current_warnings: true }));
     // RD11 — `null` on a deny vote; `true`/`false` on a deny vote is now refused (code review 2026-10-06).
     failsAt(R9PanelVote.safeParse({ ...vote, vote: 'deny', covers_current_warnings: true }), 'covers_current_warnings');
@@ -306,7 +319,8 @@ describe('the read DTOs carry the block (EA7, RD11, RD20) — every field REQUIR
 
 describe('Story 6.28 (OP14 (b)) — `finally_approved_elsewhere` is REQUIRED on every approval read, by reference only', () => {
   it('a missing field fails; a reference + stage parses; ⛔ an id / name field', () => {
-    const shape = (CycleFreezePendingItem as unknown as { shape: Record<string, { safeParse: (v: unknown) => { success: boolean } }> }).shape;
+    // Story 6.27b (Y5 (a)) — the item is now a refined object (`.superRefine`), so its shape is the INNER object's.
+    const shape = (CycleFreezePendingItem as unknown as { innerType(): { shape: Record<string, { safeParse: (v: unknown) => { success: boolean } }> } }).innerType().shape;
     expect(shape.finally_approved_elsewhere!.safeParse(undefined).success).toBe(false);
     expect(shape.finally_approved_elsewhere!.safeParse(null).success).toBe(true);
     expect(shape.finally_approved_elsewhere!.safeParse({ claim_reference: 'A1B2C3D4', stage: 'paid' }).success).toBe(true);

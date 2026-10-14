@@ -93,6 +93,7 @@ import { isRealCalendarDate } from './nominee-determination-persist.js';
 import { getClaimCase, lockClaimCase } from './read.js';
 import { projectClaimState } from './project.js';
 import { isClaimInAnswerWindow } from './answer-window.js';
+import { isSameActorId, normalizeActorId } from './approver-own-visit.js';
 
 /** Max photos per assignment (AC3) — a LOCKED named const, NOT a configurable registry. A byte
  *  cap bounds total payload independently; 20 is a generous storage-abuse boundary. ⭐ `2026-10-07-286` H2:
@@ -294,6 +295,12 @@ async function lockClaimInWindow(db: Db, pariwarId: PariwarId, claimCaseId: Clai
   return assertClaimRowInWindow(db, pariwarId, claimRow);
 }
 
+/** Story 6.27b code review round 2 (Y8) — who a written visit note is recorded against: the acting actor, through the ONE
+ *  normaliser; ⛔ author for a cleared (`null`) note. */
+function noteAuthor(notesCiphertext: string | null, actingActorId: string): string | null {
+  return notesCiphertext === null ? null : normalizeActorId(actingActorId);
+}
+
 /** Authorize an evidence-authoring verb: acting actor === assigned inspector, OR an explicit
  *  supervisor override (D6). The route already verified the override permission key. */
 function authorizeInspector(
@@ -301,7 +308,8 @@ function authorizeInspector(
   actingActorId: string,
   override?: GroundInspectionOverride,
 ): void {
-  if (actingActorId === assignment.inspectorActorId) return;
+  // ⭐ Story 6.27b code review round 2 (V2) — the ONE meaning of "is the assigned inspector" (the hide / BD4 compare the same).
+  if (isSameActorId(actingActorId, assignment.inspectorActorId)) return;
   if (override) return;
   throw new GroundInspectionInspectorMismatchError(assignment.groundInspectionId, actingActorId);
 }
@@ -435,7 +443,7 @@ function assertIdempotentReplayMatches(
   if (bound.block !== (input.block ?? null)) mismatched.push('block');
   if (bound.inspectionStage !== input.inspectionStage) mismatched.push('inspection stage');
   if (bound.inspectionSiteType !== input.inspectionSiteType) mismatched.push('inspection site type');
-  if (bound.inspectorActorId !== input.inspectorActorId) mismatched.push('inspector');
+  if (!isSameActorId(bound.inspectorActorId, input.inspectorActorId)) mismatched.push('inspector'); // V2
   if (bound.scheduledAt.getTime() !== input.scheduledAt.getTime()) mismatched.push('scheduled time');
   if (mismatched.length > 0) {
     throw new GroundInspectionIdempotencyMismatchError(bound.groundInspectionId, mismatched.join(', '));
@@ -494,6 +502,9 @@ export async function scheduleGroundInspection(
   input: ScheduleGroundInspectionInput,
 ): Promise<ScheduleGroundInspectionResult> {
   const db = bindScopedDb(client);
+  // ⭐ Story 6.27b code review round 2 (V2) — the inspector id is NORMALISED ON WRITE (`normalizeActorId` — trimmed,
+  // lower-cased): the row, the event payload and the replay check all carry the one form every comparison uses.
+  input = { ...input, inspectorActorId: normalizeActorId(input.inspectorActorId) };
 
   if (input.inspectionSiteType === 'other' && (input.locationCiphertext == null || input.locationCiphertext === '')) {
     throw new GroundInspectionSiteDetailRequiredError();
@@ -531,6 +542,8 @@ export async function scheduleGroundInspection(
       locationCiphertext: input.locationCiphertext ?? null,
       familyContactCiphertext: input.familyContactCiphertext ?? null,
       notesCiphertext: input.notesCiphertext ?? null,
+      // ⭐ Story 6.27b code review round 2 (Y8; migration 0159) — the briefing's author is the SCHEDULER (`normalizeActorId`).
+      notesAuthorActorId: input.notesCiphertext != null ? normalizeActorId(input.scheduledByActor) : null,
       structuredFindings: input.structuredFindings ?? null,
       status: 'scheduled',
       supersedesGroundInspectionId: null,
@@ -603,6 +616,9 @@ export async function rescheduleGroundInspection(
   input: RescheduleGroundInspectionInput,
 ): Promise<ScheduleGroundInspectionResult> {
   const db = bindScopedDb(client);
+  // ⭐ Story 6.27b code review round 2 (V2) — the inspector id is NORMALISED ON WRITE (`normalizeActorId` — trimmed,
+  // lower-cased): the row, the event payload and the replay check all carry the one form every comparison uses.
+  input = { ...input, inspectorActorId: normalizeActorId(input.inspectorActorId) };
 
   if (input.inspectionSiteType === 'other' && (input.locationCiphertext == null || input.locationCiphertext === '')) {
     throw new GroundInspectionSiteDetailRequiredError();
@@ -668,6 +684,8 @@ export async function rescheduleGroundInspection(
       locationCiphertext: input.locationCiphertext ?? null,
       familyContactCiphertext: input.familyContactCiphertext ?? null,
       notesCiphertext: input.notesCiphertext ?? null,
+      // ⭐ Story 6.27b code review round 2 (Y8; migration 0159) — the briefing's author is the SCHEDULER (`normalizeActorId`).
+      notesAuthorActorId: input.notesCiphertext != null ? normalizeActorId(input.scheduledByActor) : null,
       structuredFindings: input.structuredFindings ?? null,
       status: 'scheduled',
       supersedesGroundInspectionId: input.groundInspectionId,
@@ -735,7 +753,8 @@ export async function recordGroundInspectionFindings(
     .update(claimGroundInspections)
     .set({
       ...(input.structuredFindings !== undefined ? { structuredFindings: input.structuredFindings } : {}),
-      ...(input.notesCiphertext !== undefined ? { notesCiphertext: input.notesCiphertext } : {}),
+      // ⭐ Story 6.27b code review round 2 (Y8) — the note's author is the ACTING actor (the override holder when used).
+      ...(input.notesCiphertext !== undefined ? { notesCiphertext: input.notesCiphertext, notesAuthorActorId: noteAuthor(input.notesCiphertext, input.actingActorId) } : {}),
       updatedAt: sql`now()`,
     })
     .where(
@@ -833,6 +852,8 @@ export async function addGroundInspectionPhoto(
       captionCiphertext: input.captionCiphertext ?? null,
       photoKind,
       certificateUploadId: stamp,
+      // ⭐ Story 6.27b code review round 2 (Y8; migration 0159) — the uploader, the caption's author (`normalizeActorId`).
+      uploadedByActorId: normalizeActorId(input.actingActorId),
     })
     .returning();
   return rows[0]!;
@@ -995,7 +1016,8 @@ export async function completeGroundInspection(
       // later. (Reverses 6.26a's first code review, patch #2 — recorded there.)
       completedAt: sql`clock_timestamp()`,
       ...(input.structuredFindings !== undefined ? { structuredFindings: input.structuredFindings } : {}),
-      ...(input.notesCiphertext !== undefined ? { notesCiphertext: input.notesCiphertext } : {}),
+      // ⭐ Story 6.27b code review round 2 (Y8) — the note's author is the ACTING actor (the override holder when used).
+      ...(input.notesCiphertext !== undefined ? { notesCiphertext: input.notesCiphertext, notesAuthorActorId: noteAuthor(input.notesCiphertext, input.actingActorId) } : {}),
       originalCertificateVerdict: input.originalCertificateVerdict,
       comparedCertificateUploadId: snapshot.currentUploadId,
       deathDateCiphertext: deathDate.ciphertext,
@@ -1081,6 +1103,8 @@ export async function recordGroundInspectionRefusal(
       status: input.disposition,
       refusalReason: input.refusalReason,
       notesCiphertext: input.notesCiphertext,
+      // ⭐ Story 6.27b code review round 2 (Y8) — the refusal note's author is the ACTING actor.
+      notesAuthorActorId: normalizeActorId(input.actingActorId),
       updatedAt: sql`now()`,
     })
     .where(

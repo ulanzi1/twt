@@ -43,6 +43,7 @@ import { ApprovalNameHighlight } from './correction-closure.js';
 // Story 6.23b — `verification-decision.ts` imports ⛔ nothing but zod (a leaf), so this cannot close a cycle.
 import { ApprovalWarningReasonOption, ApprovalWarningsSummary, WarningReasonCode } from './verification-decision.js';
 import { FinallyApprovedElsewhere } from './one-payment-per-death.js';
+import { NoteWithheldFlag, refineWithheldPair } from './withheld-note.js';
 
 // ── Trustee decision vocabulary wire mirror (value-aligned with @twt/domain) ────────────────
 
@@ -133,8 +134,12 @@ export const CycleFreezePendingItem = z
     verifier_decision_id: z.string().uuid().nullable(),
     verifier_actor_display: z.string().nullable(),
     verifier_reason_code: z.string().nullable(),
-    /** The verifier's rationale — decrypted AFTER authorization at the route (fail-soft to '' on absence). */
+    /** The verifier's rationale — decrypted AFTER authorization at the route (fail-soft to '' on absence). ⭐ Story 6.27b
+     *  code review round 2 (S18 / V6 / X2) — `null` when WITHHELD (see `verifier_rationale_withheld`). */
     verifier_rationale: z.string().nullable(),
+    /** ⭐ Story 6.27b code review round 2 (X2; `withheld-note.ts`) — REQUIRED: `null` ⇔ ⛔ withheld; else `own_visit` (the
+     *  reader's own ground visit on the claim is pending — EVERY bucket, whatever the note says) or `check_failed`. */
+    verifier_rationale_withheld: NoteWithheldFlag,
     /** A compact, deterministic signals summary (intake provenance + verification posture). */
     signals_summary: z.string(),
     /** `[concealment_review_required]` when the claim-scoped concealment producer resolves `flagged`; else []. */
@@ -159,7 +164,9 @@ export const CycleFreezePendingItem = z
     finally_approved_elsewhere: FinallyApprovedElsewhere.nullable(),
     approval_warnings: ApprovalWarningsSummary,
   })
-  .strict();
+  .strict()
+  // Y5 (a) — a withheld rationale ⛔ rides beside its words.
+  .superRefine(refineWithheldPair('verifier_rationale', 'verifier_rationale_withheld', null));
 export type CycleFreezePendingItem = z.output<typeof CycleFreezePendingItem>;
 
 /**

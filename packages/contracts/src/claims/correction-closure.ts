@@ -36,6 +36,7 @@ import { CorrectionMustAct, CorrectionPersonKey, isRealCalendarDate } from './co
 // Story 6.23b — a zod-only leaf (⛔ no sibling import), so this cannot close a cycle.
 import { ApprovalWarningReasonOption, ApprovalWarningsSummary, WarningReasonCode } from './verification-decision.js';
 import { FinallyApprovedElsewhere } from './one-payment-per-death.js';
+import { WithheldNote } from './withheld-note.js';
 
 const IsoDate = z
   .string()
@@ -252,10 +253,13 @@ export const CorrectionClosureDto = z
   .strict();
 export type CorrectionClosureDto = z.output<typeof CorrectionClosureDto>;
 
-/** A decrypted staff note on a read surface — or `unreadable` (a KMS fault: the row still shows). */
+/** A decrypted staff note on a read surface — or `unreadable` (a KMS fault: the row still shows) — or, ⭐ Story 6.27b code
+ *  review round 2 (V6 / X2), `withheld` (`withheld-note.ts`: `own_visit` — the reader's own ground visit on the claim is
+ *  pending; `check_failed` — the hide check failed) — ⛔ never an empty `readable`. */
 export const StaffNoteDto = z.discriminatedUnion('state', [
   z.object({ state: z.literal('readable'), value: z.string() }).strict(),
   z.object({ state: z.literal('unreadable') }).strict(),
+  WithheldNote,
 ]);
 export type StaffNoteDto = z.output<typeof StaffNoteDto>;
 
@@ -267,6 +271,8 @@ export const PariwarClosureQueueItemDto = z
     short_reference: z.string(),
     at: z.string(),
     by: z.string(),
+    /** ⭐ Story 6.27b code review round 2 (V6 / X2) — `withheld` when the reader's own ground visit on the claim is pending
+     *  or the hide check failed (⛔ never decrypted). */
     note: StaffNoteDto,
     family_run_day0: IsoDate.nullable(),
     checked_after_record: z.boolean().nullable(),
@@ -325,6 +331,9 @@ export const ClosureDirectionDto = z
     directed_to_actor: z.string().uuid(),
     directed_to_role: DirectionRole,
     kind: DirectionKind,
+    /** ⭐ Story 6.27b code review round 2 (V6 / X6 / X2) — `withheld` for a reader whose own ground visit on the claim is
+     *  pending or whose hide check failed: on the escalation DETAIL always (the text and the response); in the directee's
+     *  inbox and the response echo the text unless the reader created it, the response unless they wrote it. */
     text: StaffNoteDto,
     created_by: z.string(),
     created_at: z.string(),
@@ -347,7 +356,9 @@ export const EscalatedClosureMarkDto = z
   })
   .strict();
 
-/** ONE held claim for the Super Admin's decision surface (AC14). */
+/** ONE held claim for the Super Admin's decision surface (AC14). ⭐ Story 6.27b code review round 2 (V6 / X2) — every note on it (the request,
+ *  the Pariwar Admin's decision, the review, each mark's, each direction's text and response) is `withheld` when the
+ *  reader's own ground visit on the claim is pending or the hide check failed; a `null` note field means ⛔ no note. */
 export const EscalatedClosureDetailResponse = z
   .object({
     closure: CorrectionClosureDto,

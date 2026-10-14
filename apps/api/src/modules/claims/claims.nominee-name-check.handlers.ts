@@ -62,6 +62,7 @@ import { closeScopeTx, openScopeTx } from '../multi-tenant/scope-tx.js';
 import { closureStateDto } from './correction-closure-dto.js';
 import { decryptNomineeBankField } from './nominee-bank-crypto.js';
 import { decryptTrusteeRationale } from './state-trustee-decision-crypto.js';
+import { readClaimsHiddenFromReader, withheldNote, withheldReasonOn } from './hidden-reader-notes.js';
 import { decryptNomineeField } from '../nominee/nominee-crypto.js';
 
 /** The AC2 READ key — gates seeing the two names. */
@@ -343,14 +344,28 @@ export function createNomineeNameCheckHandlers(deps: AppDeps) {
       // `-227` cl.10 asks the District Admin to get the discrepancy corrected and re-check; the note
       // saying WHAT to correct belongs beside the names they are about to re-read.
       const returnRow = await claimDomain.getLiveCorrectionReturn(scopeTx.tx, pariwarId, cid);
+      // ⭐ Story 6.27b code review round 2 (V6 — AC7's D1 B + V1 A) — the return note is a staff note on this claim: WITHHELD
+      // from a reader whose own ground visit here is pending (`hidden-reader-notes.ts`; ONE statement, only when a return
+      // exists; a failed read withholds). X2 — `{ state: 'withheld', reason }` (⛔ never decrypted, ⛔ never an empty note).
+      const returnNoteWithheld =
+        returnRow === undefined
+          ? null
+          : withheldReasonOn(
+              await readClaimsHiddenFromReader(scopeTx.client, scopeTx.tx, scopeTx.pariwarId, [claimCaseId], actorId, {
+                label: 'name_check_return_note_own_visit_pending',
+                log: request.log,
+              }),
+              claimCaseId,
+            );
       const correctionReturn =
         returnRow === undefined
           ? null
           : {
               returned_at: returnRow.decidedAt.toISOString(),
               returned_by_actor_display: returnRow.actorDisplay,
-              note:
-                returnRow.rationaleCiphertext === null
+              note: returnNoteWithheld !== null
+                ? withheldNote(returnNoteWithheld)
+                : returnRow.rationaleCiphertext === null
                   ? ({ state: 'unreadable' } as const)
                   : await readName(
                       () =>
@@ -552,6 +567,19 @@ export function createNomineeNameCheckHandlers(deps: AppDeps) {
           .slice(0, clampLimit(limit, { default: claimDomain.CORRECTION_QUEUE_DEFAULT_LIMIT, cap: claimDomain.CORRECTION_QUEUE_MAX_LIMIT }));
       }
 
+      // ⭐ Story 6.27b code review round 2 (V6 — AC7's D1 B + V1 A) — each row's return note is WITHHELD (`null`, ⛔ never
+      // decrypted, ⛔ not a placeholder) on a claim whose neighbours' section is hidden from THIS reader: ONE set-based
+      // statement over EVERY returned row (`hidden-reader-notes.ts`); a failed read withholds them all. Y3 — a hidden
+      // reader's row carries `withheld` note or ⛔ note, so presence ⛔ signals.
+      const hiddenClaims = await readClaimsHiddenFromReader(
+        scopeTx.client,
+        scopeTx.tx,
+        scopeTx.pariwarId,
+        rows.map((r) => r.claimCaseId),
+        actorId,
+        { label: 'correction_queue_own_visit_pending', log: request.log },
+      );
+      const returnNoteShown = (row: (typeof rows)[number]) => row.returnNoteCiphertext !== null && withheldReasonOn(hiddenClaims, row.claimCaseId) === null;
       const items = await Promise.all(
         rows.map(async (row) => ({
           claim_case_id: row.claimCaseId,
@@ -560,8 +588,11 @@ export function createNomineeNameCheckHandlers(deps: AppDeps) {
           claim_filed_at: row.claimFiledAt.toISOString(),
           returned_at: row.returnedAt?.toISOString() ?? null,
           returned_by_actor_display: row.returnedByActorDisplay,
+          // X2 / Y3 — withheld ⇒ `{ state: 'withheld', reason }` whatever the ciphertext (⛔ never decrypted); else ⛔ note ⇒ `null`.
           return_note:
-            row.returnNoteCiphertext === null
+            withheldReasonOn(hiddenClaims, row.claimCaseId) !== null
+              ? withheldNote(withheldReasonOn(hiddenClaims, row.claimCaseId)!)
+              : !returnNoteShown(row)
               ? null
               : await readName(
                   () =>
@@ -606,7 +637,7 @@ export function createNomineeNameCheckHandlers(deps: AppDeps) {
       // ⭐ Over the RETURNED rows only (`rows`, ⛔ not the escalated scan's `visible`) — a line for a note the
       // caller was never shown is a false audit trail.
       for (const row of rows) {
-        if (row.returnNoteCiphertext === null) continue;
+        if (!returnNoteShown(row)) continue; // ⛔ a line for a note never decrypted (⛔ ciphertext, or withheld — V6)
         emitAuthAudit(deps, request, 'admin_nominee_name_check.queue_note_read', {
           actorId,
           pariwarId: scopeTx.pariwarId,

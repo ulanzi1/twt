@@ -7,9 +7,11 @@
 // list header (it is only shown on the authorized detail read); it accepts an optional rationale to
 // display inline where the surface is authorized.
 
+import type { NoteWithheldReason } from '@twt/contracts';
 import type { ReactElement } from 'react';
 
 import { verifierConsoleEn as t } from './i18n-en.js';
+import { WithheldNote } from './WithheldNote.js';
 
 export interface AuditTrailEntryData {
   outcome: string;
@@ -18,6 +20,11 @@ export interface AuditTrailEntryData {
   decidedAt: string;
   /** The authorized-decrypted rationale, when the surface shows it inline (section (e)); else omitted. */
   rationale?: string | null;
+  /** ⭐ Story 6.27b code review round 2 (X2) — the rationale is WITHHELD from this reader (and why): said in the shared
+   *  words, ⛔ never an absent line (which reads as "no note"). Omitted / `null` ⇔ ⛔ withheld. */
+  rationaleWithheld?: NoteWithheldReason | null;
+  /** Review Y4 — the row is ANOTHER claim's (the recent precedents): the withheld words say "that claim". */
+  otherClaim?: boolean;
   /** True when this row was superseded by a later revision (AC5/AC6 — shown with linkage). */
   superseded?: boolean;
   /** True when this row is itself a revision of an earlier decision (AC5). */
@@ -56,7 +63,11 @@ export function AuditTrailEntry({ entry }: { entry: AuditTrailEntryData }): Reac
       <span className="text-xs opacity-70">
         {REASON_LABELS[entry.reasonCode] ?? entry.reasonCode} · <time>{entry.decidedAt}</time>
       </span>
-      {entry.rationale ? (
+      {entry.rationaleWithheld != null ? (
+        <span className="text-xs opacity-80" data-testid="audit-rationale">
+          <WithheldNote reason={entry.rationaleWithheld} scope={entry.otherClaim ? 'that_claim' : 'this_claim'} />
+        </span>
+      ) : entry.rationale ? (
         <span className="text-xs opacity-80" data-testid="audit-rationale">
           {entry.rationale}
         </span>

@@ -101,6 +101,7 @@ const CASE: PendingCase = {
   verifier_actor_display: 'Anita Kumari',
   verifier_reason_code: 'r8_90pct_met',
   verifier_rationale: null,
+  verifier_rationale_withheld: null,
   signals_summary: 'state=verifier_approved',
   concealment_flags: [],
   routed_to_r9: false,
@@ -363,6 +364,7 @@ const approveVote = (covers: boolean | null) => ({
   cast_at: '2026-09-21T10:00:00.000Z',
   clause_version_id: '66666666-6666-4666-8666-666666666666',
   rationale: 'yes',
+  rationale_withheld: null,
   covers_current_warnings: covers,
 });
 const approvedTally = { approve_count: 1, deny_count: 0, cast_votes: 1, panel_size: 1, quorum_required: 1, provisional_outcome: 'approved' as const, quorum_met: true };
@@ -862,5 +864,288 @@ describe('Story 6.28 OP14 (b) — the R9 panel, the escalation and "no correctio
     expect(screen.getByTestId(`finally-approved-elsewhere-${CLAIM}`)).toHaveTextContent(ofd.bannerVoted('A1B2C3D4'));
     expect(screen.getByTestId('no-correction-approve')).toBeDisabled();
     expect(screen.getByTestId('no-correction-approve').getAttribute('aria-describedby')?.split(' ')).toContain(`finally-approved-elsewhere-${CLAIM}`);
+  });
+});
+
+// ── Story 6.27b (BD4, `2026-10-13-327` decision 2; PM25 (c); AC7, AC10; Task 4.4 / 4b.5 — review S6) — EACH host, RENDERED
+// with the viewer's own ground visit pending: the approve control held WITH the ONE neutral block, ⛔ a neighbour kind,
+// ⛔ the neighbours' toggle; and the BD4 409 in the neutral words through the path each host really renders it.
+describe('Story 6.27b BD4 — each later-approver host with `own_visit_pending` (review S6)', () => {
+  const ov = verifierConsoleEn.ownVisitPending;
+  const CODE_WORDS = 'server words';
+  // The server already left the neighbours' kinds OUT (PM25 (c)); another kind still shows.
+  const HIDDEN = summary({ own_visit_pending: true });
+  const describedByText = (el: HTMLElement) =>
+    (el.getAttribute('aria-describedby') ?? '')
+      .split(' ')
+      .map((id) => document.getElementById(id)?.textContent ?? '')
+      .join(' ');
+  const noNeighbourTrace = () => {
+    const text = document.body.textContent ?? '';
+    expect(text).not.toContain(tw.kindLine.peer_says_not_died);
+    expect(text).not.toContain(tw.kindLine.peer_death_date_differs);
+    expect(text).not.toContain(verifierConsoleEn.neighboursPanel.toggle);
+  };
+  beforeEach(() => {
+    getCycleFreezePending.mockReset();
+    postCycleFreezeDecision.mockReset();
+    getR9Panel.mockReset();
+    castR9Vote.mockReset();
+    getEscalatedClosure.mockReset();
+    decideEscalatedClosure.mockReset();
+    approveNoCorrectionNeeded.mockReset();
+    getSession.mockResolvedValue({ userId: ME, nationalGrants: [] });
+  });
+
+  it('<PendingCaseCard> — Approve and Resolve → Approve held WITH the neutral words; Deny open; ⛔ picker, ⛔ kind, ⛔ toggle', () => {
+    card({ approval_warnings: HIDDEN });
+    expect(screen.getByTestId(`${prefix}-approval-blocked`)).toHaveTextContent(ov);
+    expect(screen.getByTestId('cycle-freeze-approve')).toBeDisabled();
+    expect(describedByText(screen.getByTestId('cycle-freeze-approve'))).toContain(ov);
+    expect(screen.queryByTestId(`${prefix}-warning-reason-picker`)).toBeNull();
+    expect(screen.getByRole('button', { name: 'Deny' })).toBeEnabled();
+    expect(screen.queryByTestId(`pending-case-neighbours-${CLAIM}`)).toBeNull();
+    noNeighbourTrace();
+  });
+
+  it('<PendingCaseCard> (escalated) — Resolve → Approve held WITH the neutral words; ⛔ toggle', () => {
+    card({ current_state: 'verifier_review', approval_warnings: HIDDEN }, 'escalated');
+    expect(screen.getByTestId('cycle-freeze-resolve-approve')).toBeDisabled();
+    expect(describedByText(screen.getByTestId('cycle-freeze-resolve-approve'))).toContain(ov);
+    expect(screen.queryByTestId(`pending-case-neighbours-${CLAIM}`)).toBeNull();
+    noNeighbourTrace();
+  });
+
+  it('<CycleFreezePage> — the BD4 409 reads as the neutral words (⛔ the server\'s text, ⛔ a raw code)', async () => {
+    getCycleFreezePending.mockResolvedValue({ pariwar_id: PARIWAR, ready_to_freeze: [{ ...CASE, approval_warnings: QUIET }], escalated: [], voted_pending_commit: [], reason_options: OPTIONS });
+    postCycleFreezeDecision.mockRejectedValue(new ApiError(409, 'cycle_freeze.own_ground_visit_pending', CODE_WORDS));
+    wrap(<CycleFreezePage pariwarId={PARIWAR} />);
+    fireEvent.click(await screen.findByTestId('cycle-freeze-approve'));
+    const alert = await screen.findByText((_, el) => el?.getAttribute('role') === 'alert' && (el.textContent ?? '').includes(ov));
+    expect(alert).not.toHaveTextContent(CODE_WORDS);
+    expect(alert).not.toHaveTextContent('own_ground_visit_pending');
+  });
+
+  it('<R9CasePanel> — an APPROVE vote held, the words in a PERSISTENT status region (S11 (c)) describing Approve and Submit; Deny open; ⛔ empty wrapper (S12)', async () => {
+    getR9Panel.mockResolvedValue(r9Panel({ approval_warnings: summary({ kinds: [], own_visit_pending: true }) }));
+    castR9Vote.mockResolvedValue({});
+    // Review V3 — Approve is the DEFAULT choice, so the words are due on the FIRST render: the region must still MOUNT
+    // EMPTY and receive them as a SEPARATE insertion into the already-mounted region (a region that mounts holding its
+    // text is ⛔ not announced). A node built holding the words is inserted whole — ⛔ no record targets the region then.
+    const records: MutationRecord[] = [];
+    const observer = new MutationObserver((rs) => records.push(...rs));
+    observer.observe(document.body, { childList: true, subtree: true });
+    wrap(<R9CasePanel pariwarId={PARIWAR} claimCaseId={CLAIM} />);
+    const status = await screen.findByTestId('r9-own-visit-status');
+    expect(status).toHaveAttribute('role', 'status');
+    await waitFor(() => expect(status).toHaveTextContent(ov));
+    records.push(...observer.takeRecords());
+    observer.disconnect();
+    expect(records.some((r) => r.target === status && [...r.addedNodes].some((n) => n.textContent === ov))).toBe(true);
+    expect(describedByText(screen.getByTestId('r9-vote-approve'))).toContain(ov);
+    fireEvent.change(screen.getByPlaceholderText('Rationale (required, ≤500 chars)'), { target: { value: 'x' } });
+    const submit = screen.getByTestId('r9-submit-vote');
+    expect(submit).toBeDisabled();
+    expect(describedByText(submit)).toContain(ov);
+    expect(screen.queryByTestId(`r9-${CLAIM}-warning-reason-picker`)).toBeNull();
+    expect(screen.queryByTestId('r9-neighbours-answers')).toBeNull();
+    noNeighbourTrace();
+
+    fireEvent.click(screen.getByRole('radio', { name: /Deny/ }));
+    // The SAME region, now empty — and refilled (so ANNOUNCED) when Approve is chosen again.
+    expect(screen.getByTestId('r9-own-visit-status')).toBe(status);
+    expect(status).toBeEmptyDOMElement();
+    // S12 — ⛔ an empty spacing wrapper for a hidden voter who picks Deny.
+    expect([...document.querySelectorAll('div.mb-2')].filter((d) => d.childElementCount === 0)).toHaveLength(0);
+    expect(submit).toBeEnabled();
+    fireEvent.click(screen.getByRole('radio', { name: /Approve/ }));
+    expect(screen.getByTestId('r9-own-visit-status')).toBe(status);
+    expect(status).toHaveTextContent(ov);
+    fireEvent.click(screen.getByRole('radio', { name: /Deny/ }));
+    fireEvent.click(submit);
+    await waitFor(() => expect(castR9Vote).toHaveBeenCalledWith(PARIWAR, CLAIM, { vote: 'deny', rationale: 'x' }));
+  });
+
+  it('<R9CasePanel> — V3: the elsewhere banner disables Approve ⇒ ⛔ own-visit words for that UNSELECTABLE choice; the banner describes it', async () => {
+    getR9Panel.mockResolvedValue(
+      r9Panel({ approval_warnings: summary({ kinds: [], own_visit_pending: true }), finally_approved_elsewhere: { claim_reference: 'A1B2C3D4', stage: 'passed_final_vote' } }),
+    );
+    wrap(<R9CasePanel pariwarId={PARIWAR} claimCaseId={CLAIM} />);
+    const status = await screen.findByTestId('r9-own-visit-status');
+    await new Promise((r) => setTimeout(r, 20));
+    expect(status).toBeEmptyDOMElement();
+    expect(screen.getByTestId('r9-vote-approve')).toBeDisabled();
+    const banner = verifierConsoleEn.onePaymentPerDeath.bannerVoted('A1B2C3D4');
+    expect(describedByText(screen.getByTestId('r9-vote-approve'))).toContain(banner);
+    fireEvent.change(screen.getByPlaceholderText('Rationale (required, ≤500 chars)'), { target: { value: 'x' } });
+    expect(screen.getByTestId('r9-submit-vote')).toBeDisabled();
+    expect(describedByText(screen.getByTestId('r9-submit-vote'))).toContain(banner);
+  });
+
+  it('<R9CasePanel> — the BD4 409 on an approve vote reads as the neutral words (⛔ the server\'s text)', async () => {
+    getR9Panel.mockResolvedValue(r9Panel({ approval_warnings: QUIET }));
+    castR9Vote.mockRejectedValue(new ApiError(409, 'r9_voting.own_ground_visit_pending', CODE_WORDS));
+    wrap(<R9CasePanel pariwarId={PARIWAR} claimCaseId={CLAIM} />);
+    fireEvent.change(await screen.findByPlaceholderText('Rationale (required, ≤500 chars)'), { target: { value: 'yes' } });
+    fireEvent.click(screen.getByTestId('r9-submit-vote'));
+    const alert = await screen.findByText((_, el) => el?.getAttribute('role') === 'alert' && (el.textContent ?? '').includes(ov));
+    expect(alert).not.toHaveTextContent(CODE_WORDS);
+  });
+
+  it('<EscalationDetail> — an APPROVE decision held WITH the neutral words; a refusal open; ⛔ toggle, ⛔ kind', async () => {
+    getEscalatedClosure.mockResolvedValue(detail({ approval_warnings: HIDDEN }));
+    wrap(<EscalationDetail pariwarId={PARIWAR} claimCaseId={CLAIM} />);
+    fireEvent.change(await screen.findByTestId('decision-kind'), { target: { value: 'approve' } });
+    expect(screen.getByTestId('escalation-decision-approval-blocked')).toHaveTextContent(ov);
+    expect(screen.getByTestId('decision-submit')).toBeDisabled();
+    expect(describedByText(screen.getByTestId('decision-submit'))).toContain(ov);
+    expect(screen.queryByTestId('escalation-decision-warning-reason-picker')).toBeNull();
+    expect(screen.queryByTestId(`escalation-neighbours-${CLAIM}`)).toBeNull();
+    noNeighbourTrace();
+    fireEvent.change(screen.getByTestId('decision-kind'), { target: { value: 'refuse' } });
+    expect(screen.getByTestId('decision-submit')).toBeEnabled();
+  });
+
+  it('<EscalationDetail> — the BD4 409 renders the neutral words through `closureErrorText` (⛔ the server\'s text)', async () => {
+    getEscalatedClosure.mockResolvedValue(detail({ approval_warnings: QUIET }));
+    decideEscalatedClosure.mockRejectedValue(new ApiError(409, 'closure.own_ground_visit_pending', CODE_WORDS));
+    wrap(<EscalationDetail pariwarId={PARIWAR} claimCaseId={CLAIM} />);
+    fireEvent.change(await screen.findByTestId('decision-kind'), { target: { value: 'approve' } });
+    fireEvent.change(screen.getByTestId('decision-note'), { target: { value: 'Checked.' } });
+    fireEvent.click(screen.getByTestId('decision-submit'));
+    const error = await screen.findByTestId('decision-error');
+    expect(error).toHaveAttribute('role', 'alert');
+    expect(error).toHaveTextContent(ov);
+    expect(error).not.toHaveTextContent(CODE_WORDS);
+  });
+
+  it('<NoCorrectionStrip> — approve held WITH the neutral words; Keep open; ⛔ toggle, ⛔ kind', () => {
+    wrap(<PariwarClosureList pariwarId={PARIWAR} reasonOptions={OPTIONS} items={[item({ approval_warnings: HIDDEN })]} />);
+    const p = `no-correction-${CLAIM}`;
+    expect(screen.getByTestId(`${p}-approval-blocked`)).toHaveTextContent(ov);
+    expect(screen.getByTestId('no-correction-approve')).toBeDisabled();
+    expect(describedByText(screen.getByTestId('no-correction-approve'))).toContain(ov);
+    expect(screen.queryByTestId(`${p}-warning-reason-picker`)).toBeNull();
+    expect(screen.getByTestId('no-correction-keep')).toBeEnabled();
+    expect(screen.queryByTestId(`no-correction-neighbours-${CLAIM}`)).toBeNull();
+    noNeighbourTrace();
+  });
+
+  it('<NoCorrectionStrip> — the BD4 409 renders the neutral words through `closureErrorText` (⛔ the server\'s text)', async () => {
+    approveNoCorrectionNeeded.mockRejectedValue(new ApiError(409, 'closure.own_ground_visit_pending', CODE_WORDS));
+    wrap(<PariwarClosureList pariwarId={PARIWAR} reasonOptions={OPTIONS} items={[item({ approval_warnings: QUIET })]} />);
+    fireEvent.click(screen.getByTestId('no-correction-approve'));
+    const alert = await screen.findByText((_, el) => el?.getAttribute('role') === 'alert' && (el.textContent ?? '').includes(ov));
+    expect(alert).not.toHaveTextContent(CODE_WORDS);
+  });
+});
+
+// ── Story 6.27b code review round 2 (X2; `withheld-note.ts`) — a WITHHELD staff note on each later-approval host: the shared
+// words (`own_visit` ⇒ the neutral line; `check_failed` ⇒ could-not-be-shown), ⛔ never the dash / blank of "no note".
+describe('Story 6.27b X2 — a WITHHELD note on the later-approval hosts', () => {
+  const own = verifierConsoleEn.noteWithheld.own_visit;
+  const failed = verifierConsoleEn.noteWithheld.check_failed;
+  beforeEach(() => {
+    getR9Panel.mockReset();
+    getEscalatedClosure.mockReset();
+    getSession.mockResolvedValue({ userId: ME, nationalGrants: [] });
+  });
+
+  it('<PendingCaseCard> — the verifier rationale (Pattern B): withheld ⇒ the words (⛔ "—"); a normal note and "none" unchanged', () => {
+    const rationale = () => screen.getByTestId('pending-case-verifier-rationale');
+    const { unmount } = wrap(
+      <ul>
+        <PendingCaseCard case_={{ ...CASE, verifier_rationale_withheld: 'own_visit' }} bucket="ready_to_freeze" pariwarId={PARIWAR} onDecision={vi.fn()} pending={false} reasonOptions={OPTIONS} />
+      </ul>,
+    );
+    // Review Y6 — the cell holds EXACTLY the words (⛔ a dash beside them, ⛔ anything else) — a check that can fail.
+    expect(rationale().textContent).toBe(own);
+    unmount();
+    const second = wrap(
+      <ul>
+        <PendingCaseCard case_={{ ...CASE, verifier_rationale_withheld: 'check_failed' }} bucket="ready_to_freeze" pariwarId={PARIWAR} onDecision={vi.fn()} pending={false} reasonOptions={OPTIONS} />
+      </ul>,
+    );
+    expect(rationale()).toHaveTextContent(failed);
+    second.unmount();
+    const third = wrap(
+      <ul>
+        <PendingCaseCard case_={{ ...CASE, verifier_rationale: 'Checked the register.' }} bucket="ready_to_freeze" pariwarId={PARIWAR} onDecision={vi.fn()} pending={false} reasonOptions={OPTIONS} />
+      </ul>,
+    );
+    expect(rationale()).toHaveTextContent('Checked the register.');
+    third.unmount();
+    card(); // `verifier_rationale: null`, ⛔ withheld ⇒ the dash of "none", as before
+    expect(rationale().textContent).toBe('—');
+  });
+
+  it('<R9CasePanel> — a vote\'s rationale (Pattern B): withheld ⇒ the words (⛔ blank); another vote\'s note unchanged', async () => {
+    const OTHER_VOTE = '89898989-8989-4898-8989-898989898989';
+    getR9Panel.mockResolvedValue(
+      r9Panel({
+        votes: [
+          { ...approveVote(true), rationale: '', rationale_withheld: 'own_visit' },
+          { ...approveVote(true), vote_id: OTHER_VOTE, rationale: 'Family confirmed.', rationale_withheld: null },
+        ],
+      }),
+    );
+    wrap(<R9CasePanel pariwarId={PARIWAR} claimCaseId={CLAIM} />);
+    expect(await screen.findByTestId(`r9-vote-rationale-${VOTE_ID}`)).toHaveTextContent(own);
+    expect(screen.getByTestId(`r9-vote-rationale-${OTHER_VOTE}`)).toHaveTextContent('Family confirmed.');
+  });
+
+  it('<EscalationDetail> — the staff notes (Pattern A, `StaffNoteDto`): each withheld one SAID; a readable one unchanged', async () => {
+    getEscalatedClosure.mockResolvedValue(
+      detail({
+        approval_warnings: QUIET,
+        request_note: { state: 'withheld', reason: 'own_visit' },
+        pariwar_decision_note: { state: 'readable', value: 'PA-NOTE kept the claim' },
+        review_note: { state: 'withheld', reason: 'check_failed' },
+      }),
+    );
+    wrap(<EscalationDetail pariwarId={PARIWAR} claimCaseId={CLAIM} />);
+    const withheld = await screen.findAllByTestId('note-withheld');
+    expect(withheld.map((n) => n.textContent)).toEqual([own, failed]);
+    expect(screen.getByText(/PA-NOTE kept the claim/)).toBeInTheDocument();
+  });
+
+  // Review Y6 — the escalation's OTHER notes: a mark's note and a direction's RESPONSE (its text readable).
+  it('<EscalationDetail> — a WITHHELD mark note and a WITHHELD direction response are SAID; the direction\'s readable text unchanged', async () => {
+    const DIRECTION = '66666666-6666-4666-8666-666666666666';
+    getEscalatedClosure.mockResolvedValue(
+      detail({
+        approval_warnings: QUIET,
+        marks: [
+          { must_act: 'family', is_return_mark: false, set_at: '2026-09-27T10:00:00.000Z', set_by: 'Mark Setter', set_by_role: 'district_admin', note: { state: 'withheld', reason: 'own_visit' } },
+        ],
+        directions: [
+          {
+            direction_id: DIRECTION,
+            directed_to_actor: '77777777-7777-4777-8777-777777777777',
+            directed_to_role: 'district_admin',
+            kind: 'other',
+            text: { state: 'readable', value: 'DIRECTION-call the family' },
+            created_by: 'Super Admin One',
+            created_at: '2026-09-28T10:00:00.000Z',
+            opened_run: false,
+            response: { state: 'withheld', reason: 'check_failed' },
+            responded_at: '2026-09-29T10:00:00.000Z',
+            responded_by: 'District Admin One',
+          },
+        ],
+      }),
+    );
+    wrap(<EscalationDetail pariwarId={PARIWAR} claimCaseId={CLAIM} />);
+    const mark = (await screen.findByText(/Mark Setter/)).closest('li')!;
+    expect(within(mark).getByTestId('note-withheld').textContent).toBe(own);
+    const direction = screen.getByTestId(`escalation-direction-${DIRECTION}`);
+    expect(direction).toHaveTextContent('DIRECTION-call the family');
+    expect(within(direction).getByTestId('note-withheld').textContent).toBe(failed);
+  });
+
+  it('<PariwarClosureList> — the item note (Pattern A): withheld ⇒ the words (⛔ "—")', () => {
+    wrap(<PariwarClosureList pariwarId={PARIWAR} reasonOptions={OPTIONS} items={[item({ approval_warnings: QUIET, note: { state: 'withheld', reason: 'own_visit' } })]} />);
+    // Review Y6 — the cell holds EXACTLY the words (⛔ a dash beside them, ⛔ anything else) — a check that can fail.
+    expect(screen.getByTestId('closure-queue-note').textContent).toBe(own);
   });
 });

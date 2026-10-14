@@ -323,6 +323,7 @@ import {
   PeerRequestSubmitResponse,
   type PeerRequestAnswerValue,
   ClaimPeerAnswersResponse,
+  NoteWithheldReason,
 } from '@twt/contracts';
 import { z } from 'zod';
 
@@ -1201,6 +1202,9 @@ export const GroundInspectionPhoto = z.object({
   contentType: z.string(),
   byteSize: z.number(),
   caption: z.string().nullable(),
+  // ⭐ Story 6.27b code review round 2 (X2; `@twt/contracts` `withheld-note.ts`) — REQUIRED (review Y5 (c), as the
+  // contract): `null` ⇔ ⛔ withheld (`caption` then `null`), else why.
+  captionWithheld: NoteWithheldReason.nullable(),
   signedUrl: z.string(),
   // Story 6.26a (GI4) — `site` | `original_certificate` (shown apart).
   photoKind: z.enum(['site', 'original_certificate']),
@@ -1227,6 +1231,8 @@ export const GroundInspectionAssignment = z.object({
   locationDetail: z.string().nullable(),
   familyContact: z.string().nullable(),
   notes: z.string().nullable(),
+  /** ⭐ Story 6.27b code review round 2 (X2) — REQUIRED (review Y5 (c)): `null` ⇔ ⛔ withheld (`notes` then `null`). */
+  notesWithheld: NoteWithheldReason.nullable(),
   photos: z.array(GroundInspectionPhoto),
   // ⭐ Story 6.26a (GI4 / GI5) — the inspector's record: the verdict, the upload it was compared with, and the date
   // (+ the family's time) of death, decrypted server-side. All `null` until completion (or on a pre-6.26a row).
@@ -1782,10 +1788,11 @@ export function recordRefileConfirmation(pariwarId: string, closedClaimCaseId: s
  * (and may decrypt a call-back number) — `<NeighboursAnswersPanel>` fetches it ONLY when opened. A 404 ⇔ ⛔ at an
  * approving step; `peerMesh` absent ⇔ hidden from this reader.
  */
-export function getClaimPeerAnswers(pariwarId: string, claimCaseId: string): Promise<ClaimPeerAnswersResponse> {
+export function getClaimPeerAnswers(pariwarId: string, claimCaseId: string, signal?: AbortSignal): Promise<ClaimPeerAnswersResponse> {
   return apiFetch(
     `/api/v1/p/${encodeURIComponent(pariwarId)}/admin/claims/${encodeURIComponent(claimCaseId)}/peer-answers`,
     ClaimPeerAnswersResponse,
+    { signal },
   );
 }
 

@@ -688,3 +688,79 @@ describe('<VerifierConsoleRoute> — Story 6.26a, why the approval waits for the
   });
 });
 
+// ── Story 6.27b (BD4, `2026-10-13-327` decision 2; AC7; Task 4.4 — review S6) — the ROUTE's `canApprove`, MOUNTED ────────
+// (`own-visit-pending.test.tsx` passes `canApprove={false}` to the strip itself, so deleting the route's conjunct stayed green.)
+describe('<VerifierConsoleRoute> — Story 6.27b, the viewer\'s own ground visit pending', () => {
+  const mountOwnVisit = async (ownVisitPending: boolean) => {
+    const base = packet(PASSING);
+    getVerifierConsole.mockResolvedValue({ packet: { ...base, approvalWarnings: { ...base.approvalWarnings, ownVisitPending } } });
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+    render(
+      <QueryClientProvider client={qc}>
+        <VerifierConsoleRoute />
+      </QueryClientProvider>,
+    );
+    await screen.findByTestId('name-check-disclosure');
+  };
+
+  it('⭐ `ownVisitPending` ⇒ Approve DISABLED with the ONE neutral block; Deny and Escalate stay enabled', async () => {
+    await mountOwnVisit(true);
+    expect(screen.getByTestId('action-approve')).toBeDisabled();
+    expect(screen.getByTestId('approve-blocked-reason')).toHaveTextContent(t.ownVisitPending);
+    expect(screen.getByTestId('action-deny')).toBeEnabled();
+    expect(screen.getByTestId('action-escalate')).toBeEnabled();
+  });
+
+  it('the positive control — the SAME packet with `ownVisitPending: false` ⇒ Approve ENABLED', async () => {
+    await mountOwnVisit(false);
+    expect(screen.getByTestId('action-approve')).toBeEnabled();
+    expect(screen.queryByTestId('approve-blocked-reason')).toBeNull();
+  });
+});
+
+// ── Story 6.27b code review round 2 (X2) — the revise-of-denial form ⛔ never pre-fills from a WITHHELD note ─────────────
+describe('<VerifierConsoleRoute> — Story 6.27b X2, the revise pre-fill skips a withheld note', () => {
+  const mountDenied = async (rationaleWithheld: 'own_visit' | null) => {
+    const base = packet(PASSING);
+    getVerifierConsole.mockResolvedValue({
+      packet: {
+        ...base,
+        claimState: 'denied',
+        priorVerifierComments: {
+          status: 'present',
+          comments: [
+            {
+              outcome: 'denied',
+              reasonCode: 'concealment_flag_uphold',
+              // ⚠ The wire sends `''` when withheld; a NON-empty text here proves the route's own guard (⛔ the wire alone).
+              rationale: 'SECRET-NOTE the neighbour said',
+              rationaleWithheld,
+              actorDisplay: 'Anita',
+              decidedAt: '2026-10-01T00:00:00Z',
+              claimCaseId: CLAIM,
+            },
+          ],
+        },
+      },
+    });
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+    render(
+      <QueryClientProvider client={qc}>
+        <VerifierConsoleRoute />
+      </QueryClientProvider>,
+    );
+    return screen.findByTestId('rationale-input');
+  };
+
+  it('⭐ a WITHHELD live note ⇒ the rationale field starts EMPTY (the reason code still pre-fills)', async () => {
+    const input = await mountDenied('own_visit');
+    expect(input).toHaveValue('');
+    expect(screen.getByTestId('reason-code-select')).toHaveValue('concealment_flag_uphold');
+  });
+
+  it('the positive control — an un-withheld live note pre-fills as before', async () => {
+    const input = await mountDenied(null);
+    expect(input).toHaveValue('SECRET-NOTE the neighbour said');
+  });
+});
+

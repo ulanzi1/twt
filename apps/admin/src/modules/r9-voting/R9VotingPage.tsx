@@ -12,6 +12,7 @@ import { useState } from 'react';
 import { errorMessage } from '../../api/client.js';
 import { useR9Queue, useR9VotesByTrustee } from '../../api/hooks.js';
 import { nameDifferenceReasonLabel, verifierConsoleEn as t } from '../claim-verification/i18n-en.js';
+import { WithheldNote } from '../claim-verification/WithheldNote.js';
 import { R9CasePanel } from './R9CasePanel.js';
 
 export interface R9VotingPageProps {
@@ -148,7 +149,11 @@ export function R9VotingPage({ pariwarId }: R9VotingPageProps): ReactElement {
                     {v.session_outcome ?? 'open'} · clause version <code className="opacity-60">{v.clause_version_id}</code>
                   </div>
                   <div className="opacity-70">panel: {v.panel_actor_ids.join(', ')}</div>
-                  <div className="opacity-70">{v.rationale}</div>
+                  {/* Story 6.27b code review round 2 (X2) — a WITHHELD rationale is said in words (⛔ never blank-collapsed);
+                      review Y4 — a cross-claim transcript, so "that claim". */}
+                  <div className="opacity-70" data-testid={`r9-trustee-vote-rationale-${v.vote_id}`}>
+                    {v.rationale_withheld != null ? <WithheldNote reason={v.rationale_withheld} scope="that_claim" /> : v.rationale}
+                  </div>
                 </li>
               ))}
             </ul>

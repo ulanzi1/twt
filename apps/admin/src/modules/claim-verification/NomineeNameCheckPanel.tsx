@@ -21,8 +21,10 @@ import type {
   NomineeNameCheckResponse,
   NomineeNameCheckVerdict,
 } from '@twt/contracts';
+import type { WithheldNote as WithheldNoteDto } from '@twt/contracts';
 
 import { nameDifferenceReasonLabel, verifierConsoleEn as t } from './i18n-en.js';
+import { WithheldNote } from './WithheldNote.js';
 import { ApprovalNameHighlightBadge } from '../correction-closure/ApprovalNameHighlightBadge.js';
 
 export interface NomineeNameCheckSubmit {
@@ -69,15 +71,18 @@ function reasonLabel(code: string): string {
   return nameDifferenceReasonLabel(code);
 }
 
-/** Render one Tier-1 name union. ⭐ The three states are NEVER collapsed into a blank. */
+/** Render one Tier-1 name union. ⭐ The states are NEVER collapsed into a blank. Story 6.27b code review round 2 (X2) — a
+ *  staff NOTE (`ReadableNote`) may also be `withheld` from this reader: said in the shared words. */
 function NameValue({
   value,
 }: {
   value:
     | { state: 'readable'; value: string }
     | { state: 'unreadable' }
-    | { state: 'anonymized' };
+    | { state: 'anonymized' }
+    | WithheldNoteDto;
 }): React.ReactElement {
+  if (value.state === 'withheld') return <WithheldNote reason={value.reason} />;
   if (value.state === 'readable') return <span className="font-medium">{value.value}</span>;
   if (value.state === 'anonymized') {
     // ⭐ A person who exercised erasure. NOT a missing name and NOT a failure — saying "unavailable"

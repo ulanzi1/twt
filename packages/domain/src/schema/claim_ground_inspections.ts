@@ -189,6 +189,10 @@ export const claimGroundInspections = pgTable(
     // Free-text inspection notes / the mandatory refusal reason note. NULLABLE until completion,
     // but REQUIRED (non-null) for a `photo_refused` / `evidence_unavailable` disposition (AC4a).
     notesCiphertext: piiColumn(1, 'ground_inspection')('notes_ciphertext'),
+    // ⭐ Story 6.27b code review round 2 (Y8; migration 0159) — the actor who last WROTE `notesCiphertext` (schedule /
+    // reschedule: the scheduler; findings / complete / refusal: the acting actor, the override holder when used), through
+    // `normalizeActorId`. NULL on a pre-0159 row (⛔ backfilled — a hidden reader's view withholds it). Non-PII.
+    notesAuthorActorId: text('notes_author_actor_id'),
 
     // Structured findings — a bounded non-PII enum map (e.g. { residence_confirmed: 'yes' }).
     // JSONB, never plaintext PII. Nullable until findings/completion.

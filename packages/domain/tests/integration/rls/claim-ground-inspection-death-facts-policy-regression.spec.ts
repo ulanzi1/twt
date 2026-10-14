@@ -174,3 +174,54 @@ describe.skipIf(!hasDatabase)('migrations 0147 + 0148 — ground-inspection deat
     }
   });
 });
+
+// ⭐ Migration 0159 (Story 6.27b code review round 2, Y8) — WHO wrote a visit note and WHO captioned a photo: two
+// nullable, non-PII `text` actor ids (a pre-0159 row stays NULL — ⛔ backfilled), each refusing a blank value by ITS
+// OWN CHECK; table grants / RLS are 0055's (the columns ride on them).
+describe.skipIf(!hasDatabase)('migration 0159 — the visit note author and the photo uploader: DB backstops', { timeout: 20000 }, () => {
+  setupLiveDb();
+
+  it('the catalog: both columns are nullable `text`, and both CHECKs are validated', async () => {
+    const { client } = getTx();
+    const cols = await client.query<{ table_name: string; column_name: string; data_type: string; is_nullable: string }>(
+      `SELECT table_name, column_name, data_type, is_nullable FROM information_schema.columns
+        WHERE (table_name, column_name) IN (('claim_ground_inspections', 'notes_author_actor_id'), ('claim_ground_inspection_photos', 'uploaded_by_actor_id'))
+        ORDER BY table_name`,
+    );
+    expect(cols.rows).toEqual([
+      { table_name: 'claim_ground_inspection_photos', column_name: 'uploaded_by_actor_id', data_type: 'text', is_nullable: 'YES' },
+      { table_name: 'claim_ground_inspections', column_name: 'notes_author_actor_id', data_type: 'text', is_nullable: 'YES' },
+    ]);
+    const checks = await client.query<{ conname: string; convalidated: boolean }>(
+      `SELECT conname, convalidated FROM pg_constraint WHERE conname = ANY($1) ORDER BY conname`,
+      [['claim_ground_inspection_photos_uploaded_by_check', 'claim_ground_inspections_notes_author_check']],
+    );
+    expect(checks.rows).toEqual([
+      { conname: 'claim_ground_inspection_photos_uploaded_by_check', convalidated: true },
+      { conname: 'claim_ground_inspections_notes_author_check', convalidated: true },
+    ]);
+  });
+
+  it('⭐ family 5 — a blank author / uploader is refused by ITS OWN CHECK (23514); NULL and a real id are accepted', async () => {
+    const { client, visit } = await seedInspections();
+    const blankAuthor = await attempt(client, () =>
+      client.query(`UPDATE claim_ground_inspections SET notes_author_actor_id = '   ' WHERE ground_inspection_id = $1`, [visit]),
+    );
+    expect(pgCode(blankAuthor)).toBe('23514');
+    expect(pgConstraint(blankAuthor)).toBe('claim_ground_inspections_notes_author_check');
+    expect(
+      await attempt(client, () => client.query(`UPDATE claim_ground_inspections SET notes_author_actor_id = $2 WHERE ground_inspection_id = $1`, [visit, randomUUID()])),
+    ).toBeUndefined();
+    const insertPhoto = (uploader: string | null) =>
+      client.query(
+        `INSERT INTO claim_ground_inspection_photos (ground_inspection_id, pariwar_id, storage_object_key, content_type, byte_size, uploaded_by_actor_id)
+         VALUES ($1, $2, 'k', 'image/jpeg', 1, $3)`,
+        [visit, PARIWAR_A, uploader],
+      );
+    const blankUploader = await attempt(client, () => insertPhoto(''));
+    expect(pgCode(blankUploader)).toBe('23514');
+    expect(pgConstraint(blankUploader)).toBe('claim_ground_inspection_photos_uploaded_by_check');
+    expect(await attempt(client, () => insertPhoto(null))).toBeUndefined();
+    expect(await attempt(client, () => insertPhoto(randomUUID()))).toBeUndefined();
+  });
+});

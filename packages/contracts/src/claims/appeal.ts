@@ -20,6 +20,7 @@
 import { z } from 'zod';
 
 import { ClaimLifecycleState } from './filing.js';
+import { NoteWithheldFlag, refineWithheldPair } from './withheld-note.js';
 
 /** `YYYY-MM-DD`, IST (the `death-certificate.ts` / `nominee-declaration.ts` `DateShape` / `CalendarDate` precedent). */
 const CalendarDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'a YYYY-MM-DD calendar date');
@@ -323,7 +324,9 @@ export type AppealPanelMember = z.output<typeof AppealPanelMember>;
 
 /** One LIVE panel vote (rationale decrypted AFTER authorization at the route). `rationale` is null until the
  *  REQUESTING panelist has ALSO cast their own vote in this session — a peer's rationale is withheld
- *  beforehand (the herding/bias guard, the R9 precedent this panel mirrors; 6.16 review finding). */
+ *  beforehand (the herding/bias guard, the R9 precedent this panel mirrors; 6.16 review finding). ⭐ Story 6.27b code review round 2 (V6 / X2) —
+ *  also `null` when WITHHELD from a reader whose own ground visit on the claim is pending (or whose hide check failed) —
+ *  `rationale_withheld` says so, so it ⛔ never reads as the herding guard's `null`. */
 export const AppealPanelVoteView = z
   .object({
     vote_id: z.string().uuid(),
@@ -332,8 +335,12 @@ export const AppealPanelVoteView = z
     vote: AppealPanelVote,
     cast_at: z.string(),
     rationale: z.string().nullable(),
+    /** ⭐ Story 6.27b code review round 2 (X2) — REQUIRED: `null` ⇔ ⛔ withheld; else `own_visit` / `check_failed`. */
+    rationale_withheld: NoteWithheldFlag,
   })
-  .strict();
+  .strict()
+  // Y5 (a) — a withheld rationale ⛔ rides beside its words.
+  .superRefine(refineWithheldPair('rationale', 'rationale_withheld', null));
 export type AppealPanelVoteView = z.output<typeof AppealPanelVoteView>;
 
 /** The running Stage-2 tally (panel-size denominator). */

@@ -49,6 +49,8 @@ import { CorrectionChaseSummaryDto } from './correction-chase.js';
 import { ApprovalNameHighlight, CorrectionClosureStateDto } from './correction-closure.js';
 import { z } from 'zod';
 
+import { WithheldNote } from './withheld-note.js';
+
 /** Max length of the filer's per-account note to the District Admin (AC7, `-226` cl.2). */
 export const NAME_DIFFERENCE_NOTE_MAX_CHARS = 500;
 
@@ -116,6 +118,17 @@ export const ReadableErasable = z.discriminatedUnion('state', [
   z.object({ state: z.literal('anonymized') }).strict(),
 ]);
 export type ReadableErasable = z.output<typeof ReadableErasable>;
+
+/**
+ * A staff NOTE — ⭐ Story 6.27b code review round 2 (X2) — `ReadableName`'s two states plus `withheld` (`withheld-note.ts`): a note the reader may
+ * ⛔ see (their own ground visit on the claim is pending, or the hide check failed) — ⛔ never an empty `readable`.
+ */
+export const ReadableNote = z.discriminatedUnion('state', [...ReadableName.options, WithheldNote]);
+export type ReadableNote = z.output<typeof ReadableNote>;
+
+/** An ERASABLE staff note (the death-certificate review note) — ⭐ Story 6.27b code review round 2 (X2) — `ReadableErasable` plus `withheld`. */
+export const ReadableErasableNote = z.discriminatedUnion('state', [...ReadableErasable.options, WithheldNote]);
+export type ReadableErasableNote = z.output<typeof ReadableErasableNote>;
 
 // ── (a) The bank side ───────────────────────────────────────────────────────────────────────
 
@@ -212,8 +225,10 @@ export const NomineeNameCheckReturn = z
   .object({
     returned_at: z.string(),
     returned_by_actor_display: z.string(),
-    /** The Pariwar Admin's note. Tier-1, decrypted for this authorized surface only. */
-    note: ReadableName,
+    /** The Pariwar Admin's note. Tier-1, decrypted for this authorized surface only. ⭐ Story 6.27b code review round 2
+     *  (V6 / X2) — `{ state: 'withheld', reason }` when the reader's own ground visit on the claim is pending
+     *  (`own_visit`) or the hide check failed (`check_failed`) — ⛔ never decrypted. */
+    note: ReadableNote,
     /** Derived — the correction landed and the District Admin has checked again (AC11). */
     resubmitted: z.boolean(),
   })
@@ -394,9 +409,11 @@ export const ClaimUnderCorrectionItem = z
     /**
      * The Pariwar Admin's note, decrypted AFTER authorization at the route (AC11's *"lists returned
      * claims with the note"*). `unreadable` on a decrypt failure — ⛔ never a silent empty string,
-     * which would read as "they gave no reason".
+     * which would read as "they gave no reason". ⭐ Story 6.27b code review round 2 (V6 / X2) — `{ state: 'withheld',
+     * reason }` when the reader's own ground visit on the claim is pending or the hide check failed (⛔ never decrypted);
+     * `null` ONLY when there is ⛔ no return note.
      */
-    return_note: ReadableName.nullable(),
+    return_note: ReadableNote.nullable(),
     /** The District Admin's own latest check is CURRENT and carries a `does_not_match` (`-226` cl.6). */
     sent_back_by_check: z.boolean(),
     /** `-226` cl.7 — `false` means the claim is ALSO still waiting for its two accounts. */

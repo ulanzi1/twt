@@ -8,7 +8,7 @@
 
 import { R9_PANEL_MAX_MEMBERS, R9_VOTING_CLAUSE_IDS } from '@twt/contracts';
 import type { ReactElement } from 'react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { ApiError, errorMessage as apiErrorMessage } from '../../api/client.js';
 import {
@@ -63,6 +63,7 @@ function errorMessage(error: unknown): string | undefined {
 }
 import { NomineeNameCheckDisclosure } from '../claim-verification/NomineeNameCheckDisclosure.js';
 import { NeighboursAnswersPanel } from '../claim-verification/NeighboursAnswersPanel.js';
+import { WithheldNote } from '../claim-verification/WithheldNote.js';
 import { nameDifferenceReasonLabel, verifierConsoleEn as t } from '../claim-verification/i18n-en.js';
 import { FinallyApprovedElsewhereBanner } from '../cycle-freeze/FinallyApprovedElsewhereBanner.js';
 import {
@@ -190,7 +191,13 @@ export function R9CasePanel({ pariwarId, claimCaseId }: R9CasePanelProps): React
         testId="r9-name-check-disclosure"
       />
       {/* ⭐ Story 6.27b (PM24) — the neighbours' answers, ON DEMAND; ⛔ inside the not-finalized / on-panel / warnings gates. */}
-      <NeighboursAnswersPanel key={claimCaseId} pariwarId={pariwarId} claimCaseId={claimCaseId} testId="r9-neighbours-answers" />
+      <NeighboursAnswersPanel
+        key={claimCaseId}
+        pariwarId={pariwarId}
+        claimCaseId={claimCaseId}
+        testId="r9-neighbours-answers"
+        approvalWarnings={model.approval_warnings}
+      />
     </>
   );
 
@@ -319,6 +326,12 @@ export function R9CasePanel({ pariwarId, claimCaseId }: R9CasePanelProps): React
           .join(' ') || null;
   // Story 6.27b (BD4) — an approve vote is ALSO held while THIS voter's own ground visit on the claim is pending.
   const approveVoteUnavailable = voteChoice === 'approve' && (!warnings.available || warnings.own_visit_pending);
+  // ⭐ Review S11 (c) / S12 — the neutral words, said ONLY where an approve is in play (an APPROVE choice), in the panel's OWN
+  // persistent status region below (⛔ never inside the warnings block, which mounts holding them — ⛔ not announced).
+  // Review V3 — ⛔ never for an UNSELECTABLE choice: the elsewhere banner disables Approve while `voteChoice` can still be
+  // 'approve' internally, and the banner is what describes it then.
+  const ownVisitHoldsApprove = voteChoice === 'approve' && elsewhere === null && warnings.own_visit_pending;
+  const ownVisitId = `r9-${claimCaseId}-own-visit-pending`;
   const submitVote = (): void => {
     setVoteValidation(null);
     if (voteChoice === 'approve' && elsewhereWords !== null) {
@@ -403,7 +416,10 @@ export function R9CasePanel({ pariwarId, claimCaseId }: R9CasePanelProps): React
             {model.votes.map((v) => (
               <li key={v.vote_id} className="rounded border p-2">
                 <strong>{v.vote}</strong> — {v.voter_display} <span className="opacity-50">({new Date(v.cast_at).toLocaleString()})</span>
-                <div className="opacity-70">{v.rationale}</div>
+                {/* Story 6.27b code review round 2 (X2) — a WITHHELD rationale is said in words (⛔ never blank-collapsed). */}
+                <div className="opacity-70" data-testid={`r9-vote-rationale-${v.vote_id}`}>
+                  {v.rationale_withheld != null ? <WithheldNote reason={v.rationale_withheld} /> : v.rationale}
+                </div>
                 {/* ⭐ Story 6.23b (RD11) — the SAME answer finalize would give, BEFORE the step-up. */}
                 {/* Code review round 2: ⛔ not on a FINALIZED panel — "before the outcome can be finalized" is past. */}
                 {!finalized && v.covers_current_warnings === false ? (
@@ -439,8 +455,11 @@ export function R9CasePanel({ pariwarId, claimCaseId }: R9CasePanelProps): React
                       name="vote"
                       data-testid="r9-vote-approve"
                       disabled={elsewhere !== null}
-                      // Code review round 3 (checklist 13(d)) — disabled by the banner ⇒ described by it.
-                      aria-describedby={elsewhere !== null ? `finally-approved-elsewhere-${claimCaseId}` : undefined}
+                      // Code review round 3 (checklist 13(d)) — disabled by the banner ⇒ described by it. Story 6.27b review
+                      // S11 (c) — held by the voter's own pending visit ⇒ described by the neutral words.
+                      aria-describedby={
+                        elsewhere !== null ? `finally-approved-elsewhere-${claimCaseId}` : ownVisitHoldsApprove ? ownVisitId : undefined
+                      }
                       checked={voteChoice === 'approve' && elsewhere === null}
                       onChange={() => {
                         setVoteChoice('approve');
@@ -465,11 +484,14 @@ export function R9CasePanel({ pariwarId, claimCaseId }: R9CasePanelProps): React
                 {/* ⭐ Story 6.23b (EA5) — the warning LINES always (code review round 2: a member with Deny selected can still
                     Finalize an approved outcome — invariant 5); 6.23a's picker only for an APPROVE vote; a deny vote is
                     ⛔ never gated. The WAIT holds Finalize, ⛔ not the vote — said beside Finalize. */}
-                {/* Code review round 3: ⛔ no empty spacing wrapper on an un-warned panel (the block itself returns `null`). */}
-                {warnings.kinds.length > 0 || !warnings.available || warnings.own_visit_pending ? (
+                {/* Code review round 3: ⛔ no empty spacing wrapper on an un-warned panel (the block itself returns `null`).
+                    Story 6.27b review S12 — ⛔ nor for a hidden voter: the own-visit words live in the region below, so the
+                    block renders here ONLY for a kind line or a failed read (⛔ never an empty wrapper beside a Deny choice). */}
+                {warnings.kinds.length > 0 || !warnings.available ? (
                   <div className="mb-2">
                     <LaterApprovalWarnings
-                      showPicker={voteChoice === 'approve'}
+                      // ⛔ never the picker for a hidden voter (BD4 refuses the approve vote; the words are said below).
+                      showPicker={voteChoice === 'approve' && !warnings.own_visit_pending}
                       summary={warnings}
                       options={model.reason_options}
                       value={warningReasonCode}
@@ -485,6 +507,8 @@ export function R9CasePanel({ pariwarId, claimCaseId }: R9CasePanelProps): React
                     />
                   </div>
                 ) : null}
+                {/* ⭐ Story 6.27b review S11 (c) / V3 — a PERSISTENT live region that mounts EMPTY and is filled after mount. */}
+                <OwnVisitStatus show={ownVisitHoldsApprove} id={ownVisitId} />
                 <textarea
                   className="mb-2 w-full rounded border px-2 py-1 text-sm"
                   rows={2}
@@ -507,11 +531,13 @@ export function R9CasePanel({ pariwarId, claimCaseId }: R9CasePanelProps): React
                   // Code review chunk 3/4 round 2 — a screen-reader user disabled by the elsewhere-conflict (not
                   // warnings-unavailable) must ALSO get an explanation: the banner above already carries one.
                   aria-describedby={
-                    approveVoteUnavailable
+                    approveVoteUnavailable && !warnings.own_visit_pending
                       ? `r9-${claimCaseId}-approval-blocked`
-                      : voteChoice === 'approve' && elsewhere !== null
-                        ? `finally-approved-elsewhere-${claimCaseId}`
-                        : undefined
+                      : ownVisitHoldsApprove
+                        ? ownVisitId
+                        : voteChoice === 'approve' && elsewhere !== null
+                          ? `finally-approved-elsewhere-${claimCaseId}`
+                          : undefined
                   }
                   onClick={submitVote}
                 >
@@ -664,5 +690,26 @@ export function R9CasePanel({ pariwarId, claimCaseId }: R9CasePanelProps): React
         </>
       )}
     </section>
+  );
+}
+
+/**
+ * ⭐ Story 6.27b review V3 (family 13(d)) — the own-visit words' live region. It MOUNTS EMPTY and is filled by an effect
+ * after mount: Approve is the DEFAULT choice, so a region rendered holding its words would insert both in ONE commit —
+ * and a region that mounts holding its text is ⛔ not announced (the `r9-finalize-status` rule, above). The effect runs
+ * right after the commit, before any focus can reach Approve / Submit, so their `aria-describedby` (this span's id)
+ * resolves to the words by the time it is read — the same id-on-the-shown-span shape as `r9-finalize-blocked`.
+ */
+function OwnVisitStatus({ show, id }: { show: boolean; id: string }): ReactElement {
+  const [filled, setFilled] = useState(false);
+  useEffect(() => setFilled(show), [show]);
+  return (
+    <p role="status" data-testid="r9-own-visit-status" className="text-xs font-medium">
+      {show && filled ? (
+        <span id={id} className="mb-2 block" data-testid={id}>
+          {t.ownVisitPending}
+        </span>
+      ) : null}
+    </p>
   );
 }

@@ -29,6 +29,7 @@ import { MemberValidityPayloadDto } from '../members/validity.js';
 import { DeathCertificateRegisterCheck } from './death-certificate.js';
 import { ClaimDocumentParityOutcome } from './documents.js';
 import { FinallyApprovedElsewhere } from './one-payment-per-death.js';
+import { NoteWithheldFlag, refineWithheldPair } from './withheld-note.js';
 // ⭐ The SINGLE clerical-reason tuple (a sibling contract, ⛔ not `@twt/domain` — the browser-bundle
 // rule is untouched). This file used to inline a fourth copy.
 import { NomineeNameClericalReason } from './nominee-name-check.js';
@@ -240,7 +241,19 @@ export const PeerMeshPingView = z
     /** Why the number is shown (`consented` / `super_admin`) — `null` unless `callbackMobile` is `shown`. */
     callbackBasis: z.enum(PEER_CALLBACK_BASES).nullable(),
   })
-  .strict();
+  .strict()
+  // ⭐ Story 6.27b code review round 2 (S9) — the basis is PAIRED with the status: `shown` ⇔ a basis. A shown number with
+  // ⛔ basis would let a reader fall back to the consent words; a basis on `none` / `unavailable` would claim a showing
+  // that never happened (round 1 R5 — an `unavailable` number carries `null`).
+  .superRefine((v, ctx) => {
+    if ((v.callbackMobile.status === 'shown') !== (v.callbackBasis !== null)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['callbackBasis'],
+        message: 'callbackBasis is set exactly when callbackMobile is shown',
+      });
+    }
+  });
 export type PeerMeshPingView = z.output<typeof PeerMeshPingView>;
 
 export const PeerMeshTranscript = z
@@ -276,12 +289,18 @@ export const GroundInspectionPhotoItem = z
     contentType: z.string(),
     byteSize: z.number(),
     caption: z.string().nullable(),
+    /** ⭐ Story 6.27b code review round 2 (X6 / X2; `withheld-note.ts`) — REQUIRED: `null` ⇔ ⛔ withheld (`caption` then null);
+     *  a hidden reader's caption is withheld unless they are its recorded uploader (`uploaded_by_actor_id`, migration 0159 —
+     *  review Y8); a NULL (pre-0159) uploader is withheld (fail CLOSED). */
+    captionWithheld: NoteWithheldFlag,
     /** Short-lived signed READ URL (300s TTL — minted request-time; never persisted client-side). */
     signedUrl: z.string(),
     /** Story 6.26a (GI4, GI10) — what the photo shows; the console labels original-certificate photos apart. */
     photoKind: z.enum(['site', 'original_certificate']),
   })
-  .strict();
+  .strict()
+  // Y5 (a) — a withheld note ⛔ rides beside its words.
+  .superRefine(refineWithheldPair('caption', 'captionWithheld', null));
 export type GroundInspectionPhotoItem = z.output<typeof GroundInspectionPhotoItem>;
 
 export const GroundInspectionItem = z
@@ -295,8 +314,13 @@ export const GroundInspectionItem = z
     status: z.string(),
     refusalReason: z.string().nullable(),
     completedAt: z.string().nullable(),
-    /** Decrypted free-text findings note (server-side; null = none). */
+    /** Decrypted free-text findings note (server-side; null = none, or withheld — see `notesWithheld`). */
     notes: z.string().nullable(),
+    /** ⭐ Story 6.27b code review round 2 (X6 / X2; Y8) — REQUIRED: `null` ⇔ ⛔ withheld. The note's last writer (the scheduler,
+     *  a rescheduler, the inspector or an override holder) is recorded in `notes_author_actor_id` (migration 0159); a hidden
+     *  reader sees the note only if they are that author — so the scheduler's briefing stays withheld from the inspector —
+     *  and a NULL (pre-0159) author is withheld (fail CLOSED). Location, family contact, dates and outcomes (operational) stay. */
+    notesWithheld: NoteWithheldFlag,
     /** The bounded non-PII structured findings map (as stored). */
     structuredFindings: z.unknown().nullable(),
     photos: z.array(GroundInspectionPhotoItem),
@@ -336,7 +360,9 @@ export const GroundInspectionItem = z
      *  row, or a verdict ⛔ `does_not_match`; `null` = could ⛔ not be checked just now. */
     originalMismatchWarning: z.boolean().nullable(),
   })
-  .strict();
+  .strict()
+  // Y5 (a) — a withheld note ⛔ rides beside its words.
+  .superRefine(refineWithheldPair('notes', 'notesWithheld', null));
 export type GroundInspectionItem = z.output<typeof GroundInspectionItem>;
 
 export const GroundInspectionSection = z.discriminatedUnion('status', [
@@ -367,13 +393,19 @@ export const PriorVerifierComment = z
   .object({
     outcome: z.string(),
     reasonCode: z.string(),
+    /** `''` when there is ⛔ no note, when it could ⛔ not be decrypted, or when WITHHELD (see `rationaleWithheld`). */
     rationale: z.string(),
+    /** ⭐ Story 6.27b code review round 2 (V6 / X2; `withheld-note.ts`) — REQUIRED: `null` ⇔ ⛔ withheld; else `own_visit`
+     *  (EVERY decision's note, for a reader whose own ground visit on the claim is pending) or `check_failed`. */
+    rationaleWithheld: NoteWithheldFlag,
     /** Human-actor DISPLAY attribution (never a raw actor id; no prohibited PII). */
     actorDisplay: z.string(),
     decidedAt: z.string(),
     claimCaseId: z.string(),
   })
-  .strict();
+  .strict()
+  // Y5 (a) — a withheld note ⛔ rides beside its words.
+  .superRefine(refineWithheldPair('rationale', 'rationaleWithheld', ''));
 export type PriorVerifierComment = z.output<typeof PriorVerifierComment>;
 
 export const PriorVerifierCommentsSection = z.discriminatedUnion('status', [
@@ -391,10 +423,15 @@ export const RecentPrecedent = z
     outcome: z.string(),
     reasonCode: z.string(),
     rationale: z.string().nullable(),
+    /** ⭐ Story 6.27b code review round 2 (V6 / X2) — REQUIRED: `null` ⇔ ⛔ withheld (`rationale` then null); else the
+     *  reason — judged on THAT precedent's claim. */
+    rationaleWithheld: NoteWithheldFlag,
     actorDisplay: z.string().nullable(),
     decidedAt: z.string(),
   })
-  .strict();
+  .strict()
+  // Y5 (a) — a withheld note ⛔ rides beside its words.
+  .superRefine(refineWithheldPair('rationale', 'rationaleWithheld', null));
 export type RecentPrecedent = z.output<typeof RecentPrecedent>;
 
 export const RecentPrecedentsSection = z.discriminatedUnion('status', [

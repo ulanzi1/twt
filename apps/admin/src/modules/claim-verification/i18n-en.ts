@@ -142,10 +142,22 @@ export const verifierConsoleEn = {
   // is pending: ⛔ a kind, ⛔ a count, ⛔ a word about neighbours (any of those would tell an inspector a neighbour answered).
   ownVisitPending:
     'A ground visit on this claim is assigned to you and is not finished. It must be completed, or given to someone else, before you can approve.',
+  // ⭐ Story 6.27b code review round 2 (X2; `@twt/contracts` `withheld-note.ts`) — a staff NOTE withheld from this reader,
+  // said in words on EVERY surface (⛔ never an empty note, a blank or a dash, which would read as "they wrote nothing").
+  // `own_visit` — the reader's own ground visit on the claim is pending: ⛔ a word about neighbours or about what the note
+  // says. `check_failed` — the hide check itself failed: the console's existing could-not-be-shown words (⛔ "hidden").
+  noteWithheld: {
+    own_visit: 'Not shown while a ground visit on this claim is assigned to you.',
+    // Review Y4 — a CROSS-CLAIM list (the console's recent precedents, the R9 votes-by-trustee transcript): the visit is
+    // on THAT claim, ⛔ the one on screen.
+    own_visit_other_claim: 'Not shown while a ground visit on that claim is assigned to you.',
+    check_failed: 'Could not be shown just now',
+  },
   // Story 6.27b (PM24) — the later approvers' on-demand disclosure of the neighbours' answers. English only (F22).
   neighboursPanel: {
     toggle: "Neighbours' answers",
     loading: 'Loading the neighbours’ answers…',
+    ready: 'The neighbours’ answers are ready.',
     notAtStep: 'Nothing to show at this step',
   },
   // Story 6.11 — the decision strip (approve/deny/escalate + reason-code + rationale + audit trail).

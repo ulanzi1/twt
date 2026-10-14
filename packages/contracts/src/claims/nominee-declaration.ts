@@ -22,7 +22,7 @@ import { z } from 'zod';
 
 import { EnglishScriptName, MobileNumber } from '../_common/primitives.js';
 import { NomineeRelationship } from '../nominee/declaration.js';
-import { ReadableErasable, ReadableName, ReadableNomineeName } from './nominee-name-check.js';
+import { ReadableErasable, ReadableName, ReadableNomineeName, ReadableNote } from './nominee-name-check.js';
 import { NomineeVersionWarningKind } from './verification-decision.js';
 
 const Rank = z.union([z.literal(1), z.literal(2)]);
@@ -175,9 +175,11 @@ export const NomineeDeclarationSnapshotsResponse = z
   .object({
     claim_case_id: z.string().uuid(),
     snapshots: z.array(NomineeVersionSnapshot),
-    /** The live determination's Tier-1 certificate date and note (`null` when none is live). */
+    /** The live determination's Tier-1 certificate date and note (`null` when none is live). ⭐ Story 6.27b code review round 2 (X6 / X2) — the note is
+     *  `{ state: 'withheld', reason }` for a reader whose own ground visit on the claim is pending (unless they made the
+     *  determination) or whose hide check failed; the DATE (operational) stays. */
     live_determination: z
-      .object({ determination_id: z.string().uuid(), certificate_date: ReadableName, note: ReadableName })
+      .object({ determination_id: z.string().uuid(), certificate_date: ReadableName, note: ReadableNote })
       .strict()
       .nullable(),
   })
@@ -263,8 +265,11 @@ export const NomineeCorrectionDecisionRequest = z
   .strict();
 export type NomineeCorrectionDecisionRequest = z.output<typeof NomineeCorrectionDecisionRequest>;
 
+/** ⭐ Story 6.27b code review round 2 (X6 / X2) — a step's note — and the correction's `raise_note` below when a STAFF member raised it (helpline) — is
+ *  `{ state: 'withheld', reason }` for a reader whose own ground visit on the claim is pending (unless they wrote it) or
+ *  whose hide check failed. A family's own `member_app` raise note is ⛔ a staff note and stays. */
 const CorrectionStepAct = z
-  .object({ actor_display: z.string(), decided_at: IsoInstant, note: ReadableName.nullable() })
+  .object({ actor_display: z.string(), decided_at: IsoInstant, note: ReadableNote.nullable() })
   .strict();
 
 /**
@@ -297,7 +302,7 @@ export const NomineeCorrectionView = z
       .strict(),
     raised_via: z.enum(['helpline', 'member_app']),
     raised_at: IsoInstant,
-    raise_note: ReadableName,
+    raise_note: ReadableNote,
     step: z.enum(['da_pending', 'pa_pending', 'applied', 'declined']),
     district_admin: CorrectionStepAct.nullable(),
     pariwar_admin: CorrectionStepAct.nullable(),
@@ -356,7 +361,9 @@ export const NomineeRefusalItem = z
     claim_state: z.string(),
     refused_at: IsoInstant,
     refused_by_display: z.string().nullable(),
-    rationale: ReadableName.nullable(),
+    /** ⭐ Story 6.27b code review round 2 (V6 / X2) — `{ state: 'withheld', reason }` when the reader's own ground visit on
+     *  the claim is pending or the hide check failed (⛔ never decrypted); `null` ONLY when there is ⛔ no rationale. */
+    rationale: ReadableNote.nullable(),
     // ⭐ Story 6.28 (OP10) — this list is UNFILTERED by claim state (`listNomineeRefusals` reads live
     // `current_state`), so a refusal later reversed and then CLOSED by OP4 (H(iv), another claim of the
     // death paid) can appear here as `closed` — the SAME "closed, holding claim later refused — the family

@@ -28,6 +28,7 @@ import {
 } from '../claim-verification/LaterApprovalWarnings.js';
 import { NeighboursAnswersPanel } from '../claim-verification/NeighboursAnswersPanel.js';
 import { verifierConsoleEn } from '../claim-verification/i18n-en.js';
+import { WithheldNote } from '../claim-verification/WithheldNote.js';
 import { correctionChaseEn } from '../correction-chase/i18n-en.js';
 import { ApprovalNameHighlightBadge } from './ApprovalNameHighlightBadge.js';
 import { FinallyApprovedElsewhereBanner } from '../cycle-freeze/FinallyApprovedElsewhereBanner.js';
@@ -38,6 +39,8 @@ const e = t.escalation;
 
 function Note({ note }: { note: StaffNoteDto | null }): ReactElement {
   if (note === null) return <>—</>;
+  // Story 6.27b code review round 2 (X2) — a WITHHELD note is said in words (⛔ never the dash of "no note").
+  if (note.state === 'withheld') return <WithheldNote reason={note.reason} />;
   return <>{note.state === 'readable' ? note.value : '—'}</>;
 }
 
@@ -436,6 +439,7 @@ export function EscalationDetail({ pariwarId, claimCaseId }: { pariwarId: string
         pariwarId={pariwarId}
         claimCaseId={claimCaseId}
         testId={`escalation-neighbours-${claimCaseId}`}
+        approvalWarnings={d.approval_warnings}
       />
       <ReviewForm pariwarId={pariwarId} detail={d} />
       <DirectionForm pariwarId={pariwarId} claimCaseId={claimCaseId} />

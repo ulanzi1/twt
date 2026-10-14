@@ -48,6 +48,7 @@ import { getDisplayName } from '../auth/admin/admin-auth.repo.js';
 import { closeScopeTx, openScopeTx } from '../multi-tenant/scope-tx.js';
 import { closeClaimsAfterFinalStop, readFinallyApprovedElsewhereDtos } from './close-claims-of-paid-death.js';
 import { decryptR9VoteRationale, encryptR9VoteRationale } from './r9-vote-crypto.js';
+import { readClaimsHiddenFromReader, withheldReasonOf, withheldReasonOn } from './hidden-reader-notes.js';
 import {
   UNAVAILABLE_APPROVAL_WARNINGS,
   approvedWarningAudit,
@@ -325,23 +326,42 @@ export function createR9VotingHandlers(deps: AppDeps) {
         // excludes — `-279` A1). Under a raw SAVEPOINT; a throw fails CLOSED (`available: false`, ⛔ never "no warnings").
         const approveVoteIds = model.votes.filter((v) => v.vote === 'approve').map((v) => v.voteId as string);
         const approveVoterIds = model.votes.filter((v) => v.vote === 'approve').map((v) => v.voterActorId);
-        const warned = await underSavepoint(tx.client, 'r9_panel_approval_warnings', async () => {
-          const w = await claim.readClaimApprovalWarnings(tx.tx, ctx.pariwarId, claimCaseId);
-          const coverage = await claim.readR9VoteWarningCoverage(tx.tx, ctx.pariwarId, approveVoteIds);
-          // ⭐ Story 6.27b (PM25 (c), BD4; BF21; Task 4.3) — a viewer whose own ground visit is pending sees ⛔ neighbour kind:
-          // `short` and each vote's `covers_current_warnings` are computed from the FILTERED keys (DISPLAY only —
-          // finalize's binding check reads every key).
-          const ownVisitPending = await claim.isActorOwnVisitPending(tx.tx, ctx.pariwarId, claimCaseId, ctx.actorId);
-          const shownKeys = ownVisitPending ? claim.withoutPeerWarnings(w).keys : w.keys;
-          const short = claim.r9ApproveVotesMissingKeys(shownKeys, approveVoteIds, coverage);
-          return { w, ownVisitPending, shownKeys, shortVoteIds: new Set(short.map((v) => v.voteId.toLowerCase())) };
-        }).catch((err: unknown) => {
+        // ⭐ Story 6.27b (PM25 (c), BD4; BF21; Task 4.3) — is the neighbours' section hidden from THIS viewer (their own
+        // ground visit pending)? Code review round 2 (D1 B + V1 A) — under its OWN SAVEPOINT (it used to sit inside the
+        // warnings'), because the vote NOTES below read it too: a failed warnings read must ⛔ never un-hide a note. `null`
+        // ⇔ the read FAILED ⇒ the warnings fall back to unavailable (as before) and every vote's note is withheld.
+        const ownVisitPending = await underSavepoint(tx.client, 'r9_panel_own_visit_pending', () =>
+          claim.isActorOwnVisitPending(tx.tx, ctx.pariwarId, claimCaseId, ctx.actorId),
+        ).catch((err: unknown) => {
           request.log.warn(
             { err: err instanceof Error ? err.name : 'unknown', claimCaseId },
-            'r9 panel: nominee-change warnings unavailable; failing closed to cannot-approve',
+            'r9 panel: the own-visit read failed; failing closed (warnings unavailable, vote notes withheld)',
           );
           return null;
         });
+        const warned =
+          ownVisitPending === null
+            ? null
+            : await underSavepoint(tx.client, 'r9_panel_approval_warnings', async () => {
+                const w = await claim.readClaimApprovalWarnings(tx.tx, ctx.pariwarId, claimCaseId);
+                const coverage = await claim.readR9VoteWarningCoverage(tx.tx, ctx.pariwarId, approveVoteIds);
+                // A viewer whose own ground visit is pending sees ⛔ neighbour kind: `short` and each vote's
+                // `covers_current_warnings` are computed from the FILTERED keys (DISPLAY only — finalize's binding check
+                // reads every key).
+                const shownKeys = ownVisitPending ? claim.withoutPeerWarnings(w).keys : w.keys;
+                const short = claim.r9ApproveVotesMissingKeys(shownKeys, approveVoteIds, coverage);
+                return { w, ownVisitPending, shownKeys, shortVoteIds: new Set(short.map((v) => v.voteId.toLowerCase())) };
+              }).catch((err: unknown) => {
+                request.log.warn(
+                  { err: err instanceof Error ? err.name : 'unknown', claimCaseId },
+                  'r9 panel: nominee-change warnings unavailable; failing closed to cannot-approve',
+                );
+                return null;
+              });
+        // ⭐ Story 6.27b code review round 2 (D1 B + V1 A; AC7) — for a reader HIDDEN on this claim, EVERY vote's note is
+        // withheld — approve AND deny (`hidden-reader-notes.ts`) — so the blank carries ⛔ no per-vote signal (the contract's
+        // rationale is otherwise always present). `null` (the hide read failed) withholds too (fail CLOSED).
+        const votesWithheld = withheldReasonOf(ownVisitPending); // X2 — `null` ⇔ ⛔ withheld
         const coversCurrentWarnings = (voteId: string, vote: string): boolean | null =>
           warned === null || vote !== 'approve' || warned.shownKeys.length === 0 ? null : !warned.shortVoteIds.has(voteId.toLowerCase());
 
@@ -369,9 +389,13 @@ export function createR9VotingHandlers(deps: AppDeps) {
             finalized_at: s.finalizedAt ? s.finalizedAt.toISOString() : null,
           };
           for (const v of model.votes) {
-            const rationale = await decryptR9VoteRationale(v.rationaleCiphertext, ctx.pariwarIdStr, deps.encryption, (err) =>
-              request.log.error({ err, vote_id: v.voteId }, 'r9 vote rationale decrypt failed'),
-            );
+            // S18 (D1 B + V1 A) / X2 — a withheld note is `''` WITH `rationale_withheld` naming why (⛔ never decrypted, ⛔ never
+            // blank-collapsed) — on EVERY vote for a hidden reader.
+            const rationale = votesWithheld !== null
+              ? ''
+              : await decryptR9VoteRationale(v.rationaleCiphertext, ctx.pariwarIdStr, deps.encryption, (err) =>
+                  request.log.error({ err, vote_id: v.voteId }, 'r9 vote rationale decrypt failed'),
+                );
             votes.push({
               vote_id: v.voteId,
               voter_actor_id: v.voterActorId,
@@ -380,6 +404,7 @@ export function createR9VotingHandlers(deps: AppDeps) {
               cast_at: v.castAt.toISOString(),
               clause_version_id: v.clauseVersionId,
               rationale,
+              rationale_withheld: votesWithheld,
               covers_current_warnings: coversCurrentWarnings(v.voteId, v.vote),
             });
           }
@@ -631,6 +656,13 @@ export function createR9VotingHandlers(deps: AppDeps) {
       let ok = false;
       try {
         const rows = await claim.getR9VotesByTrustee(tx.tx, ctx.pariwarId, query.actorId, { sinceDays });
+        // ⭐ Story 6.27b code review round 2 (D1 B + V1 A) — the same withholding as the panel, across claims: EVERY vote's
+        // note (approve or deny) on a claim whose neighbours' section is hidden from THIS reader. ONE set-based statement
+        // under its own SAVEPOINT; a failure withholds every vote's note (fail CLOSED — `hidden-reader-notes.ts`).
+        const hiddenClaims = await readClaimsHiddenFromReader(tx.client, tx.tx, ctx.pariwarIdStr, rows.map((r) => r.claimCaseId as string), ctx.actorId, {
+          label: 'r9_votes_by_trustee_own_visit_pending',
+          log: request.log,
+        });
         const votes = await Promise.all(
           rows.map(async (r) => ({
             vote_id: r.voteId,
@@ -645,9 +677,13 @@ export function createR9VotingHandlers(deps: AppDeps) {
             voting_requirement: r.votingRequirement as R9VotesByTrusteeResponse['votes'][number]['voting_requirement'],
             panel_actor_ids: r.panelActorIds,
             session_outcome: r.sessionOutcome as R9VotesByTrusteeResponse['votes'][number]['session_outcome'],
-            rationale: await decryptR9VoteRationale(r.rationaleCiphertext, ctx.pariwarIdStr, deps.encryption, (err) =>
-              request.log.error({ err, vote_id: r.voteId }, 'r9 vote rationale decrypt failed'),
-            ),
+            rationale:
+              withheldReasonOn(hiddenClaims, r.claimCaseId as string) !== null
+                ? '' // S18 (D1 B + V1 A) / X2 — withheld, `rationale_withheld` says why (⛔ never decrypted)
+                : await decryptR9VoteRationale(r.rationaleCiphertext, ctx.pariwarIdStr, deps.encryption, (err) =>
+                    request.log.error({ err, vote_id: r.voteId }, 'r9 vote rationale decrypt failed'),
+                  ),
+            rationale_withheld: withheldReasonOn(hiddenClaims, r.claimCaseId as string),
           })),
         );
         ok = true;

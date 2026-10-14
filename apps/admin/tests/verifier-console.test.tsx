@@ -235,6 +235,7 @@ describe('<SignalsPanel> — six sections, four-state vocabulary, tri-state conc
                 refusalReason: null,
                 completedAt: '2026-05-02T06:00:00.000Z',
                 notes: null,
+                notesWithheld: null,
                 structuredFindings: null,
                 photos: [],
                 // Story 6.26a (GI10) — a pre-6.26a inherited row: ⛔ no record, labelled as carried over.
@@ -274,6 +275,7 @@ describe('<SignalsPanel> — six sections, four-state vocabulary, tri-state conc
       refusalReason: null,
       completedAt: '2026-05-02T06:00:00.000Z',
       notes: null,
+      notesWithheld: null,
       structuredFindings: null,
       deathTimeUnreadable: false,
     };
@@ -292,7 +294,7 @@ describe('<SignalsPanel> — six sections, four-state vocabulary, tri-state conc
                 groundInspectionId: 'own-check',
                 inspectionStage: 'certificate_check',
                 inspectionSiteType: 'school_or_office',
-                photos: [{ photoId: 'p1', contentType: 'image/jpeg', byteSize: 1, caption: null, signedUrl: 'https://x/p1', photoKind: 'original_certificate' }],
+                photos: [{ photoId: 'p1', contentType: 'image/jpeg', byteSize: 1, caption: null, captionWithheld: null, signedUrl: 'https://x/p1', photoKind: 'original_certificate' }],
                 originalCertificateVerdict: 'does_not_match',
                 comparedAgainst: 'current',
                 deathDateSource: 'original_certificate',
@@ -349,6 +351,7 @@ describe('<SignalsPanel> — six sections, four-state vocabulary, tri-state conc
       refusalReason: null,
       completedAt: '2026-05-02T06:00:00.000Z',
       notes: null,
+      notesWithheld: null,
       structuredFindings: null,
       inspectionStage: 'initial',
       inspectionSiteType: 'family_residence',
@@ -578,13 +581,13 @@ describe('<SignalsPanel> — six sections, four-state vocabulary, tri-state conc
       priorVerifierComments: {
         status: 'present',
         comments: [
-          { outcome: 'approved', reasonCode: 'r8_90pct_met', rationale: 'Meets threshold.', actorDisplay: 'Anita (District Admin)', decidedAt: '2026-07-11T00:00:00Z', claimCaseId: 'claim-1' },
+          { outcome: 'approved', reasonCode: 'r8_90pct_met', rationale: 'Meets threshold.', rationaleWithheld: null, actorDisplay: 'Anita (District Admin)', decidedAt: '2026-07-11T00:00:00Z', claimCaseId: 'claim-1' },
         ],
       },
       recentPrecedents: {
         status: 'present',
         precedents: [
-          { claimCaseId: 'claim-2', outcome: 'denied', reasonCode: 'concealment_flag_uphold', rationale: null, actorDisplay: null, decidedAt: '2026-07-10T00:00:00Z' },
+          { claimCaseId: 'claim-2', outcome: 'denied', reasonCode: 'concealment_flag_uphold', rationale: null, rationaleWithheld: null, actorDisplay: null, decidedAt: '2026-07-10T00:00:00Z' },
         ],
       },
     };
@@ -607,6 +610,93 @@ describe('<SignalsPanel> — six sections, four-state vocabulary, tri-state conc
     expect(screen.getAllByTestId('section-state-unavailable').length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByTestId('section-state-empty').length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByTestId('section-state-not_available_yet').length).toBeGreaterThanOrEqual(1);
+  });
+});
+
+// ── Story 6.27b code review round 2 (X2; `withheld-note.ts`) — the console's WITHHELD notes (Pattern B): the prior comments,
+// the precedents, an inspection's notes and a photo's caption each SAY so (⛔ an absent line or a silent generic alt).
+describe('<SignalsPanel> — Story 6.27b X2, a WITHHELD note is said in words', () => {
+  const own = t.noteWithheld.own_visit;
+  const failed = t.noteWithheld.check_failed;
+  type Item = Extract<VerifierConsolePacket['groundInspection'], { status: 'present' }>['assignments'][number];
+  const assignment = (over: Partial<Item>): Item => ({
+    groundInspectionId: '88888888-8888-4888-8888-888888888888',
+    district: 'Patna',
+    inspectionStage: 'initial',
+    inspectionSiteType: 'family_residence',
+    inspectorActorId: 'inspector-1',
+    scheduledAt: '2026-05-01T06:00:00.000Z',
+    status: 'completed',
+    refusalReason: null,
+    completedAt: '2026-05-02T06:00:00.000Z',
+    notes: null,
+    notesWithheld: null,
+    structuredFindings: null,
+    photos: [],
+    originalCertificateVerdict: null,
+    comparedAgainst: null,
+    deathDateSource: null,
+    deathDate: null,
+    deathTime: null,
+    deathDateUnreadable: false,
+    deathTimeUnreadable: false,
+    inherited: false,
+    dateComparison: 'not_compared',
+    dateDiffersWarning: false,
+    originalMismatchWarning: false,
+    ...over,
+  });
+
+  it('the prior comments and the precedents: withheld ⇒ the words; a normal note unchanged', () => {
+    render(
+      <SignalsPanel
+        packet={{
+          ...PRESENT_PACKET,
+          priorVerifierComments: {
+            status: 'present',
+            comments: [
+              { outcome: 'approved', reasonCode: 'r8_90pct_met', rationale: '', rationaleWithheld: 'own_visit', actorDisplay: 'Anita', decidedAt: '2026-07-11T00:00:00Z', claimCaseId: 'claim-1' },
+              { outcome: 'denied', reasonCode: 'concealment_flag_uphold', rationale: 'NOTE-kept', rationaleWithheld: null, actorDisplay: 'Ravi', decidedAt: '2026-07-12T00:00:00Z', claimCaseId: 'claim-1' },
+            ],
+          },
+          recentPrecedents: {
+            status: 'present',
+            precedents: [
+              { claimCaseId: 'claim-2', outcome: 'denied', reasonCode: 'concealment_flag_uphold', rationale: null, rationaleWithheld: 'check_failed', actorDisplay: null, decidedAt: '2026-07-10T00:00:00Z' },
+              { claimCaseId: 'claim-3', outcome: 'approved', reasonCode: 'r8_90pct_met', rationale: null, rationaleWithheld: 'own_visit', actorDisplay: null, decidedAt: '2026-07-09T00:00:00Z' },
+            ],
+          },
+        }}
+      />,
+    );
+    const comments = within(screen.getByTestId('section-prior-comments')).getAllByTestId('audit-rationale');
+    expect(comments.map((c) => c.textContent)).toEqual([own, 'NOTE-kept']);
+    // Review Y4 — a precedent is ANOTHER claim's: its `own_visit` words say "that claim" (⛔ "this claim").
+    const precedents = within(screen.getByTestId('section-precedents')).getAllByTestId('audit-rationale');
+    expect(precedents.map((p) => p.textContent)).toEqual([failed, t.noteWithheld.own_visit_other_claim]);
+  });
+
+  it('an inspection\'s notes and a photo\'s caption: withheld ⇒ the words (the notes line; the photo\'s alt); normal ones unchanged', () => {
+    const photo = { photoId: 'p1', contentType: 'image/jpeg', byteSize: 1, signedUrl: 'https://x/p1', photoKind: 'site' as const };
+    render(
+      <SignalsPanel
+        packet={{
+          ...PRESENT_PACKET,
+          groundInspection: {
+            status: 'present',
+            assignments: [
+              assignment({ groundInspectionId: 'hidden', notesWithheld: 'own_visit', photos: [{ ...photo, caption: null, captionWithheld: 'own_visit' }] }),
+              assignment({ groundInspectionId: 'plain', notes: 'GATE-was-locked', photos: [{ ...photo, photoId: 'p2', caption: 'The front door', captionWithheld: null }] }),
+            ],
+          },
+        }}
+      />,
+    );
+    const rows = screen.getAllByTestId('ground-inspection-assignment');
+    expect(within(rows[0]!).getByTestId('ground-inspection-notes')).toHaveTextContent(own);
+    expect(within(rows[0]!).getByRole('img').getAttribute('alt')).toContain(own);
+    expect(within(rows[1]!).getByTestId('ground-inspection-notes')).toHaveTextContent('GATE-was-locked');
+    expect(within(rows[1]!).getByRole('img')).toHaveAttribute('alt', 'The front door');
   });
 });
 

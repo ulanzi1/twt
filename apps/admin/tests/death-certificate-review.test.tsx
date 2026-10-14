@@ -402,6 +402,26 @@ describe('<VerifierConsoleRoute> — the certificate section (D10, AC5)', () => 
     expect(item.textContent).not.toContain(t.history.unreadable);
   });
 
+  // Story 6.27b code review round 2 (X2) — a WITHHELD review note (`ReadableErasableNote`) is SAID — ⛔ blank, ⛔ "erased".
+  it('a WITHHELD note in the history says so in the shared words (⛔ blank, ⛔ the erased / unreadable words)', async () => {
+    const withheld: DeathCertificateHistoryResponse = {
+      ...HISTORY,
+      uploads: [
+        {
+          ...HISTORY.uploads[0]!,
+          reviews: [{ ...HISTORY.uploads[0]!.reviews[0]!, note: { state: 'withheld', reason: 'own_visit' } }],
+        },
+      ],
+    };
+    getDeathCertificateHistory.mockResolvedValue(withheld);
+    await mount([certificateItem(review())]);
+    fireEvent.click(screen.getByTestId('death-certificate-history-disclosure'));
+    const item = await screen.findByTestId('death-certificate-history-review');
+    expect(item.textContent).toContain(verifierConsoleEn.noteWithheld.own_visit);
+    expect(item.textContent).not.toContain(t.history.anonymized);
+    expect(item.textContent).not.toContain(t.history.unreadable);
+  });
+
   it('⭐ the HISTORY says when older certificates were left out (`truncated`) — ⛔ never reads as complete', async () => {
     getDeathCertificateHistory.mockResolvedValue({ ...HISTORY, truncated: true });
     await mount([certificateItem(review())]);

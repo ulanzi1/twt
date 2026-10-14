@@ -20,7 +20,20 @@
 import { randomUUID } from 'node:crypto';
 
 import { claim, cycleCalendar, ids, member as memberDomain, nominee } from '@twt/domain';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+
+// ⭐ Story 6.27b code review round 2 (X6) — the hide read behind the withheld staff notes, failing ON DEMAND with a real SQL
+// error (`SELECT 1/0`) on the request's own handle, so the fail-closed branch runs.
+const fault = vi.hoisted(() => ({ ownVisit: false }));
+vi.mock('@twt/domain', async (importActual) => {
+  const actual = await importActual<typeof import('@twt/domain')>();
+  const { sql } = await import('drizzle-orm');
+  const readOwnVisitPendingClaimIds: typeof actual.claim.readOwnVisitPendingClaimIds = async (db, ...rest) => {
+    if (fault.ownVisit) await (db as unknown as { execute: (q: unknown) => Promise<unknown> }).execute(sql`SELECT 1/0`);
+    return actual.claim.readOwnVisitPendingClaimIds(db, ...rest);
+  };
+  return { ...actual, claim: { ...actual.claim, readOwnVisitPendingClaimIds } };
+});
 
 import type { AppDeps } from '../../../src/context.js';
 import * as memberAuthRepo from '../../../src/modules/auth/member/member-auth.repo.js';
@@ -58,6 +71,7 @@ describe.skipIf(!hasDatabase)('Story 6.20 — the nominee declaration surface �
   });
 
   afterAll(async () => {
+    fault.ownVisit = false;
     await app.close();
     const c = await td.pool.connect();
     try {
@@ -447,6 +461,92 @@ describe.skipIf(!hasDatabase)('Story 6.20 — the nominee declaration surface �
     const { client } = await actor(w.pariwarId, 'verifier', 'district', w.district, 'Vera (Verifier)');
     expect((await client.inject({ method: 'GET', url: `${base(w.pariwarId, w.claimCaseId)}/nominee-declaration` })).statusCode).toBe(200);
     expect((await determineHonestly(client, w.pariwarId, w.claimCaseId)).statusCode).toBe(403);
+  });
+
+  // ── Story 6.27b code review round 2 (X6 — AC7's X1 A; X2) ─────────────────────────────────────────
+  // A reader whose OWN ground visit on the claim is pending gets the certificate-review note, the determination note and
+  // the correction notes WITHHELD (`{ state: 'withheld', reason: 'own_visit' }`, ⛔ never decrypted) — unless they wrote
+  // that note themselves; the operational fields (the accepted date, the certificate date, the proposed details) stay;
+  // every other reader sees every note; a FAILED hide read withholds them from every reader (`check_failed`).
+  it('6.27b X6 — a hidden reader: the review, determination and correction notes are withheld unless they wrote them; a failed hide read withholds', async () => {
+    const w = await world();
+    const da = await actor(w.pariwarId, 'district_admin', 'district', w.district, 'Anita (District Admin)');
+    const helpline = await actor(w.pariwarId, 'helpline_operator', 'pariwar', w.pariwarId, 'Harsh (Helpline)');
+    expect((await determineHonestly(da.client, w.pariwarId, w.claimCaseId)).statusCode).toBe(201);
+    const raise = await helpline.client.inject({
+      method: 'POST',
+      url: `${base(w.pariwarId, w.claimCaseId)}/nominee-corrections`,
+      payload: { rank: 1, proposed: { name: 'Asha Kumari', relationship: 'spouse', mobile: '9876543210' }, note: 'Maiden name on the bank passbook.' },
+    });
+    expect(raise.statusCode).toBe(201);
+    const { correction_id } = raise.json() as { correction_id: string };
+    const step1 = await da.client.inject({
+      method: 'POST',
+      url: `${base(w.pariwarId, w.claimCaseId)}/nominee-corrections/${correction_id}/district-decision`,
+      payload: { outcome: 'approve', note: 'Passbook seen.' },
+    });
+    expect(step1.statusCode).toBe(200);
+    const other = await actor(w.pariwarId, 'district_admin', 'district', w.district, 'Bina (District Admin)');
+    const third = await actor(w.pariwarId, 'district_admin', 'district', w.district, 'Chitra (District Admin)');
+    // The visits pending for `da` and `other` (seeded directly — the inspection window is ⛔ under test here).
+    for (const who of [da, other]) {
+      await td.pool.query(
+        `INSERT INTO claim_ground_inspections (ground_inspection_id, claim_case_id, pariwar_id, district, inspection_stage, inspection_site_type,
+           inspector_actor_id, scheduled_at, status)
+         VALUES ($1, $2, $3, $4, 'initial', 'family_residence', $5, now(), 'scheduled')`,
+        [randomUUID(), w.claimCaseId, w.pariwarId, w.district, who.userId],
+      );
+    }
+    type Note = Json | null | undefined;
+    const notesOf = async (who: { client: Client }): Promise<Note[]> => {
+      const history = await who.client.inject({ method: 'GET', url: `${base(w.pariwarId, w.claimCaseId)}/death-certificate/history` });
+      expect(history.statusCode, history.body).toBe(200);
+      const snapshots = await who.client.inject({ method: 'GET', url: `${base(w.pariwarId, w.claimCaseId)}/nominee-declaration/snapshots` });
+      expect(snapshots.statusCode, snapshots.body).toBe(200);
+      const list = await who.client.inject({ method: 'GET', url: `${base(w.pariwarId, w.claimCaseId)}/nominee-corrections` });
+      expect(list.statusCode, list.body).toBe(200);
+      const c = (list.json() as { corrections: { raise_note: Note; district_admin: { note: Note } | null }[] }).corrections[0]!;
+      return [
+        (history.json() as { uploads: { reviews: { note: Note }[] }[] }).uploads[0]!.reviews[0]!.note,
+        (snapshots.json() as { live_determination: { note: Note } | null }).live_determination!.note,
+        c.raise_note,
+        c.district_admin!.note,
+      ];
+    };
+    const readable = (value: string) => ({ state: 'readable', value });
+    const withheld = (reason: string) => ({ state: 'withheld', reason });
+    const OWN = withheld('own_visit');
+    const ALL = [readable('fixture: the date is clear'), readable('Certificate dated 2026-05-01; the June change is after the death.'), readable('Maiden name on the bank passbook.'), readable('Passbook seen.')];
+    expect(await notesOf(third)).toEqual(ALL);
+    expect(await notesOf(other)).toEqual([OWN, OWN, OWN, OWN]);
+    // The hidden District Admin's OWN determination and step note stay; the review (another's) and the raise note do ⛔ not.
+    expect(await notesOf(da)).toEqual([OWN, ALL[1], OWN, ALL[3]]);
+    fault.ownVisit = true;
+    try {
+      expect(await notesOf(third)).toEqual(Array(4).fill(withheld('check_failed')));
+    } finally {
+      fault.ownVisit = false;
+    }
+    // The review made by the hidden reader THEMSELVES stays visible to them (`isSameActorId`, a case variant included).
+    const c = await td.pool.connect();
+    try {
+      await c.query('BEGIN');
+      await c.query("SET LOCAL session_replication_role = 'replica'");
+      await c.query('UPDATE claim_death_certificate_reviews SET decided_by_actor_id = $2 WHERE claim_case_id = $1', [w.claimCaseId, other.userId.toUpperCase()]);
+      await c.query('COMMIT');
+    } finally {
+      c.release();
+    }
+    expect((await notesOf(other))[0]).toEqual(ALL[0]);
+    // Y6 — a FAMILY's own `member_app` raise note is ⛔ a staff note: never withheld, from a hidden reader or on a fault.
+    await td.pool.query("UPDATE nominee_corrections SET raised_via = 'member_app' WHERE claim_case_id = $1", [w.claimCaseId]);
+    expect((await notesOf(other))[2]).toEqual(ALL[2]);
+    fault.ownVisit = true;
+    try {
+      expect((await notesOf(third))[2]).toEqual(ALL[2]);
+    } finally {
+      fault.ownVisit = false;
+    }
   });
 
   // ── AC7 — the correction through HTTP ─────────────────────────────────────────────────────────

@@ -27,6 +27,7 @@ import { useEffect, useRef } from 'react';
 import { ApiError } from '../api/client.js';
 import { useClaimsUnderCorrection, useSession } from '../api/hooks.js';
 import { verifierConsoleEn as t } from '../modules/claim-verification/i18n-en.js';
+import { WithheldNote } from '../modules/claim-verification/WithheldNote.js';
 import { CorrectionChasePanel, correctionChaseEn } from '../modules/correction-chase/index.js';
 import { ClosureColumn } from '../modules/correction-closure/index.js';
 
@@ -232,11 +233,16 @@ function CorrectionQueueView(): ReactElement {
                   <dd data-testid="queue-return-note">
                     {/* ⚠ The note's three states are never collapsed into a blank: a decrypt
                         failure must not read as "they gave no reason". */}
-                    {item.return_note === null
-                      ? '—'
-                      : item.return_note.state === 'readable'
-                        ? item.return_note.value
-                        : t.nameCheck.unreadable}
+                    {/* Story 6.27b code review round 2 (X2) — nor a WITHHELD note: said in the shared words. */}
+                    {item.return_note === null ? (
+                      '—'
+                    ) : item.return_note.state === 'withheld' ? (
+                      <WithheldNote reason={item.return_note.reason} />
+                    ) : item.return_note.state === 'readable' ? (
+                      item.return_note.value
+                    ) : (
+                      t.nameCheck.unreadable
+                    )}
                   </dd>
                 </dl>
               ) : null}

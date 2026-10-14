@@ -216,7 +216,7 @@ describe.skipIf(!hasDatabase)('Story 6.26a — the console\'s ground-inspection 
   });
 
   it('⭐ AC9 — the section books EXACTLY one read and sends EXACTLY one read statement (+ its SAVEPOINT / RELEASE); the ceiling is 20', async () => {
-    expect(VERIFIER_CONSOLE_MAX_READS).toBe(26); // Story 6.27a (PM13, PM25 (c)) FROM 23 — +3: the inspector check, the answers, the neighbours' contacts; Story 6.28 (OP14 (b), code review chunk 3/4) FROM 22 — +1: the authoritative finally-approved-elsewhere signal; Story 6.28 (OP14 (a)) FROM 21 — +1: the other claims of this death; Story 6.24a (RF10) FROM 20 — +1: the suspicion-refusal section
+    expect(VERIFIER_CONSOLE_MAX_READS).toBe(27); // Story 6.27b (code review round 2, S18) FROM 26 — +1: which approval notes a hidden reader must not see; Story 6.27a (PM13, PM25 (c)) FROM 23 — +3: the inspector check, the answers, the neighbours' contacts; Story 6.28 (OP14 (b), code review chunk 3/4) FROM 22 — +1: the authoritative finally-approved-elsewhere signal; Story 6.28 (OP14 (a)) FROM 21 — +1: the other claims of this death; Story 6.24a (RF10) FROM 20 — +1: the suspicion-refusal section
     const pariwarId = randomUUID();
     const claimCaseId = await seedClaim(pariwarId, await seedDeceased(pariwarId));
     await inScope(pariwarId, async (s) => {
@@ -346,7 +346,7 @@ describe.skipIf(!hasDatabase)('Story 6.26a — the console\'s ground-inspection 
   });
 
   it('⭐⭐ Story 6.26b (invariant 5; Trap 11) — a FAILED warnings read: `null` on every completed row\'s comparison and on every flag the section does ⛔ rule out; `false` where it does; MAX_READS is pinned (23 since Story 6.28 code review chunk 3/4)', async () => {
-    expect(VERIFIER_CONSOLE_MAX_READS).toBe(26); // Story 6.27a (PM13, PM25 (c)) FROM 23 — +3: the inspector check, the answers, the neighbours' contacts; Story 6.28 (OP14 (b), code review chunk 3/4) FROM 22 — +1: the authoritative finally-approved-elsewhere signal; Story 6.28 (OP14 (a)) FROM 21 — +1: the other claims of this death; Story 6.24a (RF10) FROM 20 — +1: the suspicion-refusal section
+    expect(VERIFIER_CONSOLE_MAX_READS).toBe(27); // Story 6.27b (code review round 2, S18) FROM 26 — +1: which approval notes a hidden reader must not see; Story 6.27a (PM13, PM25 (c)) FROM 23 — +3: the inspector check, the answers, the neighbours' contacts; Story 6.28 (OP14 (b), code review chunk 3/4) FROM 22 — +1: the authoritative finally-approved-elsewhere signal; Story 6.28 (OP14 (a)) FROM 21 — +1: the other claims of this death; Story 6.24a (RF10) FROM 20 — +1: the suspicion-refusal section
     const pariwarId = randomUUID();
     const deceased = await seedDeceased(pariwarId);
     await refusedSource(pariwarId, deceased, { deathDate: daysAgo(3) });

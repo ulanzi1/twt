@@ -13,6 +13,7 @@ import { type UseMutationResult, useMutation, useQuery, useQueryClient } from '@
 
 import { ApiError } from '../../api/client.js';
 import * as api from '../../api/client.js';
+import { withheldNoteWords } from '../claim-verification/WithheldNote.js';
 import { resolveEn as t } from './i18n-en.js';
 
 // ⚠ The page's OWN copies of the domain tuples (it imports no domain package) — kept in step by hand.
@@ -384,7 +385,17 @@ function AssignmentCard(props: {
             </span>
             <div className="flex flex-wrap gap-2">
               {photos.map((p) => (
-                <img key={p.photoId} src={p.signedUrl} alt={p.caption ?? t(`gi.photo.kind.${kind}`)} className="h-20 w-20 rounded object-cover" />
+                <img
+                  key={p.photoId}
+                  src={p.signedUrl}
+                  // Story 6.27b code review round 2 (X2) — a WITHHELD caption is said (⛔ never silently the generic alt).
+                  alt={
+                    p.captionWithheld != null
+                      ? `${t(`gi.photo.kind.${kind}`)} — ${withheldNoteWords(p.captionWithheld)}`
+                      : (p.caption ?? t(`gi.photo.kind.${kind}`))
+                  }
+                  className="h-20 w-20 rounded object-cover"
+                />
               ))}
             </div>
           </div>

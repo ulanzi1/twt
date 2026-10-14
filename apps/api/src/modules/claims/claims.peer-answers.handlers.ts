@@ -6,8 +6,8 @@
 //
 // ⭐ THE STEP — FOUR arms, evaluated in order, the first that admits wins (⛔ no new state list — each arm reuses the
 // shipped constant or predicate; a THROW in an arm is a 500, ⛔ never a 404):
-//   1. the claim is in `TRUSTEE_VOTABLE_STATES` AND the reader holds `cycle.freeze` — the final vote and the
-//      no-correction approval (`final_vote`);
+//   1. the claim is in `TRUSTEE_VOTABLE_STATES` AND the reader holds `cycle.freeze` AND ⛔ live R9 routing (review round
+//      2 S15 — a routed claim's approving step is R9's, arm 3) — the final vote and the no-correction approval (`final_vote`);
 //   2. the claim is in `TRUSTEE_ESCALATION_RESOLVABLE_STATES` with a LIVE `escalated` verifier decision AND `cycle.freeze`
 //      — the cycle-freeze escalation resolution (`escalation_resolution`; BF17);
 //   3. the claim is in `R9_OUTCOME_FROM_STATES` with a LIVE R9 routing AND `claim.r9_vote` — an R9 vote or finalize
@@ -78,8 +78,12 @@ export function createPeerAnswersHandlers(deps: AppDeps) {
       const state = row.currentState as string;
 
       // ── THE STEP — four arms, in order; the cheap permission test first, then at most one statement per arm ──
+      // ⭐ Code review round 2 (S15) — a LIVE R9 routing makes the approving step R9's, ⛔ the final vote's, so arm 1 yields to
+      // arm 3 there (the audit names `r9_vote` and the R9 key). The routing read is shared by the two arms (ONE statement).
+      let liveRouted: boolean | undefined;
+      const routed = async () => (liveRouted ??= await claim.hasLiveRoutedRow(scopeTx.tx, pid, cid));
       let admitted: { step: PeerAnswersStep; key: string } | null = null;
-      if ((claim.TRUSTEE_VOTABLE_STATES as readonly string[]).includes(state) && holds('cycle.freeze')) {
+      if ((claim.TRUSTEE_VOTABLE_STATES as readonly string[]).includes(state) && holds('cycle.freeze') && !(await routed())) {
         admitted = { step: 'final_vote', key: 'cycle.freeze' };
       } else if (
         (claim.TRUSTEE_ESCALATION_RESOLVABLE_STATES as readonly string[]).includes(state) &&
@@ -90,7 +94,7 @@ export function createPeerAnswersHandlers(deps: AppDeps) {
       } else if (
         (claim.R9_OUTCOME_FROM_STATES as readonly string[]).includes(state) &&
         holds('claim.r9_vote') &&
-        (await claim.hasLiveRoutedRow(scopeTx.tx, pid, cid))
+        (await routed())
       ) {
         admitted = { step: 'r9_vote', key: 'claim.r9_vote' };
       } else if (holds('claim.review_escalated_closure') && (await claim.isCorrectionClaimHeld(scopeTx.tx, pid, cid))) {
@@ -167,7 +171,11 @@ export function createPeerAnswersHandlers(deps: AppDeps) {
             peer?.status === 'present' ? peer.transcript.pings.reduce((n, p) => n + (p.reply?.answers.length ?? 0), 0) : 0,
         },
       });
-      for (const { pingId, basis } of shown) {
+      // ⭐ Code review round 2 (S8) — only for a section the response ACTUALLY carries (`present`): the wire mapping runs
+      // after the assembler reported its numbers, and its `catch → unavailable` would otherwise leave a line for a number
+      // nobody was shown.
+      const delivered = peer?.status === 'present' ? shown : [];
+      for (const { pingId, basis } of delivered) {
         emitAuthAudit(deps, request, 'admin_claim.peer_callback_mobile_shown', {
           actorId,
           pariwarId,

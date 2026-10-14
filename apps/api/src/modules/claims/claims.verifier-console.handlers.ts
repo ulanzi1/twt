@@ -32,6 +32,7 @@ import {
   type ValidityServiceDeps,
 } from '@twt/validity-service';
 import type {
+  NoteWithheldReason,
   ApprovalWarningsStatus,
   NomineeNameCheckStatus,
   DocumentReviewSection,
@@ -71,6 +72,7 @@ import { decryptClaimDocumentField } from './claim-document-crypto.js';
 import { decryptGroundInspectionField } from './ground-inspection-crypto.js';
 import { underSavepoint } from './later-approval-warnings.js';
 import { decryptVerifierRationale } from './verifier-decision-crypto.js';
+import { type HiddenClaims, readClaimsHiddenFromReader, withheldReasonOn, withheldUnlessAuthor } from './hidden-reader-notes.js';
 
 /** The verifier-console READ key (Story 6.10, catalog v13) — gates the route (district dimension). */
 export const VERIFIER_CONSOLE_KEY = 'claim.verify';
@@ -221,7 +223,19 @@ const SIGNED_URL_TTL_SECONDS = 300;
  * warnings (which stay LAST). ⭐ Ledger line:
  *   + Story 6.27a (PM13, PM25 (c)): the inspector check, the answers, the neighbours' contacts  +3  → 26
  */
-export const VERIFIER_CONSOLE_MAX_READS = 26;
+/*
+ * ⭐ STORY 6.27b's ONE READ (code review round 2, D1 B + V1 A → S18 / V6; AC7) — the explanation this counter demands.
+ * A HIDDEN reader (their own ground visit pending, PM25 (c)) must ⛔ not read ANY staff NOTE on that claim — approval,
+ * denial or escalation: a District Admin who acts on a contradicting neighbour must escalate and SAY WHY (P1), so any of
+ * them can carry a neighbour's answer (`-310` CF2), and withholding only some would let the absence itself speak. For THIS
+ * claim's transcript (e) the console already knows (the peer section's own hide — ⛔ no read). Section (f) shows OTHER
+ * claims' notes, and the reader may be hidden on one of them. ⛔ It is the MINIMUM: `readOwnVisitPendingClaimIds` answers,
+ * for every precedent claim, whether the section is hidden from THIS reader — ONE statement (⛔ not per precedent).
+ * Conditional: ⛔ no precedent ⇒ ⛔ no read. It decrypts ⛔ nothing. Under a raw SAVEPOINT (`underSavepoint`), BEFORE the
+ * warnings (which stay LAST); a failure withholds every precedent's note (fail CLOSED — the V11 trade-off). ⭐ Ledger line:
+ *   + Story 6.27b (S18 / V6): the precedents' claims a hidden reader must ⛔ not read notes on      +1  → 27
+ */
+export const VERIFIER_CONSOLE_MAX_READS = 27;
 
 /** Counts the assembler's top-level bounded source reads (the no-N+1 fan-out width). */
 class ReadCounter {
@@ -354,7 +368,14 @@ export async function assembleVerifierConsole(
 
   // ── (c) peer-mesh transcripts (Story 6.6) — transcripts NOT counts; absence ≠ denied ─────────────
   // ⭐ Story 6.27a (PM25 (c)) — `undefined` (the field ABSENT) for an inspector before their full visit.
-  const peerMesh = await assemblePeerMesh(deps, ctx, claimCaseId, reads, identity.deceasedName ?? 'the member');
+  // ⭐ Code review round 2 (X2) — WHY the section is hidden (`own_visit` / `check_failed`), for the staff notes below.
+  let peerHiddenCause: NoteWithheldReason | null = null;
+  const peerMesh = await assemblePeerMesh(deps, ctx, claimCaseId, reads, identity.deceasedName ?? 'the member', (cause) => {
+    peerHiddenCause = cause;
+  });
+  // ⭐ Code review round 2 (D1 B + V1 A + X1 A; X2) — the reason EVERY staff note on THIS claim is withheld from this reader
+  // (`null` ⇔ ⛔ withheld): the peer section's own hide, ⛔ a new read. `undefined` ⇔ hidden, incl. a failed check.
+  const notesWithheld: NoteWithheldReason | null = peerMesh === undefined ? (peerHiddenCause ?? 'check_failed') : null;
 
   // ── (d) ground-inspection notes + photos (Story 6.7) — `[]` = a first-class absence signal ───────
   // Story 6.26a (GI10) — "compared with the CURRENT certificate?" needs the current upload: the document-review section
@@ -365,11 +386,19 @@ export async function assembleVerifierConsole(
       : documentReview.status === 'empty'
         ? null
         : undefined;
-  const groundInspection = await assembleGroundInspection(deps, ctx, claimCaseId, currentCertificateToken, reads);
+  const groundInspection = await assembleGroundInspection(deps, ctx, claimCaseId, currentCertificateToken, reads, notesWithheld);
 
   // ── (e)/(f) prior comments + recent precedents — `not_available_yet` until Story 6.11 (D6) ───────
-  const priorVerifierComments = await assemblePriorComments(deps, ctx, claimCaseId);
-  const recentPrecedents = await assembleRecentPrecedents(deps, ctx, claimCaseId);
+  // ⭐ Story 6.27b code review round 2 (D1 B + V1 A) — both transcripts are READ first; a HIDDEN reader's notes are withheld
+  // before any decrypt (a withheld note is ⛔ never decrypted): THIS claim's by the peer section's own hide (`undefined` ⇔
+  // hidden, incl. a failed hide check — V11), each precedent's by ONE statement over the precedents' claims.
+  const priorRead = await readDecisionSection(ctx, 'prior-comments', () => claim.getPriorVerifierDecisions(ctx.db, ids.pariwarId(ctx.pariwarId), claimCaseId));
+  const precedentsRead = await readDecisionSection(ctx, 'recent-precedents', () =>
+    claim.getRecentInScopePrecedents(ctx.db, ids.pariwarId(ctx.pariwarId), claimCaseId),
+  );
+  const precedentHidden = await readPrecedentClaimsHiddenFromReader(ctx, precedentsRead.status === 'present' ? precedentsRead.precedents : [], reads);
+  const priorVerifierComments = await assemblePriorComments(deps, ctx, priorRead, notesWithheld);
+  const recentPrecedents = await assembleRecentPrecedents(deps, ctx, precedentsRead, precedentHidden);
 
   // ── (g) live shepherd (Story 6.12) — the family's named contact, READ-ONLY; grants no adjudication ─
   const shepherd = await assembleShepherd(ctx, claimCaseId, reads);
@@ -545,8 +574,9 @@ export async function assembleApprovalWarnings(
   claimCaseId: ids.ClaimId,
   claimState: string,
   reads: { bump(): void },
-  /** Story 6.27b — `peerHidden`: the neighbours' section is hidden from this reader (their own ground visit pending). */
-  opts: { readonly peerHidden: boolean } = { peerHidden: false },
+  /** Story 6.27b — `peerHidden`: the neighbours' section is hidden from this reader (their own ground visit pending).
+   *  REQUIRED (code review round 2 S13) — a default of "not hidden" was the one fail-OPEN default on the hide path. */
+  opts: { readonly peerHidden: boolean },
 ): Promise<ApprovalWarningsStatus> {
   return (await readApprovalWarningsSection(ctx, claimCaseId, claimState, reads, opts)).section;
 }
@@ -578,10 +608,12 @@ async function readApprovalWarningsSection(
     // ⭐ Story 6.27b (PM25 (c); BF10) — for a HIDDEN reader the two neighbour kinds are filtered out of EVERY displayed
     // field computed from the keys (`kinds`, the counts, `viewerCanRecordLateReason`) — a count of 1 with ⛔ kind line would
     // itself say "a neighbour said something". ⭐ `reviseBlocked` stays on the UNFILTERED read (BF19 (b) — the console
-    // ⛔ never offers a revise the server refuses).
+    // ⛔ never offers a revise the server refuses) — for every reader who is ⛔ hidden. ⚠ AMENDED (code review round 2
+    // D2 A / S19): for a HIDDEN reader it is `null` — BD4 already refuses their revise of an approval and the neutral block
+    // replaces the control, so BF19 (b)'s reason does ⛔ not reach them, and the unfiltered value told them a key exists.
     const w = ownVisitPending ? claim.withoutPeerWarnings(full) : full;
     const approved = full.liveDecision?.outcome === 'approved';
-    const reviseBlocked: ApprovalWarningsStatus['reviseBlocked'] = !approved
+    const reviseBlocked: ApprovalWarningsStatus['reviseBlocked'] = ownVisitPending || !approved
       ? null
       : full.coverage.records.length > 0 || full.kinds.length > 0
         ? 'warning_approval_final'
@@ -635,8 +667,9 @@ async function readApprovalWarningsSection(
       uncoveredSinceApproval: 0,
       // Fail closed like `available` — ⛔ never `null` ("not blocked"), or the revise control would show as
       // normal and then 409 on submit instead of telling the District Admin upfront. `'unavailable'` is a
-      // console-only preview state (no matching `DecisionNotRevisableReason` — the read simply didn't run).
-      reviseBlocked: 'unavailable',
+      // console-only preview state (no matching `DecisionNotRevisableReason` — the read simply didn't run). S19 — a
+      // HIDDEN reader's is `null` on both paths (their neutral block replaces the revise control either way).
+      reviseBlocked: ownVisitPending ? null : 'unavailable',
       viewerCanRecordLateReason: false,
       lateKeysUncoveredForViewer: 0,
       reasonOptions: [],
@@ -855,6 +888,8 @@ export async function assemblePeerMesh(
   claimCaseId: ids.ClaimId,
   reads: { bump(): void },
   memberName: string,
+  /** Code review round 2 (X2) — told WHY the section is hidden (the console words its withheld staff notes by it). */
+  onHidden?: (cause: NoteWithheldReason) => void,
 ): Promise<UnstitchedPeerMeshSection | undefined> {
   // ⭐ Story 6.27a — ONE actor-aware builder (`assemblePeerSection`, second-pass review S13): the PM25 (c) hide FIRST and
   // fail CLOSED, then the selection / pings / responses / answers / contacts. EVERY read runs under its own raw SAVEPOINT
@@ -877,7 +912,10 @@ export async function assemblePeerMesh(
         },
         () => reads.bump(),
         memberName,
-      ),
+      ).then((section) => {
+        if (section.kind === 'hidden') onHidden?.(section.cause);
+        return section;
+      }),
     { claimCaseId: String(claimCaseId), ...(ctx.log ? { log: ctx.log } : {}) },
   );
 }
@@ -1021,6 +1059,13 @@ async function assembleGroundInspection(
   /** The claim's CURRENT certificate upload (from the document-review section); `null` = none; `undefined` = unknown. */
   currentUploadId: string | null | undefined,
   reads: ReadCounter,
+  /**
+   * ⭐ Code review round 2 (X6 / X2 / Y8 / Y3; AC7 X1 A) — the reason the visit NOTES and photo CAPTIONS are withheld from
+   * this reader (`null` ⇔ ⛔ withheld) — unless the reader is the note's / caption's RECORDED author (migration 0159;
+   * `isSameActorId`); a pre-0159 row (⛔ author) stays withheld, inherited rows included (fail CLOSED). The flag is set on
+   * EVERY row / photo of a hidden reader they did ⛔ author, note or ⛔ note (Y3 — presence ⛔ signals). ⛔ Never decrypted.
+   */
+  notesWithheld: NoteWithheldReason | null,
 ): Promise<UnstitchedGroundInspectionSection> {
   try {
     reads.bump();
@@ -1062,9 +1107,10 @@ async function assembleGroundInspection(
           contentType: p.contentType,
           byteSize: p.byteSize,
           caption:
-            p.captionCiphertext == null
+            p.captionCiphertext == null || withheldUnlessAuthor(notesWithheld, p.uploadedByActorId, ctx.actorId) !== null
               ? null
               : await safeDecrypt(() => decryptGroundInspectionField(p.captionCiphertext!, ctx.pariwarId, deps.encryption), ctx, 'inspection.caption'),
+          captionWithheld: withheldUnlessAuthor(notesWithheld, p.uploadedByActorId, ctx.actorId),
           signedUrl: await deps.claimDocumentStorage.signedReadUrl(p.storageObjectKey, SIGNED_URL_TTL_SECONDS),
           photoKind: p.photoKind,
         })),
@@ -1083,9 +1129,10 @@ async function assembleGroundInspection(
         refusalReason: r.inspection.refusalReason,
         completedAt: r.inspection.completedAt ? r.inspection.completedAt.toISOString() : null,
         notes:
-          r.inspection.notesCiphertext == null
+          r.inspection.notesCiphertext == null || withheldUnlessAuthor(notesWithheld, r.inspection.notesAuthorActorId, ctx.actorId) !== null
             ? null
             : await safeDecrypt(() => decryptGroundInspectionField(r.inspection.notesCiphertext!, ctx.pariwarId, deps.encryption), ctx, 'inspection.notes'),
+        notesWithheld: withheldUnlessAuthor(notesWithheld, r.inspection.notesAuthorActorId, ctx.actorId),
         structuredFindings: r.inspection.structuredFindings ?? null,
         photos,
         originalCertificateVerdict: r.inspection.originalCertificateVerdict,
@@ -1121,26 +1168,64 @@ async function assembleGroundInspection(
   }
 }
 
+/** A transcript read (sections (e)/(f)) — a throw ⇒ `unavailable` for THAT section (the four-state vocabulary). */
+async function readDecisionSection<R>(
+  ctx: VerifierConsoleContext,
+  label: string,
+  read: () => Promise<R>,
+): Promise<R | { readonly status: 'unavailable' }> {
+  try {
+    return await read();
+  } catch (err) {
+    ctx.log?.warn({ err, claimCaseId: ctx.claimCaseId }, `verifier-console: ${label} section unavailable`);
+    return { status: 'unavailable' };
+  }
+}
+
+/**
+ * ⭐ Story 6.27b code review round 2 (D1 B + V1 A; AC7) — the precedent claims whose neighbours' section is hidden from THIS
+ * reader (PM25 (c)'s ONE predicate): every note on them is withheld. ONE counted read under a SAVEPOINT
+ * (`readClaimsHiddenFromReader`), only when a precedent exists. `null` ⇔ the read FAILED ⇒ every precedent's note is
+ * withheld (fail CLOSED).
+ */
+async function readPrecedentClaimsHiddenFromReader(
+  ctx: VerifierConsoleContext,
+  precedents: readonly claim.VerifierDecisionRecord[],
+  reads: { bump(): void },
+): Promise<HiddenClaims> {
+  if (precedents.length === 0) return new Set();
+  reads.bump();
+  return readClaimsHiddenFromReader(ctx.client, ctx.db, ctx.pariwarId, precedents.map((d) => d.claimCaseId), ctx.actorId, {
+    label: 'console_precedents_own_visit_pending',
+    ...(ctx.log ? { log: ctx.log } : {}),
+  });
+}
+
 async function assemblePriorComments(
   deps: AppDeps,
   ctx: VerifierConsoleContext,
-  claimCaseId: ids.ClaimId,
+  result: claim.PriorVerifierDecisionsResult | { readonly status: 'unavailable' },
+  /** D1 B + V1 A / X2 — why EVERY note on THIS claim is withheld from this reader (`null` ⇔ ⛔ withheld). */
+  withheld: NoteWithheldReason | null,
 ): Promise<PriorVerifierCommentsSection> {
   try {
-    const result = await claim.getPriorVerifierDecisions(ctx.db, ids.pariwarId(ctx.pariwarId), claimCaseId);
-    if (result.status === 'not_available_yet') return { status: 'not_available_yet' };
-    if (result.status === 'empty') return { status: 'empty' };
+    if (result.status !== 'present') return { status: result.status };
     return {
       status: 'present',
       // The domain read returns the rationale AS STORED ciphertext (NULL → ''); decrypt here AFTER
       // authorization (D-G — never the accessor). Section (e)'s contract is non-null: NULL/'' AND a
-      // fail-soft decrypt failure both map to '' (Task 3 NULL-mapping rule).
+      // fail-soft decrypt failure both map to '' (Task 3 NULL-mapping rule) — and (S18 / V6, D1 B + V1 A) so does EVERY
+      // note — approval, denial, escalation — for a hidden reader (⛔ never decrypted, ⛔ not a placeholder; uniform, so ⛔ no
+      // per-note signal).
       comments: await Promise.all(
         result.decisions.map(async (d) => ({
           outcome: d.outcome,
           reasonCode: d.reasonCode,
           rationale:
-            d.rationale === '' ? '' : (await safeDecrypt(() => decryptVerifierRationale(d.rationale, ctx.pariwarId, deps.encryption), ctx, 'verifier_decision.rationale')) ?? '',
+            d.rationale === '' || withheld !== null
+              ? ''
+              : (await safeDecrypt(() => decryptVerifierRationale(d.rationale, ctx.pariwarId, deps.encryption), ctx, 'verifier_decision.rationale')) ?? '',
+          rationaleWithheld: withheld, // Y3 — on EVERY entry of a hidden reader, note or ⛔ note (presence ⛔ signals)
           actorDisplay: d.actorDisplay,
           decidedAt: d.decidedAt.toISOString(),
           claimCaseId: d.claimCaseId,
@@ -1156,23 +1241,27 @@ async function assemblePriorComments(
 async function assembleRecentPrecedents(
   deps: AppDeps,
   ctx: VerifierConsoleContext,
-  claimCaseId: ids.ClaimId,
+  result: claim.RecentInScopePrecedentsResult | { readonly status: 'unavailable' },
+  /** D1 B + V1 A — the precedent claims hidden from this reader (`null` ⇔ that read failed ⇒ withhold every note). */
+  hiddenClaims: HiddenClaims,
 ): Promise<RecentPrecedentsSection> {
   try {
-    const result = await claim.getRecentInScopePrecedents(ctx.db, ids.pariwarId(ctx.pariwarId), claimCaseId);
-    if (result.status === 'not_available_yet') return { status: 'not_available_yet' };
-    if (result.status === 'empty') return { status: 'empty' };
+    if (result.status !== 'present') return { status: result.status };
     return {
       status: 'present',
       // Decrypt AFTER authorization (D-G). Section (f)'s contract is nullable: NULL/'' AND a fail-soft
-      // decrypt failure map to `null` (Task 3 NULL-mapping rule — (f) may pass null through).
+      // decrypt failure map to `null` (Task 3 NULL-mapping rule — (f) may pass null through) — and (S18 / V6, D1 B + V1 A)
+      // so does EVERY note on a precedent claim the reader is hidden on.
       precedents: await Promise.all(
         result.precedents.map(async (d) => ({
           claimCaseId: d.claimCaseId,
           outcome: d.outcome,
           reasonCode: d.reasonCode,
           rationale:
-            d.rationale === '' ? null : (await safeDecrypt(() => decryptVerifierRationale(d.rationale, ctx.pariwarId, deps.encryption), ctx, 'verifier_decision.rationale')),
+            d.rationale === '' || withheldReasonOn(hiddenClaims, d.claimCaseId) !== null
+              ? null
+              : (await safeDecrypt(() => decryptVerifierRationale(d.rationale, ctx.pariwarId, deps.encryption), ctx, 'verifier_decision.rationale')),
+          rationaleWithheld: withheldReasonOn(hiddenClaims, d.claimCaseId), // Y3 — on EVERY entry, note or ⛔ note
           actorDisplay: d.actorDisplay,
           decidedAt: d.decidedAt.toISOString(),
         })),
@@ -1240,7 +1329,10 @@ export function createVerifierConsoleHandlers(deps: AppDeps) {
         onCallbackMobileShown: (pingId, basis) => shownPings.push({ pingId, basis }),
         callbackViewer,
       });
-      for (const { pingId, basis } of shownPings) {
+      // ⭐ Code review round 2 (S8) — only for a section the packet ACTUALLY carries: the wire mapping runs after the
+      // assembler reported its numbers, and its `catch → unavailable` would otherwise leave a line for a number never shown.
+      const delivered = packet.peerMesh?.status === 'present' ? shownPings : [];
+      for (const { pingId, basis } of delivered) {
         emitAuthAudit(deps, request, 'admin_verifier_console.peer_callback_mobile_shown', {
           actorId,
           pariwarId: scopeTx.pariwarId,

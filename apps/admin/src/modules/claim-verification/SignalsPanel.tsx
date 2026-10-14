@@ -16,6 +16,7 @@ import type {
 import type { ReactElement, ReactNode } from 'react';
 
 import { AuditTrail } from './AuditTrailEntry.js';
+import { WithheldNote, withheldNoteWords } from './WithheldNote.js';
 import {
   ConcealmentAssessmentControl,
   type ConcealmentAssessmentSubmit,
@@ -320,7 +321,16 @@ export function SignalsPanel({
                   </span>
                   <span className="text-xs opacity-70">{a.status}</span>
                 </p>
-                {a.notes ? <p className="mt-1 text-xs opacity-80">{a.notes}</p> : null}
+                {/* Story 6.27b code review round 2 (X2) — WITHHELD notes are said in words (⛔ never an absent line). */}
+                {a.notesWithheld != null ? (
+                  <p className="mt-1 text-xs opacity-80" data-testid="ground-inspection-notes">
+                    <WithheldNote reason={a.notesWithheld} />
+                  </p>
+                ) : a.notes ? (
+                  <p className="mt-1 text-xs opacity-80" data-testid="ground-inspection-notes">
+                    {a.notes}
+                  </p>
+                ) : null}
                 <InspectorRecordLines assignment={a} />
                 {(['original_certificate', 'site'] as const).map((kind) => {
                   const photos = a.photos.filter((ph) => ph.photoKind === kind);
@@ -335,7 +345,12 @@ export function SignalsPanel({
                           <img
                             key={ph.photoId}
                             src={ph.signedUrl}
-                            alt={ph.caption ?? 'Inspection photo'}
+                            // Story 6.27b code review round 2 (X2) — a WITHHELD caption is said (⛔ never silently the generic alt).
+                            alt={
+                              ph.captionWithheld != null
+                                ? `Inspection photo — ${withheldNoteWords(ph.captionWithheld)}`
+                                : (ph.caption ?? 'Inspection photo')
+                            }
                             className="h-16 w-16 rounded object-cover"
                           />
                         ))}
@@ -382,6 +397,7 @@ export function SignalsPanel({
               actorDisplay: c.actorDisplay,
               decidedAt: c.decidedAt,
               rationale: c.rationale,
+              rationaleWithheld: c.rationaleWithheld,
             }))}
           />
         ) : (
@@ -399,6 +415,8 @@ export function SignalsPanel({
               actorDisplay: p.actorDisplay ?? t.audit.unattributed,
               decidedAt: p.decidedAt,
               ...(p.rationale != null ? { rationale: p.rationale } : {}),
+              rationaleWithheld: p.rationaleWithheld,
+              otherClaim: true, // review Y4 — a precedent is ANOTHER claim's
             }))}
           />
         ) : (

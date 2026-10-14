@@ -254,7 +254,9 @@ export function VerifierConsoleRoute(): ReactElement {
     liveComment != null
       ? {
           reasonCode: liveComment.reasonCode as DecisionSubmit['reasonCode'],
-          rationale: liveComment.rationale,
+          // ⭐ Story 6.27b code review round 2 (X2) — ⛔ never pre-fill from a WITHHELD note: the field starts EMPTY (the
+          // reader writes their own), whatever text the wire carried — a withheld note is ⛔ never echoed into a form.
+          rationale: liveComment.rationaleWithheld == null ? liveComment.rationale : '',
         }
       : undefined;
 

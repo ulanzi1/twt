@@ -67,7 +67,8 @@ const ScheduleBody = z
     block: z.string().min(1).optional(),
     inspectionStage: StageEnum,
     inspectionSiteType: SiteTypeEnum,
-    inspectorActorId: z.string().min(1),
+    // Story 6.27b code review round 2 (V2) — trimmed here (a blank id is a 400), lower-cased by the writer's ONE normaliser.
+    inspectorActorId: z.string().trim().min(1),
     scheduledAt: z.string().datetime(),
     // Plaintext PII — the route encrypts before insert (never persisted/logged in the clear).
     locationDetail: z.string().min(1).nullish(),

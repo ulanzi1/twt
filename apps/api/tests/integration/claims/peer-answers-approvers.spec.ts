@@ -23,7 +23,9 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
 // ⭐ Fault seams — off by default. `warnings` fails the warnings read (the flags' source); `answers` fails the section's
 // answers read (a REAL SQL error first, so the SAVEPOINT path runs).
-const fault = vi.hoisted(() => ({ warnings: false, answers: false }));
+// Code review round 2 (S8): `mapping` throws in the WIRE mapping (`assemblePeerMeshSection`'s responder count), AFTER the
+// assembler has reported the numbers it showed — the section degrades to `unavailable` there.
+const fault = vi.hoisted(() => ({ warnings: false, answers: false, mapping: false }));
 vi.mock('@twt/domain', async (importActual) => {
   const actual = await importActual<typeof import('@twt/domain')>();
   const { sql } = await import('drizzle-orm');
@@ -39,6 +41,10 @@ vi.mock('@twt/domain', async (importActual) => {
       ...actual.claim,
       readClaimApprovalWarnings: failing(() => fault.warnings, actual.claim.readClaimApprovalWarnings),
       readPeerAnswersForClaim: failing(() => fault.answers, actual.claim.readPeerAnswersForClaim),
+      distinctPeerMeshResponderCount: (...a: Parameters<typeof actual.claim.distinctPeerMeshResponderCount>) => {
+        if (fault.mapping) throw new Error('simulated: the wire mapping failed');
+        return actual.claim.distinctPeerMeshResponderCount(...a);
+      },
     },
   };
 });
@@ -77,6 +83,7 @@ describe.skipIf(!hasDatabase)('Story 6.27b — the approvers\' read of the neigh
   afterAll(async () => {
     fault.warnings = false;
     fault.answers = false;
+    fault.mapping = false;
     await app.close();
     const c = await td.pool.connect();
     try {
@@ -291,6 +298,18 @@ describe.skipIf(!hasDatabase)('Story 6.27b — the approvers\' read of the neigh
       });
     }
 
+    // Code review round 2 (S15) — a votable state WITH a live R9 routing: the approving step is R9's, ⛔ the final vote's.
+    for (const state of ['verifier_approved', 'state_trustee_freeze'] as const) {
+      it(`arm 1 yields to arm 3 — \`${state}\` with a LIVE R9 routing ⇒ audited \`r9_vote\`, ⛔ \`final_vote\``, async () => {
+        const w = await claimAt(state);
+        await route(w);
+        const pa = await staff(w.pariwarId, 'pariwar_admin');
+        const r = await read(pa, w);
+        expect(r.status, JSON.stringify(r.body)).toBe(200);
+        expect(readLines(w.claimCaseId).at(-1)?.context).toMatchObject({ step: 'r9_vote' });
+      });
+    }
+
     it('arm 4 — the Super Admin on a claim HELD for an escalated correction closure; the Pariwar Admin (⛔ the key) ⇒ 404', async () => {
       const w = await claimAt('verifier_review');
       await hold(w);
@@ -459,6 +478,39 @@ describe.skipIf(!hasDatabase)('Story 6.27b — the approvers\' read of the neigh
       }
       expect(shownLines(w.claimCaseId)).toEqual([]);
       expect(readLines(w.claimCaseId).at(-1)?.context).toMatchObject({ section: 'unavailable' });
+    });
+
+    // Code review round 2 (S8) — the assembler has ALREADY reported the number when the wire mapping fails: the line is
+    // emitted only for a section the response / packet actually carries (`present`).
+    it('a WIRE-MAPPING failure after the number was assembled ⇒ `unavailable` and ⛔ showing line — the approvers\' read AND the console', async () => {
+      const w = await claimAt('verifier_approved');
+      const [n] = await neighbours(w, [true]);
+      await put(w, n!, 'has_died', { codes: ['died'] });
+      await put(w, n!, 'callback_consent', { codes: ['yes'] });
+      const pa = await staff(w.pariwarId, 'pariwar_admin');
+      const sa = await staff(w.pariwarId, 'super_admin');
+      const consoleLines = () =>
+        td.auditSink
+          .ofType('admin_verifier_console.peer_callback_mobile_shown')
+          .filter((e) => (e.context as Json | undefined)?.['claim_case_id'] === w.claimCaseId);
+      fault.mapping = true;
+      try {
+        const r = await read(pa, w);
+        expect(r.status).toBe(200);
+        expect(r.body.peerMesh).toEqual({ status: 'unavailable' });
+        const res = await sa.client.inject({ method: 'GET', url: consoleUrl(w.pariwarId, w.claimCaseId) });
+        expect(res.statusCode, res.body).toBe(200);
+        expect((res.json() as { packet: { peerMesh?: Json } }).packet.peerMesh).toEqual({ status: 'unavailable' });
+      } finally {
+        fault.mapping = false;
+      }
+      expect(shownLines(w.claimCaseId)).toEqual([]);
+      expect(consoleLines()).toEqual([]);
+      // The control: the same reads with the mapping intact DO show the number and audit it once each.
+      expect(pingsOf((await read(pa, w)).body)[0]!.callbackMobile).toEqual({ status: 'shown', text: MOBILE });
+      expect(shownLines(w.claimCaseId)).toHaveLength(1);
+      expect((await consolePings(sa, w))[0]!.callbackMobile).toEqual({ status: 'shown', text: MOBILE });
+      expect(consoleLines()).toHaveLength(1);
     });
 
     it('the CONSOLE — the District Admin and a verifier: a "Yes" only (either version); the Super Admin: "No" / unanswered / ⛔ reply (`super_admin`), ⛔ a never-texted ping', async () => {

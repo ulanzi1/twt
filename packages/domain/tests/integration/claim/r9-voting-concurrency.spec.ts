@@ -29,10 +29,15 @@ import {
   openR9VotingSession,
   prepareR9VoteCiphertext,
   projectClaimState,
+  R9NoLiveSessionError,
   R9SessionExistsError,
+  OwnGroundVisitPendingError,
+  scheduleGroundInspection,
+  supersedeR9VotingSession,
 } from '../../../src/claim/index.js';
 import * as schema from '../../../src/schema/index.js';
 import { seedNomineeNameCheck } from '../_helpers.js';
+import { attachTextedPings, savePeerFixtureAnswer } from './_peer-reply-fixtures.js';
 
 const DATABASE_URL = process.env['DATABASE_URL'];
 const hasDatabase = Boolean(DATABASE_URL);
@@ -272,6 +277,135 @@ describe.skipIf(!hasDatabase)('R9 voting — two-connection concurrency + forced
       expect(failed).toHaveLength(1);
       // The loser is a session-exists conflict (or a raw 23505 that the writer maps to it).
       expect(failed[0]!.reason).toBeInstanceOf(R9SessionExistsError);
+    },
+    TIMEOUT,
+  );
+
+  for (const withPeerKey of [false, true]) {
+    it(
+      `6.27b R1/BD4 — an approve vote waits for a concurrent visit assignment, then refuses neutrally (${withPeerKey ? 'with' : 'without'} a neighbour key)`,
+      async () => {
+        const claimCaseId = await seedRoutedClaim();
+        await onOwnTx((c) => openR9VotingSession(c, openInput(claimCaseId)));
+        if (withPeerKey) {
+          await onOwnTx(async (c) => {
+            const deceased = (await c.query<{ deceased_member_id: string }>('SELECT deceased_member_id FROM claims WHERE claim_case_id = $1', [claimCaseId])).rows[0]!.deceased_member_id;
+            const [ping] = await attachTextedPings(c, PARIWAR, claimCaseId, deceased);
+            await savePeerFixtureAnswer(c, PARIWAR, ping!, 'has_died', { codes: ['not_died'] });
+          });
+        }
+        const holder = await pool.connect();
+        const waiter = await pool.connect();
+        let pending: Promise<PromiseSettledResult<Awaited<ReturnType<typeof castR9Vote>>>> | undefined;
+        try {
+          for (const c of [holder, waiter]) {
+            await c.query('BEGIN');
+            await c.query('SET LOCAL ROLE twt_app');
+            await setPariwarScope(c, PARIWAR);
+          }
+          // The REAL scheduling writer takes and holds the claim row. Its assignment is still uncommitted, so
+          // an unlocked BD4 read would see no assignment and either write a vote or disclose the peer kind.
+          await scheduleGroundInspection(holder, {
+            pariwarId: PARIWAR,
+            claimCaseId,
+            district: 'Patna',
+            inspectionStage: 'initial',
+            inspectionSiteType: 'family_residence',
+            inspectorActorId: PANEL[0]!,
+            scheduledAt: new Date(),
+            scheduledByActor: TRUSTEE,
+            idempotencyKey: randomUUID(),
+          });
+          const holderPid = Number((await holder.query('SELECT pg_backend_pid() AS pid')).rows[0].pid);
+          const waiterPid = Number((await waiter.query('SELECT pg_backend_pid() AS pid')).rows[0].pid);
+          pending = castR9Vote(waiter, voteInput(claimCaseId, PANEL[0]!, 'approve')).then(
+            (value) => ({ status: 'fulfilled' as const, value }),
+            (reason: unknown) => ({ status: 'rejected' as const, reason }),
+          );
+          let waited = false;
+          const deadline = Date.now() + 3000;
+          while (Date.now() < deadline) {
+            const { rows } = await pool.query<{ blockers: number[] }>('SELECT pg_blocking_pids($1) AS blockers', [waiterPid]);
+            if (rows[0]?.blockers.map(Number).includes(holderPid)) {
+              waited = true;
+              break;
+            }
+            await new Promise((r) => setTimeout(r, 25));
+          }
+          expect(waited, 'the vote must serialize on the scheduling connection, not read uncommitted visibility').toBe(true);
+          await holder.query('COMMIT');
+          const outcome = await pending;
+          expect(outcome.status).toBe('rejected');
+          if (outcome.status !== 'rejected') throw new Error('hidden actor voted');
+          expect(outcome.reason).toBeInstanceOf(OwnGroundVisitPendingError);
+          expect(outcome.reason).not.toHaveProperty('kinds');
+          await waiter.query('ROLLBACK');
+          const votes = await pool.query('SELECT vote_id FROM claim_r9_votes WHERE claim_case_id = $1', [claimCaseId]);
+          const records = await pool.query('SELECT record_id FROM claim_warning_approvals WHERE claim_case_id = $1', [claimCaseId]);
+          expect(votes.rows).toHaveLength(0);
+          expect(records.rows).toHaveLength(0);
+        } finally {
+          await holder.query('ROLLBACK').catch(() => undefined);
+          if (pending) await pending;
+          await waiter.query('ROLLBACK').catch(() => undefined);
+          holder.release();
+          waiter.release();
+        }
+      },
+      TIMEOUT,
+    );
+  }
+
+  it(
+    '6.27b S7 — an approve vote that waited on the claim row re-reads the session: one superseded meanwhile ⇒ no vote',
+    async () => {
+      const claimCaseId = await seedRoutedClaim();
+      const { session } = await onOwnTx((c) => openR9VotingSession(c, openInput(claimCaseId)));
+      const holder = await pool.connect();
+      const waiter = await pool.connect();
+      let pending: Promise<PromiseSettledResult<Awaited<ReturnType<typeof castR9Vote>>>> | undefined;
+      try {
+        for (const c of [holder, waiter]) {
+          await c.query('BEGIN');
+          await c.query('SET LOCAL ROLE twt_app');
+          await setPariwarScope(c, PARIWAR);
+        }
+        // A self-mode `closeClaimIfDeathPaid`'s shape: the claim row held WITHOUT the R9 key, and the live session
+        // superseded through the same actor-free core (`endLiveProcesses` step 3).
+        await holder.query('SELECT claim_case_id FROM claims WHERE pariwar_id = $1 AND claim_case_id = $2 FOR UPDATE', [PARIWAR, claimCaseId]);
+        const holderPid = Number((await holder.query('SELECT pg_backend_pid() AS pid')).rows[0].pid);
+        const waiterPid = Number((await waiter.query('SELECT pg_backend_pid() AS pid')).rows[0].pid);
+        pending = castR9Vote(waiter, voteInput(claimCaseId, PANEL[1]!, 'approve')).then(
+          (value) => ({ status: 'fulfilled' as const, value }),
+          (reason: unknown) => ({ status: 'rejected' as const, reason }),
+        );
+        let waited = false;
+        const deadline = Date.now() + 3000;
+        while (Date.now() < deadline) {
+          const { rows } = await pool.query<{ blockers: number[] }>('SELECT pg_blocking_pids($1) AS blockers', [waiterPid]);
+          if (rows[0]?.blockers.map(Number).includes(holderPid)) {
+            waited = true;
+            break;
+          }
+          await new Promise((r) => setTimeout(r, 25));
+        }
+        expect(waited, 'the vote must have read the session, then waited on the claim row').toBe(true);
+        await supersedeR9VotingSession(bindScopedDb(holder), claimCaseId, session.sessionId);
+        await holder.query('COMMIT');
+        const outcome = await pending;
+        expect(outcome.status).toBe('rejected');
+        if (outcome.status !== 'rejected') throw new Error('a vote was written against a superseded session');
+        expect(outcome.reason).toBeInstanceOf(R9NoLiveSessionError);
+        await waiter.query('ROLLBACK');
+        const votes = await pool.query('SELECT vote_id FROM claim_r9_votes WHERE claim_case_id = $1', [claimCaseId]);
+        expect(votes.rows).toHaveLength(0);
+      } finally {
+        await holder.query('ROLLBACK').catch(() => undefined);
+        if (pending) await pending;
+        await waiter.query('ROLLBACK').catch(() => undefined);
+        holder.release();
+        waiter.release();
+      }
     },
     TIMEOUT,
   );

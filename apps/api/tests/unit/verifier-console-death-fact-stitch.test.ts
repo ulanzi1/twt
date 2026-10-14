@@ -21,6 +21,7 @@ const row = (over: Partial<Unstitched> = {}): Unstitched => ({
   refusalReason: null,
   completedAt: '2026-05-02T00:00:00.000Z',
   notes: null,
+  notesWithheld: null,
   structuredFindings: null,
   photos: [],
   originalCertificateVerdict: 'does_not_match',

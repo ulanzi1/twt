@@ -47,6 +47,7 @@ function makeAssignment(over: Partial<api.GroundInspectionAssignmentT> = {}): ap
     locationDetail: null,
     familyContact: null,
     notes: null,
+    notesWithheld: null,
     photos: [],
     // Story 6.26a (GI4 / GI5) — the inspector's record (none until completion).
     originalCertificateVerdict: null,
@@ -244,7 +245,7 @@ describe('<GroundInspectionPage>', () => {
   describe('Story 6.26a — the original certificate and the date of death', () => {
     // `2026-10-07-286` H1 — an original's photo carries the certificate it was taken for; a site photo ⛔ none.
     const originalPhoto = {
-      photoId: 'p-orig', contentType: 'image/jpeg', byteSize: 1, caption: null, signedUrl: 'https://x/p',
+      photoId: 'p-orig', contentType: 'image/jpeg', byteSize: 1, caption: null, captionWithheld: null, signedUrl: 'https://x/p',
       photoKind: 'original_certificate' as const, certificateToken: 'tok-current' as string | null,
     };
     const sitePhoto = { ...originalPhoto, photoId: 'p-site', photoKind: 'site' as const, certificateToken: null };
@@ -282,6 +283,39 @@ describe('<GroundInspectionPage>', () => {
         deathDate: '2026-06-01',
         deathTime: '14:30',
       });
+    });
+
+    // Story 6.27b review Y5 (c) — the two withheld flags are REQUIRED on the wire (as the contract): a row WITHOUT them is
+    // refused by the client schema, ⛔ silently read as "not withheld".
+    it('the client schema REQUIRES `notesWithheld` and `captionWithheld` (`null` accepted; a missing flag refused)', () => {
+      const row = makeAssignment({ photos: [{ ...sitePhoto }] });
+      expect(api.GroundInspectionAssignment.safeParse(row).success).toBe(true);
+      const withoutNotesFlag: Record<string, unknown> = { ...row };
+      delete withoutNotesFlag.notesWithheld;
+      expect(api.GroundInspectionAssignment.safeParse(withoutNotesFlag).success).toBe(false);
+      const photoWithoutFlag: Record<string, unknown> = { ...sitePhoto };
+      delete photoWithoutFlag.captionWithheld;
+      expect(api.GroundInspectionAssignment.safeParse({ ...row, photos: [photoWithoutFlag] }).success).toBe(false);
+    });
+
+    // Story 6.27b code review round 2 (X2) — a WITHHELD caption is SAID in the photo's alt (⛔ silently the generic alt).
+    it('a WITHHELD caption is said in the photo\'s alt; a normal caption unchanged', async () => {
+      vi.mocked(api.listGroundInspection).mockResolvedValue({
+        assignments: [
+          makeAssignment({
+            photos: [
+              { ...sitePhoto, captionWithheld: 'own_visit' },
+              { ...sitePhoto, photoId: 'p-plain', caption: 'The front door', captionWithheld: null },
+            ],
+          }),
+        ],
+      });
+      renderWithClient(<GroundInspectionPage pariwarId={PARIWAR} />);
+      await loadScope();
+      await screen.findByText('inspector-1');
+      const alts = screen.getAllByRole('img').map((img) => img.getAttribute('alt') ?? '');
+      expect(alts.some((alt) => alt.includes('Not shown while a ground visit on this claim is assigned to you.'))).toBe(true);
+      expect(alts).toContain('The front door');
     });
 
     it('Complete stays DISABLED without a photo of the ORIGINAL (a site photo is ⛔ enough), and says so', async () => {

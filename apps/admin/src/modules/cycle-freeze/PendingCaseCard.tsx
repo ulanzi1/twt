@@ -25,6 +25,7 @@ import { useState } from 'react';
 
 import { NomineeNameCheckDisclosure } from '../claim-verification/NomineeNameCheckDisclosure.js';
 import { NeighboursAnswersPanel } from '../claim-verification/NeighboursAnswersPanel.js';
+import { WithheldNote } from '../claim-verification/WithheldNote.js';
 import {
   LaterApprovalWarnings,
   approvalBlockedReason,
@@ -276,7 +277,16 @@ export function PendingCaseCard({
           {case_.verifier_reason_code ? ` · ${verifierReasonCodeLabel(case_.verifier_reason_code)}` : ''}
         </dd>
         <dt>Verifier rationale</dt>
-        <dd>{case_.verifier_rationale ? case_.verifier_rationale : '—'}</dd>
+        {/* Story 6.27b code review round 2 (X2) — a WITHHELD rationale is said in words (⛔ never the dash of "none"). */}
+        <dd data-testid="pending-case-verifier-rationale">
+          {case_.verifier_rationale_withheld != null ? (
+            <WithheldNote reason={case_.verifier_rationale_withheld} />
+          ) : case_.verifier_rationale ? (
+            case_.verifier_rationale
+          ) : (
+            '—'
+          )}
+        </dd>
         <dt>Signals</dt>
         <dd>{case_.signals_summary}</dd>
       </dl>
@@ -491,6 +501,7 @@ export function PendingCaseCard({
           key={case_.claim_case_id}
           pariwarId={pariwarId}
           claimCaseId={case_.claim_case_id}
+          approvalWarnings={warnings}
           testId={`pending-case-neighbours-${case_.claim_case_id}`}
         />
       )}

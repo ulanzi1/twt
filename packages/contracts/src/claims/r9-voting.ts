@@ -24,6 +24,7 @@ import { NomineeNameClericalReason } from './nominee-name-check.js';
 // Story 6.23b — a zod-only leaf (⛔ no sibling import), so this cannot close a cycle.
 import { ApprovalWarningReasonOption, ApprovalWarningsSummary, WarningReasonCode } from './verification-decision.js';
 import { FinallyApprovedElsewhere } from './one-payment-per-death.js';
+import { NoteWithheldFlag, refineWithheldPair } from './withheld-note.js';
 
 // ── R9 vocabulary wire mirror (value-aligned with @twt/domain) ──────────────────────────────
 
@@ -103,7 +104,9 @@ export const R9PanelMember = z
 export type R9PanelMember = z.output<typeof R9PanelMember>;
 
 /** One LIVE vote in the panel model. `rationale` is decrypted AFTER authorization at the route (a distinct
- *  sentinel on decrypt failure — never blank-collapsed; rationale is always present per AC3). */
+ *  sentinel on decrypt failure — never blank-collapsed; rationale is always present per AC3). ⭐ Story 6.27b code review
+ *  round 2 (S18 / V6 / X2) — when WITHHELD the text is `''` and `rationale_withheld` says why (⛔ never blank-collapsed:
+ *  the sibling is the signal). */
 export const R9PanelVote = z
   .object({
     vote_id: z.string().uuid(),
@@ -113,6 +116,9 @@ export const R9PanelVote = z
     cast_at: z.string(),
     clause_version_id: z.string().uuid(),
     rationale: z.string(),
+    /** ⭐ Story 6.27b code review round 2 (X2; `withheld-note.ts`) — REQUIRED: `null` ⇔ ⛔ withheld; else `own_visit` (EVERY
+     *  vote, approve or deny, for a reader whose own ground visit on the claim is pending) or `check_failed`. */
+    rationale_withheld: NoteWithheldFlag,
     /**
      * ⭐ Story 6.23b (RD11; `-279` A2) — does this APPROVE vote's own reason answer EVERY current warning? `false` ⇒
      * finalize would name it and the voter must revise; `null` on a deny vote, and while ⛔ no warning shows (or the
@@ -130,7 +136,9 @@ export const R9PanelVote = z
         message: 'must be null on a deny vote',
       });
     }
-  });
+  })
+  // Y5 (a) — a withheld rationale ⛔ rides beside its words.
+  .superRefine(refineWithheldPair('rationale', 'rationale_withheld', ''));
 export type R9PanelVote = z.output<typeof R9PanelVote>;
 
 /** The running / final tally (panel-size denominator). `cast_votes` is the live-vote count. */
@@ -344,7 +352,8 @@ export type R9SessionResponse = z.output<typeof R9SessionResponse>;
 
 // ── AC8 — the votes-by-trustee transcript ─────────────────────────────────────────────────────
 
-/** One vote in the transcript — bound to its session/panel/rule identity (#13). `rationale` decrypted at route. */
+/** One vote in the transcript — bound to its session/panel/rule identity (#13). `rationale` decrypted at route; `''` and
+ *  `rationale_withheld` set when WITHHELD (Story 6.27b code review round 2, S18 / V6 / X2 — as on the panel). */
 export const R9VotesByTrusteeItem = z
   .object({
     vote_id: z.string().uuid(),
@@ -362,8 +371,12 @@ export const R9VotesByTrusteeItem = z
     /** The session's final outcome (null while still open). */
     session_outcome: R9SessionOutcome.nullable(),
     rationale: z.string(),
+    /** ⭐ Story 6.27b code review round 2 (X2) — REQUIRED: `null` ⇔ ⛔ withheld; else `own_visit` / `check_failed`. */
+    rationale_withheld: NoteWithheldFlag,
   })
-  .strict();
+  .strict()
+  // Y5 (a) — a withheld rationale ⛔ rides beside its words.
+  .superRefine(refineWithheldPair('rationale', 'rationale_withheld', ''));
 export type R9VotesByTrusteeItem = z.output<typeof R9VotesByTrusteeItem>;
 
 export const R9VotesByTrusteeResponse = z

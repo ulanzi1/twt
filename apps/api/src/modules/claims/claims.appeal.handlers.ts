@@ -57,6 +57,7 @@ import { emitAuthAudit } from '../auth/shared/audit.js';
 import { getDisplayName } from '../auth/admin/admin-auth.repo.js';
 import { closeScopeTx, openScopeTx } from '../multi-tenant/scope-tx.js';
 import { underSavepoint } from './later-approval-warnings.js';
+import { readClaimsHiddenFromReader, withheldReasonOn } from './hidden-reader-notes.js';
 import {
   decryptAppealRationale,
   encryptAppealDecisionRationale,
@@ -678,6 +679,21 @@ export function createAppealHandlers(deps: AppDeps) {
           // the REQUESTING panelist has ALSO cast their own vote in this session — before that, withhold every
           // vote's rationale (6.16 review finding).
           const requesterHasVoted = panel.votes.some((v) => v.voterActorId === ctx.actorId);
+          // ⭐ Story 6.27b code review round 2 (V6 — AC7's D1 B + V1 A) — an appeal vote's rationale is a staff note on this
+          // claim: WITHHELD (`null`, as before the requester votes; ⛔ never decrypted) from a reader whose own ground visit
+          // here is pending. Read only when the guard above would decrypt (ONE statement, `hidden-reader-notes.ts`); a
+          // failed read withholds (fail CLOSED).
+          // X2 — `rationale_withheld` names why (`null` ⇔ ⛔ withheld), so a withheld note ⛔ never reads as the guard's `null`.
+          const votesWithheld =
+            requesterHasVoted && panel.votes.length > 0
+              ? withheldReasonOn(
+                  await readClaimsHiddenFromReader(tx.client, tx.tx, ctx.pariwarIdStr, [claimCaseId as string], ctx.actorId, {
+                    label: 'appeal_case_own_visit_pending',
+                    log: request.log,
+                  }),
+                  claimCaseId as string,
+                )
+              : null;
           for (const v of panel.votes) {
             votes.push({
               vote_id: v.voteId,
@@ -685,11 +701,12 @@ export function createAppealHandlers(deps: AppDeps) {
               voter_display: v.voterDisplay,
               vote: v.vote,
               cast_at: v.castAt.toISOString(),
-              rationale: requesterHasVoted
+              rationale: requesterHasVoted && votesWithheld === null
                 ? await decryptAppealRationale(v.rationaleCiphertext, ctx.pariwarIdStr, CLAIM_APPEAL_VOTE_FIELD_CLASS, deps.encryption, (err) =>
                     request.log.error({ err, vote_id: v.voteId }, 'appeal vote rationale decrypt failed'),
                   )
                 : null,
+              rationale_withheld: votesWithheld,
             });
           }
           const panelSize = s.panelActorIds.length;

@@ -70,6 +70,9 @@ export const claimGroundInspectionPhotos = pgTable(
 
     // Operator free-text caption — CAN name a person/place → Tier-1 ciphertext, nullable (#11).
     captionCiphertext: piiColumn(1, 'ground_inspection')('caption_ciphertext'),
+    // ⭐ Story 6.27b code review round 2 (Y8; migration 0159) — the actor who added this photo (its caption's author),
+    // through `normalizeActorId`. NULL on a pre-0159 row (⛔ backfilled — a hidden reader's view withholds it). Non-PII.
+    uploadedByActorId: text('uploaded_by_actor_id'),
 
     // Story 6.26a (GI4) — site | original_certificate. NOT NULL DEFAULT 'site'.
     photoKind: groundInspectionPhotoKindEnum('photo_kind').notNull().default('site'),

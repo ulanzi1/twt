@@ -18,7 +18,20 @@
 import { randomUUID } from 'node:crypto';
 
 import { claim, encryption, geoTree, ids } from '@twt/domain';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+
+// ⭐ Story 6.27b code review round 2 (X6) — the hide read behind the withheld visit notes / captions, failing ON DEMAND with
+// a real SQL error (`SELECT 1/0`) on the request's own handle, so the fail-closed branch runs.
+const fault = vi.hoisted(() => ({ ownVisit: false }));
+vi.mock('@twt/domain', async (importActual) => {
+  const actual = await importActual<typeof import('@twt/domain')>();
+  const { sql } = await import('drizzle-orm');
+  const readOwnVisitPendingClaimIds: typeof actual.claim.readOwnVisitPendingClaimIds = async (db, ...rest) => {
+    if (fault.ownVisit) await (db as unknown as { execute: (q: unknown) => Promise<unknown> }).execute(sql`SELECT 1/0`);
+    return actual.claim.readOwnVisitPendingClaimIds(db, ...rest);
+  };
+  return { ...actual, claim: { ...actual.claim, readOwnVisitPendingClaimIds } };
+});
 
 import type { AppDeps } from '../../../src/context.js';
 import * as service from '../../../src/modules/auth/admin/admin-auth.service.js';
@@ -101,6 +114,7 @@ describe.skipIf(!hasDatabase)('Ground-inspection admin surface — E2E (:5433)',
   });
 
   afterAll(async () => {
+    fault.ownVisit = false;
     await app.close();
     const c = await td.pool.connect();
     try {
@@ -464,6 +478,128 @@ describe.skipIf(!hasDatabase)('Ground-inspection admin surface — E2E (:5433)',
       // Complete gate reads it; renaming it would break the page while every mocked admin test stayed green).
       photos: [expect.objectContaining({ photoKind: 'original_certificate', certificateToken: token })],
     });
+  });
+
+  // ⭐ Story 6.27b code review round 2 (V2) — ONE meaning of "is the assigned inspector": the route-written id is stored
+  // NORMALISED (trimmed, lower-cased), and a LEGACY variant-stored id (written before V2) is hidden from its inspector AND
+  // lets them complete their own visit — ⛔ a person hidden and refused yet unable to finish without an override.
+  it('V2 — a route-written inspector id is stored normalised; a variant-stored row is hidden from its inspector, who completes it themselves', async () => {
+    const pariwarId = randomUUID();
+    const { client, userId } = await authenticate();
+    await grant(userId, pariwarId, 'district_admin', 'district', DISTRICT);
+    const claimCaseId = await seedClaim(pariwarId, { toVerification: true });
+    await seedCertificate(pariwarId, claimCaseId);
+
+    const sched = await schedule(client, pariwarId, claimCaseId, { inspectorActorId: `  ${userId.toUpperCase()}\t` });
+    expect(sched.statusCode, sched.body).toBe(201);
+    const gid = sched.json<{ groundInspectionId: string }>().groundInspectionId;
+    const stored = async () =>
+      (await td.pool.query<{ i: string }>('SELECT inspector_actor_id AS i FROM claim_ground_inspections WHERE ground_inspection_id = $1', [gid])).rows[0]!.i;
+    expect(await stored()).toBe(userId.toLowerCase());
+
+    // A legacy row: the variant written as supplied (before V2's normalise-on-write).
+    await td.pool.query('UPDATE claim_ground_inspections SET inspector_actor_id = $2 WHERE ground_inspection_id = $1', [gid, ` ${userId.toUpperCase()}  `]);
+    const hidden = async () => {
+      const s = await openScopeTx(deps, pariwarId);
+      try {
+        return await claim.isActorOwnVisitPending(s.tx, ids.pariwarId(pariwarId), ids.claimId(claimCaseId), userId);
+      } finally {
+        await closeScopeTx(s, false);
+      }
+    };
+    expect(await hidden()).toBe(true);
+
+    // The inspector completes it THEMSELVES — ⛔ an override (a district_admin holds ⛔ `claim.override_ground_inspection`).
+    const cert = await client.inject({ method: 'GET', url: `${base(pariwarId, claimCaseId)}/${gid}/certificate` });
+    expect(cert.statusCode, cert.body).toBe(200);
+    const token = cert.json<{ certificateToken: string }>().certificateToken;
+    const { body, ct } = multipart(Buffer.from([0xff, 0xd8, 0xff, 0x00]), 'p.jpg', 'image/jpeg', 'front gate', 'original_certificate', false, token);
+    const photo = await client.inject({ method: 'POST', url: `${base(pariwarId, claimCaseId)}/${gid}/photos`, payload: body as unknown as object, headers: { 'content-type': ct } });
+    expect(photo.statusCode, photo.body).toBe(201);
+    const done = await client.inject({ method: 'POST', url: `${base(pariwarId, claimCaseId)}/${gid}/complete`, payload: completeBody(token) });
+    expect(done.statusCode, done.body).toBe(200);
+    // (Had the identity check failed, a district_admin — ⛔ the override key, see the inspector-identity guard test — gets 403.)
+    const row = (await td.pool.query<{ status: string }>('SELECT status FROM claim_ground_inspections WHERE ground_inspection_id = $1', [gid])).rows[0]!;
+    expect(row.status).toBe('completed');
+    expect(await hidden()).toBe(false);
+  });
+
+  // ⭐ Story 6.27b code review round 2 (X6 / Y8 / Y3 — AC7's X1 A and Y1 → A; Y2 A kept) — a visit NOTE and a photo
+  // CAPTION carry their recorded author (migration 0159): a reader whose own visit on the claim is pending sees the ones
+  // THEY wrote (their findings note, their caption); the SCHEDULER's briefing on their visit stays withheld (its author is
+  // the scheduler — Y2 A, ⛔ built until the Panel rules); a legacy row with ⛔ author stays withheld; a row with ⛔ note
+  // reads the SAME as a withheld one for them (Y3 — presence ⛔ signals); another reader sees every note; a FAILED hide
+  // read withholds from every reader (`check_failed`). Location and family contact (operational) stay.
+  it('6.27b Y8 / X6 — the hidden inspector sees their OWN findings note and caption; the scheduler\'s briefing, a legacy row and a note-less row read withheld; another reader sees all; a failed hide read withholds', async () => {
+    const pariwarId = randomUUID();
+    const inspector = await authenticate();
+    await grant(inspector.userId, pariwarId, 'district_admin', 'district', DISTRICT);
+    const scheduler = await authenticate();
+    await grant(scheduler.userId, pariwarId, 'district_admin', 'district', DISTRICT);
+    const claimCaseId = await seedClaim(pariwarId, { toVerification: true });
+    await seedCertificate(pariwarId, claimCaseId);
+    const scheduleOne = async (notes?: string) => {
+      const res = await schedule(scheduler.client, pariwarId, claimCaseId, { inspectorActorId: inspector.userId, locationDetail: '12 MG Road', ...(notes ? { notes } : {}) });
+      expect(res.statusCode, res.body).toBe(201);
+      return res.json<{ groundInspectionId: string }>().groundInspectionId;
+    };
+    const briefed = await scheduleOne('Ask the neighbour on the left first.'); // the scheduler's BRIEFING
+    const own = await scheduleOne(); // the inspector writes their own findings note here
+    const bare = await scheduleOne(); // ⛔ note at all
+    const findings = await inspector.client.inject({ method: 'PATCH', url: `${base(pariwarId, claimCaseId)}/${own}`, payload: { notes: 'My findings so far.' } });
+    expect(findings.statusCode, findings.body).toBe(200);
+    const { body, ct } = multipart(Buffer.from([0xff, 0xd8, 0xff, 0x00]), 'p.jpg', 'image/jpeg', 'front gate', 'site');
+    const photo = await inspector.client.inject({ method: 'POST', url: `${base(pariwarId, claimCaseId)}/${own}/photos`, payload: body as unknown as object, headers: { 'content-type': ct } });
+    expect(photo.statusCode, photo.body).toBe(201);
+    // The authors are recorded through the ONE normaliser (migration 0159).
+    const authors = await td.pool.query<{ id: string; a: string | null }>(
+      'SELECT ground_inspection_id AS id, notes_author_actor_id AS a FROM claim_ground_inspections WHERE claim_case_id = $1',
+      [claimCaseId],
+    );
+    expect(Object.fromEntries(authors.rows.map((r) => [r.id, r.a]))).toEqual({ [briefed]: scheduler.userId.toLowerCase(), [own]: inspector.userId.toLowerCase(), [bare]: null });
+    const uploader = await td.pool.query<{ u: string }>('SELECT uploaded_by_actor_id AS u FROM claim_ground_inspection_photos WHERE ground_inspection_id = $1', [own]);
+    expect(uploader.rows.map((r) => r.u)).toEqual([inspector.userId.toLowerCase()]);
+
+    type Row = { groundInspectionId: string; locationDetail: string | null; notes: string | null; notesWithheld: string | null; photos: { caption: string | null; captionWithheld: string | null }[] };
+    const read = async (who: { client: Client }) => {
+      const res = await who.client.inject({ method: 'GET', url: `${base(pariwarId, claimCaseId)}?district=${DISTRICT}` });
+      expect(res.statusCode, res.body).toBe(200);
+      const byId = new Map(res.json<{ assignments: Row[] }>().assignments.map((a) => [a.groundInspectionId, a]));
+      const of = (id: string) => [byId.get(id)!.notes, byId.get(id)!.notesWithheld];
+      const ownRow = byId.get(own)!;
+      return { location: ownRow.locationDetail, briefed: of(briefed), own: of(own), bare: of(bare), caption: [ownRow.photos[0]!.caption, ownRow.photos[0]!.captionWithheld] };
+    };
+    expect(await read(inspector)).toEqual({
+      location: '12 MG Road',
+      briefed: [null, 'own_visit'], // the scheduler's briefing — ⛔ the inspector's (Y2 A)
+      own: ['My findings so far.', null], // their OWN findings note
+      bare: [null, 'own_visit'], // ⛔ note — the SAME as a withheld one (Y3)
+      caption: ['front gate', null], // their OWN caption
+    });
+    expect(await read(scheduler)).toEqual({
+      location: '12 MG Road',
+      briefed: ['Ask the neighbour on the left first.', null],
+      own: ['My findings so far.', null],
+      bare: [null, null],
+      caption: ['front gate', null],
+    });
+    fault.ownVisit = true;
+    try {
+      expect(await read(scheduler)).toEqual({
+        location: '12 MG Road',
+        briefed: ['Ask the neighbour on the left first.', null], // their OWN briefing — the author is ⛔ withheld from
+        // themselves, even when the hide check fails
+        own: [null, 'check_failed'],
+        bare: [null, 'check_failed'],
+        caption: [null, 'check_failed'],
+      });
+    } finally {
+      fault.ownVisit = false;
+    }
+    // A legacy row (⛔ author recorded — pre-0159) stays withheld from the hidden inspector, even their own words.
+    await td.pool.query('UPDATE claim_ground_inspections SET notes_author_actor_id = NULL WHERE ground_inspection_id = $1', [own]);
+    await td.pool.query('UPDATE claim_ground_inspection_photos SET uploaded_by_actor_id = NULL WHERE ground_inspection_id = $1', [own]);
+    expect(await read(inspector)).toMatchObject({ own: [null, 'own_visit'], caption: [null, 'own_visit'] });
   });
 
   it('mandatory-photo completion: complete with zero photos → 409 ground_inspection.photo_required', async () => {

@@ -357,6 +357,54 @@ describe.skipIf(!hasDatabase)('ground inspection (PARIWAR_A scope)', () => {
     ).rejects.toBeInstanceOf(GroundInspectionPhotoLimitError);
   });
 
+  // ⭐ Story 6.27b code review round 2 (Y8; migration 0159) — EVERY notes writer records the note's author through the ONE
+  // normaliser (schedule / reschedule: the scheduler; findings / complete / refusal: the acting actor — the override holder
+  // when used); ⛔ author for a schedule with ⛔ note; every photo records its uploader.
+  it('6.27b Y8 — every notes writer records the note author (normalised); a note-less schedule records none; every photo records its uploader', async () => {
+    const { client } = getTx();
+    const cid = toClaimId(randomUUID());
+    const mid = toMemberId(randomUUID());
+    await enterAppScope(client, PARIWAR_A);
+    await driveToVerification(client, cid, mid);
+    const { uploadId } = await seedDeathCertificate(client, { pariwarId: PARIWAR_A, claimCaseId: cid });
+    const SCHEDULER = ADMIN.toUpperCase(); // (the event's actor id is a uuid column — a case variant only)
+    const OVERRIDER = '77777777-7777-7777-7777-777777777777';
+    const briefed = (await scheduleGroundInspection(client, scheduleInput(cid, { idempotencyKey: randomUUID(), notesCiphertext: 'enc:v1:briefing', scheduledByActor: SCHEDULER }))).groundInspection;
+    expect(briefed.notesAuthorActorId).toBe(ADMIN);
+    const bare = (await scheduleGroundInspection(client, scheduleInput(cid, { idempotencyKey: randomUUID() }))).groundInspection;
+    expect(bare.notesAuthorActorId).toBeNull();
+    const rescheduled = (
+      await rescheduleGroundInspection(client, {
+        pariwarId: PARIWAR_A,
+        groundInspectionId: bare.groundInspectionId,
+        idempotencyKey: randomUUID(),
+        district: 'Patna',
+        inspectionStage: 'initial',
+        inspectionSiteType: 'family_residence',
+        inspectorActorId: INSPECTOR,
+        scheduledAt: new Date('2026-07-11T09:00:00Z'),
+        scheduledByActor: SCHEDULER,
+        notesCiphertext: 'enc:v1:re-briefing',
+      })
+    ).groundInspection;
+    expect(rescheduled.notesAuthorActorId).toBe(ADMIN);
+    const findings = await recordGroundInspectionFindings(client, { pariwarId: PARIWAR_A, groundInspectionId: rescheduled.groundInspectionId, actingActorId: INSPECTOR.toUpperCase(), notesCiphertext: 'enc:v1:findings' });
+    expect(findings.notesAuthorActorId).toBe(INSPECTOR);
+    const photo = await addGroundInspectionPhoto(client, {
+      pariwarId: PARIWAR_A, groundInspectionId: rescheduled.groundInspectionId, actingActorId: ` ${INSPECTOR} `,
+      storageObjectKey: 'k-y8', contentType: 'image/jpeg', byteSize: 1, photoKind: 'original_certificate', comparedCertificateUploadId: uploadId,
+    });
+    expect(photo.uploadedByActorId).toBe(INSPECTOR);
+    // Completion by an OVERRIDE holder — the note's author is the acting actor.
+    const done = await completeGroundInspection(client, completeInput(rescheduled.groundInspectionId, uploadId, { actingActorId: OVERRIDER, override: { byActorId: OVERRIDER }, notesCiphertext: 'enc:v1:completion' }));
+    expect(done.groundInspection.notesAuthorActorId).toBe(OVERRIDER);
+    const refused = await recordGroundInspectionRefusal(client, {
+      pariwarId: PARIWAR_A, groundInspectionId: briefed.groundInspectionId, actingActorId: INSPECTOR,
+      disposition: 'photo_refused', refusalReason: 'family_refused_photography', notesCiphertext: 'enc:v1:refusal',
+    });
+    expect(refused.notesAuthorActorId).toBe(INSPECTOR);
+  });
+
   it('AC4a refusal: a valid (disposition, reason) pair + mandatory note sets the disposition, emits NO completed event; a mismatched pair is rejected', async () => {
     const { client, tx } = getTx();
     const cid = toClaimId(randomUUID());

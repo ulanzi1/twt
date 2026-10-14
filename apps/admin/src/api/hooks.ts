@@ -6,7 +6,8 @@
 // + acknowledge are pessimistic/server-confirmed mutations (§4.2) that invalidate
 // the history so the banner + table re-derive from fresh server state.
 
-import { QueryClient, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { QueryClient, useMutation, useQuery, useQueryClient, type Query } from '@tanstack/react-query';
+import { useCallback } from 'react';
 import type {
   DecideModerationAppealRequest,
   AddPariwarRequest,
@@ -704,31 +705,40 @@ export function useRecordHelplineNomineeBank(pariwarId: string, claimCaseId: str
 
 // ── The neighbours' answers for a LATER approver (Story 6.27b, PM24) ────────────────────────────────────
 export const claimPeerAnswersKey = (pariwarId: string, claimCaseId: string) => ['claim-peer-answers', pariwarId, claimCaseId] as const;
+const claimPeerAnswersReadKey = (pariwarId: string, claimCaseId: string, readId: string) =>
+  [...claimPeerAnswersKey(pariwarId, claimCaseId), readId] as const;
 
 /**
- * The neighbours' answers, ON DEMAND — the `useNomineeNameCheck` shape and posture: `enabled` is the disclosure's OPEN
- * state, so ⛔ request fires as a side effect of rendering a card (up to 1,500 on the cycle-freeze list). Each fetch is an
+ * The neighbours' answers, ON DEMAND — mounted ONLY inside an open disclosure, so ⛔ request fires as a side effect of
+ * rendering a card (up to 1,500 on the cycle-freeze list). Each opening has its OWN `readId`, so another disclosure's
+ * cached response can ⛔ never be displayed before this read rechecks visibility. Each fetch is an
  * AUDITED read that may decrypt a call-back number ⇒ ⛔ refetch on window focus or reconnect (an audit line for a read
  * nobody performed) and ⛔ automatic retry (each open is ONE read; a failure shows "could not be shown" and the approver
- * re-opens — a 404 is ⛔ at an approving step, a settled answer).
+ * re-opens — a 404 is ⛔ at an approving step, a settled answer). ⛔ Never matched by a broad invalidation either — see
+ * `isNotAnAuditedOnDemandRead` (review S2).
+ * ⚠ DEV ONLY (review S16): under `<StrictMode>` (`main.tsx`) ONE opening issues TWO audited reads — React's simulated
+ * unmount runs the forget/cancel cleanup, which aborts the first fetch (its consumed `signal`), and the simulated remount
+ * fetches again. A development server's audit trail shows the pair; a production build (⛔ no StrictMode double-invoke) is
+ * unaffected — one opening, one read.
  */
-export function useClaimPeerAnswers(pariwarId: string, claimCaseId: string, enabled = true) {
+export function useClaimPeerAnswers(pariwarId: string, claimCaseId: string, readId: string) {
   return useQuery({
-    queryKey: claimPeerAnswersKey(pariwarId, claimCaseId),
-    queryFn: () => api.getClaimPeerAnswers(pariwarId, claimCaseId),
-    enabled,
+    queryKey: claimPeerAnswersReadKey(pariwarId, claimCaseId, readId),
+    queryFn: ({ signal }) => api.getClaimPeerAnswers(pariwarId, claimCaseId, signal),
+    gcTime: 0,
+    refetchOnMount: false,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
     retry: false,
   });
 }
 
-/** ⭐ FORGET the answers (names, a number) when the disclosure CLOSES — a reopen is a fresh, audited read. */
-export function useForgetClaimPeerAnswers(pariwarId: string, claimCaseId: string) {
+/** ⭐ FORGET/cancel THIS opening on close, unmount or scope change — a reopen is a fresh, audited read. */
+export function useForgetClaimPeerAnswers(pariwarId: string, claimCaseId: string, readId: string) {
   const qc = useQueryClient();
-  return () => {
-    qc.removeQueries({ queryKey: claimPeerAnswersKey(pariwarId, claimCaseId), exact: true });
-  };
+  return useCallback(() => {
+    qc.removeQueries({ queryKey: claimPeerAnswersReadKey(pariwarId, claimCaseId, readId), exact: true });
+  }, [qc, pariwarId, claimCaseId, readId]);
 }
 
 // ── Nominee NAME CHECK (Story 6.18) ──────────────────────────────────────────
@@ -781,6 +791,21 @@ export function useForgetNomineeNameCheck(pariwarId: string, claimCaseId: string
       exact: true,
     });
   };
+}
+
+/**
+ * ⭐ Story 6.27b (review S2) — the predicate every BROAD invalidation passes, so it can ⛔ never refetch an on-demand,
+ * AUDITED read: the neighbours' answers (`claim-peer-answers`) and the nominee name check (`nominee-name-check`). Each
+ * fetch decrypts a living person's PII and writes an audit line that must mean a human LOOKED — an open disclosure
+ * refetched as a side effect of an UNRELATED write (e.g. "Close this claim") is a read nobody performed. A write that
+ * really changes one of them invalidates it by its OWN key (the name-check writes), a deliberate act by the same human.
+ */
+const AUDITED_ON_DEMAND_READ_PREFIXES: ReadonlySet<unknown> = new Set([
+  claimPeerAnswersKey('', '')[0],
+  nomineeNameCheckKey('', '')[0],
+]);
+export function isNotAnAuditedOnDemandRead(query: Query): boolean {
+  return !AUDITED_ON_DEMAND_READ_PREFIXES.has(query.queryKey[0]);
 }
 
 /**

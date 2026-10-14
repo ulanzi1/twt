@@ -20,19 +20,24 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
 // ⭐ Trap 15's fault seam — the handlers' warnings reads, made to fail ON DEMAND (a real SQL error first, so the SAVEPOINT
 // path is exercised). Off by default: every other test runs the real readers.
-const fault = vi.hoisted(() => ({ on: false }));
+// Code review round 2 (V4) — the OWN-VISIT (hide) reads, failing on demand the same way: `ownVisitBulk` the set-based
+// read (`readOwnVisitPendingClaimIds` — every list surface and `readClaimsHiddenFromReader`), `ownVisitOne` the one-claim
+// read (`isActorOwnVisitPending` — the R9 panel), `hideCheck` the console's peer-section hide (`isPeerSectionHiddenFromActor`
+// — the V11 path behind the console's prior comments).
+const fault = vi.hoisted(() => ({ on: false, ownVisitBulk: false, ownVisitOne: false, hideCheck: false }));
 vi.mock('@twt/domain', async (importActual) => {
   const actual = await importActual<typeof import('@twt/domain')>();
   const { sql } = await import('drizzle-orm');
-  const failing =
-    <A extends unknown[], R>(fn: (...a: A) => Promise<R>) =>
+  const failingWhen =
+    <A extends unknown[], R>(on: () => boolean, fn: (...a: A) => Promise<R>) =>
     async (...a: A): Promise<R> => {
-      if (fault.on) {
+      if (on()) {
         const db = a[0] as { execute: (q: unknown) => Promise<unknown> };
         await db.execute(sql`SELECT 1/0`);
       }
       return fn(...a);
     };
+  const failing = <A extends unknown[], R>(fn: (...a: A) => Promise<R>) => failingWhen(() => fault.on, fn);
   // EA10's late arm runs INSIDE the domain read — reached through a db whose `execute` turns that arm's own statement
   // into a real SQL error (the domain's SAVEPOINT must keep the request's transaction usable).
   type Exec = { execute: (q: unknown) => Promise<unknown>; dialect: { sqlToQuery: (q: unknown) => { sql: string } } };
@@ -54,9 +59,22 @@ vi.mock('@twt/domain', async (importActual) => {
       readClaimApprovalWarnings: failing(actual.claim.readClaimApprovalWarnings),
       readClaimApprovalWarningsBulk: failing(actual.claim.readClaimApprovalWarningsBulk),
       listClaimsUnderCorrection,
+      readOwnVisitPendingClaimIds: failingWhen(() => fault.ownVisitBulk, actual.claim.readOwnVisitPendingClaimIds),
+      isActorOwnVisitPending: failingWhen(() => fault.ownVisitOne, actual.claim.isActorOwnVisitPending),
+      isPeerSectionHiddenFromActor: failingWhen(() => fault.hideCheck, actual.claim.isPeerSectionHiddenFromActor),
     },
   };
 });
+
+/** Run `fn` with the named hide read(s) failing (V4). */
+async function withHideFault<T>(which: readonly ('ownVisitBulk' | 'ownVisitOne' | 'hideCheck')[], fn: () => Promise<T>): Promise<T> {
+  for (const k of which) fault[k] = true;
+  try {
+    return await fn();
+  } finally {
+    for (const k of which) fault[k] = false;
+  }
+}
 
 /** Run `fn` with every warnings read failing (Trap 15). */
 async function withFault<T>(fn: () => Promise<T>): Promise<T> {
@@ -80,6 +98,9 @@ const UNAVAILABLE = {
 import type { AppDeps } from '../../../src/context.js';
 import * as service from '../../../src/modules/auth/admin/admin-auth.service.js';
 import { decryptTrusteeRationale } from '../../../src/modules/claims/state-trustee-decision-crypto.js';
+import { CLAIM_CORRECTION_CLOSURE_FIELD_CLASS, encryptClosureField } from '../../../src/modules/claims/correction-closure-crypto.js';
+import { encryptVerifierRationale } from '../../../src/modules/claims/verifier-decision-crypto.js';
+import { encryptGroundInspectionField } from '../../../src/modules/claims/ground-inspection-crypto.js';
 import { closeScopeTx, openScopeTx } from '../../../src/modules/multi-tenant/scope-tx.js';
 import { buildServer } from '../../../src/server.js';
 import { buildTestDeps, hasDatabase, makeClient, type CapturingStepUpDelivery, type TestDeps } from '../_setup.js';
@@ -115,6 +136,9 @@ describe.skipIf(!hasDatabase)('Story 6.23b — every approver, through HTTP (:54
 
   afterAll(async () => {
     fault.on = false;
+    fault.ownVisitBulk = false;
+    fault.ownVisitOne = false;
+    fault.hideCheck = false;
     await app.close();
     const c = await td.pool.connect();
     try {
@@ -1178,7 +1202,7 @@ describe.skipIf(!hasDatabase)('Story 6.23b — every approver, through HTTP (:54
         return (res.json() as { items: { claim_case_id: string }[] }).items.map((i) => i.claim_case_id);
       };
 
-      it('the CONSOLE strip and the QUEUE: ⛔ peer trace for the inspector (`ownVisitPending: true`), shown to another District Admin; `reviseBlocked` unfiltered; a `certificate_check` completion keeps it hidden; a FULL visit shows all', async () => {
+      it('the CONSOLE strip and the QUEUE: ⛔ peer trace for the inspector (`ownVisitPending: true`, `reviseBlocked: null`), shown to another District Admin (`reviseBlocked` unfiltered); a `certificate_check` completion keeps it hidden; a FULL visit shows all', async () => {
         const w = await peerWorld();
         const da = await staff(w.pariwarId, 'district_admin');
         await daApprove(da, w, false);
@@ -1188,8 +1212,9 @@ describe.skipIf(!hasDatabase)('Story 6.23b — every approver, through HTTP (:54
 
         const hidden = await stripOf(inspector, w);
         expect(hidden).toMatchObject({ kinds: [], uncoveredSinceApproval: 0, viewerCanRecordLateReason: false, lateKeysUncoveredForViewer: 0, ownVisitPending: true });
-        // BF19 (b) — computed from the UNFILTERED keys: the approval is final (a revise would 409).
-        expect(hidden.reviseBlocked).toBe('warning_approval_final');
+        // ⚠ AMENDED (code review round 2 D2 A / S19) — `null` for the HIDDEN reader: the unfiltered
+        // `warning_approval_final` told them a hidden key exists; BD4 refuses their revise and the neutral block replaces it.
+        expect(hidden.reviseBlocked).toBeNull();
         const other = await stripOf(da, w);
         expect(other).toMatchObject({ kinds: ['peer_says_not_died'], uncoveredSinceApproval: 1, ownVisitPending: false, reviseBlocked: 'warning_approval_final' });
         expect(other.lateKeysUncoveredForViewer).toBe(1);
@@ -1202,19 +1227,38 @@ describe.skipIf(!hasDatabase)('Story 6.23b — every approver, through HTTP (:54
         expect((await stripOf(inspector, w)).ownVisitPending).toBe(true);
         // A completed FULL visit ⇒ every kind shown.
         await inScope(w.pariwarId, (s) => ensureGroundInspection(deps, s, w.pariwarId, w.claimCaseId, { force: true, inspectorActorId: inspector.userId }));
-        expect(await stripOf(inspector, w)).toMatchObject({ kinds: ['peer_says_not_died'], uncoveredSinceApproval: 1, ownVisitPending: false });
+        expect(await stripOf(inspector, w)).toMatchObject({ kinds: ['peer_says_not_died'], uncoveredSinceApproval: 1, ownVisitPending: false, reviseBlocked: 'warning_approval_final' });
         expect(await queueIds(inspector, w.pariwarId)).toContain(w.claimCaseId);
       });
 
-      it('the GATE still reads every key: another District Admin\'s approval over a key hidden from an inspector is refused without a reason', async () => {
+      // Code review round 2 (S5) — from the HIDDEN actor's side: the precondition (their strip shows ⛔ key) is pinned, and
+      // the second leg makes the hidden person the one whose COVERAGE the gate computes — a wait read through that
+      // person's filtered keys would see ⛔ uncovered key and let the final vote through (red).
+      it('the GATE still reads every key: a key hidden from an inspector refuses another District Admin\'s bare approval BY NAME; a late key hidden from the approving District Admin still holds the final vote', async () => {
         const w = await peerWorld();
         await answer(w, 'peer_says_not_died');
         const inspector = await staff(w.pariwarId, 'district_admin');
         await scheduleFor(w, inspector.userId);
+        expect(await stripOf(inspector, w)).toMatchObject({ kinds: [], uncoveredSinceApproval: 0, ownVisitPending: true });
         const da = await staff(w.pariwarId, 'district_admin');
         const bare = await da.client.inject({ method: 'POST', url: `${claimBase(w.pariwarId, w.claimCaseId)}/verifier-decision`, payload: daApproveBody });
         expect(bare.statusCode).toBe(409);
-        expect(errOf(bare.body).code).toBe('verifier_decision.warning_reason_required');
+        expect(errOf(bare.body)).toMatchObject({ code: 'verifier_decision.warning_reason_required', details: { kinds: ['peer_says_not_died'], missing: 'reason' } });
+        await daApprove(da, w, true);
+        const [record] = await records(w.claimCaseId);
+        expect((record!.covered_keys as string[]).filter((k) => k.startsWith('peer_says_not_died:'))).toHaveLength(1);
+
+        // The WAIT: the District Admin approved, a LATE neighbour key arrived, THEN the visit was given to them — the key
+        // is hidden from the very person who must answer it, and the final vote still waits for them.
+        const l = await peerWorld(w.pariwarId);
+        const lda = await staff(l.pariwarId, 'district_admin');
+        await daApprove(lda, l, false);
+        await answer(l, 'peer_says_not_died');
+        await scheduleFor(l, lda.userId);
+        expect(await stripOf(lda, l)).toMatchObject({ kinds: [], uncoveredSinceApproval: 0, lateKeysUncoveredForViewer: 0, ownVisitPending: true });
+        const held = await finalVote(await staff(l.pariwarId, 'pariwar_admin'), l, true);
+        expect(held.statusCode, held.body).toBe(409);
+        expect(errOf(held.body)).toMatchObject(waits('cycle_freeze.late_warning_reason_required', 'peer_says_not_died'));
       });
 
       it('the four HOSTS\' summary for a Pariwar Admin / the Super Admin who is the scheduled inspector — filtered, `own_visit_pending: true`; another approver\'s is not', async () => {
@@ -1280,6 +1324,356 @@ describe.skipIf(!hasDatabase)('Story 6.23b — every approver, through HTTP (:54
         expect(await detailOf(gsa)).toMatchObject({ kinds: [], own_visit_pending: true });
         expect(await detailOf(await staff(g.pariwarId, 'super_admin'))).toMatchObject({ kinds: ['peer_says_not_died'], own_visit_pending: false });
       });
+
+      // ── AC7's D1 amendment + its V1 A / X1 A extensions (code review round 2, D1 B + V1 A → S18 / V6; X2, X3, X6): for a
+      //    HIDDEN reader EVERY prior staff NOTE on that claim is WITHHELD — approval (whatever its record covers, or with ⛔
+      //    no record), denial (incl. a reversed claim's live denial on the cycle-freeze card), escalation, R9 approve AND
+      //    deny vote, the Pariwar Admin's return note, the correction-closure notes, the console's visit notes — on every
+      //    surface that decrypts one for them, as ONE explicit representation (X2: `{ state: 'withheld', reason }` or the
+      //    `…_withheld` / `…Withheld` sibling): `own_visit`; every other reader sees every note. V4 — each surface's hide
+      //    read FORCED to fail withholds the notes from a reader who is ⛔ not hidden: `check_failed`.
+      describe('AC7 (D1 B + V1 A + X1 A) — every staff NOTE on a claim is withheld from a reader hidden on it', () => {
+        const NOTE = daApproveBody.rationale;
+        const ESCALATION = 'For the trustee.';
+        const DENIAL = 'The papers do not agree.';
+        const W = (reason: 'own_visit' | 'check_failed') => ({ state: 'withheld', reason });
+        const escalate = async (da: { client: Client }, w: { pariwarId: string; claimCaseId: string }) => {
+          const res = await da.client.inject({
+            method: 'POST',
+            url: `${claimBase(w.pariwarId, w.claimCaseId)}/verifier-decision`,
+            payload: { outcome: 'escalated', reason_code: 'r9_routed_to_voting', rationale: ESCALATION },
+          });
+          expect(res.statusCode, res.body).toBe(201);
+        };
+        const deny = async (da: { client: Client }, w: { pariwarId: string; claimCaseId: string }) => {
+          const res = await da.client.inject({
+            method: 'POST',
+            url: `${claimBase(w.pariwarId, w.claimCaseId)}/verifier-decision`,
+            payload: { outcome: 'denied', reason_code: 'other', rationale: DENIAL },
+          });
+          expect(res.statusCode, res.body).toBe(201);
+        };
+
+        it('the cycle-freeze card — the approval (neighbour-covered, other-kind-covered, unwarned), the escalation AND a reversed claim\'s denial note; V4: a failed hide read withholds from everyone', async () => {
+          const peer = await peerWorld();
+          await answer(peer, 'peer_says_not_died');
+          const other = await seedWorld([daysAgo(30)], peer.pariwarId); // a recent change — a NON-neighbour kind only
+          const quiet = await peerWorld(peer.pariwarId); // ⛔ warning ⇒ ⛔ approval record
+          const esc = await peerWorld(peer.pariwarId);
+          const da = await staff(peer.pariwarId, 'district_admin');
+          await daApprove(da, peer, true);
+          await daApprove(da, other, true);
+          await daApprove(da, quiet, false);
+          await escalate(da, esc);
+          // X3 — a DENIAL on the card: denied by the District Admin, then reversed on appeal (the `reversed` bucket keeps
+          // the live verifier decision — the denial — as its provenance).
+          const rev = await peerWorld(peer.pariwarId);
+          await deny(da, rev);
+          await inScope(rev.pariwarId, async (s) => {
+            const deceased = (await td.pool.query<{ d: string }>('SELECT deceased_member_id AS d FROM claims WHERE claim_case_id = $1', [rev.claimCaseId])).rows[0]!.d;
+            const emit = (from: string, to: string, eventType: string, extra: Json = {}) =>
+              claim.projectClaimState(s.client, {
+                claimCaseId: ids.claimId(rev.claimCaseId),
+                pariwarId: ids.pariwarId(rev.pariwarId),
+                deceasedMemberId: ids.memberId(deceased),
+                intakeChannels: ['helpline'],
+                claimantActorId: null,
+                eventType: eventType as never,
+                payload: { from_state: from, to_state: to, trigger: 'seed', actor: 'system', ...extra } as never,
+                actorId: null,
+              });
+            await emit('denied', 'appeal_stage_1', 'claim.appeal_stage1_initiated');
+            await emit('appeal_stage_1', 'reversed', 'claim.appeal_stage1_reviewed', { decision: 'reversed' });
+            await emit('reversed', 'reversed', 'claim.reversed', { reversed_at_stage: 1, disposition_category: 'reconsideration_on_merits' });
+          });
+          expect((await records(peer.claimCaseId))[0]!.covered_keys as string[]).toEqual([expect.stringMatching(/^peer_says_not_died:/)]);
+          expect((await records(other.claimCaseId))[0]!.covered_keys as string[]).toEqual([expect.stringMatching(/^recent_nominee_change:/)]);
+          expect(await records(quiet.claimCaseId)).toEqual([]);
+          const pa = await staff(peer.pariwarId, 'pariwar_admin');
+          for (const w of [peer, other, quiet, esc, rev]) await scheduleFor(w, pa.userId);
+          const rationalesOf = async (who: { client: Client }) => {
+            const { all } = await pendingOf(who.client, peer.pariwarId);
+            const of = (w: { claimCaseId: string }) => {
+              const c = all.find((i) => i.claim_case_id === w.claimCaseId) as unknown as { verifier_rationale: string | null; verifier_rationale_withheld: string | null };
+              return [c.verifier_rationale, c.verifier_rationale_withheld];
+            };
+            return [of(peer), of(other), of(quiet), of(esc), of(rev)];
+          };
+          expect(await rationalesOf(pa)).toEqual(Array(5).fill([null, 'own_visit']));
+          const otherPa = await staff(peer.pariwarId, 'pariwar_admin');
+          expect(await rationalesOf(otherPa)).toEqual([[NOTE, null], [NOTE, null], [NOTE, null], [ESCALATION, null], [DENIAL, null]]);
+          expect(await withHideFault(['ownVisitBulk'], () => rationalesOf(otherPa))).toEqual(Array(5).fill([null, 'check_failed']));
+        });
+
+        it('each R9 vote\'s rationale — approve AND deny — on the panel and in the votes-by-trustee transcript; V4 on both reads', async () => {
+          const votesUrl = (p: string, a: string) => `/api/v1/p/${p}/admin/r9-voting/votes-by-trustee?actorId=${a}`;
+          const panelOf = async (who: { client: Client }, w: { pariwarId: string; claimCaseId: string }) => {
+            const res = await who.client.inject({ method: 'GET', url: r9Url(w.pariwarId, w.claimCaseId) });
+            expect(res.statusCode, res.body).toBe(200);
+            return (res.json() as { votes: { rationale: string; rationale_withheld: string | null }[] }).votes.map((v) => [v.rationale, v.rationale_withheld]);
+          };
+          const byTrusteeOf = async (who: { client: Client }, w: { pariwarId: string }, voterId: string) => {
+            const res = await who.client.inject({ method: 'GET', url: votesUrl(w.pariwarId, voterId) });
+            expect(res.statusCode, res.body).toBe(200);
+            return (res.json() as { votes: { rationale: string; rationale_withheld: string | null }[] }).votes.map((v) => [v.rationale, v.rationale_withheld]);
+          };
+          // Four R9 worlds (a FRESH Pariwar each — the clause is seeded once per Pariwar): an approve vote whose record
+          // covers the neighbour key; one whose record covers only a nominee kind; one with ⛔ record; a DENY vote.
+          const peer = await peerWorld();
+          await answer(peer, 'peer_says_not_died');
+          const peerVoter = await routeToR9(peer);
+          expect((await r9Vote(peerVoter, peer, true)).statusCode).toBe(201);
+          const other = { ...(await seedWorld([daysAgo(300), daysAgo(30)])), member: '', ping: '' }; // `r9Vote` reads only the ids
+          const otherVoter = await routeToR9(other);
+          expect((await r9Vote(otherVoter, other, true)).statusCode).toBe(201);
+          const quiet = await peerWorld();
+          const quietVoter = await routeToR9(quiet);
+          expect((await r9Vote(quietVoter, quiet, false)).statusCode).toBe(201);
+          const denied = await peerWorld();
+          const denyVoter = await routeToR9(denied);
+          const denyVote = await denyVoter.client.inject({ method: 'POST', url: `${r9Url(denied.pariwarId, denied.claimCaseId)}/vote`, payload: { vote: 'deny', rationale: 'no' } });
+          expect(denyVote.statusCode, denyVote.body).toBe(201);
+          expect(await records(quiet.claimCaseId)).toEqual([]);
+
+          for (const [w, voter, note] of [
+            [peer, peerVoter, 'yes'],
+            [other, otherVoter, 'yes'],
+            [quiet, quietVoter, 'yes'],
+            [denied, denyVoter, 'no'],
+          ] as const) {
+            const hidden = await staff(w.pariwarId, 'pariwar_admin');
+            await scheduleFor(w, hidden.userId);
+            expect(await panelOf(hidden, w), w.claimCaseId).toEqual([['', 'own_visit']]);
+            expect(await byTrusteeOf(hidden, w, voter.userId), w.claimCaseId).toEqual([['', 'own_visit']]);
+            // Another reader (the voter, ⛔ hidden) sees every note…
+            expect(await panelOf(voter, w), w.claimCaseId).toEqual([[note, null]]);
+            expect(await byTrusteeOf(voter, w, voter.userId), w.claimCaseId).toEqual([[note, null]]);
+          }
+          // …unless that reader's hide read FAILS (V4): the panel's one-claim read, the transcript's set-based read.
+          expect(await withHideFault(['ownVisitOne'], () => panelOf(peerVoter, peer))).toEqual([['', 'check_failed']]);
+          expect(await withHideFault(['ownVisitBulk'], () => byTrusteeOf(denyVoter, denied, denyVoter.userId))).toEqual([['', 'check_failed']]);
+        });
+
+        it('the console\'s prior comments (approval, escalation, denial), each precedent by THAT precedent\'s claim, and (X6) the visit notes; V4 on each read', async () => {
+          const approved = await peerWorld();
+          await answer(approved, 'peer_says_not_died');
+          const escalated = await peerWorld(approved.pariwarId);
+          const denied = await peerWorld(approved.pariwarId);
+          const open = await peerWorld(approved.pariwarId); // the inspector is ⛔ hidden here
+          const noNote = await peerWorld(approved.pariwarId); // Y3 — an approval with ⛔ note at all
+          const da = await staff(approved.pariwarId, 'district_admin');
+          // The visits are assigned FIRST — a denied claim is outside the inspection window.
+          const inspector = await staff(approved.pariwarId, 'district_admin');
+          for (const w of [approved, escalated, denied, noNote]) await scheduleFor(w, inspector.userId);
+          await daApprove(da, approved, true);
+          await escalate(da, escalated);
+          await deny(da, denied);
+          await daApprove(da, open, false);
+          const bareApprove = await da.client.inject({
+            method: 'POST',
+            url: `${claimBase(noNote.pariwarId, noNote.claimCaseId)}/verifier-decision`,
+            payload: { outcome: 'approved', reason_code: daApproveBody.reason_code },
+          });
+          expect(bareApprove.statusCode, bareApprove.body).toBe(201);
+          // X6 — a visit NOTE on the inspector's own pending assignment (the scheduler's words; ⛔ author is recorded).
+          const VISIT_NOTE = 'Ask the neighbour on the left first.';
+          await td.pool.query('UPDATE claim_ground_inspections SET notes_ciphertext = $3 WHERE claim_case_id = $1 AND inspector_actor_id = $2', [
+            approved.claimCaseId,
+            inspector.userId,
+            await encryptGroundInspectionField(VISIT_NOTE, approved.pariwarId, deps.encryption),
+          ]);
+          type Console = {
+            packet: {
+              priorVerifierComments: { comments?: { rationale: string; rationaleWithheld: string | null }[] };
+              recentPrecedents: { precedents?: { claimCaseId: string; rationale: string | null; rationaleWithheld: string | null }[] };
+              groundInspection: { assignments?: { inspectorActorId: string; notes: string | null; notesWithheld: string | null }[] };
+            };
+          };
+          const consoleOf = async (who: { client: Client }, w: { claimCaseId: string }) => {
+            const res = await who.client.inject({ method: 'GET', url: `${claimBase(approved.pariwarId, w.claimCaseId)}/verifier-console` });
+            expect(res.statusCode, res.body).toBe(200);
+            return (res.json() as Console).packet;
+          };
+          const priorOf = async (who: { client: Client }, w: { claimCaseId: string }) =>
+            (await consoleOf(who, w)).priorVerifierComments.comments?.map((c) => [c.rationale, c.rationaleWithheld]);
+          const precedentsOf = async (who: { client: Client }, w: { claimCaseId: string }, of = [approved, denied]) => {
+            const list = (await consoleOf(who, w)).recentPrecedents.precedents ?? [];
+            return of.map((x) => {
+              const p = list.find((y) => y.claimCaseId === x.claimCaseId);
+              return [p?.rationale, p?.rationaleWithheld];
+            });
+          };
+          const visitNoteOf = async (who: { client: Client }) => {
+            const a = (await consoleOf(who, approved)).groundInspection.assignments?.find((x) => x.inspectorActorId === inspector.userId);
+            return [a?.notes, a?.notesWithheld];
+          };
+          for (const w of [approved, escalated, denied]) expect(await priorOf(inspector, w), w.claimCaseId).toEqual([['', 'own_visit']]);
+          // Y3 — PRESENCE ⛔ signals: the approval with ⛔ note reads the SAME as a noted one for the hidden reader, on the
+          // console's own transcript AND on a list surface (the open claim's precedents) — and plainly empty for another.
+          expect(await priorOf(inspector, noNote)).toEqual([['', 'own_visit']]);
+          expect(await priorOf(da, noNote)).toEqual([['', null]]);
+          expect(await precedentsOf(inspector, open, [approved, noNote])).toEqual([[null, 'own_visit'], [null, 'own_visit']]);
+          expect(await precedentsOf(da, open, [approved, noNote])).toEqual([[NOTE, null], [null, null]]);
+          expect(await priorOf(inspector, open)).toEqual([[NOTE, null]]);
+          // (f) — the open claim's precedents are the approval and the denial, on claims the inspector is hidden on.
+          expect(await precedentsOf(inspector, open)).toEqual([[null, 'own_visit'], [null, 'own_visit']]);
+          expect(await visitNoteOf(inspector)).toEqual([null, 'own_visit']);
+          expect(await priorOf(da, approved)).toEqual([[NOTE, null]]);
+          expect(await priorOf(da, escalated)).toEqual([[ESCALATION, null]]);
+          expect(await priorOf(da, denied)).toEqual([[DENIAL, null]]);
+          expect(await precedentsOf(da, open)).toEqual([[NOTE, null], [DENIAL, null]]);
+          expect(await visitNoteOf(da)).toEqual([VISIT_NOTE, null]);
+          // V4 — the District Admin (⛔ hidden): a failed peer-section hide (V11) withholds THIS claim's notes; a failed
+          // precedents' hide read withholds the precedents' — each alone.
+          expect(await withHideFault(['hideCheck'], () => priorOf(da, open))).toEqual([['', 'check_failed']]);
+          expect(await withHideFault(['hideCheck'], () => visitNoteOf(da))).toEqual([null, 'check_failed']);
+          expect(await withHideFault(['hideCheck'], () => precedentsOf(da, open))).toEqual([[NOTE, null], [DENIAL, null]]);
+          expect(await withHideFault(['ownVisitBulk'], () => precedentsOf(da, open))).toEqual([[null, 'check_failed'], [null, 'check_failed']]);
+          expect(await withHideFault(['ownVisitBulk'], () => priorOf(da, open))).toEqual([[NOTE, null]]);
+          // Y8 — the visit note's RECORDED author is the inspector themselves (migration 0159): their own words read plainly
+          // on the console while their visit is pending (⛔ author recorded above ⇒ withheld; a scheduler's would stay so).
+          await td.pool.query('UPDATE claim_ground_inspections SET notes_author_actor_id = $3 WHERE claim_case_id = $1 AND inspector_actor_id = $2', [
+            approved.claimCaseId,
+            inspector.userId,
+            inspector.userId.toLowerCase(),
+          ]);
+          expect(await visitNoteOf(inspector)).toEqual([VISIT_NOTE, null]);
+        });
+
+        it('the Pariwar Admin\'s RETURN note — on the name-check panel and in the correction queue; V4', async () => {
+          const w = await peerWorld();
+          const da = await staff(w.pariwarId, 'district_admin');
+          await daApprove(da, w, false);
+          const pa = await staff(w.pariwarId, 'pariwar_admin');
+          const ret = await pa.client.inject({
+            method: 'POST',
+            url: cycleDecisionUrl(w.pariwarId),
+            payload: { claim_case_id: w.claimCaseId, action: 'return_to_district_admin', reason_code: 'other', rationale: 'one more try', must_act: 'family' },
+          });
+          expect(ret.statusCode, ret.body).toBe(201);
+          const inspector = await staff(w.pariwarId, 'district_admin');
+          await scheduleFor(w, inspector.userId);
+          const panelNote = async (who: { client: Client }) => {
+            const res = await who.client.inject({ method: 'GET', url: `${claimBase(w.pariwarId, w.claimCaseId)}/nominee-name-check` });
+            expect(res.statusCode, res.body).toBe(200);
+            return (res.json() as { correction_return: { note: Json } | null }).correction_return?.note;
+          };
+          const queueNote = async (who: { client: Client }) => {
+            const res = await who.client.inject({ method: 'GET', url: `/api/v1/p/${w.pariwarId}/admin/claims/under-correction` });
+            expect(res.statusCode, res.body).toBe(200);
+            return (res.json() as { items: { claim_case_id: string; return_note: Json | null }[] }).items.find((i) => i.claim_case_id === w.claimCaseId)?.return_note;
+          };
+          expect(await panelNote(inspector)).toEqual(W('own_visit'));
+          expect(await queueNote(inspector)).toEqual(W('own_visit'));
+          expect(await panelNote(da)).toEqual({ state: 'readable', value: 'one more try' });
+          expect(await queueNote(da)).toEqual({ state: 'readable', value: 'one more try' });
+          expect(await withHideFault(['ownVisitBulk'], () => panelNote(da))).toEqual(W('check_failed'));
+          expect(await withHideFault(['ownVisitBulk'], () => queueNote(da))).toEqual(W('check_failed'));
+        });
+
+        it('the correction-closure notes — the closure queue\'s note and the escalation detail\'s review + direction; V4', async () => {
+          // The closure queue: a "no correction needed" record with a REAL note.
+          const d = await peerWorld();
+          const dda = await staff(d.pariwarId, 'district_admin');
+          await daApprove(dda, d, false);
+          const { pa: dpa } = await returnAndMark(d, 'family');
+          const QUEUE_NOTE = 'The family confirmed the account.';
+          const queueNoteCiphertext = await encryptClosureField(QUEUE_NOTE, d.pariwarId, CLAIM_CORRECTION_CLOSURE_FIELD_CLASS, deps.encryption);
+          await inScope(d.pariwarId, (s) =>
+            claim.recordNoCorrectionNeeded(s.client, {
+              pariwarId: ids.pariwarId(d.pariwarId),
+              claimCaseId: ids.claimId(d.claimCaseId),
+              actorId: dda.userId,
+              actorDisplay: 'Anita (District Admin)',
+              now: new Date(),
+              markNoteCiphertext: 'enc:v1:m',
+              noteCiphertext: queueNoteCiphertext,
+              setByRole: 'district_admin',
+              hold: claim.isCorrectionClaimHeld,
+            }),
+          );
+          const hiddenPa = await staff(d.pariwarId, 'pariwar_admin');
+          await scheduleFor(d, hiddenPa.userId);
+          const queueNoteOf = async (who: { client: Client }) => {
+            const res = await who.client.inject({ method: 'GET', url: `/api/v1/p/${d.pariwarId}/admin/correction/closure-queue?limit=50` });
+            expect(res.statusCode, res.body).toBe(200);
+            return (res.json() as { items: { claim_case_id: string; note: Json }[] }).items.find((i) => i.claim_case_id === d.claimCaseId)?.note;
+          };
+          expect(await queueNoteOf(hiddenPa)).toEqual(W('own_visit'));
+          expect(await queueNoteOf(dpa)).toEqual({ state: 'readable', value: QUEUE_NOTE });
+          expect(await withHideFault(['ownVisitBulk'], () => queueNoteOf(dpa))).toEqual(W('check_failed'));
+
+          // The escalation detail: a review note and a direction, by the Super Admin who is ⛔ hidden.
+          const g = await peerWorld();
+          const gda = await staff(g.pariwarId, 'district_admin');
+          await daApprove(gda, g, false);
+          const sa = await escalatedReady(g);
+          const review = await sa.client.inject({ method: 'POST', url: `${claimBase(g.pariwarId, g.claimCaseId)}/correction/escalation/review`, payload: { note: 'Looking into it.' } });
+          expect(review.statusCode, review.body).toBe(201);
+          const direction = await sa.client.inject({
+            method: 'POST',
+            url: `${claimBase(g.pariwarId, g.claimCaseId)}/correction/escalation/directions`,
+            payload: { directed_to_actor: gda.userId, directed_to_role: 'district_admin', kind: 'other', text: 'Call the family once more.' },
+          });
+          expect(direction.statusCode, direction.body).toBe(201);
+          const hiddenSa = await staff(g.pariwarId, 'super_admin');
+          await scheduleFor(g, hiddenSa.userId);
+          type Detail = { review_note: Json | null; directions: { text: Json; response: Json | null }[] };
+          const detailOf = async (who: { client: Client }) => {
+            const res = await who.client.inject({ method: 'GET', url: `${claimBase(g.pariwarId, g.claimCaseId)}/correction/escalation` });
+            expect(res.statusCode, res.body).toBe(200);
+            const body = res.json() as Detail;
+            return { review: body.review_note, texts: body.directions.map((x) => x.text) };
+          };
+          expect(await detailOf(hiddenSa)).toEqual({ review: W('own_visit'), texts: [W('own_visit')] });
+          const shown = { review: { state: 'readable', value: 'Looking into it.' }, texts: [{ state: 'readable', value: 'Call the family once more.' }] };
+          expect(await detailOf(sa)).toEqual(shown);
+          expect(await withHideFault(['ownVisitBulk'], () => detailOf(sa))).toEqual({ review: W('check_failed'), texts: [W('check_failed')] });
+        });
+
+        it('the refusals list — a `-239` refusal\'s DENIAL note; V4', async () => {
+          const w = await seedWorld([daysAgo(400), daysAgo(200)]);
+          await redetermine(w.pariwarId, w.claimCaseId, istDaysAgo(250)); // the 200-day version is post-death ⇒ grounded
+          const REFUSAL = 'Nominee changed after the death.';
+          // The visit is assigned FIRST — a denied claim is outside the inspection window.
+          const hidden = await staff(w.pariwarId, 'pariwar_admin');
+          await scheduleFor(w, hidden.userId);
+          await inScope(w.pariwarId, async (s) =>
+            claim.adjudicateClaim(s.client, {
+              claimCaseId: ids.claimId(w.claimCaseId),
+              pariwarId: ids.pariwarId(w.pariwarId),
+              outcome: 'denied',
+              reasonCode: 'post_death_nominee_change',
+              rationaleCiphertext: await encryptVerifierRationale(REFUSAL, w.pariwarId, deps.encryption),
+              actorId: randomUUID(),
+              actorDisplay: 'Anita (District Admin)',
+              actor: 'operator',
+            }),
+          );
+          const rationaleOf = async (who: { client: Client }) => {
+            const res = await who.client.inject({ method: 'GET', url: `/api/v1/p/${w.pariwarId}/admin/nominee-refusals` });
+            expect(res.statusCode, res.body).toBe(200);
+            return (res.json() as { items: { claim_case_id: string; rationale: Json | null }[] }).items.find((i) => i.claim_case_id === w.claimCaseId)?.rationale;
+          };
+          expect(await rationaleOf(hidden)).toEqual(W('own_visit'));
+          const other = await staff(w.pariwarId, 'pariwar_admin');
+          expect(await rationaleOf(other)).toEqual({ state: 'readable', value: REFUSAL });
+          expect(await withHideFault(['ownVisitBulk'], () => rationaleOf(other))).toEqual(W('check_failed'));
+        });
+      });
+
+      // Code review round 2 (V4) — S19's fail-closed path: a HIDDEN reader whose warnings read FAILS gets `null`, ⛔ the
+      // `'unavailable'` every other reader gets on the same fault.
+      it('S19 — a failed warnings read: `reviseBlocked` is `null` for the hidden inspector, `unavailable` for another District Admin', async () => {
+        const w = await peerWorld();
+        const da = await staff(w.pariwarId, 'district_admin');
+        await daApprove(da, w, false);
+        const inspector = await staff(w.pariwarId, 'district_admin');
+        await scheduleFor(w, inspector.userId);
+        const hidden = await withFault(() => stripOf(inspector, w));
+        expect(hidden).toMatchObject({ ownVisitPending: true, reviseBlocked: null });
+        expect(await withFault(() => stripOf(da, w))).toMatchObject({ ownVisitPending: false, reviseBlocked: 'unavailable' });
+      });
     });
 
     describe('AC10 — a hidden actor cannot approve (BD4)', () => {
@@ -1309,6 +1703,31 @@ describe.skipIf(!hasDatabase)('Story 6.23b — every approver, through HTTP (:54
         expect(err.details).toBeUndefined();
         expect(res.body).not.toMatch(/peer_|neighbour|kinds/);
       };
+      /** Code review round 2 (S5) — "nothing written", ONE shape for every refused approve: the claim's state, its events
+       *  and every decision / vote / record / closure row it owns (total AND live — a supersession is a write too). */
+      const footprint = async (claimCaseId: string) =>
+        (
+          await td.pool.query(
+            `SELECT (SELECT current_state FROM claims WHERE claim_case_id = $1) AS state,
+                    (SELECT count(*)::int FROM events_log WHERE stream_id = $1) AS events,
+                    (SELECT count(*)::int FROM claim_warning_approvals WHERE claim_case_id = $1) AS records,
+                    (SELECT count(*)::int FROM claim_verifier_decisions WHERE claim_case_id = $1) AS verifier,
+                    (SELECT count(*)::int FROM claim_verifier_decisions WHERE claim_case_id = $1 AND superseded_at IS NULL) AS verifier_live,
+                    (SELECT count(*)::int FROM claim_state_trustee_decisions WHERE claim_case_id = $1) AS trustee,
+                    (SELECT count(*)::int FROM claim_state_trustee_decisions WHERE claim_case_id = $1 AND superseded_at IS NULL) AS trustee_live,
+                    (SELECT count(*)::int FROM claim_r9_votes WHERE claim_case_id = $1) AS votes,
+                    (SELECT count(*)::int FROM claim_r9_votes WHERE claim_case_id = $1 AND superseded_at IS NULL) AS votes_live,
+                    (SELECT count(*)::int FROM claim_r9_voting_sessions WHERE claim_case_id = $1 AND outcome IS NOT NULL) AS sessions_decided,
+                    (SELECT coalesce(json_agg(json_build_array(state, super_admin_decision) ORDER BY closure_id), '[]'::json)
+                       FROM claim_correction_closures WHERE claim_case_id = $1) AS closures`,
+            [claimCaseId],
+          )
+        ).rows[0] as Json;
+      const refusedWritingNothing = async (claimCaseId: string, prefix: string, act: () => Promise<{ statusCode: number; body: string }>) => {
+        const before = await footprint(claimCaseId);
+        refusedNeutrally(await act(), prefix);
+        expect(await footprint(claimCaseId)).toEqual(before);
+      };
       const stateOf = async (claimCaseId: string) =>
         (await td.pool.query<{ s: string }>('SELECT current_state AS s FROM claims WHERE claim_case_id = $1', [claimCaseId])).rows[0]!.s;
       const approveWith = (da: { client: Client }, w: W, warned: boolean) =>
@@ -1325,7 +1744,7 @@ describe.skipIf(!hasDatabase)('Story 6.23b — every approver, through HTTP (:54
           if (withKey) await answer(w, 'peer_says_not_died');
           const da = await staff(w.pariwarId, 'district_admin');
           await assign(w, da.userId);
-          refusedNeutrally(await approveWith(da, w, withKey), 'verifier_decision');
+          await refusedWritingNothing(w.claimCaseId, 'verifier_decision', () => approveWith(da, w, withKey));
           expect(await records(w.claimCaseId)).toEqual([]);
           expect(await stateOf(w.claimCaseId)).toBe('verification_in_progress'); // ⛔ even the review-entry event
 
@@ -1336,24 +1755,25 @@ describe.skipIf(!hasDatabase)('Story 6.23b — every approver, through HTTP (:54
           if (withKey) await answer(r, 'peer_says_not_died'); // late — also what makes the late reason meaningful
           await assign(r, rda.userId);
           await elevate(rda.client, 'claim_decision_revise');
-          refusedNeutrally(
-            await rda.client.inject({
+          await refusedWritingNothing(r.claimCaseId, 'verifier_decision', () =>
+            rda.client.inject({
               method: 'POST',
               url: `${claimBase(r.pariwarId, r.claimCaseId)}/verifier-decision/revise`,
               payload: { outcome: 'approved', reason_code: 'r8_90pct_met', rationale: 'new words' },
             }),
-            'verifier_decision',
           );
           // The late reason (an approving act — it covers a key for good).
-          refusedNeutrally(
-            await rda.client.inject({
+          await refusedWritingNothing(r.claimCaseId, 'verifier_decision', () =>
+            rda.client.inject({
               method: 'POST',
               url: `${claimBase(r.pariwarId, r.claimCaseId)}/verifier-decision/late-warning-reason`,
               payload: { warning_reason_code: GENERIC, note: 'Read it.' },
             }),
-            'verifier_decision',
           );
-          expect((await records(r.claimCaseId)).map((x) => x.step)).toEqual(withKey ? [] : []);
+          // The approval was quiet (the answer, if any, came AFTER it) ⇒ ⛔ record of its own; and ⛔ late-reason row
+          // after the refusal — the claim carries NO record at all (S5: was a `withKey ? [] : []` tautology).
+          expect(await records(r.claimCaseId)).toEqual([]);
+          expect(await stateOf(r.claimCaseId)).toBe('verifier_approved');
         });
 
         it(`the final vote, the escalation resolution, R9 vote and finalize, D27 and G1 — ${label}`, async () => {
@@ -1364,7 +1784,7 @@ describe.skipIf(!hasDatabase)('Story 6.23b — every approver, through HTTP (:54
           await daApprove(fda, f, withKey);
           const pa = await staff(f.pariwarId, 'pariwar_admin');
           await assign(f, pa.userId);
-          refusedNeutrally(await finalVote(pa, f, withKey), 'cycle_freeze');
+          await refusedWritingNothing(f.claimCaseId, 'cycle_freeze', () => finalVote(pa, f, withKey));
           expect(await stateOf(f.claimCaseId)).toBe('verifier_approved');
 
           // Escalation resolution.
@@ -1377,8 +1797,8 @@ describe.skipIf(!hasDatabase)('Story 6.23b — every approver, through HTTP (:54
           });
           expect(esc.statusCode, esc.body).toBe(201); // an escalation by a hidden-or-not DA is ⛔ gated
           await assign(e, pa.userId);
-          refusedNeutrally(
-            await pa.client.inject({
+          await refusedWritingNothing(e.claimCaseId, 'cycle_freeze', () =>
+            pa.client.inject({
               method: 'POST',
               url: cycleDecisionUrl(e.pariwarId),
               payload: {
@@ -1388,7 +1808,6 @@ describe.skipIf(!hasDatabase)('Story 6.23b — every approver, through HTTP (:54
                 ...(withKey ? { warning_reason_code: GENERIC, rationale: 'why' } : {}),
               },
             }),
-            'cycle_freeze',
           );
 
           // R9 — an approve vote refused, a deny vote accepted; a finalize computing "approved" refused.
@@ -1396,13 +1815,13 @@ describe.skipIf(!hasDatabase)('Story 6.23b — every approver, through HTTP (:54
           if (withKey) await answer(r9, 'peer_says_not_died');
           const voter = await routeToR9(r9);
           await assign(r9, voter.userId);
-          refusedNeutrally(await r9Vote(voter, r9, withKey), 'r9_voting');
+          await refusedWritingNothing(r9.claimCaseId, 'r9_voting', () => r9Vote(voter, r9, withKey));
           const r9b = await peerWorld();
           if (withKey) await answer(r9b, 'peer_says_not_died');
           const voterB = await routeToR9(r9b);
           expect((await r9Vote(voterB, r9b, withKey)).statusCode).toBe(201); // cast BEFORE the visit — it STANDS
           await assign(r9b, voterB.userId);
-          refusedNeutrally(await r9Finalize(voterB, r9b), 'r9_voting');
+          await refusedWritingNothing(r9b.claimCaseId, 'r9_voting', () => r9Finalize(voterB, r9b));
 
           // D27 — the "no correction needed" approval.
           const d = await peerWorld();
@@ -1411,9 +1830,8 @@ describe.skipIf(!hasDatabase)('Story 6.23b — every approver, through HTTP (:54
           await daApprove(dda, d, withKey);
           const dpa = await noCorrectionReady(d, dda);
           await assign(d, dpa.userId);
-          refusedNeutrally(
-            await dpa.client.inject({ method: 'POST', url: noCorrectionUrl(d), payload: withKey ? { warning_reason_code: GENERIC, note: 'Read it.' } : {} }),
-            'closure',
+          await refusedWritingNothing(d.claimCaseId, 'closure', () =>
+            dpa.client.inject({ method: 'POST', url: noCorrectionUrl(d), payload: withKey ? { warning_reason_code: GENERIC, note: 'Read it.' } : {} }),
           );
 
           // G1 — the Super Admin.
@@ -1423,12 +1841,12 @@ describe.skipIf(!hasDatabase)('Story 6.23b — every approver, through HTTP (:54
           await daApprove(gda, g, withKey);
           const sa = await escalatedReady(g);
           await assign(g, sa.userId);
-          refusedNeutrally(await g1(sa, g, withKey), 'closure');
+          await refusedWritingNothing(g.claimCaseId, 'closure', () => g1(sa, g, withKey));
           expect(await records(g.claimCaseId)).toEqual(withKey ? [expect.objectContaining({ step: 'district_admin_approval' })] : []);
         });
       }
 
-      it('⛔ never refused: a hidden actor\'s denial and escalation, an R9 deny vote and a finalize that computes "denied"', async () => {
+      it('⛔ never refused: a hidden actor\'s denial (and its revise) and escalation, an R9 deny vote, a finalize that computes "denied", a final-vote denial, a return and G1\'s refuse', async () => {
         const w = await peerWorld();
         await answer(w, 'peer_says_not_died');
         const da = await staff(w.pariwarId, 'district_admin');
@@ -1439,6 +1857,15 @@ describe.skipIf(!hasDatabase)('Story 6.23b — every approver, through HTTP (:54
           payload: { outcome: 'denied', reason_code: 'other', rationale: 'Not this one.' },
         });
         expect(deny.statusCode, deny.body).toBe(201);
+        // S5 — the revise of that DENIAL (same outcome, new words) by the same hidden actor.
+        await elevate(da.client, 'claim_decision_revise');
+        const reviseDenial = await da.client.inject({
+          method: 'POST',
+          url: `${claimBase(w.pariwarId, w.claimCaseId)}/verifier-decision/revise`,
+          payload: { outcome: 'denied', reason_code: 'other', rationale: 'Not this one — the papers do not agree.' },
+        });
+        expect(reviseDenial.statusCode, reviseDenial.body).toBe(201);
+        expect(await stateOf(w.claimCaseId)).toBe('denied');
         const x = await peerWorld(w.pariwarId);
         await assign(x, da.userId);
         const esc = await da.client.inject({
@@ -1455,6 +1882,59 @@ describe.skipIf(!hasDatabase)('Story 6.23b — every approver, through HTTP (:54
         const fin = await r9Finalize(voter, r);
         expect(fin.statusCode, fin.body).toBe(200);
         expect(await stateOf(r.claimCaseId)).toBe('denied');
+
+        // S5 — a refusal at a LATER step and a return, each by a hidden Pariwar Admin / Super Admin.
+        const fd = await peerWorld();
+        await answer(fd, 'peer_says_not_died');
+        const fda = await staff(fd.pariwarId, 'district_admin');
+        await daApprove(fda, fd, true);
+        const pa = await staff(fd.pariwarId, 'pariwar_admin');
+        await assign(fd, pa.userId);
+        const finalDeny = await pa.client.inject({
+          method: 'POST',
+          url: cycleDecisionUrl(fd.pariwarId),
+          payload: { claim_case_id: fd.claimCaseId, action: 'deny', reason_code: 'documents_insufficient', rationale: 'the papers never came' },
+        });
+        expect(finalDeny.statusCode, finalDeny.body).toBe(201);
+        expect(await stateOf(fd.claimCaseId)).toBe('denied');
+        const fr = await peerWorld(fd.pariwarId);
+        await answer(fr, 'peer_says_not_died');
+        await daApprove(fda, fr, true);
+        await assign(fr, pa.userId);
+        const ret = await pa.client.inject({
+          method: 'POST',
+          url: cycleDecisionUrl(fr.pariwarId),
+          payload: { claim_case_id: fr.claimCaseId, action: 'return_to_district_admin', reason_code: 'other', rationale: 'one more try', must_act: 'family' },
+        });
+        expect(ret.statusCode, ret.body).toBe(201);
+        // G1 — the Super Admin's REFUSE (a staff-case origin, so `close` is refused on origin — `-274` 1a).
+        const g = await peerWorld();
+        await answer(g, 'peer_says_not_died');
+        const gda = await staff(g.pariwarId, 'district_admin');
+        await daApprove(gda, g, true);
+        const sa = await escalatedReady(g);
+        await assign(g, sa.userId);
+        const refuse = await sa.client.inject({
+          method: 'POST',
+          url: g1Url(g),
+          payload: { decision: 'refuse', reason: 'claim_not_payable', refusal_reason_code: 'documents_insufficient', note: 'n' },
+        });
+        expect(refuse.statusCode, refuse.body).toBe(201);
+        expect(await stateOf(g.claimCaseId)).toBe('denied');
+      });
+
+      // Code review round 2 (S14, V2) — a LEGACY row stores the inspector id as supplied (V2 normalises ON WRITE, so the
+      // variant is seeded directly); an exact-text match would leave the assigned person UN-hidden and able to approve.
+      it('the inspector id is matched normalised: a case / whitespace variant stored on a legacy row still hides the section and still refuses', async () => {
+        const w = await peerWorld();
+        await answer(w, 'peer_says_not_died');
+        const da = await staff(w.pariwarId, 'district_admin');
+        const gid = await assign(w, da.userId);
+        await td.pool.query('UPDATE claim_ground_inspections SET inspector_actor_id = $2 WHERE ground_inspection_id = $1', [gid, `\t ${da.userId.toUpperCase()} `]);
+        const res = await da.client.inject({ method: 'GET', url: `${claimBase(w.pariwarId, w.claimCaseId)}/verifier-console` });
+        expect(res.statusCode, res.body).toBe(200);
+        expect((res.json() as { packet: { approvalWarnings: Json } }).packet.approvalWarnings).toMatchObject({ kinds: [], ownVisitPending: true });
+        await refusedWritingNothing(w.claimCaseId, 'verifier_decision', () => approveWith(da, w, true));
       });
 
       it('the refusal LIFTS on a completed FULL visit and on the assignment being superseded; a `certificate_check` completion does ⛔ not lift it', async () => {

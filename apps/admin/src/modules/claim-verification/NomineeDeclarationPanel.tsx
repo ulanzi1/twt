@@ -42,9 +42,11 @@ import type {
   NomineeDeclarationTimelineResponse,
   NomineeVersionWarningKind,
 } from '@twt/contracts';
+import type { WithheldNote as WithheldNoteDto } from '@twt/contracts';
 import { CLAIMANT_NOMINEE_RELATIONSHIP_CODES, MobileNumber, isEnglishScriptName } from '@twt/contracts';
 
 import { verifierConsoleEn } from './i18n-en.js';
+import { WithheldNote } from './WithheldNote.js';
 
 const t = verifierConsoleEn.nomineeDeclaration;
 type Mark = 'stands' | 'discarded';
@@ -123,10 +125,18 @@ function warningLine(kind: NomineeVersionWarningKind, firstFiledAt: string | nul
   return WARNING_LINES[kind](firstFiledAt);
 }
 
-type Readable = { state: 'readable'; value: string } | { state: 'unreadable' } | { state: 'anonymized' } | null | undefined;
+// Story 6.27b code review round 2 (X2) — a staff NOTE (`ReadableNote`) may also be `withheld` from this reader.
+type Readable =
+  | { state: 'readable'; value: string }
+  | { state: 'unreadable' }
+  | { state: 'anonymized' }
+  | WithheldNoteDto
+  | null
+  | undefined;
 
 function ReadableValue({ value }: { value: Readable }): React.ReactElement | null {
   if (!value) return null;
+  if (value.state === 'withheld') return <WithheldNote reason={value.reason} />;
   if (value.state === 'readable') return <span className="font-medium">{value.value}</span>;
   if (value.state === 'anonymized') return <span className="italic text-slate-500">{t.anonymized}</span>;
   return <span className="italic text-amber-700">{t.unreadable}</span>;

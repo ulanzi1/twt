@@ -96,7 +96,9 @@ export type UnstitchedPeerMeshSection =
   | Exclude<PeerMeshSection, { status: 'present' }>;
 
 export type PeerSection =
-  | { readonly kind: 'hidden' }
+  /** `cause` (code review round 2, X2) — the reader's own visit is pending (`own_visit`) or the hide check FAILED
+   *  (`check_failed`, the V11 fail-closed hide); the console words its withheld staff notes by it. */
+  | { readonly kind: 'hidden'; readonly cause: 'own_visit' | 'check_failed' }
   | { readonly kind: 'no_selection' }
   | {
       readonly kind: 'present';
@@ -128,11 +130,11 @@ export async function assemblePeerSection(
   bump();
   try {
     if (await run('peer_section_visibility', () => claim.isPeerSectionHiddenFromActor(ctx.db, pariwarId, claimCaseId, ctx.actorId))) {
-      return { kind: 'hidden' };
+      return { kind: 'hidden', cause: 'own_visit' };
     }
   } catch (err) {
     warn('visibility', err);
-    return { kind: 'hidden' };
+    return { kind: 'hidden', cause: 'check_failed' };
   }
 
   bump();

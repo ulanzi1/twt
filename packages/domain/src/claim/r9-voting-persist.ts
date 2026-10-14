@@ -26,7 +26,10 @@
 // (a DISTINCT namespace prefix `r9_voting:` from the verifier/cycle-freeze locks) so votes + finalize +
 // cancel serialize; finalize additionally locks the live vote rows FOR UPDATE (deterministic vote_id order)
 // so a tally cannot race a cast/revise; the write-path state guards + the events_log (stream_id,
-// event_version) unique index + the two partial-uniques are the structural backstops.
+// event_version) unique index + the two partial-uniques are the structural backstops. Story 6.27b (review R1 / S7):
+// an APPROVE vote also locks the claim row (R9 key → claim row, the same order as open/finalize) before BD4's guard,
+// so it serializes with visit assignment / rescheduling, then RE-READS the live session under that lock — a self-mode
+// closure holds the row ⛔ without the R9 key and may have superseded the session while the vote waited.
 //
 // PII: the per-vote rationale is ALREADY ENCRYPTED by the CALLER (the route encrypts before the writer). The
 // R5 display snapshots (opened_display / voter_display / finalized_display) are ALREADY RESOLVED by the
@@ -501,6 +504,9 @@ export async function openR9VotingSession(
  * session (reject if none / finalized), assert the voter is a panel member, atomically supersede the
  * voter's prior live vote (revision — 0-row conditional UPDATE ⇒ 409) then insert the new vote copying the
  * session's clause_version_id snapshot. METADATA-ONLY — no lifecycle event. Revisable until finalize.
+ * ⭐ Story 6.27b (review R1 / S7) — an APPROVE vote additionally locks the claim row (R9 key → claim row, the order open
+ * and finalize use) BEFORE BD4's guard, so it serializes with visit assignment; after that lock it RE-READS the live
+ * session (same id, outcome still null), since a writer holding the row without the R9 key may have superseded it.
  */
 export async function castR9Vote(client: pg.PoolClient, input: CastR9VoteInput): Promise<R9VoteResult> {
   if (!input.rationaleCiphertext || input.rationaleCiphertext.trim() === '') throw new R9RationaleRequiredError();
@@ -518,12 +524,23 @@ export async function castR9Vote(client: pg.PoolClient, input: CastR9VoteInput):
   if (!session.panelActorIds.includes(input.actorId)) throw new R9ActorNotOnPanelError(input.actorId);
   if (session.outcome !== null) throw new R9SessionFinalizedError(input.claimCaseId);
 
-  // ⭐ Story 6.23b EA5 (`-277` Q2 C) — THE ONE RULE on an APPROVE vote, BEFORE any write. BEST-EFFORT (Trap 6): the
-  // reader's warnings as they stand (inexact like an escalation's — ⛔ no gate runs here, and ⛔ no claim-row lock, so a
-  // certificate re-review can commit between this read and the vote); the BINDING check is at `finalizeR9Outcome`.
+  // ⭐ Story 6.27b review R1 — serialize BD4 with visit assignment/rescheduling, which take the claim row lock.
+  // The established order is R9 advisory lock → claim row (as at open/finalize). Otherwise an assignment can commit
+  // after the guard and the now-hidden voter can receive a peer-kind refusal or cover unseen keys with a reason.
+  // An approve VOTE only — a deny vote is ⛔ touched.
+  if (input.vote === 'approve') {
+    if (!(await lockClaim(db, input.pariwarId, input.claimCaseId))) throw new R9ClaimNotFoundError(input.claimCaseId);
+    // ⭐ Story 6.27b review S7 — the wait above can outlast the session read: a self-mode `closeClaimIfDeathPaid` holds
+    // the claim row WITHOUT the R9 key and supersedes the live session. Re-read it under the row lock so the vote
+    // ⛔ never writes against a session superseded (or finalized) while it waited.
+    const relocked = await liveSession(db, input.pariwarId, input.claimCaseId);
+    if (!relocked || relocked.sessionId !== session.sessionId) throw new R9NoLiveSessionError(input.claimCaseId);
+    if (relocked.outcome !== null) throw new R9SessionFinalizedError(input.claimCaseId);
+    await assertActorMayApprove(db, input.pariwarId, input.claimCaseId, input.actorId);
+  }
+  // ⭐ Story 6.23b EA5 (`-277` Q2 C) — THE ONE RULE on an APPROVE vote, BEFORE any write. R1 now protects this read
+  // with the claim lock too; a later warning can still arrive AFTER the vote, so the BINDING check remains at finalize.
   // A deny vote is ⛔ never gated.
-  // ⭐ Story 6.27b BD4 (`-327` decision 2) — FIRST, before the gate and any warnings read: an approver whose OWN ground visit on the claim is pending is refused, unconditionally (⛔ kind on the refusal). An approve VOTE only — a deny vote is ⛔ touched.
-  if (input.vote === 'approve') await assertActorMayApprove(db, input.pariwarId, input.claimCaseId, input.actorId);
   const warningRule =
     input.vote === 'approve'
       ? await checkLaterApprovalWarningReason(db, input.pariwarId, input.claimCaseId, warningReasonCode, input.rationaleCiphertext)

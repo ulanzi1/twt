@@ -61,7 +61,10 @@ describe('ClaimPeerAnswersResponse (Story 6.27b, PM24)', () => {
     const noFlag: Record<string, unknown> = { ...answer };
     delete noFlag['warningFlag'];
     expect(ClaimPeerAnswersResponse.safeParse(withAnswer(noFlag)).success).toBe(false);
-    for (const basis of ['consented', 'super_admin', null]) expect(ClaimPeerAnswersResponse.safeParse(withPing({ ...ping, callbackBasis: basis })).success).toBe(true);
+    for (const basis of ['consented', 'super_admin']) expect(ClaimPeerAnswersResponse.safeParse(withPing({ ...ping, callbackBasis: basis })).success).toBe(true);
+    // Code review round 2 (S9) — `null` is the basis of a number ⛔ shown (a shown number with ⛔ basis is refused).
+    expect(ClaimPeerAnswersResponse.safeParse(withPing({ ...ping, callbackMobile: { status: 'none' }, callbackBasis: null })).success).toBe(true);
+    expect(ClaimPeerAnswersResponse.safeParse(withPing({ ...ping, callbackBasis: null })).success).toBe(false);
     expect(ClaimPeerAnswersResponse.safeParse(withPing({ ...ping, callbackBasis: 'district' })).success).toBe(false);
     const noBasis: Record<string, unknown> = { ...ping };
     delete noBasis['callbackBasis'];

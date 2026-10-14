@@ -26,6 +26,7 @@ import {
 } from '../claim-verification/LaterApprovalWarnings.js';
 import { NeighboursAnswersPanel } from '../claim-verification/NeighboursAnswersPanel.js';
 import { verifierConsoleEn } from '../claim-verification/i18n-en.js';
+import { WithheldNote } from '../claim-verification/WithheldNote.js';
 import { FinallyApprovedElsewhereBanner } from '../cycle-freeze/FinallyApprovedElsewhereBanner.js';
 import { closureErrorText } from './errors.js';
 import { correctionClosureEn as t } from './i18n-en.js';
@@ -35,6 +36,8 @@ type QueueItem = PariwarClosureQueueResponse['items'][number];
 const tw = verifierConsoleEn.approvalWarnings;
 
 function NoteText({ note }: { note: QueueItem['note'] }): ReactElement {
+  // Story 6.27b code review round 2 (X2) — a WITHHELD note is said in words (⛔ never the dash of "no note").
+  if (note.state === 'withheld') return <WithheldNote reason={note.reason} />;
   return <>{note.state === 'readable' ? note.value : '—'}</>;
 }
 
@@ -266,6 +269,7 @@ export function NoCorrectionStrip({
         pariwarId={pariwarId}
         claimCaseId={item.claim_case_id}
         testId={`no-correction-neighbours-${item.claim_case_id}`}
+        approvalWarnings={summary}
       />
       {summary !== null ? (
         <LaterApprovalWarnings

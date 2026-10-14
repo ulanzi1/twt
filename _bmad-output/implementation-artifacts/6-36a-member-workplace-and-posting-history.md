@@ -25,7 +25,8 @@ committed ONCE at Task 0.2), the Panel confirms (SC1–SC4 + one FYI), the invar
 BUILD the SW items tagged for them and point here. Where a summary in a part file and this file disagree, this file is the record.
 
 STATUS: `ready-for-dev` — ⭐ Task 0 DONE (2026-10-14): BigDev answered *"all A, SC4 yes"*; `2026-10-14-330` committed ALONE (`d44708e8`);
-the confirm note (SC1, SC4 + FYI — ⛔ not yet sent) and the annotations committed (`35fe513f`). AC0 is met — Task 1 may start.
+the confirm note (SC1, SC4 + FYI) and the annotations committed (`35fe513f`). ⭐ The Panel RULED SC1 A and SC4 A — `2026-10-14-331`
+(`0019b301`). AC0 is met — Task 1 may start.
 
 GLYPH REGISTER, ADDRESSING RULE: as 6.27a — `⛔` sits ONLY on a negation word · `⭐` = key fact / action · `⚠` = hazard · doubling is volume
 only. ⛔ No `file:NNN` into `.decision-log.md`, `deferred-work.md` or `sprint-status.yaml` (newest-first files — cite entry id + clause,
@@ -388,7 +389,7 @@ my family picks.**
   later approvers only — CF2's list; ⛔ never the inspector). Eligibility (SW23) is read at selection time, and a named person's own withdrawal counts whenever it happened
   (SW17). *Reading:* **NARROWS** CF4 A's
   *"the family ⛔ never chooses"* — a family that holds the phone CAN still change who is asked before filing; staff are told and the
-  inspection always runs ⇒ **SC1**.
+  inspection always runs ⇒ **SC1** — ✅ RATIFIED, `2026-10-14-331` SC1 A.
 - **SW21 — who is AT a workplace, and the 90 days.** The deceased's CURRENT workplace = the workplace of their latest posting (as of the
   cut); a retirement row or an unconfirmed *"isn't listed"* row (*"unconfirmed"* = ⛔ no confirming posting recorded before the cut —
   ⛔ never the request's state at selection time, I8) ⇒ ⛔ no current workplace. The PREVIOUS workplace = the workplace of the
@@ -398,7 +399,8 @@ my family picks.**
   the latest posting: rows naming the current workplace (an *"isn't listed"* row BETWEEN two of them ⛔ never breaks the run), or — when
   the latest row is a retirement or an unconfirmed *"isn't listed"* — the latest consecutive rows of THAT kind; its start = the
   `started_on` of its EARLIEST row ⇒ re-declaring the same workplace, or retiring twice, ⛔ never re-arms the old one. ⚠ Counting from the
-  filing, ⛔ not the death, NARROWS CF4 A (*"after a transfer less than 90 days before the death"*) when a family files late ⇒ **SC1**.
+  filing, ⛔ not the death, NARROWS CF4 A (*"after a transfer less than 90 days before the death"*) when a family files late ⇒ **SC1** —
+  ✅ RATIFIED, `2026-10-14-331` SC1 A.
   Group `workplace` = every eligible member whose latest posting (as of the cut) is at the current workplace or, when it counts, the
   previous one.
 - **SW22 — the ranking, recorded.** Inside `workplace`: when the previous workplace counts, its people FIRST (they worked with the member
@@ -445,7 +447,7 @@ my family picks.**
   (matched then discarded — DPDP §6(1) asks that the data be NECESSARY for the purpose); **(b)** a published privacy-policy revision naming
   all three; **(c)** the PRODUCTION school list's source and permission (SW3) and the app's attribution notice; **(d)** the Play Console
   contacts declaration and Apple's contacts-usage string reviewed; **(e)** the KMS quota checked against SW12's matching rate; **(f)** a
-  Hindi human review of every new member screen; **(g)** the SC confirm note answered (SW29); **(h)** every live Pariwar's list imported
+  Hindi human review of every new member screen; **(g)** the SC confirm note answered (SW29) — written **Closed by `2026-10-14-331`**; **(h)** every live Pariwar's list imported
   and its district map matched to the District Admins' grants (SF13). AND Row 27 gains **(h)** *"Row 31 closed"* (its criteria become *"ALL
   EIGHT"*) — so 6.27c's texts, which
   wait for Row 27, wait for the data basis too (`-306` §3 / `-307` §3 / `-309` owed *"a Row 27 evidence line"*; `-310` says this data is
@@ -464,7 +466,7 @@ my family picks.**
 
 ## The Panel confirms (SC1–SC4 + an FYI) — the routing template's §0 applied
 
-- **SC1 (always) — the date of death is ⛔ not known when the five are chosen.** Stripped of citations: *"when we choose who to ask, we
+- **SC1 (always — ✅ RULED A, `2026-10-14-331`) — the date of death is ⛔ not known when the five are chosen.** Stripped of citations: *"when we choose who to ask, we
   know only the day the claim was filed — the certificate's date is checked by staff later. So (1) we count the 90-day transfer rule back
   from the filing day, and (2) a family that holds the member's phone could change the member's workplace or the people they named before
   filing. We limit (2): colleagues who were recorded there for 90 days or more are asked first, and staff are told when the member's
@@ -480,7 +482,7 @@ my family picks.**
   about a member's death?"* — C8 names it.
 - **SC3 (only if SW15 B / C, SW16 (2)'s alternative, or BigDev reads SW14 (3)–(4) as a disclosure)** — *"may the app show members which other members work, or worked, at a school or
   office they say is theirs — or whether any member does?"* — a disclosure *"to whom"*.
-- **SC4 (recommended)** — *"may the answer 'A colleague at the same school' read 'A colleague at the same school or office' in the next
+- **SC4 (recommended — ✅ RULED A, `2026-10-14-331`; built by 6.36 as `peer_mesh.v4`, our reading)** — *"may the answer 'A colleague at the same school' read 'A colleague at the same school or office' in the next
   version of the neighbours' questions?"* — the words of a ruled question; built as a new version only after the ruling, by the story the
   ruling names (as `-329` minted v3 through 6.27b).
 - **FYI (⛔ not a question)** — SW2's reading of `-132` R2 / `-133` / C8 against CF4 A.
@@ -787,6 +789,7 @@ out of components. `pnpm ci:local` before push (memory: unit=4 tunable; integrat
 ## Change Log
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-14 | 1.8 | ⭐ The Panel RULED (Dhiraj Rahul + Kalpana Bharti, relayed by BigDev: *"by DR and KB / SC1: A / SC4: A"*) — `2026-10-14-331` (`0019b301`), each option transcribed as put. SC1 A ratifies SW20 / SW21 / SW22's two narrowings of CF4 A; SC4 A — 6.36 mints `peer_mesh.v4` (our reading). The note's ruling block filled in; Row 31 (g) will be written Closed by `-331`. ⛔ No AC or Task here changed. |
 | 2026-10-14 | 1.7 | ⭐ Task 0 (shared) DONE. Task 0.1 — BigDev's answer, word for word: *"all A, SC4 yes"* (to SW1–SW30 and SC1–SC4 put as plain-language summaries). Task 0.2 — `2026-10-14-330` committed ALONE (`d44708e8`; inserted by this session, additive 45 / 0, byte-identical to the scratchpad draft). Task 0.3 — `trustee-panel-routing-note-2026-10-14-6-36-confirms.md` (SC1, SC4, the FYI; SC2 / SC3 ⛔ not owed) committed with the annotations (`35fe513f`); ⛔ not yet sent. Task 0.4 — the annotations in `epics.md` (four entries + Story 6.6 + FR-39 C8), `prd.md` FR-39, architecture §2.7 / §2.13.2, 6.27a Invariant 4 / Trap 8, 6.27c STATUS / AC5 / Dev Notes (`35fe513f`). Task 0.5 — ⛔ no answer differed from a recommendation ⇒ ⛔ no AC or Task changed. |
 | 2026-10-14 | 1.6 | Validate round 6 (one fresh-context verifier — 0 BLOCKER, 1 HIGH, 4 MEDIUM, 6 LOW, all applied): Task 1.1b's leftover "re-listed" sentence replaced by the stale-map refusal and `--relist-district` (the HIGH); SW14 lists FOUR things each side can tell and its §0 says WIDENS `-307` §2 item 3 (iii), with the two notices and the `member_status` ground; the rename retires `<old>` first, writers read the district FOR SHARE, it prints the postings left on `<old>`, closed / confirmed requests keep `<old>`, and its batch row carries ⛔ no source fields (a CHECK); AC1 tests the rename arm; SW21 defines "unconfirmed". |
 | 2026-10-14 | 1.5 | Validate round 5 (one fresh-context verifier — 0 BLOCKER, 1 HIGH, 8 MEDIUM, 6 LOW, all applied): the requests' `district` grant and a rename arm in their guard (the HIGH); staff rows and the stale-map refusal around `--rename-district`, its batch row and its grant consequence; SW14 states the two things a namer CAN tell (an immediate *"No"*; a vanished row = a withdrawal, ⛔ never a death), the named person is told *"[Name] will see your answer"*, and a §0 line; SW16 (4)'s card fires only for SW14's unnamed row (the word "erased" dropped); SW20 (i) points to SW22; duplicates removed. |

@@ -163,6 +163,15 @@ owed: the peer mesh is a signal, ⛔ never a gate (`-263` FQ10).
     is still unbounded) (⛔ not rewritten); the family item gains *"⛔ not taken by 6.36 — no family-link
     data (SW23)"*.
 16. **AC15 — `pnpm ci:local` green.**
+17. **AC16 — the next version of the neighbours' questions, `peer_mesh.v4`** (`2026-10-14-331` SC4 A — *"school or office", in the next
+    version (answers already given keep their words)"*; built here on our reading, in `-329`'s v3 shape): `packages/domain/src/questionnaires/
+    peer-mesh.ts` gains v4 = v3's pages with ONE change — the `relationship` option `school_colleague` (code UNCHANGED, so stored answers keep
+    their meaning; `:110-113`) takes a NEW copy key `peer_request_questions.relationship.school_or_office_colleague` (*"A colleague at the
+    same school or office"* + Hindi — the reviewed Hindi is Row 28's), its `approvedBy` gaining `-331`; v4 becomes LIVE for every Pariwar and
+    v3 HISTORICAL; a reply keeps the version it pinned (a v3 reply shows *"A colleague at the same school"*); every question the Panel ruled is
+    in v4 (`-310` CF3 (a) — the validator); the two `'pending'` health questions and their `counselBasis` carry over unchanged (6.27c's AC2b
+    hold reads `resolveLiveVersion` — ⛔ never a version name). Tests: the validator accepts v4; a new reply pins v4; a v3 reply renders v3's
+    words; the copy keys resolve in en + hi (the real-`t()` lockstep test).
 
 ## Tasks / Subtasks
 
@@ -196,6 +205,8 @@ owed: the peer mesh is a signal, ⛔ never a gate (`-263` FQ10).
 - [ ] **Task 7 — records and close (AC13–AC15).** CHECK 6.36a Task 0.4's annotations; the deferred-work appended lines (by item heading —
       ⛔ never line numbers); the 6.6 story file gains a dated annotation that D3 and its review Decision 1 are superseded (SW18, SW25); the
       Change Log and File List; `pnpm ci:local`.
+- [ ] **Task 8 — `peer_mesh.v4` (AC16).** The version, the copy key (en + hi + `$comment` naming `-331`), the module header's version list,
+      the tests; the 6.27c annotation already names v4 (6.36a's Task 0 follow-up).
 
 ## Dev Notes
 
@@ -253,6 +264,7 @@ CF2; `-308`; `-325` S1 A; `-326` BD1 A.
 ## Change Log
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-14 | — | ⭐ The Panel RULED SC1 A and SC4 A (`2026-10-14-331`, `0019b301`): SC1 A ratifies the filing-day cut (AC5); SC4 A adds AC16 / Task 8 — this story mints `peer_mesh.v4` with *"A colleague at the same school or office"* (our reading of who builds it). |
 | 2026-10-14 | — | `2026-10-14-330` committed (`d44708e8`) — BigDev: *"all A, SC4 yes"*; every AC and Task here was written to the recommended answers ⇒ ⛔ none changed. |
 | 2026-10-14 | 1.5 | Validate round 5: AC5 quotes SW21's run word for word, defines "unconfirmed" as of the cut, and its first test now has a previous workplace to miss. |
 | 2026-10-14 | 1.4 | Validate round 4: the Story's promise names I8's two exceptions; `settled` measured from the run's recorded start and false for named people; AC5's run definition and its three tests. |

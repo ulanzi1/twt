@@ -32,7 +32,8 @@ Status: backlog
 > sends that text — once ever per neighbour, through 6.24b's shared DLT send core, with 6.29's hold / park / give-up; ⛔ never at night;
 > while the claim can still take an answer (`-305` §2 item 4); in the Pariwar's default language until row 6-35 lets members choose
 > (`-305` §2 item 2 — CF1). The link opens 6.27a's questionnaire through row 6-30's plumbing. ⭐ (2026-10-13 annotation — Story 6.27b validate, `2026-10-13-329` decision 3: the LIVE questionnaire
-> is then `peer_mesh.v3` — v2 with the call-back question reworded *"May the Admin phone you about this?"* (`-328` Q1 C) under a new copy key;
+> is then `peer_mesh.v3` ⭐ (2026-10-14 annotation — `-331` SC4 A: once row 6-36 ships, the LIVE version is `peer_mesh.v4` — v3 with the
+> *"school or office"* colleague answer; ⛔ no change to the TEXT this story sends) — v2 with the call-back question reworded *"May the Admin phone you about this?"* (`-328` Q1 C) under a new copy key;
 > so the FIRST real reply pins v3 — ⛔ no production reply can ever pin v2. ⛔ No change to the TEXT this story sends.) ⚠ Go-live waits on Row 27 (counsel, the
 > privacy policy, the link live, the health-question basis — the TEXTS themselves wait for it, ⛔ no texted neighbour sees a ruled question skipped — CF1–CF3).
 

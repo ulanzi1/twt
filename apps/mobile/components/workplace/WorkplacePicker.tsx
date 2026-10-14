@@ -119,14 +119,16 @@ export function WorkplacePicker({ submitLabel, onSaved, onCancel }: WorkplacePic
   const errorLine = error ? <AnnouncedText text={error} kind="error" color={ERROR_COLOR} /> : null
 
   // ── the district list (loading / error / no list) ────────────────────────────────────────────────────────────────
-  if (districts.isLoading) {
+  // `isPending` (⛔ `isLoading`): the query is DISABLED while the session hydrates, and a disabled v5 query is
+  // `isLoading: false` with ⛔ data — `isLoading` would show the error (and Retry an unauthenticated fetch) on a cold start.
+  if (districts.isPending) {
     return (
       <YStack flex={1} px="$6" py="$6" bg="$background">
         <AnnouncedText text={t('districts_loading')} />
       </YStack>
     )
   }
-  if (districts.isError || !districts.data) {
+  if (districts.isError) {
     return (
       <YStack flex={1} px="$6" py="$6" gap="$4" bg="$background">
         <AnnouncedText text={t('districts_error')} kind="error" color={ERROR_COLOR} />
@@ -195,8 +197,9 @@ export function WorkplacePicker({ submitLabel, onSaved, onCancel }: WorkplacePic
           <H2 accessibilityRole="header">{t('step_title')}</H2>
           <Paragraph color="$colorPress">{t('step_intro')}</Paragraph>
           <Text fontWeight="500">{t('district_prompt')}</Text>
-          {/* ⚠ ⛔ `accessible` on the group — it would hide its radios from VoiceOver (PeerQuestionnaire's note). */}
-          <YStack gap="$2" accessibilityRole="radiogroup" accessibilityLabel={t('district_prompt')}>
+          {/* ⚠ ⛔ `accessible` on the group — it would hide its radios from VoiceOver (PeerQuestionnaire's note); so ⛔ a
+              label either (never announced on a non-accessible container) — the prompt above is the group's name. */}
+          <YStack gap="$2" accessibilityRole="radiogroup">
             {districts.data.items.map(({ district }) => (
               <Button
                 key={district}
@@ -212,7 +215,15 @@ export function WorkplacePicker({ submitLabel, onSaved, onCancel }: WorkplacePic
             ))}
           </YStack>
           {onCancel ? (
-            <Button chromeless accessibilityRole="button" onPress={onCancel}>
+            <Button
+              chromeless
+              disabled={busy}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: busy }}
+              onPress={() => {
+                if (!busy) onCancel()
+              }}
+            >
               {t('cancel')}
             </Button>
           ) : null}
@@ -234,7 +245,8 @@ export function WorkplacePicker({ submitLabel, onSaved, onCancel }: WorkplacePic
       <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
         <YStack gap="$3" px="$6" py="$6" bg="$background">
           <H2 accessibilityRole="header">{prompt}</H2>
-          <YStack gap="$2" accessibilityRole="radiogroup" accessibilityLabel={prompt}>
+          {/* ⛔ `accessible`, ⛔ a label (see the district group) — the H2 is the group's name. */}
+          <YStack gap="$2" accessibilityRole="radiogroup">
             {options.map((o) => (
               <Button
                 key={o.kind}
@@ -454,6 +466,11 @@ function phaseTitleKey(phase: Phase, kind: WorkplaceAnswerKind | null): string {
   }
 }
 
+/**
+ * The step's primary + its *"Back"* / *"Cancel"*. ⚠ BOTH are gated on `busy` (review 2026-10-15): with Back live during
+ * a save, a member on a slow link could tap Save, tap Back, pick another answer and Save again — two keys, two rows; and
+ * the first save's `onSaved` / 422 would land on a phase that ⛔ shows it.
+ */
 function PickerActions({
   primaryLabel,
   primaryDisabled,
@@ -483,7 +500,15 @@ function PickerActions({
         {busy ? <Spinner /> : primaryLabel}
       </Button>
       {cancelLabel && onCancel ? (
-        <Button chromeless accessibilityRole="button" onPress={onCancel}>
+        <Button
+          chromeless
+          disabled={busy}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: busy }}
+          onPress={() => {
+            if (!busy) onCancel()
+          }}
+        >
           {cancelLabel}
         </Button>
       ) : null}

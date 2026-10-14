@@ -12,8 +12,8 @@
 // workplace (the import and the rename take them in the same order ⇒ ⛔ no deadlock).
 //
 // ⭐ THE TYPED TEXT IS MEMBER-AUTHORED. It lives only in `workplace_requests` — ⛔ never in an event, an audit line or a log
-// (AC4). The seven-digit check runs on a copy whose digits are FOLDED to ASCII (`foldDigitsToAscii`) — ⛔ the stored text
-// is the member's own, trimmed.
+// (AC4). The seven-digit check runs on a copy whose digits are FOLDED to ASCII and whose between-digit separators are
+// removed (`hasSevenDigitRun`) — ⛔ the stored text is the member's own, trimmed.
 //
 // NO HTTP, NO audit, NO event emission — the route orchestrates.
 
@@ -105,14 +105,33 @@ function codePointLength(text: string): number {
 }
 
 /**
- * A typed workplace name or place is valid when, trimmed, it is 1–120 characters and carries ⛔ no run of seven digits once
- * every digit is folded to ASCII (a phone number — SW9). ⚠ LOCKSTEP with 0161's typed-text CHECKs (which see only ASCII).
+ * `true` when `text` carries a run of seven digits once every digit is folded to ASCII AND the separators that sit BETWEEN
+ * digits — whitespace, `-`, `.` — are removed (`98765 43210`, `98765-43210`, `९८७६५-४३२१०`, `98.76.54.321` are phone numbers
+ * too — review 2026-10-15, BigDev's option 1). ONE function — the domain writer's rule; 0161's `!~ '[0-9]{7}'` CHECK is the
+ * literal backstop (⛔ never regenerated). ⛔ The stored text is never rewritten.
+ */
+export function hasSevenDigitRun(text: string): boolean {
+  // ⛔ A lookbehind — the app mirrors this line and runs on Hermes; the captured digit is put back instead.
+  const joined = foldDigitsToAscii(text).replace(/([0-9])[\s.-]+(?=[0-9])/g, '$1');
+  return /[0-9]{7}/.test(joined);
+}
+
+/** Format characters (`\p{Cf}` — ZWJ, ZWNJ, ZWSP…) and marks (`\p{M}`) — invisible on their own. */
+const INVISIBLE_RE = /[\p{Cf}\p{M}]/gu;
+
+/**
+ * A typed workplace name or place is valid when, trimmed, it is 1–120 characters, carries ⛔ no run of seven digits
+ * (`hasSevenDigitRun` — a phone number, SW9) and is VISIBLE: with every format character and mark removed, and the rest
+ * trimmed, at least one code point remains (a zero-width string, a run of combining marks, or format characters around a
+ * space all render blank). The length is the trimmed ORIGINAL's — a ZWJ / ZWNJ inside a Devanagari word is legitimate and
+ * KEPT. ⚠ LOCKSTEP with 0161's typed-text CHECKs (which see only ASCII and ⛔ the visibility rule).
  */
 export function isValidTypedWorkplaceText(text: string): boolean {
   const trimmed = text.trim();
   const len = codePointLength(trimmed);
   if (len < 1 || len > WORKPLACE_TYPED_TEXT_MAX) return false;
-  return !/[0-9]{7}/.test(foldDigitsToAscii(trimmed));
+  if (trimmed.replace(INVISIBLE_RE, '').trim() === '') return false;
+  return !hasSevenDigitRun(trimmed);
 }
 
 /** Escape `%`, `_` and `\` for an `ILIKE … ESCAPE '\'` substring pattern. */
@@ -191,6 +210,23 @@ export async function listWorkplaceDistricts(db: Db, pariwarId: PariwarId, opts:
     .orderBy(asc(workplaceDistricts.district))
     .limit(clampLimit(opts.limit, WORKPLACE_DISTRICTS_LIMIT));
   return rows.map((r) => r.district);
+}
+
+/**
+ * The districts read as ONE PAGE with an honest `hasMore` — the route's shape (AC3). ⚠ [Review][Patch] 2026-10-15: the
+ * handler first asked `listWorkplaceDistricts` for `limit + 1`, which the clamp cut back to the cap, so `hasMore` was
+ * structurally false at the default and the cap. One more than the page, the clamp's bounds shifted by one (the search's
+ * and the history's form). ⛔ No cursor — the contract promises ⛔ a second page; the remedy for `hasMore` is a larger `limit`.
+ */
+export async function pageWorkplaceDistricts(db: Db, pariwarId: PariwarId, opts: { limit?: number } = {}): Promise<{ items: string[]; hasMore: boolean }> {
+  const limit = clampLimit(opts.limit, WORKPLACE_DISTRICTS_LIMIT);
+  const rows = await db
+    .select({ district: workplaceDistricts.district })
+    .from(workplaceDistricts)
+    .where(and(eq(workplaceDistricts.pariwarId, pariwarId), eq(workplaceDistricts.status, 'listed')))
+    .orderBy(asc(workplaceDistricts.district))
+    .limit(clampLimit(limit + 1, { default: WORKPLACE_DISTRICTS_LIMIT.default + 1, cap: WORKPLACE_DISTRICTS_LIMIT.cap + 1 }));
+  return { items: rows.slice(0, limit).map((r) => r.district), hasMore: rows.length > limit };
 }
 
 /**

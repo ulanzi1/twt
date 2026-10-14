@@ -9,7 +9,10 @@
 //   · the rename: `<old>` retired and ⛔ offered, every workplace + open request moved, closed / confirmed requests and
 //     postings keep `<old>`, the count of postings left on `<old>`, the batch row (⛔ source fields);
 //   · a stale map naming a retired spelling refused; the same map with `--relist-district` lists it again;
-//   · the CLI: `--dry-run` prints the counts and writes ⛔ nothing; a refused run exits 1.
+//   · a run that reads ⛔ a school of the state (header-only; the wrong `--state`) is refused — ⛔ a batch row, ⛔ a
+//     spelling, the Pariwar still has ⛔ list (review 2026-10-15);
+//   · the CLI: `--dry-run` prints the counts and writes ⛔ nothing; a refused run exits 1; a bad source VALUE exits 1
+//     BEFORE the file is read.
 
 import { execFile } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
@@ -24,7 +27,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { Db } from '../../../src/db.js';
 import { pariwarId as toPariwarId } from '../../../src/ids/index.js';
-import { listWorkplaceDistricts } from '../../../src/member/workplace.js';
+import { listWorkplaceDistricts, pariwarHasWorkplaceList } from '../../../src/member/workplace.js';
 import {
   csvObjects,
   IDP_REQUIRED_COLUMNS,
@@ -66,11 +69,11 @@ const FULL_MAP = { PATNA: 'Patna', GAYA: 'Gaya' };
 async function importAs(
   db: Db,
   pariwarId: string,
-  opts: { map?: Record<string, string>; edit?: (rows: Record<string, string>[]) => Record<string, string>[]; relist?: string[] } = {},
+  opts: { map?: Record<string, string>; edit?: (rows: Record<string, string>[]) => Record<string, string>[]; relist?: string[]; state?: string } = {},
 ) {
   return runWorkplaceImport(db, {
     pariwarId: toPariwarId(pariwarId),
-    stateCode: '10',
+    stateCode: opts.state ?? '10',
     rows: await fixtureRows(opts.edit),
     districtMap: await mapOf(opts.map ?? FULL_MAP),
     relistDistricts: opts.relist ?? [],
@@ -163,6 +166,22 @@ describe.skipIf(!hasDatabase)('Story 6.36a — the workplace import and the dist
     for (const t of ['workplace_import_batches', 'workplace_districts', 'workplaces']) {
       expect((await client.query(`SELECT 1 FROM ${t} WHERE pariwar_id = $1`, [p])).rowCount, t).toBe(0);
     }
+  });
+
+  it('a run that reads ⛔ a school of the state is REFUSED — a header-only file, or the wrong --state — ⛔ a batch row, ⛔ a spelling; the Pariwar still has ⛔ list', async () => {
+    const { client, tx } = getTx();
+    const p = randomUUID();
+    await enterAppScope(client, p);
+    await expect(importAs(tx, p, { edit: () => [] })).rejects.toThrow(/no school of state "10" was read \(rows read 0, other state 0, refused 0\) — nothing was written/);
+    // Every row of the fixture is "another state" under --state 11 (the malformed-code row falls back to its `state_code` column — 10).
+    await expect(importAs(tx, p, { state: '11' })).rejects.toThrow(/no school of state "11" was read \(rows read 35, other state 35, refused 0\)/);
+    // Under --state 09 the one Lucknow row IS in state — and its district is unmapped, which refuses first.
+    await expect(importAs(tx, p, { state: '09' })).rejects.toThrow(/no spelling for "LUCKNOW"/);
+    for (const t of ['workplace_import_batches', 'workplace_districts', 'workplaces']) {
+      expect((await client.query(`SELECT 1 FROM ${t} WHERE pariwar_id = $1`, [p])).rowCount, t).toBe(0);
+    }
+    expect(await listWorkplaceDistricts(tx, toPariwarId(p))).toEqual([]);
+    expect(await pariwarHasWorkplaceList(tx, toPariwarId(p))).toBe(false);
   });
 
   it('a corrected map MOVES the schools to the new spelling (the old spelling stays listed — ⛔ an import retires one)', async () => {
@@ -348,6 +367,44 @@ describe.skipIf(!hasDatabase)('Story 6.36a — the workplace import and the dist
       expect(r.err).toMatch(/no spelling for "GAYA"/);
       const bad = await cli(['--pariwar', 'nope']);
       expect(bad.code).toBe(2);
+    });
+
+    it('a header-only file exits 1 ("no school of state") and writes NOTHING; a bad source VALUE exits 1 BEFORE the file is read', async () => {
+      const p = randomUUID();
+      const args = base(p);
+      args[args.indexOf('--file') + 1] = path.resolve(here, '../../fixtures/workplaces-fixture-header-only.csv');
+      const empty = await cli(args);
+      expect(empty.code).toBe(1);
+      expect(empty.err).toMatch(/no school of state "10" was read \(rows read 0, other state 0, refused 0\) — nothing was written/);
+      const probe = new pg.Client({ connectionString: DATABASE_URL });
+      await probe.connect();
+      try {
+        for (const t of ['workplace_import_batches', 'workplace_districts']) {
+          expect((await probe.query(`SELECT 1 FROM ${t} WHERE pariwar_id = $1`, [p])).rowCount, t).toBe(0);
+        }
+      } finally {
+        await probe.end();
+      }
+      // The value checks precede the read: the file does ⛔ exist, and the refusal names the argument, ⛔ ENOENT.
+      const withFile = (file: string, flag: string, value: string) => {
+        const a = base(p);
+        a[a.indexOf('--file') + 1] = file;
+        a[a.indexOf(flag) + 1] = value;
+        return a;
+      };
+      const missing = path.resolve(here, '../../fixtures/does-not-exist.csv');
+      const date = await cli(withFile(missing, '--retrieved', '2026-02-30'));
+      expect(date.code).toBe(1);
+      expect(date.err).toMatch(/refused — --retrieved "2026-02-30" is not a calendar date/);
+      const reserved = await cli(withFile(missing, '--source', 'rename'));
+      expect(reserved.code).toBe(1);
+      expect(reserved.err).toMatch(/refused — --source "rename" is reserved/);
+      const long = await cli(withFile(missing, '--source', 'x'.repeat(201)));
+      expect(long.code).toBe(1);
+      expect(long.err).toMatch(/refused — --source must be 1–200 characters/);
+      const blank = await cli(withFile(missing, '--licence', '   '));
+      expect(blank.code).toBe(1);
+      expect(blank.err).toMatch(/refused — --licence must not be blank/);
     });
   });
 });

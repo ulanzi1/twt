@@ -28,21 +28,39 @@ pnpm --filter @twt/domain workplaces:import -- \
   district name in the file, giving the spelling the Pariwar uses. ⚠ That spelling becomes every posting's `district`,
   which is compared **byte-for-byte** by the District Admins' permissions. Check every spelling against the District
   Admins' grants before a Pariwar goes live (go-live Row 31 (h)).
-- **One transaction.** A district in the file with no row in the map refuses the WHOLE run — nothing is written. So does a
-  map that names a spelling retired by an earlier rename (see below), unless `--relist-district "<that spelling>"` is
-  passed.
+- **The arguments are checked first**, before the file is read: `--retrieved` must be a real calendar date, `--source`
+  1–200 characters and not the reserved word `rename`, and `--url`, `--licence`, `--attribution` not blank. A bad value
+  exits 1 with the reason.
+- **The file is read before anything opens.** The whole file is read and filtered first (no database transaction is held
+  while it streams); only then does ONE transaction write. A district in the file with no row in the map refuses the WHOLE
+  run — nothing is written. So does a file from which NO school of `--state` was read (a header-only file, or the wrong
+  state code — every row "another state"): such a run would list every spelling in the map with no school behind it and
+  switch the Pariwar's signup step to a list that holds nothing. So does a map that names a spelling retired by an earlier
+  rename (see below), unless `--relist-district "<that spelling>"` is passed.
 - **What a run does:** lists every spelling in the map; inserts new schools; updates a school whose details (or mapped
   district) changed; DELISTS a listed imported school missing from the file — only within the districts the file
   contains, so a one-district file never touches the others; re-lists a delisted school that is back. Nothing is ever
   deleted: a delisted school is hidden from the picker and kept for every posting that names it. A row without an 11-digit
-  code or a name is refused, and a code repeated in the file keeps its first row — both are counted, neither stops the
-  run. A school added by the Super Admin with the same code is kept and counted ("kept staff rows").
+  code or a name, or whose cluster or village name is over 200 characters, is refused, and a code repeated in the file
+  keeps its first row — both are counted, neither stops the run. A school added by the Super Admin with the same code is
+  kept and counted ("kept staff rows"). Line endings may be CRLF, LF or a lone CR.
 - **`--dry-run`** does all of the above and rolls it back: the same counts, nothing written. A refused run is refused under
   `--dry-run` too.
 - **A second identical run** changes nothing (it still records a batch row).
 
 The batch row (`workplace_import_batches`) records the source, its URL, the retrieval date, the licence, the attribution
 text and every count.
+
+## Who ran it — attribution
+
+This tool runs as a command under the operator's database login. There is no HTTP actor and no audit line: **the batch
+row is the record** of every run — the source, its URL, the retrieval date, the licence, the attribution text, the state
+code and the counts; a rename writes a `source_name = 'rename'` row. Until Story 6.36c, the login the operator used is the
+only attribution of a run (the batch row has no actor column — Task 1.2 did not define one, and migration 0161 is applied,
+so none is added here). Story 6.36c's staff list / suggestion route is the first HTTP caller of a list change: it must
+carry the staff actor and the audit line in the same transaction, and an actor column on the batch row lands with its
+migration (0164). The rationale and the re-examination trigger are recorded in the module header of
+`src/member/workplace-import.ts`.
 
 ## Rename a district spelling
 

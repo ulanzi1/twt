@@ -172,6 +172,10 @@ describe.skipIf(!hasDatabase)('Life Events panel — E2E (:5433)', () => {
 
       // Story 6.36a — a Pariwar with ⛔ imported list keeps the free-text district box: the `district_only` arm, with a
       // REQUIRED Idempotency-Key (the choice arms are `workplace.spec.ts`'s).
+      // ⚠ [Review] 2026-10-15 — this leg (and the summary read below) sends `district_only` for the FIXED `PARIWAR_A`: ONE
+      // `pnpm --filter @twt/domain workplaces:seed-fixture --pariwar <PARIWAR_A>` against the shared :5433 would flip both
+      // to 422 `workplace.choice_unavailable` (the known shared-container accumulation class, ⛔ a code regression). Seed
+      // the fixture into a Pariwar of its own, ⛔ `PARIWAR_A`.
       const res = await inject(t, 'POST', '/api/v1/member/life-events/posting', {
         payload: { choice: 'district_only', district: 'Nagpur', isRetirement: true },
         token: tok,

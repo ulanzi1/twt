@@ -82,6 +82,27 @@ describe('"Continue" only for a VALID answer (AC5)', () => {
     expect(isPlausibleTypedText('x'.repeat(121))).toBe(false)
   })
 
+  it('a phone number split by spaces, hyphens or dots is STILL a phone number; a legit number stays (review 2026-10-15, widened)', () => {
+    expect(isPlausibleTypedText('98765 43210')).toBe(false)
+    expect(isPlausibleTypedText('98765-43210')).toBe(false)
+    expect(isPlausibleTypedText('९८७६५-४३२१०')).toBe(false)
+    expect(isPlausibleTypedText('98.76.54.321')).toBe(false)
+    expect(isPlausibleTypedText('Ward 987 6543')).toBe(false)
+    expect(isPlausibleTypedText('Ward 12, Block 345')).toBe(true)
+    expect(isPlausibleTypedText('GMS RAMPUR 2')).toBe(true)
+  })
+
+  it('a zero-width or marks-only name is ⛔ visible ⇒ invalid; a Devanagari word holding a ZWNJ is valid, sent UNSTRIPPED', () => {
+    expect(isPlausibleTypedText('​')).toBe(false)
+    expect(isPlausibleTypedText('​‌')).toBe(false)
+    expect(isPlausibleTypedText('‍ ‌')).toBe(false) // format characters around a lone space — the server's rule
+    expect(isPlausibleTypedText('́ँ')).toBe(false)
+    expect(isPlausibleTypedText('  ‍  ')).toBe(false)
+    const withZwnj = 'विद्‌यालय'
+    expect(isPlausibleTypedText(withZwnj)).toBe(true)
+    expect(buildListedRequest(answer({ kind: 'not_listed', typedName: ` ${withZwnj} ` }), TODAY)).toMatchObject({ typedName: withZwnj })
+  })
+
   it('"I have retired": the district and the RETIREMENT date', () => {
     expect(buildListedRequest(answer({ kind: 'retired', dateText: '31-03-2024' }), TODAY)).toEqual({
       choice: 'retired',

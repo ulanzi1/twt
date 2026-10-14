@@ -20,7 +20,20 @@
 // every OPEN request, keeps closed / confirmed requests and every posting on `<old>` (I2), and reports how many postings
 // still carry `<old>` — a District Admin's grant must cover BOTH spellings until those members post again (SF13).
 //
-// Runs on the caller's scoped transaction (`withPariwarScope`); the CLI rolls it back for `--dry-run`. NO HTTP, NO audit.
+// The file is read and filtered BEFORE the transaction opens (`readWorkplaceImportFile` — every file-level refusal fires
+// there, with ⛔ no connection held); the writes run on the caller's scoped transaction (`writeWorkplaceImport` under
+// `withPariwarScope`), the batch row FIRST; the CLI rolls the transaction back for `--dry-run`.
+//
+// ⚠ DELIBERATE — NO HTTP ACTOR, NO AUDIT LINE, NO EVENT (review 2026-10-15, checklist 8 + 9). The import and
+// `--rename-district` are PRIVILEGED list mutations (a rename moves EVERY workplace and open request of a district) run as a
+// CLI under the operator's database login: ⛔ no HTTP actor exists to attribute them to, and ⛔ no audit / event pair is
+// written. The `workplace_import_batches` row IS the record of each run — the source, its URL, the retrieval date, the
+// licence, the attribution text, the state code and every count; a rename writes a `source_name = 'rename'` row. The
+// only attribution is the database login the operator used. RATIONALE: Story 6.36a Task 3 specified the CLI and Task 1.2
+// defined the batch row WITHOUT an actor column; 0161 is applied on both shared databases, so ⛔ no column is added here.
+// RE-EXAMINATION TRIGGER: Story 6.36c's staff list / suggestion route — the FIRST HTTP caller of a list mutation — MUST
+// carry the actor and the audit pair in the SAME transaction, and an actor column on the batch row lands with 6.36c's
+// migration (0164). ⛔ An HTTP caller of `writeWorkplaceImport` / `renameWorkplaceDistrict` must never reuse this bypass.
 
 import { and, eq, inArray, sql } from 'drizzle-orm';
 
@@ -53,14 +66,16 @@ export class WorkplaceImportRefusedError extends Error {
 // ── CSV ────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 
 /**
- * A streaming RFC 4180 CSV reader: quoted fields (with `""` escapes, commas and line breaks inside), CRLF or LF records, a
- * leading BOM dropped. Yields one record (an array of raw field strings) at a time — the 400 MB IDP file is ⛔ never held.
+ * A streaming RFC 4180 CSV reader: quoted fields (with `""` escapes, commas and line breaks inside), CRLF, LF or a lone CR
+ * (classic-Mac endings) as the record end, a leading BOM dropped. Yields one record (an array of raw field strings) at a
+ * time — the 400 MB IDP file is ⛔ never held.
  */
 export async function* parseCsv(chunks: AsyncIterable<string | Buffer>): AsyncGenerator<string[]> {
   let field = '';
   let record: string[] = [];
   let inQuotes = false;
   let quotePending = false; // saw a `"` inside quotes — either an escape or the closing quote
+  let afterCr = false; // an unquoted CR ended a record — a following LF belongs to it (CRLF), ⛔ a second record end
   let first = true;
   let sawAny = false;
   // A STREAMING decoder: a multi-byte character (Devanagari is 3 bytes) split across two Buffer chunks is reassembled,
@@ -75,6 +90,10 @@ export async function* parseCsv(chunks: AsyncIterable<string | Buffer>): AsyncGe
     for (let i = 0; i < chunk.length; i += 1) {
       const c = chunk[i]!;
       sawAny = true;
+      if (afterCr) {
+        afterCr = false;
+        if (c === '\n') continue; // the LF of a CRLF (possibly across a chunk boundary)
+      }
       if (inQuotes) {
         if (quotePending) {
           quotePending = false;
@@ -97,13 +116,13 @@ export async function* parseCsv(chunks: AsyncIterable<string | Buffer>): AsyncGe
       } else if (c === ',') {
         record.push(field);
         field = '';
-      } else if (c === '\n') {
+      } else if (c === '\n' || c === '\r') {
+        // LF, or a CR — a lone CR is a record end too (classic-Mac endings); the LF of a CRLF is swallowed above.
         record.push(field);
         yield record;
         record = [];
         field = '';
-      } else if (c === '\r') {
-        // CR of a CRLF — the LF ends the record.
+        afterCr = c === '\r';
       } else {
         field += c;
       }
@@ -243,27 +262,42 @@ async function lockPariwarImports(db: Db, pariwarId: PariwarId): Promise<void> {
   await db.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${`workplace_import:${pariwarId}`}))`);
 }
 
+/** The optional text columns' bound (`cluster_name` / `village_name` have ⛔ a CHECK in 0161 — the reader is the bound). */
+const OPTIONAL_TEXT_MAX = 200;
+
+/** The file, read and filtered — the input of the write phase. */
+export interface WorkplaceImportFile {
+  readonly rowsRead: number;
+  readonly rowsOtherState: number;
+  readonly rowsRefused: number;
+  readonly rowsDuplicate: number;
+  /** The schools of the state kept, by code (the FIRST row of a repeated code). */
+  readonly schools: ReadonlyMap<string, FileSchool>;
+  /** Every well-formed code the file carries (a refused-but-present row is ⛔ delisted). */
+  readonly presentCodes: ReadonlySet<string>;
+}
+
 /**
- * Run ONE import inside the caller's scoped transaction. Reads and validates the WHOLE file first (⛔ a write before an
- * unmapped district or a stale map is known); then writes the batch row, the spellings, the schools, the delistings, and
- * finishes the batch. Throws `WorkplaceImportRefusedError` (⛔ any write) when the run is refused.
+ * Phase ONE — read and validate the WHOLE file, ⛔ a connection held (the CLI calls it BEFORE `withPariwarScope`): the
+ * state code, `--relist-district` against the map, every row; an unmapped district or a file with ⛔ no school of the state
+ * REFUSES the run. Throws `WorkplaceImportRefusedError`; ⛔ a write.
  */
-export async function runWorkplaceImport(db: Db, input: WorkplaceImportInput): Promise<WorkplaceImportCounts> {
+export async function readWorkplaceImportFile(
+  input: Pick<WorkplaceImportInput, 'stateCode' | 'rows' | 'districtMap' | 'relistDistricts'>,
+): Promise<WorkplaceImportFile> {
   if (!/^[0-9]{2}$/.test(input.stateCode)) throw new WorkplaceImportRefusedError(`"${input.stateCode}" is not a two-digit UDISE state code`);
-  const relist = new Set(input.relistDistricts ?? []);
   const mapTargets = new Set(input.districtMap.values());
-  for (const d of relist) {
+  for (const d of input.relistDistricts ?? []) {
     if (!mapTargets.has(d)) throw new WorkplaceImportRefusedError(`--relist-district "${d}" is not a spelling in the district map`);
   }
 
-  // (1) Read + validate the file (⛔ a write yet).
   let rowsRead = 0;
   let rowsOtherState = 0;
   let rowsRefused = 0;
   let rowsDuplicate = 0;
   const unmapped = new Set<string>();
   const presentCodes = new Set<string>();
-  const school = new Map<string, FileSchool>();
+  const schools = new Map<string, FileSchool>();
   for await (const row of input.rows) {
     rowsRead += 1;
     const code = (row['udise_school_code'] ?? '').trim();
@@ -275,13 +309,22 @@ export async function runWorkplaceImport(db: Db, input: WorkplaceImportInput): P
     }
     const name = (row['school_name'] ?? '').trim();
     const fileDistrict = (row['district_name'] ?? '').trim();
-    if (!validCode || name === '' || [...name].length > 200 || fileDistrict === '') {
+    const clusterName = optionalText(row['cluster_name']);
+    const villageName = optionalText(row['village_name']);
+    if (
+      !validCode ||
+      name === '' ||
+      [...name].length > 200 ||
+      fileDistrict === '' ||
+      (clusterName !== null && [...clusterName].length > OPTIONAL_TEXT_MAX) ||
+      (villageName !== null && [...villageName].length > OPTIONAL_TEXT_MAX)
+    ) {
       rowsRefused += 1;
       if (validCode) presentCodes.add(code);
       continue;
     }
     presentCodes.add(code);
-    if (school.has(code)) {
+    if (schools.has(code)) {
       rowsDuplicate += 1;
       continue;
     }
@@ -291,13 +334,13 @@ export async function runWorkplaceImport(db: Db, input: WorkplaceImportInput): P
       continue;
     }
     const pin = (row['pincode'] ?? '').trim();
-    school.set(code, {
+    schools.set(code, {
       code,
       name,
       district,
       blockCode: code.slice(0, 6),
-      clusterName: optionalText(row['cluster_name']),
-      villageName: optionalText(row['village_name']),
+      clusterName,
+      villageName,
       pincode: PIN_RE.test(pin) ? pin : null,
     });
   }
@@ -306,6 +349,38 @@ export async function runWorkplaceImport(db: Db, input: WorkplaceImportInput): P
       `the district map has no spelling for ${[...unmapped].sort().map((d) => `"${d}"`).join(', ')} — nothing was written`,
     );
   }
+  // ⛔ A run that read NO school of the state (a header-only file; a wrong `--state`) — it would list every map spelling
+  // with ⛔ a school behind it and flip the Pariwar to "has a list".
+  if (schools.size === 0) {
+    throw new WorkplaceImportRefusedError(
+      `no school of state "${input.stateCode}" was read (rows read ${rowsRead}, other state ${rowsOtherState}, refused ${rowsRefused}) — nothing was written`,
+    );
+  }
+  return { rowsRead, rowsOtherState, rowsRefused, rowsDuplicate, schools, presentCodes };
+}
+
+/**
+ * Run ONE import inside the caller's scoped transaction: the read phase, then the write phase. ⚠ The read runs INSIDE the
+ * open transaction here — the CLI calls the two phases separately (the file read BEFORE `withPariwarScope`); this form is
+ * for a caller that already holds the transaction (the tests). Throws `WorkplaceImportRefusedError` (⛔ any write).
+ */
+export async function runWorkplaceImport(db: Db, input: WorkplaceImportInput): Promise<WorkplaceImportCounts> {
+  return writeWorkplaceImport(db, input, await readWorkplaceImportFile(input));
+}
+
+/**
+ * Phase TWO — the writes, inside the caller's scoped transaction: the stale-map check, the batch row FIRST (`running`), the
+ * spellings, the schools, the delistings, the batch finished with its counts (AC2 — ONE transaction). Throws
+ * `WorkplaceImportRefusedError` on a stale map (⛔ a write — the check precedes the batch row).
+ */
+export async function writeWorkplaceImport(
+  db: Db,
+  input: Pick<WorkplaceImportInput, 'pariwarId' | 'stateCode' | 'districtMap' | 'relistDistricts' | 'source'>,
+  file: WorkplaceImportFile,
+): Promise<WorkplaceImportCounts> {
+  const relist = new Set(input.relistDistricts ?? []);
+  const mapTargets = new Set(input.districtMap.values());
+  const { rowsRead, rowsOtherState, rowsRefused, rowsDuplicate, schools: school, presentCodes } = file;
 
   await lockPariwarImports(db, input.pariwarId);
 

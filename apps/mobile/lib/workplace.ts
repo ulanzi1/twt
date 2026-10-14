@@ -30,13 +30,22 @@ export function parseStartDate(text: string, todayIst: string): string | null {
 }
 
 /**
- * A typed workplace name or place the server will take: 1–120 characters trimmed and ⛔ a run of seven digits (a phone
- * number — SW9). The server folds EVERY script's digits; this folds Devanagari (what a Hindi keyboard types) and ASCII.
+ * A typed workplace name or place the server will take (the server's rule, mirrored — review 2026-10-15):
+ *   · 1–120 code points TRIMMED (what is sent — ⛔ never rewritten);
+ *   · VISIBLE — with every format character (`\p{Cf}`: ZWJ, ZWNJ, ZWSP…) and every mark (`\p{M}`) removed, at least one
+ *     code point remains (a zero-width or marks-only name renders blank); a Devanagari word that CONTAINS a ZWNJ is fine;
+ *   · ⛔ a run of seven digits once folded (a phone number — SW9), where a space, hyphen or dot BETWEEN digits is ⛔ a
+ *     separator (`98765 43210`, `98765-43210`, `98.76.54.321` are all a phone number).
+ * The server folds EVERY script's digits; this folds Devanagari (what a Hindi keyboard types) and ASCII.
  */
 export function isPlausibleTypedText(text: string): boolean {
   const trimmed = text.trim()
   const len = [...trimmed].length
-  return len >= 1 && len <= TYPED_TEXT_MAX && !/[0-9]{7}/.test(asciiDigits(trimmed))
+  if (len < 1 || len > TYPED_TEXT_MAX) return false
+  // The stripped copy is TRIMMED again (the server's exact rule): format characters around a lone space leave only the space.
+  if (trimmed.replace(/[\p{Cf}\p{M}]/gu, '').trim() === '') return false
+  // ⛔ A lookbehind (Hermes); the captured digit is put back — the server's exact line.
+  return !/[0-9]{7}/.test(asciiDigits(trimmed).replace(/([0-9])[\s.-]+(?=[0-9])/g, '$1'))
 }
 
 /** The four answers of the step (SW7). `school` / `office` then pick from the list. */

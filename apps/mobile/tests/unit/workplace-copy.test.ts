@@ -17,7 +17,11 @@ import { historyRowView, refusalCopyKey } from '../../lib/workplace'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 const APP = path.resolve(here, '../..')
+/** The files whose `t` IS the workplace `t` (`useWorkplaceT`) — every literal key is a `workplace` key. */
 const SOURCES = ['components/workplace/WorkplacePicker.tsx', 'app/(life-events)/posting.tsx', 'app/(signup)/workplace.tsx']
+/** Files on the COMMON `useT()` that reach into the namespace explicitly — `t('key', …, { namespace: 'workplace' })` —
+ *  only those calls are scanned (the Life Events hub's card; review 2026-10-15). */
+const NAMESPACED_SOURCES = ['app/(life-events)/index.tsx']
 
 /** Every literal key passed to the workplace `t` in the source (`t('key'` / `t("key"`). */
 function literalKeys(): string[] {
@@ -27,6 +31,10 @@ function literalKeys(): string[] {
     for (const m of src.matchAll(/\bt\(\s*'([a-z_.]+)'/g)) keys.add(m[1]!)
     // The option table names keys as string literals in objects.
     for (const m of src.matchAll(/key: '([a-z_.]+)'/g)) keys.add(m[1]!)
+  }
+  for (const f of NAMESPACED_SOURCES) {
+    const src = readFileSync(path.join(APP, f), 'utf8')
+    for (const m of src.matchAll(/\bt\(\s*'([a-z_.]+)'\s*,[^)]*namespace:\s*'workplace'/g)) keys.add(m[1]!)
   }
   return [...keys].sort()
 }
@@ -60,6 +68,9 @@ describe('AC10 — the workplace copy resolves through the REAL t()', () => {
     const keys = literalKeys()
     expect(keys.length).toBeGreaterThan(25)
     expect(keys).toEqual(expect.arrayContaining(['step_title', 'not_listed', 'transferred', 'kind_prompt', 'typed_name_label', 'date_hint']))
+    // The hub card's keys come through the namespaced scan (⛔ its `lifeEvents.*` common keys).
+    expect(keys).toEqual(expect.arrayContaining(['hub_label', 'hub_desc']))
+    expect(keys.some((k) => k.startsWith('lifeEvents.'))).toBe(false)
     // Every computed key is really in a source file (⛔ a stale list).
     const src = SOURCES.map((f) => readFileSync(path.join(APP, f), 'utf8')).join('\n')
     for (const k of COMPUTED_KEYS) expect(src, k).toContain(`'${k}'`)

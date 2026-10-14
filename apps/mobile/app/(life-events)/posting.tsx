@@ -7,12 +7,16 @@
 //
 // ── ⚠⛔ the history list starts empty and fills: loading · error · empty render as SIBLINGS, ⛔ in place. It is a short
 //   list (a few transfers in a career) inside a ScrollView — a plain map, ⛔ a virtualised list nested in a scroll view.
+//   It is read PAGE BY PAGE (`useInfiniteQuery`, *"Show more"* while the server says `hasMore` — review 2026-10-15); a
+//   save invalidates it, which refetches from the first page, so the new row is at the top (AC6).
+// ── the loading state branches on `isPending` (⛔ `isLoading`): the query is DISABLED while the session hydrates, and a
+//   disabled v5 query is `isLoading: false` with ⛔ data — `isLoading` would flash *"Not added yet"* on a cold start.
 
 import { useState } from 'react'
 import { ScrollView } from 'react-native'
 
 import { Stack } from 'expo-router'
-import { Button, H2, H4, Text, YStack } from 'tamagui'
+import { Button, H2, H4, Spinner, Text, YStack } from 'tamagui'
 
 import { AnnouncedText } from '../../components/peer-request/announce'
 import { usePostingHistoryQuery } from '../../components/workplace/useWorkplaceQueries'
@@ -42,7 +46,8 @@ export default function WorkplaceScreen() {
     )
   }
 
-  const rows = (history.data?.items ?? []).map(historyRowView)
+  const items = history.data?.pages.flatMap((p) => p.items) ?? []
+  const rows = items.map(historyRowView)
   const current = rows[0]
 
   return (
@@ -54,7 +59,7 @@ export default function WorkplaceScreen() {
           {saved ? <AnnouncedText text={t('saved')} /> : null}
 
           <H4 accessibilityRole="header">{t('current_label')}</H4>
-          {history.isLoading ? (
+          {history.isPending ? (
             <AnnouncedText text={t('history_loading')} />
           ) : history.isError ? (
             <YStack gap="$2">
@@ -84,12 +89,22 @@ export default function WorkplaceScreen() {
             {t('transferred')}
           </Button>
 
-          {rows.length > 1 ? (
+          {rows.length > 1 || history.hasNextPage ? (
             <YStack gap="$3">
               <H4 accessibilityRole="header">{t('history_label')}</H4>
               {rows.slice(1).map((v, i) => (
-                <HistoryRow key={history.data!.items[i + 1]!.postingId} view={v} />
+                <HistoryRow key={items[i + 1]!.postingId} view={v} />
               ))}
+              {history.hasNextPage ? (
+                <Button
+                  accessibilityRole="button"
+                  disabled={history.isFetchingNextPage}
+                  accessibilityState={{ disabled: history.isFetchingNextPage }}
+                  onPress={() => void history.fetchNextPage()}
+                >
+                  {history.isFetchingNextPage ? <Spinner /> : t('search_more')}
+                </Button>
+              ) : null}
             </YStack>
           ) : null}
         </YStack>
@@ -110,8 +125,9 @@ function HistoryRow({ view }: { view: HistoryRowView }) {
   return (
     <YStack accessible accessibilityRole="text" accessibilityLabel={[title, ...lines].join(', ')} gap="$1" py="$2" borderBottomWidth={1} borderColor="$borderColor">
       <Text fontWeight="600">{title}</Text>
-      {lines.map((l) => (
-        <Text key={l} fontSize="$2" color="$colorPress">
+      {/* Keyed by POSITION — two lines can read the same (a district spelled like a status line), and the list is static. */}
+      {lines.map((l, i) => (
+        <Text key={i} fontSize="$2" color="$colorPress">
           {l}
         </Text>
       ))}

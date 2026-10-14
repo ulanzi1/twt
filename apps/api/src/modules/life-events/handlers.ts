@@ -49,8 +49,14 @@ import { encryptAddressLine } from './address-crypto.js';
 /** Lifecycle states in which a Life Events update is rejected (terminal — mirror nominee/medical). */
 const TERMINAL_STATES = new Set(['withdrawn', 'anonymized']);
 
-/** How long a posting write's idempotency claim is held (the personal-event precedent). */
-const POSTING_IDEMPOTENCY_TTL_SECONDS = 300;
+/**
+ * How long a posting write's idempotency claim — and its recorded result — is held. ⚠ [Review][Patch] 2026-10-15: was 300 s. The
+ * picker keeps ONE key per answer and re-sends it on every retry, and the keyed store answers `already_claimed` with ⛔ result
+ * once `expires_at` has passed — so a retry of the SAME answer six minutes after a lost response was a 409 until the hourly
+ * vacuum, then a SECOND posting row (AC4: *"a replay returns the same result, ⛔ a second row"*). 24 h, the peer-request
+ * precedent (`claims.peer-request.handlers.ts`), outlives any member's retry window.
+ */
+const POSTING_IDEMPOTENCY_TTL_SECONDS = 24 * 60 * 60;
 
 /** The 422 messages — non-sensitive, ⛔ ever the member's input (they reach logs). ONE code per family (AC4). */
 const WORKPLACE_REFUSAL_MESSAGES: Record<memberDomain.WorkplaceRefusalCode, string> = {
@@ -69,6 +75,19 @@ function refuse(code: memberDomain.WorkplaceRefusalCode): never {
 export function createLifeEventsHandlers(deps: AppDeps) {
   const enc = deps.encryption;
   const idempotencyStore = idempotency.createKeyedStore(deps.pool);
+
+  /** Release a claim whose attempt failed — three tries with a short back-off (the pool may be what failed); never throws. */
+  async function releaseClaimWithRetry(idemKey: string): Promise<void> {
+    for (const waitMs of [0, 200, 800]) {
+      if (waitMs > 0) await new Promise((resolve) => setTimeout(resolve, waitMs));
+      try {
+        await idempotencyStore.release(idemKey);
+        return;
+      } catch {
+        // retry
+      }
+    }
+  }
 
   /** Read the caller-supplied `Idempotency-Key` header (required on the posting write — AC4). */
   function requireIdempotencyKey(request: FastifyRequest): string {
@@ -226,150 +245,176 @@ export function createLifeEventsHandlers(deps: AppDeps) {
         );
       }
 
-      let written = false;
+      // ⚠ [Review][Patch] 2026-10-15 — the claim is HELD from here, so everything below sits inside ONE try/finally: a failure
+      // anywhere before the COMMIT (the pool, the scope tx, the domain) RELEASES it — a corrected retry may reuse the key. The
+      // first cut opened the scope tx OUTSIDE the try (a pool failure leaked the claim for the whole TTL) and recorded the
+      // replay result BEFORE the commit — the personal-event precedent (`personal-event-handlers.ts`) commits FIRST and only
+      // THEN records, so a replay says "saved" only for a row that landed. ⚠ That holds once `closeScopeTx` surfaces a failed
+      // COMMIT — today it swallows one (`scope-tx.ts`, a DEFERRED cross-cutting item in the 6.36a review); until then a commit
+      // failure is invisible to EVERY handler, this one included.
+      let committed = false;
       let claimSettled = false;
-      const scopeTx = await openScopeTx(deps, pariwarIdStr);
-      let ok = false;
       try {
         const memberId = ids.memberId(memberIdStr);
         const pariwarId = ids.pariwarId(pariwarIdStr);
-        const state = await assertMemberExistsAndNotTerminal(scopeTx, pariwarId, memberId);
-        const tx = scopeTx.tx;
+        let result: LifeEventsSummaryResult;
+        let auditContext: { district: string; choice: PostingUpdateRequest['choice'] };
 
-        // The member's posting writes, one at a time (the start-date check and the "end the older request" step read a
-        // stable history).
-        await memberDomain.lockMemberPostingWrites(tx, memberId);
-        const hasList = await memberDomain.pariwarHasWorkplaceList(tx, pariwarId);
-        const previousStart = await memberDomain.latestPostingStartedOn(tx, pariwarId, memberId);
-        const now = deps.clock();
-        const checkStart = (startedOn: string): void => {
-          if (!memberDomain.isValidStartDate(startedOn, now, previousStart)) refuse('workplace.start_date_invalid');
-        };
+        const scopeTx = await openScopeTx(deps, pariwarIdStr);
+        let ok = false;
+        try {
+          const state = await assertMemberExistsAndNotTerminal(scopeTx, pariwarId, memberId);
+          const tx = scopeTx.tx;
 
-        let posting: {
-          district: string;
-          isRetirement: boolean;
-          startedOn: string | null;
-          workplaceId: ids.WorkplaceId | null;
-          workplaceKind: 'school' | 'office' | null;
-          workplaceRequestId: ids.WorkplaceRequestId | null;
-          pariwarRef: string | null;
-        };
-        if (body.choice === 'district_only') {
-          if (hasList) refuse('workplace.choice_unavailable');
-          if (body.startedOn !== undefined) checkStart(body.startedOn);
-          posting = {
-            district: body.district,
-            isRetirement: body.isRetirement ?? false,
-            startedOn: body.startedOn ?? null,
-            workplaceId: null,
-            workplaceKind: null,
-            workplaceRequestId: null,
-            pariwarRef: body.pariwarRef ?? null,
+          // The member's posting writes, one at a time (the start-date check and the "end the older request" step read a
+          // stable history).
+          await memberDomain.lockMemberPostingWrites(tx, memberId);
+          const hasList = await memberDomain.pariwarHasWorkplaceList(tx, pariwarId);
+          const previousStart = await memberDomain.latestPostingStartedOn(tx, pariwarId, memberId);
+          const now = deps.clock();
+          const checkStart = (startedOn: string): void => {
+            if (!memberDomain.isValidStartDate(startedOn, now, previousStart)) refuse('workplace.start_date_invalid');
           };
-        } else {
-          if (!hasList) refuse('workplace.choice_unavailable');
-          if (body.choice === 'workplace') {
-            // The district FIRST, then the workplace, both FOR SHARE (a concurrent rename waits — SF13).
-            const w = await memberDomain.lockListedWorkplace(tx, pariwarId, body.workplaceId);
-            if (!w) refuse('workplace.not_found');
-            checkStart(body.startedOn);
+
+          let posting: {
+            district: string;
+            isRetirement: boolean;
+            startedOn: string | null;
+            workplaceId: ids.WorkplaceId | null;
+            workplaceKind: 'school' | 'office' | null;
+            workplaceRequestId: ids.WorkplaceRequestId | null;
+            pariwarRef: string | null;
+          };
+          if (body.choice === 'district_only') {
+            if (hasList) refuse('workplace.choice_unavailable');
+            if (body.startedOn !== undefined) checkStart(body.startedOn);
             posting = {
-              district: w.district,
-              isRetirement: false,
-              startedOn: body.startedOn,
-              workplaceId: w.workplaceId,
-              workplaceKind: w.kind,
+              district: body.district,
+              isRetirement: body.isRetirement ?? false,
+              startedOn: body.startedOn ?? null,
+              workplaceId: null,
+              workplaceKind: null,
               workplaceRequestId: null,
               pariwarRef: body.pariwarRef ?? null,
             };
           } else {
-            if (!(await memberDomain.lockListedDistrict(tx, pariwarId, body.district))) refuse('workplace.district_not_found');
-            checkStart(body.startedOn);
-            if (body.choice === 'not_listed') {
-              // The request row FIRST — the posting names it (I2: the member's own act writes both).
-              const req = await memberDomain.insertWorkplaceRequest(tx, {
-                pariwarId,
-                memberId,
-                district: body.district,
-                typedName: body.typedName,
-                typedPlace: body.typedPlace ?? null,
-                startedOn: body.startedOn,
-              });
+            if (!hasList) refuse('workplace.choice_unavailable');
+            if (body.choice === 'workplace') {
+              // The district FIRST, then the workplace, both FOR SHARE (a concurrent rename waits — SF13).
+              const w = await memberDomain.lockListedWorkplace(tx, pariwarId, body.workplaceId);
+              if (!w) refuse('workplace.not_found');
+              checkStart(body.startedOn);
               posting = {
-                district: body.district,
+                district: w.district,
                 isRetirement: false,
                 startedOn: body.startedOn,
-                workplaceId: null,
-                workplaceKind: null,
-                workplaceRequestId: req.requestId,
-                pariwarRef: null,
-              };
-            } else {
-              posting = {
-                district: body.district,
-                isRetirement: true,
-                startedOn: body.startedOn,
-                workplaceId: null,
-                workplaceKind: null,
+                workplaceId: w.workplaceId,
+                workplaceKind: w.kind,
                 workplaceRequestId: null,
                 pariwarRef: body.pariwarRef ?? null,
               };
+            } else {
+              if (!(await memberDomain.lockListedDistrict(tx, pariwarId, body.district))) refuse('workplace.district_not_found');
+              checkStart(body.startedOn);
+              if (body.choice === 'not_listed') {
+                // The request row FIRST — the posting names it (I2: the member's own act writes both).
+                const req = await memberDomain.insertWorkplaceRequest(tx, {
+                  pariwarId,
+                  memberId,
+                  district: body.district,
+                  typedName: body.typedName,
+                  typedPlace: body.typedPlace ?? null,
+                  startedOn: body.startedOn,
+                });
+                posting = {
+                  district: body.district,
+                  isRetirement: false,
+                  startedOn: body.startedOn,
+                  workplaceId: null,
+                  workplaceKind: null,
+                  workplaceRequestId: req.requestId,
+                  pariwarRef: null,
+                };
+              } else {
+                posting = {
+                  district: body.district,
+                  isRetirement: true,
+                  startedOn: body.startedOn,
+                  workplaceId: null,
+                  workplaceKind: null,
+                  workplaceRequestId: null,
+                  pariwarRef: body.pariwarRef ?? null,
+                };
+              }
             }
           }
+
+          await memberDomain.insertMemberPosting(tx, {
+            memberId,
+            pariwarId,
+            district: posting.district,
+            pariwarRef: posting.pariwarRef,
+            isRetirement: posting.isRetirement,
+            workplaceId: posting.workplaceId,
+            workplaceRequestId: posting.workplaceRequestId,
+            startedOn: posting.startedOn,
+          });
+
+          // Non-transition marker. NON-PII: the district, ids, a kind, a date, flags — ⛔ the typed text.
+          await memberDomain.projectMemberState(scopeTx.client, {
+            memberId,
+            pariwarId,
+            eventType: 'member.posting_updated',
+            payload: {
+              from_state: state,
+              to_state: state,
+              trigger: 'life_events_posting_update',
+              actor: 'member',
+              district: posting.district,
+              ...(posting.pariwarRef ? { pariwar_ref: posting.pariwarRef } : {}),
+              is_retirement: posting.isRetirement,
+              workplace_id: posting.workplaceId,
+              workplace_kind: posting.workplaceKind,
+              started_on: posting.startedOn,
+              not_listed: posting.workplaceRequestId !== null,
+            },
+            actorId: memberIdStr,
+          });
+
+          result = await buildSummary(scopeTx, pariwarId, memberId);
+          auditContext = { district: posting.district, choice: body.choice };
+          ok = true;
+        } catch (err) {
+          if (err instanceof memberDomain.WorkplaceWriteRefusedError) refuse(err.code);
+          throw err;
+        } finally {
+          await closeScopeTx(scopeTx, ok);
         }
 
-        await memberDomain.insertMemberPosting(tx, {
-          memberId,
-          pariwarId,
-          district: posting.district,
-          pariwarRef: posting.pariwarRef,
-          isRetirement: posting.isRetirement,
-          workplaceId: posting.workplaceId,
-          workplaceRequestId: posting.workplaceRequestId,
-          startedOn: posting.startedOn,
-        });
-
-        // Non-transition marker. NON-PII: the district, ids, a kind, a date, flags — ⛔ the typed text.
-        await memberDomain.projectMemberState(scopeTx.client, {
-          memberId,
-          pariwarId,
-          eventType: 'member.posting_updated',
-          payload: {
-            from_state: state,
-            to_state: state,
-            trigger: 'life_events_posting_update',
-            actor: 'member',
-            district: posting.district,
-            ...(posting.pariwarRef ? { pariwar_ref: posting.pariwarRef } : {}),
-            is_retirement: posting.isRetirement,
-            workplace_id: posting.workplaceId,
-            workplace_kind: posting.workplaceKind,
-            started_on: posting.startedOn,
-            not_listed: posting.workplaceRequestId !== null,
-          },
-          actorId: memberIdStr,
-        });
-
-        const result = await buildSummary(scopeTx, pariwarId, memberId);
-        ok = true;
-        written = true;
-        await idempotencyStore.recordResult(idemKey, result);
+        // COMMITTED. From here the write is durable, so the claim is KEPT whatever happens below — a retry replays rather
+        // than writing twice (the survey precedent). The replay result FIRST (the narrowest window between the commit and
+        // a replayable key), the audit line second — it carries the district and the CHOICE, ⛔ the typed text.
+        committed = true;
+        try {
+          await idempotencyStore.recordResult(idemKey, result);
+        } catch (err) {
+          // The row is committed: the member gets the honest 200. A retry with this key answers 409 until the claim expires
+          // (⛔ a duplicate — the claim is held), which is the lesser harm; the store failure is logged, ⛔ hidden.
+          request.log.warn({ err, idemKey }, 'posting write committed but its idempotency result could not be recorded');
+        }
         claimSettled = true;
         emitAuthAudit(deps, request, 'member_life_events.posting_updated', {
           actorId: memberIdStr,
           pariwarId: pariwarIdStr,
-          context: { district: posting.district, choice: body.choice },
+          context: auditContext,
         });
         return result;
-      } catch (err) {
-        if (err instanceof memberDomain.WorkplaceWriteRefusedError) refuse(err.code);
-        throw err;
       } finally {
-        await closeScopeTx(scopeTx, ok);
-        // A failed attempt releases its claim (a corrected retry may reuse the key); a write that DID commit keeps it,
-        // so a retry replays rather than writing again (the survey precedent).
-        if (!claimSettled && !written) await idempotencyStore.release(idemKey).catch(() => undefined);
+        // A failed attempt releases its claim (a corrected retry may reuse the key); a COMMITTED write keeps it. ⚠ The claim
+        // is held 24 h, so a release that ALSO fails (the pool is what broke) would lock this exact answer for a day — the
+        // release is retried with a short back-off. A process kill between the claim and here is the accepted residual (the
+        // peer-request precedent's trade-off); the member recovers by changing the answer (a new key).
+        if (!claimSettled && !committed) await releaseClaimWithRetry(idemKey);
       }
     },
 
@@ -385,9 +430,12 @@ export function createLifeEventsHandlers(deps: AppDeps) {
       try {
         const pariwarId = ids.pariwarId(pariwarIdStr);
         const hasList = await memberDomain.pariwarHasWorkplaceList(scopeTx.tx, pariwarId);
-        const districts = await memberDomain.listWorkplaceDistricts(scopeTx.tx, pariwarId, { ...(q.limit !== undefined ? { limit: q.limit } : {}) });
+        // ⚠ [Review][Patch] 2026-10-15: `hasMore` was hard-coded false while `limit` was honoured (`?limit=1` on a 38-district
+        // Pariwar declared the list complete). The domain reads ONE past the page; `nextCursor` stays null — the contract
+        // promises ⛔ a second page (the cap exceeds any state's district count), so the remedy is a larger `limit`.
+        const page = await memberDomain.pageWorkplaceDistricts(scopeTx.tx, pariwarId, { ...(q.limit !== undefined ? { limit: q.limit } : {}) });
         ok = true;
-        return { items: districts.map((district) => ({ district })), nextCursor: null, hasMore: false, hasList };
+        return { items: page.items.map((district) => ({ district })), nextCursor: null, hasMore: page.hasMore, hasList };
       } finally {
         await closeScopeTx(scopeTx, ok);
       }

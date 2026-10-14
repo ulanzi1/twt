@@ -148,6 +148,12 @@ describe.skipIf(!hasDatabase)('Story 6.36a — the workplace routes (E2E, live D
       const r = await call(t, 'GET', '/api/v1/member/life-events/workplaces/districts', { token: tok });
       expect(r.status).toBe(200);
       expect(r.body).toEqual({ items: [{ district: 'Gaya' }, { district: 'Patna' }], nextCursor: null, hasMore: false, hasList: true });
+      // [Review][Patch] 2026-10-15 — `limit` is honoured AND `hasMore` says so (it was hard-coded false).
+      const page = await call(t, 'GET', '/api/v1/member/life-events/workplaces/districts?limit=1', { token: tok });
+      expect(page.body).toEqual({ items: [{ district: 'Gaya' }], nextCursor: null, hasMore: true, hasList: true });
+      // An exact fit (and the cap itself) is ⛔ "more".
+      expect((await call(t, 'GET', '/api/v1/member/life-events/workplaces/districts?limit=2', { token: tok })).body.hasMore).toBe(false);
+      expect((await call(t, 'GET', '/api/v1/member/life-events/workplaces/districts?limit=200', { token: tok })).body.hasMore).toBe(false);
       const bare = randomUUID();
       const r2 = await call(t, 'GET', '/api/v1/member/life-events/workplaces/districts', { token: token(t, await seedMember(t, bare), bare) });
       expect(r2.body).toEqual({ items: [], nextCursor: null, hasMore: false, hasList: false });
@@ -364,10 +370,43 @@ describe.skipIf(!hasDatabase)('Story 6.36a — the workplace routes (E2E, live D
       expect(replay).toEqual(first);
       expect(await postingsOf(t, memberId)).toHaveLength(1);
       expect(await events(t, memberId)).toHaveLength(1);
+      // [Review][Patch] 2026-10-15 — the claim (and its result) outlives a member's retry window: ≥ 23 h, ⛔ the 300 s that
+      // let a retry of the same answer after five minutes write a second row. The result is recorded (`completed`).
+      const claim = await t.pool.query<{ status: string; held_s: number }>(
+        `SELECT status, EXTRACT(EPOCH FROM (expires_at - created_at))::int AS held_s FROM idempotency_keys WHERE key = $1`,
+        [`life_events.posting_update:${l.pariwarId}:${memberId}:${key}`],
+      );
+      expect(claim.rows[0]?.status).toBe('completed');
+      expect(claim.rows[0]?.held_s).toBeGreaterThanOrEqual(23 * 60 * 60);
       // A refused attempt RELEASES its key: the corrected retry with the same key goes through.
       const k2 = randomUUID();
       expect((await call(t, 'POST', POST, { token: tok, payload: { ...payload, startedOn: '2099-01-01' }, key: k2 })).status).toBe(422);
       expect((await call(t, 'POST', POST, { token: tok, payload: { ...payload, startedOn: '2020-01-01' }, key: k2 })).status).toBe(200);
+    } finally {
+      await teardown(t);
+    }
+  });
+
+  it('the posting write is rate-limited PER MEMBER (SW8): the N+1th write of one member is 429; another member is untouched', async () => {
+    // [Review][Patch] 2026-10-15 — the limit was asserted by construction only. A LOW ceiling (env override, the
+    // rate-limit.spec shape); `perMemberKey` + `hook: 'preHandler'` ⇒ the bucket is the member's actorId, ⛔ the shared IP.
+    const t = await createTestApp({ env: { WRITE_RATE_MAX: '2' } });
+    try {
+      const l = await seedList(t);
+      const a = await seedMember(t, l.pariwarId);
+      const b = await seedMember(t, l.pariwarId);
+      const tokA = token(t, a, l.pariwarId);
+      const tokB = token(t, b, l.pariwarId);
+      const payload = { choice: 'retired', district: 'Patna', startedOn: '2024-01-01' };
+      const codes: number[] = [];
+      for (let i = 0; i < 3; i += 1) codes.push((await call(t, 'POST', POST, { token: tokA, payload })).status);
+      expect(codes).toEqual([200, 200, 429]);
+      expect(await postingsOf(t, a)).toHaveLength(2);
+      // The other member's bucket is its own.
+      expect((await call(t, 'POST', POST, { token: tokB, payload })).status).toBe(200);
+      // A 429 never reached the handler: ⛔ a claim was taken, so the same key is free afterwards — ⛔ asserted here (the
+      // window is a minute); the audit line proves the hook fired.
+      expect(t.auditSink.ofType('rate_limit.exceeded').length).toBeGreaterThanOrEqual(1);
     } finally {
       await teardown(t);
     }

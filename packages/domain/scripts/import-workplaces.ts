@@ -6,23 +6,32 @@
 //     [--relist-district "<spelling>"]... [--dry-run]
 //   pnpm --filter @twt/domain workplaces:import -- --pariwar <uuid> --rename-district "<old>" "<new>" [--dry-run]
 //
-// ONE transaction under `withPariwarScope`; `--dry-run` runs the same work and ROLLS IT BACK (⛔ anything written), printing
-// the same counts. The file is STREAMED (⛔ ever 400 MB in memory). ⚠ ⛔ Never fetch the real file in a test or in CI.
+// The arguments are validated and the file is read and filtered BEFORE the transaction opens (⛔ a connection idle in
+// transaction for the read; every file-level refusal fires with nothing open); then ONE transaction under
+// `withPariwarScope` — the batch row FIRST, the counts finished at the end. `--dry-run` runs the same work and ROLLS IT
+// BACK (⛔ anything written), printing the same counts. The file is STREAMED (⛔ ever 400 MB in memory). ⚠ ⛔ Never fetch
+// the real file in a test or in CI.
+//
+// ⚠ DELIBERATE — ⛔ no HTTP actor, ⛔ no audit line: the batch row IS the record; the operator's database login is the only
+// attribution (the module header of `workplace-import.ts` holds the rationale and the re-examination trigger — 6.36c).
 
 import 'dotenv/config';
 import { createReadStream } from 'node:fs';
 
 import { createDb, withPariwarScope } from '../src/db.js';
 import { pariwarId as toPariwarId } from '../src/ids/index.js';
+import { isCalendarDate } from '../src/member/workplace.js';
 import {
   csvObjects,
   IDP_REQUIRED_COLUMNS,
   parseCsv,
   readDistrictMap,
+  readWorkplaceImportFile,
   renameWorkplaceDistrict,
-  runWorkplaceImport,
   WorkplaceImportRefusedError,
+  writeWorkplaceImport,
 } from '../src/member/workplace-import.js';
+import { WORKPLACE_RENAME_SOURCE_NAME } from '../src/schema/workplace_import_batches.js';
 import { resolveConnectionString } from '../src/secrets.js';
 
 interface Args {
@@ -38,6 +47,34 @@ const VALUE_FLAGS = ['--state', '--file', '--district-map', '--source', '--url',
 function usage(message: string): never {
   console.error(`[workplaces:import] ${message}\n\nUsage: see packages/domain/scripts/README-import-workplaces.md`);
   process.exit(2);
+}
+
+/** An argument VALUE the batch row would refuse — refused here, BEFORE the file is read (exit 1, a plain message). */
+function refuse(message: string): never {
+  console.error(`[workplaces:import] refused — ${message}`);
+  process.exit(1);
+}
+
+/** The source-column bound: `source_name` is 1–200 characters (0161's CHECK). */
+const SOURCE_NAME_MAX = 200;
+
+/**
+ * The source values, checked against what 0161 would refuse — so a calendar-invalid `--retrieved`, an over-long or
+ * reserved `--source`, or a blank `--url` / `--licence` / `--attribution` is refused with a plain message BEFORE the
+ * 400 MB read, ⛔ as a raw Postgres error after it.
+ */
+function validateSourceValues(values: ReadonlyMap<string, string>): void {
+  const retrieved = values.get('--retrieved')!;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(retrieved)) refuse(`--retrieved "${retrieved}" must be YYYY-MM-DD`);
+  if (!isCalendarDate(retrieved)) refuse(`--retrieved "${retrieved}" is not a calendar date`);
+  const source = values.get('--source')!.trim();
+  const sourceLength = [...source].length;
+  if (sourceLength < 1 || sourceLength > SOURCE_NAME_MAX) refuse(`--source must be 1–${SOURCE_NAME_MAX} characters`);
+  if (source === WORKPLACE_RENAME_SOURCE_NAME) refuse(`--source "${WORKPLACE_RENAME_SOURCE_NAME}" is reserved for --rename-district`);
+  for (const f of ['--url', '--licence', '--attribution'] as const) {
+    if (values.get(f)!.trim() === '') refuse(`${f} must not be blank`);
+  }
+  if (!/^[0-9]{2}$/.test(values.get('--state')!)) refuse(`--state "${values.get('--state')!}" is not a two-digit UDISE state code`);
 }
 
 function parseArgs(argv: readonly string[]): Args {
@@ -67,7 +104,7 @@ function parseArgs(argv: readonly string[]): Args {
   if (rename !== null && (values.size > 0 || relist.length > 0)) usage('--rename-district runs alone (with --pariwar and --dry-run only)');
   if (rename === null) {
     for (const f of VALUE_FLAGS) if (!values.has(f)) usage(`${f} is required`);
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(values.get('--retrieved')!)) usage('--retrieved must be YYYY-MM-DD');
+    validateSourceValues(values);
   }
   return { pariwar, dryRun, rename, values, relist };
 }
@@ -114,22 +151,23 @@ async function main(): Promise<void> {
     const v = args.values;
     const districtMap = await readDistrictMap(parseCsv(createReadStream(v.get('--district-map')!, { encoding: 'utf8' })));
     const rows = csvObjects(parseCsv(createReadStream(v.get('--file')!, { encoding: 'utf8', highWaterMark: 1 << 20 })), IDP_REQUIRED_COLUMNS);
-    const c = await inScope((db) =>
-      runWorkplaceImport(db, {
-        pariwarId,
-        stateCode: v.get('--state')!,
-        rows,
-        districtMap,
-        relistDistricts: args.relist,
-        source: {
-          name: v.get('--source')!,
-          url: v.get('--url')!,
-          retrievedOn: v.get('--retrieved')!,
-          licence: v.get('--licence')!,
-          attribution: v.get('--attribution')!,
-        },
-      }),
-    );
+    const input = {
+      pariwarId,
+      stateCode: v.get('--state')!,
+      districtMap,
+      relistDistricts: args.relist,
+      source: {
+        name: v.get('--source')!.trim(),
+        url: v.get('--url')!.trim(),
+        retrievedOn: v.get('--retrieved')!,
+        licence: v.get('--licence')!.trim(),
+        attribution: v.get('--attribution')!.trim(),
+      },
+    };
+    // Phase ONE — the file, read and filtered with ⛔ a transaction open (every file-level refusal fires here).
+    const file = await readWorkplaceImportFile({ ...input, rows });
+    // Phase TWO — ONE transaction: the batch row FIRST, the counts finished at the end.
+    const c = await inScope((db) => writeWorkplaceImport(db, input, file));
     console.log(`[workplaces:import] finished${tag} — batch ${c.batchId}`);
     console.log(
       [

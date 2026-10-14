@@ -1,7 +1,9 @@
 // The workplace reads (Story 6.36a, Task 5; AC3, AC3b) — TanStack Query hooks over the member-auth SDK.
 //
 // · Every key is namespaced by `pariwarId` AND `memberId` (⛔ a cache shared across the accounts a phone has held — the
-//   repo-wide persisted-cache item), and every hook is `enabled` only once the session has loaded.
+//   repo-wide persisted-cache item), and every hook is `enabled` only once the session has loaded. ⚠ A DISABLED v5 query
+//   has `isLoading === false` and `data === undefined` — a screen branches its loading state on `isPending` (true until
+//   data exists), ⛔ on `isLoading`, or a cold start renders the ERROR branch while the session hydrates.
 // · The SEARCH results and the HISTORY are `gcTime: 0` — the Provider's dehydrate filter reads that as *"⛔ never persist
 //   this to MMKV"* (`components/Provider.tsx`): the search is transient, and the history carries the member's own typed
 //   workplace name. The district list (non-PII, per Pariwar) persists as usual.
@@ -53,12 +55,18 @@ export function useWorkplaceSearchQuery(district: string | null, kind: Workplace
   })
 }
 
-/** The member's OWN posting history, newest first (AC3b). ⛔ Persisted (it carries the member's typed text). */
+/**
+ * The member's OWN posting history, newest first, page by page (AC3b; review 2026-10-15 — ⛔ only the first page).
+ * ⛔ Persisted (it carries the member's typed text). An invalidation (a save) refetches from the FIRST page, so the new
+ * row is at the top (AC6).
+ */
 export function usePostingHistoryQuery() {
   const { session } = useSession()
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: workplaceKeys.history(session?.pariwarId, session?.memberId),
-    queryFn: () => memberAuth.postingHistory(),
+    queryFn: ({ pageParam }) => memberAuth.postingHistory(pageParam !== undefined ? { cursor: pageParam } : undefined),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (last) => last.nextCursor ?? undefined,
     enabled: Boolean(session?.pariwarId),
     ...TRANSIENT,
   })

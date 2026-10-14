@@ -1000,6 +1000,18 @@ passed this run; its two earlier timeouts were its full read of `events_log` —
 6.27d's — under load.) ⚠ Innocence of #15 is by identity with the dev run's failures, ⛔ by a scratch-DB run this round. **The API
 integration suite on its own: 108 / 108 files, 1311 / 1311.**
 
+### CI exception for the push (2026-10-14)
+
+BigDev authorised pushing `story/6-27d` with `SKIP_CI_LOCAL=1` — ONE push, ONE skipped gate. **Scope:** the pre-push
+`ci:local` (the hook runs it against the shell's `DATABASE_URL`, `:5432`, on HEAD `3f81e7cf`) passed every job but
+`integration-tests`, and that job's ONLY failures were the **7** tests of `tests/integration/reconciliation/review-queue-read.spec.ts`
+(domain 5144 passed / 7 failed / 1 skipped) — the known #15 shared-`PARIWAR_A` accumulation, the SAME 7 the dev run and both
+round-3 `ci:local` runs on `:5433` saw. ⛔ File of this branch touches reconciliation (`git diff --name-only origin/main..HEAD`
+— ⛔ match). ⛔ Other gate is skipped by it in effect: the same tree's full `ci:local` and the API integration suite (108 / 108,
+1311 / 1311) are recorded under *Review Patch Validation — Round 3*, and GitHub CI runs on the PR. **Owed, ⛔ by this story:**
+the #15 remedy (recreate the `:5432` / `:5433` containers and re-migrate, or the Story 9.8 spec's per-test tenant) — until then
+every CODE push fails the hook the same way.
+
 ## Dev Notes
 
 - **Traps** (6.27a's list applies; re-read Traps 1, 5, 9, 12 there):

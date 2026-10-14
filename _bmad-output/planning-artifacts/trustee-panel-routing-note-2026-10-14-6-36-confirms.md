@@ -8,10 +8,17 @@
 
 ---
 
-> ## ⏳ AWAITING PANEL RULING
+> ## ✅ PANEL RULED — 2026-10-14 — recorded as `2026-10-14-331`
 >
-> ⛔ **Nothing is recorded here yet.** When the Panel rules, transcribe it into this block **and** into `.decision-log.md` as a new decision
-> id. ⭐ Everything below is then kept **unedited** as the question **as it was put** ([[feedback_supersede_never_reinterpret]]).
+> **Ruled by Dhiraj Rahul + Kalpana Bharti, relayed by BigDev — verbatim:**
+> *"by DR and KB / SC1: A / SC4: A"*
+>
+> ⭐ Our suggestion **taken on both.** SC1 A as put: count from the filing day, with long-standing colleagues asked first and staff told
+> when the member's workplace or named people changed in the 90 days before the claim — its cost accepted. SC4 A as put: *"school or
+> office"*, in the next version; answers already given keep their words. ⚠ Our readings (⛔ not ratified): Story 6.36 mints that version
+> as `peer_mesh.v4`; the FYI asked nothing and the reply does ⛔ not mention it — ⛔ not read as a ruling on the August directory rulings.
+>
+> ⭐ Everything **below this block is kept UNEDITED** — it is the question as it was put.
 
 ---
 

@@ -81,18 +81,20 @@ claim, contribution, pool or payment reads it. 6.36 reads the accepted people to
 7. **AC6 — the named member's request** appears in the app only, and only to an `active` member (a home card + a notice-strip item,
    `PeerRequestEntry`'s shape):
    *"[Name] has named you as someone who knows them. Do you know him/her?"* with the namer's registered name (the member-to-member name
-   form already shown elsewhere in the member app — ⛔ no new form); *"Yes, I know them"* ⇒ `accepted`; *"No"* ⇒ `declined`; a request
-   past `asked_at` + 30 days (lapsed, whether or not the writer has recorded it yet) or already answered ⇒ 409 `known_people.request_closed`,
-   and such a request ⛔ no longer appears in the named member's list or card; ⛔ no SMS, push or WhatsApp is sent (a test asserts ⛔ no dispatcher call).
+   form already shown elsewhere in the member app — ⛔ no new form), and above the answers *"[Name] will see your answer."* (6.36a SW14);
+   *"Yes, I know them"* ⇒ `accepted`; *"No"* ⇒ `declined`; a request
+   past `asked_at` + 30 days (lapsed, whether or not the writer has recorded it yet) or already answered ⇒ 409 `known_people.request_closed`;
+   a DECLINED or LAPSED request leaves the named member's list and card — an ACCEPTED one stays (it is where they can withdraw, AC8); ⛔ no SMS, push or WhatsApp is sent (a test asserts ⛔ no dispatcher call).
 8. **AC7 — the member's list** (`GET /api/v1/member/known-people`): each live link as `asked` (⛔ no name — the app shows the name the member
    saved, kept only on the phone) or `accepted` (the registered name); `not_accepted` — at once after a decline or a withdrawal, at
    `asked_at` + 30 days after a lapse — for 30 days, then ⛔ not at all (6.36a SW14 — a decline is visible at once, accepted and recorded);
    an ACCEPTED person who has withdrawn from the Trust or had a claim filed for their death (⛔ never a late renewal) reads
    `unavailable` — ⛔ no name, ⛔ never why, the slot kept until the namer removes the row; an erased person's link has ended and shows ⛔
-   nothing; `freeSlots`; remove (`POST …/:linkId/remove`, `Idempotency-Key`) ⇒ `removed`,
+   nothing (⚠ so a vanished row tells the namer that person left the Trust — ⛔ never that they died; recorded, 6.36a SW14); the contract's
+   label enum is `asked | accepted | not_accepted | unavailable`; `freeSlots`; remove (`POST …/:linkId/remove`, `Idempotency-Key`) ⇒ `removed`,
    the named member is ⛔ not told.
 9. **AC8 — withdraw:** the named member can withdraw an accepted link (`POST …/requests/:linkId/withdraw`) ⇒ `withdrawn` with `ended_at`;
-   the namer sees `not_accepted` (⛔ never who withdrew vs declined).
+   the namer sees `not_accepted` (having seen *"Accepted"* before, the namer can tell it was a withdrawal — accepted, 6.36a SW14).
 10. **AC9 — the app flow:** Life Events → *"People who know me"*: the list (AC7), *"Find members in my contacts"* (the note → the permission
     prompt → read numbers → normalise on the phone → AC3 → the matched contacts under their SAVED names, with a search box → tick up to
     `freeSlots` → AC5 for each; more than 1,000 mobiles ⇒ *"We checked 1,000 of your contacts"*), and below the matches *"Not members yet —
@@ -144,8 +146,11 @@ claim, contribution, pool or payment reads it. 6.36 reads the accepted people to
       `member_identities.mobile_blind_index = ANY($1)` inside the caller's scope joined to `members` with the eligibility predicate — ⛔ not
       the `servicePool` pre-scope lookup `resolveMembersByMobile` uses (it crosses Pariwars — SF9) → positions);
       `askKnownPerson` (the caller must be `active`; the namer's advisory lock — ⛔ no row lock on `members` (Task 1.2); lapse stale
-      `asked` rows (their `ended_at` = `asked_at` + 30 days, ⛔ never the moment the writer notices); refuse a re-ask before the last ended
-      link's `ended_at` + 60 days (SW10); count; insert); `listRequestsNamingMe` drops requests past `asked_at` + 30 days; `listMyKnownPeople`, `listRequestsNamingMe`, `answerKnownPersonRequest`,
+      `asked` rows (their `ended_at` = `asked_at` + 30 days, ⛔ never the moment the writer notices); refuse a re-ask before the last
+      DECLINED, LAPSED or WITHDRAWN link's `ended_at` + 60 days (SW10 — ⛔ never a `removed` one); count; insert); `listMyKnownPeople`
+      (derives `not_accepted` and `unavailable`, treats an `asked` row past `asked_at` + 30 days as lapsed — in `freeSlots` too);
+      `listRequestsNamingMe` (drops declined / lapsed requests — an `asked` row past `asked_at` + 30 days counts as lapsed — and keeps accepted
+      ones); `answerKnownPersonRequest`,
       `removeKnownPerson`, `withdrawKnownPerson`; ONE exported eligibility predicate for matching and asking (active · ⛔ no claim naming them
       as deceased · ⛔ not the caller), ⛔ not the selection's (6.36 SW23 adds the identity row and the claimant) — keep them two named functions
       so neither drifts into the other. Names are resolved and decrypted in the HANDLER after the read transaction commits (⛔ no KMS under a
@@ -203,8 +208,9 @@ claim, contribution, pool or payment reads it. 6.36 reads the accepted people to
    the deployment-wide chain lock (6.36a SF9). Bound matching concurrency (≤ 8 per instance), write ONE audit line per request, keep the caps.
 3. ⚠ **The error envelope can echo input** — a 400 `request.validation` carries `details.issues`; assert it carries ⛔ no submitted value
    (AC3, AC4).
-4. ⚠ **Withholding must be uniform** — not-a-member / erased / withdrawn / reported-dead / other-Pariwar is ONE 404; declined / lapsed /
-   withdrawn is ONE `not_accepted` (memory: per-item hiding leaks via absence AND presence).
+4. ⚠ **Withholding must be uniform where it is promised** — not-a-member / erased / withdrawn / reported-dead / other-Pariwar is ONE 404
+   (memory: per-item hiding leaks via absence AND presence); a withdrawal from the Trust and a death read the SAME `unavailable`. ⛔ Not
+   promised (6.36a SW14): a decline is visible at once, and a withdrawn link after an acceptance reads as one.
 5. ⚠ **iOS 18 limited access** — `accessPrivileges: 'limited'` returns only the contacts the member shared; say so on the screen
    (*"Only the contacts you shared are checked."*) and offer `presentAccessPickerAsync()` to add more.
 6. ⚠ **`useT()` returns a fresh closure** — depend on `locale`, ⛔ not on `t` (memory).
@@ -228,6 +234,7 @@ affirmative consent).
 ## Change Log
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-14 | 1.5 | Validate round 5: the named person sees *"[Name] will see your answer"*; only declined or lapsed requests leave their list (accepted ones stay — the withdraw entry); the re-ask rule names declined / lapsed / withdrawn (⛔ never removed); `listMyKnownPeople` derives the labels and `freeSlots`; Trap 4 and AC8 restate what is and is ⛔ not withheld. |
 | 2026-10-14 | 1.4 | Validate round 4: the namer's list follows 6.36a SW14's honest rule (a decline shows at once; a lapse at day 30) and ONE re-ask rule (`ended_at` + 60 days); `unavailable` rows are unnamed for withdrawal and death alike; a lapsed request leaves the named member's list; the lapse's `ended_at` pinned by a CHECK. |
 | 2026-10-14 | 1.3 | Validate round 3: ONE re-ask window and ONE display timeline for a decline and a lapse (AC5, AC7 — ⛔ no declined-vs-ignored signal, ⛔ not even in timing), with a neutral `known_people.cannot_ask_now`; a lapse dated `asked_at` + 30 and ⛔ no answer after it (AC6); the request card only for `active` members; an accepted person who can ⛔ no longer be asked, named only until erased. |
 | 2026-10-14 | 1.2 | Validate round 2: ONLY an `active` member may match, ask or answer (AC10 — ⛔ no signup step, SW16 (1)); the namer's advisory lock (⛔ no row lock — the mutual-naming deadlock); the re-ask cooldown; counters charged before any HMAC; the KMS batch line's row key; the schema's 400; the invite list only from checked contacts; the leftover composite-FK fragment removed. |

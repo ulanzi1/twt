@@ -87,8 +87,9 @@ governs it.
    workplace and is ⛔ not a retirement (a district-only posting from before the Pariwar's import, an unconfirmed *"isn't listed"*);
    `hasWorkplace` = their latest posting names a workplace (listed or since delisted); `transferReview` = the latest posting names a
    workplace, an EARLIER posting named a DIFFERENT workplace, and it was recorded within 30 days (⛔ never after a retirement, ⛔ never for a
-   first confirmed *"isn't listed"* — the member has ⛔ not moved); `replaceNeeded` = an accepted person has WITHDRAWN from the Trust, been
-   erased, or had a claim filed for their death (⛔ never a late renewal — SW16 (4)); `campaign` = a live campaign in the Pariwar AND the
+   first confirmed *"isn't listed"* — the member has ⛔ not moved); `replaceNeeded` = the member has at least one `unavailable` row in 6.36b
+   AC7's list (an accepted person who has withdrawn from the Trust or had a claim filed for their death; ⛔ never a late renewal; an erased
+   person's link has already ended and frees its slot — SW16 (4)); `campaign` = a live campaign in the Pariwar AND the
    member has fewer than three accepted people AND has asked ⛔ nobody since the campaign began. `replaceNeeded`, `campaign` and
    `transferReview` are false for any member who is ⛔ not `active`, and card (b) hides its *"Add people who know you"* button for them
    (6.36a SW16 — every people-who-know-me prompt is for `active` members only; they could ⛔ not act on it, 6.36b AC10). ⛔ No flag depends on whether OTHER members are at a workplace (SW16 (2) —
@@ -147,8 +148,8 @@ governs it.
   banner at a time — `packages/contracts/src/banners/dto.ts:200-214`).
 - ⚠ **A suggestion is the one staff act near who is asked — and it decides ⛔ nothing.** Only the member's *"Yes"* writes a posting, through
   the ONE posting writer; 6.36 reads that posting like any other (as of the cut — SW20).
-- ⚠ **Uniform withholding:** `replaceNeeded` is ONE boolean for a person who left, was erased or was reported dead (a death claim is ⛔
-  never disclosed by the card, and an erased person has ⛔ no name to show).
+- ⚠ **Uniform withholding:** `replaceNeeded` is ONE boolean for a person who left the Trust and a person reported dead (a death claim is ⛔
+  never disclosed by the card); what a namer CAN still tell is recorded in 6.36a SW14.
 - **Testing standards:** as 6.36a (+ admin vitest/jsdom page tests, `apps/admin/vitest.config.ts:16-20`).
 - **References:** 6.36a (SW9, SW16, SF1); `-307` §2 items 2 and 4; `-133` cl.2; `packages/domain/src/rbac/permissions.ts:735-755`.
 
@@ -161,6 +162,7 @@ governs it.
 ## Change Log
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-14 | 1.5 | Validate round 5: `replaceNeeded` = at least one `unavailable` row (the word "erased" dropped — an erased link has ended); the withholding note points to 6.36a SW14. |
 | 2026-10-14 | 1.4 | Validate round 4: offices only in LISTED district spellings; `transferReview` and card (b)'s people-who-know-me button only for `active` members. |
 | 2026-10-14 | 1.3 | Validate round 3: `replaceNeeded` (a boolean, ⛔ no names — an erased person has none; the card names ⛔ nobody); `transferReview` needs an earlier, DIFFERENT workplace; `hasWorkplace` includes a delisted one; the people-who-know-me flags only for `active` members. |
 | 2026-10-14 | 1.2 | Validate round 2: the confirm's order (`confirmed` FIRST, then the posting with `exceptRequestId`), its re-checks, the caller's own request, the handler's event + audit, and the question shown here; a suggestion bound to the request's district; the admin GET open to `workplace.review`; offices only in the Pariwar's `workplace_districts`; `noWorkplace` covers a district-only posting; `transferReview` ⛔ never after a retirement; `replaceNamed` ⛔ never for a late renewal; the campaign card ends when the member asks someone. |

@@ -97,10 +97,12 @@ owed: the peer mesh is a signal, ⛔ never a gate (`-263` FQ10).
    cut (a removal after it — perhaps by the family — does ⛔ not count) AND THAT link was ⛔ never WITHDRAWN (a withdrawal excludes it
    whenever it happened — 6.36a SW17; read per LINK, so a later, separately accepted link counts on its own); the CURRENT workplace is the latest posting's; the PREVIOUS workplace is the latest
    EARLIER posting's that names a workplace DIFFERENT from the current one, skipping retirement and *"isn't listed"* rows; it counts when the
-   CURRENT run began less than 90 days before the FILING date (6.36a SW21's run: the latest consecutive postings of the same kind — an
-   *"isn't listed"* row between two of the same workplace ⛔ never breaks it; a retirement or an unconfirmed *"isn't listed"* starts its own
-   — its start the `started_on` of its earliest row); tests: B → *"isn't listed"* → B, the last 20 days before ⇒ the previous workplace ⛔
-   does not count; A → an unconfirmed *"isn't listed"* 20 days before ⇒ A counts; retiring twice ⛔ never re-arms; `recent_change_before_filing` = in the 90 days before the
+   CURRENT run began less than 90 days before the FILING date — 6.36a SW21 word for word: *"the latest consecutive postings of the same
+   kind, counted back from the latest posting: rows naming the current workplace (an 'isn't listed' row BETWEEN two of them ⛔ never breaks
+   the run), or — when the latest row is a retirement or an unconfirmed 'isn't listed' — the latest consecutive rows of THAT kind; its start
+   = the `started_on` of its EARLIEST row"*, where *"unconfirmed"* means ⛔ no confirming posting recorded before the cut (⛔ never the
+   request's state at selection time — I8); tests: A → B (started 120 days before) → *"isn't listed"* → B (20 days before) ⇒ the previous
+   workplace does ⛔ not count; A → an unconfirmed *"isn't listed"* 20 days before ⇒ A counts; retiring twice ⛔ never re-arms; `recent_change_before_filing` = in the 90 days before the
    cut, the deceased's latest posting was recorded, or any of their named people was ACCEPTED or REMOVED. Live tests (rows written in SEPARATE transactions): a posting the family records on the filing day ⇒ ignored; a friend's posting at
    the deceased's school recorded on the filing day ⇒ ignored; a friend's posting recorded 10 days before ⇒ counted but ranked after every
    settled colleague; the 90-day boundary — 89 days ⇒ the previous workplace counts, 90 ⇒ ⛔ not; school A → *"isn't listed"* → confirmed
@@ -251,6 +253,7 @@ CF2; `-308`; `-325` S1 A; `-326` BD1 A.
 ## Change Log
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-14 | 1.5 | Validate round 5: AC5 quotes SW21's run word for word, defines "unconfirmed" as of the cut, and its first test now has a previous workplace to miss. |
 | 2026-10-14 | 1.4 | Validate round 4: the Story's promise names I8's two exceptions; `settled` measured from the run's recorded start and false for named people; AC5's run definition and its three tests. |
 | 2026-10-14 | 1.3 | Validate round 3: the grouped snapshot row carries `settled` (replay); the Story's promise is "after the claim is filed"; AC5 reads a withdrawal per LINK, counts REMOVALS in the staff line, and measures the 90 days from the start of the CURRENT run; the negative schema-key tests cover `recentChangeBeforeFiling`. |
 | 2026-10-14 | 1.2 | Validate round 2: the anchor is the FILING date — in v1 the certificate's OCR'd date is always empty (6.36a SF17) — so ⛔ no decrypt, ⛔ no KMS dependency, ⛔ no fence (AC4); the cut is the start of the filing day with SETTLED colleagues ranked first and ONE staff line `recentChangeBeforeFiling` (AC1, AC2, AC5, AC10); the previous workplace skips *"isn't listed"* and retirement rows; a withdrawal excludes whenever it happened; the CHECKs scoped to `workplace_named_v1` so seven shipped fixtures stay valid; the REVOKE / GRANT in Task 1; the uncapped-snapshot item NARROWED. |

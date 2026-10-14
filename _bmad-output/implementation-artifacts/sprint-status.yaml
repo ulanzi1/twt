@@ -1,3 +1,13 @@
+# last_updated: 2026-10-14 (STORY 6.27b — CODE REVIEW CLOSED (`bmad-code-review 6.27b`, rounds 1–2, branch `story/6-27b`): row
+# `6-27b-peer-mesh-warnings-wait-and-approvers-view` `review` → `done`. Three parallel layers per pass over the dev build and then over
+# each patch diff before commit: R1–R6, S1–S19, V2–V6, X2–X6, Y3–Y8 applied, each with a red-on-revert test. BigDev's author-commits
+# inside `-310` CF2: for a reader whose own ground visit on the claim is pending, every staff free-text note on that claim is withheld
+# unless they wrote it (D1 → B after A leaked through the missing note; V1 A; X1 A; Y1 A), shown as an explicit withheld state, ⛔ a
+# blank; `reviseBlocked` null for that reader (D2 A). Migration 0159 (visit-note author, photo uploader). Y2: the scheduler's briefing
+# and a Super Admin's direction stay withheld (A); showing them (B) is with the Panel — routing note 2026-10-14 (15d6c49b), WRITTEN,
+# ⛔ sent. Code bcf701c0. ci:local green except the 7 known shared-`PARIWAR_A` failures; apps/api integration 1,291/1,291. Deferrals:
+# queue arm 5 certificate moves; a deny vote into a superseding session; UNREADABLE notes as "—" on three closure surfaces.
+# ⛔ No other row moves.)
 # last_updated: 2026-10-13i (STORY 6.27b — DEV COMPLETE (`bmad-dev-story 6.27b`, branch `story/6-27b`, baseline `560369a7`): row
 # `6-27b-peer-mesh-warnings-wait-and-approvers-view` `ready-for-dev` → `in-progress` → `review`. Built: PM9 — `peer_says_not_died` /
 # `peer_death_date_differs` in both readers (ONE fragment, codes + window indexes only; the decrypt fence denies `value_ciphertext`) and
@@ -19936,7 +19946,7 @@ development_status:
   # ⭐ 2026-10-10 SPLIT (`2026-10-10-305` §2 item 1; BigDev: "Four parts (Recommended)"): the row above is STORY 6.27a (keeps its key — the
   # rulings cite it) and holds the ONE shared PM1–PM25 block. b / d stay `backlog` until 6.27a is `done`; c (sending) stays `backlog`
   # until 6.27b, 6.27d AND row 6-30 are `done` — so every safety piece exists before a real answer arrives.
-  6-27b-peer-mesh-warnings-wait-and-approvers-view: review
+  6-27b-peer-mesh-warnings-wait-and-approvers-view: done
   6-27d-inspector-discrepancy-at-completion: backlog
   # ⭐ 2026-10-12 ANNOTATION (Story 6.34 Task 0.4, `2026-10-12-322` C6 — the comments above kept as written): 6.27c's start condition
   # gains *"AND row 6-34 is done"* — it uses 6.34's typed-variable vocabulary (`{#var#}` + `slots`) and joins its gate's `REGISTRY_FILES`.

@@ -8,13 +8,16 @@ SF1–SF17, SW1–SW30, SC1–SC4, I1–I12, the shared Task 0). This file BUILD
 member is ⛔ not yet `active` while signing up; the home prompt is 6.36c's). Where a summary here and 6.36a's text disagree, 6.36a's text is the record.
 ⚠ Before Task 1: `git diff --name-only 2581c514..HEAD -- packages apps scripts infra` — re-read any cited file that moved.
 
-STATUS: `backlog` — flips to `ready-for-dev` when 6.36a is `done` (its Task 0.2 author-commit is then in the tree).
+STATUS: `ready-for-dev` — ⭐ `2026-10-14-332` (`33902d82`): built IN PARALLEL with 6.36a (wave 1). Worktree `.claude/worktrees/6-36b`; migration
+`0162` (`when` `1794195600006`); test database `twt-test-pg-b` ONLY (`:5434`, `twt_dev` —
+`DATABASE_URL='postgresql://twt_dev_app:devpass@127.0.0.1:5434/twt_dev?sslmode=disable'`), ⛔ never `:5432` / `:5433` until 6.36a has
+merged; merges to `main` SECOND (after 6.36a — a finished 6.36b waits, then rebases).
 GLYPH REGISTER, ADDRESSING RULE, LETTERS: as 6.36a.
 -->
 
 # Story 6.36b: People Who Know Me — Up to Three Members a Member Names, Found From Their Phone's Contacts, Each of Whom Accepts `[SURFACE]`
 
-Status: backlog
+Status: ready-for-dev
 
 > ⭐⭐ **WHAT THIS PART IS.** When ⛔ no colleague can be asked about a member's death, the Trust asks up to three members that member
 > named while alive and who agreed (`-310` CF4 A (2)). This part lets a member name them: *"Find members in my contacts"* checks the
@@ -48,10 +51,11 @@ claim, contribution, pool or payment reads it. 6.36 reads the accepted people to
 
 ## Acceptance Criteria
 
-1. **AC0 — ⛔ no code before 6.36a is `done`** (6.36a's Task 0.2 author-commit is in the tree; any SW answer that changed SW10–SW17 is
-   already applied to this file).
-2. **AC1 — the migration** (the next free number at build): `member_known_people`, `member_daily_counters` and `pariwar_daily_counters`
-   (Task 1); member FKs SINGLE-COLUMN (6.36a SF14); per-command RLS; applied on :5432 AND :5433, proven from zero; a policy-regression
+1. **AC0 — ⛔ no code before `2026-10-14-332` is in the tree** (it is — `33902d82`; `-330` and `-331` too); built in parallel with 6.36a,
+   which it does ⛔ not need.
+2. **AC1 — the migration** (FIXED by `2026-10-14-332`: `0162`, journal idx 162, `when` `1794195600006`): `member_known_people`,
+   `member_daily_counters` and `pariwar_daily_counters` (Task 1); member FKs SINGLE-COLUMN (6.36a SF14); per-command RLS; applied ONLY to
+   `twt-test-pg-b` (`:5434`) while 6.36a is unmerged — then, after rebasing onto `main`, to `:5432` AND `:5433` — proven from zero; a policy-regression
    spec (incl. the guard's transitions and the timestamp CHECKs).
 3. **AC2 — at most three live** (I6): live = `accepted`, or `asked` within 30 days of `asked_at`; a fourth ask is refused
    (`known_people.limit_reached`, 409) by the writer under the namer's lock AND by the DB backstop on INSERT (a test on two connections
@@ -112,7 +116,8 @@ claim, contribution, pool or payment reads it. 6.36 reads the accepted people to
 13. **AC12 — erasure and export** (SW17): `anonymizeMember` ERASES every live link where the member is namer or named (`state = 'erased'`,
     `ended_at` set, ⛔ not deleted); the rtbf pin enrols the new `.update(memberKnownPeople)`; the data export lists the member's named people and the members
     who named them.
-14. **AC13 — copy:** keys in the `workplace` namespace (6.36a) or a new `known_people` namespace (registered, member-facing, parity green);
+14. **AC13 — copy:** keys in a NEW `known_people` namespace (`2026-10-14-332` call 5 — ⛔ never 6.36a's `workplace` files; registered, member-facing,
+    parity green);
     BigDev's note words (`-309`) with the Trust's name from config; the request text (`-307`), *"[Name] will see your answer."* and *"[Name]
     will see that you withdrew."* in en + hi; a real-`t()` test.
 15. **AC14 — records and close:** Row 31's (a) / (d) evidence lines name this part's flows; `friction-budget.md` gains the row for the
@@ -239,6 +244,7 @@ affirmative consent).
 |---|---|---|
 | 2026-10-14 | — | `2026-10-14-330` committed (`d44708e8`) — BigDev: *"all A, SC4 yes"*; every AC and Task here was written to the recommended answers ⇒ ⛔ none changed. |
 | 2026-10-14 | 1.6 | Validate round 6: AC7 / Trap 4 / AC6 record what each side can tell (6.36a SW14's four); the accepted request leaves the card but stays in the list; the two notices in the copy. |
+| 2026-10-14 | 1.6 | `2026-10-14-332` (`33902d82`): `ready-for-dev` NOW — built in parallel with 6.36a; migration `0162` / `…006`; its own database `:5434` and worktree; merges second; its copy in a new `known_people` namespace. |
 | 2026-10-14 | 1.5 | Validate round 5: the named person sees *"[Name] will see your answer"*; only declined or lapsed requests leave their list (accepted ones stay — the withdraw entry); the re-ask rule names declined / lapsed / withdrawn (⛔ never removed); `listMyKnownPeople` derives the labels and `freeSlots`; Trap 4 and AC8 restate what is and is ⛔ not withheld. |
 | 2026-10-14 | 1.4 | Validate round 4: the namer's list follows 6.36a SW14's honest rule (a decline shows at once; a lapse at day 30) and ONE re-ask rule (`ended_at` + 60 days); `unavailable` rows are unnamed for withdrawal and death alike; a lapsed request leaves the named member's list; the lapse's `ended_at` pinned by a CHECK. |
 | 2026-10-14 | 1.3 | Validate round 3: ONE re-ask window and ONE display timeline for a decline and a lapse (AC5, AC7 — ⛔ no declined-vs-ignored signal, ⛔ not even in timing), with a neutral `known_people.cannot_ask_now`; a lapse dated `asked_at` + 30 and ⛔ no answer after it (AC6); the request card only for `active` members; an accepted person who can ⛔ no longer be asked, named only until erased. |

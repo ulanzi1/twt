@@ -8,7 +8,8 @@ baseline_commit: fa2687ce
 
 STATUS: `backlog` — flips to `ready-for-dev` when 6.27b AND 6.27d are `done` AND row `6-30-app-links-open-the-app-from-a-text` is `done`. ⭐ (2026-10-12 annotation — Story 6.34 Task 0.4, `-322` C6) AND row 6-34 is done.
 ⭐ (2026-10-14 annotation — Story 6.36a Task 0.4, `-330` SW1) row `6-36-peer-mesh-school-wise-selection` is now the LAST of four parts (6-36a,
-6-36b, 6-36c, 6-36) — waiting for row 6-36 waits for all four.
+6-36b, 6-36c, 6-36) — waiting for row 6-36 waits for all four. ⭐ (2026-10-14 annotation — `2026-10-14-332` call 6: row 6-36 no longer waits for
+6-36c ⇒ 6.27c waits for row 6-36 AND row 6-36c.)
 ⭐ SENDING IS LAST on purpose: once a real text goes out, real answers arrive — the warnings and the wait (6.27b), the approvers' view (6.27b)
 and the inspector's independence (6.27d) must already exist.
 ⭐ THE RECORD is 6.27a's file (rulings, invariants, F1–F41, PM1–PM25; Task 0 shared). This file BUILDS the PMs tagged **[c]**: **PM1–PM5**

@@ -10,7 +10,9 @@ This file BUILDS **SW18–SW27** and closes three deferred items (SW30). Where a
 ⚠ Before Task 1: `git diff --name-only 2581c514..HEAD -- packages apps scripts infra` — re-read any cited file that moved (6.36a–c will
 have moved `member_postings`, the life-events module and the mobile wizard).
 
-STATUS: `backlog` — flips to `ready-for-dev` when 6.36a, 6.36b AND 6.36c are `done`.
+STATUS: `backlog` — flips to `ready-for-dev` when 6.36a AND 6.36b are `done` (⭐ `2026-10-14-332`: wave 2, in parallel with 6.36c — it does ⛔ not need
+6.36c). Migration `0163` (`when` `1794195600007`); the shared test databases; worktree `.claude/worktrees/6-36`; merges to `main` THIRD
+(before 6.36c). 6.27c waits for this row AND row 6-36c.
 GLYPH REGISTER, ADDRESSING RULE, LETTERS: as 6.36a.
 -->
 
@@ -54,8 +56,8 @@ owed: the peer mesh is a signal, ⛔ never a gate (`-263` FQ10).
 
 ## Acceptance Criteria
 
-1. **AC0 — ⛔ no code before 6.36a, 6.36b and 6.36c are `done`**, and SW18–SW27 as answered at 6.36a's Task 0.1 are applied here.
-2. **AC1 — the migration** (the next free number at build): `claim_peer_mesh_selections` gains `source text null CHECK IN
+1. **AC0 — ⛔ no code before 6.36a AND 6.36b are `done`** (`2026-10-14-332` — ⛔ not 6.36c), migration `0163` / `when` `1794195600007`, and SW18–SW27 as answered at 6.36a's Task 0.1 are applied here.
+2. **AC1 — the migration** (FIXED by `2026-10-14-332`: `0163`, journal idx 163, `when` `1794195600007`): `claim_peer_mesh_selections` gains `source text null CHECK IN
    ('workplace','named_by_member')`, `previous_workplace_counted boolean null`, `recent_change_before_filing boolean null` (SW20's staff
    line), `deceased_workplace_id uuid null`, `deceased_previous_workplace_id uuid null` (row 6-32 reads them — SW25), `ranked_member_ids
    uuid[] null CHECK (cardinality(ranked_member_ids) <= 500)`; CHECK `metric_id <> 'workplace_named_v1' OR (ranked_member_ids IS NOT NULL
@@ -264,6 +266,7 @@ CF2; `-308`; `-325` S1 A; `-326` BD1 A.
 ## Change Log
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-14 | — | `2026-10-14-332` (`33902d82`): wave 2 — starts when 6.36a AND 6.36b are done (⛔ not 6.36c), in parallel with 6.36c; migration `0163` / `…007`; merges third. |
 | 2026-10-14 | — | ⭐ The Panel RULED SC1 A and SC4 A (`2026-10-14-331`, `0019b301`): SC1 A ratifies the filing-day cut (AC5); SC4 A adds AC16 / Task 8 — this story mints `peer_mesh.v4` with *"A colleague at the same school or office"* (our reading of who builds it). |
 | 2026-10-14 | — | `2026-10-14-330` committed (`d44708e8`) — BigDev: *"all A, SC4 yes"*; every AC and Task here was written to the recommended answers ⇒ ⛔ none changed. |
 | 2026-10-14 | 1.5 | Validate round 5: AC5 quotes SW21's run word for word, defines "unconfirmed" as of the cut, and its first test now has a previous workplace to miss. |

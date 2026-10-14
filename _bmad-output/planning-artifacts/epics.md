@@ -3259,6 +3259,8 @@ row 6-32); ⛔ never the medical declaration.
 > decisions `-311` PM1–PM5, PM14–PM16, PM21, PM22; `-322` C6 (it uses 6.34's typed-variable vocabulary). Row
 > `6-27c-peer-mesh-sending-texts-and-links`; LAST — it starts only when 6.27b, 6.27d, rows 6-30, 6-34 and 6-36 are `done`. Full ACs:
 > `_bmad-output/implementation-artifacts/6-27c-peer-mesh-sending-texts-and-links.md` (the 6.27a file is the record).
+>
+> ⚠ **ANNOTATION 2026-10-14 ([`-332`](../../.decision-log.md#decision-2026-10-14-332)) — ⛔ not rewritten.** Row 6-36 no longer waits for row 6-36c ⇒ 6.27c waits for rows 6-36 AND 6-36c (with 6.27b, 6.27d, 6-30, 6-34).
 
 As the Trust, I want each of the five chosen neighbours texted once — naming the member, with a link to the questions and the helpline —
 so that the check with neighbours actually reaches people, and ⛔ no text says more than the Panel ruled.
@@ -3436,6 +3438,8 @@ every template (types to select, the MSG91 `##name##` form); roster Row 30.
 > and [`-330`](../../.decision-log.md#decision-2026-10-14-330) (SW1–SW9). Row `6-36a-member-workplace-and-posting-history`; the FIRST of four (a → b → c → 6.36). Full ACs and THE RECORD
 > (SF / SW / SC / I for all four parts): `_bmad-output/implementation-artifacts/6-36a-member-workplace-and-posting-history.md`. Its go-live
 > record is roster Row 31 (`peer-mesh-selection-data-basis`).
+>
+> ⚠ **ANNOTATION 2026-10-14 ([`-332`](../../.decision-log.md#decision-2026-10-14-332)) — ⛔ not rewritten.** Built in TWO WAVES: 6.36a with 6.36b now, then 6.36c with 6.36 once both are done; merged in migration order (0161 → 0162 → 0163 → 0164).
 
 As a member, I want to pick my school or office from a list when I join and whenever I am transferred, with the date I started there, so
 that if I die the Trust asks the colleagues who actually worked with me — ⛔ never strangers from my district.
@@ -3450,6 +3454,8 @@ by the member and later suggested by a Pariwar Admin for the member to confirm; 
 > ⚠ **Minted under a Trustee ruling** (source line dated 2026-10-14, Story 6.36a Task 0.4) — [`-310`](../../.decision-log.md#decision-2026-10-10-310) CF4 A (2) and CF5 A; author decisions
 > [`-309`](../../.decision-log.md#decision-2026-10-10-309) and [`-330`](../../.decision-log.md#decision-2026-10-14-330) (SW10–SW17). Row `6-36b-people-who-know-me`; it starts only when 6.36a is
 > `done`. Full ACs: `_bmad-output/implementation-artifacts/6-36b-people-who-know-me.md` (6.36a's file is the record).
+>
+> ⚠ **ANNOTATION 2026-10-14 ([`-332`](../../.decision-log.md#decision-2026-10-14-332)) — ⛔ not rewritten.** It starts NOW, in parallel with 6.36a (⛔ not after it); migration 0162; merges after 6.36a.
 
 As an active member, I want to name up to three members who know me — found from my phone's contacts — and to answer when someone names
 me, so that if no colleague can be asked when I die, people who truly knew me are, and ⛔ no non-member's number is ever kept.
@@ -3464,6 +3470,8 @@ withdrawable; erasure and export.
 > ⚠ **Minted under a Trustee ruling** (source line dated 2026-10-14, Story 6.36a Task 0.4) — [`-310`](../../.decision-log.md#decision-2026-10-10-310) CF4 A; author decisions `-307` §2 items
 > 2 / 4 as narrowed by [`-330`](../../.decision-log.md#decision-2026-10-14-330) (SW9, SW16). Row `6-36c-workplace-list-curation-and-prompts`; it starts only when 6.36b is `done`. Full ACs:
 > `_bmad-output/implementation-artifacts/6-36c-workplace-list-curation-and-prompts.md`.
+>
+> ⚠ **ANNOTATION 2026-10-14 ([`-332`](../../.decision-log.md#decision-2026-10-14-332)) — ⛔ not rewritten.** It starts when 6.36a AND 6.36b are `done` (⛔ not 6.36b alone), in parallel with 6.36; migration 0164; merges last.
 
 As the Super Admin I want to keep the office list and add missing schools; as a Pariwar Admin I want to suggest the right entry for a
 member's unlisted workplace and run a short campaign; as a member I want to confirm my workplace and be reminded to invite colleagues.
@@ -3480,6 +3488,8 @@ members work somewhere); a campaign of up to 30 days; ⛔ no message to any phon
 > four — it starts only when 6.36a, 6.36b and 6.36c are `done`; 6.27c waits for it. Full ACs:
 > `_bmad-output/implementation-artifacts/6-36-peer-mesh-school-wise-selection.md`. ⚠ The Panel's confirms SC1 / SC4 are owed
 > (`trustee-panel-routing-note-2026-10-14-6-36-confirms.md`).
+>
+> ⚠ **ANNOTATION 2026-10-14 ([`-332`](../../.decision-log.md#decision-2026-10-14-332)) — ⛔ not rewritten.** It starts when 6.36a AND 6.36b are `done` — ⛔ not 6.36c — in parallel with 6.36c; migration 0163; merges third.
 
 As the Trust, I want the people asked about a member's death to be that member's own colleagues, otherwise the people the member named,
 chosen the same way every time and ⛔ never steered by anything changed after the claim is filed, so that the answers come from people who

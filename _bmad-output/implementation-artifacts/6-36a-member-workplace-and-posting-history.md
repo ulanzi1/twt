@@ -27,6 +27,8 @@ BUILD the SW items tagged for them and point here. Where a summary in a part fil
 STATUS: `ready-for-dev` — ⭐ Task 0 DONE (2026-10-14): BigDev answered *"all A, SC4 yes"*; `2026-10-14-330` committed ALONE (`d44708e8`);
 the confirm note (SC1, SC4 + FYI) and the annotations committed (`35fe513f`). ⭐ The Panel RULED SC1 A and SC4 A — `2026-10-14-331`
 (`0019b301`). AC0 is met — Task 1 may start.
+⭐ `2026-10-14-332` (`33902d82`): TWO WAVES — 6.36a is built WITH 6.36b (in its own worktree `.claude/worktrees/6-36a`); migration `0161`
+(`when` `1794195600005`); it merges to `main` FIRST; it uses the shared test databases (`:5433` `twt-test-pg`, and `:5432`) as usual.
 
 GLYPH REGISTER, ADDRESSING RULE: as 6.27a — `⛔` sits ONLY on a negation word · `⭐` = key fact / action · `⚠` = hazard · doubling is volume
 only. ⛔ No `file:NNN` into `.decision-log.md`, `deferred-work.md` or `sprint-status.yaml` (newest-first files — cite entry id + clause,
@@ -215,7 +217,9 @@ my family picks.**
 > written to the RECOMMENDED answer — an answer that differs amends the files it names BEFORE their code (Task 0.5).
 
 ### The set
-- **SW1 — four parts, in order a → b → c → 6.36; 6.36 keeps the row key.** New rows `6-36a-member-workplace-and-posting-history`
+- **SW1 — four parts, in order a → b → c → 6.36; 6.36 keeps the row key.** ⚠ AMENDED by `2026-10-14-332`: TWO WAVES (a ∥ b, then c ∥ 6.36
+  once both are done), fixed migration numbers merged in order, one test database and worktree per parallel part; 6.27c waits for 6-36
+  AND 6-36c. New rows `6-36a-member-workplace-and-posting-history`
   (`ready-for-dev`), `6-36b-people-who-know-me`, `6-36c-workplace-list-curation-and-prompts` (both `backlog` until their predecessor is
   `done`). Row `6-36-peer-mesh-school-wise-selection` stays `backlog` until 6.36a, 6.36b AND 6.36c are `done`; 6.27c keeps waiting for
   it (⇒ for all four). *Alt:* (B) three parts (fold c into a) — a part as large as 6.27a, reviewed in one pass; (C) selection before the
@@ -518,8 +522,8 @@ my family picks.**
 1. **AC0 — ⛔ no code before Task 0.2's author-commit is in the tree, committed ALONE** (the next free decision id at that moment — `-330`
    if ⛔ no branch has taken it; grep EVERY branch's `.decision-log.md` for the bare number), and every file the answers amend is amended
    first (Task 0.5).
-2. **AC1 — the migration** (the next free number at build — `0161` at `2581c514`: the journal ends at idx 160 and ⛔ no branch holds a
-   higher number): `workplaces`, `workplace_districts`, `workplace_import_batches`, `workplace_requests`, and three new nullable columns
+2. **AC1 — the migration** (FIXED by `2026-10-14-332`: `0161`, journal idx 161, `when` `1794195600005` — 6.36b holds `0162` in parallel; the
+   journal ends at idx 160 at `2581c514`): `workplaces`, `workplace_districts`, `workplace_import_batches`, `workplace_requests`, and three new nullable columns
    on `member_postings`
    (`workplace_id`, `workplace_request_id`, `started_on`), with the CHECKs, triggers and grants in Task 1; member FKs SINGLE-COLUMN (SF14);
    per-command RLS on `app.pariwar_id`; applied on :5432 AND :5433, proven from zero; a policy-regression spec (cross-tenant refused,
@@ -789,6 +793,7 @@ out of components. `pnpm ci:local` before push (memory: unit=4 tunable; integrat
 ## Change Log
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-14 | 1.9 | `2026-10-14-332` (`33902d82`, BigDev: *"I will go with option A."*): two waves; 6.36a's migration fixed at `0161` / `…005`; it merges first; the shared databases; its worktree `.claude/worktrees/6-36a`. SW1 annotated as amended. |
 | 2026-10-14 | 1.8 | ⭐ The Panel RULED (Dhiraj Rahul + Kalpana Bharti, relayed by BigDev: *"by DR and KB / SC1: A / SC4: A"*) — `2026-10-14-331` (`0019b301`), each option transcribed as put. SC1 A ratifies SW20 / SW21 / SW22's two narrowings of CF4 A; SC4 A — 6.36 mints `peer_mesh.v4` (our reading). The note's ruling block filled in; Row 31 (g) will be written Closed by `-331`. ⛔ No AC or Task here changed. |
 | 2026-10-14 | 1.7 | ⭐ Task 0 (shared) DONE. Task 0.1 — BigDev's answer, word for word: *"all A, SC4 yes"* (to SW1–SW30 and SC1–SC4 put as plain-language summaries). Task 0.2 — `2026-10-14-330` committed ALONE (`d44708e8`; inserted by this session, additive 45 / 0, byte-identical to the scratchpad draft). Task 0.3 — `trustee-panel-routing-note-2026-10-14-6-36-confirms.md` (SC1, SC4, the FYI; SC2 / SC3 ⛔ not owed) committed with the annotations (`35fe513f`); ⛔ not yet sent. Task 0.4 — the annotations in `epics.md` (four entries + Story 6.6 + FR-39 C8), `prd.md` FR-39, architecture §2.7 / §2.13.2, 6.27a Invariant 4 / Trap 8, 6.27c STATUS / AC5 / Dev Notes (`35fe513f`). Task 0.5 — ⛔ no answer differed from a recommendation ⇒ ⛔ no AC or Task changed. |
 | 2026-10-14 | 1.6 | Validate round 6 (one fresh-context verifier — 0 BLOCKER, 1 HIGH, 4 MEDIUM, 6 LOW, all applied): Task 1.1b's leftover "re-listed" sentence replaced by the stale-map refusal and `--relist-district` (the HIGH); SW14 lists FOUR things each side can tell and its §0 says WIDENS `-307` §2 item 3 (iii), with the two notices and the `member_status` ground; the rename retires `<old>` first, writers read the district FOR SHARE, it prints the postings left on `<old>`, closed / confirmed requests keep `<old>`, and its batch row carries ⛔ no source fields (a CHECK); AC1 tests the rename arm; SW21 defines "unconfirmed". |

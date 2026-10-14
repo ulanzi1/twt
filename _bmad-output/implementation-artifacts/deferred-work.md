@@ -4,6 +4,37 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: code review of story-6.36a (2026-10-15)
+
+- **`district_only`'s free-text district has ⛔ digit / PII guard and reaches `member.posting_updated`, the audit line and the export unscrubbed**
+  [`packages/contracts/src/members/workplace.ts:45`; `apps/api/src/modules/life-events/handlers.ts:258-268`]. Pre-existing — Story 3.9's arm,
+  kept as *"today's box"* by 6.36a's AC4 / SW7 for a Pariwar with ⛔ list; 6.36a added the seven-digit rule to the SIBLING `not_listed` arm only.
+  ⭐ Trigger: the last live Pariwar gains its list (the arm becomes dead), or a story that widens the typed-text rule to the district box.
+- **Signup step re-entry (the app killed after the committed save, before the `replace`) appends a SECOND first-posting**
+  [`apps/mobile/app/(signup)/workplace.tsx:17`; `(signup)/_layout.tsx`]. Pre-existing — ⛔ a (signup) step has resume logic; the layout derives
+  the step from the segment. ⭐ Trigger: a signup-resume story, or a report of a doubled first row.
+- **A mistyped start date (2021 for 2012) locks every earlier real date out — SW6's monotonic rule has ⛔ correction path**
+  [`packages/domain/src/member/workplace.ts:147`]. SW6 as ratified (`-330`); a correction path (a member's own fix, or a staff one) is product
+  scope. ⭐ Trigger: 6.36c's staff screens, or a helpdesk ticket class *"wrong start date"*.
+- **`Idempotency-Key` has ⛔ length bound — an oversized header reaches the keyed store and becomes a 500, ⛔ a 400**
+  [`apps/api/src/modules/life-events/handlers.ts` `requireIdempotencyKey`]. Identical in the seven existing module-local copies — a cross-cutting
+  fix (one shared helper with a ≤ 128-character printable-ASCII bound). ⭐ Trigger: the eighth copy, or a 54000 in the logs.
+- **The required signup step has ⛔ honest answer for a member whose district is ⛔ among the LISTED spellings (a partial district map)**
+  [`apps/mobile/components/workplace/WorkplacePicker.tsx:191-222`; AC4 `workplace.district_not_found`]. Spec-consistent — AC4 refuses by
+  design; SW7's *"⛔ never blocks"* holds only when every district of the Pariwar is in the map. Carried by Row 31 (h) (the map checked against
+  the District Admins' grants at go-live); the zero-row import refusal (6.36a review P4) removes the empty-list case. ⭐ Trigger: Row 31 (h).
+- **Import counts drift on a concurrent staff add (`rowsSkippedStaff` is added post-hoc; the finished batch's counts ⛔ sum)**
+  [`packages/domain/src/member/workplace-import.ts:447`]. The staff add is 6.36c's route — ⛔ a writer exists yet. ⭐ Trigger: 6.36c's staff add.
+- **The rename-vs-posting race (`FOR SHARE` district → workplace order) is covered by construction only — ⛔ a two-connection live test**
+  [`packages/domain/src/member/workplace.ts` `lockListedWorkplace`; `workplace-import.ts` `renameWorkplaceDistrict`]. Checklist family 2
+  PARTIAL; the construction is the repo's ratified pattern. ⭐ Trigger: 6.36c's rename gaining a staff caller (then a live race spec).
+- **⚠ `closeScopeTx` SWALLOWS a failed COMMIT — ⛔ a handler can tell a committed write from one that never landed (SYSTEMIC)**
+  [`apps/api/src/modules/multi-tenant/scope-tx.ts:57-66`]. `COMMIT` errors are caught as *"a broken connection on close"* and dropped, so
+  EVERY scope-tx handler answers 200 on a commit failure; an idempotent route then records a replay for a row that is ⛔ there (found while
+  re-ordering 6.36a's posting write to commit-then-record). Pre-existing, cross-cutting. Fix shape: `closeScopeTx` rethrows on a COMMIT
+  error (a ROLLBACK error stays non-fatal), each caller's `ok` path re-checked. ⭐ Trigger: a story that touches `scope-tx.ts`, or an
+  incident where a 200 did not persist.
+
 ## Deferred from: dev-story 6.27a (2026-10-12)
 
 - **FR-39's "non-response after 72 hours → escalate to block admin" and 6.6 AC6's operator extend / skip are ⛔ NOT BUILT (PM19)**

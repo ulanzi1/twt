@@ -1,3 +1,18 @@
+# last_updated: 2026-10-15a (STORY 6.36a — CODE REVIEW CLOSED (`bmad-code-review 6.36a`, worktree `.claude/worktrees/6-36a`, branch
+# `story/6-36a-member-workplace-and-posting-history`): row `6-36a-member-workplace-and-posting-history` `review` → `done` (fixes `86d00ff4`). The
+# implementation commit `727d153f` alone × Blind / Edge / Acceptance in parallel, then a fix-diff review of the patch (two rounds).
+# 1 decision (the seven-digit guard — BigDev: "1", WIDEN: separators between digits removed before the run test, app + domain; the
+# 0161 CHECK stays the literal backstop), 13 patch (all applied — BigDev: "1"), 8 defer (`district_only`'s unguarded free text — 3.9's
+# arm; signup re-entry; a mistyped start date has ⛔ correction path; the key header unbounded — seven copies; a partial district map
+# dead-ends the step — Row 31 (h); import counts on a concurrent staff add — 6.36c; the rename race by construction; ⚠ `closeScopeTx`
+# SWALLOWS a failed COMMIT — SYSTEMIC, every scope-tx handler), 9 dismissed (verified false). The HIGH: the posting write's idempotency
+# lifecycle — the scope tx now opens INSIDE the claim's try, COMMITS before the replay result is recorded, the claim is held 24 h (was
+# 300 s — a retry after five minutes wrote a second row), the release retried; a per-member 429 test + a TTL pin. The MEDIUMs: Back
+# gated while a save is in flight; the import tool's bypass a DELIBERATE block (actor column with 6.36c's 0164); a zero-school import
+# refused. The fix-diff review caught `hasMore` still false at the cap (→ `pageWorkplaceDistricts`), the audit inside the commit→record
+# window, a lookbehind on Hermes (removed; the old form also proven on hermesc), the CLI exit code vs the README. Verified: domain
+# 21 unit + 44 live, api 17 live, mobile 22 unit; tsc + eslint clean ×3. ⛔ No migration, ⛔ ruling moved. ⛔ `ci:local` re-run on the
+# final tree (the touched packages' suites run directly). ⛔ No other row moves.)
 # last_updated: 2026-10-14k (STORY 6.36a — IMPLEMENTED by `bmad-dev-story 6.36a` (worktree `.claude/worktrees/6-36a`, branch
 # `story/6-36a-member-workplace-and-posting-history`): row `6-36a-member-workplace-and-posting-history` `ready-for-dev` → `in-progress` →
 # `review`. Migration 0161 (`workplaces`, `workplace_districts`, `workplace_import_batches`, `workplace_requests` + `member_postings`
@@ -20105,7 +20120,7 @@ development_status:
   # ⭐ 2026-10-14 (`2026-10-14-332`, BigDev: "option A") — TWO WAVES: 6-36a ∥ 6-36b NOW (worktrees `.claude/worktrees/6-36a` / `6-36b`;
   # 6-36b on its own test DB `twt-test-pg-b` :5434); then 6-36c ∥ row 6-36 once 6-36a AND 6-36b are done. Migrations fixed 0161 / 0162 /
   # 0163 (row 6-36) / 0164 (6-36c), merged to main in that order. 6-27c waits for row 6-36 AND 6-36c.
-  6-36a-member-workplace-and-posting-history: review
+  6-36a-member-workplace-and-posting-history: done
   6-36b-people-who-know-me: ready-for-dev
   6-36c-workplace-list-curation-and-prompts: backlog
   # ⭐ 2026-10-10 ADDED by `2026-10-10-306` (BigDev: "Selection must be school wise …"): each member's SCHOOL (a stable school code + name)

@@ -1,3 +1,13 @@
+# last_updated: 2026-10-14c (STORY 6.27d — VALIDATE PASS (`bmad-create-story validate 6.27d`, branch `story/6-27d`): row
+# `6-27d-inspector-discrepancy-at-completion` STAYS `ready-for-dev`. File v3.0 → v3.1 against `8fcf7826` (= main; ⛔ no code moved;
+# ⛔ no decision above `-329` on any branch). Four read-only verifiers, then two fresh-context re-validate rounds (round 1: 1 HIGH, most
+# of it the pass's own; round 2: ⛔ no BLOCKER / HIGH). 2 HIGH fixed: a HIDDEN caller could learn from the note POST whether a neighbour
+# differed (201 vs 409 `discrepancy_not_shown`) — now ONE neutral `own_ground_visit_pending` refusal before any showing check, and a
+# withheld re-read returns ⛔ no notes; the admin "may complete" eligibility did ⛔ not exist — the panel fetches only on a seeded cache or
+# the inspector's own id. Also: a withheld result writes ⛔ no showing; a swallowed completion COMMIT is answered `withheld`, ⛔ never
+# `shown`; every guard keyed on `death_date_source = 'family_statement'`; 3-column owner UNIQUE + cascading FKs; `MAX_READS` 27 → 29.
+# BigDev's author answers: R1 NARROWS `-311` PM25 (a) ① (confirmed, ⛔ no log entry); notes keep R4's writer and are shown WITH a stored
+# `author_display`; the dual-role CF2 case recorded, ⛔ not routed now. `-304` Q4's counsel clause carried as a go-live fence (Task 7).
 # last_updated: 2026-10-14b (STORY 6.27d — STORY FILE RE-AUTHORED (`bmad-create-story 6.27d`, branch `story/6-27d`; BigDev chose 6.27d
 # because 6.27c is still gated on 6.27d and row 6-36): row `6-27d-inspector-discrepancy-at-completion` `backlog` → `ready-for-dev` (its one
 # condition, 6.27a `done`, is met). File v3.0: re-pinned `fa2687ce` (⛔ not an ancestor of main) → `8fcf7826`; every code cite re-read by four

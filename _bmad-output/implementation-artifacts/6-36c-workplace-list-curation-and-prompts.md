@@ -56,7 +56,7 @@ governs it.
    updated; ⛔ not `district_admin`, ⛔ not `state_trustee`, ⛔ not `block_admin` on any.
 3. **AC2 — the Super Admin's list** (`/api/v1/p/:pariwarId/admin/workplaces`): GET (filter by district, kind, status, `q`; paginated,
    bounded; `workplace.manage` OR `workplace.review` — the Pariwar Admin's suggest picker searches with it); POST add (`kind`, `name`,
-   `district` — the district MUST be one of the Pariwar's `workplace_districts` (6.36a Task 1.1b), so ⛔ no new district spelling is
+   `district` — the district MUST be one of the Pariwar's LISTED `workplace_districts` spellings (6.36a Task 1.1b; a retired one is refused), so ⛔ no new district spelling is
    minted here (6.36a SW5); ⚠ a Pariwar with ⛔ no import has ⛔ no districts, so ⛔ no office can be added there until its list is
    imported — recorded — `villageName?`, `blockCode?`, and for a school
    `udiseSchoolCode?`, refused if that code already exists; a later import ⛔ never overwrites this staff row — 6.36a AC2); POST `/:workplaceId/rename`; POST `/:workplaceId/delist` (⛔ not delete; a
@@ -89,8 +89,9 @@ governs it.
    workplace, an EARLIER posting named a DIFFERENT workplace, and it was recorded within 30 days (⛔ never after a retirement, ⛔ never for a
    first confirmed *"isn't listed"* — the member has ⛔ not moved); `replaceNeeded` = an accepted person has WITHDRAWN from the Trust, been
    erased, or had a claim filed for their death (⛔ never a late renewal — SW16 (4)); `campaign` = a live campaign in the Pariwar AND the
-   member has fewer than three accepted people AND has asked ⛔ nobody since the campaign began. `replaceNeeded` and `campaign` are false
-   for any member who is ⛔ not `active` (6.36a SW16 — they could ⛔ not act on them, 6.36b AC10). ⛔ No flag depends on whether OTHER members are at a workplace (SW16 (2) —
+   member has fewer than three accepted people AND has asked ⛔ nobody since the campaign began. `replaceNeeded`, `campaign` and
+   `transferReview` are false for any member who is ⛔ not `active`, and card (b) hides its *"Add people who know you"* button for them
+   (6.36a SW16 — every people-who-know-me prompt is for `active` members only; they could ⛔ not act on it, 6.36b AC10). ⛔ No flag depends on whether OTHER members are at a workplace (SW16 (2) —
    ⛔ no disclosure; a test).
 7. **AC6 — the cards** (home, below the My Pool card — Story 8.2 keeps it topmost, `apps/mobile/app/(tabs)/index.tsx:64-67`), each
    rendering `null` when its flag is false, each dismissible for 30 days on the phone (MMKV — a per-viewer convenience): (a) `noWorkplace`
@@ -160,6 +161,7 @@ governs it.
 ## Change Log
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-14 | 1.4 | Validate round 4: offices only in LISTED district spellings; `transferReview` and card (b)'s people-who-know-me button only for `active` members. |
 | 2026-10-14 | 1.3 | Validate round 3: `replaceNeeded` (a boolean, ⛔ no names — an erased person has none; the card names ⛔ nobody); `transferReview` needs an earlier, DIFFERENT workplace; `hasWorkplace` includes a delisted one; the people-who-know-me flags only for `active` members. |
 | 2026-10-14 | 1.2 | Validate round 2: the confirm's order (`confirmed` FIRST, then the posting with `exceptRequestId`), its re-checks, the caller's own request, the handler's event + audit, and the question shown here; a suggestion bound to the request's district; the admin GET open to `workplace.review`; offices only in the Pariwar's `workplace_districts`; `noWorkplace` covers a district-only posting; `transferReview` ⛔ never after a retirement; `replaceNamed` ⛔ never for a late renewal; the campaign card ends when the member asks someone. |
 | 2026-10-14 | 1.1 | Checklist validation: SW9 is a SUGGESTION the member confirms (the confirm route here); the cards follow SW16 (2) — `noWorkplace` / a neutral invite, ⛔ no flag about other members; the human-actor gate's real scope; the forced-pagination guard is automatic; `-133` cl.2 cited as posture; friction-budget rows. |

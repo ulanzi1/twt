@@ -30,7 +30,8 @@ Status: backlog
 
 As **the Trust** —
 I want **the people asked about a member's death to be that member's own colleagues, or failing that the people the member named, chosen
-the same way every time and ⛔ never steered by anything changed after the claim is filed**,
+the same way every time and ⛔ never steered by anything changed after the claim is filed (except eligibility, and a named person's own
+withdrawal — 6.36a I8)**,
 so that **the answers come from people who knew the member and are ⛔ not the family's choice — and a claim with nobody to ask still
 reaches the inspection that carries it.**
 
@@ -73,8 +74,9 @@ owed: the peer mesh is a signal, ⛔ never a gate (`-263` FQ10).
 3. **AC2 — the grouped engine is pure and replayable** (I7): `selectPeerMeshGrouped({ claimCaseId, candidates, metric })` — candidates
    each `{ memberId, group: 'workplace_previous' | 'workplace_current' | 'named', settled: boolean }`; returns `{ source, selectedMemberIds,
    rankedMemberIds, metricId, metricVersion }`; the `workplace` group = `workplace_previous` first (when present), then
-   `workplace_current`, each split SETTLED first (a candidate flag `settled` = their posting there recorded 90 days or more before the cut)
-   then the rest, each ordered by ascending `sha256(claimCaseId + ':' + memberId)` hex; `named` by the same hash; the first non-empty
+   `workplace_current`, each split SETTLED first (a candidate flag `settled` = their current run at that workplace began, as recorded, 90 days or
+   more before the cut — 6.36a SW22) then the rest, each ordered by
+   ascending `sha256(claimCaseId + ':' + memberId)` hex (`settled` is false for every `named` candidate); `named` by the same hash; the first non-empty
    group wins (cap 5 / cap 3); ⛔ never two groups mixed; `rankedMemberIds` is the winning group's ranking TRUNCATED to its first 500 (the
    column's CHECK — an office of 600 members must ⛔ never fail the job and re-create SF4's stall). Unit tests: byte-identical on replay and
    across input order; a 6th colleague is in `rankedMemberIds` but ⛔ not selected; previous-workplace people rank first; ⛔ no fill-up from
@@ -95,8 +97,10 @@ owed: the peer mesh is a signal, ⛔ never a gate (`-263` FQ10).
    cut (a removal after it — perhaps by the family — does ⛔ not count) AND THAT link was ⛔ never WITHDRAWN (a withdrawal excludes it
    whenever it happened — 6.36a SW17; read per LINK, so a later, separately accepted link counts on its own); the CURRENT workplace is the latest posting's; the PREVIOUS workplace is the latest
    EARLIER posting's that names a workplace DIFFERENT from the current one, skipping retirement and *"isn't listed"* rows; it counts when the
-   CURRENT run began less than 90 days before the FILING date (the run's start = the `started_on` of the earliest of the latest consecutive
-   postings at the current workplace, or of the retirement row — 6.36a SW21); `recent_change_before_filing` = in the 90 days before the
+   CURRENT run began less than 90 days before the FILING date (6.36a SW21's run: the latest consecutive postings of the same kind — an
+   *"isn't listed"* row between two of the same workplace ⛔ never breaks it; a retirement or an unconfirmed *"isn't listed"* starts its own
+   — its start the `started_on` of its earliest row); tests: B → *"isn't listed"* → B, the last 20 days before ⇒ the previous workplace ⛔
+   does not count; A → an unconfirmed *"isn't listed"* 20 days before ⇒ A counts; retiring twice ⛔ never re-arms; `recent_change_before_filing` = in the 90 days before the
    cut, the deceased's latest posting was recorded, or any of their named people was ACCEPTED or REMOVED. Live tests (rows written in SEPARATE transactions): a posting the family records on the filing day ⇒ ignored; a friend's posting at
    the deceased's school recorded on the filing day ⇒ ignored; a friend's posting recorded 10 days before ⇒ counted but ranked after every
    settled colleague; the 90-day boundary — 89 days ⇒ the previous workplace counts, 90 ⇒ ⛔ not; school A → *"isn't listed"* → confirmed
@@ -247,6 +251,7 @@ CF2; `-308`; `-325` S1 A; `-326` BD1 A.
 ## Change Log
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-14 | 1.4 | Validate round 4: the Story's promise names I8's two exceptions; `settled` measured from the run's recorded start and false for named people; AC5's run definition and its three tests. |
 | 2026-10-14 | 1.3 | Validate round 3: the grouped snapshot row carries `settled` (replay); the Story's promise is "after the claim is filed"; AC5 reads a withdrawal per LINK, counts REMOVALS in the staff line, and measures the 90 days from the start of the CURRENT run; the negative schema-key tests cover `recentChangeBeforeFiling`. |
 | 2026-10-14 | 1.2 | Validate round 2: the anchor is the FILING date — in v1 the certificate's OCR'd date is always empty (6.36a SF17) — so ⛔ no decrypt, ⛔ no KMS dependency, ⛔ no fence (AC4); the cut is the start of the filing day with SETTLED colleagues ranked first and ONE staff line `recentChangeBeforeFiling` (AC1, AC2, AC5, AC10); the previous workplace skips *"isn't listed"* and retirement rows; a withdrawal excludes whenever it happened; the CHECKs scoped to `workplace_named_v1` so seven shipped fixtures stay valid; the REVOKE / GRANT in Task 1; the uncapped-snapshot item NARROWED. |
 | 2026-10-14 | 1.1 | Checklist validation: v1's literal id before the default moves (AC3) and the domain test legs that read the default; the anchor's pre-read, lower bound, `normalizeDate`, fail-closed decrypt, the jobs encryption dependency and a NEW decrypt fence (AC4); the cut at filing − 90 days when the certificate cannot be read (AC5, SW20); the selection's UPDATE grant narrowed (AC1); the 500 truncation (AC2); all three event pins (AC8); the source BESIDE the `relationship` answer (AC10); the uncapped-snapshot closure scoped to the new metric (AC14). |

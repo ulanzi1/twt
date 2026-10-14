@@ -325,12 +325,16 @@ my family picks.**
   3 (iii); + Hindi) with the namer's registered name — *"Yes, I know them"* / *"No"*. The namer's list reads, per link: *"Asked"* (under
   the name they saved); *"Accepted"* (the registered name); *"Not accepted"* — at once after a *"No"* or a withdrawal, at day 30 after a
   lapse — for 30 days, then the link disappears; or *"Can no longer be asked"* (an accepted person who has withdrawn from the Trust or had a
-  claim filed for their death — ⛔ no name, ⛔ never why; the slot stays used until the namer removes the row). ⚠ Two things the namer CAN
-  tell, recorded and accepted: (1) a *"No"* shows at once, so it is distinguishable from silence; (2) an ERASED person's link has ended,
-  so their row VANISHES and the slot frees — since erasure follows only a withdrawal, a vanished row shows that the person left the Trust,
-  ⛔ never that they died. *§0:* the author's — the request screen tells the named person *"[Name] will see your answer."* BEFORE they
-  answer, so their answer reaches the namer with their knowledge; ⛔ no third person's information is shown (it **MATCHES** `-307` §2 item
-  3 (iii), which already shows the namer an ACCEPTANCE). *Alt:* (B) make a decline look like a lapse in every channel (the list, `freeSlots`,
+  claim filed for their death — ⛔ no name, ⛔ never why; the slot stays used until the namer removes the row). ⚠ Four things each side CAN
+  tell, recorded and accepted: (1) the namer sees a *"No"* at once (distinguishable from silence); (2) the namer sees a WITHDRAWAL after an
+  acceptance; (3) an ERASED person's link has ended, so the namer's row VANISHES and the slot frees — erasure follows only a withdrawal, so a
+  vanished row shows that the person left the Trust, ⛔ never that they died; (4) the NAMED member sees an accepted link leave their list
+  when the namer removes it. *§0 — this WIDENS `-307` §2 item 3 (iii)* (*"only accepted names count, and the named list shows names only
+  after acceptance"* — an author-commit, BigDev's own), on two grounds: the request screen tells the named person *"[Name] will see your
+  answer."* BEFORE they answer, and the withdraw screen *"[Name] will see that you withdrew."* — so each answer reaches the namer with its
+  author's knowledge; and *"Can no longer be asked"* / a vanished row add only what `member_status` already shows publicly (`-307` §1 —
+  the directory), with a death ⛔ never told apart from leaving ⇒ the author's on our reading; if BigDev reads (3)–(4) as a disclosure
+  *"to whom"*, they join **SC3**. *Alt:* (B) make a decline look like a lapse in every channel (the list, `freeSlots`,
   a re-ask's answer, a removal) until day 30 — four places that must stay consistent, each a test.
 - **SW15 — workplace SUGGESTIONS are DROPPED for v1** (supersedes `-307` §2 item 3 (ii)). (1) A member's present-workplace colleagues are
   already asked FIRST (group A) — naming them adds ⛔ nothing while they share the workplace. (2) Showing a past workplace's members to
@@ -385,7 +389,8 @@ my family picks.**
   *"the family ⛔ never chooses"* — a family that holds the phone CAN still change who is asked before filing; staff are told and the
   inspection always runs ⇒ **SC1**.
 - **SW21 — who is AT a workplace, and the 90 days.** The deceased's CURRENT workplace = the workplace of their latest posting (as of the
-  cut); a retirement row or an unconfirmed *"isn't listed"* row ⇒ ⛔ no current workplace. The PREVIOUS workplace = the workplace of the
+  cut); a retirement row or an unconfirmed *"isn't listed"* row (*"unconfirmed"* = ⛔ no confirming posting recorded before the cut —
+  ⛔ never the request's state at selection time, I8) ⇒ ⛔ no current workplace. The PREVIOUS workplace = the workplace of the
   latest EARLIER posting (as of the cut) that names a workplace DIFFERENT from the current one — skipping retirement rows and *"isn't
   listed"* rows (a transfer to an unlisted school, later confirmed, still reaches the school before it). It counts when the CURRENT run
   began less than 90 days before the FILING date. The CURRENT run = the latest consecutive postings of the same kind, counted back from
@@ -446,7 +451,7 @@ my family picks.**
   *"go-live gated (Row 27)"* — Row 31 holds the detail, Row 27 points to it). Owner BigDev; counsel. It blocks ⛔ no merge — nothing is in
   production.
 - **SW29 — ONE short Panel confirm note** (the `-305` §3 precedent), non-blocking for the build, answered before Row 31 closes: **SC1**
-  always; **SC2** only if SW9 B / C; **SC3** only if SW15 B / C or SW16 (2)'s alternative; **SC4** recommended (one line in a note that is
+  always; **SC2** only if SW9 B / C; **SC3** only if SW15 B / C, SW16 (2)'s alternative, or SW14 (3)–(4) read as a disclosure; **SC4** recommended (one line in a note that is
   going anyway); and ONE **FYI** (⛔ not a question): the directory-attribute rulings and C8 that CF4 A was ruled without (SW2).
 - **SW30 — the records the set touches.** `epics.md` gains entries for 6.36a / 6.36b / 6.36c / 6.36 and dated ANNOTATIONS (⛔ not rewrites)
   on Story 6.6 and FR-39's C8 line; `prd.md` FR-39 gains an annotation; architecture §2.7 / §2.13.2 gain one (SW2); 6.27a's Invariant 4 /
@@ -472,7 +477,7 @@ my family picks.**
   days later, and the claim must enter checking without a selection — a change to how every claim starts).
 - **SC2 (only if SW9 B / C)** — *"may a Pariwar Admin set or add a member's school or office, knowing that this changes who can be asked
   about a member's death?"* — C8 names it.
-- **SC3 (only if SW15 B / C or SW16 (2)'s alternative)** — *"may the app show members which other members work, or worked, at a school or
+- **SC3 (only if SW15 B / C, SW16 (2)'s alternative, or BigDev reads SW14 (3)–(4) as a disclosure)** — *"may the app show members which other members work, or worked, at a school or
   office they say is theirs — or whether any member does?"* — a disclosure *"to whom"*.
 - **SC4 (recommended)** — *"may the answer 'A colleague at the same school' read 'A colleague at the same school or office' in the next
   version of the neighbours' questions?"* — the words of a ruled question; built as a new version only after the ruling, by the story the
@@ -515,7 +520,7 @@ my family picks.**
    on `member_postings`
    (`workplace_id`, `workplace_request_id`, `started_on`), with the CHECKs, triggers and grants in Task 1; member FKs SINGLE-COLUMN (SF14);
    per-command RLS on `app.pariwar_id`; applied on :5432 AND :5433, proven from zero; a policy-regression spec (cross-tenant refused,
-   fail-closed without scope, ⛔ no DELETE, the column grants, the request guard incl. its erasure exception).
+   fail-closed without scope, ⛔ no DELETE, the column grants, the request guard incl. its erasure arm AND its rename arm).
 3. **AC2 — the import tool** reads the IDP profile (SF1's columns) for ONE Pariwar, ONE UDISE state code and ONE district map; refuses the
    WHOLE run on an unmapped district; refuses a row without an 11-digit code or a name, and keeps only the FIRST row of a code repeated in
    the file (both counted, ⛔ not fatal); in ONE transaction inserts the batch row first (`running`), writes every mapped district to
@@ -528,8 +533,9 @@ my family picks.**
    ⛔ nothing and prints the same counts; a second identical run changes 0 rows. A fixture CSV test covers: a duplicate code, a malformed
    code, another state's row, an unmapped district (whole run refused), a rename, a corrected district, a delisting, a re-listing, a staff
    office untouched, a staff school sharing a code, a one-district file (⛔ no other district's spelling or school changes), a stale map
-   naming a retired spelling (refused), and `--rename-district` (the old spelling retired and ⛔ never offered; every workplace and open request moved; postings
-   untouched).
+   naming a retired spelling (refused), the same map with `--relist-district` (re-listed), and `--rename-district` (the old spelling
+   retired and ⛔ never offered; every workplace and open request moved; a closed and a confirmed request keep `<old>`; postings untouched;
+   the printed count of postings still on `<old>`).
 4. **AC3 — the member reads:** the Pariwar's LISTED districts (from `workplace_districts` — the import's district map, so a district with
    ⛔ no listed school still appears, and a retired spelling ⛔ never does — `status = 'listed'` only; empty in a Pariwar with ⛔ no import); listed workplaces of
    one district and one kind, searched by name or village (case-insensitive substring, the input ESCAPED for `ILIKE`), paginated with a
@@ -614,14 +620,19 @@ my family picks.**
         district map (SF13); an import ⛔ never retires a spelling on its own (a one-district file must ⛔ never empty the other districts);
         a spelling is RETIRED only by the tool's explicit `--rename-district "<old>" "<new>"`, which in ONE transaction lists `<new>`,
         moves EVERY workplace (import AND staff) and every open request from `<old>` to `<new>`, retires `<old>` (kept for the postings
-        that copied it — I2 — but ⛔ never offered), and writes a batch row (`source_name = 'rename'`, `districts_retired = 1`); ⚠ the
-        members whose postings copied `<old>` keep it, so a District Admin's grant must cover BOTH spellings until those members post again
-        (SF13 — checked at Row 31 (h)); a spelling a later map uses again is re-listed; GRANT SELECT, INSERT, UPDATE (`status`,
+        that copied it — I2 — but ⛔ never offered), and writes a batch row (`source_name = 'rename'`, `districts_retired = 1`,
+        `rows_updated` = the workplaces moved); it RETIRES `<old>` FIRST, and every writer that checks a district (the posting writer, the
+        staff add) reads its `workplace_districts` row `FOR SHARE`, so ⛔ no write can land on `<old>` during the move; it PRINTS how many
+        postings still carry `<old>` with the warning that a District Admin's grant must cover BOTH spellings until those members post
+        again (SF13 — Row 31 (h) checks it at go-live; after go-live the printed warning and the tool's README are the check); a closed or
+        confirmed request keeps `<old>`; a retired spelling named by a later map REFUSES that run unless `--relist-district "<spelling>"`
+        names it (then it is re-listed — AC2); GRANT SELECT, INSERT, UPDATE (`status`,
         `source_batch_id`, `updated_at`); ⛔ no DELETE.
   - [ ] 1.2 `workplace_import_batches`: `batch_id`, `pariwar_id`, `source_name`, `source_url`, `retrieved_on date`, `licence`,
         `attribution text`, `state_code text CHECK ~ '^[0-9]{2}$'`, `status text CHECK IN ('running','finished')`, `rows_read`,
         `rows_inserted`, `rows_updated`, `rows_delisted`, `rows_relisted`, `rows_refused`, `rows_duplicate`, `rows_skipped_staff`,
-        `districts_retired` (nullable until finished), `started_at`,
+        `districts_retired` (nullable until finished), `started_at`, — with CHECK `source_name = 'rename' OR (source_url, retrieved_on,
+        licence, attribution, state_code) are all NOT NULL` (a rename row carries ⛔ no source fields),
         `finished_at`; GRANT SELECT, INSERT, UPDATE (the counts, `status`, `finished_at` only); a trigger: `finished` is FINAL.
   - [ ] 1.3 `workplace_requests`: `request_id`, `pariwar_id`, `member_id` (FK → `members(member_id)` — SINGLE-COLUMN, SF14), `district
         text not null`, `typed_name text null`, `typed_place text null` (both ≤ 120 and `!~ '[0-9]{7}'` — the writer folds digits first),
@@ -666,7 +677,9 @@ my family picks.**
       `pincode`; `block_code` = `udise_school_code[0:6]`), de-duplicates codes BEFORE batching (a repeated code inside one statement would
       fail it, 21000), runs under `withPariwarScope` in ONE transaction, writes `workplace_districts` from the map, batches upserts (1,000 per
       statement, `ON CONFLICT … DO UPDATE … WHERE workplaces.source = 'import'`), delists / re-lists only within the districts the file
-      contains, ⛔ never retires a district spelling except through `--rename-district`, finishes the batch with its counts, prints them. The attribution text to record (ODC-BY §4.3): *"Contains information from UDISE – Basic Details of
+      contains, ⛔ never retires a district spelling except through `--rename-district`, REFUSES the run (also under `--dry-run`) when the
+      map names a retired spelling ⛔ not passed in `--relist-district`, finishes the batch with its counts, prints them; `--rename-district`
+      follows Task 1.1b step by step. The attribution text to record (ODC-BY §4.3): *"Contains information from UDISE – Basic Details of
       Schools (India Data Portal, ISB Bharti Institute), made available under the ODC Attribution License."* A committed fixture CSV
       (`packages/domain/tests/fixtures/workplaces-fixture.csv`, ~40 rows, one Pariwar's two districts) and a documented `pnpm` seed command
       so dev and staging DBs are ⛔ never left without a list. ⚠ ⛔ Never fetch the real file in a test or in CI.
@@ -773,6 +786,7 @@ out of components. `pnpm ci:local` before push (memory: unit=4 tunable; integrat
 ## Change Log
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-14 | 1.6 | Validate round 6 (one fresh-context verifier — 0 BLOCKER, 1 HIGH, 4 MEDIUM, 6 LOW, all applied): Task 1.1b's leftover "re-listed" sentence replaced by the stale-map refusal and `--relist-district` (the HIGH); SW14 lists FOUR things each side can tell and its §0 says WIDENS `-307` §2 item 3 (iii), with the two notices and the `member_status` ground; the rename retires `<old>` first, writers read the district FOR SHARE, it prints the postings left on `<old>`, closed / confirmed requests keep `<old>`, and its batch row carries ⛔ no source fields (a CHECK); AC1 tests the rename arm; SW21 defines "unconfirmed". |
 | 2026-10-14 | 1.5 | Validate round 5 (one fresh-context verifier — 0 BLOCKER, 1 HIGH, 8 MEDIUM, 6 LOW, all applied): the requests' `district` grant and a rename arm in their guard (the HIGH); staff rows and the stale-map refusal around `--rename-district`, its batch row and its grant consequence; SW14 states the two things a namer CAN tell (an immediate *"No"*; a vanished row = a withdrawal, ⛔ never a death), the named person is told *"[Name] will see your answer"*, and a §0 line; SW16 (4)'s card fires only for SW14's unnamed row (the word "erased" dropped); SW20 (i) points to SW22; duplicates removed. |
 | 2026-10-14 | 1.4 | Validate round 4 (one fresh-context verifier — 0 BLOCKER, 2 HIGH, 5 MEDIUM, 3 LOW, all applied): SW14 RECOMMENDS the honest rule — a *"No"* shows *"Not accepted"* at once, a lapse at day 30 — after round 4 showed the indistinguishable version leaking through slots, re-asks and removals (it stays as SW14's alternative); one re-ask rule (`ended_at` + 60 days); the *"Can no longer be asked"* row is unnamed for withdrawal and death alike; district spellings are retired ONLY by an explicit `--rename-district` that moves every workplace and open request (a one-district file retires nothing); every district check reads LISTED spellings; SW21's run skips an *"isn't listed"* row between two of the same workplace and covers a retirement or an unconfirmed *"isn't listed"*; `settled` measured from the run's recorded start and false for named people. |
 | 2026-10-14 | 1.3 | Validate round 3 (one fresh-context verifier — 0 BLOCKER, 3 HIGH, 9 MEDIUM, 8 LOW, all applied): ONE re-ask rule and ONE display timeline for a decline and a lapse (SW10, SW14 — ⛔ no declined-vs-ignored signal, ⛔ not even in timing); the lapse dated `asked_at` + 30; `workplace_districts` gains a `status` (a corrected map RETIRES the old spelling); SW17 per LINK; SW20's staff line counts removals; I8 / SW20 name the withdrawal exception; SW21's 90 days from the start of the CURRENT run; the writer ⛔ never withdraws its own posting's request; the replace card names ⛔ nobody and every people-who-know-me card is for `active` members only; the erasure arm sets `resolved_at`; Task 1 / Task 3 gaps; one wording for the no-list Pariwar. |

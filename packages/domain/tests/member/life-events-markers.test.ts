@@ -101,7 +101,7 @@ describe('PostingUpdatedPayloadSchema — non-PII district + retirement flag', (
     actor: 'member',
   } as const;
 
-  it('accepts district + is_retirement (pariwar_ref is the only optional field)', () => {
+  it('accepts district + is_retirement (pariwar_ref and the four Story 6.36a fields are optional)', () => {
     expect(
       PostingUpdatedPayloadSchema.parse({ ...base, district: 'Pune', is_retirement: false }),
     ).toMatchObject({ district: 'Pune', is_retirement: false });
@@ -116,6 +116,24 @@ describe('PostingUpdatedPayloadSchema — non-PII district + retirement flag', (
     });
     expect(parsed.is_retirement).toBe(true);
     expect(parsed.pariwar_ref).toBe('pariwar-abc');
+  });
+
+  it('Story 6.36a — accepts the workplace id / kind, the start date and the not-listed flag, each nullish (a pre-6.36a event has none)', () => {
+    const parsed = PostingUpdatedPayloadSchema.parse({
+      ...base,
+      district: 'Patna',
+      is_retirement: false,
+      workplace_id: '7c9e6679-7425-40de-944b-e07fc1f90ae7',
+      workplace_kind: 'school',
+      started_on: '2019-06-01',
+      not_listed: false,
+    });
+    expect(parsed).toMatchObject({ workplace_kind: 'school', started_on: '2019-06-01', not_listed: false });
+    expect(PostingUpdatedPayloadSchema.parse({ ...base, district: 'Patna', is_retirement: false, workplace_id: null, workplace_kind: null, started_on: null, not_listed: true }).not_listed).toBe(true);
+    expect(() => PostingUpdatedPayloadSchema.parse({ ...base, district: 'Patna', is_retirement: false, workplace_kind: 'temple' })).toThrow();
+    expect(() => PostingUpdatedPayloadSchema.parse({ ...base, district: 'Patna', is_retirement: false, started_on: '01-06-2019' })).toThrow();
+    // ⛔ The typed name of an "isn't listed" answer is ⛔ a payload key (member free text never reaches an event).
+    expect(() => PostingUpdatedPayloadSchema.parse({ ...base, district: 'Patna', is_retirement: false, typed_name: 'My School' })).toThrow();
   });
 
   it('rejects an empty district and unknown keys', () => {

@@ -37,9 +37,10 @@ export default function LifeEventsIndexScreen() {
       to: '/(life-events)/address',
     },
     {
+      // Story 6.36a — "Posting" became "Workplace" (the school or office, and the transfers); the route is unchanged.
       key: 'posting',
-      label: t('lifeEvents.posting_label'),
-      desc: t('lifeEvents.posting_desc'),
+      label: t('hub_label', undefined, { namespace: 'workplace' }),
+      desc: t('hub_desc', undefined, { namespace: 'workplace' }),
       recorded: data?.posting.recorded,
       to: '/(life-events)/posting',
     },

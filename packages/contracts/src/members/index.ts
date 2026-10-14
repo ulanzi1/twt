@@ -13,3 +13,5 @@ export * from './lock-in.js';
 // member-search request/response DTOs (the compound read model). Mirrors the @twt/validity-service
 // payload shape with plain Zod (no @twt/domain import); camelCase wire (matches lock-in.ts/auth.ts).
 export * from './validity.js';
+// Story 6.36a — where each member works: the posting choice (the life-events posting body) and the workplace reads.
+export * from './workplace.js';

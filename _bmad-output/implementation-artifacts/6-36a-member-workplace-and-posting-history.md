@@ -40,7 +40,7 @@ invariants. Foreign letters cited: `PM` (6.27a, `-311`), `CF` (`-310`), `BD` (6.
 
 # Story 6.36a: Where Each Member Works — a School or an Office Picked From a List at Signup and at Every Transfer, With the Date It Began, the History Kept `[SURFACE]`
 
-Status: ready-for-dev
+Status: review
 
 > ⭐⭐ **WHAT THE SET IS.** When a death claim is filed, the Trust asks up to five members who knew the person (`-303` Q1 A). Today
 > they are chosen from the whole DISTRICT (`district_cohort_v1`) — mostly strangers. BigDev (2026-10-10): *"Selection must be school wise,
@@ -609,8 +609,8 @@ my family picks.**
         Notes (SW27). Commit with the governance commit.
   - [x] 0.5 Apply any answer that differs from a recommendation to EVERY file it touches (rebuild each file's AC ↔ Task map both ways),
         before Task 1.
-- [ ] **Task 1 — the migration (AC1).**
-  - [ ] 1.1 `workplaces`: `workplace_id uuid pk default gen_random_uuid()`, `pariwar_id uuid not null`, `kind text not null CHECK (kind IN
+- [x] **Task 1 — the migration (AC1).**
+  - [x] 1.1 `workplaces`: `workplace_id uuid pk default gen_random_uuid()`, `pariwar_id uuid not null`, `kind text not null CHECK (kind IN
         ('school','office'))`, `name text not null CHECK (length(btrim(name)) BETWEEN 1 AND 200)`, `district text not null CHECK
         (length(btrim(district)) BETWEEN 1 AND 200)`, `block_code text null CHECK (block_code ~ '^[0-9]{6}$')`, `cluster_name text null`,
         `village_name text null`, `pincode text null CHECK (pincode ~ '^[0-9]{6}$')`, `udise_school_code text null CHECK
@@ -622,7 +622,7 @@ my family picks.**
         `(pariwar_id, district, kind, status)`. GRANT SELECT, INSERT, UPDATE (`name`, `district`, `status`, `updated_at`, `cluster_name`,
         `village_name`, `pincode`, `block_code`, `import_batch_id` — ⛔ not `kind`, ⛔ not the code, ⛔ not `pariwar_id`) to the app role; ⛔ no
         DELETE. ⚠ A district change on a workplace ⛔ never rewrites a posting (each posting copied its district when written — I2).
-  - [ ] 1.1b `workplace_districts`: `(pariwar_id, district)` PK, `status text not null default 'listed' CHECK IN ('listed','retired')`,
+  - [x] 1.1b `workplace_districts`: `(pariwar_id, district)` PK, `status text not null default 'listed' CHECK IN ('listed','retired')`,
         `source_batch_id uuid null`, `created_at`, `updated_at` — the Pariwar's canonical district spellings, written by the import from its
         district map (SF13); an import ⛔ never retires a spelling on its own (a one-district file must ⛔ never empty the other districts);
         a spelling is RETIRED only by the tool's explicit `--rename-district "<old>" "<new>"`, which in ONE transaction lists `<new>`,
@@ -635,13 +635,13 @@ my family picks.**
         confirmed request keeps `<old>`; a retired spelling named by a later map REFUSES that run unless `--relist-district "<spelling>"`
         names it (then it is re-listed — AC2); GRANT SELECT, INSERT, UPDATE (`status`,
         `source_batch_id`, `updated_at`); ⛔ no DELETE.
-  - [ ] 1.2 `workplace_import_batches`: `batch_id`, `pariwar_id`, `source_name`, `source_url`, `retrieved_on date`, `licence`,
+  - [x] 1.2 `workplace_import_batches`: `batch_id`, `pariwar_id`, `source_name`, `source_url`, `retrieved_on date`, `licence`,
         `attribution text`, `state_code text CHECK ~ '^[0-9]{2}$'`, `status text CHECK IN ('running','finished')`, `rows_read`,
         `rows_inserted`, `rows_updated`, `rows_delisted`, `rows_relisted`, `rows_refused`, `rows_duplicate`, `rows_skipped_staff`,
         `districts_retired` (nullable until finished), `started_at`, — with CHECK `source_name = 'rename' OR (source_url, retrieved_on,
         licence, attribution, state_code) are all NOT NULL` (a rename row carries ⛔ no source fields),
         `finished_at`; GRANT SELECT, INSERT, UPDATE (the counts, `status`, `finished_at` only); a trigger: `finished` is FINAL.
-  - [ ] 1.3 `workplace_requests`: `request_id`, `pariwar_id`, `member_id` (FK → `members(member_id)` — SINGLE-COLUMN, SF14), `district
+  - [x] 1.3 `workplace_requests`: `request_id`, `pariwar_id`, `member_id` (FK → `members(member_id)` — SINGLE-COLUMN, SF14), `district
         text not null`, `typed_name text null`, `typed_place text null` (both ≤ 120 and `!~ '[0-9]{7}'` — the writer folds digits first),
         `started_on date not null` (the start date the member gave — the confirm reuses it),
         `state text not null default 'pending' CHECK IN ('pending','suggested','confirmed','withdrawn','closed')`, `suggested_workplace_id
@@ -655,16 +655,16 @@ my family picks.**
         `resolved_at` (the ⇔ CHECK) (test it on a row in each state); AND the rename arm: `district` may change on a `pending` or
         `suggested` row when every other column is unchanged (Task 1.1b's `--rename-district` — test it); GRANT SELECT, INSERT, UPDATE
         (`state`, `district`, `suggested_workplace_id`, `suggested_by_actor_id`, `suggested_at`, `resolved_at`, `typed_name`, `typed_place`).
-  - [ ] 1.4 `member_postings`: ADD `workplace_id uuid null` (FK `(pariwar_id, workplace_id)` → `workplaces (pariwar_id, workplace_id)`),
+  - [x] 1.4 `member_postings`: ADD `workplace_id uuid null` (FK `(pariwar_id, workplace_id)` → `workplaces (pariwar_id, workplace_id)`),
         `workplace_request_id uuid null` (FK `(pariwar_id, workplace_request_id)` → `workplace_requests (pariwar_id, request_id)`),
         `started_on date null CHECK (started_on >= DATE '1950-01-01')`; CHECK `num_nonnulls(workplace_id, workplace_request_id) <= 1`;
         CHECK `is_retirement ⇒ workplace_id IS NULL AND workplace_request_id IS NULL`; ⚠ the existing grant is SELECT, INSERT (0031) — keep
         it (append-only); a column ADD needs ⛔ no new grant. Legacy rows keep NULLs (⛔ no backfill).
-  - [ ] 1.5 Drizzle schema files (`packages/domain/src/schema/workplaces.ts`, `workplace_districts.ts`, `workplace_import_batches.ts`,
+  - [x] 1.5 Drizzle schema files (`packages/domain/src/schema/workplaces.ts`, `workplace_districts.ts`, `workplace_import_batches.ts`,
         `workplace_requests.ts`; three
         columns in `member_postings.ts`), policy files `packages/domain/src/policies/*-rls.ts`, the barrel; the journal entry
         (hand-authored; ⛔ never regenerate — memory *Live-DB test gotchas*); apply to :5432 and :5433.
-- [ ] **Task 2 — the domain (AC3–AC4, AC7, AC9).** New `packages/domain/src/member/workplace.ts`: `listWorkplaceDistricts` (`status = 'listed'` only), `searchWorkplaces(db, { pariwarId, district, kind, q, limit, cursor })` (`clampLimit` — the `domain-accessor-invariants` gate; the
+- [x] **Task 2 — the domain (AC3–AC4, AC7, AC9).** New `packages/domain/src/member/workplace.ts`: `listWorkplaceDistricts` (`status = 'listed'` only), `searchWorkplaces(db, { pariwarId, district, kind, q, limit, cursor })` (`clampLimit` — the `domain-accessor-invariants` gate; the
       `ILIKE` input escaped for `%`, `_`, `\`), `getListedWorkplace`, `pariwarHasWorkplaceList`; extend `insertMemberPosting` with
       `workplaceId`, `workplaceRequestId`, `startedOn` (still the ONE writer) and, in the SAME transaction, end the member's older open
       request (`withdrawn`); `insertWorkplaceRequest` (folds non-ASCII digits to ASCII — NFKD + the Devanagari digit range — before the
@@ -675,7 +675,7 @@ my family picks.**
       (`packages/domain/src/member/events.ts:230-237`, `.strict()`) gains `workplace_id`, `workplace_kind`, `started_on` and `not_listed` —
       each `.nullish()` (the 6.17 `block` precedent). ⛔ No typed text in the event. The anonymizer arm (AC9) + the rtbf pin; the
       data-export entries.
-- [ ] **Task 3 — the import tool (AC2).** `packages/domain/scripts/import-workplaces.ts` (run as `pnpm --filter @twt/domain
+- [x] **Task 3 — the import tool (AC2).** `packages/domain/scripts/import-workplaces.ts` (run as `pnpm --filter @twt/domain
       workplaces:import -- --pariwar <uuid> --state 10 --file <csv> --district-map <csv> --source "<name>" --url <url> --retrieved
       YYYY-MM-DD --licence ODC-BY-1.0 --attribution "<text>" [--relist-district "<spelling>"] [--dry-run]`, and separately
       `workplaces:import -- --pariwar <uuid> --rename-district "<old>" "<new>" [--dry-run]`): streams the CSV (⛔ never 400 MB in memory — a line reader),
@@ -690,7 +690,7 @@ my family picks.**
       Schools (India Data Portal, ISB Bharti Institute), made available under the ODC Attribution License."* A committed fixture CSV
       (`packages/domain/tests/fixtures/workplaces-fixture.csv`, ~40 rows, one Pariwar's two districts) and a documented `pnpm` seed command
       so dev and staging DBs are ⛔ never left without a list. ⚠ ⛔ Never fetch the real file in a test or in CI.
-- [ ] **Task 4 — contracts + API (AC3–AC4, AC3b, AC8).** Contracts `packages/contracts/src/members/workplace.ts` (`.strict()`; the body as
+- [x] **Task 4 — contracts + API (AC3–AC4, AC3b, AC8).** Contracts `packages/contracts/src/members/workplace.ts` (`.strict()`; the body as
       a discriminated union on `choice`; the read DTOs) and the changed `PostingUpdateRequest` (`packages/contracts/src/life-events/
       posting.ts:23-29`; ⚠ `pariwarRef` has readers — the handler and the data export, `assemble.ts:344` — keep it optional on the
       `workplace`, `retired` and `district_only` arms); routes in `apps/api/src/modules/life-events/` — `GET …/workplaces/districts`,
@@ -701,7 +701,7 @@ my family picks.**
       })`; route tests: each refusal, the idempotent replay, the other-Pariwar workplace = unknown, the no-list Pariwar's `district_only`
       arm, ⛔ no typed text in the audit / event / logs; AC8's contracts fence test. ⚠ The existing posting route's spec
       (`apps/api/tests/integration/life-events/life-events.spec.ts`) sends today's body — amend it to the new one.
-- [ ] **Task 5 — the member app (AC5, AC6).** `apps/mobile/components/workplace/WorkplacePicker.tsx` (district list → kind → a SERVER
+- [x] **Task 5 — the member app (AC5, AC6).** `apps/mobile/components/workplace/WorkplacePicker.tsx` (district list → kind → a SERVER
       search, debounced and cancelling the previous call, rendered in a `FlashList`; empty / loading / error rendered OUTSIDE the list —
       memory: the Fabric FlatList crash; then the start date; the *"isn't listed"*, *"retired"* and no-list branches);
       `apps/mobile/app/(signup)/workplace.tsx` + `WIZARD_STEPS` (`apps/mobile/lib/wizard-steps.ts:15`) + `kyc.tsx`'s hard-coded
@@ -711,11 +711,11 @@ my family picks.**
       `apps/mobile/lib/peer-request.ts:129-139` — move it to a shared `lib/` module now that a second caller needs it); the TanStack
       queries (keys namespaced by `pariwarId, memberId`; the search results `gcTime: 0` — ⛔ never persisted to MMKV). ⚠ Typed routes in a
       worktree: run `tsc` both ways (memory). ⚠ The app ⛔ cannot import `@twt/domain`.
-- [ ] **Task 6 — copy (AC10).** `packages/i18n/locales/{en,hi}/workplace.json` + `src/catalog.ts` + `locales/classification.json`; the
+- [x] **Task 6 — copy (AC10).** `packages/i18n/locales/{en,hi}/workplace.json` + `src/catalog.ts` + `locales/classification.json`; the
       screens' strings (the step title *"Where do you work?"*, the kinds, *"My workplace isn't listed"*, *"I have retired"*, *"When did you
       start working here?"*, *"When did you retire?"*, the refusals, the history labels, *"Not listed yet — a Pariwar Admin will look for
       it"*); a real-`t()` test.
-- [ ] **Task 7 — records and close (AC11).** Row 31 appended to `docs/launch-gate-inventory/inventory-roster.md` in Row 30's shape and
+- [x] **Task 7 — records and close (AC11).** Row 31 appended to `docs/launch-gate-inventory/inventory-roster.md` in Row 30's shape and
       Row 27's (h) added (SW28 — each cites the decision that created it); CHECK Task 0.4's annotations exist; `friction-budget.md` row
       (*"member (picking their school or office and the date they started, at signup and at each transfer)"* · protects *"who is asked
       about a member's death — colleagues, ⛔ never strangers"* · `forced`); the Change Log and File List; `pnpm ci:local` green.
@@ -782,17 +782,126 @@ out of components. `pnpm ci:local` before push (memory: unit=4 tunable; integrat
 
 ### Agent Model Used
 
+Claude Opus 5.5 (1M context) — `claude-opus-5-5[1m]`, via `bmad-dev-story 6.36a` in the worktree `.claude/worktrees/6-36a` (branch
+`story/6-36a-member-workplace-and-posting-history`, cut at `5b3a2512`; ⛔ code drift since `2581c514`).
+
 ### Debug Log References
+
+- 0161 proven FROM ZERO on a scratch database (`twt_scratch_636a` on :5433, migrated from 0000, then dropped), its policy spec green there
+  (19/19), THEN applied to :5432 and :5433 (both at `when` `1794195600005`) — applied before 6.36b's later-stamped 0162 could reach
+  either shared database (the migrator would skip an older-stamped migration for ever).
+- Two test artifacts fixed while writing the policy spec (⛔ code defects): inside one test transaction `now()` equals a seeded
+  `resolved_at`, so the "re-close a closed row" leg uses `clock_timestamp()`; and `SET LOCAL app.pariwar_id` outlives `RESET ROLE`, so
+  the unscoped probe clears it first.
+- The history cursor first carried `created_at::text` (`…+00`), which `Date.parse` refuses ⇒ the cursor time is now a fixed UTC ISO
+  form with six fractional digits (`to_char(… 'US')`), compared in SQL — a µs-exact walk is tested (two rows one microsecond apart).
+- The `domain-accessor-invariants` gate needs `clampLimit(...)` INLINE at each `.limit()` (a pre-clamped variable fails) — fixed.
+- Self-review before close (memory: review the diff): `parseCsv` decoded each `Buffer` chunk alone (a split Devanagari character would
+  turn to mojibake) ⇒ a streaming `TextDecoder` + a test; the picker's typed-name step allowed *"Continue"* with a phone number and
+  no reason shown, its date error waited for a blur, and a refusal left a stale cached list ⇒ fixed.
 
 ### Completion Notes List
 - 2026-10-14 — authored by `bmad-create-story 6.36` (five read-only research passes + the author; three fresh-context verifiers). ⛔ No
   code. Ultimate context engine analysis completed — comprehensive developer guide created.
+- 2026-10-14 — ⭐ **BUILT by `bmad-dev-story 6.36a`** (Tasks 1–7; Task 0 was already done). ⛔ No answer differed from a recommendation;
+  ⛔ no AC or Task text changed.
+  - **Task 1 (AC1)** — migration `0161_member-workplaces.sql` (journal idx 161, `when` `1794195600005`): `workplace_import_batches`
+    (created `running`, `finished` FINAL; a rename row carries ⛔ source fields — a CHECK), `workplace_districts` (the Pariwar's
+    spellings, trimmed — a CHECK; `listed` / `retired`), `workplaces` (school / office; import ⇒ a school with a code and a batch; an
+    office ⛔ a code; the district an FK to the spellings; the column grant ⛔ `kind` / the code / `source` / `pariwar_id`),
+    `workplace_requests` (the guard: created `pending`; the state machine; identity columns frozen; the ERASURE ARM in every state,
+    alone or with an open request's move to `closed`; the RENAME ARM on open rows only; ⛔ a CHECK requiring the typed text), and
+    `member_postings.workplace_id` / `workplace_request_id` / `started_on` (at most one of the two; ⛔ on a retirement; ≥ 1950).
+    Member FKs single-column (SF14), every other FK composite on `pariwar_id`; per-command RLS (⛔ DELETE leg, ⛔ `FOR ALL`); ⛔ DELETE
+    grant. Drizzle schema + policy files + three branded ids. Policy spec: 19 tests (`workplaces-policy-regression.spec.ts`).
+  - **Task 2 (AC3, AC3b, AC4, AC7, AC9)** — `member/workplace.ts`: the listed districts, the escaped `ILIKE` search (keyset pages,
+    `clampLimit`), the district / workplace locks (`FOR SHARE`, district FIRST — the import's and the rename's order), the per-member
+    posting advisory lock, `latestPostingStartedOn`, `insertWorkplaceRequest` (digits folded — every `\p{Nd}` script, after NFKD —
+    before the seven-digit check), the history (µs cursor). `insertMemberPosting` (still the ONE writer) takes the three new fields and
+    ENDS the member's older open request — ⛔ its own, ⛔ `exceptRequestId`. `member.posting_updated` gains four `.nullish()` fields
+    (⛔ typed text). The anonymizer's ONE `workplace_requests` statement (the RTBF pin raised 24 → 25 statements, 21 → 22 tables), and the
+    data export's postings (workplace, not-listed, start date) and requests.
+  - **Task 3 (AC2)** — `member/workplace-import.ts` (a streaming RFC 4180 reader; the IDP profile; the district map; one transaction,
+    the batch row first; the staff-safe upsert; delist / re-list within the file's districts; the stale-map refusal and
+    `--relist-district`; the rename) + the CLI `scripts/import-workplaces.ts` (`--dry-run` rolls the same work back) + its README + the
+    fixture (35 rows) and its maps + `pnpm workplaces:import` / `workplaces:seed-fixture`. Import spec: 11 tests incl. the CLI.
+  - **Task 4 (AC3, AC3b, AC4, AC8)** — contracts `members/workplace.ts` (the four-arm discriminated union; the read DTOs) with
+    `PostingUpdateRequest` = that union (`pariwarRef` kept on `workplace` / `retired` / `district_only`); the reworked `POST …/posting`
+    (Idempotency-Key required, per-member rate limit, ONE transaction, 422 per refusal family, audit = district + choice) and three GETs
+    (bounded `limit`); the existing Life Events spec amended to the new body; the AC8 never-public fence (with proven teeth).
+  - **Task 5 (AC5, AC6)** — `(signup)/workplace.tsx` between `kyc` and `nominees` (`WIZARD_STEPS`, `kyc.tsx`'s next step), the shared
+    `WorkplacePicker` (district → answer → server search in a FlashList with the states OUTSIDE it / the typed name → the date → save),
+    Life Events → Workplace (current, history with an open request's state, *"I have been transferred"*), the api-client methods
+    (the key in a header; an abort `signal` threaded through `call`), the queries (`pariwarId` + `memberId` keys; search and history
+    `gcTime: 0` ⇒ ⛔ persisted), `newIdempotencyKey` moved to `lib/idempotency-key.ts` (re-exported). `tsc` run BOTH ways (with and
+    without `.expo/types`).
+  - **Task 6 (AC10)** — the `workplace` namespace (en + hi + `$comment`: the Hindi NOT YET HUMAN-REVIEWED — Row 31 (f)), registered,
+    declared member-facing; the nine retired `lifeEvents.posting_*` keys removed from `common`; the parity script's print now counts
+    only admin-facing overrides; a real-`t()` test reading the keys from the screens' source.
+  - **Task 7 (AC11)** — Row 31 `peer-mesh-selection-data-basis` appended in Row 30's shape ((g) Closed by `-331`), Row 27 gains (h)
+    *"Row 31 closed"* (ALL EIGHT); Task 0.4's annotations CHECKED present (epics.md ×6, prd.md FR-39, architecture §2.7 / §2.13.2, 6.27a,
+    6.27c); `friction-budget.md` gains the `forced` workplace row and a 6.36a disposition.
+  - **Tests run (live DB :5433):** `packages/domain` 364 / 365 files, 5,202 passed — ⚠ the 7 failures are ALL
+    `reconciliation/review-queue-read.spec.ts`, the KNOWN #15 accumulation class (553 live alerts under the fixed `PARIWAR_A` > the
+    500-cycle scan cap; the spec pins both dates — ⛔ a date bomb; the diff touches ⛔ reconciliation code) — ⛔ green, reported as known;
+    `apps/api` 163 / 163 files, 1,754 passed; `apps/jobs` `data-export.test.ts` 3 / 3 (its vacuum case timed out at 20 s ONLY while the
+    domain suite ran in parallel); `apps/mobile` 55 files / 830 tests then the workplace files again; `packages/contracts` 79 files /
+    1,355; `packages/i18n` 14 / 110; `packages/events` 36; `packages/api-client` 29.
+  - **`pnpm ci:local` (:5433)** — run TWICE. ⚠ The FIRST run (22:50) overlapped the peer session's own `ci:local` (6.36b, worktree
+    `6-36b`; load average 30–42): `test (unit)` red on `@twt/channels`' 100-thread determinism gate (a 90 s timeout — it then passed
+    in ci:local's own isolated `channels-determinism` job, and 227 / 227 on a re-run) and `integration-tests` red on 16 domain files,
+    all timeouts / a busy TRUNCATE lock set — ⛔ a regression: the same domain code had passed those files at 22:33. ⭐ The SECOND run
+    (23:37, started at a 5-minute load below 8): **35 / 36 jobs green** (`test (unit)` included); `integration-tests` red ONLY in
+    `@twt/domain`, 363 / 365 files, 5,202 / 5,211 tests — the KNOWN **#15** `review-queue-read` (7 — 553 live alerts > the 500-cycle
+    scan cap) and the KNOWN **#14** `cross-pariwar-leak` *"legitimate cross-tenant read"* (a 5 s timeout on an UNFILTERED `events_log`
+    read — 596,791 rows on :5433). ⛔ Reported as "green" — both are the shared-container accumulation class; the remedy (recreate
+    `twt-test-pg`) is destructive and BigDev's call. Turbo then cancelled the other integration packages, so they were run directly with
+    the DB: `@twt/jobs` 57 / 797, `@twt/validity-service` 21 / 284, `@twt/channels` 18 / 231, `@twt/niyamavali-engine` 13 / 144,
+    `@twt/events` 7 / 36, `@twt/queue` 1 / 4 — all green; `apps/api` 163 / 1,754 green (run before).
+  - ⚠ **Not demonstrated:** ⛔ on a device (the mobile app has ⛔ screen-render harness for these screens — their logic is unit-tested);
+    ⛔ against the real IDP file (⛔ downloaded — Trap 8). The friction gate's AC-4 facet diffs COMMITTED history, so it is DORMANT until
+    this work is committed ([[project_friction_budget_baseline_ratchet]]); `friction-budget.md` and `apps/mobile/**` change together.
 
 ### File List
+
+**New**
+- `packages/domain/migrations/0161_member-workplaces.sql`
+- `packages/domain/src/schema/workplaces.ts`, `workplace_districts.ts`, `workplace_import_batches.ts`, `workplace_requests.ts`
+- `packages/domain/src/policies/workplaces-rls.ts`
+- `packages/domain/src/member/workplace.ts`, `packages/domain/src/member/workplace-import.ts`
+- `packages/domain/scripts/import-workplaces.ts`, `packages/domain/scripts/README-import-workplaces.md`
+- `packages/domain/tests/fixtures/workplaces-fixture.csv`, `workplaces-fixture-district-map.csv`, `workplaces-fixture-district-map-patna-only.csv`
+- `packages/domain/tests/integration/rls/workplaces-policy-regression.spec.ts`
+- `packages/domain/tests/integration/member/workplace.spec.ts`, `import-workplaces.spec.ts`, `_workplace-fixtures.ts`
+- `packages/domain/tests/member/workplace.test.ts`, `workplace-import-csv.test.ts`
+- `packages/contracts/src/members/workplace.ts`, `packages/contracts/tests/workplace-never-public.test.ts`
+- `apps/api/tests/integration/life-events/workplace.spec.ts`
+- `apps/mobile/app/(signup)/workplace.tsx`
+- `apps/mobile/components/workplace/WorkplacePicker.tsx`, `useWorkplaceQueries.ts`
+- `apps/mobile/lib/workplace.ts`, `workplace-i18n.ts`, `idempotency-key.ts`
+- `apps/mobile/tests/unit/workplace.test.ts`, `workplace-copy.test.ts`
+- `packages/i18n/locales/en/workplace.json`, `packages/i18n/locales/hi/workplace.json`
+
+**Modified**
+- `packages/domain/migrations/meta/_journal.json`, `packages/domain/package.json`
+- `packages/domain/src/schema/member_postings.ts`, `schema/index.ts`, `policies/index.ts`, `ids/index.ts`
+- `packages/domain/src/member/posting.ts`, `member/events.ts`, `member/anonymize.ts`, `member/index.ts`, `data-export/assemble.ts`
+- `packages/domain/tests/member/rtbf-anonymize.test.ts`, `packages/domain/tests/member/life-events-markers.test.ts`
+- `packages/contracts/src/life-events/posting.ts`, `members/index.ts`, `data-export/data-export.ts`
+- `packages/api-client/src/index.ts`
+- `apps/api/src/modules/life-events/handlers.ts`, `routes.ts`, `apps/api/src/audit/audit-sink.ts`
+- `apps/api/tests/integration/life-events/life-events.spec.ts`
+- `apps/mobile/app/(life-events)/posting.tsx`, `app/(life-events)/index.tsx`, `app/(signup)/kyc.tsx`, `lib/wizard-steps.ts`,
+  `lib/peer-request.ts`
+- `packages/i18n/src/catalog.ts`, `locales/classification.json`, `locales/en/common.json`, `locales/hi/common.json`,
+  `scripts/check-parity.ts`
+- `docs/launch-gate-inventory/inventory-roster.md`, `friction-budget.md`
+- `_bmad-output/implementation-artifacts/6-36a-member-workplace-and-posting-history.md`, `sprint-status.yaml`
 
 ## Change Log
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-14 | 2.0 | ⭐ **IMPLEMENTED** by `bmad-dev-story 6.36a` — Tasks 1–7 (Task 0 was done): migration 0161 (four tables + three posting columns, applied on :5432 and :5433, proven from zero); the domain module, the writer's request-ending step, the event's four nullish fields, the erasure arm and the export; the import tool + rename + fixture; the contracts, the reworked idempotent posting route and three reads; the signup step, the picker and Life Events → Workplace; the `workplace` copy namespace; Row 31 + Row 27 (h); the friction row. Status → `review`. ⛔ No AC or Task changed. |
 | 2026-10-14 | 1.9 | `2026-10-14-332` (`33902d82`, BigDev: *"I will go with option A."*): two waves; 6.36a's migration fixed at `0161` / `…005`; it merges first; the shared databases; its worktree `.claude/worktrees/6-36a`. SW1 annotated as amended. |
 | 2026-10-14 | 1.8 | ⭐ The Panel RULED (Dhiraj Rahul + Kalpana Bharti, relayed by BigDev: *"by DR and KB / SC1: A / SC4: A"*) — `2026-10-14-331` (`0019b301`), each option transcribed as put. SC1 A ratifies SW20 / SW21 / SW22's two narrowings of CF4 A; SC4 A — 6.36 mints `peer_mesh.v4` (our reading). The note's ruling block filled in; Row 31 (g) will be written Closed by `-331`. ⛔ No AC or Task here changed. |
 | 2026-10-14 | 1.7 | ⭐ Task 0 (shared) DONE. Task 0.1 — BigDev's answer, word for word: *"all A, SC4 yes"* (to SW1–SW30 and SC1–SC4 put as plain-language summaries). Task 0.2 — `2026-10-14-330` committed ALONE (`d44708e8`; inserted by this session, additive 45 / 0, byte-identical to the scratchpad draft). Task 0.3 — `trustee-panel-routing-note-2026-10-14-6-36-confirms.md` (SC1, SC4, the FYI; SC2 / SC3 ⛔ not owed) committed with the annotations (`35fe513f`); ⛔ not yet sent. Task 0.4 — the annotations in `epics.md` (four entries + Story 6.6 + FR-39 C8), `prd.md` FR-39, architecture §2.7 / §2.13.2, 6.27a Invariant 4 / Trap 8, 6.27c STATUS / AC5 / Dev Notes (`35fe513f`). Task 0.5 — ⛔ no answer differed from a recommendation ⇒ ⛔ no AC or Task changed. |

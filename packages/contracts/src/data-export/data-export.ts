@@ -165,6 +165,25 @@ export const ProfileSection = z
           pariwarRef: z.string().nullable(),
           isRetirement: z.boolean(),
           recordedAt: Iso8601Datetime,
+          // Story 6.36a (AC9) — the school or office the posting names, whether it was an *"isn't listed"* answer, and the
+          // date the member started there (or retired). NULL on a legacy row (⛔ no backfill).
+          workplace: z.object({ name: z.string(), kind: z.enum(['school', 'office']) }).strict().nullable(),
+          notListed: z.boolean(),
+          startedOn: z.string().nullable(),
+        })
+        .strict(),
+    ),
+    // Story 6.36a (AC9) — every *"my workplace isn't listed"* request, with the text the member typed (NULL once erased).
+    workplaceRequests: z.array(
+      z
+        .object({
+          district: z.string(),
+          typedName: z.string().nullable(),
+          typedPlace: z.string().nullable(),
+          startedOn: z.string(),
+          state: z.enum(['pending', 'suggested', 'confirmed', 'withdrawn', 'closed']),
+          recordedAt: Iso8601Datetime,
+          resolvedAt: Iso8601Datetime.nullable(),
         })
         .strict(),
     ),

@@ -804,3 +804,24 @@ export const deathCertificateUploadId = uuidBrand('DeathCertificateUploadId');
 export type DeathCertificateReviewId = Brand<'DeathCertificateReviewId'>;
 /** Smart constructor: validates UUID shape, returns a branded `DeathCertificateReviewId`. */
 export const deathCertificateReviewId = uuidBrand('DeathCertificateReviewId');
+
+// ── Workplace ids (Story 6.36a, Task 1; `2026-10-14-330` SW2, SW3, SW9) ───────────────────────────
+// Three NEW branded ids, each a ROW address (⛔ an event stream id):
+//   · `WorkplaceId` — one school or office on a Pariwar's list (`workplaces.workplace_id`); a posting names it.
+//   · `WorkplaceRequestId` — one *"my workplace isn't listed"* request (`workplace_requests.request_id`).
+//   · `WorkplaceImportBatchId` — one import run or district rename (`workplace_import_batches.batch_id`).
+
+/** Per-row address of a listed school or office (`workplaces.workplace_id`). */
+export type WorkplaceId = Brand<'WorkplaceId'>;
+/** Smart constructor: validates UUID shape, returns a branded `WorkplaceId`. */
+export const workplaceId = uuidBrand('WorkplaceId');
+
+/** Per-row address of a *"my workplace isn't listed"* request (`workplace_requests.request_id`). */
+export type WorkplaceRequestId = Brand<'WorkplaceRequestId'>;
+/** Smart constructor: validates UUID shape, returns a branded `WorkplaceRequestId`. */
+export const workplaceRequestId = uuidBrand('WorkplaceRequestId');
+
+/** Per-row address of a workplace import batch (`workplace_import_batches.batch_id`). */
+export type WorkplaceImportBatchId = Brand<'WorkplaceImportBatchId'>;
+/** Smart constructor: validates UUID shape, returns a branded `WorkplaceImportBatchId`. */
+export const workplaceImportBatchId = uuidBrand('WorkplaceImportBatchId');

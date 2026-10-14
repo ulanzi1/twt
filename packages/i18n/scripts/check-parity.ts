@@ -57,7 +57,8 @@ function main(): void {
   console.log(`▸ en namespaces: ${enNamespaces.length > 0 ? enNamespaces.join(', ') : '(none)'}`);
   console.log(
     `▸ classification default: ${classification.default}; ` +
-      `admin-facing overrides: ${Object.keys(classification.namespaces).length}\n`,
+      // Story 6.36a — count ONLY the admin-facing entries: an explicit `member-facing` entry (`workplace`) is ⛔ an override.
+      `admin-facing overrides: ${Object.values(classification.namespaces).filter((c) => c === 'admin-facing').length}\n`,
   );
 
   const findings = checkParity({ en, hi, classification });

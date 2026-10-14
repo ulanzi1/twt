@@ -1,3 +1,13 @@
+# last_updated: 2026-10-14k (STORY 6.36a — IMPLEMENTED by `bmad-dev-story 6.36a` (worktree `.claude/worktrees/6-36a`, branch
+# `story/6-36a-member-workplace-and-posting-history`): row `6-36a-member-workplace-and-posting-history` `ready-for-dev` → `in-progress` →
+# `review`. Migration 0161 (`workplaces`, `workplace_districts`, `workplace_import_batches`, `workplace_requests` + `member_postings`
+# `workplace_id` / `workplace_request_id` / `started_on`) applied on :5432 AND :5433, proven from zero; the domain module; the import tool +
+# `--rename-district` + a committed fixture (`pnpm --filter @twt/domain workplaces:import` / `workplaces:seed-fixture`); the posting route
+# reworked (a four-arm choice, Idempotency-Key, per-member limit, 422 per refusal family) + three reads; the signup step `workplace`
+# (after `kyc`) and Life Events → Workplace; the `workplace` copy namespace (Hindi NOT YET REVIEWED — Row 31 (f)); go-live Row 31
+# `peer-mesh-selection-data-basis` appended ((g) Closed by `-331`) and Row 27 (h) added; a `forced` friction row. `pnpm ci:local`: 35 / 36
+# jobs green; `integration-tests` red ONLY on the KNOWN #15 `review-queue-read` and #14 `cross-pariwar-leak` (accumulation class on the
+# shared :5433 — ⛔ reported as green); every other integration package green when run directly. ⛔ Not committed. ⛔ No other row moves.)
 # last_updated: 2026-10-14j (STORY 6.36 — TWO WAVES (`2026-10-14-332`, `33902d82`; BigDev: *"I will go with option A."*): row
 # `6-36b-people-who-know-me` `backlog` → `ready-for-dev` (in parallel with 6-36a); rows 6-36c and 6-36 stay `backlog` until 6-36a AND
 # 6-36b are `done`, then run in parallel; migrations fixed 0161 / 0162 / 0163 / 0164, merged in that order (the migrator silently skips an
@@ -20095,7 +20105,7 @@ development_status:
   # ⭐ 2026-10-14 (`2026-10-14-332`, BigDev: "option A") — TWO WAVES: 6-36a ∥ 6-36b NOW (worktrees `.claude/worktrees/6-36a` / `6-36b`;
   # 6-36b on its own test DB `twt-test-pg-b` :5434); then 6-36c ∥ row 6-36 once 6-36a AND 6-36b are done. Migrations fixed 0161 / 0162 /
   # 0163 (row 6-36) / 0164 (6-36c), merged to main in that order. 6-27c waits for row 6-36 AND 6-36c.
-  6-36a-member-workplace-and-posting-history: ready-for-dev
+  6-36a-member-workplace-and-posting-history: review
   6-36b-people-who-know-me: ready-for-dev
   6-36c-workplace-list-curation-and-prompts: backlog
   # ⭐ 2026-10-10 ADDED by `2026-10-10-306` (BigDev: "Selection must be school wise …"): each member's SCHOOL (a stable school code + name)

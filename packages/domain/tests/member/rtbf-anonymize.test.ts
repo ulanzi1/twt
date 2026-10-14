@@ -42,6 +42,7 @@ import {
   claimGroundInspectionDiscrepancyNotes,
   claims,
   nomineeDeterminations,
+  workplaceRequests,
 } from '../../src/schema/index.js';
 
 // The fixed namespace the member mobile Tier-1 envelope keys on (login runs pre-scope). Duplicated by
@@ -200,8 +201,13 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
     // `claim_ground_inspection_discrepancy_notes` holds the inspector's re-ask notes — the family's re-told account of the
     // death (Tier-1, `ground_inspection`) — on the DECEASED member's claims, ONE statement inside the same block. The
     // showings table holds ⛔ PII (keys and a time). Raised, never weakened.
+    //
+    // ⭐ MOVED AGAIN by Story 6.36a (AC9): TWENTY-TWO tables, TWENTY-FIVE statements. `workplace_requests` holds the
+    // member's TYPED workplace name and place (*"my workplace isn't listed"* — member-authored free text, plaintext) and
+    // takes ONE statement: the text → NULL in every state, an open request → `closed`, together (0161's guard's erasure
+    // arm). The postings are kept (non-PII Tier 3). Raised, never weakened.
     const { captured } = await run();
-    expect(captured).toHaveLength(24);
+    expect(captured).toHaveLength(25);
     const tables = captured.map((c) => c.table);
     for (const t of [
       memberIdentities,
@@ -225,6 +231,7 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
       claimGroundInspections,
       claimPeerMeshReplyAnswers,
       claimGroundInspectionDiscrepancyNotes,
+      workplaceRequests,
     ]) {
       expect(tables).toContain(t);
     }
@@ -237,7 +244,7 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
     expect(tables.filter((t) => t === dataExports)).toHaveLength(2);
     expect(tables.filter((t) => t === dataExportDeliveryGrants)).toHaveLength(2);
     expect(tables.filter((t) => t === memberModerationAppeals)).toHaveLength(2);
-    expect(new Set(tables).size).toBe(21); // Story 6.27d (PM17 d) — 20 → 21: `claim_ground_inspection_discrepancy_notes`; Story 6.27a (PM17) — 19 → 20: `claim_peer_mesh_reply_answers`
+    expect(new Set(tables).size).toBe(22); // Story 6.36a (AC9) — 21 → 22: `workplace_requests`; Story 6.27d (PM17 d) — 20 → 21: `claim_ground_inspection_discrepancy_notes`; Story 6.27a (PM17) — 19 → 20: `claim_peer_mesh_reply_answers`
   });
 
   it('⭐ Story 6.26a (GI13): the inspection\'s date and time of death → sentinel, the date\'s blind index → NULL', async () => {
@@ -270,7 +277,26 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
     expect(captured.map((c) => c.table)).not.toContain(claimGroundInspections);
     expect(captured.map((c) => c.table)).not.toContain(claimPeerMeshReplyAnswers); // Story 6.27a — ⛔ claims, ⛔ answers
     expect(captured.map((c) => c.table)).not.toContain(claimGroundInspectionDiscrepancyNotes); // Story 6.27d — ⛔ claims, ⛔ notes
-    expect(captured).toHaveLength(21);
+    expect(captured).toHaveLength(22); // Story 6.36a — 21 → 22: `workplace_requests` (⛔ claim-scoped)
+  });
+
+  it('⭐ Story 6.36a (AC9): the typed workplace → NULL and an open request → closed, in ONE statement, ONLY the member\'s rows', async () => {
+    const { captured, pariwar } = await run();
+    const found = captured.filter((c) => c.table === workplaceRequests);
+    expect(found).toHaveLength(1);
+    const { set } = found[0]!;
+    expect(Object.keys(set).sort()).toEqual(['resolvedAt', 'state', 'typedName', 'typedPlace']);
+    expect(set.typedName).toBeNull();
+    expect(set.typedPlace).toBeNull();
+    const dialect = new PgDialect();
+    expect(dialect.sqlToQuery(set.state as SQL).sql).toMatch(/CASE WHEN "workplace_requests"\."state" IN \('pending', 'suggested'\) THEN 'closed' ELSE "workplace_requests"\."state" END/);
+    expect(dialect.sqlToQuery(set.resolvedAt as SQL).sql).toMatch(/THEN now\(\) ELSE "workplace_requests"\."resolved_at" END/);
+    const { sql: text, params } = dialect.sqlToQuery(found[0]!.where as SQL);
+    expect(text).toMatch(/"workplace_requests"\."pariwar_id" = \$1/);
+    expect(text).toMatch(/"workplace_requests"\."member_id" = \$2/);
+    // ⚠ A final row whose text is already gone is SKIPPED (the guard refuses a write that changes nothing).
+    expect(text).toMatch(/"workplace_requests"\."typed_name" IS NOT NULL OR "workplace_requests"\."typed_place" IS NOT NULL OR "workplace_requests"\."state" IN \('pending', 'suggested'\)/);
+    expect(params).toContain(pariwar);
   });
 
   it('⭐ Story 6.27d (PM17 d): the re-ask notes → the inspection block\'s sentinel, ONLY on the deceased\'s claims, ONLY rows with a note', async () => {

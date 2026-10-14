@@ -212,7 +212,8 @@ export default function KycScreen() {
           height={56}
           accessibilityRole="button"
           accessibilityLabel={t('kyc.done')}
-          onPress={() => router.replace('/(signup)/nominees')}
+          // Story 6.36a — the workplace step comes next (SW7), then nominees.
+          onPress={() => router.replace('/(signup)/workplace')}
         >
           {t('kyc.done')}
         </Button>

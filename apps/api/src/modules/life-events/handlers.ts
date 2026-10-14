@@ -18,12 +18,20 @@
 // is non-PII geographic plaintext (safe in the column + event). The summary echoes presence flags +
 // counts, never raw bytes.
 
-import type {
-  AddressUpdateRequest,
-  LifeEventsSummaryResult,
-  PostingUpdateRequest,
+import {
+  type AddressUpdateRequest,
+  LifeEventsSummaryResponse,
+  type LifeEventsSummaryResult,
+  type PostingHistoryQuery,
+  type PostingHistoryResponse,
+  type PostingUpdateRequest,
+  type WorkplaceDistrictsQuery,
+  type WorkplaceDistrictsResponse,
+  type WorkplaceSearchQuery,
+  type WorkplaceSearchResponse,
 } from '@twt/contracts';
 import {
+  idempotency,
   ids,
   medical as medicalDomain,
   member as memberDomain,
@@ -32,7 +40,7 @@ import {
 import type { FastifyRequest } from 'fastify';
 
 import type { AppDeps } from '../../context.js';
-import { ConflictError, UnauthorizedError } from '../../http-errors.js';
+import { ApiError, BadRequestError, ConflictError, UnauthorizedError } from '../../http-errors.js';
 import { emitAuthAudit } from '../auth/shared/audit.js';
 import { closeScopeTx, openScopeTx } from '../multi-tenant/scope-tx.js';
 import type { ScopeTx } from '../../types.js';
@@ -41,8 +49,36 @@ import { encryptAddressLine } from './address-crypto.js';
 /** Lifecycle states in which a Life Events update is rejected (terminal — mirror nominee/medical). */
 const TERMINAL_STATES = new Set(['withdrawn', 'anonymized']);
 
+/** How long a posting write's idempotency claim is held (the personal-event precedent). */
+const POSTING_IDEMPOTENCY_TTL_SECONDS = 300;
+
+/** The 422 messages — non-sensitive, ⛔ ever the member's input (they reach logs). ONE code per family (AC4). */
+const WORKPLACE_REFUSAL_MESSAGES: Record<memberDomain.WorkplaceRefusalCode, string> = {
+  'workplace.not_found': 'That workplace is not on the list',
+  'workplace.district_not_found': 'That district is not on the list',
+  'workplace.start_date_invalid': 'That start date cannot be used',
+  'workplace.typed_name_invalid': 'That workplace name cannot be used',
+  'workplace.choice_unavailable': 'That choice is not available for this Pariwar',
+};
+
+/** A domain refusal → the handler's 422 (AC4). */
+function refuse(code: memberDomain.WorkplaceRefusalCode): never {
+  throw new ApiError(422, code, WORKPLACE_REFUSAL_MESSAGES[code]);
+}
+
 export function createLifeEventsHandlers(deps: AppDeps) {
   const enc = deps.encryption;
+  const idempotencyStore = idempotency.createKeyedStore(deps.pool);
+
+  /** Read the caller-supplied `Idempotency-Key` header (required on the posting write — AC4). */
+  function requireIdempotencyKey(request: FastifyRequest): string {
+    const raw = request.headers['idempotency-key'];
+    const key = Array.isArray(raw) ? raw[0] : raw;
+    if (!key || key.trim() === '') {
+      throw new BadRequestError('An Idempotency-Key header is required', 'life_events.idempotency_key_required');
+    }
+    return key.trim();
+  }
 
   /** Read the authenticated member's (memberId, pariwarId) or fail 401. */
   function memberCtx(request: FastifyRequest): { memberIdStr: string; pariwarIdStr: string } {
@@ -161,32 +197,140 @@ export function createLifeEventsHandlers(deps: AppDeps) {
     },
 
     /**
-     * POST /api/v1/member/life-events/posting — record a posting / transfer-in-out change (NO
-     * step-up). Appends a row to the append-only history (district plaintext non-PII), emits the
-     * `member.posting_updated` NON-TRANSITION marker (carries the non-PII district + is_retirement),
-     * and audits after the summary build succeeds. Records the district change as a member attribute
-     * + event ONLY — it does NOT move the member across Pariwars (v1-S scope).
+     * POST /api/v1/member/life-events/posting — record WHERE the member works, and since when (Story 6.36a, AC4; SW5–SW9).
+     * NO step-up (change after a death is answered by 6.36's cut, ⛔ by friction — SW8). A per-member rate limit (the
+     * route) and a REQUIRED `Idempotency-Key` (a replay returns the original result and writes ⛔ a second row).
+     *
+     * The body is a choice: `workplace` (a listed school or office — the posting's district is the WORKPLACE's mapped
+     * spelling, SW5) · `not_listed` (the request row FIRST, then the posting that names it) · `retired` (the retirement
+     * row, its date) · and, ONLY in a Pariwar with ⛔ no imported list, `district_only` (today's free-text box, SW7).
+     * ONE transaction: the member's posting writes serialised, the district (and the workplace) read `FOR SHARE`, the
+     * start date checked against the member's latest one, ONE posting row (the ONE writer ends the member's older open
+     * request), the `member.posting_updated` marker. The audit line carries the district and the CHOICE — ⛔ never the
+     * typed text. Domain refusals → 422, ONE code per family.
      */
     async updatePosting(request: FastifyRequest): Promise<LifeEventsSummaryResult> {
       const body = request.body as PostingUpdateRequest;
       const { memberIdStr, pariwarIdStr } = memberCtx(request);
-      const isRetirement = body.isRetirement ?? false;
 
+      const idempotencyKey = requireIdempotencyKey(request);
+      const idemKey = `life_events.posting_update:${pariwarIdStr}:${memberIdStr}:${idempotencyKey}`;
+      const claimOutcome = await idempotencyStore.claim(idemKey, POSTING_IDEMPOTENCY_TTL_SECONDS);
+      if (claimOutcome === 'already_claimed') {
+        const stored = await idempotencyStore.getResult(idemKey);
+        const replay = stored === null ? null : LifeEventsSummaryResponse.safeParse(stored);
+        if (replay?.success) return replay.data;
+        throw new ConflictError(
+          'A request with this Idempotency-Key is already in progress — please wait and retry',
+          'life_events.idempotency_in_progress',
+        );
+      }
+
+      let written = false;
+      let claimSettled = false;
       const scopeTx = await openScopeTx(deps, pariwarIdStr);
       let ok = false;
       try {
         const memberId = ids.memberId(memberIdStr);
         const pariwarId = ids.pariwarId(pariwarIdStr);
         const state = await assertMemberExistsAndNotTerminal(scopeTx, pariwarId, memberId);
+        const tx = scopeTx.tx;
 
-        await memberDomain.insertMemberPosting(scopeTx.tx, {
+        // The member's posting writes, one at a time (the start-date check and the "end the older request" step read a
+        // stable history).
+        await memberDomain.lockMemberPostingWrites(tx, memberId);
+        const hasList = await memberDomain.pariwarHasWorkplaceList(tx, pariwarId);
+        const previousStart = await memberDomain.latestPostingStartedOn(tx, pariwarId, memberId);
+        const now = deps.clock();
+        const checkStart = (startedOn: string): void => {
+          if (!memberDomain.isValidStartDate(startedOn, now, previousStart)) refuse('workplace.start_date_invalid');
+        };
+
+        let posting: {
+          district: string;
+          isRetirement: boolean;
+          startedOn: string | null;
+          workplaceId: ids.WorkplaceId | null;
+          workplaceKind: 'school' | 'office' | null;
+          workplaceRequestId: ids.WorkplaceRequestId | null;
+          pariwarRef: string | null;
+        };
+        if (body.choice === 'district_only') {
+          if (hasList) refuse('workplace.choice_unavailable');
+          if (body.startedOn !== undefined) checkStart(body.startedOn);
+          posting = {
+            district: body.district,
+            isRetirement: body.isRetirement ?? false,
+            startedOn: body.startedOn ?? null,
+            workplaceId: null,
+            workplaceKind: null,
+            workplaceRequestId: null,
+            pariwarRef: body.pariwarRef ?? null,
+          };
+        } else {
+          if (!hasList) refuse('workplace.choice_unavailable');
+          if (body.choice === 'workplace') {
+            // The district FIRST, then the workplace, both FOR SHARE (a concurrent rename waits — SF13).
+            const w = await memberDomain.lockListedWorkplace(tx, pariwarId, body.workplaceId);
+            if (!w) refuse('workplace.not_found');
+            checkStart(body.startedOn);
+            posting = {
+              district: w.district,
+              isRetirement: false,
+              startedOn: body.startedOn,
+              workplaceId: w.workplaceId,
+              workplaceKind: w.kind,
+              workplaceRequestId: null,
+              pariwarRef: body.pariwarRef ?? null,
+            };
+          } else {
+            if (!(await memberDomain.lockListedDistrict(tx, pariwarId, body.district))) refuse('workplace.district_not_found');
+            checkStart(body.startedOn);
+            if (body.choice === 'not_listed') {
+              // The request row FIRST — the posting names it (I2: the member's own act writes both).
+              const req = await memberDomain.insertWorkplaceRequest(tx, {
+                pariwarId,
+                memberId,
+                district: body.district,
+                typedName: body.typedName,
+                typedPlace: body.typedPlace ?? null,
+                startedOn: body.startedOn,
+              });
+              posting = {
+                district: body.district,
+                isRetirement: false,
+                startedOn: body.startedOn,
+                workplaceId: null,
+                workplaceKind: null,
+                workplaceRequestId: req.requestId,
+                pariwarRef: null,
+              };
+            } else {
+              posting = {
+                district: body.district,
+                isRetirement: true,
+                startedOn: body.startedOn,
+                workplaceId: null,
+                workplaceKind: null,
+                workplaceRequestId: null,
+                pariwarRef: body.pariwarRef ?? null,
+              };
+            }
+          }
+        }
+
+        await memberDomain.insertMemberPosting(tx, {
           memberId,
           pariwarId,
-          district: body.district,
-          pariwarRef: body.pariwarRef ?? null,
-          isRetirement,
+          district: posting.district,
+          pariwarRef: posting.pariwarRef,
+          isRetirement: posting.isRetirement,
+          workplaceId: posting.workplaceId,
+          workplaceRequestId: posting.workplaceRequestId,
+          startedOn: posting.startedOn,
         });
 
+        // Non-transition marker. NON-PII: the district, ids, a kind, a date, flags — ⛔ the typed text.
         await memberDomain.projectMemberState(scopeTx.client, {
           memberId,
           pariwarId,
@@ -196,21 +340,106 @@ export function createLifeEventsHandlers(deps: AppDeps) {
             to_state: state,
             trigger: 'life_events_posting_update',
             actor: 'member',
-            district: body.district,
-            ...(body.pariwarRef ? { pariwar_ref: body.pariwarRef } : {}),
-            is_retirement: isRetirement,
+            district: posting.district,
+            ...(posting.pariwarRef ? { pariwar_ref: posting.pariwarRef } : {}),
+            is_retirement: posting.isRetirement,
+            workplace_id: posting.workplaceId,
+            workplace_kind: posting.workplaceKind,
+            started_on: posting.startedOn,
+            not_listed: posting.workplaceRequestId !== null,
           },
           actorId: memberIdStr,
         });
 
         const result = await buildSummary(scopeTx, pariwarId, memberId);
         ok = true;
+        written = true;
+        await idempotencyStore.recordResult(idemKey, result);
+        claimSettled = true;
         emitAuthAudit(deps, request, 'member_life_events.posting_updated', {
           actorId: memberIdStr,
           pariwarId: pariwarIdStr,
-          context: { district: body.district, is_retirement: isRetirement },
+          context: { district: posting.district, choice: body.choice },
         });
         return result;
+      } catch (err) {
+        if (err instanceof memberDomain.WorkplaceWriteRefusedError) refuse(err.code);
+        throw err;
+      } finally {
+        await closeScopeTx(scopeTx, ok);
+        // A failed attempt releases its claim (a corrected retry may reuse the key); a write that DID commit keeps it,
+        // so a retry replays rather than writing again (the survey precedent).
+        if (!claimSettled && !written) await idempotencyStore.release(idemKey).catch(() => undefined);
+      }
+    },
+
+    /**
+     * GET /api/v1/member/life-events/workplaces/districts — the Pariwar's LISTED district spellings, A–Z (AC3), and whether
+     * the Pariwar has a list at all (`hasList: false` ⇒ the app shows today's district box — SW7).
+     */
+    async workplaceDistricts(request: FastifyRequest): Promise<WorkplaceDistrictsResponse> {
+      const { pariwarIdStr } = memberCtx(request);
+      const q = request.query as WorkplaceDistrictsQuery;
+      const scopeTx = await openScopeTx(deps, pariwarIdStr);
+      let ok = false;
+      try {
+        const pariwarId = ids.pariwarId(pariwarIdStr);
+        const hasList = await memberDomain.pariwarHasWorkplaceList(scopeTx.tx, pariwarId);
+        const districts = await memberDomain.listWorkplaceDistricts(scopeTx.tx, pariwarId, { ...(q.limit !== undefined ? { limit: q.limit } : {}) });
+        ok = true;
+        return { items: districts.map((district) => ({ district })), nextCursor: null, hasMore: false, hasList };
+      } finally {
+        await closeScopeTx(scopeTx, ok);
+      }
+    },
+
+    /** GET /api/v1/member/life-events/workplaces — the picker's server-side search (AC3, SW4). */
+    async searchWorkplaces(request: FastifyRequest): Promise<WorkplaceSearchResponse> {
+      const { pariwarIdStr } = memberCtx(request);
+      const q = request.query as WorkplaceSearchQuery;
+      const scopeTx = await openScopeTx(deps, pariwarIdStr);
+      let ok = false;
+      try {
+        const page = await memberDomain.searchWorkplaces(scopeTx.tx, {
+          pariwarId: ids.pariwarId(pariwarIdStr),
+          district: q.district,
+          kind: q.kind,
+          q: q.q,
+          limit: q.limit,
+          cursor: q.cursor,
+        });
+        ok = true;
+        return page;
+      } catch (err) {
+        if (err instanceof memberDomain.WorkplaceCursorInvalidError) {
+          ok = true;
+          throw new BadRequestError('The page cursor is not valid', 'workplace.cursor_invalid');
+        }
+        throw err;
+      } finally {
+        await closeScopeTx(scopeTx, ok);
+      }
+    },
+
+    /** GET /api/v1/member/life-events/postings — the member's OWN posting history, newest first (AC3b). */
+    async postingHistory(request: FastifyRequest): Promise<PostingHistoryResponse> {
+      const { memberIdStr, pariwarIdStr } = memberCtx(request);
+      const q = request.query as PostingHistoryQuery;
+      const scopeTx = await openScopeTx(deps, pariwarIdStr);
+      let ok = false;
+      try {
+        const page = await memberDomain.listMemberPostingHistory(scopeTx.tx, ids.pariwarId(pariwarIdStr), ids.memberId(memberIdStr), {
+          limit: q.limit,
+          cursor: q.cursor,
+        });
+        ok = true;
+        return page;
+      } catch (err) {
+        if (err instanceof memberDomain.WorkplaceCursorInvalidError) {
+          ok = true;
+          throw new BadRequestError('The page cursor is not valid', 'workplace.cursor_invalid');
+        }
+        throw err;
       } finally {
         await closeScopeTx(scopeTx, ok);
       }

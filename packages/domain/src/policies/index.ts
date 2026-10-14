@@ -45,6 +45,9 @@ export * from './member-medical-disclosures-rls.js';
 // Story 3.9 — Life Events history tables tenant-isolation (mirror member-medical-disclosures-rls).
 export * from './member-addresses-rls.js';
 export * from './member-postings-rls.js';
+// Story 6.36a (0161) — the workplace list, district spellings, import batches and requests: per-command tenant isolation
+// (SELECT + INSERT + UPDATE — the UPDATE legs narrowed by 0161's column grants); ⛔ no DELETE leg, ⛔ no `FOR ALL`.
+export * from './workplaces-rls.js';
 // Story 3.10 — member_withdrawals tenant-isolation (mirror member-addresses-rls; GRANTs UPDATE too).
 export * from './member-withdrawals-rls.js';
 // Story 3.11 — data_exports tenant-isolation (mirror member-withdrawals-rls; GRANTs UPDATE too).

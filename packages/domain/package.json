@@ -14,6 +14,8 @@
     "db:migrate": "tsx scripts/migrate.ts",
     "db:check": "drizzle-kit check",
     "db:studio": "drizzle-kit studio",
+    "workplaces:import": "tsx scripts/import-workplaces.ts",
+    "workplaces:seed-fixture": "tsx scripts/import-workplaces.ts --state 10 --file tests/fixtures/workplaces-fixture.csv --district-map tests/fixtures/workplaces-fixture-district-map.csv --source 'UDISE – Basic Details of Schools (TWT test fixture — not real data)' --url https://ckan.indiadataportal.com/dataset/udise --retrieved 2026-10-14 --licence ODC-BY-1.0 --attribution 'Contains information from UDISE – Basic Details of Schools (India Data Portal, ISB Bharti Institute), made available under the ODC Attribution License.'",
     "crypto:check": "vitest run tests/encryption"
   },
   "dependencies": {

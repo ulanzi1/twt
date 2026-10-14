@@ -95,6 +95,13 @@ export * from './member_attribution.js';
 // per-row posting_id. Both FK cascade to members for RTBF (Story 3.12).
 export * from './member_addresses.js';
 export * from './member_postings.js';
+// Story 6.36a (0161) — where each member works: the Pariwar's school / office list, its canonical district spellings, the
+// import batches, and the member's *"isn't listed"* requests. Tenant-isolated; ⛔ no DELETE. A posting fact, ⛔ never an RBAC
+// scope, ⛔ never public (`2026-10-14-330` SW2).
+export * from './workplace_import_batches.js';
+export * from './workplace_districts.js';
+export * from './workplaces.js';
+export * from './workplace_requests.js';
 // Story 3.10 — member_withdrawals (tenant-isolated; SINGLE-ROW-per-member withdrawal record + 12-month
 // rejoin lock). reason_text Tier-1 envelope, reason_code + aadhaar_hmac seam non-PII; GRANTs UPDATE
 // (NOT append-only) for the aadhaar_hmac backfill + RTBF. FK cascade to members for RTBF (Story 3.12).

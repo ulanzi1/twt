@@ -28,6 +28,13 @@ import {
   ImaListResponse,
   KycStatusResponse,
   LifeEventsSummaryResponse,
+  PostingHistoryResponse,
+  type PostingHistoryResponse as PostingHistoryResult,
+  WorkplaceDistrictsResponse,
+  type WorkplaceDistrictsResponse as WorkplaceDistrictsResult,
+  type WorkplaceKindWire,
+  WorkplaceSearchResponse,
+  type WorkplaceSearchResponse as WorkplaceSearchResult,
   MemberValidityResponse,
   MedicalDisclosureStatusResponse,
   MemberFullSession,
@@ -243,6 +250,8 @@ function createApiCallers(opts: MemberAuthClientOptions) {
     /** Extra request headers (Story 10.26 — `Idempotency-Key` rides a HEADER, never the body).
      *  Applied BEFORE `authorization`/`content-type`, so it can never override either. */
     extraHeaders?: Record<string, string>,
+    /** Story 6.36a — aborts the request (TanStack Query's per-query signal: a superseded search is CANCELLED). */
+    signal?: AbortSignal,
   ): Promise<T> {
     const headers: Record<string, string> = { ...extraHeaders };
     if (method !== 'GET') headers['content-type'] = 'application/json';
@@ -258,6 +267,7 @@ function createApiCallers(opts: MemberAuthClientOptions) {
       method,
       headers,
       ...(method === 'GET' ? {} : { body: JSON.stringify(body ?? {}) }),
+      ...(signal ? { signal } : {}),
     });
     if (!res.ok) {
       let code = `http.${res.status}`;
@@ -855,9 +865,43 @@ export function createMemberAuthClient(opts: MemberAuthClientOptions) {
       return call(`${LIFE_EVENTS_BASE}/address`, LifeEventsSummaryResponse, input, true);
     },
 
-    /** Life Events posting / transfer update — append-only write; NO step-up. Returns the refreshed summary (auth). */
-    lifeEventsUpdatePosting(input: PostingUpdateRequest): Promise<LifeEventsSummaryResult> {
-      return call(`${LIFE_EVENTS_BASE}/posting`, LifeEventsSummaryResponse, input, true);
+    /**
+     * Life Events posting / transfer update — append-only write; NO step-up. Returns the refreshed summary (auth).
+     * ⭐ Story 6.36a: the body is a CHOICE (`workplace` · `not_listed` · `retired` · and, with ⛔ imported list,
+     * `district_only`) with a start date, and `idempotencyKey` rides the `Idempotency-Key` HEADER (required) — a retried
+     * save with the SAME key replays the original result and writes ⛔ a second row. A domain refusal is a 422 whose
+     * `error.code` is one of `WORKPLACE_REFUSAL_CODES`.
+     */
+    lifeEventsUpdatePosting(input: PostingUpdateRequest, opts: { idempotencyKey: string }): Promise<LifeEventsSummaryResult> {
+      return call(`${LIFE_EVENTS_BASE}/posting`, LifeEventsSummaryResponse, input, true, 'POST', undefined, {
+        'idempotency-key': opts.idempotencyKey,
+      });
+    },
+
+    /** Story 6.36a — the Pariwar's LISTED district spellings (+ `hasList`: ⛔ list ⇒ the free-text district box) (auth). */
+    workplaceDistricts(): Promise<WorkplaceDistrictsResult> {
+      return call(`${LIFE_EVENTS_BASE}/workplaces/districts`, WorkplaceDistrictsResponse, undefined, true, 'GET');
+    },
+
+    /** Story 6.36a — the picker's server-side search: one district's listed schools or offices (auth). */
+    workplaceSearch(
+      params: { district: string; kind: WorkplaceKindWire; q?: string; limit?: number; cursor?: string },
+      opts: { signal?: AbortSignal } = {},
+    ): Promise<WorkplaceSearchResult> {
+      const search = new URLSearchParams({ district: params.district, kind: params.kind });
+      if (params.q !== undefined && params.q.trim() !== '') search.set('q', params.q.trim());
+      if (params.limit !== undefined) search.set('limit', String(params.limit));
+      if (params.cursor !== undefined) search.set('cursor', params.cursor);
+      return call(`${LIFE_EVENTS_BASE}/workplaces?${search.toString()}`, WorkplaceSearchResponse, undefined, true, 'GET', undefined, undefined, opts.signal);
+    },
+
+    /** Story 6.36a — the member's OWN posting history, newest first (auth). */
+    postingHistory(params?: { limit?: number; cursor?: string }): Promise<PostingHistoryResult> {
+      const search = new URLSearchParams();
+      if (params?.limit !== undefined) search.set('limit', String(params.limit));
+      if (params?.cursor !== undefined) search.set('cursor', params.cursor);
+      const qs = search.toString();
+      return call(`${LIFE_EVENTS_BASE}/postings${qs === '' ? '' : `?${qs}`}`, PostingHistoryResponse, undefined, true, 'GET');
     },
 
     /** Read the Life Events panel summary (presence flags + counts across all four sub-types; auth). */

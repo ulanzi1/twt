@@ -58,6 +58,7 @@ import { claimGroundInspectionDiscrepancyNotes } from '../schema/claim_ground_in
 import { claimPeerMeshReplyAnswers } from '../schema/claim_peer_mesh_replies.js';
 import { claims } from '../schema/claims.js';
 import { memberWithdrawals } from '../schema/member_withdrawals.js';
+import { workplaceRequests } from '../schema/workplace_requests.js';
 
 /** The KMS material the sentinel-encrypt uses. The caller (the RTBF handler) threads its `{ kms, kekRef }`
  *  here — the SAME `ExportEncryption` shape assemble.ts uses for the inverse decrypt. */
@@ -351,6 +352,28 @@ export async function anonymizeMember(
     .update(memberWithdrawals)
     .set({ reasonTextCiphertext: null })
     .where(eq(memberWithdrawals.memberId, memberId));
+
+  // ── ⭐ Story 6.36a (AC9) — workplace_requests: the member's TYPED workplace name / place → NULL in EVERY state, and an
+  // OPEN request (`pending` / `suggested`) → `closed`, in ONE statement per row (0161's guard admits exactly that — its
+  // erasure arm: the typed text → NULL alone, or together with an open request's move to `closed` that sets
+  // `resolved_at`). ⛔ The ROW is retained (the district, the start date, the state — the record that a request was made),
+  // and so are the member's postings (non-PII Tier 3, as `member_postings.district` always was). ⚠ The WHERE skips a final
+  // row whose text is already gone: the guard refuses an UPDATE that changes nothing (⛔ a no-op write is a state "move").
+  await client
+    .update(workplaceRequests)
+    .set({
+      typedName: null,
+      typedPlace: null,
+      state: sql`CASE WHEN ${workplaceRequests.state} IN ('pending', 'suggested') THEN 'closed' ELSE ${workplaceRequests.state} END`,
+      resolvedAt: sql`CASE WHEN ${workplaceRequests.state} IN ('pending', 'suggested') THEN now() ELSE ${workplaceRequests.resolvedAt} END`,
+    })
+    .where(
+      and(
+        eq(workplaceRequests.pariwarId, pariwarId),
+        eq(workplaceRequests.memberId, memberId),
+        sql`(${workplaceRequests.typedName} IS NOT NULL OR ${workplaceRequests.typedPlace} IS NOT NULL OR ${workplaceRequests.state} IN ('pending', 'suggested'))`,
+      ),
+    );
 
   // ── member_moderation_actions (Story 10.10, review follow-up) ────────────────────────────────────
   // The moderation RATIONALE is admin-authored free text NAMING WHAT THE MEMBER ALLEGEDLY DID — the

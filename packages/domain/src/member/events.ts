@@ -233,6 +233,15 @@ export const PostingUpdatedPayloadSchema = z
     district: z.string().min(1),
     pariwar_ref: z.string().min(1).optional(),
     is_retirement: z.boolean(),
+    // Story 6.36a (`2026-10-14-330` SW2, SW6, SW9) — where the member works, and since when. Non-PII ids / a kind / a date /
+    // a flag (the workplace is Tier 3 plaintext, ⛔ any member's free text: the typed name of an *"isn't listed"* answer
+    // NEVER reaches an event). ⚠ `.nullish()` ON PURPOSE (the 6.17 `block` precedent): this shape also validates every event
+    // appended BEFORE 6.36a, which carry none of these keys — the payload is `.strict()`, so an absent key must be legal or
+    // every historical event would fail replay. ⛔ Never backfilled onto a historical event.
+    workplace_id: z.string().uuid().nullish(),
+    workplace_kind: z.enum(['school', 'office']).nullish(),
+    started_on: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullish(),
+    not_listed: z.boolean().nullish(),
   })
   .strict();
 

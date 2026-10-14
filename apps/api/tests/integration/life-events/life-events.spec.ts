@@ -6,7 +6,8 @@
 //     into the event payload, the audit context, the summary response, or (obviously) it stays
 //     encrypted at rest. Two updates ⇒ two rows + two events (prior value preserved — AC1).
 //   · POSTING update (NO step-up): appends a row (district plaintext + is_retirement) + emits
-//     member.posting_updated; summary reflects recorded + is_retirement.
+//     member.posting_updated; summary reflects recorded + is_retirement. ⭐ Story 6.36a: the body is a choice and needs an
+//     Idempotency-Key — these legs send the no-list Pariwar's `district_only` arm (the rest: `workplace.spec.ts`).
 //   · NOMINEE + MEDICAL updates (step-up gated): 403 auth.step_up_required WITHOUT a fresh elevation;
 //     WITH an elevation for the matching action_context the gate passes (nominee → 200, the declare
 //     service re-runs; medical → past the gate). An elevation for one context does NOT satisfy the other.
@@ -71,7 +72,7 @@ async function inject(
   t: TestApp,
   method: 'GET' | 'POST',
   url: string,
-  opts: { payload?: Json; token?: string } = {},
+  opts: { payload?: Json; token?: string; headers?: Record<string, string> } = {},
 ): Promise<{ status: number; body: Json }> {
   const res = await t.app.inject({
     method,
@@ -80,6 +81,7 @@ async function inject(
     headers: {
       origin: 'http://localhost:3001',
       ...(opts.token ? { authorization: `Bearer ${opts.token}` } : {}),
+      ...(opts.headers ?? {}),
     },
   });
   let body: Json = {};
@@ -168,9 +170,12 @@ describe.skipIf(!hasDatabase)('Life Events panel — E2E (:5433)', () => {
       const { memberId, pariwarId } = await seedMember(t);
       const tok = token(t, memberId, pariwarId);
 
+      // Story 6.36a — a Pariwar with ⛔ imported list keeps the free-text district box: the `district_only` arm, with a
+      // REQUIRED Idempotency-Key (the choice arms are `workplace.spec.ts`'s).
       const res = await inject(t, 'POST', '/api/v1/member/life-events/posting', {
-        payload: { district: 'Nagpur', isRetirement: true },
+        payload: { choice: 'district_only', district: 'Nagpur', isRetirement: true },
         token: tok,
+        headers: { 'idempotency-key': randomUUID() },
       });
       expect(res.status).toBe(200);
       expect(res.body.posting).toMatchObject({ recorded: true, is_retirement: true });
@@ -255,7 +260,7 @@ describe.skipIf(!hasDatabase)('Life Events panel — E2E (:5433)', () => {
         payload: { addressLine: '5 Main Rd', locale: 'en' }, token: tok,
       });
       await inject(t, 'POST', '/api/v1/member/life-events/posting', {
-        payload: { district: 'Pune' }, token: tok,
+        payload: { choice: 'district_only', district: 'Pune' }, token: tok, headers: { 'idempotency-key': randomUUID() },
       });
 
       const summary = await inject(t, 'GET', '/api/v1/member/life-events', { token: tok });

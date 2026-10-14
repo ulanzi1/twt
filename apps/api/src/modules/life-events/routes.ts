@@ -7,8 +7,12 @@
 //   · POST /medical  — step-up-gated ('medical_change'); REUSES the 3.5 submit SERVICE unchanged
 //     (append-only history; emits member.medical_disclosed).
 //   · POST /address  — NO step-up; NEW handler (append-only Tier-1 history + member.address_updated).
-//   · POST /posting  — NO step-up; NEW handler (append-only history + member.posting_updated).
+//   · POST /posting  — NO step-up; NEW handler (append-only history + member.posting_updated). ⭐ Story 6.36a: the body is
+//     a choice (a listed workplace · *"isn't listed"* · retired · or, with ⛔ no list, the district box), with a start
+//     date; a REQUIRED `Idempotency-Key` (in the handler — it rides a header) and a per-MEMBER write rate limit.
 //   · GET  /         — NO step-up; the panel-index summary.
+//   · GET  /workplaces/districts, GET /workplaces, GET /postings — Story 6.36a's reads (the picker's districts and search,
+//     the member's own history); each a bounded `limit` (the forced-pagination guard).
 //
 // Step-up on nominee + medical ONLY (AC4): address + posting are lower-sensitivity self-service
 // updates. The two step-up routes use DISTINCT action contexts so an elevation for one does not
@@ -22,12 +26,19 @@ import {
   MedicalDisclosureStatusResponse,
   NomineeDeclareRequest,
   NomineeStatusResponse,
+  PostingHistoryQuery,
+  PostingHistoryResponse,
   PostingUpdateRequest,
+  WorkplaceDistrictsQuery,
+  WorkplaceDistrictsResponse,
+  WorkplaceSearchQuery,
+  WorkplaceSearchResponse,
 } from '@twt/contracts';
 import type { FastifyInstance } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 
 import type { AppDeps } from '../../context.js';
+import { perMemberKey, type RouteRateLimit } from '../../plugins/rate-limit/index.js';
 import { requireMemberStepUp } from '../auth/member/member-step-up.gate.js';
 import { requireMemberSession } from '../auth/shared/member-session-guard.js';
 import { createMedicalHandlers } from '../medical/medical.handlers.js';
@@ -86,6 +97,16 @@ export function registerLifeEventsRoutes(app: FastifyInstance, deps: AppDeps): v
     h.updateAddress,
   );
 
+  // Story 6.36a (SW8) — the posting write's per-MEMBER rate limit (`perMemberKey`, `hook: 'preHandler'` so `actorId` is
+  // set first — ⛔ `namedRateLimits.write`, which is `perSessionKey` and falls through to the shared IP for token-bearer
+  // members). The `Idempotency-Key` requirement is enforced in the handler (it rides a HEADER).
+  const memberWrite: RouteRateLimit = {
+    max: deps.config.writeRateMax,
+    timeWindow: '1 minute',
+    keyGenerator: perMemberKey,
+    hook: 'preHandler',
+  };
+
   // Posting / transfer-in-out update — NO step-up; NEW append-only write + member.posting_updated.
   r.post(
     `${LIFE_EVENTS_BASE}/posting`,
@@ -95,9 +116,40 @@ export function registerLifeEventsRoutes(app: FastifyInstance, deps: AppDeps): v
         response: { 200: LifeEventsSummaryResponse },
         tags: [LIFE_EVENTS_TAG],
       },
+      config: { rateLimit: memberWrite },
       preHandler: [memberSession],
     },
     h.updatePosting,
+  );
+
+  // Story 6.36a — the picker's LISTED districts (+ whether the Pariwar has a list at all).
+  r.get(
+    `${LIFE_EVENTS_BASE}/workplaces/districts`,
+    {
+      schema: { querystring: WorkplaceDistrictsQuery, response: { 200: WorkplaceDistrictsResponse }, tags: [LIFE_EVENTS_TAG] },
+      preHandler: [memberSession],
+    },
+    h.workplaceDistricts,
+  );
+
+  // Story 6.36a — the picker's server-side search: one district's listed schools or offices.
+  r.get(
+    `${LIFE_EVENTS_BASE}/workplaces`,
+    {
+      schema: { querystring: WorkplaceSearchQuery, response: { 200: WorkplaceSearchResponse }, tags: [LIFE_EVENTS_TAG] },
+      preHandler: [memberSession],
+    },
+    h.searchWorkplaces,
+  );
+
+  // Story 6.36a — the member's OWN posting history, newest first.
+  r.get(
+    `${LIFE_EVENTS_BASE}/postings`,
+    {
+      schema: { querystring: PostingHistoryQuery, response: { 200: PostingHistoryResponse }, tags: [LIFE_EVENTS_TAG] },
+      preHandler: [memberSession],
+    },
+    h.postingHistory,
   );
 
   // Panel-index summary read — NO step-up.

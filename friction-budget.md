@@ -52,6 +52,7 @@ deliberately accepted.
 | family whose filed claim was CLOSED because ANOTHER claim for the same death won its appeal against a refusal on suspicion of a post-death nominee change — or (Story 6.28 OP4 / OP10, `2026-10-11-319`; AMENDED, ⛔ not a new row) because another claim for the same death is already being paid, incl. a filing closed at the moment it is made (the app shows a calm "this claim has been closed — please call the helpline" screen instead of the filing wizard; ⛔ no reason and ⛔ no mention of the other claim) | Story 6.24a RF12 v1.3 (`2026-10-07-292`; `-262` FQ5 A): a filing after such a closure would join a live claim of the death (any age since Story 6.28 OP11 removed the 30-day window) or, the death paid, be closed at once (Story 6.28 H(ii)) — the helpline guides the family instead of the app inviting it. ⚠ Device-scoped: an offline / failed read still falls through to the wizard (`-249` §2), and a device with ⛔ no pointer to the closed claim is ⛔ not routed | forced |
 | family of a member whose claim was refused on suspicion of a post-death nominee change (the app's filing code now goes ONLY to the nominee the District Admin found in place at the death — ⛔ to the latest nominee — so the person who made the change files through the helpline; and every step behind that code — filing, a document, the bank details, a bank statement — needs it while the refusal stands) | ⭐ `-262` FQ6 B (Trustee-ratified; `2026-10-07-292` RF9, Story 6.24b): the person who changed the nominee after the death can ⛔ no longer file again in the app on the latest nominee's code. ⚠ The code is requested from the member's OWN account (Ravi mode), so the true nominee files in the app only if she has access to that account — otherwise through the helpline (F14; a non-blocking confirm owed to the Panel, `-295` RB17). A standing refusal whose determination is ⛔ effective, or whose rank-1 number is unusable, sends ⛔ code at all — the family is sent to the helpline (existence-defended, ⛔ never the latest nominee) | forced |
 | member chosen as one of the five the Trust asks about a reported death (answering a few short questions — "has the member died?", then, only if they know, the date, how they know, how they knew the member, the cause and illness (once counsel's basis is recorded) and whether the District Admin may phone them — in the app, saved as they go, or by phoning the helpline; then Submit, after which the answers are locked) | The check with neighbours the Panel made a SIGNAL, ⛔ a gate (`2026-09-28-263` FQ10 A; `-262` FQ8 E; `2026-10-10-304` Q3–Q6 A): it lets the Trust hear from people who knew the member before it pays a family. ⭐ Every question but the first is OPTIONAL, every answer is saved the moment it is chosen (a lost connection RETRIES; the member leaves with an answer unsaved only by choosing "Leave without saving" — second-pass review S32), and the closing note says who sees the answers ("never the family") BEFORE Submit. ⚠ Neither the closing note nor the screen yet says the answers LOCK at Submit (that wording is copy under Row 28's review — RECORDED here, ⛔ claimed; second-pass review S40). ⛔ Never a step for anyone the Trust has ⛔ not texted: the screens and the home card are DARK until 6.27c sends a text (Story 6.27a) | optional |
+| member (picking their school or office and the date they started, at signup and at each transfer) | who is asked about a member's death — colleagues, ⛔ never strangers (`-310` CF4 A; `-330` SW2–SW9) | forced |
 
 
 **Story 11b.3b disposition (SECOND review — declaration affirmed, ⛔ no new row):** the Sahyog Vivran
@@ -2684,3 +2685,28 @@ Retry with the same key; invalid answers remain visibly unsaved. The helpline si
 caller change / route departure while answers remain unresolved. Four new en/hi chrome strings stay under Row 28's existing
 human-review hold. The new mobile `peer-questionnaire-render.test.ts` mounts real React with native primitives mocked in
 jsdom; this is **not native/device validation or an FR-95 measurement**. No measured delta or device sign-off is claimed.
+
+**Story 6.36a disposition (ONE new row — where the member works; ⛔ no row retired):** the story's member-facing changes are
+`apps/mobile/app/(signup)/workplace.tsx` (new — the signup step between KYC and nominees), `lib/wizard-steps.ts` (the step
+inserted) and `app/(signup)/kyc.tsx` (its next step), `app/(life-events)/posting.tsx` (REWORKED — Story 3.9's free-text "Posting"
+screen became "Workplace": the current workplace, the history and *"I have been transferred"*), `app/(life-events)/index.tsx`
+(the hub card's words), `components/workplace/` (new — `WorkplacePicker.tsx`, `useWorkplaceQueries.ts`), `lib/workplace.ts`,
+`lib/workplace-i18n.ts`, `lib/idempotency-key.ts` (new — `newIdempotencyKey` MOVED from `lib/peer-request.ts`, re-exported there)
+and their tests (`tests/unit/workplace.test.ts`, `tests/unit/workplace-copy.test.ts`).
+
+1. ⭐ **The new row (above).** Payer: every member, once at signup and again at each transfer. Protects: who the Trust asks
+   about a member's death — the colleagues at their school or office (`-310` CF4 A), ⛔ strangers from the district. `forced`:
+   the signup step is REQUIRED and ⛔ skippable (SW7) — a member who skipped it would have ⛔ colleague to ask. ⭐ The design
+   pays the LEAST friction the rule allows: the step ⛔ never BLOCKS a signup (four answers, each valid: a school · an office ·
+   *"My workplace isn't listed"* · *"I have retired"*); the search is type-to-find by name OR village under ONE district,
+   ⛔ a district → block → school tree of codes nobody knows (SW4); the date is one typed field; and a Pariwar with ⛔
+   imported list keeps today's single district box (SW7).
+2. ⛔ **Not new friction:** the Life Events screen replaces a screen that already asked for a district on every transfer
+   (Story 3.9) — it now asks for the workplace and its date instead, and shows the member their own history.
+3. ⚠ **What the member pays that is ⛔ visible here:** a member whose workplace is not on the list waits for a Pariwar Admin's
+   suggestion and must confirm it (6.36c builds that question) — until then they have ⛔ workplace for the selection.
+
+⛔ No measured delta is claimed for the mobile files ([[feedback_record_unattested_no_backfill]]); ⛔ not demonstrated on a device
+(the mobile app has ⛔ no screen-render harness for these screens — their logic is unit-tested in `lib/workplace.ts`).
+`apps/public` is ⛔ touched ⇒ the page-weight baseline is unchanged and is ⛔ ratcheted
+([[project_friction_budget_baseline_ratchet]]).

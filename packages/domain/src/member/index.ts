@@ -25,6 +25,8 @@ export * from './overlay.js';
 // Story 3.9 — Life Events address + posting history accessors (append-only write + latest read).
 export * from './address.js';
 export * from './posting.js';
+// Story 6.36a — where each member works: the list reads, the *"isn't listed"* request writer, the posting history.
+export * from './workplace.js';
 // Story 11a.3 — the PUBLIC Member Directory roster read (the FIRST directory read in the repo:
 // listMemberIdsForPariwar / listMemberStatesForPariwar are unbounded whole-Pariwar sets, and
 // getMemberPostingLatest is per-member — none of them is a directory read).

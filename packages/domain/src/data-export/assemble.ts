@@ -84,6 +84,8 @@ import { memberNominees } from '../schema/member_nominees.js';
 import { memberNomineeVersions } from '../schema/member_nominee_versions.js';
 import { nomineeDeterminationItems, nomineeDeterminations } from '../schema/nominee_determinations.js';
 import { memberPostings } from '../schema/member_postings.js';
+import { workplaceRequests } from '../schema/workplace_requests.js';
+import { workplaces } from '../schema/workplaces.js';
 import { members } from '../schema/members.js';
 import { vyawasthaShulkReceipts } from '../schema/vyawastha_shulk_receipts.js';
 
@@ -230,11 +232,29 @@ export async function assembleMemberExport(
     .where(eq(memberMedicalDisclosures.memberId, memberId))
     .orderBy(asc(memberMedicalDisclosures.createdAt));
 
+  // Story 6.36a (AC9) — each posting with the workplace it names (its name and kind — Tier 3, the member's own) and its
+  // start date; then every *"isn't listed"* request the member made, with the text THEY typed.
   const postingRows = await client
-    .select()
+    .select({
+      district: memberPostings.district,
+      pariwarRef: memberPostings.pariwarRef,
+      isRetirement: memberPostings.isRetirement,
+      createdAt: memberPostings.createdAt,
+      startedOn: memberPostings.startedOn,
+      workplaceRequestId: memberPostings.workplaceRequestId,
+      workplaceName: workplaces.name,
+      workplaceKind: workplaces.kind,
+    })
     .from(memberPostings)
+    .leftJoin(workplaces, and(eq(workplaces.pariwarId, memberPostings.pariwarId), eq(workplaces.workplaceId, memberPostings.workplaceId)))
     .where(eq(memberPostings.memberId, memberId))
-    .orderBy(asc(memberPostings.createdAt));
+    .orderBy(asc(memberPostings.createdAt), asc(memberPostings.postingId));
+
+  const workplaceRequestRows = await client
+    .select()
+    .from(workplaceRequests)
+    .where(eq(workplaceRequests.memberId, memberId))
+    .orderBy(asc(workplaceRequests.createdAt), asc(workplaceRequests.requestId));
 
   const attributionRows = await client
     .select()
@@ -344,6 +364,18 @@ export async function assembleMemberExport(
       pariwarRef: p.pariwarRef ?? null,
       isRetirement: p.isRetirement,
       recordedAt: p.createdAt.toISOString(),
+      workplace: p.workplaceName !== null && p.workplaceKind !== null ? { name: p.workplaceName, kind: p.workplaceKind } : null,
+      notListed: p.workplaceRequestId !== null,
+      startedOn: p.startedOn ?? null,
+    })),
+    workplaceRequests: workplaceRequestRows.map((r) => ({
+      district: r.district,
+      typedName: r.typedName ?? null,
+      typedPlace: r.typedPlace ?? null,
+      startedOn: r.startedOn,
+      state: r.state,
+      recordedAt: r.createdAt.toISOString(),
+      resolvedAt: r.resolvedAt?.toISOString() ?? null,
     })),
     attribution: attributionRows.map((a) => ({
       attributionSource: a.attributionSource,

@@ -11,7 +11,10 @@
 // The HARD constraint is only that the tc_acceptance consent + nominee + medical events exist BEFORE
 // the Story 3.6b lock-in gate — `tc` first is the clean signup convention. `payment` is the 3.6a
 // hand-off PLACEHOLDER; Story 3.6b replaces it with the real UPI + lock-in flow.
+//
+// ⭐ Story 6.36a (`2026-10-14-330` SW7): `workplace` — where the member works, and since when — sits AFTER `kyc` and
+// BEFORE `nominees`. REQUIRED, but it ⛔ never blocks a signup (every member can answer it).
 
-export const WIZARD_STEPS = ['tc', 'kyc', 'nominees', 'medical', 'payment'] as const
+export const WIZARD_STEPS = ['tc', 'kyc', 'workplace', 'nominees', 'medical', 'payment'] as const
 
 export type WizardStep = (typeof WIZARD_STEPS)[number]

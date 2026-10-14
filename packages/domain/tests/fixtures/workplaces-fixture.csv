@@ -1,0 +1,36 @@
+id,state_name,state_code,district_name,district_code,subdistrict_name,subdistrict_code,cluster_name,village_name,village_code,pincode,ward,school_name,udise_school_code,school_category,school_type,management,year_of_establishment,longitude,latitude,status,location_type,class_from,class_to
+1,Bihar,10,PATNA,188,,,DANAPUR,RAMPUR,,801503,,GMS RAMPUR,10280000101,Primary,Co-educational,Department of Education,1965,85.1,25.6,Operational,Rural,1,8
+2,Bihar,10,PATNA,188,,,DANAPUR,RAMPUR TOLA,,801503,,UPS RAMPUR TOLA,10280000102,Primary,Co-educational,Department of Education,1965,85.1,25.6,Operational,Rural,1,8
+3,Bihar,10,PATNA,188,,,DANAPUR,KHAGAUL,,801105,,PS KHAGAUL,10280000103,Primary,Co-educational,Department of Education,1965,85.1,25.6,Operational,Rural,1,8
+4,Bihar,10,PATNA,188,,,PHULWARI,PHULWARI SHARIF,,801505,,GMS PHULWARI,10280000104,Primary,Co-educational,Department of Education,1965,85.1,25.6,Operational,Rural,1,8
+5,Bihar,10,PATNA,188,,,PHULWARI,NOHSA,,801505,,PS NOHSA,10280000105,Primary,Co-educational,Department of Education,1965,85.1,25.6,Operational,Rural,1,8
+6,Bihar,10,PATNA,188,,,BIHTA,BIHTA,,801103,,HIGH SCHOOL BIHTA,10280000106,Primary,Co-educational,Department of Education,1965,85.1,25.6,Operational,Rural,1,8
+7,Bihar,10,PATNA,188,,,BIHTA,AMHARA,,801103,,PS AMHARA,10280000107,Primary,Co-educational,Department of Education,1965,85.1,25.6,Operational,Rural,1,8
+8,Bihar,10,PATNA,188,,,MASAURHI,MASAURHI,,804452,,GIRLS MS MASAURHI,10280000108,Primary,Co-educational,Department of Education,1965,85.1,25.6,Operational,Rural,1,8
+9,Bihar,10,PATNA,188,,,MASAURHI,NADAUL,,804452,,UMS NADAUL,10280000109,Primary,Co-educational,Department of Education,1965,85.1,25.6,Operational,Rural,1,8
+10,Bihar,10,PATNA,188,,,PALIGANJ,PALIGANJ,,801110,,PS PALIGANJ,10280000110,Primary,Co-educational,Department of Education,1965,85.1,25.6,Operational,Rural,1,8
+11,Bihar,10,PATNA,188,,,PALIGANJ,KHIRIMORE,,801110,,MS KHIRIMORE,10280000111,Primary,Co-educational,Department of Education,1965,85.1,25.6,Operational,Rural,1,8
+12,Bihar,10,PATNA,188,,,FATUHA,FATUHA,,803201,,GMS FATUHA,10280000112,Primary,Co-educational,Department of Education,1965,85.1,25.6,Operational,Rural,1,8
+13,Bihar,10,PATNA,188,,,FATUHA,DARIYAPUR,,803201,,PS DARIYAPUR,10280000113,Primary,Co-educational,Department of Education,1965,85.1,25.6,Operational,Rural,1,8
+14,Bihar,10,PATNA,188,,,BAKHTIYARPUR,BAKHTIYARPUR,,803212,,HS BAKHTIYARPUR,10280000114,Primary,Co-educational,Department of Education,1965,85.1,25.6,Operational,Rural,1,8
+15,Bihar,10,PATNA,188,,,BAKHTIYARPUR,RAHUI,,803212,,PS RAHUI,10280000115,Primary,Co-educational,Department of Education,1965,85.1,25.6,Operational,Rural,1,8
+16,Bihar,10,PATNA,188,,,MOKAMA,MOKAMA,,803302,,GMS MOKAMA,10280000116,Primary,Co-educational,Department of Education,1965,85.1,25.6,Operational,Rural,1,8
+17,Bihar,10,PATNA,188,,,MOKAMA,HATHIDAH,,803302,,PS HATHIDAH,10280000117,Primary,Co-educational,Department of Education,1965,85.1,25.6,Operational,Rural,1,8
+18,Bihar,10,PATNA,188,,,BARH,BARH,,803213,,GMS BARH,10280000118,Primary,Co-educational,Department of Education,1965,85.1,25.6,Operational,Rural,1,8
+19,Bihar,10,GAYA,,,,BODH GAYA,BODH GAYA,,824231,,GMS BODH GAYA,10240000101,Primary,Co-educational,Department of Education,1965,85.1,25.6,Operational,Rural,1,8
+20,Bihar,10,GAYA,,,,BODH GAYA,BAKRAUR,,824231,,PS BAKRAUR,10240000102,Primary,Co-educational,Department of Education,1965,85.1,25.6,Operational,Rural,1,8
+21,Bihar,10,GAYA,,,,SHERGHATI,SHERGHATI,,824211,,HS SHERGHATI,10240000103,Primary,Co-educational,Department of Education,1965,85.1,25.6,Operational,Rural,1,8
+22,Bihar,10,GAYA,,,,SHERGHATI,GOPALPUR,,824211,,PS GOPALPUR,10240000104,Primary,Co-educational,Department of Education,1965,85.1,25.6,Operational,Rural,1,8
+23,Bihar,10,GAYA,,,,TEKARI,TEKARI,,824236,,GMS TEKARI,10240000105,Primary,Co-educational,Department of Education,1965,85.1,25.6,Operational,Rural,1,8
+24,Bihar,10,GAYA,,,,TEKARI,KONCH,,824236,,MS KONCH,10240000106,Primary,Co-educational,Department of Education,1965,85.1,25.6,Operational,Rural,1,8
+25,Bihar,10,GAYA,,,,WAZIRGANJ,WAZIRGANJ,,805131,,GMS WAZIRGANJ,10240000107,Primary,Co-educational,Department of Education,1965,85.1,25.6,Operational,Rural,1,8
+26,Bihar,10,GAYA,,,,WAZIRGANJ,KHIJARSARAI,,805131,,PS KHIJARSARAI,10240000108,Primary,Co-educational,Department of Education,1965,85.1,25.6,Operational,Rural,1,8
+27,Bihar,10,GAYA,,,,BELAGANJ,BELAGANJ,,804403,,GMS BELAGANJ,10240000109,Primary,Co-educational,Department of Education,1965,85.1,25.6,Operational,Rural,1,8
+28,Bihar,10,GAYA,,,,BELAGANJ,CHAKAND,,804403,,PS CHAKAND,10240000110,Primary,Co-educational,Department of Education,1965,85.1,25.6,Operational,Rural,1,8
+29,Bihar,10,GAYA,,,,MANPUR,MANPUR,,823003,,GMS MANPUR,10240000111,Primary,Co-educational,Department of Education,1965,85.1,25.6,Operational,Rural,1,8
+30,Bihar,10,GAYA,,,,MANPUR,BUNIYADGANJ,,823003,,PS BUNIYADGANJ,10240000112,Primary,Co-educational,Department of Education,1965,85.1,25.6,Operational,Rural,1,8
+31,Bihar,10,PATNA,188,,,DANAPUR,RAMPUR,,801503,,GMS RAMPUR (DUPLICATE ROW),10280000101,Primary,Co-educational,Department of Education,1965,85.1,25.6,Operational,Rural,1,8
+32,Bihar,10,PATNA,188,,,DANAPUR,RAMPUR,,801503,,MALFORMED CODE SCHOOL,1028000010,Primary,Co-educational,Department of Education,1965,85.1,25.6,Operational,Rural,1,8
+33,Bihar,10,PATNA,188,,,DANAPUR,RAMPUR,,801503,,,10280000150,Primary,Co-educational,Department of Education,1965,85.1,25.6,Operational,Rural,1,8
+34,Uttar Pradesh,09,LUCKNOW,170,,,ALIGANJ,ALIGANJ,,226024,,GIC LUCKNOW,09170000101,Primary,Co-educational,Department of Education,1965,85.1,25.6,Operational,Rural,1,8
+35,Bihar,10,PATNA,188,,,DANAPUR,DIGHA,,0,,"GOVT. MIDDLE SCHOOL ""NEW"", DIGHA",10280000160,Primary,Co-educational,Department of Education,1965,85.1,25.6,Operational,Rural,1,8

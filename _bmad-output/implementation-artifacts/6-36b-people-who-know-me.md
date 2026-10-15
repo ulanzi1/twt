@@ -17,7 +17,7 @@ GLYPH REGISTER, ADDRESSING RULE, LETTERS: as 6.36a.
 
 # Story 6.36b: People Who Know Me — Up to Three Members a Member Names, Found From Their Phone's Contacts, Each of Whom Accepts `[SURFACE]`
 
-Status: review
+Status: in-progress
 
 > ⭐⭐ **WHAT THIS PART IS.** When ⛔ no colleague can be asked about a member's death, the Trust asks up to three members that member
 > named while alive and who agreed (`-310` CF4 A (2)). This part lets a member name them: *"Find members in my contacts"* checks the
@@ -192,6 +192,71 @@ claim, contribution, pool or payment reads it. 6.36 reads the accepted people to
       app to check their contacts, or typing a number, to name people who know them)"* · protects *"who is asked when no colleague can be"* ·
       `optional`); the Change Log and File List; `pnpm ci:local`.
 
+### Review Findings
+
+Review: `bmad-code-review`, 2026-10-15, `b6cbf9db...185da74a` (77 files). All three review layers completed:
+Blind Hunter, Edge Case Hunter, Acceptance Auditor. Triage: **0 decision-needed, 6 patch, 0 defer, 1 dismissed**.
+All six findings are **MEDIUM / P2** engineering fixes; no Trustee Panel ruling is required.
+
+**Disposition (2026-10-15):** BigDev selected **2 — Leave as action items**. R1–R6 remain unchecked;
+0 patches applied. Story and sprint status return to `in-progress` while these findings remain unresolved.
+
+- [ ] [Review][Patch] **R1 — Reserve the limiter slot when waking a queued task (AC3 / SW12).**
+  [`packages/domain/src/encryption/blind-index.ts:64`]
+  `release()` decrements `active` before the queued waiter resumes; a new task can take that same slot in between.
+  Actual-source probes reached two concurrent tasks with a maximum of one, and nine with a maximum of eight.
+  Transfer the occupied slot directly to its waiter and add a handoff-interleaving regression test.
+  Sources: blind + edge.
+- [ ] [Review][Patch] **R2 — Keep every live outgoing link visible and count slots independently of displayed history (AC7).**
+  [`packages/domain/src/member/known-people.ts:443`]
+  `LIMIT 50` applies to live links and recent negative history together; `freeSlots` then counts only returned rows.
+  A live-DB, RLS-enforced reproduction with one older accepted link and 50 newer declines returned 50 negative rows,
+  omitted the accepted link and its remove control, and reported three free slots instead of two. This is reachable
+  under the ten-asks-per-day cap. Preserve live rows and calculate the aggregate over the full live set.
+  Sources: blind + edge + auditor.
+- [ ] [Review][Patch] **R3 — Make all incoming links reachable through pagination (AC6 / AC8).**
+  [`apps/api/src/modules/known-people/handlers.ts:241`]
+  The handler returns only the newest 50 links; the contract has only `limit`, no cursor, and the domain additionally
+  truncates at 100. Incoming acceptances have no per-recipient cap. An actual-handler, rollback-only DB reproduction
+  with 51 accepted links returned 50, omitted the oldest, and exposed no next-page field. The member cannot reach
+  that link's withdrawal control through the app. Add pagination across domain, contract, client and screen.
+  Sources: blind + edge + auditor.
+- [ ] [Review][Patch] **R4 — Hide the home card and notice item when eligibility refetch is denied (AC6 / AC10).**
+  [`apps/mobile/components/known-people/KnownPeopleRequestEntry.tsx:18`]
+  The entry reads only `data`. TanStack retains previous successful data when a refetch fails, so after
+  `403 known_people.not_available` the old asked request still renders the entry for a now non-active member.
+  Verified with the installed QueryClient: an error state retains the original request data. Check the denial/error
+  state before rendering cached requests. Source: auditor.
+- [ ] [Review][Patch] **R5 — Announce successful request actions (checklist 13(d), AC6 / AC8).**
+  [`apps/mobile/app/(life-events)/known-people.tsx:48`]
+  The action wrapper sets an accessible status only on failure. Acceptance swaps the controls for ordinary text;
+  decline, removal and withdrawal delete rows without a success announcement. Add action-specific accessible success
+  feedback so a screen-reader member can tell that the action completed. This is a source finding; device or emulator
+  screen-reader behavior was not demonstrated. Source: auditor.
+- [ ] [Review][Patch] **R6 — Enforce current caller eligibility before delivering an idempotent replay (AC10).**
+  [`apps/api/src/modules/known-people/handlers.ts:115`]
+  The stored-result branch precedes every active-member check, which currently lives inside `run()`. With a valid
+  access JWT and an unexpired completed key, a now non-active caller receives the old success instead of the uniform
+  403. The actual-handler DB probe returned 200 for a completed remove replay by an `active-in-grace` member, while
+  the same request with a fresh key returned `403 known_people.not_available`. Apply the active-member check before
+  claim/replay handling. Sources: edge + auditor.
+
+**Validation in this review:** 159 focused existing tests passed: domain batch crypto / mobile normalization parity
+38; mobile known-people / phone normalization 55; API number fence / lockstep / audit sink 22; live domain / policy /
+two-connection concurrency 44 on `:5434`. The first sandboxed DB attempt failed with `EPERM`; the authorized rerun
+passed. Temporary reproductions used actual source imports and rolled back their DB fixtures. No production code was
+changed. No device/emulator rendering or full `ci:local` rerun was performed during review.
+
+**Invariant lens:** families 2 and 3 have the R1/R6 boundary gaps; family 7 has R2; family 13 has R5.
+Touched families 1, 5, 6 and 12 are covered by the dedicated transition/policy/concurrency/ownership/privacy tests and
+explicit response field selection. Families 10 and 11 are covered by the story's honest device/Hindi disclosure and
+its explicit no-benefit-gate meaning. Other families introduce no additional applicable obligation in this diff.
+
+**Dismissed:** the blind review's formatted-number-as-saved-name candidate concerns a member-owned contact label
+stored locally after a successful member ask. It does not demonstrate retention of a non-member number or a server
+number leak, so it is not treated as an AC4 violation. SW17 permits exports of names previously seen; historical
+accepted-name export is not a finding.
+
 ## Dev Notes
 
 ### What exists to reuse (read at `2581c514`)
@@ -361,6 +426,7 @@ Claude Opus 5.5 (1M context) — `bmad-dev-story`, 2026-10-14, worktree `.claude
 ## Change Log
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-15 | 1.10 | `bmad-code-review`: three review layers completed on `b6cbf9db...185da74a`; 6 MEDIUM / P2 patch findings, 0 decisions, 0 deferrals, 1 dismissed; 159 focused tests passed. BigDev selected **2 — Leave as action items**: R1–R6 recorded unchecked, 0 patches applied; story and sprint status → `in-progress`. |
 | 2026-10-15 | 1.9 | 6.36a confirmed on `main` (`origin/main` = `b6cbf9db`); AC1's last step done — 0162 applied on `:5432` AND `:5433`, schema and hashes equal to the from-zero `:5434`, the 0162 specs 44 / 44 on both. ⛔ No code changed. |
 | 2026-10-15 | 1.8 | `bmad-dev-story` (continued): committed, REBASED onto 6.36a's tip `b6cbf9db` (nine shared files resolved, both stories kept); Task 6 finished — Row 31 notes (5)–(8); `ci:local` 36 / 36 green on a fresh `:5434` from zero. Status → `review`. ⚠ Owed after 6.36a lands on `main`: 0162 on `:5432` AND `:5433` (AC1). |
 | 2026-10-14 | 1.7 | `bmad-dev-story`: Tasks 1–5 built and tested (migration 0162 on `:5434` only; the domain, contracts, API module, member app, `known_people` copy); Task 6 PARTIAL — the friction-budget row done; Row 31's (a) / (d) evidence lines owed at the rebase onto 6.36a (Row 31 is ⛔ in this tree yet). Status stays `in-progress`. |

@@ -4,7 +4,11 @@
 # recheck, nominee-bank's guard, the helpline hook tx — now swallow their own COMMIT failure, so a write that landed on another tx is
 # never answered 500 by the round-2 rethrow), 1 LOW deferred (`workplaces.name` ⛔ stored trimmed — 6.36c's seam). ⚠ `pnpm ci:local`
 # (:5433) was started on the final tree; a run that had been started earlier on the same worktree was stopped to re-run on the final
-# tree — the stop used `pkill -f "turbo run"`, which may also have stopped a PEER session's run if one was live. ⛔ No other row moves.)
+# tree — the stop used `pkill -f "turbo run"`, which may also have stopped a PEER session's run if one was live. ⭐ THE GATE'S RESULT
+# (final tree `37aac6a4`): `ci:local` 35 / 36 jobs green; `integration-tests` red ONLY on `@twt/domain`'s KNOWN #15 `review-queue-read`
+# (7) and #14 `cross-pariwar-leak` (1) — the shared-container accumulation class, ⛔ reported as green; turbo then stopped before the
+# other integration packages ran, so `apps/api`'s full integration suite was run DIRECTLY on the final tree: 109 files / 1,322 green
+# (the scope-tx change's blast radius). Ready to fast-forward to `main` — BigDev's call. ⛔ No other row moves.)
 # last_updated: 2026-10-15b (STORY 6.36a — CODE REVIEW ROUND 2 (`bmad-code-review 6.36a` re-run on the whole branch, fixes `eb6d2769`; worktree
 # `.claude/worktrees/6-36a`): row `6-36a-member-workplace-and-posting-history` STAYS `done`. Three fresh layers on `5b3a2512..b77d30a5`
 # (7,633 lines) in parallel, then a fix-diff review of the round-2 patch. 0 CRITICAL / 0 HIGH. 1 decision (BigDev: "1" — FIX `closeScopeTx`

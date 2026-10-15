@@ -103,6 +103,19 @@ describe('"Continue" only for a VALID answer (AC5)', () => {
     expect(buildListedRequest(answer({ kind: 'not_listed', typedName: ` ${withZwnj} ` }), TODAY)).toMatchObject({ typedName: withZwnj })
   })
 
+  it('an invisible FILLER that is ⛔ a format character or a mark (Lo / So) is ⛔ visible either; the residue needs a letter or a digit (review R2-5)', () => {
+    expect(isPlausibleTypedText('ㅤ')).toBe(false) // Hangul filler (Lo — `\p{L}` alone would pass it)
+    expect(isPlausibleTypedText('ᅟ')).toBe(false) // Hangul choseong filler
+    expect(isPlausibleTypedText('ᅠ')).toBe(false) // Hangul jungseong filler
+    expect(isPlausibleTypedText('ﾠ')).toBe(false) // halfwidth Hangul filler
+    expect(isPlausibleTypedText('⠀')).toBe(false) // braille blank (So)
+    expect(isPlausibleTypedText('ㅤ ㅤ')).toBe(false)
+    expect(isPlausibleTypedText('- - -')).toBe(false) // punctuation alone — ⛔ a letter or digit
+    expect(isPlausibleTypedText('GMS RAMPUR')).toBe(true)
+    expect(isPlausibleTypedText('विद्यालय')).toBe(true)
+    expect(isPlausibleTypedText('Ward 12')).toBe(true)
+  })
+
   it('"I have retired": the district and the RETIREMENT date', () => {
     expect(buildListedRequest(answer({ kind: 'retired', dateText: '31-03-2024' }), TODAY)).toEqual({
       choice: 'retired',
@@ -137,6 +150,13 @@ describe('a refused save', () => {
     expect(refusalCopyKey({ status: 422, code: 'request.something_else' })).toBe('error_generic')
     expect(refusalCopyKey({ status: 400, code: 'workplace.not_found' })).toBe('error_generic')
     expect(refusalCopyKey(new Error('network'))).toBe('error_generic')
+  })
+
+  it('a 409 "already in progress" (the same key still being served) reads its own line; any other 409 is generic (review R2-6)', () => {
+    expect(refusalCopyKey({ status: 409, code: 'life_events.idempotency_in_progress' })).toBe('refusal.in_progress')
+    expect(refusalCopyKey({ status: 409, code: 'life_events.idempotency_mismatch' })).toBe('error_generic')
+    expect(refusalCopyKey({ status: 409 })).toBe('error_generic')
+    expect(refusalCopyKey({ status: 422, code: 'life_events.idempotency_in_progress' })).toBe('error_generic')
   })
 
   it('the Idempotency-Key helper is SHARED (moved, re-exported for the neighbours\' screens)', () => {
@@ -177,8 +197,20 @@ describe('the history rows (AC3b)', () => {
     expect(
       historyRowView({ ...base, request: { ...req, state: 'suggested', suggested: { workplaceId: SCHOOL.workplaceId, name: 'GMS RAMPUR', district: 'Patna' } } }),
     ).toMatchObject({ statusKey: 'request_suggested', statusParams: { name: 'GMS RAMPUR' } })
-    expect(historyRowView({ ...base, request: { ...req, state: 'withdrawn' } }).statusKey).toBeNull()
-    expect(historyRowView({ ...base, request: { ...req, typedName: null, state: 'closed' } })).toMatchObject({ titleText: null, titleKey: 'row_not_listed', kindKey: null })
+    expect(historyRowView({ ...base, request: { ...req, typedName: null, state: 'pending' } })).toMatchObject({ titleText: null, titleKey: 'row_not_listed', kindKey: null })
+  })
+
+  it('"Not listed yet — a Pariwar Admin will look for it" ONLY while the request is OPEN; withdrawn / confirmed / closed read the neutral line (review R2-1)', () => {
+    const req = { requestId: SCHOOL.workplaceId, typedName: 'Village School', typedPlace: null, suggested: null }
+    expect(historyRowView({ ...base, request: { ...req, state: 'pending' } }).kindKey).toBe('row_not_listed')
+    expect(
+      historyRowView({ ...base, request: { ...req, state: 'suggested', suggested: { workplaceId: SCHOOL.workplaceId, name: 'GMS RAMPUR', district: 'Patna' } } }).kindKey,
+    ).toBe('row_not_listed')
+    // After a transfer the writer sets the request `withdrawn`: the typed name stays the title, ⛔ a status line, ⛔ anyone looking.
+    expect(historyRowView({ ...base, request: { ...req, state: 'withdrawn' } })).toMatchObject({ titleText: 'Village School', kindKey: 'row_typed', statusKey: null })
+    expect(historyRowView({ ...base, request: { ...req, state: 'confirmed' } })).toMatchObject({ kindKey: 'row_typed', statusKey: null })
+    // Erased AND closed: the neutral line is the TITLE.
+    expect(historyRowView({ ...base, request: { ...req, typedName: null, state: 'closed' } })).toMatchObject({ titleText: null, titleKey: 'row_typed', kindKey: null, statusKey: null })
   })
 
   it('a retirement: "Retired", "On <date>"; a legacy district-only row: "District recorded", ⛔ date', () => {

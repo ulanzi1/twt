@@ -8,7 +8,10 @@
 // ── ⚠⛔ the history list starts empty and fills: loading · error · empty render as SIBLINGS, ⛔ in place. It is a short
 //   list (a few transfers in a career) inside a ScrollView — a plain map, ⛔ a virtualised list nested in a scroll view.
 //   It is read PAGE BY PAGE (`useInfiniteQuery`, *"Show more"* while the server says `hasMore` — review 2026-10-15); a
-//   save invalidates it, which refetches from the first page, so the new row is at the top (AC6).
+//   save invalidates it, which refetches from the first page, so the new row is at the top (AC6). A failed *"Show more"*
+//   sets the query's `status` to `'error'` while `data` keeps the loaded pages, so the error branch is for a failed FIRST
+//   load only (`isError && !data`); a page-2 failure is reported beside the button (`isFetchNextPageError`) with its own
+//   Retry, the rows staying on screen (review 2026-10-15 R2-3).
 // ── the loading state branches on `isPending` (⛔ `isLoading`): the query is DISABLED while the session hydrates, and a
 //   disabled v5 query is `isLoading: false` with ⛔ data — `isLoading` would flash *"Not added yet"* on a cold start.
 
@@ -61,7 +64,7 @@ export default function WorkplaceScreen() {
           <H4 accessibilityRole="header">{t('current_label')}</H4>
           {history.isPending ? (
             <AnnouncedText text={t('history_loading')} />
-          ) : history.isError ? (
+          ) : history.isError && !history.data ? (
             <YStack gap="$2">
               <AnnouncedText text={t('history_error')} kind="error" color="#C0392B" />
               <Button accessibilityRole="button" onPress={() => void history.refetch()}>
@@ -69,7 +72,19 @@ export default function WorkplaceScreen() {
               </Button>
             </YStack>
           ) : current ? (
-            <HistoryRow view={current} />
+            <>
+              {/* A failed REFETCH of page 1 (after a save, a foreground return) keeps the rows but SAYS so — the row the
+                  member just saved may be missing from what they see (fix-diff review R2-3b). */}
+              {history.isError && !history.isFetchNextPageError ? (
+                <YStack gap="$2">
+                  <AnnouncedText text={t('history_error')} kind="error" color="#C0392B" />
+                  <Button accessibilityRole="button" onPress={() => void history.refetch()}>
+                    {t('retry')}
+                  </Button>
+                </YStack>
+              ) : null}
+              <HistoryRow view={current} />
+            </>
           ) : (
             <Text accessible accessibilityRole="text" color="$colorPress">
               {t('current_none')}
@@ -95,7 +110,21 @@ export default function WorkplaceScreen() {
               {rows.slice(1).map((v, i) => (
                 <HistoryRow key={items[i + 1]!.postingId} view={v} />
               ))}
-              {history.hasNextPage ? (
+              {/* A failed *"Show more"* keeps the rows above and reports here, in the button's place, with its own
+                  Retry (R2-3) — ⛔ the whole screen flipping into the error branch. */}
+              {history.hasNextPage && history.isFetchNextPageError ? (
+                <YStack gap="$2">
+                  <AnnouncedText text={t('history_error')} kind="error" color="#C0392B" />
+                  <Button
+                    accessibilityRole="button"
+                    disabled={history.isFetchingNextPage}
+                    accessibilityState={{ disabled: history.isFetchingNextPage }}
+                    onPress={() => void history.fetchNextPage()}
+                  >
+                    {t('retry')}
+                  </Button>
+                </YStack>
+              ) : history.hasNextPage ? (
                 <Button
                   accessibilityRole="button"
                   disabled={history.isFetchingNextPage}

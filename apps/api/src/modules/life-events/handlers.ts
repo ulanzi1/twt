@@ -249,16 +249,19 @@ export function createLifeEventsHandlers(deps: AppDeps) {
       // anywhere before the COMMIT (the pool, the scope tx, the domain) RELEASES it — a corrected retry may reuse the key. The
       // first cut opened the scope tx OUTSIDE the try (a pool failure leaked the claim for the whole TTL) and recorded the
       // replay result BEFORE the commit — the personal-event precedent (`personal-event-handlers.ts`) commits FIRST and only
-      // THEN records, so a replay says "saved" only for a row that landed. ⚠ That holds once `closeScopeTx` surfaces a failed
-      // COMMIT — today it swallows one (`scope-tx.ts`, a DEFERRED cross-cutting item in the 6.36a review); until then a commit
-      // failure is invisible to EVERY handler, this one included.
+      // THEN records, so a replay says "saved" only for a row that landed: `closeScopeTx` RETHROWS a COMMIT that REPORTS
+      // failure (fixed in the same review, round 2 — it used to swallow one), and a throw there leaves `committed` false ⇒ the
+      // claim is released. ⚠ A COMMIT whose reply was LOST (the socket dropped after the server committed) also throws —
+      // then the row IS there and a retry with a fresh key appends a second one; an unknowable outcome is treated as "⛔
+      // landed" because the member can see their history (the 409 copy says so) — the lesser harm vs a false "saved".
       let committed = false;
       let claimSettled = false;
       try {
         const memberId = ids.memberId(memberIdStr);
         const pariwarId = ids.pariwarId(pariwarIdStr);
         let result: LifeEventsSummaryResult;
-        let auditContext: { district: string; choice: PostingUpdateRequest['choice'] };
+        // The district, the CHOICE and the retirement flag (3.9's audit carried it; `district_only` may set it) — ⛔ the typed text.
+        let auditContext: { district: string; choice: PostingUpdateRequest['choice']; is_retirement: boolean };
 
         const scopeTx = await openScopeTx(deps, pariwarIdStr);
         let ok = false;
@@ -382,7 +385,7 @@ export function createLifeEventsHandlers(deps: AppDeps) {
           });
 
           result = await buildSummary(scopeTx, pariwarId, memberId);
-          auditContext = { district: posting.district, choice: body.choice };
+          auditContext = { district: posting.district, choice: body.choice, is_retirement: posting.isRetirement };
           ok = true;
         } catch (err) {
           if (err instanceof memberDomain.WorkplaceWriteRefusedError) refuse(err.code);

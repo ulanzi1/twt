@@ -117,6 +117,34 @@ describe('readWorkplaceImportFile (the pure read phase)', () => {
     expect([...file.presentCodes].sort()).toEqual(['10280000101', '10280000102', '10280000103']);
   });
 
+  it('a malformed code with ⛔ a state_code column (or a blank one) is REFUSED, ⛔ "another state" — only a column NAMING another state makes it one (review R2-2 (a))', async () => {
+    const file = await read(`${HEADER}PATNA,MALFORMED CODE SCHOOL,1028000010,,,\nPATNA,GMS RAMPUR,10280000101,,,\n`);
+    expect(file).toMatchObject({ rowsRead: 2, rowsOtherState: 0, rowsRefused: 1, rowsDuplicate: 0 });
+    expect([...file.schools.keys()]).toEqual(['10280000101']);
+    expect([...file.presentCodes]).toEqual(['10280000101']); // a malformed code is ⛔ "present"
+    // With the column: blank ⇒ refused; another state ⇒ other state; this state ⇒ refused.
+    const withState = await read(
+      `state_code,${HEADER},PATNA,MALFORMED CODE SCHOOL,1028000010,,,\n09,LUCKNOW,MALFORMED CODE SCHOOL,1028000010,,,\n10,PATNA,MALFORMED CODE SCHOOL,1028000010,,,\n10,PATNA,GMS RAMPUR,10280000101,,,\n`,
+    );
+    expect(withState).toMatchObject({ rowsRead: 4, rowsOtherState: 1, rowsRefused: 2, rowsDuplicate: 0 });
+    // A VALID code of another state is "other state" whatever the column says.
+    const valid = await read(`state_code,${HEADER}10,PATNA,GIC LUCKNOW,09170000101,,,\n10,PATNA,GMS RAMPUR,10280000101,,,\n`);
+    expect(valid).toMatchObject({ rowsRead: 2, rowsOtherState: 1, rowsRefused: 0 });
+  });
+
+  it('a line break or a tab inside a QUOTED name / cluster / village cell, or a NUL in ANY cell, refuses the row — its valid code still PRESENT; the write phase is never reached (review R2-9)', async () => {
+    const file = await read(
+      `${HEADER}PATNA,"GMS RAMPUR\r\nWARD 3",10280000101,,,801503\n` +
+        `PATNA,GMS DIGHA,10280000102,"DIGHA\tNORTH",,801503\n` +
+        `PATNA,PS NOHSA,10280000103,,"NOHSA\nTOLA",801503\n` +
+        `PATNA,GMS PATNA,10280000104,,,8015\u000003\n` +
+        `PATNA,GMS BARH,10280000105,BARH,BARH,803213\n`,
+    );
+    expect(file).toMatchObject({ rowsRead: 5, rowsOtherState: 0, rowsRefused: 4, rowsDuplicate: 0 });
+    expect([...file.schools.keys()]).toEqual(['10280000105']);
+    expect([...file.presentCodes].sort()).toEqual(['10280000101', '10280000102', '10280000103', '10280000104', '10280000105']);
+  });
+
   it('an unmapped district refuses before the zero-school check', async () => {
     await expect(read(`${HEADER}GAYA,GMS BODHGAYA,10350000101,,,\n`)).rejects.toThrow(/no spelling for "GAYA"/);
   });

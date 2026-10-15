@@ -35,6 +35,12 @@ export interface ScopeTx {
   pariwarId: string;
   /** True once `setPariwarScope` has run on `client` (W9-CR1.6 tx-active guard). */
   scopeSet: boolean;
+  /**
+   * True once `closeScopeTx` has run (COMMIT or ROLLBACK attempted, client released) — a second close is a no-op. ⚠ Distinct
+   * from `scopeSet`: a route may clear `scopeSet` BEFORE closing (the helpline write's `releaseHookTx`) to keep the lifecycle
+   * hooks off a tx it closes itself. Optional — a mocked ScopeTx without it reads as "not closed".
+   */
+  closed?: boolean;
 }
 
 declare module 'fastify' {

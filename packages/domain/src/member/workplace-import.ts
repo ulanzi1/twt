@@ -2,9 +2,10 @@
 // AC2; `2026-10-14-330` SW3, Task 1.1b).
 //
 // ⭐ THE PROFILE: the India Data Portal's *"UDISE – Basic Details of Schools"* CSV (SF1 — its verified columns). Kept: the
-// rows of ONE UDISE state (the code's first two digits; Bihar `10`). A row without an 11-digit code or a name is REFUSED;
-// a code repeated in the file keeps its FIRST row (both counted, ⛔ fatal). `block_code` = the code's first six digits (the
-// file has ⛔ no block NAME — SF2).
+// rows of ONE UDISE state (the code's first two digits; Bihar `10`). A row without an 11-digit code or a name, a name /
+// cluster / village carrying ANY control character (a line break, a tab, a NUL, U+0001…), or ANY cell carrying a NUL, is REFUSED; a code repeated in the file
+// keeps its FIRST row (both counted, ⛔ fatal). `block_code` = the code's first six digits (the file has ⛔ no block NAME —
+// SF2).
 // ⭐ THE DISTRICT MAP (SF13): EVERY file district maps to the Pariwar's spelling through a required two-column CSV; ONE
 // unmapped district REFUSES the whole run. Every mapped spelling is listed in `workplace_districts`; ⛔ an import never
 // retires one — and a map naming a RETIRED spelling REFUSES the run unless `--relist-district` names it (a stale map must
@@ -245,6 +246,12 @@ interface ExistingWorkplace {
 
 const CODE_RE = /^[0-9]{11}$/;
 const PIN_RE = /^[0-9]{6}$/;
+/** A control character inside a NAME cell (RFC 4180 lets a quoted cell carry a line break — it would render as a multi-line row). */
+// EVERY control character (`\p{Cc}` — C0 and C1, so a line break, a tab, a NUL, U+0001…): a name carrying one renders
+// wrong, and a C0 control JSON-escapes to six bytes in the search cursor (the contract's bound assumes a clean name).
+const LINE_CONTROL_RE = /\p{Cc}/u;
+/** A NUL byte in ANY cell — Postgres refuses it as 22021 in the write phase, AFTER the batch row; refused here instead. */
+const NUL = '\u0000';
 
 function optionalText(v: string | undefined): string | null {
   const t = (v ?? '').trim();
@@ -302,8 +309,12 @@ export async function readWorkplaceImportFile(
     rowsRead += 1;
     const code = (row['udise_school_code'] ?? '').trim();
     const validCode = CODE_RE.test(code);
-    const inState = validCode ? code.startsWith(input.stateCode) : (row['state_code'] ?? '').trim() === input.stateCode;
-    if (!inState) {
+    // "Another state" ONLY on evidence: a valid code of another state, or a `state_code` column that NAMES another state. A
+    // malformed code with ⛔ `state_code` column (⛔ in `IDP_REQUIRED_COLUMNS`) or a blank one is REFUSED, as the README says
+    // (review 2026-10-15 R2-2 (a) — it was counted "other state" because `'' === stateCode` fell false).
+    const fileStateCode = (row['state_code'] ?? '').trim();
+    const otherState = validCode ? !code.startsWith(input.stateCode) : fileStateCode !== '' && fileStateCode !== input.stateCode;
+    if (otherState) {
       rowsOtherState += 1;
       continue;
     }
@@ -314,6 +325,10 @@ export async function readWorkplaceImportFile(
     if (
       !validCode ||
       name === '' ||
+      LINE_CONTROL_RE.test(name) ||
+      (clusterName !== null && LINE_CONTROL_RE.test(clusterName)) ||
+      (villageName !== null && LINE_CONTROL_RE.test(villageName)) ||
+      Object.values(row).some((cell) => cell.includes(NUL)) ||
       [...name].length > 200 ||
       fileDistrict === '' ||
       (clusterName !== null && [...clusterName].length > OPTIONAL_TEXT_MAX) ||
@@ -479,8 +494,10 @@ export async function writeWorkplaceImport(
     }
   }
 
-  // (6) The upsert — ⛔ ever over a staff row (the WHERE). A row a concurrent staff add took is counted as skipped.
-  let written = 0;
+  // (6) The upsert — ⛔ ever over a staff row (the WHERE). A row a concurrent staff add took between (5) and here is ⛔
+  // returned: it is counted as skipped AND taken back out of the bucket (5) put it in, so the finished counts still SUM
+  // (review 2026-10-15 R2-2 (b)).
+  const writtenCodes = new Set<string>();
   for (const part of chunks(toWrite, BATCH_SIZE)) {
     const back = await db
       .insert(workplaces)
@@ -514,12 +531,17 @@ export async function writeWorkplaceImport(
         },
         setWhere: sql`${workplaces.source} = 'import'`,
       })
-      .returning({ workplaceId: workplaces.workplaceId });
-    written += back.length;
+      .returning({ code: workplaces.udiseSchoolCode });
+    for (const b of back) if (b.code !== null) writtenCodes.add(b.code);
   }
-  if (written !== toWrite.length) {
+  for (const s of toWrite) {
+    if (writtenCodes.has(s.code)) continue;
     // A staff row with the same code appeared between the read and the write (6.36c's staff add) — it is KEPT.
-    rowsSkippedStaff += toWrite.length - written;
+    rowsSkippedStaff += 1;
+    const e = existing.get(s.code);
+    if (!e) rowsInserted -= 1;
+    else if (e.status === 'delisted') rowsRelisted -= 1;
+    else rowsUpdated -= 1;
   }
 
   // (7) The delisting — a LISTED imported school absent from the file, ONLY within the districts the file contains.

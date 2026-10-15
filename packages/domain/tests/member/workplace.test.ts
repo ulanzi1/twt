@@ -73,6 +73,21 @@ describe('isValidTypedWorkplaceText', () => {
     expect(isValidTypedWorkplaceText('विद्‌यालय')).toBe(true); // ZWNJ inside a word
     expect(isValidTypedWorkplaceText('क्‍ष')).toBe(true); // ZWJ inside a conjunct
   });
+
+  it('refuses the blank FILLERS that are letters or symbols by category (⛔ caught by \\p{Cf} / \\p{M}) — and a residue with ⛔ a letter or digit (review R2-5)', () => {
+    expect(isValidTypedWorkplaceText('\u3164')).toBe(false); // \u3164 Hangul filler (Lo)
+    expect(isValidTypedWorkplaceText('\u115F')).toBe(false); // Hangul choseong filler (Lo)
+    expect(isValidTypedWorkplaceText('\u1160')).toBe(false); // Hangul jungseong filler (Lo)
+    expect(isValidTypedWorkplaceText('\uFFA0')).toBe(false); // halfwidth Hangul filler (Lo)
+    expect(isValidTypedWorkplaceText('\u2800')).toBe(false); // \u2800 braille blank (So)
+    expect(isValidTypedWorkplaceText('\u3164 \u3164')).toBe(false); // fillers around a space
+    expect(isValidTypedWorkplaceText('\u3164GMS\u3164')).toBe(true); // fillers around a real name — the name stands
+    expect(isValidTypedWorkplaceText('---')).toBe(false); // punctuation alone
+    expect(isValidTypedWorkplaceText('...')).toBe(false);
+    expect(isValidTypedWorkplaceText('GMS RAMPUR')).toBe(true);
+    expect(isValidTypedWorkplaceText('विद्यालय')).toBe(true);
+    expect(isValidTypedWorkplaceText('Ward 12')).toBe(true);
+  });
 });
 
 describe('escapeLikePattern', () => {

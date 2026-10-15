@@ -165,8 +165,9 @@ export type AuthAuditEventType =
   // ── Member Life Events panel surface (Story 3.9, FR-5) ───────────────────────
   // Self-service address + posting updates (nominee + medical Life Events updates reuse the 3.4/3.5
   // audit lines above). Context is NON-PII: address carries a presence marker ONLY (NEVER the raw
-  // address bytes); posting carries district (non-PII geographic) + is_retirement — ⭐ Story 6.36a: the district and the
-  // CHOICE (`workplace` / `not_listed` / `retired` / `district_only`), ⛔ never the typed workplace name.
+  // address bytes); posting carries district (non-PII geographic) + is_retirement — ⭐ Story 6.36a: the district, the
+  // CHOICE (`workplace` / `not_listed` / `retired` / `district_only`) AND is_retirement (a `district_only` answer may
+  // set it), ⛔ never the typed workplace name.
   //   address.updated — a new append-only member_addresses row was written + member.address_updated emitted.
   //   posting.updated — a new append-only member_postings row was written + member.posting_updated emitted.
   | 'member_life_events.address_updated'

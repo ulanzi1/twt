@@ -8,7 +8,9 @@
 //   this to MMKV"* (`components/Provider.tsx`): the search is transient, and the history carries the member's own typed
 //   workplace name. The district list (non-PII, per Pariwar) persists as usual.
 // · The search is DEBOUNCED by the caller and CANCELLED when superseded: TanStack aborts the previous key's `signal`,
-//   which the SDK hands to `fetch`.
+//   which the SDK hands to `fetch`. Each `q` is its own key, so the PREVIOUS rows are kept as `placeholderData` while
+//   the next ones load (review 2026-10-15 R2-8) — the list dims instead of remounting on every keystroke. Placeholder
+//   data is ⛔ never written to the cache, so the `gcTime: 0` marker still covers everything persisted.
 
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 import type { WorkplaceKindWire } from '@twt/contracts'
@@ -51,6 +53,11 @@ export function useWorkplaceSearchQuery(district: string | null, kind: Workplace
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (last) => last.nextCursor ?? undefined,
     enabled: Boolean(session?.pariwarId) && district !== null && kind !== null,
+    // The previous `q`'s rows stay (dimmed — `isPlaceholderData`) while the next ones load (R2-8).
+    // The previous rows stay ONLY across a change of `q` in the SAME district and kind — another district's rows would
+    // otherwise show, dimmed, until the new page lands (fix-diff review R2-8b). The key: [...,'search', district, kind, q].
+    placeholderData: (previousData, previousQuery) =>
+      previousQuery !== undefined && previousQuery.queryKey[4] === district && previousQuery.queryKey[5] === kind ? previousData : undefined,
     ...TRANSIENT,
   })
 }

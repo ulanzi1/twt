@@ -45,8 +45,10 @@ const COMPUTED_KEYS = ['search_label_office', 'search_label_school', 'retired_la
 
 /** The keys the PURE helpers produce. */
 function producedKeys(): string[] {
-  const keys = new Set<string>(['error_generic', 'kind_school_short', 'kind_office_short', 'row_not_listed', 'row_retired', 'row_district_only', 'row_since', 'row_on', 'request_pending', 'request_suggested'])
+  const keys = new Set<string>(['error_generic', 'kind_school_short', 'kind_office_short', 'row_not_listed', 'row_typed', 'row_retired', 'row_district_only', 'row_since', 'row_on', 'request_pending', 'request_suggested'])
   for (const code of WORKPLACE_REFUSAL_CODES) keys.add(refusalCopyKey({ status: 422, code }))
+  // The 409 *"already in progress"* line (review R2-6) — produced, ⛔ listed, so a renamed key fails here.
+  keys.add(refusalCopyKey({ status: 409, code: 'life_events.idempotency_in_progress' }))
   const v = historyRowView({
     postingId: '9b2e7c1a-1111-4111-8111-111111111111',
     recordedAt: '2026-01-01T00:00:00.000000Z',

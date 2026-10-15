@@ -15,7 +15,7 @@
 //   · recordDelivery     — key (1): the delivery date + ONE screenshot (multipart). MIME and size are checked BEFORE
 //                          the port's `put`; put-then-persist, the orphan deleted best-effort on any failure THROWN
 //                          before the commit (opening the scope tx included). ⚠ ⛔ NOT a failed COMMIT itself:
-//                          `closeScopeTx` swallows a COMMIT failure, so the route then returns 201, writes the audit
+//                          `closeScopeTx` RETHROWS a COMMIT failure (since 6.36a's review round 2 — it used to swallow one), so the route answers 500 — ⛔ a false 201 — but still ⛔ a compensating audit
 //                          line and leaves the screenshot orphaned — a pre-existing project-wide pattern, DEFERRED
 //                          (`deferred-work.md`, 6.19b fourth pass), ⛔ not fixed here. A delivery later than 14 days
 //                          is ACCEPTED (flagged overdue by the read) — ⛔ never refused.
@@ -398,7 +398,7 @@ export function createCorrectionChaseHandlers(deps: AppDeps) {
 
       // D6 — the port, its OWN key prefix. put-then-persist; the orphan is deleted best-effort on any failure THROWN before
       // the commit — ⭐ `openScopeTx` runs INSIDE the `try`, so a pool / BEGIN failure cleans up too. ⚠ A failed COMMIT is
-      // ⛔ not one of them: `closeScopeTx` swallows it (deferred, see the header).
+      // ⛔ not one of them: `closeScopeTx` rethrows it (since 6.36a round 2) — a 500, ⛔ a compensating line (see the header).
       const storageKey = `pariwar/${ctx.pariwarIdStr}/claim/${ctx.claimCaseIdStr}/correction-letter/${letterId}/${randomUUID()}`;
       await deps.claimDocumentStorage.put(storageKey, new Uint8Array(buffer), { contentType: mimetype });
       let scopeTx: Awaited<ReturnType<typeof openScopeTx>> | undefined;

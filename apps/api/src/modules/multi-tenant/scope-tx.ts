@@ -53,14 +53,27 @@ export async function openScopeTx(deps: AppDeps, pariwarId: string): Promise<Sco
   }
 }
 
-/** COMMIT (or ROLLBACK) the scope tx and release the client. Never throws. */
+/**
+ * COMMIT (or ROLLBACK) the scope tx and release the client.
+ *
+ * ⚠ [Review][Patch] 2026-10-15 (Story 6.36a's review, BigDev: fix it now) — a FAILED COMMIT is RETHROWN. Until then every
+ * COMMIT error (a deadlock or lock timeout at commit, a serialization failure, a dropped connection) was swallowed as *"a
+ * broken connection on close"*, so every scope-tx handler answered 200 for a write that never landed — and an idempotent
+ * route then recorded a replay saying "saved" for a row that is ⛔ there. The client is still released on every path; a
+ * ROLLBACK failure stays non-fatal (there is nothing to lose); a second close of an already-closed tx is a no-op (the
+ * provisioning route rolls back in its catch after a commit attempt — ⛔ a double release). ⚠ The no-op is keyed on
+ * `closed`, ⛔ on `scopeSet`: the helpline write clears `scopeSet` FIRST and then closes (its COMMIT must still run).
+ */
 export async function closeScopeTx(scopeTx: ScopeTx, commit: boolean): Promise<void> {
+  if (scopeTx.closed) return; // already closed (a caller's ROLLBACK after its own failed COMMIT)
+  scopeTx.closed = true;
+  scopeTx.scopeSet = false;
   try {
     await scopeTx.client.query(commit ? 'COMMIT' : 'ROLLBACK');
-  } catch {
-    // A broken connection on close is non-fatal — the client is destroyed on release.
+  } catch (err) {
+    if (commit) throw err; // the write did ⛔ land — the caller must ⛔ report success
+    // A ROLLBACK that fails on a broken connection is non-fatal — the client is destroyed on release.
   } finally {
-    scopeTx.scopeSet = false;
     scopeTx.client.release();
   }
 }

@@ -33,10 +33,13 @@ import {
   IDP_REQUIRED_COLUMNS,
   IDP_UDISE_ATTRIBUTION,
   parseCsv,
+  readWorkplaceImportFile,
   renameWorkplaceDistrict,
   runWorkplaceImport,
   WorkplaceImportRefusedError,
+  writeWorkplaceImport,
 } from '../../../src/member/workplace-import.js';
+import { workplaces } from '../../../src/schema/workplaces.js';
 import { DATABASE_URL, getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
 import { enterAppScope, seedMember } from '../_helpers.js';
 
@@ -233,6 +236,54 @@ describe.skipIf(!hasDatabase)('Story 6.36a — the workplace import and the dist
     const later = await importAs(tx, p, { edit: (rows) => rows.filter((r) => r['udise_school_code'] !== '10280000101') });
     expect(later.rowsDelisted).toBe(0);
     expect(byCode(await workplacesOf(p), '10280000101')?.status).toBe('listed');
+  });
+
+  it('a staff row that takes a code BETWEEN the classification read and the upsert is skipped AND taken back out of "inserted" — the counts still SUM (review R2-2 (b))', async () => {
+    const { client, tx } = getTx();
+    const p = randomUUID();
+    await enterAppScope(client, p);
+    const input = { pariwarId: toPariwarId(p), stateCode: '10', districtMap: await mapOf(FULL_MAP), relistDistricts: [], source: SOURCE };
+    const file = await readWorkplaceImportFile({ ...input, rows: await fixtureRows() });
+    // The race, made deterministic: the FIRST `insert(workplaces)` statement (step 6) is preceded, on the same connection,
+    // by a staff add of a code the classification read (step 5) saw as NEW — exactly the window the finding names.
+    let fired = false;
+    const staffAdd = () =>
+      client.query(
+        `INSERT INTO workplaces (pariwar_id, kind, name, district, source, udise_school_code) VALUES ($1, 'school', 'Rampur School (added meanwhile)', 'Patna', 'staff', '10280000101')`,
+        [p],
+      );
+    const racing = new Proxy(tx as object, {
+      get(target, prop) {
+        const v = Reflect.get(target, prop) as unknown;
+        if (prop !== 'insert') return typeof v === 'function' ? (v as (...a: never[]) => unknown).bind(target) : v;
+        return (table: unknown) => {
+          const builder = tx.insert(table as typeof workplaces);
+          if (table !== workplaces || fired) return builder;
+          fired = true;
+          const values = builder.values.bind(builder) as (...a: unknown[]) => object;
+          return {
+            values: (...args: unknown[]) => {
+              const base = values(...args);
+              const thenable = base as { then: (res?: unknown, rej?: unknown) => Promise<unknown> };
+              const originalThen = thenable.then.bind(base);
+              // A failing staff add REJECTS the awaited upsert (⛔ a silent hang into the vitest timeout).
+              thenable.then = (res, rej) => staffAdd().then(() => originalThen(res, rej), rej as (reason: unknown) => unknown);
+              return base;
+            },
+          };
+        };
+      },
+    }) as Db;
+    const c = await writeWorkplaceImport(racing, input, file);
+    expect(fired).toBe(true);
+    expect(c).toMatchObject({ rowsRead: 35, rowsOtherState: 1, rowsInserted: 30, rowsUpdated: 0, rowsRelisted: 0, rowsDelisted: 0, rowsRefused: 2, rowsDuplicate: 1, rowsSkippedStaff: 1 });
+    expect(c.rowsInserted + c.rowsUpdated + c.rowsRelisted + c.rowsSkippedStaff + c.rowsRefused + c.rowsDuplicate + c.rowsOtherState).toBe(c.rowsRead);
+    const rows = await workplacesOf(p);
+    expect(rows).toHaveLength(31);
+    expect(rows.filter((r) => r.import_batch_id === c.batchId)).toHaveLength(30);
+    expect(byCode(rows, '10280000101')).toMatchObject({ name: 'Rampur School (added meanwhile)', source: 'staff', status: 'listed', import_batch_id: null });
+    const { rows: batch } = await client.query(`SELECT rows_inserted, rows_skipped_staff FROM workplace_import_batches WHERE batch_id = $1`, [c.batchId]);
+    expect(batch[0]).toEqual({ rows_inserted: 30, rows_skipped_staff: 1 });
   });
 
   it('a ONE-DISTRICT file changes ⛔ the other district — ⛔ its spelling, ⛔ a school', async () => {

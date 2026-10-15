@@ -21,7 +21,7 @@
 // RELEASES the scope-resolution hook's tx (it carried only the preHandlers' READS), then writes on its OWN tx — so ONE
 // connection is held (third-pass U2: two were), and the key's result is recorded only AFTER that COMMIT (U2's "on the
 // hook's tx" recorded it before the COMMIT: a retry in between replayed answers without the save). ⚠ `closeScopeTx`
-// swallows a failed COMMIT (deferred-work), as on every `onMemberTx` route. The list, the save and the submit
+// RETHROWS a failed COMMIT (fixed by 6.36a's review round 2, 2026-10-15 — it used to swallow one), as on every `onMemberTx` route. The list, the save and the submit
 // are gated on a TEXTED ping exactly as the member routes are (PM12) — before 6.27c texts anyone the panel is EMPTY.
 // ── Audit ──────────────────────────────────────────────────────────────────────────────────────────────────────────
 // ONE `withCompensatingAudit` intent line per write (`claim.peer_answer_saved` / `claim.peer_reply_submitted`,
@@ -101,7 +101,7 @@ export function createPeerRequestHandlers(deps: AppDeps) {
   /**
    * Run `fn` on the route's OWN scope tx — every member route (it has ⛔ no scope-resolution hook — F27) and every helpline
    * WRITE once its hook tx is released (V1). Commit on success;
-   * a mapped 4xx rolls back — nothing was written. ⚠ `closeScopeTx` swallows a failed COMMIT (deferred-work), so
+   * a mapped 4xx rolls back — nothing was written. ⚠ `closeScopeTx` RETHROWS a failed COMMIT (since 6.36a's review round 2 — it used to swallow one), so
    * "recorded after the commit" holds only for a COMMIT that did not fail.
    */
   async function onMemberTx<T>(ctx: Ctx, fn: (client: pg.PoolClient, tx: Db) => Promise<T>): Promise<T> {

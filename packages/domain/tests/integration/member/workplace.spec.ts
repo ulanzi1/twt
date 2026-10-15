@@ -287,6 +287,23 @@ describe.skipIf(!hasDatabase)('Story 6.36a — the workplace module (live DB)', 
       expect(await latestPostingStartedOn(tx, p, toMemberId(m))).toBe('2025-03-31');
     });
 
+    it('a forged cursor that passes the shape but is calendar-impossible is WorkplaceCursorInvalidError — ⛔ a pg 22008 (review R2-4)', async () => {
+      const { client, tx } = getTx();
+      const list = await seedWorkplaceList(client, LIST);
+      const m = await seedMember(tx, list.pariwarId, { state: 'active' });
+      await enterAppScope(client, list.pariwarId);
+      const id = randomUUID();
+      const forged = (recordedAt: string) => Buffer.from(JSON.stringify([recordedAt, id])).toString('base64url');
+      for (const at of ['2026-13-01T00:00:00.000000Z', '2023-02-30T00:00:00.000000Z', '2026-01-01T24:00:00.000000Z', '2026-01-01T25:61:61.000000Z', '0000-01-01T00:00:00.000000Z' /* ⛔ a Postgres year */]) {
+        await expect(listMemberPostingHistory(tx, toPariwarId(list.pariwarId), toMemberId(m), { cursor: forged(at) }), at).rejects.toBeInstanceOf(
+          WorkplaceCursorInvalidError,
+        );
+      }
+      // A real instant still reads (an empty page for a member with ⛔ rows).
+      const page = await listMemberPostingHistory(tx, toPariwarId(list.pariwarId), toMemberId(m), { cursor: forged('2024-02-29T23:59:59.999999Z') });
+      expect(page).toEqual({ items: [], hasMore: false, nextCursor: null });
+    });
+
     it('latestPostingStartedOn skips a newer legacy row with ⛔ start date', async () => {
       const { client, tx } = getTx();
       const list = await seedWorkplaceList(client, LIST);

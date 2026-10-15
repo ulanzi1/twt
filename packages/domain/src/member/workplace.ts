@@ -8,8 +8,10 @@
 // ⭐ THE DISTRICT IS AN AUTHORISATION INPUT (SF13). A posting copies the workplace's MAPPED district spelling, compared
 // byte-for-byte by RBAC (`member-geo/resolve.ts`) ⇒ ⛔ never normalised here. Every writer that checks a district reads its
 // `workplace_districts` row `FOR SHARE` (`lockListedDistrict`): the tool's `--rename-district` RETIRES the old spelling
-// FIRST, so a posting can ⛔ never land on a spelling being retired. Lock order everywhere — the district, THEN the
-// workplace (the import and the rename take them in the same order ⇒ ⛔ no deadlock).
+// FIRST, so a posting can ⛔ never land on a spelling being retired. Lock order — the district, THEN the workplace: the
+// RENAME retires the district row first and only then moves the workplaces, and the posting writer reads district →
+// workplace `FOR SHARE` in that same order (`lockListedWorkplace`) ⇒ ⛔ no deadlock between the two. (The import never
+// locks a `workplace_districts` row — it serialises against the rename by the per-Pariwar advisory lock instead.)
 //
 // ⭐ THE TYPED TEXT IS MEMBER-AUTHORED. It lives only in `workplace_requests` — ⛔ never in an event, an audit line or a log
 // (AC4). The seven-digit check runs on a copy whose digits are FOLDED to ASCII and whose between-digit separators are
@@ -116,21 +118,29 @@ export function hasSevenDigitRun(text: string): boolean {
   return /[0-9]{7}/.test(joined);
 }
 
-/** Format characters (`\p{Cf}` — ZWJ, ZWNJ, ZWSP…) and marks (`\p{M}`) — invisible on their own. */
-const INVISIBLE_RE = /[\p{Cf}\p{M}]/gu;
+/**
+ * Format characters (`\p{Cf}` — ZWJ, ZWNJ, ZWSP…), marks (`\p{M}`) and the blank FILLERS that are letters or symbols by
+ * category yet render nothing: the Hangul fillers U+115F / U+1160 / U+3164 / U+FFA0 (`Lo`) and the braille blank U+2800
+ * (`So`). ⚠ LOCKSTEP with `apps/mobile/lib/workplace.ts` (review 2026-10-15 R2-5).
+ */
+const INVISIBLE_RE = /[\p{Cf}\p{M}\u115F\u1160\u3164\uFFA0\u2800]/gu;
+/** At least one letter or digit must survive — a residue of punctuation or symbols alone is ⛔ a name. */
+const LETTER_OR_DIGIT_RE = /[\p{L}\p{N}]/u;
 
 /**
  * A typed workplace name or place is valid when, trimmed, it is 1–120 characters, carries ⛔ no run of seven digits
- * (`hasSevenDigitRun` — a phone number, SW9) and is VISIBLE: with every format character and mark removed, and the rest
- * trimmed, at least one code point remains (a zero-width string, a run of combining marks, or format characters around a
- * space all render blank). The length is the trimmed ORIGINAL's — a ZWJ / ZWNJ inside a Devanagari word is legitimate and
- * KEPT. ⚠ LOCKSTEP with 0161's typed-text CHECKs (which see only ASCII and ⛔ the visibility rule).
+ * (`hasSevenDigitRun` — a phone number, SW9) and is VISIBLE: with every format character, mark and blank filler removed,
+ * and the rest trimmed, at least one LETTER or DIGIT remains (a zero-width string, a run of combining marks, format
+ * characters around a space, a row of Hangul fillers or braille blanks all render blank). The length is the trimmed
+ * ORIGINAL's — a ZWJ / ZWNJ inside a Devanagari word is legitimate and KEPT. ⚠ LOCKSTEP with 0161's typed-text CHECKs
+ * (which see only ASCII and ⛔ the visibility rule) and with the app's copy of this rule.
  */
 export function isValidTypedWorkplaceText(text: string): boolean {
   const trimmed = text.trim();
   const len = codePointLength(trimmed);
   if (len < 1 || len > WORKPLACE_TYPED_TEXT_MAX) return false;
-  if (trimmed.replace(INVISIBLE_RE, '').trim() === '') return false;
+  const residue = trimmed.replace(INVISIBLE_RE, '').trim();
+  if (residue === '' || !LETTER_OR_DIGIT_RE.test(residue)) return false;
   return !hasSevenDigitRun(trimmed);
 }
 
@@ -291,7 +301,9 @@ export async function searchWorkplaces(db: Db, input: SearchWorkplacesInput): Pr
     eq(workplaces.kind, input.kind),
     eq(workplaces.status, 'listed'),
   ];
-  const q = (input.q ?? '').trim();
+  // Clamped to `WORKPLACE_SEARCH_TEXT_MAX` code points — the contract's `max(100)` is the front door (the api spec asserts
+  // the two agree); this is the defence behind it.
+  const q = [...(input.q ?? '').trim()].slice(0, WORKPLACE_SEARCH_TEXT_MAX).join('').trim();
   if (q !== '') {
     const pattern = `%${escapeLikePattern(q)}%`;
     conditions.push(sql`(${workplaces.name} ILIKE ${pattern} ESCAPE '\\' OR ${workplaces.villageName} ILIKE ${pattern} ESCAPE '\\')`);
@@ -462,7 +474,24 @@ export interface MemberPostingHistoryItem {
 const suggestedWorkplaces = alias(workplaces, 'suggested_workplace');
 
 /** The history's `recordedAt` — UTC, ALWAYS six fractional digits (µs — the cursor compares it in SQL, exactly). */
-const RECORDED_AT_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$/;
+const RECORDED_AT_RE = /^(\d{4}-\d{2}-\d{2})T(\d{2}):(\d{2}):(\d{2})\.\d{6}Z$/;
+
+/**
+ * `true` when a cursor's `recordedAt` is a REAL instant: the shape, a calendar date (`isCalendarDate` — ⛔ month 13, ⛔
+ * 30 February), hour 00–23, minute and second 00–59 (checked by number — Node's `Date.parse` lets `T24:00:00` through),
+ * and `Date.parse` finite. A forged cursor that passes the shape alone would reach the `::timestamptz` cast and die as a
+ * 22008 — a 500, ⛔ the 400 the route owes (review 2026-10-15 R2-4).
+ */
+function isRecordedAtCursor(value: string): boolean {
+  const m = RECORDED_AT_RE.exec(value);
+  if (!m) return false;
+  const [hh, mm, ss] = [Number(m[2]), Number(m[3]), Number(m[4])];
+  if (hh > 23 || mm > 59 || ss > 59) return false;
+  // Postgres has ⛔ year 0 (`0000-01-01` is a calendar date to V8 and to `isCalendarDate`, and 22008 to `::timestamptz`);
+  // nothing was recorded before 1970 anyway.
+  if (Number(m[1]!.slice(0, 4)) < 1970) return false;
+  return isCalendarDate(m[1]!) && Number.isFinite(Date.parse(value));
+}
 
 /**
  * The member's postings, newest first (`created_at DESC, posting_id DESC` — the peer-mesh reads' tie-break), each with its
@@ -478,7 +507,7 @@ export async function listMemberPostingHistory(
   const conditions: SQL[] = [eq(memberPostings.pariwarId, pariwarId), eq(memberPostings.memberId, memberId)];
   if (opts.cursor !== undefined) {
     const [recordedAt, id] = decodeCursor(opts.cursor, 2) as [string, string];
-    if (!UUID_RE.test(id) || !RECORDED_AT_RE.test(recordedAt)) throw new WorkplaceCursorInvalidError();
+    if (!UUID_RE.test(id) || !isRecordedAtCursor(recordedAt)) throw new WorkplaceCursorInvalidError();
     conditions.push(sql`(${memberPostings.createdAt}, ${memberPostings.postingId}) < (${recordedAt}::timestamptz, ${id}::uuid)`);
   }
   const rows = await db

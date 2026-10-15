@@ -185,6 +185,25 @@ describe.skipIf(!hasDatabase)('0161 — the workplace tables', { timeout: 20000 
       expect(cols('member_postings')).toEqual([]);
     });
 
+    it('the indexes (checklist 5): the picker path, the member\'s own requests, and the PARTIAL open-requests index with its predicate', async () => {
+      const { client } = getTx();
+      const { rows } = await client.query<{ indexname: string; indexdef: string }>(
+        `SELECT indexname, indexdef FROM pg_indexes WHERE tablename IN ('workplaces', 'workplace_requests')`,
+      );
+      const names = rows.map((r) => r.indexname);
+      expect(names).toContain('workplaces_pariwar_district_kind_status_idx');
+      expect(names).toContain('workplace_requests_pariwar_member_idx');
+      expect(names).toContain('workplace_requests_open_idx');
+      const def = (n: string) => rows.find((r) => r.indexname === n)?.indexdef ?? `<missing ${n}>`;
+      expect(def('workplaces_pariwar_district_kind_status_idx')).toMatch(/USING btree \(pariwar_id, district, kind, status\)$/);
+      expect(def('workplace_requests_pariwar_member_idx')).toMatch(/USING btree \(pariwar_id, member_id\)$/);
+      const open = def('workplace_requests_open_idx');
+      expect(open).toMatch(/USING btree \(pariwar_id, district\) WHERE /);
+      expect(open).toContain("'pending'");
+      expect(open).toContain("'suggested'");
+      expect(open).not.toContain("'withdrawn'");
+    });
+
     it('the triggers: the batch guard and the request guard (BEFORE INSERT OR UPDATE, ROW, enabled)', async () => {
       const { client } = getTx();
       const { rows } = await client.query<{ tgname: string; fn: string; tgtype: number; tgenabled: string }>(

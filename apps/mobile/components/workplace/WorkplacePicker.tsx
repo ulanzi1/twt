@@ -15,7 +15,10 @@
 //
 // ── ⚠⛔ THE LIST STARTS EMPTY AND FILLS — loading · error · empty render OUTSIDE the FlashList, as a SIBLING ⛔ a
 //   `ListEmptyComponent` swapped in place: New-Arch FlashList red-boxes crossing empty → populated IN PLACE
-//   (`components/drive-list/MemberDriveList.tsx`'s Trap 3).
+//   (`components/drive-list/MemberDriveList.tsx`'s Trap 3). The error branch is for a FAILED FIRST LOAD only
+//   (`isError && !data`): a failed *"Show more"* keeps the loaded rows and reports beside the button
+//   (`isFetchNextPageError` — review 2026-10-15 R2-3); the previous query's rows stay, dimmed, while the next
+//   `q` loads (`isPlaceholderData` — R2-8).
 // ── ⛔ The workplace is ⛔ never shown to anyone else; this screen names ⛔ a death, a claim or the people asked about one.
 
 import { useEffect, useRef, useState } from 'react'
@@ -296,11 +299,16 @@ export function WorkplacePicker({ submitLabel, onSaved, onCancel }: WorkplacePic
             maxLength={100}
           />
         </YStack>
-        {search.isLoading ? (
+        {/* *"Searching…"* on the VERY FIRST load only (`isLoading` = pending AND fetching — ⛔ data yet), or when the
+            previous `q` left NOTHING to keep on screen (a placeholder of zero rows would read *"No match"* for a query
+            still loading). With rows to keep, they stay, dimmed, until the next `q` answers (R2-8). */}
+        {search.isLoading || (search.isPlaceholderData && rows.length === 0) ? (
           <YStack px="$6" py="$4">
             <AnnouncedText text={t('search_loading')} />
           </YStack>
-        ) : search.isError ? (
+        ) : search.isError && (!search.data || !search.isFetchNextPageError) ? (
+          // ⛔ data at all, OR a failed REFETCH of page 1 (the rows below are stale — say so; fix-diff review R2-3b). A
+          // failed *"Show more"* is reported beside the button instead and keeps the list.
           <YStack px="$6" py="$4" gap="$3">
             <AnnouncedText text={t('search_error')} kind="error" color={ERROR_COLOR} />
             <Button accessibilityRole="button" onPress={() => void search.refetch()}>
@@ -312,7 +320,7 @@ export function WorkplacePicker({ submitLabel, onSaved, onCancel }: WorkplacePic
             <AnnouncedText text={t('search_empty')} />
           </YStack>
         ) : (
-          <View flex={1}>
+          <View flex={1} opacity={search.isPlaceholderData ? 0.5 : 1}>
             <FlashListAny
               data={rows}
               keyExtractor={(w: WorkplaceSummaryWire) => w.workplaceId}
@@ -346,8 +354,28 @@ export function WorkplacePicker({ submitLabel, onSaved, onCancel }: WorkplacePic
           </View>
         )}
         <XStack gap="$3" px="$6" py="$3">
-          {search.hasNextPage ? (
-            <Button flex={1} accessibilityRole="button" disabled={search.isFetchingNextPage} onPress={() => void search.fetchNextPage()}>
+          {/* A failed *"Show more"* keeps the rows above and reports HERE, in the button's place, with its own Retry
+              (R2-3). The button is held while the rows are the previous `q`'s (`hasNextPage` would be THEIRS). */}
+          {search.hasNextPage && search.isFetchNextPageError ? (
+            <YStack flex={1} gap="$2">
+              <AnnouncedText text={t('search_error')} kind="error" color={ERROR_COLOR} />
+              <Button
+                accessibilityRole="button"
+                disabled={search.isFetchingNextPage}
+                accessibilityState={{ disabled: search.isFetchingNextPage }}
+                onPress={() => void search.fetchNextPage()}
+              >
+                {t('retry')}
+              </Button>
+            </YStack>
+          ) : search.hasNextPage ? (
+            <Button
+              flex={1}
+              accessibilityRole="button"
+              disabled={search.isFetchingNextPage || search.isPlaceholderData}
+              accessibilityState={{ disabled: search.isFetchingNextPage || search.isPlaceholderData }}
+              onPress={() => void search.fetchNextPage()}
+            >
               {search.isFetchingNextPage ? <Spinner /> : t('search_more')}
             </Button>
           ) : null}

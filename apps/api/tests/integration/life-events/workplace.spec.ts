@@ -14,7 +14,7 @@ import { randomUUID } from 'node:crypto';
 import { Writable } from 'node:stream';
 
 import { ids, member as memberDomain } from '@twt/domain';
-import { WORKPLACE_REFUSAL_CODES, WorkplaceKindWire, WorkplaceRequestStateWire } from '@twt/contracts';
+import { WORKPLACE_REFUSAL_CODES, WORKPLACE_SEARCH_TEXT_MAX_WIRE, WorkplaceKindWire, WorkplaceRequestStateWire } from '@twt/contracts';
 import { describe, expect, it } from 'vitest';
 
 import { signAccessToken } from '../../../src/modules/auth/member/tokens.js';
@@ -138,6 +138,8 @@ describe.skipIf(!hasDatabase)('Story 6.36a — the workplace routes (E2E, live D
     expect([...WORKPLACE_REFUSAL_CODES]).toEqual([...memberDomain.WORKPLACE_REFUSAL_CODES]);
     expect([...WorkplaceKindWire.options]).toEqual(['school', 'office']);
     expect([...WorkplaceRequestStateWire.options]).toEqual(['pending', 'suggested', 'confirmed', 'withdrawn', 'closed']);
+    // The search text's bound — the contract fronts it, the domain clamps to its twin (review 2026-10-15, R2-13).
+    expect(WORKPLACE_SEARCH_TEXT_MAX_WIRE).toBe(memberDomain.WORKPLACE_SEARCH_TEXT_MAX);
   });
 
   it('GET …/workplaces/districts: the LISTED spellings A–Z (⛔ a retired one); `hasList: false` with ⛔ import', async () => {
@@ -159,6 +161,8 @@ describe.skipIf(!hasDatabase)('Story 6.36a — the workplace routes (E2E, live D
       expect(r2.body).toEqual({ items: [], nextCursor: null, hasMore: false, hasList: false });
       expect((await call(t, 'GET', '/api/v1/member/life-events/workplaces/districts?limit=201', { token: tok })).status).toBe(400);
       expect((await call(t, 'GET', '/api/v1/member/life-events/workplaces/districts')).status).toBe(401);
+      // The WRITE too (checklist 3 — attested, ⛔ by construction only; review R2-16).
+      expect((await call(t, 'POST', POST, { payload: { choice: 'retired', district: 'Patna', startedOn: '2024-01-01' } })).status).toBe(401);
     } finally {
       await teardown(t);
     }
@@ -218,7 +222,7 @@ describe.skipIf(!hasDatabase)('Story 6.36a — the workplace routes (E2E, live D
         not_listed: false,
       });
       const audit = t.auditSink.ofType('member_life_events.posting_updated').at(-1) as { context?: Json } | undefined;
-      expect(audit?.context).toEqual({ district: 'Gaya', choice: 'workplace' });
+      expect(audit?.context).toEqual({ district: 'Gaya', choice: 'workplace', is_retirement: false });
     } finally {
       await teardown(t);
     }
@@ -250,12 +254,18 @@ describe.skipIf(!hasDatabase)('Story 6.36a — the workplace routes (E2E, live D
       ]);
       const ev = await events(t, memberId);
       expect(ev[0]).toMatchObject({ district: 'Patna', not_listed: true, workplace_id: null, workplace_kind: null, started_on: '2021-07-01' });
-      for (const needle of ['Zxq', 'Qzx']) {
+      // [Review][Patch] 2026-10-15 (R2-12) — the REFUSAL paths too: a 422 (a phone number in the name) and a 400 (an extra key
+      // carrying text) must not echo the typed text into the logs either — an error serializer that echoed the body would.
+      const refused = await call(t, 'POST', POST, { token: tok, payload: { choice: 'not_listed', district: 'Patna', typedName: 'Kxq School 98765 43210', startedOn: '2021-07-01' } });
+      expect([refused.status, errCode(refused)]).toEqual([422, 'workplace.typed_name_invalid']);
+      const invalid = await call(t, 'POST', POST, { token: tok, payload: { choice: 'not_listed', district: 'Patna', typedName: 'Jxq School', startedOn: '2021-07-01', extra: 'Wxq leak' } });
+      expect([invalid.status, errCode(invalid)]).toEqual([400, 'request.validation']);
+      for (const needle of ['Zxq', 'Qzx', 'Kxq', 'Jxq', 'Wxq']) {
         expect(JSON.stringify(ev)).not.toContain(needle);
         expect(JSON.stringify(t.auditSink.events)).not.toContain(needle);
         expect(logLines.join('\n')).not.toContain(needle);
       }
-      expect((t.auditSink.ofType('member_life_events.posting_updated').at(-1) as { context?: Json }).context).toEqual({ district: 'Patna', choice: 'not_listed' });
+      expect((t.auditSink.ofType('member_life_events.posting_updated').at(-1) as { context?: Json }).context).toEqual({ district: 'Patna', choice: 'not_listed', is_retirement: false });
     } finally {
       await teardown(t);
     }
@@ -421,6 +431,10 @@ describe.skipIf(!hasDatabase)('Story 6.36a — the workplace routes (E2E, live D
       const ok = await call(t, 'POST', POST, { token: tok, payload: { choice: 'district_only', district: 'Any Spelling', isRetirement: false, startedOn: '2018-01-01' } });
       expect(ok.status).toBe(200);
       expect(await postingsOf(t, memberId)).toEqual([{ district: 'Any Spelling', workplace_id: null, workplace_request_id: null, started_on: '2018-01-01', is_retirement: false }]);
+      // [Review][Patch] 2026-10-15 (R2-7) — the audit line keeps 3.9's retirement flag for the district box.
+      const retiredHere = await call(t, 'POST', POST, { token: tok, payload: { choice: 'district_only', district: 'Any Spelling', isRetirement: true } });
+      expect(retiredHere.status).toBe(200);
+      expect((t.auditSink.ofType('member_life_events.posting_updated').at(-1) as { context?: Json }).context).toEqual({ district: 'Any Spelling', choice: 'district_only', is_retirement: true });
       for (const payload of [
         { choice: 'workplace', workplaceId: randomUUID(), startedOn: '2019-01-01' },
         { choice: 'not_listed', district: 'Any Spelling', typedName: 'X', startedOn: '2019-01-01' },

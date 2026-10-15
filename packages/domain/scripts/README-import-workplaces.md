@@ -31,6 +31,9 @@ pnpm --filter @twt/domain workplaces:import -- \
 - **The arguments are checked first**, before the file is read: `--retrieved` must be a real calendar date, `--source`
   1–200 characters and not the reserved word `rename`, and `--url`, `--licence`, `--attribution` not blank. A bad value
   exits 1 with the reason.
+- **Exit codes:** 2 = an argument / usage error (a missing or unknown flag, a flag without its value, a malformed
+  `--pariwar`); 1 = a refused value (checked before the file is read) or a refused / failed run; 0 = done (also under
+  `--dry-run`).
 - **The file is read before anything opens.** The whole file is read and filtered first (no database transaction is held
   while it streams); only then does ONE transaction write. A district in the file with no row in the map refuses the WHOLE
   run — nothing is written. So does a file from which NO school of `--state` was read (a header-only file, or the wrong
@@ -41,9 +44,13 @@ pnpm --filter @twt/domain workplaces:import -- \
   district) changed; DELISTS a listed imported school missing from the file — only within the districts the file
   contains, so a one-district file never touches the others; re-lists a delisted school that is back. Nothing is ever
   deleted: a delisted school is hidden from the picker and kept for every posting that names it. A row without an 11-digit
-  code or a name, or whose cluster or village name is over 200 characters, is refused, and a code repeated in the file
-  keeps its first row — both are counted, neither stops the run. A school added by the Super Admin with the same code is
-  kept and counted ("kept staff rows"). Line endings may be CRLF, LF or a lone CR.
+  code or a name, whose cluster or village name is over 200 characters, whose name, cluster or village carries a line
+  break, a tab or any other control character (inside a quoted cell), or any of whose cells carries a NUL byte, is refused, and a code repeated in the
+  file keeps its first row — both are counted, neither stops the run. A row counts as "another state" only on evidence: a VALID
+  code decides by its first two digits (the `state_code` column is then ignored); for a malformed code the `state_code` column
+  speaks — naming another state counts it "another state", blank or absent refuses it. A
+  school added by the Super Admin with the same code is kept and counted ("kept staff rows"). Line endings may be CRLF,
+  LF or a lone CR.
 - **`--dry-run`** does all of the above and rolls it back: the same counts, nothing written. A refused run is refused under
   `--dry-run` too.
 - **A second identical run** changes nothing (it still records a batch row).

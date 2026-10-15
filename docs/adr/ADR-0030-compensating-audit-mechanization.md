@@ -354,6 +354,10 @@ second pass across six files.
   outside any application-level try/catch) — this is a pre-existing, narrower residual
   risk shared by all nine implementations; out of scope for AI-5-3 (see Non-goals).
   Recorded as an accepted residual, not silently dropped.
+  > ⭐ *Annotated 2026-10-15 (Story 6.36a's code review, round 2; ⛔ a rewrite):* the residual's KIND changed — `closeScopeTx` now
+  > rethrows a failed COMMIT, so the request answers **500**, ⛔ a false 2xx. What is unchanged: the throw happens in the handler's
+  > `finally` / the `onSend` hook, OUTSIDE `withCompensatingAudit`, so ⛔ a compensating line is written for that failure either — the
+  > residual is now *"a 500 with no compensating line"*, ⛔ *"a 200 with no compensating line"*.
 - **Migration / pivot path** — If the AST check produces excessive false positives once
   scanning `packages/channels` + `apps/api` broadly (unlike `access-wrapper-invariants`,
   which had a full epic of stable code to calibrate against), the fix is to correct

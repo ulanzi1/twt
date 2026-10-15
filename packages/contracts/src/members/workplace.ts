@@ -125,14 +125,24 @@ export const WorkplaceDistrictsResponse = z
 export type WorkplaceDistrictsResponse = z.output<typeof WorkplaceDistrictsResponse>;
 
 export const WORKPLACE_SEARCH_PAGE_CAP = 50;
+/** The search text's bound — the FRONT door; the domain's `WORKPLACE_SEARCH_TEXT_MAX` is its twin (an api spec asserts they agree). */
+export const WORKPLACE_SEARCH_TEXT_MAX_WIRE = 100;
+/**
+ * The search cursor's bound. It carries `[name, workplace_id]` base64url-encoded. The WORST case is a 200-code-point name of
+ * C0 control characters (JSON-escaped to SIX bytes each — the import refuses every `\p{Cc}`, a staff-added name — 6.36c —
+ * must too) plus a UUID: ~1,660 characters; an astral name (4 bytes each) ~1,120. 1000 let the server mint a cursor its own
+ * contract refused (review 2026-10-15). A contracts test pins both cases under this bound.
+ */
+export const WORKPLACE_SEARCH_CURSOR_MAX = 1800;
+
 /** `GET …/workplaces?district=&kind=&q=&limit=&cursor=` — the picker's server-side search (SW4). */
 export const WorkplaceSearchQuery = z
   .object({
     district: District,
     kind: WorkplaceKindWire,
-    q: z.string().max(100).optional(),
+    q: z.string().max(WORKPLACE_SEARCH_TEXT_MAX_WIRE).optional(),
     limit: z.coerce.number().int().positive().max(WORKPLACE_SEARCH_PAGE_CAP).optional(),
-    cursor: Cursor.max(1000).optional(),
+    cursor: Cursor.max(WORKPLACE_SEARCH_CURSOR_MAX).optional(),
   })
   .strict();
 export type WorkplaceSearchQuery = z.output<typeof WorkplaceSearchQuery>;

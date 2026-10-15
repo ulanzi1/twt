@@ -292,7 +292,7 @@ export function createGroundInspectionHandlers(deps: AppDeps) {
    * scope transaction (the request's second connection — the first is released): (i) the HIDDEN check (the ONE
    * predicate) → `withheld/own_visit` and ⛔ no showing; (ii) ONLY when ⛔ hidden, the ONE guarded statement that records
    * the showing AND reports whether the completion PERSISTED. FAIL CLOSED: ANY failure before (i) answered, a raise
-   * from (ii), or `persisted = false` (a swallowed completion COMMIT — `closeScopeTx`) ⇒ `withheld/check_failed`,
+   * from (ii), or `persisted = false` (a failed completion COMMIT — this route commits ITSELF, so `closeScopeTx`'s rethrow since 6.36a round 2 does ⛔ reach it) ⇒ `withheld/check_failed`,
    * ⛔ never `shown` for a record ⛔ known to be saved. ONLY a failure AFTER (ii) answered `persisted` (the closing COMMIT)
    * is logged ids-only and still answers `shown` with the in-tx keys (the re-read recomputes the same keys by R2).
    * Uses `assignment.claimCaseId` — ⛔ the path's claim id (the preHandler loads by (pariwar, id) only).

@@ -407,9 +407,16 @@ export function createMemberDataRightsHandlers(deps: AppDeps) {
         }
         throw err;
       } finally {
-        await closeScopeTx(scopeTx, ok);
-        // ⛔ The work did not happen — do not hold the caller's key against a retry.
-        if (!ok) await releaseIdempotency(idemKey);
+        // ⛔ The work did not happen — do not hold the caller's key against a retry. Since 6.36a's review (2026-10-15) a
+        // failed COMMIT THROWS out of `closeScopeTx`, so the key is released then too (⛔ a 24 h "already accepted" for an
+        // act that never happened — the erasure route above all).
+        let committed = false;
+        try {
+          await closeScopeTx(scopeTx, ok);
+          committed = ok;
+        } finally {
+          if (!committed) await releaseIdempotency(idemKey);
+        }
       }
 
       // Enqueue AFTER commit so the worker sees the committed `pending` row (the shipped member-path
@@ -633,9 +640,16 @@ export function createMemberDataRightsHandlers(deps: AppDeps) {
         }
         throw err;
       } finally {
-        await closeScopeTx(scopeTx, ok);
-        // ⛔ The work did not happen — do not hold the caller's key against a retry.
-        if (!ok) await releaseIdempotency(idemKey);
+        // ⛔ The work did not happen — do not hold the caller's key against a retry. Since 6.36a's review (2026-10-15) a
+        // failed COMMIT THROWS out of `closeScopeTx`, so the key is released then too (⛔ a 24 h "already accepted" for an
+        // act that never happened — the erasure route above all).
+        let committed = false;
+        try {
+          await closeScopeTx(scopeTx, ok);
+          committed = ok;
+        } finally {
+          if (!committed) await releaseIdempotency(idemKey);
+        }
       }
 
       // ── Issue + deliver the OTP AFTER the grant commits ─────────────────────────────────────────
@@ -988,9 +1002,16 @@ export function createMemberDataRightsHandlers(deps: AppDeps) {
         }
         throw err;
       } finally {
-        await closeScopeTx(scopeTx, ok);
-        // ⛔ The work did not happen — do not hold the caller's key against a retry.
-        if (!ok) await releaseIdempotency(idemKey);
+        // ⛔ The work did not happen — do not hold the caller's key against a retry. Since 6.36a's review (2026-10-15) a
+        // failed COMMIT THROWS out of `closeScopeTx`, so the key is released then too (⛔ a 24 h "already accepted" for an
+        // act that never happened — the erasure route above all).
+        let committed = false;
+        try {
+          await closeScopeTx(scopeTx, ok);
+          committed = ok;
+        } finally {
+          if (!committed) await releaseIdempotency(idemKey);
+        }
       }
       return response!;
     },
@@ -1068,9 +1089,16 @@ export function createMemberDataRightsHandlers(deps: AppDeps) {
         };
         ok = true;
       } finally {
-        await closeScopeTx(scopeTx, ok);
-        // ⛔ The work did not happen — do not hold the caller's key against a retry.
-        if (!ok) await releaseIdempotency(idemKey);
+        // ⛔ The work did not happen — do not hold the caller's key against a retry. Since 6.36a's review (2026-10-15) a
+        // failed COMMIT THROWS out of `closeScopeTx`, so the key is released then too (⛔ a 24 h "already accepted" for an
+        // act that never happened — the erasure route above all).
+        let committed = false;
+        try {
+          await closeScopeTx(scopeTx, ok);
+          committed = ok;
+        } finally {
+          if (!committed) await releaseIdempotency(idemKey);
+        }
       }
       return response!;
     },
@@ -1216,9 +1244,16 @@ export function createMemberDataRightsHandlers(deps: AppDeps) {
         }
         throw err;
       } finally {
-        await closeScopeTx(scopeTx, ok);
-        // ⛔ The work did not happen — do not hold the caller's key against a retry.
-        if (!ok) await releaseIdempotency(idemKey);
+        // ⛔ The work did not happen — do not hold the caller's key against a retry. Since 6.36a's review (2026-10-15) a
+        // failed COMMIT THROWS out of `closeScopeTx`, so the key is released then too (⛔ a 24 h "already accepted" for an
+        // act that never happened — the erasure route above all).
+        let committed = false;
+        try {
+          await closeScopeTx(scopeTx, ok);
+          committed = ok;
+        } finally {
+          if (!committed) await releaseIdempotency(idemKey);
+        }
       }
 
       return {

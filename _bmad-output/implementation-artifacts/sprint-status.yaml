@@ -1,3 +1,16 @@
+# last_updated: 2026-10-15b (STORY 6.36a — CODE REVIEW ROUND 2 (`bmad-code-review 6.36a` re-run on the whole branch, fixes `eb6d2769`; worktree
+# `.claude/worktrees/6-36a`): row `6-36a-member-workplace-and-posting-history` STAYS `done`. Three fresh layers on `5b3a2512..b77d30a5`
+# (7,633 lines) in parallel, then a fix-diff review of the round-2 patch. 0 CRITICAL / 0 HIGH. 1 decision (BigDev: "1" — FIX `closeScopeTx`
+# NOW: a failed COMMIT is rethrown, cross-cutting; the full `apps/api` integration suite 109 / 1,322 green), 16 patch (all applied —
+# BigDev: "1"; two MEDIUM: a withdrawn "isn't listed" row's copy, the import's batch counts), 2 defer (`suggested → pending` stale
+# suggestion columns — 6.36c's 0164; two sibling handlers that now surface a COMMIT failure without an audit line + the survey submit
+# recording before its commit), 7 dismissed; round 1's `closeScopeTx` and import-count deferrals DISCHARGED. ⚠ The fix-diff review (+ the
+# coordinator's own call-site trace) caught a regression in the decision's first cut — the helpline write's own close would have been
+# skipped (a leaked client, a lost COMMIT) — fixed before commit on a new `ScopeTx.closed` flag; also caught: five `member-data-rights`
+# sites burning their idempotency key on a thrown COMMIT, a failed refetch hiding behind `isError && !data`, the search placeholder
+# showing ANOTHER district's rows, a year-0 cursor, the import's C0 controls, the cursor bound's true worst case. ADR-0030's residual
+# re-kinded (annotated), nine sibling deferrals annotated Closed by, five claims-handler comments corrected. ⛔ No migration, ⛔ ruling
+# moved. ⛔ `ci:local` re-run (the touched packages' suites and the full api integration suite run directly). ⛔ No other row moves.)
 # last_updated: 2026-10-15a (STORY 6.36a — CODE REVIEW CLOSED (`bmad-code-review 6.36a`, worktree `.claude/worktrees/6-36a`, branch
 # `story/6-36a-member-workplace-and-posting-history`): row `6-36a-member-workplace-and-posting-history` `review` → `done` (fixes `86d00ff4`). The
 # implementation commit `727d153f` alone × Blind / Edge / Acceptance in parallel, then a fix-diff review of the patch (two rounds).

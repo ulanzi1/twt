@@ -1,3 +1,13 @@
+# last_updated: 2026-10-15k (STORY 6.36 — VALIDATED against `main` `51382898` (`bmad-create-story validate 6.36`, worktree
+# `.claude/worktrees/6-36`, commit `17e44db7`): row `6-36-peer-mesh-school-wise-selection` `backlog` → `ready-for-dev` (v2.5). Four
+# parallel verifiers, then five fresh-context re-validate rounds until ⛔ finding at HIGH (5 → 2 → 2 → 1 → 1 → 0), all applied (BigDev:
+# "All"). Key changes: AC8 takes `lockClaimCase` FIRST and persists a selection ONLY with its edge (the latent two-select-jobs duplicate
+# edge; the v2.0 bank-save premise WITHDRAWN — the selection FK's KEY SHARE already serializes it); AC5 reads named people by STATE (a
+# decline also writes `responded_at`); `settled` reads `created_at`, ⛔ `started_on`; SW23 stays `active`-only (`-333` call 2 (d));
+# v4 needs `-331` in the questionnaire allow-list; SW30 = two closed, one narrowed, one open. ⏳ BigDev ROUTED RF1 to the Panel (which
+# filing day counts when a death is filed again) — `trustee-panel-routing-note-2026-10-15-6-36-refiled-claim.md`, WRITTEN, ⛔ NOT SENT;
+# non-blocking (built as written behind one function). ⚠ The head-of-school letter (CF4 A (3), row 6-32) has ⛔ go-live fence — a
+# launch-gate row PROPOSED to BigDev, ⛔ added. ⛔ No decision entry, ⛔ no code. 6.36c still waits for this row to be `done`.)
 # last_updated: 2026-10-15j (STORY 6.36 — WAVE 2 IS BUILT ONE AFTER THE OTHER (`2026-10-15-338`, `08932f43`; BigDev: *"I will be building
 # sequentially this time first 6.36 then 6.36c"* → *"yes, write -338"*): supersedes `-332` calls 1 and 3 for wave 2 only. Row 6-36 is built,
 # reviewed and merged FIRST; 6.36c starts only when row 6-36 is `done` (its AC0 amended); each file is re-validated against `main` before
@@ -20216,7 +20226,7 @@ development_status:
   # staff surfaces, `claim.peer_mesh_none_to_ask`); it stays `backlog` until 6-36a, 6-36b AND 6-36c are `done`. ⭐ AMENDED 2026-10-14
   # (`-332`): until 6-36a AND 6-36b are `done` — ⛔ not 6-36c. Story file
   # `6-36-peer-mesh-school-wise-selection.md`; the record is 6.36a's.
-  6-36-peer-mesh-school-wise-selection: backlog
+  6-36-peer-mesh-school-wise-selection: ready-for-dev
   # ⭐ 2026-10-10 ADDED by `2026-10-10-314` (BigDev: *"msg91 for now"* → *"New story row"*): the SMS gateway is MSG91, whose Flow / OTP v5
   # APIs take an `authkey` header, MSG91's OWN template id and NAMED variable values — ⛔ the generic `sms-app.ts` contract. 6-37 builds the
   # MSG91 adapter behind the SMS seam (texts + the two OTPs), a MSG91 template id per template, `91…` numbers, `type`-based errors, delivery

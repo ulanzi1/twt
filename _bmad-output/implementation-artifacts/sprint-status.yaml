@@ -1,3 +1,16 @@
+# last_updated: 2026-10-15d (STORY 6.36b — PEOPLE WHO KNOW ME via `bmad-dev-story` (BigDev: "continue"): row `in-progress` → `review`.
+# Built in its own worktree (`.claude/worktrees/6-36b`) and tested on its own container `twt-test-pg-b` (:5434) ONLY (`-332`); then
+# COMMITTED and REBASED onto 6.36a's tip `b6cbf9db` (6.36a `done`, ⛔ yet on `origin/main` — `main` = that tip when it fast-forwards),
+# the nine shared files resolved keeping BOTH stories (journal 0161 → 0162; rtbf pin 23 tables / 26 statements; both friction rows).
+# Commits `7d37ffc6` (the work: migration 0162 — `member_known_people` forward-only + ≤ 3 live per namer under ONE advisory-lock
+# function the writer and a BEFORE INSERT backstop share, the daily counters; the batch blind-index path, ONE KMS audit line per match;
+# matching → positions only; seven member routes, ONE 403 for a non-active caller; expo-contacts + WRITE_CONTACTS blocked; the find /
+# list screens and the home + notice-strip card; the `known_people` copy, the Trust's name from config; the export's `knownPeople` —
+# `ProfileSection` gained it, without which every export build would have failed) and `18c7a843` (Row 31 notes (5)–(8) naming this
+# part's flows for (a) / (d) / (e) / (f), ⛔ any criterion written closed). ⭐ `ci:local` on the rebased tree, a fresh :5434 `twt_dev`
+# migrated from zero: 36 / 36 green (an earlier run on the pre-rebase tree was RED on the known channels-determinism contention timeout
+# — recorded in the story, ⛔ as green). ⚠ Owed after 6.36a lands on `main`: 0162 on :5432 AND :5433 (AC1). ⚠ :5434's pre-rebase DB is
+# kept as `twt_dev_6_36b_pre_rebase` (BigDev may drop it). Not demonstrated on a device. ⛔ No other row moves.)
 # last_updated: 2026-10-15c (STORY 6.36a — the FINAL-DELTA PASS + the gate (BigDev: "go ahead"): row stays `done`. One Edge Case Hunter
 # over the last unreviewed delta (`b77d30a5..eb6d2769`): 1 MEDIUM + 2 LOW applied (`80e51643` — a false page-1 error flash on a refetch
 # after an earlier page-2 failure, gated on `!isFetching`; "Show more" disabled while in error; three READ-ONLY scope txs — cycle-freeze's
@@ -20145,7 +20158,7 @@ development_status:
   # 6-36b on its own test DB `twt-test-pg-b` :5434); then 6-36c ∥ row 6-36 once 6-36a AND 6-36b are done. Migrations fixed 0161 / 0162 /
   # 0163 (row 6-36) / 0164 (6-36c), merged to main in that order. 6-27c waits for row 6-36 AND 6-36c.
   6-36a-member-workplace-and-posting-history: done
-  6-36b-people-who-know-me: in-progress
+  6-36b-people-who-know-me: review
   6-36c-workplace-list-curation-and-prompts: backlog
   # ⭐ 2026-10-10 ADDED by `2026-10-10-306` (BigDev: "Selection must be school wise …"): each member's SCHOOL (a stable school code + name)
   # and posting start date captured at signup and on every transfer (a new posting — history kept); a NEW peer-mesh metric: members posted

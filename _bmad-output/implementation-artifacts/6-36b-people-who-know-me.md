@@ -17,7 +17,7 @@ GLYPH REGISTER, ADDRESSING RULE, LETTERS: as 6.36a.
 
 # Story 6.36b: People Who Know Me — Up to Three Members a Member Names, Found From Their Phone's Contacts, Each of Whom Accepts `[SURFACE]`
 
-Status: in-progress
+Status: review
 
 > ⭐⭐ **WHAT THIS PART IS.** When ⛔ no colleague can be asked about a member's death, the Trust asks up to three members that member
 > named while alive and who agreed (`-310` CF4 A (2)). This part lets a member name them: *"Find members in my contacts"* checks the
@@ -188,7 +188,7 @@ claim, contribution, pool or payment reads it. 6.36 reads the accepted people to
 - [x] **Task 5 — copy (AC13).** The note (*"We need access to find your colleagues already at {trust_name}."* + *"Numbers of people who
       aren't members are not kept."*), the request (*"{name} has named you as someone who knows them. Do you know him/her?"*), the answers,
       *"{name} will see your answer."*, *"{name} will see that you withdrew."*, the list states, the limits' messages — en + hi + `$comment`; the Trust's name a PARAM from config (memory: the legal name is pending).
-- [ ] **Task 6 — close (AC14).** Row 31's (a) / (d) evidence lines name this part's flows; `friction-budget.md` (*"member (allowing the
+- [x] **Task 6 — close (AC14).** Row 31's (a) / (d) evidence lines name this part's flows; `friction-budget.md` (*"member (allowing the
       app to check their contacts, or typing a number, to name people who know them)"* · protects *"who is asked when no colleague can be"* ·
       `optional`); the Change Log and File List; `pnpm ci:local`.
 
@@ -304,6 +304,28 @@ Claude Opus 5.5 (1M context) — `bmad-dev-story`, 2026-10-14, worktree `.claude
     prompt (`app/(life-events)/known-people-find.tsx`); iOS `NSContactsUsageDescription` = `contactsPermissionText()` (`apps/mobile/
     app.config.ts`) — the Trust's name from `EXPO_PUBLIC_TRUST_NAME`."*
 
+  - 2026-10-15 — ⭐ **REBASED onto 6.36a's tip `b6cbf9db`** (6.36a `done`, code-reviewed, *"ready to fast-forward"*; ⚠ ⛔ yet on
+    `origin/main`, which is still `2581c514` — so `main` will equal `b6cbf9db` when 6.36a fast-forwards and 6.36b needs ⛔ second
+    rebase unless 6.36a's tip moves). 6.36b = `7d37ffc6` (the work, committed 2026-10-15 as `30222b39`, rebased) + the follow-up
+    `18c7a843`. Nine shared files resolved, each keeping BOTH stories: the journal (0161 then 0162), the contracts / domain barrels,
+    the ids, the i18n catalog (`workplace` + `known_people`), `assemble.ts` (6.36a's workplace columns + requests AND 6.36b's
+    `knownPeople`; `ProfileSection` auto-merged with both), `anonymize.ts` (both arms), the rtbf pin (**23 tables, 26 statements**,
+    the no-claims case 23 — both stories' legs kept; 21/21), `friction-budget.md` (both rows + both dispositions), `sprint-status.yaml`
+    (6-36a `done`, 6-36b `in-progress`). The screens' `newIdempotencyKey` import moved to 6.36a's `lib/idempotency-key.ts`.
+  - 2026-10-15 — **Task 6 finished on the rebased tree:** Row 31's **notes (5)–(8)** name this part's flows for (a) what is sent and
+    kept, (d) what the build declares, (e) the KMS load and (f) the Hindi copy — ⛔ any criterion written closed and ⛔ any
+    `closure_evidence_link` filled ([[feedback_closure_language_precision]]); the `known_people` `$comment` carries 6.36a's
+    *"NOT YET HUMAN-REVIEWED — go-live Row 31 (f)"* marker.
+  - 2026-10-15 — ⭐ **`pnpm ci:local` on the rebased tree (`18c7a843`, `DATABASE_URL` = the fresh `:5434` `twt_dev`): PASSED — 36 / 36
+    jobs green** (`.expo/types` moved aside so it matches CI): unit 37 / 37 tasks; integration — domain 5308, API 1771, jobs 797,
+    channels 231, validity-service 284, niyamavali-engine 144, events 36, queue 4; `friction-budget`'s AC-4 leg LIVE (committed) —
+    *"declaration affirmed"*. All six Tasks done ⇒ Status `review`.
+  - 2026-10-15 — the test DB for the rebased tree: on `:5434` the old `twt_dev` (0162 without 0161 — the migrator would SKIP 0161 there,
+    its `when` being older) was RENAMED `twt_dev_6_36b_pre_rebase` (⛔ dropped — BigDev may drop it) and a fresh `twt_dev` migrated
+    FROM ZERO (162 migrations: 0161's and 0162's tables both present). Mobile `tsc` green with freshly regenerated `.expo/types` AND
+    without them. ⚠ **STILL OWED (AC1):** apply 0162 to `:5432` AND `:5433` once 6.36a has actually landed on `main` (`-332` — ⛔ until
+    then).
+
 ### File List
 - `packages/domain/migrations/0162_member-known-people.sql` (new); `packages/domain/migrations/meta/_journal.json`
 - `packages/domain/src/schema/member_known_people.ts`, `member_daily_counters.ts` (new); `packages/domain/src/schema/index.ts`
@@ -329,12 +351,13 @@ Claude Opus 5.5 (1M context) — `bmad-dev-story`, 2026-10-14, worktree `.claude
 - `apps/mobile/components/known-people/KnownPeopleRequestEntry.tsx`, `known-people-cache.ts`, `useKnownPeopleQueries.ts` (new); `apps/mobile/components/panchayat/PanchayatNoticeboard.tsx`
 - `apps/mobile/lib/known-people.ts`, `known-people-api.ts`, `known-people-contacts.ts`, `known-people-i18n.ts`, `known-people-saved-names.ts`, `phone-normalize.ts`, `trust-name.ts` (new); `apps/mobile/lib/session-context.tsx`
 - `apps/mobile/tests/unit/known-people-logic.test.ts`, `known-people-contacts.test.ts`, `known-people-copy-keys.test.ts`, `known-people-session.test.ts`, `phone-normalize.test.ts` (new)
-- `friction-budget.md`
+- `friction-budget.md`; `docs/launch-gate-inventory/inventory-roster.md` (Row 31 notes (5)–(8))
 - `_bmad-output/implementation-artifacts/6-36b-people-who-know-me.md`, `_bmad-output/implementation-artifacts/sprint-status.yaml`
 
 ## Change Log
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-15 | 1.8 | `bmad-dev-story` (continued): committed, REBASED onto 6.36a's tip `b6cbf9db` (nine shared files resolved, both stories kept); Task 6 finished — Row 31 notes (5)–(8); `ci:local` 36 / 36 green on a fresh `:5434` from zero. Status → `review`. ⚠ Owed after 6.36a lands on `main`: 0162 on `:5432` AND `:5433` (AC1). |
 | 2026-10-14 | 1.7 | `bmad-dev-story`: Tasks 1–5 built and tested (migration 0162 on `:5434` only; the domain, contracts, API module, member app, `known_people` copy); Task 6 PARTIAL — the friction-budget row done; Row 31's (a) / (d) evidence lines owed at the rebase onto 6.36a (Row 31 is ⛔ in this tree yet). Status stays `in-progress`. |
 | 2026-10-14 | — | `2026-10-14-330` committed (`d44708e8`) — BigDev: *"all A, SC4 yes"*; every AC and Task here was written to the recommended answers ⇒ ⛔ none changed. |
 | 2026-10-14 | 1.6 | Validate round 6: AC7 / Trap 4 / AC6 record what each side can tell (6.36a SW14's four); the accepted request leaves the card but stays in the list; the two notices in the copy. |

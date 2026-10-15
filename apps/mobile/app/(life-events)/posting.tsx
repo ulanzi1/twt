@@ -74,8 +74,10 @@ export default function WorkplaceScreen() {
           ) : current ? (
             <>
               {/* A failed REFETCH of page 1 (after a save, a foreground return) keeps the rows but SAYS so — the row the
-                  member just saved may be missing from what they see (fix-diff review R2-3b). */}
-              {history.isError && !history.isFetchNextPageError ? (
+                  member just saved may be missing from what they see (fix-diff review R2-3b). ⛔ While a refetch is in
+                  flight: after an earlier page-2 failure `status` stays 'error' with `fetchMeta` cleared, which would
+                  read as a page-1 error for the refetch's duration (a false flash — the final-delta pass). */}
+              {history.isError && !history.isFetchNextPageError && !history.isFetching ? (
                 <YStack gap="$2">
                   <AnnouncedText text={t('history_error')} kind="error" color="#C0392B" />
                   <Button accessibilityRole="button" onPress={() => void history.refetch()}>
@@ -127,8 +129,8 @@ export default function WorkplaceScreen() {
               ) : history.hasNextPage ? (
                 <Button
                   accessibilityRole="button"
-                  disabled={history.isFetchingNextPage}
-                  accessibilityState={{ disabled: history.isFetchingNextPage }}
+                  disabled={history.isFetchingNextPage || history.isError}
+                  accessibilityState={{ disabled: history.isFetchingNextPage || history.isError }}
                   onPress={() => void history.fetchNextPage()}
                 >
                   {history.isFetchingNextPage ? <Spinner /> : t('search_more')}

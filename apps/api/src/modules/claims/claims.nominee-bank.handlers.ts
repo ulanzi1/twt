@@ -503,8 +503,9 @@ export function createNomineeBankHandlers(deps: AppDeps) {
         ok = true;
       } finally {
         // The guard tx is read-only (the mutation ran on its own committed tx inside recordNomineeBank);
-        // close it either way. `ok` reflects whether the core returned without throwing.
-        await closeScopeTx(guardTx, ok);
+        // close it either way. `ok` reflects whether the core returned without throwing. A failed COMMIT of this
+        // read-only tx loses nothing and must ⛔ 500 a recorded bank (`closeScopeTx` rethrows since 6.36a's review).
+        await closeScopeTx(guardTx, ok).catch(() => undefined);
       }
       void reply.status(201);
       return body_;

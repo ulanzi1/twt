@@ -306,7 +306,7 @@ export function WorkplacePicker({ submitLabel, onSaved, onCancel }: WorkplacePic
           <YStack px="$6" py="$4">
             <AnnouncedText text={t('search_loading')} />
           </YStack>
-        ) : search.isError && (!search.data || !search.isFetchNextPageError) ? (
+        ) : search.isError && (!search.data || (!search.isFetchNextPageError && !search.isFetching)) ? (
           // ⛔ data at all, OR a failed REFETCH of page 1 (the rows below are stale — say so; fix-diff review R2-3b). A
           // failed *"Show more"* is reported beside the button instead and keeps the list.
           <YStack px="$6" py="$4" gap="$3">
@@ -372,8 +372,8 @@ export function WorkplacePicker({ submitLabel, onSaved, onCancel }: WorkplacePic
             <Button
               flex={1}
               accessibilityRole="button"
-              disabled={search.isFetchingNextPage || search.isPlaceholderData}
-              accessibilityState={{ disabled: search.isFetchingNextPage || search.isPlaceholderData }}
+              disabled={search.isFetchingNextPage || search.isPlaceholderData || search.isError}
+              accessibilityState={{ disabled: search.isFetchingNextPage || search.isPlaceholderData || search.isError }}
               onPress={() => void search.fetchNextPage()}
             >
               {search.isFetchingNextPage ? <Spinner /> : t('search_more')}

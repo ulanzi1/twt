@@ -717,7 +717,9 @@ export function createCycleFreezeHandlers(
                 stillPending = !(await claim.getCycleFreezeCommitTriggerDelivered(recheckTx.tx, ctx.pariwarId, commitId));
                 recheckOk = true;
               } finally {
-                await closeScopeTx(recheckTx, recheckOk);
+                // A READ-ONLY tx: a failed COMMIT loses nothing and must ⛔ fail a durably committed freeze (`closeScopeTx`
+                // rethrows a failed COMMIT since 6.36a's review, 2026-10-15).
+                await closeScopeTx(recheckTx, recheckOk).catch(() => undefined);
               }
               if (stillPending) {
                 try {

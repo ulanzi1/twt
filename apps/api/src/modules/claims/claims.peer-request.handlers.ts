@@ -127,7 +127,9 @@ export function createPeerRequestHandlers(deps: AppDeps) {
     const hookTx = request.scopeTx;
     if (!hookTx?.scopeSet) return;
     hookTx.scopeSet = false;
-    await closeScopeTx(hookTx, true);
+    // The hook tx carried READS only: a failed COMMIT loses nothing — ⛔ a 500 before the route's own write (`closeScopeTx`
+    // rethrows a failed COMMIT since 6.36a's review, 2026-10-15).
+    await closeScopeTx(hookTx, true).catch(() => undefined);
     // Detached, so nothing later in this request can reach a client that is back in the pool (fifth-pass review W9).
     request.scopeTx = undefined;
   }
